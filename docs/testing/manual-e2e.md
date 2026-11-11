@@ -1157,3 +1157,27 @@ An agent registers itself, the person approves it in the browser, and the agent 
 | Deny | Deny | back at the redirect with `error=access_denied` and the state |
 | Allow | untick one scope, Allow, then `POST /oauth/token` with the code and verifier | token `scope` lacks the unticked one; the API answers 403 for it and 200 for the rest |
 | Disconnect | Settings, Connected apps, Disconnect | the list empties; the access token answers 401 |
+
+## Series
+
+Run `broadcasts:demo`, then `series:demo --workspace $WS --member $MEM --address $EMA` on a dev build for believable data.
+
+| Flow | Do | Expect |
+|---|---|---|
+| Draft | `POST $B/series` `{"name":"Onboarding","subject":"contact"}`, then `PATCH` it with an email step without a subject | `problems` lists `message_subject_missing` on the step; `POST .../publications` answers 422 |
+| Stale save | `PATCH` with an old `lock_version` | 409 `edit_conflict` |
+| Go live | fix the step, set the sending address and teammate, `POST .../publications` | `live`; people who match later enter; with `include_existing` everyone matching enters at once |
+| Email | a contact starts matching | Mailpit has the email from the connected address with one-click unsubscribe and a reply token |
+| Wait | a wait of 2 days | the journey shows `waiting` with `wake_at` two days on; it moves on at that time |
+| Reply | answer the email | a conversation opens with the email first; with "leave on reply" the journey ends `replied` and nothing later goes out |
+| Exit | the contact matches the exit rules | the journey ends `exit_rules` at once and queued sends are withdrawn |
+| Goal | the contact does the goal event inside its window | `goal` counted; with "leave once reached" the journey ends `goal` |
+| Event entry | `POST $B/contact-events` with the series' event, twice with one `idempotency_key` | one journey |
+| Can't send | enroll a contact without an email | the journey ends `undeliverable`, or takes the "Could not send" path when the step has one |
+| Warm-up | a new address past its first day's allowance | the email waits, reason `warming_up`, and goes out the next day; the journey moves on then |
+| Account | a company series whose email picks `contact.custom.role = admin` | the company enrolls once; only its admins get the email; `GET $B/companies/$C/series` lists it |
+| Split | a split of 50/50, then Pick as winner | people share the variants; after the pick everyone new takes the winner |
+| Edit live | remove the step people wait on, publish | they move to the next step that remains; a shorter wait lets them on from when they arrived |
+| Pause | Pause, wait past a wait's end, Resume | nothing moves while paused; on resume they move on |
+| Try it on me | add yourself as a contact, Try it on me, Skip the wait | the test journey runs every step, messages reach you, the report counts nothing; trying again replaces it |
+| Builder | Series, New series, add steps with the plus, Set live, Results | cards show what each step did; the inspector lists people on a step and lets you take them off |

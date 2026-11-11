@@ -224,6 +224,10 @@ func (b *Broadcasts) replied(ctx context.Context, tx *database.Tx, r models.Broa
 		return wrap("mark replied", err)
 	}
 
+	if err := b.touched(ctx, r); err != nil {
+		return err
+	}
+
 	return b.Events.Dispatch(ctx, tx, appevents.BroadcastRecipientChanged{
 		Base:        appevents.Base{ID: ids.New(), WorkspaceID: r.WorkspaceID, OccurredAt: b.Clock.Now()},
 		BroadcastID: r.BroadcastID, RecipientID: r.ID,

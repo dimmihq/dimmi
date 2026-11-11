@@ -45,7 +45,7 @@ func (b *Broadcasts) Opened(ctx context.Context, token string) error {
 			return wrap("mark opened", err)
 		}
 
-		return b.recount(ctx, r.WorkspaceID, r.BroadcastID)
+		return errors.Join(b.recount(ctx, r.WorkspaceID, r.BroadcastID), b.touched(ctx, r))
 	})
 
 	return err
@@ -105,7 +105,7 @@ func (b *Broadcasts) countClick(ctx context.Context, q *models.Queries, r models
 		return wrap("mark clicked", err)
 	}
 
-	return b.recount(ctx, r.WorkspaceID, r.BroadcastID)
+	return errors.Join(b.recount(ctx, r.WorkspaceID, r.BroadcastID), b.touched(ctx, r))
 }
 
 /*
@@ -154,7 +154,7 @@ func (b *Broadcasts) markUnsubscribed(ctx context.Context, q *models.Queries, r 
 		return wrap("mark unsubscribed", err)
 	}
 
-	return b.recount(ctx, r.WorkspaceID, r.BroadcastID)
+	return errors.Join(b.recount(ctx, r.WorkspaceID, r.BroadcastID), b.touched(ctx, r))
 }
 
 /*

@@ -422,5 +422,17 @@
   "workflows:run": {
     "label": "Run workflows",
     "description": "Run a reusable workflow on a conversation."
+  },
+  "series:read": {
+    "label": "See series",
+    "description": "See series, the people on them and their reports."
+  },
+  "series:write": {
+    "label": "Build series",
+    "description": "Build series drafts and try them on yourself."
+  },
+  "series:publish": {
+    "label": "Publish series",
+    "description": "Set series live, pause, archive them and add or remove people."
   }
 }

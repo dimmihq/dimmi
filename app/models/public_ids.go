@@ -146,7 +146,7 @@ func PublicIDCatalog() []PublicIDEntry {
 	return slices.Concat(
 		accountPublicIDs(), inboxPublicIDs(), channelPublicIDs(), assistantPublicIDs(), helpCenterPublicIDs(),
 		platformPublicIDs(), billingPublicIDs(), changelogPublicIDs(), feedbackPublicIDs(), engagePublicIDs(),
-		workflowPublicIDs(), broadcastPublicIDs(), reservedPublicIDs(),
+		workflowPublicIDs(), broadcastPublicIDs(), seriesPublicIDs(), reservedPublicIDs(),
 	)
 }
 
@@ -468,6 +468,28 @@ func broadcastPublicIDs() []PublicIDEntry {
 		{PrefixBroadcast, "broadcasts"},
 		{PrefixBroadcastTopic, "broadcast_topics"},
 		{PrefixBroadcastRecipient, "broadcast_recipients"},
+	}
+}
+
+/*
+The prefixes of series, their versions and the journeys people take
+through them.
+*/
+const (
+	PrefixSeries           Prefix = "srs"
+	PrefixSeriesVersion    Prefix = "srsv"
+	PrefixSeriesEnrollment Prefix = "sren"
+)
+
+/*
+seriesPublicIDs lists the prefixes of series, their published versions
+and their enrollments.
+*/
+func seriesPublicIDs() []PublicIDEntry {
+	return []PublicIDEntry{
+		{PrefixSeries, "series"},
+		{PrefixSeriesVersion, "series_versions"},
+		{PrefixSeriesEnrollment, "series_enrollments"},
 	}
 }
 

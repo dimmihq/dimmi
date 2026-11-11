@@ -172,6 +172,9 @@ func bootSurfaces(ctx context.Context, a *app.App) error {
 	if err := bootBroadcasts(a); err != nil {
 		return err
 	}
+	if err := bootSeries(a); err != nil {
+		return err
+	}
 	if err := bootAI(ctx, a); err != nil {
 		return err
 	}

@@ -1,0 +1,280 @@
+[
+  {
+    "name": "Onboarding: first week",
+    "subject": "contact",
+    "spec": {
+      "entry": {
+        "rules": {
+          "rules": {
+            "field": "contact.custom.plan",
+            "op": "eq",
+            "value": "free"
+          }
+        },
+        "include_existing": true,
+        "reentry": {
+          "kind": "once"
+        }
+      },
+      "exit": {
+        "on_goal": true,
+        "on_reply": true
+      },
+      "goal": {
+        "event": "messenger_installed",
+        "days": 14
+      },
+      "nodes": [
+        {
+          "id": "entry",
+          "kind": "entry"
+        },
+        {
+          "id": "welcome",
+          "kind": "email",
+          "settings": {
+            "subject": "Welcome to Acme: three things to do first",
+            "body": "Hi {{ contact.first_name | default: \"there\" }},\n\nMost teams get value in their first hour: install the messenger, connect your inbox, invite a teammate."
+          }
+        },
+        {
+          "id": "wait-2d",
+          "kind": "wait",
+          "settings": {
+            "mode": "duration",
+            "amount": 2,
+            "unit": "days"
+          }
+        },
+        {
+          "id": "installed",
+          "kind": "condition",
+          "settings": {
+            "paths": [
+              {
+                "id": "yes",
+                "label": "Upgraded",
+                "rules": {
+                  "rules": {
+                    "field": "contact.custom.plan",
+                    "op": "eq",
+                    "value": "pro"
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "id": "tips",
+          "kind": "chat",
+          "settings": {
+            "body": "Nice work getting set up. Want me to set up your first workflow?"
+          }
+        },
+        {
+          "id": "ab",
+          "kind": "split",
+          "settings": {
+            "variants": [
+              {
+                "id": "short",
+                "label": "Short",
+                "weight": 50
+              },
+              {
+                "id": "long",
+                "label": "Long",
+                "weight": 50
+              }
+            ]
+          }
+        },
+        {
+          "id": "nudge-short",
+          "kind": "email",
+          "settings": {
+            "subject": "Two minutes to your messenger",
+            "body": "Hi {{ contact.first_name | default: \"there\" }},\n\nPaste one line before the closing body tag. Reply if you get stuck."
+          }
+        },
+        {
+          "id": "nudge-long",
+          "kind": "email",
+          "settings": {
+            "subject": "Your messenger, step by step",
+            "body": "Hi {{ contact.first_name | default: \"there\" }},\n\nHere is everything you need, from the snippet to the WordPress plugin."
+          }
+        }
+      ],
+      "edges": [
+        {
+          "from": "entry",
+          "path": "next",
+          "to": "welcome"
+        },
+        {
+          "from": "welcome",
+          "path": "next",
+          "to": "wait-2d"
+        },
+        {
+          "from": "wait-2d",
+          "path": "next",
+          "to": "installed"
+        },
+        {
+          "from": "installed",
+          "path": "yes",
+          "to": "tips"
+        },
+        {
+          "from": "installed",
+          "path": "else",
+          "to": "ab"
+        },
+        {
+          "from": "ab",
+          "path": "short",
+          "to": "nudge-short"
+        },
+        {
+          "from": "ab",
+          "path": "long",
+          "to": "nudge-long"
+        }
+      ]
+    }
+  },
+  {
+    "name": "Trial ending",
+    "subject": "contact",
+    "spec": {
+      "entry": {
+        "rules": {
+          "rules": {
+            "field": "contact.custom.plan",
+            "op": "eq",
+            "value": "pro"
+          }
+        },
+        "include_existing": true,
+        "reentry": {
+          "kind": "once"
+        }
+      },
+      "exit": {
+        "on_unsubscribe": true
+      },
+      "nodes": [
+        {
+          "id": "entry",
+          "kind": "entry"
+        },
+        {
+          "id": "soon",
+          "kind": "wait",
+          "settings": {
+            "mode": "duration",
+            "amount": 3,
+            "unit": "days"
+          }
+        },
+        {
+          "id": "remind",
+          "kind": "email",
+          "settings": {
+            "subject": "Your trial ends soon",
+            "body": "Hi {{ contact.first_name | default: \"there\" }},\n\nYour trial ends this week. Reply with any question."
+          }
+        }
+      ],
+      "edges": [
+        {
+          "from": "entry",
+          "path": "next",
+          "to": "soon"
+        },
+        {
+          "from": "soon",
+          "path": "next",
+          "to": "remind"
+        }
+      ]
+    }
+  },
+  {
+    "name": "Enterprise renewal",
+    "subject": "company",
+    "spec": {
+      "entry": {
+        "rules": {
+          "rules": {
+            "field": "company.custom.plan",
+            "op": "eq",
+            "value": "enterprise"
+          }
+        },
+        "include_existing": true,
+        "reentry": {
+          "kind": "once"
+        }
+      },
+      "exit": {},
+      "nodes": [
+        {
+          "id": "entry",
+          "kind": "entry"
+        },
+        {
+          "id": "admins",
+          "kind": "email",
+          "settings": {
+            "subject": "Your renewal is coming up",
+            "body": "Hi {{ contact.first_name | default: \"there\" }},\n\n{{ company.name }} renews next month.",
+            "recipients": {
+              "rules": {
+                "field": "contact.custom.role",
+                "op": "eq",
+                "value": "admin"
+              }
+            }
+          }
+        },
+        {
+          "id": "wait",
+          "kind": "wait",
+          "settings": {
+            "mode": "duration",
+            "amount": 7,
+            "unit": "days"
+          }
+        },
+        {
+          "id": "channel",
+          "kind": "slack",
+          "settings": {
+            "body": "Your renewal is coming up. Questions? Reply in this thread."
+          }
+        }
+      ],
+      "edges": [
+        {
+          "from": "entry",
+          "path": "next",
+          "to": "admins"
+        },
+        {
+          "from": "admins",
+          "path": "next",
+          "to": "wait"
+        },
+        {
+          "from": "wait",
+          "path": "next",
+          "to": "channel"
+        }
+      ]
+    }
+  }
+]

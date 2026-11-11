@@ -46,6 +46,7 @@ type Config struct {
 	Widget     WidgetConfig     `koanf:"widget"`
 	Contacts   ContactsConfig   `koanf:"contacts"`
 	Broadcasts BroadcastsConfig `koanf:"broadcasts"`
+	Series     SeriesConfig     `koanf:"series"`
 	Identity   IdentityConfig   `koanf:"identity"`
 
 	HelpCenters HelpCentersConfig `koanf:"help_centers"`

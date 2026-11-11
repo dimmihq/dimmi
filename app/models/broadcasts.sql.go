@@ -33,7 +33,7 @@ func (q *Queries) CountBroadcastLinkClick(ctx context.Context, arg CountBroadcas
 const createBroadcast = `-- name: CreateBroadcast :one
 INSERT INTO broadcasts (workspace_id, name, channel, sender_member_id, created_by_member_id, created_at, updated_at)
 VALUES ($1, $2, $3, $4, $4, $5::timestamptz, $5::timestamptz)
-RETURNING id, workspace_id, name, channel, status, pause_reason, audience_id, rules, room_ids, topic_id, service, subject, preview, body, sender_member_id, email_address_id, slack_as, reply_team_id, reply_member_id, ai_replies, track_clicks, skip_frequency_cap, schedule_kind, scheduled_at, goal, counts, created_by_member_id, sent_by_member_id, started_at, finished_at, deleted_at, created_at, updated_at
+RETURNING id, workspace_id, name, channel, status, pause_reason, audience_id, rules, room_ids, topic_id, service, subject, preview, body, sender_member_id, email_address_id, slack_as, reply_team_id, reply_member_id, ai_replies, track_clicks, skip_frequency_cap, schedule_kind, scheduled_at, goal, counts, created_by_member_id, sent_by_member_id, started_at, finished_at, deleted_at, created_at, updated_at, kind, series_id, series_node_id
 `
 
 type CreateBroadcastParams struct {
@@ -88,6 +88,9 @@ func (q *Queries) CreateBroadcast(ctx context.Context, arg CreateBroadcastParams
 		&i.DeletedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.Kind,
+		&i.SeriesID,
+		&i.SeriesNodeID,
 	)
 	return i, err
 }
@@ -113,7 +116,7 @@ func (q *Queries) DeleteBroadcast(ctx context.Context, arg DeleteBroadcastParams
 }
 
 const findBroadcast = `-- name: FindBroadcast :one
-SELECT id, workspace_id, name, channel, status, pause_reason, audience_id, rules, room_ids, topic_id, service, subject, preview, body, sender_member_id, email_address_id, slack_as, reply_team_id, reply_member_id, ai_replies, track_clicks, skip_frequency_cap, schedule_kind, scheduled_at, goal, counts, created_by_member_id, sent_by_member_id, started_at, finished_at, deleted_at, created_at, updated_at FROM broadcasts WHERE workspace_id = $1 AND id = $2 AND deleted_at IS NULL
+SELECT id, workspace_id, name, channel, status, pause_reason, audience_id, rules, room_ids, topic_id, service, subject, preview, body, sender_member_id, email_address_id, slack_as, reply_team_id, reply_member_id, ai_replies, track_clicks, skip_frequency_cap, schedule_kind, scheduled_at, goal, counts, created_by_member_id, sent_by_member_id, started_at, finished_at, deleted_at, created_at, updated_at, kind, series_id, series_node_id FROM broadcasts WHERE workspace_id = $1 AND id = $2 AND deleted_at IS NULL
 `
 
 type FindBroadcastParams struct {
@@ -159,6 +162,9 @@ func (q *Queries) FindBroadcast(ctx context.Context, arg FindBroadcastParams) (B
 		&i.DeletedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.Kind,
+		&i.SeriesID,
+		&i.SeriesNodeID,
 	)
 	return i, err
 }
@@ -247,7 +253,8 @@ func (q *Queries) InsertBroadcastLink(ctx context.Context, arg InsertBroadcastLi
 }
 
 const listActiveBroadcasts = `-- name: ListActiveBroadcasts :many
-SELECT id, workspace_id, name, channel, status, pause_reason, audience_id, rules, room_ids, topic_id, service, subject, preview, body, sender_member_id, email_address_id, slack_as, reply_team_id, reply_member_id, ai_replies, track_clicks, skip_frequency_cap, schedule_kind, scheduled_at, goal, counts, created_by_member_id, sent_by_member_id, started_at, finished_at, deleted_at, created_at, updated_at FROM broadcasts WHERE workspace_id = $1 AND status IN ('scheduled', 'sending') AND deleted_at IS NULL
+SELECT id, workspace_id, name, channel, status, pause_reason, audience_id, rules, room_ids, topic_id, service, subject, preview, body, sender_member_id, email_address_id, slack_as, reply_team_id, reply_member_id, ai_replies, track_clicks, skip_frequency_cap, schedule_kind, scheduled_at, goal, counts, created_by_member_id, sent_by_member_id, started_at, finished_at, deleted_at, created_at, updated_at, kind, series_id, series_node_id FROM broadcasts
+WHERE workspace_id = $1 AND status IN ('scheduled', 'sending') AND kind = 'one_off' AND deleted_at IS NULL
 `
 
 // ListActiveBroadcasts returns the workspace's broadcasts that are
@@ -295,6 +302,9 @@ func (q *Queries) ListActiveBroadcasts(ctx context.Context, workspaceID ids.UUID
 			&i.DeletedAt,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.Kind,
+			&i.SeriesID,
+			&i.SeriesNodeID,
 		); err != nil {
 			return nil, err
 		}
@@ -343,8 +353,8 @@ func (q *Queries) ListBroadcastLinks(ctx context.Context, arg ListBroadcastLinks
 }
 
 const listBroadcastPage = `-- name: ListBroadcastPage :many
-SELECT id, workspace_id, name, channel, status, pause_reason, audience_id, rules, room_ids, topic_id, service, subject, preview, body, sender_member_id, email_address_id, slack_as, reply_team_id, reply_member_id, ai_replies, track_clicks, skip_frequency_cap, schedule_kind, scheduled_at, goal, counts, created_by_member_id, sent_by_member_id, started_at, finished_at, deleted_at, created_at, updated_at FROM broadcasts
-WHERE workspace_id = $1 AND deleted_at IS NULL
+SELECT id, workspace_id, name, channel, status, pause_reason, audience_id, rules, room_ids, topic_id, service, subject, preview, body, sender_member_id, email_address_id, slack_as, reply_team_id, reply_member_id, ai_replies, track_clicks, skip_frequency_cap, schedule_kind, scheduled_at, goal, counts, created_by_member_id, sent_by_member_id, started_at, finished_at, deleted_at, created_at, updated_at, kind, series_id, series_node_id FROM broadcasts
+WHERE workspace_id = $1 AND deleted_at IS NULL AND kind = 'one_off'
   AND ($2::text IS NULL OR status = $2::text)
   AND ($3::text IS NULL OR channel = $3::text)
   AND ($4::text IS NULL OR strpos(lower(name), lower($4::text)) > 0)
@@ -413,6 +423,9 @@ func (q *Queries) ListBroadcastPage(ctx context.Context, arg ListBroadcastPagePa
 			&i.DeletedAt,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.Kind,
+			&i.SeriesID,
+			&i.SeriesNodeID,
 		); err != nil {
 			return nil, err
 		}
@@ -425,8 +438,8 @@ func (q *Queries) ListBroadcastPage(ctx context.Context, arg ListBroadcastPagePa
 }
 
 const listGoalBroadcasts = `-- name: ListGoalBroadcasts :many
-SELECT id, workspace_id, name, channel, status, pause_reason, audience_id, rules, room_ids, topic_id, service, subject, preview, body, sender_member_id, email_address_id, slack_as, reply_team_id, reply_member_id, ai_replies, track_clicks, skip_frequency_cap, schedule_kind, scheduled_at, goal, counts, created_by_member_id, sent_by_member_id, started_at, finished_at, deleted_at, created_at, updated_at FROM broadcasts
-WHERE workspace_id = $1 AND goal IS NOT NULL AND started_at >= $2::timestamptz AND deleted_at IS NULL
+SELECT id, workspace_id, name, channel, status, pause_reason, audience_id, rules, room_ids, topic_id, service, subject, preview, body, sender_member_id, email_address_id, slack_as, reply_team_id, reply_member_id, ai_replies, track_clicks, skip_frequency_cap, schedule_kind, scheduled_at, goal, counts, created_by_member_id, sent_by_member_id, started_at, finished_at, deleted_at, created_at, updated_at, kind, series_id, series_node_id FROM broadcasts
+WHERE workspace_id = $1 AND kind = 'one_off' AND goal IS NOT NULL AND started_at >= $2::timestamptz AND deleted_at IS NULL
 `
 
 type ListGoalBroadcastsParams struct {
@@ -479,6 +492,9 @@ func (q *Queries) ListGoalBroadcasts(ctx context.Context, arg ListGoalBroadcasts
 			&i.DeletedAt,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.Kind,
+			&i.SeriesID,
+			&i.SeriesNodeID,
 		); err != nil {
 			return nil, err
 		}
@@ -491,7 +507,7 @@ func (q *Queries) ListGoalBroadcasts(ctx context.Context, arg ListGoalBroadcasts
 }
 
 const lockBroadcast = `-- name: LockBroadcast :one
-SELECT id, workspace_id, name, channel, status, pause_reason, audience_id, rules, room_ids, topic_id, service, subject, preview, body, sender_member_id, email_address_id, slack_as, reply_team_id, reply_member_id, ai_replies, track_clicks, skip_frequency_cap, schedule_kind, scheduled_at, goal, counts, created_by_member_id, sent_by_member_id, started_at, finished_at, deleted_at, created_at, updated_at FROM broadcasts WHERE workspace_id = $1 AND id = $2 AND deleted_at IS NULL FOR UPDATE
+SELECT id, workspace_id, name, channel, status, pause_reason, audience_id, rules, room_ids, topic_id, service, subject, preview, body, sender_member_id, email_address_id, slack_as, reply_team_id, reply_member_id, ai_replies, track_clicks, skip_frequency_cap, schedule_kind, scheduled_at, goal, counts, created_by_member_id, sent_by_member_id, started_at, finished_at, deleted_at, created_at, updated_at, kind, series_id, series_node_id FROM broadcasts WHERE workspace_id = $1 AND id = $2 AND deleted_at IS NULL FOR UPDATE
 `
 
 type LockBroadcastParams struct {
@@ -537,6 +553,9 @@ func (q *Queries) LockBroadcast(ctx context.Context, arg LockBroadcastParams) (B
 		&i.DeletedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.Kind,
+		&i.SeriesID,
+		&i.SeriesNodeID,
 	)
 	return i, err
 }
@@ -549,7 +568,7 @@ UPDATE broadcasts SET name = $1, audience_id = $2, rules = $3,
     ai_replies = $15, track_clicks = $16, skip_frequency_cap = $17,
     schedule_kind = $18, scheduled_at = $19, goal = $20, updated_at = $21::timestamptz
 WHERE workspace_id = $22 AND id = $23 AND deleted_at IS NULL AND status IN ('draft', 'scheduled')
-RETURNING id, workspace_id, name, channel, status, pause_reason, audience_id, rules, room_ids, topic_id, service, subject, preview, body, sender_member_id, email_address_id, slack_as, reply_team_id, reply_member_id, ai_replies, track_clicks, skip_frequency_cap, schedule_kind, scheduled_at, goal, counts, created_by_member_id, sent_by_member_id, started_at, finished_at, deleted_at, created_at, updated_at
+RETURNING id, workspace_id, name, channel, status, pause_reason, audience_id, rules, room_ids, topic_id, service, subject, preview, body, sender_member_id, email_address_id, slack_as, reply_team_id, reply_member_id, ai_replies, track_clicks, skip_frequency_cap, schedule_kind, scheduled_at, goal, counts, created_by_member_id, sent_by_member_id, started_at, finished_at, deleted_at, created_at, updated_at, kind, series_id, series_node_id
 `
 
 type SaveBroadcastDraftParams struct {
@@ -641,6 +660,9 @@ func (q *Queries) SaveBroadcastDraft(ctx context.Context, arg SaveBroadcastDraft
 		&i.DeletedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.Kind,
+		&i.SeriesID,
+		&i.SeriesNodeID,
 	)
 	return i, err
 }
@@ -666,7 +688,7 @@ UPDATE broadcasts SET status = $1, pause_reason = $2,
     sent_by_member_id = COALESCE($3, sent_by_member_id),
     started_at = COALESCE(started_at, $4), finished_at = $5, updated_at = $6::timestamptz
 WHERE workspace_id = $7 AND id = $8 AND deleted_at IS NULL
-RETURNING id, workspace_id, name, channel, status, pause_reason, audience_id, rules, room_ids, topic_id, service, subject, preview, body, sender_member_id, email_address_id, slack_as, reply_team_id, reply_member_id, ai_replies, track_clicks, skip_frequency_cap, schedule_kind, scheduled_at, goal, counts, created_by_member_id, sent_by_member_id, started_at, finished_at, deleted_at, created_at, updated_at
+RETURNING id, workspace_id, name, channel, status, pause_reason, audience_id, rules, room_ids, topic_id, service, subject, preview, body, sender_member_id, email_address_id, slack_as, reply_team_id, reply_member_id, ai_replies, track_clicks, skip_frequency_cap, schedule_kind, scheduled_at, goal, counts, created_by_member_id, sent_by_member_id, started_at, finished_at, deleted_at, created_at, updated_at, kind, series_id, series_node_id
 `
 
 type SetBroadcastStatusParams struct {
@@ -728,6 +750,9 @@ func (q *Queries) SetBroadcastStatus(ctx context.Context, arg SetBroadcastStatus
 		&i.DeletedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.Kind,
+		&i.SeriesID,
+		&i.SeriesNodeID,
 	)
 	return i, err
 }

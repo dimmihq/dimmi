@@ -96,6 +96,7 @@ func API(a *app.App) {
 			procedureRoutes(workspace, a)
 			audienceRoutes(workspace, a)
 			broadcastRoutes(workspace, a)
+			seriesRoutes(workspace, a)
 			attributeRoutes(workspace, a)
 			eventRoutes(workspace, a)
 			slackChannelRoutes(workspace, a)

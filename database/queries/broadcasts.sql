@@ -16,7 +16,7 @@ SELECT * FROM broadcasts WHERE workspace_id = @workspace_id AND id = @id AND del
 -- ListBroadcastPage returns a page of the workspace's broadcasts, newest
 -- first, narrowed by status, channel and name.
 SELECT * FROM broadcasts
-WHERE workspace_id = @workspace_id AND deleted_at IS NULL
+WHERE workspace_id = @workspace_id AND deleted_at IS NULL AND kind = 'one_off'
   AND (sqlc.narg(status)::text IS NULL OR status = sqlc.narg(status)::text)
   AND (sqlc.narg(channel)::text IS NULL OR channel = sqlc.narg(channel)::text)
   AND (sqlc.narg(search)::text IS NULL OR strpos(lower(name), lower(sqlc.narg(search)::text)) > 0)
@@ -57,7 +57,8 @@ UPDATE broadcasts SET counts = @counts WHERE workspace_id = @workspace_id AND id
 -- name: ListActiveBroadcasts :many
 -- ListActiveBroadcasts returns the workspace's broadcasts that are
 -- scheduled or sending, so a sweep can restart any whose job was lost.
-SELECT * FROM broadcasts WHERE workspace_id = @workspace_id AND status IN ('scheduled', 'sending') AND deleted_at IS NULL;
+SELECT * FROM broadcasts
+WHERE workspace_id = @workspace_id AND status IN ('scheduled', 'sending') AND kind = 'one_off' AND deleted_at IS NULL;
 
 -- name: InsertBroadcastLink :exec
 -- InsertBroadcastLink records a link a broadcast tracks.
@@ -90,4 +91,4 @@ WHERE m.workspace_id = @workspace_id AND m.id = @id;
 -- ListGoalBroadcasts returns the broadcasts with a goal that started
 -- since the time, whose goal window may still be open.
 SELECT * FROM broadcasts
-WHERE workspace_id = @workspace_id AND goal IS NOT NULL AND started_at >= @since::timestamptz AND deleted_at IS NULL;
+WHERE workspace_id = @workspace_id AND kind = 'one_off' AND goal IS NOT NULL AND started_at >= @since::timestamptz AND deleted_at IS NULL;

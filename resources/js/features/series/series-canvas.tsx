@@ -1,14 +1,16 @@
 /*
  * The series canvas, on React Flow, drawn the way the workflow canvas
- * is: who enters on top, each step under the one before it, and a check
- * splitting into its two paths, each line carrying the path's name.
- * Cards are the same secondary cards with a tinted mark; the selected
- * one wears the accent ring. With results on, every card adds what its
- * step did: how many it was sent to and what they did, or how many are
- * waiting on it now, opening below the card as results turn on. Places come from d3's tidy tree, so the series
- * always reads top to bottom and a path never crosses another.
+ * is: who enters on top, each step under the one before it, and a step
+ * with several paths splitting into them, each line carrying the path's
+ * name. Where two paths meet again, the second shows a small card that
+ * says where it continues. Every path that leads nowhere yet ends in a
+ * plus that adds a step there. Cards are secondary cards with a tinted
+ * mark; the selected one wears the accent ring and one with something
+ * missing a warning line. With results on, every card adds what its
+ * step did. Places come from d3's tidy tree, so the series always reads
+ * top to bottom.
  */
-import { RiAddLine, RiFocus3Line, RiSubtractLine } from "@remixicon/react";
+import { RiAddLine, RiCornerDownRightLine, RiErrorWarningLine, RiFocus3Line, RiSubtractLine } from "@remixicon/react";
 import {
   Background,
   BackgroundVariant,
@@ -28,30 +30,37 @@ import {
   useReactFlow,
 } from "@xyflow/react";
 import { hierarchy, tree } from "d3-hierarchy";
-import { createContext, useContext, useMemo, useRef } from "react";
+import { createContext, useContext, useMemo } from "react";
 
 import { IconButton } from "@/components/base/buttons/icon-button";
 import { KindMark } from "@/features/automation/parts";
 import { useWide } from "@/features/shell/use-wide";
+import type { SeriesNode, SeriesProblem, SeriesReport, SeriesSpec } from "@/lib/api/series";
 import { formatNumber } from "@/lib/i18n/format";
 import { cx } from "@/utils/cx";
 
-import { nodeLook } from "./looks";
+import { nodeLook, percent } from "./looks";
+import { isMessage, optionalPaths, pathsOf, summary, targetOf } from "./model";
 import { Unfold } from "./motion";
-import { percent, type SeriesNode } from "./sample";
 
 const cardWidth = 264;
 const rowHeight = 160;
 const columnGap = 48;
 
 type CardNode = Node<{ node: SeriesNode }, "card">;
-type AddNode = Node<{ node?: undefined }, "add">;
+type AddNode = Node<{ from: string; path: string }, "add">;
+type JoinNode = Node<{ to: string }, "join">;
 type PathEdge = Edge<{ label?: string }, "path">;
 
-interface Moves {
+export interface Moves {
   selected: string;
   results: boolean;
+  editable: boolean;
+  spec: SeriesSpec;
+  report?: SeriesReport;
+  problems: SeriesProblem[];
   onSelect: (id: string) => void;
+  onAdd: (from: string, path: string) => void;
 }
 
 const MovesContext = createContext<Moves | null>(null);
@@ -68,36 +77,35 @@ function useMoves(): Moves {
 /*
  * resultLine says in one line what a step did while the series ran.
  */
-function resultLine(node: SeriesNode): string {
-  const stats = node.stats;
-  if (!stats) {
+function resultLine(node: SeriesNode, report?: SeriesReport): string {
+  const step = report?.steps[node.id];
+  if (!step) {
     return "No one here yet";
   }
   if (node.kind === "entry") {
-    return `${formatNumber(stats.reached)} entered`;
+    return `${formatNumber(step.reached)} entered`;
   }
-  if (node.kind === "wait") {
-    return `${formatNumber(stats.waiting ?? 0)} waiting now`;
+  if (step.waiting > 0) {
+    return `${formatNumber(step.reached)} reached · ${formatNumber(step.waiting)} here now`;
   }
-  if (node.kind === "branch") {
-    const [yes, no] = node.next ?? [];
-    return `${formatNumber(yes?.stats?.reached ?? 0)} yes · ${formatNumber(no?.stats?.reached ?? 0)} no`;
+  if (isMessage(node.kind) && step.message) {
+    const sent = step.message.sent ?? 0;
+    return `${formatNumber(sent)} sent · ${percent(step.message.opened ?? 0, sent)} opened · ${percent(step.message.replied ?? 0, sent)} replied`;
   }
-  if (stats.sent === undefined) {
-    return `${formatNumber(stats.reached)} people`;
+  const paths = Object.entries(step.paths);
+  if (paths.length > 1) {
+    const labels = new Map(pathsOf(node).map((p) => [p.id, p.label]));
+    return paths.map(([id, n]) => `${formatNumber(n)} ${labels.get(id) ?? id}`).join(" · ");
   }
-  const action =
-    stats.replied === undefined
-      ? `${percent(stats.clicked ?? 0, stats.sent)} clicked`
-      : `${percent(stats.replied, stats.sent)} replied`;
 
-  return `${formatNumber(stats.sent)} sent · ${percent(stats.opened ?? 0, stats.sent)} opened · ${action}`;
+  return `${formatNumber(step.reached)} reached`;
 }
 
 function Card({ id, data }: NodeProps<CardNode>) {
   const moves = useMoves();
   const look = nodeLook[data.node.kind];
   const selected = moves.selected === id;
+  const missing = moves.problems.some((p) => p.node_id === id);
 
   return (
     <>
@@ -105,6 +113,7 @@ function Card({ id, data }: NodeProps<CardNode>) {
       <button
         type="button"
         aria-pressed={selected}
+        aria-label={`${look.name}: ${summary(data.node, moves.spec)}`}
         onClick={() => moves.onSelect(id)}
         className={cx(
           "pointer-events-auto flex w-[264px] cursor-pointer flex-col gap-2 rounded-2xl bg-background-secondary-default p-3 text-start outline-none",
@@ -116,11 +125,14 @@ function Card({ id, data }: NodeProps<CardNode>) {
         <span className="flex items-center gap-2">
           <KindMark icon={look.icon} tint={look.tint} size="sm" />
           <span className="flex-1 text-body-2-medium text-text-secondary">{look.name}</span>
+          {missing ? (
+            <RiErrorWarningLine aria-label="Something is missing" className="size-4 text-text-error-primary" />
+          ) : null}
         </span>
-        <span className="line-clamp-2 text-body-regular text-text-primary">{data.node.summary}</span>
+        <span className="line-clamp-2 text-body-regular text-text-primary">{summary(data.node, moves.spec)}</span>
         <Unfold shown={moves.results} className="-mt-2">
           <span className="mt-2 block border-t border-separator-border pt-2 text-caption-1-medium text-text-secondary tabular-nums">
-            {resultLine(data.node)}
+            {resultLine(data.node, moves.report)}
           </span>
         </Unfold>
       </button>
@@ -129,16 +141,40 @@ function Card({ id, data }: NodeProps<CardNode>) {
   );
 }
 
-function Plus() {
+function Plus({ data }: NodeProps<AddNode>) {
+  const moves = useMoves();
+
   return (
     <>
       <Handle type="target" position={Position.Top} isConnectable={false} className="invisible" />
-      <span
-        aria-hidden
-        className="pointer-events-auto flex size-7 items-center justify-center rounded-full border border-border-button-default bg-background-primary-default text-foreground-icon-secondary shadow-xs"
+      <button
+        type="button"
+        aria-label="Add a step"
+        disabled={!moves.editable}
+        onClick={() => moves.onAdd(data.from, data.path)}
+        className="pointer-events-auto flex size-7 cursor-pointer items-center justify-center rounded-full border border-border-button-default bg-background-primary-default text-foreground-icon-secondary shadow-xs outline-none transition-colors duration-150 hover:bg-background-secondary-hover focus-visible:ring-2 focus-visible:ring-border-focus-ring disabled:cursor-default disabled:opacity-60"
       >
-        <RiAddLine className="size-4" />
-      </span>
+        <RiAddLine aria-hidden className="size-4" />
+      </button>
+    </>
+  );
+}
+
+function Join({ data }: NodeProps<JoinNode>) {
+  const moves = useMoves();
+  const target = moves.spec.nodes.find((n) => n.id === data.to);
+
+  return (
+    <>
+      <Handle type="target" position={Position.Top} isConnectable={false} className="invisible" />
+      <button
+        type="button"
+        onClick={() => moves.onSelect(data.to)}
+        className="pointer-events-auto flex w-[264px] cursor-pointer items-center gap-2 rounded-xl border border-border-button-default bg-background-primary-default px-3 py-2 text-start text-body-2-regular text-text-secondary outline-none hover:bg-background-secondary-hover focus-visible:ring-2 focus-visible:ring-border-focus-ring"
+      >
+        <RiCornerDownRightLine aria-hidden className="size-4 shrink-0 text-foreground-icon-tertiary rtl:-scale-x-100" />
+        <span className="truncate">Continues at {target ? summary(target, moves.spec) : data.to}</span>
+      </button>
     </>
   );
 }
@@ -172,46 +208,85 @@ function Line({ sourceX, sourceY, targetX, targetY, data }: EdgeProps<PathEdge>)
   );
 }
 
-const nodeTypes = { card: Card, add: Plus };
+const nodeTypes = { card: Card, add: Plus, join: Join };
 const edgeTypes = { path: Line };
 
-type Item = { node?: SeriesNode; id: string; children: Item[] };
+type Item =
+  | { kind: "card"; id: string; node: SeriesNode; label?: string; children: Item[] }
+  | { kind: "add"; id: string; from: string; path: string; label?: string; children: Item[] }
+  | { kind: "join"; id: string; to: string; label?: string; children: Item[] };
 
 /*
- * itemOf turns the series into the tree d3 lays out, ending every path
- * that does not leave the series with the add-step plus.
+ * itemOf turns the series' graph into the tree d3 lays out, from the
+ * step down: each path to a step not drawn yet becomes a child, a path
+ * to one drawn already a join card, and a path to nowhere a plus.
  */
-function itemOf(node: SeriesNode): Item {
-  const next = node.next ?? [];
-  const children =
-    next.length > 0 ? next.map(itemOf) : node.kind === "exit" ? [] : [{ id: `add:${node.id}`, children: [] }];
+function itemOf(spec: SeriesSpec, node: SeriesNode, placed: Set<string>, label?: string): Item {
+  placed.add(node.id);
+  const children: Item[] = [];
+  const optional = optionalPaths(node).filter((p) => targetOf(spec, node.id, p.id));
+  for (const p of [...pathsOf(node), ...optional]) {
+    const to = targetOf(spec, node.id, p.id);
+    const next = spec.nodes.find((n) => n.id === to);
+    if (!next) {
+      children.push({
+        kind: "add",
+        id: `add:${node.id}:${p.id}`,
+        from: node.id,
+        path: p.id,
+        label: p.label,
+        children: [],
+      });
+    } else if (placed.has(next.id)) {
+      children.push({ kind: "join", id: `join:${node.id}:${p.id}`, to: next.id, label: p.label, children: [] });
+    } else {
+      children.push(itemOf(spec, next, placed, p.label));
+    }
+  }
 
-  return { node, id: node.id, children };
+  return { kind: "card", id: node.id, node, label, children };
 }
 
-function useGraph(root: SeriesNode) {
+function useGraph(spec: SeriesSpec) {
   return useMemo(() => {
-    const laid = tree<Item>().nodeSize([cardWidth + columnGap, rowHeight])(hierarchy(itemOf(root)));
-    const nodes: (CardNode | AddNode)[] = laid.descendants().map((point) =>
-      point.data.node
-        ? {
-            id: point.data.id,
-            type: "card",
-            position: { x: point.x - cardWidth / 2, y: point.y },
-            data: { node: point.data.node },
-          }
-        : { id: point.data.id, type: "add", position: { x: point.x - 14, y: point.y }, data: {} },
-    );
+    const entry = spec.nodes.find((n) => n.kind === "entry") ?? { id: "entry", kind: "entry" as const };
+    const laid = tree<Item>().nodeSize([cardWidth + columnGap, rowHeight])(hierarchy(itemOf(spec, entry, new Set())));
+    const nodes: (CardNode | AddNode | JoinNode)[] = laid.descendants().map((point) => {
+      const item = point.data;
+      if (item.kind === "card") {
+        return {
+          id: item.id,
+          type: "card",
+          position: { x: point.x - cardWidth / 2, y: point.y },
+          data: { node: item.node },
+        };
+      }
+      if (item.kind === "join") {
+        return {
+          id: item.id,
+          type: "join",
+          position: { x: point.x - cardWidth / 2, y: point.y },
+          data: { to: item.to },
+        };
+      }
+
+      return {
+        id: item.id,
+        type: "add",
+        position: { x: point.x - 14, y: point.y },
+        data: { from: item.from, path: item.path },
+      };
+    });
     const edges: PathEdge[] = laid.links().map((link) => ({
       id: `${link.source.data.id}->${link.target.data.id}`,
       source: link.source.data.id,
       target: link.target.data.id,
       type: "path",
-      data: { label: link.target.data.node?.label },
+      data: { label: link.target.data.label },
     }));
 
     return { nodes, edges };
-  }, [root]);
+  }, [spec]);
 }
 
 function Zoom() {
@@ -236,21 +311,20 @@ function Zoom() {
   );
 }
 
-function Flow({ root, moves }: { root: SeriesNode; moves: Moves }) {
-  const { nodes, edges } = useGraph(root);
+function Flow({ moves }: { moves: Moves }) {
+  const { nodes, edges } = useGraph(moves.spec);
   const overview = useWide(768);
-  const frame = useRef<HTMLDivElement>(null);
 
   return (
     <MovesContext.Provider value={moves}>
-      <div ref={frame} className="relative min-h-0 flex-1">
+      <div className="relative min-h-0 flex-1">
         <ReactFlow
           aria-label="Series canvas"
           nodes={nodes}
           edges={edges}
           nodeTypes={nodeTypes}
           edgeTypes={edgeTypes}
-          onInit={(flow) => flow.setViewport({ x: (frame.current?.clientWidth ?? 0) / 2, y: 32, zoom: 0.9 })}
+          onInit={(flow) => void flow.fitView({ padding: 0.15, maxZoom: 0.9 })}
           nodesDraggable={false}
           nodesConnectable={false}
           nodesFocusable={false}
@@ -273,10 +347,10 @@ function Flow({ root, moves }: { root: SeriesNode; moves: Moves }) {
   );
 }
 
-export function SeriesCanvas({ root, moves }: { root: SeriesNode; moves: Moves }) {
+export function SeriesCanvas({ moves }: { moves: Moves }) {
   return (
     <ReactFlowProvider>
-      <Flow root={root} moves={moves} />
+      <Flow moves={moves} />
     </ReactFlowProvider>
   );
 }

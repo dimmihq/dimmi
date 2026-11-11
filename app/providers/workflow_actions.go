@@ -47,7 +47,7 @@ func bootWorkflows(a *app.App) {
 	a.Actions.Procedures = &procedures.Procedures{DB: a.DB, Clock: a.Clock, IDs: a.IDs}
 	a.Actions.Audiences = &audiences.Audiences{DB: a.DB, Clock: a.Clock, IDs: a.IDs}
 	a.Actions.Attributes = &attributes.Definitions{DB: a.DB, Clock: a.Clock, IDs: a.IDs}
-	a.Actions.Events = &events.Events{DB: a.DB, Cache: a.Cache, Clock: a.Clock, IDs: a.IDs}
+	a.Actions.Events = &events.Events{DB: a.DB, Cache: a.Cache, Clock: a.Clock, IDs: a.IDs, Dispatcher: a.Events}
 	a.Actions.ContactLists = &contactlists.Lists{DB: a.DB, Clock: a.Clock}
 }
 

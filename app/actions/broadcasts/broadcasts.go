@@ -73,7 +73,8 @@ var (
 Broadcasts holds every broadcast action. DB stores them, Clock dates
 them, Queue runs their jobs, Events tells open screens, Audiences
 resolves who matches, Config sets pace and limits, Senders reaches each
-channel, and Links signs the public links in what is sent.
+channel, Links signs the public links in what is sent, and Series
+hears about the recipients of series journeys.
 */
 type Broadcasts struct {
 	DB        *database.DB
@@ -84,6 +85,7 @@ type Broadcasts struct {
 	Config    config.BroadcastsConfig
 	Senders   map[string]Sender
 	Links     Links
+	Series    SeriesHook
 }
 
 /*

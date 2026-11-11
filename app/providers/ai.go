@@ -57,6 +57,9 @@ func bootAI(ctx context.Context, a *app.App) error {
 	cheap := &verdicts.Verdicts{DB: a.DB, Clock: a.Clock, LLM: a.LLM, Prices: runner.Prices}
 	a.Actions.Slack.Channel.Classifier = &verdicts.Requests{Verdicts: cheap}
 	a.Actions.Slack.Channel.Judge = &verdicts.Judge{Verdicts: cheap}
+	if a.Actions.Series != nil {
+		a.Actions.Series.Picker = &verdicts.Paths{Verdicts: cheap}
+	}
 	runner.Actions = &actionkit.Kit{
 		DB: a.DB, Clock: a.Clock, HTTP: a.HTTP, Keys: a.Keys, Events: a.Events, Queue: a.Queue,
 	}

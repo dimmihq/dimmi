@@ -6,9 +6,10 @@
  * change is saved to the working copy as it is made; publishing makes
  * that copy the version that runs. Steps with problems carry a mark, and
  * the problems count jumps to the first of them. Teammates who may only
- * read workflows see the same builder without anything to change. On
- * screens too narrow for both, the inspector opens in a drawer when a
- * card is picked, or from the header.
+ * read workflows see the same builder without anything to change.
+ * Picking a card, or the settings button, pushes the inspector out from
+ * the right in a pane that drags to any width; on screens too narrow for
+ * both, it opens in a drawer.
  */
 import { RiArrowLeftSLine, RiErrorWarningLine, RiSettings3Line } from "@remixicon/react";
 import { useQuery } from "@tanstack/react-query";
@@ -17,9 +18,9 @@ import { useMemo, useState } from "react";
 
 import { Button } from "@/components/base/buttons/button";
 import { IconButton } from "@/components/base/buttons/icon-button";
-import { Drawer } from "@/components/base/drawer/drawer";
 import { usePermission } from "@/features/settings/inboxes";
 import { Panel } from "@/features/shell/page";
+import { PushPane } from "@/features/shell/push-pane";
 import { useWide } from "@/features/shell/use-wide";
 import { agentQuery } from "@/lib/api/ai";
 import { tagsQuery } from "@/lib/api/tags";
@@ -139,8 +140,7 @@ export function WorkflowBuilder({ workspace, workflow }: { workspace: string; wo
   const [selected, setSelected] = useState<string>(triggerStep);
   const trigger = draft.spec.trigger as TriggerKind;
   const step = selected === triggerStep ? undefined : findStep(draft.spec.steps, selected);
-  const beside = useWide(1280);
-  const [drawer, setDrawer] = useState(false);
+  const [inspecting, setInspecting] = useState(useWide(1280));
   const issues = [...draft.report.errors, ...draft.report.warnings];
   const flagged = useMemo(
     () => new Set(draft.report.errors.flatMap((issue) => (issue.step_id ? [issue.step_id] : []))),
@@ -149,13 +149,13 @@ export function WorkflowBuilder({ workspace, workflow }: { workspace: string; wo
   const kinds = readOnly ? [] : readyKinds.filter((kind) => allowsStep(trigger, kind));
   const select = (id: string) => {
     setSelected(id);
-    setDrawer(!beside);
+    setInspecting(true);
   };
   const editSteps = (edit: (steps: Step[]) => Step[]) => draft.change((spec) => ({ ...spec, steps: edit(spec.steps) }));
   const remove = (id: string) => {
     editSteps((steps) => withoutStep(steps, id));
     setSelected(triggerStep);
-    setDrawer(false);
+    setInspecting(false);
   };
   const add = (path: string | null, kind: StepKind) => {
     const fresh = freshStep(kind);
@@ -188,53 +188,49 @@ export function WorkflowBuilder({ workspace, workflow }: { workspace: string; wo
     onEdit: edit,
   };
 
+  const canvas = (
+    <Panel label="Workflow" ground className="h-full w-full">
+      <header className="flex min-h-12 shrink-0 flex-wrap items-center justify-between gap-x-3 gap-y-1 ps-2.5 pe-2.5 pt-[7px]">
+        <div className="flex min-w-40 flex-1 items-center gap-2">
+          <Link
+            to="/d/workflows"
+            aria-label="Back to workflows"
+            className="flex size-8 shrink-0 items-center justify-center rounded-lg text-foreground-icon-secondary outline-none transition-colors duration-150 hover:bg-background-secondary-hover focus-visible:ring-2 focus-visible:ring-border-focus-ring"
+          >
+            <RiArrowLeftSLine aria-hidden className="size-5 rtl:-scale-x-100" />
+          </Link>
+          <h1 className="min-w-0 truncate text-body-medium text-text-primary">{draft.name || workflow.name}</h1>
+          <StatusChip status={draft.server.status} />
+          <span role="status" className="hidden truncate text-body-2-regular text-text-tertiary sm:inline">
+            {stateLine(draft.saveState, draft.server)}
+          </span>
+        </div>
+        <div className="ms-auto flex shrink-0 items-center gap-2">
+          <ProblemCount errors={draft.report.errors} onShow={(issue) => select(issue.step_id ?? triggerStep)} />
+          <IconButton
+            size="small"
+            icon={RiSettings3Line}
+            aria-label="Step settings"
+            onClick={() => setInspecting(!inspecting)}
+          />
+          <Actions draft={draft} readOnly={readOnly} />
+        </div>
+      </header>
+      <Canvas trigger={trigger} steps={draft.spec.steps} moves={moves} />
+    </Panel>
+  );
+
   return (
-    <div className="flex h-full min-h-0 min-w-0 flex-1 gap-3">
-      <Panel label="Workflow" ground className="h-full flex-1">
-        <header className="flex min-h-12 shrink-0 flex-wrap items-center justify-between gap-x-3 gap-y-1 ps-2.5 pe-2.5 pt-[7px]">
-          <div className="flex min-w-40 flex-1 items-center gap-2">
-            <Link
-              to="/d/workflows"
-              aria-label="Back to workflows"
-              className="flex size-8 shrink-0 items-center justify-center rounded-lg text-foreground-icon-secondary outline-none transition-colors duration-150 hover:bg-background-secondary-hover focus-visible:ring-2 focus-visible:ring-border-focus-ring"
-            >
-              <RiArrowLeftSLine aria-hidden className="size-5 rtl:-scale-x-100" />
-            </Link>
-            <h1 className="min-w-0 truncate text-body-medium text-text-primary">{draft.name || workflow.name}</h1>
-            <StatusChip status={draft.server.status} />
-            <span role="status" className="hidden truncate text-body-2-regular text-text-tertiary sm:inline">
-              {stateLine(draft.saveState, draft.server)}
-            </span>
-          </div>
-          <div className="ms-auto flex shrink-0 items-center gap-2">
-            <ProblemCount errors={draft.report.errors} onShow={(issue) => select(issue.step_id ?? triggerStep)} />
-            {beside ? null : (
-              <IconButton
-                size="small"
-                icon={RiSettings3Line}
-                aria-label="Step settings"
-                onClick={() => setDrawer(true)}
-              />
-            )}
-            <Actions draft={draft} readOnly={readOnly} />
-          </div>
-        </header>
-        <Canvas trigger={trigger} steps={draft.spec.steps} moves={moves} />
-      </Panel>
-      {beside ? (
-        <Inspector {...inspector} className="h-full w-[360px] shrink-0" />
-      ) : (
-        <Drawer
-          isOpen={drawer}
-          onOpenChange={setDrawer}
-          placement="end"
-          size="md"
-          aria-label="Step settings"
-          className="p-0"
-        >
-          <Inspector {...inspector} onClose={() => setDrawer(false)} className="h-full" />
-        </Drawer>
-      )}
+    <div className="flex h-full min-h-0 min-w-0 flex-1">
+      <PushPane
+        name="dimmi:workflow"
+        label="Step settings"
+        open={inspecting}
+        onOpenChange={setInspecting}
+        width={380}
+        main={canvas}
+        side={<Inspector {...inspector} onClose={() => setInspecting(false)} className="h-full w-full" />}
+      />
     </div>
   );
 }

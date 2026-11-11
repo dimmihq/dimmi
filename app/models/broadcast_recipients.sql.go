@@ -293,7 +293,7 @@ func (q *Queries) CountPacedBroadcastRecipients(ctx context.Context, arg CountPa
 }
 
 const findBroadcastRecipient = `-- name: FindBroadcastRecipient :one
-SELECT id, workspace_id, broadcast_id, contact_id, company_id, room_id, address, status, reason, reply_token, message_id_header, outbound_email_id, external_ref, conversation_id, attempts, due_at, sent_at, delivered_at, opened_at, clicked_at, replied_at, reacted_at, reactions, unsubscribed_at, converted_at, created_at, updated_at FROM broadcast_recipients WHERE workspace_id = $1 AND id = $2
+SELECT id, workspace_id, broadcast_id, contact_id, company_id, room_id, address, status, reason, reply_token, message_id_header, outbound_email_id, external_ref, conversation_id, attempts, due_at, sent_at, delivered_at, opened_at, clicked_at, replied_at, reacted_at, reactions, unsubscribed_at, converted_at, created_at, updated_at, series_enrollment_id, series_step_id FROM broadcast_recipients WHERE workspace_id = $1 AND id = $2
 `
 
 type FindBroadcastRecipientParams struct {
@@ -333,12 +333,14 @@ func (q *Queries) FindBroadcastRecipient(ctx context.Context, arg FindBroadcastR
 		&i.ConvertedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.SeriesEnrollmentID,
+		&i.SeriesStepID,
 	)
 	return i, err
 }
 
 const findBroadcastRecipientByConversation = `-- name: FindBroadcastRecipientByConversation :one
-SELECT id, workspace_id, broadcast_id, contact_id, company_id, room_id, address, status, reason, reply_token, message_id_header, outbound_email_id, external_ref, conversation_id, attempts, due_at, sent_at, delivered_at, opened_at, clicked_at, replied_at, reacted_at, reactions, unsubscribed_at, converted_at, created_at, updated_at FROM broadcast_recipients WHERE workspace_id = $1 AND conversation_id = $2 LIMIT 1
+SELECT id, workspace_id, broadcast_id, contact_id, company_id, room_id, address, status, reason, reply_token, message_id_header, outbound_email_id, external_ref, conversation_id, attempts, due_at, sent_at, delivered_at, opened_at, clicked_at, replied_at, reacted_at, reactions, unsubscribed_at, converted_at, created_at, updated_at, series_enrollment_id, series_step_id FROM broadcast_recipients WHERE workspace_id = $1 AND conversation_id = $2 LIMIT 1
 `
 
 type FindBroadcastRecipientByConversationParams struct {
@@ -379,12 +381,14 @@ func (q *Queries) FindBroadcastRecipientByConversation(ctx context.Context, arg 
 		&i.ConvertedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.SeriesEnrollmentID,
+		&i.SeriesStepID,
 	)
 	return i, err
 }
 
 const findBroadcastRecipientByMessageID = `-- name: FindBroadcastRecipientByMessageID :one
-SELECT id, workspace_id, broadcast_id, contact_id, company_id, room_id, address, status, reason, reply_token, message_id_header, outbound_email_id, external_ref, conversation_id, attempts, due_at, sent_at, delivered_at, opened_at, clicked_at, replied_at, reacted_at, reactions, unsubscribed_at, converted_at, created_at, updated_at FROM broadcast_recipients
+SELECT id, workspace_id, broadcast_id, contact_id, company_id, room_id, address, status, reason, reply_token, message_id_header, outbound_email_id, external_ref, conversation_id, attempts, due_at, sent_at, delivered_at, opened_at, clicked_at, replied_at, reacted_at, reactions, unsubscribed_at, converted_at, created_at, updated_at, series_enrollment_id, series_step_id FROM broadcast_recipients
 WHERE workspace_id = $1 AND message_id_header = ANY ($2::text[])
 LIMIT 1
 `
@@ -427,12 +431,14 @@ func (q *Queries) FindBroadcastRecipientByMessageID(ctx context.Context, arg Fin
 		&i.ConvertedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.SeriesEnrollmentID,
+		&i.SeriesStepID,
 	)
 	return i, err
 }
 
 const findBroadcastRecipientByOutboundEmail = `-- name: FindBroadcastRecipientByOutboundEmail :one
-SELECT id, workspace_id, broadcast_id, contact_id, company_id, room_id, address, status, reason, reply_token, message_id_header, outbound_email_id, external_ref, conversation_id, attempts, due_at, sent_at, delivered_at, opened_at, clicked_at, replied_at, reacted_at, reactions, unsubscribed_at, converted_at, created_at, updated_at FROM broadcast_recipients WHERE workspace_id = $1 AND outbound_email_id = $2
+SELECT id, workspace_id, broadcast_id, contact_id, company_id, room_id, address, status, reason, reply_token, message_id_header, outbound_email_id, external_ref, conversation_id, attempts, due_at, sent_at, delivered_at, opened_at, clicked_at, replied_at, reacted_at, reactions, unsubscribed_at, converted_at, created_at, updated_at, series_enrollment_id, series_step_id FROM broadcast_recipients WHERE workspace_id = $1 AND outbound_email_id = $2
 `
 
 type FindBroadcastRecipientByOutboundEmailParams struct {
@@ -473,12 +479,14 @@ func (q *Queries) FindBroadcastRecipientByOutboundEmail(ctx context.Context, arg
 		&i.ConvertedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.SeriesEnrollmentID,
+		&i.SeriesStepID,
 	)
 	return i, err
 }
 
 const findBroadcastRecipientByRef = `-- name: FindBroadcastRecipientByRef :one
-SELECT id, workspace_id, broadcast_id, contact_id, company_id, room_id, address, status, reason, reply_token, message_id_header, outbound_email_id, external_ref, conversation_id, attempts, due_at, sent_at, delivered_at, opened_at, clicked_at, replied_at, reacted_at, reactions, unsubscribed_at, converted_at, created_at, updated_at FROM broadcast_recipients
+SELECT id, workspace_id, broadcast_id, contact_id, company_id, room_id, address, status, reason, reply_token, message_id_header, outbound_email_id, external_ref, conversation_id, attempts, due_at, sent_at, delivered_at, opened_at, clicked_at, replied_at, reacted_at, reactions, unsubscribed_at, converted_at, created_at, updated_at, series_enrollment_id, series_step_id FROM broadcast_recipients
 WHERE workspace_id = $1 AND room_id = $2 AND external_ref = $3
 `
 
@@ -520,12 +528,14 @@ func (q *Queries) FindBroadcastRecipientByRef(ctx context.Context, arg FindBroad
 		&i.ConvertedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.SeriesEnrollmentID,
+		&i.SeriesStepID,
 	)
 	return i, err
 }
 
 const findBroadcastRecipientByReplyToken = `-- name: FindBroadcastRecipientByReplyToken :one
-SELECT id, workspace_id, broadcast_id, contact_id, company_id, room_id, address, status, reason, reply_token, message_id_header, outbound_email_id, external_ref, conversation_id, attempts, due_at, sent_at, delivered_at, opened_at, clicked_at, replied_at, reacted_at, reactions, unsubscribed_at, converted_at, created_at, updated_at FROM broadcast_recipients WHERE workspace_id = $1 AND reply_token = $2
+SELECT id, workspace_id, broadcast_id, contact_id, company_id, room_id, address, status, reason, reply_token, message_id_header, outbound_email_id, external_ref, conversation_id, attempts, due_at, sent_at, delivered_at, opened_at, clicked_at, replied_at, reacted_at, reactions, unsubscribed_at, converted_at, created_at, updated_at, series_enrollment_id, series_step_id FROM broadcast_recipients WHERE workspace_id = $1 AND reply_token = $2
 `
 
 type FindBroadcastRecipientByReplyTokenParams struct {
@@ -566,6 +576,8 @@ func (q *Queries) FindBroadcastRecipientByReplyToken(ctx context.Context, arg Fi
 		&i.ConvertedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.SeriesEnrollmentID,
+		&i.SeriesStepID,
 	)
 	return i, err
 }
@@ -701,7 +713,7 @@ WHERE id IN (
     LIMIT $5
     FOR UPDATE SKIP LOCKED
 )
-RETURNING id, workspace_id, broadcast_id, contact_id, company_id, room_id, address, status, reason, reply_token, message_id_header, outbound_email_id, external_ref, conversation_id, attempts, due_at, sent_at, delivered_at, opened_at, clicked_at, replied_at, reacted_at, reactions, unsubscribed_at, converted_at, created_at, updated_at
+RETURNING id, workspace_id, broadcast_id, contact_id, company_id, room_id, address, status, reason, reply_token, message_id_header, outbound_email_id, external_ref, conversation_id, attempts, due_at, sent_at, delivered_at, opened_at, clicked_at, replied_at, reacted_at, reactions, unsubscribed_at, converted_at, created_at, updated_at, series_enrollment_id, series_step_id
 `
 
 type LeaseDueBroadcastRecipientsParams struct {
@@ -758,6 +770,8 @@ func (q *Queries) LeaseDueBroadcastRecipients(ctx context.Context, arg LeaseDueB
 			&i.ConvertedAt,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.SeriesEnrollmentID,
+			&i.SeriesStepID,
 		); err != nil {
 			return nil, err
 		}
@@ -770,7 +784,7 @@ func (q *Queries) LeaseDueBroadcastRecipients(ctx context.Context, arg LeaseDueB
 }
 
 const listBroadcastRecipientPage = `-- name: ListBroadcastRecipientPage :many
-SELECT r.id, r.workspace_id, r.broadcast_id, r.contact_id, r.company_id, r.room_id, r.address, r.status, r.reason, r.reply_token, r.message_id_header, r.outbound_email_id, r.external_ref, r.conversation_id, r.attempts, r.due_at, r.sent_at, r.delivered_at, r.opened_at, r.clicked_at, r.replied_at, r.reacted_at, r.reactions, r.unsubscribed_at, r.converted_at, r.created_at, r.updated_at, coalesce(c.name, '')::text AS contact_name, coalesce(c.email, '')::text AS contact_email,
+SELECT r.id, r.workspace_id, r.broadcast_id, r.contact_id, r.company_id, r.room_id, r.address, r.status, r.reason, r.reply_token, r.message_id_header, r.outbound_email_id, r.external_ref, r.conversation_id, r.attempts, r.due_at, r.sent_at, r.delivered_at, r.opened_at, r.clicked_at, r.replied_at, r.reacted_at, r.reactions, r.unsubscribed_at, r.converted_at, r.created_at, r.updated_at, r.series_enrollment_id, r.series_step_id, coalesce(c.name, '')::text AS contact_name, coalesce(c.email, '')::text AS contact_email,
     coalesce(co.name, '')::text AS company_name, coalesce(cr.name, '')::text AS room_name
 FROM broadcast_recipients r
 LEFT JOIN contacts c ON c.id = r.contact_id
@@ -797,37 +811,39 @@ type ListBroadcastRecipientPageParams struct {
 }
 
 type ListBroadcastRecipientPageRow struct {
-	ID              ids.UUID   `json:"id"`
-	WorkspaceID     ids.UUID   `json:"workspace_id"`
-	BroadcastID     ids.UUID   `json:"broadcast_id"`
-	ContactID       *ids.UUID  `json:"contact_id"`
-	CompanyID       *ids.UUID  `json:"company_id"`
-	RoomID          *ids.UUID  `json:"room_id"`
-	Address         string     `json:"address"`
-	Status          string     `json:"status"`
-	Reason          *string    `json:"reason"`
-	ReplyToken      string     `json:"reply_token"`
-	MessageIDHeader *string    `json:"message_id_header"`
-	OutboundEmailID *ids.UUID  `json:"outbound_email_id"`
-	ExternalRef     *string    `json:"external_ref"`
-	ConversationID  *ids.UUID  `json:"conversation_id"`
-	Attempts        int32      `json:"attempts"`
-	DueAt           time.Time  `json:"due_at"`
-	SentAt          *time.Time `json:"sent_at"`
-	DeliveredAt     *time.Time `json:"delivered_at"`
-	OpenedAt        *time.Time `json:"opened_at"`
-	ClickedAt       *time.Time `json:"clicked_at"`
-	RepliedAt       *time.Time `json:"replied_at"`
-	ReactedAt       *time.Time `json:"reacted_at"`
-	Reactions       int32      `json:"reactions"`
-	UnsubscribedAt  *time.Time `json:"unsubscribed_at"`
-	ConvertedAt     *time.Time `json:"converted_at"`
-	CreatedAt       time.Time  `json:"created_at"`
-	UpdatedAt       time.Time  `json:"updated_at"`
-	ContactName     string     `json:"contact_name"`
-	ContactEmail    string     `json:"contact_email"`
-	CompanyName     string     `json:"company_name"`
-	RoomName        string     `json:"room_name"`
+	ID                 ids.UUID   `json:"id"`
+	WorkspaceID        ids.UUID   `json:"workspace_id"`
+	BroadcastID        ids.UUID   `json:"broadcast_id"`
+	ContactID          *ids.UUID  `json:"contact_id"`
+	CompanyID          *ids.UUID  `json:"company_id"`
+	RoomID             *ids.UUID  `json:"room_id"`
+	Address            string     `json:"address"`
+	Status             string     `json:"status"`
+	Reason             *string    `json:"reason"`
+	ReplyToken         string     `json:"reply_token"`
+	MessageIDHeader    *string    `json:"message_id_header"`
+	OutboundEmailID    *ids.UUID  `json:"outbound_email_id"`
+	ExternalRef        *string    `json:"external_ref"`
+	ConversationID     *ids.UUID  `json:"conversation_id"`
+	Attempts           int32      `json:"attempts"`
+	DueAt              time.Time  `json:"due_at"`
+	SentAt             *time.Time `json:"sent_at"`
+	DeliveredAt        *time.Time `json:"delivered_at"`
+	OpenedAt           *time.Time `json:"opened_at"`
+	ClickedAt          *time.Time `json:"clicked_at"`
+	RepliedAt          *time.Time `json:"replied_at"`
+	ReactedAt          *time.Time `json:"reacted_at"`
+	Reactions          int32      `json:"reactions"`
+	UnsubscribedAt     *time.Time `json:"unsubscribed_at"`
+	ConvertedAt        *time.Time `json:"converted_at"`
+	CreatedAt          time.Time  `json:"created_at"`
+	UpdatedAt          time.Time  `json:"updated_at"`
+	SeriesEnrollmentID *ids.UUID  `json:"series_enrollment_id"`
+	SeriesStepID       *ids.UUID  `json:"series_step_id"`
+	ContactName        string     `json:"contact_name"`
+	ContactEmail       string     `json:"contact_email"`
+	CompanyName        string     `json:"company_name"`
+	RoomName           string     `json:"room_name"`
 }
 
 // ListBroadcastRecipientPage returns a page of recipients with who they
@@ -876,6 +892,8 @@ func (q *Queries) ListBroadcastRecipientPage(ctx context.Context, arg ListBroadc
 			&i.ConvertedAt,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.SeriesEnrollmentID,
+			&i.SeriesStepID,
 			&i.ContactName,
 			&i.ContactEmail,
 			&i.CompanyName,
@@ -947,7 +965,7 @@ func (q *Queries) ListBroadcastRooms(ctx context.Context, arg ListBroadcastRooms
 }
 
 const listDeliveredBroadcastRecipients = `-- name: ListDeliveredBroadcastRecipients :many
-SELECT id, workspace_id, broadcast_id, contact_id, company_id, room_id, address, status, reason, reply_token, message_id_header, outbound_email_id, external_ref, conversation_id, attempts, due_at, sent_at, delivered_at, opened_at, clicked_at, replied_at, reacted_at, reactions, unsubscribed_at, converted_at, created_at, updated_at FROM broadcast_recipients
+SELECT id, workspace_id, broadcast_id, contact_id, company_id, room_id, address, status, reason, reply_token, message_id_header, outbound_email_id, external_ref, conversation_id, attempts, due_at, sent_at, delivered_at, opened_at, clicked_at, replied_at, reacted_at, reactions, unsubscribed_at, converted_at, created_at, updated_at, series_enrollment_id, series_step_id FROM broadcast_recipients
 WHERE workspace_id = $1 AND broadcast_id = $2 AND sent_at IS NOT NULL AND converted_at IS NULL
   AND contact_id IS NOT NULL AND id > $3
 ORDER BY id LIMIT 500
@@ -998,6 +1016,8 @@ func (q *Queries) ListDeliveredBroadcastRecipients(ctx context.Context, arg List
 			&i.ConvertedAt,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.SeriesEnrollmentID,
+			&i.SeriesStepID,
 		); err != nil {
 			return nil, err
 		}
@@ -1010,7 +1030,7 @@ func (q *Queries) ListDeliveredBroadcastRecipients(ctx context.Context, arg List
 }
 
 const listSentSlackBroadcastRecipients = `-- name: ListSentSlackBroadcastRecipients :many
-SELECT id, workspace_id, broadcast_id, contact_id, company_id, room_id, address, status, reason, reply_token, message_id_header, outbound_email_id, external_ref, conversation_id, attempts, due_at, sent_at, delivered_at, opened_at, clicked_at, replied_at, reacted_at, reactions, unsubscribed_at, converted_at, created_at, updated_at FROM broadcast_recipients
+SELECT id, workspace_id, broadcast_id, contact_id, company_id, room_id, address, status, reason, reply_token, message_id_header, outbound_email_id, external_ref, conversation_id, attempts, due_at, sent_at, delivered_at, opened_at, clicked_at, replied_at, reacted_at, reactions, unsubscribed_at, converted_at, created_at, updated_at, series_enrollment_id, series_step_id FROM broadcast_recipients
 WHERE workspace_id = $1 AND broadcast_id = $2 AND room_id IS NOT NULL
   AND external_ref IS NOT NULL AND status IN ('sent', 'delivered')
 ORDER BY id
@@ -1060,6 +1080,8 @@ func (q *Queries) ListSentSlackBroadcastRecipients(ctx context.Context, arg List
 			&i.ConvertedAt,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.SeriesEnrollmentID,
+			&i.SeriesStepID,
 		); err != nil {
 			return nil, err
 		}
@@ -1076,7 +1098,7 @@ UPDATE broadcast_recipients SET status = CASE WHEN status = 'sent' THEN 'deliver
     delivered_at = COALESCE(delivered_at, $1::timestamptz), opened_at = COALESCE(opened_at, $1::timestamptz),
     clicked_at = COALESCE(clicked_at, $1::timestamptz), updated_at = $1::timestamptz
 WHERE workspace_id = $2 AND id = $3 AND status IN ('sent', 'delivered')
-RETURNING id, workspace_id, broadcast_id, contact_id, company_id, room_id, address, status, reason, reply_token, message_id_header, outbound_email_id, external_ref, conversation_id, attempts, due_at, sent_at, delivered_at, opened_at, clicked_at, replied_at, reacted_at, reactions, unsubscribed_at, converted_at, created_at, updated_at
+RETURNING id, workspace_id, broadcast_id, contact_id, company_id, room_id, address, status, reason, reply_token, message_id_header, outbound_email_id, external_ref, conversation_id, attempts, due_at, sent_at, delivered_at, opened_at, clicked_at, replied_at, reacted_at, reactions, unsubscribed_at, converted_at, created_at, updated_at, series_enrollment_id, series_step_id
 `
 
 type MarkBroadcastRecipientClickedParams struct {
@@ -1118,6 +1140,8 @@ func (q *Queries) MarkBroadcastRecipientClicked(ctx context.Context, arg MarkBro
 		&i.ConvertedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.SeriesEnrollmentID,
+		&i.SeriesStepID,
 	)
 	return i, err
 }
@@ -1162,7 +1186,7 @@ func (q *Queries) MarkBroadcastRecipientDelivered(ctx context.Context, arg MarkB
 const markBroadcastRecipientFailed = `-- name: MarkBroadcastRecipientFailed :one
 UPDATE broadcast_recipients SET status = $1, reason = $2, updated_at = $3::timestamptz
 WHERE workspace_id = $4 AND id = $5 AND status IN ('queued', 'sent', 'delivered')
-RETURNING id, workspace_id, broadcast_id, contact_id, company_id, room_id, address, status, reason, reply_token, message_id_header, outbound_email_id, external_ref, conversation_id, attempts, due_at, sent_at, delivered_at, opened_at, clicked_at, replied_at, reacted_at, reactions, unsubscribed_at, converted_at, created_at, updated_at
+RETURNING id, workspace_id, broadcast_id, contact_id, company_id, room_id, address, status, reason, reply_token, message_id_header, outbound_email_id, external_ref, conversation_id, attempts, due_at, sent_at, delivered_at, opened_at, clicked_at, replied_at, reacted_at, reactions, unsubscribed_at, converted_at, created_at, updated_at, series_enrollment_id, series_step_id
 `
 
 type MarkBroadcastRecipientFailedParams struct {
@@ -1211,6 +1235,8 @@ func (q *Queries) MarkBroadcastRecipientFailed(ctx context.Context, arg MarkBroa
 		&i.ConvertedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.SeriesEnrollmentID,
+		&i.SeriesStepID,
 	)
 	return i, err
 }
@@ -1219,7 +1245,7 @@ const markBroadcastRecipientOpened = `-- name: MarkBroadcastRecipientOpened :one
 UPDATE broadcast_recipients SET status = CASE WHEN status = 'sent' THEN 'delivered' ELSE status END,
     delivered_at = COALESCE(delivered_at, $1::timestamptz), opened_at = COALESCE(opened_at, $1::timestamptz), updated_at = $1::timestamptz
 WHERE workspace_id = $2 AND id = $3 AND status IN ('sent', 'delivered')
-RETURNING id, workspace_id, broadcast_id, contact_id, company_id, room_id, address, status, reason, reply_token, message_id_header, outbound_email_id, external_ref, conversation_id, attempts, due_at, sent_at, delivered_at, opened_at, clicked_at, replied_at, reacted_at, reactions, unsubscribed_at, converted_at, created_at, updated_at
+RETURNING id, workspace_id, broadcast_id, contact_id, company_id, room_id, address, status, reason, reply_token, message_id_header, outbound_email_id, external_ref, conversation_id, attempts, due_at, sent_at, delivered_at, opened_at, clicked_at, replied_at, reacted_at, reactions, unsubscribed_at, converted_at, created_at, updated_at, series_enrollment_id, series_step_id
 `
 
 type MarkBroadcastRecipientOpenedParams struct {
@@ -1261,6 +1287,8 @@ func (q *Queries) MarkBroadcastRecipientOpened(ctx context.Context, arg MarkBroa
 		&i.ConvertedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.SeriesEnrollmentID,
+		&i.SeriesStepID,
 	)
 	return i, err
 }
@@ -1271,7 +1299,7 @@ UPDATE broadcast_recipients SET status = CASE WHEN status = 'sent' THEN 'deliver
     replied_at = COALESCE(replied_at, $1::timestamptz), conversation_id = COALESCE(conversation_id, $2),
     updated_at = $1::timestamptz
 WHERE workspace_id = $3 AND id = $4
-RETURNING id, workspace_id, broadcast_id, contact_id, company_id, room_id, address, status, reason, reply_token, message_id_header, outbound_email_id, external_ref, conversation_id, attempts, due_at, sent_at, delivered_at, opened_at, clicked_at, replied_at, reacted_at, reactions, unsubscribed_at, converted_at, created_at, updated_at
+RETURNING id, workspace_id, broadcast_id, contact_id, company_id, room_id, address, status, reason, reply_token, message_id_header, outbound_email_id, external_ref, conversation_id, attempts, due_at, sent_at, delivered_at, opened_at, clicked_at, replied_at, reacted_at, reactions, unsubscribed_at, converted_at, created_at, updated_at, series_enrollment_id, series_step_id
 `
 
 type MarkBroadcastRecipientRepliedParams struct {
@@ -1318,6 +1346,8 @@ func (q *Queries) MarkBroadcastRecipientReplied(ctx context.Context, arg MarkBro
 		&i.ConvertedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.SeriesEnrollmentID,
+		&i.SeriesStepID,
 	)
 	return i, err
 }
@@ -1328,7 +1358,7 @@ UPDATE broadcast_recipients SET status = 'sent', reason = NULL, delivered_at = $
     outbound_email_id = $3, external_ref = $4,
     conversation_id = COALESCE($5, conversation_id), sent_at = $1::timestamptz, updated_at = $1::timestamptz
 WHERE workspace_id = $6 AND id = $7 AND status = 'queued'
-RETURNING id, workspace_id, broadcast_id, contact_id, company_id, room_id, address, status, reason, reply_token, message_id_header, outbound_email_id, external_ref, conversation_id, attempts, due_at, sent_at, delivered_at, opened_at, clicked_at, replied_at, reacted_at, reactions, unsubscribed_at, converted_at, created_at, updated_at
+RETURNING id, workspace_id, broadcast_id, contact_id, company_id, room_id, address, status, reason, reply_token, message_id_header, outbound_email_id, external_ref, conversation_id, attempts, due_at, sent_at, delivered_at, opened_at, clicked_at, replied_at, reacted_at, reactions, unsubscribed_at, converted_at, created_at, updated_at, series_enrollment_id, series_step_id
 `
 
 type MarkBroadcastRecipientSentParams struct {
@@ -1382,6 +1412,8 @@ func (q *Queries) MarkBroadcastRecipientSent(ctx context.Context, arg MarkBroadc
 		&i.ConvertedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.SeriesEnrollmentID,
+		&i.SeriesStepID,
 	)
 	return i, err
 }

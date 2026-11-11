@@ -194,6 +194,8 @@ func featurePermissionGroups() map[string][]string {
 		"audiences:write":  {"audiences:manage"},
 		"broadcasts:read":  {"broadcasts:read"},
 		"broadcasts:write": {"broadcasts:write", "broadcasts:send"},
+		"series:read":      {"series:read"},
+		"series:write":     {"series:write", "series:publish"},
 		"attributes:write": {"attributes:manage"},
 		"billing:read":     {"billing:read"},
 		"billing:write":    {"billing:write", "billing:cap_unrestricted"},

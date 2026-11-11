@@ -123,7 +123,7 @@ func (b *Broadcasts) SendRecipient(ctx context.Context, ws, id ids.UUID) error {
 		return err
 	}
 
-	return b.recount(ctx, ws, d.Broadcast.ID)
+	return errors.Join(b.recount(ctx, ws, d.Broadcast.ID), b.touched(ctx, d.Recipient))
 }
 
 /*
@@ -234,18 +234,23 @@ func (b *Broadcasts) fail(ctx context.Context, r models.BroadcastRecipient, why 
 		return err
 	}
 
-	return b.recount(ctx, r.WorkspaceID, r.BroadcastID)
+	return errors.Join(b.recount(ctx, r.WorkspaceID, r.BroadcastID), b.touched(ctx, r))
 }
 
 /*
 retryAt puts a recipient back in the queue for a later dispatch.
 */
 func (b *Broadcasts) retryAt(ctx context.Context, r models.BroadcastRecipient, at time.Time, why string) error {
-	return b.inWorkspace(ctx, r.WorkspaceID, func(ctx context.Context, q *models.Queries) error {
+	err := b.inWorkspace(ctx, r.WorkspaceID, func(ctx context.Context, q *models.Queries) error {
 		return wrap("retry recipient", q.RetryBroadcastRecipientAt(ctx, models.RetryBroadcastRecipientAtParams{
 			WorkspaceID: r.WorkspaceID, ID: r.ID, DueAt: at, Reason: &why, Now: b.Clock.Now(),
 		}))
 	})
+	if err != nil || r.SeriesStepID == nil {
+		return err
+	}
+
+	return queue.Postpone(max(at.Sub(b.Clock.Now()), time.Second))
 }
 
 /*

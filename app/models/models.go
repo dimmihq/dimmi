@@ -487,6 +487,9 @@ type Broadcast struct {
 	DeletedAt         *time.Time      `json:"deleted_at"`
 	CreatedAt         time.Time       `json:"created_at"`
 	UpdatedAt         time.Time       `json:"updated_at"`
+	Kind              string          `json:"kind"`
+	SeriesID          *ids.UUID       `json:"series_id"`
+	SeriesNodeID      *string         `json:"series_node_id"`
 }
 
 type BroadcastLink struct {
@@ -505,33 +508,35 @@ type BroadcastOptOut struct {
 }
 
 type BroadcastRecipient struct {
-	ID              ids.UUID   `json:"id"`
-	WorkspaceID     ids.UUID   `json:"workspace_id"`
-	BroadcastID     ids.UUID   `json:"broadcast_id"`
-	ContactID       *ids.UUID  `json:"contact_id"`
-	CompanyID       *ids.UUID  `json:"company_id"`
-	RoomID          *ids.UUID  `json:"room_id"`
-	Address         string     `json:"address"`
-	Status          string     `json:"status"`
-	Reason          *string    `json:"reason"`
-	ReplyToken      string     `json:"reply_token"`
-	MessageIDHeader *string    `json:"message_id_header"`
-	OutboundEmailID *ids.UUID  `json:"outbound_email_id"`
-	ExternalRef     *string    `json:"external_ref"`
-	ConversationID  *ids.UUID  `json:"conversation_id"`
-	Attempts        int32      `json:"attempts"`
-	DueAt           time.Time  `json:"due_at"`
-	SentAt          *time.Time `json:"sent_at"`
-	DeliveredAt     *time.Time `json:"delivered_at"`
-	OpenedAt        *time.Time `json:"opened_at"`
-	ClickedAt       *time.Time `json:"clicked_at"`
-	RepliedAt       *time.Time `json:"replied_at"`
-	ReactedAt       *time.Time `json:"reacted_at"`
-	Reactions       int32      `json:"reactions"`
-	UnsubscribedAt  *time.Time `json:"unsubscribed_at"`
-	ConvertedAt     *time.Time `json:"converted_at"`
-	CreatedAt       time.Time  `json:"created_at"`
-	UpdatedAt       time.Time  `json:"updated_at"`
+	ID                 ids.UUID   `json:"id"`
+	WorkspaceID        ids.UUID   `json:"workspace_id"`
+	BroadcastID        ids.UUID   `json:"broadcast_id"`
+	ContactID          *ids.UUID  `json:"contact_id"`
+	CompanyID          *ids.UUID  `json:"company_id"`
+	RoomID             *ids.UUID  `json:"room_id"`
+	Address            string     `json:"address"`
+	Status             string     `json:"status"`
+	Reason             *string    `json:"reason"`
+	ReplyToken         string     `json:"reply_token"`
+	MessageIDHeader    *string    `json:"message_id_header"`
+	OutboundEmailID    *ids.UUID  `json:"outbound_email_id"`
+	ExternalRef        *string    `json:"external_ref"`
+	ConversationID     *ids.UUID  `json:"conversation_id"`
+	Attempts           int32      `json:"attempts"`
+	DueAt              time.Time  `json:"due_at"`
+	SentAt             *time.Time `json:"sent_at"`
+	DeliveredAt        *time.Time `json:"delivered_at"`
+	OpenedAt           *time.Time `json:"opened_at"`
+	ClickedAt          *time.Time `json:"clicked_at"`
+	RepliedAt          *time.Time `json:"replied_at"`
+	ReactedAt          *time.Time `json:"reacted_at"`
+	Reactions          int32      `json:"reactions"`
+	UnsubscribedAt     *time.Time `json:"unsubscribed_at"`
+	ConvertedAt        *time.Time `json:"converted_at"`
+	CreatedAt          time.Time  `json:"created_at"`
+	UpdatedAt          time.Time  `json:"updated_at"`
+	SeriesEnrollmentID *ids.UUID  `json:"series_enrollment_id"`
+	SeriesStepID       *ids.UUID  `json:"series_step_id"`
 }
 
 type BroadcastTopic struct {
@@ -1975,6 +1980,92 @@ type SecurityEvent struct {
 	Country     *string         `json:"country"`
 	Metadata    json.RawMessage `json:"metadata"`
 	CreatedAt   time.Time       `json:"created_at"`
+}
+
+type Series struct {
+	ID                ids.UUID        `json:"id"`
+	WorkspaceID       ids.UUID        `json:"workspace_id"`
+	Name              string          `json:"name"`
+	Description       string          `json:"description"`
+	Subject           string          `json:"subject"`
+	Status            string          `json:"status"`
+	Working           json.RawMessage `json:"working"`
+	WorkingHash       string          `json:"working_hash"`
+	LiveVersionID     *ids.UUID       `json:"live_version_id"`
+	LockVersion       int32           `json:"lock_version"`
+	TopicID           *ids.UUID       `json:"topic_id"`
+	Service           bool            `json:"service"`
+	EmailAddressID    *ids.UUID       `json:"email_address_id"`
+	SenderMemberID    *ids.UUID       `json:"sender_member_id"`
+	SlackAs           string          `json:"slack_as"`
+	ReplyTeamID       *ids.UUID       `json:"reply_team_id"`
+	ReplyMemberID     *ids.UUID       `json:"reply_member_id"`
+	AiReplies         bool            `json:"ai_replies"`
+	Counts            json.RawMessage `json:"counts"`
+	CreatedByMemberID *ids.UUID       `json:"created_by_member_id"`
+	UpdatedByMemberID *ids.UUID       `json:"updated_by_member_id"`
+	PublishedAt       *time.Time      `json:"published_at"`
+	PausedAt          *time.Time      `json:"paused_at"`
+	ArchivedAt        *time.Time      `json:"archived_at"`
+	CreatedAt         time.Time       `json:"created_at"`
+	UpdatedAt         time.Time       `json:"updated_at"`
+}
+
+type SeriesEnrollment struct {
+	ID            ids.UUID        `json:"id"`
+	WorkspaceID   ids.UUID        `json:"workspace_id"`
+	SeriesID      ids.UUID        `json:"series_id"`
+	VersionID     ids.UUID        `json:"version_id"`
+	Subject       string          `json:"subject"`
+	ContactID     *ids.UUID       `json:"contact_id"`
+	CompanyID     *ids.UUID       `json:"company_id"`
+	Status        string          `json:"status"`
+	NodeID        string          `json:"node_id"`
+	Seq           int64           `json:"seq"`
+	Wait          json.RawMessage `json:"wait"`
+	WakeAt        *time.Time      `json:"wake_at"`
+	EnteredAt     time.Time       `json:"entered_at"`
+	EnteredBy     string          `json:"entered_by"`
+	TriggerRef    *string         `json:"trigger_ref"`
+	GoalAt        *time.Time      `json:"goal_at"`
+	LeftAt        *time.Time      `json:"left_at"`
+	EndReason     *string         `json:"end_reason"`
+	Variants      json.RawMessage `json:"variants"`
+	Test          bool            `json:"test"`
+	StepsExecuted int32           `json:"steps_executed"`
+	CreatedAt     time.Time       `json:"created_at"`
+	UpdatedAt     time.Time       `json:"updated_at"`
+}
+
+type SeriesStep struct {
+	ID           ids.UUID        `json:"id"`
+	WorkspaceID  ids.UUID        `json:"workspace_id"`
+	SeriesID     ids.UUID        `json:"series_id"`
+	EnrollmentID ids.UUID        `json:"enrollment_id"`
+	VersionID    ids.UUID        `json:"version_id"`
+	NodeID       string          `json:"node_id"`
+	Kind         string          `json:"kind"`
+	Status       string          `json:"status"`
+	PathID       *string         `json:"path_id"`
+	Outcome      *string         `json:"outcome"`
+	Detail       json.RawMessage `json:"detail"`
+	Test         bool            `json:"test"`
+	EnteredAt    time.Time       `json:"entered_at"`
+	LeftAt       *time.Time      `json:"left_at"`
+}
+
+type SeriesVersion struct {
+	ID                    ids.UUID        `json:"id"`
+	WorkspaceID           ids.UUID        `json:"workspace_id"`
+	SeriesID              ids.UUID        `json:"series_id"`
+	Number                int32           `json:"number"`
+	Spec                  json.RawMessage `json:"spec"`
+	SpecHash              string          `json:"spec_hash"`
+	Note                  string          `json:"note"`
+	Moves                 json.RawMessage `json:"moves"`
+	PublishedByMemberID   *ids.UUID       `json:"published_by_member_id"`
+	RestoredFromVersionID *ids.UUID       `json:"restored_from_version_id"`
+	CreatedAt             time.Time       `json:"created_at"`
 }
 
 type Session struct {

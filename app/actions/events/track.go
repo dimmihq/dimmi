@@ -29,11 +29,13 @@ import (
 	"github.com/dimmihq/dimmi/framework/cache"
 	"github.com/dimmihq/dimmi/framework/clock"
 	"github.com/dimmihq/dimmi/framework/database"
+	fevents "github.com/dimmihq/dimmi/framework/events"
 	"github.com/dimmihq/dimmi/framework/fault"
 	"github.com/dimmihq/dimmi/framework/ids"
 
 	"github.com/dimmihq/dimmi/app/attributedefs"
 	"github.com/dimmihq/dimmi/app/auth/authz"
+	appevents "github.com/dimmihq/dimmi/app/events"
 	"github.com/dimmihq/dimmi/app/exceptions"
 	"github.com/dimmihq/dimmi/app/models"
 	"github.com/dimmihq/dimmi/app/support/eventroll"
@@ -74,13 +76,15 @@ var (
 )
 
 /*
-Events records events and manages their names.
+Events records events and manages their names. Dispatcher, when set,
+hears about every event recorded.
 */
 type Events struct {
-	DB    *database.DB
-	Cache *cache.Store
-	Clock clock.Clock
-	IDs   *ids.Registry
+	DB         *database.DB
+	Cache      *cache.Store
+	Clock      clock.Clock
+	IDs        *ids.Registry
+	Dispatcher *fevents.Dispatcher
 }
 
 /*
@@ -137,7 +141,10 @@ func (e *Events) Track(ctx context.Context, m authz.Membership, batch []Event) (
 	}
 
 	err = e.DB.Transaction(ctx, func(ctx context.Context, tx *database.Tx) error {
-		r := run{q: models.New(tx), ws: m.Workspace.ID, now: now, defs: map[string]*models.EventDefinition{}}
+		r := run{
+			q: models.New(tx), tx: tx, dispatcher: e.Dispatcher, ws: m.Workspace.ID, now: now,
+			defs: map[string]*models.EventDefinition{},
+		}
 		for i, ev := range batch {
 			if !fresh[i] {
 				results[i] = Result{Status: StatusDuplicate}
@@ -272,10 +279,12 @@ func idempotencyKey(ws ids.UUID, key string) string {
 run is a batch being recorded in one transaction.
 */
 type run struct {
-	q    *models.Queries
-	ws   ids.UUID
-	now  time.Time
-	defs map[string]*models.EventDefinition
+	q          *models.Queries
+	tx         *database.Tx
+	dispatcher *fevents.Dispatcher
+	ws         ids.UUID
+	now        time.Time
+	defs       map[string]*models.EventDefinition
 }
 
 /*
@@ -304,7 +313,29 @@ func (r run) record(ctx context.Context, ev Event) (Result, error) {
 		return Result{}, fmt.Errorf("count event: %w", err)
 	}
 
+	if err := r.tracked(ctx, contact, ev); err != nil {
+		return Result{}, err
+	}
+
 	return Result{Status: StatusAccepted, ContactID: contact, Clamped: clamped}, nil
+}
+
+/*
+tracked tells the rest of the app the contact did the event.
+*/
+func (r run) tracked(ctx context.Context, contact ids.UUID, ev Event) error {
+	if r.dispatcher == nil {
+		return nil
+	}
+
+	ref := ev.IdempotencyKey
+	if ref == "" {
+		ref = ids.New().String()
+	}
+
+	return r.dispatcher.Dispatch(ctx, r.tx, appevents.ContactEventTracked{
+		WorkspaceID: r.ws, ContactID: contact, Name: ev.Name, Ref: ref,
+	})
 }
 
 /*

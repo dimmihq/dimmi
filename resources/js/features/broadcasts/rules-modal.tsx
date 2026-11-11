@@ -38,11 +38,13 @@ function Count({ workspace, form }: { workspace: string; form: Form }) {
 export function RulesModal({
   workspace,
   rules,
+  title = "Who gets this broadcast",
   onSave,
   onClose,
 }: {
   workspace: string;
   rules: AudienceRules | null;
+  title?: string;
   onSave: (rules: AudienceRules) => void;
   onClose: () => void;
 }) {
@@ -52,7 +54,7 @@ export function RulesModal({
 
   return (
     <Modal size="wide" isOpen onOpenChange={(open) => (open ? undefined : onClose())}>
-      <ModalHeader title="Who gets this broadcast" />
+      <ModalHeader title={title} />
       <ModalBody className="pb-2">
         <RuleGroups form={form} fields={fields} lookups={lookups} onChange={setForm} />
       </ModalBody>

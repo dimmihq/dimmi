@@ -41,6 +41,7 @@ func AbilityGroups() []string {
 		"workflows:read", "workflows:write",
 		"audiences:read", "audiences:write",
 		"broadcasts:read", "broadcasts:write",
+		"series:read", "series:write",
 		"attributes:write",
 		"billing:read", "billing:write",
 		"system:read", "system:write",
