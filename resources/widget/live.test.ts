@@ -70,7 +70,15 @@ const conversation = {
 const settle = () => new Promise((resolve) => setTimeout(resolve, 0));
 const shadow = () => document.getElementById("dimmi-messenger")?.shadowRoot as ShadowRoot | undefined;
 
+const intervals: ReturnType<typeof setInterval>[] = [];
+const startInterval = window.setInterval.bind(window);
+
 beforeEach(() => {
+  vi.spyOn(window, "setInterval").mockImplementation((handler: TimerHandler, ms?: number) => {
+    const handle = startInterval(handler, ms);
+    intervals.push(handle);
+    return handle;
+  });
   delete win.Dimmi;
   win.__dimmi = { appId: "wgt_1", apiBase: "https://app.example.com" };
   document.body.innerHTML = "";
@@ -79,6 +87,9 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  for (const handle of intervals.splice(0)) {
+    clearInterval(handle);
+  }
   vi.unstubAllGlobals();
   vi.restoreAllMocks();
 });
