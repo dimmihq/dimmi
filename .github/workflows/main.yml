@@ -24,6 +24,62 @@ env:
   COMPOSE_FILE: compose.yaml:.github/compose.ci.yaml
 
 jobs:
+  # The release image, built while the checks run and listed first so it
+  # queues first. The binary is compiled here with a warm build cache of its
+  # own and only packed by Docker. Pushes to main push it under the
+  # commit's sha, and the staging job below releases it.
+  image:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      packages: write
+    env:
+      PUSH: ${{ github.event_name == 'push' }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+          cache: false
+      - uses: ./.github/actions/go-cache
+        with:
+          name: image
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
+      - name: Build the cloud binary
+        run: |
+          mkdir -p "$RUNNER_TEMP/image"
+          CGO_ENABLED=0 GOOS=linux GOARCH=amd64 \
+            go build -trimpath -tags cloud -ldflags="-s -w" -o "$RUNNER_TEMP/image/dimmi" ./cmd/dimmi
+      - uses: docker/setup-buildx-action@v3
+      - if: env.PUSH == 'true'
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: linux/amd64
+          build-args: |
+            BINARY=prebuilt
+            REVISION=${{ github.sha }}
+          build-contexts: prebuilt=${{ runner.temp }}/image
+          push: ${{ env.PUSH == 'true' }}
+          tags: ghcr.io/dimmihq/dimmi:${{ github.sha }}
+      - if: ${{ !cancelled() }}
+        uses: ./.github/actions/go-cache
+        with:
+          name: image
+          mode: save
+
   # Each check is its own job, so they run side by side and each shows its
   # own result (.github/actions/check runs one). The Go tests run once, as
   # the cloud runs: the cloud build as the application role, split eight
@@ -133,57 +189,6 @@ jobs:
         with:
           name: e2e
           mode: save
-
-  # The release image, built while the checks run. The binary is compiled
-  # here with the end-to-end jobs' warm build cache and only packed by
-  # Docker. Pushes to main push it under the commit's sha; staging.yml
-  # releases it once this whole run has passed.
-  image:
-    runs-on: ubuntu-24.04
-    timeout-minutes: 20
-    permissions:
-      contents: read
-      packages: write
-    env:
-      PUSH: ${{ github.event_name == 'push' }}
-    steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-go@v6
-        with:
-          go-version-file: go.mod
-          cache: false
-      - uses: ./.github/actions/go-cache
-        with:
-          name: e2e
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v5
-        with:
-          node-version: 24
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm build
-      - name: Build the cloud binary
-        run: |
-          mkdir -p "$RUNNER_TEMP/image"
-          CGO_ENABLED=0 GOOS=linux GOARCH=amd64 \
-            go build -trimpath -tags cloud -ldflags="-s -w" -o "$RUNNER_TEMP/image/dimmi" ./cmd/dimmi
-      - uses: docker/setup-buildx-action@v3
-      - if: env.PUSH == 'true'
-        uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-      - uses: docker/build-push-action@v6
-        with:
-          context: .
-          platforms: linux/amd64
-          build-args: |
-            BINARY=prebuilt
-            REVISION=${{ github.sha }}
-          build-contexts: prebuilt=${{ runner.temp }}/image
-          push: ${{ env.PUSH == 'true' }}
-          tags: ghcr.io/dimmihq/dimmi:${{ github.sha }}
 
   staging:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
