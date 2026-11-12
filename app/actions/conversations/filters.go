@@ -15,6 +15,7 @@
 package conversations
 
 import (
+	"encoding/json"
 	"time"
 
 	"github.com/dimmihq/dimmi/framework/ids"
@@ -44,8 +45,10 @@ the member and ViewID the saved view. Statuses are the statuses shown,
 none meaning open, unless AnyStatus. Assignee narrows to one member's
 conversations, Unassigned to nobody's and AssigneeMe to the caller's.
 NoTeam narrows to those no team holds. AssignmentWaiting narrows to
-those automatic assignment could not place yet. The pointers and lists
-narrow only when set. Search is what the caller typed.
+those automatic assignment could not place yet. Definition is a view's
+conditions not saved yet, narrowing whatever view the list shows. The
+pointers and lists narrow only when set. Search is what the caller
+typed.
 */
 type Filters struct {
 	View          string
@@ -74,6 +77,7 @@ type Filters struct {
 
 	AssignmentWaiting bool
 	Ai                []string
+	Definition        json.RawMessage
 }
 
 /*

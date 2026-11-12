@@ -9,6 +9,18 @@ import type { AudienceField, AudienceRules, Condition, Rule, Visitors } from "@/
 
 export type Match = "all" | "any" | "none";
 
+/*
+ * joinWord is the gutter word of a row: what the first row starts with,
+ * then how each later row joins the one above.
+ */
+export function joinWord(match: Match, index: number): string {
+  if (index === 0) {
+    return match === "none" ? "Not" : "Where";
+  }
+
+  return match === "all" ? "and" : "or";
+}
+
 export interface ConditionItem {
   kind: "condition";
   id: string;

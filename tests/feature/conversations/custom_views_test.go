@@ -1,6 +1,8 @@
 package conversations_test
 
 import (
+	"encoding/base64"
+	"encoding/json"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -29,6 +31,18 @@ func saveView(t *testing.T, c *testkit.Client, scope string, definition testkit.
 	return c.PostJSON("/api/v1/conversation-views", testkit.JSON{
 		"name": "View " + testkit.UniqueName("v"), "scope": scope, "definition": definition,
 	}).AssertCreated().String("data.id")
+}
+
+/*
+where encodes a definition the way filter[where] carries it.
+*/
+func where(t *testing.T, definition testkit.JSON) string {
+	t.Helper()
+
+	raw, err := json.Marshal(definition)
+	require.NoError(t, err)
+
+	return base64.RawURLEncoding.EncodeToString(raw)
 }
 
 func TestCustomViews(t *testing.T) {
@@ -170,5 +184,38 @@ func TestCustomViews(t *testing.T) {
 		id := saveView(t, bob, "personal", oneCondition("status", "in", []string{"open"}))
 
 		d.owner.GetJSON("/api/v1/conversations?filter[view]=" + id).AssertNotFound()
+	})
+
+	t.Run("narrows a list by conditions not saved yet", func(t *testing.T) {
+		t.Parallel()
+		d := open(t)
+		d.customer(t, "ann", "Refund please", "a")
+		d.customer(t, "bea", "Hello there", "b")
+		fund := where(t, oneCondition("subject", "contains", "fund"))
+		list := "/api/v1/conversations?filter[view]=all&filter[where]=" + fund
+
+		d.owner.GetJSON(list).AssertOK().AssertJSONPath("data.#", 1).AssertJSONPath("data.0.subject", "Refund please")
+	})
+
+	t.Run("narrows a saved view further by conditions not saved yet", func(t *testing.T) {
+		t.Parallel()
+		d := open(t)
+		d.customer(t, "ann", "Refund please", "a")
+		d.customer(t, "bea", "Refund again", "b")
+		id := saveView(t, d.owner, "personal", oneCondition("subject", "contains", "fund"))
+		again := where(t, oneCondition("subject", "contains", "again"))
+		list := "/api/v1/conversations?filter[view]=" + id + "&filter[where]=" + again
+
+		d.owner.GetJSON(list).AssertOK().AssertJSONPath("data.#", 1).AssertJSONPath("data.0.subject", "Refund again")
+	})
+
+	t.Run("refuses unsaved conditions it cannot read", func(t *testing.T) {
+		t.Parallel()
+		d := open(t)
+		list := "/api/v1/conversations?filter[view]=all&filter[where]="
+
+		d.owner.GetJSON(list+"not-json!").AssertStatus(400).AssertJSONPath("code", "invalid_filter")
+		d.owner.GetJSON(list+where(t, oneCondition("nonsense", "eq", 1))).
+			AssertStatus(422).AssertJSONPath("code", "invalid_definition")
 	})
 }

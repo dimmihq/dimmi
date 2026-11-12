@@ -10,22 +10,20 @@
  * gutter say how rows and cards join. A row still missing its field is
  * kept on screen and left out of the rule.
  */
-import { RiAddLine, RiCloseLine, RiDeleteBinLine } from "@remixicon/react";
+import { RiAddLine } from "@remixicon/react";
 import { useState } from "react";
 
 import { Button } from "@/components/base/buttons/button";
-import { IconButton } from "@/components/base/buttons/icon-button";
-import { LinkButton } from "@/components/base/buttons/link-button";
 import { Input } from "@/components/base/input/input";
-import { SegmentedControl, SegmentedControlItem } from "@/components/base/segmented-control/segmented-control";
 import { Select, SelectItem, SelectSection } from "@/components/base/select/select";
 import type { AudienceField, Condition } from "@/lib/api/audiences";
-
+import { CardJoin, MatchPick, RuleCard, RuleRow } from "./rule-layout";
 import {
   type Form,
   fieldGroup,
   fieldGroups,
   fieldName,
+  joinWord,
   type Match,
   newId,
   opNames,
@@ -62,14 +60,6 @@ interface State {
   top: Match;
   cards: Card[];
 }
-
-const matchChoices: { id: Match; label: string }[] = [
-  { id: "all", label: "All" },
-  { id: "any", label: "Any" },
-  { id: "none", label: "None" },
-];
-
-const joins: Record<Match, string> = { all: "and", any: "or", none: "or" };
 
 function emptyCard(): Card {
   return { id: newId(), match: "all", rows: [{ id: newId(), condition: null }] };
@@ -153,38 +143,6 @@ function choicesFor(field: AudienceField | undefined, lookups: Lookups): Choice[
   }
 
   return field?.options?.map((o): Choice => [o, o.charAt(0).toUpperCase() + o.slice(1)]);
-}
-
-function MatchPick({
-  label,
-  value,
-  onChange,
-  disabled = false,
-}: {
-  label: string;
-  value: Match;
-  onChange: (m: Match) => void;
-  disabled?: boolean;
-}) {
-  return (
-    <SegmentedControl
-      aria-label={label}
-      isDisabled={disabled}
-      selectedKeys={new Set([value])}
-      onSelectionChange={(keys) => {
-        const next = [...keys][0];
-        if (next) {
-          onChange(next as Match);
-        }
-      }}
-    >
-      {matchChoices.map((m) => (
-        <SegmentedControlItem key={m.id} id={m.id}>
-          {m.label}
-        </SegmentedControlItem>
-      ))}
-    </SegmentedControl>
-  );
 }
 
 function FieldPick({
@@ -302,12 +260,12 @@ function ConditionRow({
   const needsValue = c !== null && shapeOf(c.op, field?.type) !== "none";
 
   return (
-    <li className="grid grid-cols-[2.75rem_minmax(0,1.15fr)_minmax(0,0.95fr)_minmax(0,1fr)_2rem] items-start gap-2">
-      <span className="flex h-10 items-center text-body-2-medium text-text-tertiary">{join}</span>
-      <FieldPick fields={listed} value={c?.field} onChange={(f) => onChange(withField(f))} />
-      <OpPick field={field} value={c?.op} onChange={(op) => c && onChange(withOp(c, op, field?.type))} />
-      <div className="flex min-w-0 flex-col gap-2">
-        {c && needsValue ? (
+    <RuleRow
+      join={join}
+      field={<FieldPick fields={listed} value={c?.field} onChange={(f) => onChange(withField(f))} />}
+      op={<OpPick field={field} value={c?.op} onChange={(op) => c && onChange(withOp(c, op, field?.type))} />}
+      value={
+        c && needsValue ? (
           <ValueInput
             field={field}
             condition={c}
@@ -316,17 +274,15 @@ function ConditionRow({
           />
         ) : (
           <Input aria-label="Value" isDisabled placeholder={c ? "No value needed" : "Value"} className="w-full" />
-        )}
-      </div>
-      <span className="flex h-10 items-center">
-        <IconButton icon={RiCloseLine} size="small" aria-label="Remove condition" onClick={onRemove} />
-      </span>
-      {c && field?.window ? (
-        <div className="col-span-3 col-start-2">
+        )
+      }
+      below={
+        c && field?.window ? (
           <WindowInput days={c.within_days} onChange={(days) => onChange(withWindow(c, days))} />
-        </div>
-      ) : null}
-    </li>
+        ) : null
+      }
+      onRemove={onRemove}
+    />
   );
 }
 
@@ -355,52 +311,26 @@ function GroupCard({
     onChange({ ...card, rows: card.rows.map((r) => (r.id === id ? { ...r, condition } : r)) });
 
   return (
-    <section
-      aria-label={`Group ${index + 1}`}
-      className="flex flex-col gap-3 rounded-2xl border border-border-button-default bg-background-secondary-default p-4"
+    <RuleCard
+      index={index}
+      match={card.match}
+      only={only}
+      onMatch={(match) => onChange({ ...card, match })}
+      onAdd={() => onChange({ ...card, rows: [...card.rows, { id: newId(), condition: null }] })}
+      onRemove={onRemove}
     >
-      <header className="flex flex-wrap items-center gap-3">
-        <span className="text-body-medium text-text-primary">Group {index + 1}</span>
-        <span className="text-body-2-regular text-text-secondary">matches</span>
-        <MatchPick
-          label={`How group ${index + 1} matches`}
-          value={card.match}
-          onChange={(match) => onChange({ ...card, match })}
+      {card.rows.map((row, i) => (
+        <ConditionRow
+          key={row.id}
+          row={row}
+          join={joinWord(card.match, i)}
+          fields={fields}
+          lookups={lookups}
+          onChange={(condition) => setRow(row.id, condition)}
+          onRemove={() => onChange({ ...card, rows: card.rows.filter((r) => r.id !== row.id) })}
         />
-        <span className="text-body-2-regular text-text-secondary">of these</span>
-        <span className="ms-auto">
-          <IconButton
-            icon={RiDeleteBinLine}
-            size="small"
-            aria-label={`Remove group ${index + 1}`}
-            disabled={only}
-            onClick={onRemove}
-          />
-        </span>
-      </header>
-      <ul className="flex flex-col gap-2">
-        {card.rows.map((row, i) => (
-          <ConditionRow
-            key={row.id}
-            row={row}
-            join={i === 0 ? (card.match === "none" ? "Not" : "Where") : joins[card.match]}
-            fields={fields}
-            lookups={lookups}
-            onChange={(condition) => setRow(row.id, condition)}
-            onRemove={() => onChange({ ...card, rows: card.rows.filter((r) => r.id !== row.id) })}
-          />
-        ))}
-      </ul>
-      <div className="ps-14">
-        <LinkButton
-          variant="secondary"
-          leadingIcon={RiAddLine}
-          onClick={() => onChange({ ...card, rows: [...card.rows, { id: newId(), condition: null }] })}
-        >
-          Add condition
-        </LinkButton>
-      </div>
-    </section>
+      ))}
+    </RuleCard>
   );
 }
 
@@ -457,13 +387,7 @@ export function RuleGroups({
       <div className="flex flex-col">
         {state.cards.map((card, i) => (
           <div key={card.id} className="flex flex-col">
-            {i > 0 ? (
-              <span className="flex h-8 items-center justify-center">
-                <span className="rounded-full bg-background-tertiary-default px-2.5 py-0.5 text-caption-1-medium text-text-secondary">
-                  {state.top === "all" ? "and" : "or"}
-                </span>
-              </span>
-            ) : null}
+            {i > 0 ? <CardJoin match={state.top} /> : null}
             <GroupCard
               card={card}
               index={i}

@@ -274,8 +274,9 @@ export interface ConversationChanges {
 /*
  * ListParams is what one list asks for: the view as filter[view] reads
  * it, the status shown, the order, what the person searched, whether
- * only unread conversations show, the agent's part in them and how many
- * come back.
+ * only unread conversations show, the agent's part in them, conditions
+ * applied without saving a view, as filter[where] carries them, and how
+ * many come back.
  */
 export interface ListParams {
   view: string;
@@ -284,6 +285,7 @@ export interface ListParams {
   search?: string;
   unread?: boolean;
   ai?: AiFilter;
+  where?: string;
   limit?: number;
 }
 
@@ -298,11 +300,15 @@ export function conversationsPath({
   search = "",
   unread = false,
   ai,
+  where,
   limit = 50,
 }: ListParams): string {
   const params = new URLSearchParams({ "filter[view]": view, "filter[status]": status, limit: String(limit) });
   if (ai) {
     params.set("filter[ai]", ai);
+  }
+  if (where) {
+    params.set("filter[where]", where);
   }
   params.set("include", "viewers");
   if (unread) {
@@ -329,6 +335,7 @@ export function conversationsQuery(workspace: string, list: ListParams) {
       list.unread ?? false,
       list.ai ?? "",
       list.limit ?? 50,
+      list.where ?? "",
     ],
     queryFn: () => request<Conversation[]>("GET", conversationsPath(list), undefined, { workspace }),
   });

@@ -1,8 +1,13 @@
 /*
- * The editor of a saved view, in a drawer: its name, who sees it, and its
- * conditions in groups. Within a group the conditions all apply, or any
- * of them; the groups join the same way. A new view can start from the
- * list on screen, keeping its status and sort. Saving opens the view.
+ * The editor of a saved view, opened from the inbox header in a
+ * dropdown: its name, who sees it, and its conditions in the same
+ * builder as audiences, groups as cards. Within a group the conditions
+ * all apply, or any of them; the groups join the same way. A new view
+ * can start from the list on screen, keeping its status and sort, and
+ * from the conditions already applied to it. Given onApply, its main
+ * button applies the conditions to the list without saving anything,
+ * and saving it as a view, which then opens, sits behind the button's
+ * other half and needs a name. Without it the editor only saves.
  */
 import { RiAddLine, RiDeleteBinLine } from "@remixicon/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -10,45 +15,43 @@ import { useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 
 import { Button } from "@/components/base/buttons/button";
-import { Drawer, DrawerBody, DrawerFooter, DrawerHeader } from "@/components/base/drawer/drawer";
 import { Input } from "@/components/base/input/input";
+import { PopoverFooter, PopoverHeader } from "@/components/base/popover/popover";
 import { SegmentedControl, SegmentedControlItem } from "@/components/base/segmented-control/segmented-control";
+import { CardJoin, MatchPick, RuleCard } from "@/features/audiences/rule-layout";
+import { joinWord, type Match } from "@/features/audiences/rules";
+import { SplitButton } from "@/features/shell/split-button";
 import { ApiError } from "@/lib/api/client";
-import { createView, deleteView, type SavedView, updateView } from "@/lib/api/views";
+import { createView, deleteView, type SavedView, updateView, type ViewDefinition } from "@/lib/api/views";
 import { callerQuery } from "@/lib/api/workspace";
 import { realtimeKeys } from "@/lib/realtime/keys";
 
 import { ConditionRow } from "./condition-row";
 import { blankDefinition, type KeyedGroup, keyed, keyedCondition, unkeyed, warned } from "./fields";
-
-const joins = { all: "and", any: "or" } as const;
+import { hasConditions } from "./where";
 
 const scopes = { personal: "personal", shared: "shared" } as const;
+
+const views: Match[] = ["all", "any"];
+
+function matchOf(op: "and" | "or"): Match {
+  return op === "or" ? "any" : "all";
+}
+
+function opOf(match: Match): "and" | "or" {
+  return match === "any" ? "or" : "and";
+}
 
 export interface ViewDraftStart {
   sort?: string;
   status?: string;
 }
 
-function Join({ label, value, onChange }: { label: string; value: "and" | "or"; onChange: (v: "and" | "or") => void }) {
-  return (
-    <SegmentedControl
-      aria-label={label}
-      variant="plain"
-      selectedKeys={[value]}
-      onSelectionChange={(selected) => onChange(selected.has("or") ? "or" : "and")}
-      className="[&_button]:py-0.5 [&_button]:text-body-2-medium"
-    >
-      <SegmentedControlItem id={joins.all}>All</SegmentedControlItem>
-      <SegmentedControlItem id={joins.any}>Any</SegmentedControlItem>
-    </SegmentedControl>
-  );
-}
-
 function GroupEditor({
   workspace,
   index,
   group,
+  only,
   warnings,
   onChange,
   onRemove,
@@ -56,29 +59,28 @@ function GroupEditor({
   workspace: string;
   index: number;
   group: KeyedGroup;
+  only: boolean;
   warnings: SavedView["warnings"];
   onChange: (group: KeyedGroup) => void;
-  onRemove: (() => void) | null;
+  onRemove: () => void;
 }) {
+  const match = matchOf(group.op);
+
   return (
-    <fieldset className="flex flex-col gap-2 rounded-2xl border border-border-button-default p-3">
-      <legend className="sr-only">Group {index + 1}</legend>
-      <div className="flex items-center justify-between gap-2">
-        <span className="flex items-center gap-2 text-body-2-regular text-text-secondary">
-          Match
-          <Join label={`Group ${index + 1} matches`} value={group.op} onChange={(op) => onChange({ ...group, op })} />
-          of these
-        </span>
-        {onRemove ? (
-          <Button size="xs" variant="ghost" onClick={onRemove}>
-            Remove group
-          </Button>
-        ) : null}
-      </div>
+    <RuleCard
+      index={index}
+      match={match}
+      choices={views}
+      only={only}
+      onMatch={(next) => onChange({ ...group, op: opOf(next) })}
+      onAdd={() => onChange({ ...group, conditions: [...group.conditions, keyedCondition()] })}
+      onRemove={onRemove}
+    >
       {group.conditions.map((condition, i) => (
         <ConditionRow
           key={condition.key}
           workspace={workspace}
+          join={joinWord(match, i)}
           condition={condition}
           flagged={warned(warnings, index, i)}
           onChange={(next) =>
@@ -90,16 +92,87 @@ function GroupEditor({
           onRemove={() => onChange({ ...group, conditions: group.conditions.filter((_, j) => j !== i) })}
         />
       ))}
-      <Button
-        size="xs"
-        variant="secondary"
-        leadingIcon={RiAddLine}
-        onClick={() => onChange({ ...group, conditions: [...group.conditions, keyedCondition()] })}
-        className="self-start"
-      >
-        Add condition
+    </RuleCard>
+  );
+}
+
+const headings = {
+  edit: { title: "Edit view", description: "Conversations that match, listed live.", name: undefined },
+  filter: {
+    title: "Filter conversations",
+    description: "Apply to this list now, or save as a view to keep.",
+    name: "Only needed to save it",
+  },
+  create: { title: "New view", description: "Conversations that match, listed live.", name: undefined },
+};
+
+/*
+ * headingOf says what the editor is doing: changing a saved view,
+ * filtering the list, or making a new view.
+ */
+function headingOf(view: SavedView | null, onApply: unknown): keyof typeof headings {
+  if (view) {
+    return "edit";
+  }
+
+  return onApply ? "filter" : "create";
+}
+
+/*
+ * EditorFooter finishes the editor. A saved view is saved or deleted; a
+ * new one is applied to the list, or saved as a view once it has a name.
+ */
+function EditorFooter({
+  editing,
+  named,
+  filtering,
+  saving,
+  onDelete,
+  onCancel,
+  onSave,
+  onApply,
+}: {
+  editing: boolean;
+  named: boolean;
+  filtering: boolean;
+  saving: boolean;
+  onDelete: () => void;
+  onCancel: () => void;
+  onSave: () => void;
+  onApply?: () => void;
+}) {
+  return (
+    <PopoverFooter className="border-separator-border border-t px-1.5 pt-3 pb-1.5">
+      {editing ? (
+        <Button variant="danger-secondary" leadingIcon={RiDeleteBinLine} onClick={onDelete} className="me-auto">
+          Delete
+        </Button>
+      ) : null}
+      <Button variant="secondary" onClick={onCancel}>
+        Cancel
       </Button>
-    </fieldset>
+      {onApply ? (
+        <SplitButton
+          label="Apply"
+          menuLabel="More ways to finish"
+          disabled={!filtering}
+          loading={saving}
+          onPress={onApply}
+          choices={[
+            {
+              label: "Save as view",
+              detail: named ? "Keep it in your views and open it." : "Name it above to save it.",
+              disabled: !named,
+              onSelect: onSave,
+            },
+          ]}
+        />
+      ) : (
+        <Button onClick={onSave} loading={saving} disabled={!named}>
+          Save view
+        </Button>
+      )}
+    </PopoverFooter>
   );
 }
 
@@ -107,14 +180,16 @@ export function ViewEditor({
   workspace,
   view,
   start,
-  isOpen,
-  onOpenChange,
+  applied = null,
+  onApply,
+  onClose,
 }: {
   workspace: string;
   view: SavedView | null;
   start?: ViewDraftStart;
-  isOpen: boolean;
-  onOpenChange: (open: boolean) => void;
+  applied?: ViewDefinition | null;
+  onApply?: (definition: ViewDefinition) => void;
+  onClose: () => void;
 }) {
   const client = useQueryClient();
   const navigate = useNavigate();
@@ -122,7 +197,7 @@ export function ViewEditor({
   const canShare = caller?.member?.permissions.includes("views:manage_shared") ?? false;
   const [name, setName] = useState(view?.name ?? "");
   const [scope, setScope] = useState<SavedView["scope"]>(view?.scope ?? "personal");
-  const [definition, setDefinition] = useState(() => keyed(view?.definition ?? blankDefinition()));
+  const [definition, setDefinition] = useState(() => keyed(view?.definition ?? applied ?? blankDefinition()));
   const save = useMutation({
     mutationFn: () =>
       view
@@ -137,7 +212,7 @@ export function ViewEditor({
     onSuccess: (saved) => {
       void client.invalidateQueries({ queryKey: realtimeKeys.views(workspace) });
       void client.invalidateQueries({ queryKey: realtimeKeys.conversations(workspace) });
-      onOpenChange(false);
+      onClose();
       void navigate({ to: "/d/inbox/$view", params: { view: saved.id } });
     },
   });
@@ -145,7 +220,7 @@ export function ViewEditor({
     mutationFn: () => deleteView(workspace, view?.id ?? ""),
     onSuccess: () => {
       void client.invalidateQueries({ queryKey: realtimeKeys.views(workspace) });
-      onOpenChange(false);
+      onClose();
       void navigate({ to: "/d/inbox/$view", params: { view: "all" } });
     },
   });
@@ -157,68 +232,105 @@ export function ViewEditor({
         : definition.groups.filter((_, i) => i !== index),
     });
   const refusal = save.error instanceof ApiError ? save.error.message : null;
+  const heading = headings[headingOf(view, onApply)];
 
   return (
-    <Drawer isOpen={isOpen} onOpenChange={onOpenChange} size="lg">
-      <DrawerHeader title={view ? "Edit view" : "New view"} description="Conversations that match, listed live." />
-      <DrawerBody className="flex flex-col gap-4">
-        <Input label="Name" value={name} onChange={setName} maxLength={60} />
-        {view === null && canShare ? (
-          <SegmentedControl
-            aria-label="Who sees it"
-            selectedKeys={[scope]}
-            onSelectionChange={(selected) => setScope(selected.has("shared") ? "shared" : "personal")}
-          >
-            <SegmentedControlItem id={scopes.personal}>Only me</SegmentedControlItem>
-            <SegmentedControlItem id={scopes.shared}>Everyone</SegmentedControlItem>
-          </SegmentedControl>
-        ) : null}
-        {definition.groups.length > 1 ? (
-          <span className="flex items-center gap-2 text-body-2-regular text-text-secondary">
-            Match
-            <Join label="Groups match" value={definition.op} onChange={(op) => setDefinition({ ...definition, op })} />
-            groups
-          </span>
-        ) : null}
-        {definition.groups.map((group, i) => (
-          <GroupEditor
-            key={group.key}
-            workspace={workspace}
-            index={i}
-            group={group}
-            warnings={view?.warnings ?? []}
-            onChange={(next) => setGroup(i, next)}
-            onRemove={definition.groups.length > 1 ? () => setGroup(i, null) : null}
+    <>
+      <PopoverHeader
+        title={view ? "Edit view" : onApply ? "Filter conversations" : "New view"}
+        description={
+          onApply && !view
+            ? "Apply to this list now, or save as a view to keep."
+            : "Conversations that match, listed live."
+        }
+        className="px-1.5 pt-1.5"
+      />
+      <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-1.5 py-1">
+        <div className="flex flex-wrap items-end gap-3">
+          <Input
+            label="Name"
+            placeholder={heading.name}
+            value={name}
+            onChange={setName}
+            maxLength={60}
+            className="min-w-48 flex-1"
           />
-        ))}
+          {view === null && canShare ? (
+            <SegmentedControl
+              aria-label="Who sees it"
+              selectedKeys={[scope]}
+              onSelectionChange={(selected) => setScope(selected.has("shared") ? "shared" : "personal")}
+            >
+              <SegmentedControlItem id={scopes.personal}>Only me</SegmentedControlItem>
+              <SegmentedControlItem id={scopes.shared}>Everyone</SegmentedControlItem>
+            </SegmentedControl>
+          ) : null}
+        </div>
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+          <span className="text-body-medium text-text-secondary">Conversations match</span>
+          <MatchPick
+            label="How groups match"
+            value={matchOf(definition.op)}
+            choices={views}
+            disabled={definition.groups.length < 2}
+            onChange={(match) => setDefinition({ ...definition, op: opOf(match) })}
+          />
+          <span className="text-body-medium text-text-secondary">of the groups</span>
+        </div>
+        <div className="flex flex-col">
+          {definition.groups.map((group, i) => (
+            <div key={group.key} className="flex flex-col">
+              {i > 0 ? <CardJoin match={matchOf(definition.op)} /> : null}
+              <GroupEditor
+                workspace={workspace}
+                index={i}
+                group={group}
+                only={definition.groups.length === 1}
+                warnings={view?.warnings ?? []}
+                onChange={(next) => setGroup(i, next)}
+                onRemove={() => setGroup(i, null)}
+              />
+            </div>
+          ))}
+        </div>
         {definition.groups.length < 5 ? (
-          <Button
-            size="small"
-            variant="secondary"
-            leadingIcon={RiAddLine}
-            onClick={() =>
-              setDefinition({
-                ...definition,
-                groups: [...definition.groups, { key: crypto.randomUUID(), op: "and", conditions: [keyedCondition()] }],
-              })
-            }
-            className="self-start"
-          >
-            Add group
-          </Button>
+          <div>
+            <Button
+              variant="secondary"
+              leadingIcon={RiAddLine}
+              onClick={() =>
+                setDefinition({
+                  ...definition,
+                  groups: [
+                    ...definition.groups,
+                    { key: crypto.randomUUID(), op: "and", conditions: [keyedCondition()] },
+                  ],
+                })
+              }
+            >
+              Add group
+            </Button>
+          </div>
         ) : null}
         {refusal ? <p className="text-body-2-regular text-text-error-primary">{refusal}</p> : null}
-      </DrawerBody>
-      <DrawerFooter>
-        {view ? (
-          <Button variant="danger-secondary" leadingIcon={RiDeleteBinLine} onClick={() => remove.mutate()}>
-            Delete
-          </Button>
-        ) : null}
-        <Button onClick={() => save.mutate()} loading={save.isPending} disabled={name.trim() === ""}>
-          Save view
-        </Button>
-      </DrawerFooter>
-    </Drawer>
+      </div>
+      <EditorFooter
+        editing={view !== null}
+        named={name.trim() !== ""}
+        filtering={hasConditions(unkeyed(definition))}
+        saving={save.isPending}
+        onDelete={() => remove.mutate()}
+        onCancel={onClose}
+        onSave={() => save.mutate()}
+        onApply={
+          view === null && onApply
+            ? () => {
+                onApply(unkeyed(definition));
+                onClose();
+              }
+            : undefined
+        }
+      />
+    </>
   );
 }

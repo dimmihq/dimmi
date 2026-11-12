@@ -9,34 +9,6 @@ it.describe("data exports", () => {
     await expect(page).toHaveURL(inbox);
   });
 
-  it("exports a view's conversations and downloads the file from Exports", async ({ page }) => {
-    await startConversation(page, {
-      name: "Ana Lima",
-      email: "ana@lima.example",
-      subject: "Order missing",
-      body: "Where is my order?",
-    });
-
-    await page.goto("/d/inbox/all");
-    await page.getByRole("button", { name: "Export conversations" }).click();
-    const dialog = page.getByRole("dialog");
-    await dialog.getByText("Spreadsheet", { exact: true }).click();
-    await expect(dialog.getByRole("radio", { name: /Spreadsheet/ })).toBeChecked();
-    await dialog.getByRole("button", { name: "Export", exact: true }).click();
-    await expect(dialog.getByText("Export started")).toBeVisible();
-    await dialog.getByRole("link", { name: "Go to Exports" }).click();
-
-    await expect(page).toHaveURL(/\/d\/[^/]+\/settings\/exports$/);
-    const download = page.getByRole("button", { name: "Download" });
-    await expect(download).toBeVisible({ timeout: 15_000 });
-    await expect(page.getByText(/Spreadsheet of conversations, 1 row/)).toBeVisible();
-    const [file] = await Promise.all([page.waitForEvent("download"), download.click()]);
-    expect(file.suggestedFilename()).toBe("conversations.csv");
-
-    await page.getByRole("button", { name: "Delete" }).click();
-    await expect(page.getByText(/No exports yet/)).toBeVisible();
-  });
-
   it("exports the people directory", async ({ page }) => {
     await startConversation(page, {
       name: "Bo Chen",

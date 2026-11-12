@@ -134,4 +134,25 @@ it.describe("inbox views", () => {
     await page.getByRole("dialog", { name: "Edit view" }).getByRole("button", { name: "Save view" }).click();
     await expect(page.getByRole("heading", { name: "Billing questions" })).toBeVisible();
   });
+
+  it("applies conditions to the list without saving a view, and clears them", async ({ page, person }) => {
+    await signIn(page, person);
+    await startConversation(page, omar);
+    await startConversation(page, emily);
+    await page.goto("/d/inbox/all");
+
+    await page.getByRole("button", { name: "Filter", exact: true }).click();
+    const editor = page.getByRole("dialog", { name: "Filter conversations" });
+    await editor.getByRole("button", { name: /Field/ }).click();
+    await page.getByRole("option", { name: "Subject" }).click();
+    await editor.getByRole("textbox", { name: "Value" }).fill("Invoice");
+    await editor.getByRole("button", { name: "Apply" }).click();
+
+    await expect(page).toHaveURL(/\/inbox\/all\?where=/);
+    await expect(page.getByRole("link", { name: /Omar Haddad/ })).toBeVisible();
+    await expect(page.getByRole("link", { name: /Emily Johnson/ })).toHaveCount(0);
+
+    await page.getByRole("button", { name: "Clear filters" }).click();
+    await expect(page.getByRole("link", { name: /Emily Johnson/ })).toBeVisible();
+  });
 });

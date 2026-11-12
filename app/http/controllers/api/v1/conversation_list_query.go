@@ -11,7 +11,8 @@
 | filter[channel_connection], filter[priority] (a comma list of levels),
 | filter[tag], filter[tag_any], filter[created_after],
 | filter[created_before], filter[waiting], filter[unread],
-| filter[assignment_waiting], q and sort. A cursor carries a hash of
+| filter[assignment_waiting], filter[where] (unsaved view conditions),
+| q and sort. A cursor carries a hash of
 | the filters and sort it was made for, so a cursor taken to another
 | list is refused rather than silently skipping rows.
 |
@@ -53,7 +54,7 @@ func ConversationListing() pagination.Allow {
 		Filters: []string{
 			"view", "status", "inbox", "assignee", "team", "contact", "company", "channel", "channel_connection",
 			"priority", "tag", "tag_any", "created_after", "created_before", "waiting", "unread",
-			"assignment_waiting", "ai",
+			"assignment_waiting", "ai", "where",
 		},
 		Sorts:    []string{"last_message_at", "created_at", "waiting_since", "priority", "snoozed_until"},
 		Includes: []string{"viewers"},
@@ -93,7 +94,7 @@ func parseListQuery(registry *ids.Registry, query pagination.Query) (listQuery, 
 
 	lq.filters.Search = query.Search
 
-	for _, parse := range []func(*conversations.Filters) error{p.statuses, p.refs, p.narrowing, p.ai, p.view} {
+	for _, parse := range []func(*conversations.Filters) error{p.statuses, p.refs, p.narrowing, p.ai, p.view, p.where} {
 		if err := parse(&lq.filters); err != nil {
 			return lq, err
 		}

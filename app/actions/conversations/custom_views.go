@@ -9,6 +9,8 @@
 | own status and sort apply unless the request chose others. A cursor
 | remembers which version of the view it was made for, so editing the
 | view sends screens back to the first page instead of skipping rows.
+| Conditions not saved yet narrow the list the same way, on top of the
+| view it shows, so a teammate can try them before saving.
 |
 */
 
@@ -113,20 +115,40 @@ func CompileError(err error) error {
 }
 
 /*
-customView is a saved view applied to a list: its predicate and search,
-and the hash of the version applied.
+customView is what narrows a list beyond its filters: the predicates
+and searches of a saved view and of conditions not saved yet, and the
+hash of the saved version applied.
 */
 type customView struct {
-	predicate querybuilder.Fragment
-	search    *string
-	hash      string
+	predicates []querybuilder.Fragment
+	searches   []string
+	hash       string
 }
 
 /*
 applyCustomView loads and compiles the view a list names, filling in
-its status and sort where the request chose none.
+its status and sort where the request chose none, then adds the
+unsaved conditions the request carries.
 */
 func (a *ListConversations) applyCustomView(
+	ctx context.Context, q *models.Queries, in *ListConversationsInput,
+) (*customView, error) {
+	view, err := a.savedView(ctx, q, in)
+	if err != nil || len(in.Filters.Definition) == 0 {
+		return view, err
+	}
+
+	if view == nil {
+		view = &customView{}
+	}
+
+	return view, a.narrow(view, in.Membership, in.Filters.Definition)
+}
+
+/*
+savedView compiles the saved view a list names, if it names one.
+*/
+func (a *ListConversations) savedView(
 	ctx context.Context, q *models.Queries, in *ListConversationsInput,
 ) (*customView, error) {
 	if in.Filters.View != ViewCustom {
@@ -138,21 +160,38 @@ func (a *ListConversations) applyCustomView(
 		return nil, err
 	}
 
-	d, err := ReadDefinition(v.Definition)
-	if err != nil {
-		return nil, err
+	view := &customView{
+		hash: hashing.SHA256Hex(append(append([]byte{}, v.Definition...), []byte(v.UpdatedAt.String())...))[:16],
 	}
-
-	compiled, err := NewCompiler(in.Membership, a.IDs, a.Clock.Now()).Compile(d)
-	if err != nil {
-		return nil, CompileError(err)
+	if err := a.narrow(view, in.Membership, v.Definition); err != nil {
+		return nil, err
 	}
 
 	viewDefaults(in, v)
 
-	hash := hashing.SHA256Hex(append(append([]byte{}, v.Definition...), []byte(v.UpdatedAt.String())...))[:16]
+	return view, nil
+}
 
-	return &customView{predicate: compiled.Predicate, search: compiled.Search, hash: hash}, nil
+/*
+narrow compiles a definition and adds what it narrows by to the view.
+*/
+func (a *ListConversations) narrow(view *customView, m authz.Membership, raw json.RawMessage) error {
+	d, err := ReadDefinition(raw)
+	if err != nil {
+		return err
+	}
+
+	compiled, err := NewCompiler(m, a.IDs, a.Clock.Now()).Compile(d)
+	if err != nil {
+		return CompileError(err)
+	}
+
+	view.predicates = append(view.predicates, compiled.Predicate)
+	if compiled.Search != nil {
+		view.searches = append(view.searches, strings.TrimSpace(*compiled.Search))
+	}
+
+	return nil
 }
 
 /*
@@ -176,24 +215,23 @@ func viewDefaults(in *ListConversationsInput, v models.ConversationView) {
 }
 
 /*
-apply narrows the list by the view.
+apply narrows the list by the view, every search joined to the one
+typed.
 */
 func (c *customView) apply(l *querybuilder.Conversations) {
 	if c == nil {
 		return
 	}
 
-	l.Extra = append(l.Extra, c.predicate)
+	l.Extra = append(l.Extra, c.predicates...)
 
-	if c.search == nil {
-		return
+	for _, search := range c.searches {
+		if l.TSQuery == nil {
+			l.TSQuery = new(search)
+
+			continue
+		}
+
+		l.TSQuery = new("(" + *l.TSQuery + ") & (" + search + ")")
 	}
-
-	if l.TSQuery == nil {
-		l.TSQuery = c.search
-
-		return
-	}
-
-	l.TSQuery = new("(" + *l.TSQuery + ") & (" + strings.TrimSpace(*c.search) + ")")
 }

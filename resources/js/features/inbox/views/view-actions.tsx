@@ -1,21 +1,52 @@
 /*
- * What the header of a list offers about its view: any list can be saved
- * as a view, keeping its status and sort; a saved view can be edited,
- * copied, and pinned so the view picker counts its open conversations. The
- * editor also opens from the view picker's new view action.
+ * What the header of a list offers about its view: the filter icon opens
+ * a dropdown of conditions, starting from the list on screen and keeping
+ * its status and sort, that either filters the list right away or is
+ * saved as a new view. Opened from the view picker's new view action,
+ * the same dropdown leads with saving, since a view is what was asked
+ * for. While conditions are applied the icon carries a dot, and a
+ * second icon clears them; a saved view can also be
+ * edited in the same dropdown, copied, and pinned so the view picker
+ * counts its open conversations. The new view dropdown also opens from
+ * the view picker's new view action.
  */
-import { RiFileCopyLine, RiFilter3Line, RiPencilLine, RiPushpin2Fill, RiPushpin2Line } from "@remixicon/react";
+import {
+  RiFileCopyLine,
+  RiFilter3Line,
+  RiFilterOffLine,
+  RiPencilLine,
+  RiPushpin2Fill,
+  RiPushpin2Line,
+} from "@remixicon/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useSearch } from "@tanstack/react-router";
-import { useState } from "react";
+import { type ReactNode, useState } from "react";
 
-import { Button } from "@/components/base/buttons/button";
+import { IconButton } from "@/components/base/buttons/icon-button";
+import { Popover, PopoverTrigger } from "@/components/base/popover/popover";
 import { preferencesQuery, updatePreferences } from "@/lib/api/inbox";
 import { createView, viewsQuery } from "@/lib/api/views";
 import { useMutationId } from "@/lib/realtime/context";
 import { realtimeKeys } from "@/lib/realtime/keys";
 
 import { type ViewDraftStart, ViewEditor } from "./view-editor";
+import { decodeWhere, encodeWhere } from "./where";
+
+/*
+ * EditorPopover is the dropdown the view editor opens in, wide enough
+ * for a row of conditions and no taller than the window.
+ */
+function EditorPopover({ children }: { children: ReactNode }) {
+  return (
+    <Popover
+      placement="bottom end"
+      className="w-[42rem]"
+      dialogClassName="max-h-[min(44rem,calc(100dvh-7rem))] gap-3 p-1.5"
+    >
+      {children}
+    </Popover>
+  );
+}
 
 /*
  * usePin pins and unpins a saved view in the person's sidebar.
@@ -67,44 +98,34 @@ function SavedViewActions({ workspace, id }: { workspace: string; id: string }) 
 
   return (
     <>
-      <Button
-        iconOnly
-        size="xs"
-        variant="ghost"
-        leadingIcon={pin.pinned ? RiPushpin2Fill : RiPushpin2Line}
+      <IconButton
+        icon={pin.pinned ? RiPushpin2Fill : RiPushpin2Line}
+        size="small"
         aria-label={pin.pinned ? "Unpin view" : "Pin view"}
         aria-pressed={pin.pinned}
         onClick={pin.toggle}
       />
-      <Button
-        iconOnly
-        size="xs"
-        variant="ghost"
-        leadingIcon={RiFileCopyLine}
-        aria-label="Duplicate view"
-        onClick={() => copy.mutate()}
-      />
-      <Button
-        iconOnly
-        size="xs"
-        variant="ghost"
-        leadingIcon={RiPencilLine}
-        aria-label="Edit view"
-        onClick={() => setEditing(true)}
-        disabled={view === null}
-      />
-      {view && editing ? (
-        <ViewEditor key={view.id} workspace={workspace} view={view} isOpen={editing} onOpenChange={setEditing} />
-      ) : null}
+      <IconButton icon={RiFileCopyLine} size="small" aria-label="Duplicate view" onClick={() => copy.mutate()} />
+      <PopoverTrigger isOpen={editing} onOpenChange={setEditing}>
+        <IconButton icon={RiPencilLine} size="small" aria-label="Edit view" disabled={view === null} />
+        <EditorPopover>
+          {view ? (
+            <ViewEditor key={view.id} workspace={workspace} view={view} onClose={() => setEditing(false)} />
+          ) : null}
+        </EditorPopover>
+      </PopoverTrigger>
     </>
   );
 }
 
 export function ViewActions({ workspace, view, start }: { workspace: string; view: string; start: ViewDraftStart }) {
   const navigate = useNavigate();
-  const { editor } = useSearch({ strict: false }) as { editor?: "new" };
+  const { editor, where } = useSearch({ strict: false }) as { editor?: "new"; where?: string };
   const [creating, setCreating] = useState(false);
+  const applied = decodeWhere(where);
   const open = creating || editor === "new";
+  const setWhere = (next: string | undefined) =>
+    void navigate({ to: ".", search: (prev: Record<string, unknown>) => ({ ...prev, where: next }) });
   const close = (next: boolean) => {
     setCreating(next);
     if (!next && editor) {
@@ -114,19 +135,41 @@ export function ViewActions({ workspace, view, start }: { workspace: string; vie
 
   return (
     <>
-      {view.startsWith("cvw_") ? (
-        <SavedViewActions workspace={workspace} id={view} />
-      ) : (
-        <Button
-          iconOnly
-          size="xs"
-          variant="ghost"
-          leadingIcon={RiFilter3Line}
-          aria-label="Save as view"
-          onClick={() => setCreating(true)}
+      {applied ? (
+        <IconButton
+          icon={RiFilterOffLine}
+          size="small"
+          aria-label="Clear filters"
+          onClick={() => setWhere(undefined)}
         />
-      )}
-      {open ? <ViewEditor workspace={workspace} view={null} start={start} isOpen={open} onOpenChange={close} /> : null}
+      ) : null}
+      <PopoverTrigger isOpen={open} onOpenChange={close}>
+        <span className="relative flex">
+          <IconButton
+            icon={RiFilter3Line}
+            size="small"
+            aria-label={applied ? "Edit filters" : "Filter"}
+            aria-pressed={applied !== null}
+          />
+          {applied ? (
+            <span
+              aria-hidden
+              className="pointer-events-none absolute end-1 top-1 size-1.5 rounded-full bg-accent-500"
+            />
+          ) : null}
+        </span>
+        <EditorPopover>
+          <ViewEditor
+            workspace={workspace}
+            view={null}
+            start={start}
+            applied={applied}
+            onApply={editor === "new" ? undefined : (definition) => setWhere(encodeWhere(definition))}
+            onClose={() => close(false)}
+          />
+        </EditorPopover>
+      </PopoverTrigger>
+      {view.startsWith("cvw_") ? <SavedViewActions workspace={workspace} id={view} /> : null}
     </>
   );
 }

@@ -4,19 +4,17 @@
  * operator takes. A condition naming something that was deleted is
  * marked, so the person can fix or remove it.
  */
-import { RiCloseLine, RiErrorWarningLine } from "@remixicon/react";
 import { useQuery } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import type { Key } from "react-aria-components";
 
-import { Button } from "@/components/base/buttons/button";
 import { Input } from "@/components/base/input/input";
 import { Select, SelectItem } from "@/components/base/select/select";
+import { RuleRow } from "@/features/audiences/rule-layout";
 import { conversationPriorities, inboxesQuery } from "@/lib/api/inbox";
 import { teamsQuery } from "@/lib/api/teams";
 import type { ViewCondition } from "@/lib/api/views";
 import { membersQuery } from "@/lib/api/workspace";
-import { cx } from "@/utils/cx";
 
 import { priorityLabel } from "../priority/labels";
 import { defaultValue, durations, fieldSpecs, opFor, type ValueKind } from "./fields";
@@ -40,14 +38,13 @@ function Choice({
   return (
     <Select
       aria-label={label}
-      size="sm"
       selectedKey={value ?? null}
       onSelectionChange={(key: Key | null) => {
         if (key !== null) {
           onChange(String(key));
         }
       }}
-      className="min-w-0"
+      className="w-full min-w-0"
     >
       {options.map((o) => (
         <SelectItem key={o.id} id={o.id} textValue={o.label}>
@@ -121,7 +118,7 @@ function ValueControl({
     return null;
   }
   if (kind === "text") {
-    return <Input aria-label="Value" value={String(value ?? "")} onChange={onChange} />;
+    return <Input aria-label="Value" value={String(value ?? "")} onChange={onChange} className="w-full" />;
   }
   const listed = listKinds.includes(kind);
   const current = listed ? (value as string[] | undefined)?.[0] : String(value ?? "");
@@ -138,12 +135,14 @@ function ValueControl({
 
 export function ConditionRow({
   workspace,
+  join,
   condition,
   flagged,
   onChange,
   onRemove,
 }: {
   workspace: string;
+  join: string;
   condition: ViewCondition;
   flagged: boolean;
   onChange: (condition: ViewCondition) => void;
@@ -153,53 +152,49 @@ export function ConditionRow({
   const op = opFor(condition);
 
   return (
-    <div
-      className={cx(
-        "grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1.2fr)_auto] items-center gap-2 rounded-xl p-1",
-        flagged && "ring-1 ring-border-error-default",
-      )}
-    >
-      <Choice
-        label="Field"
-        value={condition.field}
-        options={fieldSpecs.map((f) => ({ id: f.field, label: f.label }))}
-        onChange={(field) => {
-          const first = fieldSpecs.find((f) => f.field === field)?.ops[0];
-          onChange({ field, op: first?.op ?? "eq", value: defaultValue(first?.kind) });
-        }}
-      />
-      <Choice
-        label="Comparison"
-        value={op?.op}
-        options={(spec?.ops ?? []).map((o) => ({ id: o.op, label: o.label }))}
-        onChange={(picked) => {
-          const next = spec?.ops.find((o) => o.op === picked);
-          onChange({ field: condition.field, op: picked, value: defaultValue(next?.kind) });
-        }}
-      />
-      <ValueControl
-        workspace={workspace}
-        kind={op?.kind}
-        value={condition.value}
-        onChange={(value) => onChange({ ...condition, value })}
-      />
-      <span className="flex items-center gap-1">
-        {flagged ? (
-          <RiErrorWarningLine
-            role="img"
-            aria-label="Names something that was deleted"
-            className="size-4 text-text-error-primary"
-          />
-        ) : null}
-        <Button
-          iconOnly
-          size="xs"
-          variant="ghost"
-          leadingIcon={RiCloseLine}
-          aria-label="Remove condition"
-          onClick={onRemove}
+    <RuleRow
+      join={join}
+      flagged={flagged}
+      field={
+        <Choice
+          label="Field"
+          value={condition.field}
+          options={fieldSpecs.map((f) => ({ id: f.field, label: f.label }))}
+          onChange={(field) => {
+            const first = fieldSpecs.find((f) => f.field === field)?.ops[0];
+            onChange({ field, op: first?.op ?? "eq", value: defaultValue(first?.kind) });
+          }}
         />
-      </span>
-    </div>
+      }
+      op={
+        <Choice
+          label="Comparison"
+          value={op?.op}
+          options={(spec?.ops ?? []).map((o) => ({ id: o.op, label: o.label }))}
+          onChange={(picked) => {
+            const next = spec?.ops.find((o) => o.op === picked);
+            onChange({ field: condition.field, op: picked, value: defaultValue(next?.kind) });
+          }}
+        />
+      }
+      value={
+        op?.kind === undefined ? (
+          <Input aria-label="Value" isDisabled placeholder="No value needed" className="w-full" />
+        ) : (
+          <ValueControl
+            workspace={workspace}
+            kind={op.kind}
+            value={condition.value}
+            onChange={(value) => onChange({ ...condition, value })}
+          />
+        )
+      }
+      below={
+        flagged ? (
+          <span className="text-body-2-regular text-text-error-primary">Names something that was deleted.</span>
+        ) : null
+      }
+      onRemove={onRemove}
+    />
   );
 }
