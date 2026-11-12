@@ -12,8 +12,11 @@ on:
   pull_request:
   workflow_dispatch:
 
+# Each push to main runs on its own, so a push never waits for the run
+# before it and every commit is checked; releases still go one at a time
+# (staging.yml). A pull request's newer push cancels its older run.
 concurrency:
-  group: main-${{ github.ref }}
+  group: main-${{ github.event_name == 'pull_request' && github.ref || github.sha }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 permissions:
