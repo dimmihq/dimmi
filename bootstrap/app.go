@@ -80,6 +80,7 @@ func Application() (*app.App, foundation.Options) {
 		Providers:   providers.All(application, routes.Register),
 		Broadcast:   application.ResolveRealtime,
 		WebPushGone: application.PushGone,
+		Domains:     application.AuthorizeDomain,
 		Commands:    commands.All(application),
 		Module:      Module,
 		GateExcept:  gateExcept(),

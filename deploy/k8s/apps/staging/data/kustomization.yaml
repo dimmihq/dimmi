@@ -40,6 +40,9 @@ patches:
         path: /data/DIMMI_TELEMETRY__METRICS
         value: prometheus
       - op: add
+        path: /data/DIMMI_HELP_CENTERS__BASE_DOMAIN
+        value: help.staging.trydimmi.com
+      - op: add
         path: /data/DIMMI_HTTP__TRUSTED_PROXIES
         value: 10.42.0.0/16
       - op: add
