@@ -231,7 +231,7 @@ export interface ReportDigestChanges {
 }
 
 export function updateReportDigest(workspace: string, changes: ReportDigestChanges): Promise<ReportDigest> {
-  return request<ReportDigest>("PUT", "/report-digest", changes, { workspace });
+  return request<ReportDigest>("PATCH", "/report-digest", changes, { workspace });
 }
 
 export function deleteReportDigest(workspace: string): Promise<void> {

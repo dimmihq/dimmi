@@ -7,8 +7,8 @@
 | /reports/{report} answers one for a range and filters, with each
 | number beside the period before when compare is set. GET
 | /reports/{report}/conversations lists the conversations behind one of
-| its numbers, up to ten thousand. GET, PUT and DELETE /report-digest
-| read, set and stop the caller's daily or weekly digest by mail.
+| its numbers, up to ten thousand. GET, PATCH and DELETE /report-digest
+| read, change and stop the caller's daily or weekly digest by mail.
 |
 */
 
@@ -168,21 +168,32 @@ UpdateDigest sets the caller's digest.
 func (c *ReportController) UpdateDigest(
 	ctx context.Context, in *requests.UpdateReportDigestRequest,
 ) (*ReportDigestOutput, error) {
+	m := membership(ctx)
+
+	current, _, err := c.Digests.Show(ctx, m)
+	if err != nil {
+		return nil, err
+	}
+
 	b := in.Body
+	f := current.Filters
+	keepGiven(&current.Frequency, b.Frequency)
+	keepGiven(&f.BusinessHours, b.BusinessHours)
+	keepGiven(&f.Channels, b.Channels)
 
-	inboxes, err := decodeReportIDs(c.IDs, models.PrefixInbox, b.Inboxes, "inbox_ids")
-	if err != nil {
-		return nil, err
+	if b.Inboxes != nil {
+		if f.Inboxes, err = decodeReportIDs(c.IDs, models.PrefixInbox, *b.Inboxes, "inbox_ids"); err != nil {
+			return nil, err
+		}
 	}
 
-	teams, err := decodeReportIDs(c.IDs, models.PrefixTeam, b.Teams, "team_ids")
-	if err != nil {
-		return nil, err
+	if b.Teams != nil {
+		if f.Teams, err = decodeReportIDs(c.IDs, models.PrefixTeam, *b.Teams, "team_ids"); err != nil {
+			return nil, err
+		}
 	}
 
-	d, err := c.Digests.Save(ctx, membership(ctx), b.Frequency, reports.Filters{
-		Inboxes: inboxes, Teams: teams, Channels: b.Channels, BusinessHours: b.BusinessHours,
-	})
+	d, err := c.Digests.Save(ctx, m, current.Frequency, f)
 	if err != nil {
 		return nil, err
 	}

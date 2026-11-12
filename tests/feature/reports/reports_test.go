@@ -310,10 +310,14 @@ func TestReportDigest(t *testing.T) {
 		d := open(t)
 
 		d.Owner.GetJSON("/api/v1/report-digest").AssertOK().AssertJSONPath("data.frequency", nil)
-		d.Owner.PutJSON("/api/v1/report-digest", testkit.JSON{"frequency": "weekly"}).AssertOK().
+		d.Owner.PatchJSON("/api/v1/report-digest", testkit.JSON{"business_hours": true}).
+			AssertStatus(fhttp.StatusUnprocessableEntity)
+		d.Owner.PatchJSON("/api/v1/report-digest", testkit.JSON{"frequency": "weekly"}).AssertOK().
 			AssertJSONPath("data.frequency", "weekly")
-		d.Owner.PutJSON("/api/v1/report-digest", testkit.JSON{"frequency": "daily"}).AssertOK().
-			AssertJSONPath("data.frequency", "daily")
+		d.Owner.PatchJSON("/api/v1/report-digest", testkit.JSON{"business_hours": true}).AssertOK().
+			AssertJSONPath("data.frequency", "weekly").AssertJSONPath("data.business_hours", true)
+		d.Owner.PatchJSON("/api/v1/report-digest", testkit.JSON{"frequency": "daily"}).AssertOK().
+			AssertJSONPath("data.frequency", "daily").AssertJSONPath("data.business_hours", true)
 		d.Owner.Delete("/api/v1/report-digest").AssertNoContent()
 		d.Owner.GetJSON("/api/v1/report-digest").AssertOK().AssertJSONPath("data.frequency", nil)
 	})
@@ -321,7 +325,7 @@ func TestReportDigest(t *testing.T) {
 	t.Run("a due digest goes out and moves on", func(t *testing.T) {
 		t.Parallel()
 		d := open(t)
-		d.Owner.PutJSON("/api/v1/report-digest", testkit.JSON{"frequency": "daily"}).AssertOK()
+		d.Owner.PatchJSON("/api/v1/report-digest", testkit.JSON{"frequency": "daily"}).AssertOK()
 
 		d.TC.Clock.Travel(25 * time.Hour)
 		require.NoError(t, d.TC.App.Actions.ReportDigests.SendDigests(t.Context()))

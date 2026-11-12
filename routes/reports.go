@@ -34,7 +34,7 @@ func reportRoutes(workspace *routing.Router, a *app.App) {
 	routing.Get(workspace, "/reports/{report}/conversations", "reports.conversations.index", c.Conversations).
 		Ability("conversations:read")
 	routing.Get(workspace, "/report-digest", "report-digest.show", c.ShowDigest).Ability("conversations:read")
-	routing.Put(workspace, "/report-digest", "report-digest.update", c.UpdateDigest).Ability("conversations:read")
+	routing.Patch(workspace, "/report-digest", "report-digest.update", c.UpdateDigest).Ability("conversations:read")
 	routing.Delete(workspace, "/report-digest", "report-digest.destroy", c.DestroyDigest).
 		Ability("conversations:read").Status(fhttp.StatusNoContent)
 }

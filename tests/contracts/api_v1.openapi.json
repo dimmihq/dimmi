@@ -32954,10 +32954,7 @@
               "type": "string"
             },
             "maxItems": 20,
-            "type": [
-              "array",
-              "null"
-            ]
+            "type": "array"
           },
           "frequency": {
             "enum": [
@@ -32971,25 +32968,16 @@
               "type": "string"
             },
             "maxItems": 50,
-            "type": [
-              "array",
-              "null"
-            ]
+            "type": "array"
           },
           "team_ids": {
             "items": {
               "type": "string"
             },
             "maxItems": 50,
-            "type": [
-              "array",
-              "null"
-            ]
+            "type": "array"
           }
         },
-        "required": [
-          "frequency"
-        ],
         "type": "object"
       },
       "UpdateRoleRequestBody": {
@@ -52896,7 +52884,7 @@
           "conversations:read"
         ]
       },
-      "put": {
+      "patch": {
         "operationId": "report-digest.update",
         "requestBody": {
           "content": {

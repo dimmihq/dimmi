@@ -54,15 +54,16 @@ type ReportConversationsRequest struct {
 }
 
 /*
-UpdateReportDigestRequest is the input of PUT /report-digest: how often
-the digest comes and what it covers.
+UpdateReportDigestRequest is the input of PATCH /report-digest: how
+often the digest comes and what it covers. Fields left out keep their
+value; a first digest needs its frequency.
 */
 type UpdateReportDigestRequest struct {
 	Body struct {
-		Frequency     string   `json:"frequency"                enum:"daily,weekly"`
-		Inboxes       []string `json:"inbox_ids,omitempty"      maxItems:"50"`
-		Teams         []string `json:"team_ids,omitempty"       maxItems:"50"`
-		Channels      []string `json:"channels,omitempty"       maxItems:"20"`
-		BusinessHours bool     `json:"business_hours,omitempty"`
+		Frequency     *string   `json:"frequency,omitempty"      enum:"daily,weekly"`
+		Inboxes       *[]string `json:"inbox_ids,omitempty"      maxItems:"50"`
+		Teams         *[]string `json:"team_ids,omitempty"       maxItems:"50"`
+		Channels      *[]string `json:"channels,omitempty"       maxItems:"20"`
+		BusinessHours *bool     `json:"business_hours,omitempty"`
 	}
 }
