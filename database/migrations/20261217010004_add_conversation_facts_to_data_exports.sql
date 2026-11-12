@@ -1,4 +1,4 @@
--- migrate: phase=expand
+-- migrate: phase=contract
 -- A data export can also be every conversation's report facts, as one
 -- spreadsheet, for the range and filters of the reports.
 
