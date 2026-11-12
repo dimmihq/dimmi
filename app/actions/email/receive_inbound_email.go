@@ -107,16 +107,16 @@ func (a *ReceiveInboundEmail) Handle(ctx context.Context, env mailbox.Envelope) 
 		return nil, err
 	}
 
-	path, size, err := a.store(ctx, env)
+	raw, err := a.store(ctx, env)
 	if err != nil {
 		return nil, err
 	}
 
-	verdicts := jsonOf(env.Verdicts)
+	raw.verdicts = jsonOf(env.Verdicts)
 
 	received := make([]ReceivedEmail, 0, len(routes))
 	for _, r := range routes {
-		row, err := a.record(ctx, env, r, recordedRaw{path: path, size: size, verdicts: verdicts})
+		row, err := a.record(ctx, env, r, raw)
 		if err != nil {
 			return received, err
 		}
@@ -188,23 +188,24 @@ func addRoute(routes []route, found models.RouteEmailAddressRow, parsed inbound.
 }
 
 /*
-store keeps the raw message on the raw disk and returns its path and
-size.
+store keeps the raw message on the raw disk and returns where it is. A
+message the provider already keeps, such as on the bucket SES writes
+to, stays on the provider's disk.
 */
-func (a *ReceiveInboundEmail) store(ctx context.Context, env mailbox.Envelope) (string, int64, error) {
+func (a *ReceiveInboundEmail) store(ctx context.Context, env mailbox.Envelope) (recordedRaw, error) {
 	if env.RawRef != nil {
-		return env.RawRef.Path, env.SizeBytes, nil
+		return recordedRaw{disk: env.RawRef.Disk, path: env.RawRef.Path, size: env.SizeBytes}, nil
 	}
 
 	raw, err := env.OpenRaw(ctx)
 	if err != nil {
-		return "", 0, fmt.Errorf("open raw email: %w", err)
+		return recordedRaw{}, fmt.Errorf("open raw email: %w", err)
 	}
 	defer func() { _ = raw.Close() }()
 
 	content, err := io.ReadAll(io.LimitReader(raw, a.Config.Inbound.MaxMessageBytes*2))
 	if err != nil {
-		return "", 0, fmt.Errorf("read raw email: %w", err)
+		return recordedRaw{}, fmt.Errorf("read raw email: %w", err)
 	}
 
 	now := a.Clock.Now().UTC()
@@ -212,10 +213,10 @@ func (a *ReceiveInboundEmail) store(ctx context.Context, env mailbox.Envelope) (
 
 	err = a.Disk.Put(ctx, path, content, filesystem.PutOptions{ContentType: "message/rfc822"})
 	if err != nil {
-		return "", 0, fmt.Errorf("store raw email: %w", err)
+		return recordedRaw{}, fmt.Errorf("store raw email: %w", err)
 	}
 
-	return path, int64(len(content)), nil
+	return recordedRaw{disk: a.DiskName, path: path, size: int64(len(content))}, nil
 }
 
 /*
@@ -223,6 +224,7 @@ recordedRaw is where the raw message was kept and what the provider
 concluded about it.
 */
 type recordedRaw struct {
+	disk     string
 	path     string
 	size     int64
 	verdicts json.RawMessage
@@ -241,7 +243,7 @@ func (a *ReceiveInboundEmail) record(
 		WorkspaceID: r.workspaceID, EmailAddressID: &r.addressID, ChannelConnectionID: &r.connectionID,
 		Source: env.Source, ProviderMessageID: optional(env.ProviderMessageID),
 		EnvelopeFrom: optional(env.EnvelopeFrom), EnvelopeTo: r.recipients, SizeBytes: raw.size,
-		RawDisk: a.DiskName, RawPath: &raw.path, Status: string(enums.InboundEmailStatusReceived),
+		RawDisk: raw.disk, RawPath: &raw.path, Status: string(enums.InboundEmailStatusReceived),
 		ProviderVerdicts: raw.verdicts, ReceivedAt: env.ReceivedAt, Now: a.Clock.Now(),
 	}
 
