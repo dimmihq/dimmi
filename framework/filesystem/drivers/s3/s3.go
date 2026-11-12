@@ -28,8 +28,10 @@ import (
 	"github.com/aws/aws-sdk-go-v2/feature/s3/transfermanager"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 
+	"github.com/dimmihq/dimmi/framework/clock"
 	"github.com/dimmihq/dimmi/framework/config"
 	"github.com/dimmihq/dimmi/framework/filesystem"
+	"github.com/dimmihq/dimmi/framework/filesystem/signedlinks"
 	"github.com/dimmihq/dimmi/framework/manager"
 )
 
@@ -47,7 +49,10 @@ app talks to it on an address they cannot, such as a store inside a
 cluster behind its own public host: signed links name it, so the
 signature holds for the host browsers send. ForcePathStyle puts the
 bucket in the path, as SeaweedFS and Garage expect. URL is the public
-base URL the files are served from.
+base URL the files are served from. Links set to "app" make the
+application serve the disk's files itself, for a store browsers cannot
+reach at all: it signs links under its own address with SigningKey and
+SignedURLBase, which it fills in, and streams each file from the store.
 */
 type Options struct {
 	Bucket          string `koanf:"bucket"`
@@ -58,6 +63,9 @@ type Options struct {
 	AccessKeyID     string `koanf:"access_key_id"`
 	SecretAccessKey string `koanf:"secret_access_key"`
 	URL             string `koanf:"url"`
+	Links           string `koanf:"links"`
+	SigningKey      string `koanf:"signing_key"`
+	SignedURLBase   string `koanf:"signed_url_base"`
 }
 
 /*
@@ -100,7 +108,16 @@ func New(ctx context.Context, opts Options) (*filesystem.Disk, error) {
 		signer = s3.NewFromConfig(awsConfig, clientOptions(opts, opts.PublicEndpoint))
 	}
 
+	var links *signedlinks.Signer
+	if opts.SigningKey != "" && opts.SignedURLBase != "" {
+		if links, err = signedlinks.New(opts.SignedURLBase, opts.SigningKey); err != nil {
+			return nil, err
+		}
+	}
+
 	return filesystem.NewDisk(&store{
+		links:    links,
+		clock:    clock.System(),
 		client:   client,
 		presign:  s3.NewPresignClient(signer),
 		uploader: transfermanager.New(client),

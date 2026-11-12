@@ -33,6 +33,7 @@ import (
 
 	"github.com/dimmihq/dimmi/framework/clock"
 	"github.com/dimmihq/dimmi/framework/filesystem"
+	"github.com/dimmihq/dimmi/framework/filesystem/signedlinks"
 )
 
 const (
@@ -47,7 +48,7 @@ the disk cannot sign URLs.
 */
 type store struct {
 	root   *os.Root
-	signer *signer
+	signer *signedlinks.Signer
 	clock  clock.Clock
 }
 
@@ -242,7 +243,7 @@ func (s *store) Sign(_ context.Context, name string, req filesystem.SignRequest)
 		return "", err
 	}
 
-	return s.signer.sign(name, req, s.clock.Now()), nil
+	return s.signer.Sign(name, req, s.clock.Now()), nil
 }
 
 /*

@@ -20,12 +20,12 @@ package local
 import (
 	"errors"
 	"fmt"
-	"net/url"
 	"os"
 
 	"github.com/dimmihq/dimmi/framework/clock"
 	"github.com/dimmihq/dimmi/framework/config"
 	"github.com/dimmihq/dimmi/framework/filesystem"
+	"github.com/dimmihq/dimmi/framework/filesystem/signedlinks"
 )
 
 /*
@@ -71,12 +71,12 @@ func New(opts Options) (*filesystem.Disk, error) {
 	s := &store{clock: clock.System()}
 
 	if opts.SignedURLBase != "" && opts.SigningKey != "" {
-		base, err := url.Parse(opts.SignedURLBase)
+		signer, err := signedlinks.New(opts.SignedURLBase, opts.SigningKey)
 		if err != nil {
-			return nil, fmt.Errorf("parse signed_url_base: %w", err)
+			return nil, err
 		}
 
-		s.signer = &signer{base: base, key: []byte(opts.SigningKey)}
+		s.signer = signer
 	}
 
 	if err := os.MkdirAll(opts.Root, dirMode); err != nil {

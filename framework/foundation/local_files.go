@@ -4,9 +4,12 @@
 |--------------------------------------------------------------------------
 |
 | A file on a local disk has no storage service to hand out links, so the
-| application signs them itself and serves them back. Every local disk
-| gets a signing key derived from the app key and a link base under this
-| server's own address, unless its configuration names its own. A link
+| application signs them itself and serves them back. So does a disk on a
+| storage service browsers cannot reach, such as one inside a private
+| network, when its links are set to "app": then nothing but the app's
+| own address has to be public. Every such disk gets a signing key
+| derived from the app key and a link base under this server's own
+| address, unless its configuration names its own. A link
 | reads, or for an upload writes, exactly one file until it expires;
 | anything unsigned, altered or late is refused. Files that are not
 | pictures are always downloaded, never shown inline, so nothing uploaded
@@ -26,6 +29,7 @@ import (
 	"strings"
 
 	"github.com/dimmihq/dimmi/framework/clock"
+	"github.com/dimmihq/dimmi/framework/config"
 	"github.com/dimmihq/dimmi/framework/encryption"
 	"github.com/dimmihq/dimmi/framework/filesystem"
 	"github.com/dimmihq/dimmi/framework/filesystem/drivers/local"
@@ -78,13 +82,21 @@ func inlineTypes() []string {
 }
 
 /*
-signLocalDisks gives every local disk without its own link settings a
-signing key derived from the app key and a link base under the app's
-address.
+appLinked reports whether the application signs and serves the disk's
+links: a local disk always, any other disk when its links are "app".
+*/
+func appLinked(section config.Section) bool {
+	return section.String("driver") == "local" || section.String("links") == "app"
+}
+
+/*
+signLocalDisks gives every disk the application serves, without its own
+link settings, a signing key derived from the app key and a link base
+under the app's address.
 */
 func (a *Application) signLocalDisks() error {
 	for name, section := range a.Config.Filesystems.Disks {
-		if section.String("driver") != "local" || section.String("signing_key") != "" {
+		if !appLinked(section) || section.String("signing_key") != "" {
 			continue
 		}
 
@@ -137,7 +149,7 @@ any link that does not check out, so a probe learns nothing.
 func (a *Application) localFile(w http.ResponseWriter, r *http.Request) {
 	name, path := r.PathValue("disk"), r.PathValue("*")
 	section, ok := a.Config.Filesystems.Disks[name]
-	if !ok || section.String("driver") != "local" || section.String("signing_key") == "" {
+	if !ok || !appLinked(section) || section.String("signing_key") == "" {
 		http.NotFound(w, r)
 
 		return

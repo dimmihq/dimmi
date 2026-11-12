@@ -28,7 +28,9 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/aws/aws-sdk-go-v2/service/s3/types"
 
+	"github.com/dimmihq/dimmi/framework/clock"
 	"github.com/dimmihq/dimmi/framework/filesystem"
+	"github.com/dimmihq/dimmi/framework/filesystem/signedlinks"
 )
 
 /*
@@ -37,6 +39,8 @@ A store is the filesystem.Store of an s3 disk.
 type store struct {
 	client   *s3.Client
 	presign  *s3.PresignClient
+	links    *signedlinks.Signer
+	clock    clock.Clock
 	uploader *transfermanager.Client
 	bucket   string
 }
@@ -134,9 +138,14 @@ func (s *store) List(ctx context.Context, prefix string) iter.Seq2[filesystem.En
 }
 
 /*
-Sign presigns a GetObject or, for PUT, a PutObject request.
+Sign presigns a GetObject or, for PUT, a PutObject request, or signs a
+link the application serves when the disk's links are the app's.
 */
 func (s *store) Sign(ctx context.Context, path string, req filesystem.SignRequest) (string, error) {
+	if s.links != nil {
+		return s.links.Sign(path, req, s.clock.Now()), nil
+	}
+
 	expires := s3.WithPresignExpires(req.TTL)
 
 	if req.Method == http.MethodPut {
