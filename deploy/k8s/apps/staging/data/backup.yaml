@@ -1,0 +1,59 @@
+# Staging's database backs up to Hetzner Object Storage in nbg1, away from
+# the server. Postgres ships every WAL segment as soon as it closes (or
+# after archive_timeout, five minutes by default) and takes a full base
+# backup each night, so it can be restored to any moment in the last 30
+# days. Backups older than that, and the WAL they need, are deleted.
+#
+# Secret pg-backup-s3 holds the bucket's keys and region. It is made by
+# hand from .env.staging and never committed.
+#
+# To restore, bootstrap a new Cluster with recovery from this store (see
+# the plugin docs, "recovery"), giving it a new serverName for its own
+# archive so it never writes over this one.
+apiVersion: barmancloud.cnpg.io/v1
+kind: ObjectStore
+metadata:
+  name: postgres-backup
+spec:
+  retentionPolicy: 30d
+  configuration:
+    destinationPath: s3://dimmi-staging-pg-backups/
+    endpointURL: https://nbg1.your-objectstorage.com
+    s3Credentials:
+      accessKeyId:
+        name: pg-backup-s3
+        key: ACCESS_KEY_ID
+      secretAccessKey:
+        name: pg-backup-s3
+        key: ACCESS_SECRET_KEY
+      region:
+        name: pg-backup-s3
+        key: ACCESS_REGION
+    wal:
+      compression: gzip
+      maxParallel: 2
+    data:
+      compression: gzip
+      jobs: 2
+  instanceSidecarConfiguration:
+    resources:
+      requests:
+        cpu: 10m
+        memory: 64Mi
+      limits:
+        memory: 512Mi
+---
+apiVersion: postgresql.cnpg.io/v1
+kind: ScheduledBackup
+metadata:
+  name: postgres-daily
+spec:
+  # Seconds first: every day at 03:00 UTC.
+  schedule: "0 0 3 * * *"
+  immediate: true
+  backupOwnerReference: self
+  cluster:
+    name: postgres
+  method: plugin
+  pluginConfiguration:
+    name: barman-cloud.cloudnative-pg.io

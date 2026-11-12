@@ -4,4 +4,6 @@ resources:
   - storage.yaml
   - protection.yaml
   - cloudnative-pg.yaml
+  - cert-manager.yaml
+  - barman-cloud.yaml
   - observability.yaml

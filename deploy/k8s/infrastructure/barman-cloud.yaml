@@ -1,0 +1,35 @@
+# The Barman Cloud plugin backs up every PostgreSQL cluster to object
+# storage: base backups plus a continuous WAL archive, so a database can be
+# restored to any moment inside its retention window. It replaces the
+# operator's built-in barmanObjectStore, deprecated since 1.26; the
+# standard Postgres images no longer ship barman-cloud, so the plugin
+# injects a sidecar into each instance instead. It must run in the
+# operator's namespace and needs cert-manager (cert-manager.yaml) first.
+#
+# Each environment declares its own ObjectStore and ScheduledBackup next to
+# its database (apps/<env>/data).
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: plugin-barman-cloud
+  namespace: cnpg-system
+spec:
+  interval: 1h
+  dependsOn:
+    - name: cloudnative-pg
+    - name: cert-manager
+      namespace: cert-manager
+  chart:
+    spec:
+      chart: plugin-barman-cloud
+      version: 0.8.1
+      sourceRef:
+        kind: HelmRepository
+        name: cloudnative-pg
+  values:
+    resources:
+      requests:
+        cpu: 10m
+        memory: 32Mi
+      limits:
+        memory: 128Mi
