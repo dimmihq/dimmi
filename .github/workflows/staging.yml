@@ -61,6 +61,14 @@ jobs:
           mkdir -p ~/.kube
           printf '%s' "$KUBECONFIG_DATA" > ~/.kube/config
           chmod 600 ~/.kube/config
+      - name: Remember the running release
+        run: |
+          image="$(kubectl -n dimmi-staging get deployment web \
+            -o jsonpath='{.spec.template.spec.containers[0].image}' 2>/dev/null || true)"
+          previous="${image##*:}"
+          if [[ "$previous" =~ ^[0-9a-f]{40}$ && "$previous" != "$SHA" ]]; then
+            echo "PREVIOUS=$previous" >> "$GITHUB_ENV"
+          fi
       - name: Release
         run: deploy/k8s/scripts/release.sh staging "$SHA"
       - name: Smoke test
@@ -68,3 +76,6 @@ jobs:
         env:
           EXPECT_RELEASE: ${{ env.SHA }}
           GATE_KEY: ${{ secrets.GATE_CI_KEY }}
+      - name: Roll back to the previous release
+        if: failure() && env.PREVIOUS != ''
+        run: deploy/k8s/scripts/rollback.sh staging "$PREVIOUS"
