@@ -1,6 +1,6 @@
 /*
 |--------------------------------------------------------------------------
-| Tool Catalog: Settings, Continued
+| Tool Catalog: Identity, Redaction, Messenger And Office Hours
 |--------------------------------------------------------------------------
 |
 | The entries for identity verification and its secrets, redaction and
@@ -13,10 +13,10 @@ package mcpserver
 import "maps"
 
 /*
-settingsDocs2 returns the entries for identity verification, redaction
+messengerPrivacyDocs returns the entries for identity verification, redaction
 and retention, the messenger's settings and office hours.
 */
-func settingsDocs2() map[string]Doc {
+func messengerPrivacyDocs() map[string]Doc {
 	out := map[string]Doc{}
 	for _, part := range []map[string]Doc{
 		identityDocs(), identitySecretChangeDocs(), identityVerificationDocs(), redactionDocs(),

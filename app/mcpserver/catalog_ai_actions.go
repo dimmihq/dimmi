@@ -14,10 +14,10 @@ package mcpserver
 import "maps"
 
 /*
-automationDocs2 returns the entries for AI actions, their connections
+aiActionDocs returns the entries for AI actions, their connections
 and their calls.
 */
-func automationDocs2() map[string]Doc {
+func aiActionDocs() map[string]Doc {
 	out := map[string]Doc{}
 	for _, part := range []map[string]Doc{
 		connectionDocs(), connectionCheckDocs(), actionDocs(), actionEditDocs(), actionCallDocs(),

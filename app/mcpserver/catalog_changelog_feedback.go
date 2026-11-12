@@ -13,18 +13,18 @@ package mcpserver
 import "maps"
 
 /*
-knowledgeDocs2 returns the entries for the changelog and feature
+changelogFeedbackDocs returns the entries for the changelog and feature
 requests.
 */
-func knowledgeDocs2() map[string]Doc {
+func changelogFeedbackDocs() map[string]Doc {
 	out := map[string]Doc{}
 	for _, part := range []map[string]Doc{
-		changelogDocs1(),
-		changelogDocs2(),
-		changelogDocs3(),
-		feedbackDocs1(),
-		feedbackDocs2(),
-		feedbackDocs3(),
+		changelogEntryDocs(),
+		changelogEntryChangeDocs(),
+		changelogLabelDocs(),
+		featureRequestDocs(),
+		featureRequestVoteDocs(),
+		featureRequestCommentDocs(),
 		feedbackStatusDocs(),
 	} {
 		maps.Copy(out, part)
@@ -34,9 +34,10 @@ func knowledgeDocs2() map[string]Doc {
 }
 
 /*
-changelogDocs1 returns entries for the changelog, part 1.
+changelogEntryDocs returns the entries for listing, writing and reading
+changelog entries.
 */
-func changelogDocs1() map[string]Doc {
+func changelogEntryDocs() map[string]Doc {
 	return map[string]Doc{
 		"help-centers.changelog-entries.index": {
 			Title:   "List changelog entries",
@@ -76,9 +77,10 @@ func changelogDocs1() map[string]Doc {
 }
 
 /*
-changelogDocs2 returns entries for the changelog, part 2.
+changelogEntryChangeDocs returns the entries for changing and publishing
+changelog entries.
 */
-func changelogDocs2() map[string]Doc {
+func changelogEntryChangeDocs() map[string]Doc {
 	return map[string]Doc{
 		"changelog-entries.update": {
 			Title: "Edit a changelog entry",
@@ -130,9 +132,10 @@ func changelogDocs2() map[string]Doc {
 }
 
 /*
-changelogDocs3 returns entries for the changelog, part 3.
+changelogLabelDocs returns the entries for the changelog's labels and
+subscribers.
 */
-func changelogDocs3() map[string]Doc {
+func changelogLabelDocs() map[string]Doc {
 	return map[string]Doc{
 		"help-centers.changelog-labels.store": {
 			Title:   "Create a changelog label",
@@ -176,9 +179,10 @@ func changelogDocs3() map[string]Doc {
 }
 
 /*
-feedbackDocs1 returns entries for feature requests, part 1.
+featureRequestDocs returns the entries for listing, posting and reading
+feature requests.
 */
-func feedbackDocs1() map[string]Doc {
+func featureRequestDocs() map[string]Doc {
 	return map[string]Doc{
 		"help-centers.feedback-posts.index": {
 			Title:   "List feature requests",
@@ -219,9 +223,10 @@ func feedbackDocs1() map[string]Doc {
 }
 
 /*
-feedbackDocs2 returns entries for feature requests, part 2.
+featureRequestVoteDocs returns the entries for changing feature requests
+and their votes.
 */
-func feedbackDocs2() map[string]Doc {
+func featureRequestVoteDocs() map[string]Doc {
 	return map[string]Doc{
 		"feedback-posts.update": {
 			Title: "Change a feature request",
@@ -271,9 +276,9 @@ func feedbackDocs2() map[string]Doc {
 }
 
 /*
-feedbackDocs3 returns entries for feature requests, part 3.
+featureRequestCommentDocs returns the entries for feature requests' comments.
 */
-func feedbackDocs3() map[string]Doc {
+func featureRequestCommentDocs() map[string]Doc {
 	return map[string]Doc{
 		"feedback-posts.comments.index": {
 			Title:   "List feature request comments",

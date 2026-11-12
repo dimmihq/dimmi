@@ -18,7 +18,7 @@ keys, Operator, procedures and workflows.
 func automationDocs() map[string]Doc {
 	out := map[string]Doc{}
 	for _, part := range []map[string]Doc{
-		agentDocs(), agentSettingsDocs(), keyDocs(), automationDocs2(), automationDocs3(),
+		agentDocs(), agentSettingsDocs(), keyDocs(), aiActionDocs(), operatorProcedureDocs(),
 	} {
 		maps.Copy(out, part)
 	}

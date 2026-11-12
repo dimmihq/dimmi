@@ -14,9 +14,9 @@ package mcpserver
 import "maps"
 
 /*
-peopleDocs3 returns the entries for custom attributes and events.
+attributeEventDocs returns the entries for custom attributes and events.
 */
-func peopleDocs3() map[string]Doc {
+func attributeEventDocs() map[string]Doc {
 	out := attributeDocs()
 	for _, part := range []map[string]Doc{
 		attributeCleanupDocs(), eventDocs(),

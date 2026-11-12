@@ -14,10 +14,10 @@ package mcpserver
 import "maps"
 
 /*
-automationDocs3 returns the entries for Operator, procedures and
+operatorProcedureDocs returns the entries for Operator, procedures and
 workflows.
 */
-func automationDocs3() map[string]Doc {
+func operatorProcedureDocs() map[string]Doc {
 	out := map[string]Doc{}
 	for _, part := range []map[string]Doc{
 		operatorThreadDocs(), operatorChangesetDocs(), operatorSettingsDocs(), procedureDocs(),

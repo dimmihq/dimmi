@@ -79,8 +79,8 @@ func ruled(t *testing.T, tc *tests.TestCase, rules map[string]any) {
 }
 
 /*
-allow1 is a one-entry allowlist.
+oneEntryAllowlist is a one-entry allowlist.
 */
-func allow1(cidr string) []map[string]string {
+func oneEntryAllowlist(cidr string) []map[string]string {
 	return []map[string]string{{"cidr": cidr, "label": "Office"}}
 }

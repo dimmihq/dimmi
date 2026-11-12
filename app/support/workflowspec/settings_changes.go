@@ -1,10 +1,11 @@
 /*
 |--------------------------------------------------------------------------
-| More Action Settings
+| State And Outside Step Settings
 |--------------------------------------------------------------------------
 |
-| The typed settings of more step kinds; see the step settings file for
-| how ids and optional switches are written.
+| The typed settings of the steps that change a contact, snooze, close or
+| time a conversation, or call another service; see the step settings
+| file for how ids and optional switches are written.
 |
 */
 

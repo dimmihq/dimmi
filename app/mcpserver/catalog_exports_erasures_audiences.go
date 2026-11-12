@@ -13,10 +13,10 @@ package mcpserver
 import "maps"
 
 /*
-peopleDocs2 returns the entries for data exports, a customer's export
-and erasure, and saved audiences.
+exportErasureAudienceDocs returns the entries for data exports, a
+customer's export and erasure, and saved audiences.
 */
-func peopleDocs2() map[string]Doc {
+func exportErasureAudienceDocs() map[string]Doc {
 	out := dataExportDocs()
 	for _, part := range []map[string]Doc{
 		contactExportDocs(), erasureDocs(), audienceDocs(), audienceCountDocs(), audienceTagDocs(),

@@ -22,7 +22,7 @@ func workspaceDocs() map[string]Doc {
 	out := map[string]Doc{}
 	for _, part := range []map[string]Doc{
 		workspaceSetupDocs(), onboardingDocs(), memberDocs(), memberChangeDocs(), invitationDocs(), teamDocs(),
-		teamChangeDocs(), workspaceDocs2(), callerDocs(),
+		teamChangeDocs(), workspaceAccessDocs(), callerDocs(),
 	} {
 		maps.Copy(out, part)
 	}

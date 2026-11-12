@@ -59,7 +59,7 @@ func TestAccessPolicyEndpoint(t *testing.T) {
 		owner := from(in(tc, tc.Owner), "203.0.113.4")
 
 		owner.PatchJSON(policyPath, testkit.JSON{
-			"dashboard_ip_allowlist": allow1("203.0.113.0/24"), "session_max_age_minutes": 120,
+			"dashboard_ip_allowlist": oneEntryAllowlist("203.0.113.0/24"), "session_max_age_minutes": 120,
 		}).AssertOK()
 		tc.Drain()
 

@@ -16,13 +16,13 @@ knowledgeDocs returns the entries for help centers, articles,
 collections, the changelog and feature requests.
 */
 func knowledgeDocs() map[string]Doc {
-	out := knowledgeDocs2()
+	out := changelogFeedbackDocs()
 	for _, part := range []map[string]Doc{
-		helpCenterDocs1(),
-		helpCenterDocs2(),
-		articleDocs1(),
-		articleDocs2(),
-		articleDocs3(),
+		helpCenterDocs(),
+		collectionDocs(),
+		articleDocs(),
+		articleChangeDocs(),
+		articleFeedbackDocs(),
 	} {
 		maps.Copy(out, part)
 	}
@@ -31,9 +31,10 @@ func knowledgeDocs() map[string]Doc {
 }
 
 /*
-helpCenterDocs1 returns entries for help centers and collections, part 1.
+helpCenterDocs returns the entries for help centers and listing their
+collections.
 */
-func helpCenterDocs1() map[string]Doc {
+func helpCenterDocs() map[string]Doc {
 	return map[string]Doc{
 		"help-centers.index": {
 			Title: "List help centers",
@@ -76,9 +77,9 @@ func helpCenterDocs1() map[string]Doc {
 }
 
 /*
-helpCenterDocs2 returns entries for help centers and collections, part 2.
+collectionDocs returns the entries for making and changing collections.
 */
-func helpCenterDocs2() map[string]Doc {
+func collectionDocs() map[string]Doc {
 	return map[string]Doc{
 		"help-centers.collections.store": {
 			Title: "Create a collection",
@@ -127,9 +128,10 @@ func helpCenterDocs2() map[string]Doc {
 }
 
 /*
-articleDocs1 returns entries for help center articles, part 1.
+articleDocs returns the entries for listing, writing and reading help
+center articles.
 */
-func articleDocs1() map[string]Doc {
+func articleDocs() map[string]Doc {
 	return map[string]Doc{
 		"help-centers.articles.index": {
 			Title: "List articles",
@@ -166,9 +168,10 @@ func articleDocs1() map[string]Doc {
 }
 
 /*
-articleDocs2 returns entries for help center articles, part 2.
+articleChangeDocs returns the entries for changing, publishing and
+restoring articles.
 */
-func articleDocs2() map[string]Doc {
+func articleChangeDocs() map[string]Doc {
 	return map[string]Doc{
 		"articles.update": {
 			Title: "Edit an article",
@@ -219,9 +222,9 @@ func articleDocs2() map[string]Doc {
 }
 
 /*
-articleDocs3 returns entries for help center articles, part 3.
+articleFeedbackDocs returns the entries for an article's feedback and audience.
 */
-func articleDocs3() map[string]Doc {
+func articleFeedbackDocs() map[string]Doc {
 	return map[string]Doc{
 		"articles.feedback.show": {
 			Title: "Read article ratings",

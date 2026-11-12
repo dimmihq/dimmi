@@ -15,10 +15,10 @@ package mcpserver
 import "maps"
 
 /*
-workspaceDocs2 returns the entries for roles, permissions, sign-in
+workspaceAccessDocs returns the entries for roles, permissions, sign-in
 rules, the audit log and the caller's notifications.
 */
-func workspaceDocs2() map[string]Doc {
+func workspaceAccessDocs() map[string]Doc {
 	out := map[string]Doc{}
 	for _, part := range []map[string]Doc{accessDocs(), auditDocs(), notificationDocs(), notificationSettingDocs()} {
 		maps.Copy(out, part)

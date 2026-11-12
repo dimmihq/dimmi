@@ -22,7 +22,7 @@ func TestClearAccessPolicyCommand(t *testing.T) {
 		tc := tests.New(t, proxyEnv())
 		owner := from(in(tc, tc.Owner), "198.51.100.7")
 		ruled(t, tc, map[string]any{
-			"dashboard_ip_allowlist": allow1("203.0.113.0/24"), "session_max_age_minutes": 60,
+			"dashboard_ip_allowlist": oneEntryAllowlist("203.0.113.0/24"), "session_max_age_minutes": 60,
 		})
 		owner.GetJSON("/api/v1/workspace").AssertForbidden()
 
@@ -76,7 +76,7 @@ func TestAccessPolicyRealtime(t *testing.T) {
 	t.Run("realtime subscribe is refused outside the list", func(t *testing.T) {
 		t.Parallel()
 		tc := tests.New(t, proxyEnv())
-		ruled(t, tc, map[string]any{"dashboard_ip_allowlist": allow1("203.0.113.0/24")})
+		ruled(t, tc, map[string]any{"dashboard_ip_allowlist": oneEntryAllowlist("203.0.113.0/24")})
 
 		c := tc.ListenAs(tc.Owner, tc.RealtimeURL())
 
