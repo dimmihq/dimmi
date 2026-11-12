@@ -4,9 +4,9 @@
 #   ssh root@<server> bash -s < deploy/server/prepare.sh
 #
 # Safe to run again. It hardens SSH, turns swap off and reuses the swap array
-# (md0) as the RAID1 volume /srv/storage, loads the kernel settings k3s needs
-# and opens the firewall for SSH, HTTP, HTTPS, the Kubernetes API and the
-# private network.
+# (md0) as the RAID1 volume /srv/storage, loads the kernel settings k3s needs,
+# installs the AppArmor profile pods need and opens the firewall for SSH,
+# HTTP, HTTPS, the Kubernetes API and the private network.
 
 set -euo pipefail
 export DEBIAN_FRONTEND=noninteractive
@@ -63,6 +63,56 @@ kernel.panic = 10
 kernel.panic_on_oops = 1
 EOF
 sysctl --system >/dev/null
+
+install -m 0644 /dev/stdin /etc/apparmor.d/cri-containerd.apparmor.d <<'EOF'
+# containerd's default container profile, with one change: processes in a
+# pod may signal each other when Ubuntu stacks the profile as
+# "cri-containerd.apparmor.d//&unconfined". Without it, every signal between
+# two processes of one pod is denied, so Postgres IO workers never wake,
+# timeouts never fire and graceful stops hang.
+#
+# containerd keeps a profile of this name when one is already loaded, and
+# AppArmor loads this one from /etc/apparmor.d at boot, before k3s starts.
+
+#include <tunables/global>
+
+profile cri-containerd.apparmor.d flags=(attach_disconnected,mediate_deleted) {
+  #include <abstractions/base>
+
+  network,
+  capability,
+  file,
+  umount,
+
+  signal (receive) peer=unconfined,
+  signal (receive) peer=runc,
+  signal (receive) peer=crun,
+  signal (send,receive) peer=cri-containerd.apparmor.d,
+  signal (send,receive) peer="cri-containerd.apparmor.d//&unconfined",
+
+  deny @{PROC}/* w,
+  deny @{PROC}/{[^1-9],[^1-9][^0-9],[^1-9s][^0-9y][^0-9s],[^1-9][^0-9][^0-9][^0-9/]*}/** w,
+  deny @{PROC}/sys/[^k]** w,
+  deny @{PROC}/sys/kernel/{?,??,[^s][^h][^m]**} w,
+  deny @{PROC}/sysrq-trigger rwklx,
+  deny @{PROC}/kcore rwklx,
+
+  deny mount,
+
+  deny /sys/[^f]*/** wklx,
+  deny /sys/f[^s]*/** wklx,
+  deny /sys/fs/[^c]*/** wklx,
+  deny /sys/fs/c[^g]*/** wklx,
+  deny /sys/fs/cg[^r]*/** wklx,
+  deny /sys/firmware/** rwklx,
+  deny /sys/devices/virtual/powercap/** rwklx,
+  deny /sys/kernel/security/** rwklx,
+
+  ptrace (trace,read,tracedby,readby) peer=cri-containerd.apparmor.d,
+  ptrace (trace,read,tracedby,readby) peer="cri-containerd.apparmor.d//&unconfined",
+}
+EOF
+apparmor_parser -r -W /etc/apparmor.d/cri-containerd.apparmor.d
 
 sed -i 's/^DEFAULT_FORWARD_POLICY=.*/DEFAULT_FORWARD_POLICY="ACCEPT"/' /etc/default/ufw
 ufw --force reset >/dev/null
