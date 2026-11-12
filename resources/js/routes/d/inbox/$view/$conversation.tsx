@@ -1,7 +1,8 @@
-import { RiChatOffLine } from "@remixicon/react";
+import { RiChatOffLine, RiWifiOffLine } from "@remixicon/react";
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 
+import { Button } from "@/components/base/buttons/button";
 import { ConversationView } from "@/features/inbox/conversation-view";
 import { useInbox } from "@/features/inbox/conversations";
 import { ConversationSkeleton } from "@/features/inbox/skeletons";
@@ -20,13 +21,15 @@ function ConversationRoute() {
     data: conversation,
     isPending,
     error,
+    refetch,
+    isFetching,
   } = useQuery({
     ...conversationQuery(workspace, id),
     enabled: workspace !== "",
     retry: false,
   });
 
-  const gone = error instanceof ApiError && error.status === 404;
+  const gone = error instanceof ApiError && (error.status === 404 || error.status === 403);
 
   if (conversation && !gone) {
     return <ConversationView key={conversation.id} view={view} workspace={workspace} conversation={conversation} />;
@@ -36,6 +39,16 @@ function ConversationRoute() {
     <Panel label="Conversation" className="flex-1">
       {isPending ? (
         <ConversationSkeleton />
+      ) : error && !gone ? (
+        <EmptyState
+          icon={RiWifiOffLine}
+          title="This conversation did not load"
+          description="Check your connection and try again."
+        >
+          <Button size="small" variant="secondary" loading={isFetching} onClick={() => void refetch()}>
+            Try again
+          </Button>
+        </EmptyState>
       ) : (
         <EmptyState
           icon={RiChatOffLine}
