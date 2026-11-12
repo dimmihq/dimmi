@@ -482,3 +482,36 @@ func (q *Queries) RunFinishedForMessage(ctx context.Context, arg RunFinishedForM
 	err := row.Scan(&column_1)
 	return column_1, err
 }
+
+const runInFlightForMessage = `-- name: RunInFlightForMessage :one
+SELECT EXISTS (
+    SELECT 1 FROM ai_runs
+    WHERE workspace_id = $1
+      AND conversation_id = $2
+      AND $3::uuid = ANY(included_message_ids)
+      AND status = 'running'
+      AND started_at > $4::timestamptz
+)::boolean
+`
+
+type RunInFlightForMessageParams struct {
+	WorkspaceID    ids.UUID  `json:"workspace_id"`
+	ConversationID *ids.UUID `json:"conversation_id"`
+	MessageID      ids.UUID  `json:"message_id"`
+	Since          time.Time `json:"since"`
+}
+
+// RunInFlightForMessage reports whether a run started since the cutoff
+// is still answering the customer's newest message, so two jobs for
+// one message never both ask the model.
+func (q *Queries) RunInFlightForMessage(ctx context.Context, arg RunInFlightForMessageParams) (bool, error) {
+	row := q.db.QueryRow(ctx, runInFlightForMessage,
+		arg.WorkspaceID,
+		arg.ConversationID,
+		arg.MessageID,
+		arg.Since,
+	)
+	var column_1 bool
+	err := row.Scan(&column_1)
+	return column_1, err
+}

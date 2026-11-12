@@ -59,6 +59,19 @@ SELECT EXISTS (
       AND outcome NOT IN ('superseded', 'skipped')
 )::boolean;
 
+-- name: RunInFlightForMessage :one
+-- RunInFlightForMessage reports whether a run started since the cutoff
+-- is still answering the customer's newest message, so two jobs for
+-- one message never both ask the model.
+SELECT EXISTS (
+    SELECT 1 FROM ai_runs
+    WHERE workspace_id = @workspace_id
+      AND conversation_id = @conversation_id
+      AND @message_id::uuid = ANY(included_message_ids)
+      AND status = 'running'
+      AND started_at > @since::timestamptz
+)::boolean;
+
 -- name: AssigneeActive :one
 -- AssigneeActive reports whether the assigned teammate is around: online
 -- now or wrote a public reply in the conversation since the cutoff.

@@ -8,7 +8,8 @@
 | customer message queues its own job, so a burst of messages ends in
 | one answer: each job but the newest finds a newer message and steps
 | aside, and the newest answers all of them. A retried job finds the
-| run that already decided its messages and steps aside too.
+| run that already decided its messages and steps aside too, and a job
+| that finds a run answering its messages right now tries again later.
 |
 */
 
@@ -18,7 +19,9 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"slices"
+	"time"
 
 	"github.com/dimmihq/dimmi/framework/database"
 
@@ -75,7 +78,11 @@ func (r *Runner) open(ctx context.Context, args Args, settings *TurnSettings) (*
 			return nil
 		}
 
-		if reason, err := r.stepAside(ctx, tx, e); err != nil || reason != "" {
+		reason, err := r.stepAside(ctx, tx, e)
+		if err == nil && reason == inFlight {
+			return ErrInFlight
+		}
+		if err != nil || reason != "" {
 			early = &Result{Outcome: "skipped", SkipReason: reason}
 			return err
 		}
@@ -90,9 +97,31 @@ func (r *Runner) open(ctx context.Context, args Args, settings *TurnSettings) (*
 }
 
 /*
+inFlightFor is how long a run still counts as answering once it
+started: longer than a queue job may run, so a run whose job died
+stops holding its messages back.
+*/
+const inFlightFor = 2 * time.Minute
+
+/*
+inFlight is the reason a job waits for another run on its messages.
+*/
+const inFlight = "in_flight"
+
+/*
+ErrInFlight means another run is answering the same customer messages
+right now, such as a workflow's answer and the message's own debounced
+job. The job tries again a little later: by then that run decided the
+messages and this one steps aside, or it died and this one answers.
+*/
+var ErrInFlight = errors.New("another run is answering these messages")
+
+/*
 stepAside names why this job should not run at all: its message is
-not the newest pending one, it was already answered, or a run already
-decided it.
+not the newest pending one, it was already answered, a run already
+decided it, or a run is answering it now. The conversation's row is
+held from that check until the run row is written, so of two jobs that
+open at once the second sees the first's run.
 */
 func (r *Runner) stepAside(ctx context.Context, tx *database.Tx, e *env) (string, error) {
 	if e.Trigger.AuthorType != string(enums.AuthorTypeContact) {
@@ -113,14 +142,33 @@ func (r *Runner) stepAside(ctx context.Context, tx *database.Tx, e *env) (string
 		return "", nil
 	}
 
-	done, err := models.New(tx).RunFinishedForMessage(ctx, models.RunFinishedForMessageParams{
-		WorkspaceID: e.Conversation.WorkspaceID, ConversationID: &e.Conversation.ID,
-		MessageID: e.Pending[len(e.Pending)-1].ID,
+	q := models.New(tx)
+	conv := e.Conversation
+	if _, err := q.LockConversationForAi(ctx, models.LockConversationForAiParams{
+		WorkspaceID: conv.WorkspaceID, ID: conv.ID,
+	}); err != nil {
+		return "", fmt.Errorf("lock conversation: %w", err)
+	}
+
+	newest := e.Pending[len(e.Pending)-1].ID
+	done, err := q.RunFinishedForMessage(ctx, models.RunFinishedForMessageParams{
+		WorkspaceID: conv.WorkspaceID, ConversationID: &conv.ID, MessageID: newest,
 	})
-	if err != nil || !done {
+	if err != nil {
 		return "", err
 	}
-	return "duplicate", nil
+	if done {
+		return "duplicate", nil
+	}
+
+	busy, err := q.RunInFlightForMessage(ctx, models.RunInFlightForMessageParams{
+		WorkspaceID: conv.WorkspaceID, ConversationID: &conv.ID, MessageID: newest,
+		Since: e.now.Add(-inFlightFor),
+	})
+	if err != nil || !busy {
+		return "", err
+	}
+	return inFlight, nil
 }
 
 /*

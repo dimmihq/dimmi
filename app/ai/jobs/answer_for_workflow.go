@@ -41,5 +41,5 @@ func (w *AnswerForWorkflow) Handle(ctx context.Context, job *queue.Job[jobs.Answ
 		TriggerMessageID: job.Args.MessageID, Kind: "conversation", QueuedAt: w.Runner.Clock.Now(),
 	})
 
-	return err
+	return waitInFlight(err)
 }

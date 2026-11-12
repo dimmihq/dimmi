@@ -15,6 +15,7 @@ package aijobs
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	"github.com/dimmihq/dimmi/framework/ids"
@@ -64,5 +65,22 @@ func (w *AnswerWithAI) Handle(ctx context.Context, job *queue.Job[AnswerWithAIAr
 		QueuedAt:         time.UnixMilli(job.Args.QueuedAt),
 		Delayed:          job.Args.Delayed,
 	})
+	return waitInFlight(err)
+}
+
+/*
+inFlightWait is how long a job waits for another run answering its
+messages before it looks again.
+*/
+const inFlightWait = 2 * time.Second
+
+/*
+waitInFlight holds the job back while another run answers the same
+messages, and passes any other error on.
+*/
+func waitInFlight(err error) error {
+	if errors.Is(err, pipeline.ErrInFlight) {
+		return queue.Postpone(inFlightWait)
+	}
 	return err
 }
