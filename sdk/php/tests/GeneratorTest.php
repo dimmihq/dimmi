@@ -25,12 +25,13 @@ final class GeneratorTest extends TestCase
         exec('rm -rf ' . escapeshellarg($this->dir));
     }
 
-    private function generate(array $paths): string
+    private function generate(array $paths, bool $update = true, int $exit = 0): string
     {
         $spec = ['openapi' => '3.1.0', 'info' => ['title' => 't', 'version' => 'test'], 'paths' => $paths];
         file_put_contents($this->dir . '/spec.json', json_encode($spec));
-        exec(PHP_BINARY . ' ' . escapeshellarg($this->dir . '/bin/generate') . ' ' . escapeshellarg($this->dir . '/spec.json') . ' 2>&1', $out, $code);
-        $this->assertSame(0, $code, implode("\n", $out));
+        $flag = $update ? ' --update-surface' : '';
+        exec(PHP_BINARY . ' ' . escapeshellarg($this->dir . '/bin/generate') . $flag . ' ' . escapeshellarg($this->dir . '/spec.json') . ' 2>&1', $out, $code);
+        $this->assertSame($exit, $code, implode("\n", $out));
 
         return implode("\n", $out);
     }
@@ -80,5 +81,33 @@ final class GeneratorTest extends TestCase
             '/widgets/{thing}/pings' => ['post' => self::op('widgets.pings.store', true)],
         ]);
         $this->assertSame($widgets, $this->resource('Widgets'));
+    }
+
+    public function testFailsWhenTheCommittedSurfaceWouldChange(): void
+    {
+        $paths = [
+            '/widgets' => ['get' => self::op('widgets.index')],
+            '/widgets/{widget}' => ['delete' => self::op('widgets.destroy')],
+        ];
+        $this->generate($paths);
+        $surface = (string) file_get_contents($this->dir . '/api-surface.json');
+        $this->assertStringContainsString('"widgets.destroy": {"method":"DELETE","path":"/widgets/{widget}","params":["widget"],"body":"none"}', $surface);
+
+        // Unchanged and additive runs pass without touching the file.
+        $this->generate($paths, false);
+        $log = $this->generate($paths + ['/gadgets' => ['get' => self::op('gadgets.index')]], false);
+        $this->assertStringContainsString('gadgets.index', $log);
+
+        // A dropped operation fails the run, and the file stays as committed.
+        unset($paths['/widgets/{widget}']);
+        $log = $this->generate($paths, false, 1);
+        $this->assertStringContainsString('no longer matches api-surface.json', $log);
+        $this->assertStringContainsString('widgets.destroy', $log);
+        $this->assertSame($surface, file_get_contents($this->dir . '/api-surface.json'));
+        $this->assertStringContainsString('@deprecated', $this->resource('Widgets'));
+
+        // --update-surface records it as deprecated.
+        $this->generate($paths);
+        $this->assertStringContainsString('"body":"none","deprecated":true}', (string) file_get_contents($this->dir . '/api-surface.json'));
     }
 }

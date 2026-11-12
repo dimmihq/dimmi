@@ -14,7 +14,8 @@
  *
  * Before an SDK's first release there is nothing to compare, and it is
  * skipped. A break passes only when a pending changeset
- * (sdk/.changeset/*.md) bumps that SDK's major version.
+ * (sdk/.changeset/*.md, added since the last platform release) or the
+ * release plan (--plan plan.json) bumps that SDK's major version.
  *
  *   node scripts/sdk-compat.ts               check every SDK
  *   node scripts/sdk-compat.ts ts python     only those languages
@@ -39,7 +40,7 @@ const GRIFFE = "griffe==2.4.1";
 const root = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
 const args = process.argv.slice(2);
 const update = args.includes("--update");
-const wanted = args.filter((a) => !a.startsWith("--"));
+const wanted = args.filter((a, i) => !a.startsWith("--") && args[i - 1] !== "--plan");
 const work = fs.mkdtempSync(path.join(os.tmpdir(), "dimmi-sdk-compat-"));
 const mirrors = process.env.SDK_COMPAT_MIRRORS ?? "https://github.com/dimmihq";
 const pypi = process.env.SDK_COMPAT_PYPI ?? "https://pypi.org";
@@ -63,15 +64,31 @@ function run(cmd: string, argv: string[], cwd = root): { ok: boolean; out: strin
   return { ok: res.status === 0, out: `${res.stdout ?? ""}${res.stderr ?? ""}`, stdout: res.stdout ?? "" };
 }
 
-/* majorBumps reads the pending changesets for packages bumped a major version. */
+/*
+ * majorBumps lists the SDKs a break is approved for: those a release plan
+ * (--plan plan.json) raises a major version, or, outside a release, those
+ * a changeset added since the last platform release bumps a major version.
+ */
 function majorBumps(): Set<string> {
-  const dir = path.join(root, "sdk", ".changeset");
+  const planFile = args.includes("--plan") ? args[args.indexOf("--plan") + 1] : undefined;
+  if (planFile) {
+    const entries: { name: string; level: string }[] = JSON.parse(fs.readFileSync(planFile, "utf8"));
+    return new Set(entries.filter((e) => e.level === "major").map((e) => e.name));
+  }
+  const since =
+    run("git", ["tag", "--list", "v*.*.*", "--sort=-v:refname"])
+      .stdout.split("\n")
+      .find((t) => /^v\d+\.\d+\.\d+$/.test(t)) ?? null;
+  const added = since
+    ? run("git", ["diff", "--name-only", "--diff-filter=A", since, "--", "sdk/.changeset"]).stdout
+    : run("git", ["ls-files", "sdk/.changeset"]).stdout;
+  const untracked = run("git", ["ls-files", "--others", "--exclude-standard", "sdk/.changeset"]).stdout;
   const majors = new Set<string>();
-  for (const file of fs.existsSync(dir) ? fs.readdirSync(dir) : []) {
-    if (!file.endsWith(".md") || file === "README.md") {
+  for (const file of `${added}\n${untracked}`.split("\n")) {
+    if (!file.endsWith(".md") || file.endsWith("README.md") || !fs.existsSync(path.join(root, file))) {
       continue;
     }
-    const front = fs.readFileSync(path.join(dir, file), "utf8").split("---")[1] ?? "";
+    const front = fs.readFileSync(path.join(root, file), "utf8").split("---")[1] ?? "";
     for (const match of front.matchAll(/^\s*["']?([^"':]+)["']?\s*:\s*major\s*$/gm)) {
       majors.add(match[1] ?? "");
     }
@@ -422,7 +439,7 @@ function php(sdk: "php" | "laravel") {
 
 /* wheel unpacks the latest release of the Python SDK from PyPI, or returns null before its first. */
 function wheel(): { version: string; dir: string } | null {
-  const res = run("curl", ["-fsSL", `${pypi}/pypi/dimmi/json`]);
+  const res = run("curl", ["-fsSL", `${pypi}/pypi/dimmi-sdk/json`]);
   if (!res.ok) {
     return null;
   }

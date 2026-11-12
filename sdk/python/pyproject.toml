@@ -3,7 +3,7 @@ requires = ["hatchling>=1.21"]
 build-backend = "hatchling.build"
 
 [project]
-name = "dimmi"
+name = "dimmi-sdk"
 dynamic = ["version"]
 description = "Python backend SDK for dimmi: REST API client, messenger identity tokens and webhook verification."
 readme = "README.md"

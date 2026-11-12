@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import type { WidgetSettings } from "@/lib/api/widget-settings";
 
-import { changed, withChange, withDraft } from "./draft";
+import { changed, hasOwnWords, withChange, withDraft } from "./draft";
 
 const saved = {
   id: "wgt_1",
@@ -45,5 +45,21 @@ describe("messenger drafts", () => {
     expect(draft).toEqual({ name: "App", appearance: { launcher: { label: "Help" } } });
     expect(changed(draft)).toBe(true);
     expect(changed({})).toBe(false);
+  });
+
+  it("merges each language's words one by one and marks the languages that have any", () => {
+    const withFrench = { ...saved, texts_by_locale: { fr: { greeting_intro: "Salut", delay_notice: "Absents" } } };
+    const draft = withChange(withChange({}, { texts_by_locale: { fr: { greeting_intro: "" } } }), {
+      texts_by_locale: { de: { greeting_intro: "Hallo" } },
+    });
+    const shown = withDraft(withFrench, draft);
+
+    expect(shown.texts_by_locale).toEqual({
+      fr: { greeting_intro: "", delay_notice: "Absents" },
+      de: { greeting_intro: "Hallo" },
+    });
+    expect(hasOwnWords(shown.texts_by_locale, "fr")).toBe(true);
+    expect(hasOwnWords({ fr: { greeting_intro: "" } }, "fr")).toBe(false);
+    expect(hasOwnWords(shown.texts_by_locale, "es")).toBe(false);
   });
 });

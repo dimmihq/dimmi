@@ -24,7 +24,8 @@ env:
   BASE: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || (github.event.before != '0000000000000000000000000000000000000000' && github.event.before || '') }}
 
 jobs:
-  # No change breaks a client of the last released API, nor of main.
+  # No change breaks a client of the last platform release (newest vX.Y.Z
+  # tag), nor of the base commit. Also tests the SDK release plan.
   api-compat:
     runs-on: ubuntu-24.04
     timeout-minutes: 10
@@ -38,11 +39,15 @@ jobs:
       - uses: actions/setup-node@v5
         with:
           node-version: 24
-      - name: Against the last release
+      - name: Against the last platform release
         run: node scripts/api-compat.ts
       - name: Against the base commit
         if: env.BASE != ''
         run: node scripts/api-compat.ts --ref "$BASE"
+      - name: Release plan
+        run: |
+          node --test scripts/sdk-release-plan.test.ts
+          node scripts/sdk-release-plan.ts
 
   # Every SDK generates from the committed API contract, builds, and passes
   # its unit tests. Generated code is never committed.
@@ -92,18 +97,3 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm sdk:build
       - run: node scripts/sdk-compat.ts
-
-  # A change to the API contract or an SDK ships with a changeset, so it
-  # reaches a released SDK version.
-  changeset:
-    if: github.event_name == 'pull_request' || github.event.before != '0000000000000000000000000000000000000000'
-    runs-on: ubuntu-24.04
-    timeout-minutes: 5
-    steps:
-      - uses: actions/checkout@v5
-        with:
-          fetch-depth: 0
-      - uses: actions/setup-node@v5
-        with:
-          node-version: 24
-      - run: node scripts/sdk-changeset-check.ts "$BASE"

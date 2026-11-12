@@ -1,14 +1,19 @@
 # Changesets
 
-Every change to an SDK, or to the API contract the SDKs are generated
-from, ships with a changeset: `pnpm changeset` at the repo root.
+Changesets are optional. SDK versions are decided at each platform
+release (`vX.Y.Z` tag) by `scripts/sdk-release-plan.ts`; see
+docs/api/versioning.md. Add one with `pnpm changeset` at the repo root
+only to:
 
-- `patch`: fixes, regenerated code with no new surface.
-- `minor`: new API surface (new endpoints, fields, events, functions).
-- `major`: a break. Only after `make sdk-compat` reports it and the owner
-  approves; see docs/api/versioning.md.
+- force a higher level for a package than the plan would pick, such as
+  `minor` for a new framework option, or `major` for an approved break
+  of an SDK's own surface;
+- describe a change for the release notes.
 
-The PHP, Laravel, Python and Go SDKs are versioned through the private
+A changeset applies to the first platform release after it is committed.
+Changesets are never consumed or deleted by the release; delete old ones
+whenever you like.
+
+The PHP, Laravel, Python and Go SDKs are named by the private
 `package.json` beside them (`@dimmi/php-sdk`, `@dimmi/laravel-sdk`,
-`@dimmi/python-sdk`, `@dimmi/go-sdk`); the release turns their versions
-into `sdk/<name>/vX.Y.Z` tags and registry releases.
+`@dimmi/python-sdk`, `@dimmi/go-sdk`).

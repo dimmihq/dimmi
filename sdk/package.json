@@ -2,5 +2,5 @@
   "name": "@dimmi/sdks",
   "private": true,
   "type": "module",
-  "description": "Release root for the SDKs: changesets versions every package listed in lerna.json. The repo root builds and tests them."
+  "description": "Lists the SDK packages (lerna.json) for pnpm changeset. The repo root builds and tests them; scripts/sdk-release-plan.ts versions them."
 }

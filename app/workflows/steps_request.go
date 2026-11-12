@@ -12,9 +12,10 @@
 | connection and are put on the request after everything is rendered;
 | the trace keeps the status and what was saved, never a body.
 |
-| A 2xx answer goes on and copies the mapped response values into run
-| variables or contact attributes; anything else takes the failure
-| path, or goes on when the step has none.
+| The call is made by a job, off the conversation and outside any
+| transaction. A 2xx answer goes on and copies the mapped response
+| values into run variables or contact attributes; anything else takes
+| the failure path, or goes on when the step has none.
 |
 */
 
@@ -58,37 +59,79 @@ type outbound struct {
 }
 
 /*
-runHTTPRequest calls the URL and saves what the step maps.
+runHTTPRequest waits for the request, which a job sends off the
+conversation.
 */
-func runHTTPRequest(ctx context.Context, st *state, s workflowspec.Step) (outcome, error) {
-	h := settings[workflowspec.HTTPRequestSettings](s)
+func runHTTPRequest(_ context.Context, st *state, s workflowspec.Step) (outcome, error) {
 	if st.e.HTTP == nil {
 		return requestFailed(s, "unavailable", 0), nil
 	}
 
+	return callingOut(true), nil
+}
+
+/*
+prepareRequest renders the request, an answer instead when it cannot
+be made.
+*/
+func (st *state) prepareRequest(ctx context.Context, s workflowspec.Step) (*call, error) {
+	h := settings[workflowspec.HTTPRequestSettings](s)
+
 	req, code, err := st.buildRequest(ctx, h)
-	if err != nil || code != "" {
-		return requestFailed(s, code, 0), err
+	if err != nil {
+		return nil, err
 	}
 
-	client := st.e.HTTP.New().WithoutRedirects().MaxBody(requestMaxBody).Timeout(timeoutOf(h.Timeout)).
+	if code != "" {
+		return &call{answer: &callAnswer{Error: code}}, nil
+	}
+
+	return &call{kind: s.Kind, request: req, saves: h.Save, timeout: h.Timeout}, nil
+}
+
+/*
+sendRequest sends the request and picks the mapped values out of a 2xx answer.
+*/
+func (e *Engine) sendRequest(ctx context.Context, c *call) *callAnswer {
+	if e.HTTP == nil {
+		return &callAnswer{Error: "unavailable"}
+	}
+
+	client := e.HTTP.New().WithoutRedirects().MaxBody(requestMaxBody).Timeout(timeoutOf(c.timeout)).
 		Accept("application/json")
 
-	resp, err := request{client}.withHeaders(req.headers).send(ctx, req)
+	resp, err := request{client}.withHeaders(c.request.headers).send(ctx, c.request)
 	if err != nil {
-		return requestFailed(s, transportCode(err), 0), nil
+		return &callAnswer{Error: transportCode(err)}
 	}
 
 	if resp.Status < 200 || resp.Status >= 300 {
-		return requestFailed(s, "http_status", resp.Status), nil
+		return &callAnswer{Error: "http_status", Status: resp.Status}
 	}
 
-	saved, err := st.saveResponse(ctx, h.Save, resp.Body)
-	if err != nil {
-		return outcome{}, err
+	return &callAnswer{Status: resp.Status, Saves: responseValues(c.saves, resp.Body)}
+}
+
+/*
+resumeHTTPRequest goes on with the request's answer: it saves the
+mapped values and goes on, or takes the failure path.
+*/
+func resumeHTTPRequest(ctx context.Context, st *state, s workflowspec.Step, _ Input) (outcome, error) {
+	answer := st.answered()
+	if answer.Error != "" {
+		return requestFailed(s, answer.Error, answer.Status), nil
 	}
 
-	detail := map[string]any{"status": resp.Status, "saved": saved}
+	saved := []string{}
+	for _, v := range answer.Saves {
+		if err := st.store(ctx, v.Field, v.Value); err != nil {
+			return outcome{}, err
+		}
+
+		saved = append(saved, v.Field)
+	}
+
+	detail := map[string]any{"status": answer.Status, "saved": saved}
 
 	return outcome{outcome: "succeeded", acted: true, detail: detail}, nil
 }
@@ -283,29 +326,22 @@ func (st *state) authorizedURL(
 }
 
 /*
-saveResponse copies the mapped values of a JSON response to their
-fields and returns the fields it saved.
+responseValues picks the mapped values out of a JSON response, with the
+fields they go to.
 */
-func (st *state) saveResponse(ctx context.Context, saves []workflowspec.ResponseSave, body []byte) ([]string, error) {
-	saved := []string{}
+func responseValues(saves []workflowspec.ResponseSave, body []byte) []savedValue {
+	var out []savedValue
 	if len(saves) == 0 || !json.Valid(body) {
-		return saved, nil
+		return out
 	}
 
 	for _, sv := range saves {
-		value, found := responseValue(body, sv.Path)
-		if !found {
-			continue
+		if value, found := responseValue(body, sv.Path); found {
+			out = append(out, savedValue{Field: sv.Field, Value: value})
 		}
-
-		if err := st.store(ctx, sv.Field, value); err != nil {
-			return nil, err
-		}
-
-		saved = append(saved, sv.Field)
 	}
 
-	return saved, nil
+	return out
 }
 
 /*

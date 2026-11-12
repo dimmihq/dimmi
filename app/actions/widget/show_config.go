@@ -133,7 +133,12 @@ func (a *ShowWidgetConfig) build(ctx context.Context, in ShowWidgetConfigInput, 
 		return Config{}, err
 	}
 
-	texts, err := a.Strings.Resolve(locale, "en", widget.Texts)
+	byLocale, err := TextsByLocale(widget)
+	if err != nil {
+		return Config{}, err
+	}
+
+	texts, err := a.Strings.ResolveWith(locale, "en", widget.Texts, byLocale)
 	if err != nil {
 		return Config{}, err
 	}

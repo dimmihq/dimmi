@@ -86,11 +86,38 @@ func (p *Prediction) count(outcome string, row int, problem string) {
 describeImport returns the import with what its file shows.
 */
 func describeImport(ctx context.Context, q *models.Queries, row models.Import) (View, error) {
-	v := View{Import: row, Mapping: []Mapping{}, Errors: []RowError{}, Preview: [][]string{}}
+	v := View{Import: row, Mapping: []Mapping{}, Errors: []RowError{}, Preview: [][]string{}, Suggested: []Mapping{}}
 
+	if row.FileExpiredAt != nil {
+		if err := json.Unmarshal(row.Columns, &v.Columns); err != nil {
+			return v, fmt.Errorf("read columns: %w", err)
+		}
+	} else if err := v.readFile(ctx, q, row); err != nil {
+		return v, err
+	}
+
+	if err := json.Unmarshal(row.Mapping, &v.Mapping); err != nil {
+		return v, fmt.Errorf("read mapping: %w", err)
+	}
+
+	var all []RowError
+	if err := json.Unmarshal(row.RowErrors, &all); err != nil {
+		return v, fmt.Errorf("read row errors: %w", err)
+	}
+
+	v.Errors = append(v.Errors, all[:min(shownErrors, len(all))]...)
+
+	return v, nil
+}
+
+/*
+readFile fills the view with what the import's file shows: its header,
+its first rows and the mapping its headers suggest.
+*/
+func (v *View) readFile(ctx context.Context, q *models.Queries, row models.Import) error {
 	s, err := read(row.File)
 	if err != nil {
-		return v, err
+		return err
 	}
 
 	v.Columns = s.columns
@@ -105,21 +132,10 @@ func describeImport(ctx context.Context, q *models.Queries, row models.Import) (
 
 	defs, err := definitions(ctx, q, row)
 	if err != nil {
-		return v, err
+		return err
 	}
 
 	v.Suggested = suggest(row.Kind, s.columns, defs)
 
-	if err := json.Unmarshal(row.Mapping, &v.Mapping); err != nil {
-		return v, fmt.Errorf("read mapping: %w", err)
-	}
-
-	var all []RowError
-	if err := json.Unmarshal(row.RowErrors, &all); err != nil {
-		return v, fmt.Errorf("read row errors: %w", err)
-	}
-
-	v.Errors = append(v.Errors, all[:min(shownErrors, len(all))]...)
-
-	return v, nil
+	return nil
 }

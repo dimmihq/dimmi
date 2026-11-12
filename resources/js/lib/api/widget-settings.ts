@@ -115,6 +115,8 @@ export interface WidgetSettings extends WidgetSummary {
   audiences: MessengerAudiences;
   appearance: WidgetAppearance;
   texts: Record<string, string>;
+  /** The messenger's own words for one language, by language tag, ahead of the shared texts. */
+  texts_by_locale: Record<string, Record<string, string>>;
   locale: string;
   reply_time: "auto" | "minutes" | "hours" | "day";
   show_team_avatars: boolean;
@@ -165,18 +167,26 @@ export function updateWidget(workspace: string, widget: string, change: WidgetCh
 
 /*
  * previewWidget returns the config the messenger would serve with the
- * change saved, without saving it.
+ * change saved, without saving it, in the language given or the one the
+ * browser asks for.
  */
 export function previewWidget(
   workspace: string,
   widget: string,
   change: WidgetChange,
   signal?: AbortSignal,
+  locale?: string,
 ): Promise<Record<string, unknown>> {
-  return request<Record<string, unknown>>("POST", `/widget-settings/${encodeURIComponent(widget)}/preview`, change, {
-    workspace,
-    signal,
-  });
+  const query = locale ? `?locale=${encodeURIComponent(locale)}` : "";
+  return request<Record<string, unknown>>(
+    "POST",
+    `/widget-settings/${encodeURIComponent(widget)}/preview${query}`,
+    change,
+    {
+      workspace,
+      signal,
+    },
+  );
 }
 
 /*

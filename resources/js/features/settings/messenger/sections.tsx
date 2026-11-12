@@ -111,31 +111,6 @@ export function AppearanceSection({ value, set, locked }: TabProps) {
   );
 }
 
-export function TextsSection({ value, set, locked }: TabProps) {
-  return (
-    <Section title="Texts">
-      <Row label="Greeting" description="Up to 60 characters.">
-        <Field
-          label="Greeting"
-          value={value.texts.greeting_intro ?? ""}
-          placeholder="Hi there 👋"
-          disabled={locked}
-          onChange={(greeting_intro) => set({ texts: { greeting_intro } })}
-        />
-      </Row>
-      <Row label="Away message" description="Shown when nobody on the team is available.">
-        <Field
-          label="Away message"
-          value={value.texts.delay_notice ?? ""}
-          placeholder="We'll reply by email."
-          disabled={locked}
-          onChange={(delay_notice) => set({ texts: { delay_notice } })}
-        />
-      </Row>
-    </Section>
-  );
-}
-
 export function VisitorsSection({ value, set, locked }: TabProps) {
   return (
     <Section title="Visitors">

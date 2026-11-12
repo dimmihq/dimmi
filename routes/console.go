@@ -64,6 +64,15 @@ func Console(a *app.App) {
 	scheduleKnowledge(a)
 	scheduleWebhooks(a)
 	scheduleNotifications(a)
+	scheduleImports(a)
+}
+
+/*
+scheduleImports empties import files a month old and drops what can no
+longer be undone.
+*/
+func scheduleImports(a *app.App) {
+	a.Schedule.Job(jobs.ExpireImportsArgs{}).DailyAt("04:30")
 }
 
 /*

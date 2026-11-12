@@ -26,7 +26,9 @@ import (
 	"github.com/dimmihq/dimmi/framework/fault"
 	"github.com/dimmihq/dimmi/framework/ids"
 	"github.com/dimmihq/dimmi/framework/queue"
+	"github.com/dimmihq/dimmi/framework/ratelimit"
 
+	"github.com/dimmihq/dimmi/app/actions/companies"
 	"github.com/dimmihq/dimmi/app/actions/contacts"
 	"github.com/dimmihq/dimmi/app/attributedefs"
 	"github.com/dimmihq/dimmi/app/auth/authz"
@@ -70,10 +72,15 @@ type Input struct {
 Imports keeps and runs imports.
 */
 type Imports struct {
-	DB     *database.DB
-	Clock  clock.Clock
-	Queue  *queue.Queue
-	Upsert *contacts.UpsertIdentifiedContact
+	DB            *database.DB
+	Clock         clock.Clock
+	Queue         *queue.Queue
+	Limiter       *ratelimit.Limiter
+	Upsert        *contacts.UpsertIdentifiedContact
+	UpdateContact *contacts.UpdateContact
+	DeleteContact *contacts.DeleteContact
+	UpdateCompany *companies.UpdateCompany
+	DeleteCompany *companies.DeleteCompany
 }
 
 /*
@@ -90,8 +97,8 @@ func allowed(m authz.Membership) error {
 /*
 Create keeps the uploaded file as a draft.
 
-Errors: [exceptions.ErrForbidden], [ErrKind], [ErrUnreadable],
-[ErrEmpty], or a wrapped database error.
+Errors: [exceptions.ErrForbidden], [ErrKind], [ErrUploadLimit],
+[ErrUnreadable], [ErrEmpty], or a wrapped database error.
 */
 func (a *Imports) Create(ctx context.Context, in CreateInput) (View, error) {
 	if err := allowed(in.Membership); err != nil {
@@ -100,6 +107,10 @@ func (a *Imports) Create(ctx context.Context, in CreateInput) (View, error) {
 
 	if in.Kind != KindContacts && in.Kind != KindCompanies {
 		return View{}, ErrKind
+	}
+
+	if err := a.throttle(ctx, in.Membership); err != nil {
+		return View{}, err
 	}
 
 	data, err := io.ReadAll(io.LimitReader(in.File, MaxBytes+1))

@@ -27,14 +27,16 @@ import (
 )
 
 /*
-SettingsRow is a widget with what its settings page shows beside it.
+SettingsRow is a widget with what its settings page shows beside it, its
+own words by language among them.
 */
 type SettingsRow struct {
-	Widget     models.WidgetSetting
-	Inbox      models.Inbox
-	Appearance Appearance
-	Texts      map[string]any
-	Branding   Branding
+	Widget        models.WidgetSetting
+	Inbox         models.Inbox
+	Appearance    Appearance
+	Texts         map[string]any
+	TextsByLocale map[string]map[string]string
+	Branding      Branding
 }
 
 /*
@@ -138,6 +140,11 @@ func (a *ShowWidgetSettings) shape(
 
 	if err := json.Unmarshal(w.Texts, &out.Texts); err != nil {
 		return out, fmt.Errorf("read widget texts: %w", err)
+	}
+
+	out.TextsByLocale, err = TextsByLocale(w)
+	if err != nil {
+		return out, err
 	}
 
 	out.Branding, err = a.Branding.Handle(ctx, m.Workspace, w.ShowBranding)

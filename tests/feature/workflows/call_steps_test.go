@@ -9,14 +9,17 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/dimmihq/dimmi/framework/database"
 	fhttp "github.com/dimmihq/dimmi/framework/http"
 	"github.com/dimmihq/dimmi/framework/httpclient"
 	"github.com/dimmihq/dimmi/framework/httpclient/httpclienttest"
+	"github.com/dimmihq/dimmi/framework/tenancy"
 	"github.com/dimmihq/dimmi/framework/testkit"
 
 	"github.com/dimmihq/dimmi/app/contracts"
 	"github.com/dimmihq/dimmi/app/drivers/llm/fake"
 	"github.com/dimmihq/dimmi/app/enums"
+	"github.com/dimmihq/dimmi/app/jobs"
 	"github.com/dimmihq/dimmi/app/managers"
 	"github.com/dimmihq/dimmi/app/models"
 	"github.com/dimmihq/dimmi/tests"
@@ -212,6 +215,59 @@ func TestCallSteps(t *testing.T) {
 
 		got := bodies(t, d, conversation(t, d, "di", "Hello"))
 		assert.Equal(t, "Lookup failed", got[len(got)-1])
+	})
+
+	t.Run("calls the customer's system with the run waiting and the conversation free", func(t *testing.T) {
+		t.Parallel()
+		d := tests.NewDesk(t)
+
+		var status, conv string
+		var locked, updated bool
+		again := jobs.CallOutForWorkflowArgs{WorkspaceID: d.TC.Workspace.Workspace.ID, StepID: "s_http0001"}
+		api := httpclienttest.New(d.TC.App.HTTP).PreventStrayRequests().
+			Serve("GET https://api.example.com/*", fhttp.HandlerFunc(func(w fhttp.ResponseWriter, r *fhttp.Request) {
+				ctx := tenancy.With(r.Context(), d.TC.Workspace.Workspace.ID.String())
+				_ = d.TC.App.DB.Transaction(ctx, func(ctx context.Context, tx *database.Tx) error {
+					if err := tx.QueryRow(ctx, `SELECT id, seq, status, conversation_id::text FROM workflow_runs
+						WHERE workspace_id = $1`, d.TC.Workspace.Workspace.ID).Scan(
+						&again.RunID, &again.Seq, &status, &conv); err != nil {
+						return err
+					}
+
+					locked, _ = tx.TryAdvisoryLock(ctx, "wf:conv:"+conv)
+					if _, err := tx.Exec(ctx, "SET LOCAL lock_timeout = '1s'"); err != nil {
+						return err
+					}
+
+					tag, err := tx.Exec(ctx, "UPDATE conversations SET updated_at = now() WHERE id = $1", conv)
+					updated = err == nil && tag.RowsAffected() == 1
+
+					return nil
+				})
+				_, _ = w.Write([]byte(`{"plan":"team"}`))
+			}))
+		live(t, d, "Lookup", testkit.JSON{
+			"schema": 1, "trigger": "conversation.first_message",
+			"steps": []testkit.JSON{
+				step("s_http0001", "http_request", testkit.JSON{
+					"method": "GET", "url": "https://api.example.com/plan",
+					"save": []testkit.JSON{{"path": "plan", "field": "run.vars.plan"}},
+				}),
+				step("s_plan0001", "message", testkit.JSON{"text": "Your plan is {{run.vars.plan}}"}),
+			},
+		})
+
+		path := conversation(t, d, "gu", "Hello")
+		got := bodies(t, d, path)
+		assert.Equal(t, "Your plan is team", got[len(got)-1])
+		assert.Equal(t, "waiting", status)
+		assert.True(t, locked, "the conversation lock is free during the call")
+		assert.True(t, updated, "the conversation can change during the call")
+
+		require.NoError(t, d.TC.App.Actions.WorkflowEngine.CallOut(t.Context(), again))
+		d.TC.Drain()
+		assert.Len(t, api.Sent(), 1, "a retried call out never calls again")
+		assert.Equal(t, got, bodies(t, d, path))
 	})
 
 	sorter := func(id string) testkit.JSON {

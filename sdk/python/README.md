@@ -4,7 +4,7 @@ The Python backend SDK for [dimmi](https://trydimmi.com): the REST API,
 messenger identity tokens and webhook verification. Python 3.10+.
 
 ```sh
-pip install dimmi
+pip install dimmi-sdk
 ```
 
 ## REST API

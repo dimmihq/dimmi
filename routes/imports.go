@@ -4,8 +4,9 @@
 |--------------------------------------------------------------------------
 |
 | The API of imports of customers and companies from a CSV: upload,
-| look, dry run, start, follow and download the failed rows. Every route
-| takes contacts:write; the actions also check imports:manage.
+| look, dry run, start, follow, download the failed rows and undo. Every
+| route takes contacts:write; the actions also check imports:manage, or
+| imports:rollback to undo.
 |
 */
 
@@ -39,4 +40,6 @@ func importRoutes(workspace *routing.Router, a *app.App) {
 	routing.Post(workspace, one+"/runs", "imports.runs.store", c.Run).
 		Ability("contacts:write").Status(fhttp.StatusAccepted)
 	routing.Get(workspace, one+"/errors", "imports.errors.show", c.Errors).Ability("contacts:write")
+	routing.Post(workspace, one+"/rollbacks", "imports.rollbacks.store", c.Rollback).
+		Ability("contacts:write").Status(fhttp.StatusAccepted)
 }

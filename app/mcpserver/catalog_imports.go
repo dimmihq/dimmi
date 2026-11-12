@@ -4,7 +4,7 @@
 |--------------------------------------------------------------------------
 |
 | Entries for imports of customers and companies from a CSV: upload,
-| dry run, start, follow and the report of failed rows. Uploading the
+| dry run, start, follow, undo and the report of failed rows. Uploading the
 | file is a form, which agents do not send, so it has no entry.
 |
 */
@@ -56,6 +56,23 @@ func importDocs() map[string]Doc {
 			Use:     "Fetches a CSV of the rows that failed, each with its line in the file and why.",
 			Returns: "the CSV.",
 			Risk:    new(RiskSensitive),
+		},
+	}
+}
+
+/*
+importRollbackDocs returns the entry of undoing an import.
+*/
+func importRollbackDocs() map[string]Doc {
+	return map[string]Doc{
+		"imports.rollbacks.store": {
+			Title: "Undo an import",
+			Use: "Undoes a finished import within 7 days, in the background: removes the records it created " +
+				"unless changed or talked to since, puts back the values it changed unless changed again, and " +
+				"takes off the tags it added. Needs imports:rollback.",
+			Returns: "the import with rollback.status queued; poll it for the counts removed, reverted and kept.",
+			Next:    []string{"dimmi_imports_get: follow the undo until rollback.status is completed"},
+			Risk:    new(RiskDanger),
 		},
 	}
 }

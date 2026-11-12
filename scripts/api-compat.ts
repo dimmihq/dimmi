@@ -5,8 +5,10 @@
  * the base's webhook contract. Additive changes pass; anything that could
  * break a client fails unless contracts/breaking-changes.json approves it.
  *
- *   node scripts/api-compat.ts                 against the last release (contracts/)
+ *   node scripts/api-compat.ts                    against the last platform release (newest vX.Y.Z tag)
  *   node scripts/api-compat.ts --ref origin/main  against a git ref
+ *   node scripts/api-compat.ts --ref v0.1.0 --to v0.2.0 --json
+ *                                                 compare two refs and print a summary, for the SDK release
  *
  * Severity: everything oasdiff calls an error or a warning, plus the
  * removals contracts/oasdiff-severity.txt raises (optional response
@@ -38,22 +40,47 @@ type Allowed = {
 
 const args = process.argv.slice(2);
 const refIndex = args.indexOf("--ref");
+const toIndex = args.indexOf("--to");
+const to = toIndex >= 0 ? args[toIndex + 1] : undefined;
+const json = args.includes("--json");
 const ref = refIndex >= 0 ? args[refIndex + 1] : (lastRelease() ?? "origin/main");
 const work = fs.mkdtempSync(path.join(os.tmpdir(), "dimmi-api-compat-"));
 
 /*
- * lastRelease returns the newest api-v* tag, the contract last released,
- * or null before the first release. No copy of a released contract is
- * kept in the tree: the tag holds it.
+ * lastRelease returns the newest platform release tag, vX.Y.Z without a
+ * prerelease suffix, or null before the first. The release is the
+ * baseline: no copy of a released contract is kept in the tree.
  */
 function lastRelease(): string | null {
   try {
-    const tags = execFileSync("git", ["tag", "--list", "api-v*", "--sort=-creatordate"], {
+    const tags = execFileSync("git", ["tag", "--list", "v*.*.*", "--sort=-v:refname"], {
       cwd: root,
       encoding: "utf8",
       stdio: ["ignore", "pipe", "ignore"],
     });
-    return tags.split("\n").find((t) => t.trim() !== "")?.trim() ?? null;
+    return (
+      tags
+        .split("\n")
+        .find((t) => /^v\d+\.\d+\.\d+$/.test(t.trim()))
+        ?.trim() ?? null
+    );
+  } catch {
+    return null;
+  }
+}
+
+/* at returns a file's path as it is at a git ref, or null when the ref has none. */
+function at(at: string, file: string, name: string): string | null {
+  try {
+    const text = execFileSync("git", ["show", `${at}:${file}`], {
+      cwd: root,
+      encoding: "utf8",
+      maxBuffer: 64 << 20,
+      stdio: ["ignore", "pipe", "ignore"],
+    });
+    const out = path.join(work, name);
+    fs.writeFileSync(out, text);
+    return out;
   } catch {
     return null;
   }
@@ -61,19 +88,16 @@ function lastRelease(): string | null {
 
 /* base returns the base file's path at the ref, or null when the ref has none yet. */
 function base(file: string): string | null {
-  try {
-    const text = execFileSync("git", ["show", `${ref}:${file}`], {
-      cwd: root,
-      encoding: "utf8",
-      maxBuffer: 64 << 20,
-      stdio: ["ignore", "pipe", "ignore"],
-    });
-    const out = path.join(work, path.basename(file));
-    fs.writeFileSync(out, text);
-    return out;
-  } catch {
-    return null;
+  return at(ref, file, `base-${path.basename(file)}`);
+}
+
+/* target returns the compared file: at --to, or in the working tree. */
+function target(file: string): string | null {
+  if (to) {
+    return at(to, file, `to-${path.basename(file)}`);
   }
+  const full = path.join(root, file);
+  return fs.existsSync(full) ? full : null;
 }
 
 function apiFindings(basePath: string): Finding[] {
@@ -84,7 +108,7 @@ function apiFindings(basePath: string): Finding[] {
       OASDIFF,
       "changelog",
       basePath,
-      path.join(root, current.api),
+      target(current.api) ?? "",
       "--format",
       "json",
       "--level",
@@ -152,7 +176,7 @@ function envelopeFindings(was: Webhooks["envelope"], now: Webhooks["envelope"]):
 
 function webhookFindings(basePath: string): Finding[] {
   const was: Webhooks = JSON.parse(fs.readFileSync(basePath, "utf8"));
-  const now: Webhooks = JSON.parse(fs.readFileSync(path.join(root, current.webhooks), "utf8"));
+  const now: Webhooks = JSON.parse(fs.readFileSync(target(current.webhooks) ?? "", "utf8"));
   const events = new Map(now.events.map((e) => [e.type, e]));
   const findings: Finding[] = [];
   for (const before of was.events) {
@@ -183,7 +207,8 @@ function entryProblems(e: Allowed, i: number): string[] {
 }
 
 function loadAllowlist(): Allowed[] {
-  const { entries }: { entries: Allowed[] } = JSON.parse(fs.readFileSync(path.join(root, allowlistFile), "utf8"));
+  const file = target(allowlistFile);
+  const { entries }: { entries: Allowed[] } = file ? JSON.parse(fs.readFileSync(file, "utf8")) : { entries: [] };
   const problems = entries.flatMap(entryProblems);
   if (problems.length > 0) {
     process.stderr.write(`${allowlistFile} is invalid:\n  ${problems.join("\n  ")}\n`);
@@ -202,32 +227,47 @@ function allows(entry: Allowed, f: Finding): boolean {
 }
 
 const allowlist = loadAllowlist();
-const against = ref ?? "the last release (contracts/)";
+const against = ref;
 const findings: Finding[] = [];
+const say = (line: string) => (json ? undefined : process.stdout.write(line));
+
+/* changed says whether the contract files differ between the base and the target. */
+const contractChanged = [current.api, current.webhooks].some((file) => {
+  const read = (f: string | null) => (f ? fs.readFileSync(f, "utf8") : null);
+  return read(base(file)) !== read(target(file));
+});
 
 const apiBase = base(current.api);
-if (apiBase) {
+if (apiBase && target(current.api)) {
   findings.push(...apiFindings(apiBase));
 } else {
-  process.stdout.write(`api-compat: ${ref} has no ${current.api} yet, skipping the API.\n`);
+  say(`api-compat: ${ref} has no ${current.api} yet, skipping the API.\n`);
 }
 const hooksBase = base(current.webhooks);
-if (hooksBase) {
+if (hooksBase && target(current.webhooks)) {
   findings.push(...webhookFindings(hooksBase));
 } else {
-  process.stdout.write(`api-compat: ${ref} has no ${current.webhooks} yet, skipping webhooks.\n`);
+  say(`api-compat: ${ref} has no ${current.webhooks} yet, skipping webhooks.\n`);
 }
 
 const blocking = findings.filter((f) => !allowlist.some((e) => allows(e, f)));
 const approved = findings.length - blocking.length;
 const unused = allowlist.filter((e) => !findings.some((f) => allows(e, f)));
 
+if (json) {
+  const baseless = !apiBase || !hooksBase;
+  process.stdout.write(
+    `${JSON.stringify({ base: ref, target: to ?? "working tree", baseless, changed: contractChanged, approved: findings.filter((f) => !blocking.includes(f)), blocking }, null, 2)}\n`,
+  );
+  process.exit(0);
+}
+
 if (approved > 0) {
   process.stdout.write(`api-compat: ${approved} breaking change(s) approved in ${allowlistFile}.\n`);
 }
-if (unused.length > 0 && !ref) {
+if (unused.length > 0) {
   process.stdout.write(
-    `api-compat: ${unused.length} entr(ies) in ${allowlistFile} match nothing; remove them:\n${unused
+    `api-compat: ${unused.length} entr(ies) in ${allowlistFile} match nothing since ${ref}; remove them:\n${unused
       .map((e) => `  ${e.id} ${e.operation ?? e.event}`)
       .join("\n")}\n`,
   );

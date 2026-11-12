@@ -47,7 +47,8 @@ const (
 waitState is what a waiting run waits for: its kind and step, when it
 times out, what interrupts it, and for questions how many answers it
 had and whether it already asked again; a run waiting for a workflow
-it runs keeps that run's id in Child. A run waiting on the agent
+it runs keeps that run's id in Child, and one waiting on a slow step's
+call keeps the call's Answer once it came. A run waiting on the agent
 also keeps when the agent took over, how long a silent customer is
 waited for, and what the agent must honor meanwhile.
 */
@@ -62,6 +63,7 @@ type waitState struct {
 	Quiet     string                      `json:"quiet,omitempty"`
 	Agent     *workflowspec.AgentHandling `json:"dimmi,omitempty"`
 	Child     string                      `json:"child,omitempty"`
+	Answer    *callAnswer                 `json:"answer,omitempty"`
 }
 
 /*
@@ -247,6 +249,10 @@ func (st *state) save(ctx context.Context) error {
 	case st.status == StatusRunning:
 		return st.push(ctx, jobs.AdvanceWorkflowRunArgs{
 			WorkspaceID: saved.WorkspaceID, RunID: saved.ID, Seq: saved.Seq,
+		})
+	case st.wait.Kind == waitCallOut:
+		return st.push(ctx, jobs.CallOutForWorkflowArgs{
+			WorkspaceID: saved.WorkspaceID, RunID: saved.ID, Seq: saved.Seq, StepID: st.wait.StepID,
 		})
 	case st.wait.Until != nil:
 		return st.push(ctx, jobs.AdvanceWorkflowRunArgs{

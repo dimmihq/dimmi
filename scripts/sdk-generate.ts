@@ -7,6 +7,11 @@
  *   node scripts/sdk-generate.ts php python      only those SDKs
  *   node scripts/sdk-generate.ts --if-missing    only SDKs whose output is missing
  *   node scripts/sdk-generate.ts --check         generate, then build and unit test every SDK
+ *   node scripts/sdk-generate.ts --spec=FILE     generate from another spec (to try a contract change)
+ *
+ * The PHP generator fails when the client's public surface would drop or
+ * change an entry of the committed sdk/php/api-surface.json; an intended
+ * change runs `bin/generate --update-surface` there and commits the diff.
  *
  * Each SDK owns its generator; this file only lists them. A new SDK adds
  * an entry with the command that generates it, what it writes and how
@@ -18,7 +23,10 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const root = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
-const spec = path.join(root, "tests/contracts/api_v1.openapi.json");
+const specArg = process.argv.find((a) => a.startsWith("--spec="));
+const spec = specArg
+  ? path.resolve(specArg.slice("--spec=".length))
+  : path.join(root, "tests/contracts/api_v1.openapi.json");
 
 type Step = string[];
 type Sdk = {

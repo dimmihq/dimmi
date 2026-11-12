@@ -12,7 +12,6 @@
     "sdk:generate": "node scripts/sdk-generate.ts",
     "sdk:check": "node scripts/sdk-generate.ts --check",
     "sdk:compat": "node scripts/sdk-compat.ts",
-    "sdk:version": "cd sdk && pnpm dlx @changesets/cli@3.0.3 version && cd .. && node scripts/sdk-versions.ts",
     "changeset": "cd sdk && pnpm dlx @changesets/cli@3.0.3",
     "typecheck": "node scripts/sdk-generate.ts api --if-missing && tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.e2e.json && tsc --noEmit -p tsconfig.widget.json && tsc --noEmit -p tsconfig.sdk.json && tsc --noEmit -p site/tsconfig.json",
     "lint": "biome ci --error-on-warnings",

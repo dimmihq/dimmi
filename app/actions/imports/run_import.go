@@ -121,7 +121,9 @@ func (a *Imports) applyRows(ctx context.Context, q *models.Queries, row models.I
 		return err
 	}
 
-	ap := applier{db: a.DB, upsert: a.Upsert, m: m, kind: row.Kind, mode: row.Mode, now: a.Clock.Now}
+	ap := applier{
+		db: a.DB, upsert: a.Upsert, m: m, kind: row.Kind, mode: row.Mode, now: a.Clock.Now, importID: row.ID,
+	}
 	failed := int(row.FailedCount)
 
 	for start := int(row.ProcessedRows); start < len(s.rows); start += batch {
@@ -239,16 +241,27 @@ func starter(ctx context.Context, q *models.Queries, row models.Import) (authz.M
 		return authz.Membership{}, exceptions.ErrForbidden
 	}
 
-	ws, err := q.FindWorkspace(ctx, row.WorkspaceID)
+	m, err := memberOf(ctx, q, row.WorkspaceID, *row.CreatedByMemberID)
+	if err != nil {
+		return m, err
+	}
+
+	return m, allowed(m)
+}
+
+/*
+memberOf returns the membership of the teammate as it stands now,
+refusing one who left.
+*/
+func memberOf(ctx context.Context, q *models.Queries, ws, id ids.UUID) (authz.Membership, error) {
+	workspace, err := q.FindWorkspace(ctx, ws)
 	if err != nil {
 		return authz.Membership{}, fmt.Errorf("find workspace: %w", err)
 	}
 
-	member, err := q.FindWorkspaceMember(ctx, models.FindWorkspaceMemberParams{
-		WorkspaceID: row.WorkspaceID, ID: *row.CreatedByMemberID,
-	})
+	member, err := q.FindWorkspaceMember(ctx, models.FindWorkspaceMemberParams{WorkspaceID: ws, ID: id})
 	if err != nil {
-		return authz.Membership{}, fmt.Errorf("find importer: %w", err)
+		return authz.Membership{}, fmt.Errorf("find member: %w", err)
 	}
 
 	custom, err := q.CustomPermissions(ctx, member)
@@ -256,20 +269,20 @@ func starter(ctx context.Context, q *models.Queries, row models.Import) (authz.M
 		return authz.Membership{}, fmt.Errorf("load custom role: %w", err)
 	}
 
-	m := authz.NewMembership(ws, member, authz.HeldPermissions(enums.Role(member.Role), custom))
+	m := authz.NewMembership(workspace, member, authz.HeldPermissions(enums.Role(member.Role), custom))
 	if member.Status != string(enums.MemberStatusActive) {
 		return m, exceptions.ErrForbidden
 	}
 
-	return m, allowed(m)
+	return m, nil
 }
 
 /*
 Report returns the import's failed rows as a CSV: the line, why, and
 the row's cells under the file's own header.
 
-Errors: [exceptions.ErrForbidden], [exceptions.ErrNotFound], or a
-wrapped error.
+Errors: [exceptions.ErrForbidden], [exceptions.ErrNotFound],
+[ErrFileExpired], or a wrapped error.
 */
 func (a *Imports) Report(ctx context.Context, in Input) ([]byte, string, error) {
 	if err := allowed(in.Membership); err != nil {
@@ -279,6 +292,10 @@ func (a *Imports) Report(ctx context.Context, in Input) ([]byte, string, error) 
 	row, err := find(ctx, models.New(a.DB), in)
 	if err != nil {
 		return nil, "", err
+	}
+
+	if row.FileExpiredAt != nil {
+		return nil, "", ErrFileExpired
 	}
 
 	s, err := read(row.File)

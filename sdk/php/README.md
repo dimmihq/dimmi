@@ -157,18 +157,21 @@ composer install
 bin/generate                                   # tests/contracts/api_v1.openapi.json
 bin/generate path/to/openapi.json              # or another snapshot
 bin/generate http://localhost:8080/api/v1/openapi.json
+bin/generate --update-surface                  # record an intended surface change
 vendor/bin/phpunit
 ```
 
 With no argument it reads `tests/contracts/api_v1.openapi.json` at the repository root, or `http://localhost:8080/api/v1/openapi.json` when that file is missing. `composer generate` runs the same script.
 
-Public methods never break between runs. The current `src/Generated/Operations.php` is the baseline:
+Public methods never break between runs. The committed `api-surface.json` (one line per operation: method, path, path parameters, body position, deprecation) is the baseline:
 
 - An operation the spec dropped is kept and marked `@deprecated`, for removal in the next major version.
 - A renamed path parameter keeps its old argument name.
 - A body added to an operation that had none becomes the last argument, `$body = null`.
 - A body the spec dropped stays an optional argument; a body that became required stays optional in the signature.
 - Changing the number of path parameters cannot be kept compatible; the script warns, and that change needs a major version.
+
+When the generated surface would drop or change an entry of `api-surface.json` (a dropped operation included), the run fails, and so does `make sdk-check`. For an intended change, run `bin/generate --update-surface` and commit the reviewed diff with it. New operations only warn until recorded the same way.
 
 The script prints each of these as a warning. Review them before committing the contract change; `make sdk-compat` compares the public surface with the last release on the mirror.
 

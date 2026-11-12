@@ -23,3 +23,9 @@ export function labelled<T extends string>(labels: Record<T, string>) {
     value: (label: string) => entries.find(([, l]) => l === label)?.[0],
   };
 }
+
+/*
+ * allLanguages is the texts language picker's value for the words every
+ * language shares.
+ */
+export const allLanguages = "all";

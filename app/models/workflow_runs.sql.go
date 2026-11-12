@@ -493,6 +493,32 @@ func (q *Queries) FinishWorkflowRunStep(ctx context.Context, arg FinishWorkflowR
 	return err
 }
 
+const keepWorkflowRunWait = `-- name: KeepWorkflowRunWait :exec
+UPDATE workflow_runs SET wait = $1, updated_at = $2
+WHERE workspace_id = $3 AND id = $4 AND seq = $5 AND status = 'waiting'
+`
+
+type KeepWorkflowRunWaitParams struct {
+	Wait        json.RawMessage `json:"wait"`
+	Now         time.Time       `json:"now"`
+	WorkspaceID ids.UUID        `json:"workspace_id"`
+	ID          ids.UUID        `json:"id"`
+	Seq         int64           `json:"seq"`
+}
+
+// KeepWorkflowRunWait rewrites what a waiting run waits for, such as the
+// answer a slow step got, without moving its sequence on.
+func (q *Queries) KeepWorkflowRunWait(ctx context.Context, arg KeepWorkflowRunWaitParams) error {
+	_, err := q.db.Exec(ctx, keepWorkflowRunWait,
+		arg.Wait,
+		arg.Now,
+		arg.WorkspaceID,
+		arg.ID,
+		arg.Seq,
+	)
+	return err
+}
+
 const lastAgentAndCustomerMessages = `-- name: LastAgentAndCustomerMessages :one
 SELECT
     coalesce(max(created_at) FILTER (WHERE author_type = 'agent'), 'epoch'::timestamptz)::timestamptz AS agent_at,
@@ -1077,7 +1103,8 @@ func (q *Queries) SaveWorkflowRun(ctx context.Context, arg SaveWorkflowRunParams
 }
 
 const scrubWorkflowRunsForContact = `-- name: ScrubWorkflowRunsForContact :execrows
-UPDATE workflow_runs SET vars = '{}', trigger_data = '{}', contact_id = NULL, updated_at = $1
+UPDATE workflow_runs SET vars = '{}', trigger_data = '{}', contact_id = NULL, updated_at = $1,
+    wait = CASE WHEN jsonb_typeof(wait) = 'object' THEN wait - 'answer' ELSE wait END
 WHERE workspace_id = $2 AND contact_id = $3
 `
 
@@ -1088,7 +1115,8 @@ type ScrubWorkflowRunsForContactParams struct {
 }
 
 // ScrubWorkflowRunsForContact forgets what an erased customer's runs
-// learned about them; the runs stay as a record that they happened.
+// learned about them, the answer a waiting run's call got included; the
+// runs stay as a record that they happened.
 func (q *Queries) ScrubWorkflowRunsForContact(ctx context.Context, arg ScrubWorkflowRunsForContactParams) (int64, error) {
 	result, err := q.db.Exec(ctx, scrubWorkflowRunsForContact, arg.Now, arg.WorkspaceID, arg.ContactID)
 	if err != nil {

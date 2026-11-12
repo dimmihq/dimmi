@@ -43,15 +43,17 @@ const (
 )
 
 /*
-applier writes rows for one member.
+applier writes rows for one member, keeping what each row changed
+under the import when it runs for real.
 */
 type applier struct {
-	db     *database.DB
-	upsert *contacts.UpsertIdentifiedContact
-	m      authz.Membership
-	kind   string
-	mode   string
-	now    func() time.Time
+	db       *database.DB
+	upsert   *contacts.UpsertIdentifiedContact
+	m        authz.Membership
+	kind     string
+	mode     string
+	now      func() time.Time
+	importID ids.UUID
 }
 
 /*
@@ -166,32 +168,23 @@ func (a applier) contact(ctx context.Context, r record) (string, error) {
 		employer = r.company
 	}
 
+	before, err := a.priorContact(ctx, r)
+	if err != nil {
+		return OutcomeFailed, err
+	}
+
 	up, err := a.upsert.Handle(ctx, contacts.UpsertInput{Membership: a.m, Fields: r.contact, Company: employer})
 	if err != nil {
 		return OutcomeFailed, err
 	}
 
-	id := up.Detail.Contact.ID
+	c := change{id: up.Detail.Contact.ID, created: up.Created, before: before}
+	if employer == nil && r.company != nil {
+		c.companyName = r.company.Name
+	}
 
 	err = a.db.Transaction(ctx, func(ctx context.Context, tx *database.Tx) error {
-		q := models.New(tx)
-		if employer == nil && r.company != nil && r.company.Name != nil {
-			if err := a.linkByName(ctx, q, id, *r.company.Name); err != nil {
-				return err
-			}
-		}
-
-		tagIDs, err := a.tags(ctx, q, r.tags)
-		if err != nil || len(tagIDs) == 0 {
-			return err
-		}
-
-		_, err = q.TagContact(ctx, models.TagContactParams{
-			WorkspaceID: a.m.Workspace.ID, ContactID: id, CreatedByType: "member", CreatedByID: &a.m.Member.ID,
-			Now: a.now(), TagIds: tagIDs,
-		})
-
-		return err
+		return a.contactExtras(ctx, models.New(tx), r, c)
 	})
 	if err != nil {
 		return OutcomeFailed, err
@@ -202,6 +195,34 @@ func (a applier) contact(ctx context.Context, r record) (string, error) {
 	}
 
 	return OutcomeUpdated, nil
+}
+
+/*
+contactExtras puts the customer in the company the row names only by
+name, when no other key named it, adds the row's tags and keeps what
+the row changed.
+*/
+func (a applier) contactExtras(ctx context.Context, q *models.Queries, r record, c change) error {
+	if c.companyName != nil {
+		if err := a.linkByName(ctx, q, c.id, *c.companyName); err != nil {
+			return err
+		}
+	}
+
+	tagIDs, err := a.tags(ctx, q, r.tags)
+	if err != nil {
+		return err
+	}
+
+	c.tags, err = q.TagContact(ctx, models.TagContactParams{
+		WorkspaceID: a.m.Workspace.ID, ContactID: c.id, CreatedByType: "member", CreatedByID: &a.m.Member.ID,
+		Now: a.now(), TagIds: tagIDs,
+	})
+	if err != nil {
+		return err
+	}
+
+	return a.keepContact(ctx, q, c)
 }
 
 /*
@@ -234,6 +255,13 @@ func (a applier) company(ctx context.Context, r record) (string, error) {
 	outcome := OutcomeUpdated
 
 	err := a.db.Transaction(ctx, func(ctx context.Context, tx *database.Tx) error {
+		q := models.New(tx)
+
+		before, err := priorCompany(ctx, q, a.m.Workspace.ID, r)
+		if err != nil {
+			return err
+		}
+
 		c, created, err := companies.Identify(ctx, tx, companies.Identity{
 			WorkspaceID: a.m.Workspace.ID, Fields: r.self, Now: a.now(),
 		})
@@ -245,19 +273,25 @@ func (a applier) company(ctx context.Context, r record) (string, error) {
 			outcome = OutcomeCreated
 		}
 
-		q := models.New(tx)
-
 		tagIDs, err := a.tags(ctx, q, r.tags)
-		if err != nil || len(tagIDs) == 0 {
+		if err != nil {
 			return err
 		}
 
-		_, err = q.TagCompany(ctx, models.TagCompanyParams{
+		added, err := q.TagCompany(ctx, models.TagCompanyParams{
 			WorkspaceID: a.m.Workspace.ID, CompanyID: c.ID, CreatedByType: "member", CreatedByID: &a.m.Member.ID,
 			Now: a.now(), TagIds: tagIDs,
 		})
+		if err != nil {
+			return err
+		}
 
-		return err
+		after, err := companySnapshot(c)
+		if err != nil {
+			return err
+		}
+
+		return a.keep(ctx, q, change{id: c.ID, created: created, before: before, after: after, tags: added})
 	})
 	if err != nil {
 		return OutcomeFailed, err

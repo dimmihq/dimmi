@@ -7,8 +7,9 @@
 | draft and answers with its header, first rows and suggested mapping.
 | GET /imports lists the latest of a kind and GET /imports/{import}
 | shows one with its progress. POST .../previews runs a mapping as a dry
-| run, POST .../runs starts the import in the background, and GET
-| .../errors downloads the failed rows as a CSV.
+| run, POST .../runs starts the import in the background, GET
+| .../errors downloads the failed rows as a CSV, and POST .../rollbacks
+| undoes a finished import in the background.
 |
 */
 
@@ -182,6 +183,23 @@ func (c *ImportController) Errors(ctx context.Context, in *requests.ImportReques
 		ContentType: "text/csv; charset=utf-8", CacheControl: "no-store",
 		ContentDisposition: `attachment; filename="` + name + `"`, Body: data,
 	}, nil
+}
+
+/*
+Rollback starts undoing the import in the background.
+*/
+func (c *ImportController) Rollback(ctx context.Context, in *requests.ImportRequest) (*ImportOutput, error) {
+	id, err := c.decode(in.Import)
+	if err != nil {
+		return nil, err
+	}
+
+	v, err := c.Imports.Rollback(ctx, imports.Input{Membership: membership(ctx), ID: id})
+	if err != nil {
+		return nil, err
+	}
+
+	return &ImportOutput{Body: fhttp.NewResource(resources.NewImport(v))}, nil
 }
 
 /*

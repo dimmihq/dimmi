@@ -35,7 +35,8 @@ WHERE workspace_id = @workspace_id AND id = @id AND deleted_at IS NULL;
 -- SaveWidgetSettings writes a widget's whole settings and moves its version
 -- on, so a cached config of the old version is never served again.
 UPDATE widget_settings SET
-    name = @name, enabled = @enabled, appearance = @appearance, texts = @texts, locale = @locale,
+    name = @name, enabled = @enabled, appearance = @appearance, texts = @texts, texts_by_locale = @texts_by_locale,
+    locale = @locale,
     reply_time = @reply_time, show_team_avatars = @show_team_avatars, show_availability = @show_availability,
     allowed_origins = @allowed_origins, allow_anonymous = @allow_anonymous, collect_email = @collect_email,
     require_email_when_offline = @require_email_when_offline, attachments_enabled = @attachments_enabled,

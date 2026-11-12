@@ -70,7 +70,8 @@ func resumers() map[string]resumer {
 	return map[string]resumer{
 		workflowspec.KindButtons: resumeButtons, workflowspec.KindCollect: resumeCollect,
 		workflowspec.KindWait: resumeWait, workflowspec.KindDimmi: resumeDimmi,
-		workflowspec.KindRunWorkflow: resumeRunWorkflow,
+		workflowspec.KindRunWorkflow: resumeRunWorkflow, workflowspec.KindHTTPRequest: resumeHTTPRequest,
+		workflowspec.KindClassify: resumeClassify,
 	}
 }
 

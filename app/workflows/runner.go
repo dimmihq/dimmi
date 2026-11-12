@@ -176,6 +176,8 @@ func (e *Engine) applies(run models.WorkflowRun, s Step) bool {
 		return w.Kind == workflowspec.WaitAgent
 	case InputCallDone:
 		return w.Kind == waitCall
+	case InputCallOutDone:
+		return w.Kind == waitCallOut
 	}
 
 	return false

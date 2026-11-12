@@ -3,7 +3,8 @@
  * applied, as the server would serve them once saved. Typing waits a
  * moment before asking, and the last good config stays on screen while
  * the next one loads, so the preview never blanks. A change the server
- * would refuse comes back as the error, for the page to point at.
+ * would refuse comes back as the error, for the page to point at. A
+ * language given shows the messenger in it.
  */
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
@@ -25,13 +26,13 @@ function useSettled<T>(value: T): T {
   return settled;
 }
 
-export function usePreviewConfig(workspace: string, widget: string, draft: WidgetChange) {
+export function usePreviewConfig(workspace: string, widget: string, draft: WidgetChange, locale?: string) {
   const settled = useSettled(draft);
   const body = JSON.stringify(settled);
 
   return useQuery({
-    queryKey: ["workspace", workspace, "widget-settings", widget, "preview", body],
-    queryFn: ({ signal }) => previewWidget(workspace, widget, settled, signal),
+    queryKey: ["workspace", workspace, "widget-settings", widget, "preview", locale ?? "", body],
+    queryFn: ({ signal }) => previewWidget(workspace, widget, settled, signal, locale),
     placeholderData: keepPreviousData,
     retry: false,
     staleTime: Number.POSITIVE_INFINITY,

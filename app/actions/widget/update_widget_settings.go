@@ -40,6 +40,7 @@ SettingsChange is what a caller sends; a nil field stays as it is. Show
 branding has a meaning for null, so ShowBrandingSent tells null from
 absent, and AllowedOrigins from nil likewise by AllowedOriginsSent.
 HomeLinks replaces the whole list when HomeLinksSent says it was sent.
+TextsByLocale merges each language's words over its stored ones.
 */
 type SettingsChange struct {
 	Name                    *string
@@ -47,6 +48,7 @@ type SettingsChange struct {
 	Enabled                 *bool
 	Appearance              map[string]any
 	Texts                   map[string]any
+	TextsByLocale           map[string]any
 	Locale                  *string
 	ReplyTime               *string
 	ShowTeamAvatars         *bool
@@ -252,9 +254,10 @@ changedParams returns the widget's values with the change applied.
 */
 func changedParams(w models.WidgetSetting, c SettingsChange) (models.SaveWidgetSettingsParams, error) {
 	p := models.SaveWidgetSettingsParams{
-		Name: w.Name, Enabled: w.Enabled, Appearance: w.Appearance, Texts: w.Texts, Locale: w.Locale,
-		ReplyTime: w.ReplyTime, ShowTeamAvatars: w.ShowTeamAvatars, ShowAvailability: w.ShowAvailability,
-		AllowedOrigins: w.AllowedOrigins, AllowAnonymous: w.AllowAnonymous, CollectEmail: w.CollectEmail,
+		Name: w.Name, Enabled: w.Enabled, Appearance: w.Appearance, Texts: w.Texts, TextsByLocale: w.TextsByLocale,
+		Locale: w.Locale, ReplyTime: w.ReplyTime, ShowTeamAvatars: w.ShowTeamAvatars,
+		ShowAvailability: w.ShowAvailability,
+		AllowedOrigins:   w.AllowedOrigins, AllowAnonymous: w.AllowAnonymous, CollectEmail: w.CollectEmail,
 		RequireEmailWhenOffline: w.RequireEmailWhenOffline, AttachmentsEnabled: w.AttachmentsEnabled,
 		MaxAttachmentMb: w.MaxAttachmentMb, HelpCenterID: w.HelpCenterID, HelpTabEnabled: w.HelpTabEnabled,
 		ChangelogTabEnabled: w.ChangelogTabEnabled, IntercomShim: w.IntercomShim,
@@ -380,7 +383,7 @@ func applyOrigins(p *models.SaveWidgetSettingsParams, c SettingsChange) error {
 }
 
 /*
-applyStored merges the appearance and texts.
+applyStored merges the appearance, the texts and the texts by language.
 */
 func applyStored(p *models.SaveWidgetSettingsParams, c SettingsChange) error {
 	if c.Appearance != nil {
@@ -399,6 +402,15 @@ func applyStored(p *models.SaveWidgetSettingsParams, c SettingsChange) error {
 		}
 
 		p.Texts = merged
+	}
+
+	if c.TextsByLocale != nil {
+		merged, err := mergeTextsByLocale(p.TextsByLocale, c.TextsByLocale)
+		if err != nil {
+			return err
+		}
+
+		p.TextsByLocale = merged
 	}
 
 	return nil
@@ -467,7 +479,7 @@ func changedFields(before models.WidgetSetting, p models.SaveWidgetSettingsParam
 	after.HelpCenterID, after.HelpTabEnabled = p.HelpCenterID, p.HelpTabEnabled
 	after.ChangelogTabEnabled, after.IntercomShim = p.ChangelogTabEnabled, p.IntercomShim
 	after.NativeAppsEnabled, after.ShowBranding = p.NativeAppsEnabled, p.ShowBranding
-	after.HomeLinks = p.HomeLinks
+	after.HomeLinks, after.TextsByLocale = p.HomeLinks, p.TextsByLocale
 
 	left, right := asFields(before), asFields(after)
 	changes := []string{}

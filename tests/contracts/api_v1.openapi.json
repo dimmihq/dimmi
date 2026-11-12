@@ -15155,6 +15155,13 @@
             "format": "int32",
             "type": "integer"
           },
+          "file_expired_at": {
+            "format": "date-time",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
           "file_name": {
             "type": "string"
           },
@@ -15204,6 +15211,16 @@
           "processed_rows": {
             "format": "int32",
             "type": "integer"
+          },
+          "rollback": {
+            "$ref": "#/components/schemas/ImportRollback"
+          },
+          "rollback_until": {
+            "format": "date-time",
+            "type": [
+              "string",
+              "null"
+            ]
           },
           "row_count": {
             "format": "int32",
@@ -15259,7 +15276,10 @@
           "error",
           "started_at",
           "finished_at",
-          "created_at"
+          "created_at",
+          "rollback_until",
+          "rollback",
+          "file_expired_at"
         ],
         "type": "object"
       },
@@ -15356,6 +15376,76 @@
         ],
         "type": "object"
       },
+      "ImportRollback": {
+        "additionalProperties": false,
+        "properties": {
+          "error": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "finished_at": {
+            "format": "date-time",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "kept": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "kept_records": {
+            "items": {
+              "$ref": "#/components/schemas/KeptRecord"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "processed": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "removed": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "requested_at": {
+            "format": "date-time",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "reverted": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "status": {
+            "type": "string"
+          },
+          "total": {
+            "format": "int32",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "status",
+          "total",
+          "processed",
+          "removed",
+          "reverted",
+          "kept",
+          "kept_records",
+          "error",
+          "requested_at",
+          "finished_at"
+        ],
+        "type": "object"
+      },
       "ImportSummary": {
         "additionalProperties": false,
         "properties": {
@@ -15363,13 +15453,32 @@
             "format": "date-time",
             "type": "string"
           },
+          "created_by_name": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
           "created_count": {
             "format": "int32",
             "type": "integer"
           },
+          "error_report_url": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
           "failed_count": {
             "format": "int32",
             "type": "integer"
+          },
+          "file_expired_at": {
+            "format": "date-time",
+            "type": [
+              "string",
+              "null"
+            ]
           },
           "file_name": {
             "type": "string"
@@ -15393,6 +15502,16 @@
           "processed_rows": {
             "format": "int32",
             "type": "integer"
+          },
+          "rollback": {
+            "$ref": "#/components/schemas/ImportRollback"
+          },
+          "rollback_until": {
+            "format": "date-time",
+            "type": [
+              "string",
+              "null"
+            ]
           },
           "row_count": {
             "format": "int32",
@@ -15423,7 +15542,12 @@
           "skipped_count",
           "failed_count",
           "finished_at",
-          "created_at"
+          "created_at",
+          "created_by_name",
+          "error_report_url",
+          "rollback_until",
+          "rollback",
+          "file_expired_at"
         ],
         "type": "object"
       },
@@ -16440,6 +16564,26 @@
         "required": [
           "code",
           "message"
+        ],
+        "type": "object"
+      },
+      "KeptRecord": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "reason"
         ],
         "type": "object"
       },
@@ -29816,6 +29960,15 @@
             "additionalProperties": {},
             "type": "object"
           },
+          "texts_by_locale": {
+            "additionalProperties": {
+              "additionalProperties": {
+                "type": "string"
+              },
+              "type": "object"
+            },
+            "type": "object"
+          },
           "updated_at": {
             "format": "date-time",
             "type": "string"
@@ -29830,6 +29983,7 @@
           "channel_connection_id",
           "appearance",
           "texts",
+          "texts_by_locale",
           "locale",
           "reply_time",
           "show_team_avatars",
@@ -29939,6 +30093,10 @@
             "type": "boolean"
           },
           "texts": {
+            "additionalProperties": {},
+            "type": "object"
+          },
+          "texts_by_locale": {
             "additionalProperties": {},
             "type": "object"
           }
@@ -42776,6 +42934,46 @@
               }
             },
             "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseError"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "x-abilities": [
+          "contacts:write"
+        ]
+      }
+    },
+    "/imports/{import}/rollbacks": {
+      "post": {
+        "operationId": "imports.rollbacks.store",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "import",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResourceImport"
+                }
+              }
+            },
+            "description": "Accepted"
           },
           "default": {
             "content": {

@@ -102,12 +102,19 @@ change cleaned, with empty texts as null so they fall back to the built-in
 words.
 */
 func CheckTexts(change map[string]any) (map[string]any, error) {
+	return checkTextsAt("texts", change)
+}
+
+/*
+checkTextsAt is CheckTexts naming each refused key under the field.
+*/
+func checkTextsAt(field string, change map[string]any) (map[string]any, error) {
 	limits, out := TextLimits(), make(map[string]any, len(change))
 
 	for key, value := range change {
 		limit, known := limits[key]
 		if !known {
-			return nil, failField("texts."+key, "This is not a text the messenger shows.")
+			return nil, failField(field+"."+key, "This is not a text the messenger shows.")
 		}
 
 		if value == nil {
@@ -118,12 +125,12 @@ func CheckTexts(change map[string]any) (map[string]any, error) {
 
 		text, ok := value.(string)
 		if !ok {
-			return nil, failField("texts."+key, "Use plain text.")
+			return nil, failField(field+"."+key, "Use plain text.")
 		}
 
 		text = str.Clean(text)
 		if len([]rune(text)) > limit {
-			return nil, failField("texts."+key, fmt.Sprintf("Use at most %d characters.", limit))
+			return nil, failField(field+"."+key, fmt.Sprintf("Use at most %d characters.", limit))
 		}
 
 		out[key] = nil

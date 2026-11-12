@@ -1423,28 +1423,52 @@ type IdentityVerificationStat struct {
 }
 
 type Import struct {
-	ID                ids.UUID        `json:"id"`
-	WorkspaceID       ids.UUID        `json:"workspace_id"`
-	Kind              string          `json:"kind"`
-	Status            string          `json:"status"`
-	FileName          string          `json:"file_name"`
-	File              []byte          `json:"file"`
-	Columns           json.RawMessage `json:"columns"`
-	RowCount          int32           `json:"row_count"`
-	Mapping           json.RawMessage `json:"mapping"`
-	Mode              string          `json:"mode"`
-	ProcessedRows     int32           `json:"processed_rows"`
-	CreatedCount      int32           `json:"created_count"`
-	UpdatedCount      int32           `json:"updated_count"`
-	SkippedCount      int32           `json:"skipped_count"`
-	FailedCount       int32           `json:"failed_count"`
-	RowErrors         json.RawMessage `json:"row_errors"`
-	Error             *string         `json:"error"`
-	CreatedByMemberID *ids.UUID       `json:"created_by_member_id"`
-	StartedAt         *time.Time      `json:"started_at"`
-	FinishedAt        *time.Time      `json:"finished_at"`
-	CreatedAt         time.Time       `json:"created_at"`
-	UpdatedAt         time.Time       `json:"updated_at"`
+	ID                  ids.UUID        `json:"id"`
+	WorkspaceID         ids.UUID        `json:"workspace_id"`
+	Kind                string          `json:"kind"`
+	Status              string          `json:"status"`
+	FileName            string          `json:"file_name"`
+	File                []byte          `json:"file"`
+	Columns             json.RawMessage `json:"columns"`
+	RowCount            int32           `json:"row_count"`
+	Mapping             json.RawMessage `json:"mapping"`
+	Mode                string          `json:"mode"`
+	ProcessedRows       int32           `json:"processed_rows"`
+	CreatedCount        int32           `json:"created_count"`
+	UpdatedCount        int32           `json:"updated_count"`
+	SkippedCount        int32           `json:"skipped_count"`
+	FailedCount         int32           `json:"failed_count"`
+	RowErrors           json.RawMessage `json:"row_errors"`
+	Error               *string         `json:"error"`
+	CreatedByMemberID   *ids.UUID       `json:"created_by_member_id"`
+	StartedAt           *time.Time      `json:"started_at"`
+	FinishedAt          *time.Time      `json:"finished_at"`
+	CreatedAt           time.Time       `json:"created_at"`
+	UpdatedAt           time.Time       `json:"updated_at"`
+	RollbackStatus      *string         `json:"rollback_status"`
+	RollbackTotal       int32           `json:"rollback_total"`
+	RollbackProcessed   int32           `json:"rollback_processed"`
+	RollbackRemoved     int32           `json:"rollback_removed"`
+	RollbackReverted    int32           `json:"rollback_reverted"`
+	RollbackKept        int32           `json:"rollback_kept"`
+	RollbackKeptRecords json.RawMessage `json:"rollback_kept_records"`
+	RollbackError       *string         `json:"rollback_error"`
+	RollbackByMemberID  *ids.UUID       `json:"rollback_by_member_id"`
+	RollbackRequestedAt *time.Time      `json:"rollback_requested_at"`
+	RollbackFinishedAt  *time.Time      `json:"rollback_finished_at"`
+	FileExpiredAt       *time.Time      `json:"file_expired_at"`
+}
+
+type ImportChange struct {
+	ID          ids.UUID        `json:"id"`
+	WorkspaceID ids.UUID        `json:"workspace_id"`
+	ImportID    ids.UUID        `json:"import_id"`
+	RecordID    ids.UUID        `json:"record_id"`
+	Created     bool            `json:"created"`
+	Before      json.RawMessage `json:"before"`
+	After       json.RawMessage `json:"after"`
+	AddedTagIds []ids.UUID      `json:"added_tag_ids"`
+	CreatedAt   time.Time       `json:"created_at"`
 }
 
 type InboundEmail struct {
@@ -2566,6 +2590,7 @@ type WidgetSetting struct {
 	NativeAppsEnabled       bool            `json:"native_apps_enabled"`
 	HomeLinks               json.RawMessage `json:"home_links"`
 	Audiences               json.RawMessage `json:"audiences"`
+	TextsByLocale           json.RawMessage `json:"texts_by_locale"`
 }
 
 type Workflow struct {

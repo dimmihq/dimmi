@@ -30,6 +30,7 @@ type WidgetSettingsBody struct {
 	Enabled                 *bool          `json:"enabled,omitempty"`
 	Appearance              map[string]any `json:"appearance,omitempty"`
 	Texts                   map[string]any `json:"texts,omitempty"`
+	TextsByLocale           map[string]any `json:"texts_by_locale,omitempty"`
 	Locale                  *string        `json:"locale,omitempty"`
 	ReplyTime               *string        `json:"reply_time,omitempty"`
 	ShowTeamAvatars         *bool          `json:"show_team_avatars,omitempty"`
@@ -69,7 +70,8 @@ func (b WidgetSettingsBody) Change(raw []byte) widget.SettingsChange {
 
 	return widget.SettingsChange{
 		Name: b.Name, Enabled: b.Enabled, Appearance: b.Appearance, Texts: b.Texts, Locale: b.Locale,
-		ReplyTime: b.ReplyTime, ShowTeamAvatars: b.ShowTeamAvatars, ShowAvailability: b.ShowAvailability,
+		TextsByLocale: b.TextsByLocale,
+		ReplyTime:     b.ReplyTime, ShowTeamAvatars: b.ShowTeamAvatars, ShowAvailability: b.ShowAvailability,
 		AllowedOrigins: b.AllowedOrigins, AllowedOriginsSent: sent["allowed_origins"],
 		AllowAnonymous: b.AllowAnonymous, CollectEmail: b.CollectEmail,
 		RequireEmailWhenOffline: b.RequireEmailWhenOffline, AttachmentsEnabled: b.AttachmentsEnabled,

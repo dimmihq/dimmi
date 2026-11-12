@@ -49,7 +49,7 @@ func (q *Queries) CountWidgetSettings(ctx context.Context, workspaceID ids.UUID)
 const createWidgetSettings = `-- name: CreateWidgetSettings :one
 INSERT INTO widget_settings (workspace_id, channel_connection_id, name, created_at, updated_at)
 VALUES ($1, $2, $3, $4, $4)
-RETURNING id, workspace_id, channel_connection_id, name, enabled, appearance, texts, locale, reply_time, show_team_avatars, show_availability, allowed_origins, allow_anonymous, collect_email, require_email_when_offline, attachments_enabled, max_attachment_mb, help_center_id, help_tab_enabled, show_branding, config_version, last_boot_at, last_boot_origin, deleted_at, created_at, updated_at, changelog_tab_enabled, intercom_shim, native_apps_enabled, home_links, audiences
+RETURNING id, workspace_id, channel_connection_id, name, enabled, appearance, texts, locale, reply_time, show_team_avatars, show_availability, allowed_origins, allow_anonymous, collect_email, require_email_when_offline, attachments_enabled, max_attachment_mb, help_center_id, help_tab_enabled, show_branding, config_version, last_boot_at, last_boot_origin, deleted_at, created_at, updated_at, changelog_tab_enabled, intercom_shim, native_apps_enabled, home_links, audiences, texts_by_locale
 `
 
 type CreateWidgetSettingsParams struct {
@@ -100,6 +100,7 @@ func (q *Queries) CreateWidgetSettings(ctx context.Context, arg CreateWidgetSett
 		&i.NativeAppsEnabled,
 		&i.HomeLinks,
 		&i.Audiences,
+		&i.TextsByLocale,
 	)
 	return i, err
 }
@@ -125,7 +126,7 @@ func (q *Queries) DeleteWidgetSettings(ctx context.Context, arg DeleteWidgetSett
 }
 
 const findWidgetSettings = `-- name: FindWidgetSettings :one
-SELECT id, workspace_id, channel_connection_id, name, enabled, appearance, texts, locale, reply_time, show_team_avatars, show_availability, allowed_origins, allow_anonymous, collect_email, require_email_when_offline, attachments_enabled, max_attachment_mb, help_center_id, help_tab_enabled, show_branding, config_version, last_boot_at, last_boot_origin, deleted_at, created_at, updated_at, changelog_tab_enabled, intercom_shim, native_apps_enabled, home_links, audiences FROM widget_settings WHERE workspace_id = $1 AND id = $2 AND deleted_at IS NULL
+SELECT id, workspace_id, channel_connection_id, name, enabled, appearance, texts, locale, reply_time, show_team_avatars, show_availability, allowed_origins, allow_anonymous, collect_email, require_email_when_offline, attachments_enabled, max_attachment_mb, help_center_id, help_tab_enabled, show_branding, config_version, last_boot_at, last_boot_origin, deleted_at, created_at, updated_at, changelog_tab_enabled, intercom_shim, native_apps_enabled, home_links, audiences, texts_by_locale FROM widget_settings WHERE workspace_id = $1 AND id = $2 AND deleted_at IS NULL
 `
 
 type FindWidgetSettingsParams struct {
@@ -169,12 +170,13 @@ func (q *Queries) FindWidgetSettings(ctx context.Context, arg FindWidgetSettings
 		&i.NativeAppsEnabled,
 		&i.HomeLinks,
 		&i.Audiences,
+		&i.TextsByLocale,
 	)
 	return i, err
 }
 
 const findWidgetSettingsByConnection = `-- name: FindWidgetSettingsByConnection :one
-SELECT id, workspace_id, channel_connection_id, name, enabled, appearance, texts, locale, reply_time, show_team_avatars, show_availability, allowed_origins, allow_anonymous, collect_email, require_email_when_offline, attachments_enabled, max_attachment_mb, help_center_id, help_tab_enabled, show_branding, config_version, last_boot_at, last_boot_origin, deleted_at, created_at, updated_at, changelog_tab_enabled, intercom_shim, native_apps_enabled, home_links, audiences FROM widget_settings WHERE workspace_id = $1 AND channel_connection_id = $2
+SELECT id, workspace_id, channel_connection_id, name, enabled, appearance, texts, locale, reply_time, show_team_avatars, show_availability, allowed_origins, allow_anonymous, collect_email, require_email_when_offline, attachments_enabled, max_attachment_mb, help_center_id, help_tab_enabled, show_branding, config_version, last_boot_at, last_boot_origin, deleted_at, created_at, updated_at, changelog_tab_enabled, intercom_shim, native_apps_enabled, home_links, audiences, texts_by_locale FROM widget_settings WHERE workspace_id = $1 AND channel_connection_id = $2
 `
 
 type FindWidgetSettingsByConnectionParams struct {
@@ -219,12 +221,13 @@ func (q *Queries) FindWidgetSettingsByConnection(ctx context.Context, arg FindWi
 		&i.NativeAppsEnabled,
 		&i.HomeLinks,
 		&i.Audiences,
+		&i.TextsByLocale,
 	)
 	return i, err
 }
 
 const listWidgetSettings = `-- name: ListWidgetSettings :many
-SELECT id, workspace_id, channel_connection_id, name, enabled, appearance, texts, locale, reply_time, show_team_avatars, show_availability, allowed_origins, allow_anonymous, collect_email, require_email_when_offline, attachments_enabled, max_attachment_mb, help_center_id, help_tab_enabled, show_branding, config_version, last_boot_at, last_boot_origin, deleted_at, created_at, updated_at, changelog_tab_enabled, intercom_shim, native_apps_enabled, home_links, audiences FROM widget_settings WHERE workspace_id = $1 AND deleted_at IS NULL ORDER BY created_at, id
+SELECT id, workspace_id, channel_connection_id, name, enabled, appearance, texts, locale, reply_time, show_team_avatars, show_availability, allowed_origins, allow_anonymous, collect_email, require_email_when_offline, attachments_enabled, max_attachment_mb, help_center_id, help_tab_enabled, show_branding, config_version, last_boot_at, last_boot_origin, deleted_at, created_at, updated_at, changelog_tab_enabled, intercom_shim, native_apps_enabled, home_links, audiences, texts_by_locale FROM widget_settings WHERE workspace_id = $1 AND deleted_at IS NULL ORDER BY created_at, id
 `
 
 // ListWidgetSettings returns the workspace's live widgets, oldest first.
@@ -269,6 +272,7 @@ func (q *Queries) ListWidgetSettings(ctx context.Context, workspaceID ids.UUID) 
 			&i.NativeAppsEnabled,
 			&i.HomeLinks,
 			&i.Audiences,
+			&i.TextsByLocale,
 		); err != nil {
 			return nil, err
 		}
@@ -384,7 +388,7 @@ func (q *Queries) ResolveWidgetApp(ctx context.Context, app ids.UUID) (ResolveWi
 const saveWidgetAudiences = `-- name: SaveWidgetAudiences :one
 UPDATE widget_settings SET audiences = $1, config_version = config_version + 1, updated_at = $2
 WHERE workspace_id = $3 AND id = $4 AND deleted_at IS NULL
-RETURNING id, workspace_id, channel_connection_id, name, enabled, appearance, texts, locale, reply_time, show_team_avatars, show_availability, allowed_origins, allow_anonymous, collect_email, require_email_when_offline, attachments_enabled, max_attachment_mb, help_center_id, help_tab_enabled, show_branding, config_version, last_boot_at, last_boot_origin, deleted_at, created_at, updated_at, changelog_tab_enabled, intercom_shim, native_apps_enabled, home_links, audiences
+RETURNING id, workspace_id, channel_connection_id, name, enabled, appearance, texts, locale, reply_time, show_team_avatars, show_availability, allowed_origins, allow_anonymous, collect_email, require_email_when_offline, attachments_enabled, max_attachment_mb, help_center_id, help_tab_enabled, show_branding, config_version, last_boot_at, last_boot_origin, deleted_at, created_at, updated_at, changelog_tab_enabled, intercom_shim, native_apps_enabled, home_links, audiences, texts_by_locale
 `
 
 type SaveWidgetAudiencesParams struct {
@@ -436,22 +440,24 @@ func (q *Queries) SaveWidgetAudiences(ctx context.Context, arg SaveWidgetAudienc
 		&i.NativeAppsEnabled,
 		&i.HomeLinks,
 		&i.Audiences,
+		&i.TextsByLocale,
 	)
 	return i, err
 }
 
 const saveWidgetSettings = `-- name: SaveWidgetSettings :one
 UPDATE widget_settings SET
-    name = $1, enabled = $2, appearance = $3, texts = $4, locale = $5,
-    reply_time = $6, show_team_avatars = $7, show_availability = $8,
-    allowed_origins = $9, allow_anonymous = $10, collect_email = $11,
-    require_email_when_offline = $12, attachments_enabled = $13,
-    max_attachment_mb = $14, help_center_id = $15, help_tab_enabled = $16,
-    changelog_tab_enabled = $17, intercom_shim = $18,
-    native_apps_enabled = $19, show_branding = $20, home_links = $21,
-    config_version = config_version + 1, updated_at = $22
-WHERE workspace_id = $23 AND id = $24 AND deleted_at IS NULL
-RETURNING id, workspace_id, channel_connection_id, name, enabled, appearance, texts, locale, reply_time, show_team_avatars, show_availability, allowed_origins, allow_anonymous, collect_email, require_email_when_offline, attachments_enabled, max_attachment_mb, help_center_id, help_tab_enabled, show_branding, config_version, last_boot_at, last_boot_origin, deleted_at, created_at, updated_at, changelog_tab_enabled, intercom_shim, native_apps_enabled, home_links, audiences
+    name = $1, enabled = $2, appearance = $3, texts = $4, texts_by_locale = $5,
+    locale = $6,
+    reply_time = $7, show_team_avatars = $8, show_availability = $9,
+    allowed_origins = $10, allow_anonymous = $11, collect_email = $12,
+    require_email_when_offline = $13, attachments_enabled = $14,
+    max_attachment_mb = $15, help_center_id = $16, help_tab_enabled = $17,
+    changelog_tab_enabled = $18, intercom_shim = $19,
+    native_apps_enabled = $20, show_branding = $21, home_links = $22,
+    config_version = config_version + 1, updated_at = $23
+WHERE workspace_id = $24 AND id = $25 AND deleted_at IS NULL
+RETURNING id, workspace_id, channel_connection_id, name, enabled, appearance, texts, locale, reply_time, show_team_avatars, show_availability, allowed_origins, allow_anonymous, collect_email, require_email_when_offline, attachments_enabled, max_attachment_mb, help_center_id, help_tab_enabled, show_branding, config_version, last_boot_at, last_boot_origin, deleted_at, created_at, updated_at, changelog_tab_enabled, intercom_shim, native_apps_enabled, home_links, audiences, texts_by_locale
 `
 
 type SaveWidgetSettingsParams struct {
@@ -459,6 +465,7 @@ type SaveWidgetSettingsParams struct {
 	Enabled                 bool            `json:"enabled"`
 	Appearance              json.RawMessage `json:"appearance"`
 	Texts                   json.RawMessage `json:"texts"`
+	TextsByLocale           json.RawMessage `json:"texts_by_locale"`
 	Locale                  string          `json:"locale"`
 	ReplyTime               string          `json:"reply_time"`
 	ShowTeamAvatars         bool            `json:"show_team_avatars"`
@@ -489,6 +496,7 @@ func (q *Queries) SaveWidgetSettings(ctx context.Context, arg SaveWidgetSettings
 		arg.Enabled,
 		arg.Appearance,
 		arg.Texts,
+		arg.TextsByLocale,
 		arg.Locale,
 		arg.ReplyTime,
 		arg.ShowTeamAvatars,
@@ -543,6 +551,7 @@ func (q *Queries) SaveWidgetSettings(ctx context.Context, arg SaveWidgetSettings
 		&i.NativeAppsEnabled,
 		&i.HomeLinks,
 		&i.Audiences,
+		&i.TextsByLocale,
 	)
 	return i, err
 }

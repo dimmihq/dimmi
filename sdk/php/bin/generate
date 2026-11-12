@@ -6,7 +6,7 @@ declare(strict_types=1);
 /*
  * Regenerates src/Generated from the dimmi OpenAPI document.
  *
- *     bin/generate [spec-path-or-url]
+ *     bin/generate [--update-surface] [spec-path-or-url]
  *
  * Default source: tests/contracts/api_v1.openapi.json at the repository
  * root, or http://localhost:8080/api/v1/openapi.json when that file is
@@ -16,15 +16,24 @@ declare(strict_types=1);
  * resource with PHPDoc, so $dimmi->conversations->messages->store($id, [...])
  * autocompletes. Nothing else is generated: requests go through Client.
  *
- * Public methods never disappear or change shape between runs. The current
- * table is the baseline: an operation the spec dropped is kept and marked
- * @deprecated, path parameter names and the body parameter keep their
- * place, and a body added to an operation that had none goes last.
+ * Public methods never disappear or change shape between runs. The
+ * committed api-surface.json is the baseline (src/Generated is gitignored):
+ * an operation the spec dropped is kept and marked @deprecated, path
+ * parameter names and the body parameter keep their place, and a body added
+ * to an operation that had none goes last.
+ *
+ * When the generated surface would change or drop an entry of
+ * api-surface.json, the run fails. --update-surface records the new surface
+ * instead, for an intended change or a release; review its diff.
  */
 
 $root = dirname(__DIR__);
+$surfaceFile = $root . '/api-surface.json';
 $snapshot = dirname($root, 2) . '/tests/contracts/api_v1.openapi.json';
-$source = $argv[1] ?? (is_file($snapshot) ? $snapshot : 'http://localhost:8080/api/v1/openapi.json');
+$flags = array_filter(array_slice($argv, 1), fn ($a) => str_starts_with($a, '--'));
+$positional = array_values(array_filter(array_slice($argv, 1), fn ($a) => !str_starts_with($a, '--')));
+$updateSurface = in_array('--update-surface', $flags, true);
+$source = $positional[0] ?? (is_file($snapshot) ? $snapshot : 'http://localhost:8080/api/v1/openapi.json');
 fwrite(STDERR, "generate: reading {$source}\n");
 
 $raw = @file_get_contents($source);
@@ -76,7 +85,8 @@ foreach ($spec['paths'] as $path => $item) {
         ];
     }
 }
-$operations = keepCompatible($operations, baseline($root . '/src/Generated/Operations.php'), $warnings);
+$committed = readSurface($surfaceFile);
+$operations = keepCompatible($operations, fromSurface($committed), $warnings);
 foreach ($warnings as $warning) {
     fwrite(STDERR, "generate: {$warning}\n");
 }
@@ -125,6 +135,24 @@ file_put_contents($out . '/Operations.php', $table);
 
 $classes = [];
 emit($tree, [], $out, $header, $operations, $classes);
+
+$surface = toSurface($operations);
+if ($updateSurface) {
+    file_put_contents($surfaceFile, writeSurface($surface));
+    fwrite(STDERR, "generate: wrote api-surface.json; review its diff and commit it\n");
+} else {
+    [$changed, $added] = diffSurface($committed, $surface);
+    if ($added !== []) {
+        fwrite(STDERR, 'generate: ' . count($added) . " new operation(s) not yet in api-surface.json (run bin/generate --update-surface to record them):\n  " . implode("\n  ", $added) . "\n");
+    }
+    if ($changed !== []) {
+        fwrite(STDERR, "\ngenerate: the PHP client's public surface no longer matches api-surface.json:\n\n  " . implode("\n  ", $changed) . "\n\n" .
+            "Customers call these methods. If the API change is intended, run\n" .
+            "`cd sdk/php && bin/generate --update-surface`, review the diff of\n" .
+            "api-surface.json and commit it with the change. See AGENTS.md.\n");
+        exit(1);
+    }
+}
 
 printf("generate: %d operations (%d deprecated), %d resource classes, spec %s\n", count($operations), count(array_filter($operations, fn ($op) => $op['deprecated'])), count($classes), $version);
 
@@ -271,25 +299,101 @@ function listExport(array $list): string
 }
 
 /**
- * The operation table the SDK last shipped, the baseline for compatibility.
+ * The committed public surface: operation id => one line of its signature.
  *
  * @return array<string, array<string, mixed>>
  */
-function baseline(string $file): array
+function readSurface(string $file): array
 {
     if (!is_file($file)) {
         return [];
     }
-    $code = (string) file_get_contents($file);
-    // Load the old table under a throwaway class name, without autoloading.
-    $class = 'GenerateBaseline' . bin2hex(random_bytes(4));
-    $code = str_replace(['namespace Dimmi\\Generated;', 'final class Operations'], ['', "final class {$class}"], $code);
-    $tmp = tempnam(sys_get_temp_dir(), 'dimmi-ops');
-    file_put_contents($tmp, $code);
-    require $tmp;
-    unlink($tmp);
 
-    return constant("{$class}::ALL");
+    return json_decode((string) file_get_contents($file), true, 512, JSON_THROW_ON_ERROR)['operations'] ?? [];
+}
+
+/**
+ * The surface of the generated operations: what a caller's code depends on.
+ *
+ * @param array<string, array<string, mixed>> $operations
+ * @return array<string, array<string, mixed>>
+ */
+function toSurface(array $operations): array
+{
+    $surface = [];
+    foreach ($operations as $id => $op) {
+        $body = match (true) {
+            $op['body'] === null => 'none',
+            $op['bodyDropped'] ?? false => 'dropped',
+            $op['bodyLast'] => 'last',
+            $op['bodyRequired'] => 'required',
+            default => 'optional',
+        };
+        $surface[$id] = ['method' => $op['method'], 'path' => $op['path'], 'params' => $op['params'], 'body' => $body] +
+            ($op['deprecated'] ? ['deprecated' => true] : []);
+    }
+    ksort($surface);
+
+    return $surface;
+}
+
+/**
+ * The surface as the baseline operation table keepCompatible reads.
+ *
+ * @param array<string, array<string, mixed>> $surface
+ * @return array<string, array<string, mixed>>
+ */
+function fromSurface(array $surface): array
+{
+    $old = [];
+    foreach ($surface as $id => $entry) {
+        $body = $entry['body'] ?? 'none';
+        $old[$id] = [
+            'method' => $entry['method'],
+            'path' => $entry['path'],
+            'params' => $entry['params'],
+            'query' => [],
+            'body' => $body === 'none' ? null : 'object',
+            'bodyRequired' => $body === 'required',
+            'response' => null,
+            'bodyLast' => $body === 'last',
+            'bodyDropped' => $body === 'dropped',
+        ];
+    }
+
+    return $old;
+}
+
+/** One operation per line, sorted, so a change reads as a one-line diff. */
+function writeSurface(array $surface): string
+{
+    $lines = [];
+    foreach ($surface as $id => $entry) {
+        $lines[] = '    ' . json_encode($id, JSON_UNESCAPED_SLASHES) . ': ' . json_encode($entry, JSON_UNESCAPED_SLASHES);
+    }
+
+    return "{\n  \"operations\": {\n" . implode(",\n", $lines) . "\n  }\n}\n";
+}
+
+/**
+ * Entries of the committed surface the new one dropped or changed, and new operation ids.
+ *
+ * @return array{list<string>, list<string>}
+ */
+function diffSurface(array $committed, array $surface): array
+{
+    $changed = [];
+    foreach ($committed as $id => $entry) {
+        if (!isset($surface[$id])) {
+            $changed[] = "{$id}: dropped";
+        } elseif (($surface[$id]['deprecated'] ?? false) && !($entry['deprecated'] ?? false)) {
+            $changed[] = "{$id}: dropped from the spec (kept as @deprecated)";
+        } elseif (json_encode($surface[$id], JSON_UNESCAPED_SLASHES) !== json_encode($entry, JSON_UNESCAPED_SLASHES)) {
+            $changed[] = "{$id}: " . json_encode($entry, JSON_UNESCAPED_SLASHES) . ' -> ' . json_encode($surface[$id], JSON_UNESCAPED_SLASHES);
+        }
+    }
+
+    return [$changed, array_values(array_diff(array_keys($surface), array_keys($committed)))];
 }
 
 /**

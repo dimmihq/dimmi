@@ -5,6 +5,7 @@
  * foot says they are unsaved, Discard puts the page back as saved and
  * Save sends them in one update. Leaving with unsaved changes asks first.
  * Someone who may only read settings sees them without changing them.
+ * Picking a language for the texts shows the preview in that language.
  */
 import { RiArrowLeftLine } from "@remixicon/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -22,6 +23,7 @@ import { AudiencesSection } from "./audiences-section";
 import { changed, withChange, withDraft } from "./draft";
 import { forPreview, linkProblems } from "./links";
 import { LinksSection } from "./links-section";
+import { allLanguages } from "./parts";
 import { PreviewPane } from "./preview-pane";
 import {
   AppearanceSection,
@@ -29,9 +31,9 @@ import {
   GeneralSection,
   InstallSection,
   TabsSection,
-  TextsSection,
   VisitorsSection,
 } from "./sections";
+import { TextsSection } from "./texts-section";
 import { usePreviewConfig } from "./use-preview-config";
 
 function BackToMessengers() {
@@ -113,7 +115,8 @@ function Editor({ workspace, saved }: { workspace: string; saved: WidgetSettings
   const edit = useMessengerDraft(workspace, saved);
   const locked = !usePermission(workspace, "settings:write");
   const sent = forPreview(edit.draft);
-  const preview = usePreviewConfig(workspace, saved.id, sent.change);
+  const [language, setLanguage] = useState(allLanguages);
+  const preview = usePreviewConfig(workspace, saved.id, sent.change, language === allLanguages ? undefined : language);
   const locales = (preview.data?.locales as string[] | undefined) ?? ["en"];
   useBlocker({
     shouldBlockFn: () => edit.dirty && !window.confirm("Leave without saving your changes?"),
@@ -134,7 +137,7 @@ function Editor({ workspace, saved }: { workspace: string; saved: WidgetSettings
           <InstallSection value={edit.shown} />
           <GeneralSection {...props} locales={locales} />
           <AppearanceSection {...props} />
-          <TextsSection {...props} />
+          <TextsSection {...props} locales={locales} language={language} onLanguage={setLanguage} />
           <VisitorsSection {...props} />
           <LinksSection {...props} problems={problems} />
           <TabsSection {...props} />

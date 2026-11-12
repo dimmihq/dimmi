@@ -67,6 +67,7 @@ func registerWorkflowJobs(a *app.App) error {
 		queue.Register(a.Queue, &jobs.AdvanceWorkflowRun{Engine: runner}),
 		queue.Register(a.Queue, &jobs.ResumeWorkflowInput{Engine: runner}),
 		queue.Register(a.Queue, &jobs.ResumeWorkflowOnAgent{Engine: runner}),
+		queue.Register(a.Queue, &jobs.CallOutForWorkflow{Engine: runner}),
 		queue.Register(a.Queue, &jobs.ArmQuietTriggers{Engine: runner}),
 		queue.Register(a.Queue, &jobs.FireQuietTrigger{Engine: runner}),
 	)

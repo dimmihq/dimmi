@@ -3,10 +3,11 @@
  * into the next: upload the file, map its columns to fields, choose what
  * happens to records already here while a dry run counts the outcome,
  * then run it in the background and follow its progress. Closing the
- * dialog while it runs leaves the import running. Only members who may
- * manage imports see the button.
+ * dialog while it runs leaves the import running. From the upload, past
+ * imports list with their problem rows and an undo. Only members who
+ * may manage imports see the button.
  */
-import { RiUploadLine } from "@remixicon/react";
+import { RiHistoryLine, RiUploadLine } from "@remixicon/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 
@@ -28,7 +29,7 @@ import {
 } from "@/lib/api/imports";
 import { callerQuery } from "@/lib/api/workspace";
 import { formatNumber } from "@/lib/i18n/format";
-
+import { ImportHistory } from "./import-history";
 import { fieldChoices, initialFields, mappingProblem, planFrom } from "./import-plan";
 import { MapStep, OptionsStep, RunStep } from "./import-steps";
 import { useWorkspace } from "./names";
@@ -92,6 +93,7 @@ function useImportRun(workspace: string, id: string | undefined) {
 
 function Footer({
   step,
+  history,
   finished,
   problem,
   canStart,
@@ -99,9 +101,11 @@ function Footer({
   rows,
   onGo,
   onStart,
+  onHistory,
   onClose,
 }: {
   step: Step;
+  history: boolean;
   finished: boolean;
   problem: string | null;
   canStart: boolean;
@@ -109,12 +113,29 @@ function Footer({
   rows: number;
   onGo: (step: Step) => void;
   onStart: () => void;
+  onHistory: (open: boolean) => void;
   onClose: () => void;
 }) {
   const closeLabel = step === "upload" ? "Cancel" : finished ? "Done" : "Close";
 
+  if (history) {
+    return (
+      <ModalFooter className="mt-6">
+        <Button variant="secondary" onClick={() => onHistory(false)}>
+          Back
+        </Button>
+        <Button onClick={onClose}>Done</Button>
+      </ModalFooter>
+    );
+  }
+
   return (
     <ModalFooter className="mt-6">
+      {step === "upload" ? (
+        <Button variant="ghost" leadingIcon={RiHistoryLine} onClick={() => onHistory(true)} className="me-auto">
+          Past imports
+        </Button>
+      ) : null}
       {step === "map" || step === "options" ? (
         <Button variant="secondary" onClick={() => onGo(step === "map" ? "upload" : "map")}>
           Back
@@ -138,10 +159,42 @@ function Footer({
   );
 }
 
-function ImportDialog({ kind, onClose }: { kind: ImportKind; onClose: () => void }) {
+type View = Step | "history";
+
+/*
+ * heading titles the dialog and says which step it is on.
+ */
+function heading(view: View, text: (typeof copy)[ImportKind]): { title: string; description: string } {
+  if (view === "history") {
+    return {
+      title: `Past imports of ${text.noun}`,
+      description: "Imports can be undone for 7 days after they finish.",
+    };
+  }
+
+  const said = view === "upload" ? text.upload : descriptions[view];
+
+  return { title: text.title, description: `Step ${steps.indexOf(view) + 1} of 4 · ${said}` };
+}
+
+function Notes({ problem, failure }: { problem: string | null; failure: Error | null }) {
+  return (
+    <>
+      {problem ? <p className="mt-3 text-body-2-regular text-text-tertiary">{problem}</p> : null}
+      {failure ? (
+        <p role="alert" className="mt-3 text-body-2-regular text-text-error-primary">
+          {failure.message}
+        </p>
+      ) : null}
+    </>
+  );
+}
+
+function ImportDialog({ kind, mayUndo, onClose }: { kind: ImportKind; mayUndo: boolean; onClose: () => void }) {
   const workspace = useWorkspace();
   const client = useQueryClient();
   const text = copy[kind];
+  const [history, setHistory] = useState(false);
   const [step, setStep] = useState<Step>("upload");
   const [forward, setForward] = useState(true);
   const [draft, setDraft] = useState<Import | null>(null);
@@ -174,7 +227,7 @@ function ImportDialog({ kind, onClose }: { kind: ImportKind; onClose: () => void
   const { run, finished } = useImportRun(workspace, start.data?.id);
   const problem = mappingProblem(kind, fields);
   const failure = upload.error ?? preview.error ?? start.error;
-  const description = step === "upload" ? text.upload : descriptions[step];
+  const view: View = history ? "history" : step;
   const check = (next: ImportMode) => {
     setMode(next);
     preview.mutate({ mapping: planFrom(fields), mode: next });
@@ -182,11 +235,14 @@ function ImportDialog({ kind, onClose }: { kind: ImportKind; onClose: () => void
 
   return (
     <Modal size="wide" isOpen onOpenChange={(open) => (open ? undefined : onClose())}>
-      <ModalHeader title={text.title} description={`Step ${steps.indexOf(step) + 1} of 4 · ${description}`} />
+      <ModalHeader {...heading(view, text)} />
       <ModalBody className="max-h-[min(560px,calc(100dvh-14rem))] overflow-y-auto">
         <Resize>
-          <Swap view={step} forward={forward}>
-            {step === "upload" ? (
+          <Swap view={view} forward={forward}>
+            {view === "history" ? (
+              <ImportHistory workspace={workspace} kind={kind} noun={text.noun} mayUndo={mayUndo} />
+            ) : null}
+            {view === "upload" ? (
               <FileUpload allowedExtensions={["csv"]} maxBytes={maxBytes} onUploadComplete={(f) => upload.mutate(f)} />
             ) : null}
             {step === "map" && draft ? (
@@ -210,15 +266,11 @@ function ImportDialog({ kind, onClose }: { kind: ImportKind; onClose: () => void
             ) : null}
           </Swap>
         </Resize>
-        {step === "map" && problem ? <p className="mt-3 text-body-2-regular text-text-tertiary">{problem}</p> : null}
-        {failure ? (
-          <p role="alert" className="mt-3 text-body-2-regular text-text-error-primary">
-            {failure.message}
-          </p>
-        ) : null}
+        {view === "history" ? null : <Notes problem={view === "map" ? problem : null} failure={failure} />}
       </ModalBody>
       <Footer
         step={step}
+        history={history}
         finished={finished}
         problem={problem}
         canStart={preview.data !== undefined && !preview.isPending && !start.isPending}
@@ -231,6 +283,10 @@ function ImportDialog({ kind, onClose }: { kind: ImportKind; onClose: () => void
           }
         }}
         onStart={() => start.mutate({ mapping: planFrom(fields), mode })}
+        onHistory={(open) => {
+          setForward(open);
+          setHistory(open);
+        }}
         onClose={onClose}
       />
     </Modal>
@@ -246,6 +302,7 @@ export function ImportButton({ kind }: { kind: ImportKind }) {
   const [open, setOpen] = useState(false);
   const { data: caller } = useQuery({ ...callerQuery(workspace), enabled: workspace !== "" });
   const allowed = caller?.member?.permissions.includes("imports:manage") ?? false;
+  const mayUndo = caller?.member?.permissions.includes("imports:rollback") ?? false;
 
   if (!allowed) {
     return null;
@@ -256,7 +313,7 @@ export function ImportButton({ kind }: { kind: ImportKind }) {
       <Button variant="secondary" size="small" leadingIcon={RiUploadLine} onClick={() => setOpen(true)}>
         Import
       </Button>
-      {open ? <ImportDialog key={kind} kind={kind} onClose={() => setOpen(false)} /> : null}
+      {open ? <ImportDialog key={kind} kind={kind} mayUndo={mayUndo} onClose={() => setOpen(false)} /> : null}
     </>
   );
 }

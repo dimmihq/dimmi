@@ -1,31 +1,38 @@
-# Releases the SDKs from sdk/.changeset. A push to main with pending
-# changesets opens or updates the "Version packages" pull request; merging
-# it bumps the versions, and the next run publishes every SDK whose version
-# is not released yet. Publishing waits for an approval on the protected
-# sdk-release environment and uses only that environment's secrets.
+# Releases the SDKs with each platform release: the same vX.Y.Z tags
+# release.yml publishes the platform from. A prerelease tag (v0.2.0-rc.1)
+# releases no SDK. A tag on a commit older than this workflow starts
+# nothing; run it by hand with the version instead:
 #
-#   npm         @dimmi/* with provenance (NPM_TOKEN, or npm trusted publishing)
+#   gh workflow run sdk-release.yml -f version=v0.2.0
+#
+# scripts/sdk-release-plan.ts decides each SDK's release by comparing the
+# tag with the previous platform release (docs/api/versioning.md): none,
+# patch, minor or major, a committed changeset raising it, and the
+# current versions as-is for a first release. The run then generates,
+# builds, tests and compat-checks every SDK, and publishes:
+#
+#   npm         @dimmi/* with provenance (NPM_TOKEN)
 #   Go          sdk/go split into the read-only mirror dimmihq/dimmi-go
 #               (module github.com/dimmihq/dimmi-go), tagged vX.Y.Z
-#   PHP         sdk/php and sdk/laravel split into read-only mirrors
-#               (dimmihq/dimmi-php, dimmihq/dimmi-laravel), tagged vX.Y.Z,
+#   PHP         sdk/php and sdk/laravel split into the read-only mirrors
+#               dimmihq/dimmi-php and dimmihq/dimmi-laravel, tagged vX.Y.Z,
 #               which Packagist follows (SPLIT_TOKEN)
-#   Python      PyPI through trusted publishing
+#   Python      dimmi-sdk on PyPI through trusted publishing
 #
-# Generated code is never committed here: every SDK is generated from
-# tests/contracts/api_v1.openapi.json before it is built, split or
-# published, so only the mirrors and the packages carry it.
+# Versions are never committed back: the registries and mirrors hold them,
+# and the plan reads each SDK's previous version from there. Generated code
+# is never committed either; only the packages and mirrors carry it.
 
 name: sdk-release
 
 on:
   push:
-    branches: [main]
-    paths:
-      - "sdk/**"
-      - "tests/contracts/api_v1.openapi.json"
-      - "tests/contracts/webhooks_v1.json"
+    tags: ["v*.*.*"]
   workflow_dispatch:
+    inputs:
+      version:
+        description: The platform version tag to release the SDKs for, such as v0.2.0.
+        required: true
 
 concurrency:
   group: sdk-release
@@ -35,65 +42,20 @@ permissions:
   contents: read
 
 jobs:
-  # Opens or updates the "Version packages" pull request while changesets
-  # are pending; reports whether any are.
-  version:
-    runs-on: ubuntu-24.04
-    timeout-minutes: 10
-    permissions:
-      contents: write
-      pull-requests: write
-    outputs:
-      pending: ${{ steps.changesets.outputs.hasChangesets }}
-      unreleased: ${{ steps.unreleased.outputs.any }}
-    steps:
-      - uses: actions/checkout@v5
-        with:
-          fetch-depth: 0
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v5
-        with:
-          node-version: 24
-      - id: changesets
-        uses: changesets/action@v1
-        with:
-          cwd: sdk
-          version: pnpm --dir .. sdk:version
-          title: Version packages
-          commit: Version packages
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      # Anything to publish: an npm version the registry lacks, or another
-      # SDK's version without its sdk/<name>/vX.Y.Z tag.
-      - id: unreleased
-        if: steps.changesets.outputs.hasChangesets == 'false'
-        run: |
-          any=false
-          for manifest in sdk/*/package.json; do
-            name=$(node -p "require('./$manifest').name")
-            version=$(node -p "require('./$manifest').version")
-            if [ "$(node -p "require('./$manifest').private === true")" = "true" ]; then
-              sdk=$(basename "$(dirname "$manifest")")
-              git rev-parse -q --verify "refs/tags/sdk/$sdk/v$version" >/dev/null || any=true
-            elif ! npm view "$name@$version" version >/dev/null 2>&1; then
-              any=true
-            fi
-          done
-          echo "any=$any" >> "$GITHUB_OUTPUT"
-
-  # Publishes every SDK version not released yet, after approval.
   publish:
-    needs: version
-    if: needs.version.outputs.pending == 'false' && needs.version.outputs.unreleased == 'true'
     runs-on: ubuntu-24.04
-    timeout-minutes: 30
+    timeout-minutes: 40
+    # Only for its secrets and the PyPI trusted publisher bound to its name.
     environment: sdk-release
     permissions:
-      contents: write
+      contents: read
       id-token: write
+    env:
+      TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.version || github.ref_name }}
     steps:
       - uses: actions/checkout@v5
         with:
+          ref: ${{ env.TAG }}
           fetch-depth: 0
       - uses: actions/setup-go@v6
         with:
@@ -104,51 +66,55 @@ jobs:
           node-version: 24
           cache: pnpm
           registry-url: https://registry.npmjs.org
-      - uses: astral-sh/setup-uv@v6
-      - run: pnpm install --frozen-lockfile
       - uses: shivammathur/setup-php@v2
         with:
           php-version: "8.2"
           tools: composer
-      - name: Generate, build, test and check every SDK
+      - uses: astral-sh/setup-uv@v6
+      - run: pnpm install --frozen-lockfile
+
+      - name: Plan the release
+        id: plan
         run: |
-          node scripts/sdk-generate.ts --check
-          node scripts/sdk-compat.ts
-      - name: Read the versions
-        id: versions
-        run: node scripts/sdk-versions.ts --print >> "$GITHUB_OUTPUT"
-      - name: Find the unreleased SDKs
-        id: unreleased
-        run: |
-          for sdk in go php laravel python; do
-            version=$(node scripts/sdk-versions.ts --print | sed -n "s/^$sdk=//p")
-            if [ -n "$version" ] && ! git rev-parse -q --verify "refs/tags/sdk/$sdk/v$version" >/dev/null; then
-              echo "$sdk=true" >> "$GITHUB_OUTPUT"
-            fi
-          done
+          node scripts/sdk-release-plan.ts --tag "$TAG" --out "$RUNNER_TEMP/plan.json" | tee -a "$GITHUB_STEP_SUMMARY"
+          node scripts/sdk-versions.ts --print "$RUNNER_TEMP/plan.json" >> "$GITHUB_OUTPUT"
+          if [ -s "$RUNNER_TEMP/plan.json" ] && [ "$(node -p "require('$RUNNER_TEMP/plan.json').some((e) => e.version)")" = "true" ]; then
+            echo "any=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Apply the versions
+        if: steps.plan.outputs.any == 'true'
+        run: node scripts/sdk-versions.ts --apply "$RUNNER_TEMP/plan.json"
+
+      - name: Generate, build and test every SDK
+        if: steps.plan.outputs.any == 'true'
+        run: node scripts/sdk-generate.ts --check
+
+      - name: Check every SDK against its last published release
+        if: steps.plan.outputs.any == 'true'
+        run: node scripts/sdk-compat.ts --plan "$RUNNER_TEMP/plan.json"
 
       - name: Publish to npm
-        working-directory: sdk
-        run: pnpm dlx @changesets/cli@3.0.3 publish
+        if: steps.plan.outputs.any == 'true'
         env:
-          NPM_CONFIG_PROVENANCE: "true"
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-
-      - name: Tag the Go, PHP, Laravel and Python releases in this repository
         run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          for sdk in go php laravel python; do
-            version=$(node scripts/sdk-versions.ts --print | sed -n "s/^$sdk=//p")
-            if [ -n "$version" ] && ! git rev-parse -q --verify "refs/tags/sdk/$sdk/v$version" >/dev/null; then
-              git tag -a "sdk/$sdk/v$version" -m "$sdk SDK v$version"
+          for dir in $(node -p "require('$RUNNER_TEMP/plan.json').filter((e) => e.version).map((e) => e.dir).join(' ')"); do
+            manifest="sdk/$dir/package.json"
+            [ "$(node -p "require('./$manifest').private === true")" = "true" ] && continue
+            name=$(node -p "require('./$manifest').name")
+            version=$(node -p "require('./$manifest').version")
+            if npm view "$name@$version" version >/dev/null 2>&1; then
+              echo "$name@$version is already published"
+              continue
             fi
+            (cd "sdk/$dir" && npm publish --provenance --access public)
           done
-          git push origin --tags
 
       # The mirrors carry the generated code and none of the monorepo's
       # plumbing: no version records, no path repositories, no lock files.
       - name: Prepare the mirrors
+        if: steps.plan.outputs.go || steps.plan.outputs.php || steps.plan.outputs.laravel
         run: |
           rm -f sdk/go/package.json sdk/php/package.json sdk/laravel/package.json
           rm -rf sdk/php/vendor sdk/laravel/vendor sdk/laravel/composer.lock sdk/php/composer.lock
@@ -159,7 +125,7 @@ jobs:
             fs.writeFileSync(f, JSON.stringify(j, null, 4) + "\n");'
 
       - name: Split the Go SDK to its mirror
-        if: steps.unreleased.outputs.go == 'true'
+        if: steps.plan.outputs.go
         uses: symplify/monorepo-split-github-action@v2.3.0
         env:
           GITHUB_TOKEN: ${{ secrets.SPLIT_TOKEN }}
@@ -168,12 +134,12 @@ jobs:
           repository_organization: dimmihq
           repository_name: dimmi-go
           branch: main
-          tag: v${{ steps.versions.outputs.go }}
+          tag: v${{ steps.plan.outputs.go }}
           user_name: github-actions[bot]
           user_email: 41898282+github-actions[bot]@users.noreply.github.com
 
       - name: Split the PHP SDK to its mirror
-        if: steps.unreleased.outputs.php == 'true'
+        if: steps.plan.outputs.php
         uses: symplify/monorepo-split-github-action@v2.3.0
         env:
           GITHUB_TOKEN: ${{ secrets.SPLIT_TOKEN }}
@@ -182,12 +148,12 @@ jobs:
           repository_organization: dimmihq
           repository_name: dimmi-php
           branch: main
-          tag: v${{ steps.versions.outputs.php }}
+          tag: v${{ steps.plan.outputs.php }}
           user_name: github-actions[bot]
           user_email: 41898282+github-actions[bot]@users.noreply.github.com
 
       - name: Split the Laravel SDK to its mirror
-        if: steps.unreleased.outputs.laravel == 'true'
+        if: steps.plan.outputs.laravel
         uses: symplify/monorepo-split-github-action@v2.3.0
         env:
           GITHUB_TOKEN: ${{ secrets.SPLIT_TOKEN }}
@@ -196,17 +162,37 @@ jobs:
           repository_organization: dimmihq
           repository_name: dimmi-laravel
           branch: main
-          tag: v${{ steps.versions.outputs.laravel }}
+          tag: v${{ steps.plan.outputs.laravel }}
           user_name: github-actions[bot]
           user_email: 41898282+github-actions[bot]@users.noreply.github.com
 
       - name: Build the Python SDK
-        if: steps.unreleased.outputs.python == 'true'
+        if: steps.plan.outputs.python
         working-directory: sdk/python
         run: uv build --out-dir dist
 
       - name: Publish the Python SDK to PyPI
-        if: steps.unreleased.outputs.python == 'true'
+        if: steps.plan.outputs.python
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
           packages-dir: sdk/python/dist
+          skip-existing: true
+
+      # Records each release as an sdk/<name>/vX.Y.Z tag on the platform
+      # tag's commit. GitHub refuses this workflow's own token a tag on a
+      # commit holding workflow files, so it uses SPLIT_TOKEN; the tags are
+      # a record only, and a failure here does not undo the release.
+      - name: Tag the SDK releases in this repository
+        if: steps.plan.outputs.any == 'true'
+        continue-on-error: true
+        env:
+          SPLIT_TOKEN: ${{ secrets.SPLIT_TOKEN }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          tags=""
+          while IFS='=' read -r dir version; do
+            [ -n "$dir" ] || continue
+            git tag -a "sdk/$dir/v$version" -m "$dir SDK v$version for $TAG" && tags="$tags sdk/$dir/v$version"
+          done < <(node scripts/sdk-versions.ts --print "$RUNNER_TEMP/plan.json")
+          [ -z "$tags" ] || git push "https://x-access-token:${SPLIT_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" $tags

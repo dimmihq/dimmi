@@ -22,6 +22,12 @@ SELECT * FROM workflow_runs WHERE workspace_id = @workspace_id AND id = @id FOR 
 -- FindWorkflowRun returns one run.
 SELECT * FROM workflow_runs WHERE workspace_id = @workspace_id AND id = @id;
 
+-- name: KeepWorkflowRunWait :exec
+-- KeepWorkflowRunWait rewrites what a waiting run waits for, such as the
+-- answer a slow step got, without moving its sequence on.
+UPDATE workflow_runs SET wait = @wait, updated_at = @now
+WHERE workspace_id = @workspace_id AND id = @id AND seq = @seq AND status = 'waiting';
+
 -- name: SaveWorkflowRun :one
 -- SaveWorkflowRun writes a run's progress and moves its sequence on.
 UPDATE workflow_runs SET
@@ -156,8 +162,10 @@ UPDATE conversations SET ai_mode = 'auto', updated_at = @now WHERE workspace_id 
 
 -- name: ScrubWorkflowRunsForContact :execrows
 -- ScrubWorkflowRunsForContact forgets what an erased customer's runs
--- learned about them; the runs stay as a record that they happened.
-UPDATE workflow_runs SET vars = '{}', trigger_data = '{}', contact_id = NULL, updated_at = @now
+-- learned about them, the answer a waiting run's call got included; the
+-- runs stay as a record that they happened.
+UPDATE workflow_runs SET vars = '{}', trigger_data = '{}', contact_id = NULL, updated_at = @now,
+    wait = CASE WHEN jsonb_typeof(wait) = 'object' THEN wait - 'answer' ELSE wait END
 WHERE workspace_id = @workspace_id AND contact_id = @contact_id;
 
 -- name: PublicAuthorBefore :one

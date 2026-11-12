@@ -9,7 +9,8 @@
 | as data and must answer with one of the categories, nothing else. A
 | workspace with no model, over its spend cap, or a model that fails or
 | is unsure, takes the none path, so a conversation is never stuck on
-| a step that cannot decide.
+| a step that cannot decide. The model is asked by a job, off the
+| conversation and outside any transaction.
 |
 */
 
@@ -76,36 +77,80 @@ type ClassifyAnswer struct {
 }
 
 /*
-runClassify takes the path of the category the conversation belongs to.
+runClassify waits for the classifier, which a job asks off the
+conversation.
 */
-func runClassify(ctx context.Context, st *state, s workflowspec.Step) (outcome, error) {
-	c := settings[workflowspec.ClassifySettings](s)
+func runClassify(_ context.Context, st *state, s workflowspec.Step) (outcome, error) {
 	if st.e.Classifier == nil {
 		return unsorted(s, "ai_unavailable"), nil
 	}
 
+	return callingOut(false), nil
+}
+
+/*
+prepareQuestion reads the customer's words and the categories, an
+answer instead when there is nothing to sort.
+*/
+func (st *state) prepareQuestion(ctx context.Context, s workflowspec.Step) (*call, error) {
+	c := settings[workflowspec.ClassifySettings](s)
+
 	text, err := st.customerWords(ctx, c.Source)
 	if err != nil {
-		return outcome{}, err
+		return nil, err
 	}
 
 	if strings.TrimSpace(text) == "" {
-		return unsorted(s, "no_text"), nil
+		return &call{answer: &callAnswer{Reason: "no_text"}}, nil
 	}
 
 	q := ClassifyQuestion{
 		WorkspaceID: st.conv.WorkspaceID, ConversationID: st.conv.ID, Instructions: c.Question, Text: text,
+		Categories: categories(s),
 	}
+
+	return &call{kind: s.Kind, question: q}, nil
+}
+
+/*
+categories are the step's categories, one per path.
+*/
+func categories(s workflowspec.Step) []Category {
+	var out []Category
 	for _, p := range buttonPaths(s) {
-		q.Categories = append(q.Categories, Category{ID: p.ID, Label: p.Label, Description: p.Description})
+		out = append(out, Category{ID: p.ID, Label: p.Label, Description: p.Description})
 	}
 
-	answer, answered := st.classify(ctx, q)
-	if !answered {
-		return unsorted(s, "ai_unavailable"), nil
+	return out
+}
+
+/*
+ask asks the classifier; one that cannot answer leaves the step
+unsorted instead of failing the run.
+*/
+func (e *Engine) ask(ctx context.Context, q ClassifyQuestion) *callAnswer {
+	if e.Classifier == nil {
+		return &callAnswer{Reason: "ai_unavailable"}
 	}
 
-	label, ok := categoryLabel(q.Categories, answer.CategoryID)
+	answer, err := e.Classifier.Classify(ctx, q)
+	if err != nil {
+		return &callAnswer{Reason: "ai_unavailable"}
+	}
+
+	return &callAnswer{Category: answer.CategoryID, Confidence: answer.Confidence}
+}
+
+/*
+resumeClassify takes the path of the category the classifier picked.
+*/
+func resumeClassify(ctx context.Context, st *state, s workflowspec.Step, _ Input) (outcome, error) {
+	c, answer := settings[workflowspec.ClassifySettings](s), st.answered()
+	if answer.Reason != "" {
+		return unsorted(s, answer.Reason), nil
+	}
+
+	label, ok := categoryLabel(categories(s), answer.Category)
 	if !ok {
 		return unsorted(s, "no_match"), nil
 	}
@@ -123,7 +168,7 @@ func runClassify(ctx context.Context, st *state, s workflowspec.Step) (outcome, 
 		}
 	}
 
-	return outcome{path: answer.CategoryID, outcome: outcomeMatched, detail: map[string]any{
+	return outcome{path: answer.Category, outcome: outcomeMatched, detail: map[string]any{
 		"category": label, "confidence": answer.Confidence,
 	}}, nil
 }
@@ -195,14 +240,4 @@ func (st *state) customerWords(ctx context.Context, source string) (string, erro
 	}
 
 	return text, nil
-}
-
-/*
-classify asks the classifier, and reports false when it could not
-answer: the step then goes on unsorted instead of failing the run.
-*/
-func (st *state) classify(ctx context.Context, q ClassifyQuestion) (ClassifyAnswer, bool) {
-	answer, err := st.e.Classifier.Classify(ctx, q)
-
-	return answer, err == nil
 }

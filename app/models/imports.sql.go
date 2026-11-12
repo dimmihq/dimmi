@@ -13,10 +13,27 @@ import (
 	"github.com/dimmihq/dimmi/framework/ids"
 )
 
+const countImportChangedRecords = `-- name: CountImportChangedRecords :one
+SELECT count(DISTINCT record_id)::integer FROM import_changes
+WHERE workspace_id = $1 AND import_id = $2
+`
+
+type CountImportChangedRecordsParams struct {
+	WorkspaceID ids.UUID `json:"workspace_id"`
+	ImportID    ids.UUID `json:"import_id"`
+}
+
+func (q *Queries) CountImportChangedRecords(ctx context.Context, arg CountImportChangedRecordsParams) (int32, error) {
+	row := q.db.QueryRow(ctx, countImportChangedRecords, arg.WorkspaceID, arg.ImportID)
+	var column_1 int32
+	err := row.Scan(&column_1)
+	return column_1, err
+}
+
 const createImport = `-- name: CreateImport :one
 INSERT INTO imports (workspace_id, kind, file_name, file, columns, row_count, created_by_member_id, created_at, updated_at)
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $8)
-RETURNING id, workspace_id, kind, status, file_name, file, columns, row_count, mapping, mode, processed_rows, created_count, updated_count, skipped_count, failed_count, row_errors, error, created_by_member_id, started_at, finished_at, created_at, updated_at
+RETURNING id, workspace_id, kind, status, file_name, file, columns, row_count, mapping, mode, processed_rows, created_count, updated_count, skipped_count, failed_count, row_errors, error, created_by_member_id, started_at, finished_at, created_at, updated_at, rollback_status, rollback_total, rollback_processed, rollback_removed, rollback_reverted, rollback_kept, rollback_kept_records, rollback_error, rollback_by_member_id, rollback_requested_at, rollback_finished_at, file_expired_at
 `
 
 type CreateImportParams struct {
@@ -67,8 +84,52 @@ func (q *Queries) CreateImport(ctx context.Context, arg CreateImportParams) (Imp
 		&i.FinishedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.RollbackStatus,
+		&i.RollbackTotal,
+		&i.RollbackProcessed,
+		&i.RollbackRemoved,
+		&i.RollbackReverted,
+		&i.RollbackKept,
+		&i.RollbackKeptRecords,
+		&i.RollbackError,
+		&i.RollbackByMemberID,
+		&i.RollbackRequestedAt,
+		&i.RollbackFinishedAt,
+		&i.FileExpiredAt,
 	)
 	return i, err
+}
+
+const deleteImportChanges = `-- name: DeleteImportChanges :exec
+DELETE FROM import_changes WHERE workspace_id = $1 AND import_id = $2
+`
+
+type DeleteImportChangesParams struct {
+	WorkspaceID ids.UUID `json:"workspace_id"`
+	ImportID    ids.UUID `json:"import_id"`
+}
+
+func (q *Queries) DeleteImportChanges(ctx context.Context, arg DeleteImportChangesParams) error {
+	_, err := q.db.Exec(ctx, deleteImportChanges, arg.WorkspaceID, arg.ImportID)
+	return err
+}
+
+const expireImportFile = `-- name: ExpireImportFile :exec
+UPDATE imports SET file = ''::bytea, file_expired_at = $1::timestamptz, updated_at = $1::timestamptz
+WHERE workspace_id = $2 AND id = $3
+`
+
+type ExpireImportFileParams struct {
+	Now         time.Time `json:"now"`
+	WorkspaceID ids.UUID  `json:"workspace_id"`
+	ID          ids.UUID  `json:"id"`
+}
+
+// ExpireImportFile empties the import's file; the import and its counts
+// stay.
+func (q *Queries) ExpireImportFile(ctx context.Context, arg ExpireImportFileParams) error {
+	_, err := q.db.Exec(ctx, expireImportFile, arg.Now, arg.WorkspaceID, arg.ID)
+	return err
 }
 
 const failImport = `-- name: FailImport :exec
@@ -85,6 +146,30 @@ type FailImportParams struct {
 
 func (q *Queries) FailImport(ctx context.Context, arg FailImportParams) error {
 	_, err := q.db.Exec(ctx, failImport,
+		arg.Error,
+		arg.Now,
+		arg.WorkspaceID,
+		arg.ID,
+	)
+	return err
+}
+
+const failImportRollback = `-- name: FailImportRollback :exec
+UPDATE imports
+SET rollback_status = 'failed', rollback_error = $1, rollback_finished_at = $2::timestamptz,
+    updated_at = $2::timestamptz
+WHERE workspace_id = $3 AND id = $4
+`
+
+type FailImportRollbackParams struct {
+	Error       *string   `json:"error"`
+	Now         time.Time `json:"now"`
+	WorkspaceID ids.UUID  `json:"workspace_id"`
+	ID          ids.UUID  `json:"id"`
+}
+
+func (q *Queries) FailImportRollback(ctx context.Context, arg FailImportRollbackParams) error {
+	_, err := q.db.Exec(ctx, failImportRollback,
 		arg.Error,
 		arg.Now,
 		arg.WorkspaceID,
@@ -126,7 +211,7 @@ func (q *Queries) FindCompanyByName(ctx context.Context, arg FindCompanyByNamePa
 }
 
 const findImport = `-- name: FindImport :one
-SELECT id, workspace_id, kind, status, file_name, file, columns, row_count, mapping, mode, processed_rows, created_count, updated_count, skipped_count, failed_count, row_errors, error, created_by_member_id, started_at, finished_at, created_at, updated_at FROM imports WHERE workspace_id = $1 AND id = $2
+SELECT id, workspace_id, kind, status, file_name, file, columns, row_count, mapping, mode, processed_rows, created_count, updated_count, skipped_count, failed_count, row_errors, error, created_by_member_id, started_at, finished_at, created_at, updated_at, rollback_status, rollback_total, rollback_processed, rollback_removed, rollback_reverted, rollback_kept, rollback_kept_records, rollback_error, rollback_by_member_id, rollback_requested_at, rollback_finished_at, file_expired_at FROM imports WHERE workspace_id = $1 AND id = $2
 `
 
 type FindImportParams struct {
@@ -160,6 +245,18 @@ func (q *Queries) FindImport(ctx context.Context, arg FindImportParams) (Import,
 		&i.FinishedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.RollbackStatus,
+		&i.RollbackTotal,
+		&i.RollbackProcessed,
+		&i.RollbackRemoved,
+		&i.RollbackReverted,
+		&i.RollbackKept,
+		&i.RollbackKeptRecords,
+		&i.RollbackError,
+		&i.RollbackByMemberID,
+		&i.RollbackRequestedAt,
+		&i.RollbackFinishedAt,
+		&i.FileExpiredAt,
 	)
 	return i, err
 }
@@ -167,7 +264,7 @@ func (q *Queries) FindImport(ctx context.Context, arg FindImportParams) (Import,
 const finishImport = `-- name: FinishImport :one
 UPDATE imports SET status = 'completed', finished_at = $1::timestamptz, updated_at = $1::timestamptz
 WHERE workspace_id = $2 AND id = $3
-RETURNING id, workspace_id, kind, status, file_name, file, columns, row_count, mapping, mode, processed_rows, created_count, updated_count, skipped_count, failed_count, row_errors, error, created_by_member_id, started_at, finished_at, created_at, updated_at
+RETURNING id, workspace_id, kind, status, file_name, file, columns, row_count, mapping, mode, processed_rows, created_count, updated_count, skipped_count, failed_count, row_errors, error, created_by_member_id, started_at, finished_at, created_at, updated_at, rollback_status, rollback_total, rollback_processed, rollback_removed, rollback_reverted, rollback_kept, rollback_kept_records, rollback_error, rollback_by_member_id, rollback_requested_at, rollback_finished_at, file_expired_at
 `
 
 type FinishImportParams struct {
@@ -202,8 +299,36 @@ func (q *Queries) FinishImport(ctx context.Context, arg FinishImportParams) (Imp
 		&i.FinishedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.RollbackStatus,
+		&i.RollbackTotal,
+		&i.RollbackProcessed,
+		&i.RollbackRemoved,
+		&i.RollbackReverted,
+		&i.RollbackKept,
+		&i.RollbackKeptRecords,
+		&i.RollbackError,
+		&i.RollbackByMemberID,
+		&i.RollbackRequestedAt,
+		&i.RollbackFinishedAt,
+		&i.FileExpiredAt,
 	)
 	return i, err
+}
+
+const finishImportRollback = `-- name: FinishImportRollback :exec
+UPDATE imports SET rollback_status = 'completed', rollback_finished_at = $1::timestamptz, updated_at = $1::timestamptz
+WHERE workspace_id = $2 AND id = $3
+`
+
+type FinishImportRollbackParams struct {
+	Now         time.Time `json:"now"`
+	WorkspaceID ids.UUID  `json:"workspace_id"`
+	ID          ids.UUID  `json:"id"`
+}
+
+func (q *Queries) FinishImportRollback(ctx context.Context, arg FinishImportRollbackParams) error {
+	_, err := q.db.Exec(ctx, finishImportRollback, arg.Now, arg.WorkspaceID, arg.ID)
+	return err
 }
 
 const linkImportedContactCompany = `-- name: LinkImportedContactCompany :exec
@@ -229,12 +354,95 @@ func (q *Queries) LinkImportedContactCompany(ctx context.Context, arg LinkImport
 	return err
 }
 
+const listImportChanges = `-- name: ListImportChanges :many
+SELECT id, workspace_id, import_id, record_id, created, before, after, added_tag_ids, created_at FROM import_changes WHERE workspace_id = $1 AND import_id = $2 ORDER BY id
+`
+
+type ListImportChangesParams struct {
+	WorkspaceID ids.UUID `json:"workspace_id"`
+	ImportID    ids.UUID `json:"import_id"`
+}
+
+// ListImportChanges returns what the import did, in the order it did it.
+func (q *Queries) ListImportChanges(ctx context.Context, arg ListImportChangesParams) ([]ImportChange, error) {
+	rows, err := q.db.Query(ctx, listImportChanges, arg.WorkspaceID, arg.ImportID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ImportChange
+	for rows.Next() {
+		var i ImportChange
+		if err := rows.Scan(
+			&i.ID,
+			&i.WorkspaceID,
+			&i.ImportID,
+			&i.RecordID,
+			&i.Created,
+			&i.Before,
+			&i.After,
+			&i.AddedTagIds,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listImportChangesToPrune = `-- name: ListImportChangesToPrune :many
+SELECT e.workspace_id::uuid AS workspace_id, e.id::uuid AS id
+FROM import_changes_to_prune($1::timestamptz, $2::integer) AS e
+`
+
+type ListImportChangesToPruneParams struct {
+	PruneBefore time.Time `json:"prune_before"`
+	RowLimit    int32     `json:"row_limit"`
+}
+
+type ListImportChangesToPruneRow struct {
+	WorkspaceID ids.UUID `json:"workspace_id"`
+	ID          ids.UUID `json:"id"`
+}
+
+// ListImportChangesToPrune returns which imports finished before the
+// cutoff still keep changes for undoing, across workspaces.
+func (q *Queries) ListImportChangesToPrune(ctx context.Context, arg ListImportChangesToPruneParams) ([]ListImportChangesToPruneRow, error) {
+	rows, err := q.db.Query(ctx, listImportChangesToPrune, arg.PruneBefore, arg.RowLimit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListImportChangesToPruneRow
+	for rows.Next() {
+		var i ListImportChangesToPruneRow
+		if err := rows.Scan(&i.WorkspaceID, &i.ID); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listImports = `-- name: ListImports :many
-SELECT id, workspace_id, kind, status, file_name, row_count, mode, processed_rows, created_count, updated_count,
-    skipped_count, failed_count, error, created_by_member_id, started_at, finished_at, created_at, updated_at
-FROM imports
-WHERE workspace_id = $1 AND kind = $2
-ORDER BY created_at DESC, id DESC
+SELECT i.id, i.workspace_id, i.kind, i.status, i.file_name, i.row_count, i.mode, i.processed_rows,
+    i.created_count, i.updated_count, i.skipped_count, i.failed_count, i.error, i.created_by_member_id,
+    i.started_at, i.finished_at, i.created_at, i.updated_at, i.rollback_status, i.rollback_total,
+    i.rollback_processed, i.rollback_removed, i.rollback_reverted, i.rollback_kept, i.rollback_kept_records,
+    i.rollback_error, i.rollback_requested_at, i.rollback_finished_at, i.file_expired_at,
+    u.name AS created_by_name
+FROM imports i
+LEFT JOIN workspace_members m ON m.id = i.created_by_member_id
+LEFT JOIN users u ON u.id = m.user_id
+WHERE i.workspace_id = $1 AND i.kind = $2
+ORDER BY i.created_at DESC, i.id DESC
 LIMIT $3
 `
 
@@ -245,28 +453,40 @@ type ListImportsParams struct {
 }
 
 type ListImportsRow struct {
-	ID                ids.UUID   `json:"id"`
-	WorkspaceID       ids.UUID   `json:"workspace_id"`
-	Kind              string     `json:"kind"`
-	Status            string     `json:"status"`
-	FileName          string     `json:"file_name"`
-	RowCount          int32      `json:"row_count"`
-	Mode              string     `json:"mode"`
-	ProcessedRows     int32      `json:"processed_rows"`
-	CreatedCount      int32      `json:"created_count"`
-	UpdatedCount      int32      `json:"updated_count"`
-	SkippedCount      int32      `json:"skipped_count"`
-	FailedCount       int32      `json:"failed_count"`
-	Error             *string    `json:"error"`
-	CreatedByMemberID *ids.UUID  `json:"created_by_member_id"`
-	StartedAt         *time.Time `json:"started_at"`
-	FinishedAt        *time.Time `json:"finished_at"`
-	CreatedAt         time.Time  `json:"created_at"`
-	UpdatedAt         time.Time  `json:"updated_at"`
+	ID                  ids.UUID        `json:"id"`
+	WorkspaceID         ids.UUID        `json:"workspace_id"`
+	Kind                string          `json:"kind"`
+	Status              string          `json:"status"`
+	FileName            string          `json:"file_name"`
+	RowCount            int32           `json:"row_count"`
+	Mode                string          `json:"mode"`
+	ProcessedRows       int32           `json:"processed_rows"`
+	CreatedCount        int32           `json:"created_count"`
+	UpdatedCount        int32           `json:"updated_count"`
+	SkippedCount        int32           `json:"skipped_count"`
+	FailedCount         int32           `json:"failed_count"`
+	Error               *string         `json:"error"`
+	CreatedByMemberID   *ids.UUID       `json:"created_by_member_id"`
+	StartedAt           *time.Time      `json:"started_at"`
+	FinishedAt          *time.Time      `json:"finished_at"`
+	CreatedAt           time.Time       `json:"created_at"`
+	UpdatedAt           time.Time       `json:"updated_at"`
+	RollbackStatus      *string         `json:"rollback_status"`
+	RollbackTotal       int32           `json:"rollback_total"`
+	RollbackProcessed   int32           `json:"rollback_processed"`
+	RollbackRemoved     int32           `json:"rollback_removed"`
+	RollbackReverted    int32           `json:"rollback_reverted"`
+	RollbackKept        int32           `json:"rollback_kept"`
+	RollbackKeptRecords json.RawMessage `json:"rollback_kept_records"`
+	RollbackError       *string         `json:"rollback_error"`
+	RollbackRequestedAt *time.Time      `json:"rollback_requested_at"`
+	RollbackFinishedAt  *time.Time      `json:"rollback_finished_at"`
+	FileExpiredAt       *time.Time      `json:"file_expired_at"`
+	CreatedByName       *string         `json:"created_by_name"`
 }
 
 // ListImports returns the workspace's latest imports of the kind, newest
-// first, without their files.
+// first, without their files, each with the name of who uploaded it.
 func (q *Queries) ListImports(ctx context.Context, arg ListImportsParams) ([]ListImportsRow, error) {
 	rows, err := q.db.Query(ctx, listImports, arg.WorkspaceID, arg.Kind, arg.RowLimit)
 	if err != nil {
@@ -295,7 +515,56 @@ func (q *Queries) ListImports(ctx context.Context, arg ListImportsParams) ([]Lis
 			&i.FinishedAt,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.RollbackStatus,
+			&i.RollbackTotal,
+			&i.RollbackProcessed,
+			&i.RollbackRemoved,
+			&i.RollbackReverted,
+			&i.RollbackKept,
+			&i.RollbackKeptRecords,
+			&i.RollbackError,
+			&i.RollbackRequestedAt,
+			&i.RollbackFinishedAt,
+			&i.FileExpiredAt,
+			&i.CreatedByName,
 		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listImportsToExpire = `-- name: ListImportsToExpire :many
+SELECT e.workspace_id::uuid AS workspace_id, e.id::uuid AS id
+FROM imports_to_expire($1::timestamptz, $2::integer) AS e
+`
+
+type ListImportsToExpireParams struct {
+	ExpireBefore time.Time `json:"expire_before"`
+	RowLimit     int32     `json:"row_limit"`
+}
+
+type ListImportsToExpireRow struct {
+	WorkspaceID ids.UUID `json:"workspace_id"`
+	ID          ids.UUID `json:"id"`
+}
+
+// ListImportsToExpire returns which finished imports still hold a file
+// older than the cutoff, across workspaces, oldest first.
+func (q *Queries) ListImportsToExpire(ctx context.Context, arg ListImportsToExpireParams) ([]ListImportsToExpireRow, error) {
+	rows, err := q.db.Query(ctx, listImportsToExpire, arg.ExpireBefore, arg.RowLimit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListImportsToExpireRow
+	for rows.Next() {
+		var i ListImportsToExpireRow
+		if err := rows.Scan(&i.WorkspaceID, &i.ID); err != nil {
 			return nil, err
 		}
 		items = append(items, i)
@@ -309,7 +578,7 @@ func (q *Queries) ListImports(ctx context.Context, arg ListImportsParams) ([]Lis
 const queueImport = `-- name: QueueImport :one
 UPDATE imports SET status = 'queued', mapping = $1, mode = $2, updated_at = $3
 WHERE workspace_id = $4 AND id = $5 AND status = 'draft'
-RETURNING id, workspace_id, kind, status, file_name, file, columns, row_count, mapping, mode, processed_rows, created_count, updated_count, skipped_count, failed_count, row_errors, error, created_by_member_id, started_at, finished_at, created_at, updated_at
+RETURNING id, workspace_id, kind, status, file_name, file, columns, row_count, mapping, mode, processed_rows, created_count, updated_count, skipped_count, failed_count, row_errors, error, created_by_member_id, started_at, finished_at, created_at, updated_at, rollback_status, rollback_total, rollback_processed, rollback_removed, rollback_reverted, rollback_kept, rollback_kept_records, rollback_error, rollback_by_member_id, rollback_requested_at, rollback_finished_at, file_expired_at
 `
 
 type QueueImportParams struct {
@@ -354,8 +623,53 @@ func (q *Queries) QueueImport(ctx context.Context, arg QueueImportParams) (Impor
 		&i.FinishedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.RollbackStatus,
+		&i.RollbackTotal,
+		&i.RollbackProcessed,
+		&i.RollbackRemoved,
+		&i.RollbackReverted,
+		&i.RollbackKept,
+		&i.RollbackKeptRecords,
+		&i.RollbackError,
+		&i.RollbackByMemberID,
+		&i.RollbackRequestedAt,
+		&i.RollbackFinishedAt,
+		&i.FileExpiredAt,
 	)
 	return i, err
+}
+
+const recordImportChange = `-- name: RecordImportChange :exec
+INSERT INTO import_changes (workspace_id, import_id, record_id, created, before, after, added_tag_ids, created_at)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+`
+
+type RecordImportChangeParams struct {
+	WorkspaceID ids.UUID        `json:"workspace_id"`
+	ImportID    ids.UUID        `json:"import_id"`
+	RecordID    ids.UUID        `json:"record_id"`
+	Created     bool            `json:"created"`
+	Before      json.RawMessage `json:"before"`
+	After       json.RawMessage `json:"after"`
+	AddedTagIds []ids.UUID      `json:"added_tag_ids"`
+	Now         time.Time       `json:"now"`
+}
+
+// RecordImportChange keeps what one row did to a record, so the import
+// can be undone: whether it made the record, the fields it changed with
+// their values before and after, and the tags it added.
+func (q *Queries) RecordImportChange(ctx context.Context, arg RecordImportChangeParams) error {
+	_, err := q.db.Exec(ctx, recordImportChange,
+		arg.WorkspaceID,
+		arg.ImportID,
+		arg.RecordID,
+		arg.Created,
+		arg.Before,
+		arg.After,
+		arg.AddedTagIds,
+		arg.Now,
+	)
+	return err
 }
 
 const recordImportProgress = `-- name: RecordImportProgress :exec
@@ -394,10 +708,113 @@ func (q *Queries) RecordImportProgress(ctx context.Context, arg RecordImportProg
 	return err
 }
 
+const recordImportRollbackProgress = `-- name: RecordImportRollbackProgress :exec
+UPDATE imports
+SET rollback_processed = $1, rollback_removed = rollback_removed + $2,
+    rollback_reverted = rollback_reverted + $3, rollback_kept = rollback_kept + $4,
+    rollback_kept_records = rollback_kept_records || $5::jsonb, updated_at = $6
+WHERE workspace_id = $7 AND id = $8
+`
+
+type RecordImportRollbackProgressParams struct {
+	Processed   int32           `json:"processed"`
+	Removed     int32           `json:"removed"`
+	Reverted    int32           `json:"reverted"`
+	Kept        int32           `json:"kept"`
+	KeptRecords json.RawMessage `json:"kept_records"`
+	Now         time.Time       `json:"now"`
+	WorkspaceID ids.UUID        `json:"workspace_id"`
+	ID          ids.UUID        `json:"id"`
+}
+
+// RecordImportRollbackProgress adds what a batch of records came to.
+func (q *Queries) RecordImportRollbackProgress(ctx context.Context, arg RecordImportRollbackProgressParams) error {
+	_, err := q.db.Exec(ctx, recordImportRollbackProgress,
+		arg.Processed,
+		arg.Removed,
+		arg.Reverted,
+		arg.Kept,
+		arg.KeptRecords,
+		arg.Now,
+		arg.WorkspaceID,
+		arg.ID,
+	)
+	return err
+}
+
+const requestImportRollback = `-- name: RequestImportRollback :one
+UPDATE imports
+SET rollback_status = 'queued', rollback_total = $1, rollback_processed = 0, rollback_removed = 0,
+    rollback_reverted = 0, rollback_kept = 0, rollback_kept_records = '[]', rollback_error = NULL,
+    rollback_by_member_id = $2, rollback_requested_at = $3::timestamptz, rollback_finished_at = NULL,
+    updated_at = $3::timestamptz
+WHERE workspace_id = $4 AND id = $5 AND status IN ('completed', 'failed')
+  AND (rollback_status IS NULL OR rollback_status = 'failed')
+RETURNING id, workspace_id, kind, status, file_name, file, columns, row_count, mapping, mode, processed_rows, created_count, updated_count, skipped_count, failed_count, row_errors, error, created_by_member_id, started_at, finished_at, created_at, updated_at, rollback_status, rollback_total, rollback_processed, rollback_removed, rollback_reverted, rollback_kept, rollback_kept_records, rollback_error, rollback_by_member_id, rollback_requested_at, rollback_finished_at, file_expired_at
+`
+
+type RequestImportRollbackParams struct {
+	Total       int32     `json:"total"`
+	MemberID    *ids.UUID `json:"member_id"`
+	Now         time.Time `json:"now"`
+	WorkspaceID ids.UUID  `json:"workspace_id"`
+	ID          ids.UUID  `json:"id"`
+}
+
+// RequestImportRollback queues the undoing of a finished import, once,
+// or again after an undo that failed.
+func (q *Queries) RequestImportRollback(ctx context.Context, arg RequestImportRollbackParams) (Import, error) {
+	row := q.db.QueryRow(ctx, requestImportRollback,
+		arg.Total,
+		arg.MemberID,
+		arg.Now,
+		arg.WorkspaceID,
+		arg.ID,
+	)
+	var i Import
+	err := row.Scan(
+		&i.ID,
+		&i.WorkspaceID,
+		&i.Kind,
+		&i.Status,
+		&i.FileName,
+		&i.File,
+		&i.Columns,
+		&i.RowCount,
+		&i.Mapping,
+		&i.Mode,
+		&i.ProcessedRows,
+		&i.CreatedCount,
+		&i.UpdatedCount,
+		&i.SkippedCount,
+		&i.FailedCount,
+		&i.RowErrors,
+		&i.Error,
+		&i.CreatedByMemberID,
+		&i.StartedAt,
+		&i.FinishedAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.RollbackStatus,
+		&i.RollbackTotal,
+		&i.RollbackProcessed,
+		&i.RollbackRemoved,
+		&i.RollbackReverted,
+		&i.RollbackKept,
+		&i.RollbackKeptRecords,
+		&i.RollbackError,
+		&i.RollbackByMemberID,
+		&i.RollbackRequestedAt,
+		&i.RollbackFinishedAt,
+		&i.FileExpiredAt,
+	)
+	return i, err
+}
+
 const startImport = `-- name: StartImport :one
 UPDATE imports SET status = 'running', started_at = coalesce(started_at, $1::timestamptz), updated_at = $1::timestamptz
 WHERE workspace_id = $2 AND id = $3 AND status IN ('queued', 'running')
-RETURNING id, workspace_id, kind, status, file_name, file, columns, row_count, mapping, mode, processed_rows, created_count, updated_count, skipped_count, failed_count, row_errors, error, created_by_member_id, started_at, finished_at, created_at, updated_at
+RETURNING id, workspace_id, kind, status, file_name, file, columns, row_count, mapping, mode, processed_rows, created_count, updated_count, skipped_count, failed_count, row_errors, error, created_by_member_id, started_at, finished_at, created_at, updated_at, rollback_status, rollback_total, rollback_processed, rollback_removed, rollback_reverted, rollback_kept, rollback_kept_records, rollback_error, rollback_by_member_id, rollback_requested_at, rollback_finished_at, file_expired_at
 `
 
 type StartImportParams struct {
@@ -434,6 +851,74 @@ func (q *Queries) StartImport(ctx context.Context, arg StartImportParams) (Impor
 		&i.FinishedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.RollbackStatus,
+		&i.RollbackTotal,
+		&i.RollbackProcessed,
+		&i.RollbackRemoved,
+		&i.RollbackReverted,
+		&i.RollbackKept,
+		&i.RollbackKeptRecords,
+		&i.RollbackError,
+		&i.RollbackByMemberID,
+		&i.RollbackRequestedAt,
+		&i.RollbackFinishedAt,
+		&i.FileExpiredAt,
+	)
+	return i, err
+}
+
+const startImportRollback = `-- name: StartImportRollback :one
+UPDATE imports SET rollback_status = 'running', updated_at = $1
+WHERE workspace_id = $2 AND id = $3 AND rollback_status IN ('queued', 'running')
+RETURNING id, workspace_id, kind, status, file_name, file, columns, row_count, mapping, mode, processed_rows, created_count, updated_count, skipped_count, failed_count, row_errors, error, created_by_member_id, started_at, finished_at, created_at, updated_at, rollback_status, rollback_total, rollback_processed, rollback_removed, rollback_reverted, rollback_kept, rollback_kept_records, rollback_error, rollback_by_member_id, rollback_requested_at, rollback_finished_at, file_expired_at
+`
+
+type StartImportRollbackParams struct {
+	Now         time.Time `json:"now"`
+	WorkspaceID ids.UUID  `json:"workspace_id"`
+	ID          ids.UUID  `json:"id"`
+}
+
+// StartImportRollback claims a queued undo for its run; a retried run
+// picks up where the last one stopped.
+func (q *Queries) StartImportRollback(ctx context.Context, arg StartImportRollbackParams) (Import, error) {
+	row := q.db.QueryRow(ctx, startImportRollback, arg.Now, arg.WorkspaceID, arg.ID)
+	var i Import
+	err := row.Scan(
+		&i.ID,
+		&i.WorkspaceID,
+		&i.Kind,
+		&i.Status,
+		&i.FileName,
+		&i.File,
+		&i.Columns,
+		&i.RowCount,
+		&i.Mapping,
+		&i.Mode,
+		&i.ProcessedRows,
+		&i.CreatedCount,
+		&i.UpdatedCount,
+		&i.SkippedCount,
+		&i.FailedCount,
+		&i.RowErrors,
+		&i.Error,
+		&i.CreatedByMemberID,
+		&i.StartedAt,
+		&i.FinishedAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.RollbackStatus,
+		&i.RollbackTotal,
+		&i.RollbackProcessed,
+		&i.RollbackRemoved,
+		&i.RollbackReverted,
+		&i.RollbackKept,
+		&i.RollbackKeptRecords,
+		&i.RollbackError,
+		&i.RollbackByMemberID,
+		&i.RollbackRequestedAt,
+		&i.RollbackFinishedAt,
+		&i.FileExpiredAt,
 	)
 	return i, err
 }

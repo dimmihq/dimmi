@@ -54,7 +54,7 @@ Public exports and options are never removed or renamed. Deprecate with a JSDoc 
 | [`github.com/dimmihq/dimmi-go`](go) | Go 1.22+: REST client (oapi-codegen), identity tokens, webhook verification. |
 | [`dimmi/dimmi-php`](php) | PHP 8.2+: Guzzle client over a generated operation table, identity tokens, webhooks. |
 | [`dimmi/dimmi-laravel`](laravel) | Laravel 10, 11, 12: `Dimmi::` facade, `@dimmiMessenger`, webhook route and events, `dimmi:install`, `dimmi:test`. |
-| [`dimmi`](python) (PyPI) | Python 3.10+: httpx client (openapi-python-client), identity tokens, webhooks. |
+| [`dimmi-sdk`](python) (PyPI, `import dimmi`) | Python 3.10+: httpx client (openapi-python-client), identity tokens, webhooks. |
 
 Each backend SDK sends the token and `Dimmi-Workspace` header, retries 429 and 503 after `Retry-After`, sends an `Idempotency-Key` with every POST, walks cursor and numbered pages, and raises typed errors from `{code, message, errors}`. Identity tokens follow `@dimmi/server` exactly. Webhooks are verified with the official Standard Webhooks libraries.
 
