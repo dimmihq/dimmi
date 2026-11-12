@@ -28,9 +28,10 @@ import type { ComponentType } from "react";
 
 import type { ChipColor } from "@/components/base/badges/chip";
 
+import { ticketTriggers } from "./ticket-triggers";
 import { customerKinds, type StepKind } from "./workflows";
 
-export type TriggerGroup = "start" | "during" | "team" | "dimmi" | "sla" | "reuse";
+export type TriggerGroup = "start" | "during" | "team" | "ticket" | "dimmi" | "sla" | "reuse";
 
 export type TriggerKind =
   | "conversation.opener"
@@ -48,6 +49,13 @@ export type TriggerKind =
   | "dimmi.resolved"
   | "sla.warning"
   | "sla.breached"
+  | "ticket.created"
+  | "ticket.state_changed"
+  | "ticket.field_changed"
+  | "ticket.customer_replied"
+  | "ticket.linked"
+  | "ticket.issue_updated"
+  | "ticket.close_loop"
   | "reusable";
 
 /*
@@ -73,6 +81,7 @@ export const triggerGroups: { id: TriggerGroup; name: string; detail: string; ti
   { id: "start", name: "Start of conversation", detail: "When someone reaches out.", tint: "blue" },
   { id: "during", name: "During conversation", detail: "While you're talking.", tint: "purple" },
   { id: "team", name: "Team", detail: "When your team does something.", tint: "orange" },
+  { id: "ticket", name: "Tickets", detail: "When a customer's ticket changes.", tint: "cyan" },
   { id: "dimmi", name: "dimmi", detail: "When dimmi is done.", tint: "lime" },
   { id: "sla", name: "Service levels", detail: "When a reply target is at risk.", tint: "yellow" },
   { id: "reuse", name: "Reusable", detail: "Steps you can use anywhere.", tint: "neutral" },
@@ -195,7 +204,7 @@ export const triggers: Record<TriggerKind, Trigger> = {
     name: "SLA about to breach",
     detail: "Raise the priority in time.",
     icon: RiAlarmWarningLine,
-    runs: false,
+    runs: true,
     talks: [],
   },
   "sla.breached": {
@@ -203,9 +212,10 @@ export const triggers: Record<TriggerKind, Trigger> = {
     name: "SLA breached",
     detail: "Escalate a missed target.",
     icon: RiErrorWarningLine,
-    runs: false,
+    runs: true,
     talks: [],
   },
+  ...ticketTriggers,
   reusable: {
     group: "reuse",
     name: "Run from other workflows",

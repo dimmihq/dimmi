@@ -173,7 +173,7 @@ func helpCenter(pages *routing.Router, a *app.App) {
 	post("/sso/codes/check", "hc.sso.codes.check", hc.CheckCode)
 	changelogPages(get, post, cl)
 	get("/help-images/{file}", "hc.help-images.show", images.Show)
-	portalPages(get, post, web.PortalController{HelpCenterController: hc})
+	portalPages(get, post, web.PortalController{HelpCenterController: hc, Requests: a.Actions.Tickets})
 	get("/assets/{file}", "hc.assets", hc.Asset)
 	get("/sitemap.xml", "hc.sitemap", hc.Sitemap)
 	get("/robots.txt", "hc.robots", hc.Robots)
@@ -201,6 +201,21 @@ func portalPages(get, post func(path, name string, h fhttp.HandlerFunc), portal 
 	post("/conversations", "hc.conversations.store", portal.StartConversation)
 	get("/conversations/{conversation}", "hc.conversations.show", portal.Conversation)
 	post("/conversations/{conversation}/messages", "hc.conversations.messages.store", portal.Reply)
+	requestPages(get, post, portal)
+}
+
+/*
+requestPages declares the reader's requests and the public status
+section.
+*/
+func requestPages(get, post func(path, name string, h fhttp.HandlerFunc), portal web.PortalController) {
+	get("/tickets", "hc.tickets.index", portal.Tickets)
+	get("/tickets/new", "hc.tickets.create", portal.NewTicket)
+	get("/tickets/new/{type}", "hc.tickets.types.create", portal.NewTicket)
+	post("/tickets/new/{type}", "hc.tickets.store", portal.SubmitTicket)
+	get("/tickets/{ticket}", "hc.tickets.show", portal.Ticket)
+	post("/tickets/{ticket}/messages", "hc.tickets.messages.store", portal.ReplyTicket)
+	get("/status", "hc.status", portal.Status)
 }
 
 /*

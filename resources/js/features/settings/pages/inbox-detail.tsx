@@ -33,6 +33,7 @@ import {
   updateInboxAccess,
 } from "@/lib/api/inboxes";
 import { type Team, teamsQuery } from "@/lib/api/teams";
+import { type TicketType, ticketTypesQuery } from "@/lib/api/tickets";
 import { membersQuery } from "@/lib/api/workspace";
 
 import { Choice, Colour, Danger, Field, Toggle } from "../controls";
@@ -95,6 +96,41 @@ function TeamPick({
 }
 
 /*
+ * TicketTypePick picks the customer ticket type every new conversation
+ * of the inbox becomes, or none to keep them plain conversations.
+ */
+function TicketTypePick({
+  types,
+  value,
+  disabled,
+  onChange,
+}: {
+  types: TicketType[];
+  value: string | null;
+  disabled: boolean;
+  onChange: (type: string | null) => void;
+}) {
+  const live = types.filter((t) => t.kind === "customer" && (t.archived_at === null || t.id === value));
+
+  return (
+    <Select
+      aria-label="New conversations become"
+      size="sm"
+      isDisabled={disabled}
+      defaultSelectedKey={value ?? "none"}
+      onSelectionChange={(key) => onChange(key === null || key === "none" ? null : String(key))}
+      popoverClassName="w-56"
+    >
+      {[{ id: "none", name: "Plain conversations" }, ...live].map((type) => (
+        <SelectItem key={type.id} id={type.id} textValue={type.name}>
+          {type.name}
+        </SelectItem>
+      ))}
+    </Select>
+  );
+}
+
+/*
  * useDraft collects the changes made on the page into one update, the
  * settings merged as the server merges them.
  */
@@ -129,6 +165,8 @@ function capacityOf(typed: string): number | null {
 
 function GeneralSection({ inbox, teams, edit, locked }: { inbox: Inbox; teams: Team[]; edit: Draft; locked: boolean }) {
   const s = inbox.settings;
+  const workspace = useAccount().workspace.id;
+  const { data: types = [] } = useQuery(ticketTypesQuery(workspace));
   const windows = reopenWindows.includes(s.reopen_window_days)
     ? reopenWindows
     : [...reopenWindows, s.reopen_window_days];
@@ -154,6 +192,14 @@ function GeneralSection({ inbox, teams, edit, locked }: { inbox: Inbox; teams: T
           value={inbox.default_team_id}
           disabled={locked}
           onChange={(team) => edit.set({ default_team_id: team })}
+        />
+      </Row>
+      <Row label="Tickets" description="New conversations become tickets of this type, such as email requests.">
+        <TicketTypePick
+          types={types}
+          value={inbox.ticket_type_id ?? null}
+          disabled={locked}
+          onChange={(type) => edit.set({ ticket_type_id: type })}
         />
       </Row>
       <Row label="Reopen window" description="A customer reply within this time reopens a closed conversation.">

@@ -1,13 +1,15 @@
 /*
  * Which conversations a page of the inbox lists. The address names the
  * view: a fixed one such as mine, or the public id of a team, a teammate,
- * an inbox or a saved view. Snoozed is the person's own conversations
+ * an inbox or a saved view, or a ticket view (which lists tickets, not
+ * conversations). Snoozed is the person's own conversations
  * that sleep. Everything that reads the address goes through viewParams,
  * so the list, its counts and the sidebar agree on what a view is.
  */
+import { isTicketView } from "@/features/tickets/views";
 import { conversationSorts } from "@/lib/api/inbox";
 
-export type ViewKind = "fixed" | "team" | "member" | "inbox" | "custom";
+export type ViewKind = "fixed" | "team" | "member" | "inbox" | "custom" | "tickets";
 
 export interface ViewParams {
   kind: ViewKind;
@@ -40,6 +42,9 @@ const prefixes: [string, ViewKind, (id: string) => string][] = [
 export function viewParams(view: string): ViewParams | null {
   if ((fixed as readonly string[]).includes(view)) {
     return { kind: "fixed", filter: view };
+  }
+  if (isTicketView(view)) {
+    return { kind: "tickets", filter: view };
   }
   if (view === "snoozed") {
     return { kind: "fixed", filter: "mine", status: "snoozed" };

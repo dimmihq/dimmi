@@ -17,6 +17,8 @@ import { Chip } from "@/components/base/badges/chip";
 import { Button } from "@/components/base/buttons/button";
 import { AlertDialog } from "@/components/base/modal/modal";
 import { toast } from "@/components/base/toast/toast";
+import { IssueSyncSettings } from "@/features/tickets/issues/issue-sync-settings";
+import { isTool } from "@/features/tickets/issues/tools";
 import {
   disconnectIntegration,
   type Integration,
@@ -26,7 +28,6 @@ import {
   startMemberGrant,
 } from "@/lib/api/integrations";
 import { formatDate } from "@/lib/i18n/format";
-
 import { Action, Danger } from "../controls";
 import { usePermission } from "../inboxes";
 import { featureLabel, healthColor, healthLabels, integrationHealth, providerLook } from "../integrations";
@@ -265,7 +266,10 @@ export function IntegrationSettingsPage({ integration: id }: { integration: stri
       <BackToIntegrations />
       <StatusSection integration={integration} />
       <FeaturesSection workspace={workspace} integration={integration} canManage={canManage} />
-      <OwnAccountSection workspace={workspace} integration={integration} />
+      {isTool(integration.provider) && integration.provider !== "github" ? null : (
+        <OwnAccountSection workspace={workspace} integration={integration} />
+      )}
+      <IssueSyncSettings workspace={workspace} integration={integration} canManage={canManage} />
       {integration.provider === "slack"
         ? integration.channel_ids.map((channel) => (
             <RoomsSection key={channel} workspace={workspace} channel={channel} canManage={canManage} />

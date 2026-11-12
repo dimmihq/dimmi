@@ -74,11 +74,11 @@ func KnownVariable(name string) bool {
 	switch name {
 	case "contact.name", "contact.first_name", "contact.email", "contact.phone", "company.name",
 		"conversation.number", "conversation.subject", "workspace.name", "schedule.next_open",
-		"dimmi.summary", "dimmi.handover_reason":
+		"dimmi.summary", "dimmi.handover_reason", "ticket.reference", "ticket.title":
 		return true
 	}
 
-	for _, prefix := range []string{"contact.custom.", "company.custom.", "run.vars."} {
+	for _, prefix := range []string{"contact.custom.", "company.custom.", "run.vars.", "ticket.fields."} {
 		if rest, ok := strings.CutPrefix(name, prefix); ok && rest != "" {
 			return true
 		}

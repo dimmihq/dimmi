@@ -102,7 +102,7 @@ func (q *Queries) FindChannelConnection(ctx context.Context, arg FindChannelConn
 }
 
 const listInboxesWithoutChannel = `-- name: ListInboxesWithoutChannel :many
-SELECT i.id, i.workspace_id, i.name, i.default_team_id, i.settings, i.deleted_at, i.created_at, i.updated_at, i.access, i.schedule_id FROM inboxes AS i
+SELECT i.id, i.workspace_id, i.name, i.default_team_id, i.settings, i.deleted_at, i.created_at, i.updated_at, i.access, i.schedule_id, i.ticket_type_id FROM inboxes AS i
 WHERE i.workspace_id = $1
   AND i.deleted_at IS NULL
   AND NOT EXISTS (
@@ -139,6 +139,7 @@ func (q *Queries) ListInboxesWithoutChannel(ctx context.Context, arg ListInboxes
 			&i.UpdatedAt,
 			&i.Access,
 			&i.ScheduleID,
+			&i.TicketTypeID,
 		); err != nil {
 			return nil, err
 		}

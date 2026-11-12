@@ -18,7 +18,7 @@ engagementWebhooks lists the events about the changelog, feedback,
 broadcasts and series.
 */
 func engagementWebhooks() []WebhookEventType {
-	return slices.Concat(changelogWebhooks(), feedbackWebhooks(), sendingWebhooks())
+	return slices.Concat(changelogWebhooks(), feedbackWebhooks(), sendingWebhooks(), ticketWebhooks())
 }
 
 /*

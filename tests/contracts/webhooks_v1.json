@@ -407,6 +407,158 @@
       "description": "A person's journey through a series ended: finished, reached the goal or left.",
       "notes_opt_in": false,
       "named_only": false
+    },
+    {
+      "type": "ticket.created",
+      "object": "ticket",
+      "group": "Tickets",
+      "description": "A ticket was created or a conversation converted.",
+      "notes_opt_in": false,
+      "named_only": false
+    },
+    {
+      "type": "ticket.updated",
+      "object": "ticket",
+      "group": "Tickets",
+      "description": "A ticket's title, description or field values changed.",
+      "notes_opt_in": false,
+      "named_only": false
+    },
+    {
+      "type": "ticket.state_changed",
+      "object": "ticket",
+      "group": "Tickets",
+      "description": "A ticket moved to another state.",
+      "notes_opt_in": false,
+      "named_only": false
+    },
+    {
+      "type": "ticket.resolved",
+      "object": "ticket",
+      "group": "Tickets",
+      "description": "A ticket entered a resolved state.",
+      "notes_opt_in": false,
+      "named_only": false
+    },
+    {
+      "type": "ticket.reopened",
+      "object": "ticket",
+      "group": "Tickets",
+      "description": "A resolved ticket left the resolved states.",
+      "notes_opt_in": false,
+      "named_only": false
+    },
+    {
+      "type": "ticket.assigned",
+      "object": "ticket",
+      "group": "Tickets",
+      "description": "A ticket's teammate or team changed.",
+      "notes_opt_in": false,
+      "named_only": false
+    },
+    {
+      "type": "ticket.type_changed",
+      "object": "ticket",
+      "group": "Tickets",
+      "description": "A ticket moved to another type.",
+      "notes_opt_in": false,
+      "named_only": false
+    },
+    {
+      "type": "ticket.linked",
+      "object": "ticket",
+      "group": "Tickets",
+      "description": "A ticket was linked to another ticket or a conversation.",
+      "notes_opt_in": false,
+      "named_only": false
+    },
+    {
+      "type": "ticket.unlinked",
+      "object": "ticket",
+      "group": "Tickets",
+      "description": "A ticket link was removed.",
+      "notes_opt_in": false,
+      "named_only": false
+    },
+    {
+      "type": "ticket.issue_linked",
+      "object": "ticket",
+      "group": "Tickets",
+      "description": "A Linear, Jira or GitHub issue or an engineering incident was linked.",
+      "notes_opt_in": false,
+      "named_only": false
+    },
+    {
+      "type": "ticket.issue_updated",
+      "object": "ticket",
+      "group": "Tickets",
+      "description": "A linked issue's status changed.",
+      "notes_opt_in": false,
+      "named_only": false
+    },
+    {
+      "type": "ticket.note_created",
+      "object": "ticket",
+      "group": "Tickets",
+      "description": "A teammate left an internal note on a ticket.",
+      "notes_opt_in": true,
+      "named_only": false
+    },
+    {
+      "type": "ticket.update_sent",
+      "object": "ticket",
+      "group": "Tickets",
+      "description": "A tracker's message to its linked customers finished sending.",
+      "notes_opt_in": false,
+      "named_only": false
+    },
+    {
+      "type": "ticket.public_update_posted",
+      "object": "ticket",
+      "group": "Tickets",
+      "description": "An incident posted to its public update log.",
+      "notes_opt_in": false,
+      "named_only": false
+    },
+    {
+      "type": "ticket.sla_warning",
+      "object": "ticket",
+      "group": "Tickets",
+      "description": "A ticket's service level target is about to be missed.",
+      "notes_opt_in": false,
+      "named_only": false
+    },
+    {
+      "type": "ticket.sla_breached",
+      "object": "ticket",
+      "group": "Tickets",
+      "description": "A ticket missed a service level target.",
+      "notes_opt_in": false,
+      "named_only": false
+    },
+    {
+      "type": "ticket.deleted",
+      "object": "ticket",
+      "group": "Tickets",
+      "description": "A ticket moved to the trash.",
+      "notes_opt_in": false,
+      "named_only": false
+    },
+    {
+      "type": "ticket.restored",
+      "object": "ticket",
+      "group": "Tickets",
+      "description": "A ticket came back from the trash.",
+      "notes_opt_in": false,
+      "named_only": false
+    },
+    {
+      "type": "incident.suggested",
+      "object": "incident_suggestion",
+      "group": "Tickets",
+      "description": "A spike of conversations about one thing suggests an incident.",
+      "notes_opt_in": false,
+      "named_only": false
     }
   ]
 }

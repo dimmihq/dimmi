@@ -63,6 +63,7 @@ func (e *Engine) Listen(d *events.Dispatcher) {
 	events.ListenQueued(d, rated)
 	events.ListenQueued(d, agentHandedOver)
 	e.listenStatus(d)
+	e.listenTickets(d)
 }
 
 /*

@@ -1,0 +1,6 @@
+{"event_type": "public_incident.incident_updated_v2",
+ "public_incident.incident_updated_v2": {"incident": {
+   "id": "inc-77", "reference": "INC-77", "name": "Sign-in failing for EU customers",
+   "permalink": "https://app.incident.io/acme/incidents/77",
+   "incident_status": {"id": "status-closed", "name": "Closed", "category": "closed"},
+   "severity": {"id": "sev-major", "name": "Major", "rank": 2}}}}

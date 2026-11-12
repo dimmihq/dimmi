@@ -21,6 +21,8 @@
  */
 import "@hotwired/turbo";
 
+import { showWhen } from "./requests";
+
 const greetings: [hour: number, text: string][] = [
   [18, "Good evening."],
   [12, "Good afternoon."],
@@ -254,6 +256,7 @@ document.addEventListener("turbo:load", () => {
   signIn(document);
   showThemes(document);
   watchContents(document);
+  showWhen(document);
 });
 
 /*

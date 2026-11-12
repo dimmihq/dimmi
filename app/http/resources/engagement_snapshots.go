@@ -18,6 +18,7 @@ import (
 
 	"github.com/dimmihq/dimmi/app/actions/changelog"
 	"github.com/dimmihq/dimmi/app/actions/feedback"
+	"github.com/dimmihq/dimmi/app/actions/tickets"
 	"github.com/dimmihq/dimmi/app/actions/webhooks"
 	"github.com/dimmihq/dimmi/app/models"
 )
@@ -43,6 +44,14 @@ func engagementSnapshot(ctx context.Context, q *models.Queries, ws ids.UUID, ref
 		return webhooks.Snapshot{Object: NewBroadcast(b)}, err
 	case "series":
 		return seriesSnapshot(ctx, q, ws, ref.id)
+	case "ticket":
+		t, err := tickets.Load(ctx, q, ws, ref.id)
+
+		return webhooks.Snapshot{Object: NewTicket(t), ContactID: t.Ticket.ContactID}, err
+	case "incident_suggestion":
+		sg, err := q.FindIncidentSuggestion(ctx, models.FindIncidentSuggestionParams{WorkspaceID: ws, ID: ref.id})
+
+		return webhooks.Snapshot{Object: NewIncidentSuggestion(sg)}, err
 	case "series_enrollment":
 		e, err := q.FindSeriesEnrollment(ctx, models.FindSeriesEnrollmentParams{WorkspaceID: ws, ID: ref.id})
 

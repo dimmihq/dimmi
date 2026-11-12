@@ -1,0 +1,10 @@
+{"audits": [
+  {"id": 9301, "ticket_id": 1003, "created_at": "2026-10-03T12:00:00Z", "author_id": 502, "events": [
+    {"id": 1, "type": "Create", "field_name": "status", "value": "new"},
+    {"id": 2, "type": "Create", "field_name": "custom_status_id", "value": 21}]},
+  {"id": 9302, "ticket_id": 1003, "created_at": "2026-10-03T13:00:00Z", "author_id": 600, "events": [
+    {"id": 3, "type": "Change", "field_name": "status", "value": "open", "previous_value": "new"}]},
+  {"id": 9303, "ticket_id": 1003, "created_at": "2026-10-05T12:00:00Z", "author_id": 600, "events": [
+    {"id": 4, "type": "Change", "field_name": "status", "value": "solved", "previous_value": "open"},
+    {"id": 5, "type": "Change", "field_name": "custom_status_id", "value": 26, "previous_value": 22}]}
+], "next_page": null, "previous_page": null, "count": 3}

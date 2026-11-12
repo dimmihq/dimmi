@@ -14,6 +14,7 @@ package workflowspec
 import (
 	"bytes"
 	"encoding/json"
+	"maps"
 	"slices"
 	"strings"
 	"time"
@@ -54,6 +55,7 @@ func (c *checker) checkSettings(s Step) {
 		KindReplyTime: c.checkReplyTime, KindClassify: c.checkClassify, KindRunWorkflow: c.checkRunWorkflow,
 		KindHTTPRequest: c.checkHTTPRequest,
 	}
+	maps.Copy(checks, c.ticketChecks())
 
 	if check, ok := checks[s.Kind]; ok {
 		check(s)

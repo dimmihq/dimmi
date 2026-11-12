@@ -104,10 +104,16 @@ func Manifest(opts ManifestOptions) map[string]any {
 				"home_tab_enabled": true, "messages_tab_enabled": true, "messages_tab_read_only_enabled": false,
 			},
 			"bot_user": map[string]any{"display_name": cmp.Or(opts.BotName, name), "always_online": true},
-			"shortcuts": []map[string]any{{
-				"name": "Track in dimmi", "type": "message", "callback_id": ShortcutCreate,
-				"description": "Track this message as a support conversation",
-			}},
+			"shortcuts": []map[string]any{
+				{
+					"name": "Track in dimmi", "type": "message", "callback_id": ShortcutCreate,
+					"description": "Track this message as a support conversation",
+				},
+				{
+					"name": "Make a dimmi ticket", "type": "message", "callback_id": ShortcutTicket,
+					"description": "Turn this customer thread into a tracked ticket",
+				},
+			},
 		},
 		"oauth_config": map[string]any{
 			"scopes": map[string]any{

@@ -1,0 +1,10 @@
+{"type": "ticket", "id": "103", "ticket_id": "3", "category": "Tracker",
+ "ticket_attributes": {"_default_title_": "Card payments failing at checkout", "_default_description_": "Stripe declines since the release."},
+ "ticket_state": {"type": "ticket_state", "id": "7002", "category": "in_progress", "internal_label": "In progress", "external_label": "In progress"},
+ "ticket_type": {"type": "ticket_type", "id": "12", "name": "Payment outage"},
+ "contacts": {"type": "contact.list", "contacts": []}, "admin_assignee_id": "0", "team_assignee_id": "0",
+ "created_at": 1792990000, "updated_at": 1792993600, "open": true,
+ "linked_objects": {"type": "list", "data": [{"type": "ticket", "id": "101", "category": "Customer"}], "has_more": false, "total_count": 1},
+ "ticket_parts": {"type": "ticket_part.list", "ticket_parts": [
+   {"type": "ticket_part", "id": "p31", "part_type": "ticket_state_updated_by_admin", "previous_ticket_state": "submitted", "ticket_state": "in_progress", "created_at": 1792993600, "body": null}
+ ], "total_count": 1}}

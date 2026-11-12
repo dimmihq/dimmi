@@ -164,7 +164,7 @@ func PublicIDCatalog() []PublicIDEntry {
 	return slices.Concat(
 		accountPublicIDs(), inboxPublicIDs(), channelPublicIDs(), assistantPublicIDs(), helpCenterPublicIDs(),
 		platformPublicIDs(), billingPublicIDs(), changelogPublicIDs(), feedbackPublicIDs(), engagePublicIDs(),
-		workflowPublicIDs(), broadcastPublicIDs(), seriesPublicIDs(), reservedPublicIDs(),
+		workflowPublicIDs(), broadcastPublicIDs(), seriesPublicIDs(), ticketPublicIDs(), reservedPublicIDs(),
 	)
 }
 
@@ -452,6 +452,50 @@ func workflowPublicIDs() []PublicIDEntry {
 		{PrefixAudience, "audiences"},
 		{PrefixAttribute, "attribute_definitions"},
 		{PrefixEvent, "event_definitions"},
+	}
+}
+
+/*
+The prefixes of tickets, their setup, links and history, the issues
+and incidents behind them, and service level clocks.
+*/
+const (
+	PrefixTicket             Prefix = "tkt"
+	PrefixTicketType         Prefix = "tktt"
+	PrefixTicketField        Prefix = "tktf"
+	PrefixTicketState        Prefix = "tkts"
+	PrefixTicketLink         Prefix = "tktl"
+	PrefixTicketEvent        Prefix = "tkte"
+	PrefixTicketIssue        Prefix = "tkti"
+	PrefixTicketUpdate       Prefix = "tktu"
+	PrefixTicketPublicUpdate Prefix = "tktp"
+	PrefixTicketUpdateDraft  Prefix = "tkdf"
+	PrefixSLAClock           Prefix = "slac"
+	PrefixIncidentSuggestion Prefix = "incs"
+	PrefixTicketImport       Prefix = "tkim"
+	PrefixTrackerSuggestion  Prefix = "trks"
+)
+
+/*
+ticketPublicIDs lists the prefixes of tickets and what hangs off them.
+*/
+func ticketPublicIDs() []PublicIDEntry {
+	return []PublicIDEntry{
+		{PrefixTicket, "tickets"},
+		{PrefixTicketType, "ticket_types"},
+		{PrefixTicketField, "ticket_fields"},
+		{PrefixTicketState, "ticket_states"},
+		{PrefixTicketLink, "ticket_links"},
+		{PrefixTicketEvent, "ticket_events"},
+		{PrefixTicketIssue, "ticket_issues"},
+		{PrefixTicketUpdate, "ticket_updates"},
+		{"tktd", "ticket_update_deliveries"},
+		{PrefixTicketPublicUpdate, "ticket_public_updates"},
+		{PrefixTicketUpdateDraft, "ticket_update_drafts"},
+		{PrefixSLAClock, "sla_clocks"},
+		{PrefixIncidentSuggestion, "incident_suggestions"},
+		{PrefixTicketImport, "ticket_imports"},
+		{PrefixTrackerSuggestion, "tracker_suggestions"},
 	}
 }
 

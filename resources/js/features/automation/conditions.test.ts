@@ -1,4 +1,4 @@
-import { changeField, conditionOf, describeCondition, fieldsFor, isSimple } from "./conditions";
+import { changeField, conditionOf, describeCondition, fieldsFor, isSimple, opsFor, optionsOf } from "./conditions";
 
 describe("conditions", () => {
   it("offers event fields only under the triggers that carry them", () => {
@@ -40,5 +40,25 @@ describe("conditions", () => {
   it("leaves grouped conditions to the API", () => {
     expect(isSimple({ all: [{ field: "contact.name", op: "exists" }] })).toBe(false);
     expect(isSimple({ field: "contact.name", op: "exists" })).toBe(true);
+  });
+
+  it("offers ticket facts picked from the workspace's own types and states", () => {
+    const tickets = {
+      types: [{ id: "tktt_1", name: "Refund", kind: "customer", fields: [] }],
+      states: [["tkts_1", "Resolved"] as const],
+      trackers: [],
+      policies: [],
+    };
+
+    expect(optionsOf("ticket.type_id", tickets)).toEqual([["tktt_1", "Refund"]]);
+    expect(optionsOf("ticket.state_id", tickets)).toEqual([["tkts_1", "Resolved"]]);
+    expect(fieldsFor("ticket.state_changed")).toHaveProperty("trigger.to_group");
+    expect(fieldsFor("message.customer")).not.toHaveProperty("trigger.to_group");
+    expect(opsFor("ticket.issue_status_groups")).toHaveProperty("has_any");
+    expect(conditionOf("ticket.issue_status_groups", "has_any", ["done"])).toEqual({
+      field: "ticket.issue_status_groups",
+      op: "has_any",
+      value: ["done"],
+    });
   });
 });

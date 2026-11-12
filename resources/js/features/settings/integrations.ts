@@ -7,7 +7,13 @@
  * cleared rather than stored.
  */
 
-import { type RemixiconComponentType, RiGithubFill, RiPlugLine, RiSlackFill } from "@remixicon/react";
+import {
+  type RemixiconComponentType,
+  RiAlarmWarningLine,
+  RiGithubFill,
+  RiPlugLine,
+  RiSlackFill,
+} from "@remixicon/react";
 import type { ChipColor } from "@/components/base/badges/chip";
 
 import type { Integration, RoomChange, RoomMode, RoomSettings, RoomTrigger, SlackRoom } from "@/lib/api/integrations";
@@ -36,7 +42,36 @@ const providerLooks: Record<string, ProviderLook> = {
     brand: "#181717",
     detail: "Link conversations to issues and pull requests.",
   },
-  linear: { label: "Linear", icon: RiPlugLine, brand: "#5E6AD2", detail: "Turn conversations into Linear issues." },
+  linear: {
+    label: "Linear",
+    icon: RiPlugLine,
+    brand: "#5E6AD2",
+    detail: "Link tickets to Linear issues; their status moves the ticket.",
+  },
+  jira: {
+    label: "Jira",
+    icon: RiPlugLine,
+    brand: "#0052CC",
+    detail: "Link tickets to Jira issues; their status moves the ticket.",
+  },
+  incident_io: {
+    label: "incident.io",
+    icon: RiAlarmWarningLine,
+    brand: "#F25533",
+    detail: "Link incidents to tickets; resolving one closes the loop.",
+  },
+  rootly: {
+    label: "Rootly",
+    icon: RiAlarmWarningLine,
+    brand: "#6E38F7",
+    detail: "Link incidents to tickets; resolving one closes the loop.",
+  },
+  pagerduty: {
+    label: "PagerDuty",
+    icon: RiAlarmWarningLine,
+    brand: "#06AC38",
+    detail: "Page on-call from an incident; acknowledged and resolved come back.",
+  },
 };
 
 export function providerLook(name: string): ProviderLook {
@@ -53,6 +88,8 @@ const featureLabels: Record<string, { label: string; detail: string }> = {
   channels: { label: "Customer channels", detail: "Turn messages in Slack channels and DMs into conversations." },
   notifications: { label: "Notifications", detail: "Post alerts to channels and to teammates' DMs." },
   operator: { label: "Operator", detail: "Ask dimmi's operator questions from your team's Slack." },
+  issues: { label: "Linked issues", detail: "Create and link issues from tickets; their status moves the ticket." },
+  incidents: { label: "Linked incidents", detail: "Declare and link incidents from tickets and follow their status." },
 };
 
 export function featureLabel(name: string): { label: string; detail: string } {

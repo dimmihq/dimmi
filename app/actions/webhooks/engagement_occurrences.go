@@ -54,6 +54,10 @@ func engagementSubjectOf(kind string) (engagementSubject, bool) {
 		return engagementSubject{prefix: models.PrefixSeries, path: "series"}, true
 	case subjectSeriesEnrollment:
 		return engagementSubject{prefix: models.PrefixSeriesEnrollment}, true
+	case subjectTicket:
+		return engagementSubject{prefix: models.PrefixTicket, path: "tickets"}, true
+	case subjectIncidentSuggestion:
+		return engagementSubject{prefix: models.PrefixIncidentSuggestion, path: "incident-suggestions"}, true
 	}
 
 	return engagementSubject{}, false
@@ -121,7 +125,7 @@ func sendingOccurrence(e any, args jobs.FanOutWebhookEventArgs) (jobs.FanOutWebh
 	case appevents.SeriesJourneyCompleted:
 		args.Subject, args.SubjectID = subjectSeriesEnrollment, ev.EnrollmentID
 	default:
-		return args, false
+		return ticketOccurrence(e, args)
 	}
 
 	return args, true
@@ -155,6 +159,8 @@ func engagementExtras(e any) map[string]any {
 		return map[string]any{"version_id": models.PublicID(models.PrefixSeriesVersion, ev.VersionID)}
 	case appevents.SeriesJourneyCompleted:
 		return map[string]any{"reason": ev.Reason, "goal_reached": ev.Goal}
+	case appevents.TicketEvent:
+		return ticketExtras(ev.Ticket())
 	}
 
 	return nil

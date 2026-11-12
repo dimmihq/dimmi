@@ -51,6 +51,7 @@ export function useWalk(
     openSnooze: () => void;
     openAssign: () => void;
     openMerge: () => void;
+    openTicket: () => void;
     toggleDetails: () => void;
     toggleEvents: () => void;
   },
@@ -112,6 +113,7 @@ export function useWalk(
       },
       toggleSpam: thenNextIf(!conversation.spam, () => caze.setSpam(!conversation.spam)),
       merge: panels.openMerge,
+      ticket: panels.openTicket,
       next: () => open(next),
       previous: () => open(previous),
       advance: () => open(next ?? previous),

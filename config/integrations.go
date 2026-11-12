@@ -31,11 +31,14 @@ Zendesk and GitHub are the OAuth clients knowledge sources connect
 through.
 */
 type ServicesConfig struct {
-	Slack    SlackServiceConfig `koanf:"slack"`
-	Notion   OAuthServiceConfig `koanf:"notion"`
-	Intercom OAuthServiceConfig `koanf:"intercom"`
-	Zendesk  OAuthServiceConfig `koanf:"zendesk"`
-	GitHub   OAuthServiceConfig `koanf:"github"`
+	Slack    SlackServiceConfig   `koanf:"slack"`
+	Notion   OAuthServiceConfig   `koanf:"notion"`
+	Intercom OAuthServiceConfig   `koanf:"intercom"`
+	Zendesk  OAuthServiceConfig   `koanf:"zendesk"`
+	GitHub   OAuthServiceConfig   `koanf:"github"`
+	Linear   TrackerServiceConfig `koanf:"linear"`
+	Jira     TrackerServiceConfig `koanf:"jira"`
+	Trackers TrackersConfig       `koanf:"trackers"`
 }
 
 /*
@@ -86,7 +89,7 @@ token is renewed, and HealthInterval how often each installation is
 checked.
 */
 type IntegrationsConfig struct {
-	Enabled        []string      `default:"[\"slack\",\"notion\",\"intercom\",\"zendesk\",\"github\"]" koanf:"enabled"`
+	Enabled        []string      `default:"[\"slack\",\"notion\",\"intercom\",\"zendesk\",\"github\",\"linear\",\"jira\",\"incident_io\",\"rootly\",\"pagerduty\"]" koanf:"enabled"` //nolint:lll // one default list
 	RefreshSkew    time.Duration `default:"5m"          koanf:"refresh_skew"`
 	HealthInterval time.Duration `default:"24h"         koanf:"health_interval"`
 }

@@ -1,0 +1,4 @@
+{"webhookEvent": "jira:issue_updated", "timestamp": 1,
+ "issue": {"id": "10001", "key": "PAY-12", "fields": {"summary": "Refunds fail for annual plans",
+   "status": {"id": "3", "name": "Done", "statusCategory": {"key": "done"}},
+   "project": {"id": "100", "name": "Payments"}, "resolution": {"name": "Done"}}}}

@@ -581,7 +581,7 @@ SELECT
     coalesce(m.joined_via, '')::text AS joined_via,
     (m.last_accessed_at IS NOT NULL)::boolean AS accessed,
     coalesce(m.last_accessed_at, m.created_at)::timestamptz AS last_accessed_at,
-    w.id, w.organization_id, w.name, w.slug, w.timezone, w.locale, w.settings, w.test_mode, w.next_conversation_number, w.suspended_at, w.deleted_at, w.created_at, w.updated_at, w.created_by_user_id, w.deleted_by_user_id, w.purge_after, w.suspended_reason, w.onboarding_step, w.onboarding_completed_at, w.logo_path
+    w.id, w.organization_id, w.name, w.slug, w.timezone, w.locale, w.settings, w.test_mode, w.next_conversation_number, w.suspended_at, w.deleted_at, w.created_at, w.updated_at, w.created_by_user_id, w.deleted_by_user_id, w.purge_after, w.suspended_reason, w.onboarding_step, w.onboarding_completed_at, w.logo_path, w.next_ticket_number, w.incident_spike_threshold, w.ticket_settings
 FROM auth_list_user_memberships($1) AS m
 JOIN workspaces w ON w.id = m.workspace_id::uuid
 WHERE m.status = 'active'
@@ -650,6 +650,9 @@ func (q *Queries) ListUserMemberships(ctx context.Context, arg ListUserMembershi
 			&i.Workspace.OnboardingStep,
 			&i.Workspace.OnboardingCompletedAt,
 			&i.Workspace.LogoPath,
+			&i.Workspace.NextTicketNumber,
+			&i.Workspace.IncidentSpikeThreshold,
+			&i.Workspace.TicketSettings,
 		); err != nil {
 			return nil, err
 		}

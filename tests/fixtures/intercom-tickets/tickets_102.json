@@ -1,0 +1,12 @@
+{"type": "ticket", "id": "102", "ticket_id": "2", "category": "Customer",
+ "ticket_attributes": {"_default_title_": "Refund for a late parcel", "_default_description_": "", "Order number": "4420", "Reason": "Arrived late"},
+ "ticket_state": {"type": "ticket_state", "id": "7005", "category": "resolved", "internal_label": "Resolved", "external_label": "Resolved"},
+ "ticket_type": {"type": "ticket_type", "id": "11", "name": "Refund request"},
+ "contacts": {"type": "contact.list", "contacts": [{"type": "contact", "id": "c2", "external_id": null}]},
+ "admin_assignee_id": "901", "team_assignee_id": "0",
+ "created_at": 1793100000, "updated_at": 1793190000, "open": false,
+ "linked_objects": {"type": "list", "data": [], "has_more": false, "total_count": 0},
+ "ticket_parts": {"type": "ticket_part.list", "ticket_parts": [
+   {"type": "ticket_part", "id": "p21", "part_type": "ticket_state_updated_by_admin", "previous_ticket_state": "submitted", "ticket_state": "waiting_on_customer", "created_at": 1793103600, "body": null},
+   {"type": "ticket_part", "id": "p22", "part_type": "ticket_state_updated_by_admin", "previous_ticket_state": "waiting_on_customer", "ticket_state": "resolved", "created_at": 1793190000, "body": null}
+ ], "total_count": 2}}

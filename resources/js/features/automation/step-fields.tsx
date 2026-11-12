@@ -16,12 +16,12 @@ import { ClassifyFields } from "./classify-fields";
 import {
   changeField,
   changeOp,
-  conditionFields,
   conditionOf,
   fieldsFor,
   isSimple,
   needsValue,
   opsFor,
+  optionsOf,
   valueList,
   valueText,
 } from "./conditions";
@@ -44,6 +44,8 @@ import {
   withPathLabel,
   withSettings,
 } from "./step-settings";
+import { type TicketLists, TicketStepFields } from "./ticket-fields";
+import { ticketStepKinds } from "./ticket-lists";
 import type { TriggerKind } from "./triggers";
 import { pathName } from "./workflows";
 
@@ -51,7 +53,8 @@ import { pathName } from "./workflows";
  * Lists are the workspace's teams, teammates and tags, as choices, and
  * whether its agent is on, unknown until read. Workflows are the live
  * reusable ones another workflow may run, connections the systems a
- * call may use, and schedules the office hours.
+ * call may use, and schedules the office hours. Tickets are the ticket
+ * setup, trackers and SLA policies the ticket steps pick from.
  */
 export interface Lists {
   teams: Choices;
@@ -61,6 +64,7 @@ export interface Lists {
   connections: Choices;
   schedules: Choices;
   agentOn?: boolean;
+  tickets?: TicketLists;
 }
 
 type Props = EditorProps;
@@ -154,10 +158,12 @@ function CollectFields({ step, onEdit }: Props) {
 function ConditionFields({
   trigger,
   condition,
+  lists,
   onChange,
 }: {
   trigger: TriggerKind;
   condition: Condition | undefined;
+  lists: Lists;
   onChange: (condition: Condition) => void;
 }) {
   if (!isSimple(condition)) {
@@ -165,7 +171,7 @@ function ConditionFields({
   }
   const field = condition?.field ?? "";
   const op = condition?.op ?? "";
-  const options = conditionFields[field]?.options;
+  const options = optionsOf(field, lists.tickets);
 
   return (
     <>
@@ -190,7 +196,7 @@ function ConditionFields({
       ) : null}
       {field && needsValue(op) && options ? (
         <Picks
-          choices={choicesOf(options)}
+          choices={options}
           value={valueList(condition)}
           empty=""
           onChange={(values) => onChange(conditionOf(field, op, values))}
@@ -211,7 +217,7 @@ function ConditionFields({
   );
 }
 
-function BranchFields({ step, trigger, onEdit }: Props) {
+function BranchFields({ step, trigger, lists, onEdit }: Props) {
   const named = (step.paths ?? []).filter((path) => !path.outcome);
 
   return (
@@ -237,6 +243,7 @@ function BranchFields({ step, trigger, onEdit }: Props) {
           <ConditionFields
             trigger={trigger}
             condition={path.condition}
+            lists={lists}
             onChange={(condition) => onEdit((current) => withPathChange(current, path.id, { condition }))}
           />
         </Section>
@@ -557,6 +564,7 @@ const editors: Record<string, (props: Props) => ReactNode> = {
   classify: ClassifyFields,
   run_workflow: RunWorkflowFields,
   http_request: CallFields,
+  ...Object.fromEntries(ticketStepKinds.map((kind) => [kind, TicketStepFields])),
 };
 
 export function StepFields(props: Props): ReactNode {

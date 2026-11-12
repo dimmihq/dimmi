@@ -148,6 +148,7 @@ export function toConversation(c: api.Conversation, now: number): Conversation {
     ago: when(last?.created_at ?? c.created_at, now),
     unread: c.unread_count,
     status: c.customer_status,
+    ticket: c.ticket,
   };
 }
 

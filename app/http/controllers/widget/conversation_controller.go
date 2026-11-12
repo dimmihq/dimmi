@@ -21,6 +21,7 @@ import (
 	"github.com/dimmihq/dimmi/framework/http/useragent"
 	"github.com/dimmihq/dimmi/framework/ids"
 
+	"github.com/dimmihq/dimmi/app/actions/tickets"
 	actions "github.com/dimmihq/dimmi/app/actions/widget"
 	"github.com/dimmihq/dimmi/app/exceptions"
 	"github.com/dimmihq/dimmi/app/http/requests"
@@ -40,6 +41,7 @@ type ConversationController struct {
 	Cursors       *pagination.Cursors
 	Agents        *useragent.Parser
 	Clock         clock.Clock
+	Tickets       *tickets.Tickets
 }
 
 /*
@@ -78,6 +80,10 @@ func (c *ConversationController) Index(ctx context.Context, _ *requests.NoInput)
 		out.Items = append(out.Items, resources.NewWidgetConversation(item))
 	}
 
+	if err := c.withTickets(ctx, out.Items, page.Items); err != nil {
+		return nil, err
+	}
+
 	if page.Next != nil {
 		if out.NextCursor, err = c.Cursors.Encode(page.Next); err != nil {
 			return nil, err
@@ -103,7 +109,12 @@ func (c *ConversationController) Show(
 		return nil, err
 	}
 
-	return &ConversationOutput{Body: fhttp.NewResource(resources.NewWidgetConversation(found))}, nil
+	shown := []resources.WidgetConversation{resources.NewWidgetConversation(found)}
+	if err := c.withTickets(ctx, shown, []actions.VisibleConversation{found}); err != nil {
+		return nil, err
+	}
+
+	return &ConversationOutput{Body: fhttp.NewResource(shown[0])}, nil
 }
 
 /*

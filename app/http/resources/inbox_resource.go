@@ -25,7 +25,8 @@ import (
 Inbox is one inbox of the workspace. Default marks the inbox where
 conversations land when nothing routes them elsewhere; Access says who
 may open it; ScheduleID names the schedule of its own office hours,
-null when it follows the workspace's default.
+null when it follows the workspace's default; TicketTypeID names the
+ticket type its new conversations become, null for none.
 */
 type Inbox struct {
 	ID            string        `json:"id"`
@@ -36,6 +37,7 @@ type Inbox struct {
 	ScheduleID    *string       `json:"schedule_id"`
 	Access        InboxAccess   `json:"access"`
 	Settings      InboxSettings `json:"settings"`
+	TicketTypeID  *string       `json:"ticket_type_id"`
 	CreatedAt     time.Time     `json:"created_at"`
 	UpdatedAt     time.Time     `json:"updated_at"`
 }
@@ -86,6 +88,7 @@ func NewInbox(i inboxes.Inbox) Inbox {
 		ID: models.PublicID(models.PrefixInbox, i.ID), Object: "inbox", Name: i.Name, Default: i.Default,
 		DefaultTeamID: teamID(i.DefaultTeamID), ScheduleID: scheduleID(i.ScheduleID),
 		CreatedAt: i.CreatedAt, UpdatedAt: i.UpdatedAt,
+		TicketTypeID: optionalID(models.PrefixTicketType, i.TicketTypeID),
 		Access: InboxAccess{
 			Mode: i.Access.Mode, Teams: publicIDs(models.PrefixTeam, i.Access.Teams),
 			Members: publicIDs(models.PrefixMember, i.Access.Members),

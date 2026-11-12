@@ -74,6 +74,7 @@ export interface Conversation {
   created_at: string;
   last_message_at: string | null;
   seen_by_team_at?: string | null;
+  ticket?: import("../content").TicketBlock;
 }
 
 export interface Typing {

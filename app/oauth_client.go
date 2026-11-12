@@ -86,6 +86,8 @@ func knowledgeClients(s appconfig.ServicesConfig) map[string]config.Section {
 		})
 	}
 
+	trackerClients(s, out)
+
 	if c := s.Zendesk; c.ClientID != "" {
 		out["zendesk"] = oauthSection("hosted", c, endpoints{
 			authorize: "https://{account}.zendesk.com/oauth/authorizations/new",
@@ -95,6 +97,35 @@ func knowledgeClients(s appconfig.ServicesConfig) map[string]config.Section {
 	}
 
 	return out
+}
+
+/*
+trackerClients adds the OAuth clients of Linear and Jira Cloud, those
+with credentials set. Linear joins scopes with commas and acts as the
+app; Atlassian needs its API audience and a consent prompt so a refresh
+token comes back.
+*/
+func trackerClients(s appconfig.ServicesConfig, out map[string]config.Section) {
+	if c := s.Linear; c.Configured() {
+		out["linear"] = oauthSection("generic", appconfig.OAuthServiceConfig{
+			ClientID:     c.ClientID,
+			ClientSecret: c.ClientSecret,
+		}, endpoints{
+			authorize: "https://linear.app/oauth/authorize", exchange: "https://api.linear.app/oauth/token",
+		})
+		out["linear"]["revoke_url"] = "https://api.linear.app/oauth/revoke"
+		out["linear"]["scope_separator"] = ","
+	}
+
+	if c := s.Jira; c.Configured() {
+		out["jira"] = oauthSection("generic", appconfig.OAuthServiceConfig{
+			ClientID:     c.ClientID,
+			ClientSecret: c.ClientSecret,
+		}, endpoints{
+			authorize: "https://auth.atlassian.com/authorize", exchange: "https://auth.atlassian.com/oauth/token",
+		})
+		out["jira"]["pkce"] = false
+	}
 }
 
 /*

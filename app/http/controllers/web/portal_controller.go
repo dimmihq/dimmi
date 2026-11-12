@@ -5,7 +5,8 @@
 |
 | The parts of the public portal beside the help center and changelog:
 | feature requests and the visitor's own conversations with the team,
-| behind a sign-in. A real help center's feature requests are its own;
+| behind a sign-in. A real help center's conversations are its
+| requests, so its conversation pages lead there. A real help center's feature requests are its own;
 | the sample portal signs anyone in who asks, with a cookie that only
 | says so, and keeps nothing a visitor submits: every form returns to
 | the page it belongs to, so the whole portal can be tried end to end.
@@ -19,6 +20,7 @@ import (
 
 	fhttp "github.com/dimmihq/dimmi/framework/http"
 
+	"github.com/dimmihq/dimmi/app/actions/tickets"
 	"github.com/dimmihq/dimmi/resources/views/helpcenter"
 )
 
@@ -33,6 +35,8 @@ shares the help center's library, styles and not found page.
 */
 type PortalController struct {
 	*HelpCenterController
+
+	Requests *tickets.Tickets
 }
 
 /*
@@ -156,6 +160,10 @@ Conversations lists the signed-in visitor's conversations, sending
 anyone else to sign in.
 */
 func (c PortalController) Conversations(w fhttp.ResponseWriter, r *fhttp.Request) {
+	if c.toRequests(w, r, "/tickets") {
+		return
+	}
+
 	center, ok := c.signedIn(w, r)
 	if !ok {
 		return
@@ -168,6 +176,10 @@ func (c PortalController) Conversations(w fhttp.ResponseWriter, r *fhttp.Request
 Conversation shows one of the signed-in visitor's conversations.
 */
 func (c PortalController) Conversation(w fhttp.ResponseWriter, r *fhttp.Request) {
+	if c.toRequests(w, r, "/tickets") {
+		return
+	}
+
 	center, ok := c.signedIn(w, r)
 	if !ok {
 		return
@@ -189,6 +201,10 @@ NewConversation shows the form to write to the team, which asks for an
 email when the visitor is not signed in.
 */
 func (c PortalController) NewConversation(w fhttp.ResponseWriter, r *fhttp.Request) {
+	if c.toRequests(w, r, "/tickets/new") {
+		return
+	}
+
 	center, ok := c.center(w, r)
 	if !ok {
 		return
@@ -215,6 +231,23 @@ Reply takes a reply in a conversation and returns to it.
 */
 func (c PortalController) Reply(w fhttp.ResponseWriter, r *fhttp.Request) {
 	back(w, strings.TrimSuffix(r.URL.Path, "/messages"))
+}
+
+/*
+toRequests sends a real help center's conversation pages to its
+requests, reporting whether it answered.
+*/
+func (c PortalController) toRequests(w fhttp.ResponseWriter, r *fhttp.Request, path string) bool {
+	if c.Requests == nil {
+		return false
+	}
+
+	s, live, ok := c.live(w, r)
+	if live && ok {
+		back(w, s.center.Base+path)
+	}
+
+	return live || !ok
 }
 
 /*

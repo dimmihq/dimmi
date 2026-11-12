@@ -124,6 +124,7 @@ export function Messenger({ options, content }: { options: Options; content: Con
           <div className="view" data-view="conversation" data-load>
             <Conversation options={options} content={content} />
           </div>
+          <div className="view" data-view="ticket" data-load />
           <Pages options={options} content={content} />
         </div>
         <TabBar options={options} content={content} />

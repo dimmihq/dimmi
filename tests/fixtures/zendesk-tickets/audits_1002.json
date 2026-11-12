@@ -1,0 +1,8 @@
+{"audits": [
+  {"id": 9201, "ticket_id": 1002, "created_at": "2026-10-02T08:00:00Z", "author_id": 501, "events": [
+    {"id": 1, "type": "Create", "field_name": "status", "value": "new"},
+    {"id": 2, "type": "Comment", "body": "Export spins forever."}]},
+  {"id": 9202, "ticket_id": 1002, "created_at": "2026-10-02T10:00:00Z", "author_id": 600, "events": [
+    {"id": 3, "type": "Change", "field_name": "status", "value": "pending", "previous_value": "new"},
+    {"id": 4, "type": "Change", "field_name": "custom_status_id", "value": 24, "previous_value": 21}]}
+], "next_page": null, "previous_page": null, "count": 2}

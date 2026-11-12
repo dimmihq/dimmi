@@ -63,6 +63,10 @@ func bootAI(ctx context.Context, a *app.App) error {
 	if a.Actions.WorkflowEngine != nil {
 		a.Actions.WorkflowEngine.Classifier = &verdicts.Categories{Verdicts: cheap}
 	}
+	if a.Actions.Tickets != nil {
+		a.Actions.Tickets.Filler = &verdicts.Tickets{Verdicts: cheap}
+		runner.Tickets = a.Actions.Tickets
+	}
 	runner.Actions = &actionkit.Kit{
 		DB: a.DB, Clock: a.Clock, HTTP: a.HTTP, Keys: a.Keys, Events: a.Events, Queue: a.Queue,
 	}

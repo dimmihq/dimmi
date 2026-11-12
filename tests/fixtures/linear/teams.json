@@ -1,0 +1,4 @@
+{"data": {"teams": {"nodes": [
+  {"id": "team-eng", "name": "Engineering", "key": "ENG"},
+  {"id": "team-web", "name": "Web", "key": "WEB"}
+]}}}

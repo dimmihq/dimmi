@@ -25,6 +25,7 @@ import (
 
 	"github.com/dimmihq/dimmi/framework/database"
 
+	"github.com/dimmihq/dimmi/app/actions/tickets"
 	"github.com/dimmihq/dimmi/app/enums"
 	"github.com/dimmihq/dimmi/app/models"
 )
@@ -54,6 +55,7 @@ type run struct {
 	actions    actionState
 	followed   bool
 	draft      bool
+	ticket     *tickets.AgentTicket
 }
 
 /*

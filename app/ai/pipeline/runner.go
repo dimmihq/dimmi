@@ -29,6 +29,7 @@ import (
 	"github.com/dimmihq/dimmi/framework/ids"
 
 	"github.com/dimmihq/dimmi/app/actions/conversations"
+	"github.com/dimmihq/dimmi/app/actions/tickets"
 	"github.com/dimmihq/dimmi/app/ai/actionkit"
 	appbroadcasting "github.com/dimmihq/dimmi/app/broadcasting"
 	"github.com/dimmihq/dimmi/app/contracts"
@@ -63,6 +64,7 @@ type Runner struct {
 	Drafts        contracts.AgentDrafts
 	Delivery      *conversations.Delivery
 	Actions       *actionkit.Kit
+	Tickets       *tickets.Tickets
 	Timeouts      config.AITimeoutsConfig
 	StorePayloads bool
 

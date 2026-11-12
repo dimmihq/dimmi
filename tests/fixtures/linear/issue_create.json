@@ -1,0 +1,6 @@
+{"data": {"issueCreate": {"success": true, "issue": {
+  "id": "iss-412", "identifier": "ENG-412", "title": "CSV export crashes",
+  "url": "https://linear.app/acme/issue/ENG-412/csv-export-crashes",
+  "state": {"id": "st-backlog", "name": "Backlog", "type": "backlog"},
+  "team": {"id": "team-eng", "name": "Engineering"}
+}}}}

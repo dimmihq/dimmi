@@ -1,0 +1,5 @@
+{"severities": [
+  {"id": "sev-minor", "name": "Minor", "rank": 1},
+  {"id": "sev-major", "name": "Major", "rank": 2},
+  {"id": "sev-critical", "name": "Critical", "rank": 3}
+]}

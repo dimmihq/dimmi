@@ -1,0 +1,246 @@
+/*
+ * Requests: the state pill on rows, Home's status card, the filter of
+ * open requests, the progress strip above a request's thread and the
+ * request form. Shipped with the requests chunk.
+ */
+.pill {
+  flex: none;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--bg-tertiary);
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 18px;
+  white-space: nowrap;
+}
+
+.pill[data-group="waiting_customer"] {
+  background: var(--tint);
+  color: var(--accent);
+}
+
+.pill[data-group="resolved"] {
+  color: var(--text-tertiary);
+}
+
+.status-card {
+  display: grid;
+  gap: 6px;
+  padding: 14px 16px;
+}
+
+.status-card header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.status-card small {
+  flex: 1;
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+
+.status-dot {
+  inline-size: 8px;
+  block-size: 8px;
+  border-radius: 50%;
+  background: #f59e0b;
+  box-shadow: 0 0 0 4px color-mix(in oklab, #f59e0b 22%, transparent);
+}
+
+.status-card[data-group="resolved"] .status-dot {
+  background: #22c55e;
+  box-shadow: none;
+}
+
+.status-card strong {
+  font-size: 15px;
+  line-height: 20px;
+}
+
+.status-card p {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 13px;
+  line-height: 18px;
+}
+
+.ticket-filter {
+  display: inline-flex;
+  gap: 2px;
+  justify-self: start;
+  padding: 3px;
+  border-radius: 10px;
+  background: var(--bg-tertiary);
+}
+
+.ticket-filter button {
+  padding: 4px 10px;
+  border: 0;
+  border-radius: 8px;
+  background: none;
+  color: var(--text-secondary);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.ticket-filter [aria-pressed="true"] {
+  background: var(--card);
+  color: var(--text-primary);
+  box-shadow: var(--shadow-xs);
+}
+
+.ticket-strip {
+  display: grid;
+  gap: 8px;
+  margin: 4px 0 16px;
+  padding: 12px 14px;
+  border: 1px solid var(--border-button);
+  border-radius: 14px;
+  background: var(--card);
+}
+
+.ticket-strip p {
+  margin: 0;
+  overflow: hidden;
+  font-size: 14px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ticket-strip b {
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.ticket-strip ol {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ticket-strip li {
+  display: grid;
+  gap: 6px;
+  color: var(--text-tertiary);
+  font-size: 12px;
+}
+
+.ticket-strip i {
+  block-size: 4px;
+  border-radius: 999px;
+  background: var(--bg-tertiary);
+}
+
+.ticket-strip [data-done="true"] i {
+  background: var(--brand);
+}
+
+.ticket-strip [aria-current="step"] {
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+.ticket-strip small {
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+.ticket-form {
+  display: grid;
+  gap: 14px;
+}
+
+.ticket-field {
+  display: grid;
+  gap: 6px;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.ticket-field[hidden] {
+  display: none;
+}
+
+.ticket-field em {
+  color: var(--text-tertiary);
+  font-style: normal;
+  font-weight: 400;
+}
+
+.ticket-field small {
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-weight: 400;
+}
+
+.ticket-field > input:not([type="checkbox"]),
+.ticket-field > select,
+.ticket-field > textarea {
+  box-sizing: border-box;
+  inline-size: 100%;
+  block-size: auto;
+  max-block-size: none;
+  min-block-size: 38px;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: 10px;
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+  font: inherit;
+  font-weight: 400;
+  resize: vertical;
+}
+
+.ticket-field > :is(input, select, textarea):focus-visible {
+  outline: 0;
+  box-shadow: inset 0 0 0 2px var(--border-button-active);
+}
+
+.ticket-field[data-invalid] > :is(input, select, textarea) {
+  box-shadow: inset 0 0 0 2px #ef4444;
+}
+
+.ticket-field[data-invalid]::after {
+  content: attr(data-invalid);
+  color: #dc2626;
+  font-size: 12px;
+  font-weight: 400;
+}
+
+.choices {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.choices label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border-radius: 10px;
+  background: var(--bg-tertiary);
+  font-weight: 400;
+}
+
+.choices input {
+  flex: none;
+  accent-color: var(--brand);
+}
+
+.ticket-error {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: color-mix(in oklab, #ef4444 12%, transparent);
+  color: #dc2626;
+  font-size: 13px;
+}

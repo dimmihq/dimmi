@@ -1,0 +1,4 @@
+{"event_type": "public_incident.incident_update_created_v2",
+ "public_incident.incident_update_created_v2": {
+   "id": "upd-1", "incident_id": "inc-77", "message": "We rolled back the bad deploy and sign-in is recovering.",
+   "updater": {"user": {"name": "Sam"}}}}

@@ -114,6 +114,37 @@ export const sample: Content = {
       title: "Workspace setup steps",
       preview: "Hi, thanks for reaching out. Setup takes about five minutes from the dashboard.",
       ago: "14h",
+      ticket: {
+        reference: "T-482",
+        title: "Workspace setup steps",
+        state: { label: "We're on it", group: "in_progress" },
+      },
+    },
+  ],
+  ticket_types: [
+    {
+      id: "tktt_sample_question",
+      name: "Question",
+      icon: "question",
+      description: "A request the team needs time to answer.",
+      fields: [],
+    },
+    {
+      id: "tktt_sample_bug",
+      name: "Bug report",
+      icon: "bug",
+      description: "Something in the product is not working.",
+      fields: [
+        {
+          key: "steps",
+          label: "Steps to reproduce",
+          data_type: "long_text",
+          options: [],
+          required: false,
+          editable: true,
+          show_when: null,
+        },
+      ],
     },
   ],
   links: [

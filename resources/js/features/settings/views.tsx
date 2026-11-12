@@ -8,6 +8,8 @@ import { ActionsSettings } from "@/features/ai/actions/actions-page";
 import { AgentSettings } from "@/features/ai/agent/agent-settings-page";
 import { ProvidersSettings } from "@/features/ai/providers/providers-page";
 import type { SettingsSection } from "@/features/shell/navigation";
+import { TicketsSettings } from "@/features/tickets/settings/tickets-settings";
+import { SLASettings } from "@/features/tickets/sla/sla-settings";
 
 import { PreferencesSettings, ProfileSettings, SecuritySettings } from "./pages/account";
 import { WorkspaceSecuritySettings } from "./pages/admin";
@@ -47,6 +49,8 @@ export const settingsViews: Record<SettingsSection, ComponentType> = {
   tags: TagsSettings,
   "saved-replies": SavedRepliesSettings,
   attributes: AttributesSettings,
+  tickets: TicketsSettings,
+  sla: SLASettings,
   "office-hours": OfficeHoursSettings,
   "conversation-safety": ConversationSafetySettings,
   "conversation-ratings": ConversationRatingsSettings,

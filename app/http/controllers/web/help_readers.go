@@ -49,6 +49,9 @@ func (c *HelpCenterController) realSite(w fhttp.ResponseWriter, r *fhttp.Request
 	c.withMessenger(&center, snap)
 
 	updates := c.announce(r, snap.HelpCenter, &center)
+	center.Sections = append(center.Sections, helpcenter.Section{
+		Key: "status", Name: "Status", Icon: "pulse", Path: "/status",
+	})
 	contact, until, signed := c.readerOf(r, snap.HelpCenter)
 	if !signed {
 		center.SignInURL = signInURL(snap, center, r.URL.Path)
@@ -69,6 +72,9 @@ func (c *HelpCenterController) realSite(w fhttp.ResponseWriter, r *fhttp.Request
 
 	w.Header().Set("Cache-Control", "private, no-store")
 	center.SignedIn, center.SignOutURL = true, base+"/sso/sign-out"
+	center.Sections = append(center.Sections, helpcenter.Section{
+		Key: "requests", Name: "Requests", Icon: "ticket", Path: "/tickets",
+	})
 
 	s := newSite(r.Context(), c.Public, mine, &contact)
 	s.updates = updates

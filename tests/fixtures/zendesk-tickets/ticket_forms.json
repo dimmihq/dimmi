@@ -1,0 +1,4 @@
+{"ticket_forms": [
+  {"id": 41, "name": "Order problem", "display_name": "Problem with an order", "active": true, "default": true, "end_user_visible": true, "ticket_field_ids": [1, 2, 31, 32, 34]},
+  {"id": 42, "name": "Bug report", "display_name": "Report a bug", "active": true, "default": false, "end_user_visible": true, "ticket_field_ids": [1, 2, 32, 33, 35, 36, 37]}
+], "next_page": null}

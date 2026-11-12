@@ -57,14 +57,16 @@ func (r *StoreInboxRequest) Validate(ctx context.Context, _ *validation.Factory)
 }
 
 /*
-UpdateInboxRequest is the input of PATCH /inboxes/{inbox}.
+UpdateInboxRequest is the input of PATCH /inboxes/{inbox}. A null
+ticket type stops new conversations becoming tickets.
 */
 type UpdateInboxRequest struct {
 	Inbox string `path:"inbox"`
 	Body  struct {
-		Name          *string         `json:"name,omitempty" validate:"omitempty,max=80"`
+		Name          *string         `json:"name,omitempty"           validate:"omitempty,max=80"`
 		DefaultTeamID *string         `json:"default_team_id,omitempty"`
 		Settings      json.RawMessage `json:"settings,omitempty"`
+		TicketTypeID  *string         `json:"ticket_type_id,omitempty" maxLength:"64"`
 	}
 	RawBody []byte
 }

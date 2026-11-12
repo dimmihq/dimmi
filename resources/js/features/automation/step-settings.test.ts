@@ -52,7 +52,30 @@ describe("describe", () => {
   });
 
   it("says when a step cannot run yet", () => {
-    expect(describeStep({ id: "s", kind: "apply_sla" }, names)).toBe("Apply an SLA, not available yet");
+    expect(describeStep({ id: "s", kind: "teleport" }, names)).toBe("teleport, not available yet");
+  });
+
+  it("names the ticket setup and policy a ticket step picked", () => {
+    const tickets = new Map([
+      ["tktt_1", "Refund"],
+      ["tkts_1", "Resolved"],
+      ["sla_1", "Priority"],
+    ]);
+    const withTickets = { ...names, tickets };
+
+    expect(describeStep({ id: "s", kind: "apply_sla", settings: { sla_policy_id: "sla_1" } }, withTickets)).toBe(
+      "Apply the Priority SLA",
+    );
+    expect(
+      describeStep(
+        { id: "s", kind: "create_ticket", settings: { type_id: "tktt_1", fields: [{ key: "a", value: "b" }] } },
+        withTickets,
+      ),
+    ).toBe("Make it a Refund ticket, setting 1 field");
+    expect(describeStep({ id: "s", kind: "set_ticket_state", settings: { state_id: "tkts_1" } }, withTickets)).toBe(
+      "Move the ticket to Resolved",
+    );
+    expect(describeStep({ id: "s", kind: "escalate", settings: {} }, withTickets)).toBe(unsetSummary);
   });
 
   it("says the reply time message, or the default one", () => {

@@ -21,6 +21,7 @@ export interface IntegrationProvider {
   name: string;
   label: string;
   installable: boolean;
+  connect?: "oauth" | "api_key";
   features: IntegrationProviderFeature[];
 }
 

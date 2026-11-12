@@ -37,6 +37,7 @@ export interface ConversationMoves {
   markUnread: () => void;
   toggleSpam: () => void;
   merge: () => void;
+  ticket: () => void;
   toggleDetails: () => void;
   toggleEvents: () => void;
   next: () => void;

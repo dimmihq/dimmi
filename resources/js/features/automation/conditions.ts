@@ -7,19 +7,24 @@
  */
 import type { Condition } from "@/lib/api/workflows";
 
+import { type Choices, choicesOf } from "./choices";
+import { ticketConditionFields } from "./ticket-conditions";
+import type { TicketLists } from "./ticket-fields";
 import type { TriggerKind } from "./triggers";
 
-type FieldType = "text" | "choice" | "yes_no";
+export type FieldType = "text" | "choice" | "yes_no" | "set";
 
 /*
  * ConditionField is a field offered in conditions. Options lists the
- * values of a choice field; triggers limits a field of the event to the
- * triggers that carry it.
+ * values of a choice field, or source names the workspace's own list
+ * they come from; triggers limits a field of the event to the triggers
+ * that carry it.
  */
 export interface ConditionField {
   name: string;
   type: FieldType;
   options?: Record<string, string>;
+  source?: "ticketTypes" | "ticketStates";
   triggers?: TriggerKind[];
 }
 
@@ -56,6 +61,7 @@ export const conditionFields: Record<string, ConditionField> = {
   "contact.name": { name: "Contact name", type: "text" },
   "contact.kind": { name: "Contact type", type: "choice", options: { user: "User", lead: "Lead" } },
   "company.name": { name: "Company name", type: "text" },
+  ...ticketConditionFields,
 };
 
 const textOps: Record<string, string> = {
@@ -74,6 +80,11 @@ const yesNoOps: Record<string, string> = {
   is_false: "is no",
 };
 
+const setOps: Record<string, string> = {
+  has_any: "has any of",
+  has_none: "has none of",
+};
+
 const choiceOps: Record<string, string> = {
   in: "is any of",
   not_in: "is none of",
@@ -84,7 +95,7 @@ const choiceOps: Record<string, string> = {
 /*
  * listOps take a list of values, typed as words separated by commas.
  */
-const listOps = new Set(["contains_any", "not_contains_any", "in", "not_in"]);
+const listOps = new Set(["contains_any", "not_contains_any", "in", "not_in", "has_any", "has_none"]);
 const bareOps = new Set(["exists", "not_exists", "is_true", "is_false"]);
 
 /*
@@ -105,6 +116,9 @@ export function opsFor(field: string): Record<string, string> {
   const type = conditionFields[field]?.type;
   if (type === "yes_no") {
     return yesNoOps;
+  }
+  if (type === "set") {
+    return setOps;
   }
 
   return type === "choice" ? choiceOps : textOps;
@@ -198,4 +212,20 @@ export function describeCondition(condition: Condition | undefined): string {
   return [field?.name ?? condition.field, op, needsValue(condition.op ?? "") ? values.join(", ") : ""]
     .filter(Boolean)
     .join(" ");
+}
+
+/*
+ * optionsOf lists the values a choice condition offers: its own, or the
+ * workspace's ticket types or states; nothing for a field typed in.
+ */
+export function optionsOf(field: string, tickets?: TicketLists): Choices | undefined {
+  const known = conditionFields[field];
+  if (known?.source === "ticketTypes") {
+    return (tickets?.types ?? []).map((type) => [type.id, type.name] as const);
+  }
+  if (known?.source === "ticketStates") {
+    return tickets?.states ?? [];
+  }
+
+  return known?.options ? choicesOf(known.options) : undefined;
 }

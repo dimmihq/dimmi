@@ -17,6 +17,54 @@ export interface Conversation {
   ago: string;
   unread?: number;
   status?: string;
+  ticket?: TicketBlock;
+}
+
+/*
+ * TicketBlock is the request a conversation carries: its reference,
+ * title and the state its customer reads, with the state's group.
+ */
+export interface TicketBlock {
+  id?: string;
+  reference: string;
+  title: string;
+  state: { label: string; group: string };
+}
+
+/*
+ * TicketField is a field of a request's form, as the customer fills it.
+ */
+export interface TicketField {
+  key: string;
+  label: string;
+  description?: string;
+  data_type: string;
+  options: string[];
+  required: boolean;
+  editable: boolean;
+  show_when: { field: string; equals?: string[] } | null;
+}
+
+/*
+ * TicketType is a kind of request the customer may open from Home.
+ */
+export interface TicketType {
+  id: string;
+  name: string;
+  icon: string;
+  description: string;
+  fields: TicketField[];
+}
+
+/*
+ * Incident is an outage the status card on Home tells customers about,
+ * with the label of its state and its latest public update.
+ */
+export interface Incident {
+  id: string;
+  title: string;
+  state: { label: string; group: string };
+  latest_update: { body: string; created_at: string } | null;
 }
 
 /*
@@ -151,4 +199,6 @@ export interface Content {
   help_url?: string;
   changelog: Entry[];
   unread_changelog: number;
+  ticket_types?: TicketType[];
+  incidents?: Incident[];
 }

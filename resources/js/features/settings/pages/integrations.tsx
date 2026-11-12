@@ -14,6 +14,7 @@ import { useNavigate } from "@tanstack/react-router";
 
 import { Chip } from "@/components/base/badges/chip";
 import { Button } from "@/components/base/buttons/button";
+import { KeyConnectButton } from "@/features/tickets/issues/key-connect";
 import {
   type Integration,
   type IntegrationProvider,
@@ -54,7 +55,10 @@ function ProviderCard({
           provider.installable ? look.detail : "This server has no app for it yet. Ask whoever runs dimmi to add one."
         }
       >
-        {canManage && provider.installable ? (
+        {canManage && provider.connect === "api_key" ? (
+          <KeyConnectButton workspace={workspace} provider={provider.name} />
+        ) : null}
+        {canManage && provider.installable && provider.connect !== "api_key" ? (
           <ConnectButton workspace={workspace} provider={provider.name} label="Connect" />
         ) : null}
       </Item>

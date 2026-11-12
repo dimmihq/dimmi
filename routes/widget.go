@@ -82,6 +82,8 @@ func widgetAppRoutes(public *routing.Router, a *app.App) {
 
 	sessions := sessionController(a)
 	routing.Post(public, "/sessions", "widget.sessions.store", sessions.Store)
+
+	widgetAppTicketRoutes(public, a)
 }
 
 /*
@@ -126,6 +128,7 @@ func widgetSessionRoutes(visitor *routing.Router, a *app.App) {
 	routing.Post(visitor, one+"/ai/handoff", "widget.conversations.ai.handoff", conv.Handoff).Middleware("idempotent")
 
 	widgetActionCallRoutes(visitor, a, one)
+	widgetTicketRoutes(visitor, a)
 	widgetEventRoutes(visitor, a)
 	widgetRatingRoutes(visitor, a, one)
 }
@@ -139,7 +142,7 @@ func widgetConversationRoutes(visitor *routing.Router, a *app.App, one string) *
 	conv := &widget.ConversationController{
 		Read: a.Actions.Widget.Conversations, Post: a.Actions.Widget.PostMessage,
 		Help: a.Actions.Widget.ConfirmHelp, HandoffAction: a.Actions.Widget.RequestHandoff,
-		IDs: a.IDs, Clock: a.Clock,
+		IDs: a.IDs, Clock: a.Clock, Tickets: a.Actions.Tickets,
 		Cursors: pagination.NewCursors(a.DerivedKey("widget.cursors")), Agents: useragent.New(),
 	}
 

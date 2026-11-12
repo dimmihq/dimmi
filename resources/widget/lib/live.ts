@@ -42,6 +42,7 @@ import { patch } from "./patch";
 import { report } from "./report";
 import type { Surface } from "./rules";
 import { loadThread, type Parts, thread as threadParts } from "./threads";
+import { loadTickets, tickets } from "./tickets";
 
 export interface Host {
   root: ShadowRoot;
@@ -198,6 +199,8 @@ export class Live {
   private readonly events: unknown[][] = [];
   private unread = -1;
   private shown = "";
+  private ticketing: Pick<Content, "ticket_types" | "incidents"> = {};
+  private openOnly = false;
 
   constructor(
     private readonly host: Host,
@@ -410,7 +413,7 @@ export class Live {
         }
       : {};
 
-    return { ...out, ...help, ...this.changelog };
+    return { ...out, ...help, ...this.changelog, ...this.ticketing };
   }
 
   /*
@@ -600,7 +603,58 @@ export class Live {
       .catch(() => undefined);
   }
 
-  private async upload(files: File[]): Promise<string[]> {
+  /*
+   * loadTicketing reads the request types Home offers and the incidents
+   * its status card shows, once, the first time the panel opens, through
+   * the app's address before the visitor has a session. A visitor who
+   * never opens the messenger never asks.
+   */
+  async loadTicketing() {
+    if (this.ticketing.ticket_types) {
+      return;
+    }
+    this.ticketing = { ticket_types: [] };
+    const base = this.session.current ? "" : `/apps/${this.appId}`;
+    const get = (path: string) =>
+      this.http.get<{ data: [] }>(base + path).then(
+        (res) => res.data,
+        () => [],
+      );
+    const [ticket_types, incidents] = await Promise.all([get("/ticket-types"), get("/incidents")]);
+    if (ticket_types.length || incidents.length) {
+      await loadTickets(this.host.root).catch(() => undefined);
+    }
+    this.ticketing = { ticket_types, incidents };
+    this.host.update({});
+  }
+
+  /*
+   * filterOpen narrows the Messages list to the open requests, or shows
+   * every conversation again.
+   */
+  filterOpen(open: boolean) {
+    this.openOnly = open;
+    for (const button of this.host.root.querySelectorAll("[data-ticket-filter]")) {
+      button.setAttribute("aria-pressed", String((button.getAttribute("data-ticket-filter") === "open") === open));
+    }
+    this.drawConversations();
+  }
+
+  /*
+   * ensure starts the visitor's session when they have none.
+   */
+  async ensure() {
+    await this.session.ensure(this.startDetails());
+  }
+
+  /*
+   * reloadConversations reads the visitor's conversations again.
+   */
+  reloadConversations() {
+    return this.reload();
+  }
+
+  async upload(files: File[]): Promise<string[]> {
     await this.session.ensure(this.startDetails());
     const ids: string[] = [];
     for (const file of files) {
@@ -880,7 +934,9 @@ export class Live {
     if (!view) {
       return;
     }
-    const list = this.content().conversations;
+    const list = this.content().conversations.filter(
+      (c) => !this.openOnly || (c.ticket && c.ticket.state.group !== "resolved"),
+    );
     const rows = view.querySelector<HTMLElement>(".list");
     const empty = view.querySelector<HTMLElement>(".empty");
     if (list.length === 0) {
@@ -926,6 +982,13 @@ export class Live {
     const typing = open ? this.store.typingIn(open) : undefined;
     const last = messages.at(-1);
     const parts = [this.statusLine(), String(t.Thread({ messages, texts: this.actionTexts() }))];
+    const ticket = this.store.conversations.find((c) => c.id === open)?.ticket;
+    const strip = tickets()?.Strip;
+    if (ticket && strip) {
+      parts.unshift(String(strip({ ticket, texts })));
+    } else if (ticket) {
+      void loadTickets(this.host.root).then(() => this.drawThread());
+    }
 
     if (typing) {
       parts.push(String(t.Typing()));

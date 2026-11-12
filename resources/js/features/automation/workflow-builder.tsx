@@ -37,6 +37,7 @@ import { type Head, Inspector } from "./inspector";
 import { StatusChip } from "./parts";
 import type { Lists } from "./step-fields";
 import { type Names, sentence } from "./step-settings";
+import { ticketNames, useTicketLists } from "./ticket-lists";
 import { allowsStep, type TriggerKind } from "./triggers";
 import { type SaveState, useWorkflowDraft } from "./use-workflow-draft";
 import { WorkflowRuns } from "./workflow-runs";
@@ -46,7 +47,8 @@ import { findStep, readyKinds, type Step, type StepKind, triggerStep } from "./w
  * useLists reads the workspace's teams, active teammates and tags, as the
  * pickers offer them and as the cards name them, and whether its agent
  * is on; and the live reusable workflows other than this one, the
- * connections to your systems and the office hours.
+ * connections to your systems, the office hours, and the ticket setup,
+ * trackers and SLA policies the ticket steps pick from.
  */
 function useLists(workspace: string, current: string): { lists: Lists; names: Names } {
   const teams = useQuery(teamsQuery(workspace)).data;
@@ -56,6 +58,7 @@ function useLists(workspace: string, current: string): { lists: Lists; names: Na
   const workflows = useQuery(workflowsQuery(workspace)).data;
   const connections = useQuery({ ...actionConnectionsQuery(workspace), retry: false }).data;
   const schedules = useQuery({ ...schedulesQuery(workspace), retry: false }).data;
+  const tickets = useTicketLists(workspace);
 
   return useMemo(() => {
     const lists: Lists = {
@@ -72,6 +75,7 @@ function useLists(workspace: string, current: string): { lists: Lists; names: Na
         .map((connection) => [connection.id, connection.name] as const),
       schedules: (schedules ?? []).map((schedule) => [schedule.id, schedule.name] as const),
       agentOn: agent ? agent.agent.enabled && agent.ready : undefined,
+      tickets,
     };
 
     return {
@@ -82,9 +86,10 @@ function useLists(workspace: string, current: string): { lists: Lists; names: Na
         tags: new Map(lists.tags),
         workflows: new Map((workflows ?? []).map((flow) => [flow.id, flow.name] as const)),
         connections: new Map((connections ?? []).map((connection) => [connection.id, connection.name] as const)),
+        tickets: ticketNames(tickets),
       },
     };
-  }, [teams, members, tags, agent, workflows, connections, schedules, current]);
+  }, [teams, members, tags, agent, workflows, connections, schedules, tickets, current]);
 }
 
 const saveWords: Record<SaveState, string> = {

@@ -1412,6 +1412,60 @@
         ],
         "type": "object"
       },
+      "ResourceListWidgetIncident": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/WidgetIncident"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "ResourceListWidgetTicket": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/WidgetTicket"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "ResourceListWidgetTicketType": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/WidgetTicketType"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
       "ResourceReadStateResource": {
         "additionalProperties": false,
         "properties": {
@@ -1496,6 +1550,18 @@
         ],
         "type": "object"
       },
+      "ResourceWidgetTicket": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/WidgetTicket"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
       "ResourceWidgetTrackedEvents": {
         "additionalProperties": false,
         "properties": {
@@ -1559,6 +1625,27 @@
         },
         "required": [
           "email"
+        ],
+        "type": "object"
+      },
+      "ShowWhen": {
+        "additionalProperties": false,
+        "properties": {
+          "equals": {
+            "items": {
+              "type": "string"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "field": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "field"
         ],
         "type": "object"
       },
@@ -1751,6 +1838,50 @@
         },
         "required": [
           "app_id"
+        ],
+        "type": "object"
+      },
+      "StoreWidgetTicketRequestBody": {
+        "additionalProperties": true,
+        "properties": {
+          "attachment_ids": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 10,
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "client_id": {
+            "maxLength": 64,
+            "type": "string"
+          },
+          "description": {
+            "maxLength": 10000,
+            "type": "string"
+          },
+          "fields": {
+            "additionalProperties": {},
+            "type": "object"
+          },
+          "page": {
+            "$ref": "#/components/schemas/WidgetPageBody"
+          },
+          "title": {
+            "maxLength": 200,
+            "type": "string"
+          },
+          "type_id": {
+            "maxLength": 64,
+            "type": "string"
+          }
+        },
+        "required": [
+          "client_id",
+          "type_id",
+          "title"
         ],
         "type": "object"
       },
@@ -2133,6 +2264,9 @@
               "null"
             ]
           },
+          "ticket": {
+            "$ref": "#/components/schemas/WidgetTicketBlock"
+          },
           "unread_count": {
             "format": "int64",
             "type": "integer"
@@ -2207,6 +2341,95 @@
           "status",
           "error",
           "warnings"
+        ],
+        "type": "object"
+      },
+      "WidgetIncident": {
+        "additionalProperties": false,
+        "properties": {
+          "areas": {
+            "items": {
+              "type": "string"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "created_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "latest_update": {
+            "$ref": "#/components/schemas/WidgetIncidentUpdate"
+          },
+          "object": {
+            "type": "string"
+          },
+          "resolved_at": {
+            "format": "date-time",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "severity": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "state": {
+            "$ref": "#/components/schemas/WidgetTicketState"
+          },
+          "title": {
+            "type": "string"
+          },
+          "updates": {
+            "items": {
+              "$ref": "#/components/schemas/WidgetIncidentUpdate"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "object",
+          "title",
+          "state",
+          "severity",
+          "areas",
+          "latest_update",
+          "updates",
+          "created_at",
+          "resolved_at"
+        ],
+        "type": "object"
+      },
+      "WidgetIncidentUpdate": {
+        "additionalProperties": false,
+        "properties": {
+          "body": {
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "body",
+          "created_at"
         ],
         "type": "object"
       },
@@ -2501,6 +2724,236 @@
           "realtime",
           "config_version",
           "server_time"
+        ],
+        "type": "object"
+      },
+      "WidgetTicket": {
+        "additionalProperties": false,
+        "properties": {
+          "conversation_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "created_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "fields": {
+            "items": {
+              "$ref": "#/components/schemas/WidgetTicketField"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "history": {
+            "items": {
+              "$ref": "#/components/schemas/WidgetTicketState"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "id": {
+            "type": "string"
+          },
+          "mine": {
+            "type": "boolean"
+          },
+          "object": {
+            "type": "string"
+          },
+          "reference": {
+            "type": "string"
+          },
+          "resolved_at": {
+            "format": "date-time",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "state": {
+            "$ref": "#/components/schemas/WidgetTicketState"
+          },
+          "title": {
+            "type": "string"
+          },
+          "type": {
+            "$ref": "#/components/schemas/WidgetTicketType"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "object",
+          "description",
+          "type",
+          "conversation_id",
+          "mine",
+          "fields",
+          "history",
+          "created_at",
+          "updated_at",
+          "resolved_at",
+          "id",
+          "reference",
+          "title",
+          "state"
+        ],
+        "type": "object"
+      },
+      "WidgetTicketBlock": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "reference": {
+            "type": "string"
+          },
+          "state": {
+            "$ref": "#/components/schemas/WidgetTicketState"
+          },
+          "title": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "reference",
+          "title",
+          "state"
+        ],
+        "type": "object"
+      },
+      "WidgetTicketField": {
+        "additionalProperties": false,
+        "properties": {
+          "currency": {
+            "type": "string"
+          },
+          "data_type": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "editable": {
+            "type": "boolean"
+          },
+          "key": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          },
+          "options": {
+            "items": {
+              "type": "string"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "required": {
+            "type": "boolean"
+          },
+          "show_when": {
+            "$ref": "#/components/schemas/ShowWhen"
+          },
+          "value": {}
+        },
+        "required": [
+          "key",
+          "label",
+          "data_type",
+          "options",
+          "required",
+          "editable",
+          "show_when"
+        ],
+        "type": "object"
+      },
+      "WidgetTicketState": {
+        "additionalProperties": false,
+        "properties": {
+          "at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "group": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "label",
+          "group"
+        ],
+        "type": "object"
+      },
+      "WidgetTicketType": {
+        "additionalProperties": false,
+        "properties": {
+          "company_sharing": {
+            "type": "boolean"
+          },
+          "description": {
+            "type": "string"
+          },
+          "fields": {
+            "items": {
+              "$ref": "#/components/schemas/WidgetTicketField"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "icon": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "object": {
+            "type": "string"
+          },
+          "states": {
+            "items": {
+              "$ref": "#/components/schemas/WidgetTicketState"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "object",
+          "name",
+          "icon",
+          "description",
+          "company_sharing",
+          "fields",
+          "states"
         ],
         "type": "object"
       },
@@ -2800,6 +3253,60 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/HelpOutputBody"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseError"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        }
+      }
+    },
+    "/apps/{app}/incidents": {
+      "get": {
+        "operationId": "widget.apps.incidents.index",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResourceListWidgetIncident"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseError"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        }
+      }
+    },
+    "/apps/{app}/ticket-types": {
+      "get": {
+        "operationId": "widget.apps.ticket-types.index",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResourceListWidgetTicketType"
                 }
               }
             },
@@ -3734,6 +4241,33 @@
         }
       }
     },
+    "/incidents": {
+      "get": {
+        "operationId": "widget.incidents.index",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResourceListWidgetIncident"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseError"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        }
+      }
+    },
     "/pings": {
       "post": {
         "operationId": "widget.pings.store",
@@ -3894,6 +4428,157 @@
               }
             },
             "description": "Created"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseError"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        }
+      }
+    },
+    "/ticket-types": {
+      "get": {
+        "operationId": "widget.ticket-types.index",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResourceListWidgetTicketType"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseError"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        }
+      }
+    },
+    "/tickets": {
+      "get": {
+        "operationId": "widget.tickets.index",
+        "parameters": [
+          {
+            "explode": false,
+            "in": "query",
+            "name": "scope",
+            "schema": {
+              "enum": [
+                "mine",
+                "company",
+                ""
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "description": "Only requests not resolved.",
+            "explode": false,
+            "in": "query",
+            "name": "open",
+            "schema": {
+              "description": "Only requests not resolved.",
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResourceListWidgetTicket"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseError"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        }
+      },
+      "post": {
+        "operationId": "widget.tickets.store",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StoreWidgetTicketRequestBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResourceWidgetTicket"
+                }
+              }
+            },
+            "description": "Created"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseError"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        }
+      }
+    },
+    "/tickets/{ticket}": {
+      "get": {
+        "operationId": "widget.tickets.show",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "ticket",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResourceWidgetTicket"
+                }
+              }
+            },
+            "description": "OK"
           },
           "default": {
             "content": {

@@ -1,0 +1,13 @@
+{"ticket_fields": [
+  {"id": 1, "type": "subject", "title": "Subject", "active": true, "removable": false, "visible_in_portal": true},
+  {"id": 2, "type": "status", "title": "Status", "active": true, "removable": false, "visible_in_portal": false},
+  {"id": 31, "type": "text", "title": "Order number", "active": true, "removable": true, "visible_in_portal": true},
+  {"id": 32, "type": "tagger", "title": "Product area", "active": true, "removable": true, "visible_in_portal": true,
+   "custom_field_options": [{"id": 1, "name": "Billing", "raw_name": "Billing", "value": "billing", "default": false}, {"id": 2, "name": "Shipping", "raw_name": "Shipping", "value": "shipping", "default": false}]},
+  {"id": 33, "type": "multiselect", "title": "Affected plans", "active": true, "removable": true, "visible_in_portal": false,
+   "custom_field_options": [{"id": 3, "name": "Starter", "value": "starter"}, {"id": 4, "name": "Pro", "value": "pro"}]},
+  {"id": 34, "type": "integer", "title": "Seats", "active": true, "removable": true, "visible_in_portal": false},
+  {"id": 35, "type": "checkbox", "title": "Blocking?", "active": true, "removable": true, "visible_in_portal": false},
+  {"id": 36, "type": "date", "title": "Needed by", "active": true, "removable": true, "visible_in_portal": false},
+  {"id": 37, "type": "text", "title": "Old field", "active": false, "removable": true, "visible_in_portal": false}
+]}

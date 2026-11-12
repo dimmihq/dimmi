@@ -75,6 +75,8 @@ token response does not, by asking the provider with the token.
 AuthParams are added to every authorization URL. Separate providers
 connect each account through its own consent, so a workspace can hold
 several, such as two help desks, instead of reusing the one it has.
+Key marks a tool that connects with an API key the workspace pastes
+rather than through OAuth.
 */
 type Provider struct {
 	Name       string
@@ -86,6 +88,7 @@ type Provider struct {
 	Identify   func(ctx context.Context, token string) (Health, error)
 	AuthParams map[string]string
 	Separate   bool
+	Key        bool
 }
 
 /*

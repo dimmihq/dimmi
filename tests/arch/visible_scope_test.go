@@ -55,7 +55,72 @@ func unscopedQueries() map[string]string {
 		"FindConversationChannelType":        "chat app routing: the system follows a change, no member is asking",
 		"FindThreadConversation":             "inbound routing: the chat thread decides the conversation",
 		"FindWindowConversation":             "inbound routing: the chat thread decides the conversation",
+		"ListRecentWidgetConversations":      "spike detection groups new conversations: the system reads, names none",
+		"ListTrackerConversations":           "a tracker the member may read names the conversations reporting it",
+		"CountTrackerImpact":                 "a tracker's reach: numbers only, names no conversation",
+		"ListTrackerRecipients":              "a tracker's message goes to every linked customer: the system sends",
+		"ListTicketUpdateDeliveries":         "who a tracker's message reached, for those who may read the tracker",
+		"ListTrackerReports":                 "a tracker's summary reads its reports, for who may read the tracker",
 	}
+}
+
+/*
+unscopedTicketQueries are the queries that may list or find tickets
+without the visibility function, each with the reason. Tickets follow
+the conversation rule: inbox, teammate and team decide who sees them.
+*/
+func unscopedTicketQueries() map[string]string {
+	return map[string]string{
+		"FindTicket":                "one row by id: tickets.find checks it with the member's scope",
+		"FindTicketByNumber":        "one row by reference: tickets.find checks it with the member's scope",
+		"FindTicketByExternalID":    "a retried create finds its own ticket: the caller made it",
+		"FindConversationTicket":    "a conversation's own ticket: the conversation was checked first",
+		"ListTicketsByIDs":          "rows a checked link or conversation names: the caller checked them",
+		"ListConversationTickets":   "tickets of conversations the caller already sees",
+		"ListActiveIncidents":       "the workspace's live incidents: shown to every member and the AI agent",
+		"ListRecentIncidents":       "public status pages: customers read incidents marked visible",
+		"ListContactTickets":        "a customer's own tickets: the customer asks, not a member",
+		"CountTicketsByType":        "type totals for settings: numbers only, names no ticket",
+		"CountTicketsInState":       "whether a state being removed is empty: names no ticket",
+		"ListWorkspaceTicketEvents": "the export cursor: refused to members whose access is restricted",
+		"ListStateEventsBetween":    "time-in-state reports: numbers only, names no ticket",
+		"ListTrackerConversations":  "the customer tickets beside a tracker's conversations, for who may read it",
+		"CountTicketsUsingType":     "undoing an import keeps a type tickets still use: numbers only",
+		"CountTicketsUsingState":    "undoing an import keeps a state tickets are in: numbers only",
+		"ListOpenTrackers":          "matching a new conversation to trackers: the system reads, names none",
+		"ListTrackerSuggestions":    "trackers suggested for a conversation the caller already sees",
+	}
+}
+
+/*
+readsTickets matches a query that reads tickets.
+*/
+var readsTickets = regexp.MustCompile(`(?i)\b(FROM|JOIN)\s+tickets\b`)
+
+/*
+missingTicketScope returns the listing queries of the source that read
+tickets without the visibility function and are not on the allowlist.
+*/
+func missingTicketScope(source string, allowed map[string]string) []string {
+	var out []string
+
+	for name, body := range sqlQueries(source) {
+		if !listingQueryName.MatchString(name) || !readsTickets.MatchString(body) {
+			continue
+		}
+
+		if strings.Contains(body, "dimmi_conversation_visible") {
+			continue
+		}
+
+		if _, ok := allowed[name]; !ok {
+			out = append(out, name)
+		}
+	}
+
+	sort.Strings(out)
+
+	return out
 }
 
 var (
@@ -143,6 +208,14 @@ func TestVisibleScope(t *testing.T) {
 
 		for name, source := range queryFiles(t) {
 			assert.Empty(t, missingScope(source, unscopedQueries()), name)
+		}
+	})
+
+	t.Run("every query listing tickets calls the visibility function or says why not", func(t *testing.T) {
+		t.Parallel()
+
+		for name, source := range queryFiles(t) {
+			assert.Empty(t, missingTicketScope(source, unscopedTicketQueries()), name)
 		}
 	})
 

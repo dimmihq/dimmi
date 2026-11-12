@@ -114,6 +114,9 @@ func (r *Runner) registry(st *run) map[string]tool {
 		toolHandoff:         {spec: handoffSpec(), effect: sideEffectWrite, handle: r.requestHandoff},
 		toolTriage:          {spec: triageSpec(st.env), effect: sideEffectWrite, handle: r.triage},
 	}
+	if len(st.env.TicketTypes) > 0 {
+		tools[toolOpenTicket] = tool{spec: openTicketSpec(st.env), effect: sideEffectWrite, handle: r.openTicket}
+	}
 	if len(st.env.Procedures) > 0 {
 		tools[toolProcedure] = tool{spec: procedureSpec(st.env), effect: sideEffectRead, handle: r.followProcedure}
 	}

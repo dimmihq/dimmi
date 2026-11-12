@@ -32,13 +32,15 @@ const Type = "slack"
 
 /*
 Prefixes of the thread keys, the action ids of answer controls, and the
-callback id of the shortcut that opens a conversation from a message.
+callback ids of the shortcuts that open a conversation or a ticket from a
+message.
 */
 const (
 	roomThreadPrefix   = "slack:r:"
 	directThreadPrefix = "slack:d:"
 	controlPrefix      = "c:"
 	ShortcutCreate     = "dimmi_create_conversation"
+	ShortcutTicket     = "dimmi_create_ticket"
 )
 
 /*

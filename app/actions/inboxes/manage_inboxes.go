@@ -94,7 +94,9 @@ func (a *CreateInbox) Handle(ctx context.Context, in CreateInboxInput) (Inbox, e
 /*
 UpdateInboxInput is who changes which inbox, and how: its new name, nil
 to keep it; its default team, nil to keep it, a TeamChoice without an id
-for none; and a merge patch on its settings, empty to keep them.
+for none; a merge patch on its settings, empty to keep them; and the
+ticket type its new conversations become, nil to keep it, a choice
+without an id for none.
 */
 type UpdateInboxInput struct {
 	Membership  authz.Membership
@@ -102,6 +104,7 @@ type UpdateInboxInput struct {
 	Name        *string
 	DefaultTeam *TeamChoice
 	Settings    json.RawMessage
+	TicketType  *TicketTypeChoice
 }
 
 /*
@@ -120,13 +123,15 @@ Rules:
     365 days, a #rrggbb color, a known assignment mode and queue order,
     capacities 1 to 500 on known channel types.
   - The default and overflow teams must exist and differ.
+  - The ticket type must be a live customer type of the workspace.
   - A change to nothing changes nothing.
 
 Events: [appevents.InboxUpdated] when anything changed.
 
 Errors: [exceptions.ErrForbidden], [exceptions.ErrNotFound],
 [exceptions.ErrInboxSettingInvalid], [exceptions.ErrInboxTeamNotFound],
-[exceptions.ErrOverflowIsDefaultTeam], or a wrapped database error.
+[exceptions.ErrOverflowIsDefaultTeam], [exceptions.ErrInboxTicketTypeInvalid],
+or a wrapped database error.
 */
 type UpdateInbox struct {
 	DB     *database.DB
@@ -155,6 +160,12 @@ func (a *UpdateInbox) Handle(ctx context.Context, in UpdateInboxInput) (Inbox, e
 		saved, err := a.save(ctx, tx, inbox, in)
 		if err != nil {
 			return err
+		}
+
+		if in.TicketType != nil {
+			if saved, err = setTicketType(ctx, q, saved, typeChange{*in.TicketType, a.Clock.Now()}); err != nil {
+				return err
+			}
 		}
 
 		out, err = withDefault(ctx, q, saved)

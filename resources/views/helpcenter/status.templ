@@ -1,0 +1,91 @@
+package helpcenter
+
+/*
+StatusPage is the help center's public status page.
+*/
+
+templ StatusPage(c Center, s SystemStatus, assets templ.Component) {
+	@Layout(c, Meta{Title: "Status | " + c.Product, Description: healthOverall(s.Overall) + ".", Section: "status", Trail: []Crumb{{Title: "Status", Path: "/status"}}}, templ.NopComponent, assets) {
+		<div class="mx-auto w-full max-w-[48rem] px-5 pt-12 pb-16 md:pt-16">
+			<header class="stagger">
+				<h1 class="text-display-4-medium tracking-tight">{ c.Product } status</h1>
+				<p class="mt-2 text-title-3-regular text-text-secondary">Live status of our product and any incident we are working on.</p>
+			</header>
+			<div data-overall={ s.Overall } class={ "mt-8 flex animate-rise items-center gap-3 rounded-2xl px-4 py-3.5 " + healthTone(s.Overall) }>
+				@Icon(healthIcon(s.Overall), "size-5 shrink-0")
+				<p class="text-title-3-medium">{ healthOverall(s.Overall) }</p>
+			</div>
+			if len(s.Components) > 0 {
+				<section aria-labelledby="components" class="mt-10 animate-rise">
+					<h2 id="components" class="text-title-2-medium">Components</h2>
+					<ul class="mt-3 overflow-hidden rounded-2xl border border-border-button-default bg-background-primary-default">
+						for _, comp := range s.Components {
+							<li data-component={ comp.Name } class="flex items-center justify-between gap-4 border-separator-border px-4 py-3 [&+&]:border-t">
+								<span class="text-body-medium text-text-primary">{ comp.Name }</span>
+								@healthPill(healthText(comp.Status), comp.Status)
+							</li>
+						}
+					</ul>
+				</section>
+			}
+			<section aria-labelledby="active" class="mt-10 animate-rise">
+				<h2 id="active" class="text-title-2-medium">Active incidents</h2>
+				if len(s.Active) == 0 {
+					<p class="mt-3 text-body-regular text-text-tertiary">No incidents right now.</p>
+				} else {
+					for _, inc := range s.Active {
+						@statusIncident(inc)
+					}
+				}
+			</section>
+			<section aria-labelledby="history" class="mt-10 animate-rise">
+				<h2 id="history" class="text-title-2-medium">Past incidents</h2>
+				<p class="mt-1 text-body-2-regular text-text-tertiary">The last 90 days.</p>
+				if len(s.History) == 0 {
+					<p class="mt-3 text-body-regular text-text-tertiary">No incidents in the last 90 days.</p>
+				} else {
+					for _, inc := range s.History {
+						@statusIncident(inc)
+					}
+				}
+			</section>
+		</div>
+	}
+}
+
+templ healthPill(label, status string) {
+	<span class={ "inline-flex h-6 shrink-0 items-center gap-1.5 rounded-full px-2 text-caption-1-medium " + healthTone(status) }>
+		<span class="size-1.5 rounded-full bg-current" aria-hidden="true"></span>
+		{ label }
+	</span>
+}
+
+templ statusIncident(inc Incident) {
+	<article class="mt-3 rounded-2xl border border-border-button-default bg-background-primary-default px-4 py-4">
+		<div class="flex flex-wrap items-start justify-between gap-3">
+			<div class="min-w-0">
+				<h3 class="text-body-semibold text-text-primary">{ inc.Title }</h3>
+				<p class="mt-0.5 text-body-2-regular text-text-tertiary">
+					Started { inc.Started }
+					if inc.Resolved != "" {
+						· resolved { inc.Resolved }
+					}
+					if len(inc.Areas) > 0 {
+						· { joinAreas(inc.Areas) }
+					}
+				</p>
+			</div>
+			@healthPill(inc.Label, inc.Status)
+		</div>
+		if len(inc.Updates) > 0 {
+			<ol class="mt-4 space-y-3 border-s border-separator-border ps-4">
+				for _, u := range inc.Updates {
+					<li>
+						<p class="text-body-regular text-text-primary">{ u.Body }</p>
+						<p class="mt-0.5 text-caption-1-regular text-text-tertiary">{ u.At }</p>
+					</li>
+				}
+			</ol>
+		}
+	</article>
+}

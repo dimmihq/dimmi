@@ -90,6 +90,8 @@ type WidgetLastMessage struct {
 WidgetConversation is a conversation as a visitor sees it. SeenByTeamAt
 is when a teammate last read it up to the customer's latest message,
 left out when nobody has or the workspace keeps it from customers.
+Ticket is the request the conversation carries, left out for a plain
+conversation.
 */
 type WidgetConversation struct {
 	ID             string             `json:"id"`
@@ -106,6 +108,7 @@ type WidgetConversation struct {
 	CreatedAt      time.Time          `json:"created_at"`
 	LastMessageAt  *time.Time         `json:"last_message_at"`
 	SeenByTeamAt   *time.Time         `json:"seen_by_team_at,omitempty"`
+	Ticket         *WidgetTicketBlock `json:"ticket,omitempty"`
 }
 
 /*

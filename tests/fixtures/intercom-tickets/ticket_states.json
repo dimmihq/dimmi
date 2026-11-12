@@ -1,0 +1,7 @@
+{"type": "list", "data": [
+  {"type": "ticket_state", "id": "7001", "category": "submitted", "internal_label": "Submitted", "external_label": "Submitted"},
+  {"type": "ticket_state", "id": "7002", "category": "in_progress", "internal_label": "In progress", "external_label": "In progress"},
+  {"type": "ticket_state", "id": "7003", "category": "in_progress", "internal_label": "Billing review", "external_label": "With our billing team"},
+  {"type": "ticket_state", "id": "7004", "category": "waiting_on_customer", "internal_label": "Waiting on customer", "external_label": "Awaiting your reply"},
+  {"type": "ticket_state", "id": "7005", "category": "resolved", "internal_label": "Resolved", "external_label": "Resolved"}
+]}

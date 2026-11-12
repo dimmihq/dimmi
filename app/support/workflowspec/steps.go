@@ -80,7 +80,7 @@ type Kind struct {
 Kinds returns every step kind.
 */
 func Kinds() []Kind {
-	return []Kind{
+	return append([]Kind{
 		{Key: KindMessage, CustomerFacing: true, Ready: true},
 		{
 			Key: KindButtons, CustomerFacing: true, Fixed: []string{OutcomeTyped, OutcomeTimeout},
@@ -111,9 +111,9 @@ func Kinds() []Kind {
 		{Key: KindUpdateContact, Ready: true, Action: true},
 		{Key: KindSnooze, Ready: true, Action: true},
 		{Key: KindClose, Ready: true, Action: true},
-		{Key: KindApplySLA, Action: true},
+		{Key: KindApplySLA, Ready: true, Action: true},
 		{Key: KindHTTPRequest, Fixed: []string{OutcomeFailure}, Ready: true, Action: true},
-	}
+	}, ticketKinds()...)
 }
 
 /*

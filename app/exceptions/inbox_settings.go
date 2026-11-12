@@ -27,7 +27,9 @@ an inbox with conversations without saying where they go, and
 ErrMoveToInvalid a target that is the inbox itself or not a live inbox.
 ErrInboxAccessInvalid refuses an access other than everyone or
 restricted, and ErrInboxAccessMemberNotFound a teammate who is not an
-active member of the workspace.
+active member of the workspace. ErrInboxTicketTypeInvalid refuses a
+ticket type new conversations cannot become: one the workspace does not
+have, an archived one, or one that is not a customer type.
 */
 var (
 	ErrInboxSettingInvalid = fault.New(fault.Invalid, "invalid_inbox_setting",
@@ -46,4 +48,6 @@ var (
 		"Choose everyone or restricted.").OnField("access")
 	ErrInboxAccessMemberNotFound = fault.New(fault.Invalid, "member_not_found",
 		"This teammate is not an active member of this workspace.").OnField("members")
+	ErrInboxTicketTypeInvalid = fault.New(fault.Invalid, "ticket_type_invalid",
+		"New conversations can only become tickets of a live customer type.").OnField("ticket_type_id")
 )

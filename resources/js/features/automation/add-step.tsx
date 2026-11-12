@@ -1,7 +1,7 @@
 /*
  * The add-step menu at the end of every path in the builder: a small
  * plus that opens BoardUI's menu panel with the step kinds offered,
- * grouped as messages, logic, dimmi and team actions; a group with
+ * grouped as messages, logic, dimmi, team actions and tickets; a group with
  * nothing offered is left out.
  */
 import { RiAddLine } from "@remixicon/react";
@@ -20,8 +20,21 @@ const groups: [string, StepKind[]][] = [
   ["dimmi", ["dimmi"]],
   [
     "Team",
-    ["assign", "unassign", "tag", "untag", "priority", "note", "update_contact", "snooze", "close", "http_request"],
+    [
+      "assign",
+      "unassign",
+      "tag",
+      "untag",
+      "priority",
+      "note",
+      "update_contact",
+      "snooze",
+      "close",
+      "apply_sla",
+      "http_request",
+    ],
   ],
+  ["Tickets", ["create_ticket", "set_ticket_state", "set_ticket_fields", "escalate", "add_to_tracker"]],
 ];
 
 export function AddStep({ kinds, onAdd }: { kinds: StepKind[]; onAdd: (kind: StepKind) => void }) {

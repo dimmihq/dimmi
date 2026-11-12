@@ -31,6 +31,7 @@ import (
 	"github.com/dimmihq/dimmi/app/actions/helpcenters"
 	"github.com/dimmihq/dimmi/app/actions/identity"
 	"github.com/dimmihq/dimmi/app/actions/invitations"
+	"github.com/dimmihq/dimmi/app/actions/issues"
 	"github.com/dimmihq/dimmi/app/actions/knowledge"
 	"github.com/dimmihq/dimmi/app/actions/knowledgesources"
 	"github.com/dimmihq/dimmi/app/actions/memberimports"
@@ -41,9 +42,12 @@ import (
 	"github.com/dimmihq/dimmi/app/actions/roles"
 	"github.com/dimmihq/dimmi/app/actions/schedules"
 	"github.com/dimmihq/dimmi/app/actions/series"
+	"github.com/dimmihq/dimmi/app/actions/sla"
 	"github.com/dimmihq/dimmi/app/actions/sso"
 	"github.com/dimmihq/dimmi/app/actions/ssologin"
 	"github.com/dimmihq/dimmi/app/actions/teams"
+	"github.com/dimmihq/dimmi/app/actions/ticketimports"
+	"github.com/dimmihq/dimmi/app/actions/tickets"
 	"github.com/dimmihq/dimmi/app/actions/tokens"
 	"github.com/dimmihq/dimmi/app/actions/users"
 	"github.com/dimmihq/dimmi/app/actions/webhooks"
@@ -150,6 +154,10 @@ type Actions struct {
 	ChangelogSubscribers       *changelog.Subscribers
 	ChangelogPublic            *changelog.Public
 	Feedback                   *feedback.Posts
+	Tickets                    *tickets.Tickets
+	TicketIssues               *issues.Issues
+	TicketImports              *ticketimports.Importer
+	SLA                        *sla.SLA
 	Workflows                  *workflows.Workflows
 	Schedules                  *schedules.Schedules
 	Procedures                 *procedures.Procedures

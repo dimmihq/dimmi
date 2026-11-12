@@ -10,6 +10,7 @@ import { ArrowRightIcon, ChevronRightIcon, Mark } from "../components/icons";
 import { ConversationRow, LinkRow, Section } from "../components/rows";
 import { Loadable, SkeletonSection } from "../components/skeleton";
 import type { Content } from "../content";
+import { tickets } from "../lib/tickets";
 import type { Options } from "../options";
 
 export function Home({ options, content }: { options: Options; content: Content }) {
@@ -47,6 +48,11 @@ export function Home({ options, content }: { options: Options; content: Content 
             <ArrowRightIcon />
           </span>
         </button>
+        {tickets()?.HomeCards({
+          types: content.ticket_types ?? [],
+          incidents: content.incidents ?? [],
+          texts: options.texts,
+        }) ?? null}
         <Loadable
           skeleton={
             <>

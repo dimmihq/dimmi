@@ -7,6 +7,7 @@ import { ArrowUpIcon, MessagesIcon } from "../components/icons";
 import { ConversationRow } from "../components/rows";
 import { Loadable, SkeletonRows } from "../components/skeleton";
 import type { Content } from "../content";
+import { tickets } from "../lib/tickets";
 import type { Options } from "../options";
 
 export function Messages({ options, content }: { options: Options; content: Content }) {
@@ -16,6 +17,7 @@ export function Messages({ options, content }: { options: Options; content: Cont
     <>
       <Bar title={texts.messages} />
       <div className="stack fill">
+        {content.conversations.some((c) => c.ticket) ? (tickets()?.Filter({ open: false, texts }) ?? null) : null}
         <Loadable skeleton={<SkeletonRows count={4} round />}>
           {content.conversations.length > 0 ? (
             <div className="list">

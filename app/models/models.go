@@ -998,6 +998,14 @@ type ConversationRead struct {
 	UpdatedAt         time.Time `json:"updated_at"`
 }
 
+type ConversationSlaPolicy struct {
+	ConversationID ids.UUID  `json:"conversation_id"`
+	WorkspaceID    ids.UUID  `json:"workspace_id"`
+	PolicyID       ids.UUID  `json:"policy_id"`
+	CreatedAt      time.Time `json:"created_at"`
+	UpdatedAt      time.Time `json:"updated_at"`
+}
+
 type ConversationTag struct {
 	WorkspaceID    ids.UUID  `json:"workspace_id"`
 	ConversationID ids.UUID  `json:"conversation_id"`
@@ -1513,6 +1521,7 @@ type Inbox struct {
 	UpdatedAt     time.Time       `json:"updated_at"`
 	Access        string          `json:"access"`
 	ScheduleID    *ids.UUID       `json:"schedule_id"`
+	TicketTypeID  *ids.UUID       `json:"ticket_type_id"`
 }
 
 type InboxAccess struct {
@@ -1521,6 +1530,24 @@ type InboxAccess struct {
 	TeamID      *ids.UUID `json:"team_id"`
 	MemberID    *ids.UUID `json:"member_id"`
 	CreatedAt   time.Time `json:"created_at"`
+}
+
+type IncidentSuggestion struct {
+	ID                ids.UUID   `json:"id"`
+	WorkspaceID       ids.UUID   `json:"workspace_id"`
+	Signature         string     `json:"signature"`
+	Title             string     `json:"title"`
+	Summary           string     `json:"summary"`
+	Area              *string    `json:"area"`
+	ConversationIds   []ids.UUID `json:"conversation_ids"`
+	ConversationCount int32      `json:"conversation_count"`
+	WindowMinutes     int32      `json:"window_minutes"`
+	Status            string     `json:"status"`
+	MutedUntil        *time.Time `json:"muted_until"`
+	TicketID          *ids.UUID  `json:"ticket_id"`
+	DecidedByMemberID *ids.UUID  `json:"decided_by_member_id"`
+	CreatedAt         time.Time  `json:"created_at"`
+	UpdatedAt         time.Time  `json:"updated_at"`
 }
 
 type IntegrationInstallation struct {
@@ -2377,6 +2404,48 @@ type Session struct {
 	AuthDomain      *string         `json:"auth_domain"`
 }
 
+type SlaClock struct {
+	ID             ids.UUID   `json:"id"`
+	WorkspaceID    ids.UUID   `json:"workspace_id"`
+	PolicyID       ids.UUID   `json:"policy_id"`
+	TicketID       *ids.UUID  `json:"ticket_id"`
+	ConversationID *ids.UUID  `json:"conversation_id"`
+	Target         string     `json:"target"`
+	State          string     `json:"state"`
+	StartedAt      time.Time  `json:"started_at"`
+	DueAt          time.Time  `json:"due_at"`
+	WarnAt         *time.Time `json:"warn_at"`
+	PausedAt       *time.Time `json:"paused_at"`
+	WarnedAt       *time.Time `json:"warned_at"`
+	BreachedAt     *time.Time `json:"breached_at"`
+	StoppedAt      *time.Time `json:"stopped_at"`
+	CreatedAt      time.Time  `json:"created_at"`
+	UpdatedAt      time.Time  `json:"updated_at"`
+}
+
+type SlaPolicy struct {
+	ID                     ids.UUID   `json:"id"`
+	WorkspaceID            ids.UUID   `json:"workspace_id"`
+	Name                   string     `json:"name"`
+	Description            string     `json:"description"`
+	ScheduleID             *ids.UUID  `json:"schedule_id"`
+	FirstReplySeconds      *int32     `json:"first_reply_seconds"`
+	NextReplySeconds       *int32     `json:"next_reply_seconds"`
+	FollowUpSeconds        *int32     `json:"follow_up_seconds"`
+	ResolutionSeconds      *int32     `json:"resolution_seconds"`
+	WarnBeforeSeconds      int32      `json:"warn_before_seconds"`
+	PauseOnWaitingCustomer bool       `json:"pause_on_waiting_customer"`
+	PauseOnWaitingTeam     bool       `json:"pause_on_waiting_team"`
+	BreachPriority         *string    `json:"breach_priority"`
+	BreachTeamID           *ids.UUID  `json:"breach_team_id"`
+	TicketTypeIds          []ids.UUID `json:"ticket_type_ids"`
+	Priorities             []string   `json:"priorities"`
+	Position               int32      `json:"position"`
+	ArchivedAt             *time.Time `json:"archived_at"`
+	CreatedAt              time.Time  `json:"created_at"`
+	UpdatedAt              time.Time  `json:"updated_at"`
+}
+
 type SnoozeList struct {
 	WorkspaceID ids.UUID        `json:"workspace_id"`
 	TeamID      *ids.UUID       `json:"team_id"`
@@ -2417,6 +2486,274 @@ type TeamMember struct {
 	WorkspaceID       ids.UUID  `json:"workspace_id"`
 	WorkspaceMemberID ids.UUID  `json:"workspace_member_id"`
 	CreatedAt         time.Time `json:"created_at"`
+}
+
+type Ticket struct {
+	ID                  ids.UUID        `json:"id"`
+	WorkspaceID         ids.UUID        `json:"workspace_id"`
+	Number              int64           `json:"number"`
+	Kind                string          `json:"kind"`
+	TypeID              ids.UUID        `json:"type_id"`
+	StateID             ids.UUID        `json:"state_id"`
+	StateGroup          string          `json:"state_group"`
+	ConversationID      *ids.UUID       `json:"conversation_id"`
+	ContactID           *ids.UUID       `json:"contact_id"`
+	CompanyID           *ids.UUID       `json:"company_id"`
+	InboxID             ids.UUID        `json:"inbox_id"`
+	Title               string          `json:"title"`
+	Description         string          `json:"description"`
+	Fields              json.RawMessage `json:"fields"`
+	Suggestions         json.RawMessage `json:"suggestions"`
+	Priority            string          `json:"priority"`
+	AssigneeMemberID    *ids.UUID       `json:"assignee_member_id"`
+	AssigneeTeamID      *ids.UUID       `json:"assignee_team_id"`
+	ExternalID          *string         `json:"external_id"`
+	SlaPolicyID         *ids.UUID       `json:"sla_policy_id"`
+	CloseLoop           bool            `json:"close_loop"`
+	NotifiedStateID     *ids.UUID       `json:"notified_state_id"`
+	CustomerVisible     bool            `json:"customer_visible"`
+	Version             int32           `json:"version"`
+	CreatedByType       string          `json:"created_by_type"`
+	CreatedByID         *ids.UUID       `json:"created_by_id"`
+	StateSince          time.Time       `json:"state_since"`
+	ResolvedAt          *time.Time      `json:"resolved_at"`
+	AutoResolveWarnedAt *time.Time      `json:"auto_resolve_warned_at"`
+	DeletedAt           *time.Time      `json:"deleted_at"`
+	CreatedAt           time.Time       `json:"created_at"`
+	UpdatedAt           time.Time       `json:"updated_at"`
+}
+
+type TicketEvent struct {
+	ID          ids.UUID        `json:"id"`
+	WorkspaceID ids.UUID        `json:"workspace_id"`
+	TicketID    ids.UUID        `json:"ticket_id"`
+	Kind        string          `json:"kind"`
+	ActorType   string          `json:"actor_type"`
+	ActorID     *ids.UUID       `json:"actor_id"`
+	Data        json.RawMessage `json:"data"`
+	CreatedAt   time.Time       `json:"created_at"`
+}
+
+type TicketField struct {
+	ID                     ids.UUID        `json:"id"`
+	WorkspaceID            ids.UUID        `json:"workspace_id"`
+	TypeID                 ids.UUID        `json:"type_id"`
+	Key                    string          `json:"key"`
+	Label                  string          `json:"label"`
+	Description            string          `json:"description"`
+	DataType               string          `json:"data_type"`
+	Options                []string        `json:"options"`
+	Currency               *string         `json:"currency"`
+	RequiredCreate         bool            `json:"required_create"`
+	RequiredCreateCustomer bool            `json:"required_create_customer"`
+	RequiredResolve        bool            `json:"required_resolve"`
+	VisibleCustomer        bool            `json:"visible_customer"`
+	EditableCustomer       bool            `json:"editable_customer"`
+	ShowWhen               json.RawMessage `json:"show_when"`
+	AiHint                 *string         `json:"ai_hint"`
+	AiAuto                 bool            `json:"ai_auto"`
+	Position               int32           `json:"position"`
+	ArchivedAt             *time.Time      `json:"archived_at"`
+	CreatedAt              time.Time       `json:"created_at"`
+	UpdatedAt              time.Time       `json:"updated_at"`
+}
+
+type TicketImport struct {
+	ID                  ids.UUID        `json:"id"`
+	WorkspaceID         ids.UUID        `json:"workspace_id"`
+	Source              string          `json:"source"`
+	Status              string          `json:"status"`
+	TypesCreated        int32           `json:"types_created"`
+	FieldsCreated       int32           `json:"fields_created"`
+	StatesCreated       int32           `json:"states_created"`
+	TicketsCreated      int32           `json:"tickets_created"`
+	TicketsFound        int32           `json:"tickets_found"`
+	TicketsFailed       int32           `json:"tickets_failed"`
+	LinksCreated        int32           `json:"links_created"`
+	RowErrors           json.RawMessage `json:"row_errors"`
+	Error               *string         `json:"error"`
+	CreatedByMemberID   *ids.UUID       `json:"created_by_member_id"`
+	StartedAt           time.Time       `json:"started_at"`
+	FinishedAt          *time.Time      `json:"finished_at"`
+	RollbackStatus      *string         `json:"rollback_status"`
+	RollbackByMemberID  *ids.UUID       `json:"rollback_by_member_id"`
+	RollbackTrashed     int32           `json:"rollback_trashed"`
+	RollbackArchived    int32           `json:"rollback_archived"`
+	RollbackError       *string         `json:"rollback_error"`
+	RollbackRequestedAt *time.Time      `json:"rollback_requested_at"`
+	RollbackFinishedAt  *time.Time      `json:"rollback_finished_at"`
+	CreatedAt           time.Time       `json:"created_at"`
+	UpdatedAt           time.Time       `json:"updated_at"`
+}
+
+type TicketImportRecord struct {
+	ID          ids.UUID  `json:"id"`
+	WorkspaceID ids.UUID  `json:"workspace_id"`
+	ImportID    ids.UUID  `json:"import_id"`
+	RecordKind  string    `json:"record_kind"`
+	ExternalID  string    `json:"external_id"`
+	RecordID    ids.UUID  `json:"record_id"`
+	Created     bool      `json:"created"`
+	CreatedAt   time.Time `json:"created_at"`
+}
+
+type TicketIssue struct {
+	ID                ids.UUID   `json:"id"`
+	WorkspaceID       ids.UUID   `json:"workspace_id"`
+	TicketID          ids.UUID   `json:"ticket_id"`
+	InstallationID    *ids.UUID  `json:"installation_id"`
+	Provider          string     `json:"provider"`
+	ExternalID        string     `json:"external_id"`
+	Key               string     `json:"key"`
+	Url               string     `json:"url"`
+	Title             string     `json:"title"`
+	Status            string     `json:"status"`
+	StatusGroup       string     `json:"status_group"`
+	TeamName          string     `json:"team_name"`
+	Warning           *string    `json:"warning"`
+	SyncError         *string    `json:"sync_error"`
+	SyncedAt          *time.Time `json:"synced_at"`
+	CreatedByMemberID *ids.UUID  `json:"created_by_member_id"`
+	CreatedAt         time.Time  `json:"created_at"`
+	UpdatedAt         time.Time  `json:"updated_at"`
+	TeamID            string     `json:"team_id"`
+	Severity          string     `json:"severity"`
+	DoneAt            *time.Time `json:"done_at"`
+	DeployedAt        *time.Time `json:"deployed_at"`
+	ImpactHash        string     `json:"impact_hash"`
+}
+
+type TicketLink struct {
+	ID                ids.UUID  `json:"id"`
+	WorkspaceID       ids.UUID  `json:"workspace_id"`
+	Kind              string    `json:"kind"`
+	FromTicketID      ids.UUID  `json:"from_ticket_id"`
+	ToTicketID        *ids.UUID `json:"to_ticket_id"`
+	ConversationID    *ids.UUID `json:"conversation_id"`
+	CreatedByMemberID *ids.UUID `json:"created_by_member_id"`
+	CreatedAt         time.Time `json:"created_at"`
+}
+
+type TicketPublicUpdate struct {
+	ID             ids.UUID  `json:"id"`
+	WorkspaceID    ids.UUID  `json:"workspace_id"`
+	TicketID       ids.UUID  `json:"ticket_id"`
+	Body           string    `json:"body"`
+	StateID        *ids.UUID `json:"state_id"`
+	UpdateID       *ids.UUID `json:"update_id"`
+	AuthorMemberID *ids.UUID `json:"author_member_id"`
+	Source         string    `json:"source"`
+	CreatedAt      time.Time `json:"created_at"`
+}
+
+type TicketState struct {
+	ID             ids.UUID   `json:"id"`
+	WorkspaceID    ids.UUID   `json:"workspace_id"`
+	StateGroup     string     `json:"state_group"`
+	Name           string     `json:"name"`
+	CustomerLabel  string     `json:"customer_label"`
+	NotifyCustomer bool       `json:"notify_customer"`
+	Purpose        *string    `json:"purpose"`
+	Position       int32      `json:"position"`
+	ArchivedAt     *time.Time `json:"archived_at"`
+	CreatedAt      time.Time  `json:"created_at"`
+	UpdatedAt      time.Time  `json:"updated_at"`
+}
+
+type TicketSummary struct {
+	TicketID    ids.UUID  `json:"ticket_id"`
+	WorkspaceID ids.UUID  `json:"workspace_id"`
+	Summary     string    `json:"summary"`
+	ReportCount int32     `json:"report_count"`
+	GeneratedAt time.Time `json:"generated_at"`
+}
+
+type TicketType struct {
+	ID                 ids.UUID   `json:"id"`
+	WorkspaceID        ids.UUID   `json:"workspace_id"`
+	Kind               string     `json:"kind"`
+	Name               string     `json:"name"`
+	Icon               string     `json:"icon"`
+	Description        string     `json:"description"`
+	InboxID            *ids.UUID  `json:"inbox_id"`
+	TeamID             *ids.UUID  `json:"team_id"`
+	CustomerVisible    bool       `json:"customer_visible"`
+	CompanySharing     bool       `json:"company_sharing"`
+	ReopenDays         int32      `json:"reopen_days"`
+	AutoResolveDays    *int32     `json:"auto_resolve_days"`
+	AutoResolveMessage *string    `json:"auto_resolve_message"`
+	AiAutoFill         bool       `json:"ai_auto_fill"`
+	Position           int32      `json:"position"`
+	ArchivedAt         *time.Time `json:"archived_at"`
+	CreatedAt          time.Time  `json:"created_at"`
+	UpdatedAt          time.Time  `json:"updated_at"`
+}
+
+type TicketTypeState struct {
+	TypeID            ids.UUID `json:"type_id"`
+	StateID           ids.UUID `json:"state_id"`
+	WorkspaceID       ids.UUID `json:"workspace_id"`
+	IsDefault         bool     `json:"is_default"`
+	IsDefaultResolved bool     `json:"is_default_resolved"`
+}
+
+type TicketUpdate struct {
+	ID             ids.UUID   `json:"id"`
+	WorkspaceID    ids.UUID   `json:"workspace_id"`
+	TicketID       ids.UUID   `json:"ticket_id"`
+	Body           string     `json:"body"`
+	Resolve        bool       `json:"resolve"`
+	Status         string     `json:"status"`
+	Recipients     int32      `json:"recipients"`
+	Delivered      int32      `json:"delivered"`
+	Held           int32      `json:"held"`
+	Failed         int32      `json:"failed"`
+	AuthorMemberID *ids.UUID  `json:"author_member_id"`
+	CreatedAt      time.Time  `json:"created_at"`
+	FinishedAt     *time.Time `json:"finished_at"`
+}
+
+type TicketUpdateDelivery struct {
+	ID             ids.UUID   `json:"id"`
+	WorkspaceID    ids.UUID   `json:"workspace_id"`
+	UpdateID       ids.UUID   `json:"update_id"`
+	ConversationID ids.UUID   `json:"conversation_id"`
+	Status         string     `json:"status"`
+	Reason         *string    `json:"reason"`
+	Attempts       int32      `json:"attempts"`
+	MessageID      *ids.UUID  `json:"message_id"`
+	SentAt         *time.Time `json:"sent_at"`
+	CreatedAt      time.Time  `json:"created_at"`
+	UpdatedAt      time.Time  `json:"updated_at"`
+}
+
+type TicketUpdateDraft struct {
+	ID                ids.UUID   `json:"id"`
+	WorkspaceID       ids.UUID   `json:"workspace_id"`
+	TicketID          ids.UUID   `json:"ticket_id"`
+	IssueID           *ids.UUID  `json:"issue_id"`
+	Source            string     `json:"source"`
+	Reason            string     `json:"reason"`
+	Body              string     `json:"body"`
+	AuthorName        string     `json:"author_name"`
+	Status            string     `json:"status"`
+	Resolve           bool       `json:"resolve"`
+	UpdateID          *ids.UUID  `json:"update_id"`
+	DecidedByMemberID *ids.UUID  `json:"decided_by_member_id"`
+	DecidedAt         *time.Time `json:"decided_at"`
+	CreatedAt         time.Time  `json:"created_at"`
+	UpdatedAt         time.Time  `json:"updated_at"`
+}
+
+type TrackerSuggestion struct {
+	ID             ids.UUID  `json:"id"`
+	WorkspaceID    ids.UUID  `json:"workspace_id"`
+	ConversationID ids.UUID  `json:"conversation_id"`
+	TicketID       ids.UUID  `json:"ticket_id"`
+	Rank           int32     `json:"rank"`
+	Status         string    `json:"status"`
+	CreatedAt      time.Time `json:"created_at"`
+	UpdatedAt      time.Time `json:"updated_at"`
 }
 
 type User struct {
@@ -2715,6 +3052,9 @@ type Workspace struct {
 	OnboardingStep         string          `json:"onboarding_step"`
 	OnboardingCompletedAt  *time.Time      `json:"onboarding_completed_at"`
 	LogoPath               *string         `json:"logo_path"`
+	NextTicketNumber       int64           `json:"next_ticket_number"`
+	IncidentSpikeThreshold int32           `json:"incident_spike_threshold"`
+	TicketSettings         json.RawMessage `json:"ticket_settings"`
 }
 
 type WorkspaceMember struct {

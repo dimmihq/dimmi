@@ -176,7 +176,7 @@ func TestManualInstallation(t *testing.T) {
 		require.ErrorIs(t, err, exceptions.ErrIntegrationAuthFailed)
 		_, err = create.Handle(t.Context(), in)
 		require.ErrorIs(t, err, exceptions.ErrIntegrationProvider)
-		in.Provider = "linear"
+		in.Provider = "asana"
 		_, err = create.Handle(t.Context(), in)
 		require.ErrorIs(t, err, exceptions.ErrIntegrationUnavailable)
 		in.Membership = authz.NewMembership(tc.Workspace.Workspace, models.WorkspaceMember{}, nil)

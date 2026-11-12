@@ -1,0 +1,28 @@
+{"type": "list", "data": [
+  {"type": "ticket_type", "id": "11", "category": "Customer", "name": "Refund request", "description": "A customer wants money back.", "icon": "💸", "workspace_id": "abc123", "archived": false, "created_at": 1790000000, "updated_at": 1790000000,
+   "ticket_type_attributes": {"type": "list", "data": [
+     {"type": "ticket_type_attribute", "id": "501", "name": "_default_title_", "data_type": "string", "default": true, "visible_to_contacts": true, "archived": false, "input_options": {"multiline": false}},
+     {"type": "ticket_type_attribute", "id": "502", "name": "_default_description_", "data_type": "string", "default": true, "visible_to_contacts": true, "archived": false, "input_options": {"multiline": true}},
+     {"type": "ticket_type_attribute", "id": "503", "name": "Order number", "data_type": "string", "default": false, "visible_to_contacts": true, "archived": false, "input_options": {"multiline": false}},
+     {"type": "ticket_type_attribute", "id": "504", "name": "Refund amount", "data_type": "decimal", "default": false, "visible_to_contacts": false, "archived": false, "input_options": {}},
+     {"type": "ticket_type_attribute", "id": "505", "name": "Reason", "data_type": "list", "default": false, "visible_to_contacts": true, "archived": false,
+      "input_options": {"list_options": [{"id": "1", "label": "Damaged", "archived": false}, {"id": "2", "label": "Arrived late", "archived": false}, {"id": "3", "label": "Old reason", "archived": true}]}}
+   ]},
+   "ticket_states": {"type": "list", "data": [
+     {"type": "ticket_state", "id": "7001", "category": "submitted", "internal_label": "Submitted", "external_label": "Submitted"},
+     {"type": "ticket_state", "id": "7003", "category": "in_progress", "internal_label": "Billing review", "external_label": "With our billing team"},
+     {"type": "ticket_state", "id": "7004", "category": "waiting_on_customer", "internal_label": "Waiting on customer", "external_label": "Awaiting your reply"},
+     {"type": "ticket_state", "id": "7005", "category": "resolved", "internal_label": "Resolved", "external_label": "Resolved"}
+   ]}},
+  {"type": "ticket_type", "id": "12", "category": "Tracker", "name": "Payment outage", "description": "Many customers cannot pay.", "icon": "🔥", "workspace_id": "abc123", "archived": false, "created_at": 1790000000, "updated_at": 1790000000,
+   "ticket_type_attributes": {"type": "list", "data": [
+     {"type": "ticket_type_attribute", "id": "601", "name": "_default_title_", "data_type": "string", "default": true, "visible_to_contacts": true, "archived": false, "input_options": {"multiline": false}}
+   ]},
+   "ticket_states": {"type": "list", "data": [
+     {"type": "ticket_state", "id": "7001", "category": "submitted", "internal_label": "Submitted", "external_label": "Submitted"},
+     {"type": "ticket_state", "id": "7002", "category": "in_progress", "internal_label": "In progress", "external_label": "In progress"},
+     {"type": "ticket_state", "id": "7005", "category": "resolved", "internal_label": "Resolved", "external_label": "Resolved"}
+   ]}},
+  {"type": "ticket_type", "id": "13", "category": "Customer", "name": "Retired type", "archived": true,
+   "ticket_type_attributes": {"type": "list", "data": []}, "ticket_states": {"type": "list", "data": []}}
+]}

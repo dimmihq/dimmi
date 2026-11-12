@@ -12,7 +12,8 @@
  * teammate's reply shows without a reload; the header shows who else has
  * it open, and the thread says when the customer is typing. When the
  * customer's time zone is known, a header control reads the thread's
- * times in it.
+ * times in it. The ticket menu turns it into a ticket (also T), escalates
+ * it, adds it to a tracker or declares an incident.
  */
 import { RiArrowLeftSLine, RiDeleteBinLine, RiGlobalLine, RiLayoutRightLine, RiSparkling2Line } from "@remixicon/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -29,6 +30,8 @@ import { Panel } from "@/features/shell/page";
 import { PaneGroup, PaneHandle } from "@/features/shell/resizable";
 import { useEasing } from "@/features/shell/use-easing";
 import { useWide } from "@/features/shell/use-wide";
+import { TicketMenu } from "@/features/tickets/ticket-menu";
+import { useTicketDialogs } from "@/features/tickets/use-ticket-dialogs";
 import {
   addNote,
   type Conversation,
@@ -303,15 +306,18 @@ export function ConversationView({
   const toggleRef = useRef<() => void>(() => undefined);
   const settings = useThreadSettings(workspace);
   const { toggleEvents } = settings;
+  const ticketDialogs = useTicketDialogs();
+  const showTicket = ticketDialogs.show;
   const panels = useMemo(
     () => ({
       openSnooze: () => setSnoozing(true),
       openAssign: () => setAssigning(true),
       openMerge: () => setMerging(true),
+      openTicket: () => showTicket("convert"),
       toggleDetails: () => toggleRef.current(),
       toggleEvents,
     }),
-    [toggleEvents],
+    [toggleEvents, showTicket],
   );
   const canTrash = useCanTrash(workspace);
   const walk = useWalk(view, workspace, conversation, caze, panels, canTrash);
@@ -367,6 +373,12 @@ export function ConversationView({
             }}
           />
           <PriorityMenu priority={conversation.priority} onChange={caze.setPriority} />
+          <TicketMenu
+            workspace={workspace}
+            conversation={conversation.id}
+            subject={subjectOf(conversation)}
+            dialogs={ticketDialogs}
+          />
           <CustomerClock zone={contactZone} customer={customer} settings={settings} />
           {sideBySide ? (
             <IconButton
@@ -487,6 +499,7 @@ export function ConversationView({
             conversation={conversation}
             caze={caze}
             onClose={() => toggle(pane.details)}
+            onConvert={() => ticketDialogs.show("convert")}
           />
         </Pane>
         <PaneHandle hidden={!operatorOpen} />

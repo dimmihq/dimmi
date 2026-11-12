@@ -66,6 +66,25 @@ func TestCheck(t *testing.T) {
 
 	const fm = workflowspec.TriggerFirstMessage
 
+	t.Run("accepts a close the loop workflow on ticket conditions", func(t *testing.T) {
+		t.Parallel()
+
+		raw := def(workflowspec.TriggerTicketCloseLoop, `{"id":"s_aaaaaa","kind":"branch","paths":[
+			{"id":"p_aaaaaa","label":"Shipped","condition":{"all":[
+				{"field":"ticket.issue_status_groups","op":"has","value":"done"},
+				{"field":"ticket.fields.plan","op":"eq","value":"pro"}]},
+			"steps":[{"id":"s_bbbbbb","kind":"message","settings":{"text":"It shipped."}},
+				{"id":"s_cccccc","kind":"set_ticket_state","settings":{"state_id":"tkts_x"}}]},
+			{"id":"p_bbbbbb","outcome":"else","steps":[]}]}`,
+			`{"id":"s_dddddd","kind":"apply_sla","settings":{"sla_policy_id":"sla_x"}}`)
+		require.NoError(t, workflowspec.Check(parse(t, raw)).Err())
+
+		state := def(workflowspec.TriggerTicketStateChanged, `{"id":"s_aaaaaa","kind":"branch","paths":[
+			{"id":"p_aaaaaa","label":"Done","condition":{"field":"trigger.to_group","op":"eq","value":"resolved"},
+			"steps":[]},{"id":"p_bbbbbb","outcome":"else","steps":[]}]}`)
+		require.NoError(t, workflowspec.Check(parse(t, state)).Err())
+	})
+
 	t.Run("accepts a close asking for a rating", func(t *testing.T) {
 		t.Parallel()
 
@@ -90,9 +109,36 @@ func TestCheck(t *testing.T) {
 			workflowspec.CodeStepUnavailableForTrigger,
 		},
 		{
-			"a step that cannot run yet", def(fm, `{"id":"s_aaaaaa","kind":"apply_sla",
-			"settings":{"sla_policy_id":"x"}}`),
-			workflowspec.CodeStepNotAvailable,
+			"an SLA step without a policy", def(fm, `{"id":"s_aaaaaa","kind":"apply_sla","settings":{}}`),
+			workflowspec.CodeMissingSetting,
+		},
+		{
+			"a ticket without a type", def(fm, `{"id":"s_aaaaaa","kind":"create_ticket","settings":{}}`),
+			workflowspec.CodeMissingSetting,
+		},
+		{
+			"a ticket field set twice", def(fm, `{"id":"s_aaaaaa","kind":"set_ticket_fields","settings":{"fields":[
+			{"key":"order","value":"1"},{"key":"order","value":"2"}]}}`),
+			workflowspec.CodeInvalidSetting,
+		},
+		{
+			"a ticket field with an unknown variable", def(fm, `{"id":"s_aaaaaa","kind":"create_ticket",
+			"settings":{"type_id":"tktt_x","fields":[{"key":"order","value":"{{contact.shoe}}"}]}}`),
+			workflowspec.CodeUnknownVariable,
+		},
+		{
+			"an escalation without a title", def(fm, `{"id":"s_aaaaaa","kind":"escalate",
+			"settings":{"type_id":"tktt_x"}}`),
+			workflowspec.CodeMissingSetting,
+		},
+		{
+			"a tracker step without a tracker", def(fm, `{"id":"s_aaaaaa","kind":"add_to_tracker","settings":{}}`),
+			workflowspec.CodeMissingSetting,
+		},
+		{
+			"a message on a ticket field change",
+			def(workflowspec.TriggerTicketFieldChanged, `{"id":"s_aaaaaa","kind":"message","settings":{"text":"hi"}}`),
+			workflowspec.CodeStepUnavailableForTrigger,
 		},
 		{
 			"an empty message", def(fm, `{"id":"s_aaaaaa","kind":"message","settings":{"text":" "}}`),

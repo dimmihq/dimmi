@@ -42,3 +42,10 @@ ApplySLASettings applies an SLA policy.
 type ApplySLASettings struct {
 	SLAPolicyID string `json:"sla_policy_id"`
 }
+
+/*
+AddToTrackerSettings links the conversation to a tracker.
+*/
+type AddToTrackerSettings struct {
+	TrackerID string `json:"tracker_id"`
+}

@@ -43,10 +43,16 @@ export function ConversationRow({ conversation }: { conversation: Conversation }
       <span className="orb" />
       <span className="text">
         <span>
-          <span className="number">#{conversation.number}</span> {conversation.title}
+          <span className="number">{conversation.ticket?.reference ?? `#${conversation.number}`}</span>{" "}
+          {conversation.ticket?.title ?? conversation.title}
         </span>
         <small>{conversation.preview}</small>
       </span>
+      {conversation.ticket ? (
+        <span className="pill" data-group={conversation.ticket.state.group}>
+          {conversation.ticket.state.label}
+        </span>
+      ) : null}
       <time>{conversation.ago}</time>
       <span className="unread-dot" />
     </button>

@@ -1,0 +1,111 @@
+{
+  "page": {
+    "title": "SLA policies",
+    "description": "Promise how fast your team replies and resolves. Clocks run in open hours, warn ahead of each target and escalate on a breach."
+  },
+  "list": {
+    "title": "Policies",
+    "description": "Workflows apply a policy to conversations; new tickets follow the policy that names their type or priority.",
+    "new": "New policy",
+    "empty": "No SLA policies yet.",
+    "archived": "Archived",
+    "edit": "Edit",
+    "archive": "Archive",
+    "noTargets": "No targets",
+    "allHours": "Around the clock",
+    "appliesTo": "Applies to {{what}}",
+    "appliesToNothing": "Applied by workflows only",
+    "breach": "On breach: {{what}}"
+  },
+  "targets": {
+    "first_reply": "First reply",
+    "next_reply": "Next reply",
+    "follow_up": "Follow-up",
+    "resolution": "Resolution"
+  },
+  "targetHints": {
+    "first_reply": "From the customer's first message to the team's first reply.",
+    "next_reply": "From each later customer message to the team's answer.",
+    "follow_up": "After the team replies, how soon it follows up if the customer stays quiet.",
+    "resolution": "From the start of the conversation until it is resolved."
+  },
+  "units": {
+    "minutes": "Minutes",
+    "hours": "Hours",
+    "days": "Days"
+  },
+  "editor": {
+    "back": "SLA policies",
+    "newTitle": "New SLA policy",
+    "newDescription": "Set at least one target. Clocks start when a workflow applies the policy or a matching ticket is created.",
+    "archivedDescription": "Archived. Its clocks were canceled and nothing new follows it.",
+    "missing": "This SLA policy does not exist",
+    "missingHint": "It may belong to another workspace.",
+    "unsaved": "Unsaved changes",
+    "discard": "Discard",
+    "save": "Save",
+    "create": "Create policy",
+    "saved": "Policy saved",
+    "created": "Policy created",
+    "leave": "Leave without saving your changes?",
+    "needsName": "Name the policy",
+    "needsTarget": "Set at least one target"
+  },
+  "details": {
+    "title": "Details",
+    "name": "Name",
+    "namePlaceholder": "Enterprise",
+    "description": "Description",
+    "descriptionHint": "Teammates read it where they pick a policy."
+  },
+  "targetsSection": {
+    "title": "Targets",
+    "description": "Each target is counted in the open hours of the schedule below. Leave one off to not track it.",
+    "off": "Off",
+    "amount": "{{target}} amount",
+    "unit": "{{target}} unit",
+    "toggle": "Track {{target}}"
+  },
+  "clock": {
+    "title": "Clock",
+    "warn": "Warn before a breach",
+    "warnHint": "Raise an alert this long before a target is missed, for workflows to act on.",
+    "warnLabel": "Warning",
+    "schedule": "Business hours",
+    "scheduleHint": "Clocks only count while this schedule is open.",
+    "allHours": "Around the clock (24/7)",
+    "defaultSchedule": "{{name}} (default)",
+    "pauseCustomer": "Pause while waiting on the customer",
+    "pauseCustomerHint": "Stop the clock while the ticket waits on the customer or the conversation is snoozed.",
+    "pauseTeam": "Pause while waiting on another team",
+    "pauseTeamHint": "Stop the clock while back-office work or a linked issue holds the ticket."
+  },
+  "applies": {
+    "title": "Applies to",
+    "description": "New tickets of these types or with these priorities follow this policy. Leave both empty to apply it from workflows only.",
+    "types": "Ticket types",
+    "typesHint": "Any of these types.",
+    "noTypes": "No ticket types yet.",
+    "priorities": "Priorities",
+    "prioritiesHint": "Any of these priorities."
+  },
+  "breach": {
+    "title": "On breach",
+    "description": "What changes when a target is missed.",
+    "priority": "Raise priority to",
+    "priorityHint": "Never lowers a priority that is already higher.",
+    "none": "Leave as is",
+    "team": "Move to team",
+    "teamHint": "Reassign the conversation to this team; its assignee stays.",
+    "noTeam": "Keep the team"
+  },
+  "archive": {
+    "title": "Archive",
+    "description": "Stop using this policy. Its history stays on old conversations and tickets.",
+    "button": "Archive policy",
+    "confirmTitle": "Archive {{name}}?",
+    "confirmBody": "Every clock it is running now is canceled, so those conversations and tickets lose their targets. New tickets and workflows no longer get it. This can't be undone.",
+    "confirm": "Archive policy",
+    "done": "Policy archived"
+  }
+}

@@ -23,13 +23,15 @@ import (
 /*
 IntegrationProvider is a provider this install offers. Installable says
 its shared app can be installed; otherwise only a custom app's pasted
-tokens connect it.
+tokens connect it. Connect says how: oauth, or api_key for a tool that
+connects with a key the workspace pastes, which is always installable.
 */
 type IntegrationProvider struct {
 	Object      string               `json:"object"`
 	Name        string               `json:"name"`
 	Label       string               `json:"label"`
 	Installable bool                 `json:"installable"`
+	Connect     string               `json:"connect"`
 	Features    []IntegrationFeature `json:"features"`
 }
 
@@ -52,7 +54,10 @@ func NewIntegrationProviders(views []integrations.ProviderView) []IntegrationPro
 	for _, v := range views {
 		p := IntegrationProvider{
 			Object: "integration_provider", Name: v.Provider.Name, Label: v.Provider.Label,
-			Installable: v.Installable, Features: []IntegrationFeature{},
+			Installable: v.Installable, Connect: "oauth", Features: []IntegrationFeature{},
+		}
+		if v.Provider.Key {
+			p.Connect, p.Installable = "api_key", true
 		}
 
 		for _, f := range v.Features {

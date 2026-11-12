@@ -2,7 +2,8 @@
  * The list of an inbox view: one row per conversation with the channel,
  * the customer, who is viewing it, the subject, how long the customer
  * has waited, whether the reader left a draft there, its priority and
- * who holds it, the agent's part in it, and the inbox when the reader
+ * who holds it, the agent's part in it, its ticket reference and state
+ * when it is a ticket, and the inbox when the reader
  * sees several, in the view's order. Rows
  * follow BoardUI's chat list: the open conversation sits on the tertiary
  * surface, the rest light up on hover. A conversation with something the
@@ -19,7 +20,9 @@ import { Avatar } from "@/components/base/avatar/avatar";
 import { StatusDot } from "@/components/base/badges/status-dot";
 import { Checkbox } from "@/components/base/checkbox/checkbox";
 import { avatarColor } from "@/features/shell/avatar-color";
+import { TicketMark } from "@/features/tickets/state-pill";
 import { type Conversation, inboxesQuery } from "@/lib/api/inbox";
+import { type Ticket, ticketsQuery } from "@/lib/api/tickets";
 import { cx } from "@/utils/cx";
 
 import { AiBadge, ApprovalBadge } from "./ai-badge";
@@ -45,6 +48,7 @@ export function ConversationList({
 }) {
   const { workspace } = useInbox();
   const { data: inboxes = [] } = useQuery({ ...inboxesQuery(workspace), enabled: workspace !== "" });
+  const tickets = useTicketsByConversation(workspace);
   const selecting = (selection?.count ?? 0) > 0;
 
   return (
@@ -66,10 +70,25 @@ export function ConversationList({
           drafted={drafted?.has(conversation.id) ?? false}
           inboxes={inboxes}
           selection={selection}
+          ticket={tickets.get(conversation.id)}
         />
       ))}
     </ul>
   );
+}
+
+/*
+ * useTicketsByConversation reads the open customer tickets once per list
+ * and finds each conversation's own, so a row that is a ticket shows its
+ * reference and state.
+ */
+function useTicketsByConversation(workspace: string): Map<string, Ticket> {
+  const { data } = useQuery({
+    ...ticketsQuery(workspace, { kind: "customer", active: true, limit: 100 }),
+    staleTime: 30_000,
+  });
+
+  return new Map((data?.items ?? []).flatMap((t) => (t.conversation_id ? [[t.conversation_id, t] as const] : [])));
 }
 
 /*
@@ -100,6 +119,7 @@ function Row({
   drafted,
   inboxes,
   selection,
+  ticket,
 }: {
   view: string;
   conversation: Conversation;
@@ -108,6 +128,7 @@ function Row({
   drafted: boolean;
   inboxes: Parameters<typeof InboxLabel>[0]["inboxes"];
   selection?: SelectionControls;
+  ticket?: Ticket;
 }) {
   const name = customerName(conversation.contact);
   const picked = selection?.ids.has(conversation.id) ?? false;
@@ -160,6 +181,7 @@ function Row({
               </>
             ) : null}
           </span>
+          {ticket ? <TicketMark reference={ticket.reference} type={ticket.type} state={ticket.state} /> : null}
           <InboxLabel inbox={conversation.inbox} inboxes={inboxes} />
         </span>
       </Link>

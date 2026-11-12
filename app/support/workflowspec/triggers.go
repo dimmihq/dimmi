@@ -25,6 +25,7 @@ const (
 	GroupTeam     = "team"
 	GroupDimmi    = "dimmi"
 	GroupSLA      = "sla"
+	GroupTicket   = "ticket"
 	GroupReusable = "reuse"
 )
 
@@ -87,7 +88,7 @@ func customerSteps() []string {
 Triggers returns every trigger in list order.
 */
 func Triggers() []Trigger {
-	return slices.Concat(startTriggers(), duringTriggers(), teamTriggers(), otherTriggers())
+	return slices.Concat(startTriggers(), duringTriggers(), teamTriggers(), ticketTriggers(), otherTriggers())
 }
 
 /*

@@ -28,6 +28,7 @@ import (
 	"github.com/dimmihq/dimmi/framework/ids"
 
 	"github.com/dimmihq/dimmi/app/actions/schedules"
+	"github.com/dimmihq/dimmi/app/actions/tickets"
 	"github.com/dimmihq/dimmi/app/enums"
 	"github.com/dimmihq/dimmi/app/models"
 	"github.com/dimmihq/dimmi/app/support/workflowspec"
@@ -60,6 +61,8 @@ type env struct {
 	Defaults      map[string]string
 	WorkflowStep  *workflowspec.AgentHandling
 	Procedures    []liveProcedure
+	Incidents     []tickets.IncidentBrief
+	TicketTypes   []tickets.AgentType
 	now           time.Time
 }
 
@@ -117,6 +120,7 @@ func (r *Runner) loadEnv(ctx context.Context, tx *database.Tx, args Args) (*env,
 	if err := loadProcedures(ctx, q, e); err != nil {
 		return nil, err
 	}
+	loadTicketContext(ctx, q, e)
 
 	return e, r.loadFacts(ctx, q, e)
 }

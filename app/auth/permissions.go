@@ -186,6 +186,8 @@ func featurePermissionGroups() map[string][]string {
 		"changelog:write":  {"changelog:write"},
 		"feedback:read":    {"feedback:read"},
 		"feedback:write":   {"feedback:write", "feedback:delete"},
+		"tickets:read":     {"tickets:read"},
+		"tickets:write":    {"tickets:write", "tickets:delete"},
 		"engage:read":      {"engage:read"},
 		"engage:write":     {"engage:write", "engage:manage"},
 		"workflows:read":   {"workflows:read"},
@@ -217,7 +219,7 @@ func settingsWritePermissions() []string {
 		"help_centers:delete", "knowledge:manage", "knowledge:sync", "github:manage", "docs_sync:manage",
 		"oauth_grants:manage_any", "agent_access:manage", "feedback:manage", "imports:manage", "imports:rollback",
 		"security_policy:manage", "sso:manage", "scim:manage", "redaction:manage", "schedules:manage",
-		"integrations:manage",
+		"integrations:manage", "tickets:manage",
 	}
 }
 

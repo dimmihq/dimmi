@@ -1,0 +1,9 @@
+{"custom_statuses": [
+  {"id": 21, "status_category": "new", "agent_label": "New", "end_user_label": "Submitted", "description": "", "active": true, "default": true},
+  {"id": 22, "status_category": "open", "agent_label": "Open", "end_user_label": "In progress", "description": "", "active": true, "default": true},
+  {"id": 23, "status_category": "open", "agent_label": "Escalated to engineering", "end_user_label": "With our engineers", "description": "", "active": true, "default": false},
+  {"id": 24, "status_category": "pending", "agent_label": "Pending", "end_user_label": "Awaiting your reply", "description": "", "active": true, "default": true},
+  {"id": 25, "status_category": "hold", "agent_label": "On-hold", "end_user_label": "On hold", "description": "", "active": true, "default": true},
+  {"id": 26, "status_category": "solved", "agent_label": "Solved", "end_user_label": "Solved", "description": "", "active": true, "default": true},
+  {"id": 27, "status_category": "open", "agent_label": "Retired", "end_user_label": "Retired", "description": "", "active": false, "default": false}
+]}

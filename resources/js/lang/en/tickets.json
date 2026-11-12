@@ -1,0 +1,68 @@
+{
+  "groups": {
+    "submitted": "Submitted",
+    "in_progress": "In progress",
+    "waiting_customer": "Waiting on customer",
+    "waiting_team": "Waiting on team",
+    "resolved": "Resolved"
+  },
+  "groupHints": {
+    "submitted": "New requests nobody has started.",
+    "in_progress": "Someone is working on it.",
+    "waiting_customer": "Out of reply queues until the customer answers.",
+    "waiting_team": "Another team or an issue holds it.",
+    "resolved": "Done. The conversation closes."
+  },
+  "kinds": {
+    "customer": "Customer ticket",
+    "back_office": "Back-office ticket",
+    "tracker": "Tracker",
+    "incident": "Incident"
+  },
+  "kindHints": {
+    "customer": "The customer's own request. They see its state and can reply.",
+    "back_office": "Internal work for another team, linked to a customer ticket.",
+    "tracker": "One problem many customers report. Update it once, everyone hears.",
+    "incident": "An outage. Tracks who is affected and what they are told."
+  },
+  "dataTypes": {
+    "short_text": "Short text",
+    "long_text": "Long text",
+    "number": "Number",
+    "decimal": "Decimal",
+    "currency": "Currency",
+    "boolean": "Yes or no",
+    "date": "Date",
+    "single_choice": "Single choice",
+    "multiple_choice": "Multiple choice",
+    "file": "File",
+    "member": "Teammate",
+    "company": "Company"
+  },
+  "priorities": {
+    "none": "No priority",
+    "low": "Low",
+    "medium": "Medium",
+    "high": "High",
+    "urgent": "Urgent"
+  },
+  "issueStatuses": {
+    "backlog": "Backlog",
+    "unstarted": "Not started",
+    "started": "In progress",
+    "done": "Done",
+    "canceled": "Canceled"
+  },
+  "views": {
+    "group": "Tickets",
+    "all": "All tickets",
+    "waiting": "Waiting on team",
+    "trackers": "Trackers",
+    "incidents": "Incidents"
+  },
+  "errors": {
+    "conflict": "Someone changed this ticket since you opened it.",
+    "reload": "Load the latest",
+    "missing": "Fill this in first."
+  }
+}

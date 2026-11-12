@@ -20,6 +20,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"maps"
 	"strconv"
 	"strings"
 
@@ -51,7 +52,7 @@ type (
 executors returns the executor of every step kind the engine runs.
 */
 func executors() map[string]executor {
-	return map[string]executor{
+	all := map[string]executor{
 		workflowspec.KindMessage: runMessage, workflowspec.KindButtons: runButtons,
 		workflowspec.KindCollect: runCollect, workflowspec.KindBranch: runBranch, workflowspec.KindWait: runWait,
 		workflowspec.KindAssign: runAssign, workflowspec.KindUnassign: runUnassign, workflowspec.KindTag: runTag,
@@ -61,6 +62,9 @@ func executors() map[string]executor {
 		workflowspec.KindReplyTime: runReplyTime, workflowspec.KindClassify: runClassify,
 		workflowspec.KindRunWorkflow: runRunWorkflow, workflowspec.KindHTTPRequest: runHTTPRequest,
 	}
+	maps.Copy(all, ticketExecutors())
+
+	return all
 }
 
 /*

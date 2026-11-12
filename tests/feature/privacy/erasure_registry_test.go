@@ -37,6 +37,7 @@ func erasedBy() map[string]string {
 		"broadcast_opt_outs":          "deleted with the contact",
 		"contact_topic_subscriptions": "deleted with the contact",
 		"series_enrollments":          "deleted with the contact",
+		"tickets":                     "the contact cleared when the contact is deleted, the conversation handed over",
 	}
 }
 

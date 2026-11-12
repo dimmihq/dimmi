@@ -7,6 +7,7 @@
  * exactly what runs.
  */
 import { stepLook } from "./step-kinds";
+import { ticketSentences } from "./ticket-sentences";
 import { newId, type Path, type Step, type StepKind } from "./workflows";
 
 export type Settings = Record<string, unknown>;
@@ -15,7 +16,8 @@ export const unsetSummary = "Not set up yet";
 
 /*
  * Names turns the ids a step holds into the names its card shows.
- * Workflows and connections are read only by the steps that name them.
+ * Workflows and connections are read only by the steps that name them;
+ * tickets names ticket types, states, trackers and SLA policies.
  */
 export interface Names {
   teams: ReadonlyMap<string, string>;
@@ -23,6 +25,7 @@ export interface Names {
   tags: ReadonlyMap<string, string>;
   workflows?: ReadonlyMap<string, string>;
   connections?: ReadonlyMap<string, string>;
+  tickets?: ReadonlyMap<string, string>;
 }
 
 export const noNames: Names = { teams: new Map(), members: new Map(), tags: new Map() };
@@ -223,7 +226,7 @@ const describers: Partial<Record<StepKind, (step: Step, names: Names) => string>
  */
 export function sentence(step: Step, names: Names): string {
   const kind = step.kind as StepKind;
-  const describer = describers[kind];
+  const describer = describers[kind] ?? ticketSentences[kind];
   if (!describer) {
     return `${stepLook[kind]?.name ?? step.kind}, not available yet`;
   }

@@ -28,7 +28,12 @@ export type StepKind =
   | "snooze"
   | "close"
   | "apply_sla"
-  | "http_request";
+  | "http_request"
+  | "create_ticket"
+  | "set_ticket_state"
+  | "set_ticket_fields"
+  | "escalate"
+  | "add_to_tracker";
 
 export type Step = SpecStep;
 export type Path = SpecPath;
@@ -57,6 +62,12 @@ export const readyKinds: StepKind[] = [
   "snooze",
   "close",
   "http_request",
+  "apply_sla",
+  "create_ticket",
+  "set_ticket_state",
+  "set_ticket_fields",
+  "escalate",
+  "add_to_tracker",
 ];
 
 /*

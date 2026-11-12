@@ -1,0 +1,323 @@
+package helpcenter
+
+/*
+RequestsPage lists the signed-in reader's requests, or their company's
+under its own tab, with a way to open a new one.
+*/
+
+templ RequestsPage(c Center, list Requests, assets templ.Component) {
+	@Layout(c, Meta{Title: "Your requests | " + c.Product, Section: "requests", Trail: []Crumb{{Title: "Requests", Path: "/tickets"}}, NoIndex: true}, templ.NopComponent, assets) {
+		<div class="mx-auto w-full max-w-[48rem] px-5 pt-12 md:pt-16">
+			<header class="stagger flex flex-wrap items-end justify-between gap-6">
+				<div>
+					<h1 class="text-display-4-medium tracking-tight">Your requests</h1>
+					<p class="mt-2 text-title-3-regular text-text-secondary">Follow everything you asked us, and where it stands.</p>
+				</div>
+				if len(list.Types) > 0 {
+					<a href={ Href(c, "/tickets/new") } class="button-brand inline-flex h-9 items-center gap-1.5 rounded-xl px-3.5 text-body-medium outline-none transition focus-visible:ring-2 focus-visible:ring-border-focus-ring">
+						@Icon("edit", "size-4")
+						New request
+					</a>
+				}
+			</header>
+			if list.Company {
+				<nav aria-label="Whose requests" class="mt-8 inline-flex gap-1 rounded-xl bg-background-secondary-default p-1">
+					@requestTab(c, "/tickets", "My requests", list.Scope != "company")
+					@requestTab(c, "/tickets?scope=company", "Company requests", list.Scope == "company")
+				</nav>
+			}
+			if len(list.Items) == 0 {
+				<div class="mt-10 animate-rise rounded-2xl border border-dashed border-border-button-default px-6 py-12 text-center">
+					<span class="mx-auto grid size-11 place-items-center rounded-2xl bg-background-secondary-default text-foreground-icon-secondary">
+						@Icon("ticket", "size-5")
+					</span>
+					<p class="mt-4 text-body-medium">No requests yet</p>
+					<p class="mt-1 text-body-2-regular text-text-tertiary">When you ask us for something, it shows here with where it stands.</p>
+				</div>
+			} else {
+				<ul class="mt-6 animate-rise overflow-hidden rounded-2xl border border-border-button-default bg-background-primary-default">
+					for _, r := range list.Items {
+						<li class="border-separator-border [&+&]:border-t">
+							<a href={ Href(c, "/tickets/"+r.Ref) } class="group flex items-center gap-4 px-4 py-3.5 outline-none transition-colors hover:bg-background-secondary-hover focus-visible:bg-background-secondary-hover">
+								<span class="grid size-8 shrink-0 place-items-center rounded-lg bg-background-secondary-default text-foreground-icon-secondary">
+									@Icon(r.TypeIcon, "size-4")
+								</span>
+								<span class="min-w-0 flex-1">
+									<span class="block truncate text-body-medium text-text-primary">{ r.Title }</span>
+									<span class="block truncate text-body-2-regular text-text-tertiary">
+										{ r.Ref } · { r.Type }
+										if !r.Mine {
+											· shared by your company
+										}
+									</span>
+								</span>
+								@requestPill(r.Label, r.Group)
+								<span class="w-14 shrink-0 text-end text-caption-1-regular text-text-tertiary">{ r.Updated }</span>
+							</a>
+						</li>
+					}
+				</ul>
+			}
+		</div>
+	}
+}
+
+templ requestTab(c Center, path, label string, current bool) {
+	<a href={ Href(c, path) } aria-current={ currentPage(current) } class={ "inline-flex h-8 items-center rounded-lg px-3 text-body-2-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-border-focus-ring " + tabTone(current) }>{ label }</a>
+}
+
+templ requestPill(label, group string) {
+	<span class={ "inline-flex h-6 shrink-0 items-center gap-1.5 rounded-full px-2 text-caption-1-medium " + groupTone(group) }>
+		<span class="size-1.5 rounded-full bg-current" aria-hidden="true"></span>
+		{ label }
+	</span>
+}
+
+/*
+NewRequestPage asks which kind of request the reader has, then shows
+that type's form.
+*/
+
+templ NewRequestPage(c Center, form RequestForm, assets templ.Component) {
+	@Layout(c, Meta{Title: "New request | " + c.Product, Section: "requests", Trail: []Crumb{{Title: "Requests", Path: "/tickets"}, {Title: "New request", Path: "/tickets/new"}}, NoIndex: true}, templ.NopComponent, assets) {
+		<div class="stagger mx-auto w-full max-w-[36rem] px-5 pt-12 md:pt-16">
+			<h1 class="text-display-4-medium tracking-tight">How can we help?</h1>
+			<p class="mt-2 text-title-3-regular text-text-secondary">Pick what fits best, so it reaches the right people.</p>
+			<div class="mt-8 flex flex-col gap-2" role="radiogroup" aria-label="Kind of request">
+				for _, t := range form.Types {
+					<a href={ Href(c, "/tickets/new/"+t.ID) } role="radio" aria-checked={ checked(t.ID == form.Type.ID) } class={ "flex items-center gap-3 rounded-2xl border px-4 py-3 outline-none transition focus-visible:ring-4 focus-visible:ring-tint " + radioTone(t.ID == form.Type.ID) }>
+						<span class="grid size-9 shrink-0 place-items-center rounded-xl bg-background-secondary-default text-foreground-icon-secondary">
+							@Icon(t.Icon, "size-4")
+						</span>
+						<span class="min-w-0 flex-1">
+							<span class="block text-body-medium">{ t.Name }</span>
+							if t.Description != "" {
+								<span class="block text-body-2-regular text-text-tertiary">{ t.Description }</span>
+							}
+						</span>
+						<span class={ "grid size-4 shrink-0 place-items-center rounded-full border " + dotTone(t.ID == form.Type.ID) } aria-hidden="true"></span>
+					</a>
+				}
+			</div>
+			if form.Type.ID != "" {
+				@requestForm(c, form)
+			}
+		</div>
+	}
+}
+
+templ requestForm(c Center, form RequestForm) {
+	<form method="post" action={ Href(c, "/tickets/new/"+form.Type.ID) } class="mt-8 flex animate-rise flex-col gap-5" data-request-form>
+		<input type="hidden" name="key" value={ form.Key }/>
+		if form.Error != "" {
+			<p role="alert" class="rounded-xl bg-tint px-4 py-3 text-body-2-medium text-link">{ form.Error }</p>
+		}
+		<label class="flex flex-col gap-1.5">
+			<span class="text-body-medium">Subject</span>
+			<input type="text" name="title" value={ form.Title } required maxlength="200" placeholder="A short summary" class={ inputClass() }/>
+		</label>
+		<label class="flex flex-col gap-1.5">
+			<span class="text-body-medium">Details</span>
+			<textarea name="description" rows="5" placeholder="Tell us what happened and what you expected." class={ inputClass() + " h-auto py-2.5" }>{ form.Description }</textarea>
+		</label>
+		for _, f := range form.Fields {
+			@requestInput(f)
+		}
+		<div>
+			<button type="submit" class="button-brand inline-flex h-10 cursor-pointer items-center gap-1.5 rounded-xl px-4 text-body-medium outline-none transition focus-visible:ring-2 focus-visible:ring-border-focus-ring">
+				@Icon("send", "size-4")
+				Send request
+			</button>
+		</div>
+	</form>
+}
+
+templ requestInput(f RequestField) {
+	<div class="flex flex-col gap-1.5" data-field={ f.Key } data-show-field={ f.ShowField } data-show-equals={ f.ShowEquals } hidden?={ f.ShowField != "" }>
+		<span class="text-body-medium">
+			{ f.Label }
+			if !f.Required {
+				<span class="text-text-tertiary">(optional)</span>
+			}
+		</span>
+		if f.Description != "" {
+			<span class="text-body-2-regular text-text-tertiary">{ f.Description }</span>
+		}
+		switch f.DataType {
+			case "long_text":
+				<textarea name={ "field." + f.Key } rows="4" required?={ f.Required } aria-label={ f.Label } class={ inputClass() + " h-auto py-2.5" }>{ f.Value }</textarea>
+			case "single_choice":
+				<select name={ "field." + f.Key } required?={ f.Required } aria-label={ f.Label } class={ inputClass() }>
+					<option value="">Choose…</option>
+					for _, o := range f.Options {
+						<option value={ o } selected?={ o == f.Value }>{ o }</option>
+					}
+				</select>
+			case "multiple_choice":
+				<span class="flex flex-wrap gap-2">
+					for _, o := range f.Options {
+						<label class="inline-flex h-8 cursor-pointer items-center gap-2 rounded-lg border border-border-button-default px-3 text-body-2-regular has-[:checked]:border-link has-[:checked]:bg-tint">
+							<input type="checkbox" name={ "field." + f.Key } value={ o } class="accent-[var(--brand)]"/>
+							{ o }
+						</label>
+					}
+				</span>
+			case "boolean":
+				<label class="inline-flex items-center gap-2 text-body-regular">
+					<input type="checkbox" name={ "field." + f.Key } value="true" checked?={ f.Value == "true" }/>
+					Yes
+				</label>
+			case "number", "decimal", "currency":
+				<input type="number" step="any" name={ "field." + f.Key } value={ f.Value } required?={ f.Required } aria-label={ f.Label } class={ inputClass() }/>
+			case "date":
+				<input type="date" name={ "field." + f.Key } value={ f.Value } required?={ f.Required } aria-label={ f.Label } class={ inputClass() }/>
+			default:
+				<input type="text" name={ "field." + f.Key } value={ f.Value } required?={ f.Required } aria-label={ f.Label } class={ inputClass() }/>
+		}
+	</div>
+}
+
+/*
+RequestShowPage shows one request: where it stands, the fields the
+reader sees, the thread and a box to reply in.
+*/
+
+templ RequestShowPage(c Center, p RequestPage, assets templ.Component) {
+	@Layout(c, Meta{Title: p.Title + " | " + c.Product, Section: "requests", Trail: []Crumb{{Title: "Requests", Path: "/tickets"}, {Title: p.Ref, Path: "/tickets/" + p.Ref}}, NoIndex: true}, templ.NopComponent, assets) {
+		<div class="mx-auto w-full max-w-[44rem] px-5 pt-12 md:pt-16">
+			<header class="stagger">
+				<p class="flex items-center gap-2 text-body-2-regular text-text-tertiary">
+					@Icon(p.TypeIcon, "size-4")
+					{ p.Type } · { p.Ref }
+				</p>
+				<h1 class="mt-3 text-title-1-medium tracking-tight">{ p.Title }</h1>
+				<div class="mt-3">
+					@requestPill(p.Label, p.Group)
+				</div>
+			</header>
+			<ol class="mt-8 grid animate-rise grid-cols-3 gap-2" aria-label="Progress">
+				for _, s := range p.Steps {
+					<li aria-current={ currentStep(s.Current) } class="flex flex-col gap-2">
+						<span class={ "h-1.5 rounded-full " + stepTone(s) }></span>
+						<span class={ "text-caption-1-medium " + stepText(s) }>{ s.Label }</span>
+					</li>
+				}
+			</ol>
+			if len(p.Fields) > 0 {
+				<dl class="mt-8 grid animate-rise grid-cols-[minmax(8rem,auto)_1fr] gap-x-6 gap-y-2 text-body-2-regular">
+					for _, f := range p.Fields {
+						<dt class="text-text-tertiary">{ f.Label }</dt>
+						<dd class="text-text-primary">{ f.Value }</dd>
+					}
+				</dl>
+			}
+			<ol class="mt-10 flex flex-col gap-6 animate-rise">
+				for _, m := range p.Messages {
+					<li class={ "flex gap-3 " + mineRow(m.Mine) }>
+						if !m.Mine {
+							@Avatar(m.Author, "size-8 text-caption-1-semibold")
+						}
+						<div class={ "flex max-w-[80%] flex-col gap-1 " + mineAlign(m.Mine) }>
+							<p class="text-caption-1-regular text-text-tertiary">{ m.Author.Name } · { m.At }</p>
+							<div class={ "whitespace-pre-line rounded-2xl px-4 py-2.5 text-body-regular " + bubble(m.Mine) }>{ m.Body }</div>
+						</div>
+					</li>
+				}
+			</ol>
+			<form method="post" action={ Href(c, "/tickets/"+p.Ref+"/messages") } class="mt-10 overflow-hidden rounded-2xl border border-border-button-default bg-background-primary-default shadow-sm transition focus-within:border-border-button-hover focus-within:ring-4 focus-within:ring-tint">
+				if p.Error != "" {
+					<p role="alert" class="bg-tint px-4 py-2 text-body-2-medium text-link">{ p.Error }</p>
+				}
+				<label>
+					<span class="sr-only">Reply</span>
+					<textarea name="body" rows="3" required placeholder="Write a reply…" class="block w-full resize-none bg-transparent px-4 py-3 text-body-regular outline-none placeholder:text-text-placeholder"></textarea>
+				</label>
+				<div class="flex justify-end border-t border-separator-border bg-background-secondary-default px-2.5 py-2">
+					<button type="submit" class="button-brand inline-flex h-8 cursor-pointer items-center gap-1.5 rounded-lg px-3 text-body-2-medium">
+						@Icon("send", "size-3.5")
+						Send
+					</button>
+				</div>
+			</form>
+		</div>
+	}
+}
+
+func inputClass() string {
+	return "h-10 rounded-xl border border-border-button-default bg-background-primary-default px-3 text-body-regular shadow-xs outline-none transition placeholder:text-text-placeholder hover:border-border-button-hover focus:border-border-button-hover focus:ring-4 focus:ring-tint"
+}
+
+func groupTone(group string) string {
+	switch group {
+	case "waiting_customer":
+		return "bg-tint text-link"
+	case "resolved":
+		return "bg-background-secondary-default text-text-tertiary"
+	default:
+		return "bg-background-secondary-default text-text-secondary"
+	}
+}
+
+func tabTone(current bool) string {
+	if current {
+		return "bg-background-primary-default text-text-primary shadow-xs"
+	}
+
+	return "text-text-secondary hover:text-text-primary"
+}
+
+func currentPage(current bool) string {
+	if current {
+		return "page"
+	}
+
+	return "false"
+}
+
+func currentStep(current bool) string {
+	if current {
+		return "step"
+	}
+
+	return "false"
+}
+
+func checked(on bool) string {
+	if on {
+		return "true"
+	}
+
+	return "false"
+}
+
+func radioTone(on bool) string {
+	if on {
+		return "border-link bg-tint"
+	}
+
+	return "border-border-button-default bg-background-primary-default hover:border-border-button-hover"
+}
+
+func dotTone(on bool) string {
+	if on {
+		return "border-[5px] border-link"
+	}
+
+	return "border-border-button-default"
+}
+
+func stepTone(s RequestStep) string {
+	if s.Done || s.Current {
+		return "bg-brand"
+	}
+
+	return "bg-background-secondary-default"
+}
+
+func stepText(s RequestStep) string {
+	if s.Current {
+		return "text-text-primary"
+	}
+
+	return "text-text-tertiary"
+}

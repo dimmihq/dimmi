@@ -1,0 +1,12 @@
+{"type": "ticket", "id": "101", "ticket_id": "1", "category": "Customer",
+ "ticket_attributes": {"_default_title_": "Refund for order 4417", "_default_description_": "The blender arrived broken.", "Order number": "4417", "Refund amount": 49.5, "Reason": "Damaged"},
+ "ticket_state": {"type": "ticket_state", "id": "7003", "category": "in_progress", "internal_label": "Billing review", "external_label": "With our billing team"},
+ "ticket_type": {"type": "ticket_type", "id": "11", "name": "Refund request"},
+ "contacts": {"type": "contact.list", "contacts": [{"type": "contact", "id": "c1", "external_id": "u-1"}]},
+ "admin_assignee_id": "900", "team_assignee_id": "0",
+ "created_at": 1793000000, "updated_at": 1793003600, "open": true,
+ "linked_objects": {"type": "list", "data": [{"type": "ticket", "id": "103", "category": "Tracker"}], "has_more": false, "total_count": 1},
+ "ticket_parts": {"type": "ticket_part.list", "ticket_parts": [
+   {"type": "ticket_part", "id": "p11", "part_type": "comment", "previous_ticket_state": "submitted", "ticket_state": "submitted", "created_at": 1793000600, "body": "<p>On it</p>"},
+   {"type": "ticket_part", "id": "p12", "part_type": "ticket_state_updated_by_admin", "previous_ticket_state": "submitted", "ticket_state": "in_progress", "created_at": 1793003600, "body": null}
+ ], "total_count": 2}}

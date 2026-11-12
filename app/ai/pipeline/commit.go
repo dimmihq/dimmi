@@ -70,6 +70,9 @@ func (r *Runner) commit(ctx context.Context, tx *database.Tx, st *run, d *decisi
 		if err := r.applyChanges(ctx, tx, st); err != nil {
 			return d, err
 		}
+		if err := r.applyTicket(ctx, tx, st, d); err != nil {
+			return d, err
+		}
 	}
 	if err := r.write(ctx, tx, st, d); err != nil {
 		return d, err

@@ -36,6 +36,11 @@ export interface Inbox {
   default_team_id: string | null;
   access: InboxAccess;
   settings: InboxSettings;
+  /*
+   * ticket_type_id is the customer ticket type every new conversation of
+   * the inbox becomes, null when they stay plain conversations.
+   */
+  ticket_type_id?: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -52,11 +57,13 @@ export interface InboxAccess {
 
 /*
  * InboxChange is what an update sends: any of the name, the default team
- * (null for none) and a patch on the settings.
+ * (null for none), the ticket type new conversations become (null for
+ * none) and a patch on the settings.
  */
 export interface InboxChange {
   name?: string;
   default_team_id?: string | null;
+  ticket_type_id?: string | null;
   settings?: Partial<Omit<InboxSettings, "assignment">> & { assignment?: Partial<InboxAssignment> };
 }
 

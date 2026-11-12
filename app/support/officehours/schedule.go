@@ -307,3 +307,41 @@ at returns the local wall time minutes past the day's midnight.
 func at(day time.Time, minutes int) time.Time {
 	return time.Date(day.Year(), day.Month(), day.Day(), minutes/60, minutes%60, 0, 0, day.Location())
 }
+
+/*
+BusinessBetween returns how long the schedule was open between two
+moments, nothing when the end does not come after the start. Each local
+day the span touches adds the part of its ranges inside the span, so
+weekends, holidays and closed nights count for nothing, and a range
+keeps its wall times across a daylight saving change.
+*/
+func (s *Schedule) BusinessBetween(from, to time.Time) time.Duration {
+	if !to.After(from) {
+		return 0
+	}
+
+	var total time.Duration
+
+	local := from.In(s.loc)
+	day := time.Date(local.Year(), local.Month(), local.Day(), 0, 0, 0, 0, s.loc)
+	for !day.After(to) {
+		for _, w := range s.windowsOn(day) {
+			open, end := at(day, w.open), at(day, w.close)
+			if open.Before(from) {
+				open = from
+			}
+
+			if end.After(to) {
+				end = to
+			}
+
+			if end.After(open) {
+				total += end.Sub(open)
+			}
+		}
+
+		day = time.Date(day.Year(), day.Month(), day.Day()+1, 0, 0, 0, 0, s.loc)
+	}
+
+	return total
+}

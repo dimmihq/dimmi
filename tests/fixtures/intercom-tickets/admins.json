@@ -1,0 +1,4 @@
+{"type": "admin.list", "admins": [
+  {"type": "admin", "id": "900", "name": "Workspace owner", "email": "{{owner}}", "away_mode_enabled": false},
+  {"type": "admin", "id": "901", "name": "Gone teammate", "email": "gone@acme.test", "away_mode_enabled": false}
+]}

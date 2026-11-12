@@ -33,7 +33,7 @@ import (
 subject is what conditions are evaluated about: the conversation, its
 contact and company with their tags, the channel, the trigger's data,
 the run's variables, the workspace's default office hours, and its
-saved audiences once a rule names one.
+saved audiences once a rule names one, and its customer ticket.
 */
 type subject struct {
 	conversation     models.Conversation
@@ -49,6 +49,7 @@ type subject struct {
 	hours            *officehours.Schedule
 	saved            *audiences.Resolver
 	events           map[string]eventroll.Summary
+	ticket           *ticketFacts
 }
 
 /*
@@ -80,6 +81,10 @@ func loadSubject(ctx context.Context, q *models.Queries, c models.Conversation) 
 	}
 
 	s.channel = conn.Type
+	if s.ticket, err = loadTicket(ctx, q, c); err != nil {
+		return nil, err
+	}
+
 	err = s.loadTags(ctx, q)
 
 	return s, err
@@ -181,8 +186,10 @@ func (s *subject) Lookup(key string) (any, bool) {
 		v = audiences.EventValue(s.events, rest, s.now)
 	case "office_hours":
 		v = s.officeField(rest)
+	case "ticket":
+		v = s.ticketField(rest)
 	default:
-		v = lookupMap(s.trigger, key)
+		v = texts(lookupMap(s.trigger, key))
 	}
 
 	return audiences.Present(v)

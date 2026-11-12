@@ -1,18 +1,30 @@
 /*
  * Every view of the inbox, grouped as the view picker shows them: the
- * fixed views first, then the workspace's saved views, its teams, its
+ * fixed views first, then the workspace's saved views, its tickets, its teams, its
  * teammates and, once there are two or more, its inboxes, with spam and
  * the trash last. Each view shows how many conversations wait in it.
  * Unassigned shows only to those who can see conversations nobody holds,
  * and the trash only to those who may delete conversations.
  */
-import { RiFilter3Line, RiInbox2Line, RiTeamLine, RiUserLine } from "@remixicon/react";
+import {
+  RiAlarmWarningLine,
+  RiCoupon3Line,
+  RiFilter3Line,
+  RiHourglassLine,
+  RiInbox2Line,
+  RiRouteLine,
+  RiTeamLine,
+  RiUserLine,
+} from "@remixicon/react";
 import { useQuery } from "@tanstack/react-query";
 
 import type { DashboardNavItem } from "@/components/application/dashboard/dashboard-sidebar";
 import { inboxViews, type Page } from "@/features/shell/navigation";
+import { typeIcon } from "@/features/tickets/labels";
+import { ticketViewCount, ticketViewName, typeViews } from "@/features/tickets/views";
 import { type Counts, countsQuery, inboxesQuery } from "@/lib/api/inbox";
 import { teamsQuery } from "@/lib/api/teams";
+import { type TicketType, ticketTypesQuery } from "@/lib/api/tickets";
 import { viewsQuery } from "@/lib/api/views";
 import { callerQuery, membersQuery } from "@/lib/api/workspace";
 
@@ -79,6 +91,40 @@ function fixedGroups(counts: Counts["views"] | undefined, unassigned: boolean, c
 }
 
 /*
+ * ticketGroup is the Tickets group: every open ticket, a view per live
+ * customer and back-office type, the tickets another team holds, and
+ * trackers and incidents. It shows once the workspace has ticket types.
+ */
+export function ticketGroup(types: TicketType[] | undefined): ViewGroup {
+  if (!types || types.length === 0) {
+    return { key: "tickets", label: "Tickets", rows: [] };
+  }
+  const fixedRow = (id: string, icon: ViewRow["icon"]): ViewRow => ({
+    id,
+    label: ticketViewName(id, types) ?? id,
+    icon,
+    count: ticketViewCount(id, types) || undefined,
+  });
+
+  return {
+    key: "tickets",
+    label: "Tickets",
+    rows: [
+      fixedRow("tickets", RiCoupon3Line),
+      ...typeViews(types).map((t) => ({
+        id: t.id,
+        label: t.name,
+        icon: typeIcon(t.icon, t.kind),
+        count: t.open_tickets || undefined,
+      })),
+      fixedRow("tickets-waiting", RiHourglassLine),
+      fixedRow("trackers", RiRouteLine),
+      fixedRow("incidents", RiAlarmWarningLine),
+    ],
+  };
+}
+
+/*
  * viewGroups builds the picker's groups from what the workspace has,
  * leaving out groups with nothing in them and a single inbox.
  */
@@ -87,6 +133,7 @@ export function viewGroups(data: {
   members?: { id: string; status: string; user: { name: string } }[];
   inboxes?: { id: string; name: string }[];
   views?: { id: string; name: string }[];
+  ticketTypes?: TicketType[];
   counts?: Counts["views"];
   unassigned?: boolean;
   canDelete?: boolean;
@@ -97,6 +144,7 @@ export function viewGroups(data: {
   const groups: ViewGroup[] = [
     inbox,
     { key: "views", label: "Views", rows: views.map((v) => row(v.id, v.name, RiFilter3Line, counts?.custom)) },
+    ticketGroup(data.ticketTypes),
     { key: "teams", label: "Teams", rows: teams.map((t) => row(t.id, t.name, RiTeamLine, counts?.teams)) },
     {
       key: "teammates",
@@ -125,6 +173,7 @@ export function useViewGroups(workspace: string, enabled = true): ViewGroup[] {
   const { data: counts } = useQuery({ ...countsQuery(workspace), enabled: on });
   const { data: caller } = useQuery({ ...callerQuery(workspace), enabled: on });
   const { data: views } = useQuery({ ...viewsQuery(workspace), enabled: on });
+  const { data: ticketTypes } = useQuery({ ...ticketTypesQuery(workspace), enabled: on });
   const access = caller?.member;
   const unassigned =
     !access || !["assigned", "teams"].includes(access.conversation_access) || access.conversation_access_unassigned;
@@ -134,6 +183,7 @@ export function useViewGroups(workspace: string, enabled = true): ViewGroup[] {
     members,
     inboxes,
     views,
+    ticketTypes,
     counts: counts?.views,
     unassigned,
     canDelete: access?.permissions.includes("conversations:delete") ?? false,
@@ -150,8 +200,10 @@ export function useViewName(workspace: string, view: string): string | undefined
   const { data: members } = useQuery({ ...membersQuery(workspace), enabled: enabled && view.startsWith("mem_") });
   const { data: inboxes } = useQuery({ ...inboxesQuery(workspace), enabled: enabled && view.startsWith("inbox_") });
   const { data: views } = useQuery({ ...viewsQuery(workspace), enabled: enabled && view.startsWith("cvw_") });
+  const { data: types } = useQuery({ ...ticketTypesQuery(workspace), enabled: enabled && view.startsWith("tktt_") });
 
   return (
+    ticketViewName(view, types) ??
     views?.find((v) => v.id === view)?.name ??
     teams?.find((t) => t.id === view)?.name ??
     members?.find((m) => m.id === view)?.user.name ??

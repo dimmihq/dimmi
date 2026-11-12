@@ -53,6 +53,7 @@ import { Route as DSeriesIndexRouteImport } from './routes/d/series/index'
 import { Route as DSeriesSeriesRouteImport } from './routes/d/series/$series'
 import { Route as DSettingsIndexRouteImport } from './routes/d/settings/index'
 import { Route as DSettingsSectionRouteImport } from './routes/d/settings/$section'
+import { Route as DTicketsTicketRouteImport } from './routes/d/tickets/$ticket'
 import { Route as DWorkflowsIndexRouteImport } from './routes/d/workflows/index'
 import { Route as DWorkflowsWorkflowRouteImport } from './routes/d/workflows/$workflow'
 import { Route as DCustomersListsIndexRouteImport } from './routes/d/customers/_lists/index'
@@ -68,7 +69,9 @@ import { Route as DSettingsIntegrationsIntegrationRouteImport } from './routes/d
 import { Route as DSettingsKnowledgeSourceRouteImport } from './routes/d/settings/knowledge.$source'
 import { Route as DSettingsMessengerWidgetRouteImport } from './routes/d/settings/messenger.$widget'
 import { Route as DSettingsSignaturesScopeRouteImport } from './routes/d/settings/signatures.$scope'
+import { Route as DSettingsSlaPolicyRouteImport } from './routes/d/settings/sla.$policy'
 import { Route as DSettingsTeamsTeamRouteImport } from './routes/d/settings/teams.$team'
+import { Route as DSettingsTicketsTypeRouteImport } from './routes/d/settings/tickets.$type'
 import { Route as DSettingsWebhooksEndpointRouteImport } from './routes/d/settings/webhooks.$endpoint'
 import { Route as DCustomersListsAudiencesIndexRouteImport } from './routes/d/customers/_lists/audiences/index'
 import { Route as DCustomersListsCompaniesIndexRouteImport } from './routes/d/customers/_lists/companies/index'
@@ -294,6 +297,11 @@ const DSettingsSectionRoute = DSettingsSectionRouteImport.update({
   path: '/settings/$section',
   getParentRoute: () => DRouteRoute,
 } as any)
+const DTicketsTicketRoute = DTicketsTicketRouteImport.update({
+  id: '/tickets/$ticket',
+  path: '/tickets/$ticket',
+  getParentRoute: () => DRouteRoute,
+} as any)
 const DWorkflowsIndexRoute = DWorkflowsIndexRouteImport.update({
   id: '/workflows/',
   path: '/workflows/',
@@ -375,9 +383,19 @@ const DSettingsSignaturesScopeRoute =
     path: '/settings/signatures/$scope',
     getParentRoute: () => DRouteRoute,
   } as any)
+const DSettingsSlaPolicyRoute = DSettingsSlaPolicyRouteImport.update({
+  id: '/settings/sla/$policy',
+  path: '/settings/sla/$policy',
+  getParentRoute: () => DRouteRoute,
+} as any)
 const DSettingsTeamsTeamRoute = DSettingsTeamsTeamRouteImport.update({
   id: '/settings/teams/$team',
   path: '/settings/teams/$team',
+  getParentRoute: () => DRouteRoute,
+} as any)
+const DSettingsTicketsTypeRoute = DSettingsTicketsTypeRouteImport.update({
+  id: '/settings/tickets/$type',
+  path: '/settings/tickets/$type',
   getParentRoute: () => DRouteRoute,
 } as any)
 const DSettingsWebhooksEndpointRoute =
@@ -453,6 +471,7 @@ export interface FileRoutesByFullPath {
   '/d/procedures/$procedure': typeof DProceduresProcedureRoute
   '/d/series/$series': typeof DSeriesSeriesRoute
   '/d/settings/$section': typeof DSettingsSectionRoute
+  '/d/tickets/$ticket': typeof DTicketsTicketRoute
   '/d/workflows/$workflow': typeof DWorkflowsWorkflowRoute
   '/d/broadcasts/': typeof DBroadcastsIndexRoute
   '/d/changelog/': typeof DChangelogIndexRoute
@@ -474,7 +493,9 @@ export interface FileRoutesByFullPath {
   '/d/settings/knowledge/$source': typeof DSettingsKnowledgeSourceRoute
   '/d/settings/messenger/$widget': typeof DSettingsMessengerWidgetRoute
   '/d/settings/signatures/$scope': typeof DSettingsSignaturesScopeRoute
+  '/d/settings/sla/$policy': typeof DSettingsSlaPolicyRoute
   '/d/settings/teams/$team': typeof DSettingsTeamsTeamRoute
+  '/d/settings/tickets/$type': typeof DSettingsTicketsTypeRoute
   '/d/settings/webhooks/$endpoint': typeof DSettingsWebhooksEndpointRoute
   '/d/customers/': typeof DCustomersListsIndexRoute
   '/d/inbox/$view/': typeof DInboxViewIndexRoute
@@ -515,6 +536,7 @@ export interface FileRoutesByTo {
   '/d/procedures/$procedure': typeof DProceduresProcedureRoute
   '/d/series/$series': typeof DSeriesSeriesRoute
   '/d/settings/$section': typeof DSettingsSectionRoute
+  '/d/tickets/$ticket': typeof DTicketsTicketRoute
   '/d/workflows/$workflow': typeof DWorkflowsWorkflowRoute
   '/d/broadcasts': typeof DBroadcastsIndexRoute
   '/d/changelog': typeof DChangelogIndexRoute
@@ -536,7 +558,9 @@ export interface FileRoutesByTo {
   '/d/settings/knowledge/$source': typeof DSettingsKnowledgeSourceRoute
   '/d/settings/messenger/$widget': typeof DSettingsMessengerWidgetRoute
   '/d/settings/signatures/$scope': typeof DSettingsSignaturesScopeRoute
+  '/d/settings/sla/$policy': typeof DSettingsSlaPolicyRoute
   '/d/settings/teams/$team': typeof DSettingsTeamsTeamRoute
+  '/d/settings/tickets/$type': typeof DSettingsTicketsTypeRoute
   '/d/settings/webhooks/$endpoint': typeof DSettingsWebhooksEndpointRoute
   '/d/inbox/$view': typeof DInboxViewIndexRoute
   '/d/series/$series/compose/$step': typeof DSeriesSeriesComposeStepRoute
@@ -583,6 +607,7 @@ export interface FileRoutesById {
   '/d/procedures/$procedure': typeof DProceduresProcedureRoute
   '/d/series/$series': typeof DSeriesSeriesRoute
   '/d/settings/$section': typeof DSettingsSectionRoute
+  '/d/tickets/$ticket': typeof DTicketsTicketRoute
   '/d/workflows/$workflow': typeof DWorkflowsWorkflowRoute
   '/d/broadcasts/': typeof DBroadcastsIndexRoute
   '/d/changelog/': typeof DChangelogIndexRoute
@@ -604,7 +629,9 @@ export interface FileRoutesById {
   '/d/settings/knowledge/$source': typeof DSettingsKnowledgeSourceRoute
   '/d/settings/messenger/$widget': typeof DSettingsMessengerWidgetRoute
   '/d/settings/signatures/$scope': typeof DSettingsSignaturesScopeRoute
+  '/d/settings/sla/$policy': typeof DSettingsSlaPolicyRoute
   '/d/settings/teams/$team': typeof DSettingsTeamsTeamRoute
+  '/d/settings/tickets/$type': typeof DSettingsTicketsTypeRoute
   '/d/settings/webhooks/$endpoint': typeof DSettingsWebhooksEndpointRoute
   '/d/customers/_lists/': typeof DCustomersListsIndexRoute
   '/d/inbox/$view/': typeof DInboxViewIndexRoute
@@ -652,6 +679,7 @@ export interface FileRouteTypes {
     | '/d/procedures/$procedure'
     | '/d/series/$series'
     | '/d/settings/$section'
+    | '/d/tickets/$ticket'
     | '/d/workflows/$workflow'
     | '/d/broadcasts/'
     | '/d/changelog/'
@@ -673,7 +701,9 @@ export interface FileRouteTypes {
     | '/d/settings/knowledge/$source'
     | '/d/settings/messenger/$widget'
     | '/d/settings/signatures/$scope'
+    | '/d/settings/sla/$policy'
     | '/d/settings/teams/$team'
+    | '/d/settings/tickets/$type'
     | '/d/settings/webhooks/$endpoint'
     | '/d/customers/'
     | '/d/inbox/$view/'
@@ -714,6 +744,7 @@ export interface FileRouteTypes {
     | '/d/procedures/$procedure'
     | '/d/series/$series'
     | '/d/settings/$section'
+    | '/d/tickets/$ticket'
     | '/d/workflows/$workflow'
     | '/d/broadcasts'
     | '/d/changelog'
@@ -735,7 +766,9 @@ export interface FileRouteTypes {
     | '/d/settings/knowledge/$source'
     | '/d/settings/messenger/$widget'
     | '/d/settings/signatures/$scope'
+    | '/d/settings/sla/$policy'
     | '/d/settings/teams/$team'
+    | '/d/settings/tickets/$type'
     | '/d/settings/webhooks/$endpoint'
     | '/d/inbox/$view'
     | '/d/series/$series/compose/$step'
@@ -781,6 +814,7 @@ export interface FileRouteTypes {
     | '/d/procedures/$procedure'
     | '/d/series/$series'
     | '/d/settings/$section'
+    | '/d/tickets/$ticket'
     | '/d/workflows/$workflow'
     | '/d/broadcasts/'
     | '/d/changelog/'
@@ -802,7 +836,9 @@ export interface FileRouteTypes {
     | '/d/settings/knowledge/$source'
     | '/d/settings/messenger/$widget'
     | '/d/settings/signatures/$scope'
+    | '/d/settings/sla/$policy'
     | '/d/settings/teams/$team'
+    | '/d/settings/tickets/$type'
     | '/d/settings/webhooks/$endpoint'
     | '/d/customers/_lists/'
     | '/d/inbox/$view/'
@@ -1130,6 +1166,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DSettingsSectionRouteImport
       parentRoute: typeof DRouteRoute
     }
+    '/d/tickets/$ticket': {
+      id: '/d/tickets/$ticket'
+      path: '/tickets/$ticket'
+      fullPath: '/d/tickets/$ticket'
+      preLoaderRoute: typeof DTicketsTicketRouteImport
+      parentRoute: typeof DRouteRoute
+    }
     '/d/workflows/': {
       id: '/d/workflows/'
       path: '/workflows'
@@ -1235,11 +1278,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DSettingsSignaturesScopeRouteImport
       parentRoute: typeof DRouteRoute
     }
+    '/d/settings/sla/$policy': {
+      id: '/d/settings/sla/$policy'
+      path: '/settings/sla/$policy'
+      fullPath: '/d/settings/sla/$policy'
+      preLoaderRoute: typeof DSettingsSlaPolicyRouteImport
+      parentRoute: typeof DRouteRoute
+    }
     '/d/settings/teams/$team': {
       id: '/d/settings/teams/$team'
       path: '/settings/teams/$team'
       fullPath: '/d/settings/teams/$team'
       preLoaderRoute: typeof DSettingsTeamsTeamRouteImport
+      parentRoute: typeof DRouteRoute
+    }
+    '/d/settings/tickets/$type': {
+      id: '/d/settings/tickets/$type'
+      path: '/settings/tickets/$type'
+      fullPath: '/d/settings/tickets/$type'
+      preLoaderRoute: typeof DSettingsTicketsTypeRouteImport
       parentRoute: typeof DRouteRoute
     }
     '/d/settings/webhooks/$endpoint': {
@@ -1396,6 +1453,7 @@ interface DRouteRouteChildren {
   DProceduresProcedureRoute: typeof DProceduresProcedureRoute
   DSeriesSeriesRoute: typeof DSeriesSeriesRoute
   DSettingsSectionRoute: typeof DSettingsSectionRoute
+  DTicketsTicketRoute: typeof DTicketsTicketRoute
   DWorkflowsWorkflowRoute: typeof DWorkflowsWorkflowRoute
   DBroadcastsIndexRoute: typeof DBroadcastsIndexRoute
   DInboxIndexRoute: typeof DInboxIndexRoute
@@ -1409,7 +1467,9 @@ interface DRouteRouteChildren {
   DSettingsKnowledgeSourceRoute: typeof DSettingsKnowledgeSourceRoute
   DSettingsMessengerWidgetRoute: typeof DSettingsMessengerWidgetRoute
   DSettingsSignaturesScopeRoute: typeof DSettingsSignaturesScopeRoute
+  DSettingsSlaPolicyRoute: typeof DSettingsSlaPolicyRoute
   DSettingsTeamsTeamRoute: typeof DSettingsTeamsTeamRoute
+  DSettingsTicketsTypeRoute: typeof DSettingsTicketsTypeRoute
   DSettingsWebhooksEndpointRoute: typeof DSettingsWebhooksEndpointRoute
   DSeriesSeriesComposeStepRoute: typeof DSeriesSeriesComposeStepRoute
   DSettingsEmailAddressesAddressRoute: typeof DSettingsEmailAddressesAddressRoute
@@ -1431,6 +1491,7 @@ const DRouteRouteChildren: DRouteRouteChildren = {
   DProceduresProcedureRoute: DProceduresProcedureRoute,
   DSeriesSeriesRoute: DSeriesSeriesRoute,
   DSettingsSectionRoute: DSettingsSectionRoute,
+  DTicketsTicketRoute: DTicketsTicketRoute,
   DWorkflowsWorkflowRoute: DWorkflowsWorkflowRoute,
   DBroadcastsIndexRoute: DBroadcastsIndexRoute,
   DInboxIndexRoute: DInboxIndexRoute,
@@ -1444,7 +1505,9 @@ const DRouteRouteChildren: DRouteRouteChildren = {
   DSettingsKnowledgeSourceRoute: DSettingsKnowledgeSourceRoute,
   DSettingsMessengerWidgetRoute: DSettingsMessengerWidgetRoute,
   DSettingsSignaturesScopeRoute: DSettingsSignaturesScopeRoute,
+  DSettingsSlaPolicyRoute: DSettingsSlaPolicyRoute,
   DSettingsTeamsTeamRoute: DSettingsTeamsTeamRoute,
+  DSettingsTicketsTypeRoute: DSettingsTicketsTypeRoute,
   DSettingsWebhooksEndpointRoute: DSettingsWebhooksEndpointRoute,
   DSeriesSeriesComposeStepRoute: DSeriesSeriesComposeStepRoute,
   DSettingsEmailAddressesAddressRoute: DSettingsEmailAddressesAddressRoute,

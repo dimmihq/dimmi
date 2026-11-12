@@ -1,0 +1,4 @@
+{"event": {"id": "ev-3", "event_type": "incident.resolved", "resource_type": "incident",
+ "data": {"id": "PD123", "type": "incident", "number": 501, "title": "Checkout API 5xx",
+   "html_url": "https://acme.pagerduty.com/incidents/PD123", "status": "resolved", "urgency": "high",
+   "service": {"id": "SVC1", "summary": "Checkout"}}}}

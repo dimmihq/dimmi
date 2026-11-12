@@ -271,7 +271,7 @@ func (q *Queries) MentionsMember(ctx context.Context, arg MentionsMemberParams) 
 const setInboxAccessMode = `-- name: SetInboxAccessMode :one
 UPDATE inboxes SET access = $1, updated_at = $2
 WHERE workspace_id = $3 AND id = $4
-RETURNING id, workspace_id, name, default_team_id, settings, deleted_at, created_at, updated_at, access, schedule_id
+RETURNING id, workspace_id, name, default_team_id, settings, deleted_at, created_at, updated_at, access, schedule_id, ticket_type_id
 `
 
 type SetInboxAccessModeParams struct {
@@ -302,6 +302,7 @@ func (q *Queries) SetInboxAccessMode(ctx context.Context, arg SetInboxAccessMode
 		&i.UpdatedAt,
 		&i.Access,
 		&i.ScheduleID,
+		&i.TicketTypeID,
 	)
 	return i, err
 }

@@ -155,8 +155,14 @@ func (c *InboxController) Update(ctx context.Context, in *requests.UpdateInboxRe
 		return nil, err
 	}
 
+	ticketType, err := c.ticketType(in)
+	if err != nil {
+		return nil, err
+	}
+
 	inbox, err := c.Change.Handle(ctx, inboxes.UpdateInboxInput{
 		Membership: membership(ctx), InboxID: id, Name: in.Body.Name, DefaultTeam: team, Settings: settings,
+		TicketType: ticketType,
 	})
 	if err != nil {
 		return nil, err
@@ -213,6 +219,27 @@ func (c *InboxController) defaultTeam(in *requests.UpdateInboxRequest) (*inboxes
 	}
 
 	return &inboxes.TeamChoice{ID: &team}, nil
+}
+
+/*
+ticketType reads the ticket type the update asks for: nil to keep it, a
+choice without an id when it is sent as null.
+*/
+func (c *InboxController) ticketType(in *requests.UpdateInboxRequest) (*inboxes.TicketTypeChoice, error) {
+	if requests.Nulls(in.RawBody)["ticket_type_id"] {
+		return &inboxes.TicketTypeChoice{}, nil
+	}
+
+	if in.Body.TicketTypeID == nil {
+		return nil, nil
+	}
+
+	t, err := c.IDs.Decode(string(models.PrefixTicketType), *in.Body.TicketTypeID)
+	if err != nil {
+		return nil, exceptions.ErrInboxTicketTypeInvalid
+	}
+
+	return &inboxes.TicketTypeChoice{ID: &t}, nil
 }
 
 /*

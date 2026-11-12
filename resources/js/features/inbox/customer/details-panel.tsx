@@ -2,7 +2,8 @@
  * What a teammate needs beside the thread. Its header holds the moves
  * they make on the case, in one Actions menu beside the close button. Below, in BoardUI's divided accordion straight on the panel,
  * who the customer is, their company and their other conversations, all
- * read from the conversation's context in one request, and the feature
+ * read from the conversation's context in one request, its ticket when
+ * it is one (or the trackers it joined), and the feature
  * requests the conversation was linked to. A section only
  * shows when it has something to say.
  */
@@ -13,6 +14,7 @@ import { Accordion, AccordionItem } from "@/components/base/accordion/accordion"
 import { IconButton } from "@/components/base/buttons/icon-button";
 import { ConversationRequests } from "@/features/feedback/conversation-requests";
 import { PageHeader, Panel, ScrollArea } from "@/features/shell/page";
+import { TicketPanel } from "@/features/tickets/ticket-panel";
 import { contextQuery } from "@/lib/api/customers";
 import type { Conversation } from "@/lib/api/inbox";
 import { callerQuery, membersQuery } from "@/lib/api/workspace";
@@ -81,11 +83,13 @@ export function DetailsPanel({
   conversation,
   caze,
   onClose,
+  onConvert,
 }: {
   workspace: string;
   conversation: Conversation;
   caze: CaseControls;
   onClose: () => void;
+  onConvert?: () => void;
 }) {
   const { data: members = [] } = useQuery(membersQuery(workspace));
   const { data: caller } = useQuery(callerQuery(workspace));
@@ -108,6 +112,7 @@ export function DetailsPanel({
           <CaseTags workspace={workspace} conversation={conversation} caze={caze} />
           <RatingSection workspace={workspace} conversation={conversation.id} />
         </div>
+        <TicketPanel workspace={workspace} conversation={conversation.id} onConvert={onConvert ?? (() => undefined)} />
         <Customer workspace={workspace} conversation={conversation} />
       </ScrollArea>
     </Panel>

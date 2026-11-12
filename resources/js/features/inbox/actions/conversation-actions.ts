@@ -1,13 +1,15 @@
 /*
  * The moves on the open conversation: walking the list, closing,
  * reopening, snoozing, taking it, marking it unread or as spam, merging
- * it into another, moving it to the trash, and how the thread reads.
+ * it into another, turning it into a ticket, moving it to the trash, and
+ * how the thread reads.
  */
 import {
   RiAlarmLine,
   RiArrowDownLine,
   RiArrowUpLine,
   RiCheckboxCircleLine,
+  RiCoupon3Line,
   RiDeleteBinLine,
   RiEyeOffLine,
   RiLayoutRightLine,
@@ -127,6 +129,16 @@ export const conversationActions: InboxAction[] = [
     icon: RiMergeCellsHorizontal,
     when: (ctx) => ctx.conversation !== null,
     run: (ctx) => ctx.conversation?.merge(),
+  },
+  {
+    id: "conversation.ticket",
+    label: "Convert to ticket",
+    group: "Conversation",
+    icon: RiCoupon3Line,
+    shortcut: "t",
+    keys: ["T"],
+    when: (ctx) => ctx.conversation !== null,
+    run: (ctx) => ctx.conversation?.ticket(),
   },
   {
     id: "conversation.trash",

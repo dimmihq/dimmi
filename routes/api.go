@@ -130,6 +130,10 @@ func featureRoutes(workspace *routing.Router, a *app.App) {
 	eventRoutes(workspace, a)
 	slackChannelRoutes(workspace, a)
 	slackRoomRoutes(workspace, a)
+	ticketRoutes(workspace, a)
+	incidentRoutes(workspace, a)
+	slaRoutes(workspace, a)
+	ticketIssueRoutes(workspace, a)
 }
 
 /*

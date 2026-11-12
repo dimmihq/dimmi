@@ -1,0 +1,6 @@
+{"data": {"team": {"states": {"nodes": [
+  {"id": "st-backlog", "name": "Backlog", "type": "backlog", "position": 0},
+  {"id": "st-progress", "name": "In Progress", "type": "started", "position": 1},
+  {"id": "st-done", "name": "Done", "type": "completed", "position": 2},
+  {"id": "st-canceled", "name": "Canceled", "type": "canceled", "position": 3}
+]}}}}

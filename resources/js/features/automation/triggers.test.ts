@@ -23,7 +23,13 @@ describe("triggers", () => {
 
   it("leaves out triggers that do not run yet", () => {
     expect(triggersIn("during", "rates")).toEqual([]);
-    expect(triggersIn("sla")).toEqual([]);
+  });
+
+  it("offers the service level and ticket triggers", () => {
+    expect(triggersIn("sla")).toEqual(["sla.warning", "sla.breached"]);
+    expect(triggersIn("ticket", "loop")).toEqual(["ticket.close_loop"]);
+    expect(allowsStep("ticket.close_loop", "message")).toBe(true);
+    expect(allowsStep("ticket.field_changed", "message")).toBe(false);
   });
 
   it("offers dimmi's triggers and reusable workflows", () => {

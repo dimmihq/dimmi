@@ -18,7 +18,7 @@ export const sourceLocale = "en";
 /*
  * namespaces are the message files of each language.
  */
-export const namespaces = ["common", "settings"] as const;
+export const namespaces = ["common", "settings", "sla", "tickets", "trackers"] as const;
 
 const bundled = import.meta.glob<ResourceLanguage>("../../lang/en/*.json", { eager: true, import: "default" });
 const chunks = import.meta.glob<ResourceLanguage>(["../../lang/*/*.json", "!../../lang/en/*.json"], {

@@ -26,5 +26,6 @@ func devCommands(a *app.App) []foundation.Command {
 		SeriesDemoCommand{App: a},
 		InboxDemoCommand{App: a},
 		InboxDemoCommand{App: a},
+		TicketsDemoCommand{App: a},
 	}
 }

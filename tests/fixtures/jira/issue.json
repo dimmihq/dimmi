@@ -1,0 +1,3 @@
+{"id": "10001", "key": "PAY-12", "fields": {"summary": "Refunds fail for annual plans",
+ "status": {"id": "1", "name": "To Do", "statusCategory": {"key": "new"}},
+ "project": {"id": "100", "name": "Payments"}, "resolution": null}}

@@ -625,6 +625,8 @@ linters:
         linters: [funlen]           # test tables are long by nature; gocognit still applies
       - linters: [lll]
         source: https?://
+      - path: ^app/integrations/trackers/
+        linters: [tagliatelle, interfacebloat] # tools' wire formats are camelCase; the contract mirrors each tool
 
 issues:
   max-issues-per-linter: 0

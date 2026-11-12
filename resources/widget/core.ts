@@ -44,6 +44,7 @@ import { Live } from "./lib/live";
 import { type Config, fromConfig, links } from "./lib/map";
 import { report } from "./lib/report";
 import { loadThread } from "./lib/threads";
+import { loadTickets, tickets } from "./lib/tickets";
 import { defaults, merge, type Options, type OptionsUpdate } from "./options";
 import { render, style } from "./render";
 import type { Command, DimmiWindow, Queue } from "./settings";
@@ -110,6 +111,21 @@ export function boot(win: Window & DimmiWindow, doc: Document): Widget | undefin
   let sample: Content = blank;
   let ready: Promise<void> = Promise.resolve();
   let language = queuedLanguage(win);
+  let ticketType = "";
+
+  /*
+   * openTicket draws a request type's form on the request page, once
+   * the requests chunk arrived.
+   */
+  const openTicket = (id: string) => {
+    ticketType = id;
+    void loadTickets(root).then((parts) => {
+      const type = (live ? live.content() : sample).ticket_types?.find((each) => each.id === id);
+      if (type) {
+        parts.openForm(root, type, options.texts, live);
+      }
+    });
+  };
 
   const draw = () => {
     const before = find();
@@ -133,6 +149,40 @@ export function boot(win: Window & DimmiWindow, doc: Document): Widget | undefin
       find()?.restore(tab);
     } else {
       find()?.show(tab);
+    }
+    drawTickets(tab);
+  };
+
+  /*
+   * drawTickets asks for the requests chunk once there is a request type,
+   * an incident or a request to show, and puts an open form back.
+   */
+  const drawTickets = (tab: string) => {
+    const shown = live ? live.content() : sample;
+    const wanted = shown.ticket_types?.length || shown.incidents?.length || shown.conversations.some((c) => c.ticket);
+    if (!tickets() && wanted) {
+      void loadTickets(root).then(() => {
+        draw();
+        live?.redraw();
+      });
+    }
+    if (tab === "ticket" && ticketType) {
+      openTicket(ticketType);
+    }
+  };
+
+  /*
+   * ticketClick opens a request type's form, or filters the Messages
+   * list to open requests.
+   */
+  const ticketClick = (target: Element | null) => {
+    const ticket = target?.closest<HTMLElement>("[data-ticket-type]")?.dataset.ticketType;
+    if (ticket) {
+      openTicket(ticket);
+    }
+    const filter = target?.closest<HTMLElement>("[data-ticket-filter]")?.dataset.ticketFilter;
+    if (filter) {
+      live?.filterOpen(filter === "open");
     }
   };
 
@@ -305,6 +355,7 @@ export function boot(win: Window & DimmiWindow, doc: Document): Widget | undefin
       }
     });
     root.addEventListener("dimmi:typing", () => live?.typing(true));
+    root.addEventListener("dimmi:open", () => void live?.loadTicketing());
     root.addEventListener("dimmi:view", (event) => {
       void live?.viewed((event as CustomEvent<{ article: string }>).detail.article);
     });
@@ -325,6 +376,7 @@ export function boot(win: Window & DimmiWindow, doc: Document): Widget | undefin
       verifyClick(target);
       articleClick(event, target);
       retryClick(live, target);
+      ticketClick(target);
       const card = target?.closest<HTMLElement>("[data-call]");
       const decision = card?.dataset.decision;
       if (card?.dataset.call && (decision === "confirmed" || decision === "canceled")) {
@@ -365,7 +417,7 @@ export function boot(win: Window & DimmiWindow, doc: Document): Widget | undefin
   };
 
   if (settings.preview) {
-    ready = Promise.all([import("./preview"), loadThread(root)]).then(([loaded]) => {
+    ready = Promise.all([import("./preview"), loadThread(root), loadTickets(root)]).then(([loaded]) => {
       preview = loaded;
       sample = loaded.sample;
       mount();

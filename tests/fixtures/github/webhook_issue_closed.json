@@ -1,0 +1,3 @@
+{"action": "closed", "repository": {"full_name": "acme/app"},
+ "issue": {"number": 88, "title": "Invoices show the wrong tax", "html_url": "https://github.com/acme/app/issues/88",
+   "state": "closed", "state_reason": "completed", "assignees": []}}

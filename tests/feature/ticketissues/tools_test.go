@@ -1,0 +1,71 @@
+package ticketissues_test
+
+import (
+	"testing"
+
+	"github.com/stretchr/testify/require"
+
+	"github.com/dimmihq/dimmi/framework/testkit"
+)
+
+func TestJiraIssues(t *testing.T) {
+	t.Parallel()
+
+	t.Run("a linked issue follows Jira to close the loop, or won't fix", func(t *testing.T) {
+		t.Parallel()
+
+		d := newDesk(t)
+		d.connect(t, "jira", "jira_oauth_token")
+		tracker := d.tracker(t, "Refunds fail", "ann")
+
+		d.Owner.PostJSON("/api/v1/tickets/"+tracker+"/issues", testkit.JSON{
+			"url": "https://acme.atlassian.net/browse/PAY-12",
+		}).AssertCreated().AssertJSONPath("data.url", "https://acme.atlassian.net/browse/PAY-12")
+
+		d.jiraDelivery(t, "webhook_issue_done.json").AssertOK()
+		d.Owner.GetJSON("/api/v1/tickets/"+tracker).AssertOK().AssertJSONPath("data.state.name", "Close the loop")
+
+		d.jiraDelivery(t, "webhook_issue_wont_do.json").AssertOK()
+		d.Owner.GetJSON("/api/v1/tickets/"+tracker).AssertOK().AssertJSONPath("data.state.name", "Won't fix")
+	})
+
+	t.Run("a delivery without the app's token is refused", func(t *testing.T) {
+		t.Parallel()
+
+		d := newDesk(t)
+		d.TC.Client().Send("POST", "/webhooks/jira", []byte(`{}`)).AssertStatus(401)
+	})
+}
+
+func TestPagerDutyAndRootly(t *testing.T) {
+	t.Parallel()
+
+	t.Run("a PagerDuty incident is mirrored, acknowledged as identified and resolved", func(t *testing.T) {
+		t.Parallel()
+
+		d := newDesk(t)
+		installation := d.keyTool(t, "pagerduty")
+
+		d.pagerDutyDelivery(t, installation, "webhook_triggered.json").AssertOK()
+		list := d.Owner.GetJSON("/api/v1/tickets?kind=incident").AssertOK()
+		require.Equal(t, 1, count(list))
+		incident := list.String("data.0.id")
+
+		d.pagerDutyDelivery(t, installation, "webhook_acknowledged.json").AssertOK()
+		d.Owner.GetJSON("/api/v1/tickets/"+incident).AssertOK().AssertJSONPath("data.state.name", "Identified")
+
+		d.pagerDutyDelivery(t, installation, "webhook_resolved.json").AssertOK()
+		d.Owner.GetJSON("/api/v1/tickets/"+incident).AssertOK().AssertJSONPath("data.state.group", "resolved")
+	})
+
+	t.Run("a critical Rootly incident is mirrored", func(t *testing.T) {
+		t.Parallel()
+
+		d := newDesk(t)
+		installation := d.keyTool(t, "rootly")
+
+		d.rootlyDelivery(t, installation, "webhook_incident_created.json").AssertOK()
+		d.Owner.GetJSON("/api/v1/tickets?kind=incident").AssertOK().
+			AssertJSONPath("data.0.title", "Payments degraded").AssertJSONPath("data.0.issues.0.key", "#55")
+	})
+}
