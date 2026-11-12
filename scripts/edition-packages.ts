@@ -18,7 +18,8 @@ const editionNames = /\b(BuiltEdition|EditionCloud|EditionSelfHost)\b/;
 type Listed = { importPath: string; dir: string; files: string[]; tests: string[] };
 
 function list(tags: string[]): Map<string, Listed> {
-  const format = '{{.ImportPath}}\t{{.Dir}}\t{{join .GoFiles ","}}\t{{join .TestGoFiles ","}},{{join .XTestGoFiles ","}}';
+  const format =
+    '{{.ImportPath}}\t{{.Dir}}\t{{join .GoFiles ","}}\t{{join .TestGoFiles ","}},{{join .XTestGoFiles ","}}';
   const output = execFileSync("go", ["list", ...tags, "-f", format, "./..."], { encoding: "utf8" });
   const packages = new Map<string, Listed>();
 
