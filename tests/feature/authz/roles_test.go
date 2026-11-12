@@ -26,7 +26,7 @@ func memberRows() []string {
 		"github:read", "ai:read", "ai:write", "ai_actions:read", "ai_action_calls:approve", "changelog:read",
 		"changelog:write", "feedback:read", "feedback:write", "engage:read", "engage:write", "conversations:assign",
 		"conversations:merge", "workflows:read", "workflows:run", "audiences:read", "broadcasts:read",
-		"broadcasts:write", "series:read", "series:write",
+		"broadcasts:write", "series:read", "series:write", "tickets:read", "tickets:write",
 	}
 }
 
@@ -49,6 +49,7 @@ func adminRows() []string {
 		"members:import", "security_policy:manage", "roles:manage", "redaction:manage",
 		"conversations:export", "conversations:manage_notes", "contacts:export", "workflows:manage", "schedules:manage",
 		"audiences:manage", "attributes:manage", "integrations:manage", "broadcasts:send", "series:publish",
+		"tickets:delete", "tickets:manage",
 	}
 }
 

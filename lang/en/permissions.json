@@ -379,6 +379,22 @@
     "label": "Manage tags",
     "description": "Create, rename and delete tags."
   },
+  "tickets:delete": {
+    "label": "Delete tickets",
+    "description": "Move tickets to the trash and restore them."
+  },
+  "tickets:manage": {
+    "label": "Set up tickets",
+    "description": "Manage ticket types, fields and states."
+  },
+  "tickets:read": {
+    "label": "Read tickets",
+    "description": "See tickets, trackers, incidents and their history."
+  },
+  "tickets:write": {
+    "label": "Work tickets",
+    "description": "Create and update tickets, link them and message linked customers."
+  },
   "tokens:manage_any": {
     "label": "Manage all tokens",
     "description": "See and revoke anyone's API tokens."

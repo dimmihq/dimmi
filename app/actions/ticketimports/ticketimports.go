@@ -90,8 +90,15 @@ func (i *Importer) Import(ctx context.Context, m authz.Membership, src Source) (
 
 	ctx = tenancy.With(ctx, m.Workspace.ID.String())
 
-	row, err := models.New(i.DB).CreateTicketImport(ctx, models.CreateTicketImportParams{
-		WorkspaceID: m.Workspace.ID, Source: src.Name(), CreatedByMemberID: &m.Member.ID, Now: i.Clock.Now(),
+	var row models.TicketImport
+
+	err := i.inTx(ctx, func(ctx context.Context, q *models.Queries) error {
+		var err error
+		row, err = q.CreateTicketImport(ctx, models.CreateTicketImportParams{
+			WorkspaceID: m.Workspace.ID, Source: src.Name(), CreatedByMemberID: &m.Member.ID, Now: i.Clock.Now(),
+		})
+
+		return err
 	})
 	if err != nil {
 		return row, fmt.Errorf("create ticket import: %w", err)
@@ -205,12 +212,14 @@ func (r *run) progress(ctx context.Context, c counts) error {
 	r.pending = nil
 	r.row.TicketsFailed += int32(c.failed) //nolint:gosec // one step counts a handful
 
-	err = models.New(r.importer.DB).RecordTicketImportProgress(ctx, models.RecordTicketImportProgressParams{
-		TypesCreated: int32(c.types), FieldsCreated: int32(c.fields), //nolint:gosec // small counts
-		StatesCreated: int32(c.states), TicketsCreated: int32(c.tickets), //nolint:gosec // small counts
-		TicketsFound: int32(c.found), TicketsFailed: int32(c.failed), //nolint:gosec // small counts
-		LinksCreated: int32(c.links), RowErrors: raw, Now: r.importer.Clock.Now(), //nolint:gosec // small counts
-		WorkspaceID: r.row.WorkspaceID, ID: r.row.ID,
+	err = r.importer.inTx(ctx, func(ctx context.Context, q *models.Queries) error {
+		return q.RecordTicketImportProgress(ctx, models.RecordTicketImportProgressParams{
+			TypesCreated: int32(c.types), FieldsCreated: int32(c.fields), //nolint:gosec // small counts
+			StatesCreated: int32(c.states), TicketsCreated: int32(c.tickets), //nolint:gosec // small counts
+			TicketsFound: int32(c.found), TicketsFailed: int32(c.failed), //nolint:gosec // small counts
+			LinksCreated: int32(c.links), RowErrors: raw, Now: r.importer.Clock.Now(), //nolint:gosec // small counts
+			WorkspaceID: r.row.WorkspaceID, ID: r.row.ID,
+		})
 	})
 	if err != nil {
 		return fmt.Errorf("record ticket import progress: %w", err)
@@ -238,8 +247,15 @@ func (r *run) finish(ctx context.Context, runErr error) (models.TicketImport, er
 		reason = &message
 	}
 
-	row, err := models.New(r.importer.DB).FinishTicketImport(ctx, models.FinishTicketImportParams{
-		Status: status, Error: reason, Now: r.importer.Clock.Now(), WorkspaceID: r.row.WorkspaceID, ID: r.row.ID,
+	var row models.TicketImport
+
+	err := r.importer.inTx(ctx, func(ctx context.Context, q *models.Queries) error {
+		var err error
+		row, err = q.FinishTicketImport(ctx, models.FinishTicketImportParams{
+			Status: status, Error: reason, Now: r.importer.Clock.Now(), WorkspaceID: r.row.WorkspaceID, ID: r.row.ID,
+		})
+
+		return err
 	})
 	if err != nil {
 		return row, errors.Join(runErr, fmt.Errorf("finish ticket import: %w", err))
@@ -283,4 +299,14 @@ func cut(s string, n int) string {
 	}
 
 	return string(runes[:n])
+}
+
+/*
+inTx runs queries in a transaction of the context's workspace, so row
+security sees the tenant.
+*/
+func (i *Importer) inTx(ctx context.Context, fn func(ctx context.Context, q *models.Queries) error) error {
+	return i.DB.Transaction(ctx, func(ctx context.Context, tx *database.Tx) error {
+		return fn(ctx, models.New(tx))
+	})
 }

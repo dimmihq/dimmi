@@ -100,10 +100,15 @@ is left alone.
 */
 func (i *Importer) RunRollback(ctx context.Context, args RollbackArgs) error {
 	ctx = tenancy.With(ctx, args.WorkspaceID.String())
-	q := models.New(i.DB)
+	var row models.TicketImport
 
-	row, err := q.StartTicketImportRollback(ctx, models.StartTicketImportRollbackParams{
-		Now: i.Clock.Now(), WorkspaceID: args.WorkspaceID, ID: args.ImportID,
+	err := i.inTx(ctx, func(ctx context.Context, q *models.Queries) error {
+		var err error
+		row, err = q.StartTicketImportRollback(ctx, models.StartTicketImportRollbackParams{
+			Now: i.Clock.Now(), WorkspaceID: args.WorkspaceID, ID: args.ImportID,
+		})
+
+		return err
 	})
 	if errors.Is(err, database.ErrNotFound) {
 		return nil
@@ -130,7 +135,9 @@ func (i *Importer) RunRollback(ctx context.Context, args RollbackArgs) error {
 		params.Status, params.Error, params.Trashed, params.Archived = "failed", &message, 0, 0
 	}
 
-	return errors.Join(err, q.FinishTicketImportRollback(ctx, params))
+	return errors.Join(err, i.inTx(ctx, func(ctx context.Context, q *models.Queries) error {
+		return q.FinishTicketImportRollback(ctx, params)
+	}))
 }
 
 /*
