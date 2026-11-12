@@ -1,8 +1,11 @@
 #!/usr/bin/env bash
 # Installs and runs dimmi on one server with Docker Compose. Run as root:
 #
-#   curl -fsSL https://raw.githubusercontent.com/dimmihq/dimmi/main/deploy/selfhost/install.sh \
+#   curl -fsSL https://github.com/dimmihq/dimmi/releases/latest/download/install.sh \
 #     | bash -s -- --domain support.example.com --email you@example.com
+#
+# It installs the latest release, or the one --version v1.2.3 names, from
+# that release's Compose bundle and image.
 #
 # With no command it does everything: prepares the server, writes the
 # settings, starts the stack and checks the domain. Safe to run again:
@@ -16,16 +19,16 @@
 #   check     check DNS, HTTPS and /up
 #   admin     create the first account: admin --email E --name N --workspace W
 #   set       add or change settings: set KEY=value ... (or lines on stdin)
-#   update    pull the newest image, migrate and restart
+#   update    move to the latest release (or --version), migrate and restart
 #   status    show the services
 #   logs      follow the logs: logs [service]
 
 set -euo pipefail
 
 DIR="${DIMMI_DIR:-/opt/dimmi}"
-REF="${DIMMI_REF:-main}"
-RAW="https://raw.githubusercontent.com/dimmihq/dimmi/$REF/deploy/selfhost"
+RELEASES="https://github.com/dimmihq/dimmi/releases"
 FILES=(compose.yaml Caddyfile postgres-init.sh .env.example install.sh)
+version="${DIMMI_VERSION:-latest}"
 
 domain="" email="" name="" workspace="" image="" clamav="" skip_prepare="" local_tls=""
 
@@ -103,22 +106,34 @@ APT::Periodic::Unattended-Upgrade "1";' >/etc/apt/apt.conf.d/20auto-upgrades
 }
 
 # Copies the stack's files from beside this script when it runs from a
-# checkout, else downloads them. With "fresh" it always downloads them.
+# checkout. Otherwise it downloads the release's bundle, the first time or
+# whenever asked with "fresh", and points IMAGE at that release's image.
 fetch() {
-  local here="" src="${BASH_SOURCE[0]:-}" f
+  local here="" src="${BASH_SOURCE[0]:-}" f url tmp
   [ -n "$src" ] && [ -f "$src" ] && here="$(dirname "$(readlink -f "$src")")"
   mkdir -p "$DIR"
   chmod 700 "$DIR"
-  for f in "${FILES[@]}"; do
-    if [ "${1:-}" != fresh ] && [ -n "$here" ] && [ "$here" != "$DIR" ] && [ -f "$here/compose.yaml" ]; then
-      cp "$here/$f" "$DIR/$f"
-    elif [ "${1:-}" = fresh ] || [ ! -f "$DIR/$f" ]; then
-      curl -fsSL "$RAW/$f" -o "$DIR/$f.new" || die "could not download $f from $RAW"
-      mv "$DIR/$f.new" "$DIR/$f"
-    fi
-  done
+  if [ "${1:-}" != fresh ] && [ -n "$here" ] && [ "$here" != "$DIR" ] && [ -f "$here/compose.yaml" ]; then
+    for f in "${FILES[@]}"; do cp "$here/$f" "$DIR/$f"; done
+  elif [ "${1:-}" = fresh ] || [ ! -f "$DIR/compose.yaml" ]; then
+    url="$RELEASES/latest/download/dimmi-selfhost.tar.gz"
+    [ "$version" = latest ] || url="$RELEASES/download/$version/dimmi-selfhost.tar.gz"
+    say "Downloading $url"
+    tmp="$(mktemp -d)"
+    curl -fsSL "$url" | tar -xz -C "$tmp" || die "could not download $url; is $version a release?"
+    rm -f "$tmp/.env"
+    cp -R "$tmp/." "$DIR/"
+    rm -rf "$tmp"
+  fi
   chmod +x "$DIR/install.sh" "$DIR/postgres-init.sh"
   if [ "$(id -u)" = 0 ] && [ -d /usr/local/bin ]; then ln -sf "$DIR/install.sh" /usr/local/bin/dimmictl; fi
+}
+
+# The image of the release in $DIR, unless --image names another.
+release_image() {
+  if [ -n "$image" ]; then echo "$image"
+  elif [ -f "$DIR/VERSION" ]; then echo "ghcr.io/dimmihq/dimmi:$(cat "$DIR/VERSION")"
+  else echo "ghcr.io/dimmihq/dimmi:latest"; fi
 }
 
 configure() {
@@ -141,7 +156,7 @@ configure() {
 # them, or use: dimmictl set KEY=value. See .env.example.
 APP_DOMAIN=$domain
 ACME_EMAIL=$email
-IMAGE=${image:-ghcr.io/dimmihq/dimmi:self-host}
+IMAGE=$(release_image)
 POSTGRES_PASSWORD=$(random)
 POSTGRES_OWNER_PASSWORD=$(random)
 POSTGRES_APP_PASSWORD=$(random)
@@ -153,7 +168,7 @@ ENV
   fi
   put "APP_DOMAIN=$domain"
   put "ACME_EMAIL=$email"
-  [ -z "$image" ] || put "IMAGE=$image"
+  put "IMAGE=$(release_image)"
   [ -z "$local_tls" ] || put "CADDY_TLS=tls internal"
   if [ -n "$clamav" ]; then
     put "COMPOSE_PROFILES=clamav"
@@ -242,9 +257,12 @@ admin() {
 }
 
 update() {
-  say "Fetching the newest stack files from $RAW"
+  [ -f "$DIR/.env" ] || die "no $DIR/.env yet: run install first"
+  local before
+  before="$(cat "$DIR/VERSION" 2>/dev/null || echo unknown)"
   fetch fresh
-  say "Pulling the newest images"
+  put "IMAGE=$(release_image)"
+  say "Updating from $before to $(cat "$DIR/VERSION" 2>/dev/null || echo unknown)"
   compose pull --ignore-pull-failures
   start
 }
@@ -268,6 +286,7 @@ if [ "$cmd" != set ] && [ "$cmd" != logs ]; then
       --name) name="${2:?}"; shift 2;;
       --workspace) workspace="${2:?}"; shift 2;;
       --image) image="${2:?}"; shift 2;;
+      --version) version="${2:?}"; shift 2;;
       --dir) DIR="${2:?}"; shift 2;;
       --clamav) clamav=1; shift;;
       --skip-prepare) skip_prepare=1; shift;;

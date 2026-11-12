@@ -11,7 +11,7 @@
 name: dimmi
 
 x-dimmi: &dimmi
-  image: ${IMAGE:-ghcr.io/dimmihq/dimmi:self-host}
+  image: ${IMAGE:-ghcr.io/dimmihq/dimmi:latest}
   restart: unless-stopped
   env_file: [.env]
   environment: &dimmi-env

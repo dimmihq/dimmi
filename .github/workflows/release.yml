@@ -1,0 +1,152 @@
+# Publishes a release: pushing a version tag such as v0.1.0 releases the
+# tagged commit. Run by hand with a version and a commit, it tags that
+# commit and releases it, so a commit staging already proved can ship while
+# main moves on. The packaging (this workflow, deploy/release and
+# deploy/selfhost) always comes from the workflow's own commit.
+#
+# It publishes:
+#   ghcr.io/dimmihq/dimmi:<version> and :latest   self-hosted edition, amd64 and arm64
+#   ghcr.io/dimmihq/dimmi:<version>-cloud         cloud edition
+#   a GitHub Release with the linux binaries, checksums, install.sh and
+#   dimmi-selfhost.tar.gz, the Compose bundle install.sh downloads
+#
+# A version with a suffix, such as v0.2.0-rc.1, is a prerelease: it never
+# moves :latest and install.sh only takes it when asked by name.
+
+name: release
+
+on:
+  push:
+    tags: ["v*.*.*"]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: The version tag to create, such as v0.1.0.
+        required: true
+      ref:
+        description: The commit to release. Empty releases the branch's newest commit.
+        required: false
+
+permissions:
+  contents: write
+  packages: write
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    env:
+      VERSION: ${{ inputs.version || github.ref_name }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          path: pack
+      - uses: actions/checkout@v5
+        with:
+          path: src
+          ref: ${{ inputs.ref || github.sha }}
+          fetch-depth: 0
+          filter: blob:none
+      - name: Check the version and commit
+        run: |
+          [[ "$VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.]+)?$ ]] || { echo "not a version: $VERSION"; exit 1; }
+          if [ "$GITHUB_EVENT_NAME" = workflow_dispatch ] && gh release view "$VERSION" -R "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "$VERSION is already released"; exit 1
+          fi
+          {
+            echo "SHA=$(git -C src rev-parse HEAD)"
+            echo "NUMBER=${VERSION#v}"
+            if [[ "$VERSION" == *-* ]]; then echo "PRERELEASE=true"; else echo "PRERELEASE=false"; fi
+          } >> "$GITHUB_ENV"
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: src/go.mod
+          cache-dependency-path: src/go.sum
+      - uses: pnpm/action-setup@v4
+        with:
+          package_json_file: src/package.json
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: src/pnpm-lock.yaml
+      - name: Build the browser app
+        working-directory: src
+        run: pnpm install --frozen-lockfile && pnpm build
+      - name: Build the binaries
+        working-directory: src
+        run: |
+          for edition in self-host cloud; do
+            tags=""; [ "$edition" = cloud ] && tags=cloud
+            for arch in amd64 arm64; do
+              CGO_ENABLED=0 GOOS=linux GOARCH=$arch go build -trimpath -tags "$tags" -ldflags="-s -w" \
+                -o "../dist/${edition}_linux_${arch}/dimmi" ./cmd/dimmi
+            done
+          done
+      - name: Pack the release files
+        run: |
+          mkdir -p assets bundle
+          for arch in amd64 arm64; do
+            cp src/THIRD_PARTY_NOTICES.md "dist/self-host_linux_${arch}/"
+            tar -czf "assets/dimmi_${NUMBER}_linux_${arch}.tar.gz" -C "dist/self-host_linux_${arch}" .
+          done
+          cp -r pack/deploy/selfhost/. bundle/
+          echo "$NUMBER" > bundle/VERSION
+          tar -czf assets/dimmi-selfhost.tar.gz -C bundle .
+          cp pack/deploy/selfhost/install.sh assets/install.sh
+          (cd assets && sha256sum -- * > checksums.txt)
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ github.token }}
+      - name: Push the self-hosted image
+        uses: docker/build-push-action@v6
+        with:
+          context: dist
+          file: pack/deploy/release/Dockerfile
+          platforms: linux/amd64,linux/arm64
+          build-args: |
+            EDITION=self-host
+            VERSION=${{ env.NUMBER }}
+            REVISION=${{ env.SHA }}
+          push: true
+          tags: |
+            ghcr.io/dimmihq/dimmi:${{ env.NUMBER }}
+            ${{ env.PRERELEASE == 'false' && 'ghcr.io/dimmihq/dimmi:latest' || '' }}
+      - name: Push the cloud image
+        uses: docker/build-push-action@v6
+        with:
+          context: dist
+          file: pack/deploy/release/Dockerfile
+          platforms: linux/amd64,linux/arm64
+          build-args: |
+            EDITION=cloud
+            VERSION=${{ env.NUMBER }}
+            REVISION=${{ env.SHA }}
+          push: true
+          tags: ghcr.io/dimmihq/dimmi:${{ env.NUMBER }}-cloud
+      - name: Publish the GitHub Release
+        run: |
+          cat > notes.md <<NOTES
+          Install on a server, as root:
+
+          \`\`\`bash
+          curl -fsSL https://github.com/$GITHUB_REPOSITORY/releases/download/$VERSION/install.sh \\
+            | bash -s -- --version $VERSION --domain support.example.com --email you@example.com
+          \`\`\`
+
+          Upgrade an install: \`dimmictl update --version $VERSION\`.
+
+          Images: \`ghcr.io/dimmihq/dimmi:$NUMBER\` (self-hosted), \`ghcr.io/dimmihq/dimmi:$NUMBER-cloud\`.
+          Commit: $SHA.
+          NOTES
+          flags=(--title "$VERSION" --notes-file notes.md --target "$SHA" -R "$GITHUB_REPOSITORY")
+          [ "$PRERELEASE" = true ] && flags+=(--prerelease) || flags+=(--latest)
+          gh release create "$VERSION" assets/* "${flags[@]}"

@@ -12,7 +12,10 @@ needed, the app's own, such as `support.example.com`. Files, help centers and
 webhooks are all served from it.
 
 Everything goes through one script, `install.sh`. After the first run it is
-installed as `dimmictl` on the server.
+installed as `dimmictl` on the server. It installs a published release: the
+latest one, or the one `--version v1.2.3` names. Releases are listed at
+https://github.com/dimmihq/dimmi/releases. Never install from the main
+branch.
 
 ## What to ask first
 
@@ -62,9 +65,12 @@ before DNS is ready works too; HTTPS starts as soon as the record resolves.
 On the server, as root:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/dimmihq/dimmi/main/deploy/selfhost/install.sh \
+curl -fsSL https://github.com/dimmihq/dimmi/releases/latest/download/install.sh \
   | bash -s -- --domain support.example.com --email ops@example.com
 ```
+
+To pin a release, add `--version v1.2.3` (and fetch that release's
+`install.sh` from `/releases/download/v1.2.3/install.sh`).
 
 Over SSH as a sudo user, pipe to `sudo bash -s -- ...` instead. Add
 `--clamav` to scan uploads and email attachments for malware.
@@ -76,7 +82,9 @@ It takes 3 to 5 minutes. It:
   80 and 443. It turns off SSH password logins only when a key can already
   log in. Skip all of this with `--skip-prepare` on a server you manage
   yourself (Docker with the compose plugin must be installed).
-- writes `/opt/dimmi` with `compose.yaml`, `Caddyfile` and `.env`. `.env`
+- downloads the release's Compose bundle into `/opt/dimmi` (`compose.yaml`,
+  `Caddyfile`, this skill, `VERSION`) and writes `.env`, pinned to that
+  release's image `ghcr.io/dimmihq/dimmi:<version>`. `.env`
   holds random passwords for Postgres, Valkey and SeaweedFS and the app key.
   They are made once and kept on every later run.
 - starts the stack. A one-off `migrate` service applies the database
@@ -146,13 +154,15 @@ Optional features and their settings:
 ## Running it
 
 ```bash
-dimmictl update          # newest stack files and image, migrate, restart
+dimmictl update                    # latest release: stack files, image, migrate, restart
+dimmictl update --version v1.2.3   # a given release
 dimmictl logs [service]  # follow logs: web, worker, caddy, postgres...
 dimmictl status
 ```
 
 Data lives in Docker volumes (`dimmi_postgres`, `dimmi_seaweedfs`, ...).
-`/opt/dimmi/.env` is the other half: without its `DIMMI_APP__KEY` encrypted
+`cat /opt/dimmi/VERSION` shows the installed release. Take a database backup
+before updating. `/opt/dimmi/.env` is the other half: without its `DIMMI_APP__KEY` encrypted
 data cannot be read. Back up both (see `references/options.md`).
 
 ## When something fails
