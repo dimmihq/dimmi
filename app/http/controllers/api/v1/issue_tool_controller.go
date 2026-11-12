@@ -205,7 +205,6 @@ func (c *IssueToolController) merged(set issues.SyncSettings, in *requests.Updat
 		{b.ProjectID, &set.Project},
 		{b.ServiceID, &set.Service},
 		{b.SeverityID, &set.Severity},
-		{b.MirrorSeverityID, &set.MirrorSeverity},
 		{b.FromEmail, &set.FromEmail},
 		{b.ImpactFieldID, &set.ImpactField},
 		{b.DeployRepository, &set.DeployRepository},
@@ -270,9 +269,7 @@ func (c *IssueToolController) UpdateTicketSettings(ctx context.Context, in *requ
 	b := in.Body
 
 	s, err := c.Issues.UpdateWorkspaceSettings(ctx, membership(ctx), issues.TicketSettingsChange{
-		IncidentMirror:         b.IncidentMirror,
-		IncidentMirrorSeverity: b.IncidentMirrorSeverity, AutoLinkDuplicates: b.AutoLinkDuplicates,
-		SpikeThreshold: b.SpikeThreshold,
+		AutoLinkDuplicates: b.AutoLinkDuplicates, SpikeThreshold: b.SpikeThreshold,
 	})
 	if err != nil {
 		return nil, err

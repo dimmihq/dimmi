@@ -52,7 +52,6 @@ export interface IssueSettings {
   project_id: string;
   service_id: string;
   severity_id: string;
-  mirror_severity_id: string;
   from_email: string;
   impact_field_id: string;
   deploy_repository: string;
@@ -91,8 +90,6 @@ export interface TicketUpdateDraft {
 
 export interface TicketSettings {
   object: "ticket_settings";
-  incident_mirror: boolean;
-  incident_mirror_severity: "all" | "minor" | "major" | "critical";
   auto_link_duplicates: boolean;
   spike_threshold: number;
 }

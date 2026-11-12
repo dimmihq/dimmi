@@ -30,7 +30,6 @@ type UpdateIssueSettingsRequest struct {
 		ProjectID         *string           `json:"project_id,omitempty"         maxLength:"200"`
 		ServiceID         *string           `json:"service_id,omitempty"         maxLength:"200"`
 		SeverityID        *string           `json:"severity_id,omitempty"        maxLength:"200"`
-		MirrorSeverityID  *string           `json:"mirror_severity_id,omitempty" maxLength:"200"`
 		FromEmail         *string           `json:"from_email,omitempty"         maxLength:"320"`
 		ImpactFieldID     *string           `json:"impact_field_id,omitempty"    maxLength:"200"`
 		DeployRepository  *string           `json:"deploy_repository,omitempty"  maxLength:"200"`

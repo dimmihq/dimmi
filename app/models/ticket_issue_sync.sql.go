@@ -475,63 +475,6 @@ func (q *Queries) TicketIssuesAwaitingDeploy(ctx context.Context, arg TicketIssu
 	return items, nil
 }
 
-const ticketIssuesOfExternal = `-- name: TicketIssuesOfExternal :many
-SELECT id, workspace_id, ticket_id, installation_id, provider, external_id, key, url, title, status, status_group, team_name, warning, sync_error, synced_at, created_by_member_id, created_at, updated_at, team_id, severity, done_at, deployed_at, impact_hash FROM ticket_issues WHERE workspace_id = $1 AND provider = $2 AND external_id = $3
-ORDER BY created_at, id
-`
-
-type TicketIssuesOfExternalParams struct {
-	WorkspaceID ids.UUID `json:"workspace_id"`
-	Provider    string   `json:"provider"`
-	ExternalID  string   `json:"external_id"`
-}
-
-// TicketIssuesOfExternal returns the workspace's links to one provider
-// issue.
-func (q *Queries) TicketIssuesOfExternal(ctx context.Context, arg TicketIssuesOfExternalParams) ([]TicketIssue, error) {
-	rows, err := q.db.Query(ctx, ticketIssuesOfExternal, arg.WorkspaceID, arg.Provider, arg.ExternalID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []TicketIssue
-	for rows.Next() {
-		var i TicketIssue
-		if err := rows.Scan(
-			&i.ID,
-			&i.WorkspaceID,
-			&i.TicketID,
-			&i.InstallationID,
-			&i.Provider,
-			&i.ExternalID,
-			&i.Key,
-			&i.Url,
-			&i.Title,
-			&i.Status,
-			&i.StatusGroup,
-			&i.TeamName,
-			&i.Warning,
-			&i.SyncError,
-			&i.SyncedAt,
-			&i.CreatedByMemberID,
-			&i.CreatedAt,
-			&i.UpdatedAt,
-			&i.TeamID,
-			&i.Severity,
-			&i.DoneAt,
-			&i.DeployedAt,
-			&i.ImpactHash,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
 const ticketUpdateDraft = `-- name: TicketUpdateDraft :one
 SELECT id, workspace_id, ticket_id, issue_id, source, reason, body, author_name, status, resolve, update_id, decided_by_member_id, decided_at, created_at, updated_at FROM ticket_update_drafts WHERE workspace_id = $1 AND id = $2 FOR UPDATE
 `

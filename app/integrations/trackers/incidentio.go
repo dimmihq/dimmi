@@ -5,8 +5,7 @@
 |
 | incident.io is connected with an API key and delivers through Svix,
 | signed with the endpoint's own secret. Severities carry a rank, higher
-| the worse, which the mirror threshold compares; statuses fall into
-| categories that map to the five groups. Declaring from dimmi opens a
+| the worse; statuses fall into categories that map to the five groups. Declaring from dimmi opens a
 | public incident; the impact on customers is written to the numeric
 | custom field the workspace picked, when it picked one.
 |

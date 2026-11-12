@@ -167,7 +167,8 @@ func (d desk) linearSent() []string {
 }
 
 /*
-serveIncidentIO answers incident.io's identity and severities.
+serveIncidentIO answers incident.io's identity, severities and incident
+INC-77.
 */
 func (d desk) serveIncidentIO(t *testing.T) {
 	t.Helper()
@@ -175,6 +176,11 @@ func (d desk) serveIncidentIO(t *testing.T) {
 	d.fake.Stub("GET https://api.incident.io/v1/identity", reply(fixture(t, incidentiofixtures.Files, "identity.json")))
 	d.fake.Stub("GET https://api.incident.io/v1/severities",
 		reply(fixture(t, incidentiofixtures.Files, "severities.json")))
+	d.fake.Stub("GET https://api.incident.io/v2/incidents/77", reply([]byte(`{"incident": {"id": "inc-77",
+		"reference": "INC-77", "name": "Sign-in failing for EU customers",
+		"permalink": "https://app.incident.io/acme/incidents/77",
+		"incident_status": {"id": "status-investigating", "name": "Investigating", "category": "live"},
+		"severity": {"id": "sev-major", "name": "Major", "rank": 2}}}`)))
 }
 
 /*

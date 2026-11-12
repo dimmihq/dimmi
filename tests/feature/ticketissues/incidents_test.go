@@ -9,8 +9,8 @@ import (
 )
 
 /*
-connectIncidentIO connects incident.io with a key, pastes its signing
-secret and turns the mirror on from major incidents.
+connectIncidentIO connects incident.io with a key and pastes its
+signing secret.
 */
 func connectIncidentIO(t *testing.T, d desk) string {
 	t.Helper()
@@ -25,29 +25,49 @@ func connectIncidentIO(t *testing.T, d desk) string {
 	settings.AssertJSONPath("data.has_signing_secret", true).
 		AssertJSONPath("data.webhook_url", d.TC.App.Application.Config.App.URL+"/webhooks/incident-io/"+installation)
 
-	d.Owner.PatchJSON("/api/v1/ticket-settings", testkit.JSON{
-		"incident_mirror": true, "incident_mirror_severity": "major",
-	}).AssertOK()
-
 	return installation
+}
+
+/*
+incident declares a dimmi incident by hand.
+*/
+func (d desk) incident(t *testing.T, title string) string {
+	t.Helper()
+
+	return d.Owner.PostJSON("/api/v1/tickets", testkit.JSON{"type_id": d.types["Incident"], "title": title}).
+		AssertCreated().String("data.id")
 }
 
 func TestIncidentTools(t *testing.T) {
 	t.Parallel()
 
-	t.Run("a major incident in incident.io is mirrored and followed to resolved", func(t *testing.T) {
+	t.Run("a new incident in incident.io opens nothing in dimmi", func(t *testing.T) {
 		t.Parallel()
 
 		d := newDesk(t)
 		installation := connectIncidentIO(t, d)
 
 		d.incidentDelivery(t, installation, "incident_created.json").AssertOK()
+		d.incidentDelivery(t, installation, "incident_update.json").AssertOK()
+		d.incidentDelivery(t, installation, "incident_closed.json").AssertOK()
 
-		list := d.Owner.GetJSON("/api/v1/tickets?kind=incident").AssertOK()
-		require.Equal(t, 1, count(list))
-		incident := list.String("data.0.id")
-		d.Owner.GetJSON("/api/v1/tickets/"+incident+"/issues").AssertOK().
-			AssertJSONPath("data.0.key", "INC-77").AssertJSONPath("data.0.provider", "incident_io")
+		require.Equal(t, 0, count(d.Owner.GetJSON("/api/v1/tickets?kind=incident").AssertOK()))
+		require.Equal(t, 0, count(d.Owner.GetJSON("/api/v1/tickets").AssertOK()))
+	})
+
+	t.Run("a linked incident.io incident posts its updates and resolves the dimmi incident", func(t *testing.T) {
+		t.Parallel()
+
+		d := newDesk(t)
+		installation := connectIncidentIO(t, d)
+		incident := d.incident(t, "Sign-in failing")
+
+		d.Owner.PostJSON("/api/v1/tickets/"+incident+"/issues", testkit.JSON{
+			"installation_id": installation, "key": "INC-77",
+		}).AssertCreated().AssertJSONPath("data.key", "INC-77").AssertJSONPath("data.provider", "incident_io")
+
+		d.incidentDelivery(t, installation, "incident_created.json").AssertOK()
+		require.Equal(t, 1, count(d.Owner.GetJSON("/api/v1/tickets?kind=incident").AssertOK()))
 
 		d.incidentDelivery(t, installation, "incident_update.json").AssertOK()
 		d.Owner.GetJSON("/api/v1/tickets/"+incident+"/public-updates").AssertOK().
@@ -56,17 +76,22 @@ func TestIncidentTools(t *testing.T) {
 		d.incidentDelivery(t, installation, "incident_closed.json").AssertOK()
 		d.Owner.GetJSON("/api/v1/tickets/"+incident).AssertOK().AssertJSONPath("data.state.group", "resolved")
 		d.Owner.GetJSON("/api/v1/tickets/"+incident+"/update-drafts").AssertOK().
-			AssertJSONPath("data.0.reason", "incident_resolved")
+			AssertJSONPath("data.0.reason", "incident_resolved").AssertJSONPath("data.0.decided_at", nil)
 	})
 
-	t.Run("an incident below the threshold is not mirrored", func(t *testing.T) {
+	t.Run("a tracker linked to an incident.io incident closes the loop when it resolves", func(t *testing.T) {
 		t.Parallel()
 
 		d := newDesk(t)
 		installation := connectIncidentIO(t, d)
+		tracker := d.tracker(t, "Cannot sign in", "ann")
 
-		d.incidentDelivery(t, installation, "incident_minor.json").AssertOK()
-		require.Equal(t, 0, count(d.Owner.GetJSON("/api/v1/tickets?kind=incident").AssertOK()))
+		d.Owner.PostJSON("/api/v1/tickets/"+tracker+"/issues", testkit.JSON{
+			"installation_id": installation, "url": "https://app.incident.io/acme/incidents/77",
+		}).AssertCreated()
+
+		d.incidentDelivery(t, installation, "incident_closed.json").AssertOK()
+		d.Owner.GetJSON("/api/v1/tickets/"+tracker).AssertOK().AssertJSONPath("data.state.name", "Close the loop")
 	})
 
 	t.Run("a delivery signed with another secret is refused", func(t *testing.T) {
@@ -80,7 +105,7 @@ func TestIncidentTools(t *testing.T) {
 			Send("POST", "/webhooks/incident-io/"+installation, []byte(`{}`)).AssertStatus(401)
 	})
 
-	t.Run("severities feed the threshold picker", func(t *testing.T) {
+	t.Run("severities feed the severity picker", func(t *testing.T) {
 		t.Parallel()
 
 		d := newDesk(t)

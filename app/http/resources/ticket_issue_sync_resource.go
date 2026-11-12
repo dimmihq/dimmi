@@ -82,9 +82,9 @@ func NewIssuesFound(list []trackers.Issue) []IssueFound {
 
 /*
 IssueSettings are a tool's sync settings: its statuses mapped to dimmi
-state ids, the defaults new issues use, the mirror threshold, the
-deployment that proves a fix shipped, where the tool delivers and
-whether the secret its deliveries are signed with is set.
+state ids, the defaults new issues use, the deployment that proves a
+fix shipped, where the tool delivers and whether the secret its
+deliveries are signed with is set.
 */
 type IssueSettings struct {
 	Object            string            `json:"object"`
@@ -95,7 +95,6 @@ type IssueSettings struct {
 	ProjectID         string            `json:"project_id"`
 	ServiceID         string            `json:"service_id"`
 	SeverityID        string            `json:"severity_id"`
-	MirrorSeverityID  string            `json:"mirror_severity_id"`
 	FromEmail         string            `json:"from_email"`
 	ImpactFieldID     string            `json:"impact_field_id"`
 	DeployRepository  string            `json:"deploy_repository"`
@@ -120,7 +119,7 @@ func NewIssueSettings(v issues.SettingsView) IssueSettings {
 		Object:         "issue_settings",
 		InstallationID: models.PublicID(models.PrefixIntegrationInstallation, v.Installation.ID),
 		Provider:       v.Installation.Provider, States: states, TeamID: s.Team, ProjectID: s.Project,
-		ServiceID: s.Service, SeverityID: s.Severity, MirrorSeverityID: s.MirrorSeverity, FromEmail: s.FromEmail,
+		ServiceID: s.Service, SeverityID: s.Severity, FromEmail: s.FromEmail,
 		ImpactFieldID:    s.ImpactField,
 		DeployRepository: s.DeployRepository, DeployEnvironment: s.DeployEnvironment, WebhookURL: v.WebhookURL,
 		NeedsSigning: v.NeedsSecret, HasSigningSecret: v.HasSigningSecret,
@@ -187,11 +186,9 @@ func NewTicketUpdateDraft(v issues.DraftView) TicketUpdateDraft {
 TicketSettings are the workspace's ticket switches.
 */
 type TicketSettings struct {
-	Object                 string `json:"object"`
-	IncidentMirror         bool   `json:"incident_mirror"`
-	IncidentMirrorSeverity string `json:"incident_mirror_severity"`
-	AutoLinkDuplicates     bool   `json:"auto_link_duplicates"`
-	SpikeThreshold         int32  `json:"spike_threshold"`
+	Object             string `json:"object"`
+	AutoLinkDuplicates bool   `json:"auto_link_duplicates"`
+	SpikeThreshold     int32  `json:"spike_threshold"`
 }
 
 /*
@@ -199,8 +196,6 @@ NewTicketSettings shapes the switches.
 */
 func NewTicketSettings(s issues.TicketSettings) TicketSettings {
 	return TicketSettings{
-		Object: "ticket_settings", IncidentMirror: s.IncidentMirror,
-		IncidentMirrorSeverity: s.IncidentMirrorSeverity, AutoLinkDuplicates: s.AutoLinkDuplicates,
-		SpikeThreshold: s.SpikeThreshold,
+		Object: "ticket_settings", AutoLinkDuplicates: s.AutoLinkDuplicates, SpikeThreshold: s.SpikeThreshold,
 	}
 }

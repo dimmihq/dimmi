@@ -40,16 +40,19 @@ func TestJiraIssues(t *testing.T) {
 func TestPagerDutyAndRootly(t *testing.T) {
 	t.Parallel()
 
-	t.Run("a PagerDuty incident is mirrored, acknowledged as identified and resolved", func(t *testing.T) {
+	t.Run("a linked PagerDuty incident is acknowledged as identified and resolved", func(t *testing.T) {
 		t.Parallel()
 
 		d := newDesk(t)
 		installation := d.keyTool(t, "pagerduty")
 
 		d.pagerDutyDelivery(t, installation, "webhook_triggered.json").AssertOK()
-		list := d.Owner.GetJSON("/api/v1/tickets?kind=incident").AssertOK()
-		require.Equal(t, 1, count(list))
-		incident := list.String("data.0.id")
+		require.Equal(t, 0, count(d.Owner.GetJSON("/api/v1/tickets?kind=incident").AssertOK()))
+
+		incident := d.incident(t, "Checkout failing")
+		d.Owner.PostJSON("/api/v1/tickets/"+incident+"/issues", testkit.JSON{
+			"installation_id": installation, "key": "PD123",
+		}).AssertCreated().AssertJSONPath("data.key", "#501")
 
 		d.pagerDutyDelivery(t, installation, "webhook_acknowledged.json").AssertOK()
 		d.Owner.GetJSON("/api/v1/tickets/"+incident).AssertOK().AssertJSONPath("data.state.name", "Identified")
@@ -58,14 +61,13 @@ func TestPagerDutyAndRootly(t *testing.T) {
 		d.Owner.GetJSON("/api/v1/tickets/"+incident).AssertOK().AssertJSONPath("data.state.group", "resolved")
 	})
 
-	t.Run("a critical Rootly incident is mirrored", func(t *testing.T) {
+	t.Run("a new Rootly incident opens nothing in dimmi", func(t *testing.T) {
 		t.Parallel()
 
 		d := newDesk(t)
 		installation := d.keyTool(t, "rootly")
 
 		d.rootlyDelivery(t, installation, "webhook_incident_created.json").AssertOK()
-		d.Owner.GetJSON("/api/v1/tickets?kind=incident").AssertOK().
-			AssertJSONPath("data.0.title", "Payments degraded").AssertJSONPath("data.0.issues.0.key", "#55")
+		require.Equal(t, 0, count(d.Owner.GetJSON("/api/v1/tickets?kind=incident").AssertOK()))
 	})
 }

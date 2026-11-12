@@ -10,8 +10,9 @@
 | installation the address names. Then each event goes where it
 | belongs: an issue's news to every link of it, in whichever workspace;
 | a comment to the tickets as a note; an incident's public update to its
-| dimmi incident; a new incident to the mirror; a deployment to the
-| drafts waiting for it.
+| dimmi incident; a deployment to the drafts waiting for it. A new
+| incident in an incident tool reaches only the tickets a teammate
+| already linked to it: nothing is opened in dimmi on its own.
 |
 */
 
@@ -158,19 +159,12 @@ route applies one event.
 */
 func (s *Issues) route(ctx context.Context, provider string, row *models.IntegrationInstallation, e trackers.Event,
 ) error {
-	switch e.Kind {
-	case trackers.EventDeployment:
+	if e.Kind == trackers.EventDeployment {
 		if row == nil {
 			return nil
 		}
 
 		return s.deployed(ctx, *row, e)
-	case trackers.EventIncident:
-		if row == nil {
-			return nil
-		}
-
-		return s.mirror(ctx, *row, e)
 	}
 
 	links, err := s.linksOf(ctx, provider, row, e.ExternalID)
@@ -192,7 +186,7 @@ apply applies one event to one link.
 */
 func (s *Issues) apply(ctx context.Context, l models.TicketIssuesByExternalIDRow, e trackers.Event) error {
 	switch e.Kind {
-	case trackers.EventIssue:
+	case trackers.EventIssue, trackers.EventIncident:
 		if e.Issue == nil {
 			return nil
 		}

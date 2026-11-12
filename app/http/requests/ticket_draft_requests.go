@@ -33,9 +33,7 @@ an absent one stays.
 */
 type UpdateTicketSettingsRequest struct {
 	Body struct {
-		IncidentMirror         *bool   `json:"incident_mirror,omitempty"`
-		IncidentMirrorSeverity *string `json:"incident_mirror_severity,omitempty" enum:"all,minor,major,critical"`
-		AutoLinkDuplicates     *bool   `json:"auto_link_duplicates,omitempty"`
-		SpikeThreshold         *int32  `json:"spike_threshold,omitempty"          minimum:"2" maximum:"1000"`
+		AutoLinkDuplicates *bool  `json:"auto_link_duplicates,omitempty"`
+		SpikeThreshold     *int32 `json:"spike_threshold,omitempty"          minimum:"2" maximum:"1000"`
 	}
 }

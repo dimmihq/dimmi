@@ -7,8 +7,8 @@
 | metadata, every value picked from lists pulled from the tool: which of
 | its statuses moves a ticket to which dimmi state, the team and project
 | new issues go to, the PagerDuty service and user to page as, the
-| severity an incident must reach to be mirrored, the incident.io field
-| the customer count is written to, and the GitHub repository and
+| severity new incidents are declared with, the incident.io field the
+| customer count is written to, and the GitHub repository and
 | environment whose deployments prove a fix shipped. A tool connected
 | with an API key also has the secret its deliveries are signed with.
 |
@@ -57,7 +57,6 @@ type SyncSettings struct {
 	Project           string            `json:"project,omitempty"`
 	Service           string            `json:"service,omitempty"`
 	Severity          string            `json:"severity,omitempty"`
-	MirrorSeverity    string            `json:"mirror_severity,omitempty"`
 	FromEmail         string            `json:"from_email,omitempty"`
 	ImpactField       string            `json:"impact_field,omitempty"`
 	DeployRepository  string            `json:"deploy_repository,omitempty"`

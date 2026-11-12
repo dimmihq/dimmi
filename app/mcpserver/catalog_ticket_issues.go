@@ -98,8 +98,8 @@ func ticketIssueToolDocs() map[string]Doc {
 		},
 		"integration-installations.issue-settings.update": {
 			Title: "Update a tool's sync settings",
-			Use: "Maps a tool's status ids to ticket states and sets defaults, the mirror severity, the deployment " +
-				"that proves a fix shipped and the signing secret of a key-connected tool.",
+			Use: "Maps a tool's status ids to ticket states and sets defaults, the deployment that proves a fix " +
+				"shipped and the signing secret of a key-connected tool.",
 			Returns: "the settings.",
 			Risk:    new(RiskSensitive),
 		},
@@ -110,8 +110,8 @@ func ticketIssueToolDocs() map[string]Doc {
 			Risk:    new(RiskSensitive),
 		},
 		"ticket-settings.show": {
-			Title: "Get ticket switches", Use: "Reads whether closing the loop sends by itself, the incident " +
-				"mirror and its severity, and the spike threshold.", Returns: "the switches.",
+			Title: "Get ticket switches", Use: "Reads whether duplicate conversations are linked to a tracker by " +
+				"themselves and the spike threshold.", Returns: "the switches.",
 		},
 		"ticket-settings.update": {
 			Title: "Update ticket switches", Use: "Changes the workspace's ticket switches.", Returns: "the switches.",

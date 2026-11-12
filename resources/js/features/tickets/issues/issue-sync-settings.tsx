@@ -4,9 +4,9 @@
  * tool needs pasted; the team, project, service and severity new work
  * goes to; which dimmi state each of the tool's statuses moves a ticket
  * to, defaulting to Being worked on, Close the loop and Won't fix; for
- * incident tools, whether new incidents are mirrored and from which
- * severity; for GitHub, the deployments that prove a fix shipped. Every
- * choice is picked from lists pulled from the tool.
+ * GitHub, the deployments that prove a fix shipped. Every choice is
+ * picked from lists pulled from the tool. Incidents are only linked by
+ * hand from a ticket: nothing opens in dimmi from the tool by itself.
  */
 import { RiFileCopyLine } from "@remixicon/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -16,7 +16,6 @@ import { Chip } from "@/components/base/badges/chip";
 import { Button } from "@/components/base/buttons/button";
 import { Input } from "@/components/base/input/input";
 import { Select, SelectItem } from "@/components/base/select/select";
-import { Switch } from "@/components/base/switch/switch";
 import { toast } from "@/components/base/toast/toast";
 import { Row, Section } from "@/features/settings/layout";
 import type { Integration } from "@/lib/api/integrations";
@@ -28,9 +27,7 @@ import {
   issueKeys,
   issueOptionsQuery,
   issueSettingsQuery,
-  ticketSettingsQuery,
   updateIssueSettings,
-  updateTicketSettings,
 } from "@/lib/api/ticket-issues";
 import { ticketStatesQuery } from "@/lib/api/tickets";
 
@@ -363,56 +360,6 @@ function StatusSection({
   );
 }
 
-function MirrorSection({
-  workspace,
-  settings,
-  canManage,
-  save,
-}: {
-  workspace: string;
-  settings: IssueSettings;
-  canManage: boolean;
-  save: Save;
-}) {
-  const queryClient = useQueryClient();
-  const { data: workspaceSettings } = useQuery(ticketSettingsQuery(workspace));
-  const toggle = useMutation({
-    mutationFn: (on: boolean) => updateTicketSettings(workspace, { incident_mirror: on }),
-    onSuccess: (next) => queryClient.setQueryData(ticketSettingsQuery(workspace).queryKey, next),
-    onError: (error) => toast.error(error.message),
-  });
-
-  return (
-    <Section
-      title="Incidents opened in the tool"
-      description="Off by default: link incidents from a ticket. When on, a new incident from the chosen severity opens a dimmi incident at once, for every connected incident tool."
-    >
-      <Row label="Mirror new incidents">
-        <Switch
-          aria-label="Mirror new incidents"
-          size="sm"
-          isDisabled={!canManage || !workspaceSettings}
-          isSelected={workspaceSettings?.incident_mirror ?? false}
-          onChange={(on) => toggle.mutate(on)}
-        />
-      </Row>
-      {workspaceSettings?.incident_mirror ? (
-        <Row label="From severity" description="Incidents less severe than this stay in the tool only.">
-          <OptionSelect
-            workspace={workspace}
-            installation={settings.installation_id}
-            list="severities"
-            label="Severity"
-            value={settings.mirror_severity_id}
-            disabled={!canManage}
-            onChange={(severity) => save({ mirror_severity_id: severity })}
-          />
-        </Row>
-      ) : null}
-    </Section>
-  );
-}
-
 function DeploySection({
   workspace,
   settings,
@@ -491,7 +438,6 @@ export function IssueSyncSettings({
       <DeliverySection settings={settings} canManage={canManage} save={props.save} />
       <DefaultsSection {...props} kind={kind} />
       <StatusSection {...props} kind={kind} />
-      {kind === "incidents" ? <MirrorSection {...props} /> : null}
       {integration.provider === "github" ? <DeploySection {...props} /> : null}
     </>
   );

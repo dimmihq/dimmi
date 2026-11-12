@@ -18,12 +18,6 @@ WHERE workspace_id = @workspace_id AND id = @id;
 -- SetTicketIssueImpact records the impact last written to the issue.
 UPDATE ticket_issues SET impact_hash = @impact_hash WHERE workspace_id = @workspace_id AND id = @id;
 
--- name: TicketIssuesOfExternal :many
--- TicketIssuesOfExternal returns the workspace's links to one provider
--- issue.
-SELECT * FROM ticket_issues WHERE workspace_id = @workspace_id AND provider = @provider AND external_id = @external_id
-ORDER BY created_at, id;
-
 -- name: TicketIssuesAwaitingDeploy :many
 -- TicketIssuesAwaitingDeploy returns the workspace's done issues whose
 -- fix no deployment has reached yet, done before the time.

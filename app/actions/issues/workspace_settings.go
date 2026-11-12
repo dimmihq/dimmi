@@ -3,10 +3,9 @@
 | Workspace Ticket Settings
 |--------------------------------------------------------------------------
 |
-| The switches a workspace sets once: whether incidents
-| opened in an engineering tool are mirrored as dimmi incidents and from
-| which severity, and how many conversations about one thing in the
-| spike window suggest an incident. They live in the workspace's ticket
+| The switches a workspace sets once: whether duplicate conversations
+| are linked on their own, and how many conversations about one thing in
+| the spike window suggest an incident. They live in the workspace's ticket
 | settings beside switches other parts of tickets keep there, which a
 | change leaves as they are.
 |
@@ -18,7 +17,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"slices"
 
 	"github.com/dimmihq/dimmi/framework/fault"
 	"github.com/dimmihq/dimmi/framework/ids"
@@ -30,19 +28,9 @@ import (
 )
 
 /*
-mirrorLevels are the severity levels an incident must reach to be
-mirrored.
-*/
-func mirrorLevels() []string {
-	return []string{"all", "minor", "major", "critical"}
-}
-
-/*
 Failures of the workspace's settings.
 */
 var (
-	ErrMirrorLevel = fault.New(fault.Invalid, "incident_mirror_severity_invalid",
-		"The severity is all, minor, major or critical.").OnField("incident_mirror_severity")
 	ErrSpikeThreshold = fault.New(fault.Invalid, "spike_threshold_invalid",
 		"The spike threshold is 2 to 1000 conversations.").OnField("spike_threshold")
 )
@@ -51,20 +39,16 @@ var (
 TicketSettings are the workspace's switches.
 */
 type TicketSettings struct {
-	IncidentMirror         bool   `json:"incident_mirror"`
-	IncidentMirrorSeverity string `json:"incident_mirror_severity"`
-	AutoLinkDuplicates     bool   `json:"auto_link_duplicates"`
-	SpikeThreshold         int32  `json:"-"`
+	AutoLinkDuplicates bool  `json:"auto_link_duplicates"`
+	SpikeThreshold     int32 `json:"-"`
 }
 
 /*
 TicketSettingsChange changes the switches; nil leaves one.
 */
 type TicketSettingsChange struct {
-	IncidentMirror         *bool
-	IncidentMirrorSeverity *string
-	AutoLinkDuplicates     *bool
-	SpikeThreshold         *int32
+	AutoLinkDuplicates *bool
+	SpikeThreshold     *int32
 }
 
 /*
@@ -76,13 +60,9 @@ func readTicketSettings(ctx context.Context, q *models.Queries, ws ids.UUID) (Ti
 		return TicketSettings{}, nil, fmt.Errorf("read ticket settings: %w", err)
 	}
 
-	out := TicketSettings{IncidentMirrorSeverity: "major"}
+	var out TicketSettings
 	_ = json.Unmarshal(row.TicketSettings, &out)
 	out.SpikeThreshold = row.IncidentSpikeThreshold
-
-	if !slices.Contains(mirrorLevels(), out.IncidentMirrorSeverity) {
-		out.IncidentMirrorSeverity = "major"
-	}
 
 	return out, decodeObject(row.TicketSettings), nil
 }
@@ -117,10 +97,6 @@ func (s *Issues) UpdateWorkspaceSettings(ctx context.Context, m authz.Membership
 		return TicketSettings{}, exceptions.ErrForbidden
 	}
 
-	if c.IncidentMirrorSeverity != nil && !slices.Contains(mirrorLevels(), *c.IncidentMirrorSeverity) {
-		return TicketSettings{}, ErrMirrorLevel
-	}
-
 	if c.SpikeThreshold != nil && (*c.SpikeThreshold < 2 || *c.SpikeThreshold > 1000) {
 		return TicketSettings{}, ErrSpikeThreshold
 	}
@@ -153,15 +129,6 @@ applySettings sets the changed switches on the settings and on the raw
 object they are stored in.
 */
 func applySettings(out TicketSettings, raw map[string]any, c TicketSettingsChange) TicketSettings {
-	if c.IncidentMirror != nil {
-		out.IncidentMirror, raw["incident_mirror"] = *c.IncidentMirror, *c.IncidentMirror
-	}
-
-	if c.IncidentMirrorSeverity != nil {
-		out.IncidentMirrorSeverity = *c.IncidentMirrorSeverity
-		raw["incident_mirror_severity"] = *c.IncidentMirrorSeverity
-	}
-
 	if c.AutoLinkDuplicates != nil {
 		out.AutoLinkDuplicates, raw["auto_link_duplicates"] = *c.AutoLinkDuplicates, *c.AutoLinkDuplicates
 	}

@@ -17333,9 +17333,6 @@
           "installation_id": {
             "type": "string"
           },
-          "mirror_severity_id": {
-            "type": "string"
-          },
           "needs_signing_secret": {
             "type": "boolean"
           },
@@ -17376,7 +17373,6 @@
           "project_id",
           "service_id",
           "severity_id",
-          "mirror_severity_id",
           "from_email",
           "impact_field_id",
           "deploy_repository",
@@ -30270,12 +30266,6 @@
           "auto_link_duplicates": {
             "type": "boolean"
           },
-          "incident_mirror": {
-            "type": "boolean"
-          },
-          "incident_mirror_severity": {
-            "type": "string"
-          },
           "object": {
             "type": "string"
           },
@@ -30286,8 +30276,6 @@
         },
         "required": [
           "object",
-          "incident_mirror",
-          "incident_mirror_severity",
           "auto_link_duplicates",
           "spike_threshold"
         ],
@@ -32529,10 +32517,6 @@
             "maxLength": 200,
             "type": "string"
           },
-          "mirror_severity_id": {
-            "maxLength": 200,
-            "type": "string"
-          },
           "project_id": {
             "maxLength": 200,
             "type": "string"
@@ -33248,18 +33232,6 @@
         "properties": {
           "auto_link_duplicates": {
             "type": "boolean"
-          },
-          "incident_mirror": {
-            "type": "boolean"
-          },
-          "incident_mirror_severity": {
-            "enum": [
-              "all",
-              "minor",
-              "major",
-              "critical"
-            ],
-            "type": "string"
           },
           "spike_threshold": {
             "format": "int32",

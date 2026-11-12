@@ -34,13 +34,18 @@ func (d desk) serveJira(t *testing.T) {
 }
 
 /*
-serveKeyedTools answers the checks of a Rootly and a PagerDuty key.
+serveKeyedTools answers the checks of a Rootly and a PagerDuty key, and
+PagerDuty incident PD123.
 */
 func (d desk) serveKeyedTools(t *testing.T) {
 	t.Helper()
 
 	d.fake.Stub("GET https://api.rootly.com/v1/users/me", reply(fixture(t, rootlyfixtures.Files, "users_me.json")))
 	d.fake.Stub("GET https://api.pagerduty.com/abilities", reply(fixture(t, pagerdutyfixtures.Files, "abilities.json")))
+	d.fake.Stub("GET https://api.pagerduty.com/incidents/PD123", reply([]byte(`{"incident": {"id": "PD123",
+		"type": "incident", "number": 501, "title": "Checkout API 5xx",
+		"html_url": "https://acme.pagerduty.com/incidents/PD123", "status": "triggered", "urgency": "high",
+		"service": {"id": "SVC1", "summary": "Checkout"}}}`)))
 }
 
 /*
@@ -56,8 +61,7 @@ func (d desk) jiraDelivery(t *testing.T, name string) *testkit.Response {
 }
 
 /*
-keyTool connects a tool with an API key, pastes its signing secret and
-turns the incident mirror on from major incidents.
+keyTool connects a tool with an API key and pastes its signing secret.
 */
 func (d desk) keyTool(t *testing.T, provider string) string {
 	t.Helper()
@@ -69,7 +73,6 @@ func (d desk) keyTool(t *testing.T, provider string) string {
 	d.Owner.PatchJSON("/api/v1/integration-installations/"+installation+"/issue-settings", testkit.JSON{
 		"signing_secret": toolSecret,
 	}).AssertOK()
-	d.Owner.PatchJSON("/api/v1/ticket-settings", testkit.JSON{"incident_mirror": true}).AssertOK()
 
 	return installation
 }
