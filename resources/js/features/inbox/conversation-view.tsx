@@ -241,8 +241,9 @@ function CustomerClock({
  * ThreadTitle names the conversation above its thread: back to the list,
  * the view it came from when the list is hidden, its subject, number and
  * status. When the header runs short the view crumb folds into a small
- * inbox button first, then the subject truncates, so the chips never
- * squeeze the rest.
+ * inbox button, the ticket button, the status on the number chip and the
+ * gaps between the buttons fold away, then the crumb and the number chip
+ * go; the subject truncates but always keeps its first word.
  */
 function ThreadTitle({
   view,
@@ -268,18 +269,19 @@ function ThreadTitle({
         <RiArrowLeftSLine aria-hidden className="size-5" />
       </Link>
       {listHidden ? (
-        <div className="flex max-w-36 shrink-0 items-center gap-2">
+        <div className="flex max-w-36 shrink-0 items-center gap-2 @max-lg/thread:hidden">
           <ViewPicker workspace={workspace} view={view} title={viewTitle} crumb />
           <span aria-hidden className="shrink-0 text-body-2-regular text-text-tertiary @max-lg:hidden">
             /
           </span>
         </div>
       ) : null}
-      <h1 className={cx("min-w-0 truncate text-body-medium text-text-primary", !listHidden && "ps-1.5")}>
+      <h1 className={cx("min-w-12 truncate text-body-medium text-text-primary", !listHidden && "ps-1.5")}>
         {subjectOf(conversation)}
       </h1>
-      <Chip variant="caption" color="neutral" className="shrink-0">
-        #{conversation.number} · {statusLabel[conversation.status]}
+      <Chip variant="caption" color="neutral" className="shrink-0 @max-md/thread:hidden">
+        #{conversation.number}
+        <span className="whitespace-pre @max-3xl/thread:sr-only"> · {statusLabel[conversation.status]}</span>
       </Chip>
       <AiBadge state={conversation.ai_state} long />
       <RatingChip workspace={workspace} conversation={conversation.id} />
@@ -345,9 +347,9 @@ export function ConversationView({
 
   const thread = (
     <Panel label="Conversation" className="h-full w-full">
-      <header className="flex h-12 shrink-0 items-center justify-between gap-3 ps-2.5 pe-2.5 pt-[7px]">
+      <header className="@container/thread flex h-12 shrink-0 items-center justify-between gap-3 ps-2.5 pe-2.5 pt-[7px]">
         <ThreadTitle view={view} workspace={workspace} conversation={conversation} listHidden={listHidden} />
-        <div className="flex shrink-0 items-center gap-2">
+        <div className="flex shrink-0 items-center gap-2 @max-3xl/thread:gap-1">
           <ConversationViewers conversation={conversation.id} self={userId} />
           <AssignPicker
             workspace={workspace}

@@ -59,8 +59,8 @@ export function TicketMenu({
       <Dropdown isOpen={menu} onOpenChange={setMenu}>
         <DropdownTrigger aria-label="Ticket" className={trigger}>
           <RiCoupon3Line aria-hidden className="size-4 text-foreground-icon-secondary" />
-          <span className="max-lg:sr-only">{own ? own.reference : "Ticket"}</span>
-          <RiArrowDownSLine aria-hidden className="size-4 text-foreground-icon-tertiary" />
+          <span className="max-lg:sr-only @max-3xl/thread:sr-only">{own ? own.reference : "Ticket"}</span>
+          <RiArrowDownSLine aria-hidden className="size-4 text-foreground-icon-tertiary @max-3xl/thread:hidden" />
         </DropdownTrigger>
         <DropdownPopover aria-label="Ticket" placement="bottom end" className="w-[220px] p-2">
           <DropdownGroup>
