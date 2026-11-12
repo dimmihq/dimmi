@@ -1,6 +1,6 @@
 # Releases a commit to staging: main.yml calls this on every push to main
-# once the checks of what staging runs passed, after its run built the image
-# and pushed it to GHCR under the commit's sha. This releases it to the
+# as soon as its run built the image and pushed it to GHCR under the
+# commit's sha, without waiting for the checks. This releases it to the
 # server and checks it from the outside. Run by hand, it releases the
 # branch's newest commit.
 #

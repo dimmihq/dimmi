@@ -1,6 +1,8 @@
 # Every push to main and every pull request: check everything, and build
 # the release image alongside the checks. A push to main releases the image
-# to staging (staging.yml) as soon as the checks of what staging runs pass.
+# to staging (staging.yml) as soon as it is pushed, while the checks still
+# run: staging shows each commit within minutes, and a failed check marks
+# the commit red. Production releases only commits whose checks all passed.
 
 name: main
 
@@ -32,8 +34,6 @@ jobs:
   # of a run fit under GitHub's 10 GB together and none is evicted by its
   # siblings. One job of each kind saves it, after compiling what the
   # others need.
-  #
-  # These checks gate the staging release.
   check:
     name: ${{ matrix.name }}
     runs-on: ubuntu-24.04
@@ -66,8 +66,7 @@ jobs:
 
   # Checks of what staging never runs: the self-hosted build, on the
   # packages that differ between the editions, and the timing and dev build
-  # tests. They run alongside and fail main's run, but the release does not
-  # wait for them.
+  # tests.
   self-hosted:
     name: ${{ matrix.name }}
     runs-on: ubuntu-24.04
@@ -188,7 +187,7 @@ jobs:
 
   staging:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    needs: [check, e2e, image]
+    needs: image
     permissions:
       contents: read
       packages: write
