@@ -43,6 +43,33 @@ asked for the link checks the file's real size afterwards.
 const maxLocalUpload = 512 << 20
 
 /*
+fileHeaders keeps a served file a file: its own type, never sniffed,
+sandboxed, readable from any site, and downloaded unless it is a
+picture, under the name its link was signed with when it has one.
+*/
+func fileHeaders(header http.Header, attrs filesystem.Attributes, name string) {
+	header.Set("Content-Type", attrs.ContentType)
+	header.Set("Content-Length", strconv.FormatInt(attrs.Size, 10))
+	header.Set("X-Content-Type-Options", "nosniff")
+	header.Set("Content-Security-Policy", "default-src 'none'; img-src 'self'; style-src 'unsafe-inline'; sandbox")
+	header.Set("Cross-Origin-Resource-Policy", "cross-origin")
+	header.Set("Access-Control-Allow-Origin", "*")
+	header.Set("Cache-Control", "private, max-age=300")
+
+	kind := filesystem.DispositionAttachment
+	if inline(attrs.ContentType) {
+		kind = filesystem.DispositionInline
+	}
+
+	switch {
+	case name != "":
+		header.Set("Content-Disposition", filesystem.Disposition(kind, name))
+	case kind == filesystem.DispositionAttachment:
+		header.Set("Content-Disposition", kind)
+	}
+}
+
+/*
 inlineTypes are the file types a browser may show in place; everything
 else downloads.
 */
@@ -177,17 +204,7 @@ func (a *Application) streamLocalFile(w http.ResponseWriter, r *http.Request, di
 	}
 
 	header := w.Header()
-	header.Set("Content-Type", attrs.ContentType)
-	header.Set("Content-Length", strconv.FormatInt(attrs.Size, 10))
-	header.Set("X-Content-Type-Options", "nosniff")
-	header.Set("Content-Security-Policy", "default-src 'none'; img-src 'self'; style-src 'unsafe-inline'; sandbox")
-	header.Set("Cross-Origin-Resource-Policy", "cross-origin")
-	header.Set("Access-Control-Allow-Origin", "*")
-	header.Set("Cache-Control", "private, max-age=300")
-
-	if !inline(attrs.ContentType) {
-		header.Set("Content-Disposition", "attachment")
-	}
+	fileHeaders(header, attrs, r.URL.Query().Get("filename"))
 
 	file, err := disk.Open(r.Context(), path)
 	if err != nil {

@@ -16,6 +16,7 @@ import (
 
 	"github.com/dimmihq/dimmi/framework/filesystem"
 
+	"github.com/dimmihq/dimmi/app/actions/messages"
 	"github.com/dimmihq/dimmi/app/models"
 )
 
@@ -71,7 +72,7 @@ func presentAttachment(ctx context.Context, disk filesystem.Filesystem, row mode
 		return file
 	}
 
-	if url, err := disk.TemporaryURL(ctx, row.Path, attachmentLinkTTL); err == nil {
+	if url, err := messages.Link(ctx, disk, row, attachmentLinkTTL); err == nil {
 		file.URL = &url
 	}
 

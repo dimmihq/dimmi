@@ -152,7 +152,17 @@ func (s *store) Sign(ctx context.Context, path string, req filesystem.SignReques
 		return signed.URL, nil
 	}
 
-	signed, err := s.presign.PresignGetObject(ctx, &s3.GetObjectInput{Bucket: &s.bucket, Key: &path}, expires)
+	input := &s3.GetObjectInput{Bucket: &s.bucket, Key: &path}
+	if req.Filename != "" {
+		kind := filesystem.DispositionAttachment
+		if req.Inline {
+			kind = filesystem.DispositionInline
+		}
+
+		input.ResponseContentDisposition = aws.String(filesystem.Disposition(kind, req.Filename))
+	}
+
+	signed, err := s.presign.PresignGetObject(ctx, input, expires)
 	if err != nil {
 		return "", mapError(err)
 	}

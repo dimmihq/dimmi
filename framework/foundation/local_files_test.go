@@ -72,6 +72,31 @@ func TestLocalFileLinks(t *testing.T) {
 		assert.Contains(t, resp.Header.Get("Content-Security-Policy"), "sandbox")
 	})
 
+	t.Run("names a download after the file, and refuses a renamed link", func(t *testing.T) {
+		t.Parallel()
+		app := newApp(t, options(environ(t)))
+		require.NoError(t, app.Start(t.Context()))
+		disk, err := app.Storage.Default()
+		require.NoError(t, err)
+		require.NoError(t, disk.Put(t.Context(), "a/0193.bin", []byte("%PDF"), filesystem.PutOptions{
+			ContentType: "application/pdf",
+		}))
+
+		link, err := disk.DownloadURL(t.Context(), "a/0193.bin", filesystem.DownloadURLOptions{
+			TTL: time.Minute, Filename: "Receipt May.pdf",
+		})
+		require.NoError(t, err)
+		address, err := url.Parse(link)
+		require.NoError(t, err)
+		named := "http://" + app.Addr() + address.RequestURI()
+
+		resp := mustGet(t, named)
+		assert.Equal(t, http.StatusOK, resp.Status)
+		assert.Equal(t, `attachment; filename="Receipt May.pdf"`, resp.Header.Get("Content-Disposition"))
+		assert.Equal(t, http.StatusNotFound,
+			mustGet(t, strings.Replace(named, "Receipt", "Invoice", 1)).Status)
+	})
+
 	t.Run("finds nothing for an altered, unsigned or unknown link", func(t *testing.T) {
 		t.Parallel()
 		app := newApp(t, options(environ(t)))

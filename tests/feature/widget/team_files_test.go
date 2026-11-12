@@ -93,7 +93,7 @@ func TestTeamFiles(t *testing.T) {
 		link := linkOf(t, tc, file)
 
 		served := fetch(t, tc, link).AssertOK()
-		assert.Equal(t, "attachment", served.Header.Get("Content-Disposition"))
+		assert.Equal(t, "attachment; filename=notes.txt", served.Header.Get("Content-Disposition"))
 		assert.Equal(t, "nosniff", served.Header.Get("X-Content-Type-Options"))
 	})
 

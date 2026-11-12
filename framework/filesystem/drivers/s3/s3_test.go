@@ -119,6 +119,28 @@ func TestNew(t *testing.T) {
 		assert.Equal(t, "kept", string(got))
 	})
 
+	t.Run("signs the name a download is saved or shown under into its link", func(t *testing.T) {
+		t.Parallel()
+		disk := newDisk(t)
+
+		link, err := disk.DownloadURL(t.Context(), "in/0193.bin", filesystem.DownloadURLOptions{
+			TTL: time.Minute, Filename: "receipt-may.pdf",
+		})
+		require.NoError(t, err)
+		saved, err := url.Parse(link)
+		require.NoError(t, err)
+		assert.Equal(t, "attachment; filename=receipt-may.pdf", saved.Query().Get("response-content-disposition"))
+		assert.Contains(t, saved.Query().Get("X-Amz-SignedHeaders"), "host")
+
+		link, err = disk.DownloadURL(t.Context(), "in/0193.bin", filesystem.DownloadURLOptions{
+			TTL: time.Minute, Filename: "Shot May.png", Inline: true,
+		})
+		require.NoError(t, err)
+		shown, err := url.Parse(link)
+		require.NoError(t, err)
+		assert.Equal(t, `inline; filename="Shot May.png"`, shown.Query().Get("response-content-disposition"))
+	})
+
 	t.Run("streams large files in parts", func(t *testing.T) {
 		t.Parallel()
 		disk := newDisk(t)

@@ -100,6 +100,13 @@ type Filesystem interface {
 	TemporaryURL(ctx context.Context, path string, ttl time.Duration) (string, error)
 
 	/*
+		DownloadURL returns a signed URL that reads the path until the TTL
+		passes, under the file's own name: shown in place when Inline,
+		saved otherwise.
+	*/
+	DownloadURL(ctx context.Context, path string, opts DownloadURLOptions) (string, error)
+
+	/*
 		TemporaryUploadURL returns a signed URL that accepts one PUT of the
 		path.
 	*/
@@ -118,6 +125,17 @@ type PutOptions struct {
 	CacheControl    string
 	ContentEncoding string
 	Metadata        map[string]string
+}
+
+/*
+DownloadURLOptions configure a signed download URL: how long it lasts,
+the name the file is saved or shown under, and whether a browser may
+show it in place.
+*/
+type DownloadURLOptions struct {
+	TTL      time.Duration
+	Filename string
+	Inline   bool
 }
 
 /*

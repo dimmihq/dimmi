@@ -43,6 +43,7 @@ const (
 	queryExpires     = "expires"
 	queryContentType = "content_type"
 	querySignature   = "signature"
+	queryFilename    = "filename"
 )
 
 type signer struct {
@@ -60,7 +61,13 @@ func (s *signer) sign(name string, req filesystem.SignRequest, now time.Time) st
 		query.Set(queryContentType, contentType)
 	}
 
-	query.Set(querySignature, hex.EncodeToString(signature(s.key, req.Method, name, expires, contentType)))
+	fields := []string{req.Method, name, expires, contentType}
+	if req.Method == http.MethodGet && req.Filename != "" {
+		query.Set(queryFilename, req.Filename)
+		fields = append(fields, req.Filename)
+	}
+
+	query.Set(querySignature, hex.EncodeToString(signature(s.key, fields...)))
 
 	u := s.base.JoinPath(name)
 	u.RawQuery = query.Encode()
@@ -93,8 +100,13 @@ func Verify(r *http.Request, path, signingKey string, now time.Time) error {
 		return ErrInvalidSignature
 	}
 
+	fields := []string{method, path, expires, contentType}
+	if filename := query.Get(queryFilename); filename != "" {
+		fields = append(fields, filename)
+	}
+
 	got, err := hex.DecodeString(query.Get(querySignature))
-	if err != nil || !hashing.Equal(got, signature([]byte(signingKey), method, path, expires, contentType)) {
+	if err != nil || !hashing.Equal(got, signature([]byte(signingKey), fields...)) {
 		return ErrInvalidSignature
 	}
 
@@ -106,8 +118,8 @@ func Verify(r *http.Request, path, signingKey string, now time.Time) error {
 }
 
 /*
-signature is the HMAC over the method, path, expiry and content type,
-one per line.
+signature is the HMAC over the method, path, expiry, content type and,
+for a named download, the name, one per line.
 */
 func signature(key []byte, fields ...string) []byte {
 	return hashing.HMAC(key, []byte(strings.Join(fields, "\n")))

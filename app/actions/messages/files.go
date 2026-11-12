@@ -16,6 +16,7 @@ package messages
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/dimmihq/dimmi/framework/filesystem"
@@ -109,9 +110,32 @@ func PresentFile(ctx context.Context, disks Disks, row models.Attachment) File {
 		return file
 	}
 
-	if url, err := disk.TemporaryURL(ctx, row.Path, fileLinkTTL); err == nil {
+	if url, err := Link(ctx, disk, row, fileLinkTTL); err == nil {
 		file.URL = &url
 	}
 
 	return file
+}
+
+/*
+Link signs a link that reads the attachment under the name it arrived
+with: pictures, audio and video show in place, anything else is saved.
+*/
+func Link(ctx context.Context, disk filesystem.Filesystem, row models.Attachment, ttl time.Duration) (string, error) {
+	return disk.DownloadURL(ctx, row.Path, filesystem.DownloadURLOptions{
+		TTL: ttl, Filename: row.Filename, Inline: shownInPlace(row.ContentType),
+	})
+}
+
+/*
+shownInPlace reports whether a browser shows the type in place.
+*/
+func shownInPlace(contentType string) bool {
+	for _, prefix := range []string{"image/", "audio/", "video/"} {
+		if strings.HasPrefix(contentType, prefix) {
+			return true
+		}
+	}
+
+	return false
 }

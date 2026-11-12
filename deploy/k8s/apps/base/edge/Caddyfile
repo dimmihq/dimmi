@@ -45,10 +45,15 @@ http:// {
 		-Server
 	}
 	respond @preflight 204
+	# SeaweedFS ignores the name a signed link asks a download to carry, so
+	# the edge applies it; the signature covers it, so it cannot be changed.
+	@named query response-content-disposition=*
+	header @named Content-Disposition "{http.request.uri.query.response-content-disposition}"
 	reverse_proxy seaweedfs:8333 {
 		header_down -Access-Control-Allow-Origin
 		header_down -Access-Control-Allow-Methods
 		header_down -Access-Control-Allow-Headers
+		header_down -Content-Disposition
 	}
 }
 

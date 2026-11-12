@@ -79,12 +79,15 @@ type Store interface {
 /*
 SignRequest describes a signed URL. Method is GET to read or PUT to
 upload. ContentType, when set on an upload, is the only Content-Type the
-upload may send.
+upload may send. Filename, when set on a read, names the file the
+browser receives, shown in place when Inline and saved otherwise.
 */
 type SignRequest struct {
 	Method      string
 	TTL         time.Duration
 	ContentType string
+	Filename    string
+	Inline      bool
 }
 
 /*
@@ -271,6 +274,16 @@ passes, or DefaultSignedURLTTL when the TTL is not positive.
 */
 func (d *Disk) TemporaryURL(ctx context.Context, path string, ttl time.Duration) (string, error) {
 	return d.sign(ctx, path, SignRequest{Method: http.MethodGet, TTL: ttl})
+}
+
+/*
+DownloadURL returns a signed URL that reads the path under the file's
+own name.
+*/
+func (d *Disk) DownloadURL(ctx context.Context, path string, opts DownloadURLOptions) (string, error) {
+	return d.sign(ctx, path, SignRequest{
+		Method: http.MethodGet, TTL: opts.TTL, Filename: opts.Filename, Inline: opts.Inline,
+	})
 }
 
 /*
