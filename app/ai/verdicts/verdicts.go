@@ -106,8 +106,11 @@ the schema forces, into out.
 */
 func (v *Verdicts) ask(ctx context.Context, q question, out any) error {
 	// Callers such as workflow runs may carry no workspace; row security
-	// shows the question's workspace only inside its own scope.
-	ctx = tenancy.With(ctx, q.workspaceID.String())
+	// shows the question's workspace only inside its own scope. A caller
+	// that has one keeps it, with any transaction it holds.
+	if _, ok := tenancy.From(ctx); !ok {
+		ctx = tenancy.With(ctx, q.workspaceID.String())
+	}
 
 	a, err := v.choose(ctx, q)
 	if err != nil {

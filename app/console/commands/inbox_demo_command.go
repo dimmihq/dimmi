@@ -43,7 +43,7 @@ import (
 /*
 demoPassword is what every seeded teammate signs in with.
 */
-const demoPassword = "dimmi-demo-team-2026"
+const demoPassword = "dimmi-demo-team-2026" //nolint:gosec // dev-only seeded teammates, never a real secret
 
 /*
 InboxDemoCommand seeds a workspace with a team and a busy inbox.
@@ -107,7 +107,7 @@ func (c InboxDemoCommand) Handle(
 	made := make([]ids.UUID, 0, total)
 
 	for i := range total {
-		id, err := c.conversation(ctx, team, inbox.ID, i, i < long)
+		id, err := c.conversation(ctx, team, inbox.ID, demoSpot{index: i, turns: demoTurns(i, i < long)})
 		if err != nil {
 			return fmt.Errorf("conversation %d: %w", i, err)
 		}
@@ -128,15 +128,10 @@ func (c InboxDemoCommand) Handle(
 }
 
 /*
-team adds the teammates, half members and a few admins, and returns
-their memberships with the owner's first.
+existingTeam returns the owner's membership, then those of the
+workspace's other active teammates.
 */
-func (c InboxDemoCommand) team(ctx context.Context, owner authz.Membership, n int) ([]authz.Membership, error) {
-	hash, err := c.App.Hash.Make(ctx, demoPassword)
-	if err != nil {
-		return nil, fmt.Errorf("hash demo password: %w", err)
-	}
-
+func (c InboxDemoCommand) existingTeam(ctx context.Context, owner authz.Membership) ([]authz.Membership, error) {
 	q := models.New(c.App.DB)
 	team := []authz.Membership{owner}
 
@@ -175,6 +170,24 @@ func (c InboxDemoCommand) team(ctx context.Context, owner authz.Membership, n in
 		team = append(team, authz.NewMembership(owner.Workspace, member, appauth.RolePermissions(enums.Role(h.role))))
 	}
 
+	return team, nil
+}
+
+/*
+team adds the teammates, half members and a few admins, and returns
+their memberships with the owner's first.
+*/
+func (c InboxDemoCommand) team(ctx context.Context, owner authz.Membership, n int) ([]authz.Membership, error) {
+	hash, err := c.App.Hash.Make(ctx, demoPassword)
+	if err != nil {
+		return nil, fmt.Errorf("hash demo password: %w", err)
+	}
+
+	team, err := c.existingTeam(ctx, owner)
+	if err != nil {
+		return nil, err
+	}
+
 	stamp := c.App.Clock.Now().Unix()
 
 	for i := range n {
@@ -206,13 +219,6 @@ func (c InboxDemoCommand) team(ctx context.Context, owner authz.Membership, n in
 			return nil, fmt.Errorf("add teammate: %w", err)
 		}
 
-		member, err = q.FindWorkspaceMember(ctx, models.FindWorkspaceMemberParams{
-			WorkspaceID: owner.Workspace.ID, ID: member.ID,
-		})
-		if err != nil {
-			return nil, fmt.Errorf("find teammate: %w", err)
-		}
-
 		team = append(team, authz.NewMembership(owner.Workspace, member, appauth.RolePermissions(role)))
 	}
 
@@ -225,12 +231,14 @@ out: replies from a teammate, the customer answering, the odd note,
 and an ending.
 */
 func (c InboxDemoCommand) conversation(
-	ctx context.Context, team []authz.Membership, inbox ids.UUID, i int, long bool,
+	ctx context.Context, team []authz.Membership, inbox ids.UUID, spot demoSpot,
 ) (ids.UUID, error) {
+	i, turns := spot.index, spot.turns
 	owner := team[0]
 	who := demoName(i)
 	email := strings.ToLower(strings.ReplaceAll(who, " ", ".")) + fmt.Sprintf(".%d@customer.test", i)
-	topic := demoTopics[i%len(demoTopics)]
+	topics := demoTopics()
+	topic := topics[i%len(topics)]
 
 	loaded, err := c.App.Actions.Inbox.CreateConversation.Handle(ctx, conversations.CreateConversationInput{
 		Membership: owner, ByContact: true, InboxID: &inbox,
@@ -244,13 +252,10 @@ func (c InboxDemoCommand) conversation(
 	ref := conversations.Ref{ID: loaded.Conversation.ID}
 	agent := team[(i*7)%len(team)]
 
-	turns := 1 + i%6
-	if long {
-		turns = 120 + i*40
-	}
+	th := demoThread{agent: agent, owner: owner, ref: ref, topic: topic}
 
 	for t := range turns {
-		if err := c.turn(ctx, agent, owner, ref, topic, t); err != nil {
+		if err := c.turn(ctx, th, t); err != nil {
 			return ids.UUID{}, err
 		}
 	}
@@ -259,12 +264,41 @@ func (c InboxDemoCommand) conversation(
 }
 
 /*
+demoTurns returns how many exchanges the i-th conversation has: a few,
+or hundreds for the long ones.
+*/
+func demoTurns(i int, long bool) int { //nolint:revive // flag-parameter: says which kind of thread
+	if long {
+		return 120 + i*40
+	}
+
+	return 1 + i%6
+}
+
+/*
+demoSpot is which seeded conversation this is and how many exchanges
+it has.
+*/
+type demoSpot struct {
+	index, turns int
+}
+
+/*
+demoThread is a conversation being played out: who answers, who writes
+as the customer, and what it is about.
+*/
+type demoThread struct {
+	agent, owner authz.Membership
+	ref          conversations.Ref
+	topic        demoTopic
+}
+
+/*
 turn adds one exchange: the teammate answers, sometimes with a note
 first, and the customer writes back.
 */
-func (c InboxDemoCommand) turn(
-	ctx context.Context, agent, owner authz.Membership, ref conversations.Ref, topic demoTopic, t int,
-) error {
+func (c InboxDemoCommand) turn(ctx context.Context, th demoThread, t int) error {
+	agent, owner, ref, topic := th.agent, th.owner, th.ref, th.topic
 	acts := c.App.Actions.Inbox
 	if t%5 == 3 {
 		_, err := acts.AddNote.Handle(ctx, messages.NoteInput{

@@ -1,3 +1,8 @@
+-- name: LockTicketSetup :exec
+-- LockTicketSetup holds the workspace's ticket setup until the
+-- transaction ends, so two first reads don't both add the defaults.
+SELECT pg_advisory_xact_lock(hashtext('ticket_setup:' || @workspace_id::text));
+
 -- name: ListTicketStates :many
 -- ListTicketStates returns the workspace's ticket states, archived ones
 -- included, group by group in the workspace's order.

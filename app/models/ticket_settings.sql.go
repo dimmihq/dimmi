@@ -740,6 +740,17 @@ func (q *Queries) ListTypeStates(ctx context.Context, workspaceID ids.UUID) ([]T
 	return items, nil
 }
 
+const lockTicketSetup = `-- name: LockTicketSetup :exec
+SELECT pg_advisory_xact_lock(hashtext('ticket_setup:' || $1::text))
+`
+
+// LockTicketSetup holds the workspace's ticket setup until the
+// transaction ends, so two first reads don't both add the defaults.
+func (q *Queries) LockTicketSetup(ctx context.Context, workspaceID string) error {
+	_, err := q.db.Exec(ctx, lockTicketSetup, workspaceID)
+	return err
+}
+
 const moveTicketsToState = `-- name: MoveTicketsToState :execrows
 UPDATE tickets SET state_id = $1, version = version + 1, updated_at = $2
 WHERE workspace_id = $3 AND state_id = $4

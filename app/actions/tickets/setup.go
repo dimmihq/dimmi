@@ -320,13 +320,18 @@ seed adds the default states and types to a workspace that has no type
 yet.
 */
 func (sd *seeder) seed(ctx context.Context) error {
-	count, err := sd.q.CountTicketTypes(ctx, sd.ws)
-	if err != nil {
-		return fmt.Errorf("count ticket types: %w", err)
+	if done, err := sd.seeded(ctx); done || err != nil {
+		return err
 	}
 
-	if count > 0 {
-		return nil
+	// Two first reads at once would both add the defaults: the second
+	// waits here, then finds the first one's.
+	if err := sd.q.LockTicketSetup(ctx, sd.ws.String()); err != nil {
+		return fmt.Errorf("lock ticket setup: %w", err)
+	}
+
+	if done, err := sd.seeded(ctx); done || err != nil {
+		return err
 	}
 
 	for _, d := range defaultStates() {
@@ -342,6 +347,18 @@ func (sd *seeder) seed(ctx context.Context) error {
 	}
 
 	return sd.types(ctx)
+}
+
+/*
+seeded reports whether the workspace has its ticket setup already.
+*/
+func (sd *seeder) seeded(ctx context.Context) (bool, error) {
+	count, err := sd.q.CountTicketTypes(ctx, sd.ws)
+	if err != nil {
+		return false, fmt.Errorf("count ticket types: %w", err)
+	}
+
+	return count > 0, nil
 }
 
 /*
