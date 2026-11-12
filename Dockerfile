@@ -1,9 +1,13 @@
-# The cloud binary in the smallest image that runs it: no shell, no package
+# The dimmi binary in the smallest image that runs it: no shell, no package
 # manager, a non-root user. It carries CA certificates and time zone data from
 # the distroless base, and the RDS certificate bundle so connections verify the
 # database. The browser app is built first because the binary embeds it.
 #
 #   docker buildx build --platform linux/arm64 -t dimmi .
+#
+# It builds the cloud edition. GO_TAGS= (empty) builds the self-hosted one:
+#
+#   docker buildx build --build-arg GO_TAGS= -t dimmi:self-host .
 #
 # CI builds the binary on the runner instead, where Go's build cache is
 # warm, and only packs it here:
@@ -21,7 +25,7 @@ COPY . .
 RUN pnpm build
 
 FROM --platform=$BUILDPLATFORM golang:1.26-bookworm AS binary
-ARG TARGETOS TARGETARCH
+ARG TARGETOS TARGETARCH GO_TAGS=cloud
 WORKDIR /src
 COPY go.mod go.sum ./
 RUN go mod download
@@ -29,7 +33,7 @@ COPY . .
 COPY --from=web /src/public/build ./public/build
 COPY --from=web /src/public/widget ./public/widget
 RUN CGO_ENABLED=0 GOOS=$TARGETOS GOARCH=$TARGETARCH \
-    go build -trimpath -tags cloud -ldflags="-s -w" -o /out/dimmi ./cmd/dimmi
+    go build -trimpath -tags "$GO_TAGS" -ldflags="-s -w" -o /out/dimmi ./cmd/dimmi
 ADD --chmod=0444 https://truststore.pki.rds.amazonaws.com/global/global-bundle.pem /out/rds-global-bundle.pem
 
 FROM binary AS source-binary
