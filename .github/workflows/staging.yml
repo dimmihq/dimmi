@@ -1,7 +1,8 @@
-# Releases every commit main's checks passed to staging: main's run builds
-# the image and pushes it to GHCR under the commit's sha while the checks
-# run, and once the whole run passed this releases it to the server and
-# checks it from the outside.
+# Releases a commit to staging: main.yml calls this on every push to main
+# once the checks of what staging runs passed, after its run built the image
+# and pushed it to GHCR under the commit's sha. This releases it to the
+# server and checks it from the outside. Run by hand, it releases the
+# branch's newest commit.
 #
 # Staging environment secrets: KUBECONFIG, a kubeconfig for the namespace's
 # deployer account, and GATE_CI_KEY, the key the smoke test passes the gate
@@ -10,15 +11,8 @@
 name: staging
 
 on:
-  workflow_run:
-    workflows: [main]
-    types: [completed]
-    branches: [main]
+  workflow_call:
   workflow_dispatch:
-
-concurrency:
-  group: release-staging
-  cancel-in-progress: false
 
 permissions:
   contents: read
@@ -26,16 +20,16 @@ permissions:
 
 jobs:
   release:
-    if: >-
-      github.event_name == 'workflow_dispatch' ||
-      (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push')
+    concurrency:
+      group: release-staging
+      cancel-in-progress: false
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     environment:
       name: staging
       url: https://staging.trydimmi.com
     env:
-      SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
+      SHA: ${{ github.sha }}
     steps:
       - uses: actions/checkout@v5
         with:
@@ -83,7 +77,7 @@ jobs:
       # Runs of commits pushed close together can pass out of order, so a
       # commit staging already runs a later one of is not released over it.
       - name: Skip a commit older than the running release
-        if: github.event_name == 'workflow_run' && env.PREVIOUS != ''
+        if: github.event_name == 'push' && env.PREVIOUS != ''
         run: |
           if git merge-base --is-ancestor "$SHA" "$PREVIOUS" 2>/dev/null; then
             echo "::notice::staging already runs $PREVIOUS, which comes after $SHA"

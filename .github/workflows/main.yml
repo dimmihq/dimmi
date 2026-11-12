@@ -1,6 +1,6 @@
 # Every push to main and every pull request: check everything, and build
-# the release image alongside the checks so staging can take it the moment
-# they pass (staging.yml releases only commits whose run here succeeded).
+# the release image alongside the checks. A push to main releases the image
+# to staging (staging.yml) as soon as the checks of what staging runs pass.
 
 name: main
 
@@ -23,14 +23,17 @@ env:
 
 jobs:
   # Each check is its own job, so they run side by side and each shows its
-  # own result. The Go test passes are split four ways by package
-  # (scripts/test-shard.ts). A public repository runs at most 20 jobs at
-  # once, so the whole run stays at 20.
+  # own result (.github/actions/check runs one). The Go tests run once, as
+  # the cloud runs: the cloud build as the application role, split eight
+  # ways by package (scripts/test-shard.ts). A public repository runs at
+  # most 20 jobs at once; a run uses 17, and its staging release one more.
   #
   # Go's build cache is kept per kind of build, not per job, so the caches
   # of a run fit under GitHub's 10 GB together and none is evicted by its
-  # siblings. The plain and application role passes compile the same race
-  # build and share one. One job of each kind saves it.
+  # siblings. One job of each kind saves it, after compiling what the
+  # others need.
+  #
+  # These checks gate the staging release.
   check:
     name: ${{ matrix.name }}
     runs-on: ubuntu-24.04
@@ -41,71 +44,48 @@ jobs:
         include:
           - { name: lint go, run: make lint-go GOLANGCI_LINT=./bin/golangci-lint, cache: lint, save: true, golangci: true }
           - { name: browser app and infrastructure, run: make lint-web test-web infra-check, cache: infra, save: true, install: true }
-          - { name: go tests (1/4), run: make test-go SHARD=1/4, cache: race, save: true, warm: go build -race ./... && make warm-arch, services: true }
-          - { name: go tests (2/4), run: make test-go SHARD=2/4, cache: race, services: true }
-          - { name: go tests (3/4), run: make test-go SHARD=3/4, cache: race, services: true }
-          - { name: go tests (4/4), run: make test-go SHARD=4/4, cache: race, services: true }
-          - { name: go tests as the application role (1/4), run: make test-app-role SHARD=1/4, cache: race, services: true }
-          - { name: go tests as the application role (2/4), run: make test-app-role SHARD=2/4, cache: race, services: true }
-          - { name: go tests as the application role (3/4), run: make test-app-role SHARD=3/4, cache: race, services: true }
-          - { name: go tests as the application role (4/4), run: make test-app-role SHARD=4/4, cache: race, services: true }
-          - { name: go tests in the cloud edition (1/4), run: make test-cloud SHARD=1/4, cache: cloud, save: true, warm: go build -race -tags cloud ./... && make warm-arch, services: true }
-          - { name: go tests in the cloud edition (2/4), run: make test-cloud SHARD=2/4, cache: cloud, services: true }
-          - { name: go tests in the cloud edition (3/4), run: make test-cloud SHARD=3/4, cache: cloud, services: true }
-          - { name: go tests in the cloud edition (4/4), run: make test-cloud SHARD=4/4, cache: cloud, services: true }
+          - { name: go tests (1/8), run: make test-cloud SHARD=1/8, cache: cloud, save: true, warm: go build -race -tags cloud ./... && make warm-arch, services: true }
+          - { name: go tests (2/8), run: make test-cloud SHARD=2/8, cache: cloud, services: true }
+          - { name: go tests (3/8), run: make test-cloud SHARD=3/8, cache: cloud, services: true }
+          - { name: go tests (4/8), run: make test-cloud SHARD=4/8, cache: cloud, services: true }
+          - { name: go tests (5/8), run: make test-cloud SHARD=5/8, cache: cloud, services: true }
+          - { name: go tests (6/8), run: make test-cloud SHARD=6/8, cache: cloud, services: true }
+          - { name: go tests (7/8), run: make test-cloud SHARD=7/8, cache: cloud, services: true }
+          - { name: go tests (8/8), run: make test-cloud SHARD=8/8, cache: cloud, services: true }
+    steps:
+      - uses: actions/checkout@v5
+      - uses: ./.github/actions/check
+        with:
+          run: ${{ matrix.run }}
+          cache: ${{ matrix.cache }}
+          save: ${{ matrix.save }}
+          warm: ${{ matrix.warm }}
+          services: ${{ matrix.services }}
+          install: ${{ matrix.install }}
+          golangci: ${{ matrix.golangci }}
+
+  # Checks of what staging never runs: the self-hosted build, on the
+  # packages that differ between the editions, and the timing and dev build
+  # tests. They run alongside and fail main's run, but the release does not
+  # wait for them.
+  self-hosted:
+    name: ${{ matrix.name }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { name: go tests in the self-hosted edition, run: make test-self-host, cache: race, save: true, services: true }
           - { name: timing and dev build tests, run: make test-timing test-dev, cache: misc, save: true, services: true }
     steps:
       - uses: actions/checkout@v5
-      - if: matrix.services
-        name: Start services
-        run: (docker compose up -d --wait > "$RUNNER_TEMP/services.log" 2>&1; echo $? > "$RUNNER_TEMP/services.status") &
-      - id: go
-        uses: actions/setup-go@v6
+      - uses: ./.github/actions/check
         with:
-          go-version-file: go.mod
-          cache: false
-      - uses: ./.github/actions/go-cache
-        with:
-          name: ${{ matrix.cache }}
-      - if: matrix.install
-        uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v5
-        with:
-          node-version: 24
-          cache: ${{ matrix.install && 'pnpm' || '' }}
-          package-manager-cache: ${{ matrix.install && true || false }}
-      - if: matrix.install
-        run: pnpm install --frozen-lockfile
-      - if: matrix.golangci
-        id: golangci-version
-        run: echo "version=$(sed -n 's/^GOLANGCI_LINT_VERSION := //p' Makefile)" >> "$GITHUB_OUTPUT"
-      - if: matrix.golangci
-        id: golangci
-        uses: actions/cache@v4
-        with:
-          path: bin/golangci-lint
-          key: golangci-lint-${{ runner.os }}-${{ steps.golangci-version.outputs.version }}-go${{ steps.go.outputs.go-version }}
-      - if: matrix.golangci && steps.golangci.outputs.cache-hit != 'true'
-        run: make lint-tools
-      - if: matrix.services
-        name: Wait for services
-        run: .github/wait-for-services.sh
-      - id: check
-        run: ${{ matrix.run }}
-        env:
-          GOFLAGS: -count=1 -timeout=15m
-      # The job that saves a shared cache first compiles every package of
-      # its kind, so the cache serves the shards that test other packages,
-      # and the plain builds tests/arch makes of the binary.
-      - if: ${{ !cancelled() && matrix.save && matrix.warm && steps.check.outcome != 'skipped' && github.event_name != 'pull_request' }}
-        name: Compile every package for the cache
-        run: ${{ matrix.warm }}
-      - if: ${{ !cancelled() && matrix.save && steps.check.outcome != 'skipped' }}
-        uses: ./.github/actions/go-cache
-        with:
-          name: ${{ matrix.cache }}
-          mode: save
-          save-modules: ${{ matrix.golangci == true }}
+          run: ${{ matrix.run }}
+          cache: ${{ matrix.cache }}
+          save: ${{ matrix.save }}
+          services: ${{ matrix.services }}
 
   e2e:
     name: e2e (${{ matrix.shard }}/4)
@@ -205,3 +185,12 @@ jobs:
           build-contexts: prebuilt=${{ runner.temp }}/image
           push: ${{ env.PUSH == 'true' }}
           tags: ghcr.io/dimmihq/dimmi:${{ github.sha }}
+
+  staging:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: [check, e2e, image]
+    permissions:
+      contents: read
+      packages: write
+    uses: ./.github/workflows/staging.yml
+    secrets: inherit

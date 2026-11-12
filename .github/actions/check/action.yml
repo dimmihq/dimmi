@@ -1,0 +1,86 @@
+# One check of main.yml: starts the services it needs, restores its Go
+# build cache, runs the check and saves the cache when it is the job that
+# keeps it. Run it after actions/checkout.
+name: Check
+description: Runs one of main.yml's checks.
+inputs:
+  run:
+    description: The command that checks.
+    required: true
+  cache:
+    description: The Go build cache's name, one per kind of build.
+    required: true
+  save:
+    description: Whether this job saves the cache.
+    default: "false"
+  warm:
+    description: A command run before saving that compiles what the other jobs sharing the cache need.
+    default: ""
+  services:
+    description: Whether the check needs the services from compose.yaml.
+    default: "false"
+  install:
+    description: Whether the check needs the browser app's packages installed.
+    default: "false"
+  golangci:
+    description: Whether the check runs golangci-lint.
+    default: "false"
+runs:
+  using: composite
+  steps:
+    - if: inputs.services == 'true'
+      name: Start services
+      shell: bash
+      run: (docker compose up -d --wait > "$RUNNER_TEMP/services.log" 2>&1; echo $? > "$RUNNER_TEMP/services.status") &
+    - id: go
+      uses: actions/setup-go@v6
+      with:
+        go-version-file: go.mod
+        cache: false
+    - uses: ./.github/actions/go-cache
+      with:
+        name: ${{ inputs.cache }}
+    - if: inputs.install == 'true'
+      uses: pnpm/action-setup@v4
+    - uses: actions/setup-node@v5
+      with:
+        node-version: 24
+        cache: ${{ inputs.install == 'true' && 'pnpm' || '' }}
+        package-manager-cache: ${{ inputs.install == 'true' }}
+    - if: inputs.install == 'true'
+      shell: bash
+      run: pnpm install --frozen-lockfile
+    - if: inputs.golangci == 'true'
+      id: golangci-version
+      shell: bash
+      run: echo "version=$(sed -n 's/^GOLANGCI_LINT_VERSION := //p' Makefile)" >> "$GITHUB_OUTPUT"
+    - if: inputs.golangci == 'true'
+      id: golangci
+      uses: actions/cache@v4
+      with:
+        path: bin/golangci-lint
+        key: golangci-lint-${{ runner.os }}-${{ steps.golangci-version.outputs.version }}-go${{ steps.go.outputs.go-version }}
+    - if: inputs.golangci == 'true' && steps.golangci.outputs.cache-hit != 'true'
+      shell: bash
+      run: make lint-tools
+    - if: inputs.services == 'true'
+      name: Wait for services
+      shell: bash
+      run: .github/wait-for-services.sh
+    - id: check
+      shell: bash
+      run: ${{ inputs.run }}
+      env:
+        GOFLAGS: -count=1 -timeout=15m
+    # The job that saves a shared cache first compiles every package of its
+    # kind, so the cache serves the shards that test other packages.
+    - if: ${{ !cancelled() && inputs.save == 'true' && inputs.warm != '' && steps.check.outcome != 'skipped' && github.event_name != 'pull_request' }}
+      name: Compile every package for the cache
+      shell: bash
+      run: ${{ inputs.warm }}
+    - if: ${{ !cancelled() && inputs.save == 'true' && steps.check.outcome != 'skipped' }}
+      uses: ./.github/actions/go-cache
+      with:
+        name: ${{ inputs.cache }}
+        mode: save
+        save-modules: ${{ inputs.golangci }}

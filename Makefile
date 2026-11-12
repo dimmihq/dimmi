@@ -12,11 +12,8 @@ AIR_VERSION := v1.67.4
 # Packages whose statements count toward the coverage gates.
 FRAMEWORK_PKGS := ./framework/...
 APP_PKGS := ./app/...
-# Packages whose behaviour depends on the edition, tested again in the
-# cloud build.
-CLOUD_PKGS := ./app/... ./config/... ./routes/... ./bootstrap/... ./tests/...
 
-.PHONY: test-sweep e2e pseudo-locale tools lint-tools fmt lint lint-go lint-web test test-go test-app-role test-cloud test-timing test-web test-dev cover cover-app services gen sqlc views build dev dev-server dev-web dev-widget dev-db web-build web-test
+.PHONY: test-sweep e2e pseudo-locale tools lint-tools fmt lint lint-go lint-web test test-go test-cloud test-self-host warm-arch test-timing test-web test-dev cover cover-app services gen sqlc views build dev dev-server dev-web dev-widget dev-db web-build web-test
 
 APP ?= dimmi
 
@@ -66,25 +63,28 @@ lint-web:
 ENV_FILE ?= .env.testing
 WITH_ENV := set -a && . ./$(ENV_FILE) && set +a &&
 
-test: test-go test-app-role test-cloud test-timing test-web test-dev
+test: test-cloud test-self-host test-timing test-web test-dev
 
 # SHARD=2/4 runs only the second of four even parts of a pass's packages,
 # so CI can spread a pass across machines; without it the whole pass runs.
 SHARD ?=
 SHARD_PKGS = $(if $(SHARD),"$$(node scripts/test-shard.ts $(1) $(SHARD) $(2))","$(2)")
 
-test-go:
-	pkgs=$(call SHARD_PKGS,,./...) && $(WITH_ENV) go test -race -shuffle=on $$pkgs
-
-# The feature tests again as the cloud's application role, where row level
-# security applies to every query.
-test-app-role:
-	pkgs=$(call SHARD_PKGS,,./tests/feature/...) && $(WITH_ENV) \
-		DIMMI_TEST_APPLICATION_ROLE=1 go test -race -shuffle=on $$pkgs
-
+# Every package as the cloud runs it: the cloud build, connected as the
+# application role, so row level security applies to every query.
 test-cloud:
-	pkgs=$(call SHARD_PKGS,-tags cloud,$(CLOUD_PKGS)) && $(WITH_ENV) \
-		go test -race -shuffle=on -tags cloud $$pkgs
+	pkgs=$(call SHARD_PKGS,-tags cloud,./...) && $(WITH_ENV) \
+		DIMMI_TEST_APPLICATION_ROLE=1 go test -race -shuffle=on -tags cloud $$pkgs
+
+# The self-hosted build, connected as the tables' owner, on the packages
+# that differ between the editions (scripts/edition-packages.ts). The
+# rest compile to the same code in both and test-cloud covers them.
+test-self-host:
+	pkgs="$$(node scripts/edition-packages.ts)" && $(WITH_ENV) go test -race -shuffle=on $$pkgs
+
+# Every package in the self-hosted build as the tables' owner.
+test-go:
+	$(WITH_ENV) go test -race -shuffle=on ./...
 
 # Timing comparisons skip themselves under the race detector, which distorts
 # them, so they get a pass of their own without it, one test at a time so no
