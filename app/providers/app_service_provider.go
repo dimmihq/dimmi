@@ -153,7 +153,9 @@ func (p AppServiceProvider) Boot(ctx context.Context, _ *foundation.Application)
 		return err
 	}
 
-	return errors.Join(registerJobs(a), registerWorkspaceJobs(a), registerWorkflowJobs(a), registerChangelogJobs(a))
+	return errors.Join(
+		registerJobs(a), registerWorkspaceJobs(a), registerWorkflowJobs(a), registerChangelogJobs(a), bootWebhooks(a),
+	)
 }
 
 /*

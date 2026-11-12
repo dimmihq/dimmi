@@ -189,6 +189,21 @@
   transition-duration: 150ms, 150ms, 220ms;
 }
 
+.reactions button[aria-pressed="true"] {
+  border-color: var(--accent);
+  background: var(--tint);
+}
+
+.feedback .thanks {
+  display: none;
+  font-size: 13px;
+}
+
+.feedback[data-rated] .thanks {
+  display: block;
+  animation: enter 220ms var(--out);
+}
+
 .entry {
   display: grid;
   inline-size: 100%;

@@ -11,7 +11,7 @@ import { queryOptions } from "@tanstack/react-query";
 import { realtimeKeys } from "@/lib/realtime/keys";
 
 import type { ActionCallState, MessageActionCall } from "./ai-actions";
-import { type DownloadedFile, request, requestFile } from "./client";
+import { type DownloadedFile, request, requestBody, requestFile, requestPage } from "./client";
 import type { Tag } from "./tags";
 
 export type ConversationStatus = "open" | "snoozed" | "closed";
@@ -343,6 +343,20 @@ export function conversationsQuery(workspace: string, list: ListParams) {
   });
 }
 
+/*
+ * listPage is how many conversations the list reads at a time.
+ */
+export const listPage = 50;
+
+/*
+ * moreConversations reads the page of the list after the cursor, or the
+ * first page when there is none, so its cursor leads further on.
+ */
+export function moreConversations(workspace: string, list: ListParams, cursor: string | null) {
+  const path = conversationsPath(list);
+  return requestPage<Conversation>(cursor ? `${path}&cursor=${encodeURIComponent(cursor)}` : path, { workspace });
+}
+
 export function inboxesQuery(workspace: string) {
   return queryOptions({
     queryKey: ["workspace", workspace, "inboxes"],
@@ -371,14 +385,47 @@ export function conversationQuery(workspace: string, id: string) {
   });
 }
 
+/*
+ * threadPage is how many messages the thread reads at a time.
+ */
+export const threadPage = 100;
+
 export function messagesQuery(workspace: string, id: string) {
   return queryOptions({
     queryKey: realtimeKeys.messages(workspace, id),
     queryFn: () =>
-      request<Message[]>("GET", `/conversations/${encodeURIComponent(id)}/messages?limit=100`, undefined, {
+      request<Message[]>("GET", `/conversations/${encodeURIComponent(id)}/messages?limit=${threadPage}`, undefined, {
         workspace,
       }),
   });
+}
+
+/*
+ * EarlierMessages is a page of older messages and the cursor of the page
+ * before it, null once the conversation's first message is in.
+ */
+export interface EarlierMessages {
+  items: Message[];
+  before: string | null;
+}
+
+/*
+ * earlierMessages reads the page of messages before the cursor, or the
+ * latest page when there is none, so its cursor leads further back.
+ */
+export async function earlierMessages(workspace: string, id: string, before: string | null): Promise<EarlierMessages> {
+  const params = new URLSearchParams({ limit: String(threadPage) });
+  if (before) {
+    params.set("before", before);
+  }
+  const body = await requestBody<{ data?: Message[]; meta?: { prev_cursor?: string | null } }>(
+    "GET",
+    `/conversations/${encodeURIComponent(id)}/messages?${params.toString()}`,
+    undefined,
+    { workspace },
+  );
+
+  return { items: body?.data ?? [], before: body?.meta?.prev_cursor ?? null };
 }
 
 /*
@@ -431,6 +478,23 @@ export interface Write {
 
 function writeOptions(write: Write) {
   return { workspace: write.workspace, headers: { "Dimmi-Client-Mutation-Id": write.mutation } };
+}
+
+/*
+ * trashConversation moves the conversation to the trash, and
+ * restoreConversation puts it back.
+ */
+export function trashConversation(write: Write, id: string): Promise<void> {
+  return request<void>("DELETE", `/conversations/${encodeURIComponent(id)}`, undefined, writeOptions(write));
+}
+
+export function restoreConversation(write: Write, id: string): Promise<Conversation> {
+  return request<Conversation>(
+    "POST",
+    `/conversations/${encodeURIComponent(id)}/restore`,
+    undefined,
+    writeOptions(write),
+  );
 }
 
 export function updateConversation(write: Write, id: string, changes: ConversationChanges): Promise<Conversation> {

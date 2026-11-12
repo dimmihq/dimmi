@@ -26,7 +26,7 @@ export function Changelog({ options, content }: { options: Options; content: Con
                 <Mark />
               </span>
               <span className="copy">
-                <em className="badge">{entry.tag}</em>
+                {entry.tag ? <em className="badge">{entry.tag}</em> : null}
                 <strong>{entry.title}</strong>
                 <small>{entry.summary}</small>
                 <time>{entry.date}</time>

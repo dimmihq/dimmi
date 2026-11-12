@@ -4,9 +4,12 @@
  * thread as an event so the history says who did what; the open
  * conversation, its timeline, the lists and the sidebar's counts are
  * then read again. Each change carries an id, so its realtime echo is
- * not applied a second time.
+ * not applied a second time. Moving a conversation to the trash offers
+ * an undo.
  */
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+
+import { toast } from "@/components/base/toast/toast";
 
 import {
   type Conversation,
@@ -14,6 +17,8 @@ import {
   type ConversationPriority,
   type ConversationStatus,
   conversationQuery,
+  restoreConversation,
+  trashConversation,
   updateConversation,
 } from "@/lib/api/inbox";
 import { useMutationId } from "@/lib/realtime/context";
@@ -37,8 +42,34 @@ export function useCase(workspace: string, conversation: Conversation) {
     },
   });
 
+  const refresh = () => queryClient.invalidateQueries({ queryKey: ["workspace", workspace] });
+  /*
+   * undoTrash puts the conversation back. It calls the server directly,
+   * since the conversation's screen has usually moved on by then.
+   */
+  const undoTrash = async () => {
+    try {
+      await restoreConversation({ workspace, mutation: mutationId() }, conversation.id);
+      toast.success("Conversation restored");
+      await refresh();
+    } catch {
+      toast.error("The conversation could not be restored.");
+    }
+  };
+  const trash = useMutation({
+    mutationFn: () => trashConversation({ workspace, mutation: mutationId() }, conversation.id),
+    onSuccess: () => {
+      toast.success("Moved to the trash", {
+        actions: [{ label: "Undo", onClick: () => void undoTrash() }],
+        duration: 8000,
+      });
+      return refresh();
+    },
+    onError: () => toast.error("The conversation could not be moved to the trash."),
+  });
+
   return {
-    pending: change.isPending,
+    pending: change.isPending || trash.isPending,
     error: change.error,
     assign: (memberId: string | null) => change.mutate({ assignee_id: memberId }),
     assignTeam: (teamId: string | null) => change.mutate({ team_id: teamId }),
@@ -50,6 +81,7 @@ export function useCase(workspace: string, conversation: Conversation) {
     setPriority: (priority: ConversationPriority) => change.mutate({ priority }),
     addTag: (name: string) => change.mutate({ add_tags: [name] }),
     removeTag: (id: string) => change.mutate({ remove_tags: [id] }),
+    trash: () => trash.mutate(),
   };
 }
 

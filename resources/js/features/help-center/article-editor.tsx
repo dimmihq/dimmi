@@ -7,6 +7,7 @@
  * else's newer one is refused and says so, so nobody's words are lost.
  */
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 
 import { AlertDialog } from "@/components/base/modal/modal";
@@ -21,6 +22,7 @@ import {
   articleVersionsQuery,
   collectionsQuery,
   defaultBrand,
+  deleteArticle,
   helpCentersQuery,
   publishArticle,
   saveArticle,
@@ -60,6 +62,7 @@ export function ArticleEditor({ id }: { id: string }) {
   const workspace = useAccount().workspace.id;
   const enabled = workspace !== "";
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const { data: article } = useQuery({ ...articleQuery(workspace, id), enabled });
   const { data: centers = [] } = useQuery({ ...helpCentersQuery(workspace), enabled });
   const center = centers.find((c) => c.id === article?.help_center_id);
@@ -168,6 +171,12 @@ export function ArticleEditor({ id }: { id: string }) {
           collections={collections}
           onChange={set}
           onSaved={settle}
+          onDelete={async () => {
+            await deleteArticle(workspace, article.id);
+            await queryClient.invalidateQueries({ queryKey: ["workspace", workspace, "help-centers"] });
+            toast.success("Article deleted");
+            await navigate({ to: "/d/help-center" });
+          }}
           onClose={() => setSettings(false)}
         />
       ) : null}

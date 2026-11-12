@@ -124,13 +124,11 @@ function PostPreview({ broadcast }: { broadcast: PreviewMessage }) {
 }
 
 function SlackPreview({ broadcast }: { broadcast: PreviewMessage }) {
-  const brand = broadcast.brand ?? "Acme";
-
   return (
     <div className="flex flex-col overflow-hidden rounded-2xl border border-border-button-default bg-background-primary-default">
       <div className="flex items-center gap-2 border-b border-separator-border px-4 py-2.5">
         <RiSlackLine aria-hidden className="size-4 text-foreground-icon-tertiary" />
-        <span className="truncate text-body-2-medium text-text-primary"># {brand.toLowerCase()}-northwind</span>
+        <span className="truncate text-body-2-medium text-text-primary">Each customer's shared channel</span>
       </div>
       <div className="flex gap-3 px-4 py-4">
         <Avatar size="sm" initials={initials(broadcast.sender)} />

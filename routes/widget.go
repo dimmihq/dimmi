@@ -76,6 +76,7 @@ func widgetAppRoutes(public *routing.Router, a *app.App) {
 	routing.Get(public, "/apps/{app}/config", "widget.apps.config.show", config.Invoke)
 	routing.Get(public, "/apps/{app}/availability", "widget.apps.availability.show", availability.Invoke)
 	routing.Get(public, "/apps/{app}/help", "widget.apps.help.show", helpController(a).Show)
+	routing.Get(public, "/apps/{app}/changelog", "widget.apps.changelog.show", changelogController(a).Show)
 
 	sessions := sessionController(a)
 	routing.Post(public, "/sessions", "widget.sessions.store", sessions.Store)
@@ -201,13 +202,16 @@ func installOrigin(appURL string) string {
 }
 
 /*
-widgetHelpRoutes declares the Help tab as the visitor reads it, and the
-passes that open the help center signed in.
+widgetHelpRoutes declares the Help tab as the visitor reads it, the
+passes that open the help center signed in, and the visitor's answers
+about articles.
 */
 func widgetHelpRoutes(visitor *routing.Router, a *app.App) {
 	help := helpController(a)
 	routing.Get(visitor, "/help", "widget.help.show", help.Mine)
 	routing.Post(visitor, "/help-passes", "widget.help-passes.store", help.Pass)
+	routing.Post(visitor, "/article-ratings", "widget.article-ratings.store", help.Rate).
+		Status(fhttp.StatusNoContent)
 }
 
 /*
@@ -215,7 +219,16 @@ helpController serves the messenger's Help tab.
 */
 func helpController(a *app.App) *widget.HelpController {
 	return &widget.HelpController{
-		Public: a.Actions.HelpPublic, Readers: a.Actions.HelpReaders, Addresses: a.Actions.HelpCenterAddresses,
-		Clock: a.Clock,
+		Public: a.Actions.HelpPublic, Readers: a.Actions.HelpReaders, Ratings: a.Actions.HelpRatings,
+		Addresses: a.Actions.HelpCenterAddresses, Clock: a.Clock,
+	}
+}
+
+/*
+changelogController serves the messenger's "What's new" tab.
+*/
+func changelogController(a *app.App) *widget.ChangelogController {
+	return &widget.ChangelogController{
+		Public: a.Actions.HelpPublic, Changelog: a.Actions.ChangelogPublic, Addresses: a.Actions.HelpCenterAddresses,
 	}
 }

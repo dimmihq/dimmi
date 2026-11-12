@@ -8,29 +8,21 @@ const pages = [
   "API tokens",
   "Inboxes",
   "Tags",
-  "Saved replies",
   "Messengers",
   "Email",
-  "Connections",
   "dimmi agent",
   "Actions",
   "AI providers",
   "Help centers",
   "Knowledge",
-  "Changelog",
   "Feedback",
-  "Announcements & surveys",
   "Webhooks",
   "Identity verification",
-  "Authorized apps",
-  "GitHub",
   "Workspace",
   "Members",
   "Teams",
   "Security",
   "Audit log",
-  "Import & export",
-  "Billing",
 ];
 
 /*
@@ -157,7 +149,7 @@ it.describe("settings", () => {
   it("keeps the page in its panel when a switch far down is toggled", async ({ page }) => {
     await openMessenger(page);
 
-    await page.getByRole("switch", { name: "Feedback tab" }).scrollIntoViewIfNeeded();
+    await page.getByRole("switch", { name: "What's new tab" }).scrollIntoViewIfNeeded();
     await page
       .locator("label")
       .filter({ has: page.getByRole("switch", { name: "Anonymous visitors" }) })
@@ -168,18 +160,5 @@ it.describe("settings", () => {
       [...document.querySelectorAll("section[aria-label]")].some((panel) => panel.scrollTop > 0),
     );
     expect(shifted).toBe(false);
-  });
-
-  it("narrows the connections by search", async ({ page }) => {
-    await page.goto("/d/settings/connections");
-    const apps = page.getByRole("region", { name: "Chat apps" });
-    await expect(apps.getByRole("button", { name: "Connect" })).toHaveCount(4);
-
-    await page.getByRole("textbox", { name: "Search connections" }).fill("whats");
-    await expect(apps.getByText("WhatsApp")).toBeVisible();
-    await expect(apps.getByRole("button", { name: "Connect" })).toHaveCount(1);
-
-    await page.getByRole("textbox", { name: "Search connections" }).fill("teams");
-    await expect(apps.getByText("No connection matches")).toBeVisible();
   });
 });

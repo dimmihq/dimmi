@@ -32,4 +32,13 @@ func emailSetupRoutes(workspace *routing.Router, a *app.App) {
 		Ability("settings:write").Status(fhttp.StatusCreated)
 	routing.Get(workspace, "/email-addresses/{address}/tests/{test}", "email-addresses.tests.show", c.ShowTest).
 		Ability("settings:write")
+
+	suppressions := &v1.EmailSuppressionController{
+		List: a.Actions.ListSuppressions, Lift: a.Actions.LiftSuppression, IDs: a.IDs,
+	}
+
+	routing.Get(workspace, "/email-suppressions", "email-suppressions.index", suppressions.Index).
+		Ability("contacts:read")
+	routing.Delete(workspace, "/email-suppressions/{email_suppression}", "email-suppressions.destroy",
+		suppressions.Destroy).Ability("contacts:write").Status(fhttp.StatusNoContent)
 }

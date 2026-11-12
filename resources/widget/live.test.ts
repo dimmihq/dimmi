@@ -197,6 +197,95 @@ describe("a connected messenger", () => {
     expect(tab.location.href).toBe("https://acme.dimmi.help/sso?next=%2F#pass=dmi_hp_1");
   });
 
+  it("fills the What's new tab from the changelog and drops its dot once the visitor reads it", async () => {
+    localStorage.setItem("dimmi:wgt_1:changelog_seen", "2026-02-01T00:00:00Z");
+    const calls = serve({
+      "GET /apps/wgt_1/config": () => ({
+        status: 200,
+        body: { data: { ...config.data, tabs: ["home", "messages", "changelog"] } },
+      }),
+      "GET /apps/wgt_1/availability": () => ({ status: 200, body: availability }),
+      "GET /apps/wgt_1/changelog": () => ({
+        status: 200,
+        body: {
+          data: {
+            url: "https://acme.dimmi.help/changelog",
+            entries: [
+              {
+                slug: "dark-mode",
+                title: "Dark mode",
+                summary: "Easy on the eyes.",
+                label: "New",
+                published_at: "2026-03-01T00:00:00Z",
+                body: [{ kind: "p", text: "Switch it on." }],
+              },
+              {
+                slug: "exports",
+                title: "Exports",
+                summary: "",
+                label: "",
+                published_at: "2026-01-01T00:00:00Z",
+                body: [],
+              },
+            ],
+          },
+        },
+      }),
+    });
+
+    boot(win, document);
+    for (let i = 0; i < 3; i++) {
+      await settle();
+    }
+
+    expect(calls).toContain("GET /apps/wgt_1/changelog");
+    const tab = shadow()?.querySelector<HTMLElement>('[role=tab][data-tab="changelog"]');
+    expect(tab?.querySelector(".dot")).not.toBeNull();
+    expect(shadow()?.textContent).toContain("Dark mode");
+    expect(shadow()?.textContent).toContain("Switch it on.");
+
+    tab?.click();
+    expect(tab?.querySelector(".dot")).toBeNull();
+    expect(localStorage.getItem("dimmi:wgt_1:changelog_seen")).toBe("2026-03-01T00:00:00Z");
+  });
+
+  it("sends the visitor's answer about an article, starting their session first", async () => {
+    const ratings: unknown[] = [];
+    const help = {
+      data: {
+        collections: [],
+        popular: ["invite"],
+        articles: [{ slug: "invite", title: "Invite", summary: "", updated: "2026-01-01T00:00:00Z", body: [] }],
+      },
+    };
+    serve({
+      "GET /apps/wgt_1/config": () => ({
+        status: 200,
+        body: { data: { ...config.data, tabs: ["home", "messages", "help"] } },
+      }),
+      "GET /apps/wgt_1/availability": () => ({ status: 200, body: availability }),
+      "GET /apps/wgt_1/help": () => ({ status: 200, body: help }),
+      "POST /sessions": () => ({ status: 201, body: session }),
+      "GET /help": () => ({ status: 200, body: help }),
+      "POST /article-ratings": (body) => {
+        ratings.push(body);
+        return { status: 200 };
+      },
+    });
+
+    boot(win, document);
+    for (let i = 0; i < 3; i++) {
+      await settle();
+    }
+    shadow()?.querySelector<HTMLElement>('[data-view="article:invite"] [data-helpful="no"]')?.click();
+    for (let i = 0; i < 3; i++) {
+      await settle();
+    }
+
+    expect(ratings).toEqual([{ article: "invite", helpful: false }]);
+    expect(shadow()?.querySelector<HTMLElement>('[data-view="article:invite"] .feedback')?.dataset.rated).toBe("no");
+  });
+
   it("shows nothing and says why when the server does not serve the app here", async () => {
     serve({ "GET /apps/wgt_1/config": () => ({ status: 403, body: { code: "origin_not_allowed" } }) });
     const error = vi.spyOn(console, "error").mockImplementation(() => undefined);

@@ -9,13 +9,11 @@ const pages = [
   "/d/settings/attributes",
   "/d/settings/profile",
   "/d/settings/security",
-  "/d/settings/connections",
   "/d/settings/messenger",
   "/d/settings/agent",
   "/d/settings/ai-providers",
   "/d/settings/workspace",
   "/d/settings/members",
-  "/d/settings/billing",
 ];
 
 const sizes = [

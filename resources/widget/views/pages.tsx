@@ -75,7 +75,7 @@ function ArticlePage({ article, options, url }: { article: Article; options: Opt
               </a>
             </p>
           ) : null}
-          <Feedback options={options} prompt={options.texts.helpful} />
+          <Feedback options={options} prompt={options.texts.helpful} article={article} />
         </Loadable>
       </article>
     </>
@@ -88,7 +88,7 @@ function EntryPage({ entry, options }: { entry: Entry; options: Options }) {
       <BackBar title={options.texts.changelog} />
       <article className="page">
         <Loadable skeleton={<SkeletonArticle />}>
-          <em className="badge">{entry.tag}</em>
+          {entry.tag ? <em className="badge">{entry.tag}</em> : null}
           <h1>{entry.title}</h1>
           <p className="byline">
             <time>{entry.date}</time>
@@ -102,8 +102,9 @@ function EntryPage({ entry, options }: { entry: Entry; options: Options }) {
 }
 
 /*
- * Pages renders every page the sample content can open. Once the backend
- * is wired, pages will load on demand instead of rendering up front.
+ * Pages renders every page the content can open, up front: the sample's
+ * in a preview, and in a connected messenger what the server sent for the
+ * Help and What's new tabs.
  */
 export function Pages({ options, content }: { options: Options; content: Content }) {
   return (

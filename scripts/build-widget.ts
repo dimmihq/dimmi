@@ -40,7 +40,7 @@ interface FileEntry {
 const root = fileURLToPath(new URL("..", import.meta.url));
 const out = path.join(root, "public/widget");
 const assets = path.join(out, "assets");
-const budgets: Record<string, number> = { loader: 3072, core: 35840, preview: 12288 };
+const budgets: Record<string, number> = { loader: 3072, core: 36864, preview: 12288 };
 const lazyBudget = 20480;
 const sampleMarker = "Maya Kerr";
 

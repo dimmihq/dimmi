@@ -83,6 +83,25 @@ export class MessengerController extends Controller {
     this.#push((event.target as Element).closest<HTMLElement>("[data-open]")?.dataset.open ?? "");
   }
 
+  /*
+   * rate marks the face the visitor picked under an article and thanks
+   * them, then hands the answer on through a "dimmi:rate" event. Picking
+   * the other face changes the answer.
+   */
+  rate(event: Event): void {
+    const face = (event.target as Element).closest<HTMLElement>("[data-helpful]");
+    const box = face?.closest<HTMLElement>(".feedback");
+    const helpful = face?.dataset.helpful;
+    if (!box?.dataset.article || (helpful !== "yes" && helpful !== "no")) {
+      return;
+    }
+    box.dataset.rated = helpful;
+    for (const each of box.querySelectorAll<HTMLElement>("[data-helpful]")) {
+      each.setAttribute("aria-pressed", String(each === face));
+    }
+    this.dispatch("rate", { article: box.dataset.article, helpful: helpful === "yes" });
+  }
+
   receive(message: Incoming): void {
     const list = this.element.querySelector(".thread .loaded") ?? this.element.querySelector(".thread");
     list?.querySelector(".seen")?.remove();

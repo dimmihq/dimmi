@@ -183,6 +183,9 @@ export class Live {
   private readonly deciding = new Set<string>();
   private readonly verifying = new Map<string, VerifyStep>();
   private help: Pick<Content, "collections" | "articles" | "popular" | "help_url"> | undefined;
+  private changelog: Pick<Content, "changelog" | "unread_changelog"> | undefined;
+  private latestEntry = "";
+  private readonly rated = new Map<string, "yes" | "no">();
   private callTimer: unknown;
   private identity: Source | undefined;
   private checking: Promise<void> | undefined;
@@ -257,6 +260,9 @@ export class Live {
     this.surface = this.config.surface?.anonymous;
     this.applySurface();
     void this.loadAvailability();
+    if (this.config.tabs?.includes("changelog")) {
+      void this.loadChangelog();
+    }
 
     const session = await this.handshake().catch(() => undefined);
     this.takeSession(session);
@@ -389,8 +395,76 @@ export class Live {
    */
   content(): Content {
     const out = content(this.base, this.config, this.availability, this.store, this.open, this.browser.now());
+    const help = this.help
+      ? {
+          ...this.help,
+          articles: this.help.articles.map((a) => {
+            const rated = this.rated.get(a.slug);
+            return rated ? { ...a, rated } : a;
+          }),
+        }
+      : {};
 
-    return this.help ? { ...out, ...this.help } : out;
+    return { ...out, ...help, ...this.changelog };
+  }
+
+  /*
+   * rate tells the server whether an article helped, starting the
+   * visitor's session first when they have none. The answer already
+   * shows; when the server refuses it, the article goes back to what the
+   * visitor answered before.
+   */
+  async rate(article: string, helpful: boolean) {
+    const before = this.rated.get(article);
+    this.rated.set(article, helpful ? "yes" : "no");
+    try {
+      await this.session.ensure(this.startDetails());
+      await this.http.post("/article-ratings", { article, helpful });
+    } catch (error) {
+      if (before) {
+        this.rated.set(article, before);
+      } else {
+        this.rated.delete(article);
+      }
+      const code = error instanceof ApiError ? error.code : "network";
+      report("warn", code, "the answer about the article could not be sent.");
+      this.host.update({});
+    }
+  }
+
+  /*
+   * loadChangelog reads the newest published entries of the changelog
+   * the messenger links to and draws the What's new tab with them. The
+   * tab carries a dot while an entry is newer than the newest one the
+   * visitor saw there on this browser.
+   */
+  private async loadChangelog() {
+    try {
+      const read = await import("./changelog");
+      const tab = await read.changelog(this.http, this.appId, this.browser.storage.get(this.seenKey));
+      this.latestEntry = tab.latest;
+      this.changelog = tab;
+      this.host.update({});
+    } catch {
+      this.changelog = undefined;
+    }
+  }
+
+  /*
+   * readChangelog remembers the newest entry as seen once the visitor
+   * opens the What's new tab, and takes the tab's dot away.
+   */
+  readChangelog() {
+    if (!this.changelog || this.changelog.unread_changelog === 0) {
+      return;
+    }
+    this.browser.storage.set(this.seenKey, this.latestEntry);
+    this.changelog = { ...this.changelog, unread_changelog: 0 };
+    this.host.root.querySelector('[data-tab="changelog"] .dot')?.remove();
+  }
+
+  private get seenKey(): string {
+    return `dimmi:${this.appId}:changelog_seen`;
   }
 
   /*

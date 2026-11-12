@@ -236,7 +236,7 @@ function SignedInShell({
   const [bellOpen, setBellOpen] = useState(false);
   const openBell = useCallback(() => setBellOpen(true), []);
   const sections = inSettings
-    ? settingsSections(me.instance?.edition === "cloud")
+    ? settingsSections()
     : appSections(counts?.views.mine.open, bell?.unseen_count, {
         isOpen: bellOpen,
         onOpenChange: setBellOpen,
@@ -253,7 +253,7 @@ function SignedInShell({
       selected={selected}
       switcher={switcher}
       account={account}
-      footer={inSettings ? null : <GetStarted />}
+      footer={inSettings || !workspace ? null : <GetStarted workspace={workspace.id} />}
       showThemeToggle={false}
       density="compact"
       collapsed={mobile ? false : collapsed}

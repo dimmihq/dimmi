@@ -24,5 +24,6 @@ func devCommands(a *app.App) []foundation.Command {
 		DisposableDomainsCommand{App: a},
 		BroadcastDemoCommand{App: a},
 		SeriesDemoCommand{App: a},
+		InboxDemoCommand{App: a},
 	}
 }

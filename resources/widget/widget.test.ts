@@ -579,6 +579,30 @@ describe("core", () => {
       expect(textarea().value).toBe("first line");
     });
 
+    it("puts a picked emoji where the cursor was and closes the picker", async () => {
+      await started();
+      const picker = () => composer().querySelector(".emoji-picker") as HTMLElement;
+      const toggle = composer().querySelector('[data-action="click->emoji"]') as HTMLButtonElement;
+      type("Thanks !");
+      textarea().setSelectionRange(7, 7);
+
+      toggle.click();
+      await vi.dynamicImportSettled();
+      expect(picker().hidden).toBe(false);
+      expect(toggle.getAttribute("aria-expanded")).toBe("true");
+
+      [...picker().querySelectorAll<HTMLButtonElement>("[data-emoji]")].find((b) => b.dataset.emoji === "🙏")?.click();
+      expect(textarea().value).toBe("Thanks 🙏!");
+      expect(textarea().selectionStart).toBe(7 + "🙏".length);
+      expect(picker().hidden).toBe(true);
+      expect(sendButton().disabled).toBe(false);
+
+      toggle.click();
+      await vi.dynamicImportSettled();
+      picker().dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+      expect(picker().hidden).toBe(true);
+    });
+
     it("holds attached files as chips and sends them as file bubbles", async () => {
       await started();
       const picker = composer().querySelector('input[type="file"]') as HTMLInputElement;
@@ -681,6 +705,25 @@ describe("core", () => {
     (shadow().querySelector('[data-current] [data-open="entry:1"]') as HTMLElement).click();
     (shadow().querySelector('[data-current] [data-action="click->back"]') as HTMLElement).click();
     expect(widget?.messenger?.expanded).toBe(true);
+  });
+
+  it("marks the face picked under an article with a thank-you, and lets the visitor change it", async () => {
+    await started();
+    tab("help").click();
+    (shadow().querySelector('[data-current] [data-open="collection:integrations"]') as HTMLElement).click();
+    (shadow().querySelector('[data-current] [data-open="article:connect-github"]') as HTMLElement).click();
+    const box = shadow().querySelector("[data-current] .feedback") as HTMLElement;
+    const face = (answer: string) => box.querySelector(`[data-helpful="${answer}"]`) as HTMLButtonElement;
+    const rated = vi.fn();
+    shadow().addEventListener("dimmi:rate", (event) => rated((event as CustomEvent).detail));
+
+    face("no").click();
+    expect(box.dataset.rated).toBe("no");
+    expect(face("no").getAttribute("aria-pressed")).toBe("true");
+    face("yes").click();
+    expect(box.dataset.rated).toBe("yes");
+    expect(face("no").getAttribute("aria-pressed")).toBe("false");
+    expect(rated).toHaveBeenLastCalledWith({ article: "connect-github", helpful: true });
   });
 
   it("opens popular articles straight from the help tab", async () => {

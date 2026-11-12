@@ -9,11 +9,12 @@
  * narrow the list too, kept on the address.
  */
 import { RiChatSmile3Line, RiInbox2Line, RiSearchLine } from "@remixicon/react";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { useNavigate, useParams, useSearch } from "@tanstack/react-router";
-import { useDeferredValue, useEffect, useState } from "react";
+import { useDeferredValue, useEffect, useMemo, useState } from "react";
 import { Panel as Pane } from "react-resizable-panels";
 
+import { Button } from "@/components/base/buttons/button";
 import { Input } from "@/components/base/input/input";
 import { SegmentedControl, SegmentedControlItem } from "@/components/base/segmented-control/segmented-control";
 import { PageOutlet } from "@/features/layout/page-outlet";
@@ -22,7 +23,16 @@ import { EmptyState, PageHeader, Panel, ScrollArea } from "@/features/shell/page
 import { PaneGroup, PaneHandle } from "@/features/shell/resizable";
 import { useWide } from "@/features/shell/use-wide";
 import { type Draft, draftsQuery } from "@/lib/api/drafts";
-import { type AiFilter, type ConversationSort, conversationsQuery, countsQuery } from "@/lib/api/inbox";
+import {
+  type AiFilter,
+  type Conversation,
+  type ConversationSort,
+  conversationsQuery,
+  countsQuery,
+  type ListParams,
+  listPage,
+  moreConversations,
+} from "@/lib/api/inbox";
 import { viewsQuery } from "@/lib/api/views";
 import { callerQuery } from "@/lib/api/workspace";
 import { ConversationList } from "./conversation-list";
@@ -135,22 +145,31 @@ function ListPanel({ view, openId }: { view: string; openId: string | undefined 
   const settings = useListSettings(workspace, view);
   const mentions = view === "mentions";
   const [everyMention, setEveryMention] = useState(false);
+  const list = {
+    view: settings.params.filter,
+    status: settings.status,
+    sort: settings.sort,
+    search: query,
+    unread: mentions && !everyMention,
+    ai: settings.ai,
+    where: settings.where,
+  };
   const {
-    data: conversations,
+    data: firstPage,
     isPending,
     isError,
   } = useQuery({
-    ...conversationsQuery(workspace, {
-      view: settings.params.filter,
-      status: settings.status,
-      sort: settings.sort,
-      search: query,
-      unread: mentions && !everyMention,
-      ai: settings.ai,
-      where: settings.where,
-    }),
+    ...conversationsQuery(workspace, list),
     enabled: workspace !== "",
   });
+  const more = useMoreConversations(workspace, list, firstPage?.length ?? 0);
+  const conversations = useMemo(() => {
+    if (!firstPage || more.items.length === 0) {
+      return firstPage;
+    }
+    const shown = new Set(firstPage.map((conversation) => conversation.id));
+    return [...firstPage, ...more.items.filter((conversation) => !shown.has(conversation.id))];
+  }, [firstPage, more.items]);
   const { data: counts } = useQuery({ ...countsQuery(workspace), enabled: workspace !== "" });
   const { data: caller } = useQuery({ ...callerQuery(workspace), enabled: workspace !== "" });
   const { data: drafts } = useQuery({ ...draftsQuery(workspace), enabled: workspace !== "" });
@@ -194,6 +213,7 @@ function ListPanel({ view, openId }: { view: string; openId: string | undefined 
         state={isPending ? "loading" : isError ? "error" : "ready"}
         conversations={conversations ?? []}
         drafted={draftedIn(drafts)}
+        more={more.more ? { busy: more.busy, load: more.load } : undefined}
       />
     </Panel>
   );
@@ -237,6 +257,7 @@ function ListBody({
   state,
   conversations,
   drafted,
+  more,
 }: {
   view: string;
   me: string | undefined;
@@ -246,6 +267,7 @@ function ListBody({
   state: "loading" | "error" | "ready";
   conversations: NonNullable<Parameters<typeof ConversationList>[0]["conversations"]>;
   drafted: ReadonlySet<string>;
+  more?: { busy: boolean; load: () => void };
 }) {
   if (state === "loading") {
     return <ConversationRowsSkeleton />;
@@ -270,6 +292,13 @@ function ListBody({
   return (
     <ScrollArea>
       <ConversationList view={view} conversations={conversations} openId={openId} me={me} drafted={drafted} />
+      {more ? (
+        <div className="flex justify-center px-[7px] pt-1 pb-3">
+          <Button size="small" variant="secondary" disabled={more.busy} onClick={more.load}>
+            Load more
+          </Button>
+        </div>
+      ) : null}
     </ScrollArea>
   );
 }
@@ -288,4 +317,45 @@ export function NoConversation() {
       />
     </Panel>
   );
+}
+
+/*
+ * useMoreConversations reads the list past its first page, a page at a
+ * time, once the first page came back full. It starts over whenever the
+ * list's filters change; the first call reads the first page again only
+ * for the cursor that leads on.
+ */
+function useMoreConversations(workspace: string, list: ListParams, firstCount: number) {
+  const key = JSON.stringify(list);
+  const [state, setState] = useState<{ key: string; items: Conversation[]; cursor: string | null; done: boolean }>({
+    key,
+    items: [],
+    cursor: null,
+    done: false,
+  });
+  const current = state.key === key ? state : { key, items: [], cursor: null, done: false };
+  const load = useMutation({
+    mutationFn: async () => {
+      let cursor = current.cursor;
+      if (!cursor) {
+        cursor = (await moreConversations(workspace, list, null)).next;
+      }
+      if (!cursor) {
+        return { items: [] as Conversation[], next: null };
+      }
+      return moreConversations(workspace, list, cursor);
+    },
+    onSuccess: (page) =>
+      setState((was) => {
+        const base = was.key === key ? was : { key, items: [], cursor: null, done: false };
+        return { key, items: [...base.items, ...page.items], cursor: page.next, done: !page.next };
+      }),
+  });
+
+  return {
+    items: current.items,
+    more: firstCount >= listPage && !current.done,
+    busy: load.isPending,
+    load: () => load.mutate(),
+  };
 }

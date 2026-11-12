@@ -77,6 +77,8 @@ type ConversationController struct {
 	Create    *conversations.CreateConversation
 	Apply     *conversations.ApplyConversationChanges
 	Neighbors *conversations.ShowNeighbors
+	Trash     *conversations.TrashConversation
+	Restore   *conversations.RestoreConversation
 	Viewers   *appbroadcasting.Viewers
 	IDs       *ids.Registry
 	Cursors   *pagination.Cursors
@@ -416,4 +418,42 @@ func (c *ConversationController) cursor(encoded, hash string) (*conversationCurs
 	}
 
 	return &start, nil
+}
+
+/*
+Destroy moves a conversation to the trash.
+*/
+func (c *ConversationController) Destroy(ctx context.Context, in *requests.ConversationRequest) (*EmptyOutput, error) {
+	ref, err := conversationRef(c.IDs, in.Conversation)
+	if err != nil {
+		return nil, err
+	}
+
+	err = c.Trash.Handle(ctx, conversations.TrashInput{Membership: membership(ctx), Ref: ref, MutationID: mutationID(ctx)})
+	if err != nil {
+		return nil, err
+	}
+
+	return &EmptyOutput{}, nil
+}
+
+/*
+StoreRestore takes a conversation out of the trash.
+*/
+func (c *ConversationController) StoreRestore(
+	ctx context.Context, in *requests.ConversationRequest,
+) (*ConversationOutput, error) {
+	ref, err := conversationRef(c.IDs, in.Conversation)
+	if err != nil {
+		return nil, err
+	}
+
+	loaded, err := c.Restore.Handle(ctx, conversations.TrashInput{
+		Membership: membership(ctx), Ref: ref, MutationID: mutationID(ctx),
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return &ConversationOutput{Body: fhttp.NewResource(resources.NewConversation(loaded))}, nil
 }

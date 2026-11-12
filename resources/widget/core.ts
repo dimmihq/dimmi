@@ -280,8 +280,15 @@ export function boot(win: Window & DimmiWindow, doc: Document): Widget | undefin
       }
     });
     root.addEventListener("dimmi:typing", () => live?.typing(true));
+    root.addEventListener("dimmi:rate", (event) => {
+      const rating = (event as CustomEvent<{ article: string; helpful: boolean }>).detail;
+      void live?.rate(rating.article, rating.helpful);
+    });
     root.addEventListener("click", (event) => {
       const target = event.target instanceof Element ? event.target : null;
+      if (target?.closest('[role="tab"][data-tab="changelog"]')) {
+        live?.readChangelog();
+      }
       const kind = target?.closest<HTMLElement>("[data-ai]")?.dataset.ai;
       if (kind === "helped" || kind === "handoff") {
         void live?.aiAction(kind);

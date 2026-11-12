@@ -123,6 +123,79 @@
         ],
         "type": "object"
       },
+      "ChangelogEntry": {
+        "additionalProperties": false,
+        "properties": {
+          "body": {
+            "items": {
+              "$ref": "#/components/schemas/Block"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "label": {
+            "type": "string"
+          },
+          "published_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "slug": {
+            "type": "string"
+          },
+          "summary": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "slug",
+          "title",
+          "summary",
+          "label",
+          "published_at",
+          "body"
+        ],
+        "type": "object"
+      },
+      "ChangelogIndex": {
+        "additionalProperties": false,
+        "properties": {
+          "entries": {
+            "items": {
+              "$ref": "#/components/schemas/ChangelogEntry"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "url": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "url",
+          "entries"
+        ],
+        "type": "object"
+      },
+      "ChangelogOutputBody": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/ChangelogIndex"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
       "CheckWidgetEmailCodeRequestBody": {
         "additionalProperties": false,
         "properties": {
@@ -1408,6 +1481,25 @@
         ],
         "type": "object"
       },
+      "StoreWidgetArticleRatingRequestBody": {
+        "additionalProperties": false,
+        "properties": {
+          "article": {
+            "maxLength": 200,
+            "minLength": 1,
+            "pattern": "^[a-z0-9-]+$",
+            "type": "string"
+          },
+          "helpful": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "article",
+          "helpful"
+        ],
+        "type": "object"
+      },
       "StoreWidgetAttachmentRequestBody": {
         "additionalProperties": true,
         "properties": {
@@ -2362,6 +2454,33 @@
         }
       }
     },
+    "/apps/{app}/changelog": {
+      "get": {
+        "operationId": "widget.apps.changelog.show",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChangelogOutputBody"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseError"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        }
+      }
+    },
     "/apps/{app}/config": {
       "get": {
         "operationId": "widget.apps.config.show",
@@ -2447,6 +2566,36 @@
               }
             },
             "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseError"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        }
+      }
+    },
+    "/article-ratings": {
+      "post": {
+        "operationId": "widget.article-ratings.store",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StoreWidgetArticleRatingRequestBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "No Content"
           },
           "default": {
             "content": {

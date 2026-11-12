@@ -49,6 +49,7 @@ export interface Texts {
   update_feedback: string;
   still_need_help: string;
   open_in_help_center: string;
+  rating_thanks: string;
   home: string;
   messages: string;
   changelog: string;
@@ -128,6 +129,7 @@ export const defaults: Options = {
     update_feedback: "What do you think of this update?",
     still_need_help: "Still need help? Chat with us",
     open_in_help_center: "Open in help center",
+    rating_thanks: "Thanks for letting us know.",
     home: "Home",
     messages: "Messages",
     changelog: "Changelog",

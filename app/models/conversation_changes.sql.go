@@ -230,6 +230,68 @@ func (q *Queries) RecordConversationMessage(ctx context.Context, arg RecordConve
 	return i, err
 }
 
+const restoreConversation = `-- name: RestoreConversation :one
+UPDATE conversations SET deleted_at = NULL, updated_at = $1::timestamptz
+WHERE workspace_id = $2 AND id = $3 AND deleted_at IS NOT NULL
+RETURNING id, workspace_id, number, inbox_id, channel_connection_id, contact_id, subject, status, spam, assignee_member_id, assignee_team_id, ai_state, snoozed_until, external_thread_key, source, first_customer_message_at, last_customer_message_at, first_reply_at, last_reply_at, last_message_at, closed_at, message_count, deleted_at, created_at, updated_at, ai_reply_count, ai_cost_micros, ai_language, ai_handed_off_at, ai_handoff_reason, is_test, previous_conversation_id, assignment_wait_reason, assignment_waiting_since, waiting_since, last_activity_at, last_message_id, search, priority, workflow_run_id, ai_mode
+`
+
+type RestoreConversationParams struct {
+	Now         time.Time `json:"now"`
+	WorkspaceID ids.UUID  `json:"workspace_id"`
+	ID          ids.UUID  `json:"id"`
+}
+
+// RestoreConversation takes the conversation out of the trash.
+func (q *Queries) RestoreConversation(ctx context.Context, arg RestoreConversationParams) (Conversation, error) {
+	row := q.db.QueryRow(ctx, restoreConversation, arg.Now, arg.WorkspaceID, arg.ID)
+	var i Conversation
+	err := row.Scan(
+		&i.ID,
+		&i.WorkspaceID,
+		&i.Number,
+		&i.InboxID,
+		&i.ChannelConnectionID,
+		&i.ContactID,
+		&i.Subject,
+		&i.Status,
+		&i.Spam,
+		&i.AssigneeMemberID,
+		&i.AssigneeTeamID,
+		&i.AiState,
+		&i.SnoozedUntil,
+		&i.ExternalThreadKey,
+		&i.Source,
+		&i.FirstCustomerMessageAt,
+		&i.LastCustomerMessageAt,
+		&i.FirstReplyAt,
+		&i.LastReplyAt,
+		&i.LastMessageAt,
+		&i.ClosedAt,
+		&i.MessageCount,
+		&i.DeletedAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.AiReplyCount,
+		&i.AiCostMicros,
+		&i.AiLanguage,
+		&i.AiHandedOffAt,
+		&i.AiHandoffReason,
+		&i.IsTest,
+		&i.PreviousConversationID,
+		&i.AssignmentWaitReason,
+		&i.AssignmentWaitingSince,
+		&i.WaitingSince,
+		&i.LastActivityAt,
+		&i.LastMessageID,
+		&i.Search,
+		&i.Priority,
+		&i.WorkflowRunID,
+		&i.AiMode,
+	)
+	return i, err
+}
+
 const setConversationAssignment = `-- name: SetConversationAssignment :one
 UPDATE conversations
 SET assignee_member_id = $1, assignee_team_id = $2,
@@ -538,4 +600,66 @@ type TouchConversationParams struct {
 func (q *Queries) TouchConversation(ctx context.Context, arg TouchConversationParams) error {
 	_, err := q.db.Exec(ctx, touchConversation, arg.Now, arg.WorkspaceID, arg.ID)
 	return err
+}
+
+const trashConversation = `-- name: TrashConversation :one
+UPDATE conversations SET deleted_at = $1::timestamptz, updated_at = $1::timestamptz
+WHERE workspace_id = $2 AND id = $3 AND deleted_at IS NULL
+RETURNING id, workspace_id, number, inbox_id, channel_connection_id, contact_id, subject, status, spam, assignee_member_id, assignee_team_id, ai_state, snoozed_until, external_thread_key, source, first_customer_message_at, last_customer_message_at, first_reply_at, last_reply_at, last_message_at, closed_at, message_count, deleted_at, created_at, updated_at, ai_reply_count, ai_cost_micros, ai_language, ai_handed_off_at, ai_handoff_reason, is_test, previous_conversation_id, assignment_wait_reason, assignment_waiting_since, waiting_since, last_activity_at, last_message_id, search, priority, workflow_run_id, ai_mode
+`
+
+type TrashConversationParams struct {
+	Now         time.Time `json:"now"`
+	WorkspaceID ids.UUID  `json:"workspace_id"`
+	ID          ids.UUID  `json:"id"`
+}
+
+// TrashConversation moves the live conversation to the trash.
+func (q *Queries) TrashConversation(ctx context.Context, arg TrashConversationParams) (Conversation, error) {
+	row := q.db.QueryRow(ctx, trashConversation, arg.Now, arg.WorkspaceID, arg.ID)
+	var i Conversation
+	err := row.Scan(
+		&i.ID,
+		&i.WorkspaceID,
+		&i.Number,
+		&i.InboxID,
+		&i.ChannelConnectionID,
+		&i.ContactID,
+		&i.Subject,
+		&i.Status,
+		&i.Spam,
+		&i.AssigneeMemberID,
+		&i.AssigneeTeamID,
+		&i.AiState,
+		&i.SnoozedUntil,
+		&i.ExternalThreadKey,
+		&i.Source,
+		&i.FirstCustomerMessageAt,
+		&i.LastCustomerMessageAt,
+		&i.FirstReplyAt,
+		&i.LastReplyAt,
+		&i.LastMessageAt,
+		&i.ClosedAt,
+		&i.MessageCount,
+		&i.DeletedAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.AiReplyCount,
+		&i.AiCostMicros,
+		&i.AiLanguage,
+		&i.AiHandedOffAt,
+		&i.AiHandoffReason,
+		&i.IsTest,
+		&i.PreviousConversationID,
+		&i.AssignmentWaitReason,
+		&i.AssignmentWaitingSince,
+		&i.WaitingSince,
+		&i.LastActivityAt,
+		&i.LastMessageID,
+		&i.Search,
+		&i.Priority,
+		&i.WorkflowRunID,
+		&i.AiMode,
+	)
+	return i, err
 }

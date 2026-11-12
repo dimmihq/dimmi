@@ -2,13 +2,11 @@
  * The composer's add menu, on BoardUI's composer add menu: the round plus
  * turns into a close, and a panel rises above it with what a teammate can
  * bring into the message. Each source opens a searchable list in the
- * same panel: help center
- * articles, saved replies, past conversations, issues, feature requests
- * and changelog entries; typing narrows the list, Enter takes the first
- * match and the down arrow moves into the list. Emoji and, when the
- * workspace allows it, GIFs from GIPHY have pickers of their own. A saved
- * reply drops its text into the draft, and anything else drops in a line
- * naming it, so whatever is picked reaches the customer with the message.
+ * same panel: the help center's articles, feature requests and changelog
+ * entries; typing narrows the list, Enter takes the first match and the
+ * down arrow moves into the list. Emoji and, when the workspace allows
+ * it, GIFs from GIPHY have pickers of their own. A pick drops in a line
+ * naming it with its link, so it reaches the customer with the message.
  * Files are not offered until replies can carry them. Moving between the menu
  * and a list slides the view the way the person is heading while the
  * panel eases to its new height, on BoardUI's timings. The panel always
@@ -18,16 +16,13 @@ import {
   RiAddLine,
   RiArrowLeftSLine,
   RiArticleLine,
-  RiChat3Line,
-  RiChatQuoteLine,
   RiEmotionLine,
   RiFileGifLine,
-  RiGitPullRequestLine,
   RiHistoryLine,
   RiLightbulbLine,
   RiSearchLine,
 } from "@remixicon/react";
-import { type ComponentType, type ReactNode, useRef, useState } from "react";
+import { type ComponentType, type ReactNode, useDeferredValue, useRef, useState } from "react";
 import { Button as AriaButton, Dialog, DialogTrigger, ListBox, ListBoxItem, Popover } from "react-aria-components";
 
 import { CHIP_COLORS, type ChipColor } from "@/components/base/badges/chip";
@@ -37,7 +32,8 @@ import { cx } from "@/utils/cx";
 
 import { EmojiPicker } from "./composer/emoji-picker";
 import { GifPicker, type PickedGif } from "./composer/gif-picker";
-import { type LibraryItem, type SourceKind, search } from "./library";
+import { useInbox } from "./conversations";
+import { type LibraryItem, type SourceKind, useLibrary } from "./library";
 import { Resize, Swap } from "./motion";
 
 interface Source {
@@ -51,13 +47,6 @@ interface Source {
 
 const basics: Source[] = [
   {
-    kind: "reply",
-    label: "Saved reply",
-    description: "Insert a reply your team saved",
-    icon: RiChatQuoteLine,
-    noun: "saved replies",
-  },
-  {
     kind: "article",
     label: "Help article",
     description: "Link an article from your help center",
@@ -67,22 +56,6 @@ const basics: Source[] = [
 ];
 
 const workspace: Source[] = [
-  {
-    kind: "conversation",
-    label: "Conversation",
-    description: "Link a similar case",
-    icon: RiChat3Line,
-    noun: "conversations",
-    tint: "blue",
-  },
-  {
-    kind: "issue",
-    label: "Issue",
-    description: "Link a GitHub issue",
-    icon: RiGitPullRequestLine,
-    noun: "issues",
-    tint: "purple",
-  },
   {
     kind: "request",
     label: "Feature request",
@@ -168,7 +141,10 @@ function Picker({
 }) {
   const [query, setQuery] = useState("");
   const results = useRef<HTMLDivElement>(null);
-  const found = search(source.kind, query);
+  const { workspace: current } = useInbox();
+  const library = useLibrary(current, source.kind, useDeferredValue(query));
+  const found = library.items;
+  const empty = library.loading ? "Loading…" : library.missing ? "Set up a help center first" : "Nothing matches";
 
   return (
     <div className="flex flex-col gap-2">
@@ -202,7 +178,7 @@ function Picker({
             onPick(item);
           }
         }}
-        renderEmptyState={() => <p className="px-2 py-3 text-body-regular text-text-tertiary">Nothing matches</p>}
+        renderEmptyState={() => <p className="px-2 py-3 text-body-regular text-text-tertiary">{empty}</p>}
         className="flex max-h-64 flex-col gap-1 overflow-y-auto outline-none"
       >
         {(item) => (
@@ -278,7 +254,7 @@ export function AddMenu({
     }
   };
   const pick = (item: LibraryItem) => {
-    onInsert(item.kind === "reply" ? (item.body ?? item.title) : `${item.title} (${item.detail})`);
+    onInsert(item.url ? `${item.title}: ${item.url}` : item.title);
     toggle(false);
   };
 

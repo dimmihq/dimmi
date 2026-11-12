@@ -12,6 +12,7 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 
 import { LocaleRoot } from "./features/shell/locale-root";
+import { RouteError } from "./features/shell/route-error";
 import { syncTheme } from "./features/theme/theme-sync";
 import "./lib/i18n";
 import { workspaceAddress } from "./features/shell/workspace";
@@ -24,6 +25,7 @@ const router = createRouter({
   routeTree,
   context: { queryClient },
   defaultPreload: "intent",
+  defaultErrorComponent: RouteError,
   rewrite: workspaceAddress,
 });
 

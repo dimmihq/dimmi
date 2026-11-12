@@ -74,6 +74,8 @@ func bootEmail(a *app.App) error {
 
 	acts.CreateEmailAddress = &email.CreateEmailAddress{DB: a.DB, Clock: a.Clock, Config: cfg}
 	acts.ListEmailAddresses = &email.ListEmailAddresses{DB: a.DB}
+	acts.ListSuppressions = &email.ListContactSuppressions{DB: a.DB, Clock: a.Clock}
+	acts.LiftSuppression = &email.LiftSuppression{DB: a.DB}
 	acts.ShowEmailAddress = &email.ShowEmailAddress{DB: a.DB}
 	acts.RecommendGuide = &email.RecommendGuide{DNS: a.DNS, Cache: a.Cache}
 	acts.UpdateEmailAddress = &email.UpdateEmailAddress{DB: a.DB, Clock: a.Clock}

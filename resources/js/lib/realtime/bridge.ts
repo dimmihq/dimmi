@@ -17,6 +17,12 @@ import { appendRecord, type Identified, upsertRecord } from "./cache";
 import { realtimeKeys } from "./keys";
 
 /*
+ * refetchWindow is how long broadcasts gather before the screens they
+ * touched refetch, in milliseconds.
+ */
+const refetchWindow = 400;
+
+/*
  * Envelope is one broadcast as the server sends it.
  */
 export interface Envelope {
@@ -101,6 +107,9 @@ function isReference(record: ObjectRecord): boolean {
 export class Bridge {
   private readonly seen = new Set<string>();
   readonly mutations = new MutationIds();
+
+  private readonly pending = new Map<string, QueryKey>();
+  private timer: ReturnType<typeof setTimeout> | undefined;
 
   constructor(private readonly client: QueryClient) {}
 
@@ -252,9 +261,28 @@ export class Bridge {
     }
   }
 
+  /*
+   * refetch marks the queries stale at once, so nothing reads them as
+   * current, and refetches the ones on screen once the burst settles: a
+   * busy workspace sends many broadcasts a second, and refetching for
+   * each would spend the person's API rate limit in moments.
+   */
   private refetch(...keys: QueryKey[]) {
     for (const queryKey of keys) {
-      void this.client.invalidateQueries({ queryKey });
+      void this.client.invalidateQueries({ queryKey, refetchType: "none" });
+      this.pending.set(JSON.stringify(queryKey), queryKey);
+    }
+    if (this.timer === undefined) {
+      this.timer = setTimeout(() => this.flush(), refetchWindow);
+    }
+  }
+
+  private flush() {
+    this.timer = undefined;
+    const keys = [...this.pending.values()];
+    this.pending.clear();
+    for (const queryKey of keys) {
+      void this.client.refetchQueries({ queryKey, type: "active", stale: true });
     }
   }
 

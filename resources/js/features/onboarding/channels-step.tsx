@@ -3,8 +3,8 @@
  * first and is recommended, since a snippet on the team's site is the
  * quickest way to get a first conversation. Email takes the support
  * address, then walks the team through forwarding it to the workspace's
- * receiving address until the first email arrives. Chat apps are
- * listed as they are in settings, ready to connect.
+ * receiving address until the first email arrives. Slack and other
+ * tools connect later from Settings, under Integrations.
  */
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { type FormEvent, type ReactNode, useState } from "react";
@@ -14,9 +14,6 @@ import { Button } from "@/components/base/buttons/button";
 import { Input } from "@/components/base/input/input";
 import { Skeleton } from "@/components/base/skeleton/skeleton";
 import { fieldError } from "@/features/auth/form-errors";
-import { chatApps } from "@/features/settings/chat-apps";
-import { Action } from "@/features/settings/controls";
-import { Item, Logo } from "@/features/settings/layout";
 import { Snippet } from "@/features/settings/snippet";
 import { createEmailAddress, emailAddressesQuery } from "@/lib/api/email";
 import { installSnippet, widgetSettingsQuery } from "@/lib/api/widget-settings";
@@ -140,17 +137,6 @@ export function ChannelsStep({ workspace, label, onNext, onBack }: StepProps) {
         </ChannelSection>
         <ChannelSection title="Email" description="Answer mail sent to your support address from the inbox.">
           <EmailSetup workspace={workspace} />
-        </ChannelSection>
-        <ChannelSection title="Chat apps" description="Answer customers in the apps they already use.">
-          <ul className="flex flex-col gap-2">
-            {chatApps.map((app) => (
-              <li key={app.name} className="rounded-2xl bg-background-secondary-default ps-3">
-                <Item mark={<Logo icon={app.icon} brand={app.brand} />} title={app.name} detail={app.detail}>
-                  <Action>Connect</Action>
-                </Item>
-              </li>
-            ))}
-          </ul>
         </ChannelSection>
       </div>
       <StepActions primary={onNext} primaryLabel="Continue" onBack={onBack} />

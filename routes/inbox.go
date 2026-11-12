@@ -60,8 +60,8 @@ func newInboxControllers(a *app.App) inboxControllers {
 		},
 		conversations: &v1.ConversationController{
 			List: acts.ListConversations, Show: acts.ShowConversation, Create: acts.CreateConversation,
-			Apply: acts.ApplyChanges, Neighbors: acts.ShowNeighbors, Viewers: a.Viewers, IDs: a.IDs,
-			Cursors: cursors,
+			Apply: acts.ApplyChanges, Neighbors: acts.ShowNeighbors, Trash: acts.TrashConversation,
+			Restore: acts.RestoreConversation, Viewers: a.Viewers, IDs: a.IDs, Cursors: cursors,
 		},
 		messages: &v1.ConversationMessageController{
 			List: acts.ListMessages, Reply: acts.Reply, Note: acts.AddNote, Relay: acts.AddContactMessage,
@@ -97,7 +97,8 @@ func inboxRoutes(r *routing.Router, a *app.App) {
 		Lists(v1.ContactListing()).Query(numberedPagesQuery()...).Query(routing.QueryParam{
 		Name: "conditions", Description: "Audience conditions as JSON, the same a saved audience holds.",
 	})
-	routing.Post(r, "/contacts", "contacts.store", c.contacts.Store).Ability("contacts:write")
+	routing.Post(r, "/contacts", "contacts.store", c.contacts.Store).Ability("contacts:write").
+		Middleware("idempotent")
 	files := &v1.AttachmentController{Upload: a.Actions.Inbox.UploadFile, Disks: a.Storage, Errors: a.Errors}
 	r.Handle(fhttp.MethodPost, "/attachments", "attachments.store", fhttp.HandlerFunc(files.Store)).
 		Ability("conversations:write").Use(middleware.BodyLimit(v1.MaxMemberUploadBytes + uploadOverhead)).
@@ -126,9 +127,14 @@ func conversationRoutes(r *routing.Router, c inboxControllers) {
 
 	routing.Get(r, "/conversations", "conversations.index", c.conversations.Index).Ability("conversations:read").
 		Lists(v1.ConversationListing())
-	routing.Post(r, "/conversations", "conversations.store", c.conversations.Store).Ability("conversations:write")
+	routing.Post(r, "/conversations", "conversations.store", c.conversations.Store).Ability("conversations:write").
+		Middleware("idempotent")
 	routing.Get(r, conv, "conversations.show", c.conversations.Get).Ability("conversations:read")
 	routing.Patch(r, conv, "conversations.update", c.conversations.Update).Ability("conversations:write")
+	routing.Delete(r, conv, "conversations.destroy", c.conversations.Destroy).Ability("conversations:write").
+		Status(fhttp.StatusNoContent)
+	routing.Post(r, conv+"/restore", "conversations.restore.store", c.conversations.StoreRestore).
+		Ability("conversations:write").Status(fhttp.StatusOK)
 	routing.Get(r, conv+"/neighbors", "conversations.neighbors.index", c.conversations.ListNeighbors).
 		Ability("conversations:read").Lists(v1.ConversationListing())
 	routing.Get(r, conv+"/read-state", "conversations.read-state.show", c.views.ReadState).
@@ -145,13 +151,13 @@ func conversationRoutes(r *routing.Router, c inboxControllers) {
 	routing.Get(r, conv+"/messages/{message}/original/raw", "conversations.messages.original.raw",
 		c.messages.DownloadRaw).Ability("conversations:read")
 	routing.Post(r, conv+"/messages", "conversations.messages.store", c.messages.Store).
-		Ability("conversations:write")
+		Ability("conversations:write").Middleware("idempotent")
 	routing.Post(r, conv+"/replies", "conversations.replies.store", c.messages.StoreReply).
-		Ability("conversations:write")
+		Ability("conversations:write").Middleware("idempotent")
 	routing.Post(r, conv+"/messages/{message}/retry", "conversations.messages.retry", c.messages.Retry).
 		Ability("conversations:write")
 	routing.Post(r, conv+"/notes", "conversations.notes.store", c.messages.StoreNote).
-		Ability("conversations:write")
+		Ability("conversations:write").Middleware("idempotent")
 	routing.Delete(r, conv+"/messages/{message}", "conversations.messages.destroy", c.messages.Destroy).
 		Ability("conversations:write").Status(fhttp.StatusOK)
 	routing.Patch(r, conv+"/messages/{message}", "conversations.messages.update", c.messages.Patch).

@@ -1,12 +1,14 @@
 /*
  * The moves on the open conversation: walking the list, closing,
- * reopening, snoozing and taking it, and how the thread reads.
+ * reopening, snoozing, taking it and moving it to the trash, and how
+ * the thread reads.
  */
 import {
   RiAlarmLine,
   RiArrowDownLine,
   RiArrowUpLine,
   RiCheckboxCircleLine,
+  RiDeleteBinLine,
   RiEyeOffLine,
   RiLayoutRightLine,
   RiRefreshLine,
@@ -86,6 +88,16 @@ export const conversationActions: InboxAction[] = [
     keys: ["A"],
     when: (ctx) => ctx.conversation !== null,
     run: (ctx) => ctx.conversation?.assign(),
+  },
+  {
+    id: "conversation.trash",
+    label: "Move to trash",
+    group: "Conversation",
+    icon: RiDeleteBinLine,
+    shortcut: "#",
+    keys: ["#"],
+    when: (ctx) => ctx.conversation?.canTrash === true,
+    run: (ctx) => ctx.conversation?.trash(),
   },
   {
     id: "conversation.details",

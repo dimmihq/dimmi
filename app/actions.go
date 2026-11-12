@@ -45,6 +45,7 @@ import (
 	"github.com/dimmihq/dimmi/app/actions/teams"
 	"github.com/dimmihq/dimmi/app/actions/tokens"
 	"github.com/dimmihq/dimmi/app/actions/users"
+	"github.com/dimmihq/dimmi/app/actions/webhooks"
 	"github.com/dimmihq/dimmi/app/actions/workflows"
 	"github.com/dimmihq/dimmi/app/actions/workspaces"
 	engine "github.com/dimmihq/dimmi/app/workflows"
@@ -132,6 +133,7 @@ type Actions struct {
 	Articles                   *helpcenters.Articles
 	KnowledgeSettings          *knowledge.Settings
 	KnowledgeSources           *knowledgesources.Engine
+	Webhooks                   *webhooks.Webhooks
 	HelpImages                 *helpcenters.Images
 	HelpCenterAddresses        helpcenters.Addresses
 	HelpPublic                 *helpcenters.Public
@@ -223,6 +225,8 @@ type Actions struct {
 
 	CreateEmailAddress   *email.CreateEmailAddress
 	ListEmailAddresses   *email.ListEmailAddresses
+	ListSuppressions     *email.ListContactSuppressions
+	LiftSuppression      *email.LiftSuppression
 	ShowEmailAddress     *email.ShowEmailAddress
 	RecommendGuide       *email.RecommendGuide
 	UpdateEmailAddress   *email.UpdateEmailAddress

@@ -29,3 +29,20 @@ WHERE workspace_id = @workspace_id AND email = @email AND reason IN ('hard_bounc
 SELECT email::text AS email FROM email_suppressions
 WHERE workspace_id = @workspace_id AND email = ANY (@emails::citext[]) AND scope = 'all'
   AND (expires_at IS NULL OR expires_at > @now::timestamptz);
+
+-- name: ListContactSuppressions :many
+-- ListContactSuppressions returns the live suppressions on the contact's
+-- address, newest first.
+SELECT s.* FROM email_suppressions s
+JOIN contacts c ON c.workspace_id = s.workspace_id AND c.email = s.email
+WHERE s.workspace_id = @workspace_id AND c.id = @contact_id
+  AND (s.expires_at IS NULL OR s.expires_at > @now::timestamptz)
+ORDER BY s.created_at DESC;
+
+-- name: FindEmailSuppression :one
+-- FindEmailSuppression returns one suppression of the workspace.
+SELECT * FROM email_suppressions WHERE workspace_id = @workspace_id AND id = @id;
+
+-- name: DeleteEmailSuppression :exec
+-- DeleteEmailSuppression lets mail reach the address again.
+DELETE FROM email_suppressions WHERE workspace_id = @workspace_id AND id = @id;

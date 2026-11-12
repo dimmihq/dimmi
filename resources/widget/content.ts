@@ -56,6 +56,11 @@ export interface Article {
   author: string;
   updated: string;
   body: Block[];
+  /*
+   * rated is what the visitor answered about the article, unset until
+   * they answer.
+   */
+  rated?: "yes" | "no";
 }
 
 export interface Collection {

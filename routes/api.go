@@ -98,6 +98,7 @@ func API(a *app.App) {
 			broadcastRoutes(workspace, a)
 			seriesRoutes(workspace, a)
 			knowledgeSourceRoutes(workspace, a)
+			webhookEndpointRoutes(workspace, a)
 			attributeRoutes(workspace, a)
 			eventRoutes(workspace, a)
 			slackChannelRoutes(workspace, a)

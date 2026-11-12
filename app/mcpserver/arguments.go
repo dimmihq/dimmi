@@ -123,5 +123,7 @@ func featureIDArguments() map[string]string {
 		"integration": idArgument("connected integration", "itg", "dimmi_integrations_list"),
 		"channel":     idArgument("Slack connection", "chn", "dimmi_integrations_get (its channel_ids)"),
 		"room":        idArgument("Slack channel a connection watches", "chr", "dimmi_channels_rooms_list"),
+		"endpoint":    idArgument("webhook endpoint", "whk", "dimmi_webhook_endpoints_list"),
+		"delivery":    idArgument("webhook delivery", "whd", "dimmi_webhook_endpoints_deliveries_list"),
 	}
 }

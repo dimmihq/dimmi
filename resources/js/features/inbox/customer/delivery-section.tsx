@@ -23,9 +23,11 @@ interface Suppression {
 
 const reasonText: Record<string, string> = {
   hard_bounce: "hard bounce",
+  soft_bounce: "soft bounce",
   complaint: "complaint",
-  unsubscribe: "unsubscribe",
+  unsubscribed: "unsubscribed",
   manual: "blocked by the team",
+  invalid: "invalid address",
 };
 
 function suppressionsQuery(workspace: string, contact: string) {

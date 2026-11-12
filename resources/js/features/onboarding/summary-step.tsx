@@ -10,6 +10,7 @@ import { useNavigate } from "@tanstack/react-router";
 import { Button } from "@/components/base/buttons/button";
 import { Skeleton } from "@/components/base/skeleton/skeleton";
 import { invitationsQuery } from "@/lib/api/invitations";
+import { sourcesQuery } from "@/lib/api/knowledge-sources";
 import { tagsQuery } from "@/lib/api/tags";
 import { updateOnboarding, workspaceQuery } from "@/lib/api/workspace";
 import { StepActions } from "./frame";
@@ -53,6 +54,7 @@ export function SummaryStep({
   const { data: tags } = useQuery(tagsQuery(workspace));
   const { data: invitations } = useQuery(invitationsQuery(workspace));
   const { data: current } = useQuery(workspaceQuery(workspace));
+  const { data: sources } = useQuery(sourcesQuery(workspace));
   const finish = useMutation({
     mutationFn: () => updateOnboarding(workspace, "done", true),
     onSuccess: async () => {
@@ -76,7 +78,11 @@ export function SummaryStep({
         <Row label="Logo" value={current?.logo_url ? "Added" : null} loading={!current} />
         <Row label="Tags" value={tagNames || null} loading={!tags} />
         <Row label="Team" value={invited > 0 ? `${invited} invited` : null} loading={!invitations} />
-        <Row label="Knowledge" value={null} />
+        <Row
+          label="Knowledge"
+          value={sources?.length ? sources.map((source) => source.name).join(", ") : null}
+          loading={!sources}
+        />
         <Row label="Example conversations" value={practiced ? "5 conversations" : null} />
       </ul>
       <div className="mt-8">

@@ -404,6 +404,7 @@
 }
 
 .composer {
+  position: relative;
   display: grid;
   gap: 4px;
   margin: 0 12px 12px;
@@ -556,6 +557,43 @@ textarea::placeholder {
 
 .recorder .round {
   margin-inline-start: auto;
+}
+
+.emoji-picker {
+  position: absolute;
+  z-index: 1;
+  inset-block-end: calc(100% + 8px);
+  inset-inline: 0;
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  gap: 2px;
+  min-inline-size: 0;
+  margin: 0;
+  padding: 8px;
+  border: 0;
+  border-radius: 16px;
+  background: var(--bg-primary);
+  box-shadow:
+    inset 0 0 0 1px var(--border-button),
+    var(--shadow-xs);
+}
+
+.emoji-picker[hidden] {
+  display: none;
+}
+
+.emoji-picker button {
+  block-size: 34px;
+  padding: 0;
+  border: 0;
+  border-radius: 8px;
+  background: none;
+  font-size: 20px;
+}
+
+.emoji-picker button:hover,
+.emoji-picker button:focus-visible {
+  background: var(--bg-primary-hover);
 }
 
 .composer-note {

@@ -68,6 +68,7 @@ import { Route as DSettingsKnowledgeSourceRouteImport } from './routes/d/setting
 import { Route as DSettingsMessengerWidgetRouteImport } from './routes/d/settings/messenger.$widget'
 import { Route as DSettingsSignaturesScopeRouteImport } from './routes/d/settings/signatures.$scope'
 import { Route as DSettingsTeamsTeamRouteImport } from './routes/d/settings/teams.$team'
+import { Route as DSettingsWebhooksEndpointRouteImport } from './routes/d/settings/webhooks.$endpoint'
 import { Route as DCustomersListsAudiencesIndexRouteImport } from './routes/d/customers/_lists/audiences/index'
 import { Route as DCustomersListsCompaniesIndexRouteImport } from './routes/d/customers/_lists/companies/index'
 import { Route as DSeriesSeriesComposeStepRouteImport } from './routes/d/series/$series_.compose.$step'
@@ -373,6 +374,12 @@ const DSettingsTeamsTeamRoute = DSettingsTeamsTeamRouteImport.update({
   path: '/settings/teams/$team',
   getParentRoute: () => DRouteRoute,
 } as any)
+const DSettingsWebhooksEndpointRoute =
+  DSettingsWebhooksEndpointRouteImport.update({
+    id: '/settings/webhooks/$endpoint',
+    path: '/settings/webhooks/$endpoint',
+    getParentRoute: () => DRouteRoute,
+  } as any)
 const DCustomersListsAudiencesIndexRoute =
   DCustomersListsAudiencesIndexRouteImport.update({
     id: '/audiences/',
@@ -461,6 +468,7 @@ export interface FileRoutesByFullPath {
   '/d/settings/messenger/$widget': typeof DSettingsMessengerWidgetRoute
   '/d/settings/signatures/$scope': typeof DSettingsSignaturesScopeRoute
   '/d/settings/teams/$team': typeof DSettingsTeamsTeamRoute
+  '/d/settings/webhooks/$endpoint': typeof DSettingsWebhooksEndpointRoute
   '/d/customers/': typeof DCustomersListsIndexRoute
   '/d/inbox/$view/': typeof DInboxViewIndexRoute
   '/d/series/$series/compose/$step': typeof DSeriesSeriesComposeStepRoute
@@ -521,6 +529,7 @@ export interface FileRoutesByTo {
   '/d/settings/messenger/$widget': typeof DSettingsMessengerWidgetRoute
   '/d/settings/signatures/$scope': typeof DSettingsSignaturesScopeRoute
   '/d/settings/teams/$team': typeof DSettingsTeamsTeamRoute
+  '/d/settings/webhooks/$endpoint': typeof DSettingsWebhooksEndpointRoute
   '/d/inbox/$view': typeof DInboxViewIndexRoute
   '/d/series/$series/compose/$step': typeof DSeriesSeriesComposeStepRoute
   '/d/settings/email/addresses/$address': typeof DSettingsEmailAddressesAddressRoute
@@ -587,6 +596,7 @@ export interface FileRoutesById {
   '/d/settings/messenger/$widget': typeof DSettingsMessengerWidgetRoute
   '/d/settings/signatures/$scope': typeof DSettingsSignaturesScopeRoute
   '/d/settings/teams/$team': typeof DSettingsTeamsTeamRoute
+  '/d/settings/webhooks/$endpoint': typeof DSettingsWebhooksEndpointRoute
   '/d/customers/_lists/': typeof DCustomersListsIndexRoute
   '/d/inbox/$view/': typeof DInboxViewIndexRoute
   '/d/series/$series_/compose/$step': typeof DSeriesSeriesComposeStepRoute
@@ -654,6 +664,7 @@ export interface FileRouteTypes {
     | '/d/settings/messenger/$widget'
     | '/d/settings/signatures/$scope'
     | '/d/settings/teams/$team'
+    | '/d/settings/webhooks/$endpoint'
     | '/d/customers/'
     | '/d/inbox/$view/'
     | '/d/series/$series/compose/$step'
@@ -714,6 +725,7 @@ export interface FileRouteTypes {
     | '/d/settings/messenger/$widget'
     | '/d/settings/signatures/$scope'
     | '/d/settings/teams/$team'
+    | '/d/settings/webhooks/$endpoint'
     | '/d/inbox/$view'
     | '/d/series/$series/compose/$step'
     | '/d/settings/email/addresses/$address'
@@ -779,6 +791,7 @@ export interface FileRouteTypes {
     | '/d/settings/messenger/$widget'
     | '/d/settings/signatures/$scope'
     | '/d/settings/teams/$team'
+    | '/d/settings/webhooks/$endpoint'
     | '/d/customers/_lists/'
     | '/d/inbox/$view/'
     | '/d/series/$series_/compose/$step'
@@ -1210,6 +1223,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DSettingsTeamsTeamRouteImport
       parentRoute: typeof DRouteRoute
     }
+    '/d/settings/webhooks/$endpoint': {
+      id: '/d/settings/webhooks/$endpoint'
+      path: '/settings/webhooks/$endpoint'
+      fullPath: '/d/settings/webhooks/$endpoint'
+      preLoaderRoute: typeof DSettingsWebhooksEndpointRouteImport
+      parentRoute: typeof DRouteRoute
+    }
     '/d/customers/_lists/audiences/': {
       id: '/d/customers/_lists/audiences/'
       path: '/audiences'
@@ -1371,6 +1391,7 @@ interface DRouteRouteChildren {
   DSettingsMessengerWidgetRoute: typeof DSettingsMessengerWidgetRoute
   DSettingsSignaturesScopeRoute: typeof DSettingsSignaturesScopeRoute
   DSettingsTeamsTeamRoute: typeof DSettingsTeamsTeamRoute
+  DSettingsWebhooksEndpointRoute: typeof DSettingsWebhooksEndpointRoute
   DSeriesSeriesComposeStepRoute: typeof DSeriesSeriesComposeStepRoute
   DSettingsEmailAddressesAddressRoute: typeof DSettingsEmailAddressesAddressRoute
   DSettingsEmailDomainsDomainRoute: typeof DSettingsEmailDomainsDomainRoute
@@ -1405,6 +1426,7 @@ const DRouteRouteChildren: DRouteRouteChildren = {
   DSettingsMessengerWidgetRoute: DSettingsMessengerWidgetRoute,
   DSettingsSignaturesScopeRoute: DSettingsSignaturesScopeRoute,
   DSettingsTeamsTeamRoute: DSettingsTeamsTeamRoute,
+  DSettingsWebhooksEndpointRoute: DSettingsWebhooksEndpointRoute,
   DSeriesSeriesComposeStepRoute: DSeriesSeriesComposeStepRoute,
   DSettingsEmailAddressesAddressRoute: DSettingsEmailAddressesAddressRoute,
   DSettingsEmailDomainsDomainRoute: DSettingsEmailDomainsDomainRoute,

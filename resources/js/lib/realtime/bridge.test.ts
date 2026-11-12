@@ -19,6 +19,33 @@ function stale(client: QueryClient, key: readonly unknown[]): boolean {
 }
 
 describe("Bridge", () => {
+  it("refetches once for a burst of broadcasts", () => {
+    vi.useFakeTimers();
+    try {
+      const { client, bridge } = setup();
+      client.setQueryData(realtimeKeys.counts(ws), { all: 1 });
+      const refetch = vi.spyOn(client, "refetchQueries").mockResolvedValue();
+
+      for (let i = 0; i < 50; i++) {
+        bridge.apply(
+          ws,
+          `workspace_conversations:${ws}`,
+          envelope("conversation.closed", { id: `conv_${i}`, object: "conversation", status: "closed" }),
+        );
+      }
+
+      expect(stale(client, realtimeKeys.counts(ws))).toBe(true);
+      expect(refetch).not.toHaveBeenCalled();
+      vi.runAllTimers();
+      const counts = refetch.mock.calls.filter(
+        ([f]) => JSON.stringify(f?.queryKey) === JSON.stringify(realtimeKeys.counts(ws)),
+      );
+      expect(counts).toHaveLength(1);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("patches a conversation row in every list that has it and refetches the others", () => {
     const { client, bridge } = setup();
     const mine = [...realtimeKeys.conversations(ws), { view: "mine" }];

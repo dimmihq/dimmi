@@ -1,67 +1,105 @@
 /*
- * What a teammate can bring into a reply or note besides files: help
- * center articles, saved replies, past conversations, issues, feature
- * requests and changelog entries. Until those parts of the workspace
- * exist, this is the example workspace's library, so the composer's add
- * menu can be tried end to end. Articles, conversations, issues, requests
- * and changelog entries attach as tiles; a saved reply drops its text
- * into the draft.
+ * What a teammate can bring into a reply or note besides files: the
+ * default help center's published articles, its feature requests and its
+ * published changelog entries. Each drops a line naming it, with the link
+ * a customer can open.
  */
-export type SourceKind = "article" | "reply" | "conversation" | "issue" | "request" | "changelog";
+import { useQuery } from "@tanstack/react-query";
+import type { ChangelogEntry } from "@/lib/api/changelog";
+import { entriesQuery } from "@/lib/api/changelog";
+import type { FeedbackPost } from "@/lib/api/feedback";
+import { postsQuery } from "@/lib/api/feedback";
+import { type Article, articlesQuery, helpCentersQuery } from "@/lib/api/help-centers";
+
+export type SourceKind = "article" | "request" | "changelog";
 
 export interface LibraryItem {
   id: string;
   kind: SourceKind;
   title: string;
   detail: string;
-  /* The text a saved reply puts in the draft. */
-  body?: string;
+  /* Where a customer opens it, when it has a public page. */
+  url?: string;
 }
 
-const items: LibraryItem[] = [
-  { id: "a1", kind: "article", title: "Reset your password", detail: "Help center · Account" },
-  { id: "a2", kind: "article", title: "Sign in with a one-time code", detail: "Help center · Account" },
-  { id: "a3", kind: "article", title: "Why reset links expire", detail: "Help center · Security" },
-  { id: "a4", kind: "article", title: "Use dimmi with a password manager", detail: "Help center · Account" },
-  {
-    id: "r1",
-    kind: "reply",
-    title: "Send a sign-in code",
-    detail: "Saved reply",
-    body: "I've sent a one-time sign-in code to your email. Enter it on the sign-in page and you'll be in right away.",
-  },
-  {
-    id: "r2",
-    kind: "reply",
-    title: "Ask for the mail app",
-    detail: "Saved reply",
-    body: "Could you tell me which email app you open the link in? Some apps open links in a preview first, which can use them up.",
-  },
-  {
-    id: "r3",
-    kind: "reply",
-    title: "Closing the loop",
-    detail: "Saved reply",
-    body: "Glad that's sorted! I'll close this conversation, but reply any time and it reopens.",
-  },
-  { id: "c1", kind: "conversation", title: "Reset link expired on open", detail: "Noor Haddad · 3 days ago" },
-  { id: "c2", kind: "conversation", title: "Outlook marks reset links as used", detail: "Tom Becker · Last week" },
-  { id: "i1", kind: "issue", title: "Mail previews spend single-use links", detail: "GitHub · #412 · Open" },
-  { id: "i2", kind: "issue", title: "Offer sign-in codes beside reset links", detail: "GitHub · #398 · In progress" },
-  { id: "f1", kind: "request", title: "Passwordless sign-in", detail: "Feature request · 24 votes" },
-  { id: "l1", kind: "changelog", title: "Sign-in codes are here", detail: "Changelog · October" },
-];
+function matches(item: LibraryItem, needle: string): boolean {
+  return item.title.toLocaleLowerCase().includes(needle) || item.detail.toLocaleLowerCase().includes(needle);
+}
+
+function joinURL(base: string, path: string): string {
+  return `${base.replace(/\/+$/, "")}/${path.replace(/^\/+/, "")}`;
+}
 
 /*
- * search returns the library items of a kind whose title or detail holds
- * the query, ignoring case.
+ * articleItems are the published public articles whose title or
+ * description holds the needle.
  */
-export function search(kind: SourceKind, query: string): LibraryItem[] {
-  const needle = query.trim().toLocaleLowerCase();
+export function articleItems(articles: Article[], base: string, needle: string): LibraryItem[] {
+  return articles
+    .filter((article) => article.status === "published" && article.visibility === "public")
+    .map((article) => ({
+      id: article.id,
+      kind: "article" as const,
+      title: article.title,
+      detail: article.description ?? "Help center",
+      url: base ? joinURL(base, `articles/${article.slug}`) : undefined,
+    }))
+    .filter((item) => matches(item, needle));
+}
 
-  return items.filter(
-    (item) =>
-      item.kind === kind &&
-      (item.title.toLocaleLowerCase().includes(needle) || item.detail.toLocaleLowerCase().includes(needle)),
-  );
+/*
+ * requestItems are feature requests, found by the server.
+ */
+export function requestItems(posts: FeedbackPost[], base: string): LibraryItem[] {
+  return posts.map((post) => ({
+    id: post.id,
+    kind: "request" as const,
+    title: post.title,
+    detail: `Feature request · ${post.vote_count} ${post.vote_count === 1 ? "vote" : "votes"}`,
+    url: base ? joinURL(base, post.path) : undefined,
+  }));
+}
+
+/*
+ * changelogItems are published changelog entries, found by the server.
+ */
+export function changelogItems(entries: ChangelogEntry[], base: string): LibraryItem[] {
+  return entries.map((entry) => ({
+    id: entry.id,
+    kind: "changelog" as const,
+    title: entry.title,
+    detail: entry.summary ?? "Changelog",
+    url: base ? joinURL(base, `changelog/${entry.slug}`) : undefined,
+  }));
+}
+
+/*
+ * useLibrary returns the items of a kind whose title or detail holds the
+ * query, ignoring case, and whether they are still loading.
+ */
+export function useLibrary(workspace: string, kind: SourceKind, query: string) {
+  const needle = query.trim().toLocaleLowerCase();
+  const { data: centers = [] } = useQuery({ ...helpCentersQuery(workspace), enabled: workspace !== "" });
+  const center = centers.find((candidate) => candidate.is_default) ?? centers[0];
+  const id = center?.id ?? "";
+  const base = center?.url ?? "";
+  const search = needle || undefined;
+
+  const articles = useQuery({ ...articlesQuery(workspace, id), enabled: kind === "article" && id !== "" });
+  const posts = useQuery({
+    ...postsQuery(workspace, id, { sort: "trending", page: 1, query: search }),
+    enabled: kind === "request" && id !== "",
+  });
+  const entries = useQuery({
+    ...entriesQuery(workspace, id, { status: "published", page: 1, query: search }),
+    enabled: kind === "changelog" && id !== "",
+  });
+
+  const read = {
+    article: () => ({ pending: articles.isPending, items: articleItems(articles.data ?? [], base, needle) }),
+    request: () => ({ pending: posts.isPending, items: requestItems(posts.data?.data ?? [], base) }),
+    changelog: () => ({ pending: entries.isPending, items: changelogItems(entries.data?.data ?? [], base) }),
+  }[kind]();
+
+  return { items: read.items.slice(0, 50), loading: read.pending && id !== "", missing: centers.length === 0 };
 }

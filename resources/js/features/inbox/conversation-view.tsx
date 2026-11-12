@@ -14,13 +14,14 @@
  * customer's time zone is known, a header control reads the thread's
  * times in it.
  */
-import { RiArrowLeftSLine, RiGlobalLine, RiLayoutRightLine, RiSparkling2Line } from "@remixicon/react";
+import { RiArrowLeftSLine, RiDeleteBinLine, RiGlobalLine, RiLayoutRightLine, RiSparkling2Line } from "@remixicon/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Panel as Pane } from "react-resizable-panels";
 
 import { Chip } from "@/components/base/badges/chip";
+import { Button } from "@/components/base/buttons/button";
 import { IconButton } from "@/components/base/buttons/icon-button";
 import { Drawer } from "@/components/base/drawer/drawer";
 import { ConversationViewers, TypingIndicator } from "@/features/realtime/collision";
@@ -31,6 +32,7 @@ import { useWide } from "@/features/shell/use-wide";
 import {
   addNote,
   type Conversation,
+  earlierMessages,
   type Message,
   markRead,
   messagesQuery,
@@ -38,7 +40,9 @@ import {
   retryDelivery,
   snoozeChoicesQuery,
   type Then,
+  threadPage,
 } from "@/lib/api/inbox";
+import { callerQuery } from "@/lib/api/workspace";
 import { useMutationId } from "@/lib/realtime/context";
 import { useConversationRealtime } from "@/lib/realtime/use-conversation";
 import { cx } from "@/utils/cx";
@@ -78,7 +82,15 @@ const pressed = "border-border-button-active bg-background-primary-active";
 function useTimeline(workspace: string, conversation: Conversation) {
   const queryClient = useQueryClient();
   const mutationId = useMutationId();
-  const { data: messages = [], isPending: loading } = useQuery(messagesQuery(workspace, conversation.id));
+  const { data: latest = [], isPending: loading } = useQuery(messagesQuery(workspace, conversation.id));
+  const earlier = useEarlier(workspace, conversation.id, latest.length);
+  const messages = useMemo(() => {
+    if (earlier.items.length === 0) {
+      return latest;
+    }
+    const shown = new Set(latest.map((message) => message.id));
+    return [...earlier.items.filter((message) => !shown.has(message.id)), ...latest];
+  }, [earlier.items, latest]);
   const refresh = () => queryClient.invalidateQueries({ queryKey: ["workspace", workspace] });
   const read = useMutation({
     mutationFn: () => markRead({ workspace, mutation: mutationId() }, conversation.id),
@@ -122,7 +134,72 @@ function useTimeline(workspace: string, conversation: Conversation) {
     onSettled: refresh,
   });
 
-  return { entries: messages.map(toEntry), loading, send, retry: retry.mutate };
+  return { entries: messages.map(toEntry), loading, send, retry: retry.mutate, earlier };
+}
+
+/*
+ * useCanTrash reports whether the teammate may move conversations to the
+ * trash.
+ */
+function useCanTrash(workspace: string): boolean {
+  const { data: caller } = useQuery(callerQuery(workspace));
+  return caller?.member?.permissions.includes("conversations:delete") ?? false;
+}
+
+function TrashButton({ shown, onPress }: { shown: boolean; onPress: () => void }) {
+  return shown ? <IconButton size="small" icon={RiDeleteBinLine} aria-label="Move to trash" onClick={onPress} /> : null;
+}
+
+/*
+ * EarlierButton reads the thread's older messages while there are any.
+ */
+function EarlierButton({ earlier }: { earlier: ReturnType<typeof useEarlier> }) {
+  if (!earlier.more) {
+    return null;
+  }
+
+  return (
+    <div className="flex justify-center pb-3">
+      <Button size="small" variant="secondary" disabled={earlier.busy} onClick={earlier.load}>
+        Show earlier messages
+      </Button>
+    </div>
+  );
+}
+
+/*
+ * useEarlier reads the thread's older messages a page at a time, once
+ * the latest page came back full. The first call reads the latest page
+ * again only for the cursor that leads further back.
+ */
+function useEarlier(workspace: string, conversation: string, latestCount: number) {
+  const [state, setState] = useState<{ for: string; items: Message[]; before: string | null; done: boolean }>({
+    for: conversation,
+    items: [],
+    before: null,
+    done: false,
+  });
+  const current = state.for === conversation ? state : { for: conversation, items: [], before: null, done: false };
+  const load = useMutation({
+    mutationFn: async () => {
+      let before = current.before;
+      if (!before) {
+        before = (await earlierMessages(workspace, conversation, null)).before;
+      }
+      if (!before) {
+        return { items: [] as Message[], before: null };
+      }
+      return earlierMessages(workspace, conversation, before);
+    },
+    onSuccess: (page) =>
+      setState((was) => {
+        const base = was.for === conversation ? was : { for: conversation, items: [], before: null, done: false };
+        return { for: conversation, items: [...page.items, ...base.items], before: page.before, done: !page.before };
+      }),
+  });
+  const more = latestCount >= threadPage && !current.done;
+
+  return { items: current.items, more, busy: load.isPending, load: () => load.mutate() };
 }
 
 /*
@@ -230,7 +307,8 @@ export function ConversationView({
     }),
     [toggleEvents],
   );
-  const walk = useWalk(view, workspace, conversation, caze, panels);
+  const canTrash = useCanTrash(workspace);
+  const walk = useWalk(view, workspace, conversation, caze, panels, canTrash);
   const timeline = useTimeline(workspace, conversation);
   const customer = customerName(conversation.contact);
   const contactZone = conversation.contact.timezone ?? null;
@@ -294,6 +372,7 @@ export function ConversationView({
               onClick={() => toggle(pane.details)}
             />
           ) : null}
+          <TrashButton shown={canTrash} onPress={walk.trash} />
           <IconButton
             size="small"
             icon={RiSparkling2Line}
@@ -308,6 +387,7 @@ export function ConversationView({
         conversation={conversation.id}
         entries={timeline.entries}
         loading={timeline.loading}
+        earlier={<EarlierButton earlier={timeline.earlier} />}
         customer={customer}
         channel={conversation.channel.name}
         channelType={conversation.channel.type}

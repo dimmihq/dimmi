@@ -2,7 +2,7 @@ import { appSections, selectedKey, settingsLink, settingsSections } from "./navi
 
 describe("selectedKey", () => {
   it("picks the row whose page holds the path, preferring the longest address", () => {
-    const sections = settingsSections(false);
+    const sections = settingsSections();
 
     expect(selectedKey(sections, [], "/d/settings/members")).toBe("settings-members");
     expect(selectedKey(appSections(), [settingsLink], "/d/settings/profile")).toBe("settings");
@@ -22,11 +22,11 @@ describe("selectedKey", () => {
 });
 
 describe("settingsSections", () => {
-  it("offers billing on the cloud only", () => {
-    const labels = (cloud: boolean) =>
-      settingsSections(cloud).flatMap((section) => section.items.map((item) => item.label));
+  it("lists no page that only shows an example", () => {
+    const labels = settingsSections().flatMap((section) => section.items.map((item) => item.label));
 
-    expect(labels(true)).toContain("Billing");
-    expect(labels(false)).not.toContain("Billing");
+    for (const label of ["Billing", "Import & export", "Saved replies", "Connections", "GitHub"]) {
+      expect(labels).not.toContain(label);
+    }
   });
 });

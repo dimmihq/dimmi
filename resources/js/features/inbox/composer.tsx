@@ -5,8 +5,8 @@
  * folds back into the bar once its message is sent. The panel has the
  * BoardUI tab strip behind its top edge saying who will see the message,
  * a field that grows with what is typed with formatting kept as
- * Markdown, and a toolbar with the add menu (help articles, saved replies,
- * emoji, GIFs and more from the workspace, dropped into the text) and a way to ask
+ * Markdown, and a toolbar with the add menu (help articles, feature requests,
+ * changelog entries, emoji and GIFs, dropped into the text) and a way to ask
  * Operator. Replies cannot carry files yet, so the composer offers none
  * rather than show files that would never be sent. Sending goes to the
  * server; a sent draft empties, a refused one stays with the reason under

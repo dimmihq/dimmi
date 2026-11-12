@@ -8,7 +8,9 @@
  * note as an audio file, the bin throws it away. A connected messenger
  * records from the real microphone and says so when it is refused; a
  * preview only plays the motions. Where the page cannot record, the
- * microphone button is not offered.
+ * microphone button is not offered. The smiley opens a small emoji
+ * picker above the text box; a picked emoji lands where the cursor was,
+ * and Escape or the smiley closes the picker again.
  *
  * Sending hands the text, files or voice note on through a "dimmi:send"
  * event: a connected messenger shows the message at once and sends it, a
@@ -37,6 +39,7 @@ export class ComposerController extends Controller {
   #timer: ReturnType<typeof setInterval> | undefined;
   #meter: ReturnType<typeof setInterval> | undefined;
   #recorder: Recorder | undefined;
+  #emoji: typeof import("../lib/emoji") | undefined;
 
   connect(): void {
     for (const bar of this.element.querySelectorAll<HTMLElement>(".live i")) {
@@ -96,8 +99,50 @@ export class ComposerController extends Controller {
     this.#chips();
   }
 
+  async emoji(): Promise<void> {
+    const picker = this.target("emoji");
+    if (!picker) {
+      return;
+    }
+    this.#emoji ??= await import("../lib/emoji");
+    if (!picker.firstChild) {
+      picker.innerHTML = this.#emoji.buttons();
+    }
+    this.#picker(Boolean(picker.hidden));
+  }
+
+  pick(event: Event): void {
+    const value = (event.target as Element).closest<HTMLElement>("[data-emoji]")?.dataset.emoji;
+    if (value && this.#emoji) {
+      this.#picker(false);
+      this.#emoji.insert(this.#input, value);
+      this.resize();
+    }
+  }
+
+  unpick(event: KeyboardEvent): void {
+    if (event.key === "Escape") {
+      event.preventDefault();
+      this.#picker(false);
+      this.target("emoji-button")?.focus();
+    }
+  }
+
+  #picker(open: boolean): void {
+    const picker = this.target("emoji");
+    if (!picker) {
+      return;
+    }
+    picker.hidden = !open;
+    this.target("emoji-button")?.setAttribute("aria-expanded", String(open));
+    if (open) {
+      picker.querySelector<HTMLElement>("button")?.focus();
+    }
+  }
+
   send(event: SubmitEvent): void {
     event.preventDefault();
+    this.#picker(false);
     const body = this.#input.value.trim();
     if (!body && !this.#files.length) {
       return;
@@ -113,6 +158,7 @@ export class ComposerController extends Controller {
 
   async record(): Promise<void> {
     this.#say("");
+    this.#picker(false);
     if (this.#live) {
       let recorder: Recorder;
       try {

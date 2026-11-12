@@ -31,6 +31,8 @@ export interface ConversationMoves {
   snooze: () => void;
   assignToMe: () => void;
   assign: () => void;
+  canTrash: boolean;
+  trash: () => void;
   toggleDetails: () => void;
   toggleEvents: () => void;
   next: () => void;

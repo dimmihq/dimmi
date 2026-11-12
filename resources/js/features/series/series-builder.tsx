@@ -13,12 +13,13 @@ import {
   type RemixiconComponentType,
   RiArchiveLine,
   RiArrowLeftSLine,
+  RiDeleteBinLine,
   RiPauseLine,
   RiPlayLine,
   RiTestTubeLine,
 } from "@remixicon/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Link } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { Focusable } from "react-aria-components";
 
@@ -37,6 +38,7 @@ import { PushPane } from "@/features/shell/push-pane";
 import { useWide } from "@/features/shell/use-wide";
 import {
   actOnSeries,
+  deleteSeries,
   type NodeKind,
   publishSeries,
   type Series,
@@ -256,7 +258,7 @@ function Tip({
   );
 }
 
-type Asked = "try" | "pause" | "archive";
+type Asked = "try" | "pause" | "archive" | "delete";
 
 /*
  * asks words each question the header puts before acting: what trying
@@ -289,11 +291,17 @@ const asks = {
     confirmLabel: "Archive",
     variant: "danger",
   },
+  delete: {
+    title: "Delete this draft?",
+    description: "The series never went live, so nobody is on it. It goes away for good.",
+    confirmLabel: "Delete",
+    variant: "danger",
+  },
 } as const;
 
 /*
  * Actions are the header's buttons, as the series' status allows them.
- * Trying, pausing and archiving ask first; resuming does not, since it
+ * Trying, pausing, archiving and deleting a draft ask first; resuming does not, since it
  * only lets the series carry on. The question keeps its words while it
  * closes, so a dialog fading out never turns into a different one.
  */
@@ -303,6 +311,7 @@ function Actions({
   trying,
   onTry,
   onAct,
+  onDelete,
   onPublish,
 }: {
   series: Series;
@@ -310,6 +319,7 @@ function Actions({
   trying: boolean;
   onTry: () => void;
   onAct: (action: SeriesAction) => void;
+  onDelete: () => void;
   onPublish: () => void;
 }) {
   const [asked, setAsked] = useState<Asked | null>(null);
@@ -321,7 +331,15 @@ function Actions({
   const ran = series.live_version_id !== null;
   const live = series.status === "live";
   const editable = series.status !== "archived";
-  const confirm = () => (asked === "try" ? onTry() : asked ? onAct(asked) : undefined);
+  const confirm = () => {
+    if (asked === "try") {
+      onTry();
+    } else if (asked === "delete") {
+      onDelete();
+    } else if (asked) {
+      onAct(asked);
+    }
+  };
 
   return (
     <>
@@ -336,6 +354,7 @@ function Actions({
       {live ? <Tip label="Pause" icon={RiPauseLine} onPress={() => ask("pause")} /> : null}
       {series.status === "paused" ? <Tip label="Resume" icon={RiPlayLine} onPress={() => onAct("resume")} /> : null}
       {ran && editable ? <Tip label="Archive" icon={RiArchiveLine} onPress={() => ask("archive")} /> : null}
+      {ran ? null : <Tip label="Delete draft" icon={RiDeleteBinLine} onPress={() => ask("delete")} />}
       {editable ? (
         <Button
           size="small"
@@ -380,6 +399,16 @@ function Builder({ workspace, series, step }: { workspace: string; series: Serie
   const act = useMutation({
     mutationFn: (action: SeriesAction) => actOnSeries(workspace, series.id, action),
     onSuccess: refresh,
+    onError: fail,
+  });
+  const navigate = useNavigate();
+  const remove = useMutation({
+    mutationFn: () => deleteSeries(workspace, series.id),
+    onSuccess: async () => {
+      await client.invalidateQueries({ queryKey: seriesKey(workspace) });
+      toast.success("Draft deleted.");
+      await navigate({ to: "/d/series" });
+    },
     onError: fail,
   });
   const tryIt = useMutation({
@@ -434,6 +463,7 @@ function Builder({ workspace, series, step }: { workspace: string; series: Serie
             trying={tryIt.isPending}
             onTry={() => tryIt.mutate()}
             onAct={(action) => act.mutate(action)}
+            onDelete={() => remove.mutate()}
             onPublish={() => setPublishing(true)}
           />
         </div>

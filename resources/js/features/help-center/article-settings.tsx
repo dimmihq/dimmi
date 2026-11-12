@@ -1,15 +1,17 @@
 /*
  * An article's settings, apart from its words: the collection it is
  * filed in, picked from the collections as they nest, whether readers or
- * only dimmi may read it, the audience it is kept to and its address. The audience saves at once; the rest saves
- * with the article.
+ * only dimmi may read it, the audience it is kept to and its address.
+ * The audience saves at once; the rest saves with the article. Deleting
+ * the article asks first.
  */
 import { RiGlobalLine, RiRobot2Line } from "@remixicon/react";
+import { useState } from "react";
 
 import { Button } from "@/components/base/buttons/button";
 import { Input } from "@/components/base/input/input";
 import { Label } from "@/components/base/input/label";
-import { Modal, ModalBody, ModalFooter, ModalHeader } from "@/components/base/modal/modal";
+import { AlertDialog, Modal, ModalBody, ModalFooter, ModalHeader } from "@/components/base/modal/modal";
 import { RadioGroup } from "@/components/base/radio/radio";
 import { RadioCard } from "@/components/base/radio/radio-card";
 import type { Article, Collection } from "@/lib/api/help-centers";
@@ -25,6 +27,7 @@ export function ArticleSettings({
   collections,
   onChange,
   onSaved,
+  onDelete,
   onClose,
 }: {
   workspace: string;
@@ -33,8 +36,11 @@ export function ArticleSettings({
   collections: Collection[];
   onChange: (change: Partial<Draft>) => void;
   onSaved: (next: Article) => void;
+  onDelete: () => Promise<unknown>;
   onClose: () => void;
 }) {
+  const [deleting, setDeleting] = useState(false);
+
   return (
     <Modal
       size="md"
@@ -80,11 +86,24 @@ export function ArticleSettings({
             maxLength={120}
             inputDir="ltr"
           />
+          <div className="mt-2 border-t border-separator-border pt-4">
+            <Button variant="danger-secondary" onClick={() => setDeleting(true)}>
+              Delete article
+            </Button>
+          </div>
         </div>
       </ModalBody>
       <ModalFooter>
         <Button onClick={onClose}>Done</Button>
       </ModalFooter>
+      <AlertDialog
+        isOpen={deleting}
+        onOpenChange={(open) => (open ? undefined : setDeleting(false))}
+        title="Delete this article?"
+        description="It leaves the help center, and dimmi stops answering from it, right away."
+        confirmLabel="Delete article"
+        onConfirm={onDelete}
+      />
     </Modal>
   );
 }

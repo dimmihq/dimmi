@@ -48,6 +48,7 @@ export function useWalk(
   conversation: Conversation,
   caze: CaseControls,
   panels: { openSnooze: () => void; openAssign: () => void; toggleDetails: () => void; toggleEvents: () => void },
+  canTrash = false,
 ) {
   const client = useQueryClient();
   const navigate = useNavigate();
@@ -84,11 +85,21 @@ export function useWalk(
       toggleDetails: panels.toggleDetails,
       toggleEvents: panels.toggleEvents,
       assignToMe: caze.assignToMe,
+      canTrash,
+      trash: () => {
+        caze.trash();
+        const to = next ?? previous;
+        if (to) {
+          open(to);
+        } else {
+          void navigate({ to: "/d/inbox/$view", params: { view } });
+        }
+      },
       next: () => open(next),
       previous: () => open(previous),
       advance: () => open(next ?? previous),
     };
-  }, [caze, conversation.id, conversation.status, navigate, next, previous, view, panels]);
+  }, [caze, conversation.id, conversation.status, navigate, next, previous, view, panels, canTrash]);
 
   useConversationMoves(moves);
 

@@ -18,7 +18,9 @@
 | and owners of access tokens about to expire are warned. Every hour the
 | auth provider key sets visitors sign in with are fetched again when
 | their copy is six hours old. Every minute the Slack digests whose
-| time came are sent.
+| time came are sent. Every minute webhook deliveries due a retry are
+| queued, every five minutes failing webhook endpoints are checked, and
+| every night the webhook delivery log past its retention is pruned.
 |
 */
 
@@ -62,4 +64,7 @@ func Console(a *app.App) {
 	a.Schedule.Job(jobs.SweepKnowledgeEmbeddingsArgs{}).DailyAt("04:10")
 	a.Schedule.Job(jobs.ScheduleKnowledgeSyncsArgs{}).Cron("*/5 * * * *")
 	a.Schedule.Job(jobs.SweepAttachmentScansArgs{}).Cron("*/5 * * * *")
+	a.Schedule.Job(jobs.SweepWebhookDeliveriesArgs{}).EveryMinute()
+	a.Schedule.Job(jobs.CheckWebhookEndpointsArgs{}).Cron("*/5 * * * *")
+	a.Schedule.Job(jobs.PruneWebhookDeliveriesArgs{}).DailyAt("03:35")
 }

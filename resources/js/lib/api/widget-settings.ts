@@ -14,6 +14,7 @@ export interface WidgetSummary {
   name: string;
   enabled: boolean;
   inbox: { id: string; name: string };
+  last_boot_at: string | null;
 }
 
 export function widgetSettingsQuery(workspace: string) {

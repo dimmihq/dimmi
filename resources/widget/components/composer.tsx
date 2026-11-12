@@ -1,8 +1,9 @@
 /*
  * The message composer: chips for attached files, the text box, and the
  * attach, emoji, voice and send buttons, with the recording bar that takes
- * their place while a voice note records. The composer controller brings
- * it to life.
+ * their place while a voice note records, and a small picker of common
+ * emoji above the text box, filled the first time it opens. The composer
+ * controller brings it to life.
  */
 import type { Options } from "../options";
 import { ArrowUpIcon, MicIcon, PaperclipIcon, SmileIcon, TrashIcon } from "./icons";
@@ -27,6 +28,7 @@ export function Composer({ options }: { options: Options }) {
 
   return (
     <form className="composer" data-controller="composer" data-action="submit->send">
+      <fieldset className="emoji-picker" data-target="emoji" data-action="keydown->unpick" aria-label="Emoji" hidden />
       <div className="chips" data-target="chips" />
       <p className="composer-note" data-target="note" role="status" hidden />
       <textarea
@@ -41,7 +43,14 @@ export function Composer({ options }: { options: Options }) {
           <PaperclipIcon />
           <input type="file" multiple hidden data-action="change->attach" />
         </label>
-        <button className="icon-button" type="button" aria-label="Add emoji">
+        <button
+          className="icon-button"
+          type="button"
+          data-action="click->emoji"
+          data-target="emoji-button"
+          aria-label="Add emoji"
+          aria-expanded="false"
+        >
           <SmileIcon />
         </button>
         <button className="icon-button" type="button" data-action="click->record" aria-label="Record a voice note">

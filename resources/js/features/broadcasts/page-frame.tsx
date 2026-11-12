@@ -76,7 +76,7 @@ function PreviewPanel({
   return (
     <Panel label="Preview" ground className={className}>
       <PageHeader title="Preview" level={2}>
-        <span className="text-body-2-regular text-text-tertiary">As Ada Okafor sees it</span>
+        <span className="text-body-2-regular text-text-tertiary">With sample details</span>
         {onClose ? <IconButton size="small" icon={RiCloseLine} aria-label="Close preview" onClick={onClose} /> : null}
       </PageHeader>
       <ScrollArea ground className="px-4 pb-6">

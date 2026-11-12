@@ -81,3 +81,15 @@ RETURNING *;
 -- TouchConversation records activity that is not a message, such as a new
 -- note, without moving the conversation in lists sorted by message.
 UPDATE conversations SET updated_at = @now, last_activity_at = @now WHERE workspace_id = @workspace_id AND id = @id;
+
+-- name: TrashConversation :one
+-- TrashConversation moves the live conversation to the trash.
+UPDATE conversations SET deleted_at = @now::timestamptz, updated_at = @now::timestamptz
+WHERE workspace_id = @workspace_id AND id = @id AND deleted_at IS NULL
+RETURNING *;
+
+-- name: RestoreConversation :one
+-- RestoreConversation takes the conversation out of the trash.
+UPDATE conversations SET deleted_at = NULL, updated_at = @now::timestamptz
+WHERE workspace_id = @workspace_id AND id = @id AND deleted_at IS NOT NULL
+RETURNING *;

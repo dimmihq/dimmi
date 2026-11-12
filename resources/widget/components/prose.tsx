@@ -4,7 +4,9 @@
  * customer markup ever reaches the page. Code in a known language comes
  * as tokens marked keyword, string, number or comment, drawn as spans
  * the stylesheet colors. Each page ends by asking what
- * the visitor thought, with a way into a conversation.
+ * the visitor thought, with a way into a conversation. An article asks
+ * whether it helped, and the answer shows as chosen with a thank-you,
+ * changeable by picking the other face.
  */
 import type { Block as Content, Token } from "../content";
 import type { Options } from "../options";
@@ -64,24 +66,50 @@ export function Prose({ blocks }: { blocks: Content[] }) {
   );
 }
 
-export function Feedback({ options, prompt }: { options: Options; prompt: string }) {
+/*
+ * Feedback closes a page. Given an article, it asks whether the article
+ * helped, with what the visitor already answered marked.
+ */
+export function Feedback({
+  options,
+  prompt,
+  article,
+}: {
+  options: Options;
+  prompt: string;
+  article?: { slug: string; rated?: "yes" | "no" };
+}) {
   return (
-    <div className="feedback">
-      <p>{prompt}</p>
-      <div className="reactions">
-        <button type="button" aria-label="Not helpful">
-          😞
-        </button>
-        <button type="button" aria-label="Somewhat">
-          😐
-        </button>
-        <button type="button" aria-label="Helpful">
-          😃
-        </button>
-      </div>
+    <div className="feedback" data-article={article?.slug} data-rated={article?.rated}>
+      {article ? (
+        <>
+          <p>{prompt}</p>
+          <div className="reactions">
+            <Face answer="no" label="Not helpful" face="😞" rated={article.rated} />
+            <Face answer="yes" label="Helpful" face="😃" rated={article.rated} />
+          </div>
+          <p className="thanks" role="status">
+            {options.texts.rating_thanks}
+          </p>
+        </>
+      ) : null}
       <button className="button secondary" type="button" data-action="click->converse">
         {options.texts.still_need_help}
       </button>
     </div>
+  );
+}
+
+function Face({ answer, label, face, rated }: { answer: "yes" | "no"; label: string; face: string; rated?: string }) {
+  return (
+    <button
+      type="button"
+      aria-label={label}
+      aria-pressed={String(rated === answer)}
+      data-action="click->rate"
+      data-helpful={answer}
+    >
+      {face}
+    </button>
   );
 }

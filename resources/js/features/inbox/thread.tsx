@@ -22,7 +22,7 @@
  */
 import { RiDeleteBinLine, RiErrorWarningLine, RiLock2Line, RiSparkling2Line, RiTimeLine } from "@remixicon/react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
-import { type ReactNode, useCallback, useEffect, useRef, useState } from "react";
+import { type ReactNode, type RefObject, useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 
 import { Avatar } from "@/components/base/avatar/avatar";
 import { Chip } from "@/components/base/badges/chip";
@@ -397,10 +397,67 @@ function useComposerKeys(keys: Record<string, () => void>) {
   }, [keys]);
 }
 
+/*
+ * useKeepPlace keeps the reader where they were when older messages are
+ * read in above them. Their distance from the end is read while the
+ * page still shows the old rows, the way getSnapshotBeforeUpdate does;
+ * the new rows ease open, so for a moment it holds that distance while
+ * they settle.
+ */
+function useKeepPlace(scroller: RefObject<HTMLDivElement | null>, conversation: string, first: string | undefined) {
+  const last = useRef({ conversation, first });
+  const fromEnd = useRef<number | null>(null);
+  const before = last.current;
+  if (before.conversation === conversation && before.first !== undefined && before.first !== first) {
+    const element = scroller.current;
+    fromEnd.current = element ? element.scrollHeight - element.scrollTop : null;
+  }
+
+  useLayoutEffect(() => {
+    last.current = { conversation, first };
+    const element = scroller.current;
+    const distance = fromEnd.current;
+    fromEnd.current = null;
+    if (!element || distance === null) {
+      return;
+    }
+    const hold = () => {
+      element.scrollTop = element.scrollHeight - distance;
+    };
+    hold();
+    const observer = new ResizeObserver(hold);
+    if (element.firstElementChild) {
+      observer.observe(element.firstElementChild);
+    }
+    const stop = setTimeout(() => observer.disconnect(), 800);
+    return () => {
+      clearTimeout(stop);
+      observer.disconnect();
+    };
+  }, [scroller, conversation, first]);
+}
+
+/*
+ * useOlderThan returns how many rows were read in above the ones already
+ * shown. Those appear in place; only what lands at the end eases in.
+ */
+function useOlderThan(conversation: string, entries: { id: string }[]): number {
+  const shown = useRef<{ conversation: string; first: string | undefined }>({ conversation, first: undefined });
+  const before = shown.current;
+  const at =
+    before.conversation === conversation && before.first ? entries.findIndex((e) => e.id === before.first) : -1;
+  useEffect(() => {
+    shown.current = { conversation, first: entries[0]?.id };
+  });
+
+  return Math.max(at, 0);
+}
+
 export function Thread({
   conversation,
   entries,
   loading = false,
+  earlier,
   customer,
   channel,
   channelType,
@@ -416,6 +473,7 @@ export function Thread({
   conversation: string;
   entries: ThreadEntry[];
   loading?: boolean;
+  earlier?: ReactNode;
   customer: string;
   channel: string;
   channelType?: string;
@@ -433,6 +491,9 @@ export function Thread({
   const scroller = useRef<HTMLDivElement>(null);
   const [list, setList] = useState<HTMLOListElement | null>(null);
   const toNewest = useFollowNewest(scroller, list, conversation, !loading);
+  useKeepPlace(scroller, conversation, entries[0]?.id);
+  const rows = foldEvents(entries, hideEvents);
+  const olderThan = useOlderThan(conversation, rows);
   const [mode, setMode] = useState<Mode | null>(null);
   const [incoming, setIncoming] = useState<string | null>(null);
   const [focusKey, setFocusKey] = useState(0);
@@ -463,10 +524,16 @@ export function Thread({
         ) : (
           <ThreadZone.Provider value={zone}>
             <LinkPolicyProvider channelType={channelType}>
+              {earlier}
               <ol ref={setList} key={conversation} className="mx-auto flex max-w-3xl flex-col gap-3">
                 <AnimatePresence initial={false}>
-                  {foldEvents(entries, hideEvents).map((entry) => (
-                    <motion.li key={entry.id} initial={still ? false : arriving} animate={arrived} transition={arrival}>
+                  {rows.map((entry, at) => (
+                    <motion.li
+                      key={entry.id}
+                      initial={still || at < olderThan ? false : arriving}
+                      animate={arrived}
+                      transition={arrival}
+                    >
                       {entry.kind === "folded" ? (
                         <Pill>{foldedText(entry.count)}</Pill>
                       ) : (

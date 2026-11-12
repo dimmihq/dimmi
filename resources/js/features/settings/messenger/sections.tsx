@@ -195,9 +195,6 @@ export function TabsSection({ value, set, locked }: TabProps) {
           onChange={(changelog_tab_enabled) => set({ changelog_tab_enabled })}
         />
       </Row>
-      <Row label="Feedback" description="Coming soon.">
-        <Toggle label="Feedback tab" disabled />
-      </Row>
     </Section>
   );
 }

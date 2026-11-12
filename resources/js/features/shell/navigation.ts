@@ -8,12 +8,9 @@
  */
 import {
   RiAlarmLine,
-  RiApps2Line,
   RiArrowLeftLine,
   RiAtLine,
-  RiBankCardLine,
   RiBookOpenLine,
-  RiChatQuoteLine,
   RiChatSmile3Line,
   RiContactsBook3Line,
   RiCpuLine,
@@ -26,7 +23,6 @@ import {
   RiFlashlightLine,
   RiFlowChart,
   RiGitBranchLine,
-  RiGithubLine,
   RiGroupLine,
   RiHistoryLine,
   RiInbox2Line,
@@ -37,7 +33,6 @@ import {
   RiMailLine,
   RiMegaphoneLine,
   RiNotification3Line,
-  RiPlugLine,
   RiPriceTag3Line,
   RiPuzzle2Line,
   RiQuestionAnswerLine,
@@ -244,13 +239,6 @@ export const settingsPages = {
     "/d/settings/office-hours",
     "When your team is around to reply.",
   ),
-  "saved-replies": page(
-    "settings-saved-replies",
-    "Saved replies",
-    RiChatQuoteLine,
-    "/d/settings/saved-replies",
-    "Answers your team sends often, with variables.",
-  ),
   "conversation-safety": page(
     "settings-conversation-safety",
     "Conversation safety",
@@ -271,13 +259,6 @@ export const settingsPages = {
     RiMailLine,
     "/d/settings/email",
     "Support addresses, sending domains and signatures.",
-  ),
-  connections: page(
-    "settings-connections",
-    "Connections",
-    RiPlugLine,
-    "/d/settings/connections",
-    "Slack, Discord, Telegram, WhatsApp and the other places customers write from.",
   ),
   integrations: page(
     "settings-integrations",
@@ -328,26 +309,12 @@ export const settingsPages = {
     "/d/settings/knowledge",
     "Sites, files and repositories dimmi learns from.",
   ),
-  changelog: page(
-    "settings-changelog",
-    "Changelog",
-    RiHistoryLine,
-    "/d/settings/changelog",
-    "How releases are published and mailed to subscribers.",
-  ),
   feedback: page(
     "settings-feedback",
     "Feedback",
     RiLightbulbLine,
     "/d/settings/feedback",
     "The feedback portal, its boards and statuses.",
-  ),
-  engage: page(
-    "settings-engage",
-    "Announcements & surveys",
-    RiMegaphoneLine,
-    "/d/settings/engage",
-    "How often customers may be interrupted, and the survey after a conversation.",
   ),
   webhooks: page(
     "settings-webhooks",
@@ -362,20 +329,6 @@ export const settingsPages = {
     RiFingerprintLine,
     "/d/settings/identity",
     "Secrets that prove who a signed-in visitor is.",
-  ),
-  apps: page(
-    "settings-apps",
-    "Authorized apps",
-    RiApps2Line,
-    "/d/settings/apps",
-    "Agents, the CLI and other apps you have let act in dimmi for you.",
-  ),
-  github: page(
-    "settings-github",
-    "GitHub",
-    RiGithubLine,
-    "/d/settings/github",
-    "Repositories for docs sync and release notes.",
   ),
   workspace: page(
     "settings-workspace",
@@ -425,20 +378,6 @@ export const settingsPages = {
     RiFileList3Line,
     "/d/settings/audit-log",
     "Who changed what in the workspace, and when.",
-  ),
-  import: page(
-    "settings-import",
-    "Import & export",
-    RiDownload2Line,
-    "/d/settings/import",
-    "Move in from another tool, or take your data with you.",
-  ),
-  billing: page(
-    "settings-billing",
-    "Billing",
-    RiBankCardLine,
-    "/d/settings/billing",
-    "Your usage, spend cap and invoices.",
   ),
 } as const;
 export type SettingsSection = keyof typeof settingsPages;
@@ -490,10 +429,10 @@ export function appSections(
 /*
  * settingsSections lists the settings pages in the sidebar, grouped as
  * the person thinks of them: their own account first, then the inbox and
- * its channels, AI, content, developers, and running the workspace.
- * Billing exists on the cloud only.
+ * its channels, AI, content, developers, and running the workspace. A
+ * page is listed only once what it shows is real.
  */
-export function settingsSections(cloud: boolean): DashboardNavSection[] {
+export function settingsSections(): DashboardNavSection[] {
   const pages = settingsPages;
   const admin = [
     pages.workspace,
@@ -503,7 +442,6 @@ export function settingsSections(cloud: boolean): DashboardNavSection[] {
     pages["workspace-security"],
     pages["single-sign-on"],
     pages["audit-log"],
-    pages.import,
   ];
 
   return [
@@ -524,28 +462,21 @@ export function settingsSections(cloud: boolean): DashboardNavSection[] {
     {
       key: "inbox",
       label: "Inbox",
-      items: [
-        pages.inboxes,
-        pages.tags,
-        pages.attributes,
-        pages["office-hours"],
-        pages["saved-replies"],
-        pages["conversation-safety"],
-      ],
+      items: [pages.inboxes, pages.tags, pages.attributes, pages["office-hours"], pages["conversation-safety"]],
     },
     {
       key: "channels",
       label: "Channels",
-      items: [pages.messenger, pages.email, pages.connections, pages.integrations],
+      items: [pages.messenger, pages.email, pages.integrations],
     },
     { key: "ai", label: "AI", items: [pages.agent, pages.operator, pages.actions, pages["ai-providers"]] },
     {
       key: "content",
       label: "Content",
-      items: [pages["help-centers"], pages.knowledge, pages.changelog, pages.feedback, pages.engage],
+      items: [pages["help-centers"], pages.knowledge, pages.feedback],
     },
-    { key: "developers", label: "Developers", items: [pages.webhooks, pages.identity, pages.apps, pages.github] },
-    { key: "administration", label: "Administration", items: cloud ? [...admin, pages.billing] : admin },
+    { key: "developers", label: "Developers", items: [pages.webhooks, pages.identity] },
+    { key: "administration", label: "Administration", items: admin },
   ];
 }
 

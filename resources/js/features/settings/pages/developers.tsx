@@ -1,33 +1,14 @@
 /*
- * The developer settings: webhooks to your own endpoints, the agents and
- * apps signed in to the workspace, and GitHub. The secrets that verify
- * signed-in messenger visitors have a page of their own.
+ * The developer settings: the agents and apps signed in to the
+ * workspace, and GitHub. Webhooks and the secrets that verify signed-in
+ * messenger visitors have pages of their own.
  */
-import { RiClaudeFill, RiGithubFill, RiTerminalBoxLine, RiWebhookLine } from "@remixicon/react";
-
-import { Chip } from "@/components/base/badges/chip";
+import { RiClaudeFill, RiGithubFill, RiTerminalBoxLine } from "@remixicon/react";
 
 import { Action, Toggle } from "../controls";
 import { Empty, Glyph, Item, Logo, Row, Section, SettingsPage } from "../layout";
 
-export function WebhooksSettings() {
-  return (
-    <SettingsPage title="Webhooks" description="Signed POST requests to your endpoints when things happen. Up to 20.">
-      <Section title="Endpoints" action={<Action>New endpoint</Action>}>
-        <Item
-          mark={<Glyph icon={RiWebhookLine} />}
-          title="https://api.acme.com/hooks/dimmi"
-          detail="conversation.* · Last delivery 3 minutes ago"
-        >
-          <Chip variant="caption" color="lime">
-            Healthy
-          </Chip>
-          <Action>Edit</Action>
-        </Item>
-      </Section>
-    </SettingsPage>
-  );
-}
+export { WebhooksSettings } from "./webhooks";
 
 export function AppsSettings() {
   return (

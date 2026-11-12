@@ -32,17 +32,20 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/http"
 	"net/url"
 	"slices"
 
 	fauth "github.com/dimmihq/dimmi/framework/auth"
 	"github.com/dimmihq/dimmi/framework/foundation"
+	"github.com/dimmihq/dimmi/framework/hashing"
 	fhttp "github.com/dimmihq/dimmi/framework/http"
 	"github.com/dimmihq/dimmi/framework/http/middleware"
 	"github.com/dimmihq/dimmi/framework/telemetry"
 	"github.com/dimmihq/dimmi/framework/view/vite"
 
 	"github.com/dimmihq/dimmi/app"
+	appauth "github.com/dimmihq/dimmi/app/auth"
 	appmiddleware "github.com/dimmihq/dimmi/app/http/middleware"
 	"github.com/dimmihq/dimmi/app/support/helpsample"
 	"github.com/dimmihq/dimmi/app/support/widgetassets"
@@ -77,6 +80,9 @@ func (p RouteServiceProvider) Register(fa *foundation.Application) error {
 	})
 	p.aliasCallers(fa)
 	p.aliasLimits(fa)
+	fa.Kernel.Alias("idempotent", func(...string) (fhttp.Middleware, error) {
+		return middleware.Idempotent(fa.Idempotency, middleware.DefaultIdempotencyHeader, idempotencyScope), nil
+	})
 	fa.Kernel.Alias("access.policy", func(...string) (fhttp.Middleware, error) {
 		return appmiddleware.EnforceAccessPolicy(p.App.AccessPolicy, fa.Clock, fa.Errors), nil
 	})
@@ -221,4 +227,19 @@ func (p RouteServiceProvider) pageSources(params []string) appmiddleware.Sources
 	extra.Images = append(extra.Images, "https://*.giphy.com")
 
 	return extra
+}
+
+/*
+idempotencyScope keeps one caller's idempotency keys apart from every
+other's: a signed-in caller by user and workspace, anyone else by the
+credential they sent, so a key two callers both pick never replays one
+caller's response to the other.
+*/
+func idempotencyScope(r *http.Request) string {
+	workspace := r.Header.Get("Dimmi-Workspace")
+	if p, ok := appauth.CurrentPrincipal(r.Context()); ok {
+		return "user:" + p.User.ID.String() + ":" + workspace
+	}
+
+	return "anon:" + hashing.SHA256Hex([]byte(r.Header.Get("Authorization")+"\n"+workspace))
 }

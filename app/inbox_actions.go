@@ -62,6 +62,8 @@ type InboxActions struct {
 	CreateTestConversations *conversations.CreateTestConversations
 	UploadFile              *attachments.UploadFile
 	ApplyChanges            *conversations.ApplyConversationChanges
+	TrashConversation       *conversations.TrashConversation
+	RestoreConversation     *conversations.RestoreConversation
 	ShowNeighbors           *conversations.ShowNeighbors
 	CountConversations      *conversations.CountConversations
 	ShowReadState           *conversations.ShowReadState

@@ -13,6 +13,51 @@ import (
 	"github.com/dimmihq/dimmi/framework/ids"
 )
 
+const deleteEmailSuppression = `-- name: DeleteEmailSuppression :exec
+DELETE FROM email_suppressions WHERE workspace_id = $1 AND id = $2
+`
+
+type DeleteEmailSuppressionParams struct {
+	WorkspaceID ids.UUID `json:"workspace_id"`
+	ID          ids.UUID `json:"id"`
+}
+
+// DeleteEmailSuppression lets mail reach the address again.
+func (q *Queries) DeleteEmailSuppression(ctx context.Context, arg DeleteEmailSuppressionParams) error {
+	_, err := q.db.Exec(ctx, deleteEmailSuppression, arg.WorkspaceID, arg.ID)
+	return err
+}
+
+const findEmailSuppression = `-- name: FindEmailSuppression :one
+SELECT id, workspace_id, email, reason, scope, source, details, outbound_email_id, expires_at, created_by_member_id, created_at, updated_at FROM email_suppressions WHERE workspace_id = $1 AND id = $2
+`
+
+type FindEmailSuppressionParams struct {
+	WorkspaceID ids.UUID `json:"workspace_id"`
+	ID          ids.UUID `json:"id"`
+}
+
+// FindEmailSuppression returns one suppression of the workspace.
+func (q *Queries) FindEmailSuppression(ctx context.Context, arg FindEmailSuppressionParams) (EmailSuppression, error) {
+	row := q.db.QueryRow(ctx, findEmailSuppression, arg.WorkspaceID, arg.ID)
+	var i EmailSuppression
+	err := row.Scan(
+		&i.ID,
+		&i.WorkspaceID,
+		&i.Email,
+		&i.Reason,
+		&i.Scope,
+		&i.Source,
+		&i.Details,
+		&i.OutboundEmailID,
+		&i.ExpiresAt,
+		&i.CreatedByMemberID,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const liftBounceSuppressions = `-- name: LiftBounceSuppressions :exec
 DELETE FROM email_suppressions
 WHERE workspace_id = $1 AND email = $2 AND reason IN ('hard_bounce', 'soft_bounce')
@@ -28,6 +73,55 @@ type LiftBounceSuppressionsParams struct {
 func (q *Queries) LiftBounceSuppressions(ctx context.Context, arg LiftBounceSuppressionsParams) error {
 	_, err := q.db.Exec(ctx, liftBounceSuppressions, arg.WorkspaceID, arg.Email)
 	return err
+}
+
+const listContactSuppressions = `-- name: ListContactSuppressions :many
+SELECT s.id, s.workspace_id, s.email, s.reason, s.scope, s.source, s.details, s.outbound_email_id, s.expires_at, s.created_by_member_id, s.created_at, s.updated_at FROM email_suppressions s
+JOIN contacts c ON c.workspace_id = s.workspace_id AND c.email = s.email
+WHERE s.workspace_id = $1 AND c.id = $2
+  AND (s.expires_at IS NULL OR s.expires_at > $3::timestamptz)
+ORDER BY s.created_at DESC
+`
+
+type ListContactSuppressionsParams struct {
+	WorkspaceID ids.UUID  `json:"workspace_id"`
+	ContactID   ids.UUID  `json:"contact_id"`
+	Now         time.Time `json:"now"`
+}
+
+// ListContactSuppressions returns the live suppressions on the contact's
+// address, newest first.
+func (q *Queries) ListContactSuppressions(ctx context.Context, arg ListContactSuppressionsParams) ([]EmailSuppression, error) {
+	rows, err := q.db.Query(ctx, listContactSuppressions, arg.WorkspaceID, arg.ContactID, arg.Now)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []EmailSuppression
+	for rows.Next() {
+		var i EmailSuppression
+		if err := rows.Scan(
+			&i.ID,
+			&i.WorkspaceID,
+			&i.Email,
+			&i.Reason,
+			&i.Scope,
+			&i.Source,
+			&i.Details,
+			&i.OutboundEmailID,
+			&i.ExpiresAt,
+			&i.CreatedByMemberID,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const listSuppressedEmails = `-- name: ListSuppressedEmails :many

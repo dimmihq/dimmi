@@ -10,24 +10,16 @@ import { ProvidersSettings } from "@/features/ai/providers/providers-page";
 import type { SettingsSection } from "@/features/shell/navigation";
 
 import { PreferencesSettings, ProfileSettings, SecuritySettings } from "./pages/account";
-import { BillingSettings, ImportSettings, WorkspaceSecuritySettings } from "./pages/admin";
+import { WorkspaceSecuritySettings } from "./pages/admin";
 import { AttributesSettings } from "./pages/attributes";
 import { AuditLogSettings } from "./pages/audit-log";
-import { ConnectionsSettings } from "./pages/channels";
 import { ConnectedAppsSettings } from "./pages/connected-apps";
-import {
-  ChangelogSettings,
-  EngageSettings,
-  FeedbackSettings,
-  HelpCentersSettings,
-  KnowledgeSettings,
-} from "./pages/content";
+import { FeedbackSettings, HelpCentersSettings, KnowledgeSettings } from "./pages/content";
 import { ConversationSafetySettings } from "./pages/conversation-safety";
-import { AppsSettings, GithubSettings, WebhooksSettings } from "./pages/developers";
+import { WebhooksSettings } from "./pages/developers";
 import { EmailSettings } from "./pages/email";
 import { ExportsSettings } from "./pages/exports";
 import { IdentitySettings } from "./pages/identity";
-import { SavedRepliesSettings } from "./pages/inbox";
 import { InboxesSettings } from "./pages/inboxes";
 import { IntegrationsSettings } from "./pages/integrations";
 import { MessengersSettings } from "./pages/messengers";
@@ -53,11 +45,9 @@ export const settingsViews: Record<SettingsSection, ComponentType> = {
   tags: TagsSettings,
   attributes: AttributesSettings,
   "office-hours": OfficeHoursSettings,
-  "saved-replies": SavedRepliesSettings,
   "conversation-safety": ConversationSafetySettings,
   messenger: MessengersSettings,
   email: EmailSettings,
-  connections: ConnectionsSettings,
   integrations: IntegrationsSettings,
   agent: AgentSettings,
   operator: OperatorSettingsView,
@@ -65,13 +55,9 @@ export const settingsViews: Record<SettingsSection, ComponentType> = {
   "ai-providers": ProvidersSettings,
   "help-centers": HelpCentersSettings,
   knowledge: KnowledgeSettings,
-  changelog: ChangelogSettings,
   feedback: FeedbackSettings,
-  engage: EngageSettings,
   webhooks: WebhooksSettings,
   identity: IdentitySettings,
-  apps: AppsSettings,
-  github: GithubSettings,
   workspace: WorkspaceSettings,
   members: MembersSettings,
   teams: TeamsSettings,
@@ -79,6 +65,4 @@ export const settingsViews: Record<SettingsSection, ComponentType> = {
   "workspace-security": WorkspaceSecuritySettings,
   "single-sign-on": SingleSignOnSettings,
   "audit-log": AuditLogSettings,
-  import: ImportSettings,
-  billing: BillingSettings,
 };
