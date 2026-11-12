@@ -32,7 +32,7 @@ async function recordsOf(page: Page, id: string): Promise<ApiRecord[]> {
   return ((await response.json()) as { data: { records: ApiRecord[] } }).data.records;
 }
 
-it.describe("sending domains", () => {
+it.describe("sending domains", { tag: "@local" }, () => {
   it.beforeEach(async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
   });

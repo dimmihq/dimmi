@@ -24,7 +24,7 @@ async function pickLanguage(page: Page, name: RegExp) {
   expect((await saved).status()).toBe(200);
 }
 
-it.describe("interface language", () => {
+it.describe("interface language", { tag: "@local" }, () => {
   it.beforeEach(async ({ page, person, request }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
     await createAccount(request, person, `Language ${randomUUID().slice(0, 8)}`);

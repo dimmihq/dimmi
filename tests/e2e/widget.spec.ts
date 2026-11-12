@@ -15,7 +15,7 @@ import type { APIRequestContext, Page } from "@playwright/test";
 import { createAccount, expect, test as it, type Person, signIn } from "./support/fixtures";
 import { openComposer } from "./support/inbox";
 
-const base = `http://localhost:${process.env.E2E_PORT ?? 18090}`;
+const base = process.env.E2E_BASE_URL ?? `http://localhost:${process.env.E2E_PORT ?? 18090}`;
 
 const onePixel = Buffer.from(
   "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M/wHwAEBgIApD5fRAAAAABJRU5ErkJggg==",

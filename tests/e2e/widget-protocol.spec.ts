@@ -13,7 +13,7 @@ import type { APIRequestContext } from "@playwright/test";
 import { Stream } from "./support/eventsource";
 import { createAccount, expect, test as it, type Person } from "./support/fixtures";
 
-const base = `http://localhost:${process.env.E2E_PORT ?? 18090}`;
+const base = process.env.E2E_BASE_URL ?? `http://localhost:${process.env.E2E_PORT ?? 18090}`;
 const site = "https://shop.example";
 
 /*

@@ -14,7 +14,7 @@ async function approve(page: Page, email: string) {
   await page.getByRole("button", { name: "Approve" }).click();
 }
 
-it.describe("sign-in methods", () => {
+it.describe("sign-in methods", { tag: "@local" }, () => {
   it("a person links a provider, signs in with it, and unlinks it", async ({ page, person, request }) => {
     const providerEmail = `linked.${randomUUID().slice(0, 8)}@example.com`;
     await page.setViewportSize({ width: 1440, height: 900 });

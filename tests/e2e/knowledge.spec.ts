@@ -89,7 +89,7 @@ it.describe("knowledge sources", () => {
     await new Promise((resolve) => site.server.close(resolve));
   });
 
-  it("adds a website source and lists its pages as live documents", async ({ page }) => {
+  it("adds a website source and lists its pages as live documents", { tag: "@local" }, async ({ page }) => {
     await page.goto("/d/settings/knowledge");
     await page.getByRole("button", { name: "Add source" }).first().click();
 

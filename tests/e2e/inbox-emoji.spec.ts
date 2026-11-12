@@ -80,7 +80,7 @@ it.describe("emoji and GIFs", () => {
     await expect(field).toContainText("🎉");
   });
 
-  it("searches GIFs through GIPHY and sends the one picked", async ({ page, person }) => {
+  it("searches GIFs through GIPHY and sends the one picked", { tag: "@local" }, async ({ page, person }) => {
     const seen = await stubGiphy(page);
     const id = await startConversation(page, lena);
     await page.goto(`/d/inbox/unassigned/${id}`);

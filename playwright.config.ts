@@ -8,7 +8,8 @@
  * With E2E_BASE_URL set they run against a deployed environment instead,
  * such as staging: no server is started, E2E_GATE_KEY is sent as the
  * gate's key on every request, and specs that need what only a local run
- * has (the database, Mailpit, the test inbound driver) are left out.
+ * has (the database, Mailpit, the test inbound driver) are left out, as
+ * are tests tagged @local, which need a fake the local server wires in.
  *
  * In CI a failed test runs once more so its first trace is kept, but a
  * test that passes only on the second try still fails the run: a flaky
@@ -35,6 +36,7 @@ export default defineConfig({
   testDir: "tests/e2e",
   testMatch: "**/*.spec.ts",
   testIgnore: remote ? localOnly().map((file) => file.replace(/^tests\/e2e\//, "")) : [],
+  grepInvert: remote ? /@local/ : undefined,
   fullyParallel: true,
   forbidOnly: Boolean(process.env.CI),
   retries: process.env.CI ? 1 : 0,

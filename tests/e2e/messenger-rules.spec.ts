@@ -11,7 +11,7 @@ import type { Page } from "@playwright/test";
 import { api } from "./support/customers";
 import { createAccount, expect, inbox, test as it, signIn } from "./support/fixtures";
 
-const base = `http://localhost:${process.env.E2E_PORT ?? 18090}`;
+const base = process.env.E2E_BASE_URL ?? `http://localhost:${process.env.E2E_PORT ?? 18090}`;
 
 /*
  * customerSite serves a page with the snippet from another origin and
