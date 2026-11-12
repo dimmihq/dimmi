@@ -52,6 +52,7 @@ func TestEmailedPictures(t *testing.T) {
 		timeline.AssertJSONPath("data.0.attachments.#(filename==\"shot.png\").content_id", "shot@customer.test")
 		assert.NotEmpty(t, timeline.String("data.0.attachments.#(filename==\"shot.png\").url"))
 		assert.NotEmpty(t, timeline.String("data.0.attachments.#(filename==\"receipt.pdf\").url"))
+		timeline.AssertJSONPath("data.0.attachments.#(filename==\"receipt.pdf\").scanned", false)
 	})
 
 	t.Run("scans emailed files and blocks an infected one", func(t *testing.T) {
@@ -76,5 +77,7 @@ func TestEmailedPictures(t *testing.T) {
 		timeline.AssertJSONPath("data.0.attachments.#(filename==\"receipt.pdf\").blocked", true)
 		assert.Empty(t, timeline.String("data.0.attachments.#(filename==\"receipt.pdf\").url"))
 		assert.NotEmpty(t, timeline.String("data.0.attachments.#(filename==\"shot.png\").url"))
+		timeline.AssertJSONPath("data.0.attachments.#(filename==\"shot.png\").scanned", true)
+		timeline.AssertJSONPath("data.0.attachments.#(filename==\"receipt.pdf\").scanned", false)
 	})
 }

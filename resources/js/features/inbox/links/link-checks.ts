@@ -6,7 +6,8 @@
  * allowed one opens without a word. Otherwise a link earns a warning when
  * its text names another host, its host mixes scripts or is spelled in
  * punycode, it goes through a URL shortener, or it points at a bare
- * address.
+ * address. Any other link asks first, until the teammate chooses to
+ * trust its domain.
  */
 import { createContext } from "react";
 
@@ -22,6 +23,7 @@ export interface LinkSafety {
  * workspace's settings, and whether they show as plain text.
  */
 export interface LinkPolicy {
+  workspace: string;
   settings: LinkSafety;
   plain: boolean;
 }
@@ -32,6 +34,7 @@ export type Reason = "other_host" | "lookalike" | "shortener" | "address";
 
 export type Verdict =
   | { kind: "open"; host: string }
+  | { kind: "ask"; host: string }
   | { kind: "warn"; host: string; reasons: Reason[] }
   | { kind: "blocked"; host: string };
 
@@ -145,7 +148,7 @@ export function check(href: string, text: string, settings: LinkSafety): Verdict
 
   const reasons = reasonsFor(host, text);
 
-  return reasons.length === 0 ? { kind: "open", host } : { kind: "warn", host, reasons };
+  return reasons.length === 0 ? { kind: "ask", host } : { kind: "warn", host, reasons };
 }
 
 const reasonWords: Record<Reason, string> = {

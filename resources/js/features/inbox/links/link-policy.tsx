@@ -26,7 +26,7 @@ export function LinkPolicyProvider({ channelType, children }: { channelType?: st
   const canReveal = caller?.member?.permissions.includes("email:read_raw") ?? false;
 
   return (
-    <LinkPolicyContext.Provider value={{ settings, plain: hidden && !shown }}>
+    <LinkPolicyContext.Provider value={{ workspace, settings, plain: hidden && !shown }}>
       {hidden && canReveal ? (
         <div className="mx-auto flex w-full max-w-3xl justify-end px-3 pb-1">
           <Button variant="ghost" size="small" leadingIcon={RiLinkM} onClick={() => setShown((now) => !now)}>

@@ -17,9 +17,9 @@ describe("link checks", () => {
     expect(under("badexample.com", "example.com")).toBe(false);
   });
 
-  it("opens ordinary links and links whose text names the same site", () => {
-    expect(check("https://example.com/a", "Read this", on)).toEqual({ kind: "open", host: "example.com" });
-    expect(check("https://www.example.com", "example.com", on)?.kind).toBe("open");
+  it("asks before ordinary links and links whose text names the same site", () => {
+    expect(check("https://example.com/a", "Read this", on)).toEqual({ kind: "ask", host: "example.com" });
+    expect(check("https://www.example.com", "example.com", on)?.kind).toBe("ask");
     expect(check("mailto:x@example.com", "mail", on)).toBeNull();
   });
 
@@ -38,6 +38,7 @@ describe("link checks", () => {
     expect(check("https://login.evil.example", "x", listed)?.kind).toBe("blocked");
     expect(check("https://login.evil.example", "x", { ...listed, enabled: false })?.kind).toBe("blocked");
     expect(check("https://bit.ly/x", "x", listed)?.kind).toBe("open");
+    expect(check("https://example.com/x", "x", { ...on, enabled: false })?.kind).toBe("open");
     expect(check("https://bit.ly/x", "x", { ...on, enabled: false })?.kind).toBe("open");
   });
 });

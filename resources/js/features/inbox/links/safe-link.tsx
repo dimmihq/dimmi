@@ -5,16 +5,18 @@
  * and the reason. A blocked one cannot be opened at all. When the
  * workspace hides email links, they read as plain text until someone
  * allowed to see raw mail shows them. Opening never hands the thread to
- * the page.
+ * the page. Any other link asks first too, with a choice to trust its
+ * domain so the teammate is never asked about it again.
  */
 import { RiErrorWarningLine, RiForbidLine } from "@remixicon/react";
 import { type ComponentProps, isValidElement, type ReactNode, useContext, useState } from "react";
 import { Link as AriaLink } from "react-aria-components";
-
+import { Checkbox } from "@/components/base/checkbox/checkbox";
 import { AlertDialog } from "@/components/base/modal/modal";
 import { Tooltip, TooltipTrigger } from "@/components/base/tooltip/tooltip";
 
 import { check, LinkPolicyContext, reasonText } from "./link-checks";
+import { isTrusted, trustDomain, useTrustedDomains } from "./trusted-domains";
 
 const linkStyle =
   "cursor-pointer rounded-sm underline outline-none focus-visible:ring-2 focus-visible:ring-border-focus-ring";
@@ -52,25 +54,35 @@ function Address({ href, host }: { href: string; host: string }) {
   );
 }
 
+/*
+ * Flagged is a link that asks before it opens. Its reasons say why it
+ * looks risky; one with none is only unknown, and offers to trust its
+ * domain in the workspace.
+ */
 function Flagged({
   href,
   host,
   reasons,
+  workspace,
   children,
 }: {
   href: string;
   host: string;
   reasons: string[];
+  workspace: string | null;
   children: ReactNode;
 }) {
   const [asking, setAsking] = useState(false);
+  const [always, setAlways] = useState(false);
 
   return (
     <>
       <TooltipTrigger>
         <AriaLink className={linkStyle} onPress={() => setAsking(true)}>
           {children}
-          <RiErrorWarningLine aria-label="Check before opening" className="ms-0.5 inline size-3.5 align-text-top" />
+          {reasons.length > 0 ? (
+            <RiErrorWarningLine aria-label="Check before opening" className="ms-0.5 inline size-3.5 align-text-top" />
+          ) : null}
         </AriaLink>
         <Tooltip>
           <Address href={href} host={host} />
@@ -83,13 +95,34 @@ function Flagged({
         title="Open this link?"
         description={`Opens ${host}. Continue?`}
         confirmLabel="Open link"
-        onConfirm={() => open(href)}
+        onConfirm={() => {
+          if (always && workspace !== null) {
+            trustDomain(workspace, host);
+          }
+          open(href);
+        }}
       >
-        <ul className="flex list-disc flex-col gap-1 ps-5 text-body-2-regular text-text-secondary">
-          {reasons.map((reason) => (
-            <li key={reason}>{reason}</li>
-          ))}
-        </ul>
+        <div className="flex flex-col gap-3">
+          <p className="text-body-2-regular text-text-secondary" dir="ltr">
+            <Address href={href} host={host} />
+          </p>
+          {reasons.length > 0 ? (
+            <ul className="flex list-disc flex-col gap-1 ps-5 text-body-2-regular text-text-secondary">
+              {reasons.map((reason) => (
+                <li key={reason}>{reason}</li>
+              ))}
+            </ul>
+          ) : (
+            <p className="text-body-2-regular text-text-secondary">
+              Be careful: only open links you expect, from people you know.
+            </p>
+          )}
+          {workspace !== null ? (
+            <Checkbox size="sm" isSelected={always} onChange={setAlways}>
+              Always allow links from {host}
+            </Checkbox>
+          ) : null}
+        </div>
       </AlertDialog>
     </>
   );
@@ -100,6 +133,7 @@ function Flagged({
  */
 export function SafeLink({ href, children }: ComponentProps<"a">) {
   const policy = useContext(LinkPolicyContext);
+  const trusted = useTrustedDomains(policy?.workspace ?? "");
   const verdict = href && policy ? check(href, textOf(children), policy.settings) : null;
   if (policy?.plain) {
     return <span>{children}</span>;
@@ -124,7 +158,14 @@ export function SafeLink({ href, children }: ComponentProps<"a">) {
   }
   if (verdict.kind === "warn") {
     return (
-      <Flagged href={href} host={verdict.host} reasons={verdict.reasons.map(reasonText)}>
+      <Flagged href={href} host={verdict.host} reasons={verdict.reasons.map(reasonText)} workspace={null}>
+        {children}
+      </Flagged>
+    );
+  }
+  if (verdict.kind === "ask" && !isTrusted(trusted, verdict.host)) {
+    return (
+      <Flagged href={href} host={verdict.host} reasons={[]} workspace={policy?.workspace ?? null}>
         {children}
       </Flagged>
     );
