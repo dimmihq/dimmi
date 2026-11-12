@@ -9,7 +9,8 @@
  * stays those five characters. A customer's links pass the workspace's
  * link checks first. Code blocks are highlighted once the highlighter,
  * loaded only for a message that has one, arrives; an image opens large
- * on a click. A note's mentions read as @Name chips.
+ * on a click. A note's mentions read as @Name chips. An email's pictures
+ * named by content id show from the message's own files.
  */
 import { type ComponentProps, lazy, Suspense, useEffect, useState } from "react";
 import Markdown, { type Components, defaultUrlTransform, type Options } from "react-markdown";
@@ -19,6 +20,7 @@ import remarkGfm from "remark-gfm";
 import type { MentionRef } from "@/lib/api/inbox";
 import { cx } from "@/utils/cx";
 
+import { pictureFor } from "./inline-pictures";
 import { SafeLink } from "./links/safe-link";
 import { CodeBlock } from "./thread/code-block";
 import { mentionScheme, withMentions } from "./thread/mention-text";
@@ -163,12 +165,14 @@ export function MessageBody({
   className,
   fromCustomer = false,
   mentions = [],
+  pictures = {},
 }: {
   text: string;
   format?: "markdown" | "plain";
   className?: string;
   fromCustomer?: boolean;
   mentions?: MentionRef[];
+  pictures?: Record<string, string>;
 }) {
   const highlight = useHighlighter(text);
   if (format === "plain") {
@@ -181,7 +185,7 @@ export function MessageBody({
         remarkPlugins={plugins}
         rehypePlugins={highlight}
         components={fromCustomer ? customerComponents : components}
-        urlTransform={keepMentions}
+        urlTransform={(url) => pictureFor(url, pictures) ?? keepMentions(url)}
         skipHtml
       >
         {withMentions(text, mentions)}

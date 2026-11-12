@@ -518,15 +518,16 @@ func readAll(ctx context.Context, file contracts.InboundAttachment) ([]byte, err
 }
 
 /*
-attach records the stored attachments on the message, each waiting for
-its scan.
+attach records the stored attachments on the message. No scanner looks
+at files yet, so each is recorded as not scanned, as uploads are, and
+teammates can open it.
 */
 func (run *ingestRun) attach(ctx context.Context, message models.Message) error {
 	for _, f := range run.files {
 		_, err := run.q.CreateEmailAttachment(ctx, models.CreateEmailAttachmentParams{
 			WorkspaceID: run.ws, MessageID: &message.ID, UploadedByID: message.AuthorID, Disk: run.r.DiskName,
 			Path: f.path, Filename: f.file.Filename, ContentType: f.file.ContentType, SizeBytes: f.size,
-			Sha256: &f.sum, Inline: f.file.Inline, ContentID: optional(f.file.ContentID), ScanStatus: "pending",
+			Sha256: &f.sum, Inline: f.file.Inline, ContentID: optional(f.file.ContentID), ScanStatus: "skipped",
 			Now: run.r.Clock.Now(),
 		})
 		if err != nil {

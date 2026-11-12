@@ -185,6 +185,7 @@ export interface Attachment {
   height: number | null;
   url: string | null;
   blocked: boolean;
+  content_id?: string | null;
 }
 
 /*

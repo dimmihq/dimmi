@@ -34,6 +34,7 @@ import { cx } from "@/utils/cx";
 import { useComposeTarget } from "./compose-bridge-context";
 import { Composer, type Send } from "./composer";
 import type { ThreadEntry } from "./conversations";
+import { inlinePictures } from "./inline-pictures";
 import { LinkPolicyProvider } from "./links/link-policy";
 import { MessageBody } from "./message-body";
 import { MessageFiles } from "./message-files";
@@ -306,6 +307,7 @@ function SaidEntry({
   const [editing, setEditing] = useState(false);
   const ours = entry.kind !== "customer";
   const note = entry.kind === "note";
+  const inline = inlinePictures(entry.text, entry.files);
 
   return (
     <article
@@ -338,11 +340,17 @@ function SaidEntry({
               }}
             />
           ) : (
-            <MessageBody text={entry.text} format={entry.format} fromCustomer={!ours} mentions={entry.mentions} />
+            <MessageBody
+              text={entry.text}
+              format={entry.format}
+              fromCustomer={!ours}
+              mentions={entry.mentions}
+              pictures={inline.pictures}
+            />
           )}
           {note ? <span className="sr-only"> Not visible to {customer}.</span> : null}
         </div>
-        <MessageFiles files={entry.files} ours={ours} />
+        <MessageFiles files={inline.listed} ours={ours} />
       </div>
       <ReactionChips
         reactions={entry.reactions ?? []}
