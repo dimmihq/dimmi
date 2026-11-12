@@ -23634,6 +23634,24 @@
         ],
         "type": "object"
       },
+      "ResourceListTicketSLAAttainment": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/TicketSLAAttainment"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
       "ResourceListTicketState": {
         "additionalProperties": false,
         "properties": {
@@ -23652,12 +23670,66 @@
         ],
         "type": "object"
       },
+      "ResourceListTicketStateTime": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/TicketStateTime"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "ResourceListTicketTrackerImpact": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/TicketTrackerImpact"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
       "ResourceListTicketType": {
         "additionalProperties": false,
         "properties": {
           "data": {
             "items": {
               "$ref": "#/components/schemas/TicketType"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "ResourceListTicketTypeCount": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/TicketTypeCount"
             },
             "type": [
               "array",
@@ -24360,6 +24432,18 @@
         "properties": {
           "data": {
             "$ref": "#/components/schemas/TicketField"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "ResourceTicketFieldReport": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/TicketFieldReport"
           }
         },
         "required": [
@@ -29785,6 +29869,65 @@
         },
         "type": "object"
       },
+      "TicketFieldCount": {
+        "additionalProperties": false,
+        "properties": {
+          "resolved": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "tickets": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "value": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "value",
+          "tickets",
+          "resolved"
+        ],
+        "type": "object"
+      },
+      "TicketFieldReport": {
+        "additionalProperties": false,
+        "properties": {
+          "data_type": {
+            "type": "string"
+          },
+          "field": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          },
+          "type_id": {
+            "type": "string"
+          },
+          "values": {
+            "items": {
+              "$ref": "#/components/schemas/TicketFieldCount"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "type_id",
+          "field",
+          "label",
+          "data_type",
+          "values"
+        ],
+        "type": "object"
+      },
       "TicketImpact": {
         "additionalProperties": false,
         "properties": {
@@ -30067,6 +30210,60 @@
         ],
         "type": "object"
       },
+      "TicketSLAAttainment": {
+        "additionalProperties": false,
+        "properties": {
+          "breached": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "hit_rate": {
+            "format": "double",
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "mean_met_seconds": {
+            "format": "double",
+            "type": "number"
+          },
+          "met": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "policy_id": {
+            "type": "string"
+          },
+          "policy_name": {
+            "type": "string"
+          },
+          "running": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "target": {
+            "enum": [
+              "first_reply",
+              "next_reply",
+              "follow_up",
+              "resolution"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "policy_id",
+          "policy_name",
+          "target",
+          "met",
+          "breached",
+          "hit_rate",
+          "mean_met_seconds",
+          "running"
+        ],
+        "type": "object"
+      },
       "TicketSettings": {
         "additionalProperties": false,
         "properties": {
@@ -30199,6 +30396,54 @@
         ],
         "type": "object"
       },
+      "TicketStateTime": {
+        "additionalProperties": false,
+        "properties": {
+          "group": {
+            "type": "string"
+          },
+          "mean_seconds": {
+            "format": "double",
+            "type": "number"
+          },
+          "median_seconds": {
+            "format": "double",
+            "type": "number"
+          },
+          "p90_seconds": {
+            "format": "double",
+            "type": "number"
+          },
+          "state_id": {
+            "type": "string"
+          },
+          "state_name": {
+            "type": "string"
+          },
+          "tickets": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "type_id": {
+            "type": "string"
+          },
+          "type_name": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "type_id",
+          "type_name",
+          "state_id",
+          "state_name",
+          "group",
+          "tickets",
+          "mean_seconds",
+          "median_seconds",
+          "p90_seconds"
+        ],
+        "type": "object"
+      },
       "TicketSummary": {
         "additionalProperties": false,
         "properties": {
@@ -30239,6 +30484,68 @@
           "reports",
           "plans",
           "generated_at"
+        ],
+        "type": "object"
+      },
+      "TicketTrackerImpact": {
+        "additionalProperties": false,
+        "properties": {
+          "companies": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "conversations": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "conversations_in_range": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "created_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "customers": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "id": {
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "tracker",
+              "incident"
+            ],
+            "type": "string"
+          },
+          "reference": {
+            "type": "string"
+          },
+          "revenue": {
+            "format": "double",
+            "type": "number"
+          },
+          "state_group": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "reference",
+          "kind",
+          "title",
+          "state_group",
+          "conversations",
+          "conversations_in_range",
+          "customers",
+          "companies",
+          "revenue",
+          "created_at"
         ],
         "type": "object"
       },
@@ -30453,6 +30760,41 @@
             "type": "string"
           }
         },
+        "type": "object"
+      },
+      "TicketTypeCount": {
+        "additionalProperties": false,
+        "properties": {
+          "created": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "kind": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "open": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "resolved": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "type_id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "type_id",
+          "name",
+          "kind",
+          "created",
+          "resolved",
+          "open"
+        ],
         "type": "object"
       },
       "TicketTypeRef": {
@@ -52620,6 +52962,300 @@
         },
         "x-abilities": [
           "conversations:read"
+        ]
+      }
+    },
+    "/reports/tickets/by-field": {
+      "get": {
+        "operationId": "reports.tickets.by-field.index",
+        "parameters": [
+          {
+            "description": "The ticket type, tktt_...",
+            "explode": false,
+            "in": "query",
+            "name": "type_id",
+            "required": true,
+            "schema": {
+              "description": "The ticket type, tktt_...",
+              "maxLength": 64,
+              "type": "string"
+            }
+          },
+          {
+            "description": "The key of one of the type's fields.",
+            "explode": false,
+            "in": "query",
+            "name": "field",
+            "required": true,
+            "schema": {
+              "description": "The key of one of the type's fields.",
+              "maxLength": 40,
+              "type": "string"
+            }
+          },
+          {
+            "description": "First day, 2006-01-02. Defaults to 30 days ago.",
+            "explode": false,
+            "in": "query",
+            "name": "from",
+            "schema": {
+              "description": "First day, 2006-01-02. Defaults to 30 days ago.",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Last day included, 2006-01-02. Defaults to today.",
+            "explode": false,
+            "in": "query",
+            "name": "to",
+            "schema": {
+              "description": "Last day included, 2006-01-02. Defaults to today.",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResourceTicketFieldReport"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseError"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "x-abilities": [
+          "tickets:read"
+        ]
+      }
+    },
+    "/reports/tickets/by-type": {
+      "get": {
+        "operationId": "reports.tickets.by-type.index",
+        "parameters": [
+          {
+            "description": "First day, 2006-01-02. Defaults to 30 days ago.",
+            "explode": false,
+            "in": "query",
+            "name": "from",
+            "schema": {
+              "description": "First day, 2006-01-02. Defaults to 30 days ago.",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Last day included, 2006-01-02. Defaults to today.",
+            "explode": false,
+            "in": "query",
+            "name": "to",
+            "schema": {
+              "description": "Last day included, 2006-01-02. Defaults to today.",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResourceListTicketTypeCount"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseError"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "x-abilities": [
+          "tickets:read"
+        ]
+      }
+    },
+    "/reports/tickets/sla": {
+      "get": {
+        "operationId": "reports.tickets.sla.index",
+        "parameters": [
+          {
+            "description": "First day, 2006-01-02. Defaults to 30 days ago.",
+            "explode": false,
+            "in": "query",
+            "name": "from",
+            "schema": {
+              "description": "First day, 2006-01-02. Defaults to 30 days ago.",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Last day included, 2006-01-02. Defaults to today.",
+            "explode": false,
+            "in": "query",
+            "name": "to",
+            "schema": {
+              "description": "Last day included, 2006-01-02. Defaults to today.",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResourceListTicketSLAAttainment"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseError"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "x-abilities": [
+          "tickets:read"
+        ]
+      }
+    },
+    "/reports/tickets/time-in-state": {
+      "get": {
+        "operationId": "reports.tickets.time-in-state.index",
+        "parameters": [
+          {
+            "description": "First day, 2006-01-02. Defaults to 30 days ago.",
+            "explode": false,
+            "in": "query",
+            "name": "from",
+            "schema": {
+              "description": "First day, 2006-01-02. Defaults to 30 days ago.",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Last day included, 2006-01-02. Defaults to today.",
+            "explode": false,
+            "in": "query",
+            "name": "to",
+            "schema": {
+              "description": "Last day included, 2006-01-02. Defaults to today.",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResourceListTicketStateTime"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseError"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "x-abilities": [
+          "tickets:read"
+        ]
+      }
+    },
+    "/reports/tickets/trackers": {
+      "get": {
+        "operationId": "reports.tickets.trackers.index",
+        "parameters": [
+          {
+            "description": "First day, 2006-01-02. Defaults to 30 days ago.",
+            "explode": false,
+            "in": "query",
+            "name": "from",
+            "schema": {
+              "description": "First day, 2006-01-02. Defaults to 30 days ago.",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Last day included, 2006-01-02. Defaults to today.",
+            "explode": false,
+            "in": "query",
+            "name": "to",
+            "schema": {
+              "description": "Last day included, 2006-01-02. Defaults to today.",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResourceListTicketTrackerImpact"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseError"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "x-abilities": [
+          "tickets:read"
         ]
       }
     },

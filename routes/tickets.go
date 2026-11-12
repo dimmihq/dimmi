@@ -45,6 +45,7 @@ func ticketRoutes(workspace *routing.Router, a *app.App) {
 
 	ticketActivityRoutes(workspace, base)
 	ticketSetupRoutes(workspace, base)
+	ticketReportRoutes(workspace, a)
 }
 
 /*

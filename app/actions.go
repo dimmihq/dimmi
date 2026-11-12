@@ -48,6 +48,7 @@ import (
 	"github.com/dimmihq/dimmi/app/actions/ssologin"
 	"github.com/dimmihq/dimmi/app/actions/teams"
 	"github.com/dimmihq/dimmi/app/actions/ticketimports"
+	"github.com/dimmihq/dimmi/app/actions/ticketreports"
 	"github.com/dimmihq/dimmi/app/actions/tickets"
 	"github.com/dimmihq/dimmi/app/actions/tokens"
 	"github.com/dimmihq/dimmi/app/actions/users"
@@ -156,6 +157,7 @@ type Actions struct {
 	ChangelogPublic            *changelog.Public
 	Feedback                   *feedback.Posts
 	Tickets                    *tickets.Tickets
+	TicketReports              *ticketreports.Reports
 	TicketIssues               *issues.Issues
 	TicketImports              *ticketimports.Importer
 	SLA                        *sla.SLA

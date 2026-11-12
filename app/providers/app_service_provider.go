@@ -184,6 +184,7 @@ func bootSurfaces(ctx context.Context, a *app.App) error {
 	if err := bootTickets(a); err != nil {
 		return err
 	}
+	bootTicketReports(a)
 	if err := bootTicketImports(a); err != nil {
 		return err
 	}
