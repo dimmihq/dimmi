@@ -1,0 +1,201 @@
+# dimmi on one server. Only Caddy is published: it takes ports 80 and 443
+# for the app's domain and gets its certificate itself. Everything else
+# talks on a private network. Settings and secrets come from .env, which
+# install.sh writes once and keeps; see .env.example for every value.
+#
+#   docker compose up -d
+#
+# Files are kept in SeaweedFS but served through the app's own address
+# (links: app), so the store never needs a public host.
+
+name: dimmi
+
+x-dimmi: &dimmi
+  image: ${IMAGE:-ghcr.io/dimmihq/dimmi:self-host}
+  restart: unless-stopped
+  env_file: [.env]
+  environment: &dimmi-env
+    DIMMI_APP__ENV: production
+    DIMMI_APP__URL: https://${APP_DOMAIN:?set APP_DOMAIN in .env}
+    DIMMI_HTTP__ADDR: ":8080"
+    DIMMI_HTTP__ADMIN_ADDR: ":9090"
+    DIMMI_HTTP__TRUSTED_PROXIES: ${NETWORK_SUBNET:-172.29.0.0/24}
+    DIMMI_MIGRATIONS__AUTO: "false"
+    DIMMI_DATABASE__URL: postgres://dimmi_app:${POSTGRES_APP_PASSWORD}@postgres:5432/dimmi?sslmode=disable
+    DIMMI_REDIS__URL: redis://:${VALKEY_PASSWORD}@valkey:6379/0
+    DIMMI_ENCRYPTION__KEK: local
+    DIMMI_FILESYSTEMS__DEFAULT: s3
+    DIMMI_FILESYSTEMS__DISKS__S3__DRIVER: s3
+    DIMMI_FILESYSTEMS__DISKS__S3__BUCKET: files
+    DIMMI_FILESYSTEMS__DISKS__S3__ENDPOINT: http://seaweedfs:8333
+    DIMMI_FILESYSTEMS__DISKS__S3__FORCE_PATH_STYLE: "true"
+    DIMMI_FILESYSTEMS__DISKS__S3__REGION: us-east-1
+    DIMMI_FILESYSTEMS__DISKS__S3__LINKS: app
+    DIMMI_FILESYSTEMS__DISKS__S3__ACCESS_KEY_ID: ${S3_ACCESS_KEY}
+    DIMMI_FILESYSTEMS__DISKS__S3__SECRET_ACCESS_KEY: ${S3_SECRET_KEY}
+  networks: [dimmi]
+
+services:
+  web:
+    <<: *dimmi
+    command: [serve]
+    environment:
+      <<: *dimmi-env
+      DIMMI_APP__ROLES: web
+    stop_grace_period: 60s
+    healthcheck:
+      test: [CMD, /dimmi, health]
+      interval: 15s
+      timeout: 5s
+      start_period: 30s
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+
+  worker:
+    <<: *dimmi
+    command: [serve]
+    environment:
+      <<: *dimmi-env
+      DIMMI_APP__ROLES: worker,scheduler
+    stop_grace_period: 60s
+    healthcheck:
+      test: [CMD, /dimmi, health]
+      interval: 30s
+      timeout: 5s
+      start_period: 30s
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+
+  # Applies pending migrations as the database owner, then exits. Every
+  # `docker compose up` runs it again before the app starts.
+  migrate:
+    <<: *dimmi
+    restart: "no"
+    command: [migrate, --force]
+    environment:
+      <<: *dimmi-env
+      DIMMI_DATABASE__URL: postgres://dimmi_owner:${POSTGRES_OWNER_PASSWORD}@postgres:5432/dimmi?sslmode=disable
+    depends_on:
+      postgres: { condition: service_healthy }
+      valkey: { condition: service_healthy }
+      buckets: { condition: service_completed_successfully }
+
+  postgres:
+    image: pgvector/pgvector:pg18
+    restart: unless-stopped
+    shm_size: 256m
+    command: postgres -c max_connections=100 -c shared_buffers=256MB
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: postgres
+      POSTGRES_OWNER_PASSWORD: ${POSTGRES_OWNER_PASSWORD}
+      POSTGRES_APP_PASSWORD: ${POSTGRES_APP_PASSWORD}
+    volumes:
+      - postgres:/var/lib/postgresql
+      - ./postgres-init.sh:/docker-entrypoint-initdb.d/10-dimmi.sh:ro
+    healthcheck:
+      test: [CMD-SHELL, pg_isready -h 127.0.0.1 -U postgres]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+    networks: [dimmi]
+
+  valkey:
+    image: valkey/valkey:8
+    restart: unless-stopped
+    command: [sh, -c, 'exec valkey-server --appendonly yes --requirepass "$$VALKEY_PASSWORD"']
+    environment:
+      VALKEY_PASSWORD: ${VALKEY_PASSWORD}
+    volumes: [valkey:/data]
+    healthcheck:
+      test: [CMD-SHELL, 'valkey-cli -a "$$VALKEY_PASSWORD" --no-auth-warning ping | grep -q PONG']
+      interval: 5s
+      timeout: 5s
+      retries: 30
+    networks: [dimmi]
+
+  # Master, volume, filer and S3 gateway in one process. Clients must sign
+  # with the key from .env; there is no anonymous access.
+  seaweedfs:
+    image: chrislusf/seaweedfs:3.97
+    restart: unless-stopped
+    entrypoint: [/bin/sh, -ec]
+    command:
+      - |
+        printf '{"identities":[{"name":"dimmi","credentials":[{"accessKey":"%s","secretKey":"%s"}],"actions":["Admin","Read","List","Tagging","Write"]}]}' \
+          "$$S3_ACCESS_KEY" "$$S3_SECRET_KEY" > /tmp/s3.json
+        exec weed server -dir=/data -ip=seaweedfs -ip.bind=0.0.0.0 -volume.max=0 \
+          -master.volumeSizeLimitMB=1024 -s3 -s3.config=/tmp/s3.json
+    environment:
+      S3_ACCESS_KEY: ${S3_ACCESS_KEY}
+      S3_SECRET_KEY: ${S3_SECRET_KEY}
+    volumes: [seaweedfs:/data]
+    healthcheck:
+      test: [CMD-SHELL, 'wget -q -O /dev/null http://127.0.0.1:9333/cluster/status']
+      interval: 5s
+      timeout: 5s
+      retries: 30
+    networks: [dimmi]
+
+  # Creates the files bucket; creating one that exists changes nothing.
+  buckets:
+    image: chrislusf/seaweedfs:3.97
+    restart: "no"
+    entrypoint: [/bin/sh, -ec]
+    command:
+      - |
+        for i in $$(seq 1 30); do
+          echo "s3.bucket.create -name files" | weed shell -master=seaweedfs:9333 -filer=seaweedfs:8888 >/dev/null 2>&1 || true
+          if echo "s3.bucket.list" | weed shell -master=seaweedfs:9333 -filer=seaweedfs:8888 2>/dev/null \
+            | grep -Eq '(^|[[:space:]])files([[:space:]]|$$)'; then exit 0; fi
+          sleep 2
+        done
+        echo "could not create the files bucket" >&2
+        exit 1
+    depends_on:
+      seaweedfs: { condition: service_healthy }
+    networks: [dimmi]
+
+  # The only public service. It proxies the app's domain and, when custom
+  # domains are on, orders certificates for them after the app allows each.
+  caddy:
+    image: caddy:2.10
+    restart: unless-stopped
+    ports: ["80:80", "443:443", "443:443/udp"]
+    environment:
+      APP_DOMAIN: ${APP_DOMAIN}
+      ACME_EMAIL: ${ACME_EMAIL:-}
+      CADDY_TLS: ${CADDY_TLS:-}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on: [web]
+    networks: [dimmi]
+
+  # Malware scanning for uploads and email attachments. It needs about
+  # 1.5 GB of memory, so it is off unless COMPOSE_PROFILES includes clamav.
+  clamav:
+    profiles: [clamav]
+    image: clamav/clamav:1.4
+    restart: unless-stopped
+    environment:
+      CLAMD_CONF_StreamMaxLength: 32M
+      CLAMD_CONF_MaxFileSize: 32M
+    volumes: [clamav:/var/lib/clamav]
+    networks: [dimmi]
+
+networks:
+  dimmi:
+    ipam:
+      config:
+        - subnet: ${NETWORK_SUBNET:-172.29.0.0/24}
+
+volumes:
+  postgres:
+  valkey:
+  seaweedfs:
+  caddy-data:
+  caddy-config:
+  clamav:
