@@ -95,31 +95,6 @@ func conversationChangeDocs() map[string]Doc {
 			},
 			Hint: "Snoozing needs exactly one of snoozed_until, snooze_preset or snooze_option.",
 		},
-		"conversations.destroy": {
-			Title:   "Move a conversation to the trash",
-			Use:     "Takes a conversation out of every list and count. Its messages stay, so it can be put back.",
-			Returns: "nothing.",
-			Next:    []string{"dimmi_conversations_restore_create: put it back"},
-			Risk:    new(RiskWrite),
-		},
-		"conversations.restore.store": {
-			Title:   "Restore a conversation from the trash",
-			Use:     "Puts a trashed conversation back where it was.",
-			Returns: "the conversation as it is now.",
-		},
-		"email-suppressions.index": {
-			Title:   "List what stops email to a customer",
-			Use:     "Lists the bounces, complaints and blocks that stop mail to a contact's address.",
-			Returns: "each suppression with its reason, the kind of mail it stops and when it lapses.",
-			Params:  map[string]string{"filter[contact]": "The contact (ctc_...) whose address to read."},
-			Next:    []string{"dimmi_email_suppressions_delete: let mail reach the address again"},
-		},
-		"email-suppressions.destroy": {
-			Title:   "Lift an email suppression",
-			Use:     "Lets mail reach a suppressed address again. Lifting a complaint takes an owner.",
-			Returns: "nothing.",
-			Risk:    new(RiskWrite),
-		},
 	}
 }
 
@@ -158,6 +133,40 @@ func conversationStateDocs() map[string]Doc {
 				"last_read_message_id": "Read up to this entry (msg_...). Leave everything out to read to the end.",
 				"unread":               "true to mark it unread. Not together with last_read_message_id.",
 			},
+		},
+	}
+}
+
+/*
+conversationTrashDocs returns the entries for the trash and for what
+stops email to a customer.
+*/
+func conversationTrashDocs() map[string]Doc {
+	return map[string]Doc{
+		"conversations.destroy": {
+			Title:   "Move a conversation to the trash",
+			Use:     "Takes a conversation out of every list and count. Its messages stay, so it can be put back.",
+			Returns: "nothing.",
+			Next:    []string{"dimmi_conversations_restore_create: put it back"},
+			Risk:    new(RiskWrite),
+		},
+		"conversations.restore.store": {
+			Title:   "Restore a conversation from the trash",
+			Use:     "Puts a trashed conversation back where it was.",
+			Returns: "the conversation as it is now.",
+		},
+		"email-suppressions.index": {
+			Title:   "List what stops email to a customer",
+			Use:     "Lists the bounces, complaints and blocks that stop mail to a contact's address.",
+			Returns: "each suppression with its reason, the kind of mail it stops and when it lapses.",
+			Params:  map[string]string{"filter[contact]": "The contact (ctc_...) whose address to read."},
+			Next:    []string{"dimmi_email_suppressions_delete: let mail reach the address again"},
+		},
+		"email-suppressions.destroy": {
+			Title:   "Lift an email suppression",
+			Use:     "Lets mail reach a suppressed address again. Lifting a complaint takes an owner.",
+			Returns: "nothing.",
+			Risk:    new(RiskWrite),
 		},
 	}
 }

@@ -46,7 +46,7 @@ func (s WebhookSnapshots) Snapshot(ctx context.Context, ws ids.UUID, kind string
 
 	err := s.DB.Transaction(tenancy.With(ctx, ws.String()), func(ctx context.Context, tx *database.Tx) error {
 		var err error
-		out, err = snapshotOf(ctx, models.New(tx), ws, kind, id)
+		out, err = snapshotOf(ctx, models.New(tx), ws, objectRef{kind: kind, id: id})
 
 		return err
 	})
@@ -62,10 +62,18 @@ func (s WebhookSnapshots) Snapshot(ctx context.Context, ws ids.UUID, kind string
 }
 
 /*
+objectRef names one object by its kind and id.
+*/
+type objectRef struct {
+	kind string
+	id   ids.UUID
+}
+
+/*
 snapshotOf reads and shapes one object of the kind.
 */
-func snapshotOf(ctx context.Context, q *models.Queries, ws ids.UUID, kind string, id ids.UUID,
-) (webhooks.Snapshot, error) {
+func snapshotOf(ctx context.Context, q *models.Queries, ws ids.UUID, ref objectRef) (webhooks.Snapshot, error) {
+	kind, id := ref.kind, ref.id
 	switch kind {
 	case "conversation":
 		return conversationSnapshot(ctx, q, ws, id)

@@ -32,7 +32,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"net/http"
 	"net/url"
 	"slices"
 
@@ -235,7 +234,7 @@ other's: a signed-in caller by user and workspace, anyone else by the
 credential they sent, so a key two callers both pick never replays one
 caller's response to the other.
 */
-func idempotencyScope(r *http.Request) string {
+func idempotencyScope(r *fhttp.Request) string {
 	workspace := r.Header.Get("Dimmi-Workspace")
 	if p, ok := appauth.CurrentPrincipal(r.Context()); ok {
 		return "user:" + p.User.ID.String() + ":" + workspace

@@ -4,7 +4,7 @@
 |--------------------------------------------------------------------------
 |
 | An address the workspace will not mail: why, for which kind of mail,
-| and until when when it lapses on its own.
+| and, when it lapses on its own, until when.
 |
 */
 

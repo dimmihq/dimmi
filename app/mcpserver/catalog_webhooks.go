@@ -111,7 +111,8 @@ func webhookSecretDocs() map[string]Doc {
 			Use:     "Posts a sample event to an endpoint now and reports how it answered.",
 			Returns: "the test delivery and its attempt with the status, body and a hint on a signature failure.",
 			Params: map[string]string{
-				"type": "Event type to send a sample of, from dimmi_webhook_event_types_list; webhook.test when left out.",
+				"type": "Event type to send a sample of, from dimmi_webhook_event_types_list; " +
+					"webhook.test when left out.",
 			},
 		},
 	}

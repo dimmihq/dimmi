@@ -429,7 +429,9 @@ func (c *ConversationController) Destroy(ctx context.Context, in *requests.Conve
 		return nil, err
 	}
 
-	err = c.Trash.Handle(ctx, conversations.TrashInput{Membership: membership(ctx), Ref: ref, MutationID: mutationID(ctx)})
+	err = c.Trash.Handle(ctx, conversations.TrashInput{
+		Membership: membership(ctx), Ref: ref, MutationID: mutationID(ctx),
+	})
 	if err != nil {
 		return nil, err
 	}

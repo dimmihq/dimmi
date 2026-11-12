@@ -59,14 +59,10 @@ func bootInbox(a *app.App) error {
 		CreateConversation: &conversations.CreateConversation{
 			DB: a.DB, Events: a.Events, Clock: a.Clock, Delivery: delivery,
 		},
-		ApplyChanges:        &conversations.ApplyConversationChanges{DB: a.DB, Events: a.Events, Clock: a.Clock},
-		TrashConversation:   &conversations.TrashConversation{DB: a.DB, Events: a.Events, Clock: a.Clock},
-		RestoreConversation: &conversations.RestoreConversation{DB: a.DB, Events: a.Events, Clock: a.Clock},
-		ShowNeighbors:       &conversations.ShowNeighbors{DB: a.DB},
-		CountConversations:  &conversations.CountConversations{DB: a.DB, IDs: a.IDs, Clock: a.Clock, Cache: a.Cache},
-		ShowReadState:       &conversations.ShowReadState{DB: a.DB},
-		UpdateReadState:     &conversations.UpdateReadState{DB: a.DB, Events: a.Events, Clock: a.Clock},
-		Search:              &conversations.Search{DB: a.DB, IDs: a.IDs},
+		ApplyChanges:       &conversations.ApplyConversationChanges{DB: a.DB, Events: a.Events, Clock: a.Clock},
+		ShowNeighbors:      &conversations.ShowNeighbors{DB: a.DB},
+		CountConversations: &conversations.CountConversations{DB: a.DB, IDs: a.IDs, Clock: a.Clock, Cache: a.Cache},
+		Search:             &conversations.Search{DB: a.DB, IDs: a.IDs},
 
 		ListMessages:      &messages.ListMessages{DB: a.DB, Disks: a.Storage},
 		AddNote:           &messages.AddNote{DB: a.DB, Events: a.Events, Clock: a.Clock, IDs: a.IDs},
@@ -76,6 +72,7 @@ func bootInbox(a *app.App) error {
 
 	bootRecords(a)
 	bootDelivery(a, delivery)
+	bootTrash(a)
 
 	return errors.Join(
 		bootWorkbench(a),
@@ -89,6 +86,18 @@ func bootInbox(a *app.App) error {
 			DB: a.DB, Clock: a.Clock, RetentionDays: a.Config.Inbox.Drafts.RetentionDays,
 		}),
 	)
+}
+
+/*
+bootTrash builds moving conversations to the trash and back, and each
+teammate's read state.
+*/
+func bootTrash(a *app.App) {
+	acts := a.Actions.Inbox
+	acts.ShowReadState = &conversations.ShowReadState{DB: a.DB}
+	acts.UpdateReadState = &conversations.UpdateReadState{DB: a.DB, Events: a.Events, Clock: a.Clock}
+	acts.TrashConversation = &conversations.TrashConversation{DB: a.DB, Events: a.Events, Clock: a.Clock}
+	acts.RestoreConversation = &conversations.RestoreConversation{DB: a.DB, Events: a.Events, Clock: a.Clock}
 }
 
 /*

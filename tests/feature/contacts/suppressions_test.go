@@ -1,10 +1,12 @@
 package contacts_test
 
 import (
+	"context"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 
+	"github.com/dimmihq/dimmi/framework/database"
 	"github.com/dimmihq/dimmi/framework/tenancy"
 	"github.com/dimmihq/dimmi/framework/testkit"
 
@@ -21,9 +23,11 @@ func TestEmailSuppressions(t *testing.T) {
 
 		ws := d.TC.Workspace.Workspace.ID
 		ctx := tenancy.With(t.Context(), ws.String())
-		err := models.New(d.TC.App.DB).SuppressEmail(ctx, models.SuppressEmailParams{
-			WorkspaceID: ws, Email: email, Reason: reason, Scope: "all", Source: "manual",
-			Details: []byte(`{}`), Now: d.TC.Clock.Now(),
+		err := d.TC.App.DB.Transaction(ctx, func(ctx context.Context, tx *database.Tx) error {
+			return models.New(tx).SuppressEmail(ctx, models.SuppressEmailParams{
+				WorkspaceID: ws, Email: email, Reason: reason, Scope: "all", Source: "manual",
+				Details: []byte(`{}`), Now: d.TC.Clock.Now(),
+			})
 		})
 		require.NoError(t, err)
 	}
@@ -42,7 +46,7 @@ func TestEmailSuppressions(t *testing.T) {
 			AssertJSONPath("data.#", 1).
 			AssertJSONPath("data.0.object", "email_suppression").
 			AssertJSONPath("data.0.reason", "hard_bounce").String("data.0.id")
-		d.Owner.GetJSON("/api/v1/email-suppressions?filter[contact]=" + other).AssertOK().AssertJSONPath("data.#", 0)
+		d.Owner.GetJSON("/api/v1/email-suppressions?filter[contact]="+other).AssertOK().AssertJSONPath("data.#", 0)
 
 		d.Owner.Delete("/api/v1/email-suppressions/" + id).AssertNoContent()
 		d.Owner.Delete("/api/v1/email-suppressions/" + id).AssertNotFound()

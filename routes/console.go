@@ -64,6 +64,14 @@ func Console(a *app.App) {
 	a.Schedule.Job(jobs.SweepKnowledgeEmbeddingsArgs{}).DailyAt("04:10")
 	a.Schedule.Job(jobs.ScheduleKnowledgeSyncsArgs{}).Cron("*/5 * * * *")
 	a.Schedule.Job(jobs.SweepAttachmentScansArgs{}).Cron("*/5 * * * *")
+	scheduleWebhooks(a)
+}
+
+/*
+scheduleWebhooks retries failed deliveries, checks endpoints' health and
+prunes the delivery log.
+*/
+func scheduleWebhooks(a *app.App) {
 	a.Schedule.Job(jobs.SweepWebhookDeliveriesArgs{}).EveryMinute()
 	a.Schedule.Job(jobs.CheckWebhookEndpointsArgs{}).Cron("*/5 * * * *")
 	a.Schedule.Job(jobs.PruneWebhookDeliveriesArgs{}).DailyAt("03:35")

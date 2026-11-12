@@ -21,7 +21,8 @@ replies, notes, drafts, views, snoozes, tags and inboxes.
 func inboxDocs() map[string]Doc {
 	out := map[string]Doc{}
 	for _, part := range []map[string]Doc{
-		conversationListDocs(), conversationDocs(), conversationChangeDocs(), conversationStateDocs(),
+		conversationListDocs(), conversationDocs(), conversationChangeDocs(),
+		conversationTrashDocs(), conversationStateDocs(),
 		timelineDocs(), writingDocs(), messageChangeDocs(), collaborationDocs(), viewDocs(), preferenceDocs(),
 		draftDocs(), snoozeDocs(), tagDocs(), inboxSetupDocs(), inboxHoursDocs(), inboxAccessDocs(), inboxAIDocs(),
 	} {

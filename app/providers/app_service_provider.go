@@ -153,6 +153,13 @@ func (p AppServiceProvider) Boot(ctx context.Context, _ *foundation.Application)
 		return err
 	}
 
+	return registerAll(a)
+}
+
+/*
+registerAll registers every job worker and the outbound webhooks.
+*/
+func registerAll(a *app.App) error {
 	return errors.Join(
 		registerJobs(a), registerWorkspaceJobs(a), registerWorkflowJobs(a), registerChangelogJobs(a), bootWebhooks(a),
 	)

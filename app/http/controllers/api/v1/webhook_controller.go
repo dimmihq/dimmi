@@ -46,61 +46,6 @@ type WebhookController struct {
 }
 
 /*
-WebhookEventTypesOutput is the catalog of subscribable events.
-*/
-type WebhookEventTypesOutput struct {
-	Body fhttp.Collection[resources.WebhookEventType]
-}
-
-/*
-WebhookEndpointsOutput is the workspace's endpoints.
-*/
-type WebhookEndpointsOutput struct {
-	Body fhttp.Collection[resources.WebhookEndpoint]
-}
-
-/*
-WebhookEndpointOutput is one endpoint.
-*/
-type WebhookEndpointOutput struct {
-	Body fhttp.Resource[resources.WebhookEndpoint]
-}
-
-/*
-CreatedWebhookEndpointOutput is a new endpoint with its secret, shown
-this once.
-*/
-type CreatedWebhookEndpointOutput struct {
-	Body struct {
-		Data resources.WebhookEndpoint `json:"data"`
-		Meta struct {
-			Secret string `json:"secret"`
-		} `json:"meta"`
-	}
-}
-
-/*
-WebhookSecretOutput is an endpoint's secrets.
-*/
-type WebhookSecretOutput struct {
-	Body fhttp.Resource[resources.WebhookSecret]
-}
-
-/*
-WebhookStatsOutput is an endpoint's numbers for the last day.
-*/
-type WebhookStatsOutput struct {
-	Body fhttp.Resource[resources.WebhookEndpointStats]
-}
-
-/*
-WebhookTestOutput is a test send and how it was answered.
-*/
-type WebhookTestOutput struct {
-	Body fhttp.Resource[resources.WebhookTestResult]
-}
-
-/*
 EventTypes lists the events an endpoint can subscribe to.
 */
 func (c *WebhookController) EventTypes(_ context.Context, _ *requests.NoInput) (*WebhookEventTypesOutput, error) {

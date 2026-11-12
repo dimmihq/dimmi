@@ -80,7 +80,9 @@ func (a *TrashConversation) Handle(ctx context.Context, in TrashInput) error {
 			return missing(err)
 		}
 
-		return w.Dispatch(ctx, appevents.ConversationDeleted{Base: w.Base(c.WorkspaceID), ConversationRef: ref(trashed)})
+		return w.Dispatch(ctx, appevents.ConversationDeleted{
+			Base: w.Base(c.WorkspaceID), ConversationRef: ref(trashed),
+		})
 	})
 }
 
