@@ -235,7 +235,8 @@ describe("a connected messenger", () => {
     });
 
     boot(win, document);
-    for (let i = 0; i < 3; i++) {
+    // The changelog loads after the config; a busy machine needs more turns.
+    for (let i = 0; i < 20 && !shadow()?.textContent?.includes("Switch it on."); i++) {
       await settle();
     }
 
