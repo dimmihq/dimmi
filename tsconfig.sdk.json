@@ -13,8 +13,10 @@
     "noEmit": true,
     "types": ["node", "vitest/globals"],
     "paths": {
-      "@dimmi/server": ["./sdk/server/src/index.ts"]
+      "@dimmi/server": ["./sdk/server/src/index.ts"],
+      "@dimmi/browser": ["./sdk/browser/src/index.ts"],
+      "@dimmi/react": ["./sdk/react/src/index.ts"]
     }
   },
-  "include": ["sdk/*/src"]
+  "include": ["sdk/*/src", "sdk/api/scripts"]
 }

@@ -36,6 +36,7 @@ func recordRoutes(r *routing.Router, a *app.App) {
 	contactDetailRoutes(r, a)
 	companyRoutes(r, a)
 	redactionRoutes(r, a)
+	savedReplyRoutes(r, a)
 	dataExportRoutes(r, a)
 }
 
@@ -58,6 +59,29 @@ func dataExportRoutes(r *routing.Router, a *app.App) {
 	routing.Get(r, path+"/download", "data-exports.download.show", c.File).Ability("conversations:read")
 	routing.Delete(r, path, "data-exports.destroy", c.Destroy).Ability("conversations:read").
 		Status(http.StatusNoContent)
+}
+
+/*
+savedReplyRoutes declares the routes on saved replies and macros. Using
+them is part of working conversations; the actions decide who may touch
+a shared reply.
+*/
+func savedReplyRoutes(r *routing.Router, a *app.App) {
+	acts := a.Actions.Inbox
+	c := &v1.SavedReplyController{
+		List: acts.ListSavedReplies, Show: acts.ShowSavedReply, Create: acts.CreateSavedReply,
+		Change: acts.UpdateSavedReply, Remove: acts.DeleteSavedReply, Import: acts.ImportSavedReplies, IDs: a.IDs,
+	}
+	path := "/saved-replies/{saved_reply}"
+
+	routing.Get(r, "/saved-replies", "saved-replies.index", c.Index).Ability("conversations:read").
+		Query(routing.QueryParam{Name: "q", Description: "Search text matched against titles and shortcuts."})
+	routing.Post(r, "/saved-replies", "saved-replies.store", c.Store).Ability("conversations:write")
+	routing.Get(r, path, "saved-replies.show", c.Get).Ability("conversations:read")
+	routing.Patch(r, path, "saved-replies.update", c.Update).Ability("conversations:write")
+	routing.Delete(r, path, "saved-replies.destroy", c.Destroy).Ability("conversations:write")
+	routing.Post(r, "/saved-reply-imports", "saved-reply-imports.store", c.StoreImport).
+		Ability("conversations:write").Status(http.StatusCreated)
 }
 
 /*

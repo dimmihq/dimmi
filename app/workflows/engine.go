@@ -24,7 +24,9 @@ import (
 
 	"github.com/dimmihq/dimmi/framework/clock"
 	"github.com/dimmihq/dimmi/framework/database"
+	"github.com/dimmihq/dimmi/framework/encryption"
 	"github.com/dimmihq/dimmi/framework/events"
+	"github.com/dimmihq/dimmi/framework/httpclient"
 	"github.com/dimmihq/dimmi/framework/ids"
 	"github.com/dimmihq/dimmi/framework/queue"
 	"github.com/dimmihq/dimmi/framework/tenancy"
@@ -59,18 +61,24 @@ func DefaultLimits() Limits {
 Engine runs workflows. Delivery hands workflow messages to channels;
 IDs reads the public ids definitions name; AgentOn says this server
 runs the agent at all, so a step that lets dimmi handle a conversation
-hands it over at once when it cannot.
+hands it over at once when it cannot. HTTP is the guarded client
+request steps call out through, Keys open the secrets of their
+connections, and Classifier sorts conversations by topic; without one
+every classify step takes its none path.
 */
 type Engine struct {
-	DB       *database.DB
-	Events   *events.Dispatcher
-	Clock    clock.Clock
-	Queue    *queue.Queue
-	IDs      *ids.Registry
-	Delivery conversations.Delivery
-	Limits   Limits
-	AgentOn  bool
-	live     *liveCache
+	DB         *database.DB
+	Events     *events.Dispatcher
+	Clock      clock.Clock
+	Queue      *queue.Queue
+	IDs        *ids.Registry
+	Delivery   conversations.Delivery
+	Limits     Limits
+	AgentOn    bool
+	HTTP       *httpclient.Client
+	Keys       *encryption.Keys
+	Classifier Classifier
+	live       *liveCache
 }
 
 /*

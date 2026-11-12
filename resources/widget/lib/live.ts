@@ -22,7 +22,6 @@ import { Realtime } from "../client/realtime";
 import { Session, type SessionData, type Storage } from "../client/session";
 import { type Conversation as ApiConversation, type Message as ApiMessage, Store } from "../client/store";
 import { ConversationRow } from "../components/rows";
-import { AiActions, Thread, Typing } from "../components/thread";
 import { Whoami } from "../components/whoami";
 import type { Block, Collection, Content, Message, VerifyStep } from "../content";
 
@@ -38,10 +37,11 @@ interface HelpIndex {
 
 import type { Options, OptionsUpdate, Tab } from "../options";
 import type { ActionTexts } from "../text";
-import { type Availability, type Config, content, fromConfig } from "./map";
+import { type Availability, type Config, content, fromConfig, reading } from "./map";
 import { patch } from "./patch";
 import { report } from "./report";
 import type { Surface } from "./rules";
+import { loadThread, type Parts, thread as threadParts } from "./threads";
 
 export interface Host {
   root: ShadowRoot;
@@ -186,6 +186,8 @@ export class Live {
   private changelog: Pick<Content, "changelog" | "unread_changelog"> | undefined;
   private latestEntry = "";
   private readonly rated = new Map<string, "yes" | "no">();
+  private ratings: import("./rating").Ratings | undefined;
+  private ratingsLoading = false;
   private callTimer: unknown;
   private identity: Source | undefined;
   private checking: Promise<void> | undefined;
@@ -193,6 +195,8 @@ export class Live {
   private surface: Surface | undefined;
   private rules: typeof import("./rules") | undefined;
   private allTabs: Tab[] = [];
+  private readonly events: unknown[][] = [];
+  private unread = -1;
   private shown = "";
 
   constructor(
@@ -242,7 +246,7 @@ export class Live {
    */
   async start(): Promise<boolean> {
     try {
-      this.config = (await this.http.get<{ data: Config }>(`/apps/${this.appId}/config`)).data;
+      this.config = (await this.http.get<{ data: Config }>(this.localized("config"))).data;
     } catch (error) {
       const code = error instanceof ApiError ? error.code : "network";
       report("error", code, fatal[code] ?? "the messenger's config could not be loaded.");
@@ -255,7 +259,7 @@ export class Live {
       this.identity = undefined;
     }
 
-    this.host.update(fromConfig(this.config, this.host.options().texts));
+    this.host.update(fromConfig(this.config));
     this.allTabs = this.host.options().tabs;
     this.surface = this.config.surface?.anonymous;
     this.applySurface();
@@ -278,6 +282,7 @@ export class Live {
       void this.outbox.flush();
     }
     this.watchRoutes();
+    this.tellUnread();
 
     return true;
   }
@@ -409,6 +414,21 @@ export class Live {
   }
 
   /*
+   * viewed tells the server the visitor opened an article, which it
+   * counts for the team's analytics. Nothing waits on it and a failure
+   * is only reported. A visitor without a session is counted through the
+   * app's own address, so reading never starts one.
+   */
+  async viewed(article: string) {
+    try {
+      await this.http.post(this.session.current ? "/article-views" : `/apps/${this.appId}/article-views`, { article });
+    } catch (error) {
+      const code = error instanceof ApiError ? error.code : "network";
+      report("warn", code, "the article view could not be counted.");
+    }
+  }
+
+  /*
    * rate tells the server whether an article helped, starting the
    * visitor's session first when they have none. The answer already
    * shows; when the server refuses it, the article goes back to what the
@@ -487,7 +507,7 @@ export class Live {
           title: a.title,
           summary: a.summary,
           author: "",
-          updated: new Date(a.updated).toLocaleDateString(),
+          updated: new Date(a.updated).toLocaleDateString(reading.locale),
           body: a.body,
         })),
       };
@@ -633,9 +653,43 @@ export class Live {
     }
   }
 
+  /*
+   * localized is the address of the widget's config or availability in
+   * the visitor's language: the one the page chose, else the browser's.
+   */
+  private localized(path: string): string {
+    const language = this.browser.language?.();
+    return `/apps/${this.appId}/${path}${language ? `?locale=${encodeURIComponent(language)}` : ""}`;
+  }
+
+  /*
+   * relocalize loads the config again after the page chose another
+   * language, and redraws the messenger's words and direction with it.
+   */
+  async relocalize() {
+    try {
+      this.config = (await this.http.get<{ data: Config }>(this.localized("config"))).data;
+    } catch {
+      return;
+    }
+    this.host.update(fromConfig(this.config));
+    this.redraw();
+    void this.loadAvailability();
+  }
+
+  /*
+   * redraw puts back what only the connection draws, such as the open
+   * thread's delivery line and the visitor's conversations, after the
+   * whole messenger was drawn again.
+   */
+  redraw() {
+    this.drawConversations();
+    this.drawThread();
+  }
+
   private async loadAvailability() {
     try {
-      this.availability = (await this.http.get<{ data: Availability }>(`/apps/${this.appId}/availability`)).data;
+      this.availability = (await this.http.get<{ data: Availability }>(this.localized("availability"))).data;
       this.drawConversations();
       this.drawHeader();
     } catch {
@@ -658,11 +712,47 @@ export class Live {
   private streaming() {
     if (this.session.current) {
       this.realtime.start();
+      this.sendEvents();
+    }
+  }
+
+  /*
+   * tellUnread tells the page the visitor's unread total, once at start
+   * and whenever it changes, as a window "dimmi:unread" event.
+   */
+  private tellUnread() {
+    const count = this.store.unread;
+    if (count !== this.unread) {
+      this.unread = count;
+      globalThis.dispatchEvent?.(new CustomEvent("dimmi:unread", { detail: { count } }));
+    }
+  }
+
+  /*
+   * track keeps an event the page reported, Dimmi("track", name,
+   * metadata), until the visitor has a session; the sender is its own
+   * chunk.
+   */
+  track(name: unknown, metadata: unknown) {
+    this.events.push([name, metadata, this.browser.uuid()]);
+    this.sendEvents();
+  }
+
+  private sendEvents() {
+    if (this.session.current && this.events.length) {
+      void import("./events").then((sender) => sender.send(this.http, this.events));
     }
   }
 
   private event(event: string, data: Record<string, unknown>) {
     this.store.apply(event, data);
+    const asked = data.conversation_id;
+    if ((event === "conversation.rating_requested" || event === "conversation.reopened") && typeof asked === "string") {
+      this.ratings?.forget(asked);
+      if (this.open === asked) {
+        this.drawThread();
+      }
+    }
     const message = data.message as ApiMessage | undefined;
     if (event !== "message.created" || !message || message.author.type === "contact") {
       return;
@@ -756,12 +846,13 @@ export class Live {
     const page = this.browser.page();
     return {
       page,
-      locale: typeof navigator === "undefined" ? undefined : navigator.language,
+      locale: this.browser.language?.(),
       timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
     };
   }
 
   private changed(change: string, conversation?: string) {
+    this.tellUnread();
     if (change === "conversations" || change === "unread") {
       this.drawConversations();
     }
@@ -824,25 +915,28 @@ export class Live {
       return;
     }
 
+    const t = threadParts();
+    if (!t) {
+      void loadThread(this.host.root).then(() => this.drawThread());
+      return;
+    }
     const texts = this.host.options().texts;
     const open = this.open;
     const messages = this.content().thread.map((m) => this.withDecision(m));
     const typing = open ? this.store.typingIn(open) : undefined;
-    const seen = open ? this.store.seen.get(open) : undefined;
     const last = messages.at(-1);
-    const parts = [this.statusLine(), String(Thread({ messages, texts: this.actionTexts() }))];
+    const parts = [this.statusLine(), String(t.Thread({ messages, texts: this.actionTexts() }))];
 
     if (typing) {
-      parts.push(String(Typing()));
+      parts.push(String(t.Typing()));
     } else {
-      parts.push(this.aiActions(last));
+      parts.push(this.aiActions(last, t));
     }
-    if (seen && last?.from === "visitor" && !last.state) {
-      parts.push(`<p class="seen">${escapeHtml(texts.seen)}</p>`);
-    }
+    parts.push(this.delivery(open));
     if (last?.from === "visitor" && this.config.delay_notice !== false && this.availability?.online === false) {
       parts.push(`<p class="delay">${escapeHtml(texts.delay_notice)}</p>`);
     }
+    parts.push(this.ratingCard());
     if (open && (this.store.messages.get(open) ?? []).some((m) => m.failed === "email_required")) {
       parts.push(
         `<form class="capture" data-capture><p>${escapeHtml(texts.email_prompt)}</p><span class="row">` +
@@ -862,7 +956,7 @@ export class Live {
    * under an answer, Talk to a person under any reply, and nothing once
    * the conversation is with the team.
    */
-  private aiActions(last: { from: string; id?: string; outcome?: string } | undefined): string {
+  private aiActions(last: { from: string; id?: string; outcome?: string } | undefined, t: Parts): string {
     const found = this.store.conversations.find((c) => c.id === this.open);
     if (last?.from !== "agent" || !last.id || found?.ai_state !== "active") {
       return "";
@@ -870,12 +964,50 @@ export class Live {
     const texts = this.host.options().texts;
 
     return String(
-      AiActions({
+      t.AiActions({
         texts: { helped: texts.ai_helped, handoff: texts.talk_to_human, thanks: texts.ai_thanks },
         helped: this.helped.has(last.id),
         answered: last.outcome === "answered" || last.outcome === "partial",
       }),
     );
+  }
+
+  /*
+   * delivery says where the visitor's latest message stands, under it:
+   * sending, not delivered with a way to send it again, seen once a
+   * teammate read it, or else sent. A conversation the team spoke in last
+   * needs no line. One refused for want of an email asks for the email
+   * instead.
+   */
+  private delivery(open: string | undefined): string {
+    const mine = open ? (this.store.messages.get(open) ?? []) : [];
+    const last = mine.at(-1);
+    if (last?.author.type !== "contact" || last.failed === "email_required") {
+      return "";
+    }
+    const t = threadParts();
+    const texts = this.host.options().texts as unknown as Record<string, string>;
+    const seen = open ? this.store.seen.get(open) : undefined;
+    const state = last.sending
+      ? "sending"
+      : last.failed
+        ? "failed"
+        : seen && Date.parse(seen.at) >= Date.parse(last.created_at)
+          ? "seen"
+          : "sent";
+
+    return String(t?.Delivery({ state, texts, retry: last.client_id ?? undefined }) ?? "");
+  }
+
+  /*
+   * retry sends again a message of the visitor's the server refused.
+   */
+  retry(clientId: string) {
+    const open = this.open;
+    const failed = open ? this.store.dropLocal(open, clientId) : undefined;
+    if (failed?.failed) {
+      void this.send(failed.body ?? "", []);
+    }
   }
 
   /*
@@ -1077,6 +1209,47 @@ export class Live {
       await Promise.all(waiting.map((call) => this.refreshCall(open, call)));
       this.drawThread();
     }, callCheck);
+  }
+
+  /*
+   * ratingCard asks the visitor to rate the open conversation once it
+   * closed and its ask went out. The card's chunk loads the first time
+   * a closed conversation opens.
+   */
+  private ratingCard(): string {
+    const open = this.open;
+    const found = this.store.conversations.find((c) => c.id === open);
+    if (!open || found?.status !== "closed") {
+      return "";
+    }
+    if (!this.ratings) {
+      if (!this.ratingsLoading) {
+        this.ratingsLoading = true;
+        void import("./rating").then(({ Ratings }) => {
+          this.ratings = new Ratings(this.http, this.host.root, (c) => this.open === c && this.drawThread());
+          this.drawThread();
+        });
+      }
+      return "";
+    }
+    const t = this.host.options().texts;
+
+    return this.ratings.card(open, {
+      ask: t.rating_ask,
+      comment: t.rating_comment,
+      send: t.rating_send,
+      thanks: t.rated_thanks,
+    });
+  }
+
+  /*
+   * rateConversation sends the face or the comment the visitor gave on
+   * the open conversation's rating card.
+   */
+  rateConversation(answer: { score?: number; comment?: string }) {
+    if (this.open) {
+      void this.ratings?.rate(this.open, answer);
+    }
   }
 
   /*

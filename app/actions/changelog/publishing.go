@@ -7,8 +7,10 @@
 | help center's cache on, so every page shows it at once. An entry
 | publishes now, on a date in the past for changes that shipped
 | earlier, or later on its own when scheduled. Asking to tell
-| subscribers queues the entry's one mailing; it is sent at most once,
-| however often the entry is published again.
+| subscribers queues the entry's one mailing, after the help center's
+| undo window when it has one; it is sent at most once, however often
+| the entry is published again, and not at all when the entry was taken
+| back before the window closed.
 |
 */
 
@@ -25,7 +27,9 @@ import (
 	"github.com/dimmihq/dimmi/framework/ids"
 	"github.com/dimmihq/dimmi/framework/queue"
 
+	"github.com/dimmihq/dimmi/app/actions/helpcenters"
 	"github.com/dimmihq/dimmi/app/auth/authz"
+	appevents "github.com/dimmihq/dimmi/app/events"
 	"github.com/dimmihq/dimmi/app/exceptions"
 	"github.com/dimmihq/dimmi/app/models"
 )
@@ -44,12 +48,14 @@ var (
 
 /*
 PublishInput says how to publish: Notify mails active subscribers once,
-At dates the entry, and ScheduledFor holds it until then instead.
+At dates the entry, and ScheduledFor holds it until then instead. The
+member publishing is set by Publish, nil when a schedule publishes.
 */
 type PublishInput struct {
 	Notify       bool
 	At           *time.Time
 	ScheduledFor *time.Time
+	by           *ids.UUID
 }
 
 /*
@@ -88,6 +94,7 @@ func (e *Entries) Publish(ctx context.Context, m authz.Membership, id ids.UUID, 
 	if in.ScheduledFor != nil {
 		return e.schedule(ctx, m, id, in)
 	}
+	in.by = &m.Member.ID
 	ws := m.Workspace.ID
 	var out Entry
 	err := e.DB.Transaction(ctx, func(ctx context.Context, tx *database.Tx) error {
@@ -135,12 +142,34 @@ func (e *Entries) goLive(ctx context.Context, tx *database.Tx, current models.Ch
 		return row, err
 	}
 	if row.NotifySubscribers && row.NotifiedAt == nil {
-		args := MailEntryArgs{WorkspaceID: row.WorkspaceID, EntryID: row.ID}
-		if err := e.Queue.PushTx(ctx, tx, args); err != nil {
-			return row, fmt.Errorf("queue changelog mailing: %w", err)
+		if err := e.queueMailing(ctx, tx, row, now); err != nil {
+			return row, err
 		}
 	}
-	return row, nil
+	return row, e.wentLive(ctx, tx, current, in.by)
+}
+
+/*
+queueMailing queues the entry's mailing, after the help center's undo
+window when it has one: an entry taken back before then is not
+published when the mailing runs, so nothing is sent.
+*/
+func (e *Entries) queueMailing(ctx context.Context, tx *database.Tx, row models.ChangelogEntry, now time.Time) error {
+	center, err := models.New(tx).FindHelpCenter(ctx, models.FindHelpCenterParams{
+		WorkspaceID: row.WorkspaceID, ID: row.HelpCenterID,
+	})
+	if err != nil {
+		return fmt.Errorf("find changelog help center: %w", err)
+	}
+	args := MailEntryArgs{WorkspaceID: row.WorkspaceID, EntryID: row.ID}
+	var opts []queue.Opt
+	if undo := helpcenters.ChangelogOf(center).Undo; undo > 0 {
+		opts = append(opts, queue.At(now.Add(undo)))
+	}
+	if err := e.Queue.PushTx(ctx, tx, args, opts...); err != nil {
+		return fmt.Errorf("queue changelog mailing: %w", err)
+	}
+	return nil
 }
 
 /*
@@ -212,7 +241,8 @@ func (e *Entries) Unpublish(ctx context.Context, m authz.Membership, id ids.UUID
 	var out Entry
 	err := e.DB.Transaction(ctx, func(ctx context.Context, tx *database.Tx) error {
 		q := models.New(tx)
-		if _, err := lockEntry(ctx, q, ws, id); err != nil {
+		before, err := lockEntry(ctx, q, ws, id)
+		if err != nil {
 			return err
 		}
 		row, err := q.UnpublishChangelogEntry(ctx, models.UnpublishChangelogEntryParams{
@@ -223,6 +253,12 @@ func (e *Entries) Unpublish(ctx context.Context, m authz.Membership, id ids.UUID
 		}
 		if err := touch(ctx, q, row, now); err != nil {
 			return err
+		}
+		if before.Status == "published" {
+			ev := appevents.ChangelogEntryUnpublished{Base: e.base(ws, &m.Member.ID), EntryID: id}
+			if err := e.announce(ctx, tx, ev); err != nil {
+				return err
+			}
 		}
 		out, err = dress(ctx, q, ws, row)
 		return err

@@ -202,3 +202,46 @@ email-matrix:
 # release, whose app.locales leaves it out.
 pseudo-locale:
 	node scripts/pseudo-locale.ts
+
+# Public API and SDK contracts (AGENTS.md, docs/api/versioning.md).
+.PHONY: api-snapshot api-compat api-baseline sdk-generate sdk-check sdk-compat sdk-compat-update sdk-changeset-check
+
+# Rewrites tests/contracts/*.json, the REST, messenger and webhook
+# contracts, from the routes, requests, resources and events.
+api-snapshot:
+	$(WITH_ENV) UPDATE_GOLDEN=1 go test -count=1 ./tests/contracts/ -run 'Contract'
+
+# Fails on any change that breaks a client of the last released API.
+# BASE=origin/main compares with a git ref instead.
+api-compat:
+	node scripts/api-compat.ts $(if $(BASE),--ref $(BASE))
+
+# Marks the current contracts as released: tags api-vYYYY.MM.DD, which
+# api-compat compares with from then on. Run by the release only.
+api-baseline:
+	git tag api-v$$(date -u +%Y.%m.%d)
+	node -e 'const f="contracts/breaking-changes.json",fs=require("fs"),j=JSON.parse(fs.readFileSync(f));j.entries=[];fs.writeFileSync(f,JSON.stringify(j,null,2)+"\n")'
+
+# Generates every SDK's generated layer from the API contract. The output
+# is gitignored; a clone runs this before building or testing an SDK.
+sdk-generate:
+	node scripts/sdk-generate.ts
+
+# Generates every SDK, then builds it and runs its unit tests.
+sdk-check:
+	node scripts/sdk-generate.ts --check
+
+# Fails when an SDK's public surface breaks, against its last published
+# release, without a major changeset.
+sdk-compat:
+	pnpm sdk:build
+	node scripts/sdk-compat.ts
+
+# Records the TypeScript SDKs' API reports after an intended change.
+sdk-compat-update:
+	pnpm sdk:build
+	node scripts/sdk-compat.ts ts --update
+
+# Fails when the API contract or an SDK changed without a changeset.
+sdk-changeset-check:
+	node scripts/sdk-changeset-check.ts $(if $(BASE),$(BASE),origin/main)

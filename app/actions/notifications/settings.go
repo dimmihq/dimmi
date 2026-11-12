@@ -94,18 +94,38 @@ Quiet reports whether the member asked not to be disturbed now about
 the trigger: paused, or inside quiet hours it does not bypass.
 */
 func (c Choices) Quiet(now time.Time, trigger, fallbackZone string) bool {
+	return c.QuietReason(now, trigger, fallbackZone) != ""
+}
+
+/*
+QuietReason says why the member is not to be disturbed now about the
+trigger: paused, or quiet hours; "" when they may be.
+*/
+func (c Choices) QuietReason(now time.Time, trigger, fallbackZone string) string {
 	s := c.Settings
 	if s.PausedUntil != nil && now.Before(*s.PausedUntil) {
-		return true
+		return ReasonPaused
 	}
 	if !s.QuietHoursEnabled || slices.Contains(s.QuietHoursBypass, trigger) {
-		return false
+		return ""
 	}
+	if InQuietHours(now, c.Window(fallbackZone)) {
+		return ReasonQuietHours
+	}
+	return ""
+}
+
+/*
+Window is the member's quiet window, in their zone or else the one
+given.
+*/
+func (c Choices) Window(fallbackZone string) Window {
+	s := c.Settings
 	zone := deref(s.Timezone)
 	if zone == "" {
 		zone = fallbackZone
 	}
-	return InQuietHours(now, Window{Zone: zone, Start: s.QuietHoursStart, End: s.QuietHoursEnd, Days: s.QuietHoursDays})
+	return Window{Zone: zone, Start: s.QuietHoursStart, End: s.QuietHoursEnd, Days: s.QuietHoursDays}
 }
 
 /*

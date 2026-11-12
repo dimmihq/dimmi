@@ -5,7 +5,10 @@
  * fills in the core's hashed file name, its integrity hash and the assets
  * host when it serves this file, so a cached loader never asks for a core
  * that no longer exists. A second copy of the snippet on the same page does
- * nothing but warn.
+ * nothing but warn. Under a strict content security policy the snippet
+ * carries a nonce, which the core's tag takes on; the parts the core loads
+ * later inherit it, and its styles are a constructed stylesheet, which a
+ * policy never blocks.
  */
 import { report } from "./lib/report";
 import type { Command, DimmiWindow, Queue } from "./settings";
@@ -46,6 +49,7 @@ export function load(win: Window & DimmiWindow, doc: Document, script: HTMLScrip
     core.src = (build.assets || `${base}/widget/assets/`) + build.core;
     core.integrity = build.integrity;
     core.crossOrigin = "anonymous";
+    core.nonce = script?.nonce ?? "";
     core.onerror = () =>
       report(
         "error",

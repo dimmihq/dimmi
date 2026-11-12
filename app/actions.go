@@ -37,6 +37,7 @@ import (
 	"github.com/dimmihq/dimmi/app/actions/members"
 	"github.com/dimmihq/dimmi/app/actions/notifications"
 	"github.com/dimmihq/dimmi/app/actions/procedures"
+	"github.com/dimmihq/dimmi/app/actions/ratings"
 	"github.com/dimmihq/dimmi/app/actions/roles"
 	"github.com/dimmihq/dimmi/app/actions/schedules"
 	"github.com/dimmihq/dimmi/app/actions/series"
@@ -122,6 +123,7 @@ type Actions struct {
 	NotificationCenter         *notifications.Center
 	NotificationPresence       *notifications.Presence
 	NotificationDestinations   *notifications.ManageDestinations
+	NotificationUnsubscribes   *notifications.Unsubscribes
 	PushDevices                *notifications.Devices
 	IdentityVerifier           *identity.Verifier
 	IdentityKeySets            *identity.KeySets
@@ -139,6 +141,10 @@ type Actions struct {
 	HelpPublic                 *helpcenters.Public
 	HelpReaders                *helpcenters.Readers
 	HelpRatings                *helpcenters.Ratings
+	HelpDomains                *helpcenters.Domains
+	HelpDomainHosts            *helpcenters.DomainHosts
+	HelpAnalytics              *helpcenters.Analytics
+	ConversationRatings        *ratings.Ratings
 	IdentityPasses             *identity.Passes
 	ChangelogEntries           *changelog.Entries
 	ChangelogSubscribers       *changelog.Subscribers

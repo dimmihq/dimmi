@@ -52,6 +52,8 @@ type UpdateEventRequest struct {
 		Label       *string `json:"label,omitempty"       maxLength:"80"`
 		Description *string `json:"description,omitempty" maxLength:"500"`
 		Status      *string `json:"status,omitempty"      enum:"active,archived"`
+		// ClientWritable lets the messenger send the event from the browser.
+		ClientWritable *bool `json:"client_writable,omitempty"`
 	}
 }
 

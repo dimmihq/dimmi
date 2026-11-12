@@ -7,30 +7,49 @@ package models
 
 import (
 	"context"
+	"encoding/json"
 	"time"
 
 	"github.com/dimmihq/dimmi/framework/ids"
 )
 
+const countSavedReplies = `-- name: CountSavedReplies :one
+SELECT count(*) FROM saved_replies WHERE workspace_id = $1
+`
+
+// CountSavedReplies returns how many replies the workspace keeps, shared
+// and personal.
+func (q *Queries) CountSavedReplies(ctx context.Context, workspaceID ids.UUID) (int64, error) {
+	row := q.db.QueryRow(ctx, countSavedReplies, workspaceID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const createSavedReply = `-- name: CreateSavedReply :one
-INSERT INTO saved_replies (workspace_id, owner_member_id, title, body, shortcut, created_at, updated_at)
-VALUES ($1, $2, $3, $4, $5, $6, $6)
-RETURNING id, workspace_id, owner_member_id, title, body, shortcut, created_at, updated_at
+INSERT INTO saved_replies (workspace_id, owner_member_id, title, body, shortcut, actions, created_at, updated_at)
+VALUES (
+    $1, $2, $3, $4, $5, coalesce($6::jsonb, '{}'::jsonb),
+    $7, $7
+)
+RETURNING id, workspace_id, owner_member_id, title, body, shortcut, created_at, updated_at, actions
 `
 
 type CreateSavedReplyParams struct {
-	WorkspaceID   ids.UUID  `json:"workspace_id"`
-	OwnerMemberID *ids.UUID `json:"owner_member_id"`
-	Title         string    `json:"title"`
-	Body          string    `json:"body"`
-	Shortcut      *string   `json:"shortcut"`
-	Now           time.Time `json:"now"`
+	WorkspaceID   ids.UUID        `json:"workspace_id"`
+	OwnerMemberID *ids.UUID       `json:"owner_member_id"`
+	Title         string          `json:"title"`
+	Body          string          `json:"body"`
+	Shortcut      *string         `json:"shortcut"`
+	Actions       json.RawMessage `json:"actions"`
+	Now           time.Time       `json:"now"`
 }
 
 // CreateSavedReply stores a reply, shared with the workspace when it has
 // no owner and the owner's own otherwise. A shortcut the owner, or the
 // workspace for a shared reply, already uses fails on
-// saved_replies_workspace_id_owner_member_id_shortcut_key.
+// saved_replies_workspace_id_owner_member_id_shortcut_key. Without
+// actions the reply is a plain one.
 func (q *Queries) CreateSavedReply(ctx context.Context, arg CreateSavedReplyParams) (SavedReply, error) {
 	row := q.db.QueryRow(ctx, createSavedReply,
 		arg.WorkspaceID,
@@ -38,6 +57,7 @@ func (q *Queries) CreateSavedReply(ctx context.Context, arg CreateSavedReplyPara
 		arg.Title,
 		arg.Body,
 		arg.Shortcut,
+		arg.Actions,
 		arg.Now,
 	)
 	var i SavedReply
@@ -50,6 +70,7 @@ func (q *Queries) CreateSavedReply(ctx context.Context, arg CreateSavedReplyPara
 		&i.Shortcut,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.Actions,
 	)
 	return i, err
 }
@@ -73,7 +94,7 @@ func (q *Queries) DeleteSavedReply(ctx context.Context, arg DeleteSavedReplyPara
 }
 
 const findSavedReply = `-- name: FindSavedReply :one
-SELECT id, workspace_id, owner_member_id, title, body, shortcut, created_at, updated_at FROM saved_replies WHERE workspace_id = $1 AND id = $2
+SELECT id, workspace_id, owner_member_id, title, body, shortcut, created_at, updated_at, actions FROM saved_replies WHERE workspace_id = $1 AND id = $2
 `
 
 type FindSavedReplyParams struct {
@@ -95,12 +116,13 @@ func (q *Queries) FindSavedReply(ctx context.Context, arg FindSavedReplyParams) 
 		&i.Shortcut,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.Actions,
 	)
 	return i, err
 }
 
 const findSavedReplyByShortcut = `-- name: FindSavedReplyByShortcut :one
-SELECT id, workspace_id, owner_member_id, title, body, shortcut, created_at, updated_at FROM saved_replies
+SELECT id, workspace_id, owner_member_id, title, body, shortcut, created_at, updated_at, actions FROM saved_replies
 WHERE workspace_id = $1
   AND shortcut = $2::citext
   AND (owner_member_id IS NULL OR owner_member_id = $3::uuid)
@@ -128,12 +150,13 @@ func (q *Queries) FindSavedReplyByShortcut(ctx context.Context, arg FindSavedRep
 		&i.Shortcut,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.Actions,
 	)
 	return i, err
 }
 
 const listSavedReplies = `-- name: ListSavedReplies :many
-SELECT id, workspace_id, owner_member_id, title, body, shortcut, created_at, updated_at FROM saved_replies
+SELECT id, workspace_id, owner_member_id, title, body, shortcut, created_at, updated_at, actions FROM saved_replies
 WHERE workspace_id = $1
   AND (owner_member_id IS NULL OR owner_member_id = $2::uuid)
   AND (
@@ -187,6 +210,7 @@ func (q *Queries) ListSavedReplies(ctx context.Context, arg ListSavedRepliesPara
 			&i.Shortcut,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.Actions,
 		); err != nil {
 			return nil, err
 		}
@@ -199,28 +223,40 @@ func (q *Queries) ListSavedReplies(ctx context.Context, arg ListSavedRepliesPara
 }
 
 const updateSavedReply = `-- name: UpdateSavedReply :one
-UPDATE saved_replies SET title = $1, body = $2, shortcut = $3, updated_at = $4
-WHERE workspace_id = $5 AND id = $6
-RETURNING id, workspace_id, owner_member_id, title, body, shortcut, created_at, updated_at
+UPDATE saved_replies
+SET title = $1, body = $2, shortcut = $3,
+    actions = coalesce($4::jsonb, actions),
+    owner_member_id = CASE WHEN $5::boolean THEN $6::uuid ELSE owner_member_id END,
+    updated_at = $7
+WHERE workspace_id = $8 AND id = $9
+RETURNING id, workspace_id, owner_member_id, title, body, shortcut, created_at, updated_at, actions
 `
 
 type UpdateSavedReplyParams struct {
-	Title       string    `json:"title"`
-	Body        string    `json:"body"`
-	Shortcut    *string   `json:"shortcut"`
-	Now         time.Time `json:"now"`
-	WorkspaceID ids.UUID  `json:"workspace_id"`
-	ID          ids.UUID  `json:"id"`
+	Title            string          `json:"title"`
+	Body             string          `json:"body"`
+	Shortcut         *string         `json:"shortcut"`
+	Actions          json.RawMessage `json:"actions"`
+	SetOwner         bool            `json:"set_owner"`
+	NewOwnerMemberID *ids.UUID       `json:"new_owner_member_id"`
+	Now              time.Time       `json:"now"`
+	WorkspaceID      ids.UUID        `json:"workspace_id"`
+	ID               ids.UUID        `json:"id"`
 }
 
-// UpdateSavedReply replaces a reply's title, body and shortcut. A
-// shortcut its owner already uses on another reply fails on
+// UpdateSavedReply replaces a reply's title, body and shortcut, its
+// actions when given, and its owner when set_owner is true, which moves
+// it between shared and personal. A shortcut its owner already uses on
+// another reply fails on
 // saved_replies_workspace_id_owner_member_id_shortcut_key.
 func (q *Queries) UpdateSavedReply(ctx context.Context, arg UpdateSavedReplyParams) (SavedReply, error) {
 	row := q.db.QueryRow(ctx, updateSavedReply,
 		arg.Title,
 		arg.Body,
 		arg.Shortcut,
+		arg.Actions,
+		arg.SetOwner,
+		arg.NewOwnerMemberID,
 		arg.Now,
 		arg.WorkspaceID,
 		arg.ID,
@@ -235,6 +271,7 @@ func (q *Queries) UpdateSavedReply(ctx context.Context, arg UpdateSavedReplyPara
 		&i.Shortcut,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.Actions,
 	)
 	return i, err
 }

@@ -42,6 +42,7 @@ import { formatNumber } from "@/lib/i18n/format";
 import { ContactEditModal } from "./contact-edit";
 import { type ContactDoing, ContactDoings, ContactMenu } from "./contact-menu";
 import { CustomersActions } from "./frame";
+import { ImportButton } from "./import-dialog";
 import { useWorkspace } from "./names";
 import { usePeopleColumns } from "./people-columns";
 import { AddFilter, FilterBar } from "./people-filter-bar";
@@ -185,6 +186,7 @@ export function PeoplePage({ blocked = false }: { blocked?: boolean }) {
     <>
       {blocked ? null : (
         <CustomersActions>
+          <ImportButton kind="contacts" />
           <Button size="small" leadingIcon={RiAddLine} onClick={() => setAdding(true)}>
             New contact
           </Button>

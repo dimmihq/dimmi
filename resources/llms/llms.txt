@@ -1,0 +1,40 @@
+# dimmi
+
+> dimmi is an open-source customer messenger, inbox and help center, an Intercom alternative you can self-host. This file tells coding assistants how to add the dimmi messenger to an app and call the dimmi API.
+
+You need two values from the dimmi dashboard: the messenger's app id (`wgt_...`, Settings > Messenger) and the dimmi host (the cloud address or your self-hosted URL, e.g. `https://dimmi.example.com`). The messenger script is `<host>/widget/v1/loader.js`.
+
+## Pick the package
+
+- Plain HTML or any other stack: paste `<script async src="<host>/widget/v1/loader.js" data-app-id="wgt_..."></script>` before `</body>`, or use `@dimmi/browser`.
+- React (Vite, CRA, Remix, React Router): `npm i @dimmi/react`; wrap the app in `<DimmiProvider appId host identity>`; use `useDimmi()`.
+- Next.js (app router): `npm i @dimmi/nextjs`; add `dimmi.config.ts` with `defineDimmi({ identify })`, a server action returning `identityToken(config)` from `@dimmi/nextjs/server`, and `<DimmiProvider identity={action}>` in `app/layout.tsx`.
+- Vue 3: `npm i @dimmi/vue`; `app.use(createDimmi({ appId, host }))`; `useDimmi()` in components.
+- Nuxt 3: `npm i @dimmi/vue`; register `createDimmi` in `plugins/dimmi.client.ts` (client-only).
+- Angular 17+: `npm i @dimmi/angular`; `provideDimmi({ appId, host })` in `app.config.ts`; inject `DimmiService`.
+- Svelte / SvelteKit: `npm i @dimmi/svelte`; `initDimmi({ appId, host })` in the root layout's `onMount`; `use:dimmiAction`.
+- Server-side API calls (Node, Bun, Deno, workers): `npm i @dimmi/api`; `createDimmiApi({ host, token, workspace })`; `api.GET("/contacts")`; `paginate(api, "/contacts")`.
+
+## Identity verification
+
+Never trust a user id from the browser. Sign a short-lived token on your server and hand the browser only the token:
+
+- `@dimmi/server`: `signIdentityToken({ id, email, name })`, `createIdentityHandler(identify)` (Fetch API), `@dimmi/server/express`, `@dimmi/server/hono`.
+- Env: `DIMMI_IDENTITY_SECRET` and `DIMMI_IDENTITY_KID` from Settings > Identity verification (or `DIMMI_IDENTITY_PRIVATE_KEY` for RS256/ES256/EdDSA).
+- Browser: pass `identity: async () => token-or-null`, or `identityUrl: "/api/dimmi/token"` answering `{"token": "<jwt>"}` or `{"token": null}`.
+- After sign-in without a reload call `identify()`; on sign-out call `shutdown()`.
+
+## Messenger API (every browser package)
+
+`show()`, `hide()`, `toggle()`, `showNewMessage(text?)`, `update({ appearance: { position, primary_color, theme, launcher } })`, `identify(fn?)`, `shutdown()`, `onUnreadCountChange(fn)`, `trackEvent(name, metadata)` (only names switched on for the messenger in Settings > Attributes are recorded; record events a rule must trust server-side with `POST /api/v1/contact-events`). Options: `appId`, `host`, `apiBase` (proxy), `nonce` (CSP with `'strict-dynamic'`), `identity`, `identityUrl`, `settings`.
+
+## REST API
+
+- Base URL: `<host>/api/v1`; OpenAPI 3.1 at `<host>/api/v1/openapi.json`.
+- Auth: `Authorization: Bearer <access token>`; workspace: `Dimmi-Workspace: <workspace id>`.
+- Lists: `cursor` + `limit` (`meta.next_cursor`); a few page by `offset`. `429` answers carry `Retry-After`. POSTs accept `Idempotency-Key`.
+
+## Docs
+
+- [SDK overview](https://github.com/dimmihq/dimmi/tree/main/sdk)
+- [Install skill for coding agents](https://github.com/dimmihq/dimmi/tree/main/sdk/skills/dimmi-install/SKILL.md)

@@ -1,0 +1,46 @@
+{
+  "name": "dimmi/dimmi-php",
+  "description": "PHP client for the dimmi REST API, identity tokens for the messenger and webhook verification.",
+  "type": "library",
+  "license": "MIT",
+  "keywords": ["dimmi", "support", "messenger", "helpdesk", "api", "webhooks"],
+  "homepage": "https://github.com/dimmihq/dimmi/tree/main/sdk/php",
+  "require": {
+    "php": ">=8.2",
+    "ext-json": "*",
+    "ext-openssl": "*",
+    "guzzlehttp/guzzle": "^7.8",
+    "firebase/php-jwt": "^7.0",
+    "standard-webhooks/standard-webhooks": "^1.0"
+  },
+  "require-dev": {
+    "phpunit/phpunit": "^10.5 || ^11.0"
+  },
+  "suggest": {
+    "ext-sodium": "Signs identity tokens with an Ed25519 (EdDSA) private key."
+  },
+  "autoload": {
+    "psr-4": {
+      "Dimmi\\": "src/"
+    }
+  },
+  "autoload-dev": {
+    "psr-4": {
+      "Dimmi\\Tests\\": "tests/"
+    }
+  },
+  "scripts": {
+    "test": "phpunit",
+    "generate": "@php bin/generate"
+  },
+  "minimum-stability": "stable",
+  "prefer-stable": true,
+  "config": {
+    "sort-packages": true
+  },
+  "extra": {
+    "branch-alias": {
+      "dev-main": "0.1.x-dev"
+    }
+  }
+}

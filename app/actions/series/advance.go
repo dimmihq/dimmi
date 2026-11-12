@@ -271,7 +271,11 @@ func (r *run) end(ctx context.Context, reason string) error {
 
 	r.e = moved
 
-	return r.s.withdraw(ctx, r.q, moved)
+	if err := r.s.withdraw(ctx, r.q, moved); err != nil {
+		return err
+	}
+
+	return r.ended(ctx, reason)
 }
 
 /*

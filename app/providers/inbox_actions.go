@@ -67,16 +67,28 @@ func bootInbox(a *app.App) error {
 		ListMessages:      &messages.ListMessages{DB: a.DB, Disks: a.Storage},
 		AddNote:           &messages.AddNote{DB: a.DB, Events: a.Events, Clock: a.Clock, IDs: a.IDs},
 		AddContactMessage: &messages.AddContactMessage{DB: a.DB, Events: a.Events, Clock: a.Clock},
+		ImportMessage:     &messages.ImportMessage{DB: a.DB, Events: a.Events, Clock: a.Clock},
 		DeleteMessage:     &messages.DeleteMessage{DB: a.DB, Events: a.Events, Clock: a.Clock, Queue: a.Queue},
 	}
 
 	bootRecords(a)
+	bootMerges(a)
 	bootDelivery(a, delivery)
 	bootTrash(a)
 
 	return errors.Join(
 		bootWorkbench(a),
 		bootErasures(a),
+		registerInboxJobs(a),
+	)
+}
+
+/*
+registerInboxJobs registers the jobs that send channel messages, erase
+their copies and purge stale drafts.
+*/
+func registerInboxJobs(a *app.App) error {
+	return errors.Join(
 		queue.Register(a.Queue, &jobs.SendChannelMessage{
 			DB: a.DB, Clock: a.Clock, Events: a.Events, Channels: a.Channels, Disks: a.Storage, Queue: a.Queue,
 			GIFs: a.Config.Inbox.GIF.GiphyAPIKey != "",

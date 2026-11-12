@@ -1,3 +1,4 @@
+import "./lib/thread_parts";
 import { boot } from "./core";
 import type { DimmiWindow } from "./settings";
 

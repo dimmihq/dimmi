@@ -1,24 +1,31 @@
 /*
- * The workspace's help center: its name and address, how it looks, how
+ * The workspace's help centers, one picked to edit: its name and address,
+ * its own domain, how it looks, how
  * readers sign in to see articles kept to an audience, and whether
  * search engines may index it and readers may ask the AI, and which of
  * the workspace's messengers its pages show, if any. The address and look
  * are saved together with Save, as is the product's login address;
- * switches and the messenger pick save at once.
+ * switches and the messenger pick save at once. A help center that is not
+ * the default can be deleted at the bottom.
  */
 import { RiBookOpenLine } from "@remixicon/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 
 import { Chip } from "@/components/base/badges/chip";
 import { Notification } from "@/components/base/notification/notification";
 import { Select, SelectItem } from "@/components/base/select/select";
+import { CreateHelpCenterDialog } from "@/features/help-center/create-help-center";
+import { HelpCenterSwitcher } from "@/features/help-center/help-center-switcher";
+import { useHelpCenterPick } from "@/features/help-center/use-help-center-pick";
 import { type HelpCenter, helpCentersQuery, updateHelpCenter } from "@/lib/api/help-centers";
 import { type WidgetSummary, widgetSettingsQuery } from "@/lib/api/widget-settings";
 
 import { Action, Colour, Field, Toggle } from "./controls";
+import { DeleteHelpCenter } from "./help-center-delete";
+import { HelpCenterDomain } from "./help-center-domain";
 import { Glyph, Item, Row, Section, SettingsPage } from "./layout";
-import { useAccount } from "./use-account";
+import { rowLink } from "./row-link";
 
 interface Form {
   name: string;
@@ -45,17 +52,18 @@ function formOf(center: HelpCenter): Form {
 }
 
 export function HelpCentersSettings() {
-  const workspace = useAccount().workspace.id;
   const queryClient = useQueryClient();
-  const { data: centers = [], isPending } = useQuery({ ...helpCentersQuery(workspace), enabled: workspace !== "" });
-  const center = centers[0];
+  const { workspace, centers, center, isPending, pick } = useHelpCenterPick();
   const [form, setForm] = useState<Form | null>(null);
+  const [formFor, setFormOf] = useState("");
+  const [creating, setCreating] = useState(false);
 
   useEffect(() => {
-    if (center && form === null) {
+    if (center && formFor !== center.id) {
       setForm(formOf(center));
+      setFormOf(center.id);
     }
-  }, [center, form]);
+  }, [center, formFor]);
 
   const update = useMutation({
     mutationFn: (change: Parameters<typeof updateHelpCenter>[2]) =>
@@ -64,10 +72,37 @@ export function HelpCentersSettings() {
   });
 
   return (
-    <SettingsPage title="Help centers" description="Your public docs, at their own address.">
-      <Section title="Help centers" loading={isPending} rows={1}>
+    <SettingsPage
+      title="Help centers"
+      description="Your public docs, at their own address."
+      actions={
+        centers.length > 1 ? (
+          <HelpCenterSwitcher workspace={workspace} centers={centers} center={center} onPick={pick} className="w-56" />
+        ) : null
+      }
+    >
+      <Section
+        title="Help centers"
+        loading={isPending}
+        rows={1}
+        action={<Action onPress={() => setCreating(true)}>New help center</Action>}
+      >
         {centers.map((c) => (
-          <Item key={c.id} mark={<Glyph icon={RiBookOpenLine} />} title={c.name} detail={c.url}>
+          <Item
+            key={c.id}
+            mark={<Glyph icon={RiBookOpenLine} />}
+            title={
+              <button type="button" className={rowLink} onClick={() => pick(c.id)}>
+                {c.name}
+              </button>
+            }
+            detail={c.url}
+          >
+            {c.id === center?.id && centers.length > 1 ? (
+              <Chip variant="caption" color="lime">
+                Editing
+              </Chip>
+            ) : null}
             {c.is_default ? (
               <Chip variant="caption" color="neutral">
                 Default
@@ -76,8 +111,9 @@ export function HelpCentersSettings() {
           </Item>
         ))}
       </Section>
-      {center && form ? (
-        <>
+      {creating ? <CreateHelpCenterDialog workspace={workspace} onClose={() => setCreating(false)} /> : null}
+      {center && form && formFor === center.id ? (
+        <Fragment key={center.id}>
           <Section
             title="Address and look"
             action={
@@ -154,6 +190,7 @@ export function HelpCentersSettings() {
               <Colour label="Help center color" value={form.color} onChange={(color) => setForm({ ...form, color })} />
             </Row>
           </Section>
+          <HelpCenterDomain workspace={workspace} center={center} />
           <Section
             title="Readers sign in with"
             description="To read articles kept to an audience."
@@ -209,7 +246,8 @@ export function HelpCentersSettings() {
               />
             </Row>
           </Section>
-        </>
+          {center.is_default ? null : <DeleteHelpCenter workspace={workspace} center={center} />}
+        </Fragment>
       ) : null}
     </SettingsPage>
   );

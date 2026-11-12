@@ -33,6 +33,7 @@ const (
 	CodeReferenceMissing          = "reference_missing"
 	CodeCallFromBackground        = "customer_facing_call_from_background"
 	CodeSelfCall                  = "self_call"
+	CodeCallCycle                 = "call_cycle"
 	CodeLimitExceeded             = "limit_exceeded"
 	CodeDuplicateID               = "duplicate_id"
 	CodeInvalidDuration           = "invalid_duration"

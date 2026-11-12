@@ -71,8 +71,9 @@ function NewInboxDialog({ isOpen, onClose }: { isOpen: boolean; onClose: () => v
 }
 
 /*
- * MessengerSection says whether the customer's "Seen" names the teammate
- * who read their message, saved as soon as it flips.
+ * MessengerSection says whether customers see "Seen" once the team read
+ * their message, and whether it names the teammate who read it, each
+ * saved as soon as it flips.
  */
 function MessengerSection() {
   const workspace = useAccount().workspace.id;
@@ -80,7 +81,8 @@ function MessengerSection() {
   const canChange = usePermission(workspace, "settings:write");
   const { data } = useQuery(workspaceQuery(workspace));
   const save = useMutation({
-    mutationFn: (on: boolean) => updateWorkspace(workspace, { seen_receipt_shows_name: on }),
+    mutationFn: (changes: { seen_receipts?: boolean; seen_receipt_shows_name?: boolean }) =>
+      updateWorkspace(workspace, changes),
     onSuccess: (updated) => queryClient.setQueryData(workspaceQuery(workspace).queryKey, updated),
   });
 
@@ -90,12 +92,20 @@ function MessengerSection() {
 
   return (
     <Section title="Messenger">
+      <Row label="Show read receipts to customers" description="Customers see Seen once the team read their message.">
+        <Toggle
+          label="Show read receipts to customers"
+          on={data.seen_receipts}
+          disabled={!canChange}
+          onChange={(on) => save.mutate({ seen_receipts: on })}
+        />
+      </Row>
       <Row label="Name in seen receipts" description="Show customers which teammate read their message.">
         <Toggle
           label="Name in seen receipts"
           on={data.seen_receipt_shows_name}
-          disabled={!canChange}
-          onChange={(on) => save.mutate(on)}
+          disabled={!canChange || !data.seen_receipts}
+          onChange={(on) => save.mutate({ seen_receipt_shows_name: on })}
         />
       </Row>
     </Section>

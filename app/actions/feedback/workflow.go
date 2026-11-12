@@ -5,10 +5,11 @@
 |
 | The team moves a request through its statuses, approves or rejects
 | what waits for approval, and merges duplicates. Moving a request can
-| tell everyone behind it, once each, with a note and the changelog
-| update that shipped it. Merging carries votes and comments to the
-| request kept, counting each customer once, and the merged request's
-| page sends readers on to it.
+| tell everyone behind it, once each, the customers of its linked
+| conversations included, with a note and the changelog update that
+| shipped it. Merging carries votes, comments and linked conversations
+| to the request kept, counting each customer once, and the merged
+| request's page sends readers on to it.
 |
 */
 
@@ -27,6 +28,7 @@ import (
 
 	"github.com/dimmihq/dimmi/app/actions/helpcenters"
 	"github.com/dimmihq/dimmi/app/auth/authz"
+	appevents "github.com/dimmihq/dimmi/app/events"
 	"github.com/dimmihq/dimmi/app/exceptions"
 	appmail "github.com/dimmihq/dimmi/app/mail"
 	"github.com/dimmihq/dimmi/app/models"
@@ -64,14 +66,14 @@ func (p *Posts) SetStatus(ctx context.Context, in StatusInput) (Post, error) {
 	if !in.Membership.Can("feedback:write") {
 		return Post{}, exceptions.ErrForbidden
 	}
-	status, ok := StatusOf(in.Status)
-	if !ok {
-		return Post{}, ErrStatusInvalid
-	}
 	ws := in.Membership.Workspace.ID
 	var out Post
 	err := p.DB.Transaction(ctx, func(ctx context.Context, tx *database.Tx) error {
 		q := models.New(tx)
+		status, err := statusOfKey(ctx, q, ws, in.Status)
+		if err != nil {
+			return err
+		}
 		current, err := lockPost(ctx, q, ws, in.Post)
 		if err != nil {
 			return err
@@ -82,8 +84,9 @@ func (p *Posts) SetStatus(ctx context.Context, in StatusInput) (Post, error) {
 		if err != nil {
 			return fmt.Errorf("move feature request: %w", err)
 		}
-		if in.Notify && current.Status != status.Key {
-			if err := p.tell(ctx, tx, news{post: row, status: status, message: in.Message}); err != nil {
+		if current.Status != status.Key {
+			n := news{post: row, status: status, message: in.Message, from: current.Status}
+			if err := p.moved(ctx, tx, in, n); err != nil {
 				return err
 			}
 		}
@@ -94,12 +97,30 @@ func (p *Posts) SetStatus(ctx context.Context, in StatusInput) (Post, error) {
 }
 
 /*
-news is a request that moved, its new status and the team's note.
+moved tells the people behind a request that moved, when asked, and
+announces the move.
+*/
+func (p *Posts) moved(ctx context.Context, tx *database.Tx, in StatusInput, n news) error {
+	if in.Notify {
+		if err := p.tell(ctx, tx, n); err != nil {
+			return err
+		}
+	}
+	return p.announce(ctx, tx, appevents.FeedbackPostStatusChanged{
+		Base: p.byMember(n.post.WorkspaceID, in.Membership.Member.ID), PostID: n.post.ID,
+		From: n.from, To: n.status.Key,
+	})
+}
+
+/*
+news is a request that moved, the status it left, its new status and
+the team's note.
 */
 type news struct {
 	post    models.FeedbackPost
 	status  Status
 	message string
+	from    string
 }
 
 /*
@@ -204,6 +225,11 @@ func (p *Posts) Merge(ctx context.Context, m authz.Membership, source, target id
 		if err := p.carry(ctx, q, from, into); err != nil {
 			return err
 		}
+		if err := p.announce(ctx, tx, appevents.FeedbackPostMerged{
+			Base: p.byMember(ws, m.Member.ID), PostID: into.ID, SourceID: from.ID,
+		}); err != nil {
+			return err
+		}
 		out, err = p.reload(ctx, q, ws, into.ID)
 		return err
 	})
@@ -221,6 +247,9 @@ func (p *Posts) carry(ctx context.Context, q *models.Queries, from, into models.
 	}
 	if err := q.MoveFeedbackComments(ctx, models.MoveFeedbackCommentsParams(move)); err != nil {
 		return fmt.Errorf("move feature request comments: %w", err)
+	}
+	if err := q.MoveFeedbackConversations(ctx, models.MoveFeedbackConversationsParams(move)); err != nil {
+		return fmt.Errorf("move feature request conversations: %w", err)
 	}
 	if _, err := q.MergeFeedbackPost(ctx, models.MergeFeedbackPostParams{
 		TargetID: &into.ID, Now: p.Clock.Now(), WorkspaceID: from.WorkspaceID, ID: from.ID,

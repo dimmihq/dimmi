@@ -13,7 +13,7 @@ import { raw } from "widget-jsx/jsx-runtime";
 
 import type { ActionCard, Attachment, Message, Source } from "../content";
 import { markdown } from "../lib/markdown";
-import { type ActionTexts, actionTexts, initials, levels } from "../text";
+import { type ActionTexts, actionTexts, initials } from "../text";
 import {
   BookIcon,
   CheckIcon,
@@ -27,10 +27,7 @@ import {
   PersonIcon,
   PlayIcon,
 } from "./icons";
-
-export function Waveform({ className = "wave" }: { className?: string }) {
-  return <span className={className}>{raw(levels.map((level) => `<i data-height="${level}"></i>`).join(""))}</span>;
-}
+import { Waveform } from "./wave";
 
 /*
  * VoiceBubble is a voice note's player, playing the recording once it has
@@ -468,5 +465,45 @@ export function Typing() {
         </div>
       </div>
     </div>
+  );
+}
+
+/*
+ * deliveryWords are the delivery lines in English, for a server that
+ * sends none of its own.
+ */
+const deliveryWords: Record<string, string> = {
+  seen: "Seen",
+  delivery_sending: "Sending…",
+  delivery_sent: "Sent",
+  delivery_failed: "Not delivered",
+  delivery_retry: "Try again",
+};
+
+/*
+ * Delivery is the line under the visitor's latest message: sending,
+ * sent, seen by the team, or not delivered with a button that sends it
+ * again.
+ */
+export function Delivery({
+  state,
+  texts,
+  retry,
+}: {
+  state: "sending" | "sent" | "seen" | "failed";
+  texts: Record<string, string>;
+  retry?: string;
+}) {
+  const word = (key: string) => texts[key] || deliveryWords[key];
+
+  return (
+    <p className="seen delivery" data-delivery={state} data-key="delivery" role="status">
+      {word(state === "seen" ? "seen" : `delivery_${state}`)}
+      {state === "failed" && retry ? (
+        <button type="button" className="retry" data-retry={retry}>
+          {word("delivery_retry")}
+        </button>
+      ) : null}
+    </p>
   );
 }

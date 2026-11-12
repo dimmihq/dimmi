@@ -1,0 +1,9 @@
+package: api
+output: api/api.gen.go
+generate:
+  models: true
+  client: true
+output-options:
+  skip-prune: true
+compatibility:
+  always-prefix-enum-values: true

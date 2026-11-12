@@ -26,6 +26,8 @@ export interface Config {
   customer_status?: boolean;
   delay_notice?: boolean;
   home_links?: Link[];
+  locale?: string;
+  dir?: string;
 }
 
 export interface Availability {
@@ -39,7 +41,7 @@ const knownTabs: Tab[] = ["home", "messages", "changelog", "help"];
 /*
  * fromConfig turns the config into an options update.
  */
-export function fromConfig(config: Config, texts: Texts): OptionsUpdate {
+export function fromConfig(config: Config): OptionsUpdate {
   const update: OptionsUpdate = {};
   const a = config.appearance;
   if (a) {
@@ -66,13 +68,11 @@ export function fromConfig(config: Config, texts: Texts): OptionsUpdate {
   }
 
   if (config.texts) {
-    const known = Object.keys(texts) as (keyof Texts)[];
     update.texts = Object.fromEntries(
-      known
-        .filter((key) => typeof config.texts?.[key] === "string" && config.texts[key] !== "")
-        .map((key) => [key, config.texts?.[key]]),
-    );
+      Object.entries(config.texts).filter(([, word]) => typeof word === "string" && word !== ""),
+    ) as Partial<Texts>;
   }
+  Object.assign(update, language(config));
 
   const tabs = (config.tabs ?? []).filter((tab): tab is Tab => knownTabs.includes(tab as Tab));
   if (tabs.length > 0) {
@@ -86,6 +86,19 @@ export function fromConfig(config: Config, texts: Texts): OptionsUpdate {
   }
 
   return update;
+}
+
+/*
+ * language is the language the server settled for the visitor and which
+ * way it reads, kept for the dates and times the messenger writes.
+ */
+function language(config: Config): OptionsUpdate {
+  if (!config.locale) {
+    return {};
+  }
+  reading.locale = config.locale;
+
+  return { locale: config.locale, dir: config.dir === "rtl" ? "rtl" : "ltr" };
 }
 
 /*
@@ -303,11 +316,18 @@ export function when(at: string, now: number): string {
   }
   const today = new Date(now);
   if (time.toDateString() === today.toDateString()) {
-    return time.toTimeString().slice(0, 5);
+    return time.toLocaleTimeString(reading.locale, { hour: "2-digit", minute: "2-digit", hourCycle: "h23" });
   }
 
-  return time.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+  return time.toLocaleDateString(reading.locale, { month: "short", day: "numeric" });
 }
+
+/*
+ * reading is the language the visitor reads the messenger in, as the
+ * server settled it, which dates and times are written in. Until the
+ * config says, it is the browser's.
+ */
+export const reading: { locale?: string } = {};
 
 function pick<T extends object, K extends keyof T>(source: T, keys: K[]): Partial<Pick<T, K>> {
   const out: Partial<Pick<T, K>> = {};

@@ -33,6 +33,10 @@ export interface ConversationMoves {
   assign: () => void;
   canTrash: boolean;
   trash: () => void;
+  spam: boolean;
+  markUnread: () => void;
+  toggleSpam: () => void;
+  merge: () => void;
   toggleDetails: () => void;
   toggleEvents: () => void;
   next: () => void;

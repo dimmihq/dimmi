@@ -56,8 +56,41 @@ type StoreConversationRequest struct {
 		Subject             *string    `json:"subject,omitempty"     validate:"omitempty,min=1,max=255"`
 		Body                string     `json:"body"                  validate:"required,max=65536"`
 		AssigneeID          *string    `json:"assignee_id,omitempty"`
+		CreatedAt           *time.Time `json:"created_at,omitempty"`
+		ExternalID          *string    `json:"external_id,omitempty" validate:"omitempty,min=1,max=255"`
+		Status              *string    `json:"status,omitempty"      validate:"omitempty,oneof=open closed"`
+		ClosedAt            *time.Time `json:"closed_at,omitempty"`
+		AuthorID            *string    `json:"author_id,omitempty"`
 	}
 	RawBody []byte
+}
+
+/*
+Importing reports whether the request brings in a conversation from
+another tool, which any of the import fields says.
+*/
+func (r *StoreConversationRequest) Importing() bool {
+	b := r.Body
+
+	return b.CreatedAt != nil || b.ExternalID != nil || b.Status != nil || b.ClosedAt != nil || b.AuthorID != nil
+}
+
+/*
+Validate refuses a close time without closing, and a teammate author on
+a message the customer wrote.
+*/
+func (r *StoreConversationRequest) Validate(ctx context.Context, _ *validation.Factory) error {
+	b := r.Body
+
+	if b.ClosedAt != nil && (b.Status == nil || *b.Status != "closed") {
+		return violation(ctx, "closed_at", "prohibited", "validation.prohibited")
+	}
+
+	if b.AuthorID != nil && b.Author != nil && *b.Author == "contact" {
+		return violation(ctx, "author_id", "prohibited", "validation.prohibited")
+	}
+
+	return nil
 }
 
 /*
@@ -65,23 +98,8 @@ UpdateConversationRequest is the input of PATCH /conversations/{conversation}.
 */
 type UpdateConversationRequest struct {
 	Conversation string `path:"conversation"`
-	Body         struct {
-		Spam         *bool      `json:"spam,omitempty"`
-		AssigneeID   *string    `json:"assignee_id,omitempty"`
-		TeamID       *string    `json:"team_id,omitempty"`
-		Status       *string    `json:"status,omitempty"        validate:"omitempty,oneof=open closed snoozed"`
-		SnoozedUntil *time.Time `json:"snoozed_until,omitempty"`
-		SnoozePreset *string    `json:"snooze_preset,omitempty"`
-		SnoozeOption *string    `json:"snooze_option,omitempty" validate:"omitempty,max=40"`
-		Note         *string    `json:"note,omitempty"          validate:"omitempty,min=1,max=65536"`
-		Subject      *string    `json:"subject,omitempty"       validate:"omitempty,min=1,max=255"`
-		Priority     *string    `json:"priority,omitempty"      validate:"omitempty,oneof=none low medium high urgent"`
-		InboxID      *string    `json:"inbox_id,omitempty"`
-		Unread       *bool      `json:"unread,omitempty"`
-		AddTags      []string   `json:"add_tags,omitempty"      validate:"omitempty,max=50,dive,min=1,max=100"`
-		RemoveTags   []string   `json:"remove_tags,omitempty"   validate:"omitempty,max=50"`
-	}
-	RawBody []byte
+	Body         UpdateConversationRequestBody
+	RawBody      []byte
 }
 
 /*
@@ -89,7 +107,14 @@ Validate refuses a side field without its field, and a snooze without
 exactly one way to say when it ends.
 */
 func (r *UpdateConversationRequest) Validate(ctx context.Context, _ *validation.Factory) error {
-	b := r.Body
+	return r.Body.check(ctx)
+}
+
+/*
+check refuses a side field without its field, and a snooze without
+exactly one way to say when it ends.
+*/
+func (b UpdateConversationRequestBody) check(ctx context.Context) error {
 	snoozing := b.Status != nil && *b.Status == "snoozed"
 
 	if err := choice(ctx, "snooze_preset", b.SnoozePreset, snoozePresets); err != nil {

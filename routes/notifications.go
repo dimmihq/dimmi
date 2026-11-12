@@ -20,6 +20,7 @@ import (
 
 	"github.com/dimmihq/dimmi/app"
 	v1 "github.com/dimmihq/dimmi/app/http/controllers/api/v1"
+	"github.com/dimmihq/dimmi/app/http/controllers/web"
 )
 
 /*
@@ -49,6 +50,9 @@ func notificationRoutes(api *routing.Router, a *app.App) {
 			Status(fhttp.StatusNoContent)
 	})
 
+	deliveryRoutes(api, a)
+	notificationLinks(a)
+
 	api.Group("", func(r *routing.Router) {
 		r.Middleware("csrf", "session", "auth:user", "workspace", "access.policy", "api.throttle")
 
@@ -57,6 +61,65 @@ func notificationRoutes(api *routing.Router, a *app.App) {
 
 	pushRoutes(api, a)
 	destinationRoutes(api, a)
+}
+
+/*
+deliveryRoutes declares the delivery log's routes: the caller's own,
+or another member's for someone who manages members, and one bell
+row's.
+*/
+func deliveryRoutes(api *routing.Router, a *app.App) {
+	d := &v1.NotificationDeliveryController{Center: a.Actions.NotificationCenter, IDs: a.IDs}
+
+	api.Group("", func(r *routing.Router) {
+		r.Middleware("csrf", "session", "auth", "workspace", "access.policy", "api.throttle")
+
+		routing.Get(r, "/notification-deliveries", "notification-deliveries.index", d.Index).
+			Ability("notifications:read")
+		routing.Get(r, "/notifications/{notification}/deliveries", "notifications.deliveries.index",
+			d.ForNotification).Ability("notifications:read")
+	})
+}
+
+/*
+emailLinkRoutes declares the APIs of the pages links in emails open
+without signing in: broadcast preferences and teammate unsubscribes.
+*/
+func emailLinkRoutes(guest *routing.Router, a *app.App) {
+	broadcastPreferenceRoutes(guest, a)
+	notificationUnsubscribeRoutes(guest, a)
+}
+
+/*
+notificationUnsubscribeRoutes declares the unsubscribe page's API,
+reached without signing in.
+*/
+func notificationUnsubscribeRoutes(guest *routing.Router, a *app.App) {
+	if a.Actions.NotificationUnsubscribes == nil {
+		return
+	}
+
+	u := &v1.NotificationUnsubscribeController{Unsubscribes: a.Actions.NotificationUnsubscribes}
+	one := "/notification-unsubscribes/{token}"
+
+	routing.Get(guest, one, "notification-unsubscribes.show", u.Show)
+	routing.Patch(guest, one, "notification-unsubscribes.update", u.Update)
+	routing.Delete(guest, one, "notification-unsubscribes.destroy", u.Destroy).Status(fhttp.StatusOK)
+}
+
+/*
+notificationLinks declares the unsubscribe link inside teammate emails.
+*/
+func notificationLinks(a *app.App) {
+	if a.Actions.NotificationUnsubscribes == nil {
+		return
+	}
+
+	links := web.NotificationLinkController{Unsubscribes: a.Actions.NotificationUnsubscribes}
+
+	a.Router.Handle(fhttp.MethodGet, "/n/u/{token}", "notifications.links.unsubscribe", fhttp.HandlerFunc(links.Page))
+	a.Router.Handle(fhttp.MethodPost, "/n/u/{token}", "notifications.links.one-click",
+		fhttp.HandlerFunc(links.OneClick))
 }
 
 /*

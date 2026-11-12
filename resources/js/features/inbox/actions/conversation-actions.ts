@@ -1,7 +1,7 @@
 /*
  * The moves on the open conversation: walking the list, closing,
- * reopening, snoozing, taking it and moving it to the trash, and how
- * the thread reads.
+ * reopening, snoozing, taking it, marking it unread or as spam, merging
+ * it into another, moving it to the trash, and how the thread reads.
  */
 import {
   RiAlarmLine,
@@ -11,7 +11,10 @@ import {
   RiDeleteBinLine,
   RiEyeOffLine,
   RiLayoutRightLine,
+  RiMailUnreadLine,
+  RiMergeCellsHorizontal,
   RiRefreshLine,
+  RiSpam2Line,
   RiUserAddLine,
   RiUserReceivedLine,
 } from "@remixicon/react";
@@ -88,6 +91,42 @@ export const conversationActions: InboxAction[] = [
     keys: ["A"],
     when: (ctx) => ctx.conversation !== null,
     run: (ctx) => ctx.conversation?.assign(),
+  },
+  {
+    id: "conversation.unread",
+    label: "Mark as unread",
+    group: "Conversation",
+    icon: RiMailUnreadLine,
+    shortcut: "Shift+U",
+    keys: ["Shift", "U"],
+    when: (ctx) => ctx.conversation !== null,
+    run: (ctx) => ctx.conversation?.markUnread(),
+  },
+  {
+    id: "conversation.spam",
+    label: "Mark as spam",
+    group: "Conversation",
+    icon: RiSpam2Line,
+    shortcut: "!",
+    keys: ["!"],
+    when: (ctx) => ctx.conversation !== null && !ctx.conversation.spam,
+    run: (ctx) => ctx.conversation?.toggleSpam(),
+  },
+  {
+    id: "conversation.not-spam",
+    label: "Not spam",
+    group: "Conversation",
+    icon: RiSpam2Line,
+    when: (ctx) => ctx.conversation?.spam === true,
+    run: (ctx) => ctx.conversation?.toggleSpam(),
+  },
+  {
+    id: "conversation.merge",
+    label: "Merge into…",
+    group: "Conversation",
+    icon: RiMergeCellsHorizontal,
+    when: (ctx) => ctx.conversation !== null,
+    run: (ctx) => ctx.conversation?.merge(),
   },
   {
     id: "conversation.trash",

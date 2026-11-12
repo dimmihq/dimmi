@@ -2,8 +2,9 @@
  * The member's notification settings: which notifications reach them in
  * the dashboard, by email, by push and in Slack, this browser's push and the other
  * devices it is on, quiet hours on their own clock, a pause, and whether
- * previews and conversations the agent is answering come through. Every
- * change saves at once. A cell that cannot be turned off says so.
+ * previews and conversations the agent is answering come through, and the
+ * recent deliveries that say why something did or did not reach them.
+ * Every change saves at once. A cell that cannot be turned off says so.
  */
 import { RiComputerLine, RiDeleteBinLine } from "@remixicon/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -30,6 +31,7 @@ import {
 import { formatDateTime, formatRelative } from "@/lib/i18n/format";
 
 import { enablePush, pushSupport } from "../../notifications/push";
+import { RecentDeliveries } from "../../notifications/recent-deliveries";
 import { Action, Choice } from "../controls";
 import { Empty, Glyph, Item, Row, RowsSkeleton, Section, SettingsPage } from "../layout";
 import { useAccount } from "../use-account";
@@ -90,6 +92,7 @@ export function NotificationsSettings() {
       <PushSection workspace={workspace} />
       <SlackDirectSection workspace={workspace} />
       {data ? <QuietSection settings={data.settings} onChange={(c) => settings.mutate(c)} /> : null}
+      <RecentDeliveries workspace={workspace} />
     </SettingsPage>
   );
 }

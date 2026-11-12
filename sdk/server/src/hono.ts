@@ -3,7 +3,7 @@
  * dimmiIdentity((c) => ...)). identify gets the context, so it can read
  * whatever your auth middleware set on it.
  */
-import { type Identify, type IdentityOptions, identityToken, tokenResponse } from "./index";
+import { type Identify, type IdentityOptions, identityToken, tokenResponse } from "./index.js";
 
 export function dimmiIdentity<Context>(identify: Identify<Context>, options: IdentityOptions = {}) {
   return async (c: Context): Promise<Response> => tokenResponse(await identityToken(identify, c, options));

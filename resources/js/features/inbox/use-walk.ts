@@ -2,8 +2,8 @@
  * Walking the list from an open conversation: J and K open the next and
  * previous rows of the list on screen, and both neighbours are fetched
  * ahead, conversation and thread, so the next one opens without a
- * spinner. Closing, or snoozing from the picker, moves on to the next
- * row by itself.
+ * spinner. Closing, snoozing from the picker, marking spam or unread,
+ * and trashing move on to the next row by themselves.
  */
 import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
@@ -47,7 +47,13 @@ export function useWalk(
   workspace: string,
   conversation: Conversation,
   caze: CaseControls,
-  panels: { openSnooze: () => void; openAssign: () => void; toggleDetails: () => void; toggleEvents: () => void },
+  panels: {
+    openSnooze: () => void;
+    openAssign: () => void;
+    openMerge: () => void;
+    toggleDetails: () => void;
+    toggleEvents: () => void;
+  },
   canTrash = false,
 ) {
   const client = useQueryClient();
@@ -74,6 +80,15 @@ export function useWalk(
       move();
       open(next ?? previous);
     };
+    const thenNextIf = (leaving: boolean, move: () => void) => (leaving ? thenNext(move) : move);
+    const leave = () => {
+      const to = next ?? previous;
+      if (to) {
+        open(to);
+      } else {
+        void navigate({ to: "/d/inbox/$view", params: { view } });
+      }
+    };
 
     return {
       id: conversation.id,
@@ -88,18 +103,20 @@ export function useWalk(
       canTrash,
       trash: () => {
         caze.trash();
-        const to = next ?? previous;
-        if (to) {
-          open(to);
-        } else {
-          void navigate({ to: "/d/inbox/$view", params: { view } });
-        }
+        leave();
       },
+      spam: conversation.spam,
+      markUnread: () => {
+        leave();
+        void caze.markUnread();
+      },
+      toggleSpam: thenNextIf(!conversation.spam, () => caze.setSpam(!conversation.spam)),
+      merge: panels.openMerge,
       next: () => open(next),
       previous: () => open(previous),
       advance: () => open(next ?? previous),
     };
-  }, [caze, conversation.id, conversation.status, navigate, next, previous, view, panels, canTrash]);
+  }, [caze, conversation.id, conversation.status, conversation.spam, navigate, next, previous, view, panels, canTrash]);
 
   useConversationMoves(moves);
 

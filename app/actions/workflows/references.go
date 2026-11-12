@@ -8,7 +8,9 @@
 | usable: a deactivated member or a deleted tag would make the step
 | silently do nothing. A called workflow must be a live reusable
 | workflow, never the caller itself, and one that speaks to customers
-| cannot be called from a workflow that runs in the background.
+| cannot be called from a workflow that runs in the background. Calls
+| may never lead back to the caller, and a request through a connection
+| needs that connection to exist.
 |
 */
 
@@ -16,9 +18,11 @@ package workflows
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"slices"
 
+	"github.com/dimmihq/dimmi/framework/database"
 	"github.com/dimmihq/dimmi/framework/ids"
 
 	"github.com/dimmihq/dimmi/app/models"
@@ -63,8 +67,23 @@ func (w *Workflows) references(
 	}
 
 	calls, err := w.calls(ctx, q, wf, sets["workflow"])
+	if err != nil {
+		return nil, err
+	}
 
-	return append(issues, calls...), err
+	issues = append(issues, calls...)
+	if len(calls) == 0 {
+		cycle, err := w.cycle(ctx, q, wf, sets["workflow"])
+		if err != nil {
+			return nil, err
+		}
+
+		issues = append(issues, cycle...)
+	}
+
+	connections, err := w.connections(ctx, q, wf, refs.Connections)
+
+	return append(issues, connections...), err
 }
 
 /*
@@ -100,6 +119,100 @@ func (w *Workflows) calls(ctx context.Context, q *models.Queries, wf models.Work
 				Code: workflowspec.CodeCallFromBackground, Field: public,
 				Message: "This workflow talks to customers, so a background workflow cannot run it.",
 			})
+		}
+	}
+
+	return issues, nil
+}
+
+/*
+cycle refuses a definition whose calls lead back to itself through the
+live reusable workflows, which would call each other until the depth
+limit cut them off.
+*/
+func (w *Workflows) cycle(ctx context.Context, q *models.Queries, wf models.Workflow, called idSet,
+) ([]workflowspec.Issue, error) {
+	if len(called) == 0 {
+		return nil, nil
+	}
+
+	rows, err := q.ListLiveWorkflowVersions(ctx, models.ListLiveWorkflowVersionsParams{
+		WorkspaceID: wf.WorkspaceID, Trigger: workflowspec.TriggerReusable,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("list reusable workflows: %w", err)
+	}
+
+	edges := map[ids.UUID][]ids.UUID{}
+	for _, row := range rows {
+		spec, err := workflowspec.Parse(row.Spec)
+		if err != nil {
+			continue
+		}
+
+		set, _ := w.decodeAll("workflow", workflowspec.Compile(spec).References.Workflows)
+		edges[row.WorkflowID] = values(set)
+	}
+
+	for public, id := range called {
+		if reaches(edges, id, wf.ID, map[ids.UUID]bool{}) {
+			return []workflowspec.Issue{{
+				Code: workflowspec.CodeCallCycle, Field: public,
+				Message: "This workflow ends up running the workflow that runs it.",
+			}}, nil
+		}
+	}
+
+	return nil, nil
+}
+
+/*
+reaches reports whether the calls from one workflow lead to another.
+*/
+func reaches(edges map[ids.UUID][]ids.UUID, from, to ids.UUID, seen map[ids.UUID]bool) bool {
+	if from == to {
+		return true
+	}
+
+	if seen[from] {
+		return false
+	}
+
+	seen[from] = true
+	for _, next := range edges[from] {
+		if reaches(edges, next, to, seen) {
+			return true
+		}
+	}
+
+	return false
+}
+
+/*
+connections refuses requests through a connection the workspace no
+longer has.
+*/
+func (w *Workflows) connections(ctx context.Context, q *models.Queries, wf models.Workflow, list []string,
+) ([]workflowspec.Issue, error) {
+	var issues []workflowspec.Issue
+
+	for _, public := range list {
+		id, err := w.IDs.Decode(string(models.PrefixAiActionConnection), public)
+		if err != nil {
+			issues = append(issues, missingIssue("connection", public))
+			continue
+		}
+
+		conn, err := q.FindActionConnection(ctx, models.FindActionConnectionParams{
+			WorkspaceID: wf.WorkspaceID, ID: id,
+		})
+		if errors.Is(err, database.ErrNotFound) || err == nil && conn.Kind != "http" {
+			issues = append(issues, missingIssue("connection", public))
+			continue
+		}
+
+		if err != nil {
+			return nil, fmt.Errorf("find connection: %w", err)
 		}
 	}
 

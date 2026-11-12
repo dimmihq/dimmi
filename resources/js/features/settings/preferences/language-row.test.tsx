@@ -34,6 +34,7 @@ const workspace: Workspace = {
   locale: "en",
   test_mode: false,
   require_two_factor: false,
+  seen_receipts: true,
   seen_receipt_shows_name: false,
   customer_facing_name: null,
   onboarding: { step: "done", completed_at: "2026-11-01T00:00:00Z" },

@@ -25,6 +25,7 @@ func unscopedQueries() map[string]string {
 		"FindConversation":                   "one row by id: conversations.Find checks it with Scope.Contains",
 		"FindConversationForEmbedding":       "the embedding job remembers a closed conversation: no member is asking",
 		"FindConversationByNumber":           "one row by number: conversations.Find checks it with Scope.Contains",
+		"FindConversationByImportExternalID": "one row by import id: the history import checks it with Scope.Contains",
 		"ListConversations":                  "workspace-level readers only: no person to restrict",
 		"ListTeamConversations":              "deleting a team moves all its conversations, whoever may see them",
 		"CountTeamConversationsByStatus":     "warns what deleting a team moves: numbers only, names no conversation",

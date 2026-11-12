@@ -87,7 +87,7 @@ func Kinds() []Kind {
 			MinPaths: 2, MaxPaths: 6, Ready: true,
 		},
 		{Key: KindCollect, CustomerFacing: true, Fixed: []string{OutcomeInvalid, OutcomeTimeout}, Ready: true},
-		{Key: KindReplyTime, CustomerFacing: true},
+		{Key: KindReplyTime, CustomerFacing: true, Ready: true},
 		{
 			Key: KindDimmi, CustomerFacing: true, Fixed: []string{OutcomeResolved, OutcomeHandedOver, OutcomeQuiet},
 			Ready: true,
@@ -96,9 +96,12 @@ func Kinds() []Kind {
 			Key: KindBranch, Fixed: []string{OutcomeElse}, Required: []string{OutcomeElse},
 			MinPaths: 1, MaxPaths: 10, Ready: true,
 		},
-		{Key: KindClassify, Fixed: []string{OutcomeNone}, Required: []string{OutcomeNone}, MinPaths: 2, MaxPaths: 10},
+		{
+			Key: KindClassify, Fixed: []string{OutcomeNone}, Required: []string{OutcomeNone}, MinPaths: 2, MaxPaths: 10,
+			Ready: true,
+		},
 		{Key: KindWait, Fixed: []string{OutcomeInterrupted}, Ready: true},
-		{Key: KindRunWorkflow},
+		{Key: KindRunWorkflow, Ready: true},
 		{Key: KindAssign, Ready: true, Action: true},
 		{Key: KindUnassign, Ready: true, Action: true},
 		{Key: KindTag, Ready: true, Action: true},
@@ -109,7 +112,7 @@ func Kinds() []Kind {
 		{Key: KindSnooze, Ready: true, Action: true},
 		{Key: KindClose, Ready: true, Action: true},
 		{Key: KindApplySLA, Action: true},
-		{Key: KindHTTPRequest, Fixed: []string{OutcomeFailure}, Action: true},
+		{Key: KindHTTPRequest, Fixed: []string{OutcomeFailure}, Ready: true, Action: true},
 	}
 }
 

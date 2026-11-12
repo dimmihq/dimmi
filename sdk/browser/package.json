@@ -1,0 +1,46 @@
+{
+  "name": "@dimmi/browser",
+  "version": "0.1.0",
+  "description": "Load the dimmi messenger on any web page, with a typed API and no framework.",
+  "license": "MIT",
+  "type": "module",
+  "sideEffects": false,
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      }
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "node ../../scripts/build-sdk.ts browser"
+  },
+  "keywords": [
+    "dimmi",
+    "messenger",
+    "chat-widget",
+    "customer-support",
+    "intercom-alternative"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/dimmihq/dimmi",
+    "directory": "sdk/browser"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

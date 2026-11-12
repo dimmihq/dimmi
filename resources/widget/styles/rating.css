@@ -1,0 +1,84 @@
+/* The rating card at the end of a closed conversation: a question, five
+ * faces that grow a little under the pointer, the picked one lifted and
+ * the rest dimmed, and a comment box once a face is picked. */
+.rating {
+  display: grid;
+  gap: 10px;
+  padding: 14px 12px 12px;
+  border-radius: 16px;
+  background: var(--bg-secondary);
+  text-align: center;
+}
+
+.rating p {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 18px;
+}
+
+.rating .faces {
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+}
+
+.rating .faces button {
+  inline-size: 40px;
+  block-size: 40px;
+  padding: 0;
+  border: 0;
+  border-radius: 12px;
+  background: transparent;
+  font-size: 24px;
+  line-height: 40px;
+  cursor: pointer;
+  transition:
+    transform 150ms var(--out),
+    opacity 150ms var(--out),
+    background-color 150ms var(--out);
+}
+
+.rating .faces button:hover:not(:disabled) {
+  background: var(--bg-primary-hover);
+  transform: scale(1.12);
+}
+
+.rating .faces:has([aria-pressed="true"]) button[aria-pressed="false"] {
+  opacity: 0.45;
+}
+
+.rating .faces button[aria-pressed="true"] {
+  background: var(--bg-primary);
+  transform: scale(1.12);
+}
+
+.rating .faces button:disabled {
+  cursor: default;
+}
+
+.rating-comment {
+  display: grid;
+  gap: 8px;
+}
+
+.rating-comment textarea {
+  box-sizing: border-box;
+  inline-size: 100%;
+  padding: 8px 10px;
+  border: 1px solid var(--border-button);
+  border-radius: 10px;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font: inherit;
+  font-size: 13px;
+  line-height: 18px;
+  resize: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rating .faces button {
+    transition: none;
+  }
+}

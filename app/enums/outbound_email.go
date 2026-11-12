@@ -30,6 +30,7 @@ const (
 	OutboundEmailKindFeedbackUpdate  OutboundEmailKind = "feedback_update"
 	OutboundEmailKindPortalSignIn    OutboundEmailKind = "portal_sign_in"
 	OutboundEmailKindBroadcast       OutboundEmailKind = "broadcast"
+	OutboundEmailKindRating          OutboundEmailKind = "conversation_rating"
 )
 
 /*
@@ -41,6 +42,7 @@ func OutboundEmailKinds() []OutboundEmailKind {
 		OutboundEmailKindReply, OutboundEmailKindAIReply, OutboundEmailKindSystem, OutboundEmailKindWidgetOffline,
 		OutboundEmailKindNewConversation, OutboundEmailKindTest, OutboundEmailKindChangelog,
 		OutboundEmailKindFeedbackUpdate, OutboundEmailKindPortalSignIn, OutboundEmailKindBroadcast,
+		OutboundEmailKindRating,
 	}
 }
 

@@ -23,6 +23,7 @@ import (
 
 	"github.com/dimmihq/dimmi/framework/clock"
 	"github.com/dimmihq/dimmi/framework/database"
+	"github.com/dimmihq/dimmi/framework/events"
 	"github.com/dimmihq/dimmi/framework/fault"
 	"github.com/dimmihq/dimmi/framework/ids"
 	"github.com/dimmihq/dimmi/framework/markdown"
@@ -69,6 +70,7 @@ type Entries struct {
 	Clock    clock.Clock
 	Queue    *queue.Queue
 	Renderer *markdown.Renderer
+	Events   *events.Dispatcher
 }
 
 /*

@@ -35,6 +35,14 @@ type HelpCenterSettingsBody struct {
 	FeedbackApproval *bool   `json:"feedback_approval,omitempty"`
 	Messenger        *bool   `json:"messenger,omitempty"`
 	MessengerID      *string `json:"messenger_id,omitempty"     maxLength:"64"`
+
+	Changelog              *bool   `json:"changelog,omitempty"`
+	ChangelogTitle         *string `json:"changelog_title,omitempty"         maxLength:"60"`
+	ChangelogAuthors       *bool   `json:"changelog_authors,omitempty"`
+	ChangelogReactions     *bool   `json:"changelog_reactions,omitempty"`
+	ChangelogSubscriptions *bool   `json:"changelog_subscriptions,omitempty"`
+	ChangelogEmail         *string `json:"changelog_email,omitempty"         enum:"full,summary"`
+	ChangelogUndoMinutes   *int    `json:"changelog_undo_minutes,omitempty"  enum:"0,5,15,60"`
 }
 
 /*

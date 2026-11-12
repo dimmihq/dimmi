@@ -12,10 +12,12 @@ package conversations
 
 import (
 	"context"
+	"errors"
 
 	"github.com/dimmihq/dimmi/framework/database"
 
 	"github.com/dimmihq/dimmi/app/auth/authz"
+	"github.com/dimmihq/dimmi/app/exceptions"
 	"github.com/dimmihq/dimmi/app/models"
 )
 
@@ -33,9 +35,11 @@ ShowConversation returns one conversation.
 Rules:
   - The caller needs conversations:read.
   - Deleted conversations and those of other workspaces are not found.
+  - One merged into a conversation the caller sees answers
+    [exceptions.ErrMergedInto] naming the target.
 
-Errors: [exceptions.ErrForbidden], [exceptions.ErrNotFound], or a
-wrapped database error.
+Errors: [exceptions.ErrForbidden], [exceptions.ErrNotFound],
+[exceptions.ErrMergedInto], or a wrapped database error.
 */
 type ShowConversation struct {
 	DB *database.DB
@@ -55,6 +59,10 @@ func (a *ShowConversation) Handle(ctx context.Context, in ShowConversationInput)
 		q := models.New(tx)
 
 		c, err := Find(ctx, q, in.Membership, in.Ref)
+		if errors.Is(err, exceptions.ErrNotFound) {
+			return mergedTarget(ctx, q, in.Membership, in.Ref)
+		}
+
 		if err != nil {
 			return err
 		}

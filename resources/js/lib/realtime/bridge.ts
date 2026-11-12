@@ -193,6 +193,13 @@ export class Bridge {
       return;
     }
 
+    if (event === "conversation.rated") {
+      this.refetch(
+        [...realtimeKeys.conversation(workspace, record.id), "ratings"],
+        realtimeKeys.messages(workspace, record.id),
+      );
+    }
+
     if (isReference(record)) {
       this.refetch(realtimeKeys.conversation(workspace, record.id), realtimeKeys.conversations(workspace));
       return;

@@ -150,6 +150,10 @@ type reference struct {
 prefixOf returns the public id prefix of a subject.
 */
 func prefixOf(kind string) models.Prefix {
+	if s, ok := engagementSubjectOf(kind); ok {
+		return s.prefix
+	}
+
 	switch kind {
 	case subjectMessage:
 		return models.PrefixMessage
@@ -191,6 +195,10 @@ func (w *Webhooks) referenceObject(r reference) map[string]any {
 apiPath is the REST collection that serves objects of the kind.
 */
 func apiPath(kind string) string {
+	if s, ok := engagementSubjectOf(kind); ok {
+		return s.path
+	}
+
 	switch kind {
 	case subjectConversation:
 		return "conversations"

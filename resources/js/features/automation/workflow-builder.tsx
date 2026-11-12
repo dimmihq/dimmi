@@ -9,9 +9,10 @@
  * read workflows see the same builder without anything to change.
  * Picking a card, or the settings button, pushes the inspector out from
  * the right in a pane that drags to any width; on screens too narrow for
- * both, it opens in a drawer.
+ * both, it opens in a drawer. The runs button shows the workflow's
+ * latest runs in the same pane, each opening to what its steps did.
  */
-import { RiArrowLeftSLine, RiErrorWarningLine, RiSettings3Line } from "@remixicon/react";
+import { RiArrowLeftSLine, RiErrorWarningLine, RiHistoryLine, RiSettings3Line } from "@remixicon/react";
 import { useQuery } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
@@ -23,9 +24,11 @@ import { Panel } from "@/features/shell/page";
 import { PushPane } from "@/features/shell/push-pane";
 import { useWide } from "@/features/shell/use-wide";
 import { agentQuery } from "@/lib/api/ai";
+import { actionConnectionsQuery } from "@/lib/api/ai-actions";
+import { schedulesQuery } from "@/lib/api/schedules";
 import { tagsQuery } from "@/lib/api/tags";
 import { teamsQuery } from "@/lib/api/teams";
-import type { Issue, Workflow } from "@/lib/api/workflows";
+import { type Issue, type Workflow, workflowsQuery } from "@/lib/api/workflows";
 import { membersQuery } from "@/lib/api/workspace";
 
 import { Canvas } from "./canvas";
@@ -36,18 +39,23 @@ import type { Lists } from "./step-fields";
 import { type Names, sentence } from "./step-settings";
 import { allowsStep, type TriggerKind } from "./triggers";
 import { type SaveState, useWorkflowDraft } from "./use-workflow-draft";
+import { WorkflowRuns } from "./workflow-runs";
 import { findStep, readyKinds, type Step, type StepKind, triggerStep } from "./workflows";
 
 /*
  * useLists reads the workspace's teams, active teammates and tags, as the
  * pickers offer them and as the cards name them, and whether its agent
- * is on.
+ * is on; and the live reusable workflows other than this one, the
+ * connections to your systems and the office hours.
  */
-function useLists(workspace: string): { lists: Lists; names: Names } {
+function useLists(workspace: string, current: string): { lists: Lists; names: Names } {
   const teams = useQuery(teamsQuery(workspace)).data;
   const members = useQuery(membersQuery(workspace)).data;
   const tags = useQuery(tagsQuery(workspace)).data;
   const agent = useQuery({ ...agentQuery(workspace), retry: false }).data;
+  const workflows = useQuery(workflowsQuery(workspace)).data;
+  const connections = useQuery({ ...actionConnectionsQuery(workspace), retry: false }).data;
+  const schedules = useQuery({ ...schedulesQuery(workspace), retry: false }).data;
 
   return useMemo(() => {
     const lists: Lists = {
@@ -56,14 +64,27 @@ function useLists(workspace: string): { lists: Lists; names: Names } {
         .filter((member) => member.status === "active")
         .map((member) => [member.id, member.user.name] as const),
       tags: (tags ?? []).map((tag) => [tag.id, tag.name] as const),
+      workflows: (workflows ?? [])
+        .filter((flow) => flow.trigger === "reusable" && flow.status === "live" && flow.id !== current)
+        .map((flow) => [flow.id, flow.name] as const),
+      connections: (connections ?? [])
+        .filter((connection) => connection.kind === "http")
+        .map((connection) => [connection.id, connection.name] as const),
+      schedules: (schedules ?? []).map((schedule) => [schedule.id, schedule.name] as const),
       agentOn: agent ? agent.agent.enabled && agent.ready : undefined,
     };
 
     return {
       lists,
-      names: { teams: new Map(lists.teams), members: new Map(lists.members), tags: new Map(lists.tags) },
+      names: {
+        teams: new Map(lists.teams),
+        members: new Map(lists.members),
+        tags: new Map(lists.tags),
+        workflows: new Map((workflows ?? []).map((flow) => [flow.id, flow.name] as const)),
+        connections: new Map((connections ?? []).map((connection) => [connection.id, connection.name] as const)),
+      },
     };
-  }, [teams, members, tags, agent]);
+  }, [teams, members, tags, agent, workflows, connections, schedules, current]);
 }
 
 const saveWords: Record<SaveState, string> = {
@@ -136,7 +157,8 @@ export function WorkflowBuilder({ workspace, workflow }: { workspace: string; wo
   const navigate = useNavigate();
   const readOnly = !usePermission(workspace, "workflows:manage");
   const draft = useWorkflowDraft(workspace, workflow, () => void navigate({ to: "/d/workflows" }));
-  const { lists, names } = useLists(workspace);
+  const { lists, names } = useLists(workspace, workflow.id);
+  const [showing, setShowing] = useState<"settings" | "runs">("settings");
   const [selected, setSelected] = useState<string>(triggerStep);
   const trigger = draft.spec.trigger as TriggerKind;
   const step = selected === triggerStep ? undefined : findStep(draft.spec.steps, selected);
@@ -149,7 +171,12 @@ export function WorkflowBuilder({ workspace, workflow }: { workspace: string; wo
   const kinds = readOnly ? [] : readyKinds.filter((kind) => allowsStep(trigger, kind));
   const select = (id: string) => {
     setSelected(id);
+    setShowing("settings");
     setInspecting(true);
+  };
+  const toggle = (pane: "settings" | "runs") => {
+    setInspecting(!(inspecting && showing === pane));
+    setShowing(pane);
   };
   const editSteps = (edit: (steps: Step[]) => Step[]) => draft.change((spec) => ({ ...spec, steps: edit(spec.steps) }));
   const remove = (id: string) => {
@@ -207,11 +234,20 @@ export function WorkflowBuilder({ workspace, workflow }: { workspace: string; wo
         </div>
         <div className="ms-auto flex shrink-0 items-center gap-2">
           <ProblemCount errors={draft.report.errors} onShow={(issue) => select(issue.step_id ?? triggerStep)} />
+          <Button
+            variant="secondary"
+            size="small"
+            leadingIcon={RiHistoryLine}
+            aria-pressed={inspecting && showing === "runs"}
+            onClick={() => toggle("runs")}
+          >
+            Runs
+          </Button>
           <IconButton
             size="small"
             icon={RiSettings3Line}
             aria-label="Step settings"
-            onClick={() => setInspecting(!inspecting)}
+            onClick={() => toggle("settings")}
           />
           <Actions draft={draft} readOnly={readOnly} />
         </div>
@@ -224,12 +260,24 @@ export function WorkflowBuilder({ workspace, workflow }: { workspace: string; wo
     <div className="flex h-full min-h-0 min-w-0 flex-1">
       <PushPane
         name="dimmi:workflow"
-        label="Step settings"
+        label={showing === "runs" ? "Recent runs" : "Step settings"}
         open={inspecting}
         onOpenChange={setInspecting}
         width={380}
         main={canvas}
-        side={<Inspector {...inspector} onClose={() => setInspecting(false)} className="h-full w-full" />}
+        side={
+          showing === "runs" ? (
+            <WorkflowRuns
+              workspace={workspace}
+              workflow={workflow.id}
+              reading={{ steps: draft.spec.steps, summarize: moves.summarize, workflows: names.workflows ?? new Map() }}
+              onClose={() => setInspecting(false)}
+              className="h-full w-full"
+            />
+          ) : (
+            <Inspector {...inspector} onClose={() => setInspecting(false)} className="h-full w-full" />
+          )
+        }
       />
     </div>
   );

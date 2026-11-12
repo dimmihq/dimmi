@@ -45,6 +45,7 @@ func (c *HelpCenterController) realSite(w fhttp.ResponseWriter, r *fhttp.Request
 ) (helpcenter.Center, HelpLibrary, bool) {
 	center := centerOf(snap.HelpCenter, base)
 	center.Origin = origin(r)
+	center.Canonical = c.canonical(r, snap.HelpCenter)
 	c.withMessenger(&center, snap)
 
 	updates := c.announce(r, snap.HelpCenter, &center)
@@ -96,7 +97,7 @@ func (c *HelpCenterController) announce(r *fhttp.Request, h models.HelpCenter, c
 		return nil
 	}
 	center.Sections = append(center.Sections, helpcenter.Section{
-		Key: "changelog", Name: "Changelog", Icon: "megaphone", Path: "/changelog",
+		Key: "changelog", Name: helpcenters.ChangelogOf(h).Title, Icon: "megaphone", Path: "/changelog",
 	})
 	out := make([]helpcenter.Update, len(latest))
 	for i, e := range latest {

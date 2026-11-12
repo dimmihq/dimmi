@@ -14,7 +14,8 @@ import { WorkspaceSecuritySettings } from "./pages/admin";
 import { AttributesSettings } from "./pages/attributes";
 import { AuditLogSettings } from "./pages/audit-log";
 import { ConnectedAppsSettings } from "./pages/connected-apps";
-import { FeedbackSettings, HelpCentersSettings, KnowledgeSettings } from "./pages/content";
+import { ChangelogSettings, FeedbackSettings, HelpCentersSettings, KnowledgeSettings } from "./pages/content";
+import { ConversationRatingsSettings } from "./pages/conversation-ratings";
 import { ConversationSafetySettings } from "./pages/conversation-safety";
 import { WebhooksSettings } from "./pages/developers";
 import { EmailSettings } from "./pages/email";
@@ -27,6 +28,7 @@ import { NotificationsSettings } from "./pages/notifications";
 import { OfficeHoursSettings } from "./pages/office-hours";
 import { OperatorSettingsView } from "./pages/operator";
 import { RolesSettings } from "./pages/roles";
+import { SavedRepliesSettings } from "./pages/saved-replies";
 import { SingleSignOnSettings } from "./pages/single-sign-on";
 import { TagsSettings } from "./pages/tags";
 import { TeamsSettings } from "./pages/teams";
@@ -43,9 +45,11 @@ export const settingsViews: Record<SettingsSection, ComponentType> = {
   exports: ExportsSettings,
   inboxes: InboxesSettings,
   tags: TagsSettings,
+  "saved-replies": SavedRepliesSettings,
   attributes: AttributesSettings,
   "office-hours": OfficeHoursSettings,
   "conversation-safety": ConversationSafetySettings,
+  "conversation-ratings": ConversationRatingsSettings,
   messenger: MessengersSettings,
   email: EmailSettings,
   integrations: IntegrationsSettings,
@@ -55,6 +59,7 @@ export const settingsViews: Record<SettingsSection, ComponentType> = {
   "ai-providers": ProvidersSettings,
   "help-centers": HelpCentersSettings,
   knowledge: KnowledgeSettings,
+  changelog: ChangelogSettings,
   feedback: FeedbackSettings,
   webhooks: WebhooksSettings,
   identity: IdentitySettings,

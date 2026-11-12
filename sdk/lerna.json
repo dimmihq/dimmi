@@ -1,0 +1,4 @@
+{
+  "$comment": "Not Lerna. Changesets finds the SDK packages through this list; see .changeset/README.md.",
+  "packages": ["*"]
+}

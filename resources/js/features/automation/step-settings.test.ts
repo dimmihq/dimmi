@@ -1,7 +1,10 @@
 import {
   sentence as describeStep,
   type Names,
+  replyTimeText,
+  splitTarget,
   unsetSummary,
+  withFailurePath,
   withNewPath,
   withoutPath,
   withPathLabel,
@@ -49,7 +52,58 @@ describe("describe", () => {
   });
 
   it("says when a step cannot run yet", () => {
-    expect(describeStep({ id: "s", kind: "classify" }, names)).toBe("Sort by topic, not available yet");
+    expect(describeStep({ id: "s", kind: "apply_sla" }, names)).toBe("Apply an SLA, not available yet");
+  });
+
+  it("says the reply time message, or the default one", () => {
+    expect(describeStep({ id: "s", kind: "reply_time", settings: {} }, names)).toBe(replyTimeText);
+    expect(describeStep({ id: "s", kind: "reply_time", settings: { text: "Back {{reply_time}}" } }, names)).toBe(
+      "Back {{reply_time}}",
+    );
+  });
+
+  it("names the categories a step sorts into", () => {
+    const step: Step = {
+      id: "s",
+      kind: "classify",
+      paths: [
+        { id: "p_1", label: "Billing", steps: [] },
+        { id: "p_2", label: "Bugs", steps: [] },
+        { id: "p_3", label: "Sales", steps: [] },
+        { id: "p_4", outcome: "none", steps: [] },
+      ],
+    };
+
+    expect(describeStep(step, names)).toBe("Sort into Billing, Bugs, Sales");
+  });
+
+  it("names the workflow another one runs", () => {
+    const named: Names = { ...names, workflows: new Map([["wf_1", "Refund check"]]) };
+
+    expect(describeStep({ id: "s", kind: "run_workflow", settings: { workflow_id: "wf_1" } }, named)).toBe(
+      "Run Refund check",
+    );
+    expect(describeStep({ id: "s", kind: "run_workflow", settings: {} }, named)).toBe(unsetSummary);
+  });
+
+  it("says where a call goes, through its connection or to a public URL", () => {
+    const named: Names = { ...names, connections: new Map([["acn_1", "Billing API"]]) };
+
+    expect(
+      describeStep(
+        { id: "s", kind: "http_request", settings: { connection_id: "acn_1", method: "POST", url: "/v1/refunds" } },
+        named,
+      ),
+    ).toBe("POST to Billing API /v1/refunds");
+    expect(
+      describeStep(
+        { id: "s", kind: "http_request", settings: { method: "GET", url: "https://api.example.com/x" } },
+        named,
+      ),
+    ).toBe("GET https://api.example.com/x");
+    expect(describeStep({ id: "s", kind: "http_request", settings: { method: "GET", url: "" } }, named)).toBe(
+      unsetSummary,
+    );
   });
 
   it("says what dimmi is told while it handles the conversation", () => {
@@ -85,5 +139,23 @@ describe("paths", () => {
   it("renames and removes a path", () => {
     expect(withPathLabel(branch, "p_one00001", "First").paths?.[0]?.label).toBe("First");
     expect(withoutPath(branch, "p_one00001").paths).toHaveLength(1);
+  });
+});
+
+describe("withFailurePath", () => {
+  it("adds and removes the path a failed call takes", () => {
+    const call: Step = { id: "s", kind: "http_request", settings: { method: "GET", url: "/x" } };
+    const failing = withFailurePath(call, true);
+
+    expect(failing.paths?.map((path) => path.outcome)).toEqual(["failure"]);
+    expect(withFailurePath(failing, false).paths).toBeUndefined();
+  });
+});
+
+describe("splitTarget", () => {
+  it("reads where a value is saved as its kind and name", () => {
+    expect(splitTarget("run.vars.plan")).toEqual(["run.vars.", "plan"]);
+    expect(splitTarget("contact.custom.tier")).toEqual(["contact.custom.", "tier"]);
+    expect(splitTarget("")).toEqual(["", ""]);
   });
 });

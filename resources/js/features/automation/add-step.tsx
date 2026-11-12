@@ -16,9 +16,12 @@ import type { StepKind } from "./workflows";
 
 const groups: [string, StepKind[]][] = [
   ["Messages", ["message", "buttons", "collect", "reply_time"]],
-  ["Logic", ["branch", "wait"]],
+  ["Logic", ["branch", "classify", "wait", "run_workflow"]],
   ["dimmi", ["dimmi"]],
-  ["Team", ["assign", "unassign", "tag", "untag", "priority", "note", "update_contact", "snooze", "close"]],
+  [
+    "Team",
+    ["assign", "unassign", "tag", "untag", "priority", "note", "update_contact", "snooze", "close", "http_request"],
+  ],
 ];
 
 export function AddStep({ kinds, onAdd }: { kinds: StepKind[]; onAdd: (kind: StepKind) => void }) {

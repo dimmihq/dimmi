@@ -80,9 +80,11 @@ func (s *Series) Publish(ctx context.Context, in PublishInput) (models.Series, e
 			return ErrProblems.With("problems", problems)
 		}
 
-		out, err = s.release(ctx, tx, release{row: row, spec: spec, in: in})
+		if out, err = s.release(ctx, tx, release{row: row, spec: spec, in: in}); err != nil {
+			return err
+		}
 
-		return err
+		return s.published(ctx, tx, out, m.Member.ID)
 	})
 
 	return out, err

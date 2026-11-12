@@ -2,20 +2,23 @@
  * What a teammate needs beside the thread. Its header holds the moves
  * they make on the case, in one Actions menu beside the close button. Below, in BoardUI's divided accordion straight on the panel,
  * who the customer is, their company and their other conversations, all
- * read from the conversation's context in one request. A section only
+ * read from the conversation's context in one request, and the feature
+ * requests the conversation was linked to. A section only
  * shows when it has something to say.
  */
-import { RiBuilding2Line, RiChatHistoryLine, RiCloseLine, RiUser3Line } from "@remixicon/react";
+import { RiBuilding2Line, RiChatHistoryLine, RiCloseLine, RiLightbulbLine, RiUser3Line } from "@remixicon/react";
 import { useQuery } from "@tanstack/react-query";
 
 import { Accordion, AccordionItem } from "@/components/base/accordion/accordion";
 import { IconButton } from "@/components/base/buttons/icon-button";
+import { ConversationRequests } from "@/features/feedback/conversation-requests";
 import { PageHeader, Panel, ScrollArea } from "@/features/shell/page";
 import { contextQuery } from "@/lib/api/customers";
 import type { Conversation } from "@/lib/api/inbox";
 import { callerQuery, membersQuery } from "@/lib/api/workspace";
 
 import type { CaseControls } from "../case";
+import { RatingSection } from "../rating";
 import { CustomerSkeleton } from "../skeletons";
 import { Actions, CaseFields, CaseTags, Refusal } from "./case-section";
 import { CompanySection } from "./company-section";
@@ -28,7 +31,7 @@ import { Nothing } from "./rows";
 /*
  * The sections' keys, which the accordion uses to remember which are open.
  */
-const section = { customer: "customer", company: "company", past: "past" } as const;
+const section = { customer: "customer", company: "company", past: "past", requests: "requests" } as const;
 
 function Customer({ workspace, conversation }: { workspace: string; conversation: Conversation }) {
   const { data: context, isPending } = useQuery(contextQuery(workspace, conversation.id));
@@ -48,7 +51,7 @@ function Customer({ workspace, conversation }: { workspace: string; conversation
         variant="divided"
         size="sm"
         allowsMultipleExpanded
-        defaultExpandedKeys={[section.customer, section.company, section.past]}
+        defaultExpandedKeys={[section.customer, section.company, section.past, section.requests]}
         className="border-t border-separator-border"
       >
         <AccordionItem id={section.customer} title="Customer" icon={RiUser3Line}>
@@ -59,6 +62,13 @@ function Customer({ workspace, conversation }: { workspace: string; conversation
         </AccordionItem>
         <AccordionItem id={section.past} title="Past conversations" icon={RiChatHistoryLine}>
           <PastConversations workspace={workspace} context={context} current={conversation.id} />
+        </AccordionItem>
+        <AccordionItem id={section.requests} title="Feature requests" icon={RiLightbulbLine}>
+          <ConversationRequests
+            workspace={workspace}
+            conversation={conversation.id}
+            subject={conversation.subject ?? ""}
+          />
         </AccordionItem>
       </Accordion>
       <DeliverySection workspace={workspace} contact={context.contact.id} />
@@ -96,6 +106,7 @@ export function DetailsPanel({
           <Refusal error={caze.error} />
           <CaseFields conversation={conversation} caze={caze} people={people} />
           <CaseTags workspace={workspace} conversation={conversation} caze={caze} />
+          <RatingSection workspace={workspace} conversation={conversation.id} />
         </div>
         <Customer workspace={workspace} conversation={conversation} />
       </ScrollArea>

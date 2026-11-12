@@ -36,6 +36,7 @@ type UpdateCurrentWorkspaceRequest struct {
 		RequireTwoFactor *bool   `json:"require_two_factor,omitempty"`
 		ShowViewers      *bool   `json:"show_viewers_on_list,omitempty"`
 		UndoSendSeconds  *int    `json:"undo_send_seconds,omitempty"  validate:"omitempty,oneof=0 5 10 20 30"`
+		SeenReceipts     *bool   `json:"seen_receipts,omitempty"`
 		SeenReceiptName  *bool   `json:"seen_receipt_shows_name,omitempty"`
 		GIFPicker        *bool   `json:"gif_picker,omitempty"`
 		TeamMentions     *bool   `json:"team_mentions_enabled,omitempty"`

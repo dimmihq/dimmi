@@ -1,6 +1,6 @@
 /*
  * What a teammate can bring into a reply or note besides files: the
- * default help center's published articles, its feature requests and its
+ * team's saved replies, the default help center's published articles, its feature requests and its
  * published changelog entries. Each drops a line naming it, with the link
  * a customer can open.
  */
@@ -10,8 +10,9 @@ import { entriesQuery } from "@/lib/api/changelog";
 import type { FeedbackPost } from "@/lib/api/feedback";
 import { postsQuery } from "@/lib/api/feedback";
 import { type Article, articlesQuery, helpCentersQuery } from "@/lib/api/help-centers";
+import { type SavedReply, savedRepliesQuery } from "@/lib/api/saved-replies";
 
-export type SourceKind = "article" | "request" | "changelog";
+export type SourceKind = "saved" | "article" | "request" | "changelog";
 
 export interface LibraryItem {
   id: string;
@@ -20,6 +21,8 @@ export interface LibraryItem {
   detail: string;
   /* Where a customer opens it, when it has a public page. */
   url?: string;
+  /* The saved reply it is, whose text and actions a pick takes. */
+  reply?: SavedReply;
 }
 
 function matches(item: LibraryItem, needle: string): boolean {
@@ -74,6 +77,20 @@ export function changelogItems(entries: ChangelogEntry[], base: string): Library
 }
 
 /*
+ * savedItems are the saved replies the server found, shared and the
+ * teammate's own.
+ */
+export function savedItems(replies: SavedReply[]): LibraryItem[] {
+  return replies.map((reply) => ({
+    id: reply.id,
+    kind: "saved" as const,
+    title: reply.title,
+    detail: reply.shortcut ? `#${reply.shortcut} · ${reply.body}` : reply.body,
+    reply,
+  }));
+}
+
+/*
  * useLibrary returns the items of a kind whose title or detail holds the
  * query, ignoring case, and whether they are still loading.
  */
@@ -85,6 +102,7 @@ export function useLibrary(workspace: string, kind: SourceKind, query: string) {
   const base = center?.url ?? "";
   const search = needle || undefined;
 
+  const saved = useQuery({ ...savedRepliesQuery(workspace, needle), enabled: kind === "saved" && workspace !== "" });
   const articles = useQuery({ ...articlesQuery(workspace, id), enabled: kind === "article" && id !== "" });
   const posts = useQuery({
     ...postsQuery(workspace, id, { sort: "trending", page: 1, query: search }),
@@ -94,6 +112,10 @@ export function useLibrary(workspace: string, kind: SourceKind, query: string) {
     ...entriesQuery(workspace, id, { status: "published", page: 1, query: search }),
     enabled: kind === "changelog" && id !== "",
   });
+
+  if (kind === "saved") {
+    return { items: savedItems(saved.data ?? []).slice(0, 50), loading: saved.isPending, missing: false };
+  }
 
   const read = {
     article: () => ({ pending: articles.isPending, items: articleItems(articles.data ?? [], base, needle) }),

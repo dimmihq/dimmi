@@ -58,6 +58,8 @@ func executors() map[string]executor {
 		workflowspec.KindUntag: runUntag, workflowspec.KindPriority: runPriority, workflowspec.KindNote: runNote,
 		workflowspec.KindUpdateContact: runUpdateContact, workflowspec.KindSnooze: runSnooze,
 		workflowspec.KindClose: runClose, workflowspec.KindDimmi: runDimmi,
+		workflowspec.KindReplyTime: runReplyTime, workflowspec.KindClassify: runClassify,
+		workflowspec.KindRunWorkflow: runRunWorkflow, workflowspec.KindHTTPRequest: runHTTPRequest,
 	}
 }
 
@@ -68,6 +70,7 @@ func resumers() map[string]resumer {
 	return map[string]resumer{
 		workflowspec.KindButtons: resumeButtons, workflowspec.KindCollect: resumeCollect,
 		workflowspec.KindWait: resumeWait, workflowspec.KindDimmi: resumeDimmi,
+		workflowspec.KindRunWorkflow: resumeRunWorkflow,
 	}
 }
 

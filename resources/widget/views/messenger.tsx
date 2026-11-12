@@ -94,7 +94,15 @@ export function Messenger({ options, content }: { options: Options; content: Con
       data-font={appearance.font}
       data-sound={String(appearance.sound)}
     >
-      <section className="panel" data-target="panel" role="dialog" aria-label="Messages" inert>
+      <section
+        className="panel"
+        data-target="panel"
+        role="dialog"
+        aria-label={options.texts.messages}
+        lang={options.locale || undefined}
+        dir={options.dir}
+        inert
+      >
         <div className="views">
           {options.tabs.map((tab) => {
             const View = views[tab];
@@ -121,7 +129,7 @@ export function Messenger({ options, content }: { options: Options; content: Con
         <TabBar options={options} content={content} />
         <Viewer />
       </section>
-      <div className="notice" data-target="notice" role="status" aria-live="polite" hidden />
+      <div className="notice" data-target="notice" role="status" aria-live="polite" dir={options.dir} hidden />
       <Launcher launcher={appearance.launcher} ruledOut={options.launcher_ruled_out} />
     </div>
   );

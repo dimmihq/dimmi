@@ -7,7 +7,7 @@
  */
 import type { Options } from "../options";
 import { ArrowUpIcon, MicIcon, PaperclipIcon, SmileIcon, TrashIcon } from "./icons";
-import { Waveform } from "./thread";
+import { Waveform } from "./wave";
 
 /*
  * Chip is a file waiting to be sent, with a button to take it out again.

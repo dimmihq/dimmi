@@ -7,11 +7,12 @@
  */
 import type { ReactNode } from "react";
 
-import { Textarea } from "@/components/base/textarea/textarea";
 import { Action, Danger, Field, Toggle } from "@/features/settings/controls";
 import { Row, Section } from "@/features/settings/layout";
 import type { Condition } from "@/lib/api/workflows";
+import { CallFields } from "./call-fields";
 import { type Choices, choicesOf } from "./choices";
+import { ClassifyFields } from "./classify-fields";
 import {
   changeField,
   changeOp,
@@ -24,17 +25,19 @@ import {
   valueList,
   valueText,
 } from "./conditions";
+import { type EditorProps, Words } from "./field-parts";
 import { Pick, Picks } from "./pick";
+import { ReplyTimeFields } from "./reply-time-fields";
+import { RunWorkflowFields } from "./run-workflow-fields";
 import {
   collectTargets,
   contactFields,
   durations,
   list,
   priorities,
-  type Settings,
   text,
   unassignTargets,
-  unsetSummary,
+  useSet,
   withNewPath,
   withoutPath,
   withPathChange,
@@ -42,57 +45,25 @@ import {
   withSettings,
 } from "./step-settings";
 import type { TriggerKind } from "./triggers";
-import { pathName, type Step } from "./workflows";
-
-type Edit = (edit: (step: Step) => Step) => void;
+import { pathName } from "./workflows";
 
 /*
  * Lists are the workspace's teams, teammates and tags, as choices, and
- * whether its agent is on, unknown until read.
+ * whether its agent is on, unknown until read. Workflows are the live
+ * reusable ones another workflow may run, connections the systems a
+ * call may use, and schedules the office hours.
  */
 export interface Lists {
   teams: Choices;
   members: Choices;
   tags: Choices;
+  workflows: Choices;
+  connections: Choices;
+  schedules: Choices;
   agentOn?: boolean;
 }
 
-interface Props {
-  step: Step;
-  trigger: TriggerKind;
-  lists: Lists;
-  onEdit: Edit;
-}
-
-function Words({
-  label,
-  value,
-  placeholder = unsetSummary,
-  onChange,
-}: {
-  label: string;
-  value: string;
-  placeholder?: string;
-  onChange: (value: string) => void;
-}) {
-  return (
-    <div className="py-2.5 pe-2.5">
-      <Textarea
-        aria-label={label}
-        defaultValue={value}
-        placeholder={placeholder}
-        onChange={onChange}
-        rows={3}
-        autoResize
-        maxRows={8}
-      />
-    </div>
-  );
-}
-
-function useSet(onEdit: Edit) {
-  return (changes: Settings) => onEdit((current) => withSettings(current, changes));
-}
+type Props = EditorProps;
 
 function MessageFields({ step, onEdit }: Props) {
   const set = useSet(onEdit);
@@ -459,6 +430,13 @@ function CloseFields({ step, onEdit }: Props) {
           onChange={(on) => set({ only_if_no_teammate_reply: on || undefined })}
         />
       </Row>
+      <Row label="Ask for a rating">
+        <Toggle
+          label="Ask for a rating"
+          on={step.settings?.ask_rating === true}
+          onChange={(on) => set({ ask_rating: on || undefined })}
+        />
+      </Row>
     </Section>
   );
 }
@@ -575,6 +553,10 @@ const editors: Record<string, (props: Props) => ReactNode> = {
   priority: (props) => <OneChoice {...props} title="Priority" name="value" choices={choicesOf(priorities)} />,
   unassign: (props) => <OneChoice {...props} title="Unassign" name="what" choices={choicesOf(unassignTargets)} />,
   close: CloseFields,
+  reply_time: ReplyTimeFields,
+  classify: ClassifyFields,
+  run_workflow: RunWorkflowFields,
+  http_request: CallFields,
 };
 
 export function StepFields(props: Props): ReactNode {

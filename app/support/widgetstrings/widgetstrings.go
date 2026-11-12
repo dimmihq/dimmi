@@ -120,13 +120,33 @@ func (s *Strings) Negotiate(r Request) string {
 		return exact
 	}
 
-	if base := Base(tag); base != tag {
+	base := Base(tag)
+	if base != tag {
 		if exact := s.exact(base, r); exact != "" {
 			return exact
 		}
 	}
 
+	if sibling := s.sibling(base); sibling != "" {
+		return sibling
+	}
+
 	return r.fallback()
+}
+
+/*
+sibling returns a shipped language of the same base in another region,
+such as pt-BR for a visitor asking for pt-PT or plain pt: closer to what
+they read than the fallback.
+*/
+func (s *Strings) sibling(base string) string {
+	for _, l := range s.locales {
+		if strings.EqualFold(Base(l), base) {
+			return l
+		}
+	}
+
+	return ""
 }
 
 /*

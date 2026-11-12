@@ -32,6 +32,7 @@ import { formatDate, formatNumber } from "@/lib/i18n/format";
 
 import { CompanyDrawer } from "./company-drawer";
 import { CustomersActions } from "./frame";
+import { ImportButton } from "./import-dialog";
 import { useWorkspace } from "./names";
 import { CompanyName, Muted, Tags } from "./people-cells";
 
@@ -167,6 +168,7 @@ export function CompaniesPage() {
   return (
     <>
       <CustomersActions>
+        <ImportButton kind="companies" />
         <Button size="small" leadingIcon={RiAddLine} onClick={() => setAdding(true)}>
           New company
         </Button>

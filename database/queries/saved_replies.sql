@@ -2,9 +2,13 @@
 -- CreateSavedReply stores a reply, shared with the workspace when it has
 -- no owner and the owner's own otherwise. A shortcut the owner, or the
 -- workspace for a shared reply, already uses fails on
--- saved_replies_workspace_id_owner_member_id_shortcut_key.
-INSERT INTO saved_replies (workspace_id, owner_member_id, title, body, shortcut, created_at, updated_at)
-VALUES (@workspace_id, @owner_member_id, @title, @body, @shortcut, @now, @now)
+-- saved_replies_workspace_id_owner_member_id_shortcut_key. Without
+-- actions the reply is a plain one.
+INSERT INTO saved_replies (workspace_id, owner_member_id, title, body, shortcut, actions, created_at, updated_at)
+VALUES (
+    @workspace_id, @owner_member_id, @title, @body, @shortcut, coalesce(sqlc.narg(actions)::jsonb, '{}'::jsonb),
+    @now, @now
+)
 RETURNING *;
 
 -- name: FindSavedReply :one
@@ -43,13 +47,24 @@ ORDER BY owner_member_id NULLS LAST
 LIMIT 1;
 
 -- name: UpdateSavedReply :one
--- UpdateSavedReply replaces a reply's title, body and shortcut. A
--- shortcut its owner already uses on another reply fails on
+-- UpdateSavedReply replaces a reply's title, body and shortcut, its
+-- actions when given, and its owner when set_owner is true, which moves
+-- it between shared and personal. A shortcut its owner already uses on
+-- another reply fails on
 -- saved_replies_workspace_id_owner_member_id_shortcut_key.
-UPDATE saved_replies SET title = @title, body = @body, shortcut = @shortcut, updated_at = @now
+UPDATE saved_replies
+SET title = @title, body = @body, shortcut = @shortcut,
+    actions = coalesce(sqlc.narg(actions)::jsonb, actions),
+    owner_member_id = CASE WHEN @set_owner::boolean THEN sqlc.narg(new_owner_member_id)::uuid ELSE owner_member_id END,
+    updated_at = @now
 WHERE workspace_id = @workspace_id AND id = @id
 RETURNING *;
 
 -- name: DeleteSavedReply :execrows
 -- DeleteSavedReply removes a reply and reports whether it existed.
 DELETE FROM saved_replies WHERE workspace_id = @workspace_id AND id = @id;
+
+-- name: CountSavedReplies :one
+-- CountSavedReplies returns how many replies the workspace keeps, shared
+-- and personal.
+SELECT count(*) FROM saved_replies WHERE workspace_id = @workspace_id;

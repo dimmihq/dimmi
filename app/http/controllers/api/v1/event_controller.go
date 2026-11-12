@@ -5,8 +5,9 @@
 |
 | POST /contact-events records one event, or up to 100 under "events",
 | and answers what became of each. GET /event-definitions lists the
-| workspace's event names; PATCH changes one's words or status. GET
-| /contacts/{contact}/event-summaries says what one person did.
+| workspace's event names; PATCH changes one's words, status or whether
+| the messenger may send it. GET /contacts/{contact}/event-summaries
+| says what one person did.
 |
 */
 
@@ -130,6 +131,7 @@ func (c *EventController) Update(ctx context.Context, in *requests.UpdateEventRe
 	b := in.Body
 	d, err := c.Events.Update(ctx, events.UpdateInput{
 		Membership: membership(ctx), ID: id, Label: b.Label, Description: b.Description, Status: b.Status,
+		ClientWritable: b.ClientWritable,
 	})
 	if err != nil {
 		return nil, err

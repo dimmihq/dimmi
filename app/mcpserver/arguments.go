@@ -103,6 +103,7 @@ func idArguments() map[string]string {
 		"signature":       idArgument("email signature", "sig", "dimmi_email_signatures_list"),
 		"secret":          idArgument("identity verification secret", "isk", "dimmi_identity_secrets_list"),
 		"redaction_rule":  idArgument("redaction rule", "rxr", "dimmi_redaction_rules_list"),
+		"saved_reply":     idArgument("saved reply", "rpl", "dimmi_saved_replies_list"),
 		"widget":          idArgument("messenger", "wgt", "dimmi_widget_settings_list"),
 	}
 }

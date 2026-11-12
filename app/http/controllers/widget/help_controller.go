@@ -38,7 +38,8 @@ const maxHelpArticles = 200
 /*
 HelpController serves the messenger's Help tab. Readers knows who a
 visitor reads as and issues passes; Addresses builds the help center's
-address; Ratings keeps what visitors say about articles.
+address; Ratings keeps what visitors say about articles, and Analytics
+counts the articles they open.
 */
 type HelpController struct {
 	Public    *helpcenters.Public
@@ -46,6 +47,7 @@ type HelpController struct {
 	Ratings   *helpcenters.Ratings
 	Addresses helpcenters.Addresses
 	Clock     clock.Clock
+	Analytics *helpcenters.Analytics
 }
 
 /*

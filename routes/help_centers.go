@@ -76,8 +76,7 @@ func helpCenterRoutes(workspace *routing.Router, a *app.App) {
 		Ability("articles:write").Status(fhttp.StatusCreated).
 		Use(middleware.BodyLimit(helpcenters.MaxImageBytes + imageUploadOverhead))
 
-	changelogRoutes(workspace, a)
-	feedbackRoutes(workspace, a)
+	portalRoutes(workspace, a)
 
 	aud := &v1.HelpAudienceController{Articles: acts.Articles, Collections: acts.Collections, IDs: a.IDs}
 	routing.Patch(workspace, article+"/audience", "articles.audience.update", aud.Article).Ability("articles:write")
@@ -136,6 +135,13 @@ func feedbackRoutes(workspace *routing.Router, a *app.App) {
 
 	routing.Get(workspace, "/feedback-statuses", "feedback-statuses.index", st.Index).Ability("feedback:read")
 	routing.Patch(workspace, "/feedback-statuses", "feedback-statuses.update", st.Reorder).Ability("settings:write")
+	routing.Post(workspace, "/feedback-statuses", "feedback-statuses.store", st.Store).
+		Ability("settings:write").Status(fhttp.StatusCreated)
+	routing.Patch(workspace, "/feedback-statuses/{status}", "feedback-statuses.change", st.Update).
+		Ability("settings:write")
+	routing.Delete(workspace, "/feedback-statuses/{status}", "feedback-statuses.destroy", st.Destroy).
+		Ability("settings:write").Status(fhttp.StatusNoContent)
+	feedbackBoardRoutes(workspace, a)
 
 	routing.Get(workspace, one+"/feedback-posts", "help-centers.feedback-posts.index", fb.Index).
 		Ability("feedback:read").Query(numberedPageQuery())
@@ -156,4 +162,32 @@ func feedbackRoutes(workspace *routing.Router, a *app.App) {
 		Ability("feedback:write").Status(fhttp.StatusCreated)
 	routing.Delete(workspace, "/feedback-comments/{comment}", "feedback-comments.destroy", ex.DestroyComment).
 		Ability("feedback:write").Status(fhttp.StatusNoContent)
+}
+
+/*
+feedbackBoardRoutes declares a help center's boards, which members who
+change settings manage, and the links between requests and the
+conversations they came up in.
+*/
+func feedbackBoardRoutes(workspace *routing.Router, a *app.App) {
+	bd := &v1.FeedbackBoardController{Posts: a.Actions.Feedback, IDs: a.IDs}
+	ln := &v1.FeedbackLinkController{Posts: a.Actions.Feedback, IDs: a.IDs}
+	one, board := "/help-centers/{help_center}/feedback-boards", "/feedback-boards/{board}"
+	conv := "/conversations/{conversation}/feedback-posts"
+
+	routing.Get(workspace, one, "help-centers.feedback-boards.index", bd.Index).Ability("feedback:read")
+	routing.Post(workspace, one, "help-centers.feedback-boards.store", bd.Store).
+		Ability("settings:write").Status(fhttp.StatusCreated)
+	routing.Patch(workspace, one, "help-centers.feedback-boards.update-many", bd.Reorder).Ability("settings:write")
+	routing.Patch(workspace, board, "feedback-boards.update", bd.Update).Ability("settings:write")
+	routing.Delete(workspace, board, "feedback-boards.destroy", bd.Destroy).
+		Ability("settings:write").Status(fhttp.StatusNoContent)
+
+	routing.Get(workspace, conv, "conversations.feedback-posts.index", ln.Index).Ability("feedback:read")
+	routing.Post(workspace, conv, "conversations.feedback-posts.store", ln.Store).
+		Ability("feedback:write").Status(fhttp.StatusOK)
+	routing.Delete(workspace, conv+"/{post}", "conversations.feedback-posts.destroy", ln.Destroy).
+		Ability("feedback:write").Status(fhttp.StatusNoContent)
+	routing.Get(workspace, "/feedback-posts/{post}/conversations", "feedback-posts.conversations.index",
+		ln.Conversations).Ability("feedback:read")
 }

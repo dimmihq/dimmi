@@ -152,6 +152,10 @@ h1 span {
   translate: 2px 0;
 }
 
+[dir="rtl"] .chat:hover .go {
+  translate: -2px 0;
+}
+
 .text {
   display: grid;
   flex: 1;

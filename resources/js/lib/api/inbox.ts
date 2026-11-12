@@ -122,6 +122,13 @@ export interface TimelineEvent {
   state?: ActionCallState;
   summary?: string;
   error_code?: string | null;
+  /* conversation.merged: the conversation folded into this one, and how many entries moved. */
+  source?: { id: string; number: number };
+  moved_messages?: number;
+  /* conversation.rated: the score from 1 to 5, its word and the customer's comment. */
+  score?: number;
+  label?: string;
+  comment?: string;
 }
 
 /*
@@ -269,6 +276,7 @@ export interface ConversationChanges {
   priority?: ConversationPriority;
   team_id?: string | null;
   unread?: boolean;
+  spam?: boolean;
   add_tags?: string[];
   remove_tags?: string[];
 }
@@ -499,6 +507,51 @@ export function restoreConversation(write: Write, id: string): Promise<Conversat
 
 export function updateConversation(write: Write, id: string, changes: ConversationChanges): Promise<Conversation> {
   return request<Conversation>("PATCH", `/conversations/${encodeURIComponent(id)}`, changes, writeOptions(write));
+}
+
+/*
+ * BulkResult is how one conversation of a bulk change went: the fields
+ * that changed, or the code of the error that stopped it.
+ */
+export interface BulkResult {
+  id: string;
+  ok: boolean;
+  changed: string[];
+  error?: string;
+}
+
+/*
+ * BulkChange is one change to many conversations: the fields of an
+ * update, or a move to the trash.
+ */
+export type BulkChange = { changes: ConversationChanges } | { trash: true };
+
+/*
+ * bulkChange applies one change to up to bulkLimit conversations, each on
+ * its own, and says how each went.
+ */
+export function bulkChange(write: Write, ids: string[], change: BulkChange): Promise<BulkResult[]> {
+  return request<BulkResult[]>(
+    "POST",
+    "/conversation-bulk-changes",
+    { conversation_ids: ids, ...change },
+    writeOptions(write),
+  );
+}
+
+export const bulkLimit = 200;
+
+/*
+ * mergeConversations folds the sources into the conversation and
+ * returns it as it now is; the sources go to the trash.
+ */
+export function mergeConversations(write: Write, id: string, sources: string[]): Promise<Conversation> {
+  return request<Conversation>(
+    "POST",
+    `/conversations/${encodeURIComponent(id)}/merges`,
+    { source_ids: sources },
+    writeOptions(write),
+  );
 }
 
 /*

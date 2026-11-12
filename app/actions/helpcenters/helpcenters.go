@@ -59,7 +59,8 @@ unset means yes. FeedbackBoard opens the portal's feature requests to
 customers, and FeedbackApproval holds what customers post until the
 team approves it. Messenger says whether the help center's pages show a
 messenger; unset means yes. MessengerID picks which of the workspace's
-messengers, empty for its first.
+messengers, empty for its first. The changelog settings are read
+through ChangelogOptions.
 */
 type HelpCenterSettings struct {
 	PrimaryColor string `json:"primary_color,omitempty"`
@@ -76,6 +77,14 @@ type HelpCenterSettings struct {
 
 	Messenger   *bool  `json:"messenger,omitempty"`
 	MessengerID string `json:"messenger_id,omitempty"`
+
+	Changelog              *bool  `json:"changelog,omitempty"`
+	ChangelogTitle         string `json:"changelog_title,omitempty"`
+	ChangelogAuthors       *bool  `json:"changelog_authors,omitempty"`
+	ChangelogReactions     *bool  `json:"changelog_reactions,omitempty"`
+	ChangelogSubscriptions *bool  `json:"changelog_subscriptions,omitempty"`
+	ChangelogEmail         string `json:"changelog_email,omitempty"`
+	ChangelogUndoMinutes   *int   `json:"changelog_undo_minutes,omitempty"`
 }
 
 /*
@@ -102,11 +111,13 @@ func SettingsOf(h models.HelpCenter) HelpCenterSettings {
 }
 
 /*
-HelpCenters manages help centers.
+HelpCenters manages help centers. Index, when set, forgets the articles
+of a help center deleted.
 */
 type HelpCenters struct {
 	DB    *database.DB
 	Clock clock.Clock
+	Index ArticleIndexer
 }
 
 /*
@@ -369,8 +380,11 @@ func checkSettings(s HelpCenterSettings) (json.RawMessage, error) {
 		return nil, fault.New(fault.Invalid, "login_url_invalid", "Use an https address.").
 			OnField("settings.login_url")
 	}
+	if err := checkChangelog(s); err != nil {
+		return nil, err
+	}
 	s.HomeTitle, s.HomeSubtitle = truncate(s.HomeTitle, 80), truncate(s.HomeSubtitle, 200)
-	s.FooterText = truncate(s.FooterText, 500)
+	s.FooterText, s.ChangelogTitle = truncate(s.FooterText, 500), truncate(strings.TrimSpace(s.ChangelogTitle), 60)
 	raw, err := json.Marshal(s)
 	if err != nil {
 		return nil, fmt.Errorf("encode help center settings: %w", err)

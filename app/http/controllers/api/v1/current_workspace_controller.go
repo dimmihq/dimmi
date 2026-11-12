@@ -60,6 +60,7 @@ func (c *CurrentWorkspaceController) Update(
 		ClearCustomerFacingName: requests.Nulls(in.RawBody)["customer_facing_name"],
 		ShowViewers:             in.Body.ShowViewers,
 		UndoSendSeconds:         in.Body.UndoSendSeconds,
+		SeenReceipts:            in.Body.SeenReceipts,
 		SeenReceiptName:         in.Body.SeenReceiptName,
 		GIFPicker:               in.Body.GIFPicker,
 		TeamMentions:            in.Body.TeamMentions,

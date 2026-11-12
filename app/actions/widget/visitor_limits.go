@@ -5,8 +5,8 @@
 |
 | The messenger is open to anyone who loads a page, so a script can fill a
 | team's inbox or its storage in minutes. Each visitor session may send
-| only so many messages, start only so many conversations and upload only
-| so many files in a window, and so may all the sessions from one network.
+| only so many messages, start only so many conversations, upload only
+| so many files and send only so many batches of events in a window, and so may all the sessions from one network.
 | A busy office shares one network, so a network's limits are far wider
 | than a session's. A visitor over a limit is told to wait, with how long.
 |
@@ -34,6 +34,8 @@ const (
 	uploadsPerNetwork       = 300
 	conversationsPerSession = 5
 	conversationsPerNetwork = 60
+	eventBatchesPerSession  = 30
+	eventBatchesPerNetwork  = 3000
 )
 
 /*
@@ -80,6 +82,14 @@ func (l *VisitorLimits) Conversation(ctx context.Context, auth Authenticated) er
 	return l.count(
 		ctx, auth, visitorRate{"conversation", conversationsPerSession, conversationsPerNetwork, time.Hour},
 	)
+}
+
+/*
+Events counts a batch of tracked events against the session's minute and
+the network's hour.
+*/
+func (l *VisitorLimits) Events(ctx context.Context, auth Authenticated) error {
+	return l.count(ctx, auth, visitorRate{"events", eventBatchesPerSession, eventBatchesPerNetwork, time.Minute})
 }
 
 /*

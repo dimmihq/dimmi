@@ -12,6 +12,9 @@
 | who keeps writing gets one push for the burst, not one per message.
 | The bell is never held back: it is the record of what happened.
 |
+| A delivery held back says why, so the delivery log can tell the
+| member.
+|
 */
 
 package notifications
@@ -51,30 +54,49 @@ type Checker struct {
 }
 
 /*
-Allow reports whether the delivery goes out.
+Allow reports whether the delivery goes out. One held back for a known
+reason comes back as a skip naming it.
 */
 func (c *Checker) Allow(ctx context.Context, a *Alert, d fnotify.Delivery) (bool, error) {
+	reason, err := c.reason(ctx, a, d)
+	if err != nil {
+		return false, err
+	}
+	if reason != "" {
+		return false, fnotify.Skip(reason)
+	}
+	return true, nil
+}
+
+/*
+reason is why the delivery is held back, "" when it goes out.
+*/
+func (c *Checker) reason(ctx context.Context, a *Alert, d fnotify.Delivery) (string, error) {
 	channel := appChannel(d.Channel)
 	if channel == ChannelInApp {
-		return true, nil
+		return "", nil
 	}
 	if _, ok := d.Notifiable.(Destination); ok {
-		return c.destinationStill(ctx, a)
+		still, err := c.destinationStill(ctx, a)
+		if err != nil || still {
+			return "", err
+		}
+		return ReasonNotNeeded, nil
 	}
 	r, ok := d.Notifiable.(Recipient)
 	if !ok {
-		return false, nil
+		return ReasonNoRoute, nil
 	}
-	allowed := true
+	reason := ""
 	target := delivery{alert: a, to: r, channel: channel}
 	scoped := tenancy.With(ctx, a.WorkspaceID.String())
 	err := c.DB.Transaction(scoped, func(ctx context.Context, tx *database.Tx) error {
 		var err error
-		allowed, err = c.still(ctx, models.New(tx), target)
+		reason, err = c.still(ctx, models.New(tx), target)
 		return err
 	})
-	if err != nil || !allowed {
-		return false, err
+	if err != nil || reason != "" {
+		return reason, err
 	}
 	return c.unwatched(ctx, a, r, channel)
 }
@@ -89,29 +111,59 @@ type delivery struct {
 }
 
 /*
-still checks what the database says: the member's choices, the
-conversation and the action call.
+still checks what the database says: the member's choices, whether
+their address takes mail, the conversation and the action call. It
+returns why the delivery is held back, "" when it goes out.
 */
-func (c *Checker) still(ctx context.Context, q *models.Queries, d delivery) (bool, error) {
+func (c *Checker) still(ctx context.Context, q *models.Queries, d delivery) (string, error) {
 	a, r, channel := d.alert, d.to, d.channel
 	t, ok := FindTrigger(a.Trigger)
 	if !ok {
-		return false, nil
+		return ReasonNotNeeded, nil
 	}
 	choices, err := LoadChoices(ctx, q, a.WorkspaceID, r.MemberID)
 	if err != nil {
-		return false, err
+		return "", err
 	}
-	if !choices.Enabled(t, channel) || choices.Quiet(c.Clock.Now(), t.Key, r.Timezone) {
+	if !choices.Enabled(t, channel) {
+		return ReasonPreferenceOff, nil
+	}
+	if quiet := choices.QuietReason(c.Clock.Now(), t.Key, r.Timezone); quiet != "" {
+		return quiet, nil
+	}
+	if channel == ChannelEmail {
+		if suppressed, err := c.suppressed(ctx, q, a, r); err != nil || suppressed {
+			return ReasonSuppressed, err
+		}
+	}
+	allowed, reason := true, ReasonNotNeeded
+	switch {
+	case a.CallID != nil:
+		allowed, err = c.callPending(ctx, q, a)
+	case a.ConversationID != nil:
+		allowed, reason, err = c.conversationStill(ctx, q, d, choices)
+	}
+	if err != nil || allowed {
+		return "", err
+	}
+	return reason, nil
+}
+
+/*
+suppressed reports whether the member's address may not be mailed,
+after a bounce or a complaint.
+*/
+func (c *Checker) suppressed(ctx context.Context, q *models.Queries, a *Alert, r Recipient) (bool, error) {
+	if r.Email == "" {
 		return false, nil
 	}
-	if a.CallID != nil {
-		return c.callPending(ctx, q, a)
+	rows, err := q.ListSuppressedEmails(ctx, models.ListSuppressedEmailsParams{
+		WorkspaceID: a.WorkspaceID, Emails: []string{r.Email}, Now: c.Clock.Now(),
+	})
+	if err != nil {
+		return false, fmt.Errorf("check suppressed address: %w", err)
 	}
-	if a.ConversationID == nil {
-		return true, nil
-	}
-	return c.conversationStill(ctx, q, d, choices)
+	return len(rows) > 0, nil
 }
 
 /*
@@ -132,28 +184,29 @@ func (c *Checker) callPending(ctx context.Context, q *models.Queries, a *Alert) 
 conversationStill checks the conversation the alert is about.
 */
 func (c *Checker) conversationStill(ctx context.Context, q *models.Queries, d delivery, choices Choices,
-) (bool, error) {
+) (bool, string, error) {
 	a, r, channel := d.alert, d.to, d.channel
 	s, err := q.NotificationConversationState(ctx, models.NotificationConversationStateParams{
 		WorkspaceID: a.WorkspaceID, ConversationID: *a.ConversationID, MemberID: r.MemberID, Since: a.OccurredAt,
 	})
 	if errors.Is(err, database.ErrNotFound) {
-		return false, nil
+		return false, ReasonNotNeeded, nil
 	}
 	if err != nil {
-		return false, fmt.Errorf("load conversation state: %w", err)
+		return false, "", fmt.Errorf("load conversation state: %w", err)
 	}
 	if s.DeletedAt != nil || s.Spam {
-		return false, nil
+		return false, ReasonNotNeeded, nil
 	}
 	if channel == ChannelEmail && !s.LastReadAt.Before(a.OccurredAt) {
-		return false, nil
+		return false, ReasonAlreadySeen, nil
 	}
 	if !matters(a.Trigger, s, r, choices.Settings.IncludeAiHandled) {
-		return false, nil
+		return false, ReasonNotNeeded, nil
 	}
 	held := appbroadcasting.Holding{Inbox: s.InboxID, Member: s.AssigneeMemberID, Team: s.AssigneeTeamID}
-	return c.sees(ctx, a, r, held)
+	sees, err := c.sees(ctx, a, r, held)
+	return sees, ReasonNotVisible, err
 }
 
 /*
@@ -198,21 +251,24 @@ unwatched checks what only the cache knows: whether the member is
 looking at the conversation now, and whether a push about the same
 thing just went out.
 */
-func (c *Checker) unwatched(ctx context.Context, a *Alert, r Recipient, channel string) (bool, error) {
+func (c *Checker) unwatched(ctx context.Context, a *Alert, r Recipient, channel string) (string, error) {
 	if c.Cache == nil {
-		return true, nil
+		return "", nil
 	}
 	focus, err := c.Cache.Get(ctx, FocusKey(r.WorkspaceID, r.MemberID))
 	if err == nil && watching(a, string(focus)) {
-		return false, nil
+		return ReasonAlreadySeen, nil
 	}
 	if channel != ChannelPush && channel != ChannelSlack {
-		return true, nil
+		return "", nil
 	}
 	key := "ntf:cooldown:" + r.MemberID.String() + ":" + a.GroupKey(fnotify.Delivery{}) + ":" + a.TitleKey + ":" +
 		channel
 	added, err := c.Cache.Add(ctx, key, []byte("1"), pushCooldown)
-	return added || err != nil, nil
+	if first := added || err != nil; first {
+		return "", nil
+	}
+	return ReasonCooldown, nil
 }
 
 /*

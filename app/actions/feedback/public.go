@@ -3,9 +3,10 @@
 | The Portal's Feature Requests
 |--------------------------------------------------------------------------
 |
-| What customers see and do on their help center's board: approved
+| What customers see and do on their help center's portal: approved
 | requests grouped by status as a roadmap, or one list sorted by
-| trending, top or new and narrowed by a search; each request's page with
+| trending, top or new and narrowed by a search, across the boards they
+| may see or on one of them; each request's page with
 | its public comments; and, signed in, posting, voting and commenting.
 | Before a new request is posted, customers see the ones that look alike
 | and can vote for one instead. A customer's own request waiting for
@@ -19,6 +20,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
 	"strings"
 
 	"github.com/dimmihq/dimmi/framework/database"
@@ -51,58 +53,147 @@ type Column struct {
 }
 
 /*
-BoardRequest asks for a help center's board as a reader sees it: Sort
-and Query make it one list instead of the roadmap.
+BoardRequest asks for a help center's portal as a reader sees it: Sort
+and Query make it one list instead of the roadmap, and Board, a board's
+slug, keeps it to that board.
 */
 type BoardRequest struct {
 	Center models.HelpCenter
 	Reader *ids.UUID
 	Sort   string
 	Query  string
+	Board  string
 }
 
 /*
-Board is the board: its roadmap columns, or the sorted list when one
-was asked for.
+Portal is what the reader sees: the boards they may open, the one shown
+when they picked one, and its roadmap columns, or the sorted list when
+one was asked for.
 */
-type Board struct {
+type Portal struct {
+	Boards  []models.FeedbackBoard
+	Active  *models.FeedbackBoard
 	Columns []Column
 	List    []Listed
 }
 
 /*
-Read returns the help center's board.
+Read returns the help center's portal. It fails with ErrBoardNotFound
+when the board asked for is not one the reader may open.
 */
-func (p *Posts) Read(ctx context.Context, in BoardRequest) (Board, error) {
-	var out Board
+func (p *Posts) Read(ctx context.Context, in BoardRequest) (Portal, error) {
+	var out Portal
 	err := p.inside(ctx, in.Center, func(ctx context.Context, q *models.Queries) error {
 		var err error
+		if out.Boards, err = shownBoards(ctx, q, in.Center, in.Reader); err != nil {
+			return err
+		}
+		var scope []ids.UUID
+		if out.Active, scope, err = narrowed(out.Boards, in.Board); err != nil {
+			return err
+		}
 		if in.Sort != "" || strings.TrimSpace(in.Query) != "" {
-			out.List, err = p.listed(ctx, q, in, nil)
+			out.List, err = p.listed(ctx, q, listing{BoardRequest: in, boards: scope})
 			return err
 		}
-		statuses, err := ordered(ctx, q, in.Center.WorkspaceID)
-		if err != nil {
-			return err
-		}
-		for _, s := range statuses {
-			if s.Key == "closed" {
-				continue
-			}
-			posts, err := p.listed(ctx, q, BoardRequest{Center: in.Center, Reader: in.Reader, Sort: "top"}, &s.Key)
-			if err != nil {
-				return err
-			}
-			out.Columns = append(out.Columns, Column{Status: s, Posts: posts})
-		}
-		return nil
+		out.Columns, err = p.roadmap(ctx, q, in, scope)
+		return err
 	})
 	return out, err
 }
 
-func (p *Posts) listed(ctx context.Context, q *models.Queries, in BoardRequest, status *string) ([]Listed, error) {
+/*
+narrowed returns the board the slug names among those the reader may
+open, and the boards to list: that one, or all of them for no slug.
+*/
+func narrowed(boards []models.FeedbackBoard, slug string) (*models.FeedbackBoard, []ids.UUID, error) {
+	if slug == "" {
+		return nil, boardIDs(boards), nil
+	}
+	i := slices.IndexFunc(boards, func(b models.FeedbackBoard) bool { return b.Slug == slug })
+	if i < 0 {
+		return nil, nil, ErrBoardNotFound
+	}
+	return &boards[i], []ids.UUID{boards[i].ID}, nil
+}
+
+/*
+roadmap returns a column for each status the roadmap shows, its
+requests on the boards given, most voted first.
+*/
+func (p *Posts) roadmap(ctx context.Context, q *models.Queries, in BoardRequest, scope []ids.UUID,
+) ([]Column, error) {
+	statuses, err := ordered(ctx, q, in.Center.WorkspaceID)
+	if err != nil {
+		return nil, err
+	}
+	var out []Column
+	for _, s := range statuses {
+		if !s.OnRoadmap() {
+			continue
+		}
+		top := BoardRequest{Center: in.Center, Reader: in.Reader, Sort: "top"}
+		posts, err := p.listed(ctx, q, listing{BoardRequest: top, boards: scope, status: &s.Key})
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, Column{Status: s, Posts: posts})
+	}
+	return out, nil
+}
+
+/*
+shownBoards returns the help center's boards the reader may open.
+*/
+func shownBoards(ctx context.Context, q *models.Queries, h models.HelpCenter, reader *ids.UUID,
+) ([]models.FeedbackBoard, error) {
+	all, err := boardsOf(ctx, q, h)
+	if err != nil {
+		return nil, err
+	}
+	return slices.DeleteFunc(all, func(b models.FeedbackBoard) bool { return !readable(b, reader != nil) }), nil
+}
+
+/*
+boardIDs returns the boards' ids, an empty list rather than none, so a
+reader who may open no board sees no request.
+*/
+func boardIDs(boards []models.FeedbackBoard) []ids.UUID {
+	out := make([]ids.UUID, 0, len(boards))
+	for _, b := range boards {
+		out = append(out, b.ID)
+	}
+	return out
+}
+
+/*
+shown says whether the reader may see the request's board. A request
+from before boards has none and is shown.
+*/
+func shown(ctx context.Context, q *models.Queries, row models.FeedbackPost, reader *ids.UUID) (bool, error) {
+	if row.BoardID == nil {
+		return true, nil
+	}
+	b, err := q.FindFeedbackBoard(ctx, models.FindFeedbackBoardParams{WorkspaceID: row.WorkspaceID, ID: *row.BoardID})
+	if err != nil {
+		return false, missing(err, ErrBoardNotFound)
+	}
+	return readable(b, reader != nil), nil
+}
+
+/*
+listing is a list the portal reads: the request, the boards it covers
+and the status it is kept to, if any.
+*/
+type listing struct {
+	BoardRequest
+	boards []ids.UUID
+	status *string
+}
+
+func (p *Posts) listed(ctx context.Context, q *models.Queries, in listing) ([]Listed, error) {
 	rows, err := q.ListFeedbackPosts(ctx, models.ListFeedbackPostsParams{
-		WorkspaceID: in.Center.WorkspaceID, HelpCenterID: in.Center.ID, Status: status,
+		WorkspaceID: in.Center.WorkspaceID, HelpCenterID: in.Center.ID, BoardIds: in.boards, Status: in.status,
 		Moderation: new("approved"), Query: nonEmpty(strings.TrimSpace(in.Query)), Sort: sortOf(in.Sort),
 		RowLimit: boardLimit,
 	})
@@ -145,11 +236,12 @@ func votedOn(ctx context.Context, q *models.Queries, reader *ids.UUID, rows []mo
 
 /*
 Page is one request as its page shows it: the request, its rendered
-details, its public comments, where it was merged to, and the slug of
-the changelog update that shipped it.
+details, where it stands, its public comments, where it was merged to,
+and the slug of the changelog update that shipped it.
 */
 type Page struct {
 	Listed
+	Stage    Status
 	Author   string
 	Details  string
 	Comments []models.ListFeedbackCommentsRow
@@ -177,7 +269,9 @@ func (p *Posts) Open(ctx context.Context, h models.HelpCenter, number int32, rea
 		if err != nil {
 			return fmt.Errorf("find board request: %w", err)
 		}
-		found = true
+		if found, err = shown(ctx, q, row, reader); err != nil || !found {
+			return err
+		}
 		out, err = p.page(ctx, q, row, reader)
 		return err
 	})
@@ -202,6 +296,13 @@ func (p *Posts) page(ctx context.Context, q *models.Queries, row models.Feedback
 		return Page{}, err
 	}
 	out := Page{Listed: listed[0], Author: named.Author}
+	statuses, err := ordered(ctx, q, row.WorkspaceID)
+	if err != nil {
+		return Page{}, err
+	}
+	if s, ok := statusIn(statuses, row.Status); ok {
+		out.Stage = s
+	}
 	if html, err := p.Renderer.HTML([]byte(row.BodyMarkdown)); err == nil {
 		out.Details = html.HTML
 	}

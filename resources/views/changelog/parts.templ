@@ -67,6 +67,7 @@ sends it in the background and writes the new counts on the buttons.
 */
 
 templ reactions(c helpcenter.Center, e Entry) {
+	if len(e.Reactions) > 0 {
 	<form method="post" action={ helpcenter.Href(c, e.Path+"/reactions") } data-reactions class="flex flex-wrap items-center gap-1.5" aria-label="Reactions">
 		for _, r := range e.Reactions {
 			<button type="submit" name="emoji" value={ r.Emoji } aria-label={ reactionLabel(r) } class="inline-flex h-8 cursor-pointer items-center gap-1.5 rounded-full border border-border-button-default bg-background-primary-default px-2.5 text-body-2-medium tabular-nums text-text-secondary outline-none transition hover:border-border-button-hover hover:bg-background-secondary-hover focus-visible:ring-2 focus-visible:ring-border-focus-ring active:scale-95">
@@ -75,6 +76,7 @@ templ reactions(c helpcenter.Center, e Entry) {
 			</button>
 		}
 	</form>
+	}
 }
 
 templ pageLink(c helpcenter.Center, path, label, icon string, before bool) {
@@ -132,8 +134,19 @@ func feedPath(label string) string {
 	return "/changelog/labels/" + label + "/feed.xml"
 }
 
+/*
+titleOr is the changelog's title, Changelog when the team gave none.
+*/
+func titleOr(title string) string {
+	if title == "" {
+		return "Changelog"
+	}
+
+	return title
+}
+
 func indexTrail(index Index) []helpcenter.Crumb {
-	trail := []helpcenter.Crumb{{Title: "Changelog", Path: "/changelog"}}
+	trail := []helpcenter.Crumb{{Title: titleOr(index.Title), Path: "/changelog"}}
 	for _, l := range index.Labels {
 		if l.Slug == index.Active {
 			trail = append(trail, helpcenter.Crumb{Title: l.Name, Path: l.Path})
@@ -148,7 +161,7 @@ func yearText(year int) string {
 }
 
 func indexTitle(c helpcenter.Center, index Index) string {
-	title := "Changelog | " + c.Product
+	title := titleOr(index.Title) + " | " + c.Product
 	for _, l := range index.Labels {
 		if l.Slug == index.Active {
 			return l.Name + " · " + title

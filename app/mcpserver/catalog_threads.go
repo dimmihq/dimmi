@@ -59,34 +59,7 @@ notes.
 */
 func writingDocs() map[string]Doc {
 	return map[string]Doc{
-		"conversations.replies.store": {
-			Title: "Reply to the customer",
-			Use: "Sends a reply the customer receives on the conversation's channel (email, messenger or API). " +
-				"Use only when the person asked you to reply, after showing them the exact text. For text " +
-				"only the team sees, use dimmi_conversations_notes_create. Replying may assign you a " +
-				"conversation nobody holds; spam conversations take no replies.",
-			Returns: "the reply with its id and delivery status, and the conversation as it is now.",
-			Next: []string{
-				"dimmi_conversations_messages_list: check the reply's delivery status",
-				"dimmi_conversations_neighbors_list: move on to the next conversation",
-			},
-			Risk: new(RiskReach),
-			Params: map[string]string{
-				"body": "The reply in Markdown, written to the customer. Never include notes, secrets or other " +
-					"customers' details. A reply needs a body or at least one attachment.",
-				"then": "What the conversation does after sending: keep (default), open, close or snooze.",
-				"snooze": "With then=snooze, exactly one of until (an RFC 3339 time), preset (later_today, " +
-					"tomorrow, next_week or one_week) or option (a key from dimmi_snooze_options_list).",
-				"attachment_ids": "Up to 10 ids (att_...) of files already uploaded.",
-				"expected_last_message_id": "The newest message (msg_...) you read. The reply is refused if the " +
-					"customer wrote since, so you never answer a question that changed.",
-				"client_message_id": "A unique string, so a retried call finds the first reply instead of " +
-					"sending twice.",
-				"delay": "Ignored for agents: only replies sent from the dashboard wait for undo.",
-			},
-			Hint: "new_messages_since means the customer wrote after the message you named: read the thread " +
-				"again and rewrite the reply.",
-		},
+		"conversations.replies.store": replyDoc(),
 		"conversations.notes.store": {
 			Title: "Add an internal note",
 			Use: "Writes a note only the team sees; it never reaches the customer and changes neither status " +
@@ -97,6 +70,11 @@ func writingDocs() map[string]Doc {
 				"body": "The note in Markdown. Only the team sees it.",
 				"client_message_id": "A unique string, so a retried call finds the first note instead of " +
 					"writing twice.",
+				"created_at": "Import only (needs imports:manage): when the note was written, RFC 3339, not " +
+					"before the conversation's latest entry.",
+				"external_id": "Import only: the note's id in the tool it comes from; sending it again returns " +
+					"the first copy.",
+				"author_id": "Import only: the teammate (mem_...) who wrote it; you by default.",
 			},
 		},
 	}
@@ -117,6 +95,10 @@ func messageChangeDocs() map[string]Doc {
 			Params: map[string]string{
 				"body":       "What the customer wrote, as they wrote it.",
 				"dedupe_key": "Makes the same message count once on the conversation however often it is sent.",
+				"created_at": "Import only (needs imports:manage): when the customer wrote it, RFC 3339, not " +
+					"before the conversation's latest entry. Works on any channel; nothing reacts.",
+				"external_id": "Import only: the message's id in the tool it comes from; sending it again returns " +
+					"the first copy.",
 			},
 			Hint: "Only conversations on the API channel take relayed messages.",
 		},
@@ -194,5 +176,44 @@ func collaborationDocs() map[string]Doc {
 				"has one and the workspace allows GIFs. Agents have no use for it.",
 			Returns: "whether GIF search is on, and its key.",
 		},
+	}
+}
+
+/*
+replyDoc is the entry for replying to the customer.
+*/
+func replyDoc() Doc {
+	return Doc{
+		Title: "Reply to the customer",
+		Use: "Sends a reply the customer receives on the conversation's channel (email, messenger or API). " +
+			"Use only when the person asked you to reply, after showing them the exact text. For text " +
+			"only the team sees, use dimmi_conversations_notes_create. Replying may assign you a " +
+			"conversation nobody holds; spam conversations take no replies.",
+		Returns: "the reply with its id and delivery status, and the conversation as it is now.",
+		Next: []string{
+			"dimmi_conversations_messages_list: check the reply's delivery status",
+			"dimmi_conversations_neighbors_list: move on to the next conversation",
+		},
+		Risk: new(RiskReach),
+		Params: map[string]string{
+			"body": "The reply in Markdown, written to the customer. Never include notes, secrets or other " +
+				"customers' details. A reply needs a body or at least one attachment.",
+			"then": "What the conversation does after sending: keep (default), open, close or snooze.",
+			"snooze": "With then=snooze, exactly one of until (an RFC 3339 time), preset (later_today, " +
+				"tomorrow, next_week or one_week) or option (a key from dimmi_snooze_options_list).",
+			"attachment_ids": "Up to 10 ids (att_...) of files already uploaded.",
+			"expected_last_message_id": "The newest message (msg_...) you read. The reply is refused if the " +
+				"customer wrote since, so you never answer a question that changed.",
+			"client_message_id": "A unique string, so a retried call finds the first reply instead of " +
+				"sending twice.",
+			"delay": "Ignored for agents: only replies sent from the dashboard wait for undo.",
+			"created_at": "Import only (needs imports:manage): when the reply was written, RFC 3339, not " +
+				"before the conversation's latest entry. Nothing is sent and nothing reacts.",
+			"external_id": "Import only: the reply's id in the tool it comes from; sending it again returns " +
+				"the first copy.",
+			"author_id": "Import only: the teammate (mem_...) who wrote it; you by default.",
+		},
+		Hint: "new_messages_since means the customer wrote after the message you named: read the thread " +
+			"again and rewrite the reply.",
 	}
 }

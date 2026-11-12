@@ -13,6 +13,7 @@ package widget
 
 import (
 	"context"
+	"time"
 
 	"github.com/dimmihq/dimmi/framework/filesystem"
 
@@ -52,13 +53,16 @@ type VisibleMessage struct {
 
 /*
 VisibleConversation is one of a visitor's conversations, with its latest
-message and how many of the team's replies wait unread.
+message, how many of the team's replies wait unread, and when the team
+last read it up to the customer's latest message, nil when it has not or
+the visitor is not told.
 */
 type VisibleConversation struct {
 	Conversation models.Conversation
 	ChannelType  string
 	UnreadCount  int64
 	Last         *VisibleMessage
+	SeenAt       *time.Time
 }
 
 /*

@@ -20,6 +20,7 @@ package workflows
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"time"
@@ -233,6 +234,10 @@ func (st *state) resolved(ctx context.Context, s workflowspec.Step) (outcome, er
 		return outcome{}, err
 	}
 
+	if err := st.announceResolved(ctx, s); err != nil {
+		return outcome{}, err
+	}
+
 	out := fixedOrEnd(s, workflowspec.OutcomeResolved, EndCompleted)
 	out.acted = true
 	if out.path != "" || !workflowspec.On(settings[workflowspec.DimmiSettings](s).CloseOnResolved, true) {
@@ -330,4 +335,21 @@ func latest(first time.Time, rest ...time.Time) time.Time {
 	}
 
 	return out
+}
+
+/*
+announceResolved offers the conversation to the workflows that start
+when dimmi resolves one, carrying this workflow in the chain so it
+never starts itself.
+*/
+func (st *state) announceResolved(ctx context.Context, s workflowspec.Step) error {
+	raw, err := json.Marshal(Event{
+		WorkspaceID: st.conv.WorkspaceID, ConversationID: st.conv.ID, Trigger: workflowspec.TriggerDimmiResolved,
+		EventID: "resolved:" + st.run.ID.String() + ":" + s.ID, Chain: st.writer().Chain,
+	})
+	if err != nil {
+		return fmt.Errorf("encode resolved event: %w", err)
+	}
+
+	return st.push(ctx, jobs.MatchWorkflowsArgs{Event: raw})
 }

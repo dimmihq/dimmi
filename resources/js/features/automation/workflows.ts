@@ -41,9 +41,12 @@ export const readyKinds: StepKind[] = [
   "message",
   "buttons",
   "collect",
+  "reply_time",
   "dimmi",
   "branch",
+  "classify",
   "wait",
+  "run_workflow",
   "assign",
   "unassign",
   "tag",
@@ -53,6 +56,7 @@ export const readyKinds: StepKind[] = [
   "update_contact",
   "snooze",
   "close",
+  "http_request",
 ];
 
 /*
@@ -68,7 +72,7 @@ const outcomes: Record<string, string> = {
   handed_over: "Handed over",
   quiet: "Customer went quiet",
   else: "Everyone else",
-  none: "None matched",
+  none: "None matched or AI unavailable",
   interrupted: "Cut short",
   failure: "Failed",
 };

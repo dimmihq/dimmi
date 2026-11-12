@@ -75,6 +75,7 @@ type Dispatcher struct {
 	Checker    *Checker
 	Fanout     *appbroadcasting.Fanout
 	Links      Links
+	Log        *DeliveryLog
 }
 
 /*
@@ -126,7 +127,9 @@ type round struct {
 }
 
 /*
-tell sends one recipient their alert on the channels they keep on.
+tell sends one recipient their alert on the channels they keep on. All
+of it shares one delivery id, so the log lines up the channels of one
+alert, those skipped here included.
 */
 func (d *Dispatcher) tell(ctx context.Context, rd round, r Recipient) error {
 	tx, ev, s := rd.tx, rd.ev, rd.subject
@@ -135,11 +138,16 @@ func (d *Dispatcher) tell(ctx context.Context, rd round, r Recipient) error {
 	if err != nil {
 		return err
 	}
-	if s.aiBusy(ev) && !choices.Settings.IncludeAiHandled {
-		return nil
-	}
 	a := s.alert(ev, choices, d.Links)
 	a.checker = d.Checker
+	if s.aiBusy(ev) && !choices.Settings.IncludeAiHandled {
+		d.skipAll(ctx, told{alert: a, trigger: t, choices: choices, to: r}, ReasonAIHandled)
+		return nil
+	}
+	a.Unsubscribe = d.Links.Unsubscribe(ev.WorkspaceID, r.MemberID, ev.Trigger, d.Clock.Now())
+	id := ids.New().String()
+	ctx = fnotify.WithDeliveryID(ctx, id)
+	d.skipChannels(ctx, told{alert: a, trigger: t, choices: choices, to: r, id: id})
 	if choices.Enabled(t, ChannelInApp) {
 		if err := d.Notify.Send(ctx, withChannels(a, "database"), r); err != nil {
 			return fmt.Errorf("store notification: %w", err)

@@ -50,12 +50,15 @@ import { AiBadge } from "./ai-badge";
 import { AssignPicker } from "./assign/assign-picker";
 import { statusLabel, useCase } from "./case";
 import { ComposeBridge } from "./compose-bridge";
+import { ConversationMenu } from "./conversation-menu";
 import { customerName, subjectOf, toEntry, useInbox } from "./conversations";
 import { DetailsPanel } from "./customer/details-panel";
+import { MergeDialog } from "./merge-dialog";
 import type { Mode } from "./modes";
 import { OperatorPanel } from "./operator-panel";
 import { OriginalMessage } from "./original-message";
 import { PriorityMenu } from "./priority/priority-menu";
+import { RatingChip } from "./rating";
 import { SnoozePicker } from "./snooze/snooze-picker";
 import { Thread } from "./thread";
 import { useThreadSettings } from "./thread/thread-settings";
@@ -276,6 +279,7 @@ function ThreadTitle({
         #{conversation.number} · {statusLabel[conversation.status]}
       </Chip>
       <AiBadge state={conversation.ai_state} long />
+      <RatingChip workspace={workspace} conversation={conversation.id} />
     </div>
   );
 }
@@ -295,6 +299,7 @@ export function ConversationView({
   const caze = useCase(workspace, conversation);
   const [snoozing, setSnoozing] = useState(false);
   const [assigning, setAssigning] = useState(false);
+  const [merging, setMerging] = useState(false);
   const toggleRef = useRef<() => void>(() => undefined);
   const settings = useThreadSettings(workspace);
   const { toggleEvents } = settings;
@@ -302,6 +307,7 @@ export function ConversationView({
     () => ({
       openSnooze: () => setSnoozing(true),
       openAssign: () => setAssigning(true),
+      openMerge: () => setMerging(true),
       toggleDetails: () => toggleRef.current(),
       toggleEvents,
     }),
@@ -373,6 +379,7 @@ export function ConversationView({
             />
           ) : null}
           <TrashButton shown={canTrash} onPress={walk.trash} />
+          <ConversationMenu moves={walk} />
           <IconButton
             size="small"
             icon={RiSparkling2Line}
@@ -405,6 +412,13 @@ export function ConversationView({
         status={<TypingIndicator conversation={conversation.id} nameOf={() => customer} />}
         zone={settings.customerTime ? contactZone : null}
         hideEvents={settings.hideEvents}
+      />
+      <MergeDialog
+        view={view}
+        workspace={workspace}
+        conversation={conversation}
+        isOpen={merging}
+        onOpenChange={setMerging}
       />
       {original ? (
         <OriginalMessage

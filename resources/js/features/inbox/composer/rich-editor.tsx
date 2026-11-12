@@ -6,7 +6,8 @@
  * pages keep only what the composer's document holds, so headings,
  * colours and underline fall away to plain text. A colon and two letters
  * suggest emoji by name; in a note, an at sign suggests teammates and
- * teams to mention.
+ * teams to mention. A hash and a letter or more suggest saved replies,
+ * whose text takes the place of what was typed.
  */
 import type { RemixiconComponentType } from "@remixicon/react";
 import {
@@ -23,6 +24,7 @@ import {
 import { type Editor, EditorContent, useEditor, useEditorState } from "@tiptap/react";
 import { useEffect, useRef, useState } from "react";
 
+import type { SavedReply } from "@/lib/api/saved-replies";
 import { cx } from "@/utils/cx";
 
 import { composerExtensions } from "./composer-markdown";
@@ -55,6 +57,10 @@ export interface RichEditorProps {
   onBlur: () => void;
   onFiles: (files: FileList) => void;
   findMentions?: (query: string) => Promise<Mentionable[]>;
+  /* Saved replies whose title or shortcut holds what follows a #. */
+  findSavedReplies?: (query: string) => Promise<SavedReply[]>;
+  /* The Markdown a picked saved reply puts in place of what was typed. */
+  takeSavedReply?: (reply: SavedReply) => string;
 }
 
 /*
@@ -82,13 +88,16 @@ export default function RichEditor({
   onBlur,
   onFiles,
   findMentions,
+  findSavedReplies,
+  takeSavedReply,
 }: RichEditorProps) {
-  const handlers = useRef({ onChange, onSubmit, onBlur, onFiles, findMentions });
-  handlers.current = { onChange, onSubmit, onBlur, onFiles, findMentions };
+  const handlers = useRef({ onChange, onSubmit, onBlur, onFiles, findMentions, findSavedReplies, takeSavedReply });
+  handlers.current = { onChange, onSubmit, onBlur, onFiles, findMentions, findSavedReplies, takeSavedReply };
   const linkRef = useRef<() => void>(() => undefined);
   const [linking, setLinking] = useState<string | null>(null);
   const [emoji, setEmoji] = useState<Suggested<Emoji> | null>(null);
   const [mention, setMention] = useState<Suggested<Mentionable> | null>(null);
+  const [saved, setSaved] = useState<Suggested<SavedReply> | null>(null);
 
   const editor = useEditor({
     extensions: composerExtensions(
@@ -112,6 +121,18 @@ export default function RichEditor({
             { type: "text", text: " " },
           ],
           onChange: setMention,
+        }),
+        suggestionExtension<SavedReply>({
+          name: "savedReplySuggestion",
+          char: "#",
+          minLength: 1,
+          find: (query) => handlers.current.findSavedReplies?.(query) ?? [],
+          content: () => "",
+          apply: (editor, range, reply) => {
+            const markdown = handlers.current.takeSavedReply?.(reply) ?? reply.body;
+            editor.chain().focus().insertContentAt(range, markdown, { contentType: "markdown" }).run();
+          },
+          onChange: setSaved,
         }),
       ],
     ),
@@ -176,6 +197,20 @@ export default function RichEditor({
               {item.detail ? <span className="ms-1.5 text-text-tertiary">{item.detail}</span> : null}
             </span>
             {item.warning ? <span className="text-body-2-regular text-text-error-primary">{item.warning}</span> : null}
+          </span>
+        )}
+      />
+      <SuggestionList
+        label="Saved replies"
+        suggested={saved}
+        keyOf={(item) => item.id}
+        render={(item) => (
+          <span className="flex min-w-0 flex-col">
+            <span className="truncate">
+              {item.title}
+              {item.shortcut ? <span className="ms-1.5 text-text-tertiary">#{item.shortcut}</span> : null}
+            </span>
+            <span className="truncate text-body-2-regular text-text-tertiary">{item.body}</span>
           </span>
         )}
       />

@@ -886,9 +886,9 @@ describe("core", () => {
     const warn = vi.spyOn(console, "warn").mockReturnValue(undefined);
     await started();
 
-    win.Dimmi?.("track", "signup");
+    win.Dimmi?.("startTour", 42);
 
-    expect(warn).toHaveBeenCalledWith(expect.stringContaining('[dimmi] unknown_command: Dimmi("track")'));
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining('[dimmi] unknown_command: Dimmi("startTour")'));
   });
 
   it("refuses to start without the loader", async () => {

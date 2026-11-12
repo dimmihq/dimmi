@@ -76,7 +76,7 @@ func (a *ListWidgetConversations) List(ctx context.Context, in ConversationQuery
 			})
 		}
 
-		out.Items, err = a.withLatest(ctx, q, in.Auth.Session.WorkspaceID, items)
+		out.Items, err = a.withLatest(ctx, q, in.Auth, items)
 
 		return err
 	})
@@ -105,7 +105,7 @@ func (a *ListWidgetConversations) Find(
 			return fmt.Errorf("find widget conversation: %w", err)
 		}
 
-		items, err := a.withLatest(ctx, q, auth.Session.WorkspaceID, []VisibleConversation{{
+		items, err := a.withLatest(ctx, q, auth, []VisibleConversation{{
 			Conversation: row.Conversation, ChannelType: row.ChannelType,
 			UnreadCount: row.UnreadCount,
 		}})
@@ -118,11 +118,15 @@ func (a *ListWidgetConversations) Find(
 }
 
 /*
-withLatest adds each conversation's latest visible message.
+withLatest adds each conversation's latest visible message, and when the
+team read up to the customer's latest one, unless the workspace keeps
+that from customers.
 */
 func (a *ListWidgetConversations) withLatest(
-	ctx context.Context, q *models.Queries, ws ids.UUID, items []VisibleConversation,
+	ctx context.Context, q *models.Queries, auth Authenticated, items []VisibleConversation,
 ) ([]VisibleConversation, error) {
+	ws := auth.Session.WorkspaceID
+
 	convIDs := make([]ids.UUID, 0, len(items))
 	for _, item := range items {
 		convIDs = append(convIDs, item.Conversation.ID)
@@ -147,6 +151,24 @@ func (a *ListWidgetConversations) withLatest(
 
 	for i := range items {
 		items[i].Last = byConversation[items[i].Conversation.ID]
+	}
+
+	if !auth.Resolved.Workspace.ShowsSeenReceipts() || len(convIDs) == 0 {
+		return items, nil
+	}
+
+	seen, err := q.WidgetSeenByTeam(ctx, models.WidgetSeenByTeamParams{WorkspaceID: ws, ConversationIds: convIDs})
+	if err != nil {
+		return nil, fmt.Errorf("list widget seen receipts: %w", err)
+	}
+
+	for _, row := range seen {
+		for i := range items {
+			if items[i].Conversation.ID == row.ConversationID {
+				at := row.SeenAt.UTC()
+				items[i].SeenAt = &at
+			}
+		}
 	}
 
 	return items, nil

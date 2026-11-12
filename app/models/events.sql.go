@@ -51,20 +51,22 @@ func (q *Queries) CountEventDefinition(ctx context.Context, arg CountEventDefini
 }
 
 const createEventDefinition = `-- name: CreateEventDefinition :one
-INSERT INTO event_definitions (id, workspace_id, name, label, description, origin, created_at, updated_at)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $7)
+INSERT INTO event_definitions (
+    id, workspace_id, name, label, description, origin, client_writable, created_at, updated_at
+) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $8)
 ON CONFLICT (workspace_id, name) DO NOTHING
-RETURNING id, workspace_id, name, label, description, origin, status, last_seen_at, total_count, created_at, updated_at
+RETURNING id, workspace_id, name, label, description, origin, status, last_seen_at, total_count, created_at, updated_at, client_writable
 `
 
 type CreateEventDefinitionParams struct {
-	ID          ids.UUID  `json:"id"`
-	WorkspaceID ids.UUID  `json:"workspace_id"`
-	Name        string    `json:"name"`
-	Label       string    `json:"label"`
-	Description *string   `json:"description"`
-	Origin      string    `json:"origin"`
-	Now         time.Time `json:"now"`
+	ID             ids.UUID  `json:"id"`
+	WorkspaceID    ids.UUID  `json:"workspace_id"`
+	Name           string    `json:"name"`
+	Label          string    `json:"label"`
+	Description    *string   `json:"description"`
+	Origin         string    `json:"origin"`
+	ClientWritable bool      `json:"client_writable"`
+	Now            time.Time `json:"now"`
 }
 
 // CreateEventDefinition stores a definition, leaving one that already
@@ -77,6 +79,7 @@ func (q *Queries) CreateEventDefinition(ctx context.Context, arg CreateEventDefi
 		arg.Label,
 		arg.Description,
 		arg.Origin,
+		arg.ClientWritable,
 		arg.Now,
 	)
 	var i EventDefinition
@@ -92,6 +95,7 @@ func (q *Queries) CreateEventDefinition(ctx context.Context, arg CreateEventDefi
 		&i.TotalCount,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.ClientWritable,
 	)
 	return i, err
 }
@@ -161,7 +165,7 @@ func (q *Queries) FindEventContactByEmail(ctx context.Context, arg FindEventCont
 }
 
 const findEventDefinition = `-- name: FindEventDefinition :one
-SELECT id, workspace_id, name, label, description, origin, status, last_seen_at, total_count, created_at, updated_at FROM event_definitions WHERE workspace_id = $1 AND id = $2
+SELECT id, workspace_id, name, label, description, origin, status, last_seen_at, total_count, created_at, updated_at, client_writable FROM event_definitions WHERE workspace_id = $1 AND id = $2
 `
 
 type FindEventDefinitionParams struct {
@@ -185,12 +189,13 @@ func (q *Queries) FindEventDefinition(ctx context.Context, arg FindEventDefiniti
 		&i.TotalCount,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.ClientWritable,
 	)
 	return i, err
 }
 
 const findEventDefinitionByName = `-- name: FindEventDefinitionByName :one
-SELECT id, workspace_id, name, label, description, origin, status, last_seen_at, total_count, created_at, updated_at FROM event_definitions WHERE workspace_id = $1 AND name = $2
+SELECT id, workspace_id, name, label, description, origin, status, last_seen_at, total_count, created_at, updated_at, client_writable FROM event_definitions WHERE workspace_id = $1 AND name = $2
 `
 
 type FindEventDefinitionByNameParams struct {
@@ -214,8 +219,23 @@ func (q *Queries) FindEventDefinitionByName(ctx context.Context, arg FindEventDe
 		&i.TotalCount,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.ClientWritable,
 	)
 	return i, err
+}
+
+const findMessengerNewEvents = `-- name: FindMessengerNewEvents :one
+SELECT coalesce((settings ->> 'messenger_new_events')::boolean, false)::boolean AS allowed
+FROM workspaces WHERE id = $1
+`
+
+// FindMessengerNewEvents reports whether the messenger may send event
+// names the workspace has not opened to it, defining new ones.
+func (q *Queries) FindMessengerNewEvents(ctx context.Context, workspaceID ids.UUID) (bool, error) {
+	row := q.db.QueryRow(ctx, findMessengerNewEvents, workspaceID)
+	var allowed bool
+	err := row.Scan(&allowed)
+	return allowed, err
 }
 
 const listContactEventSummaries = `-- name: ListContactEventSummaries :many
@@ -281,7 +301,7 @@ func (q *Queries) ListContactEventSummaries(ctx context.Context, arg ListContact
 }
 
 const listEventDefinitions = `-- name: ListEventDefinitions :many
-SELECT id, workspace_id, name, label, description, origin, status, last_seen_at, total_count, created_at, updated_at FROM event_definitions WHERE workspace_id = $1 ORDER BY name
+SELECT id, workspace_id, name, label, description, origin, status, last_seen_at, total_count, created_at, updated_at, client_writable FROM event_definitions WHERE workspace_id = $1 ORDER BY name
 `
 
 // ListEventDefinitions returns the workspace's event names.
@@ -306,6 +326,7 @@ func (q *Queries) ListEventDefinitions(ctx context.Context, workspaceID ids.UUID
 			&i.TotalCount,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.ClientWritable,
 		); err != nil {
 			return nil, err
 		}
@@ -390,27 +411,49 @@ func (q *Queries) SaveEventSummary(ctx context.Context, arg SaveEventSummaryPara
 	return err
 }
 
+const setMessengerNewEvents = `-- name: SetMessengerNewEvents :exec
+UPDATE workspaces SET settings = jsonb_set(settings, '{messenger_new_events}', to_jsonb($1::boolean)),
+    updated_at = $2
+WHERE id = $3
+`
+
+type SetMessengerNewEventsParams struct {
+	Allowed     bool      `json:"allowed"`
+	Now         time.Time `json:"now"`
+	WorkspaceID ids.UUID  `json:"workspace_id"`
+}
+
+// SetMessengerNewEvents turns the messenger's new event names on or off.
+func (q *Queries) SetMessengerNewEvents(ctx context.Context, arg SetMessengerNewEventsParams) error {
+	_, err := q.db.Exec(ctx, setMessengerNewEvents, arg.Allowed, arg.Now, arg.WorkspaceID)
+	return err
+}
+
 const updateEventDefinition = `-- name: UpdateEventDefinition :one
-UPDATE event_definitions SET label = $1, description = $2, status = $3, updated_at = $4
-WHERE workspace_id = $5 AND id = $6
-RETURNING id, workspace_id, name, label, description, origin, status, last_seen_at, total_count, created_at, updated_at
+UPDATE event_definitions SET label = $1, description = $2, status = $3,
+    client_writable = $4, updated_at = $5
+WHERE workspace_id = $6 AND id = $7
+RETURNING id, workspace_id, name, label, description, origin, status, last_seen_at, total_count, created_at, updated_at, client_writable
 `
 
 type UpdateEventDefinitionParams struct {
-	Label       string    `json:"label"`
-	Description *string   `json:"description"`
-	Status      string    `json:"status"`
-	Now         time.Time `json:"now"`
-	WorkspaceID ids.UUID  `json:"workspace_id"`
-	ID          ids.UUID  `json:"id"`
+	Label          string    `json:"label"`
+	Description    *string   `json:"description"`
+	Status         string    `json:"status"`
+	ClientWritable bool      `json:"client_writable"`
+	Now            time.Time `json:"now"`
+	WorkspaceID    ids.UUID  `json:"workspace_id"`
+	ID             ids.UUID  `json:"id"`
 }
 
-// UpdateEventDefinition changes a definition's words and status.
+// UpdateEventDefinition changes a definition's words, status and whether
+// the messenger may send it.
 func (q *Queries) UpdateEventDefinition(ctx context.Context, arg UpdateEventDefinitionParams) (EventDefinition, error) {
 	row := q.db.QueryRow(ctx, updateEventDefinition,
 		arg.Label,
 		arg.Description,
 		arg.Status,
+		arg.ClientWritable,
 		arg.Now,
 		arg.WorkspaceID,
 		arg.ID,
@@ -428,6 +471,7 @@ func (q *Queries) UpdateEventDefinition(ctx context.Context, arg UpdateEventDefi
 		&i.TotalCount,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.ClientWritable,
 	)
 	return i, err
 }

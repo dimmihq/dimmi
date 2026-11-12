@@ -143,7 +143,7 @@ func (b *Broadcasts) transition(
 		}
 
 		var err error
-		if out, err = b.move(ctx, tx, row, move{status: st.to, reason: st.why}); err != nil {
+		if out, err = b.move(ctx, tx, row, move{status: st.to, reason: st.why, actor: &m.Member.ID}); err != nil {
 			return err
 		}
 
@@ -176,13 +176,14 @@ func (b *Broadcasts) afterMove(ctx context.Context, tx *database.Tx, row models.
 }
 
 /*
-move is what changes with a status: the new status, who sent it and
-why it paused.
+move is what changes with a status: the new status, who sent it, why
+it paused and the teammate who moved it, nil for the system.
 */
 type move struct {
 	status string
 	by     *ids.UUID
 	reason string
+	actor  *ids.UUID
 }
 
 /*
@@ -212,6 +213,12 @@ func (b *Broadcasts) move(
 	out, err := models.New(tx).SetBroadcastStatus(ctx, params)
 	if err != nil {
 		return out, wrap("move broadcast", err)
+	}
+
+	if out.Status != row.Status {
+		if err := b.milestone(ctx, tx, out, mv.actor); err != nil {
+			return out, err
+		}
 	}
 
 	return out, b.changed(ctx, tx, out)

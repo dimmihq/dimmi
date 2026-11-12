@@ -65,6 +65,7 @@ func newInboxControllers(a *app.App) inboxControllers {
 		},
 		messages: &v1.ConversationMessageController{
 			List: acts.ListMessages, Reply: acts.Reply, Note: acts.AddNote, Relay: acts.AddContactMessage,
+			Import: acts.ImportMessage,
 			Delete: acts.DeleteMessage, Edit: acts.EditNote, Original: acts.ShowOriginal, Raw: acts.DownloadOriginal,
 			Resend: acts.RetryDelivery, IDs: a.IDs, Cursors: cursors,
 		},
@@ -107,6 +108,7 @@ func inboxRoutes(r *routing.Router, a *app.App) {
 	routing.Patch(r, "/contacts/{contact}", "contacts.update", c.contacts.Update).Ability("contacts:write")
 
 	conversationRoutes(r, c)
+	mergeRoutes(r, a, c)
 
 	routing.Get(r, "/conversation-counts", "conversation-counts.index", c.views.CountIndex).
 		Ability("conversations:read")

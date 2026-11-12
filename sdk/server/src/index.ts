@@ -6,11 +6,17 @@
  * DIMMI_IDENTITY_SECRET, or a private key from DIMMI_IDENTITY_PRIVATE_KEY
  * with its key id in DIMMI_IDENTITY_KID, and never reaches a browser.
  */
-import { type IdentityUser, toClaims } from "./claims";
-import { type Algorithm, privateKey, type SigningKey, secretKey, sign } from "./sign";
+import { type IdentityUser, toClaims } from "./claims.js";
+import { type Algorithm, privateKey, type SigningKey, secretKey, sign } from "./sign.js";
 
-export { type AttributeValue, DimmiIdentityError, type IdentityCompany, type IdentityUser, toClaims } from "./claims";
-export type { Algorithm } from "./sign";
+export {
+  type AttributeValue,
+  DimmiIdentityError,
+  type IdentityCompany,
+  type IdentityUser,
+  toClaims,
+} from "./claims.js";
+export type { Algorithm } from "./sign.js";
 
 export interface IdentityOptions {
   /* The shared secret, dmi_idsec_..., as shown once in dimmi. */

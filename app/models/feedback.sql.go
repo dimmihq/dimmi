@@ -49,12 +49,14 @@ SELECT (CASE WHEN moderation = 'approved' THEN status ELSE moderation END)::text
 FROM feedback_posts
 WHERE workspace_id = $1 AND help_center_id = $2 AND deleted_at IS NULL
   AND merged_into_id IS NULL
+  AND ($3::uuid IS NULL OR board_id = $3::uuid)
 GROUP BY 1
 `
 
 type CountFeedbackByStatusParams struct {
-	WorkspaceID  ids.UUID `json:"workspace_id"`
-	HelpCenterID ids.UUID `json:"help_center_id"`
+	WorkspaceID  ids.UUID  `json:"workspace_id"`
+	HelpCenterID ids.UUID  `json:"help_center_id"`
+	BoardID      *ids.UUID `json:"board_id"`
 }
 
 type CountFeedbackByStatusRow struct {
@@ -63,9 +65,10 @@ type CountFeedbackByStatusRow struct {
 }
 
 // CountFeedbackByStatus counts a help center's approved posts in each
-// status, and the ones waiting for approval under 'pending'.
+// status, and the ones waiting for approval under 'pending', on one
+// board when given.
 func (q *Queries) CountFeedbackByStatus(ctx context.Context, arg CountFeedbackByStatusParams) ([]CountFeedbackByStatusRow, error) {
-	rows, err := q.db.Query(ctx, countFeedbackByStatus, arg.WorkspaceID, arg.HelpCenterID)
+	rows, err := q.db.Query(ctx, countFeedbackByStatus, arg.WorkspaceID, arg.HelpCenterID, arg.BoardID)
 	if err != nil {
 		return nil, err
 	}
@@ -88,17 +91,21 @@ const countFeedbackPosts = `-- name: CountFeedbackPosts :one
 SELECT count(*) FROM feedback_posts
 WHERE workspace_id = $1 AND help_center_id = $2 AND deleted_at IS NULL
   AND merged_into_id IS NULL
-  AND ($3::text IS NULL OR status = $3::text)
-  AND ($4::text IS NULL OR moderation = $4::text)
-  AND ($5::text IS NULL OR title_trgm LIKE '%' || lower(dimmi_unaccent($5::text)) || '%')
+  AND ($3::uuid IS NULL OR board_id = $3::uuid)
+  AND ($4::uuid[] IS NULL OR board_id = ANY($4::uuid[]))
+  AND ($5::text IS NULL OR status = $5::text)
+  AND ($6::text IS NULL OR moderation = $6::text)
+  AND ($7::text IS NULL OR title_trgm LIKE '%' || lower(dimmi_unaccent($7::text)) || '%')
 `
 
 type CountFeedbackPostsParams struct {
-	WorkspaceID  ids.UUID `json:"workspace_id"`
-	HelpCenterID ids.UUID `json:"help_center_id"`
-	Status       *string  `json:"status"`
-	Moderation   *string  `json:"moderation"`
-	Query        *string  `json:"query"`
+	WorkspaceID  ids.UUID   `json:"workspace_id"`
+	HelpCenterID ids.UUID   `json:"help_center_id"`
+	BoardID      *ids.UUID  `json:"board_id"`
+	BoardIds     []ids.UUID `json:"board_ids"`
+	Status       *string    `json:"status"`
+	Moderation   *string    `json:"moderation"`
+	Query        *string    `json:"query"`
 }
 
 // CountFeedbackPosts counts what ListFeedbackPosts would list.
@@ -106,6 +113,8 @@ func (q *Queries) CountFeedbackPosts(ctx context.Context, arg CountFeedbackPosts
 	row := q.db.QueryRow(ctx, countFeedbackPosts,
 		arg.WorkspaceID,
 		arg.HelpCenterID,
+		arg.BoardID,
+		arg.BoardIds,
 		arg.Status,
 		arg.Moderation,
 		arg.Query,
@@ -163,18 +172,19 @@ func (q *Queries) CreateFeedbackComment(ctx context.Context, arg CreateFeedbackC
 
 const createFeedbackPost = `-- name: CreateFeedbackPost :one
 INSERT INTO feedback_posts (
-    workspace_id, help_center_id, number, title, slug, body_markdown, status, moderation,
+    workspace_id, help_center_id, board_id, number, title, slug, body_markdown, status, moderation,
     author_contact_id, author_member_id, created_at, updated_at
 ) VALUES (
-    $1, $2, $3, $4, $5, $6, $7, $8,
-    $9, $10, $11, $11
+    $1, $2, $3, $4, $5, $6, $7, $8, $9,
+    $10, $11, $12, $12
 )
-RETURNING id, workspace_id, help_center_id, number, title, slug, body_markdown, status, moderation, author_contact_id, author_member_id, vote_count, comment_count, trending_log, merged_into_id, changelog_entry_id, status_changed_at, deleted_at, created_at, updated_at, title_trgm
+RETURNING id, workspace_id, help_center_id, number, title, slug, body_markdown, status, moderation, author_contact_id, author_member_id, vote_count, comment_count, trending_log, merged_into_id, changelog_entry_id, status_changed_at, deleted_at, created_at, updated_at, title_trgm, board_id
 `
 
 type CreateFeedbackPostParams struct {
 	WorkspaceID     ids.UUID  `json:"workspace_id"`
 	HelpCenterID    ids.UUID  `json:"help_center_id"`
+	BoardID         *ids.UUID `json:"board_id"`
 	Number          int32     `json:"number"`
 	Title           string    `json:"title"`
 	Slug            string    `json:"slug"`
@@ -191,6 +201,7 @@ func (q *Queries) CreateFeedbackPost(ctx context.Context, arg CreateFeedbackPost
 	row := q.db.QueryRow(ctx, createFeedbackPost,
 		arg.WorkspaceID,
 		arg.HelpCenterID,
+		arg.BoardID,
 		arg.Number,
 		arg.Title,
 		arg.Slug,
@@ -224,6 +235,7 @@ func (q *Queries) CreateFeedbackPost(ctx context.Context, arg CreateFeedbackPost
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.TitleTrgm,
+		&i.BoardID,
 	)
 	return i, err
 }
@@ -331,7 +343,7 @@ func (q *Queries) FindFeedbackComment(ctx context.Context, arg FindFeedbackComme
 }
 
 const findFeedbackPost = `-- name: FindFeedbackPost :one
-SELECT id, workspace_id, help_center_id, number, title, slug, body_markdown, status, moderation, author_contact_id, author_member_id, vote_count, comment_count, trending_log, merged_into_id, changelog_entry_id, status_changed_at, deleted_at, created_at, updated_at, title_trgm FROM feedback_posts WHERE workspace_id = $1 AND id = $2 AND deleted_at IS NULL
+SELECT id, workspace_id, help_center_id, number, title, slug, body_markdown, status, moderation, author_contact_id, author_member_id, vote_count, comment_count, trending_log, merged_into_id, changelog_entry_id, status_changed_at, deleted_at, created_at, updated_at, title_trgm, board_id FROM feedback_posts WHERE workspace_id = $1 AND id = $2 AND deleted_at IS NULL
 `
 
 type FindFeedbackPostParams struct {
@@ -365,12 +377,13 @@ func (q *Queries) FindFeedbackPost(ctx context.Context, arg FindFeedbackPostPara
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.TitleTrgm,
+		&i.BoardID,
 	)
 	return i, err
 }
 
 const findFeedbackPostByNumber = `-- name: FindFeedbackPostByNumber :one
-SELECT id, workspace_id, help_center_id, number, title, slug, body_markdown, status, moderation, author_contact_id, author_member_id, vote_count, comment_count, trending_log, merged_into_id, changelog_entry_id, status_changed_at, deleted_at, created_at, updated_at, title_trgm FROM feedback_posts
+SELECT id, workspace_id, help_center_id, number, title, slug, body_markdown, status, moderation, author_contact_id, author_member_id, vote_count, comment_count, trending_log, merged_into_id, changelog_entry_id, status_changed_at, deleted_at, created_at, updated_at, title_trgm, board_id FROM feedback_posts
 WHERE workspace_id = $1 AND help_center_id = $2 AND number = $3 AND deleted_at IS NULL
 `
 
@@ -406,6 +419,7 @@ func (q *Queries) FindFeedbackPostByNumber(ctx context.Context, arg FindFeedback
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.TitleTrgm,
+		&i.BoardID,
 	)
 	return i, err
 }
@@ -474,37 +488,44 @@ func (q *Queries) ListFeedbackComments(ctx context.Context, arg ListFeedbackComm
 }
 
 const listFeedbackPosts = `-- name: ListFeedbackPosts :many
-SELECT id, workspace_id, help_center_id, number, title, slug, body_markdown, status, moderation, author_contact_id, author_member_id, vote_count, comment_count, trending_log, merged_into_id, changelog_entry_id, status_changed_at, deleted_at, created_at, updated_at, title_trgm FROM feedback_posts
+SELECT id, workspace_id, help_center_id, number, title, slug, body_markdown, status, moderation, author_contact_id, author_member_id, vote_count, comment_count, trending_log, merged_into_id, changelog_entry_id, status_changed_at, deleted_at, created_at, updated_at, title_trgm, board_id FROM feedback_posts
 WHERE workspace_id = $1 AND help_center_id = $2 AND deleted_at IS NULL
   AND merged_into_id IS NULL
-  AND ($3::text IS NULL OR status = $3::text)
-  AND ($4::text IS NULL OR moderation = $4::text)
-  AND ($5::text IS NULL OR title_trgm LIKE '%' || lower(dimmi_unaccent($5::text)) || '%')
+  AND ($3::uuid IS NULL OR board_id = $3::uuid)
+  AND ($4::uuid[] IS NULL OR board_id = ANY($4::uuid[]))
+  AND ($5::text IS NULL OR status = $5::text)
+  AND ($6::text IS NULL OR moderation = $6::text)
+  AND ($7::text IS NULL OR title_trgm LIKE '%' || lower(dimmi_unaccent($7::text)) || '%')
 ORDER BY
-    CASE WHEN $6::text = 'top' THEN vote_count END DESC,
-    CASE WHEN $6::text = 'trending' THEN coalesce(trending_log, -1e9) END DESC,
+    CASE WHEN $8::text = 'top' THEN vote_count END DESC,
+    CASE WHEN $8::text = 'trending' THEN coalesce(trending_log, -1e9) END DESC,
     created_at DESC, id DESC
-LIMIT $8 OFFSET $7
+LIMIT $10 OFFSET $9
 `
 
 type ListFeedbackPostsParams struct {
-	WorkspaceID  ids.UUID `json:"workspace_id"`
-	HelpCenterID ids.UUID `json:"help_center_id"`
-	Status       *string  `json:"status"`
-	Moderation   *string  `json:"moderation"`
-	Query        *string  `json:"query"`
-	Sort         string   `json:"sort"`
-	RowOffset    int32    `json:"row_offset"`
-	RowLimit     int32    `json:"row_limit"`
+	WorkspaceID  ids.UUID   `json:"workspace_id"`
+	HelpCenterID ids.UUID   `json:"help_center_id"`
+	BoardID      *ids.UUID  `json:"board_id"`
+	BoardIds     []ids.UUID `json:"board_ids"`
+	Status       *string    `json:"status"`
+	Moderation   *string    `json:"moderation"`
+	Query        *string    `json:"query"`
+	Sort         string     `json:"sort"`
+	RowOffset    int32      `json:"row_offset"`
+	RowLimit     int32      `json:"row_limit"`
 }
 
 // ListFeedbackPosts returns a page of a help center's posts that were
-// not merged away, narrowed by status, moderation and title when given,
+// not merged away, narrowed by board, the boards a reader may see,
+// status, moderation and title when given,
 // in the order asked for: trending, top or new.
 func (q *Queries) ListFeedbackPosts(ctx context.Context, arg ListFeedbackPostsParams) ([]FeedbackPost, error) {
 	rows, err := q.db.Query(ctx, listFeedbackPosts,
 		arg.WorkspaceID,
 		arg.HelpCenterID,
+		arg.BoardID,
+		arg.BoardIds,
 		arg.Status,
 		arg.Moderation,
 		arg.Query,
@@ -541,6 +562,7 @@ func (q *Queries) ListFeedbackPosts(ctx context.Context, arg ListFeedbackPostsPa
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.TitleTrgm,
+			&i.BoardID,
 		); err != nil {
 			return nil, err
 		}
@@ -556,6 +578,8 @@ const listFeedbackRecipients = `-- name: ListFeedbackRecipients :many
 SELECT DISTINCT c.id, c.email, c.name FROM contacts c
 WHERE c.workspace_id = $1 AND c.email IS NOT NULL AND (
     c.id IN (SELECT fv.contact_id FROM feedback_votes fv WHERE fv.workspace_id = $1 AND fv.post_id = $2)
+    OR c.id IN (SELECT fl.contact_id FROM feedback_post_conversations fl
+        WHERE fl.workspace_id = $1 AND fl.post_id = $2)
     OR c.id = (SELECT fp.author_contact_id FROM feedback_posts fp WHERE fp.workspace_id = $1 AND fp.id = $2)
 )
 `
@@ -572,7 +596,8 @@ type ListFeedbackRecipientsRow struct {
 }
 
 // ListFeedbackRecipients returns the addresses to tell about a post: its
-// voters and its author, once each.
+// voters, its author and the customers of its linked conversations, once
+// each.
 func (q *Queries) ListFeedbackRecipients(ctx context.Context, arg ListFeedbackRecipientsParams) ([]ListFeedbackRecipientsRow, error) {
 	rows, err := q.db.Query(ctx, listFeedbackRecipients, arg.WorkspaceID, arg.PostID)
 	if err != nil {
@@ -684,7 +709,7 @@ func (q *Queries) ListVotedFeedbackPosts(ctx context.Context, arg ListVotedFeedb
 }
 
 const lockFeedbackPost = `-- name: LockFeedbackPost :one
-SELECT id, workspace_id, help_center_id, number, title, slug, body_markdown, status, moderation, author_contact_id, author_member_id, vote_count, comment_count, trending_log, merged_into_id, changelog_entry_id, status_changed_at, deleted_at, created_at, updated_at, title_trgm FROM feedback_posts WHERE workspace_id = $1 AND id = $2 AND deleted_at IS NULL FOR UPDATE
+SELECT id, workspace_id, help_center_id, number, title, slug, body_markdown, status, moderation, author_contact_id, author_member_id, vote_count, comment_count, trending_log, merged_into_id, changelog_entry_id, status_changed_at, deleted_at, created_at, updated_at, title_trgm, board_id FROM feedback_posts WHERE workspace_id = $1 AND id = $2 AND deleted_at IS NULL FOR UPDATE
 `
 
 type LockFeedbackPostParams struct {
@@ -719,6 +744,7 @@ func (q *Queries) LockFeedbackPost(ctx context.Context, arg LockFeedbackPostPara
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.TitleTrgm,
+		&i.BoardID,
 	)
 	return i, err
 }
@@ -726,7 +752,7 @@ func (q *Queries) LockFeedbackPost(ctx context.Context, arg LockFeedbackPostPara
 const mergeFeedbackPost = `-- name: MergeFeedbackPost :one
 UPDATE feedback_posts SET merged_into_id = $1, updated_at = $2
 WHERE workspace_id = $3 AND id = $4 AND deleted_at IS NULL
-RETURNING id, workspace_id, help_center_id, number, title, slug, body_markdown, status, moderation, author_contact_id, author_member_id, vote_count, comment_count, trending_log, merged_into_id, changelog_entry_id, status_changed_at, deleted_at, created_at, updated_at, title_trgm
+RETURNING id, workspace_id, help_center_id, number, title, slug, body_markdown, status, moderation, author_contact_id, author_member_id, vote_count, comment_count, trending_log, merged_into_id, changelog_entry_id, status_changed_at, deleted_at, created_at, updated_at, title_trgm, board_id
 `
 
 type MergeFeedbackPostParams struct {
@@ -767,6 +793,7 @@ func (q *Queries) MergeFeedbackPost(ctx context.Context, arg MergeFeedbackPostPa
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.TitleTrgm,
+		&i.BoardID,
 	)
 	return i, err
 }
@@ -840,7 +867,7 @@ FROM (
     ) w
 ) v
 WHERE p.workspace_id = $1 AND p.id = $2
-RETURNING p.id, p.workspace_id, p.help_center_id, p.number, p.title, p.slug, p.body_markdown, p.status, p.moderation, p.author_contact_id, p.author_member_id, p.vote_count, p.comment_count, p.trending_log, p.merged_into_id, p.changelog_entry_id, p.status_changed_at, p.deleted_at, p.created_at, p.updated_at, p.title_trgm
+RETURNING p.id, p.workspace_id, p.help_center_id, p.number, p.title, p.slug, p.body_markdown, p.status, p.moderation, p.author_contact_id, p.author_member_id, p.vote_count, p.comment_count, p.trending_log, p.merged_into_id, p.changelog_entry_id, p.status_changed_at, p.deleted_at, p.created_at, p.updated_at, p.title_trgm, p.board_id
 `
 
 type RecountFeedbackPostParams struct {
@@ -876,6 +903,7 @@ func (q *Queries) RecountFeedbackPost(ctx context.Context, arg RecountFeedbackPo
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.TitleTrgm,
+		&i.BoardID,
 	)
 	return i, err
 }
@@ -902,7 +930,7 @@ func (q *Queries) RemoveFeedbackVote(ctx context.Context, arg RemoveFeedbackVote
 const setFeedbackModeration = `-- name: SetFeedbackModeration :one
 UPDATE feedback_posts SET moderation = $1, updated_at = $2
 WHERE workspace_id = $3 AND id = $4 AND deleted_at IS NULL
-RETURNING id, workspace_id, help_center_id, number, title, slug, body_markdown, status, moderation, author_contact_id, author_member_id, vote_count, comment_count, trending_log, merged_into_id, changelog_entry_id, status_changed_at, deleted_at, created_at, updated_at, title_trgm
+RETURNING id, workspace_id, help_center_id, number, title, slug, body_markdown, status, moderation, author_contact_id, author_member_id, vote_count, comment_count, trending_log, merged_into_id, changelog_entry_id, status_changed_at, deleted_at, created_at, updated_at, title_trgm, board_id
 `
 
 type SetFeedbackModerationParams struct {
@@ -943,6 +971,7 @@ func (q *Queries) SetFeedbackModeration(ctx context.Context, arg SetFeedbackMode
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.TitleTrgm,
+		&i.BoardID,
 	)
 	return i, err
 }
@@ -951,7 +980,7 @@ const setFeedbackStatus = `-- name: SetFeedbackStatus :one
 UPDATE feedback_posts SET status = $1, changelog_entry_id = $2, status_changed_at = $3,
     updated_at = $3
 WHERE workspace_id = $4 AND id = $5 AND deleted_at IS NULL
-RETURNING id, workspace_id, help_center_id, number, title, slug, body_markdown, status, moderation, author_contact_id, author_member_id, vote_count, comment_count, trending_log, merged_into_id, changelog_entry_id, status_changed_at, deleted_at, created_at, updated_at, title_trgm
+RETURNING id, workspace_id, help_center_id, number, title, slug, body_markdown, status, moderation, author_contact_id, author_member_id, vote_count, comment_count, trending_log, merged_into_id, changelog_entry_id, status_changed_at, deleted_at, created_at, updated_at, title_trgm, board_id
 `
 
 type SetFeedbackStatusParams struct {
@@ -995,29 +1024,37 @@ func (q *Queries) SetFeedbackStatus(ctx context.Context, arg SetFeedbackStatusPa
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.TitleTrgm,
+		&i.BoardID,
 	)
 	return i, err
 }
 
 const similarFeedbackPosts = `-- name: SimilarFeedbackPosts :many
-SELECT id, workspace_id, help_center_id, number, title, slug, body_markdown, status, moderation, author_contact_id, author_member_id, vote_count, comment_count, trending_log, merged_into_id, changelog_entry_id, status_changed_at, deleted_at, created_at, updated_at, title_trgm FROM feedback_posts
+SELECT id, workspace_id, help_center_id, number, title, slug, body_markdown, status, moderation, author_contact_id, author_member_id, vote_count, comment_count, trending_log, merged_into_id, changelog_entry_id, status_changed_at, deleted_at, created_at, updated_at, title_trgm, board_id FROM feedback_posts
 WHERE workspace_id = $1 AND help_center_id = $2 AND deleted_at IS NULL
   AND merged_into_id IS NULL AND moderation = 'approved'
-  AND similarity(title_trgm, lower(dimmi_unaccent($3::text))) > 0.25
-ORDER BY similarity(title_trgm, lower(dimmi_unaccent($3::text))) DESC
+  AND ($3::uuid[] IS NULL OR board_id = ANY($3::uuid[]))
+  AND similarity(title_trgm, lower(dimmi_unaccent($4::text))) > 0.25
+ORDER BY similarity(title_trgm, lower(dimmi_unaccent($4::text))) DESC
 LIMIT 5
 `
 
 type SimilarFeedbackPostsParams struct {
-	WorkspaceID  ids.UUID `json:"workspace_id"`
-	HelpCenterID ids.UUID `json:"help_center_id"`
-	Query        string   `json:"query"`
+	WorkspaceID  ids.UUID   `json:"workspace_id"`
+	HelpCenterID ids.UUID   `json:"help_center_id"`
+	BoardIds     []ids.UUID `json:"board_ids"`
+	Query        string     `json:"query"`
 }
 
 // SimilarFeedbackPosts finds approved posts whose titles look like the
-// text, closest first.
+// text, closest first, on the boards given when there are any.
 func (q *Queries) SimilarFeedbackPosts(ctx context.Context, arg SimilarFeedbackPostsParams) ([]FeedbackPost, error) {
-	rows, err := q.db.Query(ctx, similarFeedbackPosts, arg.WorkspaceID, arg.HelpCenterID, arg.Query)
+	rows, err := q.db.Query(ctx, similarFeedbackPosts,
+		arg.WorkspaceID,
+		arg.HelpCenterID,
+		arg.BoardIds,
+		arg.Query,
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -1047,6 +1084,7 @@ func (q *Queries) SimilarFeedbackPosts(ctx context.Context, arg SimilarFeedbackP
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.TitleTrgm,
+			&i.BoardID,
 		); err != nil {
 			return nil, err
 		}
@@ -1061,7 +1099,7 @@ func (q *Queries) SimilarFeedbackPosts(ctx context.Context, arg SimilarFeedbackP
 const updateFeedbackPost = `-- name: UpdateFeedbackPost :one
 UPDATE feedback_posts SET title = $1, slug = $2, body_markdown = $3, updated_at = $4
 WHERE workspace_id = $5 AND id = $6 AND deleted_at IS NULL
-RETURNING id, workspace_id, help_center_id, number, title, slug, body_markdown, status, moderation, author_contact_id, author_member_id, vote_count, comment_count, trending_log, merged_into_id, changelog_entry_id, status_changed_at, deleted_at, created_at, updated_at, title_trgm
+RETURNING id, workspace_id, help_center_id, number, title, slug, body_markdown, status, moderation, author_contact_id, author_member_id, vote_count, comment_count, trending_log, merged_into_id, changelog_entry_id, status_changed_at, deleted_at, created_at, updated_at, title_trgm, board_id
 `
 
 type UpdateFeedbackPostParams struct {
@@ -1106,6 +1144,7 @@ func (q *Queries) UpdateFeedbackPost(ctx context.Context, arg UpdateFeedbackPost
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.TitleTrgm,
+		&i.BoardID,
 	)
 	return i, err
 }

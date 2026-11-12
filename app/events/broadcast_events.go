@@ -54,3 +54,37 @@ EventName names the event.
 func (BroadcastRecipientChanged) EventName() string {
 	return "broadcast.recipient_changed"
 }
+
+/*
+BroadcastSent is dispatched in the transaction that marked a broadcast
+sent, once every recipient was handed out.
+*/
+type BroadcastSent struct {
+	Base
+	BroadcastID ids.UUID
+}
+
+/*
+EventName names the event.
+*/
+func (BroadcastSent) EventName() string {
+	return "broadcast.sent"
+}
+
+/*
+BroadcastPaused is dispatched in the transaction that paused a sending
+broadcast. Reason says why: a teammate paused it, or too many bounces
+or complaints.
+*/
+type BroadcastPaused struct {
+	Base
+	BroadcastID ids.UUID
+	Reason      string
+}
+
+/*
+EventName names the event.
+*/
+func (BroadcastPaused) EventName() string {
+	return "broadcast.paused"
+}

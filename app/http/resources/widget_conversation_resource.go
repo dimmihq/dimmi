@@ -87,7 +87,9 @@ type WidgetLastMessage struct {
 }
 
 /*
-WidgetConversation is a conversation as a visitor sees it.
+WidgetConversation is a conversation as a visitor sees it. SeenByTeamAt
+is when a teammate last read it up to the customer's latest message,
+left out when nobody has or the workspace keeps it from customers.
 */
 type WidgetConversation struct {
 	ID             string             `json:"id"`
@@ -103,6 +105,7 @@ type WidgetConversation struct {
 	Imported       bool               `json:"imported,omitempty"`
 	CreatedAt      time.Time          `json:"created_at"`
 	LastMessageAt  *time.Time         `json:"last_message_at"`
+	SeenByTeamAt   *time.Time         `json:"seen_by_team_at,omitempty"`
 }
 
 /*
@@ -121,6 +124,7 @@ func NewWidgetConversation(v widget.VisibleConversation) WidgetConversation {
 		Status: status, Subject: c.Subject, UnreadCount: v.UnreadCount, AIState: c.AiState,
 		CustomerStatus: CustomerStatus(c, v.Last), WidgetID: SourceWidgetID(c.Source),
 		Imported: v.ChannelType == "import", CreatedAt: c.CreatedAt.UTC(), LastMessageAt: c.LastMessageAt,
+		SeenByTeamAt: v.SeenAt,
 	}
 
 	if v.Last != nil {

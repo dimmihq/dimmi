@@ -23,7 +23,12 @@ describe("triggers", () => {
 
   it("leaves out triggers that do not run yet", () => {
     expect(triggersIn("during", "rates")).toEqual([]);
-    expect(triggersIn("dimmi")).toEqual([]);
+    expect(triggersIn("sla")).toEqual([]);
+  });
+
+  it("offers dimmi's triggers and reusable workflows", () => {
+    expect(triggersIn("dimmi").sort()).toEqual(["dimmi.handed_over", "dimmi.resolved"]);
+    expect(triggersIn("reuse")).toEqual(["reusable"]);
   });
 
   it("colours a trigger's mark by its group", () => {

@@ -51,7 +51,9 @@ const WebhookWildcard = "*"
 WebhookCatalog returns every subscribable event, grouped by area.
 */
 func WebhookCatalog() []WebhookEventType {
-	return slices.Concat(conversationWebhooks(), messageWebhooks(), contactWebhooks(), otherWebhooks())
+	return slices.Concat(
+		conversationWebhooks(), messageWebhooks(), contactWebhooks(), otherWebhooks(), engagementWebhooks(),
+	)
 }
 
 /*
@@ -70,6 +72,7 @@ func conversationWebhooks() []WebhookEventType {
 		c("updated", "A conversation's subject or inbox changed."),
 		c("assigned", "A conversation's assignee or team changed."),
 		c("closed", "A conversation was closed."),
+		c("rated", "A customer rated a closed conversation or changed their rating."),
 		c("reopened", "A closed conversation opened again."),
 		c("snoozed", "A conversation was snoozed."),
 		c("unsnoozed", "A snooze ended."),
@@ -112,6 +115,10 @@ func contactWebhooks() []WebhookEventType {
 		{Type: "contact.created", Object: "contact", Group: "Contacts", Description: "A contact was added."},
 		{Type: "contact.updated", Object: "contact", Group: "Contacts", Description: "A contact's details changed."},
 		{Type: "contact.deleted", Object: "contact", Group: "Contacts", Description: "A contact was erased."},
+		{
+			Type: "contact.merged", Object: "contact", Group: "Contacts",
+			Description: "Another contact was merged into this one.",
+		},
 		{
 			Type: "contact_event.tracked", Object: "contact_event", Group: "Contacts", NamedOnly: true,
 			Description: "Your app tracked an event for a contact. Only sent when named.",

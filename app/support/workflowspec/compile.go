@@ -36,12 +36,13 @@ const (
 References lists the public ids a definition acts on, by kind.
 */
 type References struct {
-	Teams     []string `json:"teams,omitempty"`
-	Members   []string `json:"members,omitempty"`
-	Tags      []string `json:"tags,omitempty"`
-	Schedules []string `json:"schedules,omitempty"`
-	Workflows []string `json:"workflows,omitempty"`
-	Audiences []string `json:"audiences,omitempty"`
+	Teams       []string `json:"teams,omitempty"`
+	Members     []string `json:"members,omitempty"`
+	Tags        []string `json:"tags,omitempty"`
+	Schedules   []string `json:"schedules,omitempty"`
+	Workflows   []string `json:"workflows,omitempty"`
+	Audiences   []string `json:"audiences,omitempty"`
+	Connections []string `json:"connections,omitempty"`
 }
 
 /*
@@ -143,6 +144,7 @@ func collectReferences(s Step, r *References) {
 		TagIDs           []string   `json:"tag_ids"`
 		ScheduleID       string     `json:"schedule_id"`
 		WorkflowID       string     `json:"workflow_id"`
+		ConnectionID     string     `json:"connection_id"`
 		MentionMemberIDs []string   `json:"mention_member_ids"`
 		Until            *WaitUntil `json:"until"`
 	}
@@ -156,6 +158,7 @@ func collectReferences(s Step, r *References) {
 	r.Tags = appendUnique(r.Tags, refs.TagIDs...)
 	r.Schedules = appendUnique(r.Schedules, refs.ScheduleID)
 	r.Workflows = appendUnique(r.Workflows, refs.WorkflowID)
+	r.Connections = appendUnique(r.Connections, refs.ConnectionID)
 
 	if refs.Until != nil {
 		r.Schedules = appendUnique(r.Schedules, refs.Until.ScheduleID)

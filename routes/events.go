@@ -4,8 +4,8 @@
 |--------------------------------------------------------------------------
 |
 | The API of events. Recording them takes the contacts:write ability,
-| reading names and summaries contacts:read, and changing a name
-| attributes:write.
+| reading names, summaries and settings contacts:read, and changing a
+| name or the settings attributes:write.
 |
 */
 
@@ -33,6 +33,9 @@ func eventRoutes(workspace *routing.Router, a *app.App) {
 		Ability("contacts:write").Status(fhttp.StatusOK)
 	routing.Get(workspace, "/event-definitions", "event-definitions.index", ec.Index).Ability("contacts:read")
 	routing.Patch(workspace, "/event-definitions/{event}", "event-definitions.update", ec.Update).
+		Ability("attributes:write")
+	routing.Get(workspace, "/event-settings", "event-settings.show", ec.Settings).Ability("contacts:read")
+	routing.Patch(workspace, "/event-settings", "event-settings.update", ec.UpdateSettings).
 		Ability("attributes:write")
 	routing.Get(workspace, "/contacts/{contact}/event-summaries", "contacts.event-summaries.index", ec.Summaries).
 		Ability("contacts:read")

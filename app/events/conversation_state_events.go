@@ -42,13 +42,15 @@ func (ConversationAssigned) EventName() string { return "conversation.assigned" 
 /*
 ConversationClosed is dispatched when a conversation is closed. Reason
 is empty when a teammate closed it, else why it closed, such as
-contact_solved.
+contact_solved. AskRating is true when a workflow's close step asks the
+customer for a rating whatever the workspace's settings say.
 */
 type ConversationClosed struct {
 	Base
 	ConversationRef
 
-	Reason string
+	Reason    string
+	AskRating bool
 }
 
 /*

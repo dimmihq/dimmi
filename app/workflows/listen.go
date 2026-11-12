@@ -60,6 +60,8 @@ func (e *Engine) Listen(d *events.Dispatcher) {
 	events.ListenQueued(d, func(ev appevents.ConversationAssigned) queue.Args {
 		return queuedChange(ev.Base, ev.ConversationID, workflowspec.TriggerAssignmentChanged, assignmentData(ev))
 	})
+	events.ListenQueued(d, rated)
+	events.ListenQueued(d, agentHandedOver)
 	e.listenStatus(d)
 }
 
@@ -253,4 +255,33 @@ func armQuiet(ev appevents.MessageCreated) queue.Args {
 	}
 
 	return args
+}
+
+/*
+rated matches a customer's first answer to a rating ask; changing the
+score or adding a comment later starts nothing new.
+*/
+func rated(ev appevents.ConversationRated) queue.Args {
+	if !ev.First {
+		return nil
+	}
+
+	return queuedChange(ev.Base, ev.ConversationID, workflowspec.TriggerRated, map[string]any{"rating.score": ev.Score})
+}
+
+/*
+agentHandedOver matches the agent handing a conversation to the team.
+The agent made this change, so it is matched even though changes the
+agent makes start nothing else.
+*/
+func agentHandedOver(ev appevents.AiHandoffRequested) queue.Args {
+	raw, err := json.Marshal(Event{
+		WorkspaceID: ev.WorkspaceID, ConversationID: ev.ConversationID, Trigger: workflowspec.TriggerDimmiHandedOver,
+		EventID: ev.ID.String(), Chain: ev.WorkflowChain, Data: map[string]any{"dimmi.handover_reason": ev.Reason},
+	})
+	if err != nil {
+		return nil
+	}
+
+	return jobs.MatchWorkflowsArgs{Event: raw}
 }

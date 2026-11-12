@@ -21,6 +21,7 @@ export interface Workspace {
   require_two_factor: boolean;
   link_safety?: LinkSafety;
   retention?: Retention;
+  seen_receipts: boolean;
   seen_receipt_shows_name: boolean;
   customer_facing_name: string | null;
   onboarding: WorkspaceOnboarding;
@@ -98,6 +99,7 @@ export interface WorkspaceChanges {
   require_two_factor?: boolean;
   link_safety?: Partial<LinkSafety>;
   retention?: Partial<Retention>;
+  seen_receipts?: boolean;
   seen_receipt_shows_name?: boolean;
   customer_facing_name?: string | null;
 }

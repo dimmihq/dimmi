@@ -22,6 +22,7 @@ import (
 	"github.com/dimmihq/dimmi/framework/hashing"
 	"github.com/dimmihq/dimmi/framework/ids"
 
+	"github.com/dimmihq/dimmi/app/actions/helpcenters"
 	"github.com/dimmihq/dimmi/app/models"
 )
 
@@ -46,13 +47,16 @@ type Single struct {
 
 /*
 Entry returns the published entry with the slug. Found is false when
-there is none.
+there is none, or the team turned the changelog off.
 */
 func (p *Public) Entry(ctx context.Context, h models.HelpCenter, slug string) (Single, bool, error) {
 	var (
 		out   Single
 		found bool
 	)
+	if !helpcenters.ChangelogOf(h).On {
+		return out, false, nil
+	}
 	err := p.read(ctx, h, func(ctx context.Context, q *models.Queries) error {
 		row, err := q.FindPublishedChangelogEntryBySlug(ctx, models.FindPublishedChangelogEntryBySlugParams{
 			WorkspaceID: h.WorkspaceID, HelpCenterID: h.ID, Slug: slug,
@@ -108,11 +112,15 @@ type Reaction struct {
 /*
 React counts the reader's emoji on the entry, once, and returns how many
 readers now gave each emoji, so a page can show the counts without
-loading again. Found is false when the entry is not published.
+loading again. Found is false when the entry is not published. Readers
+may not react when the team turned reactions off.
 */
 func (p *Public) React(ctx context.Context, in Reaction) (map[string]int32, bool, error) {
 	if !slices.Contains(Emoji(), in.Emoji) {
 		return nil, false, ErrEmojiInvalid
+	}
+	if o := helpcenters.ChangelogOf(in.Center); !o.On || !o.Reactions {
+		return nil, false, ErrReactionsOff
 	}
 	found, counts := false, map[string]int32{}
 	err := p.read(ctx, in.Center, func(ctx context.Context, q *models.Queries) error {

@@ -1,0 +1,55 @@
+[build-system]
+requires = ["hatchling>=1.21"]
+build-backend = "hatchling.build"
+
+[project]
+name = "dimmi"
+dynamic = ["version"]
+description = "Python backend SDK for dimmi: REST API client, messenger identity tokens and webhook verification."
+readme = "README.md"
+requires-python = ">=3.10"
+license = "MIT"
+authors = [{ name = "dimmi" }]
+keywords = ["dimmi", "customer support", "messenger", "webhooks", "sdk"]
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Typing :: Typed",
+]
+dependencies = [
+  "httpx>=0.23,<1",
+  "attrs>=22.2",
+  "python-dateutil>=2.8",
+  "PyJWT>=2.8",
+  "cryptography>=41",
+  "standardwebhooks>=1.0.0",
+]
+
+[project.optional-dependencies]
+test = ["pytest>=7", "respx>=0.21", "pytest-asyncio>=0.23"]
+
+[project.urls]
+Homepage = "https://trydimmi.com"
+Repository = "https://github.com/dimmihq/dimmi"
+
+[tool.hatch.version]
+path = "src/dimmi/_version.py"
+
+[tool.hatch.build]
+# src/dimmi/_generated is gitignored in the repo (make sdk-generate writes
+# it); ship it anyway.
+artifacts = ["src/dimmi/_generated/**"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/dimmi"]
+
+[tool.hatch.build.targets.sdist]
+include = ["src/dimmi", "scripts", "tests", "README.md", "pyproject.toml"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"

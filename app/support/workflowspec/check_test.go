@@ -66,6 +66,13 @@ func TestCheck(t *testing.T) {
 
 	const fm = workflowspec.TriggerFirstMessage
 
+	t.Run("accepts a close asking for a rating", func(t *testing.T) {
+		t.Parallel()
+
+		r := workflowspec.Check(parse(t, def(fm, `{"id":"s_aaaaaa","kind":"close","settings":{"ask_rating":true}}`)))
+		require.NoError(t, r.Err())
+	})
+
 	refused := []struct {
 		name, raw, code string
 	}{
@@ -249,10 +256,6 @@ func TestCheck(t *testing.T) {
 		},
 		{"a snooze without an end", def(fm, `{"id":"s_aaaaaa","kind":"snooze",
 			"settings":{}}`), workflowspec.CodeMissingSetting},
-		{
-			"a close asking for a rating", def(fm, `{"id":"s_aaaaaa","kind":"close","settings":{"ask_rating":true}}`),
-			workflowspec.CodeStepNotAvailable,
-		},
 		{
 			"a collect saving to the external id", def(fm, `{"id":"s_aaaaaa","kind":"collect","settings":{"text":"?",
 			"field":"contact.external_id","type":"text"}}`),

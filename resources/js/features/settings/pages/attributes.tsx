@@ -5,10 +5,18 @@
  * set. New attribute, at the top, adds one in a modal. Archiving stops new values and keeps old ones; only an archived
  * attribute can be deleted, which removes its values. A contact
  * attribute can be opened to the messenger, which may otherwise write
- * none. Values that did not fit are listed at the bottom, so nothing is
- * dropped silently.
+ * none. An event can be opened to the messenger the same way, or the
+ * messenger allowed to send any event. Values that did not fit are
+ * listed at the bottom, so nothing is dropped silently.
  */
-import { RiAddLine, RiBuilding2Line, RiErrorWarningLine, RiFlashlightLine, RiUserLine } from "@remixicon/react";
+import {
+  RiAddLine,
+  RiBuilding2Line,
+  RiChat3Line,
+  RiErrorWarningLine,
+  RiFlashlightLine,
+  RiUserLine,
+} from "@remixicon/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 
@@ -24,7 +32,13 @@ import {
   deleteAttribute,
   updateAttribute,
 } from "@/lib/api/attributes";
-import { type EventDefinition, eventsQuery, updateEvent } from "@/lib/api/events";
+import {
+  type EventDefinition,
+  eventSettingsQuery,
+  eventsQuery,
+  updateEvent,
+  updateEventSettings,
+} from "@/lib/api/events";
 import { definitionLine, eventLine, problemNames } from "../attributes";
 import { Action, Danger, Toggle } from "../controls";
 import { Glyph, Item, Section, SettingsPage } from "../layout";
@@ -110,7 +124,7 @@ function EventRow({ workspace, event, canManage }: { workspace: string; event: E
   const queryClient = useQueryClient();
   const archived = event.status === "archived";
   const change = useMutation({
-    mutationFn: () => updateEvent(workspace, event.id, { status: archived ? "active" : "archived" }),
+    mutationFn: (changes: Parameters<typeof updateEvent>[2]) => updateEvent(workspace, event.id, changes),
     onSuccess: () => {
       refresh();
       void queryClient.invalidateQueries({ queryKey: eventsQuery(workspace).queryKey });
@@ -120,10 +134,53 @@ function EventRow({ workspace, event, canManage }: { workspace: string; event: E
 
   return (
     <Item mark={<Glyph icon={RiFlashlightLine} />} title={event.label} detail={eventLine(event)}>
+      {canManage && !archived ? (
+        <span className="flex items-center gap-2">
+          <span className="text-body-2-regular text-text-tertiary">Messenger</span>
+          <Toggle
+            label={`Messenger may send ${event.label}`}
+            on={event.client_writable}
+            onChange={(on) => change.mutate({ client_writable: on })}
+          />
+        </span>
+      ) : null}
       {canManage ? (
-        <Action loading={change.isPending} onPress={() => change.mutate()}>
+        <Action loading={change.isPending} onPress={() => change.mutate({ status: archived ? "active" : "archived" })}>
           {archived ? "Restore" : "Archive"}
         </Action>
+      ) : null}
+    </Item>
+  );
+}
+
+/*
+ * AnyMessengerEvent lets the messenger send event names nobody opened to
+ * it, defining new ones as they arrive.
+ */
+function AnyMessengerEvent({ workspace, canManage }: { workspace: string; canManage: boolean }) {
+  const queryClient = useQueryClient();
+  const { data } = useQuery(eventSettingsQuery(workspace));
+  const change = useMutation({
+    mutationFn: (on: boolean) => updateEventSettings(workspace, { messenger_new_events: on }),
+    onSuccess: (saved) => {
+      queryClient.setQueryData(eventSettingsQuery(workspace).queryKey, saved);
+      void queryClient.invalidateQueries({ queryKey: eventsQuery(workspace).queryKey });
+    },
+    onError: (error) => toast.error(error.message),
+  });
+
+  return (
+    <Item
+      mark={<Glyph icon={RiChat3Line} />}
+      title="Accept any event from the messenger"
+      detail="Off, the messenger may send only the events switched on below. On, it may send any name, and new ones are added here."
+    >
+      {canManage && data ? (
+        <Toggle
+          label="Accept any event from the messenger"
+          on={data?.messenger_new_events ?? false}
+          onChange={(on) => change.mutate(on)}
+        />
       ) : null}
     </Item>
   );
@@ -135,9 +192,13 @@ function Events({ workspace, canManage }: { workspace: string; canManage: boolea
   return (
     <Section
       title="Events"
-      description="What customers did in your product, sent to POST /api/v1/contact-events. Archived events take no new ones."
+      description={
+        'What customers did in your product, sent to POST /api/v1/contact-events or from the page with Dimmi("track"). ' +
+        "Switched on, the messenger may send an event too, though anyone can forge it. Archived events take no new ones."
+      }
       loading={isPending}
     >
+      <AnyMessengerEvent workspace={workspace} canManage={canManage} />
       {data?.length === 0 ? (
         <Item
           mark={<Glyph icon={RiFlashlightLine} />}

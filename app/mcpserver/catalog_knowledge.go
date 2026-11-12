@@ -23,6 +23,8 @@ func knowledgeDocs() map[string]Doc {
 		articleDocs(),
 		articleChangeDocs(),
 		articleFeedbackDocs(),
+		helpCenterSiteDocs(),
+		helpCenterDomainDocs(),
 	} {
 		maps.Copy(out, part)
 	}

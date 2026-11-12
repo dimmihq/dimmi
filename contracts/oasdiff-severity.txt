@@ -1,0 +1,10 @@
+response-optional-property-removed ERR
+response-required-property-removed-with-deprecation ERR
+api-operation-id-removed ERR
+api-path-removed-with-deprecation ERR
+api-removed-with-deprecation ERR
+request-parameter-removed-with-deprecation ERR
+request-property-removed-with-deprecation ERR
+response-property-enum-value-removed ERR
+response-mediatype-enum-value-removed ERR
+api-schema-removed WARN

@@ -1,31 +1,32 @@
 /*
  * What the customer edit modal shows without editing: the people who
- * look like the same person, and what the person did in the team's
- * product, as its events report.
+ * look like the same person, each with a way to merge them in, and what
+ * the person did in the team's product, as its events report.
  */
+import { RiMergeCellsHorizontal } from "@remixicon/react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
+import { useState } from "react";
+
+import { Button } from "@/components/base/buttons/button";
 
 import { when } from "@/features/inbox/customer/format";
 import { type Contact, duplicatesQuery } from "@/lib/api/customers";
 import { contactEventsQuery } from "@/lib/api/events";
 
+import { duplicateReasons } from "./duplicate-reasons";
+import { MergeContactDialog } from "./merge-customer";
 import { personName, useWorkspace } from "./names";
-
-const reasons: Record<string, string> = {
-  same_email: "same email",
-  same_phone: "same phone",
-  same_whatsapp: "same WhatsApp number",
-  same_name_company: "same name and company",
-};
 
 /*
  * Duplicates lists the people who look like this one, each opening in
- * the same modal, with why they look alike.
+ * the same modal, with why they look alike, and merges one in when the
+ * teammate may change customers.
  */
-export function Duplicates({ contact }: { contact: Contact }) {
+export function Duplicates({ contact, canMerge }: { contact: Contact; canMerge: boolean }) {
   const workspace = useWorkspace();
   const { data: duplicates = [] } = useQuery(duplicatesQuery(workspace, contact.id));
+  const [merging, setMerging] = useState<string | null>(null);
   if (duplicates.length === 0) {
     return null;
   }
@@ -45,9 +46,23 @@ export function Duplicates({ contact }: { contact: Contact }) {
           >
             {personName(d.contact)}
           </Link>
-          <span className="text-text-tertiary">{d.reasons.map((r) => reasons[r] ?? r).join(", ")}</span>
+          <span className="min-w-0 flex-1 truncate text-text-tertiary">
+            {d.reasons.map((r) => duplicateReasons[r] ?? r).join(", ")}
+          </span>
+          {canMerge ? (
+            <Button
+              size="xs"
+              variant="ghost"
+              leadingIcon={RiMergeCellsHorizontal}
+              aria-label={`Merge ${personName(d.contact)} into this customer`}
+              onClick={() => setMerging(d.contact.id)}
+            >
+              Merge
+            </Button>
+          ) : null}
         </p>
       ))}
+      {merging ? <MergeContactDialog contact={contact} preselected={merging} onClose={() => setMerging(null)} /> : null}
     </section>
   );
 }

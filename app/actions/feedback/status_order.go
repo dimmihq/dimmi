@@ -6,8 +6,7 @@
 | A workspace chooses the order its statuses show in: the roadmap
 | columns and filters of its portal, and every status list in the app.
 | The team saves the whole order at once, naming each status exactly
-| once, so no status is ever lost or shown twice. A workspace that never
-| chose keeps the built-in order.
+| once, so no status is ever lost or shown twice.
 |
 */
 
@@ -20,7 +19,6 @@ import (
 
 	"github.com/dimmihq/dimmi/framework/database"
 	"github.com/dimmihq/dimmi/framework/fault"
-	"github.com/dimmihq/dimmi/framework/ids"
 
 	"github.com/dimmihq/dimmi/app/auth/authz"
 	"github.com/dimmihq/dimmi/app/exceptions"
@@ -32,7 +30,7 @@ ErrStatusOrderInvalid is an order that does not name every status of
 the workspace exactly once.
 */
 var ErrStatusOrderInvalid = fault.New(fault.Invalid, "statuses_invalid",
-	"List every status exactly once: under_review, planned, in_progress, shipped and closed.").OnField("statuses")
+	"List every status of the workspace exactly once.").OnField("statuses")
 
 /*
 StatusOrder returns the workspace's statuses in the order it chose.
@@ -59,16 +57,19 @@ func (p *Posts) Reorder(ctx context.Context, m authz.Membership, keys []string) 
 	if !m.Can("settings:write") {
 		return nil, exceptions.ErrForbidden
 	}
-	if !everyStatusOnce(keys) {
-		return nil, ErrStatusOrderInvalid
-	}
 	var out []Status
 	err := p.DB.Transaction(ctx, func(ctx context.Context, tx *database.Tx) error {
 		q := models.New(tx)
-		err := q.SaveFeedbackStatusPositions(ctx, models.SaveFeedbackStatusPositionsParams{
-			WorkspaceID: m.Workspace.ID, Statuses: keys,
-		})
+		current, err := ordered(ctx, q, m.Workspace.ID)
 		if err != nil {
+			return err
+		}
+		if !everyStatusOnce(current, keys) {
+			return ErrStatusOrderInvalid
+		}
+		if err := q.SaveFeedbackStatusOrder(ctx, models.SaveFeedbackStatusOrderParams{
+			Now: p.Clock.Now(), Keys: keys, WorkspaceID: m.Workspace.ID,
+		}); err != nil {
 			return fmt.Errorf("save status order: %w", err)
 		}
 		out, err = ordered(ctx, q, m.Workspace.ID)
@@ -77,8 +78,7 @@ func (p *Posts) Reorder(ctx context.Context, m authz.Membership, keys []string) 
 	return out, err
 }
 
-func everyStatusOnce(keys []string) bool {
-	all := Statuses()
+func everyStatusOnce(all []Status, keys []string) bool {
 	if len(keys) != len(all) {
 		return false
 	}
@@ -88,27 +88,4 @@ func everyStatusOnce(keys []string) bool {
 		}
 	}
 	return true
-}
-
-/*
-ordered returns the statuses in the workspace's saved order. A status
-the workspace never placed follows the placed ones, in built-in order.
-*/
-func ordered(ctx context.Context, q *models.Queries, ws ids.UUID) ([]Status, error) {
-	saved, err := q.ListFeedbackStatusPositions(ctx, ws)
-	if err != nil {
-		return nil, fmt.Errorf("list status order: %w", err)
-	}
-	out := make([]Status, 0, len(Statuses()))
-	for _, key := range saved {
-		if s, ok := StatusOf(key); ok {
-			out = append(out, s)
-		}
-	}
-	for _, s := range Statuses() {
-		if !slices.Contains(saved, s.Key) {
-			out = append(out, s)
-		}
-	}
-	return out, nil
 }

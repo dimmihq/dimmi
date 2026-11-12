@@ -179,7 +179,7 @@ export const triggers: Record<TriggerKind, Trigger> = {
     name: "dimmi hands over",
     detail: "Brief the team when dimmi can't help.",
     icon: RiUserVoiceLine,
-    runs: false,
+    runs: true,
     talks: [],
   },
   "dimmi.resolved": {
@@ -187,7 +187,7 @@ export const triggers: Record<TriggerKind, Trigger> = {
     name: "dimmi resolves a conversation",
     detail: "Ask for a rating, or tag it.",
     icon: RiSparkling2Line,
-    runs: false,
+    runs: true,
     talks: ["message"],
   },
   "sla.warning": {
@@ -211,7 +211,7 @@ export const triggers: Record<TriggerKind, Trigger> = {
     name: "Run from other workflows",
     detail: "Share steps between workflows.",
     icon: RiLinksLine,
-    runs: false,
+    runs: true,
     talks: customerKinds,
     dimmi: true,
   },

@@ -21,10 +21,13 @@ import (
 	"github.com/dimmihq/dimmi/app/actions/dataexports"
 	"github.com/dimmihq/dimmi/app/actions/drafts"
 	"github.com/dimmihq/dimmi/app/actions/erasures"
+	"github.com/dimmihq/dimmi/app/actions/imports"
 	"github.com/dimmihq/dimmi/app/actions/inboxes"
+	"github.com/dimmihq/dimmi/app/actions/merges"
 	"github.com/dimmihq/dimmi/app/actions/messages"
 	"github.com/dimmihq/dimmi/app/actions/redaction"
 	"github.com/dimmihq/dimmi/app/actions/retention"
+	"github.com/dimmihq/dimmi/app/actions/savedreplies"
 	"github.com/dimmihq/dimmi/app/actions/tags"
 )
 
@@ -64,6 +67,9 @@ type InboxActions struct {
 	ApplyChanges            *conversations.ApplyConversationChanges
 	TrashConversation       *conversations.TrashConversation
 	RestoreConversation     *conversations.RestoreConversation
+	BulkChange              *conversations.BulkChangeConversations
+	MergeConversations      *merges.MergeConversations
+	MergeContacts           *merges.MergeContacts
 	ShowNeighbors           *conversations.ShowNeighbors
 	CountConversations      *conversations.CountConversations
 	ShowReadState           *conversations.ShowReadState
@@ -105,6 +111,7 @@ type InboxActions struct {
 	RetryDelivery     *messages.RetryDelivery
 	AddNote           *messages.AddNote
 	AddContactMessage *messages.AddContactMessage
+	ImportMessage     *messages.ImportMessage
 	DeleteMessage     *messages.DeleteMessage
 	ReactToNote       *messages.ReactToNote
 	EditNote          *messages.EditNote
@@ -115,6 +122,13 @@ type InboxActions struct {
 	UpdateRedactionRule     *redaction.UpdateRule
 	DeleteRedactionRule     *redaction.DeleteRule
 	TryRedaction            *redaction.TryRedaction
+
+	ListSavedReplies   *savedreplies.ListSavedReplies
+	ShowSavedReply     *savedreplies.ShowSavedReply
+	CreateSavedReply   *savedreplies.CreateSavedReply
+	UpdateSavedReply   *savedreplies.UpdateSavedReply
+	DeleteSavedReply   *savedreplies.DeleteSavedReply
+	ImportSavedReplies *savedreplies.ImportSavedReplies
 
 	RequestErasure *erasures.RequestErasure
 	CancelErasure  *erasures.CancelErasure
@@ -138,4 +152,6 @@ type InboxActions struct {
 	DeleteDataExport   *dataexports.DeleteDataExport
 	BuildDataExport    *dataexports.BuildDataExport
 	ExpireDataExports  *dataexports.ExpireDataExports
+
+	Imports *imports.Imports
 }

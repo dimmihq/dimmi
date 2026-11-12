@@ -20,7 +20,10 @@ rules, the audit log and the caller's notifications.
 */
 func workspaceAccessDocs() map[string]Doc {
 	out := map[string]Doc{}
-	for _, part := range []map[string]Doc{accessDocs(), auditDocs(), notificationDocs(), notificationSettingDocs()} {
+	for _, part := range []map[string]Doc{
+		accessDocs(), auditDocs(), notificationDocs(), notificationSettingDocs(),
+		notificationDeliveryDocs(),
+	} {
 		maps.Copy(out, part)
 	}
 

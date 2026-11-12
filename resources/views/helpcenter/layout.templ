@@ -40,8 +40,11 @@ templ Layout(c Center, m Meta, sidebar templ.Component, assets templ.Component) 
 			} else {
 				<link rel="icon" href="data:,"/>
 			}
-			if m.NoIndex {
+			if m.NoIndex || c.NoIndex {
 				<meta name="robots" content="noindex"/>
+			}
+			if c.Canonical != "" && !m.NoIndex {
+				<link rel="canonical" href={ templ.SafeURL(c.Canonical) }/>
 			}
 			if m.Markdown != "" {
 				<link rel="alternate" type="text/markdown" href={ Href(c, m.Markdown) }/>

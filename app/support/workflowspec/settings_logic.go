@@ -12,10 +12,14 @@ package workflowspec
 
 /*
 ClassifySettings lets dimmi pick one of the paths for the customer's
-words.
+words: each path is a category with a label and a description.
+Question adds instructions, SaveTo keeps the category's label in a run
+variable or a contact attribute, and MinConfidence (low, medium or
+high) sends weaker answers down the none path.
 */
 type ClassifySettings struct {
 	Question      string `json:"question,omitempty"`
+	SaveTo        string `json:"save_to,omitempty"`
 	Source        string `json:"source,omitempty"`
 	MinConfidence string `json:"min_confidence,omitempty"`
 }

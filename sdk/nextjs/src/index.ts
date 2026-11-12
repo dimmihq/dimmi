@@ -3,18 +3,24 @@
  * <Dimmi /> puts the messenger on every page of your app. Pass identity,
  * a server action that returns identityToken(config), and the messenger
  * signs your user in, asks again when it needs a fresh token, and signs
- * them out when it answers null. Render it once, in your root layout.
+ * them out when it answers null. Render it once, in your root layout, or
+ * wrap your app in <DimmiProvider> from here to use useDimmi() below it.
+ * Everything @dimmi/react exports is exported here too.
  */
-import { useEffect } from "react";
+import { getDimmi } from "@dimmi/browser";
+import { Dimmi as ReactDimmi } from "@dimmi/react";
+import { createElement, type ReactNode } from "react";
 
-type Command = [string, unknown?];
-
-interface Queue {
-  (...command: Command): void;
-  q?: Command[];
-}
-
-type DimmiWindow = Window & { Dimmi?: Queue };
+export type { DimmiClient, MessengerSettings } from "@dimmi/browser";
+export {
+  DimmiButton,
+  type DimmiButtonProps,
+  DimmiProvider,
+  type DimmiProviderProps,
+  useDimmi,
+  useTrackPage,
+  useUnreadCount,
+} from "@dimmi/react";
 
 export interface DimmiProps {
   /* The messenger's app id, wgt_..., from Settings > Messenger. */
@@ -23,26 +29,12 @@ export interface DimmiProps {
   host: string;
   /* A server action answering the signed-in user's token, or null. */
   identity?: () => Promise<string | null>;
+  /* A nonce for the loader script under a strict CSP. */
+  nonce?: string;
 }
 
-export function Dimmi({ appId, host, identity }: DimmiProps): null {
-  useEffect(() => {
-    const dimmi = queue();
-    if (identity) {
-      dimmi("identify", () => identity());
-    }
-    if (document.querySelector("script[data-dimmi-loader]")) {
-      return;
-    }
-    const script = document.createElement("script");
-    script.src = `${host.replace(/\/$/, "")}/widget/v1/loader.js`;
-    script.async = true;
-    script.dataset.appId = appId;
-    script.dataset.dimmiLoader = "";
-    document.body.append(script);
-  }, [appId, host, identity]);
-
-  return null;
+export function Dimmi(props: DimmiProps): ReactNode {
+  return createElement(ReactDimmi, props);
 }
 
 /*
@@ -50,7 +42,7 @@ export function Dimmi({ appId, host, identity }: DimmiProps): null {
  * right after your app signed someone in or out without a page load.
  */
 export function refreshDimmiIdentity(): void {
-  queue()("identify");
+  getDimmi().identify();
 }
 
 /*
@@ -58,17 +50,5 @@ export function refreshDimmiIdentity(): void {
  * button.
  */
 export function dimmiLogout(): void {
-  queue()("logout");
-}
-
-function queue(): Queue {
-  const win = window as DimmiWindow;
-  if (!win.Dimmi) {
-    const stub: Queue = (...command: Command) => {
-      stub.q = stub.q ?? [];
-      stub.q.push(command);
-    };
-    win.Dimmi = stub;
-  }
-  return win.Dimmi;
+  getDimmi().shutdown();
 }

@@ -23,10 +23,13 @@ const cloudHelpDomain = "dimmi.help"
 /*
 HelpCentersConfig configures public docs. BaseDomain is the domain whose
 subdomains serve help centers, empty to serve them under the app's
-address.
+address. CustomDomainTarget is the hostname a workspace's own domain,
+such as help.acme.com, points at with a CNAME; empty means custom.<base
+domain>, or the app's own host without a base domain.
 */
 type HelpCentersConfig struct {
-	BaseDomain string `koanf:"base_domain"`
+	BaseDomain         string `koanf:"base_domain"`
+	CustomDomainTarget string `koanf:"custom_domain_target"`
 }
 
 func (c *HelpCentersConfig) settle(edition Edition) {
@@ -34,4 +37,8 @@ func (c *HelpCentersConfig) settle(edition Edition) {
 		c.BaseDomain = cloudHelpDomain
 	}
 	c.BaseDomain = strings.ToLower(strings.Trim(strings.TrimSpace(c.BaseDomain), "."))
+	c.CustomDomainTarget = strings.ToLower(strings.Trim(strings.TrimSpace(c.CustomDomainTarget), "."))
+	if c.CustomDomainTarget == "" && c.BaseDomain != "" {
+		c.CustomDomainTarget = "custom." + c.BaseDomain
+	}
 }

@@ -57,6 +57,8 @@ type Route struct {
 	handler    http.Handler
 	register   func(api huma.API, op huma.Operation, opts Options)
 	chain      []http.Middleware
+
+	deprecation *Deprecation
 }
 
 type routeKey struct{}
@@ -288,6 +290,8 @@ func (r *Route) operation() huma.Operation {
 	if len(r.abilities) > 0 {
 		op.Extensions = map[string]any{"x-abilities": r.Abilities()}
 	}
+
+	r.deprecate(&op)
 
 	return op
 }

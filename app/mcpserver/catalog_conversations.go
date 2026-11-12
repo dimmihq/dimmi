@@ -56,6 +56,13 @@ func conversationDocs() map[string]Doc {
 					"channel_connection from dimmi_email_addresses_list). Required with author member.",
 				"inbox_id":    "With author contact: the inbox (inbox_...) whose API channel takes the message.",
 				"assignee_id": "mem_..., me, or null for nobody. A teammate's conversation is theirs by default.",
+				"created_at": "Import only (needs imports:manage): when the conversation really started, RFC 3339, " +
+					"from 2000 to now. Any import field records history: nothing is sent and nothing reacts.",
+				"external_id": "Import only: the conversation's id in the tool it comes from; sending it again " +
+					"returns the first copy.",
+				"status":    "Import only: open (default) or closed.",
+				"closed_at": "Import only, with status closed: when it closed; the first message's time by default.",
+				"author_id": "Import only, author member: the teammate (mem_...) who wrote the first message.",
 			},
 			Hint: "As a teammate, pass channel_connection_id of a channel that can start threads, such as email.",
 		},

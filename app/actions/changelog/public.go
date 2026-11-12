@@ -26,6 +26,7 @@ import (
 	"github.com/dimmihq/dimmi/framework/ids"
 	"github.com/dimmihq/dimmi/framework/tenancy"
 
+	"github.com/dimmihq/dimmi/app/actions/helpcenters"
 	"github.com/dimmihq/dimmi/app/models"
 )
 
@@ -41,6 +42,11 @@ func Emoji() []string {
 ErrEmojiInvalid refuses a reaction that is not one of Emoji.
 */
 var ErrEmojiInvalid = fault.New(fault.Invalid, "emoji_invalid", "Pick one of the reactions shown.")
+
+/*
+ErrReactionsOff refuses a reaction on a changelog that takes none.
+*/
+var ErrReactionsOff = fault.New(fault.Forbidden, "reactions_off", "This changelog does not take reactions.")
 
 /*
 Public reads changelogs for readers. Key keys the hash readers are
@@ -95,13 +101,17 @@ type PageRequest struct {
 
 /*
 Index returns a page of the changelog. Found is false for a label that
-does not exist or a page past the end.
+does not exist, a page past the end, or a changelog the team turned
+off.
 */
 func (p *Public) Index(ctx context.Context, in PageRequest) (Page, bool, error) {
 	var (
 		out   Page
 		found bool
 	)
+	if !helpcenters.ChangelogOf(in.Center).On {
+		return out, false, nil
+	}
 	err := p.read(ctx, in.Center, func(ctx context.Context, q *models.Queries) error {
 		var err error
 		out, found, err = p.readPage(ctx, q, in)
@@ -222,10 +232,14 @@ func (p *Public) published(ctx context.Context, q *models.Queries, ws ids.UUID, 
 
 /*
 Latest returns the newest published entries, for the help center's
-home and its header's link to the changelog.
+home, its header's link to the changelog and the messenger's tab; none
+when the team turned the changelog off.
 */
 func (p *Public) Latest(ctx context.Context, h models.HelpCenter, n int) ([]Published, error) {
 	var out []Published
+	if !helpcenters.ChangelogOf(h).On {
+		return nil, nil
+	}
 	err := p.read(ctx, h, func(ctx context.Context, q *models.Queries) error {
 		rows, err := q.ListPublishedChangelogEntries(ctx, models.ListPublishedChangelogEntriesParams{
 			WorkspaceID: h.WorkspaceID, HelpCenterID: h.ID, RowLimit: int32Of(n),

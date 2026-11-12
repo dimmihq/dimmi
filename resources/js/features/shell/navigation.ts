@@ -11,12 +11,14 @@ import {
   RiArrowLeftLine,
   RiAtLine,
   RiBookOpenLine,
+  RiChatQuoteLine,
   RiChatSmile3Line,
   RiContactsBook3Line,
   RiCpuLine,
   RiDatabase2Line,
   RiDeleteBin6Line,
   RiDownload2Line,
+  RiEmotionHappyLine,
   RiEqualizerLine,
   RiFileList3Line,
   RiFingerprintLine,
@@ -225,6 +227,13 @@ export const settingsPages = {
     "Where conversations land and how they reopen.",
   ),
   tags: page("settings-tags", "Tags", RiPriceTag3Line, "/d/settings/tags", "Labels teammates put on conversations."),
+  "saved-replies": page(
+    "settings-saved-replies",
+    "Saved replies",
+    RiChatQuoteLine,
+    "/d/settings/saved-replies",
+    "Answers your team sends often, with variables and actions.",
+  ),
   attributes: page(
     "settings-attributes",
     "Attributes",
@@ -245,6 +254,13 @@ export const settingsPages = {
     RiShieldCheckLine,
     "/d/settings/conversation-safety",
     "Keep card numbers and other sensitive text out of conversations.",
+  ),
+  "conversation-ratings": page(
+    "settings-conversation-ratings",
+    "Conversation ratings",
+    RiEmotionHappyLine,
+    "/d/settings/conversation-ratings",
+    "Ask customers how it went when a conversation closes.",
   ),
   messenger: page(
     "settings-messenger",
@@ -308,6 +324,13 @@ export const settingsPages = {
     RiDatabase2Line,
     "/d/settings/knowledge",
     "Sites, files and repositories dimmi learns from.",
+  ),
+  changelog: page(
+    "settings-changelog",
+    "Changelog",
+    RiMegaphoneLine,
+    "/d/settings/changelog",
+    "Release notes on your help center and in subscribers' inboxes.",
   ),
   feedback: page(
     "settings-feedback",
@@ -462,7 +485,15 @@ export function settingsSections(): DashboardNavSection[] {
     {
       key: "inbox",
       label: "Inbox",
-      items: [pages.inboxes, pages.tags, pages.attributes, pages["office-hours"], pages["conversation-safety"]],
+      items: [
+        pages.inboxes,
+        pages.tags,
+        pages["saved-replies"],
+        pages.attributes,
+        pages["office-hours"],
+        pages["conversation-safety"],
+        pages["conversation-ratings"],
+      ],
     },
     {
       key: "channels",
@@ -473,7 +504,7 @@ export function settingsSections(): DashboardNavSection[] {
     {
       key: "content",
       label: "Content",
-      items: [pages["help-centers"], pages.knowledge, pages.feedback],
+      items: [pages["help-centers"], pages.knowledge, pages.changelog, pages.feedback],
     },
     { key: "developers", label: "Developers", items: [pages.webhooks, pages.identity] },
     { key: "administration", label: "Administration", items: admin },

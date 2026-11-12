@@ -39,7 +39,7 @@ import {
 import { helpCentersQuery } from "@/lib/api/help-centers";
 import { formatDate, formatDateTime } from "@/lib/i18n/format";
 import { cx } from "@/utils/cx";
-
+import { BoardPicker, PostConversations } from "./post-board";
 import { MergeDialog, StatusDialog, VoteDialog } from "./post-dialogs";
 import { StatusChip, StatusDot } from "./status-chip";
 import { useStatuses } from "./use-statuses";
@@ -204,11 +204,13 @@ function Side({
   post,
   onOpen,
   onModerate,
+  onMoveBoard,
 }: {
   workspace: string;
   post: FeedbackPost;
   onOpen: (open: Open) => void;
   onModerate: (moderation: "approved" | "spam") => void;
+  onMoveBoard: (board: string) => void;
 }) {
   const ordered = useStatuses(workspace);
 
@@ -245,7 +247,9 @@ function Side({
           </SelectItem>
         ))}
       </Select>
+      <BoardPicker workspace={workspace} post={post} onMove={onMoveBoard} />
       <Voters workspace={workspace} post={post} onVote={() => onOpen({ kind: "vote" })} />
+      <PostConversations workspace={workspace} post={post} />
       <dl className="flex flex-col gap-1 border-t border-separator-border pt-4 text-body-2-regular">
         <div className="flex justify-between gap-2">
           <dt className="text-text-tertiary">Posted by</dt>
@@ -367,6 +371,7 @@ export function PostPage({ id }: { id: string }) {
             post={post}
             onOpen={setOpen}
             onModerate={(moderation) => change.mutate(() => updatePost(workspace, id, { moderation }))}
+            onMoveBoard={(board) => change.mutate(() => updatePost(workspace, id, { board_id: board }))}
           />
         </div>
       </ScrollArea>

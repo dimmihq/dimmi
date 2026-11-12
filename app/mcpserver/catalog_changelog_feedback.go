@@ -26,6 +26,8 @@ func changelogFeedbackDocs() map[string]Doc {
 		featureRequestVoteDocs(),
 		featureRequestCommentDocs(),
 		feedbackStatusDocs(),
+		feedbackBoardDocs(),
+		feedbackLinkDocs(),
 	} {
 		maps.Copy(out, part)
 	}
@@ -190,7 +192,8 @@ func featureRequestDocs() map[string]Doc {
 			Returns: "the page of requests with status, approval, votes and total, and counts in each status.",
 			Next:    []string{"dimmi_feedback_posts_get: read one request"},
 			Params: map[string]string{
-				"status":     "under_review, planned, in_progress, shipped or closed; leave out for all.",
+				"board_id":   "Id of a board (fbd_...) to list only its requests; leave out for every board.",
+				"status":     "A status key from dimmi_feedback_statuses_list, such as planned; leave out for all.",
 				"moderation": "approved, pending (waiting for the team's approval) or spam.",
 				"sort":       "trending, top (most votes) or new.",
 				"query":      "Text to find in titles.",
@@ -208,6 +211,7 @@ func featureRequestDocs() map[string]Doc {
 			Params: map[string]string{
 				"body_markdown": "Details in Markdown, at most 64 KB.",
 				"contact_id":    "Id of the customer (ctc_...) it is posted for; leave out to post as the team.",
+				"board_id":      "Id of the board (fbd_...) to post on; leave out for the help center's first board.",
 			},
 		},
 		"feedback-posts.show": {
@@ -236,8 +240,9 @@ func featureRequestVoteDocs() map[string]Doc {
 			Returns: "the request as it now is.",
 			Risk:    new(RiskReach),
 			Params: map[string]string{
-				"status": "under_review, planned, in_progress, shipped or closed. Closed leaves the public roadmap.",
-				"notify": "With status: true emails the voters and author that it moved. Ask the person first.",
+				"status":   "A status key from dimmi_feedback_statuses_list. Closed statuses leave the public roadmap.",
+				"board_id": "Id of another board (fbd_...) of the same help center to move it to.",
+				"notify":   "With status: true emails the voters and author that it moved. Ask the person first.",
 				"message": "With status and notify: the team's note in the email, at most 2000 characters. Write " +
 					"it for customers.",
 				"changelog_entry_id": "With status: id of the changelog entry (cle_...) that shipped it, " +
@@ -300,30 +305,6 @@ func featureRequestCommentDocs() map[string]Doc {
 		"feedback-comments.destroy": {
 			Title: "Delete a feature request comment",
 			Use:   "Deletes a comment or internal note on a request.",
-		},
-	}
-}
-
-/*
-feedbackStatusDocs returns the entries for the statuses feature
-requests move through.
-*/
-func feedbackStatusDocs() map[string]Doc {
-	return map[string]Doc{
-		"feedback-statuses.index": {
-			Title:   "List feature request statuses",
-			Use:     "Lists the statuses feature requests move through, in the order the portal and the app show them.",
-			Returns: "the statuses with their key, name and color, in order.",
-		},
-		"feedback-statuses.update": {
-			Title:   "Reorder feature request statuses",
-			Use:     "Sets the order the portal and the app show the statuses in.",
-			Returns: "the statuses in their new order.",
-			Risk:    new(RiskReach),
-			Params: map[string]string{
-				"statuses": "Every status key, such as planned or under_review, once each in the new order. " +
-					"Find them with dimmi_feedback_statuses_list.",
-			},
 		},
 	}
 }

@@ -22,6 +22,7 @@ import (
 
 	"github.com/dimmihq/dimmi/framework/clock"
 	"github.com/dimmihq/dimmi/framework/database"
+	"github.com/dimmihq/dimmi/framework/events"
 	"github.com/dimmihq/dimmi/framework/fault"
 	"github.com/dimmihq/dimmi/framework/ids"
 	fmail "github.com/dimmihq/dimmi/framework/mail"
@@ -29,6 +30,7 @@ import (
 
 	"github.com/dimmihq/dimmi/app/actions/helpcenters"
 	"github.com/dimmihq/dimmi/app/auth/authz"
+	appevents "github.com/dimmihq/dimmi/app/events"
 	"github.com/dimmihq/dimmi/app/exceptions"
 	"github.com/dimmihq/dimmi/app/models"
 )
@@ -43,7 +45,7 @@ var (
 	ErrBodyTooLong  = fault.New(fault.Invalid, "body_too_long",
 		"Details are at most 64 KB.").OnField("body_markdown")
 	ErrStatusInvalid = fault.New(fault.Invalid, "status_invalid",
-		"The status is under_review, planned, in_progress, shipped or closed.").OnField("status")
+		"The status is the key of one of the workspace's statuses.").OnField("status")
 )
 
 /*
@@ -61,6 +63,7 @@ type Posts struct {
 	Mail      *fmail.Manager
 	Addresses helpcenters.Addresses
 	Renderer  *markdown.Renderer
+	Events    *events.Dispatcher
 }
 
 /*
@@ -84,7 +87,8 @@ type Post struct {
 
 /*
 PostInput is a request to post or a change to one; nil leaves a field.
-Contact is the customer a teammate posts it for.
+Contact is the customer a teammate posts it for, and Board the board it
+goes on, the help center's first when nil.
 */
 type PostInput struct {
 	Membership   authz.Membership
@@ -93,14 +97,16 @@ type PostInput struct {
 	Title        *string
 	Body         *string
 	Contact      *ids.UUID
+	Board        *ids.UUID
 }
 
 /*
-PostFilter narrows a page of a help center's requests. Sort is
-trending, top or new.
+PostFilter narrows a page of a help center's requests, to one board
+when Board is set. Sort is trending, top or new.
 */
 type PostFilter struct {
 	HelpCenterID ids.UUID
+	Board        *ids.UUID
 	Status       string
 	Moderation   string
 	Query        string
@@ -133,8 +139,8 @@ func (p *Posts) List(ctx context.Context, m authz.Membership, f PostFilter) (Pos
 	err := p.DB.Transaction(ctx, func(ctx context.Context, tx *database.Tx) error {
 		q := models.New(tx)
 		rows, err := q.ListFeedbackPosts(ctx, models.ListFeedbackPostsParams{
-			WorkspaceID: ws, HelpCenterID: f.HelpCenterID, Status: status, Moderation: moderation, Query: query,
-			Sort: sortOf(f.Sort), RowLimit: int32Of(f.Limit), RowOffset: int32Of(f.Offset),
+			WorkspaceID: ws, HelpCenterID: f.HelpCenterID, BoardID: f.Board, Status: status, Moderation: moderation,
+			Query: query, Sort: sortOf(f.Sort), RowLimit: int32Of(f.Limit), RowOffset: int32Of(f.Offset),
 		})
 		if err != nil {
 			return fmt.Errorf("list feature requests: %w", err)
@@ -143,23 +149,30 @@ func (p *Posts) List(ctx context.Context, m authz.Membership, f PostFilter) (Pos
 			return err
 		}
 		if out.Total, err = q.CountFeedbackPosts(ctx, models.CountFeedbackPostsParams{
-			WorkspaceID: ws, HelpCenterID: f.HelpCenterID, Status: status, Moderation: moderation, Query: query,
+			WorkspaceID: ws, HelpCenterID: f.HelpCenterID, BoardID: f.Board, Status: status, Moderation: moderation,
+			Query: query,
 		}); err != nil {
 			return fmt.Errorf("count feature requests: %w", err)
 		}
-		out.ByStatus, err = countByStatus(ctx, q, ws, f.HelpCenterID)
+		out.ByStatus, err = countByStatus(ctx, q, ws, f)
 		return err
 	})
 	return out, err
 }
 
-func countByStatus(ctx context.Context, q *models.Queries, ws, hc ids.UUID) (map[string]int32, error) {
-	rows, err := q.CountFeedbackByStatus(ctx, models.CountFeedbackByStatusParams{WorkspaceID: ws, HelpCenterID: hc})
+func countByStatus(ctx context.Context, q *models.Queries, ws ids.UUID, f PostFilter) (map[string]int32, error) {
+	rows, err := q.CountFeedbackByStatus(ctx, models.CountFeedbackByStatusParams{
+		WorkspaceID: ws, HelpCenterID: f.HelpCenterID, BoardID: f.Board,
+	})
 	if err != nil {
 		return nil, fmt.Errorf("count feature requests by status: %w", err)
 	}
+	statuses, err := ordered(ctx, q, ws)
+	if err != nil {
+		return nil, err
+	}
 	out := map[string]int32{"pending": 0}
-	for _, s := range Statuses() {
+	for _, s := range statuses {
 		out[s.Key] = 0
 	}
 	for _, r := range rows {
@@ -205,11 +218,16 @@ func (p *Posts) Create(ctx context.Context, in PostInput) (Post, error) {
 	err = p.DB.Transaction(ctx, func(ctx context.Context, tx *database.Tx) error {
 		q := models.New(tx)
 		at := models.FindHelpCenterParams{WorkspaceID: ws, ID: in.HelpCenterID}
-		if _, err := q.FindHelpCenter(ctx, at); err != nil {
+		center, err := q.FindHelpCenter(ctx, at)
+		if err != nil {
 			return missing(err, helpcenters.ErrHelpCenterNotFound)
 		}
+		board, err := boardOf(ctx, q, center, in.Board)
+		if err != nil {
+			return err
+		}
 		row, err := p.insert(ctx, q, draft{
-			ws: ws, hc: in.HelpCenterID, title: title, body: body, moderation: "approved",
+			ws: ws, hc: in.HelpCenterID, board: board.ID, title: title, body: body, moderation: "approved",
 			contact: in.Contact, member: memberOf(in.Membership),
 		})
 		if err != nil {
@@ -223,6 +241,10 @@ func (p *Posts) Create(ctx context.Context, in PostInput) (Post, error) {
 				return err
 			}
 		}
+		created := appevents.FeedbackPostCreated{Base: p.byMember(ws, in.Membership.Member.ID), PostID: row.ID}
+		if err := p.announce(ctx, tx, created); err != nil {
+			return err
+		}
 		out, err = one(ctx, q, ws, row)
 		return err
 	})
@@ -234,6 +256,7 @@ draft is a request about to be stored.
 */
 type draft struct {
 	ws, hc      ids.UUID
+	board       ids.UUID
 	title, body string
 	moderation  string
 	contact     *ids.UUID
@@ -249,10 +272,14 @@ func (p *Posts) insert(ctx context.Context, q *models.Queries, d draft) (models.
 	if slug == "" {
 		slug = "request"
 	}
+	statuses, err := ordered(ctx, q, d.ws)
+	if err != nil {
+		return models.FeedbackPost{}, err
+	}
 	row, err := q.CreateFeedbackPost(ctx, models.CreateFeedbackPostParams{
-		WorkspaceID: d.ws, HelpCenterID: d.hc, Number: number, Title: d.title, Slug: slug, BodyMarkdown: d.body,
-		Status: "under_review", Moderation: d.moderation, AuthorContactID: d.contact, AuthorMemberID: d.member,
-		Now: p.Clock.Now(),
+		WorkspaceID: d.ws, HelpCenterID: d.hc, BoardID: &d.board, Number: number, Title: d.title, Slug: slug,
+		BodyMarkdown: d.body, Status: startingStatus(statuses), Moderation: d.moderation, AuthorContactID: d.contact,
+		AuthorMemberID: d.member, Now: p.Clock.Now(),
 	})
 	if err != nil {
 		return row, fmt.Errorf("create feature request: %w", err)
@@ -261,7 +288,8 @@ func (p *Posts) insert(ctx context.Context, q *models.Queries, d draft) (models.
 }
 
 /*
-Update rewrites a request's title and details.
+Update rewrites a request's title and details, and moves it to another
+board of its help center when Board is set.
 */
 func (p *Posts) Update(ctx context.Context, in PostInput) (Post, error) {
 	if !in.Membership.Can("feedback:write") {
@@ -292,10 +320,35 @@ func (p *Posts) Update(ctx context.Context, in PostInput) (Post, error) {
 		if err != nil {
 			return fmt.Errorf("update feature request: %w", err)
 		}
+		if row, err = p.moveBoard(ctx, q, row, in.Board); err != nil {
+			return err
+		}
 		out, err = one(ctx, q, ws, row)
 		return err
 	})
 	return out, err
+}
+
+/*
+moveBoard puts the request on another board of its help center, when
+one is named.
+*/
+func (p *Posts) moveBoard(ctx context.Context, q *models.Queries, row models.FeedbackPost, board *ids.UUID,
+) (models.FeedbackPost, error) {
+	if board == nil {
+		return row, nil
+	}
+	b, err := q.FindFeedbackBoard(ctx, models.FindFeedbackBoardParams{WorkspaceID: row.WorkspaceID, ID: *board})
+	if err != nil || b.HelpCenterID != row.HelpCenterID {
+		return row, ErrBoardNotFound
+	}
+	out, err := q.SetFeedbackPostBoard(ctx, models.SetFeedbackPostBoardParams{
+		BoardID: &b.ID, Now: p.Clock.Now(), WorkspaceID: row.WorkspaceID, ID: row.ID,
+	})
+	if err != nil {
+		return row, fmt.Errorf("move feature request to board: %w", err)
+	}
+	return out, nil
 }
 
 /*

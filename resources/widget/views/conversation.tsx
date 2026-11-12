@@ -6,9 +6,9 @@ import { Tools } from "../components/chrome";
 import { Composer } from "../components/composer";
 import { BackIcon } from "../components/icons";
 import { Loadable, SkeletonThread } from "../components/skeleton";
-import { Thread } from "../components/thread";
 import { Whoami } from "../components/whoami";
 import type { Content } from "../content";
+import { thread } from "../lib/threads";
 import type { Options } from "../options";
 
 export function Conversation({ options, content }: { options: Options; content: Content }) {
@@ -23,9 +23,9 @@ export function Conversation({ options, content }: { options: Options; content: 
       </header>
       <div className="thread" data-target="thread">
         <Loadable skeleton={<SkeletonThread />}>
-          <p className="day">Today</p>
-          <Thread messages={content.thread} />
-          <p className="seen">Seen</p>
+          <p className="day">{options.texts.today}</p>
+          {thread()?.Thread({ messages: content.thread }) ?? null}
+          <p className="seen">{options.texts.seen}</p>
         </Loadable>
       </div>
       <Composer options={options} />

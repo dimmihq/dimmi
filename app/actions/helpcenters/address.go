@@ -27,9 +27,13 @@ type Addresses struct {
 }
 
 /*
-Root is where the help center's pages start, without a trailing slash.
+Root is where the help center's pages start, without a trailing slash:
+its verified custom domain when it has one.
 */
 func (a Addresses) Root(h models.HelpCenter) string {
+	if h.CustomDomain != nil && *h.CustomDomain != "" {
+		return "https://" + *h.CustomDomain
+	}
 	if a.BaseDomain != "" {
 		return "https://" + h.Subdomain + "." + a.BaseDomain
 	}

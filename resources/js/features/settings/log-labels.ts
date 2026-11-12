@@ -90,6 +90,7 @@ const groups: { id: string; events: string[] }[] = [
       "contact_erasure.canceled",
       "contact_erasure.held",
       "contact_erasure.completed",
+      "contact.merged",
     ],
   },
   { id: "email", events: [] },

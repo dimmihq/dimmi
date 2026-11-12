@@ -164,7 +164,7 @@ Store starts a conversation and answers with it.
 */
 func (c *ConversationController) Store(
 	ctx context.Context, in *requests.StoreConversationRequest,
-) (*ConversationOutput, error) {
+) (*StoredConversationOutput, error) {
 	b := in.Body
 	create := conversations.CreateConversationInput{
 		Membership: membership(ctx), ByContact: b.Author != nil && *b.Author == "contact", Subject: b.Subject,
@@ -194,12 +194,16 @@ func (c *ConversationController) Store(
 		return nil, err
 	}
 
+	if in.Importing() {
+		return c.storeImported(ctx, in, create)
+	}
+
 	loaded, err := c.Create.Handle(ctx, create)
 	if err != nil {
 		return nil, err
 	}
 
-	return &ConversationOutput{Body: fhttp.NewResource(resources.NewConversation(loaded))}, nil
+	return storedConversation(loaded), nil
 }
 
 /*
@@ -214,7 +218,7 @@ func (c *ConversationController) Update(
 		return nil, err
 	}
 
-	changes, err := c.changes(ctx, in)
+	changes, err := c.changes(ctx, in.Body, requests.Sent(in.RawBody))
 	if err != nil {
 		return nil, err
 	}
@@ -234,13 +238,13 @@ func (c *ConversationController) Update(
 }
 
 /*
-changes turns the request into the action's changes, resolving the ids
-it names.
+changes turns the fields of a request into the action's changes,
+resolving the ids they name. Sent names the fields the body carried, to
+tell an assignment to nobody from one left out.
 */
 func (c *ConversationController) changes(
-	ctx context.Context, in *requests.UpdateConversationRequest,
+	ctx context.Context, b requests.UpdateConversationRequestBody, sent map[string]bool,
 ) (conversations.Changes, error) {
-	b, sent := in.Body, requests.Sent(in.RawBody)
 	ch := conversations.Changes{
 		Spam: b.Spam, AssignMember: sent["assignee_id"], AssignTeam: sent["team_id"], Status: b.Status,
 		SnoozedUntil: b.SnoozedUntil, Note: b.Note, Unread: b.Unread,

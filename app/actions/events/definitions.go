@@ -6,7 +6,8 @@
 | The names a workspace's events go by, each with how many arrived and
 | when the last did, and what one person did. A name's label and
 | description change freely; archiving stops new events of it while the
-| summaries already kept still answer rules. Reading takes
+| summaries already kept still answer rules. A name may be opened to the
+| messenger, which then sends it from the visitor's browser. Reading takes
 | contacts:read; changing takes attributes:manage, the same permission
 | that shapes the rest of a workspace's customer data.
 |
@@ -48,6 +49,8 @@ type UpdateInput struct {
 	Label       *string
 	Description *string
 	Status      *string
+	// ClientWritable opens the name to the messenger, or closes it.
+	ClientWritable *bool
 }
 
 /*
@@ -114,7 +117,12 @@ changed applies the input over the stored name.
 */
 func changed(row models.EventDefinition, in UpdateInput) (models.UpdateEventDefinitionParams, error) {
 	p := models.UpdateEventDefinitionParams{
-		Label: row.Label, Description: row.Description, Status: row.Status, WorkspaceID: row.WorkspaceID, ID: row.ID,
+		Label: row.Label, Description: row.Description, Status: row.Status, ClientWritable: row.ClientWritable,
+		WorkspaceID: row.WorkspaceID, ID: row.ID,
+	}
+
+	if in.ClientWritable != nil {
+		p.ClientWritable = *in.ClientWritable
 	}
 
 	if in.Label != nil {

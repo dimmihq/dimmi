@@ -12,6 +12,7 @@
 package providers
 
 import (
+	"context"
 	"errors"
 
 	"github.com/dimmihq/dimmi/framework/foundation"
@@ -22,6 +23,7 @@ import (
 	"github.com/dimmihq/dimmi/app/actions/feedback"
 	"github.com/dimmihq/dimmi/app/actions/helpcenters"
 	"github.com/dimmihq/dimmi/app/http/controllers/web"
+	"github.com/dimmihq/dimmi/app/jobs"
 )
 
 /*
@@ -46,12 +48,15 @@ func bootHelpCenters(a *app.App) {
 		BaseDomain: a.Config.HelpCenters.BaseDomain, AppURL: a.Application.Config.App.URL,
 	}
 	acts.ChangelogEntries = changelog.NewEntries(a.DB, a.Clock, a.Queue)
+	acts.ChangelogEntries.Events = a.Events
 	acts.ChangelogSubscribers = &changelog.Subscribers{
 		DB: a.DB, Clock: a.Clock, Mail: a.Mail, Key: a.DerivedKey("changelog.subscribers"),
 		Addresses: acts.HelpCenterAddresses,
 	}
 	acts.ChangelogPublic = &changelog.Public{DB: a.DB, Clock: a.Clock, Key: a.DerivedKey("changelog.reactions")}
 	acts.Feedback = feedback.NewPosts(a.DB, a.Clock, a.Mail, acts.HelpCenterAddresses)
+	acts.Feedback.Events = a.Events
+	bootHelpCenterDomains(a)
 	bootKnowledge(a)
 }
 
@@ -64,18 +69,25 @@ func registerChangelogJobs(a *app.App) error {
 		queue.Register(a.Queue, &changelog.PublishWorker{Entries: a.Actions.ChangelogEntries}),
 		queue.Register(a.Queue, &changelog.MailWorker{Subscribers: a.Actions.ChangelogSubscribers}),
 		registerKnowledgeJobs(a),
+		queue.Register(a.Queue, &jobs.CheckHelpCenterDomain{Domains: a.Actions.HelpDomains}),
+		queue.Register(a.Queue, &jobs.ScheduleHelpCenterDomainChecks{DB: a.DB, Queue: a.Queue, Clock: a.Clock}),
+		queue.Register(a.Queue, &jobs.PruneHelpAnalytics{Analytics: a.Actions.HelpAnalytics}),
 	)
 }
 
 /*
 registerHelpCenters serves help centers on their own subdomains of the
-help domain, when the install has one.
+help domain, when the install has one, and on workspaces' verified
+custom domains.
 */
 func registerHelpCenters(a *app.App, fa *foundation.Application) {
-	if a.Config.HelpCenters.BaseDomain == "" {
-		return
+	custom := func(ctx context.Context, host string) string {
+		if a.Actions == nil || a.Actions.HelpDomainHosts == nil {
+			return ""
+		}
+		return a.Actions.HelpDomainHosts.Subdomain(ctx, host)
 	}
 	fa.Kernel.Use(web.HostedHelpCenters(helpcenters.Addresses{
 		BaseDomain: a.Config.HelpCenters.BaseDomain, AppURL: fa.Config.App.URL,
-	}))
+	}, custom))
 }

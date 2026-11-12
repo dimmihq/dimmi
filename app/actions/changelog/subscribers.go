@@ -47,8 +47,10 @@ import (
 Failures of subscribing.
 */
 var (
-	ErrEmailInvalid = fault.New(fault.Invalid, "email_invalid", "Enter a valid email address.").OnField("email")
-	ErrLinkInvalid  = fault.New(fault.NotFound, "subscription_link_invalid",
+	ErrEmailInvalid     = fault.New(fault.Invalid, "email_invalid", "Enter a valid email address.").OnField("email")
+	ErrSubscriptionsOff = fault.New(fault.Forbidden, "subscriptions_off",
+		"This changelog does not take subscriptions.")
+	ErrLinkInvalid = fault.New(fault.NotFound, "subscription_link_invalid",
 		"This link no longer works. Subscribe again from the changelog.")
 	ErrSubscriberNotFound = fault.New(fault.NotFound, "changelog_subscriber_not_found",
 		"No subscriber of this workspace has this id.")
@@ -96,6 +98,17 @@ Subscribe takes an address, active at once when verified, otherwise
 pending with a confirmation on its way.
 */
 func (s *Subscribers) Subscribe(ctx context.Context, in SubscribeInput) (models.ChangelogSubscriber, error) {
+	if o := helpcenters.ChangelogOf(in.Center); !o.On || !o.Subscriptions {
+		return models.ChangelogSubscriber{}, ErrSubscriptionsOff
+	}
+	return s.keep(ctx, in)
+}
+
+/*
+keep stores the address, active or pending, and sends the confirmation
+a pending one needs.
+*/
+func (s *Subscribers) keep(ctx context.Context, in SubscribeInput) (models.ChangelogSubscriber, error) {
 	address, err := fmail.ParseAddress(strings.TrimSpace(in.Email))
 	if err != nil || len(address.Email) > 320 {
 		return models.ChangelogSubscriber{}, ErrEmailInvalid

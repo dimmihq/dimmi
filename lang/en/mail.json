@@ -190,7 +190,14 @@
   "notification": {
     "action": "Open in dimmi",
     "why": "You get this because of your notification settings in {workspace}.",
-    "manage": "Change notifications"
+    "manage": "Change notifications",
+    "unsubscribe": "Unsubscribe from these emails"
+  },
+  "quiet_summary": {
+    "subject": "While your quiet hours were on in {workspace}",
+    "intro": "Your quiet hours held back {count} notifications. Here is what happened:",
+    "more": "And {count} more.",
+    "action": "Open notifications"
   },
   "visitor_code": {
     "subject": "{{.code}} is your {{.workspace}} code",
@@ -246,5 +253,12 @@
     "intro": "dimmi could not sync {{.source}} in {{.workspace}}. The agent keeps answering from the last copy until it syncs again.",
     "error": "What went wrong: {{.error}}",
     "action": "Open the source"
+  },
+  "conversation_rating": {
+    "subject": "How did {{.workspace}} do?",
+    "greeting": "Hi {{.name}},",
+    "intro": "Your conversation with {{.workspace}} was closed. How did it go? Pick a face:",
+    "comment": "Tell us more",
+    "why": "You get this because you talked with {{.workspace}}. The link works for a week."
   }
 }

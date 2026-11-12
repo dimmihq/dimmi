@@ -6,6 +6,7 @@ import { Button } from "@/components/base/buttons/button";
 import { ConversationView } from "@/features/inbox/conversation-view";
 import { useInbox } from "@/features/inbox/conversations";
 import { ConversationSkeleton } from "@/features/inbox/skeletons";
+import { useFollowMerge } from "@/features/inbox/use-follow-merge";
 import { EmptyState, Panel } from "@/features/shell/page";
 import { ApiError } from "@/lib/api/client";
 import { conversationQuery } from "@/lib/api/inbox";
@@ -29,6 +30,7 @@ function ConversationRoute() {
     retry: false,
   });
 
+  const following = useFollowMerge(view, error);
   const gone = error instanceof ApiError && (error.status === 404 || error.status === 403);
 
   if (conversation && !gone) {
@@ -37,7 +39,7 @@ function ConversationRoute() {
 
   return (
     <Panel label="Conversation" className="flex-1">
-      {isPending ? (
+      {isPending || following ? (
         <ConversationSkeleton />
       ) : error && !gone ? (
         <EmptyState

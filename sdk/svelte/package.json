@@ -1,0 +1,52 @@
+{
+  "name": "@dimmi/svelte",
+  "version": "0.1.0",
+  "description": "The dimmi messenger for Svelte and SvelteKit: a store and an action.",
+  "license": "MIT",
+  "type": "module",
+  "sideEffects": false,
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      }
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "node ../../scripts/build-sdk.ts svelte"
+  },
+  "dependencies": {
+    "@dimmi/browser": "^0.1.0"
+  },
+  "peerDependencies": {
+    "svelte": ">=4"
+  },
+  "keywords": [
+    "dimmi",
+    "svelte",
+    "sveltekit",
+    "messenger",
+    "chat-widget"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/dimmihq/dimmi",
+    "directory": "sdk/svelte"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

@@ -6,7 +6,7 @@
  */
 import type { IdentityUser } from "@dimmi/server";
 
-import { type Extend, extended, type ServerIdentify } from "./config";
+import { type Extend, extended, type ServerIdentify } from "./config.js";
 
 type SupabaseUser = NonNullable<
   Awaited<ReturnType<ReturnType<typeof import("@supabase/ssr").createServerClient>["auth"]["getUser"]>>["data"]["user"]

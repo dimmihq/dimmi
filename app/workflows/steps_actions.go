@@ -341,7 +341,8 @@ func (st *state) snoozeEnd(ctx context.Context, sn workflowspec.SnoozeSettings) 
 
 /*
 runClose closes the conversation, unless the step leaves conversations
-a teammate answered alone.
+a teammate answered alone, and asks the customer for a rating when the
+step says so.
 */
 func runClose(ctx context.Context, st *state, s workflowspec.Step) (outcome, error) {
 	c := settings[workflowspec.CloseSettings](s)
@@ -349,7 +350,9 @@ func runClose(ctx context.Context, st *state, s workflowspec.Step) (outcome, err
 		return skipped("teammate_replied"), nil
 	}
 
-	return st.changeStatus(ctx, conversations.StatusChange{Status: string(enums.ConversationStatusClosed)})
+	return st.changeStatus(ctx, conversations.StatusChange{
+		Status: string(enums.ConversationStatusClosed), AskRating: c.AskRating,
+	})
 }
 
 /*

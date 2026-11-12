@@ -3,7 +3,7 @@
  * dimmiIdentity((req) => ...)). identify gets the request as Express
  * hands it over, with your session middleware already run.
  */
-import { type Identify, type IdentityOptions, identityToken, tokenHeaders } from "./index";
+import { type Identify, type IdentityOptions, identityToken, tokenHeaders } from "./index.js";
 
 interface ExpressResponse {
   set(headers: Record<string, string>): ExpressResponse;

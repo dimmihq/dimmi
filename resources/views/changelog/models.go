@@ -45,7 +45,8 @@ type Reaction struct {
 /*
 Entry is a published change. Cover is the path of its image, empty when
 it has none. Full says whether a list shows its whole body or only its
-summary with a link to read on.
+summary with a link to read on. An entry without Reactions shows no
+reaction buttons.
 */
 type Entry struct {
 	Slug      string
@@ -68,15 +69,19 @@ Index is a page of the changelog: its entries newest first, the labels
 to filter by with the one being shown, the paths of the newer and older
 pages when there are any, and the year's weeks for the release strip.
 Subscribed is set after a visitor asked to subscribe, to tell them to
-check their inbox.
+check their inbox. Title heads the page, Changelog when empty, and
+NoSubscribe hides the subscribe form of a changelog that takes no
+subscriptions.
 */
 type Index struct {
-	Entries    []Entry
-	Labels     []Label
-	Active     string
-	Newer      string
-	Older      string
-	Year       int
-	Weeks      []Week
-	Subscribed bool
+	Title       string
+	NoSubscribe bool
+	Entries     []Entry
+	Labels      []Label
+	Active      string
+	Newer       string
+	Older       string
+	Year        int
+	Weeks       []Week
+	Subscribed  bool
 }

@@ -1,29 +1,35 @@
 /*
  * Posting a request for the team: what a customer asked for, or the
- * team's own idea, counted as that customer's vote when one is named.
+ * team's own idea, counted as that customer's vote when one is named, on
+ * the board picked when the help center has more than one.
  */
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { type FormEvent, useId, useState } from "react";
 
 import { Button } from "@/components/base/buttons/button";
 import { Input } from "@/components/base/input/input";
 import { Modal, ModalBody, ModalFooter, ModalHeader } from "@/components/base/modal/modal";
+import { Select, SelectItem } from "@/components/base/select/select";
 import { Textarea } from "@/components/base/textarea/textarea";
 import { toast } from "@/components/base/toast/toast";
-import { createPost, feedbackKeys } from "@/lib/api/feedback";
+import { boardsQuery, createPost, feedbackKeys } from "@/lib/api/feedback";
 
 import { CustomerPicker, type Picked } from "./customer-picker";
 
 export function NewRequestDialog({
   workspace,
   helpCenter,
+  board: initial,
   onClose,
 }: {
   workspace: string;
   helpCenter: string;
+  board?: string;
   onClose: () => void;
 }) {
+  const { data: boards = [] } = useQuery(boardsQuery(workspace, helpCenter));
+  const [board, setBoard] = useState(initial ?? "");
   const formId = useId();
   const navigate = useNavigate();
   const client = useQueryClient();
@@ -36,6 +42,7 @@ export function NewRequestDialog({
         title,
         body_markdown: details,
         ...(customer ? { contact_id: customer.id } : {}),
+        ...(board ? { board_id: board } : {}),
       }),
     onSuccess: (post) => {
       void client.invalidateQueries({ queryKey: feedbackKeys.posts(workspace, helpCenter) });
@@ -60,6 +67,19 @@ export function NewRequestDialog({
         <form id={formId} onSubmit={submit} className="flex flex-col gap-4">
           <Input label="Title" value={title} onChange={setTitle} maxLength={150} isRequired autoFocus />
           <Textarea label="Details" value={details} onChange={setDetails} rows={5} />
+          {boards.length > 1 ? (
+            <Select
+              label="Board"
+              selectedKey={board || boards[0]?.id}
+              onSelectionChange={(key) => setBoard(String(key))}
+            >
+              {boards.map((b) => (
+                <SelectItem key={b.id} id={b.id} textValue={b.name}>
+                  {b.name}
+                </SelectItem>
+              ))}
+            </Select>
+          ) : null}
           <CustomerPicker workspace={workspace} picked={customer} onPick={setCustomer} />
         </form>
       </ModalBody>

@@ -3,9 +3,10 @@
  * be judged with real-looking conversations, articles and changelog. It
  * loads as its own chunk and never reaches a customer's page.
  */
-import { Said, Typing } from "./components/thread";
-import type { Content, Message } from "./content";
+
+import type { Content, Incoming, Message } from "./content";
 import { size } from "./lib/map";
+import { Said, Typing } from "./lib/thread_parts";
 
 /*
  * teammate is who answers in a preview.
@@ -13,6 +14,13 @@ import { size } from "./lib/map";
 export const teammate = "Maya Kerr";
 
 const reply = "Thanks for the details. A teammate will pick this up here in a moment.";
+
+/*
+ * said draws a message the team sent in a preview.
+ */
+export function said(message: Incoming): string {
+  return String(Said({ messages: [message] }));
+}
 
 export interface Sent {
   body: string;

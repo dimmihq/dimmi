@@ -54,9 +54,13 @@ type CollectSettings struct {
 }
 
 /*
-ReplyTimeSettings tells the customer when the team will reply.
+ReplyTimeSettings tells the customer when the team will reply. Text
+holds the {{reply_time}} variable, worked out from the office hours of
+ScheduleID (the inbox's when empty) and the load of TeamID (the whole
+workspace when empty).
 */
 type ReplyTimeSettings struct {
+	Text       string `json:"text,omitempty"`
 	ScheduleID string `json:"schedule_id,omitempty"`
 	TeamID     string `json:"team_id,omitempty"`
 	Style      string `json:"style,omitempty"`

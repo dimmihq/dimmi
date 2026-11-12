@@ -68,7 +68,7 @@
   position: fixed;
   z-index: 2147483000;
   inset-block-end: var(--y);
-  inset-inline-end: var(--x);
+  right: var(--x);
   display: flex;
   flex-direction: column;
   align-items: flex-end;
@@ -99,9 +99,18 @@
   font-family: inherit;
 }
 
+/*
+ * The side is the page's, never the language's: a right-to-left
+ * messenger mirrors what is inside the panel, not where it sits.
+ */
 .messenger[data-side="left"] {
-  inset-inline: var(--x) auto;
+  right: auto;
+  left: var(--x);
   align-items: flex-start;
+}
+
+[dir="rtl"] .flip {
+  scale: -1 1;
 }
 
 button,

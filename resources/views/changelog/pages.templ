@@ -17,11 +17,13 @@ templ IndexPage(c helpcenter.Center, index Index, assets templ.Component) {
 	@helpcenter.Layout(c, helpcenter.Meta{Title: indexTitle(c, index), Description: "New features, improvements and fixes in " + c.Product + ".", Section: "changelog", Trail: indexTrail(index), Markdown: "/changelog.md"}, templ.NopComponent, assets) {
 		<div class="mx-auto w-full max-w-[58rem] px-5">
 			<header class="stagger flex flex-col items-center pt-14 text-center md:pt-20">
-				<h1 class="text-display-3-medium tracking-tight max-md:text-display-4-medium">Changelog</h1>
+				<h1 class="text-display-3-medium tracking-tight max-md:text-display-4-medium">{ titleOr(index.Title) }</h1>
 				<p class="mt-3 text-title-3-regular text-text-secondary">The latest { c.Product } releases and improvements.</p>
-				<div class="mt-7 w-full max-w-[24rem]">
-					@subscribe(c, index.Subscribed)
-				</div>
+				if !index.NoSubscribe {
+					<div class="mt-7 w-full max-w-[24rem]">
+						@subscribe(c, index.Subscribed)
+					</div>
+				}
 				<a href={ helpcenter.Href(c, feedPath(index.Active)) } data-turbo="false" class="mt-3 inline-flex items-center gap-1.5 text-body-2-regular text-text-tertiary transition-colors hover:text-text-primary">
 					@helpcenter.Icon("rss", "size-3.5")
 					Subscribe to RSS
@@ -125,7 +127,7 @@ reactions, a way to ask about it and the entries around it.
 */
 
 templ EntryPage(c helpcenter.Center, all []Label, p Page, assets templ.Component) {
-	@helpcenter.Layout(c, helpcenter.Meta{Title: p.Entry.Title + " | " + c.Product + " changelog", Description: p.Entry.Summary, Section: "changelog", Trail: []helpcenter.Crumb{{Title: "Changelog", Path: "/changelog"}, {Title: p.Entry.Title, Path: p.Entry.Path}}, Markdown: p.Entry.Path + ".md"}, templ.NopComponent, assets) {
+	@helpcenter.Layout(c, helpcenter.Meta{Title: p.Entry.Title + " | " + c.Product + " changelog", Description: p.Entry.Summary, Section: "changelog", Trail: []helpcenter.Crumb{{Title: titleOr(p.Title), Path: "/changelog"}, {Title: p.Entry.Title, Path: p.Entry.Path}}, Markdown: p.Entry.Path + ".md"}, templ.NopComponent, assets) {
 		<article class="mx-auto w-full max-w-[44rem] px-5 pt-12 md:pt-16">
 			<div class="stagger">
 				<p class="flex flex-wrap items-center gap-3 text-body-medium text-text-secondary">
@@ -175,13 +177,15 @@ templ EntryPage(c helpcenter.Center, all []Label, p Page, assets templ.Component
 				@helpcenter.HelpButton(c, "ms-auto inline-flex items-center gap-1.5 text-body-medium text-text-secondary transition-colors hover:text-text-primary", "Questions? ", "size-4")
 			</div>
 			@entryNeighbors(c, p.Previous, p.Next)
-			<section class="mt-12 flex flex-col items-center rounded-3xl border border-border-button-default bg-background-secondary-default px-6 py-8 text-center">
-				<h2 class="text-headline-semibold">Get updates in your inbox</h2>
-				<p class="mt-1 text-body-regular text-text-secondary">One email when we ship something worth knowing about.</p>
-				<div class="mt-5 w-full max-w-[24rem]">
-					@subscribe(c, false)
-				</div>
-			</section>
+			if !p.NoSubscribe {
+				<section class="mt-12 flex flex-col items-center rounded-3xl border border-border-button-default bg-background-secondary-default px-6 py-8 text-center">
+					<h2 class="text-headline-semibold">Get updates in your inbox</h2>
+					<p class="mt-1 text-body-regular text-text-secondary">One email when we ship something worth knowing about.</p>
+					<div class="mt-5 w-full max-w-[24rem]">
+						@subscribe(c, false)
+					</div>
+				</section>
+			}
 		</article>
 	}
 }

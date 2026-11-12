@@ -8,6 +8,7 @@
 | receipt tells them when, never which member: a teammate's name and
 | picture travel only when the workspace chose to show them, and member
 | ids never leave the team. Read markers themselves stay with the team.
+| A workspace that turned seen receipts off sends none.
 |
 | Teammates reading the same conversation at once would repeat the
 | receipt, so it goes out at most once per conversation every five
@@ -142,8 +143,17 @@ func (s *SeenReceipts) target(ctx context.Context, e appevents.ConversationRead)
 			return err
 		}
 
+		w, err := q.FindWorkspace(ctx, e.WorkspaceID)
+		if err != nil {
+			return fmt.Errorf("find workspace: %w", err)
+		}
+
+		if found = w.ShowsSeenReceipts(); !found {
+			return nil
+		}
+
 		out.contact = c.ContactID
-		out.by, err = namedReader(ctx, q, e)
+		out.by, err = namedReader(ctx, q, w, e)
 
 		return err
 	})
@@ -177,12 +187,9 @@ func answersCustomer(ctx context.Context, q *models.Queries, c models.Conversati
 namedReader returns the teammate who read, when the workspace shows
 names on receipts, nil otherwise.
 */
-func namedReader(ctx context.Context, q *models.Queries, e appevents.ConversationRead) (*seenBy, error) {
-	w, err := q.FindWorkspace(ctx, e.WorkspaceID)
-	if err != nil {
-		return nil, fmt.Errorf("find workspace: %w", err)
-	}
-
+func namedReader(
+	ctx context.Context, q *models.Queries, w models.Workspace, e appevents.ConversationRead,
+) (*seenBy, error) {
 	if !w.SeenReceiptShowsName() {
 		return nil, nil
 	}

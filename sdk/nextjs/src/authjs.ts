@@ -5,7 +5,7 @@
  */
 import type { IdentityUser } from "@dimmi/server";
 
-import { type Extend, extended, type ServerIdentify } from "./config";
+import { type Extend, extended, type ServerIdentify } from "./config.js";
 
 export interface AuthjsSession {
   user?: { id?: string | null; email?: string | null; name?: string | null; image?: string | null } & Record<

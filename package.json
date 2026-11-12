@@ -7,13 +7,24 @@
     "dev": "vite",
     "build": "pnpm typecheck && vite build && touch public/build/.gitkeep && pnpm widget:build",
     "widget:build": "node scripts/build-widget.ts",
-    "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.e2e.json && tsc --noEmit -p tsconfig.widget.json && tsc --noEmit -p tsconfig.sdk.json",
+    "sdk:build": "node scripts/sdk-generate.ts api --if-missing && node scripts/build-sdk.ts",
+    "sdk:test": "node scripts/sdk-generate.ts api --if-missing && vitest run --project sdk",
+    "sdk:generate": "node scripts/sdk-generate.ts",
+    "sdk:check": "node scripts/sdk-generate.ts --check",
+    "sdk:compat": "node scripts/sdk-compat.ts",
+    "sdk:version": "cd sdk && pnpm dlx @changesets/cli@3.0.3 version && cd .. && node scripts/sdk-versions.ts",
+    "changeset": "cd sdk && pnpm dlx @changesets/cli@3.0.3",
+    "typecheck": "node scripts/sdk-generate.ts api --if-missing && tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.e2e.json && tsc --noEmit -p tsconfig.widget.json && tsc --noEmit -p tsconfig.sdk.json && tsc --noEmit -p site/tsconfig.json",
     "lint": "biome ci --error-on-warnings",
     "format": "biome check --write",
-    "test": "vitest run",
-    "e2e": "playwright test"
+    "test": "node scripts/sdk-generate.ts api --if-missing && vitest run",
+    "e2e": "playwright test",
+    "site:dev": "vite --config site/vite.config.ts",
+    "site:build": "vite build --config site/vite.config.ts",
+    "site:preview": "vite preview --config site/vite.config.ts"
   },
   "dependencies": {
+    "@fontsource-variable/funnel-display": "5.3.0",
     "@fontsource-variable/inter": "^5.3.0",
     "@fontsource-variable/jetbrains-mono": "^5.3.0",
     "@hotwired/turbo": "^8.0.23",
@@ -51,10 +62,12 @@
     "remark-breaks": "4.0.0",
     "remark-gfm": "4.0.1",
     "tailwind-merge": "^3.7.0",
+    "three": "0.180.0",
     "tinykeys": "3.1.0",
     "yet-another-react-lightbox": "3.32.2"
   },
   "devDependencies": {
+    "@angular/core": "^20.3.35",
     "@biomejs/biome": "2.6.4",
     "@playwright/test": "^1.64.1",
     "@tailwindcss/vite": "^4.3.3",
@@ -65,12 +78,18 @@
     "@types/node": "^26.6.6",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
+    "@types/three": "0.180.0",
     "@vitejs/plugin-react": "^6.1.2",
     "i18next-cli": "1.78.0",
     "jsdom": "^30.1.3",
+    "openapi-fetch": "^0.17.0",
+    "rxjs": "^7.8.2",
+    "svelte": "^5.57.3",
     "tailwindcss": "^4.3.3",
     "typescript": "^7.0.2",
     "vite": "^8.3.5",
-    "vitest": "^5.0.5"
+    "vite-prerender-plugin": "0.5.14",
+    "vitest": "^5.0.5",
+    "vue": "^3.5.45"
   }
 }

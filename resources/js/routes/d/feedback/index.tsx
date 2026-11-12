@@ -3,6 +3,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { FeedbackPage } from "@/features/feedback/feedback-page";
 
 interface FeedbackSearch {
+  board?: string;
   view?: string;
   sort?: string;
   page?: number;
@@ -10,6 +11,7 @@ interface FeedbackSearch {
 
 export const Route = createFileRoute("/d/feedback/")({
   validateSearch: (search: Record<string, unknown>): FeedbackSearch => ({
+    ...(typeof search.board === "string" && search.board !== "" ? { board: search.board } : {}),
     ...(typeof search.view === "string" && search.view !== "" ? { view: search.view } : {}),
     ...(typeof search.sort === "string" && search.sort !== "" ? { sort: search.sort } : {}),
     ...(typeof search.page === "number" && search.page > 1 ? { page: search.page } : {}),

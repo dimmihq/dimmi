@@ -66,13 +66,15 @@ const starts: Partial<Record<StepKind, Step["settings"]>> = {
   priority: { value: "high" },
   note: { text: "" },
   update_contact: { set: [{ field: "contact.name", value: "" }] },
+  http_request: { method: "GET", url: "" },
 };
 
 /*
  * freshStep is a new step of a kind with the settings it starts with
  * and the paths it needs: two buttons for reply buttons, one condition
- * and everyone else for a branch, and for dimmi a path for each way its
- * turn ends.
+ * and everyone else for a branch, two categories and none matched for
+ * sorting by topic, and for dimmi a path for each way its turn ends. A
+ * call to your system starts with no paths; its failure path is opt-in.
  */
 export function freshStep(kind: StepKind): Step {
   const step: Step = { id: newId("s_"), kind, settings: { ...starts[kind] } };
@@ -81,6 +83,13 @@ export function freshStep(kind: StepKind): Step {
   }
   if (kind === "dimmi") {
     step.paths = ["resolved", "handed_over", "quiet"].map((outcome) => ({ id: newId("p_"), outcome, steps: [] }));
+  }
+  if (kind === "classify") {
+    step.paths = [
+      { id: newId("p_"), label: "Category 1", steps: [] },
+      { id: newId("p_"), label: "Category 2", steps: [] },
+      { id: newId("p_"), outcome: "none", steps: [] },
+    ];
   }
   if (kind === "branch") {
     step.paths = [

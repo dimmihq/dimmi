@@ -91,6 +91,24 @@ func (w Workspace) ShowsViewersOnList() bool {
 }
 
 /*
+ShowsSeenReceipts reports whether the customer's widget is told when the
+team read their message. It is unless the workspace turned it off.
+*/
+func (w Workspace) ShowsSeenReceipts() bool {
+	var settings struct {
+		Inbox struct {
+			SeenReceipts *bool `json:"seen_receipts"`
+		} `json:"inbox"`
+	}
+
+	if len(w.Settings) == 0 || json.Unmarshal(w.Settings, &settings) != nil {
+		return true
+	}
+
+	return settings.Inbox.SeenReceipts == nil || *settings.Inbox.SeenReceipts
+}
+
+/*
 SeenReceiptShowsName reports whether the customer's widget names the
 teammate who read their message. It does not unless the workspace
 turned it on: by default the customer only learns that the team saw it.

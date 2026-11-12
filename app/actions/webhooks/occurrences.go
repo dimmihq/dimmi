@@ -90,8 +90,10 @@ func namedOccurrence(e any) (jobs.FanOutWebhookEventArgs, bool) {
 		args.Subject, args.SubjectID = subjectTag, ev.TagID
 	case appevents.ContactErased:
 		args.Subject, args.SubjectID = subjectContact, ev.ContactID
+	case appevents.ContactMerged:
+		args.Subject, args.SubjectID = subjectContact, ev.ContactID
 	default:
-		return args, false
+		return engagementOccurrence(e, args)
 	}
 
 	return args, true
@@ -199,6 +201,11 @@ func otherExtras(e any) map[string]any {
 		return map[string]any{
 			"added": publicIDs(models.PrefixContact, ev.Added), "removed": publicIDs(models.PrefixContact, ev.Removed),
 		}
+	case appevents.ConversationRated:
+		return map[string]any{"rating": map[string]any{
+			"score": ev.Score, "comment": nullable(ev.Comment), "channel": ev.Channel,
+			"member_id": publicID(models.PrefixMember, ev.MemberID),
+		}}
 	case appevents.AiHandoffRequested:
 		return map[string]any{"handoff": map[string]any{"reason": ev.Reason, "summary": ev.Summary}}
 	case appevents.MessageDeliveryUpdated:
@@ -209,7 +216,7 @@ func otherExtras(e any) map[string]any {
 		return map[string]any{"name": ev.Name, "ref": nullable(ev.Ref)}
 	}
 
-	return nil
+	return engagementExtras(e)
 }
 
 /*

@@ -39,11 +39,25 @@ type Idea struct {
 }
 
 /*
+BoardTab is one board of feature requests the visitor may open, such as
+feature requests or bugs, by the slug its tab and form name it with.
+*/
+type BoardTab struct {
+	Name        string
+	Slug        string
+	Description string
+}
+
+/*
 Board is the feature requests page: the requests grouped by status as a
-roadmap, or one List when Sort or Query asks for it. Submitted thanks a
+roadmap, or one List when Sort or Query asks for it. Boards are the tabs
+to narrow it to one board, shown when there is more than one, and Active
+the slug of the board shown, empty for all of them. Submitted thanks a
 visitor who just posted; Pending says their post waits for approval.
 */
 type Board struct {
+	Boards    []BoardTab
+	Active    string
 	Statuses  []Status
 	List      []Idea
 	Sort      string

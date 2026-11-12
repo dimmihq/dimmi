@@ -21,6 +21,7 @@ import (
 	"github.com/dimmihq/dimmi/framework/ids"
 	fmail "github.com/dimmihq/dimmi/framework/mail"
 
+	"github.com/dimmihq/dimmi/app/actions/helpcenters"
 	appmail "github.com/dimmihq/dimmi/app/mail"
 	"github.com/dimmihq/dimmi/app/models"
 	"github.com/dimmihq/dimmi/resources/views/mail/changelog"
@@ -72,13 +73,17 @@ func (s *Subscribers) MailEntry(ctx context.Context, args MailEntryArgs) error {
 }
 
 /*
-entryMail is the entry as every subscriber's mail shows it.
+entryMail is the entry as every subscriber's mail shows it: whole, or
+its summary with the link when the team mails summaries.
 */
 func (s *Subscribers) entryMail(h models.HelpCenter, e models.ChangelogEntry) changelog.Entry {
 	root := s.Addresses.Root(h)
 	out := changelog.Entry{
 		HelpCenter: h.Name, Brand: brandOf(h), Title: deref(e.PublishedTitle), Summary: deref(e.PublishedSummary),
 		BodyHTML: absolute(deref(e.PublishedBodyHtml), root), URL: root + "/changelog/" + e.Slug,
+	}
+	if helpcenters.ChangelogOf(h).Summary && out.Summary != "" {
+		out.BodyHTML = ""
 	}
 	if cover := deref(e.PublishedCoverUrl); cover != "" {
 		out.CoverURL = root + cover

@@ -53,7 +53,8 @@ and Subscribers takes the people who want to hear about it. Board is
 the board of feature requests. AppURL is where the messenger's loader
 and API answer, which a help center on its own host loads across.
 Ratings keeps readers' answers about articles, and Passes signs readers
-in to the messenger on the help center's pages.
+in to the messenger on the help center's pages. Analytics counts views
+and searches, and Addresses names the help center's canonical address.
 */
 type HelpCenterController struct {
 	Library     *helpsample.Library
@@ -68,6 +69,8 @@ type HelpCenterController struct {
 	AppURL      string
 	Ratings     *helpcenters.Ratings
 	Passes      *identity.Passes
+	Analytics   *helpcenters.Analytics
+	Addresses   helpcenters.Addresses
 }
 
 /*
@@ -151,6 +154,7 @@ func (c *HelpCenterController) Article(w fhttp.ResponseWriter, r *fhttp.Request)
 	helpful := helpcenter.Helpful{
 		Answer: query.Get("helpful"), Commented: query.Has("commented"), Limited: query.Has("limited"),
 	}
+	c.countView(r, lib, slug)
 	page := helpcenter.ArticlePage(center, lib.Collections(), article, helpful, c.styles())
 	c.respond(w, r, fhttp.StatusOK, page)
 }
@@ -165,7 +169,9 @@ func (c *HelpCenterController) Search(w fhttp.ResponseWriter, r *fhttp.Request) 
 	}
 
 	query := strings.TrimSpace(r.URL.Query().Get("q"))
-	page := helpcenter.SearchPage(center, lib.Collections(), query, lib.Search(query), c.styles())
+	results := lib.Search(query)
+	c.countSearch(r, lib, query, len(results))
+	page := helpcenter.SearchPage(center, lib.Collections(), query, results, c.styles())
 	c.respond(w, r, fhttp.StatusOK, page)
 }
 

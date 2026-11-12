@@ -76,7 +76,8 @@ func API(a *app.App) {
 	a.Router.API("/api/v1", "Dimmi API", a.Config.API.Version, func(api *routing.Router) {
 		api.Group("", func(guest *routing.Router) {
 			guestRoutes(guest, c)
-			broadcastPreferenceRoutes(guest, a)
+			emailLinkRoutes(guest, a)
+			conversationRatingPageRoutes(guest, a)
 		})
 		api.Group("", func(user *routing.Router) { userRoutes(user, c) })
 
@@ -88,21 +89,7 @@ func API(a *app.App) {
 
 		api.Group("", func(workspace *routing.Router) {
 			workspaceRoutes(workspace, c)
-			realtimeRoutes(workspace, a)
-			emailSenderRoutes(workspace, a)
-			emailSetupRoutes(workspace, a)
-			helpCenterRoutes(workspace, a)
-			workflowRoutes(workspace, a)
-			procedureRoutes(workspace, a)
-			audienceRoutes(workspace, a)
-			broadcastRoutes(workspace, a)
-			seriesRoutes(workspace, a)
-			knowledgeSourceRoutes(workspace, a)
-			webhookEndpointRoutes(workspace, a)
-			attributeRoutes(workspace, a)
-			eventRoutes(workspace, a)
-			slackChannelRoutes(workspace, a)
-			slackRoomRoutes(workspace, a)
+			featureRoutes(workspace, a)
 		})
 		api.Group("", func(tokens *routing.Router) { tokenRoutes(tokens, c) })
 		api.Group("", func(inbox *routing.Router) { inboxRoutes(inbox, a) })
@@ -113,12 +100,36 @@ func API(a *app.App) {
 		roleRoutes(api, a)
 		accountRoutes(api, a)
 		api.Group("", func(records *routing.Router) { recordRoutes(records, a) })
+		api.Group("", func(ratings *routing.Router) { conversationRatingRoutes(ratings, a) })
 		api.Group("", func(setup *routing.Router) { onboardingRoutes(setup, a) })
 		api.Group("", func(widgets *routing.Router) { widgetSettingsRoutes(widgets, a) })
 		signInHelpRoutes(api, a)
 		oauthAppRoutes(api, a)
 		integrationRoutes(api, a)
 	})
+}
+
+/*
+featureRoutes declares the routes of each product area a workspace
+member reaches, in the workspace's group.
+*/
+func featureRoutes(workspace *routing.Router, a *app.App) {
+	realtimeRoutes(workspace, a)
+	emailSenderRoutes(workspace, a)
+	emailSetupRoutes(workspace, a)
+	helpCenterRoutes(workspace, a)
+	workflowRoutes(workspace, a)
+	procedureRoutes(workspace, a)
+	audienceRoutes(workspace, a)
+	importRoutes(workspace, a)
+	broadcastRoutes(workspace, a)
+	seriesRoutes(workspace, a)
+	knowledgeSourceRoutes(workspace, a)
+	webhookEndpointRoutes(workspace, a)
+	attributeRoutes(workspace, a)
+	eventRoutes(workspace, a)
+	slackChannelRoutes(workspace, a)
+	slackRoomRoutes(workspace, a)
 }
 
 /*

@@ -8,8 +8,14 @@
  * collection inside or to rename or delete it; the plus in the header
  * adds one at the top. Names are typed right in their row.
  */
-import { type RemixiconComponentType, RiAddLine, RiArticleLine, RiFolderForbidLine } from "@remixicon/react";
-import { useState } from "react";
+import {
+  type RemixiconComponentType,
+  RiAddLine,
+  RiArticleLine,
+  RiBarChart2Line,
+  RiFolderForbidLine,
+} from "@remixicon/react";
+import { type ReactNode, useState } from "react";
 
 import { IconButton } from "@/components/base/buttons/icon-button";
 import { AlertDialog } from "@/components/base/modal/modal";
@@ -19,7 +25,7 @@ import type { Article, Collection } from "@/lib/api/help-centers";
 import { cx } from "@/utils/cx";
 
 import { CollectionRow, DraftRow, type RowAct, type RowProps } from "./collection-rows";
-import { allKey, articlesIn, childrenOf, descendantsOf, unfiledKey } from "./collection-tree";
+import { allKey, analyticsKey, articlesIn, childrenOf, descendantsOf, unfiledKey } from "./collection-tree";
 import { useCollectionEdits } from "./use-collection-edits";
 
 /*
@@ -69,7 +75,7 @@ export function CollectionPanel({
 }: {
   workspace: string;
   helpCenter: string;
-  title: string;
+  title: ReactNode;
   collections: Collection[];
   articles: Article[];
   pick: string;
@@ -103,7 +109,11 @@ export function CollectionPanel({
   return (
     <Panel label="Collections" className="h-full w-full">
       <header className="flex h-14 shrink-0 items-center justify-between gap-2 ps-4 pe-2.5">
-        <h2 className="truncate text-body-medium text-text-primary">{title}</h2>
+        {typeof title === "string" ? (
+          <h2 className="truncate text-body-medium text-text-primary">{title}</h2>
+        ) : (
+          <div className="flex min-w-0 flex-1">{title}</div>
+        )}
         <IconButton
           size="small"
           icon={RiAddLine}
@@ -114,6 +124,13 @@ export function CollectionPanel({
       </header>
       <ScrollArea>
         <div className="flex flex-col gap-0.5 px-2 pb-4">
+          <PickRow
+            label="Analytics"
+            icon={RiBarChart2Line}
+            count={0}
+            current={pick === analyticsKey}
+            onPress={() => onPick(analyticsKey)}
+          />
           <PickRow
             label="All articles"
             icon={RiArticleLine}
@@ -140,7 +157,7 @@ export function CollectionPanel({
               aria-label="Collections"
               size="sm"
               selectionMode="single"
-              selectedKeys={pick === allKey || pick === unfiledKey ? [] : [pick]}
+              selectedKeys={pick === allKey || pick === unfiledKey || pick === analyticsKey ? [] : [pick]}
               onSelectionChange={(keys) => {
                 const [key] = keys === "all" ? [] : [...keys];
                 if (key !== undefined && key !== "new-collection") {

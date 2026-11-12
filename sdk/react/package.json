@@ -1,0 +1,52 @@
+{
+  "name": "@dimmi/react",
+  "version": "0.1.0",
+  "description": "The dimmi messenger for React: a provider, hooks and a button. SSR-safe, React 18 and 19.",
+  "license": "MIT",
+  "type": "module",
+  "sideEffects": false,
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      }
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "node ../../scripts/build-sdk.ts react"
+  },
+  "dependencies": {
+    "@dimmi/browser": "^0.1.0"
+  },
+  "peerDependencies": {
+    "react": ">=18"
+  },
+  "keywords": [
+    "dimmi",
+    "react",
+    "messenger",
+    "chat-widget",
+    "customer-support"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/dimmihq/dimmi",
+    "directory": "sdk/react"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

@@ -46,6 +46,8 @@
     "build": "tsc -p tsconfig.build.json"
   },
   "dependencies": {
+    "@dimmi/browser": "^0.1.0",
+    "@dimmi/react": "^0.1.0",
     "@dimmi/server": "^0.1.0"
   },
   "peerDependencies": {

@@ -253,7 +253,7 @@ function EditForm({
     <>
       <ModalBody className="pb-4">
         <fieldset disabled={!canWrite} className="flex min-w-0 flex-col gap-6">
-          <Duplicates contact={contact} />
+          <Duplicates contact={contact} canMerge={canWrite} />
           <Details state={state} set={set} fields={fields} />
           <Tags state={state} set={set} />
           <Attributes state={state} set={set} defined={defined} />

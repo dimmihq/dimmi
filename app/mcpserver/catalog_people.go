@@ -21,7 +21,7 @@ func peopleDocs() map[string]Doc {
 	out := contactReadDocs()
 	for _, part := range []map[string]Doc{
 		contactWriteDocs(), contactRemovalDocs(), contactInsightDocs(), companyDocs(), companyChangeDocs(),
-		exportErasureAudienceDocs(), attributeEventDocs(),
+		exportErasureAudienceDocs(), attributeEventDocs(), importDocs(),
 	} {
 		maps.Copy(out, part)
 	}

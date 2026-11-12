@@ -187,6 +187,34 @@ docker compose -f /opt/dimmi/compose.yaml exec -T postgres \
 Restore the database with `pg_restore -U postgres -d dimmi --clean`, run
 inside the postgres container, then `dimmictl start`.
 
+## Help centers on customers' own domains
+
+A workspace can serve a help center on its own domain, such as
+`help.acme.com`. The app shows the team a CNAME (the domain points at the
+target below) and a TXT record (`_dimmi.help.acme.com`, proving ownership),
+checks both in the background, and serves the help center there once they
+hold. Caddy orders the certificate on the first visit, after the app's ask
+endpoint allows the domain; the bundled Caddyfile already asks.
+
+Turn the ask endpoint on and name the CNAME target:
+
+```bash
+dimmictl set <<'EOF'
+DIMMI_CUSTOM_DOMAINS__DEFAULT=edge
+DIMMI_CUSTOM_DOMAINS__TLS__EDGE__DRIVER=caddyask
+DIMMI_HELP_CENTERS__CUSTOM_DOMAIN_TARGET=APP
+EOF
+```
+
+- The target defaults to `custom.<help domain>` with a help domain, else
+  the app's own host. It must resolve to this server. A domain counts as
+  pointed here when its CNAME is the target or it resolves to the
+  target's addresses, so an A record on the target works best.
+- Ports 80 and 443 must reach Caddy for every hostname, not only `APP`.
+- Only subdomains can be added; a bare domain cannot carry a CNAME.
+- Each help center also serves `/sitemap.xml`, `/robots.txt`, `/llms.txt`
+  and `/llms-full.txt` on its own address.
+
 ## Other settings
 
 - `DIMMI_AUTH__SIGNUP__MODE`: `invite_only` (default) or `open`.

@@ -291,3 +291,18 @@ func variablePattern(name string) bool {
 	}
 	return true
 }
+
+/*
+Authorize returns what a request through the connection carries: its
+static headers, then the headers and query parameters its secret puts
+on it. Workflow requests use it so a secret lives only on the sealed
+connection, never in a definition.
+*/
+func Authorize(conn models.AiActionConnection, creds Credentials) (map[string]string, url.Values) {
+	headers := defaultHeaders(conn)
+	auth := applyAuth(conn, creds)
+	for name := range auth.headers {
+		headers[name] = auth.headers.Get(name)
+	}
+	return headers, auth.query
+}

@@ -88,7 +88,7 @@ func (q *Queries) CreateCollection(ctx context.Context, arg CreateCollectionPara
 const createHelpCenter = `-- name: CreateHelpCenter :one
 INSERT INTO help_centers (id, workspace_id, name, subdomain, locale, is_default, settings, created_at, updated_at)
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $8)
-RETURNING id, workspace_id, name, subdomain, locale, is_default, status, settings, indexing_enabled, ask_ai_enabled, cache_version, deleted_at, created_at, updated_at
+RETURNING id, workspace_id, name, subdomain, locale, is_default, status, settings, indexing_enabled, ask_ai_enabled, cache_version, deleted_at, created_at, updated_at, custom_domain
 `
 
 type CreateHelpCenterParams struct {
@@ -130,6 +130,7 @@ func (q *Queries) CreateHelpCenter(ctx context.Context, arg CreateHelpCenterPara
 		&i.DeletedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.CustomDomain,
 	)
 	return i, err
 }
@@ -217,7 +218,7 @@ func (q *Queries) FindCollectionBySlug(ctx context.Context, arg FindCollectionBy
 }
 
 const findDefaultHelpCenter = `-- name: FindDefaultHelpCenter :one
-SELECT id, workspace_id, name, subdomain, locale, is_default, status, settings, indexing_enabled, ask_ai_enabled, cache_version, deleted_at, created_at, updated_at FROM help_centers WHERE workspace_id = $1 AND is_default AND deleted_at IS NULL
+SELECT id, workspace_id, name, subdomain, locale, is_default, status, settings, indexing_enabled, ask_ai_enabled, cache_version, deleted_at, created_at, updated_at, custom_domain FROM help_centers WHERE workspace_id = $1 AND is_default AND deleted_at IS NULL
 `
 
 // FindDefaultHelpCenter returns the workspace's default help center.
@@ -239,12 +240,13 @@ func (q *Queries) FindDefaultHelpCenter(ctx context.Context, workspaceID ids.UUI
 		&i.DeletedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.CustomDomain,
 	)
 	return i, err
 }
 
 const findHelpCenter = `-- name: FindHelpCenter :one
-SELECT id, workspace_id, name, subdomain, locale, is_default, status, settings, indexing_enabled, ask_ai_enabled, cache_version, deleted_at, created_at, updated_at FROM help_centers WHERE workspace_id = $1 AND id = $2 AND deleted_at IS NULL
+SELECT id, workspace_id, name, subdomain, locale, is_default, status, settings, indexing_enabled, ask_ai_enabled, cache_version, deleted_at, created_at, updated_at, custom_domain FROM help_centers WHERE workspace_id = $1 AND id = $2 AND deleted_at IS NULL
 `
 
 type FindHelpCenterParams struct {
@@ -271,6 +273,7 @@ func (q *Queries) FindHelpCenter(ctx context.Context, arg FindHelpCenterParams) 
 		&i.DeletedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.CustomDomain,
 	)
 	return i, err
 }
@@ -335,7 +338,7 @@ func (q *Queries) ListCollections(ctx context.Context, arg ListCollectionsParams
 }
 
 const listHelpCenters = `-- name: ListHelpCenters :many
-SELECT id, workspace_id, name, subdomain, locale, is_default, status, settings, indexing_enabled, ask_ai_enabled, cache_version, deleted_at, created_at, updated_at FROM help_centers
+SELECT id, workspace_id, name, subdomain, locale, is_default, status, settings, indexing_enabled, ask_ai_enabled, cache_version, deleted_at, created_at, updated_at, custom_domain FROM help_centers
 WHERE workspace_id = $1 AND deleted_at IS NULL
 ORDER BY is_default DESC, created_at, id
 `
@@ -365,6 +368,7 @@ func (q *Queries) ListHelpCenters(ctx context.Context, workspaceID ids.UUID) ([]
 			&i.DeletedAt,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.CustomDomain,
 		); err != nil {
 			return nil, err
 		}
@@ -523,7 +527,7 @@ UPDATE help_centers SET
     indexing_enabled = $6, ask_ai_enabled = $7, cache_version = cache_version + 1,
     updated_at = $8
 WHERE workspace_id = $9 AND id = $10 AND deleted_at IS NULL
-RETURNING id, workspace_id, name, subdomain, locale, is_default, status, settings, indexing_enabled, ask_ai_enabled, cache_version, deleted_at, created_at, updated_at
+RETURNING id, workspace_id, name, subdomain, locale, is_default, status, settings, indexing_enabled, ask_ai_enabled, cache_version, deleted_at, created_at, updated_at, custom_domain
 `
 
 type UpdateHelpCenterParams struct {
@@ -570,6 +574,7 @@ func (q *Queries) UpdateHelpCenter(ctx context.Context, arg UpdateHelpCenterPara
 		&i.DeletedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.CustomDomain,
 	)
 	return i, err
 }

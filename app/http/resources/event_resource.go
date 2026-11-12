@@ -26,16 +26,18 @@ import (
 EventDefinition is an event name.
 */
 type EventDefinition struct {
-	ID          string     `json:"id"`
-	Object      string     `json:"object"`
-	Name        string     `json:"name"`
-	Label       string     `json:"label"`
-	Description *string    `json:"description"`
-	Origin      string     `json:"origin"`
-	Status      string     `json:"status"`
-	TotalCount  int64      `json:"total_count"`
-	LastSeenAt  *time.Time `json:"last_seen_at"`
-	CreatedAt   time.Time  `json:"created_at"`
+	ID          string  `json:"id"`
+	Object      string  `json:"object"`
+	Name        string  `json:"name"`
+	Label       string  `json:"label"`
+	Description *string `json:"description"`
+	Origin      string  `json:"origin"`
+	Status      string  `json:"status"`
+	// ClientWritable says the messenger may send the event from the browser.
+	ClientWritable bool       `json:"client_writable"`
+	TotalCount     int64      `json:"total_count"`
+	LastSeenAt     *time.Time `json:"last_seen_at"`
+	CreatedAt      time.Time  `json:"created_at"`
 }
 
 /*
@@ -44,9 +46,25 @@ NewEventDefinition shapes an event name.
 func NewEventDefinition(d models.EventDefinition) EventDefinition {
 	return EventDefinition{
 		ID: models.PublicID(models.PrefixEvent, d.ID), Object: "event_definition", Name: d.Name, Label: d.Label,
-		Description: d.Description, Origin: d.Origin, Status: d.Status, TotalCount: d.TotalCount,
+		Description: d.Description, Origin: d.Origin, Status: d.Status, ClientWritable: d.ClientWritable,
+		TotalCount: d.TotalCount,
 		LastSeenAt: d.LastSeenAt, CreatedAt: d.CreatedAt,
 	}
+}
+
+/*
+EventSettings is how the workspace takes events from the messenger.
+*/
+type EventSettings struct {
+	Object             string `json:"object"`
+	MessengerNewEvents bool   `json:"messenger_new_events"`
+}
+
+/*
+NewEventSettings shapes the workspace's event settings.
+*/
+func NewEventSettings(open bool) EventSettings {
+	return EventSettings{Object: "event_settings", MessengerNewEvents: open}
 }
 
 /*

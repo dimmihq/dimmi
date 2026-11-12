@@ -11,7 +11,9 @@
     "skipLibCheck": true,
     "verbatimModuleSyntax": true,
     "paths": {
-      "@dimmi/server": ["../server/dist/index.d.ts"]
+      "@dimmi/server": ["../server/dist/index.d.ts"],
+      "@dimmi/browser": ["../browser/dist/index.d.ts"],
+      "@dimmi/react": ["../react/dist/index.d.ts"]
     },
     "types": ["node"]
   },

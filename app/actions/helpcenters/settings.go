@@ -29,6 +29,14 @@ type HelpCenterSettingsChange struct {
 	FeedbackApproval *bool
 	Messenger        *bool
 	MessengerID      *string
+
+	Changelog              *bool
+	ChangelogTitle         *string
+	ChangelogAuthors       *bool
+	ChangelogReactions     *bool
+	ChangelogSubscriptions *bool
+	ChangelogEmail         *string
+	ChangelogUndoMinutes   *int
 }
 
 /*
@@ -51,7 +59,7 @@ func (c HelpCenterSettingsChange) Over(s HelpCenterSettings) HelpCenterSettings 
 	if c.Messenger != nil {
 		s.Messenger = c.Messenger
 	}
-	return s
+	return c.overChangelog(s)
 }
 
 /*

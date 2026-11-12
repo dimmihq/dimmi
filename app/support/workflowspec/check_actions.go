@@ -206,13 +206,8 @@ func (c *checker) checkSnooze(s Step) {
 }
 
 /*
-checkClose checks a close step.
+checkClose checks a close step: its settings must read as a close's.
 */
 func (c *checker) checkClose(s Step) {
-	if cl, ok := decode[CloseSettings](c, s); ok && cl.AskRating {
-		c.fail(Issue{
-			Code: CodeStepNotAvailable, StepID: s.ID, Field: "ask_rating",
-			Message: "Asking for a rating cannot run yet.",
-		})
-	}
+	decode[CloseSettings](c, s)
 }

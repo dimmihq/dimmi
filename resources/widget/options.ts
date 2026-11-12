@@ -55,6 +55,7 @@ export interface Texts {
   changelog: string;
   help: string;
   seen: string;
+  today: string;
   status_with_team: string;
   status_waiting_on_you: string;
   status_closed: string;
@@ -63,6 +64,10 @@ export interface Texts {
   ai_answering: string;
   ai_helped: string;
   ai_thanks: string;
+  rating_ask: string;
+  rating_comment: string;
+  rating_send: string;
+  rated_thanks: string;
   talk_to_human: string;
   action_confirm: string;
   action_cancel: string;
@@ -89,9 +94,18 @@ export interface Options {
   show_branding: boolean;
   branding_url: string;
   launcher_ruled_out: boolean;
+  locale: string;
+  dir: "ltr" | "rtl";
 }
 
+/*
+ * language is the visitor's language a page chose with Dimmi("boot") or
+ * Dimmi("update"), over the browser's, for the server to answer in.
+ */
 export type OptionsUpdate = {
+  language?: string;
+  locale?: string;
+  dir?: "ltr" | "rtl";
   appearance?: Partial<Omit<Appearance, "launcher">> & { launcher?: Partial<Launcher> };
   texts?: Partial<Texts>;
   tabs?: Tab[];
@@ -135,6 +149,7 @@ export const defaults: Options = {
     changelog: "Changelog",
     help: "Help",
     seen: "Seen",
+    today: "Today",
     status_with_team: "With the team",
     status_waiting_on_you: "Waiting on you",
     status_closed: "Closed",
@@ -143,6 +158,10 @@ export const defaults: Options = {
     ai_answering: "AI answering",
     ai_helped: "That helped",
     ai_thanks: "Glad it helped.",
+    rating_ask: "How did we do?",
+    rating_comment: "Anything to add?",
+    rating_send: "Send",
+    rated_thanks: "Thanks for your feedback!",
     talk_to_human: "Talk to a person",
     action_confirm: "Confirm",
     action_cancel: "Cancel",
@@ -165,6 +184,8 @@ export const defaults: Options = {
   show_branding: true,
   branding_url: "https://trydimmi.com",
   launcher_ruled_out: false,
+  locale: "",
+  dir: "ltr",
 };
 
 export function merge(options: Options, update: OptionsUpdate = {}): Options {
@@ -179,6 +200,8 @@ export function merge(options: Options, update: OptionsUpdate = {}): Options {
     show_branding: update.show_branding ?? options.show_branding,
     branding_url: update.branding_url ?? options.branding_url,
     launcher_ruled_out: update.launcher_ruled_out ?? options.launcher_ruled_out,
+    locale: update.locale ?? options.locale,
+    dir: update.dir ?? options.dir,
   };
 }
 

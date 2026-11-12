@@ -5,9 +5,12 @@
  * folds back into the bar once its message is sent. The panel has the
  * BoardUI tab strip behind its top edge saying who will see the message,
  * a field that grows with what is typed with formatting kept as
- * Markdown, and a toolbar with the add menu (help articles, feature requests,
- * changelog entries, emoji and GIFs, dropped into the text) and a way to ask
- * Operator. Replies cannot carry files yet, so the composer offers none
+ * Markdown, and a toolbar with the add menu (saved replies, help articles,
+ * feature requests, changelog entries, emoji and GIFs, dropped into the
+ * text) and a way to ask Operator. Typing # and a few letters finds a
+ * saved reply too. A saved reply's variables are filled in for the
+ * customer as it is inserted, and its macro actions wait beside the
+ * draft and apply to the conversation once the message is sent. Replies cannot carry files yet, so the composer offers none
  * rather than show files that would never be sent. Sending goes to the
  * server; a sent draft empties, a refused one stays with the reason under
  * it. Each draft, reply and note apart, is kept on the server and in the
@@ -18,12 +21,16 @@
  * once the reply is sent or the field is left.
  */
 import { RiArrowUpLine, RiChatQuoteLine, RiLock2Line, RiSparkling2Line, RiStickyNoteLine } from "@remixicon/react";
+import { useQueryClient } from "@tanstack/react-query";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { useEffect, useState } from "react";
 
 import { Kbd } from "@/components/base/kbd/kbd";
 import { SegmentedControl, SegmentedControlItem } from "@/components/base/segmented-control/segmented-control";
+import { QueuedMacro } from "@/features/saved-replies/queued-macro";
+import { useMacro } from "@/features/saved-replies/use-macro";
 import { type Message, mentionables } from "@/lib/api/inbox";
+import { savedRepliesQuery } from "@/lib/api/saved-replies";
 import { cx } from "@/utils/cx";
 
 import { AddMenu } from "./add-menu";
@@ -200,7 +207,7 @@ function useSend({
   held: Held;
   onSend: Send;
   onTyping: Report;
-  onSent: (text: string) => void;
+  onSent: (text: string, then?: "close" | "snooze") => void;
 }) {
   const [sending, setSending] = useState(false);
   const [failure, setFailure] = useState<string | null>(null);
@@ -219,7 +226,7 @@ function useSend({
     draft.pause();
     try {
       const sent = await onSend(mode, text, note ? undefined : then, attaching ? files.ids : undefined);
-      onSent(text);
+      onSent(text, note ? undefined : then);
       draft.sent();
       files.clear();
       held.hold(sent);
@@ -265,7 +272,9 @@ function Panel({
   held: Held;
   onSent?: () => void;
 }) {
-  const { workspace, userId } = useInbox();
+  const { workspace, userId, me } = useInbox();
+  const client = useQueryClient();
+  const macro = useMacro(workspace, conversation, me);
   const drafts = { reply: useDraft(workspace, conversation, "reply"), note: useDraft(workspace, conversation, "note") };
   const draft = drafts[mode];
   const note = mode === "note";
@@ -288,8 +297,9 @@ function Panel({
     held,
     onSend,
     onTyping,
-    onSent: (text) => {
+    onSent: (text, then) => {
       gifs.sent(text);
+      void macro.apply(then);
       onSent?.();
     },
   });
@@ -341,11 +351,21 @@ function Panel({
             findMentions={
               note ? (query) => mentionables(workspace, conversation, query).then(toMentionables) : undefined
             }
+            findSavedReplies={(query) =>
+              client.fetchQuery(savedRepliesQuery(workspace, query)).then((found) => found.slice(0, 8))
+            }
+            takeSavedReply={macro.take}
           />
         </div>
         <ReplyFileChips files={files} shown={attachable} />
+        <QueuedMacro workspace={workspace} macro={macro} />
         <div className="flex items-center gap-2">
-          <AddMenu onInsert={insert} onEmoji={addEmoji} gifs={gifs.gifs} />
+          <AddMenu
+            onInsert={insert}
+            onEmoji={addEmoji}
+            onSavedReply={(reply) => insert(macro.take(reply))}
+            gifs={gifs.gifs}
+          />
           <AttachButton onPick={files.add} shown={attachable} />
           <button
             type="button"

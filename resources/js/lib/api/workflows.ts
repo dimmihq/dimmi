@@ -109,6 +109,41 @@ export interface WorkflowVersion {
   created_at: string;
 }
 
+export type RunStatus = "running" | "waiting" | "completed" | "passed" | "exited" | "canceled" | "failed" | "expired";
+
+export type RunStepStatus = "completed" | "waiting" | "skipped" | "failed" | "interrupted";
+
+/*
+ * RunStep is what one step did in a run: how it ended, the path it took
+ * and what it found, in a detail that differs by kind.
+ */
+export interface RunStep {
+  step_id: string;
+  kind: string;
+  status: RunStepStatus;
+  outcome: string | null;
+  path_id: string | null;
+  detail: Record<string, unknown>;
+  started_at: string;
+  finished_at: string | null;
+}
+
+/*
+ * WorkflowRun is one run of a workflow, on a conversation or, for a
+ * workflow run from another, under its parent's run.
+ */
+export interface WorkflowRun {
+  id: string;
+  status: RunStatus;
+  end_reason: string | null;
+  trigger: string;
+  conversation_id: string | null;
+  parent_run_id: string | null;
+  started_at: string;
+  ended_at: string | null;
+  steps: RunStep[];
+}
+
 const path = (id: string) => `/workflows/${encodeURIComponent(id)}`;
 
 export function workflowsQuery(workspace: string) {
@@ -130,6 +165,17 @@ export function workflowVersionsQuery(workspace: string, id: string) {
   return queryOptions({
     queryKey: ["workspace", workspace, "workflows", id, "versions"],
     queryFn: () => request<WorkflowVersion[]>("GET", `${path(id)}/versions`, undefined, { workspace }),
+  });
+}
+
+/*
+ * workflowRunsQuery reads a workflow's latest runs, newest first, each
+ * with what its steps did.
+ */
+export function workflowRunsQuery(workspace: string, id: string) {
+  return queryOptions({
+    queryKey: ["workspace", workspace, "workflows", id, "runs"],
+    queryFn: () => request<WorkflowRun[]>("GET", `${path(id)}/runs?limit=20`, undefined, { workspace }),
   });
 }
 

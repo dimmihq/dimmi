@@ -1,0 +1,4 @@
+{
+  "$comment": "Intentional breaking changes, reviewed one by one. See docs/api/versioning.md. Each entry needs id, operation (or event), reason, deprecated, sunset and approved_by. Entries are cleared when make api-baseline records a release.",
+  "entries": []
+}

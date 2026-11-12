@@ -51,7 +51,6 @@ func Console(a *app.App) {
 	a.Schedule.Job(jobs.RefreshSSOMetadataArgs{}).DailyAt("05:10")
 	a.Schedule.Job(jobs.WarnExpiringSSOCertificatesArgs{}).DailyAt("09:15")
 	a.Schedule.Job(jobs.SweepAssignmentQueuesArgs{}).EveryMinute()
-	a.Schedule.Job(jobs.SendNotificationDigestsArgs{}).EveryMinute()
 	a.Schedule.Job(jobs.RemindInvitersArgs{}).DailyAt("09:10")
 	a.Schedule.Job(jobs.ScheduleEmailDomainChecksArgs{}).EveryMinute()
 	a.Schedule.Job(jobs.ExpireContactExportsArgs{}).Hourly()
@@ -61,10 +60,10 @@ func Console(a *app.App) {
 	a.Schedule.Job(jobs.PruneChannelInboundEventsArgs{}).DailyAt("03:45")
 	a.Schedule.Job(jobs.RefreshIdentityKeySetsArgs{}).Hourly()
 	a.Schedule.Job(jobs.PruneIdentityStatsArgs{}).DailyAt("03:55")
-	a.Schedule.Job(jobs.SweepKnowledgeEmbeddingsArgs{}).DailyAt("04:10")
-	a.Schedule.Job(jobs.ScheduleKnowledgeSyncsArgs{}).Cron("*/5 * * * *")
 	a.Schedule.Job(jobs.SweepAttachmentScansArgs{}).Cron("*/5 * * * *")
+	scheduleKnowledge(a)
 	scheduleWebhooks(a)
+	scheduleNotifications(a)
 }
 
 /*
@@ -75,4 +74,26 @@ func scheduleWebhooks(a *app.App) {
 	a.Schedule.Job(jobs.SweepWebhookDeliveriesArgs{}).EveryMinute()
 	a.Schedule.Job(jobs.CheckWebhookEndpointsArgs{}).Cron("*/5 * * * *")
 	a.Schedule.Job(jobs.PruneWebhookDeliveriesArgs{}).DailyAt("03:35")
+}
+
+/*
+scheduleNotifications declares the teammate notification jobs: the
+Slack digests, the quiet hours summaries and the delivery log's prune.
+*/
+func scheduleNotifications(a *app.App) {
+	a.Schedule.Job(jobs.SendNotificationDigestsArgs{}).EveryMinute()
+	a.Schedule.Job(jobs.SendQuietHoursSummariesArgs{}).Cron("*/5 * * * *")
+	a.Schedule.Job(jobs.PruneNotificationDeliveriesArgs{}).DailyAt("03:25")
+}
+
+/*
+scheduleKnowledge declares the knowledge and help center jobs: the
+vector sweep, the source syncs that are due, the custom domain checks
+that are due, and the prune of old view and search counts.
+*/
+func scheduleKnowledge(a *app.App) {
+	a.Schedule.Job(jobs.SweepKnowledgeEmbeddingsArgs{}).DailyAt("04:10")
+	a.Schedule.Job(jobs.ScheduleKnowledgeSyncsArgs{}).Cron("*/5 * * * *")
+	a.Schedule.Job(jobs.ScheduleHelpCenterDomainChecksArgs{}).EveryMinute()
+	a.Schedule.Job(jobs.PruneHelpAnalyticsArgs{}).DailyAt("04:20")
 }

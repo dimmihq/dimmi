@@ -17,6 +17,7 @@ import (
 	"github.com/dimmihq/dimmi/app/actions/contacts"
 	"github.com/dimmihq/dimmi/app/actions/conversations"
 	"github.com/dimmihq/dimmi/app/actions/redaction"
+	"github.com/dimmihq/dimmi/app/actions/savedreplies"
 	"github.com/dimmihq/dimmi/app/actions/tags"
 	"github.com/dimmihq/dimmi/app/http/resources"
 	"github.com/dimmihq/dimmi/app/models"
@@ -58,10 +59,32 @@ func bootRecords(a *app.App) {
 	acts.DeleteCompany = &companies.DeleteCompany{DB: a.DB, Events: a.Events, Clock: a.Clock}
 	acts.ListCompanyContacts = &companies.ListCompanyContacts{DB: a.DB}
 
+	bootRedaction(a)
+	bootSavedReplies(a)
+}
+
+/*
+bootRedaction builds the actions on the workspace's redaction rules.
+*/
+func bootRedaction(a *app.App) {
+	acts := a.Actions.Inbox
 	acts.ListRedactionRules = &redaction.ListRules{DB: a.DB}
 	acts.UpdateRedactionSettings = &redaction.UpdateSettings{DB: a.DB, Events: a.Events, Clock: a.Clock}
 	acts.CreateRedactionRule = &redaction.CreateRule{DB: a.DB, Events: a.Events, Clock: a.Clock}
 	acts.UpdateRedactionRule = &redaction.UpdateRule{DB: a.DB, Events: a.Events, Clock: a.Clock}
 	acts.DeleteRedactionRule = &redaction.DeleteRule{DB: a.DB, Events: a.Events, Clock: a.Clock}
 	acts.TryRedaction = &redaction.TryRedaction{DB: a.DB}
+}
+
+/*
+bootSavedReplies builds the actions on saved replies and macros.
+*/
+func bootSavedReplies(a *app.App) {
+	acts := a.Actions.Inbox
+	acts.ListSavedReplies = &savedreplies.ListSavedReplies{DB: a.DB}
+	acts.ShowSavedReply = &savedreplies.ShowSavedReply{DB: a.DB}
+	acts.CreateSavedReply = &savedreplies.CreateSavedReply{DB: a.DB, Clock: a.Clock}
+	acts.UpdateSavedReply = &savedreplies.UpdateSavedReply{DB: a.DB, Clock: a.Clock}
+	acts.DeleteSavedReply = &savedreplies.DeleteSavedReply{DB: a.DB}
+	acts.ImportSavedReplies = &savedreplies.ImportSavedReplies{DB: a.DB, Clock: a.Clock}
 }

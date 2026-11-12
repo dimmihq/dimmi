@@ -87,7 +87,13 @@ export default defineConfig(({ command }) => ({
       "./vite.widget.config.ts",
       {
         extends: true,
-        resolve: { alias: { "@dimmi/server": fileURLToPath(new URL("./sdk/server/src/index.ts", import.meta.url)) } },
+        resolve: {
+          alias: {
+            "@dimmi/server": fileURLToPath(new URL("./sdk/server/src/index.ts", import.meta.url)),
+            "@dimmi/browser": fileURLToPath(new URL("./sdk/browser/src/index.ts", import.meta.url)),
+            "@dimmi/react": fileURLToPath(new URL("./sdk/react/src/index.ts", import.meta.url)),
+          },
+        },
         test: { name: "sdk", environment: "node", globals: true, include: ["sdk/*/src/**/*.test.ts"] },
       },
     ],

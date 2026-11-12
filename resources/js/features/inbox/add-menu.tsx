@@ -2,11 +2,12 @@
  * The composer's add menu, on BoardUI's composer add menu: the round plus
  * turns into a close, and a panel rises above it with what a teammate can
  * bring into the message. Each source opens a searchable list in the
- * same panel: the help center's articles, feature requests and changelog
+ * same panel: the team's saved replies, the help center's articles, feature requests and changelog
  * entries; typing narrows the list, Enter takes the first match and the
  * down arrow moves into the list. Emoji and, when the workspace allows
  * it, GIFs from GIPHY have pickers of their own. A pick drops in a line
- * naming it with its link, so it reaches the customer with the message.
+ * naming it with its link, so it reaches the customer with the message;
+ * a saved reply drops in its text and hands its macro to the composer.
  * Files are not offered until replies can carry them. Moving between the menu
  * and a list slides the view the way the person is heading while the
  * panel eases to its new height, on BoardUI's timings. The panel always
@@ -16,6 +17,7 @@ import {
   RiAddLine,
   RiArrowLeftSLine,
   RiArticleLine,
+  RiChatQuoteLine,
   RiEmotionLine,
   RiFileGifLine,
   RiHistoryLine,
@@ -28,6 +30,7 @@ import { Button as AriaButton, Dialog, DialogTrigger, ListBox, ListBoxItem, Popo
 import { CHIP_COLORS, type ChipColor } from "@/components/base/badges/chip";
 import { MENU_POPOVER_SURFACE } from "@/components/base/dropdown/menu-styles";
 import { Input } from "@/components/base/input/input";
+import type { SavedReply } from "@/lib/api/saved-replies";
 import { cx } from "@/utils/cx";
 
 import { EmojiPicker } from "./composer/emoji-picker";
@@ -46,6 +49,13 @@ interface Source {
 }
 
 const basics: Source[] = [
+  {
+    kind: "saved",
+    label: "Saved reply",
+    description: "Insert one of your team's answers",
+    icon: RiChatQuoteLine,
+    noun: "saved replies",
+  },
   {
     kind: "article",
     label: "Help article",
@@ -144,7 +154,8 @@ function Picker({
   const { workspace: current } = useInbox();
   const library = useLibrary(current, source.kind, useDeferredValue(query));
   const found = library.items;
-  const empty = library.loading ? "Loading…" : library.missing ? "Set up a help center first" : "Nothing matches";
+  const nothing = source.kind === "saved" && query.trim() === "" ? "No saved replies yet" : "Nothing matches";
+  const empty = library.loading ? "Loading…" : library.missing ? "Set up a help center first" : nothing;
 
   return (
     <div className="flex flex-col gap-2">
@@ -238,10 +249,12 @@ function panelKey(panel: Panel | null): string {
 export function AddMenu({
   onInsert,
   onEmoji,
+  onSavedReply,
   gifs,
 }: {
   onInsert: (text: string) => void;
   onEmoji: (emoji: string) => void;
+  onSavedReply: (reply: SavedReply) => void;
   gifs: Gifs | null;
 }) {
   const [open, setOpen] = useState(false);
@@ -254,6 +267,11 @@ export function AddMenu({
     }
   };
   const pick = (item: LibraryItem) => {
+    if (item.reply) {
+      onSavedReply(item.reply);
+      toggle(false);
+      return;
+    }
     onInsert(item.url ? `${item.title}: ${item.url}` : item.title);
     toggle(false);
   };

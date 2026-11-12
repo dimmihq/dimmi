@@ -156,6 +156,11 @@ export const allKey = "all";
 export const unfiledKey = "unfiled";
 
 /*
+ * analyticsKey is the pick that shows what readers did instead of a list.
+ */
+export const analyticsKey = "analytics";
+
+/*
  * articlesIn lists the articles a pick shows: all of them, the unfiled
  * ones, or those in a collection and every collection inside it.
  */

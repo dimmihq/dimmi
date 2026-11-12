@@ -1,7 +1,9 @@
 /*
  * The messenger's icons, drawn on a 24px grid with one stroke weight so
  * they read as a set, and the Dimmi mark on its own 40px grid. Every icon
- * is decorative: the button or row around it carries the label.
+ * is decorative: the button or row around it carries the label. Icons
+ * that point along the line, marked flip, turn around in a language read
+ * from right to left.
  */
 import type { Child } from "widget-jsx/jsx-runtime";
 
@@ -60,7 +62,7 @@ export function ChevronDownIcon() {
 
 export function ChevronRightIcon() {
   return (
-    <Icon>
+    <Icon className="flip">
       <path d="m10 7 5 5-5 5" />
     </Icon>
   );
@@ -68,7 +70,7 @@ export function ChevronRightIcon() {
 
 export function ArrowRightIcon() {
   return (
-    <Icon>
+    <Icon className="flip">
       <path d="M4.5 12h13m-5.5-6 6 6-6 6" />
     </Icon>
   );
@@ -84,7 +86,7 @@ export function ArrowUpIcon() {
 
 export function BackIcon() {
   return (
-    <Icon>
+    <Icon className="flip">
       <path d="m14 6-6 6 6 6" />
     </Icon>
   );

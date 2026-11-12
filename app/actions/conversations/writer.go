@@ -46,6 +46,9 @@ happen, and Timezone the actor's own time zone, nil when they set none.
 MutationID is the id the client gave the change, carried on every
 event so the screen that made it can drop its own echo. Chain lists the
 workflows whose steps make the changes, carried on every event.
+Imported says the writer replays history brought in from another tool:
+its rows are written as usual, but no event goes out, so nothing reacts
+to them as if they had just happened.
 */
 type Writer struct {
 	Q          *models.Queries
@@ -56,6 +59,7 @@ type Writer struct {
 	Timezone   *string
 	MutationID string
 	Chain      []ids.UUID
+	Imported   bool
 }
 
 /*
@@ -86,9 +90,14 @@ func NewWriter(ctx context.Context, tx *database.Tx, s Services, m authz.Members
 }
 
 /*
-Dispatch sends the event within the writer's transaction.
+Dispatch sends the event within the writer's transaction, and nothing
+when the writer replays imported history.
 */
 func (w *Writer) Dispatch(ctx context.Context, e events.Event) error {
+	if w.Imported {
+		return nil
+	}
+
 	return w.Events.Dispatch(ctx, w.Tx, e)
 }
 

@@ -88,11 +88,14 @@ func Web(a *app.App) {
 
 /*
 browserFiles declares the files browsers load outside the app's build:
-the messenger's, and the dashboard's service worker.
+the messenger's, the dashboard's service worker and llms.txt, and the
+probe help centers' custom domains are checked with.
 */
 func browserFiles(a *app.App) {
 	widgetAssets(a)
 	a.Router.Handle(fhttp.MethodGet, "/sw.js", "service-worker", fhttp.HandlerFunc(web.ServiceWorker))
+	a.Router.Handle(fhttp.MethodGet, "/llms.txt", "llms", fhttp.HandlerFunc(web.LLMs))
+	helpDomainProbe(a)
 }
 
 /*
@@ -144,6 +147,7 @@ func helpCenter(pages *routing.Router, a *app.App) {
 		Assets: static.Handler(helpsample.Assets(), static.Options{}),
 		Vite:   vite.New(vite.Options{Build: a.Frontend, Base: "/build", HotFile: a.Config.Frontend.HotPath}),
 		AppURL: a.Application.Config.App.URL, Ratings: a.Actions.HelpRatings, Passes: a.Actions.IdentityPasses,
+		Analytics: a.Actions.HelpAnalytics, Addresses: a.Actions.HelpCenterAddresses,
 	}
 	cl := web.ChangelogController{HelpCenterController: hc}
 	images := &web.HelpImageController{Disks: a.Storage, Dir: helpcenters.ImageDir}
@@ -171,6 +175,10 @@ func helpCenter(pages *routing.Router, a *app.App) {
 	get("/help-images/{file}", "hc.help-images.show", images.Show)
 	portalPages(get, post, web.PortalController{HelpCenterController: hc})
 	get("/assets/{file}", "hc.assets", hc.Asset)
+	get("/sitemap.xml", "hc.sitemap", hc.Sitemap)
+	get("/robots.txt", "hc.robots", hc.Robots)
+	get("/llms.txt", "hc.llms", hc.LLMs)
+	get("/llms-full.txt", "hc.llms-full", hc.LLMsFull)
 	get("/*", "hc.missing", hc.NotFound)
 }
 
@@ -201,19 +209,20 @@ provider callbacks link to.
 */
 func authPages() map[string]string {
 	return map[string]string{
-		"login":             "/login",
-		"login.magic":       "/login/magic",
-		"login.two-factor":  "/login/two-factor",
-		"signup":            "/signup",
-		"forgot-password":   "/forgot-password",
-		"reset-password":    "/reset-password",
-		"verify-email":      "/verify-email",
-		"email.confirm":     "/email/confirm",
-		"two-factor-reset":  "/two-factor-reset",
-		"invitation":        "/invitation",
-		"onboarding":        "/onboarding",
-		"oauth.authorize":   "/oauth/authorize",
-		"email.preferences": "/email-preferences",
+		"login":               "/login",
+		"login.magic":         "/login/magic",
+		"login.two-factor":    "/login/two-factor",
+		"signup":              "/signup",
+		"forgot-password":     "/forgot-password",
+		"reset-password":      "/reset-password",
+		"verify-email":        "/verify-email",
+		"email.confirm":       "/email/confirm",
+		"two-factor-reset":    "/two-factor-reset",
+		"invitation":          "/invitation",
+		"onboarding":          "/onboarding",
+		"oauth.authorize":     "/oauth/authorize",
+		"email.preferences":   "/email-preferences",
+		"conversation.rating": "/rate",
 	}
 }
 

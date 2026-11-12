@@ -37,6 +37,7 @@ func bootWorkflows(a *app.App) {
 	runner := engine.New(engine.Engine{
 		DB: a.DB, Events: a.Events, Clock: a.Clock, Queue: a.Queue, IDs: a.IDs,
 		Delivery: conversations.Delivery{Channels: a.Channels, Queue: a.Queue}, AgentOn: a.Config.AI.Enabled,
+		HTTP: a.HTTP, Keys: a.Keys,
 	})
 	runner.Listen(a.Events)
 	a.ContactErasers.Register(engine.RunEraser{Engine: runner})

@@ -1,0 +1,412 @@
+{
+  "envelope": {
+    "Envelope": {
+      "additionalProperties": false,
+      "properties": {
+        "actor": {
+          "$ref": "#/components/schemas/EnvelopeActor"
+        },
+        "api_version": {
+          "type": "string"
+        },
+        "created_at": {
+          "format": "date-time",
+          "type": "string"
+        },
+        "data": {
+          "additionalProperties": {},
+          "type": "object"
+        },
+        "id": {
+          "type": "string"
+        },
+        "object": {
+          "type": "string"
+        },
+        "sequence": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "test": {
+          "type": "boolean"
+        },
+        "test_mode": {
+          "type": "boolean"
+        },
+        "truncated": {
+          "type": "boolean"
+        },
+        "type": {
+          "type": "string"
+        },
+        "workspace_id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "object",
+        "type",
+        "api_version",
+        "created_at",
+        "workspace_id",
+        "sequence",
+        "test",
+        "test_mode",
+        "truncated",
+        "actor",
+        "data"
+      ],
+      "type": "object"
+    },
+    "EnvelopeActor": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "type": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "type",
+        "id"
+      ],
+      "type": "object"
+    }
+  },
+  "events": [
+    {
+      "type": "conversation.created",
+      "object": "conversation",
+      "group": "Conversations",
+      "description": "A conversation started.",
+      "notes_opt_in": false,
+      "named_only": false
+    },
+    {
+      "type": "conversation.updated",
+      "object": "conversation",
+      "group": "Conversations",
+      "description": "A conversation's subject or inbox changed.",
+      "notes_opt_in": false,
+      "named_only": false
+    },
+    {
+      "type": "conversation.assigned",
+      "object": "conversation",
+      "group": "Conversations",
+      "description": "A conversation's assignee or team changed.",
+      "notes_opt_in": false,
+      "named_only": false
+    },
+    {
+      "type": "conversation.closed",
+      "object": "conversation",
+      "group": "Conversations",
+      "description": "A conversation was closed.",
+      "notes_opt_in": false,
+      "named_only": false
+    },
+    {
+      "type": "conversation.rated",
+      "object": "conversation",
+      "group": "Conversations",
+      "description": "A customer rated a closed conversation or changed their rating.",
+      "notes_opt_in": false,
+      "named_only": false
+    },
+    {
+      "type": "conversation.reopened",
+      "object": "conversation",
+      "group": "Conversations",
+      "description": "A closed conversation opened again.",
+      "notes_opt_in": false,
+      "named_only": false
+    },
+    {
+      "type": "conversation.snoozed",
+      "object": "conversation",
+      "group": "Conversations",
+      "description": "A conversation was snoozed.",
+      "notes_opt_in": false,
+      "named_only": false
+    },
+    {
+      "type": "conversation.unsnoozed",
+      "object": "conversation",
+      "group": "Conversations",
+      "description": "A snooze ended.",
+      "notes_opt_in": false,
+      "named_only": false
+    },
+    {
+      "type": "conversation.priority_changed",
+      "object": "conversation",
+      "group": "Conversations",
+      "description": "A conversation's priority changed.",
+      "notes_opt_in": false,
+      "named_only": false
+    },
+    {
+      "type": "conversation.tagged",
+      "object": "conversation",
+      "group": "Conversations",
+      "description": "Tags were added to a conversation.",
+      "notes_opt_in": false,
+      "named_only": false
+    },
+    {
+      "type": "conversation.untagged",
+      "object": "conversation",
+      "group": "Conversations",
+      "description": "Tags were removed from a conversation.",
+      "notes_opt_in": false,
+      "named_only": false
+    },
+    {
+      "type": "conversation.marked_spam",
+      "object": "conversation",
+      "group": "Conversations",
+      "description": "A conversation was marked as spam.",
+      "notes_opt_in": false,
+      "named_only": false
+    },
+    {
+      "type": "conversation.unmarked_spam",
+      "object": "conversation",
+      "group": "Conversations",
+      "description": "A conversation was taken out of spam.",
+      "notes_opt_in": false,
+      "named_only": false
+    },
+    {
+      "type": "conversation.merged",
+      "object": "conversation",
+      "group": "Conversations",
+      "description": "Another conversation was merged into this one.",
+      "notes_opt_in": false,
+      "named_only": false
+    },
+    {
+      "type": "conversation.participants_changed",
+      "object": "conversation",
+      "group": "Conversations",
+      "description": "People were added to or removed from a conversation.",
+      "notes_opt_in": false,
+      "named_only": false
+    },
+    {
+      "type": "conversation.deleted",
+      "object": "conversation",
+      "group": "Conversations",
+      "description": "A conversation moved to the trash.",
+      "notes_opt_in": false,
+      "named_only": false
+    },
+    {
+      "type": "message.created",
+      "object": "message",
+      "group": "Messages",
+      "description": "A message or note was added to a conversation.",
+      "notes_opt_in": true,
+      "named_only": false
+    },
+    {
+      "type": "message.updated",
+      "object": "message",
+      "group": "Messages",
+      "description": "A note was edited.",
+      "notes_opt_in": true,
+      "named_only": false
+    },
+    {
+      "type": "message.deleted",
+      "object": "message",
+      "group": "Messages",
+      "description": "A message or note was deleted.",
+      "notes_opt_in": true,
+      "named_only": false
+    },
+    {
+      "type": "message.delivery_updated",
+      "object": "message",
+      "group": "Messages",
+      "description": "A sent message was delivered, read or failed.",
+      "notes_opt_in": true,
+      "named_only": false
+    },
+    {
+      "type": "contact.created",
+      "object": "contact",
+      "group": "Contacts",
+      "description": "A contact was added.",
+      "notes_opt_in": false,
+      "named_only": false
+    },
+    {
+      "type": "contact.updated",
+      "object": "contact",
+      "group": "Contacts",
+      "description": "A contact's details changed.",
+      "notes_opt_in": false,
+      "named_only": false
+    },
+    {
+      "type": "contact.deleted",
+      "object": "contact",
+      "group": "Contacts",
+      "description": "A contact was erased.",
+      "notes_opt_in": false,
+      "named_only": false
+    },
+    {
+      "type": "contact.merged",
+      "object": "contact",
+      "group": "Contacts",
+      "description": "Another contact was merged into this one.",
+      "notes_opt_in": false,
+      "named_only": false
+    },
+    {
+      "type": "contact_event.tracked",
+      "object": "contact_event",
+      "group": "Contacts",
+      "description": "Your app tracked an event for a contact. Only sent when named.",
+      "notes_opt_in": false,
+      "named_only": true
+    },
+    {
+      "type": "tag.created",
+      "object": "tag",
+      "group": "Tags",
+      "description": "A tag was added.",
+      "notes_opt_in": false,
+      "named_only": false
+    },
+    {
+      "type": "tag.updated",
+      "object": "tag",
+      "group": "Tags",
+      "description": "A tag was renamed or recolored.",
+      "notes_opt_in": false,
+      "named_only": false
+    },
+    {
+      "type": "tag.deleted",
+      "object": "tag",
+      "group": "Tags",
+      "description": "A tag was deleted.",
+      "notes_opt_in": false,
+      "named_only": false
+    },
+    {
+      "type": "ai.handoff_requested",
+      "object": "conversation",
+      "group": "AI agent",
+      "description": "The AI agent handed a conversation to the team.",
+      "notes_opt_in": false,
+      "named_only": false
+    },
+    {
+      "type": "changelog_entry.published",
+      "object": "changelog_entry",
+      "group": "Changelog",
+      "description": "A changelog entry went live.",
+      "notes_opt_in": false,
+      "named_only": false
+    },
+    {
+      "type": "changelog_entry.updated",
+      "object": "changelog_entry",
+      "group": "Changelog",
+      "description": "A live changelog entry was published again with edits.",
+      "notes_opt_in": false,
+      "named_only": false
+    },
+    {
+      "type": "changelog_entry.unpublished",
+      "object": "changelog_entry",
+      "group": "Changelog",
+      "description": "A changelog entry was taken back to a draft.",
+      "notes_opt_in": false,
+      "named_only": false
+    },
+    {
+      "type": "feedback_post.created",
+      "object": "feedback_post",
+      "group": "Feedback",
+      "description": "A feature request was posted.",
+      "notes_opt_in": false,
+      "named_only": false
+    },
+    {
+      "type": "feedback_post.status_changed",
+      "object": "feedback_post",
+      "group": "Feedback",
+      "description": "A feature request moved to another status.",
+      "notes_opt_in": false,
+      "named_only": false
+    },
+    {
+      "type": "feedback_post.voted",
+      "object": "feedback_post",
+      "group": "Feedback",
+      "description": "A customer's vote for a feature request was counted.",
+      "notes_opt_in": false,
+      "named_only": false
+    },
+    {
+      "type": "feedback_post.merged",
+      "object": "feedback_post",
+      "group": "Feedback",
+      "description": "A duplicate feature request was merged into this one.",
+      "notes_opt_in": false,
+      "named_only": false
+    },
+    {
+      "type": "feedback_post.linked_conversation",
+      "object": "feedback_post",
+      "group": "Feedback",
+      "description": "A conversation was linked to a feature request.",
+      "notes_opt_in": false,
+      "named_only": false
+    },
+    {
+      "type": "broadcast.sent",
+      "object": "broadcast",
+      "group": "Broadcasts",
+      "description": "A broadcast finished sending.",
+      "notes_opt_in": false,
+      "named_only": false
+    },
+    {
+      "type": "broadcast.paused",
+      "object": "broadcast",
+      "group": "Broadcasts",
+      "description": "A sending broadcast was paused, by a teammate or for bounces or complaints.",
+      "notes_opt_in": false,
+      "named_only": false
+    },
+    {
+      "type": "series.published",
+      "object": "series",
+      "group": "Series",
+      "description": "A series went live with a new version.",
+      "notes_opt_in": false,
+      "named_only": false
+    },
+    {
+      "type": "series.journey_completed",
+      "object": "series_enrollment",
+      "group": "Series",
+      "description": "A person's journey through a series ended: finished, reached the goal or left.",
+      "notes_opt_in": false,
+      "named_only": false
+    }
+  ]
+}

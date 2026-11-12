@@ -78,6 +78,9 @@ func (b *Broadcaster) Listen(d *events.Dispatcher) {
 	events.Listen(d, events.AfterCommit, func(ctx context.Context, e appevents.ConversationReopened) error {
 		return b.conversation(ctx, e)
 	})
+	events.Listen(d, events.AfterCommit, func(ctx context.Context, e appevents.ConversationRatingRequested) error {
+		return b.conversation(ctx, e)
+	})
 }
 
 /*
@@ -124,7 +127,8 @@ func (b *Broadcaster) delivery(ctx context.Context, e appevents.MessageDeliveryU
 }
 
 /*
-conversation passes on a conversation that started, closed or reopened.
+conversation passes on a conversation that started, closed, reopened or
+asks for a rating.
 */
 func (b *Broadcaster) conversation(ctx context.Context, e appevents.ConversationEvent) error {
 	h := e.Header()

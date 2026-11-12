@@ -20,7 +20,8 @@
  * changes the latency or delivers a message from the team there.
  * Dimmi("update", { ... }) merges changes over the options and re-renders
  * either way, keeping the panel open on the same tab. Dimmi("ask", text)
- * opens a new conversation and sends the text in it.
+ * opens a new conversation and sends the text in it. Dimmi("track", name,
+ * metadata) reports what the visitor did, sent once they have a session.
  *
  * A signed-in visitor's identity comes from the snippet's
  * data-identity-url, or from Dimmi("identify", fn), where fn answers the
@@ -42,6 +43,7 @@ import { Application } from "./lib/controller";
 import { Live } from "./lib/live";
 import { type Config, fromConfig, links } from "./lib/map";
 import { report } from "./lib/report";
+import { loadThread } from "./lib/threads";
 import { defaults, merge, type Options, type OptionsUpdate } from "./options";
 import { render, style } from "./render";
 import type { Command, DimmiWindow, Queue } from "./settings";
@@ -107,6 +109,7 @@ export function boot(win: Window & DimmiWindow, doc: Document): Widget | undefin
   let preview: typeof import("./preview") | undefined;
   let sample: Content = blank;
   let ready: Promise<void> = Promise.resolve();
+  let language = queuedLanguage(win);
 
   const draw = () => {
     const before = find();
@@ -170,7 +173,14 @@ export function boot(win: Window & DimmiWindow, doc: Document): Widget | undefin
     }
     if (message) {
       const conversation = sample.conversations[0]?.number ?? 0;
-      find()?.receive({ conversation, from: "team", author: preview?.teammate ?? "", body: message, at: "now" });
+      const incoming = {
+        conversation,
+        from: "team" as const,
+        author: preview?.teammate ?? "",
+        body: message,
+        at: "now",
+      };
+      find()?.receive(incoming, preview?.said(incoming) ?? "");
     }
   };
 
@@ -189,7 +199,7 @@ export function boot(win: Window & DimmiWindow, doc: Document): Widget | undefin
       logo: config.company?.logo_url ?? null,
       links: config.home_links ? links(config) : sample.links,
     };
-    widget.update(fromConfig(config, options.texts));
+    widget.update(fromConfig(config));
   };
 
   /*
@@ -203,24 +213,39 @@ export function boot(win: Window & DimmiWindow, doc: Document): Widget | undefin
     void live?.checkIdentity();
   };
 
-  const commands: Record<string, (argument: unknown) => void> = {
-    update: (argument) => widget.update(argument as OptionsUpdate),
-    boot: (argument) => widget.update(argument as OptionsUpdate),
+  /*
+   * change applies an update from the page; a new language loads the
+   * messenger's words again in it.
+   */
+  const change = (argument: unknown) => {
+    const changes = (argument ?? {}) as OptionsUpdate;
+    widget.update(changes);
+    live?.redraw();
+    if (typeof changes.language === "string" && changes.language !== language) {
+      language = changes.language;
+      void live?.relocalize();
+    }
+  };
+
+  const commands: Record<string, (argument: unknown, extra?: unknown) => void> = {
+    update: change,
+    boot: change,
     simulate: (argument) => simulate(argument as Simulation),
     configure: (argument) => configure(argument as Config),
     shutdown: () => void live?.logout(),
     logout: () => void live?.logout(),
     ask: (argument) => find()?.ask(String(argument ?? "")),
+    track: (name, metadata) => live?.track(name, metadata),
     identify,
   };
 
-  const run = ([name, argument]: Command) => {
+  const run = ([name, argument, extra]: Command) => {
     const toggle = toggles.find((known) => known === name);
     const command = Object.hasOwn(commands, name) ? commands[name] : undefined;
     if (toggle) {
       find()?.[toggle]();
     } else if (command) {
-      command(argument);
+      command(argument, extra);
     } else {
       report("warn", "unknown_command", `Dimmi("${String(name)}") is not supported yet.`);
     }
@@ -280,6 +305,9 @@ export function boot(win: Window & DimmiWindow, doc: Document): Widget | undefin
       }
     });
     root.addEventListener("dimmi:typing", () => live?.typing(true));
+    root.addEventListener("dimmi:view", (event) => {
+      void live?.viewed((event as CustomEvent<{ article: string }>).detail.article);
+    });
     root.addEventListener("dimmi:rate", (event) => {
       const rating = (event as CustomEvent<{ article: string; helpful: boolean }>).detail;
       void live?.rate(rating.article, rating.helpful);
@@ -289,12 +317,14 @@ export function boot(win: Window & DimmiWindow, doc: Document): Widget | undefin
       if (target?.closest('[role="tab"][data-tab="changelog"]')) {
         live?.readChangelog();
       }
+      rateClick(live, target);
       const kind = target?.closest<HTMLElement>("[data-ai]")?.dataset.ai;
       if (kind === "helped" || kind === "handoff") {
         void live?.aiAction(kind);
       }
       verifyClick(target);
       articleClick(event, target);
+      retryClick(live, target);
       const card = target?.closest<HTMLElement>("[data-call]");
       const decision = card?.dataset.decision;
       if (card?.dataset.call && (decision === "confirmed" || decision === "canceled")) {
@@ -303,6 +333,9 @@ export function boot(win: Window & DimmiWindow, doc: Document): Widget | undefin
     });
     root.addEventListener("submit", (event) => {
       if (verifySubmit(event)) {
+        return;
+      }
+      if (rateSubmit(live, event)) {
         return;
       }
       const form =
@@ -332,7 +365,7 @@ export function boot(win: Window & DimmiWindow, doc: Document): Widget | undefin
   };
 
   if (settings.preview) {
-    ready = import("./preview").then((loaded) => {
+    ready = Promise.all([import("./preview"), loadThread(root)]).then(([loaded]) => {
       preview = loaded;
       sample = loaded.sample;
       mount();
@@ -353,7 +386,7 @@ export function boot(win: Window & DimmiWindow, doc: Document): Widget | undefin
         return Boolean(messenger?.isOpen && messenger.tab === "conversation" && live?.open === conversation);
       },
     },
-    browserOf(win),
+    { ...browserOf(win), language: () => language || win.navigator.language },
     settings.appId,
     `${settings.apiBase}/widget/v1`,
     blank,
@@ -381,6 +414,22 @@ function identitySource(win: Window & DimmiWindow, url: string | undefined): Sou
     return fromFunction(queued[1] as () => unknown);
   }
   return url ? fromUrl(win.fetch.bind(win), url) : undefined;
+}
+
+/*
+ * queuedLanguage is the language a Dimmi("boot") or Dimmi("update")
+ * queued before the messenger loaded asked for, so the first config
+ * already comes in it.
+ */
+function queuedLanguage(win: Window & DimmiWindow): string {
+  let found = "";
+  for (const [name, arg] of win.Dimmi?.q ?? []) {
+    const wanted = (arg as OptionsUpdate | undefined)?.language;
+    if ((name === "boot" || name === "update") && typeof wanted === "string") {
+      found = wanted;
+    }
+  }
+  return found;
 }
 
 /*
@@ -422,7 +471,6 @@ function browserOf(win: Window) {
     setInterval: (fn: () => void, ms: number) => win.setInterval(fn, ms),
     page: () => ({ url: win.location.href, title: win.document.title, referrer: win.document.referrer }),
     width: () => win.innerWidth,
-    language: () => win.navigator.language,
     onVisible: (fn: (hiddenFor: number) => void) => {
       let hiddenAt = 0;
       win.document.addEventListener("visibilitychange", () => {
@@ -462,4 +510,38 @@ function stream(url: string) {
   source.onerror = (event) => out.onerror?.(event);
 
   return out;
+}
+
+/*
+ * retryClick sends again the message whose Try again the visitor pressed.
+ */
+function retryClick(live: Live | undefined, target: Element | null) {
+  const retry = target?.closest<HTMLElement>("[data-retry]")?.dataset.retry;
+  if (retry) {
+    live?.retry(retry);
+  }
+}
+
+/*
+ * rateClick sends the face the visitor picked on a rating card.
+ */
+function rateClick(live: Live | undefined, target: Element | null) {
+  const face = target?.closest<HTMLElement>("[data-rating] [data-score]");
+  if (face) {
+    void live?.rateConversation({ score: Number(face.dataset.score) });
+  }
+}
+
+/*
+ * rateSubmit sends the comment written on a rating card, and reports
+ * whether the submit was one.
+ */
+function rateSubmit(live: Live | undefined, event: Event): boolean {
+  if (!(event.target instanceof HTMLFormElement && event.target.matches("[data-rating-comment]"))) {
+    return false;
+  }
+  event.preventDefault();
+  void live?.rateConversation({ comment: String(new FormData(event.target).get("comment") ?? "") });
+
+  return true;
 }

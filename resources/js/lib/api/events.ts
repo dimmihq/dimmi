@@ -2,6 +2,8 @@
  * What customers did in the team's product, as the team's systems report
  * it: the names events go by and each person's summary of each event.
  * Reading takes contacts:read; changing a name takes attributes:manage.
+ * A name opened to the messenger may be sent from the visitor's browser,
+ * and the workspace may let the messenger send any name.
  */
 import { queryOptions } from "@tanstack/react-query";
 
@@ -14,6 +16,7 @@ export interface EventDefinition {
   description: string | null;
   origin: "created" | "observed";
   status: "active" | "archived";
+  client_writable: boolean;
   total_count: number;
   last_seen_at: string | null;
 }
@@ -49,7 +52,22 @@ export function contactEventsQuery(workspace: string, contact: string) {
 export function updateEvent(
   workspace: string,
   id: string,
-  changes: { label?: string; status?: "active" | "archived" },
+  changes: { label?: string; status?: "active" | "archived"; client_writable?: boolean },
 ): Promise<EventDefinition> {
   return request<EventDefinition>("PATCH", `/event-definitions/${encodeURIComponent(id)}`, changes, { workspace });
+}
+
+export interface EventSettings {
+  messenger_new_events: boolean;
+}
+
+export function eventSettingsQuery(workspace: string) {
+  return queryOptions({
+    queryKey: ["workspace", workspace, "event-settings"],
+    queryFn: () => request<EventSettings>("GET", "/event-settings", undefined, { workspace }),
+  });
+}
+
+export function updateEventSettings(workspace: string, changes: EventSettings): Promise<EventSettings> {
+  return request<EventSettings>("PATCH", "/event-settings", changes, { workspace });
 }

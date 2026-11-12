@@ -4,8 +4,8 @@
 |--------------------------------------------------------------------------
 |
 | The typed settings of the steps that change a contact, snooze, close or
-| time a conversation, or call another service; see the step settings
-| file for how ids and optional switches are written.
+| time a conversation; see the step settings file for how ids and
+| optional switches are written.
 |
 */
 
@@ -41,12 +41,4 @@ ApplySLASettings applies an SLA policy.
 */
 type ApplySLASettings struct {
 	SLAPolicyID string `json:"sla_policy_id"`
-}
-
-/*
-HTTPRequestSettings calls the customer's own system.
-*/
-type HTTPRequestSettings struct {
-	URL    string `json:"url,omitempty"`
-	Method string `json:"method,omitempty"`
 }

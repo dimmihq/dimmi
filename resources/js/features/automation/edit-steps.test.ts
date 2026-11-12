@@ -67,4 +67,15 @@ describe("freshStep", () => {
     expect(freshStep("wait").settings).toEqual({ for: "1h" });
     expect(freshStep("wait").id).toMatch(/^s_/);
   });
+
+  it("gives sorting by topic two categories and a none matched path", () => {
+    const sort = freshStep("classify");
+
+    expect(sort.paths?.map((path) => path.label ?? path.outcome)).toEqual(["Category 1", "Category 2", "none"]);
+  });
+
+  it("starts a call with a GET and no paths", () => {
+    expect(freshStep("http_request").settings).toEqual({ method: "GET", url: "" });
+    expect(freshStep("http_request").paths).toBeUndefined();
+  });
 });

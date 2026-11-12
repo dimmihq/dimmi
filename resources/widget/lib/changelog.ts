@@ -7,6 +7,7 @@
 
 import type { Http } from "../client/http";
 import type { Block, Entry } from "../content";
+import { reading } from "./map";
 
 /*
  * Index is what the server answers for the tab.
@@ -35,7 +36,7 @@ export async function changelog(
       tag: e.label,
       title: e.title,
       summary: e.summary,
-      date: new Date(e.published_at).toLocaleDateString(undefined, day),
+      date: new Date(e.published_at).toLocaleDateString(reading.locale, day),
       body: e.body,
     })),
     unread_changelog: entries.filter((e) => Number.isNaN(since) || Date.parse(e.published_at) > since).length,

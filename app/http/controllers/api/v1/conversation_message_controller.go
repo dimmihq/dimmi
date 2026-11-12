@@ -83,6 +83,7 @@ type ConversationMessageController struct {
 	Reply    *messages.ReplyToConversation
 	Note     *messages.AddNote
 	Relay    *messages.AddContactMessage
+	Import   *messages.ImportMessage
 	Delete   *messages.DeleteMessage
 	Edit     *messages.EditNote
 	Original *messages.ShowOriginal
@@ -210,6 +211,12 @@ func (c *ConversationMessageController) StoreReply(
 	}
 
 	b := in.Body
+	if b.Importing() {
+		return c.importEntry(ctx, historyEntry{
+			ref: ref, kind: messages.ImportReply, body: b.Body, history: b.HistoryFields, then: b.Then,
+		})
+	}
+
 	reply := messages.ReplyInput{
 		Membership: membership(ctx), Ref: ref, Body: b.Body, ClientMessageID: b.ClientMessageID,
 		Then: messages.ThenKeep, Delay: b.Delay && bySession(ctx), MutationID: mutationID(ctx),
@@ -224,14 +231,7 @@ func (c *ConversationMessageController) StoreReply(
 	}
 
 	if b.Snooze != nil {
-		reply.Snooze.Until = b.Snooze.Until
-		if b.Snooze.Option != nil {
-			reply.Snooze.Option = *b.Snooze.Option
-		}
-
-		if b.Snooze.Preset != nil {
-			reply.Snooze.Preset = *b.Snooze.Preset
-		}
+		reply.Snooze = snoozeInput(b.Snooze)
 	}
 
 	if b.ExpectedLastMessageID != nil {
@@ -252,6 +252,22 @@ func (c *ConversationMessageController) StoreReply(
 }
 
 /*
+snoozeInput returns when the snooze a reply asks for ends.
+*/
+func snoozeInput(s *requests.SnoozeBody) messages.SnoozeInput {
+	out := messages.SnoozeInput{Until: s.Until}
+	if s.Option != nil {
+		out.Option = *s.Option
+	}
+
+	if s.Preset != nil {
+		out.Preset = *s.Preset
+	}
+
+	return out
+}
+
+/*
 StoreNote writes a note to the team.
 */
 func (c *ConversationMessageController) StoreNote(
@@ -260,6 +276,12 @@ func (c *ConversationMessageController) StoreNote(
 	ref, err := conversationRef(c.IDs, in.Conversation)
 	if err != nil {
 		return nil, err
+	}
+
+	if in.Body.Importing() {
+		return c.importEntry(ctx, historyEntry{
+			ref: ref, kind: messages.ImportNote, body: in.Body.Body, history: in.Body.HistoryFields,
+		})
 	}
 
 	written, err := c.Note.Handle(ctx, messages.NoteInput{
@@ -282,6 +304,14 @@ func (c *ConversationMessageController) Store(
 	ref, err := conversationRef(c.IDs, in.Conversation)
 	if err != nil {
 		return nil, err
+	}
+
+	if in.Body.CreatedAt != nil || in.Body.ExternalID != nil {
+		history := requests.HistoryFields{CreatedAt: in.Body.CreatedAt, ExternalID: in.Body.ExternalID}
+
+		return c.importEntry(ctx, historyEntry{
+			ref: ref, kind: messages.ImportContactMessage, body: in.Body.Body, history: history,
+		})
 	}
 
 	written, err := c.Relay.Handle(ctx, messages.ContactMessageInput{

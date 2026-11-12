@@ -86,30 +86,47 @@ func (p *Posts) VoteFor(ctx context.Context, in VoteInput) (Post, error) {
 	if !in.Membership.Can("feedback:write") {
 		return Post{}, exceptions.ErrForbidden
 	}
-	if in.Priority == "" {
-		in.Priority = "nice"
+	priority, err := priorityOf(in.Priority)
+	if err != nil {
+		return Post{}, err
 	}
-	if !slices.Contains(Priorities(), in.Priority) {
-		return Post{}, ErrPriorityInvalid
-	}
+	in.Priority = priority
 	ws := in.Membership.Workspace.ID
 	var out Post
-	err := p.DB.Transaction(ctx, func(ctx context.Context, tx *database.Tx) error {
+	err = p.DB.Transaction(ctx, func(ctx context.Context, tx *database.Tx) error {
 		q := models.New(tx)
 		row, err := lockPost(ctx, q, ws, in.Post)
 		if err != nil {
 			return err
 		}
-		if err := castVote(ctx, q, vote{
+		cast := vote{
 			post: row, contact: in.Contact, member: memberOf(in.Membership),
 			priority: in.Priority, now: p.Clock.Now(),
-		}); err != nil {
+		}
+		if err := castVote(ctx, q, cast); err != nil {
+			return err
+		}
+		if err := p.voted(ctx, tx, p.byMember(ws, in.Membership.Member.ID), cast); err != nil {
 			return err
 		}
 		out, err = p.reload(ctx, q, ws, row.ID)
 		return err
 	})
 	return out, err
+}
+
+/*
+priorityOf is the priority given, nice when none is, or
+ErrPriorityInvalid.
+*/
+func priorityOf(priority string) (string, error) {
+	if priority == "" {
+		return "nice", nil
+	}
+	if !slices.Contains(Priorities(), priority) {
+		return "", ErrPriorityInvalid
+	}
+	return priority, nil
 }
 
 /*

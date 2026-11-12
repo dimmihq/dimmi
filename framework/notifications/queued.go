@@ -30,7 +30,6 @@ import (
 	"fmt"
 
 	"github.com/dimmihq/dimmi/framework/database"
-	"github.com/dimmihq/dimmi/framework/ids"
 	"github.com/dimmihq/dimmi/framework/queue"
 )
 
@@ -117,7 +116,7 @@ func (m *Manager) SendTx(ctx context.Context, tx *database.Tx, n Notification, t
 			return fmt.Errorf("queue %s: %w", n.Type(), err)
 		}
 
-		id := ids.New().String()
+		id := idFor(ctx, len(to))
 
 		for _, channel := range n.Via(notifiable) {
 			d := Delivery{ID: id, Channel: channel, Locale: localeOf(ctx, notifiable), Notifiable: notifiable}

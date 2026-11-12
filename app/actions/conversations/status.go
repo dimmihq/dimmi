@@ -74,12 +74,14 @@ const (
 
 /*
 StatusChange is a requested status: the status and, for a snooze, when
-it ends, or the reason for opening.
+it ends, or the reason for opening. AskRating asks the customer for a
+rating on a close, whatever the workspace's settings say.
 */
 type StatusChange struct {
-	Status string
-	Until  time.Time
-	Reason string
+	Status    string
+	Until     time.Time
+	Reason    string
+	AskRating bool
 }
 
 /*
@@ -124,7 +126,7 @@ func (w *Writer) statusEvent(ctx context.Context, c models.Conversation, from st
 	switch {
 	case to.Status == string(enums.ConversationStatusClosed):
 		return w.emit(ctx, c, entry{"conversation.closed", closeData(to.Reason)}, appevents.ConversationClosed{
-			Base: w.Base(c.WorkspaceID), ConversationRef: ref(c), Reason: to.Reason,
+			Base: w.Base(c.WorkspaceID), ConversationRef: ref(c), Reason: to.Reason, AskRating: to.AskRating,
 		})
 	case to.Status == string(enums.ConversationStatusSnoozed):
 		return w.emit(ctx, c, entry{"conversation.snoozed", map[string]any{"until": to.Until}},

@@ -213,9 +213,11 @@ func (s *subject) titleArgs() map[string]string {
 
 /*
 Links writes absolute dashboard addresses from the install's base URL.
+Key signs unsubscribe links; without one, emails carry none.
 */
 type Links struct {
 	Base string
+	Key  []byte
 }
 
 /*

@@ -83,20 +83,27 @@ func (c PortalController) realBoard(w fhttp.ResponseWriter, r *fhttp.Request, s 
 	}
 	query := r.URL.Query()
 	board, err := c.Board.Read(r.Context(), feedback.BoardRequest{
-		Center: s.help, Reader: s.reader, Sort: query.Get("sort"), Query: query.Get("q"),
+		Center: s.help, Reader: s.reader, Sort: query.Get("sort"), Query: query.Get("q"), Board: query.Get("board"),
 	})
+	if errors.Is(err, feedback.ErrBoardNotFound) {
+		c.NotFound(w, r)
+		return
+	}
 	if err != nil {
 		c.Errors.Render(w, r, err)
 		return
 	}
-	statuses, err := c.columns(r, s)
+	statuses, err := c.columns(r, s, query.Get("board"))
 	if err != nil {
 		c.Errors.Render(w, r, err)
 		return
 	}
 	out := helpcenter.Board{
-		Statuses: statuses, Sort: query.Get("sort"), Query: query.Get("q"),
+		Boards: boardTabs(board.Boards), Statuses: statuses, Sort: query.Get("sort"), Query: query.Get("q"),
 		Submitted: query.Has("submitted"), Pending: query.Get("submitted") == "pending",
+	}
+	if board.Active != nil {
+		out.Active = board.Active.Slug
 	}
 	for _, p := range board.List {
 		out.List = append(out.List, ideaView(p))
@@ -109,10 +116,22 @@ func (c PortalController) realBoard(w fhttp.ResponseWriter, r *fhttp.Request, s 
 }
 
 /*
-columns reads the roadmap: each open status with its requests.
+boardTabs shapes the boards a reader may open as the page's tabs.
 */
-func (c PortalController) columns(r *fhttp.Request, s liveSite) ([]helpcenter.Status, error) {
-	board, err := c.Board.Read(r.Context(), feedback.BoardRequest{Center: s.help, Reader: s.reader})
+func boardTabs(boards []models.FeedbackBoard) []helpcenter.BoardTab {
+	out := make([]helpcenter.BoardTab, len(boards))
+	for i, b := range boards {
+		out[i] = helpcenter.BoardTab{Name: b.Name, Slug: b.Slug, Description: b.Description}
+	}
+	return out
+}
+
+/*
+columns reads the roadmap: each status it shows with its requests, on
+one board when slug names one.
+*/
+func (c PortalController) columns(r *fhttp.Request, s liveSite, slug string) ([]helpcenter.Status, error) {
+	board, err := c.Board.Read(r.Context(), feedback.BoardRequest{Center: s.help, Reader: s.reader, Board: slug})
 	if err != nil {
 		return nil, err
 	}
@@ -140,12 +159,18 @@ func (c PortalController) realNewIdea(w fhttp.ResponseWriter, r *fhttp.Request, 
 		return
 	}
 	query := r.URL.Query()
-	form := helpcenter.IdeaForm{Title: query.Get("title"), Details: query.Get("details")}
+	form := helpcenter.IdeaForm{Title: query.Get("title"), Details: query.Get("details"), Board: query.Get("board")}
+	boards, err := c.Board.BoardsFor(r.Context(), s.help, s.reader)
+	if err != nil {
+		c.Errors.Render(w, r, err)
+		return
+	}
+	form.Boards = boardTabs(boards)
 	if query.Has("error") {
 		form.Error = "Give your idea a title of up to 150 characters."
 	}
 	if query.Has("similar") && form.Title != "" {
-		similar, err := c.Board.Similar(r.Context(), s.help, form.Title)
+		similar, err := c.Board.Similar(r.Context(), s.help, s.reader, form.Title)
 		if err != nil {
 			c.Errors.Render(w, r, err)
 			return
@@ -161,7 +186,7 @@ func (c PortalController) realNewIdea(w fhttp.ResponseWriter, r *fhttp.Request, 
 again sends the reader back to the form with what they typed, and why.
 */
 func again(w fhttp.ResponseWriter, s liveSite, form helpcenter.IdeaForm, why string) {
-	values := url.Values{"title": {form.Title}, "details": {form.Details}, why: {"1"}}
+	values := url.Values{"title": {form.Title}, "details": {form.Details}, "board": {form.Board}, why: {"1"}}
 	back(w, s.center.Base+"/feedback/new?"+values.Encode())
 }
 
@@ -200,10 +225,17 @@ func (c PortalController) realSubmit(w fhttp.ResponseWriter, r *fhttp.Request, s
 		c.signInFirst(w, s, "/feedback/new")
 		return
 	}
-	form := helpcenter.IdeaForm{Title: r.FormValue("title"), Details: r.FormValue("details")}
+	form := helpcenter.IdeaForm{
+		Title: r.FormValue("title"), Details: r.FormValue("details"), Board: r.FormValue("board"),
+	}
 	done, err := c.Board.Submit(r.Context(), feedback.SubmitInput{
-		Center: s.help, Reader: *s.reader, Title: form.Title, Body: form.Details, Sure: r.FormValue("sure") != "",
+		Center: s.help, Reader: *s.reader, Board: form.Board, Title: form.Title, Body: form.Details,
+		Sure: r.FormValue("sure") != "",
 	})
+	if errors.Is(err, feedback.ErrBoardNotFound) {
+		c.NotFound(w, r)
+		return
+	}
 	if errors.Is(err, feedback.ErrTitleInvalid) || errors.Is(err, feedback.ErrBodyTooLong) {
 		again(w, s, form, "error")
 		return
@@ -314,10 +346,9 @@ func (c PortalController) Idea(w fhttp.ResponseWriter, r *fhttp.Request) {
 }
 
 func (c PortalController) ideaPage(w fhttp.ResponseWriter, r *fhttp.Request, s liveSite, page feedback.Page) {
-	status, _ := feedback.StatusOf(page.Status)
 	path := feedback.PostPath(page.FeedbackPost)
 	v := helpcenter.IdeaView{
-		Idea: ideaView(page.Listed), Status: statusView(status, 0), Details: page.Details, Author: page.Author,
+		Idea: ideaView(page.Listed), Status: statusView(page.Stage, 0), Details: page.Details, Author: page.Author,
 		Posted: page.CreatedAt.Format("January 2, 2006"), Comments: threads(page.Comments),
 		Pending: page.Moderation == "pending", CanAct: s.reader != nil, Commented: r.URL.Query().Has("commented"),
 	}

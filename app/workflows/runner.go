@@ -174,6 +174,8 @@ func (e *Engine) applies(run models.WorkflowRun, s Step) bool {
 		return w.interrupts(interruptTeammate)
 	case InputAgentHandover:
 		return w.Kind == workflowspec.WaitAgent
+	case InputCallDone:
+		return w.Kind == waitCall
 	}
 
 	return false

@@ -158,3 +158,19 @@ WHERE c.workspace_id = @workspace_id AND c.contact_id = @contact_id AND c.delete
   AND c.updated_at > @since_at::timestamptz AND c.updated_at <= @until_at::timestamptz
 ORDER BY c.updated_at, c.id
 LIMIT @row_limit::bigint;
+
+-- name: WidgetSeenByTeam :many
+-- WidgetSeenByTeam returns, for each of the conversations a teammate read
+-- up to the customer's latest message, when the team last read it: what a
+-- visitor's messenger shows as Seen.
+SELECT r.conversation_id, max(r.last_read_at)::timestamptz AS seen_at
+FROM conversation_reads r
+WHERE r.workspace_id = @workspace_id AND r.conversation_id = ANY(@conversation_ids::uuid[])
+  AND r.last_read_message_id >= (
+      SELECT m.id FROM messages m
+      WHERE m.workspace_id = r.workspace_id AND m.conversation_id = r.conversation_id AND m.type = 'message'
+        AND m.author_type = 'contact' AND m.deleted_at IS NULL
+      ORDER BY m.id DESC
+      LIMIT 1
+  )
+GROUP BY r.conversation_id;

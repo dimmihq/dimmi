@@ -5,7 +5,7 @@
  * conversation, its timeline, the lists and the sidebar's counts are
  * then read again. Each change carries an id, so its realtime echo is
  * not applied a second time. Moving a conversation to the trash offers
- * an undo.
+ * an undo. Marking it unread or as spam goes through the same change.
  */
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
@@ -82,6 +82,20 @@ export function useCase(workspace: string, conversation: Conversation) {
     addTag: (name: string) => change.mutate({ add_tags: [name] }),
     removeTag: (id: string) => change.mutate({ remove_tags: [id] }),
     trash: () => trash.mutate(),
+    setSpam: (spam: boolean) => change.mutate({ spam }),
+    /*
+     * markUnread calls the server directly: the screen leaves the
+     * conversation first, so opening it does not read it again.
+     */
+    markUnread: async () => {
+      try {
+        await updateConversation({ workspace, mutation: mutationId() }, conversation.id, { unread: true });
+        toast.success("Marked as unread");
+        await refresh();
+      } catch {
+        toast.error("The conversation could not be marked as unread.");
+      }
+    },
   };
 }
 

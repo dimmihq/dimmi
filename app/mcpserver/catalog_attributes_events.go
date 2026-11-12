@@ -127,5 +127,17 @@ func eventDocs() map[string]Doc {
 			Returns: "the event definition.",
 			Params:  map[string]string{"status": "active or archived."},
 		},
+		"event-settings.show": {
+			Title:   "Get the messenger event settings",
+			Use:     "Reads whether the messenger may record event names nobody defined yet.",
+			Returns: "the event settings.",
+		},
+		"event-settings.update": {
+			Title: "Change the messenger event settings",
+			Use: "Turns on or off accepting any event name sent from the messenger; when off, only names " +
+				"marked writable from the messenger are recorded.",
+			Returns: "the event settings.",
+			Risk:    new(RiskWrite),
+		},
 	}
 }

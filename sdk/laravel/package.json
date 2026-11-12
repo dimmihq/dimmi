@@ -1,0 +1,6 @@
+{
+  "name": "@dimmi/laravel-sdk",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Version record for dimmi/dimmi-laravel on Packagist. Changesets bumps it; the release publishes from it. Not an npm package."
+}

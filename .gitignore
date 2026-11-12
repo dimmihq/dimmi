@@ -30,3 +30,15 @@ coverage-app.filtered.out
 
 # SDK package builds
 sdk/*/dist/
+/site/dist/
+
+# SDK layers generated from tests/contracts/api_v1.openapi.json by
+# make sdk-generate; never committed (AGENTS.md).
+/sdk/api/src/schema.ts
+/sdk/api/src/paging.ts
+/sdk/go/api/api.gen.go
+/sdk/go/api/openapi30.json
+/sdk/php/src/Generated/
+/sdk/python/src/dimmi/_generated/
+/sdk/python/.venv/
+/sdk/*/vendor/

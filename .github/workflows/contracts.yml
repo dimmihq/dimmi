@@ -1,0 +1,109 @@
+# The public contracts: the REST API, the webhooks and the SDKs built from
+# them never break (docs/api/versioning.md). main.yml's Go tests keep
+# tests/contracts/*.json in step with the code; these checks compare those
+# contracts and the SDKs with what clients already depend on.
+
+name: contracts
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: contracts-${{ github.event_name == 'pull_request' && github.ref || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
+env:
+  # The commit the change is compared with: the pull request's base, or the
+  # commit before a push. Empty for a new branch.
+  BASE: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || (github.event.before != '0000000000000000000000000000000000000000' && github.event.before || '') }}
+
+jobs:
+  # No change breaks a client of the last released API, nor of main.
+  api-compat:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+      - name: Against the last release
+        run: node scripts/api-compat.ts
+      - name: Against the base commit
+        if: env.BASE != ''
+        run: node scripts/api-compat.ts --ref "$BASE"
+
+  # Every SDK generates from the committed API contract, builds, and passes
+  # its unit tests. Generated code is never committed.
+  sdk-check:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: pnpm
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.2"
+          tools: composer
+      - uses: astral-sh/setup-uv@v6
+      - run: pnpm install --frozen-lockfile
+      - run: node scripts/sdk-generate.ts --check
+
+  # No SDK's public surface breaks, against its last published release,
+  # without an approved major version.
+  sdk-compat:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: pnpm
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.2"
+          tools: composer
+      - uses: astral-sh/setup-uv@v6
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm sdk:build
+      - run: node scripts/sdk-compat.ts
+
+  # A change to the API contract or an SDK ships with a changeset, so it
+  # reaches a released SDK version.
+  changeset:
+    if: github.event_name == 'pull_request' || github.event.before != '0000000000000000000000000000000000000000'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+      - run: node scripts/sdk-changeset-check.ts "$BASE"

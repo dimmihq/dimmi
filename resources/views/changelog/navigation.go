@@ -22,12 +22,16 @@ type Week struct {
 }
 
 /*
-Page is a single entry with the entries before and after it.
+Page is a single entry with the entries before and after it, the
+changelog's title, Changelog when empty, and whether it hides
+subscribing.
 */
 type Page struct {
-	Entry    Entry
-	Previous *Entry
-	Next     *Entry
+	Entry       Entry
+	Previous    *Entry
+	Next        *Entry
+	Title       string
+	NoSubscribe bool
 }
 
 /*

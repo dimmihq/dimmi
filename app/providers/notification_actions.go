@@ -27,6 +27,7 @@ import (
 	"github.com/dimmihq/dimmi/app/actions/notifications"
 	appbroadcasting "github.com/dimmihq/dimmi/app/broadcasting"
 	appevents "github.com/dimmihq/dimmi/app/events"
+	"github.com/dimmihq/dimmi/app/jobs"
 	"github.com/dimmihq/dimmi/app/models"
 )
 
@@ -39,13 +40,18 @@ func bootNotifications(a *app.App) error {
 	fanout := &appbroadcasting.Fanout{DB: a.DB, Cache: a.Cache}
 	recipients := &notifications.Recipients{DB: a.DB, Keys: a.Keys}
 	checker := &notifications.Checker{DB: a.DB, Cache: a.Cache, Clock: a.Clock, Fanout: fanout}
-	links := notifications.Links{Base: a.Application.Config.App.URL}
+	links := notifications.Links{Base: a.Application.Config.App.URL, Key: a.DerivedKey(unsubscribePurpose)}
+	log := &notifications.DeliveryLog{DB: a.DB, Clock: a.Clock, Lang: a.Lang}
 	publisher := notifications.BroadcastPublisher{Broadcaster: a.Broadcast}
 
 	fnotify.RegisterWith(a.Notify, func() *notifications.Alert { return notifications.NewAlert(checker) })
 	a.Notify.Resolve(notifications.RecipientType, recipients.Resolve)
+	a.Notify.Observe(log.Observe)
 
 	a.Actions.NotificationCenter = &notifications.Center{DB: a.DB, Clock: a.Clock, Publisher: publisher}
+	a.Actions.NotificationUnsubscribes = &notifications.Unsubscribes{
+		DB: a.DB, Clock: a.Clock, Key: links.Key, Links: links,
+	}
 	a.Actions.NotificationPresence = &notifications.Presence{
 		DB: a.DB, Clock: a.Clock, Cache: a.Cache, Notify: a.Notify, Recipients: recipients, Links: links,
 	}
@@ -57,13 +63,39 @@ func bootNotifications(a *app.App) error {
 
 	dispatcher := &notifications.Dispatcher{
 		DB: a.DB, Clock: a.Clock, Notify: a.Notify, Recipients: recipients, Checker: checker, Fanout: fanout,
-		Links: links,
+		Links: links, Log: log,
 	}
 	if err := queue.Register(a.Queue, dispatcher); err != nil {
 		return fmt.Errorf("notification dispatch job: %w", err)
 	}
+	if err := registerDeliveryUpkeep(a, log, &notifications.QuietSummaries{
+		DB: a.DB, Clock: a.Clock, Notify: a.Notify, Recipients: recipients, Links: links,
+	}); err != nil {
+		return err
+	}
 	listenForNotifications(a)
 	listenForReads(a, publisher)
+	return nil
+}
+
+/*
+unsubscribePurpose derives the key unsubscribe links in teammate
+emails are signed with.
+*/
+const unsubscribePurpose = "notifications.unsubscribe"
+
+/*
+registerDeliveryUpkeep registers the delivery log's prune and the
+quiet hours summary sweep.
+*/
+func registerDeliveryUpkeep(a *app.App, log *notifications.DeliveryLog, summaries *notifications.QuietSummaries,
+) error {
+	if err := queue.Register(a.Queue, &jobs.PruneNotificationDeliveries{Log: log}); err != nil {
+		return fmt.Errorf("notification delivery prune job: %w", err)
+	}
+	if err := queue.Register(a.Queue, &jobs.SendQuietHoursSummaries{Summaries: summaries}); err != nil {
+		return fmt.Errorf("quiet hours summary job: %w", err)
+	}
 	return nil
 }
 

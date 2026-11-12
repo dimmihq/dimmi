@@ -4,8 +4,8 @@
 |--------------------------------------------------------------------------
 |
 | A help center's feature requests: listed a numbered page at a time,
-| posted by the team, edited, moved through statuses, approved, merged
-| and deleted.
+| posted by the team, edited, moved between boards and through statuses,
+| approved, merged and deleted.
 |
 */
 
@@ -69,8 +69,12 @@ func (c *FeedbackController) Index(ctx context.Context, in *requests.IndexFeedba
 	if err != nil {
 		return nil, err
 	}
+	board, err := c.optional(models.PrefixFeedbackBoard, in.Board)
+	if err != nil {
+		return nil, err
+	}
 	page, err := c.Posts.List(ctx, membership(ctx), feedback.PostFilter{
-		HelpCenterID: hc, Status: in.Status, Moderation: in.Moderation, Query: in.Query, Sort: in.Sort,
+		HelpCenterID: hc, Board: board, Status: in.Status, Moderation: in.Moderation, Query: in.Query, Sort: in.Sort,
 		Limit: feedbackPage, Offset: offset,
 	})
 	if err != nil {
@@ -102,6 +106,9 @@ func (c *FeedbackController) Store(ctx context.Context, in *requests.StoreFeedba
 			return nil, err
 		}
 		input.Contact = &contact
+	}
+	if input.Board, err = c.optional(models.PrefixFeedbackBoard, in.Body.BoardID); err != nil {
+		return nil, err
 	}
 	p, err := c.Posts.Create(ctx, input)
 	return postOutput(p, err)
@@ -141,9 +148,13 @@ func (c *FeedbackController) Update(ctx context.Context, in *requests.UpdateFeed
 	case b.Status != nil:
 		return c.move(ctx, id, in)
 	}
-	return postOutput(c.Posts.Update(ctx, feedback.PostInput{
-		Membership: m, ID: id, Title: b.Title, Body: b.BodyMarkdown,
-	}))
+	input := feedback.PostInput{Membership: m, ID: id, Title: b.Title, Body: b.BodyMarkdown}
+	if b.BoardID != nil {
+		if input.Board, err = c.optional(models.PrefixFeedbackBoard, *b.BoardID); err != nil {
+			return nil, err
+		}
+	}
+	return postOutput(c.Posts.Update(ctx, input))
 }
 
 func (c *FeedbackController) move(ctx context.Context, id ids.UUID, in *requests.UpdateFeedbackPostRequest,
@@ -178,6 +189,20 @@ func postOutput(p feedback.Post, err error) (*FeedbackPostOutput, error) {
 		return nil, err
 	}
 	return &FeedbackPostOutput{Body: fhttp.NewResource(resources.NewFeedbackPost(p))}, nil
+}
+
+/*
+optional decodes an id the input may leave empty.
+*/
+func (c *FeedbackController) optional(prefix models.Prefix, public string) (*ids.UUID, error) {
+	if public == "" {
+		return nil, nil
+	}
+	id, err := c.decode(prefix, public)
+	if err != nil {
+		return nil, err
+	}
+	return &id, nil
 }
 
 func (c *FeedbackController) decode(prefix models.Prefix, public string) (ids.UUID, error) {

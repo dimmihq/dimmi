@@ -5,7 +5,8 @@
 |
 | How help centers and their collections read over the API. The public
 | address is spelled out, so the dashboard links to exactly what readers
-| get.
+| get: the verified custom domain, named on its own too, once there is
+| one.
 |
 */
 
@@ -27,6 +28,7 @@ type HelpCenter struct {
 	Name            string                         `json:"name"`
 	Subdomain       string                         `json:"subdomain"`
 	URL             string                         `json:"url"`
+	CustomDomain    *string                        `json:"custom_domain"`
 	Locale          string                         `json:"locale"`
 	IsDefault       bool                           `json:"is_default"`
 	Status          string                         `json:"status"`
@@ -43,9 +45,9 @@ NewHelpCenter shapes a help center reachable at the URL.
 func NewHelpCenter(h models.HelpCenter, url string) HelpCenter {
 	return HelpCenter{
 		ID: models.PublicID(models.PrefixHelpCenter, h.ID), Object: "help_center", Name: h.Name,
-		Subdomain: h.Subdomain, URL: url, Locale: h.Locale, IsDefault: h.IsDefault, Status: h.Status,
-		IndexingEnabled: h.IndexingEnabled, AskAIEnabled: h.AskAiEnabled, Settings: helpcenters.SettingsOf(h),
-		CreatedAt: h.CreatedAt, UpdatedAt: h.UpdatedAt,
+		Subdomain: h.Subdomain, URL: url, CustomDomain: h.CustomDomain, Locale: h.Locale, IsDefault: h.IsDefault,
+		Status: h.Status, IndexingEnabled: h.IndexingEnabled, AskAIEnabled: h.AskAiEnabled,
+		Settings: helpcenters.SettingsOf(h), CreatedAt: h.CreatedAt, UpdatedAt: h.UpdatedAt,
 	}
 }
 

@@ -1,23 +1,71 @@
 package accounts
 
-import "github.com/dimmihq/dimmi/framework/i18n"
+import (
+	"strconv"
+
+	"github.com/dimmihq/dimmi/framework/i18n"
+)
 
 /*
 MemberNotification tells a teammate about conversation activity: what
 happened, the customer's words when previews are on, a link straight to
-it, and a link to change which notifications reach them.
+it, a link to change which notifications reach them, and one to stop
+this kind of email when the install signs such links.
 */
 
-templ MemberNotification(title, body, workspace, url, manageURL string) {
+templ MemberNotification(title, body, workspace, url, manageURL, unsubscribeURL string) {
 	@layout(title) {
 		<p style="font-weight:600;">{ title }</p>
 		if body != "" {
 			<blockquote style="margin:16px 0;padding:12px 16px;border-left:3px solid #d7d7dc;background:#ffffff;color:#3b3b42;">{ body }</blockquote>
 		}
 		@button(url, i18n.T(ctx, "mail.notification.action", nil))
-		<p style="font-size:13px;color:#6b6b76;">
-			{ i18n.T(ctx, "mail.notification.why", i18n.Args{"workspace": workspace}) }
-			<a href={ templ.SafeURL(manageURL) } style="color:#6b6b76;">{ i18n.T(ctx, "mail.notification.manage", nil) }</a>
-		</p>
+		@notificationFooter(workspace, manageURL, unsubscribeURL)
 	}
+}
+
+/*
+QuietLine is one notification quiet hours held back: its title and
+where it leads.
+*/
+type QuietLine struct {
+	Title string
+	URL   string
+}
+
+/*
+QuietHoursSummary lists, once a teammate's quiet hours end, what they
+held back: the first few lines and how many more.
+*/
+
+templ QuietHoursSummary(subject, workspace string, lines []QuietLine, more int, url, manageURL, unsubscribeURL string) {
+	@layout(subject) {
+		<p>{ i18n.T(ctx, "mail.quiet_summary.intro", i18n.Args{"count": strconv.Itoa(len(lines) + more)}) }</p>
+		<ul style="padding-left:20px;">
+			for _, line := range lines {
+				<li style="margin:6px 0;"><a href={ templ.SafeURL(line.URL) } style="color:#1b1b1f;">{ line.Title }</a></li>
+			}
+		</ul>
+		if more > 0 {
+			<p>{ i18n.T(ctx, "mail.quiet_summary.more", i18n.Args{"count": strconv.Itoa(more)}) }</p>
+		}
+		@button(url, i18n.T(ctx, "mail.quiet_summary.action", nil))
+		@notificationFooter(workspace, manageURL, unsubscribeURL)
+	}
+}
+
+/*
+notificationFooter says why the teammate gets the email and how to
+change it or stop it.
+*/
+
+templ notificationFooter(workspace, manageURL, unsubscribeURL string) {
+	<p style="font-size:13px;color:#6b6b76;">
+		{ i18n.T(ctx, "mail.notification.why", i18n.Args{"workspace": workspace}) }
+		<a href={ templ.SafeURL(manageURL) } style="color:#6b6b76;">{ i18n.T(ctx, "mail.notification.manage", nil) }</a>
+		if unsubscribeURL != "" {
+			{ " · " }
+			<a href={ templ.SafeURL(unsubscribeURL) } style="color:#6b6b76;">{ i18n.T(ctx, "mail.notification.unsubscribe", nil) }</a>
+		}
+	</p>
 }

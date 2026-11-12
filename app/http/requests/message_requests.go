@@ -42,6 +42,7 @@ type ReplyRequest struct {
 		Then                  *string     `json:"then,omitempty"`
 		Snooze                *SnoozeBody `json:"snooze,omitempty"`
 		Delay                 bool        `json:"delay,omitempty"`
+		HistoryFields
 	}
 }
 
@@ -52,6 +53,10 @@ snoozing.
 func (r *ReplyRequest) Validate(ctx context.Context, _ *validation.Factory) error {
 	snoozing := r.Body.Then != nil && *r.Body.Then == "snooze"
 	s := r.Body.Snooze
+
+	if r.Body.Importing() && (snoozing || len(r.Body.AttachmentIDs) > 0 || r.Body.Delay) {
+		return violation(ctx, "created_at", "prohibited", "validation.prohibited")
+	}
 
 	if err := choice(ctx, "then", r.Body.Then, "keep open close snooze"); err != nil {
 		return err
@@ -82,6 +87,7 @@ type NoteRequest struct {
 	Body         struct {
 		Body            string  `json:"body"                        validate:"required,max=65536"`
 		ClientMessageID *string `json:"client_message_id,omitempty" validate:"omitempty,min=1,max=64"`
+		HistoryFields
 	}
 }
 
@@ -92,8 +98,10 @@ ContactMessageRequest is the input of POST
 type ContactMessageRequest struct {
 	Conversation string `path:"conversation"`
 	Body         struct {
-		Body      string  `json:"body"                 validate:"required,max=65536"`
-		DedupeKey *string `json:"dedupe_key,omitempty" validate:"omitempty,min=1,max=200"`
+		Body       string     `json:"body"                 validate:"required,max=65536"`
+		DedupeKey  *string    `json:"dedupe_key,omitempty"  validate:"omitempty,min=1,max=200"`
+		CreatedAt  *time.Time `json:"created_at,omitempty"`
+		ExternalID *string    `json:"external_id,omitempty" validate:"omitempty,min=1,max=255"`
 	}
 }
 

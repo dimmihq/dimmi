@@ -6,7 +6,8 @@
  * room. On phones one of the two shows at a time. Above the list the
  * person picks the status shown and the order, remembered per view; a
  * search keeps that status. The agent's part in the conversations can
- * narrow the list too, kept on the address.
+ * narrow the list too, kept on the address. Picking rows swaps the list
+ * controls for the bulk bar, whose changes apply to every row picked.
  */
 import { RiChatSmile3Line, RiInbox2Line, RiSearchLine } from "@remixicon/react";
 import { useMutation, useQuery } from "@tanstack/react-query";
@@ -35,6 +36,8 @@ import {
 } from "@/lib/api/inbox";
 import { viewsQuery } from "@/lib/api/views";
 import { callerQuery } from "@/lib/api/workspace";
+import { BulkBar } from "./bulk/bulk-bar";
+import { type SelectionControls, useSelection } from "./bulk/selection";
 import { ConversationList } from "./conversation-list";
 import { useInbox } from "./conversations";
 import { ConversationRowsSkeleton } from "./skeletons";
@@ -170,6 +173,8 @@ function ListPanel({ view, openId }: { view: string; openId: string | undefined 
     const shown = new Set(firstPage.map((conversation) => conversation.id));
     return [...firstPage, ...more.items.filter((conversation) => !shown.has(conversation.id))];
   }, [firstPage, more.items]);
+  const rowIds = useMemo(() => (conversations ?? []).map((conversation) => conversation.id), [conversations]);
+  const selection = useSelection(rowIds);
   const { data: counts } = useQuery({ ...countsQuery(workspace), enabled: workspace !== "" });
   const { data: caller } = useQuery({ ...callerQuery(workspace), enabled: workspace !== "" });
   const { data: drafts } = useQuery({ ...draftsQuery(workspace), enabled: workspace !== "" });
@@ -194,15 +199,19 @@ function ListPanel({ view, openId }: { view: string; openId: string | undefined 
           onChange={setSearch}
         />
       </div>
-      <ListControls
-        status={settings.status}
-        fixedStatus={settings.params.status !== undefined}
-        sort={settings.sort ?? "-last_message_at"}
-        ai={settings.ai}
-        onStatusChange={settings.setStatus}
-        onSortChange={settings.setSort}
-        onAiChange={settings.setAi}
-      />
+      {selection.count > 0 ? (
+        <BulkBar workspace={workspace} selection={selection} loaded={rowIds.length} />
+      ) : (
+        <ListControls
+          status={settings.status}
+          fixedStatus={settings.params.status !== undefined}
+          sort={settings.sort ?? "-last_message_at"}
+          ai={settings.ai}
+          onStatusChange={settings.setStatus}
+          onSortChange={settings.setSort}
+          onAiChange={settings.setAi}
+        />
+      )}
       {mentions ? <MentionsFilter everything={everyMention} onChange={setEveryMention} /> : null}
       <ListBody
         view={view}
@@ -213,6 +222,7 @@ function ListPanel({ view, openId }: { view: string; openId: string | undefined 
         state={isPending ? "loading" : isError ? "error" : "ready"}
         conversations={conversations ?? []}
         drafted={draftedIn(drafts)}
+        selection={selection}
         more={more.more ? { busy: more.busy, load: more.load } : undefined}
       />
     </Panel>
@@ -257,6 +267,7 @@ function ListBody({
   state,
   conversations,
   drafted,
+  selection,
   more,
 }: {
   view: string;
@@ -267,6 +278,7 @@ function ListBody({
   state: "loading" | "error" | "ready";
   conversations: NonNullable<Parameters<typeof ConversationList>[0]["conversations"]>;
   drafted: ReadonlySet<string>;
+  selection: SelectionControls;
   more?: { busy: boolean; load: () => void };
 }) {
   if (state === "loading") {
@@ -291,7 +303,14 @@ function ListBody({
 
   return (
     <ScrollArea>
-      <ConversationList view={view} conversations={conversations} openId={openId} me={me} drafted={drafted} />
+      <ConversationList
+        view={view}
+        conversations={conversations}
+        openId={openId}
+        me={me}
+        drafted={drafted}
+        selection={selection}
+      />
       {more ? (
         <div className="flex justify-center px-[7px] pt-1 pb-3">
           <Button size="small" variant="secondary" disabled={more.busy} onClick={more.load}>

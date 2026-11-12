@@ -46,6 +46,7 @@ describe("eventLine", () => {
           description: null,
           origin: "observed",
           status: "archived",
+          client_writable: false,
           total_count: 1200,
           last_seen_at: "2026-11-08T11:00:00Z",
         },

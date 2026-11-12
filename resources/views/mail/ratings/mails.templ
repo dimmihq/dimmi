@@ -1,0 +1,47 @@
+package ratings
+
+import "github.com/dimmihq/dimmi/framework/i18n"
+
+/*
+Face is one of the five faces in the email, with the signed link that
+picks its score.
+*/
+type Face struct {
+	Emoji string
+	Label string
+	URL   string
+}
+
+/*
+Ask is the email asking for a rating: the workspace, the customer's
+name, the five faces, and a link to the page for a comment.
+*/
+type Ask struct {
+	Workspace string
+	Name      string
+	Faces     []Face
+	Comment   string
+}
+
+/*
+RatingAsk asks the customer how their conversation went. It is the
+body of an email the customer stream frames like a reply.
+*/
+
+templ RatingAsk(a Ask) {
+	<div>
+		if a.Name != "" {
+			<p style="margin:0 0 12px;">{ i18n.T(ctx, "mail.conversation_rating.greeting", i18n.Args{"name": a.Name}) }</p>
+		}
+		<p style="margin:0 0 16px;">{ i18n.T(ctx, "mail.conversation_rating.intro", i18n.Args{"workspace": a.Workspace}) }</p>
+		<p style="margin:0 0 16px;font-size:34px;line-height:1;">
+			for _, f := range a.Faces {
+				<a href={ templ.SafeURL(f.URL) } title={ f.Label } style="display:inline-block;margin-right:12px;text-decoration:none;">{ f.Emoji }</a>
+			}
+		</p>
+		<p style="margin:0 0 16px;">
+			<a href={ templ.SafeURL(a.Comment) }>{ i18n.T(ctx, "mail.conversation_rating.comment", nil) }</a>
+		</p>
+		<p style="margin:16px 0 0;font-size:12px;color:#6b6b76;">{ i18n.T(ctx, "mail.conversation_rating.why", i18n.Args{"workspace": a.Workspace}) }</p>
+	</div>
+}

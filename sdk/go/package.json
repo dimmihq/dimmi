@@ -1,0 +1,6 @@
+{
+  "name": "@dimmi/go-sdk",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Version record for github.com/dimmihq/dimmi-go. Changesets bumps it; the release publishes from it. Not an npm package."
+}

@@ -5,7 +5,7 @@
  */
 import { identityToken as sign, tokenHeaders, tokenResponse } from "@dimmi/server";
 
-import type { DimmiConfig } from "./config";
+import type { DimmiConfig } from "./config.js";
 
 /*
  * identityToken signs a token for the signed-in user, null for nobody.

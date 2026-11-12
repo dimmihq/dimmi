@@ -26,6 +26,7 @@ type FeedbackPost struct {
 	ID               string     `json:"id"`
 	Object           string     `json:"object"`
 	HelpCenterID     string     `json:"help_center_id"`
+	BoardID          *string    `json:"board_id"`
 	Number           int32      `json:"number"`
 	Title            string     `json:"title"`
 	Slug             string     `json:"slug"`
@@ -54,6 +55,9 @@ func NewFeedbackPost(p feedback.Post) FeedbackPost {
 		Slug: p.Slug, BodyMarkdown: p.BodyMarkdown, Status: p.Status, Moderation: p.Moderation, Author: p.Author,
 		VoteCount: p.VoteCount, CommentCount: p.CommentCount, Path: feedback.PostPath(p.FeedbackPost),
 		StatusChangedAt: p.StatusChangedAt, CreatedAt: p.CreatedAt, UpdatedAt: p.UpdatedAt,
+	}
+	if p.BoardID != nil {
+		out.BoardID = new(models.PublicID(models.PrefixFeedbackBoard, *p.BoardID))
 	}
 	if p.AuthorContactID != nil {
 		out.AuthorContactID = new(models.PublicID(models.PrefixContact, *p.AuthorContactID))

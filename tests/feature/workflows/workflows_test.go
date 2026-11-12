@@ -190,8 +190,9 @@ func TestWorkflows(t *testing.T) {
 				{"id": "s_call01", "kind": "run_workflow", "settings": testkit.JSON{"workflow_id": reusable}},
 			},
 		}})
-		d.Owner.PostJSON("/api/v1/workflows/"+caller+"/publications", nil).
-			AssertStatus(fhttp.StatusUnprocessableEntity).AssertJSONPath("errors.0.code", "step_not_available")
+		d.Owner.PostJSON("/api/v1/workflows/"+caller+"/publications", nil).AssertOK()
+		d.Owner.Delete("/api/v1/workflows/"+reusable).
+			AssertStatus(fhttp.StatusConflict).AssertJSONPath("code", "workflow_in_use")
 	})
 
 	t.Run("lets members read but not change workflows", func(t *testing.T) {

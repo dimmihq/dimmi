@@ -34,10 +34,10 @@
  * box can hand a question to whoever answers the messenger.
  */
 import { Notice } from "../components/notice";
-import { Said } from "../components/thread";
 import type { Incoming } from "../content";
 import { Controller } from "../lib/controller";
 import { pop } from "../lib/sound";
+import { loadThread } from "../lib/threads";
 
 export class MessengerController extends Controller {
   #stack: string[] = [];
@@ -79,8 +79,16 @@ export class MessengerController extends Controller {
     this.show((event.target as Element).closest<HTMLElement>("[data-tab]")?.dataset.tab ?? "");
   }
 
+  /*
+   * visit opens the page a row names; opening an article hands its slug
+   * on through a "dimmi:view" event, so the view is counted.
+   */
   visit(event: Event): void {
-    this.#push((event.target as Element).closest<HTMLElement>("[data-open]")?.dataset.open ?? "");
+    const open = (event.target as Element).closest<HTMLElement>("[data-open]")?.dataset.open ?? "";
+    this.#push(open);
+    if (open.startsWith("article:")) {
+      this.dispatch("view", { article: open.slice("article:".length) });
+    }
   }
 
   /*
@@ -102,10 +110,10 @@ export class MessengerController extends Controller {
     this.dispatch("rate", { article: box.dataset.article, helpful: helpful === "yes" });
   }
 
-  receive(message: Incoming): void {
+  receive(message: Incoming, said: string): void {
     const list = this.element.querySelector(".thread .loaded") ?? this.element.querySelector(".thread");
     list?.querySelector(".seen")?.remove();
-    list?.insertAdjacentHTML("beforeend", String(Said({ messages: [message] })));
+    list?.insertAdjacentHTML("beforeend", said);
     this.#preview(message);
 
     if (this.isOpen && this.tab === "conversation") {
@@ -396,6 +404,7 @@ export class MessengerController extends Controller {
     this.target("panel")?.toggleAttribute("inert", !open);
     if (open) {
       this.ignore();
+      void loadThread(this.element.getRootNode() as ShadowRoot);
     } else {
       this.#unread(this.#count);
     }

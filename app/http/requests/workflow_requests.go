@@ -58,3 +58,12 @@ type UpdateWorkflowRequest struct {
 		AcknowledgeWarnings     bool            `json:"acknowledge_warnings,omitempty"`
 	}
 }
+
+/*
+WorkflowRunsRequest is the input of GET /workflows/{workflow}/runs: how
+many of the newest runs to list.
+*/
+type WorkflowRunsRequest struct {
+	Workflow string `path:"workflow"`
+	Limit    int    `query:"limit" minimum:"0" maximum:"50"`
+}

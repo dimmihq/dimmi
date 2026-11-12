@@ -73,6 +73,7 @@ export interface Conversation {
   widget_id: string | null;
   created_at: string;
   last_message_at: string | null;
+  seen_by_team_at?: string | null;
 }
 
 export interface Typing {
@@ -112,12 +113,16 @@ export class Store {
   }
 
   setConversations(list: Conversation[]) {
+    for (const c of list) {
+      this.noteSeen(c);
+    }
     this.conversations = sortConversations(list);
     this.emit("conversations");
     this.emit("unread");
   }
 
   upsertConversation(conversation: Conversation) {
+    this.noteSeen(conversation);
     const rest = this.conversations.filter((c) => c.id !== conversation.id);
     this.conversations = sortConversations([conversation, ...rest]);
     this.emit("conversations");
@@ -218,6 +223,33 @@ export class Store {
       return undefined;
     }
     return typing;
+  }
+
+  /*
+   * noteSeen keeps when the team last read a conversation the server
+   * listed, unless a receipt already told of a later read. A conversation
+   * without the time, such as one a stream event carries, changes nothing.
+   */
+  private noteSeen(c: Conversation) {
+    const known = this.seen.get(c.id);
+    if (c.seen_by_team_at && (!known || Date.parse(known.at) < Date.parse(c.seen_by_team_at))) {
+      this.seen.set(c.id, { at: c.seen_by_team_at });
+    }
+  }
+
+  /*
+   * dropLocal removes the visitor's own copy of a message, such as one
+   * refused that they send again, and returns it.
+   */
+  dropLocal(conversation: string, clientId: string): Message | undefined {
+    const list = this.messages.get(conversation) ?? [];
+    const found = list.find((m) => m.client_id === clientId && m.failed);
+    this.messages.set(
+      conversation,
+      list.filter((m) => m !== found),
+    );
+
+    return found;
   }
 
   setSeen(conversation: string, seen: Seen) {

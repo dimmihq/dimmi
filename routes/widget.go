@@ -77,6 +77,8 @@ func widgetAppRoutes(public *routing.Router, a *app.App) {
 	routing.Get(public, "/apps/{app}/availability", "widget.apps.availability.show", availability.Invoke)
 	routing.Get(public, "/apps/{app}/help", "widget.apps.help.show", helpController(a).Show)
 	routing.Get(public, "/apps/{app}/changelog", "widget.apps.changelog.show", changelogController(a).Show)
+	routing.Post(public, "/apps/{app}/article-views", "widget.apps.article-views.store", helpController(a).View).
+		Status(fhttp.StatusNoContent)
 
 	sessions := sessionController(a)
 	routing.Post(public, "/sessions", "widget.sessions.store", sessions.Store)
@@ -113,19 +115,8 @@ func widgetSessionRoutes(visitor *routing.Router, a *app.App) {
 	pings := &widget.PingController{Record: a.Actions.Widget.Ping}
 	routing.Post(visitor, "/pings", "widget.pings.store", pings.Store)
 
-	conv := &widget.ConversationController{
-		Read: a.Actions.Widget.Conversations, Post: a.Actions.Widget.PostMessage,
-		Help: a.Actions.Widget.ConfirmHelp, HandoffAction: a.Actions.Widget.RequestHandoff,
-		IDs: a.IDs, Clock: a.Clock,
-		Cursors: pagination.NewCursors(a.DerivedKey("widget.cursors")), Agents: useragent.New(),
-	}
 	one := "/conversations/{conversation}"
-
-	routing.Get(visitor, "/conversations", "widget.conversations.index", conv.Index)
-	routing.Post(visitor, "/conversations", "widget.conversations.store", conv.Store).Middleware("idempotent")
-	routing.Get(visitor, one, "widget.conversations.show", conv.Show)
-	routing.Get(visitor, one+"/messages", "widget.conversations.messages.index", conv.Messages)
-	routing.Post(visitor, one+"/messages", "widget.conversations.messages.store", conv.Send).Middleware("idempotent")
+	conv := widgetConversationRoutes(visitor, a, one)
 
 	activity := &widget.ActivityController{Read: a.Actions.Widget.MarkRead, Tell: a.Actions.Widget.Typing, IDs: a.IDs}
 	routing.Patch(visitor, one+"/read-state", "widget.conversations.read-state.update", activity.ReadState)
@@ -135,6 +126,30 @@ func widgetSessionRoutes(visitor *routing.Router, a *app.App) {
 	routing.Post(visitor, one+"/ai/handoff", "widget.conversations.ai.handoff", conv.Handoff).Middleware("idempotent")
 
 	widgetActionCallRoutes(visitor, a, one)
+	widgetEventRoutes(visitor, a)
+	widgetRatingRoutes(visitor, a, one)
+}
+
+/*
+widgetConversationRoutes declares the visitor's conversations and the
+messages in them, under one, and returns their controller for the
+routes that follow.
+*/
+func widgetConversationRoutes(visitor *routing.Router, a *app.App, one string) *widget.ConversationController {
+	conv := &widget.ConversationController{
+		Read: a.Actions.Widget.Conversations, Post: a.Actions.Widget.PostMessage,
+		Help: a.Actions.Widget.ConfirmHelp, HandoffAction: a.Actions.Widget.RequestHandoff,
+		IDs: a.IDs, Clock: a.Clock,
+		Cursors: pagination.NewCursors(a.DerivedKey("widget.cursors")), Agents: useragent.New(),
+	}
+
+	routing.Get(visitor, "/conversations", "widget.conversations.index", conv.Index)
+	routing.Post(visitor, "/conversations", "widget.conversations.store", conv.Store).Middleware("idempotent")
+	routing.Get(visitor, one, "widget.conversations.show", conv.Show)
+	routing.Get(visitor, one+"/messages", "widget.conversations.messages.index", conv.Messages)
+	routing.Post(visitor, one+"/messages", "widget.conversations.messages.store", conv.Send).Middleware("idempotent")
+
+	return conv
 }
 
 /*
@@ -203,14 +218,16 @@ func installOrigin(appURL string) string {
 
 /*
 widgetHelpRoutes declares the Help tab as the visitor reads it, the
-passes that open the help center signed in, and the visitor's answers
-about articles.
+passes that open the help center signed in, the visitor's answers
+about articles and the articles they open, counted.
 */
 func widgetHelpRoutes(visitor *routing.Router, a *app.App) {
 	help := helpController(a)
 	routing.Get(visitor, "/help", "widget.help.show", help.Mine)
 	routing.Post(visitor, "/help-passes", "widget.help-passes.store", help.Pass)
 	routing.Post(visitor, "/article-ratings", "widget.article-ratings.store", help.Rate).
+		Status(fhttp.StatusNoContent)
+	routing.Post(visitor, "/article-views", "widget.article-views.store", help.View).
 		Status(fhttp.StatusNoContent)
 }
 
@@ -220,7 +237,7 @@ helpController serves the messenger's Help tab.
 func helpController(a *app.App) *widget.HelpController {
 	return &widget.HelpController{
 		Public: a.Actions.HelpPublic, Readers: a.Actions.HelpReaders, Ratings: a.Actions.HelpRatings,
-		Addresses: a.Actions.HelpCenterAddresses, Clock: a.Clock,
+		Addresses: a.Actions.HelpCenterAddresses, Clock: a.Clock, Analytics: a.Actions.HelpAnalytics,
 	}
 }
 

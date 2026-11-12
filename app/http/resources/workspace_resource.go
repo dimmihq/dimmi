@@ -23,8 +23,9 @@ import (
 Workspace is a workspace a member works in. RequireTwoFactor says
 whether every member must have a second factor to work in it,
 ShowViewers whether inbox lists show who views each conversation, and
-SeenReceiptName whether the customer's widget names the teammate who
-read their message. CustomerFacingName is the name customers see, null
+SeenReceipts whether the customer's widget is told the team read their
+message at all, and SeenReceiptName whether it names the teammate who
+read it. CustomerFacingName is the name customers see, null
 when they see the workspace's own name. LinkSafety holds the checks the
 inbox runs on links customers send, and Retention how long
 conversations and their files are kept. DeletedAt and PurgeAfter are set
@@ -47,6 +48,7 @@ type Workspace struct {
 	TestMode           bool              `json:"test_mode"`
 	RequireTwoFactor   bool              `json:"require_two_factor"`
 	ShowViewers        bool              `json:"show_viewers_on_list"`
+	SeenReceipts       bool              `json:"seen_receipts"`
 	SeenReceiptName    bool              `json:"seen_receipt_shows_name"`
 	CustomerFacingName *string           `json:"customer_facing_name"`
 	LinkSafety         models.LinkSafety `json:"link_safety"`
@@ -82,6 +84,7 @@ func NewWorkspace(w models.Workspace) Workspace {
 		TestMode:           w.TestMode,
 		RequireTwoFactor:   w.RequiresTwoFactor(),
 		ShowViewers:        w.ShowsViewersOnList(),
+		SeenReceipts:       w.ShowsSeenReceipts(),
 		SeenReceiptName:    w.SeenReceiptShowsName(),
 		CustomerFacingName: w.CustomerFacingNameSetting(),
 		LinkSafety:         w.LinkSafety(),

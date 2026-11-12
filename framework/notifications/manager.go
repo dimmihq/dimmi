@@ -72,6 +72,7 @@ type Manager struct {
 	mu        sync.RWMutex
 	types     map[string]decoder
 	resolvers map[string]Resolver
+	observers []Observer
 }
 
 /*
@@ -163,7 +164,7 @@ func (m *Manager) Send(ctx context.Context, n Notification, to ...Notifiable) er
 	var errs []error
 
 	for _, notifiable := range to {
-		id := ids.New().String()
+		id := idFor(ctx, len(to))
 
 		for _, channel := range n.Via(notifiable) {
 			d := Delivery{ID: id, Channel: channel, Locale: localeOf(ctx, notifiable), Notifiable: notifiable}
@@ -174,6 +175,19 @@ func (m *Manager) Send(ctx context.Context, n Notification, to ...Notifiable) er
 	}
 
 	return errors.Join(errs...)
+}
+
+/*
+idFor is the id of a delivery to one of count recipients: the
+context's when it carries one and the send has one recipient, else a
+new one.
+*/
+func idFor(ctx context.Context, count int) string {
+	if id := DeliveryID(ctx); id != "" && count == 1 {
+		return id
+	}
+
+	return ids.New().String()
 }
 
 /*
@@ -197,7 +211,7 @@ func ownLocale(to Notifiable) string {
 
 /*
 deliver sends one delivery in its locale unless the notification
-declines it.
+declines it, and tells the observers how it ended.
 */
 func (m *Manager) deliver(ctx context.Context, d Delivery, n Notification) error {
 	if d.Locale != "" {
@@ -210,11 +224,19 @@ func (m *Manager) deliver(ctx context.Context, d Delivery, n Notification) error
 
 	if conditional, ok := n.(Conditional); ok {
 		send, err := conditional.ShouldSend(ctx, d)
+		if reason, skipped := skipReason(err); skipped {
+			m.report(ctx, Outcome{Delivery: d, Notification: n, Status: StatusSkipped, Reason: reason})
+
+			return nil
+		}
+
 		if err != nil {
 			return fmt.Errorf("check %s via %s: %w", n.Type(), d.Channel, err)
 		}
 
 		if !send {
+			m.report(ctx, Outcome{Delivery: d, Notification: n, Status: StatusSkipped})
+
 			return nil
 		}
 	}
@@ -225,9 +247,13 @@ func (m *Manager) deliver(ctx context.Context, d Delivery, n Notification) error
 	}
 
 	if err := channel.Send(ctx, d, n); err != nil {
+		m.report(ctx, Outcome{Delivery: d, Notification: n, Status: StatusFailed, Err: err})
+
 		return fmt.Errorf("send %s via %s to %s %s: %w",
 			n.Type(), d.Channel, d.Notifiable.NotifiableType(), d.Notifiable.NotifiableID(), err)
 	}
+
+	m.report(ctx, Outcome{Delivery: d, Notification: n, Status: StatusSent})
 
 	return nil
 }

@@ -82,5 +82,6 @@ func bootContactExports(a *app.App) error {
 		queue.Register(a.Queue, &jobs.ExpireContactExports{Expire: acts.ExpireContactExports}),
 		queue.Register(a.Queue, &jobs.ApplyConversationRetention{Apply: acts.ApplyRetention}),
 		bootDataExports(a),
+		bootImports(a),
 	)
 }

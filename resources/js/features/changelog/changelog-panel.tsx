@@ -8,33 +8,22 @@
 import {
   RiAddLine,
   RiCalendarScheduleLine,
-  RiDeleteBinLine,
   RiDraftLine,
-  RiEditLine,
   RiMailLine,
   RiMegaphoneLine,
-  RiPaletteLine,
   RiSendPlaneLine,
 } from "@remixicon/react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { type ComponentType, useState } from "react";
 
 import { IconButton } from "@/components/base/buttons/icon-button";
 import { AlertDialog } from "@/components/base/modal/modal";
-import { toast } from "@/components/base/toast/toast";
 import { InlineName } from "@/features/help-center/inline-name";
 import { Panel, ScrollArea } from "@/features/shell/page";
-import { type RowAction, RowMenu } from "@/features/shell/row-menu";
-import {
-  type ChangelogLabel,
-  changelogKeys,
-  createLabel,
-  deleteLabel,
-  type EntryStatus,
-  labelColors,
-  updateLabel,
-} from "@/lib/api/changelog";
+import { RowMenu } from "@/features/shell/row-menu";
+import { type ChangelogLabel, type EntryStatus, labelColors } from "@/lib/api/changelog";
 import { cx } from "@/utils/cx";
+
+import { type LabelAct, labelActions, useLabels } from "./use-labels";
 
 /*
  * View is what the list shows: updates in a state or under a label, or
@@ -82,40 +71,6 @@ function Pick({
       {count ? <span className="text-caption-1-regular text-text-tertiary tabular-nums">{count}</span> : null}
     </button>
   );
-}
-
-type LabelAct = "rename" | "color" | "delete";
-
-const labelActions: RowAction<LabelAct>[] = [
-  { kind: "rename", label: "Rename", icon: RiEditLine },
-  { kind: "color", label: "Next color", icon: RiPaletteLine },
-  { kind: "delete", label: "Delete", icon: RiDeleteBinLine, danger: true },
-];
-
-function nextColor(color: string): string {
-  const at = labelColors.indexOf(color);
-  return labelColors[(at + 1) % labelColors.length] ?? labelColors[0] ?? "#64748b";
-}
-
-/*
- * useLabels saves label changes and reloads the labels after each.
- */
-function useLabels(workspace: string, helpCenter: string) {
-  const client = useQueryClient();
-  const refresh = () => client.invalidateQueries({ queryKey: changelogKeys.labels(workspace, helpCenter) });
-  const change = useMutation({
-    mutationFn: (fn: () => Promise<unknown>) => fn(),
-    onSuccess: () => refresh(),
-    onError: (error) => toast.error(error.message),
-  });
-  return {
-    add: (name: string) =>
-      change.mutateAsync(() => createLabel(workspace, helpCenter, { name, color: labelColors[3] })),
-    rename: (id: string, name: string) => change.mutateAsync(() => updateLabel(workspace, id, { name })),
-    recolor: (label: ChangelogLabel) =>
-      change.mutate(() => updateLabel(workspace, label.id, { color: nextColor(label.color) })),
-    remove: (id: string) => change.mutateAsync(() => deleteLabel(workspace, id)),
-  };
 }
 
 function LabelRow({

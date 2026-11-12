@@ -67,23 +67,25 @@ const (
 The prefixes of the shared inbox's tables.
 */
 const (
-	PrefixInbox             Prefix = "inbox"
-	PrefixChannelConnection Prefix = "chn"
-	PrefixChannelRoom       Prefix = "chr"
-	PrefixContact           Prefix = "ctc"
-	PrefixCompany           Prefix = "cmp"
-	PrefixConversation      Prefix = "conv"
-	PrefixMessage           Prefix = "msg"
-	PrefixAttachment        Prefix = "att"
-	PrefixTag               Prefix = "tag"
-	PrefixSavedReply        Prefix = "rpl"
-	PrefixContactIdentity   Prefix = "cid"
-	PrefixRedactionRule     Prefix = "rxr"
-	PrefixContactErasure    Prefix = "ces"
-	PrefixContactExport     Prefix = "exp"
-	PrefixConversationView  Prefix = "cvw"
-	PrefixDraft             Prefix = "drf"
-	PrefixDataExport        Prefix = "dex"
+	PrefixInbox              Prefix = "inbox"
+	PrefixChannelConnection  Prefix = "chn"
+	PrefixChannelRoom        Prefix = "chr"
+	PrefixContact            Prefix = "ctc"
+	PrefixCompany            Prefix = "cmp"
+	PrefixConversation       Prefix = "conv"
+	PrefixMessage            Prefix = "msg"
+	PrefixAttachment         Prefix = "att"
+	PrefixTag                Prefix = "tag"
+	PrefixSavedReply         Prefix = "rpl"
+	PrefixContactIdentity    Prefix = "cid"
+	PrefixRedactionRule      Prefix = "rxr"
+	PrefixContactErasure     Prefix = "ces"
+	PrefixContactExport      Prefix = "exp"
+	PrefixConversationView   Prefix = "cvw"
+	PrefixDraft              Prefix = "drf"
+	PrefixDataExport         Prefix = "dex"
+	PrefixConversationRating Prefix = "crt"
+	PrefixImport             Prefix = "imp"
 )
 
 /*
@@ -117,6 +119,12 @@ const (
 	PrefixIntegrationInstallation Prefix = "itg"
 	PrefixIntegrationMemberGrant  Prefix = "itu"
 )
+
+/*
+PrefixNotificationDelivery names a line of the notification delivery
+log.
+*/
+const PrefixNotificationDelivery Prefix = "ndlv"
 
 /*
 PublicIDEntry is one row of the catalog: a prefix and the table it
@@ -211,6 +219,7 @@ func inboxPublicIDs() []PublicIDEntry {
 		{PrefixDraft, "conversation_drafts"},
 		{PrefixContactExport, "contact_exports"},
 		{PrefixDataExport, "data_exports"},
+		{PrefixConversationRating, "conversation_ratings"},
 		{PrefixWebhookEvent, "events"},
 	}
 }
@@ -238,7 +247,7 @@ func channelPublicIDs() []PublicIDEntry {
 		{PrefixNotification, "notifications"},
 		{PrefixPushSubscription, "push_subscriptions"},
 		{PrefixDestination, "notification_destinations"},
-		{"ndlv", "notification_deliveries"},
+		{PrefixNotificationDelivery, "notification_deliveries"},
 	}
 }
 
@@ -329,7 +338,7 @@ func platformPublicIDs() []PublicIDEntry {
 		{PrefixWebhookAttempt, "webhook_delivery_attempts"},
 		{"bak", "backups"},
 		{"iex", "data_exports"},
-		{"imp", "imports"},
+		{PrefixImport, "imports"},
 		{"impr", "import_runs"},
 		{"impm", "import_mappings"},
 		{"impf", "import_files"},
@@ -384,6 +393,7 @@ The prefixes of feature requests and their comments.
 const (
 	PrefixFeedbackPost    Prefix = "fbp"
 	PrefixFeedbackComment Prefix = "fbc"
+	PrefixFeedbackBoard   Prefix = "fbd"
 )
 
 /*
@@ -392,7 +402,7 @@ roadmap portal.
 */
 func feedbackPublicIDs() []PublicIDEntry {
 	return []PublicIDEntry{
-		{"fbd", "feedback_boards"},
+		{PrefixFeedbackBoard, "feedback_boards"},
 		{"fbct", "feedback_categories"},
 		{"fbs", "feedback_statuses"},
 		{PrefixFeedbackPost, "feedback_posts"},

@@ -23,6 +23,7 @@ import (
 	"github.com/dimmihq/dimmi/framework/view/feed"
 
 	cl "github.com/dimmihq/dimmi/app/actions/changelog"
+	"github.com/dimmihq/dimmi/app/actions/helpcenters"
 	views "github.com/dimmihq/dimmi/resources/views/changelog"
 )
 
@@ -45,6 +46,11 @@ func (c ChangelogController) realIndex(w fhttp.ResponseWriter, r *fhttp.Request,
 	}
 	index := indexView(p, label, page)
 	index.Subscribed = r.URL.Query().Has("subscribed")
+	opts := helpcenters.ChangelogOf(s.help)
+	index.Title, index.NoSubscribe = opts.Title, !opts.Subscriptions
+	for i := range index.Entries {
+		trim(&index.Entries[i], opts)
+	}
 	c.respond(w, r, fhttp.StatusOK, views.IndexPage(s.center, index, c.styles()))
 }
 
@@ -73,7 +79,24 @@ func (c ChangelogController) realEntry(w fhttp.ResponseWriter, r *fhttp.Request,
 		c.Errors.Render(w, r, err)
 		return
 	}
-	c.respond(w, r, fhttp.StatusOK, views.EntryPage(s.center, labels, singleView(one), c.styles()))
+	page := singleView(one)
+	opts := helpcenters.ChangelogOf(s.help)
+	page.Title, page.NoSubscribe = opts.Title, !opts.Subscriptions
+	trim(&page.Entry, opts)
+	c.respond(w, r, fhttp.StatusOK, views.EntryPage(s.center, labels, page, c.styles()))
+}
+
+/*
+trim leaves out of an entry what the team turned off: its authors and
+its reaction buttons.
+*/
+func trim(e *views.Entry, opts helpcenters.ChangelogOptions) {
+	if !opts.Authors {
+		e.Authors = nil
+	}
+	if !opts.Reactions {
+		e.Reactions = nil
+	}
 }
 
 func (c ChangelogController) labelsOf(r *fhttp.Request, s liveSite) ([]views.Label, error) {
@@ -117,7 +140,7 @@ from the site.
 func feedOf(s liveSite, entries []cl.Published) feed.Feed {
 	root := s.center.Origin + s.center.Base
 	out := feed.Feed{
-		Title: s.help.Name + " changelog", Link: root + "/changelog",
+		Title: s.help.Name + " " + strings.ToLower(helpcenters.ChangelogOf(s.help).Title), Link: root + "/changelog",
 		Description: "New features, improvements and fixes in " + s.help.Name + ".",
 	}
 	for _, e := range entries {
@@ -154,6 +177,8 @@ func (c ChangelogController) Subscribe(w fhttp.ResponseWriter, r *fhttp.Request)
 		_, err = c.Subscribers.Subscribe(r.Context(), cl.SubscribeInput{Center: s.help, Email: r.FormValue("email")})
 	}
 	switch {
+	case errors.Is(err, cl.ErrSubscriptionsOff):
+		c.NotFound(w, r)
 	case inPlace(r) && errors.Is(err, cl.ErrEmailInvalid):
 		w.WriteHeader(fhttp.StatusUnprocessableEntity)
 	case errors.Is(err, cl.ErrEmailInvalid):
@@ -189,6 +214,10 @@ func (c ChangelogController) React(w fhttp.ResponseWriter, r *fhttp.Request) {
 	counts, _, err := c.Changelog.React(r.Context(), cl.Reaction{
 		Center: s.help, Slug: r.PathValue("slug"), Emoji: name, Reactor: reactor,
 	})
+	if errors.Is(err, cl.ErrReactionsOff) {
+		c.NotFound(w, r)
+		return
+	}
 	if err != nil && !errors.Is(err, cl.ErrEmojiInvalid) {
 		c.Errors.Render(w, r, err)
 		return

@@ -43,9 +43,12 @@ type IdeaView struct {
 
 /*
 IdeaForm is the form to post a request, filled in again when similar
-requests are shown first or something was wrong.
+requests are shown first or something was wrong. Boards are the boards
+the visitor may post on and Board the slug of the one picked.
 */
 type IdeaForm struct {
+	Boards  []BoardTab
+	Board   string
 	Title   string
 	Details string
 	Similar []Idea

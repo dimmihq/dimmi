@@ -15,6 +15,7 @@ package helpcenters
 import (
 	"context"
 	"net/url"
+	"strings"
 
 	"github.com/dimmihq/dimmi/framework/database"
 	"github.com/dimmihq/dimmi/framework/ids"
@@ -32,7 +33,7 @@ type HelpOrigins struct {
 
 /*
 Owns reports whether the origin is the host of one of the workspace's
-help centers on the help domain.
+help centers on the help domain or on its verified custom domain.
 */
 func (o HelpOrigins) Owns(ctx context.Context, workspaceID ids.UUID, origin string) bool {
 	parsed, err := url.Parse(origin)
@@ -41,7 +42,8 @@ func (o HelpOrigins) Owns(ctx context.Context, workspaceID ids.UUID, origin stri
 	}
 	sub := o.Addresses.Subdomain(parsed.Host)
 	if sub == "" {
-		return false
+		row, err := models.New(o.DB).ResolveHelpCenterDomain(ctx, strings.ToLower(parsed.Hostname()))
+		return err == nil && row.WorkspaceID == workspaceID && parsed.Port() == ""
 	}
 	row, err := models.New(o.DB).ResolveHelpCenter(ctx, sub)
 	return err == nil && row.WorkspaceID == workspaceID

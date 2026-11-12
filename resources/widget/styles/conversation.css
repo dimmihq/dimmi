@@ -1,5 +1,6 @@
 /*
- * The conversation: thread, bubbles, attachments, voice notes and composer.
+ * The conversation: its bar, the thread around the bubbles, and the
+ * composer. The bubbles themselves load with the thread, in bubbles.css.
  */
 .view[data-view="conversation"] {
   overflow: hidden;
@@ -90,30 +91,6 @@
   text-align: end;
 }
 
-.said {
-  display: grid;
-  justify-items: start;
-  gap: 4px;
-  max-inline-size: 82%;
-  animation: enter 220ms var(--out);
-}
-
-.said[data-from="visitor"] {
-  align-self: flex-end;
-  justify-items: end;
-}
-
-.who {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-block-end: 2px;
-  color: var(--text-secondary);
-  font-size: 12px;
-  font-weight: 500;
-  line-height: 16px;
-}
-
 .face {
   display: grid;
   place-items: center;
@@ -143,197 +120,6 @@
   object-fit: cover;
 }
 
-.who .badge {
-  margin: 0;
-  padding: 0 6px;
-  font-size: 10px;
-}
-
-.bubbles {
-  display: grid;
-  justify-items: inherit;
-  gap: 4px;
-}
-
-.bubble-wrap {
-  display: grid;
-  justify-items: inherit;
-  max-inline-size: 100%;
-}
-
-.bubble {
-  max-inline-size: 100%;
-  padding: 10px 14px;
-  border-radius: 18px;
-  background: var(--bg-tertiary);
-  overflow-wrap: anywhere;
-  white-space: pre-wrap;
-}
-
-[data-from="visitor"] .bubble {
-  background-image: linear-gradient(180deg, var(--brand-top), var(--brand));
-  color: var(--on-brand);
-}
-
-[data-from="visitor"] .bubbles > :last-child {
-  border-end-end-radius: 6px;
-}
-
-.said:not([data-from="visitor"]) .bubbles > :last-child {
-  border-end-start-radius: 6px;
-}
-
-.said > time {
-  padding-inline: 4px;
-}
-
-.sources {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  margin-block-start: 10px;
-  white-space: normal;
-}
-
-.source {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 4px 10px 4px 8px;
-  border: 1px solid var(--border-button);
-  border-radius: 999px;
-  background: var(--bg-full);
-  color: var(--text-primary);
-  font-size: 12px;
-  font-weight: 500;
-  line-height: 16px;
-}
-
-.source > svg {
-  inline-size: 14px;
-  block-size: 14px;
-  color: var(--accent);
-}
-
-.file {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  min-inline-size: 220px;
-  padding: 8px 6px 8px 8px;
-  white-space: normal;
-}
-
-.file-icon {
-  display: grid;
-  place-items: center;
-  inline-size: 40px;
-  block-size: 40px;
-  border-radius: 10px;
-  background: color-mix(in oklab, currentColor 12%, transparent);
-}
-
-.file small {
-  color: inherit;
-  font-size: 12px;
-  line-height: 16px;
-  opacity: 0.7;
-}
-
-.file .icon-button {
-  color: inherit;
-}
-
-.photo {
-  display: grid;
-  gap: 6px;
-  margin: 0;
-  padding: 4px;
-  white-space: normal;
-}
-
-.shot {
-  display: grid;
-  place-items: center;
-  inline-size: 220px;
-  block-size: 140px;
-  border-radius: 14px;
-  background:
-    radial-gradient(80% 120% at 0% 100%, color-mix(in oklab, var(--brand), white 35%), transparent 60%),
-    linear-gradient(135deg, color-mix(in oklab, var(--brand) 70%, var(--bg-full)), var(--brand));
-  color: var(--on-brand);
-}
-
-.shot.picture {
-  display: block;
-  inline-size: auto;
-  block-size: auto;
-  max-inline-size: 240px;
-  overflow: hidden;
-  background: var(--bg-full);
-}
-
-.shot.picture img {
-  display: block;
-  inline-size: 100%;
-  block-size: auto;
-  max-block-size: 320px;
-  object-fit: cover;
-}
-
-.shot > svg {
-  inline-size: 28px;
-  block-size: 28px;
-  opacity: 0.8;
-}
-
-.photo figcaption {
-  padding: 0 8px 4px;
-  font-size: 12px;
-  line-height: 16px;
-  opacity: 0.7;
-}
-
-.voice {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 8px 14px 8px 8px;
-}
-
-.play {
-  display: grid;
-  place-items: center;
-  inline-size: 34px;
-  block-size: 34px;
-  padding: 0;
-  border: 0;
-  border-radius: 50%;
-  background: var(--bg-full);
-  color: var(--text-primary);
-  transition: transform 420ms var(--press);
-}
-
-.play:active {
-  transform: scale(0.96);
-  transition-duration: 220ms;
-}
-
-.play svg {
-  inline-size: 16px;
-  block-size: 16px;
-  fill: currentColor;
-}
-
-.pause,
-[data-playing="true"] .play .play {
-  display: none;
-}
-
-[data-playing="true"] .pause {
-  display: block;
-}
-
 .wave {
   display: flex;
   align-items: center;
@@ -352,41 +138,6 @@
 
 .wave i[data-played] {
   opacity: 1;
-}
-
-.wave-hit {
-  display: flex;
-  flex: 1;
-  min-inline-size: 0;
-  cursor: pointer;
-}
-
-.voice time {
-  color: inherit;
-  opacity: 0.75;
-  font-variant-numeric: tabular-nums;
-}
-
-.dots {
-  display: flex;
-  gap: 4px;
-  padding: 14px 16px;
-}
-
-.dots i {
-  inline-size: 7px;
-  block-size: 7px;
-  border-radius: 50%;
-  background: var(--text-secondary);
-  animation: wave 1.2s ease-in-out infinite;
-}
-
-.dots i:nth-child(2) {
-  animation-delay: 150ms;
-}
-
-.dots i:nth-child(3) {
-  animation-delay: 300ms;
 }
 
 @keyframes wave {

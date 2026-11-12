@@ -29,6 +29,7 @@ func TestAPIRoutes(t *testing.T) {
 				"/api/v1/conversations/{conversation}/messages/{message}/original/raw",
 				"/api/v1/conversations/{conversation}/messages/{message}/retry",
 				"/api/v1/inboxes/{inbox}/access", "/api/v1/widget-settings/{widget}/preview",
+				"/api/v1/feedback-statuses/{status}",
 			},
 		})
 

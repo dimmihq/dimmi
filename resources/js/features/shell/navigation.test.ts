@@ -25,7 +25,7 @@ describe("settingsSections", () => {
   it("lists no page that only shows an example", () => {
     const labels = settingsSections().flatMap((section) => section.items.map((item) => item.label));
 
-    for (const label of ["Billing", "Import & export", "Saved replies", "Connections", "GitHub"]) {
+    for (const label of ["Billing", "Import & export", "Connections", "GitHub"]) {
       expect(labels).not.toContain(label);
     }
   });

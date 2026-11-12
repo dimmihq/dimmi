@@ -21,6 +21,13 @@ export interface HelpCenterSettings {
   feedback_approval?: boolean;
   messenger?: boolean;
   messenger_id?: string;
+  changelog?: boolean;
+  changelog_title?: string;
+  changelog_authors?: boolean;
+  changelog_reactions?: boolean;
+  changelog_subscriptions?: boolean;
+  changelog_email?: "full" | "summary";
+  changelog_undo_minutes?: 0 | 5 | 15 | 60;
 }
 
 /*
@@ -35,6 +42,7 @@ export interface HelpCenter {
   name: string;
   subdomain: string;
   url: string;
+  custom_domain: string | null;
   locale: string;
   is_default: boolean;
   status: "active" | "disabled";

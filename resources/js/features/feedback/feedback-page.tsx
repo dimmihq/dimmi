@@ -1,13 +1,20 @@
 /*
  * The feature requests customers send, the way the team triages them: a
- * pane of views by status and approval, with the switches that open the
- * board to customers and hold their posts for approval, beside the
- * requests a numbered page at a time, searched and sorted by trending,
- * top or new. Opening a request shows its votes and conversation.
+ * pane of views by the workspace's statuses and approval, with the switch
+ * that opens the portal to customers, beside the requests a numbered page
+ * at a time, narrowed to a board, searched and sorted by trending, top or
+ * new. Opening a request shows its votes and conversation.
  */
-import { RiAddLine, RiExternalLinkLine, RiInboxLine, RiLightbulbLine, RiShieldCheckLine } from "@remixicon/react";
+import {
+  RiAddLine,
+  RiExternalLinkLine,
+  RiInboxLine,
+  RiLightbulbLine,
+  RiSettings4Line,
+  RiShieldCheckLine,
+} from "@remixicon/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useNavigate, useSearch } from "@tanstack/react-router";
+import { Link, useNavigate, useSearch } from "@tanstack/react-router";
 import type { ColumnDef } from "@tanstack/react-table";
 import { type ComponentType, useRef, useState } from "react";
 import { Panel as Pane } from "react-resizable-panels";
@@ -24,14 +31,15 @@ import { PaneGroup, PaneHandle } from "@/features/shell/resizable";
 import { TableSkeleton } from "@/features/shell/table-skeleton";
 import { useWide } from "@/features/shell/use-wide";
 import {
+  boardsQuery,
   type FeedbackPost,
+  type FeedbackStatus,
   type PostFilter,
   type PostList,
   type PostSort,
   type PostStatus,
   postsPerPage,
   postsQuery,
-  statuses,
 } from "@/lib/api/feedback";
 import { type HelpCenter, helpCentersQuery, updateHelpCenter } from "@/lib/api/help-centers";
 import { formatDate, formatNumber } from "@/lib/i18n/format";
@@ -88,13 +96,14 @@ function Pick({
 }
 
 /*
- * BoardSwitches opens the board to customers and holds their posts for
- * approval, saved at once on the help center.
+ * BoardSwitches opens the portal to customers, saved at once on the help
+ * center, and leads to the settings of its boards, which say who sees
+ * each and whether it holds posts for approval.
  */
 function BoardSwitches({ workspace, center }: { workspace: string; center: HelpCenter }) {
   const client = useQueryClient();
   const save = useMutation({
-    mutationFn: (change: { feedback_board?: boolean; feedback_approval?: boolean }) =>
+    mutationFn: (change: { feedback_board?: boolean }) =>
       updateHelpCenter(workspace, center.id, { settings: { ...center.settings, ...change } }),
     onSuccess: () => client.invalidateQueries({ queryKey: helpCentersQuery(workspace).queryKey }),
     onError: (error) => toast.error(error.message),
@@ -109,14 +118,14 @@ function BoardSwitches({ workspace, center }: { workspace: string; center: HelpC
       >
         Open to customers
       </Switch>
-      <Switch
-        size="sm"
-        isSelected={center.settings.feedback_approval ?? false}
-        onChange={(on) => save.mutate({ feedback_approval: on })}
-        isDisabled={!center.settings.feedback_board}
+      <Link
+        to="/d/settings/$section"
+        params={{ section: "feedback" }}
+        className="flex items-center gap-1 text-body-2-medium text-text-secondary hover:text-text-primary"
       >
-        Approve new posts first
-      </Switch>
+        <RiSettings4Line aria-hidden className="size-4" />
+        Boards and statuses
+      </Link>
       {center.settings.feedback_board ? (
         <a
           href={`${center.url}/feedback`}
@@ -142,16 +151,15 @@ function viewOf(raw: string | undefined): View {
   if (raw === "pending") {
     return { kind: "pending" };
   }
-  const status = statuses.find((s) => s.id === raw);
-  return status ? { kind: "status", status: status.id } : { kind: "all" };
+  return raw ? { kind: "status", status: raw } : { kind: "all" };
 }
 
-function titleOf(view: View): string {
+function titleOf(view: View, list: FeedbackStatus[]): string {
   if (view.kind === "pending") {
     return "Waiting for approval";
   }
   if (view.kind === "status") {
-    return statuses.find((s) => s.id === view.status)?.name ?? "Requests";
+    return list.find((s) => s.id === view.status)?.name ?? "Requests";
   }
   return "All requests";
 }
@@ -262,8 +270,9 @@ function FeedbackViews({
 /*
  * filterOf is the page of requests the address and search ask for.
  */
-function filterOf(view: View, search: { sort?: string; page?: number }, query: string): PostFilter {
+function filterOf(view: View, search: { board?: string; sort?: string; page?: number }, query: string): PostFilter {
   return {
+    board: search.board,
     sort: search.sort === "top" || search.sort === "new" ? search.sort : "trending",
     page: search.page ?? 1,
     query: query || undefined,
@@ -280,17 +289,19 @@ export function FeedbackPage() {
   const center = centers[0];
   const hc = center?.id ?? "";
   const view = viewOf(search.view);
+  const ordered = useStatuses(workspace);
+  const { data: boards = [] } = useQuery(boardsQuery(workspace, hc));
   const [query, setQuery] = useState("");
   const [creating, setCreating] = useState(false);
   const typing = useRef<number | undefined>(undefined);
   const filter = filterOf(view, search, query);
   const sort = filter.sort;
   const list = useQuery(postsQuery(workspace, hc, filter));
-  const counts = useQuery(postsQuery(workspace, hc, { sort: "new", page: 1 })).data?.counts;
+  const counts = useQuery(postsQuery(workspace, hc, { board: search.board, sort: "new", page: 1 })).data?.counts;
   const total = list.data?.meta.total ?? 0;
   const wide = useWide(1024);
-  const go = (next: { view?: string; sort?: string; page?: number }) =>
-    void navigate({ search: { view: search.view, sort: search.sort, ...next }, replace: true });
+  const go = (next: { board?: string; view?: string; sort?: string; page?: number }) =>
+    void navigate({ search: { board: search.board, view: search.view, sort: search.sort, ...next }, replace: true });
 
   const side = (
     <FeedbackViews
@@ -303,7 +314,7 @@ export function FeedbackPage() {
   );
   const main = (
     <Panel label="Feature requests" ground className="h-full w-full flex-1">
-      <PageHeader title={wide ? titleOf(view) : "Feature requests"}>
+      <PageHeader title={wide ? titleOf(view, ordered) : "Feature requests"}>
         <Button size="small" leadingIcon={RiAddLine} onClick={() => setCreating(true)} disabled={!center}>
           New request
         </Button>
@@ -318,6 +329,20 @@ export function FeedbackPage() {
             total={`${formatNumber(total)} ${total === 1 ? "request" : "requests"}`}
             toolbar={
               <div className="flex items-center gap-2">
+                {boards.length > 1 ? (
+                  <Select
+                    aria-label="Board"
+                    className="w-44"
+                    selectedKey={search.board ?? "all"}
+                    onSelectionChange={(key) => go({ board: key === "all" ? undefined : String(key), page: undefined })}
+                  >
+                    {[{ id: "all", name: "All boards" }, ...boards].map((b) => (
+                      <SelectItem key={b.id} id={b.id} textValue={b.name}>
+                        {b.name}
+                      </SelectItem>
+                    ))}
+                  </Select>
+                ) : null}
                 <Input
                   aria-label="Search requests"
                   placeholder="Search requests"
@@ -362,7 +387,12 @@ export function FeedbackPage() {
         </div>
       </ScrollArea>
       {creating && center ? (
-        <NewRequestDialog workspace={workspace} helpCenter={center.id} onClose={() => setCreating(false)} />
+        <NewRequestDialog
+          workspace={workspace}
+          helpCenter={center.id}
+          board={search.board}
+          onClose={() => setCreating(false)}
+        />
       ) : null}
     </Panel>
   );

@@ -105,6 +105,21 @@ func TestSeenReceipts(t *testing.T) {
 		assert.Equal(t, "marker", w.Publication().Event)
 	})
 
+	t.Run("sends nothing once the workspace turned receipts off", func(t *testing.T) {
+		t.Parallel()
+		tc := tests.New(t)
+		s := startConversation(t, tc, tc.Workspace.Workspace.ID, "widget")
+		addMessage(t, tc, s.conversation, "Hello?")
+		w := widget(t, tc, s)
+
+		owner(tc).PatchJSON("/api/v1/workspace", map[string]any{"seen_receipts": false}).AssertOK().
+			AssertJSONPath("data.seen_receipts", false)
+		owner(tc).PatchJSON(readPath(s.conversation.ID), map[string]any{}).AssertOK()
+		mark(t, tc, s)
+
+		assert.Equal(t, "marker", w.Publication().Event)
+	})
+
 	t.Run("sends nothing for a conversation outside the messenger", func(t *testing.T) {
 		t.Parallel()
 		tc := tests.New(t)

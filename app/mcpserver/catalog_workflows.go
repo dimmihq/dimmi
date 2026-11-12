@@ -27,30 +27,19 @@ func workflowDocs() map[string]Doc {
 			Use:     "Reads one workflow with its working copy and the report of problems that would block publishing.",
 			Returns: "the workflow with its spec, report, lock_version and draft_hash.",
 		},
+		"workflows.runs.index": {
+			Title:   "List a workflow's runs",
+			Use:     "Lists a workflow's recent runs with the steps each took, to see why it did what it did.",
+			Returns: "the runs, newest first, each with its trigger, status and step trace.",
+			Params:  map[string]string{"limit": "How many runs to answer, at most 100."},
+		},
 		"workflows.versions.index": {
 			Title:   "List a workflow's versions",
 			Use:     "Lists every published version of a workflow, newest first.",
 			Returns: "the versions with their number, note, who published them and their spec.",
 			Next:    []string{"dimmi_workflows_update: roll back with restore_version_id"},
 		},
-		"workflows.store": {
-			Title: "Create a workflow",
-			Use: "Creates a draft workflow at the end of the list, from a trigger or a whole definition. The " +
-				"trigger never changes later. Nothing runs until it is published.",
-			Returns: "the draft workflow.",
-			Next: []string{
-				"dimmi_workflows_update: build its steps",
-				"dimmi_workflows_publications_create: make it live",
-			},
-			Params: map[string]string{
-				"trigger": "conversation.opener, conversation.first_message, conversation.customer_reopened, " +
-					"message.customer, conversation.customer_quiet, conversation.rated, message.teammate, " +
-					"note.created, conversation.assignment_changed, conversation.status_changed, " +
-					"conversation.teammate_quiet, dimmi.handed_over, dimmi.resolved, sla.warning, sla.breached " +
-					"or reusable (called from other workflows).",
-				"spec": "A whole definition to start from, in the shape dimmi_workflows_get returns.",
-			},
-		},
+		"workflows.store": workflowCreateDoc(),
 		"workflows.destroy": {
 			Title: "Archive a workflow",
 			Use: "Archives a workflow: it stops matching at once and leaves the list. Its versions stay, and " +
@@ -114,6 +103,30 @@ func workflowChangeDocs() map[string]Doc {
 			Risk:    new(RiskReach),
 			Params:  map[string]string{"order": "Every workflow id (wf_...) that is not archived, exactly once."},
 			Hint:    "order_stale means the list changed: read it again with dimmi_workflows_list.",
+		},
+	}
+}
+
+/*
+workflowCreateDoc is the entry for creating a workflow.
+*/
+func workflowCreateDoc() Doc {
+	return Doc{
+		Title: "Create a workflow",
+		Use: "Creates a draft workflow at the end of the list, from a trigger or a whole definition. The " +
+			"trigger never changes later. Nothing runs until it is published.",
+		Returns: "the draft workflow.",
+		Next: []string{
+			"dimmi_workflows_update: build its steps",
+			"dimmi_workflows_publications_create: make it live",
+		},
+		Params: map[string]string{
+			"trigger": "conversation.opener, conversation.first_message, conversation.customer_reopened, " +
+				"message.customer, conversation.customer_quiet, conversation.rated, message.teammate, " +
+				"note.created, conversation.assignment_changed, conversation.status_changed, " +
+				"conversation.teammate_quiet, dimmi.handed_over, dimmi.resolved, sla.warning, sla.breached " +
+				"or reusable (called from other workflows).",
+			"spec": "A whole definition to start from, in the shape dimmi_workflows_get returns.",
 		},
 	}
 }

@@ -65,6 +65,7 @@ type Alert struct {
 	Body           string            `json:"body,omitempty"`
 	Link           string            `json:"link"`
 	ManageLink     string            `json:"manage_link"`
+	Unsubscribe    string            `json:"unsubscribe,omitempty"`
 	ActorName      string            `json:"actor_name,omitempty"`
 	OccurredAt     time.Time         `json:"occurred_at"`
 	Channels       []string          `json:"channels"`
@@ -154,6 +155,7 @@ ToMail is the email.
 func (a *Alert) ToMail(ctx context.Context, _ fnotify.Delivery) (mail.Mailable, error) {
 	return MemberAlertMail{
 		Title: a.title(ctx), Body: a.Body, Workspace: a.Workspace, URL: a.Link, ManageURL: a.ManageLink,
+		Unsubscribe: a.Unsubscribe,
 	}, nil
 }
 
@@ -217,26 +219,43 @@ func (a *Alert) ShouldSend(ctx context.Context, d fnotify.Delivery) (bool, error
 }
 
 /*
-MemberAlertMail is a member alert as an email.
+MemberAlertMail is a member alert as an email. Unsubscribe is where a
+mail app posts to turn this kind of email off.
 */
 type MemberAlertMail struct {
-	Title     string `json:"title"`
-	Body      string `json:"body"`
-	Workspace string `json:"workspace"`
-	URL       string `json:"url"`
-	ManageURL string `json:"manage_url"`
+	Title       string `json:"title"`
+	Body        string `json:"body"`
+	Workspace   string `json:"workspace"`
+	URL         string `json:"url"`
+	ManageURL   string `json:"manage_url"`
+	Unsubscribe string `json:"unsubscribe,omitempty"`
 }
 
 /*
-Envelope leaves the subject to the content.
+Envelope leaves the subject to the content and offers the one-click
+unsubscribe.
 */
-func (MemberAlertMail) Envelope() mail.Envelope { return mail.Envelope{} }
+func (m MemberAlertMail) Envelope() mail.Envelope { return unsubscribeEnvelope(m.Unsubscribe) }
+
+/*
+unsubscribeEnvelope carries the RFC 8058 headers for the link, none
+without one.
+*/
+func unsubscribeEnvelope(link string) mail.Envelope {
+	if link == "" {
+		return mail.Envelope{}
+	}
+	return mail.Envelope{Headers: map[string]string{
+		"List-Unsubscribe":      "<" + link + ">",
+		"List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+	}}
+}
 
 /*
 Content renders the mail with the alert's title as its subject.
 */
 func (m MemberAlertMail) Content(context.Context) (mail.Content, error) {
-	c := mail.View(accounts.MemberNotification(m.Title, m.Body, m.Workspace, m.URL, m.ManageURL))
+	c := mail.View(accounts.MemberNotification(m.Title, m.Body, m.Workspace, m.URL, m.ManageURL, m.Unsubscribe))
 	c.Subject = m.Title
 	return c, nil
 }

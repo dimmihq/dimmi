@@ -117,13 +117,15 @@ func (a *CreateConversation) Handle(ctx context.Context, in CreateConversationIn
 
 /*
 opening is a conversation about to start: the request, the channel it
-starts on, the customer and how its first message travels.
+starts on, the customer and how its first message travels. Source is
+where it came from, an empty object for one started here.
 */
 type opening struct {
 	in      CreateConversationInput
 	conn    models.ChannelConnection
 	contact models.Contact
 	route   Route
+	source  json.RawMessage
 }
 
 /*
@@ -255,10 +257,15 @@ func (o opening) insert(ctx context.Context, w *Writer) (models.Conversation, er
 		return models.Conversation{}, err
 	}
 
+	source := o.source
+	if source == nil {
+		source = json.RawMessage(`{}`)
+	}
+
 	c, err := w.Q.CreateConversation(ctx, models.CreateConversationParams{
 		WorkspaceID: o.conn.WorkspaceID, Number: number, InboxID: o.conn.InboxID, ChannelConnectionID: o.conn.ID,
 		ContactID: o.contact.ID, Subject: subject, Status: string(enums.ConversationStatusOpen),
-		Source: json.RawMessage(`{}`), Now: w.Now,
+		Source: source, Now: w.Now,
 	})
 	if err != nil {
 		return c, fmt.Errorf("create conversation: %w", err)

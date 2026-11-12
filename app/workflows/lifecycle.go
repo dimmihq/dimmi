@@ -46,7 +46,8 @@ const (
 /*
 waitState is what a waiting run waits for: its kind and step, when it
 times out, what interrupts it, and for questions how many answers it
-had and whether it already asked again. A run waiting on the agent
+had and whether it already asked again; a run waiting for a workflow
+it runs keeps that run's id in Child. A run waiting on the agent
 also keeps when the agent took over, how long a silent customer is
 waited for, and what the agent must honor meanwhile.
 */
@@ -60,6 +61,7 @@ type waitState struct {
 	Since     *time.Time                  `json:"since,omitempty"`
 	Quiet     string                      `json:"quiet,omitempty"`
 	Agent     *workflowspec.AgentHandling `json:"dimmi,omitempty"`
+	Child     string                      `json:"child,omitempty"`
 }
 
 /*
@@ -297,8 +299,13 @@ func (st *state) push(ctx context.Context, args queue.Args, opts ...queue.Opt) e
 /*
 release lets go of the conversation once a customer-facing run ended,
 and hands an open conversation nobody holds to the inbox's assignment.
+A run another workflow called hands back to its caller instead.
 */
 func (st *state) release(ctx context.Context) error {
+	if st.run.ParentRunID != nil {
+		return st.returnToCaller(ctx)
+	}
+
 	if st.run.Kind != workflowspec.KindCustomerFacing {
 		return nil
 	}

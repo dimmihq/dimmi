@@ -5,10 +5,10 @@ SELECT (coalesce(max(number), 0) + 1)::integer AS number FROM feedback_posts WHE
 -- name: CreateFeedbackPost :one
 -- CreateFeedbackPost stores a new post.
 INSERT INTO feedback_posts (
-    workspace_id, help_center_id, number, title, slug, body_markdown, status, moderation,
+    workspace_id, help_center_id, board_id, number, title, slug, body_markdown, status, moderation,
     author_contact_id, author_member_id, created_at, updated_at
 ) VALUES (
-    @workspace_id, @help_center_id, @number, @title, @slug, @body_markdown, @status, @moderation,
+    @workspace_id, @help_center_id, @board_id, @number, @title, @slug, @body_markdown, @status, @moderation,
     @author_contact_id, @author_member_id, @now, @now
 )
 RETURNING *;
@@ -60,11 +60,14 @@ WHERE workspace_id = @workspace_id AND id = @id AND deleted_at IS NULL;
 
 -- name: ListFeedbackPosts :many
 -- ListFeedbackPosts returns a page of a help center's posts that were
--- not merged away, narrowed by status, moderation and title when given,
+-- not merged away, narrowed by board, the boards a reader may see,
+-- status, moderation and title when given,
 -- in the order asked for: trending, top or new.
 SELECT * FROM feedback_posts
 WHERE workspace_id = @workspace_id AND help_center_id = @help_center_id AND deleted_at IS NULL
   AND merged_into_id IS NULL
+  AND (sqlc.narg(board_id)::uuid IS NULL OR board_id = sqlc.narg(board_id)::uuid)
+  AND (sqlc.narg(board_ids)::uuid[] IS NULL OR board_id = ANY(sqlc.narg(board_ids)::uuid[]))
   AND (sqlc.narg(status)::text IS NULL OR status = sqlc.narg(status)::text)
   AND (sqlc.narg(moderation)::text IS NULL OR moderation = sqlc.narg(moderation)::text)
   AND (sqlc.narg(query)::text IS NULL OR title_trgm LIKE '%' || lower(dimmi_unaccent(sqlc.narg(query)::text)) || '%')
@@ -79,25 +82,30 @@ LIMIT @row_limit OFFSET @row_offset;
 SELECT count(*) FROM feedback_posts
 WHERE workspace_id = @workspace_id AND help_center_id = @help_center_id AND deleted_at IS NULL
   AND merged_into_id IS NULL
+  AND (sqlc.narg(board_id)::uuid IS NULL OR board_id = sqlc.narg(board_id)::uuid)
+  AND (sqlc.narg(board_ids)::uuid[] IS NULL OR board_id = ANY(sqlc.narg(board_ids)::uuid[]))
   AND (sqlc.narg(status)::text IS NULL OR status = sqlc.narg(status)::text)
   AND (sqlc.narg(moderation)::text IS NULL OR moderation = sqlc.narg(moderation)::text)
   AND (sqlc.narg(query)::text IS NULL OR title_trgm LIKE '%' || lower(dimmi_unaccent(sqlc.narg(query)::text)) || '%');
 
 -- name: CountFeedbackByStatus :many
 -- CountFeedbackByStatus counts a help center's approved posts in each
--- status, and the ones waiting for approval under 'pending'.
+-- status, and the ones waiting for approval under 'pending', on one
+-- board when given.
 SELECT (CASE WHEN moderation = 'approved' THEN status ELSE moderation END)::text AS bucket, count(*)::integer AS posts
 FROM feedback_posts
 WHERE workspace_id = @workspace_id AND help_center_id = @help_center_id AND deleted_at IS NULL
   AND merged_into_id IS NULL
+  AND (sqlc.narg(board_id)::uuid IS NULL OR board_id = sqlc.narg(board_id)::uuid)
 GROUP BY 1;
 
 -- name: SimilarFeedbackPosts :many
 -- SimilarFeedbackPosts finds approved posts whose titles look like the
--- text, closest first.
+-- text, closest first, on the boards given when there are any.
 SELECT * FROM feedback_posts
 WHERE workspace_id = @workspace_id AND help_center_id = @help_center_id AND deleted_at IS NULL
   AND merged_into_id IS NULL AND moderation = 'approved'
+  AND (sqlc.narg(board_ids)::uuid[] IS NULL OR board_id = ANY(sqlc.narg(board_ids)::uuid[]))
   AND similarity(title_trgm, lower(dimmi_unaccent(@query::text))) > 0.25
 ORDER BY similarity(title_trgm, lower(dimmi_unaccent(@query::text))) DESC
 LIMIT 5;
@@ -170,10 +178,13 @@ UPDATE feedback_comments SET post_id = @target_id WHERE workspace_id = @workspac
 
 -- name: ListFeedbackRecipients :many
 -- ListFeedbackRecipients returns the addresses to tell about a post: its
--- voters and its author, once each.
+-- voters, its author and the customers of its linked conversations, once
+-- each.
 SELECT DISTINCT c.id, c.email, c.name FROM contacts c
 WHERE c.workspace_id = @workspace_id AND c.email IS NOT NULL AND (
     c.id IN (SELECT fv.contact_id FROM feedback_votes fv WHERE fv.workspace_id = @workspace_id AND fv.post_id = @post_id)
+    OR c.id IN (SELECT fl.contact_id FROM feedback_post_conversations fl
+        WHERE fl.workspace_id = @workspace_id AND fl.post_id = @post_id)
     OR c.id = (SELECT fp.author_contact_id FROM feedback_posts fp WHERE fp.workspace_id = @workspace_id AND fp.id = @post_id)
 );
 

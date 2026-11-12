@@ -5,7 +5,7 @@
  */
 import type { IdentityUser } from "@dimmi/server";
 
-import { type Extend, extended, type ServerIdentify } from "./config";
+import { type Extend, extended, type ServerIdentify } from "./config.js";
 
 type ClerkUser = NonNullable<Awaited<ReturnType<typeof import("@clerk/nextjs/server").currentUser>>>;
 

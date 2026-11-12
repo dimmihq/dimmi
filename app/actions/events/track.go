@@ -63,6 +63,7 @@ const (
 	StatusContactNotFound = "contact_not_found"
 	StatusArchived        = "archived"
 	StatusLimitReached    = "event_limit_reached"
+	StatusNotAllowed      = "not_allowed"
 )
 
 var eventName = regexp.MustCompile(`^[a-z0-9_.:-]{1,64}$`)
@@ -285,6 +286,7 @@ type run struct {
 	ws         ids.UUID
 	now        time.Time
 	defs       map[string]*models.EventDefinition
+	browser    *browser
 }
 
 /*
@@ -395,7 +397,7 @@ definition finds an event's name, defining it on its first event.
 */
 func (r run) definition(ctx context.Context, name string) (models.EventDefinition, string, error) {
 	if def, ok := r.defs[name]; ok {
-		return *def, statusOf(*def), nil
+		return *def, r.statusOf(*def), nil
 	}
 
 	def, err := r.q.FindEventDefinitionByName(ctx, models.FindEventDefinitionByNameParams{
@@ -411,13 +413,17 @@ func (r run) definition(ctx context.Context, name string) (models.EventDefinitio
 
 	r.defs[name] = &def
 
-	return def, statusOf(def), nil
+	return def, r.statusOf(def), nil
 }
 
 /*
 define makes a name's definition on its first event.
 */
 func (r run) define(ctx context.Context, name string) (models.EventDefinition, string, error) {
+	if r.browser != nil && !r.browser.open {
+		return models.EventDefinition{}, StatusNotAllowed, nil
+	}
+
 	active, err := r.q.CountActiveEventDefinitions(ctx, r.ws)
 	if err != nil {
 		return models.EventDefinition{}, "", fmt.Errorf("count event definitions: %w", err)
@@ -429,7 +435,7 @@ func (r run) define(ctx context.Context, name string) (models.EventDefinition, s
 
 	def, err := r.q.CreateEventDefinition(ctx, models.CreateEventDefinitionParams{
 		ID: ids.NewV7At(r.now), WorkspaceID: r.ws, Name: name, Label: attributedefs.Label(labelKey(name)),
-		Origin: "observed", Now: r.now,
+		Origin: "observed", ClientWritable: r.browser != nil, Now: r.now,
 	})
 	if err != nil {
 		return def, "", fmt.Errorf("define event %s: %w", name, err)
@@ -444,9 +450,17 @@ func labelKey(name string) string {
 	return strings.NewReplacer(".", " ", ":", " ", "-", " ").Replace(name)
 }
 
-func statusOf(def models.EventDefinition) string {
-	if def.Status == "archived" {
+/*
+statusOf says why an event of the name is not recorded, if it is not:
+archived, or sent from the messenger, which may send only the names
+opened to it unless the workspace lets it send any.
+*/
+func (r run) statusOf(def models.EventDefinition) string {
+	switch {
+	case def.Status == "archived":
 		return StatusArchived
+	case r.browser != nil && !def.ClientWritable && !r.browser.open:
+		return StatusNotAllowed
 	}
 
 	return ""

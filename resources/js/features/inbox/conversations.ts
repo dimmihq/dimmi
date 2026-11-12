@@ -160,6 +160,37 @@ export function eventText(event: TimelineEvent): string {
 }
 
 /*
+ * ratingFaces are the five faces a customer picks from, worst first.
+ */
+export const ratingFaces = ["😠", "🙁", "😐", "🙂", "😍"];
+
+/*
+ * ratedText says how the customer rated the conversation, with their
+ * comment when they left one; null for any other event.
+ */
+export function ratedText(event: TimelineEvent): string | null {
+  if (event.name !== "conversation.rated") {
+    return null;
+  }
+  const actor = event.actor.name || "The customer";
+  const face = ratingFaces[(event.score ?? 0) - 1] ?? "";
+  const said = `${actor} rated the conversation ${face} ${event.label ?? ""}`.trim();
+
+  return event.comment ? `${said}: “${event.comment}”` : said;
+}
+
+/*
+ * mergedText says which conversation a merge folded into this one, or
+ * null for any other event.
+ */
+export function mergedText(event: TimelineEvent): string | null {
+  if (event.name !== "conversation.merged") {
+    return null;
+  }
+  return `${event.actor.name || "dimmi"} merged #${event.source?.number ?? "?"} into this conversation`;
+}
+
+/*
  * filesOf returns the files the message carries.
  */
 function filesOf(message: Message): Attachment[] {
@@ -187,7 +218,7 @@ function eventEntry(message: Message, event: TimelineEvent): ThreadEntry {
     id: message.id,
     at,
     iso: message.created_at,
-    text: closed ?? callEventText(event) ?? eventText(event),
+    text: closed ?? callEventText(event) ?? mergedText(event) ?? ratedText(event) ?? eventText(event),
   };
 }
 

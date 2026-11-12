@@ -89,7 +89,7 @@ func snapshotOf(ctx context.Context, q *models.Queries, ws ids.UUID, ref objectR
 		return webhooks.Snapshot{Object: NewTag(t)}, err
 	}
 
-	return webhooks.Snapshot{}, nil
+	return engagementSnapshot(ctx, q, ws, ref)
 }
 
 /*

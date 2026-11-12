@@ -18,14 +18,17 @@ SELECT count(*) FROM event_definitions WHERE workspace_id = @workspace_id AND st
 -- name: CreateEventDefinition :one
 -- CreateEventDefinition stores a definition, leaving one that already
 -- exists for the name as it is.
-INSERT INTO event_definitions (id, workspace_id, name, label, description, origin, created_at, updated_at)
-VALUES (@id, @workspace_id, @name, @label, @description, @origin, @now, @now)
+INSERT INTO event_definitions (
+    id, workspace_id, name, label, description, origin, client_writable, created_at, updated_at
+) VALUES (@id, @workspace_id, @name, @label, @description, @origin, @client_writable, @now, @now)
 ON CONFLICT (workspace_id, name) DO NOTHING
 RETURNING *;
 
 -- name: UpdateEventDefinition :one
--- UpdateEventDefinition changes a definition's words and status.
-UPDATE event_definitions SET label = @label, description = @description, status = @status, updated_at = @now
+-- UpdateEventDefinition changes a definition's words, status and whether
+-- the messenger may send it.
+UPDATE event_definitions SET label = @label, description = @description, status = @status,
+    client_writable = @client_writable, updated_at = @now
 WHERE workspace_id = @workspace_id AND id = @id
 RETURNING *;
 
@@ -74,3 +77,15 @@ LIMIT 1;
 -- DeleteContactEventSummaries removes a person's summaries once they were
 -- added to the person they turned out to be.
 DELETE FROM contact_event_summaries WHERE workspace_id = @workspace_id AND contact_id = @contact_id;
+
+-- name: FindMessengerNewEvents :one
+-- FindMessengerNewEvents reports whether the messenger may send event
+-- names the workspace has not opened to it, defining new ones.
+SELECT coalesce((settings ->> 'messenger_new_events')::boolean, false)::boolean AS allowed
+FROM workspaces WHERE id = @workspace_id;
+
+-- name: SetMessengerNewEvents :exec
+-- SetMessengerNewEvents turns the messenger's new event names on or off.
+UPDATE workspaces SET settings = jsonb_set(settings, '{messenger_new_events}', to_jsonb(@allowed::boolean)),
+    updated_at = @now
+WHERE id = @workspace_id;

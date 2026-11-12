@@ -69,7 +69,7 @@ func catalog() map[string]Doc {
 	out := map[string]Doc{}
 	for _, area := range []map[string]Doc{
 		inboxDocs(), peopleDocs(), knowledgeDocs(), automationDocs(), workspaceDocs(), settingsDocs(),
-		outreachDocs(), sourceDocs(), integrationDocs(), webhookDocs(),
+		outreachDocs(), sourceDocs(), integrationDocs(), webhookDocs(), mergeDocs(),
 	} {
 		maps.Copy(out, area)
 	}

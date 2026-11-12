@@ -20,7 +20,6 @@ import { Drawer } from "@/components/base/drawer/drawer";
 import { Input } from "@/components/base/input/input";
 import { Modal, ModalBody, ModalFooter, ModalHeader } from "@/components/base/modal/modal";
 import { Notification } from "@/components/base/notification/notification";
-import { useAccount } from "@/features/settings/use-account";
 import { PageHeader, Panel, ScrollArea } from "@/features/shell/page";
 import { PaneGroup, PaneHandle } from "@/features/shell/resizable";
 import { useWide } from "@/features/shell/use-wide";
@@ -31,14 +30,16 @@ import {
   collectionsQuery,
   createArticle,
   type HelpCenter,
-  helpCentersQuery,
 } from "@/lib/api/help-centers";
 import { cx } from "@/utils/cx";
 
 import { CollectionPanel } from "./collection-panel";
 import { CollectionSelect } from "./collection-select";
-import { allKey, articlesIn, childrenOf, unfiledKey } from "./collection-tree";
+import { allKey, analyticsKey, articlesIn, childrenOf, unfiledKey } from "./collection-tree";
 import { articleDetail, articleState } from "./docs-format";
+import { HelpAnalytics } from "./help-analytics";
+import { HelpCenterSwitcher } from "./help-center-switcher";
+import { useHelpCenterPick } from "./use-help-center-pick";
 
 type Dialog = "article" | "collections" | null;
 
@@ -77,15 +78,12 @@ function usePick(): [string, (pick: string) => void] {
 }
 
 function useDocs() {
-  const workspace = useAccount().workspace.id;
-  const enabled = workspace !== "";
-  const { data: centers = [] } = useQuery({ ...helpCentersQuery(workspace), enabled });
-  const center = centers[0];
+  const { workspace, centers, center, pick } = useHelpCenterPick();
   const hc = center?.id ?? "";
   const { data: collections = [] } = useQuery({ ...collectionsQuery(workspace, hc), enabled: hc !== "" });
   const { data: articles = [], isPending } = useQuery({ ...articlesQuery(workspace, hc), enabled: hc !== "" });
 
-  return { workspace, center, hc, collections, articles, isPending };
+  return { workspace, centers, center, pick, hc, collections, articles, isPending };
 }
 
 export function HelpCenterPage() {
@@ -94,30 +92,45 @@ export function HelpCenterPage() {
   const [pick, setPick] = usePick();
   const [dialog, setDialog] = useState<Dialog>(null);
   const wide = useWide(1024);
-  const inCollection = pick !== allKey && pick !== unfiledKey ? pick : "";
+  const inCollection = pick !== allKey && pick !== unfiledKey && pick !== analyticsKey ? pick : "";
+  const switcher = (
+    <HelpCenterSwitcher
+      workspace={workspace}
+      centers={docs.centers}
+      center={center}
+      onPick={(id) => {
+        docs.pick(id);
+        setPick(allKey);
+      }}
+      className="min-w-0 flex-1"
+    />
+  );
   const tree = (onPicked: (pick: string) => void) => (
     <CollectionPanel
       workspace={workspace}
       helpCenter={hc}
-      title={center?.name ?? "Help center"}
+      title={docs.centers.length > 0 ? switcher : (center?.name ?? "Help center")}
       collections={collections}
       articles={articles}
       pick={pick}
       onPick={onPicked}
     />
   );
-  const list = (
-    <ArticleList
-      pick={pick}
-      center={center}
-      title={wide ? pickTitle(pick, collections) : (center?.name ?? "Help center")}
-      articles={articlesIn(pick, articles, collections)}
-      collections={collections}
-      isPending={docs.isPending}
-      onDialog={setDialog}
-      chips={wide ? null : <CollectionChips collections={collections} pick={pick} onPick={setPick} />}
-    />
-  );
+  const list =
+    pick === analyticsKey ? (
+      <HelpAnalytics workspace={workspace} center={center} header={wide ? null : switcher} />
+    ) : (
+      <ArticleList
+        pick={pick}
+        center={center}
+        title={wide ? pickTitle(pick, collections) : (center?.name ?? "Help center")}
+        articles={articlesIn(pick, articles, collections)}
+        collections={collections}
+        isPending={docs.isPending}
+        onDialog={setDialog}
+        chips={wide ? null : <CollectionChips collections={collections} pick={pick} onPick={setPick} />}
+      />
+    );
 
   return (
     <>
@@ -273,13 +286,17 @@ function CollectionChips({
   onPick: (pick: string) => void;
 }) {
   const parent = collections.find((c) => c.id === pick)?.parent_id ?? null;
-  const openTop = parent ?? (pick === allKey || pick === unfiledKey ? null : pick);
+  const openTop = parent ?? (pick === allKey || pick === unfiledKey || pick === analyticsKey ? null : pick);
   const subs = openTop ? childrenOf(collections, openTop) : [];
 
   return (
     <>
       <nav aria-label="Collections" className="flex flex-wrap items-center gap-1 px-4 pb-3">
-        {[{ id: allKey, name: "All articles" }, ...childrenOf(collections, null)].map((c) => {
+        {[
+          { id: analyticsKey, name: "Analytics" },
+          { id: allKey, name: "All articles" },
+          ...childrenOf(collections, null),
+        ].map((c) => {
           const on = pick === c.id || c.id === parent;
 
           return (

@@ -132,6 +132,14 @@ export function updateContact(workspace: string, id: string, changes: ContactCha
   return request<Contact>("PATCH", `/contacts/${encodeURIComponent(id)}`, changes, { workspace });
 }
 
+/*
+ * mergeContact folds the source contact into the one named and returns
+ * the survivor as it now is.
+ */
+export function mergeContact(workspace: string, id: string, source: string): Promise<Contact> {
+  return request<Contact>("POST", `/contacts/${encodeURIComponent(id)}/merges`, { source_id: source }, { workspace });
+}
+
 export interface Company extends CompanySummary {
   external_id: string | null;
   custom_attributes: Attributes;

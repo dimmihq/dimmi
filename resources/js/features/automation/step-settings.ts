@@ -15,11 +15,14 @@ export const unsetSummary = "Not set up yet";
 
 /*
  * Names turns the ids a step holds into the names its card shows.
+ * Workflows and connections are read only by the steps that name them.
  */
 export interface Names {
   teams: ReadonlyMap<string, string>;
   members: ReadonlyMap<string, string>;
   tags: ReadonlyMap<string, string>;
+  workflows?: ReadonlyMap<string, string>;
+  connections?: ReadonlyMap<string, string>;
 }
 
 export const noNames: Names = { teams: new Map(), members: new Map(), tags: new Map() };
@@ -94,6 +97,8 @@ function lasting(value: string): string {
   return durations[value] ?? value;
 }
 
+const noMap: ReadonlyMap<string, string> = new Map();
+
 function nameOf(names: ReadonlyMap<string, string>, id: string): string {
   return names.get(id) ?? "a removed item";
 }
@@ -146,12 +151,44 @@ function collected(step: Step): string {
   return question ? `Ask "${question}" → ${target}` : unsetSummary;
 }
 
+/*
+ * replyTimeText is what a reply time step says when no message is typed.
+ */
+export const replyTimeText = "We typically reply {{reply_time}}.";
+
+function called(step: Step, names: Names): string {
+  const url = text(step.settings, "url").trim();
+  if (!url) {
+    return unsetSummary;
+  }
+  const method = text(step.settings, "method") || "GET";
+  const connection = text(step.settings, "connection_id");
+  const where = connection ? `${nameOf(names.connections ?? noMap, connection)} ${url}` : url;
+
+  return method === "GET" ? `GET ${where}` : `${method} to ${where}`;
+}
+
+function sorted(step: Step): string {
+  const categories = (step.paths ?? []).filter((path) => !path.outcome).map((path) => path.label?.trim() ?? "");
+  const named = categories.filter(Boolean);
+
+  return named.length > 0 ? `Sort into ${named.join(", ")}` : unsetSummary;
+}
+
 const describers: Partial<Record<StepKind, (step: Step, names: Names) => string>> = {
   message: written,
   note: written,
   buttons: written,
   collect: collected,
+  reply_time: (step) => text(step.settings, "text").trim() || replyTimeText,
   branch: () => "Go down the first path that matches",
+  classify: sorted,
+  run_workflow: (step, names) => {
+    const workflow = text(step.settings, "workflow_id");
+
+    return workflow ? `Run ${nameOf(names.workflows ?? noMap, workflow)}` : unsetSummary;
+  },
+  http_request: called,
   dimmi: (step) => {
     const instructions = text(step.settings, "instructions").trim();
 
@@ -171,8 +208,13 @@ const describers: Partial<Record<StepKind, (step: Step, names: Names) => string>
 
     return count === 1 ? "Update 1 contact field" : `Update ${count} contact fields`;
   },
-  close: (step) =>
-    step.settings?.only_if_no_teammate_reply ? "Close if no teammate replied" : "Close the conversation",
+  close: (step) => {
+    const closing = step.settings?.only_if_no_teammate_reply
+      ? "Close if no teammate replied"
+      : "Close the conversation";
+
+    return step.settings?.ask_rating ? `${closing} and ask for a rating` : closing;
+  },
 };
 
 /*
@@ -239,4 +281,43 @@ export function withNewPath(step: Step, label: string): Step {
  */
 export function withoutPath(step: Step, path: string): Step {
   return { ...step, paths: step.paths?.filter((current) => current.id !== path) };
+}
+
+/*
+ * useSet makes the function an editor changes some of its step's
+ * settings with.
+ */
+export function useSet(onEdit: (edit: (step: Step) => Step) => void) {
+  return (changes: Settings) => onEdit((current) => withSettings(current, changes));
+}
+
+/*
+ * withFailurePath gives a call its own path for when it fails, or takes
+ * it away with every step down it.
+ */
+export function withFailurePath(step: Step, on: boolean): Step {
+  const others = (step.paths ?? []).filter((path) => path.outcome !== "failure");
+  const paths = on ? [...others, { id: newId("p_"), outcome: "failure", steps: [] }] : others;
+
+  return { ...step, paths: paths.length > 0 ? paths : undefined };
+}
+
+/*
+ * targetKinds are where a step saves what it finds: a variable of the
+ * run, which later steps read as {{run.vars.name}}, or an attribute of
+ * the contact, kept after the run ends.
+ */
+export const targetKinds: Record<string, string> = {
+  "run.vars.": "Run variable",
+  "contact.custom.": "Contact attribute",
+};
+
+/*
+ * splitTarget reads a saved target as its kind and its name, both empty
+ * when unset.
+ */
+export function splitTarget(target: string): [kind: string, name: string] {
+  const kind = Object.keys(targetKinds).find((prefix) => target.startsWith(prefix));
+
+  return kind ? [kind, target.slice(kind.length)] : ["", ""];
 }
