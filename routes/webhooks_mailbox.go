@@ -31,6 +31,7 @@ func mailboxRoutes(a *app.App) {
 	}
 
 	routes := []struct{ path, source string }{
+		{"/webhooks/ses/inbound", appconfig.InboundSourceSES},
 		{"/webhooks/postmark/inbound", appconfig.InboundSourcePostmark},
 		{"/webhooks/mailgun/inbound/mime", appconfig.InboundSourceMailgun},
 		{"/webhooks/sendgrid/inbound", appconfig.InboundSourceSendGrid},

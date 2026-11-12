@@ -162,8 +162,8 @@ func bootInboundSources(a *app.App) error {
 /*
 checkInboundSources builds every enabled source, so an install with a
 missing secret refuses to start and names the key, rather than failing on
-the first mail. The test source takes no options; SES reads a bucket and
-is checked when its route is wired.
+the first mail. The test source takes no options; SES reads a bucket only
+a deployed install configures, so it is checked on its first notification.
 */
 func checkInboundSources(a *app.App) error {
 	for _, source := range a.Config.Channels.Email.Inbound.Drivers {

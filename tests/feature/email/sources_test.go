@@ -386,12 +386,26 @@ func TestSourceRoutes(t *testing.T) {
 		tc, _ := emailCase(t)
 
 		for _, path := range []string{
-			"/webhooks/postmark/inbound", "/webhooks/mailgun/inbound/mime", "/webhooks/sendgrid/inbound",
-			"/webhooks/resend/inbound", "/webhooks/cloudflare/inbound",
+			"/webhooks/ses/inbound", "/webhooks/postmark/inbound", "/webhooks/mailgun/inbound/mime",
+			"/webhooks/sendgrid/inbound", "/webhooks/resend/inbound", "/webhooks/cloudflare/inbound",
 		} {
 			tc.Client().Send("POST", path, []byte("{}")).AssertNotFound().
 				AssertJSONPath("code", "inbound_driver_disabled")
 		}
+	})
+
+	t.Run("hands an ses notification to the ses source, which refuses one sns did not sign", func(t *testing.T) {
+		t.Parallel()
+		tc := tests.New(t, tests.WithEnv(
+			"DIMMI_CHANNELS__EMAIL__INBOUND_DOMAIN="+inboundDomain,
+			"DIMMI_CHANNELS__EMAIL__INBOUND__DRIVERS=ses",
+			"DIMMI_MAILBOX__SOURCES__SES__DRIVER=ses",
+			"DIMMI_MAILBOX__SOURCES__SES__TOPIC_ARNS=arn:aws:sns:us-east-2:123456789012:inbound",
+			"DIMMI_MAILBOX__SOURCES__SES__DISK=local",
+		))
+
+		tc.Client().Send("POST", "/webhooks/ses/inbound", []byte(`{"Type":"Notification"}`)).
+			AssertStatus(fhttp.StatusUnauthorized)
 	})
 
 	t.Run("refuses to boot an enabled source without its secret and names the key", func(t *testing.T) {
