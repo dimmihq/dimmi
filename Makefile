@@ -92,6 +92,11 @@ test-cloud:
 test-timing:
 	$(WITH_ENV) go test -count=1 -p=1 -parallel=1 -run 'TestEnumerationTiming|TestPasswordResetUpdate|TestAudienceBudget' ./tests/feature/auth/ ./tests/feature/access/
 
+# Compiles what tests/arch builds, a plain linux binary, so CI's shared
+# test build cache holds it and the arch tests only link.
+warm-arch:
+	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build ./cmd/dimmi ./tests/arch/testdata/sizeapp ./tests/arch/testdata/samlapp
+
 test-web:
 	pnpm test
 
