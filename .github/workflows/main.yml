@@ -26,7 +26,7 @@ jobs:
   # own result (.github/actions/check runs one). The Go tests run once, as
   # the cloud runs: the cloud build as the application role, split eight
   # ways by package (scripts/test-shard.ts). A public repository runs at
-  # most 20 jobs at once; a run uses 17, and its staging release one more.
+  # most 20 jobs at once; a run uses 19, and its staging release one more.
   #
   # Go's build cache is kept per kind of build, not per job, so the caches
   # of a run fit under GitHub's 10 GB together and none is evicted by its
@@ -88,13 +88,13 @@ jobs:
           services: ${{ matrix.services }}
 
   e2e:
-    name: e2e (${{ matrix.shard }}/4)
+    name: e2e (${{ matrix.shard }}/6)
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     strategy:
       fail-fast: false
       matrix:
-        shard: [1, 2, 3, 4]
+        shard: [1, 2, 3, 4, 5, 6]
     steps:
       - uses: actions/checkout@v5
       - name: Start services
@@ -122,7 +122,7 @@ jobs:
       - name: Wait for services
         run: .github/wait-for-services.sh
       - id: check
-        run: make e2e E2E_ARGS=--shard=${{ matrix.shard }}/4
+        run: make e2e E2E_ARGS=--shard=${{ matrix.shard }}/6
       - if: ${{ failure() && steps.check.outcome == 'failure' }}
         uses: actions/upload-artifact@v4
         with:
