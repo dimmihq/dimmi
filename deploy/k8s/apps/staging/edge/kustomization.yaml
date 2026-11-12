@@ -8,6 +8,7 @@ configMapGenerator:
   - name: edge
     literals:
       - HOST=staging.trydimmi.com
+      - FILES_HOST=files.staging.trydimmi.com
       - ACME_EMAIL=ops@trydimmi.com
 patches:
   - target:

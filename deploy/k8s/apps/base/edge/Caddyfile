@@ -31,6 +31,27 @@ http:// {
 	reverse_proxy web:8080
 }
 
+# The file store's public host. Browsers read and upload files through
+# links the app signed for this host, so the store checks every request's
+# signature itself; customers' sites upload from other origins, which the
+# store allows here. Environments without a store host leave it unset.
+{$FILES_HOST:files.invalid} {
+	@preflight method OPTIONS
+	header {
+		Access-Control-Allow-Origin "*"
+		Access-Control-Allow-Methods "GET, HEAD, PUT"
+		Access-Control-Allow-Headers "*"
+		Access-Control-Max-Age "3600"
+		-Server
+	}
+	respond @preflight 204
+	reverse_proxy seaweedfs:8333 {
+		header_down -Access-Control-Allow-Origin
+		header_down -Access-Control-Allow-Methods
+		header_down -Access-Control-Allow-Headers
+	}
+}
+
 https:// {
 	tls {
 		on_demand

@@ -42,13 +42,18 @@ var ErrBucketRequired = errors.New("s3 disk: bucket is required")
 Options configure an s3 disk.
 
 Endpoint is the store's API URL; empty means AWS, or AWS_ENDPOINT_URL_S3
-when set. ForcePathStyle puts the bucket in the path, as SeaweedFS and
-Garage expect. URL is the public base URL the files are served from.
+when set. PublicEndpoint is where browsers reach the same store when the
+app talks to it on an address they cannot, such as a store inside a
+cluster behind its own public host: signed links name it, so the
+signature holds for the host browsers send. ForcePathStyle puts the
+bucket in the path, as SeaweedFS and Garage expect. URL is the public
+base URL the files are served from.
 */
 type Options struct {
 	Bucket          string `koanf:"bucket"`
 	Region          string `default:"us-east-1" koanf:"region"`
 	Endpoint        string `koanf:"endpoint"`
+	PublicEndpoint  string `koanf:"public_endpoint"`
 	ForcePathStyle  bool   `koanf:"force_path_style"`
 	AccessKeyID     string `koanf:"access_key_id"`
 	SecretAccessKey string `koanf:"secret_access_key"`
@@ -89,19 +94,31 @@ func New(ctx context.Context, opts Options) (*filesystem.Disk, error) {
 		return nil, fmt.Errorf("load aws config: %w", err)
 	}
 
-	client := s3.NewFromConfig(awsConfig, func(o *s3.Options) {
-		if opts.Endpoint != "" {
-			o.BaseEndpoint = aws.String(opts.Endpoint)
+	client := s3.NewFromConfig(awsConfig, clientOptions(opts, opts.Endpoint))
+	signer := client
+	if opts.PublicEndpoint != "" {
+		signer = s3.NewFromConfig(awsConfig, clientOptions(opts, opts.PublicEndpoint))
+	}
+
+	return filesystem.NewDisk(&store{
+		client:   client,
+		presign:  s3.NewPresignClient(signer),
+		uploader: transfermanager.New(client),
+		bucket:   opts.Bucket,
+	}, filesystem.DiskOptions{URL: opts.URL}), nil
+}
+
+/*
+clientOptions points a client at the endpoint, AWS when empty, in the
+disk's addressing style.
+*/
+func clientOptions(opts Options, endpoint string) func(*s3.Options) {
+	return func(o *s3.Options) {
+		if endpoint != "" {
+			o.BaseEndpoint = aws.String(endpoint)
 		}
 
 		o.UsePathStyle = opts.ForcePathStyle
 		o.DisableLogOutputChecksumValidationSkipped = true
-	})
-
-	return filesystem.NewDisk(&store{
-		client:   client,
-		presign:  s3.NewPresignClient(client),
-		uploader: transfermanager.New(client),
-		bucket:   opts.Bucket,
-	}, filesystem.DiskOptions{URL: opts.URL}), nil
+	}
 }

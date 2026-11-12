@@ -180,6 +180,29 @@ func TestAppPage(t *testing.T) {
 	})
 }
 
+func TestFilePolicy(t *testing.T) {
+	t.Parallel()
+
+	t.Run("lets pages load and send files only to the public file host", func(t *testing.T) {
+		t.Parallel()
+		tc := tests.New(t, withBuild(), tests.WithEnv(
+			"DIMMI_FILESYSTEMS__DISKS__LOCAL__DRIVER=local",
+			"DIMMI_FILESYSTEMS__DISKS__LOCAL__ROOT="+t.TempDir(),
+			"DIMMI_FILESYSTEMS__DISKS__STORE__DRIVER=s3",
+			"DIMMI_FILESYSTEMS__DISKS__STORE__BUCKET=files",
+			"DIMMI_FILESYSTEMS__DISKS__STORE__ENDPOINT=http://seaweedfs:8333",
+			"DIMMI_FILESYSTEMS__DISKS__STORE__PUBLIC_ENDPOINT=https://files.example.test",
+		))
+
+		policy := ownPolicy(t, tc,
+			tc.Client().Send(fhttp.MethodGet, "/d/inbox", nil).AssertOK().Header.Get("Content-Security-Policy"))
+		assert.Contains(t, policy, "img-src 'self' data: blob: https://files.example.test")
+		assert.Contains(t, policy, "media-src 'self' blob: https://files.example.test")
+		assert.Contains(t, policy, "connect-src 'self' https://files.example.test")
+		assert.NotContains(t, policy, "seaweedfs")
+	})
+}
+
 func TestAuthPages(t *testing.T) {
 	t.Parallel()
 

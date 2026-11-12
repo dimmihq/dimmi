@@ -48,14 +48,16 @@ type DevServer interface {
 
 /*
 Sources are the outside origins a page may reach beyond its own: Scripts
-and Frames for a captcha provider, Connect for its requests and Images
-for the pictures it shows. All empty in the strict policy.
+and Frames for a captcha provider, Connect for its requests, Images for
+the pictures it shows and Media for the audio and video it plays. All
+empty in the strict policy.
 */
 type Sources struct {
 	Scripts []string
 	Frames  []string
 	Connect []string
 	Images  []string
+	Media   []string
 }
 
 /*
@@ -107,6 +109,7 @@ func policy(dev string, extra Sources) string {
 		"style-src 'self' 'unsafe-inline'" + style,
 		"img-src 'self' data: blob:" + images,
 		"font-src 'self'" + assets,
+		"media-src 'self' blob:" + sources(extra.Media),
 		"connect-src 'self'" + connect,
 		"frame-src 'self'" + frames,
 		"object-src 'none'",

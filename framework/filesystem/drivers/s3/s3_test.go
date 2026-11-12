@@ -99,6 +99,26 @@ func TestNew(t *testing.T) {
 		assert.Equal(t, "application/pdf", got.Header.Get("Content-Type"))
 	})
 
+	t.Run("signs links for the public endpoint browsers reach", func(t *testing.T) {
+		t.Parallel()
+		opts := section(t)
+		opts["public_endpoint"] = "https://files.example.test"
+		disk, err := s3.Factory(t.Context())("attachments", opts)
+		require.NoError(t, err)
+
+		read, err := disk.TemporaryURL(t.Context(), "in/report.pdf", time.Minute)
+		require.NoError(t, err)
+		signed, err := url.Parse(read)
+		require.NoError(t, err)
+		assert.Equal(t, "files.example.test", signed.Host)
+		assert.Equal(t, "/"+opts.String("bucket")+"/in/report.pdf", signed.Path)
+
+		require.NoError(t, disk.Put(t.Context(), "in/kept.txt", []byte("kept"), filesystem.PutOptions{}))
+		got, err := disk.Get(t.Context(), "in/kept.txt")
+		require.NoError(t, err)
+		assert.Equal(t, "kept", string(got))
+	})
+
 	t.Run("streams large files in parts", func(t *testing.T) {
 		t.Parallel()
 		disk := newDisk(t)

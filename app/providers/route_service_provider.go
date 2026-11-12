@@ -205,6 +205,10 @@ GIPHY when the instance has a GIF search key.
 */
 func (p RouteServiceProvider) pageSources(params []string) appmiddleware.Sources {
 	extra := captchaSources(p.App)
+	files := fileSources(p.App)
+	extra.Images = append(extra.Images, files...)
+	extra.Media = append(extra.Media, files...)
+	extra.Connect = append(extra.Connect, files...)
 	messenger := messengerSources(p.App)
 	extra.Scripts = append(extra.Scripts, messenger...)
 	extra.Connect = append(extra.Connect, messenger...)
