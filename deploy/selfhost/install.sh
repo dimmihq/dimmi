@@ -87,6 +87,9 @@ APT::Periodic::Unattended-Upgrade "1";' >/etc/apt/apt.conf.d/20auto-upgrades
     sysctl --system >/dev/null
   fi
 
+  # sshd checks its config only once its run directory exists, which Ubuntu
+  # 24.04 makes only while ssh.socket has started it.
+  mkdir -p /run/sshd
   # Password logins go only when a key can already log in, so nobody is locked out.
   local keys="/root/.ssh/authorized_keys"
   [ -n "${SUDO_USER:-}" ] && keys="$(getent passwd "$SUDO_USER" | cut -d: -f6)/.ssh/authorized_keys"
@@ -98,7 +101,7 @@ APT::Periodic::Unattended-Upgrade "1";' >/etc/apt/apt.conf.d/20auto-upgrades
 
   say "Opening the firewall for SSH, HTTP and HTTPS"
   local ssh_port
-  ssh_port="$(sshd -T 2>/dev/null | awk '/^port /{print $2; exit}')"
+  ssh_port="$(sshd -T 2>/dev/null | awk '/^port /{print $2; exit}' || true)"
   ufw allow "${ssh_port:-22}/tcp" >/dev/null
   ufw allow 80/tcp >/dev/null
   ufw allow 443 >/dev/null
