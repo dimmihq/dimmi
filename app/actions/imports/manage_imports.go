@@ -128,18 +128,24 @@ func (a *Imports) Create(ctx context.Context, in CreateInput) (View, error) {
 		return View{}, fmt.Errorf("encode columns: %w", err)
 	}
 
-	q := models.New(a.DB)
+	var out View
 
-	row, err := q.CreateImport(ctx, models.CreateImportParams{
-		WorkspaceID: in.Membership.Workspace.ID, Kind: in.Kind, FileName: fileName(in.FileName), File: data,
-		Columns: columns, RowCount: int32Of(len(s.rows)), CreatedByMemberID: &in.Membership.Member.ID,
-		Now: a.Clock.Now(),
+	err = writes(ctx, a.DB, func(q *models.Queries) error {
+		row, err := q.CreateImport(ctx, models.CreateImportParams{
+			WorkspaceID: in.Membership.Workspace.ID, Kind: in.Kind, FileName: fileName(in.FileName), File: data,
+			Columns: columns, RowCount: int32Of(len(s.rows)), CreatedByMemberID: &in.Membership.Member.ID,
+			Now: a.Clock.Now(),
+		})
+		if err != nil {
+			return fmt.Errorf("keep import: %w", err)
+		}
+
+		out, err = describeImport(ctx, q, row)
+
+		return err
 	})
-	if err != nil {
-		return View{}, fmt.Errorf("keep import: %w", err)
-	}
 
-	return describeImport(ctx, q, row)
+	return out, err
 }
 
 /*
@@ -153,7 +159,7 @@ func (a *Imports) Show(ctx context.Context, in Input) (View, error) {
 		return View{}, err
 	}
 
-	q := models.New(a.DB)
+	q := reads(ctx, a.DB)
 
 	row, err := find(ctx, q, in)
 	if err != nil {
@@ -178,7 +184,7 @@ func (a *Imports) List(ctx context.Context, m authz.Membership, kind string) ([]
 		return nil, ErrKind
 	}
 
-	rows, err := models.New(a.DB).ListImports(ctx, models.ListImportsParams{
+	rows, err := reads(ctx, a.DB).ListImports(ctx, models.ListImportsParams{
 		WorkspaceID: m.Workspace.ID, Kind: kind, RowLimit: listedImport,
 	})
 	if err != nil {
@@ -200,7 +206,7 @@ func (a *Imports) Predict(ctx context.Context, in Input) (Prediction, error) {
 		return Prediction{}, err
 	}
 
-	q := models.New(a.DB)
+	q := reads(ctx, a.DB)
 
 	row, err := find(ctx, q, in)
 	if err != nil {

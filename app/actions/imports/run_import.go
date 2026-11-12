@@ -75,10 +75,16 @@ left alone; one whose starter may no longer import fails.
 */
 func (a *Imports) Run(ctx context.Context, args RunArgs) error {
 	ctx = tenancy.With(ctx, args.WorkspaceID.String())
-	q := models.New(a.DB)
 
-	row, err := q.StartImport(ctx, models.StartImportParams{
-		Now: a.Clock.Now(), WorkspaceID: args.WorkspaceID, ID: args.ImportID,
+	var row models.Import
+
+	err := writes(ctx, a.DB, func(q *models.Queries) error {
+		var err error
+		row, err = q.StartImport(ctx, models.StartImportParams{
+			Now: a.Clock.Now(), WorkspaceID: args.WorkspaceID, ID: args.ImportID,
+		})
+
+		return err
 	})
 	if errors.Is(err, database.ErrNotFound) {
 		return nil
@@ -88,12 +94,16 @@ func (a *Imports) Run(ctx context.Context, args RunArgs) error {
 		return fmt.Errorf("start import: %w", err)
 	}
 
-	if err := a.applyRows(ctx, q, row); err != nil {
-		return errors.Join(err, a.fail(ctx, q, row, err))
+	if err := a.applyRows(ctx, row); err != nil {
+		return errors.Join(err, a.fail(ctx, row, err))
 	}
 
-	_, err = q.FinishImport(ctx, models.FinishImportParams{
-		Now: a.Clock.Now(), WorkspaceID: row.WorkspaceID, ID: row.ID,
+	err = writes(ctx, a.DB, func(q *models.Queries) error {
+		_, err := q.FinishImport(ctx, models.FinishImportParams{
+			Now: a.Clock.Now(), WorkspaceID: row.WorkspaceID, ID: row.ID,
+		})
+
+		return err
 	})
 	if err != nil {
 		return fmt.Errorf("finish import: %w", err)
@@ -105,7 +115,9 @@ func (a *Imports) Run(ctx context.Context, args RunArgs) error {
 /*
 applyRows applies the rows not yet saved, a batch at a time.
 */
-func (a *Imports) applyRows(ctx context.Context, q *models.Queries, row models.Import) error {
+func (a *Imports) applyRows(ctx context.Context, row models.Import) error {
+	q := reads(ctx, a.DB)
+
 	m, err := starter(ctx, q, row)
 	if err != nil {
 		return err
@@ -134,7 +146,7 @@ func (a *Imports) applyRows(ctx context.Context, q *models.Queries, row models.I
 		}
 
 		failed += p.failed
-		if err := a.save(ctx, q, row, p); err != nil {
+		if err := a.save(ctx, row, p); err != nil {
 			return err
 		}
 	}
@@ -185,16 +197,18 @@ func (p *progress) add(ctx context.Context, ap applier, b builder, l line) {
 /*
 save adds a batch's counts and failed rows to the import.
 */
-func (a *Imports) save(ctx context.Context, q *models.Queries, row models.Import, p progress) error {
+func (a *Imports) save(ctx context.Context, row models.Import, p progress) error {
 	failures, err := json.Marshal(append([]RowError{}, p.errors...))
 	if err != nil {
 		return fmt.Errorf("encode row errors: %w", err)
 	}
 
-	err = q.RecordImportProgress(ctx, models.RecordImportProgressParams{
-		ProcessedRows: int32Of(p.processed), Created: int32Of(p.created), Updated: int32Of(p.updated),
-		Skipped: int32Of(p.skipped), Failed: int32Of(p.failed), RowErrors: failures, Now: a.Clock.Now(),
-		WorkspaceID: row.WorkspaceID, ID: row.ID,
+	err = writes(ctx, a.DB, func(q *models.Queries) error {
+		return q.RecordImportProgress(ctx, models.RecordImportProgressParams{
+			ProcessedRows: int32Of(p.processed), Created: int32Of(p.created), Updated: int32Of(p.updated),
+			Skipped: int32Of(p.skipped), Failed: int32Of(p.failed), RowErrors: failures, Now: a.Clock.Now(),
+			WorkspaceID: row.WorkspaceID, ID: row.ID,
+		})
 	})
 	if err != nil {
 		return fmt.Errorf("record import progress: %w", err)
@@ -221,14 +235,16 @@ func int32Of(n int) int32 {
 /*
 fail marks the import failed with a reason a person can read.
 */
-func (a *Imports) fail(ctx context.Context, q *models.Queries, row models.Import, cause error) error {
+func (a *Imports) fail(ctx context.Context, row models.Import, cause error) error {
 	message := reason(cause)
 	if message == "could not be saved" {
 		message = "The import stopped unexpectedly."
 	}
 
-	return q.FailImport(ctx, models.FailImportParams{
-		Error: &message, Now: a.Clock.Now(), WorkspaceID: row.WorkspaceID, ID: row.ID,
+	return writes(ctx, a.DB, func(q *models.Queries) error {
+		return q.FailImport(ctx, models.FailImportParams{
+			Error: &message, Now: a.Clock.Now(), WorkspaceID: row.WorkspaceID, ID: row.ID,
+		})
 	})
 }
 
@@ -289,7 +305,7 @@ func (a *Imports) Report(ctx context.Context, in Input) ([]byte, string, error) 
 		return nil, "", err
 	}
 
-	row, err := find(ctx, models.New(a.DB), in)
+	row, err := find(ctx, reads(ctx, a.DB), in)
 	if err != nil {
 		return nil, "", err
 	}

@@ -145,7 +145,7 @@ apply writes the row and returns its outcome.
 */
 func (a applier) apply(ctx context.Context, r record) (string, error) {
 	if a.mode == ModeSkip {
-		found, err := a.matches(ctx, models.New(a.db), r)
+		found, err := a.matches(ctx, reads(ctx, a.db), r)
 		if err != nil || found {
 			return OutcomeSkipped, err
 		}

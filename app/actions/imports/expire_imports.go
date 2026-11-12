@@ -65,8 +65,10 @@ func (a *ExpireImports) Handle(ctx context.Context) (int, error) {
 
 	for _, f := range files {
 		scoped := tenancy.With(ctx, f.WorkspaceID.String())
-		if err := models.New(a.DB).ExpireImportFile(scoped, models.ExpireImportFileParams{
-			Now: now, WorkspaceID: f.WorkspaceID, ID: f.ID,
+		if err := writes(scoped, a.DB, func(q *models.Queries) error {
+			return q.ExpireImportFile(scoped, models.ExpireImportFileParams{
+				Now: now, WorkspaceID: f.WorkspaceID, ID: f.ID,
+			})
 		}); err != nil {
 			return 0, fmt.Errorf("expire import file: %w", err)
 		}
@@ -81,8 +83,10 @@ func (a *ExpireImports) Handle(ctx context.Context) (int, error) {
 
 	for _, c := range changed {
 		scoped := tenancy.With(ctx, c.WorkspaceID.String())
-		if err := models.New(a.DB).DeleteImportChanges(scoped, models.DeleteImportChangesParams{
-			WorkspaceID: c.WorkspaceID, ImportID: c.ID,
+		if err := writes(scoped, a.DB, func(q *models.Queries) error {
+			return q.DeleteImportChanges(scoped, models.DeleteImportChangesParams{
+				WorkspaceID: c.WorkspaceID, ImportID: c.ID,
+			})
 		}); err != nil {
 			return 0, fmt.Errorf("prune import changes: %w", err)
 		}

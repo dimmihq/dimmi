@@ -149,9 +149,9 @@ func (w *Writer) save(ctx context.Context, t models.Ticket) (models.Ticket, erro
 }
 
 /*
-lock reads the ticket and holds its row until the transaction ends.
+lockRow reads the ticket and holds its row until the transaction ends.
 */
-func (w *Writer) lock(ctx context.Context, ws, id ids.UUID) (models.Ticket, error) {
+func (w *Writer) lockRow(ctx context.Context, ws, id ids.UUID) (models.Ticket, error) {
 	t, err := w.Q.LockTicket(ctx, models.LockTicketParams{WorkspaceID: ws, ID: id})
 	if err != nil {
 		return t, notFound(err)

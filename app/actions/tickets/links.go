@@ -257,7 +257,7 @@ in Plain, nothing is sent to the customer here; a workflow on the
 close-the-loop trigger, or a teammate, tells them.
 */
 func (w *Writer) returnToTeam(ctx context.Context, customerID ids.UUID, work models.Ticket) error {
-	t, err := w.lock(ctx, work.WorkspaceID, customerID)
+	t, err := w.lockRow(ctx, work.WorkspaceID, customerID)
 	if err != nil || t.DeletedAt != nil || t.StateGroup == GroupResolved {
 		return nil //nolint:nilerr // a customer ticket gone or done needs no loop closed
 	}

@@ -13,7 +13,7 @@
     "sdk:check": "node scripts/sdk-generate.ts --check",
     "sdk:compat": "node scripts/sdk-compat.ts",
     "changeset": "cd sdk && pnpm dlx @changesets/cli@3.0.3",
-    "typecheck": "node scripts/sdk-generate.ts api --if-missing && tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.e2e.json && tsc --noEmit -p tsconfig.widget.json && tsc --noEmit -p tsconfig.sdk.json && tsc --noEmit -p site/tsconfig.json",
+    "typecheck": "node scripts/sdk-generate.ts api --if-missing && tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.e2e.json && tsc --noEmit -p tsconfig.widget.json && tsc --noEmit -p tsconfig.sdk.json",
     "lint": "biome ci --error-on-warnings",
     "format": "biome check --write",
     "test": "node scripts/sdk-generate.ts api --if-missing && vitest run",

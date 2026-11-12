@@ -165,6 +165,13 @@ func TestEmailRatings(t *testing.T) {
 		d := tests.NewDesk(t)
 		settings(d, testkit.JSON{"enabled": true})
 		id := emailChat(t, d, "di@example.com")
+
+		// A workspace starts with a forwarding address it may send from;
+		// with every address removed there is none left.
+		_, err := d.TC.Operator().Exec(t.Context(),
+			`UPDATE email_addresses SET deleted_at = now() WHERE workspace_id = $1`, d.TC.Workspace.Workspace.ID)
+		require.NoError(t, err)
+
 		d.Owner.PatchJSON("/api/v1/conversations/"+id, testkit.JSON{"status": "closed"}).AssertOK()
 
 		assert.Empty(t, ratingMail(d))

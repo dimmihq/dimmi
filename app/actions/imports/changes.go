@@ -127,7 +127,7 @@ the way the upsert matches: by external id, following merges, then by
 a proven address. Nil when the row names nobody yet.
 */
 func (a applier) priorContact(ctx context.Context, r record) (*prior, error) {
-	q, ws := models.New(a.db), a.m.Workspace.ID
+	q, ws := reads(ctx, a.db), a.m.Workspace.ID
 
 	var (
 		c   models.Contact

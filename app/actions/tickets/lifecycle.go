@@ -83,7 +83,7 @@ func (t *Tickets) withTicket(
 			w.Actor = conversations.Actor{Type: base.Actor.Type, ID: base.Actor.ID}
 		}
 
-		locked, err := w.lock(ctx, base.WorkspaceID, found.ID)
+		locked, err := w.lockRow(ctx, base.WorkspaceID, found.ID)
 		if err != nil {
 			return err
 		}
@@ -332,7 +332,7 @@ func (t *Tickets) autoResolve(ctx context.Context, ws, id ids.UUID) error {
 			return err
 		}
 
-		ticket, err := w.lock(ctx, ws, id)
+		ticket, err := w.lockRow(ctx, ws, id)
 		if err != nil || ticket.StateGroup != GroupWaitingCustomer || ticket.DeletedAt != nil {
 			return nil //nolint:nilerr // a ticket that moved on needs nothing
 		}

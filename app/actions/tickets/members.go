@@ -177,7 +177,7 @@ func (t *Tickets) Update(ctx context.Context, m authz.Membership, ref Ref, c Cha
 			return err
 		}
 
-		locked, err := w.lock(ctx, m.Workspace.ID, found.ID)
+		locked, err := w.lockRow(ctx, m.Workspace.ID, found.ID)
 		if err != nil {
 			return err
 		}
@@ -206,7 +206,7 @@ func (t *Tickets) Escalate(ctx context.Context, m authz.Membership, ref Ref, in 
 			return err
 		}
 
-		locked, err := w.lock(ctx, m.Workspace.ID, found.ID)
+		locked, err := w.lockRow(ctx, m.Workspace.ID, found.ID)
 		if err != nil {
 			return err
 		}

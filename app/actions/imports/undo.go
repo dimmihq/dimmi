@@ -180,7 +180,7 @@ func (u undoer) undo(ctx context.Context, r undoRecord) (undone, error) {
 contact undoes what the import did to one customer.
 */
 func (u undoer) contact(ctx context.Context, r undoRecord) (undone, error) {
-	st, err := u.contactNow(ctx, models.New(u.imports.DB), r.id)
+	st, err := u.contactNow(ctx, reads(ctx, u.imports.DB), r.id)
 	if err != nil || st.gone {
 		return kept(st.o, keptGone), err
 	}
@@ -228,7 +228,7 @@ func (u undoer) removeContact(ctx context.Context, r undoRecord, st standing) (u
 company undoes what the import did to one company.
 */
 func (u undoer) company(ctx context.Context, r undoRecord) (undone, error) {
-	st, err := u.companyNow(ctx, models.New(u.imports.DB), r.id)
+	st, err := u.companyNow(ctx, reads(ctx, u.imports.DB), r.id)
 	if err != nil || st.gone {
 		return kept(st.o, keptGone), err
 	}
@@ -262,7 +262,7 @@ func (u undoer) removeCompany(ctx context.Context, r undoRecord, st standing) (u
 		return kept(st.o, why), nil
 	}
 
-	people, err := models.New(u.imports.DB).CountCompanyPeople(ctx, models.CountCompanyPeopleParams{
+	people, err := reads(ctx, u.imports.DB).CountCompanyPeople(ctx, models.CountCompanyPeopleParams{
 		WorkspaceID: u.m.Workspace.ID, CompanyIds: []ids.UUID{r.id},
 	})
 	if err != nil {

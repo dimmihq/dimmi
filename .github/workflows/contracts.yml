@@ -39,6 +39,9 @@ jobs:
       - uses: actions/setup-node@v5
         with:
           node-version: 24
+          # This job installs nothing; without this, setup-node reads the
+          # packageManager field and looks for a pnpm cache it can't find.
+          package-manager-cache: false
       - name: Against the last platform release
         run: node scripts/api-compat.ts
       - name: Against the base commit

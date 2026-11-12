@@ -136,7 +136,7 @@ func (t *Tickets) NotifyState(ctx context.Context, args jobs.NotifyTicketStateAr
 			return err
 		}
 
-		ticket, err := w.lock(ctx, args.WorkspaceID, args.TicketID)
+		ticket, err := w.lockRow(ctx, args.WorkspaceID, args.TicketID)
 		if err != nil || ticket.DeletedAt != nil || ticket.ConversationID == nil {
 			return nil //nolint:nilerr // a ticket gone needs no notice
 		}

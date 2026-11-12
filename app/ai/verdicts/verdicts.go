@@ -30,6 +30,7 @@ import (
 	"github.com/dimmihq/dimmi/framework/clock"
 	"github.com/dimmihq/dimmi/framework/database"
 	"github.com/dimmihq/dimmi/framework/ids"
+	"github.com/dimmihq/dimmi/framework/tenancy"
 
 	"github.com/dimmihq/dimmi/app/ai/pipeline"
 	"github.com/dimmihq/dimmi/app/contracts"
@@ -104,6 +105,10 @@ ask asks the question and decodes the model's answer, one JSON object
 the schema forces, into out.
 */
 func (v *Verdicts) ask(ctx context.Context, q question, out any) error {
+	// Callers such as workflow runs may carry no workspace; row security
+	// shows the question's workspace only inside its own scope.
+	ctx = tenancy.With(ctx, q.workspaceID.String())
+
 	a, err := v.choose(ctx, q)
 	if err != nil {
 		return err

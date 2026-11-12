@@ -306,7 +306,7 @@ linkConversations links each live conversation not linked yet, and
 tells each newly linked customer an incident's latest.
 */
 func (w *Writer) linkConversations(ctx context.Context, ws, ticket ids.UUID, convs []ids.UUID) error {
-	locked, err := w.lock(ctx, ws, ticket)
+	locked, err := w.lockRow(ctx, ws, ticket)
 	if err != nil || locked.DeletedAt != nil || locked.StateGroup == GroupResolved {
 		return nil //nolint:nilerr // work gone or resolved takes no more links
 	}

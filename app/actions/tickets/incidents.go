@@ -65,7 +65,7 @@ func (t *Tickets) PostPublicUpdate(
 			return err
 		}
 
-		locked, err := w.lock(ctx, m.Workspace.ID, found.ID)
+		locked, err := w.lockRow(ctx, m.Workspace.ID, found.ID)
 		if err != nil {
 			return err
 		}

@@ -33,8 +33,8 @@ func (t *Tickets) AutomationWriter(ctx context.Context, tx *database.Tx, ws ids.
 Lock reads the ticket and holds its row until the transaction ends, for
 the actions that work tickets beside this one.
 */
-func (w *Writer) Lock(ctx context.Context, ws, id ids.UUID) (models.Ticket, error) { //nolint:revive // exported lock
-	return w.lock(ctx, ws, id)
+func (w *Writer) Lock(ctx context.Context, ws, id ids.UUID) (models.Ticket, error) {
+	return w.lockRow(ctx, ws, id)
 }
 
 /*

@@ -205,10 +205,16 @@ over is left alone; one whose teammate may no longer undo fails.
 */
 func (a *Imports) RunRollback(ctx context.Context, args RollbackArgs) error {
 	ctx = tenancy.With(ctx, args.WorkspaceID.String())
-	q := models.New(a.DB)
 
-	row, err := q.StartImportRollback(ctx, models.StartImportRollbackParams{
-		Now: a.Clock.Now(), WorkspaceID: args.WorkspaceID, ID: args.ImportID,
+	var row models.Import
+
+	err := writes(ctx, a.DB, func(q *models.Queries) error {
+		var err error
+		row, err = q.StartImportRollback(ctx, models.StartImportRollbackParams{
+			Now: a.Clock.Now(), WorkspaceID: args.WorkspaceID, ID: args.ImportID,
+		})
+
+		return err
 	})
 	if errors.Is(err, database.ErrNotFound) {
 		return nil
@@ -218,19 +224,23 @@ func (a *Imports) RunRollback(ctx context.Context, args RollbackArgs) error {
 		return fmt.Errorf("start import rollback: %w", err)
 	}
 
-	if err := a.undoRecords(ctx, q, row); err != nil {
+	if err := a.undoRecords(ctx, row); err != nil {
 		message := reason(err)
 		if message == "could not be saved" {
 			message = "The undo stopped unexpectedly."
 		}
 
-		return errors.Join(err, q.FailImportRollback(ctx, models.FailImportRollbackParams{
-			Error: &message, Now: a.Clock.Now(), WorkspaceID: row.WorkspaceID, ID: row.ID,
+		return errors.Join(err, writes(ctx, a.DB, func(q *models.Queries) error {
+			return q.FailImportRollback(ctx, models.FailImportRollbackParams{
+				Error: &message, Now: a.Clock.Now(), WorkspaceID: row.WorkspaceID, ID: row.ID,
+			})
 		}))
 	}
 
-	err = q.FinishImportRollback(ctx, models.FinishImportRollbackParams{
-		Now: a.Clock.Now(), WorkspaceID: row.WorkspaceID, ID: row.ID,
+	err = writes(ctx, a.DB, func(q *models.Queries) error {
+		return q.FinishImportRollback(ctx, models.FinishImportRollbackParams{
+			Now: a.Clock.Now(), WorkspaceID: row.WorkspaceID, ID: row.ID,
+		})
 	})
 	if err != nil {
 		return fmt.Errorf("finish import rollback: %w", err)
@@ -242,7 +252,9 @@ func (a *Imports) RunRollback(ctx context.Context, args RollbackArgs) error {
 /*
 undoRecords undoes the records not yet saved, a batch at a time.
 */
-func (a *Imports) undoRecords(ctx context.Context, q *models.Queries, row models.Import) error {
+func (a *Imports) undoRecords(ctx context.Context, row models.Import) error {
+	q := reads(ctx, a.DB)
+
 	if row.RollbackByMemberID == nil {
 		return exceptions.ErrForbidden
 	}
@@ -281,7 +293,7 @@ func (a *Imports) undoRecords(ctx context.Context, q *models.Queries, row models
 		}
 
 		kept += t.kept
-		if err := a.saveRollback(ctx, q, row, t); err != nil {
+		if err := a.saveRollback(ctx, row, t); err != nil {
 			return err
 		}
 	}
@@ -334,15 +346,17 @@ func (t *tally) add(ctx context.Context, u undoer, r undoRecord) error {
 /*
 saveRollback adds a batch's counts and kept records to the import.
 */
-func (a *Imports) saveRollback(ctx context.Context, q *models.Queries, row models.Import, t tally) error {
+func (a *Imports) saveRollback(ctx context.Context, row models.Import, t tally) error {
 	kept, err := json.Marshal(append([]KeptRecord{}, t.records...))
 	if err != nil {
 		return fmt.Errorf("encode kept records: %w", err)
 	}
 
-	err = q.RecordImportRollbackProgress(ctx, models.RecordImportRollbackProgressParams{
-		Processed: int32Of(t.processed), Removed: int32Of(t.removed), Reverted: int32Of(t.reverted),
-		Kept: int32Of(t.kept), KeptRecords: kept, Now: a.Clock.Now(), WorkspaceID: row.WorkspaceID, ID: row.ID,
+	err = writes(ctx, a.DB, func(q *models.Queries) error {
+		return q.RecordImportRollbackProgress(ctx, models.RecordImportRollbackProgressParams{
+			Processed: int32Of(t.processed), Removed: int32Of(t.removed), Reverted: int32Of(t.reverted),
+			Kept: int32Of(t.kept), KeptRecords: kept, Now: a.Clock.Now(), WorkspaceID: row.WorkspaceID, ID: row.ID,
+		})
 	})
 	if err != nil {
 		return fmt.Errorf("record import rollback progress: %w", err)
