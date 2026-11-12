@@ -97,7 +97,18 @@ it.describe("feature requests", () => {
 
   it("holds customers' posts for approval and the team approves them", async ({ page, person, guest }) => {
     const site = await openBoard(page);
-    await page.getByText("Approve new posts first").click();
+    await page.goto("/d/settings/feedback");
+    const boards = page.getByRole("grid", { name: "Boards" });
+    await boards.getByRole("button", { name: "Actions for Feature requests" }).click();
+    await page
+      .getByRole("dialog", { name: "Actions for Feature requests" })
+      .getByRole("button", { name: "Edit" })
+      .click();
+    const board = page.getByRole("dialog", { name: "Edit Feature requests" });
+    await board.getByText("Approve customers' posts before they show").click();
+    await board.getByRole("button", { name: "Save board" }).click();
+    await expect(board).toHaveCount(0);
+    await expect(boards.getByRole("row", { name: "Feature requests" })).toContainText("Approval first");
     const customer = `waiting.${person.email}`;
 
     await guest.goto(`${site}/feedback/new`);
@@ -149,14 +160,17 @@ it.describe("feature requests", () => {
   it("reorders statuses from the keyboard and keeps the order after a reload", async ({ page }) => {
     await page.goto("/d/settings/feedback");
     const list = page.getByRole("grid", { name: "Statuses" });
-    const names = () => list.getByRole("row").allInnerTexts();
-    await expect(list.getByRole("row")).toHaveText([
-      "In progress",
-      "Planned",
-      "Under consideration",
-      "Shipped",
-      "Closed",
-    ]);
+    const names = async () => (await list.getByRole("row").allInnerTexts()).map((text) => text.split("\n")[0]?.trim());
+    await expect(list.getByRole("row")).toHaveText(
+      [
+        "In progress In progress · On the roadmap",
+        "Planned Planned · On the roadmap",
+        "Under consideration Open · On the roadmap",
+        "Shipped Done · On the roadmap",
+        "Closed Closed",
+      ],
+      { useInnerText: true },
+    );
 
     const saved = page.waitForResponse(
       (r) => r.url().endsWith("/feedback-statuses") && r.request().method() === "PATCH",
@@ -173,7 +187,8 @@ it.describe("feature requests", () => {
     expect(moved.indexOf("In progress")).toBeGreaterThan(0);
 
     await page.reload();
-    await expect(list.getByRole("row")).toHaveText(moved);
+    await expect(list.getByRole("row")).toHaveCount(moved.length);
+    await expect.poll(names).toEqual(moved);
 
     await page.goto("/d/feedback");
     const views = page.getByRole("navigation", { name: "Feedback views" });

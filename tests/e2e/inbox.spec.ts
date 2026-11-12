@@ -1,3 +1,4 @@
+import { api } from "./support/customers";
 import { createAccount, expect, inbox, test as it, type Person, signIn } from "./support/fixtures";
 import { type Customer, openComposer, startConversation } from "./support/inbox";
 
@@ -233,6 +234,13 @@ it.describe("the inbox", () => {
   });
 
   it("keeps each draft and drops picked workspace items into the text", async ({ page }) => {
+    const centers = await api<{ id: string; url: string }[]>(page, "GET", "/help-centers");
+    const center = centers[0] ?? { id: "", url: "" };
+    const article = await api<{ id: string }>(page, "POST", `/help-centers/${center.id}/articles`, {
+      title: "Reset your password",
+      body_markdown: "Open **Settings** and pick Password.",
+    });
+    await api(page, "POST", `/articles/${article.id}/publications`, {});
     const id = await startConversation(page, emily);
     await page.goto(`/d/inbox/unassigned/${id}`);
     const reply = page.getByRole("textbox", { name: "Reply to Emily Johnson" });
@@ -254,7 +262,9 @@ it.describe("the inbox", () => {
     await menu.getByRole("button", { name: /^Help article/ }).click();
     await menu.getByRole("option", { name: /Reset your password/ }).click();
     await expect(reply).toContainText("Hi Emily");
-    await expect(reply).toContainText("Reset your password (Help center · Account)");
+    await expect(reply).toContainText(
+      `Reset your password: ${center.url.replace(/\/+$/, "")}/articles/reset-your-password`,
+    );
   });
 
   it("slides Operator over the thread on a narrow screen", async ({ page }) => {

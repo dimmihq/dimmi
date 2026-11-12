@@ -48,6 +48,8 @@ it.describe("the command menu", () => {
     await menu.getByRole("searchbox").fill("done");
     await menu.getByRole("menuitem", { name: /Mark as done/ }).click();
 
-    await expect(page.getByText(/#1 · Done/)).toBeVisible();
+    await expect(page.getByRole("region", { name: "Details" }).getByRole("button", { name: /Status/ })).toContainText(
+      "Done",
+    );
   });
 });

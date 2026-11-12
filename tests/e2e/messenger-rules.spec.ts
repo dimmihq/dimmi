@@ -52,7 +52,7 @@ it.describe("messenger rules", () => {
     });
     expect(saved.status(), await saved.text()).toBe(200);
 
-    const config = page.waitForResponse((r) => r.url().endsWith("/config"));
+    const config = page.waitForResponse((r) => new URL(r.url()).pathname.endsWith("/config"));
     await customerSite(page, app, "/pricing/teams");
     expect(await (await config).text()).not.toContain("secret_plan");
     await expect(page.locator(".launcher")).toBeVisible();

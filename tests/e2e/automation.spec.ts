@@ -169,7 +169,7 @@ it.describe("automation", () => {
     await expect
       .poll(async () => {
         const bounds = await frame.boundingBox();
-        const boxes = await canvas
+        const boxes = await frame
           .locator("button[aria-pressed]")
           .evaluateAll((cards) => cards.map((card) => card.getBoundingClientRect().toJSON() as DOMRect));
         return boxes.every(
@@ -187,7 +187,7 @@ it.describe("automation", () => {
     await canvas.getByRole("button", { name: "Zoom in" }).click();
     await canvas.getByRole("button", { name: "Add a step" }).last().click();
     await page.getByRole("dialog", { name: "Add a step" }).getByRole("button", { name: "Tag", exact: true }).click();
-    await expect(canvas.locator('button[aria-pressed="true"]')).toBeInViewport({ ratio: 0.99 });
+    await expect(frame.locator('button[aria-pressed="true"]')).toBeInViewport({ ratio: 0.99 });
   });
 
   it("finds triggers by searching and offers only those that run", async ({ page }) => {
@@ -196,7 +196,9 @@ it.describe("automation", () => {
 
     const picker = page.getByRole("dialog", { name: "What starts this workflow?" });
     await expect(picker.getByRole("region", { name: "Team" })).toBeVisible();
-    await expect(picker.getByRole("region", { name: "dimmi" })).toBeHidden();
+    await expect(picker.getByRole("region", { name: "dimmi" })).toContainText("dimmi hands over");
+    await expect(picker.getByText("Customer opens the messenger")).toBeHidden();
+    await expect(picker.getByText("Customer rates the conversation")).toBeHidden();
     await picker.getByRole("textbox", { name: "Search triggers" }).fill("status");
     await expect(picker.getByRole("region", { name: "Start of conversation" })).toBeHidden();
     await picker.getByRole("textbox", { name: "Search triggers" }).press("Enter");
