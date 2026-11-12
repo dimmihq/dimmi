@@ -110,6 +110,9 @@ func (a *ImportMessage) Handle(ctx context.Context, in ImportMessageInput) (Writ
 		}
 
 		s.w = s.w.Importing(at)
+		if err := s.w.Q.MarkImportSource(ctx); err != nil {
+			return fmt.Errorf("tag imported history: %w", err)
+		}
 
 		key := importKey(s.c, in.Backfill.ExternalID)
 		if out, err = s.replay(ctx, key); err != nil || out.Replayed {

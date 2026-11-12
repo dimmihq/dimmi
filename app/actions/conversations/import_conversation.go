@@ -121,6 +121,10 @@ func (a *CreateConversation) importIn(ctx context.Context, tx *database.Tx, run 
 	w := live.Importing(run.at)
 	w.MutationID = run.in.MutationID
 
+	if err := w.Q.MarkImportSource(ctx); err != nil {
+		return Loaded{}, false, fmt.Errorf("tag imported history: %w", err)
+	}
+
 	c, found, err := findImported(ctx, w.Q, run.in.Membership.Workspace.ID, run.imp.ExternalID)
 	if err != nil {
 		return Loaded{}, false, err

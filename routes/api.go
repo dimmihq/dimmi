@@ -118,6 +118,7 @@ func featureRoutes(workspace *routing.Router, a *app.App) {
 	emailSenderRoutes(workspace, a)
 	emailSetupRoutes(workspace, a)
 	helpCenterRoutes(workspace, a)
+	reportRoutes(workspace, a)
 	workflowRoutes(workspace, a)
 	procedureRoutes(workspace, a)
 	audienceRoutes(workspace, a)

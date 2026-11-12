@@ -30,6 +30,7 @@ import { Route as DFeedbackRouteImport } from './routes/d/feedback'
 import { Route as DHelpCenterRouteImport } from './routes/d/help-center'
 import { Route as DNotificationsRouteImport } from './routes/d/notifications'
 import { Route as DOperatorRouteImport } from './routes/d/operator'
+import { Route as DReportsRouteImport } from './routes/d/reports'
 import { Route as DShortcutsRouteImport } from './routes/d/shortcuts'
 import { Route as AuthEmailConfirmRouteImport } from './routes/_auth/email.confirm'
 import { Route as AuthLoginMagicRouteImport } from './routes/_auth/login_.magic'
@@ -49,6 +50,8 @@ import { Route as DInboxIndexRouteImport } from './routes/d/inbox/index'
 import { Route as DInboxViewRouteRouteImport } from './routes/d/inbox/$view/route'
 import { Route as DProceduresIndexRouteImport } from './routes/d/procedures/index'
 import { Route as DProceduresProcedureRouteImport } from './routes/d/procedures/$procedure'
+import { Route as DReportsIndexRouteImport } from './routes/d/reports.index'
+import { Route as DReportsReportRouteImport } from './routes/d/reports.$report'
 import { Route as DSeriesIndexRouteImport } from './routes/d/series/index'
 import { Route as DSeriesSeriesRouteImport } from './routes/d/series/$series'
 import { Route as DSettingsIndexRouteImport } from './routes/d/settings/index'
@@ -183,6 +186,11 @@ const DOperatorRoute = DOperatorRouteImport.update({
   path: '/operator',
   getParentRoute: () => DRouteRoute,
 } as any)
+const DReportsRoute = DReportsRouteImport.update({
+  id: '/reports',
+  path: '/reports',
+  getParentRoute: () => DRouteRoute,
+} as any)
 const DShortcutsRoute = DShortcutsRouteImport.update({
   id: '/shortcuts',
   path: '/shortcuts',
@@ -276,6 +284,16 @@ const DProceduresProcedureRoute = DProceduresProcedureRouteImport.update({
   id: '/procedures/$procedure',
   path: '/procedures/$procedure',
   getParentRoute: () => DRouteRoute,
+} as any)
+const DReportsIndexRoute = DReportsIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => DReportsRoute,
+} as any)
+const DReportsReportRoute = DReportsReportRouteImport.update({
+  id: '/$report',
+  path: '/$report',
+  getParentRoute: () => DReportsRoute,
 } as any)
 const DSeriesIndexRoute = DSeriesIndexRouteImport.update({
   id: '/series/',
@@ -456,6 +474,7 @@ export interface FileRoutesByFullPath {
   '/d/help-center': typeof DHelpCenterRouteWithChildren
   '/d/notifications': typeof DNotificationsRoute
   '/d/operator': typeof DOperatorRoute
+  '/d/reports': typeof DReportsRouteWithChildren
   '/d/shortcuts': typeof DShortcutsRoute
   '/d/': typeof DIndexRoute
   '/d/inbox/$view': typeof DInboxViewRouteRouteWithChildren
@@ -469,6 +488,7 @@ export interface FileRoutesByFullPath {
   '/d/feedback/$post': typeof DFeedbackPostRoute
   '/d/help-center/$article': typeof DHelpCenterArticleRoute
   '/d/procedures/$procedure': typeof DProceduresProcedureRoute
+  '/d/reports/$report': typeof DReportsReportRoute
   '/d/series/$series': typeof DSeriesSeriesRoute
   '/d/settings/$section': typeof DSettingsSectionRoute
   '/d/tickets/$ticket': typeof DTicketsTicketRoute
@@ -479,6 +499,7 @@ export interface FileRoutesByFullPath {
   '/d/help-center/': typeof DHelpCenterIndexRoute
   '/d/inbox/': typeof DInboxIndexRoute
   '/d/procedures/': typeof DProceduresIndexRoute
+  '/d/reports/': typeof DReportsIndexRoute
   '/d/series/': typeof DSeriesIndexRoute
   '/d/settings/': typeof DSettingsIndexRoute
   '/d/workflows/': typeof DWorkflowsIndexRoute
@@ -534,6 +555,7 @@ export interface FileRoutesByTo {
   '/d/feedback/$post': typeof DFeedbackPostRoute
   '/d/help-center/$article': typeof DHelpCenterArticleRoute
   '/d/procedures/$procedure': typeof DProceduresProcedureRoute
+  '/d/reports/$report': typeof DReportsReportRoute
   '/d/series/$series': typeof DSeriesSeriesRoute
   '/d/settings/$section': typeof DSettingsSectionRoute
   '/d/tickets/$ticket': typeof DTicketsTicketRoute
@@ -544,6 +566,7 @@ export interface FileRoutesByTo {
   '/d/help-center': typeof DHelpCenterIndexRoute
   '/d/inbox': typeof DInboxIndexRoute
   '/d/procedures': typeof DProceduresIndexRoute
+  '/d/reports': typeof DReportsIndexRoute
   '/d/series': typeof DSeriesIndexRoute
   '/d/settings': typeof DSettingsIndexRoute
   '/d/workflows': typeof DWorkflowsIndexRoute
@@ -591,6 +614,7 @@ export interface FileRoutesById {
   '/d/help-center': typeof DHelpCenterRouteWithChildren
   '/d/notifications': typeof DNotificationsRoute
   '/d/operator': typeof DOperatorRoute
+  '/d/reports': typeof DReportsRouteWithChildren
   '/d/shortcuts': typeof DShortcutsRoute
   '/d/': typeof DIndexRoute
   '/d/inbox/$view': typeof DInboxViewRouteRouteWithChildren
@@ -605,6 +629,7 @@ export interface FileRoutesById {
   '/d/feedback/$post': typeof DFeedbackPostRoute
   '/d/help-center/$article': typeof DHelpCenterArticleRoute
   '/d/procedures/$procedure': typeof DProceduresProcedureRoute
+  '/d/reports/$report': typeof DReportsReportRoute
   '/d/series/$series': typeof DSeriesSeriesRoute
   '/d/settings/$section': typeof DSettingsSectionRoute
   '/d/tickets/$ticket': typeof DTicketsTicketRoute
@@ -615,6 +640,7 @@ export interface FileRoutesById {
   '/d/help-center/': typeof DHelpCenterIndexRoute
   '/d/inbox/': typeof DInboxIndexRoute
   '/d/procedures/': typeof DProceduresIndexRoute
+  '/d/reports/': typeof DReportsIndexRoute
   '/d/series/': typeof DSeriesIndexRoute
   '/d/settings/': typeof DSettingsIndexRoute
   '/d/workflows/': typeof DWorkflowsIndexRoute
@@ -664,6 +690,7 @@ export interface FileRouteTypes {
     | '/d/help-center'
     | '/d/notifications'
     | '/d/operator'
+    | '/d/reports'
     | '/d/shortcuts'
     | '/d/'
     | '/d/inbox/$view'
@@ -677,6 +704,7 @@ export interface FileRouteTypes {
     | '/d/feedback/$post'
     | '/d/help-center/$article'
     | '/d/procedures/$procedure'
+    | '/d/reports/$report'
     | '/d/series/$series'
     | '/d/settings/$section'
     | '/d/tickets/$ticket'
@@ -687,6 +715,7 @@ export interface FileRouteTypes {
     | '/d/help-center/'
     | '/d/inbox/'
     | '/d/procedures/'
+    | '/d/reports/'
     | '/d/series/'
     | '/d/settings/'
     | '/d/workflows/'
@@ -742,6 +771,7 @@ export interface FileRouteTypes {
     | '/d/feedback/$post'
     | '/d/help-center/$article'
     | '/d/procedures/$procedure'
+    | '/d/reports/$report'
     | '/d/series/$series'
     | '/d/settings/$section'
     | '/d/tickets/$ticket'
@@ -752,6 +782,7 @@ export interface FileRouteTypes {
     | '/d/help-center'
     | '/d/inbox'
     | '/d/procedures'
+    | '/d/reports'
     | '/d/series'
     | '/d/settings'
     | '/d/workflows'
@@ -798,6 +829,7 @@ export interface FileRouteTypes {
     | '/d/help-center'
     | '/d/notifications'
     | '/d/operator'
+    | '/d/reports'
     | '/d/shortcuts'
     | '/d/'
     | '/d/inbox/$view'
@@ -812,6 +844,7 @@ export interface FileRouteTypes {
     | '/d/feedback/$post'
     | '/d/help-center/$article'
     | '/d/procedures/$procedure'
+    | '/d/reports/$report'
     | '/d/series/$series'
     | '/d/settings/$section'
     | '/d/tickets/$ticket'
@@ -822,6 +855,7 @@ export interface FileRouteTypes {
     | '/d/help-center/'
     | '/d/inbox/'
     | '/d/procedures/'
+    | '/d/reports/'
     | '/d/series/'
     | '/d/settings/'
     | '/d/workflows/'
@@ -1005,6 +1039,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DOperatorRouteImport
       parentRoute: typeof DRouteRoute
     }
+    '/d/reports': {
+      id: '/d/reports'
+      path: '/reports'
+      fullPath: '/d/reports'
+      preLoaderRoute: typeof DReportsRouteImport
+      parentRoute: typeof DRouteRoute
+    }
     '/d/shortcuts': {
       id: '/d/shortcuts'
       path: '/shortcuts'
@@ -1137,6 +1178,20 @@ declare module '@tanstack/react-router' {
       fullPath: '/d/procedures/$procedure'
       preLoaderRoute: typeof DProceduresProcedureRouteImport
       parentRoute: typeof DRouteRoute
+    }
+    '/d/reports/': {
+      id: '/d/reports/'
+      path: '/'
+      fullPath: '/d/reports/'
+      preLoaderRoute: typeof DReportsIndexRouteImport
+      parentRoute: typeof DReportsRoute
+    }
+    '/d/reports/$report': {
+      id: '/d/reports/$report'
+      path: '/$report'
+      fullPath: '/d/reports/$report'
+      preLoaderRoute: typeof DReportsReportRouteImport
+      parentRoute: typeof DReportsRoute
     }
     '/d/series/': {
       id: '/d/series/'
@@ -1424,6 +1479,20 @@ const DHelpCenterRouteWithChildren = DHelpCenterRoute._addFileChildren(
   DHelpCenterRouteChildren,
 )
 
+interface DReportsRouteChildren {
+  DReportsReportRoute: typeof DReportsReportRoute
+  DReportsIndexRoute: typeof DReportsIndexRoute
+}
+
+const DReportsRouteChildren: DReportsRouteChildren = {
+  DReportsReportRoute: DReportsReportRoute,
+  DReportsIndexRoute: DReportsIndexRoute,
+}
+
+const DReportsRouteWithChildren = DReportsRoute._addFileChildren(
+  DReportsRouteChildren,
+)
+
 interface DInboxViewRouteRouteChildren {
   DInboxViewConversationRoute: typeof DInboxViewConversationRoute
   DInboxViewIndexRoute: typeof DInboxViewIndexRoute
@@ -1446,6 +1515,7 @@ interface DRouteRouteChildren {
   DHelpCenterRoute: typeof DHelpCenterRouteWithChildren
   DNotificationsRoute: typeof DNotificationsRoute
   DOperatorRoute: typeof DOperatorRoute
+  DReportsRoute: typeof DReportsRouteWithChildren
   DShortcutsRoute: typeof DShortcutsRoute
   DIndexRoute: typeof DIndexRoute
   DInboxViewRouteRoute: typeof DInboxViewRouteRouteWithChildren
@@ -1484,6 +1554,7 @@ const DRouteRouteChildren: DRouteRouteChildren = {
   DHelpCenterRoute: DHelpCenterRouteWithChildren,
   DNotificationsRoute: DNotificationsRoute,
   DOperatorRoute: DOperatorRoute,
+  DReportsRoute: DReportsRouteWithChildren,
   DShortcutsRoute: DShortcutsRoute,
   DIndexRoute: DIndexRoute,
   DInboxViewRouteRoute: DInboxViewRouteRouteWithChildren,

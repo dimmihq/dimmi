@@ -260,5 +260,12 @@
     "intro": "Your conversation with {{.workspace}} was closed. How did it go? Pick a face:",
     "comment": "Tell us more",
     "why": "You get this because you talked with {{.workspace}}. The link works for a week."
+  },
+  "report_digest": {
+    "daily_subject": "Your daily dimmi report for {{.workspace}}",
+    "weekly_subject": "Your weekly dimmi report for {{.workspace}}",
+    "intro": "Here is how your team did from {{.from}} to {{.to}}, compared with the period before.",
+    "action": "Open reports",
+    "footer": "You get this because you subscribed in Reports. Change or stop it there."
   }
 }

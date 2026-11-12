@@ -462,6 +462,21 @@ type AuditLog struct {
 	CreatedAt    time.Time       `json:"created_at"`
 }
 
+type BacklogSnapshot struct {
+	WorkspaceID    ids.UUID    `json:"workspace_id"`
+	Day            pgtype.Date `json:"day"`
+	InboxID        ids.UUID    `json:"inbox_id"`
+	TeamID         *ids.UUID   `json:"team_id"`
+	Open           int32       `json:"open"`
+	Snoozed        int32       `json:"snoozed"`
+	Unassigned     int32       `json:"unassigned"`
+	UnderDay       int32       `json:"under_day"`
+	UnderThreeDays int32       `json:"under_three_days"`
+	UnderWeek      int32       `json:"under_week"`
+	OverWeek       int32       `json:"over_week"`
+	TakenAt        time.Time   `json:"taken_at"`
+}
+
 type Broadcast struct {
 	ID                ids.UUID        `json:"id"`
 	WorkspaceID       ids.UUID        `json:"workspace_id"`
@@ -952,6 +967,77 @@ type ConversationDraft struct {
 	UpdatedAt       time.Time       `json:"updated_at"`
 }
 
+type ConversationEvent struct {
+	ID             int64     `json:"id"`
+	WorkspaceID    ids.UUID  `json:"workspace_id"`
+	ConversationID ids.UUID  `json:"conversation_id"`
+	Kind           string    `json:"kind"`
+	OccurredAt     time.Time `json:"occurred_at"`
+	Source         string    `json:"source"`
+	MemberID       *ids.UUID `json:"member_id"`
+	TeamID         *ids.UUID `json:"team_id"`
+	Reason         *string   `json:"reason"`
+	RecordedAt     time.Time `json:"recorded_at"`
+}
+
+type ConversationFact struct {
+	ConversationID               ids.UUID   `json:"conversation_id"`
+	WorkspaceID                  ids.UUID   `json:"workspace_id"`
+	Number                       int64      `json:"number"`
+	InboxID                      ids.UUID   `json:"inbox_id"`
+	Channel                      string     `json:"channel"`
+	AssigneeMemberID             *ids.UUID  `json:"assignee_member_id"`
+	AssigneeTeamID               *ids.UUID  `json:"assignee_team_id"`
+	Priority                     int16      `json:"priority"`
+	Status                       string     `json:"status"`
+	Imported                     bool       `json:"imported"`
+	StartedAt                    time.Time  `json:"started_at"`
+	CustomerMessages             int32      `json:"customer_messages"`
+	LastCustomerMessageAt        *time.Time `json:"last_customer_message_at"`
+	FirstResponseAt              *time.Time `json:"first_response_at"`
+	FirstResponseSeconds         *int64     `json:"first_response_seconds"`
+	FirstResponseBusinessSeconds *int64     `json:"first_response_business_seconds"`
+	FirstResponderID             *ids.UUID  `json:"first_responder_id"`
+	FirstAnswerAt                *time.Time `json:"first_answer_at"`
+	FirstAnswerSeconds           *int64     `json:"first_answer_seconds"`
+	FirstAnswerBusinessSeconds   *int64     `json:"first_answer_business_seconds"`
+	HumanReplies                 int32      `json:"human_replies"`
+	FirstClosedAt                *time.Time `json:"first_closed_at"`
+	FirstCloseSeconds            *int64     `json:"first_close_seconds"`
+	FirstCloseBusinessSeconds    *int64     `json:"first_close_business_seconds"`
+	ClosedAt                     *time.Time `json:"closed_at"`
+	ResolutionSeconds            *int64     `json:"resolution_seconds"`
+	ResolutionBusinessSeconds    *int64     `json:"resolution_business_seconds"`
+	Closes                       int32      `json:"closes"`
+	Reopens                      int32      `json:"reopens"`
+	ClosedByMemberID             *ids.UUID  `json:"closed_by_member_id"`
+	ClosedByTeamID               *ids.UUID  `json:"closed_by_team_id"`
+	FirstContactResolved         bool       `json:"first_contact_resolved"`
+	Rating                       *int16     `json:"rating"`
+	RatedAt                      *time.Time `json:"rated_at"`
+	RatedMemberID                *ids.UUID  `json:"rated_member_id"`
+	AiInvolved                   bool       `json:"ai_involved"`
+	AiAnswers                    int32      `json:"ai_answers"`
+	AiFirstAnswerAt              *time.Time `json:"ai_first_answer_at"`
+	AiLastAnswerAt               *time.Time `json:"ai_last_answer_at"`
+	AiHandedOffAt                *time.Time `json:"ai_handed_off_at"`
+	AiHandoffReason              *string    `json:"ai_handoff_reason"`
+	AiConfirmed                  bool       `json:"ai_confirmed"`
+	AiCostMicros                 int64      `json:"ai_cost_micros"`
+	ComputedAt                   time.Time  `json:"computed_at"`
+}
+
+type ConversationMemberFact struct {
+	ConversationID      ids.UUID   `json:"conversation_id"`
+	MemberID            ids.UUID   `json:"member_id"`
+	WorkspaceID         ids.UUID   `json:"workspace_id"`
+	Replies             int32      `json:"replies"`
+	FirstRepliedAt      *time.Time `json:"first_replied_at"`
+	LastRepliedAt       *time.Time `json:"last_replied_at"`
+	AssignedOpenSeconds int64      `json:"assigned_open_seconds"`
+	LastActiveAt        time.Time  `json:"last_active_at"`
+}
+
 type ConversationParticipant struct {
 	WorkspaceID    ids.UUID  `json:"workspace_id"`
 	ConversationID ids.UUID  `json:"conversation_id"`
@@ -996,6 +1082,17 @@ type ConversationRead struct {
 	LastReadAt        time.Time `json:"last_read_at"`
 	CreatedAt         time.Time `json:"created_at"`
 	UpdatedAt         time.Time `json:"updated_at"`
+}
+
+type ConversationReplyFact struct {
+	ConversationID  ids.UUID  `json:"conversation_id"`
+	Turn            int32     `json:"turn"`
+	WorkspaceID     ids.UUID  `json:"workspace_id"`
+	AskedAt         time.Time `json:"asked_at"`
+	RepliedAt       time.Time `json:"replied_at"`
+	MemberID        ids.UUID  `json:"member_id"`
+	Seconds         int64     `json:"seconds"`
+	BusinessSeconds int64     `json:"business_seconds"`
 }
 
 type ConversationSlaPolicy struct {
@@ -2219,6 +2316,36 @@ type RedactionRule struct {
 	Position    int32     `json:"position"`
 	CreatedAt   time.Time `json:"created_at"`
 	UpdatedAt   time.Time `json:"updated_at"`
+}
+
+type ReportDigest struct {
+	ID          ids.UUID        `json:"id"`
+	WorkspaceID ids.UUID        `json:"workspace_id"`
+	MemberID    ids.UUID        `json:"member_id"`
+	Frequency   string          `json:"frequency"`
+	Filters     json.RawMessage `json:"filters"`
+	NextSendAt  time.Time       `json:"next_send_at"`
+	LastSentAt  *time.Time      `json:"last_sent_at"`
+	CreatedAt   time.Time       `json:"created_at"`
+	UpdatedAt   time.Time       `json:"updated_at"`
+}
+
+type ReportPending struct {
+	WorkspaceID    ids.UUID  `json:"workspace_id"`
+	ConversationID ids.UUID  `json:"conversation_id"`
+	DueAt          time.Time `json:"due_at"`
+}
+
+type ReportState struct {
+	WorkspaceID        ids.UUID    `json:"workspace_id"`
+	LogStartedAt       time.Time   `json:"log_started_at"`
+	BackfilledAt       *time.Time  `json:"backfilled_at"`
+	RebuildRequestedAt *time.Time  `json:"rebuild_requested_at"`
+	RebuildCursor      *ids.UUID   `json:"rebuild_cursor"`
+	RebuiltAt          *time.Time  `json:"rebuilt_at"`
+	SnapshotDay        pgtype.Date `json:"snapshot_day"`
+	CreatedAt          time.Time   `json:"created_at"`
+	UpdatedAt          time.Time   `json:"updated_at"`
 }
 
 type Role struct {

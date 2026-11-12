@@ -26,6 +26,7 @@ import (
 	"github.com/dimmihq/dimmi/framework/queue"
 
 	"github.com/dimmihq/dimmi/app/actions/conversations"
+	"github.com/dimmihq/dimmi/app/actions/reports"
 	"github.com/dimmihq/dimmi/app/auth/authz"
 	appevents "github.com/dimmihq/dimmi/app/events"
 	"github.com/dimmihq/dimmi/app/exceptions"
@@ -39,6 +40,7 @@ The kinds of export.
 const (
 	KindConversations = "conversations"
 	KindContacts      = "contacts"
+	KindFacts         = "conversation_facts"
 )
 
 /*
@@ -55,6 +57,7 @@ func limits() map[string]map[string]int {
 	return map[string]map[string]int{
 		KindConversations: {"txt": 1_000, "csv": 50_000, "json": 10_000},
 		KindContacts:      {"csv": 50_000, "json": 10_000},
+		KindFacts:         {"csv": 200_000},
 	}
 }
 
@@ -76,7 +79,8 @@ type BuildArgs = jobs.BuildDataExportArgs
 
 /*
 RequestInput is who asks for which export. Conversations is read for a
-conversations export and Contacts for a contacts export.
+conversations export, Contacts for a contacts export and Facts, a
+report's range and filters, for a conversation facts export.
 */
 type RequestInput struct {
 	Membership    authz.Membership
@@ -84,6 +88,7 @@ type RequestInput struct {
 	Format        string
 	Conversations conversations.Selection
 	Contacts      ContactSelection
+	Facts         reports.Filters
 	IncludeNotes  bool
 }
 
@@ -168,6 +173,12 @@ func allowed(in RequestInput) (int, error) {
 count returns how many rows the export covers as the caller sees them.
 */
 func (a *RequestDataExport) count(ctx context.Context, tx *database.Tx, in RequestInput) (int, error) {
+	if in.Kind == KindFacts {
+		return reports.CountFacts(ctx, tx, reports.FactScope{
+			Membership: in.Membership, Filters: in.Facts, Now: a.Clock.Now(), Limit: countCap,
+		})
+	}
+
 	if in.Kind == KindContacts {
 		return countContacts(ctx, models.New(tx), contactRead{
 			ws: in.Membership.Workspace.ID, sel: in.Contacts, now: a.Clock.Now(),
@@ -184,8 +195,11 @@ record stores the export with its selection and queues its build.
 */
 func (a *RequestDataExport) record(ctx context.Context, tx *database.Tx, in RequestInput) (models.DataExport, error) {
 	var selection any = in.Conversations
-	if in.Kind == KindContacts {
+	switch in.Kind {
+	case KindContacts:
 		selection = in.Contacts
+	case KindFacts:
+		selection = in.Facts
 	}
 
 	raw, err := json.Marshal(selection)

@@ -162,15 +162,18 @@ registerAll registers every job worker and the outbound webhooks.
 func registerAll(a *app.App) error {
 	return errors.Join(
 		registerJobs(a), registerWorkspaceJobs(a), registerWorkflowJobs(a), registerChangelogJobs(a), bootWebhooks(a),
+		registerReportJobs(a),
 	)
 }
 
 /*
-bootSurfaces starts every customer-facing piece in order: the
-integrations channels use, channels, then the workflows that talk
-through them, the agent, and last what teammates reach from Slack.
+bootSurfaces starts every customer-facing piece in order: the reports
+other areas register into, the integrations channels use, channels,
+then the workflows that talk through them, the agent, and last what
+teammates reach from Slack.
 */
 func bootSurfaces(ctx context.Context, a *app.App) error {
+	bootReports(a)
 	if err := bootIntegrations(a); err != nil {
 		return err
 	}

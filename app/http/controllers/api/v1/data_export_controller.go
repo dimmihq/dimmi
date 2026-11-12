@@ -78,9 +78,12 @@ func (c *DataExportController) Store(
 	}
 
 	var err error
-	if in.Body.Kind == dataexports.KindContacts {
+	switch in.Body.Kind {
+	case dataexports.KindContacts:
 		input.Contacts, err = c.contactSelection(ctx, in.Body.Selection)
-	} else {
+	case dataexports.KindFacts:
+		input.Facts, err = reportFiltersOf(c.IDs, in.Body.Selection.Filter)
+	default:
 		input.Conversations, err = c.conversationSelection(in.Body.Selection)
 	}
 

@@ -179,9 +179,12 @@ func (a *BuildDataExport) render(
 		err   error
 	)
 
-	if row.Kind == KindContacts {
+	switch row.Kind {
+	case KindContacts:
 		files, rows, err = renderContacts(ctx, models.New(tx), row)
-	} else {
+	case KindFacts:
+		files, rows, err = renderFacts(ctx, tx, m, row)
+	default:
 		files, rows, err = a.renderConversations(ctx, tx, m, row)
 	}
 

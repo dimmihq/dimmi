@@ -10,6 +10,7 @@ import {
   RiAlarmLine,
   RiArrowLeftLine,
   RiAtLine,
+  RiBarChart2Line,
   RiBookOpenLine,
   RiChatQuoteLine,
   RiChatSmile3Line,
@@ -109,6 +110,13 @@ export const workspacePages = {
     RiNotification3Line,
     "/d/notifications",
     "Replies, mentions and assignments that need you.",
+  ),
+  reports: page(
+    "reports",
+    "Reports",
+    RiBarChart2Line,
+    "/d/reports",
+    "How fast the team answers, what gets resolved and what customers think.",
   ),
   agent: page(
     "agent",
@@ -432,19 +440,24 @@ export const inboxLink = page("inbox", "Inbox", RiInbox2Line, "/d/inbox", "Every
 /*
  * appSections lists the workspace's pages in the sidebar, the inbox
  * showing how many open conversations are assigned to the person.
+ * Reports are listed only for those who may read conversations, once
+ * their permissions are known.
  */
 export function appSections(
   inboxBadge?: number,
   notificationBadge?: number,
   notifications?: DashboardNavPanel,
+  permissions?: string[],
 ): DashboardNavSection[] {
   const unseen = notificationBadge && notificationBadge >= 100 ? "99+" : notificationBadge || undefined;
+  const reports = permissions === undefined || permissions.includes("conversations:read");
   return [
     {
       key: "you",
       items: [
         { ...workspacePages.notifications, href: undefined, badge: unseen, panel: notifications },
         { ...inboxLink, badge: inboxBadge || undefined },
+        ...(reports ? [workspacePages.reports] : []),
       ],
     },
     {

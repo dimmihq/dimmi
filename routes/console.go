@@ -21,6 +21,9 @@
 | time came are sent. Every minute webhook deliveries due a retry are
 | queued, every five minutes failing webhook endpoints are checked, and
 | every night the webhook delivery log past its retention is pruned.
+| Report facts are refreshed every few seconds, each workspace's backlog
+| is counted hourly once its day ends, and report digests go out every
+| five minutes as they come due.
 |
 */
 
@@ -61,6 +64,7 @@ func Console(a *app.App) {
 	a.Schedule.Job(jobs.RefreshIdentityKeySetsArgs{}).Hourly()
 	a.Schedule.Job(jobs.PruneIdentityStatsArgs{}).DailyAt("03:55")
 	a.Schedule.Job(jobs.SweepAttachmentScansArgs{}).Cron("*/5 * * * *")
+	scheduleReports(a)
 	scheduleKnowledge(a)
 	scheduleWebhooks(a)
 	scheduleWork(a)
@@ -128,4 +132,15 @@ func scheduleKnowledge(a *app.App) {
 	a.Schedule.Job(jobs.ScheduleKnowledgeSyncsArgs{}).Cron("*/5 * * * *")
 	a.Schedule.Job(jobs.ScheduleHelpCenterDomainChecksArgs{}).EveryMinute()
 	a.Schedule.Job(jobs.PruneHelpAnalyticsArgs{}).DailyAt("04:20")
+}
+
+/*
+scheduleReports restarts the report refresh every minute should it have
+stopped, counts each workspace's backlog once its day ends, and sends
+the report digests that are due.
+*/
+func scheduleReports(a *app.App) {
+	a.Schedule.Job(jobs.RefreshReportsArgs{}).EveryMinute()
+	a.Schedule.Job(jobs.SnapshotBacklogsArgs{}).Cron("5 * * * *")
+	a.Schedule.Job(jobs.SendReportDigestsArgs{}).Cron("*/5 * * * *")
 }

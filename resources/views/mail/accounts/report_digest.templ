@@ -1,0 +1,36 @@
+package accounts
+
+import "github.com/dimmihq/dimmi/framework/i18n"
+
+/*
+DigestLine is one headline number of a report digest: its label, its
+value and how it moved since the period before, written out.
+*/
+type DigestLine struct {
+	Label  string `json:"label"`
+	Value  string `json:"value"`
+	Change string `json:"change"`
+}
+
+/*
+ReportDigest lists a workspace's headline numbers for a day or a week,
+each with how it moved, and links to the reports.
+*/
+
+templ ReportDigest(subject, name, from, to string, lines []DigestLine, reportURL string) {
+	@layout(subject) {
+		@greeting(name)
+		<p>{ i18n.T(ctx, "mail.report_digest.intro", i18n.Args{"from": from, "to": to}) }</p>
+		<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;margin:16px 0;">
+			for _, l := range lines {
+				<tr>
+					<td style="padding:8px 0;border-bottom:1px solid #ececec;color:#555;">{ l.Label }</td>
+					<td align="right" style="padding:8px 0;border-bottom:1px solid #ececec;font-weight:600;color:#111;">{ l.Value }</td>
+					<td align="right" style="padding:8px 0 8px 12px;border-bottom:1px solid #ececec;color:#888;white-space:nowrap;">{ l.Change }</td>
+				</tr>
+			}
+		</table>
+		@button(reportURL, i18n.T(ctx, "mail.report_digest.action", nil))
+		<p style="color:#888;font-size:13px;">{ i18n.T(ctx, "mail.report_digest.footer", nil) }</p>
+	}
+}

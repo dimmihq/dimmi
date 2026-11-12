@@ -39,6 +39,7 @@ import (
 	"github.com/dimmihq/dimmi/app/actions/notifications"
 	"github.com/dimmihq/dimmi/app/actions/procedures"
 	"github.com/dimmihq/dimmi/app/actions/ratings"
+	"github.com/dimmihq/dimmi/app/actions/reports"
 	"github.com/dimmihq/dimmi/app/actions/roles"
 	"github.com/dimmihq/dimmi/app/actions/schedules"
 	"github.com/dimmihq/dimmi/app/actions/series"
@@ -256,4 +257,8 @@ type Actions struct {
 	InboundMetrics       *email.InboundMetrics
 	ProcessInboundEmail  *email.ProcessInboundEmail
 	SendEmailMessage     *email.SendEmailMessage
+
+	Reports           *reports.Reports
+	ReportMaintenance *reports.Maintenance
+	ReportDigests     *reports.Digests
 }

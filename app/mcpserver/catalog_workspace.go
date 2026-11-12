@@ -16,13 +16,14 @@ import "maps"
 
 /*
 workspaceDocs returns the entries for the workspace, members, teams,
-roles, invitations, the audit log and the caller's notifications.
+roles, invitations, the audit log, the caller's notifications and the
+reports.
 */
 func workspaceDocs() map[string]Doc {
 	out := map[string]Doc{}
 	for _, part := range []map[string]Doc{
 		workspaceSetupDocs(), onboardingDocs(), memberDocs(), memberChangeDocs(), invitationDocs(), teamDocs(),
-		teamChangeDocs(), workspaceAccessDocs(), callerDocs(),
+		teamChangeDocs(), workspaceAccessDocs(), callerDocs(), reportDocs(),
 	} {
 		maps.Copy(out, part)
 	}

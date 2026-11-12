@@ -44,6 +44,7 @@ import { ConnectionIndicator } from "@/features/realtime/connection-indicator";
 import { type Me, meQuery, signOut } from "@/lib/api/auth";
 import { countsQuery } from "@/lib/api/inbox";
 import { notificationCountsQuery } from "@/lib/api/notifications";
+import { callerQuery } from "@/lib/api/workspace";
 import { RealtimeProvider } from "@/lib/realtime/provider";
 
 import { useAvailability } from "./availability";
@@ -232,16 +233,22 @@ function SignedInShell({
     ...notificationCountsQuery(workspace?.id ?? ""),
     enabled: Boolean(workspace),
   });
+  const { data: caller } = useQuery({ ...callerQuery(workspace?.id ?? ""), enabled: Boolean(workspace) });
   useNotificationFocus(workspace?.id ?? null, path);
   const [bellOpen, setBellOpen] = useState(false);
   const openBell = useCallback(() => setBellOpen(true), []);
   const sections = inSettings
     ? settingsSections()
-    : appSections(counts?.views.mine.open, bell?.unseen_count, {
-        isOpen: bellOpen,
-        onOpenChange: setBellOpen,
-        content: (close) => <NotificationsPanel onClose={close} />,
-      });
+    : appSections(
+        counts?.views.mine.open,
+        bell?.unseen_count,
+        {
+          isOpen: bellOpen,
+          onOpenChange: setBellOpen,
+          content: (close) => <NotificationsPanel onClose={close} />,
+        },
+        caller?.member?.permissions,
+      );
   const secondary = inSettings ? [] : [settingsLink];
   const selected = selectedKey(sections, secondary, path);
   const sidebar = (mobile: boolean) => (
