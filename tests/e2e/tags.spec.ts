@@ -52,7 +52,10 @@ it.describe("tags", () => {
     await page.getByRole("button", { name: "New tag" }).click();
     await page.getByRole("textbox", { name: "Tag name" }).fill("VIP");
     await page.getByRole("button", { name: "Create tag" }).click();
-    await expect(page.getByText("VIP")).toBeVisible();
+    // The dialog previews the tag as it is typed, so wait for it to close
+    // before looking for the tag in the list.
+    await expect(page.getByRole("alertdialog")).toBeHidden();
+    await expect(page.getByText("VIP", { exact: true })).toBeVisible();
     await expect(page.getByRole("button", { name: "VIP colour" })).toBeVisible();
 
     await page.getByRole("button", { name: "Edit" }).first().click();
@@ -60,7 +63,8 @@ it.describe("tags", () => {
     await page.locator("label", { has: page.getByRole("radio", { name: "fire" }) }).click();
     await expect(page.getByRole("radio", { name: "fire" })).toBeChecked();
     await page.getByRole("button", { name: "Save" }).click();
-    await expect(page.getByText("Defect")).toBeVisible();
+    await expect(page.getByRole("alertdialog")).toBeHidden();
+    await expect(page.getByText("Defect", { exact: true })).toBeVisible();
 
     await page.getByRole("button", { name: "Delete" }).first().click();
     await expect(page.getByRole("alertdialog")).toContainText("1 conversations");
