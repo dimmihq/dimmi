@@ -221,7 +221,7 @@ function FileRow({ file, side }: { file: Attachment; side: Side }) {
       {file.url ? <RiDownloadLine aria-hidden className="size-4 shrink-0 text-foreground-icon-tertiary" /> : null}
     </>
   );
-  const shape = cx("flex w-64 max-w-full items-center gap-2.5 rounded-xl px-3 py-2", look.frame || surfaces[side].rest);
+  const shape = cx("flex w-fit min-w-48 max-w-full items-center gap-2.5 rounded-xl px-3 py-2", look.frame || surfaces[side].rest);
   const interactive = cx(
     shape,
     surfaces[side].hover,
