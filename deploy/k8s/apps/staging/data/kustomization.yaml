@@ -40,6 +40,9 @@ patches:
         path: /data/DIMMI_TELEMETRY__METRICS
         value: prometheus
       - op: add
+        path: /data/DIMMI_AUTH__SIGNUP__MAX_PER_HOUR_PER_IP
+        value: "1000"
+      - op: add
         path: /data/DIMMI_HELP_CENTERS__BASE_DOMAIN
         value: help.staging.trydimmi.com
       - op: add
