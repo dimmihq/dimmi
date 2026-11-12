@@ -17,6 +17,7 @@
 package conversations
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -134,7 +135,7 @@ func (a *ListConversations) applyCustomView(
 	ctx context.Context, q *models.Queries, in *ListConversationsInput,
 ) (*customView, error) {
 	view, err := a.savedView(ctx, q, in)
-	if err != nil || len(in.Filters.Definition) == 0 {
+	if err != nil || !unsaved(in.Filters.Definition) {
 		return view, err
 	}
 
@@ -143,6 +144,16 @@ func (a *ListConversations) applyCustomView(
 	}
 
 	return view, a.narrow(view, in.Membership, in.Filters.Definition)
+}
+
+/*
+unsaved reports whether the list carries conditions not saved yet. A
+list kept as JSON, as an export keeps it, holds null when it had none.
+*/
+func unsaved(raw json.RawMessage) bool {
+	trimmed := bytes.TrimSpace(raw)
+
+	return len(trimmed) > 0 && !bytes.Equal(trimmed, []byte("null"))
 }
 
 /*

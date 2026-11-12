@@ -97,9 +97,34 @@ export async function createAccount(request: APIRequestContext, person: Person, 
     data: { name: person.name, email: person.email, password: person.password, workspace_name: workspace },
   });
   expect(response.status(), await response.text()).toBe(201);
-  if (workspace) {
+  if (!workspace) {
+    return;
+  }
+  if (process.env.E2E_BASE_URL) {
+    await finishSetupRemotely(request, person);
+  } else {
     finishSetup(person.email);
   }
+}
+
+/*
+ * finishSetupRemotely marks the person's new workspace as set up through
+ * the API, for a deployed environment whose database the tests cannot
+ * reach. It signs in on the request context only, so the browser stays
+ * signed out.
+ */
+async function finishSetupRemotely(request: APIRequestContext, person: Person) {
+  const session = await request.post("/api/v1/sessions", {
+    data: { grant: "password", email: person.email, password: person.password },
+  });
+  expect(session.ok(), await session.text()).toBe(true);
+  const me = await request.get("/api/v1/me");
+  const workspace = (await me.json()).data.workspaces[0].id;
+  const done = await request.patch("/api/v1/workspace/onboarding", {
+    data: { step: "done", completed: true },
+    headers: { "Dimmi-Workspace": workspace },
+  });
+  expect(done.ok(), await done.text()).toBe(true);
 }
 
 /*
