@@ -1,10 +1,13 @@
 package email_test
 
 import (
+	"encoding/base64"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/dimmihq/dimmi/framework/malware"
 
 	"github.com/dimmihq/dimmi/app/models"
 )
@@ -49,5 +52,29 @@ func TestEmailedPictures(t *testing.T) {
 		timeline.AssertJSONPath("data.0.attachments.#(filename==\"shot.png\").content_id", "shot@customer.test")
 		assert.NotEmpty(t, timeline.String("data.0.attachments.#(filename==\"shot.png\").url"))
 		assert.NotEmpty(t, timeline.String("data.0.attachments.#(filename==\"receipt.pdf\").url"))
+	})
+
+	t.Run("scans emailed files and blocks an infected one", func(t *testing.T) {
+		t.Parallel()
+		tc, _ := emailCase(t)
+		tc.App.Scanner.Fake()
+		address := defaultAddress(tc)
+		mail := string(picturesMail(address.ForwardingAddress))
+		mail = mail[:len(mail)-len("JVBERi0xLjQK\r\n--mixed--\r\n")] +
+			base64.StdEncoding.EncodeToString([]byte(malware.EICAR())) + "\r\n--mixed--\r\n"
+
+		deliver(tc, []byte(mail), "").AssertStatus(202)
+		tc.Drain()
+
+		found := conversations(tc)
+		require.Len(t, found, 1)
+		path := "/api/v1/conversations/" + models.PublicID(models.PrefixConversation, found[0].ID) + "/messages"
+		timeline := tc.ActingAsOwner().GetJSON(path).AssertOK()
+
+		tc.Table("attachments").AssertHas(map[string]any{"filename": "receipt.pdf", "scan_status": "infected"})
+		tc.Table("attachments").AssertHas(map[string]any{"filename": "shot.png", "scan_status": "clean"})
+		timeline.AssertJSONPath("data.0.attachments.#(filename==\"receipt.pdf\").blocked", true)
+		assert.Empty(t, timeline.String("data.0.attachments.#(filename==\"receipt.pdf\").url"))
+		assert.NotEmpty(t, timeline.String("data.0.attachments.#(filename==\"shot.png\").url"))
 	})
 }

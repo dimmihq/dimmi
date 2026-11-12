@@ -111,7 +111,7 @@ func newSlack(a *app.App, driver *slackdriver.Driver, secrets *channels.SlackSec
 		Scopes: a.Actions.Integrations.Registry, Articles: a.Actions.Articles,
 		Shared: &channels.SharedApp{AppID: services.AppID, SigningSecret: services.SigningSecret},
 		Receiver: &conversations.ReceiveInboundMessage{
-			DB: a.DB, Events: a.Events, Clock: a.Clock, Disk: disk, DiskName: diskName,
+			DB: a.DB, Events: a.Events, Clock: a.Clock, Disk: disk, DiskName: diskName, Queue: a.Queue,
 			ReopenWindow: a.Config.Channels.Email.Inbound.ReopenWindow,
 		},
 	}, nil

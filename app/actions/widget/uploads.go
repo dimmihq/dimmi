@@ -47,6 +47,7 @@ type Uploads struct {
 	Put      *attachments.PutUploadContent
 	Complete *attachments.CompleteUpload
 	Disk     filesystem.Filesystem
+	Limits   *VisitorLimits
 }
 
 /*
@@ -58,6 +59,10 @@ func (a *Uploads) Start(
 ) (attachments.PendingUpload, error) {
 	if !auth.Resolved.Widget.AttachmentsEnabled {
 		return attachments.PendingUpload{}, exceptions.ErrAttachmentsDisabled
+	}
+
+	if err := a.Limits.Upload(ctx, auth); err != nil {
+		return attachments.PendingUpload{}, err
 	}
 
 	return a.Create.Handle(ctx, attachments.PendingUploadInput{

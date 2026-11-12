@@ -31,8 +31,10 @@ import (
 	"github.com/dimmihq/dimmi/framework/filesystem"
 	"github.com/dimmihq/dimmi/framework/hashing"
 	"github.com/dimmihq/dimmi/framework/image"
+	"github.com/dimmihq/dimmi/framework/queue"
 
 	"github.com/dimmihq/dimmi/app/exceptions"
+	"github.com/dimmihq/dimmi/app/jobs"
 	"github.com/dimmihq/dimmi/app/models"
 )
 
@@ -48,6 +50,7 @@ type CompleteUpload struct {
 	DB    *database.DB
 	Clock clock.Clock
 	Disk  filesystem.Filesystem
+	Queue *queue.Queue
 }
 
 /*
@@ -187,8 +190,8 @@ func side(n int) *int32 {
 }
 
 /*
-finish marks the upload uploaded with what inspecting it found. No scanner
-looks at files yet, so the upload is recorded as not scanned.
+finish marks the upload uploaded with what inspecting it found, and
+queues its malware scan. Until the scan judges it the upload is pending.
 */
 func (a *CompleteUpload) finish(
 	ctx context.Context, row models.Attachment, found inspected,
@@ -198,17 +201,24 @@ func (a *CompleteUpload) finish(
 	err := a.DB.Transaction(ctx, func(ctx context.Context, tx *database.Tx) error {
 		done, err := models.New(tx).CompleteUpload(ctx, models.CompleteUploadParams{
 			Now: &now, ContentType: found.contentType, Width: found.width, Height: found.height, Sha256: &found.sum,
-			ScanStatus: "skipped", WorkspaceID: row.WorkspaceID, ID: row.ID,
+			ScanStatus: "pending", WorkspaceID: row.WorkspaceID, ID: row.ID,
 		})
 		if errors.Is(err, database.ErrNotFound) {
 			done, err = models.New(tx).FindAttachment(ctx, models.FindAttachmentParams{
 				WorkspaceID: row.WorkspaceID, ID: row.ID,
 			})
+
+			row = done
+
+			return err
 		}
 
 		row = done
+		if err != nil {
+			return err
+		}
 
-		return err
+		return a.Queue.PushTx(ctx, tx, jobs.ScanAttachmentArgs{WorkspaceID: row.WorkspaceID, AttachmentID: row.ID})
 	})
 	if err != nil {
 		return row, fmt.Errorf("complete upload %s: %w", row.ID, err)

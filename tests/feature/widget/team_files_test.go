@@ -38,6 +38,24 @@ func fetch(t *testing.T, tc *tests.TestCase, link string) *testkit.Response {
 	return tc.Client().Send(fhttp.MethodGet, address.RequestURI(), nil)
 }
 
+/*
+linkOf replies with the uploaded file, lets the scan judge it, and returns
+the link the timeline then gives the file.
+*/
+func linkOf(t *testing.T, tc *tests.TestCase, file string) string {
+	t.Helper()
+
+	conversation := startVisitor(t, tc).startConversation(t, "Can you send it?")
+	owner(tc).PostJSON("/api/v1/conversations/"+conversation+"/replies", testkit.JSON{
+		"body": "Here it is.", "attachment_ids": []string{file},
+	}).AssertCreated()
+	tc.Drain()
+
+	timeline := owner(tc).GetJSON("/api/v1/conversations/" + conversation + "/messages").AssertOK()
+
+	return timeline.String("data.#(body==\"Here it is.\").attachments.0.url")
+}
+
 func TestTeamFiles(t *testing.T) {
 	t.Parallel()
 
@@ -48,7 +66,8 @@ func TestTeamFiles(t *testing.T) {
 
 		res := teamUpload(t, tc, "shot.png", "image/png")(picture).AssertCreated()
 		res.AssertJSONPath("data.filename", "shot.png").AssertJSONPath("data.width", float64(40))
-		link := res.String("data.url")
+		assert.Empty(t, res.String("data.url"))
+		link := linkOf(t, tc, res.String("data.id"))
 		require.NotEmpty(t, link)
 
 		served := fetch(t, tc, link).AssertOK()
@@ -60,7 +79,8 @@ func TestTeamFiles(t *testing.T) {
 		t.Parallel()
 		tc := tests.New(t)
 
-		link := teamUpload(t, tc, "shot.png", "image/png")(pngOf(t, 4, 4)).AssertCreated().String("data.url")
+		file := teamUpload(t, tc, "shot.png", "image/png")(pngOf(t, 4, 4)).AssertCreated().String("data.id")
+		link := linkOf(t, tc, file)
 
 		fetch(t, tc, strings.Replace(link, "signature=", "signature=00", 1)).AssertNotFound()
 	})
@@ -69,7 +89,8 @@ func TestTeamFiles(t *testing.T) {
 		t.Parallel()
 		tc := tests.New(t)
 
-		link := teamUpload(t, tc, "notes.txt", "text/plain")([]byte("hello")).AssertCreated().String("data.url")
+		file := teamUpload(t, tc, "notes.txt", "text/plain")([]byte("hello")).AssertCreated().String("data.id")
+		link := linkOf(t, tc, file)
 
 		served := fetch(t, tc, link).AssertOK()
 		assert.Equal(t, "attachment", served.Header.Get("Content-Disposition"))
@@ -87,6 +108,7 @@ func TestTeamFiles(t *testing.T) {
 		owner(tc).PostJSON("/api/v1/conversations/"+conversation+"/replies", testkit.JSON{
 			"body": "Here it is.", "attachment_ids": []string{file},
 		}).AssertCreated()
+		tc.Drain()
 
 		timeline := owner(tc).GetJSON("/api/v1/conversations/" + conversation + "/messages").AssertOK()
 		timeline.AssertJSONPath("data.#(body==\"Here it is.\").attachments.0.filename", "invoice.pdf")

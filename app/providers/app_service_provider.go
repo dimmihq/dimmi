@@ -380,6 +380,10 @@ func registerJobs(a *app.App) error {
 			DB: a.DB, Mail: a.Mail, Limiter: a.Limiter, Links: a.Links, SecurityLog: a.SecurityLog,
 		}),
 		queue.Register(a.Queue, &jobs.RecordFailedReset{DB: a.DB}),
+		queue.Register(a.Queue, &jobs.ScanAttachment{
+			DB: a.DB, Clock: a.Clock, Events: a.Events, Scanner: a.Scanner, Storage: a.Storage,
+		}),
+		queue.Register(a.Queue, &jobs.SweepAttachmentScans{DB: a.DB, Queue: a.Queue, Clock: a.Clock}),
 		queue.Register(a.Queue, &jobs.FetchUserAvatar{DB: a.DB, Clock: a.Clock, HTTP: a.HTTP, Disk: disk}),
 		queue.Register(a.Queue, &jobs.NotifyExpiringTokens{DB: a.DB, Clock: a.Clock, Mail: a.Mail, Links: a.Links}),
 		queue.Register(a.Queue, &jobs.RefreshSSOMetadata{

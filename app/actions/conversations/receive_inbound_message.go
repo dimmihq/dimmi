@@ -39,6 +39,7 @@ import (
 	"github.com/dimmihq/dimmi/framework/filesystem"
 	"github.com/dimmihq/dimmi/framework/hashing"
 	"github.com/dimmihq/dimmi/framework/ids"
+	"github.com/dimmihq/dimmi/framework/queue"
 	"github.com/dimmihq/dimmi/framework/tenancy"
 
 	"github.com/dimmihq/dimmi/app/contracts"
@@ -80,6 +81,7 @@ type ReceiveInboundMessage struct {
 	Disk         filesystem.Filesystem
 	DiskName     string
 	ReopenWindow time.Duration
+	Queue        *queue.Queue
 }
 
 /*
@@ -518,20 +520,24 @@ func readAll(ctx context.Context, file contracts.InboundAttachment) ([]byte, err
 }
 
 /*
-attach records the stored attachments on the message. No scanner looks
-at files yet, so each is recorded as not scanned, as uploads are, and
-teammates can open it.
+attach records the stored attachments on the message and queues the
+malware scan of each. A file is pending until its scan judges it.
 */
 func (run *ingestRun) attach(ctx context.Context, message models.Message) error {
 	for _, f := range run.files {
-		_, err := run.q.CreateEmailAttachment(ctx, models.CreateEmailAttachmentParams{
+		row, err := run.q.CreateEmailAttachment(ctx, models.CreateEmailAttachmentParams{
 			WorkspaceID: run.ws, MessageID: &message.ID, UploadedByID: message.AuthorID, Disk: run.r.DiskName,
 			Path: f.path, Filename: f.file.Filename, ContentType: f.file.ContentType, SizeBytes: f.size,
-			Sha256: &f.sum, Inline: f.file.Inline, ContentID: optional(f.file.ContentID), ScanStatus: "skipped",
+			Sha256: &f.sum, Inline: f.file.Inline, ContentID: optional(f.file.ContentID), ScanStatus: "pending",
 			Now: run.r.Clock.Now(),
 		})
 		if err != nil {
 			return fmt.Errorf("record attachment: %w", err)
+		}
+
+		err = run.r.Queue.PushTx(ctx, run.tx, jobs.ScanAttachmentArgs{WorkspaceID: run.ws, AttachmentID: row.ID})
+		if err != nil {
+			return fmt.Errorf("queue attachment scan: %w", err)
 		}
 	}
 

@@ -139,12 +139,12 @@ func bootWorkbench(a *app.App) error {
 	acts.UploadFile = &attachments.UploadFile{
 		Create:   &attachments.CreatePendingUpload{DB: a.DB, Clock: a.Clock, Disk: disk, DiskName: diskName},
 		Put:      &attachments.PutUploadContent{DB: a.DB, Disk: disk},
-		Complete: &attachments.CompleteUpload{DB: a.DB, Clock: a.Clock, Disk: disk},
+		Complete: &attachments.CompleteUpload{DB: a.DB, Clock: a.Clock, Disk: disk, Queue: a.Queue},
 	}
 	acts.CreateTestConversations = &conversations.CreateTestConversations{
 		DB: a.DB, Clock: a.Clock, Create: acts.CreateConversation,
 		Receiver: &conversations.ReceiveInboundMessage{
-			DB: a.DB, Events: a.Events, Clock: a.Clock, Disk: disk, DiskName: diskName,
+			DB: a.DB, Events: a.Events, Clock: a.Clock, Disk: disk, DiskName: diskName, Queue: a.Queue,
 			ReopenWindow: a.Config.Channels.Email.Inbound.ReopenWindow,
 		},
 	}

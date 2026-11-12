@@ -18,6 +18,7 @@ import (
 	fhttp "github.com/dimmihq/dimmi/framework/http"
 	"github.com/dimmihq/dimmi/framework/httpclient"
 	"github.com/dimmihq/dimmi/framework/ids"
+	"github.com/dimmihq/dimmi/framework/malware"
 	"github.com/dimmihq/dimmi/framework/testkit"
 
 	"github.com/dimmihq/dimmi/tests"
@@ -111,7 +112,25 @@ func TestWidgetAttachments(t *testing.T) {
 		}).AssertCreated()
 		assert.Equal(t, id, sent.String("meta.message.attachments.0.id"))
 
+		tc.Table("attachments").AssertHas(map[string]any{"filename": "error.png", "scan_status": "pending"})
+		tc.Drain()
 		tc.Table("attachments").AssertHas(map[string]any{"filename": "error.png", "scan_status": "skipped"})
+	})
+
+	t.Run("blocks a file the scanner finds infected and releases a clean one", func(t *testing.T) {
+		t.Parallel()
+		tc := tests.New(t)
+		tc.App.Scanner.Fake()
+		v := startVisitor(t, tc)
+		infected := v.upload(t, "invoice.pdf", "application/pdf", []byte(malware.EICAR()))
+		clean := v.upload(t, "notes.txt", "text/plain", []byte("hello there"))
+
+		v.complete(infected).AssertOK().AssertJSONMissing("data.blocked")
+		v.complete(clean).AssertOK()
+		tc.Drain()
+
+		tc.Table("attachments").AssertHas(map[string]any{"filename": "invoice.pdf", "scan_status": "infected"})
+		tc.Table("attachments").AssertHas(map[string]any{"filename": "notes.txt", "scan_status": "clean"})
 	})
 
 	t.Run("completing twice answers the same upload", func(t *testing.T) {

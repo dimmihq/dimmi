@@ -215,13 +215,15 @@ which enter the inbox through its inbound path on the widget's disk.
 */
 func bootWidgetConversations(a *app.App, disk filesystem.Filesystem, diskName string) {
 	acts := a.Actions.Widget
+	limits := &widget.VisitorLimits{Limiter: a.Limiter}
 
 	acts.Conversations = &widget.ListWidgetConversations{DB: a.DB, Disk: disk}
 	acts.Uploads = &widget.Uploads{
 		Create:   &attachments.CreatePendingUpload{DB: a.DB, Clock: a.Clock, Disk: disk, DiskName: diskName},
 		Put:      &attachments.PutUploadContent{DB: a.DB, Disk: disk},
-		Complete: &attachments.CompleteUpload{DB: a.DB, Clock: a.Clock, Disk: disk},
+		Complete: &attachments.CompleteUpload{DB: a.DB, Clock: a.Clock, Disk: disk, Queue: a.Queue},
 		Disk:     disk,
+		Limits:   limits,
 	}
 	acts.MarkRead = &widget.MarkWidgetConversationRead{DB: a.DB, Events: a.Events, Clock: a.Clock}
 	acts.ConfirmHelp = &widget.ConfirmAiHelp{DB: a.DB, Clock: a.Clock}
@@ -237,9 +239,9 @@ func bootWidgetConversations(a *app.App, disk filesystem.Filesystem, diskName st
 		DB: a.DB, Events: a.Events, Clock: a.Clock, Cache: a.Cache, Throttle: a.Config.Widget.TypingThrottle,
 	}
 	acts.PostMessage = &widget.PostWidgetMessage{
-		DB: a.DB, Clock: a.Clock, Team: acts.Availability, Surfaces: acts.Surfaces,
+		DB: a.DB, Clock: a.Clock, Team: acts.Availability, Surfaces: acts.Surfaces, Limits: limits,
 		Receiver: &conversations.ReceiveInboundMessage{
-			DB: a.DB, Events: a.Events, Clock: a.Clock, Disk: disk, DiskName: diskName,
+			DB: a.DB, Events: a.Events, Clock: a.Clock, Disk: disk, DiskName: diskName, Queue: a.Queue,
 			ReopenWindow: a.Config.Channels.Email.Inbound.ReopenWindow,
 		},
 	}

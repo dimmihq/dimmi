@@ -61,4 +61,5 @@ func Console(a *app.App) {
 	a.Schedule.Job(jobs.PruneIdentityStatsArgs{}).DailyAt("03:55")
 	a.Schedule.Job(jobs.SweepKnowledgeEmbeddingsArgs{}).DailyAt("04:10")
 	a.Schedule.Job(jobs.ScheduleKnowledgeSyncsArgs{}).Cron("*/5 * * * *")
+	a.Schedule.Job(jobs.SweepAttachmentScansArgs{}).Cron("*/5 * * * *")
 }

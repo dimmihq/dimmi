@@ -23,5 +23,20 @@ services:
     image: axllent/mailpit:v1.27
     ports: ["11025:1025", "18025:8025"]
 
+  # Malware scanner for local runs that scan files. Off by default so the
+  # tests and CI never wait for its signatures: start it with
+  # `docker compose --profile scan up -d clamav` and point the app at
+  # 127.0.0.1:13310 (malware.scanners.clamav.address).
+  clamav:
+    profiles: [scan]
+    image: clamav/clamav:1.4
+    platform: linux/amd64
+    ports: ["13310:3310"]
+    environment:
+      CLAMD_CONF_StreamMaxLength: 32M
+      CLAMD_CONF_MaxFileSize: 32M
+    volumes: [clamav:/var/lib/clamav]
+
 volumes:
   postgres:
+  clamav:

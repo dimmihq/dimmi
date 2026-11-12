@@ -7,3 +7,4 @@ resources:
   - cert-manager.yaml
   - barman-cloud.yaml
   - observability.yaml
+  - clamav.yaml

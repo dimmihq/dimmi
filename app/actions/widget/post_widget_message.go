@@ -108,6 +108,7 @@ type PostWidgetMessage struct {
 	Receiver Receiver
 	Team     OnlineChecker
 	Surfaces *Surfaces
+	Limits   *VisitorLimits
 }
 
 /*
@@ -120,6 +121,10 @@ func (a *PostWidgetMessage) Handle(ctx context.Context, in MessageInput) (Posted
 	}
 
 	in.Body = body
+
+	if err := a.Limits.Message(ctx, in.Auth); err != nil {
+		return PostedMessage{}, err
+	}
 
 	var previous *models.FindWidgetConversationRow
 
@@ -488,6 +493,10 @@ mayStart refuses a new conversation the messenger's start rule does not
 allow this visitor, then one the widget wants an email for first.
 */
 func (a *PostWidgetMessage) mayStart(ctx context.Context, auth Authenticated) error {
+	if err := a.Limits.Conversation(ctx, auth); err != nil {
+		return err
+	}
+
 	if a.Surfaces != nil {
 		if err := a.Surfaces.MayStart(ctx, auth.Resolved.Widget, auth.Session); err != nil {
 			return err

@@ -45,6 +45,23 @@ UPDATE attachments SET scan_status = @scan_status, updated_at = @now
 WHERE workspace_id = @workspace_id AND id = @id
 RETURNING *;
 
+-- name: SettleAttachmentScan :execrows
+-- SettleAttachmentScan records the outcome of the scan of a file that
+-- still waits for it, and reports whether it did. A file already judged
+-- keeps its status.
+UPDATE attachments SET scan_status = @scan_status, updated_at = @now
+WHERE workspace_id = @workspace_id AND id = @id AND scan_status = 'pending';
+
+-- name: FindMessageConversation :one
+-- FindMessageConversation returns the conversation the message belongs to.
+SELECT conversation_id FROM messages WHERE workspace_id = @workspace_id AND id = @id;
+
+-- name: ListAttachmentsPendingScan :many
+-- ListAttachmentsPendingScan returns the files of any workspace that have
+-- waited for their scan since the cutoff.
+SELECT a.workspace_id::uuid AS workspace_id, a.id::uuid AS id
+FROM attachments_pending_scan(@cutoff::timestamptz, @row_limit::integer) AS a;
+
 -- name: DeleteUnattachedAttachment :execrows
 -- DeleteUnattachedAttachment removes an upload no message uses yet and
 -- reports whether it did. An attached file stays with its message.

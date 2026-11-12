@@ -1,0 +1,125 @@
+# Malware scanner for every environment's files: one ClamAV pod that the
+# app streams each uploaded or emailed file to over TCP (clamd INSTREAM
+# on port 3310) and that answers clean or infected. freshclam inside the
+# same pod pulls signature updates several times a day, and clamd reloads
+# them without dropping scans (concurrent reload), at the price of a
+# memory peak during the reload: about 1 GiB idle, 1.8 GiB peak.
+#
+# Reach it at clamav.clamav.svc.cluster.local:3310. Only dimmi pods, in
+# any namespace, may connect; everything else is refused by the
+# NetworkPolicy. Signatures live in an emptyDir, so a restarted pod
+# downloads them again before it is ready, which takes a few minutes.
+# The app releases a file as not scanned when the scanner stays down, so
+# a restart never hides customers' files.
+#
+# clamd takes streams up to 32M, a little over the largest email file the
+# app keeps (25 MB); anything bigger is reported unscanned.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: clamav
+  labels:
+    dimmi.com/protected: "true"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: clamav
+  namespace: clamav
+  labels:
+    app.kubernetes.io/name: clamav
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: clamav
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: clamav
+    spec:
+      automountServiceAccountToken: false
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: clamav
+          image: clamav/clamav:1.4
+          env:
+            - name: CLAMD_CONF_StreamMaxLength
+              value: 32M
+            - name: CLAMD_CONF_MaxFileSize
+              value: 32M
+          ports:
+            - name: clamd
+              containerPort: 3310
+          securityContext:
+            allowPrivilegeEscalation: false
+            privileged: false
+          startupProbe:
+            tcpSocket:
+              port: clamd
+            periodSeconds: 10
+            failureThreshold: 90
+          readinessProbe:
+            tcpSocket:
+              port: clamd
+            periodSeconds: 15
+            timeoutSeconds: 5
+          livenessProbe:
+            tcpSocket:
+              port: clamd
+            periodSeconds: 30
+            timeoutSeconds: 5
+            failureThreshold: 4
+          resources:
+            requests:
+              cpu: 50m
+              memory: 1Gi
+            limits:
+              cpu: "1"
+              memory: 2Gi
+          volumeMounts:
+            - name: signatures
+              mountPath: /var/lib/clamav
+      volumes:
+        - name: signatures
+          emptyDir:
+            sizeLimit: 2Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: clamav
+  namespace: clamav
+  labels:
+    app.kubernetes.io/name: clamav
+spec:
+  selector:
+    app.kubernetes.io/name: clamav
+  ports:
+    - name: clamd
+      port: 3310
+      targetPort: clamd
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: clamav-from-dimmi
+  namespace: clamav
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: clamav
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - namespaceSelector: {}
+          podSelector:
+            matchLabels:
+              app.kubernetes.io/name: dimmi
+      ports:
+        - protocol: TCP
+          port: 3310

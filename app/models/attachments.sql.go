@@ -160,6 +160,23 @@ func (q *Queries) FindAttachment(ctx context.Context, arg FindAttachmentParams) 
 	return i, err
 }
 
+const findMessageConversation = `-- name: FindMessageConversation :one
+SELECT conversation_id FROM messages WHERE workspace_id = $1 AND id = $2
+`
+
+type FindMessageConversationParams struct {
+	WorkspaceID ids.UUID `json:"workspace_id"`
+	ID          ids.UUID `json:"id"`
+}
+
+// FindMessageConversation returns the conversation the message belongs to.
+func (q *Queries) FindMessageConversation(ctx context.Context, arg FindMessageConversationParams) (ids.UUID, error) {
+	row := q.db.QueryRow(ctx, findMessageConversation, arg.WorkspaceID, arg.ID)
+	var conversation_id ids.UUID
+	err := row.Scan(&conversation_id)
+	return conversation_id, err
+}
+
 const linkAttachments = `-- name: LinkAttachments :execrows
 UPDATE attachments SET message_id = $1, updated_at = $2
 WHERE workspace_id = $3 AND id = ANY ($4::uuid[]) AND message_id IS NULL
@@ -232,6 +249,43 @@ func (q *Queries) ListAttachmentsByID(ctx context.Context, arg ListAttachmentsBy
 			&i.UpdatedAt,
 			&i.UploadedAt,
 		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listAttachmentsPendingScan = `-- name: ListAttachmentsPendingScan :many
+SELECT a.workspace_id::uuid AS workspace_id, a.id::uuid AS id
+FROM attachments_pending_scan($1::timestamptz, $2::integer) AS a
+`
+
+type ListAttachmentsPendingScanParams struct {
+	Cutoff   time.Time `json:"cutoff"`
+	RowLimit int32     `json:"row_limit"`
+}
+
+type ListAttachmentsPendingScanRow struct {
+	WorkspaceID ids.UUID `json:"workspace_id"`
+	ID          ids.UUID `json:"id"`
+}
+
+// ListAttachmentsPendingScan returns the files of any workspace that have
+// waited for their scan since the cutoff.
+func (q *Queries) ListAttachmentsPendingScan(ctx context.Context, arg ListAttachmentsPendingScanParams) ([]ListAttachmentsPendingScanRow, error) {
+	rows, err := q.db.Query(ctx, listAttachmentsPendingScan, arg.Cutoff, arg.RowLimit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListAttachmentsPendingScanRow
+	for rows.Next() {
+		var i ListAttachmentsPendingScanRow
+		if err := rows.Scan(&i.WorkspaceID, &i.ID); err != nil {
 			return nil, err
 		}
 		items = append(items, i)
@@ -458,4 +512,32 @@ func (q *Queries) SetAttachmentScanStatus(ctx context.Context, arg SetAttachment
 		&i.UploadedAt,
 	)
 	return i, err
+}
+
+const settleAttachmentScan = `-- name: SettleAttachmentScan :execrows
+UPDATE attachments SET scan_status = $1, updated_at = $2
+WHERE workspace_id = $3 AND id = $4 AND scan_status = 'pending'
+`
+
+type SettleAttachmentScanParams struct {
+	ScanStatus  string    `json:"scan_status"`
+	Now         time.Time `json:"now"`
+	WorkspaceID ids.UUID  `json:"workspace_id"`
+	ID          ids.UUID  `json:"id"`
+}
+
+// SettleAttachmentScan records the outcome of the scan of a file that
+// still waits for it, and reports whether it did. A file already judged
+// keeps its status.
+func (q *Queries) SettleAttachmentScan(ctx context.Context, arg SettleAttachmentScanParams) (int64, error) {
+	result, err := q.db.Exec(ctx, settleAttachmentScan,
+		arg.ScanStatus,
+		arg.Now,
+		arg.WorkspaceID,
+		arg.ID,
+	)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
 }

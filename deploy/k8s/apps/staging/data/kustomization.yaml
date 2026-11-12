@@ -105,3 +105,12 @@ patches:
       - op: add
         path: /data/DIMMI_FILESYSTEMS__DISKS__SES_INBOUND__REGION
         value: us-east-2
+      - op: add
+        path: /data/DIMMI_MALWARE__DEFAULT
+        value: clamav
+      - op: add
+        path: /data/DIMMI_MALWARE__SCANNERS__CLAMAV__DRIVER
+        value: clamav
+      - op: add
+        path: /data/DIMMI_MALWARE__SCANNERS__CLAMAV__ADDRESS
+        value: clamav.clamav.svc.cluster.local:3310
