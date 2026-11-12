@@ -10,6 +10,9 @@
 | binary runs it; tests boot the same options with their own
 | environment, so a test application is wired exactly like production.
 |
+| Spans can go to an OpenTelemetry collector over OTLP when
+| telemetry.tracing is otlp; no other tracing backend is linked in.
+|
 | The product carries its own copy of the time zone database, so a host
 | or container image without zone files accepts the same time zones for
 | workspaces and members as any other.
@@ -25,6 +28,8 @@ import (
 	_ "time/tzdata"
 
 	"github.com/dimmihq/dimmi/framework/foundation"
+	"github.com/dimmihq/dimmi/framework/telemetry"
+	"github.com/dimmihq/dimmi/framework/telemetry/otlp"
 
 	"github.com/dimmihq/dimmi/app"
 	commands "github.com/dimmihq/dimmi/app/console/commands"
@@ -79,6 +84,7 @@ func Application() (*app.App, foundation.Options) {
 		Module:      Module,
 		GateExcept:  gateExcept(),
 		GatePage:    true,
+		Telemetry:   []telemetry.Option{otlp.Tracing()},
 	}
 }
 

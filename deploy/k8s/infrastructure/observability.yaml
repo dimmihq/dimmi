@@ -1,0 +1,252 @@
+# Traces, metrics and logs from every environment, kept on this cluster.
+# OpenObserve stores all three and serves the UI; one OpenTelemetry
+# Collector per node feeds it:
+#
+#   app spans     -> OTLP/HTTP at collector.observability:4318
+#   app metrics   -> scraped from each dimmi pod's admin port, /metrics
+#   pod logs      -> read from /var/log/pods, JSON lines parsed
+#   node and pod  -> kubelet stats and cluster state (restarts, phases)
+#
+# Every signal carries k8s.namespace.name and deployment.environment.name
+# (dimmi-staging -> staging). Data older than 30 days is dropped; logs and
+# traces are cut to 14 days per stream by scripts/observability.sh, which
+# also makes the root login Secret before this is applied. Both pods are
+# sized small (about 250Mi together at idle, 544Mi at the limits).
+#
+# The UI is not public. To open it:
+#
+#   kubectl -n observability port-forward svc/openobserve 5080:5080
+#   open http://localhost:5080
+#
+# and sign in with the email and password in Secret openobserve-root.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: observability
+  labels:
+    dimmi.com/protected: "true"
+---
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: HelmRepository
+metadata:
+  name: openobserve
+  namespace: observability
+spec:
+  interval: 24h
+  url: https://charts.openobserve.ai
+---
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: HelmRepository
+metadata:
+  name: open-telemetry
+  namespace: observability
+spec:
+  interval: 24h
+  url: https://open-telemetry.github.io/opentelemetry-helm-charts
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: openobserve
+  namespace: observability
+spec:
+  interval: 1h
+  chart:
+    spec:
+      chart: openobserve-standalone
+      version: 1.1.5
+      sourceRef:
+        kind: HelmRepository
+        name: openobserve
+  values:
+    fullnameOverride: openobserve
+    image:
+      oss:
+        repository: o2cr.ai/openobserve/openobserve
+        tag: v1.1.2
+    auth:
+      existingRootUserSecret:
+        name: openobserve-root
+        emailKey: email
+        passwordKey: password
+    persistence:
+      enabled: true
+      storageClass: data-retain
+      size: 200Gi
+    probes:
+      enabled: true
+    config:
+      ZO_COMPACT_DATA_RETENTION_DAYS: "30"
+      # Small in-memory tables and files keep the pod in its limit; data
+      # goes to disk sooner.
+      ZO_MEM_TABLE_MAX_SIZE: "64"
+      ZO_MAX_FILE_SIZE_IN_MEMORY: "64"
+      ZO_MEMORY_CACHE_ENABLED: "false"
+      # No phoning home: no usage heartbeat, no GeoIP downloads.
+      ZO_TELEMETRY: "false"
+      ZO_MMDB_DISABLE_DOWNLOAD: "true"
+      ZO_TRACING_HEADER_VALUE: ""
+      ZO_WEB_URL: http://localhost:5080
+      # Alerts may post to OpenObserve itself (see scripts/observability.sh).
+      ZO_SSRF_ALLOWED_HOSTS: openobserve.observability.svc.cluster.local
+    resources:
+      requests:
+        cpu: 50m
+        memory: 192Mi
+      limits:
+        memory: 384Mi
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: collector
+  namespace: observability
+spec:
+  interval: 1h
+  dependsOn:
+    - name: openobserve
+  chart:
+    spec:
+      chart: opentelemetry-collector
+      version: 0.178.1
+      sourceRef:
+        kind: HelmRepository
+        name: open-telemetry
+  values:
+    mode: daemonset
+    fullnameOverride: collector
+    image:
+      repository: otel/opentelemetry-collector-k8s
+      tag: 0.163.2
+    presets:
+      logsCollection:
+        enabled: true
+        storeCheckpoints: true
+      kubernetesAttributes:
+        enabled: true
+      kubeletMetrics:
+        enabled: true
+      clusterMetrics:
+        enabled: true
+    # Only OTLP/HTTP, and never on a host port: the node is on the internet.
+    ports:
+      otlp:
+        enabled: false
+      otlp-http:
+        enabled: true
+        hostPort: 0
+      jaeger-compact:
+        enabled: false
+      jaeger-thrift:
+        enabled: false
+      jaeger-grpc:
+        enabled: false
+      zipkin:
+        enabled: false
+    service:
+      enabled: true
+    extraEnvs:
+      - name: OPENOBSERVE_AUTH
+        valueFrom:
+          secretKeyRef:
+            name: openobserve-root
+            key: authorization
+    resources:
+      requests:
+        cpu: 25m
+        memory: 64Mi
+      limits:
+        memory: 160Mi
+    config:
+      receivers:
+        jaeger: null
+        zipkin: null
+        otlp:
+          protocols:
+            grpc: null
+            http:
+              endpoint: ${env:MY_POD_IP}:4318
+        kubeletstats:
+          insecure_skip_verify: true
+          collection_interval: 60s
+        k8s_cluster:
+          collection_interval: 60s
+        # Each dimmi pod on this node serves Prometheus metrics on its
+        # admin port. k8sattributes names the pod and namespace by its IP.
+        prometheus:
+          config:
+            scrape_configs:
+              - job_name: dimmi
+                scrape_interval: 30s
+                metrics_path: /metrics
+                kubernetes_sd_configs:
+                  - role: pod
+                    selectors:
+                      - role: pod
+                        field: spec.nodeName=${env:K8S_NODE_NAME}
+                relabel_configs:
+                  - source_labels: [__meta_kubernetes_namespace]
+                    regex: dimmi-.+
+                    action: keep
+                  - source_labels: [__meta_kubernetes_pod_label_app_kubernetes_io_name]
+                    regex: dimmi
+                    action: keep
+                  - source_labels: [__meta_kubernetes_pod_container_port_name]
+                    regex: admin
+                    action: keep
+                  - source_labels: [__meta_kubernetes_pod_label_app_kubernetes_io_component]
+                    target_label: component
+      processors:
+        # OpenObserve logs every ingest request; reading those back would
+        # feed itself in a loop.
+        filter/self:
+          error_mode: ignore
+          logs:
+            log_record:
+              - resource.attributes["k8s.namespace.name"] == "observability" and IsMatch(body, "access_log")
+        # dimmi-<env> namespaces name the environment unless the app said so.
+        transform/environment:
+          error_mode: ignore
+          trace_statements:
+            - context: resource
+              statements: &environment
+                - set(attributes["deployment.environment.name"], attributes["k8s.namespace.name"]) where attributes["deployment.environment.name"] == nil and IsMatch(attributes["k8s.namespace.name"], "^dimmi-")
+                - replace_pattern(attributes["deployment.environment.name"], "^dimmi-", "")
+          metric_statements:
+            - context: resource
+              statements: *environment
+          log_statements:
+            - context: resource
+              statements: *environment
+        # dimmi logs JSON lines: lift the fields into attributes, keep msg
+        # as the body and level as the severity.
+        transform/json:
+          error_mode: silent
+          log_statements:
+            - context: log
+              statements:
+                - merge_maps(attributes, ParseJSON(body), "upsert") where IsString(body) and IsMatch(body, "^[{]")
+                - set(body, attributes["msg"]) where attributes["msg"] != nil
+                - delete_key(attributes, "msg")
+                - delete_key(attributes, "time")
+                - set(severity_text, attributes["level"]) where attributes["level"] != nil
+      exporters:
+        otlphttp/openobserve:
+          endpoint: http://openobserve.observability.svc.cluster.local:5080/api/default
+          headers:
+            Authorization: ${env:OPENOBSERVE_AUTH}
+          compression: gzip
+      service:
+        pipelines:
+          traces:
+            receivers: [otlp]
+            processors: [memory_limiter, transform/environment, batch]
+            exporters: [otlphttp/openobserve]
+          metrics:
+            receivers: [otlp, prometheus]
+            processors: [memory_limiter, transform/environment, batch]
+            exporters: [otlphttp/openobserve]
+          logs:
+            receivers: []
+            processors: [memory_limiter, filter/self, transform/json, transform/environment, batch]
+            exporters: [otlphttp/openobserve]

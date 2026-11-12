@@ -1,5 +1,6 @@
 # Staging is production in miniature: the same services, a gate in front,
-# mail through the staging SES stack in us-east-2. Values that name AWS
+# mail through the staging SES stack in us-east-2, telemetry to the
+# cluster's collector (infrastructure/observability.yaml). Values that name AWS
 # resources or hold keys live in dimmi-secrets, never here.
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
@@ -17,6 +18,15 @@ patches:
       - op: add
         path: /data/DIMMI_TELEMETRY__ENVIRONMENT
         value: staging
+      - op: add
+        path: /data/DIMMI_TELEMETRY__TRACING
+        value: otlp
+      - op: add
+        path: /data/DIMMI_TELEMETRY__OTLP_ENDPOINT
+        value: http://collector.observability.svc.cluster.local:4318/v1/traces
+      - op: add
+        path: /data/DIMMI_TELEMETRY__METRICS
+        value: prometheus
       - op: add
         path: /data/DIMMI_HTTP__TRUSTED_PROXIES
         value: 10.42.0.0/16
