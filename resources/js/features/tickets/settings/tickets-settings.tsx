@@ -8,7 +8,8 @@ import { SettingsPage } from "@/features/settings/layout";
 import { SaveBar } from "@/features/settings/save-bar";
 import { useAccount } from "@/features/settings/use-account";
 
-import { StatesBoard, useNotifyDraft } from "./states-board";
+import { useNotifyDraft } from "./notify-draft";
+import { StatesBoard } from "./states-board";
 import { TypesSection } from "./types-section";
 
 export function TicketsSettings() {

@@ -14,15 +14,12 @@ import { useQuery } from "@tanstack/react-query";
 
 import { Select, SelectItem } from "@/components/base/select/select";
 
-import { audienceChoice, audienceFor, custom, everyone } from "@/features/automation/audience-choice";
+import { custom, everyone } from "@/features/automation/audience-choice";
 import { audiencesQuery } from "@/lib/api/audiences";
-import { ApiError } from "@/lib/api/client";
-import type { MessengerAudiences } from "@/lib/api/widget-settings";
 
 import { Row, Section } from "../layout";
+import { type AudienceChoices, type Slot, savedChoice } from "./audience-choices";
 import type { TabProps } from "./parts";
-
-export type Slot = "launcher" | "start" | "help" | "changelog";
 
 const slots: { slot: Slot; label: string; description: string }[] = [
   {
@@ -38,50 +35,6 @@ const slots: { slot: Slot; label: string; description: string }[] = [
   { slot: "help", label: "Help tab", description: "Shown only to these people." },
   { slot: "changelog", label: "What's new tab", description: "Shown only to these people." },
 ];
-
-function ruleOf(rules: MessengerAudiences, slot: Slot) {
-  return (slot === "launcher" || slot === "start" ? rules[slot] : rules.tabs?.[slot]) ?? undefined;
-}
-
-/*
- * AudienceChoices are the choices picked but not saved yet, by slot.
- */
-export type AudienceChoices = Partial<Record<Slot, string>>;
-
-/*
- * savedChoice is the choice a slot holds as saved.
- */
-export function savedChoice(rules: MessengerAudiences | undefined, slot: Slot): string {
-  return audienceChoice(ruleOf(rules ?? {}, slot));
-}
-
-/*
- * audienceChange is what to send for the choices picked: each slot's
- * rule, null for everyone.
- */
-export function audienceChange(choices: AudienceChoices): MessengerAudiences {
-  const out: MessengerAudiences = {};
-  for (const [slot, choice] of Object.entries(choices) as [Slot, string][]) {
-    const rule = audienceFor(choice) ?? null;
-    if (slot === "launcher" || slot === "start") {
-      out[slot] = rule;
-    } else {
-      out.tabs = { ...out.tabs, [slot]: rule };
-    }
-  }
-
-  return out;
-}
-
-/*
- * audienceProblem is the sentence for refused rules: the first one the
- * server names, else its message.
- */
-export function audienceProblem(error: unknown): string {
-  const list = error instanceof ApiError ? (error.details.errors as { message: string }[] | undefined) : undefined;
-
-  return list?.[0]?.message ?? (error instanceof Error ? error.message : "Not saved.");
-}
 
 export function AudiencesSection({
   workspace,

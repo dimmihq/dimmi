@@ -11,7 +11,8 @@ import { Section } from "@/features/settings/layout";
 import type { EmailAddress } from "@/lib/api/email";
 import { teamSignaturesQuery } from "@/lib/api/email-signatures";
 
-import { SignatureCard, type SignatureToggles } from "./signature-card";
+import { SignatureCard } from "./signature-card";
+import type { SignatureToggles } from "./signature-toggles";
 
 export function TeamSignature({
   workspace,

@@ -38,7 +38,8 @@ import { ConvertModal } from "./convert-modal";
 import { DocumentsSection } from "./documents-section";
 import { ago, broken, hasTree, inTime, scheduleLabels, sourceState } from "./model";
 import { RunsSection } from "./runs-section";
-import { SettingsSections, useSourceDraft } from "./settings-sections";
+import { SettingsSections } from "./settings-sections";
+import { useSourceDraft } from "./source-draft";
 import { BrokenBanner, StateChip } from "./source-list";
 
 export function SourcePage({ source: id }: { source: string }) {

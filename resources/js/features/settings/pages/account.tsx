@@ -8,13 +8,16 @@ import { useBlocker } from "@tanstack/react-router";
 
 import { applyTheme, type ThemeMode, useThemeMode } from "@/components/application/theme/theme-toggle";
 import { toast } from "@/components/base/toast/toast";
-import { PersonalSignature, usePersonalSignatureDraft } from "@/features/email/signatures/personal-signature";
+import { PersonalSignature } from "@/features/email/signatures/personal-signature";
+import { usePersonalSignatureDraft } from "@/features/email/signatures/personal-signature-draft";
 
 import { Choice } from "../controls";
 import { Row, Section, SettingsPage } from "../layout";
 import { PasswordSection } from "../password-dialog";
-import { LanguageRow, useLanguageDraft } from "../preferences/language-row";
-import { TimeZoneRows, useTimeZoneDraft } from "../preferences/time-zone-row";
+import { useLanguageDraft } from "../preferences/language-draft";
+import { LanguageRow } from "../preferences/language-row";
+import { useTimeZoneDraft } from "../preferences/time-zone-draft";
+import { TimeZoneRows } from "../preferences/time-zone-row";
 import { AvatarRow } from "../profile/avatar-row";
 import { DeleteAccount } from "../profile/delete-account";
 import { EmailRow } from "../profile/email-row";

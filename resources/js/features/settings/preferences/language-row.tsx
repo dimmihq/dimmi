@@ -8,19 +8,16 @@
  * changes language where it stands, without reloading. The workspace's
  * waits the same way in the workspace page's draft.
  */
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 
 import { Select, SelectItem } from "@/components/base/select/select";
-import { toast } from "@/components/base/toast/toast";
-import { updateProfile } from "@/lib/api/account";
 import { authConfigQuery, type Locale } from "@/lib/api/auth";
 import { workspaceQuery } from "@/lib/api/workspace";
-import { applyLocale } from "@/lib/i18n/locale-sync";
 
 import { Row } from "../layout";
 import { useAccount } from "../use-account";
+import type { LanguageDraft } from "./language-draft";
 
 /*
  * followWorkspace is the choice that clears the person's own language.
@@ -80,39 +77,6 @@ function useLocales(): Locale[] {
 function nameOf(locales: Locale[], code: string): string {
   return locales.find((locale) => locale.code === code)?.name ?? code;
 }
-
-/*
- * useLanguageDraft holds the person's language picked but not saved yet:
- * a code, null to follow the workspace, or undefined while nothing
- * differs from what is saved. Save sends it, switches the app to it and
- * reads the person again; Discard puts it back.
- */
-export function useLanguageDraft() {
-  const me = useAccount();
-  const queryClient = useQueryClient();
-  const [pending, setPending] = useState<string | null | undefined>(undefined);
-  const save = useMutation({
-    mutationFn: () => updateProfile({ locale: pending ?? null }),
-    onSuccess: async () => {
-      if (pending) {
-        await applyLocale(pending);
-      }
-      await queryClient.invalidateQueries({ queryKey: ["me"] });
-      setPending(undefined);
-      toast.success("Preferences saved");
-    },
-  });
-
-  return {
-    pending,
-    dirty: pending !== undefined,
-    save,
-    pick: (locale: string | null) => setPending(locale === (me.locale ?? null) ? undefined : locale),
-    discard: () => setPending(undefined),
-  };
-}
-
-export type LanguageDraft = ReturnType<typeof useLanguageDraft>;
 
 export function LanguageRow({ draft }: { draft: LanguageDraft }) {
   const { t } = useTranslation("settings");

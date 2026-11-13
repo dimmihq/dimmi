@@ -43,6 +43,7 @@ import { cx } from "@/utils/cx";
 
 import { groupHint, groupLabel } from "../labels";
 import { byGroup, withGroupOrder } from "./form";
+import type { NotifyDraft } from "./notify-draft";
 
 type Open =
   | { kind: "edit"; group: StateGroup; state: TicketState | null }
@@ -83,35 +84,6 @@ function useStates(workspace: string) {
 
   return { states, isPending, refresh, reorder };
 }
-
-/*
- * useNotifyDraft holds Notify switches flipped but not saved yet. Save
- * sends each, then reads the states again; Discard puts them back.
- */
-export function useNotifyDraft(workspace: string) {
-  const client = useQueryClient();
-  const [pending, setPending] = useState<Record<string, boolean>>({});
-  const save = useMutation({
-    mutationFn: () =>
-      Promise.all(Object.entries(pending).map(([id, on]) => updateTicketState(workspace, id, { notify_customer: on }))),
-    onSuccess: async () => {
-      await client.invalidateQueries({ queryKey: ticketKeys.all(workspace) });
-      setPending({});
-      toast.success("States saved");
-    },
-  });
-
-  return {
-    pending,
-    dirty: Object.keys(pending).length > 0,
-    save,
-    flip: (state: TicketState, on: boolean) =>
-      setPending(({ [state.id]: _, ...rest }) => (on === state.notify_customer ? rest : { ...rest, [state.id]: on })),
-    discard: () => setPending({}),
-  };
-}
-
-export type NotifyDraft = ReturnType<typeof useNotifyDraft>;
 
 export function StatesBoard({ workspace, draft }: { workspace: string; draft: NotifyDraft }) {
   const { states, isPending, refresh, reorder } = useStates(workspace);

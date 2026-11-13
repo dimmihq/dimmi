@@ -17,14 +17,6 @@ import { type Ticket, ticketQuery } from "@/lib/api/tickets";
 import { TicketThread } from "./ticket-thread";
 import { TrackerPage } from "./tracker-page";
 
-/*
- * isTicketId reports whether an opened item's id names a ticket rather
- * than a conversation.
- */
-export function isTicketId(id: string): boolean {
-  return id.startsWith("tkt_");
-}
-
 export function TicketOpen({ view, id }: { view: string; id: string }) {
   const workspace = useAccount().workspace.id;
   const { data: ticket, isError } = useQuery(ticketQuery(workspace, id));

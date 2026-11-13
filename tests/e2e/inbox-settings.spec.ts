@@ -60,9 +60,11 @@ it.describe("inbox settings", () => {
 
     const names = page.getByRole("switch", { name: "Name in seen receipts" });
     await expect(names).not.toBeChecked();
-    const named = page.waitForResponse((r) => r.request().method() === "PATCH" && r.url().endsWith("/workspace"));
     await names.click({ force: true });
+    const named = page.waitForResponse((r) => r.request().method() === "PATCH" && r.url().endsWith("/workspace"));
+    await page.getByRole("button", { name: "Save", exact: true }).click();
     expect((await named).status()).toBe(200);
+    await expect(page.getByRole("button", { name: "Save", exact: true })).toHaveCount(0);
     await page.reload();
     await expect(names).toBeChecked();
 

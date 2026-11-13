@@ -44,8 +44,9 @@ import { Empty, Item, PageSkeleton, Row, Section, SettingsPage } from "../layout
 import { SaveBar } from "../save-bar";
 import { failureText } from "../teams";
 import { useAccount } from "../use-account";
+import { useChannelsDraft } from "./channels-draft";
 import { AccessSection } from "./inbox-access";
-import { ChannelsSection, useChannelsDraft } from "./inbox-channels";
+import { ChannelsSection } from "./inbox-channels";
 
 function BackToInboxes() {
   const navigate = useNavigate();

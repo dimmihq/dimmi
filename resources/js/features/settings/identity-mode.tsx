@@ -7,77 +7,18 @@
  * anyway, knowing the numbers. The mode picked waits in the page's
  * draft until the save bar sends it.
  */
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 
 import { Chip } from "@/components/base/badges/chip";
 import { AlertDialog } from "@/components/base/modal/modal";
-import { ApiError } from "@/lib/api/client";
-import {
-  type IdentityMode,
-  identitySettingsQuery,
-  identityStatsQuery,
-  updateIdentitySettings,
-} from "@/lib/api/identity";
+import { type IdentityMode, identityStatsQuery } from "@/lib/api/identity";
 
 import { Choice } from "./controls";
 import { modeDetail, modeLabels, statsSummary, topFailures } from "./identity-format";
+import type { IdentityModeDraft } from "./identity-mode-draft";
 import { Row, Section } from "./layout";
-import { useRecentAuth } from "./recent-auth";
 
 const modes = Object.keys(modeLabels) as IdentityMode[];
-
-/*
- * useIdentityModeDraft holds the sign-in mode picked but not saved yet.
- * Save sends it, asking for the password first when the server wants a
- * recent one; closing that prompt keeps the draft. When the server
- * refuses required for too few signed-in starts, the section asks
- * whether to switch anyway. Discard puts the saved mode back.
- */
-export function useIdentityModeDraft(workspace: string, hasPassword: boolean) {
-  const queryClient = useQueryClient();
-  const enabled = workspace !== "";
-  const settings = useQuery({ ...identitySettingsQuery(workspace), enabled });
-  const { run, prompt } = useRecentAuth(hasPassword);
-  const [pending, setPending] = useState<IdentityMode | null>(null);
-  const [refused, setRefused] = useState<ApiError | null>(null);
-  const saved = settings.data?.mode ?? "optional";
-  const save = useMutation({
-    mutationFn: (force: boolean) =>
-      run(() => updateIdentitySettings(workspace, { mode: pending ?? saved, ...(force ? { force } : {}) })),
-    onSuccess: async (done) => {
-      await queryClient.invalidateQueries({ queryKey: identitySettingsQuery(workspace).queryKey });
-      if (done) {
-        setPending(null);
-      }
-    },
-    onError: (error) => {
-      if (error instanceof ApiError && error.code === "rollout_guard") {
-        setRefused(error);
-      }
-    },
-  });
-
-  return {
-    enabled,
-    loading: enabled && settings.isPending,
-    mode: pending ?? saved,
-    dirty: pending !== null,
-    save,
-    refused,
-    prompt,
-    error: save.error && !refused ? save.error.message : null,
-    set: (mode: IdentityMode) => setPending(mode === saved ? null : mode),
-    dismissRefusal: () => setRefused(null),
-    discard: () => {
-      save.reset();
-      setRefused(null);
-      setPending(null);
-    },
-  };
-}
-
-export type IdentityModeDraft = ReturnType<typeof useIdentityModeDraft>;
 
 /*
  * IdentityModeSection shows the mode in the page's draft beside the last

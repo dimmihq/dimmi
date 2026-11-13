@@ -14,12 +14,13 @@ import { Button } from "@/components/base/buttons/button";
 import { Input } from "@/components/base/input/input";
 import { AlertDialog } from "@/components/base/modal/modal";
 import { Select, SelectItem } from "@/components/base/select/select";
-import { emailAddressesQuery, updateEmailAddress } from "@/lib/api/email";
+import { emailAddressesQuery } from "@/lib/api/email";
 import type { Inbox } from "@/lib/api/inboxes";
-import { createWidget, moveWidget, widgetSettingsQuery } from "@/lib/api/widget-settings";
+import { createWidget, widgetSettingsQuery } from "@/lib/api/widget-settings";
 
 import { Glyph, Item, Section } from "../layout";
 import { failureText } from "../teams";
+import type { ChannelsDraft } from "./channels-draft";
 
 function MovePick({
   label,
@@ -96,41 +97,6 @@ export function AddMessenger({ workspace, inbox }: { workspace: string; inbox: I
     </>
   );
 }
-
-/*
- * useChannelsDraft holds the channels sent to another inbox but not
- * saved yet, by messenger id and by email address. send moves each; the
- * inbox page sends them with the rest of its changes, and discard puts
- * them back.
- */
-export function useChannelsDraft(workspace: string) {
-  const [widgets, setWidgets] = useState<Record<string, string>>({});
-  const [addresses, setAddresses] = useState<Record<string, string>>({});
-  const moved = (current: string, to: string, id: string) => (pending: Record<string, string>) => {
-    const { [id]: _, ...rest } = pending;
-
-    return to === current ? rest : { ...rest, [id]: to };
-  };
-
-  return {
-    widgets,
-    addresses,
-    dirty: Object.keys(widgets).length + Object.keys(addresses).length > 0,
-    moveWidget: (id: string, current: string, to: string) => setWidgets(moved(current, to, id)),
-    moveAddress: (address: string, current: string, to: string) => setAddresses(moved(current, to, address)),
-    send: () =>
-      Promise.all([
-        ...Object.entries(widgets).map(([id, to]) => moveWidget(workspace, id, to)),
-        ...Object.entries(addresses).map(([address, to]) => updateEmailAddress(workspace, address, { inbox_id: to })),
-      ]),
-    discard: () => {
-      setWidgets({});
-      setAddresses({});
-    },
-  };
-}
-
-export type ChannelsDraft = ReturnType<typeof useChannelsDraft>;
 
 /*
  * ChannelsSection lists the inbox's channels. A channel picked to go to

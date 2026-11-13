@@ -18,7 +18,8 @@ import { Chip } from "@/components/base/badges/chip";
 import { Button } from "@/components/base/buttons/button";
 import { AlertDialog } from "@/components/base/modal/modal";
 import { toast } from "@/components/base/toast/toast";
-import { IssueSyncSettings, useIssueSyncDraft } from "@/features/tickets/issues/issue-sync-settings";
+import { useIssueSyncDraft } from "@/features/tickets/issues/issue-sync-draft";
+import { IssueSyncSettings } from "@/features/tickets/issues/issue-sync-settings";
 import { isTool } from "@/features/tickets/issues/tools";
 import {
   disconnectIntegration,

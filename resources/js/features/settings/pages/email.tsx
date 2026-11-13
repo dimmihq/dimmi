@@ -16,7 +16,7 @@ import { DomainList } from "@/features/email/domains/domain-list";
 import { AddAddress } from "@/features/email/setup/add-address";
 import { AddressStatus } from "@/features/email/setup/address-status";
 import { Failure } from "@/features/email/setup/failure";
-import { useSignatureToggles } from "@/features/email/signatures/signature-card";
+import { useSignatureToggles } from "@/features/email/signatures/signature-toggles";
 import { TeammateSignatures } from "@/features/email/signatures/teammate-signatures";
 import { emailAddressesQuery } from "@/lib/api/email";
 import { signaturesKey } from "@/lib/api/email-signatures";

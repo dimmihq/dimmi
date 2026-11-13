@@ -296,7 +296,7 @@ function SignedInShell({
         </main>
       </div>
       <ConnectionIndicator className="fixed end-4 bottom-4 z-50" />
-      <Toaster />
+      <Toaster className="[html[data-save-bar]_&]:bottom-24" />
     </RealtimeProvider>
   );
 }

@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import type { TicketEvent } from "@/lib/api/tickets";
 
-import { foldLinks } from "./ticket-thread";
+import { foldLinks } from "./fold-links";
 
 function event(id: string, kind: string): TicketEvent {
   return {

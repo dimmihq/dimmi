@@ -36,7 +36,8 @@ import {
 import { Action, Choice } from "../controls";
 import { IdentityChecker } from "../identity-checker";
 import { type SnippetLanguage, secretDetail, secretState, signingSnippet, snippetLanguages } from "../identity-format";
-import { IdentityModeSection, useIdentityModeDraft } from "../identity-mode";
+import { IdentityModeSection } from "../identity-mode";
+import { useIdentityModeDraft } from "../identity-mode-draft";
 import { Empty, Glyph, Item, RowsSkeleton, Section, SettingsPage } from "../layout";
 import { SaveBar } from "../save-bar";
 import { Snippet } from "../snippet";

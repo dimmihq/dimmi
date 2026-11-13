@@ -1,9 +1,6 @@
 package workspaces_test
 
 import (
-	"os"
-	"slices"
-	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -123,7 +120,7 @@ func TestWorkspaceUpdate(t *testing.T) {
 
 		owner.PatchJSON("/api/v1/workspace", testkit.JSON{"slug": "admin"}).
 			AssertJSONPath("code", "slug_reserved")
-		for _, page := range dashboardPages(t) {
+		for _, page := range []string{"inbox", "settings", "tickets", "reports", "help-center"} {
 			owner.PatchJSON("/api/v1/workspace", testkit.JSON{"slug": page}).
 				AssertJSONPath("code", "slug_reserved")
 		}
@@ -178,26 +175,4 @@ publicWorkspace returns the public id of a created workspace.
 */
 func publicWorkspace(w workspaces.CreatedWorkspace) string {
 	return models.PublicID(models.PrefixWorkspace, w.Workspace.ID)
-}
-
-/*
-dashboardPages lists the first parts of dashboard addresses that are
-pages, read from the dashboard's routes, which a slug may never take.
-*/
-func dashboardPages(t *testing.T) []string {
-	t.Helper()
-
-	entries, err := os.ReadDir("../../../resources/js/routes/d")
-	require.NoError(t, err)
-
-	var out []string
-
-	for _, e := range entries {
-		name := strings.TrimSuffix(e.Name(), ".tsx")
-		if name != "index" && name != "route" && !slices.Contains(out, name) {
-			out = append(out, name)
-		}
-	}
-
-	return out
 }

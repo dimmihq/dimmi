@@ -242,7 +242,8 @@ it.describe("automation", () => {
 
 /*
  * addHoliday picks a day in the holiday date picker, types the date as
- * "DD/MM/YYYY", names it and adds it, yearly unless asked for once.
+ * "DD/MM/YYYY", names it and adds it, yearly unless asked for once. The
+ * holiday joins the draft; the save bar saves it.
  */
 async function addHoliday(page: Page, date: string, name: string, options: { once?: boolean } = {}) {
   await page.getByRole("button", { name: "Select date" }).click();
@@ -262,10 +263,6 @@ async function addHoliday(page: Page, date: string, name: string, options: { onc
     await page.getByText("Repeats every year").click();
   }
   await expect(yearly).toBeChecked({ checked: !options.once });
-  const saved = page.waitForResponse(
-    (r) => r.url().includes("/schedules/") && r.request().method() === "PATCH" && r.ok(),
-  );
   await page.getByRole("button", { name: "Add", exact: true }).click();
-  await saved;
   await expect(page.getByRole("button", { name: "Select date" })).toBeVisible();
 }

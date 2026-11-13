@@ -19,9 +19,10 @@ import { emailAddressesQuery } from "@/lib/api/email";
 import { signaturesKey } from "@/lib/api/email-signatures";
 import { callerQuery } from "@/lib/api/workspace";
 
-import { useSignatureToggles } from "../signatures/signature-card";
+import { useSignatureToggles } from "../signatures/signature-toggles";
 import { TeamSignature } from "../signatures/team-signatures";
-import { AddressCard, useAddressDraft } from "./address-card";
+import { AddressCard } from "./address-card";
+import { useAddressDraft } from "./address-draft";
 
 function BackToEmail() {
   const navigate = useNavigate();

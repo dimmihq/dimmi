@@ -18,7 +18,7 @@ import { Colour } from "@/features/settings/controls";
 import { Row } from "@/features/settings/layout";
 import { type EmailAddress, type ReplyStyle, renderEmailTemplate } from "@/lib/api/email";
 
-import type { AddressDraft } from "./address-card";
+import type { AddressDraft } from "./address-draft";
 import { Failure } from "./failure";
 
 /*

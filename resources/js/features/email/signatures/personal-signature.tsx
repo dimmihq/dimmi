@@ -4,44 +4,15 @@
  * signs their replies while they have none. Turning it on or off waits
  * for the profile page's save bar, which holds this draft.
  */
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 
-import { toast } from "@/components/base/toast/toast";
 import { Section } from "@/features/settings/layout";
 import { useAccount } from "@/features/settings/use-account";
-import { mySignaturesQuery, signaturesKey } from "@/lib/api/email-signatures";
+import { mySignaturesQuery } from "@/lib/api/email-signatures";
 import { callerQuery } from "@/lib/api/workspace";
 
-import { SignatureCard, useSignatureToggles } from "./signature-card";
-
-/*
- * usePersonalSignatureDraft holds the signature switch flipped but not
- * saved yet, for the page's save bar.
- */
-export function usePersonalSignatureDraft(workspace: string) {
-  const queryClient = useQueryClient();
-  const toggles = useSignatureToggles(workspace);
-  const save = useMutation({
-    mutationFn: () => toggles.send(),
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: signaturesKey(workspace) });
-      toggles.clear();
-      toast.success("Signature saved");
-    },
-  });
-
-  return {
-    toggles,
-    save,
-    dirty: toggles.dirty,
-    discard: () => {
-      save.reset();
-      toggles.clear();
-    },
-  };
-}
-
-export type PersonalSignatureDraft = ReturnType<typeof usePersonalSignatureDraft>;
+import type { PersonalSignatureDraft } from "./personal-signature-draft";
+import { SignatureCard } from "./signature-card";
 
 export function PersonalSignature({ draft }: { draft: PersonalSignatureDraft }) {
   const workspace = useAccount().workspace.id;

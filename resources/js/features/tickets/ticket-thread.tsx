@@ -38,6 +38,7 @@ import {
 import { membersQuery } from "@/lib/api/workspace";
 import { cx } from "@/utils/cx";
 
+import { foldLinks } from "./fold-links";
 import { TicketIssues } from "./issues/ticket-issues";
 import { eventText, priorityLabel } from "./labels";
 import { StatePill, TypeIcon } from "./state-pill";
@@ -201,26 +202,6 @@ export function LinkRun({ events }: { events: TicketEvent[] }) {
       <span className="shrink-0">{ago(last.created_at)}</span>
     </li>
   );
-}
-
-/*
- * foldLinks groups each run of back-to-back links in a list, so a long
- * history of conversations joining reads as one line. isLink says which
- * items are links; the rest pass through.
- */
-export function foldLinks<T>(items: T[], linkOf: (item: T) => TicketEvent | null): (T | TicketEvent[])[] {
-  const out: (T | TicketEvent[])[] = [];
-  for (const item of items) {
-    const link = linkOf(item);
-    const previous = out[out.length - 1];
-    if (link && Array.isArray(previous)) {
-      previous.push(link);
-    } else {
-      out.push(link ? [link] : item);
-    }
-  }
-
-  return out;
 }
 
 export function Timeline({ workspace, ticket, view }: { workspace: string; ticket: Ticket; view: string }) {

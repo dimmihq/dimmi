@@ -27,14 +27,8 @@ import { PageSkeleton, SettingsPage } from "../layout";
 import { SaveBar } from "../save-bar";
 import { failureText } from "../teams";
 import { useAccount } from "../use-account";
-import {
-  type AudienceChoices,
-  AudiencesSection,
-  audienceChange,
-  audienceProblem,
-  type Slot,
-  savedChoice,
-} from "./audiences-section";
+import { type AudienceChoices, audienceChange, audienceProblem, type Slot, savedChoice } from "./audience-choices";
+import { AudiencesSection } from "./audiences-section";
 import { changed, withChange, withDraft } from "./draft";
 import { forPreview, linkProblems } from "./links";
 import { LinksSection } from "./links-section";

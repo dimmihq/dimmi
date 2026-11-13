@@ -42,7 +42,8 @@ import { callerQuery, workspaceQuery } from "@/lib/api/workspace";
 
 import { Action, Danger } from "../controls";
 import { Empty, Row, Section, SettingsPage } from "../layout";
-import { LinkSafetySection, useLinkSafetyDraft } from "../link-safety-section";
+import { useLinkSafetyDraft } from "../link-safety-draft";
+import { LinkSafetySection } from "../link-safety-section";
 import { RetentionSection } from "../retention-section";
 import { SaveBar } from "../save-bar";
 import { failureText } from "../teams";

@@ -30,10 +30,11 @@ import {
 import { type Ticket, type TicketEvent, ticketEventsQuery, ticketQuery } from "@/lib/api/tickets";
 import { formatNumber } from "@/lib/i18n/format";
 
+import { foldLinks } from "./fold-links";
 import { DraftCard } from "./issues/close-loop-drafts";
 import { MessageEveryone } from "./message-everyone";
 import { StatePill, TypeIcon } from "./state-pill";
-import { Change, foldLinks, LinkRun, Note, NoteBox, TicketDetails, TicketTitle } from "./ticket-thread";
+import { Change, LinkRun, Note, NoteBox, TicketDetails, TicketTitle } from "./ticket-thread";
 import { CustomerReports } from "./tracker-conversations";
 import { useTicketSave } from "./use-ticket-save";
 

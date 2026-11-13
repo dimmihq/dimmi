@@ -8,6 +8,9 @@
  * scale, fade and blur as it appears (220ms, ease-out), and leaves
  * faster (150ms, ease-in), staying mounted until its exit finishes.
  * Reduced motion shows and hides it without the transition.
+ *
+ * While it shows, it marks the page with data-save-bar so toasts rise
+ * above it instead of covering its buttons.
  */
 import { useEffect, useState } from "react";
 
@@ -48,6 +51,28 @@ function usePresence(visible: boolean) {
   return { mounted, shown };
 }
 
+/*
+ * shownBars counts the bars on screen; the page carries data-save-bar
+ * while any is.
+ */
+let shownBars = 0;
+
+function useMarkPage(mounted: boolean) {
+  useEffect(() => {
+    if (!mounted) {
+      return;
+    }
+    shownBars += 1;
+    document.documentElement.dataset.saveBar = "";
+    return () => {
+      shownBars -= 1;
+      if (shownBars === 0) {
+        delete document.documentElement.dataset.saveBar;
+      }
+    };
+  }, [mounted]);
+}
+
 export function SaveBar({
   dirty,
   saving,
@@ -72,6 +97,7 @@ export function SaveBar({
   hidden?: boolean;
 }) {
   const { mounted, shown } = usePresence(!hidden && (dirty || Boolean(error)));
+  useMarkPage(mounted);
   if (!mounted) {
     return null;
   }

@@ -8,18 +8,18 @@
  */
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import { useState } from "react";
 
 import { Button, buttonStyles } from "@/components/base/buttons/button";
 import { Failure } from "@/features/email/setup/failure";
 import { Toggle } from "@/features/settings/controls";
 import { Row } from "@/features/settings/layout";
-import { deleteSignature, type EmailSignature, signaturesKey, updateSignature } from "@/lib/api/email-signatures";
+import { deleteSignature, type EmailSignature, signaturesKey } from "@/lib/api/email-signatures";
 import { cx } from "@/utils/cx";
 
 import { SignatureFrame } from "./signature-frame";
 import { useSignaturePreview } from "./signature-preview";
 import { anchorOf, type SignatureScope, type SignatureSearch } from "./signature-target";
+import type { SignatureToggles } from "./signature-toggles";
 
 /*
  * lowerFirst writes a label for the middle of a sentence.
@@ -27,30 +27,6 @@ import { anchorOf, type SignatureScope, type SignatureSearch } from "./signature
 function lowerFirst(label: string): string {
   return label.charAt(0).toLowerCase() + label.slice(1);
 }
-
-/*
- * useSignatureToggles holds the signatures turned on or off but not saved
- * yet, by id. send writes each change; clear forgets them all, after a
- * save or on Discard. A removed signature's change is forgotten with it.
- */
-export function useSignatureToggles(workspace: string) {
-  const [pending, setPending] = useState<Record<string, boolean>>({});
-
-  return {
-    dirty: Object.keys(pending).length > 0,
-    enabledOf: (signature: EmailSignature) => pending[signature.id] ?? signature.enabled,
-    set: (signature: EmailSignature, on: boolean) =>
-      setPending(({ [signature.id]: _, ...rest }) =>
-        on === signature.enabled ? rest : { ...rest, [signature.id]: on },
-      ),
-    forget: (id: string) => setPending(({ [id]: _, ...rest }) => rest),
-    send: () =>
-      Promise.all(Object.entries(pending).map(([id, enabled]) => updateSignature(workspace, id, { enabled }))),
-    clear: () => setPending({}),
-  };
-}
-
-export type SignatureToggles = ReturnType<typeof useSignatureToggles>;
 
 export function SignatureCard({
   workspace,
