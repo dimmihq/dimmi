@@ -3,7 +3,8 @@
  * ticket moves through them: submitted, in progress, waiting on the
  * customer, waiting on the team and resolved. Each state shows its
  * internal name, the label its customers see, and whether a move into it
- * tells the customer, a switch that saves at once. A member who may
+ * tells the customer, a switch whose change waits for the page's save
+ * bar. A member who may
  * change settings adds a state to a group, renames one, drags one by its
  * handle within its group (the new order saves on drop and goes back,
  * with a note, when the save fails) and deletes one after picking a
@@ -83,19 +84,43 @@ function useStates(workspace: string) {
   return { states, isPending, refresh, reorder };
 }
 
-export function StatesBoard({ workspace }: { workspace: string }) {
+/*
+ * useNotifyDraft holds Notify switches flipped but not saved yet. Save
+ * sends each, then reads the states again; Discard puts them back.
+ */
+export function useNotifyDraft(workspace: string) {
+  const client = useQueryClient();
+  const [pending, setPending] = useState<Record<string, boolean>>({});
+  const save = useMutation({
+    mutationFn: () =>
+      Promise.all(Object.entries(pending).map(([id, on]) => updateTicketState(workspace, id, { notify_customer: on }))),
+    onSuccess: async () => {
+      await client.invalidateQueries({ queryKey: ticketKeys.all(workspace) });
+      setPending({});
+      toast.success("States saved");
+    },
+  });
+
+  return {
+    pending,
+    dirty: Object.keys(pending).length > 0,
+    save,
+    flip: (state: TicketState, on: boolean) =>
+      setPending(({ [state.id]: _, ...rest }) => (on === state.notify_customer ? rest : { ...rest, [state.id]: on })),
+    discard: () => setPending({}),
+  };
+}
+
+export type NotifyDraft = ReturnType<typeof useNotifyDraft>;
+
+export function StatesBoard({ workspace, draft }: { workspace: string; draft: NotifyDraft }) {
   const { states, isPending, refresh, reorder } = useStates(workspace);
   const canChange = usePermission(workspace, "settings:write");
   const [open, setOpen] = useState<Open>(null);
   const groups = byGroup(states);
-  const notify = async (state: TicketState, on: boolean) => {
-    try {
-      await updateTicketState(workspace, state.id, { notify_customer: on });
-      await refresh();
-    } catch (error) {
-      toast.error((error as Error).message);
-    }
-  };
+  const shown = states.map((s) =>
+    s.id in draft.pending ? { ...s, notify_customer: draft.pending[s.id] as boolean } : s,
+  );
 
   return (
     <>
@@ -112,10 +137,15 @@ export function StatesBoard({ workspace }: { workspace: string }) {
         >
           <GroupList
             group={group}
-            states={groups[group]}
+            states={byGroup(shown)[group]}
             canChange={canChange}
             onReorder={(order) => reorder.mutate(withGroupOrder(states, group, order))}
-            onNotify={notify}
+            onNotify={(state, on) => {
+              const saved = states.find((s) => s.id === state.id);
+              if (saved) {
+                draft.flip(saved, on);
+              }
+            }}
             onPick={(kind, state) => setOpen(kind === "edit" ? { kind, group, state } : { kind, state })}
           />
         </Section>

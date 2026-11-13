@@ -17,6 +17,7 @@ import { toast } from "@/components/base/toast/toast";
 import { Danger } from "@/features/settings/controls";
 import { usePermission } from "@/features/settings/inboxes";
 import { PageSkeleton, Row, Section, SettingsPage } from "@/features/settings/layout";
+import { SaveBar } from "@/features/settings/save-bar";
 import { useAccount } from "@/features/settings/use-account";
 import { EmptyState, Panel } from "@/features/shell/page";
 import { schedulesQuery } from "@/lib/api/schedules";
@@ -90,39 +91,22 @@ function usePolicyDraft(workspace: string, policy: SLAPolicy | null, start: Poli
 
 type Edit = ReturnType<typeof usePolicyDraft>;
 
-function SaveBar({ edit, locked }: { edit: Edit; locked: boolean }) {
+function PolicySaveBar({ edit, locked }: { edit: Edit; locked: boolean }) {
   const { t } = useTranslation("sla");
-  if (locked || !(edit.creating || edit.dirty || edit.save.error)) {
-    return null;
-  }
-  const message = edit.save.error?.message ?? (edit.problem ? t(`editor.${edit.problem}`) : t("editor.unsaved"));
 
   return (
-    <div className="flex items-center gap-3 rounded-2xl border border-border-button-default bg-background-primary-default py-2 ps-4 pe-2 shadow-dropdown">
-      <span
-        role={edit.save.error ? "alert" : "status"}
-        className={
-          edit.save.error
-            ? "min-w-0 flex-1 truncate text-body-2-regular text-text-error-primary"
-            : "min-w-0 flex-1 truncate text-body-2-regular text-text-secondary"
-        }
-      >
-        {message}
-      </span>
-      {edit.creating ? null : (
-        <Button size="small" variant="secondary" disabled={edit.save.isPending} onClick={edit.discard}>
-          {t("editor.discard")}
-        </Button>
-      )}
-      <Button
-        size="small"
-        loading={edit.save.isPending}
-        disabled={!(edit.creating || edit.dirty) || edit.problem !== null}
-        onClick={() => edit.save.mutate()}
-      >
-        {edit.creating ? t("editor.create") : t("editor.save")}
-      </Button>
-    </div>
+    <SaveBar
+      hidden={locked}
+      dirty={edit.creating || edit.dirty}
+      saving={edit.save.isPending}
+      error={edit.save.error?.message}
+      message={edit.problem ? t(`editor.${edit.problem}`) : t("editor.unsaved")}
+      saveLabel={edit.creating ? t("editor.create") : t("editor.save")}
+      discardLabel={t("editor.discard")}
+      canSave={(edit.creating || edit.dirty) && edit.problem === null}
+      onSave={() => edit.save.mutate()}
+      onDiscard={edit.creating ? undefined : edit.discard}
+    />
   );
 }
 
@@ -165,7 +149,7 @@ function Editor({ workspace, policy }: { workspace: string; policy: SLAPolicy | 
     <SettingsPage
       title={policy ? policy.name : t("editor.newTitle")}
       description={description}
-      footer={<SaveBar edit={edit} locked={locked} />}
+      footer={<PolicySaveBar edit={edit} locked={locked} />}
     >
       <BackToPolicies />
       <DetailsSection {...props} />

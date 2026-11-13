@@ -17,6 +17,7 @@ import { Button } from "@/components/base/buttons/button";
 import { toast } from "@/components/base/toast/toast";
 import { usePermission } from "@/features/settings/inboxes";
 import { PageSkeleton, SettingsPage } from "@/features/settings/layout";
+import { SaveBar } from "@/features/settings/save-bar";
 import { useAccount } from "@/features/settings/use-account";
 import { EmptyState, Panel } from "@/features/shell/page";
 import { inboxesQuery } from "@/lib/api/inboxes";
@@ -93,33 +94,6 @@ function useTypeDraft(workspace: string, type: TicketType) {
   };
 }
 
-function SaveBar({ edit }: { edit: ReturnType<typeof useTypeDraft> }) {
-  if (!(edit.dirty || edit.save.error)) {
-    return null;
-  }
-
-  return (
-    <div className="flex items-center gap-3 rounded-2xl border border-border-button-default bg-background-primary-default py-2 ps-4 pe-2 shadow-dropdown">
-      <span
-        role={edit.save.error ? "alert" : "status"}
-        className={
-          edit.save.error
-            ? "min-w-0 flex-1 truncate text-body-2-regular text-text-error-primary"
-            : "min-w-0 flex-1 truncate text-body-2-regular text-text-secondary"
-        }
-      >
-        {edit.save.error ? edit.save.error.message : "Unsaved changes"}
-      </span>
-      <Button size="small" variant="secondary" disabled={edit.save.isPending} onClick={edit.discard}>
-        Discard
-      </Button>
-      <Button size="small" loading={edit.save.isPending} disabled={!edit.dirty} onClick={() => edit.save.mutate()}>
-        Save
-      </Button>
-    </div>
-  );
-}
-
 function Editor({ workspace, type }: { workspace: string; type: TicketType }) {
   const edit = useTypeDraft(workspace, type);
   const locked = !usePermission(workspace, "settings:write");
@@ -141,7 +115,15 @@ function Editor({ workspace, type }: { workspace: string; type: TicketType }) {
       <SettingsPage
         title={type.name}
         description={type.archived_at ? "Archived. Old tickets keep this type; new ones can't use it." : undefined}
-        footer={<SaveBar edit={edit} />}
+        footer={
+          <SaveBar
+            dirty={edit.dirty}
+            saving={edit.save.isPending}
+            error={edit.save.error?.message}
+            onSave={() => edit.save.mutate()}
+            onDiscard={edit.discard}
+          />
+        }
       >
         <BackToTickets />
         <DetailsSection {...props} kind={type.kind} />

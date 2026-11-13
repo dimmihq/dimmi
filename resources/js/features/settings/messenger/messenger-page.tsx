@@ -17,6 +17,7 @@ import { updateWidget, type WidgetChange, type WidgetSettings, widgetQuery } fro
 
 import { usePermission } from "../inboxes";
 import { PageSkeleton, SettingsPage } from "../layout";
+import { SaveBar } from "../save-bar";
 import { failureText } from "../teams";
 import { useAccount } from "../use-account";
 import { AudiencesSection } from "./audiences-section";
@@ -84,33 +85,6 @@ function useMessengerDraft(workspace: string, saved: WidgetSettings) {
   };
 }
 
-function SaveBar({ edit }: { edit: ReturnType<typeof useMessengerDraft> }) {
-  if (!(edit.dirty || edit.save.error)) {
-    return null;
-  }
-
-  return (
-    <div className="flex items-center gap-3 rounded-2xl border border-border-button-default bg-background-primary-default py-2 ps-4 pe-2 shadow-dropdown">
-      <span
-        role={edit.save.error ? "alert" : "status"}
-        className={
-          edit.save.error
-            ? "min-w-0 flex-1 truncate text-body-2-regular text-text-error-primary"
-            : "min-w-0 flex-1 truncate text-body-2-regular text-text-secondary"
-        }
-      >
-        {edit.save.error ? failureText(edit.save.error) : "Unsaved changes"}
-      </span>
-      <Button size="small" variant="secondary" disabled={edit.save.isPending} onClick={edit.discard}>
-        Discard
-      </Button>
-      <Button size="small" loading={edit.save.isPending} disabled={!edit.dirty} onClick={() => edit.save.mutate()}>
-        Save
-      </Button>
-    </div>
-  );
-}
-
 function Editor({ workspace, saved }: { workspace: string; saved: WidgetSettings }) {
   const edit = useMessengerDraft(workspace, saved);
   const locked = !usePermission(workspace, "settings:write");
@@ -130,7 +104,15 @@ function Editor({ workspace, saved }: { workspace: string; saved: WidgetSettings
       <SettingsPage
         title={saved.name}
         description={`Conversations land in ${saved.inbox.name}.`}
-        footer={<SaveBar edit={edit} />}
+        footer={
+          <SaveBar
+            dirty={edit.dirty}
+            saving={edit.save.isPending}
+            error={edit.save.error ? failureText(edit.save.error) : null}
+            onSave={() => edit.save.mutate()}
+            onDiscard={edit.discard}
+          />
+        }
       >
         <BackToMessengers />
         <div key={edit.generation} className="contents">
