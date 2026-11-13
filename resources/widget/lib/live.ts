@@ -129,6 +129,12 @@ const fatal: Record<string, string> = {
 };
 
 /*
+ * handScroll is how long after the visitor's own wheel, touch or key a
+ * scroll still counts as theirs.
+ */
+const handScroll = 1200;
+
+/*
  * followBottom keeps a thread at its latest message while the visitor
  * reads there: a picture that finishes loading would otherwise push the
  * newest messages out of view. Once the visitor scrolls up, the thread
@@ -138,7 +144,22 @@ const fatal: Record<string, string> = {
 function followBottom(thread: HTMLElement, at: { pinned: boolean; jump: boolean }) {
   if (!thread.dataset.following) {
     thread.dataset.following = "true";
+    /*
+     * Only the visitor's own scrolling decides whether the thread keeps
+     * following its end. Content that grows under them scrolls the
+     * thread too, and reading that as "they scrolled away" is what left
+     * a new message half below the fold.
+     */
+    let theirs = 0;
+    for (const move of ["wheel", "touchmove", "keydown", "pointerdown"]) {
+      thread.addEventListener(move, () => {
+        theirs = Date.now();
+      });
+    }
     thread.addEventListener("scroll", () => {
+      if (Date.now() - theirs > handScroll) {
+        return;
+      }
       thread.dataset.pinned = String(thread.scrollHeight - thread.scrollTop - thread.clientHeight < 48);
     });
     thread.addEventListener(
@@ -604,9 +625,6 @@ export class Live {
       const res = await this.http.get<{ data: ApiMessage[] }>(`/conversations/${open}/messages`);
       this.store.setMessages(open, res.data);
       this.drawThread();
-      if (!id && res.data.length === 0) {
-        void this.waitForGreeting(open);
-      }
     } catch {
       return;
     }
@@ -614,30 +632,18 @@ export class Live {
   }
 
   /*
-   * waitForGreeting looks again for the first words of a chat that was
-   * opened for a workflow to speak in: the workflow writes them a moment
-   * after the conversation exists, and waiting for the next round of
-   * updates would leave the visitor looking at an empty panel. It gives
-   * up once they have arrived, or after a few seconds.
+   * awayNotice tells a visitor whose message is the latest that the team
+   * is away. A workflow still answering is not the team being away, and
+   * a menu that only takes taps has nothing to wait for, so neither says
+   * it.
    */
-  private async waitForGreeting(conversation: string) {
-    for (const wait of [400, 700, 1200, 2000, 3000]) {
-      await new Promise((done) => this.browser.setTimeout(() => done(undefined), wait));
-      if (this.open !== conversation || (this.store.messages.get(conversation) ?? []).length > 0) {
-        return;
-      }
-      try {
-        const res = await this.http.get<{ data: ApiMessage[] }>(`/conversations/${conversation}/messages`);
-        if (res.data.length > 0) {
-          this.store.setMessages(conversation, res.data);
-          this.drawThread();
-
-          return;
-        }
-      } catch {
-        return;
-      }
+  private awayNotice(last: Message | undefined, waiting: boolean, texts: Texts): string {
+    const away = !waiting && !this.locked && this.availability?.online === false;
+    if (last?.from !== "visitor" || this.config.delay_notice === false || !away) {
+      return "";
     }
+
+    return `<p class="delay">${escapeHtml(texts.delay_notice)}</p>`;
   }
 
   /*
@@ -661,14 +667,40 @@ export class Live {
    * expect says a workflow is about to write in the conversation, so the
    * thread shows the team typing while it does: a greeting on the way,
    * or the next question after an answer was tapped. It remembers how
-   * much the thread held at the time, and expected() ends the wait as
-   * soon as anything lands, or once nothing has.
+   * much the thread held at the time, and goes looking for the words
+   * rather than waiting for the next round of updates.
    */
   private expect(conversation: string) {
     this.expecting.set(conversation, {
       after: (this.store.messages.get(conversation) ?? []).length,
       until: this.browser.now() + expectingFor,
     });
+    void this.chase(conversation);
+  }
+
+  /*
+   * chase looks for the words a workflow owes the conversation, since
+   * the next round of updates can be seconds away and a menu that
+   * answers in its own time reads as a broken one. It stops as soon as
+   * they land, or when the wait is over.
+   */
+  private async chase(conversation: string) {
+    for (const wait of [350, 500, 800, 1200, 2000, 3000, 4000]) {
+      await new Promise((done) => this.browser.setTimeout(() => done(undefined), wait));
+      if (this.open !== conversation || !this.expected(conversation)) {
+        return;
+      }
+      try {
+        const res = await this.http.get<{ data: ApiMessage[] }>(`/conversations/${conversation}/messages`);
+        this.store.setMessages(conversation, res.data);
+        this.drawThread();
+        if (!this.expected(conversation)) {
+          return;
+        }
+      } catch {
+        return;
+      }
+    }
   }
 
   /*
@@ -1159,11 +1191,12 @@ export class Live {
     } else {
       parts.push(this.aiActions(last, t));
     }
-    parts.push(this.delivery(open));
-    if (last?.from === "visitor" && this.config.delay_notice !== false && this.availability?.online === false) {
-      parts.push(`<p class="delay">${escapeHtml(texts.delay_notice)}</p>`);
-    }
-    parts.push(this.ratingCard(), this.emailCapture(open, texts));
+    parts.push(
+      this.delivery(open),
+      this.awayNotice(last, waiting, texts),
+      this.ratingCard(),
+      this.emailCapture(open, texts),
+    );
 
     this.locked = choicesOnly(last) || (waiting && this.locked);
     this.lockComposer(this.locked);
