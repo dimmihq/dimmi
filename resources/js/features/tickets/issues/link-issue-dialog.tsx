@@ -25,8 +25,10 @@ import type { Integration } from "@/lib/api/integrations";
 import {
   type IssueFound,
   type IssueList,
+  type IssueSettings,
   issueOptionsQuery,
   issueSearchQuery,
+  issueSettingsQuery,
   linkTicketIssue,
   type NewIssue,
   refreshTicketKeys,
@@ -252,6 +254,23 @@ function isReady(tool: Integration | undefined, mode: Mode, issue: NewIssue, ref
 }
 
 /*
+ * withDefaults fills the details the person has not picked yet with the
+ * tool's defaults from its settings: the team, project, service and
+ * severity.
+ */
+function withDefaults(issue: NewIssue, settings: IssueSettings): NewIssue {
+  const pick = (current: string | undefined, fallback: string) => (current ? current : fallback || undefined);
+
+  return {
+    ...issue,
+    team_id: pick(issue.team_id, settings.team_id),
+    project_id: issue.team_id ? issue.project_id : pick(issue.project_id, settings.project_id),
+    service_id: pick(issue.service_id, settings.service_id),
+    severity_id: pick(issue.severity_id, settings.severity_id),
+  };
+}
+
+/*
  * Details is the second step: create in the tool, or link existing work.
  */
 function Details({
@@ -326,7 +345,15 @@ export function LinkIssueDialog({
   const [mode, setMode] = useState<Mode>("create");
   const [issue, setIssue] = useState<NewIssue>({ title });
   const [ref, setRef] = useState("");
+  const [seeded, setSeeded] = useState("");
   const tool = tools.find((t) => t.id === toolId);
+  const { data: settings } = useQuery({ ...issueSettingsQuery(workspace, toolId), enabled: toolId !== "" });
+
+  if (settings && settings.installation_id === toolId && seeded !== toolId) {
+    setSeeded(toolId);
+    setIssue((current) => withDefaults(current, settings));
+  }
+
   const look = tool ? toolLook(tool.provider) : undefined;
   const incidents = look?.kind === "incidents";
 
@@ -350,6 +377,12 @@ export function LinkIssueDialog({
     onError: (error) => toast.error(error.message),
   });
 
+  function pickTool(id: string) {
+    setToolId(id);
+    setIssue((current) => ({ title: current.title }));
+    setSeeded("");
+  }
+
   const submit = mode === "link" ? "Link" : incidents ? "Declare" : "Create issue";
 
   return (
@@ -361,7 +394,7 @@ export function LinkIssueDialog({
       <ModalBody className="min-h-[22rem]">
         <StepMotion view={step} forward={step === "details"} className="flex flex-col gap-4">
           {step === "tool" ? (
-            <RadioGroup aria-label="Tool" value={toolId} onChange={setToolId} className="flex flex-col gap-2">
+            <RadioGroup aria-label="Tool" value={toolId} onChange={pickTool} className="flex flex-col gap-2">
               {tools.map((t) => (
                 <RadioCard
                   key={t.id}
