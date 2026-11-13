@@ -100,8 +100,10 @@ func (h *Harness) read(ctx context.Context, conv models.Conversation, res *Conve
 		if res.Layer, err = h.readLayer(ctx, conv.WorkspaceID, runs); err != nil {
 			return err
 		}
-		res.Ledger, err = h.readLedger(ctx, conv.WorkspaceID, runs)
-		return err
+		if res.Ledger, err = h.readLedger(ctx, conv.WorkspaceID, runs); err != nil {
+			return err
+		}
+		return h.readAnswer(ctx, conv, res)
 	})
 }
 
@@ -158,6 +160,23 @@ func countStep(res *ConversationResult, kind, model string, call bool) {
 	case kind == string(enums.AIRunStepKindToolCall):
 		res.ToolCalls++
 	}
+}
+
+/*
+readAnswer reads the agent's last reply and the addresses of the
+passages its runs kept.
+*/
+func (h *Harness) readAnswer(ctx context.Context, conv models.Conversation, res *ConversationResult) error {
+	err := h.App.DB.QueryRow(ctx, `SELECT coalesce((SELECT body FROM messages WHERE workspace_id = $1
+			AND conversation_id = $2 AND author_type = 'agent' AND type = 'message'
+			ORDER BY created_at DESC LIMIT 1), '')`,
+		conv.WorkspaceID, conv.ID).Scan(&res.Reply)
+	if err != nil {
+		return fmt.Errorf("read reply: %w", err)
+	}
+	return h.App.DB.QueryRow(ctx, `SELECT coalesce(array_agg(DISTINCT s ->> 'url') FILTER (WHERE s ->> 'url' <> ''),
+			'{}') FROM ai_runs r, jsonb_array_elements(coalesce(r.retrieval, '[]')) s
+		WHERE r.workspace_id = $1 AND r.conversation_id = $2`, conv.WorkspaceID, conv.ID).Scan(&res.Retrieved)
 }
 
 /*

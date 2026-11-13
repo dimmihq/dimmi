@@ -25,5 +25,7 @@ func demoSeedCommands(a *app.App) []foundation.Command {
 		WorkspaceDemoCommand{App: a},
 		KnowledgeDemoEmbedCommand{App: a},
 		AISimulateCommand{App: a},
+		WorkspaceWixQACommand{App: a},
+		AIQualityCommand{App: a},
 	}
 }

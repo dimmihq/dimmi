@@ -30,6 +30,7 @@ import (
 	"github.com/dimmihq/dimmi/app"
 	"github.com/dimmihq/dimmi/app/actions/knowledge"
 	"github.com/dimmihq/dimmi/app/demo/stowline"
+	"github.com/dimmihq/dimmi/app/demo/wixqa"
 	"github.com/dimmihq/dimmi/app/enums"
 )
 
@@ -60,6 +61,7 @@ Flags asks for the confirmation.
 */
 func (c KnowledgeDemoEmbedCommand) Flags(flags *console.Flags) {
 	flags.Bool("confirm", "bind the model and queue the paid build")
+	flags.String("workspace", "stowline", "which demo workspace: stowline or wixqa")
 }
 
 /*
@@ -68,12 +70,16 @@ Handle reports the job's size and, when confirmed, starts it.
 func (c KnowledgeDemoEmbedCommand) Handle(
 	ctx context.Context, _ *foundation.Application, in *console.Input, out *console.Output,
 ) error {
-	w, found, err := stowline.Find(ctx, c.App)
+	find := stowline.Find
+	if in.String("workspace") == wixqa.Seed {
+		find = wixqa.Find
+	}
+	w, found, err := find(ctx, c.App)
 	if err != nil {
 		return err
 	}
 	if !found {
-		return errors.New("no Stowline workspace; run workspace:demo first")
+		return errors.New("no such demo workspace; run workspace:demo or workspace:wixqa first")
 	}
 	ctx = tenancy.With(ctx, w.ID.String())
 
@@ -95,6 +101,9 @@ func (c KnowledgeDemoEmbedCommand) Handle(
 	}
 
 	owner, err := demoOwner(ctx, c.App)
+	if in.String("workspace") == wixqa.Seed {
+		owner, _, _, err = wixqaPlace(ctx, c.App)
+	}
 	if err != nil {
 		return err
 	}

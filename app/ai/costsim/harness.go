@@ -114,6 +114,8 @@ type ConversationResult struct {
 	Error          string              `json:"error,omitempty"`
 	Layer          *LayerResult        `json:"tool_layer,omitempty"`
 	Ledger         map[string]PartCost `json:"ledger,omitempty"`
+	Reply          string              `json:"reply,omitempty"`
+	Retrieved      []string            `json:"retrieved,omitempty"`
 }
 
 /*
