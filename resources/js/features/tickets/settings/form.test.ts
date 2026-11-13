@@ -2,7 +2,17 @@ import { describe, expect, it } from "vitest";
 
 import type { TicketField, TicketState } from "@/lib/api/tickets";
 
-import { conditionMet, customerFields, fieldKey, typeChanges, withGroupOrder } from "./form";
+import {
+  addable,
+  conditionMet,
+  customerFields,
+  fieldKey,
+  stepOrder,
+  typeChanges,
+  typeSteps,
+  withGroupOrder,
+  withSteps,
+} from "./form";
 
 function field(key: string, extra: Partial<TicketField> = {}): TicketField {
   return {
@@ -104,5 +114,46 @@ describe("withGroupOrder", () => {
   it("reorders one group and keeps the others", () => {
     const states = [state("new", "submitted", 0), state("x", "in_progress", 1), state("y", "in_progress", 2)];
     expect(withGroupOrder(states, "in_progress", ["y", "x"])).toEqual(["new", "y", "x"]);
+  });
+});
+
+describe("type steps", () => {
+  const state = (id: string, group: TicketState["group"], purpose: string | null = null): TicketState => ({
+    object: "ticket_state",
+    id,
+    group,
+    name: id,
+    customer_label: id,
+    notify_customer: true,
+    purpose,
+    position: 0,
+    archived_at: null,
+  });
+  const states = [
+    state("new", "submitted"),
+    state("doing", "in_progress"),
+    state("found", "in_progress", "incident_identified"),
+    state("info", "waiting_customer"),
+    state("done", "resolved"),
+    state("nope", "resolved"),
+  ];
+
+  it("keeps the type's order within each group and the groups in theirs", () => {
+    const steps = typeSteps(["nope", "doing", "done", "new"], states);
+
+    expect(stepOrder(steps)).toEqual(["new", "doing", "nope", "done"]);
+  });
+
+  it("starts in the first submitted state and closes to the first resolved one", () => {
+    expect(withSteps(typeSteps(["new", "nope", "done"], states))).toEqual({
+      state_ids: ["new", "nope", "done"],
+      default_state_id: "new",
+      default_resolved_state_id: "nope",
+    });
+  });
+
+  it("offers incident states only to incidents", () => {
+    expect(addable(states, "in_progress", ["doing"], "customer").map((s) => s.id)).toEqual([]);
+    expect(addable(states, "in_progress", ["doing"], "incident").map((s) => s.id)).toEqual(["found"]);
   });
 });

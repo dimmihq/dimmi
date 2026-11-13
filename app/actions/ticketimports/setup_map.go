@@ -247,7 +247,7 @@ func (s *setupStep) allow(ctx context.Context, ty models.TicketType, states []St
 
 		err := s.q.AddTypeState(ctx, models.AddTypeStateParams{
 			TypeID: ty.ID, StateID: id, WorkspaceID: ty.WorkspaceID, IsDefault: first,
-			IsDefaultResolved: last,
+			IsDefaultResolved: last, Position: s.nextPosition(ty.ID),
 		})
 		first = false
 		if err != nil {
@@ -255,7 +255,7 @@ func (s *setupStep) allow(ctx context.Context, ty models.TicketType, states []St
 		}
 
 		s.setup.TypeStates = append(s.setup.TypeStates, models.TicketTypeState{
-			TypeID: ty.ID, StateID: id, WorkspaceID: ty.WorkspaceID,
+			TypeID: ty.ID, StateID: id, WorkspaceID: ty.WorkspaceID, Position: s.nextPosition(ty.ID),
 		})
 	}
 
@@ -313,4 +313,19 @@ func options(in []string) []string {
 	}
 
 	return out
+}
+
+/*
+nextPosition is the place after the type's last state.
+*/
+func (s *setupStep) nextPosition(typeID ids.UUID) int32 {
+	var n int32
+
+	for _, ts := range s.setup.TypeStates {
+		if ts.TypeID == typeID && ts.Position >= n {
+			n = ts.Position + 1
+		}
+	}
+
+	return n
 }

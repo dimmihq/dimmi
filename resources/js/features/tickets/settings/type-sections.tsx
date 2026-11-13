@@ -1,25 +1,24 @@
 /*
  * The settings cards of a ticket type's editor, each editing the draft
  * the page saves in one go: what the type is called and how it looks,
- * where its tickets land, the states it uses with its default and
- * default resolved state, and, for customer types, what the customer
- * sees and how the ticket closes with them.
+ * where its tickets land, and, for customer types, what the customer
+ * sees and how the ticket closes with them. Its states have their own
+ * section, in type-states.
  */
 import { Link } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 
-import { Checkbox } from "@/components/base/checkbox/checkbox";
 import { Input } from "@/components/base/input/input";
 import { NumberField } from "@/components/base/number-field/number-field";
 import { Select, SelectItem } from "@/components/base/select/select";
 import { Switch } from "@/components/base/switch/switch";
 import { Textarea } from "@/components/base/textarea/textarea";
 import { Row, Section } from "@/features/settings/layout";
-import { stateGroups, type TicketKind, type TicketState } from "@/lib/api/tickets";
+import type { TicketKind } from "@/lib/api/tickets";
 import { cx } from "@/utils/cx";
 
-import { groupLabel, kindHint, kindLabel, typeIcons } from "../labels";
-import { byGroup, type TypeDraft } from "./form";
+import { kindHint, kindLabel, typeIcons } from "../labels";
+import type { TypeDraft } from "./form";
 
 export interface DraftProps {
   draft: TypeDraft;
@@ -147,82 +146,6 @@ export function RoutingSection({
             </SelectItem>
           ))}
         </Select>
-      </Row>
-    </Section>
-  );
-}
-
-function StateSelect({
-  label,
-  value,
-  options,
-  locked,
-  onChange,
-}: {
-  label: string;
-  value: string | null;
-  options: TicketState[];
-  locked: boolean;
-  onChange: (id: string) => void;
-}) {
-  return (
-    <Select
-      aria-label={label}
-      size="sm"
-      isDisabled={locked || options.length === 0}
-      selectedKey={value && options.some((o) => o.id === value) ? value : null}
-      placeholder="Pick a state"
-      onSelectionChange={(key) => key !== null && onChange(String(key))}
-      popoverClassName="w-56"
-    >
-      {options.map((o) => (
-        <SelectItem key={o.id} id={o.id} textValue={o.name}>
-          {o.name}
-        </SelectItem>
-      ))}
-    </Select>
-  );
-}
-
-export function StatesSection({ draft, set, locked, states }: DraftProps & { states: TicketState[] }) {
-  const groups = byGroup(states);
-  const chosen = states.filter((s) => draft.state_ids.includes(s.id));
-  const toggle = (id: string, on: boolean) =>
-    set({ state_ids: on ? [...draft.state_ids, id] : draft.state_ids.filter((s) => s !== id) });
-
-  return (
-    <Section title="States" description="The states tickets of this type can move through.">
-      {stateGroups.map((group) => (
-        <Row key={group} label={groupLabel(group)}>
-          {groups[group].map((state) => (
-            <Checkbox
-              key={state.id}
-              isDisabled={locked}
-              isSelected={draft.state_ids.includes(state.id)}
-              onChange={(on) => toggle(state.id, on)}
-            >
-              {state.name}
-            </Checkbox>
-          ))}
-        </Row>
-      ))}
-      <Row label="New tickets start in">
-        <StateSelect
-          label="Default state"
-          value={draft.default_state_id}
-          options={chosen.filter((s) => s.group !== "resolved")}
-          locked={locked}
-          onChange={(default_state_id) => set({ default_state_id })}
-        />
-      </Row>
-      <Row label="Closing the conversation moves it to">
-        <StateSelect
-          label="Default resolved state"
-          value={draft.default_resolved_state_id}
-          options={chosen.filter((s) => s.group === "resolved")}
-          locked={locked}
-          onChange={(default_resolved_state_id) => set({ default_resolved_state_id })}
-        />
       </Row>
     </Section>
   );

@@ -30360,6 +30360,24 @@
         },
         "type": "object"
       },
+      "TicketStateMove": {
+        "additionalProperties": false,
+        "properties": {
+          "from_state_id": {
+            "maxLength": 64,
+            "type": "string"
+          },
+          "to_state_id": {
+            "maxLength": 64,
+            "type": "string"
+          }
+        },
+        "required": [
+          "from_state_id",
+          "to_state_id"
+        ],
+        "type": "object"
+      },
       "TicketStateRef": {
         "additionalProperties": false,
         "properties": {
@@ -30641,6 +30659,13 @@
               "null"
             ]
           },
+          "tickets_by_state": {
+            "additionalProperties": {
+              "format": "int64",
+              "type": "integer"
+            },
+            "type": "object"
+          },
           "total_tickets": {
             "format": "int64",
             "type": "integer"
@@ -30666,6 +30691,7 @@
           "default_resolved_state_id",
           "fields",
           "open_tickets",
+          "tickets_by_state",
           "total_tickets",
           "position",
           "archived_at"
@@ -30722,6 +30748,16 @@
               "incident"
             ],
             "type": "string"
+          },
+          "move_tickets": {
+            "items": {
+              "$ref": "#/components/schemas/TicketStateMove"
+            },
+            "maxItems": 100,
+            "type": [
+              "array",
+              "null"
+            ]
           },
           "name": {
             "maxLength": 60,

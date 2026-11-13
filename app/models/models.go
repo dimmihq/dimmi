@@ -2822,6 +2822,7 @@ type TicketTypeState struct {
 	WorkspaceID       ids.UUID `json:"workspace_id"`
 	IsDefault         bool     `json:"is_default"`
 	IsDefaultResolved bool     `json:"is_default_resolved"`
+	Position          int32    `json:"position"`
 }
 
 type TicketUpdate struct {

@@ -136,3 +136,69 @@ export function withGroupOrder(states: TicketState[], group: StateGroup, order: 
 
   return (Object.keys(groups) as StateGroup[]).flatMap((g) => (g === group ? order : groups[g].map((s) => s.id)));
 }
+
+/*
+ * TypeSteps is a type's states split into their groups, each in the
+ * type's own order.
+ */
+export type TypeSteps = Record<StateGroup, TicketState[]>;
+
+/*
+ * typeSteps splits the states a type uses into their groups, in the
+ * order the type lists them.
+ */
+export function typeSteps(stateIds: string[], states: TicketState[]): TypeSteps {
+  const out: TypeSteps = { submitted: [], in_progress: [], waiting_customer: [], waiting_team: [], resolved: [] };
+  for (const id of stateIds) {
+    const state = states.find((s) => s.id === id && !s.archived_at);
+    if (state) {
+      out[state.group].push(state);
+    }
+  }
+
+  return out;
+}
+
+/*
+ * stepOrder is every state id of the steps, groups in the order a ticket
+ * moves through them.
+ */
+export function stepOrder(steps: TypeSteps): string[] {
+  return (Object.keys(steps) as StateGroup[]).flatMap((g) => steps[g].map((s) => s.id));
+}
+
+/*
+ * withSteps returns the draft change for new steps: the states in order,
+ * new tickets starting in the first submitted state and closing the
+ * conversation moving to the first resolved one.
+ */
+export function withSteps(
+  steps: TypeSteps,
+): Pick<TypeDraft, "state_ids" | "default_state_id" | "default_resolved_state_id"> {
+  return {
+    state_ids: stepOrder(steps),
+    default_state_id: steps.submitted[0]?.id ?? null,
+    default_resolved_state_id: steps.resolved[0]?.id ?? null,
+  };
+}
+
+/*
+ * requiredGroups always keep at least one state: a ticket has to start,
+ * be worked on and end somewhere.
+ */
+export const requiredGroups: StateGroup[] = ["submitted", "in_progress", "resolved"];
+
+/*
+ * incidentPurposes mark the states only incidents move through.
+ */
+const incidentPurposes = ["incident_identified", "incident_monitoring"];
+
+/*
+ * addable lists the live states of the group a type of the kind could
+ * add: those it does not use yet, incident states only for incidents.
+ */
+export function addable(states: TicketState[], group: StateGroup, used: string[], kind: string): TicketState[] {
+  return byGroup(states)[group].filter(
+    (s) => !used.includes(s.id) && (kind === "incident" || !incidentPurposes.includes(s.purpose ?? "")),
+  );
+}

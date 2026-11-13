@@ -14,10 +14,10 @@ import (
 )
 
 const addTypeState = `-- name: AddTypeState :exec
-INSERT INTO ticket_type_states (type_id, state_id, workspace_id, is_default, is_default_resolved)
-VALUES ($1, $2, $3, $4, $5)
+INSERT INTO ticket_type_states (type_id, state_id, workspace_id, is_default, is_default_resolved, position)
+VALUES ($1, $2, $3, $4, $5, $6)
 ON CONFLICT (type_id, state_id) DO UPDATE SET is_default = excluded.is_default,
-    is_default_resolved = excluded.is_default_resolved
+    is_default_resolved = excluded.is_default_resolved, position = excluded.position
 `
 
 type AddTypeStateParams struct {
@@ -26,9 +26,10 @@ type AddTypeStateParams struct {
 	WorkspaceID       ids.UUID `json:"workspace_id"`
 	IsDefault         bool     `json:"is_default"`
 	IsDefaultResolved bool     `json:"is_default_resolved"`
+	Position          int32    `json:"position"`
 }
 
-// AddTypeState lets a type use a state.
+// AddTypeState lets a type use a state at a place in its order.
 func (q *Queries) AddTypeState(ctx context.Context, arg AddTypeStateParams) error {
 	_, err := q.db.Exec(ctx, addTypeState,
 		arg.TypeID,
@@ -36,6 +37,7 @@ func (q *Queries) AddTypeState(ctx context.Context, arg AddTypeStateParams) erro
 		arg.WorkspaceID,
 		arg.IsDefault,
 		arg.IsDefaultResolved,
+		arg.Position,
 	)
 	return err
 }
@@ -103,18 +105,25 @@ func (q *Queries) CountTicketTypes(ctx context.Context, workspaceID ids.UUID) (i
 }
 
 const countTicketsByType = `-- name: CountTicketsByType :many
-SELECT type_id, count(*) AS total, count(*) FILTER (WHERE state_group <> 'resolved') AS open
-FROM tickets WHERE workspace_id = $1 AND deleted_at IS NULL
-GROUP BY type_id
+SELECT type_id, state_id,
+    count(*) FILTER (WHERE deleted_at IS NULL) AS total,
+    count(*) FILTER (WHERE deleted_at IS NULL AND state_group <> 'resolved') AS open,
+    count(*) AS held
+FROM tickets WHERE workspace_id = $1
+GROUP BY type_id, state_id
 `
 
 type CountTicketsByTypeRow struct {
-	TypeID ids.UUID `json:"type_id"`
-	Total  int64    `json:"total"`
-	Open   int64    `json:"open"`
+	TypeID  ids.UUID `json:"type_id"`
+	StateID ids.UUID `json:"state_id"`
+	Total   int64    `json:"total"`
+	Open    int64    `json:"open"`
+	Held    int64    `json:"held"`
 }
 
-// CountTicketsByType counts each type's live tickets, open and in all.
+// CountTicketsByType counts each type's tickets in each state: live
+// ones, open and in all, and held, trashed ones included, which is what
+// a state taken off the type has to move.
 func (q *Queries) CountTicketsByType(ctx context.Context, workspaceID ids.UUID) ([]CountTicketsByTypeRow, error) {
 	rows, err := q.db.Query(ctx, countTicketsByType, workspaceID)
 	if err != nil {
@@ -124,7 +133,13 @@ func (q *Queries) CountTicketsByType(ctx context.Context, workspaceID ids.UUID) 
 	var items []CountTicketsByTypeRow
 	for rows.Next() {
 		var i CountTicketsByTypeRow
-		if err := rows.Scan(&i.TypeID, &i.Total, &i.Open); err != nil {
+		if err := rows.Scan(
+			&i.TypeID,
+			&i.StateID,
+			&i.Total,
+			&i.Open,
+			&i.Held,
+		); err != nil {
 			return nil, err
 		}
 		items = append(items, i)
@@ -710,10 +725,12 @@ func (q *Queries) ListTypeFields(ctx context.Context, arg ListTypeFieldsParams) 
 }
 
 const listTypeStates = `-- name: ListTypeStates :many
-SELECT type_id, state_id, workspace_id, is_default, is_default_resolved FROM ticket_type_states WHERE workspace_id = $1
+SELECT type_id, state_id, workspace_id, is_default, is_default_resolved, position FROM ticket_type_states WHERE workspace_id = $1
+ORDER BY type_id, position, state_id
 `
 
-// ListTypeStates returns which states each type of the workspace allows.
+// ListTypeStates returns which states each type of the workspace allows,
+// in each type's order.
 func (q *Queries) ListTypeStates(ctx context.Context, workspaceID ids.UUID) ([]TicketTypeState, error) {
 	rows, err := q.db.Query(ctx, listTypeStates, workspaceID)
 	if err != nil {
@@ -729,6 +746,7 @@ func (q *Queries) ListTypeStates(ctx context.Context, workspaceID ids.UUID) ([]T
 			&i.WorkspaceID,
 			&i.IsDefault,
 			&i.IsDefaultResolved,
+			&i.Position,
 		); err != nil {
 			return nil, err
 		}
@@ -770,6 +788,44 @@ func (q *Queries) MoveTicketsToState(ctx context.Context, arg MoveTicketsToState
 		arg.Target,
 		arg.Now,
 		arg.WorkspaceID,
+		arg.Source,
+	)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
+const moveTypeTicketsToState = `-- name: MoveTypeTicketsToState :execrows
+UPDATE tickets SET state_id = $1, state_group = $2,
+    state_since = $3,
+    resolved_at = CASE
+        WHEN $2::text <> 'resolved' THEN NULL
+        WHEN resolved_at IS NULL THEN $3
+        ELSE resolved_at END,
+    version = version + 1, updated_at = $3
+WHERE workspace_id = $4 AND type_id = $5 AND state_id = $6
+`
+
+type MoveTypeTicketsToStateParams struct {
+	Target      ids.UUID  `json:"target"`
+	TargetGroup string    `json:"target_group"`
+	Now         time.Time `json:"now"`
+	WorkspaceID ids.UUID  `json:"workspace_id"`
+	TypeID      ids.UUID  `json:"type_id"`
+	Source      ids.UUID  `json:"source"`
+}
+
+// MoveTypeTicketsToState moves a type's tickets, trashed ones included,
+// from a state the type no longer uses to one it does, setting the
+// group and when it was resolved to match.
+func (q *Queries) MoveTypeTicketsToState(ctx context.Context, arg MoveTypeTicketsToStateParams) (int64, error) {
+	result, err := q.db.Exec(ctx, moveTypeTicketsToState,
+		arg.Target,
+		arg.TargetGroup,
+		arg.Now,
+		arg.WorkspaceID,
+		arg.TypeID,
 		arg.Source,
 	)
 	if err != nil {

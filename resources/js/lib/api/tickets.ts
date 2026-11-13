@@ -116,8 +116,19 @@ export interface TicketType {
   fields: TicketField[];
   open_tickets: number;
   total_tickets: number;
+  /* How many of the type's tickets, trashed ones included, each state holds. */
+  tickets_by_state: Record<string, number>;
   position: number;
   archived_at: string | null;
+}
+
+/*
+ * StateMove sends the type's tickets in a state it no longer uses to one
+ * it keeps.
+ */
+export interface StateMove {
+  from_state_id: string;
+  to_state_id: string;
 }
 
 export interface StateRef {
@@ -376,7 +387,7 @@ export type TypeChange = Partial<
     | "default_state_id"
     | "default_resolved_state_id"
   >
->;
+> & { move_tickets?: StateMove[] };
 
 export function createTicketType(workspace: string, change: TypeChange) {
   return request<TicketType>("POST", "/ticket-types", change, { workspace });

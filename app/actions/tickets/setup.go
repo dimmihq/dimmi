@@ -182,25 +182,40 @@ func (s Setup) FieldsOf(typeID ids.UUID) []models.TicketField {
 }
 
 /*
-Allowed returns the states a type may use, in the workspace's order.
-A type that names none may use every live state.
+Allowed returns the states a type may use, in the type's order. A type
+that names none may use every live state, in the workspace's order.
 */
 func (s Setup) Allowed(typeID ids.UUID) []models.TicketState {
-	var named []ids.UUID
+	var out []models.TicketState
+
 	for _, ts := range s.TypeStates {
-		if ts.TypeID == typeID {
-			named = append(named, ts.StateID)
+		if ts.TypeID != typeID {
+			continue
+		}
+
+		if st, ok := s.State(ts.StateID); ok && st.ArchivedAt == nil {
+			out = append(out, st)
 		}
 	}
 
-	var out []models.TicketState
+	if len(out) > 0 || s.namesStates(typeID) {
+		return out
+	}
+
 	for _, st := range s.States {
-		if st.ArchivedAt == nil && (len(named) == 0 || slices.Contains(named, st.ID)) {
+		if st.ArchivedAt == nil {
 			out = append(out, st)
 		}
 	}
 
 	return out
+}
+
+/*
+namesStates reports whether the type lists its states at all.
+*/
+func (s Setup) namesStates(typeID ids.UUID) bool {
+	return slices.ContainsFunc(s.TypeStates, func(ts models.TicketTypeState) bool { return ts.TypeID == typeID })
 }
 
 /*
@@ -471,7 +486,7 @@ func (sd *seeder) typeStates(ctx context.Context, t models.TicketType, names []s
 	for i, name := range names {
 		err := sd.q.AddTypeState(ctx, models.AddTypeStateParams{
 			TypeID: t.ID, StateID: sd.states[name], WorkspaceID: t.WorkspaceID, IsDefault: i == 0,
-			IsDefaultResolved: name == "Resolved",
+			IsDefaultResolved: name == "Resolved", Position: int32(i),
 		})
 		if err != nil {
 			return fmt.Errorf("seed ticket type states: %w", err)

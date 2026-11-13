@@ -213,9 +213,36 @@ func (c *TicketSetupController) typeStates(b requests.TicketTypeBody, out *ticke
 		return err
 	}
 
-	out.DefaultResolved, err = c.optionalPtr(models.PrefixTicketState, b.DefaultResolvedID)
+	if out.DefaultResolved, err = c.optionalPtr(models.PrefixTicketState, b.DefaultResolvedID); err != nil {
+		return err
+	}
+
+	out.MoveTickets, err = c.stateMoves(b.MoveTickets)
 
 	return err
+}
+
+/*
+stateMoves reads where the tickets of each dropped state go.
+*/
+func (c *TicketSetupController) stateMoves(list []requests.TicketStateMove) (map[ids.UUID]ids.UUID, error) {
+	out := map[ids.UUID]ids.UUID{}
+
+	for _, m := range list {
+		from, err := c.decodeID(models.PrefixTicketState, m.FromStateID)
+		if err != nil {
+			return nil, err
+		}
+
+		to, err := c.decodeID(models.PrefixTicketState, m.ToStateID)
+		if err != nil {
+			return nil, err
+		}
+
+		out[from] = to
+	}
+
+	return out, nil
 }
 
 /*

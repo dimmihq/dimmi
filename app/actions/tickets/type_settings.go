@@ -25,8 +25,10 @@ import (
 
 /*
 TypeInput is a type's settings; nil leaves a field. States lists the
-states it may use, the default first in each; DefaultResolved names the
-state closing the conversation moves it to.
+states it may use in its order; DefaultState names where new tickets
+start and DefaultResolved the state closing the conversation moves it
+to. MoveTickets says, for each state taken off the type that still
+holds its tickets, which of its states they move to.
 */
 type TypeInput struct {
 	Kind            *string
@@ -44,6 +46,7 @@ type TypeInput struct {
 	States          []ids.UUID
 	DefaultState    *ids.UUID
 	DefaultResolved *ids.UUID
+	MoveTickets     map[ids.UUID]ids.UUID
 }
 
 /*
@@ -162,41 +165,6 @@ func checkType(t models.TicketType) error {
 		return ErrNameInvalid.OnField("reopen_days")
 	case t.AutoResolveDays != nil && (*t.AutoResolveDays < 1 || *t.AutoResolveDays > 90):
 		return ErrNameInvalid.OnField("auto_resolve_days")
-	}
-
-	return nil
-}
-
-/*
-saveTypeStates stores the states a type may use, when the input names
-them.
-*/
-func (w *Writer) saveTypeStates(ctx context.Context, ty models.TicketType, in TypeInput) error {
-	if in.States == nil {
-		return nil
-	}
-
-	for _, id := range in.States {
-		if st, ok := w.Setup.State(id); !ok || st.ArchivedAt != nil {
-			return ErrStateNotFound.OnField("states")
-		}
-	}
-
-	if err := w.Q.DeleteTypeStates(ctx, models.DeleteTypeStatesParams{
-		WorkspaceID: ty.WorkspaceID, TypeID: ty.ID,
-	}); err != nil {
-		return fmt.Errorf("clear type states: %w", err)
-	}
-
-	for _, id := range in.States {
-		err := w.Q.AddTypeState(ctx, models.AddTypeStateParams{
-			TypeID: ty.ID, StateID: id, WorkspaceID: ty.WorkspaceID,
-			IsDefault:         in.DefaultState != nil && *in.DefaultState == id,
-			IsDefaultResolved: in.DefaultResolved != nil && *in.DefaultResolved == id,
-		})
-		if err != nil {
-			return fmt.Errorf("save type states: %w", err)
-		}
 	}
 
 	return nil

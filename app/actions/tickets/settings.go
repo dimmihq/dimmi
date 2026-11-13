@@ -43,6 +43,8 @@ var (
 		"The data type is not one fields may have.").OnField("data_type")
 	ErrMoveToRequired = fault.New(fault.Invalid, "move_to_required",
 		"Choose a live state of the same group for the state's tickets.").OnField("move_to")
+	ErrTicketsNeedState = fault.New(fault.Invalid, "tickets_need_state",
+		"Choose which of the type's states the tickets in a removed state move to.").OnField("move_tickets")
 	ErrLastState = fault.New(fault.Invalid, "last_state",
 		"Every group keeps at least one live state.").OnField("state")
 	ErrOrderInvalid = fault.New(fault.Invalid, "order_invalid",

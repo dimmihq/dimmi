@@ -103,8 +103,10 @@ RETURNING *;
 UPDATE ticket_types SET archived_at = @now, updated_at = @now WHERE workspace_id = @workspace_id AND id = @id;
 
 -- name: ListTypeStates :many
--- ListTypeStates returns which states each type of the workspace allows.
-SELECT * FROM ticket_type_states WHERE workspace_id = @workspace_id;
+-- ListTypeStates returns which states each type of the workspace allows,
+-- in each type's order.
+SELECT * FROM ticket_type_states WHERE workspace_id = @workspace_id
+ORDER BY type_id, position, state_id;
 
 -- name: DeleteTypeStates :exec
 -- DeleteTypeStates clears the states a type allows before they are
@@ -112,17 +114,35 @@ SELECT * FROM ticket_type_states WHERE workspace_id = @workspace_id;
 DELETE FROM ticket_type_states WHERE workspace_id = @workspace_id AND type_id = @type_id;
 
 -- name: AddTypeState :exec
--- AddTypeState lets a type use a state.
-INSERT INTO ticket_type_states (type_id, state_id, workspace_id, is_default, is_default_resolved)
-VALUES (@type_id, @state_id, @workspace_id, @is_default, @is_default_resolved)
+-- AddTypeState lets a type use a state at a place in its order.
+INSERT INTO ticket_type_states (type_id, state_id, workspace_id, is_default, is_default_resolved, position)
+VALUES (@type_id, @state_id, @workspace_id, @is_default, @is_default_resolved, @position)
 ON CONFLICT (type_id, state_id) DO UPDATE SET is_default = excluded.is_default,
-    is_default_resolved = excluded.is_default_resolved;
+    is_default_resolved = excluded.is_default_resolved, position = excluded.position;
 
 -- name: CountTicketsByType :many
--- CountTicketsByType counts each type's live tickets, open and in all.
-SELECT type_id, count(*) AS total, count(*) FILTER (WHERE state_group <> 'resolved') AS open
-FROM tickets WHERE workspace_id = @workspace_id AND deleted_at IS NULL
-GROUP BY type_id;
+-- CountTicketsByType counts each type's tickets in each state: live
+-- ones, open and in all, and held, trashed ones included, which is what
+-- a state taken off the type has to move.
+SELECT type_id, state_id,
+    count(*) FILTER (WHERE deleted_at IS NULL) AS total,
+    count(*) FILTER (WHERE deleted_at IS NULL AND state_group <> 'resolved') AS open,
+    count(*) AS held
+FROM tickets WHERE workspace_id = @workspace_id
+GROUP BY type_id, state_id;
+
+-- name: MoveTypeTicketsToState :execrows
+-- MoveTypeTicketsToState moves a type's tickets, trashed ones included,
+-- from a state the type no longer uses to one it does, setting the
+-- group and when it was resolved to match.
+UPDATE tickets SET state_id = @target, state_group = @target_group,
+    state_since = @now,
+    resolved_at = CASE
+        WHEN @target_group::text <> 'resolved' THEN NULL
+        WHEN resolved_at IS NULL THEN @now
+        ELSE resolved_at END,
+    version = version + 1, updated_at = @now
+WHERE workspace_id = @workspace_id AND type_id = @type_id AND state_id = @source;
 
 -- name: CountTicketsInState :one
 -- CountTicketsInState says how many tickets, trashed ones included, are

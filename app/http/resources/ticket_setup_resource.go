@@ -124,32 +124,35 @@ func NewTicketFields(list []models.TicketField) []TicketField {
 }
 
 /*
-TicketType is one type with its fields, the states it uses and its
-ticket counts.
+TicketType is one type with its fields, the states it uses in its
+order and its ticket counts. TicketsByState counts, for each state, the
+type's tickets in it, trashed ones included: the tickets a state taken
+off the type has to move.
 */
 type TicketType struct {
-	Object             string        `json:"object"`
-	ID                 string        `json:"id"`
-	Kind               string        `json:"kind"`
-	Name               string        `json:"name"`
-	Icon               string        `json:"icon"`
-	Description        string        `json:"description"`
-	InboxID            *string       `json:"inbox_id"`
-	TeamID             *string       `json:"team_id"`
-	CustomerVisible    bool          `json:"customer_visible"`
-	CompanySharing     bool          `json:"company_sharing"`
-	ReopenDays         int32         `json:"reopen_days"`
-	AutoResolveDays    *int32        `json:"auto_resolve_days"`
-	AutoResolveMessage *string       `json:"auto_resolve_message"`
-	AIAutoFill         bool          `json:"ai_auto_fill"`
-	StateIDs           []string      `json:"state_ids"`
-	DefaultStateID     *string       `json:"default_state_id"`
-	DefaultResolvedID  *string       `json:"default_resolved_state_id"`
-	Fields             []TicketField `json:"fields"`
-	OpenTickets        int64         `json:"open_tickets"`
-	TotalTickets       int64         `json:"total_tickets"`
-	Position           int32         `json:"position"`
-	ArchivedAt         *time.Time    `json:"archived_at"`
+	Object             string           `json:"object"`
+	ID                 string           `json:"id"`
+	Kind               string           `json:"kind"`
+	Name               string           `json:"name"`
+	Icon               string           `json:"icon"`
+	Description        string           `json:"description"`
+	InboxID            *string          `json:"inbox_id"`
+	TeamID             *string          `json:"team_id"`
+	CustomerVisible    bool             `json:"customer_visible"`
+	CompanySharing     bool             `json:"company_sharing"`
+	ReopenDays         int32            `json:"reopen_days"`
+	AutoResolveDays    *int32           `json:"auto_resolve_days"`
+	AutoResolveMessage *string          `json:"auto_resolve_message"`
+	AIAutoFill         bool             `json:"ai_auto_fill"`
+	StateIDs           []string         `json:"state_ids"`
+	DefaultStateID     *string          `json:"default_state_id"`
+	DefaultResolvedID  *string          `json:"default_resolved_state_id"`
+	Fields             []TicketField    `json:"fields"`
+	OpenTickets        int64            `json:"open_tickets"`
+	TicketsByState     map[string]int64 `json:"tickets_by_state"`
+	TotalTickets       int64            `json:"total_tickets"`
+	Position           int32            `json:"position"`
+	ArchivedAt         *time.Time       `json:"archived_at"`
 }
 
 /*
@@ -163,7 +166,7 @@ func NewTicketType(t models.TicketType, setup tickets.Setup, counts []models.Cou
 		CompanySharing: t.CompanySharing, ReopenDays: t.ReopenDays, AutoResolveDays: t.AutoResolveDays,
 		AutoResolveMessage: t.AutoResolveMessage,
 		AIAutoFill:         t.AiAutoFill, StateIDs: []string{}, Fields: NewTicketFields(setup.FieldsOf(t.ID)),
-		Position: t.Position, ArchivedAt: t.ArchivedAt,
+		Position: t.Position, ArchivedAt: t.ArchivedAt, TicketsByState: map[string]int64{},
 	}
 
 	for _, s := range setup.Allowed(t.ID) {
@@ -180,7 +183,9 @@ func NewTicketType(t models.TicketType, setup tickets.Setup, counts []models.Cou
 
 	for _, c := range counts {
 		if c.TypeID == t.ID {
-			out.OpenTickets, out.TotalTickets = c.Open, c.Total
+			out.OpenTickets += c.Open
+			out.TotalTickets += c.Total
+			out.TicketsByState[models.PublicID(models.PrefixTicketState, c.StateID)] = c.Held
 		}
 	}
 
