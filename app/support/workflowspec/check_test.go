@@ -392,6 +392,21 @@ func TestCheck(t *testing.T) {
 		assert.Contains(t, warningCodes(t, raw), workflowspec.WarnIgnoredOnReusable)
 	})
 
+	t.Run("lets an opener branch on what its own steps put in a run variable", func(t *testing.T) {
+		t.Parallel()
+
+		opener := `{"schema":1,"trigger":"conversation.opener","steps":[
+			{"id":"s_menu00","kind":"buttons","settings":{"text":"?"},"paths":[
+			{"id":"p_aaaaaa","label":"A","steps":[
+				{"id":"s_coll00","kind":"collect","settings":{"text":"Order?","field":"run.vars.order",
+			"type":"text"}},
+				{"id":"s_br0000","kind":"branch","paths":[
+				{"id":"p_known0","label":"Known","condition":{"field":"run.vars.order","op":"exists"},"steps":[]},
+				{"id":"p_else00","outcome":"else","steps":[]}]}]},
+			{"id":"p_bbbbbb","label":"B","steps":[]}]}]}`
+		assert.Empty(t, errorCodes(t, opener))
+	})
+
 	t.Run("accepts an opener and every ready step", func(t *testing.T) {
 		t.Parallel()
 

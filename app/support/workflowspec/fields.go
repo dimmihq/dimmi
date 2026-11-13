@@ -112,8 +112,14 @@ func fieldAllowed(f audience.Field, t Trigger, scope ruleScope) bool {
 		return false
 	}
 
-	if f.Key == "run.vars." && scope == scopeAudience {
-		return false
+	if f.Key == "run.vars." {
+		/*
+			A run's own variables belong to the run, not to the conversation
+			it works on: a step put them there a moment ago. So a branch may
+			read them under any trigger, an opener included, while an
+			audience, which is decided before any run exists, may not.
+		*/
+		return scope != scopeAudience
 	}
 
 	if f.Where == audience.Conversation {
