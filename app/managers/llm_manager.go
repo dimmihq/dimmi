@@ -111,6 +111,15 @@ func (m *LLMManager) Extend(provider enums.AIProvider, factory DriverFactory) {
 }
 
 /*
+Factory returns the driver factory registered for a provider, so a
+caller can wrap the drivers it builds, such as to meter every call.
+*/
+func (m *LLMManager) Factory(provider enums.AIProvider) (DriverFactory, bool) {
+	f, ok := m.factories[provider]
+	return f, ok
+}
+
+/*
 ForKey returns the driver for a provider-key row, wrapped with
 retries, the connection's breakers and timeout enforcement. A caller
 bounds a step by setting the request's Timeout, typically from
