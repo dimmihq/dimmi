@@ -18,6 +18,7 @@ it.describe("notifications", () => {
       (r) => r.url().endsWith("/api/v1/notification-preferences") && r.request().method() === "PATCH",
     );
     await mentionsByEmail.click({ force: true });
+    await page.getByRole("button", { name: "Save", exact: true }).click();
     await saved;
     await page.reload();
     await expect(page.getByRole("switch", { name: "Mentions by Email" })).not.toBeChecked();

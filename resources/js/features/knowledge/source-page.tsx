@@ -3,14 +3,16 @@
  * feeds, starts a sync now, and lists its syncs with what each did. Its
  * documents are listed by status, live, failed or excluded, and each can
  * be synced again, set aside or let back in. Each group of settings is
- * its own section, edited where it stands. A synced source can be
+ * its own section, edited where it stands; the changes wait in one draft
+ * that the bar at the bottom saves or discards, and leaving with changes
+ * unsaved asks first. A synced source can be
  * turned into help center articles; and
  * the source is removed only after a confirmation, since its documents
  * go with it.
  */
 import { RiArrowLeftLine, RiRefreshLine } from "@remixicon/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useNavigate } from "@tanstack/react-router";
+import { useBlocker, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 
 import { Button } from "@/components/base/buttons/button";
@@ -19,6 +21,7 @@ import { toast } from "@/components/base/toast/toast";
 import { Action, Danger } from "@/features/settings/controls";
 import { usePermission } from "@/features/settings/inboxes";
 import { Row, RowsSkeleton, Section, SettingsPage } from "@/features/settings/layout";
+import { SaveBar } from "@/features/settings/save-bar";
 import { useAccount } from "@/features/settings/use-account";
 import { ApiError } from "@/lib/api/client";
 import {
@@ -35,7 +38,7 @@ import { ConvertModal } from "./convert-modal";
 import { DocumentsSection } from "./documents-section";
 import { ago, broken, hasTree, inTime, scheduleLabels, sourceState } from "./model";
 import { RunsSection } from "./runs-section";
-import { SettingsSections } from "./settings-sections";
+import { SettingsSections, useSourceDraft } from "./settings-sections";
 import { BrokenBanner, StateChip } from "./source-list";
 
 export function SourcePage({ source: id }: { source: string }) {
@@ -48,6 +51,12 @@ export function SourcePage({ source: id }: { source: string }) {
   const types = useQuery(sourceTypesQuery(workspace));
   const [removing, setRemoving] = useState(false);
   const [converting, setConverting] = useState(false);
+  const kind = types.data?.find((t) => t.type === query.data?.type);
+  const draft = useSourceDraft(workspace, query.data, kind);
+  useBlocker({
+    shouldBlockFn: () => draft.dirty && !window.confirm("Leave without saving your changes?"),
+    enableBeforeUnload: () => draft.dirty,
+  });
 
   const refresh = () => client.invalidateQueries({ queryKey: ["workspace", workspace, "knowledge"] });
   const fail = (err: unknown) => toast.error(err instanceof ApiError ? err.message : "That did not work. Try again.");
@@ -79,7 +88,6 @@ export function SourcePage({ source: id }: { source: string }) {
     );
   }
 
-  const kind = types.data?.find((t) => t.type === s.type);
   const syncing = s.status === "syncing";
 
   return (
@@ -96,6 +104,17 @@ export function SourcePage({ source: id }: { source: string }) {
           />
         ) : null
       }
+      footer={
+        <SaveBar
+          dirty={draft.dirty}
+          saving={draft.save.isPending}
+          error={draft.save.error ? failure(draft.save.error) : null}
+          canSave={draft.canSave}
+          hidden={!canManage}
+          onSave={() => draft.save.mutate()}
+          onDiscard={draft.discard}
+        />
+      }
     >
       <BackToSources />
       {broken(s) ? <BrokenBanner sources={[s]} /> : null}
@@ -110,7 +129,9 @@ export function SourcePage({ source: id }: { source: string }) {
           <span className="text-body-regular text-text-secondary">{ago(s.last_synced_at)}</span>
         </Row>
       </Section>
-      {kind ? <SettingsSections workspace={workspace} source={s} kind={kind} canManage={canManage} /> : null}
+      {kind ? (
+        <SettingsSections workspace={workspace} source={s} kind={kind} canManage={canManage} draft={draft} />
+      ) : null}
       {kind && hasTree(kind) ? (
         <ContentSection workspace={workspace} source={s} kind={kind} canManage={canManage} />
       ) : null}
@@ -192,6 +213,14 @@ function useRefreshAfterSync(workspace: string, id: string, syncing: boolean) {
     }
     was.current = syncing;
   }, [syncing, client, workspace, id]);
+}
+
+/*
+ * failure says why a save did not work, in the server's words when it
+ * gave them.
+ */
+function failure(err: Error): string {
+  return err instanceof ApiError ? err.message : "The change could not be saved.";
 }
 
 function scheduleLine(s: KnowledgeSource): string {

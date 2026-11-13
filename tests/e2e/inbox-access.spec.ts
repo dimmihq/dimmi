@@ -83,7 +83,7 @@ class Admin {
  */
 async function saveAccess(page: Page) {
   const saved = page.waitForResponse((r) => r.url().endsWith("/access") && r.request().method() === "PUT");
-  await page.getByRole("button", { name: "Save changes" }).click();
+  await page.getByRole("button", { name: "Save", exact: true }).click();
   expect((await saved).status()).toBe(200);
 }
 

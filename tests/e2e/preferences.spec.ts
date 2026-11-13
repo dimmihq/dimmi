@@ -26,6 +26,7 @@ it.describe("own preferences", () => {
     const saved = profileSaved(page);
     await picker.fill("Tokyo");
     await page.getByRole("option", { name: "Asia/Tokyo" }).click();
+    await page.getByRole("button", { name: "Save", exact: true }).click();
     expect((await saved).status()).toBe(200);
 
     const dark = await page.evaluate(() => document.documentElement.classList.contains("dark"));
@@ -42,6 +43,7 @@ it.describe("own preferences", () => {
     const saved = profileSaved(page);
     await page.getByRole("combobox", { name: "Time zone" }).fill("Tokyo");
     await page.getByRole("option", { name: "Asia/Tokyo" }).click();
+    await page.getByRole("button", { name: "Save", exact: true }).click();
     expect((await saved).status()).toBe(200);
     await page.reload();
     await expect(page.getByRole("combobox", { name: "Time zone" })).toHaveValue("Asia/Tokyo");
@@ -49,6 +51,7 @@ it.describe("own preferences", () => {
     const cleared = profileSaved(page);
     await page.getByRole("combobox", { name: "Time zone" }).fill("Workspace");
     await page.getByRole("option", { name: /^Workspace default/ }).click();
+    await page.getByRole("button", { name: "Save", exact: true }).click();
     expect((await cleared).status()).toBe(200);
     await page.reload();
     await expect(page.getByRole("combobox", { name: "Time zone" })).toHaveValue(/^Workspace default/);

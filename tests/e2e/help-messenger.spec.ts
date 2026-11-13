@@ -34,6 +34,7 @@ it.describe("help center messenger", () => {
     await show.focus();
     await page.keyboard.press("Space");
     await expect(show).not.toBeChecked();
+    await page.getByRole("button", { name: "Save", exact: true }).click();
     expect((await saved).ok()).toBe(true);
 
     await guest.goto(`${home}/search?q=nothing-matches-this`);

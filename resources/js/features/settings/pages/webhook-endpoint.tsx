@@ -4,11 +4,12 @@
  * events sent to it lately, each of which can be opened and sent again.
  * A test sends a sample event now. Removing the endpoint asks first,
  * since its log goes with it. People who may only read see all of it
- * but change nothing and never see the secret.
+ * but change nothing and never see the secret. Its switches change only
+ * when Save is pressed in the bar at the bottom.
  */
 import { RiArrowLeftLine, RiWebhookLine } from "@remixicon/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useNavigate } from "@tanstack/react-router";
+import { useBlocker, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 
 import { Chip } from "@/components/base/badges/chip";
@@ -16,6 +17,7 @@ import { Button } from "@/components/base/buttons/button";
 import { AlertDialog, Modal, ModalBody, ModalFooter, ModalHeader } from "@/components/base/modal/modal";
 import { Notification } from "@/components/base/notification/notification";
 import { Switch } from "@/components/base/switch/switch";
+import { toast } from "@/components/base/toast/toast";
 import {
   deleteWebhookEndpoint,
   revealWebhookSecret,
@@ -33,6 +35,7 @@ import {
 import { ago } from "../attributes";
 import { Action, Danger } from "../controls";
 import { PageSkeleton, Row, Section, SettingsPage } from "../layout";
+import { SaveBar } from "../save-bar";
 import { useAccount } from "../use-account";
 import { useCanManageWebhooks } from "../use-can-manage-webhooks";
 import { DeliveriesSection } from "../webhook-deliveries";
@@ -94,6 +97,36 @@ export function WebhookEndpointSettings({ endpoint }: { endpoint: string }) {
   return <EndpointPage endpoint={data} />;
 }
 
+type EndpointSwitches = Pick<WebhookEndpointInput, "include_notes" | "enabled">;
+
+/*
+ * useEndpointDraft holds the switches flipped but not saved yet. A switch
+ * flipped back drops out. Save sends them in one call, then reads the
+ * endpoint again; Discard puts them back.
+ */
+function useEndpointDraft(workspace: string, endpoint: WebhookEndpoint) {
+  const queryClient = useQueryClient();
+  const [pending, setPending] = useState<EndpointSwitches>({});
+  const save = useMutation({
+    mutationFn: () => updateWebhookEndpoint(workspace, endpoint.id, pending),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: webhooksKey(workspace) });
+      setPending({});
+      toast.success("Endpoint saved");
+    },
+  });
+
+  return {
+    includeNotes: pending.include_notes ?? endpoint.include_notes,
+    enabled: pending.enabled ?? endpoint.enabled,
+    dirty: Object.keys(pending).length > 0,
+    save,
+    flip: (key: keyof EndpointSwitches, on: boolean) =>
+      setPending(({ [key]: _, ...rest }) => (on === endpoint[key] ? rest : { ...rest, [key]: on })),
+    discard: () => setPending({}),
+  };
+}
+
 function EndpointPage({ endpoint }: { endpoint: WebhookEndpoint }) {
   const workspace = useAccount().workspace.id;
   const manage = useCanManageWebhooks(workspace);
@@ -102,16 +135,26 @@ function EndpointPage({ endpoint }: { endpoint: WebhookEndpoint }) {
   const refresh = () => queryClient.invalidateQueries({ queryKey: webhooksKey(workspace) });
   const [editing, setEditing] = useState(false);
   const [removing, setRemoving] = useState(false);
-  const update = useMutation({
-    mutationFn: (input: WebhookEndpointInput) => updateWebhookEndpoint(workspace, endpoint.id, input),
-    onSettled: refresh,
-  });
+  const draft = useEndpointDraft(workspace, endpoint);
   const state = endpointState(endpoint);
+  useBlocker({
+    shouldBlockFn: () => draft.dirty && !window.confirm("Leave without saving your changes?"),
+    enableBeforeUnload: () => draft.dirty,
+  });
 
   return (
     <SettingsPage
       title={endpoint.url}
       description={endpoint.description || undefined}
+      footer={
+        <SaveBar
+          dirty={draft.dirty}
+          saving={draft.save.isPending}
+          error={draft.save.error?.message}
+          onSave={() => draft.save.mutate()}
+          onDiscard={draft.discard}
+        />
+      }
       actions={
         <Chip variant="caption" color={state.color}>
           {state.label}
@@ -127,15 +170,15 @@ function EndpointPage({ endpoint }: { endpoint: WebhookEndpoint }) {
           <Switch
             aria-label="Internal notes"
             size="sm"
-            isSelected={endpoint.include_notes}
-            isDisabled={!manage || update.isPending}
-            onChange={(on) => update.mutate({ include_notes: on })}
+            isSelected={draft.includeNotes}
+            isDisabled={!manage || draft.save.isPending}
+            onChange={(on) => draft.flip("include_notes", on)}
           />
         </Row>
         <Row
           label="Sending"
           description={
-            endpoint.enabled
+            draft.enabled
               ? endpoint.health === "failing" && endpoint.failing_since
                 ? `Failing since ${ago(endpoint.failing_since)}. It turns off after three days.`
                 : "Events are posted as they happen."
@@ -147,13 +190,12 @@ function EndpointPage({ endpoint }: { endpoint: WebhookEndpoint }) {
           <Switch
             aria-label="Sending"
             size="sm"
-            isSelected={endpoint.enabled}
-            isDisabled={!manage || update.isPending}
-            onChange={(on) => update.mutate({ enabled: on })}
+            isSelected={draft.enabled}
+            isDisabled={!manage || draft.save.isPending}
+            onChange={(on) => draft.flip("enabled", on)}
           />
         </Row>
       </Section>
-      <Problem error={update.error} />
       <StatsSection workspace={workspace} endpoint={endpoint.id} />
       {manage ? <SecretSection workspace={workspace} endpoint={endpoint} /> : null}
       <DeliveriesSection workspace={workspace} endpoint={endpoint.id} manage={manage} />

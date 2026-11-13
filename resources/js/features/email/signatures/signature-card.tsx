@@ -2,10 +2,13 @@
  * One signature where it is managed: a small preview of how it reads,
  * a way to its own page to write it, whether replies use it, and
  * removing it, which lets the next signature in line sign replies. The
- * card carries the anchor the signature page returns to.
+ * card carries the anchor the signature page returns to. Whether replies
+ * use it is held in the page's draft and sent with the page's save bar;
+ * removing is an action of its own and happens at once.
  */
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
+import { useState } from "react";
 
 import { Button, buttonStyles } from "@/components/base/buttons/button";
 import { Failure } from "@/features/email/setup/failure";
@@ -25,18 +28,44 @@ function lowerFirst(label: string): string {
   return label.charAt(0).toLowerCase() + label.slice(1);
 }
 
+/*
+ * useSignatureToggles holds the signatures turned on or off but not saved
+ * yet, by id. send writes each change; clear forgets them all, after a
+ * save or on Discard. A removed signature's change is forgotten with it.
+ */
+export function useSignatureToggles(workspace: string) {
+  const [pending, setPending] = useState<Record<string, boolean>>({});
+
+  return {
+    dirty: Object.keys(pending).length > 0,
+    enabledOf: (signature: EmailSignature) => pending[signature.id] ?? signature.enabled,
+    set: (signature: EmailSignature, on: boolean) =>
+      setPending(({ [signature.id]: _, ...rest }) =>
+        on === signature.enabled ? rest : { ...rest, [signature.id]: on },
+      ),
+    forget: (id: string) => setPending(({ [id]: _, ...rest }) => rest),
+    send: () =>
+      Promise.all(Object.entries(pending).map(([id, enabled]) => updateSignature(workspace, id, { enabled }))),
+    clear: () => setPending({}),
+  };
+}
+
+export type SignatureToggles = ReturnType<typeof useSignatureToggles>;
+
 export function SignatureCard({
   workspace,
   label,
   signature,
   scope,
   search = {},
+  toggles,
 }: {
   workspace: string;
   label: string;
   signature?: EmailSignature;
   scope: SignatureScope;
   search?: SignatureSearch;
+  toggles: SignatureToggles;
 }) {
   const queryClient = useQueryClient();
   const preview = useSignaturePreview(
@@ -45,13 +74,14 @@ export function SignatureCard({
     signature?.email_address_id ?? search.address ?? undefined,
   );
   const refresh = () => queryClient.invalidateQueries({ queryKey: signaturesKey(workspace) });
-  const toggle = useMutation({
-    mutationFn: (enabled: boolean) => updateSignature(workspace, signature?.id ?? "", { enabled }),
-    onSuccess: refresh,
-  });
   const remove = useMutation({
     mutationFn: () => deleteSignature(workspace, signature?.id ?? ""),
-    onSuccess: refresh,
+    onSuccess: () => {
+      if (signature) {
+        toggles.forget(signature.id);
+      }
+      return refresh();
+    },
   });
   const html = signature ? preview.data?.html : undefined;
 
@@ -65,7 +95,7 @@ export function SignatureCard({
             {signature ? "This signature shows nothing in a reply yet." : "No signature yet."}
           </p>
         )}
-        <Failure error={toggle.error ?? remove.error} />
+        <Failure error={remove.error} />
         <div className="flex gap-2">
           <Link
             to="/d/settings/signatures/$scope"
@@ -85,7 +115,12 @@ export function SignatureCard({
       </div>
       {signature ? (
         <Row label="Use in replies" description="Turned off, replies use the next signature in line.">
-          <Toggle label={`Use ${label.toLowerCase()}`} on={signature.enabled} onChange={(on) => toggle.mutate(on)} />
+          <Toggle
+            key={`enabled-${toggles.enabledOf(signature)}`}
+            label={`Use ${label.toLowerCase()}`}
+            on={toggles.enabledOf(signature)}
+            onChange={(on) => toggles.set(signature, on)}
+          />
         </Row>
       ) : null}
     </div>

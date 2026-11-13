@@ -32,7 +32,7 @@ it.describe("reply style and default address", () => {
 
     await card.getByRole("textbox", { name: "Footer" }).fill("**Acme** support, every weekday");
     await expect(preview).toHaveAttribute("srcdoc", /<strong>Acme<\/strong> support, every weekday/);
-    await card.getByRole("button", { name: "Save footer" }).click();
+    await page.getByRole("button", { name: "Save", exact: true }).click();
 
     await expect(async () => {
       const list = await page.request.get("/api/v1/email-addresses");

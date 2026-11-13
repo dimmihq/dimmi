@@ -74,9 +74,9 @@ it.describe("inbox settings", () => {
     await pick(page, "Reopen window", "7 days");
     await pick(page, "Assignment mode", "Round robin");
     const saved = page.waitForResponse((r) => r.request().method() === "PATCH" && r.url().includes("/inboxes/"));
-    await page.getByRole("button", { name: "Save changes" }).click();
+    await page.getByRole("button", { name: "Save", exact: true }).click();
     expect((await saved).status()).toBe(200);
-    await expect(page.getByRole("button", { name: "Save changes" })).toBeDisabled();
+    await expect(page.getByRole("button", { name: "Discard" })).toHaveCount(0);
 
     await page.reload();
     await expect(page.getByRole("button", { name: "Reopen window" })).toContainText("7 days");
@@ -122,7 +122,7 @@ it.describe("inbox settings", () => {
     await expect(page.getByText("Only admins can change inboxes.")).toBeVisible();
     await expect(page.getByRole("textbox", { name: "Inbox name" })).toBeDisabled();
     await expect(page.getByRole("switch", { name: "Assign to whoever replies" })).toBeDisabled();
-    await expect(page.getByRole("button", { name: "Save changes" })).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "Save", exact: true })).toHaveCount(0);
     await expect(page.getByRole("button", { name: "Delete inbox" })).toHaveCount(0);
   });
 });

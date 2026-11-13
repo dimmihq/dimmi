@@ -2,8 +2,9 @@
  * The channels that bring conversations into an inbox, each on a row of
  * its own: its messengers, its email addresses and its API channel, which
  * every inbox has. Someone who manages inboxes can add a messenger here
- * or send a channel's new conversations to another inbox; conversations
- * it already brought in stay where they are.
+ * at once, or pick another inbox for a channel's new conversations,
+ * which moves it when the inbox page is saved; conversations it already
+ * brought in stay where they are.
  */
 import { RiChat3Line, RiMailLine, RiPlugLine } from "@remixicon/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -96,29 +97,61 @@ export function AddMessenger({ workspace, inbox }: { workspace: string; inbox: I
   );
 }
 
+/*
+ * useChannelsDraft holds the channels sent to another inbox but not
+ * saved yet, by messenger id and by email address. send moves each; the
+ * inbox page sends them with the rest of its changes, and discard puts
+ * them back.
+ */
+export function useChannelsDraft(workspace: string) {
+  const [widgets, setWidgets] = useState<Record<string, string>>({});
+  const [addresses, setAddresses] = useState<Record<string, string>>({});
+  const moved = (current: string, to: string, id: string) => (pending: Record<string, string>) => {
+    const { [id]: _, ...rest } = pending;
+
+    return to === current ? rest : { ...rest, [id]: to };
+  };
+
+  return {
+    widgets,
+    addresses,
+    dirty: Object.keys(widgets).length + Object.keys(addresses).length > 0,
+    moveWidget: (id: string, current: string, to: string) => setWidgets(moved(current, to, id)),
+    moveAddress: (address: string, current: string, to: string) => setAddresses(moved(current, to, address)),
+    send: () =>
+      Promise.all([
+        ...Object.entries(widgets).map(([id, to]) => moveWidget(workspace, id, to)),
+        ...Object.entries(addresses).map(([address, to]) => updateEmailAddress(workspace, address, { inbox_id: to })),
+      ]),
+    discard: () => {
+      setWidgets({});
+      setAddresses({});
+    },
+  };
+}
+
+export type ChannelsDraft = ReturnType<typeof useChannelsDraft>;
+
+/*
+ * ChannelsSection lists the inbox's channels. A channel picked to go to
+ * another inbox stays listed, showing where it goes, until the page is
+ * saved.
+ */
 export function ChannelsSection({
   workspace,
   inbox,
   inboxes,
   canManage,
+  draft,
 }: {
   workspace: string;
   inbox: Inbox;
   inboxes: Inbox[];
   canManage: boolean;
+  draft: ChannelsDraft;
 }) {
-  const queryClient = useQueryClient();
   const { data: widgets = [], isPending: loadingWidgets } = useQuery(widgetSettingsQuery(workspace));
   const { data: addresses = [], isPending: loadingAddresses } = useQuery(emailAddressesQuery(workspace));
-  const refresh = () => queryClient.invalidateQueries({ queryKey: ["workspace", workspace] });
-  const widget = useMutation({
-    mutationFn: ({ id, to }: { id: string; to: string }) => moveWidget(workspace, id, to),
-    onSuccess: refresh,
-  });
-  const address = useMutation({
-    mutationFn: ({ id, to }: { id: string; to: string }) => updateEmailAddress(workspace, id, { inbox_id: to }),
-    onSuccess: refresh,
-  });
   const here = (i: { inbox: { id: string } }) => i.inbox.id === inbox.id;
   const moving = canManage ? inboxes : [];
 
@@ -134,9 +167,9 @@ export function ChannelsSection({
         <Item key={w.id} mark={<Glyph icon={RiChat3Line} />} title={w.name} detail={`Messenger · ${w.id}`}>
           <MovePick
             label={`Inbox of ${w.name}`}
-            inbox={inbox.id}
+            inbox={draft.widgets[w.id] ?? inbox.id}
             inboxes={moving}
-            onMove={(to) => widget.mutate({ id: w.id, to })}
+            onMove={(to) => draft.moveWidget(w.id, inbox.id, to)}
           />
         </Item>
       ))}
@@ -144,9 +177,9 @@ export function ChannelsSection({
         <Item key={a.id} mark={<Glyph icon={RiMailLine} />} title={a.address} detail="Email">
           <MovePick
             label={`Inbox of ${a.address}`}
-            inbox={inbox.id}
+            inbox={draft.addresses[a.address] ?? inbox.id}
             inboxes={moving}
-            onMove={(to) => address.mutate({ id: a.address, to })}
+            onMove={(to) => draft.moveAddress(a.address, inbox.id, to)}
           />
         </Item>
       ))}
@@ -155,11 +188,6 @@ export function ChannelsSection({
         title="API"
         detail="Conversations started in this inbox through the REST API."
       />
-      {widget.error || address.error ? (
-        <p role="alert" className="px-3 pb-3 text-body-2-regular text-text-error-primary">
-          {failureText(widget.error ?? address.error)}
-        </p>
-      ) : null}
     </Section>
   );
 }

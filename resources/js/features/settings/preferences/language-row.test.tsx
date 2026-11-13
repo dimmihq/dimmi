@@ -5,7 +5,7 @@ import { config } from "@/features/auth/test-utils";
 import { authConfigQuery, type Locale, type Me, meQuery } from "@/lib/api/auth";
 import { type Workspace, workspaceQuery } from "@/lib/api/workspace";
 
-import { LanguageRow, WorkspaceLanguageRow } from "./language-row";
+import { LanguageRow, useLanguageDraft, WorkspaceLanguageRow } from "./language-row";
 
 const me: Me = {
   object: "me",
@@ -43,6 +43,14 @@ const workspace: Workspace = {
 };
 
 /*
+ * OwnLanguageRow is the person's row with a draft of its own, as the
+ * Preferences page gives it.
+ */
+function OwnLanguageRow() {
+  return <LanguageRow draft={useLanguageDraft()} />;
+}
+
+/*
  * renderRows shows both language rows with the server serving the
  * languages given.
  */
@@ -54,8 +62,8 @@ function renderRows(locales: Locale[]) {
 
   return render(
     <QueryClientProvider client={client}>
-      <LanguageRow />
-      <WorkspaceLanguageRow workspace="ws_1" />
+      <OwnLanguageRow />
+      <WorkspaceLanguageRow workspace="ws_1" onChange={() => undefined} />
     </QueryClientProvider>,
   );
 }

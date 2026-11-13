@@ -3,14 +3,15 @@
  * open it, the channels that feed it, how long a reply reopens a closed
  * conversation, whether a reply takes a conversation nobody holds, how
  * new conversations are assigned, how that assignment stands right now,
- * and deleting it. Changes collect on the page and save together.
+ * and deleting it. Changes collect on the page in a draft and save
+ * together from the bar at its bottom, or are discarded there.
  * Deleting moves the inbox's conversations to another inbox; the default
  * inbox is never deleted. People who may not manage inboxes see every
  * setting without changing it.
  */
 import { RiArrowLeftLine } from "@remixicon/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useNavigate } from "@tanstack/react-router";
+import { useBlocker, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 
 import { Avatar } from "@/components/base/avatar/avatar";
@@ -18,6 +19,7 @@ import { Chip } from "@/components/base/badges/chip";
 import { Button } from "@/components/base/buttons/button";
 import { AlertDialog } from "@/components/base/modal/modal";
 import { Select, SelectItem } from "@/components/base/select/select";
+import { toast } from "@/components/base/toast/toast";
 import { avatarColor } from "@/features/shell/avatar-color";
 import {
   assignmentStatusQuery,
@@ -39,10 +41,11 @@ import { membersQuery } from "@/lib/api/workspace";
 import { Choice, Colour, Danger, Field, Toggle } from "../controls";
 import { assignmentModes, keyOf, poolLine, queueOrders, reopenLabel, reopenWindows, usePermission } from "../inboxes";
 import { Empty, Item, PageSkeleton, Row, Section, SettingsPage } from "../layout";
+import { SaveBar } from "../save-bar";
 import { failureText } from "../teams";
 import { useAccount } from "../use-account";
 import { AccessSection } from "./inbox-access";
-import { ChannelsSection } from "./inbox-channels";
+import { ChannelsSection, useChannelsDraft } from "./inbox-channels";
 
 function BackToInboxes() {
   const navigate = useNavigate();
@@ -131,23 +134,81 @@ function TicketTypePick({
 }
 
 /*
- * useDraft collects the changes made on the page into one update, the
- * settings merged as the server merges them.
+ * without drops key from a record, so a change put back to what the
+ * inbox holds leaves nothing pending.
  */
-function useDraft() {
+function without<T extends object>(record: T, key: keyof T): T {
+  const { [key]: _, ...rest } = record;
+
+  return rest as T;
+}
+
+/*
+ * pick keeps a change unless it puts back what the inbox holds, in which
+ * case the change drops out of the draft.
+ */
+function pick<T extends object>(draft: T, change: Partial<T>, saved: Partial<T>): T {
+  let next = draft;
+  for (const key of Object.keys(change) as (keyof T)[]) {
+    next = change[key] === saved[key] ? without(next, key) : { ...next, [key]: change[key] };
+  }
+
+  return next;
+}
+
+type Settings = NonNullable<InboxChange["settings"]>;
+
+/*
+ * useDraft collects the changes made on the page into one update, the
+ * settings merged as the server merges them. A change put back to what
+ * the inbox holds leaves the draft, so the page is unchanged again.
+ * version counts discards: the sections remount on it, so controls that
+ * keep their own state show the inbox again.
+ */
+function useDraft(inbox: Inbox) {
   const [draft, setDraft] = useState<InboxChange>({});
+  const [version, setVersion] = useState(0);
+  const settled = (d: InboxChange): InboxChange => {
+    const assignment = d.settings?.assignment;
+    let settings = d.settings;
+    if (settings && assignment && Object.keys(assignment).length === 0) {
+      settings = without(settings, "assignment");
+    }
+    if (settings && Object.keys(settings).length === 0) {
+      return without(d, "settings");
+    }
+
+    return settings === d.settings ? d : { ...d, settings };
+  };
 
   return {
     draft,
+    version,
     reset: () => setDraft({}),
-    set: (change: Omit<InboxChange, "settings">) => setDraft((d) => ({ ...d, ...change })),
+    discard: () => {
+      setDraft({});
+      setVersion((v) => v + 1);
+    },
+    set: (change: Omit<InboxChange, "settings">) =>
+      setDraft((d) =>
+        pick(d, change, {
+          name: inbox.name,
+          default_team_id: inbox.default_team_id,
+          ticket_type_id: inbox.ticket_type_id ?? null,
+        }),
+      ),
     setting: (change: Partial<Omit<InboxSettings, "assignment">>) =>
-      setDraft((d) => ({ ...d, settings: { ...d.settings, ...change } })),
+      setDraft((d) => settled({ ...d, settings: pick<Settings>(d.settings ?? {}, change, inbox.settings) })),
     rule: (change: Partial<InboxAssignment>) =>
-      setDraft((d) => ({
-        ...d,
-        settings: { ...d.settings, assignment: { ...d.settings?.assignment, ...change } },
-      })),
+      setDraft((d) =>
+        settled({
+          ...d,
+          settings: {
+            ...d.settings,
+            assignment: pick<Partial<InboxAssignment>>(d.settings?.assignment ?? {}, change, inbox.settings.assignment),
+          },
+        }),
+      ),
   };
 }
 
@@ -385,52 +446,93 @@ function DeleteSection({ inbox }: { inbox: Inbox }) {
   );
 }
 
+/*
+ * shownOf is the inbox as the page shows it: what it holds with the
+ * draft laid over it.
+ */
+function shownOf(inbox: Inbox, draft: InboxChange): Inbox {
+  return {
+    ...inbox,
+    ...(draft.name === undefined ? {} : { name: draft.name }),
+    ...(draft.default_team_id === undefined ? {} : { default_team_id: draft.default_team_id }),
+    ...(draft.ticket_type_id === undefined ? {} : { ticket_type_id: draft.ticket_type_id }),
+    settings: {
+      ...inbox.settings,
+      ...draft.settings,
+      assignment: { ...inbox.settings.assignment, ...draft.settings?.assignment },
+    },
+  };
+}
+
+/*
+ * InboxPage keeps every change made on the page, its settings, who may
+ * open it and where its channels send new conversations, in one draft.
+ * The bar at the bottom saves them together or discards them, and
+ * leaving with changes unsaved asks first.
+ */
 function InboxPage({ inbox, canManage }: { inbox: Inbox; canManage: boolean }) {
   const workspace = useAccount().workspace.id;
   const queryClient = useQueryClient();
   const { data: teams = [] } = useQuery(teamsQuery(workspace));
   const { data: members = [] } = useQuery(membersQuery(workspace));
   const { data: inboxes = [] } = useQuery(inboxesQuery(workspace));
-  const edit = useDraft();
+  const edit = useDraft(inbox);
+  const channels = useChannelsDraft(workspace);
   const [access, setAccess] = useState(inbox.access);
   const accessChanged = !sameAccess(access, inbox.access);
+  const settingsChanged = Object.keys(edit.draft).length > 0;
   const save = useMutation({
     mutationFn: async () => {
-      if (Object.keys(edit.draft).length > 0) {
+      if (settingsChanged) {
         await updateInbox(workspace, inbox.id, edit.draft);
       }
       if (accessChanged) {
         await updateInboxAccess(workspace, inbox.id, access);
       }
+      if (channels.dirty) {
+        await channels.send();
+      }
     },
     onSuccess: async () => {
       edit.reset();
-      await queryClient.invalidateQueries({ queryKey: ["workspace", workspace, "inboxes"] });
+      channels.discard();
+      await queryClient.invalidateQueries({ queryKey: ["workspace", workspace] });
+      toast.success("Inbox saved");
     },
   });
   const canReadSettings = usePermission(workspace, "settings:read");
   const locked = !canManage;
-  const changed = Object.keys(edit.draft).length > 0 || accessChanged;
+  const dirty = settingsChanged || accessChanged || channels.dirty;
+  const shown = shownOf(inbox, edit.draft);
+  useBlocker({
+    shouldBlockFn: () => dirty && !window.confirm("Leave without saving your changes?"),
+    enableBeforeUnload: () => dirty,
+  });
 
   return (
-    <SettingsPage title={inbox.name} description={canManage ? undefined : "Only admins can change inboxes."}>
+    <SettingsPage
+      title={inbox.name}
+      description={canManage ? undefined : "Only admins can change inboxes."}
+      footer={
+        <SaveBar
+          dirty={dirty}
+          saving={save.isPending}
+          error={save.error ? failureText(save.error) : null}
+          onSave={() => save.mutate()}
+          onDiscard={() => {
+            edit.discard();
+            channels.discard();
+            setAccess(inbox.access);
+            save.reset();
+          }}
+        />
+      }
+    >
       <BackToInboxes />
-      <GeneralSection inbox={inbox} teams={teams} edit={edit} locked={locked} />
+      <GeneralSection key={`general-${edit.version}`} inbox={shown} teams={teams} edit={edit} locked={locked} />
       <AccessSection access={access} teams={teams} members={members} locked={locked} onChange={setAccess} />
-      <ChannelsSection workspace={workspace} inbox={inbox} inboxes={inboxes} canManage={canManage} />
-      <AssignmentSection inbox={inbox} teams={teams} edit={edit} locked={locked} />
-      {canManage ? (
-        <div className="flex items-center justify-end gap-3">
-          {save.error ? (
-            <p role="alert" className="text-body-2-regular text-text-error-primary">
-              {failureText(save.error)}
-            </p>
-          ) : null}
-          <Button size="small" loading={save.isPending} disabled={!changed} onClick={() => save.mutate()}>
-            Save changes
-          </Button>
-        </div>
-      ) : null}
+      <ChannelsSection workspace={workspace} inbox={inbox} inboxes={inboxes} canManage={canManage} draft={channels} />
+      <AssignmentSection key={`assignment-${edit.version}`} inbox={shown} teams={teams} edit={edit} locked={locked} />
       {canReadSettings ? <StatusSection inbox={inbox} /> : null}
       {canManage ? <DeleteSection inbox={inbox} /> : null}
     </SettingsPage>

@@ -6,22 +6,20 @@
  * it is mail, and the brand color is the customer's own data that only
  * the mail uses; the frame has an origin of its own and inherits the
  * page's content security policy, which runs no script without the
- * page's nonce. The style and color save as they change; the footer
- * saves with its button.
+ * page's nonce. The style, color and footer are held in the address
+ * page's draft, previewed as they change and sent with its save bar.
  */
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useDeferredValue, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { useDeferredValue } from "react";
 
-import { Button } from "@/components/base/buttons/button";
 import { SegmentedControl, SegmentedControlItem } from "@/components/base/segmented-control/segmented-control";
 import { Textarea } from "@/components/base/textarea/textarea";
 import { Colour } from "@/features/settings/controls";
 import { Row } from "@/features/settings/layout";
-import { type EmailAddress, type ReplyStyle, renderEmailTemplate, updateEmailAddress } from "@/lib/api/email";
+import { type EmailAddress, type ReplyStyle, renderEmailTemplate } from "@/lib/api/email";
 
+import type { AddressDraft } from "./address-card";
 import { Failure } from "./failure";
-
-const fallbackColor = "#171717";
 
 /*
  * framed gives a plain reply room inside the preview, the margin a mail
@@ -51,26 +49,23 @@ function usePreview(workspace: string, address: string, style: ReplyStyle) {
   });
 }
 
-export function TemplateSettings({ workspace, address }: { workspace: string; address: EmailAddress }) {
-  const queryClient = useQueryClient();
-  const saved = address.settings;
-  const [style, setStyle] = useState<ReplyStyle>({
-    template: saved.template ?? "plain",
-    brand_color: saved.brand_color || fallbackColor,
-    footer_markdown: saved.footer_markdown ?? "",
-  });
-  const preview = usePreview(workspace, address.id, style);
-
-  const save = useMutation({
-    mutationFn: (changes: Partial<ReplyStyle>) => updateEmailAddress(workspace, address.id, { settings: changes }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["workspace", workspace, "email-addresses"] }),
-  });
-  const change = (changes: Partial<ReplyStyle>, keep = true) => {
-    setStyle((current) => ({ ...current, ...changes }));
-    if (keep) {
-      save.mutate(changes);
-    }
+export function TemplateSettings({
+  workspace,
+  address,
+  draft,
+  settings,
+}: {
+  workspace: string;
+  address: EmailAddress;
+  draft: AddressDraft;
+  settings: EmailAddress["settings"];
+}) {
+  const style: ReplyStyle = {
+    template: settings.template,
+    brand_color: settings.brand_color,
+    footer_markdown: settings.footer_markdown,
   };
+  const preview = usePreview(workspace, address.id, style);
 
   return (
     <>
@@ -81,7 +76,7 @@ export function TemplateSettings({ workspace, address }: { workspace: string; ad
           onSelectionChange={(keys) => {
             const [picked] = [...keys];
             if (picked === "plain" || picked === "branded") {
-              change({ template: picked });
+              draft.set("template", picked);
             }
           }}
         >
@@ -96,9 +91,10 @@ export function TemplateSettings({ workspace, address }: { workspace: string; ad
         <>
           <Row label="Brand color" description="The line above each reply.">
             <Colour
+              key={`color-${draft.generation}`}
               label={`Brand color for ${address.address}`}
               value={style.brand_color}
-              onChange={(hex) => change({ brand_color: hex })}
+              onChange={(hex) => draft.set("brand_color", hex)}
             />
           </Row>
           <div className="flex flex-col gap-3 py-3 pe-3">
@@ -108,18 +104,8 @@ export function TemplateSettings({ workspace, address }: { workspace: string; ad
               rows={2}
               maxLength={500}
               value={style.footer_markdown}
-              onChange={(footer) => change({ footer_markdown: footer }, false)}
+              onChange={(footer) => draft.set("footer_markdown", footer)}
             />
-            <div className="flex">
-              <Button
-                variant="secondary"
-                size="small"
-                loading={save.isPending}
-                onClick={() => save.mutate({ footer_markdown: style.footer_markdown })}
-              >
-                Save footer
-              </Button>
-            </div>
           </div>
         </>
       ) : null}
@@ -133,7 +119,7 @@ export function TemplateSettings({ workspace, address }: { workspace: string; ad
           />
         </div>
       ) : null}
-      <Failure error={preview.error ?? save.error} />
+      <Failure error={preview.error} />
     </>
   );
 }

@@ -7,17 +7,19 @@
  * kind of change, whether Operator's changes apply on their own, wait
  * for a teammate, or are never offered; article and procedure changes
  * always wait. Each teammate sees what they asked Operator to remember
- * and can make it forget.
+ * and can make it forget. Settings change only when Save is pressed in
+ * the bar at the bottom; leaving with unsaved changes asks first.
  */
 import { RiDeleteBin6Line } from "@remixicon/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useBlocker } from "@tanstack/react-router";
 import { useState } from "react";
 
-import { Button } from "@/components/base/buttons/button";
 import { IconButton } from "@/components/base/buttons/icon-button";
 import { SegmentedControl, SegmentedControlItem } from "@/components/base/segmented-control/segmented-control";
 import { Switch } from "@/components/base/switch/switch";
 import { Textarea } from "@/components/base/textarea/textarea";
+import { toast } from "@/components/base/toast/toast";
 import { ModelSelect, NoConnection } from "@/features/ai/agent/model-section";
 import { modelsFor, operatorModel, usableKeys } from "@/features/ai/format";
 import { agentQuery } from "@/lib/api/ai";
@@ -36,6 +38,7 @@ import {
 import { callerQuery } from "@/lib/api/workspace";
 
 import { Empty, Row, Section, SettingsPage } from "../layout";
+import { SaveBar } from "../save-bar";
 import { failureText } from "../teams";
 import { useAccount } from "../use-account";
 
@@ -132,17 +135,14 @@ function ModelRow({
 }
 
 function Instructions({
-  settings,
+  text,
   canManage,
-  onSave,
+  onChange,
 }: {
-  settings: OperatorSettings;
+  text: string;
   canManage: boolean;
-  onSave: (text: string) => Promise<unknown>;
+  onChange: (text: string) => void;
 }) {
-  const [text, setText] = useState(settings.instructions);
-  const save = useMutation({ mutationFn: () => onSave(text) });
-
   return (
     <Section
       title="Instructions"
@@ -157,21 +157,8 @@ function Instructions({
           maxRows={14}
           value={text}
           isDisabled={!canManage}
-          onChange={setText}
+          onChange={onChange}
         />
-        {canManage ? (
-          <Button
-            size="small"
-            variant="secondary"
-            className="self-start"
-            loading={save.isPending}
-            disabled={text === settings.instructions}
-            onClick={() => save.mutate()}
-          >
-            Save instructions
-          </Button>
-        ) : null}
-        {save.error ? <p className="text-body-2-regular text-text-error-primary">{failureText(save.error)}</p> : null}
       </div>
     </Section>
   );
@@ -202,21 +189,97 @@ function Memories({ workspace }: { workspace: string }) {
   );
 }
 
+/*
+ * unsaved keeps only the parts of a change that differ from the saved
+ * settings, so a value put back as it was leaves the draft.
+ */
+function unsaved(settings: OperatorSettings, change: OperatorSettingsChange): OperatorSettingsChange {
+  const result: OperatorSettingsChange = {};
+  for (const key of ["enabled", "brief_on_open", "triage_on_arrival", "instructions", "model"] as const) {
+    if (change[key] !== undefined && change[key] !== settings[key]) {
+      Object.assign(result, { [key]: change[key] });
+    }
+  }
+
+  const policies = Object.fromEntries(
+    Object.entries(change.policies ?? {}).filter(
+      ([group, policy]) => settings.policies[group as OperatorGroup] !== policy,
+    ),
+  );
+  if (Object.keys(policies).length > 0) {
+    result.policies = policies;
+  }
+
+  return result;
+}
+
+/*
+ * useOperatorDraft holds the changes made on the page but not saved yet:
+ * switches, the model, policies and the instructions. A change that puts
+ * a value back as saved drops out of the draft. Save sends them in one
+ * call and keeps what came back; Discard forgets them.
+ */
+function useOperatorDraft(workspace: string, settings: OperatorSettings | undefined) {
+  const client = useQueryClient();
+  const [pending, setPending] = useState<OperatorSettingsChange>({});
+  const save = useMutation({
+    mutationFn: () => updateOperatorSettings(workspace, pending),
+    onSuccess: async (saved) => {
+      client.setQueryData(operatorKeys.settings(workspace), saved);
+      await client.invalidateQueries({ queryKey: operatorKeys.settings(workspace) });
+      setPending({});
+      toast.success("Operator saved");
+    },
+  });
+  const shown = settings
+    ? { ...settings, ...pending, policies: { ...settings.policies, ...pending.policies } }
+    : undefined;
+
+  return {
+    shown,
+    dirty: Object.keys(pending).length > 0,
+    save,
+    change: (next: OperatorSettingsChange) =>
+      setPending((current) => {
+        if (!settings) {
+          return current;
+        }
+
+        return unsaved(settings, {
+          ...current,
+          ...next,
+          policies: { ...current.policies, ...next.policies },
+        });
+      }),
+    discard: () => setPending({}),
+  };
+}
+
 export function OperatorSettingsView() {
   const workspace = useAccount().workspace.id;
-  const client = useQueryClient();
-  const { data: settings } = useQuery({ ...operatorSettingsQuery(workspace), enabled: workspace !== "" });
+  const { data } = useQuery({ ...operatorSettingsQuery(workspace), enabled: workspace !== "" });
   const { data: caller } = useQuery(callerQuery(workspace));
   const canManage = (caller?.member?.permissions ?? []).includes("ai_agent:manage");
-  const change = useMutation({
-    mutationFn: (next: OperatorSettingsChange) => updateOperatorSettings(workspace, next),
-    onSuccess: (saved) => client.setQueryData(operatorKeys.settings(workspace), saved),
+  const draft = useOperatorDraft(workspace, data);
+  const settings = draft.shown;
+  useBlocker({
+    shouldBlockFn: () => draft.dirty && !window.confirm("Leave without saving your changes?"),
+    enableBeforeUnload: () => draft.dirty,
   });
 
   return (
     <SettingsPage
       title="Operator"
       description="Your team's own agent. It answers teammates, never customers, and every change it makes can be undone."
+      footer={
+        <SaveBar
+          dirty={draft.dirty}
+          saving={draft.save.isPending}
+          error={draft.save.error ? failureText(draft.save.error) : null}
+          onSave={() => draft.save.mutate()}
+          onDiscard={draft.discard}
+        />
+      }
     >
       <Section title="Operator" loading={!settings} rows={4}>
         {settings ? (
@@ -227,15 +290,10 @@ export function OperatorSettingsView() {
                 size="sm"
                 isSelected={settings.enabled}
                 isDisabled={!canManage}
-                onChange={(on) => change.mutate({ enabled: on })}
+                onChange={(on) => draft.change({ enabled: on })}
               />
             </Row>
-            <ModelRow
-              workspace={workspace}
-              settings={settings}
-              canManage={canManage}
-              onChange={(next) => change.mutate(next)}
-            />
+            <ModelRow workspace={workspace} settings={settings} canManage={canManage} onChange={draft.change} />
             <Row
               label="Brief conversations as they open"
               description="Operator reads each conversation a teammate opens and briefs them. Spends tokens on every open."
@@ -245,7 +303,7 @@ export function OperatorSettingsView() {
                 size="sm"
                 isSelected={settings.brief_on_open}
                 isDisabled={!canManage || !settings.enabled}
-                onChange={(on) => change.mutate({ brief_on_open: on })}
+                onChange={(on) => draft.change({ brief_on_open: on })}
               />
             </Row>
             <Row
@@ -257,7 +315,7 @@ export function OperatorSettingsView() {
                 size="sm"
                 isSelected={settings.triage_on_arrival}
                 isDisabled={!canManage || !settings.enabled}
-                onChange={(on) => change.mutate({ triage_on_arrival: on })}
+                onChange={(on) => draft.change({ triage_on_arrival: on })}
               />
             </Row>
           </>
@@ -269,29 +327,18 @@ export function OperatorSettingsView() {
           description="Changes on their own still show in the chat and can be undone. Operator never changes anything on its own after reading what a customer wrote."
         >
           {OPERATOR_GROUPS.map((group) => (
-            <Policy
-              key={group}
-              group={group}
-              settings={settings}
-              canManage={canManage}
-              onChange={(next) => change.mutate(next)}
-            />
+            <Policy key={group} group={group} settings={settings} canManage={canManage} onChange={draft.change} />
           ))}
         </Section>
       ) : null}
       {settings ? (
         <Instructions
-          settings={settings}
+          text={settings.instructions}
           canManage={canManage}
-          onSave={(instructions) => change.mutateAsync({ instructions })}
+          onChange={(instructions) => draft.change({ instructions })}
         />
       ) : null}
       <Memories workspace={workspace} />
-      {change.error ? (
-        <p role="alert" className="text-body-2-regular text-text-error-primary">
-          {failureText(change.error)}
-        </p>
-      ) : null}
     </SettingsPage>
   );
 }

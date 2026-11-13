@@ -5,23 +5,27 @@
  * another, or closed; holidays close a whole day. Hours are kept in
  * their own time zone, so daylight saving never moves them. The page
  * edits the default schedule, which every workflow uses unless it names
- * another; changes apply to waits that start after saving.
+ * another; changes apply to waits that start after saving. Nothing is
+ * saved until Save is pressed in the bar at the bottom, holidays added or
+ * removed included; leaving with unsaved changes asks first.
  */
 import { type CalendarDate, parseTime } from "@internationalized/date";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useBlocker } from "@tanstack/react-router";
 import { useState } from "react";
 
-import { Button } from "@/components/base/buttons/button";
 import { Checkbox } from "@/components/base/checkbox/checkbox";
 import { DatePicker } from "@/components/base/date-picker/date-picker";
 import { TimeField } from "@/components/base/time-field/time-field";
+import { toast } from "@/components/base/toast/toast";
 import { Action, Danger, Field, Toggle } from "@/features/settings/controls";
 import { usePermission } from "@/features/settings/inboxes";
-import type { Holiday, Schedule, Weekday } from "@/lib/api/schedules";
+import type { Holiday, Schedule, Weekday, Weekly } from "@/lib/api/schedules";
 import { schedulesQuery, updateSchedule } from "@/lib/api/schedules";
 import { Item, Row, RowsSkeleton, Section, SettingsPage } from "../layout";
 import { holidayWhen, sameWeek, statusLine, withDay } from "../office-hours";
 import { ZonePicker } from "../preferences/zone-picker";
+import { SaveBar } from "../save-bar";
 import { useAccount } from "../use-account";
 
 const days: [Weekday, string][] = [
@@ -168,28 +172,73 @@ function Holidays({
   );
 }
 
-function Editor({ schedule, workspace }: { schedule: Schedule; workspace: string }) {
+type ScheduleChange = { timezone?: string; weekly?: Weekly; holidays?: Holiday[] };
+
+/*
+ * useScheduleDraft holds the time zone, weekly hours and holidays changed
+ * but not saved yet. A value put back as saved drops out of the draft.
+ * Save sends what changed in one call, then reads the schedules again;
+ * Discard puts them back.
+ */
+function useScheduleDraft(workspace: string, schedule: Schedule | undefined) {
   const queryClient = useQueryClient();
-  const readOnly = !usePermission(workspace, "schedules:manage");
-  const [weekly, setWeekly] = useState(schedule.weekly);
-  const [holidays, setHolidays] = useState(schedule.holidays);
+  const [pending, setPending] = useState<ScheduleChange>({});
   const save = useMutation({
-    mutationFn: (changes: Parameters<typeof updateSchedule>[2]) => updateSchedule(workspace, schedule.id, changes),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: schedulesQuery(workspace).queryKey }),
+    mutationFn: () => updateSchedule(workspace, schedule?.id ?? "", pending),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: schedulesQuery(workspace).queryKey });
+      setPending({});
+      toast.success("Office hours saved");
+    },
   });
+  const change = (next: ScheduleChange) =>
+    setPending((current) => {
+      if (!schedule) {
+        return current;
+      }
+
+      const merged = { ...current, ...next };
+      const result: ScheduleChange = {};
+      if (merged.timezone !== undefined && merged.timezone !== schedule.timezone) {
+        result.timezone = merged.timezone;
+      }
+      if (merged.weekly !== undefined && !sameWeek(merged.weekly, schedule.weekly)) {
+        result.weekly = merged.weekly;
+      }
+      if (merged.holidays !== undefined && JSON.stringify(merged.holidays) !== JSON.stringify(schedule.holidays)) {
+        result.holidays = merged.holidays;
+      }
+
+      return result;
+    });
+
+  return {
+    timezone: pending.timezone ?? schedule?.timezone ?? "UTC",
+    weekly: pending.weekly ?? schedule?.weekly ?? {},
+    holidays: pending.holidays ?? schedule?.holidays ?? [],
+    dirty: Object.keys(pending).length > 0,
+    save,
+    change,
+    discard: () => setPending({}),
+  };
+}
+
+type ScheduleDraft = ReturnType<typeof useScheduleDraft>;
+
+function Editor({ schedule, workspace, draft }: { schedule: Schedule; workspace: string; draft: ScheduleDraft }) {
+  const readOnly = !usePermission(workspace, "schedules:manage");
   const zones = ["UTC", ...Intl.supportedValuesOf("timeZone")].map((id) => ({ id, label: id }));
-  const changed = !sameWeek(weekly, schedule.weekly);
 
   return (
     <>
       <Section title="Right now">
-        <Row label={statusLine(schedule)} description={`Hours are kept in ${schedule.timezone}.`}>
+        <Row label={statusLine(schedule)} description={`Hours are kept in ${draft.timezone}.`}>
           {readOnly ? null : (
             <ZonePicker
               label="Office hours time zone"
               choices={zones}
-              selected={schedule.timezone}
-              onPick={(timezone) => save.mutate({ timezone })}
+              selected={draft.timezone}
+              onPick={(timezone) => draft.change({ timezone })}
             />
           )}
         </Row>
@@ -197,35 +246,18 @@ function Editor({ schedule, workspace }: { schedule: Schedule; workspace: string
       <Section
         title="Weekly hours"
         description="Workflows can run only in or out of these hours, wait for them, and count only them."
-        action={
-          readOnly ? undefined : (
-            <Button size="small" loading={save.isPending} disabled={!changed} onClick={() => save.mutate({ weekly })}>
-              Save hours
-            </Button>
-          )
-        }
       >
         {days.map(([day, label]) => (
           <DayRow
             key={day}
             label={label}
-            range={weekly[day]?.[0]}
+            range={draft.weekly[day]?.[0]}
             readOnly={readOnly}
-            onChange={(range) => setWeekly((current) => withDay(current, day, range))}
+            onChange={(range) => draft.change({ weekly: withDay(draft.weekly, day, range) })}
           />
         ))}
-        {save.error ? (
-          <p className="px-3 py-2 text-body-2-regular text-text-error-primary">{save.error.message}</p>
-        ) : null}
       </Section>
-      <Holidays
-        holidays={holidays}
-        readOnly={readOnly}
-        onChange={(next) => {
-          setHolidays(next);
-          save.mutate({ holidays: next });
-        }}
-      />
+      <Holidays holidays={draft.holidays} readOnly={readOnly} onChange={(holidays) => draft.change({ holidays })} />
     </>
   );
 }
@@ -234,11 +266,28 @@ export function OfficeHoursSettings() {
   const workspace = useAccount().workspace.id;
   const { data } = useQuery(schedulesQuery(workspace));
   const schedule = data?.find((s) => s.is_default);
+  const draft = useScheduleDraft(workspace, schedule);
+  useBlocker({
+    shouldBlockFn: () => draft.dirty && !window.confirm("Leave without saving your changes?"),
+    enableBeforeUnload: () => draft.dirty,
+  });
 
   return (
-    <SettingsPage title="Office hours" description="When your team is around to reply.">
+    <SettingsPage
+      title="Office hours"
+      description="When your team is around to reply."
+      footer={
+        <SaveBar
+          dirty={draft.dirty}
+          saving={draft.save.isPending}
+          error={draft.save.error?.message}
+          onSave={() => draft.save.mutate()}
+          onDiscard={draft.discard}
+        />
+      }
+    >
       {schedule ? (
-        <Editor key={`${schedule.id}-${schedule.timezone}`} schedule={schedule} workspace={workspace} />
+        <Editor key={schedule.id} schedule={schedule} workspace={workspace} draft={draft} />
       ) : (
         <Section title="Weekly hours">
           <RowsSkeleton rows={7} />

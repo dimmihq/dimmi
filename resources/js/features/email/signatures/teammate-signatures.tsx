@@ -4,7 +4,7 @@
  * the teammate's next reply carries the change. Each opens on the
  * signature page and returns here, at that signature. A teammate is
  * shown by name when the members list is readable, else plainly as a
- * teammate.
+ * teammate. Turning one on or off waits for the email page's save bar.
  */
 import { useQuery } from "@tanstack/react-query";
 
@@ -13,16 +13,18 @@ import type { EmailAddress } from "@/lib/api/email";
 import { personalSignaturesQuery } from "@/lib/api/email-signatures";
 import { membersQuery } from "@/lib/api/workspace";
 
-import { SignatureCard } from "./signature-card";
+import { SignatureCard, type SignatureToggles } from "./signature-card";
 
 export function TeammateSignatures({
   workspace,
   email,
   addresses,
+  toggles,
 }: {
   workspace: string;
   email: string;
   addresses: EmailAddress[];
+  toggles: SignatureToggles;
 }) {
   const { data: signatures } = useQuery(personalSignaturesQuery(workspace));
   const { data: members } = useQuery({ ...membersQuery(workspace), retry: false });
@@ -50,6 +52,7 @@ export function TeammateSignatures({
             signature={signature}
             scope="teammate"
             search={{ signature: signature.id }}
+            toggles={toggles}
           />
         );
       })}

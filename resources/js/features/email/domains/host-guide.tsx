@@ -2,7 +2,9 @@
  * The steps for the customer's DNS host, read from the domain's name
  * servers. A wrong guess costs nothing: the link opens a dashboard, and
  * whoever may manage email can pick the right host, which also changes
- * how record names are shown.
+ * how record names are shown. The host picked is shown as selected
+ * while it waits for the page's save bar; the steps follow once it is
+ * saved.
  */
 import { RiExternalLinkLine } from "@remixicon/react";
 
@@ -27,10 +29,12 @@ const hosts = [
 export function HostGuide({
   guide,
   manage,
+  selected = guide.key,
   onPick,
 }: {
   guide: Guide;
   manage: boolean;
+  selected?: string;
   onPick: (host: string) => void;
 }) {
   return (
@@ -42,7 +46,7 @@ export function HostGuide({
           <Select
             aria-label="DNS host"
             size="sm"
-            selectedKey={guide.key}
+            selectedKey={selected}
             onSelectionChange={(key) => (key === null ? undefined : onPick(String(key)))}
             popoverClassName="w-56"
           >

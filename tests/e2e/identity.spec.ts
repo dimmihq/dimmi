@@ -60,6 +60,8 @@ it.describe("identity verification", () => {
     await mode.getByRole("button", { name: "Sign-in mode" }).click();
     await page.getByRole("option", { name: "Off" }).click();
     await expect(mode.getByText("Identity tokens are ignored and every visitor chats anonymously.")).toBeVisible();
+    await page.getByRole("button", { name: "Save", exact: true }).click();
+    await expect(page.getByRole("button", { name: "Save", exact: true })).toBeHidden();
 
     await page.getByRole("button", { name: "New secret" }).click();
     await page

@@ -29,8 +29,8 @@ it.describe("workspace and members", () => {
 
     const name = page.getByRole("textbox", { name: "Workspace name" });
     await expect(name).toHaveValue(`Rename ${suffixOf(person)}`);
-    const save = page.getByRole("button", { name: "Save changes" });
-    await expect(save).toBeDisabled();
+    const save = page.getByRole("button", { name: "Save", exact: true });
+    await expect(save).toBeHidden();
 
     await name.fill(`Renamed ${suffixOf(person)}`);
     await page.getByRole("textbox", { name: "Workspace address" }).fill(`moved-${suffixOf(person)}`);
@@ -39,7 +39,7 @@ it.describe("workspace and members", () => {
     );
     await save.click();
     expect((await saved).status()).toBe(200);
-    await expect(save).toBeDisabled();
+    await expect(save).toBeHidden();
 
     await page.reload();
     await expect(page.getByRole("textbox", { name: "Workspace name" })).toHaveValue(`Renamed ${suffixOf(person)}`);
@@ -54,18 +54,13 @@ it.describe("workspace and members", () => {
     const customerName = page.getByRole("textbox", { name: "Name customers see" });
     await expect(customerName).toHaveAttribute("placeholder", `Facing ${suffixOf(person)}`);
     await customerName.fill("Acme Support");
+    await page.getByRole("combobox", { name: "Workspace time zone" }).fill("Lagos");
+    await page.getByRole("option", { name: "Africa/Lagos" }).click();
     const saved = page.waitForResponse(
       (r) => r.url().endsWith("/api/v1/workspace") && r.request().method() === "PATCH",
     );
-    await page.getByRole("button", { name: "Save changes" }).click();
+    await page.getByRole("button", { name: "Save", exact: true }).click();
     expect((await saved).status()).toBe(200);
-
-    const zoned = page.waitForResponse(
-      (r) => r.url().endsWith("/api/v1/workspace") && r.request().method() === "PATCH",
-    );
-    await page.getByRole("combobox", { name: "Workspace time zone" }).fill("Lagos");
-    await page.getByRole("option", { name: "Africa/Lagos" }).click();
-    expect((await zoned).status()).toBe(200);
 
     await page.reload();
     await expect(page.getByRole("textbox", { name: "Name customers see" })).toHaveValue("Acme Support");
@@ -78,7 +73,7 @@ it.describe("workspace and members", () => {
     await page.goto("/d/settings/workspace");
 
     await page.getByRole("textbox", { name: "Workspace address" }).fill("admin");
-    await page.getByRole("button", { name: "Save changes" }).click();
+    await page.getByRole("button", { name: "Save", exact: true }).click();
     await expect(page.getByRole("alert")).toHaveText("This address is reserved. Choose another one.");
   });
 

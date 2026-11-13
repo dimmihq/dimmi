@@ -133,11 +133,11 @@ it.describe("automation", () => {
     await page.getByRole("switch", { name: "Open on Saturday" }).focus();
     await page.keyboard.press("Space");
     await expect(page.getByRole("switch", { name: "Open on Saturday" })).toBeChecked();
-    // The button is disabled while the save runs too, so wait for the save.
+    // The bar stays while the save runs, so wait for the save itself.
     const saved = page.waitForResponse((r) => r.request().method() === "PATCH" && /\/schedules\//.test(r.url()));
-    await page.getByRole("button", { name: "Save hours" }).click();
+    await page.getByRole("button", { name: "Save", exact: true }).click();
     expect((await saved).ok()).toBe(true);
-    await expect(page.getByRole("button", { name: "Save hours" })).toBeDisabled();
+    await expect(page.getByRole("button", { name: "Save", exact: true })).toHaveCount(0);
 
     await page.reload();
     await expect(page.getByRole("group", { name: "Saturday opens" })).toHaveText(/09\D*00/);
@@ -153,6 +153,8 @@ it.describe("automation", () => {
 
     await addHoliday(page, "03/03/2027", "Offsite", { once: true });
     await expect(page.getByText("Mar 3, 2027")).toBeVisible();
+    await page.getByRole("button", { name: "Save", exact: true }).click();
+    await expect(page.getByRole("button", { name: "Save", exact: true })).toHaveCount(0);
 
     await page.reload();
     await expect(page.getByText("Christmas")).toBeVisible();

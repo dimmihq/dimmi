@@ -4,11 +4,14 @@
  * live: every check the server runs refreshes it over the workspace's
  * channel, and while the connection is down it reads the domain again
  * every thirty seconds. Removing a domain addresses still send from asks
- * again before those addresses fall back to the dimmi address.
+ * again before those addresses fall back to the dimmi address. The DNS
+ * host picked waits in a draft for the save bar at the foot; leaving
+ * with it unsaved asks first. Checking, rotating the key and removing
+ * are actions and happen at once.
  */
 import { RiArrowLeftLine } from "@remixicon/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useNavigate } from "@tanstack/react-router";
+import { useBlocker, useNavigate } from "@tanstack/react-router";
 import { useCallback, useState } from "react";
 
 import { Button } from "@/components/base/buttons/button";
@@ -16,6 +19,7 @@ import { AlertDialog } from "@/components/base/modal/modal";
 import { Failure } from "@/features/email/setup/failure";
 import { Danger } from "@/features/settings/controls";
 import { Row, Section, SettingsPage } from "@/features/settings/layout";
+import { SaveBar } from "@/features/settings/save-bar";
 import { useAccount } from "@/features/settings/use-account";
 import { ApiError } from "@/lib/api/client";
 import {
@@ -131,9 +135,19 @@ function DomainView({ domain, permissions }: { domain: EmailDomain; permissions:
   const [removing, setRemoving] = useState<"ask" | "force" | null>(null);
   const [blocked, setBlocked] = useState<string[] | null>(null);
   const [rotating, setRotating] = useState(false);
+  const [host, setHost] = useState<string | null>(null);
   const manage = permissions.includes("email:manage");
   const applied = useCallback(() => changes.check.mutate(), [changes.check.mutate]);
-  const error = changes.check.error ?? changes.rotate.error ?? changes.host.error ?? changes.remove.error;
+  const error = changes.check.error ?? changes.rotate.error ?? changes.remove.error;
+  const dirty = host !== null;
+  useBlocker({
+    shouldBlockFn: () => dirty && !window.confirm("Leave without saving your changes?"),
+    enableBeforeUnload: () => dirty,
+  });
+  const discard = () => {
+    changes.host.reset();
+    setHost(null);
+  };
 
   const remove = async (force: boolean) => {
     try {
@@ -148,12 +162,29 @@ function DomainView({ domain, permissions }: { domain: EmailDomain; permissions:
       }
       return;
     }
+    setHost(null);
     await navigate({ to: "/d/settings/$section", params: { section: "email" } });
     await queryClient.invalidateQueries({ queryKey: domainsKey(workspace) });
   };
 
   return (
-    <SettingsPage title={domain.domain} description={statusLines[domain.status]}>
+    <SettingsPage
+      title={domain.domain}
+      description={statusLines[domain.status]}
+      footer={
+        <SaveBar
+          dirty={dirty}
+          saving={changes.host.isPending}
+          error={changes.host.error?.message}
+          onSave={() => {
+            if (host !== null) {
+              changes.host.mutate(host, { onSuccess: () => setHost(null) });
+            }
+          }}
+          onDiscard={discard}
+        />
+      }
+    >
       <BackToEmail />
       <Section
         title="Status"
@@ -175,7 +206,12 @@ function DomainView({ domain, permissions }: { domain: EmailDomain; permissions:
         <Failure error={error} />
       </Section>
       <DomainRecords records={domain.records} />
-      <HostGuide guide={domain.host_guide} manage={manage} onPick={(host) => changes.host.mutate(host)} />
+      <HostGuide
+        guide={domain.host_guide}
+        manage={manage}
+        selected={host ?? domain.host_guide.key}
+        onPick={(picked) => setHost(picked === domain.host_guide.key ? null : picked)}
+      />
       {manage ? (
         <Section title="Manage">
           {domain.driver === "smtp" && permissions.includes("email:rotate_dkim") ? (

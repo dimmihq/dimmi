@@ -6,9 +6,15 @@
  * gone for good. The test box shows what the rules would make of a text
  * without storing it. Below, the link checks run on what customers send.
  * Only people the server lets manage these see the controls.
+ *
+ * Switches and the domain lists change nothing until Save in the bar
+ * at the bottom is pressed; Discard puts them back, and leaving with
+ * changes not saved asks first. Adding, editing, deleting and moving a
+ * rule, and retention with its own confirmation, save as they always did.
  */
 import { RiArrowUpLine } from "@remixicon/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useBlocker } from "@tanstack/react-router";
 import { useState } from "react";
 
 import { Button } from "@/components/base/buttons/button";
@@ -17,11 +23,13 @@ import { Input } from "@/components/base/input/input";
 import { AlertDialog } from "@/components/base/modal/modal";
 import { Switch } from "@/components/base/switch/switch";
 import { Textarea } from "@/components/base/textarea/textarea";
+import { toast } from "@/components/base/toast/toast";
 import { ApiError } from "@/lib/api/client";
 import {
   type BuiltIns,
   createRedactionRule,
   deleteRedactionRule,
+  type Redaction,
   type RedactionRule,
   type RedactionTest,
   redactionKey,
@@ -30,12 +38,13 @@ import {
   updateRedaction,
   updateRedactionRule,
 } from "@/lib/api/redaction";
-import { callerQuery } from "@/lib/api/workspace";
+import { callerQuery, workspaceQuery } from "@/lib/api/workspace";
 
 import { Action, Danger } from "../controls";
 import { Empty, Row, Section, SettingsPage } from "../layout";
-import { LinkSafetySection } from "../link-safety-section";
+import { LinkSafetySection, useLinkSafetyDraft } from "../link-safety-section";
 import { RetentionSection } from "../retention-section";
+import { SaveBar } from "../save-bar";
 import { failureText } from "../teams";
 import { useAccount } from "../use-account";
 
@@ -46,6 +55,63 @@ function useRefresh(workspace: string) {
 
   return () => client.invalidateQueries({ queryKey: redactionKey(workspace) });
 }
+
+/*
+ * useSafetyDraft holds every switch and domain list changed on the page
+ * but not saved yet: the built-in rules, each rule's own switch, and
+ * link safety. Save sends only what differs, then reads redaction and
+ * the workspace again; Discard puts everything back. A pending switch
+ * for a rule deleted meanwhile is dropped rather than sent.
+ */
+function useSafetyDraft(workspace: string, redaction: Redaction | undefined) {
+  const client = useQueryClient();
+  const links = useLinkSafetyDraft(workspace);
+  const [builtIns, setBuiltIns] = useState<Partial<BuiltIns>>({});
+  const [rules, setRules] = useState<Record<string, boolean>>({});
+  const known = new Set(redaction?.rules.map((rule) => rule.id) ?? []);
+  const ruleChanges = Object.entries(rules).filter(([id]) => known.has(id));
+  const clear = () => {
+    setBuiltIns({});
+    setRules({});
+    links.discard();
+  };
+  const save = useMutation({
+    mutationFn: () =>
+      Promise.all([
+        Object.keys(builtIns).length > 0 ? updateRedaction(workspace, builtIns) : null,
+        ...ruleChanges.map(([id, enabled]) => updateRedactionRule(workspace, id, { enabled })),
+        links.send(),
+      ]),
+    onSuccess: async () => {
+      await Promise.all([
+        client.invalidateQueries({ queryKey: redactionKey(workspace) }),
+        client.invalidateQueries({ queryKey: workspaceQuery(workspace).queryKey }),
+      ]);
+      clear();
+      toast.success("Conversation safety saved");
+    },
+  });
+
+  return {
+    builtIns: redaction ? { ...redaction.built_ins, ...builtIns } : null,
+    ruleOn: (rule: RedactionRule) => rules[rule.id] ?? rule.enabled,
+    links,
+    dirty: Object.keys(builtIns).length > 0 || ruleChanges.length > 0 || links.dirty,
+    save,
+    discard: () => {
+      save.reset();
+      clear();
+    },
+    setBuiltIn: (key: keyof BuiltIns, on: boolean) =>
+      setBuiltIns(({ [key]: _, ...rest }) =>
+        redaction && redaction.built_ins[key] === on ? rest : { ...rest, [key]: on },
+      ),
+    setRule: (rule: RedactionRule, on: boolean) =>
+      setRules(({ [rule.id]: _, ...rest }) => (on === rule.enabled ? rest : { ...rest, [rule.id]: on })),
+  };
+}
+
+type SafetyDraft = ReturnType<typeof useSafetyDraft>;
 
 function RuleDialog({ rule, onClose }: { rule: RedactionRule | null; onClose: () => void }) {
   const workspace = useAccount().workspace.id;
@@ -125,14 +191,7 @@ function DeleteRuleDialog({ rule, onClose }: { rule: RedactionRule; onClose: () 
   );
 }
 
-function BuiltInRules({ builtIns, canManage }: { builtIns: BuiltIns; canManage: boolean }) {
-  const workspace = useAccount().workspace.id;
-  const refresh = useRefresh(workspace);
-  const change = useMutation({
-    mutationFn: (next: Partial<BuiltIns>) => updateRedaction(workspace, next),
-    onSuccess: refresh,
-  });
-
+function BuiltInRules({ builtIns, canManage, draft }: { builtIns: BuiltIns; canManage: boolean; draft: SafetyDraft }) {
   return (
     <Section
       title="Built-in rules"
@@ -147,7 +206,7 @@ function BuiltInRules({ builtIns, canManage }: { builtIns: BuiltIns; canManage: 
           size="sm"
           isSelected={builtIns.card_numbers}
           isDisabled={!canManage}
-          onChange={(on) => change.mutate({ card_numbers: on })}
+          onChange={(on) => draft.setBuiltIn("card_numbers", on)}
         />
       </Row>
       <Row
@@ -159,7 +218,7 @@ function BuiltInRules({ builtIns, canManage }: { builtIns: BuiltIns; canManage: 
           size="sm"
           isSelected={builtIns.us_ssn}
           isDisabled={!canManage}
-          onChange={(on) => change.mutate({ us_ssn: on })}
+          onChange={(on) => draft.setBuiltIn("us_ssn", on)}
         />
       </Row>
     </Section>
@@ -170,6 +229,8 @@ function RuleRow({
   rule,
   first,
   canManage,
+  enabled,
+  onToggle,
   onEdit,
   onDelete,
   onMoveUp,
@@ -177,17 +238,12 @@ function RuleRow({
   rule: RedactionRule;
   first: boolean;
   canManage: boolean;
+  enabled: boolean;
+  onToggle: (on: boolean) => void;
   onEdit: () => void;
   onDelete: () => void;
   onMoveUp: () => void;
 }) {
-  const workspace = useAccount().workspace.id;
-  const refresh = useRefresh(workspace);
-  const toggle = useMutation({
-    mutationFn: (enabled: boolean) => updateRedactionRule(workspace, rule.id, { enabled }),
-    onSuccess: refresh,
-  });
-
   return (
     <Row
       label={rule.name}
@@ -200,9 +256,9 @@ function RuleRow({
       <Switch
         aria-label={`Use ${rule.name}`}
         size="sm"
-        isSelected={rule.enabled}
+        isSelected={enabled}
         isDisabled={!canManage}
-        onChange={(on) => toggle.mutate(on)}
+        onChange={onToggle}
       />
       {canManage ? (
         <>
@@ -223,7 +279,7 @@ function RuleRow({
   );
 }
 
-function OwnRules({ rules, canManage }: { rules: RedactionRule[]; canManage: boolean }) {
+function OwnRules({ rules, canManage, draft }: { rules: RedactionRule[]; canManage: boolean; draft: SafetyDraft }) {
   const workspace = useAccount().workspace.id;
   const refresh = useRefresh(workspace);
   const [editing, setEditing] = useState<RedactionRule | "new" | null>(null);
@@ -251,6 +307,8 @@ function OwnRules({ rules, canManage }: { rules: RedactionRule[]; canManage: boo
           rule={rule}
           first={index === 0}
           canManage={canManage}
+          enabled={draft.ruleOn(rule)}
+          onToggle={(on) => draft.setRule(rule, on)}
           onEdit={() => setEditing(rule)}
           onDelete={() => setDeleting(rule)}
           onMoveUp={() => moveUp(index)}
@@ -321,16 +379,30 @@ export function ConversationSafetySettings() {
   const { data: caller } = useQuery(callerQuery(workspace));
   const permissions = caller?.member?.permissions ?? [];
   const canManage = permissions.includes("redaction:manage") && permissions.includes("settings:write");
+  const draft = useSafetyDraft(workspace, redaction);
+  useBlocker({
+    shouldBlockFn: () => draft.dirty && !window.confirm("Leave without saving your changes?"),
+    enableBeforeUnload: () => draft.dirty,
+  });
 
   return (
     <SettingsPage
       title="Conversation safety"
       description="Keep card numbers and other sensitive text out of what your workspace stores."
+      footer={
+        <SaveBar
+          dirty={draft.dirty}
+          saving={draft.save.isPending}
+          error={draft.save.error ? failureText(draft.save.error) : null}
+          onSave={() => draft.save.mutate()}
+          onDiscard={draft.discard}
+        />
+      }
     >
-      {redaction ? (
+      {redaction && draft.builtIns ? (
         <>
-          <BuiltInRules builtIns={redaction.built_ins} canManage={canManage} />
-          <OwnRules rules={redaction.rules} canManage={canManage} />
+          <BuiltInRules builtIns={draft.builtIns} canManage={canManage} draft={draft} />
+          <OwnRules rules={redaction.rules} canManage={canManage} draft={draft} />
           {canManage ? <TryRules /> : null}
         </>
       ) : (
@@ -339,7 +411,7 @@ export function ConversationSafetySettings() {
           <Section title="Your rules" loading rows={2} />
         </>
       )}
-      <LinkSafetySection canManage={permissions.includes("settings:write")} />
+      <LinkSafetySection canManage={permissions.includes("settings:write")} draft={draft.links} />
       <RetentionSection canManage={permissions.includes("settings:write")} />
     </SettingsPage>
   );

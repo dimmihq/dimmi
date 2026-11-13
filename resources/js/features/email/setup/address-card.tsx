@@ -2,9 +2,12 @@
  * One address with its forwarding setup: where to forward, the steps for
  * the mail service it lives in, whether mail arrived, and the settings
  * of the address for whoever may manage it, among them the default that
- * new mail leaves from and how replies look.
+ * new mail leaves from and how replies look. The settings are held in
+ * the page's draft and sent with its save bar; making the address the
+ * default is an action of its own and happens at once.
  */
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useState } from "react";
 
 import { Button } from "@/components/base/buttons/button";
 import { Choice, Toggle } from "@/features/settings/controls";
@@ -22,6 +25,55 @@ import { TemplateSettings } from "./template-settings";
 
 const bulkLabels = { close: "Close", open: "Keep open", drop: "Drop" } as const;
 
+type AddressSettings = EmailAddress["settings"];
+
+/*
+ * fallbackColor is the brand color shown before one is picked.
+ */
+const fallbackColor = "#171717";
+
+/*
+ * savedSettings reads an address's settings as the controls show them,
+ * filling a reply style never picked with its defaults.
+ */
+function savedSettings(settings: AddressSettings): AddressSettings {
+  return {
+    ...settings,
+    template: settings.template ?? "plain",
+    brand_color: settings.brand_color || fallbackColor,
+    footer_markdown: settings.footer_markdown ?? "",
+  };
+}
+
+/*
+ * useAddressDraft holds the address's settings changed but not saved
+ * yet. A setting put back to its saved value drops out of the draft.
+ * send writes what changed in one call; clear forgets it after a save or
+ * on Discard. generation counts the clears, so controls that keep their
+ * own value, such as the color well, start over from the saved one.
+ */
+export function useAddressDraft(workspace: string, address: EmailAddress | undefined) {
+  const [pending, setPending] = useState<Partial<AddressSettings>>({});
+  const [generation, setGeneration] = useState(0);
+  const saved = address ? savedSettings(address.settings) : undefined;
+  const dirty = Object.keys(pending).length > 0;
+
+  return {
+    settings: saved ? { ...saved, ...pending } : undefined,
+    generation,
+    dirty,
+    set: <K extends keyof AddressSettings>(key: K, value: AddressSettings[K]) =>
+      setPending(({ [key]: _, ...rest }) => (saved && saved[key] === value ? rest : { ...rest, [key]: value })),
+    send: () => (address && dirty ? updateEmailAddress(workspace, address.id, { settings: pending }) : null),
+    clear: () => {
+      setPending({});
+      setGeneration((count) => count + 1);
+    },
+  };
+}
+
+export type AddressDraft = ReturnType<typeof useAddressDraft>;
+
 /*
  * AddressCard is one address with its forwarding setup.
  */
@@ -29,24 +81,26 @@ export function AddressCard({
   address,
   manage,
   readRaw,
+  draft,
   title = address.address,
 }: {
   address: EmailAddress;
   manage: boolean;
   readRaw: boolean;
+  draft: AddressDraft;
   title?: string;
 }) {
   const me = useAccount();
   const queryClient = useQueryClient();
   const refresh = () => queryClient.invalidateQueries({ queryKey: ["workspace", me.workspace.id, "email-addresses"] });
 
-  const change = useMutation({
-    mutationFn: (changes: Parameters<typeof updateEmailAddress>[2]) =>
-      updateEmailAddress(me.workspace.id, address.id, changes),
+  const makeDefault = useMutation({
+    mutationFn: () => updateEmailAddress(me.workspace.id, address.id, { is_default: true }),
     onSuccess: refresh,
   });
 
   const confirmation = address.forwarding_confirmation;
+  const settings = draft.settings ?? savedSettings(address.settings);
 
   return (
     <Section title={title} description={`${address.inbox.name} inbox`} action={<AddressStatus address={address} />}>
@@ -87,8 +141,8 @@ export function AddressCard({
               <Button
                 variant="secondary"
                 size="small"
-                loading={change.isPending}
-                onClick={() => change.mutate({ is_default: true })}
+                loading={makeDefault.isPending}
+                onClick={() => makeDefault.mutate()}
               >
                 Make default
               </Button>
@@ -97,31 +151,33 @@ export function AddressCard({
           <ForwardingTest address={address} />
           <Row label="Quote the previous message">
             <Toggle
+              key={`quote-${settings.quote_previous}`}
               label="Quote the previous message"
-              on={address.settings.quote_previous}
-              onChange={(on) => change.mutate({ settings: { quote_previous: on } })}
+              on={settings.quote_previous}
+              onChange={(on) => draft.set("quote_previous", on)}
             />
           </Row>
           <Row label="Bulk mail" description="Newsletters and notifications that start no thread.">
             <Choice
+              key={`bulk-${settings.bulk_mail_handling}`}
               label="Bulk mail"
               options={Object.values(bulkLabels)}
-              value={bulkLabels[address.settings.bulk_mail_handling]}
+              value={bulkLabels[settings.bulk_mail_handling]}
               onChange={(label) => {
                 const handling = (Object.keys(bulkLabels) as (keyof typeof bulkLabels)[]).find(
                   (key) => bulkLabels[key] === label,
                 );
                 if (handling) {
-                  change.mutate({ settings: { bulk_mail_handling: handling } });
+                  draft.set("bulk_mail_handling", handling);
                 }
               }}
             />
           </Row>
-          <TemplateSettings workspace={me.workspace.id} address={address} />
+          <TemplateSettings workspace={me.workspace.id} address={address} draft={draft} settings={settings} />
         </>
       ) : null}
       {readRaw ? <Activity address={address} /> : null}
-      <Failure error={change.error} />
+      <Failure error={makeDefault.error} />
     </Section>
   );
 }

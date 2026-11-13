@@ -12,10 +12,17 @@ import { Row, Section } from "@/features/settings/layout";
 import type { AiAgent } from "@/lib/api/ai";
 
 import type { AgentChange } from "../format";
-import { SavedTextarea, StackedRow } from "./fields";
+import { DraftTextarea, StackedRow } from "./fields";
 import { contactContexts, domains, unknownBehaviors } from "./options";
 
 const replyLimits = [3, 5, 10, 20];
+
+/*
+ * allowlistText is the allowlist typed text stands for, one site a line,
+ * so the field keeps blank lines and half-typed sites while the draft
+ * holds only the sites.
+ */
+const allowlistText = (text: string) => domains(text).join("\n");
 
 export function AnswersSection({
   agent,
@@ -78,13 +85,14 @@ export function AnswersSection({
         label="Links it may share"
         description="Sites beyond your help center it may link to, one per line. Leave empty for your help center only."
       >
-        <SavedTextarea
+        <DraftTextarea
           label="Links it may share"
           value={allowlist}
           placeholder={"example.com\nstatus.example.com"}
           maxLength={2000}
           disabled={!canWrite}
-          onSave={(text) => save({ link_allowlist: domains(text) })}
+          normalize={allowlistText}
+          onChange={(text) => save({ link_allowlist: domains(text) })}
         />
       </StackedRow>
     </Section>

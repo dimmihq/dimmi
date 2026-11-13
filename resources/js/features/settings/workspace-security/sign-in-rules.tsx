@@ -3,17 +3,15 @@
  * rule at all, so the list stored is empty then, and a way the install
  * adds later stays open. Google can also be held to company domains.
  * The rule bites at the workspace's door, never at sign-in: a person may
- * belong to other workspaces without it.
+ * belong to other workspaces without it. Ticks and domains wait in the
+ * page's draft until its save bar sends them.
  */
-import { useState } from "react";
-
-import { Button } from "@/components/base/buttons/button";
 import { Checkbox } from "@/components/base/checkbox/checkbox";
 import { Input } from "@/components/base/input/input";
 
 import { Row, Section } from "../layout";
+import type { SecurityDraft } from "../pages/admin";
 import { storedMethods } from "./methods";
-import { useAccessPolicy } from "./use-access-policy";
 
 const labels: Record<string, string> = {
   password: "Password",
@@ -23,9 +21,8 @@ const labels: Record<string, string> = {
   sso: "Single sign-on",
 };
 
-export function SignInRulesSection() {
-  const { policy, canManage, save, failure, prompt } = useAccessPolicy();
-  const [domains, setDomains] = useState<string | null>(null);
+export function SignInRulesSection({ draft }: { draft: SecurityDraft }) {
+  const { policy, canManage } = draft;
 
   if (!policy) {
     return null;
@@ -33,23 +30,22 @@ export function SignInRulesSection() {
 
   const allowed = policy.allowed_sign_in_methods;
   const ticked = allowed.length > 0 ? allowed : policy.available_sign_in_methods;
-  const shownDomains = domains ?? policy.google_allowed_domains.join(", ");
+  const shownDomains = draft.domainsText ?? policy.google_allowed_domains.join(", ");
 
   const toggle = (method: string, on: boolean) => {
     const next = on ? [...ticked, method] : ticked.filter((value) => value !== method);
 
-    void save({ allowed_sign_in_methods: storedMethods(next, policy.available_sign_in_methods) });
+    draft.set({ allowed_sign_in_methods: storedMethods(next, policy.available_sign_in_methods) });
   };
 
-  const saveDomains = async () => {
-    const list = shownDomains
-      .split(",")
-      .map((domain) => domain.trim())
-      .filter(Boolean);
-
-    if (await save({ google_allowed_domains: list })) {
-      setDomains(null);
-    }
+  const typeDomains = (text: string) => {
+    draft.setDomainsText(text);
+    draft.set({
+      google_allowed_domains: text
+        .split(",")
+        .map((domain) => domain.trim())
+        .filter(Boolean),
+    });
   };
 
   return (
@@ -69,28 +65,15 @@ export function SignInRulesSection() {
       ))}
       {ticked.includes("google") ? (
         <Row label="Google domains" description="Only accounts of these domains. Leave empty for any Google account.">
-          <div className="flex items-end gap-2">
-            <Input
-              aria-label="Google domains"
-              placeholder="acme.com, acme.co.uk"
-              isDisabled={!canManage}
-              value={shownDomains}
-              onChange={setDomains}
-            />
-            {canManage ? (
-              <Button variant="secondary" size="small" onClick={() => void saveDomains()}>
-                Save
-              </Button>
-            ) : null}
-          </div>
+          <Input
+            aria-label="Google domains"
+            placeholder="acme.com, acme.co.uk"
+            isDisabled={!canManage}
+            value={shownDomains}
+            onChange={typeDomains}
+          />
         </Row>
       ) : null}
-      {failure ? (
-        <p role="alert" className="py-2.5 pe-3 text-body-2-regular text-text-error-primary">
-          {failure}
-        </p>
-      ) : null}
-      {prompt}
     </Section>
   );
 }

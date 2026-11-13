@@ -131,7 +131,7 @@ function AlwaysTagsRow({
       await client.invalidateQueries({ queryKey: ["workspace", workspace, "tags"] });
       keep([...chosen, created]);
     } catch (error) {
-      toast.error("Not saved", { description: refusal(error, "Check your connection and try again.") });
+      toast.error("Tag not created", { description: refusal(error, "Check your connection and try again.") });
     }
   };
   const remove = (tag: Tag) => keep(chosen.filter((other) => other.id !== tag.id));

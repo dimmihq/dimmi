@@ -3,11 +3,14 @@
  * each. Any teammate can add one. Renaming, recolouring and deleting
  * change what every record means, so they show only to people the server
  * lets manage tags, and deleting says how many it takes the tag from.
+ * Colours picked on the rows wait in one draft for the page's save bar;
+ * the dialogs to create, edit and delete a tag save on their own.
  */
 
 import { RiDeleteBinLine, RiPencilLine } from "@remixicon/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useRef, useState } from "react";
+import { useBlocker } from "@tanstack/react-router";
+import { useState } from "react";
 import { parseColor } from "react-aria-components";
 
 import { Button } from "@/components/base/buttons/button";
@@ -24,6 +27,7 @@ import { callerQuery } from "@/lib/api/workspace";
 import { Action } from "../controls";
 import { SettingsPage } from "../layout";
 import { placeholders } from "../placeholders";
+import { SaveBar } from "../save-bar";
 import { failureText } from "../teams";
 import { useAccount } from "../use-account";
 
@@ -188,31 +192,59 @@ function DeleteTagDialog({ tag, onClose }: { tag: ListedTag; onClose: () => void
 }
 
 /*
- * TagColor is the swatch on a tag's row: it opens the colour picker and
- * saves the colour picked once the pointer settles, so dragging across
- * the picker does not send a request for every step.
+ * useColorDraft holds the colours picked on the rows but not saved yet,
+ * by tag. Save sends each one that differs from the tag's saved colour
+ * and reloads the tags; Discard puts them back. A colour saved from the
+ * edit dialog meanwhile stops counting as a change.
  */
-function TagColor({ tag }: { tag: ListedTag }) {
-  const workspace = useAccount().workspace.id;
+function useColorDraft(workspace: string, tags: ListedTag[] | undefined) {
   const refresh = useTagWrites(workspace);
-  const [color, setColor] = useState(parseColor(tag.color ?? "#737373"));
-  const pending = useRef<number | undefined>(undefined);
+  const [pending, setPending] = useState<Record<string, string>>({});
   const save = useMutation({
-    mutationFn: (hex: string) => updateTag(workspace, tag.id, { color: hex }),
-    onSuccess: refresh,
+    mutationFn: (sent: Record<string, string>) =>
+      Promise.all(Object.entries(sent).map(([id, color]) => updateTag(workspace, id, { color }))),
+    onSuccess: () => setPending({}),
+    onSettled: refresh,
   });
 
-  useEffect(() => () => window.clearTimeout(pending.current), []);
+  const changes = Object.fromEntries(
+    Object.entries(pending).filter(([id, color]) => {
+      const tag = tags?.find((t) => t.id === id);
+
+      return tag !== undefined && tag.color?.toLowerCase() !== color;
+    }),
+  );
+
+  return {
+    pending,
+    changes,
+    dirty: Object.keys(changes).length > 0,
+    save,
+    set: (tag: ListedTag, color: string) =>
+      setPending(({ [tag.id]: _, ...rest }) =>
+        color === tag.color?.toLowerCase() ? rest : { ...rest, [tag.id]: color },
+      ),
+    discard: () => {
+      setPending({});
+      save.reset();
+    },
+  };
+}
+
+type ColorDraft = ReturnType<typeof useColorDraft>;
+
+/*
+ * TagColor is the swatch on a tag's row: it opens the colour picker and
+ * shows the colour picked, which waits in the draft for Save.
+ */
+function TagColor({ tag, draft }: { tag: ListedTag; draft: ColorDraft }) {
+  const hex = draft.pending[tag.id] ?? tag.color ?? "#737373";
 
   return (
     <ColorWell
       aria-label={`${tag.name} colour`}
-      value={color}
-      onChange={(next) => {
-        setColor(next);
-        window.clearTimeout(pending.current);
-        pending.current = window.setTimeout(() => save.mutate(next.toString("hex").toLowerCase()), 400);
-      }}
+      value={parseColor(hex)}
+      onChange={(next) => draft.set(tag, next.toString("hex").toLowerCase())}
       swatches={swatches}
       placement="bottom end"
       wellClassName="size-6"
@@ -223,11 +255,13 @@ function TagColor({ tag }: { tag: ListedTag }) {
 function TagRow({
   tag,
   canManage,
+  draft,
   onEdit,
   onDelete,
 }: {
   tag: ListedTag;
   canManage: boolean;
+  draft: ColorDraft;
   onEdit: () => void;
   onDelete: () => void;
 }) {
@@ -239,7 +273,7 @@ function TagRow({
       <span className="text-body-2-regular text-text-tertiary">{countOf(tag)}</span>
       {canManage ? (
         <span className="flex items-center gap-2">
-          <TagColor tag={tag} />
+          <TagColor tag={tag} draft={draft} />
           <Button
             iconOnly
             variant="secondary"
@@ -287,9 +321,26 @@ export function TagsSettings() {
   const [creating, setCreating] = useState(false);
   const [editing, setEditing] = useState<ListedTag | null>(null);
   const [deleting, setDeleting] = useState<ListedTag | null>(null);
+  const colors = useColorDraft(workspace, tags);
+  useBlocker({
+    shouldBlockFn: () => colors.dirty && !window.confirm("Leave without saving your changes?"),
+    enableBeforeUnload: () => colors.dirty,
+  });
 
   return (
-    <SettingsPage title="Tags" description="Any teammate can create tags; admins rename, recolour and delete them.">
+    <SettingsPage
+      title="Tags"
+      description="Any teammate can create tags; admins rename, recolour and delete them."
+      footer={
+        <SaveBar
+          dirty={colors.dirty}
+          saving={colors.save.isPending}
+          error={colors.save.error ? failureText(colors.save.error) : null}
+          onSave={() => colors.save.mutate(colors.changes)}
+          onDiscard={colors.discard}
+        />
+      }
+    >
       <section aria-label="Tags" className="flex flex-col gap-2">
         <div className="flex items-end justify-between gap-4 px-3">
           <p className="text-body-2-regular text-text-tertiary">
@@ -311,6 +362,7 @@ export function TagsSettings() {
               key={tag.id}
               tag={tag}
               canManage={canManage}
+              draft={colors}
               onEdit={() => setEditing(tag)}
               onDelete={() => setDeleting(tag)}
             />
@@ -322,7 +374,13 @@ export function TagsSettings() {
         onClose={() => setCreating(false)}
         suggested={tagPalette[(tags?.length ?? 0) % tagPalette.length] ?? "#2563eb"}
       />
-      {editing ? <EditTagDialog key={editing.id} tag={editing} onClose={() => setEditing(null)} /> : null}
+      {editing ? (
+        <EditTagDialog
+          key={editing.id}
+          tag={{ ...editing, color: colors.pending[editing.id] ?? editing.color }}
+          onClose={() => setEditing(null)}
+        />
+      ) : null}
       {deleting ? <DeleteTagDialog tag={deleting} onClose={() => setDeleting(null)} /> : null}
     </SettingsPage>
   );

@@ -3,12 +3,13 @@
  * The API takes any number of minutes; the page offers round ones. A value
  * set some other way is listed too, so the choice never lies. Activity is
  * written at most every five minutes, so the idle limit can run that much
- * over, which is why the shortest choice is fifteen.
+ * over, which is why the shortest choice is fifteen. A pick waits in the
+ * page's draft until its save bar sends it.
  */
 import { Select, SelectItem } from "@/components/base/select/select";
 
 import { Row, Section } from "../layout";
-import { useAccessPolicy } from "./use-access-policy";
+import type { SecurityDraft } from "../pages/admin";
 
 interface Choice {
   minutes: number | null;
@@ -77,8 +78,8 @@ function LimitSelect({
   );
 }
 
-export function SessionLengthSection() {
-  const { policy, canManage, save, failure, prompt } = useAccessPolicy();
+export function SessionLengthSection({ draft }: { draft: SecurityDraft }) {
+  const { policy, canManage } = draft;
 
   if (!policy) {
     return null;
@@ -92,7 +93,7 @@ export function SessionLengthSection() {
           choices={maxAgeChoices}
           value={policy.session_max_age_minutes}
           disabled={!canManage}
-          onChange={(minutes) => void save({ session_max_age_minutes: minutes })}
+          onChange={(minutes) => draft.set({ session_max_age_minutes: minutes })}
         />
       </Row>
       <Row
@@ -104,15 +105,9 @@ export function SessionLengthSection() {
           choices={idleChoices}
           value={policy.session_idle_timeout_minutes}
           disabled={!canManage}
-          onChange={(minutes) => void save({ session_idle_timeout_minutes: minutes })}
+          onChange={(minutes) => draft.set({ session_idle_timeout_minutes: minutes })}
         />
       </Row>
-      {failure ? (
-        <p role="alert" className="py-2.5 pe-3 text-body-2-regular text-text-error-primary">
-          {failure}
-        </p>
-      ) : null}
-      {prompt}
     </Section>
   );
 }

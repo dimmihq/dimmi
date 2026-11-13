@@ -6,8 +6,10 @@
  * attribute can be deleted, which removes its values. A contact
  * attribute can be opened to the messenger, which may otherwise write
  * none. An event can be opened to the messenger the same way, or the
- * messenger allowed to send any event. Values that did not fit are
- * listed at the bottom, so nothing is dropped silently.
+ * messenger allowed to send any event. Those messenger switches wait in
+ * one draft for the page's save bar; archiving, restoring and deleting
+ * happen at once. Values that did not fit are listed at the bottom, so
+ * nothing is dropped silently.
  */
 import {
   RiAddLine,
@@ -18,6 +20,7 @@ import {
   RiUserLine,
 } from "@remixicon/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useBlocker } from "@tanstack/react-router";
 import { useState } from "react";
 
 import { Button } from "@/components/base/buttons/button";
@@ -42,6 +45,8 @@ import {
 import { definitionLine, eventLine, problemNames } from "../attributes";
 import { Action, Danger, Toggle } from "../controls";
 import { Glyph, Item, Section, SettingsPage } from "../layout";
+import { SaveBar } from "../save-bar";
+import { failureText } from "../teams";
 import { useAccount } from "../use-account";
 import { NewAttributeModal } from "./new-attribute-modal";
 
@@ -56,14 +61,89 @@ function useRefresh(workspace: string) {
   };
 }
 
+/*
+ * Writable is what the messenger may write, flipped but not saved yet:
+ * per attribute, per event, and whether it may send any event.
+ */
+type Writable = { attributes: Record<string, boolean>; events: Record<string, boolean>; anyEvent?: boolean };
+
+const nothing: Writable = { attributes: {}, events: {} };
+
+/*
+ * flipped drops a flip that puts a switch back where it was saved.
+ */
+function flipped(map: Record<string, boolean>, id: string, on: boolean, saved: boolean) {
+  const { [id]: _, ...rest } = map;
+
+  return on === saved ? rest : { ...rest, [id]: on };
+}
+
+/*
+ * useWritableDraft holds the page's messenger switches until Save, which
+ * sends every flip together and then reloads the lists; Discard puts
+ * them back.
+ */
+function useWritableDraft(workspace: string) {
+  const queryClient = useQueryClient();
+  const refresh = useRefresh(workspace);
+  const [pending, setPending] = useState<Writable>(nothing);
+  const save = useMutation({
+    mutationFn: async (sent: Writable) => {
+      await Promise.all([
+        ...Object.entries(sent.attributes).map(([id, on]) => updateAttribute(workspace, id, { client_writable: on })),
+        ...Object.entries(sent.events).map(([id, on]) => updateEvent(workspace, id, { client_writable: on })),
+        ...(sent.anyEvent === undefined
+          ? []
+          : [
+              updateEventSettings(workspace, { messenger_new_events: sent.anyEvent }).then((saved) =>
+                queryClient.setQueryData(eventSettingsQuery(workspace).queryKey, saved),
+              ),
+            ]),
+      ]);
+    },
+    onSuccess: () => {
+      setPending(nothing);
+      toast.success("Attributes saved");
+    },
+    onSettled: () => {
+      refresh();
+      void queryClient.invalidateQueries({ queryKey: eventsQuery(workspace).queryKey });
+      void queryClient.invalidateQueries({ queryKey: eventSettingsQuery(workspace).queryKey });
+    },
+  });
+
+  return {
+    pending,
+    dirty:
+      Object.keys(pending.attributes).length > 0 ||
+      Object.keys(pending.events).length > 0 ||
+      pending.anyEvent !== undefined,
+    save,
+    attribute: (definition: AttributeDefinition, on: boolean) =>
+      setPending((p) => ({ ...p, attributes: flipped(p.attributes, definition.id, on, definition.client_writable) })),
+    event: (event: EventDefinition, on: boolean) =>
+      setPending((p) => ({ ...p, events: flipped(p.events, event.id, on, event.client_writable) })),
+    anyEvent: (on: boolean, saved: boolean) =>
+      setPending(({ anyEvent: _, ...rest }) => (on === saved ? rest : { ...rest, anyEvent: on })),
+    discard: () => {
+      setPending(nothing);
+      save.reset();
+    },
+  };
+}
+
+type WritableDraft = ReturnType<typeof useWritableDraft>;
+
 function DefinitionRow({
   workspace,
   definition,
   canManage,
+  draft,
 }: {
   workspace: string;
   definition: AttributeDefinition;
   canManage: boolean;
+  draft: WritableDraft;
 }) {
   const refresh = useRefresh(workspace);
   const [confirm, setConfirm] = useState(false);
@@ -74,6 +154,7 @@ function DefinitionRow({
   });
   const remove = useMutation({ mutationFn: () => deleteAttribute(workspace, definition.id), onSuccess: refresh });
   const archived = definition.status === "archived";
+  const writable = draft.pending.attributes[definition.id] ?? definition.client_writable;
 
   return (
     <Item
@@ -85,9 +166,10 @@ function DefinitionRow({
         <span className="flex items-center gap-2">
           <span className="text-body-2-regular text-text-tertiary">Messenger</span>
           <Toggle
+            key={`writable-${writable}`}
             label={`Messenger may write ${definition.label}`}
-            on={definition.client_writable}
-            onChange={(on) => change.mutate({ client_writable: on })}
+            on={writable}
+            onChange={(on) => draft.attribute(definition, on)}
           />
         </span>
       ) : null}
@@ -119,7 +201,17 @@ function DefinitionRow({
   );
 }
 
-function EventRow({ workspace, event, canManage }: { workspace: string; event: EventDefinition; canManage: boolean }) {
+function EventRow({
+  workspace,
+  event,
+  canManage,
+  draft,
+}: {
+  workspace: string;
+  event: EventDefinition;
+  canManage: boolean;
+  draft: WritableDraft;
+}) {
   const refresh = useRefresh(workspace);
   const queryClient = useQueryClient();
   const archived = event.status === "archived";
@@ -131,6 +223,7 @@ function EventRow({ workspace, event, canManage }: { workspace: string; event: E
     },
     onError: (error) => toast.error(error.message),
   });
+  const writable = draft.pending.events[event.id] ?? event.client_writable;
 
   return (
     <Item mark={<Glyph icon={RiFlashlightLine} />} title={event.label} detail={eventLine(event)}>
@@ -138,9 +231,10 @@ function EventRow({ workspace, event, canManage }: { workspace: string; event: E
         <span className="flex items-center gap-2">
           <span className="text-body-2-regular text-text-tertiary">Messenger</span>
           <Toggle
+            key={`writable-${writable}`}
             label={`Messenger may send ${event.label}`}
-            on={event.client_writable}
-            onChange={(on) => change.mutate({ client_writable: on })}
+            on={writable}
+            onChange={(on) => draft.event(event, on)}
           />
         </span>
       ) : null}
@@ -155,19 +249,20 @@ function EventRow({ workspace, event, canManage }: { workspace: string; event: E
 
 /*
  * AnyMessengerEvent lets the messenger send event names nobody opened to
- * it, defining new ones as they arrive.
+ * it, defining new ones as they arrive. The flip waits for the save bar.
  */
-function AnyMessengerEvent({ workspace, canManage }: { workspace: string; canManage: boolean }) {
-  const queryClient = useQueryClient();
+function AnyMessengerEvent({
+  workspace,
+  canManage,
+  draft,
+}: {
+  workspace: string;
+  canManage: boolean;
+  draft: WritableDraft;
+}) {
   const { data } = useQuery(eventSettingsQuery(workspace));
-  const change = useMutation({
-    mutationFn: (on: boolean) => updateEventSettings(workspace, { messenger_new_events: on }),
-    onSuccess: (saved) => {
-      queryClient.setQueryData(eventSettingsQuery(workspace).queryKey, saved);
-      void queryClient.invalidateQueries({ queryKey: eventsQuery(workspace).queryKey });
-    },
-    onError: (error) => toast.error(error.message),
-  });
+  const saved = data?.messenger_new_events ?? false;
+  const on = draft.pending.anyEvent ?? saved;
 
   return (
     <Item
@@ -177,16 +272,17 @@ function AnyMessengerEvent({ workspace, canManage }: { workspace: string; canMan
     >
       {canManage && data ? (
         <Toggle
+          key={`any-${on}`}
           label="Accept any event from the messenger"
-          on={data?.messenger_new_events ?? false}
-          onChange={(on) => change.mutate(on)}
+          on={on}
+          onChange={(next) => draft.anyEvent(next, saved)}
         />
       ) : null}
     </Item>
   );
 }
 
-function Events({ workspace, canManage }: { workspace: string; canManage: boolean }) {
+function Events({ workspace, canManage, draft }: { workspace: string; canManage: boolean; draft: WritableDraft }) {
   const { data, isPending } = useQuery(eventsQuery(workspace));
 
   return (
@@ -198,7 +294,7 @@ function Events({ workspace, canManage }: { workspace: string; canManage: boolea
       }
       loading={isPending}
     >
-      <AnyMessengerEvent workspace={workspace} canManage={canManage} />
+      <AnyMessengerEvent workspace={workspace} canManage={canManage} draft={draft} />
       {data?.length === 0 ? (
         <Item
           mark={<Glyph icon={RiFlashlightLine} />}
@@ -207,7 +303,7 @@ function Events({ workspace, canManage }: { workspace: string; canManage: boolea
         />
       ) : null}
       {(data ?? []).map((e) => (
-        <EventRow key={e.id} workspace={workspace} event={e} canManage={canManage} />
+        <EventRow key={e.id} workspace={workspace} event={e} canManage={canManage} draft={draft} />
       ))}
     </Section>
   );
@@ -239,11 +335,25 @@ export function AttributesSettings() {
   const { data, isPending } = useQuery(attributesQuery(workspace));
   const [adding, setAdding] = useState(false);
   const of = (object: AttributeOf) => (data ?? []).filter((d) => d.of === object);
+  const draft = useWritableDraft(workspace);
+  useBlocker({
+    shouldBlockFn: () => draft.dirty && !window.confirm("Leave without saving your changes?"),
+    enableBeforeUnload: () => draft.dirty,
+  });
 
   return (
     <SettingsPage
       title="Attributes"
       description="The fields your contacts and companies carry, and their types."
+      footer={
+        <SaveBar
+          dirty={draft.dirty}
+          saving={draft.save.isPending}
+          error={draft.save.error ? failureText(draft.save.error) : null}
+          onSave={() => draft.save.mutate(draft.pending)}
+          onDiscard={draft.discard}
+        />
+      }
       actions={
         canManage ? (
           <Button size="small" leadingIcon={RiAddLine} onClick={() => setAdding(true)}>
@@ -271,11 +381,11 @@ export function AttributesSettings() {
             />
           ) : null}
           {of(object).map((d) => (
-            <DefinitionRow key={d.id} workspace={workspace} definition={d} canManage={canManage} />
+            <DefinitionRow key={d.id} workspace={workspace} definition={d} canManage={canManage} draft={draft} />
           ))}
         </Section>
       ))}
-      <Events workspace={workspace} canManage={canManage} />
+      <Events workspace={workspace} canManage={canManage} draft={draft} />
       <Problems workspace={workspace} />
       {adding ? <NewAttributeModal workspace={workspace} onClose={() => setAdding(false)} /> : null}
     </SettingsPage>

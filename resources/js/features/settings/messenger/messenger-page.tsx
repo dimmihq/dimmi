@@ -3,7 +3,7 @@
  * them on screens wide enough for both. Every change shows on it at once,
  * before anything is saved: changes collect in a draft, a bar at the
  * foot says they are unsaved, Discard puts the page back as saved and
- * Save sends them in one update. Leaving with unsaved changes asks first.
+ * Save sends them in one update, then who sees it in another. Leaving with unsaved changes asks first.
  * Someone who may only read settings sees them without changing them.
  * Picking a language for the texts shows the preview in that language.
  */
@@ -13,14 +13,28 @@ import { useBlocker, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 
 import { Button } from "@/components/base/buttons/button";
-import { updateWidget, type WidgetChange, type WidgetSettings, widgetQuery } from "@/lib/api/widget-settings";
+import { toast } from "@/components/base/toast/toast";
+import {
+  saveMessengerAudiences,
+  updateWidget,
+  type WidgetChange,
+  type WidgetSettings,
+  widgetQuery,
+} from "@/lib/api/widget-settings";
 
 import { usePermission } from "../inboxes";
 import { PageSkeleton, SettingsPage } from "../layout";
 import { SaveBar } from "../save-bar";
 import { failureText } from "../teams";
 import { useAccount } from "../use-account";
-import { AudiencesSection } from "./audiences-section";
+import {
+  type AudienceChoices,
+  AudiencesSection,
+  audienceChange,
+  audienceProblem,
+  type Slot,
+  savedChoice,
+} from "./audiences-section";
 import { changed, withChange, withDraft } from "./draft";
 import { forPreview, linkProblems } from "./links";
 import { LinksSection } from "./links-section";
@@ -55,30 +69,52 @@ function BackToMessengers() {
 }
 
 /*
- * useMessengerDraft holds the unsaved changes and saves them.
+ * useMessengerDraft holds the unsaved changes and saves them: the
+ * settings first, then the audiences picked. When the audiences are
+ * refused the settings stay saved and the picks stay pending, with the
+ * server's reason in the bar.
  */
 function useMessengerDraft(workspace: string, saved: WidgetSettings) {
   const queryClient = useQueryClient();
+  const key = widgetQuery(workspace, saved.id).queryKey;
   const [draft, setDraft] = useState<WidgetChange>({});
+  const [audiences, setAudiences] = useState<AudienceChoices>({});
   const [generation, setGeneration] = useState(0);
   const save = useMutation({
-    mutationFn: () => updateWidget(workspace, saved.id, draft),
-    onSuccess: async (updated) => {
-      queryClient.setQueryData(widgetQuery(workspace, saved.id).queryKey, updated);
-      setDraft({});
-      await queryClient.invalidateQueries({ queryKey: ["workspace", workspace, "widget-settings"] });
+    mutationFn: async () => {
+      if (changed(draft)) {
+        queryClient.setQueryData(key, await updateWidget(workspace, saved.id, draft));
+        setDraft({});
+      }
+      if (Object.keys(audiences).length > 0) {
+        try {
+          const answer = await saveMessengerAudiences(workspace, saved.id, audienceChange(audiences));
+          queryClient.setQueryData(key, (before) => before && { ...before, audiences: answer.rules });
+          setAudiences({});
+        } catch (error) {
+          throw new Error(audienceProblem(error));
+        }
+      }
     },
+    onSuccess: () => toast.success("Messenger saved"),
+    onSettled: () => queryClient.invalidateQueries({ queryKey: ["workspace", workspace, "widget-settings"] }),
   });
 
   return {
     draft,
+    audiences,
     shown: withDraft(saved, draft),
-    dirty: changed(draft),
+    dirty: changed(draft) || Object.keys(audiences).length > 0,
     generation,
     set: (change: WidgetChange) => setDraft((before) => withChange(before, change)),
+    pickAudience: (slot: Slot, choice: string) =>
+      setAudiences(({ [slot]: _, ...rest }) =>
+        choice === savedChoice(saved.audiences, slot) ? rest : { ...rest, [slot]: choice },
+      ),
     discard: () => {
       save.reset();
       setDraft({});
+      setAudiences({});
       setGeneration((n) => n + 1);
     },
     save,
@@ -123,7 +159,13 @@ function Editor({ workspace, saved }: { workspace: string; saved: WidgetSettings
           <VisitorsSection {...props} />
           <LinksSection {...props} problems={problems} />
           <TabsSection {...props} />
-          <AudiencesSection key={edit.shown.id} workspace={workspace} value={edit.shown} locked={locked} />
+          <AudiencesSection
+            workspace={workspace}
+            value={edit.shown}
+            locked={locked}
+            choices={edit.audiences}
+            onPick={edit.pickAudience}
+          />
           {locked ? null : <DangerSection workspace={workspace} value={edit.shown} />}
         </div>
         {preview.error && Object.keys(linkProblems(preview.error)).length === 0 ? (

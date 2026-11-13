@@ -15,12 +15,16 @@ const pseudo = JSON.parse(readFileSync("resources/js/lang/en-XA/settings.json", 
 
 /*
  * pickLanguage opens the language select labelled with the name and picks
- * the pseudo locale, whose name starts with an accented E.
+ * the pseudo locale, whose name starts with an accented E, then presses
+ * the page's Save when the page keeps the pick in a draft.
  */
-async function pickLanguage(page: Page, name: RegExp) {
+async function pickLanguage(page: Page, name: RegExp, save = false) {
   const saved = page.waitForResponse((r) => r.url().includes("/api/v1/") && r.request().method() === "PATCH");
   await page.getByRole("button", { name }).click();
   await page.getByRole("option", { name: /^\[Éñĝļîšĥ/ }).click();
+  if (save) {
+    await page.getByRole("button", { name: "Save", exact: true }).click();
+  }
   expect((await saved).status()).toBe(200);
 }
 
@@ -46,7 +50,7 @@ it.describe("interface language", { tag: "@local" }, () => {
       document.body.dataset.sameDocument = "yes";
     });
 
-    await pickLanguage(page, /Language$/);
+    await pickLanguage(page, /Language$/, true);
 
     await expect(page.locator("html")).toHaveAttribute("lang", "en-XA");
     await expect(page.getByText(pseudo.language.label, { exact: true })).toBeVisible();
@@ -55,13 +59,14 @@ it.describe("interface language", { tag: "@local" }, () => {
     const asked = page.waitForRequest((r) => r.url().endsWith("/api/v1/user") && r.method() === "PATCH");
     await page.getByRole("button", { name: pseudo.language.label }).click();
     await page.getByRole("option", { name: "English", exact: true }).click();
+    await page.getByRole("button", { name: "Save", exact: true }).click();
     expect((await asked).headers()["accept-language"]).toBe("en-XA");
     await expect(page.locator("html")).toHaveAttribute("lang", "en");
   });
 
   it("the choice survives a new sign-in", async ({ page, person }) => {
     await page.goto("/d/settings/preferences");
-    await pickLanguage(page, /Language$/);
+    await pickLanguage(page, /Language$/, true);
     await expect(page.locator("html")).toHaveAttribute("lang", "en-XA");
 
     await signOut(page, person);
@@ -72,12 +77,12 @@ it.describe("interface language", { tag: "@local" }, () => {
 
   it("a server error reads in that language", async ({ page }) => {
     await page.goto("/d/settings/preferences");
-    await pickLanguage(page, /Language$/);
+    await pickLanguage(page, /Language$/, true);
     await expect(page.locator("html")).toHaveAttribute("lang", "en-XA");
 
     await page.goto("/d/settings/workspace");
     await page.getByRole("textbox", { name: "Workspace address" }).fill("Not A Slug");
-    await page.getByRole("button", { name: "Save changes" }).click();
+    await page.getByRole("button", { name: "Save", exact: true }).click();
 
     await expect(page.getByRole("alert")).toHaveText(/^\[Ŧĥé slug ɱåý öñļý/);
   });
@@ -85,7 +90,7 @@ it.describe("interface language", { tag: "@local" }, () => {
   it("a workspace's language reaches a person who picked none", async ({ page }) => {
     await page.goto("/d/settings/workspace");
 
-    await pickLanguage(page, /Workspace language$/);
+    await pickLanguage(page, /Workspace language$/, true);
 
     await expect(page.locator("html")).toHaveAttribute("lang", "en-XA");
     await page.goto("/d/settings/preferences");

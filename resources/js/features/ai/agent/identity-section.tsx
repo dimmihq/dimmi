@@ -1,14 +1,14 @@
 /*
  * Who the agent is to customers: the name it signs with, what it calls
  * your product, how it sounds, and the standing guidance it follows in
- * every answer.
+ * every answer. Changes go into the page's draft through save.
  */
 import { SegmentedControl, SegmentedControlItem } from "@/components/base/segmented-control/segmented-control";
 import { Row, Section } from "@/features/settings/layout";
 import type { AiAgent } from "@/lib/api/ai";
 
 import type { AgentChange } from "../format";
-import { SavedText, SavedTextarea, StackedRow } from "./fields";
+import { DraftText, DraftTextarea, StackedRow } from "./fields";
 import { tones } from "./options";
 
 /*
@@ -30,23 +30,22 @@ export function IdentitySection({
   return (
     <Section title="Identity" description="How the agent introduces itself and sounds.">
       <Row label="Name" description="Shown on its replies in the messenger.">
-        <SavedText
+        <DraftText
           label="Agent name"
           value={agent.name}
           maxLength={60}
-          required
           disabled={!canWrite}
-          onSave={(name) => save({ name })}
+          onChange={(name) => save({ name })}
         />
       </Row>
       <Row label="Product name" description="What it calls your product in answers.">
-        <SavedText
+        <DraftText
           label="Product name"
           value={agent.product_name ?? ""}
           placeholder="Your product"
           maxLength={80}
           disabled={!canWrite}
-          onSave={(product_name) => save({ product_name })}
+          onChange={(product_name) => save({ product_name })}
         />
       </Row>
       <StackedRow label="Tone" description={tone.line}>
@@ -73,13 +72,13 @@ export function IdentitySection({
         label="Guidance"
         description="Anything it should always know or do: policies, words to avoid, when to point to a page."
       >
-        <SavedTextarea
+        <DraftTextarea
           label="Guidance"
           value={agent.guidance}
           placeholder="For example: We ship worldwide except Antarctica. Never promise refunds; offer a teammate instead."
           maxLength={guidanceLimit}
           disabled={!canWrite}
-          onSave={(guidance) => save({ guidance })}
+          onChange={(guidance) => save({ guidance })}
         />
       </StackedRow>
     </Section>

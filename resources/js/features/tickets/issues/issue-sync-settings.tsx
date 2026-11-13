@@ -7,12 +7,13 @@
  * GitHub, the deployments that prove a fix shipped. Every choice is
  * picked from lists pulled from the tool. Incidents are only linked by
  * hand from a ticket: nothing opens in dimmi from the tool by itself.
+ * Every pick and the pasted secret wait in the page's draft until its
+ * save bar sends them.
  */
 import { RiFileCopyLine } from "@remixicon/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { Chip } from "@/components/base/badges/chip";
-import { Button } from "@/components/base/buttons/button";
 import { IconButton } from "@/components/base/buttons/icon-button";
 import { Input } from "@/components/base/input/input";
 import { Select, SelectItem } from "@/components/base/select/select";
@@ -34,6 +35,58 @@ import { ticketStatesQuery } from "@/lib/api/tickets";
 import { defaultState, groupTint, isTool, type ToolKind, toolLook } from "./tools";
 
 type Save = (change: IssueSettingsChange) => void;
+
+/*
+ * useIssueSyncDraft holds the tool's settings changed but not saved yet,
+ * laid over them as saved. A change back to the saved value drops out,
+ * and so does an empty secret. Save sends the rest in one update.
+ */
+export function useIssueSyncDraft(workspace: string, installation: string, enabled: boolean) {
+  const queryClient = useQueryClient();
+  const { data: saved } = useQuery({ ...issueSettingsQuery(workspace, installation), enabled });
+  const [pending, setPending] = useState<IssueSettingsChange>({});
+  const save = useMutation({
+    mutationFn: () =>
+      updateIssueSettings(workspace, installation, {
+        ...pending,
+        ...(pending.signing_secret ? { signing_secret: pending.signing_secret.trim() } : {}),
+      }),
+    onSuccess: (next) => {
+      queryClient.setQueryData(issueKeys.settings(workspace, installation), next);
+      setPending({});
+      toast.success("Sync settings saved");
+    },
+  });
+  const { signing_secret: secret = "", ...picked } = pending;
+
+  return {
+    settings: saved && { ...saved, ...picked },
+    secret,
+    dirty: Object.keys(pending).length > 0,
+    save,
+    set: (change: IssueSettingsChange) =>
+      setPending((before) => {
+        const next: Record<string, unknown> = { ...before, ...change };
+        for (const [key, value] of Object.entries(change)) {
+          const same =
+            key === "signing_secret"
+              ? String(value).trim() === ""
+              : JSON.stringify(value) === JSON.stringify(saved?.[key as keyof IssueSettings]);
+          if (same) {
+            delete next[key];
+          }
+        }
+
+        return next as IssueSettingsChange;
+      }),
+    discard: () => {
+      save.reset();
+      setPending({});
+    },
+  };
+}
+
+export type IssueSyncDraft = ReturnType<typeof useIssueSyncDraft>;
 
 /*
  * defaultKey is the option that leaves a status on its default state.
@@ -83,8 +136,17 @@ function OptionSelect({
   );
 }
 
-function DeliverySection({ settings, canManage, save }: { settings: IssueSettings; canManage: boolean; save: Save }) {
-  const [secret, setSecret] = useState("");
+function DeliverySection({
+  settings,
+  secret,
+  canManage,
+  save,
+}: {
+  settings: IssueSettings;
+  secret: string;
+  canManage: boolean;
+  save: Save;
+}) {
   const appWide = settings.provider === "linear" || settings.provider === "jira";
 
   return (
@@ -133,19 +195,8 @@ function DeliverySection({ settings, canManage, save }: { settings: IssueSetting
               className="w-48"
               value={secret}
               isDisabled={!canManage}
-              onChange={setSecret}
+              onChange={(text) => save({ signing_secret: text })}
             />
-            <Button
-              variant="secondary"
-              size="small"
-              disabled={!canManage || secret.trim() === ""}
-              onClick={() => {
-                save({ signing_secret: secret.trim() });
-                setSecret("");
-              }}
-            >
-              Save
-            </Button>
           </span>
         </Row>
       ) : null}
@@ -407,33 +458,25 @@ export function IssueSyncSettings({
   workspace,
   integration,
   canManage,
+  draft,
 }: {
   workspace: string;
   integration: Integration;
   canManage: boolean;
+  draft: IssueSyncDraft;
 }) {
-  const queryClient = useQueryClient();
-  const { data: settings } = useQuery(issueSettingsQuery(workspace, integration.id));
+  const { settings } = draft;
   const kind = toolLook(integration.provider).kind;
-
-  const update = useMutation({
-    mutationFn: (change: IssueSettingsChange) => updateIssueSettings(workspace, integration.id, change),
-    onSuccess: (next) => {
-      queryClient.setQueryData(issueKeys.settings(workspace, integration.id), next);
-      toast.success("Saved.");
-    },
-    onError: (error) => toast.error(error.message),
-  });
 
   if (!settings || !isTool(integration.provider) || integration.status !== "active") {
     return null;
   }
 
-  const props = { workspace, settings, canManage, save: (change: IssueSettingsChange) => update.mutate(change) };
+  const props = { workspace, settings, canManage, save: draft.set };
 
   return (
     <>
-      <DeliverySection settings={settings} canManage={canManage} save={props.save} />
+      <DeliverySection settings={settings} secret={draft.secret} canManage={canManage} save={props.save} />
       <DefaultsSection {...props} kind={kind} />
       <StatusSection {...props} kind={kind} />
       {integration.provider === "github" ? <DeploySection {...props} /> : null}

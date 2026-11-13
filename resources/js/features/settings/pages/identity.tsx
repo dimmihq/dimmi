@@ -6,11 +6,13 @@
  * switch without failed sign-ins. Revoking stops a secret at once and
  * signs out every visitor it verified. A secret can also point at an
  * auth provider's key set, so the provider's own tokens sign customers
- * in. Above the secrets sits how strict sign-in is; below, a checker
- * that explains a pasted token.
+ * in. Above the secrets sits how strict sign-in is, picked in a draft
+ * and saved from the bar at the foot; leaving with it unsaved asks
+ * first. Below, a checker that explains a pasted token.
  */
 import { RiCheckLine, RiFileCopyLine, RiFingerprintLine } from "@remixicon/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useBlocker } from "@tanstack/react-router";
 import { type FormEvent, useState } from "react";
 
 import { Chip } from "@/components/base/badges/chip";
@@ -34,8 +36,9 @@ import {
 import { Action, Choice } from "../controls";
 import { IdentityChecker } from "../identity-checker";
 import { type SnippetLanguage, secretDetail, secretState, signingSnippet, snippetLanguages } from "../identity-format";
-import { IdentityModeSection } from "../identity-mode";
+import { IdentityModeSection, useIdentityModeDraft } from "../identity-mode";
 import { Empty, Glyph, Item, RowsSkeleton, Section, SettingsPage } from "../layout";
+import { SaveBar } from "../save-bar";
 import { Snippet } from "../snippet";
 import { useAccount } from "../use-account";
 
@@ -76,13 +79,27 @@ export function IdentitySettings() {
   const live = secrets.filter((secret) => secret.status !== "revoked");
   const kid = live.find((secret) => secret.status === "active")?.kid ?? "isk_…";
   const failure = rotate.error ?? revoke.error;
+  const mode = useIdentityModeDraft(workspace, me.hasPassword);
+  useBlocker({
+    shouldBlockFn: () => mode.dirty && !window.confirm("Leave without saving your changes?"),
+    enableBeforeUnload: () => mode.dirty,
+  });
 
   return (
     <SettingsPage
       title="Identity verification"
       description="Your server signs a token for each signed-in user, so nobody can pose as one of your customers."
+      footer={
+        <SaveBar
+          dirty={mode.dirty}
+          saving={mode.save.isPending}
+          error={mode.error}
+          onSave={() => mode.save.mutate(false)}
+          onDiscard={mode.discard}
+        />
+      }
     >
-      {inWorkspace ? <IdentityModeSection workspace={workspace} hasPassword={me.hasPassword} /> : null}
+      {inWorkspace ? <IdentityModeSection workspace={workspace} draft={mode} /> : null}
       <Section
         title="Secrets"
         description="Up to 5 at once. A rotated secret keeps working for 7 days."

@@ -5,19 +5,21 @@
  * ownership over and leaving. What a person is offered follows the
  * permissions the server gives them here, never their role, and changes
  * that touch owners ask for the password again when the last sign-in is
- * a while ago.
+ * a while ago. The workspace's own settings wait in a draft saved from
+ * the bar at the foot; members, invitations, leaving and deleting are
+ * actions that happen at once, each confirmed first.
  */
 import { RiMore2Line } from "@remixicon/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useSearch } from "@tanstack/react-router";
+import { useBlocker, useSearch } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 
 import { Avatar } from "@/components/base/avatar/avatar";
 import { Chip } from "@/components/base/badges/chip";
-import { Button } from "@/components/base/buttons/button";
 import { Dropdown, DropdownItem, DropdownPopover, DropdownTrigger } from "@/components/base/dropdown/dropdown";
 import { Input } from "@/components/base/input/input";
 import { AlertDialog } from "@/components/base/modal/modal";
+import { toast } from "@/components/base/toast/toast";
 import { avatarColor } from "@/features/shell/avatar-color";
 import { ApiError } from "@/lib/api/client";
 import { type Role, rolesQuery } from "@/lib/api/roles";
@@ -30,6 +32,7 @@ import {
   membersQuery,
   updateMember,
   updateWorkspace,
+  type Workspace,
   type WorkspaceChanges,
   workspaceQuery,
 } from "@/lib/api/workspace";
@@ -47,29 +50,67 @@ import { type Help, type HelpPowers, helpLabel, helpOffers } from "../members/si
 import { SignInHelpDialogs } from "../members/two-factor-help-dialog";
 import { WorkspaceLanguageRow } from "../preferences/language-row";
 import { ZonePicker } from "../preferences/zone-picker";
+import { useRecentAuth } from "../recent-auth";
 import { RequireTwoFactorSection } from "../require-two-factor";
+import { SaveBar } from "../save-bar";
 import { useAccount } from "../use-account";
+import { refusedForOwnAccount, twoFactorRefusal } from "../workspace-security/use-access-policy";
 
 /*
- * Draft is what the General section holds before it is saved. An empty
- * name for customers saves as none, so they see the workspace's name.
+ * Draft is what the page holds before it is saved: the General section's
+ * names and address, the language and time zone, and whether two-factor
+ * authentication is required. A field left out is as the server has it.
+ * An empty name for customers saves as none, so they see the workspace's
+ * name.
  */
 interface Draft {
   name?: string;
   slug?: string;
   customerName?: string;
+  locale?: string;
+  timezone?: string;
+  requireTwoFactor?: boolean;
 }
 
 /*
- * draftChanges turns the draft into the change the server takes.
+ * draftChanges turns the draft into the change the server takes, only
+ * what differs from the workspace as it is.
  */
-function draftChanges(draft: Draft): WorkspaceChanges {
-  const changes: WorkspaceChanges = { name: draft.name, slug: draft.slug };
-  if (draft.customerName !== undefined) {
+function draftChanges(draft: Draft, workspace: Workspace | undefined): WorkspaceChanges {
+  const changes: WorkspaceChanges = {};
+  if (draft.name !== undefined && draft.name !== workspace?.name) {
+    changes.name = draft.name;
+  }
+  if (draft.slug !== undefined && draft.slug !== workspace?.slug) {
+    changes.slug = draft.slug;
+  }
+  if (draft.customerName !== undefined && draft.customerName.trim() !== (workspace?.customer_facing_name ?? "")) {
     changes.customer_facing_name = draft.customerName.trim() === "" ? null : draft.customerName;
+  }
+  if (draft.locale !== undefined && draft.locale !== workspace?.locale) {
+    changes.locale = draft.locale;
+  }
+  if (draft.timezone !== undefined && draft.timezone !== workspace?.timezone) {
+    changes.timezone = draft.timezone;
+  }
+  if (draft.requireTwoFactor !== undefined && draft.requireTwoFactor !== workspace?.require_two_factor) {
+    changes.require_two_factor = draft.requireTwoFactor;
   }
 
   return changes;
+}
+
+/*
+ * failureText is the sentence for a refused change: why two-factor
+ * could not be required, the first rejected field's message, or the
+ * server's message.
+ */
+function failureText(error: Error): string {
+  if (refusedForOwnAccount(error)) {
+    return twoFactorRefusal(error);
+  }
+
+  return error instanceof ApiError ? (Object.values(error.fields)[0] ?? error.message) : error.message;
 }
 
 /*
@@ -83,54 +124,86 @@ function Failure({ error }: { error: Error | null }) {
 
   return (
     <p role="alert" className="px-3 text-body-2-regular text-text-error-primary">
-      {error instanceof ApiError ? (Object.values(error.fields)[0] ?? error.message) : error.message}
+      {failureText(error)}
     </p>
   );
 }
 
+/*
+ * WorkspaceSettings keeps every change in one draft, saved from the bar
+ * at the foot in one change, behind a password check when two-factor is
+ * part of it and the last sign-in is a while ago. Discard puts the page
+ * back; leaving with unsaved changes asks first. A requirement refused
+ * because the person has no second factor themselves goes back to the
+ * server's, so the switch says what holds while the bar says why.
+ */
 export function WorkspaceSettings() {
   const me = useAccount();
   const queryClient = useQueryClient();
   const { data: workspace } = useQuery(workspaceQuery(me.workspace.id));
   const [draft, setDraft] = useState<Draft>({});
+  const [generation, setGeneration] = useState(0);
+  const { run, prompt } = useRecentAuth(me.hasPassword);
   const zones = useMemo(() => ["UTC", ...Intl.supportedValuesOf("timeZone")].map((id) => ({ id, label: id })), []);
+  const changes = draftChanges(draft, workspace);
+  const dirty = Object.keys(changes).length > 0;
 
   const save = useMutation({
-    mutationFn: (changes: WorkspaceChanges) => updateWorkspace(me.workspace.id, changes),
-    onSuccess: (saved) => {
-      setDraft({});
-      queryClient.setQueryData(workspaceQuery(me.workspace.id).queryKey, saved);
-      return queryClient.invalidateQueries({ queryKey: ["me"] });
+    mutationFn: async () => {
+      try {
+        return await run(async () => {
+          const saved = await updateWorkspace(me.workspace.id, changes);
+          queryClient.setQueryData(workspaceQuery(me.workspace.id).queryKey, saved);
+        });
+      } catch (error) {
+        if (refusedForOwnAccount(error)) {
+          setDraft(({ requireTwoFactor: _, ...rest }) => rest);
+        }
+        throw error;
+      }
     },
+    onSuccess: async (done) => {
+      if (!done) {
+        return;
+      }
+      await queryClient.invalidateQueries({ queryKey: ["me"] });
+      setDraft({});
+      toast.success("Workspace saved");
+    },
+  });
+  useBlocker({
+    shouldBlockFn: () => dirty && !window.confirm("Leave without saving your changes?"),
+    enableBeforeUnload: () => dirty,
   });
 
   const name = workspace?.name ?? me.workspace.name;
   const slug = workspace?.slug ?? me.workspace.slug;
   const customerName = workspace?.customer_facing_name ?? "";
-  const changed =
-    (draft.name !== undefined && draft.name !== name) ||
-    (draft.slug !== undefined && draft.slug !== slug) ||
-    (draft.customerName !== undefined && draft.customerName.trim() !== customerName);
+  const fields = `${generation}-${workspace?.name}-${workspace?.slug}-${workspace?.customer_facing_name}`;
 
   return (
-    <SettingsPage title="Workspace" description="Seen by everyone in the workspace.">
-      <Section
-        title="General"
-        action={
-          <Button
-            size="small"
-            loading={save.isPending}
-            disabled={!changed}
-            onClick={() => save.mutate(draftChanges(draft))}
-          >
-            Save changes
-          </Button>
-        }
-      >
+    <SettingsPage
+      title="Workspace"
+      description="Seen by everyone in the workspace."
+      footer={
+        <SaveBar
+          dirty={dirty}
+          saving={save.isPending}
+          error={save.error ? failureText(save.error) : null}
+          onSave={() => save.mutate()}
+          onDiscard={() => {
+            save.reset();
+            setDraft({});
+            setGeneration((n) => n + 1);
+          }}
+        />
+      }
+    >
+      <Section title="General">
         <LogoRow workspace={me.workspace.id} url={workspace?.logo_url ?? null} />
         <Row label="Name">
           <Field
-            key={`name-${name}`}
+            key={`name-${fields}`}
             label="Workspace name"
             value={name}
             onChange={(value) => setDraft((d) => ({ ...d, name: value }))}
@@ -139,7 +212,7 @@ export function WorkspaceSettings() {
         <Row label="Address" description="The old address keeps redirecting for 30 days after a change.">
           <span className="text-body-2-regular text-text-tertiary">/w/</span>
           <Field
-            key={`slug-${slug}`}
+            key={`slug-${fields}`}
             label="Workspace address"
             value={slug}
             width="w-40"
@@ -149,7 +222,7 @@ export function WorkspaceSettings() {
         {workspace ? (
           <Row label="Name customers see" description="Shown in the messenger and in email. Empty uses the name above.">
             <Field
-              key={`customer-${customerName}`}
+              key={`customer-${fields}`}
               label="Name customers see"
               value={customerName}
               placeholder={name}
@@ -158,22 +231,31 @@ export function WorkspaceSettings() {
           </Row>
         ) : null}
       </Section>
-      <Failure error={save.error} />
       <Section title="Language and region" description="Members and customers fall back to these.">
-        <WorkspaceLanguageRow workspace={me.workspace.id} />
+        <WorkspaceLanguageRow
+          workspace={me.workspace.id}
+          value={draft.locale}
+          onChange={(locale) => setDraft((d) => ({ ...d, locale }))}
+        />
         <Row label="Time zone">
           {workspace ? (
             <ZonePicker
               label="Workspace time zone"
               choices={zones}
-              selected={workspace.timezone}
-              onPick={(timezone) => save.mutate({ timezone })}
+              selected={draft.timezone ?? workspace.timezone}
+              onPick={(timezone) => setDraft((d) => ({ ...d, timezone }))}
             />
           ) : null}
         </Row>
       </Section>
-      <RequireTwoFactorSection workspace={me.workspace.id} hasPassword={me.hasPassword} />
+      <RequireTwoFactorSection
+        workspace={me.workspace.id}
+        hasPassword={me.hasPassword}
+        value={draft.requireTwoFactor}
+        onChange={(on) => setDraft((d) => ({ ...d, requireTwoFactor: on }))}
+      />
       <DeleteWorkspace id={me.workspace.id} name={name} slug={slug} />
+      {prompt}
     </SettingsPage>
   );
 }

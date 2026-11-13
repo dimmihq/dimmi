@@ -4,10 +4,15 @@
  * devices it is on, quiet hours on their own clock, a pause, and whether
  * previews and conversations the agent is answering come through, and the
  * recent deliveries that say why something did or did not reach them.
- * Every change saves at once. A cell that cannot be turned off says so.
+ * Switches, boxes and picks wait in a draft: a bar at the foot says they
+ * are unsaved, Discard puts them back and Save sends them. Leaving with
+ * unsaved changes asks first. Reset, Resume, enabling push, removing a
+ * device and sending a test act at once. A cell that cannot be turned
+ * off says so.
  */
 import { RiComputerLine, RiDeleteBinLine } from "@remixicon/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useBlocker } from "@tanstack/react-router";
 import { useState } from "react";
 
 import { IconButton } from "@/components/base/buttons/icon-button";
@@ -34,6 +39,7 @@ import { enablePush, pushSupport } from "../../notifications/push";
 import { RecentDeliveries } from "../../notifications/recent-deliveries";
 import { Action, Choice } from "../controls";
 import { Empty, Glyph, Item, Row, RowsSkeleton, Section, SettingsPage } from "../layout";
+import { SaveBar } from "../save-bar";
 import { useAccount } from "../use-account";
 import { SlackDirectSection } from "./slack-direct";
 
@@ -58,27 +64,137 @@ const pauses: { label: string; hours: number }[] = [
   { label: "1 week", hours: 24 * 7 },
 ];
 
+type CellChange = { trigger: string; channel: NotificationChannel; enabled: boolean };
+type SettingsChange = Partial<NotificationSettings> & { clear_pause?: boolean };
+
+const notPaused = "Not paused";
+
+/*
+ * useNotificationsDraft holds the cells and settings changed but not
+ * saved yet, and the pause picked, by its label, since its end is only
+ * counted from the moment Save is pressed. Save sends the cells in one
+ * update and the settings in another, then reads the page again; Discard
+ * puts everything back.
+ */
+function useNotificationsDraft(workspace: string, data: NotificationPreferences | undefined) {
+  const queryClient = useQueryClient();
+  const query = notificationPreferencesQuery(workspace);
+  const [cells, setCells] = useState<Record<string, CellChange>>({});
+  const [settings, setSettings] = useState<SettingsChange>({});
+  const [pause, setPause] = useState(notPaused);
+  const save = useMutation({
+    mutationFn: async () => {
+      const list = Object.values(cells);
+      if (list.length > 0) {
+        await updateNotificationPreferences(workspace, list);
+      }
+      const pick = pauses.find((p) => p.label === pause);
+      const change: SettingsChange = {
+        ...settings,
+        ...(pick ? { paused_until: new Date(Date.now() + pick.hours * 3_600_000).toISOString() } : {}),
+      };
+      if (Object.keys(change).length > 0) {
+        await updateNotificationSettings(workspace, change);
+      }
+    },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: query.queryKey });
+      setCells({});
+      setSettings({});
+      setPause(notPaused);
+      toast.success("Notifications saved");
+    },
+  });
+  const discard = () => {
+    save.reset();
+    setCells({});
+    setSettings({});
+    setPause(notPaused);
+  };
+
+  const shown = data && {
+    ...data,
+    cells: data.cells.map((c) => {
+      const change = cells[`${c.trigger}:${c.channel}`];
+      return change ? { ...c, enabled: change.enabled } : c;
+    }),
+    settings: { ...data.settings, ...settings },
+  };
+
+  return {
+    shown,
+    pause,
+    dirty: Object.keys(cells).length > 0 || Object.keys(settings).length > 0 || pause !== notPaused,
+    save,
+    discard,
+    flip: (change: CellChange) => {
+      const key = `${change.trigger}:${change.channel}`;
+      const saved = data?.cells.find((c) => c.trigger === change.trigger && c.channel === change.channel);
+      setCells(({ [key]: _, ...rest }) =>
+        saved?.enabled === change.enabled ? rest : { ...rest, [key]: { ...change } },
+      );
+    },
+    set: (change: SettingsChange) =>
+      setSettings((before) => {
+        const next: Record<string, unknown> = { ...before, ...change };
+        for (const [key, value] of Object.entries(change)) {
+          if (data && data.settings[key as keyof NotificationSettings] === value) {
+            delete next[key];
+          }
+        }
+        /* The zone only rides along with turning quiet hours on. */
+        if (change.quiet_hours_enabled !== undefined && !("quiet_hours_enabled" in next)) {
+          delete next.timezone;
+        }
+
+        return next as SettingsChange;
+      }),
+    setPause,
+    /*
+     * clearCells drops pending cells once a reset has replaced them.
+     */
+    clearCells: () => setCells({}),
+  };
+}
+
 export function NotificationsSettings() {
   const workspace = useAccount().workspace.id;
   const queryClient = useQueryClient();
   const query = notificationPreferencesQuery(workspace);
   const { data, isPending } = useQuery({ ...query, enabled: workspace !== "" });
-  const save = (next: NotificationPreferences) => queryClient.setQueryData(query.queryKey, next);
-  const cells = useMutation({
-    mutationFn: (change: { trigger: string; channel: NotificationChannel; enabled: boolean }) =>
-      updateNotificationPreferences(workspace, [change]),
-    onSuccess: save,
+  const draft = useNotificationsDraft(workspace, data);
+  const put = (next: NotificationPreferences) => queryClient.setQueryData(query.queryKey, next);
+  const reset = useMutation({
+    mutationFn: () => resetNotificationPreferences(workspace),
+    onSuccess: (next) => {
+      put(next);
+      draft.clearCells();
+    },
   });
-  const reset = useMutation({ mutationFn: () => resetNotificationPreferences(workspace), onSuccess: save });
-  const settings = useMutation({
-    mutationFn: (change: Partial<NotificationSettings> & { clear_pause?: boolean }) =>
-      updateNotificationSettings(workspace, change),
-    onSuccess: (next) => data && save({ ...data, settings: next }),
+  const resume = useMutation({
+    mutationFn: () => updateNotificationSettings(workspace, { clear_pause: true }),
+    onSuccess: (next) => data && put({ ...data, settings: next }),
   });
-  const failure = cells.error ?? settings.error ?? reset.error;
+  const failure = reset.error ?? resume.error;
+  useBlocker({
+    shouldBlockFn: () => draft.dirty && !window.confirm("Leave without saving your changes?"),
+    enableBeforeUnload: () => draft.dirty,
+  });
 
   return (
-    <SettingsPage title="Notifications" description="What reaches you, where, and when to stay quiet.">
+    <SettingsPage
+      title="Notifications"
+      description="What reaches you, where, and when to stay quiet."
+      footer={
+        <SaveBar
+          dirty={draft.dirty}
+          saving={draft.save.isPending}
+          error={draft.save.error?.message}
+          onSave={() => draft.save.mutate()}
+          onDiscard={draft.discard}
+        />
+      }
+    >
       {failure ? (
         <Notification status="error" title={failure.message} dismissible={false} role="alert" className="w-full" />
       ) : null}
@@ -87,23 +203,25 @@ export function NotificationsSettings() {
         description="The bell in the dashboard, email, push on the browsers you enable, and your Slack DMs."
         action={<Action onPress={() => reset.mutate()}>Reset to defaults</Action>}
       >
-        {isPending || !data ? <RowsSkeleton rows={4} /> : <Matrix data={data} onChange={(c) => cells.mutate(c)} />}
+        {isPending || !draft.shown ? <RowsSkeleton rows={4} /> : <Matrix data={draft.shown} onChange={draft.flip} />}
       </Section>
       <PushSection workspace={workspace} />
       <SlackDirectSection workspace={workspace} />
-      {data ? <QuietSection settings={data.settings} onChange={(c) => settings.mutate(c)} /> : null}
+      {draft.shown ? (
+        <QuietSection
+          settings={draft.shown.settings}
+          pause={draft.pause}
+          onChange={draft.set}
+          onPause={draft.setPause}
+          onResume={() => resume.mutate()}
+        />
+      ) : null}
       <RecentDeliveries workspace={workspace} />
     </SettingsPage>
   );
 }
 
-function Matrix({
-  data,
-  onChange,
-}: {
-  data: NotificationPreferences;
-  onChange: (change: { trigger: string; channel: NotificationChannel; enabled: boolean }) => void;
-}) {
+function Matrix({ data, onChange }: { data: NotificationPreferences; onChange: (change: CellChange) => void }) {
   return (
     <div className="overflow-x-auto py-2.5 pe-2.5">
       <table className="w-full min-w-[480px] text-start">
@@ -233,10 +351,16 @@ function PushSection({ workspace }: { workspace: string }) {
 
 function QuietSection({
   settings,
+  pause,
   onChange,
+  onPause,
+  onResume,
 }: {
   settings: NotificationSettings;
-  onChange: (change: Partial<NotificationSettings> & { clear_pause?: boolean }) => void;
+  pause: string;
+  onChange: (change: SettingsChange) => void;
+  onPause: (label: string) => void;
+  onResume: () => void;
 }) {
   const zone = settings.timezone ?? Intl.DateTimeFormat().resolvedOptions().timeZone;
   const paused = settings.paused_until && new Date(settings.paused_until) > new Date();
@@ -294,18 +418,13 @@ function QuietSection({
         }
       >
         {paused ? (
-          <Action onPress={() => onChange({ clear_pause: true })}>Resume</Action>
+          <Action onPress={onResume}>Resume</Action>
         ) : (
           <Choice
             label="Pause for"
-            options={["Not paused", ...pauses.map((p) => p.label)]}
-            value="Not paused"
-            onChange={(label) => {
-              const pick = pauses.find((p) => p.label === label);
-              if (pick) {
-                onChange({ paused_until: new Date(Date.now() + pick.hours * 3_600_000).toISOString() });
-              }
-            }}
+            options={[notPaused, ...pauses.map((p) => p.label)]}
+            value={pause}
+            onChange={onPause}
           />
         )}
       </Row>

@@ -25,6 +25,17 @@ async function toggle(checkbox: Locator) {
 }
 
 /*
+ * saveRules presses the page's Save and waits for the rules to be sent.
+ */
+async function saveRules(page: Page) {
+  const saved = page.waitForResponse(
+    (r) => r.url().endsWith("/api/v1/workspace/access-policy") && r.request().method() === "PATCH",
+  );
+  await page.getByRole("button", { name: "Save", exact: true }).click();
+  await saved;
+}
+
+/*
  * addAddress adds an entry to the allowlist section through its dialog.
  */
 async function addAddress(page: Page, list: Locator, cidr: string, label: string) {
@@ -49,6 +60,7 @@ it.describe("workspace security", () => {
     await length.getByRole("button", { name: "Sign in again after" }).click();
     await page.getByRole("option", { name: "1 hour" }).click();
     await expect(length.getByRole("button", { name: "Sign in again after" })).toContainText("1 hour");
+    await saveRules(page);
 
     ageSessions(person.email, 90);
     await page.goto("/d/settings/workspace");
@@ -82,6 +94,7 @@ it.describe("workspace security", () => {
     await toggle(methods.getByRole("checkbox", { name: "Allow Password" }));
     await expect(methods.getByRole("checkbox", { name: "Allow Password" })).not.toBeChecked();
     await expect(methods.getByRole("checkbox", { name: "Allow Email link or code" })).toBeChecked();
+    await saveRules(page);
 
     await guest.goto("/d/settings/workspace");
     const required = guest.getByRole("alert").filter({ hasText: "Sign in another way" });
@@ -97,8 +110,10 @@ it.describe("workspace security", () => {
     await page.goto("/d/settings/workspace-security");
     const methods = page.getByRole("region", { name: "Sign-in methods" });
     await toggle(methods.getByRole("checkbox", { name: "Allow Password" }));
+    await saveRules(page);
 
-    await expect(methods.getByRole("alert")).toBeVisible();
+    await expect(page.getByRole("alert")).toBeVisible();
+    await page.getByRole("button", { name: "Discard" }).click();
     await expect(methods.getByRole("checkbox", { name: "Allow Password" })).toBeChecked();
   });
 

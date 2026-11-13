@@ -85,6 +85,7 @@ it.describe("messenger rules", () => {
       await section.getByRole("button", { name: "Launcher" }).click();
       await page.getByRole("option", { name: "Pro plan" }).click({ timeout: 2000 });
     }).toPass();
+    await page.getByRole("button", { name: "Save", exact: true }).click();
     await expect
       .poll(async () =>
         JSON.stringify((await api<{ audiences: unknown }>(page, "GET", `/widget-settings/${app}`)).audiences),
@@ -96,6 +97,7 @@ it.describe("messenger rules", () => {
       await section.getByRole("button", { name: "Starting a conversation" }).click();
       await page.getByRole("option", { name: "Pricing readers" }).click({ timeout: 2000 });
     }).toPass();
-    await expect(section).toContainText("cannot decide who may start a conversation");
+    await page.getByRole("button", { name: "Save", exact: true }).click();
+    await expect(page.getByRole("alert")).toContainText("cannot decide who may start a conversation");
   });
 });

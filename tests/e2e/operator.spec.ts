@@ -23,6 +23,8 @@ it.describe("operator", () => {
     await expect(
       page.getByRole("radiogroup", { name: "Help articles changes" }).getByRole("radio", { name: "On its own" }),
     ).toHaveCount(0);
+    await page.getByRole("button", { name: "Save", exact: true }).click();
+    await expect(page.getByRole("button", { name: "Save", exact: true })).toHaveCount(0);
 
     await page.reload();
     await expect(

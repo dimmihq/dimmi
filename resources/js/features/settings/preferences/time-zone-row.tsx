@@ -1,10 +1,11 @@
 /*
  * The person's own time zone, or the workspace's when they chose none.
- * Picking saves at once. A browser somewhere else only earns a quiet offer
- * to switch: nothing here ever changes the setting on its own.
+ * A pick waits in the Preferences page's draft until its save bar sends
+ * it. A browser somewhere else only earns a quiet offer to switch, which
+ * fills the draft too: nothing here ever changes the setting on its own.
  */
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 
 import { updateProfile } from "@/lib/api/account";
 import { workspaceQuery } from "@/lib/api/workspace";
@@ -20,40 +21,64 @@ import { type ZoneChoice, ZonePicker } from "./zone-picker";
  */
 const followWorkspace = "workspace-default";
 
-export function TimeZoneRows() {
+/*
+ * useTimeZoneDraft holds the person's time zone picked but not saved
+ * yet: a zone, null to follow the workspace, or undefined while nothing
+ * differs from what is saved. Save sends it and reads the person again;
+ * Discard puts it back.
+ */
+export function useTimeZoneDraft() {
   const me = useAccount();
   const queryClient = useQueryClient();
+  const [pending, setPending] = useState<string | null | undefined>(undefined);
+  const save = useMutation({
+    mutationFn: () => updateProfile({ timezone: pending ?? null }),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["me"] });
+      setPending(undefined);
+    },
+  });
+
+  return {
+    pending,
+    dirty: pending !== undefined,
+    save,
+    pick: (zone: string | null) => setPending(zone === (me.timezone ?? null) ? undefined : zone),
+    discard: () => setPending(undefined),
+  };
+}
+
+export type TimeZoneDraft = ReturnType<typeof useTimeZoneDraft>;
+
+export function TimeZoneRows({ draft }: { draft: TimeZoneDraft }) {
+  const me = useAccount();
   const { data: workspace } = useQuery(workspaceQuery(me.workspace.id));
   const fallback = workspace?.timezone ?? "UTC";
   const browser = browserZone();
-
-  const save = useMutation({
-    mutationFn: (timezone: string | null) => updateProfile({ timezone }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["me"] }),
-  });
+  const chosen = draft.pending === undefined ? me.timezone : draft.pending;
 
   const choices = useMemo<ZoneChoice[]>(
     () => [
       { id: followWorkspace, label: `Workspace default (${fallback})` },
-      ...zoneChoices(me.timezone, Intl.supportedValuesOf("timeZone")).map((zone) => ({ id: zone, label: zone })),
+      ...zoneChoices(chosen ?? null, Intl.supportedValuesOf("timeZone")).map((zone) => ({ id: zone, label: zone })),
     ],
-    [fallback, me.timezone],
+    [fallback, chosen],
   );
 
   return (
     <>
-      <Row label="Time zone" description={save.error?.message ?? "Used for times in the inbox and in notifications."}>
+      <Row label="Time zone" description="Used for times in the inbox and in notifications.">
         <ZonePicker
-          key={`${me.timezone}-${fallback}`}
+          key={`${chosen}-${fallback}`}
           label="Time zone"
           choices={choices}
-          selected={me.timezone ?? followWorkspace}
-          onPick={(key) => save.mutate(key === followWorkspace ? null : key)}
+          selected={chosen ?? followWorkspace}
+          onPick={(key) => draft.pick(key === followWorkspace ? null : key)}
         />
       </Row>
-      {shouldOfferZone(me.timezone, fallback, browser) ? (
+      {shouldOfferZone(chosen ?? null, fallback, browser) ? (
         <Row label={`Your browser is on ${browser}`} description="Times show in the workspace's zone until you switch.">
-          <Action onPress={() => save.mutate(browser)}>{`Use ${browser}`}</Action>
+          <Action onPress={() => draft.pick(browser)}>{`Use ${browser}`}</Action>
         </Row>
       ) : null}
     </>

@@ -3,22 +3,23 @@
  * its own domain, how it looks, how
  * readers sign in to see articles kept to an audience, and whether
  * search engines may index it and readers may ask the AI, and which of
- * the workspace's messengers its pages show, if any. The address and look
- * are saved together with Save, as is the product's login address;
- * switches and the messenger pick save at once. A help center that is not
- * the default can be deleted at the bottom.
+ * the workspace's messengers its pages show, if any. Every change waits
+ * in a draft until Save in the bar at the bottom; its own domain is set
+ * up on its own. A help center that is not the default can be deleted at
+ * the bottom.
  */
 import { RiBookOpenLine } from "@remixicon/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useBlocker } from "@tanstack/react-router";
 import { Fragment, useEffect, useState } from "react";
 
 import { Chip } from "@/components/base/badges/chip";
-import { Notification } from "@/components/base/notification/notification";
 import { Select, SelectItem } from "@/components/base/select/select";
+import { toast } from "@/components/base/toast/toast";
 import { CreateHelpCenterDialog } from "@/features/help-center/create-help-center";
 import { HelpCenterSwitcher } from "@/features/help-center/help-center-switcher";
 import { useHelpCenterPick } from "@/features/help-center/use-help-center-pick";
-import { type HelpCenter, helpCentersQuery, updateHelpCenter } from "@/lib/api/help-centers";
+import { type HelpCenter, type HelpCenterSettings, helpCentersQuery, updateHelpCenter } from "@/lib/api/help-centers";
 import { type WidgetSummary, widgetSettingsQuery } from "@/lib/api/widget-settings";
 
 import { Action, Colour, Field, Toggle } from "./controls";
@@ -26,6 +27,7 @@ import { DeleteHelpCenter } from "./help-center-delete";
 import { HelpCenterDomain } from "./help-center-domain";
 import { Glyph, Item, Row, Section, SettingsPage } from "./layout";
 import { rowLink } from "./row-link";
+import { SaveBar } from "./save-bar";
 
 interface Form {
   name: string;
@@ -36,6 +38,11 @@ interface Form {
   footer: string;
   contact: string;
   login: string;
+  emailSignIn: boolean;
+  messenger: boolean;
+  messengerId: string;
+  askAi: boolean;
+  indexing: boolean;
 }
 
 function formOf(center: HelpCenter): Form {
@@ -48,14 +55,59 @@ function formOf(center: HelpCenter): Form {
     footer: center.settings.footer_text ?? "",
     contact: center.settings.contact_url ?? "",
     login: center.settings.login_url ?? "",
+    emailSignIn: center.settings.email_sign_in ?? true,
+    messenger: center.settings.messenger ?? true,
+    messengerId: center.settings.messenger_id ?? "",
+    askAi: center.ask_ai_enabled,
+    indexing: center.indexing_enabled,
   };
 }
 
+/*
+ * changeOf is the update a save sends: only what the form changed from
+ * the help center as it is, text trimmed. The settings go whole, with
+ * the changed ones laid over them, since the server keeps what it is
+ * sent.
+ */
+function changeOf(center: HelpCenter, form: Form): Parameters<typeof updateHelpCenter>[2] {
+  const was = formOf(center);
+  const differs = (key: keyof Form) => form[key] !== was[key];
+  const text = (key: "title" | "subtitle" | "footer" | "contact" | "login") => form[key].trim();
+  const settings: HelpCenterSettings = {
+    ...(differs("color") ? { primary_color: form.color } : {}),
+    ...(differs("title") ? { home_title: text("title") } : {}),
+    ...(differs("subtitle") ? { home_subtitle: text("subtitle") } : {}),
+    ...(differs("footer") ? { footer_text: text("footer") } : {}),
+    ...(differs("contact") ? { contact_url: text("contact") } : {}),
+    ...(differs("login") ? { login_url: text("login") } : {}),
+    ...(differs("emailSignIn") ? { email_sign_in: form.emailSignIn } : {}),
+    ...(differs("messenger") ? { messenger: form.messenger } : {}),
+    ...(differs("messengerId") ? { messenger_id: form.messengerId } : {}),
+  };
+
+  return {
+    ...(differs("name") ? { name: form.name } : {}),
+    ...(differs("subdomain") ? { subdomain: form.subdomain } : {}),
+    ...(differs("askAi") ? { ask_ai_enabled: form.askAi } : {}),
+    ...(differs("indexing") ? { indexing_enabled: form.indexing } : {}),
+    ...(Object.keys(settings).length > 0 ? { settings: { ...center.settings, ...settings } } : {}),
+  };
+}
+
+/*
+ * HelpCentersSettings keeps every change to the picked help center in
+ * one draft. The bar at the bottom saves it or discards it; leaving the
+ * page, or picking another help center, with changes unsaved asks first.
+ * version counts saves and discards: the draft's sections remount on
+ * it, so the controls that keep their own state show the help center
+ * again.
+ */
 export function HelpCentersSettings() {
   const queryClient = useQueryClient();
   const { workspace, centers, center, isPending, pick } = useHelpCenterPick();
   const [form, setForm] = useState<Form | null>(null);
   const [formFor, setFormOf] = useState("");
+  const [version, setVersion] = useState(0);
   const [creating, setCreating] = useState(false);
 
   useEffect(() => {
@@ -65,10 +117,37 @@ export function HelpCentersSettings() {
     }
   }, [center, formFor]);
 
-  const update = useMutation({
-    mutationFn: (change: Parameters<typeof updateHelpCenter>[2]) =>
-      updateHelpCenter(workspace, center?.id ?? "", change),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: helpCentersQuery(workspace).queryKey }),
+  const dirty =
+    center !== undefined &&
+    form !== null &&
+    formFor === center.id &&
+    JSON.stringify(form) !== JSON.stringify(formOf(center));
+  const save = useMutation({
+    mutationFn: () => updateHelpCenter(workspace, center?.id ?? "", changeOf(center as HelpCenter, form as Form)),
+    onSuccess: async (saved) => {
+      await queryClient.invalidateQueries({ queryKey: helpCentersQuery(workspace).queryKey });
+      setForm(formOf(saved));
+      setVersion((v) => v + 1);
+      toast.success("Help center saved");
+    },
+  });
+  const discard = () => {
+    if (center) {
+      setForm(formOf(center));
+    }
+    setVersion((v) => v + 1);
+    save.reset();
+  };
+  const switchTo = (id: string) => {
+    if (id === center?.id || (dirty && !window.confirm("Leave without saving your changes?"))) {
+      return;
+    }
+    save.reset();
+    pick(id);
+  };
+  useBlocker({
+    shouldBlockFn: () => dirty && !window.confirm("Leave without saving your changes?"),
+    enableBeforeUnload: () => dirty,
   });
 
   return (
@@ -77,8 +156,23 @@ export function HelpCentersSettings() {
       description="Your public docs, at their own address."
       actions={
         centers.length > 1 ? (
-          <HelpCenterSwitcher workspace={workspace} centers={centers} center={center} onPick={pick} className="w-56" />
+          <HelpCenterSwitcher
+            workspace={workspace}
+            centers={centers}
+            center={center}
+            onPick={switchTo}
+            className="w-56"
+          />
         ) : null
+      }
+      footer={
+        <SaveBar
+          dirty={dirty}
+          saving={save.isPending}
+          error={save.error?.message}
+          onSave={() => save.mutate()}
+          onDiscard={discard}
+        />
       }
     >
       <Section
@@ -92,7 +186,7 @@ export function HelpCentersSettings() {
             key={c.id}
             mark={<Glyph icon={RiBookOpenLine} />}
             title={
-              <button type="button" className={rowLink} onClick={() => pick(c.id)}>
+              <button type="button" className={rowLink} onClick={() => switchTo(c.id)}>
                 {c.name}
               </button>
             }
@@ -114,35 +208,7 @@ export function HelpCentersSettings() {
       {creating ? <CreateHelpCenterDialog workspace={workspace} onClose={() => setCreating(false)} /> : null}
       {center && form && formFor === center.id ? (
         <Fragment key={center.id}>
-          <Section
-            title="Address and look"
-            action={
-              <Action
-                loading={update.isPending}
-                onPress={() =>
-                  update.mutate({
-                    name: form.name,
-                    subdomain: form.subdomain,
-                    settings: {
-                      ...center.settings,
-                      primary_color: form.color,
-                      home_title: form.title.trim(),
-                      home_subtitle: form.subtitle.trim(),
-                      footer_text: form.footer.trim(),
-                      contact_url: form.contact.trim(),
-                    },
-                  })
-                }
-              >
-                Save
-              </Action>
-            }
-          >
-            {update.error ? (
-              <div className="py-2.5 pe-2.5">
-                <Notification status="error" title={update.error.message} dismissible={false} role="alert" />
-              </div>
-            ) : null}
+          <Section key={`look-${version}`} title="Address and look">
             <Row label="Name">
               <Field label="Help center name" value={form.name} onChange={(name) => setForm({ ...form, name })} />
             </Row>
@@ -192,16 +258,9 @@ export function HelpCentersSettings() {
           </Section>
           <HelpCenterDomain workspace={workspace} center={center} />
           <Section
+            key={`sign-in-${version}`}
             title="Readers sign in with"
             description="To read articles kept to an audience."
-            action={
-              <Action
-                loading={update.isPending}
-                onPress={() => update.mutate({ settings: { ...center.settings, login_url: form.login.trim() } })}
-              >
-                Save
-              </Action>
-            }
           >
             <Row
               label="Email code"
@@ -209,8 +268,8 @@ export function HelpCentersSettings() {
             >
               <Toggle
                 label="Email code"
-                on={center.settings.email_sign_in ?? true}
-                onChange={(on) => update.mutate({ settings: { ...center.settings, email_sign_in: on } })}
+                on={form.emailSignIn}
+                onChange={(emailSignIn) => setForm({ ...form, emailSignIn })}
               />
             </Row>
             <Row
@@ -226,23 +285,21 @@ export function HelpCentersSettings() {
             </Row>
           </Section>
           <MessengerSection
+            key={`messenger-${version}`}
             workspace={workspace}
-            center={center}
-            onChange={(change) => update.mutate({ settings: { ...center.settings, ...change } })}
+            on={form.messenger}
+            pickedId={form.messengerId}
+            onChange={(change) => setForm({ ...form, ...change })}
           />
-          <Section title="Features">
+          <Section key={`features-${version}`} title="Features">
             <Row label="Ask AI" description="Let readers ask a question and get an answer from your articles.">
-              <Toggle
-                label="Ask AI"
-                on={center.ask_ai_enabled}
-                onChange={(on) => update.mutate({ ask_ai_enabled: on })}
-              />
+              <Toggle label="Ask AI" on={form.askAi} onChange={(askAi) => setForm({ ...form, askAi })} />
             </Row>
             <Row label="Search engines" description="Let Google and others index your articles.">
               <Toggle
                 label="Search engines"
-                on={center.indexing_enabled}
-                onChange={(on) => update.mutate({ indexing_enabled: on })}
+                on={form.indexing}
+                onChange={(indexing) => setForm({ ...form, indexing })}
               />
             </Row>
           </Section>
@@ -256,20 +313,22 @@ export function HelpCentersSettings() {
 /*
  * MessengerSection shows a messenger on every help center page, on until
  * the team turns it off, and picks which one when the workspace has more
- * than one; the first is shown until one is picked.
+ * than one; the first is shown until one is picked. Both go into the
+ * page's draft.
  */
 function MessengerSection({
   workspace,
-  center,
+  on,
+  pickedId,
   onChange,
 }: {
   workspace: string;
-  center: HelpCenter;
-  onChange: (change: { messenger?: boolean; messenger_id?: string }) => void;
+  on: boolean;
+  pickedId: string;
+  onChange: (change: { messenger?: boolean; messengerId?: string }) => void;
 }) {
   const { data: messengers = [] } = useQuery({ ...widgetSettingsQuery(workspace), enabled: workspace !== "" });
-  const on = center.settings.messenger ?? true;
-  const picked = messengers.find((m) => m.id === center.settings.messenger_id) ?? messengers[0];
+  const picked = messengers.find((m) => m.id === pickedId) ?? messengers[0];
 
   return (
     <Section title="Messenger" description="So readers can ask your team without leaving the page.">
@@ -285,7 +344,7 @@ function MessengerSection({
       </Row>
       {on && messengers.length > 1 ? (
         <Row label="Which messenger" description="Its look, greeting and team show on the help center.">
-          <MessengerPicker messengers={messengers} picked={picked} onPick={(id) => onChange({ messenger_id: id })} />
+          <MessengerPicker messengers={messengers} picked={picked} onPick={(id) => onChange({ messengerId: id })} />
         </Row>
       ) : null}
     </Section>

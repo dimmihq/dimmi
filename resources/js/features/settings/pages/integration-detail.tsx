@@ -6,18 +6,19 @@
  * one's own name and picture; anyone may do it for themselves. Updating
  * permissions and disconnecting take integrations:manage. Disconnecting
  * stops every feature at once and signs every teammate's own account
- * out of it.
+ * out of it. An engineering tool's sync settings wait in a draft, saved
+ * from the bar at the foot; leaving with them unsaved asks first.
  */
 import { RiArrowLeftLine } from "@remixicon/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useNavigate } from "@tanstack/react-router";
+import { useBlocker, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 
 import { Chip } from "@/components/base/badges/chip";
 import { Button } from "@/components/base/buttons/button";
 import { AlertDialog } from "@/components/base/modal/modal";
 import { toast } from "@/components/base/toast/toast";
-import { IssueSyncSettings } from "@/features/tickets/issues/issue-sync-settings";
+import { IssueSyncSettings, useIssueSyncDraft } from "@/features/tickets/issues/issue-sync-settings";
 import { isTool } from "@/features/tickets/issues/tools";
 import {
   disconnectIntegration,
@@ -32,6 +33,7 @@ import { Action, Danger } from "../controls";
 import { usePermission } from "../inboxes";
 import { featureLabel, healthColor, healthLabels, integrationHealth, providerLook } from "../integrations";
 import { PageSkeleton, Row, Section, SettingsPage } from "../layout";
+import { SaveBar } from "../save-bar";
 import { useAccount } from "../use-account";
 import { useProviderLanding } from "../use-provider-landing";
 import { ConnectButton } from "./integration-parts";
@@ -244,6 +246,15 @@ export function IntegrationSettingsPage({ integration: id }: { integration: stri
   const canManage = usePermission(workspace, "integrations:manage");
   const canNotify = usePermission(workspace, "notification_destinations:manage");
   const { data: integration, isPending } = useQuery(integrationQuery(workspace, id));
+  const sync = useIssueSyncDraft(
+    workspace,
+    id,
+    integration !== undefined && isTool(integration.provider) && integration.status === "active",
+  );
+  useBlocker({
+    shouldBlockFn: () => sync.dirty && !window.confirm("Leave without saving your changes?"),
+    enableBeforeUnload: () => sync.dirty,
+  });
 
   useProviderLanding(workspace);
 
@@ -262,14 +273,26 @@ export function IntegrationSettingsPage({ integration: id }: { integration: stri
   const look = providerLook(integration.provider);
 
   return (
-    <SettingsPage title={integration.name} description={look.detail}>
+    <SettingsPage
+      title={integration.name}
+      description={look.detail}
+      footer={
+        <SaveBar
+          dirty={sync.dirty}
+          saving={sync.save.isPending}
+          error={sync.save.error?.message}
+          onSave={() => sync.save.mutate()}
+          onDiscard={sync.discard}
+        />
+      }
+    >
       <BackToIntegrations />
       <StatusSection integration={integration} />
       <FeaturesSection workspace={workspace} integration={integration} canManage={canManage} />
       {isTool(integration.provider) && integration.provider !== "github" ? null : (
         <OwnAccountSection workspace={workspace} integration={integration} />
       )}
-      <IssueSyncSettings workspace={workspace} integration={integration} canManage={canManage} />
+      <IssueSyncSettings workspace={workspace} integration={integration} canManage={canManage} draft={sync} />
       {integration.provider === "slack"
         ? integration.channel_ids.map((channel) => (
             <RoomsSection key={channel} workspace={workspace} channel={channel} canManage={canManage} />

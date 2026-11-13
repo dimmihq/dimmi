@@ -1,94 +1,69 @@
 /*
- * The text controls of the agent's settings. Text saves once the person
- * is done with it, when the field loses focus or Enter is pressed, never
- * on every keystroke, and only when it changed. Escape puts the saved
- * value back.
+ * The text controls of the agent's settings. What the person types goes
+ * into the page's draft as they type, and waits for the save bar like
+ * every other setting on the page; nothing saves when a field loses
+ * focus.
  */
-import { type KeyboardEvent, type ReactNode, useEffect, useState } from "react";
+import { type ReactNode, useEffect, useState } from "react";
 
 import { Input } from "@/components/base/input/input";
 import { Textarea } from "@/components/base/textarea/textarea";
 
 /*
- * useDraft keeps what the person types apart from the saved value, and
- * follows the saved value whenever it changes underneath.
+ * DraftText is a one-line text setting, showing the draft's value.
  */
-function useDraft(saved: string) {
-  const [draft, setDraft] = useState(saved);
-  useEffect(() => setDraft(saved), [saved]);
-
-  return [draft, setDraft] as const;
-}
-
-/*
- * SavedText is a one-line text setting. A required one goes back to its
- * saved value when emptied, rather than saving nothing.
- */
-export function SavedText({
+export function DraftText({
   label,
   value,
   placeholder,
   disabled,
   maxLength,
-  required = false,
   width = "w-full sm:w-64",
-  onSave,
+  onChange,
 }: {
   label: string;
   value: string;
   placeholder?: string;
   disabled: boolean;
   maxLength?: number;
-  required?: boolean;
   width?: string;
-  onSave: (value: string) => void;
+  onChange: (value: string) => void;
 }) {
-  const [draft, setDraft] = useDraft(value);
-  const commit = () => {
-    if (required && draft.trim() === "") {
-      setDraft(value);
-      return;
-    }
-    if (draft.trim() !== value) {
-      onSave(draft.trim());
-    }
-  };
-  const keys = (event: KeyboardEvent) => {
-    if (event.key === "Enter") {
-      commit();
-    }
-    if (event.key === "Escape") {
-      setDraft(value);
-    }
-  };
-
   return (
     <Input
       aria-label={label}
       size="small"
-      value={draft}
+      value={value}
       placeholder={placeholder}
       maxLength={maxLength}
       isDisabled={disabled}
-      onChange={setDraft}
-      onBlur={commit}
-      onKeyDown={keys}
+      onChange={onChange}
       className={width}
     />
   );
 }
 
 /*
- * SavedTextarea is a longer text setting with a count of what is left.
+ * same leaves text as it is, for a draft that keeps it as typed.
  */
-export function SavedTextarea({
+const same = (text: string) => text;
+
+/*
+ * DraftTextarea is a longer text setting with a count of what is left.
+ * When the draft keeps a tidied form of the text, such as a list read
+ * from its lines, normalize gives that form: the field keeps what was
+ * typed while it still reads the same, and takes the draft's value once
+ * it differs, as after Discard.
+ */
+export function DraftTextarea({
   label,
   value,
   placeholder,
   disabled,
   maxLength,
   hint,
-  onSave,
+  normalize = same,
+  onChange,
 }: {
   label: string;
   value: string;
@@ -96,14 +71,18 @@ export function SavedTextarea({
   disabled: boolean;
   maxLength: number;
   hint?: string;
-  onSave: (value: string) => void;
+  normalize?: (text: string) => string;
+  onChange: (value: string) => void;
 }) {
-  const [draft, setDraft] = useDraft(value);
+  const [text, setText] = useState(value);
+  useEffect(() => {
+    setText((typed) => (normalize(typed) === value ? typed : value));
+  }, [value, normalize]);
 
   return (
     <Textarea
       aria-label={label}
-      value={draft}
+      value={text}
       placeholder={placeholder}
       isDisabled={disabled}
       maxLength={maxLength}
@@ -112,11 +91,9 @@ export function SavedTextarea({
       rows={4}
       autoResize
       maxRows={12}
-      onChange={setDraft}
-      onBlur={() => {
-        if (draft !== value) {
-          onSave(draft);
-        }
+      onChange={(next) => {
+        setText(next);
+        onChange(next);
       }}
     />
   );

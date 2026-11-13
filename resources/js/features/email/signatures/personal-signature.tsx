@@ -1,18 +1,49 @@
 /*
  * The teammate's own signature, closing their email replies from every
  * address. Shown to whoever may keep one; an address's own signature
- * signs their replies while they have none.
+ * signs their replies while they have none. Turning it on or off waits
+ * for the profile page's save bar, which holds this draft.
  */
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
+import { toast } from "@/components/base/toast/toast";
 import { Section } from "@/features/settings/layout";
 import { useAccount } from "@/features/settings/use-account";
-import { mySignaturesQuery } from "@/lib/api/email-signatures";
+import { mySignaturesQuery, signaturesKey } from "@/lib/api/email-signatures";
 import { callerQuery } from "@/lib/api/workspace";
 
-import { SignatureCard } from "./signature-card";
+import { SignatureCard, useSignatureToggles } from "./signature-card";
 
-export function PersonalSignature() {
+/*
+ * usePersonalSignatureDraft holds the signature switch flipped but not
+ * saved yet, for the page's save bar.
+ */
+export function usePersonalSignatureDraft(workspace: string) {
+  const queryClient = useQueryClient();
+  const toggles = useSignatureToggles(workspace);
+  const save = useMutation({
+    mutationFn: () => toggles.send(),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: signaturesKey(workspace) });
+      toggles.clear();
+      toast.success("Signature saved");
+    },
+  });
+
+  return {
+    toggles,
+    save,
+    dirty: toggles.dirty,
+    discard: () => {
+      save.reset();
+      toggles.clear();
+    },
+  };
+}
+
+export type PersonalSignatureDraft = ReturnType<typeof usePersonalSignatureDraft>;
+
+export function PersonalSignature({ draft }: { draft: PersonalSignatureDraft }) {
   const workspace = useAccount().workspace.id;
   const { data: caller } = useQuery(callerQuery(workspace));
   const permissions = caller?.member?.permissions ?? [];
@@ -31,7 +62,13 @@ export function PersonalSignature() {
       title="Email signature"
       description="Closes your email replies. Without one, replies use the signature of the address they come from."
     >
-      <SignatureCard workspace={workspace} label="Your signature" signature={general} scope="mine" />
+      <SignatureCard
+        workspace={workspace}
+        label="Your signature"
+        signature={general}
+        scope="mine"
+        toggles={draft.toggles}
+      />
     </Section>
   );
 }

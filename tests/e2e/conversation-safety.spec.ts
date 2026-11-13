@@ -45,7 +45,8 @@ it.describe("conversation safety", () => {
   it("blocks listed domains and asks before opening a suspicious link", async ({ page }) => {
     await page.goto("/d/settings/conversation-safety");
     await page.getByRole("textbox", { name: "Blocked domains" }).fill("Evil.example");
-    await page.getByRole("button", { name: "Save domains" }).click();
+    await page.getByRole("button", { name: "Save", exact: true }).click();
+    await expect(page.getByRole("button", { name: "Save", exact: true })).toBeHidden();
     await expect(page.getByRole("textbox", { name: "Blocked domains" })).toHaveValue("evil.example");
 
     const id = await startConversation(page, {

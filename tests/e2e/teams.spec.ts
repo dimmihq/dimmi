@@ -44,14 +44,17 @@ it.describe("teams", () => {
     await members.getByRole("button", { name: "Add a member" }).click();
     await page.getByRole("option", { name: teammate.name }).click();
     await expect(members.getByText(teammate.email)).toBeVisible();
+    await page.getByRole("button", { name: "Save", exact: true }).click();
     await expect(page.getByText("1 member", { exact: true })).toBeVisible();
 
     await page.getByRole("textbox", { name: "Team name" }).fill("Customer care");
-    await page.getByRole("button", { name: "Save changes" }).click();
+    await page.getByRole("button", { name: "Save", exact: true }).click();
     await expect(page.getByRole("heading", { name: "Customer care", level: 1 })).toBeVisible();
 
     await members.getByRole("button", { name: "Remove" }).click();
     await expect(members.getByText("Nobody is in this team yet.")).toBeVisible();
+    await page.getByRole("button", { name: "Save", exact: true }).click();
+    await expect(page.getByText("0 members", { exact: true })).toBeVisible();
 
     await page.getByRole("button", { name: "All teams" }).click();
     await expect(teams.getByText("Customer care")).toBeVisible();

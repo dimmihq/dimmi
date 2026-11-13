@@ -94,6 +94,8 @@ it.describe("two-factor authentication", () => {
     await page.goto("/d/settings/workspace");
     await rule.focus();
     await page.keyboard.press("Space");
+    await expect(rule).toBeChecked();
+    await page.getByRole("button", { name: "Save", exact: true }).click();
     await expect(page.getByRole("alert")).toContainText("Turn on two-factor authentication for your own account");
     await expect(rule).not.toBeChecked();
 
@@ -105,6 +107,7 @@ it.describe("two-factor authentication", () => {
     await rule.focus();
     await page.keyboard.press("Space");
     await expect(rule).toBeChecked();
+    await page.getByRole("button", { name: "Save", exact: true }).click();
     expect((await saved).status()).toBe(200);
 
     await page.reload();

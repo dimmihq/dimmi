@@ -52,18 +52,19 @@ it.describe("ai settings", () => {
 
     const answer = page.getByRole("switch", { name: "Answer customers" });
     await expect(answer).toBeEnabled();
+    await page.locator("label", { has: answer }).click();
+    await expect(answer).toBeChecked();
     await Promise.all([
       page.waitForResponse(
         (response) => response.url().endsWith("/api/v1/ai/agent") && response.request().method() === "PATCH",
       ),
-      page.locator("label", { has: answer }).click(),
+      page.getByRole("button", { name: "Save", exact: true }).click(),
     ]);
-    await expect(answer).toBeChecked();
     await page.reload();
     await expect(page.getByRole("switch", { name: "Answer customers" })).toBeChecked();
   });
 
-  it("saves the agent's settings one change at a time", async ({ page }) => {
+  it("saves the agent's settings together from the save bar", async ({ page }) => {
     await page.goto("/d/settings/agent");
     await expect(page.getByRole("heading", { level: 1, name: "dimmi agent" })).toBeVisible();
 
@@ -73,11 +74,12 @@ it.describe("ai settings", () => {
       );
     const name = page.getByRole("textbox", { name: "Agent name" });
     await name.fill("Ada");
-    await Promise.all([saved(), name.press("Enter")]);
+    await name.blur();
+    await page.getByRole("radio", { name: "Concise" }).click();
+    await page.locator("label", { has: page.getByRole("checkbox", { name: /Email/ }) }).click();
+    await expect(page.getByText("Unsaved changes")).toBeVisible();
+    await Promise.all([saved(), page.getByRole("button", { name: "Save", exact: true }).click()]);
     await expect(page.getByText("Saved", { exact: true }).first()).toBeVisible();
-
-    await Promise.all([saved(), page.getByRole("radio", { name: "Concise" }).click()]);
-    await Promise.all([saved(), page.locator("label", { has: page.getByRole("checkbox", { name: /Email/ }) }).click()]);
 
     await page.reload();
     await expect(page.getByRole("textbox", { name: "Agent name" })).toHaveValue("Ada");
