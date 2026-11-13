@@ -29,7 +29,9 @@
  * argument asks again after the visitor signed in without a page load,
  * and Dimmi("logout") forgets the visitor here and on the server. In a preview,
  * Dimmi("configure", config) takes a config as the server would serve it,
- * which is how the messenger settings show unsaved changes.
+ * which is how the messenger settings show unsaved changes, and
+ * Dimmi("tickets", { types, request, show }) shows request types and a
+ * request in a state, which is how the ticket settings show a type.
  */
 
 import { fromFunction, fromUrl, type Source } from "./client/identity";
@@ -46,6 +48,7 @@ import { report } from "./lib/report";
 import { loadThread } from "./lib/threads";
 import { loadTickets, tickets } from "./lib/tickets";
 import { defaults, merge, type Options, type OptionsUpdate } from "./options";
+import type { PreviewTickets } from "./preview";
 import { render, style } from "./render";
 import type { Command, DimmiWindow, Queue } from "./settings";
 import styles from "./styles/index.css?inline";
@@ -253,6 +256,26 @@ export function boot(win: Window & DimmiWindow, doc: Document): Widget | undefin
   };
 
   /*
+   * showTickets puts request types and a request into a preview and opens
+   * Home, Messages or the first type's form.
+   */
+  const showTickets = (given: PreviewTickets = {}) => {
+    if (live || !preview) {
+      report("warn", "tickets_live", 'Dimmi("tickets") works only in a preview.');
+      return;
+    }
+    sample = preview.withTickets(sample, given);
+    draw();
+    const first = given.types?.[0];
+    if (given.show === "form" && first) {
+      find()?.show("ticket");
+      openTicket(first.id);
+    } else if (given.show) {
+      find()?.show(given.show);
+    }
+  };
+
+  /*
    * identify takes a new identity function, when given one, and asks who
    * is signed in now.
    */
@@ -282,6 +305,7 @@ export function boot(win: Window & DimmiWindow, doc: Document): Widget | undefin
     boot: change,
     simulate: (argument) => simulate(argument as Simulation),
     configure: (argument) => configure(argument as Config),
+    tickets: (argument) => showTickets(argument as PreviewTickets),
     shutdown: () => void live?.logout(),
     logout: () => void live?.logout(),
     ask: (argument) => find()?.ask(String(argument ?? "")),

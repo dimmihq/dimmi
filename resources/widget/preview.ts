@@ -4,7 +4,7 @@
  * loads as its own chunk and never reaches a customer's page.
  */
 
-import type { Content, Incoming, Message } from "./content";
+import type { Content, Incoming, Message, TicketBlock, TicketType } from "./content";
 import { size } from "./lib/map";
 import { Said, Typing } from "./lib/thread_parts";
 
@@ -301,3 +301,32 @@ export const sample: Content = {
   ],
   unread_changelog: 1,
 };
+
+/*
+ * PreviewTickets is what the ticket settings show in a preview: the
+ * request types Home offers, a request in the state picked, and the view
+ * to open, the type's form or the Messages list.
+ */
+export interface PreviewTickets {
+  types?: TicketType[];
+  request?: TicketBlock;
+  show?: "home" | "messages" | "form";
+}
+
+/*
+ * withTickets puts the request types and the request into the sample
+ * content, the request on the latest conversation and no other.
+ */
+export function withTickets(content: Content, given: PreviewTickets): Content {
+  const request = given.request;
+
+  return {
+    ...content,
+    ticket_types: given.types ?? content.ticket_types,
+    conversations: request
+      ? content.conversations.map((c, i) =>
+          i === 0 ? { ...c, title: request.title, ticket: request } : { ...c, ticket: undefined },
+        )
+      : content.conversations,
+  };
+}

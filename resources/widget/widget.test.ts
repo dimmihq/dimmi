@@ -834,6 +834,45 @@ describe("core", () => {
     ]);
   });
 
+  it("shows a request type's form and a request in a state when the ticket settings ask, in a preview", async () => {
+    await started();
+    win.Dimmi?.("open");
+    const type = {
+      id: "tktt_access",
+      name: "Account access",
+      icon: "bug",
+      description: "A customer cannot sign in.",
+      fields: [
+        {
+          key: "issue",
+          label: "What happened",
+          data_type: "single_choice",
+          options: ["Password reset", "SSO error"],
+          required: true,
+          editable: true,
+          show_when: null,
+        },
+      ],
+    };
+    const request = {
+      reference: "T-482",
+      title: "Locked out",
+      state: { label: "With our team", group: "waiting_team" },
+    };
+
+    win.Dimmi?.("tickets", { types: [type], request, show: "form" });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    const form = shadow().querySelector('.view[data-view="ticket"] form');
+    expect(form?.textContent).toContain("What happened");
+    expect([...(form?.querySelectorAll("option") ?? [])].map((o) => o.textContent)).toContain("SSO error");
+
+    win.Dimmi?.("tickets", { types: [type], request, show: "messages" });
+
+    const pills = [...shadow().querySelectorAll('.view[data-view="messages"] .pill')].map((p) => p.textContent);
+    expect(pills).toEqual(["With our team"]);
+  });
+
   it("hides the launcher when the customer opens the messenger from their own buttons", async () => {
     await started();
 

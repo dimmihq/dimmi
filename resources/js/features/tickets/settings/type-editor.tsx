@@ -3,10 +3,10 @@
  * from a bar that floats over the page while anything changed; leaving
  * with unsaved changes asks first. Fields save on their own, as they are
  * added, edited, archived or dragged. Beside the editor, on wide
- * screens, the customer's form updates live as the type changes; on
- * narrower ones it follows the editor. Back-office types, trackers and
- * incidents have no customer form, so their editor shows no customer
- * settings and no preview.
+ * screens, the real messenger shows the type as customers meet it: its
+ * form, or a request in the state picked in its states, live as the type
+ * changes. Back-office types, trackers and incidents have no customer
+ * form, so their editor shows no customer settings and no preview.
  */
 import { RiArrowLeftLine, RiCoupon3Line } from "@remixicon/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -18,15 +18,14 @@ import { toast } from "@/components/base/toast/toast";
 import { usePermission } from "@/features/settings/inboxes";
 import { PageSkeleton, SettingsPage } from "@/features/settings/layout";
 import { useAccount } from "@/features/settings/use-account";
-import { EmptyState, Panel, ScrollArea } from "@/features/shell/page";
+import { EmptyState, Panel } from "@/features/shell/page";
 import { inboxesQuery } from "@/lib/api/inboxes";
 import { teamsQuery } from "@/lib/api/teams";
 import { type TicketType, ticketKeys, ticketStatesQuery, ticketTypesQuery, updateTicketType } from "@/lib/api/tickets";
 
-import { CustomerPreview } from "./customer-preview";
 import { FieldBuilder } from "./field-builder";
 import { draftOf, type TypeDraft, typeChanges } from "./form";
-import { StatusPreview } from "./status-preview";
+import { MessengerPreview, type PreviewView } from "./messenger-preview";
 import { CustomerSection, DetailsSection, RoutingSection } from "./type-sections";
 import { TypeStatesSection } from "./type-states";
 
@@ -127,6 +126,7 @@ function Editor({ workspace, type }: { workspace: string; type: TicketType }) {
   const { data: states = [] } = useQuery(ticketStatesQuery(workspace));
   const { data: types = [] } = useQuery(ticketTypesQuery(workspace));
   const [previewId, setPreviewId] = useState<string | null>(null);
+  const [view, setView] = useState<PreviewView>("form");
   const previewState = states.find((s) => s.id === (previewId ?? edit.draft.default_state_id));
   const { data: inboxes = [] } = useQuery({ ...inboxesQuery(workspace), enabled: workspace !== "" });
   const { data: teams = [] } = useQuery({ ...teamsQuery(workspace), enabled: workspace !== "" });
@@ -136,18 +136,6 @@ function Editor({ workspace, type }: { workspace: string; type: TicketType }) {
   });
   const props = { draft: edit.draft, set: edit.set, locked };
   const customer = type.kind === "customer";
-  const preview = (
-    <div className="flex flex-col gap-8">
-      <CustomerPreview
-        name={edit.draft.name}
-        description={edit.draft.description}
-        fields={type.fields}
-        shown={edit.draft.customer_visible}
-      />
-      <StatusPreview typeName={edit.draft.name} state={previewState} />
-    </div>
-  );
-
   return (
     <div className="flex h-full min-w-0 flex-1 gap-3">
       <SettingsPage
@@ -168,16 +156,26 @@ function Editor({ workspace, type }: { workspace: string; type: TicketType }) {
           moves={edit.moves}
           setMoves={edit.setMoves}
           previewId={previewId}
-          onPreview={setPreviewId}
+          onPreview={(id) => {
+            setPreviewId(id);
+            setView("messages");
+          }}
         />
         {customer ? <CustomerSection {...props} /> : null}
-        {customer ? <div className="xl:hidden">{preview}</div> : null}
       </SettingsPage>
       {customer ? (
-        <Panel label="Customer form preview" ground className="hidden h-full w-[400px] shrink-0 xl:flex">
-          <ScrollArea ground>
-            <div className="px-5 pt-10 pb-16">{preview}</div>
-          </ScrollArea>
+        <Panel label="Customer preview" className="hidden h-full w-[440px] shrink-0 xl:flex">
+          <MessengerPreview
+            workspace={workspace}
+            typeId={type.id}
+            name={edit.draft.name}
+            description={edit.draft.description}
+            icon={edit.draft.icon}
+            fields={type.fields}
+            state={previewState}
+            view={view}
+            onView={setView}
+          />
         </Panel>
       ) : null}
     </div>
