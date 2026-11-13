@@ -57,5 +57,6 @@ type ConfigFeatures struct {
 	AllowAnonymous          bool             `json:"allow_anonymous"`
 	IdentityMode            string           `json:"identity_mode"`
 	IntercomShim            bool             `json:"intercom_shim"`
+	Opener                  bool             `json:"opener"`
 	DevContext              ConfigDevContext `json:"dev_context"`
 }

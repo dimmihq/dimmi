@@ -595,6 +595,9 @@
             "format": "int32",
             "type": "integer"
           },
+          "opener": {
+            "type": "boolean"
+          },
           "require_email_when_offline": {
             "type": "boolean"
           }
@@ -609,6 +612,7 @@
           "allow_anonymous",
           "identity_mode",
           "intercom_shim",
+          "opener",
           "dev_context"
         ],
         "type": "object"
@@ -1746,6 +1750,19 @@
             "maxLength": 200,
             "pattern": "^[a-z0-9-]*$",
             "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "StoreWidgetOpenerRequestBody": {
+        "additionalProperties": true,
+        "properties": {
+          "context": {
+            "additionalProperties": {},
+            "type": "object"
+          },
+          "page": {
+            "$ref": "#/components/schemas/WidgetPageBody"
           }
         },
         "type": "object"
@@ -4146,6 +4163,43 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ResourceHelpPass"
+                }
+              }
+            },
+            "description": "Created"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseError"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        }
+      }
+    },
+    "/openers": {
+      "post": {
+        "operationId": "widget.openers.store",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StoreWidgetOpenerRequestBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StartedConversation"
                 }
               }
             },

@@ -77,6 +77,15 @@
   scrollbar-width: thin;
 }
 
+/*
+ * The thread's contents fill it even when there is little to say, so the
+ * answers a question offers sit at the foot of the panel, where the
+ * visitor's hand already is, rather than halfway up under the question.
+ */
+.thread > .loaded {
+  flex: 1 0 auto;
+}
+
 .day,
 .seen {
   margin: 0;

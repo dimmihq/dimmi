@@ -41,6 +41,7 @@ type WidgetActions struct {
 	EmailProofs    *widget.EmailProofs
 	Conversations  *widget.ListWidgetConversations
 	PostMessage    *widget.PostWidgetMessage
+	OpenChat       *widget.OpenWidgetConversation
 	MarkRead       *widget.MarkWidgetConversationRead
 	ConfirmHelp    *widget.ConfirmAiHelp
 	RequestHandoff *widget.RequestAiHandoff

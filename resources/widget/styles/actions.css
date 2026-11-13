@@ -89,31 +89,36 @@
  * visitor is about to say.
  */
 .choices {
-  align-self: flex-end;
+  align-self: stretch;
   display: flex;
-  flex-wrap: wrap;
-  justify-content: flex-end;
+  flex-direction: column;
+  align-items: flex-end;
   gap: 8px;
-  margin-block-start: 8px;
+  margin-block: auto 0;
+  padding-block-start: 16px;
 }
 
 .choice {
-  padding: 10px 16px;
-  border: 1px solid var(--accent);
+  max-inline-size: 85%;
+  padding: 11px 18px;
+  border: 1px solid var(--border-button);
   border-radius: 999px;
   background: var(--bg-primary);
-  color: var(--accent);
+  color: var(--text-primary);
   font: inherit;
   font-size: 14px;
   font-weight: 500;
-  line-height: 1.2;
+  line-height: 1.25;
+  text-align: start;
   cursor: pointer;
-  box-shadow: var(--shadow-xs);
+  box-shadow:
+    0 1px 2px light-dark(rgb(0 0 0 / 0.06), rgb(0 0 0 / 0.3)),
+    0 4px 12px light-dark(rgb(0 0 0 / 0.06), rgb(0 0 0 / 0.24));
   animation: choice-in 260ms var(--out) backwards;
   animation-delay: calc(var(--step, 0) * 60ms);
   transition:
     background-color 120ms ease,
-    color 120ms ease,
+    border-color 120ms ease,
     transform 120ms var(--out);
 }
 
@@ -129,14 +134,14 @@
 }
 
 .choice:hover {
-  background: var(--tint);
+  border-color: var(--border-button-hover);
+  background: var(--bg-primary-hover);
 }
 
 .choice:active {
-  background-image: linear-gradient(180deg, var(--brand-top), var(--brand));
-  border-color: transparent;
-  color: var(--on-brand);
-  transform: scale(0.96);
+  background: var(--bg-primary-active);
+  border-color: var(--border-button-active);
+  transform: scale(0.97);
 }
 
 @media (prefers-reduced-motion: reduce) {

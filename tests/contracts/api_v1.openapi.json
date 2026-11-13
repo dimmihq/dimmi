@@ -11116,6 +11116,9 @@
             "format": "int32",
             "type": "integer"
           },
+          "opener": {
+            "type": "boolean"
+          },
           "require_email_when_offline": {
             "type": "boolean"
           }
@@ -11130,6 +11133,7 @@
           "allow_anonymous",
           "identity_mode",
           "intercom_shim",
+          "opener",
           "dev_context"
         ],
         "type": "object"

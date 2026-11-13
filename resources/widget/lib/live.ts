@@ -215,6 +215,7 @@ export class Live {
   private readonly verifying = new Map<string, VerifyStep>();
   private help: Pick<Content, "collections" | "articles" | "popular" | "help_url"> | undefined;
   private changelog: Pick<Content, "changelog" | "unread_changelog"> | undefined;
+  private greeting = false;
   private latestEntry = "";
   private readonly rated = new Map<string, "yes" | "no">();
   private ratings: import("./rating").Ratings | undefined;
@@ -584,17 +585,82 @@ export class Live {
   async openConversation(id: string | undefined) {
     this.open = id ?? draftId;
     this.drawThread();
-    if (!id) {
+
+    const open = id ?? (await this.greet());
+    if (!open) {
       return;
     }
 
     try {
-      const res = await this.http.get<{ data: ApiMessage[] }>(`/conversations/${id}/messages`);
-      this.store.setMessages(id, res.data);
+      const res = await this.http.get<{ data: ApiMessage[] }>(`/conversations/${open}/messages`);
+      this.store.setMessages(open, res.data);
+      this.drawThread();
+      if (!id && res.data.length === 0) {
+        void this.waitForGreeting(open);
+      }
     } catch {
       return;
     }
-    void this.markRead(id);
+    void this.markRead(open);
+  }
+
+  /*
+   * waitForGreeting looks again for the first words of a chat that was
+   * opened for a workflow to speak in: the workflow writes them a moment
+   * after the conversation exists, and waiting for the next round of
+   * updates would leave the visitor looking at an empty panel. It gives
+   * up once they have arrived, or after a few seconds.
+   */
+  private async waitForGreeting(conversation: string) {
+    for (const wait of [400, 700, 1200, 2000, 3000]) {
+      await new Promise((done) => this.browser.setTimeout(() => done(undefined), wait));
+      if (this.open !== conversation || (this.store.messages.get(conversation) ?? []).length > 0) {
+        return;
+      }
+      try {
+        const res = await this.http.get<{ data: ApiMessage[] }>(`/conversations/${conversation}/messages`);
+        if (res.data.length > 0) {
+          this.store.setMessages(conversation, res.data);
+          this.drawThread();
+
+          return;
+        }
+      } catch {
+        return;
+      }
+    }
+  }
+
+  /*
+   * greet opens a conversation before the visitor has written anything,
+   * where the workspace greets them as the chat opens: the conversation
+   * has to exist for a workflow to say the first word in it. Workspaces
+   * without an opener skip this, so nothing is left behind by a visitor
+   * who only looked. A failure is quiet: the visitor writes and the chat
+   * starts the usual way.
+   */
+  private async greet(): Promise<string | undefined> {
+    if (!this.config.features?.opener || this.greeting) {
+      return undefined;
+    }
+    this.greeting = true;
+    try {
+      await this.session.ensure(this.startDetails());
+      const res = await this.http.post<{ data: ApiConversation }>("/openers", {});
+      this.store.upsertConversation(res.data);
+      if (this.open !== draftId) {
+        return undefined;
+      }
+      this.open = res.data.id;
+      this.drawThread();
+      this.streaming();
+
+      return res.data.id;
+    } catch {
+      return undefined; // The visitor can still start the conversation by writing.
+    } finally {
+      this.greeting = false;
+    }
   }
 
   /*

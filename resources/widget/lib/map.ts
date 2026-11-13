@@ -20,7 +20,7 @@ export interface Config {
   tabs?: string[];
   surface?: { version?: number; anonymous?: Surface };
   branding?: { show?: boolean; url?: string };
-  features?: { attachments?: boolean; max_attachment_mb?: number; identity_mode?: string };
+  features?: { attachments?: boolean; max_attachment_mb?: number; identity_mode?: string; opener?: boolean };
   realtime?: { url?: string; token_url?: string; polling_interval_ms?: number };
   honeypot_field?: string;
   customer_status?: boolean;

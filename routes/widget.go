@@ -141,6 +141,7 @@ routes that follow.
 func widgetConversationRoutes(visitor *routing.Router, a *app.App, one string) *widget.ConversationController {
 	conv := &widget.ConversationController{
 		Read: a.Actions.Widget.Conversations, Post: a.Actions.Widget.PostMessage,
+		Open: a.Actions.Widget.OpenChat,
 		Help: a.Actions.Widget.ConfirmHelp, HandoffAction: a.Actions.Widget.RequestHandoff,
 		IDs: a.IDs, Clock: a.Clock, Tickets: a.Actions.Tickets,
 		Cursors: pagination.NewCursors(a.DerivedKey("widget.cursors")), Agents: useragent.New(),
@@ -148,6 +149,7 @@ func widgetConversationRoutes(visitor *routing.Router, a *app.App, one string) *
 
 	routing.Get(visitor, "/conversations", "widget.conversations.index", conv.Index)
 	routing.Post(visitor, "/conversations", "widget.conversations.store", conv.Store).Middleware("idempotent")
+	routing.Post(visitor, "/openers", "widget.openers.store", conv.Opener).Middleware("idempotent")
 	routing.Get(visitor, one, "widget.conversations.show", conv.Show)
 	routing.Get(visitor, one+"/messages", "widget.conversations.messages.index", conv.Messages)
 	routing.Post(visitor, one+"/messages", "widget.conversations.messages.store", conv.Send).Middleware("idempotent")

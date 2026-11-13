@@ -24,6 +24,12 @@ type ConversationCreated struct {
 
 	ContactID   ids.UUID
 	InitiatedBy string
+
+	/*
+		Empty says the conversation holds no message yet: a visitor opened
+		a chat and a workflow may greet them before they say anything.
+	*/
+	Empty bool
 }
 
 /*

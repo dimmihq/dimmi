@@ -39,6 +39,7 @@ Listen wires the engine to the domain events.
 */
 func (e *Engine) Listen(d *events.Dispatcher) {
 	events.Listen(d, events.InTx, e.onMessage)
+	events.Listen(d, events.InTx, e.onOpened)
 	events.Listen(d, events.InTx, e.onReopened)
 	events.Listen(d, events.InTx, func(ctx context.Context, ev appevents.ConversationClosed) error {
 		return e.interruptNow(ctx, ev.Base, ev.ConversationID, EndConversationClosed)
@@ -117,6 +118,23 @@ func (e *Engine) onMessage(ctx context.Context, ev appevents.MessageCreated) err
 	}
 
 	return nil
+}
+
+/*
+onOpened matches a visitor opening a chat before they have said
+anything, so an opener greets them and offers its answers while the
+panel is still coming up. Only a conversation that starts empty counts:
+one a message started is a first message, not an opener.
+*/
+func (e *Engine) onOpened(ctx context.Context, ev appevents.ConversationCreated) error {
+	if !ev.Empty || ev.InitiatedBy != string(enums.AuthorTypeContact) {
+		return nil
+	}
+
+	return e.Match(ctx, Event{
+		WorkspaceID: ev.WorkspaceID, ConversationID: ev.ConversationID,
+		Trigger: workflowspec.TriggerOpener, EventID: ev.ID.String(), Chain: ev.WorkflowChain,
+	})
 }
 
 /*

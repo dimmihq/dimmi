@@ -35,6 +35,19 @@ type StoreWidgetConversationRequest struct {
 }
 
 /*
+StoreWidgetOpenerRequest is the input of POST /widget/v1/openers: the
+visitor opened a new chat and said nothing yet, so only where they are
+is worth sending.
+*/
+type StoreWidgetOpenerRequest struct {
+	Body struct {
+		_       struct{}        `additionalProperties:"true"`
+		Page    *WidgetPageBody `json:"page,omitempty"`
+		Context map[string]any  `json:"context,omitempty"`
+	}
+}
+
+/*
 ShowWidgetConversationRequest is the input of the routes on one of the
 visitor's conversations.
 */

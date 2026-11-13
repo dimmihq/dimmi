@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/dimmihq/dimmi/framework/database"
 	"github.com/dimmihq/dimmi/framework/ids"
 	"github.com/dimmihq/dimmi/framework/memo"
 
@@ -109,6 +110,26 @@ func (e *Engine) candidates(ctx context.Context, q *models.Queries, workspace id
 	e.live.entries.Set(key, out)
 
 	return out, nil
+}
+
+/*
+HasOpener reports whether the workspace has a live workflow that greets
+a visitor as they open a chat. The messenger asks before it opens one,
+so that a workspace without an opener still starts its conversations
+from the visitor's first message and leaves nothing behind when nobody
+answers.
+*/
+func (e *Engine) HasOpener(ctx context.Context, workspace ids.UUID) (bool, error) {
+	var found []candidate
+
+	err := e.DB.Transaction(ctx, func(ctx context.Context, tx *database.Tx) error {
+		var err error
+		found, err = e.candidates(ctx, models.New(tx), workspace, workflowspec.TriggerOpener)
+
+		return err
+	})
+
+	return len(found) > 0, err
 }
 
 /*

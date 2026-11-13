@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"slices"
 
+	"github.com/dimmihq/dimmi/framework/ids"
 	"github.com/dimmihq/dimmi/framework/tenancy"
 
 	"github.com/dimmihq/dimmi/app/actions/identity"
@@ -51,7 +52,33 @@ type ShowWidgetConfig struct {
 	Surfaces        *Surfaces
 	Branding        *ResolveBranding
 	Strings         *widgetstrings.Strings
+	Openers         Openers
 	PollingInterval int64
+}
+
+/*
+Openers says whether a workspace greets visitors as they open a chat.
+*/
+type Openers interface {
+	/*
+		HasOpener reports whether a live workflow opens conversations in
+		the workspace.
+	*/
+	HasOpener(ctx context.Context, workspace ids.UUID) (bool, error)
+}
+
+/*
+OpenerFunc is an Openers made of one function, so an install can answer
+from whatever it has by the time a visitor asks rather than from what
+existed when the messenger was built.
+*/
+type OpenerFunc func(ctx context.Context, workspace ids.UUID) (bool, error)
+
+/*
+HasOpener asks the function.
+*/
+func (f OpenerFunc) HasOpener(ctx context.Context, workspace ids.UUID) (bool, error) {
+	return f(ctx, workspace)
 }
 
 /*
@@ -148,6 +175,13 @@ func (a *ShowWidgetConfig) build(ctx context.Context, in ShowWidgetConfigInput, 
 		return Config{}, err
 	}
 
+	features := configFeatures(r)
+
+	features.Opener, err = a.opens(ctx, r)
+	if err != nil {
+		return Config{}, err
+	}
+
 	return Config{
 		Surface: surface,
 		Object:  "widget_config", AppID: models.PublicID(models.PrefixWidget, widget.ID),
@@ -155,13 +189,26 @@ func (a *ShowWidgetConfig) build(ctx context.Context, in ShowWidgetConfigInput, 
 		Appearance: configAppearance(appearance), Texts: texts, Locale: locale, Dir: widgetstrings.Direction(locale),
 		Locales: a.Strings.Locales(), Tabs: configTabs(widget), OpenTo: "home",
 		ShowTeamAvatars: widget.ShowTeamAvatars, ShowAvailability: widget.ShowAvailability, CustomerStatus: true,
-		DelayNotice: true, HomeLinks: HomeLinks(widget), Features: configFeatures(in.Resolved), Branding: branding,
+		DelayNotice: true, HomeLinks: HomeLinks(widget), Features: features, Branding: branding,
 		Realtime: ConfigRealtime{
 			URL: in.BaseURL + "/connection/uni_sse", TokenURL: in.BaseURL + "/widget/v1/realtime-tokens",
 			PollingIntervalMS: a.PollingInterval,
 		},
 		HoneypotField: HoneypotField,
 	}, nil
+}
+
+/*
+opens reports whether a workflow greets this workspace's visitors as
+they open a chat. A workspace without one is the common case, and its
+messenger keeps starting conversations from the first message.
+*/
+func (a *ShowWidgetConfig) opens(ctx context.Context, r Resolved) (bool, error) {
+	if a.Openers == nil {
+		return false, nil
+	}
+
+	return a.Openers.HasOpener(ctx, r.Workspace.ID)
 }
 
 /*

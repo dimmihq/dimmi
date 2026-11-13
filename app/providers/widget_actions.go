@@ -21,6 +21,7 @@ import (
 	"github.com/dimmihq/dimmi/framework/filesystem"
 	"github.com/dimmihq/dimmi/framework/foundation"
 	fhttp "github.com/dimmihq/dimmi/framework/http"
+	"github.com/dimmihq/dimmi/framework/ids"
 
 	"github.com/dimmihq/dimmi/app"
 	"github.com/dimmihq/dimmi/app/actions/attachments"
@@ -102,6 +103,23 @@ func bootBilling(a *app.App) contracts.BillingStatus {
 }
 
 /*
+openers answers whether a workspace greets visitors as they open a chat,
+asking the engine at the moment a messenger loads: an install that runs
+no workflows, and one that builds its messenger before its engine, both
+answer no rather than failing.
+*/
+func openers(a *app.App) widget.OpenerFunc {
+	return func(ctx context.Context, workspace ids.UUID) (bool, error) {
+		engine := a.Actions.WorkflowEngine
+		if engine == nil {
+			return false, nil
+		}
+
+		return engine.HasOpener(ctx, workspace)
+	}
+}
+
+/*
 bootWidget builds the messenger's actions.
 */
 func bootWidget(ctx context.Context, a *app.App) error {
@@ -122,7 +140,7 @@ func bootWidget(ctx context.Context, a *app.App) error {
 	branding := &widget.ResolveBranding{Edition: a.Config.App.Edition, Billing: bootBilling(a)}
 	show := &widget.ShowWidgetConfig{
 		Directory: directory, Surfaces: &widget.Surfaces{DB: a.DB, Clock: a.Clock, Bust: directory}, Branding: branding,
-		Strings: words, PollingInterval: cfg.PollingInterval.Milliseconds(),
+		Strings: words, Openers: openers(a), PollingInterval: cfg.PollingInterval.Milliseconds(),
 	}
 
 	a.Actions.Widget = &app.WidgetActions{
@@ -237,6 +255,9 @@ func bootWidgetConversations(a *app.App, disk filesystem.Filesystem, diskName st
 	broadcaster.Listen(a.Events)
 	acts.Typing = &widget.BroadcastVisitorTyping{
 		DB: a.DB, Events: a.Events, Clock: a.Clock, Cache: a.Cache, Throttle: a.Config.Widget.TypingThrottle,
+	}
+	acts.OpenChat = &widget.OpenWidgetConversation{
+		DB: a.DB, Clock: a.Clock, Events: a.Events, Surfaces: acts.Surfaces, Limits: limits,
 	}
 	acts.PostMessage = &widget.PostWidgetMessage{
 		DB: a.DB, Clock: a.Clock, Team: acts.Availability, Surfaces: acts.Surfaces, Limits: limits,

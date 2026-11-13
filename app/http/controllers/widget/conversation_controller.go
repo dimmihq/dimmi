@@ -35,6 +35,7 @@ ConversationController serves a visitor's conversations and messages.
 type ConversationController struct {
 	Read          *actions.ListWidgetConversations
 	Post          *actions.PostWidgetMessage
+	Open          *actions.OpenWidgetConversation
 	Help          *actions.ConfirmAiHelp
 	HandoffAction *actions.RequestAiHandoff
 	IDs           *ids.Registry
@@ -215,6 +216,43 @@ func (c *ConversationController) Send(
 		from := models.PublicID(models.PrefixConversation, *posted.RedirectedFrom)
 		out.Body.Meta.RedirectedFrom = &from
 	}
+
+	return out, nil
+}
+
+/*
+Opener starts a conversation the visitor has not written in yet, so a
+workflow can greet them and offer its answers as the chat opens.
+*/
+func (c *ConversationController) Opener(
+	ctx context.Context, in *requests.StoreWidgetOpenerRequest,
+) (*StartedConversationOutput, error) {
+	r, _ := fhttp.RequestFrom(ctx)
+	auth := authenticated(ctx)
+
+	opening := actions.OpenInput{Auth: auth, Context: in.Body.Context}
+	if in.Body.Page != nil {
+		page := in.Body.Page.Page()
+		opening.Page = &page
+	}
+
+	if r != nil {
+		agent := c.Agents.Parse(r.UserAgent())
+		opening.Browser, opening.OS = agent.Browser, agent.OS
+	}
+
+	opened, err := c.Open.Handle(ctx, opening)
+	if err != nil {
+		return nil, err
+	}
+
+	conv, err := c.Read.Find(ctx, auth, opened.ID)
+	if err != nil {
+		return nil, err
+	}
+
+	out := &StartedConversationOutput{Status: fhttp.StatusCreated}
+	out.Body.Data = resources.NewWidgetConversation(conv)
 
 	return out, nil
 }
