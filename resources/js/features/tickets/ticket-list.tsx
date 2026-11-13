@@ -218,20 +218,17 @@ function TicketRow({
 
   return (
     <li>
-      {ticket.kind === "customer" && ticket.conversation_id ? (
-        <Link
-          to="/d/inbox/$view/$conversation"
-          params={{ view, conversation: ticket.conversation_id }}
-          aria-current={open ? "page" : undefined}
-          className={cx(rowClass, tone, focus)}
-        >
-          {body}
-        </Link>
-      ) : (
-        <Link to="/d/tickets/$ticket" params={{ ticket: ticket.id }} className={cx(rowClass, tone, focus)}>
-          {body}
-        </Link>
-      )}
+      <Link
+        to="/d/inbox/$view/$conversation"
+        params={{
+          view,
+          conversation: ticket.kind === "customer" && ticket.conversation_id ? ticket.conversation_id : ticket.id,
+        }}
+        aria-current={open ? "page" : undefined}
+        className={cx(rowClass, tone, focus)}
+      >
+        {body}
+      </Link>
     </li>
   );
 }

@@ -1,6 +1,7 @@
 /*
- * An incident: an outage customers are affected by. The header names
- * it with its severity and the areas it touches. The stepper shows where
+ * An incident: an outage customers are affected by, opened in the inbox
+ * like any ticket, its details beside it. The thread names its severity
+ * and the areas it touches. The stepper shows where
  * it stands, Investigating, Identified, Monitoring, Resolved, each with
  * the words customers see; moving it asks first, and can post to the
  * public log on the way. Resolving goes on to "Message everyone" with a
@@ -42,12 +43,14 @@ import { formatNumber } from "@/lib/i18n/format";
 import { cx } from "@/utils/cx";
 
 import { IncidentLog } from "./incident-log";
-import { TicketIssues } from "./issues/ticket-issues";
 import { MessageEveryone } from "./message-everyone";
 import { SentMessages } from "./message-everyone-results";
+import { TypeIcon } from "./state-pill";
+import { TicketDetails, TicketTitle } from "./ticket-thread";
 import { TrackerConversations } from "./tracker-conversations";
 import { draftFromLog, useChangeTicket, useTypeStates } from "./tracker-helpers";
-import { ImpactTotals, IssueChips, Title } from "./tracker-parts";
+import { ImpactTotals, IssueChips, Reach, Title } from "./tracker-parts";
+import { useTicketSave } from "./use-ticket-save";
 
 const severityTint: Record<string, ChipColor> = { minor: "yellow", major: "orange", critical: "rose" };
 
@@ -310,7 +313,9 @@ function Heading({ ticket, editable, onEdit }: { ticket: Ticket; editable: boole
 
   return (
     <div className="flex flex-col gap-3">
-      <h2 className="text-title-2-medium tracking-tight text-text-primary">{ticket.title}</h2>
+      {ticket.description ? (
+        <p className="whitespace-pre-line text-body-regular text-text-secondary">{ticket.description}</p>
+      ) : null}
       <div className="flex flex-wrap items-center gap-2">
         {severity ? (
           <Chip variant="caption" color={severityTint[severity] ?? "gray"}>
@@ -365,35 +370,51 @@ function Incident({ workspace, ticket }: { workspace: string; ticket: Ticket }) 
   const fields = types.find((ty) => ty.id === ticket.type_id)?.fields ?? [];
   const severityField = fields.find((f) => f.key === "severity");
   const areasField = fields.find((f) => f.key === "areas");
+  const save = useTicketSave(workspace, ticket);
 
   return (
-    <Panel label={t("incident.label")} className="h-full w-full flex-1">
-      <PageHeader title={<Title ticket={ticket} fallback={t("incident.label")} />}>
-        <Button
-          size="small"
-          variant="secondary"
-          leadingIcon={RiSendPlaneLine}
-          disabled={rows.length === 0}
-          onClick={() => setMessaging({ kind: "new", draft: "" })}
-        >
-          {t("message.open")}
-        </Button>
-      </PageHeader>
-      <ScrollArea>
-        <div className="mx-auto flex w-full max-w-[64rem] flex-col gap-6 px-4 pt-6 pb-16 md:px-6">
-          <Heading ticket={ticket} editable={Boolean(severityField || areasField)} onEdit={() => setEditing(true)} />
-          {states.length > 0 ? <Stepper states={states} current={ticket.state_id} onPick={setMoving} /> : null}
-          <ImpactTotals impact={linked?.impact ?? ticket.impact} />
-          <TicketIssues ticketId={ticket.id} />
-          <IncidentLog workspace={workspace} ticket={ticket} states={states} linked={rows.length} />
-          <SentMessages
-            workspace={workspace}
-            ticket={ticket.id}
-            onOpen={(u) => setMessaging({ kind: "sent", update: u.id })}
-          />
-          <TrackerConversations workspace={workspace} ticket={ticket} rows={rows} loading={isPending} />
-        </div>
-      </ScrollArea>
+    <div className="flex h-full min-w-0 flex-1 gap-2">
+      <Panel label={t("incident.label")} className="flex h-full min-w-0 flex-1 flex-col">
+        <header className="flex h-12 shrink-0 items-center gap-2 ps-3 pe-2.5 pt-[7px]">
+          <TypeIcon icon={ticket.type.icon} kind={ticket.kind} />
+          <span className="shrink-0 text-body-2-medium text-text-tertiary">{ticket.reference}</span>
+          <TicketTitle key={ticket.version} ticket={ticket} save={save} />
+          <span className="ms-auto shrink-0">
+            <Button
+              size="small"
+              variant="secondary"
+              leadingIcon={RiSendPlaneLine}
+              disabled={rows.length === 0}
+              onClick={() => setMessaging({ kind: "new", draft: "" })}
+            >
+              {t("message.open")}
+            </Button>
+          </span>
+        </header>
+        <ScrollArea className="flex-1">
+          <div className="mx-auto flex w-full max-w-[760px] flex-col gap-6 px-4 pt-5 pb-16">
+            <Heading ticket={ticket} editable={Boolean(severityField || areasField)} onEdit={() => setEditing(true)} />
+            {states.length > 0 ? <Stepper states={states} current={ticket.state_id} onPick={setMoving} /> : null}
+            <IncidentLog workspace={workspace} ticket={ticket} states={states} linked={rows.length} />
+            <SentMessages
+              workspace={workspace}
+              ticket={ticket.id}
+              onOpen={(u) => setMessaging({ kind: "sent", update: u.id })}
+            />
+            <TrackerConversations workspace={workspace} ticket={ticket} rows={rows} loading={isPending} />
+          </div>
+        </ScrollArea>
+      </Panel>
+      <Panel label="Details" className="hidden h-full w-[340px] shrink-0 flex-col lg:flex">
+        <header className="flex h-12 shrink-0 items-center ps-4 pe-2.5 pt-[7px]">
+          <h2 className="text-body-medium text-text-primary">Details</h2>
+        </header>
+        <ScrollArea>
+          <TicketDetails workspace={workspace} ticket={ticket} save={save}>
+            <Reach impact={linked?.impact ?? ticket.impact} />
+          </TicketDetails>
+        </ScrollArea>
+      </Panel>
       {moving ? (
         <MoveDialog
           workspace={workspace}
@@ -428,6 +449,6 @@ function Incident({ workspace, ticket }: { workspace: string; ticket: Ticket }) 
           onClose={() => setMessaging({ kind: "closed" })}
         />
       ) : null}
-    </Panel>
+    </div>
   );
 }

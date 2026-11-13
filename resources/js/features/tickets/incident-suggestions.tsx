@@ -43,7 +43,10 @@ function Suggestion({ workspace, suggestion }: { workspace: string; suggestion: 
       void client.invalidateQueries({ queryKey: incidentSuggestionKeys.all(workspace) });
       if (decided.status === "accepted" && decided.ticket_id) {
         toast.success(t("suggestions.declared", { title: decided.title }));
-        void navigate({ to: "/d/tickets/$ticket", params: { ticket: decided.ticket_id } });
+        void navigate({
+          to: "/d/inbox/$view/$conversation",
+          params: { view: "incidents", conversation: decided.ticket_id },
+        });
       } else {
         toast.success(t("suggestions.dismissed"));
       }

@@ -31,8 +31,8 @@ function Pin({ incident, companies }: { incident: Ticket; companies: number | un
   return (
     <li>
       <Link
-        to="/d/tickets/$ticket"
-        params={{ ticket: incident.id }}
+        to="/d/inbox/$view/$conversation"
+        params={{ view: "incidents", conversation: incident.id }}
         title={[
           incident.reference,
           incident.title,

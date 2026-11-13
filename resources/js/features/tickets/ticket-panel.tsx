@@ -9,7 +9,7 @@
  */
 import { RiAlarmLine, RiCoupon3Line } from "@remixicon/react";
 import { useQuery } from "@tanstack/react-query";
-import { Link } from "@tanstack/react-router";
+import { Link, useParams } from "@tanstack/react-router";
 
 import { Button } from "@/components/base/buttons/button";
 import { Select, SelectItem } from "@/components/base/select/select";
@@ -109,10 +109,12 @@ function LinkedRow({
   ticket: { id: string; reference: string; title: string };
   detail: React.ReactNode;
 }) {
+  const { view } = useParams({ strict: false }) as { view?: string };
+
   return (
     <Link
-      to="/d/tickets/$ticket"
-      params={{ ticket: ticket.id }}
+      to="/d/inbox/$view/$conversation"
+      params={{ view: view ?? "tickets", conversation: ticket.id }}
       className="flex flex-col gap-0.5 rounded-lg px-1.5 py-1 outline-none hover:bg-background-secondary-hover focus-visible:ring-2 focus-visible:ring-border-focus-ring"
     >
       <span className="flex min-w-0 items-center gap-1.5 text-body-2-medium text-text-primary">
@@ -218,13 +220,7 @@ export function TicketPanel({
         <RiCoupon3Line aria-hidden className="size-4 text-foreground-icon-secondary" />
         <h3 className="flex-1 text-body-2-medium text-text-primary">Ticket</h3>
         {data.ticket ? (
-          <Link
-            to="/d/tickets/$ticket"
-            params={{ ticket: data.ticket.id }}
-            className="text-body-2-medium text-text-secondary hover:text-text-primary"
-          >
-            {data.ticket.reference}
-          </Link>
+          <span className="text-body-2-medium text-text-secondary">{data.ticket.reference}</span>
         ) : (
           <Button size="xs" variant="secondary" onClick={onConvert}>
             Convert to ticket

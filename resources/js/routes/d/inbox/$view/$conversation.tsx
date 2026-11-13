@@ -8,6 +8,7 @@ import { useInbox } from "@/features/inbox/conversations";
 import { ConversationSkeleton } from "@/features/inbox/skeletons";
 import { useFollowMerge } from "@/features/inbox/use-follow-merge";
 import { EmptyState, Panel } from "@/features/shell/page";
+import { isTicketId, TicketOpen } from "@/features/tickets/ticket-open";
 import { ApiError } from "@/lib/api/client";
 import { conversationQuery } from "@/lib/api/inbox";
 
@@ -17,6 +18,18 @@ export const Route = createFileRoute("/d/inbox/$view/$conversation")({
 
 function ConversationRoute() {
   const { view, conversation: id } = Route.useParams();
+
+  if (isTicketId(id)) {
+    return <TicketOpen key={id} view={view} id={id} />;
+  }
+
+  return <OpenConversation view={view} id={id} />;
+}
+
+/*
+ * OpenConversation shows the conversation the address names.
+ */
+function OpenConversation({ view, id }: { view: string; id: string }) {
   const { workspace } = useInbox();
   const {
     data: conversation,

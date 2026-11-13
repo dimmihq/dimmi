@@ -11,11 +11,12 @@ import { useTranslation } from "react-i18next";
 import { StatCards } from "@/components/application/dashboard/stat-cards";
 import { Chip, type ChipColor } from "@/components/base/badges/chip";
 import { Skeleton } from "@/components/base/skeleton/skeleton";
+import { Row } from "@/features/inbox/customer/rows";
 import type { Impact, TrackerSummary } from "@/lib/api/ticket-trackers";
 import type { Ticket, TicketIssue } from "@/lib/api/tickets";
 import { formatNumber, formatRelative } from "@/lib/i18n/format";
-
 import { StatePill } from "./state-pill";
+
 import { money } from "./tracker-helpers";
 
 /*
@@ -153,6 +154,28 @@ export function Summary({ ticket }: { ticket: Ticket }) {
         ) : null}
       </h2>
       <p className="whitespace-pre-line text-body-regular text-text-primary">{summary.text}</p>
+    </section>
+  );
+}
+
+/*
+ * Reach is who a tracker or incident reaches, as quiet rows beside the thread.
+ */
+export function Reach({ impact }: { impact: Ticket["impact"] }) {
+  const { t } = useTranslation("trackers");
+  if (!impact) {
+    return null;
+  }
+
+  return (
+    <section aria-label={t("impact.customers")} className="flex flex-col gap-1 border-t border-separator-border pt-3">
+      <h3 className="text-caption-1-medium text-text-tertiary">Reach</h3>
+      <dl className="flex flex-col">
+        <Row label={t("impact.customers")}>{formatNumber(impact.customers)}</Row>
+        <Row label={t("impact.companies")}>{formatNumber(impact.companies)}</Row>
+        <Row label={t("impact.revenue")}>{money(impact.revenue)}</Row>
+        <Row label={t("impact.conversations")}>{formatNumber(impact.conversations)}</Row>
+      </dl>
     </section>
   );
 }
