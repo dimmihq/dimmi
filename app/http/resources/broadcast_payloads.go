@@ -26,6 +26,7 @@ import (
 	"github.com/dimmihq/dimmi/framework/tenancy"
 
 	"github.com/dimmihq/dimmi/app/actions/conversations"
+	"github.com/dimmihq/dimmi/app/actions/messages"
 	"github.com/dimmihq/dimmi/app/models"
 )
 
@@ -60,7 +61,8 @@ BroadcastPayloads renders the subjects of broadcasts from the stored
 records, in the API's shapes.
 */
 type BroadcastPayloads struct {
-	DB *database.DB
+	DB    *database.DB
+	Disks messages.Disks
 }
 
 /*
@@ -118,7 +120,14 @@ func (p BroadcastPayloads) Message(ctx context.Context, workspaceID, id ids.UUID
 		}
 
 		members, err := conversations.Members(ctx, q, workspaceID, authorIDs(m))
-		out = NewTimelineEntry(m, contact, members)
+		if err != nil {
+			return err
+		}
+
+		// The entry carries its files as the timeline does, so a client
+		// that puts it in place of the one it holds keeps them.
+		files, err := p.files(ctx, q, m)
+		out = NewTimelineEntries([]models.Message{m}, contact, members, files)[0]
 
 		return err
 	})
@@ -127,6 +136,27 @@ func (p BroadcastPayloads) Message(ctx context.Context, workspaceID, id ids.UUID
 	}
 
 	return out, true, nil
+}
+
+/*
+files reads the message's files with their links.
+*/
+func (p BroadcastPayloads) files(
+	ctx context.Context, q *models.Queries, m models.Message,
+) (map[ids.UUID][]messages.File, error) {
+	rows, err := q.ListMessageAttachments(ctx, models.ListMessageAttachmentsParams{
+		WorkspaceID: m.WorkspaceID, MessageIds: []ids.UUID{m.ID},
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	out := map[ids.UUID][]messages.File{}
+	for _, row := range rows {
+		out[m.ID] = append(out[m.ID], messages.PresentFile(ctx, p.Disks, row))
+	}
+
+	return out, nil
 }
 
 /*

@@ -309,6 +309,7 @@ describe("realtime", () => {
     expect(decodeURIComponent(first.url)).toContain('"token":"eyJ"');
 
     push(first, { connect: { subs: { "widget_contact:ctc_1": { epoch: "e1", offset: 4 } } } });
+    expect(counts().resyncs).toBe(1);
     const pub = { data: { id: "evt_1", event: "message.created", data: { widget_id: "wgt_1" } }, offset: 5 };
     push(first, { pub });
     push(first, { pub });
@@ -322,7 +323,7 @@ describe("realtime", () => {
     expect(decodeURIComponent(again.url)).toContain('"recover":true,"epoch":"e1","offset":6');
 
     push(again, { connect: { subs: { "widget_contact:ctc_1": { recovered: false, epoch: "e2", offset: 0 } } } });
-    expect(counts().resyncs).toBe(1);
+    expect(counts().resyncs).toBe(2);
   });
 
   it("ends when the session ends and falls back to polling when replaced", async () => {

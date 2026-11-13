@@ -195,15 +195,19 @@ func (w *ScanAttachment) settle(ctx context.Context, row models.Attachment, stat
 	err := w.DB.Transaction(ctx, func(ctx context.Context, tx *database.Tx) error {
 		q := models.New(tx)
 
-		changed, err := q.SettleAttachmentScan(ctx, models.SettleAttachmentScanParams{
+		// The message comes from the update, not the row read before the
+		// scan: the file may have been put on a message since.
+		settled, err := q.SettleAttachmentScan(ctx, models.SettleAttachmentScanParams{
 			ScanStatus: status, Now: w.Clock.Now(), WorkspaceID: row.WorkspaceID, ID: row.ID,
 		})
-		if err != nil || changed == 0 || row.MessageID == nil {
+		if err != nil || len(settled) == 0 || settled[0] == nil {
 			return err
 		}
 
+		message := *settled[0]
+
 		conversation, err := q.FindMessageConversation(ctx, models.FindMessageConversationParams{
-			WorkspaceID: row.WorkspaceID, ID: *row.MessageID,
+			WorkspaceID: row.WorkspaceID, ID: message,
 		})
 		if err != nil {
 			return err
@@ -215,7 +219,7 @@ func (w *ScanAttachment) settle(ctx context.Context, row models.Attachment, stat
 				Actor: appevents.Actor{Type: "system", ID: ids.Nil()},
 			},
 			MessageRef: appevents.MessageRef{
-				ConversationRef: appevents.ConversationRef{ConversationID: conversation}, MessageID: *row.MessageID,
+				ConversationRef: appevents.ConversationRef{ConversationID: conversation}, MessageID: message,
 			},
 		})
 	})

@@ -163,7 +163,10 @@ export class Realtime {
     const hadPosition = this.epoch !== "";
     this.listener.mode("stream");
 
-    if (hadPosition && !sub.recovered) {
+    // A first connect has nothing to recover from: what changed between
+    // the last load and this subscription, such as a picture checked
+    // just after it was sent, is read again.
+    if (!hadPosition || !sub.recovered) {
       this.listener.resync();
     }
     for (const pub of sub.publications ?? []) {

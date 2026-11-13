@@ -514,9 +514,10 @@ func (q *Queries) SetAttachmentScanStatus(ctx context.Context, arg SetAttachment
 	return i, err
 }
 
-const settleAttachmentScan = `-- name: SettleAttachmentScan :execrows
+const settleAttachmentScan = `-- name: SettleAttachmentScan :many
 UPDATE attachments SET scan_status = $1, updated_at = $2
 WHERE workspace_id = $3 AND id = $4 AND scan_status = 'pending'
+RETURNING message_id
 `
 
 type SettleAttachmentScanParams struct {
@@ -527,17 +528,31 @@ type SettleAttachmentScanParams struct {
 }
 
 // SettleAttachmentScan records the outcome of the scan of a file that
-// still waits for it, and reports whether it did. A file already judged
-// keeps its status.
-func (q *Queries) SettleAttachmentScan(ctx context.Context, arg SettleAttachmentScanParams) (int64, error) {
-	result, err := q.db.Exec(ctx, settleAttachmentScan,
+// still waits for it and returns the message the file is on as the
+// update sees it: it waits for a send that is attaching the file, so a
+// file put on a message while it was scanned is never missed. No row
+// means the file was already judged and keeps its status.
+func (q *Queries) SettleAttachmentScan(ctx context.Context, arg SettleAttachmentScanParams) ([]*ids.UUID, error) {
+	rows, err := q.db.Query(ctx, settleAttachmentScan,
 		arg.ScanStatus,
 		arg.Now,
 		arg.WorkspaceID,
 		arg.ID,
 	)
 	if err != nil {
-		return 0, err
+		return nil, err
 	}
-	return result.RowsAffected(), nil
+	defer rows.Close()
+	var items []*ids.UUID
+	for rows.Next() {
+		var message_id *ids.UUID
+		if err := rows.Scan(&message_id); err != nil {
+			return nil, err
+		}
+		items = append(items, message_id)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }

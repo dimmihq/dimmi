@@ -45,12 +45,15 @@ UPDATE attachments SET scan_status = @scan_status, updated_at = @now
 WHERE workspace_id = @workspace_id AND id = @id
 RETURNING *;
 
--- name: SettleAttachmentScan :execrows
+-- name: SettleAttachmentScan :many
 -- SettleAttachmentScan records the outcome of the scan of a file that
--- still waits for it, and reports whether it did. A file already judged
--- keeps its status.
+-- still waits for it and returns the message the file is on as the
+-- update sees it: it waits for a send that is attaching the file, so a
+-- file put on a message while it was scanned is never missed. No row
+-- means the file was already judged and keeps its status.
 UPDATE attachments SET scan_status = @scan_status, updated_at = @now
-WHERE workspace_id = @workspace_id AND id = @id AND scan_status = 'pending';
+WHERE workspace_id = @workspace_id AND id = @id AND scan_status = 'pending'
+RETURNING message_id;
 
 -- name: FindMessageConversation :one
 -- FindMessageConversation returns the conversation the message belongs to.
