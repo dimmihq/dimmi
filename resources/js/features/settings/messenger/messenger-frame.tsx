@@ -3,10 +3,13 @@
  * no server, so it keeps its styles and focus to itself and opens as the
  * page opens. Each command given runs on it once it loaded, and again
  * when it changes: a config to show, as the messenger settings send, or
- * request types and a request, as the ticket settings send.
+ * request types and a request, as the ticket settings send. A messenger
+ * that follows the visitor's theme follows the dashboard's here, light or
+ * dark as the teammate sees it.
  */
 import { useEffect, useRef, useState } from "react";
 
+import { useThemeMode } from "@/components/application/theme/theme-toggle";
 import { cx } from "@/utils/cx";
 
 type Messenger = (...command: unknown[]) => void;
@@ -27,6 +30,18 @@ function messenger(frame: HTMLIFrameElement | null): Messenger | undefined {
   return (frame?.contentWindow as (Window & { Dimmi?: Messenger }) | null | undefined)?.Dimmi;
 }
 
+/*
+ * followsVisitor reports whether the messenger shown takes the visitor's
+ * theme rather than a fixed light or dark one.
+ */
+function followsVisitor(commands: [string, unknown][]): boolean {
+  const config = commands.find(([name]) => name === "configure")?.[1] as
+    | { appearance?: { theme?: string } }
+    | undefined;
+
+  return (config?.appearance?.theme ?? "auto") === "auto";
+}
+
 export function MessengerFrame({
   title,
   commands,
@@ -38,6 +53,7 @@ export function MessengerFrame({
 }) {
   const frame = useRef<HTMLIFrameElement>(null);
   const [ready, setReady] = useState(false);
+  const mode = useThemeMode();
   const sent = JSON.stringify(commands);
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: sent stands for the commands
@@ -51,7 +67,10 @@ export function MessengerFrame({
         dimmi?.(name, argument);
       }
     }
-  }, [ready, sent]);
+    if (followsVisitor(commands)) {
+      dimmi?.("update", { appearance: { theme: mode } });
+    }
+  }, [ready, sent, mode]);
 
   return (
     <iframe
