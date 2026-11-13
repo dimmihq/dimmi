@@ -68,8 +68,8 @@
 
 .bubble {
   max-inline-size: 100%;
-  padding: 12px 16px;
-  border-radius: 20px;
+  padding: 13px 18px;
+  border-radius: 22px;
   background: var(--bg-tertiary);
   line-height: 20px;
   overflow-wrap: anywhere;
@@ -79,14 +79,6 @@
 [data-from="visitor"] .bubble {
   background-image: linear-gradient(180deg, var(--brand-top), var(--brand));
   color: var(--on-brand);
-}
-
-[data-from="visitor"] .bubbles > :last-child {
-  border-end-end-radius: 8px;
-}
-
-.said:not([data-from="visitor"]) .bubbles > :last-child {
-  border-end-start-radius: 8px;
 }
 
 .sources {
