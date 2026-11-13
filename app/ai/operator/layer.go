@@ -86,6 +86,7 @@ type layerState struct {
 	suggested []string
 	earlier   []string
 	catalog   map[string]bool
+	system    string
 }
 
 /*
@@ -259,7 +260,7 @@ func (e *Engine) saveLayer(ctx context.Context, s *session) {
 	if s.layer == nil || s.run.ID == (ids.UUID{}) {
 		return
 	}
-	body, err := json.Marshal(s.layer.set.Record(e.layerSpecs(s), s.layer.suggested, s.layer.earlier))
+	body, err := json.Marshal(s.layer.set.Record(e.layerSpecs(s), s.layer.suggested, s.layer.earlier, s.layer.system))
 	if err != nil {
 		return
 	}

@@ -112,6 +112,7 @@ type ConversationResult struct {
 	Models         map[string]int `json:"models"`
 	Outcome        string         `json:"outcome"`
 	Error          string         `json:"error,omitempty"`
+	Layer          *LayerResult   `json:"tool_layer,omitempty"`
 }
 
 /*

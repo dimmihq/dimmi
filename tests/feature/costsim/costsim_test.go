@@ -184,6 +184,12 @@ func TestSimulation(t *testing.T) {
 			assert.True(t, found, file)
 		}
 		assert.Contains(t, report.Markdown(), "By scenario kind")
+
+		require.NotNil(t, first.Layer, "the seeded agent runs with the tool layer on")
+		assert.Positive(t, first.Layer.FixedTokens)
+		assert.Positive(t, first.Layer.SystemTokens)
+		assert.NotEmpty(t, first.Layer.Steps)
+		assert.Contains(t, report.Markdown(), "## Tool layer")
 	})
 
 	t.Run("stops cleanly when the run's spend limit is reached", func(t *testing.T) {
@@ -227,6 +233,8 @@ func TestSimulation(t *testing.T) {
 		require.Len(t, report.Conversations, 2)
 		assert.Equal(t, "answered", report.Conversations[0].Outcome, report.Conversations[0].Error)
 		assert.Positive(t, report.Conversations[0].CostMicros)
+		require.NotNil(t, report.Conversations[0].Layer, "Operator runs with the tool layer on")
+		assert.Positive(t, report.Conversations[0].Layer.SystemTokens)
 	})
 }
 

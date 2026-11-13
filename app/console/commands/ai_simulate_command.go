@@ -36,6 +36,7 @@ import (
 
 	"github.com/dimmihq/dimmi/app"
 	"github.com/dimmihq/dimmi/app/ai/costsim"
+	"github.com/dimmihq/dimmi/app/mcpserver"
 	"github.com/dimmihq/dimmi/app/demo/stowline"
 )
 
@@ -201,7 +202,16 @@ func (c AISimulateCommand) run(ctx context.Context, agent string, h *costsim.Har
 	if err != nil {
 		return nil, err
 	}
-	return h.RunOperator(ctx, o, stowline.TeammateRequests(), team)
+	report, err := h.RunOperator(ctx, o, stowline.TeammateRequests(), team)
+	if err != nil {
+		return nil, err
+	}
+	if lister, ok := c.App.Actions.OperatorAgent.Engine.Catalog.(interface{ Left() []mcpserver.Left }); ok {
+		for _, l := range lister.Left() {
+			report.LeftOut = append(report.LeftOut, costsim.LeftOut{Name: l.Name, Reason: l.Reason})
+		}
+	}
+	return report, nil
 }
 
 /*

@@ -89,7 +89,16 @@ func (h *Harness) read(ctx context.Context, conv models.Conversation, res *Conve
 		if err := h.readSteps(ctx, conv, res); err != nil {
 			return err
 		}
-		return h.readReplies(ctx, conv, res)
+		if err := h.readReplies(ctx, conv, res); err != nil {
+			return err
+		}
+		runs, err := h.runIDs(ctx, `SELECT id FROM ai_runs WHERE workspace_id = $1 AND conversation_id = $2
+			AND kind = 'conversation'`, conv.WorkspaceID, conv.ID)
+		if err != nil {
+			return fmt.Errorf("read run ids: %w", err)
+		}
+		res.Layer, err = h.readLayer(ctx, conv.WorkspaceID, runs)
+		return err
 	})
 }
 

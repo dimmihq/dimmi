@@ -43,8 +43,8 @@ func Note(earlier, likely []string) string {
 /*
 Record is what the layer did during one run, kept on the run: the
 tools it loaded, the tools the newest message named as likely, its
-counts, and the estimated tokens of the fixed tool list and the groups'
-lines.
+counts, and the estimated tokens of the fixed tool list, the groups'
+lines and the whole system prompt.
 */
 type Record struct {
 	Loaded       []string `json:"loaded"`
@@ -53,16 +53,26 @@ type Record struct {
 	Stats        Stats    `json:"stats"`
 	FixedTokens  int      `json:"fixed_tokens"`
 	GroupsTokens int      `json:"groups_tokens"`
+	SystemTokens int      `json:"system_tokens"`
 }
 
 /*
-Record sums up the run so far.
+Record sums up the run so far, given the fixed tools, the tools the
+newest message named, those earlier turns loaded, and the system
+prompt.
 */
-func (s *Set) Record(fixed []contracts.ToolSpec, suggested, earlier []string) Record {
+func (s *Set) Record(fixed []contracts.ToolSpec, suggested, earlier []string, system string) Record {
 	return Record{
 		Loaded: s.Loaded(), Suggested: suggested, Earlier: earlier, Stats: s.Stats(),
-		FixedTokens: Tokens(fixed), GroupsTokens: (len(s.Prompt()) + charsPerToken - 1) / charsPerToken,
+		FixedTokens: Tokens(fixed), GroupsTokens: textTokens(s.Prompt()), SystemTokens: textTokens(system),
 	}
+}
+
+/*
+textTokens estimates the tokens of a text.
+*/
+func textTokens(text string) int {
+	return (len(text) + charsPerToken - 1) / charsPerToken
 }
 
 /*

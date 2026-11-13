@@ -128,6 +128,13 @@ func (h *Harness) readTask(ctx context.Context, m authz.Membership, since time.T
 				res.ToolCalls++
 			}
 		}
-		return nil
+		rows.Close()
+		runs, err := h.runIDs(ctx, `SELECT id FROM ai_runs WHERE workspace_id = $1 AND kind = 'task'
+			AND actor_id = $2 AND created_at >= $3`, ws, m.Member.ID, since)
+		if err != nil {
+			return fmt.Errorf("read task run ids: %w", err)
+		}
+		res.Layer, err = h.readLayer(ctx, ws, runs)
+		return err
 	})
 }

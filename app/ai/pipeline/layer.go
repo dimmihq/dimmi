@@ -210,7 +210,8 @@ func (r *Runner) saveLayer(ctx context.Context, st *run) {
 	if st.layer == nil || st.rec == nil {
 		return
 	}
-	body, err := json.Marshal(st.layer.set.Record(r.layerSpecs(st), st.layer.suggested, st.layer.earlier))
+	body, err := json.Marshal(st.layer.set.Record(r.layerSpecs(st), st.layer.suggested, st.layer.earlier,
+		st.loop.system))
 	if err != nil {
 		return
 	}

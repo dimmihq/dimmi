@@ -56,6 +56,7 @@ func (e *Engine) converse(ctx context.Context, s *session) (string, string) {
 	p := prompt{system: e.systemPrompt(s), messages: e.transcript(s)}
 	if s.layer != nil {
 		p.system += "\n\n" + s.layer.set.Prompt()
+		s.layer.system = p.system
 	}
 	var written strings.Builder
 	for calls := 1; ; calls++ {
