@@ -38,57 +38,6 @@ func openTicket(args map[string]any) contracts.ToolCall {
 }
 
 /*
-lastTurn is the text of the last turn the model read on its first call.
-*/
-func (h *harness) lastTurn() string {
-	h.t.Helper()
-	msgs := h.llm.answer.Sent()[0].Messages
-	return msgs[len(msgs)-1].Parts[0].Text
-}
-
-/*
-TestAiIncidents tells the agent about the incidents customers can see,
-so it answers that the team knows instead of handing off.
-*/
-func TestAiIncidents(t *testing.T) {
-	t.Parallel()
-
-	t.Run("reads the active incidents with their status and latest update", func(t *testing.T) {
-		t.Parallel()
-		h := newHarness(t, nil)
-		incident := h.d.Owner.PostJSON("/api/v1/tickets", testkit.JSON{
-			"type_id": h.ticketType("Incident"), "title": "Sign-in outage",
-			"fields": testkit.JSON{"areas": []string{"Sign-in"}, "severity": "major"},
-		}).AssertCreated().String("data.id")
-		h.d.Owner.PostJSON("/api/v1/tickets/"+incident+"/public-updates", testkit.JSON{
-			"body": "A fix is rolling out <now>.",
-		}).AssertCreated()
-		h.llm.answer.Script(reply("Yes, we know: sign-in is down and a fix is rolling out."))
-
-		conv, trigger := h.conversation("I cannot sign in")
-		res := h.run(conv, trigger)
-
-		turn := h.lastTurn()
-		assert.Contains(t, turn, "<active_incidents>")
-		assert.Contains(t, turn, `title="Sign-in outage"`)
-		assert.Contains(t, turn, `areas="Sign-in"`)
-		assert.Contains(t, turn, "A fix is rolling out &lt;now&gt;.")
-		assert.NotEqual(t, "handoff", res.Outcome)
-	})
-
-	t.Run("leaves the block out when nothing is active", func(t *testing.T) {
-		t.Parallel()
-		h := newHarness(t, nil)
-		h.llm.answer.Script(reply("Hello!"))
-
-		conv, trigger := h.conversation("Hi")
-		h.run(conv, trigger)
-
-		assert.NotContains(t, h.lastTurn(), "<active_incidents>")
-	})
-}
-
-/*
 TestAiOpensTickets lets the agent open a ticket when the team's
 guidance says so: it collects required fields, confirms, and tells the
 customer the reference.

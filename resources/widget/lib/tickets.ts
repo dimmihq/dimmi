@@ -1,10 +1,9 @@
 /*
- * Requests and the status card are a chunk of their own, so the core
- * does not grow with them: Home's "Get help with" cards and status card,
- * the request form, the filter of open requests and the progress strip
- * above a request's thread. The messenger asks for the chunk once it has
- * a request type, an incident or a request to show, and draws again once
- * it arrived.
+ * Requests are a chunk of their own, so the core does not grow with
+ * them: Home's "Get help with" cards, the request form, the filter of
+ * open requests and the progress strip above a request's thread. The
+ * messenger asks for the chunk once it has a request type or a request
+ * to show, and draws again once it arrived.
  */
 export type TicketParts = typeof import("./ticket_parts");
 

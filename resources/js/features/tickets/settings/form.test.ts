@@ -132,7 +132,7 @@ describe("type steps", () => {
   const states = [
     state("new", "submitted"),
     state("doing", "in_progress"),
-    state("found", "in_progress", "incident_identified"),
+    state("found", "in_progress"),
     state("info", "waiting_customer"),
     state("done", "resolved"),
     state("nope", "resolved"),
@@ -152,8 +152,7 @@ describe("type steps", () => {
     });
   });
 
-  it("offers incident states only to incidents", () => {
-    expect(addable(states, "in_progress", ["doing"], "customer").map((s) => s.id)).toEqual([]);
-    expect(addable(states, "in_progress", ["doing"], "incident").map((s) => s.id)).toEqual(["found"]);
+  it("offers the group's states the type does not use yet", () => {
+    expect(addable(states, "in_progress", ["doing"]).map((s) => s.id)).toEqual(["found"]);
   });
 });

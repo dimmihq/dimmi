@@ -205,8 +205,7 @@ func portalPages(get, post func(path, name string, h fhttp.HandlerFunc), portal 
 }
 
 /*
-requestPages declares the reader's requests and the public status
-section.
+requestPages declares the reader's requests.
 */
 func requestPages(get, post func(path, name string, h fhttp.HandlerFunc), portal web.PortalController) {
 	get("/tickets", "hc.tickets.index", portal.Tickets)
@@ -215,7 +214,6 @@ func requestPages(get, post func(path, name string, h fhttp.HandlerFunc), portal
 	post("/tickets/new/{type}", "hc.tickets.store", portal.SubmitTicket)
 	get("/tickets/{ticket}", "hc.tickets.show", portal.Ticket)
 	post("/tickets/{ticket}/messages", "hc.tickets.messages.store", portal.ReplyTicket)
-	get("/status", "hc.status", portal.Status)
 }
 
 /*

@@ -19,7 +19,6 @@ import { toast } from "@/components/base/toast/toast";
 import {
   createTicketState,
   type StateGroup,
-  type TicketKind,
   type TicketState,
   type TicketType,
   ticketKeys,
@@ -72,7 +71,6 @@ function NameFields({
 export function AddStateDialog({
   workspace,
   group,
-  kind,
   states,
   used,
   usedBy,
@@ -81,7 +79,6 @@ export function AddStateDialog({
 }: {
   workspace: string;
   group: StateGroup;
-  kind: TicketKind;
   states: TicketState[];
   used: string[];
   usedBy: (id: string) => TicketType[];
@@ -90,7 +87,7 @@ export function AddStateDialog({
 }) {
   const formId = useId();
   const client = useQueryClient();
-  const options = addable(states, group, used, kind);
+  const options = addable(states, group, used);
   const [picked, setPicked] = useState(options[0]?.id ?? fresh);
   const [name, setName] = useState("");
   const [label, setLabel] = useState("");

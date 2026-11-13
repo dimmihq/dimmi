@@ -76,7 +76,7 @@ export interface TicketUpdateDraft {
   ticket_id: string;
   issue_id: string | null;
   source: string;
-  reason: "incident_resolved" | "comment";
+  reason: "issue_done" | "issue_canceled" | "comment";
   body: string;
   author_name: string;
   status: DraftStatus;
@@ -91,7 +91,6 @@ export interface TicketUpdateDraft {
 export interface TicketSettings {
   object: "ticket_settings";
   auto_link_duplicates: boolean;
-  spike_threshold: number;
 }
 
 /*

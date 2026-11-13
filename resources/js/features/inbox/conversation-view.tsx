@@ -13,7 +13,7 @@
  * it open, and the thread says when the customer is typing. When the
  * customer's time zone is known, a header control reads the thread's
  * times in it. The ticket menu turns it into a ticket (also T), escalates
- * it, adds it to a tracker or declares an incident.
+ * it or adds it to a tracker.
  */
 import { RiArrowLeftSLine, RiDeleteBinLine, RiGlobalLine, RiLayoutRightLine, RiSparkling2Line } from "@remixicon/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";

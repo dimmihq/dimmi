@@ -1,8 +1,8 @@
 -- migrate: phase=expand
 -- Links tie tickets to other tickets and to conversations: a customer
--- ticket to the back-office work behind it, a tracker or incident to
--- every conversation reporting the problem, an old ticket to the
--- follow-up opened after its reopen window, or any two related tickets.
+-- ticket to the back-office work behind it, a tracker to every
+-- conversation reporting the problem, an old ticket to the follow-up
+-- opened after its reopen window, or any two related tickets.
 -- A link points from one ticket to exactly one other ticket or one
 -- conversation, once per kind.
 --

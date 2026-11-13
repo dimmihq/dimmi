@@ -22,23 +22,18 @@ import (
 )
 
 /*
-Subjects of the ticket events.
+subjectTicket is the subject of the ticket events.
 */
-const (
-	subjectTicket             = "ticket"
-	subjectIncidentSuggestion = "incident_suggestion"
-)
+const subjectTicket = "ticket"
 
 /*
-ticketOccurrence names the ticket of a ticket event, or the suggestion
-of a spike, and reports false for any other event.
+ticketOccurrence names the ticket of a ticket event, and reports false
+for any other event.
 */
 func ticketOccurrence(e any, args jobs.FanOutWebhookEventArgs) (jobs.FanOutWebhookEventArgs, bool) {
 	switch ev := e.(type) {
 	case appevents.TicketEvent:
 		args.Subject, args.SubjectID = subjectTicket, ev.Ticket().TicketID
-	case appevents.IncidentSuggested:
-		args.Subject, args.SubjectID = subjectIncidentSuggestion, ev.SuggestionID
 	default:
 		return args, false
 	}

@@ -56,8 +56,6 @@ func engagementSubjectOf(kind string) (engagementSubject, bool) {
 		return engagementSubject{prefix: models.PrefixSeriesEnrollment}, true
 	case subjectTicket:
 		return engagementSubject{prefix: models.PrefixTicket, path: "tickets"}, true
-	case subjectIncidentSuggestion:
-		return engagementSubject{prefix: models.PrefixIncidentSuggestion, path: "incident-suggestions"}, true
 	}
 
 	return engagementSubject{}, false

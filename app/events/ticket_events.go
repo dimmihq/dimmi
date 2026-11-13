@@ -139,11 +139,6 @@ func (TicketUpdateSent) EventName() string { return "ticket.update_sent" }
 /*
 EventName names the event.
 */
-func (TicketPublicUpdatePosted) EventName() string { return "ticket.public_update_posted" }
-
-/*
-EventName names the event.
-*/
 func (TicketSLAWarning) EventName() string { return "ticket.sla_warning" }
 
 /*
@@ -165,8 +160,3 @@ func (TicketRestored) EventName() string { return "ticket.restored" }
 EventName names the event.
 */
 func (TicketCustomerReplied) EventName() string { return "ticket.customer_replied" }
-
-/*
-EventName names the event.
-*/
-func (IncidentSuggested) EventName() string { return "incident.suggested" }

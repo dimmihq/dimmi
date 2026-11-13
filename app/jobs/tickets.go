@@ -74,11 +74,6 @@ Kind names the job.
 func (SyncTicketIssuesArgs) Kind() string { return "sync_ticket_issues" }
 
 /*
-Kind names the job.
-*/
-func (DetectIncidentSpikesArgs) Kind() string { return "detect_incident_spikes" }
-
-/*
 TicketWork is what the ticket jobs run.
 */
 type TicketWork interface {

@@ -1,20 +1,21 @@
 /*
- * The messages dimmi drafted for a person to send to everyone a tracker
- * or incident links: an engineer's note written with @customers, or the
- * closing message of an incident its tool resolved. Nothing goes out on
- * its own. Each says why it was drafted, who it reaches and who would be
- * held and why. A teammate edits it, sends it after confirming, or
- * discards it.
+ * A message dimmi drafted for a person to send to everyone a tracker
+ * links: an engineer's note written with @customers, or the closing
+ * message of an incident its tool resolved. Nothing goes out on its own.
+ * It sits in the tracker's thread as a compact card that says why it was
+ * drafted, who it reaches and who would be held and why. A teammate
+ * edits it, sends it after confirming, or discards it.
  */
-import { RiSendPlaneLine } from "@remixicon/react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { RiQuillPenLine, RiSendPlaneLine } from "@remixicon/react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 
 import { Button } from "@/components/base/buttons/button";
 import { AlertDialog } from "@/components/base/modal/modal";
 import { Textarea } from "@/components/base/textarea/textarea";
 import { toast } from "@/components/base/toast/toast";
-import { decideDraft, refreshTicketKeys, type TicketUpdateDraft, ticketDraftsQuery } from "@/lib/api/ticket-issues";
+import { ago } from "@/features/inbox/conversations";
+import { decideDraft, refreshTicketKeys, type TicketUpdateDraft } from "@/lib/api/ticket-issues";
 
 import { draftReasons, heldReasons, toolLook } from "./tools";
 
@@ -30,7 +31,18 @@ function reach(draft: TicketUpdateDraft): string {
   return held.length > 0 ? `Reaches ${total}, holds ${held.join(" and ")}` : `Reaches ${total}`;
 }
 
-function Draft({ workspace, ticket, draft }: { workspace: string; ticket: string; draft: TicketUpdateDraft }) {
+/*
+ * DraftCard is one draft waiting for a person, as an entry in the thread.
+ */
+export function DraftCard({
+  workspace,
+  ticket,
+  draft,
+}: {
+  workspace: string;
+  ticket: string;
+  draft: TicketUpdateDraft;
+}) {
   const queryClient = useQueryClient();
   const [body, setBody] = useState(draft.body);
   const [confirming, setConfirming] = useState(false);
@@ -49,27 +61,30 @@ function Draft({ workspace, ticket, draft }: { workspace: string; ticket: string
   });
 
   return (
-    <li className="flex flex-col gap-3 px-4 py-4">
-      <div className="flex flex-wrap items-center gap-2">
-        <span className="text-body-medium text-text-primary">{draftReasons[draft.reason] ?? draft.reason}</span>
-        <span className="text-caption-1-regular text-text-tertiary">
-          from {source}
-          {draft.author_name ? `, ${draft.author_name}` : ""}
+    <li
+      aria-label="Draft to everyone linked"
+      className="flex flex-col gap-2 rounded-xl border border-border-primary bg-background-primary-default p-3 shadow-xs"
+    >
+      <div className="flex items-center gap-2">
+        <RiQuillPenLine aria-hidden className="size-4 shrink-0 text-foreground-icon-secondary" />
+        <span className="min-w-0 flex-1 truncate text-body-2-medium text-text-primary">
+          {draftReasons[draft.reason] ?? draft.reason}
+          <span className="text-caption-1-regular text-text-tertiary">
+            {" "}
+            · from {source}
+            {draft.author_name ? `, ${draft.author_name}` : ""}
+          </span>
         </span>
+        <span className="shrink-0 text-caption-1-regular text-text-tertiary">{ago(draft.created_at)}</span>
       </div>
       <Textarea aria-label="Message" value={body} onChange={setBody} rows={3} />
-      <div className="flex flex-wrap items-center justify-between gap-3">
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <span className="text-caption-1-regular text-text-secondary">{reach(draft)}</span>
         <div className="flex gap-2">
-          <Button
-            variant="secondary"
-            size="small"
-            loading={decide.isPending}
-            onClick={() => decide.mutate("discarded")}
-          >
+          <Button variant="secondary" size="xs" loading={decide.isPending} onClick={() => decide.mutate("discarded")}>
             Discard
           </Button>
-          <Button size="small" leadingIcon={RiSendPlaneLine} onClick={() => setConfirming(true)}>
+          <Button size="xs" leadingIcon={RiSendPlaneLine} onClick={() => setConfirming(true)}>
             Send
           </Button>
         </div>
@@ -78,35 +93,10 @@ function Draft({ workspace, ticket, draft }: { workspace: string; ticket: string
         isOpen={confirming}
         onOpenChange={setConfirming}
         title="Send to everyone linked?"
-        description={`${reach(draft)}. Each customer gets it in their own channel.`}
+        description={`${reach(draft)}. Each customer gets it in their own channel. Customers who wrote since, or whom a teammate already told, are held back.`}
         confirmLabel="Send"
         onConfirm={() => decide.mutateAsync("sent")}
       />
     </li>
-  );
-}
-
-export function CloseLoopDrafts({ workspace, ticket }: { workspace: string; ticket: string }) {
-  const { data } = useQuery(ticketDraftsQuery(workspace, ticket));
-  const open = (data ?? []).filter((d) => d.status === "ready");
-
-  if (open.length === 0) {
-    return null;
-  }
-
-  return (
-    <section aria-label="Close the loop" className="flex flex-col gap-2">
-      <div className="flex flex-col gap-0.5">
-        <h3 className="text-headline-medium text-text-primary">Drafts to everyone linked</h3>
-        <p className="text-caption-1-regular text-text-tertiary">
-          Customers who wrote since, or whom a teammate already told, are held back.
-        </p>
-      </div>
-      <ul className="flex flex-col divide-y divide-separator-border rounded-xl border border-border-primary">
-        {open.map((draft) => (
-          <Draft key={draft.id} workspace={workspace} ticket={ticket} draft={draft} />
-        ))}
-      </ul>
-    </section>
   );
 }

@@ -1,18 +1,14 @@
 /*
- * What a tracker or an incident reaches and what it says: the
- * conversations linked to it with each customer's company, plan and
- * revenue, the message to all of them with who it would hold back and
- * how each delivery went, an incident's public log, and the incidents
- * active right now. A section whose endpoint the server does not have
- * yet answers null, so its screen can leave it out.
+ * What a tracker reaches and what it says: the conversations linked to
+ * it with each customer's company, plan and revenue, and the message to
+ * all of them with who it would hold back and how each delivery went.
  */
 import { queryOptions } from "@tanstack/react-query";
 
-import { ApiError, request, requestBody } from "./client";
-import type { Ticket } from "./tickets";
+import { request, requestBody } from "./client";
 
 /*
- * TrackerConversation is one conversation a tracker or incident links,
+ * TrackerConversation is one conversation a tracker links,
  * with who wrote it and the ticket of its own, if any.
  */
 export interface TrackerConversation {
@@ -37,8 +33,7 @@ export interface TrackerConversation {
 }
 
 /*
- * Impact is who a tracker or incident reaches, all of them, not only
- * the page read.
+ * Impact is who a tracker reaches, all of them, not only the page read.
  */
 export interface Impact {
   conversations: number;
@@ -103,34 +98,11 @@ export interface UpdatePlan {
   update: TicketUpdate | null;
 }
 
-export interface PublicUpdate {
-  object: "ticket_public_update";
-  id: string;
-  ticket_id: string;
-  body: string;
-  state_id: string | null;
-  update_id: string | null;
-  author_id: string | null;
-  source: string;
-  created_at: string;
-}
-
-/*
- * TrackerSummary is the AI's read of a tracker: what customers report,
- * how many, which plans. The server may not send it yet.
- */
-export interface TrackerSummary {
-  text: string;
-  generated_at?: string;
-}
-
 export const trackerKeys = {
   conversations: (workspace: string, ticket: string) =>
     ["workspace", workspace, "tickets", "tracker", ticket, "conversations"] as const,
   updates: (workspace: string, ticket: string) =>
     ["workspace", workspace, "tickets", "tracker", ticket, "updates"] as const,
-  log: (workspace: string, ticket: string) => ["workspace", workspace, "tickets", "tracker", ticket, "log"] as const,
-  active: (workspace: string) => ["workspace", workspace, "tickets", "incidents", "active"] as const,
 };
 
 const noImpact: Impact = { conversations: 0, customers: 0, companies: 0, revenue: 0 };
@@ -186,49 +158,4 @@ export function sendTicketUpdate(
   message: { body: string; resolve?: boolean; dry_run?: boolean },
 ) {
   return request<UpdatePlan>("POST", `/tickets/${ticket}/updates`, message, { workspace });
-}
-
-export function publicUpdatesQuery(workspace: string, ticket: string) {
-  return queryOptions({
-    queryKey: trackerKeys.log(workspace, ticket),
-    queryFn: () => request<PublicUpdate[]>("GET", `/tickets/${ticket}/public-updates`, undefined, { workspace }),
-    enabled: workspace !== "" && ticket !== "",
-  });
-}
-
-export function postPublicUpdate(
-  workspace: string,
-  ticket: string,
-  post: { body: string; state_id?: string; send_to_linked?: boolean },
-) {
-  return request<PublicUpdate>("POST", `/tickets/${ticket}/public-updates`, post, { workspace });
-}
-
-/*
- * activeIncidentsQuery reads the incidents not resolved yet, for the
- * pins beside the inbox. The counts stay live: the list is read again
- * every thirty seconds.
- */
-export function activeIncidentsQuery(workspace: string) {
-  return queryOptions({
-    queryKey: trackerKeys.active(workspace),
-    queryFn: () => request<Ticket[]>("GET", "/tickets?kind=incident&active=true&limit=10", undefined, { workspace }),
-    enabled: workspace !== "",
-    refetchInterval: 30_000,
-  });
-}
-
-/*
- * optional reads an endpoint that may not exist yet: a 404 or 405
- * answers null instead of failing.
- */
-export async function optional<T>(read: () => Promise<T>): Promise<T | null> {
-  try {
-    return await read();
-  } catch (error) {
-    if (error instanceof ApiError && (error.status === 404 || error.status === 405)) {
-      return null;
-    }
-    throw error;
-  }
 }

@@ -201,7 +201,7 @@ func linkedPage(ctx context.Context, q *models.Queries, t models.Ticket, after *
 
 /*
 ConversationTickets returns the customer ticket of a conversation the
-member may see, and the trackers and incidents it is linked to.
+member may see, and the trackers it is linked to.
 */
 func (t *Tickets) ConversationTickets(
 	ctx context.Context, m authz.Membership, ref conversations.Ref,

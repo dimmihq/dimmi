@@ -457,23 +457,21 @@ func workflowPublicIDs() []PublicIDEntry {
 
 /*
 The prefixes of tickets, their setup, links and history, the issues
-and incidents behind them, and service level clocks.
+and engineering incidents behind them, and service level clocks.
 */
 const (
-	PrefixTicket             Prefix = "tkt"
-	PrefixTicketType         Prefix = "tktt"
-	PrefixTicketField        Prefix = "tktf"
-	PrefixTicketState        Prefix = "tkts"
-	PrefixTicketLink         Prefix = "tktl"
-	PrefixTicketEvent        Prefix = "tkte"
-	PrefixTicketIssue        Prefix = "tkti"
-	PrefixTicketUpdate       Prefix = "tktu"
-	PrefixTicketPublicUpdate Prefix = "tktp"
-	PrefixTicketUpdateDraft  Prefix = "tkdf"
-	PrefixSLAClock           Prefix = "slac"
-	PrefixIncidentSuggestion Prefix = "incs"
-	PrefixTicketImport       Prefix = "tkim"
-	PrefixTrackerSuggestion  Prefix = "trks"
+	PrefixTicket            Prefix = "tkt"
+	PrefixTicketType        Prefix = "tktt"
+	PrefixTicketField       Prefix = "tktf"
+	PrefixTicketState       Prefix = "tkts"
+	PrefixTicketLink        Prefix = "tktl"
+	PrefixTicketEvent       Prefix = "tkte"
+	PrefixTicketIssue       Prefix = "tkti"
+	PrefixTicketUpdate      Prefix = "tktu"
+	PrefixTicketUpdateDraft Prefix = "tkdf"
+	PrefixSLAClock          Prefix = "slac"
+	PrefixTicketImport      Prefix = "tkim"
+	PrefixTrackerSuggestion Prefix = "trks"
 )
 
 /*
@@ -490,10 +488,8 @@ func ticketPublicIDs() []PublicIDEntry {
 		{PrefixTicketIssue, "ticket_issues"},
 		{PrefixTicketUpdate, "ticket_updates"},
 		{"tktd", "ticket_update_deliveries"},
-		{PrefixTicketPublicUpdate, "ticket_public_updates"},
 		{PrefixTicketUpdateDraft, "ticket_update_drafts"},
 		{PrefixSLAClock, "sla_clocks"},
-		{PrefixIncidentSuggestion, "incident_suggestions"},
 		{PrefixTicketImport, "ticket_imports"},
 		{PrefixTrackerSuggestion, "tracker_suggestions"},
 	}

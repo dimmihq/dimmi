@@ -17,7 +17,6 @@ const english: Record<string, string> = {
   ticket_attach: "Attach files",
   ticket_required: "Please fill this in",
   ticket_failed: "We couldn't send this. Try again.",
-  status_title: "Service status",
   ticket_yes: "Yes",
 };
 

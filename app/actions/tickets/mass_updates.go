@@ -3,7 +3,7 @@
 | Messaging Everyone Linked
 |--------------------------------------------------------------------------
 |
-| A tracker or incident writes once to every linked customer. A dry run
+| A tracker writes once to every linked customer. A dry run
 | counts who it reaches and who would be held back, with the reason: the
 | customer wrote since they were linked and nobody answered, or a
 | teammate already wrote to them after the last update. Sending stores
@@ -93,7 +93,7 @@ func (t *Tickets) SendToLinked(ctx context.Context, m authz.Membership, ref Ref,
 			return err
 		}
 
-		if found.Kind != KindTracker && found.Kind != KindIncident {
+		if found.Kind != KindTracker {
 			return ErrNotTracker
 		}
 

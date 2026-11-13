@@ -7,7 +7,7 @@
 -- product itself moves tickets to, such as "close the loop".
 --
 -- A type is a kind of ticket: a customer's request, back-office work,
--- a tracker that gathers many reports of one problem, or an incident.
+-- or a tracker that gathers many reports of one problem.
 -- It names its default inbox and team, the states it may use, and for
 -- customer types whether the messenger and portal show it, whether the
 -- requester's company sees it, how long a resolved ticket may reopen,
@@ -15,8 +15,14 @@
 -- per type, typed like attributes, each saying when it is required and
 -- what the customer sees of it. Archiving hides a type, field or state
 -- from new work and keeps it on old tickets.
+--
+-- The workspace keeps its ticket switches, such as linking duplicate
+-- conversations on its own, in one object.
 
 -- +goose Up
+ALTER TABLE workspaces ADD COLUMN ticket_settings jsonb NOT NULL DEFAULT '{}'
+    CHECK (jsonb_typeof(ticket_settings) = 'object');
+
 CREATE TABLE ticket_states (
     id uuid PRIMARY KEY DEFAULT uuidv7(),
     workspace_id uuid NOT NULL REFERENCES workspaces ON DELETE CASCADE,
@@ -42,7 +48,7 @@ CREATE POLICY ticket_states_tenant ON ticket_states USING (workspace_id = ANY (d
 CREATE TABLE ticket_types (
     id uuid PRIMARY KEY DEFAULT uuidv7(),
     workspace_id uuid NOT NULL REFERENCES workspaces ON DELETE CASCADE,
-    kind text NOT NULL CHECK (kind IN ('customer', 'back_office', 'tracker', 'incident')),
+    kind text NOT NULL CHECK (kind IN ('customer', 'back_office', 'tracker')),
     name text NOT NULL CHECK (char_length(name) BETWEEN 1 AND 60),
     icon text NOT NULL DEFAULT 'ticket' CHECK (icon ~ '^[a-z0-9-]{1,40}$'),
     description text NOT NULL DEFAULT '' CHECK (char_length(description) <= 500),
@@ -119,3 +125,4 @@ DROP TABLE ticket_fields;
 DROP TABLE ticket_type_states;
 DROP TABLE ticket_types;
 DROP TABLE ticket_states;
+ALTER TABLE workspaces DROP COLUMN ticket_settings;

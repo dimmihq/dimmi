@@ -7,7 +7,6 @@
  * and the trash only to those who may delete conversations.
  */
 import {
-  RiAlarmWarningLine,
   RiCoupon3Line,
   RiFilter3Line,
   RiHourglassLine,
@@ -93,7 +92,7 @@ function fixedGroups(counts: Counts["views"] | undefined, unassigned: boolean, c
 /*
  * ticketGroup is the Tickets group: every open ticket, a view per live
  * customer and back-office type, the tickets another team holds, and
- * trackers and incidents. It shows once the workspace has ticket types.
+ * trackers. It shows once the workspace has ticket types.
  */
 export function ticketGroup(types: TicketType[] | undefined): ViewGroup {
   if (!types || types.length === 0) {
@@ -119,7 +118,6 @@ export function ticketGroup(types: TicketType[] | undefined): ViewGroup {
       })),
       fixedRow("tickets-waiting", RiHourglassLine),
       fixedRow("trackers", RiRouteLine),
-      fixedRow("incidents", RiAlarmWarningLine),
     ],
   };
 }

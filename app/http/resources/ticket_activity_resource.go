@@ -5,8 +5,8 @@
 |
 | What happened on a ticket and what it sent: its event log entries,
 | a tracker's messages to everyone linked with each recipient's result,
-| an incident's public posts, and the conversations a tracker reaches
-| with their customer, company, plan and revenue.
+| and the conversations a tracker reaches with their customer, company,
+| plan and revenue.
 |
 */
 
@@ -146,46 +146,6 @@ func NewTicketUpdates(list []tickets.UpdateReport) []TicketUpdate {
 	out := make([]TicketUpdate, len(list))
 	for i, r := range list {
 		out[i] = NewTicketUpdate(r)
-	}
-
-	return out
-}
-
-/*
-TicketPublicUpdate is a post to an incident's public log.
-*/
-type TicketPublicUpdate struct {
-	Object    string    `json:"object"`
-	ID        string    `json:"id"`
-	TicketID  string    `json:"ticket_id"`
-	Body      string    `json:"body"`
-	StateID   *string   `json:"state_id"`
-	UpdateID  *string   `json:"update_id"`
-	AuthorID  *string   `json:"author_id"`
-	Source    string    `json:"source"`
-	CreatedAt time.Time `json:"created_at"`
-}
-
-/*
-NewTicketPublicUpdate shapes a post.
-*/
-func NewTicketPublicUpdate(p models.TicketPublicUpdate) TicketPublicUpdate {
-	return TicketPublicUpdate{
-		Object: "ticket_public_update", ID: models.PublicID(models.PrefixTicketPublicUpdate, p.ID),
-		TicketID: models.PublicID(models.PrefixTicket, p.TicketID), Body: p.Body,
-		StateID:  optionalID(models.PrefixTicketState, p.StateID),
-		UpdateID: optionalID(models.PrefixTicketUpdate, p.UpdateID),
-		AuthorID: optionalID(models.PrefixMember, p.AuthorMemberID), Source: p.Source, CreatedAt: p.CreatedAt,
-	}
-}
-
-/*
-NewTicketPublicUpdates shapes posts.
-*/
-func NewTicketPublicUpdates(list []models.TicketPublicUpdate) []TicketPublicUpdate {
-	out := make([]TicketPublicUpdate, len(list))
-	for i, p := range list {
-		out[i] = NewTicketPublicUpdate(p)
 	}
 
 	return out

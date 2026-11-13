@@ -199,7 +199,7 @@ export class Live {
   private readonly events: unknown[][] = [];
   private unread = -1;
   private shown = "";
-  private ticketing: Pick<Content, "ticket_types" | "incidents"> = {};
+  private ticketing: Pick<Content, "ticket_types"> = {};
   private openOnly = false;
 
   constructor(
@@ -604,9 +604,9 @@ export class Live {
   }
 
   /*
-   * loadTicketing reads the request types Home offers and the incidents
-   * its status card shows, once, the first time the panel opens, through
-   * the app's address before the visitor has a session. A visitor who
+   * loadTicketing reads the request types Home offers, once, the first
+   * time the panel opens, through the app's address before the visitor
+   * has a session. A visitor who
    * never opens the messenger never asks.
    */
   async loadTicketing() {
@@ -620,11 +620,11 @@ export class Live {
         (res) => res.data,
         () => [],
       );
-    const [ticket_types, incidents] = await Promise.all([get("/ticket-types"), get("/incidents")]);
-    if (ticket_types.length || incidents.length) {
+    const ticket_types = await get("/ticket-types");
+    if (ticket_types.length) {
       await loadTickets(this.host.root).catch(() => undefined);
     }
-    this.ticketing = { ticket_types, incidents };
+    this.ticketing = { ticket_types };
     this.host.update({});
   }
 

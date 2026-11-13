@@ -142,7 +142,7 @@ func (i *Intake) typeOf(
 		return ids.Nil(), fmt.Errorf("find ticket settings: %w", err)
 	}
 
-	candidates = append(candidates, defaultType(settings.TicketSettings))
+	candidates = append(candidates, defaultType(settings))
 
 	for _, c := range candidates {
 		if id, ok := i.customerType(w.Setup, c); ok {

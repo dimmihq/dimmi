@@ -85,8 +85,7 @@ func (r *Runner) envelope(e *env, update string) []contracts.ChatMessage {
 		msgs = addTurn(msgs, contracts.ChatRoleUser, update)
 	}
 	last := &msgs[len(msgs)-1]
-	last.Parts[0].Text += "\n<today>" + e.now.UTC().Format("Monday 2 January 2006") + " (UTC)</today>" +
-		incidentBlock(e)
+	last.Parts[0].Text += "\n<today>" + e.now.UTC().Format("Monday 2 January 2006") + " (UTC)</today>"
 
 	if contact := r.contactBlock(e); contact != "" {
 		if speaker(msgs[0]) != contracts.ChatRoleUser {

@@ -4,7 +4,7 @@
  */
 import { useState } from "react";
 
-export type TicketDialog = "convert" | "escalate" | "tracker" | "incident";
+export type TicketDialog = "convert" | "escalate" | "tracker";
 
 /*
  * useTicketDialogs holds which ticket dialog is open.

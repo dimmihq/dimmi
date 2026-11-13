@@ -5,7 +5,6 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 
 	fhttp "github.com/dimmihq/dimmi/framework/http"
 	"github.com/dimmihq/dimmi/framework/testkit"
@@ -116,26 +115,5 @@ func TestPortalRequests(t *testing.T) {
 
 		c.as(cookie, "/conversations").AssertStatus(fhttp.StatusSeeOther).
 			AssertHeader("Location", c.local("/tickets"))
-	})
-}
-
-func TestPortalStatus(t *testing.T) {
-	t.Parallel()
-
-	t.Run("shows everyone the active incidents with their update log", func(t *testing.T) {
-		t.Parallel()
-		c := newCenter(t)
-		assert.Contains(t, string(c.page("/status").AssertOK().Body), "All systems operational")
-
-		id := c.d.Owner.PostJSON("/api/v1/tickets", testkit.JSON{
-			"type_id": c.typeID(t, "Incident"), "title": "Sign-in failing",
-		}).AssertCreated().String("data.id")
-		c.d.Owner.PostJSON("/api/v1/tickets/"+id+"/public-updates", testkit.JSON{"body": "Fix deployed, monitoring"}).
-			AssertCreated()
-
-		body := string(c.page("/status").AssertOK().Body)
-		require.Contains(t, body, "Sign-in failing")
-		assert.Contains(t, body, "Fix deployed, monitoring")
-		assert.NotContains(t, body, "All systems operational")
 	})
 }

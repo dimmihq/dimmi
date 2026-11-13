@@ -329,11 +329,10 @@ func resolvedAt(st models.TicketState, w *Writer) *time.Time {
 
 /*
 visibleToCustomer says whether customers see tickets of the type: a
-customer ticket always, an incident when its type says so, other work
-never.
+customer ticket always, other work never.
 */
 func visibleToCustomer(ty models.TicketType) bool {
-	return ty.Kind == KindCustomer || (ty.Kind == KindIncident && ty.CustomerVisible)
+	return ty.Kind == KindCustomer
 }
 
 /*

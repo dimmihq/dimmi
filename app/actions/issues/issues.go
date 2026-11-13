@@ -10,8 +10,8 @@
 | tells dimmi when the issue moves, by webhook and by a re-check every
 | fifteen minutes, and each status maps to a dimmi state, so customers
 | only ever see dimmi's states. Comments arrive as internal notes; a
-| comment starting with @customers, a done issue or a resolved incident
-| drafts a message to everyone linked. The impact on customers is kept
+| comment starting with @customers drafts a message to everyone
+| linked. The impact on customers is kept
 | current on the issue so engineering ranks work by it.
 |
 */

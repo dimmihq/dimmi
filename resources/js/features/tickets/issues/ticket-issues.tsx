@@ -1,10 +1,10 @@
 /*
  * The engineering work behind a ticket, for the ticket panel and the
- * tracker and incident pages: each linked issue or incident with its
+ * tracker page: each linked issue or incident with its
  * tool, key, title and status as last seen, and any warning, such as a
  * Linear team the app can no longer see, so nothing drops silently.
  * Linking opens the two-step dialog; unlinking asks first and leaves the
- * issue in its tool. Below, the drafts that close the loop.
+ * issue in its tool.
  */
 import { RiAddLine, RiErrorWarningLine, RiExternalLinkLine, RiLinkUnlinkM } from "@remixicon/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -19,7 +19,6 @@ import { integrationsQuery } from "@/lib/api/integrations";
 import { refreshTicketKeys, ticketIssuesQuery, unlinkTicketIssue } from "@/lib/api/ticket-issues";
 import { type TicketIssue, ticketQuery } from "@/lib/api/tickets";
 
-import { CloseLoopDrafts } from "./close-loop-drafts";
 import { LinkIssueDialog } from "./link-issue-dialog";
 import { groupTint, isTool, toolLook } from "./tools";
 
@@ -128,7 +127,7 @@ function IssueList({
 
 /*
  * TicketIssues is the block itself; compact fits the conversation's
- * ticket panel, without the heading and the drafts.
+ * ticket panel, without the heading.
  */
 export function TicketIssues({ ticketId, compact = false }: { ticketId: string; compact?: boolean }) {
   const workspace = useAccount().workspace.id;
@@ -164,7 +163,6 @@ export function TicketIssues({ ticketId, compact = false }: { ticketId: string; 
       {compact && tools.length === 0 && list.length === 0 ? (
         <span className="text-body-2-regular text-text-tertiary">No linked issues.</span>
       ) : null}
-      {compact ? null : <CloseLoopDrafts workspace={workspace} ticket={ticketId} />}
       {linking ? (
         <LinkIssueDialog
           workspace={workspace}

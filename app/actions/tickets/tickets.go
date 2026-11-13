@@ -54,7 +54,7 @@ var (
 	ErrLinkInvalid = fault.New(fault.Invalid, "ticket_link_invalid",
 		"This link does not fit the tickets it joins.").OnField("kind")
 	ErrNotTracker = fault.New(fault.Invalid, "ticket_not_tracker",
-		"Only trackers and incidents message their linked customers.")
+		"Only trackers message their linked customers.")
 )
 
 /*

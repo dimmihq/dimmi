@@ -3,7 +3,7 @@
 | Tracker Summaries
 |--------------------------------------------------------------------------
 |
-| A tracker or incident says at a glance what its customers report: a
+| A tracker says at a glance what its customers report: a
 | few sentences the cheap model writes from the first words of every
 | linked conversation, how many reports there are, and which plans the
 | reporters' companies are on. The written part is kept and written
@@ -70,7 +70,7 @@ type TrackerSummary struct {
 }
 
 /*
-Summary returns what the tracker or incident's customers report,
+Summary returns what the tracker's customers report,
 writing the summary again when new reports joined since.
 */
 func (t *Tickets) Summary(ctx context.Context, m authz.Membership, ref Ref) (TrackerSummary, error) {
@@ -92,7 +92,7 @@ func (t *Tickets) Summary(ctx context.Context, m authz.Membership, ref Ref) (Tra
 			return err
 		}
 
-		if found.Kind != KindTracker && found.Kind != KindIncident {
+		if found.Kind != KindTracker {
 			return ErrNotTracker
 		}
 
@@ -226,4 +226,22 @@ func strOr(s *string) string {
 	}
 
 	return *s
+}
+
+/*
+dbCount is a length as the database counts it.
+*/
+func dbCount(n int) int32 {
+	return int32(min(n, 1<<30)) //nolint:gosec // capped above
+}
+
+/*
+clip cuts text to at most n characters.
+*/
+func clip(s string, n int) string {
+	if r := []rune(s); len(r) > n {
+		return string(r[:n])
+	}
+
+	return s
 }

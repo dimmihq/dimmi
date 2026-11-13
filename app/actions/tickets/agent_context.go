@@ -3,13 +3,10 @@
 | What The AI Agent Knows About Tickets
 |--------------------------------------------------------------------------
 |
-| The AI agent knows every incident customers can see while it is
-| active: its title, the affected areas, the customer label of its state
-| and the latest public post, so it answers "Yes, we know, here is the
-| latest" without handing off. It also knows the ticket types customers
-| may open and their fields, so when the team's guidance says so it
-| collects the required values in chat, confirms them with the customer
-| and opens the ticket, telling the customer its reference.
+| The AI agent knows the ticket types customers may open and their
+| fields, so when the team's guidance says so it collects the required
+| values in chat, confirms them with the customer and opens the ticket,
+| telling the customer its reference.
 |
 */
 
@@ -17,7 +14,6 @@ package tickets
 
 import (
 	"context"
-	"fmt"
 	"strings"
 	"time"
 
@@ -26,86 +22,6 @@ import (
 	"github.com/dimmihq/dimmi/app/actions/conversations"
 	"github.com/dimmihq/dimmi/app/models"
 )
-
-/*
-IncidentBrief is an active incident as the agent reads it.
-*/
-type IncidentBrief struct {
-	Title  string
-	Areas  []string
-	Label  string
-	Latest string
-	Since  time.Time
-}
-
-/*
-IncidentBriefs returns the workspace's active incidents customers may
-see, newest first.
-*/
-func IncidentBriefs(ctx context.Context, q *models.Queries, ws ids.UUID) ([]IncidentBrief, error) {
-	rows, err := q.ListActiveIncidents(ctx, ws)
-	if err != nil {
-		return nil, fmt.Errorf("list active incidents: %w", err)
-	}
-
-	var visible []models.Ticket
-
-	for _, r := range rows {
-		if r.CustomerVisible {
-			visible = append(visible, r)
-		}
-	}
-
-	if len(visible) == 0 {
-		return nil, nil
-	}
-
-	labels, latest, err := incidentWords(ctx, q, ws, visible)
-	if err != nil {
-		return nil, err
-	}
-
-	out := make([]IncidentBrief, len(visible))
-	for i, r := range visible {
-		out[i] = IncidentBrief{
-			Title: r.Title, Areas: areasOf(r), Label: labels[r.StateID], Latest: latest[r.ID], Since: r.CreatedAt,
-		}
-	}
-
-	return out, nil
-}
-
-/*
-incidentWords reads the customer labels of the states and the latest
-public post of each incident.
-*/
-func incidentWords(
-	ctx context.Context, q *models.Queries, ws ids.UUID, list []models.Ticket,
-) (map[ids.UUID]string, map[ids.UUID]string, error) {
-	states, err := q.ListTicketStates(ctx, ws)
-	if err != nil {
-		return nil, nil, fmt.Errorf("list ticket states: %w", err)
-	}
-
-	labels := map[ids.UUID]string{}
-	for _, s := range states {
-		labels[s.ID] = s.CustomerLabel
-	}
-
-	posts, err := q.ListLatestPublicUpdates(ctx, models.ListLatestPublicUpdatesParams{
-		WorkspaceID: ws, TicketIds: ticketIDs(list),
-	})
-	if err != nil {
-		return nil, nil, fmt.Errorf("list latest public updates: %w", err)
-	}
-
-	latest := map[ids.UUID]string{}
-	for _, p := range posts {
-		latest[p.TicketID] = p.Body
-	}
-
-	return labels, latest, nil
-}
 
 /*
 AgentField is a field the agent may ask the customer for.

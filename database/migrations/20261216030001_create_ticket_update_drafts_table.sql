@@ -1,8 +1,7 @@
 -- migrate: phase=expand
 -- What engineering tools hand back to support: a message to everyone a
--- tracker or incident links, drafted when a linked issue is done, an
--- incident resolves in its tool, or an engineer comments starting with
--- @customers. A draft waits for a person to send or discard it, or is
+-- tracker links, drafted when a linked issue is done or an engineer
+-- comments starting with @customers. A draft waits for a person to send or discard it, or is
 -- sent at once when the workspace chose automatic. One waiting for the
 -- fix to reach production stays waiting_deploy until a deployment says
 -- so; nothing is dropped, a draft only ends as sent or discarded.
@@ -23,7 +22,7 @@ CREATE TABLE ticket_update_drafts (
     ticket_id uuid NOT NULL REFERENCES tickets ON DELETE CASCADE,
     issue_id uuid REFERENCES ticket_issues ON DELETE SET NULL,
     source text NOT NULL CHECK (source ~ '^[a-z_]{1,40}$'),
-    reason text NOT NULL CHECK (reason IN ('issue_done', 'issue_canceled', 'incident_resolved', 'comment')),
+    reason text NOT NULL CHECK (reason IN ('issue_done', 'issue_canceled', 'comment')),
     body text NOT NULL CHECK (char_length(body) BETWEEN 1 AND 20000),
     author_name text NOT NULL DEFAULT '' CHECK (char_length(author_name) <= 200),
     status text NOT NULL DEFAULT 'ready' CHECK (status IN ('waiting_deploy', 'ready', 'sent', 'discarded')),

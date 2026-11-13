@@ -10,9 +10,9 @@
 | customer ticket comes back to the team marked "close the loop", or,
 | when its type sends a prepared reply, resolves itself with it.
 |
-| Trackers and incidents link to conversations; a conversation may join
-| several. Follow-up and related links join any two tickets. Linking
-| twice is a no-op.
+| Trackers link to conversations; a conversation may join several.
+| Follow-up and related links join any two tickets. Linking twice is a
+| no-op.
 |
 */
 
@@ -88,14 +88,13 @@ func (w *Writer) Link(ctx context.Context, from models.Ticket, in LinkInput) (mo
 
 /*
 checkLink refuses links that do not fit their tickets: a tracker link
-goes from a tracker or incident to a conversation, a back-office link
-from a customer ticket to back-office work, and nothing links to
-itself.
+goes from a tracker to a conversation, a back-office link from a
+customer ticket to back-office work, and nothing links to itself.
 */
 func (w *Writer) checkLink(ctx context.Context, from models.Ticket, in LinkInput) error {
 	switch in.Kind {
 	case LinkTracker:
-		if (from.Kind != KindTracker && from.Kind != KindIncident) || in.ConversationID == nil {
+		if from.Kind != KindTracker || in.ConversationID == nil {
 			return ErrLinkInvalid
 		}
 

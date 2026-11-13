@@ -139,8 +139,8 @@ func publicStateID(raw string) string {
 }
 
 /*
-TicketUpdateDraft is a drafted message to everyone a tracker or
-incident links: why it was drafted, its text, whether it waits for the
+TicketUpdateDraft is a drafted message to everyone a tracker links:
+why it was drafted, its text, whether it waits for the
 fix to deploy, and who it would reach now with those held by reason.
 */
 type TicketUpdateDraft struct {
@@ -188,7 +188,6 @@ TicketSettings are the workspace's ticket switches.
 type TicketSettings struct {
 	Object             string `json:"object"`
 	AutoLinkDuplicates bool   `json:"auto_link_duplicates"`
-	SpikeThreshold     int32  `json:"spike_threshold"`
 }
 
 /*
@@ -196,6 +195,6 @@ NewTicketSettings shapes the switches.
 */
 func NewTicketSettings(s issues.TicketSettings) TicketSettings {
 	return TicketSettings{
-		Object: "ticket_settings", AutoLinkDuplicates: s.AutoLinkDuplicates, SpikeThreshold: s.SpikeThreshold,
+		Object: "ticket_settings", AutoLinkDuplicates: s.AutoLinkDuplicates,
 	}
 }

@@ -3,8 +3,8 @@
 | Ticket Impact Report Resources
 |--------------------------------------------------------------------------
 |
-| Service level attainment per policy and target, and the trackers and
-| incidents ranked by the customers, companies and revenue they reach.
+| Service level attainment per policy and target, and the trackers
+| ranked by the customers, companies and revenue they reach.
 |
 */
 
@@ -49,12 +49,12 @@ func NewTicketSLAAttainments(rows []ticketreports.Attainment) []TicketSLAAttainm
 }
 
 /*
-TicketTrackerImpact is one tracker or incident and what it reaches.
+TicketTrackerImpact is one tracker and what it reaches.
 */
 type TicketTrackerImpact struct {
 	ID                   string    `json:"id"`
 	Reference            string    `json:"reference"`
-	Kind                 string    `json:"kind"                   enum:"tracker,incident"`
+	Kind                 string    `json:"kind"                   enum:"tracker"`
 	Title                string    `json:"title"`
 	StateGroup           string    `json:"state_group"`
 	Conversations        int64     `json:"conversations"`

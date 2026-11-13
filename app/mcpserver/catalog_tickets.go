@@ -4,12 +4,12 @@
 |--------------------------------------------------------------------------
 |
 | The entries for tickets: finding and reading them, turning a
-| conversation into one, creating back-office work, trackers and
-| incidents, moving state and setting fields with the same required
-| field rules the inbox obeys, notes and links, messaging everyone a
-| tracker reaches, and the public log of incidents. A recipe for an
-| agent triaging a bug report: read the conversation, list trackers
-| with q, link it to the right one or create one, then file the issue.
+| conversation into one, creating back-office work and trackers, moving
+| state and setting fields with the same required field rules the inbox
+| obeys, notes and links, and messaging everyone a tracker reaches. A
+| recipe for an agent triaging a bug report: read the conversation,
+| list trackers with q, link it to the right one or create one, then
+| file the issue.
 |
 */
 
@@ -36,10 +36,9 @@ func ticketWorkDocs() map[string]Doc {
 	return map[string]Doc{
 		"tickets.index": {
 			Title: "List tickets",
-			Use: "Finds tickets by type, kind (customer, back_office, tracker, incident), state, group, " +
+			Use: "Finds tickets by type, kind (customer, back_office, tracker), state, group, " +
 				"teammate, team, company, customer, reference, field values, linked issue status, dates or text. " +
-				"Use kind=tracker&q=... to find the tracker a bug report belongs to, and kind=incident&active=true " +
-				"for live incidents.",
+				"Use kind=tracker&q=... to find the tracker a bug report belongs to.",
 			Returns: "a page of tickets with type, state and customer label, fields, version and linked issues.",
 			Next: []string{
 				"dimmi_tickets_get: read one with its links and clocks",
@@ -48,7 +47,7 @@ func ticketWorkDocs() map[string]Doc {
 		},
 		"tickets.store": {
 			Title: "Create a ticket",
-			Use: "Creates a ticket of a type: back-office work, a tracker, an incident, or a customer ticket for " +
+			Use: "Creates a ticket of a type: back-office work, a tracker, or a customer ticket for " +
 				"a contact (which starts its conversation). Required fields are enforced: a 422 lists the missing " +
 				"keys. Send external_id to make retries safe.",
 			Returns: "the ticket with its reference, such as T-482.",
@@ -71,7 +70,7 @@ func ticketChangeDocs() map[string]Doc {
 		"tickets.show": {
 			Title:   "Get a ticket",
 			Use:     "Reads one ticket by id or reference (T-482) with its links, running SLA clocks and impact.",
-			Returns: "the ticket; trackers and incidents include customers, companies and revenue reached.",
+			Returns: "the ticket; trackers include customers, companies and revenue reached.",
 		},
 		"tickets.update": {
 			Title: "Update a ticket",
@@ -123,13 +122,13 @@ func ticketActivityDocs() map[string]Doc {
 		"tickets.links.index": {Title: "List a ticket's links", Use: "Reads back-office, tracker, follow-up links."},
 		"tickets.links.store": {
 			Title: "Link a ticket",
-			Use: "Links a tracker or incident to a conversation (kind tracker), a customer ticket to back-office " +
+			Use: "Links a tracker to a conversation (kind tracker), a customer ticket to back-office " +
 				"work, or any two tickets (related, follow_up). Linking twice changes nothing.",
 		},
 		"ticket-links.destroy": {Title: "Remove a ticket link", Use: "Removes a link.", Risk: new(RiskDanger)},
 		"tickets.conversations.index": {
 			Title:   "List a tracker's conversations",
-			Use:     "Lists the conversations a tracker or incident reaches, with customer, company, plan and revenue.",
+			Use:     "Lists the conversations a tracker reaches, with customer, company, plan and revenue.",
 			Returns: "the conversations and totals under meta.impact.",
 		},
 		"tickets.updates.store": {
@@ -140,13 +139,6 @@ func ticketActivityDocs() map[string]Doc {
 		},
 		"tickets.updates.index": {
 			Title: "List a tracker's messages", Use: "Reads past messages with each recipient's result.",
-		},
-		"tickets.public-updates.index": {Title: "List an incident's public log", Use: "Reads the public posts."},
-		"tickets.public-updates.store": {
-			Title: "Post an incident update",
-			Use: "Posts to the incident's public log, shown on the messenger status card and help center status " +
-				"page; send_to_linked also messages every linked customer.",
-			Risk: new(RiskReach),
 		},
 		"conversations.tickets.index": {
 			Title: "Get a conversation's tickets", Use: "Reads a conversation's own ticket and the trackers it joined.",
@@ -168,7 +160,7 @@ func ticketSetupDocs() map[string]Doc {
 			Title: "List ticket types", Use: "Lists types with their fields, allowed states and ticket counts.",
 		},
 		"ticket-types.show":  {Title: "Get a ticket type", Use: "Reads one type with its fields and states."},
-		"ticket-types.store": setup("Create a ticket type", "Adds a type: customer, back_office, tracker or incident."),
+		"ticket-types.store": setup("Create a ticket type", "Adds a type: customer, back_office or tracker."),
 		"ticket-types.update": setup("Update a ticket type",
 			"Changes a type's settings and the states it uses; its kind stays."),
 		"ticket-types.destroy":      setup("Archive a ticket type", "Hides a type from new tickets; old ones keep it."),

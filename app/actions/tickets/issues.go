@@ -121,12 +121,12 @@ func (w *Writer) AnnounceIssue(ctx context.Context, t models.Ticket, c IssueChan
 }
 
 /*
-PlanMessage plans a message to everyone the tracker or incident links:
+PlanMessage plans a message to everyone the tracker links:
 a dry run counts who it reaches and who is held and why; otherwise the
 message is stored and queued.
 */
 func (w *Writer) PlanMessage(ctx context.Context, t models.Ticket, in UpdateInput) (Plan, error) {
-	if t.Kind != KindTracker && t.Kind != KindIncident {
+	if t.Kind != KindTracker {
 		return Plan{}, ErrNotTracker
 	}
 

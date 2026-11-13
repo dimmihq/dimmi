@@ -31,8 +31,8 @@ ORDER BY done_at, id;
 UPDATE ticket_issues SET deployed_at = @now::timestamptz, updated_at = @now WHERE workspace_id = @workspace_id AND id = @id;
 
 -- name: TicketImpactCompanies :many
--- TicketImpactCompanies names the companies a tracker or incident
--- reaches, the largest by revenue first.
+-- TicketImpactCompanies names the companies a tracker reaches, the
+-- largest by revenue first.
 SELECT DISTINCT co.id, co.name, dimmi_company_revenue(co.custom_attributes)::float8 AS revenue
 FROM ticket_links l
 JOIN conversations c ON c.id = l.conversation_id

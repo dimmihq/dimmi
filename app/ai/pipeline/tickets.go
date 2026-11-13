@@ -1,17 +1,14 @@
 /*
 |--------------------------------------------------------------------------
-| Incidents And Tickets For The Agent
+| Tickets For The Agent
 |--------------------------------------------------------------------------
 |
-| The agent knows every incident customers can see while it is active,
-| read into the last turn beside today's date, so it can say "yes, we
-| know, here is the latest" without a hand-off. When the team's
-| guidance or a procedure asks for tickets, the agent gets the
-| open_ticket tool: it names the missing required fields to ask for,
-| then a summary for the customer to confirm, and only a confirmed call
-| opens the ticket. Like every write, the ticket is opened at commit,
-| and the reply's {ticket_reference} becomes its reference, such as
-| T-482.
+| When the team's guidance or a procedure asks for tickets, the agent
+| gets the open_ticket tool: it names the missing required fields to
+| ask for, then a summary for the customer to confirm, and only a
+| confirmed call opens the ticket. Like every write, the ticket is
+| opened at commit, and the reply's {ticket_reference} becomes its
+| reference, such as T-482.
 |
 */
 
@@ -43,21 +40,16 @@ const (
 )
 
 /*
-loadTicketContext reads the active incidents and, when the team's
-guidance mentions tickets, the types the agent may open. A failure
-costs only this context: the agent still answers.
+loadTicketContext reads, when the team's guidance mentions tickets, the
+types the agent may open. A failure costs only this context: the agent
+still answers.
 */
 func loadTicketContext(ctx context.Context, q *models.Queries, e *env) {
-	ws := e.Conversation.WorkspaceID
-	if briefs, err := tickets.IncidentBriefs(ctx, q, ws); err == nil {
-		e.Incidents = briefs
-	}
-
 	if !mentionsTickets(e) {
 		return
 	}
 
-	if types, err := tickets.AgentTypes(ctx, q, ws, e.now); err == nil {
+	if types, err := tickets.AgentTypes(ctx, q, e.Conversation.WorkspaceID, e.now); err == nil {
 		e.TicketTypes = types
 	}
 }
@@ -79,41 +71,6 @@ func mentionsTickets(e *env) bool {
 	}
 
 	return false
-}
-
-/*
-incidentBlock is what the agent reads about the active incidents, empty
-when there are none.
-*/
-func incidentBlock(e *env) string {
-	if len(e.Incidents) == 0 {
-		return ""
-	}
-
-	var b strings.Builder
-
-	b.WriteString("\n<active_incidents>")
-
-	for _, inc := range e.Incidents {
-		fmt.Fprintf(&b, "\n<incident title=\"%s\" since=\"%s\"", escape(inc.Title),
-			inc.Since.UTC().Format("2 January 15:04 UTC"))
-
-		if len(inc.Areas) > 0 {
-			fmt.Fprintf(&b, " areas=\"%s\"", escape(strings.Join(inc.Areas, ", ")))
-		}
-
-		fmt.Fprintf(&b, ">\n<status>%s</status>", escape(inc.Label))
-
-		if inc.Latest != "" {
-			fmt.Fprintf(&b, "\n<latest_update>%s</latest_update>", escape(truncate(inc.Latest, turnChars)))
-		}
-
-		b.WriteString("\n</incident>")
-	}
-
-	b.WriteString("\n</active_incidents>")
-
-	return b.String()
 }
 
 /*

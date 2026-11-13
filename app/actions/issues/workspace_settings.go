@@ -4,10 +4,9 @@
 |--------------------------------------------------------------------------
 |
 | The switches a workspace sets once: whether duplicate conversations
-| are linked on their own, and how many conversations about one thing in
-| the spike window suggest an incident. They live in the workspace's ticket
-| settings beside switches other parts of tickets keep there, which a
-| change leaves as they are.
+| are linked on their own. They live in the workspace's ticket settings
+| beside switches other parts of tickets keep there, which a change
+| leaves as they are.
 |
 */
 
@@ -18,7 +17,6 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/dimmihq/dimmi/framework/fault"
 	"github.com/dimmihq/dimmi/framework/ids"
 
 	"github.com/dimmihq/dimmi/app/actions/tickets"
@@ -28,19 +26,10 @@ import (
 )
 
 /*
-Failures of the workspace's settings.
-*/
-var (
-	ErrSpikeThreshold = fault.New(fault.Invalid, "spike_threshold_invalid",
-		"The spike threshold is 2 to 1000 conversations.").OnField("spike_threshold")
-)
-
-/*
 TicketSettings are the workspace's switches.
 */
 type TicketSettings struct {
-	AutoLinkDuplicates bool  `json:"auto_link_duplicates"`
-	SpikeThreshold     int32 `json:"-"`
+	AutoLinkDuplicates bool `json:"auto_link_duplicates"`
 }
 
 /*
@@ -48,23 +37,21 @@ TicketSettingsChange changes the switches; nil leaves one.
 */
 type TicketSettingsChange struct {
 	AutoLinkDuplicates *bool
-	SpikeThreshold     *int32
 }
 
 /*
 readTicketSettings reads the switches and the raw settings they sit in.
 */
 func readTicketSettings(ctx context.Context, q *models.Queries, ws ids.UUID) (TicketSettings, map[string]any, error) {
-	row, err := q.FindWorkspaceTicketSettings(ctx, ws)
+	raw, err := q.FindWorkspaceTicketSettings(ctx, ws)
 	if err != nil {
 		return TicketSettings{}, nil, fmt.Errorf("read ticket settings: %w", err)
 	}
 
 	var out TicketSettings
-	_ = json.Unmarshal(row.TicketSettings, &out)
-	out.SpikeThreshold = row.IncidentSpikeThreshold
+	_ = json.Unmarshal(raw, &out)
 
-	return out, decodeObject(row.TicketSettings), nil
+	return out, decodeObject(raw), nil
 }
 
 /*
@@ -97,10 +84,6 @@ func (s *Issues) UpdateWorkspaceSettings(ctx context.Context, m authz.Membership
 		return TicketSettings{}, exceptions.ErrForbidden
 	}
 
-	if c.SpikeThreshold != nil && (*c.SpikeThreshold < 2 || *c.SpikeThreshold > 1000) {
-		return TicketSettings{}, ErrSpikeThreshold
-	}
-
 	var out TicketSettings
 
 	err := s.inWorkspace(ctx, m.Workspace.ID, func(ctx context.Context, q *models.Queries) error {
@@ -117,7 +100,7 @@ func (s *Issues) UpdateWorkspaceSettings(ctx context.Context, m authz.Membership
 		}
 
 		return q.SaveWorkspaceTicketSettings(ctx, models.SaveWorkspaceTicketSettingsParams{
-			TicketSettings: encoded, IncidentSpikeThreshold: out.SpikeThreshold, WorkspaceID: m.Workspace.ID,
+			TicketSettings: encoded, WorkspaceID: m.Workspace.ID,
 		})
 	})
 
@@ -131,10 +114,6 @@ object they are stored in.
 func applySettings(out TicketSettings, raw map[string]any, c TicketSettingsChange) TicketSettings {
 	if c.AutoLinkDuplicates != nil {
 		out.AutoLinkDuplicates, raw["auto_link_duplicates"] = *c.AutoLinkDuplicates, *c.AutoLinkDuplicates
-	}
-
-	if c.SpikeThreshold != nil {
-		out.SpikeThreshold = *c.SpikeThreshold
 	}
 
 	return out

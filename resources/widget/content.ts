@@ -57,17 +57,6 @@ export interface TicketType {
 }
 
 /*
- * Incident is an outage the status card on Home tells customers about,
- * with the label of its state and its latest public update.
- */
-export interface Incident {
-  id: string;
-  title: string;
-  state: { label: string; group: string };
-  latest_update: { body: string; created_at: string } | null;
-}
-
-/*
  * Incoming is a message the team sends while the visitor is elsewhere,
  * with the conversation it belongs to.
  */
@@ -200,5 +189,4 @@ export interface Content {
   changelog: Entry[];
   unread_changelog: number;
   ticket_types?: TicketType[];
-  incidents?: Incident[];
 }

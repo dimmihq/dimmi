@@ -6,9 +6,9 @@
 | A workspace's types, fields and states, read once per transaction. A
 | workspace that has none yet gets the defaults the first time anything
 | reads them: the five groups' starting states, the states the product
-| moves tickets to on its own (close the loop, being worked on, the
-| incident stages), and one type of each kind, so a new workspace can
-| convert, escalate, track and declare an incident from the start.
+| moves tickets to on its own (close the loop, being worked on), and one
+| type of each kind, so a new workspace can convert, escalate and track
+| from the start.
 |
 */
 
@@ -51,14 +51,13 @@ const (
 	KindCustomer   = "customer"
 	KindBackOffice = "back_office"
 	KindTracker    = "tracker"
-	KindIncident   = "incident"
 )
 
 /*
 Kinds returns every kind.
 */
 func Kinds() []string {
-	return []string{KindCustomer, KindBackOffice, KindTracker, KindIncident}
+	return []string{KindCustomer, KindBackOffice, KindTracker}
 }
 
 /*
@@ -68,8 +67,6 @@ const (
 	PurposeCloseLoop     = "close_loop"
 	PurposeBeingWorked   = "being_worked_on"
 	PurposeWontFix       = "wont_fix"
-	PurposeIdentified    = "incident_identified"
-	PurposeMonitoring    = "incident_monitoring"
 	PurposeInvestigating = "investigating"
 )
 
@@ -299,20 +296,10 @@ func defaultStates() []defaultState {
 		{group: GroupSubmitted, name: "New", label: "Submitted", notify: true},
 		{group: GroupInProgress, name: "Investigating", label: "We're on it", role: PurposeInvestigating, notify: true},
 		{group: GroupInProgress, name: "Close the loop", label: "We're on it", role: PurposeCloseLoop},
-		{
-			group: GroupInProgress, name: "Identified", label: "We found the cause and are fixing it",
-			role:   PurposeIdentified,
-			notify: true,
-		},
 		{group: GroupWaitingCustomer, name: "Needs info", label: "Waiting for your reply", notify: true},
 		{group: GroupWaitingTeam, name: "With another team", label: "With our specialist team", notify: true},
 		{
 			group: GroupWaitingTeam, name: "Being worked on", label: "Being worked on", role: PurposeBeingWorked,
-			notify: true,
-		},
-		{
-			group: GroupWaitingTeam, name: "Monitoring", label: "A fix is out and we're watching it",
-			role:   PurposeMonitoring,
 			notify: true,
 		},
 		{group: GroupResolved, name: "Resolved", label: "Resolved", notify: true},
@@ -435,21 +422,6 @@ func defaultTypes() []defaultType {
 			kind: KindTracker, name: "Tracker", icon: "stack", states: everyday,
 			description: "One problem many customers report.",
 		},
-		{
-			kind: KindIncident, name: "Incident", icon: "alarm-warning",
-			states:      []string{"Investigating", "Identified", "Monitoring", "Resolved"},
-			description: "An outage customers are affected by.",
-			fields: []defaultField{
-				{
-					key: "severity", label: "Severity", dataType: "single_choice",
-					options: []string{"minor", "major", "critical"}, customer: true,
-				},
-				{
-					key: "areas", label: "Affected areas", dataType: "multiple_choice",
-					options: []string{"Sign-in", "Payments", "API", "Messenger", "Email"}, customer: true,
-				},
-			},
-		},
 	}
 }
 
@@ -460,7 +432,7 @@ func (sd *seeder) types(ctx context.Context) error {
 	for _, d := range defaultTypes() {
 		row, err := sd.q.CreateTicketType(ctx, models.CreateTicketTypeParams{
 			WorkspaceID: sd.ws, Kind: d.kind, Name: d.name, Icon: d.icon, Description: d.description,
-			CustomerVisible: d.customer || d.kind == KindIncident, ReopenDays: defaultReopenDays,
+			CustomerVisible: d.customer, ReopenDays: defaultReopenDays,
 			Now: sd.now,
 		})
 		if err != nil {

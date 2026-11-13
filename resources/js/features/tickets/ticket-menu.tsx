@@ -1,11 +1,11 @@
 /*
  * The ticket moves in a conversation's header, behind one button that
  * shows the ticket's reference once it is one: convert it (also T),
- * escalate it to another team, add it to a tracker, and declare an
- * incident from it. Each opens its own dialog; the conversation view
+ * escalate it to another team, and add it to a tracker. Each opens its
+ * own dialog; the conversation view
  * holds which one is open, so the keyboard can open them too.
  */
-import { RiAlarmWarningLine, RiArrowDownSLine, RiBriefcase4Line, RiCoupon3Line, RiRouteLine } from "@remixicon/react";
+import { RiArrowDownSLine, RiBriefcase4Line, RiCoupon3Line, RiRouteLine } from "@remixicon/react";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 
@@ -22,7 +22,7 @@ import { cx } from "@/utils/cx";
 
 import { ConvertDialog } from "./convert-dialog";
 import { EscalateDialog } from "./escalate-dialog";
-import { IncidentDialog, TrackerDialog } from "./tracker-dialog";
+import { TrackerDialog } from "./tracker-dialog";
 
 import type { TicketDialog, TicketDialogs } from "./use-ticket-dialogs";
 
@@ -51,7 +51,6 @@ export function TicketMenu({
     ...(own ? [] : [{ kind: "convert" as const, label: "Convert to ticket", icon: RiCoupon3Line, keys: "T" }]),
     ...(own?.kind === "customer" ? [{ kind: "escalate" as const, label: "Escalate", icon: RiBriefcase4Line }] : []),
     { kind: "tracker", label: "Add to tracker", icon: RiRouteLine },
-    { kind: "incident", label: "Declare incident", icon: RiAlarmWarningLine },
   ];
 
   return (
@@ -89,9 +88,6 @@ export function TicketMenu({
       ) : null}
       {dialogs.open === "tracker" ? (
         <TrackerDialog workspace={workspace} conversation={conversation} subject={subject} onClose={dialogs.close} />
-      ) : null}
-      {dialogs.open === "incident" ? (
-        <IncidentDialog workspace={workspace} conversation={conversation} onClose={dialogs.close} />
       ) : null}
     </>
   );

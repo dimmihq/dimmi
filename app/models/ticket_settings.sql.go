@@ -519,21 +519,15 @@ func (q *Queries) FindTicketType(ctx context.Context, arg FindTicketTypeParams) 
 }
 
 const findWorkspaceTicketSettings = `-- name: FindWorkspaceTicketSettings :one
-SELECT ticket_settings, incident_spike_threshold FROM workspaces WHERE id = $1
+SELECT ticket_settings FROM workspaces WHERE id = $1
 `
 
-type FindWorkspaceTicketSettingsRow struct {
-	TicketSettings         json.RawMessage `json:"ticket_settings"`
-	IncidentSpikeThreshold int32           `json:"incident_spike_threshold"`
-}
-
-// FindWorkspaceTicketSettings returns the workspace's ticket settings
-// and spike threshold.
-func (q *Queries) FindWorkspaceTicketSettings(ctx context.Context, workspaceID ids.UUID) (FindWorkspaceTicketSettingsRow, error) {
+// FindWorkspaceTicketSettings returns the workspace's ticket settings.
+func (q *Queries) FindWorkspaceTicketSettings(ctx context.Context, workspaceID ids.UUID) (json.RawMessage, error) {
 	row := q.db.QueryRow(ctx, findWorkspaceTicketSettings, workspaceID)
-	var i FindWorkspaceTicketSettingsRow
-	err := row.Scan(&i.TicketSettings, &i.IncidentSpikeThreshold)
-	return i, err
+	var ticket_settings json.RawMessage
+	err := row.Scan(&ticket_settings)
+	return ticket_settings, err
 }
 
 const listTicketFields = `-- name: ListTicketFields :many
@@ -900,20 +894,17 @@ func (q *Queries) SaveTicketStateOrder(ctx context.Context, arg SaveTicketStateO
 }
 
 const saveWorkspaceTicketSettings = `-- name: SaveWorkspaceTicketSettings :exec
-UPDATE workspaces SET ticket_settings = $1, incident_spike_threshold = $2
-WHERE id = $3
+UPDATE workspaces SET ticket_settings = $1 WHERE id = $2
 `
 
 type SaveWorkspaceTicketSettingsParams struct {
-	TicketSettings         json.RawMessage `json:"ticket_settings"`
-	IncidentSpikeThreshold int32           `json:"incident_spike_threshold"`
-	WorkspaceID            ids.UUID        `json:"workspace_id"`
+	TicketSettings json.RawMessage `json:"ticket_settings"`
+	WorkspaceID    ids.UUID        `json:"workspace_id"`
 }
 
-// SaveWorkspaceTicketSettings stores the workspace's ticket settings and
-// spike threshold.
+// SaveWorkspaceTicketSettings stores the workspace's ticket settings.
 func (q *Queries) SaveWorkspaceTicketSettings(ctx context.Context, arg SaveWorkspaceTicketSettingsParams) error {
-	_, err := q.db.Exec(ctx, saveWorkspaceTicketSettings, arg.TicketSettings, arg.IncidentSpikeThreshold, arg.WorkspaceID)
+	_, err := q.db.Exec(ctx, saveWorkspaceTicketSettings, arg.TicketSettings, arg.WorkspaceID)
 	return err
 }
 

@@ -1629,24 +1629,6 @@ type InboxAccess struct {
 	CreatedAt   time.Time `json:"created_at"`
 }
 
-type IncidentSuggestion struct {
-	ID                ids.UUID   `json:"id"`
-	WorkspaceID       ids.UUID   `json:"workspace_id"`
-	Signature         string     `json:"signature"`
-	Title             string     `json:"title"`
-	Summary           string     `json:"summary"`
-	Area              *string    `json:"area"`
-	ConversationIds   []ids.UUID `json:"conversation_ids"`
-	ConversationCount int32      `json:"conversation_count"`
-	WindowMinutes     int32      `json:"window_minutes"`
-	Status            string     `json:"status"`
-	MutedUntil        *time.Time `json:"muted_until"`
-	TicketID          *ids.UUID  `json:"ticket_id"`
-	DecidedByMemberID *ids.UUID  `json:"decided_by_member_id"`
-	CreatedAt         time.Time  `json:"created_at"`
-	UpdatedAt         time.Time  `json:"updated_at"`
-}
-
 type IntegrationInstallation struct {
 	ID                   ids.UUID          `json:"id"`
 	WorkspaceID          ids.UUID          `json:"workspace_id"`
@@ -2761,18 +2743,6 @@ type TicketLink struct {
 	CreatedAt         time.Time `json:"created_at"`
 }
 
-type TicketPublicUpdate struct {
-	ID             ids.UUID  `json:"id"`
-	WorkspaceID    ids.UUID  `json:"workspace_id"`
-	TicketID       ids.UUID  `json:"ticket_id"`
-	Body           string    `json:"body"`
-	StateID        *ids.UUID `json:"state_id"`
-	UpdateID       *ids.UUID `json:"update_id"`
-	AuthorMemberID *ids.UUID `json:"author_member_id"`
-	Source         string    `json:"source"`
-	CreatedAt      time.Time `json:"created_at"`
-}
-
 type TicketState struct {
 	ID             ids.UUID   `json:"id"`
 	WorkspaceID    ids.UUID   `json:"workspace_id"`
@@ -3180,9 +3150,8 @@ type Workspace struct {
 	OnboardingStep         string          `json:"onboarding_step"`
 	OnboardingCompletedAt  *time.Time      `json:"onboarding_completed_at"`
 	LogoPath               *string         `json:"logo_path"`
-	NextTicketNumber       int64           `json:"next_ticket_number"`
-	IncidentSpikeThreshold int32           `json:"incident_spike_threshold"`
 	TicketSettings         json.RawMessage `json:"ticket_settings"`
+	NextTicketNumber       int64           `json:"next_ticket_number"`
 }
 
 type WorkspaceMember struct {

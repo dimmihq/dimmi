@@ -5,8 +5,8 @@
  * added, edited, archived or dragged. Beside the editor, on wide
  * screens, the real messenger shows the type as customers meet it: its
  * form, or a request in the state picked in its states, live as the type
- * changes. Back-office types, trackers and incidents have no customer
- * form, so their editor shows no customer settings and no preview.
+ * changes. Back-office types and trackers have no customer form, so
+ * their editor shows no customer settings and no preview.
  */
 import { RiArrowLeftLine, RiCoupon3Line } from "@remixicon/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";

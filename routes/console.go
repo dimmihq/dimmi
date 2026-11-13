@@ -83,14 +83,12 @@ func scheduleWork(a *app.App) {
 /*
 scheduleTickets resolves tickets that waited on their customer too
 long, every fifteen minutes, and every minute warns about and breaches
-service level clocks and looks for spikes of conversations. Linked
-issues not checked for fifteen minutes are read again every five, in
-case their tool's webhook was missed.
+service level clocks. Linked issues not checked for fifteen minutes are
+read again every five, in case their tool's webhook was missed.
 */
 func scheduleTickets(a *app.App) {
 	a.Schedule.Job(jobs.SweepTicketsArgs{}).Cron("*/15 * * * *")
 	a.Schedule.Job(jobs.SweepSLAClocksArgs{}).EveryMinute()
-	a.Schedule.Job(jobs.DetectIncidentSpikesArgs{}).EveryMinute()
 	a.Schedule.Job(jobs.SyncTicketIssuesArgs{}).Cron("*/5 * * * *")
 }
 

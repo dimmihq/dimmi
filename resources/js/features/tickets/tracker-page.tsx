@@ -1,32 +1,40 @@
 /*
  * A tracker: one problem many customers reported, opened in the inbox
- * like any ticket. The thread in the middle holds the AI's summary of
- * what customers report, drafts an engineer wrote to them waiting for a
- * person, the messages already sent to all of them, every report with
- * its customer, company, plan, revenue and ticket state, then the
- * team's notes and history. Beside it, the details: the state, who
- * holds it, its fields, who it reaches and the engineering work behind
- * it. "Message everyone" writes once to all of them.
+ * like any ticket. The thread in the middle starts with what the tracker
+ * is about, then runs oldest first through the team's notes and every
+ * change, the messages already sent to everyone (each opening on how it
+ * went) and the drafts an engineer's "@customers" comment left for a
+ * person to send, with the note box at the foot. Beside it, the
+ * details: the state, who holds it, the customer reports with "Reply
+ * all", and the engineering work behind it.
  */
-import { RiSendPlaneLine } from "@remixicon/react";
+import { RiMailSendLine, RiReplyAllLine } from "@remixicon/react";
 import { useQuery } from "@tanstack/react-query";
 import { useParams } from "@tanstack/react-router";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
+import { Chip, type ChipColor } from "@/components/base/badges/chip";
 import { Button } from "@/components/base/buttons/button";
+import { ago } from "@/features/inbox/conversations";
+import { ConversationSkeleton } from "@/features/inbox/skeletons";
 import { useAccount } from "@/features/settings/use-account";
-import { PageHeader, Panel, ScrollArea } from "@/features/shell/page";
-import { trackerConversationsQuery } from "@/lib/api/ticket-trackers";
-import { type Ticket, ticketQuery } from "@/lib/api/tickets";
+import { Panel, ScrollArea } from "@/features/shell/page";
+import { type TicketUpdateDraft, ticketDraftsQuery } from "@/lib/api/ticket-issues";
+import {
+  type TicketUpdate,
+  ticketUpdatesQuery,
+  trackerConversationsQuery,
+  type UpdateStatus,
+} from "@/lib/api/ticket-trackers";
+import { type Ticket, type TicketEvent, ticketEventsQuery, ticketQuery } from "@/lib/api/tickets";
+import { formatNumber } from "@/lib/i18n/format";
 
-import { CloseLoopDrafts } from "./issues/close-loop-drafts";
+import { DraftCard } from "./issues/close-loop-drafts";
 import { MessageEveryone } from "./message-everyone";
-import { SentMessages } from "./message-everyone-results";
 import { StatePill, TypeIcon } from "./state-pill";
-import { NoteBox, TicketDetails, TicketTitle, Timeline } from "./ticket-thread";
-import { TrackerConversations } from "./tracker-conversations";
-import { ImpactTotals, Reach, Summary, Title } from "./tracker-parts";
+import { Change, foldLinks, LinkRun, Note, NoteBox, TicketDetails, TicketTitle } from "./ticket-thread";
+import { CustomerReports } from "./tracker-conversations";
 import { useTicketSave } from "./use-ticket-save";
 
 /*
@@ -35,6 +43,22 @@ import { useTicketSave } from "./use-ticket-save";
  */
 type Messaging = { kind: "closed" } | { kind: "new" } | { kind: "sent"; update: string };
 
+/*
+ * Entry is one item of the thread, in the order it happened.
+ */
+type Entry =
+  | { kind: "event"; at: string; event: TicketEvent }
+  | { kind: "sent"; at: string; update: TicketUpdate }
+  | { kind: "draft"; at: string; draft: TicketUpdateDraft };
+
+const updateTint: Record<UpdateStatus, ChipColor> = {
+  queued: "gray",
+  sending: "blue",
+  sent: "lime",
+  partial: "yellow",
+  failed: "rose",
+};
+
 export function TrackerPage({ ticketId }: { ticketId: string }) {
   const { t } = useTranslation("trackers");
   const workspace = useAccount().workspace.id;
@@ -42,16 +66,100 @@ export function TrackerPage({ ticketId }: { ticketId: string }) {
 
   if (!ticket) {
     return (
-      <Panel label={t("tracker.label")} className="h-full w-full flex-1">
-        <PageHeader title={<Title ticket={undefined} fallback={t("tracker.label")} />} />
-        <div className="mx-auto w-full max-w-[64rem] px-4 pt-6 md:px-6">
-          <ImpactTotals impact={undefined} />
-        </div>
+      <Panel label={t("tracker.label")} className="flex-1">
+        <ConversationSkeleton />
       </Panel>
     );
   }
 
   return <Tracker workspace={workspace} ticket={ticket} />;
+}
+
+/*
+ * Sent is a message already sent to everyone, a compact line in the
+ * thread that opens on how each delivery went.
+ */
+function Sent({ update, onOpen }: { update: TicketUpdate; onOpen: () => void }) {
+  const { t } = useTranslation("trackers");
+  const counts = t("results.counts", {
+    sent: formatNumber(update.delivered),
+    held: formatNumber(update.held),
+    failed: formatNumber(update.failed),
+    total: formatNumber(update.recipients),
+  });
+
+  return (
+    <li>
+      <button
+        type="button"
+        onClick={onOpen}
+        title={counts}
+        className="flex w-full min-w-0 items-center gap-2 rounded-lg px-1 py-1 text-start text-caption-1-regular text-text-tertiary outline-none hover:bg-background-secondary-hover focus-visible:ring-2 focus-visible:ring-border-focus-ring"
+      >
+        <RiMailSendLine aria-hidden className="size-4 shrink-0 text-foreground-icon-secondary" />
+        <span className="shrink-0 text-body-2-medium text-text-secondary">{t("results.entry")}</span>
+        <span className="min-w-0 flex-1 truncate">{update.body.split("\n")[0]}</span>
+        <Chip variant="caption" color={updateTint[update.status]} className="shrink-0">
+          {t(`results.status.${update.status}`)}
+        </Chip>
+        <span className="shrink-0">{ago(update.created_at)}</span>
+      </button>
+    </li>
+  );
+}
+
+/*
+ * Thread is the middle of the page: the description, then notes,
+ * changes, messages sent and drafts, oldest first.
+ */
+function Thread({
+  workspace,
+  ticket,
+  onOpenSent,
+}: {
+  workspace: string;
+  ticket: Ticket;
+  onOpenSent: (update: TicketUpdate) => void;
+}) {
+  const { data: events } = useQuery(ticketEventsQuery(workspace, ticket.id));
+  const { data: updates = [] } = useQuery(ticketUpdatesQuery(workspace, ticket.id));
+  const { data: drafts = [] } = useQuery(ticketDraftsQuery(workspace, ticket.id));
+  const entries: Entry[] = [
+    ...(events?.items ?? []).map((event): Entry => ({ kind: "event", at: event.created_at, event })),
+    ...updates.map((update): Entry => ({ kind: "sent", at: update.created_at, update })),
+    ...drafts
+      .filter((d) => d.status === "ready")
+      .map((draft): Entry => ({ kind: "draft", at: draft.created_at, draft })),
+  ].sort((a, b) => a.at.localeCompare(b.at));
+
+  return (
+    <div className="mx-auto flex w-full max-w-[760px] flex-col gap-4 px-4 py-5">
+      {ticket.description ? (
+        <p className="whitespace-pre-wrap text-body-regular text-text-primary">{ticket.description}</p>
+      ) : null}
+      <ol aria-label="Notes and history" className="flex flex-col gap-3">
+        {foldLinks(entries, (entry) =>
+          entry.kind === "event" && entry.event.kind === "link" ? entry.event : null,
+        ).map((entry) => {
+          if (Array.isArray(entry)) {
+            return <LinkRun key={entry[0]?.id} events={entry} />;
+          }
+          if (entry.kind === "sent") {
+            return <Sent key={entry.update.id} update={entry.update} onOpen={() => onOpenSent(entry.update)} />;
+          }
+          if (entry.kind === "draft") {
+            return <DraftCard key={entry.draft.id} workspace={workspace} ticket={ticket.id} draft={entry.draft} />;
+          }
+
+          return entry.event.kind === "note" ? (
+            <Note key={entry.event.id} event={entry.event} />
+          ) : (
+            <Change key={entry.event.id} event={entry.event} />
+          );
+        })}
+      </ol>
+    </div>
+  );
 }
 
 function Tracker({ workspace, ticket }: { workspace: string; ticket: Ticket }) {
@@ -73,29 +181,22 @@ function Tracker({ workspace, ticket }: { workspace: string; ticket: Ticket }) {
             <StatePill state={ticket.state} />
             <Button
               size="small"
-              leadingIcon={RiSendPlaneLine}
+              variant="secondary"
+              leadingIcon={RiReplyAllLine}
               disabled={rows.length === 0}
               onClick={() => setMessaging({ kind: "new" })}
+              className="lg:hidden"
             >
-              {t("message.open")}
+              {t("conversations.replyAll")}
             </Button>
           </span>
         </header>
         <ScrollArea className="flex-1">
-          <div className="mx-auto flex w-full max-w-[760px] flex-col gap-6 px-4 pt-5">
-            {ticket.description ? (
-              <p className="whitespace-pre-line text-body-regular text-text-primary">{ticket.description}</p>
-            ) : null}
-            <Summary ticket={ticket} />
-            <CloseLoopDrafts workspace={workspace} ticket={ticket.id} />
-            <SentMessages
-              workspace={workspace}
-              ticket={ticket.id}
-              onOpen={(u) => setMessaging({ kind: "sent", update: u.id })}
-            />
-            <TrackerConversations workspace={workspace} ticket={ticket} rows={rows} loading={isPending} />
-          </div>
-          <Timeline workspace={workspace} ticket={ticket} view={view ?? "trackers"} intro={false} />
+          <Thread
+            workspace={workspace}
+            ticket={ticket}
+            onOpenSent={(u) => setMessaging({ kind: "sent", update: u.id })}
+          />
         </ScrollArea>
         <NoteBox workspace={workspace} ticket={ticket} />
       </Panel>
@@ -105,7 +206,15 @@ function Tracker({ workspace, ticket }: { workspace: string; ticket: Ticket }) {
         </header>
         <ScrollArea>
           <TicketDetails workspace={workspace} ticket={ticket} save={save}>
-            <Reach impact={linked?.impact ?? ticket.impact} />
+            <CustomerReports
+              workspace={workspace}
+              view={view ?? "trackers"}
+              ticket={ticket}
+              rows={rows}
+              impact={linked?.impact ?? ticket.impact ?? undefined}
+              loading={isPending}
+              onReplyAll={() => setMessaging({ kind: "new" })}
+            />
           </TicketDetails>
         </ScrollArea>
       </Panel>

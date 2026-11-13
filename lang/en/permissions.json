@@ -389,7 +389,7 @@
   },
   "tickets:read": {
     "label": "Read tickets",
-    "description": "See tickets, trackers, incidents and their history."
+    "description": "See tickets, trackers and their history."
   },
   "tickets:write": {
     "label": "Work tickets",

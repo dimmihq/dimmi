@@ -11,7 +11,7 @@ import { queryOptions } from "@tanstack/react-query";
 
 import { request, requestPage } from "./client";
 
-export type TicketKind = "customer" | "back_office" | "tracker" | "incident";
+export type TicketKind = "customer" | "back_office" | "tracker";
 export type StateGroup = "submitted" | "in_progress" | "waiting_customer" | "waiting_team" | "resolved";
 export type TicketPriority = "none" | "low" | "medium" | "high" | "urgent";
 export type FieldDataType =
@@ -35,7 +35,7 @@ export type IssueStatus = "backlog" | "unstarted" | "started" | "done" | "cancel
  * them.
  */
 export const stateGroups: StateGroup[] = ["submitted", "in_progress", "waiting_customer", "waiting_team", "resolved"];
-export const ticketKinds: TicketKind[] = ["customer", "back_office", "tracker", "incident"];
+export const ticketKinds: TicketKind[] = ["customer", "back_office", "tracker"];
 export const ticketPriorities: TicketPriority[] = ["none", "low", "medium", "high", "urgent"];
 export const fieldDataTypes: FieldDataType[] = [
   "short_text",
@@ -240,7 +240,7 @@ export interface TicketEvent {
 
 /*
  * ConversationTickets is a conversation's own ticket, when it is one,
- * and the trackers and incidents it joined.
+ * and the trackers it joined.
  */
 export interface ConversationTickets {
   ticket: Ticket | null;

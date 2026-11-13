@@ -16,14 +16,12 @@
   "kinds": {
     "customer": "Customer ticket",
     "back_office": "Back-office ticket",
-    "tracker": "Tracker",
-    "incident": "Incident"
+    "tracker": "Tracker"
   },
   "kindHints": {
     "customer": "The customer's own request. They see its state and can reply.",
     "back_office": "Internal work for another team, linked to a customer ticket.",
-    "tracker": "One problem many customers report. Update it once, everyone hears.",
-    "incident": "An outage. Tracks who is affected and what they are told."
+    "tracker": "One problem many customers report, such as an outage. Update it once, everyone hears."
   },
   "dataTypes": {
     "short_text": "Short text",
@@ -57,8 +55,7 @@
     "group": "Tickets",
     "all": "All tickets",
     "waiting": "Waiting on team",
-    "trackers": "Trackers",
-    "incidents": "Incidents"
+    "trackers": "Trackers"
   },
   "errors": {
     "conflict": "Someone changed this ticket since you opened it.",

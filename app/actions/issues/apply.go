@@ -8,8 +8,7 @@
 | the ticket's history notes it, and the ticket moves to the dimmi state
 | the status maps to when its type allows it. A move the ticket's rules
 | refuse, such as fields required to resolve, leaves a warning on the
-| link instead of failing silently. A done or canceled issue, or a
-| resolved incident, drafts the message closing the loop.
+| link instead of failing silently.
 |
 */
 
@@ -19,7 +18,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"strings"
 
 	"github.com/dimmihq/dimmi/framework/fault"
 	"github.com/dimmihq/dimmi/framework/ids"
@@ -56,16 +54,9 @@ func (s *Issues) applyIssue(ctx context.Context, ws, linkID ids.UUID, is tracker
 			return err
 		}
 
-		t, err = s.follow(ctx, w, t, statusUpdate{link: updated, statusID: is.StatusID})
-		if err != nil {
-			return err
-		}
+		_, err = s.follow(ctx, w, t, statusUpdate{link: updated, statusID: is.StatusID})
 
-		if updated.StatusGroup != link.StatusGroup {
-			return s.closeLoop(ctx, w, t, updated)
-		}
-
-		return nil
+		return err
 	})
 }
 
@@ -103,7 +94,7 @@ func (s *Issues) follow(ctx context.Context, w *tickets.Writer, t models.Ticket,
 	link := u.link
 	u.settings = s.settingsOfLink(ctx, w.Q, link)
 
-	state, ok := stateFor(w.Setup, t, u)
+	state, ok := stateFor(w.Setup, u)
 	if !ok || state.ID == t.StateID || !w.Setup.Allows(t.TypeID, state.ID) {
 		return t, nil
 	}
@@ -155,7 +146,7 @@ func (s *Issues) settingsOfLink(ctx context.Context, q *models.Queries, link mod
 stateFor returns the dimmi state a tool status maps to: the one the
 workspace picked for it, or the default for its group.
 */
-func stateFor(setup tickets.Setup, t models.Ticket, u statusUpdate) (models.TicketState, bool) {
+func stateFor(setup tickets.Setup, u statusUpdate) (models.TicketState, bool) {
 	link := u.link
 
 	for _, key := range []string{u.statusID, link.Status} {
@@ -168,10 +159,6 @@ func stateFor(setup tickets.Setup, t models.Ticket, u statusUpdate) (models.Tick
 		}
 	}
 
-	if t.Kind == tickets.KindIncident {
-		return incidentState(setup, t, link)
-	}
-
 	switch link.StatusGroup {
 	case trackers.GroupStarted:
 		return setup.StateByPurpose(tickets.PurposeBeingWorked)
@@ -182,24 +169,4 @@ func stateFor(setup tickets.Setup, t models.Ticket, u statusUpdate) (models.Tick
 	}
 
 	return models.TicketState{}, false
-}
-
-/*
-incidentState maps an incident tool's status to the incident states:
-resolved when it is over, monitoring once mitigated, identified once
-someone acknowledged or is fixing it, investigating before.
-*/
-func incidentState(setup tickets.Setup, t models.Ticket, link models.TicketIssue) (models.TicketState, bool) {
-	name := strings.ToLower(link.Status)
-
-	switch {
-	case link.StatusGroup == trackers.GroupDone || link.StatusGroup == trackers.GroupCanceled:
-		return setup.DefaultResolved(t.TypeID)
-	case strings.Contains(name, "monitor") || strings.Contains(name, "mitigat"):
-		return setup.StateByPurpose(tickets.PurposeMonitoring)
-	case strings.Contains(name, "identif") || strings.Contains(name, "fix") || strings.Contains(name, "acknowledg"):
-		return setup.StateByPurpose(tickets.PurposeIdentified)
-	}
-
-	return setup.StateByPurpose(tickets.PurposeInvestigating)
 }

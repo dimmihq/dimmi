@@ -2,26 +2,16 @@
  * How a message to everyone went: a bar filling as deliveries go out,
  * counts of sent, held back and failed, and every customer with what
  * happened to their copy and why. The list reads itself again every two
- * seconds while the message is still going out. The tracker page lists
- * the messages sent before, each opening on its results.
+ * seconds while the message is still going out.
  */
-import { RiMailSendLine } from "@remixicon/react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { Chip, type ChipColor } from "@/components/base/badges/chip";
 import { ProgressBar } from "@/components/base/progress/progress";
-import { Glyph, Item, Section } from "@/features/settings/layout";
-import { rowLink } from "@/features/settings/row-link";
-import {
-  type DeliveryStatus,
-  type TicketUpdate,
-  ticketUpdatesQuery,
-  type UpdateStatus,
-} from "@/lib/api/ticket-trackers";
-import { formatDateTime, formatNumber } from "@/lib/i18n/format";
+import { type DeliveryStatus, type TicketUpdate, ticketUpdatesQuery } from "@/lib/api/ticket-trackers";
+import { formatNumber } from "@/lib/i18n/format";
 
 import { heldReasonLabel } from "./tracker-helpers";
 
@@ -29,14 +19,6 @@ const deliveryTint: Record<DeliveryStatus, ChipColor> = {
   pending: "gray",
   sent: "lime",
   held: "yellow",
-  failed: "rose",
-};
-
-const updateTint: Record<UpdateStatus, ChipColor> = {
-  queued: "gray",
-  sending: "blue",
-  sent: "lime",
-  partial: "yellow",
   failed: "rose",
 };
 
@@ -115,66 +97,5 @@ export function DeliveryResults({
         ))}
       </ul>
     </div>
-  );
-}
-
-/*
- * SentMessages lists the messages a tracker sent, newest first, each
- * opening on its results. It is left out until the first one is sent.
- */
-export function SentMessages({
-  workspace,
-  ticket,
-  onOpen,
-}: {
-  workspace: string;
-  ticket: string;
-  onOpen: (update: TicketUpdate) => void;
-}) {
-  const { t } = useTranslation("trackers");
-  const { data: updates = [] } = useQuery(ticketUpdatesQuery(workspace, ticket));
-  const [all, setAll] = useState(false);
-  if (updates.length === 0) {
-    return null;
-  }
-  const shown = all ? updates : updates.slice(0, 3);
-
-  return (
-    <Section
-      title={t("results.sentTitle")}
-      action={
-        updates.length > 3 ? (
-          <button
-            type="button"
-            className="rounded-md text-body-2-medium text-text-secondary outline-none hover:underline focus-visible:ring-2 focus-visible:ring-border-focus-ring"
-            onClick={() => setAll((v) => !v)}
-          >
-            {all ? t("results.fewer") : t("results.all", { count: updates.length })}
-          </button>
-        ) : undefined
-      }
-    >
-      {shown.map((u) => (
-        <Item
-          key={u.id}
-          mark={<Glyph icon={RiMailSendLine} />}
-          title={
-            <button type="button" className={`${rowLink} text-start`} onClick={() => onOpen(u)}>
-              {u.body.split("\n")[0]}
-            </button>
-          }
-          detail={`${formatDateTime(u.created_at)} · ${t("results.counts", {
-            sent: formatNumber(u.delivered),
-            held: formatNumber(u.held),
-            failed: formatNumber(u.failed),
-            total: formatNumber(u.recipients),
-          })}`}
-        >
-          <Chip variant="caption" color={updateTint[u.status]} className="me-3">
-            {t(`results.status.${u.status}`)}
-          </Chip>
-        </Item>
-      ))}
-    </Section>
   );
 }

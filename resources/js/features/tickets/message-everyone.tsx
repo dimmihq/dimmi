@@ -1,6 +1,6 @@
 /*
- * Message everyone a tracker or incident links, in three steps. Write
- * the message once and see it as one customer will, in their own
+ * Message everyone a tracker links, in three steps. Write the
+ * message once and see it as one customer will, in their own
  * conversation, switching between customers to check it reads right for
  * each. Then check who it reaches: dimmi counts them and names the ones
  * it holds back and why (they wrote since, or a teammate already told
@@ -111,24 +111,19 @@ function Preview({ body, row, author }: { body: string; row: TrackerConversation
 }
 
 /*
- * MessageEveryone is the whole flow in one dialog. A draft, such as an
- * incident's closing note, can start the message; startAt "results"
- * opens a message already sent on its deliveries.
+ * MessageEveryone is the whole flow in one dialog; sentUpdate opens a
+ * message already sent on its deliveries.
  */
 export function MessageEveryone({
   workspace,
   ticket,
   rows,
-  draft = "",
-  resolve: resolveFirst = false,
   sentUpdate,
   onClose,
 }: {
   workspace: string;
   ticket: Ticket;
   rows: TrackerConversation[];
-  draft?: string;
-  resolve?: boolean;
   sentUpdate?: string;
   onClose: () => void;
 }) {
@@ -137,8 +132,8 @@ export function MessageEveryone({
   const account = useAccount();
   const [step, setStep] = useState<Step>(sentUpdate ? "results" : "write");
   const [forward, setForward] = useState(true);
-  const [body, setBody] = useState(draft);
-  const [resolve, setResolve] = useState(resolveFirst);
+  const [body, setBody] = useState("");
+  const [resolve, setResolve] = useState(false);
   const [previewId, setPreviewId] = useState<string | null>(rows[0]?.conversation_id ?? null);
   const [plan, setPlan] = useState<UpdatePlan | null>(null);
   const [updateId, setUpdateId] = useState<string | null>(sentUpdate ?? null);

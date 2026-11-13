@@ -65,8 +65,7 @@ func (r *run) linkTracker(ctx context.Context, external string, made madeTicket)
 		tracker, err := w.Q.FindTicketByExternalID(ctx, models.FindTicketByExternalIDParams{
 			WorkspaceID: r.row.WorkspaceID, ExternalID: &made.tracker,
 		})
-		if err != nil || tracker.DeletedAt != nil ||
-			(tracker.Kind != tickets.KindTracker && tracker.Kind != tickets.KindIncident) {
+		if err != nil || tracker.DeletedAt != nil || tracker.Kind != tickets.KindTracker {
 			return nil //nolint:nilerr // a tracker that did not come in leaves the ticket unlinked
 		}
 

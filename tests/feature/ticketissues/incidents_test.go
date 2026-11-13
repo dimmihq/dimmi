@@ -28,16 +28,6 @@ func connectIncidentIO(t *testing.T, d desk) string {
 	return installation
 }
 
-/*
-incident declares a dimmi incident by hand.
-*/
-func (d desk) incident(t *testing.T, title string) string {
-	t.Helper()
-
-	return d.Owner.PostJSON("/api/v1/tickets", testkit.JSON{"type_id": d.types["Incident"], "title": title}).
-		AssertCreated().String("data.id")
-}
-
 func TestIncidentTools(t *testing.T) {
 	t.Parallel()
 
@@ -51,32 +41,7 @@ func TestIncidentTools(t *testing.T) {
 		d.incidentDelivery(t, installation, "incident_update.json").AssertOK()
 		d.incidentDelivery(t, installation, "incident_closed.json").AssertOK()
 
-		require.Equal(t, 0, count(d.Owner.GetJSON("/api/v1/tickets?kind=incident").AssertOK()))
 		require.Equal(t, 0, count(d.Owner.GetJSON("/api/v1/tickets").AssertOK()))
-	})
-
-	t.Run("a linked incident.io incident posts its updates and resolves the dimmi incident", func(t *testing.T) {
-		t.Parallel()
-
-		d := newDesk(t)
-		installation := connectIncidentIO(t, d)
-		incident := d.incident(t, "Sign-in failing")
-
-		d.Owner.PostJSON("/api/v1/tickets/"+incident+"/issues", testkit.JSON{
-			"installation_id": installation, "key": "INC-77",
-		}).AssertCreated().AssertJSONPath("data.key", "INC-77").AssertJSONPath("data.provider", "incident_io")
-
-		d.incidentDelivery(t, installation, "incident_created.json").AssertOK()
-		require.Equal(t, 1, count(d.Owner.GetJSON("/api/v1/tickets?kind=incident").AssertOK()))
-
-		d.incidentDelivery(t, installation, "incident_update.json").AssertOK()
-		d.Owner.GetJSON("/api/v1/tickets/"+incident+"/public-updates").AssertOK().
-			AssertJSONPath("data.0.source", "incident_io")
-
-		d.incidentDelivery(t, installation, "incident_closed.json").AssertOK()
-		d.Owner.GetJSON("/api/v1/tickets/"+incident).AssertOK().AssertJSONPath("data.state.group", "resolved")
-		d.Owner.GetJSON("/api/v1/tickets/"+incident+"/update-drafts").AssertOK().
-			AssertJSONPath("data.0.reason", "incident_resolved").AssertJSONPath("data.0.decided_at", nil)
 	})
 
 	t.Run("a tracker linked to an incident.io incident closes the loop when it resolves", func(t *testing.T) {

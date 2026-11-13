@@ -34,7 +34,6 @@ export default defineConfig({
       "trackers:results.*",
       "trackers:reasons.*",
       "trackers:reports.sla.targets.*",
-      "trackers:incident.severityHint.*",
     ],
     sort: true,
     indentation: 2,

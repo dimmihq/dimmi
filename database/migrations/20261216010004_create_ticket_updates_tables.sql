@@ -1,12 +1,9 @@
 -- migrate: phase=expand
--- A tracker or incident tells every linked customer at once. The update
--- is written once; each linked conversation gets a delivery row that
--- says whether it was sent, held back and why (the customer wrote since,
--- a teammate already told them), or failed after its retries, so a
--- partial failure shows exactly who did not hear.
---
--- An incident also keeps a public log of short posts the messenger's
--- status card and the help center's status page show.
+-- A tracker tells every linked customer at once. The update is written
+-- once; each linked conversation gets a delivery row that says whether
+-- it was sent, held back and why (the customer wrote since, a teammate
+-- already told them), or failed after its retries, so a partial failure
+-- shows exactly who did not hear.
 
 -- +goose Up
 CREATE TABLE ticket_updates (
@@ -52,28 +49,6 @@ ALTER TABLE ticket_update_deliveries ENABLE ROW LEVEL SECURITY;
 CREATE POLICY ticket_update_deliveries_tenant ON ticket_update_deliveries
     USING (workspace_id = ANY (dimmi_visible_workspaces()));
 
-CREATE TABLE ticket_public_updates (
-    id uuid PRIMARY KEY DEFAULT uuidv7(),
-    workspace_id uuid NOT NULL REFERENCES workspaces ON DELETE CASCADE,
-    ticket_id uuid NOT NULL REFERENCES tickets ON DELETE CASCADE,
-    body text NOT NULL CHECK (char_length(body) BETWEEN 1 AND 2000),
-    state_id uuid REFERENCES ticket_states ON DELETE SET NULL,
-    update_id uuid REFERENCES ticket_updates ON DELETE SET NULL,
-    author_member_id uuid REFERENCES workspace_members ON DELETE SET NULL,
-    source text NOT NULL DEFAULT 'dimmi' CHECK (source ~ '^[a-z_]{1,40}$'),
-    created_at timestamptz NOT NULL DEFAULT now()
-);
-
-CREATE INDEX ticket_public_updates_ticket_id_created_at_index ON ticket_public_updates (ticket_id, created_at DESC);
-CREATE INDEX ticket_public_updates_state_id_index ON ticket_public_updates (state_id);
-CREATE INDEX ticket_public_updates_update_id_index ON ticket_public_updates (update_id);
-CREATE INDEX ticket_public_updates_author_member_id_index ON ticket_public_updates (author_member_id);
-
-ALTER TABLE ticket_public_updates ENABLE ROW LEVEL SECURITY;
-CREATE POLICY ticket_public_updates_tenant ON ticket_public_updates
-    USING (workspace_id = ANY (dimmi_visible_workspaces()));
-
 -- +goose Down
-DROP TABLE ticket_public_updates;
 DROP TABLE ticket_update_deliveries;
 DROP TABLE ticket_updates;

@@ -56,8 +56,8 @@ func ticketIssueLinkDocs() map[string]Doc {
 		},
 		"tickets.update-drafts.index": {
 			Title: "List close-the-loop drafts",
-			Use: "Lists the messages drafted for everyone a tracker or incident links: when its issue is done, " +
-				"its incident resolved, or an engineer commented @customers. Open drafts count who they reach " +
+			Use: "Lists the messages drafted for everyone a tracker links: when its issue is done or an " +
+				"engineer commented @customers. Open drafts count who they reach " +
 				"and who would be held, by reason.",
 			Returns: "the drafts with status (waiting_deploy, ready, sent, discarded) and counts.",
 		},

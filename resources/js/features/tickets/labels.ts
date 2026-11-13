@@ -84,7 +84,6 @@ export const typeIcons: Record<string, RemixiconComponentType> = {
   support: RiCustomerService2Line,
   route: RiRouteLine,
   list: RiFileList3Line,
-  incident: RiAlarmWarningLine,
   "alarm-warning": RiAlarmWarningLine,
   stack: RiStackLine,
   flash: RiFlashlightLine,
@@ -94,7 +93,6 @@ const kindIcons: Record<TicketKind, RemixiconComponentType> = {
   customer: RiCoupon3Line,
   back_office: RiBriefcase4Line,
   tracker: RiRouteLine,
-  incident: RiAlarmWarningLine,
 };
 
 /*

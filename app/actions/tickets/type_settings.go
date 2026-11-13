@@ -67,7 +67,7 @@ func (t *Tickets) CreateType(ctx context.Context, m authz.Membership, in TypeInp
 
 		cur := models.TicketType{
 			Kind: *in.Kind, Icon: "ticket", ReopenDays: defaultReopenDays,
-			CustomerVisible: *in.Kind == KindCustomer || *in.Kind == KindIncident,
+			CustomerVisible: *in.Kind == KindCustomer,
 		}
 
 		next, err := applyType(cur, in)

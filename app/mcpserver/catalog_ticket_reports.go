@@ -63,7 +63,7 @@ func ticketReportDocs() map[string]Doc {
 		},
 		"reports.tickets.trackers.index": {
 			Title: "Report tracker impact",
-			Use: "Ranks the trackers and incidents open in the range, or resolved in it, by the monthly revenue " +
+			Use: "Ranks the trackers open in the range, or resolved in it, by the monthly revenue " +
 				"of the companies whose conversations they gather, then by conversations.",
 			Returns: "trackers with conversations, those linked in the range, customers, companies and revenue.",
 			Next:    []string{"dimmi_tickets_get: read the tracker", "dimmi_tickets_updates_create: message them"},

@@ -12,52 +12,6 @@ import (
 	"github.com/dimmihq/dimmi/framework/ids"
 )
 
-const createTicketPublicUpdate = `-- name: CreateTicketPublicUpdate :one
-INSERT INTO ticket_public_updates (workspace_id, ticket_id, body, state_id, update_id, author_member_id, source,
-    created_at)
-VALUES ($1, $2, $3, $4, $5, $6,
-    $7, $8)
-RETURNING id, workspace_id, ticket_id, body, state_id, update_id, author_member_id, source, created_at
-`
-
-type CreateTicketPublicUpdateParams struct {
-	WorkspaceID    ids.UUID  `json:"workspace_id"`
-	TicketID       ids.UUID  `json:"ticket_id"`
-	Body           string    `json:"body"`
-	StateID        *ids.UUID `json:"state_id"`
-	UpdateID       *ids.UUID `json:"update_id"`
-	AuthorMemberID *ids.UUID `json:"author_member_id"`
-	Source         string    `json:"source"`
-	Now            time.Time `json:"now"`
-}
-
-// CreateTicketPublicUpdate posts to an incident's public update log.
-func (q *Queries) CreateTicketPublicUpdate(ctx context.Context, arg CreateTicketPublicUpdateParams) (TicketPublicUpdate, error) {
-	row := q.db.QueryRow(ctx, createTicketPublicUpdate,
-		arg.WorkspaceID,
-		arg.TicketID,
-		arg.Body,
-		arg.StateID,
-		arg.UpdateID,
-		arg.AuthorMemberID,
-		arg.Source,
-		arg.Now,
-	)
-	var i TicketPublicUpdate
-	err := row.Scan(
-		&i.ID,
-		&i.WorkspaceID,
-		&i.TicketID,
-		&i.Body,
-		&i.StateID,
-		&i.UpdateID,
-		&i.AuthorMemberID,
-		&i.Source,
-		&i.CreatedAt,
-	)
-	return i, err
-}
-
 const createTicketUpdate = `-- name: CreateTicketUpdate :one
 INSERT INTO ticket_updates (workspace_id, ticket_id, body, resolve, recipients, held, author_member_id, created_at)
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
@@ -211,49 +165,6 @@ func (q *Queries) FinishTicketUpdate(ctx context.Context, arg FinishTicketUpdate
 	return i, err
 }
 
-const listLatestPublicUpdates = `-- name: ListLatestPublicUpdates :many
-SELECT DISTINCT ON (ticket_id) id, workspace_id, ticket_id, body, state_id, update_id, author_member_id, source, created_at FROM ticket_public_updates
-WHERE workspace_id = $1 AND ticket_id = ANY ($2::uuid[])
-ORDER BY ticket_id, created_at DESC, id DESC
-`
-
-type ListLatestPublicUpdatesParams struct {
-	WorkspaceID ids.UUID   `json:"workspace_id"`
-	TicketIds   []ids.UUID `json:"ticket_ids"`
-}
-
-// ListLatestPublicUpdates returns the newest public post of each of the
-// incidents.
-func (q *Queries) ListLatestPublicUpdates(ctx context.Context, arg ListLatestPublicUpdatesParams) ([]TicketPublicUpdate, error) {
-	rows, err := q.db.Query(ctx, listLatestPublicUpdates, arg.WorkspaceID, arg.TicketIds)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []TicketPublicUpdate
-	for rows.Next() {
-		var i TicketPublicUpdate
-		if err := rows.Scan(
-			&i.ID,
-			&i.WorkspaceID,
-			&i.TicketID,
-			&i.Body,
-			&i.StateID,
-			&i.UpdateID,
-			&i.AuthorMemberID,
-			&i.Source,
-			&i.CreatedAt,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
 const listPendingTicketUpdateDeliveries = `-- name: ListPendingTicketUpdateDeliveries :many
 SELECT id, workspace_id, update_id, conversation_id, status, reason, attempts, message_id, sent_at, created_at, updated_at FROM ticket_update_deliveries
 WHERE workspace_id = $1 AND update_id = $2 AND status = 'pending'
@@ -290,49 +201,6 @@ func (q *Queries) ListPendingTicketUpdateDeliveries(ctx context.Context, arg Lis
 			&i.SentAt,
 			&i.CreatedAt,
 			&i.UpdatedAt,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const listTicketPublicUpdates = `-- name: ListTicketPublicUpdates :many
-SELECT id, workspace_id, ticket_id, body, state_id, update_id, author_member_id, source, created_at FROM ticket_public_updates WHERE workspace_id = $1 AND ticket_id = $2
-ORDER BY created_at DESC, id DESC
-LIMIT 100
-`
-
-type ListTicketPublicUpdatesParams struct {
-	WorkspaceID ids.UUID `json:"workspace_id"`
-	TicketID    ids.UUID `json:"ticket_id"`
-}
-
-// ListTicketPublicUpdates returns an incident's public update log,
-// newest first.
-func (q *Queries) ListTicketPublicUpdates(ctx context.Context, arg ListTicketPublicUpdatesParams) ([]TicketPublicUpdate, error) {
-	rows, err := q.db.Query(ctx, listTicketPublicUpdates, arg.WorkspaceID, arg.TicketID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []TicketPublicUpdate
-	for rows.Next() {
-		var i TicketPublicUpdate
-		if err := rows.Scan(
-			&i.ID,
-			&i.WorkspaceID,
-			&i.TicketID,
-			&i.Body,
-			&i.StateID,
-			&i.UpdateID,
-			&i.AuthorMemberID,
-			&i.Source,
-			&i.CreatedAt,
 		); err != nil {
 			return nil, err
 		}

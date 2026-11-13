@@ -23,8 +23,6 @@ import { inboxViews, type Page } from "@/features/shell/navigation";
 import { EmptyState, PageHeader, Panel, ScrollArea } from "@/features/shell/page";
 import { PaneGroup, PaneHandle } from "@/features/shell/resizable";
 import { useWide } from "@/features/shell/use-wide";
-import { IncidentPins } from "@/features/tickets/incident-pins";
-import { IncidentSuggestions } from "@/features/tickets/incident-suggestions";
 import { TicketListPanel } from "@/features/tickets/ticket-list";
 import { isTicketView } from "@/features/tickets/views";
 import { type Draft, draftsQuery } from "@/lib/api/drafts";
@@ -207,8 +205,6 @@ function ListPanel({ view, openId }: { view: string; openId: string | undefined 
           onChange={setSearch}
         />
       </div>
-      <IncidentPins workspace={workspace} className="shrink-0 px-[7px] pb-2" />
-      <IncidentSuggestions workspace={workspace} />
       {selection.count > 0 ? (
         <BulkBar workspace={workspace} selection={selection} loaded={rowIds.length} />
       ) : (

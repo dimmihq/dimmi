@@ -18,7 +18,7 @@ TicketTypeBody is a type's settings; fields left out stay as they are.
 The kind is read only when the type is added.
 */
 type TicketTypeBody struct {
-	Kind               *string           `json:"kind,omitempty"                      enum:"customer,back_office,tracker,incident"` //nolint:lll // one enum
+	Kind               *string           `json:"kind,omitempty"                      enum:"customer,back_office,tracker"` //nolint:lll // one enum
 	Name               *string           `json:"name,omitempty"                      maxLength:"60"`
 	Icon               *string           `json:"icon,omitempty"                      maxLength:"40"`
 	Description        *string           `json:"description,omitempty"               maxLength:"500"`

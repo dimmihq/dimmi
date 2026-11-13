@@ -127,10 +127,9 @@ GROUP BY d.day
 ORDER BY d.day;
 
 -- name: ListReportTrackers :many
--- ListReportTrackers ranks the trackers and incidents the member may
--- see by what they reach: linked conversations, those linked in the
--- range, distinct customers and companies, and the companies' monthly
--- revenue.
+-- ListReportTrackers ranks the trackers the member may see by what they
+-- reach: linked conversations, those linked in the range, distinct
+-- customers and companies, and the companies' monthly revenue.
 SELECT t.id, t.number, t.kind, t.title, t.state_group, t.created_at,
     count(DISTINCT c.id) AS conversations,
     count(DISTINCT c.id) FILTER (WHERE l.created_at >= @range_from AND l.created_at < @range_to) AS linked_in_range,
@@ -145,7 +144,7 @@ FROM tickets t
 LEFT JOIN ticket_links l ON l.from_ticket_id = t.id AND l.conversation_id IS NOT NULL
 LEFT JOIN conversations c ON c.id = l.conversation_id AND c.deleted_at IS NULL
 LEFT JOIN contacts ct ON ct.id = c.contact_id
-WHERE t.workspace_id = @workspace_id AND t.kind IN ('tracker', 'incident') AND t.deleted_at IS NULL
+WHERE t.workspace_id = @workspace_id AND t.kind = 'tracker' AND t.deleted_at IS NULL
   AND (t.state_group <> 'resolved' OR t.resolved_at >= @range_from OR t.created_at >= @range_from)
   AND t.created_at < @range_to
   AND dimmi_conversation_visible(

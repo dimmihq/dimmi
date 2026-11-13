@@ -18,7 +18,7 @@ CREATE TABLE tickets (
     id uuid PRIMARY KEY DEFAULT uuidv7(),
     workspace_id uuid NOT NULL REFERENCES workspaces ON DELETE CASCADE,
     number bigint NOT NULL,
-    kind text NOT NULL CHECK (kind IN ('customer', 'back_office', 'tracker', 'incident')),
+    kind text NOT NULL CHECK (kind IN ('customer', 'back_office', 'tracker')),
     type_id uuid NOT NULL REFERENCES ticket_types,
     state_id uuid NOT NULL REFERENCES ticket_states,
     state_group text NOT NULL

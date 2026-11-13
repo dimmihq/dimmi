@@ -6,8 +6,8 @@
 | The tickets API: types, fields and states, which members who change
 | settings manage; tickets with their history, notes and links; a
 | conversation turned into a ticket; trackers' conversations and the
-| messages that reach all of them; and incidents' public logs. Members
-| need tickets:read to read and tickets:write to change.
+| messages that reach all of them. Members need tickets:read to read
+| and tickets:write to change.
 |
 */
 
@@ -49,8 +49,8 @@ func ticketRoutes(workspace *routing.Router, a *app.App) {
 }
 
 /*
-ticketActivityRoutes declares history, notes, links, trackers' reach
-and incidents' public logs.
+ticketActivityRoutes declares history, notes, links and trackers'
+reach.
 */
 func ticketActivityRoutes(workspace *routing.Router, base v1.TicketController) {
 	ac := &v1.TicketActivityController{TicketController: base}
@@ -71,10 +71,6 @@ func ticketActivityRoutes(workspace *routing.Router, base v1.TicketController) {
 	routing.Post(workspace, one+"/updates", "tickets.updates.store", ac.SendUpdate).Ability("tickets:write").
 		Status(fhttp.StatusOK)
 	routing.Get(workspace, one+"/updates", "tickets.updates.index", ac.Updates).Ability("tickets:read")
-	routing.Get(workspace, one+"/public-updates", "tickets.public-updates.index", ac.PublicUpdates).
-		Ability("tickets:read")
-	routing.Post(workspace, one+"/public-updates", "tickets.public-updates.store", ac.PostPublicUpdate).
-		Ability("tickets:write").Status(fhttp.StatusCreated)
 	routing.Get(workspace, conv+"/tickets", "conversations.tickets.index", ac.ConversationTickets).
 		Ability("tickets:read")
 	routing.Get(workspace, conv+"/ticket-suggestions", "conversations.ticket-suggestions.index", ac.Suggestions).

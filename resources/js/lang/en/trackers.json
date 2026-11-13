@@ -2,88 +2,32 @@
   "common": {
     "back": "Back",
     "cancel": "Cancel",
-    "changedMeanwhile": "A teammate changed this ticket just now. Look again, then try once more.",
-    "done": "Done",
-    "save": "Save"
+    "done": "Done"
   },
   "conversations": {
     "add": "Link conversations",
     "addTitle": "Link conversations",
+    "all": "Show all {{count}}",
     "alreadyLinked": "linked",
-    "columns": {
-      "company": "Company",
-      "customer": "Customer",
-      "lastMessage": "Last message",
-      "revenue": "Revenue",
-      "ticket": "Their ticket"
-    },
-    "description": "Everyone who reported it, with their company, plan and revenue.",
     "empty": "No conversations linked yet.",
+    "fewer": "Show fewer",
     "linkPicked_one": "Link 1 conversation",
     "linkPicked_other": "Link {{count}} conversations",
     "linked_one": "Linked 1 conversation",
     "linked_other": "Linked {{count}} conversations",
     "noCompany": "No company",
     "noMatches": "No conversation matches.",
-    "noTicket": "No ticket",
     "open": "Open conversation #{{number}}",
+    "reach": "{{customers}} customers · {{companies}} companies · {{revenue}} at stake",
+    "replyAll": "Reply all",
     "search": "Search conversations",
     "searchPlaceholder": "Search by words, customer or number",
-    "title": "Linked conversations",
+    "title": "Customer reports",
     "unlink": "Unlink conversation #{{number}}",
     "unlinkConfirm": "Unlink",
     "unlinkDescription": "{{name}} stops getting messages sent from {{reference}}. The conversation itself stays as it is.",
     "unlinkTitle": "Unlink conversation #{{number}}?",
     "untitled": "Conversation"
-  },
-  "impact": {
-    "companies": "Companies",
-    "companiesHint": "Companies of the customers it reaches.",
-    "conversations": "Conversations",
-    "conversationsHint": "Conversations linked to it.",
-    "customers": "Customers affected",
-    "customersHint": "People who reported it, each counted once.",
-    "revenue": "Revenue at stake",
-    "revenueHint": "The monthly spend of the companies it reaches, from their monthly_spend or mrr attribute."
-  },
-  "incident": {
-    "addDetails": "Add severity and areas",
-    "customersWillSee": "Customers will see “{{label}}”.",
-    "detailsTitle": "Severity and areas",
-    "draft": "Hi, the problem with {{title}} is fixed and everything works again.\n\nThank you for your patience while we worked on it.",
-    "draftWithLatest": "Hi, the problem with {{title}} is fixed and everything works again.\n\n{{latest}}\n\nThank you for your patience while we worked on it.",
-    "editDetails": "Edit",
-    "label": "Incident",
-    "moveNote": "Post to the update log",
-    "moveNotePlaceholder": "Optional: what changed, in a sentence customers understand.",
-    "moveTitle": "Move to {{state}}",
-    "resolveAndMessage": "Resolve and message everyone",
-    "resolveNext": "Next you write to everyone linked, starting from a note drafted from the update log.",
-    "severity": "{{level}} severity",
-    "severityHint": {
-      "critical": "Customers cannot work at all.",
-      "major": "A main part of the product fails for many customers.",
-      "minor": "Something is slower or partly broken."
-    },
-    "stages": "Incident stages"
-  },
-  "issues": {
-    "label": "Linked issues"
-  },
-  "log": {
-    "composer": "New update",
-    "description": "Short posts customers see on the messenger's status card and the help center's status page.",
-    "empty": "Nothing posted yet.",
-    "placeholder": "Fix deployed, monitoring.",
-    "post": "Post update",
-    "postAndSend": "Post and send",
-    "posted": "Update posted",
-    "postedAndSent_one": "Update posted and sent to 1 customer",
-    "postedAndSent_other": "Update posted and sent to {{count}} customers",
-    "sendToLinked_one": "Also send it to the 1 linked customer",
-    "sendToLinked_other": "Also send it to the {{formatted}} linked customers",
-    "sent": "Sent to linked",
-    "title": "Update log"
   },
   "message": {
     "body": "Message",
@@ -92,7 +36,6 @@
     "held_one": "1 customer held back",
     "held_other": "{{count}} customers held back",
     "noneHeld": "Nobody is held back.",
-    "open": "Message everyone",
     "previewAs": "Preview as",
     "previewEmpty": "Your message shows here.",
     "previewFrom": "From {{name}}, in their conversation",
@@ -111,14 +54,6 @@
     },
     "steps": "Steps",
     "title": "Message everyone"
-  },
-  "pins": {
-    "companies_one": "1 company",
-    "companies_other": "{{formatted}} companies",
-    "conversations_one": "1 conversation",
-    "conversations_other": "{{formatted}} conversations",
-    "label": "Active incidents",
-    "severity": "{{level}}"
   },
   "reasons": {
     "customer_unreachable": "No channel reaches them",
@@ -166,13 +101,12 @@
     },
     "title": "Ticket reports",
     "trackers": {
-      "description": "Trackers and incidents by the monthly revenue of the companies they reach.",
+      "description": "Trackers by the monthly revenue of the companies they reach.",
       "reach": "{{customers}} customers · {{companies}} companies",
       "title": "Tracker impact"
     }
   },
   "results": {
-    "all": "Show all {{count}}",
     "counts": "{{sent}} sent · {{held}} held · {{failed}} failed of {{total}}",
     "deliveries": "Deliveries",
     "delivery": {
@@ -181,10 +115,9 @@
       "pending": "Waiting",
       "sent": "Sent"
     },
-    "fewer": "Show fewer",
+    "entry": "Sent to everyone",
     "loading": "Getting deliveries…",
     "progress": "Delivery progress",
-    "sentTitle": "Messages sent",
     "status": {
       "failed": "Failed",
       "partial": "Sent, some failed",
@@ -192,19 +125,6 @@
       "sending": "Sending",
       "sent": "Sent"
     }
-  },
-  "suggestions": {
-    "declare": "Declare incident",
-    "declared": "Declared “{{title}}” with its conversations linked",
-    "dismiss": "Dismiss",
-    "dismissed": "Dismissed for an hour",
-    "headline_one": "1 conversation about {{topic}} in {{minutes}} minutes.",
-    "headline_other": "{{count}} conversations about {{topic}} in {{minutes}} minutes.",
-    "label": "Suggested incidents",
-    "question": "Declare an incident?"
-  },
-  "summary": {
-    "title": "What customers report"
   },
   "tracker": {
     "customerSees": "Customers see “{{label}}”.",

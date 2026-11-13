@@ -12,10 +12,10 @@ function type(kind: TicketType["kind"], open: number, tid = id): TicketType {
 
 describe("ticket views", () => {
   it("names the fixed views and type ids only", () => {
-    for (const view of ["tickets", "tickets-waiting", "trackers", "incidents", id]) {
+    for (const view of ["tickets", "tickets-waiting", "trackers", id]) {
       expect(isTicketView(view)).toBe(true);
     }
-    for (const view of ["mine", "tktt_", `${id}x`, "team_01jb8z2k3m4n5p6q7r8s9t0vwx"]) {
+    for (const view of ["mine", "incidents", "tktt_", `${id}x`, "team_01jb8z2k3m4n5p6q7r8s9t0vwx"]) {
       expect(isTicketView(view)).toBe(false);
     }
   });

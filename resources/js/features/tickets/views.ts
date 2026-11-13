@@ -1,14 +1,14 @@
 /*
  * The inbox's ticket views: every open ticket, one view per type, the
- * tickets another team holds, and the open trackers and incidents. A
- * view's address is a fixed name or a type's public id, and each one
- * says which tickets the list asks for. Counts come from the types'
- * open totals, so the picker needs no extra request.
+ * tickets another team holds, and the open trackers. A view's address
+ * is a fixed name or a type's public id, and each one says which
+ * tickets the list asks for. Counts come from the types' open totals,
+ * so the picker needs no extra request.
  */
 import type { TicketFilter, TicketType } from "@/lib/api/tickets";
 import { i18n } from "@/lib/i18n";
 
-export const fixedTicketViews = ["tickets", "tickets-waiting", "trackers", "incidents"] as const;
+export const fixedTicketViews = ["tickets", "tickets-waiting", "trackers"] as const;
 export type FixedTicketView = (typeof fixedTicketViews)[number];
 
 /*
@@ -29,8 +29,6 @@ export function ticketViewFilter(view: string): TicketFilter {
       return { group: "waiting_team", active: true };
     case "trackers":
       return { kind: "tracker", active: true };
-    case "incidents":
-      return { kind: "incident", active: true };
   }
 
   return { type_id: view, active: true };
@@ -48,8 +46,6 @@ export function ticketViewName(view: string, types: TicketType[] | undefined): s
       return i18n.t("tickets:views.waiting");
     case "trackers":
       return i18n.t("tickets:views.trackers");
-    case "incidents":
-      return i18n.t("tickets:views.incidents");
   }
 
   return types?.find((t) => t.id === view)?.name;
@@ -70,8 +66,6 @@ export function ticketViewCount(view: string, types: TicketType[] | undefined): 
       return sum(["customer", "back_office"]);
     case "trackers":
       return sum(["tracker"]);
-    case "incidents":
-      return sum(["incident"]);
   }
 
   return types.find((t) => t.id === view)?.open_tickets;

@@ -61,7 +61,6 @@ type env struct {
 	Defaults      map[string]string
 	WorkflowStep  *workflowspec.AgentHandling
 	Procedures    []liveProcedure
-	Incidents     []tickets.IncidentBrief
 	TicketTypes   []tickets.AgentType
 	now           time.Time
 }

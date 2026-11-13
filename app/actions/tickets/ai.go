@@ -6,10 +6,8 @@
 | The AI reads a conversation to fill a ticket's fields, each by the
 | hint its field gives, and its values wait as suggestions until a
 | person accepts them, unless the field fills itself. It matches a new
-| conversation against open trackers and incidents by meaning, so the
-| panel suggests where the report belongs, and it groups a burst of new
-| conversations by what they are about, so a spike becomes a suggested
-| incident. Without a model every answer is empty.
+| conversation against open trackers by meaning, so the panel suggests
+| where the report belongs. Without a model every answer is empty.
 |
 */
 
@@ -42,11 +40,6 @@ type Filler interface {
 		Match returns the candidates the conversation is about, best first.
 	*/
 	Match(ctx context.Context, q MatchQuestion) ([]ids.UUID, error)
-
-	/*
-		Group sorts conversations into groups about one thing each.
-	*/
-	Group(ctx context.Context, q GroupQuestion) ([]Group, error)
 }
 
 /*

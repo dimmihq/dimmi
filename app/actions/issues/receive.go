@@ -9,10 +9,10 @@
 | secret of the endpoint the workspace pasted, found through the
 | installation the address names. Then each event goes where it
 | belongs: an issue's news to every link of it, in whichever workspace;
-| a comment to the tickets as a note; an incident's public update to its
-| dimmi incident; a deployment to the drafts waiting for it. A new
-| incident in an incident tool reaches only the tickets a teammate
-| already linked to it: nothing is opened in dimmi on its own.
+| a comment to the tickets as a note; a deployment to the drafts
+| waiting for it. A new incident in an incident tool reaches only the
+| tickets a teammate already linked to it: nothing is opened in dimmi
+| on its own.
 |
 */
 
@@ -20,7 +20,6 @@ package issues
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	"github.com/dimmihq/dimmi/framework/database"
@@ -28,7 +27,6 @@ import (
 	"github.com/dimmihq/dimmi/framework/ids"
 	"github.com/dimmihq/dimmi/framework/tenancy"
 
-	"github.com/dimmihq/dimmi/app/actions/tickets"
 	"github.com/dimmihq/dimmi/app/integrations/trackers"
 	"github.com/dimmihq/dimmi/app/models"
 )
@@ -194,8 +192,6 @@ func (s *Issues) apply(ctx context.Context, l models.TicketIssuesByExternalIDRow
 		return s.applyIssue(ctx, l.WorkspaceID, l.ID, *e.Issue)
 	case trackers.EventComment:
 		return s.commentOn(ctx, l.WorkspaceID, l.ID, e)
-	case trackers.EventUpdate:
-		return s.publicUpdate(ctx, l.WorkspaceID, l.ID, e)
 	}
 
 	return nil
@@ -238,30 +234,4 @@ func (s *Issues) linksOf(ctx context.Context, provider string, row *models.Integ
 	}
 
 	return mine, nil
-}
-
-/*
-publicUpdate posts an update from the tool to the linked dimmi
-incident's public log.
-*/
-func (s *Issues) publicUpdate(ctx context.Context, ws, linkID ids.UUID, e trackers.Event) error {
-	if e.Body == "" {
-		return nil
-	}
-
-	return s.asTool(ctx, ws, linkID, func(ctx context.Context, w *tickets.Writer, link models.TicketIssue) error {
-		t, err := w.Lock(ctx, ws, link.TicketID)
-		if err != nil || t.DeletedAt != nil || t.Kind != tickets.KindIncident {
-			return nil //nolint:nilerr // only a live incident keeps a public log
-		}
-
-		_, err = w.PublicUpdate(ctx, t, tickets.PublicUpdateInput{Body: clip(e.Body, 2000), Source: link.Provider})
-
-		var f *fault.Error
-		if errors.As(err, &f) && f.Kind() == fault.Invalid {
-			return nil
-		}
-
-		return err
-	})
 }

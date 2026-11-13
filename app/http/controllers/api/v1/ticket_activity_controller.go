@@ -5,8 +5,8 @@
 |
 | What happens around a ticket: its history and the workspace's log,
 | internal notes, links to tickets and conversations, a tracker's
-| conversations and messages to all of them, an incident's public log,
-| a conversation's own ticket and trackers, and the AI's field values.
+| conversations and messages to all of them, a conversation's own
+| ticket and trackers, and the AI's field values.
 |
 */
 
@@ -329,45 +329,4 @@ func (c *TicketActivityController) Suggestions(ctx context.Context, in *requests
 	}
 
 	return &TicketSuggestionsOutput{Body: fhttp.NewResource(values)}, nil
-}
-
-/*
-PublicUpdates lists an incident's public log.
-*/
-func (c *TicketActivityController) PublicUpdates(ctx context.Context, in *requests.TicketRequest,
-) (*TicketPublicUpdatesOutput, error) {
-	ref, err := c.ref(in.Ticket)
-	if err != nil {
-		return nil, err
-	}
-
-	list, err := c.Tickets.PublicUpdates(ctx, membership(ctx), ref)
-	if err != nil {
-		return nil, err
-	}
-
-	return &TicketPublicUpdatesOutput{Body: fhttp.NewResource(resources.NewTicketPublicUpdates(list))}, nil
-}
-
-/*
-PostPublicUpdate posts to an incident's public log.
-*/
-func (c *TicketActivityController) PostPublicUpdate(ctx context.Context, in *requests.StorePublicUpdateRequest,
-) (*TicketPublicUpdateOutput, error) {
-	ref, err := c.ref(in.Ticket)
-	if err != nil {
-		return nil, err
-	}
-
-	input := tickets.PublicUpdateInput{Body: in.Body.Body, SendToLinked: in.Body.SendToLinked}
-	if input.StateID, err = c.optionalPtr(models.PrefixTicketState, in.Body.StateID); err != nil {
-		return nil, err
-	}
-
-	post, err := c.Tickets.PostPublicUpdate(ctx, membership(ctx), ref, input)
-	if err != nil {
-		return nil, err
-	}
-
-	return &TicketPublicUpdateOutput{Body: fhttp.NewResource(resources.NewTicketPublicUpdate(post))}, nil
 }

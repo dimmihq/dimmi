@@ -6,12 +6,11 @@
 | A linked issue that is done or canceled moves its ticket to the
 | close-the-loop state, as Plain does; nothing writes to customers on
 | its own. What customers are told comes from a person, or from the
-| workflows the ticket.close_loop trigger runs. Two things are drafted
-| for a person to send to everyone linked: the note an engineer writes
-| in a comment starting with @customers, and, when an incident resolves
-| in its tool, the closing message built from the incident's public
-| log. When sent, customers who wrote since or whom a teammate already
-| told are held with the reason, as for any message to everyone.
+| workflows the ticket.close_loop trigger runs. The note an engineer
+| writes in a comment starting with @customers is drafted for a person
+| to send to everyone linked. When sent, customers who wrote since or
+| whom a teammate already told are held with the reason, as for any
+| message to everyone.
 |
 */
 
@@ -33,61 +32,12 @@ import (
 The reasons a draft was made and the states it moves through.
 */
 const (
-	ReasonResolved  = "incident_resolved"
 	ReasonComment   = "comment"
 	DraftReady      = "ready"
 	DraftSent       = "sent"
 	DraftDiscarded  = "discarded"
 	customersPrefix = "@customers"
 )
-
-/*
-closeLoop drafts the closing message of an incident its tool resolved,
-for a person to send.
-*/
-func (s *Issues) closeLoop(ctx context.Context, w *tickets.Writer, t models.Ticket, link models.TicketIssue) error {
-	reason := ""
-
-	if t.Kind == tickets.KindIncident && (link.StatusGroup == trackers.GroupDone ||
-		link.StatusGroup == trackers.GroupCanceled) {
-		reason = ReasonResolved
-	}
-
-	if reason == "" {
-		return nil
-	}
-
-	body, err := s.draftBody(ctx, w.Q, t, reason)
-	if err != nil {
-		return err
-	}
-
-	return s.draft(ctx, w, t, draftInput{link: &link, reason: reason, body: body})
-}
-
-/*
-draftBody writes the message a reason drafts.
-*/
-func (s *Issues) draftBody(ctx context.Context, q *models.Queries, t models.Ticket, reason string) (string, error) {
-	if reason == ReasonResolved {
-		posts, err := q.ListTicketPublicUpdates(ctx, models.ListTicketPublicUpdatesParams{
-			WorkspaceID: t.WorkspaceID, TicketID: t.ID,
-		})
-		if err != nil {
-			return "", fmt.Errorf("read public updates: %w", err)
-		}
-
-		latest := ""
-		if len(posts) > 0 {
-			latest = " " + strings.TrimSpace(posts[0].Body)
-		}
-
-		return fmt.Sprintf("%q is resolved.%s Everything is working again. Thank you for your patience.",
-			t.Title, latest), nil
-	}
-
-	return "", nil
-}
 
 /*
 draftInput is a draft to make: the link it comes from, nil for none,
@@ -200,7 +150,7 @@ func (s *Issues) commentOn(ctx context.Context, ws, linkID ids.UUID, e trackers.
 		}
 
 		rest, ok := cutCustomers(body)
-		if !ok || rest == "" || (t.Kind != tickets.KindTracker && t.Kind != tickets.KindIncident) {
+		if !ok || rest == "" || t.Kind != tickets.KindTracker {
 			return nil
 		}
 

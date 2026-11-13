@@ -4,8 +4,8 @@
  * called in its own terms (a Jira project is where a Linear team would
  * be), and the dimmi state a status maps to when nobody picked one. The
  * defaults mirror the server's: started is "Being worked on", done
- * closes the loop, canceled is "Won't fix"; an incident follows its
- * tool from investigating to resolved.
+ * closes the loop, canceled is "Won't fix"; while an incident is open
+ * the ticket is being worked on, and resolving it resolves the ticket.
  */
 import type { IssueOption } from "@/lib/api/ticket-issues";
 import type { TicketState } from "@/lib/api/tickets";
@@ -60,25 +60,19 @@ export function defaultState(kind: ToolKind, status: IssueOption, states: Ticket
     return purpose ? byPurpose(purpose) : undefined;
   }
 
-  const name = status.name.toLowerCase();
   if (status.group === "done" || status.group === "canceled") {
     return states.find((s) => s.group === "resolved" && !s.purpose && !s.archived_at);
   }
-  if (name.includes("monitor") || name.includes("mitigat")) {
-    return byPurpose("incident_monitoring");
-  }
-  if (name.includes("identif") || name.includes("fix") || name.includes("acknowledg")) {
-    return byPurpose("incident_identified");
-  }
 
-  return byPurpose("investigating");
+  return byPurpose("being_worked_on");
 }
 
 /*
  * draftReasons say why a draft was written.
  */
 export const draftReasons: Record<string, string> = {
-  incident_resolved: "The incident is resolved",
+  issue_done: "The work behind it is done",
+  issue_canceled: "The work behind it was canceled",
   comment: "An engineer wrote to customers",
 };
 

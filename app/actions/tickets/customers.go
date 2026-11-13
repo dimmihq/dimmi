@@ -190,7 +190,6 @@ type CustomerTicket struct {
 	State   models.TicketState
 	Fields  []models.TicketField
 	History []StateStep
-	Updates []models.TicketPublicUpdate
 }
 
 /*

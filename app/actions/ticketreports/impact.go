@@ -5,9 +5,9 @@
 |
 | How often the team kept its promises: for each policy and target, the
 | clocks that ended in the range met or breached, and the share met. A
-| clock counts on the day it ended. And which trackers and incidents
-| matter most: ranked by the monthly revenue of the companies whose
-| conversations they gather, then by how many conversations they hold.
+| clock counts on the day it ended. And which trackers matter most:
+| ranked by the monthly revenue of the companies whose conversations
+| they gather, then by how many conversations they hold.
 |
 */
 
@@ -138,13 +138,13 @@ func percent(part, whole int64) *float64 {
 }
 
 /*
-Tracker is one tracker or incident and what it reaches.
+Tracker is one tracker and what it reaches.
 */
 type Tracker = models.ListReportTrackersRow
 
 /*
-Trackers ranks the trackers and incidents open in the range, or
-resolved in it, by what they reach.
+Trackers ranks the trackers open in the range, or resolved in it, by
+what they reach.
 */
 func (r *Reports) Trackers(ctx context.Context, m authz.Membership, rg Range) ([]Tracker, error) {
 	var out []Tracker

@@ -107,7 +107,7 @@ func TestTicketSetup(t *testing.T) {
 		t.Parallel()
 		d := newDesk(t)
 
-		for _, name := range []string{"Question", "Bug report", "Back-office task", "Tracker", "Incident"} {
+		for _, name := range []string{"Question", "Bug report", "Back-office task", "Tracker"} {
 			assert.NotEmpty(t, d.types[name], name)
 		}
 
@@ -285,13 +285,13 @@ func TestTicketTeams(t *testing.T) {
 		t.Parallel()
 		d := newDesk(t)
 		conv := d.Customer(t, "dee", "Login fails").String("data.id")
-		incident := d.Owner.PostJSON("/api/v1/tickets", testkit.JSON{
-			"type_id": d.types["Incident"], "title": "Sign-in outage",
+		tracker := d.Owner.PostJSON("/api/v1/tickets", testkit.JSON{
+			"type_id": d.types["Tracker"], "title": "Sign-in outage",
 			"link_to": []testkit.JSON{{"kind": "tracker", "conversation_id": conv}},
 		}).AssertCreated().String("data.id")
 
 		d.Owner.GetJSON("/api/v1/conversations/"+conv+"/tickets").AssertOK().
-			AssertJSONPath("data.trackers.0.id", incident)
-		d.Owner.GetJSON("/api/v1/tickets?kind=incident&active=true").AssertOK().AssertJSONPath("data.0.id", incident)
+			AssertJSONPath("data.trackers.0.id", tracker)
+		d.Owner.GetJSON("/api/v1/tickets?kind=tracker&active=true").AssertOK().AssertJSONPath("data.0.id", tracker)
 	})
 }

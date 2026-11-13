@@ -5,8 +5,7 @@
  * ticket is for, then runs oldest first through the notes the team left
  * each other and every change, with a box at the foot to add a note.
  * The header carries the reference, the title (click it to rename) and
- * the state. The details hold the state (an incident moves through its
- * stepper instead, which asks first), who holds it, priority, type,
+ * the state. The details hold the state, who holds it, priority, type,
  * fields, the customer requests it serves and the engineering work
  * behind it, each changed in place.
  */
@@ -182,30 +181,66 @@ export function Change({ event }: { event: TicketEvent }) {
   );
 }
 
-export function Timeline({
-  workspace,
-  ticket,
-  view,
-  intro = true,
-}: {
-  workspace: string;
-  ticket: Ticket;
-  view: string;
-  intro?: boolean;
-}) {
+/*
+ * LinkRun is a run of links made one after another, such as dozens of
+ * conversations joining a tracker, folded into one quiet line.
+ */
+export function LinkRun({ events }: { events: TicketEvent[] }) {
+  const first = events[0];
+  const last = events[events.length - 1];
+  if (!first || !last) {
+    return null;
+  }
+
+  return (
+    <li className="flex items-center gap-2 ps-1 text-caption-1-regular text-text-tertiary">
+      <span aria-hidden className="size-1.5 shrink-0 rounded-full bg-foreground-icon-quaternary" />
+      <span className="min-w-0 flex-1 truncate">
+        {events.length === 1 ? eventText(first) : `Linked ${events.length} tickets or conversations`}
+      </span>
+      <span className="shrink-0">{ago(last.created_at)}</span>
+    </li>
+  );
+}
+
+/*
+ * foldLinks groups each run of back-to-back links in a list, so a long
+ * history of conversations joining reads as one line. isLink says which
+ * items are links; the rest pass through.
+ */
+export function foldLinks<T>(items: T[], linkOf: (item: T) => TicketEvent | null): (T | TicketEvent[])[] {
+  const out: (T | TicketEvent[])[] = [];
+  for (const item of items) {
+    const link = linkOf(item);
+    const previous = out[out.length - 1];
+    if (link && Array.isArray(previous)) {
+      previous.push(link);
+    } else {
+      out.push(link ? [link] : item);
+    }
+  }
+
+  return out;
+}
+
+export function Timeline({ workspace, ticket, view }: { workspace: string; ticket: Ticket; view: string }) {
   const { data } = useQuery(ticketEventsQuery(workspace, ticket.id));
   const events = [...(data?.items ?? [])].sort((a, b) => a.created_at.localeCompare(b.created_at));
 
   return (
     <div className="mx-auto flex w-full max-w-[760px] flex-col gap-4 px-4 py-5">
-      {intro ? <ForLine ticket={ticket} view={view} /> : null}
-      {intro && ticket.description ? (
+      <ForLine ticket={ticket} view={view} />
+      {ticket.description ? (
         <p className="whitespace-pre-wrap text-body-regular text-text-primary">{ticket.description}</p>
       ) : null}
       <ol aria-label="Notes and history" className="flex flex-col gap-3">
-        {events.map((event) =>
-          event.kind === "note" ? <Note key={event.id} event={event} /> : <Change key={event.id} event={event} />,
-        )}
+        {foldLinks(events, (event) => (event.kind === "link" ? event : null)).map((item) => {
+          if (Array.isArray(item)) {
+            return <LinkRun key={item[0]?.id} events={item} />;
+          }
+
+          return item.kind === "note" ? <Note key={item.id} event={item} /> : <Change key={item.id} event={item} />;
+        })}
       </ol>
     </div>
   );
@@ -331,7 +366,9 @@ function Block({ label, children }: { label: string; children: React.ReactNode }
 }
 
 /*
- * TicketDetails is the column beside the thread.
+ * TicketDetails is the column beside the thread; what a kind adds, such
+ * as a tracker's customer reports, comes in after who holds it. A
+ * tracker whose type has no fields leaves the fields out.
  */
 export function TicketDetails({
   workspace,
@@ -350,11 +387,9 @@ export function TicketDetails({
   return (
     <div className="flex flex-col gap-3 px-4 pt-1 pb-4">
       <ClashPrompt save={save} />
-      {ticket.kind === "incident" ? null : (
-        <div className="flex flex-col gap-1">
-          <StatePicker ticket={ticket} states={setup.states} save={save} compact />
-        </div>
-      )}
+      <div className="flex flex-col gap-1">
+        <StatePicker ticket={ticket} states={setup.states} save={save} compact />
+      </div>
       <dl className="flex flex-col">
         <Holders workspace={workspace} ticket={ticket} save={save} />
         <Row label="Type">
@@ -366,13 +401,15 @@ export function TicketDetails({
         <Row label="Created">{ago(ticket.created_at)}</Row>
       </dl>
       {children}
-      <Block label="Fields">
-        {hasFields ? (
-          <FieldsEditor key={ticket.version} workspace={workspace} ticket={ticket} type={setup.type} save={save} />
-        ) : (
-          <Nothing>This type has no fields.</Nothing>
-        )}
-      </Block>
+      {hasFields || ticket.kind !== "tracker" ? (
+        <Block label="Fields">
+          {hasFields ? (
+            <FieldsEditor key={ticket.version} workspace={workspace} ticket={ticket} type={setup.type} save={save} />
+          ) : (
+            <Nothing>This type has no fields.</Nothing>
+          )}
+        </Block>
+      ) : null}
       <Block label="Engineering work">
         <TicketIssues ticketId={ticket.id} compact />
       </Block>

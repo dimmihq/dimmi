@@ -51,7 +51,7 @@ export interface StatesProps {
  * showsLabels says whether customers ever read the type's state labels.
  */
 function showsLabels(kind: TicketKind): boolean {
-  return kind === "customer" || kind === "incident";
+  return kind === "customer";
 }
 
 export function TypeStatesSection(props: StatesProps) {
@@ -96,7 +96,6 @@ export function TypeStatesSection(props: StatesProps) {
         <AddStateDialog
           workspace={props.workspace}
           group={open.group}
-          kind={type.kind}
           states={states}
           used={draft.state_ids}
           usedBy={usedBy}

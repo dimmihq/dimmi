@@ -16495,86 +16495,6 @@
         ],
         "type": "object"
       },
-      "IncidentSuggestion": {
-        "additionalProperties": false,
-        "properties": {
-          "area": {
-            "type": [
-              "string",
-              "null"
-            ]
-          },
-          "conversation_count": {
-            "format": "int32",
-            "type": "integer"
-          },
-          "conversation_ids": {
-            "items": {
-              "type": "string"
-            },
-            "type": [
-              "array",
-              "null"
-            ]
-          },
-          "created_at": {
-            "format": "date-time",
-            "type": "string"
-          },
-          "id": {
-            "type": "string"
-          },
-          "muted_until": {
-            "format": "date-time",
-            "type": [
-              "string",
-              "null"
-            ]
-          },
-          "object": {
-            "type": "string"
-          },
-          "status": {
-            "type": "string"
-          },
-          "summary": {
-            "type": "string"
-          },
-          "ticket_id": {
-            "type": [
-              "string",
-              "null"
-            ]
-          },
-          "title": {
-            "type": "string"
-          },
-          "updated_at": {
-            "format": "date-time",
-            "type": "string"
-          },
-          "window_minutes": {
-            "format": "int32",
-            "type": "integer"
-          }
-        },
-        "required": [
-          "object",
-          "id",
-          "title",
-          "summary",
-          "area",
-          "conversation_ids",
-          "conversation_count",
-          "window_minutes",
-          "status",
-          "muted_until",
-          "ticket_id",
-          "created_at",
-          "updated_at"
-        ],
-        "type": "object"
-      },
       "Instance": {
         "additionalProperties": false,
         "properties": {
@@ -23336,18 +23256,6 @@
         ],
         "type": "object"
       },
-      "ResourceIncidentSuggestion": {
-        "additionalProperties": false,
-        "properties": {
-          "data": {
-            "$ref": "#/components/schemas/IncidentSuggestion"
-          }
-        },
-        "required": [
-          "data"
-        ],
-        "type": "object"
-      },
       "ResourceIntegration": {
         "additionalProperties": false,
         "properties": {
@@ -23540,24 +23448,6 @@
         ],
         "type": "object"
       },
-      "ResourceListIncidentSuggestion": {
-        "additionalProperties": false,
-        "properties": {
-          "data": {
-            "items": {
-              "$ref": "#/components/schemas/IncidentSuggestion"
-            },
-            "type": [
-              "array",
-              "null"
-            ]
-          }
-        },
-        "required": [
-          "data"
-        ],
-        "type": "object"
-      },
       "ResourceListInvitationResult": {
         "additionalProperties": false,
         "properties": {
@@ -23600,24 +23490,6 @@
           "data": {
             "items": {
               "$ref": "#/components/schemas/TicketLink"
-            },
-            "type": [
-              "array",
-              "null"
-            ]
-          }
-        },
-        "required": [
-          "data"
-        ],
-        "type": "object"
-      },
-      "ResourceListTicketPublicUpdate": {
-        "additionalProperties": false,
-        "properties": {
-          "data": {
-            "items": {
-              "$ref": "#/components/schemas/TicketPublicUpdate"
             },
             "type": [
               "array",
@@ -24464,18 +24336,6 @@
         "properties": {
           "data": {
             "$ref": "#/components/schemas/TicketLink"
-          }
-        },
-        "required": [
-          "data"
-        ],
-        "type": "object"
-      },
-      "ResourceTicketPublicUpdate": {
-        "additionalProperties": false,
-        "properties": {
-          "data": {
-            "$ref": "#/components/schemas/TicketPublicUpdate"
           }
         },
         "required": [
@@ -28274,26 +28134,6 @@
         ],
         "type": "object"
       },
-      "StorePublicUpdateRequestBody": {
-        "additionalProperties": false,
-        "properties": {
-          "body": {
-            "maxLength": 2000,
-            "type": "string"
-          },
-          "send_to_linked": {
-            "type": "boolean"
-          },
-          "state_id": {
-            "maxLength": 64,
-            "type": "string"
-          }
-        },
-        "required": [
-          "body"
-        ],
-        "type": "object"
-      },
       "StorePushSubscriptionRequestBody": {
         "additionalProperties": false,
         "properties": {
@@ -30152,60 +29992,6 @@
         ],
         "type": "object"
       },
-      "TicketPublicUpdate": {
-        "additionalProperties": false,
-        "properties": {
-          "author_id": {
-            "type": [
-              "string",
-              "null"
-            ]
-          },
-          "body": {
-            "type": "string"
-          },
-          "created_at": {
-            "format": "date-time",
-            "type": "string"
-          },
-          "id": {
-            "type": "string"
-          },
-          "object": {
-            "type": "string"
-          },
-          "source": {
-            "type": "string"
-          },
-          "state_id": {
-            "type": [
-              "string",
-              "null"
-            ]
-          },
-          "ticket_id": {
-            "type": "string"
-          },
-          "update_id": {
-            "type": [
-              "string",
-              "null"
-            ]
-          }
-        },
-        "required": [
-          "object",
-          "id",
-          "ticket_id",
-          "body",
-          "state_id",
-          "update_id",
-          "author_id",
-          "source",
-          "created_at"
-        ],
-        "type": "object"
-      },
       "TicketSLAAttainment": {
         "additionalProperties": false,
         "properties": {
@@ -30268,16 +30054,11 @@
           },
           "object": {
             "type": "string"
-          },
-          "spike_threshold": {
-            "format": "int32",
-            "type": "integer"
           }
         },
         "required": [
           "object",
-          "auto_link_duplicates",
-          "spike_threshold"
+          "auto_link_duplicates"
         ],
         "type": "object"
       },
@@ -30521,8 +30302,7 @@
           },
           "kind": {
             "enum": [
-              "tracker",
-              "incident"
+              "tracker"
             ],
             "type": "string"
           },
@@ -30744,8 +30524,7 @@
             "enum": [
               "customer",
               "back_office",
-              "tracker",
-              "incident"
+              "tracker"
             ],
             "type": "string"
           },
@@ -32518,22 +32297,6 @@
         },
         "type": "object"
       },
-      "UpdateIncidentSuggestionRequestBody": {
-        "additionalProperties": false,
-        "properties": {
-          "status": {
-            "enum": [
-              "accepted",
-              "dismissed"
-            ],
-            "type": "string"
-          }
-        },
-        "required": [
-          "status"
-        ],
-        "type": "object"
-      },
       "UpdateIssueSettingsRequestBody": {
         "additionalProperties": false,
         "properties": {
@@ -33268,12 +33031,6 @@
         "properties": {
           "auto_link_duplicates": {
             "type": "boolean"
-          },
-          "spike_threshold": {
-            "format": "int32",
-            "maximum": 1000,
-            "minimum": 2,
-            "type": "integer"
           }
         },
         "type": "object"
@@ -48182,86 +47939,6 @@
         ]
       }
     },
-    "/incident-suggestions": {
-      "get": {
-        "operationId": "incident-suggestions.index",
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ResourceListIncidentSuggestion"
-                }
-              }
-            },
-            "description": "OK"
-          },
-          "default": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ResponseError"
-                }
-              }
-            },
-            "description": "Error"
-          }
-        },
-        "x-abilities": [
-          "tickets:read"
-        ]
-      }
-    },
-    "/incident-suggestions/{suggestion}": {
-      "patch": {
-        "operationId": "incident-suggestions.update",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "suggestion",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/UpdateIncidentSuggestionRequestBody"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ResourceIncidentSuggestion"
-                }
-              }
-            },
-            "description": "OK"
-          },
-          "default": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ResponseError"
-                }
-              }
-            },
-            "description": "Error"
-          }
-        },
-        "x-abilities": [
-          "tickets:write"
-        ]
-      }
-    },
     "/integration-installations/{installation}/issue-options": {
       "get": {
         "operationId": "integration-installations.issue-options.index",
@@ -57388,12 +57065,12 @@
             }
           },
           {
-            "description": "Trackers and incidents linked to it.",
+            "description": "Trackers linked to it.",
             "explode": false,
             "in": "query",
             "name": "conversation_id",
             "schema": {
-              "description": "Trackers and incidents linked to it.",
+              "description": "Trackers linked to it.",
               "maxLength": 64,
               "type": "string"
             }
@@ -58075,94 +57752,6 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ResourceTicketEvent"
-                }
-              }
-            },
-            "description": "Created"
-          },
-          "default": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ResponseError"
-                }
-              }
-            },
-            "description": "Error"
-          }
-        },
-        "x-abilities": [
-          "tickets:write"
-        ]
-      }
-    },
-    "/tickets/{ticket}/public-updates": {
-      "get": {
-        "operationId": "tickets.public-updates.index",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "ticket",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ResourceListTicketPublicUpdate"
-                }
-              }
-            },
-            "description": "OK"
-          },
-          "default": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ResponseError"
-                }
-              }
-            },
-            "description": "Error"
-          }
-        },
-        "x-abilities": [
-          "tickets:read"
-        ]
-      },
-      "post": {
-        "operationId": "tickets.public-updates.store",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "ticket",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/StorePublicUpdateRequestBody"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "201": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ResourceTicketPublicUpdate"
                 }
               }
             },

@@ -27,30 +27,25 @@ import (
 
 /*
 WorkspaceSettings are the workspace's ticket switches: whether a new
-conversation is linked to the tracker it matches without asking, and
-how many conversations about one thing in the spike window suggest an
-incident.
+conversation is linked to the tracker it matches without asking.
 */
 type WorkspaceSettings struct {
 	AutoLinkDuplicates bool `json:"auto_link_duplicates"`
-	SpikeThreshold     int32
 }
 
 /*
 readSettings reads the workspace's ticket settings.
 */
 func readSettings(ctx context.Context, q *models.Queries, ws ids.UUID) (WorkspaceSettings, error) {
-	row, err := q.FindWorkspaceTicketSettings(ctx, ws)
+	raw, err := q.FindWorkspaceTicketSettings(ctx, ws)
 	if err != nil {
 		return WorkspaceSettings{}, fmt.Errorf("read ticket settings: %w", err)
 	}
 
 	var out WorkspaceSettings
-	if len(row.TicketSettings) > 0 {
-		_ = json.Unmarshal(row.TicketSettings, &out)
+	if len(raw) > 0 {
+		_ = json.Unmarshal(raw, &out)
 	}
-
-	out.SpikeThreshold = row.IncidentSpikeThreshold
 
 	return out, nil
 }

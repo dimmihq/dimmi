@@ -513,14 +513,6 @@
       "named_only": false
     },
     {
-      "type": "ticket.public_update_posted",
-      "object": "ticket",
-      "group": "Tickets",
-      "description": "An incident posted to its public update log.",
-      "notes_opt_in": false,
-      "named_only": false
-    },
-    {
       "type": "ticket.sla_warning",
       "object": "ticket",
       "group": "Tickets",
@@ -549,14 +541,6 @@
       "object": "ticket",
       "group": "Tickets",
       "description": "A ticket came back from the trash.",
-      "notes_opt_in": false,
-      "named_only": false
-    },
-    {
-      "type": "incident.suggested",
-      "object": "incident_suggestion",
-      "group": "Tickets",
-      "description": "A spike of conversations about one thing suggests an incident.",
       "notes_opt_in": false,
       "named_only": false
     }

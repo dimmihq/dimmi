@@ -129,23 +129,6 @@ SELECT * FROM tickets WHERE workspace_id = @workspace_id AND id = ANY (@ids::uui
 SELECT * FROM tickets
 WHERE workspace_id = @workspace_id AND conversation_id = ANY (@conversation_ids::uuid[]) AND deleted_at IS NULL;
 
--- name: ListActiveIncidents :many
--- ListActiveIncidents returns the workspace's live incidents that are
--- not resolved, newest first.
-SELECT * FROM tickets
-WHERE workspace_id = @workspace_id AND kind = 'incident' AND state_group <> 'resolved' AND deleted_at IS NULL
-ORDER BY created_at DESC
-LIMIT 20;
-
--- name: ListRecentIncidents :many
--- ListRecentIncidents returns the workspace's customer-visible
--- incidents active or resolved since the time, newest first.
-SELECT * FROM tickets
-WHERE workspace_id = @workspace_id AND kind = 'incident' AND deleted_at IS NULL AND customer_visible
-  AND (state_group <> 'resolved' OR resolved_at >= @since)
-ORDER BY created_at DESC
-LIMIT 50;
-
 -- name: ListContactTickets :many
 -- ListContactTickets returns a customer's own customer-visible tickets,
 -- or those of their company when the type shares them, newest first.

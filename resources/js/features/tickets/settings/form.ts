@@ -189,16 +189,9 @@ export function withSteps(
 export const requiredGroups: StateGroup[] = ["submitted", "in_progress", "resolved"];
 
 /*
- * incidentPurposes mark the states only incidents move through.
+ * addable lists the live states of the group a type could add: those
+ * it does not use yet.
  */
-const incidentPurposes = ["incident_identified", "incident_monitoring"];
-
-/*
- * addable lists the live states of the group a type of the kind could
- * add: those it does not use yet, incident states only for incidents.
- */
-export function addable(states: TicketState[], group: StateGroup, used: string[], kind: string): TicketState[] {
-  return byGroup(states)[group].filter(
-    (s) => !used.includes(s.id) && (kind === "incident" || !incidentPurposes.includes(s.purpose ?? "")),
-  );
+export function addable(states: TicketState[], group: StateGroup, used: string[]): TicketState[] {
+  return byGroup(states)[group].filter((s) => !used.includes(s.id));
 }

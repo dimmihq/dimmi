@@ -30,7 +30,7 @@ type CountLinkedConversationsRow struct {
 }
 
 // CountLinkedConversations counts the linked conversations of each
-// tracker or incident.
+// tracker.
 func (q *Queries) CountLinkedConversations(ctx context.Context, arg CountLinkedConversationsParams) ([]CountLinkedConversationsRow, error) {
 	rows, err := q.db.Query(ctx, countLinkedConversations, arg.WorkspaceID, arg.TicketIds)
 	if err != nil {
@@ -187,8 +187,8 @@ type ListConversationLinksParams struct {
 	ConversationID *ids.UUID `json:"conversation_id"`
 }
 
-// ListConversationLinks returns the trackers and incidents the
-// conversation is linked to.
+// ListConversationLinks returns the trackers the conversation is linked
+// to.
 func (q *Queries) ListConversationLinks(ctx context.Context, arg ListConversationLinksParams) ([]TicketLink, error) {
 	rows, err := q.db.Query(ctx, listConversationLinks, arg.WorkspaceID, arg.ConversationID)
 	if err != nil {
@@ -228,7 +228,7 @@ type ListLinksOfConversationsParams struct {
 	ConversationIds []ids.UUID `json:"conversation_ids"`
 }
 
-// ListLinksOfConversations returns the tracker and incident links of the
+// ListLinksOfConversations returns the tracker links of the
 // conversations, for their rows in the inbox.
 func (q *Queries) ListLinksOfConversations(ctx context.Context, arg ListLinksOfConversationsParams) ([]TicketLink, error) {
 	rows, err := q.db.Query(ctx, listLinksOfConversations, arg.WorkspaceID, arg.ConversationIds)
@@ -425,8 +425,8 @@ type ListTrackerRecipientsRow struct {
 }
 
 // ListTrackerRecipients returns every conversation linked to a tracker
-// or incident that a mass update reaches, with when the customer and
-// the team last wrote. The system sends it, no member is asking.
+// that a mass update reaches, with when the customer and the team last
+// wrote. The system sends it, no member is asking.
 func (q *Queries) ListTrackerRecipients(ctx context.Context, arg ListTrackerRecipientsParams) ([]ListTrackerRecipientsRow, error) {
 	rows, err := q.db.Query(ctx, listTrackerRecipients, arg.WorkspaceID, arg.TicketID)
 	if err != nil {

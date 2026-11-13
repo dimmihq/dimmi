@@ -3,10 +3,9 @@
 | Ticket Webhooks
 |--------------------------------------------------------------------------
 |
-| The subscribable events of tickets, trackers and incidents. Each
-| carries the ticket as the REST API shows it, what changed from and to,
-| and who changed it. Incidents fire the same events with their kind,
-| plus their public posts and the spikes the detector suggests.
+| The subscribable events of tickets and trackers. Each carries the
+| ticket as the REST API shows it, what changed from and to, and who
+| changed it.
 |
 */
 
@@ -37,14 +36,9 @@ func ticketWebhooks() []WebhookEventType {
 			Description: "A teammate left an internal note on a ticket.",
 		},
 		t("update_sent", "A tracker's message to its linked customers finished sending."),
-		t("public_update_posted", "An incident posted to its public update log."),
 		t("sla_warning", "A ticket's service level target is about to be missed."),
 		t("sla_breached", "A ticket missed a service level target."),
 		t("deleted", "A ticket moved to the trash."),
 		t("restored", "A ticket came back from the trash."),
-		{
-			Type: "incident.suggested", Object: "incident_suggestion", Group: "Tickets",
-			Description: "A spike of conversations about one thing suggests an incident.",
-		},
 	}
 }

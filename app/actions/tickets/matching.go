@@ -4,12 +4,9 @@
 |--------------------------------------------------------------------------
 |
 | Once a customer starts a conversation, a job asks the model whether it
-| reports an incident active now or a problem an open tracker follows.
-| A match to an incident links the conversation and tells the customer
-| where it stands at once: the state's customer label and the latest
-| public post. A match to a tracker waits as a suggestion on the
-| conversation's panel, or is linked straight away when the workspace
-| turned automatic linking on.
+| reports a problem an open tracker follows. A match waits as a
+| suggestion on the conversation's panel, or is linked straight away
+| when the workspace turned automatic linking on.
 |
 */
 
@@ -19,6 +16,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
 	"strings"
 
 	"github.com/dimmihq/dimmi/framework/database"
@@ -39,6 +37,15 @@ suggested.
 const maxTrackerSuggestions = 3
 
 /*
+The statuses of a tracker suggestion.
+*/
+const (
+	SuggestionOpen      = "open"
+	SuggestionAccepted  = "accepted"
+	SuggestionDismissed = "dismissed"
+)
+
+/*
 ListenForMatches queues the match of every conversation a customer
 starts, once it is saved.
 */
@@ -56,19 +63,17 @@ func (t *Tickets) ListenForMatches(d *events.Dispatcher) {
 }
 
 /*
-matchInput is what the match reads: the conversation's words, the
-incidents active now, the open trackers and the workspace's settings.
+matchInput is what the match reads: the conversation's words, the open
+trackers and the workspace's settings.
 */
 type matchInput struct {
-	text      string
-	incidents []models.Ticket
-	trackers  []models.Ticket
-	settings  WorkspaceSettings
+	text     string
+	trackers []models.Ticket
+	settings WorkspaceSettings
 }
 
 /*
-MatchConversation matches a new conversation to an active incident and
-to open trackers.
+MatchConversation matches a new conversation to open trackers.
 */
 func (t *Tickets) MatchConversation(ctx context.Context, args jobs.MatchTicketConversationArgs) error {
 	if t.Filler == nil {
@@ -82,7 +87,7 @@ func (t *Tickets) MatchConversation(ctx context.Context, args jobs.MatchTicketCo
 		return err
 	}
 
-	return errors.Join(t.matchIncident(ctx, args, in), t.matchTrackers(ctx, args, in))
+	return t.matchTrackers(ctx, args, in)
 }
 
 /*
@@ -105,10 +110,6 @@ func (t *Tickets) readMatch(ctx context.Context, args jobs.MatchTicketConversati
 			return err
 		}
 
-		if in.incidents, err = q.ListActiveIncidents(ctx, args.WorkspaceID); err != nil {
-			return fmt.Errorf("list active incidents: %w", err)
-		}
-
 		if in.trackers, err = q.ListOpenTrackers(ctx, args.WorkspaceID); err != nil {
 			return fmt.Errorf("list open trackers: %w", err)
 		}
@@ -119,26 +120,6 @@ func (t *Tickets) readMatch(ctx context.Context, args jobs.MatchTicketConversati
 	})
 
 	return in, err
-}
-
-/*
-matchIncident links the conversation to the incident it reports and
-tells the customer the latest.
-*/
-func (t *Tickets) matchIncident(ctx context.Context, args jobs.MatchTicketConversationArgs, in matchInput) error {
-	if len(in.incidents) == 0 {
-		return nil
-	}
-
-	best, err := t.bestMatch(ctx, MatchQuestion{
-		WorkspaceID: args.WorkspaceID, ConversationID: args.ConversationID, Text: in.text,
-		Candidates: candidates(in.incidents),
-	})
-	if err != nil || best == nil {
-		return err
-	}
-
-	return t.linkAll(ctx, args.WorkspaceID, *best, []ids.UUID{args.ConversationID})
 }
 
 /*
@@ -215,61 +196,14 @@ func (w *Writer) suggestTrackers(
 }
 
 /*
-bestMatch returns the candidate the model ranks first, nil for none.
-*/
-func (t *Tickets) bestMatch(ctx context.Context, q MatchQuestion) (*ids.UUID, error) {
-	found, err := t.Filler.Match(ctx, q)
-	if err != nil {
-		return nil, fmt.Errorf("match conversation: %w", err)
-	}
-
-	known := make([]ids.UUID, len(q.Candidates))
-	for i, c := range q.Candidates {
-		known[i] = c.ID
-	}
-
-	found = keepKnown(found, known)
-	if len(found) == 0 {
-		return nil, nil
-	}
-
-	return &found[0], nil
-}
-
-/*
 candidates are the tickets as the model reads them: the title, then the
-description and the affected areas.
+description.
 */
 func candidates(list []models.Ticket) []MatchCandidate {
 	out := make([]MatchCandidate, len(list))
 
 	for i, r := range list {
-		desc := r.Description
-		if areas := areasOf(r); len(areas) > 0 {
-			desc = strings.TrimSpace(desc + " Affected areas: " + strings.Join(areas, ", ") + ".")
-		}
-
-		out[i] = MatchCandidate{ID: r.ID, Title: r.Title, Description: desc}
-	}
-
-	return out
-}
-
-/*
-areasOf reads an incident's affected areas.
-*/
-func areasOf(r models.Ticket) []string {
-	var out []string
-
-	switch v := objectOf(r.Fields)["areas"].(type) {
-	case []any:
-		for _, a := range v {
-			if s, ok := a.(string); ok {
-				out = append(out, s)
-			}
-		}
-	case string:
-		out = append(out, v)
+		out[i] = MatchCandidate{ID: r.ID, Title: r.Title, Description: r.Description}
 	}
 
 	return out
@@ -288,22 +222,7 @@ func ticketIDs(list []models.Ticket) []ids.UUID {
 }
 
 /*
-linkAll links the conversations to the incident or tracker as dimmi.
-*/
-func (t *Tickets) linkAll(ctx context.Context, ws, ticket ids.UUID, convs []ids.UUID) error {
-	return t.DB.Transaction(ctx, func(ctx context.Context, tx *database.Tx) error {
-		w, err := t.systemWriter(ctx, tx, ws)
-		if err != nil {
-			return err
-		}
-
-		return w.linkConversations(ctx, ws, ticket, convs)
-	})
-}
-
-/*
-linkConversations links each live conversation not linked yet, and
-tells each newly linked customer an incident's latest.
+linkConversations links each live conversation not linked yet.
 */
 func (w *Writer) linkConversations(ctx context.Context, ws, ticket ids.UUID, convs []ids.UUID) error {
 	locked, err := w.lockRow(ctx, ws, ticket)
@@ -320,61 +239,23 @@ func (w *Writer) linkConversations(ctx context.Context, ws, ticket ids.UUID, con
 		if err != nil {
 			return err
 		}
-
-		if locked.Kind == KindIncident {
-			if err := w.tellIncident(ctx, locked, conv); err != nil {
-				return err
-			}
-		}
 	}
 
 	return nil
 }
 
 /*
-tellIncident tells a customer whose conversation joined an incident
-where it stands: the state's customer label and the latest public
-post. A customer who cannot be reached is skipped.
+keepKnown keeps the ids of the list that are among the known ones, in
+the list's order and once each.
 */
-func (w *Writer) tellIncident(ctx context.Context, incident models.Ticket, conv ids.UUID) error {
-	if !incident.CustomerVisible {
-		return nil
+func keepKnown(list, known []ids.UUID) []ids.UUID {
+	var out []ids.UUID
+
+	for _, id := range list {
+		if slices.Contains(known, id) && !slices.Contains(out, id) {
+			out = append(out, id)
+		}
 	}
 
-	body, err := w.incidentNotice(ctx, incident)
-	if err != nil {
-		return err
-	}
-
-	key := "incident-status:" + incident.ID.String() + ":" + conv.String()
-
-	_, err = w.Owner.send(ctx, w.Writer, incident.WorkspaceID, sendInput{conversation: conv, body: body, dedupe: key})
-
-	return err
-}
-
-/*
-incidentNotice writes what a customer reads about an incident.
-*/
-func (w *Writer) incidentNotice(ctx context.Context, incident models.Ticket) (string, error) {
-	var b strings.Builder
-
-	fmt.Fprintf(&b, "**%s**", incident.Title)
-
-	if st, ok := w.Setup.State(incident.StateID); ok && st.CustomerLabel != "" {
-		fmt.Fprintf(&b, "\n\n%s", st.CustomerLabel)
-	}
-
-	latest, err := w.Q.ListLatestPublicUpdates(ctx, models.ListLatestPublicUpdatesParams{
-		WorkspaceID: incident.WorkspaceID, TicketIds: []ids.UUID{incident.ID},
-	})
-	if err != nil {
-		return "", fmt.Errorf("read latest public update: %w", err)
-	}
-
-	if len(latest) > 0 {
-		fmt.Fprintf(&b, "\n\nLatest update: %s", latest[0].Body)
-	}
-
-	return b.String(), nil
+	return out
 }

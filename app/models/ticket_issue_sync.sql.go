@@ -396,8 +396,8 @@ type TicketImpactCompaniesRow struct {
 	Revenue float64  `json:"revenue"`
 }
 
-// TicketImpactCompanies names the companies a tracker or incident
-// reaches, the largest by revenue first.
+// TicketImpactCompanies names the companies a tracker reaches, the
+// largest by revenue first.
 func (q *Queries) TicketImpactCompanies(ctx context.Context, arg TicketImpactCompaniesParams) ([]TicketImpactCompaniesRow, error) {
 	rows, err := q.db.Query(ctx, ticketImpactCompanies, arg.WorkspaceID, arg.TicketID)
 	if err != nil {

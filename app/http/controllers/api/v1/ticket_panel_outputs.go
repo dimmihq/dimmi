@@ -3,9 +3,8 @@
 | Ticket Panel Outputs
 |--------------------------------------------------------------------------
 |
-| What a conversation's ticket panel and an incident's public log read:
-| the conversation's own ticket and trackers, the AI's field values, and
-| the incident's public posts.
+| What a conversation's ticket panel reads: the conversation's own
+| ticket and trackers, and the AI's field values.
 |
 */
 
@@ -19,7 +18,7 @@ import (
 
 /*
 ConversationTicketsOutput is a conversation's own ticket and the
-trackers and incidents it joined.
+trackers it joined.
 */
 type ConversationTicketsOutput struct {
 	Body struct {
@@ -35,18 +34,4 @@ TicketSuggestionsOutput is the AI's values for a type's fields.
 */
 type TicketSuggestionsOutput struct {
 	Body fhttp.Resource[map[string]any]
-}
-
-/*
-TicketPublicUpdatesOutput is an incident's public log.
-*/
-type TicketPublicUpdatesOutput struct {
-	Body fhttp.Resource[[]resources.TicketPublicUpdate]
-}
-
-/*
-TicketPublicUpdateOutput is one post.
-*/
-type TicketPublicUpdateOutput struct {
-	Body fhttp.Resource[resources.TicketPublicUpdate]
 }

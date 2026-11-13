@@ -8,7 +8,7 @@
 | works it, the conversation, customer and company it belongs to, its
 | version for safe edits, and the issues behind it. One ticket read on
 | its own also carries its links, running service level clocks and,
-| for trackers and incidents, who they reach.
+| for trackers, who they reach.
 |
 */
 
@@ -87,7 +87,7 @@ type Ticket struct {
 }
 
 /*
-TicketImpact is who a tracker or incident reaches.
+TicketImpact is who a tracker reaches.
 */
 type TicketImpact struct {
 	Conversations int64   `json:"conversations"`

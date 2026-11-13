@@ -4,8 +4,8 @@
 |--------------------------------------------------------------------------
 |
 | A ticket read on its own comes with what its panel shows: the tickets
-| it links to, its running service level clocks and, for trackers and
-| incidents, the customers, companies and revenue they reach.
+| it links to, its running service level clocks and, for trackers, the
+| customers, companies and revenue they reach.
 |
 */
 
@@ -43,7 +43,7 @@ type LinkView struct {
 }
 
 /*
-Impact is who a tracker or incident reaches.
+Impact is who a tracker reaches.
 */
 type Impact struct {
 	Conversations int64
@@ -74,7 +74,7 @@ func detailOf(ctx context.Context, q *models.Queries, t models.Ticket, now time.
 		return d, fmt.Errorf("list ticket clocks: %w", err)
 	}
 
-	if t.Kind == KindTracker || t.Kind == KindIncident {
+	if t.Kind == KindTracker {
 		impact, err := impactOf(ctx, q, t)
 		if err != nil {
 			return d, err

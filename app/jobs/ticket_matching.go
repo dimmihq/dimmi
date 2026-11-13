@@ -4,10 +4,8 @@
 |--------------------------------------------------------------------------
 |
 | After a customer starts a conversation, the AI reads it against the
-| incidents active now and the open trackers: a match to an incident
-| links it and tells the customer the latest at once, a match to a
-| tracker is suggested to the team, or linked when the workspace says
-| so.
+| open trackers: a match is suggested to the team, or linked when the
+| workspace says so.
 |
 */
 
@@ -41,8 +39,7 @@ func (MatchTicketConversationArgs) Options() queue.Options {
 }
 
 /*
-ConversationMatcher matches a new conversation to incidents and
-trackers.
+ConversationMatcher matches a new conversation to trackers.
 */
 type ConversationMatcher interface {
 	/*

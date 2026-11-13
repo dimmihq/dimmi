@@ -73,12 +73,6 @@ const bug = {
     },
   ],
 };
-const incident = {
-  id: "tkt_9",
-  title: "Sign-in failing",
-  state: { label: "Investigating", group: "in_progress" },
-  latest_update: { body: "Fix deployed, monitoring", created_at: "2026-11-12T10:00:00Z" },
-};
 
 const settle = async (times = 6) => {
   for (let i = 0; i < times; i++) {
@@ -101,11 +95,10 @@ afterEach(() => {
 });
 
 describe("requests in the messenger", () => {
-  it("shows the request types and the status card on Home once the panel opens", async () => {
+  it("shows the request types on Home once the panel opens", async () => {
     const calls = serve({
       "GET /apps/wgt_1/config": () => ({ status: 200, body: config }),
       "GET /apps/wgt_1/ticket-types": () => ({ status: 200, body: { data: [bug] } }),
-      "GET /apps/wgt_1/incidents": () => ({ status: 200, body: { data: [incident] } }),
     });
 
     const widget = boot(win, document);
@@ -119,7 +112,7 @@ describe("requests in the messenger", () => {
     const home = shadow().querySelector('.view[data-view="home"]');
     expect(home?.textContent).toContain("Get help with");
     expect(home?.querySelector("[data-ticket-type]")?.textContent).toContain("Bug report");
-    expect(home?.querySelector(".status-card")?.textContent).toContain("Fix deployed, monitoring");
+    expect(calls.map((c) => c.key)).not.toContain("GET /apps/wgt_1/incidents");
   });
 
   it("checks the required fields, then sends the form once with its client id", async () => {
@@ -127,7 +120,6 @@ describe("requests in the messenger", () => {
     serve({
       "GET /apps/wgt_1/config": () => ({ status: 200, body: config }),
       "GET /apps/wgt_1/ticket-types": () => ({ status: 200, body: { data: [bug] } }),
-      "GET /apps/wgt_1/incidents": () => ({ status: 200, body: { data: [] } }),
       "POST /sessions": () => ({
         status: 201,
         body: { data: { id: "wss_1", token: "dmi_ws_1", kind: "anonymous", contact: { id: "ctc_1" } } },

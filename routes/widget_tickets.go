@@ -3,9 +3,9 @@
 | Widget Ticket Routes
 |--------------------------------------------------------------------------
 |
-| The messenger's requests and status card. The types a visitor may
-| open and the active incidents read without a session too, under the
-| app's own address, so Home shows them before the visitor writes.
+| The messenger's requests. The types a visitor may open read without
+| a session too, under the app's own address, so Home shows them before
+| the visitor writes.
 | Opening a request, and reading one's own, needs the session; replies
 | go through the conversation's message routes.
 |
@@ -30,10 +30,8 @@ func widgetAppTicketRoutes(public *routing.Router, a *app.App) {
 	}
 
 	types := widgetTickets(a)
-	incidents := &widget.IncidentController{Tickets: a.Actions.Tickets}
 
 	routing.Get(public, "/apps/{app}/ticket-types", "widget.apps.ticket-types.index", types.Types)
-	routing.Get(public, "/apps/{app}/incidents", "widget.apps.incidents.index", incidents.Index)
 }
 
 /*
@@ -45,13 +43,11 @@ func widgetTicketRoutes(visitor *routing.Router, a *app.App) {
 	}
 
 	c := widgetTickets(a)
-	incidents := &widget.IncidentController{Tickets: a.Actions.Tickets}
 
 	routing.Get(visitor, "/ticket-types", "widget.ticket-types.index", c.Types)
 	routing.Get(visitor, "/tickets", "widget.tickets.index", c.Index)
 	routing.Post(visitor, "/tickets", "widget.tickets.store", c.Store).Middleware("idempotent")
 	routing.Get(visitor, "/tickets/{ticket}", "widget.tickets.show", c.Show)
-	routing.Get(visitor, "/incidents", "widget.incidents.index", incidents.Index)
 }
 
 /*

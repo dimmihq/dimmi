@@ -3,8 +3,7 @@
  * customer's request opens its conversation, where its replies and its
  * ticket panel live. Back-office work opens the conversation of the
  * customer request it serves, where it shows in that ticket panel.
- * Trackers and incidents, which many conversations share, open their
- * own views. A back-office ticket made without a customer request opens
+ * Trackers, which many conversations share, open their own view. A back-office ticket made without a customer request opens
  * as a thread of its notes beside its details.
  */
 import { RiCoupon3Line } from "@remixicon/react";
@@ -15,7 +14,6 @@ import { useAccount } from "@/features/settings/use-account";
 import { EmptyState, Panel } from "@/features/shell/page";
 import { type Ticket, ticketQuery } from "@/lib/api/tickets";
 
-import { IncidentPage } from "./incident-page";
 import { TicketThread } from "./ticket-thread";
 import { TrackerPage } from "./tracker-page";
 
@@ -48,9 +46,6 @@ export function TicketOpen({ view, id }: { view: string; id: string }) {
   }
   if (ticket.kind === "tracker") {
     return <TrackerPage key={ticket.id} ticketId={ticket.id} />;
-  }
-  if (ticket.kind === "incident") {
-    return <IncidentPage key={ticket.id} ticketId={ticket.id} />;
   }
 
   return <BackOffice view={view} ticket={ticket} />;

@@ -1,13 +1,12 @@
 /*
- * What the messenger draws for requests: Home's "Get help with" cards and
- * the status card, the form of a request type, the filter of open
- * requests, and the strip above a request's thread from submitted to
- * resolved. Words come from the messenger's texts, English when an older
+ * What the messenger draws for requests: Home's "Get help with" cards,
+ * the form of a request type, the filter of open requests, and the strip
+ * above a request's thread from submitted to resolved. Words come from the messenger's texts, English when an older
  * config lacks them.
  */
 import type { Child } from "widget-jsx/jsx-runtime";
 
-import type { Incident, TicketBlock, TicketField, TicketType } from "../content";
+import type { TicketBlock, TicketField, TicketType } from "../content";
 import { type Words, word } from "../lib/ticket_words";
 import { ArrowUpIcon, BackIcon, ChevronRightIcon } from "./icons";
 
@@ -25,24 +24,12 @@ function TypeIcon({ icon }: { icon: string }) {
 }
 
 /*
- * HomeCards are the request types the visitor may open and, above them,
- * a card for each incident under way. They are cards in Home's list, not
- * banners over the messenger.
+ * HomeCards are the request types the visitor may open, a section in
+ * Home's list.
  */
-export function HomeCards({ types, incidents, texts }: { types: TicketType[]; incidents: Incident[]; texts: Words }) {
+export function HomeCards({ types, texts }: { types: TicketType[]; texts: Words }) {
   return (
     <>
-      {incidents.map((incident) => (
-        <section className="card status-card" key={incident.id} data-group={incident.state.group}>
-          <header>
-            <b className="status-dot" />
-            <small>{word(texts, "status_title")}</small>
-            <span className="pill">{incident.state.label}</span>
-          </header>
-          <strong>{incident.title}</strong>
-          {incident.latest_update ? <p>{incident.latest_update.body}</p> : null}
-        </section>
-      ))}
       {types.length > 0 && (
         <section className="section">
           <header className="section-head">

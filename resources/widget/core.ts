@@ -157,12 +157,12 @@ export function boot(win: Window & DimmiWindow, doc: Document): Widget | undefin
   };
 
   /*
-   * drawTickets asks for the requests chunk once there is a request type,
-   * an incident or a request to show, and puts an open form back.
+   * drawTickets asks for the requests chunk once there is a request type
+   * or a request to show, and puts an open form back.
    */
   const drawTickets = (tab: string) => {
     const shown = live ? live.content() : sample;
-    const wanted = shown.ticket_types?.length || shown.incidents?.length || shown.conversations.some((c) => c.ticket);
+    const wanted = shown.ticket_types?.length || shown.conversations.some((c) => c.ticket);
     if (!tickets() && wanted) {
       void loadTickets(root).then(() => {
         draw();
@@ -366,6 +366,17 @@ export function boot(win: Window & DimmiWindow, doc: Document): Widget | undefin
     return true;
   };
 
+  /*
+   * previewClick shows a request's progress strip when a preview opens a
+   * sample conversation that carries one.
+   */
+  const previewClick = (target: Element | null) => {
+    const strip = tickets()?.Strip;
+    if (preview && strip) {
+      preview.strip(root, sample, target, strip, options.texts);
+    }
+  };
+
   const listen = () => {
     root.addEventListener("dimmi:connect", () => app.connect(root));
     root.addEventListener("dimmi:converse", (event) => {
@@ -394,10 +405,7 @@ export function boot(win: Window & DimmiWindow, doc: Document): Widget | undefin
         live?.readChangelog();
       }
       rateClick(live, target);
-      const strip = tickets()?.Strip;
-      if (preview && strip) {
-        preview.strip(root, sample, target, strip, options.texts);
-      }
+      previewClick(target);
       const kind = target?.closest<HTMLElement>("[data-ai]")?.dataset.ai;
       if (kind === "helped" || kind === "handoff") {
         void live?.aiAction(kind);

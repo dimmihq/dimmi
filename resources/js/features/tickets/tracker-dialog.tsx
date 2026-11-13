@@ -2,8 +2,6 @@
  * Joining a conversation to the work many customers share. Add to
  * tracker searches the open trackers by title or reference and links
  * the conversation to the one picked, or starts a new tracker with it.
- * Declare incident opens an incident from the conversation, linked to
- * it at once, so the team can reach everyone it affects.
  */
 import { RiSearchLine } from "@remixicon/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -14,7 +12,6 @@ import { Input } from "@/components/base/input/input";
 import { Modal, ModalBody, ModalFooter, ModalHeader } from "@/components/base/modal/modal";
 import { RadioGroup } from "@/components/base/radio/radio";
 import { RadioCard } from "@/components/base/radio/radio-card";
-import { Textarea } from "@/components/base/textarea/textarea";
 import { toast } from "@/components/base/toast/toast";
 import { Resize, Swap } from "@/features/inbox/motion";
 import {
@@ -29,7 +26,7 @@ import {
 import { typeIcon } from "./labels";
 
 /*
- * useNewLinked starts a tracker or incident linked to the conversation.
+ * useNewLinked starts a tracker linked to the conversation.
  */
 function useNewLinked(workspace: string, conversation: string, onDone: () => void) {
   const client = useQueryClient();
@@ -177,74 +174,6 @@ export function TrackerDialog({
             </Button>
           </>
         )}
-      </ModalFooter>
-    </Modal>
-  );
-}
-
-export function IncidentDialog({
-  workspace,
-  conversation,
-  onClose,
-}: {
-  workspace: string;
-  conversation: string;
-  onClose: () => void;
-}) {
-  const types = useTypesOf(workspace, "incident");
-  const [typeId, setTypeId] = useState<string | null>(null);
-  const chosen = types.find((t) => t.id === (typeId ?? types[0]?.id));
-  const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
-  const declare = useNewLinked(workspace, conversation, onClose);
-
-  return (
-    <Modal size="md" isOpen onOpenChange={(open) => (open ? undefined : onClose())}>
-      <ModalHeader
-        title="Declare incident"
-        description="Opens an incident with this conversation on it. Matching conversations can join it as they come."
-      />
-      <ModalBody className="flex flex-col gap-4 pb-4">
-        {types.length > 1 ? (
-          <RadioGroup
-            aria-label="Incident type"
-            value={chosen?.id ?? null}
-            onChange={setTypeId}
-            className="flex flex-col gap-2"
-          >
-            {types.map((t) => (
-              <RadioCard key={t.id} value={t.id} title={t.name} icon={typeIcon(t.icon, t.kind)} />
-            ))}
-          </RadioGroup>
-        ) : null}
-        <Input
-          label="What is broken"
-          placeholder="Sign-in fails for some customers"
-          size="small"
-          value={title}
-          onChange={setTitle}
-          maxLength={200}
-          isRequired
-          autoFocus
-        />
-        <Textarea label="What we know" rows={3} value={description} onChange={setDescription} />
-      </ModalBody>
-      <ModalFooter>
-        <Button variant="secondary" size="small" onClick={onClose}>
-          Cancel
-        </Button>
-        <Button
-          size="small"
-          variant="danger"
-          loading={declare.isPending}
-          disabled={!chosen || title.trim() === ""}
-          onClick={() =>
-            chosen &&
-            declare.mutate({ type: chosen.id, title: title.trim(), description: description.trim() || undefined })
-          }
-        >
-          Declare incident
-        </Button>
       </ModalFooter>
     </Modal>
   );

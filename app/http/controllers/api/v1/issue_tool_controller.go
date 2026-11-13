@@ -266,10 +266,8 @@ UpdateTicketSettings changes the workspace's ticket switches.
 */
 func (c *IssueToolController) UpdateTicketSettings(ctx context.Context, in *requests.UpdateTicketSettingsRequest,
 ) (*TicketSettingsOutput, error) {
-	b := in.Body
-
 	s, err := c.Issues.UpdateWorkspaceSettings(ctx, membership(ctx), issues.TicketSettingsChange{
-		AutoLinkDuplicates: b.AutoLinkDuplicates, SpikeThreshold: b.SpikeThreshold,
+		AutoLinkDuplicates: in.Body.AutoLinkDuplicates,
 	})
 	if err != nil {
 		return nil, err

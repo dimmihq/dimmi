@@ -7,8 +7,8 @@
 | team, company, customer, number, external id, any field value, the
 | status of a linked issue, created and resolved ranges and text, newest
 | first behind a cursor. One ticket comes with what the panel shows
-| beside it: its links, issues, service level clocks and, for trackers
-| and incidents, who they reach.
+| beside it: its links, issues, service level clocks and, for trackers,
+| who they reach.
 |
 */
 
@@ -75,7 +75,7 @@ type Page struct {
 
 /*
 Summary is a ticket as a list shows it: its type and state, and for
-trackers and incidents how many conversations link to it.
+trackers how many conversations link to it.
 */
 type Summary struct {
 	Ticket models.Ticket

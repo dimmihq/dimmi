@@ -50,7 +50,6 @@ export function Home({ options, content }: { options: Options; content: Content 
         </button>
         {tickets()?.HomeCards({
           types: content.ticket_types ?? [],
-          incidents: content.incidents ?? [],
           texts: options.texts,
         }) ?? null}
         <Loadable

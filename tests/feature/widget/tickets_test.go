@@ -88,12 +88,11 @@ func TestWidgetTicketTypes(t *testing.T) {
 		assert.NotEmpty(t, res.String("data.1.states.0.label"))
 	})
 
-	t.Run("reads the types and active incidents without a session", func(t *testing.T) {
+	t.Run("reads the types without a session", func(t *testing.T) {
 		t.Parallel()
 		tc := tests.New(t)
 
 		tc.Client().GetJSON("/widget/v1/apps/"+appID(t, tc)+"/ticket-types").AssertOK().AssertJSONPath("data.#", 2)
-		tc.Client().GetJSON("/widget/v1/apps/"+appID(t, tc)+"/incidents").AssertOK().AssertJSONPath("data.#", 0)
 	})
 }
 
@@ -227,28 +226,5 @@ func TestWidgetCompanyTickets(t *testing.T) {
 		res.AssertJSONPath("data.#", 1)
 		res.AssertJSONPath("data.0.mine", false)
 		bo.client().GetJSON("/widget/v1/tickets").AssertOK().AssertJSONPath("data.#", 0)
-	})
-}
-
-func TestWidgetIncidents(t *testing.T) {
-	t.Parallel()
-
-	t.Run("lists active incidents with the latest public update for the status card", func(t *testing.T) {
-		t.Parallel()
-		tc := tests.New(t)
-		v := startVisitor(t, tc)
-		id := owner(tc).PostJSON("/api/v1/tickets", testkit.JSON{
-			"type_id": ticketTypes(t, tc)["Incident"], "title": "Sign-in failing",
-			"fields": testkit.JSON{"severity": "major", "areas": []string{"Sign-in"}},
-		}).AssertCreated().String("data.id")
-		owner(tc).PostJSON("/api/v1/tickets/"+id+"/public-updates", testkit.JSON{"body": "Fix deployed, monitoring"}).
-			AssertCreated()
-
-		res := v.client().GetJSON("/widget/v1/incidents").AssertOK()
-		res.AssertJSONPath("data.#", 1)
-		res.AssertJSONPath("data.0.title", "Sign-in failing")
-		res.AssertJSONPath("data.0.severity", "major")
-		res.AssertJSONPath("data.0.latest_update.body", "Fix deployed, monitoring")
-		assert.NotEmpty(t, res.String("data.0.state.label"))
 	})
 }

@@ -537,7 +537,7 @@ FROM tickets t
 LEFT JOIN ticket_links l ON l.from_ticket_id = t.id AND l.conversation_id IS NOT NULL
 LEFT JOIN conversations c ON c.id = l.conversation_id AND c.deleted_at IS NULL
 LEFT JOIN contacts ct ON ct.id = c.contact_id
-WHERE t.workspace_id = $3 AND t.kind IN ('tracker', 'incident') AND t.deleted_at IS NULL
+WHERE t.workspace_id = $3 AND t.kind = 'tracker' AND t.deleted_at IS NULL
   AND (t.state_group <> 'resolved' OR t.resolved_at >= $1 OR t.created_at >= $1)
   AND t.created_at < $2
   AND dimmi_conversation_visible(
@@ -576,10 +576,9 @@ type ListReportTrackersRow struct {
 	Revenue       float64   `json:"revenue"`
 }
 
-// ListReportTrackers ranks the trackers and incidents the member may
-// see by what they reach: linked conversations, those linked in the
-// range, distinct customers and companies, and the companies' monthly
-// revenue.
+// ListReportTrackers ranks the trackers the member may see by what they
+// reach: linked conversations, those linked in the range, distinct
+// customers and companies, and the companies' monthly revenue.
 func (q *Queries) ListReportTrackers(ctx context.Context, arg ListReportTrackersParams) ([]ListReportTrackersRow, error) {
 	rows, err := q.db.Query(ctx, listReportTrackers,
 		arg.RangeFrom,

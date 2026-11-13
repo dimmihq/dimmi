@@ -1,12 +1,12 @@
 /*
  * A ticket view of the inbox: the open tickets of a type, of every type,
- * waiting on another team, or the open trackers and incidents, newest
- * change first. Each row shows the reference, the type's icon, the
- * title, the state as a pill in its group's colour, who holds it and how
- * many conversations it links. A customer ticket opens its conversation
- * beside the list, since its replies live there; back-office work,
- * trackers and incidents open their own ticket page. Search and filters
- * narrow the view; a page of fifty loads at a time.
+ * waiting on another team, or the open trackers, newest change first.
+ * Each row shows the reference, the type's icon, the title, the state as
+ * a pill in its group's colour, who holds it and how many conversations
+ * it links. A customer ticket opens its conversation beside the list,
+ * since its replies live there; back-office work and trackers open their
+ * own ticket page. Search and filters narrow the view; a page of fifty
+ * loads at a time.
  */
 import { RiCoupon3Line, RiLinksLine, RiSearchLine } from "@remixicon/react";
 import { useQuery } from "@tanstack/react-query";

@@ -209,12 +209,9 @@ WHERE workspace_id = @workspace_id AND id = @id;
 SELECT ticket_type_id FROM inboxes WHERE workspace_id = @workspace_id AND id = @id;
 
 -- name: FindWorkspaceTicketSettings :one
--- FindWorkspaceTicketSettings returns the workspace's ticket settings
--- and spike threshold.
-SELECT ticket_settings, incident_spike_threshold FROM workspaces WHERE id = @workspace_id;
+-- FindWorkspaceTicketSettings returns the workspace's ticket settings.
+SELECT ticket_settings FROM workspaces WHERE id = @workspace_id;
 
 -- name: SaveWorkspaceTicketSettings :exec
--- SaveWorkspaceTicketSettings stores the workspace's ticket settings and
--- spike threshold.
-UPDATE workspaces SET ticket_settings = @ticket_settings, incident_spike_threshold = @incident_spike_threshold
-WHERE id = @workspace_id;
+-- SaveWorkspaceTicketSettings stores the workspace's ticket settings.
+UPDATE workspaces SET ticket_settings = @ticket_settings WHERE id = @workspace_id;

@@ -26,7 +26,7 @@ type TicketsRequest struct {
 	TeamID         string `query:"team_id"         maxLength:"64"`
 	CompanyID      string `query:"company_id"      maxLength:"64"`
 	ContactID      string `query:"contact_id"      maxLength:"64"`
-	ConversationID string `query:"conversation_id" maxLength:"64"  doc:"Trackers and incidents linked to it."`
+	ConversationID string `query:"conversation_id" maxLength:"64"  doc:"Trackers linked to it."`
 	Number         string `query:"number"          maxLength:"24"  doc:"A reference such as T-482."`
 	ExternalID     string `query:"external_id"     maxLength:"255"`
 	Priority       string `query:"priority"        enum:"none,low,medium,high,urgent"`
