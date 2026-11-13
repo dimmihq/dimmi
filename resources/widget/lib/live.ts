@@ -1176,7 +1176,10 @@ export class Live {
     const messages = this.content().thread.map((m) => this.withDecision(m));
     const typing = open ? this.store.typingIn(open) : undefined;
     const last = messages.at(-1);
-    const parts = [this.statusLine(), String(t.Thread({ messages, texts: this.actionTexts() }))];
+    const parts = [
+      this.statusLine(),
+      String(t.Thread({ messages, texts: this.actionTexts(), team: this.content().company })),
+    ];
     const ticket = this.store.conversations.find((c) => c.id === open)?.ticket;
     const strip = tickets()?.Strip;
     if (ticket && strip) {

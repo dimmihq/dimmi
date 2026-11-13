@@ -331,12 +331,69 @@ export function when(at: string, now: number): string {
   if (Number.isNaN(time.getTime())) {
     return "";
   }
+  const since = Math.max(0, now - time.getTime());
+  const ago = howLongAgo(since);
+  if (ago) {
+    return ago;
+  }
   const today = new Date(now);
   if (time.toDateString() === today.toDateString()) {
     return time.toLocaleTimeString(reading.locale, { hour: "2-digit", minute: "2-digit", hourCycle: "h23" });
   }
 
   return time.toLocaleDateString(reading.locale, { month: "short", day: "numeric" });
+}
+
+const minute = 60_000;
+const hour = 60 * minute;
+
+/*
+ * recent is how far back a time is still read as a distance from now.
+ * Beyond it a clock time or a date places a message better than a
+ * growing count of hours does.
+ */
+const recent = 6 * hour;
+
+/*
+ * howLongAgo writes a time near enough to now as the distance from it,
+ * the way a reader thinks of it: now, a few minutes, a few hours. Older
+ * than a day is a clock time or a date, which is easier to place than
+ * "17 days ago". It is nothing when the time is too old for this, and
+ * nothing where the browser cannot write the words.
+ */
+function howLongAgo(since: number): string {
+  const rtf = relative();
+  if (!rtf || since >= recent) {
+    return "";
+  }
+  if (since < minute) {
+    return rtf.format(0, "second");
+  }
+  if (since < hour) {
+    return rtf.format(-Math.floor(since / minute), "minute");
+  }
+
+  return rtf.format(-Math.floor(since / hour), "hour");
+}
+
+/*
+ * relative is the visitor's way of saying how long ago something was,
+ * made once per language.
+ */
+let relativeFor: { locale?: string; rtf?: Intl.RelativeTimeFormat } = {};
+
+function relative(): Intl.RelativeTimeFormat | undefined {
+  if (typeof Intl?.RelativeTimeFormat !== "function") {
+    return undefined;
+  }
+  if (relativeFor.locale !== reading.locale) {
+    relativeFor = {
+      locale: reading.locale,
+      rtf: new Intl.RelativeTimeFormat(reading.locale, { numeric: "auto", style: "long" }),
+    };
+  }
+
+  return relativeFor.rtf;
 }
 
 /*

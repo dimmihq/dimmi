@@ -13,7 +13,7 @@ import { raw } from "widget-jsx/jsx-runtime";
 
 import type { ActionCard, Attachment, Message, Source } from "../content";
 import { markdown } from "../lib/markdown";
-import { type ActionTexts, actionTexts, initials } from "../text";
+import { type ActionTexts, actionTexts } from "../text";
 import {
   BookIcon,
   CheckIcon,
@@ -23,7 +23,6 @@ import {
   DownloadIcon,
   FileIcon,
   ImageIcon,
-  Mark,
   PauseIcon,
   PersonIcon,
   PlayIcon,
@@ -403,27 +402,28 @@ function Bubble({ message, texts }: { message: Message; texts: ActionTexts }) {
   );
 }
 
-function Who({ message }: { message: Message }) {
-  const agent = message.from === "agent";
+function Byline({ who, when, team }: { who: Message; when: string; team?: string }) {
+  const agent = who.from === "agent";
+  const name = who.from === "visitor" ? "" : (who.author ?? team ?? "");
 
   return (
-    <div className="who">
-      <span className="face">
-        {agent && message.avatar ? (
-          <img src={message.avatar} alt="" />
-        ) : agent ? (
-          <Mark />
-        ) : (
-          initials(message.author ?? "")
-        )}
-      </span>
-      <span>{message.author}</span>
-      {agent ? <em className="badge">AI</em> : null}
-    </div>
+    <p className="byline">
+      {name ? <span>{name}</span> : null}
+      {agent ? <span>AI</span> : null}
+      {when ? <time>{when}</time> : null}
+    </p>
   );
 }
 
-export function Said({ messages, texts = actionTexts }: { messages: Message[]; texts?: ActionTexts }) {
+export function Said({
+  messages,
+  texts = actionTexts,
+  team,
+}: {
+  messages: Message[];
+  texts?: ActionTexts;
+  team?: string;
+}) {
   const [first] = messages;
   const last = messages.at(-1);
   if (!first || !last) {
@@ -432,13 +432,12 @@ export function Said({ messages, texts = actionTexts }: { messages: Message[]; t
 
   return (
     <div className="said" data-from={first.from} data-key={`said:${keyOf(first)}`}>
-      {first.from !== "visitor" && <Who message={first} />}
       <div className="bubbles">
         {messages.map((message) => (
           <Bubble message={message} texts={texts} key={`${message.at}-${message.body ?? message.attachment?.name}`} />
         ))}
       </div>
-      <time>{last.at}</time>
+      <Byline who={first} when={last.at} team={team} />
     </div>
   );
 }
@@ -461,13 +460,21 @@ function runs(messages: Message[]): Message[][] {
   return grouped;
 }
 
-export function Thread({ messages, texts = actionTexts }: { messages: Message[]; texts?: ActionTexts }) {
+export function Thread({
+  messages,
+  texts = actionTexts,
+  team,
+}: {
+  messages: Message[];
+  texts?: ActionTexts;
+  team?: string;
+}) {
   const last = messages.at(-1);
 
   return (
     <>
       {runs(messages).map((run) => (
-        <Said messages={run} texts={texts} key={`${run[0]?.at}-${run[0]?.from}-${run.length}`} />
+        <Said messages={run} texts={texts} team={team} key={`${run[0]?.at}-${run[0]?.from}-${run.length}`} />
       ))}
       {last ? <Choices message={last} /> : null}
     </>

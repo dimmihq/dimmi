@@ -116,8 +116,11 @@ describe("the messenger's language", () => {
     await settle();
 
     const now = Date.parse("2026-03-04T12:00:00");
-    expect(when("2026-03-04T09:05:00", now)).toBe(
-      new Date("2026-03-04T09:05:00").toLocaleTimeString("ar", {
+    expect(when("2026-03-04T11:48:00", now)).toBe(
+      new Intl.RelativeTimeFormat("ar", { numeric: "auto", style: "long" }).format(-12, "minute"),
+    );
+    expect(when("2026-03-04T03:05:00", now)).toBe(
+      new Date("2026-03-04T03:05:00").toLocaleTimeString("ar", {
         hour: "2-digit",
         minute: "2-digit",
         hourCycle: "h23",

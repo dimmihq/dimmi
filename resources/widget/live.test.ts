@@ -526,7 +526,7 @@ describe("a connected messenger", () => {
     }
 
     const thread = root.querySelector(".thread") as HTMLElement;
-    expect(thread.querySelector(".who")?.textContent).toContain("AI");
+    expect(thread.querySelector(".byline")?.textContent).toContain("AI");
     const link = thread.querySelector<HTMLAnchorElement>("a.source");
     expect(link?.href).toBe("https://help.shop.example/invoices");
     expect(link?.target).toBe("_blank");

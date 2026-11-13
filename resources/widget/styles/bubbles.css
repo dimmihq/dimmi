@@ -6,9 +6,26 @@
 .said {
   display: grid;
   justify-items: start;
-  gap: 4px;
-  max-inline-size: 82%;
-  animation: enter 220ms var(--out);
+  gap: 2px;
+  max-inline-size: 85%;
+  animation: say 320ms var(--out);
+}
+
+/*
+ * A message arrives the way one is spoken: it rises a little, settles
+ * and is there. Reduced motion keeps the fade and drops the movement.
+ */
+@keyframes say {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.97);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .said {
+    animation: enter 160ms linear;
+  }
 }
 
 .said[data-from="visitor"] {
@@ -16,21 +33,25 @@
   justify-items: end;
 }
 
-.who {
+/*
+ * Who spoke and when, as one quiet line under what they said, in the
+ * order a reader takes it: the name, that it was the agent, the time.
+ */
+.byline {
   display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-block-end: 2px;
-  color: var(--text-secondary);
+  flex-wrap: wrap;
+  gap: 5px;
+  margin: 2px 0 0;
+  padding-inline: 4px;
+  color: var(--text-tertiary);
   font-size: 12px;
-  font-weight: 500;
   line-height: 16px;
+  animation: enter 320ms var(--out) 120ms backwards;
 }
 
-.who .badge {
-  margin: 0;
-  padding: 0 6px;
-  font-size: 10px;
+.byline > * + *::before {
+  content: "·";
+  margin-inline-end: 5px;
 }
 
 .bubbles {
@@ -47,9 +68,10 @@
 
 .bubble {
   max-inline-size: 100%;
-  padding: 10px 14px;
-  border-radius: 18px;
-  background: var(--bg-tertiary);
+  padding: 12px 16px;
+  border-radius: 20px;
+  background: light-dark(var(--bg-secondary), var(--bg-tertiary));
+  line-height: 20px;
   overflow-wrap: anywhere;
   white-space: pre-wrap;
 }
@@ -60,15 +82,11 @@
 }
 
 [data-from="visitor"] .bubbles > :last-child {
-  border-end-end-radius: 6px;
+  border-end-end-radius: 8px;
 }
 
 .said:not([data-from="visitor"]) .bubbles > :last-child {
-  border-end-start-radius: 6px;
-}
-
-.said > time {
-  padding-inline: 4px;
+  border-end-start-radius: 8px;
 }
 
 .sources {
