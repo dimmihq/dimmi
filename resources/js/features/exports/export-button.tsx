@@ -78,7 +78,7 @@ export function ExportButton({
         <Button
           iconOnly
           size="xs"
-          variant="ghost"
+          variant="secondary"
           leadingIcon={RiDownload2Line}
           aria-label={`Export ${kind === "contacts" ? "customers" : "conversations"}`}
           onClick={() => setOpen(true)}

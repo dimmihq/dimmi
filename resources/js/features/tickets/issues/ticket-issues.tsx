@@ -9,9 +9,9 @@
 import { RiAddLine, RiErrorWarningLine, RiExternalLinkLine, RiLinkUnlinkM } from "@remixicon/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-
 import { Chip } from "@/components/base/badges/chip";
 import { Button } from "@/components/base/buttons/button";
+import { IconButton } from "@/components/base/buttons/icon-button";
 import { AlertDialog } from "@/components/base/modal/modal";
 import { toast } from "@/components/base/toast/toast";
 import { useAccount } from "@/features/settings/use-account";
@@ -44,14 +44,7 @@ function IssueRow({ issue, compact, onUnlink }: { issue: TicketIssue; compact: b
         <Chip variant="caption" color={groupTint[issue.status_group] ?? "gray"}>
           {issue.status || issue.status_group}
         </Chip>
-        <Button
-          variant="ghost"
-          size="small"
-          iconOnly
-          leadingIcon={RiLinkUnlinkM}
-          aria-label={`Unlink ${issue.key}`}
-          onClick={onUnlink}
-        />
+        <IconButton size="small" icon={RiLinkUnlinkM} aria-label={`Unlink ${issue.key}`} onClick={onUnlink} />
       </div>
       {problem ? (
         <p className="flex items-start gap-1.5 text-caption-1-regular text-text-error-primary">

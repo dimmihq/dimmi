@@ -25,7 +25,7 @@ export function DraftConflict({ draft }: { draft: DraftState }) {
       <Button size="xs" variant="secondary" onClick={draft.takeTheirs}>
         Use
       </Button>
-      <Button size="xs" variant="ghost" onClick={draft.keepMine}>
+      <Button size="xs" variant="secondary" onClick={draft.keepMine}>
         Keep
       </Button>
     </div>

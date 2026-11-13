@@ -18,9 +18,8 @@ import {
 } from "@remixicon/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-
-import { Button } from "@/components/base/buttons/button";
 import { IconButton } from "@/components/base/buttons/icon-button";
+import { LinkButton } from "@/components/base/buttons/link-button";
 import { Dropdown, DropdownItem, DropdownPopover, DropdownTrigger } from "@/components/base/dropdown/dropdown";
 import { toast } from "@/components/base/toast/toast";
 import { type RowAction, RowMenu } from "@/features/shell/row-menu";
@@ -139,9 +138,9 @@ export function BulkBar({
           {selection.count} selected
         </span>
         {selection.count < loaded ? (
-          <Button size="xs" variant="ghost" onClick={selection.selectAll}>
+          <LinkButton size="xs" variant="primary" onClick={selection.selectAll}>
             Select all {loaded}
-          </Button>
+          </LinkButton>
         ) : null}
         <span className="flex-1" />
         <IconButton size="small" icon={RiCloseLine} aria-label="Clear selection" onClick={selection.clear} />

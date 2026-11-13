@@ -9,9 +9,9 @@
  */
 import { RiAddLine, RiDeleteBinLine, RiQuillPenLine } from "@remixicon/react";
 import { useNavigate } from "@tanstack/react-router";
-
 import { Button } from "@/components/base/buttons/button";
 import { IconButton } from "@/components/base/buttons/icon-button";
+import { LinkButton } from "@/components/base/buttons/link-button";
 import { useEvents, useTopics } from "@/features/broadcasts/sources";
 import { Row, Section } from "@/features/settings/layout";
 import type { NodeSettings, SeriesNode, SeriesSpec } from "@/lib/api/series";
@@ -440,14 +440,14 @@ function AIPathStep({ node, spec, editable, set }: StepProps) {
               />
               {editable && paths.length > 2 ? (
                 <span>
-                  <Button
+                  <LinkButton
                     size="xs"
-                    variant="ghost"
+                    variant="secondary"
                     leadingIcon={RiDeleteBinLine}
                     onClick={() => setPaths(paths.filter((_, j) => j !== i))}
                   >
                     Remove path
-                  </Button>
+                  </LinkButton>
                 </span>
               ) : null}
             </Field>

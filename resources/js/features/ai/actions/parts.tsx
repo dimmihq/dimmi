@@ -7,9 +7,9 @@
  */
 import { RiAddLine, RiCloseLine } from "@remixicon/react";
 import type { ReactNode } from "react";
-
 import { Chip } from "@/components/base/badges/chip";
 import { Button } from "@/components/base/buttons/button";
+import { IconButton } from "@/components/base/buttons/icon-button";
 import { Input } from "@/components/base/input/input";
 import { SegmentedControl, SegmentedControlItem } from "@/components/base/segmented-control/segmented-control";
 import { KindMark } from "@/features/automation/parts";
@@ -135,10 +135,9 @@ export function PairRows({
             inputDir="ltr"
             className="min-w-0 flex-1"
           />
-          <Button
-            variant="ghost"
+          <IconButton
             size="small"
-            leadingIcon={RiCloseLine}
+            icon={RiCloseLine}
             aria-label={`Remove ${label.toLowerCase()} ${index + 1}`}
             onClick={() => onChange(rows.filter((other) => other.key !== row.key))}
             disabled={disabled}

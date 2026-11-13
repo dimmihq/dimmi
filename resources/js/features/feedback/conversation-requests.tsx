@@ -9,9 +9,9 @@ import { RiAddLine, RiCloseLine, RiThumbUpLine } from "@remixicon/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { useState } from "react";
-
 import { Button } from "@/components/base/buttons/button";
 import { IconButton } from "@/components/base/buttons/icon-button";
+import { LinkButton } from "@/components/base/buttons/link-button";
 import { Input } from "@/components/base/input/input";
 import { Label } from "@/components/base/input/label";
 import { Modal, ModalBody, ModalFooter, ModalHeader } from "@/components/base/modal/modal";
@@ -103,9 +103,9 @@ export function ConversationRequests({
           ))}
         </ul>
       )}
-      <Button variant="ghost" size="small" leadingIcon={RiAddLine} onClick={() => setLinking(true)}>
+      <LinkButton variant="secondary" size="small" leadingIcon={RiAddLine} onClick={() => setLinking(true)}>
         Link to feature request
-      </Button>
+      </LinkButton>
       {linking ? (
         <LinkRequestDialog
           workspace={workspace}
@@ -199,10 +199,9 @@ function LinkRequestDialog({
             empty={found.data !== undefined && results.length === 0}
           />
         )}
-        <Button
-          variant="ghost"
+        <LinkButton
+          variant="secondary"
           size="small"
-          className="self-start"
           leadingIcon={creating ? undefined : RiAddLine}
           onClick={() => {
             setCreating(!creating);
@@ -210,7 +209,7 @@ function LinkRequestDialog({
           }}
         >
           {creating ? "Search existing requests instead" : "Post a new request from this conversation"}
-        </Button>
+        </LinkButton>
         <div className="flex flex-col gap-1.5">
           <Label>How much it matters to them</Label>
           <RadioGroup aria-label="How much it matters" value={priority} onChange={(v) => setPriority(v as Priority)}>

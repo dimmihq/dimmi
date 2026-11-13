@@ -12,9 +12,9 @@
 import { RiPauseCircleLine } from "@remixicon/react";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
-
 import { type Stat, StatCards } from "@/components/application/dashboard/stat-cards";
 import { Button } from "@/components/base/buttons/button";
+import { LinkButton } from "@/components/base/buttons/link-button";
 import { ProgressTrack } from "@/components/base/progress/progress";
 import { Row, Section } from "@/features/settings/layout";
 import {
@@ -166,13 +166,13 @@ function Companies({ companies, onPick }: { companies: BroadcastCompany[]; onPic
           label={company.name || "Unnamed account"}
           description={`${formatNumber(company.delivered)} of ${formatNumber(company.total)} delivered · ${percent(company.opened, company.delivered)} opened · ${formatNumber(company.clicked)} clicked · ${formatNumber(company.replied)} replied${company.reactions ? ` · ${formatNumber(company.reactions)} reactions` : ""}${company.failed ? ` · ${formatNumber(company.failed)} failed` : ""}`}
         >
-          <Button
-            variant="ghost"
+          <LinkButton
+            variant="primary"
             size="xs"
             onClick={() => onPick({ id: company.company_id, name: company.name, total: company.total })}
           >
             Recipients
-          </Button>
+          </LinkButton>
         </Row>
       ))}
     </Section>

@@ -132,7 +132,7 @@ function Footer({
   return (
     <ModalFooter className="mt-6">
       {step === "upload" ? (
-        <Button variant="ghost" leadingIcon={RiHistoryLine} onClick={() => onHistory(true)} className="me-auto">
+        <Button variant="secondary" leadingIcon={RiHistoryLine} onClick={() => onHistory(true)} className="me-auto">
           Past imports
         </Button>
       ) : null}

@@ -8,7 +8,7 @@ import { RiLinkM } from "@remixicon/react";
 import { useQuery } from "@tanstack/react-query";
 import { type ReactNode, useState } from "react";
 
-import { Button } from "@/components/base/buttons/button";
+import { LinkButton } from "@/components/base/buttons/link-button";
 import { callerQuery, workspaceQuery } from "@/lib/api/workspace";
 
 import { useInbox } from "../conversations";
@@ -29,9 +29,9 @@ export function LinkPolicyProvider({ channelType, children }: { channelType?: st
     <LinkPolicyContext.Provider value={{ workspace, settings, plain: hidden && !shown }}>
       {hidden && canReveal ? (
         <div className="mx-auto flex w-full max-w-3xl justify-end px-3 pb-1">
-          <Button variant="ghost" size="small" leadingIcon={RiLinkM} onClick={() => setShown((now) => !now)}>
+          <LinkButton variant="secondary" size="small" leadingIcon={RiLinkM} onClick={() => setShown((now) => !now)}>
             {shown ? "Hide links" : "Show links"}
-          </Button>
+          </LinkButton>
         </div>
       ) : null}
       {children}

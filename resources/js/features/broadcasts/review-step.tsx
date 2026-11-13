@@ -10,7 +10,7 @@
  */
 import { RiCheckboxBlankCircleLine, RiCheckboxCircleFill, RiErrorWarningLine } from "@remixicon/react";
 
-import { Button } from "@/components/base/buttons/button";
+import { LinkButton } from "@/components/base/buttons/link-button";
 import { useWorkspace } from "@/features/customers/names";
 import { Row, Section } from "@/features/settings/layout";
 import type { Broadcast, BroadcastEstimate } from "@/lib/api/broadcasts";
@@ -29,9 +29,9 @@ function Edit({ step, onStep }: { step: StepId; onStep?: (step: StepId) => void 
   }
 
   return (
-    <Button variant="ghost" size="xs" onClick={() => onStep(step)}>
+    <LinkButton variant="primary" size="xs" onClick={() => onStep(step)}>
       Edit
-    </Button>
+    </LinkButton>
   );
 }
 

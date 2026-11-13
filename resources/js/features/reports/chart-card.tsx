@@ -89,7 +89,7 @@ export function ChartCard({
         </div>
         <Button
           size="xs"
-          variant="ghost"
+          variant="secondary"
           leadingIcon={RiDownload2Line}
           aria-label={`Download ${chart.title} as CSV`}
           disabled={empty}

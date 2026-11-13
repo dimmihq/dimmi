@@ -9,7 +9,7 @@
 import { RiSparkling2Line } from "@remixicon/react";
 import { useQuery } from "@tanstack/react-query";
 
-import { Button } from "@/components/base/buttons/button";
+import { LinkButton } from "@/components/base/buttons/link-button";
 import { Checkbox } from "@/components/base/checkbox/checkbox";
 import { Input } from "@/components/base/input/input";
 import { Select, SelectItem } from "@/components/base/select/select";
@@ -57,9 +57,9 @@ function Suggestion({ value, onAccept }: { value: unknown; onAccept?: () => void
       <RiSparkling2Line aria-hidden className="size-3.5 shrink-0 text-foreground-icon-secondary" />
       <span className="min-w-0 truncate">AI · {fieldText(value)}</span>
       {onAccept ? (
-        <Button size="xs" variant="ghost" onClick={onAccept}>
+        <LinkButton size="xs" variant="primary" onClick={onAccept}>
           Accept
-        </Button>
+        </LinkButton>
       ) : null}
     </span>
   );

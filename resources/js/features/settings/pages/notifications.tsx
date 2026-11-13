@@ -10,7 +10,7 @@ import { RiComputerLine, RiDeleteBinLine } from "@remixicon/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 
-import { Button } from "@/components/base/buttons/button";
+import { IconButton } from "@/components/base/buttons/icon-button";
 import { Checkbox } from "@/components/base/checkbox/checkbox";
 import { Notification } from "@/components/base/notification/notification";
 import { Switch } from "@/components/base/switch/switch";
@@ -210,11 +210,9 @@ function PushSection({ workspace }: { workspace: string }) {
               : `Added ${formatDateTime(device.created_at)}`
           }
         >
-          <Button
-            variant="ghost"
+          <IconButton
             size="small"
-            iconOnly
-            leadingIcon={RiDeleteBinLine}
+            icon={RiDeleteBinLine}
             aria-label={`Remove ${device.device_label ?? "this device"}`}
             onClick={() => remove.mutate(device.id)}
           />

@@ -6,8 +6,8 @@
  * builder saves as the teammate types.
  */
 import { type ReactNode, useState } from "react";
-
 import { Button } from "@/components/base/buttons/button";
+import { LinkButton } from "@/components/base/buttons/link-button";
 import { Input } from "@/components/base/input/input";
 import { Select, SelectItem } from "@/components/base/select/select";
 import { Switch } from "@/components/base/switch/switch";
@@ -197,9 +197,9 @@ export function Rules({
         {n === 0 ? "Add rules" : `${n} ${n === 1 ? "condition" : "conditions"}`}
       </Button>
       {n > 0 && !disabled ? (
-        <Button variant="ghost" size="small" onClick={() => onChange(undefined)}>
+        <LinkButton variant="secondary" size="small" onClick={() => onChange(undefined)}>
           Clear
-        </Button>
+        </LinkButton>
       ) : null}
       {open ? (
         <RulesModal

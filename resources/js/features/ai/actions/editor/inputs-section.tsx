@@ -8,8 +8,8 @@
  */
 import { RiAddLine, RiBracesLine, RiCloseLine } from "@remixicon/react";
 import { useState } from "react";
-
 import { Button } from "@/components/base/buttons/button";
+import { IconButton } from "@/components/base/buttons/icon-button";
 import { LinkButton } from "@/components/base/buttons/link-button";
 import { Checkbox } from "@/components/base/checkbox/checkbox";
 import { Input } from "@/components/base/input/input";
@@ -78,13 +78,7 @@ function FieldRow({
         <Checkbox size="sm" isSelected={field.required} onChange={(required) => onChange({ required })}>
           Required
         </Checkbox>
-        <Button
-          variant="ghost"
-          size="small"
-          leadingIcon={RiCloseLine}
-          aria-label={`Remove ${label}`}
-          onClick={onRemove}
-        />
+        <IconButton size="small" icon={RiCloseLine} aria-label={`Remove ${label}`} onClick={onRemove} />
       </div>
       <Input
         aria-label={`${label} description`}

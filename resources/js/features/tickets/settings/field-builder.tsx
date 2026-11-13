@@ -181,16 +181,16 @@ export function FieldBuilder({
                   <RiDraggable aria-hidden className="size-4" />
                 </AriaButton>
               ) : null}
-              <span className="flex min-w-0 flex-1 flex-col gap-1">
-                <span className="truncate text-body-regular text-text-primary">{field.label}</span>
-                <span className="truncate text-body-2-regular text-text-secondary">{detailOf(field, fields)}</span>
-                <span className="flex flex-wrap gap-1">
+              <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+                <span className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+                  <span className="truncate text-body-regular text-text-primary">{field.label}</span>
                   {marks(field).map((mark) => (
                     <Chip key={mark} variant="caption" color={mark.startsWith("AI") ? "purple" : "neutral"}>
                       {mark}
                     </Chip>
                   ))}
                 </span>
+                <span className="truncate text-body-2-regular text-text-secondary">{detailOf(field, fields)}</span>
               </span>
               {canChange ? (
                 <RowMenu

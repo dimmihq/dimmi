@@ -33,7 +33,7 @@ import {
   MenuHeader,
   MenuRowList,
 } from "@/components/application/dashboard/dashboard-user-menu";
-import { Button } from "@/components/base/buttons/button";
+import { IconButton } from "@/components/base/buttons/icon-button";
 import { Drawer } from "@/components/base/drawer/drawer";
 import { Toaster } from "@/components/base/toast/toast";
 import { ActionProvider } from "@/features/inbox/actions/action-provider";
@@ -275,14 +275,7 @@ function SignedInShell({
         <div className="hidden h-full lg:flex">{sidebar(false)}</div>
 
         <div className="flex items-center gap-2 px-1 lg:hidden">
-          <Button
-            variant="ghost"
-            size="small"
-            iconOnly
-            leadingIcon={RiMenuLine}
-            aria-label="Open navigation"
-            onClick={() => setDrawerOpen(true)}
-          />
+          <IconButton size="small" icon={RiMenuLine} aria-label="Open navigation" onClick={() => setDrawerOpen(true)} />
           <span className="text-body-semibold text-text-primary">{switcher.label}</span>
         </div>
         <Drawer

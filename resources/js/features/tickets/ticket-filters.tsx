@@ -8,8 +8,8 @@
 import { RiCloseLine, RiFilter3Line } from "@remixicon/react";
 import { useQuery } from "@tanstack/react-query";
 import { type Key, useState } from "react";
-
 import { Button } from "@/components/base/buttons/button";
+import { LinkButton } from "@/components/base/buttons/link-button";
 import { Input } from "@/components/base/input/input";
 import { Popover, PopoverTrigger } from "@/components/base/popover/popover";
 import { Select, SelectItem } from "@/components/base/select/select";
@@ -240,9 +240,9 @@ export function TicketFilters({
           </Popover>
         </PopoverTrigger>
         {chips.length > 0 ? (
-          <Button size="small" variant="ghost" onClick={() => onChange({})}>
+          <LinkButton size="small" variant="secondary" onClick={() => onChange({})}>
             Clear
-          </Button>
+          </LinkButton>
         ) : null}
       </div>
       {chips.length > 0 ? (

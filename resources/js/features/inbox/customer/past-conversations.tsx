@@ -6,9 +6,8 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link, useParams } from "@tanstack/react-router";
 import { useState } from "react";
-
 import { StatusDot } from "@/components/base/badges/status-dot";
-import { Button } from "@/components/base/buttons/button";
+import { LinkButton } from "@/components/base/buttons/link-button";
 import { type ConversationContext, contactConversationsQuery } from "@/lib/api/customers";
 import type { Conversation } from "@/lib/api/inbox";
 
@@ -69,9 +68,9 @@ export function PastConversations({
         ))}
       </ul>
       {!more && past.total_estimate > past.data.length ? (
-        <Button variant="ghost" size="small" onClick={() => setMore(true)}>
+        <LinkButton variant="secondary" size="small" onClick={() => setMore(true)}>
           Show more
-        </Button>
+        </LinkButton>
       ) : null}
     </div>
   );

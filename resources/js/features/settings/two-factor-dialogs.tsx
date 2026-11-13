@@ -178,7 +178,7 @@ function SetupKey({ secret }: { secret: string }) {
         className="font-mono text-body-2-regular"
         trailingAddon={
           <Button
-            variant="ghost"
+            variant="secondary"
             size="xs"
             iconOnly
             leadingIcon={copied ? RiCheckLine : RiFileCopyLine}

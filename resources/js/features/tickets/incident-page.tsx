@@ -12,9 +12,9 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { motion, useReducedMotion } from "motion/react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-
 import { Chip, type ChipColor } from "@/components/base/badges/chip";
 import { Button } from "@/components/base/buttons/button";
+import { LinkButton } from "@/components/base/buttons/link-button";
 import { Checkbox } from "@/components/base/checkbox/checkbox";
 import { Modal, ModalBody, ModalFooter, ModalHeader } from "@/components/base/modal/modal";
 import { RadioGroup } from "@/components/base/radio/radio";
@@ -323,9 +323,9 @@ function Heading({ ticket, editable, onEdit }: { ticket: Ticket; editable: boole
           </Chip>
         ))}
         {editable ? (
-          <Button size="xs" variant="ghost" leadingIcon={RiEditLine} onClick={onEdit}>
+          <LinkButton size="xs" variant="secondary" leadingIcon={RiEditLine} onClick={onEdit}>
             {severity || areas.length > 0 ? t("incident.editDetails") : t("incident.addDetails")}
-          </Button>
+          </LinkButton>
         ) : null}
         <IssueChips issues={ticket.issues ?? []} />
       </div>

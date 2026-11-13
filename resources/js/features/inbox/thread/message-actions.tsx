@@ -126,7 +126,7 @@ export function NoteEditor({
         className="block w-full resize-none bg-transparent p-0 text-body-regular text-text-primary outline-none"
       />
       <div className="flex justify-end gap-2">
-        <Button size="xs" variant="ghost" onClick={onCancel}>
+        <Button size="xs" variant="secondary" onClick={onCancel}>
           Cancel
         </Button>
         <Button size="xs" variant="primary" onClick={() => void save()} disabled={saving || !body.trim()}>

@@ -11,9 +11,9 @@
 import { RiFileCopyLine } from "@remixicon/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-
 import { Chip } from "@/components/base/badges/chip";
 import { Button } from "@/components/base/buttons/button";
+import { IconButton } from "@/components/base/buttons/icon-button";
 import { Input } from "@/components/base/input/input";
 import { Select, SelectItem } from "@/components/base/select/select";
 import { toast } from "@/components/base/toast/toast";
@@ -100,11 +100,9 @@ function DeliverySection({ settings, canManage, save }: { settings: IssueSetting
       >
         <span className="flex items-center gap-2">
           <code className="max-w-72 truncate text-caption-1-regular text-text-secondary">{settings.webhook_url}</code>
-          <Button
-            variant="ghost"
+          <IconButton
             size="small"
-            iconOnly
-            leadingIcon={RiFileCopyLine}
+            icon={RiFileCopyLine}
             aria-label="Copy the webhook address"
             onClick={() => {
               void navigator.clipboard?.writeText(settings.webhook_url);

@@ -8,7 +8,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { useState } from "react";
 
-import { Button } from "@/components/base/buttons/button";
+import { LinkButton } from "@/components/base/buttons/link-button";
 
 import { when } from "@/features/inbox/customer/format";
 import { type Contact, duplicatesQuery } from "@/lib/api/customers";
@@ -50,15 +50,15 @@ export function Duplicates({ contact, canMerge }: { contact: Contact; canMerge: 
             {d.reasons.map((r) => duplicateReasons[r] ?? r).join(", ")}
           </span>
           {canMerge ? (
-            <Button
+            <LinkButton
               size="xs"
-              variant="ghost"
+              variant="secondary"
               leadingIcon={RiMergeCellsHorizontal}
               aria-label={`Merge ${personName(d.contact)} into this customer`}
               onClick={() => setMerging(d.contact.id)}
             >
               Merge
-            </Button>
+            </LinkButton>
           ) : null}
         </p>
       ))}
