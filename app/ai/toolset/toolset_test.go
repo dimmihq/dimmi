@@ -304,3 +304,27 @@ func TestLoadingAFixedToolSaysItIsOffered(t *testing.T) {
 		t.Fatal("a fixed tool is not counted as not found")
 	}
 }
+
+func TestCompactWritesLinesAndShortIDs(t *testing.T) {
+	s := toolset.New(entries(), groups(), nil).WithCompact()
+	id := "conv_01jcz7m8q4n5p6r7s8t9v0w1x2"
+	out := s.Compact(`{"data":[{"id":"` + id + `","title":"Refund","note":null,"tags":[]},{"id":"` + id + `"}]}`)
+	if strings.Contains(out, id) || strings.Contains(out, "null") || strings.Contains(out, "{") {
+		t.Fatalf("compact = %q", out)
+	}
+	if !strings.Contains(out, "- id: c1; title: Refund") {
+		t.Fatalf("compact = %q", out)
+	}
+	back, err := s.Expand(json.RawMessage(`{"conversation_id":"c1","tags":["c1"]}`))
+	if err != nil || !strings.Contains(string(back), id) {
+		t.Fatalf("expand = %s, %v", back, err)
+	}
+	_, err = s.Expand(json.RawMessage(`{"conversation_id":"c9"}`))
+	if !errors.Is(err, toolset.ErrArguments) || !strings.Contains(err.Error(), "look the record up again") {
+		t.Fatalf("err = %v", err)
+	}
+	plain := toolset.New(entries(), groups(), nil)
+	if plain.Compact(`{"a":1}`) != `{"a":1}` {
+		t.Fatal("compact is off unless asked for")
+	}
+}

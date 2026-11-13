@@ -153,3 +153,9 @@ DELETE FROM operator_memories WHERE workspace_id = @workspace_id AND member_id =
 INSERT INTO operator_settings (workspace_id, tool_layer, created_at, updated_at)
 VALUES (@workspace_id, @tool_layer, @now, @now)
 ON CONFLICT (workspace_id) DO UPDATE SET tool_layer = EXCLUDED.tool_layer, updated_at = EXCLUDED.updated_at;
+
+-- name: SetOperatorCompactResults :exec
+-- SetOperatorCompactResults turns Operator's compact results on or off.
+INSERT INTO operator_settings (workspace_id, compact_results, created_at, updated_at)
+VALUES (@workspace_id, @compact_results, @now, @now)
+ON CONFLICT (workspace_id) DO UPDATE SET compact_results = EXCLUDED.compact_results, updated_at = EXCLUDED.updated_at;

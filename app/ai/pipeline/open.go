@@ -57,6 +57,8 @@ type run struct {
 	draft      bool
 	ticket     *tickets.AgentTicket
 	layer      *layerState
+	prefetched bool
+	shown      map[int]bool
 }
 
 /*

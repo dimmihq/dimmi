@@ -134,6 +134,7 @@ type Set struct {
 	limits  Limits
 	listMax int
 	fixed   map[string]bool
+	alias   *aliases
 }
 
 /*
@@ -447,6 +448,11 @@ func (s *Set) Check(args json.RawMessage) (Call, error) {
 	if e.Reads {
 		c.Arguments, c.Fields = splitFields(c.Arguments)
 	}
+	expanded, err := s.Expand(c.Arguments)
+	if err != nil {
+		return Call{}, s.refuse(err)
+	}
+	c.Arguments = expanded
 	if err := s.validate(e, c.Arguments); err != nil {
 		return Call{}, s.refuse(err)
 	}

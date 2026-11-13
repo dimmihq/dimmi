@@ -37,3 +37,9 @@ RETURNING *;
 -- SetAgentToolLayer turns the agent's tool layer on or off.
 UPDATE ai_agents SET tool_layer = @tool_layer, updated_at = @now
 WHERE workspace_id = @workspace_id AND id = @id;
+
+-- name: SetAgentTokenSavers :exec
+-- SetAgentTokenSavers turns the agent's up-front search and compact
+-- results on or off.
+UPDATE ai_agents SET prefetch_search = @prefetch_search, compact_results = @compact_results, updated_at = @now
+WHERE workspace_id = @workspace_id AND id = @id;

@@ -18,7 +18,7 @@ const createAgent = `-- name: CreateAgent :one
 INSERT INTO ai_agents (workspace_id, monthly_spend_cap_micros, created_at, updated_at)
 VALUES ($1, $2, $3, $3)
 ON CONFLICT (workspace_id) WHERE deleted_at IS NULL DO NOTHING
-RETURNING id, workspace_id, name, avatar_attachment_id, enabled, product_name, tone, guidance, enabled_channels, excluded_channel_connection_ids, schedule, office_hours, assigned_behavior, answer_key_id, answer_model, classifier_key_id, classifier_model, fallback_key_id, fallback_model, temperature, max_output_tokens, max_ai_replies, unknown_behavior, grounding_mode, require_citations, min_similarity, languages, default_language, streaming, include_contact_context, contact_attribute_allowlist, pii_redaction, link_allowlist, handoff, messages, prompt_version, monthly_spend_cap_micros, actions_enabled, created_at, updated_at, deleted_at, min_vector_similarity, tool_layer
+RETURNING id, workspace_id, name, avatar_attachment_id, enabled, product_name, tone, guidance, enabled_channels, excluded_channel_connection_ids, schedule, office_hours, assigned_behavior, answer_key_id, answer_model, classifier_key_id, classifier_model, fallback_key_id, fallback_model, temperature, max_output_tokens, max_ai_replies, unknown_behavior, grounding_mode, require_citations, min_similarity, languages, default_language, streaming, include_contact_context, contact_attribute_allowlist, pii_redaction, link_allowlist, handoff, messages, prompt_version, monthly_spend_cap_micros, actions_enabled, created_at, updated_at, deleted_at, min_vector_similarity, tool_layer, prefetch_search, compact_results
 `
 
 type CreateAgentParams struct {
@@ -75,12 +75,14 @@ func (q *Queries) CreateAgent(ctx context.Context, arg CreateAgentParams) (AiAge
 		&i.DeletedAt,
 		&i.MinVectorSimilarity,
 		&i.ToolLayer,
+		&i.PrefetchSearch,
+		&i.CompactResults,
 	)
 	return i, err
 }
 
 const findAgent = `-- name: FindAgent :one
-SELECT id, workspace_id, name, avatar_attachment_id, enabled, product_name, tone, guidance, enabled_channels, excluded_channel_connection_ids, schedule, office_hours, assigned_behavior, answer_key_id, answer_model, classifier_key_id, classifier_model, fallback_key_id, fallback_model, temperature, max_output_tokens, max_ai_replies, unknown_behavior, grounding_mode, require_citations, min_similarity, languages, default_language, streaming, include_contact_context, contact_attribute_allowlist, pii_redaction, link_allowlist, handoff, messages, prompt_version, monthly_spend_cap_micros, actions_enabled, created_at, updated_at, deleted_at, min_vector_similarity, tool_layer FROM ai_agents
+SELECT id, workspace_id, name, avatar_attachment_id, enabled, product_name, tone, guidance, enabled_channels, excluded_channel_connection_ids, schedule, office_hours, assigned_behavior, answer_key_id, answer_model, classifier_key_id, classifier_model, fallback_key_id, fallback_model, temperature, max_output_tokens, max_ai_replies, unknown_behavior, grounding_mode, require_citations, min_similarity, languages, default_language, streaming, include_contact_context, contact_attribute_allowlist, pii_redaction, link_allowlist, handoff, messages, prompt_version, monthly_spend_cap_micros, actions_enabled, created_at, updated_at, deleted_at, min_vector_similarity, tool_layer, prefetch_search, compact_results FROM ai_agents
 WHERE workspace_id = $1 AND deleted_at IS NULL
 `
 
@@ -132,8 +134,36 @@ func (q *Queries) FindAgent(ctx context.Context, workspaceID ids.UUID) (AiAgent,
 		&i.DeletedAt,
 		&i.MinVectorSimilarity,
 		&i.ToolLayer,
+		&i.PrefetchSearch,
+		&i.CompactResults,
 	)
 	return i, err
+}
+
+const setAgentTokenSavers = `-- name: SetAgentTokenSavers :exec
+UPDATE ai_agents SET prefetch_search = $1, compact_results = $2, updated_at = $3
+WHERE workspace_id = $4 AND id = $5
+`
+
+type SetAgentTokenSaversParams struct {
+	PrefetchSearch bool      `json:"prefetch_search"`
+	CompactResults bool      `json:"compact_results"`
+	Now            time.Time `json:"now"`
+	WorkspaceID    ids.UUID  `json:"workspace_id"`
+	ID             ids.UUID  `json:"id"`
+}
+
+// SetAgentTokenSavers turns the agent's up-front search and compact
+// results on or off.
+func (q *Queries) SetAgentTokenSavers(ctx context.Context, arg SetAgentTokenSaversParams) error {
+	_, err := q.db.Exec(ctx, setAgentTokenSavers,
+		arg.PrefetchSearch,
+		arg.CompactResults,
+		arg.Now,
+		arg.WorkspaceID,
+		arg.ID,
+	)
+	return err
 }
 
 const setAgentToolLayer = `-- name: SetAgentToolLayer :exec
@@ -179,7 +209,7 @@ UPDATE ai_agents SET
     monthly_spend_cap_micros = $34, actions_enabled = $35,
     updated_at = $36
 WHERE workspace_id = $37 AND id = $38 AND deleted_at IS NULL
-RETURNING id, workspace_id, name, avatar_attachment_id, enabled, product_name, tone, guidance, enabled_channels, excluded_channel_connection_ids, schedule, office_hours, assigned_behavior, answer_key_id, answer_model, classifier_key_id, classifier_model, fallback_key_id, fallback_model, temperature, max_output_tokens, max_ai_replies, unknown_behavior, grounding_mode, require_citations, min_similarity, languages, default_language, streaming, include_contact_context, contact_attribute_allowlist, pii_redaction, link_allowlist, handoff, messages, prompt_version, monthly_spend_cap_micros, actions_enabled, created_at, updated_at, deleted_at, min_vector_similarity, tool_layer
+RETURNING id, workspace_id, name, avatar_attachment_id, enabled, product_name, tone, guidance, enabled_channels, excluded_channel_connection_ids, schedule, office_hours, assigned_behavior, answer_key_id, answer_model, classifier_key_id, classifier_model, fallback_key_id, fallback_model, temperature, max_output_tokens, max_ai_replies, unknown_behavior, grounding_mode, require_citations, min_similarity, languages, default_language, streaming, include_contact_context, contact_attribute_allowlist, pii_redaction, link_allowlist, handoff, messages, prompt_version, monthly_spend_cap_micros, actions_enabled, created_at, updated_at, deleted_at, min_vector_similarity, tool_layer, prefetch_search, compact_results
 `
 
 type UpdateAgentParams struct {
@@ -310,6 +340,8 @@ func (q *Queries) UpdateAgent(ctx context.Context, arg UpdateAgentParams) (AiAge
 		&i.DeletedAt,
 		&i.MinVectorSimilarity,
 		&i.ToolLayer,
+		&i.PrefetchSearch,
+		&i.CompactResults,
 	)
 	return i, err
 }

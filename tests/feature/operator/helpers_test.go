@@ -90,6 +90,11 @@ func connect(ctx context.Context, t *testing.T, d tests.Desk) error {
 	if err != nil {
 		return err
 	}
+	if err := q.SetOperatorCompactResults(ctx, models.SetOperatorCompactResultsParams{
+		WorkspaceID: ws, CompactResults: false, Now: now,
+	}); err != nil {
+		return err
+	}
 	return q.SetOperatorToolLayer(ctx, models.SetOperatorToolLayerParams{WorkspaceID: ws, ToolLayer: false, Now: now})
 }
 

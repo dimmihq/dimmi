@@ -226,24 +226,34 @@ func (r *Runner) searchKnowledge(ctx context.Context, st *run, args json.RawMess
 		return "", err
 	}
 
-	type result struct {
-		ID    int    `json:"id"`
-		Title string `json:"title"`
-		URL   string `json:"url"`
-		Text  string `json:"text"`
-	}
-	results := []result{}
+	results := []searchResult{}
 	gate := similarityGate{keyword: minSimilarity(st.env), vector: minVectorSimilarity(st.env)}
 	for _, ch := range res.Chunks {
 		if len(results) >= searchResults || !gate.passes(ch) {
 			continue
 		}
 		n := st.sourceFor(ch)
-		results = append(results, result{ID: n, Title: ch.Title, URL: ch.URL, Text: ch.Text})
+		results = append(results, searchResult{ID: n, Title: ch.Title, URL: ch.URL, Text: ch.Text})
 	}
 	st.lastSearch = searchTrace{Mode: res.Mode, Degraded: res.Degraded, Found: len(res.Chunks), Kept: len(results)}
+	if st.env.Agent.CompactResults {
+		if st.shown == nil {
+			st.shown = map[int]bool{}
+		}
+		return compactSearch(results, st.shown), nil
+	}
 	out, err := json.Marshal(map[string]any{"results": results})
 	return string(out), err
+}
+
+/*
+searchResult is one passage a search returns to the model.
+*/
+type searchResult struct {
+	ID    int    `json:"id"`
+	Title string `json:"title"`
+	URL   string `json:"url"`
+	Text  string `json:"text"`
 }
 
 /*

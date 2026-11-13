@@ -124,9 +124,17 @@ func (e *Engine) runCall(ctx context.Context, s *session, p *pending) {
 		p.out, p.err = e.layerCall(ctx, s, p)
 		return
 	}
-	if p.known {
-		p.out, p.err = p.tool.handle(ctx, s, p.call.Arguments)
+	if !p.known {
+		return
 	}
+	args := p.call.Arguments
+	if s.layer != nil {
+		if args, p.err = s.layer.set.Expand(args); p.err != nil {
+			p.err = errors.Join(errBadArguments, p.err)
+			return
+		}
+	}
+	p.out, p.err = p.tool.handle(ctx, s, args)
 }
 
 /*
@@ -142,6 +150,8 @@ func (e *Engine) finishCall(ctx context.Context, s *session, p *pending) contrac
 	out.step.OK = err == nil
 	if err != nil {
 		out.text, out.step.Summary = refusal(err), out.step.Summary+": "+refusal(err)
+	} else if s.layer != nil {
+		out.text = s.layer.set.Compact(out.text)
 	}
 	s.steps = append(s.steps, out.step)
 	e.publishStep(ctx, s, out.step)

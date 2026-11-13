@@ -184,6 +184,9 @@ func (e *Engine) openLayer(ctx context.Context, s *session) {
 			func(en toolset.Entry) bool { return en.Spec.Name == n })
 	})
 	ls.set = toolset.New(entries, groups, ls.earlier).WithFixed(fixed)
+	if s.settings.CompactResults {
+		ls.set.WithCompact()
+	}
 	ls.suggested = ls.set.Suggest(ctx, toolset.Keywords{}, s.question)
 	s.layer = ls
 }
@@ -250,15 +253,7 @@ func (e *Engine) layerCall(ctx context.Context, s *session, p *pending) (result,
 		return result{text: out, step: Step{Tool: toolset.LoadTool, Summary: "Looked up tools"}}, err
 	}
 	if inner := innerName(p.call.Arguments); set.IsFixed(inner) {
-		p.ran = inner
-		if !p.known {
-			return result{}, errors.New("tool " + inner + " is not available")
-		}
-		var in struct {
-			Arguments json.RawMessage `json:"arguments"`
-		}
-		_ = json.Unmarshal(p.call.Arguments, &in)
-		return p.tool.handle(ctx, s, in.Arguments)
+		return e.runFixed(ctx, s, p, inner)
 	}
 	c, err := set.Check(p.call.Arguments)
 	if err != nil {
@@ -286,6 +281,26 @@ func (e *Engine) layerCall(ctx context.Context, s *session, p *pending) (result,
 		out.text = set.Shape(out.text, c.Fields)
 	}
 	return out, err
+}
+
+/*
+runFixed runs a fixed tool the model reached through call_tool, as if
+it had called it by name.
+*/
+func (e *Engine) runFixed(ctx context.Context, s *session, p *pending, name string) (result, error) {
+	p.ran = name
+	if !p.known {
+		return result{}, errors.New("tool " + name + " is not available")
+	}
+	var in struct {
+		Arguments json.RawMessage `json:"arguments"`
+	}
+	_ = json.Unmarshal(p.call.Arguments, &in)
+	args, err := s.layer.set.Expand(in.Arguments)
+	if err != nil {
+		return result{}, errors.Join(errBadArguments, err)
+	}
+	return p.tool.handle(ctx, s, args)
 }
 
 /*

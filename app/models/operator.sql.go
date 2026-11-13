@@ -313,7 +313,7 @@ func (q *Queries) FindOperatorChangeset(ctx context.Context, arg FindOperatorCha
 }
 
 const findOperatorSettings = `-- name: FindOperatorSettings :one
-SELECT workspace_id, enabled, brief_on_open, triage_on_arrival, instructions, policies, model, created_at, updated_at, tool_layer FROM operator_settings WHERE workspace_id = $1
+SELECT workspace_id, enabled, brief_on_open, triage_on_arrival, instructions, policies, model, created_at, updated_at, tool_layer, compact_results FROM operator_settings WHERE workspace_id = $1
 `
 
 // FindOperatorSettings returns the workspace's Operator settings.
@@ -331,6 +331,7 @@ func (q *Queries) FindOperatorSettings(ctx context.Context, workspaceID ids.UUID
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.ToolLayer,
+		&i.CompactResults,
 	)
 	return i, err
 }
@@ -635,7 +636,7 @@ ON CONFLICT (workspace_id) DO UPDATE SET
     enabled = EXCLUDED.enabled, brief_on_open = EXCLUDED.brief_on_open,
     triage_on_arrival = EXCLUDED.triage_on_arrival, instructions = EXCLUDED.instructions,
     policies = EXCLUDED.policies, model = EXCLUDED.model, updated_at = EXCLUDED.updated_at
-RETURNING workspace_id, enabled, brief_on_open, triage_on_arrival, instructions, policies, model, created_at, updated_at, tool_layer
+RETURNING workspace_id, enabled, brief_on_open, triage_on_arrival, instructions, policies, model, created_at, updated_at, tool_layer, compact_results
 `
 
 type SaveOperatorSettingsParams struct {
@@ -673,8 +674,27 @@ func (q *Queries) SaveOperatorSettings(ctx context.Context, arg SaveOperatorSett
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.ToolLayer,
+		&i.CompactResults,
 	)
 	return i, err
+}
+
+const setOperatorCompactResults = `-- name: SetOperatorCompactResults :exec
+INSERT INTO operator_settings (workspace_id, compact_results, created_at, updated_at)
+VALUES ($1, $2, $3, $3)
+ON CONFLICT (workspace_id) DO UPDATE SET compact_results = EXCLUDED.compact_results, updated_at = EXCLUDED.updated_at
+`
+
+type SetOperatorCompactResultsParams struct {
+	WorkspaceID    ids.UUID  `json:"workspace_id"`
+	CompactResults bool      `json:"compact_results"`
+	Now            time.Time `json:"now"`
+}
+
+// SetOperatorCompactResults turns Operator's compact results on or off.
+func (q *Queries) SetOperatorCompactResults(ctx context.Context, arg SetOperatorCompactResultsParams) error {
+	_, err := q.db.Exec(ctx, setOperatorCompactResults, arg.WorkspaceID, arg.CompactResults, arg.Now)
+	return err
 }
 
 const setOperatorToolLayer = `-- name: SetOperatorToolLayer :exec

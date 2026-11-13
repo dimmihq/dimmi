@@ -179,6 +179,8 @@ type AiAgent struct {
 	DeletedAt                    *time.Time      `json:"deleted_at"`
 	MinVectorSimilarity          pgtype.Numeric  `json:"min_vector_similarity"`
 	ToolLayer                    bool            `json:"tool_layer"`
+	PrefetchSearch               bool            `json:"prefetch_search"`
+	CompactResults               bool            `json:"compact_results"`
 }
 
 type AiProviderKey struct {
@@ -2153,6 +2155,7 @@ type OperatorSetting struct {
 	CreatedAt       time.Time       `json:"created_at"`
 	UpdatedAt       time.Time       `json:"updated_at"`
 	ToolLayer       bool            `json:"tool_layer"`
+	CompactResults  bool            `json:"compact_results"`
 }
 
 type OperatorSlackThread struct {

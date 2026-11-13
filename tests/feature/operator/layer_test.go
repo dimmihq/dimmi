@@ -169,3 +169,37 @@ func TestOperatorToolLayer(t *testing.T) {
 		assert.True(t, req.Messages[len(req.Messages)-2].Cacheable)
 	})
 }
+
+func TestOperatorCompactResults(t *testing.T) {
+	t.Parallel()
+	k := newDesk(t)
+	k.withToolLayer()
+	k.d.TC.InWorkspace(func(ctx context.Context) error {
+		_, err := k.d.TC.App.DB.Exec(ctx, "UPDATE operator_settings SET compact_results = true WHERE workspace_id = $1",
+			k.d.TC.Workspace.Workspace.ID)
+		return err
+	})
+	inbox := k.d.InboxID()
+	thread := k.thread("")
+	k.llm.Script(
+		tools(loadTools("dimmi_inboxes_list", "dimmi_inboxes_get")),
+		tools(callTool("dimmi_inboxes_list", map[string]any{"fields": []string{"name"}})),
+		tools(callTool("dimmi_inboxes_get", map[string]any{"inbox": "i1"})),
+		tools(callTool("dimmi_inboxes_get", map[string]any{"inbox": "i7"})),
+		reply("One inbox."),
+	)
+
+	k.ask(thread, "List inboxes").AssertOK()
+
+	sent := k.llm.Sent()
+	listed := lastResult(sent[2]).Parts[0].Text
+	assert.NotContains(t, listed, inbox, "long ids become short aliases")
+	assert.Contains(t, listed, "id: i1")
+	assert.NotContains(t, listed, "{")
+	got := lastResult(sent[3])
+	require.False(t, got.ToolError, got.Parts[0].Text)
+	assert.NotContains(t, got.Parts[0].Text, inbox, "the alias maps back, and the answer is shortened again")
+	stale := lastResult(sent[4])
+	assert.True(t, stale.ToolError)
+	assert.Contains(t, stale.Parts[0].Text, "look the record up again")
+}
