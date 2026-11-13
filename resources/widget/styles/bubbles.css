@@ -70,7 +70,7 @@
   max-inline-size: 100%;
   padding: 12px 16px;
   border-radius: 20px;
-  background: light-dark(var(--bg-secondary), var(--bg-tertiary));
+  background: var(--bg-tertiary);
   line-height: 20px;
   overflow-wrap: anywhere;
   white-space: pre-wrap;
