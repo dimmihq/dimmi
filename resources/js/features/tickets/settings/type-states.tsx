@@ -16,7 +16,7 @@ import { useState } from "react";
 import { Button as AriaButton, DropIndicator, GridList, GridListItem, useDragAndDrop } from "react-aria-components";
 
 import { Chip } from "@/components/base/badges/chip";
-import { Button } from "@/components/base/buttons/button";
+import { LinkButton } from "@/components/base/buttons/link-button";
 import { Section } from "@/features/settings/layout";
 import { moved } from "@/features/settings/status-order";
 import { RowMenu } from "@/features/shell/row-menu";
@@ -187,9 +187,9 @@ function GroupSteps({
           <span className="text-caption-1-regular text-text-tertiary">{groupHint(group)}</span>
         </div>
         {locked ? null : (
-          <Button size="xs" variant="ghost" leadingIcon={RiAddLine} onClick={onAdd}>
+          <LinkButton size="small" variant="secondary" leadingIcon={RiAddLine} onClick={onAdd}>
             Add
-          </Button>
+          </LinkButton>
         )}
       </div>
       {steps.length === 0 ? (

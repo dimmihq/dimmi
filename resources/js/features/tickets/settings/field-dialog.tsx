@@ -15,6 +15,8 @@ import { Modal, ModalBody, ModalFooter, ModalHeader } from "@/components/base/mo
 import { Select, SelectItem } from "@/components/base/select/select";
 import { Switch } from "@/components/base/switch/switch";
 import { Textarea } from "@/components/base/textarea/textarea";
+import { optionList } from "@/features/settings/options";
+import { OptionsEditor } from "@/features/settings/options-editor";
 import { type FieldChange, type FieldDataType, fieldDataTypes, type TicketField } from "@/lib/api/tickets";
 
 import { dataTypeLabel } from "../labels";
@@ -25,14 +27,6 @@ const choices: FieldDataType[] = ["single_choice", "multiple_choice"];
 
 function Heading({ children }: { children: string }) {
   return <span className="-mb-1 text-body-2-medium text-text-secondary">{children}</span>;
-}
-
-/*
- * optionList reads the options textarea: one per line, trimmed, no
- * blanks or repeats.
- */
-function optionList(text: string): string[] {
-  return [...new Set(text.split("\n").map((line) => line.trim()))].filter(Boolean);
 }
 
 type Flags = Pick<
@@ -55,7 +49,7 @@ function startOf(field: TicketField | null) {
       label: "",
       key: "",
       dataType: "short_text" as FieldDataType,
-      options: "",
+      options: [] as string[],
       description: "",
       flags: {
         required_create: false,
@@ -75,7 +69,7 @@ function startOf(field: TicketField | null) {
     label: field.label,
     key: field.key,
     dataType: field.data_type,
-    options: field.options.join("\n"),
+    options: field.options,
     description: field.description,
     flags: {
       required_create: field.required_create,
@@ -101,7 +95,7 @@ function changeOf(
     description: string;
     flags: Flags;
     dataType: FieldDataType;
-    options: string;
+    options: string[];
     when: string;
     equals: string[];
     hint: string;
@@ -138,7 +132,7 @@ export function FieldDialog({
   const [key, setKey] = useState(start.key);
   const [keyTouched, setKeyTouched] = useState(false);
   const [dataType, setDataType] = useState<FieldDataType>(start.dataType);
-  const [options, setOptions] = useState(start.options);
+  const [options, setOptions] = useState<string[]>(start.options);
   const [description, setDescription] = useState(start.description);
   const [flags, setFlags] = useState(start.flags);
   const [when, setWhen] = useState(start.when);
@@ -210,9 +204,7 @@ export function FieldDialog({
               ))}
             </Select>
           </div>
-          {choices.includes(dataType) ? (
-            <Textarea label="Options" value={options} onChange={setOptions} rows={4} hint="One option per line." />
-          ) : null}
+          {choices.includes(dataType) ? <OptionsEditor value={options} onChange={setOptions} /> : null}
           <Input label="Help text" value={description} onChange={setDescription} maxLength={300} />
         </form>
         <Heading>Required</Heading>
