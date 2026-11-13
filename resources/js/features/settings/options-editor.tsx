@@ -135,7 +135,7 @@ export function OptionsEditor({
                   update(moveRow(rows, index, index + (event.key === "ArrowUp" ? -1 : 1)));
                 }
               }}
-              className="mt-2 flex size-6 shrink-0 cursor-grab items-center justify-center rounded-md text-foreground-icon-tertiary outline-none hover:bg-background-secondary-hover focus-visible:ring-2 focus-visible:ring-border-focus-ring active:cursor-grabbing"
+              className="flex h-8 w-6 shrink-0 cursor-grab items-center justify-center rounded-md text-foreground-icon-tertiary outline-none hover:bg-background-secondary-hover focus-visible:ring-2 focus-visible:ring-border-focus-ring active:cursor-grabbing"
             >
               <RiDraggable aria-hidden className="size-4" />
             </button>
@@ -164,7 +164,7 @@ export function OptionsEditor({
               aria-label={`Remove ${row.text || "option"}`}
               disabled={isDisabled || (rows.length === 1 && row.text === "")}
               onClick={() => remove(index)}
-              className="mt-1.5 flex size-7 shrink-0 items-center justify-center rounded-md text-foreground-icon-tertiary outline-none hover:bg-background-secondary-hover hover:text-foreground-icon-primary focus-visible:ring-2 focus-visible:ring-border-focus-ring disabled:opacity-40 disabled:hover:bg-transparent"
+              className="flex size-8 shrink-0 items-center justify-center rounded-md text-foreground-icon-tertiary outline-none hover:bg-background-secondary-hover hover:text-foreground-icon-primary focus-visible:ring-2 focus-visible:ring-border-focus-ring disabled:opacity-40 disabled:hover:bg-transparent"
             >
               <RiCloseLine aria-hidden className="size-4" />
             </button>
