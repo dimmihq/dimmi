@@ -133,11 +133,10 @@ describe("tracked events", () => {
     win.Dimmi?.("track", "plan.viewed", { plan: "pro" });
 
     boot(win, document);
-    await settle();
+    const posts = () => calls.filter((c) => c.key === "POST /events");
+    await vi.waitFor(() => expect(posts()).toHaveLength(1));
     win.Dimmi?.("track", "video.played");
-    await settle();
-
-    expect(calls.filter((c) => c.key === "POST /events")).toHaveLength(2);
+    await vi.waitFor(() => expect(posts()).toHaveLength(2));
     const first = sent[0] as { events: { name: string; metadata: unknown; id: string }[] };
     expect(first.events[0]).toMatchObject({ name: "plan.viewed", metadata: { plan: "pro" } });
     expect(first.events[0]?.id).toBeTruthy();
