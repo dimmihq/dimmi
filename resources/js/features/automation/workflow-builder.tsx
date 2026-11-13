@@ -25,6 +25,7 @@ import { PushPane } from "@/features/shell/push-pane";
 import { useWide } from "@/features/shell/use-wide";
 import { agentQuery } from "@/lib/api/ai";
 import { actionConnectionsQuery } from "@/lib/api/ai-actions";
+import { articlesQuery, helpCentersQuery } from "@/lib/api/help-centers";
 import { schedulesQuery } from "@/lib/api/schedules";
 import { tagsQuery } from "@/lib/api/tags";
 import { teamsQuery } from "@/lib/api/teams";
@@ -32,6 +33,7 @@ import { type Issue, type Workflow, workflowsQuery } from "@/lib/api/workflows";
 import { membersQuery } from "@/lib/api/workspace";
 
 import { Canvas } from "./canvas";
+import type { Choices } from "./choices";
 import { freshStep, withEdited, withoutStep, withStep } from "./edit-steps";
 import { type Head, Inspector } from "./inspector";
 import { StatusChip } from "./parts";
@@ -47,8 +49,9 @@ import { findStep, readyKinds, type Step, type StepKind, triggerStep } from "./w
  * useLists reads the workspace's teams, active teammates and tags, as the
  * pickers offer them and as the cards name them, and whether its agent
  * is on; and the live reusable workflows other than this one, the
- * connections to your systems, the office hours, and the ticket setup,
- * trackers and SLA policies the ticket steps pick from.
+ * connections to your systems, the office hours, the published help
+ * articles a step may answer with, and the ticket setup, trackers and
+ * SLA policies the ticket steps pick from.
  */
 function useLists(workspace: string, current: string): { lists: Lists; names: Names } {
   const teams = useQuery(teamsQuery(workspace)).data;
@@ -59,6 +62,7 @@ function useLists(workspace: string, current: string): { lists: Lists; names: Na
   const connections = useQuery({ ...actionConnectionsQuery(workspace), retry: false }).data;
   const schedules = useQuery({ ...schedulesQuery(workspace), retry: false }).data;
   const tickets = useTicketLists(workspace);
+  const articles = useArticleChoices(workspace);
 
   return useMemo(() => {
     const lists: Lists = {
@@ -74,6 +78,7 @@ function useLists(workspace: string, current: string): { lists: Lists; names: Na
         .filter((connection) => connection.kind === "http")
         .map((connection) => [connection.id, connection.name] as const),
       schedules: (schedules ?? []).map((schedule) => [schedule.id, schedule.name] as const),
+      articles,
       agentOn: agent ? agent.agent.enabled && agent.ready : undefined,
       tickets,
     };
@@ -86,10 +91,29 @@ function useLists(workspace: string, current: string): { lists: Lists; names: Na
         tags: new Map(lists.tags),
         workflows: new Map((workflows ?? []).map((flow) => [flow.id, flow.name] as const)),
         connections: new Map((connections ?? []).map((connection) => [connection.id, connection.name] as const)),
+        articles: new Map(articles),
         tickets: ticketNames(tickets),
       },
     };
-  }, [teams, members, tags, agent, workflows, connections, schedules, tickets, current]);
+  }, [teams, members, tags, agent, workflows, connections, schedules, articles, tickets, current]);
+}
+
+/*
+ * useArticleChoices reads the published articles of every help center,
+ * as the article step picks them.
+ */
+function useArticleChoices(workspace: string): Choices {
+  const centers = useQuery({ ...helpCentersQuery(workspace), retry: false }).data ?? [];
+  const first = centers[0];
+  const articles = useQuery({ ...articlesQuery(workspace, first?.id ?? ""), enabled: Boolean(first) }).data;
+
+  return useMemo(
+    () =>
+      (articles ?? [])
+        .filter((article) => article.status === "published" && article.visibility === "public")
+        .map((article) => [article.id, article.title] as const),
+    [articles],
+  );
 }
 
 const saveWords: Record<SaveState, string> = {

@@ -24,6 +24,7 @@ export interface Names {
   members: ReadonlyMap<string, string>;
   tags: ReadonlyMap<string, string>;
   workflows?: ReadonlyMap<string, string>;
+  articles?: ReadonlyMap<string, string>;
   connections?: ReadonlyMap<string, string>;
   tickets?: ReadonlyMap<string, string>;
 }
@@ -181,6 +182,11 @@ function sorted(step: Step): string {
 const describers: Partial<Record<StepKind, (step: Step, names: Names) => string>> = {
   message: written,
   note: written,
+  article: (step, names) => {
+    const article = text(step.settings, "article");
+
+    return article ? `Send ${nameOf(names.articles ?? noMap, article)}` : unsetSummary;
+  },
   buttons: written,
   collect: collected,
   reply_time: (step) => text(step.settings, "text").trim() || replyTimeText,

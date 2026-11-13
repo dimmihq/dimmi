@@ -19,6 +19,7 @@ package workflows
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"regexp"
 	"strconv"
@@ -106,15 +107,71 @@ func notWordRune(r rune) bool {
 }
 
 /*
-loadInputText reads the text of the message a run receives.
+loadInputText reads the message a run receives: what the customer wrote,
+and the path their tap named when they answered by button rather than in
+their own words.
 */
 func (st *state) loadInputText(ctx context.Context) {
 	msg, err := st.q.FindMessage(ctx, models.FindMessageParams{
 		WorkspaceID: st.run.WorkspaceID, ConversationID: *st.run.ConversationID, ID: *st.input.MessageID,
 	})
-	if err == nil && msg.Body != nil {
+	if err != nil {
+		return
+	}
+
+	if msg.Body != nil {
 		st.input.Text = *msg.Body
 	}
+
+	st.input.Choice = chosenPath(msg.Metadata)
+}
+
+/*
+chosenPath is the path a tapped button named, empty when the customer
+answered in their own words. A channel's own metadata is kept under its
+name, so the answer is read there as well as at the top.
+*/
+func chosenPath(metadata json.RawMessage) string {
+	var parts map[string]json.RawMessage
+	if json.Unmarshal(metadata, &parts) != nil {
+		return ""
+	}
+
+	if path := answeredPath(parts["answer"]); path != "" {
+		return path
+	}
+
+	for name, part := range parts {
+		if name == "answer" {
+			continue
+		}
+
+		var nested map[string]json.RawMessage
+		if json.Unmarshal(part, &nested) != nil {
+			continue
+		}
+
+		if path := answeredPath(nested["answer"]); path != "" {
+			return path
+		}
+	}
+
+	return ""
+}
+
+/*
+answeredPath reads the path out of an answer.
+*/
+func answeredPath(raw json.RawMessage) string {
+	var answer struct {
+		PathID string `json:"path_id"`
+	}
+
+	if len(raw) == 0 || json.Unmarshal(raw, &answer) != nil {
+		return ""
+	}
+
+	return answer.PathID
 }
 
 /*

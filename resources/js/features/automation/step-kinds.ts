@@ -7,6 +7,7 @@
  */
 import {
   RiAlarmWarningLine,
+  RiBookOpenLine,
   RiCheckboxCircleLine,
   RiContactsLine,
   RiFileList3Line,
@@ -47,6 +48,7 @@ export interface KindLook {
 
 export const stepLook: Record<StepKind, KindLook> = {
   message: { name: "Send a message", icon: RiMessage2Line, tint: "blue" },
+  article: { name: "Send an article", icon: RiBookOpenLine, tint: "blue" },
   buttons: { name: "Reply buttons", icon: RiListRadio, tint: "blue" },
   collect: { name: "Collect data", icon: RiQuestionAnswerLine, tint: "blue" },
   reply_time: { name: "Show reply time", icon: RiTimeLine, tint: "blue" },

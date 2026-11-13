@@ -10,6 +10,7 @@ import type { ReactNode } from "react";
 import { Action, Danger, Field, Toggle } from "@/features/settings/controls";
 import { Row, Section } from "@/features/settings/layout";
 import type { Condition } from "@/lib/api/workflows";
+import { ArticleFields } from "./article-fields";
 import { CallFields } from "./call-fields";
 import { type Choices, choicesOf } from "./choices";
 import { ClassifyFields } from "./classify-fields";
@@ -63,6 +64,7 @@ export interface Lists {
   workflows: Choices;
   connections: Choices;
   schedules: Choices;
+  articles: Choices;
   agentOn?: boolean;
   tickets?: TicketLists;
 }
@@ -546,6 +548,7 @@ function Unavailable({ step }: Props) {
 
 const editors: Record<string, (props: Props) => ReactNode> = {
   message: MessageFields,
+  article: ArticleFields,
   note: MessageFields,
   buttons: ButtonsFields,
   collect: CollectFields,

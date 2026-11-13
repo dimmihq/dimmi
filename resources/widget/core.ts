@@ -383,11 +383,11 @@ export function boot(win: Window & DimmiWindow, doc: Document): Widget | undefin
       void live?.openConversation((event as CustomEvent<{ conversation?: string }>).detail?.conversation);
     });
     root.addEventListener("dimmi:send", (event) => {
-      const sent = (event as CustomEvent<{ body: string; files: File[]; voice?: string }>).detail;
+      const sent = (event as CustomEvent<{ body: string; files: File[]; voice?: string; choice?: string }>).detail;
       if (preview) {
         preview.answer(root, sent);
       } else {
-        void live?.send(sent.body, sent.files);
+        void live?.send(sent.body, sent.files, sent.choice);
       }
     });
     root.addEventListener("dimmi:typing", () => live?.typing(true));

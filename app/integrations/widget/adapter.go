@@ -40,13 +40,14 @@ func (Channel) Type() string {
 
 /*
 Capabilities says replies travel live, with files, typing and read
-receipts, and never start a thread.
+receipts, never start a thread, and draw buttons and cards beside a
+message.
 */
 func (Channel) Capabilities(models.ChannelConnection) contracts.ChannelCapabilities {
 	return contracts.ChannelCapabilities{
 		Transport: contracts.TransportRealtime, StartConversation: contracts.StartNever,
 		Formatting: contracts.FormatMarkdown, Attachments: true, MaxAttachments: maxAttachments,
-		Typing: true, DeliveryReceipts: true, ReadReceipts: true,
+		Typing: true, DeliveryReceipts: true, ReadReceipts: true, Rich: true,
 	}
 }
 

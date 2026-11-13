@@ -15,7 +15,7 @@ import { stepLook } from "./step-kinds";
 import type { StepKind } from "./workflows";
 
 const groups: [string, StepKind[]][] = [
-  ["Messages", ["message", "buttons", "collect", "reply_time"]],
+  ["Messages", ["message", "article", "buttons", "collect", "reply_time"]],
   ["Logic", ["branch", "classify", "wait", "run_workflow"]],
   ["dimmi", ["dimmi"]],
   [

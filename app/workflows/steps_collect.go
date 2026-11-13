@@ -53,11 +53,14 @@ func runCollect(ctx context.Context, st *state, s workflowspec.Step) (outcome, e
 		return outcome{}, err
 	}
 
+	var picks []choice
 	if c.Type == "choice" || c.Type == "yes_no" {
-		text += "\n\n" + numbered(choices(c))
+		for _, option := range choices(c) {
+			picks = append(picks, choice{Label: option})
+		}
 	}
 
-	sent, err := st.send(ctx, s, text, "")
+	sent, err := st.sendChoices(ctx, outgoing{step: s, text: text, choices: picks})
 	if err != nil || sent.outcome != outcomeSent {
 		return sent, err
 	}

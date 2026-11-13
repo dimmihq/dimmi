@@ -19,9 +19,19 @@ import {
   VideoIcon,
 } from "./icons";
 
-export function Section({ title, more, children }: { title: string; more?: Child; children: Child }) {
+export function Section({
+  title,
+  more,
+  target,
+  children,
+}: {
+  title: string;
+  more?: Child;
+  target?: string;
+  children: Child;
+}) {
   return (
-    <section className="section">
+    <section className="section" data-target={target}>
       <header className="section-head">
         <h3>{title}</h3>
         {more}

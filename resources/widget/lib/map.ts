@@ -193,6 +193,7 @@ export function toMessage(m: api.Message, now: number): Message {
   if (file) {
     out.attachment = toAttachment(file);
   }
+  Object.assign(out, workflowParts(m));
   if (m.sending) {
     out.state = "sending";
   } else if (m.failed) {
@@ -200,6 +201,21 @@ export function toMessage(m: api.Message, now: number): Message {
   }
 
   return out;
+}
+
+/*
+ * workflowParts is what a workflow's message carries beside its text: the
+ * answers it offers, whether they are the only way on, and the help
+ * article it answered with.
+ */
+function workflowParts(m: api.Message): Pick<Message, "choices" | "choicesOnly" | "article"> {
+  const choices = m.choices ?? [];
+
+  return {
+    ...(choices.length > 0 ? { choices } : {}),
+    ...(choices.length > 0 && m.choices_only ? { choicesOnly: true } : {}),
+    ...(m.article ? { article: m.article } : {}),
+  };
 }
 
 /*

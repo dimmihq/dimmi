@@ -163,6 +163,23 @@ export class MessengerController extends Controller {
     }
   }
 
+  /*
+   * choose answers a question with the button the visitor tapped. The
+   * label travels as their own message, so the thread reads the way they
+   * answered, and the path the button names travels beside it, so the
+   * workflow takes that path whatever the button reads.
+   */
+  choose(event: Event): void {
+    const button = event.target instanceof Element ? event.target.closest<HTMLElement>("[data-label]") : null;
+    const label = button?.dataset.label;
+    if (!label) {
+      return;
+    }
+
+    button?.closest(".choices")?.remove();
+    this.dispatch("send", { body: label, files: [], choice: button?.dataset.choice });
+  }
+
   converse(event?: Event): void {
     const row = event?.target instanceof Element ? event.target.closest<HTMLElement>("[data-conversation]") : null;
     this.#converse(row?.dataset.conversation);

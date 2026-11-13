@@ -36,9 +36,9 @@ func TextLimits() map[string]int {
 	}
 
 	for _, key := range []string{
-		"search_placeholder", "popular", "helpful", "update_feedback", "still_need_help", "action_waiting",
-		"action_done", "action_declined", "action_canceled", "action_expired", "action_failed", "verify_intro",
-		"verify_sent", "verify_resend", "verify_other",
+		"search_placeholder", "search_none", "popular", "helpful", "update_feedback", "still_need_help",
+		"action_waiting", "action_done", "action_declined", "action_canceled", "action_expired",
+		"action_failed", "verify_intro", "verify_sent", "verify_resend", "verify_other",
 	} {
 		limits[key] = 80
 	}

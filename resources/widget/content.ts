@@ -158,6 +158,32 @@ export interface VerifyStep {
   busy?: boolean;
 }
 
+/*
+ * Choice is one answer a question offers: the path the workflow takes
+ * when the visitor taps it, and what the button reads.
+ */
+export interface Choice {
+  id: string;
+  label: string;
+}
+
+/*
+ * ArticleCard is a help article a workflow answered with, which the
+ * visitor opens in the messenger.
+ */
+export interface ArticleCard {
+  slug: string;
+  title: string;
+  summary?: string;
+  url?: string;
+}
+
+/*
+ * Message is one thing said in a thread. choices are the answers a
+ * workflow's question offers, which the visitor taps instead of typing;
+ * choicesOnly means they are the only way on, so the composer waits;
+ * and article a help article it answered with.
+ */
 export interface Message {
   id?: string;
   key?: string;
@@ -170,6 +196,9 @@ export interface Message {
   attachment?: Attachment;
   sources?: Source[];
   action?: ActionCard;
+  choices?: Choice[];
+  choicesOnly?: boolean;
+  article?: ArticleCard;
   at: string;
 }
 

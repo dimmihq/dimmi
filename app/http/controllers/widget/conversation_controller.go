@@ -230,6 +230,7 @@ func (c *ConversationController) post(
 
 	in := actions.MessageInput{
 		Auth: auth, Conversation: conversation, ClientID: body.ClientID, Body: body.Body, Context: body.Context,
+		Choice: body.Choice,
 	}
 
 	if body.Page != nil {

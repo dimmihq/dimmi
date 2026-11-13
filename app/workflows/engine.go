@@ -32,6 +32,7 @@ import (
 	"github.com/dimmihq/dimmi/framework/tenancy"
 
 	"github.com/dimmihq/dimmi/app/actions/conversations"
+	"github.com/dimmihq/dimmi/app/actions/helpcenters"
 	"github.com/dimmihq/dimmi/app/actions/sla"
 	"github.com/dimmihq/dimmi/app/actions/tickets"
 )
@@ -71,20 +72,21 @@ tickets of conversations and SLA applies service level policies; without
 them, ticket and SLA steps are skipped.
 */
 type Engine struct {
-	DB         *database.DB
-	Events     *events.Dispatcher
-	Clock      clock.Clock
-	Queue      *queue.Queue
-	IDs        *ids.Registry
-	Delivery   conversations.Delivery
-	Limits     Limits
-	AgentOn    bool
-	HTTP       *httpclient.Client
-	Keys       *encryption.Keys
-	Classifier Classifier
-	Tickets    *tickets.Tickets
-	SLA        *sla.SLA
-	live       *liveCache
+	DB          *database.DB
+	Events      *events.Dispatcher
+	Clock       clock.Clock
+	Queue       *queue.Queue
+	IDs         *ids.Registry
+	Delivery    conversations.Delivery
+	Limits      Limits
+	AgentOn     bool
+	HTTP        *httpclient.Client
+	Keys        *encryption.Keys
+	Classifier  Classifier
+	Tickets     *tickets.Tickets
+	HelpCenters helpcenters.Addresses
+	SLA         *sla.SLA
+	live        *liveCache
 }
 
 /*

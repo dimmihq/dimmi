@@ -22,6 +22,7 @@ import (
 	"github.com/dimmihq/dimmi/app/actions/contactlists"
 	"github.com/dimmihq/dimmi/app/actions/conversations"
 	"github.com/dimmihq/dimmi/app/actions/events"
+	"github.com/dimmihq/dimmi/app/actions/helpcenters"
 	"github.com/dimmihq/dimmi/app/actions/procedures"
 	"github.com/dimmihq/dimmi/app/actions/schedules"
 	"github.com/dimmihq/dimmi/app/actions/workflows"
@@ -38,6 +39,9 @@ func bootWorkflows(a *app.App) {
 		DB: a.DB, Events: a.Events, Clock: a.Clock, Queue: a.Queue, IDs: a.IDs,
 		Delivery: conversations.Delivery{Channels: a.Channels, Queue: a.Queue}, AgentOn: a.Config.AI.Enabled,
 		HTTP: a.HTTP, Keys: a.Keys,
+		HelpCenters: helpcenters.Addresses{
+			BaseDomain: a.Config.HelpCenters.BaseDomain, AppURL: a.Application.Config.App.URL,
+		},
 	})
 	runner.Listen(a.Events)
 	a.ContactErasers.Register(engine.RunEraser{Engine: runner})

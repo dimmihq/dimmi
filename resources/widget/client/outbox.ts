@@ -15,6 +15,8 @@ export interface Pending {
   conversation?: string;
   body: string;
   attachmentIds: string[];
+  /* The path of the button the visitor tapped, for an answer to a question. */
+  choice?: string;
   createdAt: number;
 }
 
@@ -121,7 +123,12 @@ export class Outbox {
   }
 
   private async post(pending: Pending): Promise<Sent> {
-    const body = { client_id: pending.clientId, body: pending.body, attachment_ids: pending.attachmentIds };
+    const body = {
+      client_id: pending.clientId,
+      body: pending.body,
+      attachment_ids: pending.attachmentIds,
+      ...(pending.choice ? { choice: pending.choice } : {}),
+    };
 
     if (pending.conversation) {
       const res = await this.http.post<{ data: Record<string, unknown>; meta?: Record<string, unknown> }>(

@@ -70,7 +70,10 @@ limit. The attachment limits use the global ones when zero. RetryWindow
 is how long a transient failure keeps being retried, the inbox default
 when zero. ThreadAddressed says replies reach the customer through the
 conversation's thread on the channel rather than an address, so a
-customer without an email can still be answered.
+customer without an email can still be answered. Rich says the channel
+draws what a message carries beside its body, such as a question's
+answers as buttons or an article as a card, so the body itself needs no
+numbered list and no link.
 */
 type ChannelCapabilities struct {
 	Transport               Transport
@@ -90,6 +93,7 @@ type ChannelCapabilities struct {
 	MessagingWindow         time.Duration
 	RetryWindow             time.Duration
 	ThreadAddressed         bool
+	Rich                    bool
 }
 
 /*

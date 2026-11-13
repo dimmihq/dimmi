@@ -10,6 +10,7 @@ import type { SpecPath, SpecStep } from "@/lib/api/workflows";
 
 export type StepKind =
   | "message"
+  | "article"
   | "buttons"
   | "collect"
   | "reply_time"
@@ -44,6 +45,7 @@ export type Path = SpecPath;
  */
 export const readyKinds: StepKind[] = [
   "message",
+  "article",
   "buttons",
   "collect",
   "reply_time",
@@ -73,7 +75,7 @@ export const readyKinds: StepKind[] = [
 /*
  * customerKinds speak to the customer, which only some triggers may do.
  */
-export const customerKinds: StepKind[] = ["message", "buttons", "collect", "reply_time"];
+export const customerKinds: StepKind[] = ["message", "article", "buttons", "collect", "reply_time"];
 
 const outcomes: Record<string, string> = {
   typed: "Typed an answer",

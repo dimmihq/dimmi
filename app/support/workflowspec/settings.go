@@ -23,6 +23,15 @@ type MessageSettings struct {
 }
 
 /*
+ArticleSettings answers with a help article: Article is the article's
+id, and Text an optional line before it.
+*/
+type ArticleSettings struct {
+	Article string `json:"article"`
+	Text    string `json:"text,omitempty"`
+}
+
+/*
 ButtonsSettings asks a question answered with buttons, one per user
 path. AllowTyping (default true) lets the customer write instead;
 Timeout ends the wait; RetryText is sent once on text channels when a

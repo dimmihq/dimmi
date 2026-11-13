@@ -2093,6 +2093,28 @@
         ],
         "type": "object"
       },
+      "WidgetArticleCard": {
+        "additionalProperties": false,
+        "properties": {
+          "slug": {
+            "type": "string"
+          },
+          "summary": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "slug",
+          "title"
+        ],
+        "type": "object"
+      },
       "WidgetAttachment": {
         "additionalProperties": false,
         "properties": {
@@ -2160,6 +2182,22 @@
         },
         "required": [
           "display"
+        ],
+        "type": "object"
+      },
+      "WidgetChoice": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "label"
         ],
         "type": "object"
       },
@@ -2357,6 +2395,9 @@
           "ai": {
             "$ref": "#/components/schemas/MessageAI"
           },
+          "article": {
+            "$ref": "#/components/schemas/WidgetArticleCard"
+          },
           "attachments": {
             "items": {
               "$ref": "#/components/schemas/WidgetAttachment"
@@ -2377,6 +2418,18 @@
           },
           "broadcast": {
             "$ref": "#/components/schemas/WidgetBroadcast"
+          },
+          "choices": {
+            "items": {
+              "$ref": "#/components/schemas/WidgetChoice"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "choices_only": {
+            "type": "boolean"
           },
           "client_id": {
             "type": [
@@ -2436,6 +2489,10 @@
           },
           "body": {
             "maxLength": 262144,
+            "type": "string"
+          },
+          "choice": {
+            "maxLength": 64,
             "type": "string"
           },
           "client_id": {

@@ -50,7 +50,9 @@ type WidgetAttachment struct {
 /*
 WidgetMessage is a message as a visitor sees it. A deleted message keeps
 its place with no body. AI marks a reply the agent wrote, with the
-sources it cites.
+sources it cites. Choices are the answers a workflow's question offers,
+which the customer taps instead of typing, ChoicesOnly that they are the
+only way on, and Article a help article it answered with.
 */
 type WidgetMessage struct {
 	ID             string             `json:"id"`
@@ -65,6 +67,9 @@ type WidgetMessage struct {
 	ReadAt         *time.Time         `json:"read_at"`
 	AI             *MessageAI         `json:"ai,omitempty"`
 	Broadcast      *WidgetBroadcast   `json:"broadcast,omitempty"`
+	Choices        []WidgetChoice     `json:"choices,omitempty"`
+	ChoicesOnly    bool               `json:"choices_only,omitempty"`
+	Article        *WidgetArticleCard `json:"article,omitempty"`
 }
 
 /*
@@ -191,6 +196,7 @@ func NewWidgetMessage(v widget.VisibleMessage) WidgetMessage {
 		ConversationID: models.PublicID(models.PrefixConversation, m.ConversationID), ClientID: clientID(m.Metadata),
 		Author: v.Author, Body: m.Body, Attachments: []WidgetAttachment{}, CreatedAt: m.CreatedAt.UTC(),
 		ReadAt: m.ReadAt, AI: customerAIOf(m.Metadata), Broadcast: broadcastOf(m.Metadata),
+		Choices: choicesOf(m.Metadata), ChoicesOnly: choicesOnly(m.Metadata), Article: articleOf(m.Metadata),
 	}
 
 	if m.DeletedAt != nil {
@@ -234,6 +240,56 @@ func broadcastOf(metadata json.RawMessage) *WidgetBroadcast {
 	}
 
 	return &WidgetBroadcast{Display: m.Broadcast.Display, Title: m.Broadcast.Subject}
+}
+
+/*
+choicesOf reads the answers a workflow's question offers, nil for any
+other message.
+*/
+func choicesOf(metadata json.RawMessage) []WidgetChoice {
+	var m struct {
+		Workflow *struct {
+			Choices []WidgetChoice `json:"choices"`
+		} `json:"workflow"`
+	}
+
+	if json.Unmarshal(metadata, &m) != nil || m.Workflow == nil {
+		return nil
+	}
+
+	return m.Workflow.Choices
+}
+
+/*
+choicesOnly reports whether the question takes its buttons alone, so the
+messenger puts the composer away until one is tapped.
+*/
+func choicesOnly(metadata json.RawMessage) bool {
+	var m struct {
+		Workflow *struct {
+			ChoicesOnly bool `json:"choices_only"`
+		} `json:"workflow"`
+	}
+
+	return json.Unmarshal(metadata, &m) == nil && m.Workflow != nil && m.Workflow.ChoicesOnly
+}
+
+/*
+articleOf reads the help article a workflow answered with, nil for any
+other message.
+*/
+func articleOf(metadata json.RawMessage) *WidgetArticleCard {
+	var m struct {
+		Workflow *struct {
+			Article *WidgetArticleCard `json:"article"`
+		} `json:"workflow"`
+	}
+
+	if json.Unmarshal(metadata, &m) != nil || m.Workflow == nil {
+		return nil
+	}
+
+	return m.Workflow.Article
 }
 
 /*

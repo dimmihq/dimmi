@@ -12,7 +12,9 @@
 package requests
 
 /*
-WidgetMessageBody is a visitor's message.
+WidgetMessageBody is a visitor's message. Choice is the button they
+tapped, when the message answers a question the messenger drew as
+buttons: the workflow then takes that path, whatever the button reads.
 */
 type WidgetMessageBody struct {
 	_             struct{}        `additionalProperties:"true"`
@@ -22,6 +24,7 @@ type WidgetMessageBody struct {
 	Page          *WidgetPageBody `json:"page,omitempty"`
 	Context       map[string]any  `json:"context,omitempty"`
 	Website       string          `json:"website,omitempty"        maxLength:"1000"`
+	Choice        string          `json:"choice,omitempty"         maxLength:"64"`
 }
 
 /*

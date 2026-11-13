@@ -47,7 +47,7 @@ checkSettings checks a step's settings by kind.
 */
 func (c *checker) checkSettings(s Step) {
 	checks := map[string]func(Step){
-		KindMessage: c.checkMessage, KindButtons: c.checkButtons, KindCollect: c.checkCollect,
+		KindMessage: c.checkMessage, KindArticle: c.checkArticle, KindButtons: c.checkButtons, KindCollect: c.checkCollect,
 		KindBranch: c.checkBranch, KindWait: c.checkWait, KindAssign: c.checkAssign,
 		KindUnassign: c.checkUnassign, KindTag: c.checkTags, KindUntag: c.checkTags,
 		KindPriority: c.checkPriority, KindNote: c.checkNote, KindUpdateContact: c.checkUpdateContact,
@@ -150,6 +150,25 @@ func (c *checker) checkMessage(s Step) {
 
 	c.text(s, m.Text, maxMessage)
 	c.duration(s, "delay", m.Delay, span{0, 30 * time.Second})
+}
+
+/*
+checkArticle checks an article step: it needs an article, and its line
+before the article is optional.
+*/
+func (c *checker) checkArticle(s Step) {
+	a, ok := decode[ArticleSettings](c, s)
+	if !ok {
+		return
+	}
+
+	if strings.TrimSpace(a.Article) == "" {
+		c.fail(Issue{Code: CodeMissingSetting, StepID: s.ID, Field: "article", Message: "Pick the article to send."})
+	}
+
+	if a.Text != "" {
+		c.text(s, a.Text, maxMessage)
+	}
 }
 
 /*

@@ -44,6 +44,7 @@ export interface Texts {
   messages_empty_title: string;
   messages_empty_body: string;
   search_placeholder: string;
+  search_none: string;
   popular: string;
   helpful: string;
   update_feedback: string;
@@ -138,6 +139,7 @@ export const defaults: Options = {
     messages_empty_title: "No messages yet",
     messages_empty_body: "Questions you ask will show up here.",
     search_placeholder: "Search for help",
+    search_none: "No results",
     popular: "Popular articles",
     helpful: "Did this answer your question?",
     update_feedback: "What do you think of this update?",

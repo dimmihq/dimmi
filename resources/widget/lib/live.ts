@@ -569,16 +569,17 @@ export class Live {
 
   /*
    * send queues what the visitor wrote in the open conversation and shows
-   * it at once.
+   * it at once. choice names the path of a button they tapped, so the
+   * workflow takes it whatever the button reads.
    */
-  async send(body: string, files: File[]) {
+  async send(body: string, files: File[], choice?: string) {
     const conversation = this.open && this.open !== draftId ? this.open : undefined;
     let attachmentIds: string[] = [];
     if (files.length > 0) {
       attachmentIds = await this.upload(files);
     }
 
-    const pending = this.outbox.send({ conversation, body, attachmentIds });
+    const pending = this.outbox.send({ conversation, body, attachmentIds, choice });
     this.store.addLocal({
       id: `local:${pending.clientId}`,
       conversation_id: conversation ?? draftId,
@@ -1008,9 +1009,21 @@ export class Live {
       );
     }
 
+    this.lockComposer(choicesOnly(last));
     place({ thread, loaded, open: open ?? "", shown: messages.length }, parts.join(""));
     this.host.root.dispatchEvent(new CustomEvent("dimmi:connect"));
     this.watchCalls(messages);
+  }
+
+  /*
+   * lockComposer puts the composer away while a question takes its
+   * buttons alone, and brings it back once one is tapped.
+   */
+  private lockComposer(locked: boolean) {
+    const panel = this.host.root.firstElementChild;
+    if (panel) {
+      panel.toggleAttribute("data-choices-only", locked);
+    }
   }
 
   /*
@@ -1348,6 +1361,14 @@ export class Live {
       void this.send(message.body ?? "", []);
     }
   }
+}
+
+/*
+ * choicesOnly reports whether the thread ends on a question that takes
+ * its buttons alone.
+ */
+function choicesOnly(last: Message | undefined): boolean {
+  return last?.choicesOnly === true && (last.choices ?? []).length > 0;
 }
 
 /*

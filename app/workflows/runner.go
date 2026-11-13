@@ -81,10 +81,12 @@ Input is what a waiting run receives: a customer message, a teammate's
 reply, its timer, or the agent handing the conversation over, with why.
 */
 type Input struct {
+	// Choice is the path a tapped button names, read from the message.
 	Kind      string    `json:"kind"`
 	MessageID *ids.UUID `json:"message_id,omitempty"`
 	Reason    string    `json:"reason,omitempty"`
 	Text      string    `json:"-"`
+	Choice    string    `json:"-"`
 }
 
 /*

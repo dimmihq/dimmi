@@ -17,6 +17,7 @@ import { type ActionTexts, actionTexts, initials } from "../text";
 import {
   BookIcon,
   CheckIcon,
+  ChevronRightIcon,
   ClockIcon,
   CloseIcon,
   DownloadIcon,
@@ -312,6 +313,61 @@ function spoken(message: Message): string | undefined {
   return body.slice(0, -question.length).trim() || undefined;
 }
 
+/*
+ * ArticleAnswer is the help article a workflow answered with: a row the
+ * visitor taps to read it in the messenger.
+ */
+function ArticleAnswer({ message }: { message: Message }) {
+  const article = message.article;
+  if (!article) {
+    return raw("");
+  }
+
+  return (
+    <div className="bubble-wrap" data-key={`${keyOf(message)}:article`}>
+      <button className="row card" type="button" data-action="click->visit" data-open={`article:${article.slug}`}>
+        <span className="row-icon">
+          <BookIcon />
+        </span>
+        <span className="text">
+          <strong>{article.title}</strong>
+          {article.summary ? <small>{article.summary}</small> : null}
+        </span>
+        <ChevronRightIcon />
+      </button>
+    </div>
+  );
+}
+
+/*
+ * Choices are the answers a question offers, as buttons the visitor taps.
+ * They show under the last message alone: once the visitor has answered,
+ * the question is behind them and its buttons go.
+ */
+function Choices({ message }: { message: Message }) {
+  const choices = message.choices ?? [];
+  if (choices.length === 0) {
+    return raw("");
+  }
+
+  return (
+    <div className="choices" data-key={`${keyOf(message)}:choices`}>
+      {choices.map((choice) => (
+        <button
+          className="choice"
+          type="button"
+          data-action="click->choose"
+          data-choice={choice.id}
+          data-label={choice.label}
+          key={choice.id || choice.label}
+        >
+          {choice.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 function Bubble({ message, texts }: { message: Message; texts: ActionTexts }) {
   const sources = message.sources ?? [];
   const key = keyOf(message);
@@ -340,6 +396,7 @@ function Bubble({ message, texts }: { message: Message; texts: ActionTexts }) {
           <AttachmentBubble attachment={message.attachment} />
         </div>
       ) : null}
+      {message.article ? <ArticleAnswer message={message} /> : null}
       {message.action ? <ActionBlock action={message.action} texts={texts} /> : null}
     </>
   );
@@ -404,11 +461,14 @@ function runs(messages: Message[]): Message[][] {
 }
 
 export function Thread({ messages, texts = actionTexts }: { messages: Message[]; texts?: ActionTexts }) {
+  const last = messages.at(-1);
+
   return (
     <>
       {runs(messages).map((run) => (
         <Said messages={run} texts={texts} key={`${run[0]?.at}-${run[0]?.from}-${run.length}`} />
       ))}
+      {last ? <Choices message={last} /> : null}
     </>
   );
 }

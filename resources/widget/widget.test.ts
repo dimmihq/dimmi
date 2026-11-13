@@ -751,20 +751,32 @@ describe("core", () => {
     expect(home.hasAttribute("data-scrolled")).toBe(false);
   });
 
-  it("narrows the help collections as the visitor types", async () => {
+  it("searches every article by its own words and brings the collections back", async () => {
     await started();
     const input = shadow().querySelector("[data-view=help] input") as HTMLInputElement;
-    const shown = () =>
-      [...shadow().querySelectorAll<HTMLElement>("[data-target=row]")].filter((row) => !row.hidden).length;
+    const hits = () =>
+      [...shadow().querySelectorAll<HTMLElement>("[data-target=hit]")].filter((row) => !row.hidden).length;
+    const browsing = () =>
+      [...shadow().querySelectorAll<HTMLElement>("[data-target=browse]")].every((part) => !part.hidden);
 
-    input.value = "BILL";
+    expect(browsing()).toBe(true);
+    expect(hits()).toBe(0);
+
+    // "fine-grained token" appears in an article's body alone, never in a title.
+    input.value = "FINE-GRAINED";
     input.dispatchEvent(new Event("input", { bubbles: true }));
-    expect(shown()).toBe(1);
+    expect(hits()).toBe(1);
+    expect(browsing()).toBe(false);
 
     input.value = "nothing like this";
     input.dispatchEvent(new Event("input", { bubbles: true }));
-    expect(shown()).toBe(0);
+    expect(hits()).toBe(0);
     expect(shadow().querySelector("[data-target=none]")?.hasAttribute("hidden")).toBe(false);
+
+    input.value = "";
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+    expect(browsing()).toBe(true);
+    expect(shadow().querySelector("[data-target=none]")?.hasAttribute("hidden")).toBe(true);
   });
 
   it("draws only the tabs the customer kept, in their order, and drops the bar for one", async () => {

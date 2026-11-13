@@ -82,6 +82,7 @@ type MessageInput struct {
 	Context       map[string]any
 	Browser       string
 	OS            string
+	Choice        string
 }
 
 /*
@@ -230,6 +231,10 @@ func (a *PostWidgetMessage) inbound(
 			"session_id": models.PublicID(models.PrefixWidgetSession, s.ID), "identity_verified": verified(s, now),
 			"email_verified": EmailProven(s, now),
 		},
+	}
+
+	if in.Choice != "" {
+		msg.Metadata["answer"] = map[string]any{"path_id": in.Choice}
 	}
 
 	if s.BotScore >= botBlockScore {

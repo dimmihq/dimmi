@@ -55,6 +55,7 @@
   "reply_hours": "通常数時間以内に返信",
   "reply_minutes": "通常数分以内に返信",
   "search_placeholder": "ヘルプを検索",
+  "search_none": "結果はありません",
   "seen": "既読",
   "send_message": "メッセージを送る",
   "show_all": "すべて表示",

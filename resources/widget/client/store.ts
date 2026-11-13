@@ -56,6 +56,9 @@ export interface Message {
   created_at: string;
   read_at?: string | null;
   ai?: AiAnswer | null;
+  choices?: { id: string; label: string }[] | null;
+  choices_only?: boolean;
+  article?: { slug: string; title: string; summary?: string; url?: string } | null;
   metadata?: { ai?: AiAnswer | null } | null;
   sending?: boolean;
   failed?: string;

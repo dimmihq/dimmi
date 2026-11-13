@@ -23,6 +23,7 @@ The step kinds.
 */
 const (
 	KindMessage       = "message"
+	KindArticle       = "article"
 	KindButtons       = "buttons"
 	KindCollect       = "collect"
 	KindReplyTime     = "reply_time"
@@ -82,6 +83,7 @@ Kinds returns every step kind.
 func Kinds() []Kind {
 	return append([]Kind{
 		{Key: KindMessage, CustomerFacing: true, Ready: true},
+		{Key: KindArticle, CustomerFacing: true, Ready: true},
 		{
 			Key: KindButtons, CustomerFacing: true, Fixed: []string{OutcomeTyped, OutcomeTimeout},
 			MinPaths: 2, MaxPaths: 6, Ready: true,
