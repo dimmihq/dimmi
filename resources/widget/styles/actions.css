@@ -93,15 +93,14 @@
   display: flex;
   flex-wrap: wrap;
   justify-content: flex-end;
-  gap: 6px;
-  margin-block-start: 6px;
-  animation: enter 220ms var(--out);
+  gap: 8px;
+  margin-block-start: 8px;
 }
 
 .choice {
-  padding: 8px 14px;
+  padding: 10px 16px;
   border: 1px solid var(--accent);
-  border-radius: 18px;
+  border-radius: 999px;
   background: var(--bg-primary);
   color: var(--accent);
   font: inherit;
@@ -109,9 +108,24 @@
   font-weight: 500;
   line-height: 1.2;
   cursor: pointer;
+  box-shadow: var(--shadow-xs);
+  animation: choice-in 260ms var(--out) backwards;
+  animation-delay: calc(var(--step, 0) * 60ms);
   transition:
-    background-color 150ms ease,
-    color 150ms ease;
+    background-color 120ms ease,
+    color 120ms ease,
+    transform 120ms var(--out);
+}
+
+/*
+ * Each answer comes in just after the one before it, so a menu reads as
+ * a list being laid down rather than a block appearing at once.
+ */
+@keyframes choice-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.96);
+  }
 }
 
 .choice:hover {
@@ -122,6 +136,17 @@
   background-image: linear-gradient(180deg, var(--brand-top), var(--brand));
   border-color: transparent;
   color: var(--on-brand);
+  transform: scale(0.96);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .choice {
+    animation: none;
+  }
+
+  .choice:active {
+    transform: none;
+  }
 }
 
 .choice:focus-visible {

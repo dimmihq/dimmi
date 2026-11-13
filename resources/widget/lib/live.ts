@@ -145,6 +145,7 @@ function followBottom(thread: HTMLElement, at: { pinned: boolean; jump: boolean 
       },
       true,
     );
+    keepAtBottom(thread);
   }
   if (!at.pinned) {
     return;
@@ -155,6 +156,35 @@ function followBottom(thread: HTMLElement, at: { pinned: boolean; jump: boolean 
   thread.scrollTop = thread.scrollHeight;
   thread.dataset.pinned = "true";
   thread.style.scrollBehavior = "";
+}
+
+/*
+ * keepAtBottom holds the thread at its end while whatever it holds is
+ * still settling: a bubble animating in, the composer going away under a
+ * question that only takes an answer, a picture sizing itself. Without
+ * it the thread lands where the content was a moment ago and the newest
+ * message sits half below the fold.
+ */
+function keepAtBottom(thread: HTMLElement) {
+  if (typeof ResizeObserver !== "function") {
+    return;
+  }
+  const settle = new ResizeObserver(() => {
+    if (thread.dataset.pinned === "false") {
+      return;
+    }
+    thread.style.scrollBehavior = "auto";
+    thread.scrollTop = thread.scrollHeight;
+    thread.style.scrollBehavior = "";
+  });
+  settle.observe(thread);
+  const follow = () => {
+    for (const child of thread.children) {
+      settle.observe(child);
+    }
+  };
+  follow();
+  new MutationObserver(follow).observe(thread, { childList: true });
 }
 
 /*

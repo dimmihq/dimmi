@@ -352,13 +352,14 @@ function Choices({ message }: { message: Message }) {
 
   return (
     <div className="choices" data-key={`${keyOf(message)}:choices`}>
-      {choices.map((choice) => (
+      {choices.map((choice, index) => (
         <button
           className="choice"
           type="button"
           data-action="click->choose"
           data-choice={choice.id}
           data-label={choice.label}
+          style={`--step:${index}`}
           key={choice.id || choice.label}
         >
           {choice.label}
