@@ -1,9 +1,11 @@
 /*
  * A ticket opened in the inbox, in the place a conversation opens. A
  * customer's request opens its conversation, where its replies and its
- * ticket panel live. Trackers and incidents open their own views, and
- * any other ticket, such as back-office work, opens as a thread of its
- * notes and changes beside its details.
+ * ticket panel live. Back-office work opens the conversation of the
+ * customer request it serves, where it shows in that ticket panel.
+ * Trackers and incidents, which many conversations share, open their
+ * own views. A back-office ticket made without a customer request opens
+ * as a thread of its notes beside its details.
  */
 import { RiCoupon3Line } from "@remixicon/react";
 import { useQuery } from "@tanstack/react-query";
@@ -11,7 +13,7 @@ import { Navigate } from "@tanstack/react-router";
 import { ConversationSkeleton } from "@/features/inbox/skeletons";
 import { useAccount } from "@/features/settings/use-account";
 import { EmptyState, Panel } from "@/features/shell/page";
-import { ticketQuery } from "@/lib/api/tickets";
+import { type Ticket, ticketQuery } from "@/lib/api/tickets";
 
 import { IncidentPage } from "./incident-page";
 import { TicketThread } from "./ticket-thread";
@@ -49,6 +51,40 @@ export function TicketOpen({ view, id }: { view: string; id: string }) {
   }
   if (ticket.kind === "incident") {
     return <IncidentPage key={ticket.id} ticketId={ticket.id} />;
+  }
+
+  return <BackOffice view={view} ticket={ticket} />;
+}
+
+/*
+ * servedRequest is the customer request a back-office ticket was made
+ * for, when it has one.
+ */
+function servedRequest(ticket: Ticket): string | null {
+  const link = (ticket.links ?? []).find((l) => l.kind === "back_office" && l.ticket && l.ticket.id !== ticket.id);
+
+  return link?.ticket?.id ?? null;
+}
+
+/*
+ * BackOffice opens the conversation of the request the work serves.
+ */
+function BackOffice({ view, ticket }: { view: string; ticket: Ticket }) {
+  const workspace = useAccount().workspace.id;
+  const parent = servedRequest(ticket);
+  const { data: request, isPending } = useQuery({ ...ticketQuery(workspace, parent ?? ""), enabled: parent !== null });
+
+  if (parent && isPending) {
+    return (
+      <Panel label="Ticket" className="flex-1">
+        <ConversationSkeleton />
+      </Panel>
+    );
+  }
+  if (request?.conversation_id) {
+    return (
+      <Navigate to="/d/inbox/$view/$conversation" params={{ view, conversation: request.conversation_id }} replace />
+    );
   }
 
   return <TicketThread key={ticket.id} view={view} ticket={ticket} />;

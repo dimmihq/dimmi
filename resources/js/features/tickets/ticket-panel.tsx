@@ -2,7 +2,8 @@
  * The ticket panel beside a conversation that is a ticket: its
  * reference, its type with a way to change it, the state and what the
  * customer sees of it, its fields with the AI's suggestions, the
- * back-office work linked to it with each one's state and who holds it,
+ * back-office work linked to it, each a card that opens to move its
+ * state, hand it over and read and add the team's notes,
  * the trackers the conversation joined, the issues behind it and when
  * the next reply is due. A conversation that is no ticket but joined
  * trackers shows only those.
@@ -13,11 +14,11 @@ import { Link, useParams } from "@tanstack/react-router";
 
 import { Button } from "@/components/base/buttons/button";
 import { Select, SelectItem } from "@/components/base/select/select";
-import { ago } from "@/features/inbox/conversations";
 import { conversationTicketsQuery, type SLAClock, type Ticket, type TicketType } from "@/lib/api/tickets";
 import { membersQuery } from "@/lib/api/workspace";
 import { cx } from "@/utils/cx";
 
+import { BackOfficeCard } from "./back-office-card";
 import { TicketIssues } from "./issues/ticket-issues";
 import { dueIn } from "./labels";
 import { StatePill, TypeIcon } from "./state-pill";
@@ -148,17 +149,11 @@ function OwnTicket({ workspace, ticket, trackers }: { workspace: string; ticket:
         ) : (
           backOffice.map((l) =>
             l.ticket ? (
-              <LinkedRow
+              <BackOfficeCard
                 key={l.id}
-                ticket={l.ticket}
-                detail={
-                  <>
-                    <StatePill state={l.ticket.state} />
-                    <span className="truncate">
-                      {nameOf(l.ticket.assignee_id)} · {ago(l.ticket.updated_at)}
-                    </span>
-                  </>
-                }
+                linked={l.ticket}
+                holder={nameOf(l.ticket.assignee_id)}
+                startOpen={backOffice.length === 1}
               />
             ) : null,
           )

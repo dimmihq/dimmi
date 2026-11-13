@@ -145,7 +145,7 @@ function TicketLink({
 /*
  * Note is one note a teammate left, shown like a message.
  */
-function Note({ event }: { event: TicketEvent }) {
+export function Note({ event }: { event: TicketEvent }) {
   const name = String(event.data.actor_name ?? "Teammate");
 
   return (
@@ -167,7 +167,7 @@ function Note({ event }: { event: TicketEvent }) {
 /*
  * Change is one change to the ticket, a quiet line between the notes.
  */
-function Change({ event }: { event: TicketEvent }) {
+export function Change({ event }: { event: TicketEvent }) {
   const who = event.data.actor_name ? `${String(event.data.actor_name)} · ` : "";
 
   return (
@@ -215,7 +215,7 @@ export function Timeline({
  * NoteBox writes a note for the team at the foot of the thread; Cmd or
  * Ctrl+Enter adds it.
  */
-export function NoteBox({ workspace, ticket }: { workspace: string; ticket: Ticket }) {
+export function NoteBox({ workspace, ticket, bare = false }: { workspace: string; ticket: Ticket; bare?: boolean }) {
   const client = useQueryClient();
   const [body, setBody] = useState("");
   const note = useMutation({
@@ -228,7 +228,7 @@ export function NoteBox({ workspace, ticket }: { workspace: string; ticket: Tick
   });
 
   return (
-    <div className="mx-auto w-full max-w-[760px] px-4 pb-4">
+    <div className={bare ? "w-full" : "mx-auto w-full max-w-[760px] px-4 pb-4"}>
       <div className="flex flex-col gap-2 rounded-2xl border border-border-button-default bg-background-primary-default p-2 shadow-xs">
         <Textarea
           aria-label="Note"
@@ -260,7 +260,7 @@ export function NoteBox({ workspace, ticket }: { workspace: string; ticket: Tick
 /*
  * Holders are who holds the ticket and how urgent it is.
  */
-function Holders({ workspace, ticket, save }: { workspace: string; ticket: Ticket; save: TicketSave }) {
+export function Holders({ workspace, ticket, save }: { workspace: string; ticket: Ticket; save: TicketSave }) {
   const { data: members = [] } = useQuery({ ...membersQuery(workspace), enabled: workspace !== "" });
   const { data: teams = [] } = useQuery(teamsQuery(workspace));
   const people = [
