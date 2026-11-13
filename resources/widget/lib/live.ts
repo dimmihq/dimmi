@@ -35,7 +35,7 @@ interface HelpIndex {
   articles: { slug: string; title: string; summary: string; updated: string; body: Block[] }[];
 }
 
-import type { Options, OptionsUpdate, Tab } from "../options";
+import type { Options, OptionsUpdate, Tab, Texts } from "../options";
 import type { ActionTexts } from "../text";
 import { type Availability, type Config, content, fromConfig, reading } from "./map";
 import { patch } from "./patch";
@@ -109,6 +109,13 @@ interface WidgetCall {
  * it an id.
  */
 const draftId = "draft";
+
+/*
+ * expectingFor is how long the thread shows the team typing while it
+ * waits on a workflow, so a workflow that never answers does not leave
+ * the dots running.
+ */
+const expectingFor = 20_000;
 
 /*
  * Codes that mean the messenger must not show at all here, with the line
@@ -216,6 +223,8 @@ export class Live {
   private help: Pick<Content, "collections" | "articles" | "popular" | "help_url"> | undefined;
   private changelog: Pick<Content, "changelog" | "unread_changelog"> | undefined;
   private greeting = false;
+  private locked = false;
+  private readonly expecting = new Map<string, { after: number; until: number }>();
   private latestEntry = "";
   private readonly rated = new Map<string, "yes" | "no">();
   private ratings: import("./rating").Ratings | undefined;
@@ -632,6 +641,55 @@ export class Live {
   }
 
   /*
+   * emailCapture asks where to reply when a message of the visitor's was
+   * refused for want of an address, and is nothing otherwise.
+   */
+  private emailCapture(open: string | undefined, texts: Texts): string {
+    const waiting = open && (this.store.messages.get(open) ?? []).some((m) => m.failed === "email_required");
+    if (!waiting) {
+      return "";
+    }
+
+    return (
+      `<form class="capture" data-capture><p>${escapeHtml(texts.email_prompt)}</p><span class="row">` +
+      '<label class="field"><input type="email" name="email" required autocomplete="email"></label>' +
+      `<button class="button primary" type="submit">${escapeHtml(texts.send_message)}</button></span></form>`
+    );
+  }
+
+  /*
+   * expect says a workflow is about to write in the conversation, so the
+   * thread shows the team typing while it does: a greeting on the way,
+   * or the next question after an answer was tapped. It remembers how
+   * much the thread held at the time, and expected() ends the wait as
+   * soon as anything lands, or once nothing has.
+   */
+  private expect(conversation: string) {
+    this.expecting.set(conversation, {
+      after: (this.store.messages.get(conversation) ?? []).length,
+      until: this.browser.now() + expectingFor,
+    });
+  }
+
+  /*
+   * expected reports whether the conversation is still waiting on words
+   * a workflow owes it.
+   */
+  private expected(conversation: string | undefined): boolean {
+    const wait = conversation ? this.expecting.get(conversation) : undefined;
+    if (!conversation || !wait) {
+      return false;
+    }
+    if ((this.store.messages.get(conversation) ?? []).length > wait.after || this.browser.now() > wait.until) {
+      this.expecting.delete(conversation);
+
+      return false;
+    }
+
+    return true;
+  }
+
+  /*
    * greet opens a conversation before the visitor has written anything,
    * where the workspace greets them as the chat opens: the conversation
    * has to exist for a workflow to say the first word in it. Workspaces
@@ -652,6 +710,7 @@ export class Live {
         return undefined;
       }
       this.open = res.data.id;
+      this.expect(res.data.id);
       this.drawThread();
       this.streaming();
 
@@ -670,6 +729,7 @@ export class Live {
    */
   async send(body: string, files: File[], choice?: string) {
     const conversation = this.open && this.open !== draftId ? this.open : undefined;
+    const answering = this.locked;
     let attachmentIds: string[] = [];
     if (files.length > 0) {
       attachmentIds = await this.upload(files);
@@ -686,6 +746,12 @@ export class Live {
       created_at: new Date(this.browser.now()).toISOString(),
       sending: true,
     });
+
+    if (choice && conversation) {
+      this.expect(conversation);
+      this.locked = answering;
+      this.drawThread();
+    }
   }
 
   /*
@@ -1087,7 +1153,8 @@ export class Live {
       void loadTickets(this.host.root).then(() => this.drawThread());
     }
 
-    if (typing) {
+    const waiting = this.expected(open);
+    if (typing || waiting) {
       parts.push(String(t.Typing()));
     } else {
       parts.push(this.aiActions(last, t));
@@ -1096,16 +1163,10 @@ export class Live {
     if (last?.from === "visitor" && this.config.delay_notice !== false && this.availability?.online === false) {
       parts.push(`<p class="delay">${escapeHtml(texts.delay_notice)}</p>`);
     }
-    parts.push(this.ratingCard());
-    if (open && (this.store.messages.get(open) ?? []).some((m) => m.failed === "email_required")) {
-      parts.push(
-        `<form class="capture" data-capture><p>${escapeHtml(texts.email_prompt)}</p><span class="row">` +
-          '<label class="field"><input type="email" name="email" required autocomplete="email"></label>' +
-          `<button class="button primary" type="submit">${escapeHtml(texts.send_message)}</button></span></form>`,
-      );
-    }
+    parts.push(this.ratingCard(), this.emailCapture(open, texts));
 
-    this.lockComposer(choicesOnly(last));
+    this.locked = choicesOnly(last) || (waiting && this.locked);
+    this.lockComposer(this.locked);
     place({ thread, loaded, open: open ?? "", shown: messages.length }, parts.join(""));
     this.host.root.dispatchEvent(new CustomEvent("dimmi:connect"));
     this.watchCalls(messages);
