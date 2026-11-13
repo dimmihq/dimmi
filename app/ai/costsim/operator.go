@@ -90,6 +90,26 @@ func (h *Harness) ask(ctx context.Context, m authz.Membership, i int, requests [
 }
 
 /*
+readTaskParts reads the tool layer's figures and the token ledger of
+the teammate's task runs since the moment.
+*/
+func (h *Harness) readTaskParts(ctx context.Context, m authz.Membership, since time.Time,
+	res *ConversationResult,
+) error {
+	ws := m.Workspace.ID
+	runs, err := h.runIDs(ctx, `SELECT id FROM ai_runs WHERE workspace_id = $1 AND kind = 'task'
+		AND actor_id = $2 AND created_at >= $3`, ws, m.Member.ID, since)
+	if err != nil {
+		return fmt.Errorf("read task run ids: %w", err)
+	}
+	if res.Layer, err = h.readLayer(ctx, ws, runs); err != nil {
+		return err
+	}
+	res.Ledger, err = h.readLedger(ctx, ws, runs)
+	return err
+}
+
+/*
 readTask fills the result from the task runs the teammate started
 since the moment.
 */
@@ -129,12 +149,6 @@ func (h *Harness) readTask(ctx context.Context, m authz.Membership, since time.T
 			}
 		}
 		rows.Close()
-		runs, err := h.runIDs(ctx, `SELECT id FROM ai_runs WHERE workspace_id = $1 AND kind = 'task'
-			AND actor_id = $2 AND created_at >= $3`, ws, m.Member.ID, since)
-		if err != nil {
-			return fmt.Errorf("read task run ids: %w", err)
-		}
-		res.Layer, err = h.readLayer(ctx, ws, runs)
-		return err
+		return h.readTaskParts(ctx, m, since, res)
 	})
 }

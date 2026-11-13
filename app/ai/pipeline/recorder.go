@@ -81,6 +81,7 @@ type stepRecord struct {
 	request       string
 	response      string
 	usage         contracts.LLMUsage
+	ledger        json.RawMessage
 	err           error
 }
 
@@ -120,6 +121,7 @@ func (r *Runner) step(ctx context.Context, st *run, in stepRecord) {
 	if in.key != nil {
 		params.ProviderKeyID = &in.key.id
 	}
+	params.Ledger = in.ledger
 	if in.llm != nil && in.model != "" {
 		params.Upstream = new(string(contracts.UpstreamOf(in.llm, in.model)))
 	}

@@ -20,6 +20,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/dimmihq/dimmi/app/ai/ledger"
 	"github.com/dimmihq/dimmi/app/ai/toolset"
 	"github.com/dimmihq/dimmi/app/contracts"
 	"github.com/dimmihq/dimmi/app/enums"
@@ -54,6 +55,7 @@ func (e *Engine) converse(ctx context.Context, s *session) (string, string) {
 	e.openLayer(ctx, s)
 	defer e.saveLayer(ctx, s)
 	p := prompt{system: e.systemPrompt(s), messages: e.transcript(s)}
+	p.newest = len(p.messages) - 1
 	if s.layer != nil {
 		p.system += "\n\n" + s.layer.set.Prompt()
 		s.layer.system = p.system
@@ -92,6 +94,7 @@ so far.
 type prompt struct {
 	system   string
 	messages []contracts.ChatMessage
+	newest   int
 }
 
 /*
@@ -112,7 +115,7 @@ func (e *Engine) generate(ctx context.Context, s *session, p prompt, tools []con
 	out, err := e.stream(ctx, s, req, started)
 	e.record(ctx, s, step{
 		kind: enums.AIRunStepKindGenerate, name: s.model, started: started, firstToken: out.firstToken,
-		response: out.text, usage: out.usage, err: err,
+		response: out.text, usage: out.usage, ledger: ledger.Encode(ledger.Of(req, p.newest)), err: err,
 	})
 	return out, err
 }

@@ -93,26 +93,27 @@ var ErrNoAgentModel = errors.New("the agent has no AI connection; connect one in
 ConversationResult is one simulated conversation and what it cost.
 */
 type ConversationResult struct {
-	Index          int            `json:"index"`
-	Scenario       string         `json:"scenario"`
-	Kind           string         `json:"kind"`
-	ConversationID string         `json:"conversation_id"`
-	Turns          int            `json:"turns"`
-	AIReplies      int            `json:"ai_replies"`
-	Runs           int            `json:"runs"`
-	ModelCalls     int            `json:"model_calls"`
-	Searches       int            `json:"searches"`
-	ToolCalls      int            `json:"tool_calls"`
-	NewTokens      int64          `json:"new_input_tokens"`
-	CachedTokens   int64          `json:"cached_input_tokens"`
-	OutputTokens   int64          `json:"output_tokens"`
-	CostMicros     int64          `json:"cost_micros"`
-	ConvCost       int64          `json:"conversation_ai_cost_micros"`
-	ReplyCosts     []int64        `json:"reply_cost_micros"`
-	Models         map[string]int `json:"models"`
-	Outcome        string         `json:"outcome"`
-	Error          string         `json:"error,omitempty"`
-	Layer          *LayerResult   `json:"tool_layer,omitempty"`
+	Index          int                 `json:"index"`
+	Scenario       string              `json:"scenario"`
+	Kind           string              `json:"kind"`
+	ConversationID string              `json:"conversation_id"`
+	Turns          int                 `json:"turns"`
+	AIReplies      int                 `json:"ai_replies"`
+	Runs           int                 `json:"runs"`
+	ModelCalls     int                 `json:"model_calls"`
+	Searches       int                 `json:"searches"`
+	ToolCalls      int                 `json:"tool_calls"`
+	NewTokens      int64               `json:"new_input_tokens"`
+	CachedTokens   int64               `json:"cached_input_tokens"`
+	OutputTokens   int64               `json:"output_tokens"`
+	CostMicros     int64               `json:"cost_micros"`
+	ConvCost       int64               `json:"conversation_ai_cost_micros"`
+	ReplyCosts     []int64             `json:"reply_cost_micros"`
+	Models         map[string]int      `json:"models"`
+	Outcome        string              `json:"outcome"`
+	Error          string              `json:"error,omitempty"`
+	Layer          *LayerResult        `json:"tool_layer,omitempty"`
+	Ledger         map[string]PartCost `json:"ledger,omitempty"`
 }
 
 /*

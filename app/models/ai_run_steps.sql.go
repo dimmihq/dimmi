@@ -19,15 +19,15 @@ INSERT INTO ai_run_steps (
     retry_of_step_id, status, error_kind, provider_error_code, http_status, provider_request_id,
     request, response, input_tokens, cached_input_tokens, cache_write_tokens, output_tokens,
     reasoning_tokens, usage_estimated, cost_micros, latency_ms, first_token_ms,
-    started_at, completed_at, upstream, created_at
+    started_at, completed_at, upstream, ledger, created_at
 ) VALUES (
     $1, $2, $3, $4, $5, $6, $7, $8, $9,
     $10, $11, $12, $13, $14, $15,
     $16, $17, $18, $19, $20, $21,
     $22, $23, $24, $25, $26,
-    $27, $28, $29, $30
+    $27, $28, $29, $30, $31
 )
-RETURNING id, workspace_id, run_id, seq, kind, provider, provider_key_id, model, response_model, attempt, retry_of_step_id, status, error_kind, provider_error_code, http_status, provider_request_id, request, response, input_tokens, cached_input_tokens, cache_write_tokens, output_tokens, reasoning_tokens, usage_estimated, cost_micros, latency_ms, first_token_ms, started_at, completed_at, created_at, upstream
+RETURNING id, workspace_id, run_id, seq, kind, provider, provider_key_id, model, response_model, attempt, retry_of_step_id, status, error_kind, provider_error_code, http_status, provider_request_id, request, response, input_tokens, cached_input_tokens, cache_write_tokens, output_tokens, reasoning_tokens, usage_estimated, cost_micros, latency_ms, first_token_ms, started_at, completed_at, created_at, upstream, ledger
 `
 
 type CreateRunStepParams struct {
@@ -60,6 +60,7 @@ type CreateRunStepParams struct {
 	StartedAt         *time.Time      `json:"started_at"`
 	CompletedAt       *time.Time      `json:"completed_at"`
 	Upstream          *string         `json:"upstream"`
+	Ledger            json.RawMessage `json:"ledger"`
 	Now               time.Time       `json:"now"`
 }
 
@@ -95,6 +96,7 @@ func (q *Queries) CreateRunStep(ctx context.Context, arg CreateRunStepParams) (A
 		arg.StartedAt,
 		arg.CompletedAt,
 		arg.Upstream,
+		arg.Ledger,
 		arg.Now,
 	)
 	var i AiRunStep
@@ -130,6 +132,7 @@ func (q *Queries) CreateRunStep(ctx context.Context, arg CreateRunStepParams) (A
 		&i.CompletedAt,
 		&i.CreatedAt,
 		&i.Upstream,
+		&i.Ledger,
 	)
 	return i, err
 }
@@ -149,7 +152,7 @@ func (q *Queries) EraseContactRunData(ctx context.Context, conversationIds []ids
 }
 
 const listRunSteps = `-- name: ListRunSteps :many
-SELECT id, workspace_id, run_id, seq, kind, provider, provider_key_id, model, response_model, attempt, retry_of_step_id, status, error_kind, provider_error_code, http_status, provider_request_id, request, response, input_tokens, cached_input_tokens, cache_write_tokens, output_tokens, reasoning_tokens, usage_estimated, cost_micros, latency_ms, first_token_ms, started_at, completed_at, created_at, upstream FROM ai_run_steps
+SELECT id, workspace_id, run_id, seq, kind, provider, provider_key_id, model, response_model, attempt, retry_of_step_id, status, error_kind, provider_error_code, http_status, provider_request_id, request, response, input_tokens, cached_input_tokens, cache_write_tokens, output_tokens, reasoning_tokens, usage_estimated, cost_micros, latency_ms, first_token_ms, started_at, completed_at, created_at, upstream, ledger FROM ai_run_steps
 WHERE workspace_id = $1 AND run_id = $2
 ORDER BY seq
 `
@@ -201,6 +204,7 @@ func (q *Queries) ListRunSteps(ctx context.Context, arg ListRunStepsParams) ([]A
 			&i.CompletedAt,
 			&i.CreatedAt,
 			&i.Upstream,
+			&i.Ledger,
 		); err != nil {
 			return nil, err
 		}

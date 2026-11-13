@@ -183,6 +183,7 @@ func (r *Runner) followUpTurn(ctx context.Context, st *run) *decision {
 	st.loop.messages = r.envelope(st.env, actionkit.FollowUpNote(call))
 	r.offerActions(ctx, st)
 	r.openLayer(ctx, st)
+	st.loop.newest = len(st.loop.messages) - 1
 
 	draft, err := r.agentLoop(ctx, st)
 	r.saveLayer(ctx, st)

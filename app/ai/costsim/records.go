@@ -97,7 +97,10 @@ func (h *Harness) read(ctx context.Context, conv models.Conversation, res *Conve
 		if err != nil {
 			return fmt.Errorf("read run ids: %w", err)
 		}
-		res.Layer, err = h.readLayer(ctx, conv.WorkspaceID, runs)
+		if res.Layer, err = h.readLayer(ctx, conv.WorkspaceID, runs); err != nil {
+			return err
+		}
+		res.Ledger, err = h.readLedger(ctx, conv.WorkspaceID, runs)
 		return err
 	})
 }

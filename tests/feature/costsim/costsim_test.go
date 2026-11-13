@@ -190,6 +190,10 @@ func TestSimulation(t *testing.T) {
 		assert.Positive(t, first.Layer.SystemTokens)
 		assert.NotEmpty(t, first.Layer.Steps)
 		assert.Contains(t, report.Markdown(), "## Tool layer")
+		assert.Positive(t, first.Ledger["fixed"].Tokens(), "the ledger splits the input by part")
+		assert.Positive(t, first.Ledger["newest"].Tokens())
+		assert.Positive(t, first.Ledger["output"].Tokens())
+		assert.Contains(t, report.Markdown(), "## Token ledger")
 	})
 
 	t.Run("stops cleanly when the run's spend limit is reached", func(t *testing.T) {

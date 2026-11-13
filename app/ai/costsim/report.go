@@ -243,6 +243,7 @@ func (r *Report) Markdown() string {
 	b.WriteString(groupTable(sortedKeys(r.ByKind), r.ByKind))
 	b.WriteString("\n## By model\n\n")
 	b.WriteString(groupTable(sortedKeys(r.ByModel), r.ByModel))
+	b.WriteString(r.ledgerMarkdown())
 	b.WriteString(r.layerMarkdown())
 	b.WriteString("\n## Conversations\n\n| # | scenario | kind | turns | AI replies | calls | searches | tools | " +
 		"new | cached | out | cost | outcome |\n" + strings.Repeat("|---", 13) + "|\n")

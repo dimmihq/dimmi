@@ -29,6 +29,7 @@ import (
 
 	"github.com/dimmihq/dimmi/framework/ids"
 
+	"github.com/dimmihq/dimmi/app/ai/ledger"
 	"github.com/dimmihq/dimmi/app/ai/toolset"
 	"github.com/dimmihq/dimmi/app/contracts"
 	"github.com/dimmihq/dimmi/app/enums"
@@ -54,6 +55,7 @@ type loop struct {
 	brief    string
 	messages []contracts.ChatMessage
 	stop     contracts.StopReason
+	newest   int
 }
 
 /*
@@ -189,6 +191,7 @@ func (r *Runner) generate(ctx context.Context, st *run, tools []contracts.ToolSp
 		key: &keyRef{id: e.AnswerKey.ID, provider: e.AnswerKey.Provider}, model: model,
 		started: started, firstToken: out.firstToken, request: transcriptOf(req),
 		response: r.redactFor(e, out.text+"\n"+string(calls)), usage: out.usage, err: err,
+		ledger: ledger.Encode(ledger.Of(req, lp.newest)),
 	})
 	return out, err
 }

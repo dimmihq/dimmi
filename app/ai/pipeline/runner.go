@@ -169,6 +169,7 @@ func (r *Runner) turn(ctx context.Context, st *run) *decision {
 	st.loop.messages = r.conversationMessages(st.env)
 	r.offerActions(ctx, st)
 	r.openLayer(ctx, st)
+	st.loop.newest = len(st.loop.messages) - 1
 
 	draft, err := r.agentLoop(ctx, st)
 	r.saveLayer(ctx, st)

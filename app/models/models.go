@@ -288,6 +288,7 @@ type AiRunStep struct {
 	CompletedAt       *time.Time      `json:"completed_at"`
 	CreatedAt         time.Time       `json:"created_at"`
 	Upstream          *string         `json:"upstream"`
+	Ledger            json.RawMessage `json:"ledger"`
 }
 
 type AiSpendPeriod struct {
