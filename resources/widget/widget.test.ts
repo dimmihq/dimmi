@@ -871,6 +871,20 @@ describe("core", () => {
 
     const pills = [...shadow().querySelectorAll('.view[data-view="messages"] .pill')].map((p) => p.textContent);
     expect(pills).toEqual(["With our team"]);
+
+    const rows = () =>
+      [...shadow().querySelectorAll<HTMLElement>('.view[data-view="messages"] [data-conversation]')].filter(
+        (row) => row.style.display !== "none",
+      );
+    shadow().querySelector<HTMLElement>('[data-ticket-filter="open"]')?.click();
+    expect(rows().map((row) => row.textContent)).toEqual([expect.stringContaining("T-482")]);
+    shadow().querySelector<HTMLElement>('[data-ticket-filter="all"]')?.click();
+    expect(rows().length).toBeGreaterThan(1);
+
+    rows()[0]?.click();
+    expect(shadow().querySelector(".thread .ticket-strip")?.textContent).toContain("With our team");
+    rows()[1]?.click();
+    expect(shadow().querySelector(".thread .ticket-strip")).toBeNull();
   });
 
   it("hides the launcher when the customer opens the messenger from their own buttons", async () => {

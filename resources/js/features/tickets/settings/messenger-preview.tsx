@@ -1,6 +1,6 @@
 /*
  * A customer type as customers meet it, in the real messenger with the
- * workspace's messenger look: the type's form with only the fields
+ * look of the messenger its customers use: the type's form with only the fields
  * customers see, or Messages with a request of this type in the state
  * picked in the type's states, under the label customers read. It
  * follows the editor's draft as it changes. Nothing typed or sent in it
@@ -40,12 +40,13 @@ function widgetFields(fields: TicketField[]) {
 }
 
 /*
- * useMessengerConfig reads how the workspace's first messenger looks, so
- * the preview wears it.
+ * useMessengerConfig reads how the messenger customers of this type use
+ * looks, so the preview wears it: the one on the type's inbox, else the
+ * workspace's first live one.
  */
-function useMessengerConfig(workspace: string) {
+function useMessengerConfig(workspace: string, inbox: string | null) {
   const { data: widgets = [] } = useQuery(widgetSettingsQuery(workspace));
-  const widget = widgets.find((w) => w.enabled) ?? widgets[0];
+  const widget = widgets.find((w) => w.enabled && w.inbox.id === inbox) ?? widgets.find((w) => w.enabled) ?? widgets[0];
 
   return useQuery({
     queryKey: ["workspace", workspace, "widget-settings", widget?.id ?? "", "preview", "", "{}"],
@@ -58,6 +59,7 @@ function useMessengerConfig(workspace: string) {
 
 export function MessengerPreview({
   workspace,
+  inbox,
   typeId,
   name,
   description,
@@ -68,6 +70,7 @@ export function MessengerPreview({
   onView,
 }: {
   workspace: string;
+  inbox: string | null;
   typeId: string;
   name: string;
   description: string;
@@ -77,7 +80,7 @@ export function MessengerPreview({
   view: PreviewView;
   onView: (view: PreviewView) => void;
 }) {
-  const config = useMessengerConfig(workspace);
+  const config = useMessengerConfig(workspace, inbox);
   const tickets = {
     types: [{ id: typeId, name: name || "Untitled type", icon, description, fields: widgetFields(fields) }],
     request: {
@@ -91,12 +94,7 @@ export function MessengerPreview({
   return (
     <div className="flex h-full flex-col">
       <div className="flex items-center justify-between gap-3 px-4 pt-4 pb-3">
-        <div className="flex min-w-0 flex-col">
-          <span className="text-body-2-medium text-text-primary">Customer preview</span>
-          <span className="truncate text-caption-1-regular text-text-tertiary">
-            The real messenger. Nothing here is sent.
-          </span>
-        </div>
+        <span className="text-body-2-medium text-text-primary">Customer preview</span>
         <SegmentedControl
           aria-label="What to preview"
           selectedKeys={[view]}

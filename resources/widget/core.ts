@@ -186,6 +186,7 @@ export function boot(win: Window & DimmiWindow, doc: Document): Widget | undefin
     const filter = target?.closest<HTMLElement>("[data-ticket-filter]")?.dataset.ticketFilter;
     if (filter) {
       live?.filterOpen(filter === "open");
+      preview?.filter(root, sample, filter === "open");
     }
   };
 
@@ -393,6 +394,10 @@ export function boot(win: Window & DimmiWindow, doc: Document): Widget | undefin
         live?.readChangelog();
       }
       rateClick(live, target);
+      const strip = tickets()?.Strip;
+      if (preview && strip) {
+        preview.strip(root, sample, target, strip, options.texts);
+      }
       const kind = target?.closest<HTMLElement>("[data-ai]")?.dataset.ai;
       if (kind === "helped" || kind === "handoff") {
         void live?.aiAction(kind);

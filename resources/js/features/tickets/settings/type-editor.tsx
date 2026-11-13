@@ -164,9 +164,10 @@ function Editor({ workspace, type }: { workspace: string; type: TicketType }) {
         {customer ? <CustomerSection {...props} /> : null}
       </SettingsPage>
       {customer ? (
-        <Panel label="Customer preview" className="hidden h-full w-[440px] shrink-0 xl:flex">
+        <Panel label="Customer preview" className="hidden h-full w-[500px] shrink-0 xl:flex">
           <MessengerPreview
             workspace={workspace}
+            inbox={edit.draft.inbox_id}
             typeId={type.id}
             name={edit.draft.name}
             description={edit.draft.description}

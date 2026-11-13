@@ -7,6 +7,7 @@
 import type { Content, Incoming, Message, TicketBlock, TicketType } from "./content";
 import { size } from "./lib/map";
 import { Said, Typing } from "./lib/thread_parts";
+import type { Words } from "./lib/ticket_words";
 
 /*
  * teammate is who answers in a preview.
@@ -329,4 +330,41 @@ export function withTickets(content: Content, given: PreviewTickets): Content {
         )
       : content.conversations,
   };
+}
+
+type StripOf = (props: { ticket: TicketBlock; texts: Words }) => unknown;
+
+/*
+ * strip shows a request's progress above the thread when the visitor
+ * opens a sample conversation that carries one, as a live messenger
+ * does, and takes it away for one that does not.
+ */
+export function strip(root: ShadowRoot, content: Content, target: Element | null, of: StripOf, texts: Words) {
+  const row = target?.closest<HTMLElement>("[data-conversation]");
+  if (!row) {
+    return;
+  }
+  const ticket = content.conversations.find((c) => String(c.number) === row.dataset.conversation)?.ticket;
+  const thread = root.querySelector<HTMLElement>(".thread");
+  thread?.querySelector(".ticket-strip")?.remove();
+  const loaded = thread?.querySelector<HTMLElement>(".loaded");
+  if (ticket) {
+    const html = String(of({ ticket, texts }));
+    loaded ? loaded.insertAdjacentHTML("beforebegin", html) : thread?.insertAdjacentHTML("afterbegin", html);
+  }
+}
+
+/*
+ * filter narrows the sample Messages list to open requests, or shows
+ * every conversation again, as a live messenger does.
+ */
+export function filter(root: ShadowRoot, content: Content, open: boolean) {
+  for (const button of root.querySelectorAll("[data-ticket-filter]")) {
+    button.setAttribute("aria-pressed", String((button.getAttribute("data-ticket-filter") === "open") === open));
+  }
+  for (const row of root.querySelectorAll<HTMLElement>('.view[data-view="messages"] [data-conversation]')) {
+    const ticket = content.conversations.find((c) => String(c.number) === row.dataset.conversation)?.ticket;
+    const item = row.closest("li") ?? row;
+    (item as HTMLElement).style.display = open && (!ticket || ticket.state.group === "resolved") ? "none" : "";
+  }
 }
