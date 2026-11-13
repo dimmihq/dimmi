@@ -10,7 +10,7 @@
  * state of the same group for its tickets. A state's group never
  * changes.
  */
-import { RiDeleteBinLine, RiDraggable, RiEditLine } from "@remixicon/react";
+import { RiDeleteBinLine, RiDraggable, RiEditLine, RiInformationLine } from "@remixicon/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useId, useState } from "react";
 import { Button as AriaButton, DropIndicator, GridList, GridListItem, useDragAndDrop } from "react-aria-components";
@@ -21,6 +21,7 @@ import { AlertDialog, Modal, ModalBody, ModalFooter, ModalHeader } from "@/compo
 import { Select, SelectItem } from "@/components/base/select/select";
 import { Switch } from "@/components/base/switch/switch";
 import { toast } from "@/components/base/toast/toast";
+import { Tooltip, TooltipTrigger } from "@/components/base/tooltip/tooltip";
 import { Action } from "@/features/settings/controls";
 import { usePermission } from "@/features/settings/inboxes";
 import { Empty, Section } from "@/features/settings/layout";
@@ -233,14 +234,17 @@ function GroupList({
               Customer sees “{state.customer_label}”
             </span>
           </span>
-          <Switch
-            size="sm"
-            isSelected={state.notify_customer}
-            isDisabled={!canChange}
-            onChange={(on) => onNotify(state, on)}
-          >
-            <span className="text-body-2-regular text-text-secondary">Notify</span>
-          </Switch>
+          <span className="flex items-center gap-1">
+            <Switch
+              size="sm"
+              isSelected={state.notify_customer}
+              isDisabled={!canChange}
+              onChange={(on) => onNotify(state, on)}
+            >
+              <span className="text-body-2-regular text-text-secondary">Notify</span>
+            </Switch>
+            <NotifyHelp state={state} />
+          </span>
           {canChange ? (
             <RowMenu
               label={state.name}
@@ -251,6 +255,39 @@ function GroupList({
         </GridListItem>
       )}
     </GridList>
+  );
+}
+
+/*
+ * NotifyHelp explains what Notify does for this state: who hears, how,
+ * when, and when nothing is sent.
+ */
+function NotifyHelp({ state }: { state: TicketState }) {
+  return (
+    <TooltipTrigger delay={150}>
+      <AriaButton
+        aria-label={`What Notify does for ${state.name}`}
+        className="flex size-6 items-center justify-center rounded-md text-foreground-icon-tertiary outline-none hover:text-foreground-icon-secondary focus-visible:ring-2 focus-visible:ring-border-focus-ring"
+      >
+        <RiInformationLine aria-hidden className="size-4" />
+      </AriaButton>
+      <Tooltip size="md" placement="left" className="max-w-[320px]">
+        <span className="flex flex-col gap-2 text-body-2-regular">
+          <span>
+            When a ticket moves into <b className="text-body-2-medium">{state.name}</b>, the customer who asked gets “
+            {state.customer_label}” in their conversation, on the channel they wrote from: the messenger, email or
+            Slack.
+          </span>
+          <span className="text-text-secondary">
+            dimmi waits two minutes first. Nothing is sent if the ticket moves on, a teammate replies, the customer was
+            already told this state, or the customer made the change. Only tickets the customer can see send it.
+          </span>
+          <span className="text-text-secondary">
+            Off: the state changes quietly. Customers still see it in the messenger and the help center.
+          </span>
+        </span>
+      </Tooltip>
+    </TooltipTrigger>
   );
 }
 
