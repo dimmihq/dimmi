@@ -164,8 +164,21 @@ func saveAgent(ctx context.Context, t *testing.T, d tests.Desk, change func(*mod
 	if change != nil {
 		change(&params)
 	}
-	_, err = q.UpdateAgent(ctx, params)
-	return err
+	if _, err = q.UpdateAgent(ctx, params); err != nil {
+		return err
+	}
+	return q.SetAgentToolLayer(ctx, models.SetAgentToolLayerParams{
+		WorkspaceID: params.WorkspaceID, ID: params.ID, ToolLayer: false, Now: now,
+	})
+}
+
+/*
+withToolLayer turns the agent's tool layer on; the harness keeps it off
+so scripted calls name the tools directly.
+*/
+func (h *harness) withToolLayer() {
+	h.t.Helper()
+	h.operator("UPDATE ai_agents SET tool_layer = true WHERE workspace_id = $1", h.d.TC.Workspace.Workspace.ID)
 }
 
 /*

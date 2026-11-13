@@ -63,7 +63,7 @@ func newOperatorEngine(a *app.App) *operator.Engine {
 	inbox := a.Actions.Inbox
 	return &operator.Engine{
 		DB: a.DB, IDs: a.IDs, Clock: a.Clock, LLM: a.LLM, Prices: a.AI.Prices, Publisher: a.Broadcast,
-		Timeouts: a.Config.AI.Timeouts, StorePayloads: a.Config.AI.TracesStorePayloads,
+		Timeouts: a.Config.AI.Timeouts, StorePayloads: a.Config.AI.TracesStorePayloads, Catalog: newOperatorCatalog(a),
 		Services: operator.Services{
 			Knowledge: a.Knowledge, Show: inbox.ShowConversation, Search: inbox.Search, List: inbox.ListConversations,
 			Context:  inbox.ShowContext,

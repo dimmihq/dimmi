@@ -49,6 +49,33 @@ func TestAnthropicDriver(t *testing.T) {
 		assert.Equal(t, "sk-ant", fake.Sent()[0].Header.Get("X-Api-Key"))
 	})
 
+	t.Run("marks the end of stable history and the last message as cacheable", func(t *testing.T) {
+		t.Parallel()
+		hc, fake := fakeHTTP(t)
+		fake.Stub(messagesURL, fixtures.Reply("anthropic_message.json"))
+		drv := anthropic.New(anthropic.Options{APIKey: "sk-ant", HTTP: hc.StdClient()})
+
+		req := request("claude-opus-5-5")
+		req.CacheHint = true
+		req.Messages = []contracts.ChatMessage{
+			{Role: contracts.ChatRoleUser, Parts: []contracts.ContentPart{{Text: "first"}}},
+			{Role: contracts.ChatRoleAssistant, Parts: []contracts.ContentPart{{Text: "answer"}}, Cacheable: true},
+			{Role: contracts.ChatRoleUser, Parts: []contracts.ContentPart{{Text: "newest"}}},
+		}
+		_, err := drv.Chat(t.Context(), req)
+		require.NoError(t, err)
+
+		messages := list(body(t, fake.Sent()[0])["messages"])
+		require.Len(t, messages, 3)
+		marked := func(i int) any {
+			content := list(object(messages[i])["content"])
+			return object(content[len(content)-1])["cache_control"]
+		}
+		assert.Nil(t, marked(0))
+		assert.Equal(t, map[string]any{"type": "ephemeral"}, marked(1))
+		assert.Equal(t, map[string]any{"type": "ephemeral"}, marked(2))
+	})
+
 	t.Run("streams text, a whole tool call, cache usage and the stop reason", func(t *testing.T) {
 		t.Parallel()
 		hc, fake := fakeHTTP(t)

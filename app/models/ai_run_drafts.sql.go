@@ -13,7 +13,7 @@ import (
 )
 
 const findUnjudgedDraft = `-- name: FindUnjudgedDraft :one
-SELECT id, workspace_id, agent_id, kind, conversation_id, trigger_message_id, included_message_ids, actor_type, actor_id, channel_type, status, outcome, skip_reason, handoff_reason, intent, language, query_original, query_rewritten, retrieval, answer_message_id, prompt_version, prompt_hashes, config_snapshot, flags, input_tokens, cached_input_tokens, cache_write_tokens, output_tokens, cost_micros, price_table_version, first_token_ms, latency_ms, queue_wait_ms, error_code, error_message, feedback, action_calls_count, started_at, completed_at, created_at, updated_at, trigger_action_call_id, draft_body, feedback_at, shadow_agreed FROM ai_runs
+SELECT id, workspace_id, agent_id, kind, conversation_id, trigger_message_id, included_message_ids, actor_type, actor_id, channel_type, status, outcome, skip_reason, handoff_reason, intent, language, query_original, query_rewritten, retrieval, answer_message_id, prompt_version, prompt_hashes, config_snapshot, flags, input_tokens, cached_input_tokens, cache_write_tokens, output_tokens, cost_micros, price_table_version, first_token_ms, latency_ms, queue_wait_ms, error_code, error_message, feedback, action_calls_count, started_at, completed_at, created_at, updated_at, trigger_action_call_id, draft_body, feedback_at, shadow_agreed, tool_layer FROM ai_runs
 WHERE workspace_id = $1 AND conversation_id = $2 AND outcome = 'drafted'
   AND draft_body IS NOT NULL AND shadow_agreed IS NULL
 ORDER BY created_at DESC, id DESC LIMIT 1
@@ -75,6 +75,7 @@ func (q *Queries) FindUnjudgedDraft(ctx context.Context, arg FindUnjudgedDraftPa
 		&i.DraftBody,
 		&i.FeedbackAt,
 		&i.ShadowAgreed,
+		&i.ToolLayer,
 	)
 	return i, err
 }

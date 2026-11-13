@@ -20,6 +20,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/dimmihq/dimmi/app/ai/toolset"
 	"github.com/dimmihq/dimmi/app/contracts"
 	"github.com/dimmihq/dimmi/app/enums"
 	"github.com/dimmihq/dimmi/app/models"
@@ -50,7 +51,12 @@ converse runs model calls and tools until the model answers, and
 returns the answer with how the run ended.
 */
 func (e *Engine) converse(ctx context.Context, s *session) (string, string) {
+	e.openLayer(ctx, s)
+	defer e.saveLayer(ctx, s)
 	p := prompt{system: e.systemPrompt(s), messages: e.transcript(s)}
+	if s.layer != nil {
+		p.system += "\n\n" + s.layer.set.Prompt()
+	}
 	var written strings.Builder
 	for calls := 1; ; calls++ {
 		var tools []contracts.ToolSpec
@@ -92,7 +98,8 @@ generate streams one model call and records it.
 */
 func (e *Engine) generate(ctx context.Context, s *session, p prompt, tools []contracts.ToolSpec) (streamed, error) {
 	req := contracts.ChatRequest{
-		Model: s.model, System: []contracts.SystemBlock{{Text: p.system}}, Messages: p.messages, Tools: tools,
+		Model: s.model, System: []contracts.SystemBlock{{Text: p.system, Cacheable: true}}, Messages: p.messages,
+		Tools:           tools,
 		MaxOutputTokens: maxOutputTokens, CacheHint: true, Effort: contracts.EffortMedium,
 		Timeout:  llmretry.StepTimeouts(e.Timeouts, llmretry.StepGenerate),
 		Metadata: map[string]string{"session_id": s.thread.ID.String()},
@@ -182,7 +189,16 @@ func (e *Engine) transcript(s *session) []contracts.ChatMessage {
 		}
 		out = append(out, contracts.ChatMessage{Role: speaker(m), Parts: textParts(m.Body)})
 	}
-	return append(out, contracts.ChatMessage{Role: contracts.ChatRoleUser, Parts: textParts(s.question)})
+	if len(out) > 0 {
+		out[len(out)-1].Cacheable = true
+	}
+	question := contracts.ChatMessage{Role: contracts.ChatRoleUser, Parts: textParts(s.question)}
+	if s.layer != nil {
+		if note := toolset.Note(s.layer.earlier, s.layer.suggested); note != "" {
+			question.Parts = append(question.Parts, contracts.ContentPart{Text: note})
+		}
+	}
+	return append(out, question)
 }
 
 /*

@@ -135,6 +135,9 @@ toolSpecs are the specs of the tools the turn allows, sorted by name so
 the prompt stays cacheable.
 */
 func (r *Runner) toolSpecs(st *run) []contracts.ToolSpec {
+	if st.layer != nil {
+		return r.layerSpecs(st)
+	}
 	tools := r.registry(st)
 	names := make([]string, 0, len(tools))
 	for name, t := range tools {

@@ -87,7 +87,23 @@ func connect(ctx context.Context, t *testing.T, d tests.Desk) error {
 		MinSimilarity: database.NumericFloat(0.35), Handoff: json.RawMessage("{}"),
 		Messages: json.RawMessage("{}"), Now: now,
 	})
-	return err
+	if err != nil {
+		return err
+	}
+	return q.SetOperatorToolLayer(ctx, models.SetOperatorToolLayerParams{WorkspaceID: ws, ToolLayer: false, Now: now})
+}
+
+/*
+withToolLayer turns Operator's tool layer on; the desk keeps it off so
+scripted calls name the tools directly.
+*/
+func (k *desk) withToolLayer() {
+	k.t.Helper()
+	k.d.TC.InWorkspace(func(ctx context.Context) error {
+		return models.New(k.d.TC.App.DB).SetOperatorToolLayer(ctx, models.SetOperatorToolLayerParams{
+			WorkspaceID: k.d.TC.Workspace.Workspace.ID, ToolLayer: true, Now: k.d.TC.App.Clock.Now(),
+		})
+	})
 }
 
 /*

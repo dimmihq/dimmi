@@ -30,5 +30,6 @@ func operatorCommands(a *app.App) []foundation.Command {
 		WorkspaceRestoreCommand{App: a},
 		WorkspacePurgeCommand{App: a},
 		TokenCreateCommand{App: a},
+		AIToolLayerCommand{App: a},
 	}
 }

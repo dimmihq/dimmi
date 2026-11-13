@@ -178,6 +178,7 @@ type AiAgent struct {
 	UpdatedAt                    time.Time       `json:"updated_at"`
 	DeletedAt                    *time.Time      `json:"deleted_at"`
 	MinVectorSimilarity          pgtype.Numeric  `json:"min_vector_similarity"`
+	ToolLayer                    bool            `json:"tool_layer"`
 }
 
 type AiProviderKey struct {
@@ -252,6 +253,7 @@ type AiRun struct {
 	DraftBody           *string         `json:"draft_body"`
 	FeedbackAt          *time.Time      `json:"feedback_at"`
 	ShadowAgreed        *bool           `json:"shadow_agreed"`
+	ToolLayer           json.RawMessage `json:"tool_layer"`
 }
 
 type AiRunStep struct {
@@ -2149,6 +2151,7 @@ type OperatorSetting struct {
 	Model           *string         `json:"model"`
 	CreatedAt       time.Time       `json:"created_at"`
 	UpdatedAt       time.Time       `json:"updated_at"`
+	ToolLayer       bool            `json:"tool_layer"`
 }
 
 type OperatorSlackThread struct {

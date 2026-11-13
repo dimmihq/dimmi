@@ -71,6 +71,7 @@ func Groups() []Group {
 Settings are one workspace's Operator settings. Policies holds only the
 groups an admin changed; the rest ask. Model is the model Operator
 answers with on the agent's connection; empty means the agent's own.
+ToolLayer offers the model a few tools and loads the rest on request.
 */
 type Settings struct {
 	Enabled         bool
@@ -79,13 +80,14 @@ type Settings struct {
 	Instructions    string
 	Policies        map[Group]Policy
 	Model           string
+	ToolLayer       bool
 }
 
 /*
 DefaultSettings are the settings of a workspace that saved none.
 */
 func DefaultSettings() Settings {
-	return Settings{Enabled: true, Policies: map[Group]Policy{}}
+	return Settings{Enabled: true, Policies: map[Group]Policy{}, ToolLayer: true}
 }
 
 /*
@@ -181,6 +183,7 @@ func SettingsOf(row models.OperatorSetting) Settings {
 	s := Settings{
 		Enabled: row.Enabled, BriefOnOpen: row.BriefOnOpen, TriageOnArrival: row.TriageOnArrival,
 		Instructions: row.Instructions, Policies: map[Group]Policy{}, Model: deref(row.Model),
+		ToolLayer: row.ToolLayer,
 	}
 	_ = json.Unmarshal(row.Policies, &s.Policies)
 	return s

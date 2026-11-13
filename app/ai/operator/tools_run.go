@@ -18,9 +18,11 @@ package operator
 import (
 	"context"
 	"errors"
+	"slices"
 	"sync"
 	"time"
 
+	"github.com/dimmihq/dimmi/app/ai/toolset"
 	"github.com/dimmihq/dimmi/app/contracts"
 	"github.com/dimmihq/dimmi/app/enums"
 )
@@ -33,6 +35,8 @@ type pending struct {
 	call    contracts.ToolCall
 	tool    tool
 	known   bool
+	layer   bool
+	ran     string
 	started time.Time
 	out     result
 	err     error
@@ -46,8 +50,7 @@ func (e *Engine) callTools(ctx context.Context, s *session, calls []contracts.To
 	registry := e.registry(s)
 	batch := make([]*pending, len(calls))
 	for i, call := range calls {
-		t, ok := registry[call.Name]
-		batch[i] = &pending{call: call, tool: t, known: ok && e.offers(s, t)}
+		batch[i] = e.resolve(s, registry, call)
 	}
 	out := make([]contracts.ChatMessage, 0, len(calls))
 	for start := 0; start < len(batch); {
@@ -64,6 +67,21 @@ func (e *Engine) callTools(ctx context.Context, s *session, calls []contracts.To
 		start = end
 	}
 	return out
+}
+
+/*
+resolve finds the tool a call runs. A call_tool request resolves to the
+tool it names, so a writing tool behind the layer still runs alone; with
+the layer on, only the fixed tools may be called by name.
+*/
+func (e *Engine) resolve(s *session, registry map[string]tool, call contracts.ToolCall) *pending {
+	if s.layer != nil && (call.Name == toolset.LoadTool || call.Name == toolset.CallTool) {
+		t, ok := registry[innerName(call.Arguments)]
+		return &pending{call: call, tool: t, known: ok && e.offers(s, t), layer: true}
+	}
+	t, ok := registry[call.Name]
+	fixed := s.layer == nil || slices.Contains(fixedTools(), call.Name)
+	return &pending{call: call, tool: t, known: ok && e.offers(s, t) && fixed}
 }
 
 /*
@@ -102,6 +120,10 @@ offer.
 func (e *Engine) runCall(ctx context.Context, s *session, p *pending) {
 	p.started = e.Clock.Now()
 	p.err = errors.New("unknown tool " + p.call.Name)
+	if p.layer {
+		p.out, p.err = e.layerCall(ctx, s, p)
+		return
+	}
 	if p.known {
 		p.out, p.err = p.tool.handle(ctx, s, p.call.Arguments)
 	}
@@ -123,8 +145,12 @@ func (e *Engine) finishCall(ctx context.Context, s *session, p *pending) contrac
 	}
 	s.steps = append(s.steps, out.step)
 	e.publishStep(ctx, s, out.step)
+	name := p.call.Name
+	if p.ran != "" {
+		name = p.ran
+	}
 	e.record(ctx, s, step{
-		kind: enums.AIRunStepKindToolCall, name: p.call.Name, started: p.started,
+		kind: enums.AIRunStepKindToolCall, name: name, started: p.started,
 		request: string(p.call.Arguments), response: out.text, err: err,
 	})
 	return contracts.ChatMessage{

@@ -168,8 +168,10 @@ func (r *Runner) turn(ctx context.Context, st *run) *decision {
 	st.loop = &loop{llm: llm, system: r.render(st.env, "answer.system.md", r.answerVars(st))}
 	st.loop.messages = r.conversationMessages(st.env)
 	r.offerActions(ctx, st)
+	r.openLayer(ctx, st)
 
 	draft, err := r.agentLoop(ctx, st)
+	r.saveLayer(ctx, st)
 	if err != nil {
 		return failed("provider_error", err)
 	}

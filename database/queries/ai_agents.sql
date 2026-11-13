@@ -32,3 +32,8 @@ UPDATE ai_agents SET
     updated_at = @now
 WHERE workspace_id = @workspace_id AND id = @id AND deleted_at IS NULL
 RETURNING *;
+
+-- name: SetAgentToolLayer :exec
+-- SetAgentToolLayer turns the agent's tool layer on or off.
+UPDATE ai_agents SET tool_layer = @tool_layer, updated_at = @now
+WHERE workspace_id = @workspace_id AND id = @id;

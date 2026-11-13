@@ -56,6 +56,7 @@ type run struct {
 	followed   bool
 	draft      bool
 	ticket     *tickets.AgentTicket
+	layer      *layerState
 }
 
 /*

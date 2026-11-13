@@ -63,6 +63,33 @@ func Compile(raw json.RawMessage) (*Schema, error) {
 }
 
 /*
+CompileExact resolves a schema as written, without capping the strings
+it left unbounded: for the platform's own tools, whose long fields, such
+as an article's body, are meant to be long.
+*/
+func CompileExact(raw json.RawMessage) (*Schema, error) {
+	var s jsonschema.Schema
+	if err := json.Unmarshal(raw, &s); err != nil {
+		return nil, fmt.Errorf("%w: %w", ErrUnsupported, err)
+	}
+	resolved, err := s.Resolve(&jsonschema.ResolveOptions{ValidateDefaults: true})
+	if err != nil {
+		return nil, fmt.Errorf("%w: %w", ErrUnsupported, err)
+	}
+	return &Schema{resolved: resolved}, nil
+}
+
+/*
+Check validates arguments against the schema without filling defaults.
+*/
+func (s *Schema) Check(args map[string]any) error {
+	if err := s.resolved.Validate(args); err != nil {
+		return fmt.Errorf("%w: %w", ErrInvalidArguments, err)
+	}
+	return nil
+}
+
+/*
 Validate checks the arguments, fills in the schema's defaults and
 returns them decoded. Missing arguments are an empty object.
 */

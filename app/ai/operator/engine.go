@@ -83,6 +83,7 @@ type Engine struct {
 	Timeouts      config.AITimeoutsConfig
 	Services      Services
 	StorePayloads bool
+	Catalog       Catalog
 }
 
 /*

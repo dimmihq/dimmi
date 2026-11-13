@@ -23,11 +23,13 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
+	"slices"
 	"strings"
 	"time"
 
 	"github.com/dimmihq/dimmi/framework/ids"
 
+	"github.com/dimmihq/dimmi/app/ai/toolset"
 	"github.com/dimmihq/dimmi/app/contracts"
 	"github.com/dimmihq/dimmi/app/enums"
 	"github.com/dimmihq/dimmi/app/models"
@@ -107,17 +109,24 @@ func (r *Runner) callTool(ctx context.Context, st *run, call contracts.ToolCall)
 	started := r.Clock.Now()
 	t, ok := r.registry(st)[call.Name]
 	allowed := ok && st.settings.allows(call.Name, t.action)
+	if st.layer != nil {
+		allowed = allowed && slices.Contains(fixedTools(), call.Name)
+	}
 	st.actions.toolCallID = call.ID
 
 	var result string
+	ran := call.Name
 	err := errors.New("unknown tool " + call.Name)
-	if allowed {
+	switch {
+	case st.layer != nil && (call.Name == toolset.LoadTool || call.Name == toolset.CallTool):
+		ran, result, err = r.layerCall(ctx, st, call)
+	case allowed:
 		result, err = t.handle(ctx, st, call.Arguments)
 	}
 
 	r.step(ctx, st, stepRecord{
-		kind: enums.AIRunStepKindToolCall, model: call.Name, started: started,
-		request: r.redactFor(st.env, string(call.Arguments)), response: withTrace(st, call.Name, result), err: err,
+		kind: enums.AIRunStepKindToolCall, model: ran, started: started,
+		request: r.redactFor(st.env, string(call.Arguments)), response: withTrace(st, ran, result), err: err,
 	})
 	if err != nil {
 		return "error: " + err.Error(), true

@@ -17,6 +17,7 @@ package anthropic
 import (
 	"context"
 	"encoding/json"
+	"slices"
 	"strings"
 	"time"
 
@@ -162,15 +163,8 @@ func messageParams(req contracts.ChatRequest) (anth.MessageNewParams, error) {
 		params.OutputConfig = anth.OutputConfigParam{Effort: anth.OutputConfigEffort(req.Effort)}
 	}
 
-	for _, block := range req.System {
-		sys := anth.TextBlockParam{Text: block.Text}
-		if block.Cacheable {
-			sys.CacheControl = anth.NewCacheControlEphemeralParam()
-		}
-		params.System = append(params.System, sys)
-	}
-
-	params.Messages = mapMessages(req.Messages)
+	params.System = systemBlocks(req.System)
+	params.Messages = historyOf(req)
 
 	tools, err := mapTools(req.Tools)
 	if err != nil {
@@ -194,6 +188,66 @@ func messageParams(req contracts.ChatRequest) (anth.MessageNewParams, error) {
 	}
 
 	return params, nil
+}
+
+/*
+historyOf maps the messages and marks where they may be cached, within
+the breakpoints the system blocks leave.
+*/
+func historyOf(req contracts.ChatRequest) []anth.MessageParam {
+	breakpoints := maxBreakpoints
+	for _, block := range req.System {
+		if block.Cacheable {
+			breakpoints--
+		}
+	}
+	msgs, cacheable := mapMessages(req.Messages)
+	if req.CacheHint && len(cacheable) > 0 {
+		cacheable[len(cacheable)-1] = true
+	}
+	markHistory(msgs, cacheable, breakpoints)
+	return msgs
+}
+
+/*
+systemBlocks maps the system blocks, a cacheable one marked so.
+*/
+func systemBlocks(blocks []contracts.SystemBlock) []anth.TextBlockParam {
+	out := make([]anth.TextBlockParam, 0, len(blocks))
+	for _, block := range blocks {
+		sys := anth.TextBlockParam{Text: block.Text}
+		if block.Cacheable {
+			sys.CacheControl = anth.NewCacheControlEphemeralParam()
+		}
+		out = append(out, sys)
+	}
+	return out
+}
+
+/*
+maxBreakpoints is the most cache breakpoints one request may carry.
+*/
+const maxBreakpoints = 4
+
+/*
+markHistory marks where the history may be cached, newest first, within
+the breakpoints the system blocks left: the messages marked cacheable,
+which with a cache hint include the last one, so the next call of a
+tool loop reads everything before it from the cache.
+*/
+func markHistory(msgs []anth.MessageParam, cacheable []bool, left int) {
+	for i, msg := range slices.Backward(msgs) {
+		if left <= 0 {
+			return
+		}
+		if !cacheable[i] || len(msg.Content) == 0 {
+			continue
+		}
+		if cc := msg.Content[len(msg.Content)-1].GetCacheControl(); cc != nil {
+			*cc = anth.NewCacheControlEphemeralParam()
+			left--
+		}
+	}
 }
 
 /*
@@ -225,20 +279,24 @@ func mapTools(specs []contracts.ToolSpec) ([]anth.ToolUnionParam, error) {
 mapMessages maps the conversation to SDK params. The results of the
 tool calls one reply made go back together in a single user message:
 split across several, the model learns to stop calling tools in
-parallel.
+parallel. Beside each mapped message it reports whether the caller
+marked it, or a message folded into it, as cacheable.
 */
-func mapMessages(msgs []contracts.ChatMessage) []anth.MessageParam {
+func mapMessages(msgs []contracts.ChatMessage) ([]anth.MessageParam, []bool) {
 	var out []anth.MessageParam
+	var cacheable []bool
 	for i, msg := range msgs {
 		mapped := mapMessage(msg)
 		if toolResult(msg) && i > 0 && toolResult(msgs[i-1]) {
 			last := &out[len(out)-1]
 			last.Content = append(last.Content, mapped.Content...)
+			cacheable[len(cacheable)-1] = cacheable[len(cacheable)-1] || msg.Cacheable
 			continue
 		}
 		out = append(out, mapped)
+		cacheable = append(cacheable, msg.Cacheable)
 	}
-	return out
+	return out, cacheable
 }
 
 /*

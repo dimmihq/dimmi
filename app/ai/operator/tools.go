@@ -78,6 +78,9 @@ func (e *Engine) registry(s *session) map[string]tool {
 toolSpecs returns the specs of the tools offered to this run, by name.
 */
 func (e *Engine) toolSpecs(s *session) []contracts.ToolSpec {
+	if s.layer != nil {
+		return e.layerSpecs(s)
+	}
 	var out []contracts.ToolSpec
 	for _, t := range e.registry(s) {
 		if e.offers(s, t) {

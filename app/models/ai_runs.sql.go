@@ -52,7 +52,7 @@ INSERT INTO ai_runs (
     $7, $8, $9, $10, $11, $12, $13,
     $14, $15, $15
 )
-RETURNING id, workspace_id, agent_id, kind, conversation_id, trigger_message_id, included_message_ids, actor_type, actor_id, channel_type, status, outcome, skip_reason, handoff_reason, intent, language, query_original, query_rewritten, retrieval, answer_message_id, prompt_version, prompt_hashes, config_snapshot, flags, input_tokens, cached_input_tokens, cache_write_tokens, output_tokens, cost_micros, price_table_version, first_token_ms, latency_ms, queue_wait_ms, error_code, error_message, feedback, action_calls_count, started_at, completed_at, created_at, updated_at, trigger_action_call_id, draft_body, feedback_at, shadow_agreed
+RETURNING id, workspace_id, agent_id, kind, conversation_id, trigger_message_id, included_message_ids, actor_type, actor_id, channel_type, status, outcome, skip_reason, handoff_reason, intent, language, query_original, query_rewritten, retrieval, answer_message_id, prompt_version, prompt_hashes, config_snapshot, flags, input_tokens, cached_input_tokens, cache_write_tokens, output_tokens, cost_micros, price_table_version, first_token_ms, latency_ms, queue_wait_ms, error_code, error_message, feedback, action_calls_count, started_at, completed_at, created_at, updated_at, trigger_action_call_id, draft_body, feedback_at, shadow_agreed, tool_layer
 `
 
 type CreateRunParams struct {
@@ -139,12 +139,13 @@ func (q *Queries) CreateRun(ctx context.Context, arg CreateRunParams) (AiRun, er
 		&i.DraftBody,
 		&i.FeedbackAt,
 		&i.ShadowAgreed,
+		&i.ToolLayer,
 	)
 	return i, err
 }
 
 const findRun = `-- name: FindRun :one
-SELECT id, workspace_id, agent_id, kind, conversation_id, trigger_message_id, included_message_ids, actor_type, actor_id, channel_type, status, outcome, skip_reason, handoff_reason, intent, language, query_original, query_rewritten, retrieval, answer_message_id, prompt_version, prompt_hashes, config_snapshot, flags, input_tokens, cached_input_tokens, cache_write_tokens, output_tokens, cost_micros, price_table_version, first_token_ms, latency_ms, queue_wait_ms, error_code, error_message, feedback, action_calls_count, started_at, completed_at, created_at, updated_at, trigger_action_call_id, draft_body, feedback_at, shadow_agreed FROM ai_runs WHERE workspace_id = $1 AND id = $2
+SELECT id, workspace_id, agent_id, kind, conversation_id, trigger_message_id, included_message_ids, actor_type, actor_id, channel_type, status, outcome, skip_reason, handoff_reason, intent, language, query_original, query_rewritten, retrieval, answer_message_id, prompt_version, prompt_hashes, config_snapshot, flags, input_tokens, cached_input_tokens, cache_write_tokens, output_tokens, cost_micros, price_table_version, first_token_ms, latency_ms, queue_wait_ms, error_code, error_message, feedback, action_calls_count, started_at, completed_at, created_at, updated_at, trigger_action_call_id, draft_body, feedback_at, shadow_agreed, tool_layer FROM ai_runs WHERE workspace_id = $1 AND id = $2
 `
 
 type FindRunParams struct {
@@ -202,6 +203,7 @@ func (q *Queries) FindRun(ctx context.Context, arg FindRunParams) (AiRun, error)
 		&i.DraftBody,
 		&i.FeedbackAt,
 		&i.ShadowAgreed,
+		&i.ToolLayer,
 	)
 	return i, err
 }
@@ -219,7 +221,7 @@ UPDATE ai_runs SET
     action_calls_count = $23,
     completed_at = $24, updated_at = $25
 WHERE workspace_id = $26 AND id = $27
-RETURNING id, workspace_id, agent_id, kind, conversation_id, trigger_message_id, included_message_ids, actor_type, actor_id, channel_type, status, outcome, skip_reason, handoff_reason, intent, language, query_original, query_rewritten, retrieval, answer_message_id, prompt_version, prompt_hashes, config_snapshot, flags, input_tokens, cached_input_tokens, cache_write_tokens, output_tokens, cost_micros, price_table_version, first_token_ms, latency_ms, queue_wait_ms, error_code, error_message, feedback, action_calls_count, started_at, completed_at, created_at, updated_at, trigger_action_call_id, draft_body, feedback_at, shadow_agreed
+RETURNING id, workspace_id, agent_id, kind, conversation_id, trigger_message_id, included_message_ids, actor_type, actor_id, channel_type, status, outcome, skip_reason, handoff_reason, intent, language, query_original, query_rewritten, retrieval, answer_message_id, prompt_version, prompt_hashes, config_snapshot, flags, input_tokens, cached_input_tokens, cache_write_tokens, output_tokens, cost_micros, price_table_version, first_token_ms, latency_ms, queue_wait_ms, error_code, error_message, feedback, action_calls_count, started_at, completed_at, created_at, updated_at, trigger_action_call_id, draft_body, feedback_at, shadow_agreed, tool_layer
 `
 
 type FinishRunParams struct {
@@ -330,12 +332,13 @@ func (q *Queries) FinishRun(ctx context.Context, arg FinishRunParams) (AiRun, er
 		&i.DraftBody,
 		&i.FeedbackAt,
 		&i.ShadowAgreed,
+		&i.ToolLayer,
 	)
 	return i, err
 }
 
 const listConversationRuns = `-- name: ListConversationRuns :many
-SELECT id, workspace_id, agent_id, kind, conversation_id, trigger_message_id, included_message_ids, actor_type, actor_id, channel_type, status, outcome, skip_reason, handoff_reason, intent, language, query_original, query_rewritten, retrieval, answer_message_id, prompt_version, prompt_hashes, config_snapshot, flags, input_tokens, cached_input_tokens, cache_write_tokens, output_tokens, cost_micros, price_table_version, first_token_ms, latency_ms, queue_wait_ms, error_code, error_message, feedback, action_calls_count, started_at, completed_at, created_at, updated_at, trigger_action_call_id, draft_body, feedback_at, shadow_agreed FROM ai_runs
+SELECT id, workspace_id, agent_id, kind, conversation_id, trigger_message_id, included_message_ids, actor_type, actor_id, channel_type, status, outcome, skip_reason, handoff_reason, intent, language, query_original, query_rewritten, retrieval, answer_message_id, prompt_version, prompt_hashes, config_snapshot, flags, input_tokens, cached_input_tokens, cache_write_tokens, output_tokens, cost_micros, price_table_version, first_token_ms, latency_ms, queue_wait_ms, error_code, error_message, feedback, action_calls_count, started_at, completed_at, created_at, updated_at, trigger_action_call_id, draft_body, feedback_at, shadow_agreed, tool_layer FROM ai_runs
 WHERE workspace_id = $1 AND conversation_id = $2
 ORDER BY created_at DESC
 LIMIT $3
@@ -403,6 +406,7 @@ func (q *Queries) ListConversationRuns(ctx context.Context, arg ListConversation
 			&i.DraftBody,
 			&i.FeedbackAt,
 			&i.ShadowAgreed,
+			&i.ToolLayer,
 		); err != nil {
 			return nil, err
 		}
@@ -414,8 +418,75 @@ func (q *Queries) ListConversationRuns(ctx context.Context, arg ListConversation
 	return items, nil
 }
 
+const listConversationToolLayers = `-- name: ListConversationToolLayers :many
+SELECT tool_layer FROM ai_runs
+WHERE workspace_id = $1 AND conversation_id = $2 AND id <> $3
+    AND tool_layer IS NOT NULL
+ORDER BY created_at DESC, id DESC
+LIMIT 10
+`
+
+type ListConversationToolLayersParams struct {
+	WorkspaceID    ids.UUID  `json:"workspace_id"`
+	ConversationID *ids.UUID `json:"conversation_id"`
+	Before         ids.UUID  `json:"before"`
+}
+
+// ListConversationToolLayers returns what the tool layer did in the
+// conversation's latest runs before the given one, newest first.
+func (q *Queries) ListConversationToolLayers(ctx context.Context, arg ListConversationToolLayersParams) ([]json.RawMessage, error) {
+	rows, err := q.db.Query(ctx, listConversationToolLayers, arg.WorkspaceID, arg.ConversationID, arg.Before)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []json.RawMessage
+	for rows.Next() {
+		var tool_layer json.RawMessage
+		if err := rows.Scan(&tool_layer); err != nil {
+			return nil, err
+		}
+		items = append(items, tool_layer)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listRunToolLayers = `-- name: ListRunToolLayers :many
+SELECT tool_layer FROM ai_runs
+WHERE workspace_id = $1 AND id = ANY($2::uuid[]) AND tool_layer IS NOT NULL
+`
+
+type ListRunToolLayersParams struct {
+	WorkspaceID ids.UUID   `json:"workspace_id"`
+	Ids         []ids.UUID `json:"ids"`
+}
+
+// ListRunToolLayers returns what the tool layer did in the given runs.
+func (q *Queries) ListRunToolLayers(ctx context.Context, arg ListRunToolLayersParams) ([]json.RawMessage, error) {
+	rows, err := q.db.Query(ctx, listRunToolLayers, arg.WorkspaceID, arg.Ids)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []json.RawMessage
+	for rows.Next() {
+		var tool_layer json.RawMessage
+		if err := rows.Scan(&tool_layer); err != nil {
+			return nil, err
+		}
+		items = append(items, tool_layer)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listRuns = `-- name: ListRuns :many
-SELECT id, workspace_id, agent_id, kind, conversation_id, trigger_message_id, included_message_ids, actor_type, actor_id, channel_type, status, outcome, skip_reason, handoff_reason, intent, language, query_original, query_rewritten, retrieval, answer_message_id, prompt_version, prompt_hashes, config_snapshot, flags, input_tokens, cached_input_tokens, cache_write_tokens, output_tokens, cost_micros, price_table_version, first_token_ms, latency_ms, queue_wait_ms, error_code, error_message, feedback, action_calls_count, started_at, completed_at, created_at, updated_at, trigger_action_call_id, draft_body, feedback_at, shadow_agreed FROM ai_runs
+SELECT id, workspace_id, agent_id, kind, conversation_id, trigger_message_id, included_message_ids, actor_type, actor_id, channel_type, status, outcome, skip_reason, handoff_reason, intent, language, query_original, query_rewritten, retrieval, answer_message_id, prompt_version, prompt_hashes, config_snapshot, flags, input_tokens, cached_input_tokens, cache_write_tokens, output_tokens, cost_micros, price_table_version, first_token_ms, latency_ms, queue_wait_ms, error_code, error_message, feedback, action_calls_count, started_at, completed_at, created_at, updated_at, trigger_action_call_id, draft_body, feedback_at, shadow_agreed, tool_layer FROM ai_runs
 WHERE workspace_id = $1
     AND ($2::uuid IS NULL OR conversation_id = $2)
     AND ($3::text = '' OR kind = $3)
@@ -500,6 +571,7 @@ func (q *Queries) ListRuns(ctx context.Context, arg ListRunsParams) ([]AiRun, er
 			&i.DraftBody,
 			&i.FeedbackAt,
 			&i.ShadowAgreed,
+			&i.ToolLayer,
 		); err != nil {
 			return nil, err
 		}
@@ -579,7 +651,7 @@ func (q *Queries) SetLatestAnswerFeedback(ctx context.Context, arg SetLatestAnsw
 const setRunFeedback = `-- name: SetRunFeedback :one
 UPDATE ai_runs SET feedback = $1, updated_at = $2
 WHERE workspace_id = $3 AND id = $4
-RETURNING id, workspace_id, agent_id, kind, conversation_id, trigger_message_id, included_message_ids, actor_type, actor_id, channel_type, status, outcome, skip_reason, handoff_reason, intent, language, query_original, query_rewritten, retrieval, answer_message_id, prompt_version, prompt_hashes, config_snapshot, flags, input_tokens, cached_input_tokens, cache_write_tokens, output_tokens, cost_micros, price_table_version, first_token_ms, latency_ms, queue_wait_ms, error_code, error_message, feedback, action_calls_count, started_at, completed_at, created_at, updated_at, trigger_action_call_id, draft_body, feedback_at, shadow_agreed
+RETURNING id, workspace_id, agent_id, kind, conversation_id, trigger_message_id, included_message_ids, actor_type, actor_id, channel_type, status, outcome, skip_reason, handoff_reason, intent, language, query_original, query_rewritten, retrieval, answer_message_id, prompt_version, prompt_hashes, config_snapshot, flags, input_tokens, cached_input_tokens, cache_write_tokens, output_tokens, cost_micros, price_table_version, first_token_ms, latency_ms, queue_wait_ms, error_code, error_message, feedback, action_calls_count, started_at, completed_at, created_at, updated_at, trigger_action_call_id, draft_body, feedback_at, shadow_agreed, tool_layer
 `
 
 type SetRunFeedbackParams struct {
@@ -644,6 +716,24 @@ func (q *Queries) SetRunFeedback(ctx context.Context, arg SetRunFeedbackParams) 
 		&i.DraftBody,
 		&i.FeedbackAt,
 		&i.ShadowAgreed,
+		&i.ToolLayer,
 	)
 	return i, err
+}
+
+const setRunToolLayer = `-- name: SetRunToolLayer :exec
+UPDATE ai_runs SET tool_layer = $1
+WHERE workspace_id = $2 AND id = $3
+`
+
+type SetRunToolLayerParams struct {
+	ToolLayer   json.RawMessage `json:"tool_layer"`
+	WorkspaceID ids.UUID        `json:"workspace_id"`
+	ID          ids.UUID        `json:"id"`
+}
+
+// SetRunToolLayer records what the tool layer did during a run.
+func (q *Queries) SetRunToolLayer(ctx context.Context, arg SetRunToolLayerParams) error {
+	_, err := q.db.Exec(ctx, setRunToolLayer, arg.ToolLayer, arg.WorkspaceID, arg.ID)
+	return err
 }

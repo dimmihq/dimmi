@@ -93,3 +93,22 @@ DELETE FROM ai_runs WHERE id IN (
         AND (@kind::text = '' OR r.kind = @kind::text)
     ORDER BY r.created_at LIMIT @batch::bigint
 );
+
+-- name: SetRunToolLayer :exec
+-- SetRunToolLayer records what the tool layer did during a run.
+UPDATE ai_runs SET tool_layer = @tool_layer
+WHERE workspace_id = @workspace_id AND id = @id;
+
+-- name: ListConversationToolLayers :many
+-- ListConversationToolLayers returns what the tool layer did in the
+-- conversation's latest runs before the given one, newest first.
+SELECT tool_layer FROM ai_runs
+WHERE workspace_id = @workspace_id AND conversation_id = @conversation_id AND id <> @before
+    AND tool_layer IS NOT NULL
+ORDER BY created_at DESC, id DESC
+LIMIT 10;
+
+-- name: ListRunToolLayers :many
+-- ListRunToolLayers returns what the tool layer did in the given runs.
+SELECT tool_layer FROM ai_runs
+WHERE workspace_id = @workspace_id AND id = ANY(@ids::uuid[]) AND tool_layer IS NOT NULL;

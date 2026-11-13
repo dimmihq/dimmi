@@ -79,7 +79,9 @@ const (
 /*
 ChatMessage is one turn of a conversation. Customer messages carry the
 user role; teammate and agent messages carry the assistant role with a
-name prefix; tool results carry the tool role.
+name prefix; tool results carry the tool role. Cacheable marks the end
+of history that stays the same from call to call, which a provider with
+explicit caching may cache up to.
 */
 type ChatMessage struct {
 	Role       ChatRole
@@ -87,6 +89,7 @@ type ChatMessage struct {
 	ToolCalls  []ToolCall
 	ToolCallID string
 	ToolError  bool
+	Cacheable  bool
 }
 
 /*

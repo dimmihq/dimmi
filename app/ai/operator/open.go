@@ -76,6 +76,7 @@ type session struct {
 	background   bool
 	failure      error
 	toolCalls    int
+	layer        *layerState
 }
 
 /*
