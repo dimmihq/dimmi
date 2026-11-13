@@ -136,6 +136,21 @@ func multiSearchScenarios() []costsim.Scenario {
 			},
 		},
 		{
+			Key: "dhl-dim-divisor", Kind: k, Subject: "DHL billing weight",
+			Persona: "Ceramics brand comparing carriers for bulky parcels.", Goal: "Find DHL Express's dimensional divisor and how a 40 x 30 x 30 cm box is billed.",
+			Messages: []string{"How does DHL Express work out the billable weight for a 40 x 30 x 30 cm box that weighs 3 kg? Which divisor do they use?", "And are there surcharges for remote postcodes?"},
+		},
+		{
+			Key: "api-concurrent-update", Kind: k, Subject: "Concurrent updates",
+			Persona: "Developer syncing an ERP.", Goal: "Learn how to avoid overwriting a colleague's change when updating an order through the API.",
+			Messages: []string{"If two of our systems PATCH the same order at once, which change wins? Is there a way to refuse an update when someone changed it since we read it?", "Does that work for warehouses too?"},
+		},
+		{
+			Key: "fedex-pieces", Kind: k, Subject: "Multi-piece shipments",
+			Persona: "Furniture parts seller.", Goal: "Learn how many parcels a FedEx multi-parcel shipment can hold and how labels work.",
+			Messages: []string{"We ship one order as many boxes. How many parcels can a FedEx multi-parcel shipment have, and do they share a tracking number?"},
+		},
+		{
 			Key: "carrier-options", Kind: k, Subject: "Which carriers",
 			Persona: "UK-based store.", Goal: "Choose between Royal Mail, DPD and DHL Express for different parcels.",
 			Messages: []string{

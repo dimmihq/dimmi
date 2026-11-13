@@ -24,7 +24,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
 	"strconv"
+	"strings"
 
 	"github.com/dimmihq/dimmi/framework/config"
 	"github.com/dimmihq/dimmi/framework/console"
@@ -78,6 +80,7 @@ func (c AISimulateCommand) Flags(flags *console.Flags) {
 	flags.Bool("dry-run", "run everything on an offline model: no real model calls, no spend")
 	flags.Bool("confirm", "start a real run after printing the estimate")
 	flags.String("out", "tmp/costsim", "the directory the report is written under")
+	flags.String("scenarios", "", "play only these scenarios, by key, comma separated; empty plays them all in turn")
 }
 
 /*
@@ -149,6 +152,10 @@ func (c AISimulateCommand) options(ctx context.Context, in *console.Input, out *
 	if mode != costsim.ModeScripted && mode != costsim.ModeModel {
 		return costsim.Options{}, fmt.Errorf("--mode is %s or %s", costsim.ModeScripted, costsim.ModeModel)
 	}
+	scenarios, err := pickScenarios(in.String("scenarios"))
+	if err != nil {
+		return costsim.Options{}, err
+	}
 	place, err := c.demo(ctx)
 	if err != nil {
 		return costsim.Options{}, err
@@ -159,7 +166,7 @@ func (c AISimulateCommand) options(ctx context.Context, in *console.Input, out *
 	}
 	return costsim.Options{
 		Owner: place.Owner, Inbox: place.Inbox, Channel: place.Channel, Company: stowline.Name,
-		Scenarios: stowline.Scenarios(), Conversations: in.Int("conversations"), Mode: mode,
+		Scenarios: scenarios, Conversations: in.Int("conversations"), Mode: mode,
 		AgentModel: in.String("agent-model"), ClassifierModel: in.String("classifier-model"),
 		CustomerModel: in.String("customer-model"), MaxSpend: maxSpend, MaxPerConv: perConv,
 		MaxTurns: in.Int("max-turns"), DryRun: dry, Actions: stowline.StubAPI, Label: label, Log: out.Line,
@@ -195,6 +202,26 @@ func (c AISimulateCommand) run(ctx context.Context, agent string, h *costsim.Har
 		return nil, err
 	}
 	return h.RunOperator(ctx, o, stowline.TeammateRequests(), team)
+}
+
+/*
+pickScenarios returns the scenarios the keys name, in their order, or
+every scenario when none are named.
+*/
+func pickScenarios(keys string) ([]costsim.Scenario, error) {
+	all := stowline.Scenarios()
+	if keys == "" {
+		return all, nil
+	}
+	var out []costsim.Scenario
+	for key := range strings.SplitSeq(keys, ",") {
+		i := slices.IndexFunc(all, func(s costsim.Scenario) bool { return s.Key == strings.TrimSpace(key) })
+		if i < 0 {
+			return nil, fmt.Errorf("--scenarios: no scenario %q", key)
+		}
+		out = append(out, all[i])
+	}
+	return out, nil
 }
 
 /*

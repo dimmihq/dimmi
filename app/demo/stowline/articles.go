@@ -78,18 +78,32 @@ func Articles() []Article {
 	for _, p := range Platforms() {
 		out = append(out, platformArticles(p)...)
 	}
-	for _, e := range Endpoints() {
-		out = append(out, endpointArticle(e))
-	}
 	out = append(out, apiGuideArticles()...)
+	out = append(out, referenceArticles()...)
+	out = append(out, guideArticles()...)
+	out = append(out, releaseArticles()...)
+	for i, c := range Carriers() {
+		out = append(out, carrierGuide(i, c))
+	}
+	for i := range errorAreas() {
+		out = append(out, errorReference(i))
+	}
+	out = append(out, serviceArticles()...)
+	out = append(out, sectionArticles()...)
+	out = append(out, completeReferences(out)...)
 	out = append(out, quickstartArticle())
 	for _, e := range ErrorCodes() {
 		out = append(out, errorArticle(e))
 	}
 
+	taken := map[string]int{}
 	for i := range out {
 		if out[i].Slug == "" {
 			out[i].Slug = Slugify(out[i].Title)
+		}
+		taken[out[i].Slug]++
+		if taken[out[i].Slug] > 1 {
+			out[i].Slug = fmt.Sprintf("%s-%d", out[i].Slug, taken[out[i].Slug])
 		}
 		if out[i].Visibility == "" {
 			out[i].Visibility = "public"

@@ -13,10 +13,7 @@
 package stowline
 
 import (
-	"encoding/json"
 	"fmt"
-	"maps"
-	"slices"
 	"strings"
 )
 
@@ -242,54 +239,6 @@ func Endpoints() []Endpoint {
 			Errors:   []string{"INSUFFICIENT_BALANCE"}, Notes: "Insurance can be added until the parcel's first scan. The premium is charged to your balance.",
 		},
 	}
-}
-
-func endpointArticle(e Endpoint) Article {
-	var b strings.Builder
-	fmt.Fprintf(&b, "%s\n\n", e.Summary)
-	b.WriteString(code("http", e.Method+" https://api.stowline.test"+e.Path))
-	b.WriteString("\nAuthenticate with your API key as a bearer token. See *Authenticating with the API*.\n\n")
-	if len(e.Params) > 0 {
-		b.WriteString("## Parameters\n\n")
-		rows := make([][]string, 0, len(e.Params))
-		for _, p := range e.Params {
-			rows = append(rows, []string{"`" + p[0] + "`", p[1], p[2]})
-		}
-		b.WriteString(table([]string{"Name", "Type", "Description"}, rows))
-		b.WriteString("\n")
-	}
-	if e.Request != "" {
-		b.WriteString("## Example request\n\n")
-		b.WriteString(code("bash", fmt.Sprintf("curl -X %s https://api.stowline.test%s \\\n  -H \"Authorization: Bearer $STOWLINE_API_KEY\" \\\n  -H \"Content-Type: application/json\" \\\n  -H \"Idempotency-Key: 6f1c2e0a-order-1042\" \\\n  -d '%s'",
-			e.Method, strings.ReplaceAll(e.Path, "{id}", "shp_01JC8Z4M2Q"), e.Request)))
-		b.WriteString("\n")
-	} else {
-		b.WriteString("## Example request\n\n")
-		b.WriteString(code("bash", fmt.Sprintf("curl https://api.stowline.test%s \\\n  -H \"Authorization: Bearer $STOWLINE_API_KEY\"",
-			strings.NewReplacer("{id}", "shp_01JC8Z4M2Q", "{tracking_number}", "1Z999AA10123456784").Replace(e.Path))))
-		b.WriteString("\n")
-	}
-	b.WriteString(sdkSamples(e))
-	b.WriteString("## Example response\n\n")
-	b.WriteString(code("json", e.Response))
-	b.WriteString("\n")
-	b.WriteString(responseFields(e.Response))
-	if len(e.Errors) > 0 {
-		b.WriteString("## Errors\n\nBesides the errors every request can return (`UNAUTHORIZED`, `FORBIDDEN`, `RATE_LIMITED`, `INTERNAL`), this operation can return:\n\n")
-		for _, code := range e.Errors {
-			if ec, ok := errorCodeByName(code); ok {
-				fmt.Fprintf(&b, "- `%s` (%d): %s\n", ec.Code, ec.Status, ec.Meaning)
-			} else {
-				fmt.Fprintf(&b, "- `%s`: see the error's message for details.\n", code)
-			}
-		}
-		b.WriteString("\n")
-	}
-	if e.Notes != "" {
-		b.WriteString("## Notes\n\n" + e.Notes + "\n\n")
-	}
-	b.WriteString("## Test mode\n\nWith a test key (`sk_test_...`) this operation behaves exactly the same but nothing is sent to a carrier and nothing is charged. Test labels carry the word SAMPLE across them.\n")
-	return Article{Collection: "api", Title: e.Title, Description: e.Summary, Body: b.String()}
 }
 
 func apiGuideArticles() []Article {
@@ -563,18 +512,6 @@ func ErrorCodes() []ErrorCode {
 	}
 }
 
-/*
-errorCodeByName finds an error code's page facts.
-*/
-func errorCodeByName(name string) (ErrorCode, bool) {
-	for _, e := range ErrorCodes() {
-		if e.Code == name {
-			return e, true
-		}
-	}
-	return ErrorCode{}, false
-}
-
 func errorArticle(e ErrorCode) Article {
 	body := fmt.Sprintf(`You may see this error as **%[1]s** in the dashboard or as the code `+"`%[2]s`"+` with HTTP status %[3]d in the API.
 
@@ -611,118 +548,6 @@ Send us the order number or the request id from the *Request-Id* response header
 }
 
 /*
-sdkSamples shows the operation in each official library.
-*/
-func sdkSamples(e Endpoint) string {
-	method := sdkMethod(e)
-	args := "{ /* fields as above */ }"
-	pyArgs := "**fields"
-	if e.Request == "" {
-		args, pyArgs = `"shp_01JC8Z4M2Q"`, `"shp_01JC8Z4M2Q"`
-	}
-	var b strings.Builder
-	b.WriteString("## With the official libraries\n\nThe libraries add the idempotency key, retries and error types for you.\n\n")
-	b.WriteString("**Node.js**\n\n")
-	b.WriteString(code("javascript", fmt.Sprintf(`import Stowline from "@stowline/node";
-
-const stowline = new Stowline(process.env.STOWLINE_API_KEY);
-
-try {
-  const result = await stowline.%s(%s);
-  console.log(result.id);
-} catch (err) {
-  if (err instanceof Stowline.ApiError) {
-    console.error(err.code, err.message, err.requestId);
-  }
-  throw err;
-}`, method, args)))
-	b.WriteString("\n**Python**\n\n")
-	b.WriteString(code("python", fmt.Sprintf(`import os
-import stowline
-
-client = stowline.Client(os.environ["STOWLINE_API_KEY"])
-
-try:
-    result = client.%s(%s)
-    print(result.id)
-except stowline.ApiError as err:
-    print(err.code, err.message, err.request_id)
-    raise`, snake(method), pyArgs)))
-	b.WriteString("\n**Go**\n\n")
-	b.WriteString(code("go", fmt.Sprintf(`client := stowline.New(os.Getenv("STOWLINE_API_KEY"))
-
-result, err := client.%s(ctx, params)
-var apiErr *stowline.Error
-if errors.As(err, &apiErr) {
-	log.Printf("%%s: %%s (request %%s)", apiErr.Code, apiErr.Message, apiErr.RequestID)
-}`, goMethod(method))))
-	b.WriteString("\n**PHP**\n\n")
-	b.WriteString(code("php", fmt.Sprintf(`$stowline = new \Stowline\Client(getenv('STOWLINE_API_KEY'));
-
-try {
-    $result = $stowline->%s(%s);
-} catch (\Stowline\ApiException $e) {
-    error_log($e->getCode() . ': ' . $e->getMessage() . ' (' . $e->getRequestId() . ')');
-    throw $e;
-}`, strings.ReplaceAll(method, ".", "->"), pyArgs)))
-	b.WriteString("\n**Ruby**\n\n")
-	b.WriteString(code("ruby", fmt.Sprintf(`client = Stowline::Client.new(api_key: ENV.fetch("STOWLINE_API_KEY"))
-
-begin
-  result = client.%s(%s)
-rescue Stowline::ApiError => e
-  warn "#{e.code}: #{e.message} (#{e.request_id})"
-  raise
-end`, snake(method), pyArgs)))
-	b.WriteString("\n")
-	b.WriteString(practices(e))
-	return b.String()
-}
-
-/*
-practices is the advice for calling an operation of the kind well.
-*/
-func practices(e Endpoint) string {
-	advice := map[string][]string{
-		"POST": {
-			"Send an `Idempotency-Key` header derived from your own record, such as the order id, so a retry after a timeout or a crash never does the work twice. Keys are kept for 24 hours.",
-			"Retry only 429 and 5xx responses, with exponential backoff and jitter, honoring `Retry-After`. Any other 4xx will fail the same way until the request changes.",
-			"Store the id of what was created in your own database in the same transaction as the record it belongs to, so you can always find it again.",
-			"Log the `Request-Id` header of every failed request. Support can see exactly what happened from it.",
-		},
-		"DELETE": {
-			"Deleting twice is safe: the second request answers 404, which you can treat as done.",
-			"Remove the id from your own records only after the response confirms the deletion.",
-		},
-	}
-	items, ok := advice[e.Method]
-	if !ok {
-		items = []string{
-			"Cache responses that do not change often, and use webhooks instead of polling for changes.",
-			"Ask only for what you need: use filters and `expand` rather than fetching every object and filtering in your code.",
-			"Respect the rate limit headers; a nightly job that reads everything should page with the largest `limit` and pause when `X-RateLimit-Remaining` is low.",
-		}
-	}
-	return "## Best practices\n\n" + list(items...) + "\n"
-}
-
-/*
-sdkMethod names the operation the way the Node.js library does.
-*/
-func sdkMethod(e Endpoint) string {
-	parts := strings.Split(strings.Trim(e.Path, "/"), "/")
-	resource := parts[1]
-	verb := map[string]string{"GET": "retrieve", "POST": "create", "DELETE": "del"}[e.Method]
-	if verb == "retrieve" && !strings.Contains(e.Path, "{") {
-		verb = "list"
-	}
-	if last := parts[len(parts)-1]; !strings.HasPrefix(last, "{") && len(parts) > 2 {
-		verb = last
-	}
-	return camel(resource) + "." + verb
-}
-
-/*
 camel turns snake_case into camelCase.
 */
 func camel(s string) string {
@@ -746,86 +571,6 @@ func snake(s string) string {
 		b.WriteRune(r)
 	}
 	return b.String()
-}
-
-/*
-goMethod names the operation the way the Go library does.
-*/
-func goMethod(m string) string {
-	var b strings.Builder
-	for part := range strings.SplitSeq(m, ".") {
-		b.WriteString(strings.ToUpper(part[:1]) + part[1:])
-	}
-	return b.String()
-}
-
-/*
-responseFields lists the top-level fields of a response with what each
-holds.
-*/
-func responseFields(resp string) string {
-	known := map[string]string{
-		"id":                "The object's id. Ids are prefixed by type, such as shp_ for shipments.",
-		"status":            "Where the object is in its life. New statuses may be added; treat unknown ones as in progress.",
-		"to_address":        "The recipient as verified, which may differ from what you sent.",
-		"parcel":            "The parcel as rated, in the units you sent.",
-		"selected_rate":     "The rate the label was bought at.",
-		"label":             "The label: tracking number, file address and format. Files are kept for 90 days.",
-		"created_at":        "When the object was created, in UTC.",
-		"data":              "The page of results.",
-		"next_cursor":       "Pass as cursor to get the next page; null on the last page.",
-		"refund":            "The postage refund and its status.",
-		"rates":             "Each available service with its price and delivery estimate.",
-		"verified":          "Whether the carrier database matched the address.",
-		"residential":       "Whether the address is a home, which affects surcharges.",
-		"address":           "The corrected address to use.",
-		"messages":          "What was changed or could not be checked.",
-		"charge":            "When the label is charged.",
-		"tracking_number":   "The carrier's tracking number.",
-		"carrier":           "The carrier's key, such as ups or usps.",
-		"est_delivery_date": "The carrier's estimate, when it gives one.",
-		"events":            "Tracking events, newest first.",
-		"confirmation":      "The carrier's confirmation number.",
-		"fee":               "What the carrier charges for this, if anything.",
-		"form_url":          "Where to download the printable form.",
-		"shipment_count":    "How many labels are on it.",
-		"counts":            "How many shipments were bought and how many failed.",
-		"url":               "Where events are sent.",
-		"secret":            "The signing secret, shown only once.",
-		"plan":              "The account's plan key.",
-		"labels_used":       "Labels bought since the billing date.",
-		"labels_included":   "The plan's monthly allowance.",
-		"balance":           "The Stowline balance, as a decimal string.",
-		"currency":          "The currency of amounts in this response.",
-		"items":             "How many items the declaration holds.",
-		"total_value":       "The declared value of all items.",
-		"deleted":           "True once deleted.",
-		"label_url":         "The combined label file.",
-		"failures":          "Each failed shipment with its error code.",
-		"order_number":      "Your reference.",
-		"rules_applied":     "Automation rules that changed the order.",
-		"premium":           "What the insurance costs.",
-		"amount":            "The insured value.",
-	}
-	var top map[string]any
-	if json.Unmarshal([]byte(resp), &top) != nil {
-		return ""
-	}
-	keys := slices.SortedFunc(maps.Keys(top), func(a, b string) int {
-		return strings.Index(resp, `"`+a+`"`) - strings.Index(resp, `"`+b+`"`)
-	})
-	var rows [][]string
-	for _, k := range keys {
-		if desc := known[k]; desc != "" {
-			rows = append(rows, []string{"`" + k + "`", desc})
-		}
-	}
-	if len(rows) == 0 {
-		return ""
-	}
-	return "## Response fields\n\n" + table([]string{"Field", "Meaning"}, rows) +
-		"\nAmounts are decimal strings, never floats, so they are exact. New fields can be added at any time; " +
-		"ignore fields you do not know.\n\n"
 }
 
 /*

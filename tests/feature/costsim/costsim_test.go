@@ -202,7 +202,7 @@ func TestSimulation(t *testing.T) {
 		t.Parallel()
 		tc, res := seeded(t)
 		report := simulate(t, tc, res, func(o *costsim.Options) {
-			o.Scenarios = []costsim.Scenario{stowline.Scenarios()[14]}
+			o.Scenarios = []costsim.Scenario{scenarioOf(costsim.KindTroubleshooting)}
 			o.Conversations, o.MaxTurns = 1, 2
 		})
 
@@ -228,4 +228,16 @@ func TestSimulation(t *testing.T) {
 		assert.Equal(t, "answered", report.Conversations[0].Outcome, report.Conversations[0].Error)
 		assert.Positive(t, report.Conversations[0].CostMicros)
 	})
+}
+
+/*
+scenarioOf returns the first scenario of the kind.
+*/
+func scenarioOf(kind string) costsim.Scenario {
+	for _, sc := range stowline.Scenarios() {
+		if sc.Kind == kind {
+			return sc
+		}
+	}
+	return costsim.Scenario{}
 }

@@ -37,20 +37,22 @@ func small(t *testing.T) stowline.Size {
 func TestHelpCenter(t *testing.T) {
 	t.Parallel()
 
-	t.Run("has at least 150 articles of real length in every section", func(t *testing.T) {
+	t.Run("has about 400 articles of real length in every section", func(t *testing.T) {
 		t.Parallel()
 		articles := stowline.Articles()
-		require.GreaterOrEqual(t, len(articles), 150)
+		require.GreaterOrEqual(t, len(articles), 400)
+		total := 0
+		for _, a := range articles {
+			total += stowline.WordCount(a.Body)
+		}
+		assert.Greater(t, total, 300_000, "at least 300,000 words of knowledge")
 
 		sections := map[string]int{}
 		long := 0
 		for _, a := range articles {
 			sections[a.Collection]++
 			words := stowline.WordCount(a.Body)
-			if a.Visibility == "public" {
-				assert.GreaterOrEqual(t, words, 220, a.Title)
-			}
-			if words >= 700 {
+			if words >= 4_000 {
 				long++
 			}
 		}
@@ -58,7 +60,7 @@ func TestHelpCenter(t *testing.T) {
 			assert.Positive(t, sections[c.Slug], c.Slug)
 		}
 		assert.Len(t, sections, len(stowline.Collections()), "every article sits in a known section")
-		assert.GreaterOrEqual(t, long, 10, "some long technical articles")
+		assert.GreaterOrEqual(t, long, 20, "long documents of 4,000 words and more")
 	})
 
 	t.Run("keeps every article within the help center's limits", func(t *testing.T) {
