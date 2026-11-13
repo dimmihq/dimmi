@@ -20,12 +20,14 @@ import (
 /*
 EnrollSeriesArgs looks through the workspace's contacts for those who
 match a live series' entry rules. Baseline records the people who match
-when the series goes live, so they do not enter.
+when the series goes live, so they do not enter; LiveAt is when it went
+live, and people changed after it are left to enter by their change.
 */
 type EnrollSeriesArgs struct {
-	WorkspaceID ids.UUID `json:"workspace_id"`
-	SeriesID    ids.UUID `json:"series_id"`
-	Baseline    bool     `json:"baseline"`
+	WorkspaceID ids.UUID   `json:"workspace_id"`
+	SeriesID    ids.UUID   `json:"series_id"`
+	Baseline    bool       `json:"baseline"`
+	LiveAt      *time.Time `json:"live_at,omitempty"`
 }
 
 /*

@@ -149,7 +149,7 @@ func (s *Series) release(ctx context.Context, tx *database.Tx, r release) (model
 	}
 
 	return out, s.Queue.PushTx(ctx, tx, jobs.EnrollSeriesArgs{
-		WorkspaceID: ws, SeriesID: r.row.ID, Baseline: !r.spec.Entry.IncludeExisting,
+		WorkspaceID: ws, SeriesID: r.row.ID, Baseline: !r.spec.Entry.IncludeExisting, LiveAt: &now,
 	})
 }
 

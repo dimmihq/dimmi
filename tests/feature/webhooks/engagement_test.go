@@ -5,6 +5,7 @@ import (
 	"maps"
 	"slices"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -249,6 +250,7 @@ func TestEngagementWebhooks(t *testing.T) {
 		path := "/api/v1/series/" + id
 
 		d.Owner.PostJSON(path+"/publications", testkit.JSON{"note": "go"}).AssertOK()
+		d.TC.Clock.Travel(time.Second)
 		d.Owner.PostJSON("/api/v1/contacts", testkit.JSON{
 			"email": "ada@example.org", "custom_attributes": testkit.JSON{"plan": "pro"},
 		}).AssertCreated()

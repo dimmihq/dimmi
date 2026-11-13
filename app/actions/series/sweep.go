@@ -18,6 +18,7 @@ package series
 import (
 	"context"
 	"fmt"
+	"slices"
 	"time"
 
 	"github.com/dimmihq/dimmi/framework/database"
@@ -59,6 +60,8 @@ func (s *Series) EnrollAll(ctx context.Context, a jobs.EnrollSeriesArgs) error {
 
 			done, after, in.people = page.Done, page.Last, page.Contacts
 			if a.Baseline {
+				in.people = matchedBefore(in.people, a.LiveAt)
+
 				return s.baseline(ctx, tx, in)
 			}
 
@@ -96,6 +99,19 @@ func (s *Series) liveEntrant(ctx context.Context, q *models.Queries, a jobs.Enro
 	}
 
 	return entrant{row: row, version: v, spec: spec, by: "rules"}, true, nil
+}
+
+/*
+matchedBefore keeps the people unchanged since the series went live. A
+person added or changed after it may only now match, and the check their
+change pushed enters them; the baseline must not shut them out first.
+*/
+func matchedBefore(people []models.Contact, liveAt *time.Time) []models.Contact {
+	if liveAt == nil {
+		return people
+	}
+
+	return slices.DeleteFunc(people, func(c models.Contact) bool { return c.UpdatedAt.After(*liveAt) })
 }
 
 /*
