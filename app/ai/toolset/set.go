@@ -55,6 +55,25 @@ group gives its count, and loading the group lists its tools.
 const groupIndexMax = 8
 
 /*
+InlineTokens is the most the definitions of a workspace's actions for
+an agent may total, in estimated tokens, to stay in the fixed tool list
+instead of behind load_tools. Below it, a load would cost a model call
+for every action use and save little: about 2,000 tokens is what a
+handful of actions with short schemas take, and under a tenth of the
+system prompt. The fixed list then changes only when the workspace
+changes its actions, so it still caches.
+*/
+const InlineTokens = 2000
+
+/*
+Inline reports whether specs are few and small enough to offer
+directly.
+*/
+func Inline(specs []contracts.ToolSpec) bool {
+	return len(specs) > 0 && Tokens(specs) <= InlineTokens
+}
+
+/*
 Errors the layer answers with.
 */
 var (
@@ -114,6 +133,7 @@ type Set struct {
 	stats   Stats
 	limits  Limits
 	listMax int
+	fixed   map[string]bool
 }
 
 /*
@@ -152,6 +172,25 @@ WithLimits sets how far results are trimmed.
 func (s *Set) WithLimits(l Limits) *Set {
 	s.limits = l
 	return s
+}
+
+/*
+WithFixed names the tools offered outside the layer, so loading one
+answers that it is already offered instead of not found.
+*/
+func (s *Set) WithFixed(names []string) *Set {
+	s.fixed = map[string]bool{}
+	for _, n := range names {
+		s.fixed[n] = true
+	}
+	return s
+}
+
+/*
+IsFixed reports whether a tool is offered outside the layer.
+*/
+func (s *Set) IsFixed(name string) bool {
+	return s.fixed[name]
 }
 
 /*
@@ -311,9 +350,13 @@ define returns the named tools' definitions and marks them loaded.
 */
 func (s *Set) define(names []string) (string, error) {
 	var defs []definition
-	var missing []string
+	var missing, offered []string
 	for _, n := range names {
 		e, ok := s.entries[n]
+		if !ok && s.fixed[n] {
+			offered = append(offered, n)
+			continue
+		}
 		if !ok {
 			missing = append(missing, n)
 			continue
@@ -325,11 +368,14 @@ func (s *Set) define(names []string) (string, error) {
 		s.miss(n)
 	}
 	out := map[string]any{"tools": defs}
+	if len(offered) > 0 {
+		out["already_offered"] = offered
+	}
 	if len(missing) > 0 {
 		out["not_found"] = missing
 		out["hint"] = "no such tools; load a group to list its tools: " + s.groupNames()
 	}
-	if len(defs) == 0 {
+	if len(defs) == 0 && len(offered) == 0 {
 		return "", fmt.Errorf("%w: %s; load a group to list its tools: %s", ErrUnknownTool,
 			strings.Join(missing, ", "), s.groupNames())
 	}

@@ -80,7 +80,7 @@ func (e *Engine) resolve(s *session, registry map[string]tool, call contracts.To
 		return &pending{call: call, tool: t, known: ok && e.offers(s, t), layer: true}
 	}
 	t, ok := registry[call.Name]
-	fixed := s.layer == nil || slices.Contains(fixedTools(), call.Name)
+	fixed := s.layer == nil || slices.Contains(s.layer.fixed, call.Name)
 	return &pending{call: call, tool: t, known: ok && e.offers(s, t) && fixed}
 }
 

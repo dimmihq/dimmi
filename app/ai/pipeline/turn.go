@@ -110,7 +110,7 @@ func (r *Runner) callTool(ctx context.Context, st *run, call contracts.ToolCall)
 	t, ok := r.registry(st)[call.Name]
 	allowed := ok && st.settings.allows(call.Name, t.action)
 	if st.layer != nil {
-		allowed = allowed && slices.Contains(fixedTools(), call.Name)
+		allowed = allowed && slices.Contains(st.layer.fixed, call.Name)
 	}
 	st.actions.toolCallID = call.ID
 

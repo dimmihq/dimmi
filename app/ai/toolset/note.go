@@ -47,6 +47,7 @@ counts, and the estimated tokens of the fixed tool list, the groups'
 lines and the whole system prompt.
 */
 type Record struct {
+	Fixed        []string `json:"fixed"`
 	Loaded       []string `json:"loaded"`
 	Suggested    []string `json:"suggested,omitempty"`
 	Earlier      []string `json:"earlier,omitempty"`
@@ -62,8 +63,12 @@ newest message named, those earlier turns loaded, and the system
 prompt.
 */
 func (s *Set) Record(fixed []contracts.ToolSpec, suggested, earlier []string, system string) Record {
+	names := make([]string, 0, len(fixed))
+	for _, f := range fixed {
+		names = append(names, f.Name)
+	}
 	return Record{
-		Loaded: s.Loaded(), Suggested: suggested, Earlier: earlier, Stats: s.Stats(),
+		Fixed: names, Loaded: s.Loaded(), Suggested: suggested, Earlier: earlier, Stats: s.Stats(),
 		FixedTokens: Tokens(fixed), GroupsTokens: textTokens(s.Prompt()), SystemTokens: textTokens(system),
 	}
 }

@@ -51,6 +51,9 @@ Shape trims a tool's result: the asked fields, capped lists and cut
 text. A result that is not JSON is cut as text.
 */
 func (s *Set) Shape(result string, fields []string) string {
+	if w, ok := wrapped(result); ok {
+		return w.open + s.cut(w.inner) + w.end
+	}
 	var value any
 	if json.Unmarshal([]byte(result), &value) != nil {
 		return s.cut(result)
@@ -99,6 +102,34 @@ func (s *Set) trim(v any, fields []string, depth int) any {
 	default:
 		return v
 	}
+}
+
+/*
+wrapped splits a result held in one wrapper element, such as an
+action's untrusted result, so a cut keeps the wrapper whole and the
+model still reads where the untrusted data ends.
+*/
+func wrapped(text string) (wrapper, bool) {
+	if !strings.HasPrefix(text, "<") {
+		return wrapper{}, false
+	}
+	head := strings.IndexByte(text, '>')
+	if head < 0 {
+		return wrapper{}, false
+	}
+	name, _, _ := strings.Cut(text[1:head], " ")
+	end := "</" + name + ">"
+	if name == "" || !strings.HasSuffix(text, end) || len(text) < head+1+len(end) {
+		return wrapper{}, false
+	}
+	return wrapper{open: text[:head+1], inner: text[head+1 : len(text)-len(end)], end: end}, true
+}
+
+/*
+wrapper is a result's opening tag, its content and its closing tag.
+*/
+type wrapper struct {
+	open, inner, end string
 }
 
 /*

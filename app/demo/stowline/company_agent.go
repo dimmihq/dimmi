@@ -109,6 +109,42 @@ func AgentActions(conn ids.UUID) []agentactions.DefinitionInput {
 			ResponseFields: fields("refund_id", "id", "status", "status"),
 			Channels:       channels,
 		},
+		{
+			ConnectionID: &conn, Name: new("get_order"), Title: new("Look up an order"),
+			Description: new("Look up an order by its number: the store it came from, its items, whether it has shipped and the tracking number."),
+			SideEffect:  new("read"), Method: new("GET"), PathTemplate: new("/orders/{input.order_number}"),
+			InputSchema: schema(map[string]any{
+				"type": "object", "required": []string{"order_number"},
+				"properties": map[string]any{"order_number": map[string]any{"type": "string", "pattern": "^ORD-[0-9]{4,8}$"}},
+			}),
+			ResponseFields: fields("store", "store", "status", "status", "items", "items", "tracking_number", "tracking_number"),
+			Channels:       channels,
+		},
+		{
+			ConnectionID: &conn, Name: new("change_plan"), Title: new("Change the plan"),
+			Description: new("Move the signed-in customer's account to another plan from the next billing period. An admin approves it first."),
+			SideEffect:  new("write"), Approval: new("admin"), Method: new("POST"),
+			PathTemplate: new("/accounts/{contact.external_id}/plan"),
+			BodyTemplate: schema(map[string]any{"plan": "{input.plan}"}),
+			InputSchema: schema(map[string]any{
+				"type": "object", "required": []string{"plan"},
+				"properties": map[string]any{"plan": map[string]any{"type": "string", "enum": []string{"starter", "growth", "pro"}}},
+			}),
+			ResponseFields: fields("plan", "plan", "effective_from", "effective_from"),
+			Channels:       channels,
+		},
+		{
+			ConnectionID: &conn, Name: new("unlock_account"), Title: new("Unlock an account"),
+			Description: new("Unlock a Stowline sign-in locked after too many failed attempts, by the account owner's email, and send them a reset link."),
+			SideEffect:  new("write"), Method: new("POST"), PathTemplate: new("/logins/unlock"),
+			BodyTemplate: schema(map[string]any{"email": "{input.email}"}),
+			InputSchema: schema(map[string]any{
+				"type": "object", "required": []string{"email"},
+				"properties": map[string]any{"email": map[string]any{"type": "string", "format": "email", "maxLength": 200}},
+			}),
+			ResponseFields: fields("status", "status"),
+			Channels:       channels, Agents: &[]string{"operator"},
+		},
 	}
 }
 

@@ -45,7 +45,13 @@ func StubAPI(client *httpclient.Client) {
 		Stub("POST "+base+"/accounts/*/balance_refunds", ok(201, map[string]any{
 			"id":     "bref_01JCK2",
 			"status": "pending_review",
-		}))
+		})).
+		Stub("GET "+base+"/orders/*", ok(200, map[string]any{
+			"store": "Shopify", "status": "shipped", "tracking_number": "1ZX4F1E40312345678",
+			"items": []map[string]any{{"sku": "MUG-BLU", "quantity": 2}, {"sku": "TEA-50", "quantity": 1}},
+		})).
+		Stub("POST "+base+"/accounts/*/plan", ok(200, map[string]any{"plan": "pro", "effective_from": "2026-12-01"})).
+		Stub("POST "+base+"/logins/unlock", ok(200, map[string]any{"status": "unlocked"}))
 }
 
 /*
@@ -110,12 +116,15 @@ agent, in a working week.
 func TeammateRequests() []string {
 	return []string{
 		"How many conversations are open right now, and how many have nobody assigned?",
+		"Where is parcel 1ZX4F1E40312345678 right now, and when will it arrive?",
 		"Summarize what customers wrote in about billing this week. What are the top three problems?",
 		"Find open conversations from the last 7 days about voided labels and tag them voids.",
 		"Read our help center articles about dimensional weight and draft a shorter, clearer version of the DHL Express section.",
 		"Change the workflow that raises priority on handover so it also tags the conversation urgent.",
+		"Has order ORD-10423 shipped yet? Which store did it come from?",
 		"Which customers at enterprise companies wrote in more than twice this month, what about, and is there a help article that would have answered them?",
 		"Something seems off with returns lately. Can you look into it?",
+		"ana@lima-ceramics.example is locked out after too many sign-in attempts. Unlock her account.",
 		"Draft a reply to the newest open conversation tagged tracking, using what the help center says about tracking gaps.",
 		"How did customers rate us over the last 30 days, and which teammates got the low ratings?",
 		"List the open conversations tagged urgent with how long each has waited, oldest first.",

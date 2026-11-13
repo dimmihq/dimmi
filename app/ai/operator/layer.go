@@ -87,6 +87,7 @@ type layerState struct {
 	earlier   []string
 	catalog   map[string]bool
 	system    string
+	fixed     []string
 }
 
 /*
@@ -94,6 +95,27 @@ fixedTools are the tools offered outside the layer.
 */
 func fixedTools() []string {
 	return []string{"get_conversation", "search_conversations", "search_knowledge"}
+}
+
+/*
+fixedFor is the run's fixed list: the built-in fixed tools, and the
+actions offered to Operator too when they are few and small enough to
+offer directly.
+*/
+func (e *Engine) fixedFor(s *session, registry map[string]tool) []string {
+	fixed := fixedTools()
+	var names []string
+	var specs []contracts.ToolSpec
+	for name, t := range registry {
+		if strings.HasPrefix(name, actionPrefix) && e.offers(s, t) {
+			names, specs = append(names, name), append(specs, t.spec)
+		}
+	}
+	if toolset.Inline(specs) {
+		fixed = append(fixed, names...)
+	}
+	slices.Sort(fixed)
+	return fixed
 }
 
 /*
@@ -134,16 +156,18 @@ func (e *Engine) openLayer(ctx context.Context, s *session) {
 	if !s.settings.ToolLayer {
 		return
 	}
+	registry := e.registry(s)
+	fixed := e.fixedFor(s, registry)
 	var entries []toolset.Entry
-	for name, t := range e.registry(s) {
-		if slices.Contains(fixedTools(), name) || !e.offers(s, t) {
+	for name, t := range registry {
+		if slices.Contains(fixed, name) || !e.offers(s, t) {
 			continue
 		}
 		entries = append(entries, toolset.Entry{Spec: t.spec, Group: ownGroupOf(t), Reads: len(t.writes) == 0 &&
 			ownGroupOf(t) != groupChanges})
 	}
 	groups := ownGroups()
-	ls := &layerState{catalog: map[string]bool{}}
+	ls := &layerState{catalog: map[string]bool{}, fixed: fixed}
 	if e.Catalog != nil {
 		seen := map[string]bool{}
 		for _, c := range e.Catalog.Tools() {
@@ -159,7 +183,7 @@ func (e *Engine) openLayer(ctx context.Context, s *session) {
 		return slices.ContainsFunc(entries,
 			func(en toolset.Entry) bool { return en.Spec.Name == n })
 	})
-	ls.set = toolset.New(entries, groups, ls.earlier)
+	ls.set = toolset.New(entries, groups, ls.earlier).WithFixed(fixed)
 	ls.suggested = ls.set.Suggest(ctx, toolset.Keywords{}, s.question)
 	s.layer = ls
 }
@@ -194,7 +218,7 @@ layerSpecs are the specs offered with the layer on.
 func (e *Engine) layerSpecs(s *session) []contracts.ToolSpec {
 	var out []contracts.ToolSpec
 	registry := e.registry(s)
-	for _, name := range fixedTools() {
+	for _, name := range s.layer.fixed {
 		if t, ok := registry[name]; ok && e.offers(s, t) {
 			out = append(out, t.spec)
 		}
@@ -224,6 +248,17 @@ func (e *Engine) layerCall(ctx context.Context, s *session, p *pending) (result,
 	if p.call.Name == toolset.LoadTool {
 		out, err := set.Load(p.call.Arguments)
 		return result{text: out, step: Step{Tool: toolset.LoadTool, Summary: "Looked up tools"}}, err
+	}
+	if inner := innerName(p.call.Arguments); set.IsFixed(inner) {
+		p.ran = inner
+		if !p.known {
+			return result{}, errors.New("tool " + inner + " is not available")
+		}
+		var in struct {
+			Arguments json.RawMessage `json:"arguments"`
+		}
+		_ = json.Unmarshal(p.call.Arguments, &in)
+		return p.tool.handle(ctx, s, in.Arguments)
 	}
 	c, err := set.Check(p.call.Arguments)
 	if err != nil {

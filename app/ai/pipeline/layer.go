@@ -53,6 +53,7 @@ type layerState struct {
 	set       *toolset.Set
 	suggested []string
 	earlier   []string
+	fixed     []string
 }
 
 /*
@@ -60,6 +61,27 @@ fixedTools are the tools offered outside the layer.
 */
 func fixedTools() []string {
 	return []string{toolSearchKnowledge, toolHandoff}
+}
+
+/*
+fixedFor is the turn's fixed list: the built-in fixed tools, and the
+workspace's actions too when they are few and small enough to offer
+directly.
+*/
+func (r *Runner) fixedFor(st *run, tools map[string]tool) []string {
+	fixed := fixedTools()
+	var names []string
+	var specs []contracts.ToolSpec
+	for name, t := range tools {
+		if t.action && st.settings.allows(name, t.action) {
+			names, specs = append(names, name), append(specs, t.spec)
+		}
+	}
+	if toolset.Inline(specs) {
+		fixed = append(fixed, names...)
+	}
+	slices.Sort(fixed)
+	return fixed
 }
 
 /*
@@ -100,9 +122,10 @@ func (r *Runner) openLayer(ctx context.Context, st *run) {
 		return
 	}
 	tools := r.registry(st)
+	fixed := r.fixedFor(st, tools)
 	var entries []toolset.Entry
 	for name, t := range tools {
-		if slices.Contains(fixedTools(), name) || !st.settings.allows(name, t.action) {
+		if slices.Contains(fixed, name) || !st.settings.allows(name, t.action) {
 			continue
 		}
 		entries = append(entries, toolset.Entry{
@@ -112,9 +135,9 @@ func (r *Runner) openLayer(ctx context.Context, st *run) {
 	if len(entries) == 0 {
 		return
 	}
-	earlier := r.earlierLoads(ctx, st)
-	set := toolset.New(entries, layerGroups(), earlier).WithIndexMax(layerIndexMax)
-	ls := &layerState{set: set, earlier: earlier}
+	earlier := r.earlierLoads(ctx, st, fixed)
+	set := toolset.New(entries, layerGroups(), earlier).WithIndexMax(layerIndexMax).WithFixed(fixed)
+	ls := &layerState{set: set, earlier: earlier, fixed: fixed}
 	ls.suggested = set.Suggest(ctx, toolset.Keywords{}, r.redactFor(st.env, st.env.pendingText()))
 	st.layer = ls
 
@@ -133,7 +156,7 @@ func (r *Runner) openLayer(ctx context.Context, st *run) {
 earlierLoads are the tools the conversation's earlier runs loaded that
 the layer still holds.
 */
-func (r *Runner) earlierLoads(ctx context.Context, st *run) []string {
+func (r *Runner) earlierLoads(ctx context.Context, st *run, fixed []string) []string {
 	if st.rec == nil || st.env.Conversation.ID == (ids.UUID{}) {
 		return nil
 	}
@@ -148,7 +171,7 @@ func (r *Runner) earlierLoads(ctx context.Context, st *run) []string {
 	registry := r.registry(st)
 	return toolset.Earlier(records, func(name string) bool {
 		t, ok := registry[name]
-		return ok && st.settings.allows(name, t.action) && !slices.Contains(fixedTools(), name)
+		return ok && st.settings.allows(name, t.action) && !slices.Contains(fixed, name)
 	})
 }
 
@@ -159,7 +182,7 @@ turn allows and the layer's own.
 func (r *Runner) layerSpecs(st *run) []contracts.ToolSpec {
 	var out []contracts.ToolSpec
 	tools := r.registry(st)
-	for _, name := range fixedTools() {
+	for _, name := range st.layer.fixed {
 		if t, ok := tools[name]; ok && st.settings.allows(name, t.action) {
 			out = append(out, t.spec)
 		}
@@ -184,6 +207,9 @@ func (r *Runner) layerCall(ctx context.Context, st *run, call contracts.ToolCall
 		out, err := set.Load(call.Arguments)
 		return call.Name, out, err
 	}
+	if inner := innerName(call.Arguments); set.IsFixed(inner) {
+		return r.runFixed(ctx, st, inner, call.Arguments)
+	}
 	c, err := set.Check(call.Arguments)
 	if err != nil {
 		return call.Name, "", err
@@ -201,6 +227,37 @@ func (r *Runner) layerCall(ctx context.Context, st *run, call contracts.ToolCall
 		out = set.Shape(out, c.Fields)
 	}
 	return c.Name, out, err
+}
+
+/*
+runFixed runs a fixed tool the model reached through call_tool, as if
+it had called it by name.
+*/
+func (r *Runner) runFixed(ctx context.Context, st *run, name string, args json.RawMessage) (string, string, error) {
+	var in struct {
+		Arguments json.RawMessage `json:"arguments"`
+	}
+	_ = json.Unmarshal(args, &in)
+	t, ok := r.registry(st)[name]
+	if !ok || !st.settings.allows(name, t.action) {
+		return name, "", errors.New("tool " + name + " is not available in this turn")
+	}
+	if len(in.Arguments) == 0 {
+		in.Arguments = json.RawMessage("{}")
+	}
+	out, err := t.handle(ctx, st, in.Arguments)
+	return name, out, err
+}
+
+/*
+innerName is the tool a call_tool request names.
+*/
+func innerName(args json.RawMessage) string {
+	var in struct {
+		Name string `json:"name"`
+	}
+	_ = json.Unmarshal(args, &in)
+	return in.Name
 }
 
 /*

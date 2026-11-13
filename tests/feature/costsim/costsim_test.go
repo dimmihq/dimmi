@@ -71,7 +71,7 @@ func TestSeed(t *testing.T) {
 		assert.Equal(t, int64(len(stowline.Teams())), c["teams"])
 		assert.Positive(t, c["ai_runs"])
 		assert.Greater(t, c["ai_run_steps"], c["ai_runs"])
-		assert.Equal(t, int64(5), c["ai_actions"])
+		assert.Equal(t, int64(8), c["ai_actions"])
 		assert.Equal(t, int64(3), c["procedures"])
 		assert.Positive(t, c["conversation_tag"])
 		assert.Positive(t, c["conversation_ratings"])

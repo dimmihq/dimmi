@@ -270,3 +270,37 @@ func TestNoteAndEarlier(t *testing.T) {
 		t.Fatalf("loaded = %v", got)
 	}
 }
+
+func TestInlineThreshold(t *testing.T) {
+	small := []contracts.ToolSpec{{Name: "a", Description: "short", Schema: json.RawMessage(`{}`)}}
+	if !toolset.Inline(small) {
+		t.Fatal("a small action stays inline")
+	}
+	big := make([]contracts.ToolSpec, 0, 10)
+	for range 10 {
+		big = append(big, contracts.ToolSpec{Name: "b", Description: strings.Repeat("x", 900)})
+	}
+	if toolset.Inline(big) || toolset.Inline(nil) {
+		t.Fatal("many large actions, or none, are not inline")
+	}
+}
+
+func TestShapeKeepsTheUntrustedWrapper(t *testing.T) {
+	s := toolset.New(entries(), groups(), nil).WithLimits(toolset.Limits{Items: 5, Text: 10})
+	out := s.Shape(`<action_result action="x">abcdefghijklmnopqrstuvwxyz</action_result>`, nil)
+	if !strings.HasPrefix(out, `<action_result action="x">abcdefghij …[cut`) ||
+		!strings.HasSuffix(out, "</action_result>") {
+		t.Fatalf("shaped = %q", out)
+	}
+}
+
+func TestLoadingAFixedToolSaysItIsOffered(t *testing.T) {
+	s := toolset.New(entries(), groups(), nil).WithFixed([]string{"search_knowledge"})
+	out, err := s.Load(json.RawMessage(`{"names":["search_knowledge"]}`))
+	if err != nil || !strings.Contains(out, `"already_offered":["search_knowledge"]`) {
+		t.Fatalf("load = %s, %v", out, err)
+	}
+	if len(s.Stats().NotFound) != 0 {
+		t.Fatal("a fixed tool is not counted as not found")
+	}
+}
