@@ -39,5 +39,5 @@ func All(a *app.App) []foundation.Command {
 		EmailResendBackfillCommand{App: a},
 		AIDoctorCommand{App: a},
 		EmailDoctorCommand{App: a},
-	}, append(operatorCommands(a), devCommands(a)...)...)
+	}, append(operatorCommands(a), append(devCommands(a), demoSeedCommands(a)...)...)...)
 }

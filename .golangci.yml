@@ -625,6 +625,14 @@ linters:
         linters: [funlen]           # test tables are long by nature; gocognit still applies
       - linters: [lll]
         source: https?://
+      # The demo seed's content is prose written by hand: help center
+      # articles, support threads and simulated customers, a paragraph to a
+      # line, and the long lists that hold them.
+      - path: ^app/demo/stowline/(articles|topics|scenarios|company|vocabulary|team|people)[a-z_]*\.go$
+        linters: [lll, funlen, dupword]
+      - path: ^app/demo/stowline/(articles|topics)[a-z_]*\.go$
+        linters: [revive]
+        text: file-length-limit
       - path: ^app/integrations/trackers/
         linters: [tagliatelle, interfacebloat] # tools' wire formats are camelCase; the contract mirrors each tool
 
