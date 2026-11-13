@@ -17,6 +17,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/dimmihq/dimmi/framework/broadcasting"
+	"github.com/dimmihq/dimmi/framework/clock"
 	"github.com/dimmihq/dimmi/framework/httpclient"
 	"github.com/dimmihq/dimmi/framework/log"
 	"github.com/dimmihq/dimmi/framework/redis"
@@ -400,6 +401,33 @@ func (c *wsClient) unsubscribed() string {
 			return p.Channel
 		}
 	}
+}
+
+/*
+keepBroadcasting publishes the event on the channel now and every
+quarter second until the test ends.
+*/
+func keepBroadcasting(t *testing.T, n *node, channel, event string) {
+	t.Helper()
+
+	require.NoError(t, n.server.Broadcast(t.Context(), channel, event, nil))
+
+	ctx, stop := context.WithCancel(t.Context())
+	t.Cleanup(stop)
+
+	go func() {
+		tick := clock.System().NewTicker(250 * time.Millisecond)
+		defer tick.Stop()
+
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-tick.Chan():
+				_ = n.server.Broadcast(ctx, channel, event, nil)
+			}
+		}
+	}()
 }
 
 /*

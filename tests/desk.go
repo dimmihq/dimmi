@@ -38,12 +38,13 @@ type Desk struct {
 
 /*
 NewDesk boots the application with a workspace, its default inbox with
-its API channel and the owner signed in.
+its API channel and the owner signed in; the options change the boot as
+for New.
 */
-func NewDesk(t *testing.T) Desk {
+func NewDesk(t *testing.T, opts ...Option) Desk {
 	t.Helper()
 
-	tc := New(t)
+	tc := New(t, opts...)
 	inbox, err := factories.DefaultInbox(t.Context(), tc.App, tc.Workspace.Workspace)
 	require.NoError(t, err)
 

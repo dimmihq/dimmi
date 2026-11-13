@@ -133,7 +133,10 @@ it.describe("automation", () => {
     await page.getByRole("switch", { name: "Open on Saturday" }).focus();
     await page.keyboard.press("Space");
     await expect(page.getByRole("switch", { name: "Open on Saturday" })).toBeChecked();
+    // The button is disabled while the save runs too, so wait for the save.
+    const saved = page.waitForResponse((r) => r.request().method() === "PATCH" && /\/schedules\//.test(r.url()));
     await page.getByRole("button", { name: "Save hours" }).click();
+    expect((await saved).ok()).toBe(true);
     await expect(page.getByRole("button", { name: "Save hours" })).toBeDisabled();
 
     await page.reload();

@@ -42,12 +42,7 @@ export function ArticleSettings({
   const [deleting, setDeleting] = useState(false);
 
   return (
-    <Modal
-      size="md"
-      className="h-[min(640px,calc(100dvh-3rem))]"
-      isOpen
-      onOpenChange={(open) => (open ? undefined : onClose())}
-    >
+    <Modal size="md" isOpen onOpenChange={(open) => (open ? undefined : onClose())}>
       <ModalHeader title="Article settings" description="Changes here are saved with the article." />
       <ModalBody className="pb-4">
         <div className="flex flex-col gap-4">

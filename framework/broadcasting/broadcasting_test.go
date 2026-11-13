@@ -79,7 +79,10 @@ func TestChannels(t *testing.T) {
 		require.Nil(t, reply.Error)
 		assert.Equal(t, map[string]string{"team": "7", "board": "main"}, <-got)
 
-		require.NoError(t, n.server.Broadcast(t.Context(), "team:7:board:main", "moved", nil))
+		// Without history a publication is sent once, and the shared Valkey
+		// may drop its Pub/Sub connection under load, so publish until one
+		// arrives.
+		keepBroadcasting(t, n, "team:7:board:main", "moved")
 		assert.Equal(t, "moved", decode(t, c.publication().Pub).Event, "a channel without history still delivers")
 	})
 }

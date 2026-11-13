@@ -42,7 +42,10 @@ export function AddStep({ kinds, onAdd }: { kinds: StepKind[]; onAdd: (kind: Ste
     <DialogTrigger>
       <AriaButton
         aria-label="Add a step"
+        // nopan: a press here is never the start of a pan, so the canvas
+        // moving under the pointer cannot swallow the click.
         className={cx(
+          "nodrag nopan",
           "flex size-7 cursor-pointer items-center justify-center rounded-full border border-border-button-default",
           "bg-background-primary-default text-foreground-icon-secondary shadow-xs outline-none transition-colors duration-150",
           "hover:bg-background-primary-hover focus-visible:ring-2 focus-visible:ring-border-focus-ring",

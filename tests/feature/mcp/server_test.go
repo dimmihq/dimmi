@@ -349,12 +349,14 @@ func TestServerAnswers(t *testing.T) {
 
 	t.Run("tells the agent to slow down when the API limits it", func(t *testing.T) {
 		t.Parallel()
-		d := tests.NewDesk(t)
+		// A small limit, so the burst runs out within a few calls however
+		// slowly they go.
+		d := tests.NewDesk(t, tests.WithEnv("DIMMI_API__LIMITS__TOKEN_PER_MINUTE=30"))
 		_, token := d.TC.MintToken(d.TC.Workspace.Owner, "conversations:read")
 		c := agent(t, d, token)
 
 		var last mcpResult
-		for range 700 {
+		for range 50 {
 			res, err := c.CallTool(t.Context(), "dimmi_tags_list", map[string]any{})
 			require.NoError(t, err)
 			last = mcpResult{text: res.Text, isError: res.IsError}
