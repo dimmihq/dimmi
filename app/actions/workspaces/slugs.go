@@ -46,7 +46,7 @@ func reservedSlug(slug string) bool {
 		"api", "app", "www", "admin", "help", "docs", "status", "mail", "support", "dimmi", "auth", "login",
 		"setup", "static", "assets", "cdn", "widget", "mcp", "oauth", "billing", "inbox", "settings", "customers",
 		"notifications", "agent", "feedback", "announcements", "changelog", "shortcuts", "procedures", "workflows",
-		"broadcasts", "series", "operator",
+		"broadcasts", "series", "operator", "tickets", "reports", "help-center",
 	}, slug)
 }
 

@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from "vitest";
 
-import { addressed, workspaceAddress } from "./workspace";
+import { addressed, pages, workspaceAddress } from "./workspace";
 
 const acme = {
   id: "ws_a",
@@ -65,5 +65,17 @@ describe("workspace addresses", () => {
     expect(visit("/d/inbox/all")).toBe("/d/inbox/all");
     expect(addressed([acme, globex])).toEqual({ workspace: globex, missing: null, stale: true });
     expect(written("/d/inbox/all")).toBe("/d/globex/inbox/all");
+  });
+});
+
+describe("dashboard pages", () => {
+  it("takes every top-level dashboard route as a page, never a workspace slug", () => {
+    const files = Object.keys(import.meta.glob("../../routes/d/**/*.tsx"));
+    const routes = new Set(files.map((file) => file.replace("../../routes/d/", "").split(/[/.]/)[0] ?? ""));
+    routes.delete("index");
+    routes.delete("route");
+
+    expect(routes.size).toBeGreaterThan(10);
+    expect([...routes].filter((name) => !pages.has(name))).toEqual([]);
   });
 });

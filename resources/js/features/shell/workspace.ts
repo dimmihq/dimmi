@@ -18,8 +18,10 @@ const key = "dimmi:workspace";
  * pages are the first parts of dashboard addresses that are pages, not
  * slugs; the server never hands these out as slugs.
  */
-const pages = new Set([
+export const pages = new Set([
   "inbox",
+  "tickets",
+  "reports",
   "settings",
   "customers",
   "notifications",
