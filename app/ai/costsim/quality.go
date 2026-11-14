@@ -113,27 +113,23 @@ func (h *Harness) RunQuality(ctx context.Context, o Options, q QualityRun) (*Qua
 	if err != nil {
 		return nil, err
 	}
+	grades := h.gradeAll(ctx, o, q, cost)
 	out := &QualityReport{Set: set, AgentModel: cost.AgentModel, JudgeModel: judge.Model, Cost: cost}
-	before, _, _ := h.Budget.Spent()
 	for i, c := range cost.Conversations {
 		it := items[i]
 		r := QualityResult{
 			Key: it.Key, Question: it.Question, Reply: c.Reply, Outcome: c.Outcome, ModelCalls: c.ModelCalls,
 			CostMicros: c.CostMicros, Ledger: c.Ledger, Error: c.Error, Hit: hit(c.Retrieved, it.Slugs),
 		}
-		if !o.DryRun && judge.LLM != nil {
-			g, err := judge.grade(ctx, it, c.Reply)
-			if err != nil {
-				r.Error = strings.TrimSpace(r.Error + " judge: " + err.Error())
-			} else {
-				r.Grade, r.Graded = g, true
-			}
+		if g := grades.items[i]; g.err != nil {
+			r.Error = strings.TrimSpace(r.Error + " judge: " + g.err.Error())
+		} else if g.done {
+			r.Grade, r.Graded = g.grade, true
 		}
 		out.Items = append(out.Items, r)
 		o.Log("%3d %-10s hit %-5v score %d %s", i+1, it.Key, r.Hit, r.Grade.Score, r.Grade.Reason)
 	}
-	after, _, _ := h.Budget.Spent()
-	out.JudgeMicros = after - before
+	out.JudgeMicros = grades.micros
 	out.summarize()
 	return out, nil
 }

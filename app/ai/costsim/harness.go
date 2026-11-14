@@ -27,6 +27,7 @@ import (
 	"errors"
 	"fmt"
 	"slices"
+	"sync"
 
 	"github.com/dimmihq/dimmi/framework/httpclient"
 	"github.com/dimmihq/dimmi/framework/ids"
@@ -73,6 +74,7 @@ type Options struct {
 	Model           contracts.LLM
 	Label           string
 	Log             func(format string, args ...any)
+	Parallel        int
 }
 
 /*
@@ -143,6 +145,10 @@ func (h *Harness) Run(ctx context.Context, o Options) (*Report, error) {
 	}
 
 	report := h.newReport(o, p)
+	if o.Parallel > 1 {
+		h.runParallel(ctx, turn{o: o, p: p, customer: customer}, report)
+		return h.finish(report), nil
+	}
 	failures := 0
 	for i := range o.Conversations {
 		if !h.roomFor(p) {
@@ -161,6 +167,41 @@ func (h *Harness) Run(ctx context.Context, o Options) (*Report, error) {
 		}
 	}
 	return h.finish(report), nil
+}
+
+/*
+runParallel plays the conversations several at a time under the same
+run limit. The per-conversation limit cannot tell parallel conversations
+apart, so this mode is for one-message questions, where the run limit
+is the guard that matters.
+*/
+func (h *Harness) runParallel(ctx context.Context, base turn, report *Report) {
+	o, p, customer := base.o, base.p, base.customer
+	results := make([]ConversationResult, o.Conversations)
+	started := make([]bool, o.Conversations)
+	slots := make(chan struct{}, o.Parallel)
+	var wg sync.WaitGroup
+	for i := range o.Conversations {
+		if !h.roomFor(p) {
+			report.StoppedBy = "run spend limit"
+			break
+		}
+		slots <- struct{}{}
+		started[i] = true
+		sc := o.Scenarios[i%len(o.Scenarios)]
+		wg.Go(func() {
+			defer func() { <-slots }()
+			results[i] = h.conversation(ctx, turn{o: o, p: p, customer: customer, index: i, sc: sc})
+			o.Log("%3d %-28s calls %2d  $%.4f  %s %s", i+1, sc.Key, results[i].ModelCalls,
+				float64(results[i].CostMicros)/1e6, results[i].Outcome, results[i].Error)
+		})
+	}
+	wg.Wait()
+	for i, res := range results {
+		if started[i] {
+			report.Conversations = append(report.Conversations, res)
+		}
+	}
 }
 
 /*

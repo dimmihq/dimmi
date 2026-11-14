@@ -189,6 +189,7 @@ func (AIQualityCommand) Flags(flags *console.Flags) {
 	flags.Bool("dry-run", "run on an offline model and skip judging: no spend")
 	flags.Bool("confirm", "start a real run")
 	flags.String("out", "tmp/quality", "the directory reports are written under")
+	flags.Int("parallel", 8, "how many questions run at once, all under the one spend limit")
 }
 
 /*
@@ -298,8 +299,8 @@ func (c AIQualityCommand) options(ctx context.Context, in *console.Input, out *c
 	}
 	return costsim.Options{
 		Owner: owner, Inbox: inbox, Channel: channel, Company: "Wix", Mode: costsim.ModeScripted,
-		AgentModel: in.String("agent-model"), MaxSpend: maxSpend, MaxPerConv: 500_000, DryRun: dry,
-		Label: label, Log: out.Line,
+		AgentModel: in.String("agent-model"), MaxSpend: maxSpend, MaxPerConv: maxSpend, DryRun: dry,
+		Label: label, Log: out.Line, Parallel: max(in.Int("parallel"), 1),
 	}, nil
 }
 
