@@ -46,26 +46,50 @@ func (j Judge) grade(ctx context.Context, it QualityItem, reply string) (Grade, 
 	}
 	user := "<question>\n" + it.Question + "\n</question>\n\n<expert_answer>\n" + it.Expected +
 		"\n</expert_answer>\n\n<reply>\n" + reply + "\n</reply>"
-	res, err := j.LLM.Chat(ctx, contracts.ChatRequest{
+	req := contracts.ChatRequest{
 		Model: j.Model, System: []contracts.SystemBlock{{Text: judgePrompt, Cacheable: true}},
 		Messages: []contracts.ChatMessage{
 			{Role: contracts.ChatRoleUser, Parts: []contracts.ContentPart{{Text: user}}},
 		},
 		MaxOutputTokens: 600, Effort: contracts.EffortLow,
-		Schema: &contracts.ResponseSchema{Name: "grade", Schema: json.RawMessage(`{"type":"object",` +
-			`"properties":{"score":{"type":"integer","minimum":1,"maximum":5},"correct":{"type":"boolean"},` +
-			`"contradicts":{"type":"boolean"},"reason":{"type":"string"}},` +
-			`"required":["score","correct","contradicts","reason"],"additionalProperties":false}`)},
-	})
+	}
+	if j.LLM.Capabilities(j.Model).JSONSchema {
+		req.Schema = &contracts.ResponseSchema{Name: "grade", Schema: json.RawMessage(gradeSchema)}
+	} else {
+		req.MaxOutputTokens = 2000
+		req.System = append(req.System, contracts.SystemBlock{Text: "Answer with only a JSON object matching " +
+			"this schema, nothing before or after it: " + gradeSchema})
+	}
+	res, err := j.LLM.Chat(ctx, req)
 	if err != nil {
 		return Grade{}, err
 	}
 	var g Grade
-	if err := json.Unmarshal([]byte(res.Text), &g); err != nil {
+	if err := json.Unmarshal([]byte(jsonObject(res.Text)), &g); err != nil {
 		return Grade{}, fmt.Errorf("read verdict: %w", err)
 	}
 	g.Score = min(max(g.Score, 1), 5)
 	return g, nil
+}
+
+/*
+gradeSchema is the verdict's shape.
+*/
+const gradeSchema = `{"type":"object","properties":{"score":{"type":"integer","minimum":1,"maximum":5},` +
+	`"correct":{"type":"boolean"},"contradicts":{"type":"boolean"},"reason":{"type":"string"}},` +
+	`"required":["score","correct","contradicts","reason"],"additionalProperties":false}`
+
+/*
+jsonObject is the JSON object a reply holds, from its first opening
+brace to its last closing one, for a model that wraps it in prose or a
+code fence.
+*/
+func jsonObject(text string) string {
+	start, end := strings.Index(text, "{"), strings.LastIndex(text, "}")
+	if start < 0 || end < start {
+		return text
+	}
+	return text[start : end+1]
 }
 
 /*
