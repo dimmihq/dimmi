@@ -439,9 +439,6 @@ func (s *Set) Check(args json.RawMessage) (Call, error) {
 		return Call{}, s.refuse(fmt.Errorf("%w %q; load a group to list its tools: %s", ErrUnknownTool, in.Name,
 			s.groupNames()))
 	}
-	s.mu.Lock()
-	loaded := s.loaded[in.Name]
-	s.mu.Unlock()
 	c := Call{Name: in.Name, Arguments: orEmpty(in.Arguments)}
 	if e.Reads {
 		c.Arguments, c.Fields = splitFields(c.Arguments)
@@ -451,7 +448,7 @@ func (s *Set) Check(args json.RawMessage) (Call, error) {
 		return Call{}, s.refuse(err)
 	}
 	c.Arguments = expanded
-	if err := s.admit(e, c.Arguments, loaded); err != nil {
+	if err := s.admit(e, c.Arguments); err != nil {
 		return Call{}, err
 	}
 	s.mu.Lock()
@@ -466,7 +463,10 @@ admit checks a call's arguments. A tool the model never loaded runs
 when they fit and counts as loaded; when they do not, the refusal
 carries its definition, so the model can fix the call without a load.
 */
-func (s *Set) admit(e *entry, args json.RawMessage, loaded bool) error {
+func (s *Set) admit(e *entry, args json.RawMessage) error {
+	s.mu.Lock()
+	loaded := s.loaded[e.Spec.Name]
+	s.mu.Unlock()
 	if err := s.validate(e, args); err != nil {
 		if loaded {
 			return s.refuse(err)
