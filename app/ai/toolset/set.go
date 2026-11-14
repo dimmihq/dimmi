@@ -78,7 +78,6 @@ Errors the layer answers with.
 */
 var (
 	ErrUnknownTool = errors.New("unknown tool")
-	ErrNotLoaded   = errors.New("tool not loaded")
 	ErrArguments   = errors.New("invalid arguments")
 )
 
@@ -112,6 +111,7 @@ type Stats struct {
 	Reloads   int      `json:"reloads"`
 	Calls     int      `json:"calls"`
 	ArgErrors int      `json:"argument_errors"`
+	Direct    int      `json:"direct_calls"`
 	NotFound  []string `json:"not_found,omitempty"`
 	Used      []string `json:"used,omitempty"`
 }
@@ -262,8 +262,9 @@ func Specs() []contracts.ToolSpec {
 		},
 		{
 			Name: CallTool,
-			Description: "Run a loaded tool. Arguments must match its definition; a refusal says what to " +
-				"fix. To read the rest of a cut text, run read_rest with its ref.",
+			Description: "Run a tool from the groups. Load it first unless you know its arguments; " +
+				"arguments that do not fit are refused with the tool's definition. To read the rest of a cut text, " +
+				"run read_rest with its ref.",
 			Schema: json.RawMessage(`{"type":"object","properties":{"name":{"type":"string"},` +
 				`"arguments":{"type":"object"}},"required":["name"],"additionalProperties":false}`),
 		},
@@ -354,7 +355,7 @@ func (s *Set) define(names []string) (string, error) {
 	var missing, offered []string
 	for _, n := range names {
 		e, ok := s.entries[n]
-		if !ok && s.fixed[n] {
+		if !ok && (s.fixed[n] || n == ReadRest) {
 			offered = append(offered, n)
 			continue
 		}
@@ -441,9 +442,6 @@ func (s *Set) Check(args json.RawMessage) (Call, error) {
 	s.mu.Lock()
 	loaded := s.loaded[in.Name]
 	s.mu.Unlock()
-	if !loaded {
-		return Call{}, s.refuse(fmt.Errorf("%w: call load_tools with names [%q] first", ErrNotLoaded, in.Name))
-	}
 	c := Call{Name: in.Name, Arguments: orEmpty(in.Arguments)}
 	if e.Reads {
 		c.Arguments, c.Fields = splitFields(c.Arguments)
@@ -454,7 +452,19 @@ func (s *Set) Check(args json.RawMessage) (Call, error) {
 	}
 	c.Arguments = expanded
 	if err := s.validate(e, c.Arguments); err != nil {
+		if !loaded {
+			s.markLoaded(in.Name)
+			return Call{}, s.refuse(fmt.Errorf("%w; its definition: %s", err, mustJSON(definition{
+				Name: in.Name, Description: e.Spec.Description, Input: inputOf(e.Entry),
+			})))
+		}
 		return Call{}, s.refuse(err)
+	}
+	if !loaded {
+		s.mu.Lock()
+		s.loaded[in.Name] = true
+		s.stats.Direct++
+		s.mu.Unlock()
 	}
 	s.mu.Lock()
 	s.stats.Calls++
@@ -610,6 +620,17 @@ func orEmpty(args json.RawMessage) json.RawMessage {
 		return json.RawMessage("{}")
 	}
 	return args
+}
+
+/*
+mustJSON writes a value as JSON, empty when it cannot.
+*/
+func mustJSON(v any) string {
+	out, err := json.Marshal(v)
+	if err != nil {
+		return ""
+	}
+	return string(out)
 }
 
 /*

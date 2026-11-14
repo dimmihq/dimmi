@@ -37,6 +37,7 @@ type LayerResult struct {
 	Reloads      int         `json:"reloads"`
 	Calls        int         `json:"calls"`
 	ArgErrors    int         `json:"argument_errors"`
+	Direct       int         `json:"direct_calls"`
 	NotFound     []string    `json:"not_found,omitempty"`
 	Used         int         `json:"used"`
 	UsedHits     int         `json:"used_in_suggestions"`
@@ -99,6 +100,7 @@ func (l *LayerResult) add(r toolset.Record) {
 	l.Reloads += r.Stats.Reloads
 	l.Calls += r.Stats.Calls
 	l.ArgErrors += r.Stats.ArgErrors
+	l.Direct += r.Stats.Direct
 	l.NotFound = append(l.NotFound, r.Stats.NotFound...)
 	for _, u := range r.Stats.Used {
 		l.Used++

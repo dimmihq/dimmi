@@ -85,12 +85,12 @@ func TestAiToolLayer(t *testing.T) {
 		assert.Equal(t, []string{"load_tools", "triage_conversation"}, names)
 	})
 
-	t.Run("refuses a tool that is not loaded and arguments that do not fit, in short words", func(t *testing.T) {
+	t.Run("runs a tool not loaded when its arguments fit, and refuses misfits in short words", func(t *testing.T) {
 		t.Parallel()
 		h := newHarness(t, nil)
 		h.withToolLayer()
 		h.llm.answer.Script(
-			tools(callTool("triage_conversation", map[string]any{"title": "x"})),
+			tools(callTool("triage_conversation", map[string]any{"title": "Double charge"})),
 			tools(loadCall("triage_conversation", "refund_card")),
 			tools(callTool("triage_conversation", map[string]any{"priority": "very"})),
 			reply("Let me check."),
@@ -101,17 +101,17 @@ func TestAiToolLayer(t *testing.T) {
 
 		sent := h.llm.answer.Sent()
 		last := func(i int) contracts.ChatMessage { return sent[i].Messages[len(sent[i].Messages)-1] }
-		assert.True(t, last(1).ToolError)
-		assert.Contains(t, last(1).Parts[0].Text, "load_tools")
+		assert.False(t, last(1).ToolError, last(1).Parts[0].Text)
 		assert.Contains(t, last(2).Parts[0].Text, `"not_found":["refund_card"]`)
 		assert.True(t, last(3).ToolError)
 		assert.Contains(t, last(3).Parts[0].Text, "invalid arguments for triage_conversation")
 		assert.Less(t, len(last(3).Parts[0].Text), 320)
 
 		r := h.layerRecord(h.load(conv, res.RunID))
-		assert.Equal(t, 2, r.Stats.ArgErrors)
+		assert.Equal(t, 1, r.Stats.ArgErrors)
+		assert.Equal(t, 1, r.Stats.Direct)
 		assert.Equal(t, []string{"refund_card"}, r.Stats.NotFound)
-		assert.Zero(t, r.Stats.Calls)
+		assert.Equal(t, 1, r.Stats.Calls)
 	})
 
 	t.Run("names the tools to reload and likely tools in the newest message only", func(t *testing.T) {

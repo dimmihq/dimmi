@@ -2,6 +2,7 @@ package toolset_test
 
 import (
 	"context"
+	"slices"
 	"encoding/json"
 	"errors"
 	"strings"
@@ -64,18 +65,21 @@ func TestPromptListsGroupsOneLineEach(t *testing.T) {
 	}
 }
 
-func TestCallNeedsLoadFirst(t *testing.T) {
+func TestCallRunsAToolNotLoadedWhenItsArgumentsFit(t *testing.T) {
 	s := toolset.New(entries(), groups(), nil)
-	_, err := s.Check(json.RawMessage(`{"name":"open_ticket","arguments":{"title":"x"}}`))
-	if !errors.Is(err, toolset.ErrNotLoaded) || !strings.Contains(err.Error(), "load_tools") {
-		t.Fatalf("err = %v", err)
-	}
-	if _, err := s.Load(json.RawMessage(`{"names":["open_ticket"]}`)); err != nil {
-		t.Fatal(err)
-	}
 	c, err := s.Check(json.RawMessage(`{"name":"open_ticket","arguments":{"title":"x"}}`))
 	if err != nil || c.Name != "open_ticket" {
 		t.Fatalf("call = %+v, %v", c, err)
+	}
+	if st := s.Stats(); st.Direct != 1 || st.Calls != 1 {
+		t.Fatalf("stats = %+v", st)
+	}
+	_, err = s.Check(json.RawMessage(`{"name":"action_void_label","arguments":{}}`))
+	if !errors.Is(err, toolset.ErrArguments) || !strings.Contains(err.Error(), `"input_schema"`) {
+		t.Fatalf("a misfit call answers with the definition: %v", err)
+	}
+	if !slices.Contains(s.Loaded(), "action_void_label") {
+		t.Fatal("the definition sent counts as loaded")
 	}
 }
 
