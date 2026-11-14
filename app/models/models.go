@@ -2157,6 +2157,7 @@ type OperatorSetting struct {
 	UpdatedAt       time.Time       `json:"updated_at"`
 	ToolLayer       bool            `json:"tool_layer"`
 	CompactResults  bool            `json:"compact_results"`
+	Effort          string          `json:"effort"`
 }
 
 type OperatorSlackThread struct {

@@ -313,7 +313,7 @@ func (q *Queries) FindOperatorChangeset(ctx context.Context, arg FindOperatorCha
 }
 
 const findOperatorSettings = `-- name: FindOperatorSettings :one
-SELECT workspace_id, enabled, brief_on_open, triage_on_arrival, instructions, policies, model, created_at, updated_at, tool_layer, compact_results FROM operator_settings WHERE workspace_id = $1
+SELECT workspace_id, enabled, brief_on_open, triage_on_arrival, instructions, policies, model, created_at, updated_at, tool_layer, compact_results, effort FROM operator_settings WHERE workspace_id = $1
 `
 
 // FindOperatorSettings returns the workspace's Operator settings.
@@ -332,6 +332,7 @@ func (q *Queries) FindOperatorSettings(ctx context.Context, workspaceID ids.UUID
 		&i.UpdatedAt,
 		&i.ToolLayer,
 		&i.CompactResults,
+		&i.Effort,
 	)
 	return i, err
 }
@@ -636,7 +637,7 @@ ON CONFLICT (workspace_id) DO UPDATE SET
     enabled = EXCLUDED.enabled, brief_on_open = EXCLUDED.brief_on_open,
     triage_on_arrival = EXCLUDED.triage_on_arrival, instructions = EXCLUDED.instructions,
     policies = EXCLUDED.policies, model = EXCLUDED.model, updated_at = EXCLUDED.updated_at
-RETURNING workspace_id, enabled, brief_on_open, triage_on_arrival, instructions, policies, model, created_at, updated_at, tool_layer, compact_results
+RETURNING workspace_id, enabled, brief_on_open, triage_on_arrival, instructions, policies, model, created_at, updated_at, tool_layer, compact_results, effort
 `
 
 type SaveOperatorSettingsParams struct {
@@ -675,6 +676,7 @@ func (q *Queries) SaveOperatorSettings(ctx context.Context, arg SaveOperatorSett
 		&i.UpdatedAt,
 		&i.ToolLayer,
 		&i.CompactResults,
+		&i.Effort,
 	)
 	return i, err
 }

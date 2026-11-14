@@ -104,7 +104,7 @@ func (e *Engine) generate(ctx context.Context, s *session, p prompt, tools []con
 	req := contracts.ChatRequest{
 		Model: s.model, System: []contracts.SystemBlock{{Text: p.system, Cacheable: true}}, Messages: p.messages,
 		Tools:           tools,
-		MaxOutputTokens: maxOutputTokens, CacheHint: true, Effort: contracts.EffortMedium,
+		MaxOutputTokens: maxOutputTokens, CacheHint: true, Effort: effortOf(s.settings),
 		Timeout:  llmretry.StepTimeouts(e.Timeouts, llmretry.StepGenerate),
 		Metadata: map[string]string{"session_id": s.thread.ID.String()},
 	}
@@ -118,6 +118,17 @@ func (e *Engine) generate(ctx context.Context, s *session, p prompt, tools []con
 		response: out.text, usage: out.usage, ledger: ledger.Encode(ledger.Of(req, p.newest)), err: err,
 	})
 	return out, err
+}
+
+/*
+effortOf is how hard a call thinks: the settings' effort, medium when
+unset.
+*/
+func effortOf(s Settings) contracts.Effort {
+	if s.Effort == "" {
+		return contracts.EffortMedium
+	}
+	return s.Effort
 }
 
 /*

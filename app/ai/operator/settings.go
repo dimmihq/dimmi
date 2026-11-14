@@ -24,6 +24,7 @@ import (
 	"github.com/dimmihq/dimmi/framework/database"
 	"github.com/dimmihq/dimmi/framework/ids"
 
+	"github.com/dimmihq/dimmi/app/contracts"
 	"github.com/dimmihq/dimmi/app/models"
 )
 
@@ -72,7 +73,8 @@ Settings are one workspace's Operator settings. Policies holds only the
 groups an admin changed; the rest ask. Model is the model Operator
 answers with on the agent's connection; empty means the agent's own.
 ToolLayer offers the model a few tools and loads the rest on request;
-CompactResults writes tool results as short lines with short ids.
+CompactResults writes tool results as short lines with short ids;
+Effort is how hard each model call thinks.
 */
 type Settings struct {
 	Enabled         bool
@@ -83,13 +85,17 @@ type Settings struct {
 	Model           string
 	ToolLayer       bool
 	CompactResults  bool
+	Effort          contracts.Effort
 }
 
 /*
 DefaultSettings are the settings of a workspace that saved none.
 */
 func DefaultSettings() Settings {
-	return Settings{Enabled: true, Policies: map[Group]Policy{}, ToolLayer: true, CompactResults: true}
+	return Settings{
+		Enabled: true, Policies: map[Group]Policy{}, ToolLayer: true, CompactResults: true,
+		Effort: contracts.EffortMedium,
+	}
 }
 
 /*
@@ -185,7 +191,7 @@ func SettingsOf(row models.OperatorSetting) Settings {
 	s := Settings{
 		Enabled: row.Enabled, BriefOnOpen: row.BriefOnOpen, TriageOnArrival: row.TriageOnArrival,
 		Instructions: row.Instructions, Policies: map[Group]Policy{}, Model: deref(row.Model),
-		ToolLayer: row.ToolLayer, CompactResults: row.CompactResults,
+		ToolLayer: row.ToolLayer, CompactResults: row.CompactResults, Effort: contracts.Effort(row.Effort),
 	}
 	_ = json.Unmarshal(row.Policies, &s.Policies)
 	return s
