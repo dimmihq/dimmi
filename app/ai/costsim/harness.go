@@ -75,6 +75,7 @@ type Options struct {
 	Label           string
 	Log             func(format string, args ...any)
 	Parallel        int
+	AnswerKey       *ids.UUID
 }
 
 /*
@@ -118,6 +119,7 @@ type ConversationResult struct {
 	Ledger         map[string]PartCost `json:"ledger,omitempty"`
 	Reply          string              `json:"reply,omitempty"`
 	RunErrors      int                 `json:"run_errors,omitempty"`
+	BigPrompts     int                 `json:"calls_over_100k_tokens,omitempty"`
 	Retrieved      []string            `json:"retrieved,omitempty"`
 }
 

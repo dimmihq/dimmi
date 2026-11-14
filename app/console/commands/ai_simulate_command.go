@@ -32,6 +32,7 @@ import (
 	"github.com/dimmihq/dimmi/framework/console"
 	"github.com/dimmihq/dimmi/framework/database"
 	"github.com/dimmihq/dimmi/framework/foundation"
+	"github.com/dimmihq/dimmi/framework/ids"
 	"github.com/dimmihq/dimmi/framework/tenancy"
 
 	"github.com/dimmihq/dimmi/app"
@@ -82,6 +83,8 @@ func (c AISimulateCommand) Flags(flags *console.Flags) {
 	flags.Bool("confirm", "start a real run after printing the estimate")
 	flags.String("out", "tmp/costsim", "the directory the report is written under")
 	flags.String("scenarios", "", "play only these scenarios, by key, comma separated; empty plays them all in turn")
+	flags.String("connection", "", "answer on this AI connection of the workspace, by name; empty keeps the agent's")
+	flags.String("label", "", "a name for the run's folder; empty uses the time")
 }
 
 /*
@@ -165,13 +168,40 @@ func (c AISimulateCommand) options(ctx context.Context, in *console.Input, out *
 	if dry {
 		label += "-dry"
 	}
+	if l := in.String("label"); l != "" {
+		label = l
+	}
+	key, err := connectionNamed(ctx, c.App, place.Owner.Workspace.ID, in.String("connection"))
+	if err != nil {
+		return costsim.Options{}, err
+	}
 	return costsim.Options{
 		Owner: place.Owner, Inbox: place.Inbox, Channel: place.Channel, Company: stowline.Name,
 		Scenarios: scenarios, Conversations: in.Int("conversations"), Mode: mode,
 		AgentModel: in.String("agent-model"), ClassifierModel: in.String("classifier-model"),
 		CustomerModel: in.String("customer-model"), MaxSpend: maxSpend, MaxPerConv: perConv,
 		MaxTurns: in.Int("max-turns"), DryRun: dry, Actions: stowline.StubAPI, Label: label, Log: out.Line,
+		AnswerKey: key,
 	}, nil
+}
+
+/*
+connectionNamed finds the workspace's AI connection by name; an empty
+name keeps the agent's own.
+*/
+func connectionNamed(ctx context.Context, a *app.App, ws ids.UUID, name string) (*ids.UUID, error) {
+	if name == "" {
+		return nil, nil
+	}
+	var id ids.UUID
+	err := a.DB.Transaction(tenancy.With(ctx, ws.String()), func(ctx context.Context, tx *database.Tx) error {
+		return tx.QueryRow(ctx, `SELECT id FROM ai_provider_keys WHERE workspace_id = $1 AND name = $2
+			AND deleted_at IS NULL ORDER BY created_at DESC LIMIT 1`, ws, name).Scan(&id)
+	})
+	if err != nil {
+		return nil, fmt.Errorf("find connection %q: %w", name, err)
+	}
+	return &id, nil
 }
 
 /*
@@ -258,8 +288,9 @@ func (c AISimulateCommand) agentModel(ctx context.Context, o *costsim.Options) (
 	err := c.App.DB.Transaction(tenancy.With(ctx, o.Owner.Workspace.ID.String()),
 		func(ctx context.Context, tx *database.Tx) error {
 			return tx.QueryRow(ctx, `SELECT a.answer_model, k.provider FROM ai_agents a
-				LEFT JOIN ai_provider_keys k ON k.id = a.answer_key_id AND k.deleted_at IS NULL
-				WHERE a.workspace_id = $1 AND a.deleted_at IS NULL`, o.Owner.Workspace.ID).Scan(&model, &provider)
+				LEFT JOIN ai_provider_keys k ON k.id = COALESCE($2, a.answer_key_id) AND k.deleted_at IS NULL
+				WHERE a.workspace_id = $1 AND a.deleted_at IS NULL`, o.Owner.Workspace.ID, o.AnswerKey).
+				Scan(&model, &provider)
 		})
 	if err != nil {
 		return "", fmt.Errorf("read agent: %w", err)

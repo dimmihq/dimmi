@@ -62,34 +62,47 @@ func (p PartCost) add(o PartCost) PartCost {
 }
 
 /*
-readLedger sums the model calls of the runs by part.
+bigPromptTokens is the prompt size above which some providers charge
+more for the whole call.
 */
-func (h *Harness) readLedger(ctx context.Context, ws ids.UUID, runs []ids.UUID) (map[string]PartCost, error) {
+const bigPromptTokens = 100_000
+
+/*
+readLedgerAndBig sums the model calls of the runs by part and counts
+the calls whose prompt passed 100,000 tokens.
+*/
+func (h *Harness) readLedgerAndBig(ctx context.Context, ws ids.UUID, runs []ids.UUID) (map[string]PartCost, int,
+	error,
+) {
 	if len(runs) == 0 {
-		return nil, nil
+		return nil, 0, nil
 	}
 	rows, err := h.App.DB.Query(ctx, `SELECT coalesce(s.provider, ''), coalesce(s.model, ''), s.input_tokens,
 			s.cached_input_tokens, s.cache_write_tokens, s.output_tokens, s.reasoning_tokens, s.ledger
 		FROM ai_run_steps s JOIN ai_runs r ON r.id = s.run_id
 		WHERE r.workspace_id = $1 AND r.id = ANY($2) AND s.kind = 'generate'`, ws, runs)
 	if err != nil {
-		return nil, fmt.Errorf("read ledger: %w", err)
+		return nil, 0, fmt.Errorf("read ledger: %w", err)
 	}
 	defer rows.Close()
 	out := map[string]PartCost{}
+	big := 0
 	for rows.Next() {
 		var provider, model string
 		var u contracts.LLMUsage
 		var raw json.RawMessage
 		if err := rows.Scan(&provider, &model, &u.InputTokens, &u.CachedInputTokens, &u.CacheWriteTokens,
 			&u.OutputTokens, &u.ReasoningTokens, &raw); err != nil {
-			return nil, err
+			return nil, 0, err
+		}
+		if u.InputTokens+u.CachedInputTokens+u.CacheWriteTokens > bigPromptTokens {
+			big++
 		}
 		for part, c := range h.priceCall(provider, model, u, raw) {
 			out[part] = out[part].add(c)
 		}
 	}
-	return out, rows.Err()
+	return out, big, rows.Err()
 }
 
 /*

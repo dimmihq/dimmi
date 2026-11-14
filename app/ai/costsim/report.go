@@ -97,6 +97,8 @@ type Report struct {
 	Overall             Group                `json:"overall"`
 	ByKind              map[string]Group     `json:"by_kind"`
 	ByModel             map[string]Group     `json:"by_model"`
+	ByReplies           map[string]Group     `json:"by_ai_replies"`
+	BigPrompts          int                  `json:"calls_over_100k_tokens"`
 	Conversations       []ConversationResult `json:"conversations"`
 	LeftOut             []LeftOut            `json:"catalog_left_out,omitempty"`
 }
@@ -177,6 +179,33 @@ func (r *Report) summarize() {
 	for m, list := range byModel {
 		r.ByModel[m] = groupOf(list)
 	}
+	r.ByReplies, r.BigPrompts = map[string]Group{}, 0
+	byReplies := map[string][]ConversationResult{}
+	for _, c := range r.Conversations {
+		byReplies[repliesBucket(c.AIReplies)] = append(byReplies[repliesBucket(c.AIReplies)], c)
+		r.BigPrompts += c.BigPrompts
+	}
+	for b, list := range byReplies {
+		r.ByReplies[b] = groupOf(list)
+	}
+}
+
+/*
+repliesBucket names the group a conversation's AI replies fall in.
+*/
+func repliesBucket(n int) string {
+	switch {
+	case n <= 0:
+		return "0"
+	case n == 1:
+		return "1"
+	case n <= 3:
+		return "2-3"
+	case n <= 7:
+		return "4-7"
+	default:
+		return "8+"
+	}
 }
 
 /*
@@ -241,6 +270,12 @@ func (r *Report) Markdown() string {
 	b.WriteString(groupTable([]string{"all"}, map[string]Group{"all": r.Overall}))
 	b.WriteString("\n## By scenario kind\n\n")
 	b.WriteString(groupTable(sortedKeys(r.ByKind), r.ByKind))
+	b.WriteString("\n## By number of AI replies\n\n")
+	b.WriteString(groupTable(slices.DeleteFunc([]string{"0", "1", "2-3", "4-7", "8+"}, func(k string) bool {
+		_, ok := r.ByReplies[k]
+		return !ok
+	}), r.ByReplies))
+	fmt.Fprintf(&b, "\nModel calls whose prompt passed 100,000 tokens: %d\n", r.BigPrompts)
 	b.WriteString("\n## By model\n\n")
 	b.WriteString(groupTable(sortedKeys(r.ByModel), r.ByModel))
 	b.WriteString(r.ledgerMarkdown())

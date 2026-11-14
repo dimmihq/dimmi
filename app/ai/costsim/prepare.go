@@ -104,6 +104,12 @@ func (h *Harness) pointAgent(ctx context.Context, o *Options, p *prepared) error
 		return ErrNoAgentModel
 	}
 	original := p.agent
+	if o.AnswerKey != nil {
+		if _, err := h.App.DB.Exec(ctx, `UPDATE ai_agents SET answer_key_id = $2 WHERE id = $1`, original.ID,
+			*o.AnswerKey); err != nil {
+			return fmt.Errorf("point agent at connection: %w", err)
+		}
+	}
 	if _, err := h.App.DB.Exec(ctx, `UPDATE ai_agents SET answer_model = COALESCE(NULLIF($2, ''), answer_model),
 			classifier_model = COALESCE(NULLIF($3, ''), classifier_model), enabled = true,
 			enabled_channels = CASE WHEN 'widget' = ANY(enabled_channels) THEN enabled_channels
@@ -113,8 +119,8 @@ func (h *Harness) pointAgent(ctx context.Context, o *Options, p *prepared) error
 	}
 	p.restores = append(p.restores, h.later(ctx, func(ctx context.Context) {
 		_, _ = h.App.DB.Exec(ctx, `UPDATE ai_agents SET answer_model = $2, classifier_model = $3, enabled = $4,
-			enabled_channels = $5 WHERE id = $1`, original.ID, original.AnswerModel, original.ClassifierModel,
-			original.Enabled, original.EnabledChannels)
+			enabled_channels = $5, answer_key_id = $6 WHERE id = $1`, original.ID, original.AnswerModel,
+			original.ClassifierModel, original.Enabled, original.EnabledChannels, original.AnswerKeyID)
 	}))
 	p.agent, err = q.FindAgent(ctx, o.Owner.Workspace.ID)
 	return err

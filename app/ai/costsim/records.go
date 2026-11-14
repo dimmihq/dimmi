@@ -100,7 +100,7 @@ func (h *Harness) read(ctx context.Context, conv models.Conversation, res *Conve
 		if res.Layer, err = h.readLayer(ctx, conv.WorkspaceID, runs); err != nil {
 			return err
 		}
-		if res.Ledger, err = h.readLedger(ctx, conv.WorkspaceID, runs); err != nil {
+		if res.Ledger, res.BigPrompts, err = h.readLedgerAndBig(ctx, conv.WorkspaceID, runs); err != nil {
 			return err
 		}
 		return h.readAnswer(ctx, conv, res)

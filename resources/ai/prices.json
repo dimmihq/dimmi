@@ -1,5 +1,5 @@
 {
-  "version": "2026-11-06",
+  "version": "2026-11-14",
   "currency": "USD",
   "models": [
     {
@@ -139,6 +139,28 @@
       "output_per_mtok": "",
       "roles": [
         "embed"
+      ]
+    },
+    {
+      "provider": "openai_compatible",
+      "match": "exact",
+      "model": "deepseek-ai/DeepSeek-V4-Flash-0731",
+      "input_per_mtok": "0.06",
+      "cached_input_per_mtok": "0.015",
+      "output_per_mtok": "0.18",
+      "roles": [
+        "answer"
+      ]
+    },
+    {
+      "provider": "openai_compatible",
+      "match": "exact",
+      "model": "zai-org/GLM-5.3-Flash",
+      "input_per_mtok": "0.15",
+      "cached_input_per_mtok": "0.03",
+      "output_per_mtok": "0.50",
+      "roles": [
+        "answer"
       ]
     }
   ]
