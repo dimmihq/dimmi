@@ -154,6 +154,23 @@ func simulate(t *testing.T, tc *tests.TestCase, res *stowline.Result, change fun
 func TestSimulation(t *testing.T) {
 	t.Parallel()
 
+	t.Run("puts the agent's model back after the run", func(t *testing.T) {
+		t.Parallel()
+		tc, res := seeded(t)
+		model := func() string {
+			var m *string
+			require.NoError(t, tc.Operator().QueryRow(t.Context(), `SELECT answer_model FROM ai_agents
+				WHERE workspace_id = $1`, res.Workspace.ID).Scan(&m))
+			if m == nil {
+				return ""
+			}
+			return *m
+		}
+		before := model()
+		simulate(t, tc, res, func(o *costsim.Options) { o.AgentModel = "glm-5.3-flash" })
+		assert.Equal(t, before, model())
+	})
+
 	t.Run("plays scripted customers through the real pipeline and reads the cost back", func(t *testing.T) {
 		t.Parallel()
 		tc, res := seeded(t)

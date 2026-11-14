@@ -118,9 +118,11 @@ func (h *Harness) pointAgent(ctx context.Context, o *Options, p *prepared) error
 		return fmt.Errorf("point agent at models: %w", err)
 	}
 	p.restores = append(p.restores, h.later(ctx, func(ctx context.Context) {
-		_, _ = h.App.DB.Exec(ctx, `UPDATE ai_agents SET answer_model = $2, classifier_model = $3, enabled = $4,
-			enabled_channels = $5, answer_key_id = $6 WHERE id = $1`, original.ID, original.AnswerModel,
-			original.ClassifierModel, original.Enabled, original.EnabledChannels, original.AnswerKeyID)
+		if _, err := h.App.DB.Exec(ctx, `UPDATE ai_agents SET answer_model = $2, classifier_model = $3,
+			enabled = $4, enabled_channels = $5, answer_key_id = $6 WHERE id = $1`, original.ID, original.AnswerModel,
+			original.ClassifierModel, original.Enabled, original.EnabledChannels, original.AnswerKeyID); err != nil {
+			o.Log("could not put the agent back: %v", err)
+		}
 	}))
 	p.agent, err = q.FindAgent(ctx, o.Owner.Workspace.ID)
 	return err
@@ -279,11 +281,12 @@ func (h *Harness) within(ctx context.Context, fn func(ctx context.Context) error
 
 /*
 later returns a function that runs fn in the workspace after the run,
+in a transaction of its own even when registered inside another one,
 even when the run's context was canceled.
 */
 func (h *Harness) later(ctx context.Context, fn func(ctx context.Context)) func() {
 	return func() {
-		_ = h.within(context.WithoutCancel(ctx), func(ctx context.Context) error {
+		_ = h.within(database.Detach(ctx), func(ctx context.Context) error {
 			fn(ctx)
 			return nil
 		})
