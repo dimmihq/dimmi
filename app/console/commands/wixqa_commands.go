@@ -17,8 +17,10 @@ package commands
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"path/filepath"
 	"slices"
 
 	"github.com/dimmihq/dimmi/framework/config"
@@ -190,6 +192,7 @@ func (AIQualityCommand) Flags(flags *console.Flags) {
 	flags.Bool("confirm", "start a real run")
 	flags.String("out", "tmp/quality", "the directory reports are written under")
 	flags.Int("parallel", 3, "how many questions run at once, all under the one spend limit")
+	flags.String("regrade", "", "grade the replies of an earlier run's quality.json again, asking nothing")
 }
 
 /*
@@ -226,7 +229,13 @@ func (c AIQualityCommand) Handle(
 	if err != nil {
 		return err
 	}
-	report, err := h.RunQuality(ctx, o, costsim.QualityRun{Set: in.String("set"), Items: items, Judge: judge})
+	run := costsim.QualityRun{Set: in.String("set"), Items: items, Judge: judge}
+	var report *costsim.QualityReport
+	if prior := in.String("regrade"); prior != "" {
+		report, err = regrade(ctx, h, prior, run)
+	} else {
+		report, err = h.RunQuality(ctx, o, run)
+	}
 	if err != nil {
 		return err
 	}
@@ -243,6 +252,36 @@ func (c AIQualityCommand) Handle(
 		report.AnswerMicros/1e4, report.Failed)
 	out.Line("Report: %s/%s and %s/%s", in.String("out"), js, in.String("out"), md)
 	return nil
+}
+
+/*
+regrade reads an earlier run's report and grades its replies again.
+*/
+func regrade(ctx context.Context, h *costsim.Harness, path string, run costsim.QualityRun) (
+	*costsim.QualityReport, error,
+) {
+	dir, file := filepath.Split(path)
+	disk, err := h.App.Storage.Build("quality-prior", config.Section{"driver": "local", "root": dir})
+	if err != nil {
+		return nil, err
+	}
+	raw, err := disk.Get(ctx, file)
+	if err != nil {
+		return nil, fmt.Errorf("read %s: %w", path, err)
+	}
+	var prior costsim.QualityReport
+	if err := json.Unmarshal(raw, &prior); err != nil {
+		return nil, fmt.Errorf("read %s: %w", path, err)
+	}
+	keys := map[string]costsim.QualityItem{}
+	for _, it := range run.Items {
+		keys[it.Key] = it
+	}
+	run.Items = run.Items[:0]
+	for _, it := range prior.Items {
+		run.Items = append(run.Items, keys[it.Key])
+	}
+	return h.Regrade(ctx, &prior, run), nil
 }
 
 /*

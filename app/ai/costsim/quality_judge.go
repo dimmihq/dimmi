@@ -16,6 +16,7 @@ import (
 	_ "embed"
 	"encoding/json"
 	"fmt"
+	"slices"
 	"strings"
 	"sync"
 
@@ -109,4 +110,29 @@ func (h *Harness) gradeAll(ctx context.Context, o Options, q QualityRun, cost *R
 	after, _, _ := h.Budget.Spent()
 	out.micros = after - before
 	return out
+}
+
+/*
+Regrade grades a finished run's replies again with the judge, leaving
+the answers as they were: twice-graded replies show how much the
+judge's own scores move from run to run.
+*/
+func (h *Harness) Regrade(ctx context.Context, prior *QualityReport, q QualityRun) *QualityReport {
+	out := *prior
+	out.Items = slices.Clone(prior.Items)
+	out.JudgeModel = q.Judge.Model
+	out.Contradicting, out.Failed = 0, 0
+	cost := &Report{Conversations: make([]ConversationResult, len(out.Items))}
+	for i, it := range out.Items {
+		cost.Conversations[i] = ConversationResult{Reply: it.Reply}
+	}
+	grades := h.gradeAll(ctx, Options{Parallel: 4}, q, cost)
+	for i := range out.Items {
+		if g := grades.items[i]; g.done {
+			out.Items[i].Grade, out.Items[i].Graded = g.grade, true
+		}
+	}
+	out.JudgeMicros = grades.micros
+	out.summarize()
+	return &out
 }
