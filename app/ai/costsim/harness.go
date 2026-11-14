@@ -120,6 +120,7 @@ type ConversationResult struct {
 	Reply          string              `json:"reply,omitempty"`
 	RunErrors      int                 `json:"run_errors,omitempty"`
 	BigPrompts     int                 `json:"calls_over_100k_tokens,omitempty"`
+	RunIDs         []string            `json:"run_ids,omitempty"`
 	Retrieved      []string            `json:"retrieved,omitempty"`
 }
 

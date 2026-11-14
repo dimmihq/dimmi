@@ -81,7 +81,7 @@ func (c AISimulateCommand) Flags(flags *console.Flags) {
 	flags.Int("max-turns", 15, "stop a conversation after this many customer messages")
 	flags.Bool("dry-run", "run everything on an offline model: no real model calls, no spend")
 	flags.Bool("confirm", "start a real run after printing the estimate")
-	flags.String("out", "tmp/costsim", "the directory the report is written under")
+	flags.String("out", "tmp/benchmarks/runs", "the directory the report is written under")
 	flags.String("scenarios", "", "play only these scenarios, by key, comma separated; empty plays them all in turn")
 	flags.String("connection", "", "answer on this AI connection of the workspace, by name; empty keeps the agent's")
 	flags.String("label", "", "a name for the run's folder; empty uses the time")
@@ -128,6 +128,7 @@ func (c AISimulateCommand) Handle(
 		float64(g.PerConversation.Max)/1e4, g.PerReply.Mean/1e4, g.CacheHitShare*100,
 		float64(report.SpendMicros)/1e6)
 	out.Line("Report: %s/%s and %s/%s", in.String("out"), js, in.String("out"), md)
+	refreshViewer(ctx, c.App, out)
 	return nil
 }
 

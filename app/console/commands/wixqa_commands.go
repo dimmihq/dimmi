@@ -192,7 +192,7 @@ func (AIQualityCommand) Flags(flags *console.Flags) {
 	flags.String("label", "", "a name for the run's folder")
 	flags.Bool("dry-run", "run on an offline model and skip judging: no spend")
 	flags.Bool("confirm", "start a real run")
-	flags.String("out", "tmp/quality", "the directory reports are written under")
+	flags.String("out", "tmp/benchmarks/runs", "the directory reports are written under")
 	flags.Int("parallel", 3, "how many questions run at once, all under the one spend limit")
 	flags.String("regrade", "", "grade the replies of an earlier run's quality.json again, asking nothing")
 }
@@ -254,6 +254,7 @@ func (c AIQualityCommand) Handle(
 		"%d failed.", report.HitRate*100, report.AvgScore, report.CorrectShare*100, report.Contradicting,
 		report.AnswerMicros/1e4, report.Failed)
 	out.Line("Report: %s/%s and %s/%s", in.String("out"), js, in.String("out"), md)
+	refreshViewer(ctx, c.App, out)
 	return nil
 }
 

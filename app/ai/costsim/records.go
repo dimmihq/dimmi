@@ -100,6 +100,7 @@ func (h *Harness) read(ctx context.Context, conv models.Conversation, res *Conve
 		if res.Layer, err = h.readLayer(ctx, conv.WorkspaceID, runs); err != nil {
 			return err
 		}
+		res.RunIDs = runStrings(runs)
 		if res.Ledger, res.BigPrompts, err = h.readLedgerAndBig(ctx, conv.WorkspaceID, runs); err != nil {
 			return err
 		}
@@ -166,6 +167,17 @@ func countStep(res *ConversationResult, kind, model string, call bool) {
 	case kind == string(enums.AIRunStepKindToolCall):
 		res.ToolCalls++
 	}
+}
+
+/*
+runStrings writes run ids as strings, for the report.
+*/
+func runStrings(runs []ids.UUID) []string {
+	out := make([]string, 0, len(runs))
+	for _, r := range runs {
+		out = append(out, r.String())
+	}
+	return out
 }
 
 /*

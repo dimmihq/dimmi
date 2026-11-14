@@ -105,6 +105,7 @@ func (h *Harness) readTaskParts(ctx context.Context, m authz.Membership, since t
 	if res.Layer, err = h.readLayer(ctx, ws, runs); err != nil {
 		return err
 	}
+	res.RunIDs = runStrings(runs)
 	res.Ledger, res.BigPrompts, err = h.readLedgerAndBig(ctx, ws, runs)
 	return err
 }
