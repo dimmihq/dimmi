@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"path/filepath"
 	"slices"
+	"strings"
 
 	"github.com/dimmihq/dimmi/framework/config"
 	"github.com/dimmihq/dimmi/framework/console"
@@ -183,6 +184,7 @@ Flags declares the set, the models, the limits and the output.
 func (AIQualityCommand) Flags(flags *console.Flags) {
 	flags.String("set", wixqa.SetExpert, "the question set: expert or simulated")
 	flags.Int("questions", 0, "how many questions to ask, from the start of the set; 0 asks all")
+	flags.Int("sample", 0, "ask a fixed random sample of this many questions instead, the same every run")
 	flags.String("dir", wixqa.DefaultDir, "the downloaded dataset folder")
 	flags.String("agent-model", "", "the model the agent answers with; empty keeps the agent's own")
 	flags.String("judge-model", DefaultJudgeModel, "the model that grades; keep it fixed across comparisons")
@@ -209,6 +211,7 @@ func (c AIQualityCommand) Handle(
 	if err != nil {
 		return err
 	}
+	items = sample(items, in.Int("sample"))
 	o, err := c.options(ctx, in, out)
 	if err != nil {
 		return err
@@ -282,6 +285,23 @@ func regrade(ctx context.Context, h *costsim.Harness, path string, run costsim.Q
 		run.Items = append(run.Items, keys[it.Key])
 	}
 	return h.Regrade(ctx, &prior, run), nil
+}
+
+/*
+sample keeps n questions chosen by a hash of their text, so every run
+asks the same ones; zero keeps all.
+*/
+func sample(items []costsim.QualityItem, n int) []costsim.QualityItem {
+	if n <= 0 || n >= len(items) {
+		return items
+	}
+	out := slices.Clone(items)
+	slices.SortStableFunc(out, func(a, b costsim.QualityItem) int {
+		return strings.Compare(hashing.SHA256Hex([]byte(a.Question)), hashing.SHA256Hex([]byte(b.Question)))
+	})
+	out = out[:n]
+	slices.SortStableFunc(out, func(a, b costsim.QualityItem) int { return strings.Compare(a.Key, b.Key) })
+	return out
 }
 
 /*
