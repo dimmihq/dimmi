@@ -153,7 +153,7 @@ func (h *Harness) Regrade(ctx context.Context, prior *QualityReport, q QualityRu
 	grades := h.gradeAll(ctx, Options{Parallel: 4}, q, cost)
 	for i := range out.Items {
 		if g := grades.items[i]; g.done {
-			out.Items[i].Grade, out.Items[i].Graded = g.grade, true
+			out.Items[i].Grade, out.Items[i].Graded, out.Items[i].Error = g.grade, true, ""
 		}
 	}
 	out.JudgeMicros = grades.micros
