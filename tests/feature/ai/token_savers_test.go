@@ -66,3 +66,18 @@ func TestAiTokenSavers(t *testing.T) {
 		assert.Contains(t, msgs[len(msgs)-1].Parts[0].Text, "(shown above)")
 	})
 }
+
+func TestAiSearchResultsSetting(t *testing.T) {
+	t.Parallel()
+	h := newHarness(t, nil)
+	h.operator("UPDATE ai_agents SET search_results = 1 WHERE workspace_id = $1", h.d.TC.Workspace.Workspace.ID)
+	h.llm.answer.Script(search("pro plan price per seat"), reply("Per seat [1]."))
+
+	conv, trigger := h.conversation("What is the pro plan price per seat?")
+	h.run(conv, trigger)
+
+	msgs := h.llm.answer.Sent()[1].Messages
+	result := msgs[len(msgs)-1].Parts[0].Text
+	assert.Contains(t, result, `"id":1`)
+	assert.NotContains(t, result, `"id":2`, "one passage per search")
+}

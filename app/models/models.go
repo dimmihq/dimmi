@@ -181,6 +181,7 @@ type AiAgent struct {
 	ToolLayer                    bool            `json:"tool_layer"`
 	PrefetchSearch               bool            `json:"prefetch_search"`
 	CompactResults               bool            `json:"compact_results"`
+	SearchResults                int16           `json:"search_results"`
 }
 
 type AiProviderKey struct {
