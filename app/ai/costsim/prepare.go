@@ -157,6 +157,8 @@ the options name, behind the spend guard, so nothing a connection
 names can leave the process.
 */
 func (h *Harness) offline(ctx context.Context, o *Options, p *prepared) {
+	h.App.LLM.Flush()
+	p.restores = append(p.restores, h.App.LLM.Flush)
 	providers := []string{
 		string(enums.AIProviderDimmi), string(enums.AIProviderAnthropic), string(enums.AIProviderOpenAI),
 		string(enums.AIProviderChatGPT), string(enums.AIProviderEngy), string(enums.AIProviderBaseten),
@@ -185,6 +187,8 @@ meter puts the spend guard around every driver the agent's connections
 build.
 */
 func (h *Harness) meter(ctx context.Context, p *prepared) error {
+	h.App.LLM.Flush()
+	p.restores = append(p.restores, h.App.LLM.Flush)
 	for _, provider := range h.keyProviders(ctx, p.agent) {
 		build, ok := h.App.LLM.Factory(enums.AIProvider(provider))
 		if !ok {

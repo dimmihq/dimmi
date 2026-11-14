@@ -111,6 +111,17 @@ func (m *LLMManager) Extend(provider enums.AIProvider, factory DriverFactory) {
 }
 
 /*
+Flush drops every cached driver, so the next ForKey builds afresh with
+the factories registered now.
+*/
+func (m *LLMManager) Flush() {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.cache = map[string]cachedDriver{}
+	m.order = nil
+}
+
+/*
 Factory returns the driver factory registered for a provider, so a
 caller can wrap the drivers it builds, such as to meter every call.
 */
