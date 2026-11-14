@@ -10,7 +10,9 @@
 | call_tool runs one once it is loaded, with its arguments checked and a
 | reading tool's result trimmed. The layer never widens what Operator
 | may do: its own tools keep their write policies and changesets, and
-| the catalog is reached only to read, as the teammate.
+| the catalog is reached only to read, as the teammate. A model without
+| a prompt cache gets every tool instead: each load re-reads the prefix
+| at full price, which cost more than the layer saved on the benchmark.
 |
 */
 
@@ -153,7 +155,7 @@ func ownGroupOf(t tool) string {
 openLayer builds the run's layer when the settings have it on.
 */
 func (e *Engine) openLayer(ctx context.Context, s *session) {
-	if !s.settings.ToolLayer {
+	if !s.settings.ToolLayer || !s.llm.Capabilities(s.model).PromptCache {
 		return
 	}
 	registry := e.registry(s)

@@ -147,6 +147,20 @@ func TestAiToolLayer(t *testing.T) {
 		assert.Contains(t, r.Suggested, "triage_conversation")
 	})
 
+	t.Run("stays off for a model without a prompt cache", func(t *testing.T) {
+		t.Parallel()
+		h := newHarness(t, nil)
+		h.withToolLayer()
+		h.llm.answer.CapabilitiesOf(contracts.LLMCapabilities{Tools: true, Streaming: true, SystemPrompt: true})
+		h.llm.answer.Script(reply("Hello."))
+		conv, trigger := h.conversation("I was charged twice")
+		res := h.run(conv, trigger)
+
+		assert.Contains(t, toolNames(h.llm.answer.Sent()[0]), "triage_conversation")
+		assert.NotContains(t, toolNames(h.llm.answer.Sent()[0]), "load_tools")
+		assert.Nil(t, h.load(conv, res.RunID).run.ToolLayer)
+	})
+
 	t.Run("stays off when the agent turns it off", func(t *testing.T) {
 		t.Parallel()
 		h := newHarness(t, nil)

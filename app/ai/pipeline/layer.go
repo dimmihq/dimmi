@@ -11,6 +11,11 @@
 | conversation loaded before, which this turn must load again, and the
 | tools likeliest to help. What the layer did is kept on the run.
 |
+| The layer saves only on a model that caches the prompt: loading a
+| tool costs a model call, which re-reads the whole prefix, and on the
+| benchmark a model without a prompt cache spent more with the layer
+| than without it. Such a model gets every tool as before.
+|
 */
 
 package pipeline
@@ -118,7 +123,8 @@ behind it, the groups in the system prompt, and the note on the newest
 message. It runs once the turn's actions are offered.
 */
 func (r *Runner) openLayer(ctx context.Context, st *run) {
-	if !st.env.Agent.ToolLayer || st.loop == nil || len(st.loop.messages) == 0 {
+	if !st.env.Agent.ToolLayer || st.loop == nil || len(st.loop.messages) == 0 ||
+		!st.loop.llm.Capabilities(strv(st.env.Agent.AnswerModel)).PromptCache {
 		return
 	}
 	tools := r.registry(st)
