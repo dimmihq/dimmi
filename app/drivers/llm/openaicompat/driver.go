@@ -29,14 +29,16 @@ import (
 Config carries the connection's quirks: which max-tokens field the
 server honors ("max_tokens" or "max_completion_tokens"), whether
 tools work, whether usage arrives inside a stream, whether the server
-enforces a strict json_schema response format, and the context window
-when the connection knows it.
+enforces a strict json_schema response format, the context window
+when the connection knows it, and whether the server caches repeated
+prompt prefixes, as hosts that price cached input do.
 */
 type Config struct {
 	MaxTokensField      string
 	SupportsTools       bool
 	SupportsStreamUsage bool
 	JSONSchema          bool
+	PromptCache         bool
 	ContextTokens       int
 	MaxOutputTokens     int
 }
@@ -111,7 +113,7 @@ base row.
 func capabilities(cfg Config, _ string) contracts.LLMCapabilities {
 	caps := contracts.LLMCapabilities{
 		Tools: cfg.SupportsTools, Streaming: true, SystemPrompt: true, JSONSchema: cfg.JSONSchema,
-		ContextTokens: 128_000, MaxOutputTokens: 8_192,
+		PromptCache: cfg.PromptCache, ContextTokens: 128_000, MaxOutputTokens: 8_192,
 	}
 	if cfg.ContextTokens > 0 {
 		caps.ContextTokens = cfg.ContextTokens

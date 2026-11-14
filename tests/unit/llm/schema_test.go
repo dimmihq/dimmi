@@ -129,6 +129,17 @@ func TestOpenAIResponseSchema(t *testing.T) {
 		assert.Equal(t, true, object(format["json_schema"])["strict"])
 	})
 
+	t.Run("reports a prompt cache only when the compatible server declares one", func(t *testing.T) {
+		t.Parallel()
+		cfg := openaicompat.DefaultConfig()
+		plain := openaicompat.New(openaicompat.Options{BaseURL: "https://llm.example.test/v1", Config: cfg})
+		cfg.PromptCache = true
+		cached := openaicompat.New(openaicompat.Options{BaseURL: "https://llm.example.test/v1", Config: cfg})
+
+		assert.False(t, plain.Capabilities("glm").PromptCache)
+		assert.True(t, cached.Capabilities("glm").PromptCache)
+	})
+
 	t.Run("refuses a schema on a compatible server or engy that never declared it", func(t *testing.T) {
 		t.Parallel()
 		hc, fake := fakeHTTP(t)

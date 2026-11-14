@@ -182,6 +182,7 @@ type connectionConfig struct {
 	SupportsTools       *bool  `json:"supports_tools"`
 	SupportsStreamUsage *bool  `json:"supports_stream_usage"`
 	JSONSchema          *bool  `json:"json_schema"`
+	PromptCache         *bool  `json:"prompt_cache"`
 	ContextTokens       int    `json:"context_tokens"`
 	MaxOutputTokens     int    `json:"max_output_tokens"`
 }
@@ -212,6 +213,9 @@ func (c connectionConfig) compat() openaicompat.Config {
 	}
 	if c.JSONSchema != nil {
 		out.JSONSchema = *c.JSONSchema
+	}
+	if c.PromptCache != nil {
+		out.PromptCache = *c.PromptCache
 	}
 	out.ContextTokens = c.ContextTokens
 	out.MaxOutputTokens = c.MaxOutputTokens
