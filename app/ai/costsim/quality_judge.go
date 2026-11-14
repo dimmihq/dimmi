@@ -4,8 +4,8 @@
 |--------------------------------------------------------------------------
 |
 | One model grades every reply against the expert's answer, with the
-| prompt in prompts/judge.md and a fixed response schema, at temperature
-| zero, so a score means the same thing in every comparison.
+| prompt in prompts/judge.md and a fixed response schema, at the model's
+| default temperature, so a score means the same in every comparison.
 |
 */
 
@@ -49,7 +49,7 @@ func (j Judge) grade(ctx context.Context, it QualityItem, reply string) (Grade, 
 		Messages: []contracts.ChatMessage{
 			{Role: contracts.ChatRoleUser, Parts: []contracts.ContentPart{{Text: user}}},
 		},
-		MaxOutputTokens: 400, Effort: contracts.EffortLow, Temperature: new(0.0),
+		MaxOutputTokens: 600, Effort: contracts.EffortLow,
 		Schema: &contracts.ResponseSchema{Name: "grade", Schema: json.RawMessage(`{"type":"object",` +
 			`"properties":{"score":{"type":"integer","minimum":1,"maximum":5},"correct":{"type":"boolean"},` +
 			`"contradicts":{"type":"boolean"},"reason":{"type":"string"}},` +
