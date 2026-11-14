@@ -79,6 +79,17 @@ type Options struct {
 }
 
 /*
+ParallelLimits lifts the per-conversation limit to the run's when
+conversations play at once, since the guard cannot tell them apart.
+*/
+func (o Options) ParallelLimits() Options {
+	if o.Parallel > 1 && o.MaxSpend > 0 {
+		o.MaxPerConv = o.MaxSpend
+	}
+	return o
+}
+
+/*
 Harness runs simulations on an application.
 */
 type Harness struct {

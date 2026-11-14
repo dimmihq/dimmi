@@ -16,6 +16,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"sync"
 	"time"
 
 	"github.com/dimmihq/dimmi/app/ai/operator"
@@ -42,6 +43,10 @@ func (h *Harness) RunOperator(ctx context.Context, o Options, requests []string,
 	defer p.restore()
 
 	report := h.newReport(o, p)
+	if o.Parallel > 1 {
+		h.askParallel(ctx, o, teamRequests{requests: requests, team: team}, report)
+		return h.finish(report), nil
+	}
 	for i := range o.Conversations {
 		if !h.roomFor(p) {
 			report.StoppedBy = "run spend limit"
@@ -57,6 +62,46 @@ func (h *Harness) RunOperator(ctx context.Context, o Options, requests []string,
 		}
 	}
 	return h.finish(report), nil
+}
+
+/*
+teamRequests are the requests and the teammates who ask them in turn.
+*/
+type teamRequests struct {
+	requests []string
+	team     []authz.Membership
+}
+
+/*
+askParallel asks several requests at once under the run's limit.
+*/
+func (h *Harness) askParallel(ctx context.Context, o Options, tr teamRequests, report *Report) {
+	requests, team := tr.requests, tr.team
+	results := make([]ConversationResult, o.Conversations)
+	started := make([]bool, o.Conversations)
+	slots := make(chan struct{}, o.Parallel)
+	var wg sync.WaitGroup
+	for i := range o.Conversations {
+		run, _ := h.Budget.Remaining()
+		if run <= 0 {
+			report.StoppedBy = "run spend limit"
+			break
+		}
+		slots <- struct{}{}
+		started[i] = true
+		wg.Go(func() {
+			defer func() { <-slots }()
+			results[i] = h.ask(ctx, team[i%len(team)], i, requests)
+			o.Log("%3d %-28s calls %2d tools %2d  $%.4f  %s", i+1, results[i].Scenario, results[i].ModelCalls,
+				results[i].ToolCalls, float64(results[i].CostMicros)/1e6, results[i].Outcome)
+		})
+	}
+	wg.Wait()
+	for i, res := range results {
+		if started[i] {
+			report.Conversations = append(report.Conversations, res)
+		}
+	}
 }
 
 /*

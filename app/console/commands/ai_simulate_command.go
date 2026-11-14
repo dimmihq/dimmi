@@ -85,6 +85,7 @@ func (c AISimulateCommand) Flags(flags *console.Flags) {
 	flags.String("scenarios", "", "play only these scenarios, by key, comma separated; empty plays them all in turn")
 	flags.String("connection", "", "answer on this AI connection of the workspace, by name; empty keeps the agent's")
 	flags.String("label", "", "a name for the run's folder; empty uses the time")
+	flags.Int("parallel", 1, "how many conversations play at once; above one only the run's spend limit applies")
 }
 
 /*
@@ -182,8 +183,8 @@ func (c AISimulateCommand) options(ctx context.Context, in *console.Input, out *
 		AgentModel: in.String("agent-model"), ClassifierModel: in.String("classifier-model"),
 		CustomerModel: in.String("customer-model"), MaxSpend: maxSpend, MaxPerConv: perConv,
 		MaxTurns: in.Int("max-turns"), DryRun: dry, Actions: stowline.StubAPI, Label: label, Log: out.Line,
-		AnswerKey: key,
-	}, nil
+		AnswerKey: key, Parallel: max(in.Int("parallel"), 1),
+	}.ParallelLimits(), nil
 }
 
 /*
