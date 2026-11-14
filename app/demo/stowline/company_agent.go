@@ -54,7 +54,7 @@ func AgentActions(conn ids.UUID) []agentactions.DefinitionInput {
 		}
 		return &out
 	}
-	channels := &[]string{"widget", "email", "api"}
+	channels := &[]string{"widget", "email", "api", "slack"}
 	return []agentactions.DefinitionInput{
 		{
 			ConnectionID: &conn, Name: new("get_shipment_status"), Title: new("Look up a parcel"),
