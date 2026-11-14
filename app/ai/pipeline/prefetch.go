@@ -31,6 +31,14 @@ prefetchQueryChars caps the query taken from the customer's message.
 const prefetchQueryChars = 300
 
 /*
+prefetchNote follows the up-front search's results: they were found with
+the customer's own words, which may name a neighboring feature, so the
+model checks they answer the exact question before relying on them.
+*/
+const prefetchNote = "\n\n(Found with the customer's own words. Check these answer exactly what they asked, " +
+	"for the product area they mean; if not, search again with the product's own terms before answering.)"
+
+/*
 prefetchCallID names the up-front search's call in the turn.
 */
 const prefetchCallID = "prefetch_search"
@@ -59,7 +67,9 @@ func (r *Runner) prefetch(ctx context.Context, st *run) {
 	st.prefetched = true
 	st.loop.messages = append(st.loop.messages,
 		contracts.ChatMessage{Role: contracts.ChatRoleAssistant, ToolCalls: []contracts.ToolCall{call}},
-		contracts.ChatMessage{Role: contracts.ChatRoleTool, ToolCallID: call.ID, Parts: textParts(result)},
+		contracts.ChatMessage{
+			Role: contracts.ChatRoleTool, ToolCallID: call.ID, Parts: textParts(result + prefetchNote),
+		},
 	)
 }
 
