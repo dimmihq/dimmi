@@ -66,7 +66,7 @@ func AgentActions(conn ids.UUID) []agentactions.DefinitionInput {
 			}),
 			ResponseFields: fields("status", "status", "carrier", "carrier", "estimated_delivery", "est_delivery_date",
 				"latest_scan", "events.0.message", "latest_location", "events.0.location"),
-			Channels: channels,
+			Channels: channels, Agents: &[]string{"dimmi", "operator"},
 		},
 		{
 			ConnectionID: &conn, Name: new("get_account_overview"), Title: new("Check the customer's account"),
@@ -74,7 +74,7 @@ func AgentActions(conn ids.UUID) []agentactions.DefinitionInput {
 			SideEffect:  new("read"), Method: new("GET"), PathTemplate: new("/accounts/{contact.external_id}"),
 			InputSchema:    schema(map[string]any{"type": "object", "properties": map[string]any{}}),
 			ResponseFields: fields("plan", "plan", "labels_used", "labels_used", "labels_included", "labels_included", "balance", "balance"),
-			Channels:       channels,
+			Channels:       channels, Agents: &[]string{"dimmi", "operator"},
 		},
 		{
 			ConnectionID: &conn, Name: new("list_recent_invoices"), Title: new("List recent invoices"),
@@ -118,7 +118,7 @@ func AgentActions(conn ids.UUID) []agentactions.DefinitionInput {
 				"properties": map[string]any{"order_number": map[string]any{"type": "string", "pattern": "^ORD-[0-9]{4,8}$"}},
 			}),
 			ResponseFields: fields("store", "store", "status", "status", "items", "items", "tracking_number", "tracking_number"),
-			Channels:       channels,
+			Channels:       channels, Agents: &[]string{"dimmi", "operator"},
 		},
 		{
 			ConnectionID: &conn, Name: new("change_plan"), Title: new("Change the plan"),
@@ -131,7 +131,7 @@ func AgentActions(conn ids.UUID) []agentactions.DefinitionInput {
 				"properties": map[string]any{"plan": map[string]any{"type": "string", "enum": []string{"starter", "growth", "pro"}}},
 			}),
 			ResponseFields: fields("plan", "plan", "effective_from", "effective_from"),
-			Channels:       channels,
+			Channels:       channels, Agents: &[]string{"dimmi", "operator"},
 		},
 		{
 			ConnectionID: &conn, Name: new("unlock_account"), Title: new("Unlock an account"),
