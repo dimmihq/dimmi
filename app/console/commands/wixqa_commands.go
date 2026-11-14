@@ -189,7 +189,7 @@ func (AIQualityCommand) Flags(flags *console.Flags) {
 	flags.Bool("dry-run", "run on an offline model and skip judging: no spend")
 	flags.Bool("confirm", "start a real run")
 	flags.String("out", "tmp/quality", "the directory reports are written under")
-	flags.Int("parallel", 8, "how many questions run at once, all under the one spend limit")
+	flags.Int("parallel", 3, "how many questions run at once, all under the one spend limit")
 }
 
 /*
@@ -238,8 +238,9 @@ func (c AIQualityCommand) Handle(
 	if err != nil {
 		return err
 	}
-	out.Info("Retrieval hit %.1f%%, average score %.2f, correct %.1f%%, contradicting %d, %.3f¢ per answer.",
-		report.HitRate*100, report.AvgScore, report.CorrectShare*100, report.Contradicting, report.AnswerMicros/1e4)
+	out.Info("Retrieval hit %.1f%%, average score %.2f, correct %.1f%%, contradicting %d, %.3f¢ per answer, "+
+		"%d failed.", report.HitRate*100, report.AvgScore, report.CorrectShare*100, report.Contradicting,
+		report.AnswerMicros/1e4, report.Failed)
 	out.Line("Report: %s/%s and %s/%s", in.String("out"), js, in.String("out"), md)
 	return nil
 }

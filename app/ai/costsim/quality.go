@@ -62,6 +62,7 @@ type QualityResult struct {
 	Hit        bool                `json:"retrieval_hit"`
 	Grade      Grade               `json:"grade"`
 	Graded     bool                `json:"graded"`
+	Failed     bool                `json:"failed"`
 	Outcome    string              `json:"outcome"`
 	ModelCalls int                 `json:"model_calls"`
 	CostMicros int64               `json:"cost_micros"`
@@ -81,6 +82,7 @@ type QualityReport struct {
 	AvgScore      float64         `json:"average_score"`
 	CorrectShare  float64         `json:"correct_share"`
 	Contradicting int             `json:"contradicting"`
+	Failed        int             `json:"failed"`
 	AnswerMicros  float64         `json:"cost_per_answer_micros"`
 	JudgeMicros   int64           `json:"judge_micros"`
 	Cost          *Report         `json:"cost"`
@@ -120,6 +122,7 @@ func (h *Harness) RunQuality(ctx context.Context, o Options, q QualityRun) (*Qua
 		r := QualityResult{
 			Key: it.Key, Question: it.Question, Reply: c.Reply, Outcome: c.Outcome, ModelCalls: c.ModelCalls,
 			CostMicros: c.CostMicros, Ledger: c.Ledger, Error: c.Error, Hit: hit(c.Retrieved, it.Slugs),
+			Failed: c.RunErrors > 0,
 		}
 		if g := grades.items[i]; g.err != nil {
 			r.Error = strings.TrimSpace(r.Error + " judge: " + g.err.Error())
@@ -152,10 +155,15 @@ func hit(retrieved, slugs []string) bool {
 summarize works out the run's figures.
 */
 func (q *QualityReport) summarize() {
-	var hits, graded, correct int
+	var hits, graded, correct, n int
 	var score float64
 	var cost int64
 	for _, it := range q.Items {
+		if it.Failed {
+			q.Failed++
+			continue
+		}
+		n++
 		if it.Hit {
 			hits++
 		}
@@ -171,7 +179,7 @@ func (q *QualityReport) summarize() {
 		}
 		cost += it.CostMicros
 	}
-	if n := len(q.Items); n > 0 {
+	if n > 0 {
 		q.HitRate = float64(hits) / float64(n)
 		q.AnswerMicros = float64(cost) / float64(n)
 	}
@@ -190,6 +198,9 @@ func (q *QualityReport) Markdown() string {
 	fmt.Fprintf(&b, "- %d questions, agent model %s, judge %s\n", len(q.Items), q.AgentModel, q.JudgeModel)
 	fmt.Fprintf(&b, "- retrieval hit rate %.1f%%, average score %.2f, judged correct %.1f%%, contradicting %d\n",
 		q.HitRate*100, q.AvgScore, q.CorrectShare*100, q.Contradicting)
+	if q.Failed > 0 {
+		fmt.Fprintf(&b, "- %d questions failed on the provider and are left out of every figure\n", q.Failed)
+	}
 	fmt.Fprintf(&b, "- cost per answer %s; judging %s in all\n", cents(q.AnswerMicros),
 		cents(float64(q.JudgeMicros)))
 	b.WriteString("\nDataset: WixQA, Wix.com AI Research (MIT license).\n")

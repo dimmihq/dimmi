@@ -117,6 +117,7 @@ type ConversationResult struct {
 	Layer          *LayerResult        `json:"tool_layer,omitempty"`
 	Ledger         map[string]PartCost `json:"ledger,omitempty"`
 	Reply          string              `json:"reply,omitempty"`
+	RunErrors      int                 `json:"run_errors,omitempty"`
 	Retrieved      []string            `json:"retrieved,omitempty"`
 }
 

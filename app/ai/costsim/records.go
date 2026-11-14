@@ -111,7 +111,13 @@ func (h *Harness) read(ctx context.Context, conv models.Conversation, res *Conve
 readRuns reads the runs' sums and the conversation's own total.
 */
 func (h *Harness) readRuns(ctx context.Context, conv models.Conversation, res *ConversationResult) error {
-	err := h.App.DB.QueryRow(ctx, `SELECT count(*), count(*) FILTER (WHERE answer_message_id IS NOT NULL),
+	err := h.App.DB.QueryRow(ctx, `SELECT count(*) FILTER (WHERE status = 'failed') FROM ai_runs
+		WHERE workspace_id = $1 AND conversation_id = $2 AND kind = 'conversation'`, conv.WorkspaceID, conv.ID).
+		Scan(&res.RunErrors)
+	if err != nil {
+		return fmt.Errorf("read run errors: %w", err)
+	}
+	err = h.App.DB.QueryRow(ctx, `SELECT count(*), count(*) FILTER (WHERE answer_message_id IS NOT NULL),
 			coalesce(sum(cost_micros), 0), coalesce(sum(input_tokens), 0), coalesce(sum(cached_input_tokens), 0),
 			coalesce(sum(output_tokens), 0),
 			(SELECT ai_cost_micros FROM conversations WHERE workspace_id = $1 AND id = $2)
