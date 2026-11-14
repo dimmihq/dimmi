@@ -451,26 +451,38 @@ func (s *Set) Check(args json.RawMessage) (Call, error) {
 		return Call{}, s.refuse(err)
 	}
 	c.Arguments = expanded
-	if err := s.validate(e, c.Arguments); err != nil {
-		if !loaded {
-			s.markLoaded(in.Name)
-			return Call{}, s.refuse(fmt.Errorf("%w; its definition: %s", err, mustJSON(definition{
-				Name: in.Name, Description: e.Spec.Description, Input: inputOf(e.Entry),
-			})))
-		}
-		return Call{}, s.refuse(err)
-	}
-	if !loaded {
-		s.mu.Lock()
-		s.loaded[in.Name] = true
-		s.stats.Direct++
-		s.mu.Unlock()
+	if err := s.admit(e, c.Arguments, loaded); err != nil {
+		return Call{}, err
 	}
 	s.mu.Lock()
 	s.stats.Calls++
 	s.stats.Used = append(s.stats.Used, in.Name)
 	s.mu.Unlock()
 	return c, nil
+}
+
+/*
+admit checks a call's arguments. A tool the model never loaded runs
+when they fit and counts as loaded; when they do not, the refusal
+carries its definition, so the model can fix the call without a load.
+*/
+func (s *Set) admit(e *entry, args json.RawMessage, loaded bool) error {
+	if err := s.validate(e, args); err != nil {
+		if loaded {
+			return s.refuse(err)
+		}
+		s.markLoaded(e.Spec.Name)
+		return s.refuse(fmt.Errorf("%w; its definition: %s", err, mustJSON(definition{
+			Name: e.Spec.Name, Description: e.Spec.Description, Input: inputOf(e.Entry),
+		})))
+	}
+	if !loaded {
+		s.mu.Lock()
+		s.loaded[e.Spec.Name] = true
+		s.stats.Direct++
+		s.mu.Unlock()
+	}
+	return nil
 }
 
 /*
