@@ -171,6 +171,10 @@ type StreamEvent struct {
 	ToolCall   *ToolCall
 	Usage      *LLMUsage
 	StopReason StopReason
+	// RequestID is the provider's id for the call, on the usage event.
+	RequestID string
+	// Model is the model the provider says answered, on the usage event.
+	Model string
 }
 
 /*

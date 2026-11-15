@@ -67,6 +67,8 @@ type streamed struct {
 	usage      contracts.LLMUsage
 	stop       contracts.StopReason
 	firstToken time.Duration
+	requestID  string
+	model      string
 }
 
 /*
@@ -191,6 +193,7 @@ func (r *Runner) generate(ctx context.Context, st *run, tools []contracts.ToolSp
 		key: &keyRef{id: e.AnswerKey.ID, provider: e.AnswerKey.Provider}, model: model,
 		started: started, firstToken: out.firstToken, request: transcriptOf(req),
 		response: r.redactFor(e, out.text+"\n"+string(calls)), usage: out.usage, err: err,
+		requestID: out.requestID, responseModel: out.model,
 		ledger: ledger.Encode(ledger.Of(req, lp.newest)),
 	})
 	return out, err
@@ -253,6 +256,7 @@ func (r *Runner) collect(out *streamed, b *strings.Builder, ev contracts.StreamE
 		if ev.Usage != nil {
 			out.usage = *ev.Usage
 		}
+		out.requestID, out.model = ev.RequestID, ev.Model
 	case contracts.StreamEventDone:
 		if ev.StopReason != "" {
 			out.stop = ev.StopReason

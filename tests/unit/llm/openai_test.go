@@ -108,6 +108,8 @@ func TestOpenAIDriver(t *testing.T) {
 		assert.Equal(t, "lookup", call.Name)
 		assert.JSONEq(t, `{"q":"x"}`, string(call.Arguments))
 		assert.Equal(t, int64(40), find(events, contracts.StreamEventUsage).Usage.InputTokens)
+		assert.Equal(t, "c1", find(events, contracts.StreamEventUsage).RequestID, "the provider's id for the call")
+		assert.Equal(t, "gpt-6.1-sol", find(events, contracts.StreamEventUsage).Model)
 		assert.Equal(t, contracts.StopReasonToolUse, find(events, contracts.StreamEventDone).StopReason)
 		assert.Equal(t, map[string]any{"include_usage": true}, body(t, fake.Sent()[0])["stream_options"])
 	})

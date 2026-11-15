@@ -67,13 +67,18 @@ func TestOperatorToolLayer(t *testing.T) {
 		k := newDesk(t)
 		k.withToolLayer()
 		thread := k.thread(k.conversation("Where is my order?"))
+		answered := reply("Done.")
+		answered.RequestID = "chatcmpl_provider_1"
 		k.llm.Script(
 			tools(loadTools("list_tags")),
 			tools(callTool("list_tags", map[string]any{})),
-			reply("Done."),
+			answered,
 		)
 
 		res := k.ask(thread, "Which tags do we have?").AssertOK()
+		assert.Equal(t, 1, k.count("SELECT count(*) FROM ai_run_steps WHERE kind = 'generate' "+
+			"AND provider_request_id = 'chatcmpl_provider_1' AND response_model IS NOT NULL"),
+			"the provider's id for the call and the model that answered are kept")
 
 		want := []string{"call_tool", "get_conversation", "load_tools", "search_conversations", "search_knowledge"}
 		for _, req := range k.llm.Sent() {

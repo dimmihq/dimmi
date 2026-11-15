@@ -45,6 +45,8 @@ type streamed struct {
 	calls      []contracts.ToolCall
 	usage      contracts.LLMUsage
 	firstToken time.Duration
+	requestID  string
+	model      string
 }
 
 /*
@@ -116,6 +118,7 @@ func (e *Engine) generate(ctx context.Context, s *session, p prompt, tools []con
 	e.record(ctx, s, step{
 		kind: enums.AIRunStepKindGenerate, name: s.model, started: started, firstToken: out.firstToken,
 		response: out.text, usage: out.usage, ledger: ledger.Encode(ledger.Of(req, p.newest)), err: err,
+		requestID: out.requestID, responseModel: out.model,
 	})
 	return out, err
 }
@@ -188,6 +191,7 @@ func (e *Engine) collect(ctx context.Context, s *session, c *collector, ev contr
 		if ev.Usage != nil {
 			c.out.usage = *ev.Usage
 		}
+		c.out.requestID, c.out.model = ev.RequestID, ev.Model
 	case contracts.StreamEventDone:
 		return
 	}

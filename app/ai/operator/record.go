@@ -104,6 +104,8 @@ type step struct {
 	usage             contracts.LLMUsage
 	ledger            json.RawMessage
 	err               error
+	requestID         string
+	responseModel     string
 }
 
 /*
@@ -131,6 +133,7 @@ func (e *Engine) record(ctx context.Context, s *session, in step) {
 		provider := string(s.llm.Provider())
 		params.Provider, params.ProviderKeyID = &provider, &s.key.ID
 		params.Upstream = new(string(contracts.UpstreamOf(s.llm, s.model)))
+		params.ProviderRequestID, params.ResponseModel = nilable(in.requestID), nilable(in.responseModel)
 	}
 	if e.StorePayloads {
 		params.Request, params.Response = payload(in.request), payload(in.response)

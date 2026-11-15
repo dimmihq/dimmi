@@ -119,7 +119,9 @@ func (s *chatStream) handle(chunk oai.ChatCompletionChunk) {
 
 	if chunk.Usage.PromptTokens > 0 || chunk.Usage.CompletionTokens > 0 {
 		usage := usageOf(chunk.Usage)
-		s.pend = append(s.pend, contracts.StreamEvent{Kind: contracts.StreamEventUsage, Usage: &usage})
+		s.pend = append(s.pend, contracts.StreamEvent{
+			Kind: contracts.StreamEventUsage, Usage: &usage, RequestID: chunk.ID, Model: chunk.Model,
+		})
 	}
 }
 

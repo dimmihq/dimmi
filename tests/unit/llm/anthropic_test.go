@@ -97,6 +97,8 @@ func TestAnthropicDriver(t *testing.T) {
 		assert.Equal(t, int64(200), usage.CachedInputTokens)
 		assert.Equal(t, int64(10), usage.CacheWriteTokens)
 		assert.Equal(t, int64(30), usage.OutputTokens)
+		assert.Equal(t, "msg_1", find(events, contracts.StreamEventUsage).RequestID, "the provider's id for the call")
+		assert.Equal(t, "claude-opus-5-5", find(events, contracts.StreamEventUsage).Model)
 		assert.Equal(t, contracts.StopReasonToolUse, find(events, contracts.StreamEventDone).StopReason)
 	})
 

@@ -42,6 +42,7 @@ type Step struct {
 	Usage     contracts.LLMUsage
 	Err       error
 	Delay     time.Duration
+	RequestID string
 }
 
 /*
@@ -199,7 +200,7 @@ func (l *LLM) Stream(_ context.Context, req contracts.ChatRequest) (contracts.Ch
 	usage := step.Usage
 	usage.Reported = true
 	events = append(events,
-		contracts.StreamEvent{Kind: contracts.StreamEventUsage, Usage: &usage},
+		contracts.StreamEvent{Kind: contracts.StreamEventUsage, Usage: &usage, RequestID: step.RequestID, Model: req.Model},
 		contracts.StreamEvent{Kind: contracts.StreamEventDone, StopReason: contracts.StopReasonEnd},
 	)
 

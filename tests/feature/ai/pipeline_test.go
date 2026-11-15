@@ -20,8 +20,9 @@ func TestAiTurn(t *testing.T) {
 	t.Run("answers after one search with citations", func(t *testing.T) {
 		t.Parallel()
 		h := newHarness(t, nil)
-		h.llm.answer.Script(search("pro plan price per seat"),
-			reply("The Pro plan costs $12 per seat per month [1]."))
+		searched := search("pro plan price per seat")
+		searched.RequestID = "msg_provider_1"
+		h.llm.answer.Script(searched, reply("The Pro plan costs $12 per seat per month [1]."))
 
 		conv, trigger := h.conversation("How much is Pro per seat?")
 		res := h.run(conv, trigger)
@@ -37,6 +38,8 @@ func TestAiTurn(t *testing.T) {
 			res.RunID).Scan(&undated))
 		assert.Zero(t, undated, "every step is stamped with when it was written")
 		assert.Equal(t, "anthropic", str(s.steps[0].Upstream))
+		assert.Equal(t, "msg_provider_1", str(s.steps[0].ProviderRequestID), "the provider's id for the call is kept")
+		assert.NotEmpty(t, str(s.steps[0].ResponseModel), "the model the provider says answered is kept")
 		assert.Positive(t, s.run.CostMicros)
 		assert.Equal(t, "pro plan price per seat", str(s.run.QueryRewritten))
 		assert.Equal(t, int32(1), s.conv.AiReplyCount)

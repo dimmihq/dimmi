@@ -122,7 +122,9 @@ func (s *chatStream) handle(event anth.MessageStreamEventUnion) {
 			stop = contracts.StopReasonEnd
 		}
 		s.pend = append(s.pend,
-			contracts.StreamEvent{Kind: contracts.StreamEventUsage, Usage: &usage},
+			contracts.StreamEvent{
+				Kind: contracts.StreamEventUsage, Usage: &usage, RequestID: s.msg.ID, Model: string(s.msg.Model),
+			},
 			contracts.StreamEvent{Kind: contracts.StreamEventDone, StopReason: stop},
 		)
 		s.done = true
