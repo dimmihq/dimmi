@@ -31,7 +31,7 @@ func TestAiWorkspaceRules(t *testing.T) {
 		assert.Equal(t, "handed_off", s.conv.AiState)
 		body := str(s.agentReplies()[0].Body)
 		assert.Contains(t, body, "Thanks for the details.")
-		assert.Contains(t, body, "bringing in a teammate")
+		assert.Contains(t, body, "passed this to someone on the team")
 		require.Len(t, s.notes(), 1)
 
 		sent := h.llm.answer.Sent()[0]

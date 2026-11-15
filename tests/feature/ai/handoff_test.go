@@ -72,7 +72,7 @@ func TestAiHandoffs(t *testing.T) {
 		assert.Equal(t, "handoff", res.Outcome)
 
 		s := h.load(conv, res.RunID)
-		assert.Contains(t, str(s.agentReplies()[0].Body), "bringing in a teammate")
+		assert.Contains(t, str(s.agentReplies()[0].Body), "passed this to someone on the team")
 	})
 
 	t.Run("marks the conversation for the team without offering a teammate when handoff is unavailable",
@@ -106,7 +106,7 @@ func TestAiHandoffs(t *testing.T) {
 		assert.Empty(t, h.llm.answer.Sent())
 
 		s := h.load(conv, res.RunID)
-		assert.Contains(t, str(s.agentReplies()[0].Body), "reached what I can help with")
+		assert.Contains(t, str(s.agentReplies()[0].Body), "passed this to someone on the team")
 		require.Len(t, s.notes(), 1)
 		assert.Contains(t, str(s.notes()[0].Body), "Handed off because: max replies.")
 	})
@@ -163,7 +163,7 @@ func TestAiHandoffs(t *testing.T) {
 		assert.Equal(t, "failed", s.run.Status)
 		assert.Equal(t, "provider_error", str(s.run.ErrorCode))
 		assert.Equal(t, "handed_off", s.conv.AiState)
-		assert.Contains(t, str(s.agentReplies()[0].Body), "teammate")
+		assert.Contains(t, str(s.agentReplies()[0].Body), "someone on the team")
 		require.Len(t, s.notes(), 1)
 	})
 

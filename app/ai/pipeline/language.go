@@ -62,5 +62,5 @@ func (r *Runner) line(e *env, key string) string {
 	if v := e.Defaults[key]; v != "" {
 		return v
 	}
-	return "A teammate will take it from here."
+	return "Someone on the team will take it from here."
 }

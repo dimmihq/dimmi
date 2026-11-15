@@ -1,8 +1,8 @@
-unknown: I couldn't find that in our documentation, and I'd rather not guess. A teammate can help with it.
-handoff: I'm bringing in a teammate who can take this from here.
-handoff_later: Our team is offline right now. A teammate will pick this up and reply here or by email as soon as they're back.
-handoff_unavailable: This is something I can't resolve here. Please reach the team through your usual contact route and they'll take it from there.
-max_replies: I've reached what I can help with in this conversation. A teammate will take it from here.
-error: Something went wrong on my side while answering. Please try again in a moment.
-refusal: That's outside what I can help with here, but I'm glad to help with anything about the product.
-action_update: There's an update on your request. A teammate will follow up here if anything else is needed.
+unknown: I don't know that one off the top of my head.
+handoff: I've passed this to someone on the team, along with everything you've told me, so you won't have to repeat yourself. They'll reply right here.
+handoff_later: The team's offline right now, but I've passed this on with everything you've told me. Someone will reply here or by email as soon as they're back.
+handoff_unavailable: This is one for the team, and they're best reached the usual way you contact them.
+max_replies: I've passed this to someone on the team, along with everything you've told me so far. They'll reply right here.
+error: Sorry, something went wrong on my end while I was answering. Could you send that again?
+refusal: I'll have to pass on that one, but I'm glad to help with anything to do with the product or your account.
+action_update: Quick update on your request: a teammate will follow up here if they need anything else.

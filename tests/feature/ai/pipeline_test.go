@@ -141,8 +141,8 @@ func TestAiTurn(t *testing.T) {
 
 		s := h.load(conv, res.RunID)
 		body := str(s.agentReplies()[0].Body)
-		assert.Contains(t, body, "couldn't find that in our documentation")
-		assert.Contains(t, body, "bringing in a teammate")
+		assert.Contains(t, body, "don't know that one")
+		assert.Contains(t, body, "passed this to someone on the team")
 		assert.Contains(t, sentText(h.llm.answer), "call handoff with reason unknown at once")
 		require.Len(t, s.notes(), 1)
 	})

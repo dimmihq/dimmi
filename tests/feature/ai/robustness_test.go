@@ -34,7 +34,7 @@ func TestAiRunRobustness(t *testing.T) {
 		assert.Empty(t, sent[5].Tools)
 		assert.NotEmpty(t, sent[4].Tools)
 		s := h.load(conv, res.RunID)
-		assert.Contains(t, str(s.agentReplies()[0].Body), "couldn't find that in our documentation")
+		assert.Contains(t, str(s.agentReplies()[0].Body), "don't know that one")
 	})
 
 	t.Run("caps searches per turn", func(t *testing.T) {
