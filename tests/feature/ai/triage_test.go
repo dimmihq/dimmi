@@ -71,6 +71,7 @@ func TestAiTriage(t *testing.T) {
 		var result map[string]any
 		require.NoError(t, json.Unmarshal([]byte(h.llm.answer.Sent()[1].Messages[2].Parts[0].Text), &result))
 		assert.Equal(t, []any{"tag vip"}, result["ignored"])
+		assert.Contains(t, result["note"], "Nobody on the team was told", "triage is never mistaken for passing it on")
 
 		sent := h.llm.answer.Sent()[0]
 		for _, spec := range sent.Tools {

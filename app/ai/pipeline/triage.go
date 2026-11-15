@@ -121,7 +121,16 @@ type triageResult struct {
 	Applied map[string]any `json:"applied"`
 	Ignored []string       `json:"ignored"`
 	Kept    []string       `json:"kept_human_changes"`
+	Note    string         `json:"note"`
 }
+
+/*
+triageNote says what triage is not. A result reading "team: Billing"
+looks like the conversation went to Billing, and a model that believes
+so tells the customer it passed the request on when nobody was told.
+*/
+const triageNote = "These are labels on the conversation in the team's inbox. Nobody on the team was told " +
+	"or asked anything: only handoff passes the conversation to a person."
 
 /*
 triage records the desired triage and reports what will hold.
@@ -131,7 +140,7 @@ func (r *Runner) triage(_ context.Context, st *run, args json.RawMessage) (strin
 	if err := json.Unmarshal(args, &in); err != nil {
 		return "", errToolArguments
 	}
-	res := triageResult{Applied: map[string]any{}, Ignored: []string{}, Kept: []string{}}
+	res := triageResult{Applied: map[string]any{}, Ignored: []string{}, Kept: []string{}, Note: triageNote}
 	f := st.env.Triage
 
 	st.triageTitle(in.Title, &res)
