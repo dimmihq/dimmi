@@ -115,6 +115,9 @@ func (r *Runner) historyTurns(e *env) []contracts.ChatMessage {
 		case string(enums.AuthorTypeMember):
 			msgs = addTurn(msgs, contracts.ChatRoleUser, "<teammate_message>"+escape(text)+"</teammate_message>")
 		default:
+			if annotated := annotatedOf(m); annotated != "" {
+				text = truncate(r.redactFor(e, annotated), turnChars+300)
+			}
 			msgs = addTurn(msgs, contracts.ChatRoleAssistant, text)
 		}
 	}
@@ -254,4 +257,20 @@ func strv(s *string) string {
 		return ""
 	}
 	return *s
+}
+
+/*
+annotatedOf is an agent reply as the model wrote it, with its sources,
+when the reply cited any.
+*/
+func annotatedOf(m models.Message) string {
+	var meta struct {
+		AI struct {
+			Annotated string `json:"annotated"`
+		} `json:"ai"`
+	}
+	if len(m.Metadata) == 0 || json.Unmarshal(m.Metadata, &meta) != nil {
+		return ""
+	}
+	return meta.AI.Annotated
 }

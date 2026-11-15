@@ -61,6 +61,7 @@ type run struct {
 	shown      map[int]bool
 	carried    map[int]bool
 	cited      []citation
+	annotated  string
 }
 
 /*

@@ -311,6 +311,9 @@ func (r *Runner) metadata(st *run, d *decision) json.RawMessage {
 			sources = append(sources, map[string]any{"n": c.N, "title": c.Title, "url": c.URL})
 		}
 		ai["sources"] = sources
+		if st.annotated != "" {
+			ai["annotated"] = st.annotated
+		}
 	}
 	if d.offerHandoff {
 		ai["actions"] = []string{"handoff"}

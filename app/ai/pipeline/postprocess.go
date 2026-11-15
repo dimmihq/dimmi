@@ -40,8 +40,11 @@ const maxReplyChars = 6000
 review turns the model's draft into the turn's decision.
 */
 func (r *Runner) review(ctx context.Context, st *run, draft string) *decision {
+	draft = earlierMarker().ReplaceAllString(draft, "")
 	text, cited := citations(draft, st.sources)
-	text = r.guard.Filter(text, r.allowedHosts(ctx, st))
+	hosts := r.allowedHosts(ctx, st)
+	text = r.guard.Filter(text, hosts)
+	st.annotated = annotate(r.guard.Filter(draft, hosts), st.sources)
 	if st.loop != nil && st.loop.stop == contracts.StopReasonMaxTokens {
 		text = trimToSentence(text)
 	}
@@ -104,6 +107,67 @@ func citations(text string, sources []source) (string, []citation) {
 	}
 	b.WriteString(text[last:])
 	return strings.TrimSpace(b.String()), cited
+}
+
+/*
+earlierMarker matches the markers earlier replies carry in the history,
+which a reply must never repeat.
+*/
+func earlierMarker() *regexp.Regexp {
+	return regexp.MustCompile(`[ \t]?\[S\d{1,3}(?:\s*[,;]\s*S\d{1,3})*\]`)
+}
+
+/*
+annotate is the reply as later turns show it to the model: each marker
+rewritten as [S1], [S2] by the documents the reply cites, opened by the
+list of those documents. A reply that cites nothing is empty.
+*/
+func annotate(draft string, sources []source) string {
+	var docs []source
+	var b strings.Builder
+	last := 0
+	for _, loc := range markerPattern().FindAllStringSubmatchIndex(draft, -1) {
+		if loc[1] < len(draft) && draft[loc[1]] == '(' {
+			continue
+		}
+		b.WriteString(draft[last:loc[0]])
+		last = loc[1]
+		var tags []string
+		for _, part := range strings.FieldsFunc(draft[loc[2]:loc[3]], func(r rune) bool {
+			return r == ',' || r == ';' || r == ' '
+		}) {
+			n, err := strconv.Atoi(part)
+			if err != nil || n < 1 || n > len(sources) {
+				continue
+			}
+			k := slices.IndexFunc(docs, func(d source) bool { return d.chunk.DocumentID == sources[n-1].chunk.DocumentID })
+			if k < 0 {
+				docs = append(docs, sources[n-1])
+				k = len(docs) - 1
+			}
+			tag := "S" + strconv.Itoa(k+1)
+			if !slices.Contains(tags, tag) {
+				tags = append(tags, tag)
+			}
+		}
+		if len(tags) > 0 {
+			b.WriteString(" [" + strings.Join(tags, ", ") + "]")
+		}
+	}
+	if len(docs) == 0 {
+		return ""
+	}
+	b.WriteString(draft[last:])
+	var head strings.Builder
+	head.WriteString("<cited>")
+	for i, d := range docs {
+		if i > 0 {
+			head.WriteString("; ")
+		}
+		head.WriteString("[S" + strconv.Itoa(i+1) + "] " + d.chunk.Title)
+	}
+	head.WriteString("</cited>\n")
+	return head.String() + strings.TrimSpace(b.String())
 }
 
 /*

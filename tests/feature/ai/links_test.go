@@ -51,3 +51,36 @@ func TestReplyLinks(t *testing.T) {
 		assert.NotContains(t, body, "evil.example")
 	})
 }
+
+func TestEarlierReplies(t *testing.T) {
+	t.Parallel()
+
+	t.Run("shows the model its earlier replies with the documents they cited", func(t *testing.T) {
+		t.Parallel()
+		h := newHarness(t, nil)
+		conv, trigger := h.conversation("How much is Pro per seat?")
+		h.llm.answer.Script(search("pro plan price per seat"), reply("Pro costs $12 per seat per month [1]."))
+		first := h.run(conv, trigger)
+		require.Equal(t, "answered", first.Outcome)
+		replies := h.load(conv, first.RunID).agentReplies()
+		assert.Equal(t, "Pro costs $12 per seat per month.", str(replies[0].Body), "the customer sees no markers")
+
+		next := h.add(conv, "contact", "message", "And Business?")
+		h.llm.answer.Script(search("business plan price"), reply("Business costs $20 per seat [1], like Pro [S1]."))
+		res := h.run(conv, next)
+		require.Equal(t, "answered", res.Outcome)
+
+		sent := h.llm.answer.Sent()
+		var earlier string
+		for _, m := range sent[len(sent)-2].Messages {
+			if m.Role == contracts.ChatRoleAssistant {
+				earlier = m.Parts[0].Text
+			}
+		}
+		assert.Regexp(t, `^<cited>\[S1\] [^<]+</cited>\nPro costs \$12 per seat per month \[S1\]\.$`, earlier)
+
+		replies = h.load(conv, res.RunID).agentReplies()
+		assert.Equal(t, "Business costs $20 per seat, like Pro.", str(replies[len(replies)-1].Body),
+			"an earlier reply's marker never reaches the customer")
+	})
+}
