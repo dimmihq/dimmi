@@ -210,7 +210,7 @@ func (r *Runner) loadConnections(ctx context.Context, q *models.Queries, e *env)
 	e.Version = strv(e.Agent.PromptVersion)
 	if r.Prompts != nil {
 		e.Version = r.Prompts.Version(e.Version)
-		e.Defaults = r.Prompts.Defaults(e.Version)
+		e.Defaults = r.Prompts.Defaults(e.Version, r.family(e.AnswerKey, e.Agent.AnswerModel))
 	}
 }
 

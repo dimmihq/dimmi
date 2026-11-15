@@ -12,18 +12,20 @@ import (
 )
 
 /*
-tree builds a prompt version with every required file, overridden by
-the given files.
+tree builds a prompt version with every required file in every family's
+folder, overridden by the given files.
 */
 func tree(files map[string]string) fstest.MapFS {
 	version := "v9"
 	out := fstest.MapFS{}
-	for name := range Variables() {
-		out["agent/"+version+"/common/"+name] = &fstest.MapFile{Data: []byte("text")}
+	for _, family := range Families() {
+		for name := range Variables() {
+			out["agent/"+version+"/"+string(family)+"/"+name] = &fstest.MapFile{Data: []byte("text " + string(family))}
+		}
+		out["agent/"+version+"/"+string(family)+"/defaults.md"] = &fstest.MapFile{Data: []byte(
+			"unknown: u " + string(family) + "\nhandoff: h\nhandoff_later: l\nhandoff_unavailable: x\nmax_replies: m\nerror: e\nrefusal: r\n",
+		)}
 	}
-	out["agent/"+version+"/common/defaults.md"] = &fstest.MapFile{Data: []byte(
-		"unknown: u\nhandoff: h\nhandoff_later: l\nhandoff_unavailable: x\nmax_replies: m\nerror: e\nrefusal: r\n",
-	)}
 	for path, data := range files {
 		if data == "" {
 			delete(out, "agent/"+version+"/"+path)
@@ -43,8 +45,10 @@ func TestLoader(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, "v2", l.Version(""))
 		assert.Equal(t, "v2", l.Version("v1"))
-		for _, key := range DefaultKeys() {
-			assert.NotEmpty(t, l.Defaults("v2")[key], key)
+		for _, family := range Families() {
+			for _, key := range DefaultKeys() {
+				assert.NotEmpty(t, l.Defaults("v2", family)[key], key)
+			}
 		}
 	})
 
@@ -59,7 +63,7 @@ func TestLoader(t *testing.T) {
 		require.NoError(t, err)
 		assert.Contains(t, file.Content, "Lovelace")
 		assert.NotContains(t, file.Content, "{{")
-		assert.Equal(t, "agent/v2/common/answer.system.md", file.Path)
+		assert.Equal(t, "agent/v2/anthropic/answer.system.md", file.Path)
 	})
 
 	t.Run("refuses a version that is not compiled in", func(t *testing.T) {
@@ -70,36 +74,41 @@ func TestLoader(t *testing.T) {
 
 	t.Run("refuses a tree missing a required file", func(t *testing.T) {
 		t.Parallel()
-		_, err := loadSet([]fs.FS{tree(map[string]string{"common/tone_concise.md": ""})}, "v9")
+		_, err := loadSet([]fs.FS{tree(map[string]string{"openweight/tone_concise.md": ""})}, "v9")
 		assert.ErrorIs(t, err, ErrInvalid)
 	})
 
 	t.Run("refuses a file naming an unknown variable", func(t *testing.T) {
 		t.Parallel()
 		_, err := loadSet([]fs.FS{tree(map[string]string{
-			"common/answer.system.md": "Hello {{customer_secret}}",
+			"openai/answer.system.md": "Hello {{customer_secret}}",
 		})}, "v9")
 		assert.ErrorIs(t, err, ErrInvalid)
 	})
 
 	t.Run("refuses defaults missing a key", func(t *testing.T) {
 		t.Parallel()
-		_, err := loadSet([]fs.FS{tree(map[string]string{"common/defaults.md": "unknown: u\n"})}, "v9")
+		_, err := loadSet([]fs.FS{tree(map[string]string{"anthropic/defaults.md": "unknown: u\n"})}, "v9")
 		assert.ErrorIs(t, err, ErrInvalid)
 	})
 
-	t.Run("prefers a family file and falls back to common", func(t *testing.T) {
+	t.Run("refuses a folder that is not a model family", func(t *testing.T) {
 		t.Parallel()
-		s, err := loadSet([]fs.FS{tree(map[string]string{"anthropic/tone_concise.md": "short"})}, "v9")
+		_, err := loadSet([]fs.FS{tree(map[string]string{"common/answer.system.md": "shared"})}, "v9")
+		assert.ErrorIs(t, err, ErrInvalid)
+	})
+
+	t.Run("gives each family only its own files and lines", func(t *testing.T) {
+		t.Parallel()
+		s, err := loadSet([]fs.FS{tree(nil)}, "v9")
 		require.NoError(t, err)
 		l := &Loader{version: "v9", versions: map[string]*set{"v9": s}}
 
-		family, err := l.GetVersion("v9", enums.AIModelFamilyAnthropic, "tone_concise.md")
-		require.NoError(t, err)
-		assert.Equal(t, "short", family.Content)
-
-		common, err := l.GetVersion("v9", enums.AIModelFamilyOpenAI, "tone_concise.md")
-		require.NoError(t, err)
-		assert.Equal(t, "text", common.Content)
+		for _, family := range Families() {
+			file, err := l.GetVersion("v9", family, "answer.system.md")
+			require.NoError(t, err)
+			assert.Equal(t, "text "+string(family), file.Content)
+			assert.Equal(t, "u "+string(family), l.Defaults("v9", family)["unknown"])
+		}
 	})
 }

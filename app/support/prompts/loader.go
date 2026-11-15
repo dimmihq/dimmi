@@ -4,14 +4,15 @@
 |--------------------------------------------------------------------------
 |
 | The prompt tree is compiled in: resources/prompts/agent/<version>/,
-| a common folder and one folder per model family. A file under the
-| model's family wins over the same file in common, so a family gets
-| its own tuning where the shared text does not fit.
+| one folder per model family and nothing shared. Each family's folder
+| holds every file that family's models read, so tuning the prompt for
+| one family can never change what another reads.
 |
-| Every version is read and checked when the application boots: each
-| required file exists in common, every placeholder a file names is
-| one the pipeline fills, and the default lines parse. A broken prompt
-| tree stops the boot instead of surfacing mid-conversation.
+| Every version is read and checked when the application boots: only
+| family folders exist, each holds every required file, every
+| placeholder a file names is one the pipeline fills, and each family's
+| default lines parse. A broken prompt tree stops the boot instead of
+| surfacing mid-conversation.
 |
 */
 
@@ -73,12 +74,20 @@ type Loader struct {
 }
 
 /*
-set is one version's files, keyed "<folder>/<name>", plus its parsed
-default lines.
+set is one version's files, keyed "<family>/<name>", plus each family's
+parsed default lines.
 */
 type set struct {
 	files    map[string]File
-	defaults map[string]string
+	defaults map[enums.AIModelFamily]map[string]string
+}
+
+/*
+Families are the model families with a folder of their own in every
+version.
+*/
+func Families() []enums.AIModelFamily {
+	return []enums.AIModelFamily{enums.AIModelFamilyAnthropic, enums.AIModelFamilyOpenAI, enums.AIModelFamilyOpenWeight}
 }
 
 /*
@@ -159,25 +168,21 @@ func (l *Loader) Get(family enums.AIModelFamily, name string) (*File, error) {
 }
 
 /*
-GetVersion resolves one file for the family: the family's folder
-first, the common folder second.
+GetVersion resolves one file from the family's own folder.
 */
 func (l *Loader) GetVersion(version string, family enums.AIModelFamily, name string) (*File, error) {
 	s := l.versions[l.Version(version)]
 	if f, ok := s.files[string(family)+"/"+name]; ok {
 		return &f, nil
 	}
-	if f, ok := s.files["common/"+name]; ok {
-		return &f, nil
-	}
-	return nil, fmt.Errorf("%w: %s not found", ErrInvalid, name)
+	return nil, fmt.Errorf("%w: %s/%s not found", ErrInvalid, family, name)
 }
 
 /*
-Defaults returns the version's default customer lines by key.
+Defaults returns the family's default customer lines by key.
 */
-func (l *Loader) Defaults(version string) map[string]string {
-	return l.versions[l.Version(version)].defaults
+func (l *Loader) Defaults(version string, family enums.AIModelFamily) map[string]string {
+	return l.versions[l.Version(version)].defaults[family]
 }
 
 /*
@@ -220,42 +225,43 @@ func versionNames(tree fs.FS) ([]string, error) {
 }
 
 /*
-loadSet reads one version: every required file of every folder, the
-common folder holding them all, and the default lines.
+loadSet reads one version: every family's folder, each holding every
+required file, and each family's default lines. A folder that is not a
+model family, such as a shared one, is refused.
 */
 func loadSet(trees []fs.FS, version string) (*set, error) {
 	folders, err := fs.ReadDir(trees[len(trees)-1], "agent/"+version)
 	if err != nil {
 		return nil, fmt.Errorf("read prompt version %s: %w", version, err)
 	}
-
-	s := &set{files: map[string]File{}}
 	for _, folder := range folders {
-		if !folder.IsDir() {
-			continue
+		if folder.IsDir() && !slices.Contains(Families(), enums.AIModelFamily(folder.Name())) {
+			return nil, fmt.Errorf("%w: %s/%s is not a model family", ErrInvalid, version, folder.Name())
 		}
-		if err := s.loadFolder(trees, version, folder.Name()); err != nil {
+	}
+
+	s := &set{files: map[string]File{}, defaults: map[enums.AIModelFamily]map[string]string{}}
+	for _, family := range Families() {
+		if err := s.loadFolder(trees, version, string(family)); err != nil {
 			return nil, err
 		}
-	}
-
-	for name := range Variables() {
-		if _, ok := s.files["common/"+name]; !ok {
-			return nil, fmt.Errorf("%w: %s/common/%s is missing", ErrInvalid, version, name)
+		for name := range Variables() {
+			if _, ok := s.files[string(family)+"/"+name]; !ok {
+				return nil, fmt.Errorf("%w: %s/%s/%s is missing", ErrInvalid, version, family, name)
+			}
 		}
+		defaults, err := parseDefaults(s.files[string(family)+"/defaults.md"].Content)
+		if err != nil {
+			return nil, fmt.Errorf("%w: %s/%s defaults: %w", ErrInvalid, version, family, err)
+		}
+		s.defaults[family] = defaults
 	}
-
-	defaults, err := parseDefaults(s.files["common/defaults.md"].Content)
-	if err != nil {
-		return nil, fmt.Errorf("%w: %s defaults: %w", ErrInvalid, version, err)
-	}
-	s.defaults = defaults
 	return s, nil
 }
 
 /*
-loadFolder reads the required files present in one folder and checks
-their placeholders.
+loadFolder reads the required files present in one family's folder and
+checks their placeholders.
 */
 func (s *set) loadFolder(trees []fs.FS, version, folder string) error {
 	for name, allowed := range Variables() {
