@@ -86,6 +86,9 @@ func (r *Runner) envelope(e *env, update string) []contracts.ChatMessage {
 	}
 	last := &msgs[len(msgs)-1]
 	last.Parts[0].Text += "\n<today>" + e.now.UTC().Format("Monday 2 January 2006") + " (UTC)</today>"
+	if repliedBefore(e.History) {
+		last.Parts[0].Text += "\n<reply_focus>" + replyFocus + "</reply_focus>"
+	}
 
 	if contact := r.contactBlock(e); contact != "" {
 		if speaker(msgs[0]) != contracts.ChatRoleUser {
@@ -273,4 +276,26 @@ func annotatedOf(m models.Message) string {
 		return ""
 	}
 	return meta.AI.Annotated
+}
+
+/*
+replyFocus closes the newest turn of a conversation the agent already
+answered in. Guidance placed in the newest turn is what a fast model
+follows best mid-conversation, and repeating earlier steps, questions
+and offers is the habit long conversations show most.
+*/
+const replyFocus = "Your earlier replies above are settled: the customer already has every step, tip, question " +
+	"and offer in them. This reply answers only what is new in the latest message, short and easy to scan."
+
+/*
+repliedBefore reports whether the agent has replied earlier in the
+conversation.
+*/
+func repliedBefore(history []models.Message) bool {
+	for _, m := range history {
+		if m.AuthorType == string(enums.AuthorTypeAgent) {
+			return true
+		}
+	}
+	return false
 }

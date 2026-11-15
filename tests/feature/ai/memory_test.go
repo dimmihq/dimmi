@@ -167,3 +167,24 @@ func TestConversationMemory(t *testing.T) {
 		assert.Empty(t, h.llm.answer.Sent())
 	})
 }
+
+func TestReplyFocus(t *testing.T) {
+	t.Parallel()
+
+	t.Run("closes the newest turn with a focus note once the agent has replied", func(t *testing.T) {
+		t.Parallel()
+		h := newHarness(t, nil)
+		conv, trigger := h.conversation("How much is Pro per seat?")
+		h.llm.answer.Script(search("pro plan price per seat"), reply("Pro costs $12 per seat per month [1]."))
+		require.Equal(t, "answered", h.run(conv, trigger).Outcome)
+		first := h.llm.answer.Sent()[0].Messages
+		assert.NotContains(t, first[len(first)-1].Parts[0].Text, "<reply_focus>", "a first reply has nothing to build on")
+
+		next := h.add(conv, "contact", "message", "And Business?")
+		h.llm.answer.Script(search("business plan price"), reply("Business costs $20 per seat [1]."))
+		require.Equal(t, "answered", h.run(conv, next).Outcome)
+		sent := h.llm.answer.Sent()
+		last := sent[len(sent)-2].Messages
+		assert.Contains(t, last[len(last)-1].Parts[0].Text, "<reply_focus>")
+	})
+}
