@@ -173,3 +173,34 @@ func TestAiToolLayer(t *testing.T) {
 		assert.Nil(t, h.load(conv, res.RunID).run.ToolLayer)
 	})
 }
+
+func TestAiToolLayerMisdirectedCalls(t *testing.T) {
+	t.Parallel()
+
+	t.Run("tells a model that names a layered tool directly that nothing was done and how to run it", func(t *testing.T) {
+		t.Parallel()
+		h := newHarness(t, nil)
+		h.withToolLayer()
+		h.llm.answer.Script(
+			tools(call("triage_conversation", `{"title":"Double charge"}`)),
+			tools(loadCall("triage_conversation")),
+			tools(call("triage_conversation", `{"title":"Double charge"}`)),
+			reply("Let me check."),
+		)
+
+		conv, trigger := h.conversation("I was charged twice")
+		h.run(conv, trigger)
+
+		sent := h.llm.answer.Sent()
+		last := func(i int) contracts.ChatMessage { return sent[i].Messages[len(sent[i].Messages)-1] }
+		before := last(1)
+		assert.True(t, before.ToolError)
+		assert.Contains(t, before.Parts[0].Text, "triage_conversation is not called by name. Nothing was done.")
+		assert.Contains(t, before.Parts[0].Text, "Load it with load_tools")
+		assert.Contains(t, last(2).Parts[0].Text, `"how_to_run"`)
+		after := last(3)
+		assert.True(t, after.ToolError)
+		assert.Contains(t, after.Parts[0].Text, "triage_conversation is loaded, but it is not called by name.")
+		assert.Contains(t, after.Parts[0].Text, `"name": "triage_conversation"`)
+	})
+}

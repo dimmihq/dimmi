@@ -211,6 +211,23 @@ func (s *Set) Has(name string) bool {
 }
 
 /*
+Misdirected is the answer to a call that names a tool behind the layer
+directly: such a tool runs only through call_tool, so the answer says
+nothing was done and how to run it, loaded or not.
+*/
+func (s *Set) Misdirected(name string) string {
+	s.mu.Lock()
+	loaded := s.loaded[name]
+	s.mu.Unlock()
+	if loaded {
+		return name + " is loaded, but it is not called by name. Nothing was done. Run it with " + CallTool +
+			`, passing {"name": "` + name + `", "arguments": {...}}.`
+	}
+	return name + " is not called by name. Nothing was done. Load it with " + LoadTool + ", then run it with " +
+		CallTool + `, passing {"name": "` + name + `", "arguments": {...}}.`
+}
+
+/*
 Entries returns the entries, by name.
 */
 func (s *Set) Entries() []Entry {
@@ -282,8 +299,9 @@ func (s *Set) Prompt() string {
 		members[g] = append(members[g], n)
 	}
 	var b strings.Builder
-	b.WriteString("More tools are in these groups. Load what you need with load_tools, then run it with " +
-		"call_tool. Loaded tools last until the next message.\n")
+	b.WriteString("More tools are in these groups. They are never called by name: load what you need with " +
+		"load_tools, then run it with call_tool, passing the tool's name and arguments. Loaded tools last until " +
+		"the next message.\n")
 	for _, g := range s.groups {
 		names := members[g.Name]
 		if len(names) == 0 {
@@ -370,6 +388,10 @@ func (s *Set) define(names []string) (string, error) {
 		s.miss(n)
 	}
 	out := map[string]any{"tools": defs}
+	if len(defs) > 0 {
+		out["how_to_run"] = "These tools are not called by name: run each with " + CallTool +
+			", passing its name and arguments."
+	}
 	if len(offered) > 0 {
 		out["already_offered"] = offered
 	}

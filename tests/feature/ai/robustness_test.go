@@ -66,7 +66,8 @@ func TestAiRunRobustness(t *testing.T) {
 		assert.True(t, bad.ToolError)
 		assert.Equal(t, "error: invalid arguments", bad.Parts[0].Text)
 		assert.True(t, unknown.ToolError)
-		assert.Equal(t, "error: unknown tool delete_account", unknown.Parts[0].Text)
+		assert.Equal(t, "error: there is no tool named delete_account in this conversation. Nothing was done.",
+			unknown.Parts[0].Text)
 
 		s := h.load(conv, res.RunID)
 		assert.Equal(t, "error", s.steps[1].Status)

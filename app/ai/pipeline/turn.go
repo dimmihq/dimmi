@@ -120,7 +120,10 @@ func (r *Runner) callTool(ctx context.Context, st *run, call contracts.ToolCall)
 
 	var result string
 	ran := call.Name
-	err := errors.New("unknown tool " + call.Name)
+	err := errors.New("there is no tool named " + call.Name + " in this conversation. Nothing was done.")
+	if st.layer != nil && st.layer.set.Has(call.Name) {
+		err = errors.New(st.layer.set.Misdirected(call.Name))
+	}
 	switch {
 	case st.layer != nil && (call.Name == toolset.LoadTool || call.Name == toolset.CallTool):
 		ran, result, err = r.layerCall(ctx, st, call)
