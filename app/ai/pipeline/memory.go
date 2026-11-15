@@ -48,8 +48,8 @@ const (
 	unfoldedMax     = 24
 	summaryChars    = 2000
 	summaryTokens   = 700
-	carriedMax      = 5
-	carriedChars    = 1500
+	carriedMax      = 8
+	carriedChars    = 2500
 	conversationCap = 100_000
 )
 
@@ -242,24 +242,19 @@ func (r *Runner) remember(ctx context.Context, st *run, res *Result) {
 }
 
 /*
-carry keeps the passages the reply cited, newest first, when the agent
-carries passages, and reports whether they changed.
+carry keeps every passage the reply cited, not one per document, newest
+first, when the agent carries passages, and reports whether they changed.
 */
 func (r *Runner) carry(st *run, m *memory) bool {
 	if !st.env.Agent.CarryPassages || len(st.cited) == 0 {
 		return false
 	}
 	var fresh []carriedChunk
-	for _, c := range st.cited {
-		for _, s := range st.sources {
-			if s.chunk.ID.String() != c.ChunkID {
-				continue
-			}
-			fresh = append(fresh, carriedChunk{
-				ChunkID: c.ChunkID, DocumentID: c.DocumentID, Title: s.chunk.Title, URL: s.chunk.URL,
-				Text: truncate(strings.TrimSpace(s.chunk.Text), carriedChars),
-			})
-		}
+	for _, s := range st.citedChunks {
+		fresh = append(fresh, carriedChunk{
+			ChunkID: s.chunk.ID.String(), DocumentID: s.chunk.DocumentID.String(), Title: s.chunk.Title,
+			URL: s.chunk.URL, Text: truncate(strings.TrimSpace(s.chunk.Text), carriedChars),
+		})
 	}
 	if len(fresh) == 0 {
 		return false

@@ -45,6 +45,7 @@ func (r *Runner) review(ctx context.Context, st *run, draft string) *decision {
 	hosts := r.allowedHosts(ctx, st)
 	text = r.guard.Filter(text, hosts)
 	st.annotated = annotate(r.guard.Filter(draft, hosts), st.sources)
+	st.citedChunks = citedChunks(draft, st.sources)
 	if st.loop != nil && st.loop.stop == contracts.StopReasonMaxTokens {
 		text = trimToSentence(text)
 	}
@@ -115,6 +116,26 @@ which a reply must never repeat.
 */
 func earlierMarker() *regexp.Regexp {
 	return regexp.MustCompile(`[ \t]?\[S\d{1,3}(?:\s*[,;]\s*S\d{1,3})*\]`)
+}
+
+/*
+citedChunks are the passages the draft's markers name, in first-cited
+order, each once.
+*/
+func citedChunks(draft string, sources []source) []source {
+	var out []source
+	for _, m := range markerPattern().FindAllStringSubmatch(draft, -1) {
+		for _, part := range strings.FieldsFunc(m[1], func(r rune) bool { return r == ',' || r == ';' || r == ' ' }) {
+			n, err := strconv.Atoi(part)
+			if err != nil || n < 1 || n > len(sources) {
+				continue
+			}
+			if !slices.ContainsFunc(out, func(s source) bool { return s.chunk.ID == sources[n-1].chunk.ID }) {
+				out = append(out, sources[n-1])
+			}
+		}
+	}
+	return out
 }
 
 /*

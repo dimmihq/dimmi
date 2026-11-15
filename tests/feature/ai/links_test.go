@@ -84,3 +84,47 @@ func TestEarlierReplies(t *testing.T) {
 			"an earlier reply's marker never reaches the customer")
 	})
 }
+
+/*
+twoParts is a knowledge base whose one article comes back as two
+passages.
+*/
+type twoParts struct {
+	contracts.Knowledge
+	doc ids.UUID
+}
+
+func (k twoParts) Search(context.Context, ids.UUID, string, contracts.KnowledgeSearchOptions,
+) (contracts.KnowledgeSearchResult, error) {
+	similarity := 0.9
+	part := func(n int, text string) contracts.KnowledgeChunk {
+		return contracts.KnowledgeChunk{
+			ID: ids.New(), DocumentID: k.doc, Title: "Automation rules", URL: "https://help.lovelace.test/rules",
+			Text: text, Similarity: &similarity, MatchedBy: []string{"vector"}, Rank: n,
+		}
+	}
+	return contracts.KnowledgeSearchResult{Mode: "hybrid", Chunks: []contracts.KnowledgeChunk{
+		part(1, "Open a rule and choose Test to try it on an order without changing anything."),
+		part(2, "The rule action Split by tag splits an order into parcels by SKU tag."),
+	}}, nil
+}
+
+func TestCarriedPassages(t *testing.T) {
+	t.Parallel()
+
+	t.Run("carries every passage a reply cites, not one per article", func(t *testing.T) {
+		t.Parallel()
+		h := newHarness(t, nil)
+		h.operator("UPDATE ai_agents SET carry_passages = true WHERE workspace_id = $1", h.d.TC.Workspace.Workspace.ID)
+		h.d.TC.App.AI.Knowledge = twoParts{Knowledge: h.d.TC.App.AI.Knowledge, doc: ids.New()}
+
+		conv, trigger := h.conversation("Can rules split orders, and can I try one first?")
+		h.llm.answer.Script(search("rules split test"),
+			reply("Choose **Test** on a rule to try it [1], and the **Split by tag** action splits orders [2]."))
+		require.Equal(t, "answered", h.run(conv, trigger).Outcome)
+
+		m := h.memoryOf(conv)
+		require.Len(t, m.Passages, 2)
+		assert.Equal(t, m.Passages[0].Title, m.Passages[1].Title, "both passages of the one article are kept")
+	})
+}

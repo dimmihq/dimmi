@@ -62,6 +62,8 @@ type run struct {
 	carried    map[int]bool
 	cited      []citation
 	annotated  string
+	// citedChunks are the passages the reply's markers name, each once.
+	citedChunks []source
 }
 
 /*
