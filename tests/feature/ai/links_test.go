@@ -2,6 +2,7 @@ package ai_test
 
 import (
 	"context"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -120,8 +121,12 @@ func TestCarriedPassages(t *testing.T) {
 
 		conv, trigger := h.conversation("Can rules split orders, and can I try one first?")
 		h.llm.answer.Script(search("rules split test"),
-			reply("Choose **Test** on a rule to try it [1], and the **Split by tag** action splits orders [2]."))
-		require.Equal(t, "answered", h.run(conv, trigger).Outcome)
+			reply("Choose **Test** on a rule to try it [1], and the **Split by tag** action splits orders [2].\n\n[1] Automation rules\nhttps://help.lovelace.test/rules"))
+		res := h.run(conv, trigger)
+		require.Equal(t, "answered", res.Outcome)
+		replies := h.load(conv, res.RunID).agentReplies()
+		assert.Equal(t, "Choose **Test** on a rule to try it, and the **Split by tag** action splits orders.",
+			str(replies[0].Body), "a source list under the reply never reaches the customer")
 
 		m := h.memoryOf(conv)
 		require.Len(t, m.Passages, 2)
@@ -154,5 +159,45 @@ func TestImpliedHandoff(t *testing.T) {
 		h.llm.answer.Script(search("pro plan price per seat"),
 			reply("Pro costs $12 per seat per month [1]. I haven't passed anything on; want me to get someone from the team?"))
 		assert.Equal(t, "answered", h.run(conv, trigger).Outcome)
+	})
+}
+
+/*
+longPart is a knowledge base whose one long passage states the cited
+fact near its end.
+*/
+type longPart struct {
+	contracts.Knowledge
+}
+
+func (longPart) Search(context.Context, ids.UUID, string, contracts.KnowledgeSearchOptions,
+) (contracts.KnowledgeSearchResult, error) {
+	similarity := 0.9
+	filler := strings.Repeat("Presets save a package and service for reuse. ", 120)
+	return contracts.KnowledgeSearchResult{Mode: "hybrid", Chunks: []contracts.KnowledgeChunk{{
+		ID: ids.New(), DocumentID: ids.New(), Title: "Release notes", URL: "https://help.lovelace.test/notes",
+		Text:       filler + "The rule action Split by tag splits an order into parcels by SKU tag. " + filler,
+		Similarity: &similarity, MatchedBy: []string{"vector"},
+	}}}, nil
+}
+
+func TestCarriedCitedPart(t *testing.T) {
+	t.Parallel()
+
+	t.Run("keeps the part of a long passage the reply cited", func(t *testing.T) {
+		t.Parallel()
+		h := newHarness(t, nil)
+		h.operator("UPDATE ai_agents SET carry_passages = true WHERE workspace_id = $1", h.d.TC.Workspace.Workspace.ID)
+		h.d.TC.App.AI.Knowledge = longPart{Knowledge: h.d.TC.App.AI.Knowledge}
+
+		conv, trigger := h.conversation("Can rules split an order by SKU tag?")
+		h.llm.answer.Script(search("split order sku tag"), reply("Yes, the **Split by tag** action splits an order by SKU tag [1]."))
+		require.Equal(t, "answered", h.run(conv, trigger).Outcome)
+
+		var text string
+		require.NoError(t, h.d.TC.Operator().QueryRow(t.Context(),
+			"SELECT ai_memory->'passages'->0->>'text' FROM conversations WHERE id = $1", conv).Scan(&text))
+		assert.Contains(t, text, "Split by tag splits an order")
+		assert.LessOrEqual(t, len([]rune(text)), 2500)
 	})
 }
