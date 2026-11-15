@@ -124,9 +124,15 @@ func rulesText(e *env, s *TurnSettings) string {
 	if len(names) > 0 {
 		lines = append(lines, "Always hand off when the conversation is about: "+strings.Join(names, ", ")+".")
 	}
-	if handsOffUnknowns(e) {
-		lines = append(lines, "When the documentation does not cover the question, call handoff with reason "+
-			"unknown at once, without asking the customer first, and tell them a teammate will pick it up.")
+	switch {
+	case handsOffUnknowns(e):
+		lines = append(lines, "When nothing you know answers the question, call handoff with reason "+
+			"unknown at once, without asking the customer first, and tell them it's passed on.")
+	case e.availability() != "unavailable":
+		lines = append(lines, "When nothing you know answers a question, say so in a few words and stop there. "+
+			"The system shows the customer a way to reach a teammate, and a second unanswered question in a row "+
+			"goes to the team automatically, so you never ask whether they want a teammate; if they ask for one, "+
+			"hand off.")
 	}
 	if text := strings.TrimSpace(s.Instructions); text != "" {
 		lines = append(lines, text)
