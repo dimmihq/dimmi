@@ -66,7 +66,7 @@ func TestEarlierReplies(t *testing.T) {
 		assert.Equal(t, "Pro costs $12 per seat per month.", str(replies[0].Body), "the customer sees no markers")
 
 		next := h.add(conv, "contact", "message", "And Business?")
-		h.llm.answer.Script(search("business plan price"), reply("Business costs $20 per seat [1], like Pro [S1]."))
+		h.llm.answer.Script(search("business plan price"), reply("Business costs $20 per seat [1], like Pro [S1].\n\n[S1] Plans and pricing\n<cited>[S1] Plans</cited>"))
 		res := h.run(conv, next)
 		require.Equal(t, "answered", res.Outcome)
 
@@ -81,7 +81,7 @@ func TestEarlierReplies(t *testing.T) {
 
 		replies = h.load(conv, res.RunID).agentReplies()
 		assert.Equal(t, "Business costs $20 per seat, like Pro.", str(replies[len(replies)-1].Body),
-			"an earlier reply's marker never reaches the customer")
+			"an earlier reply's markers and source list never reach the customer")
 	})
 }
 

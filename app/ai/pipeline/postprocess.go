@@ -40,7 +40,7 @@ const maxReplyChars = 6000
 review turns the model's draft into the turn's decision.
 */
 func (r *Runner) review(ctx context.Context, st *run, draft string) *decision {
-	draft = earlierMarker().ReplaceAllString(draft, "")
+	draft = strings.TrimSpace(earlierMarker().ReplaceAllString(earlierSources().ReplaceAllString(draft, ""), ""))
 	text, cited := citations(draft, st.sources)
 	hosts := r.allowedHosts(ctx, st)
 	text = r.guard.Filter(text, hosts)
@@ -136,6 +136,15 @@ func citedChunks(draft string, sources []source) []source {
 		}
 	}
 	return out
+}
+
+/*
+earlierSources matches the list of documents earlier replies open with in
+the history, when the model copies it into a reply: a <cited> block, or
+lines that name a document by its [S] marker.
+*/
+func earlierSources() *regexp.Regexp {
+	return regexp.MustCompile(`(?s)<cited>.*?</cited>|(?m)^[ \t]*\[S\d{1,3}\][^\n]*$`)
 }
 
 /*
