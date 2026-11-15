@@ -253,7 +253,8 @@ func (r *Runner) carry(st *run, m *memory) bool {
 	for _, s := range st.citedChunks {
 		fresh = append(fresh, carriedChunk{
 			ChunkID: s.chunk.ID.String(), DocumentID: s.chunk.DocumentID.String(), Title: s.chunk.Title,
-			URL: s.chunk.URL, Text: citedWindow(strings.TrimSpace(s.chunk.Text), st.annotated, carriedChars),
+			URL: s.chunk.URL, Text: citedWindow(strings.TrimSpace(s.chunk.Text), st.citedClaims[s.chunk.ID.String()],
+				carriedChars),
 		})
 	}
 	if len(fresh) == 0 {
@@ -365,8 +366,9 @@ Leave out greetings, thanks and repeated wording. Never add facts that are not i
 /*
 citedWindow is the part of a passage a reply drew on, at most limit
 characters: the whole passage when it fits, otherwise the sentences
-around the one sharing the most words with the reply, so a long
-passage keeps the fact the reply cited rather than only its opening.
+around the one sharing the most words with the reply's sentences that
+cite this passage, so a long passage keeps the very fact the reply took
+from it rather than its opening or what other passages supplied.
 */
 func citedWindow(text, reply string, limit int) string {
 	if len([]rune(text)) <= limit {

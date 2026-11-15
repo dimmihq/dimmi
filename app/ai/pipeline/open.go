@@ -64,6 +64,8 @@ type run struct {
 	annotated  string
 	// citedChunks are the passages the reply's markers name, each once.
 	citedChunks []source
+	// citedClaims are, by chunk id, the reply's sentences citing it.
+	citedClaims map[string]string
 }
 
 /*

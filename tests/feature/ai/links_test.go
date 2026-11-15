@@ -210,7 +210,8 @@ func TestCarriedCitedPart(t *testing.T) {
 		h.d.TC.App.AI.Knowledge = longPart{Knowledge: h.d.TC.App.AI.Knowledge}
 
 		conv, trigger := h.conversation("Can rules split an order by SKU tag?")
-		h.llm.answer.Script(search("split order sku tag"), reply("Yes, the **Split by tag** action splits an order by SKU tag [1]."))
+		h.llm.answer.Script(search("split order sku tag"), reply("Presets save a package and service for reuse, "+
+			"and presets save a package for every order. Separately, the **Split by tag** action splits an order by SKU tag [1]."))
 		require.Equal(t, "answered", h.run(conv, trigger).Outcome)
 
 		var text string

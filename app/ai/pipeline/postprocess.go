@@ -50,7 +50,7 @@ func (r *Runner) review(ctx context.Context, st *run, draft string) *decision {
 		text = filtered
 	}
 	st.annotated = annotate(r.guard.Filter(draft, hosts), st.sources)
-	st.citedChunks = citedChunks(draft, st.sources)
+	st.citedChunks, st.citedClaims = citedChunks(draft, st.sources)
 	if st.loop != nil && st.loop.stop == contracts.StopReasonMaxTokens {
 		text = trimToSentence(text)
 	}
@@ -129,22 +129,41 @@ func earlierMarker() *regexp.Regexp {
 
 /*
 citedChunks are the passages the draft's markers name, in first-cited
-order, each once.
+order, each once, and for each passage the sentences that cite it, so a
+long passage can later be cut around the facts the reply took from it.
 */
-func citedChunks(draft string, sources []source) []source {
+func citedChunks(draft string, sources []source) ([]source, map[string]string) {
 	var out []source
-	for _, m := range markerPattern().FindAllStringSubmatch(draft, -1) {
-		for _, part := range strings.FieldsFunc(m[1], func(r rune) bool { return r == ',' || r == ';' || r == ' ' }) {
+	claims := map[string]string{}
+	for _, loc := range markerPattern().FindAllStringSubmatchIndex(draft, -1) {
+		claim := claimBefore(draft, loc[0])
+		for _, part := range strings.FieldsFunc(draft[loc[2]:loc[3]], func(r rune) bool {
+			return r == ',' || r == ';' || r == ' '
+		}) {
 			n, err := strconv.Atoi(part)
 			if err != nil || n < 1 || n > len(sources) {
 				continue
 			}
+			id := sources[n-1].chunk.ID.String()
+			claims[id] += " " + claim
 			if !slices.ContainsFunc(out, func(s source) bool { return s.chunk.ID == sources[n-1].chunk.ID }) {
 				out = append(out, sources[n-1])
 			}
 		}
 	}
-	return out
+	return out, claims
+}
+
+/*
+claimBefore is the sentence a marker at the position closes: the text
+back to the previous sentence end or line break.
+*/
+func claimBefore(draft string, at int) string {
+	start := strings.LastIndexAny(draft[:at], ".!?\n")
+	for start > 0 && start < at && draft[start] == '.' && start+1 < len(draft) && draft[start+1] != ' ' {
+		start = strings.LastIndexAny(draft[:start], ".!?\n")
+	}
+	return strings.TrimSpace(draft[start+1 : at])
 }
 
 /*
