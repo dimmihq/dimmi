@@ -128,3 +128,31 @@ func TestCarriedPassages(t *testing.T) {
 		assert.Equal(t, m.Passages[0].Title, m.Passages[1].Title, "both passages of the one article are kept")
 	})
 }
+
+func TestImpliedHandoff(t *testing.T) {
+	t.Parallel()
+
+	t.Run("makes a hand-over the reply claims real", func(t *testing.T) {
+		t.Parallel()
+		h := newHarness(t, nil)
+		conv, trigger := h.conversation("Can I get a refund on last month's invoice?")
+		h.llm.answer.Script(search("refund invoice"),
+			reply("Monthly plans renew automatically [1]. I've asked the billing team to look at last month's invoice."))
+		res := h.run(conv, trigger)
+
+		assert.Equal(t, "handoff", res.Outcome)
+		assert.Equal(t, "other", res.HandoffReason)
+		s := h.load(conv, res.RunID)
+		assert.Equal(t, "handed_off", s.conv.AiState, "the team really has the conversation")
+		assert.Contains(t, s.run.Flags, "implied_handoff")
+	})
+
+	t.Run("leaves a reply that only offers the team alone", func(t *testing.T) {
+		t.Parallel()
+		h := newHarness(t, nil)
+		conv, trigger := h.conversation("How much is Pro per seat?")
+		h.llm.answer.Script(search("pro plan price per seat"),
+			reply("Pro costs $12 per seat per month [1]. I haven't passed anything on; want me to get someone from the team?"))
+		assert.Equal(t, "answered", h.run(conv, trigger).Outcome)
+	})
+}
