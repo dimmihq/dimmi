@@ -254,7 +254,7 @@ func (r *Runner) carry(st *run, m *memory) bool {
 		fresh = append(fresh, carriedChunk{
 			ChunkID: s.chunk.ID.String(), DocumentID: s.chunk.DocumentID.String(), Title: s.chunk.Title,
 			URL: s.chunk.URL, Text: citedWindow(strings.TrimSpace(s.chunk.Text), st.citedClaims[s.chunk.ID.String()],
-				carriedChars),
+				st.annotated, carriedChars),
 		})
 	}
 	if len(fresh) == 0 {
@@ -366,47 +366,73 @@ Leave out greetings, thanks and repeated wording. Never add facts that are not i
 /*
 citedWindow is the part of a passage a reply drew on, at most limit
 characters: the whole passage when it fits, otherwise the sentences
-around the one sharing the most words with the reply's sentences that
-cite this passage, so a long passage keeps the very fact the reply took
-from it rather than its opening or what other passages supplied.
+sharing the most words with the reply, those with the sentences citing
+this passage counting double, kept in their order with "…" between
+gaps. A reply can take several facts from one passage, some in
+sentences that carry no marker, so one stretch around the best match
+is not enough: a fact left out reads later as a claim nothing backs.
 */
-func citedWindow(text, reply string, limit int) string {
+func citedWindow(text, claims, reply string, limit int) string {
 	if len([]rune(text)) <= limit {
 		return text
 	}
 	sentences := splitSentences(text)
-	words := replyWords(reply)
-	best, bestScore := 0, -1
+	weights := map[string]int{}
+	for w := range replyWords(reply) {
+		weights[w] = 1
+	}
+	for w := range replyWords(claims) {
+		weights[w] = 2
+	}
+	type scored struct{ at, score int }
+	var ranked []scored
+	seen := map[string]bool{}
 	for i, s := range sentences {
-		score := 0
+		key := strings.TrimSpace(s)
+		if key == "" || seen[key] {
+			continue
+		}
+		seen[key] = true
+		score, counted := 0, map[string]bool{}
 		for _, w := range strings.Fields(strings.ToLower(s)) {
-			if words[strings.Trim(w, ".,;:()*`\"'")] {
-				score++
+			w = strings.Trim(w, ".,;:()*`\"'[]")
+			if !counted[w] {
+				counted[w] = true
+				score += weights[w]
 			}
 		}
-		if score > bestScore {
-			best, bestScore = i, score
+		if score > 0 {
+			ranked = append(ranked, scored{i, score})
 		}
 	}
-	lo, hi := best, best+1
-	size := len([]rune(sentences[best]))
-	for lo > 0 || hi < len(sentences) {
-		grew := false
-		if hi < len(sentences) && size+len([]rune(sentences[hi])) <= limit {
-			size += len([]rune(sentences[hi]))
-			hi++
-			grew = true
-		}
-		if lo > 0 && size+len([]rune(sentences[lo-1])) <= limit {
-			lo--
-			size += len([]rune(sentences[lo]))
-			grew = true
-		}
-		if !grew {
-			break
-		}
+	if len(ranked) == 0 {
+		return truncate(strings.TrimSpace(text), limit)
 	}
-	return truncate(strings.TrimSpace(strings.Join(sentences[lo:hi], "")), limit)
+	slices.SortStableFunc(ranked, func(a, b scored) int { return b.score - a.score })
+	keep, size := map[int]bool{}, 0
+	for _, r := range ranked {
+		n := len([]rune(sentences[r.at])) + 2
+		if size+n > limit {
+			continue
+		}
+		keep[r.at], size = true, size+n
+	}
+	if len(keep) == 0 {
+		return truncate(strings.TrimSpace(sentences[ranked[0].at]), limit)
+	}
+	var b strings.Builder
+	last := -2
+	for i, s := range sentences {
+		if !keep[i] {
+			continue
+		}
+		if last >= 0 && i != last+1 {
+			b.WriteString(" … ")
+		}
+		b.WriteString(s)
+		last = i
+	}
+	return truncate(strings.TrimSpace(b.String()), limit)
 }
 
 /*

@@ -2,6 +2,7 @@ package ai_test
 
 import (
 	"context"
+	"fmt"
 	"strings"
 	"testing"
 
@@ -220,4 +221,46 @@ func TestCarriedCitedPart(t *testing.T) {
 		assert.Contains(t, text, "Split by tag splits an order")
 		assert.LessOrEqual(t, len([]rune(text)), 2500)
 	})
+
+	t.Run("keeps every fact the reply took from a long passage, marked or not", func(t *testing.T) {
+		t.Parallel()
+		h := newHarness(t, nil)
+		h.operator("UPDATE ai_agents SET carry_passages = true WHERE workspace_id = $1", h.d.TC.Workspace.Workspace.ID)
+		h.d.TC.App.AI.Knowledge = spreadFacts{Knowledge: h.d.TC.App.AI.Knowledge}
+
+		conv, trigger := h.conversation("How do I create an order through the API?")
+		h.llm.answer.Script(search("create order api"), reply("Send a POST to the orders endpoint [1]. "+
+			"Authenticate with a key carrying the orders:write scope."))
+		require.Equal(t, "answered", h.run(conv, trigger).Outcome)
+
+		var text string
+		require.NoError(t, h.d.TC.Operator().QueryRow(t.Context(),
+			"SELECT ai_memory->'passages'->0->>'text' FROM conversations WHERE id = $1", conv).Scan(&text))
+		assert.Contains(t, text, "POST to the orders endpoint")
+		assert.Contains(t, text, "orders:write scope", "a fact the reply states without a marker is carried too")
+		assert.LessOrEqual(t, len([]rune(text)), 2500)
+	})
+}
+
+/*
+spreadFacts is a knowledge base whose one long passage states two facts
+far apart, among varied filler.
+*/
+type spreadFacts struct {
+	contracts.Knowledge
+}
+
+func (spreadFacts) Search(context.Context, ids.UUID, string, contracts.KnowledgeSearchOptions,
+) (contracts.KnowledgeSearchResult, error) {
+	similarity := 0.9
+	var filler strings.Builder
+	for i := range 60 {
+		fmt.Fprintf(&filler, "Field number %d of the sample object holds a value you can ignore here. ", i)
+	}
+	return contracts.KnowledgeSearchResult{Mode: "hybrid", Chunks: []contracts.KnowledgeChunk{{
+		ID: ids.New(), DocumentID: ids.New(), Title: "API reference", URL: "https://help.lovelace.test/api",
+		Text: "Create one with a POST to the orders endpoint. " + filler.String() +
+			"Authenticate with a key carrying the orders:write scope. " + filler.String(),
+		Similarity: &similarity, MatchedBy: []string{"vector"},
+	}}}, nil
 }
