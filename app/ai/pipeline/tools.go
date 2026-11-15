@@ -244,7 +244,7 @@ func (r *Runner) searchKnowledge(ctx context.Context, st *run, args json.RawMess
 	}
 	for i := range results {
 		if st.carried[results[i].ID] {
-			results[i].Text = "(in known_passages above)"
+			results[i].Text = "(in product_knowledge above)"
 		}
 	}
 	out, err := json.Marshal(map[string]any{"results": results})

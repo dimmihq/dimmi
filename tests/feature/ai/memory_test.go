@@ -146,7 +146,7 @@ func TestConversationMemory(t *testing.T) {
 		require.Equal(t, "answered", res.Outcome)
 		sent := h.llm.answer.Sent()
 		first := sent[len(sent)-1].Messages[0].Parts[0].Text
-		assert.Contains(t, first, "<known_passages>\n[1] "+m.Passages[0].Title)
+		assert.Contains(t, first, "<product_knowledge>\n[1] "+m.Passages[0].Title)
 		replies := h.load(conv, res.RunID).agentReplies()
 		meta := aiMeta(t, replies[len(replies)-1])
 		sources, _ := meta["sources"].([]any)

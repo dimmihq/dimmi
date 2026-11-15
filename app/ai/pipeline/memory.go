@@ -135,7 +135,7 @@ func (r *Runner) memoryBlock(st *run) string {
 	if !st.env.Agent.CarryPassages || len(m.Passages) == 0 {
 		return b.String()
 	}
-	b.WriteString("\n<known_passages>")
+	b.WriteString("\n<product_knowledge>")
 	for _, p := range m.Passages {
 		chunk, ok := p.chunk()
 		if !ok {
@@ -156,7 +156,7 @@ func (r *Runner) memoryBlock(st *run) string {
 		}
 		b.WriteString("\n" + escape(p.Text) + "\n")
 	}
-	b.WriteString("</known_passages>")
+	b.WriteString("</product_knowledge>")
 	return b.String()
 }
 
