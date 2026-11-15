@@ -5,7 +5,8 @@
 |
 | The model writes links; only the ones the workspace trusts reach a
 | customer. A link is trusted when its host belongs to a source the
-| answer was built from or to a domain the workspace allowlisted.
+| answer was built from, to a link one of those sources quotes, or to a
+| domain the workspace allowlisted.
 | Everything else loses its URL: a Markdown link keeps its text, a bare
 | URL disappears. Images and raw HTML never pass, whatever they point
 | at, because a reply is text and a phishing page needs only one click.
@@ -81,6 +82,19 @@ func (g *Guard) Filter(text string, allowed []string) string {
 	}
 
 	return g.tidy(out)
+}
+
+/*
+Find returns the bare links written in a text, such as the URLs an
+article quotes.
+*/
+func (g *Guard) Find(text string) []string {
+	var out []string
+	for _, m := range g.bare.FindAllString(text, -1) {
+		link, _ := splitTrailing(m)
+		out = append(out, link)
+	}
+	return out
 }
 
 /*

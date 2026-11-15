@@ -118,12 +118,12 @@ func citationOf(s source) citation {
 
 /*
 allowedHosts are the hosts a reply may link to: the sources' own, the
-help center's and the agent's allowlist.
+links the sources quote, the help center's and the agent's allowlist.
 */
 func (r *Runner) allowedHosts(ctx context.Context, st *run) []string {
 	urls := make([]string, 0, len(st.sources))
 	for _, s := range st.sources {
-		urls = append(urls, s.chunk.URL)
+		urls = append(append(urls, s.chunk.URL), r.guard.Find(s.chunk.Text)...)
 	}
 	hosts := append(linkguard.Hosts(urls), st.env.Agent.LinkAllowlist...)
 	if r.Knowledge != nil {
