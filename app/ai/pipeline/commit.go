@@ -83,6 +83,7 @@ func (r *Runner) commit(ctx context.Context, tx *database.Tx, st *run, d *decisi
 	if err := r.finishRun(ctx, tx, st, d); err != nil {
 		return d, fmt.Errorf("finish run: %w", err)
 	}
+	st.cited = d.citations
 	return d, r.recordSpend(ctx, tx, st, d)
 }
 

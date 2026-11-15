@@ -49,7 +49,7 @@ func (q *Queries) CopyConversationParticipants(ctx context.Context, arg CopyConv
 
 const foldConversationActivity = `-- name: FoldConversationActivity :one
 WITH s AS (
-    SELECT id, workspace_id, number, inbox_id, channel_connection_id, contact_id, subject, status, spam, assignee_member_id, assignee_team_id, ai_state, snoozed_until, external_thread_key, source, first_customer_message_at, last_customer_message_at, first_reply_at, last_reply_at, last_message_at, closed_at, message_count, deleted_at, created_at, updated_at, ai_reply_count, ai_cost_micros, ai_language, ai_handed_off_at, ai_handoff_reason, merged_into_id, is_test, previous_conversation_id, assignment_wait_reason, assignment_waiting_since, waiting_since, last_activity_at, last_message_id, search, priority, workflow_run_id, ai_mode FROM conversations AS src WHERE src.workspace_id = $2 AND src.id = $4::uuid
+    SELECT id, workspace_id, number, inbox_id, channel_connection_id, contact_id, subject, status, spam, assignee_member_id, assignee_team_id, ai_state, snoozed_until, external_thread_key, source, first_customer_message_at, last_customer_message_at, first_reply_at, last_reply_at, last_message_at, closed_at, message_count, deleted_at, created_at, updated_at, ai_reply_count, ai_cost_micros, ai_language, ai_handed_off_at, ai_handoff_reason, merged_into_id, is_test, previous_conversation_id, assignment_wait_reason, assignment_waiting_since, waiting_since, last_activity_at, last_message_id, search, priority, workflow_run_id, ai_mode, ai_memory FROM conversations AS src WHERE src.workspace_id = $2 AND src.id = $4::uuid
 )
 UPDATE conversations AS t SET
     message_count = t.message_count + (SELECT s.message_count FROM s),
@@ -68,7 +68,7 @@ UPDATE conversations AS t SET
         THEN least(t.waiting_since, (SELECT s.waiting_since FROM s)) ELSE NULL END,
     updated_at = $1::timestamptz
 WHERE t.workspace_id = $2 AND t.id = $3::uuid
-RETURNING id, workspace_id, number, inbox_id, channel_connection_id, contact_id, subject, status, spam, assignee_member_id, assignee_team_id, ai_state, snoozed_until, external_thread_key, source, first_customer_message_at, last_customer_message_at, first_reply_at, last_reply_at, last_message_at, closed_at, message_count, deleted_at, created_at, updated_at, ai_reply_count, ai_cost_micros, ai_language, ai_handed_off_at, ai_handoff_reason, merged_into_id, is_test, previous_conversation_id, assignment_wait_reason, assignment_waiting_since, waiting_since, last_activity_at, last_message_id, search, priority, workflow_run_id, ai_mode
+RETURNING id, workspace_id, number, inbox_id, channel_connection_id, contact_id, subject, status, spam, assignee_member_id, assignee_team_id, ai_state, snoozed_until, external_thread_key, source, first_customer_message_at, last_customer_message_at, first_reply_at, last_reply_at, last_message_at, closed_at, message_count, deleted_at, created_at, updated_at, ai_reply_count, ai_cost_micros, ai_language, ai_handed_off_at, ai_handoff_reason, merged_into_id, is_test, previous_conversation_id, assignment_wait_reason, assignment_waiting_since, waiting_since, last_activity_at, last_message_id, search, priority, workflow_run_id, ai_mode, ai_memory
 `
 
 type FoldConversationActivityParams struct {
@@ -133,6 +133,7 @@ func (q *Queries) FoldConversationActivity(ctx context.Context, arg FoldConversa
 		&i.Priority,
 		&i.WorkflowRunID,
 		&i.AiMode,
+		&i.AiMemory,
 	)
 	return i, err
 }
@@ -207,7 +208,7 @@ UPDATE conversations SET
     snoozed_until = NULL, waiting_since = NULL, message_count = 0, last_message_id = NULL,
     deleted_at = $2::timestamptz, updated_at = $2::timestamptz
 WHERE workspace_id = $3 AND id = $4::uuid
-RETURNING id, workspace_id, number, inbox_id, channel_connection_id, contact_id, subject, status, spam, assignee_member_id, assignee_team_id, ai_state, snoozed_until, external_thread_key, source, first_customer_message_at, last_customer_message_at, first_reply_at, last_reply_at, last_message_at, closed_at, message_count, deleted_at, created_at, updated_at, ai_reply_count, ai_cost_micros, ai_language, ai_handed_off_at, ai_handoff_reason, merged_into_id, is_test, previous_conversation_id, assignment_wait_reason, assignment_waiting_since, waiting_since, last_activity_at, last_message_id, search, priority, workflow_run_id, ai_mode
+RETURNING id, workspace_id, number, inbox_id, channel_connection_id, contact_id, subject, status, spam, assignee_member_id, assignee_team_id, ai_state, snoozed_until, external_thread_key, source, first_customer_message_at, last_customer_message_at, first_reply_at, last_reply_at, last_message_at, closed_at, message_count, deleted_at, created_at, updated_at, ai_reply_count, ai_cost_micros, ai_language, ai_handed_off_at, ai_handoff_reason, merged_into_id, is_test, previous_conversation_id, assignment_wait_reason, assignment_waiting_since, waiting_since, last_activity_at, last_message_id, search, priority, workflow_run_id, ai_mode, ai_memory
 `
 
 type RetireMergedConversationParams struct {
@@ -270,6 +271,7 @@ func (q *Queries) RetireMergedConversation(ctx context.Context, arg RetireMerged
 		&i.Priority,
 		&i.WorkflowRunID,
 		&i.AiMode,
+		&i.AiMemory,
 	)
 	return i, err
 }

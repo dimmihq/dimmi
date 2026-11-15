@@ -68,6 +68,14 @@ UPDATE conversations SET
     updated_at = @now
 WHERE workspace_id = @workspace_id AND id = @id AND ai_state = 'active';
 
+-- name: SetConversationAiMemory :exec
+-- SetConversationAiMemory stores what the agent remembers of the
+-- conversation and adds what remembering cost to the agent's spend on it.
+UPDATE conversations SET
+    ai_memory = @memory,
+    ai_cost_micros = ai_cost_micros + @cost_micros
+WHERE workspace_id = @workspace_id AND id = @id;
+
 -- name: HandoffConversationAi :exec
 -- HandoffConversationAi stops the agent in a conversation, naming why.
 UPDATE conversations SET

@@ -104,10 +104,7 @@ func (r *Runner) envelope(e *env, update string) []contracts.ChatMessage {
 historyTurns are the recent turns before the pending messages.
 */
 func (r *Runner) historyTurns(e *env) []contracts.ChatMessage {
-	history := e.History
-	if len(history) > historyTurns {
-		history = history[len(history)-historyTurns:]
-	}
+	history := windowed(e.History, memoryOf(e.Conversation))
 
 	var msgs []contracts.ChatMessage
 	for _, m := range history {

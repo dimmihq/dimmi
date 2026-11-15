@@ -13,6 +13,44 @@ import (
 	"github.com/dimmihq/dimmi/framework/ids"
 )
 
+const addRunCost = `-- name: AddRunCost :exec
+UPDATE ai_runs SET
+    input_tokens = input_tokens + $1,
+    cached_input_tokens = cached_input_tokens + $2,
+    cache_write_tokens = cache_write_tokens + $3,
+    output_tokens = output_tokens + $4,
+    cost_micros = cost_micros + $5,
+    updated_at = $6
+WHERE workspace_id = $7 AND id = $8
+`
+
+type AddRunCostParams struct {
+	InputTokens       int64     `json:"input_tokens"`
+	CachedInputTokens int64     `json:"cached_input_tokens"`
+	CacheWriteTokens  int64     `json:"cache_write_tokens"`
+	OutputTokens      int64     `json:"output_tokens"`
+	CostMicros        int64     `json:"cost_micros"`
+	Now               time.Time `json:"now"`
+	WorkspaceID       ids.UUID  `json:"workspace_id"`
+	ID                ids.UUID  `json:"id"`
+}
+
+// AddRunCost adds a step written after the run finished, such as the
+// summary of a long conversation, to the run's tokens and cost.
+func (q *Queries) AddRunCost(ctx context.Context, arg AddRunCostParams) error {
+	_, err := q.db.Exec(ctx, addRunCost,
+		arg.InputTokens,
+		arg.CachedInputTokens,
+		arg.CacheWriteTokens,
+		arg.OutputTokens,
+		arg.CostMicros,
+		arg.Now,
+		arg.WorkspaceID,
+		arg.ID,
+	)
+	return err
+}
+
 const countConversationOutcomes = `-- name: CountConversationOutcomes :one
 SELECT count(*) FROM ai_runs r
 WHERE r.workspace_id = $1 AND r.conversation_id = $2

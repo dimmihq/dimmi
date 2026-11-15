@@ -242,6 +242,11 @@ func (r *Runner) searchKnowledge(ctx context.Context, st *run, args json.RawMess
 		}
 		return compactSearch(results, st.shown), nil
 	}
+	for i := range results {
+		if st.carried[results[i].ID] {
+			results[i].Text = "(in known_passages above)"
+		}
+	}
 	out, err := json.Marshal(map[string]any{"results": results})
 	return string(out), err
 }

@@ -180,7 +180,7 @@ func (r *Runner) followUpTurn(ctx context.Context, st *run) *decision {
 	defer stopTyping()
 
 	st.loop = &loop{llm: llm, system: r.render(st.env, "answer.system.md", r.answerVars(st))}
-	st.loop.messages = r.envelope(st.env, actionkit.FollowUpNote(call))
+	st.loop.messages = r.withMemory(st, r.envelope(st.env, actionkit.FollowUpNote(call)))
 	r.offerActions(ctx, st)
 	r.openLayer(ctx, st)
 	st.loop.newest = len(st.loop.messages) - 1

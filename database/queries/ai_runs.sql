@@ -112,3 +112,15 @@ LIMIT 10;
 -- ListRunToolLayers returns what the tool layer did in the given runs.
 SELECT tool_layer FROM ai_runs
 WHERE workspace_id = @workspace_id AND id = ANY(@ids::uuid[]) AND tool_layer IS NOT NULL;
+
+-- name: AddRunCost :exec
+-- AddRunCost adds a step written after the run finished, such as the
+-- summary of a long conversation, to the run's tokens and cost.
+UPDATE ai_runs SET
+    input_tokens = input_tokens + @input_tokens,
+    cached_input_tokens = cached_input_tokens + @cached_input_tokens,
+    cache_write_tokens = cache_write_tokens + @cache_write_tokens,
+    output_tokens = output_tokens + @output_tokens,
+    cost_micros = cost_micros + @cost_micros,
+    updated_at = @now
+WHERE workspace_id = @workspace_id AND id = @id;

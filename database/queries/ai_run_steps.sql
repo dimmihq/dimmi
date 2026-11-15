@@ -26,14 +26,16 @@ ORDER BY seq;
 SELECT COALESCE(max(seq), 0) + 1 FROM ai_run_steps WHERE run_id = @run_id;
 
 -- name: EraseContactRunData :exec
--- EraseContactRunData drops payloads and queries for a contact's
--- conversations, keeping every number.
+-- EraseContactRunData drops payloads, queries and the agent's memory for
+-- a contact's conversations, keeping every number.
 UPDATE ai_run_steps SET request = NULL, response = NULL
 WHERE run_id IN (
     SELECT id FROM ai_runs WHERE conversation_id = ANY(@conversation_ids::uuid[])
 );
 UPDATE ai_runs SET query_original = NULL, query_rewritten = NULL
 WHERE conversation_id = ANY(@conversation_ids::uuid[]);
+UPDATE conversations SET ai_memory = NULL
+WHERE id = ANY(@conversation_ids::uuid[]);
 
 -- name: NullExpiredRunStepPayloads :execrows
 -- NullExpiredRunStepPayloads drops the request and response payloads of

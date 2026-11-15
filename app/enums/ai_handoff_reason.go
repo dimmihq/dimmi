@@ -24,6 +24,7 @@ const (
 	AIHandoffUnknown           AIHandoffReason = "unknown"
 	AIHandoffUnknownStreak     AIHandoffReason = "unknown_streak"
 	AIHandoffMaxReplies        AIHandoffReason = "max_replies"
+	AIHandoffConversationCost  AIHandoffReason = "conversation_cost"
 	AIHandoffFrustration       AIHandoffReason = "frustration"
 	AIHandoffFeedback          AIHandoffReason = "feedback"
 	AIHandoffAbusive           AIHandoffReason = "abusive"

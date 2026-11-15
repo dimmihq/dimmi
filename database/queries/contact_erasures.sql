@@ -94,10 +94,10 @@ WHERE m.workspace_id = @workspace_id AND c.id = m.conversation_id AND c.workspac
   AND c.contact_id = @contact_id AND (m.body IS NOT NULL OR m.body_html IS NOT NULL);
 
 -- name: HandOverErasedConversations :execrows
--- HandOverErasedConversations clears the subject and source of the
--- contact's conversations and gives them to the placeholder.
+-- HandOverErasedConversations clears the subject, source and the agent's
+-- memory of the contact's conversations and gives them to the placeholder.
 UPDATE conversations
-SET contact_id = @placeholder_id, subject = NULL, source = '{}', updated_at = @now
+SET contact_id = @placeholder_id, subject = NULL, source = '{}', ai_memory = NULL, updated_at = @now
 WHERE workspace_id = @workspace_id AND contact_id = @contact_id;
 
 -- name: DeleteErasedContact :execrows

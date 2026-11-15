@@ -54,6 +54,9 @@ func (r *Runner) gate(e *env, s *TurnSettings) *decision {
 	if s.MaxReplies > 0 && e.Conversation.AiReplyCount >= s.MaxReplies {
 		return handoff("max_replies", "", "max_replies")
 	}
+	if e.Conversation.AiCostMicros >= conversationCap {
+		return handoff(string(enums.AIHandoffConversationCost), "", "max_replies")
+	}
 	return nil
 }
 

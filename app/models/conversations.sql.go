@@ -70,7 +70,7 @@ INSERT INTO conversations (
     $1, $2, $3, $4, $5, $6, $7,
     $8, $9, $10, $10
 )
-RETURNING id, workspace_id, number, inbox_id, channel_connection_id, contact_id, subject, status, spam, assignee_member_id, assignee_team_id, ai_state, snoozed_until, external_thread_key, source, first_customer_message_at, last_customer_message_at, first_reply_at, last_reply_at, last_message_at, closed_at, message_count, deleted_at, created_at, updated_at, ai_reply_count, ai_cost_micros, ai_language, ai_handed_off_at, ai_handoff_reason, merged_into_id, is_test, previous_conversation_id, assignment_wait_reason, assignment_waiting_since, waiting_since, last_activity_at, last_message_id, search, priority, workflow_run_id, ai_mode
+RETURNING id, workspace_id, number, inbox_id, channel_connection_id, contact_id, subject, status, spam, assignee_member_id, assignee_team_id, ai_state, snoozed_until, external_thread_key, source, first_customer_message_at, last_customer_message_at, first_reply_at, last_reply_at, last_message_at, closed_at, message_count, deleted_at, created_at, updated_at, ai_reply_count, ai_cost_micros, ai_language, ai_handed_off_at, ai_handoff_reason, merged_into_id, is_test, previous_conversation_id, assignment_wait_reason, assignment_waiting_since, waiting_since, last_activity_at, last_message_id, search, priority, workflow_run_id, ai_mode, ai_memory
 `
 
 type CreateConversationParams struct {
@@ -145,12 +145,13 @@ func (q *Queries) CreateConversation(ctx context.Context, arg CreateConversation
 		&i.Priority,
 		&i.WorkflowRunID,
 		&i.AiMode,
+		&i.AiMemory,
 	)
 	return i, err
 }
 
 const findConversation = `-- name: FindConversation :one
-SELECT id, workspace_id, number, inbox_id, channel_connection_id, contact_id, subject, status, spam, assignee_member_id, assignee_team_id, ai_state, snoozed_until, external_thread_key, source, first_customer_message_at, last_customer_message_at, first_reply_at, last_reply_at, last_message_at, closed_at, message_count, deleted_at, created_at, updated_at, ai_reply_count, ai_cost_micros, ai_language, ai_handed_off_at, ai_handoff_reason, merged_into_id, is_test, previous_conversation_id, assignment_wait_reason, assignment_waiting_since, waiting_since, last_activity_at, last_message_id, search, priority, workflow_run_id, ai_mode FROM conversations WHERE workspace_id = $1 AND id = $2
+SELECT id, workspace_id, number, inbox_id, channel_connection_id, contact_id, subject, status, spam, assignee_member_id, assignee_team_id, ai_state, snoozed_until, external_thread_key, source, first_customer_message_at, last_customer_message_at, first_reply_at, last_reply_at, last_message_at, closed_at, message_count, deleted_at, created_at, updated_at, ai_reply_count, ai_cost_micros, ai_language, ai_handed_off_at, ai_handoff_reason, merged_into_id, is_test, previous_conversation_id, assignment_wait_reason, assignment_waiting_since, waiting_since, last_activity_at, last_message_id, search, priority, workflow_run_id, ai_mode, ai_memory FROM conversations WHERE workspace_id = $1 AND id = $2
 `
 
 type FindConversationParams struct {
@@ -206,6 +207,7 @@ func (q *Queries) FindConversation(ctx context.Context, arg FindConversationPara
 		&i.Priority,
 		&i.WorkflowRunID,
 		&i.AiMode,
+		&i.AiMemory,
 	)
 	return i, err
 }
@@ -238,7 +240,7 @@ func (q *Queries) HandoffConversationAi(ctx context.Context, arg HandoffConversa
 }
 
 const listConversations = `-- name: ListConversations :many
-SELECT id, workspace_id, number, inbox_id, channel_connection_id, contact_id, subject, status, spam, assignee_member_id, assignee_team_id, ai_state, snoozed_until, external_thread_key, source, first_customer_message_at, last_customer_message_at, first_reply_at, last_reply_at, last_message_at, closed_at, message_count, deleted_at, created_at, updated_at, ai_reply_count, ai_cost_micros, ai_language, ai_handed_off_at, ai_handoff_reason, merged_into_id, is_test, previous_conversation_id, assignment_wait_reason, assignment_waiting_since, waiting_since, last_activity_at, last_message_id, search, priority, workflow_run_id, ai_mode FROM conversations
+SELECT id, workspace_id, number, inbox_id, channel_connection_id, contact_id, subject, status, spam, assignee_member_id, assignee_team_id, ai_state, snoozed_until, external_thread_key, source, first_customer_message_at, last_customer_message_at, first_reply_at, last_reply_at, last_message_at, closed_at, message_count, deleted_at, created_at, updated_at, ai_reply_count, ai_cost_micros, ai_language, ai_handed_off_at, ai_handoff_reason, merged_into_id, is_test, previous_conversation_id, assignment_wait_reason, assignment_waiting_since, waiting_since, last_activity_at, last_message_id, search, priority, workflow_run_id, ai_mode, ai_memory FROM conversations
 WHERE workspace_id = $1
   AND deleted_at IS NULL
   AND (
@@ -317,6 +319,7 @@ func (q *Queries) ListConversations(ctx context.Context, arg ListConversationsPa
 			&i.Priority,
 			&i.WorkflowRunID,
 			&i.AiMode,
+			&i.AiMemory,
 		); err != nil {
 			return nil, err
 		}
@@ -329,7 +332,7 @@ func (q *Queries) ListConversations(ctx context.Context, arg ListConversationsPa
 }
 
 const listTeamConversations = `-- name: ListTeamConversations :many
-SELECT id, workspace_id, number, inbox_id, channel_connection_id, contact_id, subject, status, spam, assignee_member_id, assignee_team_id, ai_state, snoozed_until, external_thread_key, source, first_customer_message_at, last_customer_message_at, first_reply_at, last_reply_at, last_message_at, closed_at, message_count, deleted_at, created_at, updated_at, ai_reply_count, ai_cost_micros, ai_language, ai_handed_off_at, ai_handoff_reason, merged_into_id, is_test, previous_conversation_id, assignment_wait_reason, assignment_waiting_since, waiting_since, last_activity_at, last_message_id, search, priority, workflow_run_id, ai_mode FROM conversations
+SELECT id, workspace_id, number, inbox_id, channel_connection_id, contact_id, subject, status, spam, assignee_member_id, assignee_team_id, ai_state, snoozed_until, external_thread_key, source, first_customer_message_at, last_customer_message_at, first_reply_at, last_reply_at, last_message_at, closed_at, message_count, deleted_at, created_at, updated_at, ai_reply_count, ai_cost_micros, ai_language, ai_handed_off_at, ai_handoff_reason, merged_into_id, is_test, previous_conversation_id, assignment_wait_reason, assignment_waiting_since, waiting_since, last_activity_at, last_message_id, search, priority, workflow_run_id, ai_mode, ai_memory FROM conversations
 WHERE workspace_id = $1 AND assignee_team_id = $2::uuid AND deleted_at IS NULL
 ORDER BY id
 FOR UPDATE
@@ -394,6 +397,7 @@ func (q *Queries) ListTeamConversations(ctx context.Context, arg ListTeamConvers
 			&i.Priority,
 			&i.WorkflowRunID,
 			&i.AiMode,
+			&i.AiMemory,
 		); err != nil {
 			return nil, err
 		}
@@ -440,6 +444,32 @@ type ReactivateConversationAiParams struct {
 // ReactivateConversationAi hands a conversation back to the agent.
 func (q *Queries) ReactivateConversationAi(ctx context.Context, arg ReactivateConversationAiParams) error {
 	_, err := q.db.Exec(ctx, reactivateConversationAi, arg.Now, arg.WorkspaceID, arg.ID)
+	return err
+}
+
+const setConversationAiMemory = `-- name: SetConversationAiMemory :exec
+UPDATE conversations SET
+    ai_memory = $1,
+    ai_cost_micros = ai_cost_micros + $2
+WHERE workspace_id = $3 AND id = $4
+`
+
+type SetConversationAiMemoryParams struct {
+	Memory      json.RawMessage `json:"memory"`
+	CostMicros  int64           `json:"cost_micros"`
+	WorkspaceID ids.UUID        `json:"workspace_id"`
+	ID          ids.UUID        `json:"id"`
+}
+
+// SetConversationAiMemory stores what the agent remembers of the
+// conversation and adds what remembering cost to the agent's spend on it.
+func (q *Queries) SetConversationAiMemory(ctx context.Context, arg SetConversationAiMemoryParams) error {
+	_, err := q.db.Exec(ctx, setConversationAiMemory,
+		arg.Memory,
+		arg.CostMicros,
+		arg.WorkspaceID,
+		arg.ID,
+	)
 	return err
 }
 

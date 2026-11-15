@@ -144,8 +144,8 @@ WHERE run_id IN (
 )
 `
 
-// EraseContactRunData drops payloads and queries for a contact's
-// conversations, keeping every number.
+// EraseContactRunData drops payloads, queries and the agent's memory for
+// a contact's conversations, keeping every number.
 func (q *Queries) EraseContactRunData(ctx context.Context, conversationIds []ids.UUID) error {
 	_, err := q.db.Exec(ctx, eraseContactRunData, conversationIds)
 	return err

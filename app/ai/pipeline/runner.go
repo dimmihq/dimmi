@@ -134,6 +134,7 @@ func (r *Runner) RunConversationTurn(ctx context.Context, args Args, settings *T
 	if err != nil {
 		return nil, fmt.Errorf("pipeline commit: %w", err)
 	}
+	r.remember(ctx, st, res)
 	return res, nil
 }
 
@@ -166,7 +167,7 @@ func (r *Runner) turn(ctx context.Context, st *run) *decision {
 	defer stopTyping()
 
 	st.loop = &loop{llm: llm, system: r.render(st.env, "answer.system.md", r.answerVars(st))}
-	st.loop.messages = r.conversationMessages(st.env)
+	st.loop.messages = r.withMemory(st, r.conversationMessages(st.env))
 	r.offerActions(ctx, st)
 	r.openLayer(ctx, st)
 	st.loop.newest = len(st.loop.messages) - 1

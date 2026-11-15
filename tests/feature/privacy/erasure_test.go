@@ -171,6 +171,8 @@ func TestContactErasure(t *testing.T) {
 		file := storeAttachment(t, d.TC, path)
 		d.Owner.PostJSON("/api/v1/contacts/"+contact+"/exports", nil).AssertStatus(202)
 		d.TC.Drain()
+		_, err := d.TC.Operator().Exec(t.Context(), `UPDATE conversations SET ai_memory = '{"summary":"Card ending 1111"}'`)
+		require.NoError(t, err)
 
 		var zipPath string
 		require.NoError(t, d.TC.Operator().QueryRow(t.Context(), `SELECT path FROM contact_exports`).Scan(&zipPath))
@@ -201,6 +203,10 @@ func TestContactErasure(t *testing.T) {
 		d.Owner.GetJSON(path+"/messages").AssertOK().AssertJSONPath("data.0.body", nil)
 		d.TC.Table("messages").AssertCount(0, testkit.Row{"body": "Card ending 1111, call me"})
 		d.TC.Table("contacts").AssertCount(0, testkit.Row{"email": "ann@example.com"})
+		var memories int
+		require.NoError(t, d.TC.Operator().QueryRow(t.Context(),
+			"SELECT count(*) FROM conversations WHERE ai_memory IS NOT NULL").Scan(&memories))
+		assert.Zero(t, memories, "the agent's summary of the conversation goes too")
 		d.TC.Table("attachments").AssertCount(0)
 		d.TC.Table("audit_logs").AssertCount(1, testkit.Row{"event": "contact_erasure.completed"})
 		exists, err := file.disk.Exists(t.Context(), file.path)

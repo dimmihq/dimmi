@@ -344,7 +344,7 @@ func (q *Queries) FindPlaceholderContact(ctx context.Context, workspaceID ids.UU
 
 const handOverErasedConversations = `-- name: HandOverErasedConversations :execrows
 UPDATE conversations
-SET contact_id = $1, subject = NULL, source = '{}', updated_at = $2
+SET contact_id = $1, subject = NULL, source = '{}', ai_memory = NULL, updated_at = $2
 WHERE workspace_id = $3 AND contact_id = $4
 `
 
@@ -355,8 +355,8 @@ type HandOverErasedConversationsParams struct {
 	ContactID     ids.UUID  `json:"contact_id"`
 }
 
-// HandOverErasedConversations clears the subject and source of the
-// contact's conversations and gives them to the placeholder.
+// HandOverErasedConversations clears the subject, source and the agent's
+// memory of the contact's conversations and gives them to the placeholder.
 func (q *Queries) HandOverErasedConversations(ctx context.Context, arg HandOverErasedConversationsParams) (int64, error) {
 	result, err := q.db.Exec(ctx, handOverErasedConversations,
 		arg.PlaceholderID,

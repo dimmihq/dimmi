@@ -182,6 +182,7 @@ type AiAgent struct {
 	PrefetchSearch               bool            `json:"prefetch_search"`
 	CompactResults               bool            `json:"compact_results"`
 	SearchResults                int16           `json:"search_results"`
+	CarryPassages                bool            `json:"carry_passages"`
 }
 
 type AiProviderKey struct {
@@ -957,6 +958,7 @@ type Conversation struct {
 	Priority               int16                   `json:"priority"`
 	WorkflowRunID          *ids.UUID               `json:"workflow_run_id"`
 	AiMode                 string                  `json:"ai_mode"`
+	AiMemory               json.RawMessage         `json:"ai_memory"`
 }
 
 type ConversationDraft struct {
