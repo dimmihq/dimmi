@@ -21,6 +21,7 @@ package pipeline
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/dimmihq/dimmi/framework/clock"
@@ -67,6 +68,7 @@ type Runner struct {
 	Tickets       *tickets.Tickets
 	Timeouts      config.AITimeoutsConfig
 	StorePayloads bool
+	AnswerEffort  contracts.Effort
 
 	redactor *pii.Redactor
 	guard    *linkguard.Guard
@@ -174,6 +176,9 @@ func (r *Runner) turn(ctx context.Context, st *run) *decision {
 	r.prefetch(ctx, st)
 
 	draft, err := r.agentLoop(ctx, st)
+	if err == nil {
+		draft, err = r.withoutUnknownLinks(ctx, st, draft)
+	}
 	r.saveLayer(ctx, st)
 	if err != nil {
 		return failed("provider_error", err)
@@ -195,4 +200,27 @@ func (r *Runner) timeout(ctx context.Context, d time.Duration) (context.Context,
 		timer.Stop()
 		cancel(context.Canceled)
 	}
+}
+
+/*
+withoutUnknownLinks sends a draft that links somewhere the conversation
+never mentioned back to the model once, with a note saying why, and
+returns the rewritten reply. Nothing is cut from the draft: the model
+writes it again. Should the rewrite still carry an unknown link, the
+link guard in the review removes it as a last resort.
+*/
+func (r *Runner) withoutUnknownLinks(ctx context.Context, st *run, draft string) (string, error) {
+	visible := earlierMarker().ReplaceAllString(earlierSources().ReplaceAllString(draft, ""), "")
+	bad := r.guard.Untrusted(visible, r.allowedHosts(ctx, st))
+	if len(bad) == 0 {
+		return draft, nil
+	}
+	st.flags = append(st.flags, "link_regenerated")
+	st.loop.messages = append(st.loop.messages,
+		contracts.ChatMessage{Role: contracts.ChatRoleAssistant, Parts: textParts(draft)},
+		userMessage("<system_note>That reply was not sent. It links to "+strings.Join(bad, ", ")+
+			", which no result in this conversation contains and the customer did not give. Write the reply "+
+			"again for the customer without that link. Use only links that appear in a result or that the "+
+			"customer gave; when there is none, say in words where to go.</system_note>"))
+	return r.agentLoop(ctx, st)
 }

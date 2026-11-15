@@ -42,9 +42,13 @@ review turns the model's draft into the turn's decision.
 func (r *Runner) review(ctx context.Context, st *run, draft string) *decision {
 	draft = strings.TrimSpace(earlierMarker().ReplaceAllString(earlierSources().ReplaceAllString(draft, ""), ""))
 	text, cited := citations(draft, st.sources)
-	text = dropSourceLines(text, st.sources)
 	hosts := r.allowedHosts(ctx, st)
-	text = r.guard.Filter(text, hosts)
+	if filtered := r.guard.Filter(text, hosts); filtered != text {
+		if len(r.guard.Untrusted(text, hosts)) > 0 {
+			st.flags = append(st.flags, "link_removed")
+		}
+		text = filtered
+	}
 	st.annotated = annotate(r.guard.Filter(draft, hosts), st.sources)
 	st.citedChunks = citedChunks(draft, st.sources)
 	if st.loop != nil && st.loop.stop == contracts.StopReasonMaxTokens {
@@ -290,32 +294,4 @@ func capLength(text string) string {
 		return strings.TrimSpace(cut[:i])
 	}
 	return trimToSentence(cut)
-}
-
-/*
-dropSourceLines removes lines that only name a source, by its title or
-its link, which the model sometimes lists under a reply after the
-markers are stripped.
-*/
-func dropSourceLines(text string, sources []source) string {
-	if len(sources) == 0 {
-		return text
-	}
-	lines := strings.Split(text, "\n")
-	kept := lines[:0]
-	for _, line := range lines {
-		bare := strings.Trim(strings.TrimSpace(line), "-*:•")
-		bare = strings.TrimSpace(bare)
-		named := false
-		for _, s := range sources {
-			if bare != "" && (strings.EqualFold(bare, strings.TrimSpace(s.chunk.Title)) || bare == s.chunk.URL) {
-				named = true
-				break
-			}
-		}
-		if !named {
-			kept = append(kept, line)
-		}
-	}
-	return strings.TrimSpace(strings.Join(kept, "\n"))
 }

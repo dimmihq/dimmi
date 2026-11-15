@@ -85,6 +85,37 @@ func (g *Guard) Filter(text string, allowed []string) string {
 }
 
 /*
+Untrusted returns the links in a text a customer must not get: every
+Markdown link, autolink or bare URL whose host is not allowed, and
+every image or raw HTML tag, whatever it points at. The text itself is
+left alone; the caller decides what to do.
+*/
+func (g *Guard) Untrusted(text string, allowed []string) []string {
+	var out []string
+	out = append(out, g.image.FindAllString(text, -1)...)
+	for _, m := range g.mdLink.FindAllStringSubmatch(text, -1) {
+		if !Allowed(m[2], allowed) {
+			out = append(out, m[2])
+		}
+	}
+	rest := g.mdLink.ReplaceAllString(g.image.ReplaceAllString(text, ""), "")
+	for _, m := range g.autolink.FindAllStringSubmatch(rest, -1) {
+		if !Allowed(m[1], allowed) {
+			out = append(out, m[1])
+		}
+	}
+	rest = g.autolink.ReplaceAllString(rest, "")
+	out = append(out, g.html.FindAllString(rest, -1)...)
+	for _, m := range g.bare.FindAllString(rest, -1) {
+		link, _ := splitTrailing(m)
+		if !Allowed(link, allowed) {
+			out = append(out, link)
+		}
+	}
+	return out
+}
+
+/*
 Find returns the bare links written in a text, such as the URLs an
 article quotes.
 */

@@ -175,7 +175,7 @@ func (r *Runner) generate(ctx context.Context, st *run, tools []contracts.ToolSp
 	}
 	req := contracts.ChatRequest{
 		Model: model, System: system,
-		Messages: lp.messages, Tools: tools, CacheHint: true, Effort: contracts.EffortLow,
+		Messages: lp.messages, Tools: tools, CacheHint: true, Effort: r.answerEffort(),
 		Temperature: temperature(e), Timeout: llmretry.StepTimeouts(r.Timeouts, llmretry.StepGenerate),
 	}
 	if e.Conversation.ID != (ids.UUID{}) {
@@ -376,4 +376,15 @@ func toneOf(tone string) string {
 		return tone
 	}
 	return "friendly"
+}
+
+/*
+answerEffort is the configured reasoning effort for answer calls, low
+when unset.
+*/
+func (r *Runner) answerEffort() contracts.Effort {
+	if r.AnswerEffort == "" {
+		return contracts.EffortLow
+	}
+	return r.AnswerEffort
 }

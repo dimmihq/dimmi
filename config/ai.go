@@ -32,6 +32,10 @@ type AIConfig struct {
 	Decisions AIDecisionsConfig `koanf:"decisions"`
 	Knowledge AIKnowledgeConfig `koanf:"knowledge"`
 
+	// AnswerEffort is how hard the answer model reasons on each call:
+	// low, medium or high, for models that support it.
+	AnswerEffort string `default:"low" koanf:"answer_effort"`
+
 	TracesRetentionDays     int  `default:"30"  koanf:"traces_retention_days"`
 	RunsRetentionDays       int  `default:"400" koanf:"runs_retention_days"`
 	PlaygroundRetentionDays int  `default:"30" koanf:"playground_retention_days"`

@@ -34,22 +34,44 @@ func (quoting) Search(context.Context, ids.UUID, string, contracts.KnowledgeSear
 func TestReplyLinks(t *testing.T) {
 	t.Parallel()
 
-	t.Run("keeps a link the cited passage quotes and drops one it does not", func(t *testing.T) {
+	t.Run("keeps a link the cited passage quotes", func(t *testing.T) {
 		t.Parallel()
 		h := newHarness(t, nil)
 		h.d.TC.App.AI.Knowledge = quoting{Knowledge: h.d.TC.App.AI.Knowledge}
 
 		conv, trigger := h.conversation("How do I create an order through the API?")
-		h.llm.answer.Script(search("create order api"), reply(
-			"Send a `POST` to `https://api.lovelace.test/v1/orders` [1]. See also https://evil.example/login."))
+		h.llm.answer.Script(search("create order api"), reply("Send a `POST` to `https://api.lovelace.test/v1/orders` [1]."))
 		res := h.run(conv, trigger)
 		require.Equal(t, "answered", res.Outcome)
 
 		replies := h.load(conv, res.RunID).agentReplies()
 		require.Len(t, replies, 1)
-		body := str(replies[0].Body)
-		assert.Contains(t, body, "`https://api.lovelace.test/v1/orders`")
-		assert.NotContains(t, body, "evil.example")
+		assert.Equal(t, "Send a `POST` to `https://api.lovelace.test/v1/orders`.", str(replies[0].Body))
+		assert.NotContains(t, h.load(conv, res.RunID).run.Flags, "link_regenerated")
+	})
+
+	t.Run("has a reply with an unknown link written again instead of cutting it", func(t *testing.T) {
+		t.Parallel()
+		h := newHarness(t, nil)
+		h.d.TC.App.AI.Knowledge = quoting{Knowledge: h.d.TC.App.AI.Knowledge}
+
+		conv, trigger := h.conversation("How do I create an order through the API?")
+		h.llm.answer.Script(search("create order api"),
+			reply("Send a `POST` to the orders endpoint [1]. The guide is at https://docs.lovelace.test/orders."),
+			reply("Send a `POST` to `https://api.lovelace.test/v1/orders` [1]; the orders guide covers the body."))
+		res := h.run(conv, trigger)
+		require.Equal(t, "answered", res.Outcome)
+
+		s := h.load(conv, res.RunID)
+		assert.Contains(t, s.run.Flags, "link_regenerated")
+		assert.NotContains(t, s.run.Flags, "link_removed")
+		assert.Equal(t, "Send a `POST` to `https://api.lovelace.test/v1/orders`; the orders guide covers the body.",
+			str(s.agentReplies()[0].Body), "the customer gets the rewritten reply, nothing cut out")
+
+		sent := h.llm.answer.Sent()
+		note := sent[len(sent)-1].Messages[len(sent[len(sent)-1].Messages)-1].Parts[0].Text
+		assert.Contains(t, note, "<system_note>")
+		assert.Contains(t, note, "https://docs.lovelace.test/orders")
 	})
 }
 
@@ -121,12 +143,9 @@ func TestCarriedPassages(t *testing.T) {
 
 		conv, trigger := h.conversation("Can rules split orders, and can I try one first?")
 		h.llm.answer.Script(search("rules split test"),
-			reply("Choose **Test** on a rule to try it [1], and the **Split by tag** action splits orders [2].\n\n[1] Automation rules\nhttps://help.lovelace.test/rules"))
+			reply("Choose **Test** on a rule to try it [1], and the **Split by tag** action splits orders [2]."))
 		res := h.run(conv, trigger)
 		require.Equal(t, "answered", res.Outcome)
-		replies := h.load(conv, res.RunID).agentReplies()
-		assert.Equal(t, "Choose **Test** on a rule to try it, and the **Split by tag** action splits orders.",
-			str(replies[0].Body), "a source list under the reply never reaches the customer")
 
 		m := h.memoryOf(conv)
 		require.Len(t, m.Passages, 2)

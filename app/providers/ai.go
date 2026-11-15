@@ -34,6 +34,7 @@ import (
 	aijobs "github.com/dimmihq/dimmi/app/ai/jobs"
 	"github.com/dimmihq/dimmi/app/ai/pipeline"
 	"github.com/dimmihq/dimmi/app/ai/verdicts"
+	"github.com/dimmihq/dimmi/app/contracts"
 	appevents "github.com/dimmihq/dimmi/app/events"
 	"github.com/dimmihq/dimmi/app/managers"
 	"github.com/dimmihq/dimmi/app/models"
@@ -124,6 +125,7 @@ func newRunner(ctx context.Context, a *app.App) (*pipeline.Runner, error) {
 		DB: a.DB, Clock: a.Clock, LLM: a.LLM, Knowledge: a.Knowledge, Prompts: loader,
 		Prices: loadPrices(a), Events: a.Events, Publisher: a.Broadcast,
 		Timeouts: a.Config.AI.Timeouts, StorePayloads: a.Config.AI.TracesStorePayloads,
+		AnswerEffort: contracts.Effort(a.Config.AI.AnswerEffort),
 	}, nil
 }
 
