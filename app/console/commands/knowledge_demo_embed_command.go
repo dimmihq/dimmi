@@ -9,7 +9,8 @@
 | seeding never calls a paid embeddings API. This is the separate step
 | that builds its vectors: it binds the install's default embedding
 | model, which makes one tiny check call, and queues the build, which
-| the queue worker runs batch by batch. It prints the size of the job
+| the queue worker runs batch by batch, or with --now right here, so a
+| queue full of other work never runs. It prints the size of the job
 | and its cost from the price table first, and does nothing without
 | --confirm.
 |
@@ -61,6 +62,7 @@ Flags asks for the confirmation.
 */
 func (c KnowledgeDemoEmbedCommand) Flags(flags *console.Flags) {
 	flags.Bool("confirm", "bind the model and queue the paid build")
+	flags.Bool("now", "embed in this process instead of the queue, so no other queued job runs")
 	flags.String("workspace", "stowline", "which demo workspace: stowline or wixqa")
 }
 
@@ -110,7 +112,15 @@ func (c KnowledgeDemoEmbedCommand) Handle(
 	if _, err := c.App.Actions.KnowledgeSettings.Update(ctx, owner, knowledge.SettingsInput{}); err != nil {
 		return fmt.Errorf("bind embedding model: %w", err)
 	}
-	out.Info("Bound %s and queued the build; the queue worker embeds the chunks and switches search to hybrid.", model)
+	if !in.Bool("now") {
+		out.Info("Bound %s and queued the build; the queue worker embeds the chunks and switches search to hybrid.",
+			model)
+		return nil
+	}
+	if err := c.App.Vectors.BuildNow(ctx, w.ID, model); err != nil {
+		return fmt.Errorf("build embeddings: %w", err)
+	}
+	out.Info("Bound %s and embedded the chunks here; search is hybrid once the build is complete.", model)
 	return nil
 }
 

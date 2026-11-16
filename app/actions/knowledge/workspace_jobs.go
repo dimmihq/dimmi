@@ -27,6 +27,7 @@ import (
 	"github.com/dimmihq/dimmi/framework/queue"
 	"github.com/dimmihq/dimmi/framework/tenancy"
 
+	"github.com/dimmihq/dimmi/app/contracts"
 	"github.com/dimmihq/dimmi/app/jobs"
 	"github.com/dimmihq/dimmi/app/models"
 )
@@ -86,6 +87,41 @@ func (v *Vectors) Reembed(ctx context.Context, ws ids.UUID, model string) error 
 	args := jobs.EmbedKnowledgeChunksArgs{WorkspaceID: ws, ModelKey: model}
 	if err := v.pushBatches(ctx, nil, args, hashes); err != nil {
 		return err
+	}
+	return v.progress(ctx, ws, model)
+}
+
+/*
+BuildNow does what Reembed and its batches do, in this process instead
+of on the queue: it indexes the workspace's unindexed articles, embeds
+every hash the model lacks and records the progress. It is for a
+development install whose queue holds other work that must not run.
+*/
+func (v *Vectors) BuildNow(ctx context.Context, ws ids.UUID, model string) error {
+	if err := v.indexUnindexed(ctx, ws); err != nil {
+		return err
+	}
+	var hashes []string
+	err := v.inWorkspace(ctx, ws, func(ctx context.Context, _ *database.Tx, q *models.Queries) error {
+		_, ok, err := bindingFor(ctx, q, ws, model)
+		if err != nil || !ok {
+			return err
+		}
+		hashes, err = q.ListMissingEmbedHashes(ctx, models.ListMissingEmbedHashesParams{
+			WorkspaceID: ws, ModelKey: model, RowLimit: buildLimit,
+		})
+		return err
+	})
+	if err != nil {
+		return fmt.Errorf("list missing embeddings: %w", err)
+	}
+	for start := 0; start < len(hashes); start += contracts.MaxEmbedBatch {
+		batch := jobs.EmbedKnowledgeChunksArgs{
+			WorkspaceID: ws, ModelKey: model, Hashes: hashes[start:min(start+contracts.MaxEmbedBatch, len(hashes))],
+		}
+		if err := v.EmbedBatch(ctx, batch); err != nil {
+			return err
+		}
 	}
 	return v.progress(ctx, ws, model)
 }
