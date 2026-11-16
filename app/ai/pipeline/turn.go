@@ -352,10 +352,24 @@ type keyRef struct {
 
 /*
 transcriptOf is the text of a request's turns, for its step row.
+Passages a turn carries as sources are written out as they would read
+in <product_knowledge>, so the row shows everything the model saw.
 */
 func transcriptOf(req contracts.ChatRequest) string {
 	var parts []string
 	for _, m := range req.Messages {
+		if m.Role == contracts.ChatRoleUser && len(m.Sources) > 0 {
+			var b strings.Builder
+			b.WriteString("<product_knowledge>")
+			for _, s := range m.Sources {
+				b.WriteString("\n[" + s.ID + "] " + s.Title)
+				if s.URL != "" {
+					b.WriteString(" " + s.URL)
+				}
+				b.WriteString("\n" + s.Text + "\n")
+			}
+			parts = append(parts, string(m.Role)+": "+b.String()+"</product_knowledge>")
+		}
 		for _, p := range m.Parts {
 			parts = append(parts, string(m.Role)+": "+p.Text)
 		}

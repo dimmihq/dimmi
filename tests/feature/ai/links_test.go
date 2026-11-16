@@ -303,6 +303,11 @@ func TestNativeCitations(t *testing.T) {
 		assert.Equal(t, "101", first.Sources[0].ID)
 		assert.Contains(t, first.Parts[0].Text, "in the search results at the start of this turn")
 		assert.NotContains(t, first.Parts[0].Text, "$12 per seat", "the passage is not also written out as text")
+		var seen string
+		require.NoError(t, h.d.TC.Operator().QueryRow(t.Context(),
+			"SELECT request#>>'{}' FROM ai_run_steps WHERE run_id = $1 AND kind = 'generate' ORDER BY seq LIMIT 1",
+			res.RunID).Scan(&seen))
+		assert.Contains(t, seen, "<product_knowledge>\n[101] ", "the step row shows the passages the model saw")
 		sources, _ := aiMeta(t, h.load(conv, res.RunID).agentReplies()[1])["sources"].([]any)
 		assert.Len(t, sources, 1, "a citation of a carried passage links it")
 	})
