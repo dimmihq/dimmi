@@ -90,26 +90,6 @@ type ChatMessage struct {
 	ToolCallID string
 	ToolError  bool
 	Cacheable  bool
-	// Sources are knowledge passages the message carries for a model
-	// that cites them itself (LLMCapabilities.Citations): a search's
-	// results on a tool message, carried knowledge on a user message.
-	// A driver sends them as its own citable blocks beside the parts.
-	Sources []ChatSource
-}
-
-/*
-ChatSource is one knowledge passage a model can cite. ID is the number
-the pipeline cites it by; a driver that cites natively writes "[ID]"
-after each stretch of the reply the passage supports, so the reply
-reads the same as one whose model wrote the markers itself, with the
-difference that the provider, not the model, decides which passage a
-marker names.
-*/
-type ChatSource struct {
-	ID    string
-	Title string
-	URL   string
-	Text  string
 }
 
 /*

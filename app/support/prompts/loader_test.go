@@ -59,11 +59,9 @@ func TestLoader(t *testing.T) {
 		file, err := l.Render("v2", enums.AIModelFamilyAnthropic, "answer.system.md", Vars{
 			"agent_name": "Ada", "product_name": "Lovelace", "tone": "Warm.", "language": "German",
 			"guidance": "Be brief.", "channel": "chat", "handoff": "available",
-			"citing": "Facts link themselves.",
 		})
 		require.NoError(t, err)
 		assert.Contains(t, file.Content, "Lovelace")
-		assert.Contains(t, file.Content, "Facts link themselves.", "the citing rule fits the provider")
 		assert.NotContains(t, file.Content, "{{")
 		assert.Equal(t, "agent/v2/anthropic/answer.system.md", file.Path)
 	})

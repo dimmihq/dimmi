@@ -26,7 +26,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"slices"
-	"strconv"
 	"strings"
 	"time"
 
@@ -125,25 +124,18 @@ func windowed(history []models.Message, m memory) []models.Message {
 /*
 memoryBlock opens the first user turn: the summary of the folded turns
 and the passages carried from earlier replies, each numbered as the
-run's sources. Everything in it is escaped data. For a model that cites
-natively the passages come back as sources for the turn instead, so it
-cites them like search results.
+run's sources. Everything in it is escaped data.
 */
-func (r *Runner) memoryBlock(st *run) (string, []contracts.ChatSource) {
+func (r *Runner) memoryBlock(st *run) string {
 	m := memoryOf(st.env.Conversation)
 	var b strings.Builder
 	if _, folded := unfolded(st.env.History, m); folded {
 		b.WriteString("<earlier_conversation>" + escape(m.Summary) + "</earlier_conversation>")
 	}
 	if !st.env.Agent.CarryPassages || len(m.Passages) == 0 {
-		return b.String(), nil
+		return b.String()
 	}
-	native := st.cites()
-	var sources []contracts.ChatSource
 	b.WriteString("\n<product_knowledge>")
-	if native {
-		b.WriteString("The knowledge your earlier replies used is in the search results at the start of this turn.")
-	}
 	for _, p := range m.Passages {
 		chunk, ok := p.chunk()
 		if !ok {
@@ -158,12 +150,6 @@ func (r *Runner) memoryBlock(st *run) (string, []contracts.ChatSource) {
 			st.carried = map[int]bool{}
 		}
 		st.carried[n] = true
-		if native {
-			sources = append(sources, contracts.ChatSource{
-				ID: strconv.Itoa(n), Title: p.Title, URL: p.URL, Text: p.Text,
-			})
-			continue
-		}
 		fmt.Fprintf(&b, "\n[%d] %s", n, escape(p.Title))
 		if p.URL != "" {
 			b.WriteString(" " + escape(p.URL))
@@ -171,19 +157,18 @@ func (r *Runner) memoryBlock(st *run) (string, []contracts.ChatSource) {
 		b.WriteString("\n" + escape(p.Text) + "\n")
 	}
 	b.WriteString("</product_knowledge>")
-	return b.String(), sources
+	return b.String()
 }
 
 /*
 withMemory opens the first turn with the memory block, when there is one.
 */
 func (r *Runner) withMemory(st *run, msgs []contracts.ChatMessage) []contracts.ChatMessage {
-	block, sources := r.memoryBlock(st)
+	block := r.memoryBlock(st)
 	if block == "" || len(msgs) == 0 || len(msgs[0].Parts) == 0 {
 		return msgs
 	}
 	msgs[0].Parts[0].Text = block + "\n" + msgs[0].Parts[0].Text
-	msgs[0].Sources = sources
 	return msgs
 }
 

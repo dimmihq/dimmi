@@ -26,12 +26,6 @@ type model struct {
 	context   int
 	maxOutput int
 	sampling  bool
-	// citations turns native citing on for the model. It stays off
-	// until a benchmark shows the model cites reliably: Claude Haiku
-	// 5.5 at low effort cited 27 of 66 answered searches, so most
-	// grounded replies read as unknown, and the sentence blocks cost
-	// 43% more per reply and 66% more time.
-	citations bool
 }
 
 /*
@@ -84,7 +78,6 @@ func Capabilities(id string) contracts.LLMCapabilities {
 		SystemPrompt:    true,
 		JSONSchema:      true,
 		PromptCache:     true,
-		Citations:       m.citations,
 		ContextTokens:   m.context,
 		MaxOutputTokens: m.maxOutput,
 	}

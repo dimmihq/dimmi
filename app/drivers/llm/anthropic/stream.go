@@ -133,16 +133,9 @@ func (s *chatStream) handle(event anth.MessageStreamEventUnion) {
 
 /*
 blockDone queues a finished tool call, or for a typed answer the forced
-tool's input as text. A finished text block that cites passages gets
-their markers right after it, where the claim it supports ends.
+tool's input as text.
 */
 func (s *chatStream) blockDone(block anth.ContentBlockUnion) {
-	if block.Type == "text" && s.answer == "" {
-		if markers := citationMarkers(block.Citations); markers != "" {
-			s.pend = append(s.pend, contracts.StreamEvent{Kind: contracts.StreamEventTextDelta, Text: markers})
-		}
-		return
-	}
 	if block.Type != "tool_use" {
 		return
 	}

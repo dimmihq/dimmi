@@ -99,23 +99,10 @@ func (r *Runner) agentLoop(ctx context.Context, st *run) (string, error) {
 			result, failed := r.callTool(ctx, st, call)
 			lp.messages = append(lp.messages, contracts.ChatMessage{
 				Role: contracts.ChatRoleTool, ToolCallID: call.ID, ToolError: failed,
-				Parts: []contracts.ContentPart{{Text: result}}, Sources: sourcesOf(st, call, failed),
+				Parts: []contracts.ContentPart{{Text: result}},
 			})
 		}
 	}
-}
-
-/*
-sourcesOf are the passages a search call found, for a model that cites
-them natively; every other call, and every other model, gets none and
-reads the result's text.
-*/
-func sourcesOf(st *run, call contracts.ToolCall, failed bool) []contracts.ChatSource {
-	sources := st.takeCitable()
-	if failed || call.Name != toolSearchKnowledge || !st.cites() {
-		return nil
-	}
-	return sources
 }
 
 /*
@@ -297,22 +284,8 @@ func (r *Runner) answerVars(st *run) prompts.Vars {
 		"agent_name": e.Agent.Name, "product_name": product, "rules": rulesText(e, st.settings),
 		"tone":     r.render(e, "tone_"+toneOf(e.Agent.Tone)+".md", nil),
 		"language": languageName(e.Agent.DefaultLanguage), "guidance": e.Agent.Guidance,
-		"channel": channel, "handoff": e.availability(), "citing": citingRule(st.cites()),
+		"channel": channel, "handoff": e.availability(),
 	}
-}
-
-/*
-citingRule says how a reply cites knowledge: nothing to write when the
-provider links facts to passages itself, the passage numbers otherwise.
-*/
-func citingRule(native bool) string {
-	if native {
-		return "Each fact you take from your knowledge is linked to it for the customer automatically, " +
-			"so you never write numbers, brackets or source markers."
-	}
-	return "Put the number of the knowledge a fact comes from right after the sentence it supports, like [3]; " +
-		"the numbers become links for the customer. Knowledge in <product_knowledge> is numbered from [101] " +
-		"and this turn's search results from [1], so cite each piece by the number it carries."
 }
 
 /*
@@ -352,24 +325,10 @@ type keyRef struct {
 
 /*
 transcriptOf is the text of a request's turns, for its step row.
-Passages a turn carries as sources are written out as they would read
-in <product_knowledge>, so the row shows everything the model saw.
 */
 func transcriptOf(req contracts.ChatRequest) string {
 	var parts []string
 	for _, m := range req.Messages {
-		if m.Role == contracts.ChatRoleUser && len(m.Sources) > 0 {
-			var b strings.Builder
-			b.WriteString("<product_knowledge>")
-			for _, s := range m.Sources {
-				b.WriteString("\n[" + s.ID + "] " + s.Title)
-				if s.URL != "" {
-					b.WriteString(" " + s.URL)
-				}
-				b.WriteString("\n" + s.Text + "\n")
-			}
-			parts = append(parts, string(m.Role)+": "+b.String()+"</product_knowledge>")
-		}
 		for _, p := range m.Parts {
 			parts = append(parts, string(m.Role)+": "+p.Text)
 		}

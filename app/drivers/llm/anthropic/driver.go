@@ -337,110 +337,11 @@ func mapMessage(msg contracts.ChatMessage) anth.MessageParam {
 		}
 		return anth.NewAssistantMessage(blocks...)
 	case contracts.ChatRoleTool:
-		if len(msg.Sources) > 0 && !msg.ToolError {
-			content := make([]anth.ToolResultBlockParamContentUnion, 0, len(msg.Sources))
-			for _, s := range msg.Sources {
-				block := searchResult(s)
-				content = append(content, anth.ToolResultBlockParamContentUnion{OfSearchResult: &block})
-			}
-			return anth.NewUserMessage(anth.ContentBlockParamUnion{OfToolResult: &anth.ToolResultBlockParam{
-				ToolUseID: msg.ToolCallID, Content: content,
-			}})
-		}
 		return anth.NewUserMessage(anth.NewToolResultBlock(msg.ToolCallID, text, msg.ToolError))
 	case contracts.ChatRoleUser:
-		blocks := make([]anth.ContentBlockParamUnion, 0, len(msg.Sources)+1)
-		for _, s := range msg.Sources {
-			block := searchResult(s)
-			blocks = append(blocks, anth.ContentBlockParamUnion{OfSearchResult: &block})
-		}
-		return anth.NewUserMessage(append(blocks, anth.NewTextBlock(text))...)
+		return anth.NewUserMessage(anth.NewTextBlock(text))
 	}
 	return anth.NewUserMessage(anth.NewTextBlock(text))
-}
-
-/*
-sourcePrefix marks a search result's source as a passage the pipeline
-numbered, so a citation of it maps back to that number.
-*/
-const sourcePrefix = "kb:"
-
-/*
-searchResult is one passage as a citable search result. Its text is
-cut into sentences, the smallest piece Claude cites, so a citation
-names the sentence a claim rests on rather than the whole passage.
-*/
-func searchResult(s contracts.ChatSource) anth.SearchResultBlockParam {
-	var content []anth.TextBlockParam
-	for _, piece := range citablePieces(s.Text) {
-		content = append(content, anth.TextBlockParam{Text: piece})
-	}
-	if len(content) == 0 {
-		content = []anth.TextBlockParam{{Text: s.Title}}
-	}
-	title := s.Title
-	if s.URL != "" {
-		title += " (" + s.URL + ")"
-	}
-	return anth.SearchResultBlockParam{
-		Source: sourcePrefix + s.ID, Title: title, Content: content,
-		Citations: anth.CitationsConfigParam{Enabled: anth.Bool(true)},
-	}
-}
-
-/*
-citablePieces cuts a passage into paragraphs and each prose paragraph
-into sentences. A fenced code block stays whole, since a sentence of
-code means nothing on its own.
-*/
-func citablePieces(text string) []string {
-	var out []string
-	var fence []string
-	for _, para := range strings.Split(strings.TrimSpace(text), "\n\n") {
-		if fence != nil || strings.HasPrefix(strings.TrimSpace(para), "```") {
-			fence = append(fence, para)
-			if strings.Count(strings.Join(fence, "\n\n"), "```")%2 == 0 {
-				out = append(out, strings.Join(fence, "\n\n"))
-				fence = nil
-			}
-			continue
-		}
-		start := 0
-		for i := 0; i < len(para); i++ {
-			if (para[i] == '.' || para[i] == '?' || para[i] == '!') && (i+1 == len(para) || para[i+1] == ' ') {
-				if piece := strings.TrimSpace(para[start : i+1]); piece != "" {
-					out = append(out, piece)
-				}
-				start = i + 1
-			}
-		}
-		if piece := strings.TrimSpace(para[start:]); piece != "" {
-			out = append(out, piece)
-		}
-	}
-	if fence != nil {
-		out = append(out, strings.Join(fence, "\n\n"))
-	}
-	return out
-}
-
-/*
-citationMarkers are the "[ID]" markers of the passages a text block
-cites, each once, in the order the provider listed them. Citations of
-anything other than a numbered passage add nothing.
-*/
-func citationMarkers(citations []anth.TextCitationUnion) string {
-	var b strings.Builder
-	seen := map[string]bool{}
-	for _, c := range citations {
-		id, ok := strings.CutPrefix(c.Source, sourcePrefix)
-		if c.Type != "search_result_location" || !ok || id == "" || seen[id] {
-			continue
-		}
-		seen[id] = true
-		b.WriteString(" [" + id + "]")
-	}
-	return b.String()
 }
 
 /*
@@ -458,7 +359,7 @@ func mapResponse(res *anth.Message, latency time.Duration) *contracts.ChatRespon
 	for _, block := range res.Content {
 		switch block.Type {
 		case "text":
-			out.Text += block.Text + citationMarkers(block.Citations)
+			out.Text += block.Text
 		case "tool_use":
 			out.ToolCalls = append(out.ToolCalls, toolCall(block))
 		}

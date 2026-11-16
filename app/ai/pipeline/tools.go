@@ -243,15 +243,10 @@ func (r *Runner) searchKnowledge(ctx context.Context, st *run, args json.RawMess
 		}
 		return compactSearch(results, st.shown), nil
 	}
-	st.citable = nil
 	for i := range results {
 		if st.carried[results[i].ID] {
 			results[i].Text = "(in product_knowledge above)"
-			continue
 		}
-		st.citable = append(st.citable, contracts.ChatSource{
-			ID: strconv.Itoa(results[i].ID), Title: results[i].Title, URL: results[i].URL, Text: results[i].Text,
-		})
 	}
 	out, err := json.Marshal(map[string]any{"results": results})
 	return string(out), err
