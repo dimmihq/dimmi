@@ -64,11 +64,17 @@ func Fuse(limit, perDocument int, lists ...[]contracts.KnowledgeChunk) []contrac
 		return strings.Compare(a.chunk.ID.String(), b.chunk.ID.String())
 	})
 	perDoc := map[ids.UUID]int{}
+	seen := map[string]bool{}
 	out := make([]contracts.KnowledgeChunk, 0, min(limit, len(order)))
 	for _, f := range order {
 		if len(out) >= limit || (perDocument > 0 && perDoc[f.chunk.DocumentID] >= perDocument) {
 			continue
 		}
+		key := SameText(f.chunk.Text)
+		if seen[key] {
+			continue
+		}
+		seen[key] = true
 		perDoc[f.chunk.DocumentID]++
 		f.chunk.Score, f.chunk.Rank = f.score, len(out)+1
 		out = append(out, f.chunk)
@@ -96,4 +102,16 @@ func merge(into *contracts.KnowledgeChunk, ch contracts.KnowledgeChunk) {
 			into.MatchedBy = append(into.MatchedBy, m)
 		}
 	}
+}
+
+/*
+SameText is what two chunks share when they say exactly the same thing:
+their text with its spacing evened out. Help centers repeat whole
+sections, such as one FAQ closing every API page, and every copy
+matches a question equally well, so a search could hand back the same
+words several times and nothing else. Only the best-ranked copy is
+kept; a chunk that differs by a single word is a different chunk.
+*/
+func SameText(text string) string {
+	return strings.Join(strings.Fields(text), " ")
 }

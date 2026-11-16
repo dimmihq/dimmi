@@ -143,7 +143,7 @@ func NewSeed(articles []Article) *Seed {
 /*
 Search ranks the chunks by BM25 over the query and the extra queries,
 keeping each chunk's best similarity across them, and drops chunks
-that match nothing.
+that match nothing and copies of a better-ranked chunk's text.
 */
 func (s *Seed) Search(_ context.Context, _ ids.UUID, query string,
 	opts contracts.KnowledgeSearchOptions,
@@ -155,9 +155,17 @@ func (s *Seed) Search(_ context.Context, _ ids.UUID, query string,
 	if limit <= 0 {
 		limit = 8
 	}
-	if len(hits) > limit {
-		hits = hits[:limit]
+	kept, seen := make([]hit, 0, min(limit, len(hits))), map[string]bool{}
+	for _, h := range hits {
+		if len(kept) >= limit {
+			break
+		}
+		if key := SameText(s.chunks[h.at].chunk.Text); !seen[key] {
+			seen[key] = true
+			kept = append(kept, h)
+		}
 	}
+	hits = kept
 
 	out := make([]contracts.KnowledgeChunk, len(hits))
 	for i, h := range hits {

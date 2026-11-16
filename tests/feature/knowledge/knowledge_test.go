@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"slices"
+	"strings"
 	"testing"
 	"time"
 
@@ -221,6 +222,29 @@ func TestKnowledgeEmbeddings(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, "embedding_timeout", res.Degraded)
 		assert.Contains(t, titles(res.Chunks), "Refund policy")
+	})
+
+	t.Run("hands back a section repeated across articles once", func(t *testing.T) {
+		t.Parallel()
+		x := newIndex(t)
+		faq := "\n\n## Questions\n\nIs there a sandbox? Use a test key; sandbox data never reaches carriers."
+		x.publish(t, "Listing orders", "Returns your orders a page at a time."+faq)
+		x.publish(t, "Creating an order", "Creates an order from a store connection."+faq)
+		x.publish(t, "Deleting an order", "Deletes an order that has no labels."+faq)
+		x.publish(t, "Test mode", "A sandbox test key starts with sk_test and is free to use.")
+		x.tc.Drain()
+
+		for _, mode := range []string{"keyword", ""} {
+			res := x.search(t, "sandbox test key", mode)
+			copies := 0
+			for _, c := range res.Chunks {
+				if strings.Contains(c.Text, "Is there a sandbox?") {
+					copies++
+				}
+			}
+			assert.Equal(t, 1, copies, "mode %q: the repeated section comes back once", mode)
+			assert.Contains(t, titles(res.Chunks), "Test mode", "mode %q: the room goes to other answers", mode)
+		}
 	})
 
 	t.Run("searches by keywords alone without an embedder, as before", func(t *testing.T) {
