@@ -140,13 +140,16 @@ func TestConversationMemory(t *testing.T) {
 		assert.Empty(t, m.Summary, "a short conversation keeps no summary")
 
 		next := h.add(conv, "contact", "message", "So 3 seats on Pro?")
-		h.llm.answer.Script(reply("That is 3 times $12 per seat each month [1]."))
+		h.llm.answer.Script(search("refund annual plan"), reply("That is 3 times $12 per seat each month [101]."))
 		res := h.run(conv, next)
 
 		require.Equal(t, "answered", res.Outcome)
 		sent := h.llm.answer.Sent()
 		first := sent[len(sent)-1].Messages[0].Parts[0].Text
-		assert.Contains(t, first, "<product_knowledge>\n[1] "+m.Passages[0].Title)
+		assert.Contains(t, first, "<product_knowledge>\n[101] "+m.Passages[0].Title,
+			"carried passages are numbered from 101")
+		results := sent[len(sent)-1].Messages[len(sent[len(sent)-1].Messages)-1].Parts[0].Text
+		assert.Contains(t, results, `"id":1,`, "this turn's first result is still [1], as a model numbering footnotes expects")
 		replies := h.load(conv, res.RunID).agentReplies()
 		meta := aiMeta(t, replies[len(replies)-1])
 		sources, _ := meta["sources"].([]any)

@@ -105,11 +105,11 @@ func citations(text string, sources []source) (string, []citation) {
 		for _, part := range strings.FieldsFunc(text[loc[2]:loc[3]], func(r rune) bool {
 			return r == ',' || r == ';' || r == ' '
 		}) {
-			n, err := strconv.Atoi(part)
-			if err != nil || n < 1 || n > len(sources) {
+			s, ok := sourceNumbered(sources, part)
+			if !ok {
 				continue
 			}
-			c := citationOf(sources[n-1])
+			c := citationOf(s)
 			if !slices.ContainsFunc(cited, func(o citation) bool { return o.DocumentID == c.DocumentID }) {
 				cited = append(cited, c)
 			}
@@ -140,14 +140,14 @@ func citedChunks(draft string, sources []source) ([]source, map[string]string) {
 		for _, part := range strings.FieldsFunc(draft[loc[2]:loc[3]], func(r rune) bool {
 			return r == ',' || r == ';' || r == ' '
 		}) {
-			n, err := strconv.Atoi(part)
-			if err != nil || n < 1 || n > len(sources) {
+			s, ok := sourceNumbered(sources, part)
+			if !ok {
 				continue
 			}
-			id := sources[n-1].chunk.ID.String()
+			id := s.chunk.ID.String()
 			claims[id] += " " + claim
-			if !slices.ContainsFunc(out, func(s source) bool { return s.chunk.ID == sources[n-1].chunk.ID }) {
-				out = append(out, sources[n-1])
+			if !slices.ContainsFunc(out, func(o source) bool { return o.chunk.ID == s.chunk.ID }) {
+				out = append(out, s)
 			}
 		}
 	}
@@ -219,13 +219,13 @@ func annotate(draft string, sources []source) string {
 		for _, part := range strings.FieldsFunc(draft[loc[2]:loc[3]], func(r rune) bool {
 			return r == ',' || r == ';' || r == ' '
 		}) {
-			n, err := strconv.Atoi(part)
-			if err != nil || n < 1 || n > len(sources) {
+			s, ok := sourceNumbered(sources, part)
+			if !ok {
 				continue
 			}
-			k := slices.IndexFunc(docs, func(d source) bool { return d.chunk.DocumentID == sources[n-1].chunk.DocumentID })
+			k := slices.IndexFunc(docs, func(d source) bool { return d.chunk.DocumentID == s.chunk.DocumentID })
 			if k < 0 {
-				docs = append(docs, sources[n-1])
+				docs = append(docs, s)
 				k = len(docs) - 1
 			}
 			tag := "S" + strconv.Itoa(k+1)

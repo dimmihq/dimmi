@@ -24,6 +24,7 @@ import (
 	"errors"
 	"slices"
 	"sort"
+	"strconv"
 	"time"
 
 	"github.com/dimmihq/dimmi/app/ai/actionkit"
@@ -298,13 +299,55 @@ sourceFor returns the number a chunk is cited by, numbering it when it
 is new to the run.
 */
 func (st *run) sourceFor(ch contracts.KnowledgeChunk) int {
+	return st.numbered(ch, false)
+}
+
+/*
+carriedFrom is where the numbers of carried passages start. A model
+numbers its citations like footnotes, [1] for the first result it uses,
+so carried passages numbered [1] to [5] took the citations meant for
+this turn's results: the customer got the wrong link and the wrong
+passage was carried on. Numbered from 101, carried passages leave [1]
+to this turn's first result, which is what a footnote habit means.
+*/
+const carriedFrom = 101
+
+/*
+numbered returns the number a chunk is cited by, numbering it when it
+is new to the run: this turn's results from 1, carried passages from
+carriedFrom.
+*/
+func (st *run) numbered(ch contracts.KnowledgeChunk, carried bool) int {
+	next := 1
+	if carried {
+		next = carriedFrom
+	}
 	for _, s := range st.sources {
 		if s.chunk.ID == ch.ID {
 			return s.n
 		}
+		if (s.n >= carriedFrom) == carried && s.n >= next {
+			next = s.n + 1
+		}
 	}
-	st.sources = append(st.sources, source{n: len(st.sources) + 1, chunk: ch})
-	return len(st.sources)
+	st.sources = append(st.sources, source{n: next, chunk: ch})
+	return next
+}
+
+/*
+sourceNumbered finds the source a citation number names.
+*/
+func sourceNumbered(sources []source, number string) (source, bool) {
+	n, err := strconv.Atoi(number)
+	if err != nil {
+		return source{}, false
+	}
+	for _, s := range sources {
+		if s.n == n {
+			return s, true
+		}
+	}
+	return source{}, false
 }
 
 /*

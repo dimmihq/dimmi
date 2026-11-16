@@ -141,7 +141,7 @@ func (r *Runner) memoryBlock(st *run) string {
 		if !ok {
 			continue
 		}
-		n := st.sourceFor(chunk)
+		n := st.numbered(chunk, true)
 		if st.shown == nil {
 			st.shown = map[int]bool{}
 		}
