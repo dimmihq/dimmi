@@ -183,7 +183,7 @@ func TestAnthropicDriver(t *testing.T) {
 			text += ev.Text
 		}
 		assert.Equal(t, "Yes. Refunds take 30 days [3].", text, "only numbered passages become markers")
-		assert.True(t, drv.Capabilities("claude-haiku-5-5").Citations)
+		assert.False(t, drv.Capabilities("claude-haiku-5-5").Citations, "off until a model is measured to cite reliably")
 	})
 
 	t.Run("fails from stream on a refusal at request time", func(t *testing.T) {
