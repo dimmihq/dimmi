@@ -264,3 +264,57 @@ func (spreadFacts) Search(context.Context, ids.UUID, string, contracts.Knowledge
 		Similarity: &similarity, MatchedBy: []string{"vector"},
 	}}}, nil
 }
+
+/*
+TestNativeCitations covers a provider that cites passages itself: the
+passages travel as sources, the model is told to write no markers, and
+the markers the driver writes from the provider's citations become the
+reply's links and the carried passages as before.
+*/
+func TestNativeCitations(t *testing.T) {
+	t.Parallel()
+
+	t.Run("hands search results and carried passages over as sources", func(t *testing.T) {
+		t.Parallel()
+		h := newHarness(t, nil)
+		h.llm.answer.CapabilitiesOf(contracts.LLMCapabilities{
+			Tools: true, Streaming: true, SystemPrompt: true, PromptCache: true, Citations: true,
+			ContextTokens: 200_000, MaxOutputTokens: 8_192,
+		})
+		h.operator("UPDATE ai_agents SET carry_passages = true WHERE workspace_id = $1", h.d.TC.Workspace.Workspace.ID)
+
+		conv, trigger := h.conversation("How much is Pro per seat?")
+		h.llm.answer.Script(search("pro plan price per seat"), reply("The Pro plan costs $12 per seat per month [1]."))
+		res := h.run(conv, trigger)
+		require.Equal(t, "answered", res.Outcome)
+
+		sent := h.llm.answer.Sent()
+		results := sent[1].Messages[len(sent[1].Messages)-1]
+		require.NotEmpty(t, results.Sources, "the search's passages travel as sources")
+		assert.Equal(t, "1", results.Sources[0].ID)
+		assert.Equal(t, "https://help.lovelace.test/plans-and-pricing", aiMeta(t, h.load(conv, res.RunID).agentReplies()[0])["sources"].([]any)[0].(map[string]any)["url"])
+
+		next := h.add(conv, "contact", "message", "So 3 seats on Pro?")
+		h.llm.answer.Script(reply("That is 3 times $12 per seat each month [101]."))
+		res = h.run(conv, next)
+		require.Equal(t, "answered", res.Outcome)
+		first := h.llm.answer.Sent()[len(h.llm.answer.Sent())-1].Messages[0]
+		require.NotEmpty(t, first.Sources, "carried passages travel as sources on the first turn")
+		assert.Equal(t, "101", first.Sources[0].ID)
+		assert.Contains(t, first.Parts[0].Text, "in the search results at the start of this turn")
+		assert.NotContains(t, first.Parts[0].Text, "$12 per seat", "the passage is not also written out as text")
+		sources, _ := aiMeta(t, h.load(conv, res.RunID).agentReplies()[1])["sources"].([]any)
+		assert.Len(t, sources, 1, "a citation of a carried passage links it")
+	})
+
+	t.Run("keeps passages as text for a model without native citations", func(t *testing.T) {
+		t.Parallel()
+		h := newHarness(t, nil)
+		conv, trigger := h.conversation("How much is Pro per seat?")
+		h.llm.answer.Script(search("pro plan price per seat"), reply("Pro costs $12 per seat [1]."))
+		require.Equal(t, "answered", h.run(conv, trigger).Outcome)
+		sent := h.llm.answer.Sent()
+		assert.Contains(t, sent[1].Messages[len(sent[1].Messages)-1].Parts[0].Text, `"id":1`)
+		assert.Empty(t, sent[1].Messages[len(sent[1].Messages)-1].Sources)
+	})
+}

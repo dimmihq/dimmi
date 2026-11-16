@@ -78,6 +78,7 @@ func Capabilities(id string) contracts.LLMCapabilities {
 		SystemPrompt:    true,
 		JSONSchema:      true,
 		PromptCache:     true,
+		Citations:       true,
 		ContextTokens:   m.context,
 		MaxOutputTokens: m.maxOutput,
 	}

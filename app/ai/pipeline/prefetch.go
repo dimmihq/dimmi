@@ -65,11 +65,22 @@ func (r *Runner) prefetch(ctx context.Context, st *run) {
 		return
 	}
 	st.prefetched = true
+	sources := sourcesOf(st, call, false)
+	if sources == nil {
+		st.loop.messages = append(st.loop.messages,
+			contracts.ChatMessage{Role: contracts.ChatRoleAssistant, ToolCalls: []contracts.ToolCall{call}},
+			contracts.ChatMessage{Role: contracts.ChatRoleTool, ToolCallID: call.ID, Parts: textParts(result + prefetchNote)},
+		)
+		return
+	}
+	// Cited passages fill the tool result on their own, so the note
+	// follows it as text in the same turn.
 	st.loop.messages = append(st.loop.messages,
 		contracts.ChatMessage{Role: contracts.ChatRoleAssistant, ToolCalls: []contracts.ToolCall{call}},
 		contracts.ChatMessage{
-			Role: contracts.ChatRoleTool, ToolCallID: call.ID, Parts: textParts(result + prefetchNote),
+			Role: contracts.ChatRoleTool, ToolCallID: call.ID, Parts: textParts(result), Sources: sources,
 		},
+		contracts.ChatMessage{Role: contracts.ChatRoleUser, Parts: textParts(strings.TrimSpace(prefetchNote))},
 	)
 }
 

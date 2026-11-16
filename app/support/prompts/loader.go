@@ -97,7 +97,7 @@ fills. A file naming any other placeholder fails the boot check.
 func Variables() map[string][]string {
 	return map[string][]string{
 		"answer.system.md": {
-			"agent_name", "product_name", "tone", "language", "guidance", "channel", "handoff", "rules",
+			"agent_name", "product_name", "tone", "language", "guidance", "channel", "handoff", "rules", "citing",
 		},
 		"tone_friendly.md":     {},
 		"tone_professional.md": {},

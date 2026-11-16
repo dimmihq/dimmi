@@ -207,11 +207,14 @@ table plus connection overrides. JSONSchema means the provider enforces
 a request's ResponseSchema, so the answer is typed.
 */
 type LLMCapabilities struct {
-	Tools           bool
-	Streaming       bool
-	SystemPrompt    bool
-	JSONSchema      bool
-	PromptCache     bool
+	Tools        bool
+	Streaming    bool
+	SystemPrompt bool
+	JSONSchema   bool
+	PromptCache  bool
+	// Citations is true when the provider cites ChatMessage.Sources
+	// itself, so the model never writes citation markers.
+	Citations       bool
 	ContextTokens   int
 	MaxOutputTokens int
 }

@@ -26,6 +26,7 @@ import (
 	"github.com/dimmihq/dimmi/framework/database"
 
 	"github.com/dimmihq/dimmi/app/actions/tickets"
+	"github.com/dimmihq/dimmi/app/contracts"
 	"github.com/dimmihq/dimmi/app/enums"
 	"github.com/dimmihq/dimmi/app/models"
 )
@@ -66,6 +67,27 @@ type run struct {
 	citedChunks []source
 	// citedClaims are, by chunk id, the reply's sentences citing it.
 	citedClaims map[string]string
+	// citable are the last search's new passages, for a model that
+	// cites them natively; the loop hands them to the tool message.
+	citable []contracts.ChatSource
+}
+
+/*
+cites reports whether the answer model's provider cites the passages
+itself, so passages travel as sources and the model writes no markers.
+*/
+func (st *run) cites() bool {
+	return st.loop != nil && st.loop.llm != nil &&
+		st.loop.llm.Capabilities(strv(st.env.Agent.AnswerModel)).Citations
+}
+
+/*
+takeCitable hands over the last search's passages once.
+*/
+func (st *run) takeCitable() []contracts.ChatSource {
+	out := st.citable
+	st.citable = nil
+	return out
 }
 
 /*
