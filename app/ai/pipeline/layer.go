@@ -62,10 +62,14 @@ type layerState struct {
 }
 
 /*
-fixedTools are the tools offered outside the layer.
+fixedTools are the tools offered outside the layer. The procedure tool
+is one of them because its description is the list of the team's
+procedures and when each applies: behind the layer the agent saw only
+that procedures exist, so it could not tell a request matched one and
+almost never followed any.
 */
 func fixedTools() []string {
-	return []string{toolSearchKnowledge, toolHandoff}
+	return []string{toolSearchKnowledge, toolHandoff, toolProcedure}
 }
 
 /*

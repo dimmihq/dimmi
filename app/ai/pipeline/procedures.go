@@ -83,9 +83,10 @@ func procedureSpec(e *env) contracts.ToolSpec {
 
 	return contracts.ToolSpec{
 		Name: toolProcedure,
-		Description: "Get the steps your team wrote for a kind of request. When the customer's request matches " +
-			"one of these, call this before answering, then do what the steps say, in order; call it again on " +
-			"later turns while you are still following it. Procedures:" + list.String(),
+		Description: "Get the steps your team wrote for a kind of request. Check this list on every customer " +
+			"message. When the request matches one, call this first, before searching or answering, then do what " +
+			"the steps say, in order, in place of your usual approach; call it again on later turns while you are " +
+			"still following it. Procedures:" + list.String(),
 		Schema: objectSchema(map[string]any{"procedure_id": enumProperty(ids)}, "procedure_id"),
 	}
 }

@@ -63,6 +63,33 @@ func TestAiProcedures(t *testing.T) {
 		h.d.Owner.GetJSON("/api/v1/procedures").AssertOK().AssertJSONPath("data.0.uses", float64(1))
 	})
 
+	t.Run("keeps the procedure list in view when tools load on request", func(t *testing.T) {
+		t.Parallel()
+		h := newHarness(t, nil)
+		h.withToolLayer()
+		id := h.liveProcedure("Send a sign-in code", signIn)
+		args, _ := json.Marshal(map[string]string{"procedure_id": id})
+		h.llm.answer.Script(tools(call("follow_procedure", string(args))),
+			reply("Which email address do you sign in with?"))
+
+		conv, trigger := h.conversation("I can't sign in to my account")
+		res := h.run(conv, trigger)
+		require.Equal(t, "answered", res.Outcome)
+
+		first := h.llm.answer.Sent()[0]
+		var offered string
+		for _, tool := range first.Tools {
+			if tool.Name == "follow_procedure" {
+				offered = tool.Description
+			}
+		}
+		assert.Contains(t, offered, id+": Send a sign-in code. Use when: The customer cannot sign in.",
+			"the agent sees every procedure and when it applies without loading anything")
+		assert.Contains(t, sentText(h.llm.answer), "1. Ask which email address they sign in with.",
+			"and follows it by name, not through call_tool")
+		assert.True(t, slicesHasPrefix(h.load(conv, res.RunID).run.Flags, "procedure:"))
+	})
+
 	t.Run("offers no procedure tool when none is live", func(t *testing.T) {
 		t.Parallel()
 		h := newHarness(t, nil)
