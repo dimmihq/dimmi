@@ -129,7 +129,6 @@ func (c AISimulateCommand) Handle(
 		float64(g.PerConversation.Max)/1e4, g.PerReply.Mean/1e4, g.CacheHitShare*100,
 		float64(report.SpendMicros)/1e6)
 	out.Line("Report: %s/%s and %s/%s", in.String("out"), js, in.String("out"), md)
-	refreshViewer(ctx, c.App, out)
 	return nil
 }
 

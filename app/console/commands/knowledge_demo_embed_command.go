@@ -31,7 +31,6 @@ import (
 	"github.com/dimmihq/dimmi/app"
 	"github.com/dimmihq/dimmi/app/actions/knowledge"
 	"github.com/dimmihq/dimmi/app/demo/stowline"
-	"github.com/dimmihq/dimmi/app/demo/wixqa"
 	"github.com/dimmihq/dimmi/app/enums"
 )
 
@@ -63,7 +62,6 @@ Flags asks for the confirmation.
 func (c KnowledgeDemoEmbedCommand) Flags(flags *console.Flags) {
 	flags.Bool("confirm", "bind the model and queue the paid build")
 	flags.Bool("now", "embed in this process instead of the queue, so no other queued job runs")
-	flags.String("workspace", "stowline", "which demo workspace: stowline or wixqa")
 }
 
 /*
@@ -72,16 +70,12 @@ Handle reports the job's size and, when confirmed, starts it.
 func (c KnowledgeDemoEmbedCommand) Handle(
 	ctx context.Context, _ *foundation.Application, in *console.Input, out *console.Output,
 ) error {
-	find := stowline.Find
-	if in.String("workspace") == wixqa.Seed {
-		find = wixqa.Find
-	}
-	w, found, err := find(ctx, c.App)
+	w, found, err := stowline.Find(ctx, c.App)
 	if err != nil {
 		return err
 	}
 	if !found {
-		return errors.New("no such demo workspace; run workspace:demo or workspace:wixqa first")
+		return errors.New("no demo workspace; run workspace:demo first")
 	}
 	ctx = tenancy.With(ctx, w.ID.String())
 
@@ -102,7 +96,7 @@ func (c KnowledgeDemoEmbedCommand) Handle(
 		return nil
 	}
 
-	if err := c.bind(ctx, in); err != nil {
+	if err := c.bind(ctx); err != nil {
 		return err
 	}
 	if !in.Bool("now") {
@@ -121,13 +115,8 @@ func (c KnowledgeDemoEmbedCommand) Handle(
 bind sets the workspace's embedding model to the built-in one, as the
 workspace's owner, which queues the build.
 */
-func (c KnowledgeDemoEmbedCommand) bind(ctx context.Context, in *console.Input) error {
+func (c KnowledgeDemoEmbedCommand) bind(ctx context.Context) error {
 	owner, err := demoOwner(ctx, c.App)
-	if in.String("workspace") == wixqa.Seed {
-		var spot wixqaSpot
-		spot, err = wixqaPlace(ctx, c.App)
-		owner = spot.owner
-	}
 	if err != nil {
 		return err
 	}
