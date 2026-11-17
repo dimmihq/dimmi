@@ -178,7 +178,6 @@ func (r *Runner) turn(ctx context.Context, st *run) *decision {
 	r.offerActions(ctx, st)
 	r.openLayer(ctx, st)
 	st.loop.newest = len(st.loop.messages) - 1
-	r.prefetch(ctx, st)
 
 	draft, err := r.agentLoop(ctx, st)
 	if err == nil {

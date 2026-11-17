@@ -147,9 +147,6 @@ func (r *Runner) openLayer(ctx context.Context, st *run) {
 	}
 	earlier := r.earlierLoads(ctx, st, fixed)
 	set := toolset.New(entries, layerGroups(), earlier).WithIndexMax(layerIndexMax).WithFixed(fixed)
-	if st.env.Agent.CompactResults {
-		set.WithCompact()
-	}
 	ls := &layerState{set: set, earlier: earlier, fixed: fixed}
 	ls.suggested = set.Suggest(ctx, toolset.Keywords{}, r.redactFor(st.env, st.env.pendingText()))
 	st.layer = ls

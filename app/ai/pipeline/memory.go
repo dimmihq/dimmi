@@ -142,10 +142,6 @@ func (r *Runner) memoryBlock(st *run) string {
 			continue
 		}
 		n := st.numbered(chunk, carriedFrom)
-		if st.shown == nil {
-			st.shown = map[int]bool{}
-		}
-		st.shown[n] = true
 		if st.carried == nil {
 			st.carried = map[int]bool{}
 		}

@@ -38,9 +38,7 @@ RETURNING *;
 UPDATE ai_agents SET tool_layer = @tool_layer, updated_at = @now
 WHERE workspace_id = @workspace_id AND id = @id;
 
--- name: SetAgentTokenSavers :exec
--- SetAgentTokenSavers turns the agent's up-front search, compact results
--- and carried passages on or off.
-UPDATE ai_agents SET prefetch_search = @prefetch_search, compact_results = @compact_results,
-    carry_passages = @carry_passages, updated_at = @now
+-- name: SetAgentCarryPassages :exec
+-- SetAgentCarryPassages turns the agent's carried knowledge on or off.
+UPDATE ai_agents SET carry_passages = @carry_passages, updated_at = @now
 WHERE workspace_id = @workspace_id AND id = @id;

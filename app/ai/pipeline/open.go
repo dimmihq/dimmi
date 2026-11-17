@@ -63,8 +63,6 @@ type run struct {
 	draft          bool
 	ticket         *tickets.AgentTicket
 	layer          *layerState
-	prefetched     bool
-	shown          map[int]bool
 	carried        map[int]bool
 	cited          []citation
 	annotated      string

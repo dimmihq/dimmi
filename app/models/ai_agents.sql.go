@@ -144,27 +144,21 @@ func (q *Queries) FindAgent(ctx context.Context, workspaceID ids.UUID) (AiAgent,
 	return i, err
 }
 
-const setAgentTokenSavers = `-- name: SetAgentTokenSavers :exec
-UPDATE ai_agents SET prefetch_search = $1, compact_results = $2,
-    carry_passages = $3, updated_at = $4
-WHERE workspace_id = $5 AND id = $6
+const setAgentCarryPassages = `-- name: SetAgentCarryPassages :exec
+UPDATE ai_agents SET carry_passages = $1, updated_at = $2
+WHERE workspace_id = $3 AND id = $4
 `
 
-type SetAgentTokenSaversParams struct {
-	PrefetchSearch bool      `json:"prefetch_search"`
-	CompactResults bool      `json:"compact_results"`
-	CarryPassages  bool      `json:"carry_passages"`
-	Now            time.Time `json:"now"`
-	WorkspaceID    ids.UUID  `json:"workspace_id"`
-	ID             ids.UUID  `json:"id"`
+type SetAgentCarryPassagesParams struct {
+	CarryPassages bool      `json:"carry_passages"`
+	Now           time.Time `json:"now"`
+	WorkspaceID   ids.UUID  `json:"workspace_id"`
+	ID            ids.UUID  `json:"id"`
 }
 
-// SetAgentTokenSavers turns the agent's up-front search, compact results
-// and carried passages on or off.
-func (q *Queries) SetAgentTokenSavers(ctx context.Context, arg SetAgentTokenSaversParams) error {
-	_, err := q.db.Exec(ctx, setAgentTokenSavers,
-		arg.PrefetchSearch,
-		arg.CompactResults,
+// SetAgentCarryPassages turns the agent's carried knowledge on or off.
+func (q *Queries) SetAgentCarryPassages(ctx context.Context, arg SetAgentCarryPassagesParams) error {
+	_, err := q.db.Exec(ctx, setAgentCarryPassages,
 		arg.CarryPassages,
 		arg.Now,
 		arg.WorkspaceID,

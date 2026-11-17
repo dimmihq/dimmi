@@ -229,12 +229,6 @@ func (r *Runner) searchKnowledge(ctx context.Context, st *run, args json.RawMess
 
 	results := st.kept(res.Chunks)
 	st.lastSearch = searchTrace{Mode: res.Mode, Degraded: res.Degraded, Found: len(res.Chunks), Kept: len(results)}
-	if st.env.Agent.CompactResults {
-		if st.shown == nil {
-			st.shown = map[int]bool{}
-		}
-		return compactSearch(results, st.shown), nil
-	}
 	for i := range results {
 		if st.carried[results[i].ID] {
 			results[i].Text = "(in product_knowledge above)"

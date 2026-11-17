@@ -64,7 +64,7 @@ func (AIToolLayerCommand) Flags(flags *console.Flags) {
 	flags.Argument("slug", "the workspace")
 	flags.Bool("on", "offer a few tools and load the rest on request")
 	flags.Bool("off", "offer every tool on every call")
-	flags.String("features", "layer,prefetch,compact", "which savers to switch: layer, prefetch, compact, carry")
+	flags.String("features", "layer,compact", "which savers to switch: layer, compact (Operator only), carry")
 }
 
 /*
@@ -115,7 +115,7 @@ func (c AIToolLayerCommand) save(ctx context.Context, q *models.Queries, choice 
 	if err != nil {
 		return fmt.Errorf("find agent: %w", err)
 	}
-	prefetch, compact, carry := agent.PrefetchSearch, agent.CompactResults, agent.CarryPassages
+	carry := agent.CarryPassages
 	for _, f := range features {
 		switch strings.TrimSpace(f) {
 		case "layer":
@@ -129,12 +129,9 @@ func (c AIToolLayerCommand) save(ctx context.Context, q *models.Queries, choice 
 			}); err != nil {
 				return err
 			}
-		case "prefetch":
-			prefetch = on
 		case "carry":
 			carry = on
 		case "compact":
-			compact = on
 			if err := q.SetOperatorCompactResults(ctx, models.SetOperatorCompactResultsParams{
 				WorkspaceID: ws, CompactResults: on, Now: now,
 			}); err != nil {
@@ -144,8 +141,7 @@ func (c AIToolLayerCommand) save(ctx context.Context, q *models.Queries, choice 
 			return fmt.Errorf("%w: unknown feature %q", ErrLayerChoice, f)
 		}
 	}
-	return q.SetAgentTokenSavers(ctx, models.SetAgentTokenSaversParams{
-		WorkspaceID: ws, ID: agent.ID, PrefetchSearch: prefetch, CompactResults: compact, CarryPassages: carry,
-		Now: now,
+	return q.SetAgentCarryPassages(ctx, models.SetAgentCarryPassagesParams{
+		WorkspaceID: ws, ID: agent.ID, CarryPassages: carry, Now: now,
 	})
 }
