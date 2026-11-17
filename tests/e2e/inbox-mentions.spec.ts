@@ -42,6 +42,10 @@ it.describe("mentions", () => {
     const suggestions = page.getByRole("listbox", { name: "Mention" });
     await expect(suggestions).toContainText("@Ada Lovelace");
     await page.keyboard.press("Enter");
+    // Typing goes on once the mention is in the text and its list is gone;
+    // keys sent while the editor is still placing it lost the space after it.
+    await expect(suggestions).toBeHidden();
+    await expect(field.locator("[data-mention]")).toBeVisible();
     await field.pressSequentially("please");
     await page.getByRole("button", { name: "Add note" }).click();
 
