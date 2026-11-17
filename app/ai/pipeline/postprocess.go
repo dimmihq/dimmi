@@ -121,10 +121,12 @@ func citations(text string, sources []source) (string, []citation) {
 
 /*
 earlierMarker matches the markers earlier replies carry in the history,
-which a reply must never repeat.
+which a reply must never repeat, and the same marker written with a
+question mark for a number, which a model makes up when it copies the
+shape without a source.
 */
 func earlierMarker() *regexp.Regexp {
-	return regexp.MustCompile(`[ \t]?\[S\d{1,3}(?:\s*[,;]\s*S\d{1,3})*\]`)
+	return regexp.MustCompile(`[ \t]?\[S(?:\d{1,3}|\?)(?:\s*[,;]\s*S(?:\d{1,3}|\?))*\]`)
 }
 
 /*
