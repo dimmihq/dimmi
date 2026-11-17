@@ -1,12 +1,13 @@
 {
-  "version": "2026-11-15",
+  "version": "2026-11-17",
   "currency": "USD",
   "sources": {
-    "note": "Copied by hand from each provider's own pricing page or API, checked 2026-11-15. Base rates: global routing, standard tier, prompts under the long-context thresholds. The dimmi rows repeat the upstream rate of the model they serve.",
+    "note": "Copied by hand from each provider's own pricing page or API, checked 2026-11-15, Wafer on 2026-11-17. Base rates: global routing, standard tier, prompts under the long-context thresholds. The dimmi rows repeat the upstream rate of the model they serve; for the open-weight models that is Wafer, the first host.",
     "anthropic": "https://platform.claude.com/docs/en/about-claude/pricing (cache write is the 5-minute write; Haiku 5.5 bills a whole request above 100K prompt tokens at 5x)",
     "openai": "https://developers.openai.com/api/docs/pricing (cache write is the 30-minute write; above 272K input tokens prices rise)",
     "openai_compatible": "https://api.deepinfra.com/models/list (DeepInfra; pricing in cents per token, cached input as a multiplier of input)",
-    "engy": "https://api.engy.ai/v1/models and https://engy.ai/pricing"
+    "engy": "https://api.engy.ai/v1/models and https://engy.ai/pricing",
+    "wafer": "https://pass.wafer.ai/v1/models (pricing per model in cents per million tokens; reached as an OpenAI-compatible endpoint, so its rows carry Wafer's own model names)"
   },
   "models": [
     {
@@ -108,9 +109,9 @@
       "provider": "dimmi",
       "match": "exact",
       "model": "glm-5.3-flash",
-      "input_per_mtok": "0.135",
-      "cached_input_per_mtok": "0.027",
-      "output_per_mtok": "0.45"
+      "input_per_mtok": "0.05",
+      "cached_input_per_mtok": "0.03",
+      "output_per_mtok": "0.20"
     },
     {
       "provider": "dimmi",
@@ -177,6 +178,39 @@
       "input_per_mtok": "0.15",
       "cached_input_per_mtok": "0.03",
       "output_per_mtok": "0.50",
+      "roles": [
+        "answer"
+      ]
+    },
+    {
+      "provider": "openai_compatible",
+      "match": "exact",
+      "model": "GLM-5.3-Flash",
+      "input_per_mtok": "0.05",
+      "cached_input_per_mtok": "0.03",
+      "output_per_mtok": "0.20",
+      "roles": [
+        "answer"
+      ]
+    },
+    {
+      "provider": "openai_compatible",
+      "match": "exact",
+      "model": "DeepSeek-V4.1-Flash-1017",
+      "input_per_mtok": "0.13",
+      "cached_input_per_mtok": "0.008",
+      "output_per_mtok": "0.50",
+      "roles": [
+        "answer"
+      ]
+    },
+    {
+      "provider": "openai_compatible",
+      "match": "exact",
+      "model": "DeepSeek-V4.1-Flash",
+      "input_per_mtok": "0.19",
+      "cached_input_per_mtok": "0.012",
+      "output_per_mtok": "0.65",
       "roles": [
         "answer"
       ]

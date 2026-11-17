@@ -34,6 +34,7 @@ const (
 	LLMProviderChatGPT          LLMProvider = "chatgpt"
 	LLMProviderEngy             LLMProvider = "engy"
 	LLMProviderBaseten          LLMProvider = "baseten"
+	LLMProviderWafer            LLMProvider = "wafer"
 	LLMProviderOpenAICompatible LLMProvider = "openai_compatible"
 )
 

@@ -29,6 +29,7 @@ import (
 	"github.com/dimmihq/dimmi/app/drivers/llm/managed"
 	"github.com/dimmihq/dimmi/app/drivers/llm/openai"
 	"github.com/dimmihq/dimmi/app/drivers/llm/openaicompat"
+	"github.com/dimmihq/dimmi/app/drivers/llm/wafer"
 	"github.com/dimmihq/dimmi/app/enums"
 	"github.com/dimmihq/dimmi/app/models"
 	"github.com/dimmihq/dimmi/app/support/llmretry"
@@ -143,15 +144,20 @@ func (m *LLMManager) managedDriver(hc *httpclient.Client) (contracts.LLM, error)
 
 /*
 openWeightHosts fronts the hosts the built-in provider sends the
-open-weight models to: Baseten first and Engy when Baseten cannot
-serve, or whichever of the two the install has a key for. Each host
-has its own breaker per model, so a host that keeps failing is
-skipped until it recovers.
+open-weight models to: Wafer first, then Baseten, then Engy, each when
+the one before it cannot serve, leaving out any the install has no key
+for. Each host has its own breaker per model, so a host that keeps
+failing is skipped until it recovers.
 */
 func (m *LLMManager) openWeightHosts(hc *httpclient.Client) contracts.LLM {
 	cfg := m.config.Managed.OpenWeight
 	var hosts []contracts.LLM
 
+	if cfg.Wafer.APIKey != "" {
+		hosts = append(hosts, wafer.New(wafer.Options{
+			BaseURL: cfg.Wafer.BaseURL, APIKey: cfg.Wafer.APIKey, HTTP: hc.StdClient(), Clock: m.clock,
+		}))
+	}
 	if cfg.Baseten.APIKey != "" {
 		hosts = append(hosts, baseten.New(baseten.Options{
 			BaseURL: cfg.Baseten.BaseURL, APIKey: cfg.Baseten.APIKey, HTTP: hc.StdClient(), Clock: m.clock,

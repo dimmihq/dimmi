@@ -20,6 +20,8 @@ import (
 const (
 	basetenCompletions = "POST https://inference.baseten.co/v1/chat/completions"
 	engyCompletions    = "POST https://api.engy.ai/v1/chat/completions"
+	waferCompletions   = "POST https://pass.wafer.ai/v1/chat/completions"
+	waferKeyEnv        = "DIMMI_AI__MANAGED__OPENWEIGHT__WAFER__API_KEY=wf-managed"
 	basetenKeyEnv      = "DIMMI_AI__MANAGED__OPENWEIGHT__BASETEN__API_KEY=bt-managed"
 	engyKeyEnv         = "DIMMI_AI__MANAGED__OPENWEIGHT__ENGY__API_KEY=sk-engy-managed"
 )
@@ -66,6 +68,32 @@ func askBuiltIn(t *testing.T, stub func(*httpclienttest.Fake), env ...string) (s
 
 func TestManagedOpenWeightHosts(t *testing.T) {
 	t.Parallel()
+
+	t.Run("answers from wafer first when every host is set", func(t *testing.T) {
+		t.Parallel()
+
+		text, hosts, err := askBuiltIn(t, func(f *httpclienttest.Fake) {
+			f.Stub(waferCompletions, jsonReply(fhttp.StatusOK, openWeightReply("from wafer")))
+		}, waferKeyEnv, basetenKeyEnv, engyKeyEnv)
+
+		require.NoError(t, err)
+		assert.Equal(t, "from wafer", text)
+		assert.Equal(t, []string{"pass.wafer.ai"}, hosts)
+	})
+
+	t.Run("answers from baseten when wafer is failing", func(t *testing.T) {
+		t.Parallel()
+
+		text, hosts, err := askBuiltIn(t, func(f *httpclienttest.Fake) {
+			f.Stub(waferCompletions, jsonReply(fhttp.StatusBadGateway, `{"error":{"message":"bad gateway"}}`))
+			f.Stub(basetenCompletions, jsonReply(fhttp.StatusOK, openWeightReply("from baseten")))
+		}, waferKeyEnv, basetenKeyEnv, engyKeyEnv)
+
+		require.NoError(t, err)
+		assert.Equal(t, "from baseten", text)
+		assert.Equal(t, "pass.wafer.ai", hosts[0])
+		assert.Equal(t, "inference.baseten.co", hosts[len(hosts)-1])
+	})
 
 	t.Run("answers from baseten when both hosts are set", func(t *testing.T) {
 		t.Parallel()

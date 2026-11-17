@@ -77,14 +77,16 @@ type AIManagedUpstream struct {
 }
 
 /*
-AIManagedOpenWeight holds the two hosts that serve the open-weight
-models under the same names. Baseten answers first and Engy takes over
-whenever Baseten cannot serve; with only one host set, that host serves
-alone. APIKey, BaseURL and Provider are the older single-host settings:
-settle moves them onto the host Provider names, Engy unless it says
-baseten, so an install configured that way keeps working.
+AIManagedOpenWeight holds the hosts that serve the open-weight models
+under the same names. Wafer answers first, then Baseten, then Engy,
+each taking over when the one before it cannot serve; a host with no
+key is left out. APIKey, BaseURL and Provider are the older
+single-host settings: settle moves them onto the host Provider names,
+Engy unless it says baseten, so an install configured that way keeps
+working.
 */
 type AIManagedOpenWeight struct {
+	Wafer   AIManagedUpstream `koanf:"wafer"`
 	Baseten AIManagedUpstream `koanf:"baseten"`
 	Engy    AIManagedUpstream `koanf:"engy"`
 
@@ -97,7 +99,7 @@ type AIManagedOpenWeight struct {
 Configured reports whether any open-weight host has a key.
 */
 func (o *AIManagedOpenWeight) Configured() bool {
-	return o.Baseten.APIKey != "" || o.Engy.APIKey != ""
+	return o.Wafer.APIKey != "" || o.Baseten.APIKey != "" || o.Engy.APIKey != ""
 }
 
 /*
