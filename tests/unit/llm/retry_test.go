@@ -81,6 +81,51 @@ func (s *silentStream) Next(context.Context) (contracts.StreamEvent, error) {
 
 func (s *silentStream) Close() error { return nil }
 
+/*
+stalling opens a stream that sends nothing for its first stalls calls,
+then one that says hello; thenQuiet makes that stream go quiet after
+its first event.
+*/
+type stalling struct {
+	scripted
+	stalls    int
+	thenQuiet bool
+}
+
+func (s *stalling) Stream(ctx context.Context, _ contracts.ChatRequest) (contracts.ChatStream, error) {
+	s.mu.Lock()
+	s.calls++
+	stall := s.calls <= s.stalls
+	s.mu.Unlock()
+	if stall {
+		return &silentStream{wait: func() error { return canceled(ctx) }}, nil
+	}
+	return &helloStream{quiet: s.thenQuiet, wait: func() error { return canceled(ctx) }}, nil
+}
+
+/*
+helloStream sends one event, then ends, or goes quiet until its
+context ends.
+*/
+type helloStream struct {
+	sent  bool
+	quiet bool
+	wait  func() error
+}
+
+func (s *helloStream) Next(context.Context) (contracts.StreamEvent, error) {
+	if !s.sent {
+		s.sent = true
+		return contracts.StreamEvent{Kind: contracts.StreamEventTextDelta, Text: "hello"}, nil
+	}
+	if s.quiet {
+		return contracts.StreamEvent{}, &contracts.LLMError{Kind: contracts.LLMErrorCanceled, Message: s.wait().Error()}
+	}
+	return contracts.StreamEvent{Kind: contracts.StreamEventDone}, nil
+}
+
+func (s *helloStream) Close() error { return nil }
+
 func failure(kind contracts.LLMErrorKind, status int) error {
 	return &contracts.LLMError{Kind: kind, HTTPStatus: status, Message: string(kind)}
 }
@@ -185,22 +230,74 @@ func TestRetryWrapper(t *testing.T) {
 		assert.Equal(t, contracts.LLMErrorTimeout, llmError(t, <-done).Kind)
 	})
 
-	t.Run("ends a stream that goes quiet past its first-token bound", func(t *testing.T) {
+	t.Run("tries a stream again when it opens and sends nothing in time", func(t *testing.T) {
 		t.Parallel()
 		clk := clock.NewFake(time.Date(2026, 11, 6, 10, 0, 0, 0, time.UTC))
-		w := llmretry.Wrap(&scripted{}, llmretry.Options{Clock: clk, Backoff: noWait})
+		inner := &stalling{stalls: 1}
+		w := llmretry.Wrap(inner, llmretry.Options{Clock: clk, Backoff: noWait})
 
 		req := contracts.ChatRequest{Timeout: contracts.StepTimeouts{FirstToken: 3 * time.Second}}
+		opened := make(chan contracts.ChatStream, 1)
+		go func() {
+			stream, err := w.Stream(t.Context(), req)
+			assert.NoError(t, err)
+			opened <- stream
+		}()
+		require.NoError(t, clk.BlockUntilContext(t.Context(), 1))
+		clk.Travel(3 * time.Second)
+
+		stream := <-opened
+		require.NotNil(t, stream)
+		ev, err := stream.Next(t.Context())
+		require.NoError(t, err)
+		assert.Equal(t, "hello", ev.Text, "the second attempt's first event is not lost")
+		assert.Equal(t, 2, inner.count())
+		require.NoError(t, stream.Close())
+	})
+
+	t.Run("gives up on a stream that stalls on every attempt", func(t *testing.T) {
+		t.Parallel()
+		clk := clock.NewFake(time.Date(2026, 11, 6, 10, 0, 0, 0, time.UTC))
+		inner := &stalling{stalls: 2}
+		w := llmretry.Wrap(inner, llmretry.Options{Clock: clk, Backoff: noWait, MaxAttempts: 2})
+
+		req := contracts.ChatRequest{Timeout: contracts.StepTimeouts{FirstToken: 3 * time.Second}}
+		done := make(chan error, 1)
+		go func() {
+			_, err := w.Stream(t.Context(), req)
+			done <- err
+		}()
+		for range 2 {
+			require.NoError(t, clk.BlockUntilContext(t.Context(), 1))
+			clk.Travel(3 * time.Second)
+		}
+
+		assert.Equal(t, contracts.LLMErrorTimeout, llmError(t, <-done).Kind)
+		assert.Equal(t, 2, inner.count())
+	})
+
+	t.Run("does not try again once a stream has sent something", func(t *testing.T) {
+		t.Parallel()
+		clk := clock.NewFake(time.Date(2026, 11, 6, 10, 0, 0, 0, time.UTC))
+		inner := &stalling{thenQuiet: true}
+		w := llmretry.Wrap(inner, llmretry.Options{Clock: clk, Backoff: noWait})
+
+		bounds := contracts.StepTimeouts{FirstToken: 3 * time.Second, Idle: 2 * time.Second}
+		req := contracts.ChatRequest{Timeout: bounds}
 		stream, err := w.Stream(t.Context(), req)
+		require.NoError(t, err)
+		_, err = stream.Next(t.Context())
 		require.NoError(t, err)
 		done := make(chan error, 1)
 		go func() {
 			_, err := stream.Next(t.Context())
 			done <- err
 		}()
-		clk.Travel(3 * time.Second)
+		require.NoError(t, clk.BlockUntilContext(t.Context(), 1))
+		clk.Travel(2 * time.Second)
 
 		assert.Equal(t, contracts.LLMErrorTimeout, llmError(t, <-done).Kind)
+		assert.Equal(t, 1, inner.count(), "part of the answer may be with the caller already")
 		require.NoError(t, stream.Close())
 	})
 

@@ -189,6 +189,13 @@ func (w *watchdog) stop() {
 }
 
 /*
+breachedBy reports whether a bound was breached.
+*/
+func (w *watchdog) breachedBy() bool {
+	return errors.Is(w.cause(), errStepTimeout)
+}
+
+/*
 translate turns a failure caused by a breached bound into a timeout.
 */
 func (w *watchdog) translate(err error) error {
@@ -196,11 +203,21 @@ func (w *watchdog) translate(err error) error {
 }
 
 /*
-watchedStream is a stream read under its watchdog.
+watchedStream is a stream read under its watchdog. Its first read was
+made while the stream was opened and is handed over on the first Next.
 */
 type watchedStream struct {
 	inner contracts.ChatStream
 	watch *watchdog
+	first *firstRead
+}
+
+/*
+firstRead is what a stream's first read returned.
+*/
+type firstRead struct {
+	event contracts.StreamEvent
+	err   error
 }
 
 /*
@@ -208,6 +225,16 @@ Next reads the next event, reporting a breached bound as a timeout
 and disarming the watchdog once the stream ends.
 */
 func (s *watchedStream) Next(ctx context.Context) (contracts.StreamEvent, error) {
+	if first := s.first; first != nil {
+		s.first = nil
+		if first.err != nil {
+			err := s.watch.translate(first.err)
+			s.watch.stop()
+			return first.event, err
+		}
+		return first.event, nil
+	}
+
 	ev, err := s.inner.Next(ctx)
 	if err != nil {
 		err = s.watch.translate(err)

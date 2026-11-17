@@ -107,23 +107,50 @@ func (w *Wrapper) Chat(ctx context.Context, req contracts.ChatRequest) (*contrac
 }
 
 /*
-Stream retries only until the stream has been opened; once tokens
-flow, failures pass through untouched. The returned stream enforces
-the request's first-token, idle and total timeouts.
+Stream retries until the stream has sent its first event; once
+anything has arrived, failures pass through untouched, since part of
+the answer may already be with the caller. A stream that opens and
+then sends nothing within the first-token bound counts as a failed
+attempt and is tried again: nothing was received, so nothing is
+repeated. The returned stream enforces the request's idle and total
+timeouts.
 */
 func (w *Wrapper) Stream(ctx context.Context, req contracts.ChatRequest) (contracts.ChatStream, error) {
+	return attempt(ctx, w, req, func(ctx context.Context, d contracts.LLM) (contracts.ChatStream, error) {
+		return w.started(ctx, d, req)
+	})
+}
+
+/*
+started opens a stream under its own watchdog and waits for its first
+event. A stream that stalls before it is closed and reported as a
+timeout; any other outcome of the first read, an error included, is
+kept for the caller's first Next.
+*/
+func (w *Wrapper) started(
+	ctx context.Context, d contracts.LLM, req contracts.ChatRequest,
+) (contracts.ChatStream, error) {
 	ctx, watch := newWatchdog(ctx, w.opts.Clock, req.Timeout)
 
-	stream, err := attempt(ctx, w, req, func(ctx context.Context, d contracts.LLM) (contracts.ChatStream, error) {
-		return d.Stream(ctx, req)
-	})
+	stream, err := d.Stream(ctx, req)
 	if err != nil {
 		err = watch.translate(err)
 		watch.stop()
 		return nil, err
 	}
 
-	return &watchedStream{inner: stream, watch: watch}, nil
+	first, err := stream.Next(ctx)
+	if err != nil && watch.breachedBy() {
+		err = watch.translate(err)
+		watch.stop()
+		_ = stream.Close()
+		return nil, err
+	}
+
+	if err == nil {
+		watch.seen()
+	}
+	return &watchedStream{inner: stream, watch: watch, first: &firstRead{event: first, err: err}}, nil
 }
 
 /*
