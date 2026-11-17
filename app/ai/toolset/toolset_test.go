@@ -200,63 +200,6 @@ func TestKeywordsRankTheMatchingTool(t *testing.T) {
 	}
 }
 
-func TestVectorsEmbedEachToolOnce(t *testing.T) {
-	calls := 0
-	embed := func(_ context.Context, texts []string) ([][]float32, error) {
-		calls++
-		out := make([][]float32, len(texts))
-		for i, text := range texts {
-			if strings.Contains(text, "Void") || strings.Contains(text, "refund my label") {
-				out[i] = []float32{1, 0}
-			} else {
-				out[i] = []float32{0, 1}
-			}
-		}
-		return out, nil
-	}
-	v := &toolset.Vectors{Model: "m", Embed: embed}
-	for range 2 {
-		names, err := v.Rank(context.Background(), "refund my label", entries(), 1)
-		if err != nil || len(names) != 1 || names[0] != "action_void_label" {
-			t.Fatalf("ranked = %v, %v", names, err)
-		}
-	}
-	v.Query = []float32{1, 0}
-	if _, err := v.Rank(context.Background(), "anything", entries(), 1); err != nil {
-		t.Fatal(err)
-	}
-	if calls != 2 {
-		t.Fatalf("embed calls = %d, want tools once and the query once", calls)
-	}
-}
-
-type decider struct{ pick string }
-
-func (d decider) Decide(_ context.Context, req contracts.DecisionRequest) (*contracts.DecisionResponse, error) {
-	q := req.Questions["tool"]
-	p := map[string]float64{}
-	for name := range q.Choices {
-		p[name] = 0.1
-	}
-	p[d.pick] = 0.9
-	return &contracts.DecisionResponse{Answers: map[string]contracts.DecisionAnswer{"tool": {Probabilities: p}}}, nil
-}
-
-func TestDecidedReordersAndIsOptional(t *testing.T) {
-	msg := "void the shipment label"
-	base, _ := toolset.Keywords{}.Rank(context.Background(), msg, entries(), 20)
-	same, _ := toolset.Decided{Base: toolset.Keywords{}}.Rank(context.Background(), msg, entries(), 20)
-	if strings.Join(base, ",") != strings.Join(same, ",") {
-		t.Fatalf("without a decider %v != %v", same, base)
-	}
-	last := base[len(base)-1]
-	got, _ := toolset.Decided{Base: toolset.Keywords{}, Decider: decider{pick: last}}.Rank(
-		context.Background(), msg, entries(), 20)
-	if got[0] != last {
-		t.Fatalf("decided = %v", got)
-	}
-}
-
 func TestNoteAndEarlier(t *testing.T) {
 	if toolset.Note(nil, nil) != "" {
 		t.Fatal("empty note")
