@@ -162,6 +162,17 @@
     {
       "provider": "openai_compatible",
       "match": "exact",
+      "model": "deepseek-ai/DeepSeek-V4.1-Flash-1017",
+      "input_per_mtok": "0.20",
+      "cached_input_per_mtok": "0.006",
+      "output_per_mtok": "0.60",
+      "roles": [
+        "answer"
+      ]
+    },
+    {
+      "provider": "openai_compatible",
+      "match": "exact",
       "model": "zai-org/GLM-5.3-Flash",
       "input_per_mtok": "0.15",
       "cached_input_per_mtok": "0.03",
