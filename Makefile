@@ -13,7 +13,7 @@ AIR_VERSION := v1.67.4
 FRAMEWORK_PKGS := ./framework/...
 APP_PKGS := ./app/...
 
-.PHONY: test-sweep e2e pseudo-locale tools lint-tools fmt lint lint-go lint-web test test-go test-cloud test-self-host warm-arch test-timing test-web test-dev cover cover-app services gen sqlc views build dev dev-server dev-web dev-widget dev-db web-build web-test
+.PHONY: test-sweep e2e pseudo-locale tools lint-tools fmt lint lint-go lint-web test test-go test-cloud test-self-host warm-arch test-timing test-web test-dev cover cover-app services gen sqlc views build build-cloud dev dev-server dev-web dev-widget dev-db web-build web-test
 
 APP ?= dimmi
 
@@ -156,6 +156,10 @@ build: web-build
 	go build -trimpath -o bin/dimmi ./cmd/dimmi
 	go build -trimpath -tags cloud -o bin/dimmi-cloud ./cmd/dimmi
 
+# Builds only the cloud binary, which is the one the end-to-end tests run.
+build-cloud: web-build
+	go build -trimpath -tags cloud -o bin/dimmi-cloud ./cmd/dimmi
+
 # Builds the browser app into public/build, which the next go build embeds.
 web-build:
 	pnpm build
@@ -164,11 +168,11 @@ web-test:
 	pnpm typecheck
 	pnpm test
 
-# End-to-end tests: builds both binaries, then drives Chromium in light
+# End-to-end tests: builds the cloud binary, then drives Chromium in light
 # and dark against the release cloud binary, started fresh on :18090
 # with its own database (tests/e2e/server.ts). Needs `make services`.
 # E2E_ARGS passes options to Playwright, such as --shard=1/3.
-e2e: pseudo-locale build
+e2e: pseudo-locale build-cloud
 	pnpm e2e $(E2E_ARGS)
 
 # Checks the infrastructure code without reaching any account: credentials
