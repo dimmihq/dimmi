@@ -236,6 +236,24 @@ func TestAiProcedureCheck(t *testing.T) {
 		}
 	})
 
+	t.Run("asks the decision model once when the agent asks for two procedures", func(t *testing.T) {
+		t.Parallel()
+		h := newHarness(t, nil)
+		first := h.liveProcedure("Customer wants to cancel", cancel)
+		second := h.liveProcedure("Send a sign-in code", signIn)
+		d := h.decider().Script(fits(map[string]float64{first: 0.8, second: 0.8}))
+		one, _ := json.Marshal(map[string]string{"procedure_id": first})
+		two, _ := json.Marshal(map[string]string{"procedure_id": second})
+		h.llm.answer.Script(tools(call("follow_procedure", string(one))),
+			tools(call("follow_procedure", string(two))), reply("Which email address do you sign in with?"))
+
+		conv, trigger := h.conversation("I can't sign in, and I want to cancel")
+		res := h.run(conv, trigger)
+
+		assert.Len(t, d.Sent(), 1)
+		assert.Len(t, h.load(conv, res.RunID).run.Flags, 2)
+	})
+
 	t.Run("does not check a procedure the conversation is already following", func(t *testing.T) {
 		t.Parallel()
 		h := newHarness(t, nil)

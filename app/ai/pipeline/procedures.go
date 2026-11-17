@@ -159,7 +159,8 @@ agent: the asked one with no note when it fits or was not checked,
 another with a note when that one fits and the asked one does not, and
 none with a note when nothing fits. A procedure is checked once: asked
 for again in the run, or followed earlier in the conversation, it is
-handed over.
+handed over. The decision model is asked once in a run, whatever the
+number of procedures the agent asks for.
 */
 func (r *Runner) fittingProcedure(ctx context.Context, st *run, asked liveProcedure) (*liveProcedure, string) {
 	id := asked.publicID()
@@ -171,7 +172,10 @@ func (r *Runner) fittingProcedure(ctx context.Context, st *run, asked liveProced
 	}
 	st.procedureAsked[id] = true
 
-	fits := r.procedureFits(ctx, st)
+	if st.procedureFits == nil {
+		st.procedureFits = r.procedureFits(ctx, st)
+	}
+	fits := st.procedureFits
 	score, ok := fits[id]
 	if !ok || score >= procedureMisfit {
 		return &asked, ""

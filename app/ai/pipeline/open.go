@@ -35,8 +35,9 @@ run is one run in flight: its environment, recorder and settings, and
 what the turn produced: the loop's state, the search results numbered
 for citation, the last search query, the handoff and the internal
 changes the tools asked for, the workspace actions it offered and
-called, whether it followed one of the team's procedures, and the
-procedures it already checked or handed over.
+called, whether it followed one of the team's procedures, the
+procedures it already checked or handed over, and how well the
+decision model found each procedure to fit.
 */
 type run struct {
 	env            *env
@@ -56,6 +57,7 @@ type run struct {
 	actions        actionState
 	followed       bool
 	procedureAsked map[string]bool
+	procedureFits  map[string]float64
 	draft          bool
 	ticket         *tickets.AgentTicket
 	layer          *layerState
