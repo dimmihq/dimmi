@@ -20,7 +20,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"path/filepath"
 	"slices"
 	"strings"
 
@@ -203,21 +202,16 @@ Handle runs the questions and writes the report.
 func (c AIQualityCommand) Handle(
 	ctx context.Context, _ *foundation.Application, in *console.Input, out *console.Output,
 ) error {
-	data, err := dataset(c.App, in.String("dir"))
+	items, err := c.questions(ctx, in)
 	if err != nil {
 		return err
 	}
-	items, err := qualityItems(ctx, data, in.String("set"), in.Int("questions"))
-	if err != nil {
-		return err
-	}
-	items = sample(items, in.Int("sample"))
 	o, err := c.options(ctx, in, out)
 	if err != nil {
 		return err
 	}
 	budget := costsim.NewBudget(c.App.AI.Prices, o.MaxSpend, o.MaxPerConv)
-	sim := AISimulateCommand{App: c.App}
+	sim := AISimulateCommand(c)
 	if _, err := sim.agentModel(ctx, &o); err != nil {
 		return err
 	}
@@ -242,20 +236,53 @@ func (c AIQualityCommand) Handle(
 	if err != nil {
 		return err
 	}
-	disk, err := c.App.Storage.Build("quality-report", config.Section{"driver": "local", "root": in.String("out")})
+	js, md, err := c.write(ctx, in.String("out"), report, o.Label)
 	if err != nil {
 		return err
 	}
-	js, md, err := report.Write(ctx, disk, o.Label)
-	if err != nil {
-		return err
-	}
+	printQuality(out, report, fmt.Sprintf("%s/%s and %s/%s", in.String("out"), js, in.String("out"), md))
+	refreshViewer(ctx, c.App, out)
+	return nil
+}
+
+/*
+printQuality prints a report's headline numbers and where its files
+are.
+*/
+func printQuality(out *console.Output, report *costsim.QualityReport, files string) {
 	out.Info("Retrieval hit %.1f%%, average score %.2f, correct %.1f%%, contradicting %d, %.3f¢ per answer, "+
 		"%d failed.", report.HitRate*100, report.AvgScore, report.CorrectShare*100, report.Contradicting,
 		report.AnswerMicros/1e4, report.Failed)
-	out.Line("Report: %s/%s and %s/%s", in.String("out"), js, in.String("out"), md)
-	refreshViewer(ctx, c.App, out)
-	return nil
+	out.Line("Report: %s", files)
+}
+
+/*
+questions reads the set's questions and keeps the sample asked for.
+*/
+func (c AIQualityCommand) questions(ctx context.Context, in *console.Input) ([]costsim.QualityItem, error) {
+	data, err := dataset(c.App, in.String("dir"))
+	if err != nil {
+		return nil, err
+	}
+	items, err := qualityItems(ctx, data, in.String("set"), in.Int("questions"))
+	if err != nil {
+		return nil, err
+	}
+	return sample(items, in.Int("sample")), nil
+}
+
+/*
+write saves the report under the output directory and returns the
+names of its JSON and Markdown files.
+*/
+func (c AIQualityCommand) write(ctx context.Context, root string, report *costsim.QualityReport, label string) (
+	string, string, error,
+) {
+	disk, err := c.App.Storage.Build("quality-report", config.Section{"driver": "local", "root": root})
+	if err != nil {
+		return "", "", err
+	}
+	return report.Write(ctx, disk, label)
 }
 
 /*
@@ -264,7 +291,10 @@ regrade reads an earlier run's report and grades its replies again.
 func regrade(ctx context.Context, h *costsim.Harness, path string, run costsim.QualityRun) (
 	*costsim.QualityReport, error,
 ) {
-	dir, file := filepath.Split(path)
+	dir, file := "", path
+	if i := strings.LastIndex(path, "/"); i >= 0 {
+		dir, file = path[:i+1], path[i+1:]
+	}
 	disk, err := h.App.Storage.Build("quality-prior", config.Section{"driver": "local", "root": dir})
 	if err != nil {
 		return nil, err
@@ -350,7 +380,7 @@ func (c AIQualityCommand) options(ctx context.Context, in *console.Input, out *c
 	if !dry && maxSpend <= 0 {
 		return costsim.Options{}, errors.New("a real run needs --max-spend in dollars, or use --dry-run")
 	}
-	owner, inbox, channel, err := wixqaPlace(ctx, c.App)
+	spot, err := wixqaPlace(ctx, c.App)
 	if err != nil {
 		return costsim.Options{}, err
 	}
@@ -359,7 +389,7 @@ func (c AIQualityCommand) options(ctx context.Context, in *console.Input, out *c
 		label = c.App.Clock.Now().UTC().Format("20060102-150405") + "-" + in.String("set")
 	}
 	return costsim.Options{
-		Owner: owner, Inbox: inbox, Channel: channel, Company: "Wix", Mode: costsim.ModeScripted,
+		Owner: spot.owner, Inbox: spot.inbox, Channel: spot.channel, Company: "Wix", Mode: costsim.ModeScripted,
 		AgentModel: in.String("agent-model"), MaxSpend: maxSpend, MaxPerConv: maxSpend, DryRun: dry,
 		Label: label, Log: out.Line, Parallel: max(in.Int("parallel"), 1),
 	}, nil
@@ -397,13 +427,22 @@ func (c AIQualityCommand) judge(ctx context.Context, o costsim.Options, budget *
 }
 
 /*
+wixqaSpot is where the WixQA questions are asked: as the workspace's
+owner, in its inbox, over its messenger.
+*/
+type wixqaSpot struct {
+	owner   authz.Membership
+	inbox   ids.UUID
+	channel ids.UUID
+}
+
+/*
 wixqaPlace finds the WixQA workspace's owner and its messenger.
 */
-func wixqaPlace(ctx context.Context, a *app.App) (authz.Membership, ids.UUID, ids.UUID, error) {
+func wixqaPlace(ctx context.Context, a *app.App) (wixqaSpot, error) {
 	w, found, err := wixqa.Find(ctx, a)
 	if err != nil || !found {
-		return authz.Membership{}, ids.UUID{}, ids.UUID{}, errors.Join(err,
-			errors.New("no WixQA workspace; run workspace:wixqa first"))
+		return wixqaSpot{}, errors.Join(err, errors.New("no WixQA workspace; run workspace:wixqa first"))
 	}
 	var member models.WorkspaceMember
 	var inbox, channel ids.UUID
@@ -425,7 +464,8 @@ func wixqaPlace(ctx context.Context, a *app.App) (authz.Membership, ids.UUID, id
 		return err
 	})
 	if err != nil {
-		return authz.Membership{}, ids.UUID{}, ids.UUID{}, fmt.Errorf("find WixQA owner and messenger: %w", err)
+		return wixqaSpot{}, fmt.Errorf("find WixQA owner and messenger: %w", err)
 	}
-	return authz.NewMembership(w, member, appauth.RolePermissions(enums.RoleOwner)), inbox, channel, nil
+	owner := authz.NewMembership(w, member, appauth.RolePermissions(enums.RoleOwner))
+	return wixqaSpot{owner: owner, inbox: inbox, channel: channel}, nil
 }

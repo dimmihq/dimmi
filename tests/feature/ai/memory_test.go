@@ -149,7 +149,8 @@ func TestConversationMemory(t *testing.T) {
 		assert.Contains(t, first, "<product_knowledge>\n[101] "+m.Passages[0].Title,
 			"carried passages are numbered from 101")
 		results := sent[len(sent)-1].Messages[len(sent[len(sent)-1].Messages)-1].Parts[0].Text
-		assert.Contains(t, results, `"id":1,`, "this turn's first result is still [1], as a model numbering footnotes expects")
+		assert.Contains(t, results, `"id":1,`,
+			"this turn's first result is still [1], as a model numbering footnotes expects")
 		replies := h.load(conv, res.RunID).agentReplies()
 		meta := aiMeta(t, replies[len(replies)-1])
 		sources, _ := meta["sources"].([]any)
@@ -181,7 +182,8 @@ func TestReplyFocus(t *testing.T) {
 		h.llm.answer.Script(search("pro plan price per seat"), reply("Pro costs $12 per seat per month [1]."))
 		require.Equal(t, "answered", h.run(conv, trigger).Outcome)
 		first := h.llm.answer.Sent()[0].Messages
-		assert.NotContains(t, first[len(first)-1].Parts[0].Text, "<reply_focus>", "a first reply has nothing to build on")
+		assert.NotContains(t, first[len(first)-1].Parts[0].Text, "<reply_focus>",
+			"a first reply has nothing to build on")
 
 		next := h.add(conv, "contact", "message", "And Business?")
 		h.llm.answer.Script(search("business plan price"), reply("Business costs $20 per seat [1]."))

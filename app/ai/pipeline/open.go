@@ -37,7 +37,9 @@ for citation, the last search query, the handoff and the internal
 changes the tools asked for, the workspace actions it offered and
 called, whether it followed one of the team's procedures, the
 procedures it already checked or handed over, and how well the
-decision model found each procedure to fit.
+decision model found each procedure to fit. The cited chunks are the
+passages the reply's markers name, each once; the cited claims are, by
+chunk id, the reply's sentences citing it.
 */
 type run struct {
 	env            *env
@@ -66,10 +68,8 @@ type run struct {
 	carried        map[int]bool
 	cited          []citation
 	annotated      string
-	// citedChunks are the passages the reply's markers name, each once.
-	citedChunks []source
-	// citedClaims are, by chunk id, the reply's sentences citing it.
-	citedClaims map[string]string
+	citedChunks    []source
+	citedClaims    map[string]string
 }
 
 /*

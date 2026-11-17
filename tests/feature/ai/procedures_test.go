@@ -87,7 +87,7 @@ func TestAiProcedures(t *testing.T) {
 		assert.Contains(t, sentText(h.llm.answer), "They lost access to the mailbox.")
 
 		s := h.load(conv, res.RunID)
-		assert.True(t, slicesHasPrefix(s.run.Flags, "procedure:"))
+		assert.True(t, followedProcedure(s.run.Flags))
 		h.d.Owner.GetJSON("/api/v1/procedures").AssertOK().AssertJSONPath("data.0.uses", float64(1))
 	})
 
@@ -115,7 +115,7 @@ func TestAiProcedures(t *testing.T) {
 			"the agent sees every procedure and when it applies without loading anything")
 		assert.Contains(t, sentText(h.llm.answer), "1. Ask which email address they sign in with.",
 			"and follows it by name, not through call_tool")
-		assert.True(t, slicesHasPrefix(h.load(conv, res.RunID).run.Flags, "procedure:"))
+		assert.True(t, followedProcedure(h.load(conv, res.RunID).run.Flags))
 	})
 
 	t.Run("offers no procedure tool when none is live", func(t *testing.T) {
@@ -165,7 +165,7 @@ func TestAiProcedureCheck(t *testing.T) {
 		assert.Equal(t, "The customer cannot sign in.", d.Sent()[0].Questions[id].True)
 		assert.Contains(t, sentText(h.llm.answer), "1. Ask which email address they sign in with.")
 		s := h.load(conv, res.RunID)
-		assert.True(t, slicesHasPrefix(s.run.Flags, "procedure:"))
+		assert.True(t, followedProcedure(s.run.Flags))
 		assert.Contains(t, s.stepKinds(), "verify", "the check is recorded as a step of the run")
 	})
 
@@ -190,7 +190,7 @@ func TestAiProcedureCheck(t *testing.T) {
 		assert.Contains(t, sentText(h.llm.answer), "1. Ask what made them decide to leave.",
 			"asking again gets the steps")
 		assert.Len(t, d.Sent(), 1, "and is not checked a second time")
-		assert.True(t, slicesHasPrefix(h.load(conv, res.RunID).run.Flags, "procedure:"))
+		assert.True(t, followedProcedure(h.load(conv, res.RunID).run.Flags))
 	})
 
 	t.Run("does not count a held-back procedure as followed", func(t *testing.T) {
@@ -204,7 +204,7 @@ func TestAiProcedureCheck(t *testing.T) {
 		conv, trigger := h.conversation("How do I set a 30 day return window?")
 		res := h.run(conv, trigger)
 
-		assert.False(t, slicesHasPrefix(h.load(conv, res.RunID).run.Flags, "procedure:"))
+		assert.False(t, followedProcedure(h.load(conv, res.RunID).run.Flags))
 		assert.NotContains(t, sentText(h.llm.answer), "Ask what made them decide to leave.")
 	})
 
@@ -269,7 +269,7 @@ func TestAiProcedureCheck(t *testing.T) {
 		res := h.run(conv, h.add(conv, "contact", "message", "ok"))
 
 		assert.Len(t, d.Sent(), 1, "a short follow-up does not put the procedure in question")
-		assert.True(t, slicesHasPrefix(h.load(conv, res.RunID).run.Flags, "procedure:"))
+		assert.True(t, followedProcedure(h.load(conv, res.RunID).run.Flags))
 	})
 
 	t.Run("hands the procedure over when the decision model fails", func(t *testing.T) {
@@ -290,11 +290,12 @@ func TestAiProcedureCheck(t *testing.T) {
 }
 
 /*
-slicesHasPrefix reports whether any flag starts with the prefix.
+followedProcedure reports whether the flags name a procedure the run
+followed.
 */
-func slicesHasPrefix(flags []string, prefix string) bool {
+func followedProcedure(flags []string) bool {
 	for _, f := range flags {
-		if strings.HasPrefix(f, prefix) {
+		if strings.HasPrefix(f, "procedure:") {
 			return true
 		}
 	}

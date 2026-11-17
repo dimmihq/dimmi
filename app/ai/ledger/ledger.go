@@ -87,6 +87,13 @@ func Of(req contracts.ChatRequest, newest int) []Segment {
 }
 
 /*
+speaker is who a message is from.
+*/
+func speaker(m contracts.ChatMessage) contracts.ChatRole {
+	return m.Role
+}
+
+/*
 partOf names the part a message belongs to.
 */
 func partOf(m contracts.ChatMessage, i, newest int, names map[string]string) string {
@@ -95,7 +102,7 @@ func partOf(m contracts.ChatMessage, i, newest int, names map[string]string) str
 		return History
 	case i == newest:
 		return Newest
-	case m.Role != contracts.ChatRoleTool:
+	case speaker(m) != contracts.ChatRoleTool:
 		return Calls
 	}
 	switch names[m.ToolCallID] {

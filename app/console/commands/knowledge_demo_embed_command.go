@@ -102,15 +102,8 @@ func (c KnowledgeDemoEmbedCommand) Handle(
 		return nil
 	}
 
-	owner, err := demoOwner(ctx, c.App)
-	if in.String("workspace") == wixqa.Seed {
-		owner, _, _, err = wixqaPlace(ctx, c.App)
-	}
-	if err != nil {
+	if err := c.bind(ctx, in); err != nil {
 		return err
-	}
-	if _, err := c.App.Actions.KnowledgeSettings.Update(ctx, owner, knowledge.SettingsInput{}); err != nil {
-		return fmt.Errorf("bind embedding model: %w", err)
 	}
 	if !in.Bool("now") {
 		out.Info("Bound %s and queued the build; the queue worker embeds the chunks and switches search to hybrid.",
@@ -121,6 +114,26 @@ func (c KnowledgeDemoEmbedCommand) Handle(
 		return fmt.Errorf("build embeddings: %w", err)
 	}
 	out.Info("Bound %s and embedded the chunks here; search is hybrid once the build is complete.", model)
+	return nil
+}
+
+/*
+bind sets the workspace's embedding model to the built-in one, as the
+workspace's owner, which queues the build.
+*/
+func (c KnowledgeDemoEmbedCommand) bind(ctx context.Context, in *console.Input) error {
+	owner, err := demoOwner(ctx, c.App)
+	if in.String("workspace") == wixqa.Seed {
+		var spot wixqaSpot
+		spot, err = wixqaPlace(ctx, c.App)
+		owner = spot.owner
+	}
+	if err != nil {
+		return err
+	}
+	if _, err := c.App.Actions.KnowledgeSettings.Update(ctx, owner, knowledge.SettingsInput{}); err != nil {
+		return fmt.Errorf("bind embedding model: %w", err)
+	}
 	return nil
 }
 

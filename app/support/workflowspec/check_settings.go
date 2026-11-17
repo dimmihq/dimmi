@@ -47,8 +47,9 @@ checkSettings checks a step's settings by kind.
 */
 func (c *checker) checkSettings(s Step) {
 	checks := map[string]func(Step){
-		KindMessage: c.checkMessage, KindArticle: c.checkArticle, KindButtons: c.checkButtons, KindCollect: c.checkCollect,
-		KindBranch: c.checkBranch, KindWait: c.checkWait, KindAssign: c.checkAssign,
+		KindMessage: c.checkMessage, KindArticle: c.checkArticle, KindButtons: c.checkButtons,
+		KindCollect: c.checkCollect,
+		KindBranch:  c.checkBranch, KindWait: c.checkWait, KindAssign: c.checkAssign,
 		KindUnassign: c.checkUnassign, KindTag: c.checkTags, KindUntag: c.checkTags,
 		KindPriority: c.checkPriority, KindNote: c.checkNote, KindUpdateContact: c.checkUpdateContact,
 		KindSnooze: c.checkSnooze, KindClose: c.checkClose, KindDimmi: c.checkDimmi,

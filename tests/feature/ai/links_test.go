@@ -90,7 +90,8 @@ func TestEarlierReplies(t *testing.T) {
 		assert.Equal(t, "Pro costs $12 per seat per month.", str(replies[0].Body), "the customer sees no markers")
 
 		next := h.add(conv, "contact", "message", "And Business?")
-		h.llm.answer.Script(search("business plan price"), reply("Business costs $20 per seat [1], like Pro [S1].\n\n[S1] Plans and pricing\n<cited>[S1] Plans</cited>"))
+		h.llm.answer.Script(search("business plan price"), reply(
+			"Business costs $20 per seat [1], like Pro [S1].\n\n[S1] Plans and pricing\n<cited>[S1] Plans</cited>"))
 		res := h.run(conv, next)
 		require.Equal(t, "answered", res.Outcome)
 
@@ -162,7 +163,8 @@ func TestImpliedHandoff(t *testing.T) {
 		h := newHarness(t, nil)
 		conv, trigger := h.conversation("Can I get a refund on last month's invoice?")
 		h.llm.answer.Script(search("refund invoice"),
-			reply("Monthly plans renew automatically [1]. I've asked the billing team to look at last month's invoice."))
+			reply("Monthly plans renew automatically [1]. "+
+				"I've asked the billing team to look at last month's invoice."))
 		res := h.run(conv, trigger)
 
 		assert.Equal(t, "handoff", res.Outcome)
@@ -177,7 +179,8 @@ func TestImpliedHandoff(t *testing.T) {
 		h := newHarness(t, nil)
 		conv, trigger := h.conversation("How much is Pro per seat?")
 		h.llm.answer.Script(search("pro plan price per seat"),
-			reply("Pro costs $12 per seat per month [1]. I haven't passed anything on; want me to get someone from the team?"))
+			reply("Pro costs $12 per seat per month [1]. "+
+				"I haven't passed anything on; want me to get someone from the team?"))
 		assert.Equal(t, "answered", h.run(conv, trigger).Outcome)
 	})
 }
@@ -212,7 +215,8 @@ func TestCarriedCitedPart(t *testing.T) {
 
 		conv, trigger := h.conversation("Can rules split an order by SKU tag?")
 		h.llm.answer.Script(search("split order sku tag"), reply("Presets save a package and service for reuse, "+
-			"and presets save a package for every order. Separately, the **Split by tag** action splits an order by SKU tag [1]."))
+			"and presets save a package for every order. "+
+			"Separately, the **Split by tag** action splits an order by SKU tag [1]."))
 		require.Equal(t, "answered", h.run(conv, trigger).Outcome)
 
 		var text string

@@ -90,7 +90,7 @@ func TestAiWorkspaceRules(t *testing.T) {
 		assert.Equal(t, "I'm bringing in a teammate.", str(s.agentReplies()[0].Body))
 	})
 
-	t.Run("tells the model by default that the system offers a teammate for an unanswered question", func(t *testing.T) {
+	t.Run("tells the model by default that the system offers a teammate when it has no answer", func(t *testing.T) {
 		t.Parallel()
 		h := newHarness(t, nil)
 		h.llm.answer.Script(reply("Hi!"))

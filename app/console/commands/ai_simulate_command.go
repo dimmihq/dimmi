@@ -37,8 +37,8 @@ import (
 
 	"github.com/dimmihq/dimmi/app"
 	"github.com/dimmihq/dimmi/app/ai/costsim"
-	"github.com/dimmihq/dimmi/app/mcpserver"
 	"github.com/dimmihq/dimmi/app/demo/stowline"
+	"github.com/dimmihq/dimmi/app/mcpserver"
 )
 
 /*

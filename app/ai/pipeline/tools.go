@@ -227,15 +227,7 @@ func (r *Runner) searchKnowledge(ctx context.Context, st *run, args json.RawMess
 		return "", err
 	}
 
-	results := []searchResult{}
-	gate := similarityGate{keyword: minSimilarity(st.env), vector: minVectorSimilarity(st.env)}
-	for _, ch := range res.Chunks {
-		if len(results) >= resultsFor(st.env) || !gate.passes(ch) {
-			continue
-		}
-		n := st.sourceFor(ch)
-		results = append(results, searchResult{ID: n, Title: ch.Title, URL: ch.URL, Text: ch.Text})
-	}
+	results := st.kept(res.Chunks)
 	st.lastSearch = searchTrace{Mode: res.Mode, Degraded: res.Degraded, Found: len(res.Chunks), Kept: len(results)}
 	if st.env.Agent.CompactResults {
 		if st.shown == nil {
@@ -250,6 +242,23 @@ func (r *Runner) searchKnowledge(ctx context.Context, st *run, args json.RawMess
 	}
 	out, err := json.Marshal(map[string]any{"results": results})
 	return string(out), err
+}
+
+/*
+kept are the chunks that clear the agent's minimum similarity, up to
+the agent's result limit, each numbered for citing.
+*/
+func (st *run) kept(chunks []contracts.KnowledgeChunk) []searchResult {
+	results := []searchResult{}
+	gate := similarityGate{keyword: minSimilarity(st.env), vector: minVectorSimilarity(st.env)}
+	for _, ch := range chunks {
+		if len(results) >= resultsFor(st.env) || !gate.passes(ch) {
+			continue
+		}
+		n := st.sourceFor(ch)
+		results = append(results, searchResult{ID: n, Title: ch.Title, URL: ch.URL, Text: ch.Text})
+	}
+	return results
 }
 
 /*
@@ -299,7 +308,7 @@ sourceFor returns the number a chunk is cited by, numbering it when it
 is new to the run.
 */
 func (st *run) sourceFor(ch contracts.KnowledgeChunk) int {
-	return st.numbered(ch, false)
+	return st.numbered(ch, 1)
 }
 
 /*
@@ -314,14 +323,11 @@ const carriedFrom = 101
 
 /*
 numbered returns the number a chunk is cited by, numbering it when it
-is new to the run: this turn's results from 1, carried passages from
-carriedFrom.
+is new to the run, counting up from the given start: 1 for this turn's
+results, carriedFrom for carried passages.
 */
-func (st *run) numbered(ch contracts.KnowledgeChunk, carried bool) int {
-	next := 1
-	if carried {
-		next = carriedFrom
-	}
+func (st *run) numbered(ch contracts.KnowledgeChunk, from int) int {
+	next, carried := from, from >= carriedFrom
 	for _, s := range st.sources {
 		if s.chunk.ID == ch.ID {
 			return s.n

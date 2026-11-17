@@ -123,7 +123,7 @@ func (s *chatStream) handle(event anth.MessageStreamEventUnion) {
 		}
 		s.pend = append(s.pend,
 			contracts.StreamEvent{
-				Kind: contracts.StreamEventUsage, Usage: &usage, RequestID: s.msg.ID, Model: string(s.msg.Model),
+				Kind: contracts.StreamEventUsage, Usage: &usage, RequestID: s.msg.ID, Model: s.msg.Model,
 			},
 			contracts.StreamEvent{Kind: contracts.StreamEventDone, StopReason: stop},
 		)

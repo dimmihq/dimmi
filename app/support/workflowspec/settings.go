@@ -76,20 +76,6 @@ type ReplyTimeSettings struct {
 }
 
 /*
-DimmiSettings hands the conversation to dimmi until it resolves,
-hands over or the customer goes quiet.
-*/
-type DimmiSettings struct {
-	Instructions           string `json:"instructions,omitempty"`
-	MaxReplies             int    `json:"max_replies,omitempty"`
-	QuietAfter             string `json:"quiet_after,omitempty"`
-	ConfirmResolution      *bool  `json:"confirm_resolution,omitempty"`
-	CloseOnResolved        *bool  `json:"close_on_resolved,omitempty"`
-	AskEmailBeforeHandover *bool  `json:"ask_email_before_handover,omitempty"`
-	HandoverNotice         string `json:"handover_notice,omitempty"`
-}
-
-/*
 On returns a switch's value, or its default when unset.
 */
 func On(b *bool, fallback bool) bool {

@@ -240,7 +240,7 @@ func loadSet(trees []fs.FS, version string) (*set, error) {
 		}
 	}
 
-	s := &set{files: map[string]File{}, defaults: map[enums.AIModelFamily]map[string]string{}}
+	s := &set{files: map[string]File{}, defaults: make(map[enums.AIModelFamily]map[string]string)}
 	for _, family := range Families() {
 		if err := s.loadFolder(trees, version, string(family)); err != nil {
 			return nil, err

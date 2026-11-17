@@ -145,6 +145,7 @@ func (c AIToolLayerCommand) save(ctx context.Context, q *models.Queries, choice 
 		}
 	}
 	return q.SetAgentTokenSavers(ctx, models.SetAgentTokenSaversParams{
-		WorkspaceID: ws, ID: agent.ID, PrefetchSearch: prefetch, CompactResults: compact, CarryPassages: carry, Now: now,
+		WorkspaceID: ws, ID: agent.ID, PrefetchSearch: prefetch, CompactResults: compact, CarryPassages: carry,
+		Now: now,
 	})
 }

@@ -188,7 +188,9 @@ handoffClaim matches "I've passed this to the billing team", "I've asked
 the team to confirm", "I have flagged it for someone" and the like.
 */
 func handoffClaim() *regexp.Regexp {
-	return regexp.MustCompile(`(?i)\bI(?:['’]ve| have) (?:just |now |already )?(?:passed|handed|sent|forwarded|flagged|asked|told|let|brought in|looped in|routed)\b[^.!?\n]{0,80}?\b(?:team|teammate|colleague|someone|somebody|billing|support|specialist)s?\b`)
+	return regexp.MustCompile(`(?i)\bI(?:['’]ve| have) (?:just |now |already )?` +
+		`(?:passed|handed|sent|forwarded|flagged|asked|told|let|brought in|looped in|routed)\b[^.!?\n]{0,80}?` +
+		`\b(?:team|teammate|colleague|someone|somebody|billing|support|specialist)s?\b`)
 }
 
 /*
@@ -216,23 +218,7 @@ func annotate(draft string, sources []source) string {
 		b.WriteString(draft[last:loc[0]])
 		last = loc[1]
 		var tags []string
-		for _, part := range strings.FieldsFunc(draft[loc[2]:loc[3]], func(r rune) bool {
-			return r == ',' || r == ';' || r == ' '
-		}) {
-			s, ok := sourceNumbered(sources, part)
-			if !ok {
-				continue
-			}
-			k := slices.IndexFunc(docs, func(d source) bool { return d.chunk.DocumentID == s.chunk.DocumentID })
-			if k < 0 {
-				docs = append(docs, s)
-				k = len(docs) - 1
-			}
-			tag := "S" + strconv.Itoa(k+1)
-			if !slices.Contains(tags, tag) {
-				tags = append(tags, tag)
-			}
-		}
+		tags, docs = documentTags(draft[loc[2]:loc[3]], sources, docs)
 		if len(tags) > 0 {
 			b.WriteString(" [" + strings.Join(tags, ", ") + "]")
 		}
@@ -251,6 +237,32 @@ func annotate(draft string, sources []source) string {
 	}
 	head.WriteString("</cited>\n")
 	return head.String() + strings.TrimSpace(b.String())
+}
+
+/*
+documentTags turns one marker's numbers into the tags of the documents
+they name, [S1] for the first document cited, adding to docs each
+document seen for the first time.
+*/
+func documentTags(numbers string, sources, docs []source) ([]string, []source) {
+	var tags []string
+	for part := range strings.FieldsFuncSeq(numbers, func(r rune) bool {
+		return r == ',' || r == ';' || r == ' '
+	}) {
+		s, ok := sourceNumbered(sources, part)
+		if !ok {
+			continue
+		}
+		k := slices.IndexFunc(docs, func(d source) bool { return d.chunk.DocumentID == s.chunk.DocumentID })
+		if k < 0 {
+			docs = append(docs, s)
+			k = len(docs) - 1
+		}
+		if tag := "S" + strconv.Itoa(k+1); !slices.Contains(tags, tag) {
+			tags = append(tags, tag)
+		}
+	}
+	return tags, docs
 }
 
 /*

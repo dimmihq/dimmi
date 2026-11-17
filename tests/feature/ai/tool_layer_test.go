@@ -177,7 +177,7 @@ func TestAiToolLayer(t *testing.T) {
 func TestAiToolLayerMisdirectedCalls(t *testing.T) {
 	t.Parallel()
 
-	t.Run("tells a model that names a layered tool directly that nothing was done and how to run it", func(t *testing.T) {
+	t.Run("tells a model naming a layered tool directly that nothing was done and how to run it", func(t *testing.T) {
 		t.Parallel()
 		h := newHarness(t, nil)
 		h.withToolLayer()

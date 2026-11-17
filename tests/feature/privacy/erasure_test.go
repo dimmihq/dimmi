@@ -171,7 +171,8 @@ func TestContactErasure(t *testing.T) {
 		file := storeAttachment(t, d.TC, path)
 		d.Owner.PostJSON("/api/v1/contacts/"+contact+"/exports", nil).AssertStatus(202)
 		d.TC.Drain()
-		_, err := d.TC.Operator().Exec(t.Context(), `UPDATE conversations SET ai_memory = '{"summary":"Card ending 1111"}'`)
+		_, err := d.TC.Operator().Exec(t.Context(),
+			`UPDATE conversations SET ai_memory = '{"summary":"Card ending 1111"}'`)
 		require.NoError(t, err)
 
 		var zipPath string

@@ -23,7 +23,8 @@ func tree(files map[string]string) fstest.MapFS {
 			out["agent/"+version+"/"+string(family)+"/"+name] = &fstest.MapFile{Data: []byte("text " + string(family))}
 		}
 		out["agent/"+version+"/"+string(family)+"/defaults.md"] = &fstest.MapFile{Data: []byte(
-			"unknown: u " + string(family) + "\nhandoff: h\nhandoff_later: l\nhandoff_unavailable: x\nmax_replies: m\nerror: e\nrefusal: r\n",
+			"unknown: u " + string(family) + "\nhandoff: h\nhandoff_later: l\nhandoff_unavailable: x\n" +
+				"max_replies: m\nerror: e\nrefusal: r\n",
 		)}
 	}
 	for path, data := range files {
