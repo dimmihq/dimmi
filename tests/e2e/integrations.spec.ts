@@ -156,6 +156,8 @@ it.describe("Integrations", () => {
     });
     await expect(page.getByText("Shared with a customer · Requests the AI spots")).toBeVisible();
 
+    // The channel's dialog covers the page until it has closed.
+    await expect(dialog).toBeHidden();
     await page.getByRole("button", { name: "Disconnect", exact: true }).click();
     await expect(page.getByRole("alertdialog", { name: "Disconnect Slack?" })).toBeVisible();
     await page.getByRole("button", { name: "Cancel" }).click();

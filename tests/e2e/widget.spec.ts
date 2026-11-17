@@ -119,6 +119,9 @@ it.describe("messenger on a customer's page", () => {
       mimeType: "image/png",
       buffer: onePixel,
     });
+    // The message is sent once the picture is attached; sent sooner, it goes
+    // without it.
+    await expect(page.locator('[data-view="conversation"] [aria-label="Remove screen.png"]')).toBeVisible();
     const box = page.locator('[data-view="conversation"] textarea');
     await box.fill("Here is what I see");
     await box.press("Enter");
