@@ -65,7 +65,8 @@ func AgentActions(conn ids.UUID) []agentactions.DefinitionInput {
 				"properties": map[string]any{"tracking_number": map[string]any{"type": "string", "minLength": 8, "maxLength": 40}},
 			}),
 			ResponseFields: fields("status", "status", "carrier", "carrier", "estimated_delivery", "est_delivery_date",
-				"latest_scan", "events.0.message", "latest_location", "events.0.location"),
+				"latest_scan", "events.0.message", "latest_scan_at", "events.0.occurred_at",
+				"latest_location", "events.0.location"),
 			Channels: channels, Agents: &[]string{"dimmi", "operator"},
 		},
 		{
@@ -163,7 +164,8 @@ taking the published actions by their public ids.
 func Procedures(actions map[string]string) []NamedProcedure {
 	return []NamedProcedure{
 		{"Parcel not moving", procedure.Definition{
-			Description: "The customer says a parcel's tracking has not changed, or asks where a parcel is.",
+			Description: "The customer says one parcel's tracking has not changed, or asks where a parcel is. " +
+				"Not for a batch, an import or a print job that is stuck.",
 			Steps: []procedure.Step{
 				{ID: "ask", Kind: procedure.KindInstruction, Text: "Ask for the tracking number if the customer has not given it."},
 				{ID: "lookup", Kind: procedure.KindAction, Text: "Look the parcel up.", ActionID: actions["get_shipment_status"]},
