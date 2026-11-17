@@ -42,6 +42,10 @@ export default defineConfig({
   retries: process.env.CI ? 1 : 0,
   failOnFlakyTests: Boolean(process.env.CI),
   reporter: process.env.CI ? "github" : "list",
+  // A CI runner has two cores for two browsers, the server and the database,
+  // so a change that crosses from one browser to another can take longer than
+  // the five seconds an assertion waits by default.
+  expect: { timeout: process.env.CI ? 10_000 : 5_000 },
   use: {
     baseURL,
     trace: "retain-on-failure",
