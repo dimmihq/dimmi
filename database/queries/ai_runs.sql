@@ -124,3 +124,12 @@ UPDATE ai_runs SET
     cost_micros = cost_micros + @cost_micros,
     updated_at = @now
 WHERE workspace_id = @workspace_id AND id = @id;
+
+-- name: ConversationFollowedProcedure :one
+-- ConversationFollowedProcedure reports whether a run of the
+-- conversation before the given one carries the flag.
+SELECT EXISTS (
+    SELECT 1 FROM ai_runs
+    WHERE workspace_id = @workspace_id AND conversation_id = @conversation_id AND id <> @before
+        AND @flag::text = ANY(flags)
+);

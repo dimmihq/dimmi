@@ -51,6 +51,35 @@ func (q *Queries) AddRunCost(ctx context.Context, arg AddRunCostParams) error {
 	return err
 }
 
+const conversationFollowedProcedure = `-- name: ConversationFollowedProcedure :one
+SELECT EXISTS (
+    SELECT 1 FROM ai_runs
+    WHERE workspace_id = $1 AND conversation_id = $2 AND id <> $3
+        AND $4::text = ANY(flags)
+)
+`
+
+type ConversationFollowedProcedureParams struct {
+	WorkspaceID    ids.UUID  `json:"workspace_id"`
+	ConversationID *ids.UUID `json:"conversation_id"`
+	Before         ids.UUID  `json:"before"`
+	Flag           string    `json:"flag"`
+}
+
+// ConversationFollowedProcedure reports whether a run of the
+// conversation before the given one carries the flag.
+func (q *Queries) ConversationFollowedProcedure(ctx context.Context, arg ConversationFollowedProcedureParams) (bool, error) {
+	row := q.db.QueryRow(ctx, conversationFollowedProcedure,
+		arg.WorkspaceID,
+		arg.ConversationID,
+		arg.Before,
+		arg.Flag,
+	)
+	var exists bool
+	err := row.Scan(&exists)
+	return exists, err
+}
+
 const countConversationOutcomes = `-- name: CountConversationOutcomes :one
 SELECT count(*) FROM ai_runs r
 WHERE r.workspace_id = $1 AND r.conversation_id = $2

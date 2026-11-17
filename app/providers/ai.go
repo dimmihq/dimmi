@@ -35,6 +35,7 @@ import (
 	"github.com/dimmihq/dimmi/app/ai/pipeline"
 	"github.com/dimmihq/dimmi/app/ai/verdicts"
 	"github.com/dimmihq/dimmi/app/contracts"
+	"github.com/dimmihq/dimmi/app/drivers/decision/typesafe"
 	appevents "github.com/dimmihq/dimmi/app/events"
 	"github.com/dimmihq/dimmi/app/managers"
 	"github.com/dimmihq/dimmi/app/models"
@@ -121,12 +122,23 @@ func newRunner(ctx context.Context, a *app.App) (*pipeline.Runner, error) {
 		return nil, fmt.Errorf("load agent prompts: %w", err)
 	}
 
-	return &pipeline.Runner{
+	runner := &pipeline.Runner{
 		DB: a.DB, Clock: a.Clock, LLM: a.LLM, Knowledge: a.Knowledge, Prompts: loader,
 		Prices: loadPrices(a), Events: a.Events, Publisher: a.Broadcast,
 		Timeouts: a.Config.AI.Timeouts, StorePayloads: a.Config.AI.TracesStorePayloads,
 		AnswerEffort: contracts.Effort(a.Config.AI.AnswerEffort),
-	}, nil
+	}
+	if ts := a.Config.AI.Decisions.TypeSafe; ts.APIKey != "" {
+		decider, err := typesafe.New(a.HTTP, a.Clock, typesafe.Config{
+			APIKey: ts.APIKey, BaseURL: ts.BaseURL, Model: ts.Model, Timeout: ts.Timeout,
+		})
+		if err != nil {
+			return nil, fmt.Errorf("decision model: %w", err)
+		}
+		runner.Decider, runner.DecisionPrice = decider, ts.InputPricePerMtok
+	}
+
+	return runner, nil
 }
 
 /*

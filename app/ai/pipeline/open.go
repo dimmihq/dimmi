@@ -35,33 +35,35 @@ run is one run in flight: its environment, recorder and settings, and
 what the turn produced: the loop's state, the search results numbered
 for citation, the last search query, the handoff and the internal
 changes the tools asked for, the workspace actions it offered and
-called, and whether it followed one of the team's procedures.
+called, whether it followed one of the team's procedures, and the
+procedures it already checked or handed over.
 */
 type run struct {
-	env        *env
-	rec        *Recorder
-	args       Args
-	settings   *TurnSettings
-	gate       *decision
-	loop       *loop
-	sources    []source
-	flags      []string
-	query      string
-	searched   bool
-	searches   int
-	lastSearch searchTrace
-	handoff    *handoffRequest
-	changes    changeSet
-	actions    actionState
-	followed   bool
-	draft      bool
-	ticket     *tickets.AgentTicket
-	layer      *layerState
-	prefetched bool
-	shown      map[int]bool
-	carried    map[int]bool
-	cited      []citation
-	annotated  string
+	env            *env
+	rec            *Recorder
+	args           Args
+	settings       *TurnSettings
+	gate           *decision
+	loop           *loop
+	sources        []source
+	flags          []string
+	query          string
+	searched       bool
+	searches       int
+	lastSearch     searchTrace
+	handoff        *handoffRequest
+	changes        changeSet
+	actions        actionState
+	followed       bool
+	procedureAsked map[string]bool
+	draft          bool
+	ticket         *tickets.AgentTicket
+	layer          *layerState
+	prefetched     bool
+	shown          map[int]bool
+	carried        map[int]bool
+	cited          []citation
+	annotated      string
 	// citedChunks are the passages the reply's markers name, each once.
 	citedChunks []source
 	// citedClaims are, by chunk id, the reply's sentences citing it.

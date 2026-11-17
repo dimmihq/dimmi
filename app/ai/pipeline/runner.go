@@ -51,6 +51,9 @@ channel, so a chat app can show it. Drafts, when set, turns answers in
 places where the team reviews the agent into drafts for a teammate to
 send. Actions, when set, gives the agent the workspace's own actions as
 tools. Delivery, when set, queues each reply on a channel that pushes.
+Decider, when set, checks that a procedure the agent asks for fits the
+request; DecisionPrice is what one of its input tokens costs, in
+millionths of a dollar.
 */
 type Runner struct {
 	DB            *database.DB
@@ -69,6 +72,8 @@ type Runner struct {
 	Timeouts      config.AITimeoutsConfig
 	StorePayloads bool
 	AnswerEffort  contracts.Effort
+	Decider       contracts.Decider
+	DecisionPrice float64
 
 	redactor *pii.Redactor
 	guard    *linkguard.Guard
