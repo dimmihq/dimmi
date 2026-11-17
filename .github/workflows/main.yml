@@ -156,7 +156,7 @@ jobs:
     steps:
       - uses: actions/checkout@v5
       - name: Start services
-        run: (docker compose up -d --wait > "$RUNNER_TEMP/services.log" 2>&1; echo $? > "$RUNNER_TEMP/services.status") &
+        run: .github/start-services.sh
       - uses: actions/setup-go@v6
         with:
           go-version-file: go.mod

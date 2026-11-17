@@ -31,7 +31,7 @@ runs:
     - if: inputs.services == 'true'
       name: Start services
       shell: bash
-      run: (docker compose up -d --wait > "$RUNNER_TEMP/services.log" 2>&1; echo $? > "$RUNNER_TEMP/services.status") &
+      run: .github/start-services.sh
     - id: go
       uses: actions/setup-go@v6
       with:
