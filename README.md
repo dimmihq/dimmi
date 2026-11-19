@@ -15,11 +15,11 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/dimmihq/dimmi/actions/workflows/main.yml"><img alt="Tests" src="https://img.shields.io/github/actions/workflow/status/dimmihq/dimmi/main.yml?branch=main&label=tests&style=for-the-badge&labelColor=000000&color=E9EAEC"></a>
-  <a href="https://github.com/dimmihq/dimmi/releases/latest"><img alt="Latest release" src="https://img.shields.io/github/v/release/dimmihq/dimmi?label=release&style=for-the-badge&labelColor=000000&color=E9EAEC"></a>
-  <a href="https://github.com/dimmihq/dimmi/pkgs/container/dimmi"><img alt="Docker image" src="https://img.shields.io/badge/ghcr.io-dimmihq%2Fdimmi-E9EAEC?style=for-the-badge&logo=docker&logoColor=white&labelColor=000000"></a>
-  <a href="https://github.com/dimmihq/dimmi/graphs/contributors"><img alt="Contributors" src="https://img.shields.io/github/contributors/dimmihq/dimmi?style=for-the-badge&labelColor=000000&color=E9EAEC"></a>
-  <a href="https://github.com/dimmihq/dimmi/commits/main"><img alt="Commit activity" src="https://img.shields.io/github/commit-activity/m/dimmihq/dimmi?label=commits&style=for-the-badge&labelColor=000000&color=E9EAEC"></a>
+  <a href="https://github.com/dimmihq/dimmi/actions/workflows/main.yml"><img alt="Tests" src="https://img.shields.io/github/actions/workflow/status/dimmihq/dimmi/main.yml?branch=main&label=tests&style=for-the-badge&labelColor=002C22&color=00BC7D"></a>
+  <a href="https://github.com/dimmihq/dimmi/releases/latest"><img alt="Latest release" src="https://img.shields.io/github/v/release/dimmihq/dimmi?label=release&style=for-the-badge&labelColor=002C22&color=00BC7D"></a>
+  <a href="https://github.com/dimmihq/dimmi/pkgs/container/dimmi"><img alt="Docker image" src="https://img.shields.io/badge/ghcr.io-dimmihq%2Fdimmi-00BC7D?style=for-the-badge&logo=docker&logoColor=00D492&labelColor=002C22"></a>
+  <a href="https://github.com/dimmihq/dimmi/graphs/contributors"><img alt="Contributors" src="https://img.shields.io/github/contributors/dimmihq/dimmi?style=for-the-badge&labelColor=002C22&color=00BC7D"></a>
+  <a href="https://github.com/dimmihq/dimmi/commits/main"><img alt="Commit activity" src="https://img.shields.io/github/commit-activity/m/dimmihq/dimmi?label=commits&style=for-the-badge&labelColor=002C22&color=00BC7D"></a>
 </p>
 
 <p align="center">
@@ -36,8 +36,8 @@
 <p align="center">
   <a href="https://trydimmi.com">
     <picture>
-      <source media="(prefers-color-scheme: dark)" srcset=".github/assets/inbox-dark.webp">
-      <img alt="The dimmi inbox: a conversation list, an open email thread with an internal note, and the customer's details" src=".github/assets/inbox-light.webp" width="100%">
+      <source media="(prefers-color-scheme: dark)" srcset=".github/assets/hero-dark.webp">
+      <img alt="The dimmi inbox: a conversation list, an open email thread with an internal note, and the customer's details" src=".github/assets/hero-light.webp" width="100%">
     </picture>
   </a>
 </p>
@@ -102,11 +102,11 @@ dimmi has a [REST API](https://trydimmi.com/docs/api-reference/), [webhooks](htt
 
 | SDK | Install |
 | --- | --- |
-| <img alt="TypeScript" src="https://img.shields.io/badge/TypeScript-000000?style=for-the-badge&logo=typescript&logoColor=white"> | `npm install @dimmi/api` |
-| <img alt="Go" src="https://img.shields.io/badge/Go-000000?style=for-the-badge&logo=go&logoColor=white"> | `go get github.com/dimmihq/dimmi-go` |
-| <img alt="PHP" src="https://img.shields.io/badge/PHP-000000?style=for-the-badge&logo=php&logoColor=white"> | `composer require dimmi/dimmi-php` |
-| <img alt="Laravel" src="https://img.shields.io/badge/Laravel-000000?style=for-the-badge&logo=laravel&logoColor=white"> | `composer require dimmi/dimmi-laravel` |
-| <img alt="Python" src="https://img.shields.io/badge/Python-000000?style=for-the-badge&logo=python&logoColor=white"> | `pip install dimmi-sdk` |
+| <img alt="TypeScript" src="https://img.shields.io/badge/TypeScript-002C22?style=for-the-badge&logoColor=00D492&logo=typescript"> | `npm install @dimmi/api` |
+| <img alt="Go" src="https://img.shields.io/badge/Go-002C22?style=for-the-badge&logoColor=00D492&logo=go"> | `go get github.com/dimmihq/dimmi-go` |
+| <img alt="PHP" src="https://img.shields.io/badge/PHP-002C22?style=for-the-badge&logoColor=00D492&logo=php"> | `composer require dimmi/dimmi-php` |
+| <img alt="Laravel" src="https://img.shields.io/badge/Laravel-002C22?style=for-the-badge&logoColor=00D492&logo=laravel"> | `composer require dimmi/dimmi-laravel` |
+| <img alt="Python" src="https://img.shields.io/badge/Python-002C22?style=for-the-badge&logoColor=00D492&logo=python"> | `pip install dimmi-sdk` |
 
 The messenger has packages for the browser, React, Next.js, Vue, Angular and Svelte. See the [messenger install guide](https://trydimmi.com/docs/developers/messenger/install/).
 
@@ -120,27 +120,30 @@ Issues and pull requests are welcome. Read [AGENTS.md](AGENTS.md) first: the API
 
 <br>
 
+<p align="center">
+  <a href="https://trydimmi.com">
+    <img alt="dimmi: customer support you own. Open source and MIT licensed, on dimmi Cloud or your own server." src=".github/assets/banner.webp" width="100%">
+  </a>
+</p>
+
 <div align="center">
 
 [![tests-image]][tests-url] [![release-image]][release-url] ![][typescript-image] ![][go-image] [![license-image]][license-url]
 
 </div>
 
-<div align="center">
-  <h3>
-    <a href="https://trydimmi.com">Website</a>
-    <span> | </span>
-    <a href="https://trydimmi.com/docs/">Docs</a>
-    <span> | </span>
-    <a href="AGENTS.md">Contributing</a>
-  </h3>
-</div>
+<p align="center">
+  <a href="https://app.trydimmi.com"><b>Start free</b></a> ·
+  <a href="https://trydimmi.com/docs/self-hosting/"><b>Self-host it</b></a> ·
+  <a href="https://trydimmi.com/docs/">Docs</a> ·
+  <a href="AGENTS.md">Contributing</a>
+</p>
 
-[tests-image]: https://img.shields.io/github/actions/workflow/status/dimmihq/dimmi/main.yml?branch=main&label=tests&style=for-the-badge&labelColor=000000&color=E9EAEC
+[tests-image]: https://img.shields.io/github/actions/workflow/status/dimmihq/dimmi/main.yml?branch=main&label=tests&style=for-the-badge&labelColor=002C22&color=00BC7D
 [tests-url]: https://github.com/dimmihq/dimmi/actions/workflows/main.yml
-[release-image]: https://img.shields.io/github/v/release/dimmihq/dimmi?label=release&style=for-the-badge&logo=github&labelColor=000000&color=E9EAEC
+[release-image]: https://img.shields.io/github/v/release/dimmihq/dimmi?label=release&style=for-the-badge&logo=github&logoColor=00D492&labelColor=002C22&color=00BC7D
 [release-url]: https://github.com/dimmihq/dimmi/releases/latest
-[typescript-image]: https://img.shields.io/badge/TypeScript-000000?style=for-the-badge&logo=typescript&logoColor=white
-[go-image]: https://img.shields.io/badge/Go-000000?style=for-the-badge&logo=go&logoColor=white
-[license-image]: https://img.shields.io/badge/license-MIT-E9EAEC?style=for-the-badge&labelColor=000000
+[typescript-image]: https://img.shields.io/badge/TypeScript-002C22?style=for-the-badge&logoColor=00D492&logo=typescript
+[go-image]: https://img.shields.io/badge/Go-002C22?style=for-the-badge&logoColor=00D492&logo=go
+[license-image]: https://img.shields.io/badge/license-MIT-00BC7D?style=for-the-badge&labelColor=002C22
 [license-url]: LICENSE
