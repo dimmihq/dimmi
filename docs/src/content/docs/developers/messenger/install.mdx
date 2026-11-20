@@ -4,7 +4,7 @@ description: "Install the dimmi messenger in a React, Next.js, Vue, Nuxt, Angula
 ---
 import { TabItem, Tabs } from "~docs/components/mdx";
 
-Add one package, once, at the root of your app. `<app_id>` is the messenger's app ID (`wgt_...`) from **Settings → Messengers**, and a self-hosted server replaces `https://app.trydimmi.com` with its own address.
+Add one package, once, at the root of your app. `<app_id>` is the messenger's app ID (`wgt_...`) from **Settings → Messengers**, and a self-hosted server replaces `https://trydimmi.com` with its own address.
 
 <Tabs>
 <TabItem label="React">
@@ -20,7 +20,7 @@ import { createRoot } from "react-dom/client";
 import App from "./App";
 
 createRoot(document.getElementById("root")!).render(
-  <DimmiProvider appId="<app_id>" host="https://app.trydimmi.com">
+  <DimmiProvider appId="<app_id>" host="https://trydimmi.com">
     <App />
   </DimmiProvider>,
 );
@@ -42,7 +42,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
     <html lang="en">
       <body>
         {children}
-        <Dimmi appId="<app_id>" host="https://app.trydimmi.com" />
+        <Dimmi appId="<app_id>" host="https://trydimmi.com" />
       </body>
     </html>
   );
@@ -63,7 +63,7 @@ import { createApp } from "vue";
 import App from "./App.vue";
 
 createApp(App)
-  .use(createDimmi({ appId: "<app_id>", host: "https://app.trydimmi.com" }))
+  .use(createDimmi({ appId: "<app_id>", host: "https://trydimmi.com" }))
   .mount("#app");
 ```
 
@@ -78,7 +78,7 @@ npm install @dimmi/vue
 import { createDimmi } from "@dimmi/vue";
 
 export default defineNuxtPlugin((nuxtApp) => {
-  nuxtApp.vueApp.use(createDimmi({ appId: "<app_id>", host: "https://app.trydimmi.com" }));
+  nuxtApp.vueApp.use(createDimmi({ appId: "<app_id>", host: "https://trydimmi.com" }));
 });
 ```
 
@@ -94,7 +94,7 @@ import { type ApplicationConfig } from "@angular/core";
 import { provideDimmi } from "@dimmi/angular";
 
 export const appConfig: ApplicationConfig = {
-  providers: [provideDimmi({ appId: "<app_id>", host: "https://app.trydimmi.com" })],
+  providers: [provideDimmi({ appId: "<app_id>", host: "https://trydimmi.com" })],
 };
 ```
 
@@ -113,7 +113,7 @@ npm install @dimmi/svelte
   let { children } = $props();
 
   onMount(() => {
-    initDimmi({ appId: "<app_id>", host: "https://app.trydimmi.com" });
+    initDimmi({ appId: "<app_id>", host: "https://trydimmi.com" });
   });
 </script>
 
@@ -130,14 +130,14 @@ npm install @dimmi/browser
 ```ts title="src/dimmi.ts"
 import { loadDimmi } from "@dimmi/browser";
 
-export const dimmi = loadDimmi({ appId: "<app_id>", host: "https://app.trydimmi.com" });
+export const dimmi = loadDimmi({ appId: "<app_id>", host: "https://trydimmi.com" });
 ```
 
 </TabItem>
 <TabItem label="HTML">
 
 ```html title="index.html"
-<script async src="https://app.trydimmi.com/widget/v1/loader.js" data-app-id="<app_id>"></script>
+<script async src="https://trydimmi.com/widget/v1/loader.js" data-app-id="<app_id>"></script>
 ```
 
 </TabItem>

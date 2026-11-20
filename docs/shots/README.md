@@ -50,7 +50,7 @@ Then send a test delivery to the endpoint and rotate its secret (`POST $API/webh
 
 ## Rules
 
-- Show what the reader sees in dimmi Cloud: the capture rewrites the local server's address to `https://app.trydimmi.com` on screen.
+- Show what the reader sees in dimmi Cloud: the capture rewrites the local server's address to `https://trydimmi.com` on screen.
 - Crop to what the page talks about: a settings section (`crop: { section: "Heading" }`) or a dialog (`crop: { dialog: true }`).
 - Never capture a secret, a real person or a real customer. The demo data is fictional.
 - A shot that types into the app clears what it typed (`cleanup`), so drafts don't leak into other captures.

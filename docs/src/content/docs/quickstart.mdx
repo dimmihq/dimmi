@@ -4,14 +4,14 @@ description: "Add the dimmi messenger to your site and answer your first convers
 ---
 import { Screenshot, Steps } from "~docs/components/mdx";
 
-Create a workspace at [app.trydimmi.com/signup](https://app.trydimmi.com/signup). On a self-hosted server, create the first account with [`dimmictl admin`](/self-hosting/install/).
+Create a workspace at [trydimmi.com/signup](https://trydimmi.com/signup). On a self-hosted server, create the first account with [`dimmictl admin`](/self-hosting/install/).
 
 <Steps>
 
 1. Open **Settings → Messengers**, select the **Website** messenger and copy its snippet. Paste it before the closing `</body>` tag of your site.
 
    ```html
-   <script async src="https://app.trydimmi.com/widget/v1/loader.js" data-app-id="<app_id>"></script>
+   <script async src="https://trydimmi.com/widget/v1/loader.js" data-app-id="<app_id>"></script>
    ```
 
    The copied snippet has your `<app_id>` filled in.

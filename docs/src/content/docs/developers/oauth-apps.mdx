@@ -5,12 +5,12 @@ description: "Let other dimmi workspaces connect your app with OAuth 2: register
 
 Your app registers itself, sends a teammate to dimmi to approve it, and gets tokens that work on the [REST API](/api-reference/) and the [MCP server](/developers/mcp/).
 
-Server metadata is at `https://app.trydimmi.com/.well-known/oauth-authorization-server`. On a self-hosted install, use your own dimmi address.
+Server metadata is at `https://trydimmi.com/.well-known/oauth-authorization-server`. On a self-hosted install, use your own dimmi address.
 
 ## Register the app
 
 ```bash
-curl https://app.trydimmi.com/oauth/register \
+curl https://trydimmi.com/oauth/register \
   -H "Content-Type: application/json" \
   -d '{
     "client_name": "Acme Reports",
@@ -45,7 +45,7 @@ const verifier = randomBytes(32).toString("base64url");
 const challenge = createHash("sha256").update(verifier).digest("base64url");
 const state = randomBytes(16).toString("base64url");
 
-const url = new URL("https://app.trydimmi.com/oauth/authorize");
+const url = new URL("https://trydimmi.com/oauth/authorize");
 url.search = new URLSearchParams({
   response_type: "code",
   client_id: "<client_id>",
@@ -68,7 +68,7 @@ The teammate picks one workspace and can untick scopes. dimmi then redirects to 
 The code works once, for 1 minute.
 
 ```bash
-curl https://app.trydimmi.com/oauth/token \
+curl https://trydimmi.com/oauth/token \
   -u "<client_id>:<client_secret>" \
   -d grant_type=authorization_code \
   -d code=<code> \
@@ -95,7 +95,7 @@ Send the access token as `Authorization: Bearer <access_token>`. It acts as that
 ## Refresh the access token
 
 ```bash
-curl https://app.trydimmi.com/oauth/token \
+curl https://trydimmi.com/oauth/token \
   -u "<client_id>:<client_secret>" \
   -d grant_type=refresh_token \
   -d refresh_token=<refresh_token>
@@ -108,7 +108,7 @@ curl https://app.trydimmi.com/oauth/token \
 ## Revoke a token
 
 ```bash
-curl https://app.trydimmi.com/oauth/revoke \
+curl https://trydimmi.com/oauth/revoke \
   -u "<client_id>:<client_secret>" \
   -d token=<token>
 ```

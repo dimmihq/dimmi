@@ -108,7 +108,7 @@ How a token is signed:
 To put the messenger on a page:
 
 ```go
-html := dimmi.MessengerSnippet(dimmi.SnippetOptions{AppID: "wgt_...", Host: "https://app.trydimmi.com", Token: token})
+html := dimmi.MessengerSnippet(dimmi.SnippetOptions{AppID: "wgt_...", Host: "https://trydimmi.com", Token: token})
 ```
 
 Or let the messenger fetch fresh tokens from a route:

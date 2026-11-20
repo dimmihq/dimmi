@@ -327,7 +327,7 @@ def _script_json(value: str) -> str:
 
 def messenger_snippet(
     app_id: str,
-    host: str = "https://app.trydimmi.com",
+    host: str = "https://trydimmi.com",
     token: Optional[str] = None,
     identity_url: Optional[str] = None,
     nonce: Optional[str] = None,

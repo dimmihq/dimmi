@@ -6,7 +6,7 @@ description: "Send an Idempotency-Key header so retried POST requests to the dim
 Send an `Idempotency-Key` header with a `POST`, and a retry with the same key returns the first response without running the request again.
 
 ```bash
-curl https://app.trydimmi.com/api/v1/contacts \
+curl https://trydimmi.com/api/v1/contacts \
   -H "Authorization: Bearer <api_token>" \
   -H "Idempotency-Key: <key>" \
   -H "Content-Type: application/json" \

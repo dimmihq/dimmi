@@ -15,7 +15,7 @@ from dimmi import Dimmi
 client = Dimmi(
     token="dmi_...",            # or DIMMI_API_TOKEN / DIMMI_TOKEN
     workspace="ws_...",         # optional: a token works in its own workspace; or DIMMI_WORKSPACE
-    base_url="https://app.trydimmi.com",  # or DIMMI_BASE_URL; your origin when self-hosting
+    base_url="https://trydimmi.com",  # or DIMMI_BASE_URL; your origin when self-hosting
     max_retries=3,
     timeout=30,
 )
@@ -126,7 +126,7 @@ token = sign_identity_token(
     expires_in=600,
 )
 
-html = messenger_snippet("wgt_...", "https://app.trydimmi.com", token=token)
+html = messenger_snippet("wgt_...", "https://trydimmi.com", token=token)
 ```
 
 Fields: `id`, `email`, `email_verified`, `name`, `phone`,
@@ -148,7 +148,7 @@ def dimmi_token(request):
     body, headers = token_response(sign_identity_token({"id": user.id, "email": user.email}) if user else None)
     return Response(body, status_code=200, headers=headers)
 
-html = messenger_snippet("wgt_...", "https://app.trydimmi.com", identity_url="/dimmi/token")
+html = messenger_snippet("wgt_...", "https://trydimmi.com", identity_url="/dimmi/token")
 ```
 
 ## Webhooks

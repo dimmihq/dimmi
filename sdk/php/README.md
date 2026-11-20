@@ -14,7 +14,7 @@ PHP 8.2 or newer. Using Laravel? Install [`dimmi/dimmi-laravel`](../laravel) ins
 $dimmi = new Dimmi\Client(
     token: getenv('DIMMI_TOKEN'),          // falls back to DIMMI_TOKEN
     workspace: getenv('DIMMI_WORKSPACE'),  // optional: a token works in its own workspace; falls back to DIMMI_WORKSPACE
-    baseUrl: 'https://dimmi.acme.com',     // falls back to DIMMI_BASE_URL, then https://app.trydimmi.com; "/api/v1" is added
+    baseUrl: 'https://dimmi.acme.com',     // falls back to DIMMI_BASE_URL, then https://trydimmi.com; "/api/v1" is added
 );
 
 $contact = $dimmi->contacts->store(['email' => 'ada@example.com', 'name' => 'Ada']);

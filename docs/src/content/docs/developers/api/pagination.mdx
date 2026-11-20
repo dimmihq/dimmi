@@ -6,7 +6,7 @@ description: "The limit, cursor, filter, sort, include and search parameters of 
 List endpoints return `data` and `meta`. To read the next page, send `meta.next_cursor` as `cursor`.
 
 ```bash
-curl -G https://app.trydimmi.com/api/v1/conversations \
+curl -G https://trydimmi.com/api/v1/conversations \
   -H "Authorization: Bearer <api_token>" \
   --data-urlencode "limit=50" \
   --data-urlencode "filter[status]=open,snoozed" \

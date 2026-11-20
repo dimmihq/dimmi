@@ -192,7 +192,7 @@ export const sample: Content = {
         },
         {
           kind: "code",
-          text: '<script async src="https://app.trydimmi.com/widget/v1/loader.js" data-app-id="wgt_..."></script>',
+          text: '<script async src="https://trydimmi.com/widget/v1/loader.js" data-app-id="wgt_..."></script>',
         },
         { kind: "note", text: "Using Next.js or React? Run npx dimmi init and the package sets everything up." },
         { kind: "h2", text: "Check that it works" },

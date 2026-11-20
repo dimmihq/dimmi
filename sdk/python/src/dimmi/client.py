@@ -36,7 +36,7 @@ from ._transport import AsyncRetryTransport, RetryTransport
 from ._version import __version__
 from .errors import error_from_response
 
-DEFAULT_BASE_URL = "https://app.trydimmi.com"
+DEFAULT_BASE_URL = "https://trydimmi.com"
 DEFAULT_TIMEOUT = 30.0
 API_PREFIX = "/api/v1"
 
@@ -128,7 +128,7 @@ class Dimmi(_Base):
         token: an API token; defaults to DIMMI_API_TOKEN or DIMMI_TOKEN.
         workspace: the workspace id (ws_...) sent as Dimmi-Workspace;
             defaults to DIMMI_WORKSPACE.
-        base_url: https://app.trydimmi.com or your self-hosted origin;
+        base_url: https://trydimmi.com or your self-hosted origin;
             defaults to DIMMI_BASE_URL. "/api/v1" is added when missing.
         max_retries: retries for 429/503 answers and connection failures.
         timeout: seconds, or an httpx.Timeout.

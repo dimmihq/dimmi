@@ -293,6 +293,6 @@ export function sectionFor(path: string): Section {
 }
 
 export const GITHUB_URL = "https://github.com/dimmihq/dimmi";
-export const APP_URL = "https://app.trydimmi.com";
+export const APP_URL = "https://trydimmi.com";
 // The marketing site, which the docs are part of (served under /docs).
 export const SITE_URL = "/";

@@ -83,7 +83,7 @@ Your team answers messenger, email and Slack conversations from one inbox. The A
 
 ### dimmi Cloud
 
-[Sign up](https://app.trydimmi.com) and answer your first conversation in a few minutes. The first 100 conversations every month are free, with unlimited seats. The [quickstart](https://trydimmi.com/docs/quickstart/) walks you through it.
+[Sign up](https://trydimmi.com) and answer your first conversation in a few minutes. The first 100 conversations every month are free, with unlimited seats. The [quickstart](https://trydimmi.com/docs/quickstart/) walks you through it.
 
 ### Self-host
 
@@ -133,7 +133,7 @@ Issues and pull requests are welcome. Read [AGENTS.md](AGENTS.md) first: the API
 </div>
 
 <p align="center">
-  <a href="https://app.trydimmi.com"><b>Start free</b></a> ·
+  <a href="https://trydimmi.com"><b>Start free</b></a> ·
   <a href="https://trydimmi.com/docs/self-hosting/"><b>Self-host it</b></a> ·
   <a href="https://trydimmi.com/docs/">Docs</a> ·
   <a href="AGENTS.md">Contributing</a>

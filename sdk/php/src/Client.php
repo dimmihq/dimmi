@@ -33,7 +33,7 @@ final class Client extends Api
     public const VERSION = '0.1.0';
 
     /** dimmi cloud. Self-hosted installs pass their own address. */
-    public const DEFAULT_BASE_URL = 'https://app.trydimmi.com';
+    public const DEFAULT_BASE_URL = 'https://trydimmi.com';
 
     private const DEFAULTS = [
         'maxRetries' => 2,
@@ -55,7 +55,7 @@ final class Client extends Api
      * @param string|null $workspace Workspace id (ws_...); falls back to DIMMI_WORKSPACE.
      * @param string|null $baseUrl Your dimmi host or API base, such as https://dimmi.acme.com;
      *                             "/api/v1" is added when missing. Falls back to DIMMI_BASE_URL, then DIMMI_HOST,
-     *                             then dimmi cloud (https://app.trydimmi.com).
+     *                             then dimmi cloud (https://trydimmi.com).
      * @param array{
      *     maxRetries?: int,
      *     timeout?: float,

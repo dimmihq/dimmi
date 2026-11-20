@@ -63,7 +63,7 @@ async function showProductionHost(page: Page) {
     const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
     for (let node = walker.nextNode(); node; node = walker.nextNode()) {
       if (node.nodeValue?.includes(origin)) {
-        node.nodeValue = node.nodeValue.replaceAll(origin, "https://app.trydimmi.com");
+        node.nodeValue = node.nodeValue.replaceAll(origin, "https://trydimmi.com");
       }
     }
   }, new URL(base).origin);

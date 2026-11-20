@@ -201,8 +201,8 @@ def test_messenger_snippet_with_token_escapes():
 
 
 def test_messenger_snippet_with_identity_url():
-    html = messenger_snippet("wgt_1", "https://app.trydimmi.com", identity_url="/dimmi/token?a=1&b=2")
+    html = messenger_snippet("wgt_1", "https://trydimmi.com", identity_url="/dimmi/token?a=1&b=2")
     assert html == (
-        '<script async src="https://app.trydimmi.com/widget/v1/loader.js" data-app-id="wgt_1" '
+        '<script async src="https://trydimmi.com/widget/v1/loader.js" data-app-id="wgt_1" '
         'data-identity-url="/dimmi/token?a=1&amp;b=2"></script>'
     )

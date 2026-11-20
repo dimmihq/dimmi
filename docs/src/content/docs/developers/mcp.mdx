@@ -3,20 +3,20 @@ title: "Connect Claude, ChatGPT or Cursor over MCP"
 description: "Connect an AI assistant to your dimmi workspace through the MCP server at /mcp, with OAuth or an API token."
 ---
 
-The dimmi MCP server is at `https://app.trydimmi.com/mcp`, or `/mcp` on your own dimmi address when self-hosted, and speaks Streamable HTTP.
+The dimmi MCP server is at `https://trydimmi.com/mcp`, or `/mcp` on your own dimmi address when self-hosted, and speaks Streamable HTTP.
 
 ## Connect with OAuth
 
 Add the address as a remote MCP server or custom connector in your assistant. The assistant opens dimmi in your browser, where you pick the workspace and the access to give.
 
 ```bash title="Claude Code"
-claude mcp add --transport http dimmi https://app.trydimmi.com/mcp
+claude mcp add --transport http dimmi https://trydimmi.com/mcp
 ```
 
 ```json title=".cursor/mcp.json"
 {
   "mcpServers": {
-    "dimmi": { "url": "https://app.trydimmi.com/mcp" }
+    "dimmi": { "url": "https://trydimmi.com/mcp" }
   }
 }
 ```
@@ -31,7 +31,7 @@ A client that cannot open a browser sends an [API token](/developers/api/authent
 {
   "mcpServers": {
     "dimmi": {
-      "url": "https://app.trydimmi.com/mcp",
+      "url": "https://trydimmi.com/mcp",
       "headers": { "Authorization": "Bearer <api_token>" }
     }
   }

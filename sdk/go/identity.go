@@ -268,7 +268,7 @@ SnippetOptions place the messenger on a page.
 type SnippetOptions struct {
 	// AppID is the messenger's app id, wgt_..., from Settings > Messenger.
 	AppID string
-	// Host is where dimmi runs: https://app.trydimmi.com or your own address.
+	// Host is where dimmi runs: https://trydimmi.com or your own address.
 	Host string
 	// Token is a signed identity token for the signed-in user; empty for visitors.
 	Token string

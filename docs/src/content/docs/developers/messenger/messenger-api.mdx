@@ -3,14 +3,14 @@ title: "Messenger API"
 description: "The HTTP API the dimmi messenger uses, for building your own chat interface."
 ---
 
-The messenger's HTTP API is at `/widget/v1` on `https://app.trydimmi.com`, or on your own dimmi address when self-hosted.
+The messenger's HTTP API is at `/widget/v1` on `https://trydimmi.com`, or on your own dimmi address when self-hosted.
 
 Requests and responses are JSON, and the API reads and sets no cookies.
 
 ## Start a session
 
 ```bash
-curl https://app.trydimmi.com/widget/v1/sessions \
+curl https://trydimmi.com/widget/v1/sessions \
   -H "Content-Type: application/json" \
   -d '{"app_id": "<app_id>"}'
 ```
@@ -28,12 +28,12 @@ curl https://app.trydimmi.com/widget/v1/sessions \
 ## Send a message and read replies
 
 ```bash
-curl https://app.trydimmi.com/widget/v1/conversations \
+curl https://trydimmi.com/widget/v1/conversations \
   -H "Authorization: Bearer <session_token>" \
   -H "Content-Type: application/json" \
   -d '{"client_id": "7f9c2b1e-4a53-4d0e-9c1f-2b6a8e0d3f15", "body": "Where is my order?"}'
 
-curl "https://app.trydimmi.com/widget/v1/updates?since=<cursor>" \
+curl "https://trydimmi.com/widget/v1/updates?since=<cursor>" \
   -H "Authorization: Bearer <session_token>"
 ```
 

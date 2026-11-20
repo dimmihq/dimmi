@@ -4,7 +4,7 @@ description: Read and change everything in your workspace over HTTPS. Every endp
 ---
 import { Callout, Card, CardGrid, Endpoint, Param } from "~docs/components/mdx";
 
-The API lives at `https://app.trydimmi.com/api/v1`. It takes and returns JSON, and every page here is generated from the same contract the SDKs are built from.
+The API lives at `https://trydimmi.com/api/v1`. It takes and returns JSON, and every page here is generated from the same contract the SDKs are built from.
 
 <Endpoint method="GET" path="/api/v1/conversations" />
 
@@ -13,7 +13,7 @@ The API lives at `https://app.trydimmi.com/api/v1`. It takes and returns JSON, a
 Send an API token in the `Authorization` header. Create tokens in **Settings → API tokens**; each one carries the abilities you give it, and every endpoint lists the ability it needs.
 
 ```bash
-curl https://app.trydimmi.com/api/v1/me \
+curl https://trydimmi.com/api/v1/me \
   --header "Authorization: Bearer $DIMMI_TOKEN"
 ```
 

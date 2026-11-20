@@ -52,7 +52,7 @@ type Spec = {
 const spec = JSON.parse(raw) as Spec;
 
 export const API_VERSION = spec.info.version;
-export const BASE_URL = "https://app.trydimmi.com/api/v1";
+export const BASE_URL = "https://trydimmi.com/api/v1";
 export const API_ROOT = "/api-reference/";
 
 /* ---------------------------------------------------------------- naming */

@@ -3,7 +3,7 @@ title: "Content Security Policy for the messenger"
 description: "The Content-Security-Policy directives and nonce the dimmi messenger needs on a page with a strict policy."
 ---
 
-Add `<dimmi_host>` to three directives: `https://app.trydimmi.com` on dimmi Cloud, or your self-hosted server's address.
+Add `<dimmi_host>` to three directives: `https://trydimmi.com` on dimmi Cloud, or your self-hosted server's address.
 
 | Directive | Add |
 | --- | --- |
@@ -14,7 +14,7 @@ Add `<dimmi_host>` to three directives: `https://app.trydimmi.com` on dimmi Clou
 | `style-src` | Nothing |
 
 ```http
-Content-Security-Policy: script-src 'self' https://app.trydimmi.com; connect-src 'self' https://app.trydimmi.com; img-src 'self' https://app.trydimmi.com data:
+Content-Security-Policy: script-src 'self' https://trydimmi.com; connect-src 'self' https://trydimmi.com; img-src 'self' https://trydimmi.com data:
 ```
 
 ## Use a nonce with 'strict-dynamic'
@@ -22,14 +22,14 @@ Content-Security-Policy: script-src 'self' https://app.trydimmi.com; connect-src
 Browsers ignore host sources in `script-src` under `'strict-dynamic'`, so put your nonce on the loader's script tag. With a package, pass it as the `nonce` option.
 
 ```http
-Content-Security-Policy: script-src 'nonce-<nonce>' 'strict-dynamic'; connect-src 'self' https://app.trydimmi.com; img-src 'self' https://app.trydimmi.com data:
+Content-Security-Policy: script-src 'nonce-<nonce>' 'strict-dynamic'; connect-src 'self' https://trydimmi.com; img-src 'self' https://trydimmi.com data:
 ```
 
 ```html title="index.html"
 <script
   async
   nonce="<nonce>"
-  src="https://app.trydimmi.com/widget/v1/loader.js"
+  src="https://trydimmi.com/widget/v1/loader.js"
   data-app-id="<app_id>"
 ></script>
 ```

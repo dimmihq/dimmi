@@ -37,7 +37,7 @@ import (
 const Version = "0.1.0"
 
 // DefaultBaseURL is dimmi cloud. Self-hosted installs pass their own address.
-const DefaultBaseURL = "https://app.trydimmi.com"
+const DefaultBaseURL = "https://trydimmi.com"
 
 // WorkspaceHeader names the workspace a request acts in.
 const WorkspaceHeader = "Dimmi-Workspace"
