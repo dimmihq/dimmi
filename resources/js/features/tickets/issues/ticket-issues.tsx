@@ -6,44 +6,69 @@
  * Linking opens the two-step dialog; unlinking asks first and leaves the
  * issue in its tool.
  */
-import { RiAddLine, RiErrorWarningLine, RiExternalLinkLine, RiLinkUnlinkM } from "@remixicon/react";
+import { RiAddLine, RiErrorWarningLine, RiExternalLinkLine, RiLinkUnlinkM, RiRefreshLine } from "@remixicon/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { Chip } from "@/components/base/badges/chip";
 import { Button } from "@/components/base/buttons/button";
 import { IconButton } from "@/components/base/buttons/icon-button";
+import { LinkButton as LinkAction } from "@/components/base/buttons/link-button";
+import { Checkbox } from "@/components/base/checkbox/checkbox";
 import { AlertDialog } from "@/components/base/modal/modal";
 import { toast } from "@/components/base/toast/toast";
+import { Section } from "@/features/inbox/customer/rows";
 import { useAccount } from "@/features/settings/use-account";
 import { integrationsQuery } from "@/lib/api/integrations";
-import { refreshTicketKeys, ticketIssuesQuery, unlinkTicketIssue } from "@/lib/api/ticket-issues";
+import {
+  issueKeys,
+  refreshTicketIssues,
+  refreshTicketKeys,
+  ticketIssuesQuery,
+  unlinkTicketIssue,
+} from "@/lib/api/ticket-issues";
 import { type TicketIssue, ticketQuery } from "@/lib/api/tickets";
 
 import { LinkIssueDialog } from "./link-issue-dialog";
-import { groupTint, isTool, toolLook } from "./tools";
+import { ToolMark } from "./tool-logos";
+import { groupTint, isTool, toolLook, writtenOn } from "./tools";
 
 function IssueRow({ issue, compact, onUnlink }: { issue: TicketIssue; compact: boolean; onUnlink: () => void }) {
   const look = toolLook(issue.provider);
   const problem = issue.warning ?? issue.sync_error;
 
   return (
-    <li className={compact ? "flex flex-col gap-1 py-1" : "flex flex-col gap-1 px-4 py-3"}>
+    <li
+      className={compact ? "group/issue flex min-h-8 flex-col justify-center gap-1" : "flex flex-col gap-1 px-4 py-3"}
+    >
       <div className={compact ? "flex items-center gap-2" : "flex items-center gap-3"}>
-        {compact ? null : <span className="shrink-0 text-caption-1-medium text-text-tertiary">{look.label}</span>}
         <a
           href={issue.url}
           target="_blank"
           rel="noopener noreferrer"
+          aria-label={`${issue.key} in ${look.label}: ${issue.title}`}
           className="flex min-w-0 flex-1 items-center gap-2 rounded-md outline-none focus-visible:ring-2 focus-visible:ring-border-focus-ring"
         >
+          <ToolMark provider={issue.provider} />
           <span className="shrink-0 text-body-2-medium text-text-primary">{issue.key}</span>
           <span className="truncate text-body-2-regular text-text-secondary">{issue.title}</span>
           <RiExternalLinkLine aria-hidden className="size-3.5 shrink-0 text-foreground-icon-tertiary" />
         </a>
-        <Chip variant="caption" color={groupTint[issue.status_group] ?? "gray"}>
+        <Chip variant="caption" color={groupTint[issue.status_group] ?? "neutral"}>
           {issue.status || issue.status_group}
         </Chip>
-        <IconButton size="small" icon={RiLinkUnlinkM} aria-label={`Unlink ${issue.key}`} onClick={onUnlink} />
+        {compact ? (
+          <Button
+            variant="secondary"
+            size="xs"
+            iconOnly
+            leadingIcon={RiLinkUnlinkM}
+            aria-label={`Unlink ${issue.key}`}
+            className="shrink-0 opacity-0 transition-opacity duration-150 focus-visible:opacity-100 group-hover/issue:opacity-100"
+            onClick={onUnlink}
+          />
+        ) : (
+          <IconButton size="small" icon={RiLinkUnlinkM} aria-label={`Unlink ${issue.key}`} onClick={onUnlink} />
+        )}
       </div>
       {problem ? (
         <p className="flex items-start gap-1.5 text-caption-1-regular text-text-error-primary">
@@ -58,37 +83,52 @@ function IssueRow({ issue, compact, onUnlink }: { issue: TicketIssue; compact: b
 /*
  * LinkButton opens the dialog that links engineering work.
  */
-function LinkButton({
-  size,
-  disabled = false,
-  onPress,
-}: {
-  size: "small" | "xs";
-  disabled?: boolean;
-  onPress: () => void;
-}) {
+function LinkButton({ disabled = false, onPress }: { disabled?: boolean; onPress: () => void }) {
   return (
-    <Button variant="secondary" size={size} leadingIcon={RiAddLine} disabled={disabled} onClick={onPress}>
+    <Button variant="secondary" size="small" leadingIcon={RiAddLine} disabled={disabled} onClick={onPress}>
       Link issue
     </Button>
   );
 }
 
 /*
- * Heading names the block and offers to link work.
+ * Refresh is how a ticket's issues are read from their tools now.
  */
-function Heading({ linkable, onLink }: { linkable: boolean; onLink: () => void }) {
+interface Refresh {
+  shown: boolean;
+  busy: boolean;
+  run: () => void;
+}
+
+/*
+ * Heading names the block and offers to link work, and to read the
+ * linked issues again.
+ */
+function Heading({ linkable, refresh, onLink }: { linkable: boolean; refresh: Refresh; onLink: () => void }) {
   return (
     <div className="flex items-end justify-between gap-3">
       <div className="flex flex-col gap-0.5">
-        <h3 className="text-headline-medium text-text-primary">Engineering work</h3>
+        <h3 className="text-headline-medium text-text-primary">Linked issues</h3>
         <p className="text-caption-1-regular text-text-tertiary">
           {linkable
             ? "Statuses come back from the tool and move this ticket for you."
             : "Connect Linear, Jira, GitHub or an incident tool in Settings, Integrations to link work here."}
         </p>
       </div>
-      <LinkButton disabled={!linkable} size="small" onPress={onLink} />
+      <div className="flex shrink-0 items-center gap-2">
+        {refresh.shown ? (
+          <Button
+            variant="secondary"
+            size="small"
+            leadingIcon={RiRefreshLine}
+            loading={refresh.busy}
+            onClick={refresh.run}
+          >
+            Refresh
+          </Button>
+        ) : null}
+        <LinkButton disabled={!linkable} onPress={onLink} />
+      </div>
     </div>
   );
 }
@@ -126,10 +166,66 @@ function IssueList({
 }
 
 /*
+ * CompactFoot ends the panel's block: a quiet way to link work when a
+ * tool is connected and to read the linked issues again, or a line
+ * saying there is none.
+ */
+function CompactFoot({
+  linkable,
+  empty,
+  refresh,
+  onLink,
+}: {
+  linkable: boolean;
+  empty: boolean;
+  refresh: Refresh;
+  onLink: () => void;
+}) {
+  if (linkable) {
+    return (
+      <div className="flex min-h-8 items-center gap-3">
+        <LinkAction size="xs" variant="secondary" leadingIcon={RiAddLine} onClick={onLink}>
+          Link issue
+        </LinkAction>
+        {refresh.shown ? (
+          <LinkAction
+            size="xs"
+            variant="secondary"
+            leadingIcon={RiRefreshLine}
+            disabled={refresh.busy}
+            onClick={refresh.run}
+          >
+            {refresh.busy ? "Refreshing…" : "Refresh"}
+          </LinkAction>
+        ) : null}
+      </div>
+    );
+  }
+
+  return empty ? <span className="text-body-2-regular text-text-tertiary">No linked issues.</span> : null;
+}
+
+/*
  * TicketIssues is the block itself; compact fits the conversation's
  * ticket panel, without the heading.
  */
-export function TicketIssues({ ticketId, compact = false }: { ticketId: string; compact?: boolean }) {
+/*
+ * noun is what the tool holds: an incident or an issue.
+ */
+function noun(provider: string) {
+  return toolLook(provider).kind === "incidents" ? "incident" : "issue";
+}
+
+export function TicketIssues({
+  ticketId,
+  compact = false,
+  heading,
+}: {
+  ticketId: string;
+  compact?: boolean;
+  /* Names the compact block, which then shows nothing at all when it has no issue and no tool to link one in. */
+  heading?: string;
+}) {
   const workspace = useAccount().workspace.id;
   const queryClient = useQueryClient();
   const { data: ticket } = useQuery(ticketQuery(workspace, ticketId));
@@ -137,32 +233,44 @@ export function TicketIssues({ ticketId, compact = false }: { ticketId: string; 
   const { data: installations } = useQuery(integrationsQuery(workspace));
   const [linking, setLinking] = useState(false);
   const [unlinking, setUnlinking] = useState<TicketIssue | null>(null);
+  const [removeFromTool, setRemoveFromTool] = useState(false);
   const tools = (installations ?? []).filter((i) => isTool(i.provider) && i.status === "active");
   const list = issues ?? [];
 
   const unlink = useMutation({
-    mutationFn: (issue: TicketIssue) => unlinkTicketIssue(workspace, issue.id),
-    onSuccess: async () => {
+    mutationFn: ({ issue, remove }: { issue: TicketIssue; remove: boolean }) =>
+      unlinkTicketIssue(workspace, issue.id, remove),
+    onSuccess: async (_, { issue, remove }) => {
       await Promise.all(
         refreshTicketKeys(workspace, ticketId).map((queryKey) => queryClient.invalidateQueries({ queryKey })),
       );
-      toast.success("Unlinked. The issue stays in its tool.");
+      const label = toolLook(issue.provider).label;
+      toast.success(
+        remove
+          ? `Unlinked, and dimmi's details removed from ${label}.`
+          : `Unlinked. The ${noun(issue.provider)} stays in ${label} as it is.`,
+      );
     },
     onError: (error) => toast.error(error.message),
   });
+  const reread = useMutation({
+    mutationFn: () => refreshTicketIssues(workspace, ticketId),
+    onSuccess: async (fresh) => {
+      queryClient.setQueryData(issueKeys.ticket(workspace, ticketId), fresh);
+      await Promise.all(
+        refreshTicketKeys(workspace, ticketId).map((queryKey) => queryClient.invalidateQueries({ queryKey })),
+      );
+    },
+    onError: (error) => toast.error(error.message),
+  });
+  const refresh: Refresh = { shown: list.length > 0, busy: reread.isPending, run: () => reread.mutate() };
 
-  return (
-    <section aria-label="Engineering work" className={compact ? "flex flex-col gap-1" : "flex flex-col gap-3"}>
-      {compact ? null : <Heading linkable={tools.length > 0} onLink={() => setLinking(true)} />}
-      {isPending ? null : <IssueList issues={list} compact={compact} onUnlink={(issue) => setUnlinking(issue)} />}
-      {compact && tools.length > 0 ? (
-        <div>
-          <LinkButton size="xs" onPress={() => setLinking(true)} />
-        </div>
-      ) : null}
-      {compact && tools.length === 0 && list.length === 0 ? (
-        <span className="text-body-2-regular text-text-tertiary">No linked issues.</span>
-      ) : null}
+  if (heading && tools.length === 0 && list.length === 0) {
+    return null;
+  }
+
+  const dialogs = (
+    <>
       {linking ? (
         <LinkIssueDialog
           workspace={workspace}
@@ -176,10 +284,63 @@ export function TicketIssues({ ticketId, compact = false }: { ticketId: string; 
         isOpen={unlinking !== null}
         onOpenChange={(open) => (open ? undefined : setUnlinking(null))}
         title={`Unlink ${unlinking?.key ?? "the issue"}?`}
-        description="Its status stops moving this ticket. The issue itself stays in its tool."
+        description={`Its status stops moving this ticket. The ${noun(unlinking?.provider ?? "")} stays in ${toolLook(unlinking?.provider ?? "").label}.`}
         confirmLabel="Unlink"
-        onConfirm={() => (unlinking ? unlink.mutateAsync(unlinking) : undefined)}
-      />
+        onConfirm={() => (unlinking ? unlink.mutateAsync({ issue: unlinking, remove: removeFromTool }) : undefined)}
+      >
+        {unlinking && writtenOn(unlinking.provider) ? (
+          <Checkbox isSelected={removeFromTool} onChange={setRemoveFromTool}>
+            <span className="flex flex-col">
+              <span>Also remove what dimmi wrote in {toolLook(unlinking.provider).label}</span>
+              <span className="text-body-2-regular text-text-secondary">{writtenOn(unlinking.provider)}</span>
+            </span>
+          </Checkbox>
+        ) : null}
+      </AlertDialog>
+    </>
+  );
+
+  if (heading) {
+    return (
+      <Section title={heading} count={list.length}>
+        <div className="flex flex-col">
+          <CompactFoot linkable={tools.length > 0} empty={false} refresh={refresh} onLink={() => setLinking(true)} />
+          <IssueList
+            issues={list}
+            compact
+            onUnlink={(issue) => {
+              setRemoveFromTool(false);
+              setUnlinking(issue);
+            }}
+          />
+        </div>
+        {dialogs}
+      </Section>
+    );
+  }
+
+  return (
+    <section aria-label="Linked issues" className={compact ? "flex flex-col gap-1" : "flex flex-col gap-3"}>
+      {compact ? null : <Heading linkable={tools.length > 0} refresh={refresh} onLink={() => setLinking(true)} />}
+      {isPending ? null : (
+        <IssueList
+          issues={list}
+          compact={compact}
+          onUnlink={(issue) => {
+            setRemoveFromTool(false);
+            setUnlinking(issue);
+          }}
+        />
+      )}
+      {compact ? (
+        <CompactFoot
+          linkable={tools.length > 0}
+          empty={list.length === 0}
+          refresh={refresh}
+          onLink={() => setLinking(true)}
+        />
+      ) : null}
+      {dialogs}
     </section>
   );
 }

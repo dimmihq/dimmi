@@ -135,6 +135,7 @@ export function FeedbackBoardsSection({ workspace, helpCenter }: { workspace: st
             </span>
             {canChange ? (
               <RowMenu
+                quiet
                 label={board.name}
                 actions={boards.length > 1 ? actions : actions.slice(0, 1)}
                 onPick={(kind) => setOpen({ kind, board })}

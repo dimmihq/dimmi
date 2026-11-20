@@ -471,3 +471,54 @@ export async function downloadExport(workspace: string, url: string): Promise<Bl
 
   return response.blob();
 }
+
+/*
+ * ContactNote is one note the team keeps about a customer or a company:
+ * its words, whether it is pinned to the top, who wrote it and whether
+ * the reader may rewrite or delete it.
+ */
+export interface ContactNote {
+  id: string;
+  object: "contact_note";
+  contact_id: string | null;
+  company_id: string | null;
+  body: string;
+  pinned: boolean;
+  editable: boolean;
+  author: { id: string; name: string } | null;
+  created_at: string;
+  updated_at: string;
+}
+
+/*
+ * NoteSubject is who notes are about: a customer or a company.
+ */
+export type NoteSubject = { kind: "contact"; id: string } | { kind: "company"; id: string };
+
+function notesPath(about: NoteSubject): string {
+  return `/${about.kind === "contact" ? "contacts" : "companies"}/${encodeURIComponent(about.id)}/notes`;
+}
+
+export const contactNoteKeys = {
+  list: (workspace: string, about: NoteSubject) => ["workspace", workspace, "notes", about.kind, about.id] as const,
+};
+
+export function contactNotesQuery(workspace: string, about: NoteSubject) {
+  return queryOptions({
+    queryKey: contactNoteKeys.list(workspace, about),
+    queryFn: () => request<ContactNote[]>("GET", notesPath(about), undefined, { workspace }),
+    enabled: workspace !== "" && about.id !== "",
+  });
+}
+
+export function addContactNote(workspace: string, about: NoteSubject, body: string) {
+  return request<ContactNote>("POST", notesPath(about), { body }, { workspace });
+}
+
+export function updateContactNote(workspace: string, note: string, change: { body?: string; pinned?: boolean }) {
+  return request<ContactNote>("PATCH", `/contact-notes/${encodeURIComponent(note)}`, change, { workspace });
+}
+
+export function deleteContactNote(workspace: string, note: string) {
+  return request<void>("DELETE", `/contact-notes/${encodeURIComponent(note)}`, undefined, { workspace });
+}

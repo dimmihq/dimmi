@@ -24,10 +24,10 @@ import {
   postsQuery,
   priorities,
   type StatusChange,
-  statuses,
 } from "@/lib/api/feedback";
 
 import { CustomerPicker, type Picked } from "./customer-picker";
+import { useStatuses } from "./use-statuses";
 
 const tallModal = "h-[min(640px,calc(100dvh-3rem))]";
 
@@ -62,14 +62,15 @@ export function StatusDialog({
   const [entry, setEntry] = useState("");
   const [busy, run] = useBusy();
   const entries = useQuery(entriesQuery(workspace, post.help_center_id, { status: "published", page: 1 }));
-  const name = statuses.find((s) => s.id === status)?.name ?? status;
+  const moved = useStatuses(workspace).find((s) => s.id === status);
+  const name = moved?.name ?? status;
   const people = post.vote_count === 1 ? "1 voter" : `${post.vote_count} voters`;
 
   return (
     <Modal size="md" className={tallModal} isOpen onOpenChange={(open) => (open ? undefined : onClose())}>
       <ModalHeader title={`Move to ${name}`} description={`#${post.number} ${post.title}`} />
       <ModalBody className="flex flex-col gap-4 pb-4">
-        {status === "shipped" ? (
+        {moved?.category === "done" ? (
           <Select
             label="Changelog update"
             className="w-full"

@@ -120,7 +120,7 @@ function Writer({
             <h2 className="text-body-2-medium text-text-secondary">Signature</h2>
             <SignatureWriter value={initial} label={target.title} onChange={setBody} />
             <p className="text-body-2-regular text-text-tertiary">
-              Bold, italic and links. Type / or pick Detail to add your name, job title, the address or the company.
+              Bold, italic and links. Type / or pick Detail to add your name, the address or the company.
             </p>
             <Failure error={preview.error ?? save.error} />
           </div>

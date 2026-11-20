@@ -1,8 +1,6 @@
 {
   "common": {
-    "back": "Back",
-    "cancel": "Cancel",
-    "done": "Done"
+    "cancel": "Cancel"
   },
   "conversations": {
     "add": "Link conversations",
@@ -20,45 +18,15 @@
     "open": "Open conversation #{{number}}",
     "reach": "{{customers}} customers · {{companies}} companies · {{revenue}} at stake",
     "replyAll": "Reply all",
+    "replyAllName": "{{reference}} update: {{title}}",
     "search": "Search conversations",
     "searchPlaceholder": "Search by words, customer or number",
     "title": "Customer reports",
     "unlink": "Unlink conversation #{{number}}",
     "unlinkConfirm": "Unlink",
-    "unlinkDescription": "{{name}} stops getting messages sent from {{reference}}. The conversation itself stays as it is.",
+    "unlinkDescription": "{{name}} leaves {{reference}} and stops counting toward its reach. The conversation itself stays as it is.",
     "unlinkTitle": "Unlink conversation #{{number}}?",
     "untitled": "Conversation"
-  },
-  "message": {
-    "body": "Message",
-    "bodyPlaceholder": "Write what changed and what they should do now.",
-    "checkRecipients": "Check recipients",
-    "held_one": "1 customer held back",
-    "held_other": "{{count}} customers held back",
-    "noneHeld": "Nobody is held back.",
-    "previewAs": "Preview as",
-    "previewEmpty": "Your message shows here.",
-    "previewFrom": "From {{name}}, in their conversation",
-    "reach_one": "Send to 1 customer",
-    "reach_other": "Send to {{formatted}} customers",
-    "reachKeep": "Each gets it in their own conversation, on the channel they wrote from. Their conversations stay open.",
-    "reachResolve": "Each gets it in their own conversation, on the channel they wrote from. Their conversations close and their tickets resolve.",
-    "resolve": "Resolve them all after sending",
-    "resolveHint": "Closes each conversation and resolves its ticket once their copy is sent.",
-    "sendTo_one": "Send to 1 customer",
-    "sendTo_other": "Send to {{count}} customers",
-    "step": {
-      "check": "Check",
-      "results": "Sent",
-      "write": "Write"
-    },
-    "steps": "Steps",
-    "title": "Message everyone"
-  },
-  "reasons": {
-    "customer_unreachable": "No channel reaches them",
-    "customer_wrote_since": "Wrote since it last changed",
-    "teammate_already_replied": "A teammate already told them"
   },
   "reports": {
     "byType": {
@@ -104,26 +72,6 @@
       "description": "Trackers by the monthly revenue of the companies they reach.",
       "reach": "{{customers}} customers · {{companies}} companies",
       "title": "Tracker impact"
-    }
-  },
-  "results": {
-    "counts": "{{sent}} sent · {{held}} held · {{failed}} failed of {{total}}",
-    "deliveries": "Deliveries",
-    "delivery": {
-      "failed": "Failed",
-      "held": "Held back",
-      "pending": "Waiting",
-      "sent": "Sent"
-    },
-    "entry": "Sent to everyone",
-    "loading": "Getting deliveries…",
-    "progress": "Delivery progress",
-    "status": {
-      "failed": "Failed",
-      "partial": "Sent, some failed",
-      "queued": "Queued",
-      "sending": "Sending",
-      "sent": "Sent"
     }
   },
   "tracker": {

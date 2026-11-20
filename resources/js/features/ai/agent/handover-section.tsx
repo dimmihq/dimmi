@@ -139,7 +139,7 @@ function AlwaysTagsRow({
   return (
     <StackedRow
       label="Always hand over when tagged"
-      description="When the agent tags a conversation with one of these, it hands it to your team."
+      description="When a conversation has one of these tags, or the agent adds one, it hands it to your team."
     >
       <div className="flex flex-wrap items-center gap-1.5">
         {chosen.map((tag) => (

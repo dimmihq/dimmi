@@ -8,7 +8,7 @@
  * card. Review stacks each answer under its name before anything is
  * saved.
  */
-import { RiArrowRightSLine } from "@remixicon/react";
+import { RiArrowRightSLine, RiExternalLinkLine } from "@remixicon/react";
 import { useQuery } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 
@@ -49,12 +49,20 @@ export interface Usage {
  * connected through an account first, each with its logo, what it does
  * and a chevron, as picking one moves on.
  */
-export function Gallery({ types, onPick }: { types: SourceType[]; onPick: (type: SourceType) => void }) {
+export function Gallery({
+  types,
+  connected,
+  onPick,
+}: {
+  types: SourceType[];
+  connected: (type: SourceType) => boolean;
+  onPick: (type: SourceType) => void;
+}) {
   const groups = [
     {
       id: "services",
       name: "Connected services",
-      detail: "Sign in to the service, then pick what dimmi reads.",
+      detail: "Services connected in Integrations. Pick one, then what dimmi reads.",
       kinds: types.filter((t) => t.auth === "oauth"),
     },
     {
@@ -74,24 +82,41 @@ export function Gallery({ types, onPick }: { types: SourceType[]; onPick: (type:
             <p className="text-body-2-regular text-text-secondary">{group.detail}</p>
           </div>
           <div className="flex flex-col gap-0.5 rounded-2xl bg-background-secondary-default p-1">
-            {group.kinds.map((t) => (
-              <button
-                key={t.type}
-                type="button"
-                onClick={() => onPick(t)}
-                className="flex w-full cursor-pointer items-center gap-3 rounded-xl px-2.5 py-2 text-start outline-none transition-colors duration-150 hover:bg-background-secondary-hover focus-visible:ring-2 focus-visible:ring-border-focus-ring"
-              >
-                <SourceLogo logo={t.logo} />
-                <span className="flex min-w-0 flex-1 flex-col">
-                  <span className="text-body-regular text-text-primary">{t.name}</span>
-                  <span className="text-body-2-regular text-text-secondary">{t.summary}</span>
-                </span>
-                <RiArrowRightSLine
-                  aria-hidden
-                  className="size-5 shrink-0 text-foreground-icon-tertiary rtl:-scale-x-100"
-                />
-              </button>
-            ))}
+            {group.kinds.map((t) => {
+              const away = Boolean(t.integration) && !connected(t);
+
+              return (
+                <button
+                  key={t.type}
+                  type="button"
+                  onClick={() => onPick(t)}
+                  aria-label={away ? `Connect ${t.name} in Integrations` : undefined}
+                  className="flex w-full cursor-pointer items-center gap-3 rounded-xl px-2.5 py-2 text-start outline-none transition-colors duration-150 hover:bg-background-primary-hover focus-visible:ring-2 focus-visible:ring-border-focus-ring"
+                >
+                  <span className={away ? "opacity-50" : undefined}>
+                    <SourceLogo logo={t.logo} />
+                  </span>
+                  <span className="flex min-w-0 flex-1 flex-col">
+                    <span
+                      className={away ? "text-body-regular text-text-tertiary" : "text-body-regular text-text-primary"}
+                    >
+                      {t.name}
+                    </span>
+                    <span className="text-body-2-regular text-text-secondary">
+                      {away ? `Not connected. Connect it in Integrations first.` : t.summary}
+                    </span>
+                  </span>
+                  {away ? (
+                    <RiExternalLinkLine aria-hidden className="size-4 shrink-0 text-foreground-icon-tertiary" />
+                  ) : (
+                    <RiArrowRightSLine
+                      aria-hidden
+                      className="size-5 shrink-0 text-foreground-icon-tertiary rtl:-scale-x-100"
+                    />
+                  )}
+                </button>
+              );
+            })}
           </div>
         </section>
       ))}

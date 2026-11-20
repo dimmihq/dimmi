@@ -9,6 +9,8 @@ import { useQuery } from "@tanstack/react-query";
 import { Chip } from "@/components/base/badges/chip";
 import { type ConversationRating, conversationRatingsQuery } from "@/lib/api/ratings";
 
+import { cx } from "@/utils/cx";
+
 import { when } from "./customer/format";
 
 const tones: Record<number, "rose" | "orange" | "neutral" | "lime"> = {
@@ -25,7 +27,15 @@ function useLatest(workspace: string, conversation: string): ConversationRating 
   return data?.[0];
 }
 
-export function RatingChip({ workspace, conversation }: { workspace: string; conversation: string }) {
+export function RatingChip({
+  workspace,
+  conversation,
+  className,
+}: {
+  workspace: string;
+  conversation: string;
+  className?: string;
+}) {
   const rating = useLatest(workspace, conversation);
   if (!rating) {
     return null;
@@ -35,7 +45,7 @@ export function RatingChip({ workspace, conversation }: { workspace: string; con
     <Chip
       variant="caption"
       color={tones[rating.score] ?? "neutral"}
-      className="shrink-0 gap-0.5"
+      className={cx("shrink-0 gap-0.5", className)}
       title={`Rated ${rating.label}`}
     >
       <span aria-hidden>{rating.face}</span>
@@ -51,7 +61,7 @@ export function RatingSection({ workspace, conversation }: { workspace: string; 
   }
 
   return (
-    <section aria-label="Rating" className="flex items-start gap-3 rounded-lg py-2">
+    <section aria-label="Rating" className="flex items-start gap-3">
       <span aria-hidden className="text-title-2-medium leading-none">
         {rating.face}
       </span>

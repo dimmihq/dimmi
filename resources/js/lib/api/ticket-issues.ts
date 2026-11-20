@@ -3,8 +3,8 @@
  * Linear, Jira, GitHub, incident.io, Rootly and PagerDuty; the lists a
  * connected tool offers its pickers (teams, projects, states,
  * severities, services, users, fields, environments) and a search of
- * its issues; each tool's sync settings; the drafts that close the loop
- * when the work is done; and the workspace's ticket switches.
+ * its issues; each tool's sync settings; and the workspace's ticket
+ * switches.
  */
 import { queryOptions } from "@tanstack/react-query";
 
@@ -68,26 +68,6 @@ export type IssueSettingsChange = Partial<
   >
 > & { signing_secret?: string };
 
-export type DraftStatus = "ready" | "sent" | "discarded";
-
-export interface TicketUpdateDraft {
-  object: "ticket_update_draft";
-  id: string;
-  ticket_id: string;
-  issue_id: string | null;
-  source: string;
-  reason: "issue_done" | "issue_canceled" | "comment";
-  body: string;
-  author_name: string;
-  status: DraftStatus;
-  resolve: boolean;
-  update_id: string | null;
-  recipients: number;
-  held: Record<string, number>;
-  decided_at: string | null;
-  created_at: string;
-}
-
 export interface TicketSettings {
   object: "ticket_settings";
   auto_link_duplicates: boolean;
@@ -109,7 +89,6 @@ export interface NewIssue {
 
 export const issueKeys = {
   ticket: (workspace: string, ticket: string) => ["workspace", workspace, "ticket-issues", ticket] as const,
-  drafts: (workspace: string, ticket: string) => ["workspace", workspace, "ticket-drafts", ticket] as const,
   options: (workspace: string, installation: string, list: IssueList, parent: string) =>
     ["workspace", workspace, "issue-options", installation, list, parent] as const,
   search: (workspace: string, installation: string, q: string) =>
@@ -129,24 +108,42 @@ export function ticketIssuesQuery(workspace: string, ticket: string) {
   });
 }
 
-export function issueOptionsQuery(workspace: string, installation: string, list: IssueList, parent = "") {
+/*
+ * readIssueOptions reads one of a tool's lists. The server keeps each
+ * list for a day; fresh pulls it from the tool again.
+ */
+function readIssueOptions(workspace: string, installation: string, list: IssueList, parent: string, fresh: boolean) {
   const query = new URLSearchParams({ list });
   if (parent) {
     query.set("parent", parent);
   }
+  if (fresh) {
+    query.set("refresh", "true");
+  }
 
+  return request<IssueOption[]>(
+    "GET",
+    `/integration-installations/${enc(installation)}/issue-options?${query.toString()}`,
+    undefined,
+    { workspace },
+  );
+}
+
+export function issueOptionsQuery(workspace: string, installation: string, list: IssueList, parent = "") {
   return queryOptions({
     queryKey: issueKeys.options(workspace, installation, list, parent),
-    queryFn: () =>
-      request<IssueOption[]>(
-        "GET",
-        `/integration-installations/${enc(installation)}/issue-options?${query.toString()}`,
-        undefined,
-        { workspace },
-      ),
+    queryFn: () => readIssueOptions(workspace, installation, list, parent, false),
     enabled: installation !== "",
-    staleTime: 60_000,
+    staleTime: 5 * 60_000,
   });
+}
+
+/*
+ * refreshIssueOptions pulls one of a tool's lists from the tool again,
+ * such as its teams after one was added there.
+ */
+export function refreshIssueOptions(workspace: string, installation: string, list: IssueList, parent = "") {
+  return readIssueOptions(workspace, installation, list, parent, true);
 }
 
 export function issueSearchQuery(workspace: string, installation: string, q: string) {
@@ -170,15 +167,6 @@ export function issueSettingsQuery(workspace: string, installation: string) {
   });
 }
 
-export function ticketDraftsQuery(workspace: string, ticket: string) {
-  return queryOptions({
-    queryKey: issueKeys.drafts(workspace, ticket),
-    queryFn: () =>
-      request<TicketUpdateDraft[]>("GET", `/tickets/${enc(ticket)}/update-drafts`, undefined, { workspace }),
-    enabled: workspace !== "" && ticket !== "",
-  });
-}
-
 export function ticketSettingsQuery(workspace: string) {
   return queryOptions({
     queryKey: issueKeys.ticketSettings(workspace),
@@ -190,8 +178,22 @@ export function linkTicketIssue(workspace: string, ticket: string, issue: NewIss
   return request<TicketIssue>("POST", `/tickets/${enc(ticket)}/issues`, issue, { workspace });
 }
 
-export function unlinkTicketIssue(workspace: string, issue: string) {
-  return request<unknown>("DELETE", `/ticket-issues/${enc(issue)}`, undefined, { workspace });
+/*
+ * refreshTicketIssues reads a ticket's linked issues from their tools
+ * now, instead of waiting for the next delivery or re-check.
+ */
+export function refreshTicketIssues(workspace: string, ticket: string) {
+  return request<TicketIssue[]>("POST", `/tickets/${enc(ticket)}/issues/refresh`, undefined, { workspace });
+}
+
+/*
+ * unlinkTicketIssue unlinks an issue. removeFromTool also takes back what
+ * dimmi wrote on it in its tool; otherwise the tool keeps it.
+ */
+export function unlinkTicketIssue(workspace: string, issue: string, removeFromTool = false) {
+  const query = removeFromTool ? "?remove_from_tool=true" : "";
+
+  return request<unknown>("DELETE", `/ticket-issues/${enc(issue)}${query}`, undefined, { workspace });
 }
 
 export function updateIssueSettings(workspace: string, installation: string, change: IssueSettingsChange) {
@@ -211,22 +213,14 @@ export function connectWithKey(workspace: string, provider: string, apiKey: stri
   );
 }
 
-export function decideDraft(
-  workspace: string,
-  draft: string,
-  decision: { status: "sent" | "discarded"; body?: string; resolve?: boolean },
-) {
-  return request<TicketUpdateDraft>("PATCH", `/ticket-update-drafts/${enc(draft)}`, decision, { workspace });
-}
-
 export function updateTicketSettings(workspace: string, change: Partial<Omit<TicketSettings, "object">>) {
   return request<TicketSettings>("PATCH", "/ticket-settings", change, { workspace });
 }
 
 /*
- * refreshTicketKeys are what a link or a draft changes: the ticket's
- * issues, its drafts and the ticket itself.
+ * refreshTicketKeys are what a link changes: the ticket's issues and the
+ * ticket itself.
  */
 export function refreshTicketKeys(workspace: string, ticket: string) {
-  return [issueKeys.ticket(workspace, ticket), issueKeys.drafts(workspace, ticket), ticketKeys.all(workspace)];
+  return [issueKeys.ticket(workspace, ticket), ticketKeys.all(workspace)];
 }

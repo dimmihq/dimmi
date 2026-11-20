@@ -23,6 +23,7 @@ import {
   type BroadcastCompany,
   type BroadcastCounts,
   broadcastReportQuery,
+  fullCounts,
   type BroadcastReport as Report,
 } from "@/lib/api/broadcasts";
 import { formatNumber, formatTime } from "@/lib/i18n/format";
@@ -322,7 +323,7 @@ export function BroadcastReport({
     refetchInterval: going && state !== "connected" ? 10_000 : false,
   });
   const [account, setAccount] = useState<Account | null>(null);
-  const counts = report?.counts ?? broadcast.counts;
+  const counts = fullCounts(report?.counts ?? broadcast.counts);
 
   return (
     <div className="mx-auto flex w-full max-w-[960px] flex-col gap-8 px-4 pt-6 pb-16 sm:px-6">

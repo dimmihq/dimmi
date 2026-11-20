@@ -158,7 +158,7 @@ export const workspacePages = {
     "Changelog",
     RiHistoryLine,
     "/d/changelog",
-    "Tell customers what shipped, by mail and in the widget.",
+    "Tell customers what shipped, by mail and in the messenger.",
   ),
   customers: page(
     "customers",
@@ -358,10 +358,10 @@ export const settingsPages = {
   ),
   feedback: page(
     "settings-feedback",
-    "Feedback",
+    "Feature requests",
     RiLightbulbLine,
     "/d/settings/feedback",
-    "The feedback portal, its boards and statuses.",
+    "The feature requests portal, its boards and statuses.",
   ),
   webhooks: page(
     "settings-webhooks",

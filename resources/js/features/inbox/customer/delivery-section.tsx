@@ -69,7 +69,7 @@ export function DeliverySection({ workspace, contact }: { workspace: string; con
   }
 
   return (
-    <section aria-label="Email delivery" className="flex flex-col gap-2 border-t border-separator-border pt-3">
+    <section aria-label="Email delivery" className="flex flex-col gap-2">
       {suppressions.map((suppression) => {
         const canLift = held.includes(
           suppression.reason === "complaint" ? "email_suppressions:lift_complaint" : "email_suppressions:manage",

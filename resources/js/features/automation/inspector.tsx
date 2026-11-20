@@ -231,7 +231,10 @@ function TriggerSettings({ spec, head }: { spec: Spec; head: Head }) {
         </Row>
       </Section>
       <Section title="Archive">
-        <Row label="Archive this workflow" description="It stops running. You can bring it back later.">
+        <Row
+          label="Archive this workflow"
+          description="It stops running and leaves this list. Only the API can bring it back."
+        >
           <Danger onPress={head.onArchive}>Archive</Danger>
         </Row>
       </Section>

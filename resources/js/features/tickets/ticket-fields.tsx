@@ -18,6 +18,7 @@ import { i18n } from "@/lib/i18n";
 import { FieldInput } from "./field-input";
 import { shownFields } from "./field-rules";
 import { groupLabel } from "./labels";
+import { StatePill } from "./state-pill";
 import type { TicketSave } from "./use-ticket-save";
 
 export function ClashPrompt({ save }: { save: TicketSave }) {
@@ -83,6 +84,37 @@ export function StatePicker({
 }
 
 /*
+ * StateMenu is the state as a row's value: its pill, which opens the
+ * states the type uses when pressed.
+ */
+export function StateMenu({ ticket, states, save }: { ticket: Ticket; states: TicketState[]; save: TicketSave }) {
+  return (
+    <Select
+      aria-label="State"
+      size="sm"
+      variant="quiet"
+      selectedKey={ticket.state_id}
+      renderValue={() => <StatePill state={ticket.state} />}
+      isDisabled={save.busy}
+      onSelectionChange={(key) => {
+        if (key !== null && key !== ticket.state_id) {
+          void save.save({ state_id: String(key) });
+        }
+      }}
+    >
+      {states.map((s) => (
+        <SelectItem key={s.id} id={s.id} textValue={s.name}>
+          <span className="flex min-w-0 flex-col">
+            <span className="truncate">{s.name}</span>
+            <span className="truncate text-caption-1-regular text-text-tertiary">{groupLabel(s.group)}</span>
+          </span>
+        </SelectItem>
+      ))}
+    </Select>
+  );
+}
+
+/*
  * changedValues are the draft's values that differ from the ticket's.
  */
 function changedValues(draft: Record<string, unknown>, saved: Record<string, unknown>): Record<string, unknown> {
@@ -111,14 +143,15 @@ export function FieldsEditor({
   const dirty = Object.keys(changes).length > 0;
 
   if (fields.length === 0) {
-    return <p className="text-body-2-regular text-text-tertiary">This type has no fields.</p>;
+    return null;
   }
 
   return (
-    <div className="flex flex-col gap-3">
+    <div className="flex flex-col">
       {fields.map((field) => (
         <FieldInput
           key={field.id}
+          inline
           workspace={workspace}
           field={field}
           value={values[field.key]}
@@ -130,7 +163,7 @@ export function FieldsEditor({
         />
       ))}
       {dirty ? (
-        <div className="flex justify-end gap-2">
+        <div className="flex justify-end gap-2 pt-2">
           <Button size="small" variant="secondary" onClick={() => setDraft({})}>
             Discard
           </Button>

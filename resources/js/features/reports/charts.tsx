@@ -5,6 +5,8 @@
  * code of its own. Clicking a point opens the conversations behind it,
  * narrowed to that day when the axis is days.
  */
+
+import { useState } from "react";
 import {
   Bar,
   BarChart,
@@ -20,6 +22,7 @@ import {
 } from "recharts";
 
 import { Table, TableBody, TableCell, TableColumn, TableHeader, TableRow } from "@/components/base/table/table";
+import { ChevronSortDown } from "@/components/foundations/icons/chevrons";
 import type { ReportChart } from "@/lib/api/reports";
 import { cx } from "@/utils/cx";
 
@@ -261,8 +264,49 @@ function columnClass(index: number): string | undefined {
 }
 
 /*
- * ReportTable draws a table chart. A row that narrows the report or has
- * conversations behind it can be clicked.
+ * labelHeading names a table's first column from its title: "Channel"
+ * for "Conversations by channel", "Team" for "Teams", or "Name" when
+ * the title names nothing to go by.
+ */
+function labelHeading(title: string): string {
+  const by = title.split(" by ")[1]?.trim();
+  if (by) {
+    return by.charAt(0).toUpperCase() + by.slice(1);
+  }
+
+  return /^\w+s$/.test(title) ? title.slice(0, -1) : "Name";
+}
+
+type Sort = { column: string; desc: boolean } | null;
+
+/*
+ * sortRows orders a table's rows by one column, names by the alphabet
+ * and numbers by size, with rows that have no number last.
+ */
+function sortRows(chart: ReportChart, sort: Sort): ReportChart["rows"] {
+  if (!sort) {
+    return chart.rows;
+  }
+  const way = sort.desc ? -1 : 1;
+  if (sort.column === labelColumn) {
+    return [...chart.rows].sort((a, b) => way * a.label.localeCompare(b.label));
+  }
+  const i = chart.columns.findIndex((c) => c.key === sort.column);
+
+  return [...chart.rows].sort((a, b) => {
+    const [x, y] = [a.values[i], b.values[i]];
+    if (x == null || y == null) {
+      return x == null ? (y == null ? 0 : 1) : -1;
+    }
+
+    return way * (x - y);
+  });
+}
+
+/*
+ * ReportTable draws a table chart as the data table draws its own: a
+ * header row to sort by, numbers to the end. A row that narrows the
+ * report or has conversations behind it can be clicked.
  */
 export function ReportTable({
   chart,
@@ -271,58 +315,80 @@ export function ReportTable({
   chart: ReportChart;
   onRow?: (row: ReportChart["rows"][number]) => void;
 }) {
+  const [sort, setSort] = useState<Sort>(null);
   const clickable = (row: ReportChart["rows"][number]) =>
     onRow !== undefined && (Object.keys(row.filter).length > 0 || chart.drill !== null);
+  const rows = sortRows(chart, sort);
+  const heading = (column: string, label: string, end: boolean) => {
+    const dir = sort?.column === column ? (sort.desc ? "desc" : "asc") : false;
+
+    return (
+      <button
+        type="button"
+        onClick={() => setSort({ column, desc: dir === false ? column !== labelColumn : dir === "asc" })}
+        className={cx(
+          "flex cursor-pointer items-center gap-0.5 rounded-md outline-none focus-visible:ring-2 focus-visible:ring-border-focus-ring",
+          end && "ms-auto",
+        )}
+      >
+        {label}
+        <ChevronSortDown
+          className={cx(
+            "size-6 shrink-0 transition-[transform,color] duration-150",
+            dir === "asc" && "rotate-180",
+            dir ? "text-text-secondary" : "text-text-tertiary",
+          )}
+        />
+      </button>
+    );
+  };
 
   return (
-    <div className="-mx-4 -mb-2 min-w-0">
-      <Table
-        aria-label={chart.title}
-        size="sm"
-        className="w-full [&_th]:border-t-0"
-        containerClassName="overflow-x-hidden"
-        onRowAction={(key) => {
-          const row = chart.rows.find((r) => r.key === key);
-          if (row && clickable(row)) {
-            onRow?.(row);
-          }
-        }}
-      >
-        <TableHeader>
-          <TableColumn id={labelColumn} isRowHeader className="w-full ps-4">
-            <span className="sr-only">Name</span>
+    <Table
+      aria-label={chart.title}
+      size="md"
+      containerClassName="overflow-x-hidden"
+      onRowAction={(key) => {
+        const row = chart.rows.find((r) => r.key === key);
+        if (row && clickable(row)) {
+          onRow?.(row);
+        }
+      }}
+    >
+      <TableHeader>
+        <TableColumn id={labelColumn} isRowHeader className="w-full min-w-44">
+          {heading(labelColumn, labelHeading(chart.title), false)}
+        </TableColumn>
+        {chart.columns.map((column, i) => (
+          <TableColumn key={column.key} id={column.key} className={columnClass(i)}>
+            {heading(column.key, column.label, true)}
           </TableColumn>
-          {chart.columns.map((column, i) => (
-            <TableColumn key={column.key} id={column.key} className={cx("text-end", columnClass(i))}>
-              {column.label}
-            </TableColumn>
-          ))}
-        </TableHeader>
-        <TableBody
-          renderEmptyState={() => (
-            <p className="px-4 py-6 text-body-2-regular text-text-tertiary">Nothing in this range.</p>
-          )}
-        >
-          {chart.rows.map((row) => (
-            <TableRow
-              key={row.key}
-              id={row.key}
-              className={cx(clickable(row) && "cursor-pointer hover:bg-background-secondary-hover")}
-            >
-              <TableCell className="max-w-0 ps-4">
-                <span className="block truncate text-body-2-medium text-text-primary">{row.label}</span>
+        ))}
+      </TableHeader>
+      <TableBody
+        renderEmptyState={() => (
+          <div className="flex h-32 items-center justify-center text-body-medium text-text-tertiary">
+            Nothing in this range.
+          </div>
+        )}
+      >
+        {rows.map((row) => (
+          <TableRow
+            key={row.key}
+            id={row.key}
+            className={cx(clickable(row) && "cursor-pointer hover:bg-background-secondary-hover")}
+          >
+            <TableCell className="max-w-0 min-w-44">
+              <span className="block truncate">{row.label}</span>
+            </TableCell>
+            {chart.columns.map((column, i) => (
+              <TableCell key={column.key} className={cx("text-end whitespace-nowrap", columnClass(i))}>
+                <span className="pe-6 text-text-secondary tabular-nums">{formatValue(column.unit, row.values[i])}</span>
               </TableCell>
-              {chart.columns.map((column, i) => (
-                <TableCell key={column.key} className={cx("text-end whitespace-nowrap", columnClass(i))}>
-                  <span className="text-body-2-regular text-text-secondary tabular-nums">
-                    {formatValue(column.unit, row.values[i])}
-                  </span>
-                </TableCell>
-              ))}
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
-    </div>
+            ))}
+          </TableRow>
+        ))}
+      </TableBody>
+    </Table>
   );
 }

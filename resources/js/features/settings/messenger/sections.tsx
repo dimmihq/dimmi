@@ -72,9 +72,9 @@ export function AppearanceSection({ value, set, locked }: TabProps) {
 
   return (
     <Section title="Appearance">
-      <Row label="Colour" description="The launcher, buttons and your messages.">
+      <Row label="Color" description="The launcher, buttons and your messages.">
         <Colour
-          label="Messenger colour"
+          label="Messenger color"
           value={a.primary_color}
           disabled={locked}
           onChange={(hex) => set({ appearance: { primary_color: hex } })}

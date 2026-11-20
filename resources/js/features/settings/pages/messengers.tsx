@@ -20,7 +20,8 @@ export function MessengersSettings() {
   const workspace = useAccount().workspace.id;
   const { data: widgets } = useQuery(widgetSettingsQuery(workspace));
   const { data: inboxes = [] } = useQuery(inboxesQuery(workspace));
-  const canManage = usePermission(workspace, "inboxes:manage");
+  const canWrite = usePermission(workspace, "settings:write");
+  const canManage = usePermission(workspace, "widgets:manage") && canWrite;
   const home = inboxes.find((inbox) => inbox.default) ?? inboxes[0];
 
   return (

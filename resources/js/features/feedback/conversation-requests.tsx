@@ -10,7 +10,6 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { Button } from "@/components/base/buttons/button";
-import { IconButton } from "@/components/base/buttons/icon-button";
 import { LinkButton } from "@/components/base/buttons/link-button";
 import { Input } from "@/components/base/input/input";
 import { Label } from "@/components/base/input/label";
@@ -49,7 +48,7 @@ function Row({
   onUnlink: () => void;
 }) {
   return (
-    <li className="flex min-h-9 items-center gap-2 rounded-xl px-2 hover:bg-background-secondary-hover">
+    <li className="group/request flex min-h-8 items-center gap-2 rounded-lg px-1.5 hover:bg-background-secondary-hover">
       <StatusDot color={status?.color ?? "#a1a1aa"} />
       <Link
         to="/d/feedback/$post"
@@ -63,7 +62,15 @@ function Row({
         <RiThumbUpLine aria-hidden className="size-3.5" />
         {post.vote_count}
       </span>
-      <IconButton size="small" icon={RiCloseLine} aria-label={`Unlink ${post.title}`} onClick={onUnlink} />
+      <Button
+        variant="secondary"
+        size="xs"
+        iconOnly
+        leadingIcon={RiCloseLine}
+        aria-label={`Unlink ${post.title}`}
+        className="shrink-0 opacity-0 transition-opacity duration-150 focus-visible:opacity-100 group-hover/request:opacity-100"
+        onClick={onUnlink}
+      />
     </li>
   );
 }
@@ -93,19 +100,19 @@ export function ConversationRequests({
   });
 
   return (
-    <div className="flex flex-col gap-1">
-      {posts.length === 0 ? (
-        <p className="text-body-2-regular text-text-tertiary">No requests linked yet.</p>
-      ) : (
-        <ul aria-label="Linked feature requests" className="-mx-2 flex flex-col">
+    <div className="flex flex-col">
+      <div className="flex min-h-8 items-center">
+        <LinkButton variant="secondary" size="xs" leadingIcon={RiAddLine} onClick={() => setLinking(true)}>
+          Link to feature request
+        </LinkButton>
+      </div>
+      {posts.length === 0 ? null : (
+        <ul aria-label="Linked feature requests" className="-mx-1.5 flex flex-col">
           {posts.map((post) => (
             <Row key={post.id} post={post} status={statusOf(statuses, post)} onUnlink={() => unlink.mutate(post.id)} />
           ))}
         </ul>
       )}
-      <LinkButton variant="secondary" size="small" leadingIcon={RiAddLine} onClick={() => setLinking(true)}>
-        Link to feature request
-      </LinkButton>
       {linking ? (
         <LinkRequestDialog
           workspace={workspace}

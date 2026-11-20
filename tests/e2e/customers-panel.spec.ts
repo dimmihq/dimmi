@@ -34,10 +34,10 @@ it.describe("customer panel", () => {
     await expect(details.getByRole("button", { name: "Copy email" })).toBeVisible();
     await expect(details.getByRole("link", { name: "Northwind" })).toBeVisible();
 
-    await details.getByRole("button", { name: "Edit name" }).click();
-    const name = details.getByRole("textbox", { name: "Customer name" });
-    await name.fill("Emily J.");
-    await name.press("Enter");
+    await details.getByRole("button", { name: "Edit customer" }).click();
+    const edit = page.getByRole("dialog", { name: "Edit Emily Johnson" });
+    await edit.getByRole("textbox", { name: "Name" }).fill("Emily J.");
+    await edit.getByRole("button", { name: "Save" }).click();
     await expect(details.getByRole("link", { name: "Emily J." })).toBeVisible();
 
     const notes = details.getByRole("textbox", { name: "Notes" });

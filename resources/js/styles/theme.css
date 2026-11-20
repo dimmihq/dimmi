@@ -88,6 +88,13 @@
     0 1px 12px 0 rgb(0 0 0 / 0.0588),
     0 0 1px 0 rgb(0 0 0 / 0.3216);
 
+  /* The sidebar's shadow without its hairline, for the sidebar and the
+   * panes beside it: their border draws the edge, and a hairline beside
+   * a border reads as two edges. */
+  --shadow-panel:
+    0 1px 0 0 rgb(0 0 0 / 0.0196),
+    0 1px 12px 0 rgb(0 0 0 / 0.0588);
+
   /* Figma effect style "Sidebar selected" — copied 1:1:
    *   DROP_SHADOW  color/blue/500 offset(0,0) radius 0 spread 1 → 0 0 0 1px blue-500
    *   INNER_SHADOW #FFFFFF40       offset(0,1) radius 0 spread 0 → inset 0 1px 0 0 / 0.251
@@ -232,6 +239,10 @@
   --color-border-button-hover:     var(--color-neutral-300);
   --color-border-button-active:    var(--color-neutral-400);
   --color-border-button-white:     var(--color-white);
+  /* The edge of the sidebar and of every pane beside it. A white edge
+   * leaves only the shadow to draw the frame, and the shadow sits low, so
+   * the top of a pane all but vanished on the white ground. */
+  --color-border-panel:            var(--color-neutral-200);
   /* The system had no red border. Matches text/error/primary so an invalid
      field's edge and its message are the same red. */
   --color-border-error-default:    var(--color-red-500);
@@ -255,6 +266,7 @@
   /* Selected control interiors remain light on colored tracks in both themes. */
   --color-control-indicator-background:        var(--color-white);
   --color-control-indicator-background-subtle: var(--color-neutral-100);
+  --color-switch-off-track:                     var(--color-neutral-200);
   --color-switch-off-chip-start:                var(--color-white);
   --color-switch-off-chip-end:                  var(--color-neutral-100);
   /* Selected switch chip: the Figma comps use hexes a touch deeper than the
@@ -465,8 +477,11 @@
   --color-background-primary-active:    var(--color-neutral-800);
   --color-background-primary-disabled:  var(--color-neutral-800);
   --color-input-disabled-background:    color-mix(in srgb, var(--color-neutral-800) 30%, transparent);
-  --color-switch-off-chip-start:        var(--color-background-tertiary-default);
-  --color-switch-off-chip-end:          var(--color-background-tertiary-default);
+  /* Lighter than the tertiary surface, which is the primary surface's own
+   * shade here, so an off switch shows on every card. */
+  --color-switch-off-track:             var(--color-neutral-700);
+  --color-switch-off-chip-start:        var(--color-switch-off-track);
+  --color-switch-off-chip-end:          var(--color-switch-off-track);
   --color-background-secondary-default: var(--color-neutral-900);
   --color-background-secondary-hover:   var(--color-neutral-800);
   --color-background-tertiary-default:  var(--color-neutral-800);
@@ -527,6 +542,10 @@
     0 1px 0 0 rgb(0 0 0 / 0.10),
     0 1px 12px 0 rgb(0 0 0 / 0.16),
     0 0 1px 0 rgb(0 0 0 / 0.42);
+  --shadow-panel:
+    0 1px 0 0 rgb(0 0 0 / 0.10),
+    0 1px 12px 0 rgb(0 0 0 / 0.16),
+    0 0 1px 0 rgb(0 0 0 / 0.42);
   --shadow-waitlist:
     0 0 6px 0 rgb(0 0 0 / 0.12),
     0 0 64px 0 rgb(0 0 0 / 0.22),
@@ -557,6 +576,7 @@
   --color-border-button-hover:     var(--color-neutral-500);
   --color-border-button-active:    var(--color-neutral-600);
   --color-border-button-white:     var(--color-zinc-800);
+  --color-border-panel:            var(--color-zinc-800);
   --color-border-error-default:    var(--color-red-400);
   --color-border-checkbox-default: var(--color-neutral-700);
   --color-border-checkbox-hover:   var(--color-neutral-500);
@@ -702,6 +722,7 @@
   --color-border-button-hover:     var(--color-border-button-hover);
   --color-border-button-active:    var(--color-border-button-active);
   --color-border-button-white:     var(--color-border-button-white);
+  --color-border-panel:            var(--color-border-panel);
   --color-border-error-default:    var(--color-border-error-default);
   --color-border-checkbox-default: var(--color-border-checkbox-default);
   --color-border-checkbox-hover:   var(--color-border-checkbox-hover);
@@ -720,6 +741,7 @@
   --color-state-success-base: var(--color-state-success-base);
   --color-control-indicator-background:        var(--color-control-indicator-background);
   --color-control-indicator-background-subtle: var(--color-control-indicator-background-subtle);
+  --color-switch-off-track:                     var(--color-switch-off-track);
   --color-switch-off-chip-start:                var(--color-switch-off-chip-start);
   --color-switch-off-chip-end:                  var(--color-switch-off-chip-end);
   --color-switch-on-chip-start:                 var(--color-switch-on-chip-start);

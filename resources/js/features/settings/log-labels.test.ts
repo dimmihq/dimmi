@@ -43,6 +43,7 @@ describe("log labels", () => {
       "member.sign_in_lock_cleared",
       "audit_logs.exported",
       "members.exported",
+      "contact.merged",
     ]) {
       expect(auditEventLabel(event)).not.toBe(event);
     }

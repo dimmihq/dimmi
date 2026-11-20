@@ -13,6 +13,7 @@ import { teamsQuery } from "@/lib/api/teams";
 
 import type { CaseControls } from "./case";
 import { useInbox } from "./conversations";
+import { Row } from "./customer/rows";
 
 const noTeam = "none";
 
@@ -21,29 +22,27 @@ export function TeamRow({ conversation, caze }: { conversation: Conversation; ca
   const { data: teams = [] } = useQuery({ ...teamsQuery(workspace), enabled: workspace !== "" });
 
   return (
-    <div className="grid min-h-9 grid-cols-[80px_minmax(0,1fr)] items-center gap-2">
-      <dt className="text-body-2-regular text-text-secondary">Team</dt>
-      <dd className="flex min-w-0 justify-end text-body-2-medium text-text-primary">
-        <Select
-          aria-label="Team"
-          size="sm"
-          selectedKey={conversation.team?.id ?? noTeam}
-          onSelectionChange={(key: Key | null) => {
-            if (key !== null) {
-              caze.assignTeam(key === noTeam ? null : String(key));
-            }
-          }}
-        >
-          <SelectItem id={noTeam} textValue="No team">
-            No team
+    <Row label="Team">
+      <Select
+        aria-label="Team"
+        size="sm"
+        variant="quiet"
+        selectedKey={conversation.team?.id ?? noTeam}
+        onSelectionChange={(key: Key | null) => {
+          if (key !== null) {
+            caze.assignTeam(key === noTeam ? null : String(key));
+          }
+        }}
+      >
+        <SelectItem id={noTeam} textValue="No team">
+          No team
+        </SelectItem>
+        {teams.map((team) => (
+          <SelectItem key={team.id} id={team.id} textValue={team.name}>
+            {team.name}
           </SelectItem>
-          {teams.map((team) => (
-            <SelectItem key={team.id} id={team.id} textValue={team.name}>
-              {team.name}
-            </SelectItem>
-          ))}
-        </Select>
-      </dd>
-    </div>
+        ))}
+      </Select>
+    </Row>
   );
 }

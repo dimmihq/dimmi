@@ -17,7 +17,7 @@ import type { Broadcast, BroadcastEstimate } from "@/lib/api/broadcasts";
 import { formatNumber } from "@/lib/i18n/format";
 import { cx } from "@/utils/cx";
 
-import type { Check, Draft, StepId } from "./draft";
+import { type Check, type Draft, type StepId, untitled } from "./draft";
 import { channelLook, reachNoun } from "./looks";
 import { sendTimeOf } from "./schedule";
 import { useWorkspaceZone } from "./sources";
@@ -120,7 +120,7 @@ export function ReviewStep({
           <Edit step="setup" onStep={onStep} />
         </Row>
         <Row label={reach} description="Counted again when it sends, without unsubscribed and bounced people." />
-        {broadcast.channel === "chat" ? null : (
+        {untitled(broadcast.channel) ? null : (
           <Row label={filled(draft.subject) || "No subject"} description={draft.preview || undefined}>
             <Edit step="write" onStep={onStep} />
           </Row>

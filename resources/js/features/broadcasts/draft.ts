@@ -43,6 +43,8 @@ export type Draft = Pick<
   | "schedule_kind"
   | "scheduled_at"
   | "goal"
+  | "ticket_id"
+  | "holds"
 >;
 
 export type DraftKey = keyof Draft;
@@ -69,6 +71,8 @@ export function draftOf(broadcast: Broadcast): Draft {
     schedule_kind: broadcast.schedule_kind,
     scheduled_at: broadcast.scheduled_at,
     goal: broadcast.goal,
+    ticket_id: broadcast.ticket_id,
+    holds: broadcast.holds ?? [],
   };
 }
 
@@ -93,6 +97,7 @@ const plain = [
   "track_clicks",
   "skip_frequency_cap",
   "goal",
+  "holds",
 ] as const;
 
 /*
@@ -143,7 +148,7 @@ export function testable(channel: Channel): boolean {
 }
 
 function audienceCheck(channel: Channel, draft: Draft, estimate: BroadcastEstimate | undefined): Check {
-  const chosen = channel === "slack" || draft.audience_id !== null || draft.rules !== null;
+  const chosen = channel === "slack" || draft.ticket_id !== null || draft.audience_id !== null || draft.rules !== null;
   const label = channel === "slack" ? "Customer channels to post in" : "An audience with people in it";
 
   return { label, done: chosen && (estimate?.reach ?? 0) > 0, step: "setup" };
@@ -177,6 +182,14 @@ export function checksOf(
   }
 
   return checks;
+}
+
+/*
+ * untitled says whether the channel's message has no title of its own:
+ * a chat, or a reply inside a conversation.
+ */
+export function untitled(channel: Channel): boolean {
+  return channel === "chat" || channel === "conversation";
 }
 
 /*

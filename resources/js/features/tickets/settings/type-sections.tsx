@@ -224,7 +224,7 @@ export function CustomerSection({ draft, set, locked }: DraftProps) {
       <Block label="Close the loop">
         <p className="text-body-2-regular text-text-secondary">
           When back-office work or a linked issue resolves, the ticket moves to Close the loop. Use a workflow on
-          “Ticket enters close the loop” to message the customer.{" "}
+          “Ticket needs the loop closed” to message the customer.{" "}
           <Link to="/d/workflows" className="text-body-2-medium text-text-primary underline">
             Open workflows
           </Link>

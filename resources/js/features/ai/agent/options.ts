@@ -77,7 +77,7 @@ export const handoffModes = choices<AiHandoffMode>(AI_HANDOFF_MODES, {
 
 export const contactContexts = choices<AiContactContext>(AI_CONTACT_CONTEXTS, {
   none: ["None", "Nothing about the customer beyond the conversation."],
-  basic: ["Basic", "Name, plan and company, so answers can be personal."],
+  basic: ["Basic", "First name and language, so answers can be personal."],
 });
 
 /*

@@ -5,7 +5,7 @@
   },
   "list": {
     "title": "Policies",
-    "description": "Workflows apply a policy to conversations; new tickets follow the policy that names their type or priority.",
+    "description": "Workflows apply a policy to conversations; new tickets follow the first policy that matches their type and priority.",
     "new": "New policy",
     "empty": "No SLA policies yet.",
     "archived": "Archived",
@@ -71,7 +71,7 @@
     "warn": "Warn before a breach",
     "warnHint": "Raise an alert this long before a target is missed, for workflows to act on.",
     "warnLabel": "Warning",
-    "schedule": "Business hours",
+    "schedule": "Office hours",
     "scheduleHint": "Clocks only count while this schedule is open.",
     "allHours": "Around the clock (24/7)",
     "defaultSchedule": "{{name}} (default)",
@@ -82,7 +82,7 @@
   },
   "applies": {
     "title": "Applies to",
-    "description": "New tickets of these types or with these priorities follow this policy. Leave both empty to apply it from workflows only.",
+    "description": "New tickets that match both lists follow this policy. An empty list matches any type or any priority. Leave both empty to apply it from workflows only.",
     "types": "Ticket types",
     "typesHint": "Any of these types.",
     "noTypes": "No ticket types yet.",

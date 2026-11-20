@@ -21,6 +21,7 @@
  * a note from anywhere, and O opens or closes Operator.
  */
 import { RiDeleteBinLine, RiErrorWarningLine, RiLock2Line, RiSparkling2Line, RiTimeLine } from "@remixicon/react";
+import { Link } from "@tanstack/react-router";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { type ReactNode, type RefObject, useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 
@@ -29,13 +30,14 @@ import { Chip } from "@/components/base/badges/chip";
 import { DimmiIconSmall } from "@/features/brand/logo";
 import { avatarColor } from "@/features/shell/avatar-color";
 import { ScrollArea } from "@/features/shell/page";
+import { ToolMark } from "@/features/tickets/issues/tool-logos";
 import { cx } from "@/utils/cx";
-
 import { useComposeTarget } from "./compose-bridge-context";
 import { Composer, type Send } from "./composer";
 import type { ThreadEntry } from "./conversations";
 import { inlinePictures } from "./inline-pictures";
 import { LinkPolicyProvider } from "./links/link-policy";
+
 import { MessageBody } from "./message-body";
 import { MessageFiles } from "./message-files";
 import type { Mode } from "./modes";
@@ -68,6 +70,9 @@ function Mark({ entry }: { entry: Said }) {
   if (entry.kind === "dimmi") {
     return <DimmiIconSmall className="size-4 text-text-primary" />;
   }
+  if (entry.kind === "note" && entry.tool) {
+    return <ToolMark provider={entry.tool} className="size-4" />;
+  }
   if (entry.kind === "note") {
     return <RiLock2Line aria-hidden className="size-4 text-foreground-icon-tertiary" />;
   }
@@ -81,6 +86,25 @@ function At({ entry }: { entry: Said }) {
   return entry.iso ? <When iso={entry.iso} className={style} /> : <span className={style}>{entry.at}</span>;
 }
 
+/*
+ * BroadcastMark says a message went out with a broadcast, many people
+ * at once, and opens that broadcast's report.
+ */
+function BroadcastMark({ broadcast }: { broadcast: { id: string; name: string } }) {
+  return (
+    <Link
+      to="/d/broadcasts/$broadcast"
+      params={{ broadcast: broadcast.id }}
+      title={broadcast.name}
+      className="rounded-md outline-none focus-visible:ring-2 focus-visible:ring-border-focus-ring"
+    >
+      <Chip variant="caption" color="cyan" className="py-0 hover:underline">
+        Broadcast
+      </Chip>
+    </Link>
+  );
+}
+
 function Tag({ entry }: { entry: Said }) {
   return (
     <span className="my-1 flex items-center gap-1.5 text-body-2-medium text-text-secondary">
@@ -91,6 +115,7 @@ function Tag({ entry }: { entry: Said }) {
           AI agent
         </Chip>
       ) : null}
+      {entry.broadcast ? <BroadcastMark broadcast={entry.broadcast} /> : null}
       <At entry={entry} />
       {entry.redacted ? (
         <span className="text-body-2-regular text-text-tertiary">

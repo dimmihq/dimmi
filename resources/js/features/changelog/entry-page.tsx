@@ -14,9 +14,11 @@ import { Avatar } from "@/components/base/avatar/avatar";
 import { Dropdown, DropdownItem, DropdownPopover, DropdownTrigger } from "@/components/base/dropdown/dropdown";
 import { Notification } from "@/components/base/notification/notification";
 import { toast } from "@/components/base/toast/toast";
+import { TagChip, TagIcon } from "@/features/inbox/tags/tag-chip";
 import { EditorSkeleton } from "@/features/shell/table-skeleton";
 import type { ChangelogEntry, ChangelogLabel } from "@/lib/api/changelog";
 import { uploadArticleImage } from "@/lib/api/help-centers";
+import type { Tag } from "@/lib/api/tags";
 import { cx } from "@/utils/cx";
 
 import { type Draft, initialsOf } from "./entry-format";
@@ -34,8 +36,9 @@ function nextOnEnter(event: KeyboardEvent, next: () => void) {
 }
 
 /*
- * Cover is the entry's picture across the top: a quiet button to add
- * one, or the picture with buttons to change or remove it.
+ * Cover is the entry's picture across the top: a dashed card the size
+ * and shape the cover will take, to add one, or the picture with
+ * buttons to change or remove it.
  */
 function Cover({ workspace, url, onChange }: { workspace: string; url: string; onChange: (url: string) => void }) {
   const input = useRef<HTMLInputElement | null>(null);
@@ -91,13 +94,15 @@ function Cover({ workspace, url, onChange }: { workspace: string; url: string; o
           onClick={() => input.current?.click()}
           disabled={busy}
           className={cx(
-            "mb-6 inline-flex h-8 items-center gap-1.5 self-start rounded-lg px-2 text-body-2-medium text-text-tertiary",
-            "outline-none transition-colors hover:bg-background-secondary-hover hover:text-text-primary",
-            "focus-visible:ring-2 focus-visible:ring-border-focus-ring",
+            "mb-8 flex aspect-video w-full cursor-pointer flex-col items-center justify-center gap-2 rounded-2xl",
+            "border border-dashed border-border-button-default bg-background-primary-default/40 text-text-tertiary",
+            "outline-none transition-colors hover:border-border-button-hover hover:bg-background-secondary-hover hover:text-text-primary",
+            "focus-visible:ring-2 focus-visible:ring-border-focus-ring disabled:cursor-progress",
           )}
         >
-          <RiImageAddLine aria-hidden className="size-4" />
-          {busy ? "Uploading cover…" : "Add cover"}
+          <RiImageAddLine aria-hidden className="size-6" />
+          <span className="text-body-medium">{busy ? "Uploading cover…" : "Add a cover"}</span>
+          <span className="text-caption-1-regular">16:9, such as 1600 × 900. PNG, JPEG, GIF or WebP.</span>
         </button>
       )}
     </>
@@ -105,8 +110,16 @@ function Cover({ workspace, url, onChange }: { workspace: string; url: string; o
 }
 
 /*
- * Labels shows the entry's labels as colored chips and a menu to file
- * it under others.
+ * asTag reads a label as a tag, so labels are drawn as tags are
+ * everywhere else.
+ */
+function asTag(label: ChangelogLabel): Tag {
+  return { id: label.id, object: "tag", name: label.name, color: label.color || null, icon: null };
+}
+
+/*
+ * Labels shows the entry's labels as tags, each removable, and a menu to
+ * file it under others.
  */
 function Labels({
   labels,
@@ -125,18 +138,12 @@ function Labels({
       {labels
         .filter((l) => chosen.includes(l.id))
         .map((l) => (
-          <span
-            key={l.id}
-            className="inline-flex h-6 items-center gap-1.5 rounded-full bg-background-secondary-default px-2.5 text-caption-1-medium text-text-secondary"
-          >
-            <span aria-hidden className="size-1.5 rounded-full" style={{ background: l.color }} />
-            {l.name}
-          </span>
+          <TagChip key={l.id} size="small" tag={asTag(l)} onRemove={() => toggle(l.id)} />
         ))}
       <Dropdown isOpen={open} onOpenChange={setOpen}>
         <DropdownTrigger
           aria-label="Labels"
-          className="inline-flex h-6 items-center gap-1 rounded-full px-2 text-caption-1-medium text-text-tertiary outline-none hover:bg-background-secondary-hover hover:text-text-primary focus-visible:ring-2 focus-visible:ring-border-focus-ring"
+          className="inline-flex h-6 cursor-pointer items-center gap-1 rounded-lg px-1.5 text-caption-1-medium text-text-tertiary outline-none hover:bg-background-secondary-hover hover:text-text-primary focus-visible:ring-2 focus-visible:ring-border-focus-ring"
         >
           <RiAddLine aria-hidden className="size-3.5" />
           {chosen.length === 0 ? "Add label" : "Label"}
@@ -152,7 +159,7 @@ function Labels({
               onSelect={() => toggle(l.id)}
               className="px-2 py-1.5"
             >
-              <span aria-hidden className="size-2 rounded-full" style={{ background: l.color }} />
+              <TagIcon tag={asTag(l)} />
               <span className="flex-1 truncate text-body-medium text-text-primary">{l.name}</span>
               {chosen.includes(l.id) ? (
                 <RiCheckLine aria-hidden className="size-4 text-foreground-icon-secondary" />

@@ -35,6 +35,7 @@ import {
 import { helpCentersQuery } from "@/lib/api/help-centers";
 import { formatNumber } from "@/lib/i18n/format";
 
+import { ChangelogAnalytics, DaysPicker } from "./changelog-analytics";
 import { ChangelogPanel, type View } from "./changelog-panel";
 import { authorNames, entryState, entryWhen, initialsOf } from "./entry-format";
 import { SubscribersList } from "./subscribers-list";
@@ -51,6 +52,9 @@ const visible = { overflow: "visible" } as const;
 function viewOf(raw: string | undefined): View {
   if (raw === "draft" || raw === "scheduled" || raw === "published") {
     return { kind: "status", status: raw };
+  }
+  if (raw === "analytics") {
+    return { kind: "analytics" };
   }
   if (raw === "subscribers") {
     return { kind: "subscribers" };
@@ -69,6 +73,8 @@ function addressOf(view: View): string | undefined {
       return `label:${view.id}`;
     case "subscribers":
       return "subscribers";
+    case "analytics":
+      return "analytics";
     default:
       return undefined;
   }
@@ -82,6 +88,8 @@ function titleOf(view: View, labels: { id: string; name: string }[]): string {
       return labels.find((l) => l.id === view.id)?.name ?? "Label";
     case "subscribers":
       return "Subscribers";
+    case "analytics":
+      return "Analytics";
     default:
       return "All updates";
   }
@@ -263,6 +271,7 @@ function NarrowViews({
     ["published", "Published"],
     ...labels.map((l): [string, string] => [`label:${l.id}`, l.name]),
     ["subscribers", "Subscribers"],
+    ["analytics", "Analytics"],
   ];
 
   return (
@@ -298,6 +307,7 @@ export function ChangelogPage() {
   const wide = useWide(1024);
   const make = useNewEntry(workspace, hc, view);
   const typing = useRef<number | undefined>(undefined);
+  const [days, setDays] = useState(30);
   const go = (next: { view?: string; page?: number }) => void navigate({ search: next, replace: true });
 
   const side = (
@@ -324,6 +334,7 @@ export function ChangelogPage() {
             View changelog
           </a>
         ) : null}
+        {view.kind === "analytics" ? <DaysPicker days={days} onDays={setDays} /> : null}
         <Button
           size="small"
           leadingIcon={RiAddLine}
@@ -337,7 +348,9 @@ export function ChangelogPage() {
       <ScrollArea ground>
         {wide ? null : <NarrowViews view={search.view} labels={labels} onView={(next) => go({ view: next })} />}
         <div key={search.view ?? "all"} className="flex h-full flex-col px-4 pb-4 animate-page-in">
-          {view.kind === "subscribers" ? (
+          {view.kind === "analytics" ? (
+            <ChangelogAnalytics workspace={workspace} helpCenter={hc} days={days} />
+          ) : view.kind === "subscribers" ? (
             <SubscribersList workspace={workspace} helpCenter={hc} />
           ) : (
             <UpdatesList

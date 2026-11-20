@@ -5,8 +5,10 @@
  * a message failed read here in words; a code nobody named reads as
  * itself, made readable.
  */
-import { RiChat3Line, RiFileTextLine, RiMailLine, RiSlackLine } from "@remixicon/react";
+
+import { RiChat3Line, RiFileTextLine, RiMailLine, RiQuestionAnswerLine } from "@remixicon/react";
 import type { ComponentType } from "react";
+import { SlackMark } from "@/components/application/brand/slack-mark";
 
 import type { ChipColor } from "@/components/base/badges/chip";
 import type { Broadcast, BroadcastStatus, Channel, PauseReason } from "@/lib/api/broadcasts";
@@ -29,7 +31,13 @@ export const channelLook: Record<Channel, ChannelLook> = {
   email: { name: "Email", icon: RiMailLine, tint: "blue", where: "Lands in their inbox, replies come back here." },
   chat: { name: "Chat", icon: RiChat3Line, tint: "lime", where: "A message from a teammate in the messenger." },
   post: { name: "Post", icon: RiFileTextLine, tint: "purple", where: "An announcement card in the messenger." },
-  slack: { name: "Slack", icon: RiSlackLine, tint: "orange", where: "A post in each customer's shared Slack channel." },
+  slack: { name: "Slack", icon: SlackMark, tint: "neutral", where: "A post in each customer's shared Slack channel." },
+  conversation: {
+    name: "Conversation",
+    icon: RiQuestionAnswerLine,
+    tint: "cyan",
+    where: "A reply in each person's own conversation.",
+  },
 };
 
 export const channels = Object.keys(channelLook) as Channel[];
@@ -73,6 +81,11 @@ const reasonNames: Record<string, string> = {
   not_in_audience: "No longer in the audience",
   broadcast_stopped: "Broadcast was stopped",
   no_sending_address: "No address to send from",
+  customer_waiting: "Waiting on an answer from your team",
+  team_replied: "A teammate already answered",
+  unreachable: "Can't be reached in that conversation",
+  channel_unsupported: "Their channel can't carry it",
+  not_delivered: "Their channel couldn't deliver it",
 };
 
 /*

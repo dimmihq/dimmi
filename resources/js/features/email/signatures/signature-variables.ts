@@ -1,6 +1,8 @@
 /*
- * The details a signature can name: the teammate's name and job title,
- * the address's display name and the company's name. The server fills
+ * The details a signature can name: the teammate's name, the address's
+ * display name and the company's name. Members hold no job title, so
+ * {{member_title}} is no longer offered; a signature that already has it
+ * still shows it, and the server fills it with nothing. The server fills
  * them in when a reply is written and leaves out a line whose detail is
  * empty, so they carry no fallback. A signature keeps them as
  * {{member_name}} in its Markdown, and every line break of the stored
@@ -21,15 +23,22 @@ export interface SignatureVariable {
 
 export const signatureVariables: SignatureVariable[] = [
   { key: "member_name", label: "Teammate name", description: "The name of the teammate who replies." },
-  { key: "member_title", label: "Job title", description: "The job title of the teammate who replies." },
   { key: "address_name", label: "Address name", description: "The display name of the address replied from." },
   { key: "company_name", label: "Company name", description: "Your company's name." },
+];
+
+/*
+ * retiredVariables are details a stored signature may still name but
+ * that are no longer offered.
+ */
+const retiredVariables: SignatureVariable[] = [
+  { key: "member_title", label: "Job title", description: "Not filled in: teammates have no job title." },
 ];
 
 export const signatureVariablePattern = /^\{\{\s*(member_name|member_title|address_name|company_name)\s*\}\}/;
 
 export function signatureVariableOf(key: string): SignatureVariable | undefined {
-  return signatureVariables.find((variable) => variable.key === key);
+  return [...signatureVariables, ...retiredVariables].find((variable) => variable.key === key);
 }
 
 /*

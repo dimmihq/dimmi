@@ -65,8 +65,22 @@ export function NewRequestDialog({
       <ModalHeader title="New request" description="Post what a customer asked for, or an idea of the team's." />
       <ModalBody className="pb-4">
         <form id={formId} onSubmit={submit} className="flex flex-col gap-4">
-          <Input label="Title" value={title} onChange={setTitle} maxLength={150} isRequired autoFocus />
-          <Textarea label="Details" value={details} onChange={setDetails} rows={5} />
+          <Input
+            label="Title"
+            placeholder="Split an order into several parcels"
+            value={title}
+            onChange={setTitle}
+            maxLength={150}
+            isRequired
+            autoFocus
+          />
+          <Textarea
+            label="Details"
+            placeholder="What they are trying to do, and why it matters to them."
+            value={details}
+            onChange={setDetails}
+            rows={5}
+          />
           {boards.length > 1 ? (
             <Select
               label="Board"

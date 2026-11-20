@@ -13,21 +13,21 @@ import { type ReactNode, useState } from "react";
 import { StatCards } from "@/components/application/dashboard/stat-cards";
 import { SegmentedControl, SegmentedControlItem } from "@/components/base/segmented-control/segmented-control";
 import { Skeleton } from "@/components/base/skeleton/skeleton";
+import { CartesianChart } from "@/features/reports/charts";
+import { seriesColor } from "@/features/reports/format";
 import { Empty, Glyph, Item, Section } from "@/features/settings/layout";
 import { rowLink } from "@/features/settings/row-link";
 import { PageHeader, Panel, ScrollArea } from "@/features/shell/page";
 import { type HelpCenterAnalytics, helpCenterAnalyticsQuery } from "@/lib/api/help-center-sites";
 import type { HelpCenter } from "@/lib/api/help-centers";
+import type { ReportChart } from "@/lib/api/reports";
+import { countOf } from "@/lib/i18n/format";
 
 const ranges = [
   ["7", "7 days"],
   ["30", "30 days"],
   ["90", "90 days"],
 ] as const;
-
-function plural(n: number, one: string, many: string): string {
-  return `${n.toLocaleString()} ${n === 1 ? one : many}`;
-}
 
 export function HelpAnalytics({
   workspace,
@@ -43,7 +43,7 @@ export function HelpAnalytics({
   const { data } = useQuery({ ...helpCenterAnalyticsQuery(workspace, hc, days), enabled: hc !== "" });
 
   return (
-    <Panel label="Help center analytics" className="h-full w-full flex-1">
+    <Panel label="Help center analytics" ground className="h-full w-full flex-1">
       <PageHeader title="Analytics">
         {header}
         <SegmentedControl
@@ -63,7 +63,7 @@ export function HelpAnalytics({
           ))}
         </SegmentedControl>
       </PageHeader>
-      <ScrollArea>
+      <ScrollArea ground>
         <div className="flex flex-col gap-6 px-4 pb-8">
           <Totals data={data} />
           {data ? <Daily data={data} /> : <Skeleton className="h-44 rounded-2xl" />}
@@ -102,7 +102,7 @@ function Totals({ data }: { data: HelpCenterAnalytics | undefined }) {
           label: "Helpful",
           hint: "Of the readers who answered “Was this article helpful?”, how many said yes.",
           value: data.helpful_percent === null ? "—" : `${data.helpful_percent}%`,
-          caption: plural(answers, "answer", "answers"),
+          caption: countOf(answers, "answer", "answers"),
         },
         {
           label: "Searches",
@@ -120,39 +120,53 @@ function Totals({ data }: { data: HelpCenterAnalytics | undefined }) {
 }
 
 /*
- * Daily draws the views as bars, one a day, tallest the busiest, the part
- * read in the messenger in a lighter shade on top.
+ * Daily draws the views as bars, one a day, the part read in the
+ * messenger stacked on the part read on the help center. Hovering a day
+ * shows its date and both counts.
  */
 function Daily({ data }: { data: HelpCenterAnalytics }) {
-  const most = Math.max(1, ...data.daily.map((d) => d.views));
+  const chart: ReportChart = {
+    key: "views_by_day",
+    title: "Views by day",
+    kind: "stacked_bar",
+    unit: "count",
+    axis: "day",
+    drill: null,
+    columns: [],
+    rows: [],
+    series: [
+      {
+        key: "web",
+        label: "Help center",
+        drill: null,
+        points: data.daily.map((d) => ({ x: d.date, y: d.views - d.messenger })),
+      },
+      {
+        key: "messenger",
+        label: "Messenger",
+        drill: null,
+        points: data.daily.map((d) => ({ x: d.date, y: d.messenger })),
+      },
+    ],
+  };
 
   return (
-    <section aria-label="Views by day" className="flex flex-col gap-2">
-      <h2 className="px-3 text-body-2-medium text-text-secondary">Views by day</h2>
-      <div className="flex h-40 items-end gap-0.5 rounded-2xl bg-background-secondary-default p-4">
-        {data.daily.map((day) => (
-          <span
-            key={day.date}
-            title={`${day.date}: ${plural(day.views, "view", "views")}${day.messenger ? `, ${day.messenger} in the messenger` : ""}`}
-            className="flex h-full min-w-0 flex-1 flex-col justify-end"
-          >
-            <span
-              className="w-full rounded-t-sm bg-chart-2 transition-[height] duration-500 ease-out"
-              style={{ height: day.messenger === 0 ? "0" : `${(day.messenger / most) * 100}%` }}
-            />
-            <span
-              className="w-full bg-chart-1 transition-[height] duration-500 ease-out"
-              style={{
-                height: day.views === 0 ? "2px" : `${Math.max(4, ((day.views - day.messenger) / most) * 100)}%`,
-              }}
-            />
-          </span>
-        ))}
-      </div>
-      <div className="flex justify-between px-3 text-caption-1-regular text-text-tertiary">
-        <span>{data.daily[0]?.date}</span>
-        <span>{data.daily.at(-1)?.date}</span>
-      </div>
+    <section
+      aria-label={chart.title}
+      className="flex min-w-0 flex-col gap-3 rounded-2xl bg-background-secondary-default p-4"
+    >
+      <header className="flex min-w-0 flex-col gap-1.5">
+        <h2 className="truncate text-body-medium text-text-primary">{chart.title}</h2>
+        <ul className="flex flex-wrap items-center gap-x-3 gap-y-1">
+          {chart.series.map((series, i) => (
+            <li key={series.key} className="flex items-center gap-1.5 text-caption-1-regular text-text-secondary">
+              <span aria-hidden className="size-2 rounded-full" style={{ background: seriesColor(i) }} />
+              {series.label}
+            </li>
+          ))}
+        </ul>
+      </header>
+      <CartesianChart chart={chart} onPick={() => undefined} />
     </section>
   );
 }
@@ -178,7 +192,7 @@ function Lists({ data }: { data: HelpCenterAnalytics }) {
               detail={helpful}
             >
               <span className="pe-3 text-body-2-medium text-text-primary tabular-nums">
-                {plural(a.views, "view", "views")}
+                {countOf(a.views, "view", "views")}
               </span>
             </Item>
           );
@@ -192,7 +206,7 @@ function Lists({ data }: { data: HelpCenterAnalytics }) {
         {data.content_gaps.map((g) => (
           <Item key={g.query} mark={<Glyph icon={RiSearchLine} />} title={g.query} detail={`Last on ${g.last_date}`}>
             <span className="pe-3 text-body-2-medium text-text-primary tabular-nums">
-              {plural(g.searches, "search", "searches")}
+              {countOf(g.searches, "search", "searches")}
             </span>
           </Item>
         ))}

@@ -105,6 +105,14 @@ export function formatNumber(value: number, options: { locale?: string } & Intl.
 }
 
 /*
+ * countOf writes a count with its noun, singular for exactly one:
+ * "1 person", "2 people", "1,204 people".
+ */
+export function countOf(value: number, one: string, many: string): string {
+  return `${formatNumber(value)} ${value === 1 ? one : many}`;
+}
+
+/*
  * RelativeOptions sets the moment "now" is measured from and how long
  * the words are.
  */

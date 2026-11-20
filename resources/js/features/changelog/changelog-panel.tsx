@@ -7,6 +7,7 @@
  */
 import {
   RiAddLine,
+  RiBarChart2Line,
   RiCalendarScheduleLine,
   RiDraftLine,
   RiMailLine,
@@ -18,6 +19,7 @@ import { type ComponentType, useState } from "react";
 import { IconButton } from "@/components/base/buttons/icon-button";
 import { AlertDialog } from "@/components/base/modal/modal";
 import { InlineName } from "@/features/help-center/inline-name";
+import { TagIcon } from "@/features/inbox/tags/tag-chip";
 import { Panel, ScrollArea } from "@/features/shell/page";
 import { RowMenu } from "@/features/shell/row-menu";
 import { type ChangelogLabel, type EntryStatus, labelColors } from "@/lib/api/changelog";
@@ -33,7 +35,8 @@ export type View =
   | { kind: "all" }
   | { kind: "status"; status: EntryStatus }
   | { kind: "label"; id: string }
-  | { kind: "subscribers" };
+  | { kind: "subscribers" }
+  | { kind: "analytics" };
 
 const statusPicks: { status: EntryStatus; label: string; icon: ComponentType<{ className?: string }> }[] = [
   { status: "draft", label: "Drafts", icon: RiDraftLine },
@@ -93,7 +96,7 @@ function LabelRow({
   if (renaming) {
     return (
       <div className="flex min-h-8 items-center gap-2 ps-3 pe-2">
-        <span aria-hidden className="size-2 shrink-0 rounded-full" style={{ background: label.color }} />
+        <TagIcon tag={{ color: label.color || null, icon: null }} />
         <InlineName initial={label.name} label="Label name" onCommit={onName} onCancel={onCancel} />
       </div>
     );
@@ -106,7 +109,7 @@ function LabelRow({
         onClick={onPick}
         className="flex min-w-0 flex-1 items-center gap-2 self-stretch outline-none"
       >
-        <span aria-hidden className="size-2 shrink-0 rounded-full" style={{ background: label.color }} />
+        <TagIcon tag={{ color: label.color || null, icon: null }} />
         <span className="min-w-0 flex-1 truncate text-start">{label.name}</span>
       </button>
       <span className="opacity-0 transition-opacity group-focus-within/row:opacity-100 group-hover/row:opacity-100 has-[[aria-expanded=true]]:opacity-100 pointer-coarse:opacity-100">
@@ -218,6 +221,12 @@ export function ChangelogPanel({
             icon={RiMailLine}
             current={view.kind === "subscribers"}
             onPress={() => onView({ kind: "subscribers" })}
+          />
+          <Pick
+            label="Analytics"
+            icon={RiBarChart2Line}
+            current={view.kind === "analytics"}
+            onPress={() => onView({ kind: "analytics" })}
           />
         </nav>
       </ScrollArea>

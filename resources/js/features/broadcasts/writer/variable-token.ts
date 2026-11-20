@@ -4,6 +4,7 @@
  * goes out. Picking the chip edits the fallback for people without one.
  * The Markdown keeps it in Liquid's form, which the server reads.
  */
+import { Plugin } from "@tiptap/pm/state";
 import { mergeAttributes, Node, ReactNodeViewRenderer } from "@tiptap/react";
 
 import { VariableView } from "./variable-view";
@@ -57,6 +58,31 @@ export const VariableToken = Node.create({
 
   addNodeView() {
     return ReactNodeViewRenderer(VariableView, { as: "span" });
+  },
+
+  addProseMirrorPlugins() {
+    return [
+      new Plugin({
+        props: {
+          // A chip ends with a space so typing goes on after it; punctuation
+          // typed straight after takes that space back, so "Hi Ada," reads
+          // without a gap.
+          handleTextInput(view, from, to, text) {
+            const { doc } = view.state;
+            if (!/^[,.!?;:)]$/.test(text) || from !== to || from < 2) {
+              return false;
+            }
+            const before = doc.resolve(from - 1).nodeBefore;
+            if (doc.textBetween(from - 1, from) !== " " || before?.type.name !== "variableToken") {
+              return false;
+            }
+            view.dispatch(view.state.tr.insertText(text, from - 1, from));
+
+            return true;
+          },
+        },
+      }),
+    ];
   },
 
   addCommands() {

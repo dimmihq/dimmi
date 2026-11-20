@@ -1,6 +1,7 @@
 /*
  * The moves a teammate makes on the case: assign it, change its status or
- * priority, mark it done or snooze it, and tag it. Tags are the one
+ * priority, mark it done or snooze it, and tag it. Each value reads as
+ * text and opens its choices when pressed. Tags are the one
  * vocabulary the workspace shares; Shift+T opens the picker from
  * anywhere in the conversation.
  */
@@ -9,6 +10,7 @@ import { type Key, useState } from "react";
 
 import { Avatar } from "@/components/base/avatar/avatar";
 import { StatusDot } from "@/components/base/badges/status-dot";
+import { linkButtonStyles } from "@/components/base/buttons/link-button";
 import { Dropdown, DropdownItem, DropdownPopover, DropdownTrigger } from "@/components/base/dropdown/dropdown";
 import { Select, SelectItem } from "@/components/base/select/select";
 import { TeamRow } from "@/features/inbox/team-select";
@@ -22,19 +24,15 @@ import {
 } from "@/lib/api/inbox";
 import { cx } from "@/utils/cx";
 
+import { AssignPicker } from "../assign/assign-picker";
 import { type CaseControls, statusLabel } from "../case";
 import { priorityLabel } from "../priority/labels";
 import { TagChip } from "../tags/tag-chip";
 import { TagPicker } from "../tags/tag-picker";
-import { Row } from "./rows";
+import { quiet } from "./quiet";
+import { Row, Section } from "./rows";
 
-const nobody = "nobody";
 const statusDot = { open: "green", snoozed: "yellow", closed: "indigo" } as const;
-
-export interface Person {
-  id: string;
-  name: string;
-}
 
 function PersonName({ name }: { name: string }) {
   return (
@@ -54,38 +52,40 @@ function choose<T extends string>(apply: (value: T) => void) {
 }
 
 export function CaseFields({
+  workspace,
   conversation,
   caze,
-  people,
 }: {
+  workspace: string;
   conversation: Conversation;
   caze: CaseControls;
-  people: Person[];
 }) {
+  const [assigning, setAssigning] = useState(false);
+  const assignee = conversation.assignee;
+
   return (
     <dl className="flex flex-col">
       <Row label="Assignee">
-        <Select
-          aria-label="Assignee"
-          size="sm"
-          selectedKey={conversation.assignee?.id ?? nobody}
-          onSelectionChange={choose((key) => caze.assign(key === nobody ? null : key))}
-        >
-          <SelectItem id={nobody} textValue="Unassigned">
-            Unassigned
-          </SelectItem>
-          {people.map((person) => (
-            <SelectItem key={person.id} id={person.id} textValue={person.name}>
-              <PersonName name={person.name} />
-            </SelectItem>
-          ))}
-        </Select>
+        <AssignPicker
+          workspace={workspace}
+          assignee={assignee?.id ?? null}
+          team={null}
+          isOpen={assigning}
+          onOpenChange={setAssigning}
+          onMember={caze.assign}
+          trigger={{
+            label: `Assignee: ${assignee?.name ?? "Unassigned"}`,
+            className: quiet,
+            children: assignee ? <PersonName name={assignee.name} /> : "Unassigned",
+          }}
+        />
       </Row>
       <TeamRow conversation={conversation} caze={caze} />
       <Row label="Status">
         <Select
           aria-label="Status"
           size="sm"
+          variant="quiet"
           selectedKey={conversation.status}
           onSelectionChange={choose<ConversationStatus>(caze.setStatus)}
         >
@@ -103,6 +103,7 @@ export function CaseFields({
         <Select
           aria-label="Priority"
           size="sm"
+          variant="quiet"
           selectedKey={conversation.priority}
           onSelectionChange={choose<ConversationPriority>(caze.setPriority)}
         >
@@ -142,11 +143,13 @@ export function Actions({
 
   return (
     <Dropdown isOpen={open} onOpenChange={setOpen}>
-      <DropdownTrigger className="flex h-8 items-center gap-0.5 rounded-lg border border-border-button-default bg-background-primary-default ps-2.5 pe-1.5 text-body-medium text-text-primary shadow-xs transition-colors duration-150 hover:border-border-button-hover hover:bg-background-primary-hover">
+      <DropdownTrigger
+        className={cx(linkButtonStyles.base, linkButtonStyles.size.small, linkButtonStyles.variant.secondary)}
+      >
         Actions
         <RiArrowDownSLine
           aria-hidden
-          className={cx("size-4 text-foreground-icon-tertiary transition-transform duration-150", open && "rotate-180")}
+          className={cx(linkButtonStyles.icon.small, "transition-transform duration-150", open && "rotate-180")}
         />
       </DropdownTrigger>
       <DropdownPopover aria-label="Conversation actions" placement="bottom end" className="w-52 p-1.5">
@@ -200,18 +203,21 @@ export function CaseTags({
   caze: CaseControls;
 }) {
   return (
-    <div className="flex flex-wrap items-center gap-1.5">
-      {conversation.tags.map((tag) => (
-        <TagChip key={tag.id} tag={tag} onRemove={() => caze.removeTag(tag.id)} />
-      ))}
-      <TagPicker
-        workspace={workspace}
-        label="Add tag"
-        selected={conversation.tags}
-        onAdd={caze.addTag}
-        onRemove={(tag) => caze.removeTag(tag.id)}
-        shortcut
-      />
-    </div>
+    <Section title="Tags">
+      <div className="flex flex-wrap items-center gap-1">
+        {conversation.tags.map((tag) => (
+          <TagChip key={tag.id} tag={tag} size="small" onRemove={() => caze.removeTag(tag.id)} />
+        ))}
+        <TagPicker
+          workspace={workspace}
+          label="Add tag"
+          selected={conversation.tags}
+          onAdd={caze.addTag}
+          onRemove={(tag) => caze.removeTag(tag.id)}
+          shortcut
+          quiet
+        />
+      </div>
+    </Section>
   );
 }

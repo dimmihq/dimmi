@@ -7,10 +7,11 @@
  * deleting it.
  */
 import { type CalendarDate, getLocalTimeZone, parseDate, Time, today } from "@internationalized/date";
-import { RiCalendarScheduleLine, RiGroupLine, RiSendPlaneLine, RiUserFollowLine } from "@remixicon/react";
+import { RiCalendarScheduleLine, RiGroupLine, RiSearchLine, RiSendPlaneLine } from "@remixicon/react";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 
+import { Avatar } from "@/components/base/avatar/avatar";
 import { Button } from "@/components/base/buttons/button";
 import { Checkbox } from "@/components/base/checkbox/checkbox";
 import { DatePicker } from "@/components/base/date-picker/date-picker";
@@ -19,8 +20,10 @@ import { Label } from "@/components/base/input/label";
 import { AlertDialog, Modal, ModalBody, ModalFooter, ModalHeader } from "@/components/base/modal/modal";
 import { RadioGroup } from "@/components/base/radio/radio";
 import { RadioCard } from "@/components/base/radio/radio-card";
+import { SegmentedControl, SegmentedControlItem } from "@/components/base/segmented-control/segmented-control";
 import { TimeField } from "@/components/base/time-field/time-field";
 import { untilOf } from "@/features/inbox/snooze/until";
+import { avatarColor } from "@/features/shell/avatar-color";
 import { type ChangelogEntry, type PublishOptions, subscribersQuery } from "@/lib/api/changelog";
 import { membersQuery } from "@/lib/api/workspace";
 
@@ -28,8 +31,18 @@ import type { Draft } from "./entry-format";
 
 const tallModal = "h-[min(640px,calc(100dvh-3rem))]";
 
+const everyone = "editors";
+const chosenOnes = "picked";
+
 /*
- * AuthorsDialog picks who an entry names as its authors.
+ * mostAuthors is how many teammates an entry can name.
+ */
+const mostAuthors = 5;
+
+/*
+ * AuthorsDialog picks who an entry names as its authors: everyone who
+ * edits it, or up to five teammates found by name and ticked, shown in
+ * the order they were picked.
  */
 export function AuthorsDialog({
   workspace,
@@ -43,41 +56,94 @@ export function AuthorsDialog({
   onClose: () => void;
 }) {
   const { data: members = [] } = useQuery({ ...membersQuery(workspace, {}), enabled: workspace !== "" });
-  const [mode, setMode] = useState(chosen.length > 0 ? "picked" : "editors");
+  const [mode, setMode] = useState(chosen.length > 0 ? chosenOnes : everyone);
   const [picked, setPicked] = useState<string[]>(chosen);
+  const [query, setQuery] = useState("");
   const [busy, setBusy] = useState(false);
   const active = members.filter((m) => m.status === "active");
-  const toggle = (id: string, on: boolean) =>
-    setPicked(on ? [...picked.filter((p) => p !== id), id].slice(-5) : picked.filter((p) => p !== id));
+  const needle = query.trim().toLowerCase();
+  const shown = active.filter((m) => `${m.user.name} ${m.user.email}`.toLowerCase().includes(needle));
+  const full = picked.length >= mostAuthors;
+  const toggle = (id: string) =>
+    setPicked(picked.includes(id) ? picked.filter((p) => p !== id) : full ? picked : [...picked, id]);
 
   return (
     <Modal size="md" className={tallModal} isOpen onOpenChange={(open) => (open ? undefined : onClose())}>
       <ModalHeader title="Authors" description="Shown under the title on the changelog." />
-      <ModalBody className="flex flex-col gap-4 pb-4">
-        <RadioGroup aria-label="Who is named" value={mode} onChange={setMode}>
-          <RadioCard
-            value="editors"
-            icon={RiGroupLine}
-            title="Everyone who edits it"
-            description="Each teammate who saves the update is added, in the order they joined in."
-          />
-          <RadioCard
-            value="picked"
-            icon={RiUserFollowLine}
-            title="Pick authors"
-            description="Name up to five teammates, whoever edits it."
-          />
-        </RadioGroup>
-        {mode === "picked" ? (
-          <fieldset className="flex flex-col gap-2">
-            <legend className="sr-only">Teammates</legend>
-            {active.map((m) => (
-              <Checkbox key={m.id} isSelected={picked.includes(m.id)} onChange={(on) => toggle(m.id, on)}>
-                {m.user.name}
-              </Checkbox>
-            ))}
-          </fieldset>
-        ) : null}
+      <ModalBody className="flex min-h-0 flex-col gap-4 pb-2">
+        <SegmentedControl
+          aria-label="Who is named"
+          className="self-start"
+          selectedKeys={new Set([mode])}
+          onSelectionChange={(keys) => {
+            const [key] = [...keys];
+            if (key === everyone || key === chosenOnes) {
+              setMode(key);
+            }
+          }}
+        >
+          <SegmentedControlItem id={everyone}>Everyone who edits</SegmentedControlItem>
+          <SegmentedControlItem id={chosenOnes}>Picked teammates</SegmentedControlItem>
+        </SegmentedControl>
+        {mode === everyone ? (
+          <div className="flex flex-1 flex-col items-center justify-center gap-2 rounded-2xl bg-background-secondary-default px-6 py-10 text-center">
+            <RiGroupLine aria-hidden className="size-6 text-foreground-icon-tertiary" />
+            <p className="text-body-medium text-text-primary">Everyone who edits it is named</p>
+            <p className="max-w-xs text-body-2-regular text-text-secondary">
+              Each teammate who saves the update is added, in the order they first saved.
+            </p>
+          </div>
+        ) : (
+          <>
+            <Input
+              aria-label="Search teammates"
+              placeholder="Search teammates"
+              leadingIcon={RiSearchLine}
+              autoFocus
+              value={query}
+              onChange={setQuery}
+            />
+            <div className="flex min-h-0 flex-1 flex-col overflow-y-auto rounded-2xl bg-background-secondary-default p-1">
+              {shown.map((m) => {
+                const on = picked.includes(m.id);
+                const place = picked.indexOf(m.id) + 1;
+
+                return (
+                  <button
+                    key={m.id}
+                    type="button"
+                    aria-pressed={on}
+                    disabled={!on && full}
+                    onClick={() => toggle(m.id)}
+                    className="flex min-h-11 w-full cursor-pointer items-center gap-3 rounded-xl px-2.5 text-start outline-none transition-colors duration-150 hover:bg-background-secondary-hover focus-visible:ring-2 focus-visible:ring-border-focus-ring disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    <Avatar
+                      size="xs"
+                      src={m.user.avatar_url ?? undefined}
+                      color={avatarColor(m.user.name)}
+                      initials={m.user.name.charAt(0)}
+                    />
+                    <span className="flex min-w-0 flex-1 flex-col">
+                      <span className="truncate text-body-2-medium text-text-primary">{m.user.name}</span>
+                      <span className="truncate text-caption-1-regular text-text-tertiary">{m.user.email}</span>
+                    </span>
+                    {on ? (
+                      <span className="grid size-5 shrink-0 place-items-center rounded-full bg-button-primary text-caption-2-medium text-text-white tabular-nums">
+                        {place}
+                      </span>
+                    ) : null}
+                  </button>
+                );
+              })}
+              {shown.length === 0 ? (
+                <p className="px-2.5 py-3 text-body-2-regular text-text-tertiary">No teammate matches.</p>
+              ) : null}
+            </div>
+            <p className="text-caption-1-regular text-text-tertiary">
+              {picked.length} of {mostAuthors} picked. The number is the order they show in.
+            </p>
+          </>
+        )}
       </ModalBody>
       <ModalFooter>
         <Button variant="secondary" onClick={onClose}>
@@ -85,10 +151,10 @@ export function AuthorsDialog({
         </Button>
         <Button
           loading={busy}
-          disabled={mode === "picked" && picked.length === 0}
+          disabled={mode === chosenOnes && picked.length === 0}
           onClick={() => {
             setBusy(true);
-            onSave(mode === "picked" ? picked : [])
+            onSave(mode === chosenOnes ? picked : [])
               .then(onClose)
               .finally(() => setBusy(false));
           }}

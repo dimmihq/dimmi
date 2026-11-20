@@ -117,7 +117,8 @@ function useMessengerDraft(workspace: string, saved: WidgetSettings) {
 
 function Editor({ workspace, saved }: { workspace: string; saved: WidgetSettings }) {
   const edit = useMessengerDraft(workspace, saved);
-  const locked = !usePermission(workspace, "settings:write");
+  const canWrite = usePermission(workspace, "settings:write");
+  const locked = !(usePermission(workspace, "widgets:manage") && canWrite);
   const sent = forPreview(edit.draft);
   const [language, setLanguage] = useState(allLanguages);
   const preview = usePreviewConfig(workspace, saved.id, sent.change, language === allLanguages ? undefined : language);

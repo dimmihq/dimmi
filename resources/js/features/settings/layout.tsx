@@ -44,12 +44,15 @@ export function SettingsPage({
   description,
   footer,
   actions,
+  mark,
   children,
 }: {
   title: string | null;
   description?: string;
   footer?: ReactNode;
   actions?: ReactNode;
+  /* A logo drawn before the title, such as an integration's. */
+  mark?: ReactNode;
   children: ReactNode;
 }) {
   return (
@@ -66,7 +69,10 @@ export function SettingsPage({
               {title === null ? (
                 <Skeleton shape="text" className="my-1 h-6 w-48" />
               ) : (
-                <h1 className="text-title-2-medium text-text-primary">{title}</h1>
+                <div className="flex items-center gap-3">
+                  {mark}
+                  <h1 className="text-title-2-medium text-text-primary">{title}</h1>
+                </div>
               )}
               {description ? <p className="text-body-regular text-text-secondary">{description}</p> : null}
             </div>

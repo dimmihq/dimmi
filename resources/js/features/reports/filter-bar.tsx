@@ -1,13 +1,30 @@
 /*
- * The bar above a report: the range, compare and business hours, and a
- * picker for each filter. Every choice is written to the address, so a
- * view can be shared as a link. A live report has no range.
+ * The bar above a report. The range leads, then one Filter menu that
+ * holds every filter: it lists them, and picking one slides in its
+ * values to tick. Each filter in use shows as a chip that opens the same
+ * values to change it, with a cross to remove it. Compare and office
+ * hours sit at the far end. Every choice is written to the address, so
+ * a view can be shared as a link. A live report has no range.
  */
 import { getLocalTimeZone, today } from "@internationalized/date";
-import { RiArrowDownSLine, RiSearchLine } from "@remixicon/react";
+import {
+  RiArrowLeftSLine,
+  RiArrowRightSLine,
+  RiAtLine,
+  RiCloseLine,
+  RiFilter3Line,
+  RiFlag2Line,
+  RiInbox2Line,
+  RiPriceTag3Line,
+  RiSearchLine,
+  RiSparkling2Line,
+  RiTeamLine,
+  RiUserLine,
+} from "@remixicon/react";
 import { useQuery } from "@tanstack/react-query";
-import { useState } from "react";
+import { type ComponentType, useState } from "react";
 
+import { Button } from "@/components/base/buttons/button";
 import { LinkButton } from "@/components/base/buttons/link-button";
 import { Checkbox } from "@/components/base/checkbox/checkbox";
 import { DateRangePicker, type DateRangePreset } from "@/components/base/date-picker/date-range-picker";
@@ -28,41 +45,69 @@ const aiOptions: Option[] = [
   { id: "not_involved", label: "No AI" },
 ];
 
-const chip =
-  "inline-flex h-9 max-w-64 shrink-0 items-center gap-1 rounded-full border border-border-button-default bg-background-secondary-default ps-3 pe-2 text-body-medium outline-none hover:bg-background-secondary-hover focus-visible:ring-2 focus-visible:ring-border-focus-ring";
+type FilterKey = "inbox" | "team" | "member" | "channel" | "tag" | "priority" | "ai";
+
+/*
+ * FilterDef is one filter: what it is called, its mark, the values it
+ * offers, and whether it takes one value only.
+ */
+interface FilterDef {
+  key: FilterKey;
+  label: string;
+  icon: ComponentType<{ className?: string }>;
+  options: Option[];
+  single?: boolean;
+}
+
+const row = cx(
+  "flex min-h-9 w-full items-center gap-2.5 rounded-xl px-2 text-start text-body-medium text-text-primary",
+  "outline-none hover:bg-background-primary-hover focus-visible:bg-background-primary-hover",
+);
+
+const slide = "motion-safe:animate-[filter-panel-in_180ms_ease-out]";
 
 function split(value: string | undefined): string[] {
   return value ? value.split(",").filter(Boolean) : [];
 }
 
 /*
- * Picker picks any number of values of one filter, from the workspace's
- * own list, or one value when single is set.
+ * summaryOf says what a filter is set to: the one value by name, or how
+ * many.
  */
-function Picker({
-  label,
-  options,
+function summaryOf(def: FilterDef, picked: string[]): string {
+  if (picked.length === 1) {
+    return def.options.find((o) => o.id === picked[0])?.label ?? "1 picked";
+  }
+
+  return `${picked.length} picked`;
+}
+
+/*
+ * Values lists a filter's values to tick, searchable when there are
+ * many. Each tick applies at once; a filter that takes one value closes
+ * on the pick.
+ */
+function Values({
+  def,
   value,
   onChange,
-  single = false,
+  onDone,
+  onBack,
 }: {
-  label: string;
-  options: Option[];
+  def: FilterDef;
   value: string | undefined;
   onChange: (value: string | undefined) => void;
-  single?: boolean;
+  onDone: () => void;
+  onBack?: () => void;
 }) {
-  const [open, setOpen] = useState(false);
   const [text, setText] = useState("");
   const picked = split(value);
   const q = text.trim().toLowerCase();
-  const shown = options.filter((o) => o.label.toLowerCase().includes(q));
-  const first = options.find((o) => o.id === picked[0])?.label ?? picked[0];
-  const summary = picked.length === 0 ? label : picked.length === 1 ? first : `${label}: ${picked.length}`;
+  const shown = def.options.filter((o) => o.label.toLowerCase().includes(q));
   const toggle = (id: string, on: boolean) => {
-    if (single) {
+    if (def.single) {
       onChange(on ? id : undefined);
-      setOpen(false);
+      onDone();
       return;
     }
     const next = on ? [...picked, id] : picked.filter((p) => p !== id);
@@ -70,65 +115,175 @@ function Picker({
   };
 
   return (
+    <div className={cx("flex flex-col gap-2", slide)}>
+      <div className={cx("flex min-h-8 items-center", onBack ? "gap-0.5 ps-0.5" : "ps-2")}>
+        {onBack ? (
+          <button
+            type="button"
+            aria-label="Back"
+            onClick={onBack}
+            className="grid size-7 shrink-0 place-items-center rounded-lg text-foreground-icon-secondary outline-none hover:bg-background-primary-hover focus-visible:ring-2 focus-visible:ring-border-focus-ring"
+          >
+            <RiArrowLeftSLine aria-hidden className="size-4 rtl:-scale-x-100" />
+          </button>
+        ) : null}
+        <span className="min-w-0 flex-1 truncate text-body-medium text-text-primary">{def.label}</span>
+        {picked.length > 0 ? (
+          <LinkButton size="xs" variant="secondary" className="me-2" onClick={() => onChange(undefined)}>
+            Clear
+          </LinkButton>
+        ) : null}
+      </div>
+      {def.options.length > 8 ? (
+        <InputBase
+          aria-label={`Search ${def.label.toLowerCase()}`}
+          placeholder="Search"
+          leadingIcon={RiSearchLine}
+          autoFocus
+          value={text}
+          onChange={(event) => setText(event.target.value)}
+          className="text-body-medium"
+        />
+      ) : null}
+      <div className="-mx-1 flex max-h-72 flex-col overflow-y-auto px-1">
+        {shown.map((option) => (
+          <Checkbox
+            key={option.id}
+            size="sm"
+            isSelected={picked.includes(option.id)}
+            onChange={(on) => toggle(option.id, on)}
+            className="min-h-9 w-full cursor-pointer items-center rounded-xl px-2 transition-colors duration-150 hover:bg-background-primary-hover [&>span:first-child]:mt-0"
+          >
+            <span className="truncate">{option.label}</span>
+          </Checkbox>
+        ))}
+        {shown.length === 0 ? (
+          <p className="px-2 py-3 text-body-2-regular text-text-tertiary">
+            {def.options.length === 0 ? "Nothing to pick yet." : "Nothing matches."}
+          </p>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
+type Change = (changes: Partial<ReportSearch>) => void;
+
+/*
+ * setOf writes one filter's value to the address. AI takes only its two
+ * values.
+ */
+function setOf(key: FilterKey, value: string | undefined): Partial<ReportSearch> {
+  if (key === "ai") {
+    return { ai: value === "involved" || value === "not_involved" ? value : undefined };
+  }
+
+  return { [key]: value };
+}
+
+/*
+ * FilterMenu is the one way in to every filter: the list of them, each
+ * saying what it is set to, and the values of the one picked.
+ */
+function FilterMenu({ defs, search, onChange }: { defs: FilterDef[]; search: ReportSearch; onChange: Change }) {
+  const [open, setOpen] = useState(false);
+  const [key, setKey] = useState<FilterKey | null>(null);
+  const def = defs.find((d) => d.key === key);
+  const active = defs.filter((d) => search[d.key]).length;
+
+  return (
     <PopoverTrigger
       isOpen={open}
       onOpenChange={(next) => {
         setOpen(next);
-        setText("");
+        setKey(null);
       }}
     >
-      <button
-        type="button"
-        aria-label={picked.length === 0 ? `Filter by ${label.toLowerCase()}` : `${label}: ${summary}`}
-        className={cx(chip, picked.length > 0 ? "text-text-primary" : "text-text-secondary")}
-      >
-        <span className="truncate">{summary}</span>
-        <RiArrowDownSLine aria-hidden className="size-4 shrink-0 text-foreground-icon-tertiary" />
-      </button>
-      <Popover aria-label={label} placement="bottom start" className="w-64">
-        <div className="flex flex-col gap-2">
-          {options.length > 8 ? (
-            <InputBase
-              aria-label={`Search ${label.toLowerCase()}`}
-              placeholder="Search"
-              leadingIcon={RiSearchLine}
-              value={text}
-              onChange={(event) => setText(event.target.value)}
-              className="text-body-medium"
+      <Button variant="secondary" size="small" leadingIcon={RiFilter3Line} className="shrink-0">
+        Filter
+        {active > 0 ? (
+          <span className="ms-1 grid h-4 min-w-4 place-items-center rounded-full bg-button-primary px-1 text-caption-2-medium text-text-white tabular-nums">
+            {active}
+          </span>
+        ) : null}
+      </Button>
+      <Popover aria-label="Filter the report" placement="bottom start" className="w-64 overflow-hidden">
+        {def ? (
+          <div key={def.key}>
+            <Values
+              def={def}
+              value={search[def.key]}
+              onChange={(value) => onChange(setOf(def.key, value))}
+              onDone={() => setOpen(false)}
+              onBack={() => setKey(null)}
             />
-          ) : null}
-          <div className="-mx-1 flex max-h-72 flex-col gap-0.5 overflow-y-auto px-1">
-            {shown.map((option) => (
-              <Checkbox
-                key={option.id}
-                isSelected={picked.includes(option.id)}
-                onChange={(on) => toggle(option.id, on)}
-                className="rounded-lg px-2 py-1.5 hover:bg-background-secondary-hover"
-              >
-                <span className="truncate">{option.label}</span>
-              </Checkbox>
-            ))}
-            {shown.length === 0 ? (
-              <p className="px-2 py-3 text-body-2-regular text-text-tertiary">
-                {options.length === 0 ? "Nothing to pick yet." : "Nothing matches."}
-              </p>
-            ) : null}
           </div>
-          {picked.length > 0 ? (
-            <LinkButton
-              variant="secondary"
-              className="self-start px-2"
-              onClick={() => {
-                onChange(undefined);
-                setOpen(false);
-              }}
-            >
-              Clear
-            </LinkButton>
-          ) : null}
-        </div>
+        ) : (
+          <div className={cx("flex flex-col", slide)}>
+            <p className="px-2 py-1.5 text-caption-1-medium text-text-tertiary">Filter by</p>
+            {defs.map((d) => {
+              const picked = split(search[d.key]);
+
+              return (
+                <button key={d.key} type="button" onClick={() => setKey(d.key)} className={row}>
+                  <d.icon aria-hidden className="size-4 shrink-0 text-foreground-icon-secondary" />
+                  <span className="min-w-0 flex-1 truncate">{d.label}</span>
+                  {picked.length > 0 ? (
+                    <span className="max-w-24 shrink-0 truncate text-body-2-regular text-text-tertiary">
+                      {summaryOf(d, picked)}
+                    </span>
+                  ) : null}
+                  <RiArrowRightSLine
+                    aria-hidden
+                    className="size-4 shrink-0 text-foreground-icon-tertiary rtl:-scale-x-100"
+                  />
+                </button>
+              );
+            })}
+          </div>
+        )}
       </Popover>
     </PopoverTrigger>
+  );
+}
+
+/*
+ * FilterChip is one filter in use: it opens its values to change it, and
+ * its cross removes it.
+ */
+function FilterChip({ def, value, onChange }: { def: FilterDef; value: string; onChange: Change }) {
+  const [open, setOpen] = useState(false);
+  const text = `${def.label}: ${summaryOf(def, split(value))}`;
+
+  return (
+    <span className="inline-flex h-8 max-w-72 items-center rounded-full border border-border-button-default bg-background-secondary-default ps-1">
+      <PopoverTrigger isOpen={open} onOpenChange={setOpen}>
+        <button
+          type="button"
+          aria-label={`Change filter: ${text}`}
+          className="inline-flex h-full min-w-0 items-center gap-1.5 rounded-full ps-2 pe-1 text-body-2-medium text-text-primary outline-none focus-visible:ring-2 focus-visible:ring-border-focus-ring"
+        >
+          <def.icon aria-hidden className="size-4 shrink-0 text-foreground-icon-secondary" />
+          <span className="truncate">{text}</span>
+        </button>
+        <Popover aria-label={def.label} placement="bottom start" className="w-64">
+          <Values
+            def={def}
+            value={value}
+            onChange={(next) => onChange(setOf(def.key, next))}
+            onDone={() => setOpen(false)}
+          />
+        </Popover>
+      </PopoverTrigger>
+      <button
+        type="button"
+        aria-label={`Remove filter: ${text}`}
+        onClick={() => onChange(setOf(def.key, undefined))}
+        className="me-1 grid size-6 shrink-0 place-items-center rounded-full text-foreground-icon-tertiary outline-none hover:bg-background-secondary-hover hover:text-foreground-icon-primary focus-visible:ring-2 focus-visible:ring-border-focus-ring"
+      >
+        <RiCloseLine aria-hidden className="size-4" />
+      </button>
+    </span>
   );
 }
 
@@ -140,6 +295,49 @@ function presetList(): DateRangePreset[] {
   });
 }
 
+/*
+ * useFilterDefs builds the filters from the workspace's own lists.
+ */
+function useFilterDefs(workspace: string): FilterDef[] {
+  const enabled = workspace !== "";
+  const inboxes = useQuery({ ...inboxesQuery(workspace), enabled });
+  const teams = useQuery({ ...teamsQuery(workspace), enabled });
+  const members = useQuery({ ...membersQuery(workspace), enabled });
+  const tags = useQuery({ ...tagsQuery(workspace), enabled });
+
+  return [
+    {
+      key: "inbox",
+      label: "Inbox",
+      icon: RiInbox2Line,
+      options: (inboxes.data ?? []).map((i) => ({ id: i.id, label: i.name })),
+    },
+    {
+      key: "team",
+      label: "Team",
+      icon: RiTeamLine,
+      options: (teams.data ?? []).map((t) => ({ id: t.id, label: t.name })),
+    },
+    {
+      key: "member",
+      label: "Teammate",
+      icon: RiUserLine,
+      options: (members.data ?? [])
+        .filter((m) => m.status === "active")
+        .map((m) => ({ id: m.id, label: m.user.name || m.user.email })),
+    },
+    { key: "channel", label: "Channel", icon: RiAtLine, options: channelOptions },
+    {
+      key: "tag",
+      label: "Tag",
+      icon: RiPriceTag3Line,
+      options: (tags.data ?? []).map((t) => ({ id: t.id, label: t.name })),
+    },
+    { key: "priority", label: "Priority", icon: RiFlag2Line, options: priorityOptions },
+    { key: "ai", label: "AI", icon: RiSparkling2Line, options: aiOptions, single: true },
+  ];
+}
+
 export function FilterBar({
   workspace,
   search,
@@ -149,24 +347,18 @@ export function FilterBar({
   workspace: string;
   search: ReportSearch;
   live: boolean;
-  onChange: (changes: Partial<ReportSearch>) => void;
+  onChange: Change;
 }) {
-  const enabled = workspace !== "";
-  const inboxes = useQuery({ ...inboxesQuery(workspace), enabled });
-  const teams = useQuery({ ...teamsQuery(workspace), enabled });
-  const members = useQuery({ ...membersQuery(workspace), enabled });
-  const tags = useQuery({ ...tagsQuery(workspace), enabled });
+  const defs = useFilterDefs(workspace);
   const preset: RangePreset | null = search.range ?? (search.from || search.to ? null : "30d");
   const days = preset ? presetDays(preset) : null;
   const value = days
     ? calendarRange(days.from, days.to)
     : calendarRange(search.from ?? search.to ?? "", search.to ?? search.from ?? "");
-  const filtered = Boolean(
-    search.inbox || search.team || search.member || search.channel || search.tag || search.priority || search.ai,
-  );
+  const inUse = defs.filter((d) => search[d.key]);
 
   return (
-    <div className="flex flex-wrap items-center gap-2">
+    <div className="flex flex-wrap items-center gap-x-2 gap-y-2">
       {live ? null : (
         <DateRangePicker
           aria-label="Date range"
@@ -187,71 +379,15 @@ export function FilterBar({
           }}
         />
       )}
-      {live ? null : (
-        <Switch
-          size="sm"
-          isSelected={search.compare === true}
-          onChange={(on) => onChange({ compare: on || undefined })}
-        >
-          Compare
-        </Switch>
-      )}
-      <Switch
-        size="sm"
-        isSelected={search.business_hours === true}
-        onChange={(on) => onChange({ business_hours: on || undefined })}
-      >
-        Business hours
-      </Switch>
-      <span aria-hidden className="hidden h-5 w-px bg-separator-border sm:block" />
-      <Picker
-        label="Inbox"
-        options={(inboxes.data ?? []).map((i) => ({ id: i.id, label: i.name }))}
-        value={search.inbox}
-        onChange={(inbox) => onChange({ inbox })}
-      />
-      <Picker
-        label="Team"
-        options={(teams.data ?? []).map((t) => ({ id: t.id, label: t.name }))}
-        value={search.team}
-        onChange={(team) => onChange({ team })}
-      />
-      <Picker
-        label="Teammate"
-        options={(members.data ?? [])
-          .filter((m) => m.status === "active")
-          .map((m) => ({ id: m.id, label: m.user.name || m.user.email }))}
-        value={search.member}
-        onChange={(member) => onChange({ member })}
-      />
-      <Picker
-        label="Channel"
-        options={channelOptions}
-        value={search.channel}
-        onChange={(channel) => onChange({ channel })}
-      />
-      <Picker
-        label="Tag"
-        options={(tags.data ?? []).map((t) => ({ id: t.id, label: t.name }))}
-        value={search.tag}
-        onChange={(tag) => onChange({ tag })}
-      />
-      <Picker
-        label="Priority"
-        options={priorityOptions}
-        value={search.priority}
-        onChange={(priority) => onChange({ priority })}
-      />
-      <Picker
-        label="AI"
-        single
-        options={aiOptions}
-        value={search.ai}
-        onChange={(ai) => onChange({ ai: ai === "involved" || ai === "not_involved" ? ai : undefined })}
-      />
-      {filtered ? (
+      <FilterMenu defs={defs} search={search} onChange={onChange} />
+      {inUse.map((d) => (
+        <FilterChip key={d.key} def={d} value={search[d.key] ?? ""} onChange={onChange} />
+      ))}
+      {inUse.length > 1 ? (
         <LinkButton
           variant="secondary"
+          size="xs"
+          className="ms-1"
           onClick={() =>
             onChange({
               inbox: undefined,
@@ -264,9 +400,27 @@ export function FilterBar({
             })
           }
         >
-          Clear filters
+          Clear all
         </LinkButton>
       ) : null}
+      <div className="ms-auto flex shrink-0 items-center gap-4">
+        {live ? null : (
+          <Switch
+            size="sm"
+            isSelected={search.compare === true}
+            onChange={(on) => onChange({ compare: on || undefined })}
+          >
+            Compare
+          </Switch>
+        )}
+        <Switch
+          size="sm"
+          isSelected={search.business_hours === true}
+          onChange={(on) => onChange({ business_hours: on || undefined })}
+        >
+          Office hours
+        </Switch>
+      </div>
     </div>
   );
 }

@@ -9,6 +9,7 @@
  * may only read procedures see everything and change nothing. On screens
  * too narrow for both, the side opens in a drawer from the header.
  */
+
 import {
   RiArrowDownLine,
   RiArrowLeftSLine,
@@ -23,7 +24,6 @@ import {
 import { useQuery } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
-
 import { Button } from "@/components/base/buttons/button";
 import { IconButton } from "@/components/base/buttons/icon-button";
 import { Drawer } from "@/components/base/drawer/drawer";
@@ -35,6 +35,7 @@ import { PageHeader, Panel, ScrollArea } from "@/features/shell/page";
 import { useWide } from "@/features/shell/use-wide";
 import { actionsQuery } from "@/lib/api/ai-actions";
 import type { Procedure, ProcedureIssue, ProcedureStep, ProcedureStepKind } from "@/lib/api/procedures";
+import { countOf } from "@/lib/i18n/format";
 
 import type { Choices } from "./choices";
 import { KindMark, StatusChip } from "./parts";
@@ -266,7 +267,7 @@ function Side({ draft, onClose, className }: { draft: Draft; onClose?: () => voi
               label={server.status === "live" ? "dimmi follows this" : "Not live"}
               description={
                 server.status === "live"
-                  ? `Followed in ${server.uses} conversations in the last 30 days.`
+                  ? `Followed in ${countOf(server.uses, "conversation", "conversations")} in the last 30 days.`
                   : "Publish it for dimmi to follow."
               }
             />

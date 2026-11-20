@@ -27,10 +27,22 @@ const keyHelp: Record<string, string> = {
   pagerduty: "Create a REST API key in PagerDuty under Integrations, API Access Keys.",
 };
 
-export function KeyConnectButton({ workspace, provider }: { workspace: string; provider: string }) {
+/*
+ * KeyConnectDialog asks for the tool's key and connects it.
+ */
+export function KeyConnectDialog({
+  workspace,
+  provider,
+  isOpen,
+  onOpenChange,
+}: {
+  workspace: string;
+  provider: string;
+  isOpen: boolean;
+  onOpenChange: (open: boolean) => void;
+}) {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const [open, setOpen] = useState(false);
   const [key, setKey] = useState("");
   const label = toolLook(provider).label;
 
@@ -39,31 +51,39 @@ export function KeyConnectButton({ workspace, provider }: { workspace: string; p
     onSuccess: async (made) => {
       await queryClient.invalidateQueries({ queryKey: integrationsQuery(workspace).queryKey });
       toast.success(`${label} is connected.`);
-      setOpen(false);
+      onOpenChange(false);
       await navigate({ to: "/d/settings/integrations/$integration", params: { integration: made.id } });
     },
     onError: (error) => toast.error(error.message),
   });
 
   return (
+    <Modal isOpen={isOpen} onOpenChange={onOpenChange}>
+      <ModalHeader icon={RiKey2Line} title={`Connect ${label}`} description={keyHelp[provider]} />
+      <ModalBody>
+        <Input label="API key" type="password" value={key} onChange={setKey} autoFocus />
+      </ModalBody>
+      <ModalFooter>
+        <Button variant="secondary" onClick={() => onOpenChange(false)}>
+          Cancel
+        </Button>
+        <Button disabled={key.trim() === ""} loading={connect.isPending} onClick={() => connect.mutate()}>
+          Connect
+        </Button>
+      </ModalFooter>
+    </Modal>
+  );
+}
+
+export function KeyConnectButton({ workspace, provider }: { workspace: string; provider: string }) {
+  const [open, setOpen] = useState(false);
+
+  return (
     <>
       <Button variant="secondary" size="small" onClick={() => setOpen(true)}>
         Connect
       </Button>
-      <Modal isOpen={open} onOpenChange={setOpen}>
-        <ModalHeader icon={RiKey2Line} title={`Connect ${label}`} description={keyHelp[provider]} />
-        <ModalBody>
-          <Input label="API key" type="password" value={key} onChange={setKey} autoFocus />
-        </ModalBody>
-        <ModalFooter>
-          <Button variant="secondary" onClick={() => setOpen(false)}>
-            Cancel
-          </Button>
-          <Button disabled={key.trim() === ""} loading={connect.isPending} onClick={() => connect.mutate()}>
-            Connect
-          </Button>
-        </ModalFooter>
-      </Modal>
+      <KeyConnectDialog workspace={workspace} provider={provider} isOpen={open} onOpenChange={setOpen} />
     </>
   );
 }

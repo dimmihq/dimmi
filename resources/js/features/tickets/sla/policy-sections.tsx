@@ -1,7 +1,7 @@
 /*
  * The cards of an SLA policy's editor, each editing the draft the page
  * saves in one go: its name, its targets with a switch each, the clock
- * (warning, business hours, pauses), the ticket types and priorities
+ * (warning, office hours, pauses), the ticket types and priorities
  * new tickets follow it for, and what a breach changes. Schedules, ticket
  * types and teams are picked from what the workspace holds.
  */

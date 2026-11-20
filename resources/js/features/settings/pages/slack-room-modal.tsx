@@ -1,8 +1,8 @@
 /*
  * One Slack channel's settings: who counts as the customer there, when
  * a message becomes a conversation, how the agent answers and how long
- * it waits, where new conversations are posted for the team, when an
- * automatic reply goes out, and joining matching channels on its own.
+ * it waits, where new conversations are posted for the team and when an
+ * automatic reply goes out.
  * A team-only channel never opens conversations, so its trigger and
  * agent settings step aside. Saving sends only what changed.
  */
@@ -331,13 +331,6 @@ export function RoomSettingsModal({
           {draft.mode === "internal" ? null : (
             <CustomerFields room={room} rooms={rooms} draft={draft} disabled={disabled} set={set} />
           )}
-          <Toggle
-            label="Join matching channels"
-            detail="Join new public channels named like this one by itself, with these settings."
-            on={draft.auto_join}
-            disabled={disabled}
-            onChange={(auto_join) => set({ auto_join })}
-          />
           {save.error ? <p className="text-body-2-regular text-text-error-primary">{save.error.message}</p> : null}
         </form>
       </ModalBody>

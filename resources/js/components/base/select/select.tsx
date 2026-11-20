@@ -53,6 +53,13 @@ import { useDismissOnOutsidePress, useTriggerToggle } from "@/utils/use-dismiss-
 
 export type SelectSize = "sm" | "md";
 
+/**
+ * `quiet` is the property-row trigger: the value reads as plain text, with
+ * no border, fill or shadow until hovered, and the chevron shows on hover.
+ * It hugs its content so a row of them aligns like text.
+ */
+export type SelectVariant = "default" | "quiet";
+
 const SelectSizeContext = createContext<SelectSize>("md");
 
 export interface SelectProps<T extends object>
@@ -66,6 +73,7 @@ export interface SelectProps<T extends object>
   popoverClassName?: string;
   /** `md` (default) or `sm` for compact/dense contexts (e.g. compact tables). */
   size?: SelectSize;
+  variant?: SelectVariant;
   children: ReactNode;
   items?: Iterable<T>;
   /** Customise the trigger's rendered value (e.g. a compact flag + dial code).
@@ -80,6 +88,7 @@ export function Select<T extends object>({
   triggerClassName,
   popoverClassName,
   size = "md",
+  variant = "default",
   children,
   items,
   renderValue,
@@ -107,7 +116,12 @@ export function Select<T extends object>({
       {...props}
       isOpen={isOpen}
       onOpenChange={(o) => allowOpenChange(o) && setIsOpen(o)}
-      className={cx("group flex flex-col", label ? "gap-1" : undefined, className)}
+      className={cx(
+        "group flex flex-col",
+        label ? "gap-1" : undefined,
+        variant === "quiet" && "-ms-1.5 min-w-0 max-w-full items-start",
+        className,
+      )}
     >
       {({ isOpen, isRequired }) => (
         <>
@@ -115,16 +129,26 @@ export function Select<T extends object>({
           <AriaButton
             ref={triggerRef}
             className={cx(
-              "flex w-full cursor-pointer items-center justify-between rounded-2lg",
-              "border border-border-button-default bg-background-primary-default shadow-xs",
-              "text-text-primary",
-              "transition-[background-color,border-color,box-shadow,padding,font-size] duration-200 ease",
-              "hover:bg-background-primary-hover hover:border-border-button-hover",
-              "outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-border-focus-ring",
-              "disabled:cursor-not-allowed disabled:bg-background-primary-disabled disabled:text-text-tertiary disabled:shadow-none",
-              size === "sm"
-                ? "gap-1 px-[7px] py-1 text-body-2-medium"
-                : "gap-1.5 px-2.5 py-2 text-body-medium",
+              "flex cursor-pointer items-center text-text-primary",
+              "outline-none focus-visible:ring-2 focus-visible:ring-border-focus-ring",
+              variant === "quiet"
+                ? [
+                    "group/trigger h-7 max-w-full min-w-0 gap-1 rounded-lg px-1.5 text-body-2-regular",
+                    "transition-colors duration-150 hover:bg-background-secondary-hover",
+                    "aria-expanded:bg-background-secondary-hover",
+                    "disabled:cursor-not-allowed disabled:text-text-tertiary",
+                  ]
+                : [
+                    "w-full justify-between rounded-2lg",
+                    "border border-border-button-default bg-background-primary-default shadow-xs",
+                    "transition-[background-color,border-color,box-shadow,padding,font-size] duration-200 ease",
+                    "hover:bg-background-primary-hover hover:border-border-button-hover",
+                    "focus-visible:ring-offset-2",
+                    "disabled:cursor-not-allowed disabled:bg-background-primary-disabled disabled:text-text-tertiary disabled:shadow-none",
+                    size === "sm"
+                      ? "gap-1 px-[7px] py-1 text-body-2-medium"
+                      : "gap-1.5 px-2.5 py-2 text-body-medium",
+                  ],
               triggerClassName,
             )}
           >
@@ -140,6 +164,9 @@ export function Select<T extends object>({
               className={cx(
                 "shrink-0 text-text-secondary transition-transform duration-200 ease",
                 size === "sm" ? "size-3.5" : "size-4",
+                variant === "quiet" &&
+                  "size-3.5 text-text-tertiary opacity-0 group-hover/trigger:opacity-100 group-focus-visible/trigger:opacity-100",
+                variant === "quiet" && isOpen && "opacity-100",
                 isOpen && "rotate-180",
               )}
             />

@@ -60,6 +60,7 @@ export function TagPicker({
   shortcut = false,
   label,
   size = "small",
+  quiet = false,
 }: {
   workspace: string;
   selected: Tag[];
@@ -68,6 +69,8 @@ export function TagPicker({
   shortcut?: boolean;
   label?: string;
   size?: "small" | "medium";
+  /* A small plus the size of a small tag, for a row of tags in a panel. */
+  quiet?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const [text, setText] = useState("");
@@ -92,9 +95,13 @@ export function TagPicker({
 
   return (
     <PopoverTrigger isOpen={open} onOpenChange={setOpen}>
-      <Button variant="secondary" size={size} leadingIcon={RiPriceTag3Line} aria-label={label}>
-        Add tag
-      </Button>
+      {quiet ? (
+        <Button variant="secondary" size="xs" iconOnly leadingIcon={RiAddLine} aria-label={label ?? "Add tag"} />
+      ) : (
+        <Button variant="secondary" size={size} leadingIcon={RiPriceTag3Line} aria-label={label}>
+          Add tag
+        </Button>
+      )}
       <Popover aria-label="Tags" placement="bottom end" className="w-64">
         <div className="flex flex-col gap-1">
           <Input

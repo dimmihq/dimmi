@@ -44,11 +44,23 @@ export function contextValues(context: ReplyContext): Record<string, string> {
 }
 
 /*
+ * cleanVariables undoes the Markdown escapes an editor puts inside a
+ * variable, such as the backslash before the underscore of
+ * contact.first\_name, so the variable reads as Liquid again.
+ */
+export function cleanVariables(markdown: string): string {
+  return markdown.replace(/\{\{[^{}]*\}\}/g, (variable) => variable.replace(/\\([\\`*_[\]~"])/g, "$1"));
+}
+
+/*
  * renderReply writes every variable in the Markdown as its value for the
  * context, or its fallback when the value is not known.
  */
 export function renderReply(markdown: string, context: ReplyContext): string {
   const values = contextValues(context);
 
-  return markdown.replace(anywhere, (_, key: string, fallback?: string) => values[key] || fallback || "");
+  return cleanVariables(markdown).replace(
+    anywhere,
+    (_, key: string, fallback?: string) => values[key] || fallback || "",
+  );
 }

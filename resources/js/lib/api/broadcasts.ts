@@ -1,6 +1,7 @@
 /*
  * Broadcasts: one-off messages to an audience, by email, in the
- * messenger or into customers' Slack channels. A draft changes field by
+ * messenger, into customers' Slack channels, or as a reply in each
+ * person's own conversation on whatever channel it uses. A draft changes field by
  * field until it is sent; then the server freezes who gets it and the
  * counts fill in as each message goes out, is opened, clicked or
  * answered. Reading takes broadcasts:read; writing and sending take
@@ -11,7 +12,14 @@ import { keepPreviousData, queryOptions } from "@tanstack/react-query";
 import type { AudienceRules } from "./audiences";
 import { request } from "./client";
 
-export type Channel = "email" | "chat" | "post" | "slack";
+export type Channel = "email" | "chat" | "post" | "slack" | "conversation";
+
+/*
+ * Hold is who a conversation broadcast leaves out: customers still
+ * waiting on an answer, and, for a tracker, those a teammate already
+ * answered since it last moved.
+ */
+export type Hold = "customer_waiting" | "team_replied";
 
 export type BroadcastStatus = "draft" | "scheduled" | "sending" | "paused" | "sent" | "stopped";
 
@@ -41,6 +49,35 @@ export interface BroadcastCounts {
   suppressed: number;
   skipped: number;
   recalled: number;
+}
+
+const noCounts: BroadcastCounts = {
+  total: 0,
+  queued: 0,
+  sent: 0,
+  delivered: 0,
+  opened: 0,
+  clicked: 0,
+  replied: 0,
+  reacted: 0,
+  reactions: 0,
+  unsubscribed: 0,
+  converted: 0,
+  failed: 0,
+  bounced: 0,
+  complained: 0,
+  suppressed: 0,
+  skipped: 0,
+  recalled: 0,
+};
+
+/*
+ * fullCounts fills every count a partial tally leaves out with zero: a
+ * broadcast that just started sending carries an empty tally until its
+ * first count comes in.
+ */
+export function fullCounts(counts: Partial<BroadcastCounts> | null | undefined): BroadcastCounts | null {
+  return counts ? { ...noCounts, ...counts } : null;
 }
 
 /*
@@ -77,6 +114,8 @@ export interface Broadcast {
   schedule_kind: ScheduleKind;
   scheduled_at: string | null;
   goal: BroadcastGoal | null;
+  ticket_id: string | null;
+  holds: Hold[];
   counts: BroadcastCounts | null;
   started_at: string | null;
   finished_at: string | null;
@@ -108,6 +147,7 @@ export interface BroadcastChanges {
   skip_frequency_cap?: boolean;
   schedule?: { kind: ScheduleKind; at?: string };
   goal?: BroadcastGoal | null;
+  holds?: Hold[];
 }
 
 /*
@@ -198,6 +238,9 @@ export interface BroadcastTopic {
   name: string;
   description: string;
   consent: "opt_in" | "opt_out";
+  subscribed_count: number;
+  unsubscribed_count: number;
+  broadcast_count: number;
 }
 
 /*
@@ -293,8 +336,23 @@ export function broadcastTopicsQuery(workspace: string) {
   });
 }
 
-export function createBroadcast(workspace: string, name: string, channel: Channel): Promise<Broadcast> {
-  return request<Broadcast>("POST", "/broadcasts", { name, channel }, { workspace });
+/*
+ * Opening is what a new draft can start with beyond its name and
+ * channel: the tracker a conversation broadcast answers for, and who it
+ * leaves out.
+ */
+export interface Opening {
+  ticket_id?: string;
+  holds?: Hold[];
+}
+
+export function createBroadcast(
+  workspace: string,
+  name: string,
+  channel: Channel,
+  opening: Opening = {},
+): Promise<Broadcast> {
+  return request<Broadcast>("POST", "/broadcasts", { name, channel, ...opening }, { workspace });
 }
 
 export function saveBroadcast(workspace: string, id: string, changes: BroadcastChanges): Promise<Broadcast> {

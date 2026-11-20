@@ -14,6 +14,7 @@ import { emailAddressesQuery } from "@/lib/api/email";
 import { eventsQuery } from "@/lib/api/events";
 import { integrationsQuery, type SlackRoom, slackRoomsQuery } from "@/lib/api/integrations";
 import { teamsQuery } from "@/lib/api/teams";
+import { ticketQuery } from "@/lib/api/tickets";
 import { membersQuery, workspaceQuery } from "@/lib/api/workspace";
 
 import type { Draft } from "./draft";
@@ -75,14 +76,18 @@ export function useCustomerRooms(workspace: string, enabled = true): { rooms: Sl
 export function useNames(
   workspace: string,
   channel: Channel,
-  draft: Pick<Draft, "audience_id" | "rules" | "room_ids" | "sender_id">,
+  draft: Pick<Draft, "audience_id" | "rules" | "room_ids" | "sender_id" | "ticket_id">,
 ): Names {
   const audiences = useAudiences(workspace);
+  const { data: tracker } = useQuery(ticketQuery(workspace, draft.ticket_id ?? ""));
   const members = useActiveMembers(workspace);
   const audience = audiences.find((one) => one.id === draft.audience_id)?.name;
   const sender = members.find((member) => member.id === draft.sender_id)?.user.name ?? "A teammate";
 
-  return { audience: audienceName(channel, draft, audience), sender };
+  const linked = tracker ? `customers linked to ${tracker.reference}` : null;
+  const named = audienceName(channel, draft, audience);
+
+  return { audience: linked ? (audience || draft.rules ? `${linked}, in ${named}` : linked) : named, sender };
 }
 
 function audienceName(

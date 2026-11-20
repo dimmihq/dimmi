@@ -13,10 +13,13 @@
  */
 import {
   RiAddLine,
+  RiArchiveLine,
   RiBuilding2Line,
   RiChat3Line,
+  RiDeleteBinLine,
   RiErrorWarningLine,
   RiFlashlightLine,
+  RiInboxUnarchiveLine,
   RiUserLine,
 } from "@remixicon/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -27,6 +30,7 @@ import { Button } from "@/components/base/buttons/button";
 import { AlertDialog } from "@/components/base/modal/modal";
 import { toast } from "@/components/base/toast/toast";
 import { usePermission } from "@/features/settings/inboxes";
+import { type RowAction, RowMenu } from "@/features/shell/row-menu";
 import {
   type AttributeDefinition,
   type AttributeOf,
@@ -43,7 +47,7 @@ import {
   updateEventSettings,
 } from "@/lib/api/events";
 import { definitionLine, eventLine, problemNames } from "../attributes";
-import { Action, Danger, Toggle } from "../controls";
+import { Toggle } from "../controls";
 import { Glyph, Item, Section, SettingsPage } from "../layout";
 import { SaveBar } from "../save-bar";
 import { failureText } from "../teams";
@@ -60,6 +64,16 @@ function useRefresh(workspace: string) {
     void queryClient.invalidateQueries({ queryKey: attributeProblemsQuery(workspace).queryKey });
   };
 }
+
+type RowAct = "archive" | "restore" | "delete";
+
+/*
+ * What a row's options menu offers: archiving while it is in use, and
+ * restoring or deleting once archived.
+ */
+const archiveAction: RowAction<RowAct> = { kind: "archive", label: "Archive", icon: RiArchiveLine };
+const restoreAction: RowAction<RowAct> = { kind: "restore", label: "Restore", icon: RiInboxUnarchiveLine };
+const deleteAction: RowAction<RowAct> = { kind: "delete", label: "Delete", icon: RiDeleteBinLine, danger: true };
 
 /*
  * Writable is what the messenger may write, flipped but not saved yet:
@@ -164,21 +178,25 @@ function DefinitionRow({
     >
       {canManage && definition.of === "contact" && !archived ? (
         <span className="flex items-center gap-2">
-          <span className="text-body-2-regular text-text-tertiary">Messenger</span>
+          <span className="text-body-2-regular text-text-tertiary">Set from your site</span>
           <Toggle
             key={`writable-${writable}`}
-            label={`Messenger may write ${definition.label}`}
+            label={`Your site may set ${definition.label}`}
             on={writable}
             onChange={(on) => draft.attribute(definition, on)}
           />
         </span>
       ) : null}
       {canManage ? (
-        <Action loading={change.isPending} onPress={() => change.mutate({ status: archived ? "active" : "archived" })}>
-          {archived ? "Restore" : "Archive"}
-        </Action>
+        <RowMenu
+          quiet
+          label={definition.label}
+          actions={archived ? [restoreAction, deleteAction] : [archiveAction]}
+          onPick={(act) =>
+            act === "delete" ? setConfirm(true) : change.mutate({ status: archived ? "active" : "archived" })
+          }
+        />
       ) : null}
-      {canManage && archived ? <Danger onPress={() => setConfirm(true)}>Delete</Danger> : null}
       <AlertDialog
         isOpen={confirm}
         onOpenChange={(open) => {
@@ -229,19 +247,22 @@ function EventRow({
     <Item mark={<Glyph icon={RiFlashlightLine} />} title={event.label} detail={eventLine(event)}>
       {canManage && !archived ? (
         <span className="flex items-center gap-2">
-          <span className="text-body-2-regular text-text-tertiary">Messenger</span>
+          <span className="text-body-2-regular text-text-tertiary">Send from your site</span>
           <Toggle
             key={`writable-${writable}`}
-            label={`Messenger may send ${event.label}`}
+            label={`Your site may send ${event.label}`}
             on={writable}
             onChange={(on) => draft.event(event, on)}
           />
         </span>
       ) : null}
       {canManage ? (
-        <Action loading={change.isPending} onPress={() => change.mutate({ status: archived ? "active" : "archived" })}>
-          {archived ? "Restore" : "Archive"}
-        </Action>
+        <RowMenu
+          quiet
+          label={event.label}
+          actions={archived ? [restoreAction] : [archiveAction]}
+          onPick={() => change.mutate({ status: archived ? "active" : "archived" })}
+        />
       ) : null}
     </Item>
   );
@@ -267,13 +288,13 @@ function AnyMessengerEvent({
   return (
     <Item
       mark={<Glyph icon={RiChat3Line} />}
-      title="Accept any event from the messenger"
-      detail="Off, the messenger may send only the events switched on below. On, it may send any name, and new ones are added here."
+      title="Accept any event from your site"
+      detail="Off, the messenger code on your site or app may send only the events switched on below. On, it may send any name, and new ones are added here."
     >
       {canManage && data ? (
         <Toggle
           key={`any-${on}`}
-          label="Accept any event from the messenger"
+          label="Accept any event from your site"
           on={on}
           onChange={(next) => draft.anyEvent(next, saved)}
         />
@@ -290,7 +311,7 @@ function Events({ workspace, canManage, draft }: { workspace: string; canManage:
       title="Events"
       description={
         'What customers did in your product, sent to POST /api/v1/contact-events or from the page with Dimmi("track"). ' +
-        "Switched on, the messenger may send an event too, though anyone can forge it. Archived events take no new ones."
+        "Switch on Send from your site to let the messenger code on your site or app send one too, in every messenger, though a visitor can fake it. Archived events take no new ones."
       }
       loading={isPending}
     >
@@ -368,7 +389,7 @@ export function AttributesSettings() {
           title={object === "contact" ? "People" : "Companies"}
           description={
             object === "contact"
-              ? "Switched on, the messenger may write the attribute too. Its value is then not trusted."
+              ? "Your server sets these through the API. Switch on Set from your site to let the messenger code on your site or app set one too, in every messenger. A visitor can fake a value set that way, so dimmi marks it not trusted."
               : undefined
           }
           loading={isPending}

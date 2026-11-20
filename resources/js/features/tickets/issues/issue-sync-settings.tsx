@@ -11,7 +11,7 @@
  * save bar sends them.
  */
 import { RiFileCopyLine } from "@remixicon/react";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Chip } from "@/components/base/badges/chip";
 import { IconButton } from "@/components/base/buttons/icon-button";
 import { Input } from "@/components/base/input/input";
@@ -21,22 +21,19 @@ import { Row, Section } from "@/features/settings/layout";
 import type { Integration } from "@/lib/api/integrations";
 import {
   type IssueList,
-  type IssueOption,
   type IssueSettings,
   type IssueSettingsChange,
+  issueKeys,
   issueOptionsQuery,
+  refreshIssueOptions,
 } from "@/lib/api/ticket-issues";
 import { ticketStatesQuery } from "@/lib/api/tickets";
 
 import type { IssueSyncDraft } from "./issue-sync-draft";
-import { defaultState, groupTint, isTool, type ToolKind, toolLook } from "./tools";
+import { QuietRefresh, StatusRow, TeamStatuses } from "./team-statuses";
+import { isTool, type ToolKind, toolLook } from "./tools";
 
 type Save = (change: IssueSettingsChange) => void;
-
-/*
- * defaultKey is the option that leaves a status on its default state.
- */
-const defaultKey = "default";
 
 /*
  * OptionSelect is a compact select fed by one of the tool's lists.
@@ -81,6 +78,38 @@ function OptionSelect({
   );
 }
 
+/*
+ * useRefreshLists pulls lists of the tool again and puts them where
+ * the pickers read them.
+ */
+function useRefreshLists(workspace: string, installation: string, provider: string, lists: IssueList[]) {
+  const client = useQueryClient();
+  const label = toolLook(provider).label;
+
+  return useMutation({
+    mutationFn: () => Promise.all(lists.map((list) => refreshIssueOptions(workspace, installation, list))),
+    onSuccess: (fresh) => {
+      lists.forEach((list, i) => {
+        client.setQueryData(issueKeys.options(workspace, installation, list, ""), fresh[i]);
+      });
+      toast.success(`Read again from ${label}.`);
+    },
+    onError: (error) => toast.error((error as Error).message),
+  });
+}
+
+/*
+ * webhookSteps say where in each key-connected tool its webhook is made
+ * and which events to send.
+ */
+const webhookSteps: Record<string, string> = {
+  incident_io:
+    "In incident.io, open Settings, Webhooks and add an endpoint with the address below. Subscribe to public_incident.incident_created_v2, incident_updated_v2 and incident_status_updated_v2.",
+  rootly:
+    "In Rootly, open Configuration, Webhooks and add an endpoint with the address below. Subscribe to the incident events and incident_event.created.",
+  pagerduty: "In PagerDuty, open Integrations, Generic Webhooks (v3) and add a subscription with the address below.",
+};
+
 function DeliverySection({
   settings,
   secret,
@@ -93,16 +122,26 @@ function DeliverySection({
   save: Save;
 }) {
   const appWide = settings.provider === "linear" || settings.provider === "jira";
+  const label = toolLook(settings.provider).label;
+  const steps = settings.needs_signing_secret ? webhookSteps[settings.provider] : undefined;
 
   return (
     <Section
       title="Deliveries"
-      description="Changes in the tool reach dimmi here, and are re-checked every 15 minutes."
+      description={
+        steps
+          ? `${steps} Changes are also re-checked every 15 minutes.`
+          : "Changes in the tool reach dimmi here, and are re-checked every 15 minutes."
+      }
     >
       <Row
-        label="Webhook address"
+        label={steps ? "1. Webhook address" : "Webhook address"}
         description={
-          appWide ? "dimmi's app delivers here; nothing to set up." : "Create a webhook in the tool pointing here."
+          appWide
+            ? "dimmi's app delivers here; nothing to set up."
+            : steps
+              ? `Where ${label} sends incident changes.`
+              : "Create a webhook in the tool pointing here."
         }
       >
         <span className="flex items-center gap-2">
@@ -120,11 +159,11 @@ function DeliverySection({
       </Row>
       {settings.needs_signing_secret ? (
         <Row
-          label="Signing secret"
+          label="2. Signing secret"
           description={
             settings.has_signing_secret
               ? "Set. Paste a new one to replace it."
-              : "Paste the secret the tool shows for the webhook. Deliveries are refused until it is set."
+              : `Copy it from the endpoint you added in ${label}. Deliveries are refused until it is set.`
           }
         >
           <span className="flex items-center gap-2">
@@ -149,6 +188,23 @@ function DeliverySection({
   );
 }
 
+/*
+ * defaultLists are the lists the defaults of an incident tool pick from.
+ */
+function defaultLists(provider: string, kind: ToolKind): IssueList[] {
+  if (kind !== "incidents") {
+    return [];
+  }
+
+  return (
+    {
+      incident_io: ["severities", "fields"] as IssueList[],
+      rootly: ["severities", "services"] as IssueList[],
+      pagerduty: ["services", "users", "severities"] as IssueList[],
+    }[provider] ?? ["severities"]
+  );
+}
+
 function DefaultsSection({
   workspace,
   settings,
@@ -165,9 +221,19 @@ function DefaultsSection({
   const look = toolLook(settings.provider);
   const id = settings.installation_id;
   const disabled = !canManage;
+  const lists = defaultLists(settings.provider, kind);
+  const refresh = useRefreshLists(workspace, id, settings.provider, lists);
 
   return (
-    <Section title={kind === "incidents" ? "Declaring from dimmi" : "New issues"}>
+    <Section
+      title={kind === "incidents" ? "Declaring from dimmi" : "New issues"}
+      description={kind === "incidents" ? "Picked first when declaring an incident from a ticket." : undefined}
+      action={
+        kind === "incidents" ? (
+          <QuietRefresh label="Refresh" busy={refresh.isPending} onPress={() => refresh.mutate()} />
+        ) : undefined
+      }
+    >
       {kind === "issues" ? (
         <Row
           label={`Default ${(look.team ?? "team").toLowerCase()}`}
@@ -224,6 +290,19 @@ function DefaultsSection({
           </Row>
         </>
       ) : null}
+      {settings.provider === "rootly" ? (
+        <Row label="Default service" description="The service a declared incident affects.">
+          <OptionSelect
+            workspace={workspace}
+            installation={id}
+            list="services"
+            label="Service"
+            value={settings.service_id}
+            disabled={disabled}
+            onChange={(service) => save({ service_id: service })}
+          />
+        </Row>
+      ) : null}
       {kind === "incidents" ? (
         <Row label="Default severity">
           <OptionSelect
@@ -238,7 +317,10 @@ function DefaultsSection({
         </Row>
       ) : null}
       {settings.provider === "incident_io" ? (
-        <Row label="Customer count field" description="A numeric custom field kept at the customers reached.">
+        <Row
+          label="Customer count field"
+          description="A number custom field dimmi keeps at the customers a ticket reaches."
+        >
           <OptionSelect
             workspace={workspace}
             installation={id}
@@ -254,89 +336,45 @@ function DefaultsSection({
   );
 }
 
-function StatusRow({
-  status,
-  picked,
-  fallback,
-  states,
-  disabled,
-  onPick,
-}: {
-  status: IssueOption;
-  picked: string;
-  fallback: string;
-  states: { id: string; name: string }[];
-  disabled: boolean;
-  onPick: (state: string) => void;
-}) {
-  return (
-    <Row
-      label={
-        <span className="flex items-center gap-2">
-          {status.name}
-          <Chip variant="caption" color={groupTint[status.group] ?? "gray"}>
-            {status.group || "status"}
-          </Chip>
-        </span>
-      }
-    >
-      <Select
-        aria-label={`State for ${status.name}`}
-        size="sm"
-        className="w-60"
-        isDisabled={disabled}
-        selectedKey={picked || defaultKey}
-        onSelectionChange={(key) => onPick(key && key !== defaultKey ? String(key) : "")}
-      >
-        <SelectItem id={defaultKey} textValue={`Default: ${fallback}`}>
-          {`Default: ${fallback}`}
-        </SelectItem>
-        {states.map((s) => (
-          <SelectItem key={s.id} id={s.id} textValue={s.name}>
-            {s.name}
-          </SelectItem>
-        ))}
-      </Select>
-    </Row>
-  );
-}
-
+/*
+ * StatusSection maps the tool's statuses to dimmi states: team by team
+ * for a tool whose workflows belong to its teams, else in one list.
+ */
 function StatusSection({
   workspace,
   settings,
-  kind,
   canManage,
   save,
 }: {
   workspace: string;
   settings: IssueSettings;
-  kind: ToolKind;
   canManage: boolean;
   save: Save;
 }) {
-  const parent = settings.provider === "linear" || settings.provider === "jira" ? settings.team_id : "";
-  const needsParent = parent === "" && (settings.provider === "linear" || settings.provider === "jira");
+  const byTeam = settings.provider === "linear" || settings.provider === "jira";
   const { data: statuses } = useQuery({
-    ...issueOptionsQuery(workspace, settings.installation_id, "states", parent),
-    enabled: !needsParent,
+    ...issueOptionsQuery(workspace, settings.installation_id, "states", ""),
+    enabled: !byTeam,
   });
   const { data: states } = useQuery(ticketStatesQuery(workspace));
   const live = (states ?? []).filter((s) => !s.archived_at);
+  const refresh = useRefreshLists(workspace, settings.installation_id, settings.provider, ["states"]);
+
+  if (byTeam) {
+    return <TeamStatuses workspace={workspace} settings={settings} canManage={canManage} save={save} />;
+  }
 
   return (
     <Section
       title="Statuses"
       description="Customers only ever see dimmi's states. Each status of the tool moves a linked ticket here."
+      action={<QuietRefresh label="Refresh" busy={refresh.isPending} onPress={() => refresh.mutate()} />}
     >
-      {needsParent ? (
-        <Row label="Pick a default team first" description="Statuses are read from that team's workflow." muted />
-      ) : null}
       {(statuses ?? []).map((status) => (
         <StatusRow
           key={status.id}
           status={status}
           picked={settings.states[status.id] ?? ""}
-          fallback={defaultState(kind, status, live)?.name ?? "Leave as is"}
           states={live}
           disabled={!canManage}
           onPick={(state) => {
@@ -423,7 +461,7 @@ export function IssueSyncSettings({
     <>
       <DeliverySection settings={settings} secret={draft.secret} canManage={canManage} save={props.save} />
       <DefaultsSection {...props} kind={kind} />
-      <StatusSection {...props} kind={kind} />
+      <StatusSection {...props} />
       {integration.provider === "github" ? <DeploySection {...props} /> : null}
     </>
   );

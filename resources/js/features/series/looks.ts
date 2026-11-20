@@ -4,6 +4,7 @@
  * read blue, timing and logic purple, AI rose and housekeeping neutral.
  * The steps offered when adding one are grouped the same way.
  */
+
 import {
   RiChat3Line,
   RiDoorOpenLine,
@@ -14,13 +15,13 @@ import {
   RiLoginCircleLine,
   RiMailLine,
   RiPriceTag3Line,
-  RiSlackLine,
   RiSparkling2Line,
   RiSplitCellsHorizontal,
   RiTimerLine,
   RiUserUnfollowLine,
   RiWebhookLine,
 } from "@remixicon/react";
+import { SlackMark } from "@/components/application/brand/slack-mark";
 
 import type { KindLook } from "@/features/automation/step-kinds";
 import type { NodeKind, SeriesStatus } from "@/lib/api/series";
@@ -30,7 +31,7 @@ export const nodeLook: Record<NodeKind, KindLook> = {
   email: { name: "Email", icon: RiMailLine, tint: "blue" },
   chat: { name: "Chat", icon: RiChat3Line, tint: "blue" },
   post: { name: "Post", icon: RiFileTextLine, tint: "blue" },
-  slack: { name: "Slack", icon: RiSlackLine, tint: "blue" },
+  slack: { name: "Slack", icon: SlackMark, tint: "neutral" },
   wait: { name: "Wait", icon: RiTimerLine, tint: "purple" },
   wait_for: { name: "Wait for", icon: RiHourglassLine, tint: "purple" },
   condition: { name: "Check", icon: RiGitBranchLine, tint: "purple" },

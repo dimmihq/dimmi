@@ -7,7 +7,7 @@
  */
 import { RiAddLine, RiSearchLine } from "@remixicon/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useNavigate, useSearch } from "@tanstack/react-router";
+import { useNavigate } from "@tanstack/react-router";
 import type { ColumnDef, RowSelectionState } from "@tanstack/react-table";
 import { useDeferredValue, useState } from "react";
 
@@ -30,7 +30,6 @@ import {
 } from "@/lib/api/customers";
 import { formatDate, formatNumber } from "@/lib/i18n/format";
 
-import { CompanyDrawer } from "./company-drawer";
 import { CustomersActions } from "./frame";
 import { ImportButton } from "./import-dialog";
 import { useWorkspace } from "./names";
@@ -153,7 +152,6 @@ function totalText(total: number | undefined): string {
 export function CompaniesPage() {
   const workspace = useWorkspace();
   const navigate = useNavigate();
-  const { company: open } = useSearch({ strict: false }) as { company?: string };
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
   const [selection, setSelection] = useState<RowSelectionState>({});
@@ -162,8 +160,7 @@ export function CompaniesPage() {
   const list = useQuery({ ...companiesPageQuery(workspace, q, page), enabled: workspace !== "" });
   const companies = list.data?.items ?? [];
   const total = list.data?.total;
-  const show = (company: string | undefined) =>
-    navigate({ to: ".", search: company ? { company } : {}, replace: company === undefined });
+  const show = (company: string) => navigate({ to: "/d/customers/companies/$company", params: { company } });
 
   return (
     <>
@@ -230,7 +227,6 @@ export function CompaniesPage() {
           }
         }}
       />
-      <CompanyDrawer id={open} onClose={() => show(undefined)} />
     </>
   );
 }

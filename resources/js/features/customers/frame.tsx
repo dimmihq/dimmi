@@ -11,11 +11,12 @@
  * drawn for that surface.
  */
 import { useQuery } from "@tanstack/react-query";
-import { Outlet, useLocation, useNavigate } from "@tanstack/react-router";
+import { useLocation, useNavigate } from "@tanstack/react-router";
 import { createContext, type ReactNode, useContext, useState } from "react";
 import { createPortal } from "react-dom";
 
 import { Tab, TabList, Tabs } from "@/components/base/tabs/tabs";
+import { PageOutlet } from "@/features/layout/page-outlet";
 import { PageHeader, Panel, ScrollArea } from "@/features/shell/page";
 import { callerQuery } from "@/lib/api/workspace";
 
@@ -90,7 +91,7 @@ export function CustomersLists() {
       <Sections />
       <ScrollArea ground>
         <ActionsSlot.Provider value={slot}>
-          <Outlet />
+          <PageOutlet className="h-full" />
         </ActionsSlot.Provider>
       </ScrollArea>
     </Panel>

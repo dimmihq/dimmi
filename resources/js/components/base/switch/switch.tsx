@@ -14,7 +14,7 @@ import { cx, sortCx } from "@/utils/cx";
  *   size    sm 28×16 · md 42×24 · lg 56×32   (track w×h; thumb = h − 2·pad)
  *
  * Anatomy (all values 1:1 with Figma):
- *   track   off → bg background/tertiary/default (#ebebeb, no border)
+ *   track   off → bg switch/off/track (#ebebeb light; a shade above every dark surface)
  *           on  → Button/Primary gradient (blue/500 → blue/600) + an inset
  *                 ring + top highlight that scales with size. lg is exactly
  *                 the shared `--shadow-checkbox-selected` token; md/sm scale
@@ -102,7 +102,7 @@ export function SwitchTrack({
         s.trackRadius[shape],
         state.isSelected
           ? cx("bg-linear-to-b from-accent-500 to-accent-600", s.onShadow)
-          : "bg-background-tertiary-default",
+          : "bg-switch-off-track",
         state.isDisabled && "opacity-50",
         state.isFocusVisible && "ring-2 ring-border-focus-ring ring-offset-2",
       )}

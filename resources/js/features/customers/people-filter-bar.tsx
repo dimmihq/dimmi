@@ -44,7 +44,7 @@ import {
 
 const row = cx(
   "flex min-h-9 w-full items-center gap-2.5 rounded-xl px-2 text-start text-body-medium text-text-primary",
-  "outline-none hover:bg-background-secondary-hover focus-visible:bg-background-secondary-hover",
+  "outline-none hover:bg-background-primary-hover focus-visible:bg-background-primary-hover",
 );
 
 function Search({ value, onChange, label }: { value: string; onChange: (next: string) => void; label: string }) {
@@ -108,7 +108,7 @@ function Picks({
             size="sm"
             isSelected={filter.values.includes(choice.id)}
             onChange={() => toggle(choice)}
-            className="min-h-9 rounded-xl px-2 hover:bg-background-secondary-hover"
+            className="min-h-9 w-full cursor-pointer items-center rounded-xl px-2 transition-colors duration-150 hover:bg-background-primary-hover [&>span:first-child]:mt-0"
           >
             <span className="flex min-w-0 items-center gap-2">
               {choice.leading}
@@ -240,7 +240,7 @@ function Header({ title, icon: Icon, onBack }: { title: string; icon?: FilterFie
           type="button"
           aria-label="Back"
           onClick={onBack}
-          className="grid size-7 place-items-center rounded-lg text-foreground-icon-secondary outline-none hover:bg-background-secondary-hover focus-visible:ring-2 focus-visible:ring-border-focus-ring"
+          className="grid size-7 place-items-center rounded-lg text-foreground-icon-secondary outline-none hover:bg-background-primary-hover focus-visible:ring-2 focus-visible:ring-border-focus-ring"
         >
           <RiArrowLeftSLine aria-hidden className="size-4 rtl:-scale-x-100" />
         </button>

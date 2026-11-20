@@ -1,7 +1,7 @@
 /*
  * The feature requests customers send, the way the team triages them: a
- * pane of views by the workspace's statuses and approval, with the switch
- * that opens the portal to customers, beside the requests a numbered page
+ * pane of views by the workspace's statuses and approval, with links to
+ * the settings and the open board, beside the requests a numbered page
  * at a time, narrowed to a board, searched and sorted by trending, top or
  * new. Opening a request shows its votes and conversation.
  */
@@ -13,7 +13,7 @@ import {
   RiSettings4Line,
   RiShieldCheckLine,
 } from "@remixicon/react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { Link, useNavigate, useSearch } from "@tanstack/react-router";
 import type { ColumnDef } from "@tanstack/react-table";
 import { type ComponentType, useRef, useState } from "react";
@@ -23,8 +23,6 @@ import { DataTable } from "@/components/application/data-table/data-table";
 import { Button } from "@/components/base/buttons/button";
 import { Input } from "@/components/base/input/input";
 import { Select, SelectItem } from "@/components/base/select/select";
-import { Switch } from "@/components/base/switch/switch";
-import { toast } from "@/components/base/toast/toast";
 import { useAccount } from "@/features/settings/use-account";
 import { PageHeader, Panel, ScrollArea } from "@/features/shell/page";
 import { PaneGroup, PaneHandle } from "@/features/shell/resizable";
@@ -41,7 +39,7 @@ import {
   postsPerPage,
   postsQuery,
 } from "@/lib/api/feedback";
-import { type HelpCenter, helpCentersQuery, updateHelpCenter } from "@/lib/api/help-centers";
+import { type HelpCenter, helpCentersQuery } from "@/lib/api/help-centers";
 import { formatDate, formatNumber } from "@/lib/i18n/format";
 import { cx } from "@/utils/cx";
 
@@ -96,48 +94,26 @@ function Pick({
 }
 
 /*
- * BoardSwitches opens the portal to customers, saved at once on the help
- * center, and leads to the settings of its boards, which say who sees
- * each and whether it holds posts for approval.
+ * BoardLinks lead out of the views: to the settings, where the portal
+ * is opened to customers and its boards and statuses are set, and to
+ * the board itself once it is open.
  */
-function BoardSwitches({ workspace, center }: { workspace: string; center: HelpCenter }) {
-  const client = useQueryClient();
-  const save = useMutation({
-    mutationFn: (change: { feedback_board?: boolean }) =>
-      updateHelpCenter(workspace, center.id, { settings: { ...center.settings, ...change } }),
-    onSuccess: () => client.invalidateQueries({ queryKey: helpCentersQuery(workspace).queryKey }),
-    onError: (error) => toast.error(error.message),
-  });
+function BoardLinks({ center }: { center: HelpCenter }) {
+  const icon = "size-4 shrink-0 text-foreground-icon-secondary opacity-50";
 
   return (
-    <div className="mx-1 mt-4 flex flex-col gap-3 rounded-2xl bg-background-primary-default p-3 shadow-xs ring-1 ring-inset ring-border-button-default">
-      <Switch
-        size="sm"
-        isSelected={center.settings.feedback_board ?? false}
-        onChange={(on) => save.mutate({ feedback_board: on })}
-      >
-        Open to customers
-      </Switch>
-      <Link
-        to="/d/settings/$section"
-        params={{ section: "feedback" }}
-        className="flex items-center gap-1 text-body-2-medium text-text-secondary hover:text-text-primary"
-      >
-        <RiSettings4Line aria-hidden className="size-4" />
-        Boards and statuses
+    <>
+      <Link to="/d/settings/$section" params={{ section: "feedback" }} className={rowClass(false)}>
+        <RiSettings4Line aria-hidden className={icon} />
+        <span className="min-w-0 flex-1 truncate text-start">Settings</span>
       </Link>
       {center.settings.feedback_board ? (
-        <a
-          href={`${center.url}/feedback`}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="flex items-center gap-1 text-body-2-medium text-text-secondary hover:text-text-primary"
-        >
-          <RiExternalLinkLine aria-hidden className="size-4" />
-          View the board
+        <a href={`${center.url}/feedback`} target="_blank" rel="noopener noreferrer" className={rowClass(false)}>
+          <RiExternalLinkLine aria-hidden className={icon} />
+          <span className="min-w-0 flex-1 truncate text-start">View the board</span>
         </a>
       ) : null}
-    </div>
+    </>
   );
 }
 
@@ -210,7 +186,7 @@ const widths = { request: "w-[48%]", votes: "w-[10%]", status: "w-[20%]", author
 
 /*
  * FeedbackViews is the pane of views by status and approval, with the
- * board's switches under them.
+ * links to the settings and the board under them.
  */
 function FeedbackViews({
   workspace,
@@ -260,7 +236,7 @@ function FeedbackViews({
             current={view.kind === "pending"}
             onPress={() => onView("pending")}
           />
-          {center ? <BoardSwitches workspace={workspace} center={center} /> : null}
+          {center ? <BoardLinks center={center} /> : null}
         </nav>
       </ScrollArea>
     </Panel>

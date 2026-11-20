@@ -92,7 +92,7 @@ export function TrackerDialog({
         title={mode === "pick" ? "Add to tracker" : "New tracker"}
         description={
           mode === "pick"
-            ? "Link this conversation to the problem it reports. One update then reaches everyone."
+            ? "Link this conversation to the problem it reports."
             : "Start a tracker for a problem many customers report, with this conversation on it."
         }
       />

@@ -147,36 +147,50 @@ export function dueIn(at: string, now = Date.now()): { text: string; late: boole
 }
 
 /*
- * eventText says what one history entry changed.
+ * Wording writes one kind of history entry: `did` puts whoever did it
+ * in front, or uses the second wording when nobody is named.
+ */
+type Wording = (data: TicketEvent["data"], did: (phrase: string, alone: string) => string) => string;
+
+const text = (value: unknown) => String(value ?? "");
+
+const wordings: Record<string, Wording> = {
+  created: (_, did) => did("created the ticket", "Ticket created"),
+  state: (d, did) => {
+    const move = `from ${text(d.from_name)} to ${text(d.to_name)}`;
+    return did(`moved it ${move}`, `Moved ${move}`);
+  },
+  note: (d) => text(d.body),
+  type: (_, did) => did("changed the type", "Type changed"),
+  assign: (_, did) => did("changed who holds it", "Holder changed"),
+  link: (d, did) =>
+    d.conversation_id ? did("linked a conversation", "Conversation linked") : did("linked a ticket", "Ticket linked"),
+  unlink: (_, did) => did("removed a link", "Link removed"),
+  close_loop: () => "The work behind it is done: close the loop",
+  customer_notified: (d) =>
+    d.label ? `The customer was told “${text(d.label)}”` : "The customer was told the new state",
+  update: (d, did) => {
+    const changes = (d.changes ?? {}) as Record<string, { to?: unknown }>;
+    const what = Object.entries(changes)
+      .map(([key, c]) => `${key.replace(/^fields\./, "")} to ${fieldText(c.to) || "nothing"}`)
+      .join(", ");
+    return did(`changed ${what}`, `Changed ${what}`);
+  },
+  issue_linked: (d, did) => did(`linked issue ${text(d.key)}`, `Issue ${text(d.key)} linked`),
+  issue_updated: (d) =>
+    d.from_status
+      ? `${text(d.key)} moved from ${text(d.from_status)} to ${text(d.status)}`
+      : `${text(d.key)} is now ${text(d.status)}`,
+};
+
+/*
+ * eventText says in a sentence what one history entry records, naming
+ * who did it when the entry knows.
  */
 export function eventText(event: TicketEvent): string {
-  const d = event.data;
-  switch (event.kind) {
-    case "created":
-      return "Created the ticket";
-    case "state":
-      return `Moved from ${String(d.from_name ?? "")} to ${String(d.to_name ?? "")}`;
-    case "note":
-      return String(d.body ?? "");
-    case "type":
-      return "Changed the type";
-    case "assign":
-      return "Changed who holds it";
-    case "link":
-      return "Linked a ticket or conversation";
-    case "unlink":
-      return "Removed a link";
-    case "close_loop":
-      return "The work behind it is done: close the loop";
-    case "customer_notified":
-      return "Told the customer the new state";
-    case "update": {
-      const changes = (d.changes ?? {}) as Record<string, { to?: unknown }>;
-      return `Changed ${Object.entries(changes)
-        .map(([key, c]) => `${key.replace(/^fields\./, "")} to ${fieldText(c.to) || "nothing"}`)
-        .join(", ")}`;
-    }
-  }
+  const actor = event.data.actor_name ? String(event.data.actor_name) : null;
+  const did = (phrase: string, alone: string) => (actor ? `${actor} ${phrase}` : alone);
+  const wording = wordings[event.kind];
 
-  return event.kind.replace(/_/g, " ");
+  return wording ? wording(event.data, did) : event.kind.replace(/_/g, " ");
 }

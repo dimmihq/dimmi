@@ -182,7 +182,7 @@ export function AgentComposer({
         <div className="flex items-center gap-3">
           <StatusItem
             icon={RiSparklingLine}
-            label={messageCount === 0 ? "New chat" : `${messageCount} messages`}
+            label={messageCount === 0 ? "New chat" : `${messageCount} ${messageCount === 1 ? "message" : "messages"}`}
           />
         </div>
       </div>

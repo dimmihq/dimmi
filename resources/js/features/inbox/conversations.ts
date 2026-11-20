@@ -7,6 +7,7 @@ import { useSuspenseQuery } from "@tanstack/react-query";
 import type { ActionCall } from "@/features/ai/actions/api";
 import { actionCallOf, callEventText, callOfEvent, isOpen } from "@/features/ai/actions/format";
 import { useCurrentWorkspace } from "@/features/shell/workspace";
+import { toolByLabel } from "@/features/tickets/issues/tools";
 import { meQuery } from "@/lib/api/auth";
 import type {
   Attachment,
@@ -105,6 +106,8 @@ export type ThreadEntry =
       reactions?: Reaction[];
       files: Attachment[];
       call?: ActionCall;
+      broadcast?: { id: string; name: string };
+      tool?: string;
     }
   | { kind: "event"; id: string; at: string; iso?: string; text: string }
   | { kind: "call"; id: string; at: string; iso?: string; call: ActionCall };
@@ -117,6 +120,28 @@ const statusWords: Record<string, string> = {
   "conversation.marked_spam": "marked the conversation as spam",
   "conversation.unmarked_spam": "took the conversation out of spam",
   "conversation.updated": "updated the conversation",
+  "conversation.ticket_created": "turned the conversation into a ticket",
+};
+
+/*
+ * handoffWords says why the agent handed a conversation over, by the
+ * reason the handoff recorded.
+ */
+const handoffWords: Record<string, string> = {
+  customer_requested: "the customer asked for a person",
+  unknown: "it had no answer",
+  unknown_streak: "it had no answer several times",
+  max_replies: "it reached its reply limit",
+  conversation_cost: "it reached its cost limit",
+  frustration: "the customer seemed frustrated",
+  feedback: "the customer said the answer did not help",
+  abusive: "the message was abusive",
+  safety: "the topic needs a person",
+  unsupported_language: "it does not answer in this language",
+  asked_for_human: "the customer asked for a person",
+  no_answer: "it had no answer",
+  low_confidence: "it was not sure of its answer",
+  sensitive_topic: "the topic needs a person",
 };
 
 /*
@@ -132,9 +157,43 @@ function renamedTo(event: TimelineEvent): string | null {
 }
 
 /*
+ * handoffText says that the agent handed the conversation over, and why
+ * when the reason is known; null for any other event.
+ */
+function handoffText(event: TimelineEvent): string | null {
+  if (event.name !== "ai.handoff_requested") {
+    return null;
+  }
+  const agent = event.actor.type === "agent" && event.actor.name ? event.actor.name : "The AI agent";
+  const why = handoffWords[event.reason ?? ""];
+
+  return `${agent} handed the conversation to the team${why ? `: ${why}` : ""}`;
+}
+
+/*
+ * ticketText names the ticket a conversation became; null for any other
+ * event.
+ */
+function ticketText(event: TimelineEvent): string | null {
+  if (event.name !== "conversation.ticket_created" || !event.reference) {
+    return null;
+  }
+
+  return `${event.actor.name || "dimmi"} turned the conversation into ticket ${event.reference}`;
+}
+
+/*
  * eventText says in words what an event entry records.
  */
 export function eventText(event: TimelineEvent): string {
+  return handoffText(event) ?? ticketText(event) ?? changeText(event);
+}
+
+/*
+ * changeText words a change to the conversation itself: who holds it,
+ * its priority, subject, tags and status.
+ */
+function changeText(event: TimelineEvent): string {
   const actor = event.actor.name || "dimmi";
   if (event.name === "conversation.assigned" && typeof event.to !== "string") {
     const to = event.to?.member?.name ?? event.to?.team?.name;
@@ -257,6 +316,7 @@ export function toEntry(message: Message): ThreadEntry {
     deletedAtSource: Boolean(message.source_deleted_at),
     files: filesOf(message),
     ...(call ? { call } : {}),
+    ...(message.broadcast ? { broadcast: message.broadcast } : {}),
   } as const;
   const redacted = message.redactions?.reduce((total, hit) => total + hit.count, 0);
 
@@ -266,14 +326,25 @@ export function toEntry(message: Message): ThreadEntry {
 type SaidFields = Omit<Extract<ThreadEntry, { author: string }>, "kind">;
 
 /*
+ * toolOf names the linked tool a note came from, such as a comment
+ * synced from Linear, which dimmi writes in the tool's name.
+ */
+export function toolOf(authorType: string, name: string): string | undefined {
+  return authorType === "system" || authorType === "integration" ? toolByLabel(name) : undefined;
+}
+
+/*
  * byAuthor finishes a said entry by who wrote it: a note keeps its
  * mentions and reactions, and a reply to the customer when they saw it.
  */
 function byAuthor(message: Message, said: SaidFields): ThreadEntry {
   if (message.type === "note") {
+    const tool = toolOf(message.author.type, message.author.name);
+
     return {
       kind: "note",
       ...said,
+      ...(tool ? { tool } : {}),
       edited: Boolean(message.edited_at),
       mentions: message.mentions ?? [],
       reactions: message.reactions ?? [],

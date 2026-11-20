@@ -12,7 +12,6 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useBlocker } from "@tanstack/react-router";
 import { useState } from "react";
 import { parseColor } from "react-aria-components";
-
 import { Button } from "@/components/base/buttons/button";
 import { ColorWell } from "@/components/base/color-picker/color-picker";
 import { Input } from "@/components/base/input/input";
@@ -24,6 +23,7 @@ import { tagPalette } from "@/features/inbox/tags/tag-colors";
 import { TagIconPicker } from "@/features/inbox/tags/tag-icon-picker";
 import { createTag, deleteTag, type ListedTag, tagsQuery, updateTag } from "@/lib/api/tags";
 import { callerQuery } from "@/lib/api/workspace";
+import { countOf as counted } from "@/lib/i18n/format";
 import { Action } from "../controls";
 import { SettingsPage } from "../layout";
 import { placeholders } from "../placeholders";
@@ -184,7 +184,7 @@ function DeleteTagDialog({ tag, onClose }: { tag: ListedTag; onClose: () => void
         }
       }}
       title={`Delete ${tag.name}?`}
-      description={`It comes off ${counts?.conversations ?? 0} conversations, ${counts?.contacts ?? 0} people and ${counts?.companies ?? 0} companies. This cannot be undone.`}
+      description={`It comes off ${counted(counts?.conversations ?? 0, "conversation", "conversations")}, ${counted(counts?.contacts ?? 0, "person", "people")} and ${counted(counts?.companies ?? 0, "company", "companies")}. This cannot be undone.`}
       confirmLabel="Delete tag"
       onConfirm={() => remove.mutateAsync()}
     />

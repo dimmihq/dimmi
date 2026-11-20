@@ -1,21 +1,27 @@
 /*
- * One ticket field as a teammate fills it in, in the panel, the convert
- * dialog and the ticket page: the control fits the field's data type,
+ * One ticket field as a teammate fills it in. In the convert dialog it
+ * is a labelled form field; in the details panel and on the ticket page
+ * it is a row whose value is edited in place. Either way the control
+ * fits the field's data type,
  * required ones are marked, the AI's suggestion shows under it with a
  * button that keeps it, and a value the server refused shows its reason
  * in place. Teammates are picked from the workspace's members, never
  * typed.
  */
-import { RiSparkling2Line } from "@remixicon/react";
+import { RiCheckLine, RiSparkling2Line } from "@remixicon/react";
 import { useQuery } from "@tanstack/react-query";
 
 import { LinkButton } from "@/components/base/buttons/link-button";
 import { Checkbox } from "@/components/base/checkbox/checkbox";
+import { Dropdown, DropdownItem, DropdownPopover, DropdownTrigger } from "@/components/base/dropdown/dropdown";
 import { Input } from "@/components/base/input/input";
 import { Select, SelectItem } from "@/components/base/select/select";
 import { Textarea } from "@/components/base/textarea/textarea";
+import { quiet } from "@/features/inbox/customer/quiet";
+import { QuietTextarea, Row } from "@/features/inbox/customer/rows";
 import type { TicketField } from "@/lib/api/tickets";
 import { membersQuery } from "@/lib/api/workspace";
+import { cx } from "@/utils/cx";
 
 import { fieldText } from "./labels";
 import { filled } from "./settings/form";
@@ -73,6 +79,7 @@ export function FieldInput({
   error,
   purpose,
   disabled,
+  inline = false,
   onChange,
   onAccept,
 }: {
@@ -83,9 +90,58 @@ export function FieldInput({
   error?: string;
   purpose?: "create" | "resolve";
   disabled?: boolean;
+  /* A row in a details list, its value edited in place, instead of a labelled form field. */
+  inline?: boolean;
   onChange: (value: unknown) => void;
   onAccept?: () => void;
 }) {
+  const extras = (
+    <>
+      {filled(suggestion) && fieldText(suggestion) !== fieldText(value) ? (
+        <Suggestion value={suggestion} onAccept={onAccept} />
+      ) : null}
+      {error ? (
+        <span role="alert" className="text-caption-1-medium text-text-error-primary">
+          {error}
+        </span>
+      ) : null}
+    </>
+  );
+
+  if (inline) {
+    const needed = field.required_create || field.required_resolve;
+
+    const name = (
+      <span className="truncate" title={needed ? `${field.label}, required` : field.label}>
+        {field.label}
+        {needed ? <span className="text-text-tertiary"> *</span> : null}
+      </span>
+    );
+    const control = (
+      <InlineControl workspace={workspace} field={field} value={value} disabled={disabled} onChange={onChange} />
+    );
+
+    /* Long text gets the panel's whole width under its label: beside it, several lines read as a cramped box. */
+    if (field.data_type === "long_text") {
+      return (
+        <div className="flex flex-col pb-1" data-field={field.key}>
+          <dt className="flex min-h-8 items-center text-body-2-regular text-text-tertiary">{name}</dt>
+          <dd className="flex min-w-0 flex-col gap-0.5">
+            {control}
+            {extras}
+          </dd>
+        </div>
+      );
+    }
+
+    return (
+      <div className="flex flex-col" data-field={field.key}>
+        <Row label={name}>{control}</Row>
+        <div className="flex flex-col gap-0.5 ps-35 empty:hidden">{extras}</div>
+      </div>
+    );
+  }
+
   const label = (
     <span className="flex items-center gap-2">
       {field.label}
@@ -103,15 +159,144 @@ export function FieldInput({
         disabled={disabled}
         onChange={onChange}
       />
-      {filled(suggestion) && fieldText(suggestion) !== fieldText(value) ? (
-        <Suggestion value={suggestion} onAccept={onAccept} />
-      ) : null}
-      {error ? (
-        <span role="alert" className="text-caption-1-medium text-text-error-primary">
-          {error}
-        </span>
-      ) : null}
+      {extras}
     </div>
+  );
+}
+
+const empty = "Empty";
+const yesNo = [
+  { id: "true", name: "Yes" },
+  { id: "false", name: "No" },
+];
+
+/*
+ * InlineControl is the field's value as a details row shows it, edited
+ * where it stands.
+ */
+function InlineControl({
+  workspace,
+  field,
+  value,
+  disabled,
+  onChange,
+}: {
+  workspace: string;
+  field: TicketField;
+  value: unknown;
+  disabled?: boolean;
+  onChange: (value: unknown) => void;
+}) {
+  switch (field.data_type) {
+    case "long_text":
+      return (
+        <QuietTextarea
+          aria-label={field.label}
+          placeholder={empty}
+          isDisabled={disabled}
+          value={String(value ?? "")}
+          onChange={(next) => onChange(next === "" ? null : next)}
+        />
+      );
+    case "single_choice":
+      return (
+        <Select
+          aria-label={field.label}
+          size="sm"
+          variant="quiet"
+          placeholder={empty}
+          isDisabled={disabled}
+          selectedKey={typeof value === "string" ? value : null}
+          onSelectionChange={(key) => onChange(key === null ? null : String(key))}
+        >
+          {field.options.map((o) => (
+            <SelectItem key={o} id={o} textValue={o}>
+              {o}
+            </SelectItem>
+          ))}
+        </Select>
+      );
+    case "multiple_choice":
+      return <InlineChoices field={field} value={value} disabled={disabled} onChange={onChange} />;
+    case "boolean":
+      return (
+        <Select
+          aria-label={field.label}
+          size="sm"
+          variant="quiet"
+          placeholder={empty}
+          isDisabled={disabled}
+          selectedKey={typeof value === "boolean" ? String(value) : null}
+          onSelectionChange={(key) => onChange(key === null ? null : key === "true")}
+        >
+          {yesNo.map((choice) => (
+            <SelectItem key={choice.id} id={choice.id} textValue={choice.name}>
+              {choice.name}
+            </SelectItem>
+          ))}
+        </Select>
+      );
+    case "member":
+      return <MemberPick workspace={workspace} value={value} disabled={disabled} inline onChange={onChange} />;
+    default:
+      return (
+        <Input
+          aria-label={field.label}
+          size="small"
+          placeholder={empty}
+          isDisabled={disabled}
+          className="-ms-1.5 min-w-0 flex-1"
+          fieldClassName="bg-transparent hover:bg-background-secondary-hover focus-within:bg-background-tertiary-default"
+          inputClassName="text-body-2-regular"
+          type={field.data_type === "date" ? "date" : "text"}
+          inputMode={["number", "decimal", "currency"].includes(field.data_type) ? "decimal" : undefined}
+          value={value === null || value === undefined ? "" : String(value)}
+          onChange={(next) => onChange(readValue(field, next))}
+        />
+      );
+  }
+}
+
+/*
+ * InlineChoices shows the picked options as one line of text that opens
+ * the list to tick and untick them.
+ */
+function InlineChoices({
+  field,
+  value,
+  disabled,
+  onChange,
+}: {
+  field: TicketField;
+  value: unknown;
+  disabled?: boolean;
+  onChange: (value: unknown) => void;
+}) {
+  const picked = Array.isArray(value) ? value.map(String) : [];
+
+  return (
+    <Dropdown>
+      <DropdownTrigger aria-label={field.label} isDisabled={disabled} className={quiet}>
+        <span className={cx("truncate", picked.length === 0 && "text-text-tertiary")}>
+          {picked.length === 0 ? empty : picked.join(", ")}
+        </span>
+      </DropdownTrigger>
+      <DropdownPopover aria-label={field.label} className="w-56 p-1.5">
+        {field.options.map((o) => (
+          <DropdownItem
+            key={o}
+            selected={picked.includes(o)}
+            onSelect={() => onChange(picked.includes(o) ? picked.filter((v) => v !== o) : [...picked, o])}
+            className="px-2 py-1.5 text-body-2-medium"
+          >
+            <span className="min-w-0 flex-1 truncate">{o}</span>
+            {picked.includes(o) ? (
+              <RiCheckLine aria-hidden className="size-4 shrink-0 text-foreground-icon-secondary" />
+            ) : null}
+          </DropdownItem>
+        ))}
+      </DropdownPopover>
+    </Dropdown>
   );
 }
 
@@ -222,21 +407,25 @@ function MemberPick({
   value,
   label,
   disabled,
+  inline = false,
   onChange,
 }: {
   workspace: string;
   value: unknown;
-  label: React.ReactNode;
+  label?: React.ReactNode;
   disabled?: boolean;
+  inline?: boolean;
   onChange: (value: unknown) => void;
 }) {
   const { data: members = [] } = useQuery({ ...membersQuery(workspace), enabled: workspace !== "" });
 
   return (
     <Select
-      label={label}
+      label={inline ? undefined : label}
+      aria-label={inline ? "Teammate" : undefined}
+      variant={inline ? "quiet" : "default"}
       size="sm"
-      placeholder="Pick a teammate"
+      placeholder={inline ? empty : "Pick a teammate"}
       isDisabled={disabled}
       selectedKey={typeof value === "string" ? value : null}
       onSelectionChange={(key) => onChange(key === null ? null : String(key))}

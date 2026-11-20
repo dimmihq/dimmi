@@ -113,7 +113,7 @@ it.describe("the inbox", () => {
     await expect(page.getByText(`${person.name} assigned the conversation to ${person.name}`)).toBeVisible();
 
     await details.getByRole("button", { name: /Assignee/ }).click();
-    await page.getByRole("option", { name: "Unassigned" }).click();
+    await page.getByRole("dialog", { name: "Assign to" }).getByRole("button", { name: "Unassigned" }).click();
     await expect(page.getByText(`${person.name} unassigned the conversation`)).toBeVisible();
 
     await act("Mark as done");

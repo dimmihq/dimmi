@@ -25,7 +25,9 @@ import { cx, sortCx } from "@/utils/cx";
  *   </Accordion>
  *
  * Variants: `divided` (hairlines between rows), `contained` (the landing
- * FAQ's tray of cards), and `separated` (one bordered card per item).
+ * FAQ's tray of cards), `separated` (one bordered card per item), and
+ * `plain` (Dimmi): headings with nothing drawn between them, for a details
+ * panel that reads as one list.
  *
  * Motion follows the agent limits card and Tree View: the panel's height
  * eases open over 300ms on cubic-bezier(0.22, 1, 0.36, 1) while its content
@@ -37,7 +39,7 @@ import { cx, sortCx } from "@/utils/cx";
 
 type IconComponent = ComponentType<{ className?: string; "aria-hidden"?: boolean | "true" | "false" }>;
 
-export type AccordionVariant = "divided" | "contained" | "separated";
+export type AccordionVariant = "divided" | "contained" | "separated" | "plain";
 
 const EASE = "ease-[cubic-bezier(0.22,1,0.36,1)]";
 
@@ -48,6 +50,7 @@ const styles = sortCx({
     // stay a step lighter than the page.
     contained: "flex flex-col gap-[3px] rounded-[26px] bg-background-secondary-default p-[3px] dark:bg-background-primary-default",
     separated: "flex flex-col gap-2",
+    plain: "flex flex-col gap-3",
   },
   item: {
     divided: "",
@@ -55,16 +58,21 @@ const styles = sortCx({
     // Modal's ground rather than the card surface: in dark mode the inputs
     // and switch tracks a settings group holds keep an edge against it.
     separated: "rounded-2xl border border-border-button-default bg-background-full shadow-xs",
+    // Bleeds past the column on both sides and pads back in, so a quiet
+    // control's hover fill and focus ring are not cut by the panel's clip.
+    plain: "-mx-2",
   },
   trigger: {
     divided: "rounded-lg py-4",
     contained: "rounded-[23px] px-5 py-4",
     separated: "rounded-2xl px-4 py-3.5",
+    plain: "rounded-lg px-2 py-1.5",
   },
   content: {
     divided: "pb-4",
     contained: "px-5 pb-5",
     separated: "px-4 pb-4",
+    plain: "px-2 pb-1",
   },
 });
 
@@ -159,7 +167,7 @@ export function AccordionItem({
               "disabled:cursor-not-allowed",
               isFocusVisible && "ring-2 ring-border-focus-ring ring-inset",
               styles.trigger[variant],
-              sizes[size].trigger,
+              variant === "plain" ? undefined : sizes[size].trigger,
             )
           }
         >
@@ -191,7 +199,7 @@ export function AccordionItem({
             "group-data-[expanded]/item:translate-y-0 group-data-[expanded]/item:opacity-100 group-data-[expanded]/item:blur-[0px]",
             EASE,
             styles.content[variant],
-            sizes[size].content,
+            variant === "plain" ? undefined : sizes[size].content,
           )}
         >
           {children}

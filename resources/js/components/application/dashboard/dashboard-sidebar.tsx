@@ -480,7 +480,7 @@ export function DashboardSidebar({
         "flex h-full shrink-0 flex-col justify-between overflow-hidden",
         flat
           ? "bg-background-full"
-          : "rounded-3xl border border-border-button-white bg-background-secondary-default shadow-sidebar",
+          : "rounded-3xl border border-border-panel bg-background-secondary-default shadow-panel",
         "transition-[width] duration-300 ease-in-out",
         // Collapsed rail keeps the 60px spec: 1px border + 11px padding on each
         // side leaves an exactly 36px column so the w-9 (36px) icon items center.

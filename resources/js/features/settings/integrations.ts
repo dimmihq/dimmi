@@ -7,20 +7,25 @@
  * cleared rather than stored.
  */
 
-import {
-  type RemixiconComponentType,
-  RiAlarmWarningLine,
-  RiGithubFill,
-  RiPlugLine,
-  RiSlackFill,
-} from "@remixicon/react";
+import { RiGithubFill, RiPlugLine, RiSlackFill } from "@remixicon/react";
+import type { ComponentType } from "react";
 import type { ChipColor } from "@/components/base/badges/chip";
+import {
+  IncidentIOMark,
+  IntercomMark,
+  JiraMark,
+  LinearMark,
+  NotionMark,
+  PagerDutyMark,
+  RootlyMark,
+  ZendeskMark,
+} from "@/features/tickets/issues/tool-logos";
 
 import type { Integration, RoomChange, RoomMode, RoomSettings, RoomTrigger, SlackRoom } from "@/lib/api/integrations";
 
 export interface ProviderLook {
   label: string;
-  icon: RemixiconComponentType;
+  icon: ComponentType<{ className?: string }>;
   brand: string;
   detail: string;
 }
@@ -44,31 +49,49 @@ const providerLooks: Record<string, ProviderLook> = {
   },
   linear: {
     label: "Linear",
-    icon: RiPlugLine,
+    icon: LinearMark,
     brand: "#5E6AD2",
     detail: "Link tickets to Linear issues; their status moves the ticket.",
   },
   jira: {
     label: "Jira",
-    icon: RiPlugLine,
+    icon: JiraMark,
     brand: "#0052CC",
     detail: "Link tickets to Jira issues; their status moves the ticket.",
   },
   incident_io: {
     label: "incident.io",
-    icon: RiAlarmWarningLine,
+    icon: IncidentIOMark,
     brand: "#F25533",
-    detail: "Link incidents to tickets; resolving one closes the loop.",
+    detail: "Declare incidents from tickets; their status moves the ticket.",
   },
   rootly: {
     label: "Rootly",
-    icon: RiAlarmWarningLine,
-    brand: "#6E38F7",
-    detail: "Link incidents to tickets; resolving one closes the loop.",
+    icon: RootlyMark,
+    brand: "#8D6FDE",
+    detail: "Declare incidents from tickets; their status moves the ticket.",
+  },
+  intercom: {
+    label: "Intercom",
+    icon: IntercomMark,
+    brand: "#1F8DED",
+    detail: "Answer from your Intercom help center articles.",
+  },
+  zendesk: {
+    label: "Zendesk",
+    icon: ZendeskMark,
+    brand: "#03363D",
+    detail: "Answer from your Zendesk help center articles.",
+  },
+  notion: {
+    label: "Notion",
+    icon: NotionMark,
+    brand: "#191919",
+    detail: "Answer from pages in your Notion workspace.",
   },
   pagerduty: {
     label: "PagerDuty",
-    icon: RiAlarmWarningLine,
+    icon: PagerDutyMark,
     brand: "#06AC38",
     detail: "Page on-call from an incident; acknowledged and resolved come back.",
   },
@@ -240,7 +263,6 @@ export interface RoomDraft {
   agent_delay_when: NonNullable<RoomSettings["agent_delay_when"]>;
   triage_channel_id: string | null;
   auto_reply_after_seconds: number | null;
-  auto_join: boolean;
   request_sensitivity: NonNullable<RoomSettings["request_sensitivity"]>;
 }
 
@@ -255,7 +277,6 @@ export function draftOf(room: SlackRoom): RoomDraft {
     agent_delay_when: s.agent_delay_when ?? "always",
     triage_channel_id: s.triage_channel_id ?? null,
     auto_reply_after_seconds: s.auto_reply_after_seconds ?? null,
-    auto_join: s.auto_join ?? false,
     request_sensitivity: s.request_sensitivity ?? "conservative",
   };
 }
@@ -272,7 +293,6 @@ const defaults: Record<SettingKey, unknown> = {
   agent_delay_when: "always",
   triage_channel_id: null,
   auto_reply_after_seconds: null,
-  auto_join: false,
   request_sensitivity: "conservative",
 };
 

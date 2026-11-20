@@ -11,6 +11,16 @@
       "url": "http://localhost:8080"
     },
     {
+      "name": "dimmi-8082",
+      "runtimeExecutable": "sh",
+      "runtimeArgs": [
+        "-c",
+        "make dev-db pseudo-locale && (pnpm exec vite --config tmp/vite.8082.config.ts &) && DIMMI_HTTP__ADDR=127.0.0.1:8082 DIMMI_HTTP__ADMIN_ADDR= DIMMI_APP__URL=http://localhost:8082 DIMMI_FRONTEND__HOT_PATH=tmp/hot-8082 make -j2 dev-server dev-widget"
+      ],
+      "port": 8082,
+      "autoPort": false
+    },
+    {
       "name": "dimmi-web-only",
       "runtimeExecutable": "sh",
       "runtimeArgs": [
@@ -99,6 +109,128 @@
         "/private/tmp/claude-501/-Users-bahdcoder-code-trydimmi-com/5f0a7b0a-3143-49ba-b451-e5eceaccbf98/scratchpad/knowledge-preview.sh"
       ],
       "port": 8094,
+      "autoPort": false
+    },
+    {
+      "name": "dimmi-site",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": [
+        "site:dev"
+      ],
+      "port": 5180,
+      "autoPort": false
+    },
+    {
+      "name": "dimmi-sla-proof",
+      "runtimeExecutable": "sh",
+      "runtimeArgs": [
+        "-c",
+        "DIMMI_DATABASE__URL=\"postgres://postgres:postgres@localhost:15432/dimmi_sla_proof?sslmode=disable\" DIMMI_REDIS__URL=redis://localhost:16379/9 DIMMI_HTTP__ADDR=127.0.0.1:8089 DIMMI_HTTP__ADMIN_ADDR= DIMMI_APP__URL=http://localhost:8089 tmp/dimmi-sla serve"
+      ],
+      "port": 8089,
+      "autoPort": false
+    },
+    {
+      "name": "dimmi-issues",
+      "runtimeExecutable": "sh",
+      "runtimeArgs": [
+        "-c",
+        "DIMMI_SERVICES__TRACKERS__FAKE=true DIMMI_FRONTEND__HOT_PATH=tmp/no-hot DIMMI_HTTP__ADDR=127.0.0.1:8093 DIMMI_HTTP__ADMIN_ADDR= DIMMI_APP__ROLES=web DIMMI_APP__URL=http://localhost:8093 tmp/dimmi-issues serve"
+      ],
+      "port": 8093,
+      "autoPort": false
+    },
+    {
+      "name": "dimmi-linear",
+      "runtimeExecutable": "sh",
+      "runtimeArgs": [
+        "tmp/serve-linear.sh"
+      ],
+      "port": 8087,
+      "autoPort": false
+    },
+    {
+      "name": "outray-linear",
+      "runtimeExecutable": "outray",
+      "runtimeArgs": [
+        "http",
+        "8087",
+        "--subdomain",
+        "dimmi"
+      ],
+      "port": 8087,
+      "autoPort": false,
+      "url": "https://dimmi.outray.app"
+    },
+    {
+      "name": "dimmi-bench",
+      "runtimeExecutable": "sh",
+      "runtimeArgs": [
+        "/private/tmp/claude-501/-Users-bahdcoder-code-trydimmi-com/ae160802-6f7e-48fd-864b-fd432c469ed7/scratchpad/benchserver.sh"
+      ],
+      "port": 8111,
+      "autoPort": false
+    },
+    {
+      "name": "dimmi-shots",
+      "runtimeExecutable": "sh",
+      "runtimeArgs": [
+        "-c",
+        "DIMMI_DATABASE__URL=\"postgres://postgres:postgres@localhost:15432/dimmi_shots?sslmode=disable\" DIMMI_REDIS__URL=redis://localhost:16379/12 DIMMI_FRONTEND__HOT_PATH=tmp/no-hot DIMMI_HTTP__ADDR=127.0.0.1:8085 DIMMI_HTTP__ADMIN_ADDR= DIMMI_APP__ROLES=web DIMMI_APP__URL=http://localhost:8085 tmp/dimmi-shots serve"
+      ],
+      "port": 8085,
+      "autoPort": false
+    },
+    {
+      "name": "dimmi-docs",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": [
+        "docs:dev"
+      ],
+      "port": 5190,
+      "autoPort": false
+    },
+    {
+      "name": "dimmi-docs-preview",
+      "runtimeExecutable": "sh",
+      "runtimeArgs": [
+        "-c",
+        "pnpm docs:build && pnpm docs:preview"
+      ],
+      "port": 5191,
+      "autoPort": false
+    },
+    {
+      "name": "dimmi-site-image",
+      "runtimeExecutable": "sh",
+      "runtimeArgs": [
+        "-c",
+        "docker build -f site/Dockerfile -t dimmi-site . && docker run --rm --name dimmi-site -p 8180:8080 dimmi-site"
+      ],
+      "port": 8180
+    },
+    {
+      "name": "dimmi-check",
+      "runtimeExecutable": "sh",
+      "runtimeArgs": [
+        "tmp/serve-check.sh"
+      ],
+      "port": 8088,
+      "autoPort": false
+    },
+    {
+      "name": "proof-shots",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "8120",
+        "--bind",
+        "127.0.0.1",
+        "--directory",
+        "tmp/shots"
+      ],
+      "port": 8120,
       "autoPort": false
     }
   ]

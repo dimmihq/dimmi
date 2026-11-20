@@ -17,8 +17,9 @@ const looks: Record<Exclude<AiState, "off">, { label: string; long: string; colo
 
 /*
  * AiBadge shows the agent's state; long spells it out where there is
- * room, such as the conversation's header, and falls back to the short
- * label when that header's container runs narrow.
+ * room, such as the conversation's header, falls back to the short
+ * label when that header's container runs narrow, and to the icon alone
+ * when it runs narrower still.
  */
 export function ApprovalBadge({ count }: { count: number | undefined }) {
   if (!count) {
@@ -46,8 +47,8 @@ export function AiBadge({ state, long = false }: { state: AiState | undefined; l
       <RiSparkling2Line aria-hidden className="size-3" />
       {long ? (
         <>
-          <span className="@max-md:hidden">{look.long}</span>
-          <span className="@md:hidden">{look.label}</span>
+          <span className="@max-xl:hidden">{look.long}</span>
+          <span className="@max-sm:sr-only @xl:hidden">{look.label}</span>
         </>
       ) : (
         look.label

@@ -27,9 +27,25 @@ it.describe("attributes", () => {
     await expect(add).toBeHidden();
     await expect(people).toContainText("tier · List · gold, silver");
 
-    await people.getByRole("button", { name: "Archive" }).first().click();
+    await people
+      .getByRole("button", { name: /^Actions for / })
+      .first()
+      .click();
+    await page
+      .getByRole("menuitem", { name: "Archive" })
+      .or(page.getByText("Archive", { exact: true }))
+      .first()
+      .click();
     await expect(people).toContainText("archived");
-    await people.getByRole("button", { name: "Delete" }).click();
+    await people
+      .getByRole("button", { name: /^Actions for / })
+      .first()
+      .click();
+    await page
+      .getByRole("menuitem", { name: "Delete" })
+      .or(page.getByText("Delete", { exact: true }))
+      .first()
+      .click();
     await page.getByRole("button", { name: "Delete attribute" }).click();
     await expect(people).not.toContainText("seats · Number");
   });

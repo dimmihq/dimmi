@@ -116,6 +116,8 @@ export interface TimelineEvent {
   from?: string;
   to?: { member: Named | null; team: Named | null } | string;
   changes?: Record<string, [unknown, unknown]>;
+  /* A conversation.ticket_created event: the ticket's reference, such as T-482. */
+  reference?: string;
   /* An ai.action_call_* step: the call, its action, where it then stood and why a failure failed. */
   call_id?: string;
   action?: { id: string; title: string };
@@ -176,6 +178,8 @@ export interface Message {
   attachments?: Attachment[];
   /* The agent's mark on its replies, such as action_call: a change the reply reports. */
   ai?: { action_call?: MessageActionCall } | null;
+  /* The broadcast the message went out with, when one did. */
+  broadcast?: { id: string; name: string } | null;
 }
 
 /*

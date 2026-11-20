@@ -61,8 +61,8 @@ describe("signature markdown", () => {
   });
 
   it("finds details by name or key", () => {
-    expect(findSignatureVariables("job").map((v) => v.key)).toEqual(["member_title"]);
+    expect(findSignatureVariables("job")).toEqual([]);
     expect(findSignatureVariables("company").map((v) => v.key)).toEqual(["company_name"]);
-    expect(findSignatureVariables("")).toHaveLength(4);
+    expect(findSignatureVariables("")).toHaveLength(3);
   });
 });

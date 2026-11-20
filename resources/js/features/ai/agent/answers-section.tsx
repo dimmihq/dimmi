@@ -112,7 +112,10 @@ export function PrivacySection({
 
   return (
     <Section title="Privacy" description="What reaches the model provider.">
-      <Row label="Hide personal data" description="Emails, phone numbers and card numbers are masked before sending.">
+      <Row
+        label="Hide personal data"
+        description="Emails, phone numbers, card and bank account numbers, US social security numbers and API keys are masked before sending."
+      >
         <Switch
           aria-label="Hide personal data"
           size="sm"

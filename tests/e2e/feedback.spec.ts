@@ -5,12 +5,15 @@ import { createAccount, expect, inbox, test as it, signIn } from "./support/fixt
 import { mailedText } from "./support/mail";
 
 /*
- * openBoard opens the help center's board to customers from the
- * dashboard and returns the help center's address.
+ * openBoard opens the help center's board to customers from its
+ * settings and returns the help center's address.
  */
 async function openBoard(page: Page): Promise<string> {
+  await page.goto("/d/settings/feedback");
+  await page.getByRole("switch", { name: "Open to customers" }).click({ force: true });
+  await page.getByRole("button", { name: "Save", exact: true }).click();
+  await expect(page.getByText("Unsaved changes")).toBeHidden();
   await page.goto("/d/feedback");
-  await page.getByText("Open to customers").click();
   await expect(page.getByRole("link", { name: "View the board" })).toBeVisible();
   const centers = await api<{ subdomain: string }[]>(page, "GET", "/help-centers");
   return `/hc/${centers[0]?.subdomain}`;

@@ -172,11 +172,9 @@ export function placeholdersIn(text: string): string[] {
 export const contactPlaceholders = [
   { token: "contact.external_id", label: "Customer's ID in your system" },
   { token: "contact.email", label: "Customer's verified email" },
-  { token: "contact.phone", label: "Customer's verified phone" },
-  { token: "contact.company.external_id", label: "Company's ID in your system" },
 ];
 
-const contactPaths = ["id", "external_id", "email", "phone", "company.external_id"];
+const contactPaths = ["id", "external_id", "email"];
 const fixedPaths: Record<string, string[]> = {
   conversation: ["id", "number", "channel_type"],
   workspace: ["id"],

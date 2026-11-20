@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import type { Message } from "@/lib/api/inbox";
 
-import { toEntry, waitedFor } from "./conversations";
+import { eventText, toEntry, waitedFor } from "./conversations";
 
 describe("waitedFor", () => {
   const now = Date.parse("2026-11-04T12:00:00Z");
@@ -110,5 +110,30 @@ describe("closed events", () => {
     expect(closed("source_deleted")).toMatchObject({ text: "Closed: the customer deleted their message" });
     expect(closed("contact_solved")).toMatchObject({ text: "Closed: the customer marked it solved" });
     expect(closed()).toMatchObject({ text: "dimmi closed the conversation" });
+  });
+});
+
+describe("eventText", () => {
+  it("says the agent handed over, and why", () => {
+    expect(
+      eventText({
+        name: "ai.handoff_requested",
+        actor: { type: "agent", id: "", name: "Sky" },
+        reason: "customer_requested",
+      }),
+    ).toBe("Sky handed the conversation to the team: the customer asked for a person");
+    expect(eventText({ name: "ai.handoff_requested", actor: { type: "contact", id: "ctc_1", name: "" } })).toBe(
+      "The AI agent handed the conversation to the team",
+    );
+  });
+
+  it("names the ticket a conversation became", () => {
+    expect(
+      eventText({
+        name: "conversation.ticket_created",
+        actor: { type: "member", id: "mem_1", name: "Wen Zhao" },
+        reference: "T-321",
+      }),
+    ).toBe("Wen Zhao turned the conversation into ticket T-321");
   });
 });

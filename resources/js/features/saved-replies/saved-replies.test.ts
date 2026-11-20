@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { readReplies } from "./csv";
 import { hasActions, macroChanges, macroSummary } from "./macro";
-import { renderReply } from "./render";
+import { cleanVariables, renderReply } from "./render";
 
 describe("renderReply", () => {
   it("fills the customer's and sender's details", () => {
@@ -63,5 +63,14 @@ describe("readReplies", () => {
 
   it("refuses a file without title and body columns", () => {
     expect(readReplies("name,text\nA,B").error).toMatch(/title and a body/);
+  });
+});
+
+describe("escaped variables", () => {
+  it("fills a variable the editor wrote with Markdown escapes", () => {
+    const body = 'Hi {{ contact.first\\_name | default: \\"there\\" }}, thanks for **waiting**\\_.';
+
+    expect(cleanVariables(body)).toBe('Hi {{ contact.first_name | default: "there" }}, thanks for **waiting**\\_.');
+    expect(renderReply(body, { contact: { name: "Owen Gonzalez" } })).toBe("Hi Owen, thanks for **waiting**\\_.");
   });
 });

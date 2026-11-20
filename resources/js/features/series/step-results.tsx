@@ -14,7 +14,7 @@ import { Button } from "@/components/base/buttons/button";
 import { toast } from "@/components/base/toast/toast";
 import { Row, Section } from "@/features/settings/layout";
 import { pickSeriesWinner, type SeriesNode, type SeriesReport, seriesKey } from "@/lib/api/series";
-import { formatNumber } from "@/lib/i18n/format";
+import { countOf, formatNumber } from "@/lib/i18n/format";
 
 import { endReasonName, percent } from "./looks";
 import { isMessage, pathsOf } from "./model";
@@ -86,7 +86,7 @@ function Variants({
         <Row
           key={v.path}
           label={names.get(v.path) ?? v.path}
-          description={`${formatNumber(v.entered)} people · ${percent(v.goal, v.entered)} reached the goal`}
+          description={`${countOf(v.entered, "person", "people")} · ${percent(v.goal, v.entered)} reached the goal`}
         >
           <Button size="xs" variant="secondary" loading={pick.isPending} onClick={() => pick.mutate(v.path)}>
             Pick as winner

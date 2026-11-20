@@ -16,6 +16,8 @@ function broadcast(change: Partial<Broadcast> = {}): Broadcast {
     audience_id: null,
     rules: null,
     room_ids: null,
+    ticket_id: null,
+    holds: [],
     topic_id: null,
     service: false,
     subject: "",

@@ -1,23 +1,25 @@
 /*
- * Adding or changing a saved reply in a modal: its title, the shortcut
- * found by typing # in the composer, its Markdown text with variables
- * picked from a list, who it is for, and the macro actions it applies
- * when it is sent. Only people who manage shared replies can share one.
- * The server's reason shows when it refuses.
+ * Adding or changing a saved reply, in a modal the size of the one that
+ * starts a workflow. Its title and the shortcut a reply inserts it with
+ * after a #; its text, written in the same editor as a reply, with the
+ * same formatting and variables picked from the toolbar; who it is for;
+ * and the macro actions it applies when it is sent. Only people who
+ * manage shared replies can share one. The server's reason shows when it
+ * refuses.
  */
-import { RiGroupLine, RiUserLine } from "@remixicon/react";
+import { RiBracesLine, RiGroupLine, RiUserLine } from "@remixicon/react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useId, useState } from "react";
+import { useEffect, useId, useState } from "react";
 
 import { Button } from "@/components/base/buttons/button";
+import { Dropdown, DropdownItem, DropdownPopover, DropdownTrigger } from "@/components/base/dropdown/dropdown";
 import { Input } from "@/components/base/input/input";
-import { Label } from "@/components/base/input/label";
 import { Modal, ModalBody, ModalFooter, ModalHeader } from "@/components/base/modal/modal";
 import { RadioGroup } from "@/components/base/radio/radio";
 import { RadioCard } from "@/components/base/radio/radio-card";
-import { Select, SelectItem } from "@/components/base/select/select";
-import { Textarea } from "@/components/base/textarea/textarea";
 import { variableMarkdown, variables } from "@/features/broadcasts/writer/variables";
+import { ComposerField } from "@/features/inbox/composer/composer-field";
+import { preloadEditor } from "@/features/inbox/composer/load-editor";
 import { failureText } from "@/features/settings/teams";
 import {
   createSavedReply,
@@ -28,10 +30,56 @@ import {
 } from "@/lib/api/saved-replies";
 
 import { ActionsPicker } from "./actions-picker";
-import { contextValues } from "./render";
+import { cleanVariables, contextValues } from "./render";
 
 const known = Object.keys(contextValues({}));
 const offered = variables.filter((variable) => known.includes(variable.key));
+
+const noop = () => undefined;
+
+/*
+ * Section is one titled part of the form.
+ */
+function Section({ title, detail, children }: { title: string; detail?: string; children: React.ReactNode }) {
+  return (
+    <section className="flex flex-col gap-2.5">
+      <div className="flex flex-col">
+        <h3 className="text-body-2-medium text-text-primary">{title}</h3>
+        {detail ? <p className="text-body-2-regular text-text-secondary">{detail}</p> : null}
+      </div>
+      {children}
+    </section>
+  );
+}
+
+/*
+ * VariableMenu offers the customer details a reply fills in.
+ */
+function VariableMenu({ onPick }: { onPick: (markdown: string) => void }) {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <Dropdown isOpen={open} onOpenChange={setOpen}>
+      <DropdownTrigger className="flex h-[30px] shrink-0 cursor-pointer items-center gap-1 rounded-full ps-2 pe-2.5 text-body-2-medium text-text-secondary outline-none transition-colors duration-150 ease hover:bg-background-secondary-hover hover:text-text-primary focus-visible:ring-2 focus-visible:ring-border-focus-ring">
+        <RiBracesLine aria-hidden className="size-4" />
+        Variable
+      </DropdownTrigger>
+      <DropdownPopover aria-label="Insert a variable" placement="bottom end">
+        {offered.map((variable) => (
+          <DropdownItem
+            key={variable.key}
+            onSelect={() => {
+              onPick(variableMarkdown(variable.key, variable.fallback));
+              setOpen(false);
+            }}
+          >
+            {variable.label}
+          </DropdownItem>
+        ))}
+      </DropdownPopover>
+    </Dropdown>
+  );
+}
 
 export function ReplyDialog({
   workspace,
@@ -51,12 +99,14 @@ export function ReplyDialog({
   const [body, setBody] = useState(reply?.body ?? "");
   const [shared, setShared] = useState(reply?.shared ?? false);
   const [actions, setActions] = useState<SavedReplyActions>(reply?.actions ?? { tag_ids: [] });
+  const [slot, setSlot] = useState<HTMLElement | null>(null);
+  useEffect(preloadEditor, []);
   const save = useMutation({
     mutationFn: () => {
       const fields = {
         title: title.trim(),
-        body,
-        shortcut: shortcut.trim() || (reply ? null : undefined),
+        body: cleanVariables(body),
+        shortcut: shortcut.trim().replace(/^#/, "") || (reply ? null : undefined),
         shared,
         actions,
       };
@@ -69,71 +119,66 @@ export function ReplyDialog({
   });
   const ready = title.trim() !== "" && body.trim() !== "";
   const sharing = canShare || (reply?.shared ?? false);
+  const submit = () => {
+    if (ready && !save.isPending) {
+      save.mutate();
+    }
+  };
 
   return (
     <Modal
-      size="lg"
-      className="h-[min(760px,calc(100dvh-3rem))]"
+      size="md"
+      className="h-[min(640px,calc(100dvh-3rem))]"
       isOpen
       onOpenChange={(open) => (open ? undefined : onClose())}
     >
       <ModalHeader
         title={reply ? `Edit ${reply.title}` : "New saved reply"}
-        description="Insert it from the composer's add menu, or type # and its shortcut."
+        description="Insert it from a reply's add menu, or type # and its shortcut."
       />
       <ModalBody className="pb-4">
         <form
           id={formId}
-          className="flex flex-col gap-5"
+          className="flex flex-col gap-6"
           onSubmit={(event) => {
             event.preventDefault();
-            if (ready) {
-              save.mutate();
-            }
+            submit();
           }}
         >
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-[1fr_180px]">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-[1fr_160px]">
             <Input label="Title" placeholder="Refund on its way" autoFocus value={title} onChange={setTitle} />
             <Input label="Shortcut" placeholder="refund" inputDir="ltr" value={shortcut} onChange={setShortcut} />
           </div>
-          <div className="flex flex-col gap-1.5">
-            <Textarea
-              label="Text"
-              hint="Markdown. Variables fill in with the customer's details when the reply is inserted."
-              rows={6}
-              value={body}
-              onChange={setBody}
-            />
-            <Select
-              aria-label="Insert a variable"
-              placeholder="Insert a variable"
-              size="sm"
-              className="self-start"
-              selectedKey={null}
-              onSelectionChange={(key) => {
-                const variable = offered.find((candidate) => candidate.key === key);
-                if (variable) {
-                  setBody(`${body}${variableMarkdown(variable.key, variable.fallback)}`);
-                }
-              }}
-            >
-              {offered.map((variable) => (
-                <SelectItem key={variable.key} id={variable.key} textValue={variable.label}>
-                  {variable.label}
-                </SelectItem>
-              ))}
-            </Select>
-          </div>
+          <Section title="Reply" detail="Variables fill in with the customer's details when the reply is inserted.">
+            <div className="flex flex-col gap-2 rounded-2xl bg-background-secondary-default p-3">
+              <ComposerField
+                value={body}
+                label="Saved reply text"
+                placeholder="Write the reply your team will send…"
+                focusKey={reply?.id ?? "new"}
+                onChange={setBody}
+                onSubmit={submit}
+                onBlur={noop}
+                onFiles={noop}
+                toolbarSlot={slot}
+              />
+              <div className="flex flex-wrap items-center gap-1 border-t border-separator-border pt-2">
+                <span ref={setSlot} className="contents" />
+                <span className="ms-auto">
+                  <VariableMenu onPick={(markdown) => setBody((was) => `${was}${markdown}`)} />
+                </span>
+              </div>
+            </div>
+          </Section>
           {sharing ? (
-            <div className="flex flex-col gap-1">
-              <Label>Who can use it</Label>
+            <Section title="Who can use it">
               <RadioGroup
                 aria-label="Who can use it"
                 value={shared ? "shared" : "personal"}
                 onChange={(next) => setShared(next === "shared")}
                 isDisabled={!canShare}
               >
-                <RadioCard value="personal" icon={RiUserLine} title="Only me" description="In your composer only." />
+                <RadioCard value="personal" icon={RiUserLine} title="Only me" description="In your replies only." />
                 <RadioCard
                   value="shared"
                   icon={RiGroupLine}
@@ -141,15 +186,14 @@ export function ReplyDialog({
                   description="The whole team can use it."
                 />
               </RadioGroup>
-            </div>
+            </Section>
           ) : null}
-          <div className="flex flex-col gap-1">
-            <span className="text-headline-medium text-text-primary">When it is sent</span>
-            <p className="text-body-2-regular text-text-tertiary">
-              Turn the reply into a macro: these apply to the conversation as the reply goes out.
-            </p>
-          </div>
-          <ActionsPicker workspace={workspace} value={actions} onChange={setActions} />
+          <Section
+            title="When it is sent"
+            detail="Turn the reply into a macro: these apply to the conversation as it goes out."
+          >
+            <ActionsPicker workspace={workspace} value={actions} onChange={setActions} />
+          </Section>
           {save.error ? (
             <p role="alert" className="text-body-2-regular text-text-error-primary">
               {failureText(save.error)}

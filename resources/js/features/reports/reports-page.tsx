@@ -87,7 +87,7 @@ function ReportPicker({ types, current }: { types: ReportType[]; current: string
 
 /*
  * Caption says what the numbers cover: the range, the period compared
- * and whether only business hours count.
+ * and whether only office hours count.
  */
 function Caption({ report, summary }: { report: Report; summary: string | undefined }) {
   const parts = [
@@ -95,7 +95,7 @@ function Caption({ report, summary }: { report: Report; summary: string | undefi
     report.previous_from && report.previous_to
       ? `against ${formatRange(report.previous_from, report.previous_to)}`
       : "",
-    report.business_hours ? "business hours" : "",
+    report.business_hours ? "office hours" : "",
     summary ?? "",
   ];
 
@@ -237,7 +237,7 @@ export function ReportsPage() {
       <div className="flex min-h-0 flex-1">
         <ReportList types={view.types} current={key} />
         <ScrollArea ground className="min-w-0">
-          <div className="flex min-w-0 flex-col gap-4 px-4 pt-1 pb-8">
+          <div key={key} className="flex min-w-0 flex-col gap-4 px-4 pt-1 pb-8 animate-page-in">
             {view.types ? <ReportPicker types={view.types} current={key} /> : null}
             {view.unknown ? (
               <EmptyState icon={RiBarChart2Line} title="Report not found" description="Pick a report from the list." />

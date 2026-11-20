@@ -1,23 +1,22 @@
 /*
- * Linking engineering work to a ticket, in two steps. First the tool,
- * picked from the workspace's connected trackers and incident tools
- * (skipped when there is only one). Then either a new issue, filed in a
- * team and project picked from lists pulled from the tool (an incident
- * tool asks for a severity, PagerDuty for the service to page), or an
- * existing one found by search or pasted as a URL or key. Nothing is
- * typed as an id.
+ * Linking an issue or incident to a ticket, a step at a time in the
+ * same dialog as picking a workflow's trigger. First the tool, picked
+ * from the workspace's connected trackers and incident tools (skipped
+ * when there is only one). Then a choice: a new issue in the tool, or
+ * an existing one. A new issue is filed in a team and project picked
+ * from lists pulled from the tool (an incident tool asks for a
+ * severity, PagerDuty for the service to page); an existing one is
+ * found by search or pasted as a URL or key. Nothing is typed as an id.
  */
-import { RiArrowLeftLine, RiCheckLine, RiSearchLine } from "@remixicon/react";
+import { RiArrowLeftLine, RiArrowRightSLine } from "@remixicon/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { type ReactNode, useState } from "react";
 
+import { SearchComboBox } from "@/components/application/search-combobox/search-combobox";
 import { Chip } from "@/components/base/badges/chip";
 import { Button } from "@/components/base/buttons/button";
 import { Input } from "@/components/base/input/input";
 import { Modal, ModalBody, ModalFooter, ModalHeader } from "@/components/base/modal/modal";
-import { RadioGroup } from "@/components/base/radio/radio";
-import { RadioCard } from "@/components/base/radio/radio-card";
-import { SegmentedControl, SegmentedControlItem } from "@/components/base/segmented-control/segmented-control";
 import { Select, SelectItem } from "@/components/base/select/select";
 import { toast } from "@/components/base/toast/toast";
 import { StepMotion } from "@/features/knowledge/step-motion";
@@ -33,8 +32,8 @@ import {
   type NewIssue,
   refreshTicketKeys,
 } from "@/lib/api/ticket-issues";
-import { cx } from "@/utils/cx";
 
+import { ToolMark, ToolTile } from "./tool-logos";
 import { groupTint, toolLook } from "./tools";
 
 type Mode = "create" | "link";
@@ -113,6 +112,17 @@ function CreateFields({
             onChange={(id) => onChange({ ...issue, service_id: id })}
           />
         ) : null}
+        {tool.provider === "rootly" ? (
+          <Picker
+            workspace={workspace}
+            installation={tool.id}
+            list="services"
+            label="Service"
+            value={issue.service_id ?? ""}
+            optional
+            onChange={(id) => onChange({ ...issue, service_id: id })}
+          />
+        ) : null}
         <Picker
           workspace={workspace}
           installation={tool.id}
@@ -153,87 +163,62 @@ function CreateFields({
 }
 
 /*
- * LinkFields find an existing issue by search, or take a pasted URL.
+ * LinkFields find an existing issue with an autocomplete over the tool's
+ * search, or take a pasted URL.
  */
 function LinkFields({
   workspace,
   tool,
-  picked,
   onPick,
 }: {
   workspace: string;
   tool: Integration;
-  picked: string;
   onPick: (ref: string) => void;
 }) {
-  const [q, setQ] = useState("");
-  const pasted = /^https?:\/\//.test(q.trim());
+  const [words, setWords] = useState("");
+  const [typed, setTyped] = useState("");
+  const pasted = /^https?:\/\//.test(typed.trim());
   const { data, isFetching } = useQuery({
-    ...issueSearchQuery(workspace, tool.id, q.trim()),
-    enabled: !pasted && q.trim().length > 1,
+    ...issueSearchQuery(workspace, tool.id, words),
+    enabled: words !== "" && !pasted,
   });
-  const found: IssueFound[] = data ?? [];
 
   return (
     <div className="flex flex-col gap-3">
-      <Input
+      <SearchComboBox
         label="Find the issue"
         placeholder={toolLook(tool.provider).search}
-        leadingIcon={RiSearchLine}
-        value={q}
-        onChange={(value) => {
-          setQ(value);
-          onPick(/^https?:\/\//.test(value.trim()) ? value.trim() : "");
+        autoFocus
+        items={pasted ? [] : (data ?? [])}
+        searching={isFetching}
+        keyOf={(issue: IssueFound) => issue.external_id}
+        textOf={(issue) => `${issue.key} ${issue.title}`}
+        onSearch={setWords}
+        onType={(text) => {
+          setTyped(text);
+          if (/^https?:\/\//.test(text.trim())) {
+            onPick(text.trim());
+          }
         }}
-      />
+        onPick={(issue) => onPick(issue ? issue.url || issue.key : "")}
+        empty={pasted ? "dimmi reads this issue from the link." : "Nothing matches. Try other words or paste the link."}
+      >
+        {(issue) => (
+          <>
+            <ToolMark provider={tool.provider} />
+            <span className="shrink-0 text-body-2-medium text-text-secondary">{issue.key}</span>
+            <span className="min-w-0 flex-1 truncate text-text-primary">{issue.title}</span>
+            <Chip variant="caption" color={groupTint[issue.status_group] ?? "neutral"}>
+              {issue.status}
+            </Chip>
+          </>
+        )}
+      </SearchComboBox>
       {pasted ? (
         <p className="text-caption-1-regular text-text-tertiary">dimmi reads this issue from the link.</p>
       ) : null}
-      {!pasted && q.trim().length > 1 && !isFetching && found.length === 0 ? (
-        <p className="text-body-2-regular text-text-tertiary">Nothing matches. Try other words or paste the link.</p>
-      ) : null}
-      <ul className="flex flex-col divide-y divide-separator-border overflow-hidden rounded-xl border border-border-primary">
-        {found.map((issue) => {
-          const ref = issue.url || issue.key;
-          const selected = picked === ref;
-
-          return (
-            <li key={issue.external_id}>
-              <button
-                type="button"
-                aria-pressed={selected}
-                onClick={() => onPick(ref)}
-                className={cx(
-                  "flex w-full items-center gap-3 px-3 py-2.5 text-start outline-none focus-visible:ring-2 focus-visible:ring-border-focus-ring",
-                  selected ? "bg-background-secondary-hover" : "hover:bg-background-secondary-default",
-                )}
-              >
-                <span className="shrink-0 text-body-2-medium text-text-secondary">{issue.key}</span>
-                <span className="min-w-0 flex-1 truncate text-body-medium text-text-primary">{issue.title}</span>
-                <Chip variant="caption" color={groupTint[issue.status_group] ?? "gray"}>
-                  {issue.status}
-                </Chip>
-                {selected ? <RiCheckLine aria-hidden className="size-4 text-foreground-icon-primary" /> : null}
-              </button>
-            </li>
-          );
-        })}
-      </ul>
     </div>
   );
-}
-
-/*
- * modeLabels name the two ways of linking for the tool.
- */
-function modeLabels(tool: Integration): { id: Mode; label: string }[] {
-  const look = toolLook(tool.provider);
-  const create = look.kind === "incidents" ? `Declare in ${look.label}` : `New ${look.label} issue`;
-
-  return [
-    { id: "create", label: create },
-    { id: "link", label: "Link an existing one" },
-  ];
 }
 
 /*
@@ -271,57 +256,146 @@ function withDefaults(issue: NewIssue, settings: IssueSettings): NewIssue {
 }
 
 /*
- * Details is the second step: create in the tool, or link existing work.
+ * Choice is one card in a list of choices; picking it moves on.
  */
-function Details({
+function Choice({
+  mark,
+  title,
+  detail,
+  onPick,
+}: {
+  mark: ReactNode;
+  title: string;
+  detail: string;
+  onPick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onPick}
+      className="flex w-full cursor-pointer items-center gap-3 rounded-xl px-2.5 py-2 text-start outline-none transition-colors duration-150 hover:bg-background-secondary-hover focus-visible:ring-2 focus-visible:ring-border-focus-ring"
+    >
+      {mark}
+      <span className="flex min-w-0 flex-1 flex-col">
+        <span className="text-body-regular text-text-primary">{title}</span>
+        <span className="truncate text-body-2-regular text-text-secondary">{detail}</span>
+      </span>
+      <RiArrowRightSLine aria-hidden className="size-5 shrink-0 text-foreground-icon-tertiary rtl:-scale-x-100" />
+    </button>
+  );
+}
+
+function Choices({ children }: { children: ReactNode }) {
+  return <div className="flex flex-col gap-0.5 rounded-2xl bg-background-secondary-default p-1">{children}</div>;
+}
+
+/*
+ * modeChoices name the two ways of linking for the tool.
+ */
+function modeChoices(tool: Integration): { id: Mode; title: string; detail: string; mark: ReactNode }[] {
+  const look = toolLook(tool.provider);
+  const incidents = look.kind === "incidents";
+
+  return [
+    {
+      id: "create",
+      title: incidents ? `Declare in ${look.label}` : `New ${look.label} issue`,
+      detail: incidents
+        ? `Open an incident in ${look.label} for this ticket.`
+        : `Create it in ${look.label} from this ticket.`,
+      mark: <ToolTile provider={tool.provider} />,
+    },
+    {
+      id: "link",
+      title: "Link an existing one",
+      detail: `Search ${look.label} or paste a link.`,
+      mark: <ToolTile provider={tool.provider} />,
+    },
+  ];
+}
+
+type Step = "tool" | "mode" | "details";
+
+/*
+ * heading names the dialog for the tool, or for linking in general
+ * before one is picked.
+ */
+function heading(tool: Integration | undefined): { title: ReactNode; description: string } {
+  if (!tool) {
+    return { title: "Link an issue", description: "Customers see this ticket's states, never the tool's." };
+  }
+  const look = toolLook(tool.provider);
+
+  return {
+    title: `Link ${/^[aeiou]/i.test(look.label) ? "an" : "a"} ${look.label} ${look.kind === "incidents" ? "incident" : "issue"}`,
+    description: `Customers see this ticket's states, never ${look.label}'s.`,
+  };
+}
+
+/*
+ * StepBody is what the step on screen asks for.
+ */
+function StepBody({
   workspace,
+  step,
+  tools,
   tool,
   mode,
   issue,
-  picked,
+  onTool,
   onMode,
   onIssue,
   onPick,
 }: {
   workspace: string;
-  tool: Integration;
+  step: Step;
+  tools: Integration[];
+  tool: Integration | undefined;
   mode: Mode;
   issue: NewIssue;
-  picked: string;
+  onTool: (id: string) => void;
   onMode: (mode: Mode) => void;
   onIssue: (issue: NewIssue) => void;
   onPick: (ref: string) => void;
 }) {
+  if (step === "tool" || !tool) {
+    return (
+      <Choices>
+        {tools.map((t) => (
+          <Choice
+            key={t.id}
+            mark={<ToolTile provider={t.provider} />}
+            title={toolLook(t.provider).label}
+            detail={`${t.name} · ${toolLook(t.provider).kind === "incidents" ? "Incidents" : "Issues"}`}
+            onPick={() => onTool(t.id)}
+          />
+        ))}
+      </Choices>
+    );
+  }
+
+  if (step === "mode") {
+    return (
+      <Choices>
+        {modeChoices(tool).map((c) => (
+          <Choice key={c.id} mark={c.mark} title={c.title} detail={c.detail} onPick={() => onMode(c.id)} />
+        ))}
+      </Choices>
+    );
+  }
+
+  if (mode === "link") {
+    return <LinkFields workspace={workspace} tool={tool} onPick={onPick} />;
+  }
+
   return (
     <>
-      <SegmentedControl
-        aria-label="Create or link"
-        selectedKeys={[mode]}
-        onSelectionChange={(keys) => {
-          const next = [...keys][0];
-          if (next) {
-            onMode(next as Mode);
-          }
-        }}
-      >
-        {modeLabels(tool).map((m) => (
-          <SegmentedControlItem key={m.id} id={m.id}>
-            {m.label}
-          </SegmentedControlItem>
-        ))}
-      </SegmentedControl>
-      {mode === "create" ? (
-        <>
-          <Input label="Title" value={issue.title ?? ""} onChange={(value) => onIssue({ ...issue, title: value })} />
-          <CreateFields workspace={workspace} tool={tool} issue={issue} onChange={onIssue} />
-          <p className="text-caption-1-regular text-text-tertiary">
-            The description lists the customers, companies and revenue this reaches, with a link back here, and stays
-            current as conversations are linked.
-          </p>
-        </>
-      ) : (
-        <LinkFields workspace={workspace} tool={tool} picked={picked} onPick={onPick} />
-      )}
+      <Input label="Title" value={issue.title ?? ""} onChange={(value) => onIssue({ ...issue, title: value })} />
+      <CreateFields workspace={workspace} tool={tool} issue={issue} onChange={onIssue} />
+      <p className="text-caption-1-regular text-text-tertiary">
+        The description lists the customers, companies and revenue this reaches, with a link back here, and stays
+        current as conversations are linked.
+      </p>
     </>
   );
 }
@@ -340,8 +414,10 @@ export function LinkIssueDialog({
   onClose: () => void;
 }) {
   const queryClient = useQueryClient();
-  const [toolId, setToolId] = useState(tools.length === 1 ? tools[0].id : "");
-  const [step, setStep] = useState<"tool" | "details">(tools.length === 1 ? "details" : "tool");
+  const single = tools.length === 1;
+  const [toolId, setToolId] = useState(single ? tools[0].id : "");
+  const [step, setStep] = useState<Step>(single ? "mode" : "tool");
+  const [forward, setForward] = useState(true);
   const [mode, setMode] = useState<Mode>("create");
   const [issue, setIssue] = useState<NewIssue>({ title });
   const [ref, setRef] = useState("");
@@ -356,6 +432,7 @@ export function LinkIssueDialog({
 
   const look = tool ? toolLook(tool.provider) : undefined;
   const incidents = look?.kind === "incidents";
+  const head = heading(step === "tool" ? undefined : tool);
 
   const link = useMutation({
     mutationFn: () => {
@@ -377,51 +454,57 @@ export function LinkIssueDialog({
     onError: (error) => toast.error(error.message),
   });
 
-  function pickTool(id: string) {
-    setToolId(id);
-    setIssue((current) => ({ title: current.title }));
-    setSeeded("");
+  function go(next: Step, ahead: boolean) {
+    setForward(ahead);
+    setStep(next);
   }
 
+  function pickTool(id: string) {
+    if (id !== toolId) {
+      setToolId(id);
+      setIssue((current) => ({ title: current.title }));
+      setRef("");
+      setSeeded("");
+    }
+    go("mode", true);
+  }
+
+  function pickMode(next: Mode) {
+    setMode(next);
+    go("details", true);
+  }
+
+  const back =
+    step === "details" ? () => go("mode", false) : step === "mode" && !single ? () => go("tool", false) : null;
   const submit = mode === "link" ? "Link" : incidents ? "Declare" : "Create issue";
 
   return (
-    <Modal size="wide" isOpen onOpenChange={(open) => (open ? undefined : onClose())}>
-      <ModalHeader
-        title={incidents ? "Link an incident" : "Link engineering work"}
-        description="The ticket stays dimmi's: customers see its states, never the tool's."
-      />
-      <ModalBody className="min-h-[22rem]">
-        <StepMotion view={step} forward={step === "details"} className="flex flex-col gap-4">
-          {step === "tool" ? (
-            <RadioGroup aria-label="Tool" value={toolId} onChange={pickTool} className="flex flex-col gap-2">
-              {tools.map((t) => (
-                <RadioCard
-                  key={t.id}
-                  value={t.id}
-                  title={toolLook(t.provider).label}
-                  description={`${t.name} · ${toolLook(t.provider).kind === "incidents" ? "Incidents" : "Issues"}`}
-                />
-              ))}
-            </RadioGroup>
-          ) : null}
-          {step === "details" && tool ? (
-            <Details
-              workspace={workspace}
-              tool={tool}
-              mode={mode}
-              issue={issue}
-              picked={ref}
-              onMode={setMode}
-              onIssue={setIssue}
-              onPick={setRef}
-            />
-          ) : null}
+    <Modal
+      size="md"
+      className="h-[min(640px,calc(100dvh-3rem))]"
+      isOpen
+      onOpenChange={(open) => (open ? undefined : onClose())}
+    >
+      <ModalHeader title={head.title} description={head.description} />
+      <ModalBody>
+        <StepMotion view={step} forward={forward} className="flex flex-col gap-4 pb-2">
+          <StepBody
+            workspace={workspace}
+            step={step}
+            tools={tools}
+            tool={tool}
+            mode={mode}
+            issue={issue}
+            onTool={pickTool}
+            onMode={pickMode}
+            onIssue={setIssue}
+            onPick={setRef}
+          />
         </StepMotion>
       </ModalBody>
       <ModalFooter>
-        {step === "details" && tools.length > 1 ? (
-          <Button variant="secondary" leadingIcon={RiArrowLeftLine} onClick={() => setStep("tool")}>
+        {back ? (
+          <Button variant="secondary" leadingIcon={RiArrowLeftLine} onClick={back}>
             Back
           </Button>
         ) : (
@@ -429,15 +512,11 @@ export function LinkIssueDialog({
             Cancel
           </Button>
         )}
-        {step === "tool" ? (
-          <Button disabled={!toolId} onClick={() => setStep("details")}>
-            Continue
-          </Button>
-        ) : (
+        {step === "details" ? (
           <Button disabled={!isReady(tool, mode, issue, ref)} loading={link.isPending} onClick={() => link.mutate()}>
             {submit}
           </Button>
-        )}
+        ) : null}
       </ModalFooter>
     </Modal>
   );

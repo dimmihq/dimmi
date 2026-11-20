@@ -5,11 +5,11 @@
  * naming it, and lands in its editor; archiving a type asks first, and
  * its old tickets keep it. Archived types sit at the end, marked.
  */
+
 import { RiArchiveLine, RiEditLine } from "@remixicon/react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { useId, useState } from "react";
-
 import { Chip } from "@/components/base/badges/chip";
 import { Button } from "@/components/base/buttons/button";
 import { Input } from "@/components/base/input/input";
@@ -30,6 +30,7 @@ import {
   ticketKinds,
   ticketTypesQuery,
 } from "@/lib/api/tickets";
+import { formatNumber } from "@/lib/i18n/format";
 
 import { kindHint, kindLabel, typeIcon } from "../labels";
 
@@ -123,7 +124,7 @@ export function TypesSection({ workspace }: { workspace: string }) {
           isOpen
           onOpenChange={(next) => (next ? undefined : setArchiving(null))}
           title={`Archive ${archiving.name}?`}
-          description={`New tickets can no longer use it. Its ${archiving.total_tickets} tickets keep it, and so do their fields.`}
+          description={`New tickets can no longer use it. ${archiving.total_tickets === 1 ? "Its 1 ticket keeps" : `Its ${formatNumber(archiving.total_tickets)} tickets keep`} it, and so do their fields.`}
           confirmLabel="Archive type"
           onConfirm={async () => {
             try {

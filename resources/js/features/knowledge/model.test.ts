@@ -2,7 +2,18 @@ import { describe, expect, it } from "vitest";
 
 import type { KnowledgeSource, SourceSchema, SyncRun } from "@/lib/api/knowledge-sources";
 
-import { ago, broken, initialValues, missing, nameFor, patterns, runSummary, settingsOf, sourceState } from "./model";
+import {
+  ago,
+  broken,
+  initialValues,
+  missing,
+  nameFor,
+  patterns,
+  runSummary,
+  settingsOf,
+  sourceState,
+  stepsFor,
+} from "./model";
 
 const schema: SourceSchema = {
   type: "object",
@@ -88,5 +99,16 @@ describe("source state", () => {
     expect(runSummary(run)).toBe("3 new · 1 removed");
     expect(ago("2026-11-01T10:00:00Z", Date.parse("2026-11-01T12:00:00Z"))).toBe("2 hours ago");
     expect(ago(null)).toBe("Never");
+  });
+});
+
+describe("stepsFor", () => {
+  it("never asks for an account: services are connected once, in Integrations", () => {
+    const schema = {
+      type: "object",
+      properties: { installation: { type: "string", format: "x-integration" } },
+    } as unknown as SourceSchema;
+
+    expect(stepsFor({ schema, integration: "notion" }).map((s) => s.id)).not.toContain("account");
   });
 });

@@ -18,7 +18,7 @@ const pages = [
   "Help centers",
   "Knowledge",
   "Changelog",
-  "Feedback",
+  "Feature requests",
   "Webhooks",
   "Identity verification",
   "Workspace",
@@ -79,8 +79,8 @@ it.describe("settings", () => {
     const appearance = page.getByRole("region", { name: "Appearance" });
     await expect(appearance.getByText("#1F2328", { exact: false })).toBeVisible();
 
-    await appearance.getByRole("button", { name: "Messenger colour" }).click();
-    const editor = page.getByRole("dialog", { name: "Messenger colour" });
+    await appearance.getByRole("button", { name: "Messenger color" }).click();
+    const editor = page.getByRole("dialog", { name: "Messenger color" });
     await editor.getByRole("textbox").fill("#3b82f6");
     await editor.getByRole("textbox").press("Enter");
     await expect(appearance.getByText("#3B82F6", { exact: false })).toBeVisible();

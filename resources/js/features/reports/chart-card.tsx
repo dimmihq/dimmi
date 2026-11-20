@@ -1,12 +1,12 @@
 /*
  * One chart of a report on its card: its title, a legend when it has
  * more than one series, a CSV of exactly its data, and the chart its
- * kind calls for. A kind this page does not know yet draws as a table
- * when it has rows, else as bars.
+ * kind calls for. A table takes the data table's card, outlined on the
+ * page with its title above the header row. A kind this page does not
+ * know yet draws as a table when it has rows, else as bars.
  */
 import { RiDownload2Line } from "@remixicon/react";
 
-import { Button } from "@/components/base/buttons/button";
 import { Skeleton } from "@/components/base/skeleton/skeleton";
 import type { Report, ReportChart } from "@/lib/api/reports";
 import { cx } from "@/utils/cx";
@@ -14,6 +14,7 @@ import { cx } from "@/utils/cx";
 import { CartesianChart, Heatmap, type PointPick, ReportTable } from "./charts";
 import { chartCsv, saveFile } from "./csv";
 import { seriesColor } from "./format";
+import { IconAction } from "./icon-action";
 
 type Drawn = "cartesian" | "heatmap" | "table";
 
@@ -64,6 +65,31 @@ export function ChartCard({
   const drawn = drawnAs(chart);
   const empty = isEmpty(chart, drawn);
   const legend = drawn === "cartesian" && chart.series.length > 1;
+  const download = () => saveFile(chartCsv(chart), `${report.key}-${chart.key}-${report.from}-${report.to}.csv`);
+
+  if (drawn === "table") {
+    return (
+      <section
+        aria-label={chart.title}
+        className={cx(
+          "flex min-w-0 flex-col overflow-hidden rounded-2xl border border-border-table pt-2",
+          isWide(chart) && "xl:col-span-2",
+        )}
+      >
+        <header className="flex min-h-10 min-w-0 items-center justify-between gap-2 px-3 pb-2">
+          <h2 className="truncate text-body-medium text-text-primary">{chart.title}</h2>
+          <IconAction
+            icon={RiDownload2Line}
+            label={`Download ${chart.title} as CSV`}
+            isDisabled={empty}
+            className="-me-1"
+            onPress={download}
+          />
+        </header>
+        <ReportTable chart={chart} onRow={onRow} />
+      </section>
+    );
+  }
 
   return (
     <section
@@ -87,16 +113,13 @@ export function ChartCard({
             </ul>
           ) : null}
         </div>
-        <Button
-          size="xs"
-          variant="secondary"
-          leadingIcon={RiDownload2Line}
-          aria-label={`Download ${chart.title} as CSV`}
-          disabled={empty}
-          onClick={() => saveFile(chartCsv(chart), `${report.key}-${chart.key}-${report.from}-${report.to}.csv`)}
-        >
-          CSV
-        </Button>
+        <IconAction
+          icon={RiDownload2Line}
+          label={`Download ${chart.title} as CSV`}
+          isDisabled={empty}
+          className="-my-1 -me-1.5"
+          onPress={download}
+        />
       </header>
       {empty ? (
         <p className="flex h-40 items-center justify-center text-body-2-regular text-text-tertiary">
@@ -104,8 +127,6 @@ export function ChartCard({
         </p>
       ) : drawn === "heatmap" ? (
         <Heatmap chart={chart} />
-      ) : drawn === "table" ? (
-        <ReportTable chart={chart} onRow={onRow} />
       ) : (
         <CartesianChart chart={chart} onPick={onPick} />
       )}

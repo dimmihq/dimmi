@@ -1,19 +1,22 @@
 /*
  * The macro part of a saved reply: what happens to the conversation once
  * the reply is sent. Every choice is picked from what the workspace has,
- * its statuses, teammates, teams, tags and priorities, never typed.
+ * its statuses, teammates, teams and priorities; tags are found or
+ * created in the same picker the inbox uses, and the ones added show as
+ * chips to remove.
  */
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { Label } from "@/components/base/input/label";
 import { Select, SelectItem } from "@/components/base/select/select";
+import { toast } from "@/components/base/toast/toast";
 import { TagChip } from "@/features/inbox/tags/tag-chip";
+import { TagPicker } from "@/features/inbox/tags/tag-picker";
 import type { ConversationPriority } from "@/lib/api/inbox";
 import type { SavedReplyActions, SnoozePreset } from "@/lib/api/saved-replies";
-import { tagsQuery } from "@/lib/api/tags";
+import { createTag, tagsQuery } from "@/lib/api/tags";
 import { teamsQuery } from "@/lib/api/teams";
 import { membersQuery } from "@/lib/api/workspace";
-import { cx } from "@/utils/cx";
 
 import { snoozeLabels } from "./macro";
 
@@ -91,11 +94,25 @@ export function ActionsPicker({
   const { data: teams = [] } = useQuery(teamsQuery(workspace));
   const { data: tags = [] } = useQuery(tagsQuery(workspace));
   const active = members.filter((member) => member.status === "active");
-  const toggleTag = (id: string) =>
-    onChange({
-      ...value,
-      tag_ids: value.tag_ids.includes(id) ? value.tag_ids.filter((tag) => tag !== id) : [...value.tag_ids, id],
-    });
+  const client = useQueryClient();
+  const picked = value.tag_ids.flatMap((id) => tags.filter((tag) => tag.id === id));
+  const addTag = async (name: string) => {
+    let tag = tags.find((candidate) => candidate.name.toLowerCase() === name.toLowerCase());
+    if (!tag) {
+      try {
+        tag = await createTag(workspace, name);
+        await client.invalidateQueries({ queryKey: tagsQuery(workspace).queryKey });
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : "The tag could not be created.");
+
+        return;
+      }
+    }
+    if (!value.tag_ids.includes(tag.id) && value.tag_ids.length < 10) {
+      onChange({ ...value, tag_ids: [...value.tag_ids, tag.id] });
+    }
+  };
+  const removeTag = (id: string) => onChange({ ...value, tag_ids: value.tag_ids.filter((tag) => tag !== id) });
 
   return (
     <div className="flex flex-col gap-4">
@@ -147,30 +164,18 @@ export function ActionsPicker({
       </div>
       <div className="flex flex-col gap-1.5">
         <Label>Add tags</Label>
-        {tags.length === 0 ? (
-          <p className="text-body-2-regular text-text-tertiary">The workspace has no tags yet.</p>
-        ) : (
-          <fieldset aria-label="Add tags" className="m-0 flex flex-wrap gap-1.5 border-0 p-0">
-            {tags.map((tag) => {
-              const on = value.tag_ids.includes(tag.id);
-              return (
-                <button
-                  key={tag.id}
-                  type="button"
-                  aria-pressed={on}
-                  onClick={() => toggleTag(tag.id)}
-                  disabled={!on && value.tag_ids.length >= 10}
-                  className={cx(
-                    "cursor-pointer rounded-full outline-none ring-offset-1 transition-opacity focus-visible:ring-2 focus-visible:ring-border-focus-ring disabled:cursor-not-allowed",
-                    on ? "ring-2 ring-border-focus-ring" : "opacity-60 hover:opacity-100",
-                  )}
-                >
-                  <TagChip tag={tag} />
-                </button>
-              );
-            })}
-          </fieldset>
-        )}
+        <div className="flex flex-wrap items-center gap-1.5">
+          {picked.map((tag) => (
+            <TagChip key={tag.id} tag={tag} onRemove={() => removeTag(tag.id)} />
+          ))}
+          <TagPicker
+            workspace={workspace}
+            selected={picked}
+            onAdd={(name) => void addTag(name)}
+            onRemove={(tag) => removeTag(tag.id)}
+            label="Add tags"
+          />
+        </div>
       </div>
     </div>
   );

@@ -8,7 +8,6 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 
-import { Button } from "@/components/base/buttons/button";
 import { Popover, PopoverHeader, PopoverTrigger } from "@/components/base/popover/popover";
 import { SegmentedControl, SegmentedControlItem } from "@/components/base/segmented-control/segmented-control";
 import { Switch } from "@/components/base/switch/switch";
@@ -25,6 +24,8 @@ import {
   updateReportDigest,
 } from "@/lib/api/reports";
 import { formatDateTime } from "@/lib/i18n/format";
+
+import { IconAction } from "./icon-action";
 
 export function FactsExportButton({ workspace, filters }: { workspace: string; filters: ReportFilters }) {
   const client = useQueryClient();
@@ -47,28 +48,12 @@ export function FactsExportButton({ workspace, filters }: { workspace: string; f
   });
 
   return (
-    <>
-      <Button
-        size="small"
-        variant="secondary"
-        iconOnly
-        leadingIcon={RiDownload2Line}
-        aria-label="Export facts CSV"
-        className="sm:hidden"
-        loading={start.isPending}
-        onClick={() => start.mutate()}
-      />
-      <Button
-        size="small"
-        variant="secondary"
-        leadingIcon={RiDownload2Line}
-        className="max-sm:hidden"
-        loading={start.isPending}
-        onClick={() => start.mutate()}
-      >
-        Export facts CSV
-      </Button>
-    </>
+    <IconAction
+      icon={RiDownload2Line}
+      label={start.isPending ? "Starting the export" : "Export facts as CSV"}
+      isDisabled={start.isPending}
+      onPress={() => start.mutate()}
+    />
   );
 }
 
@@ -136,7 +121,7 @@ function DigestForm({ workspace, digest }: { workspace: string; digest: ReportDi
           isDisabled={save.isPending}
           onChange={(on) => save.mutate({ frequency, businessHours: on })}
         >
-          Count business hours only
+          Count office hours only
         </Switch>
       )}
       {frequency !== "off" && digest?.next_send_at ? (
@@ -153,15 +138,7 @@ export function DigestButton({ workspace }: { workspace: string }) {
 
   return (
     <PopoverTrigger isOpen={open} onOpenChange={setOpen}>
-      <Button
-        size="small"
-        variant="secondary"
-        leadingIcon={RiMailLine}
-        aria-label={on ? "Email digest: on" : "Email digest"}
-        className="max-sm:size-8 max-sm:px-0 max-sm:[&>span]:hidden"
-      >
-        Email digest
-      </Button>
+      <IconAction icon={RiMailLine} label={on ? "Email digest: on" : "Email digest"} tip={false} />
       <Popover aria-label="Email digest" placement="bottom end" className="w-72">
         {digest.isError ? (
           <p className="text-body-2-regular text-text-error-primary">{digest.error.message}</p>

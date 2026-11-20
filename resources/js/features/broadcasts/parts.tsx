@@ -4,7 +4,9 @@
  * receiving it will see it: in their inbox, in the messenger or in
  * their Slack channel.
  */
-import { RiChat3Line, RiSlackLine } from "@remixicon/react";
+
+import { RiChat3Line } from "@remixicon/react";
+import { SlackMark } from "@/components/application/brand/slack-mark";
 
 import { Avatar } from "@/components/base/avatar/avatar";
 import { Chip } from "@/components/base/badges/chip";
@@ -127,7 +129,7 @@ function SlackPreview({ broadcast }: { broadcast: PreviewMessage }) {
   return (
     <div className="flex flex-col overflow-hidden rounded-2xl border border-border-button-default bg-background-primary-default">
       <div className="flex items-center gap-2 border-b border-separator-border px-4 py-2.5">
-        <RiSlackLine aria-hidden className="size-4 text-foreground-icon-tertiary" />
+        <SlackMark className="size-4" />
         <span className="truncate text-body-2-medium text-text-primary">Each customer's shared channel</span>
       </div>
       <div className="flex gap-3 px-4 py-4">
@@ -148,6 +150,31 @@ function SlackPreview({ broadcast }: { broadcast: PreviewMessage }) {
 }
 
 /*
+ * ConversationPreview shows the reply where it lands: under the
+ * customer's own last message, in the thread they already have.
+ */
+function ConversationPreview({ broadcast }: { broadcast: PreviewMessage }) {
+  return (
+    <div className="flex flex-col gap-3 rounded-2xl bg-background-tertiary-default p-4">
+      <span className="w-fit max-w-[80%] rounded-2xl bg-background-primary-default px-3 py-2 text-body-2-regular text-text-tertiary">
+        Their last message in the conversation
+      </span>
+      <div className="flex w-[90%] flex-col gap-2 self-end rounded-2xl bg-background-primary-default p-4 shadow-card">
+        <span className="flex items-center gap-2">
+          <Avatar size="xs" initials={initials(broadcast.sender)} />
+          <span className="text-body-2-medium text-text-primary">{broadcast.sender}</span>
+          <span className="text-caption-1-regular text-text-tertiary">just now</span>
+        </span>
+        <MarkdownBody markdown={broadcast.body} />
+      </div>
+      <span className="text-caption-1-regular text-text-tertiary">
+        Sent on the channel they wrote from: email, the messenger, Slack or another.
+      </span>
+    </div>
+  );
+}
+
+/*
  * MessagePreview shows the broadcast the way its channel delivers it.
  */
 export function MessagePreview({ broadcast, className }: { broadcast: PreviewMessage; className?: string }) {
@@ -156,6 +183,7 @@ export function MessagePreview({ broadcast, className }: { broadcast: PreviewMes
     chat: ChatPreview,
     post: PostPreview,
     slack: SlackPreview,
+    conversation: ConversationPreview,
   };
   const Preview = previews[broadcast.channel] ?? PostPreview;
 

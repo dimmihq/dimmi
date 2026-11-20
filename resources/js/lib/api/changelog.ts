@@ -234,3 +234,41 @@ export function deleteSubscriber(workspace: string, id: string): Promise<void> {
  * picker shows them.
  */
 export const labelColors = ["#22c55e", "#3b82f6", "#f97316", "#a855f7", "#ef4444", "#eab308", "#14b8a6", "#64748b"];
+
+/*
+ * ChangelogAnalytics is what readers did with a changelog over the last
+ * days: views by day, the most read updates, reactions, and the
+ * subscribers it has now with those who joined and left.
+ */
+export interface ChangelogAnalytics {
+  object: "changelog_analytics";
+  days: number;
+  since: string;
+  views: number;
+  daily: { date: string; views: number }[];
+  top_entries: {
+    id: string;
+    title: string;
+    slug: string;
+    published_at: string | null;
+    views: number;
+    reactions: number;
+  }[];
+  reactions: number;
+  subscribers: number;
+  subscribers_joined: number;
+  subscribers_unsubscribed: number;
+}
+
+export function changelogAnalyticsQuery(workspace: string, helpCenter: string, days = 30) {
+  return queryOptions({
+    queryKey: ["workspace", workspace, "help-centers", helpCenter, "changelog-analytics", days],
+    queryFn: () =>
+      request<ChangelogAnalytics>(
+        "GET",
+        `/help-centers/${encodeURIComponent(helpCenter)}/changelog-analytics?days=${days}`,
+        undefined,
+        { workspace },
+      ),
+  });
+}

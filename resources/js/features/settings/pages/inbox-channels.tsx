@@ -18,6 +18,7 @@ import { emailAddressesQuery } from "@/lib/api/email";
 import type { Inbox } from "@/lib/api/inboxes";
 import { createWidget, widgetSettingsQuery } from "@/lib/api/widget-settings";
 
+import { usePermission } from "../inboxes";
 import { Glyph, Item, Section } from "../layout";
 import { failureText } from "../teams";
 import type { ChannelsDraft } from "./channels-draft";
@@ -120,12 +121,14 @@ export function ChannelsSection({
   const { data: addresses = [], isPending: loadingAddresses } = useQuery(emailAddressesQuery(workspace));
   const here = (i: { inbox: { id: string } }) => i.inbox.id === inbox.id;
   const moving = canManage ? inboxes : [];
+  const canWrite = usePermission(workspace, "settings:write");
+  const canAddMessenger = usePermission(workspace, "widgets:manage") && canWrite;
 
   return (
     <Section
       title="Channels"
       description="Where this inbox's conversations come from."
-      action={canManage ? <AddMessenger workspace={workspace} inbox={inbox} /> : null}
+      action={canManage && canAddMessenger ? <AddMessenger workspace={workspace} inbox={inbox} /> : null}
       loading={loadingWidgets || loadingAddresses}
       rows={2}
     >

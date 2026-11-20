@@ -9,22 +9,30 @@
  * fields, the customer requests it serves and the engineering work
  * behind it, each changed in place.
  */
-import { RiArrowRightUpLine, RiChat3Line, RiStickyNoteLine } from "@remixicon/react";
+import { RiArrowRightUpLine, RiChat3Line, RiLock2Line, RiStickyNoteLine } from "@remixicon/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { type KeyboardEvent, useState } from "react";
+import { Panel as Pane } from "react-resizable-panels";
 
+import { Accordion } from "@/components/base/accordion/accordion";
 import { Avatar } from "@/components/base/avatar/avatar";
 import { Button } from "@/components/base/buttons/button";
 import { Input } from "@/components/base/input/input";
 import { Select, SelectItem } from "@/components/base/select/select";
 import { Textarea } from "@/components/base/textarea/textarea";
 import { toast } from "@/components/base/toast/toast";
-import { ago } from "@/features/inbox/conversations";
-import { Nothing, Row } from "@/features/inbox/customer/rows";
+import { AssignPicker } from "@/features/inbox/assign/assign-picker";
+import { NoteComposer } from "@/features/inbox/composer";
+import { ago, toolOf } from "@/features/inbox/conversations";
+import { quiet } from "@/features/inbox/customer/quiet";
+import { Row, Section } from "@/features/inbox/customer/rows";
+import { MessageBody } from "@/features/inbox/message-body";
 import { useAccount } from "@/features/settings/use-account";
 import { avatarColor } from "@/features/shell/avatar-color";
-import { Panel, ScrollArea } from "@/features/shell/page";
+import { PageHeader, Panel, ScrollArea } from "@/features/shell/page";
+import { PaneGroup, PaneHandle } from "@/features/shell/resizable";
+import { useWide } from "@/features/shell/use-wide";
 import { teamsQuery } from "@/lib/api/teams";
 import {
   addTicketNote,
@@ -36,13 +44,13 @@ import {
   ticketPriorities,
 } from "@/lib/api/tickets";
 import { membersQuery } from "@/lib/api/workspace";
-import { cx } from "@/utils/cx";
 
 import { foldLinks } from "./fold-links";
 import { TicketIssues } from "./issues/ticket-issues";
+import { ToolMark } from "./issues/tool-logos";
 import { eventText, priorityLabel } from "./labels";
 import { StatePill, TypeIcon } from "./state-pill";
-import { ClashPrompt, FieldsEditor, StatePicker } from "./ticket-fields";
+import { ClashPrompt, FieldsEditor, StateMenu } from "./ticket-fields";
 import { type TicketSave, useTicketSave } from "./use-ticket-save";
 import { useTicketSetup } from "./use-ticket-setup";
 
@@ -143,23 +151,29 @@ function TicketLink({
 }
 
 /*
- * Note is one note a teammate left, shown like a message.
+ * Note is one note a teammate left, drawn as the conversation thread
+ * draws an internal note: on the team's side, in the same rounded
+ * bubble with the note's edge, its text read as Markdown, and who wrote
+ * it and when underneath.
  */
 export function Note({ event }: { event: TicketEvent }) {
   const name = String(event.data.actor_name ?? "Teammate");
+  const tool = toolOf(event.actor_type, name);
 
   return (
-    <li className="flex gap-2.5">
-      <Avatar size="sm" color={avatarColor(name)} initials={name.charAt(0)} aria-label={name} />
-      <div className="flex min-w-0 flex-1 flex-col gap-1">
-        <span className="flex items-baseline gap-2">
-          <span className="text-body-2-medium text-text-primary">{name}</span>
-          <span className="text-caption-1-regular text-text-tertiary">{ago(event.created_at)}</span>
-        </span>
-        <p className="w-fit max-w-full whitespace-pre-wrap rounded-xl rounded-ss-sm border border-status-yellow-text/40 bg-background-primary-default px-3 py-2 text-body-regular text-text-primary shadow-card">
-          {String(event.data.body ?? "")}
-        </p>
+    <li aria-label={`Internal note from ${name}`} className="flex flex-col items-end gap-1.5">
+      <div className="w-fit max-w-[min(520px,calc(100%-24px))] rounded-[var(--radius-2-5xl)] border border-status-yellow-text/40 bg-background-primary-default p-3 text-body-regular text-text-primary shadow-card">
+        <MessageBody text={String(event.data.body ?? "")} />
       </div>
+      <span className="flex items-center gap-1.5 text-body-2-regular text-text-tertiary">
+        {tool ? (
+          <ToolMark provider={tool} className="size-4" />
+        ) : (
+          <RiLock2Line aria-hidden className="size-4 text-foreground-icon-tertiary" />
+        )}
+        <span className="text-text-secondary">{name}</span>
+        {ago(event.created_at)}
+      </span>
     </li>
   );
 }
@@ -168,15 +182,10 @@ export function Note({ event }: { event: TicketEvent }) {
  * Change is one change to the ticket, a quiet line between the notes.
  */
 export function Change({ event }: { event: TicketEvent }) {
-  const who = event.data.actor_name ? `${String(event.data.actor_name)} · ` : "";
-
   return (
     <li className="flex items-center gap-2 ps-1 text-caption-1-regular text-text-tertiary">
       <span aria-hidden className="size-1.5 shrink-0 rounded-full bg-foreground-icon-quaternary" />
-      <span className="min-w-0 flex-1 truncate">
-        {who}
-        {eventText(event)}
-      </span>
+      <span className="min-w-0 flex-1 truncate">{eventText(event)}</span>
       <span className="shrink-0">{ago(event.created_at)}</span>
     </li>
   );
@@ -197,7 +206,7 @@ export function LinkRun({ events }: { events: TicketEvent[] }) {
     <li className="flex items-center gap-2 ps-1 text-caption-1-regular text-text-tertiary">
       <span aria-hidden className="size-1.5 shrink-0 rounded-full bg-foreground-icon-quaternary" />
       <span className="min-w-0 flex-1 truncate">
-        {events.length === 1 ? eventText(first) : `Linked ${events.length} tickets or conversations`}
+        {events.length === 1 ? eventText(first) : `${events.length} conversations and tickets linked`}
       </span>
       <span className="shrink-0">{ago(last.created_at)}</span>
     </li>
@@ -228,23 +237,34 @@ export function Timeline({ workspace, ticket, view }: { workspace: string; ticke
 }
 
 /*
- * NoteBox writes a note for the team at the foot of the thread; Cmd or
- * Ctrl+Enter adds it.
+ * NoteBox writes a note for the team. At the foot of a ticket's thread
+ * it is the conversation's composer with only its note side; bare, in a
+ * card inside a details panel, it is a plain field. Cmd or Ctrl+Enter
+ * adds the note.
  */
 export function NoteBox({ workspace, ticket, bare = false }: { workspace: string; ticket: Ticket; bare?: boolean }) {
   const client = useQueryClient();
   const [body, setBody] = useState("");
+  const refresh = () => client.invalidateQueries({ queryKey: ticketKeys.events(workspace, ticket.id) });
   const note = useMutation({
     mutationFn: () => addTicketNote(workspace, ticket.id, body.trim()),
     onSuccess: async () => {
       setBody("");
-      await client.invalidateQueries({ queryKey: ticketKeys.events(workspace, ticket.id) });
+      await refresh();
     },
     onError: (error) => toast.error((error as Error).message),
   });
 
+  if (!bare) {
+    return (
+      <div className="px-3 pb-3">
+        <NoteComposer onAdd={(text) => addTicketNote(workspace, ticket.id, text).then(refresh)} />
+      </div>
+    );
+  }
+
   return (
-    <div className={bare ? "w-full" : "mx-auto w-full max-w-[760px] px-4 pb-4"}>
+    <div className="w-full">
       <div className="flex flex-col gap-2 rounded-2xl border border-border-button-default bg-background-primary-default p-2 shadow-xs">
         <Textarea
           aria-label="Note"
@@ -279,34 +299,38 @@ export function NoteBox({ workspace, ticket, bare = false }: { workspace: string
 export function Holders({ workspace, ticket, save }: { workspace: string; ticket: Ticket; save: TicketSave }) {
   const { data: members = [] } = useQuery({ ...membersQuery(workspace), enabled: workspace !== "" });
   const { data: teams = [] } = useQuery(teamsQuery(workspace));
-  const people = [
-    { id: nobody, name: "Unassigned" },
-    ...members.filter((m) => m.status === "active").map((m) => ({ id: m.id, name: m.user.name })),
-  ];
+  const [assigning, setAssigning] = useState(false);
+  const holder = members.find((m) => m.id === ticket.assignee_id)?.user.name ?? null;
 
   return (
     <>
       <Row label="Assignee">
-        <Select
-          aria-label="Assignee"
-          size="sm"
-          selectedKey={ticket.assignee_id ?? nobody}
-          isDisabled={save.busy}
-          onSelectionChange={(key) =>
-            void save.save({ assignee_id: key === nobody || key === null ? null : String(key) })
-          }
-        >
-          {people.map((p) => (
-            <SelectItem key={p.id} id={p.id} textValue={p.name}>
-              {p.name}
-            </SelectItem>
-          ))}
-        </Select>
+        <AssignPicker
+          workspace={workspace}
+          assignee={ticket.assignee_id}
+          team={null}
+          isOpen={assigning}
+          onOpenChange={setAssigning}
+          onMember={(id) => void save.save({ assignee_id: id })}
+          trigger={{
+            label: `Assignee: ${holder ?? "Unassigned"}`,
+            className: quiet,
+            children: holder ? (
+              <span className="flex min-w-0 items-center gap-2">
+                <Avatar size="xs" color={avatarColor(holder)} initials={holder.charAt(0)} />
+                <span className="truncate">{holder}</span>
+              </span>
+            ) : (
+              "Unassigned"
+            ),
+          }}
+        />
       </Row>
       <Row label="Team">
         <Select
           aria-label="Team"
           size="sm"
+          variant="quiet"
           selectedKey={ticket.team_id ?? nobody}
           isDisabled={save.busy}
           onSelectionChange={(key) => void save.save({ team_id: key === nobody || key === null ? null : String(key) })}
@@ -322,6 +346,7 @@ export function Holders({ workspace, ticket, save }: { workspace: string; ticket
         <Select
           aria-label="Priority"
           size="sm"
+          variant="quiet"
           selectedKey={ticket.priority}
           isDisabled={save.busy}
           onSelectionChange={(key) => key !== null && void save.save({ priority: String(key) as TicketPriority })}
@@ -337,64 +362,111 @@ export function Holders({ workspace, ticket, save }: { workspace: string; ticket
   );
 }
 
-function Block({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <section aria-label={label} className="flex flex-col gap-2 border-t border-separator-border pt-3">
-      <h3 className="text-caption-1-medium text-text-tertiary">{label}</h3>
-      {children}
-    </section>
-  );
-}
-
 /*
- * TicketDetails is the column beside the thread; what a kind adds, such
- * as a tracker's customer reports, comes in after who holds it. A
- * tracker whose type has no fields leaves the fields out.
+ * TicketDetails is the column beside the thread, built like the
+ * conversation's details: the state, who holds it and what it is as
+ * rows, then sections. What a kind adds, such as a tracker's customer
+ * reports, comes in as the first section; `open` names the sections it
+ * adds so they start open.
  */
 export function TicketDetails({
   workspace,
   ticket,
   save,
+  open = [],
   children,
 }: {
   workspace: string;
   ticket: Ticket;
   save: TicketSave;
+  open?: string[];
   children?: React.ReactNode;
 }) {
   const setup = useTicketSetup(workspace, ticket);
   const hasFields = (setup.type?.fields ?? []).some((f) => !f.archived_at);
+  const sees = setup.states.find((s) => s.id === ticket.state_id)?.customer_label ?? ticket.state.customer_label;
 
   return (
-    <div className="flex flex-col gap-3 px-4 pt-1 pb-4">
-      <ClashPrompt save={save} />
+    <Accordion
+      variant="plain"
+      size="sm"
+      allowsMultipleExpanded
+      defaultExpandedKeys={[...open, "Fields", "Issues"]}
+      className="pt-1"
+    >
       <div className="flex flex-col gap-1">
-        <StatePicker ticket={ticket} states={setup.states} save={save} compact />
+        <ClashPrompt save={save} />
+        <dl className="flex flex-col">
+          <Row label="State">
+            <StateMenu ticket={ticket} states={setup.states} save={save} />
+          </Row>
+          {sees ? <Row label="Customer sees">{sees}</Row> : null}
+          <Holders workspace={workspace} ticket={ticket} save={save} />
+          <Row label="Type">
+            <span className="flex min-w-0 items-center gap-1.5">
+              <TypeIcon icon={ticket.type.icon} kind={ticket.kind} />
+              <span className="truncate">{ticket.type.name}</span>
+            </span>
+          </Row>
+          <Row label="Created">{ago(ticket.created_at)}</Row>
+        </dl>
       </div>
-      <dl className="flex flex-col">
-        <Holders workspace={workspace} ticket={ticket} save={save} />
-        <Row label="Type">
-          <span className="flex min-w-0 items-center gap-1.5">
-            <TypeIcon icon={ticket.type.icon} kind={ticket.kind} />
-            <span className="truncate">{ticket.type.name}</span>
-          </span>
-        </Row>
-        <Row label="Created">{ago(ticket.created_at)}</Row>
-      </dl>
       {children}
-      {hasFields || ticket.kind !== "tracker" ? (
-        <Block label="Fields">
-          {hasFields ? (
-            <FieldsEditor key={ticket.version} workspace={workspace} ticket={ticket} type={setup.type} save={save} />
-          ) : (
-            <Nothing>This type has no fields.</Nothing>
-          )}
-        </Block>
+      {hasFields ? (
+        <Section title="Fields">
+          <FieldsEditor key={ticket.version} workspace={workspace} ticket={ticket} type={setup.type} save={save} />
+        </Section>
       ) : null}
-      <Block label="Engineering work">
-        <TicketIssues ticketId={ticket.id} compact />
-      </Block>
-    </div>
+      <TicketIssues ticketId={ticket.id} compact heading="Issues" />
+    </Accordion>
+  );
+}
+
+/*
+ * DetailsColumn is the panel that holds the details.
+ */
+export function DetailsColumn({ children }: { children: React.ReactNode }) {
+  return (
+    <Panel label="Details" className="h-full w-full">
+      <PageHeader title="Details" level={2} />
+      <ScrollArea className="px-4 pb-6">{children}</ScrollArea>
+    </Panel>
+  );
+}
+
+const visible = { overflow: "visible" } as const;
+const split = { group: "dimmi:ticket", thread: "thread", details: "details" } as const;
+
+/*
+ * TicketSplit lays a ticket's thread and its details side by side, with
+ * the gap between them a grip that resizes them the way a conversation's
+ * panels resize; each browser remembers the width. On a narrow screen
+ * only the thread shows.
+ */
+export function TicketSplit({ thread, details }: { thread: React.ReactNode; details: React.ReactNode }) {
+  const sideBySide = useWide(1024);
+  if (!sideBySide) {
+    return <div className="flex h-full min-w-0 flex-1">{thread}</div>;
+  }
+
+  return (
+    <PaneGroup id={split.group} panelIds={[split.thread, split.details]}>
+      <Pane id={split.thread} minSize={360} style={visible} className="flex h-full">
+        {thread}
+      </Pane>
+      <PaneHandle />
+      <Pane
+        id={split.details}
+        defaultSize={360}
+        minSize={300}
+        maxSize={560}
+        groupResizeBehavior="preserve-pixel-size"
+        style={visible}
+        className="flex h-full"
+      >
+        {details}
+      </Pane>
+    </PaneGroup>
   );
 }
 
@@ -403,29 +475,28 @@ export function TicketThread({ view, ticket }: { view: string; ticket: Ticket })
   const save = useTicketSave(workspace, ticket);
 
   return (
-    <div className="flex h-full min-w-0 flex-1 gap-2">
-      <Panel label={`${ticket.reference} ${ticket.title}`} className="flex h-full min-w-0 flex-1 flex-col">
-        <header className="flex h-12 shrink-0 items-center gap-2 ps-3 pe-2.5 pt-[7px]">
-          <TypeIcon icon={ticket.type.icon} kind={ticket.kind} />
-          <span className="shrink-0 text-body-2-medium text-text-tertiary">{ticket.reference}</span>
-          <TicketTitle key={ticket.version} ticket={ticket} save={save} />
-          <span className="ms-auto shrink-0">
-            <StatePill state={ticket.state} />
-          </span>
-        </header>
-        <ScrollArea className="flex-1">
-          <Timeline workspace={workspace} ticket={ticket} view={view} />
-        </ScrollArea>
-        <NoteBox workspace={workspace} ticket={ticket} />
-      </Panel>
-      <Panel label="Details" className={cx("hidden h-full w-[340px] shrink-0 flex-col lg:flex")}>
-        <header className="flex h-12 shrink-0 items-center ps-4 pe-2.5 pt-[7px]">
-          <h2 className="text-body-medium text-text-primary">Details</h2>
-        </header>
-        <ScrollArea>
+    <TicketSplit
+      thread={
+        <Panel label={`${ticket.reference} ${ticket.title}`} className="flex h-full min-w-0 flex-1 flex-col">
+          <header className="flex h-12 shrink-0 items-center gap-2 ps-3 pe-2.5 pt-[7px]">
+            <TypeIcon icon={ticket.type.icon} kind={ticket.kind} />
+            <span className="shrink-0 text-body-2-medium text-text-tertiary">{ticket.reference}</span>
+            <TicketTitle key={ticket.version} ticket={ticket} save={save} />
+            <span className="ms-auto shrink-0">
+              <StatePill state={ticket.state} />
+            </span>
+          </header>
+          <ScrollArea className="flex-1">
+            <Timeline workspace={workspace} ticket={ticket} view={view} />
+          </ScrollArea>
+          <NoteBox workspace={workspace} ticket={ticket} />
+        </Panel>
+      }
+      details={
+        <DetailsColumn>
           <TicketDetails workspace={workspace} ticket={ticket} save={save} />
-        </ScrollArea>
-      </Panel>
-    </div>
+        </DetailsColumn>
+      }
+    />
   );
 }

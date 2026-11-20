@@ -55,7 +55,7 @@ it.describe("email signatures", () => {
     await page.getByRole("button", { name: "Insert a detail" }).click();
     await page
       .getByRole("dialog", { name: "Details" })
-      .getByRole("button", { name: /^Job title/ })
+      .getByRole("button", { name: /^Company name/ })
       .click();
     await expect(page.getByRole("dialog", { name: "Details" })).toHaveCount(0);
     await expect(writer.getByRole("button", { name: "Teammate name" })).toBeVisible();
@@ -69,7 +69,7 @@ it.describe("email signatures", () => {
     await expect(page).toHaveURL(/\/settings\/profile#signature$/);
     await expect(page.getByRole("switch", { name: "Use your signature" })).toBeChecked();
     await expect(page.getByTitle("Your signature preview")).toHaveAttribute("srcdoc", new RegExp(person.name));
-    expect(await storedBodies(page, "filter[member]=me")).toEqual(["Thanks,\n{{member_name}}\n{{member_title}}"]);
+    expect(await storedBodies(page, "filter[member]=me")).toEqual(["Thanks,\n{{member_name}}\n{{company_name}}"]);
 
     await page.getByRole("link", { name: "Edit your signature" }).click();
     await writer.click();

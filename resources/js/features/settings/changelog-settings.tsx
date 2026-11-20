@@ -287,7 +287,7 @@ function LabelsSection({ workspace, helpCenter }: { workspace: string; helpCente
             )
           }
         >
-          <RowMenu label={l.name} actions={labelActions} onPick={(act) => onAct(l, act)} />
+          <RowMenu quiet label={l.name} actions={labelActions} onPick={(act) => onAct(l, act)} />
         </Item>
       ))}
       {adding ? (

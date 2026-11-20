@@ -33,7 +33,7 @@ import { formatDate } from "@/lib/i18n/format";
 import { Action, Danger } from "../controls";
 import { usePermission } from "../inboxes";
 import { featureLabel, healthColor, healthLabels, integrationHealth, providerLook } from "../integrations";
-import { PageSkeleton, Row, Section, SettingsPage } from "../layout";
+import { Logo, PageSkeleton, Row, Section, SettingsPage } from "../layout";
 import { SaveBar } from "../save-bar";
 import { useAccount } from "../use-account";
 import { useProviderLanding } from "../use-provider-landing";
@@ -246,6 +246,8 @@ export function IntegrationSettingsPage({ integration: id }: { integration: stri
   const workspace = useAccount().workspace.id;
   const canManage = usePermission(workspace, "integrations:manage");
   const canNotify = usePermission(workspace, "notification_destinations:manage");
+  const canWrite = usePermission(workspace, "settings:write");
+  const canManageRooms = usePermission(workspace, "channels:manage") && canWrite;
   const { data: integration, isPending } = useQuery(integrationQuery(workspace, id));
   const sync = useIssueSyncDraft(
     workspace,
@@ -277,6 +279,7 @@ export function IntegrationSettingsPage({ integration: id }: { integration: stri
     <SettingsPage
       title={integration.name}
       description={look.detail}
+      mark={<Logo icon={look.icon} brand={look.brand} />}
       footer={
         <SaveBar
           dirty={sync.dirty}
@@ -296,7 +299,7 @@ export function IntegrationSettingsPage({ integration: id }: { integration: stri
       <IssueSyncSettings workspace={workspace} integration={integration} canManage={canManage} draft={sync} />
       {integration.provider === "slack"
         ? integration.channel_ids.map((channel) => (
-            <RoomsSection key={channel} workspace={workspace} channel={channel} canManage={canManage} />
+            <RoomsSection key={channel} workspace={workspace} channel={channel} canManage={canManageRooms} />
           ))
         : null}
       {integration.provider === "slack" ? (

@@ -342,9 +342,6 @@ export type StepId = "account" | "setup" | "content" | "use" | "review";
  */
 export function stepsFor(kind: { schema: SourceSchema; integration?: string }): { id: StepId; label: string }[] {
   const out: { id: StepId; label: string }[] = [];
-  if (kind.integration) {
-    out.push({ id: "account", label: "Account" });
-  }
   const fields = setupFields(kind);
   if (fields.length > 0) {
     const first = kind.schema.properties[fields[0]];

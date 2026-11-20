@@ -63,7 +63,7 @@ export function AddressCard({
       </Row>
       <ForwardingGuide guides={address.setup_guides} />
       {confirmation ? (
-        <Row label="Gmail confirmation code" description="Enter it in Gmail to finish turning on forwarding.">
+        <Row label="Confirmation code" description="Enter it where you set up forwarding to finish turning it on.">
           <span className="font-mono text-body-medium text-text-primary">{confirmation.code}</span>
           {confirmation.confirm_url ? (
             <a
@@ -72,7 +72,7 @@ export function AddressCard({
               target="_blank"
               rel="noopener noreferrer"
             >
-              Open Gmail confirmation
+              Open confirmation
             </a>
           ) : null}
         </Row>

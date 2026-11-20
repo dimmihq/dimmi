@@ -23,7 +23,7 @@
 import { RiArrowUpLine, RiChatQuoteLine, RiLock2Line, RiSparkling2Line, RiStickyNoteLine } from "@remixicon/react";
 import { useQueryClient } from "@tanstack/react-query";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
-import { useEffect, useState } from "react";
+import { type ReactNode, useEffect, useState } from "react";
 
 import { Kbd } from "@/components/base/kbd/kbd";
 import { SegmentedControl, SegmentedControlItem } from "@/components/base/segmented-control/segmented-control";
@@ -289,6 +289,7 @@ function Panel({
   const addEmoji = (emoji: string) => draft.edit(`${draft.body}${emoji}`);
   const gifs = useGifs(workspace, userId, insert);
   const files = useReplyFiles(workspace);
+  const [slot, setSlot] = useState<HTMLElement | null>(null);
   const attachable = !note && canAttach;
   const { send, sending, failure, ready } = useSend({
     mode,
@@ -305,8 +306,9 @@ function Panel({
   });
 
   return (
-    <div>
-      <div className="mx-7 flex h-[34px] items-center justify-between gap-3 rounded-t-2xl bg-composer-panel-tab-background px-1 py-1">
+    <Shell
+      label={note ? "Note composer" : "Reply composer"}
+      tab={
         <SegmentedControl
           aria-label="Write"
           variant="plain"
@@ -323,79 +325,248 @@ function Panel({
           <SegmentedControlItem id={modes.reply}>Reply</SegmentedControlItem>
           <SegmentedControlItem id={modes.note}>Note</SegmentedControlItem>
         </SegmentedControl>
-        <span className="flex min-w-0 items-center gap-1 pe-1.5 text-body-2-medium text-text-secondary">
+      }
+      aside={
+        <>
           {note ? <RiLock2Line aria-hidden className="size-3.5 shrink-0" /> : null}
           <span className="truncate">{note ? "Only your team sees this" : `To ${customer} · ${channel}`}</span>
+        </>
+      }
+    >
+      <div className="flex flex-col gap-3 px-1.5">
+        <DraftConflict draft={draft} />
+        <ComposerField
+          value={draft.body}
+          label={note ? "Internal note" : `Reply to ${customer}`}
+          placeholder={note ? "Write a note only your team sees…" : `Write your reply to ${customer}…`}
+          focusKey={`${mode}-${focusKey}`}
+          onChange={(value) => {
+            draft.edit(value);
+            if (!note) {
+              onTyping(value.trim() !== "");
+            }
+          }}
+          onSubmit={(then) => void send(then)}
+          onBlur={() => onTyping(false)}
+          onFiles={(picked) => files.add(picked, attachable)}
+          findMentions={note ? (query) => mentionables(workspace, conversation, query).then(toMentionables) : undefined}
+          findSavedReplies={(query) =>
+            client.fetchQuery(savedRepliesQuery(workspace, query)).then((found) => found.slice(0, 8))
+          }
+          takeSavedReply={macro.take}
+          toolbarSlot={slot}
+        />
+      </div>
+      <ReplyFileChips files={files} shown={attachable} />
+      <QueuedMacro workspace={workspace} macro={macro} />
+      <div className="flex items-center gap-2">
+        <AddMenu
+          onInsert={insert}
+          onEmoji={addEmoji}
+          onSavedReply={(reply) => insert(macro.take(reply))}
+          gifs={gifs.gifs}
+        />
+        <span ref={setSlot} className="contents" />
+        <AttachButton onPick={files.add} shown={attachable} />
+        <button
+          type="button"
+          onClick={onAskOperator}
+          className="flex h-[30px] shrink-0 cursor-pointer items-center gap-1 rounded-full ps-2 pe-2.5 text-body-2-medium text-text-secondary outline-none transition-colors duration-150 ease hover:bg-background-secondary-hover hover:text-text-primary focus-visible:ring-2 focus-visible:ring-border-focus-ring"
+        >
+          <RiSparkling2Line aria-hidden className="size-4" />
+          Ask Operator
+        </button>
+        <span
+          role={failure ? "alert" : undefined}
+          className={cx(
+            "ms-auto min-w-0 truncate text-body-2-regular",
+            failure ? "text-text-error-primary" : "hidden text-text-tertiary sm:inline",
+          )}
+        >
+          {failure ?? (note ? "Only your team sees notes" : `Sends on ${channel}`)}
         </span>
+        <button
+          type="button"
+          disabled={!ready || sending}
+          onClick={() => void send()}
+          aria-label={note ? "Add note" : "Send"}
+          className="flex size-9 shrink-0 cursor-pointer items-center justify-center rounded-full bg-button-primary p-2 text-text-white outline-none transition-opacity duration-200 ease focus-visible:ring-2 focus-visible:ring-border-focus-ring disabled:cursor-not-allowed disabled:opacity-40"
+        >
+          <RiArrowUpLine aria-hidden className="size-5" />
+        </button>
+        {note ? null : <SendMenu disabled={!ready || sending} onSend={(then) => void send(then)} />}
+      </div>
+    </Shell>
+  );
+}
+
+/*
+ * Shell is the composer's frame: the tab strip behind its top edge, with
+ * what is being written on one side and who sees it on the other, over
+ * the panel that holds the field and its toolbar.
+ */
+function Shell({
+  label,
+  tab,
+  aside,
+  children,
+}: {
+  label: string;
+  tab: ReactNode;
+  aside: ReactNode;
+  children: ReactNode;
+}) {
+  return (
+    <div>
+      <div className="mx-7 flex h-[34px] items-center justify-between gap-3 rounded-t-2xl bg-composer-panel-tab-background px-1 py-1">
+        {tab}
+        <span className="flex min-w-0 items-center gap-1 pe-1.5 text-body-2-medium text-text-secondary">{aside}</span>
       </div>
       <fieldset
-        aria-label={note ? "Note composer" : "Reply composer"}
+        aria-label={label}
         className={cx(surface, "m-0 flex min-w-0 flex-col gap-5 border-0 p-2.5 pt-4 transition-shadow duration-150")}
       >
+        {children}
+      </fieldset>
+    </div>
+  );
+}
+
+/*
+ * ReplySide is the reply half of a small composer: what sends a reply,
+ * who it goes to and what the empty field says.
+ */
+export interface ReplySide {
+  onReply: (text: string) => Promise<unknown>;
+  to: string;
+  placeholder: string;
+}
+
+/*
+ * NoteComposer is the composer for something outside a conversation: a
+ * ticket with no conversation of its own, which takes notes only, or a
+ * feature request, which also takes replies when reply is given and
+ * then opens on its Reply tab. It keeps the same field, add menu and
+ * send button; what is typed stays until it has been taken.
+ */
+export function NoteComposer({ onAdd, reply }: { onAdd: (text: string) => Promise<unknown>; reply?: ReplySide }) {
+  const { workspace, userId } = useInbox();
+  const client = useQueryClient();
+  const [body, setBody] = useState("");
+  const [mode, setMode] = useState<Mode>(reply ? modes.reply : modes.note);
+  const [sending, setSending] = useState(false);
+  const [failure, setFailure] = useState<string | null>(null);
+  const [round, setRound] = useState(0);
+  const [slot, setSlot] = useState<HTMLElement | null>(null);
+  const insert = (text: string) => setBody((was) => (was ? `${was}\n\n${text}` : text));
+  const gifs = useGifs(workspace, userId, insert);
+  const ready = body.trim() !== "" && !sending;
+  const replying = reply !== undefined && mode === modes.reply;
+  useEffect(preloadEditor, []);
+
+  const add = async () => {
+    if (!ready) {
+      return;
+    }
+    setSending(true);
+    setFailure(null);
+    try {
+      await (replying ? reply.onReply(body.trim()) : onAdd(body.trim()));
+      setBody("");
+      setRound((was) => was + 1);
+    } catch (error) {
+      const fallback = replying ? "Sending the reply failed. Try again." : "Adding the note failed. Try again.";
+      setFailure(error instanceof Error ? error.message : fallback);
+    } finally {
+      setSending(false);
+    }
+  };
+
+  return (
+    <div className="mx-auto w-full max-w-3xl">
+      <Shell
+        label={replying ? "Reply composer" : "Note composer"}
+        tab={
+          reply ? (
+            <SegmentedControl
+              aria-label="Write"
+              variant="plain"
+              selectedKeys={[mode]}
+              onSelectionChange={(selected) => {
+                const next = [...selected][0];
+                if (next === modes.reply || next === modes.note) {
+                  setMode(next);
+                }
+              }}
+              className="[&_button]:py-0.5 [&_button]:text-body-2-medium"
+            >
+              <SegmentedControlItem id={modes.reply}>Reply</SegmentedControlItem>
+              <SegmentedControlItem id={modes.note}>Note</SegmentedControlItem>
+            </SegmentedControl>
+          ) : (
+            <span className="px-2.5 text-body-2-medium text-text-primary">Note</span>
+          )
+        }
+        aside={
+          replying ? (
+            <span className="truncate">{reply.to}</span>
+          ) : (
+            <>
+              <RiLock2Line aria-hidden className="size-3.5 shrink-0" />
+              <span className="truncate">Only your team sees this</span>
+            </>
+          )
+        }
+      >
         <div className="flex flex-col gap-3 px-1.5">
-          <DraftConflict draft={draft} />
           <ComposerField
-            value={draft.body}
-            label={note ? "Internal note" : `Reply to ${customer}`}
-            placeholder={note ? "Write a note only your team sees…" : `Write your reply to ${customer}…`}
-            focusKey={`${mode}-${focusKey}`}
-            onChange={(value) => {
-              draft.edit(value);
-              if (!note) {
-                onTyping(value.trim() !== "");
-              }
-            }}
-            onSubmit={(then) => void send(then)}
-            onBlur={() => onTyping(false)}
-            onFiles={(picked) => files.add(picked, attachable)}
-            findMentions={
-              note ? (query) => mentionables(workspace, conversation, query).then(toMentionables) : undefined
-            }
+            value={body}
+            label={replying ? "Reply" : "Internal note"}
+            placeholder={replying ? reply.placeholder : "Write a note only your team sees…"}
+            focusKey={`${mode}-${round}`}
+            onChange={setBody}
+            onSubmit={() => void add()}
+            onBlur={noop}
+            onFiles={noop}
             findSavedReplies={(query) =>
               client.fetchQuery(savedRepliesQuery(workspace, query)).then((found) => found.slice(0, 8))
             }
-            takeSavedReply={macro.take}
+            takeSavedReply={(reply) => reply.body}
+            toolbarSlot={slot}
           />
         </div>
-        <ReplyFileChips files={files} shown={attachable} />
-        <QueuedMacro workspace={workspace} macro={macro} />
         <div className="flex items-center gap-2">
           <AddMenu
             onInsert={insert}
-            onEmoji={addEmoji}
-            onSavedReply={(reply) => insert(macro.take(reply))}
+            onEmoji={(emoji) => setBody((was) => `${was}${emoji}`)}
+            onSavedReply={(reply) => insert(reply.body)}
             gifs={gifs.gifs}
           />
-          <AttachButton onPick={files.add} shown={attachable} />
-          <button
-            type="button"
-            onClick={onAskOperator}
-            className="flex h-[30px] shrink-0 cursor-pointer items-center gap-1 rounded-full ps-2 pe-2.5 text-body-2-medium text-text-secondary outline-none transition-colors duration-150 ease hover:bg-background-secondary-hover hover:text-text-primary focus-visible:ring-2 focus-visible:ring-border-focus-ring"
-          >
-            <RiSparkling2Line aria-hidden className="size-4" />
-            Ask Operator
-          </button>
+          <span ref={setSlot} className="contents" />
           <span
             role={failure ? "alert" : undefined}
             className={cx(
-              "ms-auto truncate text-body-2-regular",
+              "ms-auto min-w-0 truncate text-body-2-regular",
               failure ? "text-text-error-primary" : "hidden text-text-tertiary sm:inline",
             )}
           >
-            {failure ?? (note ? "Only your team sees notes" : `Sends on ${channel}`)}
+            {failure ?? (replying ? "" : "Only your team sees notes")}
           </span>
           <button
             type="button"
-            disabled={!ready || sending}
-            onClick={() => void send()}
-            aria-label={note ? "Add note" : "Send"}
+            disabled={!ready}
+            onClick={() => void add()}
+            aria-label={replying ? "Send reply" : "Add note"}
             className="flex size-9 shrink-0 cursor-pointer items-center justify-center rounded-full bg-button-primary p-2 text-text-white outline-none transition-opacity duration-200 ease focus-visible:ring-2 focus-visible:ring-border-focus-ring disabled:cursor-not-allowed disabled:opacity-40"
           >
             <RiArrowUpLine aria-hidden className="size-5" />
           </button>
-          {note ? null : <SendMenu disabled={!ready || sending} onSend={(then) => void send(then)} />}
         </div>
-      </fieldset>
+      </Shell>
     </div>
   );
+}
+
+function noop() {
+  return undefined;
 }

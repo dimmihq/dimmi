@@ -80,7 +80,7 @@ export function ViewPicker({
         <span
           className={cx(
             "min-w-0 truncate",
-            crumb ? "text-body-2-medium text-text-secondary @max-lg:sr-only" : "text-body-medium text-text-primary",
+            crumb ? "text-body-2-medium text-text-secondary @max-2xl:sr-only" : "text-body-medium text-text-primary",
           )}
         >
           {title}

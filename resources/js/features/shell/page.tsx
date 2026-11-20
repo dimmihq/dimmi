@@ -42,7 +42,7 @@ export function Panel({
     <section
       aria-label={label}
       className={cx(
-        "flex min-h-0 min-w-0 flex-col overflow-clip rounded-3xl border border-border-button-white shadow-sidebar",
+        "flex min-h-0 min-w-0 flex-col overflow-clip rounded-3xl border border-border-panel shadow-panel",
         ground ? "bg-background-full" : "bg-background-secondary-default",
         className,
       )}

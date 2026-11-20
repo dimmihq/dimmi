@@ -23,6 +23,7 @@ import {
 } from "@remixicon/react";
 import { type Editor, EditorContent, useEditor, useEditorState } from "@tiptap/react";
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 
 import type { SavedReply } from "@/lib/api/saved-replies";
 import { cx } from "@/utils/cx";
@@ -61,6 +62,8 @@ export interface RichEditorProps {
   findSavedReplies?: (query: string) => Promise<SavedReply[]>;
   /* The Markdown a picked saved reply puts in place of what was typed. */
   takeSavedReply?: (reply: SavedReply) => string;
+  /* Where the formatting buttons go, such as the composer's own toolbar row; under the text when left out. */
+  toolbarSlot?: HTMLElement | null;
 }
 
 /*
@@ -90,6 +93,7 @@ export default function RichEditor({
   findMentions,
   findSavedReplies,
   takeSavedReply,
+  toolbarSlot,
 }: RichEditorProps) {
   const handlers = useRef({ onChange, onSubmit, onBlur, onFiles, findMentions, findSavedReplies, takeSavedReply });
   handlers.current = { onChange, onSubmit, onBlur, onFiles, findMentions, findSavedReplies, takeSavedReply };
@@ -225,7 +229,7 @@ export default function RichEditor({
           </>
         )}
       />
-      {editor ? <Toolbar editor={editor} onLink={() => linkRef.current()} /> : null}
+      {editor ? <Formatting editor={editor} onLink={() => linkRef.current()} slot={toolbarSlot} /> : null}
       {editor && linking !== null ? (
         <LinkRow
           initial={linking}
@@ -297,11 +301,21 @@ const tools: Tool[] = [
   },
 ];
 
+/*
+ * Formatting puts the toolbar where the composer asked for it, or under
+ * the text.
+ */
+function Formatting({ editor, onLink, slot }: { editor: Editor; onLink: () => void; slot?: HTMLElement | null }) {
+  const toolbar = <Toolbar editor={editor} onLink={onLink} />;
+
+  return slot ? createPortal(toolbar, slot) : toolbar;
+}
+
 function Toolbar({ editor, onLink }: { editor: Editor; onLink: () => void }) {
   const active = useEditorState({ editor, selector: ({ editor: e }) => tools.map((t) => t.active(e)) });
 
   return (
-    <div role="toolbar" aria-label="Formatting" className="flex flex-wrap items-center gap-0.5">
+    <div role="toolbar" aria-label="Formatting" className="flex shrink-0 items-center gap-0.5">
       {tools.map((tool, index) => (
         <button
           key={tool.label}

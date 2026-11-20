@@ -26,7 +26,15 @@ const pause = 600;
  * reach names the fields whose change alters who gets the broadcast, so
  * only those count the audience again.
  */
-const reach = new Set<DraftKey>(["audience_id", "rules", "room_ids", "topic_id", "service", "skip_frequency_cap"]);
+const reach = new Set<DraftKey>([
+  "audience_id",
+  "rules",
+  "room_ids",
+  "topic_id",
+  "service",
+  "skip_frequency_cap",
+  "holds",
+]);
 
 export interface DraftState {
   draft: Draft;

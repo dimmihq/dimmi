@@ -25,7 +25,7 @@ import {
   type RecipientStatus,
   recipientsPerPage,
 } from "@/lib/api/broadcasts";
-import { formatNumber } from "@/lib/i18n/format";
+import { countOf } from "@/lib/i18n/format";
 
 import { Pick } from "./controls";
 import { counted, reasonName, roomName } from "./looks";
@@ -62,7 +62,7 @@ function did(recipient: BroadcastRecipient): string {
     recipient.opened_at ? "Opened" : "",
     recipient.clicked_at ? "Clicked" : "",
     recipient.replied_at ? "Replied" : "",
-    recipient.reactions ? `${formatNumber(recipient.reactions)} reactions` : "",
+    recipient.reactions ? countOf(recipient.reactions, "reaction", "reactions") : "",
     recipient.unsubscribed_at ? "Unsubscribed" : "",
     recipient.converted_at ? "Reached the goal" : "",
   ].filter(Boolean);

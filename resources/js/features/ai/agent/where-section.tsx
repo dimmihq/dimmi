@@ -50,7 +50,7 @@ export function WhereSection({
       </StackedRow>
       <StackedRow
         label="Hours"
-        description="It follows the office hours of each conversation's inbox, set on the inbox's page."
+        description="It follows your office hours, set in Settings → Office hours. An inbox given its own hours through the API follows those."
       >
         <RadioGroup
           aria-label="Hours"

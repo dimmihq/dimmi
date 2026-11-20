@@ -78,6 +78,9 @@
       "held": "Held an erasure for retention",
       "completed": "Erased a customer"
     },
+    "contact": {
+      "merged": "Merged two customers"
+    },
     "inbox": {
       "access_changed": "Changed who can open an inbox"
     }

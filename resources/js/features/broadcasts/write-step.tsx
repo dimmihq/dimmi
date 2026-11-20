@@ -15,7 +15,7 @@ import { EditorSkeleton } from "@/features/shell/table-skeleton";
 import type { Channel } from "@/lib/api/broadcasts";
 import { cx } from "@/utils/cx";
 
-import type { Draft } from "./draft";
+import { type Draft, untitled } from "./draft";
 
 const MessageWriter = lazy(() => import("./writer/message-writer"));
 
@@ -38,11 +38,11 @@ function initials(name: string): string {
 }
 
 function titleOf(channel: Channel): string {
-  return { email: "Subject", post: "Title", slack: "Headline", chat: "" }[channel];
+  return { email: "Subject", post: "Title", slack: "Headline", chat: "", conversation: "" }[channel];
 }
 
 function placeholderOf(channel: Channel): string {
-  return { email: "Subject", post: "Untitled post", slack: "Headline, optional", chat: "" }[channel];
+  return { email: "Subject", post: "Untitled post", slack: "Headline, optional", chat: "", conversation: "" }[channel];
 }
 
 /*
@@ -69,7 +69,7 @@ export function WriteStep({
 
   return (
     <article ref={page} className="flex w-full flex-col">
-      {channel === "chat" ? null : (
+      {untitled(channel) ? null : (
         <TextField
           aria-label={titleOf(channel)}
           value={draft.subject}

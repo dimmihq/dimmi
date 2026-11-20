@@ -1,38 +1,153 @@
 /*
- * The tools the workspace connects, one card per tool this install
- * offers: Slack now, GitHub and Linear once the server offers them. A
- * tool is installed once and every feature shares it. Connecting sends
- * the browser to the tool to approve and back here, where a toast says
- * how it went. A connected tool shows how it stands and opens its own
- * page; one missing permissions a feature needs offers to update them.
- * A tool this server has no app for says so instead of offering to
- * connect.
+ * The tools the workspace connects, grouped by what they are for:
+ * messaging, help desks and CRMs, issue trackers, incident tools and
+ * knowledge. A tool is installed once and every feature shares it. Each
+ * tool is one row: a filled check when it is connected, an empty one
+ * when it is not, a warning when it needs attention. A connected row
+ * opens the tool's page; an unconnected one connects it, sending the
+ * browser to the tool to approve or asking for its API key. A tool this
+ * server has no app for says so and opens nothing.
  */
-import { RiArrowRightSLine } from "@remixicon/react";
-import { useQuery } from "@tanstack/react-query";
+import {
+  RiArrowRightSLine,
+  RiCheckboxBlankCircleLine,
+  RiCheckboxCircleFill,
+  RiErrorWarningFill,
+  RiLink,
+} from "@remixicon/react";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
+import { useState } from "react";
 
-import { Chip } from "@/components/base/badges/chip";
 import { Button } from "@/components/base/buttons/button";
-import { KeyConnectButton } from "@/features/tickets/issues/key-connect";
+import { Input } from "@/components/base/input/input";
+import { Modal, ModalBody, ModalFooter, ModalHeader } from "@/components/base/modal/modal";
+import { Spinner } from "@/components/base/spinner/spinner";
+import { toast } from "@/components/base/toast/toast";
+import { KeyConnectDialog } from "@/features/tickets/issues/key-connect";
 import {
   type Integration,
   type IntegrationProvider,
   integrationProvidersQuery,
   integrationsQuery,
+  startInstallation,
 } from "@/lib/api/integrations";
+import { cx } from "@/utils/cx";
 import { usePermission } from "../inboxes";
-import { healthColor, healthLabels, integrationHealth, providerLook } from "../integrations";
-import { Empty, Item, Logo, RowsSkeleton, Section, SettingsPage } from "../layout";
+import { healthLabels, integrationHealth, providerLook } from "../integrations";
+import { Empty, Logo, RowsSkeleton, Section, SettingsPage } from "../layout";
 import { useAccount } from "../use-account";
 import { useProviderLanding } from "../use-provider-landing";
-import { ConnectButton } from "./integration-parts";
 
 /*
- * ProviderCard is one tool: its installation when it has one, or the
- * way to connect it.
+ * groups list the sections in order and the tools each holds; a tool
+ * none names falls under Other.
  */
-function ProviderCard({
+const groups: { title: string; description: string; providers: string[] }[] = [
+  { title: "Messaging", description: "Answer customers and alert your team where they talk.", providers: ["slack"] },
+  {
+    title: "Help desks and CRMs",
+    description: "Answer from the help center articles you already keep there.",
+    providers: ["intercom", "zendesk"],
+  },
+  {
+    title: "Issue trackers",
+    description: "Link tickets to engineering issues; their status moves the ticket.",
+    providers: ["linear", "jira", "github"],
+  },
+  {
+    title: "Incidents",
+    description: "Link tickets to incidents, or declare one from a ticket.",
+    providers: ["incident_io", "rootly", "pagerduty"],
+  },
+  { title: "Knowledge", description: "Answer from the docs your team already keeps.", providers: ["notion"] },
+];
+
+/*
+ * sections sorts the server's tools into the groups, keeping only
+ * groups that hold one.
+ */
+function sections(providers: IntegrationProvider[]) {
+  const named = new Set(groups.flatMap((g) => g.providers));
+  const out = groups
+    .map((g) => ({
+      ...g,
+      list: g.providers.flatMap((name) => providers.filter((p) => p.name === name)),
+    }))
+    .filter((g) => g.list.length > 0);
+  const other = providers.filter((p) => !named.has(p.name));
+  if (other.length > 0) {
+    out.push({ title: "Other", description: "", providers: [], list: other });
+  }
+
+  return out;
+}
+
+/*
+ * State is the mark at a row's end: filled when connected and working,
+ * a warning when it needs attention, empty when not connected.
+ */
+function State({ installation }: { installation: Integration | undefined }) {
+  if (!installation) {
+    return <RiCheckboxBlankCircleLine aria-label="Not connected" className="size-4 text-foreground-icon-quaternary" />;
+  }
+  const health = integrationHealth(installation);
+  if (health !== "connected") {
+    return <RiErrorWarningFill aria-label={healthLabels[health]} className="size-4 text-status-yellow-text" />;
+  }
+
+  return <RiCheckboxCircleFill aria-label="Connected" className="size-4 text-status-lime-text" />;
+}
+
+/*
+ * hosted names the tools hosted per customer, which need the
+ * customer's subdomain before their consent screen.
+ */
+const hosted: Record<string, string> = { zendesk: "zendesk.com" };
+
+/*
+ * SubdomainDialog asks for the subdomain of a tool hosted per customer.
+ */
+function SubdomainDialog({
+  label,
+  domain,
+  isOpen,
+  busy,
+  onOpenChange,
+  onConnect,
+}: {
+  label: string;
+  domain: string;
+  isOpen: boolean;
+  busy: boolean;
+  onOpenChange: (open: boolean) => void;
+  onConnect: (subdomain: string) => void;
+}) {
+  const [subdomain, setSubdomain] = useState("");
+
+  return (
+    <Modal isOpen={isOpen} onOpenChange={onOpenChange}>
+      <ModalHeader icon={RiLink} title={`Connect ${label}`} description={`The part before .${domain}`} />
+      <ModalBody>
+        <Input label="Subdomain" placeholder="your-subdomain" value={subdomain} onChange={setSubdomain} autoFocus />
+      </ModalBody>
+      <ModalFooter>
+        <Button variant="secondary" onClick={() => onOpenChange(false)}>
+          Cancel
+        </Button>
+        <Button disabled={subdomain.trim() === ""} loading={busy} onClick={() => onConnect(subdomain.trim())}>
+          Connect
+        </Button>
+      </ModalFooter>
+    </Modal>
+  );
+}
+
+/*
+ * ProviderRow is one tool. The whole row opens the tool's page, or
+ * connects it when it has no installation yet.
+ */
+function ProviderRow({
   workspace,
   provider,
   installation,
@@ -45,53 +160,76 @@ function ProviderCard({
 }) {
   const navigate = useNavigate();
   const look = providerLook(provider.name);
+  const [asking, setAsking] = useState(false);
+  const start = useMutation({
+    mutationFn: (account?: string) =>
+      startInstallation(workspace, provider.name, { return_to: window.location.pathname, account }),
+    onSuccess: ({ authorize_url }) => window.location.assign(authorize_url),
+    onError: (error) => toast.error(error.message),
+  });
 
-  if (!installation) {
-    return (
-      <Item
-        mark={<Logo icon={look.icon} brand={look.brand} />}
-        title={provider.label}
-        detail={
-          provider.installable ? look.detail : "This server has no app for it yet. Ask whoever runs dimmi to add one."
-        }
-      >
-        {canManage && provider.connect === "api_key" ? (
-          <KeyConnectButton workspace={workspace} provider={provider.name} />
-        ) : null}
-        {canManage && provider.installable && provider.connect !== "api_key" ? (
-          <ConnectButton workspace={workspace} provider={provider.name} label="Connect" />
-        ) : null}
-      </Item>
-    );
-  }
+  const connectable = !installation && canManage && provider.installable;
+  const opens = Boolean(installation) || connectable;
+  const detail = installation
+    ? (installation.last_error ?? installation.name)
+    : provider.installable
+      ? look.detail
+      : "This server has no app for it yet. Ask whoever runs dimmi to add one.";
 
-  const health = integrationHealth(installation);
+  const open = () => {
+    if (installation) {
+      void navigate({ to: "/d/settings/integrations/$integration", params: { integration: installation.id } });
+    } else if (provider.connect === "api_key" || hosted[provider.name]) {
+      setAsking(true);
+    } else {
+      start.mutate(undefined);
+    }
+  };
 
   return (
-    <Item
-      mark={<Logo icon={look.icon} brand={look.brand} />}
-      title={
-        <span className="flex items-center gap-2">
-          {provider.label}
-          <Chip variant="caption" color={healthColor[health]}>
-            {healthLabels[health]}
-          </Chip>
-        </span>
-      }
-      detail={installation.last_error ?? installation.name}
-    >
-      <Button
-        variant="secondary"
-        size="small"
-        trailingIcon={RiArrowRightSLine}
-        aria-label={`Manage ${provider.label}`}
-        onClick={() =>
-          navigate({ to: "/d/settings/integrations/$integration", params: { integration: installation.id } })
-        }
+    <>
+      <button
+        type="button"
+        disabled={!opens || start.isPending}
+        onClick={open}
+        aria-label={installation ? `Open ${provider.label}` : `Connect ${provider.label}`}
+        className={cx(
+          "-ms-1.5 flex min-h-[52px] w-[calc(100%+0.375rem)] items-center gap-3 rounded-lg border-b border-separator-border py-2.5 ps-1.5 pe-2.5 text-start outline-none transition-colors duration-150 last:border-b-0 focus-visible:ring-2 focus-visible:ring-border-focus-ring",
+          opens ? "cursor-pointer hover:bg-background-secondary-hover" : "cursor-default",
+        )}
       >
-        Manage
-      </Button>
-    </Item>
+        <span className="flex shrink-0 items-center">
+          <Logo icon={look.icon} brand={look.brand} />
+        </span>
+        <span className="flex min-w-0 flex-1 flex-col">
+          <span className="truncate text-body-regular text-text-primary">{provider.label}</span>
+          <span className="truncate text-body-2-regular text-text-secondary">{detail}</span>
+        </span>
+        <span className="flex shrink-0 items-center gap-1.5">
+          {start.isPending ? <Spinner size="sm" /> : <State installation={installation} />}
+          <RiArrowRightSLine
+            aria-hidden
+            className={cx(
+              "size-5 rtl:-scale-x-100",
+              opens ? "text-foreground-icon-tertiary" : "text-foreground-icon-quaternary opacity-0",
+            )}
+          />
+        </span>
+      </button>
+      {provider.connect === "api_key" ? (
+        <KeyConnectDialog workspace={workspace} provider={provider.name} isOpen={asking} onOpenChange={setAsking} />
+      ) : null}
+      {hosted[provider.name] ? (
+        <SubdomainDialog
+          label={provider.label}
+          domain={hosted[provider.name]}
+          isOpen={asking}
+          busy={start.isPending}
+          onOpenChange={setAsking}
+          onConnect={(subdomain) => start.mutate(subdomain)}
+        />
+      ) : null}
+    </>
   );
 }
 
@@ -111,19 +249,29 @@ export function IntegrationsSettings() {
       title="Integrations"
       description="Connect the tools your team already uses. Each one is installed once and every feature shares it."
     >
-      <Section title="Tools" description="Connecting one takes you to it to approve, then brings you back here.">
-        {loading ? <RowsSkeleton rows={1} /> : null}
-        {!loading && list.length === 0 ? <Empty>This server offers no integrations.</Empty> : null}
-        {list.map((provider) => (
-          <ProviderCard
-            key={provider.name}
-            workspace={workspace}
-            provider={provider}
-            installation={installations.data?.find((installation) => installation.provider === provider.name)}
-            canManage={canManage}
-          />
-        ))}
-      </Section>
+      {loading ? (
+        <Section title="Tools">
+          <RowsSkeleton rows={3} />
+        </Section>
+      ) : null}
+      {!loading && list.length === 0 ? (
+        <Section title="Tools">
+          <Empty>This server offers no integrations.</Empty>
+        </Section>
+      ) : null}
+      {sections(list).map((group) => (
+        <Section key={group.title} title={group.title} description={group.description || undefined}>
+          {group.list.map((provider) => (
+            <ProviderRow
+              key={provider.name}
+              workspace={workspace}
+              provider={provider}
+              installation={installations.data?.find((installation) => installation.provider === provider.name)}
+              canManage={canManage}
+            />
+          ))}
+        </Section>
+      ))}
     </SettingsPage>
   );
 }

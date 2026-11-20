@@ -5,9 +5,11 @@
  * quiet hours or a channel turned off. Someone who manages members can
  * read another member's, to answer the same question for them.
  */
-import { RiMailLine, RiNotification3Line, RiSlackLine, RiSmartphoneLine } from "@remixicon/react";
+
+import { RiMailLine, RiNotification3Line, RiSmartphoneLine } from "@remixicon/react";
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { useState } from "react";
+import { SlackMark } from "@/components/application/brand/slack-mark";
 
 import { Badge } from "@/components/base/badges/badge";
 import {
@@ -28,7 +30,7 @@ const channels: Record<NotificationChannel, { label: string; icon: typeof RiMail
   in_app: { label: "In app", icon: RiNotification3Line },
   email: { label: "Email", icon: RiMailLine },
   push: { label: "Push", icon: RiSmartphoneLine },
-  slack: { label: "Slack", icon: RiSlackLine },
+  slack: { label: "Slack", icon: SlackMark },
 };
 
 const statusChoices = ["All", "Sent", "Skipped", "Failed"];

@@ -239,9 +239,9 @@ function GeneralSection({ inbox, teams, edit, locked }: { inbox: Inbox; teams: T
       <Row label="Name">
         <Field label="Inbox name" value={inbox.name} disabled={locked} onChange={(name) => edit.set({ name })} />
       </Row>
-      <Row label="Colour" description="Marks its conversations in lists.">
+      <Row label="Color" description="Marks its conversations in lists.">
         <Colour
-          label="Inbox colour"
+          label="Inbox color"
           value={s.color || "#3b82f6"}
           disabled={locked}
           onChange={(color) => edit.setting({ color })}

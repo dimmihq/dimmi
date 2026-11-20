@@ -175,7 +175,7 @@ function WhenSection({ workspace, broadcast, draft, onChange }: StepProps) {
           />
         </Row>
       ) : null}
-      {broadcast.channel === "slack" ? null : (
+      {broadcast.channel === "slack" || broadcast.channel === "conversation" ? null : (
         <Row label="Ignore the frequency cap" description="Reaches people who got another message recently.">
           <Flag
             label="Ignore the frequency cap"
@@ -228,7 +228,7 @@ export function DeliveryStep(props: StepProps) {
   return (
     <div className="flex flex-col gap-8">
       <SenderSection {...props} />
-      <RepliesSection {...props} />
+      {props.broadcast.channel === "conversation" ? null : <RepliesSection {...props} />}
       <WhenSection {...props} />
       <GoalSection {...props} />
     </div>

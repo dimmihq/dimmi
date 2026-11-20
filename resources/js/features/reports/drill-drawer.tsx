@@ -18,7 +18,7 @@ import {
   type ReportUnit,
   reportConversationsQuery,
 } from "@/lib/api/reports";
-import { formatMonthDay, formatNumber, formatTime } from "@/lib/i18n/format";
+import { countOf, formatMonthDay, formatNumber, formatTime } from "@/lib/i18n/format";
 import { formatRange, formatValue } from "./format";
 import { channelOptions } from "./options";
 import { drillFilters, parseDrillBy, type ReportSearch } from "./search";
@@ -162,7 +162,9 @@ function DrillList({
   const from = search.drill_from ?? report?.from;
   const to = search.drill_to ?? report?.to;
   const range = live ? "Now" : from && to ? formatRange(from, to) : "";
-  const shown = list.data?.capped ? `Showing first ${formatNumber(10_000)}` : `${formatNumber(total)} conversations`;
+  const shown = list.data?.capped
+    ? `Showing first ${formatNumber(10_000)}`
+    : countOf(total, "conversation", "conversations");
 
   return (
     <>

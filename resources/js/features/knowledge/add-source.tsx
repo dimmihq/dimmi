@@ -1,8 +1,10 @@
 /*
  * Adding a source, in the same narrow dialog as starting a workflow:
  * pick a kind from a list grouped into connected services and your own
- * content, then one short step at a time. A connected service first
- * picks its account; then whatever the source needs, such as the
+ * content, then one short step at a time. A service is connected once,
+ * on the integrations page: picking one that is not connected yet goes
+ * there, and one that is reads through that connection. Then whatever
+ * the source needs, such as the
  * repository and branch, picked from what the account holds; then the
  * items to read, ticked in a tree that fills the dialog; then what the
  * source is for; then a review. The settings are tried against the real
@@ -17,6 +19,7 @@ import { Button } from "@/components/base/buttons/button";
 import { Modal, ModalBody, ModalFooter, ModalHeader } from "@/components/base/modal/modal";
 import { toast } from "@/components/base/toast/toast";
 import { ApiError } from "@/lib/api/client";
+import { integrationsQuery } from "@/lib/api/integrations";
 import {
   createSource,
   previewSource,
@@ -122,16 +125,28 @@ function Flow({ workspace, resume, onDone }: { workspace: string; resume: Resume
     workspace,
     draft: showing === "pick" ? null : draft,
     step: steps[at]?.id ?? "review",
-    lastSetup: lastSetupStep(steps),
+    lastSetup: lastSetupStep(steps, draft?.kind ?? null),
     preview,
     onPreview: setPreview,
     onChange: nav.change,
     onNext: () => nav.go(steps[at + 1]?.id ?? "review", true),
     onDone,
   });
+  const navigate = useNavigate();
+  const installations = useQuery(integrationsQuery(workspace));
+  const connection = (kind: SourceType) =>
+    (installations.data ?? []).find((i) => i.provider === kind.integration && i.status === "active") ?? null;
   const pick = (kind: SourceType) => {
+    const account = kind.integration ? connection(kind) : null;
+    if (kind.integration && !account) {
+      onDone();
+      toast.info(`Connect ${kind.name} here first, then add it as a source.`);
+      void navigate({ to: "/d/settings/$section", params: { section: "integrations" } });
+
+      return;
+    }
     setPreview(null);
-    nav.begin(kind);
+    nav.begin(kind, account?.id ?? null);
   };
   const motionClass = flow.filling ? "flex min-h-0 flex-1 flex-col" : undefined;
 
@@ -140,7 +155,11 @@ function Flow({ workspace, resume, onDone }: { workspace: string; resume: Resume
       <FlowHeader kind={showing === "pick" ? null : (draft?.kind ?? null)} steps={steps} at={at} />
       <ModalBody className={flow.filling ? "flex flex-col" : undefined}>
         <StepMotion view={showing} forward={nav.forward} className={motionClass}>
-          {showing === "pick" ? <Gallery types={types.data ?? []} onPick={pick} /> : flow.body}
+          {showing === "pick" ? (
+            <Gallery types={types.data ?? []} connected={(kind) => connection(kind) !== null} onPick={pick} />
+          ) : (
+            flow.body
+          )}
         </StepMotion>
       </ModalBody>
       {showing === "pick" ? null : (
@@ -162,7 +181,7 @@ function Flow({ workspace, resume, onDone }: { workspace: string; resume: Resume
 function useNav(resumed: SourceType | null, resume: Resume | null) {
   const [picked, setDraft] = useState<Draft | null>(null);
   const draft = picked ?? (resumed ? draftOf(resumed, resume?.installation ?? null) : null);
-  const [view, setView] = useState<View>(resume ? "account" : "pick");
+  const [view, setView] = useState<View>(resumed ? (stepsFor(resumed)[0]?.id ?? "review") : "pick");
   const [forward, setForward] = useState(true);
   const steps = draft ? stepsFor(draft.kind) : [];
   const at = Math.max(
@@ -183,8 +202,8 @@ function useNav(resumed: SourceType | null, resume: Resume | null) {
     showing: (view === "pick" || !draft ? "pick" : view) as View,
     change: (changes: Partial<Draft>) => draft && setDraft({ ...draft, ...changes }),
     back: () => go(at <= 0 ? "pick" : steps[at - 1].id, false),
-    begin: (kind: SourceType) => {
-      setDraft(draftOf(kind, null));
+    begin: (kind: SourceType, installation: string | null) => {
+      setDraft(draftOf(kind, installation));
       go(stepsFor(kind)[0].id, true);
     },
   };
@@ -324,14 +343,15 @@ function useStepFlow({
 
 /*
  * lastSetupStep is the step after which the settings are tried against
- * the service: the setup step, or the account when there is none.
+ * the service: the setup step, or for a connected service with none,
+ * its first step, so the connection is tried before anything is picked.
  */
-function lastSetupStep(steps: { id: StepId }[]): StepId | null {
+function lastSetupStep(steps: { id: StepId }[], kind: SourceType | null): StepId | null {
   if (steps.some((s) => s.id === "setup")) {
     return "setup";
   }
 
-  return steps.some((s) => s.id === "account") ? "account" : null;
+  return kind?.integration ? (steps[0]?.id ?? null) : null;
 }
 
 function blockedAt(step: StepId, d: Draft): boolean {

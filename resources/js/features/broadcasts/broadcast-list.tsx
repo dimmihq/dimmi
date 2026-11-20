@@ -33,18 +33,23 @@ import {
   broadcastsQuery,
   type Channel,
   createBroadcast,
+  fullCounts,
 } from "@/lib/api/broadcasts";
-import { formatNumber } from "@/lib/i18n/format";
+import { countOf, formatNumber } from "@/lib/i18n/format";
 import { cx } from "@/utils/cx";
 
 import { useLiveBroadcasts } from "./live";
 import { channelLook, channels, noteOf, percent, statuses, statusName } from "./looks";
 import { BroadcastStatusChip, ChannelMark } from "./parts";
 import { useWorkspaceZone } from "./sources";
-import { TopicsModal } from "./topics-modal";
+import { TopicsPanel } from "./topics-page";
 import { plainText } from "./writer/variables";
 
-type View = { kind: "all" } | { kind: "status"; status: BroadcastStatus } | { kind: "channel"; channel: Channel };
+type View =
+  | { kind: "all" }
+  | { kind: "status"; status: BroadcastStatus }
+  | { kind: "channel"; channel: Channel }
+  | { kind: "topics" };
 
 const pane = { group: "dimmi:broadcasts", side: "views", list: "broadcasts" } as const;
 
@@ -73,6 +78,9 @@ function titleOf(view: View): string {
 }
 
 function keyOf(view: View): string {
+  if (view.kind === "topics") {
+    return "topics";
+  }
   if (view.kind === "status") {
     return view.status;
   }
@@ -84,6 +92,9 @@ function keyOf(view: View): string {
 }
 
 function viewOf(key: string): View {
+  if (key === "topics") {
+    return { kind: "topics" };
+  }
   if (key.startsWith("channel:")) {
     return { kind: "channel", channel: key.slice(8) as Channel };
   }
@@ -128,8 +139,6 @@ function Pick({
 
 function Views({ broadcasts, view, onView }: { broadcasts: Broadcast[]; view: View; onView: (view: View) => void }) {
   const current = keyOf(view);
-  const workspace = useWorkspace();
-  const [topics, setTopics] = useState(false);
   const count = (next: View) => broadcasts.filter((broadcast) => holds(next, broadcast)).length;
 
   return (
@@ -172,11 +181,16 @@ function Views({ broadcasts, view, onView }: { broadcasts: Broadcast[]; view: Vi
           </div>
           <div className="flex flex-col gap-0.5">
             <span className="px-3 pb-1 text-caption-1-medium text-text-tertiary">Subscriptions</span>
-            <Pick label="Topics" icon={RiListCheck2} count={0} current={false} onPress={() => setTopics(true)} />
+            <Pick
+              label="Topics"
+              icon={RiListCheck2}
+              count={0}
+              current={current === "topics"}
+              onPress={() => onView({ kind: "topics" })}
+            />
           </div>
         </nav>
       </ScrollArea>
-      {topics ? <TopicsModal workspace={workspace} onClose={() => setTopics(false)} /> : null}
     </Panel>
   );
 }
@@ -199,7 +213,7 @@ function NameCell({ broadcast }: { broadcast: Broadcast }) {
  * one under it.
  */
 function Results({ broadcast }: { broadcast: Broadcast }) {
-  const counts = broadcast.counts;
+  const counts = fullCounts(broadcast.counts);
   if (!counts || broadcast.status === "draft" || broadcast.status === "scheduled") {
     return <span className="whitespace-nowrap text-body-2-regular text-text-tertiary">Not sent yet</span>;
   }
@@ -208,7 +222,7 @@ function Results({ broadcast }: { broadcast: Broadcast }) {
     return (
       <span className="flex min-w-0 flex-col">
         <span className="whitespace-nowrap text-body-2-medium text-text-primary tabular-nums">
-          {formatNumber(counts.reactions)} reactions
+          {countOf(counts.reactions, "reaction", "reactions")}
         </span>
         <span className="whitespace-nowrap text-caption-1-regular text-text-tertiary tabular-nums">
           {formatNumber(counts.replied)} replied
@@ -217,7 +231,7 @@ function Results({ broadcast }: { broadcast: Broadcast }) {
     );
   }
   const second =
-    broadcast.channel === "chat"
+    broadcast.channel === "chat" || broadcast.channel === "conversation"
       ? `${percent(counts.replied, base)} replied`
       : `${percent(counts.clicked, base)} clicked`;
 
@@ -237,7 +251,7 @@ function reachOf(broadcast: Broadcast): string {
     return "Counted when it sends";
   }
 
-  return `${formatNumber(total)} ${broadcast.channel === "slack" ? "channels" : "people"}`;
+  return broadcast.channel === "slack" ? countOf(total, "channel", "channels") : countOf(total, "person", "people");
 }
 
 function columnsOf(audiences: Map<string, string>, zone: string | undefined): ColumnDef<Broadcast>[] {
@@ -389,6 +403,7 @@ function NarrowViews({ view, onView }: { view: View; onView: (view: View) => voi
     ["all", "All broadcasts"],
     ...statuses.map((status): [string, string] => [status, statusName(status)]),
     ...channels.map((channel): [string, string] => [`channel:${channel}`, channelLook[channel].name]),
+    ["topics", "Topics"],
   ];
 
   return (
@@ -409,7 +424,12 @@ function NarrowViews({ view, onView }: { view: View; onView: (view: View) => voi
   );
 }
 
-export function BroadcastList() {
+/*
+ * BroadcastList is the broadcasts page. The view it shows, such as one
+ * status, one channel or the topics, is named in the address, so the
+ * page stays in place as views change and a view can be linked to.
+ */
+export function BroadcastList({ view: shownKey = "all" }: { view?: string }) {
   const workspace = useWorkspace();
   useLiveBroadcasts(workspace);
   const { data: broadcasts = [], isPending } = useQuery(broadcastsQuery(workspace));
@@ -418,7 +438,11 @@ export function BroadcastList() {
   const zone = useWorkspaceZone(workspace);
   const navigate = useNavigate();
   const wide = useWide(1024);
-  const [view, setView] = useState<View>({ kind: "all" });
+  const view = viewOf(shownKey);
+  const setView = (next: View) => {
+    const key = keyOf(next);
+    void navigate({ to: "/d/broadcasts", search: key === "all" ? {} : { view: key } });
+  };
   const [query, setQuery] = useState("");
   const [picking, setPicking] = useState(false);
   const needle = query.trim().toLowerCase();
@@ -435,54 +459,60 @@ export function BroadcastList() {
     onError: (error) => toast.error(error.message),
   });
 
-  const main = (
-    <Panel label="Broadcasts" ground className="h-full w-full flex-1">
-      <PageHeader title={wide ? titleOf(view) : "Broadcasts"}>
-        <Button size="small" leadingIcon={RiAddLine} disabled={start.isPending} onClick={() => setPicking(true)}>
-          New broadcast
-        </Button>
-      </PageHeader>
-      <ChannelPicker
-        isOpen={picking}
-        onOpenChange={setPicking}
-        onPick={(channel) => {
-          setPicking(false);
-          start.mutate(channel);
-        }}
-      />
-      <ScrollArea ground>
+  const main =
+    view.kind === "topics" ? (
+      <div className="flex h-full w-full flex-1 flex-col">
         {wide ? null : <NarrowViews view={view} onView={setView} />}
-        <div key={keyOf(view)} className="flex h-full flex-col gap-4 px-4 pb-4 animate-page-in">
-          <MonthStats broadcasts={broadcasts} />
-          <div className="min-h-[420px] flex-1">
-            <DataTable
-              aria-label="Broadcasts"
-              data={rows}
-              columns={columnsOf(audiences, zone)}
-              getRowId={(broadcast) => broadcast.id}
-              total={`${formatNumber(rows.length)} ${rows.length === 1 ? "broadcast" : "broadcasts"}`}
-              toolbar={
-                <Input
-                  aria-label="Search broadcasts"
-                  placeholder="Search broadcasts"
-                  value={query}
-                  onChange={setQuery}
-                  className="w-64"
-                />
-              }
-              page={1}
-              pageCount={1}
-              onPageChange={() => undefined}
-              onRowAction={open}
-              loading={isPending}
-              widths={widths}
-              empty={needle ? "No broadcast matches." : "Nothing here yet. Send your first broadcast."}
-            />
+        <TopicsPanel workspace={workspace} />
+      </div>
+    ) : (
+      <Panel label="Broadcasts" ground className="h-full w-full flex-1">
+        <PageHeader title={wide ? titleOf(view) : "Broadcasts"}>
+          <Button size="small" leadingIcon={RiAddLine} disabled={start.isPending} onClick={() => setPicking(true)}>
+            New broadcast
+          </Button>
+        </PageHeader>
+        <ChannelPicker
+          isOpen={picking}
+          onOpenChange={setPicking}
+          onPick={(channel) => {
+            setPicking(false);
+            start.mutate(channel);
+          }}
+        />
+        <ScrollArea ground>
+          {wide ? null : <NarrowViews view={view} onView={setView} />}
+          <div key={keyOf(view)} className="flex h-full flex-col gap-4 px-4 pb-4 animate-page-in">
+            <MonthStats broadcasts={broadcasts} />
+            <div className="min-h-[420px] flex-1">
+              <DataTable
+                aria-label="Broadcasts"
+                data={rows}
+                columns={columnsOf(audiences, zone)}
+                getRowId={(broadcast) => broadcast.id}
+                total={countOf(rows.length, "broadcast", "broadcasts")}
+                toolbar={
+                  <Input
+                    aria-label="Search broadcasts"
+                    placeholder="Search broadcasts"
+                    value={query}
+                    onChange={setQuery}
+                    className="w-64"
+                  />
+                }
+                page={1}
+                pageCount={1}
+                onPageChange={() => undefined}
+                onRowAction={open}
+                loading={isPending}
+                widths={widths}
+                empty={needle ? "No broadcast matches." : "Nothing here yet. Send your first broadcast."}
+              />
+            </div>
           </div>
-        </div>
-      </ScrollArea>
-    </Panel>
-  );
+        </ScrollArea>
+      </Panel>
+    );
 
   if (!wide) {
     return main;

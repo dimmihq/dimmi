@@ -3,9 +3,8 @@
  * called, whether it holds issues or incidents, what its lists are
  * called in its own terms (a Jira project is where a Linear team would
  * be), and the dimmi state a status maps to when nobody picked one. The
- * defaults mirror the server's: started is "Being worked on", done
- * closes the loop, canceled is "Won't fix"; while an incident is open
- * the ticket is being worked on, and resolving it resolves the ticket.
+ * defaults mirror the server's, for issues and incidents alike: started
+ * is "Being worked on", done closes the loop, canceled is "Won't fix".
  */
 import type { IssueOption } from "@/lib/api/ticket-issues";
 import type { TicketState } from "@/lib/api/tickets";
@@ -38,11 +37,22 @@ export function toolLook(provider: string): ToolLook {
 }
 
 /*
- * groupTint colours a status by its group.
+ * toolByLabel names the tool behind a label, such as the "Linear" a
+ * comment synced from Linear is written as, or undefined for anyone
+ * else.
  */
-export const groupTint: Record<string, "gray" | "blue" | "lime" | "rose" | "yellow"> = {
-  backlog: "gray",
-  unstarted: "gray",
+export function toolByLabel(label: string): string | undefined {
+  return Object.keys(looks).find((provider) => looks[provider]?.label === label);
+}
+
+/*
+ * groupTint colours a status by its group. Backlog and unstarted take
+ * the tertiary tint so they stand out on the secondary cards they sit
+ * in.
+ */
+export const groupTint: Record<string, "neutral" | "blue" | "lime" | "rose" | "yellow"> = {
+  backlog: "neutral",
+  unstarted: "neutral",
   started: "blue",
   done: "lime",
   canceled: "rose",
@@ -52,34 +62,23 @@ export const groupTint: Record<string, "gray" | "blue" | "lime" | "rose" | "yell
  * defaultState is the state a status moves a ticket to when the
  * workspace picked none, or undefined when it leaves the ticket be.
  */
-export function defaultState(kind: ToolKind, status: IssueOption, states: TicketState[]): TicketState | undefined {
-  const byPurpose = (purpose: string) => states.find((s) => s.purpose === purpose && !s.archived_at);
+export function defaultState(status: IssueOption, states: TicketState[]): TicketState | undefined {
+  const purpose = { started: "being_worked_on", done: "close_loop", canceled: "wont_fix" }[status.group];
 
-  if (kind === "issues") {
-    const purpose = { started: "being_worked_on", done: "close_loop", canceled: "wont_fix" }[status.group];
-    return purpose ? byPurpose(purpose) : undefined;
-  }
-
-  if (status.group === "done" || status.group === "canceled") {
-    return states.find((s) => s.group === "resolved" && !s.purpose && !s.archived_at);
-  }
-
-  return byPurpose("being_worked_on");
+  return purpose ? states.find((s) => s.purpose === purpose && !s.archived_at) : undefined;
 }
 
 /*
- * draftReasons say why a draft was written.
+ * written says what dimmi keeps on an issue in each tool that it can
+ * take back on unlinking, or undefined for a tool it cannot.
  */
-export const draftReasons: Record<string, string> = {
-  issue_done: "The work behind it is done",
-  issue_canceled: "The work behind it was canceled",
-  comment: "An engineer wrote to customers",
+const written: Record<string, string> = {
+  linear: "The impact attachment linking back to this ticket.",
+  jira: "The web link back to this ticket and the customer impact property.",
+  incident_io: "The customer count dimmi keeps in the custom field.",
+  rootly: "The dimmi_ labels holding the customer impact and the link back.",
 };
 
-/*
- * heldReasons explain why a customer would be held back.
- */
-export const heldReasons: Record<string, string> = {
-  customer_wrote_since: "wrote since",
-  teammate_already_replied: "already told",
-};
+export function writtenOn(provider: string): string | undefined {
+  return written[provider];
+}

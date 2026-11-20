@@ -114,7 +114,7 @@ export function FeedbackStatusesSection() {
   return (
     <Section
       title="Statuses"
-      description="Where requests stand. Drag to set the order of the roadmap and every status list."
+      description="Drag to set their order on the roadmap."
       action={canChange ? <Action onPress={() => setOpen({ kind: "edit", status: null })}>New status</Action> : null}
     >
       <GridList
@@ -151,6 +151,7 @@ export function FeedbackStatusesSection() {
             </span>
             {canChange ? (
               <RowMenu
+                quiet
                 label={status.name}
                 actions={list.length > 1 ? actions : actions.slice(0, 1)}
                 onPick={(kind) => setOpen({ kind, status })}

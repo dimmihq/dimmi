@@ -4,36 +4,42 @@
  * and the state of their own ticket, opening that conversation in the
  * inbox. One quiet line above says who it reaches in all. Teammates
  * link more conversations from a picker of the inbox's own
- * conversations, unlink one after confirming, and reply to all of them
- * at once from the "Reply all" button.
+ * conversations and unlink one after confirming. "Reply all" opens a
+ * draft broadcast that answers every linked customer in their own
+ * conversation; it leaves out, until a teammate says otherwise, those
+ * still waiting on an answer and those already answered since the
+ * tracker last moved.
  */
-import { RiAddLine, RiLinkUnlinkM, RiReplyAllLine, RiSearchLine } from "@remixicon/react";
+import {
+  RiAddLine,
+  RiArrowDownSLine,
+  RiArrowUpSLine,
+  RiLinkUnlinkM,
+  RiReplyAllLine,
+  RiSearchLine,
+} from "@remixicon/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Link } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
+import { StatusDot } from "@/components/base/badges/status-dot";
 import { Button } from "@/components/base/buttons/button";
-import { IconButton } from "@/components/base/buttons/icon-button";
 import { LinkButton } from "@/components/base/buttons/link-button";
 import { Checkbox } from "@/components/base/checkbox/checkbox";
 import { Input } from "@/components/base/input/input";
 import { AlertDialog, Modal, ModalBody, ModalFooter, ModalHeader } from "@/components/base/modal/modal";
 import { Skeleton } from "@/components/base/skeleton/skeleton";
 import { toast } from "@/components/base/toast/toast";
+import { ago } from "@/features/inbox/conversations";
+import { onRowHover } from "@/features/inbox/customer/quiet";
+import { Nothing, Section } from "@/features/inbox/customer/rows";
+import { createBroadcast } from "@/lib/api/broadcasts";
 import { conversationsQuery } from "@/lib/api/inbox";
 import { type Impact, type TrackerConversation, trackerKeys } from "@/lib/api/ticket-trackers";
-import {
-  addTicketLink,
-  removeTicketLink,
-  type Ticket,
-  type TicketState,
-  ticketKeys,
-  ticketStatesQuery,
-} from "@/lib/api/tickets";
+import { addTicketLink, removeTicketLink, type Ticket, ticketKeys } from "@/lib/api/tickets";
 import { formatNumber } from "@/lib/i18n/format";
 
-import { StatePill } from "./state-pill";
 import { customerName, money } from "./tracker-helpers";
 
 /*
@@ -41,44 +47,40 @@ import { customerName, money } from "./tracker-helpers";
  */
 const shownFirst = 8;
 
+const statusDot: Record<string, "green" | "yellow" | "indigo"> = { open: "green", snoozed: "yellow", closed: "indigo" };
+
 /*
- * Report is one customer's report: who, their company and their own
- * ticket's state, opening the conversation; unlinking shows on hover.
+ * Report is one customer's report: its conversation's number, title
+ * and status, opening the conversation; the customer shows on hover, as
+ * does unlinking.
  */
-function Report({
-  view,
-  row,
-  state,
-  onUnlink,
-}: {
-  view: string;
-  row: TrackerConversation;
-  state: TicketState | undefined;
-  onUnlink: () => void;
-}) {
+function Report({ view, row, onUnlink }: { view: string; row: TrackerConversation; onUnlink: () => void }) {
   const { t } = useTranslation("trackers");
 
   return (
-    <li className="group flex items-center gap-1">
+    <li className="group/row flex items-center gap-1">
       <Link
         to="/d/inbox/$view/$conversation"
         params={{ view, conversation: row.conversation_id }}
-        title={t("conversations.open", { number: row.conversation_number })}
-        className="flex min-w-0 flex-1 items-center gap-2 rounded-lg px-1.5 py-1 outline-none hover:bg-background-secondary-hover focus-visible:ring-2 focus-visible:ring-border-focus-ring"
+        className="flex min-h-8 min-w-0 flex-1 items-center gap-2 rounded-lg px-1.5 text-body-2-regular outline-none hover:bg-background-secondary-hover focus-visible:ring-2 focus-visible:ring-border-focus-ring"
       >
-        <span className="flex min-w-0 flex-1 flex-col">
-          <span className="truncate text-body-2-medium text-text-primary">{customerName(row)}</span>
-          <span className="truncate text-caption-1-regular text-text-tertiary">
-            {row.company_name ?? t("conversations.noCompany")}
-          </span>
+        <StatusDot color={statusDot[row.status] ?? "gray"} />
+        <span className="sr-only">{row.status}</span>
+        <span className="shrink-0 text-text-tertiary tabular-nums">#{row.conversation_number}</span>
+        <span className="min-w-0 flex-1 truncate text-text-primary" title={customerName(row)}>
+          {row.subject || t("conversations.untitled")}
         </span>
-        {state ? <StatePill state={state} /> : null}
+        <span className="shrink-0 text-caption-1-medium text-text-tertiary">
+          {ago(row.last_message_at ?? row.linked_at)}
+        </span>
       </Link>
-      <IconButton
-        size="small"
-        icon={RiLinkUnlinkM}
+      <Button
+        variant="secondary"
+        size="xs"
+        iconOnly
+        leadingIcon={RiLinkUnlinkM}
         aria-label={t("conversations.unlink", { number: row.conversation_number })}
-        className="opacity-0 group-hover:opacity-100 focus-visible:opacity-100"
+        className={onRowHover}
         onClick={onUnlink}
       />
     </li>
@@ -86,8 +88,41 @@ function Report({
 }
 
 /*
+ * ReplyAll starts a conversation broadcast for the tracker and opens it
+ * to be written.
+ */
+function ReplyAll({ workspace, ticket, disabled }: { workspace: string; ticket: Ticket; disabled: boolean }) {
+  const { t } = useTranslation("trackers");
+  const navigate = useNavigate();
+  const start = useMutation({
+    mutationFn: () =>
+      createBroadcast(
+        workspace,
+        t("conversations.replyAllName", { reference: ticket.reference, title: ticket.title }).slice(0, 120),
+        "conversation",
+        { ticket_id: ticket.id, holds: ["customer_waiting", "team_replied"] },
+      ),
+    onSuccess: (broadcast) => void navigate({ to: "/d/broadcasts/$broadcast", params: { broadcast: broadcast.id } }),
+    onError: (error) => toast.error(error.message),
+  });
+
+  return (
+    <Button
+      size="xs"
+      variant="secondary"
+      leadingIcon={RiReplyAllLine}
+      disabled={disabled}
+      loading={start.isPending}
+      onClick={() => start.mutate()}
+    >
+      {t("conversations.replyAll")}
+    </Button>
+  );
+}
+
+/*
  * CustomerReports is the block in the tracker's details: the count, who
- * it reaches, the reports, and the ways to link more and reply to all.
+ * it reaches, the reports, and the way to link more.
  */
 export function CustomerReports({
   workspace,
@@ -96,7 +131,6 @@ export function CustomerReports({
   rows,
   impact,
   loading,
-  onReplyAll,
 }: {
   workspace: string;
   view: string;
@@ -104,12 +138,9 @@ export function CustomerReports({
   rows: TrackerConversation[];
   impact: Impact | undefined;
   loading: boolean;
-  onReplyAll: () => void;
 }) {
   const { t } = useTranslation("trackers");
   const client = useQueryClient();
-  const { data: allStates = [] } = useQuery(ticketStatesQuery(workspace));
-  const states = new Map(allStates.map((s) => [s.id, s]));
   const [adding, setAdding] = useState(false);
   const [all, setAll] = useState(false);
   const [unlinking, setUnlinking] = useState<TrackerConversation | null>(null);
@@ -120,62 +151,50 @@ export function CustomerReports({
   const shown = all ? rows : rows.slice(0, shownFirst);
 
   return (
-    <section
-      aria-label={t("conversations.title")}
-      className="flex flex-col gap-2 border-t border-separator-border pt-3"
-    >
-      <div className="flex items-center justify-between gap-2">
-        <h3 className="text-caption-1-medium text-text-tertiary">
-          {t("conversations.title")} · {formatNumber(rows.length)}
-        </h3>
-        <Button
-          size="xs"
-          variant="secondary"
-          leadingIcon={RiReplyAllLine}
-          disabled={rows.length === 0}
-          onClick={onReplyAll}
-        >
-          {t("conversations.replyAll")}
-        </Button>
-      </div>
-      {impact && impact.customers > 0 ? (
-        <p className="text-caption-1-regular text-text-secondary">
-          {t("conversations.reach", {
-            customers: formatNumber(impact.customers),
-            companies: formatNumber(impact.companies),
-            revenue: money(impact.revenue),
-          })}
-        </p>
-      ) : null}
-      {loading ? (
-        <div className="flex flex-col gap-2">
-          {["a", "b", "c"].map((id) => (
-            <Skeleton key={id} className="h-9 rounded-lg" />
-          ))}
-        </div>
-      ) : rows.length === 0 ? (
-        <p className="text-body-2-regular text-text-tertiary">{t("conversations.empty")}</p>
-      ) : (
-        <ul aria-label={t("conversations.title")} className="-mx-1.5 flex flex-col">
-          {shown.map((row) => (
-            <Report
-              key={row.link_id}
-              view={view}
-              row={row}
-              state={row.ticket_state_id ? states.get(row.ticket_state_id) : undefined}
-              onUnlink={() => setUnlinking(row)}
-            />
-          ))}
-        </ul>
-      )}
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
-        <LinkButton size="xs" variant="secondary" leadingIcon={RiAddLine} onClick={() => setAdding(true)}>
-          {t("conversations.add")}
-        </LinkButton>
-        {rows.length > shownFirst ? (
-          <LinkButton size="xs" variant="secondary" onClick={() => setAll((v) => !v)}>
-            {all ? t("conversations.fewer") : t("conversations.all", { count: rows.length })}
+    <Section title={t("conversations.title")} count={rows.length}>
+      <div className="flex flex-col gap-1">
+        {impact && impact.customers > 0 ? (
+          <p className="text-body-2-regular text-text-tertiary">
+            {t("conversations.reach", {
+              customers: formatNumber(impact.customers),
+              companies: formatNumber(impact.companies),
+              revenue: money(impact.revenue),
+            })}
+          </p>
+        ) : null}
+        <div className="flex min-h-8 flex-wrap items-center gap-x-4 gap-y-1">
+          <ReplyAll workspace={workspace} ticket={ticket} disabled={rows.length === 0} />
+          <LinkButton size="xs" variant="secondary" leadingIcon={RiAddLine} onClick={() => setAdding(true)}>
+            {t("conversations.add")}
           </LinkButton>
+        </div>
+        {loading ? (
+          <div className="flex flex-col gap-2">
+            {["a", "b", "c"].map((id) => (
+              <Skeleton key={id} className="h-6 rounded-lg" />
+            ))}
+          </div>
+        ) : rows.length === 0 ? (
+          <Nothing>{t("conversations.empty")}</Nothing>
+        ) : (
+          <ul aria-label={t("conversations.title")} className="-mx-1.5 flex flex-col">
+            {shown.map((row) => (
+              <Report key={row.link_id} view={view} row={row} onUnlink={() => setUnlinking(row)} />
+            ))}
+          </ul>
+        )}
+        {rows.length > shownFirst ? (
+          <div>
+            <LinkButton
+              size="xs"
+              variant="secondary"
+              leadingIcon={all ? RiArrowUpSLine : RiArrowDownSLine}
+              aria-expanded={all}
+              onClick={() => setAll((v) => !v)}
+            >
+              {all ? t("conversations.fewer") : t("conversations.all", { count: rows.length })}
+            </LinkButton>
+          </div>
         ) : null}
       </div>
       {adding ? (
@@ -207,7 +226,7 @@ export function CustomerReports({
           refresh();
         }}
       />
-    </section>
+    </Section>
   );
 }
 
