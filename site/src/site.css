@@ -1,0 +1,119 @@
+/*
+ * The site's stylesheet is the app's: BoardUI tokens, type scale, fonts
+ * and the dimmi accent, so marketing pages and the product match. The
+ * site's own files are added as a Tailwind source on top.
+ */
+@import "../../resources/js/app.css";
+
+@source "./";
+
+/* Headlines use the app's Inter, set larger and tighter than body text. */
+@theme {
+  --font-display: "Inter Variable", ui-sans-serif, system-ui, sans-serif;
+}
+
+/*
+ * The ground under a product visual: the muted surface, a dot grid, and a
+ * soft wedge of the accent from one corner, so captures sit on something.
+ */
+.site-panel {
+  background-color: var(--color-background-secondary-default);
+  background-image:
+    radial-gradient(
+      120% 90% at 100% 0%,
+      color-mix(in oklab, var(--color-accent-500) 14%, transparent) 0%,
+      transparent 55%
+    ),
+    radial-gradient(var(--color-separator-border) 1px, transparent 1px);
+  background-size:
+    100% 100%,
+    16px 16px;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+/* Nothing on the page may push it sideways; frame crosses sit on the edge. */
+body {
+  overflow-x: clip;
+}
+
+/* A soft dot grid behind feature visuals, drawn in the separator tone. */
+.site-dots {
+  background-image: radial-gradient(var(--color-separator-border) 1px, transparent 1px);
+  background-size: 16px 16px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+}
+
+/*
+ * The brand ground: a deep emerald that closes the page, from the last
+ * call to action through the footer, the same in light and dark. It sits
+ * on the dark tokens, re-tinted so surfaces and hairlines read as green
+ * rather than grey.
+ */
+.dark.site-brand {
+  --color-background-full: var(--color-accent-950);
+  --color-background-primary-default: color-mix(in oklab, var(--color-accent-950) 82%, white);
+  --color-background-secondary-default: color-mix(in oklab, var(--color-accent-950) 90%, white);
+  --color-border-button-default: color-mix(in oklab, var(--color-accent-950) 72%, white);
+  --color-border-button-hover: color-mix(in oklab, var(--color-accent-950) 60%, white);
+  --color-separator-border: color-mix(in oklab, var(--color-accent-950) 84%, white);
+  --color-separator-border-strong: color-mix(in oklab, var(--color-accent-950) 78%, white);
+  --color-text-secondary: color-mix(in oklab, white 72%, var(--color-accent-950));
+  --color-text-tertiary: color-mix(in oklab, white 52%, var(--color-accent-950));
+}
+
+/* A dashed connector whose dashes travel along it, for data moving. */
+@keyframes site-dash {
+  to {
+    stroke-dashoffset: -16;
+  }
+}
+
+.site-flow {
+  stroke-dasharray: 3 5;
+  animation: site-dash 1.2s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .site-flow {
+    animation: none;
+  }
+}
+
+/* Code colours, on the theme's own text and accent tokens. */
+.site-code .k {
+  color: var(--color-accent-600);
+}
+.site-code .s {
+  color: color-mix(in oklab, var(--color-text-primary) 62%, var(--color-accent-500));
+}
+.site-code .c {
+  color: var(--color-text-tertiary);
+  font-style: italic;
+}
+.site-code .f {
+  color: var(--color-text-primary);
+  font-weight: 500;
+}
+.site-code .p {
+  color: var(--color-text-tertiary);
+}
+.dark .site-code .k {
+  color: var(--color-accent-400);
+}
+
+@keyframes site-fill-x {
+  from {
+    width: 0%;
+  }
+  to {
+    width: 100%;
+  }
+}

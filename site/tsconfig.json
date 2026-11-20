@@ -1,0 +1,12 @@
+{
+  "extends": "../tsconfig.json",
+  "compilerOptions": {
+    "types": ["vite/client"],
+    "paths": {
+      "@/*": ["../resources/js/*"],
+      "~site/*": ["./src/*"]
+    },
+    "resolveJsonModule": true
+  },
+  "include": ["src", "vite.config.ts"]
+}

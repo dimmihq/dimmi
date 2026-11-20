@@ -1,0 +1,142 @@
+{
+  "queue": {
+    "width": 320,
+    "height": 560,
+    "frames": [
+      {
+        "next": {
+          "x": 109,
+          "y": 120,
+          "kind": "click"
+        }
+      },
+      {
+        "next": {
+          "x": 176,
+          "y": 120,
+          "kind": "click"
+        }
+      },
+      {
+        "next": {
+          "x": 47,
+          "y": 120,
+          "kind": "click"
+        }
+      },
+      {}
+    ]
+  },
+  "details": {
+    "width": 383,
+    "height": 560,
+    "frames": [
+      {
+        "next": {
+          "x": 296,
+          "y": 191,
+          "kind": "click"
+        }
+      },
+      {
+        "next": {
+          "x": 158,
+          "y": 267,
+          "kind": "hover"
+        }
+      },
+      {
+        "next": {
+          "x": 158,
+          "y": 335,
+          "kind": "hover"
+        }
+      },
+      {}
+    ]
+  },
+  "assign": {
+    "width": 913,
+    "height": 540,
+    "frames": [
+      {
+        "next": {
+          "x": 716,
+          "y": 41,
+          "kind": "click"
+        }
+      },
+      {
+        "next": {
+          "x": 563,
+          "y": 209,
+          "kind": "hover"
+        }
+      },
+      {
+        "next": {
+          "x": 563,
+          "y": 253,
+          "kind": "hover"
+        }
+      },
+      {}
+    ]
+  },
+  "snooze": {
+    "width": 913,
+    "height": 540,
+    "frames": [
+      {
+        "next": {
+          "x": 756,
+          "y": 41,
+          "kind": "click"
+        }
+      },
+      {
+        "next": {
+          "x": 543,
+          "y": 135,
+          "kind": "hover"
+        }
+      },
+      {
+        "next": {
+          "x": 543,
+          "y": 179,
+          "kind": "hover"
+        }
+      },
+      {}
+    ]
+  },
+  "operator": {
+    "width": 400,
+    "height": 700,
+    "frames": [
+      {
+        "next": {
+          "x": 83,
+          "y": 613,
+          "kind": "click"
+        }
+      },
+      {
+        "next": {
+          "x": 83,
+          "y": 613,
+          "kind": "type"
+        }
+      },
+      {
+        "next": {
+          "x": 83,
+          "y": 613,
+          "kind": "type"
+        }
+      },
+      {}
+    ]
+  }
+}

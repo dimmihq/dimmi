@@ -1,0 +1,20 @@
+# The site image's own build context (BuildKit reads <Dockerfile>.dockerignore
+# instead of the root .dockerignore). Unlike the app image it needs docs/,
+# the docs site served under /docs.
+.git
+.claude
+**/node_modules
+**/cdk.out
+**/dist
+**/.astro
+bin
+tmp
+storage
+public/build
+test-results
+playwright-report
+deploy
+specs
+research
+.env*
+dimmi.yaml
