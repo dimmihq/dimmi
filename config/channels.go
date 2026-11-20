@@ -55,12 +55,14 @@ const cloudInboundDomain = "inbound.trydimmi.com"
 
 /*
 ChannelsConfig configures the conversation channels: email, the Slack
-and WhatsApp chat apps, and how long deliveries from chat apps are kept.
+and WhatsApp chat apps, Messenger and Instagram, and how long deliveries
+from chat apps are kept.
 */
 type ChannelsConfig struct {
 	Email         EmailConfig                `koanf:"email"`
 	Slack         SlackChannelConfig         `koanf:"slack"`
 	WhatsApp      WhatsAppChannelConfig      `koanf:"whatsapp"`
+	Social        SocialChannelConfig        `koanf:"social"`
 	InboundEvents ChannelInboundEventsConfig `koanf:"inbound_events"`
 }
 

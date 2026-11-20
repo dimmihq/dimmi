@@ -311,7 +311,7 @@ another type keeps no extension in its name.
 */
 func commonExtensions() map[string]string {
 	return map[string]string{
-		"image/jpeg": ".jpg", "image/png": ".png", "image/webp": ".webp", "video/mp4": ".mp4",
+		"image/jpeg": ".jpg", "image/png": ".png", "image/webp": ".webp", "image/gif": ".gif", "video/mp4": ".mp4",
 		"audio/ogg": ".ogg", "audio/mpeg": ".mp3", "audio/mp4": ".m4a", "audio/aac": ".aac", "audio/amr": ".amr",
 		"video/3gpp": ".3gp", "application/pdf": ".pdf", "text/plain": ".txt",
 		"application/msword":       ".doc",

@@ -61,6 +61,7 @@ export const sidebar: Group[] = [
       { label: "Slack", link: "/channels/slack/" },
       { label: "Slack room modes", link: "/channels/slack-room-modes/" },
       { label: "WhatsApp", link: "/channels/whatsapp/" },
+      { label: "Instagram and Messenger", link: "/channels/instagram-messenger/" },
     ],
   },
   {

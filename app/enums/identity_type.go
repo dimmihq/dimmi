@@ -26,4 +26,6 @@ const (
 	IdentityTypeExternalID    IdentityType = "external_id"
 	IdentityTypeSlackUser     IdentityType = "slack_user"
 	IdentityTypeWhatsAppUser  IdentityType = "whatsapp_user"
+	IdentityTypeFacebookUser  IdentityType = "facebook_user"
+	IdentityTypeInstagramUser IdentityType = "instagram_user"
 )

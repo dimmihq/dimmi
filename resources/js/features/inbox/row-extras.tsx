@@ -9,7 +9,9 @@ import {
   RiChat3Line,
   RiDraftLine,
   RiGlobalLine,
+  RiInstagramLine,
   RiMailLine,
+  RiMessengerLine,
   RiPlugLine,
   RiTimeLine,
   RiWhatsappLine,
@@ -29,6 +31,8 @@ const channels: Record<string, { icon: typeof RiMailLine; label: string }> = {
   widget: { icon: RiChat3Line, label: "Messenger" },
   api: { icon: RiPlugLine, label: "API" },
   whatsapp: { icon: RiWhatsappLine, label: "WhatsApp" },
+  facebook: { icon: RiMessengerLine, label: "Facebook Messenger" },
+  instagram: { icon: RiInstagramLine, label: "Instagram" },
 };
 
 /*

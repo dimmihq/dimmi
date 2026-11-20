@@ -27,4 +27,8 @@ const (
 	ChannelTypeAPI      ChannelType = "api"
 	ChannelTypeSlack    ChannelType = "slack"
 	ChannelTypeWhatsApp ChannelType = "whatsapp"
+
+	// ChannelTypeFacebook is a Facebook Page's Messenger conversations.
+	ChannelTypeFacebook  ChannelType = "facebook"
+	ChannelTypeInstagram ChannelType = "instagram"
 )

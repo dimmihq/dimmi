@@ -115,7 +115,7 @@ export function CaseFields({
         </Select>
       </Row>
       <Row label="Inbox">{conversation.inbox.name}</Row>
-      <Row label="Channel">{conversation.channel.name}</Row>
+      <Row label="Channel">{channelName(conversation.channel)}</Row>
     </dl>
   );
 }
@@ -220,4 +220,20 @@ export function CaseTags({
       </div>
     </Section>
   );
+}
+
+/*
+ * platformNames are the channels whose connections are named after an
+ * account, which alone would not say where the conversation came from.
+ */
+const platformNames: Record<string, string> = {
+  whatsapp: "WhatsApp",
+  facebook: "Messenger",
+  instagram: "Instagram",
+};
+
+function channelName(channel: { type: string; name: string }): string {
+  const platform = platformNames[channel.type];
+
+  return platform ? `${platform} · ${channel.name}` : channel.name;
 }

@@ -72,6 +72,9 @@ describe("dashboard pages", () => {
   it("takes every top-level dashboard route as a page, never a workspace slug", () => {
     const files = Object.keys(import.meta.glob("../../routes/d/**/*.tsx"));
     const routes = new Set(files.map((file) => file.replace("../../routes/d/", "").split(/[/.]/)[0] ?? ""));
+    for (const file of Object.keys(import.meta.glob("../../routes/d_.*.tsx"))) {
+      routes.add(file.replace("../../routes/d_.", "").split(".")[0] ?? "");
+    }
     routes.delete("index");
     routes.delete("route");
 

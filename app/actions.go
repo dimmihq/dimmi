@@ -66,6 +66,8 @@ type Actions struct {
 	Widget                  *WidgetActions
 	Slack                   *SlackActions
 	WhatsApp                *channels.WhatsApp
+	Facebook                *channels.Social
+	Instagram               *channels.Social
 	CreateUser              *users.CreateUser
 	CreateFirstUser         *users.CreateFirstUser
 	OperatorAccounts        *users.OperatorAccounts

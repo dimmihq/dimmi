@@ -25,10 +25,12 @@ export interface RadioCardProps extends Omit<AriaRadioProps, "children"> {
   description?: ReactNode;
   /** Optional leading icon, drawn in the icon tone beside the title. */
   icon?: ComponentType<{ className?: string; "aria-hidden"?: boolean | "true" | "false" }>;
+  /** Optional leading mark, such as an account's picture or a brand logo; drawn in place of `icon`. */
+  mark?: ReactNode;
   ref?: Ref<HTMLLabelElement>;
 }
 
-export function RadioCard({ className, title, description, icon: Icon, ref, ...props }: RadioCardProps) {
+export function RadioCard({ className, title, description, icon: Icon, mark, ref, ...props }: RadioCardProps) {
   return (
     <AriaRadio
       ref={ref}
@@ -48,8 +50,11 @@ export function RadioCard({ className, title, description, icon: Icon, ref, ...p
     >
       {(state) => (
         <>
-          <span className="flex min-w-0 items-start gap-2.5">
-            {Icon ? <Icon aria-hidden className="mt-0.5 size-4 shrink-0 text-foreground-icon-secondary" /> : null}
+          <span className={cx("flex min-w-0 gap-2.5", mark ? "items-center gap-3" : "items-start")}>
+            {mark ? <span className="flex shrink-0 items-center">{mark}</span> : null}
+            {Icon && !mark ? (
+              <Icon aria-hidden className="mt-0.5 size-4 shrink-0 text-foreground-icon-secondary" />
+            ) : null}
             <span className="flex min-w-0 flex-col gap-0.5">
               <span className="text-body-medium text-text-primary">{title}</span>
               {description !== undefined && description !== null && (
@@ -57,7 +62,7 @@ export function RadioCard({ className, title, description, icon: Icon, ref, ...p
               )}
             </span>
           </span>
-          <span className="flex shrink-0 items-center py-1">
+          <span className={cx("flex shrink-0 items-center", mark ? "self-center" : "py-1")}>
             <RadioDot size="md" selected={state.isSelected} focusVisible={state.isFocusVisible} />
           </span>
         </>

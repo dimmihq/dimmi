@@ -33,11 +33,13 @@ import {
   integrationsQuery,
   startInstallation,
 } from "@/lib/api/integrations";
+import { type SocialPlatform, socialChannelsQuery } from "@/lib/api/social";
 import { whatsappChannelsQuery } from "@/lib/api/whatsapp";
 import { cx } from "@/utils/cx";
 import { usePermission } from "../inboxes";
 import { healthLabels, integrationHealth, providerLook } from "../integrations";
 import { Empty, Logo, RowsSkeleton, Section, SettingsPage } from "../layout";
+import { socialLook } from "../social-look";
 import { useAccount } from "../use-account";
 import { useProviderLanding } from "../use-provider-landing";
 import { whatsappGreen } from "../whatsapp-look";
@@ -277,6 +279,48 @@ function WhatsAppRow({ workspace }: { workspace: string }) {
   );
 }
 
+/*
+ * SocialRow is Facebook Messenger or Instagram among the tools: like
+ * WhatsApp, its accounts are channels of their own, so the row opens the
+ * page that lists them and connects more.
+ */
+function SocialRow({ workspace, platform }: { workspace: string; platform: SocialPlatform }) {
+  const navigate = useNavigate();
+  const look = socialLook[platform];
+  const { data: accounts } = useQuery(socialChannelsQuery(workspace, platform));
+  const connected = (accounts?.length ?? 0) > 0;
+  const detail = connected ? accounts?.map((a) => a.name).join(", ") : look.pitch;
+
+  return (
+    <button
+      type="button"
+      onClick={() =>
+        navigate({
+          to: platform === "facebook" ? "/d/settings/integrations/facebook" : "/d/settings/integrations/instagram",
+        })
+      }
+      aria-label={`Open ${look.name}`}
+      className="-ms-1.5 flex min-h-[52px] w-[calc(100%+0.375rem)] cursor-pointer items-center gap-3 rounded-lg border-b border-separator-border py-2.5 ps-1.5 pe-2.5 text-start outline-none transition-colors duration-150 last:border-b-0 hover:bg-background-secondary-hover focus-visible:ring-2 focus-visible:ring-border-focus-ring"
+    >
+      <span className="flex shrink-0 items-center">
+        <Logo icon={look.icon} brand={look.brand} />
+      </span>
+      <span className="flex min-w-0 flex-1 flex-col">
+        <span className="truncate text-body-regular text-text-primary">{look.name}</span>
+        <span className="truncate text-body-2-regular text-text-secondary">{detail}</span>
+      </span>
+      <span className="flex shrink-0 items-center gap-1.5">
+        {connected ? (
+          <RiCheckboxCircleFill aria-label="Connected" className="size-4 text-status-lime-text" />
+        ) : (
+          <RiCheckboxBlankCircleLine aria-label="Not connected" className="size-4 text-foreground-icon-quaternary" />
+        )}
+        <RiArrowRightSLine aria-hidden className="size-5 text-foreground-icon-tertiary rtl:-scale-x-100" />
+      </span>
+    </button>
+  );
+}
+
 export function IntegrationsSettings() {
   const workspace = useAccount().workspace.id;
   const canManage = usePermission(workspace, "integrations:manage");
@@ -314,7 +358,13 @@ export function IntegrationsSettings() {
               canManage={canManage}
             />
           ))}
-          {group.title === messaging ? <WhatsAppRow workspace={workspace} /> : null}
+          {group.title === messaging ? (
+            <>
+              <WhatsAppRow workspace={workspace} />
+              <SocialRow workspace={workspace} platform="facebook" />
+              <SocialRow workspace={workspace} platform="instagram" />
+            </>
+          ) : null}
         </Section>
       ))}
     </SettingsPage>

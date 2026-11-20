@@ -28,20 +28,24 @@ import (
 /*
 ServicesConfig holds the credentials of the apps dimmi has registered at
 other services. Slack is the shared Slack app, WhatsApp the Meta app
-WhatsApp numbers connect through; Notion, Intercom,
+WhatsApp numbers connect through, Meta the same app for Messenger and
+Instagram with each one's login; Notion, Intercom,
 Zendesk and GitHub are the OAuth clients knowledge sources connect
 through.
 */
 type ServicesConfig struct {
-	Slack    SlackServiceConfig    `koanf:"slack"`
-	WhatsApp WhatsAppServiceConfig `koanf:"whatsapp"`
-	Notion   OAuthServiceConfig    `koanf:"notion"`
-	Intercom OAuthServiceConfig    `koanf:"intercom"`
-	Zendesk  OAuthServiceConfig    `koanf:"zendesk"`
-	GitHub   OAuthServiceConfig    `koanf:"github"`
-	Linear   TrackerServiceConfig  `koanf:"linear"`
-	Jira     TrackerServiceConfig  `koanf:"jira"`
-	Trackers TrackersConfig        `koanf:"trackers"`
+	Slack     SlackServiceConfig    `koanf:"slack"`
+	WhatsApp  WhatsAppServiceConfig `koanf:"whatsapp"`
+	Meta      MetaServiceConfig     `koanf:"meta"`
+	Facebook  SocialServiceConfig   `koanf:"facebook"`
+	Instagram SocialServiceConfig   `koanf:"instagram"`
+	Notion    OAuthServiceConfig    `koanf:"notion"`
+	Intercom  OAuthServiceConfig    `koanf:"intercom"`
+	Zendesk   OAuthServiceConfig    `koanf:"zendesk"`
+	GitHub    OAuthServiceConfig    `koanf:"github"`
+	Linear    TrackerServiceConfig  `koanf:"linear"`
+	Jira      TrackerServiceConfig  `koanf:"jira"`
+	Trackers  TrackersConfig        `koanf:"trackers"`
 }
 
 /*

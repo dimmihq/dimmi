@@ -615,7 +615,8 @@ security_events:
   retention_days: 365  # DIMMI_SECURITY_EVENTS__RETENTION_DAYS
 
 # ChannelsConfig configures the conversation channels: email, the Slack
-# and WhatsApp chat apps, and how long deliveries from chat apps are kept.
+# and WhatsApp chat apps, Messenger and Instagram, and how long deliveries
+# from chat apps are kept.
 channels:
   # EmailConfig configures the email channel.
   #
@@ -798,6 +799,23 @@ channels:
     dedupe_window: 1h  # DIMMI_CHANNELS__WHATSAPP__DEDUPE_WINDOW
     window: 24h  # DIMMI_CHANNELS__WHATSAPP__WINDOW
     max_media_bytes: 26214400  # DIMMI_CHANNELS__WHATSAPP__MAX_MEDIA_BYTES
+  # SocialChannelConfig configures the Messenger and Instagram channels.
+  #
+  # GraphURL is the Graph API host, Meta's own unless a test or a proxy
+  # needs another, and GraphVersion the version every call names.
+  # MaxPayloadBytes bounds one delivery and DedupeWindow is how long a
+  # delivered event is recognized quickly. Window is how long after a
+  # customer's last message anyone may reply, HumanWindow how long a
+  # teammate still may. MaxMediaBytes is the largest file the inbox copies
+  # from a message.
+  social:
+    graph_url: https://graph.facebook.com  # DIMMI_CHANNELS__SOCIAL__GRAPH_URL
+    graph_version: v27.0  # DIMMI_CHANNELS__SOCIAL__GRAPH_VERSION
+    max_payload_bytes: 3145728  # DIMMI_CHANNELS__SOCIAL__MAX_PAYLOAD_BYTES
+    dedupe_window: 1h  # DIMMI_CHANNELS__SOCIAL__DEDUPE_WINDOW
+    window: 24h  # DIMMI_CHANNELS__SOCIAL__WINDOW
+    human_window: 168h  # DIMMI_CHANNELS__SOCIAL__HUMAN_WINDOW
+    max_media_bytes: 26214400  # DIMMI_CHANNELS__SOCIAL__MAX_MEDIA_BYTES
   # ChannelInboundEventsConfig says how long kept deliveries stay.
   #
   # ProcessedRetentionDays covers processed and ignored deliveries, and
@@ -977,7 +995,8 @@ ai:
 
 # ServicesConfig holds the credentials of the apps dimmi has registered at
 # other services. Slack is the shared Slack app, WhatsApp the Meta app
-# WhatsApp numbers connect through; Notion, Intercom,
+# WhatsApp numbers connect through, Meta the same app for Messenger and
+# Instagram with each one's login; Notion, Intercom,
 # Zendesk and GitHub are the OAuth clients knowledge sources connect
 # through.
 services:
@@ -1000,6 +1019,24 @@ services:
     app_secret: ""  # DIMMI_SERVICES__WHATSAPP__APP_SECRET (secret; or DIMMI_SERVICES__WHATSAPP__APP_SECRET_FILE naming a file)
     config_id: ""  # DIMMI_SERVICES__WHATSAPP__CONFIG_ID
     verify_token: ""  # DIMMI_SERVICES__WHATSAPP__VERIFY_TOKEN (secret; or DIMMI_SERVICES__WHATSAPP__VERIFY_TOKEN_FILE naming a file)
+  # MetaServiceConfig is the install's Meta app as Messenger and Instagram
+  # use it: its id, the secret Meta signs every delivery with, and the token
+  # Meta must echo when it checks the webhook address. An install that set
+  # these for WhatsApp need not repeat them: the same app serves all three.
+  meta:
+    app_id: ""  # DIMMI_SERVICES__META__APP_ID
+    app_secret: ""  # DIMMI_SERVICES__META__APP_SECRET (secret; or DIMMI_SERVICES__META__APP_SECRET_FILE naming a file)
+    verify_token: ""  # DIMMI_SERVICES__META__VERIFY_TOKEN (secret; or DIMMI_SERVICES__META__VERIFY_TOKEN_FILE naming a file)
+  # SocialServiceConfig is one platform's login on the Meta app: ConfigID
+  # is the Facebook Login for Business configuration the connect popup
+  # opens. Empty means the platform cannot be connected.
+  facebook:
+    config_id: ""  # DIMMI_SERVICES__FACEBOOK__CONFIG_ID
+  # SocialServiceConfig is one platform's login on the Meta app: ConfigID
+  # is the Facebook Login for Business configuration the connect popup
+  # opens. Empty means the platform cannot be connected.
+  instagram:
+    config_id: ""  # DIMMI_SERVICES__INSTAGRAM__CONFIG_ID
   # OAuthServiceConfig is an OAuth client registered at a service: its id
   # and secret. Empty means the service cannot be connected.
   notion:

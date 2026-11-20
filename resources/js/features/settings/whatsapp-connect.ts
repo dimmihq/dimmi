@@ -1,16 +1,97 @@
 /*
- * Connecting a WhatsApp number through Meta's Embedded Signup, without
- * Meta's JavaScript SDK: the dashboard loads no third-party script, so
- * the signup dialog opens in a popup of its own and Meta returns its code
- * to /d/whatsapp-return, which hands it back here. Meta's popup also
- * posts which account and number were picked; when that message never
- * arrives, the server reads them from the token instead.
+ * Connecting through Meta's sign-in, without Meta's JavaScript SDK: the
+ * dashboard loads no third-party script, so the dialog opens in a popup
+ * of its own and Meta returns its code to /d/whatsapp-return, which
+ * hands it back here. Meta's pages cut the popup off from the window
+ * that opened it, so the code comes back over a channel every dimmi
+ * window on this browser hears, not through the popup itself; for the
+ * same reason the popup cannot be watched for closing, and a sign-in
+ * counts as abandoned when the person is back on this page without a
+ * code. WhatsApp's popup also posts which account and number were
+ * picked; when that message never arrives, the server reads them from
+ * the token instead.
  */
 
 const metaOrigins = ["https://www.facebook.com", "https://web.facebook.com", "https://business.facebook.com"];
 
 export const signupReturnPath = "/d/whatsapp-return";
 export const signupMessage = "dimmi:whatsapp-signup";
+export const signupChannel = "dimmi:meta-signup";
+export const signupTaken = "dimmi:meta-signup-taken";
+
+const startedKey = "dimmi:meta-signup:started";
+const finishedKey = "dimmi:meta-signup:finished";
+
+/*
+ * A sign-in that came back to a window with nothing left listening, as
+ * when the browser opened Meta in place of the page: the page it started
+ * on, and the code Meta handed back.
+ */
+interface Started {
+  state: string;
+  page: string;
+  redirect_uri: string;
+}
+
+function readJSON<T>(key: string): T | null {
+  try {
+    const raw = window.localStorage.getItem(key);
+
+    return raw ? (JSON.parse(raw) as T) : null;
+  } catch {
+    return null;
+  }
+}
+
+function writeJSON(key: string, value: unknown) {
+  try {
+    if (value === null) {
+      window.localStorage.removeItem(key);
+    } else {
+      window.localStorage.setItem(key, JSON.stringify(value));
+    }
+  } catch {
+    /* Storage is blocked; only the open page can finish the sign-in. */
+  }
+}
+
+/*
+ * leaveForPage keeps the code for the page the sign-in started on and
+ * returns that page's address, or null when this browser started none
+ * with the state.
+ */
+export function leaveForPage(state: string, code: string): string | null {
+  const started = readJSON<Started>(startedKey);
+  if (!started || started.state !== state) {
+    return null;
+  }
+
+  writeJSON(finishedKey, { code, redirect_uri: started.redirect_uri, page: started.page });
+
+  return started.page;
+}
+
+/*
+ * takeFinishedSignup returns, once, the code of a sign-in that came back
+ * for this page while it was not open.
+ */
+export function takeFinishedSignup(): SignupResult | null {
+  const finished = readJSON<{ code: string; redirect_uri: string; page: string }>(finishedKey);
+  if (!finished || finished.page !== window.location.pathname) {
+    return null;
+  }
+
+  writeJSON(finishedKey, null);
+  writeJSON(startedKey, null);
+
+  return { code: finished.code, redirect_uri: finished.redirect_uri };
+}
+
+/*
+ * How long after the person is back on this page a sign-in that handed
+ * no code back counts as abandoned.
+ */
+const abandonedAfter = 4000;
 
 /*
  * SignupResult is what the popup handed back: the code, the address it
@@ -38,15 +119,19 @@ export class SignupClosed extends Error {
  * openSignup opens Meta's signup dialog and resolves with what it handed
  * back, or rejects when the person closes it.
  */
-export function openSignup(config: {
-  app_id: string;
-  config_id: string;
-  graph_version: string;
-}): Promise<SignupResult> {
+export function openSignup(
+  config: {
+    app_id: string;
+    config_id: string;
+    graph_version: string;
+  },
+  /* plain opens Meta's ordinary business sign-in, as Messenger and Instagram use, without WhatsApp's signup steps. */
+  plain = false,
+): Promise<SignupResult> {
   const state = crypto.randomUUID();
   const redirect = `${window.location.origin}${signupReturnPath}`;
   const url = new URL(`https://www.facebook.com/${config.graph_version}/dialog/oauth`);
-  url.search = new URLSearchParams({
+  const query = new URLSearchParams({
     client_id: config.app_id,
     config_id: config.config_id,
     response_type: "code",
@@ -54,8 +139,13 @@ export function openSignup(config: {
     redirect_uri: redirect,
     state,
     display: "popup",
-    extras: JSON.stringify({ setup: {}, sessionInfoVersion: "3", version: "v4" }),
-  }).toString();
+  });
+  if (!plain) {
+    query.set("extras", JSON.stringify({ setup: {}, sessionInfoVersion: "3", version: "v4" }));
+  }
+  url.search = query.toString();
+
+  writeJSON(startedKey, { state, page: window.location.pathname, redirect_uri: redirect } satisfies Started);
 
   const width = 680;
   const height = 760;
@@ -74,7 +164,9 @@ export function openSignup(config: {
     }
 
     const picked: Partial<SignupResult> = {};
+    const channel = new BroadcastChannel(signupChannel);
     let settled = false;
+    let leaving: number | undefined;
 
     const finish = (fn: () => void) => {
       if (settled) {
@@ -82,24 +174,20 @@ export function openSignup(config: {
       }
       settled = true;
       window.removeEventListener("message", listen);
-      window.clearInterval(watch);
+      window.removeEventListener("focus", back);
+      window.removeEventListener("blur", back);
+      document.removeEventListener("visibilitychange", back);
+      window.clearTimeout(leaving);
+      channel.close();
       fn();
     };
 
-    const listen = (event: MessageEvent) => {
-      if (metaOrigins.includes(event.origin)) {
-        Object.assign(picked, readSession(event.data));
+    const returned = (data: { type?: string; state?: string; code?: string }) => {
+      if (data?.type !== signupMessage || data.state !== state) {
         return;
       }
 
-      if (event.origin !== window.location.origin || event.data?.type !== signupMessage) {
-        return;
-      }
-
-      const data = event.data as { state?: string; code?: string; error?: string };
-      if (data.state !== state) {
-        return;
-      }
+      channel.postMessage({ type: signupTaken, state });
 
       finish(() => {
         if (data.code) {
@@ -110,12 +198,36 @@ export function openSignup(config: {
       });
     };
 
-    window.addEventListener("message", listen);
-    const watch = window.setInterval(() => {
-      if (popup.closed) {
-        window.setTimeout(() => finish(() => reject(new SignupClosed(false))), 800);
+    const listen = (event: MessageEvent) => {
+      if (metaOrigins.includes(event.origin)) {
+        Object.assign(picked, readSession(event.data));
+        return;
       }
-    }, 500);
+
+      if (event.origin === window.location.origin) {
+        returned(event.data);
+      }
+    };
+
+    /* The person left for Meta's window, then came back to this page. */
+    let away = false;
+    const back = () => {
+      if (document.visibilityState !== "visible" || !document.hasFocus()) {
+        away = true;
+        return;
+      }
+      if (!away) {
+        return;
+      }
+      window.clearTimeout(leaving);
+      leaving = window.setTimeout(() => finish(() => reject(new SignupClosed(false))), abandonedAfter);
+    };
+
+    channel.onmessage = (event) => returned(event.data);
+    window.addEventListener("message", listen);
+    window.addEventListener("focus", back);
+    window.addEventListener("blur", back);
+    document.addEventListener("visibilitychange", back);
   });
 }
 

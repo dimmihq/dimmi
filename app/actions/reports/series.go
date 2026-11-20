@@ -157,6 +157,7 @@ channelLabels names the channels as the dashboard does.
 func channelLabels() map[string]string {
 	return map[string]string{
 		"widget": "Messenger", "email": "Email", "slack": "Slack", "api": "API", "whatsapp": "WhatsApp",
+		"facebook": "Facebook Messenger", "instagram": "Instagram",
 		"sms": "SMS", "teams": "Microsoft Teams", "discord": "Discord", "telegram": "Telegram",
 	}
 }

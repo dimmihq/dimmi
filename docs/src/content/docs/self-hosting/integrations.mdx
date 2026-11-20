@@ -17,6 +17,7 @@ Give each app the redirect URL `https://<app_domain>/integrations/<service>/call
 | Intercom | `intercom` | `INTERCOM__CLIENT_ID`, `INTERCOM__CLIENT_SECRET` |
 | Zendesk | `zendesk` | `ZENDESK__CLIENT_ID`, `ZENDESK__CLIENT_SECRET` |
 | WhatsApp | none | `WHATSAPP__APP_ID`, `WHATSAPP__APP_SECRET`, `WHATSAPP__CONFIG_ID`, `WHATSAPP__VERIFY_TOKEN` |
+| Instagram, Messenger | none | `META__APP_ID`, `META__APP_SECRET`, `META__VERIFY_TOKEN`, `INSTAGRAM__CONFIG_ID`, `FACEBOOK__CONFIG_ID` |
 
 ```bash
 dimmictl set <<'EOF'
@@ -29,6 +30,7 @@ EOF
 - **Slack:** point the app's events at `https://<app_domain>/webhooks/slack/events` and its interactivity at `https://<app_domain>/webhooks/slack/interactions`. dimmi does not start with a Slack client ID and secret but no signing secret.
 - **Linear:** `WEBHOOK_SECRET` is the signing secret of the Linear app's webhook.
 - **WhatsApp:** the Meta app needs no redirect URL. Point its webhook at `https://<app_domain>/webhooks/whatsapp` with `VERIFY_TOKEN`, a random value you make up, as the verify token. `CONFIG_ID` is the app's Embedded Signup configuration. Without these, each workspace [connects its number](/channels/whatsapp/) with a token of its own Meta app.
+- **Instagram, Messenger:** one Meta app serves both, and WhatsApp too: leave the `META__` variables out to reuse the WhatsApp app. Each `CONFIG_ID` is a Facebook Login for Business configuration with a system-user token: Instagram accounts as the asset for one, Pages for the other. Point the app's `instagram` webhook at `https://<app_domain>/webhooks/instagram` and its `page` webhook at `https://<app_domain>/webhooks/facebook`, and add `https://<app_domain>/d/whatsapp-return` as a valid OAuth redirect URI. Meta delivers messages only once the app is live.
 - **GitHub:** one app serves the GitHub [knowledge source](/ai/knowledge-sources/) and [linked issues](/tickets/linked-issues/). dimmi signs the webhook of each linked repository with `TRACKERS__GITHUB_WEBHOOK_SECRET`, a random value you make up. [GitHub sign-in](/self-hosting/sign-in-providers/) uses a separate app.
 - **incident.io, Rootly, PagerDuty:** nothing to set. Each workspace connects with its own API key.
 

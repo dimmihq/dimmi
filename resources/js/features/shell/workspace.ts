@@ -36,6 +36,8 @@ export const pages = new Set([
   "procedures",
   "workflows",
   "operator",
+  /* Where Meta's sign-in popup returns; it belongs to no workspace. */
+  "whatsapp-return",
 ]);
 
 /*

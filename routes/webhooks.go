@@ -32,5 +32,6 @@ func Webhooks(a *app.App) {
 	mailboxRoutes(a)
 	slackWebhookRoutes(a)
 	whatsappWebhookRoutes(a)
+	socialWebhookRoutes(a)
 	trackerWebhookRoutes(a)
 }

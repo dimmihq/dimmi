@@ -12,23 +12,18 @@
 
 package whatsapp
 
-import (
-	"encoding/hex"
-	"strings"
-
-	"github.com/dimmihq/dimmi/framework/hashing"
-)
+import "github.com/dimmihq/dimmi/app/drivers/channel/meta"
 
 /*
 SignatureHeader is the header Meta signs deliveries in.
 */
-const SignatureHeader = "X-Hub-Signature-256"
+const SignatureHeader = meta.SignatureHeader
 
 /*
 Sign returns the signature header value of the body under the secret.
 */
 func Sign(secret string, body []byte) string {
-	return "sha256=" + hex.EncodeToString(hashing.HMAC([]byte(secret), body))
+	return meta.Sign(secret, body)
 }
 
 /*
@@ -36,9 +31,5 @@ Verify reports whether the header is the secret's signature of the
 body. An empty secret verifies nothing.
 */
 func Verify(secret, header string, body []byte) bool {
-	if secret == "" || !strings.HasPrefix(header, "sha256=") {
-		return false
-	}
-
-	return hashing.Equal([]byte(Sign(secret, body)), []byte(header))
+	return meta.Verify(secret, header, body)
 }

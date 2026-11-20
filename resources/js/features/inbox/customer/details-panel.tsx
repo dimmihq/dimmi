@@ -32,6 +32,7 @@ import { DeliverySection } from "./delivery-section";
 import { DuplicateBanner } from "./duplicate-banner";
 import { PastConversations } from "./past-conversations";
 import { Nothing, Section } from "./rows";
+import { SocialSection } from "./social-section";
 
 /*
  * The sections the panel can show, all open at first. Each is named by
@@ -45,6 +46,8 @@ const sections = [
   "Issues",
   "Customer",
   "Customer notes",
+  "Instagram",
+  "Facebook Messenger",
   "Company",
   "Past conversations",
   "Feature requests",
@@ -65,6 +68,7 @@ function Customer({ workspace, conversation }: { workspace: string; conversation
     <>
       <DuplicateBanner workspace={workspace} contact={context.contact.id} count={context.duplicates_count} />
       <ContactSection workspace={workspace} context={context} />
+      <SocialSection workspace={workspace} conversation={conversation.id} channelType={conversation.channel.type} />
       <CompanySection context={context} />
       <PastConversations workspace={workspace} context={context} current={conversation.id} />
       <Section title="Feature requests">

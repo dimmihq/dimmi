@@ -402,7 +402,7 @@ function SaidEntry({
  * fileChannels are the channels a reply can carry files on; the composer
  * offers files only there.
  */
-const fileChannels = ["widget", "email", "whatsapp"];
+const fileChannels = ["widget", "email", "whatsapp", "facebook", "instagram"];
 
 function useComposerKeys(keys: Record<string, () => void>) {
   useEffect(() => {

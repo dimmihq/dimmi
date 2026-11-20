@@ -205,8 +205,8 @@ func messengerSources(a *app.App) []string {
 /*
 pageSources returns the extra sources of the pages a csp middleware
 covers: every page may load the captcha provider when one is on and the
-messenger from wherever it is served, and the dashboard also reaches
-GIPHY when the instance has a GIF search key.
+messenger from wherever it is served; the dashboard also shows pictures
+Meta serves, and reaches GIPHY when the instance has a GIF search key.
 */
 func (p RouteServiceProvider) pageSources(params []string) appmiddleware.Sources {
 	extra := captchaSources(p.App)
@@ -218,7 +218,13 @@ func (p RouteServiceProvider) pageSources(params []string) appmiddleware.Sources
 	extra.Scripts = append(extra.Scripts, messenger...)
 	extra.Connect = append(extra.Connect, messenger...)
 	extra.Images = append(extra.Images, messenger...)
-	if !slices.Contains(params, "dashboard") || p.App.Config.Inbox.GIF.GiphyAPIKey == "" {
+	if !slices.Contains(params, "dashboard") {
+		return extra
+	}
+
+	extra.Images = append(extra.Images, metaImageHosts()...)
+
+	if p.App.Config.Inbox.GIF.GiphyAPIKey == "" {
 		return extra
 	}
 
@@ -226,6 +232,15 @@ func (p RouteServiceProvider) pageSources(params []string) appmiddleware.Sources
 	extra.Images = append(extra.Images, "https://*.giphy.com")
 
 	return extra
+}
+
+/*
+metaImageHosts are where Meta serves the pictures the dashboard shows
+straight from it: Facebook Pages' and Instagram accounts' pictures, and
+stories a customer mentioned an account in, which Meta forbids keeping.
+*/
+func metaImageHosts() []string {
+	return []string{"https://*.fbcdn.net", "https://*.cdninstagram.com", "https://lookaside.fbsbx.com"}
 }
 
 /*

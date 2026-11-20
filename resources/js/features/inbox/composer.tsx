@@ -44,6 +44,8 @@ import { useDraft } from "./drafts/use-draft";
 import { type Mode, modes } from "./modes";
 import { AttachButton, ReplyFileChips } from "./reply-files";
 import { SendMenu } from "./send-menu";
+import { useSocialWindow } from "./social-state";
+import { SocialChip, SocialNotice } from "./social-window";
 import { UndoToast } from "./undo/undo-toast";
 import { type Held, useHeld } from "./undo/use-held";
 import { type ReplyFiles, useReplyFiles } from "./use-reply-files";
@@ -299,6 +301,7 @@ function Panel({
   const [slot, setSlot] = useState<HTMLElement | null>(null);
   const attachable = !note && canAttach;
   const whatsapp = useWhatsAppWindow(workspace, conversation, channelType, note);
+  const social = useSocialWindow(workspace, conversation, channelType, note);
   const text = useSend({
     mode,
     draft,
@@ -341,10 +344,12 @@ function Panel({
           {note ? <RiLock2Line aria-hidden className="size-3.5 shrink-0" /> : null}
           <span className="truncate">{note ? "Only your team sees this" : `To ${customer} · ${channel}`}</span>
           <WindowChip state={whatsapp} />
+          <SocialChip state={social} />
         </>
       }
     >
       <ClosedWindow customer={customer} state={whatsapp} reply={template} />
+      <SocialNotice customer={customer} state={social} />
       <TemplateCard reply={template} customer={customer} />
       <div className={template.picked ? "hidden" : "flex flex-col gap-3 px-1.5"}>
         <DraftConflict draft={draft} />

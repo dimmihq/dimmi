@@ -70,6 +70,8 @@ import { Route as DInboxViewConversationRouteImport } from './routes/d/inbox/$vi
 import { Route as DSettingsActionsActionRouteImport } from './routes/d/settings/actions.$action'
 import { Route as DSettingsInboxesInboxRouteImport } from './routes/d/settings/inboxes.$inbox'
 import { Route as DSettingsIntegrationsIntegrationRouteImport } from './routes/d/settings/integrations.$integration'
+import { Route as DSettingsIntegrationsFacebookRouteImport } from './routes/d/settings/integrations.facebook'
+import { Route as DSettingsIntegrationsInstagramRouteImport } from './routes/d/settings/integrations.instagram'
 import { Route as DSettingsIntegrationsWhatsappRouteImport } from './routes/d/settings/integrations.whatsapp'
 import { Route as DSettingsKnowledgeSourceRouteImport } from './routes/d/settings/knowledge.$source'
 import { Route as DSettingsMessengerWidgetRouteImport } from './routes/d/settings/messenger.$widget'
@@ -83,6 +85,8 @@ import { Route as DCustomersListsCompaniesIndexRouteImport } from './routes/d/cu
 import { Route as DSeriesSeriesComposeStepRouteImport } from './routes/d/series/$series_.compose.$step'
 import { Route as DSettingsEmailAddressesAddressRouteImport } from './routes/d/settings/email.addresses.$address'
 import { Route as DSettingsEmailDomainsDomainRouteImport } from './routes/d/settings/email.domains.$domain'
+import { Route as DSettingsIntegrationsFacebookChannelRouteImport } from './routes/d/settings/integrations.facebook_.$channel'
+import { Route as DSettingsIntegrationsInstagramChannelRouteImport } from './routes/d/settings/integrations.instagram_.$channel'
 import { Route as DSettingsIntegrationsWhatsappChannelRouteImport } from './routes/d/settings/integrations.whatsapp_.$channel'
 import { Route as DSettingsIntegrationsWhatsappChannelTemplatesTemplateRouteImport } from './routes/d/settings/integrations.whatsapp_.$channel_.templates.$template'
 
@@ -392,6 +396,18 @@ const DSettingsIntegrationsIntegrationRoute =
     path: '/settings/integrations/$integration',
     getParentRoute: () => DRouteRoute,
   } as any)
+const DSettingsIntegrationsFacebookRoute =
+  DSettingsIntegrationsFacebookRouteImport.update({
+    id: '/settings/integrations/facebook',
+    path: '/settings/integrations/facebook',
+    getParentRoute: () => DRouteRoute,
+  } as any)
+const DSettingsIntegrationsInstagramRoute =
+  DSettingsIntegrationsInstagramRouteImport.update({
+    id: '/settings/integrations/instagram',
+    path: '/settings/integrations/instagram',
+    getParentRoute: () => DRouteRoute,
+  } as any)
 const DSettingsIntegrationsWhatsappRoute =
   DSettingsIntegrationsWhatsappRouteImport.update({
     id: '/settings/integrations/whatsapp',
@@ -467,6 +483,18 @@ const DSettingsEmailDomainsDomainRoute =
     path: '/settings/email/domains/$domain',
     getParentRoute: () => DRouteRoute,
   } as any)
+const DSettingsIntegrationsFacebookChannelRoute =
+  DSettingsIntegrationsFacebookChannelRouteImport.update({
+    id: '/settings/integrations/facebook_/$channel',
+    path: '/settings/integrations/facebook/$channel',
+    getParentRoute: () => DRouteRoute,
+  } as any)
+const DSettingsIntegrationsInstagramChannelRoute =
+  DSettingsIntegrationsInstagramChannelRouteImport.update({
+    id: '/settings/integrations/instagram_/$channel',
+    path: '/settings/integrations/instagram/$channel',
+    getParentRoute: () => DRouteRoute,
+  } as any)
 const DSettingsIntegrationsWhatsappChannelRoute =
   DSettingsIntegrationsWhatsappChannelRouteImport.update({
     id: '/settings/integrations/whatsapp_/$channel',
@@ -539,6 +567,8 @@ export interface FileRoutesByFullPath {
   '/d/settings/actions/$action': typeof DSettingsActionsActionRoute
   '/d/settings/inboxes/$inbox': typeof DSettingsInboxesInboxRoute
   '/d/settings/integrations/$integration': typeof DSettingsIntegrationsIntegrationRoute
+  '/d/settings/integrations/facebook': typeof DSettingsIntegrationsFacebookRoute
+  '/d/settings/integrations/instagram': typeof DSettingsIntegrationsInstagramRoute
   '/d/settings/integrations/whatsapp': typeof DSettingsIntegrationsWhatsappRoute
   '/d/settings/knowledge/$source': typeof DSettingsKnowledgeSourceRoute
   '/d/settings/messenger/$widget': typeof DSettingsMessengerWidgetRoute
@@ -552,6 +582,8 @@ export interface FileRoutesByFullPath {
   '/d/series/$series/compose/$step': typeof DSeriesSeriesComposeStepRoute
   '/d/settings/email/addresses/$address': typeof DSettingsEmailAddressesAddressRoute
   '/d/settings/email/domains/$domain': typeof DSettingsEmailDomainsDomainRoute
+  '/d/settings/integrations/facebook/$channel': typeof DSettingsIntegrationsFacebookChannelRoute
+  '/d/settings/integrations/instagram/$channel': typeof DSettingsIntegrationsInstagramChannelRoute
   '/d/settings/integrations/whatsapp/$channel': typeof DSettingsIntegrationsWhatsappChannelRoute
   '/d/customers/audiences/': typeof DCustomersListsAudiencesIndexRoute
   '/d/customers/companies/': typeof DCustomersListsCompaniesIndexRoute
@@ -610,6 +642,8 @@ export interface FileRoutesByTo {
   '/d/settings/actions/$action': typeof DSettingsActionsActionRoute
   '/d/settings/inboxes/$inbox': typeof DSettingsInboxesInboxRoute
   '/d/settings/integrations/$integration': typeof DSettingsIntegrationsIntegrationRoute
+  '/d/settings/integrations/facebook': typeof DSettingsIntegrationsFacebookRoute
+  '/d/settings/integrations/instagram': typeof DSettingsIntegrationsInstagramRoute
   '/d/settings/integrations/whatsapp': typeof DSettingsIntegrationsWhatsappRoute
   '/d/settings/knowledge/$source': typeof DSettingsKnowledgeSourceRoute
   '/d/settings/messenger/$widget': typeof DSettingsMessengerWidgetRoute
@@ -622,6 +656,8 @@ export interface FileRoutesByTo {
   '/d/series/$series/compose/$step': typeof DSeriesSeriesComposeStepRoute
   '/d/settings/email/addresses/$address': typeof DSettingsEmailAddressesAddressRoute
   '/d/settings/email/domains/$domain': typeof DSettingsEmailDomainsDomainRoute
+  '/d/settings/integrations/facebook/$channel': typeof DSettingsIntegrationsFacebookChannelRoute
+  '/d/settings/integrations/instagram/$channel': typeof DSettingsIntegrationsInstagramChannelRoute
   '/d/settings/integrations/whatsapp/$channel': typeof DSettingsIntegrationsWhatsappChannelRoute
   '/d/customers/audiences': typeof DCustomersListsAudiencesIndexRoute
   '/d/customers/companies': typeof DCustomersListsCompaniesIndexRoute
@@ -688,6 +724,8 @@ export interface FileRoutesById {
   '/d/settings/actions/$action': typeof DSettingsActionsActionRoute
   '/d/settings/inboxes/$inbox': typeof DSettingsInboxesInboxRoute
   '/d/settings/integrations/$integration': typeof DSettingsIntegrationsIntegrationRoute
+  '/d/settings/integrations/facebook': typeof DSettingsIntegrationsFacebookRoute
+  '/d/settings/integrations/instagram': typeof DSettingsIntegrationsInstagramRoute
   '/d/settings/integrations/whatsapp': typeof DSettingsIntegrationsWhatsappRoute
   '/d/settings/knowledge/$source': typeof DSettingsKnowledgeSourceRoute
   '/d/settings/messenger/$widget': typeof DSettingsMessengerWidgetRoute
@@ -701,6 +739,8 @@ export interface FileRoutesById {
   '/d/series/$series_/compose/$step': typeof DSeriesSeriesComposeStepRoute
   '/d/settings/email/addresses/$address': typeof DSettingsEmailAddressesAddressRoute
   '/d/settings/email/domains/$domain': typeof DSettingsEmailDomainsDomainRoute
+  '/d/settings/integrations/facebook_/$channel': typeof DSettingsIntegrationsFacebookChannelRoute
+  '/d/settings/integrations/instagram_/$channel': typeof DSettingsIntegrationsInstagramChannelRoute
   '/d/settings/integrations/whatsapp_/$channel': typeof DSettingsIntegrationsWhatsappChannelRoute
   '/d/customers/_lists/audiences/': typeof DCustomersListsAudiencesIndexRoute
   '/d/customers/_lists/companies/': typeof DCustomersListsCompaniesIndexRoute
@@ -767,6 +807,8 @@ export interface FileRouteTypes {
     | '/d/settings/actions/$action'
     | '/d/settings/inboxes/$inbox'
     | '/d/settings/integrations/$integration'
+    | '/d/settings/integrations/facebook'
+    | '/d/settings/integrations/instagram'
     | '/d/settings/integrations/whatsapp'
     | '/d/settings/knowledge/$source'
     | '/d/settings/messenger/$widget'
@@ -780,6 +822,8 @@ export interface FileRouteTypes {
     | '/d/series/$series/compose/$step'
     | '/d/settings/email/addresses/$address'
     | '/d/settings/email/domains/$domain'
+    | '/d/settings/integrations/facebook/$channel'
+    | '/d/settings/integrations/instagram/$channel'
     | '/d/settings/integrations/whatsapp/$channel'
     | '/d/customers/audiences/'
     | '/d/customers/companies/'
@@ -838,6 +882,8 @@ export interface FileRouteTypes {
     | '/d/settings/actions/$action'
     | '/d/settings/inboxes/$inbox'
     | '/d/settings/integrations/$integration'
+    | '/d/settings/integrations/facebook'
+    | '/d/settings/integrations/instagram'
     | '/d/settings/integrations/whatsapp'
     | '/d/settings/knowledge/$source'
     | '/d/settings/messenger/$widget'
@@ -850,6 +896,8 @@ export interface FileRouteTypes {
     | '/d/series/$series/compose/$step'
     | '/d/settings/email/addresses/$address'
     | '/d/settings/email/domains/$domain'
+    | '/d/settings/integrations/facebook/$channel'
+    | '/d/settings/integrations/instagram/$channel'
     | '/d/settings/integrations/whatsapp/$channel'
     | '/d/customers/audiences'
     | '/d/customers/companies'
@@ -915,6 +963,8 @@ export interface FileRouteTypes {
     | '/d/settings/actions/$action'
     | '/d/settings/inboxes/$inbox'
     | '/d/settings/integrations/$integration'
+    | '/d/settings/integrations/facebook'
+    | '/d/settings/integrations/instagram'
     | '/d/settings/integrations/whatsapp'
     | '/d/settings/knowledge/$source'
     | '/d/settings/messenger/$widget'
@@ -928,6 +978,8 @@ export interface FileRouteTypes {
     | '/d/series/$series_/compose/$step'
     | '/d/settings/email/addresses/$address'
     | '/d/settings/email/domains/$domain'
+    | '/d/settings/integrations/facebook_/$channel'
+    | '/d/settings/integrations/instagram_/$channel'
     | '/d/settings/integrations/whatsapp_/$channel'
     | '/d/customers/_lists/audiences/'
     | '/d/customers/_lists/companies/'
@@ -1371,6 +1423,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DSettingsIntegrationsIntegrationRouteImport
       parentRoute: typeof DRouteRoute
     }
+    '/d/settings/integrations/facebook': {
+      id: '/d/settings/integrations/facebook'
+      path: '/settings/integrations/facebook'
+      fullPath: '/d/settings/integrations/facebook'
+      preLoaderRoute: typeof DSettingsIntegrationsFacebookRouteImport
+      parentRoute: typeof DRouteRoute
+    }
+    '/d/settings/integrations/instagram': {
+      id: '/d/settings/integrations/instagram'
+      path: '/settings/integrations/instagram'
+      fullPath: '/d/settings/integrations/instagram'
+      preLoaderRoute: typeof DSettingsIntegrationsInstagramRouteImport
+      parentRoute: typeof DRouteRoute
+    }
     '/d/settings/integrations/whatsapp': {
       id: '/d/settings/integrations/whatsapp'
       path: '/settings/integrations/whatsapp'
@@ -1460,6 +1526,20 @@ declare module '@tanstack/react-router' {
       path: '/settings/email/domains/$domain'
       fullPath: '/d/settings/email/domains/$domain'
       preLoaderRoute: typeof DSettingsEmailDomainsDomainRouteImport
+      parentRoute: typeof DRouteRoute
+    }
+    '/d/settings/integrations/facebook_/$channel': {
+      id: '/d/settings/integrations/facebook_/$channel'
+      path: '/settings/integrations/facebook/$channel'
+      fullPath: '/d/settings/integrations/facebook/$channel'
+      preLoaderRoute: typeof DSettingsIntegrationsFacebookChannelRouteImport
+      parentRoute: typeof DRouteRoute
+    }
+    '/d/settings/integrations/instagram_/$channel': {
+      id: '/d/settings/integrations/instagram_/$channel'
+      path: '/settings/integrations/instagram/$channel'
+      fullPath: '/d/settings/integrations/instagram/$channel'
+      preLoaderRoute: typeof DSettingsIntegrationsInstagramChannelRouteImport
       parentRoute: typeof DRouteRoute
     }
     '/d/settings/integrations/whatsapp_/$channel': {
@@ -1614,6 +1694,8 @@ interface DRouteRouteChildren {
   DSettingsActionsActionRoute: typeof DSettingsActionsActionRoute
   DSettingsInboxesInboxRoute: typeof DSettingsInboxesInboxRoute
   DSettingsIntegrationsIntegrationRoute: typeof DSettingsIntegrationsIntegrationRoute
+  DSettingsIntegrationsFacebookRoute: typeof DSettingsIntegrationsFacebookRoute
+  DSettingsIntegrationsInstagramRoute: typeof DSettingsIntegrationsInstagramRoute
   DSettingsIntegrationsWhatsappRoute: typeof DSettingsIntegrationsWhatsappRoute
   DSettingsKnowledgeSourceRoute: typeof DSettingsKnowledgeSourceRoute
   DSettingsMessengerWidgetRoute: typeof DSettingsMessengerWidgetRoute
@@ -1625,6 +1707,8 @@ interface DRouteRouteChildren {
   DSeriesSeriesComposeStepRoute: typeof DSeriesSeriesComposeStepRoute
   DSettingsEmailAddressesAddressRoute: typeof DSettingsEmailAddressesAddressRoute
   DSettingsEmailDomainsDomainRoute: typeof DSettingsEmailDomainsDomainRoute
+  DSettingsIntegrationsFacebookChannelRoute: typeof DSettingsIntegrationsFacebookChannelRoute
+  DSettingsIntegrationsInstagramChannelRoute: typeof DSettingsIntegrationsInstagramChannelRoute
   DSettingsIntegrationsWhatsappChannelRoute: typeof DSettingsIntegrationsWhatsappChannelRoute
   DSettingsIntegrationsWhatsappChannelTemplatesTemplateRoute: typeof DSettingsIntegrationsWhatsappChannelTemplatesTemplateRoute
 }
@@ -1656,6 +1740,8 @@ const DRouteRouteChildren: DRouteRouteChildren = {
   DSettingsActionsActionRoute: DSettingsActionsActionRoute,
   DSettingsInboxesInboxRoute: DSettingsInboxesInboxRoute,
   DSettingsIntegrationsIntegrationRoute: DSettingsIntegrationsIntegrationRoute,
+  DSettingsIntegrationsFacebookRoute: DSettingsIntegrationsFacebookRoute,
+  DSettingsIntegrationsInstagramRoute: DSettingsIntegrationsInstagramRoute,
   DSettingsIntegrationsWhatsappRoute: DSettingsIntegrationsWhatsappRoute,
   DSettingsKnowledgeSourceRoute: DSettingsKnowledgeSourceRoute,
   DSettingsMessengerWidgetRoute: DSettingsMessengerWidgetRoute,
@@ -1667,6 +1753,10 @@ const DRouteRouteChildren: DRouteRouteChildren = {
   DSeriesSeriesComposeStepRoute: DSeriesSeriesComposeStepRoute,
   DSettingsEmailAddressesAddressRoute: DSettingsEmailAddressesAddressRoute,
   DSettingsEmailDomainsDomainRoute: DSettingsEmailDomainsDomainRoute,
+  DSettingsIntegrationsFacebookChannelRoute:
+    DSettingsIntegrationsFacebookChannelRoute,
+  DSettingsIntegrationsInstagramChannelRoute:
+    DSettingsIntegrationsInstagramChannelRoute,
   DSettingsIntegrationsWhatsappChannelRoute:
     DSettingsIntegrationsWhatsappChannelRoute,
   DSettingsIntegrationsWhatsappChannelTemplatesTemplateRoute:

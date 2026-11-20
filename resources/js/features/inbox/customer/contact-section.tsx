@@ -158,6 +158,7 @@ export function ContactSection({ workspace, context }: { workspace: string; cont
     ...origin(context).map(([label, value]) => copy(label, value)),
     ...context.identities
       .filter((identity) => ![contact.email, contact.phone].includes(identity.value))
+      .filter((identity) => !platformIdentities.includes(identity.type))
       .map((identity) => (
         <Row key={identity.id} label={<span className="truncate">{identityLabel(identity.type)}</span>}>
           <Copyable value={identity.value} label={identityLabel(identity.type)} />
@@ -201,11 +202,20 @@ export function ContactSection({ workspace, context }: { workspace: string; cont
 }
 
 /*
+ * platformIdentities are ids only Meta's servers can use, a number that
+ * tells a teammate nothing; the customer's username is shown in their
+ * place, in the platform's own section.
+ */
+const platformIdentities = ["facebook_user", "instagram_user"];
+
+/*
  * identityLabels name the identities channels know a customer by; any
  * other type shows its own name, spaced out and capitalised.
  */
 const identityLabels: Record<string, string> = {
   whatsapp_user: "WhatsApp",
+  facebook_user: "Messenger",
+  instagram_user: "Instagram",
   slack_user: "Slack",
   external_id: "External ID",
   widget_visitor: "Visitor",

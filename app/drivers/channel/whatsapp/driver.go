@@ -297,7 +297,7 @@ func recipientOf(r contracts.Recipient) (Recipient, bool) {
 
 		return Recipient{WaID: digits}, digits != ""
 	case enums.IdentityTypeEmail, enums.IdentityTypeWidgetVisitor, enums.IdentityTypeExternalID,
-		enums.IdentityTypeSlackUser:
+		enums.IdentityTypeSlackUser, enums.IdentityTypeFacebookUser, enums.IdentityTypeInstagramUser:
 		return Recipient{}, false
 	default:
 		return Recipient{}, false
