@@ -49,6 +49,8 @@ type Broadcast struct {
 	ScheduleKind     string          `json:"schedule_kind"`
 	ScheduledAt      *time.Time      `json:"scheduled_at"`
 	Goal             json.RawMessage `json:"goal"`
+	TicketID         *string         `json:"ticket_id"`
+	Holds            []string        `json:"holds"`
 	Counts           json.RawMessage `json:"counts"`
 	StartedAt        *time.Time      `json:"started_at"`
 	FinishedAt       *time.Time      `json:"finished_at"`
@@ -76,6 +78,7 @@ func NewBroadcast(b models.Broadcast) Broadcast {
 		ReplyMemberID: broadcastRef(models.PrefixMember, b.ReplyMemberID),
 		AIReplies:     b.AiReplies, TrackClicks: b.TrackClicks, SkipFrequencyCap: b.SkipFrequencyCap,
 		ScheduleKind: b.ScheduleKind, ScheduledAt: b.ScheduledAt, Goal: b.Goal, Counts: b.Counts,
+		TicketID: broadcastRef(models.PrefixTicket, b.TicketID), Holds: nonNilHolds(b.Holds),
 		StartedAt: b.StartedAt, FinishedAt: b.FinishedAt, CreatedAt: b.CreatedAt, UpdatedAt: b.UpdatedAt,
 	}
 }
@@ -146,15 +149,30 @@ type BroadcastTopic struct {
 	Description string    `json:"description"`
 	Consent     string    `json:"consent"`
 	CreatedAt   time.Time `json:"created_at"`
+
+	SubscribedCount   int64 `json:"subscribed_count"`
+	UnsubscribedCount int64 `json:"unsubscribed_count"`
+	BroadcastCount    int64 `json:"broadcast_count"`
 }
 
 /*
-NewBroadcastTopic shapes a topic.
+BroadcastTopicCounts is how a topic stands: the people it reaches now,
+the people who left it and the broadcasts sent under it.
 */
-func NewBroadcastTopic(t models.BroadcastTopic) BroadcastTopic {
+type BroadcastTopicCounts struct {
+	Subscribed   int64
+	Unsubscribed int64
+	Broadcasts   int64
+}
+
+/*
+NewBroadcastTopic shapes a topic with its counts.
+*/
+func NewBroadcastTopic(t models.BroadcastTopic, c BroadcastTopicCounts) BroadcastTopic {
 	return BroadcastTopic{
 		ID: models.PublicID(models.PrefixBroadcastTopic, t.ID), Object: "broadcast_topic", Name: t.Name,
 		Description: t.Description, Consent: t.Consent, CreatedAt: t.CreatedAt,
+		SubscribedCount: c.Subscribed, UnsubscribedCount: c.Unsubscribed, BroadcastCount: c.Broadcasts,
 	}
 }
 
@@ -169,4 +187,15 @@ func broadcastRef(prefix models.Prefix, id *ids.UUID) *string {
 	public := models.PublicID(prefix, *id)
 
 	return &public
+}
+
+/*
+nonNilHolds is the holds, or an empty list for none.
+*/
+func nonNilHolds(holds []string) []string {
+	if holds == nil {
+		return []string{}
+	}
+
+	return holds
 }

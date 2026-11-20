@@ -1,10 +1,12 @@
 package ticketissues_test
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 
+	fhttp "github.com/dimmihq/dimmi/framework/http"
 	"github.com/dimmihq/dimmi/framework/testkit"
 )
 
@@ -27,6 +29,66 @@ func TestJiraIssues(t *testing.T) {
 
 		d.jiraDelivery(t, "webhook_issue_wont_do.json").AssertOK()
 		d.Owner.GetJSON("/api/v1/tickets/"+tracker).AssertOK().AssertJSONPath("data.state.name", "Won't fix")
+	})
+
+	t.Run("linking watches the issue's project, and unlinking deletes what dimmi wrote", func(t *testing.T) {
+		t.Parallel()
+
+		d := newDesk(t)
+		d.connect(t, "jira", "jira_oauth_token")
+		tracker := d.tracker(t, "Refunds fail", "ann")
+
+		link := d.Owner.PostJSON("/api/v1/tickets/"+tracker+"/issues", testkit.JSON{
+			"url": "https://acme.atlassian.net/browse/PAY-12",
+		}).AssertCreated().String("data.id")
+		hooks := d.sentTo(fhttp.MethodPost, jiraSite+"/webhook")
+		require.Len(t, hooks, 1)
+		require.Contains(t, string(hooks[0].Body), `"jqlFilter":"project = `)
+
+		d.Owner.Delete("/api/v1/ticket-issues/" + link + "?remove_from_tool=true").AssertNoContent()
+
+		removed := d.sentTo(fhttp.MethodDelete, jiraSite+"/issue/10001/properties/dimmi.impact")
+		require.Len(t, removed, 1)
+
+		var unlinked bool
+		for _, r := range d.fake.Sent() {
+			if r.Method == fhttp.MethodDelete && strings.Contains(r.URL.String(), "/remotelink?globalId=") &&
+				strings.Contains(r.URL.Query().Get("globalId"), "/tickets/"+tracker) {
+				unlinked = true
+			}
+		}
+
+		require.True(t, unlinked, "the remote link back to the ticket was not deleted")
+	})
+
+	t.Run("unlinking one of two tickets removes only its link and writes the other's impact", func(t *testing.T) {
+		t.Parallel()
+
+		d := newDesk(t)
+		d.connect(t, "jira", "jira_oauth_token")
+		first := d.tracker(t, "Refunds fail", "ann")
+		second := d.tracker(t, "Refund button greyed out", "bob")
+
+		var links []string
+		for _, ticket := range []string{first, second} {
+			links = append(links, d.Owner.PostJSON("/api/v1/tickets/"+ticket+"/issues", testkit.JSON{
+				"url": "https://acme.atlassian.net/browse/PAY-12",
+			}).AssertCreated().String("data.id"))
+		}
+
+		written := len(d.sentTo(fhttp.MethodPut, jiraSite+"/issue/10001/properties/dimmi.impact"))
+		d.Owner.Delete("/api/v1/ticket-issues/" + links[0] + "?remove_from_tool=true").AssertNoContent()
+
+		var dropped []string
+		for _, r := range d.fake.Sent() {
+			if r.Method == fhttp.MethodDelete && strings.Contains(r.URL.Path, "/remotelink") {
+				dropped = append(dropped, r.URL.Query().Get("globalId"))
+			}
+		}
+
+		require.Len(t, dropped, 1)
+		require.Contains(t, dropped[0], "/tickets/"+first)
+		require.Greater(t, len(d.sentTo(fhttp.MethodPut, jiraSite+"/issue/10001/properties/dimmi.impact")), written)
 	})
 
 	t.Run("a delivery without the app's token is refused", func(t *testing.T) {

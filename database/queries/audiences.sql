@@ -61,8 +61,11 @@ RETURNING id;
 -- name: AudienceUsers :many
 -- AudienceUsers returns what names a saved audience: other saved audiences,
 -- workflows whose working copy names it, workflows whose live version does,
--- and the articles and collections kept to it. live is true for live
--- workflows, articles and collections, which rely on it now.
+-- the articles and collections kept to it, the messengers whose rules name
+-- it, the broadcasts still to send to it, and the series whose working copy
+-- or live version names it. live is true for what relies on it now: live
+-- workflows, articles, collections, messengers, broadcasts that are
+-- scheduled, sending or paused, and live or paused series.
 SELECT 'audience'::text AS kind, a.id, a.name, false AS live FROM audiences a
 WHERE a.workspace_id = @workspace_id AND a.deleted_at IS NULL AND a.id <> @audience_id
   AND strpos(a.rules::text, @public_id::text) > 0
@@ -78,6 +81,21 @@ WHERE ar.workspace_id = @workspace_id AND ar.deleted_at IS NULL AND ar.audience_
 UNION ALL
 SELECT 'collection', co.id, co.name, true FROM collections co
 WHERE co.workspace_id = @workspace_id AND co.deleted_at IS NULL AND co.audience_id = @audience_id
+UNION ALL
+SELECT 'messenger', ws.id, ws.name, true FROM widget_settings ws
+WHERE ws.workspace_id = @workspace_id AND ws.deleted_at IS NULL
+  AND strpos(ws.audiences::text, @public_id::text) > 0
+UNION ALL
+SELECT 'broadcast', b.id, b.name, (b.status <> 'draft') FROM broadcasts b
+WHERE b.workspace_id = @workspace_id AND b.deleted_at IS NULL AND b.kind = 'one_off'
+  AND b.status IN ('draft', 'scheduled', 'sending', 'paused')
+  AND (b.audience_id = @audience_id OR strpos(coalesce(b.rules::text, ''), @public_id::text) > 0)
+UNION ALL
+SELECT 'series', s.id, s.name, (sv.id IS NOT NULL) FROM series s
+LEFT JOIN series_versions sv ON sv.id = s.live_version_id AND s.status IN ('live', 'paused')
+  AND strpos(sv.spec::text, @public_id::text) > 0
+WHERE s.workspace_id = @workspace_id AND s.status <> 'archived'
+  AND (strpos(s.working::text, @public_id::text) > 0 OR sv.id IS NOT NULL)
 ORDER BY 1, 3;
 
 -- name: CountAudienceContacts :one

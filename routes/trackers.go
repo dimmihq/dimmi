@@ -24,6 +24,6 @@ func trackerRoutes(workspace *routing.Router, a *app.App) {
 	tc := &v1.TrackerController{TicketController: v1.TicketController{Tickets: a.Actions.Tickets, IDs: a.IDs}}
 
 	routing.Get(workspace, "/conversations/{conversation}/tracker-suggestions",
-		"conversations.tracker-suggestions.index", tc.TrackerSuggestions).Ability("tickets:read")
+		"conversations.tracker-suggestions.index", tc.TrackerSuggestions).Internal().Ability("tickets:read")
 	routing.Get(workspace, "/tickets/{ticket}/summary", "tickets.summary.show", tc.Summary).Ability("tickets:read")
 }

@@ -122,6 +122,48 @@ func TestReportFacts(t *testing.T) {
 			AssertStatus(fhttp.StatusUnprocessableEntity)
 	})
 
+	t.Run("the teams table names the team that closed", func(t *testing.T) {
+		t.Parallel()
+		d := open(t)
+		path := d.customer("ana")
+		team := d.Owner.PostJSON("/api/v1/teams", testkit.JSON{"name": "Billing"}).AssertCreated().String("data.id")
+
+		d.TC.Clock.Travel(time.Minute)
+		d.Owner.PatchJSON(path, testkit.JSON{"team_id": team}).AssertOK()
+		d.TC.Clock.Travel(time.Minute)
+		d.Owner.PostJSON(path+"/replies", testkit.JSON{"body": "Done"}).AssertCreated()
+		d.TC.Clock.Travel(time.Minute)
+		d.Owner.PatchJSON(path, testkit.JSON{"status": "closed"}).AssertOK()
+		d.refresh()
+
+		var body struct {
+			Data struct {
+				Charts []struct {
+					Key  string `json:"key"`
+					Rows []struct {
+						Key   string `json:"key"`
+						Label string `json:"label"`
+					} `json:"rows"`
+				} `json:"charts"`
+			} `json:"data"`
+		}
+		d.Owner.GetJSON("/api/v1/reports/team").AssertOK().Decode(&body)
+
+		for _, chart := range body.Data.Charts {
+			if chart.Key != "teams" {
+				continue
+			}
+
+			require.Len(t, chart.Rows, 1)
+			assert.Equal(t, "Billing", chart.Rows[0].Label)
+			assert.Equal(t, team, chart.Rows[0].Key)
+
+			return
+		}
+
+		t.Fatal("no teams table")
+	})
+
 	t.Run("an AI hand-off and its return are logged", func(t *testing.T) {
 		t.Parallel()
 		d := open(t)

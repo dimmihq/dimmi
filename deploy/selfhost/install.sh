@@ -18,8 +18,9 @@
 #   start     pull images, migrate and start everything
 #   check     check DNS, HTTPS and /up
 #   admin     create the first account: admin --email E --name N --workspace W
-#   set       add or change settings: set KEY=value ... (or lines on stdin)
-#   update    move to the latest release (or --version), migrate and restart
+#   set       add or change settings and apply them: set KEY=value ... (or lines on stdin)
+#   update    move to the latest release (or --version), migrate and restart;
+#             a changed compose.yaml or Caddyfile is kept as <file>.bak
 #   status    show the services
 #   logs      follow the logs: logs [service]
 
@@ -49,6 +50,18 @@ put() {
     { print } END { if (!done) print line }' "$DIR/.env" >"$tmp"
   chmod 600 "$tmp"
   mv "$tmp" "$DIR/.env"
+}
+
+# Keeps a copy of each stack file in $DIR that differs from the one in $1,
+# so edits made on the server outlive the copy that follows.
+keep_edits() {
+  local f
+  for f in compose.yaml Caddyfile; do
+    [ -f "$DIR/$f" ] && [ -f "$1/$f" ] || continue
+    cmp -s "$DIR/$f" "$1/$f" && continue
+    cp -p "$DIR/$f" "$DIR/$f.bak"
+    say "$f differs from the new one; the old one is kept as $DIR/$f.bak"
+  done
 }
 
 need_root() { [ "$(id -u)" = 0 ] || die "run this as root (sudo -i, or prefix with sudo)"; }
@@ -117,6 +130,7 @@ fetch() {
   mkdir -p "$DIR"
   chmod 700 "$DIR"
   if [ "${1:-}" != fresh ] && [ -n "$here" ] && [ "$here" != "$DIR" ] && [ -f "$here/compose.yaml" ]; then
+    keep_edits "$here"
     for f in "${FILES[@]}"; do cp "$here/$f" "$DIR/$f"; done
   elif [ "${1:-}" = fresh ] || [ ! -f "$DIR/compose.yaml" ]; then
     url="$RELEASES/latest/download/dimmi-selfhost.tar.gz"
@@ -125,6 +139,7 @@ fetch() {
     tmp="$(mktemp -d)"
     curl -fsSL "$url" | tar -xz -C "$tmp" || die "could not download $url; is $version a release?"
     rm -f "$tmp/.env"
+    keep_edits "$tmp"
     cp -R "$tmp/." "$DIR/"
     rm -rf "$tmp"
   fi
@@ -193,14 +208,20 @@ wait_healthy() {
   die "the web service did not become healthy; see the logs above"
 }
 
-start() {
-  [ -f "$DIR/.env" ] || die "no $DIR/.env yet: run install or configure first"
-  say "Starting dimmi (the first run pulls images and migrates the database)"
+# Brings the whole stack to what .env and compose.yaml say. Compose
+# recreates only the containers whose settings changed.
+up() {
   compose up -d --pull missing --remove-orphans || {
     compose logs --tail 60 migrate buckets >&2 || true
     die "the stack did not start; see the logs above"
   }
   wait_healthy
+}
+
+start() {
+  [ -f "$DIR/.env" ] || die "no $DIR/.env yet: run install or configure first"
+  say "Starting dimmi (the first run pulls images and migrates the database)"
+  up
   say "dimmi is running"
 }
 
@@ -245,9 +266,8 @@ set_values() {
     put "$line"
     n=$((n + 1))
   done
-  say "Saved $n setting(s); restarting the app"
-  compose up -d --force-recreate web worker
-  wait_healthy
+  say "Saved $n setting(s); restarting the services they change"
+  up
 }
 
 # New installs are invite-only: the first account comes from here, owns a
@@ -272,7 +292,7 @@ update() {
 
 usage() {
   local src="${BASH_SOURCE[0]:-}"
-  if [ -n "$src" ] && [ -f "$src" ]; then sed -n '2,22p' "$src" | sed 's/^# \{0,1\}//'
+  if [ -n "$src" ] && [ -f "$src" ]; then sed -n '2,25p' "$src" | sed 's/^# \{0,1\}//'
   else echo "Usage: https://github.com/dimmihq/dimmi/blob/main/deploy/selfhost/SKILL.md"; fi
   exit "${1:-0}"
 }

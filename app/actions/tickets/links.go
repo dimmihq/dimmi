@@ -7,8 +7,8 @@
 | makes that work and moves the customer ticket to a state that waits on
 | the team, so the customer sees "with our billing team" while the
 | agent's queue stays clean. When the back-office work resolves, the
-| customer ticket comes back to the team marked "close the loop", or,
-| when its type sends a prepared reply, resolves itself with it.
+| customer ticket comes back to the team marked "close the loop".
+| Nothing is sent to the customer: a workflow or a teammate tells them.
 |
 | Trackers link to conversations; a conversation may join several.
 | Follow-up and related links join any two tickets. Linking twice is a

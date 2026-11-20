@@ -47,8 +47,12 @@ func (q *Queries) CountWidgetSettings(ctx context.Context, workspaceID ids.UUID)
 }
 
 const createWidgetSettings = `-- name: CreateWidgetSettings :one
-INSERT INTO widget_settings (workspace_id, channel_connection_id, name, created_at, updated_at)
-VALUES ($1, $2, $3, $4, $4)
+INSERT INTO widget_settings (workspace_id, channel_connection_id, name, help_center_id, created_at, updated_at)
+VALUES (
+    $1, $2, $3,
+    (SELECT id FROM help_centers WHERE workspace_id = $1 AND is_default AND deleted_at IS NULL),
+    $4, $4
+)
 RETURNING id, workspace_id, channel_connection_id, name, enabled, appearance, texts, locale, reply_time, show_team_avatars, show_availability, allowed_origins, allow_anonymous, collect_email, require_email_when_offline, attachments_enabled, max_attachment_mb, help_center_id, help_tab_enabled, show_branding, config_version, last_boot_at, last_boot_origin, deleted_at, created_at, updated_at, changelog_tab_enabled, intercom_shim, native_apps_enabled, home_links, audiences, texts_by_locale
 `
 
@@ -59,7 +63,8 @@ type CreateWidgetSettingsParams struct {
 	Now                 time.Time `json:"now"`
 }
 
-// CreateWidgetSettings stores a new widget on its channel connection.
+// CreateWidgetSettings stores a new widget on its channel connection,
+// linked to the workspace's default help center when it has one.
 func (q *Queries) CreateWidgetSettings(ctx context.Context, arg CreateWidgetSettingsParams) (WidgetSetting, error) {
 	row := q.db.QueryRow(ctx, createWidgetSettings,
 		arg.WorkspaceID,

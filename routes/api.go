@@ -142,6 +142,7 @@ guestRoutes declares the routes anyone reaches before signing in.
 */
 func guestRoutes(guest *routing.Router, c controllers) {
 	guest.Middleware("csrf", "session")
+	guest.Internal()
 
 	routing.Get(guest, "/auth/config", "auth.config.show", c.authConfig.Show)
 	routing.Post(guest, "/users", "users.store", c.users.Store)
@@ -161,28 +162,28 @@ never reaches.
 func userRoutes(user *routing.Router, c controllers) {
 	user.Middleware("csrf", "session", "auth:user", "api.throttle")
 
-	routing.Get(user, "/sessions", "sessions.index", c.sessions.Index)
-	routing.Delete(user, "/sessions", "sessions.destroy-many", c.sessions.DestroyMany).
+	routing.Get(user, "/sessions", "sessions.index", c.sessions.Index).Internal()
+	routing.Delete(user, "/sessions", "sessions.destroy-many", c.sessions.DestroyMany).Internal().
 		Middleware("password.confirm").Status(fhttp.StatusNoContent)
-	routing.Delete(user, "/sessions/{session}", "sessions.destroy", c.sessions.Destroy).
+	routing.Delete(user, "/sessions/{session}", "sessions.destroy", c.sessions.Destroy).Internal().
 		Status(fhttp.StatusNoContent)
-	routing.Post(user, "/email-verifications", "email-verifications.store", c.verifications.Store)
-	routing.Get(user, "/user/confirmation", "user.confirmation.show", c.confirmation.Show)
-	routing.Post(user, "/user/confirmation", "user.confirmation.store", c.confirmation.Store)
+	routing.Post(user, "/email-verifications", "email-verifications.store", c.verifications.Store).Internal()
+	routing.Get(user, "/user/confirmation", "user.confirmation.show", c.confirmation.Show).Internal()
+	routing.Post(user, "/user/confirmation", "user.confirmation.store", c.confirmation.Store).Internal()
 	routing.Post(user, "/user/confirmation-codes", "user.confirmation-codes.store",
-		c.confirmationCodes.Store)
-	routing.Get(user, "/user/identities", "user.identities.index", c.identities.Index)
-	routing.Delete(user, "/user/identities/{identity}", "user.identities.destroy", c.identities.Destroy).
+		c.confirmationCodes.Store).Internal()
+	routing.Get(user, "/user/identities", "user.identities.index", c.identities.Index).Internal()
+	routing.Delete(user, "/user/identities/{identity}", "user.identities.destroy", c.identities.Destroy).Internal().
 		Middleware("password.confirm").Status(fhttp.StatusNoContent)
-	routing.Get(user, "/user/memberships", "user.memberships.index", c.memberships.Index).
+	routing.Get(user, "/user/memberships", "user.memberships.index", c.memberships.Index).Internal().
 		Lists(v1.MembershipListing())
-	routing.Post(user, "/user/memberships", "user.memberships.store", c.memberships.Store)
-	routing.Post(user, "/workspaces", "workspaces.store", c.workspaces.Store).Status(fhttp.StatusCreated)
-	routing.Patch(user, "/workspaces/{workspace}", "workspaces.update", c.workspaces.Update)
-	routing.Delete(user, "/user/memberships/{membership}", "user.memberships.destroy", c.memberships.Destroy).
+	routing.Post(user, "/user/memberships", "user.memberships.store", c.memberships.Store).Internal()
+	routing.Post(user, "/workspaces", "workspaces.store", c.workspaces.Store).Internal().Status(fhttp.StatusCreated)
+	routing.Patch(user, "/workspaces/{workspace}", "workspaces.update", c.workspaces.Update).Internal()
+	routing.Delete(user, "/user/memberships/{membership}", "user.memberships.destroy", c.memberships.Destroy).Internal().
 		Status(fhttp.StatusNoContent)
 	authFactorRoutes(user, c.authFactors)
-	routing.Get(user, "/user/security-events", "user.security-events.index", c.securityEvents.Index).
+	routing.Get(user, "/user/security-events", "user.security-events.index", c.securityEvents.Index).Internal().
 		Lists(v1.PageListing())
 }
 
@@ -196,13 +197,13 @@ func workspaceRoutes(workspace *routing.Router, c controllers) {
 	routing.Get(workspace, "/workspace", "workspace.show", c.workspace.Show)
 	routing.Get(workspace, "/workspace/entitlements", "workspace.entitlements.show", c.entitlements.Show)
 	routing.Patch(workspace, "/workspace", "workspace.update", c.workspace.Update).Ability("settings:write")
-	routing.Delete(workspace, "/workspace", "workspace.destroy", c.workspace.Destroy).Status(fhttp.StatusOK).
-		Middleware("auth:user")
+	routing.Delete(workspace, "/workspace", "workspace.destroy", c.workspace.Destroy).Internal().
+		Status(fhttp.StatusOK).Middleware("auth:user")
 	routing.Get(workspace, "/members", "members.index", c.members.Index).Ability("members:read").
 		Use(c.members.ServeCSV).Lists(v1.MemberListing()).Query(csvQuery())
 	routing.Get(workspace, "/members/{member}", "members.show", c.members.Show).Ability("members:read").
 		Lists(v1.MemberShowing())
-	routing.Patch(workspace, "/members/me", "members.me.update", c.members.UpdateMe).Ability("conversations:write")
+	routing.Patch(workspace, "/members/me", "members.me.update", c.members.UpdateMe).Internal().Ability("conversations:write")
 	routing.Patch(workspace, "/members/{member}", "members.update", c.members.Update).Ability("members:write")
 	routing.Patch(workspace, "/members", "members.update-many", c.members.UpdateMany).Ability("members:write")
 	routing.Get(workspace, "/audit-logs", "audit-logs.index", c.auditLogs.Index).Ability("settings:read").
@@ -256,13 +257,13 @@ Minting needs a verified email and a recent confirmation.
 func tokenRoutes(tokens *routing.Router, c controllers) {
 	tokens.Middleware("csrf", "session", "auth:user", "workspace", "api.throttle")
 
-	routing.Get(tokens, "/tokens", "tokens.index", c.tokens.Index).Lists(v1.TokenListing())
-	routing.Post(tokens, "/tokens", "tokens.store", c.tokens.Store).
+	routing.Get(tokens, "/tokens", "tokens.index", c.tokens.Index).Internal().Lists(v1.TokenListing())
+	routing.Post(tokens, "/tokens", "tokens.store", c.tokens.Store).Internal().
 		Middleware("verified", "password.confirm")
-	routing.Get(tokens, "/tokens/abilities", "tokens.abilities.index", c.tokenAbilities.Index)
-	routing.Get(tokens, "/tokens/{token}", "tokens.show", c.tokens.ShowToken)
-	routing.Patch(tokens, "/tokens/{token}", "tokens.update", c.tokens.Update)
-	routing.Delete(tokens, "/tokens/{token}", "tokens.destroy", c.tokens.Destroy).Status(fhttp.StatusNoContent)
+	routing.Get(tokens, "/tokens/abilities", "tokens.abilities.index", c.tokenAbilities.Index).Internal()
+	routing.Get(tokens, "/tokens/{token}", "tokens.show", c.tokens.ShowToken).Internal()
+	routing.Patch(tokens, "/tokens/{token}", "tokens.update", c.tokens.Update).Internal()
+	routing.Delete(tokens, "/tokens/{token}", "tokens.destroy", c.tokens.Destroy).Internal().Status(fhttp.StatusNoContent)
 }
 
 /*
@@ -440,11 +441,11 @@ removing factors needs a recent confirmation; activating needs only the
 code, which proves the factor works.
 */
 func authFactorRoutes(user *routing.Router, c *v1.AuthFactorController) {
-	routing.Get(user, "/user/auth-factors", "user.auth-factors.index", c.Index)
-	routing.Post(user, "/user/auth-factors", "user.auth-factors.store", c.Store).Middleware("password.confirm")
-	routing.Patch(user, "/user/auth-factors/{factor}", "user.auth-factors.update", c.Update)
-	routing.Delete(user, "/user/auth-factors", "user.auth-factors.destroy-many", c.DestroyMany).
+	routing.Get(user, "/user/auth-factors", "user.auth-factors.index", c.Index).Internal()
+	routing.Post(user, "/user/auth-factors", "user.auth-factors.store", c.Store).Internal().Middleware("password.confirm")
+	routing.Patch(user, "/user/auth-factors/{factor}", "user.auth-factors.update", c.Update).Internal()
+	routing.Delete(user, "/user/auth-factors", "user.auth-factors.destroy-many", c.DestroyMany).Internal().
 		Middleware("password.confirm").Status(fhttp.StatusNoContent)
-	routing.Delete(user, "/user/auth-factors/{factor}", "user.auth-factors.destroy", c.Destroy).
+	routing.Delete(user, "/user/auth-factors/{factor}", "user.auth-factors.destroy", c.Destroy).Internal().
 		Middleware("password.confirm").Status(fhttp.StatusNoContent)
 }

@@ -6,7 +6,7 @@
 | The entries for tickets: finding and reading them, turning a
 | conversation into one, creating back-office work and trackers, moving
 | state and setting fields with the same required field rules the inbox
-| obeys, notes and links, and messaging everyone a tracker reaches. A
+| obeys, notes and links, and the conversations a tracker reaches. A
 | recipe for an agent triaging a bug report: read the conversation,
 | list trackers with q, link it to the right one or create one, then
 | file the issue.
@@ -130,15 +130,6 @@ func ticketActivityDocs() map[string]Doc {
 			Title:   "List a tracker's conversations",
 			Use:     "Lists the conversations a tracker reaches, with customer, company, plan and revenue.",
 			Returns: "the conversations and totals under meta.impact.",
-		},
-		"tickets.updates.store": {
-			Title: "Message everyone a tracker reaches",
-			Use: "Sends one message to every linked customer on their own channel, optionally resolving them. " +
-				"Always call with dry_run: true first to see the count and who is held back, then confirm.",
-			Risk: new(RiskReach),
-		},
-		"tickets.updates.index": {
-			Title: "List a tracker's messages", Use: "Reads past messages with each recipient's result.",
 		},
 		"conversations.tickets.index": {
 			Title: "Get a conversation's tickets", Use: "Reads a conversation's own ticket and the trackers it joined.",

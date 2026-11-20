@@ -36,7 +36,7 @@ const maxTraceBody = 16 << 10
 /*
 userAgent names the agent to the workspace's API.
 */
-const userAgent = "Dimmi-Actions/1 (+https://trydimmi.com/docs/actions)"
+const userAgent = "Dimmi-Actions/1 (+https://trydimmi.com/docs/ai/actions/)"
 
 /*
 Target is everything one execution needs: the connection and its

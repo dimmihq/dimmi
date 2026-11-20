@@ -430,7 +430,13 @@ templ comment(cm Comment) {
 			}
 			<span class="text-caption-1-regular text-text-tertiary">{ cm.At }</span>
 		</p>
-		<p class="whitespace-pre-line text-body-regular text-text-secondary">{ cm.Body }</p>
+		if cm.HTML != "" {
+			<div class="prose text-body-regular text-text-secondary">
+				@templ.Raw(cm.HTML)
+			</div>
+		} else {
+			<p class="whitespace-pre-line text-body-regular text-text-secondary">{ cm.Body }</p>
+		}
 		if len(cm.Replies) > 0 {
 			<ol class="mt-2 flex flex-col gap-4 border-s border-separator-border ps-4">
 				for _, r := range cm.Replies {

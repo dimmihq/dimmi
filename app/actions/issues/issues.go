@@ -9,10 +9,9 @@
 | pulled from the tool) or links one pasted or found by search. The tool
 | tells dimmi when the issue moves, by webhook and by a re-check every
 | fifteen minutes, and each status maps to a dimmi state, so customers
-| only ever see dimmi's states. Comments arrive as internal notes; a
-| comment starting with @customers drafts a message to everyone
-| linked. The impact on customers is kept
-| current on the issue so engineering ranks work by it.
+| only ever see dimmi's states. Comments arrive as internal notes. The
+| impact on customers is kept current on the issue so engineering ranks
+| work by it.
 |
 */
 
@@ -24,6 +23,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/dimmihq/dimmi/framework/cache"
 	"github.com/dimmihq/dimmi/framework/clock"
 	"github.com/dimmihq/dimmi/framework/database"
 	"github.com/dimmihq/dimmi/framework/fault"
@@ -63,6 +63,7 @@ to dimmi point; Services holds the apps' webhook secrets.
 */
 type Issues struct {
 	DB       *database.DB
+	Cache    *cache.Store
 	Clock    clock.Clock
 	Queue    *queue.Queue
 	Tickets  *tickets.Tickets

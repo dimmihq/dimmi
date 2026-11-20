@@ -46,3 +46,22 @@ DELETE FROM broadcast_opt_outs WHERE workspace_id = @workspace_id AND contact_id
 -- ContactOptedOutOfBroadcasts reports whether the contact left all
 -- broadcasts.
 SELECT EXISTS (SELECT 1 FROM broadcast_opt_outs WHERE workspace_id = @workspace_id AND contact_id = @contact_id);
+
+-- name: BroadcastTopicTallies :many
+-- BroadcastTopicTallies counts, for each live topic, the people who
+-- said yes, the people who said no and the broadcasts sent under it.
+SELECT t.id,
+    (SELECT count(*) FROM contact_topic_subscriptions s JOIN contacts c ON c.id = s.contact_id
+        WHERE s.topic_id = t.id AND s.subscribed AND c.deleted_at IS NULL AND c.merged_into_id IS NULL)::bigint AS said_yes,
+    (SELECT count(*) FROM contact_topic_subscriptions s JOIN contacts c ON c.id = s.contact_id
+        WHERE s.topic_id = t.id AND NOT s.subscribed AND c.deleted_at IS NULL AND c.merged_into_id IS NULL)::bigint AS said_no,
+    (SELECT count(*) FROM broadcasts b WHERE b.topic_id = t.id AND b.deleted_at IS NULL)::bigint AS broadcasts
+FROM broadcast_topics t
+WHERE t.workspace_id = @workspace_id AND t.archived_at IS NULL;
+
+-- name: CountBroadcastPeople :one
+-- CountBroadcastPeople counts the people broadcasts may reach: everyone
+-- who has not left all broadcasts.
+SELECT count(*)::bigint FROM contacts c
+WHERE c.workspace_id = @workspace_id AND c.deleted_at IS NULL AND c.merged_into_id IS NULL
+    AND NOT EXISTS (SELECT 1 FROM broadcast_opt_outs o WHERE o.workspace_id = c.workspace_id AND o.contact_id = c.id);

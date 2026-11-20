@@ -23,7 +23,7 @@ ListBroadcastsRequest narrows the list of broadcasts.
 */
 type ListBroadcastsRequest struct {
 	Status  string `query:"status"  enum:"draft,scheduled,sending,paused,sent,stopped,"`
-	Channel string `query:"channel" enum:"email,chat,post,slack,"`
+	Channel string `query:"channel" enum:"email,chat,post,slack,conversation,"`
 	Search  string `query:"q"`
 	Limit   int    `query:"limit"`
 	Offset  int    `query:"offset"`
@@ -35,7 +35,14 @@ StoreBroadcastRequest is the input of POST /broadcasts.
 type StoreBroadcastRequest struct {
 	Body struct {
 		Name    string `json:"name"    maxLength:"120" minLength:"1"`
-		Channel string `json:"channel" enum:"email,chat,post,slack"`
+		Channel string `json:"channel" enum:"email,chat,post,slack,conversation"`
+		// TicketID is a tracker's public id: a conversation broadcast then
+		// answers only in the conversations linked to it.
+		TicketID string `json:"ticket_id,omitempty"`
+		// Holds leave people out of a conversation broadcast: customers
+		// still waiting on an answer, and, for a tracker, customers a
+		// teammate already answered since it last moved.
+		Holds []string `json:"holds,omitempty" enum:"customer_waiting,team_replied" maxItems:"2"`
 	}
 }
 

@@ -3,7 +3,6 @@ package tickets_test
 import (
 	"strconv"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -244,37 +243,19 @@ func TestTicketTeams(t *testing.T) {
 			AssertJSONPath("data.close_loop", true)
 	})
 
-	t.Run("links conversations to a tracker and messages them, holding who wrote since", func(t *testing.T) {
+	t.Run("links conversations to a tracker and counts who it reaches", func(t *testing.T) {
 		t.Parallel()
 		d := newDesk(t)
 		tracker := d.Owner.PostJSON("/api/v1/tickets", testkit.JSON{
 			"type_id": d.types["Tracker"], "title": "CSV export crashes",
 		}).AssertCreated().String("data.id")
 
-		var convs []string
 		for _, name := range []string{"ann", "ben", "cat"} {
 			c := d.Customer(t, name, "CSV export").String("data.id")
-			convs = append(convs, c)
 			link := testkit.JSON{"kind": "tracker", "conversation_id": c}
 			d.Owner.PostJSON("/api/v1/tickets/"+tracker+"/links", link).
 				AssertOK()
 		}
-
-		d.TC.Clock.Travel(time.Minute)
-		d.Owner.PostJSON("/api/v1/conversations/"+convs[2]+"/messages", testkit.JSON{"body": "any news?"}).
-			AssertCreated()
-
-		dry := d.Owner.PostJSON("/api/v1/tickets/"+tracker+"/updates", testkit.JSON{
-			"body": "The fix is live.", "dry_run": true,
-		}).AssertOK()
-		dry.AssertJSONPath("data.recipients", float64(3)).AssertJSONPath("data.held.#", float64(1))
-
-		d.Owner.PostJSON("/api/v1/tickets/"+tracker+"/updates", testkit.JSON{"body": "The fix is live."}).AssertOK()
-		d.TC.Drain()
-
-		updates := d.Owner.GetJSON("/api/v1/tickets/" + tracker + "/updates").AssertOK()
-		updates.AssertJSONPath("data.0.status", "sent").AssertJSONPath("data.0.delivered", float64(2)).
-			AssertJSONPath("data.0.held", float64(1))
 
 		reach := d.Owner.GetJSON("/api/v1/tickets/" + tracker + "/conversations").AssertOK()
 		reach.AssertJSONPath("meta.impact.customers", float64(3))

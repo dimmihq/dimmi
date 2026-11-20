@@ -196,7 +196,7 @@ func (st *state) render(ctx context.Context, text string) (string, error) {
 
 	return variablePattern().ReplaceAllStringFunc(text, func(found string) string {
 		m := variablePattern().FindStringSubmatch(found)
-		if v := st.variable(s, m[1]); v != "" {
+		if v := st.variable(ctx, s, m[1]); v != "" {
 			return v
 		}
 
@@ -207,7 +207,7 @@ func (st *state) render(ctx context.Context, text string) (string, error) {
 /*
 variable returns one variable's text, empty when it has no value.
 */
-func (st *state) variable(s *subject, name string) string {
+func (st *state) variable(ctx context.Context, s *subject, name string) string {
 	switch name {
 	case "contact.first_name":
 		full, _ := s.Lookup("contact.name")
@@ -217,7 +217,12 @@ func (st *state) variable(s *subject, name string) string {
 	case "conversation.number":
 		return strconv.FormatInt(st.conv.Number, 10)
 	case "workspace.name":
-		return ""
+		ws, err := st.q.FindWorkspace(ctx, st.run.WorkspaceID)
+		if err != nil {
+			return ""
+		}
+
+		return ws.Name
 	}
 
 	v, ok := s.Lookup(name)

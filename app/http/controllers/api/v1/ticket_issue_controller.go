@@ -4,8 +4,7 @@
 |--------------------------------------------------------------------------
 |
 | The engineering work behind tickets: the issues linked to a ticket,
-| creating or linking one, unlinking, and the drafts that close the
-| loop when the work is done.
+| creating or linking one, and unlinking.
 |
 */
 
@@ -27,7 +26,7 @@ import (
 )
 
 /*
-TicketIssueController serves linked issues and drafts.
+TicketIssueController serves linked issues.
 */
 type TicketIssueController struct {
 	TicketController
@@ -53,6 +52,29 @@ func (c *TicketIssueController) Index(ctx context.Context, in *requests.TicketIs
 	}
 
 	list, err := c.Issues.List(ctx, membership(ctx), ref)
+	if err != nil {
+		return nil, err
+	}
+
+	items := resources.NewTicketIssues(list)
+
+	return &TicketIssuesOutput{Body: fhttp.NewCollection(pagination.Page[resources.TicketIssue]{
+		Items: items, Limit: len(items),
+	})}, nil
+}
+
+/*
+Refresh reads a ticket's linked issues from their tools now and lists
+them.
+*/
+func (c *TicketIssueController) Refresh(ctx context.Context, in *requests.TicketIssuesRequest,
+) (*TicketIssuesOutput, error) {
+	ref, err := c.ref(in.Ticket)
+	if err != nil {
+		return nil, err
+	}
+
+	list, err := c.Issues.Refresh(ctx, membership(ctx), ref)
 	if err != nil {
 		return nil, err
 	}
@@ -105,7 +127,8 @@ func (c *TicketIssueController) Store(ctx context.Context, in *requests.StoreTic
 }
 
 /*
-Destroy unlinks an issue.
+Destroy unlinks an issue, taking back what dimmi wrote on it in its
+tool only when asked.
 */
 func (c *TicketIssueController) Destroy(ctx context.Context, in *requests.TicketIssueRequest) (*struct{}, error) {
 	id, err := c.IDs.Decode(string(models.PrefixTicketIssue), in.Issue)
@@ -113,68 +136,7 @@ func (c *TicketIssueController) Destroy(ctx context.Context, in *requests.Ticket
 		return nil, issues.ErrIssueNotFound
 	}
 
-	return &struct{}{}, c.Issues.Remove(ctx, membership(ctx), id)
-}
-
-/*
-TicketUpdateDraftsOutput is a ticket's drafts.
-*/
-type TicketUpdateDraftsOutput struct {
-	Body fhttp.Collection[resources.TicketUpdateDraft]
-}
-
-/*
-Drafts lists a ticket's drafts with who each would reach.
-*/
-func (c *TicketIssueController) Drafts(ctx context.Context, in *requests.TicketIssuesRequest,
-) (*TicketUpdateDraftsOutput, error) {
-	ref, err := c.ref(in.Ticket)
-	if err != nil {
-		return nil, err
-	}
-
-	list, err := c.Issues.Drafts(ctx, membership(ctx), ref)
-	if err != nil {
-		return nil, err
-	}
-
-	items := make([]resources.TicketUpdateDraft, len(list))
-	for i, d := range list {
-		items[i] = resources.NewTicketUpdateDraft(d)
-	}
-
-	return &TicketUpdateDraftsOutput{Body: fhttp.NewCollection(pagination.Page[resources.TicketUpdateDraft]{
-		Items: items, Limit: len(items),
-	})}, nil
-}
-
-/*
-TicketUpdateDraftOutput is one draft.
-*/
-type TicketUpdateDraftOutput struct {
-	Body fhttp.Resource[resources.TicketUpdateDraft]
-}
-
-/*
-UpdateDraft sends or discards a draft.
-*/
-func (c *TicketIssueController) UpdateDraft(ctx context.Context, in *requests.UpdateTicketUpdateDraftRequest,
-) (*TicketUpdateDraftOutput, error) {
-	id, err := c.IDs.Decode(string(models.PrefixTicketUpdateDraft), in.Draft)
-	if err != nil {
-		return nil, issues.ErrDraftNotFound
-	}
-
-	d, err := c.Issues.Decide(ctx, membership(ctx), id, issues.DecideInput{
-		Status: in.Body.Status, Body: in.Body.Body, Resolve: in.Body.Resolve,
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	view := resources.NewTicketUpdateDraft(issues.DraftView{Draft: d})
-
-	return &TicketUpdateDraftOutput{Body: fhttp.NewResource(view)}, nil
+	return &struct{}{}, c.Issues.Remove(ctx, membership(ctx), id, issues.RemoveOptions{FromTool: in.RemoveFromTool})
 }
 
 /*

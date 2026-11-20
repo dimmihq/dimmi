@@ -58,6 +58,10 @@ func (b *Broadcasts) Estimate(ctx context.Context, m authz.Membership, id ids.UU
 			return b.estimateRooms(ctx, q, row, &out)
 		}
 
+		if row.Channel == ChannelConversation {
+			return b.estimateConversations(ctx, q, row, &out)
+		}
+
 		return b.estimatePeople(ctx, q, row, &out)
 	})
 

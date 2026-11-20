@@ -521,6 +521,8 @@ type Broadcast struct {
 	Kind              string          `json:"kind"`
 	SeriesID          *ids.UUID       `json:"series_id"`
 	SeriesNodeID      *string         `json:"series_node_id"`
+	TicketID          *ids.UUID       `json:"ticket_id"`
+	Holds             []string        `json:"holds"`
 }
 
 type BroadcastLink struct {
@@ -628,6 +630,14 @@ type ChangelogEntryPerson struct {
 	Role        string    `json:"role"`
 	Position    int32     `json:"position"`
 	CreatedAt   time.Time `json:"created_at"`
+}
+
+type ChangelogEntryView struct {
+	WorkspaceID  ids.UUID    `json:"workspace_id"`
+	HelpCenterID ids.UUID    `json:"help_center_id"`
+	EntryID      ids.UUID    `json:"entry_id"`
+	Day          pgtype.Date `json:"day"`
+	Views        int32       `json:"views"`
 }
 
 type ChangelogLabel struct {
@@ -1136,6 +1146,18 @@ type ConversationView struct {
 	CreatedAt         time.Time       `json:"created_at"`
 	UpdatedAt         time.Time       `json:"updated_at"`
 	DeletedAt         *time.Time      `json:"deleted_at"`
+}
+
+type CustomerNote struct {
+	ID             ids.UUID   `json:"id"`
+	WorkspaceID    ids.UUID   `json:"workspace_id"`
+	ContactID      *ids.UUID  `json:"contact_id"`
+	CompanyID      *ids.UUID  `json:"company_id"`
+	AuthorMemberID *ids.UUID  `json:"author_member_id"`
+	Body           string     `json:"body"`
+	PinnedAt       *time.Time `json:"pinned_at"`
+	CreatedAt      time.Time  `json:"created_at"`
+	UpdatedAt      time.Time  `json:"updated_at"`
 }
 
 type DataExport struct {
@@ -2804,54 +2826,6 @@ type TicketTypeState struct {
 	IsDefault         bool     `json:"is_default"`
 	IsDefaultResolved bool     `json:"is_default_resolved"`
 	Position          int32    `json:"position"`
-}
-
-type TicketUpdate struct {
-	ID             ids.UUID   `json:"id"`
-	WorkspaceID    ids.UUID   `json:"workspace_id"`
-	TicketID       ids.UUID   `json:"ticket_id"`
-	Body           string     `json:"body"`
-	Resolve        bool       `json:"resolve"`
-	Status         string     `json:"status"`
-	Recipients     int32      `json:"recipients"`
-	Delivered      int32      `json:"delivered"`
-	Held           int32      `json:"held"`
-	Failed         int32      `json:"failed"`
-	AuthorMemberID *ids.UUID  `json:"author_member_id"`
-	CreatedAt      time.Time  `json:"created_at"`
-	FinishedAt     *time.Time `json:"finished_at"`
-}
-
-type TicketUpdateDelivery struct {
-	ID             ids.UUID   `json:"id"`
-	WorkspaceID    ids.UUID   `json:"workspace_id"`
-	UpdateID       ids.UUID   `json:"update_id"`
-	ConversationID ids.UUID   `json:"conversation_id"`
-	Status         string     `json:"status"`
-	Reason         *string    `json:"reason"`
-	Attempts       int32      `json:"attempts"`
-	MessageID      *ids.UUID  `json:"message_id"`
-	SentAt         *time.Time `json:"sent_at"`
-	CreatedAt      time.Time  `json:"created_at"`
-	UpdatedAt      time.Time  `json:"updated_at"`
-}
-
-type TicketUpdateDraft struct {
-	ID                ids.UUID   `json:"id"`
-	WorkspaceID       ids.UUID   `json:"workspace_id"`
-	TicketID          ids.UUID   `json:"ticket_id"`
-	IssueID           *ids.UUID  `json:"issue_id"`
-	Source            string     `json:"source"`
-	Reason            string     `json:"reason"`
-	Body              string     `json:"body"`
-	AuthorName        string     `json:"author_name"`
-	Status            string     `json:"status"`
-	Resolve           bool       `json:"resolve"`
-	UpdateID          *ids.UUID  `json:"update_id"`
-	DecidedByMemberID *ids.UUID  `json:"decided_by_member_id"`
-	DecidedAt         *time.Time `json:"decided_at"`
-	CreatedAt         time.Time  `json:"created_at"`
-	UpdatedAt         time.Time  `json:"updated_at"`
 }
 
 type TrackerSuggestion struct {

@@ -349,7 +349,7 @@ func (c PortalController) ideaPage(w fhttp.ResponseWriter, r *fhttp.Request, s l
 	path := feedback.PostPath(page.FeedbackPost)
 	v := helpcenter.IdeaView{
 		Idea: ideaView(page.Listed), Status: statusView(page.Stage, 0), Details: page.Details, Author: page.Author,
-		Posted: page.CreatedAt.Format("January 2, 2006"), Comments: threads(page.Comments),
+		Posted: page.CreatedAt.Format("January 2, 2006"), Comments: threads(page.Comments, page.TeamHTML),
 		Pending: page.Moderation == "pending", CanAct: s.reader != nil, Commented: r.URL.Query().Has("commented"),
 	}
 	if page.Update != "" {
@@ -364,14 +364,15 @@ func (c PortalController) ideaPage(w fhttp.ResponseWriter, r *fhttp.Request, s l
 }
 
 /*
-threads nests replies under the comments they answer.
+threads nests replies under the comments they answer, with what the
+team wrote as HTML.
 */
-func threads(rows []models.ListFeedbackCommentsRow) []helpcenter.Comment {
+func threads(rows []models.ListFeedbackCommentsRow, html map[ids.UUID]string) []helpcenter.Comment {
 	var out []helpcenter.Comment
 	at := map[ids.UUID]int{}
 	for _, row := range rows {
 		cm := helpcenter.Comment{
-			Author: row.AuthorName, FromTeam: row.AuthorMemberID != nil, Body: row.Body,
+			Author: row.AuthorName, FromTeam: row.AuthorMemberID != nil, Body: row.Body, HTML: html[row.ID],
 			At: row.CreatedAt.Format("Jan 2, 2006"),
 		}
 		if row.ParentID != nil {

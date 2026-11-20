@@ -19,7 +19,7 @@ models'. Without a key the built-in embedder is absent. Model is the
 upstream model and Dims the size its vectors are shortened to.
 */
 type AIManagedEmbeddings struct {
-	APIKey  string `koanf:"api_key"`
+	APIKey  string `koanf:"api_key"                               secret:"true"`
 	BaseURL string `default:"https://api.deepinfra.com/v1/openai" koanf:"base_url"`
 	Model   string `default:"Qwen/Qwen3-Embedding-8B"             koanf:"model"`
 	Dims    int    `default:"1024"                                koanf:"dims"`
@@ -43,7 +43,7 @@ type AIKnowledgeConfig struct {
 	QueryEmbedTimeoutMS int    `default:"4000" koanf:"query_embed_timeout_ms"`
 	VectorTimeoutMS     int    `default:"250"  koanf:"vector_timeout_ms"`
 	CrawlIntervalMS     int    `default:"1000" koanf:"crawl_interval_ms"`
-	CloudflareAPIToken  string `koanf:"cloudflare_api_token"`
+	CloudflareAPIToken  string `koanf:"cloudflare_api_token"  secret:"true"`
 	CloudflareAccountID string `koanf:"cloudflare_account_id"`
 
 	CloudflareBrowserHourMicros int64 `default:"90000" koanf:"cloudflare_browser_hour_micros"`

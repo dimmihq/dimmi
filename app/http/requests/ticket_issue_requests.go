@@ -6,7 +6,7 @@
 | The inputs of linked issues: creating or linking one on a ticket,
 | unlinking one, the lists a connected tool offers to pick from, a
 | search of its issues, its sync settings, connecting a tool with an
-| API key, the drafts closing the loop, and the workspace's switches.
+| API key, and the workspace's switches.
 |
 */
 
@@ -39,8 +39,12 @@ type StoreTicketIssueRequest struct {
 }
 
 /*
-TicketIssueRequest names a linked issue in the path.
+TicketIssueRequest names a linked issue in the path. RemoveFromTool,
+on unlinking, also takes back what dimmi wrote on the issue in its
+tool, such as the impact and the link back to the ticket; without it
+the tool keeps them.
 */
 type TicketIssueRequest struct {
-	Issue string `path:"issue"`
+	Issue          string `path:"issue"`
+	RemoveFromTool bool   `query:"remove_from_tool"`
 }

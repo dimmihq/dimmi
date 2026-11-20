@@ -128,6 +128,29 @@ func TestEmailBroadcasts(t *testing.T) {
 			AssertJSONPath("data.reasons.0.reason", "unsubscribed")
 	})
 
+	t.Run("counts who each topic reaches, who left it and its broadcasts", func(t *testing.T) {
+		t.Parallel()
+		d := newDesk(t)
+		ada := unique("ada")
+		d.contact(ada, "Ada", "pro")
+		d.contact(unique("ben"), "Ben", "pro")
+
+		updates := d.owner.PostJSON("/api/v1/broadcast-topics", testkit.JSON{"name": "Updates", "consent": "opt_out"}).
+			AssertCreated().AssertJSONPath("data.subscribed_count", float64(2)).String("data.id")
+		d.owner.PostJSON("/api/v1/broadcast-topics", testkit.JSON{"name": "Events", "consent": "opt_in"}).
+			AssertCreated().AssertJSONPath("data.subscribed_count", float64(0))
+
+		d.send(d.emailBroadcast("First", testkit.JSON{"skip_frequency_cap": true, "topic_id": updates}))
+		d.tc.Client().PatchJSON("/api/v1/broadcast-preferences/"+tokenOf(t, ada),
+			testkit.JSON{"topics": []string{}, "unsubscribe_all": false}).AssertOK()
+
+		list := d.owner.GetJSON("/api/v1/broadcast-topics").AssertOK()
+		list.AssertJSONPath("data.0.name", "Events").AssertJSONPath("data.0.subscribed_count", float64(0)).
+			AssertJSONPath("data.0.unsubscribed_count", float64(1))
+		list.AssertJSONPath("data.1.name", "Updates").AssertJSONPath("data.1.subscribed_count", float64(1)).
+			AssertJSONPath("data.1.unsubscribed_count", float64(1)).AssertJSONPath("data.1.broadcast_count", float64(1))
+	})
+
 	t.Run("leaves out someone who got a broadcast too recently", func(t *testing.T) {
 		t.Parallel()
 		d := newDesk(t)

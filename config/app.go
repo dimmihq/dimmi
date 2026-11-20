@@ -4,7 +4,7 @@
 |--------------------------------------------------------------------------
 |
 | The edition, chosen when the binary is built, decides the defaults that
-| differ between a self-hosted install and Dimmi cloud. The region and the API version are reported
+| differ between a self-hosted install and dimmi cloud. The region and the API version are reported
 | to clients before they sign in, so apps can tell which server they
 | talk to and which features it has.
 |
@@ -20,7 +20,7 @@ type Edition string
 
 /*
 The editions. A self-hosted install is run by its operator; the cloud
-is run by Dimmi for many customers.
+is run by dimmi for many customers.
 */
 const (
 	EditionSelfHost Edition = "self_host"

@@ -9,10 +9,9 @@
 | secret of the endpoint the workspace pasted, found through the
 | installation the address names. Then each event goes where it
 | belongs: an issue's news to every link of it, in whichever workspace;
-| a comment to the tickets as a note; a deployment to the drafts
-| waiting for it. A new incident in an incident tool reaches only the
-| tickets a teammate already linked to it: nothing is opened in dimmi
-| on its own.
+| a comment to the tickets as a note; a deployment to the issues it
+| ships. A new incident in an incident tool reaches only the tickets a
+| teammate already linked to it: nothing is opened in dimmi on its own.
 |
 */
 
@@ -190,7 +189,7 @@ func (s *Issues) apply(ctx context.Context, l models.TicketIssuesByExternalIDRow
 		}
 
 		return s.applyIssue(ctx, l.WorkspaceID, l.ID, *e.Issue)
-	case trackers.EventComment:
+	case trackers.EventComment, trackers.EventUpdate:
 		return s.commentOn(ctx, l.WorkspaceID, l.ID, e)
 	}
 

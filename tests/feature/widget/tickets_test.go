@@ -44,6 +44,22 @@ func ticketTypes(t *testing.T, tc *tests.TestCase) map[string]string {
 }
 
 /*
+stepsField adds a field the customer fills in to the bug report type and
+returns the type's id.
+*/
+func stepsField(t *testing.T, tc *tests.TestCase) string {
+	t.Helper()
+
+	bug := ticketTypes(t, tc)["Bug report"]
+	owner(tc).PostJSON("/api/v1/ticket-types/"+bug+"/fields", testkit.JSON{
+		"key": "steps", "label": "Steps to reproduce", "data_type": "long_text",
+		"visible_customer": true, "editable_customer": true,
+	}).AssertCreated()
+
+	return bug
+}
+
+/*
 submit sends the visitor's form for a request.
 */
 func (v *visitor) submit(typeID, client string, extra testkit.JSON) *testkit.Response {
@@ -76,6 +92,7 @@ func TestWidgetTicketTypes(t *testing.T) {
 		t.Parallel()
 		tc := tests.New(t)
 		v := startVisitor(t, tc)
+		stepsField(t, tc)
 
 		res := v.client().GetJSON("/widget/v1/ticket-types").AssertOK()
 
@@ -103,7 +120,7 @@ func TestWidgetTicketForm(t *testing.T) {
 		t.Parallel()
 		tc := tests.New(t)
 		v := startVisitor(t, tc)
-		bug := ticketTypes(t, tc)["Bug report"]
+		bug := stepsField(t, tc)
 		client := ids.New().String()
 
 		first := v.submit(bug, client, testkit.JSON{

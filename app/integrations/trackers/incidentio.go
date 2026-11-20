@@ -7,7 +7,8 @@
 | signed with the endpoint's own secret. Severities carry a rank, higher
 | the worse; statuses fall into categories that map to the five groups. Declaring from dimmi opens a
 | public incident; the impact on customers is written to the numeric
-| custom field the workspace picked, when it picked one.
+| custom field the workspace picked, when it picked one, and cleared
+| from it when the ticket is unlinked.
 |
 */
 
@@ -62,6 +63,11 @@ func (*IncidentIO) Provider() string { return "incident_io" }
 Incidents reports true.
 */
 func (*IncidentIO) Incidents() bool { return true }
+
+/*
+SharedImpact reports true: the incident keeps one impact.
+*/
+func (*IncidentIO) SharedImpact() bool { return true }
 
 /*
 ioIncident is an incident as the API returns it.
@@ -289,6 +295,25 @@ func (t *IncidentIO) Impact(ctx context.Context, c Call, is Issue, impact Impact
 }
 
 /*
+Forget clears the customer count dimmi kept in the picked field.
+*/
+func (t *IncidentIO) Forget(ctx context.Context, c Call, is Issue, _ string) error {
+	field := c.meta("impact_field")
+	if field == "" {
+		return nil
+	}
+
+	entry := map[string]any{"custom_field_id": field, "values": []any{}}
+
+	return t.call(ctx, c, request{
+		method: fhttp.MethodPost, url: "/v2/incidents/" + url.PathEscape(is.ExternalID) + "/actions/edit",
+		body: map[string]any{
+			"notify_incident_channel": false, "incident": map[string]any{"custom_field_entries": []any{entry}},
+		},
+	})
+}
+
+/*
 Verify checks the Svix signature.
 */
 func (*IncidentIO) Verify(s Signed, secret string, now time.Time) error {
@@ -296,8 +321,8 @@ func (*IncidentIO) Verify(s Signed, secret string, now time.Time) error {
 }
 
 /*
-Parse reads an incident.io delivery: a new or changed incident, or an
-update posted on one.
+Parse reads an incident.io delivery: a new or changed incident, and
+the message of an update shared with a status change.
 */
 func (*IncidentIO) Parse(body []byte) ([]Event, error) {
 	var raw map[string]any
@@ -316,6 +341,8 @@ func (*IncidentIO) Parse(body []byte) ([]Event, error) {
 		return []Event{ioUpdate(payload)}, nil
 	}
 
+	message, _ := payload["message"].(string)
+
 	if inner, ok := payload["incident"].(map[string]any); ok {
 		payload = inner
 	}
@@ -332,7 +359,12 @@ func (*IncidentIO) Parse(body []byte) ([]Event, error) {
 		event.Kind = EventIncident
 	}
 
-	return []Event{event}, nil
+	events := []Event{event}
+	if message = strings.TrimSpace(message); message != "" {
+		events = append(events, Event{Kind: EventUpdate, ExternalID: i.ID, Body: message})
+	}
+
+	return events, nil
 }
 
 /*

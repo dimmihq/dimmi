@@ -57,8 +57,6 @@ func unscopedQueries() map[string]string {
 		"FindWindowConversation":             "inbound routing: the chat thread decides the conversation",
 		"ListTrackerConversations":           "a tracker the member may read names the conversations reporting it",
 		"CountTrackerImpact":                 "a tracker's reach: numbers only, names no conversation",
-		"ListTrackerRecipients":              "a tracker's message goes to every linked customer: the system sends",
-		"ListTicketUpdateDeliveries":         "who a tracker's message reached, for those who may read the tracker",
 		"ListTrackerReports":                 "a tracker's summary reads its reports, for who may read the tracker",
 	}
 }

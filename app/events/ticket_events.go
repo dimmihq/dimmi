@@ -134,11 +134,6 @@ func (TicketNoteCreated) EventName() string { return "ticket.note_created" }
 /*
 EventName names the event.
 */
-func (TicketUpdateSent) EventName() string { return "ticket.update_sent" }
-
-/*
-EventName names the event.
-*/
 func (TicketSLAWarning) EventName() string { return "ticket.sla_warning" }
 
 /*

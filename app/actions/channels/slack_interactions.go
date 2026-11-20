@@ -197,6 +197,16 @@ func (s *Slack) handOff(ctx context.Context, conv models.Conversation) error {
 		if err != nil {
 			return fmt.Errorf("hand the conversation off: %w", err)
 		}
+		writer := &conversations.Writer{
+			Q: models.New(tx), Tx: tx, Events: s.Events, Now: now,
+			Actor: conversations.Actor{Type: string(enums.AuthorTypeContact), ID: conv.ContactID},
+		}
+		err = writer.Record(ctx, conv, "ai.handoff_requested", map[string]any{
+			"reason": string(enums.AIHandoffCustomerRequested),
+		})
+		if err != nil {
+			return err
+		}
 
 		return s.Events.Dispatch(ctx, tx, appevents.AiHandoffRequested{
 			Base: appevents.Base{

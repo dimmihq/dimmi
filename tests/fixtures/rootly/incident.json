@@ -1,0 +1,7 @@
+{"data": {"id": "fe952192-b309-438e-a112-4c0fdd21ec36", "type": "incidents", "attributes": {
+  "title": "[dimmi dev test] Webhook signature never matches", "sequential_id": 13,
+  "slug": "dimmi-dev-test-webhook-signature-never-matches", "kind": "normal", "status": "started",
+  "url": "https://rootly.com/account/incidents/13-dimmi-dev-test-webhook-signature-never-matches",
+  "short_url": "https://root.ly/6txqox", "labels": {"team": "payments"},
+  "severity": {"data": {"id": "462e5b20-06a0-44a3-974e-fcbad9f02b50", "type": "severities",
+    "attributes": {"name": "SEV2", "slug": "sev2", "severity": "medium"}}}}}}

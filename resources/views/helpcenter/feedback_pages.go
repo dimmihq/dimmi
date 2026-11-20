@@ -12,12 +12,14 @@ package helpcenter
 
 /*
 Comment is a reply under a request, with the replies to it. FromTeam
-marks the team's own.
+marks the team's own, which carry HTML since the team writes with
+formatting; a reader's comment is plain words.
 */
 type Comment struct {
 	Author   string
 	FromTeam bool
 	Body     string
+	HTML     string
 	At       string
 	Replies  []Comment
 }

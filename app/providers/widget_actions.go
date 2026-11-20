@@ -83,7 +83,9 @@ func bootEntitlements(a *app.App) {
 		return
 	}
 
-	catalog := entitlements.SelfHost(a.Config.Widget.MaxWidgetsPerWorkspace)
+	catalog := entitlements.SelfHostWith(entitlements.SelfHostLimits{
+		Widgets: a.Config.Widget.MaxWidgetsPerWorkspace, WebhookEndpoints: a.Config.Webhooks.MaxEndpoints,
+	})
 	if a.Config.App.Edition == appconfig.EditionCloud {
 		catalog = entitlements.Cloud()
 	}

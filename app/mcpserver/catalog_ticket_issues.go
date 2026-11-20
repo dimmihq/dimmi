@@ -6,8 +6,7 @@
 | The entries for the engineering work behind tickets: issues and
 | incidents linked from Linear, Jira, GitHub, incident.io, Rootly and
 | PagerDuty, the lists each connected tool offers, its search and sync
-| settings, the drafts that close the loop, and the workspace's ticket
-| switches. A recipe for filing a bug from a tracker: list the
+| settings, and the workspace's ticket switches. A recipe for filing a bug from a tracker: list the
 | workspace's integrations, read the tool's teams, create the issue on
 | the tracker, then watch its status come back on the ticket.
 |
@@ -53,19 +52,6 @@ func ticketIssueLinkDocs() map[string]Doc {
 		},
 		"ticket-issues.destroy": {
 			Title: "Unlink an issue", Use: "Removes the link; the issue stays in its tool.", Risk: new(RiskDanger),
-		},
-		"tickets.update-drafts.index": {
-			Title: "List close-the-loop drafts",
-			Use: "Lists the messages drafted for everyone a tracker links: when its issue is done or an " +
-				"engineer commented @customers. Open drafts count who they reach " +
-				"and who would be held, by reason.",
-			Returns: "the drafts with status (waiting_deploy, ready, sent, discarded) and counts.",
-		},
-		"ticket-update-drafts.update": {
-			Title:   "Send or discard a draft",
-			Use:     "Sends a draft to everyone linked, optionally with an edited body, or discards it.",
-			Returns: "the draft as decided.",
-			Risk:    new(RiskReach),
 		},
 	}
 }

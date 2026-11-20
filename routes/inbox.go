@@ -21,6 +21,7 @@ import (
 	"github.com/dimmihq/dimmi/framework/routing"
 
 	"github.com/dimmihq/dimmi/app"
+	"github.com/dimmihq/dimmi/app/actions/contacts"
 	v1 "github.com/dimmihq/dimmi/app/http/controllers/api/v1"
 )
 
@@ -106,13 +107,14 @@ func inboxRoutes(r *routing.Router, a *app.App) {
 		Query(routing.QueryParam{Name: "filename", Description: "Name of the uploaded file. Required."})
 	routing.Get(r, "/contacts/{contact}", "contacts.show", c.contacts.Get).Ability("contacts:read")
 	routing.Patch(r, "/contacts/{contact}", "contacts.update", c.contacts.Update).Ability("contacts:write")
+	contactNoteRoutes(r, a)
 
 	conversationRoutes(r, c)
 	mergeRoutes(r, a, c)
 
-	routing.Get(r, "/conversation-counts", "conversation-counts.index", c.views.CountIndex).
+	routing.Get(r, "/conversation-counts", "conversation-counts.index", c.views.CountIndex).Internal().
 		Ability("conversations:read")
-	routing.Get(r, "/search", "search.index", c.views.SearchIndex).Ability("conversations:read").Query(
+	routing.Get(r, "/search", "search.index", c.views.SearchIndex).Internal().Ability("conversations:read").Query(
 		routing.QueryParam{Name: "q", Description: "Search text."},
 		routing.QueryParam{Name: "limit", Description: "How many results of each kind to answer."},
 	)
@@ -137,11 +139,11 @@ func conversationRoutes(r *routing.Router, c inboxControllers) {
 		Status(fhttp.StatusNoContent)
 	routing.Post(r, conv+"/restore", "conversations.restore.store", c.conversations.StoreRestore).
 		Ability("conversations:write").Status(fhttp.StatusOK)
-	routing.Get(r, conv+"/neighbors", "conversations.neighbors.index", c.conversations.ListNeighbors).
+	routing.Get(r, conv+"/neighbors", "conversations.neighbors.index", c.conversations.ListNeighbors).Internal().
 		Ability("conversations:read").Lists(v1.ConversationListing())
-	routing.Get(r, conv+"/read-state", "conversations.read-state.show", c.views.ReadState).
+	routing.Get(r, conv+"/read-state", "conversations.read-state.show", c.views.ReadState).Internal().
 		Ability("conversations:read")
-	routing.Patch(r, conv+"/read-state", "conversations.read-state.update", c.views.UpdateReadState).
+	routing.Patch(r, conv+"/read-state", "conversations.read-state.update", c.views.UpdateReadState).Internal().
 		Ability("conversations:read")
 	routing.Get(r, conv+"/messages", "conversations.messages.index", c.messages.Index).
 		Ability("conversations:read").Lists(v1.TimelineListing()).Query(
@@ -164,4 +166,23 @@ func conversationRoutes(r *routing.Router, c inboxControllers) {
 		Ability("conversations:write").Status(fhttp.StatusOK)
 	routing.Patch(r, conv+"/messages/{message}", "conversations.messages.update", c.messages.Patch).
 		Ability("conversations:write")
+}
+
+/*
+contactNoteRoutes declares the notes the team keeps about a customer or
+a company. A note of either is changed and removed at /contact-notes.
+*/
+func contactNoteRoutes(r *routing.Router, a *app.App) {
+	notes := &v1.ContactNoteController{IDs: a.IDs, Notes: &contacts.Notes{DB: a.DB, Clock: a.Clock}}
+
+	routing.Get(r, "/contacts/{contact}/notes", "contacts.notes.index", notes.Index).Ability("contacts:read")
+	routing.Post(r, "/contacts/{contact}/notes", "contacts.notes.store", notes.Store).Ability("contacts:write").
+		Status(fhttp.StatusCreated)
+	routing.Get(r, "/companies/{company}/notes", "companies.notes.index", notes.CompanyIndex).
+		Ability("contacts:read")
+	routing.Post(r, "/companies/{company}/notes", "companies.notes.store", notes.CompanyStore).
+		Ability("contacts:write").Status(fhttp.StatusCreated)
+	routing.Patch(r, "/contact-notes/{note}", "contact-notes.update", notes.Update).Ability("contacts:write")
+	routing.Delete(r, "/contact-notes/{note}", "contact-notes.destroy", notes.Destroy).Ability("contacts:write").
+		Status(fhttp.StatusNoContent)
 }

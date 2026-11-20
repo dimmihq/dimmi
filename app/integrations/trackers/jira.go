@@ -10,6 +10,7 @@
 | issue resolved as won't do or duplicate counts as canceled. The impact
 | is written as a remote link back to the tracker, which Jira updates in
 | place by its global id, and as an issue property JQL can sort by.
+| Unlinking deletes both.
 |
 */
 
@@ -17,6 +18,7 @@ package trackers
 
 import (
 	"context"
+	"errors"
 	"net/url"
 	"regexp"
 	"strings"
@@ -350,6 +352,29 @@ func (j *Jira) Impact(ctx context.Context, c Call, is Issue, impact Impact) erro
 		"customers": impact.Customers, "companies": impact.Companies, "conversations": impact.Conversations,
 		"revenue": impact.Revenue,
 	}})
+}
+
+/*
+Forget deletes the remote link back to the ticket at link and the
+impact property: the issues layer only forgets an issue no other ticket
+still links.
+*/
+func (j *Jira) Forget(ctx context.Context, c Call, is Issue, link string) error {
+	path := "/issue/" + url.PathEscape(is.ExternalID)
+
+	err := j.call(ctx, c, request{
+		method: fhttp.MethodDelete, url: path + "/remotelink?globalId=" + url.QueryEscape(link),
+	})
+	if err != nil && !errors.Is(err, ErrNotFound) {
+		return err
+	}
+
+	err = j.call(ctx, c, request{method: fhttp.MethodDelete, url: path + "/properties/dimmi.impact"})
+	if errors.Is(err, ErrNotFound) {
+		return nil
+	}
+
+	return err
 }
 
 /*

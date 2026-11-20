@@ -184,6 +184,34 @@ func TestWidgetMessages(t *testing.T) {
 		assert.Equal(t, id, models.PublicID(models.PrefixConversation, *row.PreviousConversationID))
 	})
 
+	t.Run("the inbox's reopen window decides when a reply starts a new conversation", func(t *testing.T) {
+		t.Parallel()
+		tc := tests.New(t)
+		v := startVisitor(t, tc)
+		id := v.startConversation(t, "hello")
+		inbox := models.PublicID(models.PrefixInbox, conversationRow(t, tc, id).InboxID)
+
+		owner(tc).PatchJSON("/api/v1/inboxes/"+inbox, testkit.JSON{
+			"settings": testkit.JSON{"reopen_window_days": 2},
+		}).AssertOK()
+		owner(tc).PatchJSON("/api/v1/conversations/"+id, testkit.JSON{"status": "closed"}).AssertOK()
+		tc.Clock.Travel(24 * time.Hour)
+
+		v.client().PostJSON("/widget/v1/conversations/"+id+"/messages", testkit.JSON{
+			"client_id": ids.New().String(), "body": "still here",
+		}).AssertCreated().AssertJSONPath("data.conversation_id", id)
+
+		owner(tc).PatchJSON("/api/v1/conversations/"+id, testkit.JSON{"status": "closed"}).AssertOK()
+		tc.Clock.Travel(3 * 24 * time.Hour)
+
+		res := v.client().PostJSON("/widget/v1/conversations/"+id+"/messages", testkit.JSON{
+			"client_id": ids.New().String(), "body": "back again",
+		}).AssertCreated()
+
+		res.AssertJSONPath("meta.redirected_from", id)
+		assert.NotEqual(t, id, res.String("data.conversation_id"))
+	})
+
 	t.Run("another visitor's conversation is not found", func(t *testing.T) {
 		t.Parallel()
 		tc := tests.New(t)

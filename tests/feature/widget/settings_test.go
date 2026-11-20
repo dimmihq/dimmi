@@ -98,6 +98,21 @@ func TestWidgetSettingsCreate(t *testing.T) {
 		assert.Len(t, listWidgets(t, tc), 2)
 	})
 
+	t.Run("links a new widget to the default help center so its help tab turns on", func(t *testing.T) {
+		t.Parallel()
+		tc := tests.New(t)
+
+		center := owner(tc).GetJSON("/api/v1/help-centers").AssertOK().String("data.0.id")
+		require.NotEmpty(t, center)
+
+		res := owner(tc).PostJSON("/api/v1/widget-settings", testkit.JSON{"name": "Docs"}).AssertCreated()
+		res.AssertJSONPath("data.help_center_id", center)
+
+		owner(tc).PatchJSON("/api/v1/widget-settings/"+res.String("data.id"), testkit.JSON{
+			"help_tab_enabled": true, "changelog_tab_enabled": true,
+		}).AssertOK()
+	})
+
 	t.Run("keeps a workspace within ten widgets and each has its own id", func(t *testing.T) {
 		t.Parallel()
 		tc := tests.New(t)

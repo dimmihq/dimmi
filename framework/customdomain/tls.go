@@ -7,7 +7,7 @@
 | how the installation is deployed. The application may terminate TLS
 | itself and get certificates on demand (certmagic), a proxy in front may
 | do it after asking the application whether a hostname is allowed
-| (caddy_ask), or the operator's own proxy handles TLS entirely (none).
+| (caddyask), or the operator's own proxy handles TLS entirely (none).
 |
 | Whichever driver runs, the application keeps the one decision that
 | matters: the authorizer says which hostnames may have a certificate.

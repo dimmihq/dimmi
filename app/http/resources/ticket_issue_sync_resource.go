@@ -5,16 +5,13 @@
 |
 | What the API shows of a connected engineering tool: one value of a
 | list to pick from, an issue found by search, the tool's sync settings
-| with the address it delivers to, and a draft closing the loop with who
-| it would reach and who would be held.
+| with the address it delivers to, and the workspace's ticket switches.
 |
 */
 
 package resources
 
 import (
-	"time"
-
 	"github.com/dimmihq/dimmi/framework/ids"
 
 	"github.com/dimmihq/dimmi/app/actions/issues"
@@ -136,50 +133,6 @@ func publicStateID(raw string) string {
 	}
 
 	return models.PublicID(models.PrefixTicketState, id)
-}
-
-/*
-TicketUpdateDraft is a drafted message to everyone a tracker links:
-why it was drafted, its text, whether it waits for the
-fix to deploy, and who it would reach now with those held by reason.
-*/
-type TicketUpdateDraft struct {
-	Object     string         `json:"object"`
-	ID         string         `json:"id"`
-	TicketID   string         `json:"ticket_id"`
-	IssueID    *string        `json:"issue_id"`
-	Source     string         `json:"source"`
-	Reason     string         `json:"reason"`
-	Body       string         `json:"body"`
-	AuthorName string         `json:"author_name"`
-	Status     string         `json:"status"`
-	Resolve    bool           `json:"resolve"`
-	UpdateID   *string        `json:"update_id"`
-	Recipients int            `json:"recipients"`
-	Held       map[string]int `json:"held"`
-	DecidedAt  *time.Time     `json:"decided_at"`
-	CreatedAt  time.Time      `json:"created_at"`
-}
-
-/*
-NewTicketUpdateDraft shapes a draft with its counts.
-*/
-func NewTicketUpdateDraft(v issues.DraftView) TicketUpdateDraft {
-	d := v.Draft
-
-	held := v.Held
-	if held == nil {
-		held = map[string]int{}
-	}
-
-	return TicketUpdateDraft{
-		Object: "ticket_update_draft", ID: models.PublicID(models.PrefixTicketUpdateDraft, d.ID),
-		TicketID: models.PublicID(models.PrefixTicket, d.TicketID),
-		IssueID:  optionalID(models.PrefixTicketIssue, d.IssueID), Source: d.Source, Reason: d.Reason, Body: d.Body,
-		AuthorName: d.AuthorName, Status: d.Status, Resolve: d.Resolve,
-		UpdateID: optionalID(models.PrefixTicketUpdate, d.UpdateID), Recipients: v.Recipients, Held: held,
-		DecidedAt: d.DecidedAt, CreatedAt: d.CreatedAt,
-	}
 }
 
 /*

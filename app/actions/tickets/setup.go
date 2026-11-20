@@ -404,10 +404,6 @@ func defaultTypes() []defaultType {
 			description: "Something in the product is not working.",
 			fields: []defaultField{
 				{
-					key: "steps", label: "Steps to reproduce", dataType: "long_text", customer: true,
-					hint: "How the customer got to the problem, step by step.",
-				},
-				{
 					key: "severity", label: "Severity", dataType: "single_choice",
 					options: []string{"low", "medium", "high"},
 					hint:    "high when the customer cannot work at all, low for cosmetic problems.",

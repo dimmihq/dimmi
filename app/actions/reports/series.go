@@ -98,13 +98,20 @@ func loadNames(ctx context.Context, tx *database.Tx, ws ids.UUID) (names, error)
 
 /*
 groupKinds maps a group to the kind its names come from, the filter
-that narrows to it and the public id prefix of its keys.
+that narrows to it and the public id prefix of its keys. The team that
+closed a conversation and the teammate a rating is for are named the
+same way as the team and teammate it is assigned to.
 */
 func groupKinds() map[string][3]string {
+	team := [3]string{"team", "team", string(models.PrefixTeam)}
+	member := [3]string{"member", "member", string(models.PrefixMember)}
+
 	return map[string][3]string{
-		groupInbox:  {"inbox", "inbox", string(models.PrefixInbox)},
-		groupTeam:   {"team", "team", string(models.PrefixTeam)},
-		groupMember: {"member", "member", string(models.PrefixMember)},
+		groupInbox:            {"inbox", "inbox", string(models.PrefixInbox)},
+		groupTeam:             team,
+		groupMember:           member,
+		"f.closed_by_team_id": team,
+		"f.rated_member_id":   member,
 	}
 }
 

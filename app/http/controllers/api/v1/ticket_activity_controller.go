@@ -5,8 +5,8 @@
 |
 | What happens around a ticket: its history and the workspace's log,
 | internal notes, links to tickets and conversations, a tracker's
-| conversations and messages to all of them, a conversation's own
-| ticket and trackers, and the AI's field values.
+| conversations, a conversation's own ticket and trackers, and the
+| AI's field values.
 |
 */
 
@@ -226,60 +226,6 @@ func (c *TicketActivityController) Conversations(ctx context.Context, in *reques
 	}
 
 	return out, nil
-}
-
-/*
-SendUpdate messages everyone a tracker links, or counts them.
-*/
-func (c *TicketActivityController) SendUpdate(ctx context.Context, in *requests.StoreTicketUpdateRequest,
-) (*TicketUpdatePlanOutput, error) {
-	ref, err := c.ref(in.Ticket)
-	if err != nil {
-		return nil, err
-	}
-
-	plan, err := c.Tickets.SendToLinked(ctx, membership(ctx), ref, tickets.UpdateInput{
-		Body: in.Body.Body, Resolve: in.Body.Resolve, DryRun: in.Body.DryRun,
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	out := &TicketUpdatePlanOutput{}
-	out.Body.Data.Recipients = len(plan.Recipients)
-	out.Body.Data.Held = []HeldRecipient{}
-
-	for _, r := range plan.Recipients {
-		if r.Held != "" {
-			out.Body.Data.Held = append(out.Body.Data.Held, HeldRecipient{
-				ConversationID: models.PublicID(models.PrefixConversation, r.ConversationID), Reason: r.Held,
-			})
-		}
-	}
-
-	if plan.Update != nil {
-		out.Body.Data.Update = new(resources.NewTicketUpdate(tickets.UpdateReport{Update: *plan.Update}))
-	}
-
-	return out, nil
-}
-
-/*
-Updates lists a tracker's messages.
-*/
-func (c *TicketActivityController) Updates(ctx context.Context, in *requests.TicketRequest,
-) (*TicketUpdatesOutput, error) {
-	ref, err := c.ref(in.Ticket)
-	if err != nil {
-		return nil, err
-	}
-
-	list, err := c.Tickets.Updates(ctx, membership(ctx), ref)
-	if err != nil {
-		return nil, err
-	}
-
-	return &TicketUpdatesOutput{Body: fhttp.NewResource(resources.NewTicketUpdates(list))}, nil
 }
 
 /*

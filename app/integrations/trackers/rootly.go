@@ -5,10 +5,12 @@
 |
 | Rootly is connected with an API key and speaks JSON:API. Severities
 | name a level (critical, high, medium, low) that becomes their rank;
-| statuses run from in triage to closed (Rootly spells canceled with two Ls). Declaring from dimmi opens an
-| incident of the picked severity; the impact on customers is kept in
-| the incident's labels, and a comment becomes an internal timeline
-| event. Deliveries are signed over a timestamp and the body.
+| statuses run from in triage to closed (Rootly spells canceled with
+| two Ls). Declaring from dimmi opens an incident of the picked severity
+| on the picked service; the impact on customers and the link back are
+| kept in the incident's labels and taken off again on unlink. A note a
+| person posts on the timeline comes back as a note on the ticket.
+| Deliveries are signed over a timestamp and the body.
 |
 */
 
@@ -18,6 +20,7 @@ import (
 	"context"
 	"maps"
 	"net/url"
+	"strconv"
 	"strings"
 	"time"
 
@@ -41,7 +44,9 @@ type Rootly struct {
 NewRootly returns the Rootly tool calling through the client.
 */
 func NewRootly(h *httpclient.Client) *Rootly {
-	return &Rootly{c: client{http: h, header: map[string]string{"Accept": "application/vnd.api+json"}}}
+	return &Rootly{c: client{http: h, header: map[string]string{
+		"Accept": "application/vnd.api+json", "Content-Type": "application/vnd.api+json",
+	}}}
 }
 
 /*
@@ -53,6 +58,11 @@ func (*Rootly) Provider() string { return "rootly" }
 Incidents reports true.
 */
 func (*Rootly) Incidents() bool { return true }
+
+/*
+SharedImpact reports true: the incident keeps one impact.
+*/
+func (*Rootly) SharedImpact() bool { return true }
 
 /*
 rootlyIncident is an incident's attributes, flat as deliveries carry
@@ -83,7 +93,7 @@ func (r rootlyIncident) issue() Issue {
 
 	is := Issue{
 		ExternalID: r.ID, Key: "#" + formatInt(r.SequentialID), URL: link, Title: r.Title,
-		Status: strings.ReplaceAll(r.Status, "_", " "), StatusID: r.Status, StatusGroup: RootlyGroup(r.Status),
+		Status: rootlyStatusName(r.Status), StatusID: r.Status, StatusGroup: RootlyGroup(r.Status),
 	}
 	if r.Severity != nil {
 		is.Severity, is.SeverityID, is.Rank = r.Severity.Name, r.Severity.ID, levelRank(r.Severity.Severity)
@@ -108,6 +118,18 @@ func RootlyGroup(status string) string {
 	}
 
 	return GroupUnstarted
+}
+
+/*
+rootlyStatusName is a status as Rootly shows it, such as "In triage".
+*/
+func rootlyStatusName(status string) string {
+	name := strings.ReplaceAll(status, "_", " ")
+	if name == "" {
+		return name
+	}
+
+	return strings.ToUpper(name[:1]) + name[1:]
 }
 
 /*
@@ -162,7 +184,7 @@ func (t *Rootly) call(ctx context.Context, c Call, r request) error {
 }
 
 /*
-Options returns severities or statuses.
+Options returns severities, services or statuses.
 */
 func (t *Rootly) Options(ctx context.Context, c Call, list, _ string) ([]Option, error) {
 	switch list {
@@ -182,10 +204,25 @@ func (t *Rootly) Options(ctx context.Context, c Call, list, _ string) ([]Option,
 		}
 
 		return options, nil
+	case ListServices:
+		var out struct {
+			Data []jsonAPI `json:"data"`
+		}
+
+		if err := t.call(ctx, c, get("/services?page[size]=100", &out)); err != nil {
+			return nil, err
+		}
+
+		options := make([]Option, len(out.Data))
+		for i, s := range out.Data {
+			options[i] = Option{ID: s.ID, Name: str(s.Attributes["name"])}
+		}
+
+		return options, nil
 	case ListStates:
 		var options []Option
 		for _, s := range []string{"in_triage", "started", "mitigated", "resolved", "closed", "cancel" + "led"} {
-			options = append(options, Option{ID: s, Name: strings.ReplaceAll(s, "_", " "), Group: RootlyGroup(s)})
+			options = append(options, Option{ID: s, Name: rootlyStatusName(s), Group: RootlyGroup(s)})
 		}
 
 		return options, nil
@@ -219,10 +256,37 @@ func (t *Rootly) list(ctx context.Context, c Call, path string) ([]Issue, error)
 }
 
 /*
-Search finds incidents by their words.
+Search finds incidents by words in their title, or by their number,
+newest first. Rootly's search filter only matches numbers and its
+title filter matches loosely, so titles are checked again here.
 */
 func (t *Rootly) Search(ctx context.Context, c Call, q string) ([]Issue, error) {
-	return t.list(ctx, c, "/incidents?page[size]=20&filter[search]="+url.QueryEscape(q))
+	path := "/incidents?page[size]=20&sort=-created_at"
+
+	number := strings.TrimPrefix(q, "#")
+	if _, err := strconv.Atoi(number); err == nil {
+		return t.list(ctx, c, path+"&filter[search]="+url.QueryEscape(number))
+	}
+
+	if q == "" {
+		return t.list(ctx, c, path)
+	}
+
+	found, err := t.list(ctx, c, path+"&filter[title]="+url.QueryEscape(q))
+	if err != nil {
+		return nil, err
+	}
+
+	words := strings.ToLower(q)
+	matching := found[:0]
+
+	for _, is := range found {
+		if strings.Contains(strings.ToLower(is.Title), words) {
+			matching = append(matching, is)
+		}
+	}
+
+	return matching, nil
 }
 
 /*
@@ -255,6 +319,10 @@ func (t *Rootly) Create(ctx context.Context, c Call, in CreateInput) (Issue, err
 	attrs := map[string]any{"title": in.Title, "summary": Description(in.Description, in.Impact), "kind": "normal"}
 	if in.Severity != "" {
 		attrs["severity_id"] = in.Severity
+	}
+
+	if in.Service != "" {
+		attrs["service_ids"] = []string{in.Service}
 	}
 
 	var one struct {
@@ -291,13 +359,51 @@ func (t *Rootly) Comment(ctx context.Context, c Call, is Issue, body string) err
 }
 
 /*
-Impact keeps the customers, companies and revenue in the labels.
+labelPrefix starts the labels dimmi keeps on an incident.
+*/
+const labelPrefix = "dimmi_"
+
+/*
+Impact keeps the customers, companies, conversations, revenue and the
+link back in the incident's labels, beside the labels already there.
 */
 func (t *Rootly) Impact(ctx context.Context, c Call, is Issue, impact Impact) error {
-	labels := map[string]any{
-		"dimmi_customers": formatInt(impact.Customers), "dimmi_companies": formatInt(impact.Companies),
-		"dimmi_revenue": Money(impact.Revenue),
+	return t.relabel(ctx, c, is, map[string]any{
+		labelPrefix + "customers": formatInt(impact.Customers), labelPrefix + "companies": formatInt(impact.Companies),
+		labelPrefix + "conversations": formatInt(impact.Conversations), labelPrefix + "revenue": Money(impact.Revenue),
+		labelPrefix + "ticket": impact.Link,
+	})
+}
+
+/*
+Forget takes dimmi's labels off the incident.
+*/
+func (t *Rootly) Forget(ctx context.Context, c Call, is Issue, _ string) error {
+	return t.relabel(ctx, c, is, nil)
+}
+
+/*
+relabel replaces dimmi's labels on the incident with ours, keeping
+every other label as it is: Rootly replaces the labels whole.
+*/
+func (t *Rootly) relabel(ctx context.Context, c Call, is Issue, ours map[string]any) error {
+	var one struct {
+		Data jsonAPI `json:"data"`
 	}
+
+	if err := t.call(ctx, c, get("/incidents/"+url.PathEscape(is.ExternalID), &one)); err != nil {
+		return err
+	}
+
+	labels := map[string]any{}
+
+	for k, v := range asMap(one.Data.Attributes["labels"]) {
+		if !strings.HasPrefix(k, labelPrefix) {
+			labels[k] = v
+		}
+	}
+
+	maps.Copy(labels, ours)
 
 	return t.call(ctx, c, request{
 		method: fhttp.MethodPut, url: "/incidents/" + url.PathEscape(is.ExternalID),
@@ -315,8 +421,8 @@ func (*Rootly) Verify(s Signed, secret string, now time.Time) error {
 }
 
 /*
-Parse reads a Rootly delivery: a new or changed incident, or a status
-page event posted on one.
+Parse reads a Rootly delivery: a new or changed incident, a note
+posted on its timeline, or a status page event posted on one.
 */
 func (*Rootly) Parse(body []byte) ([]Event, error) {
 	var d struct {
@@ -328,6 +434,10 @@ func (*Rootly) Parse(body []byte) ([]Event, error) {
 
 	if err := decode(body, &d); err != nil {
 		return nil, err
+	}
+
+	if d.Event.Type == "incident_event.created" {
+		return rootlyNote(d.Data), nil
 	}
 
 	if strings.HasPrefix(d.Event.Type, "incident_status_page_event") {
@@ -351,4 +461,23 @@ func (*Rootly) Parse(body []byte) ([]Event, error) {
 	}
 
 	return []Event{event}, nil
+}
+
+/*
+rootlyNote reads a timeline event a person posted. Rootly writes its
+own events on the timeline too (status changes, fields set, the line
+saying who opened the incident), which are left out: the incident's
+own news already tells the ticket.
+*/
+func rootlyNote(data map[string]any) []Event {
+	body := strings.TrimSpace(str(data["event_raw"]))
+	if body == "" {
+		body = strings.TrimSpace(str(data["event"]))
+	}
+
+	if str(data["kind"]) != "event" || body == "" || strings.HasSuffix(body, " created this incident") {
+		return nil
+	}
+
+	return []Event{{Kind: EventComment, ExternalID: str(data["incident_id"]), Body: body}}
 }

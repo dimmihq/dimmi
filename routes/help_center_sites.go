@@ -57,6 +57,8 @@ func helpCenterSiteRoutes(workspace *routing.Router, a *app.App) {
 	routing.Delete(workspace, one+"/domain", "help-centers.domain.destroy", c.DestroyDomain).
 		Ability("settings:write").Status(fhttp.StatusNoContent)
 	routing.Get(workspace, one+"/analytics", "help-centers.analytics.show", c.Analytics).Ability("articles:read")
+	routing.Get(workspace, one+"/changelog-analytics", "help-centers.changelog-analytics.show", c.ChangelogAnalytics).
+		Ability("changelog:read")
 }
 
 /*

@@ -43,7 +43,7 @@ func widgetSettingsRoutes(r *routing.Router, a *app.App) {
 	routing.Patch(r, one, "widget-settings.update", c.Update).Ability("settings:write")
 	routing.Delete(r, one, "widget-settings.destroy", c.Destroy).Ability("settings:write").
 		Status(fhttp.StatusNoContent)
-	routing.Post(r, one+"/preview", "widget-settings.preview", c.PreviewConfig).
+	routing.Post(r, one+"/preview", "widget-settings.preview", c.PreviewConfig).Internal().
 		Status(fhttp.StatusOK).Ability("settings:read")
 
 	rules := &v1.WidgetAudienceController{Surfaces: acts.Surfaces, IDs: a.IDs}

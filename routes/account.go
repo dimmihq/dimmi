@@ -65,18 +65,21 @@ func accountRoutes(api *routing.Router, a *app.App) {
 
 	api.Group("", func(guest *routing.Router) {
 		guest.Middleware("csrf", "session")
+		guest.Internal()
 
 		routing.Patch(guest, "/email-changes/{change}", "email-changes.update", changes.Update)
 	})
 
 	api.Group("", func(caller *routing.Router) {
 		caller.Middleware("csrf", "session", "auth", "api.throttle")
+		caller.Internal()
 
 		routing.Get(caller, "/user", "user.show", profile.Show)
 	})
 
 	api.Group("", func(user *routing.Router) {
 		user.Middleware("csrf", "session", "auth:user", "api.throttle")
+		user.Internal()
 
 		routing.Patch(user, "/user", "user.update", profile.Update)
 		routing.Delete(user, "/user", "user.destroy", profile.Destroy).

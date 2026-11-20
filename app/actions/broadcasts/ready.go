@@ -48,7 +48,8 @@ func (b *Broadcasts) ready(ctx context.Context, q *models.Queries, row models.Br
 		return ErrNoSubject
 	}
 
-	if row.AudienceID == nil && len(nullJSON(row.Rules)) == 0 && len(row.RoomIds) == 0 && row.Channel != ChannelSlack {
+	if row.AudienceID == nil && len(nullJSON(row.Rules)) == 0 && len(row.RoomIds) == 0 && row.Channel != ChannelSlack &&
+		row.TicketID == nil {
 		return ErrNoAudience
 	}
 

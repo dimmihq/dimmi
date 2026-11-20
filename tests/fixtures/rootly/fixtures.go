@@ -3,8 +3,10 @@
 | Rootly Fixtures
 |--------------------------------------------------------------------------
 |
-| Rootly's API answer for an API key and the delivery sent when a
-| critical incident opens. No test ever reaches Rootly.
+| Rootly's API answers for an API key, an incident, a search and the
+| services, and deliveries recorded from a live endpoint: an incident
+| mitigated, a note posted on its timeline and the events Rootly writes
+| there itself. No test ever reaches Rootly.
 |
 */
 

@@ -6,9 +6,9 @@
 | Once every ticket is in, each one that reported a tracker is linked to
 | it: a Zendesk incident to its problem, an Intercom ticket to the
 | tracker it was linked to. A ticket with a conversation joins the
-| tracker's conversations, so the tracker's messages reach its
-| customer; one without is linked as a related ticket. A link made by
-| an earlier run is left as it is.
+| tracker's conversations, so the tracker counts its customer; one
+| without is linked as a related ticket. A link made by an earlier run
+| is left as it is.
 |
 */
 

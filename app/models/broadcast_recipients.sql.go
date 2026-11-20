@@ -13,27 +13,30 @@ import (
 )
 
 const addBroadcastRecipients = `-- name: AddBroadcastRecipients :execrows
-INSERT INTO broadcast_recipients (workspace_id, broadcast_id, contact_id, company_id, room_id, address, status,
-    reason, reply_token, due_at, created_at, updated_at)
+INSERT INTO broadcast_recipients (workspace_id, broadcast_id, contact_id, company_id, room_id, conversation_id,
+    address, status, reason, reply_token, due_at, created_at, updated_at)
 SELECT $1::uuid, $2::uuid, NULLIF(unnest($3::uuid[]), '00000000-0000-0000-0000-000000000000'::uuid), NULLIF(unnest($4::uuid[]), '00000000-0000-0000-0000-000000000000'::uuid),
-    NULLIF(unnest($5::uuid[]), '00000000-0000-0000-0000-000000000000'::uuid), unnest($6::text[]), unnest($7::text[]),
-    NULLIF(unnest($8::text[]), ''), unnest($9::text[]), unnest($10::timestamptz[]),
-    $11::timestamptz, $11::timestamptz
+    NULLIF(unnest($5::uuid[]), '00000000-0000-0000-0000-000000000000'::uuid),
+    NULLIF(unnest($6::uuid[]), '00000000-0000-0000-0000-000000000000'::uuid),
+    unnest($7::text[]), unnest($8::text[]),
+    NULLIF(unnest($9::text[]), ''), unnest($10::text[]), unnest($11::timestamptz[]),
+    $12::timestamptz, $12::timestamptz
 ON CONFLICT DO NOTHING
 `
 
 type AddBroadcastRecipientsParams struct {
-	WorkspaceID ids.UUID    `json:"workspace_id"`
-	BroadcastID ids.UUID    `json:"broadcast_id"`
-	ContactIds  []ids.UUID  `json:"contact_ids"`
-	CompanyIds  []ids.UUID  `json:"company_ids"`
-	RoomIds     []ids.UUID  `json:"room_ids"`
-	Addresses   []string    `json:"addresses"`
-	Statuses    []string    `json:"statuses"`
-	Reasons     []string    `json:"reasons"`
-	ReplyTokens []string    `json:"reply_tokens"`
-	DueAts      []time.Time `json:"due_ats"`
-	Now         time.Time   `json:"now"`
+	WorkspaceID     ids.UUID    `json:"workspace_id"`
+	BroadcastID     ids.UUID    `json:"broadcast_id"`
+	ContactIds      []ids.UUID  `json:"contact_ids"`
+	CompanyIds      []ids.UUID  `json:"company_ids"`
+	RoomIds         []ids.UUID  `json:"room_ids"`
+	ConversationIds []ids.UUID  `json:"conversation_ids"`
+	Addresses       []string    `json:"addresses"`
+	Statuses        []string    `json:"statuses"`
+	Reasons         []string    `json:"reasons"`
+	ReplyTokens     []string    `json:"reply_tokens"`
+	DueAts          []time.Time `json:"due_ats"`
+	Now             time.Time   `json:"now"`
 }
 
 // AddBroadcastRecipients freezes one page of the audience into
@@ -46,6 +49,7 @@ func (q *Queries) AddBroadcastRecipients(ctx context.Context, arg AddBroadcastRe
 		arg.ContactIds,
 		arg.CompanyIds,
 		arg.RoomIds,
+		arg.ConversationIds,
 		arg.Addresses,
 		arg.Statuses,
 		arg.Reasons,
@@ -352,6 +356,57 @@ type FindBroadcastRecipientByConversationParams struct {
 // broadcast started the conversation.
 func (q *Queries) FindBroadcastRecipientByConversation(ctx context.Context, arg FindBroadcastRecipientByConversationParams) (BroadcastRecipient, error) {
 	row := q.db.QueryRow(ctx, findBroadcastRecipientByConversation, arg.WorkspaceID, arg.ConversationID)
+	var i BroadcastRecipient
+	err := row.Scan(
+		&i.ID,
+		&i.WorkspaceID,
+		&i.BroadcastID,
+		&i.ContactID,
+		&i.CompanyID,
+		&i.RoomID,
+		&i.Address,
+		&i.Status,
+		&i.Reason,
+		&i.ReplyToken,
+		&i.MessageIDHeader,
+		&i.OutboundEmailID,
+		&i.ExternalRef,
+		&i.ConversationID,
+		&i.Attempts,
+		&i.DueAt,
+		&i.SentAt,
+		&i.DeliveredAt,
+		&i.OpenedAt,
+		&i.ClickedAt,
+		&i.RepliedAt,
+		&i.ReactedAt,
+		&i.Reactions,
+		&i.UnsubscribedAt,
+		&i.ConvertedAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.SeriesEnrollmentID,
+		&i.SeriesStepID,
+	)
+	return i, err
+}
+
+const findBroadcastRecipientByMessage = `-- name: FindBroadcastRecipientByMessage :one
+SELECT r.id, r.workspace_id, r.broadcast_id, r.contact_id, r.company_id, r.room_id, r.address, r.status, r.reason, r.reply_token, r.message_id_header, r.outbound_email_id, r.external_ref, r.conversation_id, r.attempts, r.due_at, r.sent_at, r.delivered_at, r.opened_at, r.clicked_at, r.replied_at, r.reacted_at, r.reactions, r.unsubscribed_at, r.converted_at, r.created_at, r.updated_at, r.series_enrollment_id, r.series_step_id FROM broadcast_recipients r
+JOIN broadcasts b ON b.workspace_id = r.workspace_id AND b.id = r.broadcast_id
+WHERE r.workspace_id = $1 AND b.channel = 'conversation' AND r.external_ref = $2::text
+LIMIT 1
+`
+
+type FindBroadcastRecipientByMessageParams struct {
+	WorkspaceID ids.UUID `json:"workspace_id"`
+	ExternalRef string   `json:"external_ref"`
+}
+
+// FindBroadcastRecipientByMessage returns the recipient a conversation
+// broadcast answered with the message.
+func (q *Queries) FindBroadcastRecipientByMessage(ctx context.Context, arg FindBroadcastRecipientByMessageParams) (BroadcastRecipient, error) {
+	row := q.db.QueryRow(ctx, findBroadcastRecipientByMessage, arg.WorkspaceID, arg.ExternalRef)
 	var i BroadcastRecipient
 	err := row.Scan(
 		&i.ID,
@@ -1353,15 +1408,17 @@ func (q *Queries) MarkBroadcastRecipientReplied(ctx context.Context, arg MarkBro
 }
 
 const markBroadcastRecipientSent = `-- name: MarkBroadcastRecipientSent :one
-UPDATE broadcast_recipients SET status = 'sent', reason = NULL, delivered_at = $1::timestamptz,
-    message_id_header = $2,
-    outbound_email_id = $3, external_ref = $4,
-    conversation_id = COALESCE($5, conversation_id), sent_at = $1::timestamptz, updated_at = $1::timestamptz
-WHERE workspace_id = $6 AND id = $7 AND status = 'queued'
+UPDATE broadcast_recipients SET status = 'sent', reason = NULL,
+    delivered_at = CASE WHEN $1::boolean THEN NULL ELSE $2::timestamptz END,
+    message_id_header = $3,
+    outbound_email_id = $4, external_ref = $5,
+    conversation_id = COALESCE($6, conversation_id), sent_at = $2::timestamptz, updated_at = $2::timestamptz
+WHERE workspace_id = $7 AND id = $8 AND status = 'queued'
 RETURNING id, workspace_id, broadcast_id, contact_id, company_id, room_id, address, status, reason, reply_token, message_id_header, outbound_email_id, external_ref, conversation_id, attempts, due_at, sent_at, delivered_at, opened_at, clicked_at, replied_at, reacted_at, reactions, unsubscribed_at, converted_at, created_at, updated_at, series_enrollment_id, series_step_id
 `
 
 type MarkBroadcastRecipientSentParams struct {
+	Pending         bool      `json:"pending"`
 	Now             time.Time `json:"now"`
 	MessageIDHeader *string   `json:"message_id_header"`
 	OutboundEmailID *ids.UUID `json:"outbound_email_id"`
@@ -1372,9 +1429,12 @@ type MarkBroadcastRecipientSentParams struct {
 }
 
 // MarkBroadcastRecipientSent records that a recipient's message went out
-// and was accepted; a bounce later takes the delivery back.
+// and was accepted; a bounce later takes the delivery back. A message
+// handed to a channel that reports later waits for that report before
+// it counts as delivered.
 func (q *Queries) MarkBroadcastRecipientSent(ctx context.Context, arg MarkBroadcastRecipientSentParams) (BroadcastRecipient, error) {
 	row := q.db.QueryRow(ctx, markBroadcastRecipientSent,
+		arg.Pending,
 		arg.Now,
 		arg.MessageIDHeader,
 		arg.OutboundEmailID,

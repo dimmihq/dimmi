@@ -28,6 +28,7 @@ import (
 
 	fhttp "github.com/dimmihq/dimmi/framework/http"
 	"github.com/dimmihq/dimmi/framework/httpclient"
+	"github.com/dimmihq/dimmi/framework/log"
 )
 
 /*
@@ -314,7 +315,11 @@ func (l *Linear) Create(ctx context.Context, c Call, in CreateInput) (Issue, err
 	is := out.Create.Issue.issue()
 
 	for _, company := range in.Impact.CompanyNames {
-		_ = l.customerRequest(ctx, c, is, company)
+		if err := l.customerRequest(ctx, c, is, company); err != nil {
+			log.From(ctx).WarnContext(ctx, "linear customer request", log.String("issue", is.Key), log.Err(err))
+
+			break
+		}
 	}
 
 	return is, l.Impact(ctx, c, is, in.Impact)
@@ -373,6 +378,45 @@ func (l *Linear) Impact(ctx context.Context, c Call, is Issue, impact Impact) er
 	doc := `mutation($input: AttachmentCreateInput!) { attachmentCreate(input: $input) { success } }`
 
 	return l.query(ctx, c, gql{doc, map[string]any{"input": input}}, nil)
+}
+
+/*
+Forget deletes the issue's attachments that link back to the ticket,
+which Impact wrote.
+*/
+func (l *Linear) Forget(ctx context.Context, c Call, is Issue, link string) error {
+	if link == "" {
+		return nil
+	}
+
+	var out struct {
+		Attachments struct {
+			Nodes []struct {
+				ID    string `json:"id"`
+				Issue struct {
+					ID string `json:"id"`
+				} `json:"issue"`
+			} `json:"nodes"`
+		} `json:"attachmentsForURL"`
+	}
+
+	doc := `query($url: String!) { attachmentsForURL(url: $url) { nodes { id issue { id } } } }`
+	if err := l.query(ctx, c, gql{doc, map[string]any{"url": link}}, &out); err != nil {
+		return err
+	}
+
+	for _, a := range out.Attachments.Nodes {
+		if a.Issue.ID != is.ExternalID {
+			continue
+		}
+
+		del := `mutation($id: String!) { attachmentDelete(id: $id) { success } }`
+		if err := l.query(ctx, c, gql{del, map[string]any{"id": a.ID}}, nil); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 /*

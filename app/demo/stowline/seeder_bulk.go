@@ -268,7 +268,7 @@ func (r *run) conversationRows(offset int, batch []Conversation) []rowSet {
 		conversations: rowSet{name: "conversations", cols: conversationColumns()},
 		messages: rowSet{name: "messages", cols: []string{
 			"id", "workspace_id", "conversation_id", "type", "author_type", "author_id", "body", "sent_at",
-			"delivery_status", "channel_connection_id", "created_at", "updated_at",
+			"delivery_status", "channel_connection_id", "created_at", "updated_at", "event", "substantive",
 		}},
 		tags: rowSet{name: "conversation_tag", cols: []string{
 			"workspace_id", "conversation_id", "tag_id", "created_by_type", "created_by_id", "created_at",
@@ -364,6 +364,7 @@ func (r *run) messageRows(set *rowSet, c Conversation, member any) thread {
 		byTeam = r.owner.Member.ID
 	}
 	channel := r.channels[c.Inbox][c.Channel]
+	handedAt, _ := lastAgentMessage(c).(time.Time)
 	for k, m := range c.Messages {
 		id := stableID(m.At, fmt.Sprintf("%s/%d", c.ID, k))
 		kind, authorType, author := "message", m.Author, byTeam
@@ -390,10 +391,29 @@ func (r *run) messageRows(set *rowSet, c Conversation, member any) thread {
 			}
 		}
 		set.rows = append(set.rows, []any{
-			id, r.ws.ID, c.ID, kind, authorType, author, m.Body, sent, status, channel, m.At, m.At,
+			id, r.ws.ID, c.ID, kind, authorType, author, m.Body, sent, status, channel, m.At, m.At, nil, true,
 		})
+		if m.Author == "agent" && c.AI == "handed_off" && m.At.Equal(handedAt) {
+			at := m.At.Add(time.Second)
+			set.rows = append(set.rows, []any{
+				stableID(at, fmt.Sprintf("%s/%d/handoff", c.ID, k)), r.ws.ID, c.ID, "event", "agent", nil, nil, nil,
+				"not_applicable", channel, at, at, handoffRow(c.HandoffReason), false,
+			})
+		}
 	}
 	return th
+}
+
+/*
+handoffRow is the timeline row that says the agent handed the
+conversation over, and why.
+*/
+func handoffRow(reason string) string {
+	row, _ := json.Marshal(map[string]any{
+		"name": "ai.handoff_requested", "reason": reason,
+		"actor": map[string]any{"type": "agent", "id": "", "name": "dimmi"},
+	})
+	return string(row)
 }
 
 /*

@@ -35,6 +35,7 @@ func notificationRoutes(api *routing.Router, a *app.App) {
 
 	api.Group("", func(r *routing.Router) {
 		r.Middleware("csrf", "session", "auth", "workspace", "access.policy", "api.throttle")
+		r.Internal()
 
 		routing.Get(r, "/notifications", "notifications.index", c.Index).Ability("notifications:read")
 		routing.Patch(r, "/notifications", "notifications.update-many", c.Update).Ability("notifications:write")
@@ -55,6 +56,7 @@ func notificationRoutes(api *routing.Router, a *app.App) {
 
 	api.Group("", func(r *routing.Router) {
 		r.Middleware("csrf", "session", "auth:user", "workspace", "access.policy", "api.throttle")
+		r.Internal()
 
 		routing.Post(r, "/notification-focus", "notification-focus.store", c.Focus).Status(fhttp.StatusNoContent)
 	})
@@ -73,6 +75,7 @@ func deliveryRoutes(api *routing.Router, a *app.App) {
 
 	api.Group("", func(r *routing.Router) {
 		r.Middleware("csrf", "session", "auth", "workspace", "access.policy", "api.throttle")
+		r.Internal()
 
 		routing.Get(r, "/notification-deliveries", "notification-deliveries.index", d.Index).
 			Ability("notifications:read")
@@ -137,6 +140,7 @@ func destinationRoutes(api *routing.Router, a *app.App) {
 
 	api.Group("", func(r *routing.Router) {
 		r.Middleware("csrf", "session", "auth", "workspace", "access.policy", "api.throttle")
+		r.Internal()
 
 		routing.Get(r, "/notification-destinations", "notification-destinations.index", d.Index).
 			Ability("notifications:read")
@@ -161,6 +165,7 @@ func pushRoutes(api *routing.Router, a *app.App) {
 
 	api.Group("", func(r *routing.Router) {
 		r.Middleware("csrf", "session", "auth:user", "api.throttle")
+		r.Internal()
 
 		routing.Get(r, "/push-config", "push-config.show", p.Config)
 		routing.Get(r, "/push-subscriptions", "push-subscriptions.index", p.Index)

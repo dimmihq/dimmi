@@ -69,6 +69,10 @@ func TestPortalRequests(t *testing.T) {
 		c := newCenter(t)
 		cookie := c.reader(t, "user_ada", "ada@example.com")
 		bug := c.typeID(t, "Bug report")
+		c.d.Owner.PostJSON("/api/v1/ticket-types/"+bug+"/fields", testkit.JSON{
+			"key": "steps", "label": "Steps to reproduce", "data_type": "long_text",
+			"visible_customer": true, "editable_customer": true,
+		}).AssertCreated()
 
 		picker := string(c.as(cookie, "/tickets/new").AssertOK().Body)
 		assert.Contains(t, picker, "Bug report")

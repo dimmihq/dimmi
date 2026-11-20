@@ -49,6 +49,7 @@ type BroadcastBody struct {
 	SkipFrequencyCap *bool              `json:"skip_frequency_cap,omitempty"`
 	Schedule         *BroadcastSchedule `json:"schedule,omitempty"`
 	Goal             json.RawMessage    `json:"goal,omitempty"`
+	Holds            *[]string          `json:"holds,omitempty"              enum:"customer_waiting,team_replied" maxItems:"2"`
 }
 
 /*

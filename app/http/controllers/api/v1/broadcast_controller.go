@@ -69,7 +69,17 @@ func (c *BroadcastController) Index(
 Store starts a draft.
 */
 func (c *BroadcastController) Store(ctx context.Context, in *requests.StoreBroadcastRequest) (*BroadcastOutput, error) {
-	return broadcastOutput(c.Broadcasts.Create(ctx, membership(ctx), in.Body.Name, in.Body.Channel))
+	open := broadcasts.Opening{Name: in.Body.Name, Channel: in.Body.Channel, Holds: in.Body.Holds}
+	if in.Body.TicketID != "" {
+		ticket, err := c.IDs.Decode(string(models.PrefixTicket), in.Body.TicketID)
+		if err != nil {
+			return nil, broadcasts.ErrTracker
+		}
+
+		open.TicketID = &ticket
+	}
+
+	return broadcastOutput(c.Broadcasts.Create(ctx, membership(ctx), open))
 }
 
 /*

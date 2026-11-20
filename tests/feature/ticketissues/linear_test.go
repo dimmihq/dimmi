@@ -81,6 +81,35 @@ func TestLinearIssues(t *testing.T) {
 		}).AssertCreated().AssertJSONPath("data.title", "CSV export crashes")
 	})
 
+	t.Run("teams pulled are kept until asked for fresh", func(t *testing.T) {
+		t.Parallel()
+
+		d := newDesk(t)
+		installation := d.connect(t, "linear", "lin_oauth_token")
+		teams := "/api/v1/integration-installations/" + installation + "/issue-teams"
+
+		d.Owner.GetJSON(teams).AssertOK().AssertJSONPath("data.0.name", "Engineering")
+		d.Owner.GetJSON(teams).AssertOK().AssertJSONPath("data.0.name", "Engineering")
+		assert.Equal(t, 1, d.linearCount("teams(first"), "the second read uses the teams kept")
+
+		d.Owner.GetJSON(teams+"?refresh=true").AssertOK().AssertJSONPath("data.0.name", "Engineering")
+		assert.Equal(t, 2, d.linearCount("teams(first"), "a refresh pulls the teams again")
+	})
+
+	t.Run("refreshing a ticket reads its issues from Linear now", func(t *testing.T) {
+		t.Parallel()
+
+		d := newDesk(t)
+		tracker := linkLinear(t, d)
+
+		d.mu.Lock()
+		*d.hidden = true
+		d.mu.Unlock()
+
+		res := d.Owner.PostJSON("/api/v1/tickets/"+tracker+"/issues/refresh", testkit.JSON{}).AssertOK()
+		assert.Contains(t, res.String("data.0.warning"), "no access to Engineering")
+	})
+
 	t.Run("a signed delivery moves the tracker to close the loop without messaging anyone", func(t *testing.T) {
 		t.Parallel()
 
@@ -94,9 +123,6 @@ func TestLinearIssues(t *testing.T) {
 		d.linearDelivery(t, "webhook_issue_done.json").AssertOK()
 		d.Owner.GetJSON("/api/v1/tickets/"+tracker).AssertOK().AssertJSONPath("data.state.name", "Close the loop").
 			AssertJSONPath("data.close_loop", true)
-
-		require.Equal(t, 0, count(d.Owner.GetJSON("/api/v1/tickets/"+tracker+"/update-drafts").AssertOK()))
-		require.Equal(t, 0, count(d.Owner.GetJSON("/api/v1/tickets/"+tracker+"/updates").AssertOK()))
 
 		seen := changes.All()
 		require.NotEmpty(t, seen)
@@ -112,7 +138,7 @@ func TestLinearIssues(t *testing.T) {
 			Send("POST", "/webhooks/linear", []byte(`{"type":"Issue","webhookTimestamp":1}`)).AssertStatus(401)
 	})
 
-	t.Run("comments become notes and @customers drafts a message", func(t *testing.T) {
+	t.Run("a comment becomes an internal note", func(t *testing.T) {
 		t.Parallel()
 
 		d := newDesk(t)
@@ -122,16 +148,7 @@ func TestLinearIssues(t *testing.T) {
 
 		events := d.Owner.GetJSON("/api/v1/tickets/" + tracker + "/events").AssertOK()
 		assert.Contains(t, string(events.Body), "Priya commented on Linear ENG-412")
-
-		drafts := d.Owner.GetJSON("/api/v1/tickets/" + tracker + "/update-drafts").AssertOK()
-		drafts.AssertJSONPath("data.0.reason", "comment").AssertJSONPath("data.0.status", "ready").
-			AssertJSONPath("data.0.recipients", float64(2)).
-			AssertJSONPath("data.0.body", "The export works again for files of any size.")
-
-		d.Owner.PatchJSON("/api/v1/ticket-update-drafts/"+drafts.String("data.0.id"), testkit.JSON{"status": "sent"}).
-			AssertOK().AssertJSONPath("data.status", "sent")
-		d.TC.Drain()
-		d.Owner.GetJSON("/api/v1/tickets/"+tracker+"/updates").AssertOK().AssertJSONPath("data.0.delivered", float64(2))
+		assert.Contains(t, string(events.Body), "The export works again for files of any size.")
 	})
 
 	t.Run("the re-check warns about a team the app cannot see", func(t *testing.T) {
@@ -151,7 +168,28 @@ func TestLinearIssues(t *testing.T) {
 		assert.Contains(t, list.String("data.0.warning"), "no access to Engineering")
 	})
 
-	t.Run("unlinking keeps the issue and removes the link", func(t *testing.T) {
+	t.Run("unlinking and removing from Linear takes back only this ticket's attachment", func(t *testing.T) {
+		t.Parallel()
+
+		d := newDesk(t)
+		tracker := linkLinear(t, d)
+		link := d.Owner.GetJSON("/api/v1/tickets/" + tracker + "/issues").AssertOK().String("data.0.id")
+
+		d.Owner.Delete("/api/v1/ticket-issues/" + link + "?remove_from_tool=true").AssertNoContent()
+		require.Equal(t, 0, count(d.Owner.GetJSON("/api/v1/tickets/"+tracker+"/issues").AssertOK()))
+
+		var deleted []string
+		for _, q := range d.linearSent() {
+			if strings.Contains(q, "attachmentDelete") {
+				deleted = append(deleted, q)
+			}
+		}
+
+		require.Len(t, deleted, 1, "only the attachment on this issue is taken back")
+		assert.Contains(t, deleted[0], "att-1")
+	})
+
+	t.Run("unlinking without asking leaves what dimmi wrote in Linear", func(t *testing.T) {
 		t.Parallel()
 
 		d := newDesk(t)
@@ -160,5 +198,45 @@ func TestLinearIssues(t *testing.T) {
 
 		d.Owner.Delete("/api/v1/ticket-issues/" + link).AssertNoContent()
 		require.Equal(t, 0, count(d.Owner.GetJSON("/api/v1/tickets/"+tracker+"/issues").AssertOK()))
+		require.Zero(t, d.linearCount("attachmentDelete"))
+	})
+
+	t.Run("linking an issue already done closes the loop", func(t *testing.T) {
+		t.Parallel()
+
+		d := newDesk(t)
+		d.connect(t, "linear", "lin_oauth_token")
+		tracker := d.tracker(t, "Labels print blank")
+
+		d.Owner.PostJSON("/api/v1/tickets/"+tracker+"/issues", testkit.JSON{
+			"url": "https://linear.app/acme/issue/ENG-500/labels-print-blank",
+		}).AssertCreated().AssertJSONPath("data.status_group", "done")
+
+		d.Owner.GetJSON("/api/v1/tickets/"+tracker).AssertOK().AssertJSONPath("data.state.name", "Close the loop")
+	})
+
+	t.Run("a ticket from a conversation counts its own customer in the impact", func(t *testing.T) {
+		t.Parallel()
+
+		d := newDesk(t)
+		installation := d.connect(t, "linear", "lin_oauth_token")
+		conv := d.Customer(t, "cat", "Labels print blank").String("data.id")
+		ticket := d.Owner.PostJSON("/api/v1/tickets", testkit.JSON{
+			"type_id": d.types["Bug report"], "title": "Labels print blank", "conversation_id": conv,
+		}).AssertCreated().String("data.id")
+
+		d.Owner.PostJSON("/api/v1/tickets/"+ticket+"/issues", testkit.JSON{
+			"installation_id": installation, "team_id": "team-eng", "title": "Labels print blank",
+		}).AssertCreated()
+
+		var create string
+		for _, q := range d.linearSent() {
+			if strings.Contains(q, "issueCreate") {
+				create = q
+			}
+		}
+
+		assert.Contains(t, create, "Customer impact: 1 customer")
+		assert.Contains(t, create, "1 conversation")
 	})
 }

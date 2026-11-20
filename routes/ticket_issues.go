@@ -5,11 +5,11 @@
 |
 | The engineering work behind tickets: issues linked to a ticket, the
 | lists and search of each connected tool its pickers read, a tool's
-| sync settings, connecting a tool that takes an API key, the drafts
-| closing the loop, and the workspace's ticket switches. Reading takes
-| tickets:read and changing tickets:write; a tool's settings and the
-| workspace's switches take settings:write. The tools deliver to
-| signed web routes outside the API.
+| sync settings, connecting a tool that takes an API key, and the
+| workspace's ticket switches. Reading takes tickets:read and changing
+| tickets:write; a tool's settings and the workspace's switches take
+| settings:write. The tools deliver to signed web routes outside the
+| API.
 |
 */
 
@@ -40,11 +40,10 @@ func ticketIssueRoutes(workspace *routing.Router, a *app.App) {
 	routing.Get(workspace, one+"/issues", "tickets.issues.index", ic.Index).Ability("tickets:read")
 	routing.Post(workspace, one+"/issues", "tickets.issues.store", ic.Store).Ability("tickets:write").
 		Status(fhttp.StatusCreated)
+	routing.Post(workspace, one+"/issues/refresh", "tickets.issues.refresh", ic.Refresh).Internal().
+		Ability("tickets:read").Status(fhttp.StatusOK)
 	routing.Delete(workspace, "/ticket-issues/{issue}", "ticket-issues.destroy", ic.Destroy).
 		Ability("tickets:write").Status(fhttp.StatusNoContent)
-	routing.Get(workspace, one+"/update-drafts", "tickets.update-drafts.index", ic.Drafts).Ability("tickets:read")
-	routing.Patch(workspace, "/ticket-update-drafts/{draft}", "ticket-update-drafts.update", ic.UpdateDraft).
-		Ability("tickets:write")
 
 	issueToolRoutes(workspace, a)
 }
@@ -60,9 +59,9 @@ func issueToolRoutes(workspace *routing.Router, a *app.App) {
 	}
 	inst := "/integration-installations/{installation}"
 
-	routing.Get(workspace, inst+"/issue-teams", "integration-installations.issue-teams.index", tc.Teams).
+	routing.Get(workspace, inst+"/issue-teams", "integration-installations.issue-teams.index", tc.Teams).Internal().
 		Ability("tickets:read")
-	routing.Get(workspace, inst+"/issue-options", "integration-installations.issue-options.index", tc.Options).
+	routing.Get(workspace, inst+"/issue-options", "integration-installations.issue-options.index", tc.Options).Internal().
 		Ability("tickets:read")
 	routing.Get(workspace, inst+"/issues", "integration-installations.issues.index", tc.Search).
 		Ability("tickets:read")
@@ -71,7 +70,7 @@ func issueToolRoutes(workspace *routing.Router, a *app.App) {
 	routing.Patch(workspace, inst+"/issue-settings", "integration-installations.issue-settings.update",
 		tc.UpdateSettings).Ability("settings:write")
 	routing.Post(workspace, "/integrations/{provider}/key-installations", "integrations.key-installations.store",
-		tc.StoreKey).Ability("settings:write").Status(fhttp.StatusCreated)
+		tc.StoreKey).Internal().Ability("settings:write").Status(fhttp.StatusCreated)
 	routing.Get(workspace, "/ticket-settings", "ticket-settings.show", tc.TicketSettings).Ability("tickets:read")
 	routing.Patch(workspace, "/ticket-settings", "ticket-settings.update", tc.UpdateTicketSettings).
 		Ability("settings:write")

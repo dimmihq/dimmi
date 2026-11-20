@@ -29,8 +29,8 @@ func inboxViewRoutes(r *routing.Router, a *app.App) {
 	acts := a.Actions.Inbox
 	prefs := &v1.InboxPreferenceController{Show: acts.ShowPreferences, Update: acts.UpdatePreferences}
 
-	routing.Get(r, "/inbox-preferences", "inbox-preferences.show", prefs.Get).Ability("conversations:read")
-	routing.Patch(r, "/inbox-preferences", "inbox-preferences.update", prefs.Patch).Ability("conversations:read")
+	routing.Get(r, "/inbox-preferences", "inbox-preferences.show", prefs.Get).Internal().Ability("conversations:read")
+	routing.Patch(r, "/inbox-preferences", "inbox-preferences.update", prefs.Patch).Internal().Ability("conversations:read")
 
 	views := &v1.ConversationViewController{
 		List: acts.ListViews, Show: acts.ShowView, Create: acts.CreateView, Update: acts.UpdateView,
@@ -38,23 +38,23 @@ func inboxViewRoutes(r *routing.Router, a *app.App) {
 	}
 	view := "/conversation-views/{view}"
 
-	routing.Get(r, "/conversation-views", "conversation-views.index", views.Index).Ability("conversations:read").
+	routing.Get(r, "/conversation-views", "conversation-views.index", views.Index).Internal().Ability("conversations:read").
 		Query(routing.QueryParam{Name: "q", Description: "Only views whose name holds this text."})
-	routing.Post(r, "/conversation-views", "conversation-views.store", views.Store).Ability("conversations:write")
-	routing.Patch(r, "/conversation-views", "conversation-views.reorder", views.ReorderShared).
+	routing.Post(r, "/conversation-views", "conversation-views.store", views.Store).Internal().Ability("conversations:write")
+	routing.Patch(r, "/conversation-views", "conversation-views.reorder", views.ReorderShared).Internal().
 		Ability("conversations:write")
-	routing.Get(r, view, "conversation-views.show", views.Get).Ability("conversations:read")
-	routing.Patch(r, view, "conversation-views.update", views.Patch).Ability("conversations:write")
-	routing.Delete(r, view, "conversation-views.destroy", views.Destroy).Ability("conversations:write").
+	routing.Get(r, view, "conversation-views.show", views.Get).Internal().Ability("conversations:read")
+	routing.Patch(r, view, "conversation-views.update", views.Patch).Internal().Ability("conversations:write")
+	routing.Delete(r, view, "conversation-views.destroy", views.Destroy).Internal().Ability("conversations:write").
 		Status(fhttp.StatusNoContent)
 
 	snooze := &v1.SnoozeController{
 		Lists: acts.ListSnoozeLists, Update: acts.UpdateSnoozeList, Options: acts.ShowSnoozeOptions, IDs: a.IDs,
 	}
 
-	routing.Get(r, "/snooze-lists", "snooze-lists.index", snooze.Index).Ability("conversations:read")
-	routing.Patch(r, "/snooze-lists/{scope}", "snooze-lists.update", snooze.Patch).Ability("settings:write")
-	routing.Get(r, "/snooze-options", "snooze-options.index", snooze.Choices).Ability("conversations:read").
+	routing.Get(r, "/snooze-lists", "snooze-lists.index", snooze.Index).Internal().Ability("conversations:read")
+	routing.Patch(r, "/snooze-lists/{scope}", "snooze-lists.update", snooze.Patch).Internal().Ability("settings:write")
+	routing.Get(r, "/snooze-options", "snooze-options.index", snooze.Choices).Internal().Ability("conversations:read").
 		Query(routing.QueryParam{Name: "conversation", Description: "ID or number of the conversation to snooze."})
 
 	collaborationRoutes(r, a)
@@ -63,15 +63,15 @@ func inboxViewRoutes(r *routing.Router, a *app.App) {
 		List: acts.ListDrafts, Save: acts.SaveDraft, Update: acts.UpdateDraft, Delete: acts.DeleteDraft, IDs: a.IDs,
 	}
 
-	routing.Get(r, "/drafts", "drafts.index", drafts.Index).Ability("conversations:read").Query(
+	routing.Get(r, "/drafts", "drafts.index", drafts.Index).Internal().Ability("conversations:read").Query(
 		routing.QueryParam{Name: "filter[conversation]", Description: "Only drafts on this conversation."},
 		routing.QueryParam{
 			Name: "filter[mode]", Description: "Only drafts of this kind.", Values: []string{"reply", "note", "new"},
 		},
 	)
-	routing.Post(r, "/drafts", "drafts.store", drafts.Store).Ability("conversations:write")
-	routing.Patch(r, "/drafts/{draft}", "drafts.update", drafts.Patch).Ability("conversations:write")
-	routing.Delete(r, "/drafts/{draft}", "drafts.destroy", drafts.Destroy).Ability("conversations:write").
+	routing.Post(r, "/drafts", "drafts.store", drafts.Store).Internal().Ability("conversations:write")
+	routing.Patch(r, "/drafts/{draft}", "drafts.update", drafts.Patch).Internal().Ability("conversations:write")
+	routing.Delete(r, "/drafts/{draft}", "drafts.destroy", drafts.Destroy).Internal().Ability("conversations:write").
 		Status(fhttp.StatusNoContent)
 }
 
@@ -84,7 +84,7 @@ func collaborationRoutes(r *routing.Router, a *app.App) {
 
 	mentionables := &v1.MentionableController{List: acts.ListMentionables, IDs: a.IDs}
 	routing.Get(r, "/conversations/{conversation}/mentionables", "conversations.mentionables.index",
-		mentionables.Index).Ability("conversations:read")
+		mentionables.Index).Internal().Ability("conversations:read")
 
 	reactions := &v1.ReactionController{React: acts.ReactToNote, IDs: a.IDs}
 	message := "/conversations/{conversation}/messages/{message}/reactions"
@@ -94,5 +94,5 @@ func collaborationRoutes(r *routing.Router, a *app.App) {
 		Ability("conversations:write").Status(fhttp.StatusOK)
 
 	gifs := &v1.GIFSearchController{APIKey: a.Config.Inbox.GIF.GiphyAPIKey}
-	routing.Get(r, "/gif-search", "gif-search.show", gifs.Show).Ability("conversations:write")
+	routing.Get(r, "/gif-search", "gif-search.show", gifs.Show).Internal().Ability("conversations:write")
 }

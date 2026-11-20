@@ -37,7 +37,7 @@ func onboardingRoutes(r *routing.Router, a *app.App) {
 		Use(middleware.BodyLimit(pictures.MaxBytes + avatarUploadOverhead))
 	routing.Delete(r, "/workspace/logo", "workspace.logo.destroy", logo.Destroy).
 		Ability("settings:write").Status(fhttp.StatusNoContent)
-	routing.Patch(r, "/workspace/onboarding", "workspace.onboarding.update", c.Update).Ability("settings:write")
+	routing.Patch(r, "/workspace/onboarding", "workspace.onboarding.update", c.Update).Internal().Ability("settings:write")
 	routing.Post(r, "/workspace/onboarding/test-conversations", "workspace.onboarding.test-conversations.store",
-		c.StoreTestConversations).Ability("conversations:write").Status(fhttp.StatusCreated)
+		c.StoreTestConversations).Internal().Ability("conversations:write").Status(fhttp.StatusCreated)
 }

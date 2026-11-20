@@ -67,6 +67,7 @@ func oauthAppRoutes(api *routing.Router, a *app.App) {
 
 	api.Group("", func(user *routing.Router) {
 		user.Middleware("csrf", "session", "auth:user", "api.throttle")
+		user.Internal()
 
 		routing.Get(user, "/oauth/authorization", "oauth.authorization.show", c.Show)
 		routing.Post(user, "/oauth/authorizations", "oauth.authorizations.store", c.Store).Status(fhttp.StatusOK)

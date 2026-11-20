@@ -26,6 +26,6 @@ func realtimeRoutes(workspace *routing.Router, a *app.App) {
 	typing := &v1.ConversationTypingIndicatorController{RecordTyping: a.Actions.RecordTyping, IDs: a.IDs}
 
 	routing.Post(workspace, "/conversations/{conversation}/typing-indicators",
-		"conversations.typing-indicators.store", typing.Store).
+		"conversations.typing-indicators.store", typing.Store).Internal().
 		Ability("conversations:write").Status(fhttp.StatusAccepted)
 }

@@ -344,5 +344,8 @@ func (w *SendChannelMessage) announce(
 			ConversationRef: appevents.ConversationRef{ConversationID: args.ConversationID}, MessageID: args.MessageID,
 		},
 		Status: string(status),
+		// Only a try that is not made again is announced, so a failure here
+		// is the last word on the message.
+		Final: status == enums.DeliveryStatusFailed,
 	})
 }

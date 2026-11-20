@@ -14,7 +14,8 @@ import (
 )
 
 /*
-ticketSetup reads the workspace's ticket types and states by name.
+ticketSetup reads the workspace's ticket types and states by name, and
+gives the bug report type a long text field to fill in.
 */
 func ticketSetup(t *testing.T, d tests.Desk) (map[string]string, map[string]string) {
 	t.Helper()
@@ -31,7 +32,12 @@ func ticketSetup(t *testing.T, d tests.Desk) (map[string]string, map[string]stri
 		return out
 	}
 
-	return byName("/api/v1/ticket-types"), byName("/api/v1/ticket-states")
+	types := byName("/api/v1/ticket-types")
+	d.Owner.PostJSON("/api/v1/ticket-types/"+types["Bug report"]+"/fields", testkit.JSON{
+		"key": "steps", "label": "Steps to reproduce", "data_type": "long_text",
+	}).AssertCreated()
+
+	return types, byName("/api/v1/ticket-states")
 }
 
 /*

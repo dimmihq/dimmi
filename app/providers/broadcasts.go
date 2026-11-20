@@ -24,6 +24,7 @@ import (
 
 	"github.com/dimmihq/dimmi/app"
 	"github.com/dimmihq/dimmi/app/actions/broadcasts"
+	"github.com/dimmihq/dimmi/app/actions/conversations"
 	"github.com/dimmihq/dimmi/app/actions/email"
 	appbroadcasting "github.com/dimmihq/dimmi/app/broadcasting"
 	"github.com/dimmihq/dimmi/app/enums"
@@ -59,6 +60,9 @@ func bootBroadcasts(a *app.App) error {
 			}},
 			broadcasts.ChannelChat: messenger,
 			broadcasts.ChannelPost: messenger,
+			broadcasts.ChannelConversation: &broadcasts.ConversationSender{
+				DB: a.DB, Events: a.Events, Delivery: conversations.Delivery{Channels: a.Channels, Queue: a.Queue}, Now: a.Clock.Now,
+			},
 		},
 	}
 
@@ -104,6 +108,12 @@ func listenForBroadcastReplies(a *app.App, b *broadcasts.Broadcasts) {
 			}
 
 			return b.MessengerReplied(ctx, tx, c)
+		})
+	})
+
+	events.Listen(a.Events, events.AfterCommit, func(ctx context.Context, e appevents.MessageDeliveryUpdated) error {
+		return b.MessageDelivery(ctx, broadcasts.DeliveryReport{
+			WorkspaceID: e.WorkspaceID, MessageID: e.MessageID, Status: e.Status, Reason: e.Reason, Final: e.Final,
 		})
 	})
 

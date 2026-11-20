@@ -51,7 +51,7 @@ func Layout(c Center, m Meta, sidebar templ.Component, assets templ.Component) t
 		var templ_7745c5c3_Var2 string
 		templ_7745c5c3_Var2, templ_7745c5c3_Err = templruntime.SanitizeStyleAttributeValues(BrandStyle(c))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `resources/views/helpcenter/layout.templ`, Line: 22, Col: 38}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `helpcenter/layout.templ`, Line: 22, Col: 38}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var2))
 		if templ_7745c5c3_Err != nil {
@@ -64,7 +64,7 @@ func Layout(c Center, m Meta, sidebar templ.Component, assets templ.Component) t
 		var templ_7745c5c3_Var3 string
 		templ_7745c5c3_Var3, templ_7745c5c3_Err = templruntime.NewAttributeExpression(fixedTheme(c)).Resolve(ctx)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `resources/views/helpcenter/layout.templ`, Line: 22, Col: 72}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `helpcenter/layout.templ`, Line: 22, Col: 72}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var3)
 		if templ_7745c5c3_Err != nil {
@@ -77,7 +77,7 @@ func Layout(c Center, m Meta, sidebar templ.Component, assets templ.Component) t
 		var templ_7745c5c3_Var4 string
 		templ_7745c5c3_Var4, templ_7745c5c3_Err = templruntime.NewAttributeExpression(colorScheme(c)).Resolve(ctx)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `resources/views/helpcenter/layout.templ`, Line: 26, Col: 53}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `helpcenter/layout.templ`, Line: 26, Col: 53}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var4)
 		if templ_7745c5c3_Err != nil {
@@ -90,7 +90,7 @@ func Layout(c Center, m Meta, sidebar templ.Component, assets templ.Component) t
 		var templ_7745c5c3_Var5 string
 		templ_7745c5c3_Var5, templ_7745c5c3_Err = templruntime.NewAttributeExpression(templ.GetNonce(ctx)).Resolve(ctx)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `resources/views/helpcenter/layout.templ`, Line: 29, Col: 55}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `helpcenter/layout.templ`, Line: 29, Col: 55}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var5)
 		if templ_7745c5c3_Err != nil {
@@ -103,7 +103,7 @@ func Layout(c Center, m Meta, sidebar templ.Component, assets templ.Component) t
 		var templ_7745c5c3_Var6 string
 		templ_7745c5c3_Var6, templ_7745c5c3_Err = templ.JoinStringErrs(m.Title)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `resources/views/helpcenter/layout.templ`, Line: 30, Col: 19}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `helpcenter/layout.templ`, Line: 30, Col: 19}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var6))
 		if templ_7745c5c3_Err != nil {
@@ -121,7 +121,7 @@ func Layout(c Center, m Meta, sidebar templ.Component, assets templ.Component) t
 			var templ_7745c5c3_Var7 string
 			templ_7745c5c3_Var7, templ_7745c5c3_Err = templruntime.NewAttributeExpression(m.Description).Resolve(ctx)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `resources/views/helpcenter/layout.templ`, Line: 32, Col: 52}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `helpcenter/layout.templ`, Line: 32, Col: 52}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var7)
 			if templ_7745c5c3_Err != nil {
@@ -134,7 +134,7 @@ func Layout(c Center, m Meta, sidebar templ.Component, assets templ.Component) t
 			var templ_7745c5c3_Var8 string
 			templ_7745c5c3_Var8, templ_7745c5c3_Err = templruntime.NewAttributeExpression(m.Description).Resolve(ctx)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `resources/views/helpcenter/layout.templ`, Line: 33, Col: 59}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `helpcenter/layout.templ`, Line: 33, Col: 59}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var8)
 			if templ_7745c5c3_Err != nil {
@@ -152,7 +152,7 @@ func Layout(c Center, m Meta, sidebar templ.Component, assets templ.Component) t
 		var templ_7745c5c3_Var9 string
 		templ_7745c5c3_Var9, templ_7745c5c3_Err = templruntime.NewAttributeExpression(m.Title).Resolve(ctx)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `resources/views/helpcenter/layout.templ`, Line: 35, Col: 46}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `helpcenter/layout.templ`, Line: 35, Col: 46}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var9)
 		if templ_7745c5c3_Err != nil {
@@ -165,7 +165,7 @@ func Layout(c Center, m Meta, sidebar templ.Component, assets templ.Component) t
 		var templ_7745c5c3_Var10 string
 		templ_7745c5c3_Var10, templ_7745c5c3_Err = templruntime.NewAttributeExpression(c.Name).Resolve(ctx)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `resources/views/helpcenter/layout.templ`, Line: 36, Col: 49}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `helpcenter/layout.templ`, Line: 36, Col: 49}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var10)
 		if templ_7745c5c3_Err != nil {
@@ -178,7 +178,7 @@ func Layout(c Center, m Meta, sidebar templ.Component, assets templ.Component) t
 		var templ_7745c5c3_Var11 string
 		templ_7745c5c3_Var11, templ_7745c5c3_Err = templruntime.NewAttributeExpression(c.Brand).Resolve(ctx)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `resources/views/helpcenter/layout.templ`, Line: 37, Col: 45}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `helpcenter/layout.templ`, Line: 37, Col: 45}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var11)
 		if templ_7745c5c3_Err != nil {
@@ -196,7 +196,7 @@ func Layout(c Center, m Meta, sidebar templ.Component, assets templ.Component) t
 			var templ_7745c5c3_Var12 string
 			templ_7745c5c3_Var12, templ_7745c5c3_Err = templruntime.NewAttributeExpression(Path(c, c.LogoLight)).ResolveURL(ctx)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `resources/views/helpcenter/layout.templ`, Line: 39, Col: 48}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `helpcenter/layout.templ`, Line: 39, Col: 48}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var12)
 			if templ_7745c5c3_Err != nil {
@@ -226,7 +226,7 @@ func Layout(c Center, m Meta, sidebar templ.Component, assets templ.Component) t
 			var templ_7745c5c3_Var13 string
 			templ_7745c5c3_Var13, templ_7745c5c3_Err = templruntime.NewAttributeExpression(templ.SafeURL(c.Canonical)).ResolveURL(ctx)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `resources/views/helpcenter/layout.templ`, Line: 47, Col: 59}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `helpcenter/layout.templ`, Line: 47, Col: 59}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var13)
 			if templ_7745c5c3_Err != nil {
@@ -245,7 +245,7 @@ func Layout(c Center, m Meta, sidebar templ.Component, assets templ.Component) t
 			var templ_7745c5c3_Var14 string
 			templ_7745c5c3_Var14, templ_7745c5c3_Err = templruntime.NewAttributeExpression(Href(c, m.Markdown)).ResolveURL(ctx)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `resources/views/helpcenter/layout.templ`, Line: 50, Col: 73}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `helpcenter/layout.templ`, Line: 50, Col: 73}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var14)
 			if templ_7745c5c3_Err != nil {
@@ -263,7 +263,7 @@ func Layout(c Center, m Meta, sidebar templ.Component, assets templ.Component) t
 		var templ_7745c5c3_Var15 string
 		templ_7745c5c3_Var15, templ_7745c5c3_Err = templruntime.NewAttributeExpression(c.Product + " changelog").Resolve(ctx)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `resources/views/helpcenter/layout.templ`, Line: 52, Col: 84}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `helpcenter/layout.templ`, Line: 52, Col: 84}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var15)
 		if templ_7745c5c3_Err != nil {
@@ -276,7 +276,7 @@ func Layout(c Center, m Meta, sidebar templ.Component, assets templ.Component) t
 		var templ_7745c5c3_Var16 string
 		templ_7745c5c3_Var16, templ_7745c5c3_Err = templruntime.NewAttributeExpression(Href(c, "/changelog/feed.xml")).ResolveURL(ctx)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `resources/views/helpcenter/layout.templ`, Line: 52, Col: 124}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `helpcenter/layout.templ`, Line: 52, Col: 124}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var16)
 		if templ_7745c5c3_Err != nil {
@@ -306,7 +306,7 @@ func Layout(c Center, m Meta, sidebar templ.Component, assets templ.Component) t
 			var templ_7745c5c3_Var17 string
 			templ_7745c5c3_Var17, templ_7745c5c3_Err = templruntime.NewAttributeExpression(templ.GetNonce(ctx)).Resolve(ctx)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `resources/views/helpcenter/layout.templ`, Line: 57, Col: 45}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `helpcenter/layout.templ`, Line: 57, Col: 45}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var17)
 			if templ_7745c5c3_Err != nil {
@@ -319,7 +319,7 @@ func Layout(c Center, m Meta, sidebar templ.Component, assets templ.Component) t
 			var templ_7745c5c3_Var18 string
 			templ_7745c5c3_Var18, templ_7745c5c3_Err = templruntime.NewAttributeExpression(c.MessengerSrc).ResolveURL(ctx)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `resources/views/helpcenter/layout.templ`, Line: 57, Col: 68}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `helpcenter/layout.templ`, Line: 57, Col: 68}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var18)
 			if templ_7745c5c3_Err != nil {
@@ -332,7 +332,7 @@ func Layout(c Center, m Meta, sidebar templ.Component, assets templ.Component) t
 			var templ_7745c5c3_Var19 string
 			templ_7745c5c3_Var19, templ_7745c5c3_Err = templruntime.NewAttributeExpression(c.Messenger).Resolve(ctx)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `resources/views/helpcenter/layout.templ`, Line: 57, Col: 96}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `helpcenter/layout.templ`, Line: 57, Col: 96}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var19)
 			if templ_7745c5c3_Err != nil {
@@ -345,7 +345,7 @@ func Layout(c Center, m Meta, sidebar templ.Component, assets templ.Component) t
 			var templ_7745c5c3_Var20 string
 			templ_7745c5c3_Var20, templ_7745c5c3_Err = templruntime.NewAttributeExpression(c.MessengerIdentity).ResolveURL(ctx)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `resources/views/helpcenter/layout.templ`, Line: 57, Col: 138}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `helpcenter/layout.templ`, Line: 57, Col: 138}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var20)
 			if templ_7745c5c3_Err != nil {
@@ -405,7 +405,7 @@ func Layout(c Center, m Meta, sidebar templ.Component, assets templ.Component) t
 				var templ_7745c5c3_Var21 string
 				templ_7745c5c3_Var21, templ_7745c5c3_Err = templ.JoinStringErrs(c.FooterText)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `resources/views/helpcenter/layout.templ`, Line: 77, Col: 53}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `helpcenter/layout.templ`, Line: 77, Col: 53}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var21))
 				if templ_7745c5c3_Err != nil {
@@ -424,7 +424,7 @@ func Layout(c Center, m Meta, sidebar templ.Component, assets templ.Component) t
 				var templ_7745c5c3_Var22 string
 				templ_7745c5c3_Var22, templ_7745c5c3_Err = templruntime.NewAttributeExpression(templ.SafeURL(c.ContactURL)).ResolveURL(ctx)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `resources/views/helpcenter/layout.templ`, Line: 80, Col: 45}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `helpcenter/layout.templ`, Line: 80, Col: 45}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var22)
 				if templ_7745c5c3_Err != nil {
@@ -511,7 +511,7 @@ func applyTheme() templ.Component {
 		var templ_7745c5c3_Var25 string
 		templ_7745c5c3_Var25, templ_7745c5c3_Err = templruntime.NewAttributeExpression(templ.GetNonce(ctx)).Resolve(ctx)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `resources/views/helpcenter/layout.templ`, Line: 129, Col: 36}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `helpcenter/layout.templ`, Line: 129, Col: 36}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var25)
 		if templ_7745c5c3_Err != nil {
@@ -623,7 +623,7 @@ func themeChoice(value, label, icon string) templ.Component {
 		var templ_7745c5c3_Var28 string
 		templ_7745c5c3_Var28, templ_7745c5c3_Err = templruntime.NewAttributeExpression(value).Resolve(ctx)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `resources/views/helpcenter/layout.templ`, Line: 165, Col: 48}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `helpcenter/layout.templ`, Line: 165, Col: 48}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var28)
 		if templ_7745c5c3_Err != nil {
@@ -644,7 +644,7 @@ func themeChoice(value, label, icon string) templ.Component {
 		var templ_7745c5c3_Var29 string
 		templ_7745c5c3_Var29, templ_7745c5c3_Err = templ.JoinStringErrs(label)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `resources/views/helpcenter/layout.templ`, Line: 167, Col: 41}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `helpcenter/layout.templ`, Line: 167, Col: 41}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var29))
 		if templ_7745c5c3_Err != nil {
@@ -690,7 +690,7 @@ func homeLink(c Center) templ.Component {
 		var templ_7745c5c3_Var31 string
 		templ_7745c5c3_Var31, templ_7745c5c3_Err = templruntime.NewAttributeExpression(Href(c, "/")).ResolveURL(ctx)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `resources/views/helpcenter/layout.templ`, Line: 173, Col: 23}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `helpcenter/layout.templ`, Line: 173, Col: 23}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var31)
 		if templ_7745c5c3_Err != nil {
@@ -761,7 +761,7 @@ func topBar(c Center, m Meta) templ.Component {
 			var templ_7745c5c3_Var33 string
 			templ_7745c5c3_Var33, templ_7745c5c3_Err = templruntime.NewAttributeExpression(Href(c, "/search")).ResolveURL(ctx)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `resources/views/helpcenter/layout.templ`, Line: 196, Col: 36}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `helpcenter/layout.templ`, Line: 196, Col: 36}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var33)
 			if templ_7745c5c3_Err != nil {
@@ -792,7 +792,7 @@ func topBar(c Center, m Meta) templ.Component {
 			var templ_7745c5c3_Var34 string
 			templ_7745c5c3_Var34, templ_7745c5c3_Err = templruntime.NewAttributeExpression(Href(c, s.Path)).ResolveURL(ctx)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `resources/views/helpcenter/layout.templ`, Line: 205, Col: 27}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `helpcenter/layout.templ`, Line: 205, Col: 27}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var34)
 			if templ_7745c5c3_Err != nil {
@@ -815,7 +815,7 @@ func topBar(c Center, m Meta) templ.Component {
 			var templ_7745c5c3_Var35 string
 			templ_7745c5c3_Var35, templ_7745c5c3_Err = templ.JoinStringErrs(s.Name)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `resources/views/helpcenter/layout.templ`, Line: 210, Col: 13}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `helpcenter/layout.templ`, Line: 210, Col: 13}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var35))
 			if templ_7745c5c3_Err != nil {
@@ -862,7 +862,7 @@ func topBar(c Center, m Meta) templ.Component {
 			var templ_7745c5c3_Var36 string
 			templ_7745c5c3_Var36, templ_7745c5c3_Err = templruntime.NewAttributeExpression(Href(c, s.Path)).ResolveURL(ctx)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `resources/views/helpcenter/layout.templ`, Line: 223, Col: 31}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `helpcenter/layout.templ`, Line: 223, Col: 31}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var36)
 			if templ_7745c5c3_Err != nil {
@@ -883,7 +883,7 @@ func topBar(c Center, m Meta) templ.Component {
 			var templ_7745c5c3_Var37 string
 			templ_7745c5c3_Var37, templ_7745c5c3_Err = templ.JoinStringErrs(s.Name)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `resources/views/helpcenter/layout.templ`, Line: 225, Col: 15}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `helpcenter/layout.templ`, Line: 225, Col: 15}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var37))
 			if templ_7745c5c3_Err != nil {
@@ -972,7 +972,7 @@ func drawerPanel(c Center, m Meta, sidebar templ.Component) templ.Component {
 		var templ_7745c5c3_Var40 string
 		templ_7745c5c3_Var40, templ_7745c5c3_Err = templruntime.NewAttributeExpression(drawerTitle(m)).Resolve(ctx)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `resources/views/helpcenter/layout.templ`, Line: 256, Col: 53}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `helpcenter/layout.templ`, Line: 256, Col: 53}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var40)
 		if templ_7745c5c3_Err != nil {
@@ -985,7 +985,7 @@ func drawerPanel(c Center, m Meta, sidebar templ.Component) templ.Component {
 		var templ_7745c5c3_Var41 string
 		templ_7745c5c3_Var41, templ_7745c5c3_Err = templ.JoinStringErrs(drawerTitle(m))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `resources/views/helpcenter/layout.templ`, Line: 258, Col: 49}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `helpcenter/layout.templ`, Line: 258, Col: 49}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var41))
 		if templ_7745c5c3_Err != nil {
@@ -1011,7 +1011,7 @@ func drawerPanel(c Center, m Meta, sidebar templ.Component) templ.Component {
 			var templ_7745c5c3_Var42 string
 			templ_7745c5c3_Var42, templ_7745c5c3_Err = templruntime.NewAttributeExpression(Href(c, "/search")).ResolveURL(ctx)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `resources/views/helpcenter/layout.templ`, Line: 264, Col: 36}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `helpcenter/layout.templ`, Line: 264, Col: 36}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var42)
 			if templ_7745c5c3_Err != nil {
@@ -1092,7 +1092,7 @@ func account(c Center) templ.Component {
 			var templ_7745c5c3_Var44 string
 			templ_7745c5c3_Var44, templ_7745c5c3_Err = templruntime.NewAttributeExpression(Href(c, "/conversations")).ResolveURL(ctx)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `resources/views/helpcenter/layout.templ`, Line: 299, Col: 37}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `helpcenter/layout.templ`, Line: 299, Col: 37}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var44)
 			if templ_7745c5c3_Err != nil {
@@ -1105,7 +1105,7 @@ func account(c Center) templ.Component {
 			var templ_7745c5c3_Var45 string
 			templ_7745c5c3_Var45, templ_7745c5c3_Err = templruntime.NewAttributeExpression(c.Visitor.Name).Resolve(ctx)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `resources/views/helpcenter/layout.templ`, Line: 299, Col: 62}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `helpcenter/layout.templ`, Line: 299, Col: 62}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var45)
 			if templ_7745c5c3_Err != nil {
@@ -1131,7 +1131,7 @@ func account(c Center) templ.Component {
 			var templ_7745c5c3_Var46 string
 			templ_7745c5c3_Var46, templ_7745c5c3_Err = templruntime.NewAttributeExpression(templ.SafeURL(c.SignOutURL)).ResolveURL(ctx)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `resources/views/helpcenter/layout.templ`, Line: 303, Col: 58}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `helpcenter/layout.templ`, Line: 303, Col: 58}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var46)
 			if templ_7745c5c3_Err != nil {
@@ -1149,7 +1149,7 @@ func account(c Center) templ.Component {
 			var templ_7745c5c3_Var47 string
 			templ_7745c5c3_Var47, templ_7745c5c3_Err = templruntime.NewAttributeExpression(templ.SafeURL(c.SignInURL)).ResolveURL(ctx)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `resources/views/helpcenter/layout.templ`, Line: 307, Col: 38}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `helpcenter/layout.templ`, Line: 307, Col: 38}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var47)
 			if templ_7745c5c3_Err != nil {
@@ -1202,7 +1202,7 @@ func HelpButton(c Center, class, lead, icon string) templ.Component {
 				var templ_7745c5c3_Var49 string
 				templ_7745c5c3_Var49, templ_7745c5c3_Err = templruntime.NewAttributeExpression(HelpLabel(c)).Resolve(ctx)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `resources/views/helpcenter/layout.templ`, Line: 322, Col: 62}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `helpcenter/layout.templ`, Line: 322, Col: 62}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var49)
 				if templ_7745c5c3_Err != nil {
@@ -1220,7 +1220,7 @@ func HelpButton(c Center, class, lead, icon string) templ.Component {
 				var templ_7745c5c3_Var51 string
 				templ_7745c5c3_Var51, templ_7745c5c3_Err = templruntime.NewAttributeExpression(templ.CSSClasses(templ_7745c5c3_Var50).String()).Resolve(ctx)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `resources/views/helpcenter/layout.templ`, Line: 1, Col: 0}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `helpcenter/layout.templ`, Line: 1, Col: 0}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var51)
 				if templ_7745c5c3_Err != nil {
@@ -1257,7 +1257,7 @@ func HelpButton(c Center, class, lead, icon string) templ.Component {
 			var templ_7745c5c3_Var52 string
 			templ_7745c5c3_Var52, templ_7745c5c3_Err = templ.JoinStringErrs(lead + HelpLabel(c))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `resources/views/helpcenter/layout.templ`, Line: 326, Col: 30}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `helpcenter/layout.templ`, Line: 326, Col: 30}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var52))
 			if templ_7745c5c3_Err != nil {
@@ -1320,7 +1320,7 @@ func Logo(c Center) templ.Component {
 			var templ_7745c5c3_Var54 string
 			templ_7745c5c3_Var54, templ_7745c5c3_Err = templruntime.NewAttributeExpression(Path(c, c.LogoLight)).ResolveURL(ctx)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `resources/views/helpcenter/layout.templ`, Line: 356, Col: 33}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `helpcenter/layout.templ`, Line: 356, Col: 33}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var54)
 			if templ_7745c5c3_Err != nil {
@@ -1333,7 +1333,7 @@ func Logo(c Center) templ.Component {
 			var templ_7745c5c3_Var55 string
 			templ_7745c5c3_Var55, templ_7745c5c3_Err = templruntime.NewAttributeExpression(c.Product).Resolve(ctx)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `resources/views/helpcenter/layout.templ`, Line: 356, Col: 51}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `helpcenter/layout.templ`, Line: 356, Col: 51}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var55)
 			if templ_7745c5c3_Err != nil {
@@ -1346,7 +1346,7 @@ func Logo(c Center) templ.Component {
 			var templ_7745c5c3_Var56 string
 			templ_7745c5c3_Var56, templ_7745c5c3_Err = templruntime.NewAttributeExpression(Path(c, c.LogoDark)).ResolveURL(ctx)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `resources/views/helpcenter/layout.templ`, Line: 357, Col: 32}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `helpcenter/layout.templ`, Line: 357, Col: 32}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var56)
 			if templ_7745c5c3_Err != nil {
@@ -1359,7 +1359,7 @@ func Logo(c Center) templ.Component {
 			var templ_7745c5c3_Var57 string
 			templ_7745c5c3_Var57, templ_7745c5c3_Err = templruntime.NewAttributeExpression(c.Product).Resolve(ctx)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `resources/views/helpcenter/layout.templ`, Line: 357, Col: 50}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `helpcenter/layout.templ`, Line: 357, Col: 50}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var57)
 			if templ_7745c5c3_Err != nil {
@@ -1377,7 +1377,7 @@ func Logo(c Center) templ.Component {
 			var templ_7745c5c3_Var58 string
 			templ_7745c5c3_Var58, templ_7745c5c3_Err = templ.JoinStringErrs(c.Product)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `resources/views/helpcenter/layout.templ`, Line: 359, Col: 77}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `helpcenter/layout.templ`, Line: 359, Col: 77}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var58))
 			if templ_7745c5c3_Err != nil {
@@ -1431,7 +1431,7 @@ func Icon(name, class string) templ.Component {
 			var templ_7745c5c3_Var61 string
 			templ_7745c5c3_Var61, templ_7745c5c3_Err = templruntime.NewAttributeExpression(templ.CSSClasses(templ_7745c5c3_Var60).String()).Resolve(ctx)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `resources/views/helpcenter/layout.templ`, Line: 1, Col: 0}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `helpcenter/layout.templ`, Line: 1, Col: 0}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var61)
 			if templ_7745c5c3_Err != nil {
@@ -1458,7 +1458,7 @@ func Icon(name, class string) templ.Component {
 		var templ_7745c5c3_Var62 string
 		templ_7745c5c3_Var62, templ_7745c5c3_Err = templruntime.NewAttributeExpression(iconPath(name)).Resolve(ctx)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `resources/views/helpcenter/layout.templ`, Line: 371, Col: 26}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `helpcenter/layout.templ`, Line: 371, Col: 26}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var62)
 		if templ_7745c5c3_Err != nil {
@@ -1504,7 +1504,7 @@ func Avatar(p Person, size string) templ.Component {
 			var templ_7745c5c3_Var64 string
 			templ_7745c5c3_Var64, templ_7745c5c3_Err = templruntime.NewAttributeExpression(p.Name).Resolve(ctx)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `resources/views/helpcenter/layout.templ`, Line: 380, Col: 21}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `helpcenter/layout.templ`, Line: 380, Col: 21}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var64)
 			if templ_7745c5c3_Err != nil {
@@ -1522,7 +1522,7 @@ func Avatar(p Person, size string) templ.Component {
 			var templ_7745c5c3_Var66 string
 			templ_7745c5c3_Var66, templ_7745c5c3_Err = templruntime.NewAttributeExpression(templ.CSSClasses(templ_7745c5c3_Var65).String()).Resolve(ctx)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `resources/views/helpcenter/layout.templ`, Line: 1, Col: 0}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `helpcenter/layout.templ`, Line: 1, Col: 0}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var66)
 			if templ_7745c5c3_Err != nil {
@@ -1549,7 +1549,7 @@ func Avatar(p Person, size string) templ.Component {
 		var templ_7745c5c3_Var67 string
 		templ_7745c5c3_Var67, templ_7745c5c3_Err = templ.JoinStringErrs(p.Initials)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `resources/views/helpcenter/layout.templ`, Line: 380, Col: 181}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `helpcenter/layout.templ`, Line: 380, Col: 181}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var67))
 		if templ_7745c5c3_Err != nil {
@@ -1626,7 +1626,7 @@ func SidebarHeading(title string) templ.Component {
 		var templ_7745c5c3_Var70 string
 		templ_7745c5c3_Var70, templ_7745c5c3_Err = templ.JoinStringErrs(title)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `resources/views/helpcenter/layout.templ`, Line: 396, Col: 90}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `helpcenter/layout.templ`, Line: 396, Col: 90}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var70))
 		if templ_7745c5c3_Err != nil {
@@ -1669,7 +1669,7 @@ func SidebarLink(c Center, path, title, icon, dot string, count int, current boo
 		var templ_7745c5c3_Var72 string
 		templ_7745c5c3_Var72, templ_7745c5c3_Err = templruntime.NewAttributeExpression(Href(c, path)).ResolveURL(ctx)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `resources/views/helpcenter/layout.templ`, Line: 406, Col: 22}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `helpcenter/layout.templ`, Line: 406, Col: 22}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var72)
 		if templ_7745c5c3_Err != nil {
@@ -1703,7 +1703,7 @@ func SidebarLink(c Center, path, title, icon, dot string, count int, current boo
 			var templ_7745c5c3_Var73 string
 			templ_7745c5c3_Var73, templ_7745c5c3_Err = templruntime.NewAttributeExpression(dot).Resolve(ctx)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `resources/views/helpcenter/layout.templ`, Line: 416, Col: 128}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `helpcenter/layout.templ`, Line: 416, Col: 128}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var73)
 			if templ_7745c5c3_Err != nil {
@@ -1721,7 +1721,7 @@ func SidebarLink(c Center, path, title, icon, dot string, count int, current boo
 		var templ_7745c5c3_Var74 string
 		templ_7745c5c3_Var74, templ_7745c5c3_Err = templ.JoinStringErrs(title)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `resources/views/helpcenter/layout.templ`, Line: 418, Col: 39}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `helpcenter/layout.templ`, Line: 418, Col: 39}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var74))
 		if templ_7745c5c3_Err != nil {
@@ -1739,7 +1739,7 @@ func SidebarLink(c Center, path, title, icon, dot string, count int, current boo
 			var templ_7745c5c3_Var75 string
 			templ_7745c5c3_Var75, templ_7745c5c3_Err = templ.JoinStringErrs(strconv.Itoa(count))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `resources/views/helpcenter/layout.templ`, Line: 420, Col: 92}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `helpcenter/layout.templ`, Line: 420, Col: 92}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var75))
 			if templ_7745c5c3_Err != nil {

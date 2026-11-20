@@ -28,8 +28,8 @@
     "description": "See the actions the AI may run."
   },
   "ai_agent:manage": {
-    "label": "Manage the AI agent",
-    "description": "Set up how the AI agent answers customers."
+    "label": "Manage the dimmi agent",
+    "description": "Set up how the dimmi agent answers customers."
   },
   "ai_runs:read_payloads": {
     "label": "Read AI run details",
@@ -216,20 +216,20 @@
     "description": "Start an export of the workspace's data."
   },
   "feedback:delete": {
-    "label": "Delete feedback",
-    "description": "Delete feedback posts."
+    "label": "Delete feature requests",
+    "description": "Delete feature requests."
   },
   "feedback:manage": {
-    "label": "Manage feedback boards",
-    "description": "Set up feedback boards and their rules."
+    "label": "Manage feature request boards",
+    "description": "Set up feature request boards and their rules."
   },
   "feedback:read": {
-    "label": "Read feedback",
-    "description": "See feedback posts and votes."
+    "label": "Read feature requests",
+    "description": "See feature requests and votes."
   },
   "feedback:write": {
-    "label": "Answer feedback",
-    "description": "Reply to and update feedback posts."
+    "label": "Answer feature requests",
+    "description": "Reply to and update feature requests."
   },
   "github:manage": {
     "label": "Manage GitHub",
@@ -281,11 +281,11 @@
   },
   "knowledge:manage": {
     "label": "Manage knowledge",
-    "description": "Change the sources the AI answers from."
+    "description": "Change the sources the dimmi agent answers from."
   },
   "knowledge:sync": {
     "label": "Sync knowledge",
-    "description": "Refresh the sources the AI answers from."
+    "description": "Refresh the sources the dimmi agent answers from."
   },
   "members:manage_owners": {
     "label": "Manage owners",

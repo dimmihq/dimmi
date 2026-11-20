@@ -1,0 +1,194 @@
+//go:build dev
+
+/*
+|--------------------------------------------------------------------------
+| Marketing Demo: Agent And Workflows
+|--------------------------------------------------------------------------
+|
+| The parts of the Lumen workspace the AI agent and Workflows pages are
+| shot in: two teams to route to, a few tags, the agent's voice and
+| rules, one procedure the agent follows, and one workflow that sorts a
+| first message by topic. Everything is saved through the real actions.
+| The agent is left switched off, so nothing here calls a model.
+|
+*/
+
+package commands
+
+import (
+	"context"
+	"encoding/json"
+	"fmt"
+
+	"github.com/dimmihq/dimmi/framework/ids"
+
+	"github.com/dimmihq/dimmi/app/actions/ai"
+	"github.com/dimmihq/dimmi/app/actions/procedures"
+	"github.com/dimmihq/dimmi/app/actions/tags"
+	"github.com/dimmihq/dimmi/app/actions/teams"
+	"github.com/dimmihq/dimmi/app/actions/workflows"
+	"github.com/dimmihq/dimmi/app/auth/authz"
+	"github.com/dimmihq/dimmi/app/models"
+	"github.com/dimmihq/dimmi/app/support/procedure"
+)
+
+/*
+marketingGuidance is what Lumen's support lead wrote for the agent.
+*/
+const marketingGuidance = `You answer customers of Lumen, an analytics product for software teams.
+
+- Search the help center before answering anything about Lumen, and link the article you used.
+- Customers are engineers and product managers. Lead with the fix, then explain.
+- Never promise dates, quote prices or discuss legal terms. Hand those to the team.
+- If an Enterprise customer reports an outage, hand over at once.`
+
+/*
+agentSetup seeds what the agent and workflow shots need.
+*/
+func (c MarketingDemoCommand) agentSetup(ctx context.Context, owner authz.Membership) error {
+	a := c.App
+
+	teamIDs := map[string]ids.UUID{}
+	for _, name := range []string{"Billing", "Engineering"} {
+		made, err := a.Actions.CreateTeam.Handle(ctx, teams.CreateTeamInput{Membership: owner, Name: name})
+		if err != nil {
+			return fmt.Errorf("create team %s: %w", name, err)
+		}
+
+		teamIDs[name] = made.Team.ID
+	}
+
+	tagIDs := map[string]ids.UUID{}
+	for _, t := range [][2]string{{"billing", "blue"}, {"bug", "red"}, {"enterprise", "orange"}} {
+		made, err := a.Actions.Inbox.CreateTag.Handle(ctx, tags.CreateTagInput{
+			Membership: owner, Name: t[0], Color: new(t[1]),
+		})
+		if err != nil {
+			return fmt.Errorf("create tag %s: %w", t[0], err)
+		}
+
+		tagIDs[t[0]] = made.ID
+	}
+
+	if _, err := a.Actions.AI.GetAgent.Handle(ctx, ai.GetAgentInput{Membership: owner}); err != nil {
+		return fmt.Errorf("provision agent: %w", err)
+	}
+
+	patch := ai.AgentPatch{
+		Name: new("Lumi"), Tone: new("friendly"), Guidance: new(marketingGuidance), Schedule: new("always"),
+		AssignedBehavior: new("skip_when_human_active"), UnknownBehavior: new("offer_handoff"),
+		DefaultLanguage: new("en"), RequireCitations: new(true), EnabledChannels: &[]string{"widget", "email"},
+		ProductName:   ai.Optional[string]{Set: true, Value: new("Lumen")},
+		HandoffTeamID: ai.Optional[ids.UUID]{Set: true, Value: new(teamIDs["Engineering"])},
+	}
+	if _, err := a.Actions.AI.UpdateAgent.Handle(ctx, ai.UpdateAgentInput{Membership: owner, Patch: patch}); err != nil {
+		return fmt.Errorf("configure agent: %w", err)
+	}
+
+	if err := c.procedure(ctx, owner); err != nil {
+		return err
+	}
+
+	return c.workflow(ctx, owner, teamIDs, tagIDs)
+}
+
+/*
+procedure saves and publishes the one procedure the agent follows.
+*/
+func (c MarketingDemoCommand) procedure(ctx context.Context, owner authz.Membership) error {
+	a := c.App
+
+	def := procedure.Definition{
+		Description: "The customer says they were charged twice for the same period and asks for one charge back.",
+		Steps: []procedure.Step{
+			{ID: "account", Kind: procedure.KindInstruction, Text: "Look up the customer's account and plan."},
+			{ID: "charges", Kind: procedure.KindInstruction, Text: "Find the charges for the month they name, and confirm two match."},
+			{ID: "single", Kind: procedure.KindCondition, Text: "If there is only one charge, explain what it covers and stop."},
+			{ID: "refund", Kind: procedure.KindInstruction, Text: "Refund the duplicate charge once someone on the Billing team approves it."},
+			{ID: "tell", Kind: procedure.KindInstruction, Text: "Tell the customer the amount and that it shows on their card in 5 to 10 days."},
+		},
+		Handover: []string{"The charges are more than 90 days old.", "The customer disputes the charge with their bank."},
+	}
+
+	made, err := a.Actions.Procedures.Create(ctx, owner, "Refund a duplicate charge")
+	if err != nil {
+		return fmt.Errorf("create procedure: %w", err)
+	}
+
+	raw, _ := json.Marshal(def)
+
+	saved, err := a.Actions.Procedures.Save(ctx, procedures.SaveInput{
+		Membership: owner, ID: made.ID, LockVersion: made.LockVersion, Definition: raw,
+	})
+	if err != nil {
+		return fmt.Errorf("save procedure: %w", err)
+	}
+
+	if _, err := a.Actions.Procedures.Publish(ctx, owner, saved.ID); err != nil {
+		return fmt.Errorf("publish procedure: %w", err)
+	}
+
+	return nil
+}
+
+/*
+workflow saves and publishes the workflow that sorts a first message by
+topic: billing goes to the Billing team, bugs to Engineering at high
+priority, and anything else carries on to the inbox.
+*/
+func (c MarketingDemoCommand) workflow(
+	ctx context.Context, owner authz.Membership, teamIDs, tagIDs map[string]ids.UUID,
+) error {
+	a := c.App
+	if a.Actions.Workflows == nil {
+		return nil
+	}
+
+	step := func(id, kind string, settings map[string]any) map[string]any {
+		return map[string]any{"id": id, "kind": kind, "settings": settings}
+	}
+	team := func(name string) string { return models.PublicID(models.PrefixTeam, teamIDs[name]) }
+	tag := func(name string) string { return models.PublicID(models.PrefixTag, tagIDs[name]) }
+
+	spec := map[string]any{
+		"schema": 1, "trigger": "conversation.first_message",
+		"steps": []any{map[string]any{
+			"id": "s_sorttopic1", "kind": "classify",
+			"paths": []any{
+				map[string]any{
+					"id": "p_billing001", "label": "Billing", "description": "Invoices, charges and refunds",
+					"steps": []any{
+						step("s_tagbill001", "tag", map[string]any{"tag_ids": []string{tag("billing")}}),
+						step("s_asgbill001", "assign", map[string]any{"mode": "team", "team_id": team("Billing")}),
+					},
+				},
+				map[string]any{
+					"id": "p_bug0000001", "label": "Bug", "description": "Something in the product is broken",
+					"steps": []any{
+						step("s_tagbug0001", "tag", map[string]any{"tag_ids": []string{tag("bug")}}),
+						step("s_priobug001", "priority", map[string]any{"value": "high"}),
+						step("s_asgbug0001", "assign", map[string]any{"mode": "team", "team_id": team("Engineering")}),
+					},
+				},
+				map[string]any{"id": "p_other00001", "steps": []any{}, "outcome": "none"},
+			},
+		}},
+	}
+
+	raw, _ := json.Marshal(spec)
+
+	made, err := a.Actions.Workflows.Create(ctx, workflows.CreateInput{
+		Membership: owner, Name: "Sort new conversations by topic", Trigger: "conversation.first_message", Spec: raw,
+	})
+	if err != nil {
+		return fmt.Errorf("create workflow: %w", err)
+	}
+
+	if _, err := a.Actions.Workflows.Publish(ctx, workflows.PublishInput{
+		Membership: owner, ID: made.ID, AcknowledgeWarnings: true,
+	}); err != nil {
+		return fmt.Errorf("publish workflow: %w", err)
+	}
+
+	return nil
+}

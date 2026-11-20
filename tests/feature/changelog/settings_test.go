@@ -91,6 +91,26 @@ func TestChangelogSettings(t *testing.T) {
 		l.d.TC.Table("changelog_subscribers").AssertCount(0)
 	})
 
+	t.Run("counts the views of an update people open, not crawlers", func(t *testing.T) {
+		t.Parallel()
+		l := newLog(t)
+		l.published(t, testkit.JSON{"title": "Hello world"})
+		browser := "Mozilla/5.0 (Macintosh; Intel Mac OS X 14_0) AppleWebKit/537.36 Chrome/130.0 Safari/537.36"
+		open := func(agent string) {
+			l.d.TC.Client().WithHeader("Accept", "text/html").WithHeader("User-Agent", agent).
+				Send("GET", "/hc/"+l.subdomain+"/changelog/hello-world", nil).AssertOK()
+		}
+
+		open(browser)
+		open(browser)
+		open("Googlebot/2.1")
+
+		res := l.d.Owner.GetJSON("/api/v1/help-centers/" + l.id + "/changelog-analytics?days=7").AssertOK()
+		res.AssertJSONPath("data.views", float64(2)).AssertJSONPath("data.daily.6.views", float64(2)).
+			AssertJSONPath("data.top_entries.0.title", "Hello world").
+			AssertJSONPath("data.top_entries.0.views", float64(2)).AssertJSONPath("data.subscribers", float64(0))
+	})
+
 	t.Run("refuses an email kind or undo window it does not offer", func(t *testing.T) {
 		t.Parallel()
 		l := newLog(t)

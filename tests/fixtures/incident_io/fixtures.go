@@ -4,8 +4,8 @@
 |--------------------------------------------------------------------------
 |
 | incident.io's API answers for an API key, its severities, and the
-| deliveries it sends when an incident opens, gets an update or closes.
-| No test ever reaches incident.io.
+| deliveries it sends when an incident opens, changes status with an
+| update's message, or closes. No test ever reaches incident.io.
 |
 */
 

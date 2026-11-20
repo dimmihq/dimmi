@@ -4,11 +4,9 @@
 |--------------------------------------------------------------------------
 |
 | What the linked-issue sync needs from tickets, and nothing more: a
-| writer acting as a tool, such as Linear, so its moves, notes and
-| public updates carry the tool's name in the history; a ticket found
-| on a member's terms or locked for a change; a link logged and
-| announced; and a message to everyone linked, planned with the same
-| holds a teammate's message gets.
+| writer acting as a tool, such as Linear, so its moves and notes carry
+| the tool's name in the history; a ticket found on a member's terms or
+| locked for a change; and a link logged and announced.
 |
 */
 
@@ -118,17 +116,4 @@ func (w *Writer) AnnounceIssue(ctx context.Context, t models.Ticket, c IssueChan
 	}
 
 	return w.emit(ctx, appevents.TicketIssueUpdated{TicketChanged: w.changed(t, changes)})
-}
-
-/*
-PlanMessage plans a message to everyone the tracker links:
-a dry run counts who it reaches and who is held and why; otherwise the
-message is stored and queued.
-*/
-func (w *Writer) PlanMessage(ctx context.Context, t models.Ticket, in UpdateInput) (Plan, error) {
-	if t.Kind != KindTracker {
-		return Plan{}, ErrNotTracker
-	}
-
-	return w.planUpdate(ctx, t, in)
 }

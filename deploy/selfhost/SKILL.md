@@ -22,8 +22,8 @@ branch.
 Ask only what you cannot find yourself:
 
 1. **The server.** A fresh Ubuntu 22.04/24.04 or Debian 12 machine with a
-   public IPv4, at least 2 vCPU, 4 GB RAM and 40 GB disk (add 2 GB of RAM for
-   malware scanning). Root over SSH, or a sudo user.
+   public IPv4, at least 2 vCPU, 4 GB RAM and 40 GB disk (add about 1.5 GB
+   of RAM for malware scanning). Root over SSH, or a sudo user.
 2. **The domain** dimmi will live on, and who controls its DNS.
 3. **An email** for Let's Encrypt notices.
 4. **The first account**: name, email and workspace name.
@@ -83,8 +83,9 @@ It takes 3 to 5 minutes. It:
   log in. Skip all of this with `--skip-prepare` on a server you manage
   yourself (Docker with the compose plugin must be installed).
 - downloads the release's Compose bundle into `/opt/dimmi` (`compose.yaml`,
-  `Caddyfile`, this skill, `VERSION`) and writes `.env`, pinned to that
-  release's image `ghcr.io/dimmihq/dimmi:<version>`. `.env`
+  `Caddyfile`, `postgres-init.sh`, `.env.example`, `install.sh`, this skill,
+  `VERSION`) and writes `.env`, pinned to that release's image
+  `ghcr.io/dimmihq/dimmi:<version>`. `.env`
   holds random passwords for Postgres, Valkey and SeaweedFS and the app key.
   They are made once and kept on every later run.
 - starts the stack. A one-off `migrate` service applies the database
@@ -118,14 +119,15 @@ and the owner can sign in.
 
 Until email is set up, dimmi writes each email with its links to the logs
 instead of sending it. Find an invite or sign-in link with
-`dimmictl logs web worker | grep -i http`.
+`dimmictl logs web worker | grep mail_fallback`.
 
 ## Changing settings
 
 Every setting is an environment variable in `/opt/dimmi/.env`: `DIMMI_`
 plus the setting's path in upper case with `__` between levels, so
 `mail.from.name` is `DIMMI_MAIL__FROM__NAME`. `.env.example` beside it lists
-the common ones.
+the common ones, and the few that `compose.yaml` sets itself and `.env`
+cannot change.
 
 ```bash
 dimmictl set DIMMI_MAIL__FROM__NAME="Acme Support"
@@ -140,7 +142,9 @@ DIMMI_AI__MANAGED__ANTHROPIC__API_KEY=sk-ant-...
 EOF
 ```
 
-`set` saves the values and restarts the app. If it does not come back
+`set` saves the values and restarts the services they change: the app for
+a `DIMMI_` setting, Caddy or ClamAV too for a stack setting such as
+`APP_DOMAIN`, `CADDY_TLS` or `COMPOSE_PROFILES`. If the app does not come back
 healthy, the app explains what is wrong: `dimmictl logs web`.
 
 Optional features and their settings:
@@ -161,7 +165,9 @@ dimmictl status
 ```
 
 Data lives in Docker volumes (`dimmi_postgres`, `dimmi_seaweedfs`, ...).
-`cat /opt/dimmi/VERSION` shows the installed release. Take a database backup
+`cat /opt/dimmi/VERSION` shows the installed release. `update` replaces the
+stack files; a `compose.yaml` or `Caddyfile` that differs from the new one
+is kept beside it as `<file>.bak`. Take a database backup
 before updating. `/opt/dimmi/.env` is the other half: without its `DIMMI_APP__KEY` encrypted
 data cannot be read. Back up both (see `references/options.md`).
 

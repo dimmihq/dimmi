@@ -119,6 +119,21 @@ WHERE ar.workspace_id = $1 AND ar.deleted_at IS NULL AND ar.audience_id = $2
 UNION ALL
 SELECT 'collection', co.id, co.name, true FROM collections co
 WHERE co.workspace_id = $1 AND co.deleted_at IS NULL AND co.audience_id = $2
+UNION ALL
+SELECT 'messenger', ws.id, ws.name, true FROM widget_settings ws
+WHERE ws.workspace_id = $1 AND ws.deleted_at IS NULL
+  AND strpos(ws.audiences::text, $3::text) > 0
+UNION ALL
+SELECT 'broadcast', b.id, b.name, (b.status <> 'draft') FROM broadcasts b
+WHERE b.workspace_id = $1 AND b.deleted_at IS NULL AND b.kind = 'one_off'
+  AND b.status IN ('draft', 'scheduled', 'sending', 'paused')
+  AND (b.audience_id = $2 OR strpos(coalesce(b.rules::text, ''), $3::text) > 0)
+UNION ALL
+SELECT 'series', s.id, s.name, (sv.id IS NOT NULL) FROM series s
+LEFT JOIN series_versions sv ON sv.id = s.live_version_id AND s.status IN ('live', 'paused')
+  AND strpos(sv.spec::text, $3::text) > 0
+WHERE s.workspace_id = $1 AND s.status <> 'archived'
+  AND (strpos(s.working::text, $3::text) > 0 OR sv.id IS NOT NULL)
 ORDER BY 1, 3
 `
 
@@ -137,8 +152,11 @@ type AudienceUsersRow struct {
 
 // AudienceUsers returns what names a saved audience: other saved audiences,
 // workflows whose working copy names it, workflows whose live version does,
-// and the articles and collections kept to it. live is true for live
-// workflows, articles and collections, which rely on it now.
+// the articles and collections kept to it, the messengers whose rules name
+// it, the broadcasts still to send to it, and the series whose working copy
+// or live version names it. live is true for what relies on it now: live
+// workflows, articles, collections, messengers, broadcasts that are
+// scheduled, sending or paused, and live or paused series.
 func (q *Queries) AudienceUsers(ctx context.Context, arg AudienceUsersParams) ([]AudienceUsersRow, error) {
 	rows, err := q.db.Query(ctx, audienceUsers, arg.WorkspaceID, arg.AudienceID, arg.PublicID)
 	if err != nil {

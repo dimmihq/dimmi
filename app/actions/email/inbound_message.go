@@ -29,7 +29,6 @@ import (
 	"github.com/dimmihq/dimmi/framework/hashing"
 	"github.com/dimmihq/dimmi/framework/mailbox/parse"
 
-	"github.com/dimmihq/dimmi/app/actions/conversations"
 	"github.com/dimmihq/dimmi/app/contracts"
 	"github.com/dimmihq/dimmi/app/enums"
 	inbound "github.com/dimmihq/dimmi/app/integrations/email"
@@ -136,7 +135,7 @@ func (a *ProcessInboundEmail) continueThread(msg *contracts.InboundMessage, hit 
 		return
 	}
 
-	if conversations.ClosedBefore(*conversation, a.Clock.Now().Add(-a.Config.Inbound.ReopenWindow)) {
+	if hit.stale {
 		msg.ExternalThreadKey = ownID
 
 		return

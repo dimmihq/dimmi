@@ -20,8 +20,8 @@ WebhooksConfig configures outbound webhooks.
 
 Enabled false stops every event from being delivered, while endpoints
 can still be managed. MaxEndpoints caps a workspace's endpoints on a
-self-hosted install. RequireHTTPS refuses plain http endpoints; unset,
-it holds on the cloud only. Timeout bounds one request, headers and
+self-hosted install, zero meaning no limit. RequireHTTPS refuses plain
+http endpoints; unset, it holds on the cloud only. Timeout bounds one request, headers and
 body. MaxPayloadBytes is the largest body sent before the snapshot is
 replaced by a reference. MaxResponseBytes is how much of an answer is
 read, StoredResponseBytes how much of it the log keeps. FailingNotifyAfter

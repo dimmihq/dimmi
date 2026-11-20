@@ -8,7 +8,9 @@
 | URL or key or picking it from a search. A new issue carries the
 | customer impact and a link back; incident tools get an incident of the
 | picked severity, PagerDuty on the picked service. Unlinking leaves the
-| issue in the tool as it is.
+| issue in the tool and, when the teammate chooses, takes back what dimmi
+| wrote on it for the ticket. An issue linked to more tickets gets their
+| impact written again; an incident keeps its impact for them.
 |
 */
 
@@ -21,6 +23,7 @@ import (
 
 	"github.com/dimmihq/dimmi/framework/database"
 	"github.com/dimmihq/dimmi/framework/ids"
+	"github.com/dimmihq/dimmi/framework/log"
 
 	"github.com/dimmihq/dimmi/app/actions/tickets"
 	"github.com/dimmihq/dimmi/app/auth/authz"
@@ -200,7 +203,9 @@ type found struct {
 }
 
 /*
-save stores the link and announces it on the ticket.
+save stores the link, announces it on the ticket and moves the ticket
+to the state the issue's status maps to, so linking an issue already
+done closes the loop as its finishing later would.
 */
 func (s *Issues) save(ctx context.Context, m authz.Membership, f found) (models.TicketIssue, error) {
 	t, tl, is := f.ticket, f.tool, f.issue
@@ -231,21 +236,42 @@ func (s *Issues) save(ctx context.Context, m authz.Membership, f found) (models.
 			return err
 		}
 
-		return w.AnnounceIssue(ctx, locked, tickets.IssueChange{Issue: out, Linked: true})
+		if err := w.AnnounceIssue(ctx, locked, tickets.IssueChange{Issue: out, Linked: true}); err != nil {
+			return err
+		}
+
+		return s.follow(ctx, w, locked, statusUpdate{link: out, statusID: is.StatusID})
 	})
 
 	return out, err
 }
 
 /*
-Remove unlinks an issue; the issue itself stays in the tool.
+RemoveOptions say what unlinking does in the tool. FromTool takes back
+what dimmi wrote on the issue for the ticket; otherwise the tool keeps
+it, and only an issue other tickets still link gets their impact
+written again.
 */
-func (s *Issues) Remove(ctx context.Context, m authz.Membership, id ids.UUID) error {
+type RemoveOptions struct {
+	FromTool bool
+}
+
+/*
+Remove unlinks an issue. The issue itself stays in the tool; what dimmi
+wrote on it for this ticket, such as Linear's impact attachment, is
+taken back, best effort, only when the options ask.
+*/
+func (s *Issues) Remove(ctx context.Context, m authz.Membership, id ids.UUID, opts RemoveOptions) error {
 	if err := tickets.MayWrite(m); err != nil {
 		return err
 	}
 
-	return s.Tickets.AsMember(ctx, m, func(ctx context.Context, w *tickets.Writer) error {
+	var (
+		gone models.TicketIssue
+		back string
+	)
+
+	err := s.Tickets.AsMember(ctx, m, func(ctx context.Context, w *tickets.Writer) error {
 		link, err := w.Q.FindTicketIssue(ctx, models.FindTicketIssueParams{WorkspaceID: m.Workspace.ID, ID: id})
 		if errors.Is(err, database.ErrNotFound) {
 			return ErrIssueNotFound
@@ -265,8 +291,100 @@ func (s *Issues) Remove(ctx context.Context, m authz.Membership, id ids.UUID) er
 			return err
 		}
 
+		gone, back = link, s.ticketLink(ctx, w.Q, t)
+
 		return w.AnnounceIssue(ctx, t, tickets.IssueChange{Issue: link, Data: map[string]any{"unlinked": true}})
 	})
+	if err != nil {
+		return err
+	}
+
+	if opts.FromTool {
+		s.forget(ctx, gone, back)
+	}
+
+	return nil
+}
+
+/*
+forget takes back what dimmi wrote on an unlinked issue for its ticket,
+when the tool can. A tool that refuses keeps it; the link is gone
+either way.
+*/
+func (s *Issues) forget(ctx context.Context, link models.TicketIssue, back string) {
+	if link.InstallationID == nil {
+		return
+	}
+
+	tl, err := s.toolFor(ctx, link.WorkspaceID, *link.InstallationID)
+	if err != nil {
+		return
+	}
+
+	other, linked := s.otherLink(ctx, link)
+	shared, _ := tl.tracker.(trackers.Shared)
+
+	keep := linked && shared != nil && shared.SharedImpact()
+
+	if f, ok := tl.tracker.(trackers.Forgetter); ok && !keep {
+		is := trackers.Issue{ExternalID: link.ExternalID, Key: link.Key, URL: link.Url}
+		if err := f.Forget(ctx, tl.call, is, back); err != nil {
+			log.From(ctx).WarnContext(ctx, "take back issue impact",
+				log.String("provider", link.Provider), log.Err(err))
+		}
+	}
+
+	if linked {
+		s.rewriteImpact(ctx, other)
+	}
+}
+
+/*
+otherLink finds another ticket of the workspace still linked to the
+same issue, whose impact is then written again: an incident keeps one
+impact for all its tickets, and Jira's impact property is the issue's.
+*/
+func (s *Issues) otherLink(ctx context.Context, link models.TicketIssue) (models.TicketIssuesByExternalIDRow, bool) {
+	links, err := s.linksOf(ctx, link.Provider, nil, link.ExternalID)
+	if err != nil {
+		return models.TicketIssuesByExternalIDRow{}, false
+	}
+
+	for _, l := range links {
+		if l.WorkspaceID == link.WorkspaceID && l.ID != link.ID {
+			return l, true
+		}
+	}
+
+	return models.TicketIssuesByExternalIDRow{}, false
+}
+
+/*
+rewriteImpact writes the impact of the link's ticket to its issue again,
+even when it did not change since dimmi last wrote it.
+*/
+func (s *Issues) rewriteImpact(ctx context.Context, l models.TicketIssuesByExternalIDRow) {
+	var ticket ids.UUID
+
+	err := s.inWorkspace(ctx, l.WorkspaceID, func(ctx context.Context, q *models.Queries) error {
+		link, err := q.FindTicketIssue(ctx, models.FindTicketIssueParams(l))
+		if err != nil {
+			return err
+		}
+
+		ticket = link.TicketID
+
+		return q.SetTicketIssueImpact(ctx, models.SetTicketIssueImpactParams{
+			ImpactHash: "", WorkspaceID: l.WorkspaceID, ID: l.ID,
+		})
+	})
+	if err == nil {
+		err = s.RefreshImpact(ctx, l.WorkspaceID, ticket)
+	}
+
+	if err != nil {
+		log.From(ctx).WarnContext(ctx, "rewrite issue impact", log.String("issue_id", l.ID.String()), log.Err(err))
+	}
 }
 
 /*

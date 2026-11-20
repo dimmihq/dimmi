@@ -43,6 +43,7 @@ func roleRoutes(api *routing.Router, a *app.App) {
 		writers.Middleware(
 			"csrf", "session", "auth:user", "workspace", "access.policy", "api.throttle", "password.confirm",
 		)
+		writers.Internal()
 
 		routing.Post(writers, "/roles", "roles.store", c.Store).Status(fhttp.StatusCreated)
 		routing.Patch(writers, "/roles/{role}", "roles.update", c.Update)

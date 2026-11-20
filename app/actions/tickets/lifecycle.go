@@ -399,3 +399,14 @@ func (w *Writer) resolveWaiting(ctx context.Context, ticket models.Ticket, ty mo
 
 	return w.log(ctx, ticket, "auto_resolved", map[string]any{"days": *ty.AutoResolveDays})
 }
+
+/*
+cutText cuts text to a length.
+*/
+func cutText(s string, n int) string {
+	if r := []rune(s); len(r) > n {
+		return string(r[:n])
+	}
+
+	return s
+}

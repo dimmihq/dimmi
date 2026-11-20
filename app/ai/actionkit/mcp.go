@@ -110,13 +110,16 @@ func mcpArguments(t Target) (map[string]any, error) {
 }
 
 /*
-callHeaders name the call to the server; a write also carries its
-idempotency key.
+callHeaders name the action, the call and the workspace to the server,
+as an HTTP action's request does; a write also carries its idempotency
+key.
 */
 func callHeaders(t Target) fhttp.Header {
 	h := fhttp.Header{}
 	callID := models.PublicID(models.PrefixAiActionCall, t.CallID)
+	h.Set("Dimmi-Action", t.Spec.Name)
 	h.Set("Dimmi-Action-Call", callID)
+	h.Set("Dimmi-Workspace", models.PublicID(models.PrefixWorkspace, t.WorkspaceID))
 	if t.Spec.SideEffect == SideEffectWrite {
 		h.Set("Idempotency-Key", callID)
 	}

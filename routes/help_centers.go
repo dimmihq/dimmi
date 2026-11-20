@@ -72,7 +72,7 @@ func helpCenterRoutes(workspace *routing.Router, a *app.App) {
 	routing.Get(workspace, article+"/feedback", "articles.feedback.show", ratings.Show).Ability("articles:read")
 	routing.Post(workspace, article+"/restorations", "articles.restorations.store", extras.Restore).
 		Ability("articles:write").Status(fhttp.StatusOK)
-	routing.Post(workspace, "/help-images", "help-images.store", extras.StoreImage).
+	routing.Post(workspace, "/help-images", "help-images.store", extras.StoreImage).Internal().
 		Ability("articles:write").Status(fhttp.StatusCreated).
 		Use(middleware.BodyLimit(helpcenters.MaxImageBytes + imageUploadOverhead))
 

@@ -31,7 +31,7 @@ func emailSenderRoutes(workspace *routing.Router, a *app.App) {
 
 	t := &v1.EmailTemplateController{Render: &email.RenderEmailTemplate{DB: a.DB}, IDs: a.IDs}
 	routing.Post(workspace, "/email-addresses/{address}/template-renderings",
-		"email-addresses.template-renderings.store", t.StoreRendering).
+		"email-addresses.template-renderings.store", t.StoreRendering).Internal().
 		Ability("settings:read").Status(fhttp.StatusCreated)
 
 	c := emailDomainController(a)
@@ -89,7 +89,7 @@ func emailSignatureRoutes(workspace *routing.Router, a *app.App) {
 		Lists(v1.EmailSignatureListing())
 	routing.Post(workspace, "/email-signatures", "email-signatures.store", c.Store).
 		Ability("settings:write").Status(fhttp.StatusCreated)
-	routing.Post(workspace, "/email-signatures/renderings", "email-signatures.renderings.store", c.StoreRendering).
+	routing.Post(workspace, "/email-signatures/renderings", "email-signatures.renderings.store", c.StoreRendering).Internal().
 		Ability("settings:read").Status(fhttp.StatusCreated)
 	routing.Patch(workspace, "/email-signatures/{signature}", "email-signatures.update", c.Update).
 		Ability("settings:write")

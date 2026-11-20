@@ -156,7 +156,8 @@ func (s *Series) answer(ctx context.Context, r *run, n Node) string {
 }
 
 /*
-postWebhook posts the traveler and the step, and returns the status.
+postWebhook posts the traveler and the step and returns the status. A
+redirect is never followed: its status is returned as it is.
 */
 func (s *Series) postWebhook(ctx context.Context, r *run, n Node) string {
 	if s.HTTP == nil {
@@ -172,7 +173,7 @@ func (s *Series) postWebhook(ctx context.Context, r *run, n Node) string {
 		body["company_id"] = models.PublicID(models.PrefixCompany, *r.company)
 	}
 
-	resp, err := s.HTTP.New().
+	resp, err := s.HTTP.New().WithoutRedirects().
 		Timeout(time.Duration(max(s.Config.WebhookTimeoutSeconds, 1))*time.Second).
 		WithHeader("Idempotency-Key", r.e.ID.String()+":"+r.waitOf().StepID).
 		Post(ctx, settingsOf[WebhookSettings](n).URL, body)

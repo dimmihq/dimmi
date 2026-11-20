@@ -82,13 +82,3 @@ SELECT from_ticket_id, count(*) AS conversations
 FROM ticket_links
 WHERE workspace_id = @workspace_id AND from_ticket_id = ANY (@ticket_ids::uuid[]) AND conversation_id IS NOT NULL
 GROUP BY from_ticket_id;
-
--- name: ListTrackerRecipients :many
--- ListTrackerRecipients returns every conversation linked to a tracker
--- that a mass update reaches, with when the customer and the team last
--- wrote. The system sends it, no member is asking.
-SELECT c.id, c.contact_id, c.status, c.last_customer_message_at, c.last_reply_at, l.created_at AS linked_at
-FROM ticket_links l
-JOIN conversations c ON c.id = l.conversation_id
-WHERE l.workspace_id = @workspace_id AND l.from_ticket_id = @ticket_id AND c.deleted_at IS NULL
-ORDER BY l.created_at;

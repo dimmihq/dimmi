@@ -59,6 +59,7 @@ type Route struct {
 	chain      []http.Middleware
 
 	deprecation *Deprecation
+	internal    bool
 }
 
 type routeKey struct{}
@@ -292,6 +293,7 @@ func (r *Route) operation() huma.Operation {
 	}
 
 	r.deprecate(&op)
+	r.markInternal(&op)
 
 	return op
 }

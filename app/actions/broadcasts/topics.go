@@ -70,6 +70,64 @@ func (b *Broadcasts) Topics(ctx context.Context, m authz.Membership) ([]models.B
 }
 
 /*
+TopicTally is how a topic stands: the people it reaches now, the people
+who left it and the broadcasts sent under it.
+*/
+type TopicTally struct {
+	Subscribed   int64
+	Unsubscribed int64
+	Broadcasts   int64
+}
+
+/*
+TopicTallies counts every live topic. An opt-in topic reaches those who
+said yes; an opt-out topic reaches everyone broadcasts may reach, less
+those who said no.
+*/
+func (b *Broadcasts) TopicTallies(ctx context.Context, m authz.Membership) (map[ids.UUID]TopicTally, error) {
+	if !m.Can("broadcasts:read") {
+		return nil, exceptions.ErrForbidden
+	}
+
+	out := map[ids.UUID]TopicTally{}
+
+	err := b.inWorkspace(ctx, m.Workspace.ID, func(ctx context.Context, q *models.Queries) error {
+		topics, err := q.ListBroadcastTopics(ctx, m.Workspace.ID)
+		if err != nil {
+			return wrap("list topics", err)
+		}
+
+		rows, err := q.BroadcastTopicTallies(ctx, m.Workspace.ID)
+		if err != nil {
+			return wrap("count topics", err)
+		}
+
+		people, err := q.CountBroadcastPeople(ctx, m.Workspace.ID)
+		if err != nil {
+			return wrap("count people", err)
+		}
+
+		consent := map[ids.UUID]string{}
+		for _, t := range topics {
+			consent[t.ID] = t.Consent
+		}
+
+		for _, r := range rows {
+			tally := TopicTally{Subscribed: r.SaidYes, Unsubscribed: r.SaidNo, Broadcasts: r.Broadcasts}
+			if consent[r.ID] == "opt_out" {
+				tally.Subscribed = max(people-r.SaidNo, 0)
+			}
+
+			out[r.ID] = tally
+		}
+
+		return nil
+	})
+
+	return out, err
+}
+
+/*
 CreateTopic adds a topic.
 */
 func (b *Broadcasts) CreateTopic(ctx context.Context, in TopicInput) (models.BroadcastTopic, error) {

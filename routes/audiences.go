@@ -41,13 +41,13 @@ func audienceRoutes(workspace *routing.Router, a *app.App) {
 	routing.Patch(workspace, one, "audiences.update", ac.Update).Ability("audiences:write")
 	routing.Delete(workspace, one, "audiences.destroy", ac.Destroy).
 		Ability("audiences:write").Status(fhttp.StatusNoContent)
-	routing.Post(workspace, one+"/previews", "audiences.previews.store", pc.PreviewSaved).
+	routing.Post(workspace, one+"/previews", "audiences.previews.store", pc.PreviewSaved).Internal().
 		Ability("audiences:read").Status(fhttp.StatusOK)
-	routing.Post(workspace, "/audience-previews", "audience-previews.store", pc.Preview).
+	routing.Post(workspace, "/audience-previews", "audience-previews.store", pc.Preview).Internal().
 		Ability("audiences:read").Status(fhttp.StatusOK)
-	routing.Post(workspace, "/audience-evaluations", "audience-evaluations.store", pc.Evaluate).
+	routing.Post(workspace, "/audience-evaluations", "audience-evaluations.store", pc.Evaluate).Internal().
 		Ability("audiences:read").Status(fhttp.StatusOK)
-	routing.Get(workspace, "/audience-fields", "audience-fields.index", pc.Fields).Ability("audiences:read")
+	routing.Get(workspace, "/audience-fields", "audience-fields.index", pc.Fields).Internal().Ability("audiences:read")
 
 	lists := &v1.ContactListController{Lists: a.Actions.ContactLists, Audiences: a.Actions.Audiences, IDs: a.IDs}
 	routing.Post(workspace, one+"/freezes", "audiences.freezes.store", lists.Freeze).

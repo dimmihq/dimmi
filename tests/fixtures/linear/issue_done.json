@@ -1,0 +1,6 @@
+{"data": {"issue": {
+  "id": "iss-500", "identifier": "ENG-500", "title": "Labels print blank",
+  "url": "https://linear.app/acme/issue/ENG-500/labels-print-blank",
+  "state": {"id": "st-done", "name": "Done", "type": "completed"},
+  "team": {"id": "team-eng", "name": "Engineering"}
+}}}

@@ -52,18 +52,43 @@ Catalog is the value of each key on an install.
 type Catalog map[string]int64
 
 /*
+SelfHostLimits are the caps a self-hosted operator configures: widgets
+and webhook endpoints per workspace, zero meaning no limit for either.
+*/
+type SelfHostLimits struct {
+	Widgets          int64
+	WebhookEndpoints int64
+}
+
+/*
 SelfHost returns the catalog of a self-hosted install, where the operator
-sets the number of widgets and zero means no limit.
+sets the number of widgets and zero means no limit. Webhook endpoints
+keep their default cap.
 */
 func SelfHost(maxWidgets int64) Catalog {
-	if maxWidgets == 0 {
-		maxWidgets = Unlimited
+	return SelfHostWith(SelfHostLimits{Widgets: maxWidgets, WebhookEndpoints: defaultWebhookEndpoints})
+}
+
+/*
+SelfHostWith returns the catalog of a self-hosted install with the caps
+the operator configured, zero meaning no limit.
+*/
+func SelfHostWith(limits SelfHostLimits) Catalog {
+	return Catalog{
+		KeyWidgetMaxPerWorkspace: orUnlimited(limits.Widgets), KeyBillingTestModeCap: Unlimited,
+		KeyWebhookEndpoints: orUnlimited(limits.WebhookEndpoints),
+	}
+}
+
+/*
+orUnlimited returns the configured cap, or no limit for zero.
+*/
+func orUnlimited(limit int64) int64 {
+	if limit == 0 {
+		return Unlimited
 	}
 
-	return Catalog{
-		KeyWidgetMaxPerWorkspace: maxWidgets, KeyBillingTestModeCap: Unlimited,
-		KeyWebhookEndpoints: defaultWebhookEndpoints,
-	}
+	return limit
 }
 
 /*

@@ -2,6 +2,7 @@ package ai_test
 
 import (
 	"encoding/json"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -57,6 +58,8 @@ func TestAiHandoffs(t *testing.T) {
 		assert.Equal(t, "I'm bringing in a teammate to sort out the refund.", str(s.agentReplies()[0].Body))
 		require.Len(t, s.notes(), 1)
 		assert.Equal(t, handoffNote, str(s.notes()[0].Body))
+		assert.Contains(t, strings.Join(s.timeline(), "\n"), `"name": "ai.handoff_requested"`)
+		assert.Contains(t, strings.Join(s.timeline(), "\n"), `"reason": "refund"`)
 
 		mode := h.llm.answer.Sent()[1].Messages[2].Parts[0].Text
 		assert.JSONEq(t, `{"ok":true,"mode":"available"}`, mode)

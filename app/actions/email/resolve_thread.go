@@ -57,12 +57,14 @@ const (
 threadHit is the conversation a received email continues, and how it
 was found; Conversation is nil for a new thread. Reused marks a new
 thread whose Message-ID another conversation's mail already carries,
-as careless scripts send every mail under one id.
+as careless scripts send every mail under one id. Stale marks a
+conversation closed longer ago than replies reopen it.
 */
 type threadHit struct {
 	conversation *models.Conversation
 	method       string
 	reused       bool
+	stale        bool
 }
 
 /*

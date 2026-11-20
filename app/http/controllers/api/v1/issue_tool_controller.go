@@ -51,7 +51,7 @@ repositories.
 */
 func (c *IssueToolController) Teams(ctx context.Context, in *requests.IssueTeamsRequest,
 ) (*IssueOptionsOutput, error) {
-	return c.readOptions(ctx, in.Installation, trackers.ListTeams, "")
+	return c.readOptions(ctx, in.Installation, issues.OptionsQuery{List: trackers.ListTeams, Fresh: in.Refresh})
 }
 
 /*
@@ -59,20 +59,20 @@ Options lists any of the tool's lists within a parent.
 */
 func (c *IssueToolController) Options(ctx context.Context, in *requests.IssueOptionsRequest,
 ) (*IssueOptionsOutput, error) {
-	return c.readOptions(ctx, in.Installation, in.List, in.Parent)
+	return c.readOptions(ctx, in.Installation, issues.OptionsQuery{List: in.List, Parent: in.Parent, Fresh: in.Refresh})
 }
 
 /*
-readOptions reads one list.
+readOptions reads one list, kept or fresh as the query asks.
 */
-func (c *IssueToolController) readOptions(ctx context.Context, installation, list, parent string,
+func (c *IssueToolController) readOptions(ctx context.Context, installation string, query issues.OptionsQuery,
 ) (*IssueOptionsOutput, error) {
 	id, err := installationID(c.IDs, installation)
 	if err != nil {
 		return nil, err
 	}
 
-	query := issues.OptionsQuery{Installation: id, List: list, Parent: parent}
+	query.Installation = id
 
 	found, err := c.Issues.Options(ctx, membership(ctx), query)
 	if err != nil {

@@ -12,8 +12,9 @@
 | Tokens close to expiry are renewed when used, a little ahead of time,
 | and every installation is checked against its provider once a day.
 |
-| App credentials are secrets: set them from files, such as
-| DIMMI_SERVICES__SLACK__CLIENT_SECRET_FILE, rather than in dimmi.yaml.
+| App credentials are secrets: set them in the environment, such as
+| DIMMI_SERVICES__SLACK__CLIENT_SECRET, or name a file that holds the
+| value with DIMMI_SERVICES__SLACK__CLIENT_SECRET_FILE.
 |
 */
 
@@ -47,7 +48,7 @@ and secret. Empty means the service cannot be connected.
 */
 type OAuthServiceConfig struct {
 	ClientID     string `koanf:"client_id"`
-	ClientSecret string `koanf:"client_secret"`
+	ClientSecret string `koanf:"client_secret" secret:"true"`
 }
 
 /*
@@ -57,8 +58,8 @@ Empty means the shared app is unavailable.
 */
 type SlackServiceConfig struct {
 	ClientID      string `koanf:"client_id"`
-	ClientSecret  string `koanf:"client_secret"`
-	SigningSecret string `koanf:"signing_secret"`
+	ClientSecret  string `koanf:"client_secret"  secret:"true"`
+	SigningSecret string `koanf:"signing_secret" secret:"true"`
 	AppID         string `koanf:"app_id"`
 }
 

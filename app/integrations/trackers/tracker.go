@@ -206,6 +206,32 @@ type Tracker interface {
 }
 
 /*
+Forgetter is a tracker that can take back what dimmi wrote on an issue
+for one ticket, such as Linear's impact attachment, when the ticket is
+unlinked.
+*/
+type Forgetter interface {
+	/*
+		Forget removes what dimmi wrote on the issue for the ticket at link,
+		the ticket's address in dimmi.
+	*/
+	Forget(ctx context.Context, c Call, is Issue, link string) error
+}
+
+/*
+Shared is a tracker that keeps one impact for an issue whatever the
+tickets linked to it, such as an incident's labels or custom field,
+so unlinking one ticket leaves it for the others.
+*/
+type Shared interface {
+	/*
+		SharedImpact reports that the impact belongs to the issue, not to a
+		ticket.
+	*/
+	SharedImpact() bool
+}
+
+/*
 Set holds the trackers by provider name.
 */
 type Set map[string]Tracker

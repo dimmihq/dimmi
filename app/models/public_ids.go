@@ -78,6 +78,7 @@ const (
 	PrefixTag                Prefix = "tag"
 	PrefixSavedReply         Prefix = "rpl"
 	PrefixContactIdentity    Prefix = "cid"
+	PrefixContactNote        Prefix = "cnt"
 	PrefixRedactionRule      Prefix = "rxr"
 	PrefixContactErasure     Prefix = "ces"
 	PrefixContactExport      Prefix = "exp"
@@ -213,6 +214,7 @@ func inboxPublicIDs() []PublicIDEntry {
 		{PrefixTag, "tags"},
 		{PrefixSavedReply, "saved_replies"},
 		{PrefixContactIdentity, "contact_identities"},
+		{PrefixContactNote, "customer_notes"},
 		{PrefixRedactionRule, "redaction_rules"},
 		{PrefixContactErasure, "contact_erasures"},
 		{PrefixConversationView, "conversation_views"},
@@ -467,8 +469,6 @@ const (
 	PrefixTicketLink        Prefix = "tktl"
 	PrefixTicketEvent       Prefix = "tkte"
 	PrefixTicketIssue       Prefix = "tkti"
-	PrefixTicketUpdate      Prefix = "tktu"
-	PrefixTicketUpdateDraft Prefix = "tkdf"
 	PrefixSLAClock          Prefix = "slac"
 	PrefixTicketImport      Prefix = "tkim"
 	PrefixTrackerSuggestion Prefix = "trks"
@@ -486,9 +486,6 @@ func ticketPublicIDs() []PublicIDEntry {
 		{PrefixTicketLink, "ticket_links"},
 		{PrefixTicketEvent, "ticket_events"},
 		{PrefixTicketIssue, "ticket_issues"},
-		{PrefixTicketUpdate, "ticket_updates"},
-		{"tktd", "ticket_update_deliveries"},
-		{PrefixTicketUpdateDraft, "ticket_update_drafts"},
 		{PrefixSLAClock, "sla_clocks"},
 		{PrefixTicketImport, "ticket_imports"},
 		{PrefixTrackerSuggestion, "tracker_suggestions"},

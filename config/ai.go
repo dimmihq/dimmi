@@ -56,7 +56,7 @@ type AIConfig struct {
 /*
 AIManagedConfig holds the built-in provider's upstream credentials:
 one key per model family, all optional so an install can run any
-subset. On Dimmi Cloud these are Dimmi's own keys; on self-host the
+subset. On dimmi cloud these are dimmi's own keys; on self-host the
 operator's, and absent means the built-in provider is hidden.
 */
 type AIManagedConfig struct {
@@ -72,7 +72,7 @@ AIManagedUpstream is one upstream the built-in provider routes to: its
 key and, when it is not the host's public endpoint, its address.
 */
 type AIManagedUpstream struct {
-	APIKey  string `koanf:"api_key"`
+	APIKey  string `koanf:"api_key"  secret:"true"`
 	BaseURL string `koanf:"base_url"`
 }
 
@@ -90,7 +90,7 @@ type AIManagedOpenWeight struct {
 	Baseten AIManagedUpstream `koanf:"baseten"`
 	Engy    AIManagedUpstream `koanf:"engy"`
 
-	APIKey   string `koanf:"api_key"`
+	APIKey   string `koanf:"api_key"  secret:"true"`
 	BaseURL  string `koanf:"base_url"`
 	Provider string `koanf:"provider"`
 }

@@ -145,6 +145,10 @@ func (d desk) serveLinear(t *testing.T) {
 			name = "states.json"
 		case strings.Contains(q, "issueCreate"):
 			name = "issue_create.json"
+		case strings.Contains(q, "attachmentsForURL"):
+			name = "attachments_for_url.json"
+		case strings.Contains(q, "ENG-500"):
+			name = "issue_done.json"
 		case strings.Contains(q, "issue(id") && hidden:
 			name = "issue_hidden.json"
 		case strings.Contains(q, "issue(id"):
@@ -164,6 +168,21 @@ func (d desk) linearSent() []string {
 	defer d.mu.Unlock()
 
 	return append([]string(nil), *d.linear...)
+}
+
+/*
+linearCount counts the GraphQL requests sent so far that hold the text.
+*/
+func (d desk) linearCount(text string) int {
+	n := 0
+
+	for _, q := range d.linearSent() {
+		if strings.Contains(q, text) {
+			n++
+		}
+	}
+
+	return n
 }
 
 /*

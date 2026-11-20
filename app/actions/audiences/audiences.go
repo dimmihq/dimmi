@@ -75,8 +75,8 @@ type SaveInput struct {
 }
 
 /*
-User is something that names a saved audience. Live is set for a
-workflow whose live version runs on it.
+User is something that names a saved audience. Live is set for what
+relies on it now, such as a workflow whose live version runs on it.
 */
 type User = models.AudienceUsersRow
 
@@ -281,7 +281,9 @@ func usersOf(ctx context.Context, q *models.Queries, row models.Audience) ([]Use
 
 /*
 blockers are the users that keep a saved audience from being deleted:
-other saved audiences, and live workflows.
+other saved audiences, and whatever relies on it now: live workflows,
+articles, collections, messengers, broadcasts still to send, and live or
+paused series.
 */
 func blockers(users []User) []string {
 	var out []string

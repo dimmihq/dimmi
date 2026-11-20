@@ -171,6 +171,9 @@ func (a *RequestAiHandoff) handOff(ctx context.Context, tx *database.Tx, conv mo
 	}); err != nil {
 		return fmt.Errorf("handoff conversation: %w", err)
 	}
+	if err := writer.Record(ctx, conv, "ai.handoff_requested", map[string]any{"reason": "customer_requested"}); err != nil {
+		return err
+	}
 
 	return a.Events.Dispatch(ctx, tx, appevents.AiHandoffRequested{
 		Base: appevents.Base{

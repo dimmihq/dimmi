@@ -69,8 +69,10 @@ func bounceFindings(status, diagnostic string) []TestFinding {
 
 /*
 timeoutHints returns what usually holds a forward up in the mail service
-of the guide, a Gmail confirmation the address still waits on first,
-spam at the host last.
+of the guide, a forwarding confirmation the address still waits on
+first, spam at the host last. A confirmation is kept only until mail
+reaches the address, so one still kept means nothing has come through
+since the provider asked for it.
 */
 func timeoutHints(guide string, address models.EmailAddress) []TestFinding {
 	findings := []TestFinding{}

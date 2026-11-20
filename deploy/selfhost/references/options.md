@@ -132,10 +132,19 @@ DIMMI_SERVICES__NOTION__CLIENT_ID / __CLIENT_SECRET
 DIMMI_SERVICES__INTERCOM__CLIENT_ID / __CLIENT_SECRET
 DIMMI_SERVICES__ZENDESK__CLIENT_ID / __CLIENT_SECRET
 DIMMI_SERVICES__GITHUB__CLIENT_ID / __CLIENT_SECRET
+DIMMI_SERVICES__LINEAR__CLIENT_ID / __CLIENT_SECRET / __WEBHOOK_SECRET
+DIMMI_SERVICES__JIRA__CLIENT_ID / __CLIENT_SECRET
+DIMMI_SERVICES__TRACKERS__GITHUB_WEBHOOK_SECRET
 ```
 
 Slack also needs its signing secret, and events and interactivity pointed at
 `https://APP/webhooks/slack/events` and `https://APP/webhooks/slack/interactions`.
+Linear's `WEBHOOK_SECRET` is the signing secret of the Linear app's webhook;
+Jira signs with the client secret. The GitHub app also serves linked issues:
+dimmi signs the webhook of each linked repository with
+`TRACKERS__GITHUB_WEBHOOK_SECRET`, a random value you make up
+(`openssl rand -hex 32`). incident.io, Rootly and PagerDuty need nothing
+here; each workspace connects with its own API key.
 
 ## Help centers
 
@@ -161,7 +170,6 @@ Install with `--clamav`, or later:
 ```
 dimmictl set COMPOSE_PROFILES=clamav DIMMI_MALWARE__DEFAULT=clamav \
   DIMMI_MALWARE__SCANNERS__CLAMAV__DRIVER=clamav DIMMI_MALWARE__SCANNERS__CLAMAV__ADDRESS=clamav:3310
-docker compose -f /opt/dimmi/compose.yaml up -d clamav
 ```
 
 ClamAV needs about 1.5 GB of RAM and takes a few minutes to load its
@@ -180,9 +188,12 @@ docker compose -f /opt/dimmi/compose.yaml exec -T postgres \
   pg_dump -U postgres -Fc dimmi > dimmi-$(date +%F).dump
 ```
 
-- Files: the `dimmi_seaweedfs` volume (`/var/lib/docker/volumes/dimmi_seaweedfs`),
-  or copy the bucket with any S3 tool through
-  `docker compose ... exec seaweedfs weed shell`.
+- Files, daily: the `dimmi_seaweedfs` volume.
+
+```bash
+tar -czf dimmi-files-$(date +%F).tar.gz \
+  -C /var/lib/docker/volumes/dimmi_seaweedfs/_data .
+```
 
 Restore the database with `pg_restore -U postgres -d dimmi --clean`, run
 inside the postgres container, then `dimmictl start`.
@@ -218,7 +229,6 @@ EOF
 ## Other settings
 
 - `DIMMI_AUTH__SIGNUP__MODE`: `invite_only` (default) or `open`.
-- `DIMMI_APP__LOCALE`, `DIMMI_APP__LOCALES`: languages.
 - `DIMMI_LOG__LEVEL`: `debug`, `info`, `warn`, `error`.
 - `docker compose -f /opt/dimmi/compose.yaml exec web /dimmi config:show`
   prints the settings in effect, secrets masked.

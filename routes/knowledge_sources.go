@@ -35,16 +35,16 @@ func knowledgeSourceRoutes(workspace *routing.Router, a *app.App) {
 	routing.Get(workspace, "/knowledge/usage", "knowledge.usage.show", c.Usage).Ability("settings:read")
 	routing.Post(workspace, "/knowledge/sources", "knowledge.sources.store", c.Store).
 		Ability("settings:write").Status(fhttp.StatusCreated)
-	routing.Post(workspace, "/knowledge/sources/previews", "knowledge.sources.previews.store", c.Preview).
+	routing.Post(workspace, "/knowledge/sources/previews", "knowledge.sources.previews.store", c.Preview).Internal().
 		Ability("settings:write").Status(fhttp.StatusOK)
-	routing.Post(workspace, "/knowledge/sources/trees", "knowledge.sources.trees.store", c.Tree).
+	routing.Post(workspace, "/knowledge/sources/trees", "knowledge.sources.trees.store", c.Tree).Internal().
 		Ability("settings:write").Status(fhttp.StatusOK)
-	routing.Post(workspace, "/knowledge/sources/options", "knowledge.sources.options.store", c.Options).
+	routing.Post(workspace, "/knowledge/sources/options", "knowledge.sources.options.store", c.Options).Internal().
 		Ability("settings:write").Status(fhttp.StatusOK)
 	routing.Post(workspace, "/knowledge/uploads", "knowledge.uploads.store", c.Upload).
 		Ability("settings:write").Status(fhttp.StatusCreated)
 	routing.Get(workspace, one, "knowledge.sources.show", c.Show).Ability("settings:read")
-	routing.Get(workspace, one+"/tree", "knowledge.sources.tree.show", c.SourceTree).Ability("settings:read")
+	routing.Get(workspace, one+"/tree", "knowledge.sources.tree.show", c.SourceTree).Internal().Ability("settings:read")
 	routing.Patch(workspace, one, "knowledge.sources.update", c.Update).Ability("settings:write")
 	routing.Delete(workspace, one, "knowledge.sources.destroy", c.Destroy).
 		Ability("settings:write").Status(fhttp.StatusNoContent)

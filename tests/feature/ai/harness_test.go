@@ -338,6 +338,19 @@ func (s state) agentReplies() []models.Message {
 }
 
 /*
+timeline are the conversation's timeline events, as stored.
+*/
+func (s state) timeline() []string {
+	var out []string
+	for _, m := range s.messages {
+		if m.Type == "event" {
+			out = append(out, string(m.Event))
+		}
+	}
+	return out
+}
+
+/*
 notes are the conversation's internal notes.
 */
 func (s state) notes() []models.Message {

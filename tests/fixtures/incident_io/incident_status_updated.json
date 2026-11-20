@@ -1,0 +1,10 @@
+{"event_type": "public_incident.incident_status_updated_v2",
+ "public_incident.incident_status_updated_v2": {
+   "incident": {
+     "id": "inc-77", "reference": "INC-77", "name": "Sign-in failing for EU customers",
+     "permalink": "https://app.incident.io/acme/incidents/77",
+     "incident_status": {"id": "status-monitoring", "name": "Monitoring", "category": "live"},
+     "severity": {"id": "sev-major", "name": "Major", "rank": 1}},
+   "message": "We rolled back the bad deploy and sign-in is recovering.",
+   "new_status": {"id": "status-monitoring", "name": "Monitoring", "category": "live", "rank": 3},
+   "previous_status": {"id": "status-fixing", "name": "Fixing", "category": "live", "rank": 2}}}

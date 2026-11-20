@@ -1,26 +1,13 @@
 /*
 |--------------------------------------------------------------------------
-| Ticket Draft Requests
+| Ticket Settings Requests
 |--------------------------------------------------------------------------
 |
-| The inputs of the drafts closing the loop and of the workspace's
-| ticket switches.
+| The inputs of the workspace's ticket switches.
 |
 */
 
 package requests
-
-/*
-UpdateTicketUpdateDraftRequest sends or discards a drafted message.
-*/
-type UpdateTicketUpdateDraftRequest struct {
-	Draft string `path:"draft"`
-	Body  struct {
-		Status  string  `json:"status"            enum:"sent,discarded" validate:"required"`
-		Body    *string `json:"body,omitempty"    maxLength:"20000"`
-		Resolve *bool   `json:"resolve,omitempty"`
-	}
-}
 
 /*
 TicketSettingsRequest reads the workspace's ticket switches.

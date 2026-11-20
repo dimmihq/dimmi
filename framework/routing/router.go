@@ -82,6 +82,7 @@ type Router struct {
 	api        *apiSpec
 	middleware []string
 	uses       []http.Middleware
+	internal   bool
 }
 
 /*

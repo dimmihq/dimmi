@@ -26,7 +26,7 @@ base URL, the model or alias, the timeout of one call and the price of
 a million input tokens in US dollars (output is free).
 */
 type AITypeSafeConfig struct {
-	APIKey            string        `koanf:"api_key"`
+	APIKey            string        `koanf:"api_key"                      secret:"true"`
 	BaseURL           string        `default:"https://api.typesafe.ai/v1" koanf:"base_url"`
 	Model             string        `default:"jev-latest"                 koanf:"model"`
 	Timeout           time.Duration `default:"3s"                         koanf:"timeout"`

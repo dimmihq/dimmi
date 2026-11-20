@@ -245,6 +245,9 @@ type Page struct {
 	Author   string
 	Details  string
 	Comments []models.ListFeedbackCommentsRow
+	// TeamHTML holds what the team wrote as HTML, by comment: the team
+	// writes with formatting, readers in plain words.
+	TeamHTML map[ids.UUID]string
 	MergedTo *models.FeedbackPost
 	Update   string
 }
@@ -311,6 +314,7 @@ func (p *Posts) page(ctx context.Context, q *models.Queries, row models.Feedback
 	}); err != nil {
 		return out, fmt.Errorf("list board comments: %w", err)
 	}
+	out.TeamHTML = p.teamHTML(out.Comments)
 	if row.MergedIntoID != nil {
 		if target, err := findPost(ctx, q, row.WorkspaceID, *row.MergedIntoID); err == nil {
 			out.MergedTo = &target
@@ -337,4 +341,24 @@ func (p *Posts) inside(ctx context.Context, h models.HelpCenter,
 	return p.DB.Transaction(scoped, func(ctx context.Context, tx *database.Tx) error {
 		return fn(ctx, models.New(tx))
 	})
+}
+
+/*
+teamHTML renders what the team wrote in each comment as HTML, by
+comment. Readers' comments stay plain words.
+*/
+func (p *Posts) teamHTML(comments []models.ListFeedbackCommentsRow) map[ids.UUID]string {
+	out := map[ids.UUID]string{}
+
+	for _, c := range comments {
+		if c.AuthorMemberID == nil {
+			continue
+		}
+
+		if html, err := p.Renderer.HTML([]byte(c.Body)); err == nil {
+			out[c.ID] = html.HTML
+		}
+	}
+
+	return out
 }

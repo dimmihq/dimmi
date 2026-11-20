@@ -66,8 +66,10 @@ func ticketReportDocs() map[string]Doc {
 			Use: "Ranks the trackers open in the range, or resolved in it, by the monthly revenue " +
 				"of the companies whose conversations they gather, then by conversations.",
 			Returns: "trackers with conversations, those linked in the range, customers, companies and revenue.",
-			Next:    []string{"dimmi_tickets_get: read the tracker", "dimmi_tickets_updates_create: message them"},
-			Params:  ticketReportRange(),
+			Next: []string{
+				"dimmi_tickets_get: read the tracker", "dimmi_tickets_conversations_list: see who it reaches",
+			},
+			Params: ticketReportRange(),
 		},
 	}
 }

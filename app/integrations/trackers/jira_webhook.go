@@ -3,11 +3,12 @@
 | Jira Deliveries
 |--------------------------------------------------------------------------
 |
-| An OAuth app registers its webhooks through the REST API, with a JQL
-| filter and the events it wants; Jira lets them lapse after thirty
-| days unless refreshed, which the sync does. A delivery names its event
-| and carries the issue, and a comment's body in Atlassian's document
-| format, read here as plain text.
+| An OAuth app registers its webhooks through the REST API, one per
+| project, with a JQL filter naming the project and the events it
+| wants; Jira lets them lapse after thirty days unless refreshed, which
+| the sync does. A delivery names its event and carries the issue, and
+| a comment's body in Atlassian's document format, read here as plain
+| text.
 |
 */
 
@@ -15,6 +16,7 @@ package trackers
 
 import (
 	"context"
+	"fmt"
 	"strings"
 
 	fhttp "github.com/dimmihq/dimmi/framework/http"
@@ -64,13 +66,16 @@ func (*Jira) Parse(body []byte) ([]Event, error) {
 }
 
 /*
-Subscribe registers the app's webhook for issues and comments on the
-site, returning the id Jira gave it.
+Subscribe registers the app's webhook for issues and comments in the
+project, returning the id Jira gave it. An OAuth app's webhook filter
+may only name projects, issue types and the like, so each project gets
+its own.
 */
-func (j *Jira) Subscribe(ctx context.Context, c Call, address string) (string, error) {
+func (j *Jira) Subscribe(ctx context.Context, c Call, address, project string) (string, error) {
 	var out struct {
 		Results []struct {
-			ID int64 `json:"createdWebhookId"`
+			ID     int64    `json:"createdWebhookId"`
+			Errors []string `json:"errors"`
 		} `json:"webhookRegistrationResult"`
 	}
 
@@ -78,11 +83,20 @@ func (j *Jira) Subscribe(ctx context.Context, c Call, address string) (string, e
 		"url": address,
 		"webhooks": []any{map[string]any{
 			"events":    []string{"jira:issue_updated", "jira:issue_deleted", "comment_created"},
-			"jqlFilter": "project IS NOT EMPTY",
+			"jqlFilter": "project = " + project,
 		}},
 	}})
-	if err != nil || len(out.Results) == 0 {
+	if err != nil {
 		return "", err
+	}
+
+	if len(out.Results) == 0 || out.Results[0].ID == 0 {
+		reason := "no webhook made"
+		if len(out.Results) > 0 && len(out.Results[0].Errors) > 0 {
+			reason = strings.Join(out.Results[0].Errors, "; ")
+		}
+
+		return "", fmt.Errorf("register jira webhook: %w: %s", ErrProvider, reason)
 	}
 
 	return formatInt(out.Results[0].ID), nil

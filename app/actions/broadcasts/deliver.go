@@ -72,6 +72,9 @@ type Delivered struct {
 	OutboundEmailID *ids.UUID
 	ExternalRef     *string
 	ConversationID  *ids.UUID
+	// Pending says the message waits on its channel to report whether it
+	// arrived, so it counts as delivered only once the channel says so.
+	Pending bool
 }
 
 /*
@@ -114,7 +117,7 @@ func (b *Broadcasts) SendRecipient(ctx context.Context, ws, id ids.UUID) error {
 	err = b.inWorkspace(ctx, ws, func(ctx context.Context, q *models.Queries) error {
 		_, err := q.MarkBroadcastRecipientSent(ctx, models.MarkBroadcastRecipientSentParams{
 			WorkspaceID: ws, ID: id, MessageIDHeader: sent.MessageIDHeader, OutboundEmailID: sent.OutboundEmailID,
-			ExternalRef: sent.ExternalRef, ConversationID: sent.ConversationID, Now: b.Clock.Now(),
+			ExternalRef: sent.ExternalRef, ConversationID: sent.ConversationID, Pending: sent.Pending, Now: b.Clock.Now(),
 		})
 
 		return ignoreMissing(err, "mark recipient sent")

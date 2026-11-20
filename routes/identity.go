@@ -39,6 +39,7 @@ func identityRoutes(api *routing.Router, a *app.App) {
 		writers.Middleware(
 			"csrf", "session", "auth:user", "workspace", "access.policy", "api.throttle", "password.confirm",
 		)
+		writers.Internal()
 
 		routing.Patch(writers, "/workspace/access-policy", "workspace.access-policy.update", policy.UpdatePolicy)
 	})
@@ -98,7 +99,7 @@ func identityVerificationRoutes(api *routing.Router, a *app.App) {
 			Ability("settings:read")
 		routing.Get(r, "/identity-verification/stats", "identity-verification.stats.show", c.ShowStats).
 			Ability("settings:read")
-		routing.Post(r, "/identity-verification/validations", "identity-verification.validations.store", c.Check).
+		routing.Post(r, "/identity-verification/validations", "identity-verification.validations.store", c.Check).Internal().
 			Ability("settings:read").Status(fhttp.StatusOK)
 		routing.Delete(r, "/contacts/{contact}/widget-sessions", "contacts.widget-sessions.destroy", c.SignOut).
 			Ability("settings:write").Status(fhttp.StatusOK)
@@ -108,6 +109,7 @@ func identityVerificationRoutes(api *routing.Router, a *app.App) {
 		confirmed.Middleware(
 			"csrf", "session", "auth:user", "workspace", "access.policy", "api.throttle", "password.confirm",
 		)
+		confirmed.Internal()
 
 		routing.Patch(confirmed, "/identity-verification/settings", "identity-verification.settings.update",
 			c.UpdateSettings)
@@ -133,11 +135,12 @@ func ssoRoutes(api *routing.Router, a *app.App) {
 	api.Group("", func(guest *routing.Router) {
 		guest.Middleware("csrf", "session")
 
-		routing.Post(guest, "/sso-lookups", "sso-lookups.store", lookups.Store).Status(fhttp.StatusOK)
+		routing.Post(guest, "/sso-lookups", "sso-lookups.store", lookups.Store).Internal().Status(fhttp.StatusOK)
 	})
 
 	api.Group("", func(owners *routing.Router) {
 		owners.Middleware("csrf", "session", "auth:user", "workspace", "access.policy", "api.throttle")
+		owners.Internal()
 
 		routing.Get(owners, "/sso-connections", "sso-connections.index", connections.Index)
 		routing.Get(owners, "/sso-connections/{connection}", "sso-connections.show", connections.ShowConnection)
@@ -152,6 +155,7 @@ func ssoRoutes(api *routing.Router, a *app.App) {
 		confirmed.Middleware(
 			"csrf", "session", "auth:user", "workspace", "access.policy", "api.throttle", "password.confirm",
 		)
+		confirmed.Internal()
 
 		routing.Post(confirmed, "/sso-connections", "sso-connections.store", connections.Store).
 			Status(fhttp.StatusCreated)

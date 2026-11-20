@@ -8,7 +8,8 @@
 | agent writes it as part of its handoff call; when it did not — a
 | policy handoff, a failed run, an empty note — a plain note built from
 | the conversation stands in, so every handoff carries a note and
-| raises its event.
+| raises its event. The timeline gets a row saying the agent handed
+| over, and why.
 |
 */
 
@@ -26,8 +27,16 @@ import (
 )
 
 /*
-writeNote adds the handoff note and raises the handoff event, inside
-the commit's transaction.
+handoffEvent names the timeline row a handoff leaves in the
+conversation, so a teammate reading the thread sees where the agent
+stopped and why.
+*/
+const handoffEvent = "ai.handoff_requested"
+
+/*
+writeNote marks the handoff in the conversation's timeline, adds the
+handoff note and raises the handoff event, inside the commit's
+transaction.
 */
 func (r *Runner) writeNote(ctx context.Context, tx *database.Tx, st *run, d *decision) error {
 	e := st.env
@@ -35,7 +44,11 @@ func (r *Runner) writeNote(ctx context.Context, tx *database.Tx, st *run, d *dec
 	if st.handoff != nil && strings.TrimSpace(st.handoff.note) != "" {
 		note = strings.TrimSpace(markerPattern().ReplaceAllString(st.handoff.note, ""))
 	}
-	if _, err := r.agentWriter(tx, e).AddNote(ctx, e.Conversation, note); err != nil {
+	w := r.agentWriter(tx, e)
+	if err := w.Record(ctx, e.Conversation, handoffEvent, map[string]any{"reason": d.handoffReason}); err != nil {
+		return err
+	}
+	if _, err := w.AddNote(ctx, e.Conversation, note); err != nil {
 		return err
 	}
 	if r.Events == nil {

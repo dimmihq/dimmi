@@ -237,8 +237,8 @@ func yesNo(value string) (bool, bool) {
 }
 
 /*
-splitTags reads a cell of tags separated by commas or semicolons,
-without blanks or repeats.
+splitTags reads a cell of tags separated by commas, semicolons or
+vertical bars, without blanks or repeats.
 */
 func splitTags(value string) []string {
 	var out []string

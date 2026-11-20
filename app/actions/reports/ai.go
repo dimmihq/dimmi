@@ -1,6 +1,6 @@
 /*
 |--------------------------------------------------------------------------
-| dimmi AI
+| dimmi agent
 |--------------------------------------------------------------------------
 |
 | What the AI agent did for the conversations started in the range: how
@@ -29,7 +29,7 @@ listed is how many questions and gaps a table shows.
 const listed = 15
 
 /*
-AI is the dimmi AI report.
+AI is the dimmi agent report.
 */
 type AI struct{}
 
@@ -38,8 +38,8 @@ Describe says what the report is.
 */
 func (AI) Describe() Description {
 	return Description{
-		Key: "ai", Title: "dimmi AI", Order: 70,
-		Summary: "How often the AI answers and resolves, why it hands off, and what it costs.",
+		Key: "ai", Title: "dimmi agent", Order: 70,
+		Summary: "How often the dimmi agent answers and resolves, why it hands over, and what it costs.",
 	}
 }
 
@@ -74,7 +74,7 @@ func (AI) Metrics(ctx context.Context, tx *database.Tx, q Query) ([]Metric, erro
 		rateMetric("ai_resolution", "AI resolution rate", resolved, involved),
 		countMetric("ai_confirmed", "Confirmed resolutions", confirmed),
 		countMetric("ai_assumed", "Assumed resolutions", resolved-confirmed),
-		rateMetric("ai_handoff", "Hand-off rate", handed, involved),
+		rateMetric("ai_handoff", "Handover rate", handed, involved),
 		{
 			Key: "ai_cost_per_resolution", Label: "Cost per resolution", Unit: UnitMicros, Value: perResolution,
 			Sample: resolved, Drill: "ai_resolution",
@@ -121,11 +121,12 @@ func (AI) Charts(ctx context.Context, tx *database.Tx, q Query) ([]Chart, error)
 				daily(q, Series{Key: "assumed", Label: "Assumed", Drill: "ai_assumed"}, byDay, func(v values) *float64 {
 					return num(v.count(3) - v.count(4))
 				}),
-				daily(q, Series{Key: "handed_off", Label: "Handed off", Drill: "ai_handoff"}, byDay, at(2)),
+				daily(q, Series{Key: "handed_off", Label: "Handed over", Drill: "ai_handoff"}, byDay, at(2)),
 			},
 		},
 		{
-			Key: "handoff_reasons", Title: "Why the AI handed off", Kind: ChartBar, Unit: UnitCount, Axis: AxisCategory,
+			Key: "handoff_reasons", Title: "Why the dimmi agent handed over", Kind: ChartBar, Unit: UnitCount,
+			Axis:  AxisCategory,
 			Drill: "ai_handoff", Series: []Series{reasonSeries},
 		},
 		questions,
@@ -144,7 +145,7 @@ func (r reader) handoffReasons(ctx context.Context) (Series, error) {
 		return Series{}, err
 	}
 
-	out := Series{Key: "handoffs", Label: "Hand-offs"}
+	out := Series{Key: "handoffs", Label: "Handovers"}
 	for _, v := range reasons {
 		out.Points = append(out.Points, Point{X: humanize(v.key), Y: v.at(0)})
 	}

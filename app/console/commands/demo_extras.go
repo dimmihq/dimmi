@@ -173,7 +173,7 @@ func demoTickets(ctx context.Context, a *app.App, in DemoExtrasInput) error {
 	steps := []func(context.Context) error{
 		d.loadTeam, d.setUpTypes, d.seedPolicies,
 		func(ctx context.Context) error { return d.customerTickets(ctx, in.Tickets) },
-		d.trackers, d.trackerMessages,
+		d.trackers,
 	}
 	for _, step := range steps {
 		if err := step(ctx); err != nil {

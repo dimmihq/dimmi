@@ -5,11 +5,10 @@
 |
 | The work tickets do outside a request: telling a customer the state
 | their ticket moved to, two minutes after the move and only once per
-| ticket while it waits; sending a tracker's message to every linked
-| customer; resolving tickets that waited on the customer too long;
-| warning about and breaching service level clocks; re-checking linked
-| issues in case a webhook was missed; and looking for spikes of
-| conversations about one thing.
+| ticket while it waits; resolving tickets that waited on the customer
+| too long; warning about and breaching service level clocks;
+| re-checking linked issues in case a webhook was missed; and looking
+| for spikes of conversations about one thing.
 |
 */
 
@@ -39,26 +38,6 @@ Kind names the job.
 func (NotifyTicketStateArgs) Kind() string { return "notify_ticket_state" }
 
 /*
-SendTicketUpdateArgs names a tracker's mass message to send.
-*/
-type SendTicketUpdateArgs struct {
-	WorkspaceID ids.UUID `json:"workspace_id"`
-	UpdateID    ids.UUID `json:"update_id"`
-}
-
-/*
-Kind names the job.
-*/
-func (SendTicketUpdateArgs) Kind() string { return "send_ticket_update" }
-
-/*
-Options keep one job per message.
-*/
-func (SendTicketUpdateArgs) Options() queue.Options {
-	return queue.Options{Unique: queue.UniqueOpts{ByArgs: true, ByState: pendingStates()}}
-}
-
-/*
 Kind names the job.
 */
 func (SweepTicketsArgs) Kind() string { return "sweep_tickets" }
@@ -83,11 +62,6 @@ type TicketWork interface {
 	NotifyState(ctx context.Context, args NotifyTicketStateArgs) error
 
 	/*
-		SendUpdate sends a tracker's message to its pending recipients.
-	*/
-	SendUpdate(ctx context.Context, args SendTicketUpdateArgs) error
-
-	/*
 		Sweep resolves tickets that waited on their customer too long.
 	*/
 	Sweep(ctx context.Context) error
@@ -105,18 +79,4 @@ Handle sends the notice.
 */
 func (w *NotifyTicketState) Handle(ctx context.Context, job *queue.Job[NotifyTicketStateArgs]) error {
 	return w.Work.NotifyState(ctx, job.Args)
-}
-
-/*
-SendTicketUpdate sends a tracker's message to its linked customers.
-*/
-type SendTicketUpdate struct {
-	Work TicketWork
-}
-
-/*
-Handle sends the message.
-*/
-func (w *SendTicketUpdate) Handle(ctx context.Context, job *queue.Job[SendTicketUpdateArgs]) error {
-	return w.Work.SendUpdate(ctx, job.Args)
 }

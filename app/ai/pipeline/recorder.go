@@ -7,7 +7,9 @@
 | short transaction, so a trace exists even when the run dies midway
 | and no transaction waits on a model. Each step's usage is priced as
 | it lands; when a provider reports no usage the tokens are estimated
-| from the text and the step says so. Payloads are stored only when the
+| from the text and the step says so. A model the price table does not
+| list costs nothing, so it never counts toward a spend cap; the first
+| such step of each model is logged. Payloads are stored only when the
 | install keeps them, and only as redacted as the agent's setting.
 |
 */
@@ -18,10 +20,12 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"sync"
 	"time"
 
 	"github.com/dimmihq/dimmi/framework/clock"
 	"github.com/dimmihq/dimmi/framework/database"
+	"github.com/dimmihq/dimmi/framework/log"
 
 	"github.com/dimmihq/dimmi/app/contracts"
 	"github.com/dimmihq/dimmi/app/enums"
@@ -103,6 +107,9 @@ func (r *Runner) step(ctx context.Context, st *run, in stepRecord) {
 	if in.cost != nil {
 		cost = *in.cost
 		rec.costMicros += cost
+	} else if rec.unpriced(provider, in.model, usage) && firstUnpriced(provider, in.model) {
+		log.From(ctx).WarnContext(ctx, "model has no price, its usage counts as free toward the spend cap",
+			log.String("provider", provider), log.String("model", in.model))
 	}
 	if in.kind == enums.AIRunStepKindGenerate && in.firstToken > 0 && rec.firstToken == 0 {
 		rec.firstToken = in.firstToken
@@ -159,6 +166,35 @@ func (rec *Recorder) price(provider, model string, u contracts.LLMUsage) int64 {
 	}
 	rec.costMicros += *c
 	return *c
+}
+
+/*
+unpriced reports whether a usage with tokens went uncharged because
+the price table does not list its model.
+*/
+func (rec *Recorder) unpriced(provider, model string, u contracts.LLMUsage) bool {
+	if rec.prices == nil || model == "" {
+		return false
+	}
+	if u.InputTokens+u.CachedInputTokens+u.CacheWriteTokens+u.OutputTokens <= 0 {
+		return false
+	}
+	return rec.prices.Find(provider, model) == nil
+}
+
+/*
+unpricedSeen holds the provider and model pairs already logged as
+having no price, so each is logged once per process.
+*/
+var unpricedSeen sync.Map
+
+/*
+firstUnpriced reports whether this is the first time the process meets
+the unpriced model.
+*/
+func firstUnpriced(provider, model string) bool {
+	_, seen := unpricedSeen.LoadOrStore(provider+"/"+model, struct{}{})
+	return !seen
 }
 
 /*

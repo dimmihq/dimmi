@@ -11,8 +11,8 @@
 | kept on the link.
 |
 | Tools also need to deliver back. A GitHub repository gets a webhook
-| the first time one of its issues is linked, and a Jira site gets the
-| app's webhook once, refreshed before Jira lets it lapse.
+| the first time one of its issues is linked, and so does a Jira
+| project, its webhooks refreshed before Jira lets them lapse.
 |
 */
 
@@ -23,6 +23,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/dimmihq/dimmi/framework/hashing"
@@ -68,10 +69,11 @@ func (s *Issues) ticketImpact(ctx context.Context, m authz.Membership, ref ticke
 }
 
 /*
-impactOf counts what the ticket reaches.
+impactOf counts what the ticket reaches: its own conversation, customer
+and company, and those of the conversations linked to it as a tracker.
 */
 func (s *Issues) impactOf(ctx context.Context, q *models.Queries, t models.Ticket) (trackers.Impact, error) {
-	counts, err := q.CountTrackerImpact(ctx, models.CountTrackerImpactParams{
+	counts, err := q.CountTicketImpact(ctx, models.CountTicketImpactParams{
 		WorkspaceID: t.WorkspaceID, TicketID: t.ID,
 	})
 	if err != nil {
@@ -193,7 +195,7 @@ func (s *Issues) watch(ctx context.Context, tl tool, is trackers.Issue) {
 			s.remember(ctx, tl.row, map[string]any{"github_hook_" + is.TeamID: true})
 		}
 	case *trackers.Jira:
-		s.watchJira(ctx, tl, tracker)
+		s.watchJira(ctx, tl, tracker, is)
 	}
 }
 
@@ -207,28 +209,52 @@ func (t tool) hasHook(repo string) bool {
 }
 
 /*
-watchJira registers the app's webhook on the site once and refreshes
-it before Jira lets it lapse.
+jiraHookPrefix starts the metadata keys holding the id of each Jira
+project's webhook.
 */
-func (s *Issues) watchJira(ctx context.Context, tl tool, jira *trackers.Jira) {
-	id, _ := tl.call.Meta["jira_webhook_id"].(string)
-	at, _ := tl.call.Meta["jira_webhook_at"].(string)
-	stamp, _ := time.Parse(time.RFC3339, at)
-	now := s.Clock.Now()
+const jiraHookPrefix = "jira_webhook_project_"
 
-	switch {
-	case id == "":
-		made, err := jira.Subscribe(ctx, tl.call, s.WebhookURL(tl.row))
-		if err == nil && made != "" {
-			s.remember(ctx, tl.row, map[string]any{
-				"jira_webhook_id": made, "jira_webhook_at": now.Format(time.RFC3339),
-			})
+/*
+watchJira registers the app's webhook for the issue's project once, as
+Jira only takes a filter naming projects, and refreshes every webhook
+of the site before Jira lets them lapse.
+*/
+func (s *Issues) watchJira(ctx context.Context, tl tool, jira *trackers.Jira, is trackers.Issue) {
+	now := s.Clock.Now()
+	stamp := now.Format(time.RFC3339)
+
+	if project := is.TeamID; project != "" {
+		if _, ok := tl.call.Meta[jiraHookPrefix+project]; !ok {
+			made, err := jira.Subscribe(ctx, tl.call, s.WebhookURL(tl.row), project)
+			if err != nil {
+				log.From(ctx).WarnContext(ctx, "register jira webhook", log.String("project", project), log.Err(err))
+
+				return
+			}
+
+			s.remember(ctx, tl.row, map[string]any{jiraHookPrefix + project: made, "jira_webhook_at": stamp})
+
+			return
 		}
-	case now.Sub(stamp) > jiraRefreshEvery:
-		n, _ := strconv.ParseInt(id, 10, 64)
-		if jira.Refresh(ctx, tl.call, []int64{n}) == nil {
-			s.remember(ctx, tl.row, map[string]any{"jira_webhook_at": now.Format(time.RFC3339)})
+	}
+
+	at, _ := tl.call.Meta["jira_webhook_at"].(string)
+	if last, _ := time.Parse(time.RFC3339, at); now.Sub(last) <= jiraRefreshEvery {
+		return
+	}
+
+	var hooks []int64
+
+	for key, value := range tl.call.Meta {
+		id, _ := value.(string)
+		if n, err := strconv.ParseInt(id, 10, 64); err == nil && n > 0 &&
+			(strings.HasPrefix(key, jiraHookPrefix) || key == "jira_webhook_id") {
+			hooks = append(hooks, n)
 		}
+	}
+
+	if len(hooks) > 0 && jira.Refresh(ctx, tl.call, hooks) == nil {
+		s.remember(ctx, tl.row, map[string]any{"jira_webhook_at": stamp})
 	}
 }
 

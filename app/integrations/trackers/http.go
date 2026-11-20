@@ -26,7 +26,8 @@ import (
 )
 
 /*
-client sends JSON requests with the headers a tool needs.
+client sends JSON requests with the headers a tool needs. A
+Content-Type among them replaces application/json on bodies sent.
 */
 type client struct {
 	http   *httpclient.Client
@@ -65,6 +66,12 @@ func (c client) do(ctx context.Context, header map[string]string, r request) err
 	switch r.method {
 	case fhttp.MethodGet:
 		resp, err = req.Get(ctx, r.url)
+	case fhttp.MethodDelete:
+		if _, set := c.header["Content-Type"]; !set {
+			req.WithHeader("Content-Type", "application/json") // Jira refuses a delete without one.
+		}
+
+		resp, err = req.Delete(ctx, r.url)
 	default:
 		resp, err = c.send(ctx, req, r)
 	}
@@ -91,7 +98,12 @@ func (c client) send(ctx context.Context, req *httpclient.Request, r request) (*
 		body = encoded
 	}
 
-	req.WithHeader("Content-Type", "application/json")
+	contentType := "application/json"
+	if v, ok := c.header["Content-Type"]; ok {
+		contentType = v
+	}
+
+	req.WithHeader("Content-Type", contentType)
 
 	switch r.method {
 	case fhttp.MethodPut:

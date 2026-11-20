@@ -366,7 +366,8 @@ func (q *Queries) ListWorkspaceEmailIdentities(ctx context.Context, workspaceID 
 
 const recordEmailAddressInbound = `-- name: RecordEmailAddressInbound :exec
 UPDATE email_addresses
-SET last_inbound_at = $1::timestamptz, inbound_verified_at = coalesce(inbound_verified_at, $1::timestamptz), updated_at = $1::timestamptz
+SET last_inbound_at = $1::timestamptz, inbound_verified_at = coalesce(inbound_verified_at, $1::timestamptz),
+    forwarding_confirmation = NULL, updated_at = $1::timestamptz
 WHERE workspace_id = $2 AND id = $3
 `
 
@@ -377,7 +378,8 @@ type RecordEmailAddressInboundParams struct {
 }
 
 // RecordEmailAddressInbound notes that mail reached the address, which
-// proves its forwarding works the first time.
+// proves its forwarding works the first time. Forwarded mail means any
+// confirmation the mail provider sent was done with, so it is cleared.
 func (q *Queries) RecordEmailAddressInbound(ctx context.Context, arg RecordEmailAddressInboundParams) error {
 	_, err := q.db.Exec(ctx, recordEmailAddressInbound, arg.Now, arg.WorkspaceID, arg.ID)
 	return err

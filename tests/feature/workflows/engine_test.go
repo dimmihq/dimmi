@@ -207,18 +207,18 @@ func TestEngine(t *testing.T) {
 			"schema": 1, "trigger": "conversation.status_changed",
 			"trigger_settings": testkit.JSON{"to": []string{"closed"}},
 			"steps": []testkit.JSON{
-				step("s_note001", "note", testkit.JSON{"text": "closed by {{conversation.number}}"}),
+				step("s_note001", "note", testkit.JSON{"text": "closed by {{conversation.number}} at {{workspace.name}}"}),
 			},
 		})
 
 		conv := conversation(t, d, "fy", "Hi")
 		d.Owner.PatchJSON(conv, testkit.JSON{"status": "snoozed", "snooze_preset": "next_week"}).AssertOK()
 		d.TC.Drain()
-		assert.NotContains(t, bodies(t, d, conv), "closed by 1")
+		assert.NotContains(t, bodies(t, d, conv), "closed by 1 at "+d.TC.Workspace.Workspace.Name)
 
 		d.Owner.PatchJSON(conv, testkit.JSON{"status": "closed"}).AssertOK()
 		d.TC.Drain()
-		assert.Contains(t, bodies(t, d, conv), "closed by 1")
+		assert.Contains(t, bodies(t, d, conv), "closed by 1 at "+d.TC.Workspace.Workspace.Name)
 	})
 
 	t.Run("never starts a workflow from its own changes", func(t *testing.T) {

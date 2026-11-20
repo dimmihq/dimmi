@@ -54,9 +54,7 @@ func (s *Issues) applyIssue(ctx context.Context, ws, linkID ids.UUID, is tracker
 			return err
 		}
 
-		_, err = s.follow(ctx, w, t, statusUpdate{link: updated, statusID: is.StatusID})
-
-		return err
+		return s.follow(ctx, w, t, statusUpdate{link: updated, statusID: is.StatusID})
 	})
 }
 
@@ -89,29 +87,28 @@ func (s *Issues) asTool(ctx context.Context, ws, linkID ids.UUID,
 follow moves the ticket to the state the status maps to. A move the
 ticket's rules refuse becomes a warning on the link.
 */
-func (s *Issues) follow(ctx context.Context, w *tickets.Writer, t models.Ticket, u statusUpdate,
-) (models.Ticket, error) {
+func (s *Issues) follow(ctx context.Context, w *tickets.Writer, t models.Ticket, u statusUpdate) error {
 	link := u.link
 	u.settings = s.settingsOfLink(ctx, w.Q, link)
 
 	state, ok := stateFor(w.Setup, u)
 	if !ok || state.ID == t.StateID || !w.Setup.Allows(t.TypeID, state.ID) {
-		return t, nil
+		return nil
 	}
 
-	moved, err := w.Apply(ctx, t, tickets.Change{StateID: &state.ID})
+	_, err := w.Apply(ctx, t, tickets.Change{StateID: &state.ID})
 
 	var f *fault.Error
 	if errors.As(err, &f) && f.Kind() == fault.Invalid {
 		warning := clip(fmt.Sprintf("%s says %s, but the ticket could not move to %s: %s", Label(link.Provider),
 			link.Status, state.Name, f.Message()), 500)
 
-		return t, w.Q.WarnTicketIssue(ctx, models.WarnTicketIssueParams{
+		return w.Q.WarnTicketIssue(ctx, models.WarnTicketIssueParams{
 			Warning: &warning, Now: w.Now, WorkspaceID: link.WorkspaceID, ID: link.ID,
 		})
 	}
 
-	return moved, err
+	return err
 }
 
 /*

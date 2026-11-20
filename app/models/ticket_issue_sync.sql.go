@@ -13,160 +13,56 @@ import (
 	"github.com/dimmihq/dimmi/framework/ids"
 )
 
-const createTicketUpdateDraft = `-- name: CreateTicketUpdateDraft :one
-INSERT INTO ticket_update_drafts (workspace_id, ticket_id, issue_id, source, reason, body, author_name, status, resolve,
-    created_at, updated_at)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9,
-    $10, $10)
-RETURNING id, workspace_id, ticket_id, issue_id, source, reason, body, author_name, status, resolve, update_id, decided_by_member_id, decided_at, created_at, updated_at
+const countTicketImpact = `-- name: CountTicketImpact :one
+WITH convs AS (
+    SELECT c.id, c.contact_id FROM ticket_links l
+    JOIN conversations c ON c.id = l.conversation_id
+    WHERE l.workspace_id = $1 AND l.from_ticket_id = $2 AND c.deleted_at IS NULL
+    UNION
+    SELECT c.id, c.contact_id FROM tickets t
+    JOIN conversations c ON c.id = t.conversation_id
+    WHERE t.workspace_id = $1 AND t.id = $2 AND c.deleted_at IS NULL
+), people AS (
+    SELECT contact_id AS id FROM convs WHERE contact_id IS NOT NULL
+    UNION
+    SELECT contact_id FROM tickets WHERE workspace_id = $1 AND id = $2 AND contact_id IS NOT NULL
+), firms AS (
+    SELECT ct.company_id AS id FROM people p JOIN contacts ct ON ct.id = p.id WHERE ct.company_id IS NOT NULL
+    UNION
+    SELECT company_id FROM tickets WHERE workspace_id = $1 AND id = $2 AND company_id IS NOT NULL
+)
+SELECT (SELECT count(*) FROM convs)::bigint AS conversations, (SELECT count(*) FROM people)::bigint AS customers,
+    (SELECT count(*) FROM firms)::bigint AS companies,
+    coalesce((SELECT sum(dimmi_company_revenue(co.custom_attributes)) FROM companies co
+        WHERE co.workspace_id = $1 AND co.id IN (SELECT id FROM firms)), 0)::float8 AS revenue
 `
 
-type CreateTicketUpdateDraftParams struct {
-	WorkspaceID ids.UUID  `json:"workspace_id"`
-	TicketID    ids.UUID  `json:"ticket_id"`
-	IssueID     *ids.UUID `json:"issue_id"`
-	Source      string    `json:"source"`
-	Reason      string    `json:"reason"`
-	Body        string    `json:"body"`
-	AuthorName  string    `json:"author_name"`
-	Status      string    `json:"status"`
-	Resolve     bool      `json:"resolve"`
-	Now         time.Time `json:"now"`
+type CountTicketImpactParams struct {
+	WorkspaceID ids.UUID `json:"workspace_id"`
+	TicketID    ids.UUID `json:"ticket_id"`
 }
 
-// CreateTicketUpdateDraft stores a drafted message to everyone linked.
-func (q *Queries) CreateTicketUpdateDraft(ctx context.Context, arg CreateTicketUpdateDraftParams) (TicketUpdateDraft, error) {
-	row := q.db.QueryRow(ctx, createTicketUpdateDraft,
-		arg.WorkspaceID,
-		arg.TicketID,
-		arg.IssueID,
-		arg.Source,
-		arg.Reason,
-		arg.Body,
-		arg.AuthorName,
-		arg.Status,
-		arg.Resolve,
-		arg.Now,
-	)
-	var i TicketUpdateDraft
+type CountTicketImpactRow struct {
+	Conversations int64   `json:"conversations"`
+	Customers     int64   `json:"customers"`
+	Companies     int64   `json:"companies"`
+	Revenue       float64 `json:"revenue"`
+}
+
+// CountTicketImpact counts what a ticket reaches for the issues linked
+// to it: its own conversation, customer and company, and those of the
+// conversations linked to it as a tracker, with the companies' monthly
+// revenue.
+func (q *Queries) CountTicketImpact(ctx context.Context, arg CountTicketImpactParams) (CountTicketImpactRow, error) {
+	row := q.db.QueryRow(ctx, countTicketImpact, arg.WorkspaceID, arg.TicketID)
+	var i CountTicketImpactRow
 	err := row.Scan(
-		&i.ID,
-		&i.WorkspaceID,
-		&i.TicketID,
-		&i.IssueID,
-		&i.Source,
-		&i.Reason,
-		&i.Body,
-		&i.AuthorName,
-		&i.Status,
-		&i.Resolve,
-		&i.UpdateID,
-		&i.DecidedByMemberID,
-		&i.DecidedAt,
-		&i.CreatedAt,
-		&i.UpdatedAt,
+		&i.Conversations,
+		&i.Customers,
+		&i.Companies,
+		&i.Revenue,
 	)
 	return i, err
-}
-
-const decideTicketUpdateDraft = `-- name: DecideTicketUpdateDraft :one
-UPDATE ticket_update_drafts SET status = $1, body = $2, update_id = $3,
-    decided_by_member_id = $4, decided_at = $5, updated_at = $6
-WHERE workspace_id = $7 AND id = $8
-RETURNING id, workspace_id, ticket_id, issue_id, source, reason, body, author_name, status, resolve, update_id, decided_by_member_id, decided_at, created_at, updated_at
-`
-
-type DecideTicketUpdateDraftParams struct {
-	Status            string     `json:"status"`
-	Body              string     `json:"body"`
-	UpdateID          *ids.UUID  `json:"update_id"`
-	DecidedByMemberID *ids.UUID  `json:"decided_by_member_id"`
-	DecidedAt         *time.Time `json:"decided_at"`
-	Now               time.Time  `json:"now"`
-	WorkspaceID       ids.UUID   `json:"workspace_id"`
-	ID                ids.UUID   `json:"id"`
-}
-
-// DecideTicketUpdateDraft moves a draft on: ready once the fix shipped,
-// sent with the update it became, or discarded.
-func (q *Queries) DecideTicketUpdateDraft(ctx context.Context, arg DecideTicketUpdateDraftParams) (TicketUpdateDraft, error) {
-	row := q.db.QueryRow(ctx, decideTicketUpdateDraft,
-		arg.Status,
-		arg.Body,
-		arg.UpdateID,
-		arg.DecidedByMemberID,
-		arg.DecidedAt,
-		arg.Now,
-		arg.WorkspaceID,
-		arg.ID,
-	)
-	var i TicketUpdateDraft
-	err := row.Scan(
-		&i.ID,
-		&i.WorkspaceID,
-		&i.TicketID,
-		&i.IssueID,
-		&i.Source,
-		&i.Reason,
-		&i.Body,
-		&i.AuthorName,
-		&i.Status,
-		&i.Resolve,
-		&i.UpdateID,
-		&i.DecidedByMemberID,
-		&i.DecidedAt,
-		&i.CreatedAt,
-		&i.UpdatedAt,
-	)
-	return i, err
-}
-
-const draftsWaitingDeploy = `-- name: DraftsWaitingDeploy :many
-SELECT id, workspace_id, ticket_id, issue_id, source, reason, body, author_name, status, resolve, update_id, decided_by_member_id, decided_at, created_at, updated_at FROM ticket_update_drafts
-WHERE workspace_id = $1 AND status = 'waiting_deploy' AND issue_id = ANY ($2::uuid[])
-`
-
-type DraftsWaitingDeployParams struct {
-	WorkspaceID ids.UUID   `json:"workspace_id"`
-	IssueIds    []ids.UUID `json:"issue_ids"`
-}
-
-// DraftsWaitingDeploy returns the drafts of the issues waiting for
-// their fix to ship.
-func (q *Queries) DraftsWaitingDeploy(ctx context.Context, arg DraftsWaitingDeployParams) ([]TicketUpdateDraft, error) {
-	rows, err := q.db.Query(ctx, draftsWaitingDeploy, arg.WorkspaceID, arg.IssueIds)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []TicketUpdateDraft
-	for rows.Next() {
-		var i TicketUpdateDraft
-		if err := rows.Scan(
-			&i.ID,
-			&i.WorkspaceID,
-			&i.TicketID,
-			&i.IssueID,
-			&i.Source,
-			&i.Reason,
-			&i.Body,
-			&i.AuthorName,
-			&i.Status,
-			&i.Resolve,
-			&i.UpdateID,
-			&i.DecidedByMemberID,
-			&i.DecidedAt,
-			&i.CreatedAt,
-			&i.UpdatedAt,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
 }
 
 const installationOwner = `-- name: InstallationOwner :one
@@ -247,45 +143,6 @@ func (q *Queries) MergeIntegrationMetadata(ctx context.Context, arg MergeIntegra
 		&i.LastCheckedAt,
 		&i.DisconnectedAt,
 		&i.DeletedAt,
-		&i.CreatedAt,
-		&i.UpdatedAt,
-	)
-	return i, err
-}
-
-const openDraftOfTicket = `-- name: OpenDraftOfTicket :one
-SELECT id, workspace_id, ticket_id, issue_id, source, reason, body, author_name, status, resolve, update_id, decided_by_member_id, decided_at, created_at, updated_at FROM ticket_update_drafts
-WHERE workspace_id = $1 AND ticket_id = $2 AND reason = $3
-  AND status IN ('waiting_deploy', 'ready')
-ORDER BY created_at DESC
-LIMIT 1
-`
-
-type OpenDraftOfTicketParams struct {
-	WorkspaceID ids.UUID `json:"workspace_id"`
-	TicketID    ids.UUID `json:"ticket_id"`
-	Reason      string   `json:"reason"`
-}
-
-// OpenDraftOfTicket returns the ticket's draft still waiting, of the
-// reason, so a repeated signal refreshes it instead of adding another.
-func (q *Queries) OpenDraftOfTicket(ctx context.Context, arg OpenDraftOfTicketParams) (TicketUpdateDraft, error) {
-	row := q.db.QueryRow(ctx, openDraftOfTicket, arg.WorkspaceID, arg.TicketID, arg.Reason)
-	var i TicketUpdateDraft
-	err := row.Scan(
-		&i.ID,
-		&i.WorkspaceID,
-		&i.TicketID,
-		&i.IssueID,
-		&i.Source,
-		&i.Reason,
-		&i.Body,
-		&i.AuthorName,
-		&i.Status,
-		&i.Resolve,
-		&i.UpdateID,
-		&i.DecidedByMemberID,
-		&i.DecidedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -375,12 +232,24 @@ func (q *Queries) SyncTicketIssueDetails(ctx context.Context, arg SyncTicketIssu
 }
 
 const ticketImpactCompanies = `-- name: TicketImpactCompanies :many
-SELECT DISTINCT co.id, co.name, dimmi_company_revenue(co.custom_attributes)::float8 AS revenue
-FROM ticket_links l
-JOIN conversations c ON c.id = l.conversation_id
-JOIN contacts ct ON ct.id = c.contact_id
-JOIN companies co ON co.id = ct.company_id
-WHERE l.workspace_id = $1 AND l.from_ticket_id = $2 AND c.deleted_at IS NULL
+WITH people AS (
+    SELECT c.contact_id AS id FROM ticket_links l
+    JOIN conversations c ON c.id = l.conversation_id
+    WHERE l.workspace_id = $1 AND l.from_ticket_id = $2 AND c.deleted_at IS NULL
+    UNION
+    SELECT c.contact_id FROM tickets t
+    JOIN conversations c ON c.id = t.conversation_id
+    WHERE t.workspace_id = $1 AND t.id = $2 AND c.deleted_at IS NULL
+    UNION
+    SELECT contact_id FROM tickets WHERE workspace_id = $1 AND id = $2
+), firms AS (
+    SELECT ct.company_id AS id FROM people p JOIN contacts ct ON ct.id = p.id WHERE ct.company_id IS NOT NULL
+    UNION
+    SELECT company_id FROM tickets WHERE workspace_id = $1 AND id = $2 AND company_id IS NOT NULL
+)
+SELECT co.id, co.name, dimmi_company_revenue(co.custom_attributes)::float8 AS revenue
+FROM companies co
+WHERE co.workspace_id = $1 AND co.id IN (SELECT id FROM firms)
 ORDER BY revenue DESC, co.name
 LIMIT 50
 `
@@ -396,8 +265,8 @@ type TicketImpactCompaniesRow struct {
 	Revenue float64  `json:"revenue"`
 }
 
-// TicketImpactCompanies names the companies a tracker reaches, the
-// largest by revenue first.
+// TicketImpactCompanies names the companies a ticket reaches, as
+// CountTicketImpact counts them, the largest by revenue first.
 func (q *Queries) TicketImpactCompanies(ctx context.Context, arg TicketImpactCompaniesParams) ([]TicketImpactCompaniesRow, error) {
 	rows, err := q.db.Query(ctx, ticketImpactCompanies, arg.WorkspaceID, arg.TicketID)
 	if err != nil {
@@ -464,87 +333,6 @@ func (q *Queries) TicketIssuesAwaitingDeploy(ctx context.Context, arg TicketIssu
 			&i.DoneAt,
 			&i.DeployedAt,
 			&i.ImpactHash,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const ticketUpdateDraft = `-- name: TicketUpdateDraft :one
-SELECT id, workspace_id, ticket_id, issue_id, source, reason, body, author_name, status, resolve, update_id, decided_by_member_id, decided_at, created_at, updated_at FROM ticket_update_drafts WHERE workspace_id = $1 AND id = $2 FOR UPDATE
-`
-
-type TicketUpdateDraftParams struct {
-	WorkspaceID ids.UUID `json:"workspace_id"`
-	ID          ids.UUID `json:"id"`
-}
-
-// TicketUpdateDraft returns one draft, locked for a decision.
-func (q *Queries) TicketUpdateDraft(ctx context.Context, arg TicketUpdateDraftParams) (TicketUpdateDraft, error) {
-	row := q.db.QueryRow(ctx, ticketUpdateDraft, arg.WorkspaceID, arg.ID)
-	var i TicketUpdateDraft
-	err := row.Scan(
-		&i.ID,
-		&i.WorkspaceID,
-		&i.TicketID,
-		&i.IssueID,
-		&i.Source,
-		&i.Reason,
-		&i.Body,
-		&i.AuthorName,
-		&i.Status,
-		&i.Resolve,
-		&i.UpdateID,
-		&i.DecidedByMemberID,
-		&i.DecidedAt,
-		&i.CreatedAt,
-		&i.UpdatedAt,
-	)
-	return i, err
-}
-
-const ticketUpdateDrafts = `-- name: TicketUpdateDrafts :many
-SELECT id, workspace_id, ticket_id, issue_id, source, reason, body, author_name, status, resolve, update_id, decided_by_member_id, decided_at, created_at, updated_at FROM ticket_update_drafts WHERE workspace_id = $1 AND ticket_id = $2
-ORDER BY created_at DESC, id DESC
-LIMIT 50
-`
-
-type TicketUpdateDraftsParams struct {
-	WorkspaceID ids.UUID `json:"workspace_id"`
-	TicketID    ids.UUID `json:"ticket_id"`
-}
-
-// TicketUpdateDrafts returns a ticket's drafts, the newest first.
-func (q *Queries) TicketUpdateDrafts(ctx context.Context, arg TicketUpdateDraftsParams) ([]TicketUpdateDraft, error) {
-	rows, err := q.db.Query(ctx, ticketUpdateDrafts, arg.WorkspaceID, arg.TicketID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []TicketUpdateDraft
-	for rows.Next() {
-		var i TicketUpdateDraft
-		if err := rows.Scan(
-			&i.ID,
-			&i.WorkspaceID,
-			&i.TicketID,
-			&i.IssueID,
-			&i.Source,
-			&i.Reason,
-			&i.Body,
-			&i.AuthorName,
-			&i.Status,
-			&i.Resolve,
-			&i.UpdateID,
-			&i.DecidedByMemberID,
-			&i.DecidedAt,
-			&i.CreatedAt,
-			&i.UpdatedAt,
 		); err != nil {
 			return nil, err
 		}

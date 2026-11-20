@@ -14,6 +14,7 @@ package models
 
 import (
 	"encoding/json"
+	"time"
 
 	"github.com/dimmihq/dimmi/framework/ids"
 )
@@ -107,4 +108,21 @@ ReadSettings returns the inbox's settings with their defaults.
 */
 func (i Inbox) ReadSettings() InboxSettings {
 	return ReadInboxSettings(i.Settings)
+}
+
+/*
+ReopenWindow returns how long after closing a reply still reopens a
+conversation in the inbox: the inbox's own reopen window when it stores
+one, else the fallback. Zero means a reply never reopens.
+*/
+func (i Inbox) ReopenWindow(fallback time.Duration) time.Duration {
+	var stored struct {
+		Days *int `json:"reopen_window_days"`
+	}
+
+	if err := json.Unmarshal(i.Settings, &stored); err != nil || stored.Days == nil || *stored.Days < 0 {
+		return fallback
+	}
+
+	return time.Duration(*stored.Days) * 24 * time.Hour
 }

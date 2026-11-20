@@ -1,7 +1,10 @@
 -- name: CreateBroadcast :one
--- CreateBroadcast stores a new draft.
-INSERT INTO broadcasts (workspace_id, name, channel, sender_member_id, created_by_member_id, created_at, updated_at)
-VALUES (@workspace_id, @name, @channel, @member_id, @member_id, @now::timestamptz, @now::timestamptz)
+-- CreateBroadcast stores a new draft. A conversation broadcast started
+-- from a tracker names the tracker and what it leaves out.
+INSERT INTO broadcasts (workspace_id, name, channel, sender_member_id, created_by_member_id, ticket_id, holds,
+    created_at, updated_at)
+VALUES (@workspace_id, @name, @channel, @member_id, @member_id, sqlc.narg(ticket_id), @holds::text[],
+    @now::timestamptz, @now::timestamptz)
 RETURNING *;
 
 -- name: FindBroadcast :one
@@ -31,7 +34,8 @@ UPDATE broadcasts SET name = @name, audience_id = sqlc.narg(audience_id), rules 
     body = @body, sender_member_id = sqlc.narg(sender_member_id), email_address_id = sqlc.narg(email_address_id),
     slack_as = @slack_as, reply_team_id = sqlc.narg(reply_team_id), reply_member_id = sqlc.narg(reply_member_id),
     ai_replies = @ai_replies, track_clicks = @track_clicks, skip_frequency_cap = @skip_frequency_cap,
-    schedule_kind = @schedule_kind, scheduled_at = sqlc.narg(scheduled_at), goal = sqlc.narg(goal), updated_at = @now::timestamptz
+    schedule_kind = @schedule_kind, scheduled_at = sqlc.narg(scheduled_at), goal = sqlc.narg(goal),
+    holds = @holds::text[], updated_at = @now::timestamptz
 WHERE workspace_id = @workspace_id AND id = @id AND deleted_at IS NULL AND status IN ('draft', 'scheduled')
 RETURNING *;
 

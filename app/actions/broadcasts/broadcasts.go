@@ -43,6 +43,9 @@ const (
 	ChannelChat  = "chat"
 	ChannelPost  = "post"
 	ChannelSlack = "slack"
+	// ChannelConversation answers each person inside a conversation they
+	// already have, on that conversation's own channel.
+	ChannelConversation = "conversation"
 )
 
 /*
@@ -64,7 +67,11 @@ var (
 	ErrNotDraft = fault.New(fault.Conflict, "broadcast_not_draft",
 		"This broadcast has started sending, so it can no longer be changed.")
 	ErrChannel = fault.New(fault.Invalid, "broadcast_channel_invalid",
-		"Choose email, chat, post or Slack.")
+		"Choose email, chat, post, Slack or conversation.")
+	ErrHolds = fault.New(fault.Invalid, "broadcast_holds_invalid",
+		"Leave out customers waiting on an answer or already answered, and only on a conversation broadcast.")
+	ErrTracker = fault.New(fault.Invalid, "broadcast_tracker_invalid",
+		"Only a conversation broadcast can start from a tracker, and only from one that exists.")
 	ErrName = fault.New(fault.Invalid, "broadcast_name_invalid",
 		"Give the broadcast a name of up to 120 characters.")
 )
@@ -113,6 +120,9 @@ type Draft struct {
 	ScheduleKind     string
 	ScheduledAt      *time.Time
 	Goal             json.RawMessage
+	// Holds leave people out of a conversation broadcast: those waiting
+	// on an answer, and those already answered since the tracker moved.
+	Holds []string
 }
 
 /*
@@ -172,35 +182,100 @@ func (b *Broadcasts) Show(ctx context.Context, m authz.Membership, id ids.UUID) 
 }
 
 /*
+Opening is a new draft: its name and channel and, for a conversation
+broadcast started from a tracker, the tracker and what it leaves out.
+*/
+type Opening struct {
+	Name     string
+	Channel  string
+	TicketID *ids.UUID
+	Holds    []string
+}
+
+/*
 Create starts a draft on a channel, sent by the teammate who wrote it.
 */
-func (b *Broadcasts) Create(ctx context.Context, m authz.Membership, name, channel string) (models.Broadcast, error) {
+func (b *Broadcasts) Create(ctx context.Context, m authz.Membership, in Opening) (models.Broadcast, error) {
 	if !m.Can("broadcasts:write") {
 		return models.Broadcast{}, exceptions.ErrForbidden
 	}
 
-	name = strings.TrimSpace(name)
+	name := strings.TrimSpace(in.Name)
 	if name == "" || len([]rune(name)) > 120 {
 		return models.Broadcast{}, ErrName
 	}
 
-	if !validChannel(channel) {
+	if !validChannel(in.Channel) {
 		return models.Broadcast{}, ErrChannel
+	}
+
+	if err := checkOpening(in); err != nil {
+		return models.Broadcast{}, err
 	}
 
 	var out models.Broadcast
 
 	err := b.inWorkspace(ctx, m.Workspace.ID, func(ctx context.Context, q *models.Queries) error {
+		if err := trackerExists(ctx, q, m.Workspace.ID, in.TicketID); err != nil {
+			return err
+		}
+
 		var err error
 
 		out, err = q.CreateBroadcast(ctx, models.CreateBroadcastParams{
-			WorkspaceID: m.Workspace.ID, Name: name, Channel: channel, MemberID: &m.Member.ID, Now: b.Clock.Now(),
+			WorkspaceID: m.Workspace.ID, Name: name, Channel: in.Channel, MemberID: &m.Member.ID,
+			TicketID: in.TicketID, Holds: nonNilStrings(in.Holds), Now: b.Clock.Now(),
 		})
 
 		return wrap("create broadcast", err)
 	})
 
 	return out, err
+}
+
+/*
+checkOpening refuses a tracker or holds on a channel other than
+conversation, and a hold it does not know.
+*/
+func checkOpening(in Opening) error {
+	conversation := in.Channel == ChannelConversation
+	if in.TicketID != nil && !conversation {
+		return ErrTracker
+	}
+
+	if len(in.Holds) > 0 && (!conversation || !validHolds(in.Holds)) {
+		return ErrHolds
+	}
+
+	return nil
+}
+
+/*
+trackerExists refuses a ticket that is not one of the workspace's
+trackers.
+*/
+func trackerExists(ctx context.Context, q *models.Queries, ws ids.UUID, ticket *ids.UUID) error {
+	if ticket == nil {
+		return nil
+	}
+
+	t, err := q.FindTicket(ctx, models.FindTicketParams{WorkspaceID: ws, ID: *ticket})
+	if errors.Is(err, database.ErrNotFound) || (err == nil && (t.Kind != "tracker" || t.DeletedAt != nil)) {
+		return ErrTracker
+	}
+
+	return wrap("find tracker", err)
+}
+
+/*
+nonNilStrings is the list, or an empty one for nil.
+*/
+func nonNilStrings(in []string) []string {
+	if in == nil {
+		return []string{}
+	}
+
+	return in
 }
 
 /*
@@ -248,7 +323,7 @@ func (b *Broadcasts) Duplicate(ctx context.Context, m authz.Membership, id ids.U
 		name := []rune("Copy of " + row.Name)
 		out, err = q.CreateBroadcast(ctx, models.CreateBroadcastParams{
 			WorkspaceID: m.Workspace.ID, Name: string(name[:min(len(name), 120)]), Channel: row.Channel,
-			MemberID: &m.Member.ID, Now: b.Clock.Now(),
+			MemberID: &m.Member.ID, TicketID: row.TicketID, Holds: nonNilStrings(row.Holds), Now: b.Clock.Now(),
 		})
 		if err != nil {
 			return wrap("duplicate broadcast", err)
@@ -292,7 +367,7 @@ validChannel reports whether a broadcast can go out on the channel.
 */
 func validChannel(channel string) bool {
 	switch channel {
-	case ChannelEmail, ChannelChat, ChannelPost, ChannelSlack:
+	case ChannelEmail, ChannelChat, ChannelPost, ChannelSlack, ChannelConversation:
 		return true
 	}
 

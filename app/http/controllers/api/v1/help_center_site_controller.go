@@ -156,6 +156,37 @@ func (c *HelpCenterSiteController) Analytics(ctx context.Context, in *requests.H
 	return &HelpCenterAnalyticsOutput{Body: fhttp.NewResource(resources.NewHelpCenterAnalytics(report))}, nil
 }
 
+/*
+ChangelogAnalyticsOutput is a changelog's analytics.
+*/
+type ChangelogAnalyticsOutput struct {
+	Body fhttp.Resource[resources.ChangelogAnalytics]
+}
+
+/*
+ChangelogAnalytics answers what readers did with the changelog over the
+last days.
+*/
+func (c *HelpCenterSiteController) ChangelogAnalytics(ctx context.Context, in *requests.ChangelogAnalyticsRequest,
+) (*ChangelogAnalyticsOutput, error) {
+	id, err := c.id(in.HelpCenter)
+	if err != nil {
+		return nil, err
+	}
+
+	days := in.Days
+	if days == 0 {
+		days = 30
+	}
+
+	report, err := c.Counts.ChangelogReport(ctx, membership(ctx), id, days)
+	if err != nil {
+		return nil, err
+	}
+
+	return &ChangelogAnalyticsOutput{Body: fhttp.NewResource(resources.NewChangelogAnalytics(report))}, nil
+}
+
 func domainOutput(d helpcenters.Domain, err error) (*HelpCenterDomainOutput, error) {
 	if err != nil {
 		return nil, err

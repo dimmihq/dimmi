@@ -35,7 +35,7 @@ func bootTicketIssues(a *app.App) error {
 	}
 
 	s := &issues.Issues{
-		DB: a.DB, Clock: a.Clock, Queue: a.Queue, Tickets: a.Actions.Tickets,
+		DB: a.DB, Cache: a.Cache, Clock: a.Clock, Queue: a.Queue, Tickets: a.Actions.Tickets,
 		Tokens:   a.Actions.Integrations.Tokens,
 		Registry: a.Actions.Integrations.Registry, Services: a.Config.Services, AppURL: a.Application.Config.App.URL,
 		Trackers: trackers.Set{

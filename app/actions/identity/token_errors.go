@@ -44,7 +44,7 @@ var (
 		"Token is not a JWT (needs three base64url parts separated by dots).",
 		"Pass the token string, not the JSON payload or 'Bearer ...'.")
 	ErrKidRequired = tokenError("token_kid_required",
-		"RS256 and EdDSA tokens need a kid header.",
+		"Tokens not signed with HS256 (RS256, ES256, EdDSA) need a kid header.",
 		"Set kid to the key id shown in Settings > Identity verification.")
 	ErrSignatureInvalid = tokenError("token_signature_invalid",
 		"Signature does not match.",

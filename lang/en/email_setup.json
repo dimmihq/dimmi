@@ -53,7 +53,7 @@
     "yahoo": {
       "step_1": "In Yahoo Mail, open Settings, More Settings, Mailboxes, and choose {{.address}}.",
       "step_2": "Under Forwarding, enter {{.forwarding_address}} and choose Verify.",
-      "step_3": "Open the verification mail that arrives here and confirm, then choose Store and forward.",
+      "step_3": "Yahoo mails a verification link there. It arrives as a conversation in this address's inbox, closed if it looks automated; open it, follow the link, then choose Store and forward.",
       "warning_paid_plan": "Yahoo only offers forwarding on some plans."
     },
     "zoho": {
@@ -68,7 +68,7 @@
     },
     "cloudflare_routing": {
       "step_1": "In the Cloudflare dashboard, open {{.domain}}, Email, Email Routing, Destination addresses, and add {{.forwarding_address}}.",
-      "step_2": "Confirm it with the link Cloudflare mails there; that mail shows in the activity on this page.",
+      "step_2": "Cloudflare mails a verification link there. It arrives as a conversation in this address's inbox, closed if it looks automated; open it and follow the link.",
       "step_3": "Under Routing rules, create a custom address {{.address}} that sends to {{.forwarding_address}}."
     },
     "generic": {
@@ -82,7 +82,7 @@
     "subject_rewritten": "Your mail service changed the subject on the way, for example by adding [External]. Replies still thread, but less reliably.",
     "m365_external_forward_blocked": "Microsoft 365 refused to forward outside your organization. Allow automatic forwarding in the outbound spam policy, then test again.",
     "test_bounced": "The test email bounced before it reached your address. Check that the address exists and accepts mail.",
-    "gmail_confirmation_pending": "Gmail is still waiting for its confirmation code. Enter the code shown on this page in Gmail, then test again.",
+    "gmail_confirmation_pending": "Your mail service is still waiting for its confirmation code. Enter the code shown on this page in its forwarding settings, then test again.",
     "gmail_not_confirmed": "Check that forwarding is turned on in Gmail and that the forwarding address was confirmed.",
     "google_rule_delay": "Google can take up to 24 hours to apply a new routing rule. Test again later.",
     "group_moderation": "If the address is a Google Group, the group may be holding mail for moderation. A routing rule avoids this.",

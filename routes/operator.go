@@ -28,6 +28,7 @@ operatorRoutes declares Operator's routes.
 */
 func operatorRoutes(r *routing.Router, a *app.App) {
 	r.Middleware("csrf", "session", "auth", "workspace", "access.policy", "api.throttle")
+	r.Internal()
 	acts := a.Actions.OperatorAgent
 	c := &v1.OperatorController{Settings: acts.Settings, Threads: acts.Threads, IDs: a.IDs}
 	routing.Get(r, "/operator/settings", "operator.settings.show", c.ShowSettings).Ability("conversations:read")

@@ -11,7 +11,9 @@
 | and PagerDuty connect with each workspace's own API key and sign with
 | each endpoint's own secret, so they need nothing here.
 |
-| Secrets come from files, such as DIMMI_SERVICES__LINEAR__CLIENT_SECRET_FILE.
+| Secrets come from the environment, such as
+| DIMMI_SERVICES__LINEAR__CLIENT_SECRET, or from a file named by
+| DIMMI_SERVICES__LINEAR__CLIENT_SECRET_FILE.
 |
 */
 
@@ -23,8 +25,8 @@ its app webhooks are signed with.
 */
 type TrackerServiceConfig struct {
 	ClientID      string `koanf:"client_id"`
-	ClientSecret  string `koanf:"client_secret"`
-	WebhookSecret string `koanf:"webhook_secret"`
+	ClientSecret  string `koanf:"client_secret"  secret:"true"`
+	WebhookSecret string `koanf:"webhook_secret" secret:"true"`
 }
 
 /*
@@ -41,6 +43,6 @@ tool from canned data instead of calling it, and only a development
 build honors it.
 */
 type TrackersConfig struct {
-	GitHubWebhookSecret string `koanf:"github_webhook_secret"`
+	GitHubWebhookSecret string `koanf:"github_webhook_secret" secret:"true"`
 	Fake                bool   `koanf:"fake"`
 }

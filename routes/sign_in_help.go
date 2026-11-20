@@ -44,11 +44,12 @@ func signInHelpRoutes(api *routing.Router, a *app.App) {
 	api.Group("", func(guest *routing.Router) {
 		guest.Middleware("csrf", "session")
 
-		routing.Patch(guest, "/two-factor-resets/{reset}", "two-factor-resets.update", help.UpdateReset)
+		routing.Patch(guest, "/two-factor-resets/{reset}", "two-factor-resets.update", help.UpdateReset).Internal()
 	})
 
 	api.Group("", func(admin *routing.Router) {
 		admin.Middleware("csrf", "session", "auth:user", "workspace", "access.policy", "api.throttle")
+		admin.Internal()
 
 		routing.Post(admin, "/members/{member}/two-factor-resets", "members.two-factor-resets.store",
 			help.StoreReset).Middleware("password.confirm").Status(fhttp.StatusCreated)

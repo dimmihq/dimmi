@@ -143,8 +143,9 @@ func (r *Resolver) exists(path, id string) []audience.Problem {
 }
 
 /*
-trusted checks a saved audience the start rule names, and those inside
-it: each must read only what the server knows and trusts.
+trusted checks a saved audience the start rule names, or one an article
+or collection is kept to, and those inside it: each must read only what
+the server knows and trusts.
 */
 func (r *Resolver) trusted(path, id string, depth int) []audience.Problem {
 	if missing := r.exists(path, id); missing != nil || depth > 3 {
@@ -159,10 +160,15 @@ func (r *Resolver) trusted(path, id string, depth int) []audience.Problem {
 	}
 
 	if err != nil {
+		guards := "who may start a conversation"
+		if path != "start" {
+			guards = "who may read"
+		}
+
 		return []audience.Problem{{
 			Code: audience.CodeClaimedOnAccessGate, Path: path, Field: "audience",
 			Message: "The saved audience " + row.Name + " reads what a visitor's browser could claim or the page " +
-				"they are on, so it cannot decide who may start a conversation.",
+				"they are on, so it cannot decide " + guards + ".",
 		}}
 	}
 

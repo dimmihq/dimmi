@@ -75,6 +75,10 @@ type TimelineEntry struct {
 	UpdatedAt       time.Time       `json:"updated_at"`
 	Attachments     []Attachment    `json:"attachments"`
 	AI              *MessageAI      `json:"ai"`
+	// Broadcast names the broadcast the message went out with, when one
+	// did: a reply sent into many conversations at once, or the message
+	// that started a conversation.
+	Broadcast *MessageBroadcast `json:"broadcast,omitempty"`
 
 	Redactions []redaction.Hit `json:"redactions,omitempty"`
 }
@@ -212,8 +216,33 @@ func NewTimelineEntry(m models.Message, contact models.Contact, members Authors)
 	}
 
 	out.Redactions = redactionsOf(m.Metadata)
+	out.Broadcast = sentWith(m.Metadata)
 
 	return out
+}
+
+/*
+MessageBroadcast is the broadcast a message went out with: its public id
+and name.
+*/
+type MessageBroadcast struct {
+	ID   string `json:"id"`
+	Name string `json:"name"`
+}
+
+/*
+sentWith reads the broadcast a message went out with from its
+metadata, nil when none did.
+*/
+func sentWith(metadata json.RawMessage) *MessageBroadcast {
+	var read struct {
+		Broadcast *MessageBroadcast `json:"broadcast"`
+	}
+	if json.Unmarshal(metadata, &read) != nil || read.Broadcast == nil || read.Broadcast.ID == "" {
+		return nil
+	}
+
+	return read.Broadcast
 }
 
 /*
@@ -312,7 +341,22 @@ func author(m models.Message, contact models.Contact, member *conversations.Memb
 		}
 	}
 
-	return Author{Type: m.AuthorType, Name: "dimmi"}
+	return Author{Type: m.AuthorType, Name: systemAuthor(m.Metadata)}
+}
+
+/*
+systemAuthor names an entry dimmi wrote: the linked tool it wrote it
+for, such as a comment synced from Linear, or dimmi itself.
+*/
+func systemAuthor(metadata json.RawMessage) string {
+	var read struct {
+		AuthorName string `json:"author_name"`
+	}
+	if json.Unmarshal(metadata, &read) != nil || read.AuthorName == "" {
+		return "dimmi"
+	}
+
+	return read.AuthorName
 }
 
 /*

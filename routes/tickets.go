@@ -5,9 +5,8 @@
 |
 | The tickets API: types, fields and states, which members who change
 | settings manage; tickets with their history, notes and links; a
-| conversation turned into a ticket; trackers' conversations and the
-| messages that reach all of them. Members need tickets:read to read
-| and tickets:write to change.
+| conversation turned into a ticket; and trackers' conversations.
+| Members need tickets:read to read and tickets:write to change.
 |
 */
 
@@ -68,12 +67,9 @@ func ticketActivityRoutes(workspace *routing.Router, base v1.TicketController) {
 		Status(fhttp.StatusNoContent)
 	routing.Get(workspace, one+"/conversations", "tickets.conversations.index", ac.Conversations).
 		Ability("tickets:read")
-	routing.Post(workspace, one+"/updates", "tickets.updates.store", ac.SendUpdate).Ability("tickets:write").
-		Status(fhttp.StatusOK)
-	routing.Get(workspace, one+"/updates", "tickets.updates.index", ac.Updates).Ability("tickets:read")
 	routing.Get(workspace, conv+"/tickets", "conversations.tickets.index", ac.ConversationTickets).
 		Ability("tickets:read")
-	routing.Get(workspace, conv+"/ticket-suggestions", "conversations.ticket-suggestions.index", ac.Suggestions).
+	routing.Get(workspace, conv+"/ticket-suggestions", "conversations.ticket-suggestions.index", ac.Suggestions).Internal().
 		Ability("tickets:read")
 }
 

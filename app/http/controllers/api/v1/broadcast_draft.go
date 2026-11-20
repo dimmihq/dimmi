@@ -33,6 +33,10 @@ func (c *BroadcastController) merge(d broadcasts.Draft, in requests.BroadcastBod
 	setFlag(&d.TrackClicks, in.TrackClicks)
 	setFlag(&d.SkipFrequencyCap, in.SkipFrequencyCap)
 
+	if in.Holds != nil {
+		d.Holds = *in.Holds
+	}
+
 	if in.Rules != nil {
 		d.Rules = in.Rules
 	}

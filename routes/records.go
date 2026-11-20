@@ -101,11 +101,11 @@ func redactionRoutes(r *routing.Router, a *app.App) {
 	routing.Post(r, "/redaction-rules", "redaction-rules.store", c.Store).Ability("settings:write")
 	routing.Patch(r, path, "redaction-rules.update", c.Update).Ability("settings:write")
 	routing.Delete(r, path, "redaction-rules.destroy", c.Destroy).Ability("settings:write")
-	routing.Post(r, "/redaction-tests", "redaction-tests.store", c.Test).Ability("settings:write").
+	routing.Post(r, "/redaction-tests", "redaction-tests.store", c.Test).Internal().Ability("settings:write").
 		Status(http.StatusOK)
 
 	previews := &v1.RetentionController{Preview: acts.PreviewRetention}
-	routing.Post(r, "/retention-previews", "retention-previews.store", previews.Store).Ability("settings:read").
+	routing.Post(r, "/retention-previews", "retention-previews.store", previews.Store).Internal().Ability("settings:read").
 		Status(http.StatusOK)
 }
 

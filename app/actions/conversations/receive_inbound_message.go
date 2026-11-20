@@ -69,7 +69,7 @@ type storedFile struct {
 ReceiveInboundMessage takes inbound messages into the inbox of the
 workspace the context is scoped to. Disk holds the attachments, under
 DiskName, and ReopenWindow is how long after closing a reply still
-reopens a conversation.
+reopens a conversation whose inbox sets no reopen window of its own.
 
 Events: [appevents.ConversationCreated], [appevents.MessageCreated], and
 the reopening or waking.
@@ -285,8 +285,15 @@ func (run *ingestRun) conversation(
 		return models.Conversation{}, false, err
 	}
 
-	if found != nil && !ClosedBefore(*found, run.r.Clock.Now().Add(-run.r.ReopenWindow)) {
-		return *found, false, nil
+	if found != nil {
+		stale, err := PastReopenWindow(ctx, run.q, *found, run.r.Clock.Now(), run.r.ReopenWindow)
+		if err != nil {
+			return models.Conversation{}, false, err
+		}
+
+		if !stale {
+			return *found, false, nil
+		}
 	}
 
 	spam, err := run.spam(ctx, contact, found)
@@ -389,6 +396,32 @@ time, too long ago for a reply to reopen it.
 func ClosedBefore(conv models.Conversation, cutoff time.Time) bool {
 	return conv.Status == string(enums.ConversationStatusClosed) &&
 		(conv.ClosedAt == nil || conv.ClosedAt.Before(cutoff))
+}
+
+/*
+PastReopenWindow reports whether the conversation closed too long ago
+for a reply to reopen it. The window is the one its inbox sets, or the
+fallback when the inbox sets none.
+*/
+func PastReopenWindow(
+	ctx context.Context, q *models.Queries, conv models.Conversation, now time.Time, fallback time.Duration,
+) (bool, error) {
+	if conv.Status != string(enums.ConversationStatusClosed) {
+		return false, nil
+	}
+
+	window := fallback
+
+	inbox, err := q.FindInbox(ctx, models.FindInboxParams{WorkspaceID: conv.WorkspaceID, ID: conv.InboxID})
+	if err != nil && !errors.Is(err, database.ErrNotFound) {
+		return false, fmt.Errorf("find inbox: %w", err)
+	}
+
+	if err == nil {
+		window = inbox.ReopenWindow(fallback)
+	}
+
+	return ClosedBefore(conv, now.Add(-window)), nil
 }
 
 /*

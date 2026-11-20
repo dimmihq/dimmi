@@ -1,0 +1,19 @@
+{
+ "event": {
+  "id": "54a976b9-0863-41b7-853a-efb5b89c6a21",
+  "type": "incident_event.created",
+  "issued_at": "2026-11-20T04:50:08.320Z"
+ },
+ "data": {
+  "id": "29fc3f29-e1ed-4c35-bf23-e70f277faddb",
+  "event": "[dimmi dev test] Root cause: the secret was rotated without a deploy.",
+  "event_raw": "[dimmi dev test] Root cause: the secret was rotated without a deploy.",
+  "kind": "event",
+  "source": "web",
+  "visibility": "internal",
+  "occurred_at": "2026-11-19T20:50:08.271-08:00",
+  "created_at": "2026-11-19T20:50:08.271-08:00",
+  "updated_at": "2026-11-19T20:50:08.271-08:00",
+  "incident_id": "fe952192-b309-438e-a112-4c0fdd21ec36"
+ }
+}

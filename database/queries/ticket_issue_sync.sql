@@ -30,15 +30,54 @@ ORDER BY done_at, id;
 -- production.
 UPDATE ticket_issues SET deployed_at = @now::timestamptz, updated_at = @now WHERE workspace_id = @workspace_id AND id = @id;
 
+-- name: CountTicketImpact :one
+-- CountTicketImpact counts what a ticket reaches for the issues linked
+-- to it: its own conversation, customer and company, and those of the
+-- conversations linked to it as a tracker, with the companies' monthly
+-- revenue.
+WITH convs AS (
+    SELECT c.id, c.contact_id FROM ticket_links l
+    JOIN conversations c ON c.id = l.conversation_id
+    WHERE l.workspace_id = @workspace_id AND l.from_ticket_id = @ticket_id AND c.deleted_at IS NULL
+    UNION
+    SELECT c.id, c.contact_id FROM tickets t
+    JOIN conversations c ON c.id = t.conversation_id
+    WHERE t.workspace_id = @workspace_id AND t.id = @ticket_id AND c.deleted_at IS NULL
+), people AS (
+    SELECT contact_id AS id FROM convs WHERE contact_id IS NOT NULL
+    UNION
+    SELECT contact_id FROM tickets WHERE workspace_id = @workspace_id AND id = @ticket_id AND contact_id IS NOT NULL
+), firms AS (
+    SELECT ct.company_id AS id FROM people p JOIN contacts ct ON ct.id = p.id WHERE ct.company_id IS NOT NULL
+    UNION
+    SELECT company_id FROM tickets WHERE workspace_id = @workspace_id AND id = @ticket_id AND company_id IS NOT NULL
+)
+SELECT (SELECT count(*) FROM convs)::bigint AS conversations, (SELECT count(*) FROM people)::bigint AS customers,
+    (SELECT count(*) FROM firms)::bigint AS companies,
+    coalesce((SELECT sum(dimmi_company_revenue(co.custom_attributes)) FROM companies co
+        WHERE co.workspace_id = @workspace_id AND co.id IN (SELECT id FROM firms)), 0)::float8 AS revenue;
+
 -- name: TicketImpactCompanies :many
--- TicketImpactCompanies names the companies a tracker reaches, the
--- largest by revenue first.
-SELECT DISTINCT co.id, co.name, dimmi_company_revenue(co.custom_attributes)::float8 AS revenue
-FROM ticket_links l
-JOIN conversations c ON c.id = l.conversation_id
-JOIN contacts ct ON ct.id = c.contact_id
-JOIN companies co ON co.id = ct.company_id
-WHERE l.workspace_id = @workspace_id AND l.from_ticket_id = @ticket_id AND c.deleted_at IS NULL
+-- TicketImpactCompanies names the companies a ticket reaches, as
+-- CountTicketImpact counts them, the largest by revenue first.
+WITH people AS (
+    SELECT c.contact_id AS id FROM ticket_links l
+    JOIN conversations c ON c.id = l.conversation_id
+    WHERE l.workspace_id = @workspace_id AND l.from_ticket_id = @ticket_id AND c.deleted_at IS NULL
+    UNION
+    SELECT c.contact_id FROM tickets t
+    JOIN conversations c ON c.id = t.conversation_id
+    WHERE t.workspace_id = @workspace_id AND t.id = @ticket_id AND c.deleted_at IS NULL
+    UNION
+    SELECT contact_id FROM tickets WHERE workspace_id = @workspace_id AND id = @ticket_id
+), firms AS (
+    SELECT ct.company_id AS id FROM people p JOIN contacts ct ON ct.id = p.id WHERE ct.company_id IS NOT NULL
+    UNION
+    SELECT company_id FROM tickets WHERE workspace_id = @workspace_id AND id = @ticket_id AND company_id IS NOT NULL
+)
+SELECT co.id, co.name, dimmi_company_revenue(co.custom_attributes)::float8 AS revenue
+FROM companies co
+WHERE co.workspace_id = @workspace_id AND co.id IN (SELECT id FROM firms)
 ORDER BY revenue DESC, co.name
 LIMIT 50;
 
@@ -52,45 +91,4 @@ FROM integration_installation_owner(@installation_id::uuid) AS d;
 -- MergeIntegrationMetadata adds keys to an installation's metadata.
 UPDATE integration_installations SET metadata = metadata || @metadata::jsonb, updated_at = @now
 WHERE workspace_id = @workspace_id AND id = @id AND deleted_at IS NULL
-RETURNING *;
-
--- name: CreateTicketUpdateDraft :one
--- CreateTicketUpdateDraft stores a drafted message to everyone linked.
-INSERT INTO ticket_update_drafts (workspace_id, ticket_id, issue_id, source, reason, body, author_name, status, resolve,
-    created_at, updated_at)
-VALUES (@workspace_id, @ticket_id, sqlc.narg(issue_id), @source, @reason, @body, @author_name, @status, @resolve,
-    @now, @now)
-RETURNING *;
-
--- name: TicketUpdateDrafts :many
--- TicketUpdateDrafts returns a ticket's drafts, the newest first.
-SELECT * FROM ticket_update_drafts WHERE workspace_id = @workspace_id AND ticket_id = @ticket_id
-ORDER BY created_at DESC, id DESC
-LIMIT 50;
-
--- name: TicketUpdateDraft :one
--- TicketUpdateDraft returns one draft, locked for a decision.
-SELECT * FROM ticket_update_drafts WHERE workspace_id = @workspace_id AND id = @id FOR UPDATE;
-
--- name: OpenDraftOfTicket :one
--- OpenDraftOfTicket returns the ticket's draft still waiting, of the
--- reason, so a repeated signal refreshes it instead of adding another.
-SELECT * FROM ticket_update_drafts
-WHERE workspace_id = @workspace_id AND ticket_id = @ticket_id AND reason = @reason
-  AND status IN ('waiting_deploy', 'ready')
-ORDER BY created_at DESC
-LIMIT 1;
-
--- name: DraftsWaitingDeploy :many
--- DraftsWaitingDeploy returns the drafts of the issues waiting for
--- their fix to ship.
-SELECT * FROM ticket_update_drafts
-WHERE workspace_id = @workspace_id AND status = 'waiting_deploy' AND issue_id = ANY (@issue_ids::uuid[]);
-
--- name: DecideTicketUpdateDraft :one
--- DecideTicketUpdateDraft moves a draft on: ready once the fix shipped,
--- sent with the update it became, or discarded.
-UPDATE ticket_update_drafts SET status = @status, body = @body, update_id = sqlc.narg(update_id),
-    decided_by_member_id = sqlc.narg(decided_by_member_id), decided_at = sqlc.narg(decided_at), updated_at = @now
-WHERE workspace_id = @workspace_id AND id = @id
 RETURNING *;

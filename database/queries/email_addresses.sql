@@ -95,9 +95,11 @@ WHERE channel_connections.workspace_id = @workspace_id AND channel_connections.i
 
 -- name: RecordEmailAddressInbound :exec
 -- RecordEmailAddressInbound notes that mail reached the address, which
--- proves its forwarding works the first time.
+-- proves its forwarding works the first time. Forwarded mail means any
+-- confirmation the mail provider sent was done with, so it is cleared.
 UPDATE email_addresses
-SET last_inbound_at = @now::timestamptz, inbound_verified_at = coalesce(inbound_verified_at, @now::timestamptz), updated_at = @now::timestamptz
+SET last_inbound_at = @now::timestamptz, inbound_verified_at = coalesce(inbound_verified_at, @now::timestamptz),
+    forwarding_confirmation = NULL, updated_at = @now::timestamptz
 WHERE workspace_id = @workspace_id AND id = @id;
 
 -- name: RecordEmailAddressOutbound :exec

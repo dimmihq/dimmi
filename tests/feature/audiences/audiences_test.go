@@ -3,6 +3,7 @@ package audiences_test
 import (
 	"strconv"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -10,6 +11,7 @@ import (
 	"github.com/dimmihq/dimmi/framework/testkit"
 
 	"github.com/dimmihq/dimmi/app/enums"
+	"github.com/dimmihq/dimmi/app/models"
 	"github.com/dimmihq/dimmi/tests"
 )
 
@@ -120,6 +122,57 @@ func TestSavedAudiences(t *testing.T) {
 		d.Owner.GetJSON("/api/v1/audiences/"+vip).AssertOK().AssertJSONPath("data.used_by.0.object", "workflow").
 			AssertJSONPath("data.used_by.0.live", true)
 		d.Owner.Delete("/api/v1/audiences/"+vip).AssertStatus(409).AssertJSONPath("used_by.0", "VIP lane")
+	})
+
+	t.Run("refuses to delete an audience a messenger, a live series or a scheduled broadcast uses", func(t *testing.T) {
+		t.Parallel()
+		d := tests.NewDesk(t)
+		rule := testkit.JSON{"rules": leaf("contact.kind", "eq", "user")}
+		refused := func(id, object, name string) {
+			d.Owner.GetJSON("/api/v1/audiences/"+id).AssertOK().AssertJSONPath("data.used_by.0.object", object).
+				AssertJSONPath("data.used_by.0.live", true)
+			d.Owner.Delete("/api/v1/audiences/"+id).AssertStatus(409).AssertJSONPath("code", "audience_in_use").
+				AssertJSONPath("used_by.0", name)
+		}
+
+		shown, _ := save(t, d, "Shown", rule)
+		widgets := d.Owner.GetJSON("/api/v1/widget-settings").AssertOK()
+		d.Owner.PatchJSON("/api/v1/widget-settings/"+widgets.String("data.0.id")+"/audiences", testkit.JSON{
+			"launcher": testkit.JSON{"rules": leaf("audience", "in", []string{shown})},
+		}).AssertOK()
+		refused(shown, "messenger", widgets.String("data.0.name"))
+
+		travelers, _ := save(t, d, "Travelers", rule)
+		tag := d.Owner.PostJSON("/api/v1/tags", testkit.JSON{"name": "Traveled"}).AssertCreated().String("data.id")
+		journey := testkit.JSON{"name": "Journey", "subject": "contact"}
+		journey["spec"] = testkit.JSON{
+			"entry": testkit.JSON{"audience_id": travelers, "reentry": testkit.JSON{"kind": "once"}},
+			"nodes": []testkit.JSON{
+				{"id": "entry", "kind": "entry"},
+				{"id": "tag", "kind": "tag", "settings": testkit.JSON{"tag_ids": []string{tag}}},
+			},
+			"edges": []testkit.JSON{{"from": "entry", "to": "tag"}},
+		}
+		series := d.Owner.PostJSON("/api/v1/series", journey).AssertCreated().String("data.id")
+		d.Owner.GetJSON("/api/v1/audiences/"+travelers).AssertOK().AssertJSONPath("data.used_by.0.object", "series").
+			AssertJSONPath("data.used_by.0.id", series).AssertJSONPath("data.used_by.0.live", false)
+		d.Owner.PostJSON("/api/v1/series/"+series+"/publications", testkit.JSON{"note": "go"}).AssertOK()
+		refused(travelers, "series", "Journey")
+
+		readers, _ := save(t, d, "Readers", rule)
+		broadcast := d.Owner.PostJSON("/api/v1/broadcasts", testkit.JSON{"name": "News", "channel": "chat"}).
+			AssertCreated().String("data.id")
+		d.Owner.PatchJSON("/api/v1/broadcasts/"+broadcast, testkit.JSON{"audience_id": readers}).AssertOK()
+		d.Owner.GetJSON("/api/v1/audiences/"+readers).AssertOK().AssertJSONPath("data.used_by.0.object", "broadcast").
+			AssertJSONPath("data.used_by.0.id", broadcast).AssertJSONPath("data.used_by.0.live", false)
+		member := models.PublicID(models.PrefixMember, d.TC.Workspace.Owner.ID)
+		d.Owner.PatchJSON("/api/v1/broadcasts/"+broadcast, testkit.JSON{
+			"body": "Hello", "sender_id": member, "reply_member_id": member,
+			"schedule": testkit.JSON{"kind": "at", "at": d.TC.Clock.Now().Add(48 * time.Hour)},
+		}).AssertOK()
+		d.Owner.PostJSON("/api/v1/broadcasts/"+broadcast+"/send", nil).AssertOK().
+			AssertJSONPath("data.status", "scheduled")
+		refused(readers, "broadcast", "News")
 	})
 
 	t.Run("lets members read and preview audiences but not change them", func(t *testing.T) {

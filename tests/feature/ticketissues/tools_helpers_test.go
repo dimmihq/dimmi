@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	fhttp "github.com/dimmihq/dimmi/framework/http"
+	"github.com/dimmihq/dimmi/framework/httpclient"
 	"github.com/dimmihq/dimmi/framework/testkit"
 
 	"github.com/dimmihq/dimmi/app/integrations/trackers"
@@ -31,6 +32,8 @@ func (d desk) serveJira(t *testing.T) {
 	d.fake.Stub("POST "+jiraSite+"/webhook", reply(fixture(t, jirafixtures.Files, "webhook_registered.json")))
 	d.fake.Stub("POST "+jiraSite+"/issue/10001/remotelink", reply([]byte(`{"id": 1}`)))
 	d.fake.Stub("PUT "+jiraSite+"/issue/10001/properties/dimmi.impact", reply(nil))
+	d.fake.Stub("DELETE "+jiraSite+"/issue/10001/remotelink?*", httpclient.Response{Status: 204})
+	d.fake.Stub("DELETE "+jiraSite+"/issue/10001/properties/dimmi.impact", httpclient.Response{Status: 204})
 }
 
 /*

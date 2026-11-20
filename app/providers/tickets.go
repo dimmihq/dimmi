@@ -4,8 +4,7 @@
 |--------------------------------------------------------------------------
 |
 | Tickets follow their conversations, so the action hears conversation
-| events; it sends customers notices and tracker messages from jobs,
-| resolves tickets that waited too long from a sweep, matches each
+| events; it sends customers notices from jobs, resolves tickets that waited too long from a sweep, matches each
 | conversation a customer starts to open trackers once it is saved, and
 | starts a customer ticket's conversation through the inbox's own
 | action.
@@ -41,7 +40,6 @@ func bootTickets(a *app.App) error {
 
 	return errors.Join(
 		queue.Register(a.Queue, &jobs.NotifyTicketState{Work: t}),
-		queue.Register(a.Queue, &jobs.SendTicketUpdate{Work: t}),
 		queue.Register(a.Queue, &jobs.SweepTickets{Work: t}),
 		queue.Register(a.Queue, &jobs.MatchTicketConversation{Work: t}),
 		bootSLA(a),

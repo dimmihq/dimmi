@@ -119,6 +119,22 @@ func TestClassification(t *testing.T) {
 		assert.NotEmpty(t, res.String("data.inbound_verified_at"))
 	})
 
+	t.Run("clears the forwarding confirmation once forwarded mail arrives", func(t *testing.T) {
+		t.Parallel()
+		tc, _ := emailCase(t)
+		address := defaultAddress(tc)
+		path := "/api/v1/email-addresses/" + publicID(address)
+
+		deliver(tc, fixture(t, "gmail_confirmation.eml", map[string]string{
+			"TO": address.ForwardingAddress, "FORWARDING": address.ForwardingAddress,
+		}), "")
+		tc.ActingAsOwner().GetJSON(path).AssertOK().AssertJSONPath("data.forwarding_confirmation.provider", "gmail")
+
+		deliver(tc, fixture(t, "newsletter.eml", map[string]string{"TO": address.ForwardingAddress}), "")
+
+		tc.ActingAsOwner().GetJSON(path).AssertOK().AssertJSONPath("data.forwarding_confirmation", nil)
+	})
+
 	t.Run("sets spam aside", func(t *testing.T) {
 		t.Parallel()
 		tc, _ := emailCase(t)

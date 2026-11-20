@@ -68,14 +68,14 @@ sends it in the background and writes the new counts on the buttons.
 
 templ reactions(c helpcenter.Center, e Entry) {
 	if len(e.Reactions) > 0 {
-	<form method="post" action={ helpcenter.Href(c, e.Path+"/reactions") } data-reactions class="flex flex-wrap items-center gap-1.5" aria-label="Reactions">
-		for _, r := range e.Reactions {
-			<button type="submit" name="emoji" value={ r.Emoji } aria-label={ reactionLabel(r) } class="inline-flex h-8 cursor-pointer items-center gap-1.5 rounded-full border border-border-button-default bg-background-primary-default px-2.5 text-body-2-medium tabular-nums text-text-secondary outline-none transition hover:border-border-button-hover hover:bg-background-secondary-hover focus-visible:ring-2 focus-visible:ring-border-focus-ring active:scale-95">
-				<span class="text-[0.9375rem] leading-none">{ r.Emoji }</span>
-				<span data-count hidden?={ r.Count == 0 }>{ strconv.Itoa(r.Count) }</span>
-			</button>
-		}
-	</form>
+		<form method="post" action={ helpcenter.Href(c, e.Path+"/reactions") } data-reactions class="flex flex-wrap items-center gap-1.5" aria-label="Reactions">
+			for _, r := range e.Reactions {
+				<button type="submit" name="emoji" value={ r.Emoji } aria-label={ reactionLabel(r) } class="inline-flex h-8 cursor-pointer items-center gap-1.5 rounded-full border border-border-button-default bg-background-primary-default px-2.5 text-body-2-medium tabular-nums text-text-secondary outline-none transition hover:border-border-button-hover hover:bg-background-secondary-hover focus-visible:ring-2 focus-visible:ring-border-focus-ring active:scale-95">
+					<span class="text-[0.9375rem] leading-none">{ r.Emoji }</span>
+					<span data-count hidden?={ r.Count == 0 }>{ strconv.Itoa(r.Count) }</span>
+				</button>
+			}
+		</form>
 	}
 }
 

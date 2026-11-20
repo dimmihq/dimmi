@@ -24,6 +24,7 @@ import (
 	"github.com/dimmihq/dimmi/framework/ids"
 
 	"github.com/dimmihq/dimmi/app/auth/authz"
+	"github.com/dimmihq/dimmi/app/enums"
 	appevents "github.com/dimmihq/dimmi/app/events"
 	"github.com/dimmihq/dimmi/app/models"
 )
@@ -58,7 +59,7 @@ func (w *Writer) Note(ctx context.Context, t models.Ticket, body string) (models
 			WorkspaceID: t.WorkspaceID, ID: *t.ConversationID,
 		})
 		if err == nil && c.DeletedAt == nil {
-			if _, err := w.AddNote(ctx, c, body); err != nil {
+			if err := w.mirrorNote(ctx, c, body); err != nil {
 				return ev, err
 			}
 		}
@@ -183,4 +184,19 @@ func (t *Tickets) Export(
 	})
 
 	return out, err
+}
+
+/*
+mirrorNote adds the note to the ticket's conversation, in the linked
+tool's name when a tool wrote it.
+*/
+func (w *Writer) mirrorNote(ctx context.Context, c models.Conversation, body string) error {
+	var err error
+	if w.Actor.Type == string(enums.AuthorTypeSystem) && w.Actor.Name != "" {
+		_, err = w.AddToolNote(ctx, c, body, w.Actor.Name)
+	} else {
+		_, err = w.AddNote(ctx, c, body)
+	}
+
+	return err
 }

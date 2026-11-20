@@ -53,13 +53,14 @@ const freezePage = 1000
 candidate is one person or Slack channel about to become a recipient.
 */
 type candidate struct {
-	contact ids.UUID
-	company ids.UUID
-	room    ids.UUID
-	address string
-	status  string
-	reason  string
-	due     time.Time
+	contact      ids.UUID
+	company      ids.UUID
+	room         ids.UUID
+	conversation ids.UUID
+	address      string
+	status       string
+	reason       string
+	due          time.Time
 }
 
 /*
@@ -68,6 +69,10 @@ freeze turns the broadcast's audience into recipients.
 func (b *Broadcasts) freeze(ctx context.Context, row models.Broadcast) error {
 	if row.Channel == ChannelSlack {
 		return b.freezeRooms(ctx, row)
+	}
+
+	if row.Channel == ChannelConversation {
+		return b.freezeConversations(ctx, row)
 	}
 
 	seen := map[string]bool{}
@@ -168,6 +173,7 @@ func (b *Broadcasts) add(ctx context.Context, q *models.Queries, row models.Broa
 		p.ContactIds = append(p.ContactIds, c.contact)
 		p.CompanyIds = append(p.CompanyIds, c.company)
 		p.RoomIds = append(p.RoomIds, c.room)
+		p.ConversationIds = append(p.ConversationIds, c.conversation)
 		p.Addresses = append(p.Addresses, c.address)
 		p.Statuses = append(p.Statuses, c.status)
 		p.Reasons = append(p.Reasons, c.reason)

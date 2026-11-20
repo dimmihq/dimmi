@@ -43,6 +43,8 @@ func TestIdentityEdges(t *testing.T) {
 			handmade(s, map[string]any{"alg": "none", "kid": s.id}, claims):              "token_alg_not_allowed",
 			handmade(s, map[string]any{"alg": "RS256", "kid": s.id}, claims):             "token_alg_mismatch",
 			handmade(s, map[string]any{"alg": "RS256"}, claims):                          "token_kid_required",
+			handmade(s, map[string]any{"alg": "ES256"}, claims):                          "token_kid_required",
+			handmade(s, map[string]any{"alg": "EdDSA"}, claims):                          "token_kid_required",
 			handmade(s, named, map[string]any{"sub": 42, "exp": claims["exp"]}):          "token_sub_invalid",
 			handmade(s, named, map[string]any{"sub": "u"}):                               "token_exp_missing",
 			handmade(s, named, late):                                                     "token_not_yet_valid",
@@ -54,6 +56,9 @@ func TestIdentityEdges(t *testing.T) {
 			res := d.signIn(token, nil).AssertUnauthorized().AssertJSONPath("code", code)
 			assert.NotEmpty(t, res.String("message"), code)
 		}
+		d.signIn(handmade(s, map[string]any{"alg": "ES256"}, claims), nil).
+			AssertUnauthorized().AssertJSONPath("code", "token_kid_required").
+			AssertJSONPath("message", "Tokens not signed with HS256 (RS256, ES256, EdDSA) need a kid header.")
 		d.signIn(s.sign(t, now, map[string]any{"sub": "u", "exp": now.Add(-3 * time.Hour)}), nil).
 			AssertUnauthorized().AssertJSONPath("code", "token_expired").
 			AssertJSONPath("hint", "It expired 3 hours ago. Mint a token per request from your identity endpoint; "+

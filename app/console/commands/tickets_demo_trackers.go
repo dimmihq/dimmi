@@ -7,10 +7,7 @@
 |
 | Three trackers each gather dozens of conversations reporting one
 | problem, linked as the reports came in over the weeks, from customers
-| of paying companies so the revenue at stake adds up. Two trackers
-| then message everyone linked, which lands for most, is held for
-| customers who wrote since, and fails for any the channel cannot
-| reach.
+| of paying companies so the revenue at stake adds up.
 |
 */
 
@@ -21,7 +18,6 @@ import (
 	"time"
 
 	"github.com/dimmihq/dimmi/app/actions/tickets"
-	"github.com/dimmihq/dimmi/app/jobs"
 	"github.com/dimmihq/dimmi/app/models"
 )
 
@@ -157,55 +153,4 @@ func (d *ticketDemo) moveTo(ctx context.Context, t models.Ticket, state string, 
 
 		return err
 	})
-}
-
-/*
-trackerMessages has the first two trackers message everyone linked,
-once, and sends the messages at once.
-*/
-func (d *ticketDemo) trackerMessages(ctx context.Context) error {
-	bodies := map[string]string{
-		"exports": "Good news: large exports now run in the background and arrive by email when ready. " +
-			"Thanks for your patience while we fixed this.",
-		"ios-login": "We've found what makes the iOS app crash after sign-in. Version 6.2.1 with the fix is " +
-			"waiting for App Store review; we'll write again once it's out.",
-	}
-
-	for key, body := range bodies {
-		ref, err := d.findDemo(ctx, "demo:Tracker:"+key)
-		if err != nil {
-			return err
-		}
-
-		sent, err := d.app.Actions.Tickets.Updates(ctx, d.owner, ref)
-		if err != nil || len(sent) > 0 {
-			return err
-		}
-
-		plan, err := d.app.Actions.Tickets.SendToLinked(ctx, d.owner, ref, tickets.UpdateInput{Body: body})
-		if err != nil {
-			return err
-		}
-
-		err = d.app.Actions.Tickets.SendUpdate(ctx, jobs.SendTicketUpdateArgs{
-			WorkspaceID: d.owner.Workspace.ID, UpdateID: plan.Update.ID,
-		})
-		if err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
-/*
-findDemo returns the reference of the ticket the demo made under the
-external id.
-*/
-func (d *ticketDemo) findDemo(ctx context.Context, external string) (tickets.Ref, error) {
-	t, err := models.New(d.app.DB).FindTicketByExternalID(ctx, models.FindTicketByExternalIDParams{
-		WorkspaceID: d.owner.Workspace.ID, ExternalID: &external,
-	})
-
-	return tickets.Ref{ID: t.ID}, err
 }

@@ -188,7 +188,7 @@ func (q *Queries) FindSeries(ctx context.Context, arg FindSeriesParams) (Series,
 }
 
 const findSeriesBroadcast = `-- name: FindSeriesBroadcast :one
-SELECT id, workspace_id, name, channel, status, pause_reason, audience_id, rules, room_ids, topic_id, service, subject, preview, body, sender_member_id, email_address_id, slack_as, reply_team_id, reply_member_id, ai_replies, track_clicks, skip_frequency_cap, schedule_kind, scheduled_at, goal, counts, created_by_member_id, sent_by_member_id, started_at, finished_at, deleted_at, created_at, updated_at, kind, series_id, series_node_id FROM broadcasts
+SELECT id, workspace_id, name, channel, status, pause_reason, audience_id, rules, room_ids, topic_id, service, subject, preview, body, sender_member_id, email_address_id, slack_as, reply_team_id, reply_member_id, ai_replies, track_clicks, skip_frequency_cap, schedule_kind, scheduled_at, goal, counts, created_by_member_id, sent_by_member_id, started_at, finished_at, deleted_at, created_at, updated_at, kind, series_id, series_node_id, ticket_id, holds FROM broadcasts
 WHERE workspace_id = $1 AND series_id = $2 AND series_node_id = $3
 `
 
@@ -239,6 +239,8 @@ func (q *Queries) FindSeriesBroadcast(ctx context.Context, arg FindSeriesBroadca
 		&i.Kind,
 		&i.SeriesID,
 		&i.SeriesNodeID,
+		&i.TicketID,
+		&i.Holds,
 	)
 	return i, err
 }
@@ -345,7 +347,7 @@ func (q *Queries) ListLiveSeries(ctx context.Context, workspaceID ids.UUID) ([]L
 }
 
 const listSeriesBroadcasts = `-- name: ListSeriesBroadcasts :many
-SELECT id, workspace_id, name, channel, status, pause_reason, audience_id, rules, room_ids, topic_id, service, subject, preview, body, sender_member_id, email_address_id, slack_as, reply_team_id, reply_member_id, ai_replies, track_clicks, skip_frequency_cap, schedule_kind, scheduled_at, goal, counts, created_by_member_id, sent_by_member_id, started_at, finished_at, deleted_at, created_at, updated_at, kind, series_id, series_node_id FROM broadcasts WHERE workspace_id = $1 AND series_id = $2 ORDER BY created_at
+SELECT id, workspace_id, name, channel, status, pause_reason, audience_id, rules, room_ids, topic_id, service, subject, preview, body, sender_member_id, email_address_id, slack_as, reply_team_id, reply_member_id, ai_replies, track_clicks, skip_frequency_cap, schedule_kind, scheduled_at, goal, counts, created_by_member_id, sent_by_member_id, started_at, finished_at, deleted_at, created_at, updated_at, kind, series_id, series_node_id, ticket_id, holds FROM broadcasts WHERE workspace_id = $1 AND series_id = $2 ORDER BY created_at
 `
 
 type ListSeriesBroadcastsParams struct {
@@ -400,6 +402,8 @@ func (q *Queries) ListSeriesBroadcasts(ctx context.Context, arg ListSeriesBroadc
 			&i.Kind,
 			&i.SeriesID,
 			&i.SeriesNodeID,
+			&i.TicketID,
+			&i.Holds,
 		); err != nil {
 			return nil, err
 		}
@@ -774,7 +778,7 @@ ON CONFLICT (series_id, series_node_id) WHERE series_id IS NOT NULL DO UPDATE SE
     slack_as = EXCLUDED.slack_as, reply_team_id = EXCLUDED.reply_team_id,
     reply_member_id = EXCLUDED.reply_member_id, ai_replies = EXCLUDED.ai_replies,
     track_clicks = EXCLUDED.track_clicks, updated_at = EXCLUDED.updated_at
-RETURNING id, workspace_id, name, channel, status, pause_reason, audience_id, rules, room_ids, topic_id, service, subject, preview, body, sender_member_id, email_address_id, slack_as, reply_team_id, reply_member_id, ai_replies, track_clicks, skip_frequency_cap, schedule_kind, scheduled_at, goal, counts, created_by_member_id, sent_by_member_id, started_at, finished_at, deleted_at, created_at, updated_at, kind, series_id, series_node_id
+RETURNING id, workspace_id, name, channel, status, pause_reason, audience_id, rules, room_ids, topic_id, service, subject, preview, body, sender_member_id, email_address_id, slack_as, reply_team_id, reply_member_id, ai_replies, track_clicks, skip_frequency_cap, schedule_kind, scheduled_at, goal, counts, created_by_member_id, sent_by_member_id, started_at, finished_at, deleted_at, created_at, updated_at, kind, series_id, series_node_id, ticket_id, holds
 `
 
 type UpsertSeriesBroadcastParams struct {
@@ -861,6 +865,8 @@ func (q *Queries) UpsertSeriesBroadcast(ctx context.Context, arg UpsertSeriesBro
 		&i.Kind,
 		&i.SeriesID,
 		&i.SeriesNodeID,
+		&i.TicketID,
+		&i.Holds,
 	)
 	return i, err
 }

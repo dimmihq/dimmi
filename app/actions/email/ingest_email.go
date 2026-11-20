@@ -33,6 +33,7 @@ import (
 	"github.com/dimmihq/dimmi/framework/database"
 	"github.com/dimmihq/dimmi/framework/ids"
 
+	"github.com/dimmihq/dimmi/app/actions/conversations"
 	"github.com/dimmihq/dimmi/app/enums"
 	inbound "github.com/dimmihq/dimmi/app/integrations/email"
 	"github.com/dimmihq/dimmi/app/models"
@@ -120,6 +121,15 @@ func (a *ProcessInboundEmail) deliver(ctx context.Context, q *models.Queries, d 
 
 	if err := teammateOnThread(ctx, q, &d); err != nil {
 		return err
+	}
+
+	if d.hit.conversation != nil {
+		d.hit.stale, err = conversations.PastReopenWindow(
+			ctx, q, *d.hit.conversation, a.Clock.Now(), a.Config.Inbound.ReopenWindow,
+		)
+		if err != nil {
+			return err
+		}
 	}
 
 	p, reason, err := a.decide(ctx, q, d)

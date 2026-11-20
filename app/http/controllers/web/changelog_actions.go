@@ -74,6 +74,9 @@ func (c ChangelogController) realEntry(w fhttp.ResponseWriter, r *fhttp.Request,
 			deref(one.PublishedBodyMarkdown))
 		return
 	}
+	if c.Analytics != nil && personReading(r) {
+		c.Analytics.EntryViewed(r.Context(), s.help, one.ID)
+	}
 	labels, err := c.labelsOf(r, s)
 	if err != nil {
 		c.Errors.Render(w, r, err)

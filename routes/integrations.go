@@ -54,11 +54,11 @@ func integrationRoutes(api *routing.Router, a *app.App) {
 		r.Middleware("csrf", "session", "auth:user", "workspace", "access.policy", "api.throttle")
 
 		routing.Post(r, "/integrations/{provider}/installations", "integrations.installations.store",
-			installs.Store).Middleware("verified").Status(fhttp.StatusOK)
+			installs.Store).Internal().Middleware("verified").Status(fhttp.StatusOK)
 		routing.Post(r, "/integrations/{integration}/member-grants", "integrations.member-grants.store",
-			grants.Store).Status(fhttp.StatusOK)
+			grants.Store).Internal().Status(fhttp.StatusOK)
 		routing.Delete(r, "/integrations/{integration}/member-grants/{grant}",
-			"integrations.member-grants.destroy", grants.Destroy).Status(fhttp.StatusNoContent)
+			"integrations.member-grants.destroy", grants.Destroy).Internal().Status(fhttp.StatusNoContent)
 	})
 }
 

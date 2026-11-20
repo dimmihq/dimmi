@@ -35,7 +35,6 @@ func ticketWebhooks() []WebhookEventType {
 			Type: "ticket.note_created", Object: "ticket", Group: "Tickets", NotesOptIn: true,
 			Description: "A teammate left an internal note on a ticket.",
 		},
-		t("update_sent", "A tracker's message to its linked customers finished sending."),
 		t("sla_warning", "A ticket's service level target is about to be missed."),
 		t("sla_breached", "A ticket missed a service level target."),
 		t("deleted", "A ticket moved to the trash."),

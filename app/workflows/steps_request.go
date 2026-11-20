@@ -360,7 +360,7 @@ func (st *state) renderEscaped(ctx context.Context, text string, escape func(str
 
 	return variablePattern().ReplaceAllStringFunc(text, func(found string) string {
 		m := variablePattern().FindStringSubmatch(found)
-		if v := st.variable(s, m[1]); v != "" {
+		if v := st.variable(ctx, s, m[1]); v != "" {
 			return escape(v)
 		}
 

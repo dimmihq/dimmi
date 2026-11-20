@@ -124,6 +124,8 @@ func (w *Webhooks) store(
 		return err
 	}
 
+	snap.Note = snap.Note || aboutNote(args.Type)
+
 	targets := slices.DeleteFunc(endpoints, func(e models.WebhookEndpoint) bool { return !receives(e, snap) })
 	if len(targets) == 0 {
 		return nil
@@ -171,6 +173,18 @@ func (w *Webhooks) snapshot(ctx context.Context, args jobs.FanOutWebhookEventArg
 	}
 
 	return snap, nil
+}
+
+/*
+aboutNote reports whether every event of the type is about an internal
+note, such as ticket.note_created. A message event can be about a note
+or not, so its snapshot says which; any other event the catalog marks
+as notes opt-in carries a note each time.
+*/
+func aboutNote(eventType string) bool {
+	entry, ok := appevents.FindWebhookEventType(eventType)
+
+	return ok && entry.NotesOptIn && entry.Object != subjectMessage
 }
 
 /*

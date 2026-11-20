@@ -66,7 +66,7 @@ func RatingAsk(a Ask) templ.Component {
 			var templ_7745c5c3_Var2 string
 			templ_7745c5c3_Var2, templ_7745c5c3_Err = templ.JoinStringErrs(i18n.T(ctx, "mail.conversation_rating.greeting", i18n.Args{"name": a.Name}))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `mails.templ`, Line: 34, Col: 108}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `mail/ratings/mails.templ`, Line: 34, Col: 108}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var2))
 			if templ_7745c5c3_Err != nil {
@@ -84,7 +84,7 @@ func RatingAsk(a Ask) templ.Component {
 		var templ_7745c5c3_Var3 string
 		templ_7745c5c3_Var3, templ_7745c5c3_Err = templ.JoinStringErrs(i18n.T(ctx, "mail.conversation_rating.intro", i18n.Args{"workspace": a.Workspace}))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `mails.templ`, Line: 36, Col: 114}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `mail/ratings/mails.templ`, Line: 36, Col: 114}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var3))
 		if templ_7745c5c3_Err != nil {
@@ -102,7 +102,7 @@ func RatingAsk(a Ask) templ.Component {
 			var templ_7745c5c3_Var4 string
 			templ_7745c5c3_Var4, templ_7745c5c3_Err = templruntime.NewAttributeExpression(templ.SafeURL(f.URL)).ResolveURL(ctx)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `mails.templ`, Line: 39, Col: 34}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `mail/ratings/mails.templ`, Line: 39, Col: 34}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var4)
 			if templ_7745c5c3_Err != nil {
@@ -115,7 +115,7 @@ func RatingAsk(a Ask) templ.Component {
 			var templ_7745c5c3_Var5 string
 			templ_7745c5c3_Var5, templ_7745c5c3_Err = templruntime.NewAttributeExpression(f.Label).Resolve(ctx)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `mails.templ`, Line: 39, Col: 52}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `mail/ratings/mails.templ`, Line: 39, Col: 52}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var5)
 			if templ_7745c5c3_Err != nil {
@@ -128,7 +128,7 @@ func RatingAsk(a Ask) templ.Component {
 			var templ_7745c5c3_Var6 string
 			templ_7745c5c3_Var6, templ_7745c5c3_Err = templ.JoinStringErrs(f.Emoji)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `mails.templ`, Line: 39, Col: 133}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `mail/ratings/mails.templ`, Line: 39, Col: 133}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var6))
 			if templ_7745c5c3_Err != nil {
@@ -146,7 +146,7 @@ func RatingAsk(a Ask) templ.Component {
 		var templ_7745c5c3_Var7 string
 		templ_7745c5c3_Var7, templ_7745c5c3_Err = templruntime.NewAttributeExpression(templ.SafeURL(a.Comment)).ResolveURL(ctx)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `mails.templ`, Line: 43, Col: 37}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `mail/ratings/mails.templ`, Line: 43, Col: 37}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var7)
 		if templ_7745c5c3_Err != nil {
@@ -159,7 +159,7 @@ func RatingAsk(a Ask) templ.Component {
 		var templ_7745c5c3_Var8 string
 		templ_7745c5c3_Var8, templ_7745c5c3_Err = templ.JoinStringErrs(i18n.T(ctx, "mail.conversation_rating.comment", nil))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `mails.templ`, Line: 43, Col: 94}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `mail/ratings/mails.templ`, Line: 43, Col: 94}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var8))
 		if templ_7745c5c3_Err != nil {
@@ -172,7 +172,7 @@ func RatingAsk(a Ask) templ.Component {
 		var templ_7745c5c3_Var9 string
 		templ_7745c5c3_Var9, templ_7745c5c3_Err = templ.JoinStringErrs(i18n.T(ctx, "mail.conversation_rating.why", i18n.Args{"workspace": a.Workspace}))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `mails.templ`, Line: 45, Col: 141}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `mail/ratings/mails.templ`, Line: 45, Col: 141}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var9))
 		if templ_7745c5c3_Err != nil {

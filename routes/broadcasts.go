@@ -87,8 +87,8 @@ func broadcastPreferenceRoutes(guest *routing.Router, a *app.App) {
 
 	pc := &v1.BroadcastPreferencesController{Broadcasts: a.Actions.Broadcasts, IDs: a.IDs}
 
-	routing.Get(guest, "/broadcast-preferences/{token}", "broadcast-preferences.show", pc.Show)
-	routing.Patch(guest, "/broadcast-preferences/{token}", "broadcast-preferences.update", pc.Update)
+	routing.Get(guest, "/broadcast-preferences/{token}", "broadcast-preferences.show", pc.Show).Internal()
+	routing.Patch(guest, "/broadcast-preferences/{token}", "broadcast-preferences.update", pc.Update).Internal()
 }
 
 /*

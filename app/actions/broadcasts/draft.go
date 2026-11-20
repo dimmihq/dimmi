@@ -74,6 +74,10 @@ func (b *Broadcasts) Save(ctx context.Context, in SaveInput) (models.Broadcast, 
 			return ErrNotDraft
 		}
 
+		if len(d.Holds) > 0 && (row.Channel != ChannelConversation || !validHolds(d.Holds)) {
+			return ErrHolds
+		}
+
 		out, err = q.SaveBroadcastDraft(ctx, saveParams(row, d, b.Clock.Now()))
 
 		return wrap("save broadcast", err)
@@ -142,7 +146,7 @@ func saveParams(row models.Broadcast, d Draft, now time.Time) models.SaveBroadca
 		SenderMemberID: d.SenderMemberID, EmailAddressID: d.EmailAddressID, SlackAs: d.SlackAs,
 		ReplyTeamID: d.ReplyTeamID, ReplyMemberID: d.ReplyMemberID, AiReplies: d.AIReplies, TrackClicks: d.TrackClicks,
 		SkipFrequencyCap: d.SkipFrequencyCap, ScheduleKind: d.ScheduleKind, ScheduledAt: d.ScheduledAt,
-		Goal: nullJSON(d.Goal), Now: now,
+		Goal: nullJSON(d.Goal), Holds: nonNilStrings(d.Holds), Now: now,
 	}
 }
 
@@ -156,7 +160,7 @@ func DraftOf(row models.Broadcast) Draft {
 		SenderMemberID: row.SenderMemberID, EmailAddressID: row.EmailAddressID, SlackAs: row.SlackAs,
 		ReplyTeamID: row.ReplyTeamID, ReplyMemberID: row.ReplyMemberID, AIReplies: row.AiReplies,
 		TrackClicks: row.TrackClicks, SkipFrequencyCap: row.SkipFrequencyCap, ScheduleKind: row.ScheduleKind,
-		ScheduledAt: row.ScheduledAt, Goal: row.Goal,
+		ScheduledAt: row.ScheduledAt, Goal: row.Goal, Holds: row.Holds,
 	}
 }
 

@@ -2,10 +2,12 @@
 -- AddBroadcastRecipients freezes one page of the audience into
 -- recipients. A contact or room already frozen is left as it is, so
 -- freezing can resume after a crash. A nil id stands for none.
-INSERT INTO broadcast_recipients (workspace_id, broadcast_id, contact_id, company_id, room_id, address, status,
-    reason, reply_token, due_at, created_at, updated_at)
+INSERT INTO broadcast_recipients (workspace_id, broadcast_id, contact_id, company_id, room_id, conversation_id,
+    address, status, reason, reply_token, due_at, created_at, updated_at)
 SELECT @workspace_id::uuid, @broadcast_id::uuid, NULLIF(unnest(@contact_ids::uuid[]), '00000000-0000-0000-0000-000000000000'::uuid), NULLIF(unnest(@company_ids::uuid[]), '00000000-0000-0000-0000-000000000000'::uuid),
-    NULLIF(unnest(@room_ids::uuid[]), '00000000-0000-0000-0000-000000000000'::uuid), unnest(@addresses::text[]), unnest(@statuses::text[]),
+    NULLIF(unnest(@room_ids::uuid[]), '00000000-0000-0000-0000-000000000000'::uuid),
+    NULLIF(unnest(@conversation_ids::uuid[]), '00000000-0000-0000-0000-000000000000'::uuid),
+    unnest(@addresses::text[]), unnest(@statuses::text[]),
     NULLIF(unnest(@reasons::text[]), ''), unnest(@reply_tokens::text[]), unnest(@due_ats::timestamptz[]),
     @now::timestamptz, @now::timestamptz
 ON CONFLICT DO NOTHING;
@@ -36,8 +38,11 @@ SELECT * FROM broadcast_recipients WHERE workspace_id = @workspace_id AND id = @
 
 -- name: MarkBroadcastRecipientSent :one
 -- MarkBroadcastRecipientSent records that a recipient's message went out
--- and was accepted; a bounce later takes the delivery back.
-UPDATE broadcast_recipients SET status = 'sent', reason = NULL, delivered_at = @now::timestamptz,
+-- and was accepted; a bounce later takes the delivery back. A message
+-- handed to a channel that reports later waits for that report before
+-- it counts as delivered.
+UPDATE broadcast_recipients SET status = 'sent', reason = NULL,
+    delivered_at = CASE WHEN @pending::boolean THEN NULL ELSE @now::timestamptz END,
     message_id_header = sqlc.narg(message_id_header),
     outbound_email_id = sqlc.narg(outbound_email_id), external_ref = sqlc.narg(external_ref),
     conversation_id = COALESCE(sqlc.narg(conversation_id), conversation_id), sent_at = @now::timestamptz, updated_at = @now::timestamptz
@@ -334,3 +339,11 @@ WHERE workspace_id = @workspace_id AND email_address_id = @email_address_id AND 
 SELECT coalesce(reason, '')::text AS reason, count(*) AS n FROM broadcast_recipients
 WHERE workspace_id = @workspace_id AND broadcast_id = @broadcast_id AND status = 'queued' AND reason IS NOT NULL
 GROUP BY reason;
+
+-- name: FindBroadcastRecipientByMessage :one
+-- FindBroadcastRecipientByMessage returns the recipient a conversation
+-- broadcast answered with the message.
+SELECT r.* FROM broadcast_recipients r
+JOIN broadcasts b ON b.workspace_id = r.workspace_id AND b.id = r.broadcast_id
+WHERE r.workspace_id = @workspace_id AND b.channel = 'conversation' AND r.external_ref = @external_ref::text
+LIMIT 1;

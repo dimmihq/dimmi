@@ -57,9 +57,14 @@ func (c *BroadcastTopicController) Index(ctx context.Context, _ *requests.NoInpu
 		return nil, err
 	}
 
+	tallies, err := c.Broadcasts.TopicTallies(ctx, membership(ctx))
+	if err != nil {
+		return nil, err
+	}
+
 	items := make([]resources.BroadcastTopic, len(rows))
 	for i, t := range rows {
-		items[i] = resources.NewBroadcastTopic(t)
+		items[i] = resources.NewBroadcastTopic(t, resources.BroadcastTopicCounts(tallies[t.ID]))
 	}
 
 	page := pagination.Page[resources.BroadcastTopic]{Items: items, Limit: 500}
@@ -79,7 +84,7 @@ func (c *BroadcastTopicController) Store(ctx context.Context, in *requests.Store
 		return nil, err
 	}
 
-	return &BroadcastTopicOutput{Body: fhttp.NewResource(resources.NewBroadcastTopic(t))}, nil
+	return c.show(ctx, t)
 }
 
 /*
@@ -100,5 +105,19 @@ func (c *BroadcastTopicController) Update(ctx context.Context, in *requests.Upda
 		return nil, err
 	}
 
-	return &BroadcastTopicOutput{Body: fhttp.NewResource(resources.NewBroadcastTopic(t))}, nil
+	return c.show(ctx, t)
+}
+
+/*
+show answers with one topic and its counts.
+*/
+func (c *BroadcastTopicController) show(ctx context.Context, t models.BroadcastTopic) (*BroadcastTopicOutput, error) {
+	tallies, err := c.Broadcasts.TopicTallies(ctx, membership(ctx))
+	if err != nil {
+		return nil, err
+	}
+
+	topic := resources.NewBroadcastTopic(t, resources.BroadcastTopicCounts(tallies[t.ID]))
+
+	return &BroadcastTopicOutput{Body: fhttp.NewResource(topic)}, nil
 }

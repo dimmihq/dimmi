@@ -24,6 +24,8 @@ import (
 	"github.com/dimmihq/dimmi/framework/ids"
 	"github.com/dimmihq/dimmi/framework/log"
 
+	"github.com/dimmihq/dimmi/app/actions/tickets"
+	"github.com/dimmihq/dimmi/app/auth/authz"
 	"github.com/dimmihq/dimmi/app/integrations/trackers"
 	"github.com/dimmihq/dimmi/app/models"
 )
@@ -62,6 +64,27 @@ func (s *Issues) Sweep(ctx context.Context) error {
 	}
 
 	return nil
+}
+
+/*
+Refresh reads every issue linked to the ticket from its tool now,
+applying each the way the re-check does, and returns the links. A tool
+that fails keeps its error on the link, as the re-check would.
+*/
+func (s *Issues) Refresh(ctx context.Context, m authz.Membership, ref tickets.Ref) ([]models.TicketIssue, error) {
+	links, err := s.List(ctx, m, ref)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, link := range links {
+		if err := s.Check(ctx, link.WorkspaceID, link.ID); err != nil {
+			log.From(ctx).WarnContext(ctx, "refresh linked issue",
+				log.String("issue_id", link.ID.String()), log.Err(err))
+		}
+	}
+
+	return s.List(ctx, m, ref)
 }
 
 /*

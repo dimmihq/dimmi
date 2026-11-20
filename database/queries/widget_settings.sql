@@ -4,9 +4,14 @@
 SELECT workspace_id::uuid, id::uuid FROM widget_resolve_app(@app);
 
 -- name: CreateWidgetSettings :one
--- CreateWidgetSettings stores a new widget on its channel connection.
-INSERT INTO widget_settings (workspace_id, channel_connection_id, name, created_at, updated_at)
-VALUES (@workspace_id, @channel_connection_id, @name, @now, @now)
+-- CreateWidgetSettings stores a new widget on its channel connection,
+-- linked to the workspace's default help center when it has one.
+INSERT INTO widget_settings (workspace_id, channel_connection_id, name, help_center_id, created_at, updated_at)
+VALUES (
+    @workspace_id, @channel_connection_id, @name,
+    (SELECT id FROM help_centers WHERE workspace_id = @workspace_id AND is_default AND deleted_at IS NULL),
+    @now, @now
+)
 RETURNING *;
 
 -- name: FindWidgetSettings :one

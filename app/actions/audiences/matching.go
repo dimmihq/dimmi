@@ -140,3 +140,50 @@ func int32Of(n int) int32 {
 
 	return int32(n)
 }
+
+/*
+KeepInput is a set of contacts already read, and the saved audience or
+rules they must match; with neither, all of them stay.
+*/
+type KeepInput struct {
+	WorkspaceID ids.UUID
+	AudienceID  *ids.UUID
+	Rules       json.RawMessage
+	Contacts    []models.Contact
+}
+
+/*
+Keep returns the contacts among those given who match, in the order
+given. A sender that finds its people some other way, such as through
+the conversations linked to a tracker, narrows them with it.
+*/
+func (a *Audiences) Keep(ctx context.Context, q *models.Queries, in KeepInput) ([]models.Contact, error) {
+	program, err := a.programOf(ctx, q, MatchInput{WorkspaceID: in.WorkspaceID, AudienceID: in.AudienceID, Rules: in.Rules})
+	if err != nil || program == nil || len(in.Contacts) == 0 {
+		return in.Contacts, err
+	}
+
+	env, err := a.env(ctx, q, in.WorkspaceID)
+	if err != nil {
+		return nil, err
+	}
+
+	matched, err := judge{program: program, env: env}.matching(ctx, q, in.Contacts)
+	if err != nil {
+		return nil, err
+	}
+
+	keep := make(map[ids.UUID]bool, len(matched))
+	for _, id := range matched {
+		keep[id] = true
+	}
+
+	out := make([]models.Contact, 0, len(matched))
+	for _, c := range in.Contacts {
+		if keep[c.ID] {
+			out = append(out, c)
+		}
+	}
+
+	return out, nil
+}

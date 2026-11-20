@@ -9,10 +9,9 @@
 | one inbox:demo seeded, with tickets the way a busy team builds them up:
 | customer types with their fields, back-office types, hundreds of
 | tickets across states and teammates with weeks of history, trackers
-| gathering dozens of reports from paying companies, tracker messages
-| sent to everyone linked, service level policies with clocks met,
-| breached and running, and AI suggestions waiting on a few tickets. Every ticket
-| goes through the tickets writer, replayed at its own time like an
+| gathering dozens of reports from paying companies, service level
+| policies with clocks met, breached and running, and AI suggestions
+| waiting on a few tickets. Every ticket goes through the tickets writer, replayed at its own time like an
 | import, under an external id, so running it again adds nothing twice.
 |
 */
@@ -88,7 +87,6 @@ func (c TicketsDemoCommand) Handle(
 		{"service level policies", d.seedPolicies},
 		{"customer tickets", func(ctx context.Context) error { return d.customerTickets(ctx, in.Int("tickets")) }},
 		{"trackers", d.trackers},
-		{"tracker messages", d.trackerMessages},
 	}
 
 	for _, s := range steps {

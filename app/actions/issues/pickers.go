@@ -5,9 +5,11 @@
 |
 | Nothing about a tool is typed: teams, projects, workflow states,
 | services, severities, users, fields and environments are pulled from
-| the tool when a picker opens, and issues to link are found by search.
-| Reading them takes only tickets:read; what is picked is then checked
-| again by the tool itself when used.
+| the tool, and issues to link are found by search. A list pulled is
+| kept for a day so pickers open at once; asking for it fresh pulls it
+| again, as after adding a team in the tool. Reading them takes only
+| tickets:read; what is picked is then checked again by the tool itself
+| when used.
 |
 */
 
@@ -16,7 +18,9 @@ package issues
 import (
 	"context"
 	"strings"
+	"time"
 
+	"github.com/dimmihq/dimmi/framework/cache"
 	"github.com/dimmihq/dimmi/framework/ids"
 
 	"github.com/dimmihq/dimmi/app/actions/tickets"
@@ -25,13 +29,20 @@ import (
 )
 
 /*
+optionsKept is how long a list pulled from a tool is kept.
+*/
+const optionsKept = 24 * time.Hour
+
+/*
 OptionsQuery names a list of an installation's tool and the parent it
-is within, such as a team.
+is within, such as a team. Fresh pulls it from the tool again instead
+of the copy kept.
 */
 type OptionsQuery struct {
 	Installation ids.UUID
 	List         string
 	Parent       string
+	Fresh        bool
 }
 
 /*
@@ -52,13 +63,39 @@ func (s *Issues) Options(ctx context.Context, m authz.Membership, in OptionsQuer
 		return nil, err
 	}
 
-	options, err := tl.tracker.Options(ctx, tl.call, in.List, in.Parent)
-	if err != nil {
-		return nil, toolError(err)
+	var failed error
+
+	pull := func(ctx context.Context) ([]trackers.Option, error) {
+		options, err := tl.tracker.Options(ctx, tl.call, in.List, in.Parent)
+		if err != nil {
+			failed = toolError(err)
+
+			return nil, failed
+		}
+
+		if options == nil {
+			options = []trackers.Option{}
+		}
+
+		return options, nil
 	}
 
-	if options == nil {
-		options = []trackers.Option{}
+	if s.Cache == nil {
+		return pull(ctx)
+	}
+
+	key := "issue-options:" + m.Workspace.ID.String() + ":" + in.Installation.String() + ":" + in.List + ":" + in.Parent
+	if in.Fresh {
+		_ = s.Cache.Forget(ctx, key)
+	}
+
+	options, err := cache.For[[]trackers.Option](s.Cache, optionsKept).Remember(ctx, key, pull)
+	if failed != nil {
+		return nil, failed
+	}
+
+	if err != nil {
+		return pull(ctx)
 	}
 
 	return options, nil

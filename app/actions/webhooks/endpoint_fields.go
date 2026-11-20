@@ -191,7 +191,7 @@ func normalizeEventTypes(types []string) ([]string, error) {
 
 	out = slices.Compact(slices.Sorted(slices.Values(out)))
 	if len(out) > maxEventTypes {
-		return nil, exceptions.ErrUnknownWebhookEventType.With("max", maxEventTypes)
+		return nil, exceptions.ErrTooManyWebhookEventTypes.With("max", maxEventTypes)
 	}
 
 	return out, nil

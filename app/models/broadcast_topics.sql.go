@@ -12,6 +12,51 @@ import (
 	"github.com/dimmihq/dimmi/framework/ids"
 )
 
+const broadcastTopicTallies = `-- name: BroadcastTopicTallies :many
+SELECT t.id,
+    (SELECT count(*) FROM contact_topic_subscriptions s JOIN contacts c ON c.id = s.contact_id
+        WHERE s.topic_id = t.id AND s.subscribed AND c.deleted_at IS NULL AND c.merged_into_id IS NULL)::bigint AS said_yes,
+    (SELECT count(*) FROM contact_topic_subscriptions s JOIN contacts c ON c.id = s.contact_id
+        WHERE s.topic_id = t.id AND NOT s.subscribed AND c.deleted_at IS NULL AND c.merged_into_id IS NULL)::bigint AS said_no,
+    (SELECT count(*) FROM broadcasts b WHERE b.topic_id = t.id AND b.deleted_at IS NULL)::bigint AS broadcasts
+FROM broadcast_topics t
+WHERE t.workspace_id = $1 AND t.archived_at IS NULL
+`
+
+type BroadcastTopicTalliesRow struct {
+	ID         ids.UUID `json:"id"`
+	SaidYes    int64    `json:"said_yes"`
+	SaidNo     int64    `json:"said_no"`
+	Broadcasts int64    `json:"broadcasts"`
+}
+
+// BroadcastTopicTallies counts, for each live topic, the people who
+// said yes, the people who said no and the broadcasts sent under it.
+func (q *Queries) BroadcastTopicTallies(ctx context.Context, workspaceID ids.UUID) ([]BroadcastTopicTalliesRow, error) {
+	rows, err := q.db.Query(ctx, broadcastTopicTallies, workspaceID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []BroadcastTopicTalliesRow
+	for rows.Next() {
+		var i BroadcastTopicTalliesRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.SaidYes,
+			&i.SaidNo,
+			&i.Broadcasts,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const contactOptedOutOfBroadcasts = `-- name: ContactOptedOutOfBroadcasts :one
 SELECT EXISTS (SELECT 1 FROM broadcast_opt_outs WHERE workspace_id = $1 AND contact_id = $2)
 `
@@ -28,6 +73,21 @@ func (q *Queries) ContactOptedOutOfBroadcasts(ctx context.Context, arg ContactOp
 	var exists bool
 	err := row.Scan(&exists)
 	return exists, err
+}
+
+const countBroadcastPeople = `-- name: CountBroadcastPeople :one
+SELECT count(*)::bigint FROM contacts c
+WHERE c.workspace_id = $1 AND c.deleted_at IS NULL AND c.merged_into_id IS NULL
+    AND NOT EXISTS (SELECT 1 FROM broadcast_opt_outs o WHERE o.workspace_id = c.workspace_id AND o.contact_id = c.id)
+`
+
+// CountBroadcastPeople counts the people broadcasts may reach: everyone
+// who has not left all broadcasts.
+func (q *Queries) CountBroadcastPeople(ctx context.Context, workspaceID ids.UUID) (int64, error) {
+	row := q.db.QueryRow(ctx, countBroadcastPeople, workspaceID)
+	var column_1 int64
+	err := row.Scan(&column_1)
+	return column_1, err
 }
 
 const createBroadcastTopic = `-- name: CreateBroadcastTopic :one

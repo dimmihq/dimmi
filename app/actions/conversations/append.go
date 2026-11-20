@@ -166,6 +166,22 @@ func (w *Writer) AddNote(ctx context.Context, c models.Conversation, body string
 }
 
 /*
+AddToolNote adds an internal note dimmi writes on behalf of a linked
+tool, such as a comment synced from Linear. The note keeps the tool's
+name, so the thread shows who it came from.
+*/
+func (w *Writer) AddToolNote(ctx context.Context, c models.Conversation, body, tool string) (models.Message, error) {
+	meta, err := json.Marshal(map[string]string{"author_name": tool})
+	if err != nil {
+		return models.Message{}, fmt.Errorf("encode note author: %w", err)
+	}
+
+	msg, _, err := w.Append(ctx, c, NewMessage{Type: string(enums.MessageTypeNote), Body: body, Metadata: meta})
+
+	return msg, err
+}
+
+/*
 AsSystem returns a writer acting as dimmi itself.
 */
 func (w *Writer) AsSystem() *Writer {
