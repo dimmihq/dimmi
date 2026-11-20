@@ -70,7 +70,7 @@ func catalog() map[string]Doc {
 	for _, area := range []map[string]Doc{
 		inboxDocs(), peopleDocs(), knowledgeDocs(), automationDocs(), workspaceDocs(), settingsDocs(),
 		outreachDocs(), sourceDocs(), integrationDocs(), webhookDocs(), mergeDocs(), ticketDocs(), trackerDocs(),
-		slaDocs(), ticketIssueDocs(), ticketReportDocs(),
+		slaDocs(), ticketIssueDocs(), ticketReportDocs(), channelDocs(), noteDocs(),
 	} {
 		maps.Copy(out, area)
 	}
@@ -85,7 +85,13 @@ agent could never complete them.
 */
 func excluded() map[string]string {
 	return map[string]string{
-		"ai.chatgpt.connect.store":  "Connecting a ChatGPT plan needs the person to sign in to OpenAI in a browser.",
-		"ai.chatgpt.callback.store": "Finishes the ChatGPT browser sign-in; only the browser calls it.",
+		"ai.chatgpt.connect.store":               "Connecting ChatGPT needs a person to sign in to OpenAI.",
+		"ai.chatgpt.callback.store":              "Finishes the ChatGPT browser sign-in; only the browser calls it.",
+		"channels.whatsapp.signup-config.index":  "What Meta's signup popup opens with; only the browser uses it.",
+		"channels.whatsapp.signups.store":        "Finishes Meta's signup in a browser; only the browser calls it.",
+		"channels.facebook.signup-config.index":  "What Meta's sign-in popup opens with; only the browser uses it.",
+		"channels.facebook.signups.store":        "Finishes Meta's sign-in in a browser; only the browser calls it.",
+		"channels.instagram.signup-config.index": "What Meta's sign-in popup opens with; only the browser uses it.",
+		"channels.instagram.signups.store":       "Finishes Meta's sign-in in a browser; only the browser calls it.",
 	}
 }

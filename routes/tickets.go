@@ -69,7 +69,8 @@ func ticketActivityRoutes(workspace *routing.Router, base v1.TicketController) {
 		Ability("tickets:read")
 	routing.Get(workspace, conv+"/tickets", "conversations.tickets.index", ac.ConversationTickets).
 		Ability("tickets:read")
-	routing.Get(workspace, conv+"/ticket-suggestions", "conversations.ticket-suggestions.index", ac.Suggestions).Internal().
+	routing.Get(workspace, conv+"/ticket-suggestions", "conversations.ticket-suggestions.index", ac.Suggestions).
+		Internal().
 		Ability("tickets:read")
 }
 

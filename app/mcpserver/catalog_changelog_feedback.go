@@ -41,6 +41,12 @@ changelog entries.
 */
 func changelogEntryDocs() map[string]Doc {
 	return map[string]Doc{
+		"help-centers.changelog-analytics.show": {
+			Title: "Read changelog analytics",
+			Use: "Says how readers took a help center's changelog over the last days (30 unless days is " +
+				"given): views by day, reactions, subscribers and the entries read most.",
+			Returns: "the totals, daily views and top entries.",
+		},
 		"help-centers.changelog-entries.index": {
 			Title:   "List changelog entries",
 			Use:     "Lists a help center's changelog entries, 25 a page, without their bodies.",

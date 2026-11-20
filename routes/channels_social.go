@@ -34,14 +34,14 @@ func socialChannelRoutes(workspace *routing.Router, a *app.App) {
 		base, name := "/channels/"+p.name, "channels."+p.name
 
 		routing.Get(workspace, base, name+".index", c.Index).Internal().Ability("settings:read")
-		routing.Get(workspace, base+"/signup-config", name+".signup-config", c.SignupConfig).Internal().
+		routing.Get(workspace, base+"/signup-config", name+".signup-config.index", c.SignupConfig).Internal().
 			Ability("settings:read")
-		routing.Post(workspace, base+"/signups", name+".signups", c.Signup).Internal().
+		routing.Post(workspace, base+"/signups", name+".signups.store", c.Signup).Internal().
 			Ability("settings:write").Middleware("verified").Status(fhttp.StatusOK)
 		routing.Post(workspace, base, name+".store", c.Store).Internal().
 			Ability("settings:write").Middleware("verified").Status(fhttp.StatusCreated)
 		routing.Patch(workspace, base+"/{channel}", name+".update", c.Update).Internal().Ability("settings:write")
-		routing.Get(workspace, base+"/{channel}/check", name+".check", c.Check).Internal().Ability("settings:read")
+		routing.Get(workspace, base+"/{channel}/check", name+".check.show", c.Check).Internal().Ability("settings:read")
 		routing.Delete(workspace, base+"/{channel}", name+".destroy", c.Destroy).Internal().
 			Ability("settings:write").Status(fhttp.StatusNoContent)
 		routing.Get(workspace, "/conversations/{conversation}/"+p.name, "conversations."+p.name+".show",

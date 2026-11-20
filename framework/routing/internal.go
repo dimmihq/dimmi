@@ -17,8 +17,8 @@ package routing
 import "github.com/danielgtaylor/huma/v2"
 
 /*
-Internal marks the route as built for the product's own client, so the public API
-reference leaves it out.
+Internal marks the route as built for the product's own client, so the
+public API reference leaves it out.
 */
 func (r *Route) Internal() *Route {
 	r.internal = true

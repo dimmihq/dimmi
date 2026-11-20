@@ -1,11 +1,12 @@
 package config_test
 
 import (
-	"reflect"
+	"context"
 	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	frameworkconfig "github.com/dimmihq/dimmi/framework/config"
 
@@ -13,10 +14,11 @@ import (
 )
 
 /*
-public lists the settings named like a secret that are safe to print.
+publicSetting reports whether a setting named like a secret is safe to
+print.
 */
-var public = map[string]bool{
-	"auth.captcha.site_key": true,
+func publicSetting(path string) bool {
+	return path == "auth.captcha.site_key"
 }
 
 /*
@@ -34,38 +36,43 @@ func secretNamed(key string) bool {
 }
 
 /*
-fill sets every string setting named like a secret and returns their
-paths.
+secretPaths collects the paths of every string setting in the tree
+named like a secret.
 */
-func fill(v reflect.Value, path string, found *[]string) {
-	for i := range v.NumField() {
-		field := v.Type().Field(i)
-
-		key, _, _ := strings.Cut(field.Tag.Get("koanf"), ",")
-		if !field.IsExported() || key == "" || key == "-" {
-			continue
-		}
-
+func secretPaths(tree map[string]any, path string, found *[]string) {
+	for key, value := range tree {
 		at := strings.TrimPrefix(path+"."+key, ".")
 
-		if field.Type.Kind() == reflect.Struct {
-			fill(v.Field(i), at, found)
-
-			continue
-		}
-
-		if field.Type.Kind() == reflect.String && secretNamed(key) && !public[at] {
-			v.Field(i).SetString("value-to-hide")
-			*found = append(*found, at)
+		switch v := value.(type) {
+		case map[string]any:
+			secretPaths(v, at, found)
+		case string:
+			if secretNamed(key) && !publicSetting(at) {
+				*found = append(*found, at)
+			}
 		}
 	}
+}
+
+/*
+settings is a runtime store that supplies fixed values.
+*/
+type settings map[string]any
+
+func (s settings) Settings(context.Context) (map[string]any, error) {
+	return s, nil
 }
 
 func lookup(tree map[string]any, path string) any {
 	var value any = tree
 
 	for part := range strings.SplitSeq(path, ".") {
-		value = value.(map[string]any)[part]
+		branch, ok := value.(map[string]any)
+		if !ok {
+			return nil
+		}
+
+		value = branch[part]
 	}
 
 	return value
@@ -74,12 +81,9 @@ func lookup(tree map[string]any, path string) any {
 func TestSecretsAreMaskedWhenPrinted(t *testing.T) {
 	t.Parallel()
 
-	var (
-		cfg   config.Config
-		found []string
-	)
+	var found []string
 
-	fill(reflect.ValueOf(&cfg).Elem(), "", &found)
+	secretPaths(frameworkconfig.Redacted(&config.Config{}), "", &found)
 
 	assert.Contains(t, found, "services.slack.signing_secret")
 	assert.Contains(t, found, "services.linear.webhook_secret")
@@ -87,6 +91,15 @@ func TestSecretsAreMaskedWhenPrinted(t *testing.T) {
 	assert.Contains(t, found, "ai.managed.anthropic.api_key")
 	assert.Contains(t, found, "ai.managed.embeddings.api_key")
 	assert.Contains(t, found, "ai.knowledge.cloudflare_api_token")
+
+	values := settings{}
+	for _, path := range found {
+		values[path] = "value-to-hide"
+	}
+
+	var cfg config.Config
+
+	require.NoError(t, frameworkconfig.LoadInto(t.Context(), frameworkconfig.LoadOptions{Runtime: values}, &cfg))
 
 	printed := frameworkconfig.Redacted(&cfg)
 

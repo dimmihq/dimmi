@@ -380,15 +380,7 @@ func (r *run) messageRows(set *rowSet, c Conversation, member any) thread {
 		var sent any
 		status := "not_applicable"
 		if kind == "message" {
-			th.count++
-			th.last, th.lastID = m.At, id
-			if m.Author != "contact" {
-				sent, status = m.At, "delivered"
-				th.lastReply = m.At
-				if th.firstReply.IsZero() {
-					th.firstReply = m.At
-				}
-			}
+			sent, status = th.message(m, id)
 		}
 		set.rows = append(set.rows, []any{
 			id, r.ws.ID, c.ID, kind, authorType, author, m.Body, sent, status, channel, m.At, m.At, nil, true,
@@ -402,6 +394,23 @@ func (r *run) messageRows(set *rowSet, c Conversation, member any) thread {
 		}
 	}
 	return th
+}
+
+/*
+message counts a message in the thread and returns when it was sent
+and its delivery status: a customer's message is never sent.
+*/
+func (th *thread) message(m Message, id ids.UUID) (any, string) {
+	th.count++
+	th.last, th.lastID = m.At, id
+	if m.Author == "contact" {
+		return nil, "not_applicable"
+	}
+	th.lastReply = m.At
+	if th.firstReply.IsZero() {
+		th.firstReply = m.At
+	}
+	return m.At, "delivered"
 }
 
 /*

@@ -56,7 +56,8 @@ func aiRoutes(r *routing.Router, a *app.App) {
 		Status(fhttp.StatusOK)
 
 	routing.Post(r, "/ai/chatgpt/connect", "ai.chatgpt.connect.store", c.StartConnect).Internal().Ability("ai:keys")
-	routing.Post(r, "/ai/chatgpt/callback", "ai.chatgpt.callback.store", c.CompleteConnect).Internal().Ability("ai:keys")
+	routing.Post(r, "/ai/chatgpt/callback", "ai.chatgpt.callback.store", c.CompleteConnect).
+		Internal().Ability("ai:keys")
 
 	aiTraceRoutes(r, a)
 	aiActionRoutes(r, a)
@@ -77,7 +78,8 @@ func aiTraceRoutes(r *routing.Router, a *app.App) {
 	}
 
 	routing.Get(r, "/ai/usage", "ai.usage.show", t.Usage).Ability("ai:read")
-	routing.Post(r, "/ai/playground", "ai.playground.store", t.Ask).Internal().Ability("ai:write").Status(fhttp.StatusOK)
+	routing.Post(r, "/ai/playground", "ai.playground.store", t.Ask).
+		Internal().Ability("ai:write").Status(fhttp.StatusOK)
 	routing.Get(r, "/conversations/{conversation}/ai/runs", "conversations.ai.runs.index", t.Runs).Ability("ai:read")
 	routing.Get(r, "/conversations/{conversation}/ai/runs/{run}", "conversations.ai.runs.show", t.Run).
 		Ability("ai:read")

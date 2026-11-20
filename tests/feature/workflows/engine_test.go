@@ -207,7 +207,9 @@ func TestEngine(t *testing.T) {
 			"schema": 1, "trigger": "conversation.status_changed",
 			"trigger_settings": testkit.JSON{"to": []string{"closed"}},
 			"steps": []testkit.JSON{
-				step("s_note001", "note", testkit.JSON{"text": "closed by {{conversation.number}} at {{workspace.name}}"}),
+				step("s_note001", "note", testkit.JSON{
+					"text": "closed by {{conversation.number}} at {{workspace.name}}",
+				}),
 			},
 		})
 

@@ -39954,7 +39954,7 @@
     },
     "/channels/facebook/signup-config": {
       "get": {
-        "operationId": "channels.facebook.signup-config",
+        "operationId": "channels.facebook.signup-config.index",
         "responses": {
           "200": {
             "content": {
@@ -39985,7 +39985,7 @@
     },
     "/channels/facebook/signups": {
       "post": {
-        "operationId": "channels.facebook.signups",
+        "operationId": "channels.facebook.signups.store",
         "requestBody": {
           "content": {
             "application/json": {
@@ -40109,7 +40109,7 @@
     },
     "/channels/facebook/{channel}/check": {
       "get": {
-        "operationId": "channels.facebook.check",
+        "operationId": "channels.facebook.check.show",
         "parameters": [
           {
             "in": "path",
@@ -40220,7 +40220,7 @@
     },
     "/channels/instagram/signup-config": {
       "get": {
-        "operationId": "channels.instagram.signup-config",
+        "operationId": "channels.instagram.signup-config.index",
         "responses": {
           "200": {
             "content": {
@@ -40251,7 +40251,7 @@
     },
     "/channels/instagram/signups": {
       "post": {
-        "operationId": "channels.instagram.signups",
+        "operationId": "channels.instagram.signups.store",
         "requestBody": {
           "content": {
             "application/json": {
@@ -40375,7 +40375,7 @@
     },
     "/channels/instagram/{channel}/check": {
       "get": {
-        "operationId": "channels.instagram.check",
+        "operationId": "channels.instagram.check.show",
         "parameters": [
           {
             "in": "path",
@@ -40527,7 +40527,7 @@
     },
     "/channels/whatsapp/accounts": {
       "post": {
-        "operationId": "channels.whatsapp.accounts",
+        "operationId": "channels.whatsapp.accounts.store",
         "requestBody": {
           "content": {
             "application/json": {
@@ -40568,7 +40568,7 @@
     },
     "/channels/whatsapp/signup-config": {
       "get": {
-        "operationId": "channels.whatsapp.signup-config",
+        "operationId": "channels.whatsapp.signup-config.index",
         "responses": {
           "200": {
             "content": {
@@ -40599,7 +40599,7 @@
     },
     "/channels/whatsapp/signups": {
       "post": {
-        "operationId": "channels.whatsapp.signups",
+        "operationId": "channels.whatsapp.signups.store",
         "requestBody": {
           "content": {
             "application/json": {
@@ -40723,7 +40723,7 @@
     },
     "/channels/whatsapp/{channel}/templates": {
       "get": {
-        "operationId": "channels.whatsapp.templates",
+        "operationId": "channels.whatsapp.templates.index",
         "parameters": [
           {
             "in": "path",
@@ -40860,7 +40860,7 @@
         ],
         "x-internal": true
       },
-      "put": {
+      "patch": {
         "operationId": "channels.whatsapp.templates.update",
         "parameters": [
           {
@@ -45861,7 +45861,7 @@
     },
     "/conversations/{conversation}/whatsapp-templates": {
       "post": {
-        "operationId": "conversations.whatsapp.templates",
+        "operationId": "conversations.whatsapp-templates.store",
         "parameters": [
           {
             "in": "path",
@@ -60543,7 +60543,7 @@
     },
     "/tickets/{ticket}/issues/refresh": {
       "post": {
-        "operationId": "tickets.issues.refresh",
+        "operationId": "tickets.issues.refresh.store",
         "parameters": [
           {
             "in": "path",

@@ -26,13 +26,15 @@ func TestSelfHostWebhookEndpoints(t *testing.T) {
 	t.Run("the configured number is the cap", func(t *testing.T) {
 		t.Parallel()
 
-		assert.EqualValues(t, 50, limit(t, entitlements.SelfHostWith(entitlements.SelfHostLimits{WebhookEndpoints: 50})))
+		catalog := entitlements.SelfHostWith(entitlements.SelfHostLimits{WebhookEndpoints: 50})
+		assert.EqualValues(t, 50, limit(t, catalog))
 	})
 
 	t.Run("zero means no limit", func(t *testing.T) {
 		t.Parallel()
 
-		assert.EqualValues(t, entitlements.Unlimited, limit(t, entitlements.SelfHostWith(entitlements.SelfHostLimits{})))
+		catalog := entitlements.SelfHostWith(entitlements.SelfHostLimits{})
+		assert.EqualValues(t, entitlements.Unlimited, limit(t, catalog))
 	})
 
 	t.Run("the widget-only catalog keeps the default of 20", func(t *testing.T) {

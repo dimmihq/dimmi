@@ -42,7 +42,7 @@ it.describe("changelog", () => {
     await body.click();
     await page.keyboard.type("Teams grow, and one inbox stops working.");
     const chooser = page.waitForEvent("filechooser");
-    await page.getByRole("button", { name: "Add cover" }).click();
+    await page.getByRole("button", { name: /^Add a cover/ }).click();
     await (await chooser).setFiles(picture);
     await expect(page.getByRole("button", { name: "Change cover" })).toBeAttached();
     await page.getByRole("button", { name: "Labels" }).click();
@@ -51,8 +51,8 @@ it.describe("changelog", () => {
 
     await page.getByRole("button", { name: "Authors" }).click();
     const authors = page.getByRole("dialog", { name: "Authors" });
-    await authors.getByText("Pick authors").click();
-    await authors.getByText(person.name).click();
+    await authors.getByRole("radio", { name: "Picked teammates" }).click();
+    await authors.getByRole("button", { name: new RegExp(person.name) }).click();
     await authors.getByRole("button", { name: "Save authors" }).click();
     await expect(authors).toHaveCount(0);
     await expect(page.getByRole("button", { name: "Authors" })).not.toContainText("from edits");

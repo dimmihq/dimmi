@@ -28,6 +28,7 @@ func slackChannelRoutes(workspace *routing.Router, a *app.App) {
 
 	routing.Post(workspace, "/channels/slack", "channels.slack.store", c.Store).Internal().
 		Ability("settings:write").Middleware("verified").Status(fhttp.StatusCreated)
-	routing.Post(workspace, "/channels/{channel}/credentials", "channels.credentials.store", c.StoreCredentials).Internal().
+	routing.Post(workspace, "/channels/{channel}/credentials", "channels.credentials.store", c.StoreCredentials).
+		Internal().
 		Ability("settings:write").Middleware("verified").Status(fhttp.StatusOK)
 }

@@ -39,13 +39,15 @@ func TestUnpricedFlagsOnlyUsageTheTableCannotPrice(t *testing.T) {
 }
 
 func TestFirstUnpricedReportsEachModelOnce(t *testing.T) {
-	if !firstUnpriced("test-provider", "test-model") {
+	var r Runner
+
+	if !r.firstUnpriced("test-provider", "test-model") {
 		t.Fatal("the first sighting was not reported")
 	}
-	if firstUnpriced("test-provider", "test-model") {
+	if r.firstUnpriced("test-provider", "test-model") {
 		t.Fatal("the second sighting was reported again")
 	}
-	if !firstUnpriced("test-provider", "another-model") {
+	if !r.firstUnpriced("test-provider", "another-model") {
 		t.Fatal("another model was not reported")
 	}
 }

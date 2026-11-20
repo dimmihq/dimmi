@@ -99,7 +99,8 @@ func identityVerificationRoutes(api *routing.Router, a *app.App) {
 			Ability("settings:read")
 		routing.Get(r, "/identity-verification/stats", "identity-verification.stats.show", c.ShowStats).
 			Ability("settings:read")
-		routing.Post(r, "/identity-verification/validations", "identity-verification.validations.store", c.Check).Internal().
+		routing.Post(r, "/identity-verification/validations", "identity-verification.validations.store", c.Check).
+			Internal().
 			Ability("settings:read").Status(fhttp.StatusOK)
 		routing.Delete(r, "/contacts/{contact}/widget-sessions", "contacts.widget-sessions.destroy", c.SignOut).
 			Ability("settings:write").Status(fhttp.StatusOK)

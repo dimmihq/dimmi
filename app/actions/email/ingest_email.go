@@ -124,9 +124,9 @@ func (a *ProcessInboundEmail) deliver(ctx context.Context, q *models.Queries, d 
 	}
 
 	if d.hit.conversation != nil {
-		d.hit.stale, err = conversations.PastReopenWindow(
-			ctx, q, *d.hit.conversation, a.Clock.Now(), a.Config.Inbound.ReopenWindow,
-		)
+		d.hit.stale, err = conversations.PastReopenWindow(ctx, q, *d.hit.conversation, conversations.Reopening{
+			Now: a.Clock.Now(), Fallback: a.Config.Inbound.ReopenWindow,
+		})
 		if err != nil {
 			return err
 		}

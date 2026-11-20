@@ -191,7 +191,8 @@ it.describe("messenger on a customer's page", () => {
     const desk2 = await page.context().newPage();
     await signIn(desk2, person);
     await desk2.goto(`/d/inbox/all/${id}`);
-    const player = desk2.locator("audio[controls]");
+    await expect(desk2.getByRole("button", { name: `Play ${file.filename}` })).toBeEnabled();
+    const player = desk2.locator("audio");
     await expect(player).toHaveCount(1);
     await expect.poll(() => player.evaluate((audio: HTMLAudioElement) => audio.readyState)).toBeGreaterThan(0);
   });
