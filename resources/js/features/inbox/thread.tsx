@@ -402,7 +402,7 @@ function SaidEntry({
  * fileChannels are the channels a reply can carry files on; the composer
  * offers files only there.
  */
-const fileChannels = ["widget", "email"];
+const fileChannels = ["widget", "email", "whatsapp"];
 
 function useComposerKeys(keys: Record<string, () => void>) {
   useEffect(() => {
@@ -586,6 +586,7 @@ export function Thread({
           focusKey={focusKey}
           customer={customer}
           channel={channel}
+          channelType={channelType ?? ""}
           canAttach={fileChannels.includes(channelType ?? "")}
           onSend={onSend}
           onOpen={(next) => (next === "reply" ? keys.r() : keys.n())}

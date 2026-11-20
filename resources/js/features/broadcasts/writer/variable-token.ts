@@ -18,8 +18,26 @@ declare module "@tiptap/react" {
   }
 }
 
-export const VariableToken = Node.create({
+/*
+ * VariableOptions lets a writer with details of its own, such as a
+ * WhatsApp template's custom values, name them on their chips, and say
+ * which are filled in by hand and so take no fallback.
+ */
+export interface VariableOptions {
+  named: (key: string) => string | undefined;
+  byHand: (key: string) => boolean;
+}
+
+export const VariableToken = Node.create<VariableOptions>({
   name: "variableToken",
+
+  addOptions() {
+    return {
+      named: (key) => variableOf(key)?.label,
+      byHand: () => false,
+    };
+  },
+
   group: "inline",
   inline: true,
   atom: true,
@@ -48,7 +66,7 @@ export const VariableToken = Node.create({
     return [
       "span",
       mergeAttributes(HTMLAttributes, { "data-variable": node.attrs.key, "data-fallback": node.attrs.fallback }),
-      variableOf(node.attrs.key as string)?.label ?? String(node.attrs.key),
+      this.options.named(node.attrs.key as string) ?? String(node.attrs.key),
     ];
   },
 
@@ -91,7 +109,10 @@ export const VariableToken = Node.create({
         (key) =>
         ({ commands }) =>
           commands.insertContent([
-            { type: this.name, attrs: { key, fallback: variableOf(key)?.fallback ?? "" } },
+            {
+              type: this.name,
+              attrs: { key, fallback: this.options.byHand(key) ? "" : (variableOf(key)?.fallback ?? "") },
+            },
             { type: "text", text: " " },
           ]),
     };

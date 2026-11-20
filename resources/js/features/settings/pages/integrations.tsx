@@ -14,6 +14,7 @@ import {
   RiCheckboxCircleFill,
   RiErrorWarningFill,
   RiLink,
+  RiWhatsappLine,
 } from "@remixicon/react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
@@ -32,19 +33,23 @@ import {
   integrationsQuery,
   startInstallation,
 } from "@/lib/api/integrations";
+import { whatsappChannelsQuery } from "@/lib/api/whatsapp";
 import { cx } from "@/utils/cx";
 import { usePermission } from "../inboxes";
 import { healthLabels, integrationHealth, providerLook } from "../integrations";
 import { Empty, Logo, RowsSkeleton, Section, SettingsPage } from "../layout";
 import { useAccount } from "../use-account";
 import { useProviderLanding } from "../use-provider-landing";
+import { whatsappGreen } from "../whatsapp-look";
 
 /*
  * groups list the sections in order and the tools each holds; a tool
  * none names falls under Other.
  */
+const messaging = "Messaging";
+
 const groups: { title: string; description: string; providers: string[] }[] = [
-  { title: "Messaging", description: "Answer customers and alert your team where they talk.", providers: ["slack"] },
+  { title: messaging, description: "Answer customers and alert your team where they talk.", providers: ["slack"] },
   {
     title: "Help desks and CRMs",
     description: "Answer from the help center articles you already keep there.",
@@ -74,7 +79,7 @@ function sections(providers: IntegrationProvider[]) {
       ...g,
       list: g.providers.flatMap((name) => providers.filter((p) => p.name === name)),
     }))
-    .filter((g) => g.list.length > 0);
+    .filter((g) => g.list.length > 0 || g.title === messaging);
   const other = providers.filter((p) => !named.has(p.name));
   if (other.length > 0) {
     out.push({ title: "Other", description: "", providers: [], list: other });
@@ -233,6 +238,45 @@ function ProviderRow({
   );
 }
 
+/*
+ * WhatsAppRow is WhatsApp among the tools: its numbers are channels of
+ * their own rather than one installation, so the row opens the page that
+ * lists them and connects more.
+ */
+function WhatsAppRow({ workspace }: { workspace: string }) {
+  const navigate = useNavigate();
+  const { data: numbers } = useQuery(whatsappChannelsQuery(workspace));
+  const connected = (numbers?.length ?? 0) > 0;
+  const detail = connected
+    ? numbers?.map((n) => n.display_phone_number).join(", ")
+    : "Answer customers who write to your business number.";
+
+  return (
+    <button
+      type="button"
+      onClick={() => navigate({ to: "/d/settings/integrations/whatsapp" })}
+      aria-label="Open WhatsApp"
+      className="-ms-1.5 flex min-h-[52px] w-[calc(100%+0.375rem)] cursor-pointer items-center gap-3 rounded-lg border-b border-separator-border py-2.5 ps-1.5 pe-2.5 text-start outline-none transition-colors duration-150 last:border-b-0 hover:bg-background-secondary-hover focus-visible:ring-2 focus-visible:ring-border-focus-ring"
+    >
+      <span className="flex shrink-0 items-center">
+        <Logo icon={RiWhatsappLine} brand={whatsappGreen} />
+      </span>
+      <span className="flex min-w-0 flex-1 flex-col">
+        <span className="truncate text-body-regular text-text-primary">WhatsApp</span>
+        <span className="truncate text-body-2-regular text-text-secondary">{detail}</span>
+      </span>
+      <span className="flex shrink-0 items-center gap-1.5">
+        {connected ? (
+          <RiCheckboxCircleFill aria-label="Connected" className="size-4 text-status-lime-text" />
+        ) : (
+          <RiCheckboxBlankCircleLine aria-label="Not connected" className="size-4 text-foreground-icon-quaternary" />
+        )}
+        <RiArrowRightSLine aria-hidden className="size-5 text-foreground-icon-tertiary rtl:-scale-x-100" />
+      </span>
+    </button>
+  );
+}
+
 export function IntegrationsSettings() {
   const workspace = useAccount().workspace.id;
   const canManage = usePermission(workspace, "integrations:manage");
@@ -270,6 +314,7 @@ export function IntegrationsSettings() {
               canManage={canManage}
             />
           ))}
+          {group.title === messaging ? <WhatsAppRow workspace={workspace} /> : null}
         </Section>
       ))}
     </SettingsPage>

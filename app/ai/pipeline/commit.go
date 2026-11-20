@@ -339,7 +339,7 @@ func offersButtons(channel string) bool {
 	switch enums.ChannelType(channel) {
 	case enums.ChannelTypeWidget, enums.ChannelTypeAPI, enums.ChannelTypeSlack:
 		return true
-	case enums.ChannelTypeEmail:
+	case enums.ChannelTypeEmail, enums.ChannelTypeWhatsApp:
 		return false
 	}
 

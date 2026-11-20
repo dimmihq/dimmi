@@ -18,6 +18,7 @@ package jobs
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -73,6 +74,7 @@ func (w *SendChannelMessage) outbound(ctx context.Context, q *models.Queries, ms
 
 	message, err := outboundMessage(c, msg, contact, w.remoteImages())
 	message.Author, message.Controls, message.Sources = author, controlsOf(msg), sourcesOf(msg)
+	message.Options = optionsOf(msg)
 	if err != nil {
 		return outbound{}, err
 	}
@@ -246,6 +248,22 @@ func controlsOf(msg models.Message) []string {
 	}
 
 	return meta.Actions
+}
+
+/*
+optionsOf returns the channel options the reply was written with, nil
+when it has none.
+*/
+func optionsOf(msg models.Message) []byte {
+	var meta struct {
+		Options json.RawMessage `json:"channel_options"`
+	}
+
+	if len(msg.Metadata) == 0 || json.Unmarshal(msg.Metadata, &meta) != nil || len(meta.Options) == 0 {
+		return nil
+	}
+
+	return meta.Options
 }
 
 /*

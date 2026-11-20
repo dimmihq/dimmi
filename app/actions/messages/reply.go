@@ -22,6 +22,7 @@ package messages
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
@@ -58,7 +59,9 @@ one of the Then values, with Snooze saying until when. Delay holds the
 reply for the caller's undo window on a channel that cannot take it
 back. MutationID is the id the client gave the change, empty when it
 gave none. Files are the caller's finished uploads that go with the
-reply; a reply needs a body or at least one file.
+reply; a reply needs a body or at least one file. ChannelOptions are
+choices for the conversation's channel keyed by its type, such as the
+WhatsApp template the reply is sent as.
 */
 type ReplyInput struct {
 	Membership            authz.Membership
@@ -71,6 +74,7 @@ type ReplyInput struct {
 	Delay                 bool
 	MutationID            string
 	Files                 []ids.UUID
+	ChannelOptions        json.RawMessage
 }
 
 /*
@@ -174,12 +178,8 @@ it to its channel, ends the caller's reply draft, takes the
 conversation and applies what comes after.
 */
 func (a *ReplyToConversation) write(ctx context.Context, s *session, in ReplyInput, key *string) error {
-	route, err := a.route(ctx, s)
+	route, metadata, err := a.check(ctx, s, in)
 	if err != nil {
-		return err
-	}
-
-	if err := checkFiles(route, in.Files); err != nil {
 		return err
 	}
 
@@ -190,7 +190,7 @@ func (a *ReplyToConversation) write(ctx context.Context, s *session, in ReplyInp
 
 	if s.msg, s.c, err = s.w.Append(ctx, s.c, conversations.NewMessage{
 		Type: string(enums.MessageTypeMessage), Body: in.Body, DeliveryStatus: &route.Status, DedupeKey: key,
-		Metadata: gifs.Metadata(in.Body),
+		Metadata: metadata,
 	}); err != nil {
 		return err
 	}
@@ -239,6 +239,90 @@ func (a *ReplyToConversation) route(ctx context.Context, s *session) (conversati
 	}
 
 	return a.Delivery.Plan(conn, contact)
+}
+
+/*
+check finds how the reply travels and refuses one the channel cannot
+take: files it does not carry, or free text outside its window. It
+returns what the reply keeps beside its body.
+*/
+func (a *ReplyToConversation) check(ctx context.Context, s *session, in ReplyInput) (
+	conversations.Route, json.RawMessage, error,
+) {
+	route, err := a.route(ctx, s)
+	if err != nil {
+		return route, nil, err
+	}
+
+	if err := checkFiles(route, in.Files); err != nil {
+		return route, nil, err
+	}
+
+	if err := a.checkWindow(ctx, s, route, in.ChannelOptions); err != nil {
+		return route, nil, err
+	}
+
+	metadata, err := replyMetadata(in.Body, in.ChannelOptions)
+
+	return route, metadata, err
+}
+
+/*
+checkWindow refuses free text on a channel that only takes it for a
+while after the customer last wrote, such as WhatsApp's 24 hours, once
+that window has closed. A reply carrying channel options, such as a
+template, is the channel's to judge.
+*/
+func (a *ReplyToConversation) checkWindow(
+	ctx context.Context, s *session, route conversations.Route, options json.RawMessage,
+) error {
+	if route.Capabilities.MessagingWindow <= 0 || len(options) > 0 {
+		return nil
+	}
+
+	state, err := s.w.Q.FindChannelContactState(ctx, models.FindChannelContactStateParams{
+		WorkspaceID: s.c.WorkspaceID, ChannelConnectionID: route.Connection.ID, ContactID: s.c.ContactID,
+	})
+	if errors.Is(err, database.ErrNotFound) {
+		return exceptions.ErrChannelWindowClosed
+	}
+
+	if err != nil {
+		return fmt.Errorf("find channel window: %w", err)
+	}
+
+	if state.WindowExpiresAt == nil || !a.Clock.Now().Before(*state.WindowExpiresAt) {
+		return exceptions.ErrChannelWindowClosed
+	}
+
+	return nil
+}
+
+/*
+replyMetadata is what the reply keeps beside its body: the GIF it shows
+and the channel options it is sent with.
+*/
+func replyMetadata(body string, options json.RawMessage) (json.RawMessage, error) {
+	meta := gifs.Metadata(body)
+	if len(options) == 0 {
+		return meta, nil
+	}
+
+	merged := map[string]json.RawMessage{}
+	if len(meta) > 0 {
+		if err := json.Unmarshal(meta, &merged); err != nil {
+			return nil, fmt.Errorf("read reply metadata: %w", err)
+		}
+	}
+
+	merged["channel_options"] = options
+
+	out, err := json.Marshal(merged)
+	if err != nil {
+		return nil, fmt.Errorf("encode reply metadata: %w", err)
+	}
+
+	return out, nil
 }
 
 /*

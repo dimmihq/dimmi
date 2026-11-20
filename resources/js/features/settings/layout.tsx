@@ -100,6 +100,7 @@ export function Section({
   action,
   loading = false,
   rows = 3,
+  bare = false,
   children,
 }: {
   title: string;
@@ -107,26 +108,35 @@ export function Section({
   action?: ReactNode;
   loading?: boolean;
   rows?: number;
+  /* bare leaves out the card, for content that is cards itself, such as radio cards. */
+  bare?: boolean;
   children?: ReactNode;
 }) {
   return (
     <section aria-label={title || undefined} className="flex flex-col gap-2">
-      <div className="flex flex-wrap items-end justify-between gap-x-4 gap-y-2 px-3">
-        <div className="flex min-w-0 flex-col gap-0.5">
+      <div className="flex flex-col gap-0.5 px-3">
+        <div className="flex min-h-5 items-center justify-between gap-4">
           {title ? (
-            <h2 className="text-body-2-medium text-text-secondary">{title}</h2>
+            <h2 className="min-w-0 text-body-2-medium text-text-secondary">{title}</h2>
           ) : (
             <Skeleton shape="text" className="my-0.5 h-3.5 w-28" />
           )}
-          {description ? <p className="text-body-2-regular text-text-tertiary">{description}</p> : null}
+          {action ? <div className="shrink-0">{action}</div> : null}
         </div>
-        {action ? <div className="shrink-0">{action}</div> : null}
+        {description ? <p className="text-body-2-regular text-text-tertiary">{description}</p> : null}
       </div>
-      <div aria-busy={loading || undefined} className="flex flex-col rounded-2xl bg-background-secondary-default ps-3">
-        <SectionBody loading={loading} rows={rows}>
-          {children}
-        </SectionBody>
-      </div>
+      {bare ? (
+        children
+      ) : (
+        <div
+          aria-busy={loading || undefined}
+          className="flex flex-col rounded-2xl bg-background-secondary-default ps-3"
+        >
+          <SectionBody loading={loading} rows={rows}>
+            {children}
+          </SectionBody>
+        </div>
+      )}
     </section>
   );
 }

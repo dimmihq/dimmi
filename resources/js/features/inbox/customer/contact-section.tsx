@@ -159,8 +159,8 @@ export function ContactSection({ workspace, context }: { workspace: string; cont
     ...context.identities
       .filter((identity) => ![contact.email, contact.phone].includes(identity.value))
       .map((identity) => (
-        <Row key={identity.id} label={<span className="truncate capitalize">{identity.type}</span>}>
-          <Copyable value={identity.value} label={identity.type} />
+        <Row key={identity.id} label={<span className="truncate">{identityLabel(identity.type)}</span>}>
+          <Copyable value={identity.value} label={identityLabel(identity.type)} />
         </Row>
       )),
   ].filter(Boolean);
@@ -198,4 +198,20 @@ export function ContactSection({ workspace, context }: { workspace: string; cont
       </Section>
     </>
   );
+}
+
+/*
+ * identityLabels name the identities channels know a customer by; any
+ * other type shows its own name, spaced out and capitalised.
+ */
+const identityLabels: Record<string, string> = {
+  whatsapp_user: "WhatsApp",
+  slack_user: "Slack",
+  external_id: "External ID",
+  widget_visitor: "Visitor",
+};
+
+function identityLabel(type: string): string {
+  const spaced = type.replace(/_/g, " ");
+  return identityLabels[type] ?? spaced.charAt(0).toUpperCase() + spaced.slice(1);
 }

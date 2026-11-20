@@ -241,6 +241,10 @@ func bootChannels(ctx context.Context, a *app.App) error {
 		return err
 	}
 
+	if err := bootWhatsApp(a); err != nil {
+		return err
+	}
+
 	if err := bootWidget(ctx, a); err != nil {
 		return err
 	}

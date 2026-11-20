@@ -694,6 +694,18 @@ type ChannelConnection struct {
 	IntegrationInstallationID *ids.UUID         `json:"integration_installation_id"`
 }
 
+type ChannelContactState struct {
+	ID                   ids.UUID   `json:"id"`
+	WorkspaceID          ids.UUID   `json:"workspace_id"`
+	ChannelConnectionID  ids.UUID   `json:"channel_connection_id"`
+	ContactID            ids.UUID   `json:"contact_id"`
+	LastInboundAt        *time.Time `json:"last_inbound_at"`
+	WindowExpiresAt      *time.Time `json:"window_expires_at"`
+	LastInboundMessageID *string    `json:"last_inbound_message_id"`
+	CreatedAt            time.Time  `json:"created_at"`
+	UpdatedAt            time.Time  `json:"updated_at"`
+}
+
 type ChannelConversationPost struct {
 	ID                  ids.UUID  `json:"id"`
 	WorkspaceID         ids.UUID  `json:"workspace_id"`
@@ -2944,6 +2956,25 @@ type WebhookEndpoint struct {
 	CreatedByMemberID       *ids.UUID         `json:"created_by_member_id"`
 	CreatedAt               time.Time         `json:"created_at"`
 	UpdatedAt               time.Time         `json:"updated_at"`
+}
+
+type WhatsappTemplate struct {
+	ID                  ids.UUID        `json:"id"`
+	WorkspaceID         ids.UUID        `json:"workspace_id"`
+	ChannelConnectionID ids.UUID        `json:"channel_connection_id"`
+	ExternalID          string          `json:"external_id"`
+	Name                string          `json:"name"`
+	Language            string          `json:"language"`
+	Category            string          `json:"category"`
+	Status              string          `json:"status"`
+	Components          json.RawMessage `json:"components"`
+	ParameterCount      int32           `json:"parameter_count"`
+	Sendable            bool            `json:"sendable"`
+	RejectedReason      *string         `json:"rejected_reason"`
+	Bindings            json.RawMessage `json:"bindings"`
+	SyncedAt            time.Time       `json:"synced_at"`
+	CreatedAt           time.Time       `json:"created_at"`
+	UpdatedAt           time.Time       `json:"updated_at"`
 }
 
 type WidgetSession struct {

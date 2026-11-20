@@ -11,12 +11,13 @@ import { Input } from "@/components/base/input/input";
 import { Popover, PopoverHeader, PopoverTrigger } from "@/components/base/popover/popover";
 import { cx } from "@/utils/cx";
 
-import { variableOf } from "./variables";
+import type { VariableOptions } from "./variable-token";
 
-export function VariableView({ node, updateAttributes, editor, selected }: NodeViewProps) {
+export function VariableView({ node, updateAttributes, editor, extension, selected }: NodeViewProps) {
+  const options = extension.options as VariableOptions;
   const key = node.attrs.key as string;
   const fallback = node.attrs.fallback as string;
-  const label = variableOf(key)?.label ?? key;
+  const label = options.named(key) ?? key;
   const chip = cx(
     "mx-px inline-flex items-center gap-0.5 rounded-md bg-status-blue-background px-1 align-baseline text-status-blue-text",
     "outline-none",
@@ -25,7 +26,7 @@ export function VariableView({ node, updateAttributes, editor, selected }: NodeV
 
   return (
     <NodeViewWrapper as="span" data-variable={key} className="inline">
-      {editor.isEditable ? (
+      {editor.isEditable && !options.byHand(key) ? (
         <PopoverTrigger>
           <button type="button" contentEditable={false} className={cx(chip, "cursor-pointer")}>
             <RiBracesLine aria-hidden className="size-3 shrink-0" />

@@ -10613,6 +10613,124 @@
         ],
         "type": "object"
       },
+      "CollectionWhatsAppChannel": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/WhatsAppChannel"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "links": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/CollectionWhatsAppChannelMetaStruct"
+          }
+        },
+        "required": [
+          "data",
+          "meta"
+        ],
+        "type": "object"
+      },
+      "CollectionWhatsAppChannelMetaStruct": {
+        "additionalProperties": false,
+        "properties": {
+          "next_cursor": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "per_page": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "prev_cursor": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "total": {
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "next_cursor",
+          "prev_cursor",
+          "per_page"
+        ],
+        "type": "object"
+      },
+      "CollectionWhatsAppTemplate": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/WhatsAppTemplate"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "links": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/CollectionWhatsAppTemplateMetaStruct"
+          }
+        },
+        "required": [
+          "data",
+          "meta"
+        ],
+        "type": "object"
+      },
+      "CollectionWhatsAppTemplateMetaStruct": {
+        "additionalProperties": false,
+        "properties": {
+          "next_cursor": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "per_page": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "prev_cursor": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "total": {
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "next_cursor",
+          "prev_cursor",
+          "per_page"
+        ],
+        "type": "object"
+      },
       "CollectionWidgetSettings": {
         "additionalProperties": false,
         "properties": {
@@ -24680,6 +24798,54 @@
         ],
         "type": "object"
       },
+      "ResourceWhatsAppAccount": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/WhatsAppAccount"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "ResourceWhatsAppChannel": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/WhatsAppChannel"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "ResourceWhatsAppConversation": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/WhatsAppConversation"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "ResourceWhatsAppTemplate": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/WhatsAppTemplate"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
       "ResourceWidgetPreviewConfig": {
         "additionalProperties": false,
         "properties": {
@@ -29002,6 +29168,125 @@
         ],
         "type": "object"
       },
+      "StoreWhatsAppChannelRequestBody": {
+        "additionalProperties": false,
+        "properties": {
+          "access_token": {
+            "type": "string"
+          },
+          "app_secret": {
+            "type": "string"
+          },
+          "inbox_id": {
+            "type": "string"
+          },
+          "name": {
+            "maxLength": 80,
+            "type": "string"
+          },
+          "phone_number_id": {
+            "maxLength": 64,
+            "type": "string"
+          },
+          "waba_id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "phone_number_id",
+          "access_token",
+          "waba_id"
+        ],
+        "type": "object"
+      },
+      "StoreWhatsAppSignupRequestBody": {
+        "additionalProperties": false,
+        "properties": {
+          "business_id": {
+            "maxLength": 64,
+            "type": "string"
+          },
+          "code": {
+            "maxLength": 1024,
+            "type": "string"
+          },
+          "coexistence": {
+            "type": "boolean"
+          },
+          "inbox_id": {
+            "type": "string"
+          },
+          "phone_number_id": {
+            "maxLength": 64,
+            "type": "string"
+          },
+          "redirect_uri": {
+            "maxLength": 512,
+            "type": "string"
+          },
+          "waba_id": {
+            "maxLength": 64,
+            "type": "string"
+          }
+        },
+        "required": [
+          "code"
+        ],
+        "type": "object"
+      },
+      "StoreWhatsAppTemplateRequestBody": {
+        "additionalProperties": false,
+        "properties": {
+          "bindings": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/WhatsAppBindingBody"
+            },
+            "type": "object"
+          },
+          "body": {
+            "type": "string"
+          },
+          "buttons": {
+            "items": {
+              "$ref": "#/components/schemas/WhatsAppTemplateButtonBody"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "category": {
+            "type": "string"
+          },
+          "footer": {
+            "type": "string"
+          },
+          "header": {
+            "type": "string"
+          },
+          "language": {
+            "maxLength": 16,
+            "type": "string"
+          },
+          "name": {
+            "maxLength": 512,
+            "type": "string"
+          },
+          "samples": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object"
+          }
+        },
+        "required": [
+          "name",
+          "language",
+          "category",
+          "body"
+        ],
+        "type": "object"
+      },
       "StoreWorkflowRequestBody": {
         "additionalProperties": false,
         "properties": {
@@ -33119,6 +33404,15 @@
         },
         "type": "object"
       },
+      "UpdateWhatsAppChannelRequestBody": {
+        "additionalProperties": false,
+        "properties": {
+          "inbox_id": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
       "UpdateWorkflowRequestBody": {
         "additionalProperties": false,
         "properties": {
@@ -33971,6 +34265,586 @@
           "object",
           "delivery",
           "attempt"
+        ],
+        "type": "object"
+      },
+      "WhatsAppAccount": {
+        "additionalProperties": false,
+        "properties": {
+          "business": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "numbers": {
+            "items": {
+              "$ref": "#/components/schemas/WhatsAppNumber"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "business",
+          "numbers"
+        ],
+        "type": "object"
+      },
+      "WhatsAppBindingBody": {
+        "additionalProperties": false,
+        "properties": {
+          "fallback": {
+            "type": "string"
+          },
+          "key": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "key"
+        ],
+        "type": "object"
+      },
+      "WhatsAppButton": {
+        "additionalProperties": false,
+        "properties": {
+          "phone_number": {
+            "type": "string"
+          },
+          "text": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "type",
+          "text"
+        ],
+        "type": "object"
+      },
+      "WhatsAppChannel": {
+        "additionalProperties": false,
+        "properties": {
+          "coexistence": {
+            "type": "boolean"
+          },
+          "created_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "display_phone_number": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "inbox_id": {
+            "type": "string"
+          },
+          "last_error": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "messaging_limit": {
+            "type": "string"
+          },
+          "mode": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "name_status": {
+            "type": "string"
+          },
+          "object": {
+            "type": "string"
+          },
+          "phone_number_id": {
+            "type": "string"
+          },
+          "quality_rating": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "verified_name": {
+            "type": "string"
+          },
+          "waba_id": {
+            "type": "string"
+          },
+          "webhook": {
+            "$ref": "#/components/schemas/WhatsAppHookup"
+          }
+        },
+        "required": [
+          "id",
+          "object",
+          "name",
+          "status",
+          "mode",
+          "inbox_id",
+          "display_phone_number",
+          "verified_name",
+          "name_status",
+          "quality_rating",
+          "messaging_limit",
+          "waba_id",
+          "phone_number_id",
+          "coexistence",
+          "webhook",
+          "last_error",
+          "created_at"
+        ],
+        "type": "object"
+      },
+      "WhatsAppContact": {
+        "additionalProperties": false,
+        "properties": {
+          "email": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "phone": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "email",
+          "phone"
+        ],
+        "type": "object"
+      },
+      "WhatsAppContent": {
+        "additionalProperties": false,
+        "properties": {
+          "body": {
+            "type": "string"
+          },
+          "buttons": {
+            "items": {
+              "$ref": "#/components/schemas/WhatsAppButton"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "editable": {
+            "type": "boolean"
+          },
+          "footer": {
+            "type": "string"
+          },
+          "header": {
+            "type": "string"
+          },
+          "samples": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object"
+          }
+        },
+        "required": [
+          "header",
+          "body",
+          "footer",
+          "buttons",
+          "samples",
+          "editable"
+        ],
+        "type": "object"
+      },
+      "WhatsAppConversation": {
+        "additionalProperties": false,
+        "properties": {
+          "channel_id": {
+            "type": "string"
+          },
+          "contact": {
+            "$ref": "#/components/schemas/WhatsAppContact"
+          },
+          "templates": {
+            "items": {
+              "$ref": "#/components/schemas/WhatsAppTemplate"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "window": {
+            "$ref": "#/components/schemas/WhatsAppWindow"
+          }
+        },
+        "required": [
+          "channel_id",
+          "window",
+          "contact",
+          "templates"
+        ],
+        "type": "object"
+      },
+      "WhatsAppHookup": {
+        "additionalProperties": false,
+        "properties": {
+          "callback_url": {
+            "type": "string"
+          },
+          "verify_token": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "callback_url",
+          "verify_token"
+        ],
+        "type": "object"
+      },
+      "WhatsAppNumber": {
+        "additionalProperties": false,
+        "properties": {
+          "connected": {
+            "type": "boolean"
+          },
+          "display_phone_number": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "quality_rating": {
+            "type": "string"
+          },
+          "verified_name": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "display_phone_number",
+          "verified_name",
+          "quality_rating",
+          "connected"
+        ],
+        "type": "object"
+      },
+      "WhatsAppReplyMeta": {
+        "additionalProperties": false,
+        "properties": {
+          "conversation": {
+            "$ref": "#/components/schemas/Conversation"
+          }
+        },
+        "required": [
+          "conversation"
+        ],
+        "type": "object"
+      },
+      "WhatsAppSignupConfig": {
+        "additionalProperties": false,
+        "properties": {
+          "app_id": {
+            "type": "string"
+          },
+          "available": {
+            "type": "boolean"
+          },
+          "config_id": {
+            "type": "string"
+          },
+          "graph_version": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "available",
+          "app_id",
+          "config_id",
+          "graph_version"
+        ],
+        "type": "object"
+      },
+      "WhatsAppSignupConfigOutputBody": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/WhatsAppSignupConfig"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "WhatsAppTemplate": {
+        "additionalProperties": false,
+        "properties": {
+          "bindings": {},
+          "category": {
+            "type": "string"
+          },
+          "content": {
+            "$ref": "#/components/schemas/WhatsAppContent"
+          },
+          "id": {
+            "type": "string"
+          },
+          "language": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "preview": {
+            "type": "string"
+          },
+          "rejected_reason": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "sendable": {
+            "type": "boolean"
+          },
+          "status": {
+            "type": "string"
+          },
+          "synced_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "variables": {
+            "items": {
+              "$ref": "#/components/schemas/WhatsAppVariable"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "language",
+          "category",
+          "status",
+          "sendable",
+          "rejected_reason",
+          "variables",
+          "preview",
+          "content",
+          "bindings",
+          "synced_at"
+        ],
+        "type": "object"
+      },
+      "WhatsAppTemplateBody": {
+        "additionalProperties": false,
+        "properties": {
+          "bindings": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/WhatsAppBindingBody"
+            },
+            "maxProperties": 40,
+            "type": "object"
+          },
+          "body": {
+            "maxLength": 4096,
+            "type": "string"
+          },
+          "buttons": {
+            "items": {
+              "$ref": "#/components/schemas/WhatsAppTemplateButtonBody"
+            },
+            "maxItems": 10,
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "category": {
+            "enum": [
+              "utility",
+              "marketing"
+            ],
+            "type": "string"
+          },
+          "footer": {
+            "maxLength": 200,
+            "type": "string"
+          },
+          "header": {
+            "maxLength": 200,
+            "type": "string"
+          },
+          "samples": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "maxProperties": 40,
+            "type": "object"
+          }
+        },
+        "required": [
+          "category",
+          "body"
+        ],
+        "type": "object"
+      },
+      "WhatsAppTemplateButtonBody": {
+        "additionalProperties": false,
+        "properties": {
+          "phone_number": {
+            "maxLength": 32,
+            "type": "string"
+          },
+          "text": {
+            "maxLength": 100,
+            "type": "string"
+          },
+          "type": {
+            "enum": [
+              "quick_reply",
+              "url",
+              "phone_number"
+            ],
+            "type": "string"
+          },
+          "url": {
+            "maxLength": 2000,
+            "type": "string"
+          }
+        },
+        "required": [
+          "type",
+          "text"
+        ],
+        "type": "object"
+      },
+      "WhatsAppTemplateReplyOutputBody": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/TimelineEntry"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/WhatsAppReplyMeta"
+          }
+        },
+        "required": [
+          "data",
+          "meta"
+        ],
+        "type": "object"
+      },
+      "WhatsAppTemplateReplyRequestBody": {
+        "additionalProperties": false,
+        "properties": {
+          "client_message_id": {
+            "maxLength": 64,
+            "minLength": 1,
+            "type": "string"
+          },
+          "language": {
+            "maxLength": 15,
+            "type": "string"
+          },
+          "name": {
+            "maxLength": 512,
+            "type": "string"
+          },
+          "values": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object"
+          }
+        },
+        "required": [
+          "name",
+          "language"
+        ],
+        "type": "object"
+      },
+      "WhatsAppTokenBody": {
+        "additionalProperties": false,
+        "properties": {
+          "access_token": {
+            "maxLength": 1024,
+            "type": "string"
+          },
+          "app_secret": {
+            "maxLength": 128,
+            "type": "string"
+          },
+          "waba_id": {
+            "maxLength": 64,
+            "type": "string"
+          }
+        },
+        "required": [
+          "access_token",
+          "waba_id"
+        ],
+        "type": "object"
+      },
+      "WhatsAppVariable": {
+        "additionalProperties": false,
+        "properties": {
+          "key": {
+            "type": "string"
+          },
+          "part": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "part",
+          "key"
+        ],
+        "type": "object"
+      },
+      "WhatsAppWindow": {
+        "additionalProperties": false,
+        "properties": {
+          "expires_at": {
+            "format": "date-time",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "open": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "open",
+          "expires_at"
         ],
         "type": "object"
       },
@@ -38584,6 +39458,469 @@
               }
             },
             "description": "Created"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseError"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "x-abilities": [
+          "settings:write"
+        ],
+        "x-internal": true
+      }
+    },
+    "/channels/whatsapp": {
+      "get": {
+        "operationId": "channels.whatsapp.index",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CollectionWhatsAppChannel"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseError"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "x-abilities": [
+          "settings:read"
+        ],
+        "x-internal": true
+      },
+      "post": {
+        "operationId": "channels.whatsapp.store",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StoreWhatsAppChannelRequestBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResourceWhatsAppChannel"
+                }
+              }
+            },
+            "description": "Created"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseError"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "x-abilities": [
+          "settings:write"
+        ],
+        "x-internal": true
+      }
+    },
+    "/channels/whatsapp/accounts": {
+      "post": {
+        "operationId": "channels.whatsapp.accounts",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WhatsAppTokenBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResourceWhatsAppAccount"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseError"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "x-abilities": [
+          "settings:write"
+        ],
+        "x-internal": true
+      }
+    },
+    "/channels/whatsapp/signup-config": {
+      "get": {
+        "operationId": "channels.whatsapp.signup-config",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WhatsAppSignupConfigOutputBody"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseError"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "x-abilities": [
+          "settings:read"
+        ],
+        "x-internal": true
+      }
+    },
+    "/channels/whatsapp/signups": {
+      "post": {
+        "operationId": "channels.whatsapp.signups",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StoreWhatsAppSignupRequestBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResourceWhatsAppChannel"
+                }
+              }
+            },
+            "description": "Created"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseError"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "x-abilities": [
+          "settings:write"
+        ],
+        "x-internal": true
+      }
+    },
+    "/channels/whatsapp/{channel}": {
+      "delete": {
+        "operationId": "channels.whatsapp.destroy",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "channel",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseError"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "x-abilities": [
+          "settings:write"
+        ],
+        "x-internal": true
+      },
+      "patch": {
+        "operationId": "channels.whatsapp.update",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "channel",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateWhatsAppChannelRequestBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResourceWhatsAppChannel"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseError"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "x-abilities": [
+          "settings:write"
+        ],
+        "x-internal": true
+      }
+    },
+    "/channels/whatsapp/{channel}/templates": {
+      "get": {
+        "operationId": "channels.whatsapp.templates",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "channel",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "explode": false,
+            "in": "query",
+            "name": "refresh",
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CollectionWhatsAppTemplate"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseError"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "x-abilities": [
+          "conversations:read"
+        ],
+        "x-internal": true
+      },
+      "post": {
+        "operationId": "channels.whatsapp.templates.store",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "channel",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StoreWhatsAppTemplateRequestBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResourceWhatsAppTemplate"
+                }
+              }
+            },
+            "description": "Created"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseError"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "x-abilities": [
+          "settings:write"
+        ],
+        "x-internal": true
+      }
+    },
+    "/channels/whatsapp/{channel}/templates/{template}": {
+      "delete": {
+        "operationId": "channels.whatsapp.templates.destroy",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "channel",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "template",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseError"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "x-abilities": [
+          "settings:write"
+        ],
+        "x-internal": true
+      },
+      "put": {
+        "operationId": "channels.whatsapp.templates.update",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "channel",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "template",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WhatsAppTemplateBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResourceWhatsAppTemplate"
+                }
+              }
+            },
+            "description": "OK"
           },
           "default": {
             "content": {
@@ -43402,6 +44739,105 @@
               }
             },
             "description": "Accepted"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseError"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "x-abilities": [
+          "conversations:write"
+        ],
+        "x-internal": true
+      }
+    },
+    "/conversations/{conversation}/whatsapp": {
+      "get": {
+        "operationId": "conversations.whatsapp.show",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "conversation",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResourceWhatsAppConversation"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseError"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "x-abilities": [
+          "conversations:read"
+        ],
+        "x-internal": true
+      }
+    },
+    "/conversations/{conversation}/whatsapp-templates": {
+      "post": {
+        "operationId": "conversations.whatsapp.templates",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "conversation",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WhatsAppTemplateReplyRequestBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WhatsAppTemplateReplyOutputBody"
+                }
+              }
+            },
+            "description": "Created",
+            "headers": {
+              "Idempotent-Replayed": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
           },
           "default": {
             "content": {

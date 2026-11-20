@@ -7,17 +7,15 @@
  * manage shared replies can share one. The server's reason shows when it
  * refuses.
  */
-import { RiBracesLine, RiGroupLine, RiUserLine } from "@remixicon/react";
+import { RiGroupLine, RiUserLine } from "@remixicon/react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useId, useState } from "react";
 
 import { Button } from "@/components/base/buttons/button";
-import { Dropdown, DropdownItem, DropdownPopover, DropdownTrigger } from "@/components/base/dropdown/dropdown";
 import { Input } from "@/components/base/input/input";
 import { Modal, ModalBody, ModalFooter, ModalHeader } from "@/components/base/modal/modal";
 import { RadioGroup } from "@/components/base/radio/radio";
 import { RadioCard } from "@/components/base/radio/radio-card";
-import { variableMarkdown, variables } from "@/features/broadcasts/writer/variables";
 import { ComposerField } from "@/features/inbox/composer/composer-field";
 import { preloadEditor } from "@/features/inbox/composer/load-editor";
 import { failureText } from "@/features/settings/teams";
@@ -30,10 +28,8 @@ import {
 } from "@/lib/api/saved-replies";
 
 import { ActionsPicker } from "./actions-picker";
-import { cleanVariables, contextValues } from "./render";
-
-const known = Object.keys(contextValues({}));
-const offered = variables.filter((variable) => known.includes(variable.key));
+import { cleanVariables } from "./render";
+import { VariableMenu } from "./variable-menu";
 
 const noop = () => undefined;
 
@@ -49,35 +45,6 @@ function Section({ title, detail, children }: { title: string; detail?: string; 
       </div>
       {children}
     </section>
-  );
-}
-
-/*
- * VariableMenu offers the customer details a reply fills in.
- */
-function VariableMenu({ onPick }: { onPick: (markdown: string) => void }) {
-  const [open, setOpen] = useState(false);
-
-  return (
-    <Dropdown isOpen={open} onOpenChange={setOpen}>
-      <DropdownTrigger className="flex h-[30px] shrink-0 cursor-pointer items-center gap-1 rounded-full ps-2 pe-2.5 text-body-2-medium text-text-secondary outline-none transition-colors duration-150 ease hover:bg-background-secondary-hover hover:text-text-primary focus-visible:ring-2 focus-visible:ring-border-focus-ring">
-        <RiBracesLine aria-hidden className="size-4" />
-        Variable
-      </DropdownTrigger>
-      <DropdownPopover aria-label="Insert a variable" placement="bottom end">
-        {offered.map((variable) => (
-          <DropdownItem
-            key={variable.key}
-            onSelect={() => {
-              onPick(variableMarkdown(variable.key, variable.fallback));
-              setOpen(false);
-            }}
-          >
-            {variable.label}
-          </DropdownItem>
-        ))}
-      </DropdownPopover>
-    </Dropdown>
   );
 }
 

@@ -26,14 +26,15 @@ import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
 import type { SavedReply } from "@/lib/api/saved-replies";
+import type { WhatsAppTemplate } from "@/lib/api/whatsapp";
 import { cx } from "@/utils/cx";
-
 import { composerExtensions } from "./composer-markdown";
 import { applyLink, syncContent, whenReady } from "./editor-helpers";
 import { type Emoji, findEmoji, loadEmoji } from "./emoji";
 import { LinkRow } from "./link-row";
 import type { Mentionable } from "./mentionable";
 import { type Suggested, suggestionExtension } from "./suggestion-extension";
+
 import { SuggestionList } from "./suggestion-list";
 
 /*
@@ -62,6 +63,10 @@ export interface RichEditorProps {
   findSavedReplies?: (query: string) => Promise<SavedReply[]>;
   /* The Markdown a picked saved reply puts in place of what was typed. */
   takeSavedReply?: (reply: SavedReply) => string;
+  /* Templates a WhatsApp reply can be sent as, whose name holds what follows a /. */
+  findTemplates?: (query: string) => WhatsAppTemplate[];
+  /* Takes the picked template in place of what was typed. */
+  takeTemplate?: (template: WhatsAppTemplate) => void;
   /* Where the formatting buttons go, such as the composer's own toolbar row; under the text when left out. */
   toolbarSlot?: HTMLElement | null;
 }
@@ -93,15 +98,38 @@ export default function RichEditor({
   findMentions,
   findSavedReplies,
   takeSavedReply,
+  findTemplates,
+  takeTemplate,
   toolbarSlot,
 }: RichEditorProps) {
-  const handlers = useRef({ onChange, onSubmit, onBlur, onFiles, findMentions, findSavedReplies, takeSavedReply });
-  handlers.current = { onChange, onSubmit, onBlur, onFiles, findMentions, findSavedReplies, takeSavedReply };
+  const handlers = useRef({
+    onChange,
+    onSubmit,
+    onBlur,
+    onFiles,
+    findMentions,
+    findSavedReplies,
+    takeSavedReply,
+    findTemplates,
+    takeTemplate,
+  });
+  handlers.current = {
+    onChange,
+    onSubmit,
+    onBlur,
+    onFiles,
+    findMentions,
+    findSavedReplies,
+    takeSavedReply,
+    findTemplates,
+    takeTemplate,
+  };
   const linkRef = useRef<() => void>(() => undefined);
   const [linking, setLinking] = useState<string | null>(null);
   const [emoji, setEmoji] = useState<Suggested<Emoji> | null>(null);
   const [mention, setMention] = useState<Suggested<Mentionable> | null>(null);
   const [saved, setSaved] = useState<Suggested<SavedReply> | null>(null);
+  const [template, setTemplate] = useState<Suggested<WhatsAppTemplate> | null>(null);
 
   const editor = useEditor({
     extensions: composerExtensions(
@@ -137,6 +165,18 @@ export default function RichEditor({
             editor.chain().focus().insertContentAt(range, markdown, { contentType: "markdown" }).run();
           },
           onChange: setSaved,
+        }),
+        suggestionExtension<WhatsAppTemplate>({
+          name: "templateSuggestion",
+          char: "/",
+          minLength: 0,
+          find: (query) => handlers.current.findTemplates?.(query) ?? [],
+          content: () => "",
+          apply: (editor, range, picked) => {
+            editor.chain().focus().deleteRange(range).run();
+            handlers.current.takeTemplate?.(picked);
+          },
+          onChange: setTemplate,
         }),
       ],
     ),
@@ -215,6 +255,22 @@ export default function RichEditor({
               {item.shortcut ? <span className="ms-1.5 text-text-tertiary">#{item.shortcut}</span> : null}
             </span>
             <span className="truncate text-body-2-regular text-text-tertiary">{item.body}</span>
+          </span>
+        )}
+      />
+      <SuggestionList
+        label="WhatsApp templates"
+        suggested={template}
+        keyOf={(item) => item.id}
+        render={(item) => (
+          <span className="flex min-w-0 flex-col">
+            <span className="truncate">
+              /{item.name}
+              <span className="ms-1.5 text-text-tertiary">
+                {item.language} · {item.category}
+              </span>
+            </span>
+            <span className="truncate text-body-2-regular text-text-tertiary">{item.preview.replace(/[*_]/g, "")}</span>
           </span>
         )}
       />
@@ -311,19 +367,25 @@ function Formatting({ editor, onLink, slot }: { editor: Editor; onLink: () => vo
   return slot ? createPortal(toolbar, slot) : toolbar;
 }
 
-function Toolbar({ editor, onLink }: { editor: Editor; onLink: () => void }) {
-  const active = useEditorState({ editor, selector: ({ editor: e }) => tools.map((t) => t.active(e)) });
+/*
+ * Toolbar is the formatting buttons. An editor whose text takes fewer
+ * formats, such as a WhatsApp template, names the ones it keeps.
+ */
+export function Toolbar({ editor, onLink, only }: { editor: Editor; onLink?: () => void; only?: string[] }) {
+  const shown = only ? tools.filter((t) => only.includes(t.label)) : tools;
+  const link = onLink ?? (() => undefined);
+  const active = useEditorState({ editor, selector: ({ editor: e }) => shown.map((t) => t.active(e)) });
 
   return (
     <div role="toolbar" aria-label="Formatting" className="flex shrink-0 items-center gap-0.5">
-      {tools.map((tool, index) => (
+      {shown.map((tool, index) => (
         <button
           key={tool.label}
           type="button"
           aria-label={tool.label}
           aria-pressed={active[index]}
           onMouseDown={(event) => event.preventDefault()}
-          onClick={() => tool.run(editor, onLink)}
+          onClick={() => tool.run(editor, link)}
           className={cx(
             "flex size-7 cursor-pointer items-center justify-center rounded-lg text-foreground-icon-secondary outline-none transition-colors duration-150 hover:bg-background-secondary-hover focus-visible:ring-2 focus-visible:ring-border-focus-ring",
             active[index] && "bg-background-tertiary-default text-foreground-icon-primary",

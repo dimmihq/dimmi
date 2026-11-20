@@ -135,6 +135,7 @@ func featureRoutes(workspace *routing.Router, a *app.App) {
 	trackerRoutes(workspace, a)
 	slaRoutes(workspace, a)
 	ticketIssueRoutes(workspace, a)
+	whatsappChannelRoutes(workspace, a)
 }
 
 /*

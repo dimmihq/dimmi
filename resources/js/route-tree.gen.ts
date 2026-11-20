@@ -32,6 +32,7 @@ import { Route as DNotificationsRouteImport } from './routes/d/notifications'
 import { Route as DOperatorRouteImport } from './routes/d/operator'
 import { Route as DReportsRouteImport } from './routes/d/reports'
 import { Route as DShortcutsRouteImport } from './routes/d/shortcuts'
+import { Route as DWhatsappReturnRouteImport } from './routes/d_.whatsapp-return'
 import { Route as AuthEmailConfirmRouteImport } from './routes/_auth/email.confirm'
 import { Route as AuthLoginMagicRouteImport } from './routes/_auth/login_.magic'
 import { Route as AuthLoginTwoFactorRouteImport } from './routes/_auth/login_.two-factor'
@@ -69,6 +70,7 @@ import { Route as DInboxViewConversationRouteImport } from './routes/d/inbox/$vi
 import { Route as DSettingsActionsActionRouteImport } from './routes/d/settings/actions.$action'
 import { Route as DSettingsInboxesInboxRouteImport } from './routes/d/settings/inboxes.$inbox'
 import { Route as DSettingsIntegrationsIntegrationRouteImport } from './routes/d/settings/integrations.$integration'
+import { Route as DSettingsIntegrationsWhatsappRouteImport } from './routes/d/settings/integrations.whatsapp'
 import { Route as DSettingsKnowledgeSourceRouteImport } from './routes/d/settings/knowledge.$source'
 import { Route as DSettingsMessengerWidgetRouteImport } from './routes/d/settings/messenger.$widget'
 import { Route as DSettingsSignaturesScopeRouteImport } from './routes/d/settings/signatures.$scope'
@@ -81,6 +83,8 @@ import { Route as DCustomersListsCompaniesIndexRouteImport } from './routes/d/cu
 import { Route as DSeriesSeriesComposeStepRouteImport } from './routes/d/series/$series_.compose.$step'
 import { Route as DSettingsEmailAddressesAddressRouteImport } from './routes/d/settings/email.addresses.$address'
 import { Route as DSettingsEmailDomainsDomainRouteImport } from './routes/d/settings/email.domains.$domain'
+import { Route as DSettingsIntegrationsWhatsappChannelRouteImport } from './routes/d/settings/integrations.whatsapp_.$channel'
+import { Route as DSettingsIntegrationsWhatsappChannelTemplatesTemplateRouteImport } from './routes/d/settings/integrations.whatsapp_.$channel_.templates.$template'
 
 const Char91__gateChar93Route = Char91__gateChar93RouteImport.update({
   id: '/__gate',
@@ -195,6 +199,11 @@ const DShortcutsRoute = DShortcutsRouteImport.update({
   id: '/shortcuts',
   path: '/shortcuts',
   getParentRoute: () => DRouteRoute,
+} as any)
+const DWhatsappReturnRoute = DWhatsappReturnRouteImport.update({
+  id: '/d_/whatsapp-return',
+  path: '/d/whatsapp-return',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const AuthEmailConfirmRoute = AuthEmailConfirmRouteImport.update({
   id: '/email/confirm',
@@ -383,6 +392,12 @@ const DSettingsIntegrationsIntegrationRoute =
     path: '/settings/integrations/$integration',
     getParentRoute: () => DRouteRoute,
   } as any)
+const DSettingsIntegrationsWhatsappRoute =
+  DSettingsIntegrationsWhatsappRouteImport.update({
+    id: '/settings/integrations/whatsapp',
+    path: '/settings/integrations/whatsapp',
+    getParentRoute: () => DRouteRoute,
+  } as any)
 const DSettingsKnowledgeSourceRoute =
   DSettingsKnowledgeSourceRouteImport.update({
     id: '/settings/knowledge/$source',
@@ -452,6 +467,18 @@ const DSettingsEmailDomainsDomainRoute =
     path: '/settings/email/domains/$domain',
     getParentRoute: () => DRouteRoute,
   } as any)
+const DSettingsIntegrationsWhatsappChannelRoute =
+  DSettingsIntegrationsWhatsappChannelRouteImport.update({
+    id: '/settings/integrations/whatsapp_/$channel',
+    path: '/settings/integrations/whatsapp/$channel',
+    getParentRoute: () => DRouteRoute,
+  } as any)
+const DSettingsIntegrationsWhatsappChannelTemplatesTemplateRoute =
+  DSettingsIntegrationsWhatsappChannelTemplatesTemplateRouteImport.update({
+    id: '/settings/integrations/whatsapp_/$channel_/templates/$template',
+    path: '/settings/integrations/whatsapp/$channel/templates/$template',
+    getParentRoute: () => DRouteRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/d': typeof DRouteRouteWithChildren
@@ -476,6 +503,7 @@ export interface FileRoutesByFullPath {
   '/d/operator': typeof DOperatorRoute
   '/d/reports': typeof DReportsRouteWithChildren
   '/d/shortcuts': typeof DShortcutsRoute
+  '/d/whatsapp-return': typeof DWhatsappReturnRoute
   '/d/': typeof DIndexRoute
   '/d/inbox/$view': typeof DInboxViewRouteRouteWithChildren
   '/email/confirm': typeof AuthEmailConfirmRoute
@@ -511,6 +539,7 @@ export interface FileRoutesByFullPath {
   '/d/settings/actions/$action': typeof DSettingsActionsActionRoute
   '/d/settings/inboxes/$inbox': typeof DSettingsInboxesInboxRoute
   '/d/settings/integrations/$integration': typeof DSettingsIntegrationsIntegrationRoute
+  '/d/settings/integrations/whatsapp': typeof DSettingsIntegrationsWhatsappRoute
   '/d/settings/knowledge/$source': typeof DSettingsKnowledgeSourceRoute
   '/d/settings/messenger/$widget': typeof DSettingsMessengerWidgetRoute
   '/d/settings/signatures/$scope': typeof DSettingsSignaturesScopeRoute
@@ -523,8 +552,10 @@ export interface FileRoutesByFullPath {
   '/d/series/$series/compose/$step': typeof DSeriesSeriesComposeStepRoute
   '/d/settings/email/addresses/$address': typeof DSettingsEmailAddressesAddressRoute
   '/d/settings/email/domains/$domain': typeof DSettingsEmailDomainsDomainRoute
+  '/d/settings/integrations/whatsapp/$channel': typeof DSettingsIntegrationsWhatsappChannelRoute
   '/d/customers/audiences/': typeof DCustomersListsAudiencesIndexRoute
   '/d/customers/companies/': typeof DCustomersListsCompaniesIndexRoute
+  '/d/settings/integrations/whatsapp/$channel/templates/$template': typeof DSettingsIntegrationsWhatsappChannelTemplatesTemplateRoute
 }
 export interface FileRoutesByTo {
   '/__gate': typeof Char91__gateChar93Route
@@ -544,6 +575,7 @@ export interface FileRoutesByTo {
   '/d/notifications': typeof DNotificationsRoute
   '/d/operator': typeof DOperatorRoute
   '/d/shortcuts': typeof DShortcutsRoute
+  '/d/whatsapp-return': typeof DWhatsappReturnRoute
   '/d': typeof DIndexRoute
   '/email/confirm': typeof AuthEmailConfirmRoute
   '/login/magic': typeof AuthLoginMagicRoute
@@ -578,6 +610,7 @@ export interface FileRoutesByTo {
   '/d/settings/actions/$action': typeof DSettingsActionsActionRoute
   '/d/settings/inboxes/$inbox': typeof DSettingsInboxesInboxRoute
   '/d/settings/integrations/$integration': typeof DSettingsIntegrationsIntegrationRoute
+  '/d/settings/integrations/whatsapp': typeof DSettingsIntegrationsWhatsappRoute
   '/d/settings/knowledge/$source': typeof DSettingsKnowledgeSourceRoute
   '/d/settings/messenger/$widget': typeof DSettingsMessengerWidgetRoute
   '/d/settings/signatures/$scope': typeof DSettingsSignaturesScopeRoute
@@ -589,8 +622,10 @@ export interface FileRoutesByTo {
   '/d/series/$series/compose/$step': typeof DSeriesSeriesComposeStepRoute
   '/d/settings/email/addresses/$address': typeof DSettingsEmailAddressesAddressRoute
   '/d/settings/email/domains/$domain': typeof DSettingsEmailDomainsDomainRoute
+  '/d/settings/integrations/whatsapp/$channel': typeof DSettingsIntegrationsWhatsappChannelRoute
   '/d/customers/audiences': typeof DCustomersListsAudiencesIndexRoute
   '/d/customers/companies': typeof DCustomersListsCompaniesIndexRoute
+  '/d/settings/integrations/whatsapp/$channel/templates/$template': typeof DSettingsIntegrationsWhatsappChannelTemplatesTemplateRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -616,6 +651,7 @@ export interface FileRoutesById {
   '/d/operator': typeof DOperatorRoute
   '/d/reports': typeof DReportsRouteWithChildren
   '/d/shortcuts': typeof DShortcutsRoute
+  '/d_/whatsapp-return': typeof DWhatsappReturnRoute
   '/d/': typeof DIndexRoute
   '/d/inbox/$view': typeof DInboxViewRouteRouteWithChildren
   '/_auth/email/confirm': typeof AuthEmailConfirmRoute
@@ -652,6 +688,7 @@ export interface FileRoutesById {
   '/d/settings/actions/$action': typeof DSettingsActionsActionRoute
   '/d/settings/inboxes/$inbox': typeof DSettingsInboxesInboxRoute
   '/d/settings/integrations/$integration': typeof DSettingsIntegrationsIntegrationRoute
+  '/d/settings/integrations/whatsapp': typeof DSettingsIntegrationsWhatsappRoute
   '/d/settings/knowledge/$source': typeof DSettingsKnowledgeSourceRoute
   '/d/settings/messenger/$widget': typeof DSettingsMessengerWidgetRoute
   '/d/settings/signatures/$scope': typeof DSettingsSignaturesScopeRoute
@@ -664,8 +701,10 @@ export interface FileRoutesById {
   '/d/series/$series_/compose/$step': typeof DSeriesSeriesComposeStepRoute
   '/d/settings/email/addresses/$address': typeof DSettingsEmailAddressesAddressRoute
   '/d/settings/email/domains/$domain': typeof DSettingsEmailDomainsDomainRoute
+  '/d/settings/integrations/whatsapp_/$channel': typeof DSettingsIntegrationsWhatsappChannelRoute
   '/d/customers/_lists/audiences/': typeof DCustomersListsAudiencesIndexRoute
   '/d/customers/_lists/companies/': typeof DCustomersListsCompaniesIndexRoute
+  '/d/settings/integrations/whatsapp_/$channel_/templates/$template': typeof DSettingsIntegrationsWhatsappChannelTemplatesTemplateRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -692,6 +731,7 @@ export interface FileRouteTypes {
     | '/d/operator'
     | '/d/reports'
     | '/d/shortcuts'
+    | '/d/whatsapp-return'
     | '/d/'
     | '/d/inbox/$view'
     | '/email/confirm'
@@ -727,6 +767,7 @@ export interface FileRouteTypes {
     | '/d/settings/actions/$action'
     | '/d/settings/inboxes/$inbox'
     | '/d/settings/integrations/$integration'
+    | '/d/settings/integrations/whatsapp'
     | '/d/settings/knowledge/$source'
     | '/d/settings/messenger/$widget'
     | '/d/settings/signatures/$scope'
@@ -739,8 +780,10 @@ export interface FileRouteTypes {
     | '/d/series/$series/compose/$step'
     | '/d/settings/email/addresses/$address'
     | '/d/settings/email/domains/$domain'
+    | '/d/settings/integrations/whatsapp/$channel'
     | '/d/customers/audiences/'
     | '/d/customers/companies/'
+    | '/d/settings/integrations/whatsapp/$channel/templates/$template'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/__gate'
@@ -760,6 +803,7 @@ export interface FileRouteTypes {
     | '/d/notifications'
     | '/d/operator'
     | '/d/shortcuts'
+    | '/d/whatsapp-return'
     | '/d'
     | '/email/confirm'
     | '/login/magic'
@@ -794,6 +838,7 @@ export interface FileRouteTypes {
     | '/d/settings/actions/$action'
     | '/d/settings/inboxes/$inbox'
     | '/d/settings/integrations/$integration'
+    | '/d/settings/integrations/whatsapp'
     | '/d/settings/knowledge/$source'
     | '/d/settings/messenger/$widget'
     | '/d/settings/signatures/$scope'
@@ -805,8 +850,10 @@ export interface FileRouteTypes {
     | '/d/series/$series/compose/$step'
     | '/d/settings/email/addresses/$address'
     | '/d/settings/email/domains/$domain'
+    | '/d/settings/integrations/whatsapp/$channel'
     | '/d/customers/audiences'
     | '/d/customers/companies'
+    | '/d/settings/integrations/whatsapp/$channel/templates/$template'
   id:
     | '__root__'
     | '/d'
@@ -831,6 +878,7 @@ export interface FileRouteTypes {
     | '/d/operator'
     | '/d/reports'
     | '/d/shortcuts'
+    | '/d_/whatsapp-return'
     | '/d/'
     | '/d/inbox/$view'
     | '/_auth/email/confirm'
@@ -867,6 +915,7 @@ export interface FileRouteTypes {
     | '/d/settings/actions/$action'
     | '/d/settings/inboxes/$inbox'
     | '/d/settings/integrations/$integration'
+    | '/d/settings/integrations/whatsapp'
     | '/d/settings/knowledge/$source'
     | '/d/settings/messenger/$widget'
     | '/d/settings/signatures/$scope'
@@ -879,8 +928,10 @@ export interface FileRouteTypes {
     | '/d/series/$series_/compose/$step'
     | '/d/settings/email/addresses/$address'
     | '/d/settings/email/domains/$domain'
+    | '/d/settings/integrations/whatsapp_/$channel'
     | '/d/customers/_lists/audiences/'
     | '/d/customers/_lists/companies/'
+    | '/d/settings/integrations/whatsapp_/$channel_/templates/$template'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -888,6 +939,7 @@ export interface RootRouteChildren {
   Char91__gateChar93Route: typeof Char91__gateChar93Route
   AuthRoute: typeof AuthRouteWithChildren
   OnboardingRoute: typeof OnboardingRoute
+  DWhatsappReturnRoute: typeof DWhatsappReturnRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -1052,6 +1104,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/d/shortcuts'
       preLoaderRoute: typeof DShortcutsRouteImport
       parentRoute: typeof DRouteRoute
+    }
+    '/d_/whatsapp-return': {
+      id: '/d_/whatsapp-return'
+      path: '/d/whatsapp-return'
+      fullPath: '/d/whatsapp-return'
+      preLoaderRoute: typeof DWhatsappReturnRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/_auth/email/confirm': {
       id: '/_auth/email/confirm'
@@ -1312,6 +1371,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DSettingsIntegrationsIntegrationRouteImport
       parentRoute: typeof DRouteRoute
     }
+    '/d/settings/integrations/whatsapp': {
+      id: '/d/settings/integrations/whatsapp'
+      path: '/settings/integrations/whatsapp'
+      fullPath: '/d/settings/integrations/whatsapp'
+      preLoaderRoute: typeof DSettingsIntegrationsWhatsappRouteImport
+      parentRoute: typeof DRouteRoute
+    }
     '/d/settings/knowledge/$source': {
       id: '/d/settings/knowledge/$source'
       path: '/settings/knowledge/$source'
@@ -1394,6 +1460,20 @@ declare module '@tanstack/react-router' {
       path: '/settings/email/domains/$domain'
       fullPath: '/d/settings/email/domains/$domain'
       preLoaderRoute: typeof DSettingsEmailDomainsDomainRouteImport
+      parentRoute: typeof DRouteRoute
+    }
+    '/d/settings/integrations/whatsapp_/$channel': {
+      id: '/d/settings/integrations/whatsapp_/$channel'
+      path: '/settings/integrations/whatsapp/$channel'
+      fullPath: '/d/settings/integrations/whatsapp/$channel'
+      preLoaderRoute: typeof DSettingsIntegrationsWhatsappChannelRouteImport
+      parentRoute: typeof DRouteRoute
+    }
+    '/d/settings/integrations/whatsapp_/$channel_/templates/$template': {
+      id: '/d/settings/integrations/whatsapp_/$channel_/templates/$template'
+      path: '/settings/integrations/whatsapp/$channel/templates/$template'
+      fullPath: '/d/settings/integrations/whatsapp/$channel/templates/$template'
+      preLoaderRoute: typeof DSettingsIntegrationsWhatsappChannelTemplatesTemplateRouteImport
       parentRoute: typeof DRouteRoute
     }
   }
@@ -1534,6 +1614,7 @@ interface DRouteRouteChildren {
   DSettingsActionsActionRoute: typeof DSettingsActionsActionRoute
   DSettingsInboxesInboxRoute: typeof DSettingsInboxesInboxRoute
   DSettingsIntegrationsIntegrationRoute: typeof DSettingsIntegrationsIntegrationRoute
+  DSettingsIntegrationsWhatsappRoute: typeof DSettingsIntegrationsWhatsappRoute
   DSettingsKnowledgeSourceRoute: typeof DSettingsKnowledgeSourceRoute
   DSettingsMessengerWidgetRoute: typeof DSettingsMessengerWidgetRoute
   DSettingsSignaturesScopeRoute: typeof DSettingsSignaturesScopeRoute
@@ -1544,6 +1625,8 @@ interface DRouteRouteChildren {
   DSeriesSeriesComposeStepRoute: typeof DSeriesSeriesComposeStepRoute
   DSettingsEmailAddressesAddressRoute: typeof DSettingsEmailAddressesAddressRoute
   DSettingsEmailDomainsDomainRoute: typeof DSettingsEmailDomainsDomainRoute
+  DSettingsIntegrationsWhatsappChannelRoute: typeof DSettingsIntegrationsWhatsappChannelRoute
+  DSettingsIntegrationsWhatsappChannelTemplatesTemplateRoute: typeof DSettingsIntegrationsWhatsappChannelTemplatesTemplateRoute
 }
 
 const DRouteRouteChildren: DRouteRouteChildren = {
@@ -1573,6 +1656,7 @@ const DRouteRouteChildren: DRouteRouteChildren = {
   DSettingsActionsActionRoute: DSettingsActionsActionRoute,
   DSettingsInboxesInboxRoute: DSettingsInboxesInboxRoute,
   DSettingsIntegrationsIntegrationRoute: DSettingsIntegrationsIntegrationRoute,
+  DSettingsIntegrationsWhatsappRoute: DSettingsIntegrationsWhatsappRoute,
   DSettingsKnowledgeSourceRoute: DSettingsKnowledgeSourceRoute,
   DSettingsMessengerWidgetRoute: DSettingsMessengerWidgetRoute,
   DSettingsSignaturesScopeRoute: DSettingsSignaturesScopeRoute,
@@ -1583,6 +1667,10 @@ const DRouteRouteChildren: DRouteRouteChildren = {
   DSeriesSeriesComposeStepRoute: DSeriesSeriesComposeStepRoute,
   DSettingsEmailAddressesAddressRoute: DSettingsEmailAddressesAddressRoute,
   DSettingsEmailDomainsDomainRoute: DSettingsEmailDomainsDomainRoute,
+  DSettingsIntegrationsWhatsappChannelRoute:
+    DSettingsIntegrationsWhatsappChannelRoute,
+  DSettingsIntegrationsWhatsappChannelTemplatesTemplateRoute:
+    DSettingsIntegrationsWhatsappChannelTemplatesTemplateRoute,
 }
 
 const DRouteRouteWithChildren =
@@ -1627,6 +1715,7 @@ const rootRouteChildren: RootRouteChildren = {
   Char91__gateChar93Route: Char91__gateChar93Route,
   AuthRoute: AuthRouteWithChildren,
   OnboardingRoute: OnboardingRoute,
+  DWhatsappReturnRoute: DWhatsappReturnRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

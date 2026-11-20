@@ -70,6 +70,7 @@ const (
 	PrefixInbox              Prefix = "inbox"
 	PrefixChannelConnection  Prefix = "chn"
 	PrefixChannelRoom        Prefix = "chr"
+	PrefixWhatsAppTemplate   Prefix = "wtp"
 	PrefixContact            Prefix = "ctc"
 	PrefixCompany            Prefix = "cmp"
 	PrefixConversation       Prefix = "conv"
@@ -245,7 +246,7 @@ func channelPublicIDs() []PublicIDEntry {
 		{PrefixChannelRoom, "channel_rooms"},
 		{"cml", "channel_member_links"},
 		{"cie", "channel_inbound_events"},
-		{"wtp", "whatsapp_templates"},
+		{PrefixWhatsAppTemplate, "whatsapp_templates"},
 		{PrefixNotification, "notifications"},
 		{PrefixPushSubscription, "push_subscriptions"},
 		{PrefixDestination, "notification_destinations"},

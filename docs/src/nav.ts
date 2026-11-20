@@ -60,6 +60,7 @@ export const sidebar: Group[] = [
       { label: "Signatures", link: "/channels/email-signatures/" },
       { label: "Slack", link: "/channels/slack/" },
       { label: "Slack room modes", link: "/channels/slack-room-modes/" },
+      { label: "WhatsApp", link: "/channels/whatsapp/" },
     ],
   },
   {

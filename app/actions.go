@@ -12,6 +12,7 @@
 package app
 
 import (
+	"github.com/dimmihq/dimmi/app/actions/channels"
 	"github.com/dimmihq/dimmi/framework/mailbox"
 
 	"github.com/dimmihq/dimmi/app/actions/accesspolicy"
@@ -64,6 +65,7 @@ Actions holds the business actions.
 type Actions struct {
 	Widget                  *WidgetActions
 	Slack                   *SlackActions
+	WhatsApp                *channels.WhatsApp
 	CreateUser              *users.CreateUser
 	CreateFirstUser         *users.CreateFirstUser
 	OperatorAccounts        *users.OperatorAccounts

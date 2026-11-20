@@ -1,7 +1,7 @@
 /*
  * The files on a message in the thread. Pictures show themselves at
- * their stored proportions and open full size; voice notes and other
- * audio play in place; other files are a row with their name and size
+ * their stored proportions and open full size; voice notes, other audio
+ * and videos play in place; other files are a row with their name and size
  * that downloads them. A file the malware scan
  * refused is red, says a virus was found and never links; one still being
  * checked waits without a link. A file nothing checked, because it was too
@@ -10,11 +10,14 @@
  * their side, so they stand out from the thread the same way.
  */
 import { RiDownloadLine, RiErrorWarningLine, RiFileLine, RiShieldCrossLine, RiTimeLine } from "@remixicon/react";
+import { useQueryClient } from "@tanstack/react-query";
 import { type ReactNode, useState } from "react";
 
 import { AlertDialog } from "@/components/base/modal/modal";
 import type { Attachment } from "@/lib/api/inbox";
 import { cx } from "@/utils/cx";
+
+import { VideoPlayer, VoicePlayer } from "./media-player";
 
 /*
  * sizeOf writes a file size the way people read it.
@@ -76,7 +79,29 @@ function CarefulOpen({
   );
 }
 
+/*
+ * useFreshLinks asks once for the thread's files again when a picture
+ * fails to load: a file's link reads it for minutes only, and a picture
+ * shown later, such as one scrolled to, may find its link expired.
+ */
+function useFreshLinks() {
+  const client = useQueryClient();
+  const [asked, setAsked] = useState(false);
+
+  return () => {
+    if (asked) {
+      return;
+    }
+
+    setAsked(true);
+    void client.invalidateQueries({
+      predicate: (query) => query.queryKey[2] === "conversation" && query.queryKey[4] === "messages",
+    });
+  };
+}
+
 function Picture({ file }: { file: Attachment & { url: string } }) {
+  const refresh = useFreshLinks();
   const frame =
     "block overflow-hidden rounded-xl outline-none focus-visible:ring-2 focus-visible:ring-border-focus-ring";
   const picture = (
@@ -87,6 +112,7 @@ function Picture({ file }: { file: Attachment & { url: string } }) {
         width={file.width ?? undefined}
         height={file.height ?? undefined}
         loading="lazy"
+        onError={refresh}
         className="block h-auto max-h-72 w-auto max-w-full object-cover"
       />
       {unchecked(file) ? (
@@ -145,9 +171,39 @@ function Voice({ file, side }: { file: Attachment & { url: string }; side: Side 
 
   return (
     <div className={cx("flex w-72 max-w-full flex-col gap-1.5 rounded-xl p-2", surfaces[side].rest)}>
-      <audio controls preload="metadata" src={file.url} aria-label={file.filename} className="h-9 w-full">
-        <track kind="captions" />
-      </audio>
+      <VoicePlayer src={file.url} label={file.filename} seed={file.id} />
+      {unchecked(file) ? (
+        <CarefulOpen file={file} label={`Download ${file.filename}`} className={saveStyle}>
+          {saveLabel}
+        </CarefulOpen>
+      ) : (
+        <a href={file.url} download={file.filename} className={saveStyle}>
+          {saveLabel}
+        </a>
+      )}
+    </div>
+  );
+}
+
+/*
+ * Clip is a video the team can play in place, such as one a customer
+ * sent on WhatsApp, with a link to save it under the player. Formats
+ * the browser cannot play still show the link.
+ */
+function Clip({ file, side }: { file: Attachment & { url: string }; side: Side }) {
+  const saveLabel = (
+    <>
+      <RiDownloadLine aria-hidden className="size-3.5 shrink-0" />
+      <span className="truncate">
+        {file.filename} · {sizeOf(file.size_bytes)}
+        {unchecked(file) ? " · not scanned" : ""}
+      </span>
+    </>
+  );
+
+  return (
+    <div className={cx("flex w-72 max-w-full flex-col gap-1.5 rounded-xl p-1.5", surfaces[side].rest)}>
+      <VideoPlayer src={file.url} label={file.filename} />
       {unchecked(file) ? (
         <CarefulOpen file={file} label={`Download ${file.filename}`} className={saveStyle}>
           {saveLabel}
@@ -262,7 +318,7 @@ function FileRow({ file, side }: { file: Attachment; side: Side }) {
 
 /*
  * FileView shows a file the way that suits it: a picture, a player for
- * audio, or a row to download.
+ * audio or video, or a row to download.
  */
 function FileView({ file, side }: { file: Attachment; side: Side }) {
   if (!file.url || file.blocked) {
@@ -273,6 +329,9 @@ function FileView({ file, side }: { file: Attachment; side: Side }) {
   }
   if (file.content_type.startsWith("audio/")) {
     return <Voice file={{ ...file, url: file.url }} side={side} />;
+  }
+  if (file.content_type === "video/mp4" || file.content_type === "video/webm") {
+    return <Clip file={{ ...file, url: file.url }} side={side} />;
   }
 
   return <FileRow file={file} side={side} />;

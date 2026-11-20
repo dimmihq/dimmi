@@ -27,19 +27,21 @@ import (
 
 /*
 ServicesConfig holds the credentials of the apps dimmi has registered at
-other services. Slack is the shared Slack app; Notion, Intercom,
+other services. Slack is the shared Slack app, WhatsApp the Meta app
+WhatsApp numbers connect through; Notion, Intercom,
 Zendesk and GitHub are the OAuth clients knowledge sources connect
 through.
 */
 type ServicesConfig struct {
-	Slack    SlackServiceConfig   `koanf:"slack"`
-	Notion   OAuthServiceConfig   `koanf:"notion"`
-	Intercom OAuthServiceConfig   `koanf:"intercom"`
-	Zendesk  OAuthServiceConfig   `koanf:"zendesk"`
-	GitHub   OAuthServiceConfig   `koanf:"github"`
-	Linear   TrackerServiceConfig `koanf:"linear"`
-	Jira     TrackerServiceConfig `koanf:"jira"`
-	Trackers TrackersConfig       `koanf:"trackers"`
+	Slack    SlackServiceConfig    `koanf:"slack"`
+	WhatsApp WhatsAppServiceConfig `koanf:"whatsapp"`
+	Notion   OAuthServiceConfig    `koanf:"notion"`
+	Intercom OAuthServiceConfig    `koanf:"intercom"`
+	Zendesk  OAuthServiceConfig    `koanf:"zendesk"`
+	GitHub   OAuthServiceConfig    `koanf:"github"`
+	Linear   TrackerServiceConfig  `koanf:"linear"`
+	Jira     TrackerServiceConfig  `koanf:"jira"`
+	Trackers TrackersConfig        `koanf:"trackers"`
 }
 
 /*
@@ -81,6 +83,36 @@ func (c SlackServiceConfig) check() error {
 	}
 
 	return nil
+}
+
+/*
+WhatsAppServiceConfig is the install's own Meta app, the one WhatsApp
+numbers connect through: its id, the secret Meta signs every delivery
+with, the Embedded Signup configuration the connect popup opens, and
+the token Meta must echo when it checks the webhook address. Without an
+app id and secret the popup is unavailable, and a workspace connects
+its number with a token of its own Meta app instead.
+*/
+type WhatsAppServiceConfig struct {
+	AppID       string `koanf:"app_id"`
+	AppSecret   string `koanf:"app_secret"   secret:"true"`
+	ConfigID    string `koanf:"config_id"`
+	VerifyToken string `koanf:"verify_token" secret:"true"`
+}
+
+/*
+Configured reports whether numbers can connect through the install's
+own Meta app.
+*/
+func (c WhatsAppServiceConfig) Configured() bool {
+	return c.AppID != "" && c.AppSecret != ""
+}
+
+/*
+SignupReady reports whether the Embedded Signup popup can open.
+*/
+func (c WhatsAppServiceConfig) SignupReady() bool {
+	return c.Configured() && c.ConfigID != ""
 }
 
 /*

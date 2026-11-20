@@ -24,6 +24,15 @@ import { directionalIconClass } from "@/utils/directional-icon";
 
 type IconButtonSize = "medium" | "small";
 
+/*
+ * Variants: secondary is the designs' white button; primary is filled with
+ * the primary colour and round, for a single main action such as play;
+ * glass sits on a picture or a video, a translucent dark disc with a
+ * white icon; quiet has no fill or border until hovered, for a minor
+ * action beside a heading, named by a tooltip.
+ */
+type IconButtonVariant = "secondary" | "primary" | "glass" | "quiet";
+
 type IconComponent = ComponentType<{
   className?: string;
   "aria-hidden"?: boolean | "true" | "false";
@@ -33,6 +42,7 @@ export interface IconButtonProps
   extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, "children"> {
   icon: IconComponent;
   size?: IconButtonSize;
+  variant?: IconButtonVariant;
   /** Accessible name — required since there is no visible label. */
   "aria-label": string;
   ref?: Ref<HTMLButtonElement>;
@@ -49,16 +59,36 @@ export interface IconLinkButtonProps
 
 const styles = sortCx({
   base: [
-    "relative inline-flex shrink-0 items-center justify-center overflow-visible rounded-2lg",
-    "bg-background-primary-default text-foreground-icon-primary",
-    "border border-border-button-default shadow-xs",
+    "relative inline-flex shrink-0 items-center justify-center overflow-visible",
     "select-none cursor-pointer",
-    "transition-[background-color,border-color,box-shadow,color] duration-150 ease",
+    "transition-[background-color,border-color,box-shadow,color,opacity] duration-150 ease",
     "outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-border-focus-ring",
-    "hover:bg-background-primary-hover hover:border-border-button-hover",
-    "active:bg-background-primary-active active:border-border-button-active",
-    "disabled:cursor-not-allowed disabled:bg-background-primary-disabled disabled:border-border-button-default disabled:text-icon-button-disabled-foreground disabled:opacity-60 disabled:shadow-none",
   ].join(" "),
+  variant: {
+    secondary: [
+      "rounded-2lg bg-background-primary-default text-foreground-icon-primary",
+      "border border-border-button-default shadow-xs",
+      "hover:bg-background-primary-hover hover:border-border-button-hover",
+      "active:bg-background-primary-active active:border-border-button-active",
+      "disabled:cursor-not-allowed disabled:bg-background-primary-disabled disabled:border-border-button-default disabled:text-icon-button-disabled-foreground disabled:opacity-60 disabled:shadow-none",
+    ].join(" "),
+    primary: [
+      "rounded-full bg-button-primary text-text-white shadow-xs",
+      "hover:opacity-90 active:opacity-80",
+      "disabled:cursor-not-allowed disabled:opacity-50 disabled:shadow-none",
+    ].join(" "),
+    glass: [
+      "rounded-full bg-black/45 text-text-white backdrop-blur-sm",
+      "hover:bg-black/60 active:bg-black/70",
+      "disabled:cursor-not-allowed disabled:opacity-50",
+    ].join(" "),
+    quiet: [
+      "rounded-2lg text-foreground-icon-secondary",
+      "hover:bg-background-secondary-hover hover:text-foreground-icon-primary",
+      "active:bg-background-tertiary-default",
+      "disabled:cursor-not-allowed disabled:opacity-50",
+    ].join(" "),
+  },
   size: {
     medium: "size-9",
     small: "size-8",
@@ -72,6 +102,7 @@ const styles = sortCx({
 export function IconButton({
   icon: Icon,
   size = "medium",
+  variant = "secondary",
   className,
   type = "button",
   ref,
@@ -81,7 +112,7 @@ export function IconButton({
     <button
       ref={ref}
       type={type}
-      className={cx(styles.base, styles.size[size], className)}
+      className={cx(styles.base, styles.variant[variant], styles.size[size], className)}
       {...props}
     >
       <Icon className={cx(styles.icon[size], directionalIconClass(Icon))} aria-hidden />
@@ -100,7 +131,7 @@ export function IconLinkButton({
   return (
     <a
       ref={ref}
-      className={cx(styles.base, styles.size[size], className)}
+      className={cx(styles.base, styles.variant.secondary, styles.size[size], className)}
       {...props}
     >
       <Icon className={cx(styles.icon[size], directionalIconClass(Icon))} aria-hidden />

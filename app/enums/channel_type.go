@@ -22,8 +22,9 @@ The channel types the product ships. ChannelTypeAPI is the connection
 every inbox has for conversations created through the API.
 */
 const (
-	ChannelTypeWidget ChannelType = "widget"
-	ChannelTypeEmail  ChannelType = "email"
-	ChannelTypeAPI    ChannelType = "api"
-	ChannelTypeSlack  ChannelType = "slack"
+	ChannelTypeWidget   ChannelType = "widget"
+	ChannelTypeEmail    ChannelType = "email"
+	ChannelTypeAPI      ChannelType = "api"
+	ChannelTypeSlack    ChannelType = "slack"
+	ChannelTypeWhatsApp ChannelType = "whatsapp"
 )

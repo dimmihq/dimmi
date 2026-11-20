@@ -16,6 +16,7 @@ Give each app the redirect URL `https://<app_domain>/integrations/<service>/call
 | Notion | `notion` | `NOTION__CLIENT_ID`, `NOTION__CLIENT_SECRET` |
 | Intercom | `intercom` | `INTERCOM__CLIENT_ID`, `INTERCOM__CLIENT_SECRET` |
 | Zendesk | `zendesk` | `ZENDESK__CLIENT_ID`, `ZENDESK__CLIENT_SECRET` |
+| WhatsApp | none | `WHATSAPP__APP_ID`, `WHATSAPP__APP_SECRET`, `WHATSAPP__CONFIG_ID`, `WHATSAPP__VERIFY_TOKEN` |
 
 ```bash
 dimmictl set <<'EOF'
@@ -27,6 +28,7 @@ EOF
 
 - **Slack:** point the app's events at `https://<app_domain>/webhooks/slack/events` and its interactivity at `https://<app_domain>/webhooks/slack/interactions`. dimmi does not start with a Slack client ID and secret but no signing secret.
 - **Linear:** `WEBHOOK_SECRET` is the signing secret of the Linear app's webhook.
+- **WhatsApp:** the Meta app needs no redirect URL. Point its webhook at `https://<app_domain>/webhooks/whatsapp` with `VERIFY_TOKEN`, a random value you make up, as the verify token. `CONFIG_ID` is the app's Embedded Signup configuration. Without these, each workspace [connects its number](/channels/whatsapp/) with a token of its own Meta app.
 - **GitHub:** one app serves the GitHub [knowledge source](/ai/knowledge-sources/) and [linked issues](/tickets/linked-issues/). dimmi signs the webhook of each linked repository with `TRACKERS__GITHUB_WEBHOOK_SECRET`, a random value you make up. [GitHub sign-in](/self-hosting/sign-in-providers/) uses a separate app.
 - **incident.io, Rootly, PagerDuty:** nothing to set. Each workspace connects with its own API key.
 

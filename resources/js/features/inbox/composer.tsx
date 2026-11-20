@@ -48,6 +48,8 @@ import { UndoToast } from "./undo/undo-toast";
 import { type Held, useHeld } from "./undo/use-held";
 import { type ReplyFiles, useReplyFiles } from "./use-reply-files";
 import type { Report } from "./use-typing-report";
+import { outgoing, useTemplateReply, useWhatsAppWindow } from "./whatsapp-state";
+import { ClosedWindow, TemplateCard, WindowChip } from "./whatsapp-window";
 
 /*
  * Send sends what the composer holds as a reply or a note, and for a
@@ -70,6 +72,7 @@ export function Composer({
   focusKey,
   customer,
   channel,
+  channelType = "",
   canAttach = false,
   onSend,
   onOpen,
@@ -84,6 +87,7 @@ export function Composer({
   focusKey: number;
   customer: string;
   channel: string;
+  channelType?: string;
   canAttach?: boolean;
   onSend: Send;
   onOpen: (mode: Mode) => void;
@@ -136,6 +140,7 @@ export function Composer({
               focusKey={focusKey}
               customer={customer}
               channel={channel}
+              channelType={channelType}
               canAttach={canAttach}
               onSend={onSend}
               onModeChange={onOpen}
@@ -247,6 +252,7 @@ function Panel({
   focusKey,
   customer,
   channel,
+  channelType = "",
   canAttach = false,
   onSend,
   onModeChange,
@@ -262,6 +268,7 @@ function Panel({
   focusKey: number;
   customer: string;
   channel: string;
+  channelType?: string;
   canAttach?: boolean;
   onSend: Send;
   onModeChange: (mode: Mode) => void;
@@ -291,7 +298,8 @@ function Panel({
   const files = useReplyFiles(workspace);
   const [slot, setSlot] = useState<HTMLElement | null>(null);
   const attachable = !note && canAttach;
-  const { send, sending, failure, ready } = useSend({
+  const whatsapp = useWhatsAppWindow(workspace, conversation, channelType, note);
+  const text = useSend({
     mode,
     draft,
     files,
@@ -304,6 +312,8 @@ function Panel({
       onSent?.();
     },
   });
+  const template = useTemplateReply(workspace, conversation, whatsapp, onSent);
+  const out = outgoing(template, whatsapp, text);
 
   return (
     <Shell
@@ -330,10 +340,13 @@ function Panel({
         <>
           {note ? <RiLock2Line aria-hidden className="size-3.5 shrink-0" /> : null}
           <span className="truncate">{note ? "Only your team sees this" : `To ${customer} · ${channel}`}</span>
+          <WindowChip state={whatsapp} />
         </>
       }
     >
-      <div className="flex flex-col gap-3 px-1.5">
+      <ClosedWindow customer={customer} state={whatsapp} reply={template} />
+      <TemplateCard reply={template} customer={customer} />
+      <div className={template.picked ? "hidden" : "flex flex-col gap-3 px-1.5"}>
         <DraftConflict draft={draft} />
         <ComposerField
           value={draft.body}
@@ -346,7 +359,7 @@ function Panel({
               onTyping(value.trim() !== "");
             }
           }}
-          onSubmit={(then) => void send(then)}
+          onSubmit={out.send}
           onBlur={() => onTyping(false)}
           onFiles={(picked) => files.add(picked, attachable)}
           findMentions={note ? (query) => mentionables(workspace, conversation, query).then(toMentionables) : undefined}
@@ -354,6 +367,8 @@ function Panel({
             client.fetchQuery(savedRepliesQuery(workspace, query)).then((found) => found.slice(0, 8))
           }
           takeSavedReply={macro.take}
+          findTemplates={template.find}
+          takeTemplate={template.pick}
           toolbarSlot={slot}
         />
       </div>
@@ -377,24 +392,24 @@ function Panel({
           Ask Operator
         </button>
         <span
-          role={failure ? "alert" : undefined}
+          role={out.failure ? "alert" : undefined}
           className={cx(
             "ms-auto min-w-0 truncate text-body-2-regular",
-            failure ? "text-text-error-primary" : "hidden text-text-tertiary sm:inline",
+            out.failure ? "text-text-error-primary" : "hidden text-text-tertiary sm:inline",
           )}
         >
-          {failure ?? (note ? "Only your team sees notes" : `Sends on ${channel}`)}
+          {out.failure ?? (note ? "Only your team sees notes" : `Sends on ${channel}`)}
         </span>
         <button
           type="button"
-          disabled={!ready || sending}
-          onClick={() => void send()}
+          disabled={out.disabled}
+          onClick={() => out.send()}
           aria-label={note ? "Add note" : "Send"}
           className="flex size-9 shrink-0 cursor-pointer items-center justify-center rounded-full bg-button-primary p-2 text-text-white outline-none transition-opacity duration-200 ease focus-visible:ring-2 focus-visible:ring-border-focus-ring disabled:cursor-not-allowed disabled:opacity-40"
         >
           <RiArrowUpLine aria-hidden className="size-5" />
         </button>
-        {note ? null : <SendMenu disabled={!ready || sending} onSend={(then) => void send(then)} />}
+        {note ? null : <SendMenu disabled={out.disabled} onSend={out.send} />}
       </div>
     </Shell>
   );
