@@ -1,0 +1,13 @@
+# Where the tests find their services: the ones compose.yaml starts with
+# `make services`. Each key reaches the tests as the environment variable
+# of the same name in capitals (database_url as DATABASE_URL); a variable
+# already set in the environment wins. Keep it flat: one `key: value` a
+# line. Nothing here is secret.
+database_url: postgres://postgres:postgres@127.0.0.1:15432/postgres?sslmode=disable
+redis_url: redis://127.0.0.1:16379
+aws_endpoint_url_s3: http://127.0.0.1:18333
+aws_region: us-east-1
+aws_access_key_id: local
+aws_secret_access_key: local-secret
+mail_smtp_url: smtp://127.0.0.1:11025
+mailpit_api_url: http://127.0.0.1:18025

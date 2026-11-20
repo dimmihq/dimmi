@@ -58,10 +58,10 @@ lint-web:
 	pnpm lint
 	pnpm typecheck
 
-# Tests read the same variables the application does; ENV_FILE picks the
-# environment (CI passes its own file).
-ENV_FILE ?= .env.testing
-WITH_ENV := set -a && . ./$(ENV_FILE) && set +a &&
+# Tests find their services through dimmi.test.yaml; TEST_CONFIG picks
+# another file, and a variable already in the environment wins.
+TEST_CONFIG ?= dimmi.test.yaml
+WITH_ENV := eval "$$(TEST_CONFIG=$(TEST_CONFIG) sh scripts/test-env.sh)" &&
 
 test: test-cloud test-self-host test-timing test-web test-dev
 
@@ -206,6 +206,13 @@ email-matrix:
 # release, whose app.locales leaves it out.
 pseudo-locale:
 	node scripts/pseudo-locale.ts
+
+# Rewrites dimmi.example.yaml from the configuration structs: every
+# setting at its default beside its DIMMI_ variable, keeping the values
+# the file sets for local development. Run after adding a setting.
+.PHONY: config-example
+config-example:
+	UPDATE_GOLDEN=1 go test -count=1 ./tests/contracts/ -run 'TestExampleConfigurationListsEverySetting'
 
 # Public API and SDK contracts (AGENTS.md, contracts/VERSIONING.md).
 .PHONY: api-snapshot api-compat sdk-generate sdk-check sdk-compat sdk-compat-update sdk-release-plan

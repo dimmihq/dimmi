@@ -35,7 +35,7 @@
       "runtimeExecutable": "sh",
       "runtimeArgs": [
         "-c",
-        "set -a; . ./.env.testing; set +a; go build -o tmp/dimmi-gate ./cmd/dimmi && DIMMI_DATABASE__URL=\"${DATABASE_URL%/postgres*}/dimmi_demo?sslmode=disable\" DIMMI_REDIS__URL=\"$REDIS_URL\" DIMMI_APP__KEY=\"base64:$(openssl rand -base64 32)\" DIMMI_GATE__ENABLED=true DIMMI_GATE__PASSWORD=preview DIMMI_HTTP__ADDR=127.0.0.1:8096 DIMMI_HTTP__ADMIN_ADDR= DIMMI_APP__ROLES=web DIMMI_APP__URL=http://localhost:8096 tmp/dimmi-gate serve"
+        "eval \"$(sh scripts/test-env.sh)\"; go build -o tmp/dimmi-gate ./cmd/dimmi && DIMMI_DATABASE__URL=\"${DATABASE_URL%/postgres*}/dimmi_demo?sslmode=disable\" DIMMI_REDIS__URL=\"$REDIS_URL\" DIMMI_APP__KEY=\"base64:$(openssl rand -base64 32)\" DIMMI_GATE__ENABLED=true DIMMI_GATE__PASSWORD=preview DIMMI_HTTP__ADDR=127.0.0.1:8096 DIMMI_HTTP__ADMIN_ADDR= DIMMI_APP__ROLES=web DIMMI_APP__URL=http://localhost:8096 tmp/dimmi-gate serve"
       ],
       "port": 8096,
       "autoPort": false
@@ -45,7 +45,7 @@
       "runtimeExecutable": "sh",
       "runtimeArgs": [
         "-c",
-        "set -a; . ./.env.testing; set +a; go build -tags cloud -o tmp/dimmi-local ./cmd/dimmi && DIMMI_DATABASE__URL=\"${DATABASE_URL%/postgres*}/dimmi_preview?sslmode=disable\" DIMMI_REDIS__URL=\"$REDIS_URL\" DIMMI_APP__KEY=\"base64:$(openssl rand -base64 32)\" DIMMI_APP__ENV=local DIMMI_FRONTEND__HOT_PATH=tmp/no-hot DIMMI_HTTP__ADDR=127.0.0.1:8097 DIMMI_HTTP__ADMIN_ADDR= DIMMI_APP__URL=http://localhost:8097 tmp/dimmi-local serve"
+        "eval \"$(sh scripts/test-env.sh)\"; go build -tags cloud -o tmp/dimmi-local ./cmd/dimmi && DIMMI_DATABASE__URL=\"${DATABASE_URL%/postgres*}/dimmi_preview?sslmode=disable\" DIMMI_REDIS__URL=\"$REDIS_URL\" DIMMI_APP__KEY=\"base64:$(openssl rand -base64 32)\" DIMMI_APP__ENV=local DIMMI_FRONTEND__HOT_PATH=tmp/no-hot DIMMI_HTTP__ADDR=127.0.0.1:8097 DIMMI_HTTP__ADMIN_ADDR= DIMMI_APP__URL=http://localhost:8097 tmp/dimmi-local serve"
       ],
       "port": 8097,
       "autoPort": false
@@ -232,6 +232,23 @@
       ],
       "port": 8120,
       "autoPort": false
+    },
+    {
+      "name": "dimmi-whatsapp",
+      "runtimeExecutable": "tmp/dev-whatsapp.sh",
+      "runtimeArgs": [],
+      "port": 8086
+    },
+    {
+      "name": "outray-whatsapp",
+      "runtimeExecutable": "outray",
+      "runtimeArgs": [
+        "http",
+        "8086",
+        "--subdomain",
+        "dimmi"
+      ],
+      "port": 8086
     }
   ]
 }

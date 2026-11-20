@@ -1,45 +1,1050 @@
-# Local development settings. `make dev` copies this file to dimmi.yaml,
-# which stays out of git; edit that copy. Services come from compose.yaml
+# Every setting dimmi reads, each at its default, with the environment
+# variable that sets the same value beside it. `make dev` copies this file
+# to dimmi.yaml, which stays out of git: edit that copy. The values set
+# here for local development point at the services compose.yaml starts
 # (`make services`).
+#
+# A variable wins over this file. A secret can also come from a file:
+# name it in the variable with _FILE added.
+#
+# This file is written from the configuration structs. After changing a
+# value here or adding a setting to a struct, run `make config-example`.
+
+# AppConfig describes the application itself.
+#
+# Env is local, testing or production. URL is the absolute address the
+# application is reached at, used for generated links. Key is the app
+# key, "base64:" followed by 32 bytes; when empty it is read from
+# DataDir/app.key, and generated there first when KeyAutoGenerate is on.
+# DataDir is the writable directory for local files. Roles lists what
+# this process does. Locale is the default locale, used when a request
+# names none and for messages another locale lacks; Locales lists every
+# locale the application is served in, and adding a language means adding
+# its lang directory and listing it here. Release names the build that is
+# running, such as its commit; the image sets it, and a binary built from
+# a checkout reads its commit from its build information.
 app:
-  env: local
-  url: http://localhost:8080
-  key_auto_generate: true
-  # en-XA is the pseudo locale `make dev` generates: accented, longer
-  # English that shows untranslated text and tight layouts at a glance.
-  locales: [en, en-XA]
+  env: local  # DIMMI_APP__ENV
+  url: http://localhost:8080  # DIMMI_APP__URL
+  key: ""  # DIMMI_APP__KEY (secret; or DIMMI_APP__KEY_FILE naming a file)
+  key_auto_generate: true  # DIMMI_APP__KEY_AUTO_GENERATE
+  data_dir: ./storage  # DIMMI_APP__DATA_DIR
+  roles: [web, worker, scheduler]  # DIMMI_APP__ROLES
+  locale: en  # DIMMI_APP__LOCALE
+  locales: [en, en-XA]  # DIMMI_APP__LOCALES
+  release: ""  # DIMMI_APP__RELEASE
+  region: ""  # DIMMI_APP__REGION
+
+# HTTPConfig configures the listeners.
+#
+# Addr is the public listener. TLSAddr, when set, is the HTTPS listener,
+# served with the default custom domain driver's certificates; Addr then
+# answers only health, certificate challenges and redirects to HTTPS.
+# AdminAddr is the admin listener for health and metrics, loopback by
+# default; empty disables it.
+# TrustedProxies lists the addresses and ranges whose forwarded client
+# address is believed. ShutdownTimeout bounds the whole graceful
+# shutdown.
 http:
-  addr: 127.0.0.1:8080
-  admin_addr: 127.0.0.1:9090
+  addr: 127.0.0.1:8080  # DIMMI_HTTP__ADDR
+  tls_addr: ""  # DIMMI_HTTP__TLS_ADDR
+  admin_addr: 127.0.0.1:9090  # DIMMI_HTTP__ADMIN_ADDR
+  trusted_proxies: []  # DIMMI_HTTP__TRUSTED_PROXIES
+  read_header_timeout: 10s  # DIMMI_HTTP__READ_HEADER_TIMEOUT
+  idle_timeout: 2m  # DIMMI_HTTP__IDLE_TIMEOUT
+  shutdown_timeout: 25s  # DIMMI_HTTP__SHUTDOWN_TIMEOUT
+  trusted_origins: []  # DIMMI_HTTP__TRUSTED_ORIGINS
+
+# RuntimeConfig tunes the Go runtime. MemoryLimit is auto, which sets
+# the limit to nine tenths of the container's memory when it has a limit;
+# off, which leaves the runtime alone; or a size in bytes, optionally with
+# a KiB, MiB or GiB suffix.
+runtime:
+  memory_limit: auto  # DIMMI_RUNTIME__MEMORY_LIMIT
+
+# Options choose how and where lines are written.
+#
+# Driver is json for servers or text for local development. Level is the
+# lowest level written. Redact names extra attribute keys and struct
+# fields whose values are hidden, on top of the built-in secret names.
+# Writer receives the lines and is stdout when left nil; it is set in
+# code, never from configuration.
+log:
+  driver: json  # DIMMI_LOG__DRIVER
+  level: info  # DIMMI_LOG__LEVEL
+  redact: []  # DIMMI_LOG__REDACT
+
+# Config switches each part of telemetry on or off.
+#
+# ServiceName and Environment label everything recorded. Tracing is none
+# or the name of an exporter the application registered with
+# WithExporter, such as otlp from the telemetry/otlp package, which sends
+# spans over HTTP to OTLPEndpoint, the full URL that receives traces such
+# as http://collector:4318/v1/traces, with OTLPHeaders on every request.
+# Metrics is none or prometheus, served by MetricsHandler. Errors are
+# reported to Sentry only when SentryDSN is set.
+telemetry:
+  service_name: app  # DIMMI_TELEMETRY__SERVICE_NAME
+  environment: ""  # DIMMI_TELEMETRY__ENVIRONMENT
+  tracing: none  # DIMMI_TELEMETRY__TRACING
+  otlp_endpoint: ""  # DIMMI_TELEMETRY__OTLP_ENDPOINT
+  otlp_headers: {}  # DIMMI_TELEMETRY__OTLP_HEADERS__<NAME>
+  metrics: none  # DIMMI_TELEMETRY__METRICS
+  sentry_dsn: ""  # DIMMI_TELEMETRY__SENTRY_DSN
+
+# Config configures the pool.
+#
+# URL must reach a primary; multi-host URLs with
+# target_session_attrs=read-write are accepted. TenantSetting names the
+# setting each transaction writes the tenant id to, which row-level
+# security policies read back with current_setting.
+#
+# DirectURL reaches the primary without a transaction-mode pooler, for
+# session-scoped work; see SessionURL. ReadURLs lists read replicas for
+# Reader, and ReadMaxLag is how far behind the primary a replica may fall
+# before reads leave it. A zero ReadMaxLag accepts only replicas that are
+# fully caught up.
+#
+# Tracer, set in code, observes every query on every pool, so query spans
+# join the trace of the request that ran them.
 database:
-  url: postgres://postgres:postgres@localhost:15432/dimmi?sslmode=disable
-redis:
-  url: redis://localhost:16379/1
+  url: postgres://postgres:postgres@localhost:15432/dimmi?sslmode=disable  # DIMMI_DATABASE__URL
+  direct_url: ""  # DIMMI_DATABASE__DIRECT_URL
+  read_urls: []  # DIMMI_DATABASE__READ_URLS
+  read_max_lag: 10s  # DIMMI_DATABASE__READ_MAX_LAG
+  max_conns: 10  # DIMMI_DATABASE__MAX_CONNS
+  pool_mode: session  # DIMMI_DATABASE__POOL_MODE
+  tenant_setting: app.tenant_id  # DIMMI_DATABASE__TENANT_SETTING
+
+# MigrationsConfig configures migrations. Auto applies pending migrations
+# at boot. LockTimeout bounds the wait for another server's migration
+# lock.
 migrations:
-  auto: true
-frontend:
-  hot_path: public/hot
-auth:
-  signup:
-    mode: open
-  # Sign-in providers. A provider shows on the sign-in pages once it has a
-  # client id. Register an OAuth app at each provider with the callback
-  # http://localhost:8080/auth/<key>/callback, then paste its credentials.
-  oauth:
-    github:
-      client_id: replace-with-github-client-id
-      client_secret: replace-with-github-client-secret
-    google:
-      client_id: replace-with-google-client-id
-      client_secret: replace-with-google-client-secret
+  auto: true  # DIMMI_MIGRATIONS__AUTO
+  lock_timeout: 10m  # DIMMI_MIGRATIONS__LOCK_TIMEOUT
+
+# Config describes how to reach Valkey.
+#
+# The URL carries address, credentials, TLS (rediss://) and database. Addrs
+# adds cluster seed nodes, or lists the sentinels in sentinel mode. Every
+# key starts with KeyPrefix, so several applications can share a server;
+# the application chooses it and ends it with a colon.
+redis:
+  url: redis://localhost:16379/1  # DIMMI_REDIS__URL
+  mode: auto  # DIMMI_REDIS__MODE
+  addrs: []  # DIMMI_REDIS__ADDRS
+  # SentinelConfig names the primary the sentinels watch.
+  sentinel:
+    master: ""  # DIMMI_REDIS__SENTINEL__MASTER
+  key_prefix: ""  # DIMMI_REDIS__KEY_PREFIX
+
+# Options configure a store. The keyspace keeps the store's keys apart
+# from every other store and service on the same server.
+cache:
+  keyspace: cache  # DIMMI_CACHE__KEYSPACE
+
+# Options configure a limiter. The keyspace keeps its counters apart from
+# every other service on the same server.
+rate_limit:
+  keyspace: rl  # DIMMI_RATE_LIMIT__KEYSPACE
+
+# Options configure a bus. The keyspace keeps its topics apart from every
+# other service on the same server.
+pubsub:
+  keyspace: ps  # DIMMI_PUBSUB__KEYSPACE
+
+# Config configures the queue.
+#
+# Queues maps each queue name to how many of its jobs one node runs at
+# once; it defaults to ten workers on the queue named "default". MaxConns
+# sizes the queue's own pool. JobTimeout bounds one run of a job.
+# PollInterval is how often idle workers look for jobs no notification
+# announced, such as scheduled jobs and retries coming due. NoLeader keeps
+# this node out of leader election, so it never pushes periodic jobs: set
+# on worker nodes when dedicated scheduler nodes run the schedule. Clock
+# is the application's clock: a job held until a moment on it is held
+# for that long from now on the database's, so a clock that is not the
+# system's, such as a test's, still holds jobs for the right length.
+queue:
+  queues: {}  # DIMMI_QUEUE__QUEUES__<NAME>
+  max_conns: 10  # DIMMI_QUEUE__MAX_CONNS
+  job_timeout: 1m  # DIMMI_QUEUE__JOB_TIMEOUT
+  poll_interval: 1s  # DIMMI_QUEUE__POLL_INTERVAL
+
+# Config configures the server.
+#
+# Keyspace keeps realtime keys apart from the other services on the same
+# Valkey. PingInterval is how often the server pings each client, short
+# enough to keep idle connections open through proxies that close them
+# after a minute. MaxPayload caps an encoded broadcast in bytes. Recheck is
+# how often a connection is asked whether its credential is still alive,
+# which bounds how long one outlives a credential that ran out on its own.
+# Resolve authenticates each connection and is set in code, as is Clock,
+# which stamps broadcasts and defaults to the system clock.
+broadcasting:
+  keyspace: rt  # DIMMI_BROADCASTING__KEYSPACE
+  ping_interval: 25s  # DIMMI_BROADCASTING__PING_INTERVAL
+  max_payload: 10240  # DIMMI_BROADCASTING__MAX_PAYLOAD
+  recheck: 1m  # DIMMI_BROADCASTING__RECHECK
+
+# Config lists the named disks and which one is the default.
+filesystems:
+  default: ""  # DIMMI_FILESYSTEMS__DEFAULT
+  disks: {}  # DIMMI_FILESYSTEMS__DISKS__<NAME>__<OPTION>
+
+# Config lists the named scanners and which one is the default.
+# AllowFakes, set in code and only when the application runs its tests,
+# lets Fake replace the scanners.
+malware:
+  default: ""  # DIMMI_MALWARE__DEFAULT
+  scanners: {}  # DIMMI_MALWARE__SCANNERS__<NAME>__<OPTION>
+
+# Config lists the named mailers, the default one's name, and the From
+# address mailables use when they set none. AllowFakes, set in code and
+# only when the application runs its tests, lets Fake replace the
+# mailers. Translator, set in code, is put in the context mailables render
+# with, so their content can call i18n.T.
 mail:
+  default: system  # DIMMI_MAIL__DEFAULT
+  # Address is one mailbox: an email address with an optional display name.
+  from:
+    name: ""  # DIMMI_MAIL__FROM__NAME
+    email: ""  # DIMMI_MAIL__FROM__EMAIL
   mailers:
     system:
-      driver: smtp
-      host: localhost
-      port: 11025
-      allow_insecure: true
+      allow_insecure: true  # DIMMI_MAIL__MAILERS__SYSTEM__ALLOW_INSECURE
+      driver: smtp  # DIMMI_MAIL__MAILERS__SYSTEM__DRIVER
+      host: localhost  # DIMMI_MAIL__MAILERS__SYSTEM__HOST
+      port: 11025  # DIMMI_MAIL__MAILERS__SYSTEM__PORT
+
+# Config lists the named sources and which one is the default.
+mailbox:
+  default: ""  # DIMMI_MAILBOX__DEFAULT
+  sources: {}  # DIMMI_MAILBOX__SOURCES__<NAME>__<OPTION>
+
+# Config names the queue that queued deliveries wait in and declares the
+# channels. Translator, set in code, is put in the context channels render
+# with, so notifications can call i18n.T.
+notifications:
+  queue: default  # DIMMI_NOTIFICATIONS__QUEUE
+  channels: {}  # DIMMI_NOTIFICATIONS__CHANNELS__<NAME>__<OPTION>
+
+# Config lists the named hashers and which one makes new hashes.
+#
+# Concurrency is how many hashes may run at once; zero means one per CPU.
+# Queue is how many more callers may wait for a slot; zero means four per
+# running slot.
+hashing:
+  default: ""  # DIMMI_HASHING__DEFAULT
+  concurrency: 0  # DIMMI_HASHING__CONCURRENCY
+  queue: 0  # DIMMI_HASHING__QUEUE
+  hashers: {}  # DIMMI_HASHING__HASHERS__<NAME>__<OPTION>
+
+# Config names the current KEK, the previous ones and every KEK's
+# section.
+encryption:
+  kek: ""  # DIMMI_ENCRYPTION__KEK
+  previous: []  # DIMMI_ENCRYPTION__PREVIOUS
+  keks: {}  # DIMMI_ENCRYPTION__KEKS__<NAME>__<OPTION>
+
+# Config configures the client.
+#
+# AllowPrivateNetworks lets requests reach private and loopback addresses;
+# AllowHosts is the narrower choice, listing host:port pairs such as
+# localhost:11434. Timeout bounds a whole request including its body,
+# MaxBody caps a response body in bytes, and MaxRedirects caps how many
+# redirects one request follows. AllowFakes, set in code and only when
+# the application runs its tests, lets a fake replace the transport.
+http_client:
+  allow_private_networks: false  # DIMMI_HTTP_CLIENT__ALLOW_PRIVATE_NETWORKS
+  allow_hosts: []  # DIMMI_HTTP_CLIENT__ALLOW_HOSTS
+  timeout: 30s  # DIMMI_HTTP_CLIENT__TIMEOUT
+  max_body: 10485760  # DIMMI_HTTP_CLIENT__MAX_BODY
+  max_redirects: 3  # DIMMI_HTTP_CLIENT__MAX_REDIRECTS
+
+# Config configures lookups.
+#
+# Timeout bounds each lookup. Nameserver is the host:port of the server to
+# ask; empty uses the operating system's resolver. AllowFakes, set in code
+# and only when the application runs its tests, lets Fake replace the
+# resolver.
+dns:
+  timeout: 5s  # DIMMI_DNS__TIMEOUT
+  nameserver: ""  # DIMMI_DNS__NAMESERVER
+
+aws: {}  # DIMMI_AWS__<NAME>
+
+# DetectorConfig lists the named detectors and which one is the default.
+language_detection:
+  default: ""  # DIMMI_LANGUAGE_DETECTION__DEFAULT
+  detectors: {}  # DIMMI_LANGUAGE_DETECTION__DETECTORS__<NAME>__<OPTION>
+
+# Config configures the manager.
+#
+# Cookie is the cookie name, "session" by default; served over HTTPS it
+# gets the __Host- prefix. Insecure drops the prefix and the Secure flag,
+# for a plain-HTTP install on a local network only. SameSite is "lax"
+# (the default), "strict" or "none". IdleTimeout ends a session nobody used
+# for that long (default 14 days), Lifetime ends any session that long
+# after login (default 30 days), and TouchInterval is how often activity
+# is written to the store (default five minutes). Errors renders a store
+# failure as the response.
+session:
+  cookie: ""  # DIMMI_SESSION__COOKIE
+  insecure: false  # DIMMI_SESSION__INSECURE
+  same_site: ""  # DIMMI_SESSION__SAME_SITE
+  idle_timeout: 0s  # DIMMI_SESSION__IDLE_TIMEOUT
+  lifetime: 0s  # DIMMI_SESSION__LIFETIME
+  touch_interval: 0s  # DIMMI_SESSION__TOUCH_INTERVAL
+
+# Config lists the named providers and how long an attempt stays open.
+# AllowFakes, set in code and only when the application runs its tests,
+# lets Fake replace the providers.
+socialite:
+  state_ttl: 10m  # DIMMI_SOCIALITE__STATE_TTL
+  providers: {}  # DIMMI_SOCIALITE__PROVIDERS__<NAME>__<OPTION>
+
+# Config lists the named providers and how long an attempt stays open.
+# AllowFakes, set in code and only when the application runs its tests,
+# lets Fake replace the providers.
+oauth_client:
+  state_ttl: 10m  # DIMMI_OAUTH_CLIENT__STATE_TTL
+  providers: {}  # DIMMI_OAUTH_CLIENT__PROVIDERS__<NAME>__<OPTION>
+
+# Config names the TLS setups and which one is the default. Each section
+# names its driver.
+custom_domains:
+  default: ""  # DIMMI_CUSTOM_DOMAINS__DEFAULT
+  tls: {}  # DIMMI_CUSTOM_DOMAINS__TLS__<NAME>__<OPTION>
+
+# Config configures the database store.
+#
+# Table names the table, optionally schema-qualified. TTL is how long a
+# response is kept. LockTimeout is how long a reservation without a
+# response blocks other attempts before one may take it over; keep it
+# longer than the slowest request.
+idempotency:
+  table: idempotency_keys  # DIMMI_IDEMPOTENCY__TABLE
+  ttl: 24h  # DIMMI_IDEMPOTENCY__TTL
+  lock_timeout: 5m  # DIMMI_IDEMPOTENCY__LOCK_TIMEOUT
+
+# MaintenanceConfig configures maintenance mode. RetryAfter is how long
+# clients are told to wait before trying again.
+maintenance:
+  retry_after: 1m  # DIMMI_MAINTENANCE__RETRY_AFTER
+
+# GateConfig puts the whole application behind one shared password, for a
+# public host only invited people should use. Password is what people
+# type; CIKey is what automated checks send in the X-Gate-Key header. An
+# enabled gate needs at least one of them.
+gate:
+  enabled: false  # DIMMI_GATE__ENABLED
+  password: ""  # DIMMI_GATE__PASSWORD (secret; or DIMMI_GATE__PASSWORD_FILE naming a file)
+  ci_key: ""  # DIMMI_GATE__CI_KEY (secret; or DIMMI_GATE__CI_KEY_FILE naming a file)
+
+# APIConfig holds the version of the public API this server speaks and
+# its rate limits.
+api:
+  version: "2026-11-01"  # DIMMI_API__VERSION
+  # APILimitsConfig holds requests a minute per token, per signed-in person,
+  # per workspace's tokens together, and per address that keeps sending bad
+  # credentials.
+  limits:
+    token_per_minute: 600  # DIMMI_API__LIMITS__TOKEN_PER_MINUTE
+    user_per_minute: 1200  # DIMMI_API__LIMITS__USER_PER_MINUTE
+    workspace_per_minute: 6000  # DIMMI_API__LIMITS__WORKSPACE_PER_MINUTE
+    bad_credential_per_minute: 60  # DIMMI_API__LIMITS__BAD_CREDENTIAL_PER_MINUTE
+
+# AuthConfig groups the authentication settings. DisposableEmail is off,
+# flag or block: how a signup from a throwaway mailbox is treated.
+auth:
+  # SignupConfig says who may create an account. Mode is open or
+  # invite_only. MaxPerHourPerIP caps the accounts one address creates in an
+  # hour, to slow down scripted signups.
+  signup:
+    mode: open  # DIMMI_AUTH__SIGNUP__MODE
+    max_per_hour_per_ip: 0  # DIMMI_AUTH__SIGNUP__MAX_PER_HOUR_PER_IP
+  # PasswordsConfig judges new passwords. MinLength counts characters, not
+  # bytes.
+  passwords:
+    min_length: 10  # DIMMI_AUTH__PASSWORDS__MIN_LENGTH
+  # SessionsConfig bounds browser sessions. A session nobody used for
+  # IdleLifetime ends, and any session ends AbsoluteLifetime after login.
+  # Cookie names the session cookie; served over HTTPS it gets the __Host-
+  # prefix.
+  sessions:
+    idle_lifetime: 336h  # DIMMI_AUTH__SESSIONS__IDLE_LIFETIME
+    absolute_lifetime: 720h  # DIMMI_AUTH__SESSIONS__ABSOLUTE_LIFETIME
+    cookie: dimmi_session  # DIMMI_AUTH__SESSIONS__COOKIE
+    device_cookie: dimmi_device  # DIMMI_AUTH__SESSIONS__DEVICE_COOKIE
+  # LockoutConfig sets how failed sign-ins are pushed back. PerIPEmail caps
+  # attempts per minute for one address at one email. PerEmailSoftLock is
+  # the failures per hour at one email, from anywhere, that lock it for
+  # unknown devices. PerIPSpray is the failures per hour from one address,
+  # at any email, that block it.
+  lockout:
+    per_ip_email: 10  # DIMMI_AUTH__LOCKOUT__PER_IP_EMAIL
+    per_email_soft_lock: 30  # DIMMI_AUTH__LOCKOUT__PER_EMAIL_SOFT_LOCK
+    per_ip_spray: 100  # DIMMI_AUTH__LOCKOUT__PER_IP_SPRAY
+  # MagicLinkConfig turns sign-in links by mail on or off. TTL is how long a
+  # link and its code work after they were sent.
+  magic_link:
+    enabled: true  # DIMMI_AUTH__MAGIC_LINK__ENABLED
+    ttl: 15m  # DIMMI_AUTH__MAGIC_LINK__TTL
+  # VerificationConfig says whether a user must prove their email before
+  # the steps that reach other people, such as inviting them or minting
+  # tokens. Required is unset until the edition settles it: the cloud
+  # requires it, a self-hosted install does not.
+  verification:
+    required: null  # DIMMI_AUTH__VERIFICATION__REQUIRED
+  # PasswordConfirmationConfig sets TTL, how long after proving who they are
+  # a user may take sensitive steps without proving it again.
+  password_confirmation:
+    ttl: 15m  # DIMMI_AUTH__PASSWORD_CONFIRMATION__TTL
+  # FactorsConfig lists the second-factor types users may enroll.
+  # MaxPerUser caps the active factors of one user, the recovery code set
+  # included. PendingTTL is how long an enrollment may stay unfinished
+  # before it counts as gone. TOTP names the install in authenticator apps
+  # and Passkey on passkey prompts.
+  factors:
+    enabled: [totp, passkey, recovery_code]  # DIMMI_AUTH__FACTORS__ENABLED
+    max_per_user: 10  # DIMMI_AUTH__FACTORS__MAX_PER_USER
+    pending_ttl: 1h  # DIMMI_AUTH__FACTORS__PENDING_TTL
+    # TOTPFactorConfig configures authenticator apps. Issuer is the name an
+    # app lists the account under.
+    totp:
+      issuer: dimmi  # DIMMI_AUTH__FACTORS__TOTP__ISSUER
+    # PasskeyFactorConfig configures passkeys. Name is the install's name some
+    # devices show when a passkey is made or used. The domain passkeys are
+    # bound to is the host of app.url, and they answer from that origin or a
+    # trusted one.
+    passkey:
+      name: dimmi  # DIMMI_AUTH__FACTORS__PASSKEY__NAME
+  oauth:
+    # OAuthProviderConfig configures one sign-in provider. A provider without
+    # a client id is not offered.
+    github:
+      client_id: replace-with-github-client-id  # DIMMI_AUTH__OAUTH__GITHUB__CLIENT_ID
+      client_secret: replace-with-github-client-secret  # DIMMI_AUTH__OAUTH__GITHUB__CLIENT_SECRET (secret; or DIMMI_AUTH__OAUTH__GITHUB__CLIENT_SECRET_FILE naming a file)
+    # OAuthProviderConfig configures one sign-in provider. A provider without
+    # a client id is not offered.
+    google:
+      client_id: replace-with-google-client-id  # DIMMI_AUTH__OAUTH__GOOGLE__CLIENT_ID
+      client_secret: replace-with-google-client-secret  # DIMMI_AUTH__OAUTH__GOOGLE__CLIENT_SECRET (secret; or DIMMI_AUTH__OAUTH__GOOGLE__CLIENT_SECRET_FILE naming a file)
+  # CaptchaConfig chooses the captcha provider. Driver is none or turnstile;
+  # SiteKey and SecretKey are the provider's keys; VerifyURL is where
+  # answers are checked; Timeout bounds each check.
+  captcha:
+    driver: none  # DIMMI_AUTH__CAPTCHA__DRIVER
+    site_key: ""  # DIMMI_AUTH__CAPTCHA__SITE_KEY
+    secret_key: ""  # DIMMI_AUTH__CAPTCHA__SECRET_KEY (secret; or DIMMI_AUTH__CAPTCHA__SECRET_KEY_FILE naming a file)
+    verify_url: https://challenges.cloudflare.com/turnstile/v0/siteverify  # DIMMI_AUTH__CAPTCHA__VERIFY_URL
+    timeout: 3s  # DIMMI_AUTH__CAPTCHA__TIMEOUT
+  disposable_email: ""  # DIMMI_AUTH__DISPOSABLE_EMAIL
+
+# OAuthServerConfig sets how agents sign in. AccessTokenTTL and
+# RefreshTokenTTL are how long the two tokens last, and Registration
+# whether apps may register themselves, which MCP clients do.
+oauth_server:
+  access_token_ttl: 1h  # DIMMI_OAUTH_SERVER__ACCESS_TOKEN_TTL
+  refresh_token_ttl: 2160h  # DIMMI_OAUTH_SERVER__REFRESH_TOKEN_TTL
+  registration: true  # DIMMI_OAUTH_SERVER__REGISTRATION
+
+# WorkspacesConfig sets DeletionGraceDays, the days a deleted workspace
+# can still be restored before it is purged.
+workspaces:
+  deletion_grace_days: 30  # DIMMI_WORKSPACES__DELETION_GRACE_DAYS
+
+# InvitationsConfig sets TTL, how long an invitation link works after it
+# was last sent, and MaxPerDay, the invitations one workspace may send in
+# a day, zero for no cap. MaxPerDay is settled from the edition when the
+# operator leaves it out.
+invitations:
+  ttl: 168h  # DIMMI_INVITATIONS__TTL
+  max_per_day: null  # DIMMI_INVITATIONS__MAX_PER_DAY
+
+# TokensConfig caps the personal access tokens of a member. MaxPerMember
+# is how many live tokens one member may hold in a workspace.
+tokens:
+  max_per_member: 50  # DIMMI_TOKENS__MAX_PER_MEMBER
+
+# FrontendConfig configures the browser app. HotPath is the file the
+# Vite dev server writes its address to, empty outside development.
+# The key avoids a _FILE ending, which the environment reads as a file
+# holding the value.
+frontend:
+  hot_path: public/hot  # DIMMI_FRONTEND__HOT_PATH
+
+# WidgetConfig configures the messenger widget. AssetsBaseURL is the
+# origin serving the widget's hashed files, such as a CDN in front of
+# this install; empty means the install's own host. LoaderMaxAge is how
+# long browsers and proxies keep the loader before asking again, which
+# bounds how long a deploy takes to reach every page. Enabled turns the
+# visitor API off for the whole install. MaxWidgetsPerWorkspace is the
+# self-hosted cap, zero meaning none. ConfigCacheTTL is how long a replica
+# keeps a widget in memory, PollingInterval how often a browser without a
+# stream polls, and InstallFlushInterval how often a replica writes down
+# where it saw each widget.
+#
+# AnonymousSessionTTL is how long an anonymous visitor's session lives after
+# their last visit. RealtimeTokenTTL is how long a stream's connect token
+# works, MaxConnectionsPerSession how many streams one session keeps open, one
+# per tab, and TypingThrottle how often a visitor's typing is passed on.
+widget:
+  assets_base_url: ""  # DIMMI_WIDGET__ASSETS_BASE_URL
+  loader_max_age: 5m  # DIMMI_WIDGET__LOADER_MAX_AGE
+  enabled: true  # DIMMI_WIDGET__ENABLED
+  max_widgets_per_workspace: 10  # DIMMI_WIDGET__MAX_WIDGETS_PER_WORKSPACE
+  config_cache_ttl: 1m  # DIMMI_WIDGET__CONFIG_CACHE_TTL
+  polling_interval: 5s  # DIMMI_WIDGET__POLLING_INTERVAL
+  install_flush_interval: 1m  # DIMMI_WIDGET__INSTALL_FLUSH_INTERVAL
+  anonymous_session_ttl: 4320h  # DIMMI_WIDGET__ANONYMOUS_SESSION_TTL
+  realtime_token_ttl: 1m  # DIMMI_WIDGET__REALTIME_TOKEN_TTL
+  max_connections_per_session: 10  # DIMMI_WIDGET__MAX_CONNECTIONS_PER_SESSION
+  typing_throttle: 2s  # DIMMI_WIDGET__TYPING_THROTTLE
+
+# ContactsConfig configures customer records. EraseGraceDays is how many
+# days an erasure waits before wiping, and ExportTTLHours how long a
+# customer's data export can be downloaded.
+contacts:
+  erase_grace_days: 7  # DIMMI_CONTACTS__ERASE_GRACE_DAYS
+  export_ttl_hours: 24  # DIMMI_CONTACTS__EXPORT_TTL_HOURS
+
+# BroadcastsConfig configures broadcasts. EmailPerMinute is the most
+# emails one address sends a minute, MessengerPerMinute and SlackPerMinute
+# the same for Messenger conversations and Slack posts. MinGapHours is the
+# least time between two broadcasts to one person, unless a broadcast
+# opts out. PauseAfter is how many sent emails the bounce and complaint
+# rates wait for, BounceRate and ComplaintRate the shares that pause a
+# send. LeaseSeconds is how long a recipient handed to a sender stays
+# out of the queue before it is tried again, and BatchSize how many
+# recipients one dispatch hands out. DispatchSeconds is how often a
+# sending broadcast hands out recipients. WarmupFirstDay is how many
+# broadcast emails a newly used address sends in its first day, doubling
+# each day until WarmupUntil, after which it is not held back; zero turns
+# the warm-up off.
+broadcasts:
+  email_per_minute: 600  # DIMMI_BROADCASTS__EMAIL_PER_MINUTE
+  messenger_per_minute: 1200  # DIMMI_BROADCASTS__MESSENGER_PER_MINUTE
+  slack_per_minute: 50  # DIMMI_BROADCASTS__SLACK_PER_MINUTE
+  min_gap_hours: 72  # DIMMI_BROADCASTS__MIN_GAP_HOURS
+  pause_after: 100  # DIMMI_BROADCASTS__PAUSE_AFTER
+  bounce_rate: 0.05  # DIMMI_BROADCASTS__BOUNCE_RATE
+  complaint_rate: 0.003  # DIMMI_BROADCASTS__COMPLAINT_RATE
+  lease_seconds: 600  # DIMMI_BROADCASTS__LEASE_SECONDS
+  batch_size: 200  # DIMMI_BROADCASTS__BATCH_SIZE
+  dispatch_seconds: 10  # DIMMI_BROADCASTS__DISPATCH_SECONDS
+  warmup_first_day: 500  # DIMMI_BROADCASTS__WARMUP_FIRST_DAY
+  warmup_until: 50000  # DIMMI_BROADCASTS__WARMUP_UNTIL
+
+# SeriesConfig configures series. MaxMessagesPerDay is how many series
+# messages one contact gets a day across every series. QuietStart and
+# QuietEnd bound the hours, in the contact's zone, email may leave.
+# SweepMinutes is how often series with rules look for people who began
+# to match as time passed. MaxStepsPerEnrollment ends a journey that
+# takes more steps than any real series needs. AITimeoutSeconds bounds
+# the wait for an AI path. WebhookTimeoutSeconds bounds a webhook call.
+series:
+  max_messages_per_day: 2  # DIMMI_SERIES__MAX_MESSAGES_PER_DAY
+  quiet_start: 08:00  # DIMMI_SERIES__QUIET_START
+  quiet_end: 20:00  # DIMMI_SERIES__QUIET_END
+  sweep_minutes: 15  # DIMMI_SERIES__SWEEP_MINUTES
+  max_steps_per_enrollment: 500  # DIMMI_SERIES__MAX_STEPS_PER_ENROLLMENT
+  ai_timeout_seconds: 20  # DIMMI_SERIES__AI_TIMEOUT_SECONDS
+  webhook_timeout_seconds: 10  # DIMMI_SERIES__WEBHOOK_TIMEOUT_SECONDS
+
+# WebhooksConfig configures outbound webhooks.
+#
+# Enabled false stops every event from being delivered, while endpoints
+# can still be managed. MaxEndpoints caps a workspace's endpoints on a
+# self-hosted install, zero meaning no limit. RequireHTTPS refuses plain
+# http endpoints; unset, it holds on the cloud only. Timeout bounds one request, headers and
+# body. MaxPayloadBytes is the largest body sent before the snapshot is
+# replaced by a reference. MaxResponseBytes is how much of an answer is
+# read, StoredResponseBytes how much of it the log keeps. FailingNotifyAfter
+# is how long an endpoint fails before its owners are told, DisableAfter
+# how long before it is turned off. RetentionDays is how long the delivery
+# log is kept. MaxRotationOverlap caps how long a replaced secret still
+# signs. TestsPerMinute caps test sends per endpoint.
+webhooks:
+  enabled: true  # DIMMI_WEBHOOKS__ENABLED
+  max_endpoints: 20  # DIMMI_WEBHOOKS__MAX_ENDPOINTS
+  require_https: null  # DIMMI_WEBHOOKS__REQUIRE_HTTPS
+  timeout: 15s  # DIMMI_WEBHOOKS__TIMEOUT
+  max_payload_bytes: 262144  # DIMMI_WEBHOOKS__MAX_PAYLOAD_BYTES
+  max_response_bytes: 65536  # DIMMI_WEBHOOKS__MAX_RESPONSE_BYTES
+  stored_response_bytes: 4096  # DIMMI_WEBHOOKS__STORED_RESPONSE_BYTES
+  failing_notify_after: 24h  # DIMMI_WEBHOOKS__FAILING_NOTIFY_AFTER
+  disable_after: 72h  # DIMMI_WEBHOOKS__DISABLE_AFTER
+  delivery_retention_days: 30  # DIMMI_WEBHOOKS__DELIVERY_RETENTION_DAYS
+  rotation_max_overlap: 168h  # DIMMI_WEBHOOKS__ROTATION_MAX_OVERLAP
+  tests_per_minute: 10  # DIMMI_WEBHOOKS__TESTS_PER_MINUTE
+
+# IdentityConfig configures visitor identity verification. SessionTTL is
+# how long a signed-in session lives after its last verified token,
+# ClockLeeway the clock skew forgiven between servers, MaxTokenLifetime the
+# longest a token may be valid, MaxActiveSecrets how many secrets a
+# workspace keeps at once, RetireDefault how long a rotated secret keeps
+# working and RetireMax the furthest a retirement may be set.
+identity:
+  session_ttl: 24h  # DIMMI_IDENTITY__SESSION_TTL
+  clock_leeway: 1m  # DIMMI_IDENTITY__CLOCK_LEEWAY
+  max_token_lifetime: 168h  # DIMMI_IDENTITY__MAX_TOKEN_LIFETIME
+  max_active_secrets: 5  # DIMMI_IDENTITY__MAX_ACTIVE_SECRETS
+  retire_default: 168h  # DIMMI_IDENTITY__RETIRE_DEFAULT
+  retire_max: 720h  # DIMMI_IDENTITY__RETIRE_MAX
+
+# HelpCentersConfig configures public docs. BaseDomain is the domain whose
+# subdomains serve help centers, empty to serve them under the app's
+# address. CustomDomainTarget is the hostname a workspace's own domain,
+# such as help.acme.com, points at with a CNAME; empty means custom.<base
+# domain>, or the app's own host without a base domain.
+help_centers:
+  base_domain: ""  # DIMMI_HELP_CENTERS__BASE_DOMAIN
+  custom_domain_target: ""  # DIMMI_HELP_CENTERS__CUSTOM_DOMAIN_TARGET
+
+# AuditConfig says how long audit entries are kept. RetentionDays is the
+# number of days, 0 to keep them for ever; unset, it is a year on the
+# cloud and for ever on a self-hosted install.
+audit:
+  retention_days: null  # DIMMI_AUDIT__RETENTION_DAYS
+
+# SecurityEventsConfig says how long security log entries are kept, in
+# days, 0 to keep them for ever.
+security_events:
+  retention_days: 365  # DIMMI_SECURITY_EVENTS__RETENTION_DAYS
+
+# ChannelsConfig configures the conversation channels: email, the Slack
+# and WhatsApp chat apps, and how long deliveries from chat apps are kept.
+channels:
+  # EmailConfig configures the email channel.
+  #
+  # InboundDomain is the domain forwarding addresses live on, empty when the
+  # install receives no mail. DefaultSenderDomain is the domain replies come
+  # from while a workspace has no verified domain of its own; it defaults to
+  # the inbound domain. Mailer names the mailer of the customer stream; a
+  # name the mail configuration lacks falls back to its default mailer.
+  email:
+    inbound_domain: ""  # DIMMI_CHANNELS__EMAIL__INBOUND_DOMAIN
+    default_sender_domain: ""  # DIMMI_CHANNELS__EMAIL__DEFAULT_SENDER_DOMAIN
+    mailer: customer  # DIMMI_CHANNELS__EMAIL__MAILER
+    # EmailInboundConfig configures received mail.
+    #
+    # Drivers lists the enabled inbound sources; TestSecret is the bearer
+    # secret the test source requires. MaxMessageBytes is the largest message
+    # parsed whole, MaxAttachments and MaxAttachmentBytes bound the files kept
+    # from one message. RawDisk names the disk raw messages are kept on, the
+    # default disk when empty. SenderRate mails from one sender within
+    # SenderRateWindow are kept but never answered automatically;
+    # SenderQuarantine within SenderQuarantineWindow are set aside as spam.
+    # ReopenWindow is how long after closing a reply still reopens a
+    # conversation rather than starting a new one. ParseMemoryBudgetMB bounds
+    # the mail held in memory at once across webhooks and parsing.
+    inbound:
+      drivers: []  # DIMMI_CHANNELS__EMAIL__INBOUND__DRIVERS
+      test_secret: ""  # DIMMI_CHANNELS__EMAIL__INBOUND__TEST_SECRET (secret; or DIMMI_CHANNELS__EMAIL__INBOUND__TEST_SECRET_FILE naming a file)
+      max_message_bytes: 31457280  # DIMMI_CHANNELS__EMAIL__INBOUND__MAX_MESSAGE_BYTES
+      max_attachments: 50  # DIMMI_CHANNELS__EMAIL__INBOUND__MAX_ATTACHMENTS
+      max_attachment_bytes: 26214400  # DIMMI_CHANNELS__EMAIL__INBOUND__MAX_ATTACHMENT_BYTES
+      raw_disk: ""  # DIMMI_CHANNELS__EMAIL__INBOUND__RAW_DISK
+      sender_rate: 20  # DIMMI_CHANNELS__EMAIL__INBOUND__SENDER_RATE
+      sender_rate_window: 10m  # DIMMI_CHANNELS__EMAIL__INBOUND__SENDER_RATE_WINDOW
+      sender_quarantine: 100  # DIMMI_CHANNELS__EMAIL__INBOUND__SENDER_QUARANTINE
+      sender_quarantine_window: 1h  # DIMMI_CHANNELS__EMAIL__INBOUND__SENDER_QUARANTINE_WINDOW
+      reopen_window: 720h  # DIMMI_CHANNELS__EMAIL__INBOUND__REOPEN_WINDOW
+      parse_memory_budget_mb: 64  # DIMMI_CHANNELS__EMAIL__INBOUND__PARSE_MEMORY_BUDGET_MB
+    # EmailOutboundConfig configures sent mail. ReferencesMax is how many
+    # earlier ids a reply's References header carries at most.
+    outbound:
+      references_max: 20  # DIMMI_CHANNELS__EMAIL__OUTBOUND__REFERENCES_MAX
+    # EmailSendingConfig configures sent customer mail.
+    #
+    # ProviderVerifiedDomains lists the domains the operator set up at a provider
+    # by hand; a parent covers its subdomains. Resolvers name the DNS servers a
+    # domain check asks, host:port, the install's own when empty. SelectorPrefix
+    # starts the key names of domains a relay's mail is signed for. MaxAttachmentBytes
+    # is the largest total sent as attachments, the rest going as links that live
+    # for AttachmentLinkTTL.
+    sending:
+      provider_verified_domains: []  # DIMMI_CHANNELS__EMAIL__SENDING__PROVIDER_VERIFIED_DOMAINS
+      resolvers: []  # DIMMI_CHANNELS__EMAIL__SENDING__RESOLVERS
+      selector_prefix: dimmi  # DIMMI_CHANNELS__EMAIL__SENDING__SELECTOR_PREFIX
+      relay_spf_include: ""  # DIMMI_CHANNELS__EMAIL__SENDING__RELAY_SPF_INCLUDE
+      max_attachment_bytes: 20971520  # DIMMI_CHANNELS__EMAIL__SENDING__MAX_ATTACHMENT_BYTES
+      attachment_link_ttl: 168h  # DIMMI_CHANNELS__EMAIL__SENDING__ATTACHMENT_LINK_TTL
+      # EmailSESConfig configures sending through SES. AccountID completes the
+      # resource names a tenant holds; without it identities are not tied to
+      # tenants. PauseAll stops the customer stream on the whole install.
+      ses:
+        events_topic_arn: ""  # DIMMI_CHANNELS__EMAIL__SENDING__SES__EVENTS_TOPIC_ARN
+        system_events_topic_arn: ""  # DIMMI_CHANNELS__EMAIL__SENDING__SES__SYSTEM_EVENTS_TOPIC_ARN
+        configuration_set: dimmi-customer  # DIMMI_CHANNELS__EMAIL__SENDING__SES__CONFIGURATION_SET
+        tenant_per_workspace: false  # DIMMI_CHANNELS__EMAIL__SENDING__SES__TENANT_PER_WORKSPACE
+        mail_from_subdomain: bounce  # DIMMI_CHANNELS__EMAIL__SENDING__SES__MAIL_FROM_SUBDOMAIN
+        account_id: ""  # DIMMI_CHANNELS__EMAIL__SENDING__SES__ACCOUNT_ID
+        pause_all: false  # DIMMI_CHANNELS__EMAIL__SENDING__SES__PAUSE_ALL
+      # EmailProviderConfig configures one mail provider's event webhook and domain
+      # API. WebhookSecret is what proves its events: a basic auth password, a signing
+      # secret or a public key, by provider. Endpoint replaces its API base, for a
+      # region of its own. MessageStream names Postmark's customer stream.
+      postmark:
+        webhook_secret: ""  # DIMMI_CHANNELS__EMAIL__SENDING__POSTMARK__WEBHOOK_SECRET (secret; or DIMMI_CHANNELS__EMAIL__SENDING__POSTMARK__WEBHOOK_SECRET_FILE naming a file)
+        domain_api_token: ""  # DIMMI_CHANNELS__EMAIL__SENDING__POSTMARK__DOMAIN_API_TOKEN (secret; or DIMMI_CHANNELS__EMAIL__SENDING__POSTMARK__DOMAIN_API_TOKEN_FILE naming a file)
+        endpoint: ""  # DIMMI_CHANNELS__EMAIL__SENDING__POSTMARK__ENDPOINT
+        message_stream: ""  # DIMMI_CHANNELS__EMAIL__SENDING__POSTMARK__MESSAGE_STREAM
+      # EmailProviderConfig configures one mail provider's event webhook and domain
+      # API. WebhookSecret is what proves its events: a basic auth password, a signing
+      # secret or a public key, by provider. Endpoint replaces its API base, for a
+      # region of its own. MessageStream names Postmark's customer stream.
+      resend:
+        webhook_secret: ""  # DIMMI_CHANNELS__EMAIL__SENDING__RESEND__WEBHOOK_SECRET (secret; or DIMMI_CHANNELS__EMAIL__SENDING__RESEND__WEBHOOK_SECRET_FILE naming a file)
+        domain_api_token: ""  # DIMMI_CHANNELS__EMAIL__SENDING__RESEND__DOMAIN_API_TOKEN (secret; or DIMMI_CHANNELS__EMAIL__SENDING__RESEND__DOMAIN_API_TOKEN_FILE naming a file)
+        endpoint: ""  # DIMMI_CHANNELS__EMAIL__SENDING__RESEND__ENDPOINT
+        message_stream: ""  # DIMMI_CHANNELS__EMAIL__SENDING__RESEND__MESSAGE_STREAM
+      # EmailProviderConfig configures one mail provider's event webhook and domain
+      # API. WebhookSecret is what proves its events: a basic auth password, a signing
+      # secret or a public key, by provider. Endpoint replaces its API base, for a
+      # region of its own. MessageStream names Postmark's customer stream.
+      mailgun:
+        webhook_secret: ""  # DIMMI_CHANNELS__EMAIL__SENDING__MAILGUN__WEBHOOK_SECRET (secret; or DIMMI_CHANNELS__EMAIL__SENDING__MAILGUN__WEBHOOK_SECRET_FILE naming a file)
+        domain_api_token: ""  # DIMMI_CHANNELS__EMAIL__SENDING__MAILGUN__DOMAIN_API_TOKEN (secret; or DIMMI_CHANNELS__EMAIL__SENDING__MAILGUN__DOMAIN_API_TOKEN_FILE naming a file)
+        endpoint: ""  # DIMMI_CHANNELS__EMAIL__SENDING__MAILGUN__ENDPOINT
+        message_stream: ""  # DIMMI_CHANNELS__EMAIL__SENDING__MAILGUN__MESSAGE_STREAM
+      # EmailProviderConfig configures one mail provider's event webhook and domain
+      # API. WebhookSecret is what proves its events: a basic auth password, a signing
+      # secret or a public key, by provider. Endpoint replaces its API base, for a
+      # region of its own. MessageStream names Postmark's customer stream.
+      sendgrid:
+        webhook_secret: ""  # DIMMI_CHANNELS__EMAIL__SENDING__SENDGRID__WEBHOOK_SECRET (secret; or DIMMI_CHANNELS__EMAIL__SENDING__SENDGRID__WEBHOOK_SECRET_FILE naming a file)
+        domain_api_token: ""  # DIMMI_CHANNELS__EMAIL__SENDING__SENDGRID__DOMAIN_API_TOKEN (secret; or DIMMI_CHANNELS__EMAIL__SENDING__SENDGRID__DOMAIN_API_TOKEN_FILE naming a file)
+        endpoint: ""  # DIMMI_CHANNELS__EMAIL__SENDING__SENDGRID__ENDPOINT
+        message_stream: ""  # DIMMI_CHANNELS__EMAIL__SENDING__SENDGRID__MESSAGE_STREAM
+      # EmailLimitsConfig holds sending caps. The daily and hourly ones are what a
+      # self-hosted install uses for the matching entitlements, zero meaning none.
+      # The two per-address ones protect recipients on every install, so zero
+      # there means the default. ProviderPerMinute and ProviderPerDay are the
+      # sending quota the install's mail provider grants, such as an SES
+      # account's, zero meaning none; every broadcast of every workspace
+      # shares BroadcastSharePercent of it, so replies always keep room.
+      limits:
+        verified_daily: 0  # DIMMI_CHANNELS__EMAIL__SENDING__LIMITS__VERIFIED_DAILY
+        unverified_daily: 0  # DIMMI_CHANNELS__EMAIL__SENDING__LIMITS__UNVERIFIED_DAILY
+        new_workspace_hourly: 0  # DIMMI_CHANNELS__EMAIL__SENDING__LIMITS__NEW_WORKSPACE_HOURLY
+        unverified_relay_workspace_daily: 0  # DIMMI_CHANNELS__EMAIL__SENDING__LIMITS__UNVERIFIED_RELAY_WORKSPACE_DAILY
+        unverified_relay_per_address_daily: 0  # DIMMI_CHANNELS__EMAIL__SENDING__LIMITS__UNVERIFIED_RELAY_PER_ADDRESS_DAILY
+        automated_per_recipient_hourly: 0  # DIMMI_CHANNELS__EMAIL__SENDING__LIMITS__AUTOMATED_PER_RECIPIENT_HOURLY
+        provider_per_minute: 0  # DIMMI_CHANNELS__EMAIL__SENDING__LIMITS__PROVIDER_PER_MINUTE
+        provider_per_day: 0  # DIMMI_CHANNELS__EMAIL__SENDING__LIMITS__PROVIDER_PER_DAY
+        broadcast_share_percent: 80  # DIMMI_CHANNELS__EMAIL__SENDING__LIMITS__BROADCAST_SHARE_PERCENT
+      # EmailReputation holds the rates that pause a workspace's sending. Zero turns
+      # a rate off.
+      reputation:
+        bounce_pause_rate: 0  # DIMMI_CHANNELS__EMAIL__SENDING__REPUTATION__BOUNCE_PAUSE_RATE
+        complaint_pause_rate: 0  # DIMMI_CHANNELS__EMAIL__SENDING__REPUTATION__COMPLAINT_PAUSE_RATE
+      # DomainConnectConfig configures automatic DNS setup at hosts that support it:
+      # the identifiers of our published template, the key that signs a request and
+      # the TXT host that publishes its public half.
+      domain_connect:
+        enabled: false  # DIMMI_CHANNELS__EMAIL__SENDING__DOMAIN_CONNECT__ENABLED
+        provider_id: ""  # DIMMI_CHANNELS__EMAIL__SENDING__DOMAIN_CONNECT__PROVIDER_ID
+        service_id: ""  # DIMMI_CHANNELS__EMAIL__SENDING__DOMAIN_CONNECT__SERVICE_ID
+        private_key: ""  # DIMMI_CHANNELS__EMAIL__SENDING__DOMAIN_CONNECT__PRIVATE_KEY (secret; or DIMMI_CHANNELS__EMAIL__SENDING__DOMAIN_CONNECT__PRIVATE_KEY_FILE naming a file)
+        key_host: ""  # DIMMI_CHANNELS__EMAIL__SENDING__DOMAIN_CONNECT__KEY_HOST
+      # RoundTripConfig configures the scheduled proof that mail really goes both
+      # ways. Workspace is the slug of the workspace it runs in, Simulator whether it
+      # also mails SES's simulator. The alert goes to the webhook and each success
+      # pings the heartbeat.
+      round_trip:
+        enabled: false  # DIMMI_CHANNELS__EMAIL__SENDING__ROUND_TRIP__ENABLED
+        workspace: ""  # DIMMI_CHANNELS__EMAIL__SENDING__ROUND_TRIP__WORKSPACE
+        simulator: false  # DIMMI_CHANNELS__EMAIL__SENDING__ROUND_TRIP__SIMULATOR
+        alert_webhook_url: ""  # DIMMI_CHANNELS__EMAIL__SENDING__ROUND_TRIP__ALERT_WEBHOOK_URL (secret; or DIMMI_CHANNELS__EMAIL__SENDING__ROUND_TRIP__ALERT_WEBHOOK_URL_FILE naming a file)
+        heartbeat_url: ""  # DIMMI_CHANNELS__EMAIL__SENDING__ROUND_TRIP__HEARTBEAT_URL (secret; or DIMMI_CHANNELS__EMAIL__SENDING__ROUND_TRIP__HEARTBEAT_URL_FILE naming a file)
+      widget_offline_enabled: true  # DIMMI_CHANNELS__EMAIL__SENDING__WIDGET_OFFLINE_ENABLED
+      ops_forward_to: ""  # DIMMI_CHANNELS__EMAIL__SENDING__OPS_FORWARD_TO
+  # SlackChannelConfig configures the Slack channel.
+  #
+  # APIURL is the Web API base, Slack's own unless a test or a proxy needs
+  # another. MaxPayloadBytes bounds one delivery and DedupeWindow is how
+  # long a delivered event is recognized quickly. GroupWindow joins a
+  # customer's top-level messages into one conversation. PleasantryMaxChars
+  # is the longest message a pleasantry may be. TriggerEmoji opens a
+  # conversation in an emoji room, ClosedMarker marks a closed one and
+  # WorkingMarker shows the agent is writing. LeaseTTL and RenewInterval
+  # time the socket leases.
+  slack:
+    api_url: https://slack.com/api/  # DIMMI_CHANNELS__SLACK__API_URL
+    max_payload_bytes: 1048576  # DIMMI_CHANNELS__SLACK__MAX_PAYLOAD_BYTES
+    dedupe_window: 1h  # DIMMI_CHANNELS__SLACK__DEDUPE_WINDOW
+    group_window: 2m  # DIMMI_CHANNELS__SLACK__GROUP_WINDOW
+    pleasantry_max_chars: 40  # DIMMI_CHANNELS__SLACK__PLEASANTRY_MAX_CHARS
+    trigger_emoji: ticket  # DIMMI_CHANNELS__SLACK__TRIGGER_EMOJI
+    closed_marker: white_check_mark  # DIMMI_CHANNELS__SLACK__CLOSED_MARKER
+    working_marker: eyes  # DIMMI_CHANNELS__SLACK__WORKING_MARKER
+    lease_ttl: 15s  # DIMMI_CHANNELS__SLACK__LEASE_TTL
+    renew_interval: 5s  # DIMMI_CHANNELS__SLACK__RENEW_INTERVAL
+  # WhatsAppChannelConfig configures the WhatsApp channel.
+  #
+  # GraphURL is the Graph API host, Meta's own unless a test or a proxy
+  # needs another, and GraphVersion the version every call names.
+  # MaxPayloadBytes bounds one delivery and DedupeWindow is how long a
+  # delivered change is recognized quickly. Window is how long after a
+  # customer's last message free text may still be sent, 24 hours on Meta.
+  # MaxMediaBytes is the largest file the inbox downloads from a message.
+  whatsapp:
+    graph_url: https://graph.facebook.com  # DIMMI_CHANNELS__WHATSAPP__GRAPH_URL
+    graph_version: v25.0  # DIMMI_CHANNELS__WHATSAPP__GRAPH_VERSION
+    max_payload_bytes: 3145728  # DIMMI_CHANNELS__WHATSAPP__MAX_PAYLOAD_BYTES
+    dedupe_window: 1h  # DIMMI_CHANNELS__WHATSAPP__DEDUPE_WINDOW
+    window: 24h  # DIMMI_CHANNELS__WHATSAPP__WINDOW
+    max_media_bytes: 26214400  # DIMMI_CHANNELS__WHATSAPP__MAX_MEDIA_BYTES
+  # ChannelInboundEventsConfig says how long kept deliveries stay.
+  #
+  # ProcessedRetentionDays covers processed and ignored deliveries, and
+  # FailedRetentionDays failed and held ones. A period of 0 keeps them for
+  # ever.
+  inbound_events:
+    processed_retention_days: 7  # DIMMI_CHANNELS__INBOUND_EVENTS__PROCESSED_RETENTION_DAYS
+    failed_retention_days: 30  # DIMMI_CHANNELS__INBOUND_EVENTS__FAILED_RETENTION_DAYS
+
+# InboxConfig configures the shared inbox.
+inbox:
+  # DraftsConfig says how many days an untouched draft is kept before the
+  # daily purge removes it; 0 keeps drafts for ever.
+  drafts:
+    retention_days: 30  # DIMMI_INBOX__DRAFTS__RETENTION_DAYS
+  # GIFConfig holds the GIPHY key the composer's GIF search uses; empty
+  # turns GIF search off for every workspace.
+  gif:
+    giphy_api_key: ""  # DIMMI_INBOX__GIF__GIPHY_API_KEY (secret; or DIMMI_INBOX__GIF__GIPHY_API_KEY_FILE naming a file)
+
+# AIConfig configures the AI agent.
 ai:
-  # Markdown articles the agent answers from until the help center's index
-  # exists: a fictional product, so the agent has something to cite.
-  knowledge_seed_path: database/seeders/knowledge
+  enabled: true  # DIMMI_AI__ENABLED
+  # AIManagedConfig holds the built-in provider's upstream credentials:
+  # one key per model family, all optional so an install can run any
+  # subset. On dimmi cloud these are dimmi's own keys; on self-host the
+  # operator's, and absent means the built-in provider is hidden.
+  managed:
+    # AIManagedUpstream is one upstream the built-in provider routes to: its
+    # key and, when it is not the host's public endpoint, its address.
+    anthropic:
+      api_key: ""  # DIMMI_AI__MANAGED__ANTHROPIC__API_KEY (secret; or DIMMI_AI__MANAGED__ANTHROPIC__API_KEY_FILE naming a file)
+      base_url: ""  # DIMMI_AI__MANAGED__ANTHROPIC__BASE_URL
+    # AIManagedUpstream is one upstream the built-in provider routes to: its
+    # key and, when it is not the host's public endpoint, its address.
+    openai:
+      api_key: ""  # DIMMI_AI__MANAGED__OPENAI__API_KEY (secret; or DIMMI_AI__MANAGED__OPENAI__API_KEY_FILE naming a file)
+      base_url: ""  # DIMMI_AI__MANAGED__OPENAI__BASE_URL
+    # AIManagedOpenWeight holds the hosts that serve the open-weight models
+    # under the same names. Wafer answers first, then Baseten, then Engy,
+    # each taking over when the one before it cannot serve; a host with no
+    # key is left out. APIKey, BaseURL and Provider are the older
+    # single-host settings: settle moves them onto the host Provider names,
+    # Engy unless it says baseten, so an install configured that way keeps
+    # working.
+    openweight:
+      # AIManagedUpstream is one upstream the built-in provider routes to: its
+      # key and, when it is not the host's public endpoint, its address.
+      wafer:
+        api_key: ""  # DIMMI_AI__MANAGED__OPENWEIGHT__WAFER__API_KEY (secret; or DIMMI_AI__MANAGED__OPENWEIGHT__WAFER__API_KEY_FILE naming a file)
+        base_url: ""  # DIMMI_AI__MANAGED__OPENWEIGHT__WAFER__BASE_URL
+      # AIManagedUpstream is one upstream the built-in provider routes to: its
+      # key and, when it is not the host's public endpoint, its address.
+      baseten:
+        api_key: ""  # DIMMI_AI__MANAGED__OPENWEIGHT__BASETEN__API_KEY (secret; or DIMMI_AI__MANAGED__OPENWEIGHT__BASETEN__API_KEY_FILE naming a file)
+        base_url: ""  # DIMMI_AI__MANAGED__OPENWEIGHT__BASETEN__BASE_URL
+      # AIManagedUpstream is one upstream the built-in provider routes to: its
+      # key and, when it is not the host's public endpoint, its address.
+      engy:
+        api_key: ""  # DIMMI_AI__MANAGED__OPENWEIGHT__ENGY__API_KEY (secret; or DIMMI_AI__MANAGED__OPENWEIGHT__ENGY__API_KEY_FILE naming a file)
+        base_url: ""  # DIMMI_AI__MANAGED__OPENWEIGHT__ENGY__BASE_URL
+      api_key: ""  # DIMMI_AI__MANAGED__OPENWEIGHT__API_KEY (secret; or DIMMI_AI__MANAGED__OPENWEIGHT__API_KEY_FILE naming a file)
+      base_url: ""  # DIMMI_AI__MANAGED__OPENWEIGHT__BASE_URL
+      provider: ""  # DIMMI_AI__MANAGED__OPENWEIGHT__PROVIDER
+    # AIManagedEmbeddings is the built-in embedder every workspace gets
+    # semantic search from, with its own key apart from the language
+    # models'. Without a key the built-in embedder is absent. Model is the
+    # upstream model and Dims the size its vectors are shortened to.
+    embeddings:
+      api_key: ""  # DIMMI_AI__MANAGED__EMBEDDINGS__API_KEY (secret; or DIMMI_AI__MANAGED__EMBEDDINGS__API_KEY_FILE naming a file)
+      base_url: https://api.deepinfra.com/v1/openai  # DIMMI_AI__MANAGED__EMBEDDINGS__BASE_URL
+      model: Qwen/Qwen3-Embedding-8B  # DIMMI_AI__MANAGED__EMBEDDINGS__MODEL
+      dims: 1024  # DIMMI_AI__MANAGED__EMBEDDINGS__DIMS
+  # AIChatGPTConfig configures the subscription sign-in source. It signs
+  # in with the public client the ChatGPT coding tools share, so a hosted
+  # web app cannot use its own redirect: the member either enters a
+  # device code on OpenAI's page or pastes the address the sign-in lands
+  # on. Issuer hosts the device-code endpoints; RedirectURI is the
+  # loopback address registered for that client; APIBaseURL is the
+  # subscription's model endpoint; Originator names this app to it.
+  # Enabled stays off until the operator turns the source on.
+  chatgpt:
+    enabled: false  # DIMMI_AI__CHATGPT__ENABLED
+    client_id: app_EMoamEEZ73f0CkXaXp7hrann  # DIMMI_AI__CHATGPT__CLIENT_ID
+    issuer: https://auth.openai.com  # DIMMI_AI__CHATGPT__ISSUER
+    authorize_url: https://auth.openai.com/oauth/authorize  # DIMMI_AI__CHATGPT__AUTHORIZE_URL
+    token_url: https://auth.openai.com/oauth/token  # DIMMI_AI__CHATGPT__TOKEN_URL
+    redirect_uri: http://localhost:1455/auth/callback  # DIMMI_AI__CHATGPT__REDIRECT_URI
+    api_base_url: https://chatgpt.com/backend-api/codex  # DIMMI_AI__CHATGPT__API_BASE_URL
+    originator: dimmi  # DIMMI_AI__CHATGPT__ORIGINATOR
+  # AIPricesConfig names where the model price table lives.
+  prices:
+    path: ""  # DIMMI_AI__PRICES__PATH
+    sync_url: ""  # DIMMI_AI__PRICES__SYNC_URL
+    auto_sync: false  # DIMMI_AI__PRICES__AUTO_SYNC
+  # AIPromptsConfig selects the prompt version and, on self-host, an
+  # override directory.
+  prompts:
+    version: ""  # DIMMI_AI__PROMPTS__VERSION
+    path: ""  # DIMMI_AI__PROMPTS__PATH
+  # AITimeoutsConfig bounds each pipeline step's provider call. The retry
+  # wrapper enforces the bounds a request carries, so a step passes its
+  # row through llmretry.StepTimeouts into ChatRequest.Timeout.
+  timeouts:
+    classify_total: 8s  # DIMMI_AI__TIMEOUTS__CLASSIFY_TOTAL
+    generate_first_token: 12s  # DIMMI_AI__TIMEOUTS__GENERATE_FIRST_TOKEN
+    generate_idle: 15s  # DIMMI_AI__TIMEOUTS__GENERATE_IDLE
+    generate_total: 1m  # DIMMI_AI__TIMEOUTS__GENERATE_TOTAL
+    verify_total: 10s  # DIMMI_AI__TIMEOUTS__VERIFY_TOTAL
+    summarize_total: 10s  # DIMMI_AI__TIMEOUTS__SUMMARIZE_TOTAL
+    validation_total: 10s  # DIMMI_AI__TIMEOUTS__VALIDATION_TOTAL
+    probe_total: 20s  # DIMMI_AI__TIMEOUTS__PROBE_TOTAL
+  # AIRetryConfig bounds the retry wrapper: how many attempts one call
+  # gets and the longest provider retry hint it honors before giving up.
+  retry:
+    max_attempts: 3  # DIMMI_AI__RETRY__MAX_ATTEMPTS
+    max_retry_after: 20s  # DIMMI_AI__RETRY__MAX_RETRY_AFTER
+  # AIBreakerConfig sets the per-connection circuit breaker.
+  breaker:
+    failures: 5  # DIMMI_AI__BREAKER__FAILURES
+    window: 1m  # DIMMI_AI__BREAKER__WINDOW
+    open: 1m  # DIMMI_AI__BREAKER__OPEN
+  # AIBootstrapConfig carries self-host env keys into the first
+  # workspace's connections at first boot.
+  bootstrap:
+    anthropic_api_key: ""  # DIMMI_AI__BOOTSTRAP__ANTHROPIC_API_KEY (secret; or DIMMI_AI__BOOTSTRAP__ANTHROPIC_API_KEY_FILE naming a file)
+    openai_api_key: ""  # DIMMI_AI__BOOTSTRAP__OPENAI_API_KEY (secret; or DIMMI_AI__BOOTSTRAP__OPENAI_API_KEY_FILE naming a file)
+    engy_api_key: ""  # DIMMI_AI__BOOTSTRAP__ENGY_API_KEY (secret; or DIMMI_AI__BOOTSTRAP__ENGY_API_KEY_FILE naming a file)
+    engy_base_url: ""  # DIMMI_AI__BOOTSTRAP__ENGY_BASE_URL
+    openai_compatible_base_url: ""  # DIMMI_AI__BOOTSTRAP__OPENAI_COMPATIBLE_BASE_URL
+    openai_compatible_api_key: ""  # DIMMI_AI__BOOTSTRAP__OPENAI_COMPATIBLE_API_KEY (secret; or DIMMI_AI__BOOTSTRAP__OPENAI_COMPATIBLE_API_KEY_FILE naming a file)
+    answer_model: ""  # DIMMI_AI__BOOTSTRAP__ANSWER_MODEL
+    classifier_model: ""  # DIMMI_AI__BOOTSTRAP__CLASSIFIER_MODEL
+  # AIDecisionsConfig configures the decision model.
+  decisions:
+    # AITypeSafeConfig is the TypeSafe System One account: its key, the API
+    # base URL, the model or alias, the timeout of one call and the price of
+    # a million input tokens in US dollars (output is free).
+    typesafe:
+      api_key: ""  # DIMMI_AI__DECISIONS__TYPESAFE__API_KEY (secret; or DIMMI_AI__DECISIONS__TYPESAFE__API_KEY_FILE naming a file)
+      base_url: https://api.typesafe.ai/v1  # DIMMI_AI__DECISIONS__TYPESAFE__BASE_URL
+      model: jev-latest  # DIMMI_AI__DECISIONS__TYPESAFE__MODEL
+      timeout: 3s  # DIMMI_AI__DECISIONS__TYPESAFE__TIMEOUT
+      input_price_per_mtok: 0.042  # DIMMI_AI__DECISIONS__TYPESAFE__INPUT_PRICE_PER_MTOK
+  # AIKnowledgeConfig bounds retrieval: how long a search waits for the
+  # query's vector and for the vector query before it answers from
+  # keywords alone. Hosted embedders answer a short query in one to five
+  # seconds, so the wait leaves room for that; a vector found once is
+  # cached and later searches for the same words wait for nothing.
+  # CrawlIntervalMS is the least time between two requests the website
+  # crawler sends one host; zero lifts the pace, for tests only. With a
+  # Cloudflare API token, websites are crawled through Cloudflare's
+  # Browser Run instead, which renders pages that need JavaScript; the
+  # account is found from the token unless CloudflareAccountID names it.
+  # CloudflareBrowserHourMicros is what an hour of that browser costs, in
+  # millionths of a dollar, so crawl time can be billed on.
+  knowledge:
+    query_embed_timeout_ms: 4000  # DIMMI_AI__KNOWLEDGE__QUERY_EMBED_TIMEOUT_MS
+    vector_timeout_ms: 250  # DIMMI_AI__KNOWLEDGE__VECTOR_TIMEOUT_MS
+    crawl_interval_ms: 1000  # DIMMI_AI__KNOWLEDGE__CRAWL_INTERVAL_MS
+    cloudflare_api_token: ""  # DIMMI_AI__KNOWLEDGE__CLOUDFLARE_API_TOKEN (secret; or DIMMI_AI__KNOWLEDGE__CLOUDFLARE_API_TOKEN_FILE naming a file)
+    cloudflare_account_id: ""  # DIMMI_AI__KNOWLEDGE__CLOUDFLARE_ACCOUNT_ID
+    cloudflare_browser_hour_micros: 90000  # DIMMI_AI__KNOWLEDGE__CLOUDFLARE_BROWSER_HOUR_MICROS
+  answer_effort: low  # DIMMI_AI__ANSWER_EFFORT
+  traces_retention_days: 30  # DIMMI_AI__TRACES_RETENTION_DAYS
+  runs_retention_days: 400  # DIMMI_AI__RUNS_RETENTION_DAYS
+  playground_retention_days: 30  # DIMMI_AI__PLAYGROUND_RETENTION_DAYS
+  traces_store_payloads: true  # DIMMI_AI__TRACES_STORE_PAYLOADS
+  debounce_widget_ms: 1500  # DIMMI_AI__DEBOUNCE_WIDGET_MS
+  debounce_chat_ms: 2500  # DIMMI_AI__DEBOUNCE_CHAT_MS
+  debounce_email_ms: 0  # DIMMI_AI__DEBOUNCE_EMAIL_MS
+  workspace_concurrency: 3  # DIMMI_AI__WORKSPACE_CONCURRENCY
+  contact_daily_runs: 100  # DIMMI_AI__CONTACT_DAILY_RUNS
+  conversation_hourly_runs: 30  # DIMMI_AI__CONVERSATION_HOURLY_RUNS
+  default_monthly_cap_usd: 25  # DIMMI_AI__DEFAULT_MONTHLY_CAP_USD
+  knowledge_seed_path: database/seeders/knowledge  # DIMMI_AI__KNOWLEDGE_SEED_PATH
+
+# ServicesConfig holds the credentials of the apps dimmi has registered at
+# other services. Slack is the shared Slack app, WhatsApp the Meta app
+# WhatsApp numbers connect through; Notion, Intercom,
+# Zendesk and GitHub are the OAuth clients knowledge sources connect
+# through.
+services:
+  # SlackServiceConfig is the shared Slack app: its OAuth client id and
+  # secret, the signing secret its events are signed with and its app id.
+  # Empty means the shared app is unavailable.
+  slack:
+    client_id: ""  # DIMMI_SERVICES__SLACK__CLIENT_ID
+    client_secret: ""  # DIMMI_SERVICES__SLACK__CLIENT_SECRET (secret; or DIMMI_SERVICES__SLACK__CLIENT_SECRET_FILE naming a file)
+    signing_secret: ""  # DIMMI_SERVICES__SLACK__SIGNING_SECRET (secret; or DIMMI_SERVICES__SLACK__SIGNING_SECRET_FILE naming a file)
+    app_id: ""  # DIMMI_SERVICES__SLACK__APP_ID
+  # WhatsAppServiceConfig is the install's own Meta app, the one WhatsApp
+  # numbers connect through: its id, the secret Meta signs every delivery
+  # with, the Embedded Signup configuration the connect popup opens, and
+  # the token Meta must echo when it checks the webhook address. Without an
+  # app id and secret the popup is unavailable, and a workspace connects
+  # its number with a token of its own Meta app instead.
+  whatsapp:
+    app_id: ""  # DIMMI_SERVICES__WHATSAPP__APP_ID
+    app_secret: ""  # DIMMI_SERVICES__WHATSAPP__APP_SECRET (secret; or DIMMI_SERVICES__WHATSAPP__APP_SECRET_FILE naming a file)
+    config_id: ""  # DIMMI_SERVICES__WHATSAPP__CONFIG_ID
+    verify_token: ""  # DIMMI_SERVICES__WHATSAPP__VERIFY_TOKEN (secret; or DIMMI_SERVICES__WHATSAPP__VERIFY_TOKEN_FILE naming a file)
+  # OAuthServiceConfig is an OAuth client registered at a service: its id
+  # and secret. Empty means the service cannot be connected.
+  notion:
+    client_id: ""  # DIMMI_SERVICES__NOTION__CLIENT_ID
+    client_secret: ""  # DIMMI_SERVICES__NOTION__CLIENT_SECRET (secret; or DIMMI_SERVICES__NOTION__CLIENT_SECRET_FILE naming a file)
+  # OAuthServiceConfig is an OAuth client registered at a service: its id
+  # and secret. Empty means the service cannot be connected.
+  intercom:
+    client_id: ""  # DIMMI_SERVICES__INTERCOM__CLIENT_ID
+    client_secret: ""  # DIMMI_SERVICES__INTERCOM__CLIENT_SECRET (secret; or DIMMI_SERVICES__INTERCOM__CLIENT_SECRET_FILE naming a file)
+  # OAuthServiceConfig is an OAuth client registered at a service: its id
+  # and secret. Empty means the service cannot be connected.
+  zendesk:
+    client_id: ""  # DIMMI_SERVICES__ZENDESK__CLIENT_ID
+    client_secret: ""  # DIMMI_SERVICES__ZENDESK__CLIENT_SECRET (secret; or DIMMI_SERVICES__ZENDESK__CLIENT_SECRET_FILE naming a file)
+  # OAuthServiceConfig is an OAuth client registered at a service: its id
+  # and secret. Empty means the service cannot be connected.
+  github:
+    client_id: ""  # DIMMI_SERVICES__GITHUB__CLIENT_ID
+    client_secret: ""  # DIMMI_SERVICES__GITHUB__CLIENT_SECRET (secret; or DIMMI_SERVICES__GITHUB__CLIENT_SECRET_FILE naming a file)
+  # TrackerServiceConfig is an engineering tool's OAuth app and the secret
+  # its app webhooks are signed with.
+  linear:
+    client_id: ""  # DIMMI_SERVICES__LINEAR__CLIENT_ID
+    client_secret: ""  # DIMMI_SERVICES__LINEAR__CLIENT_SECRET (secret; or DIMMI_SERVICES__LINEAR__CLIENT_SECRET_FILE naming a file)
+    webhook_secret: ""  # DIMMI_SERVICES__LINEAR__WEBHOOK_SECRET (secret; or DIMMI_SERVICES__LINEAR__WEBHOOK_SECRET_FILE naming a file)
+  # TrackerServiceConfig is an engineering tool's OAuth app and the secret
+  # its app webhooks are signed with.
+  jira:
+    client_id: ""  # DIMMI_SERVICES__JIRA__CLIENT_ID
+    client_secret: ""  # DIMMI_SERVICES__JIRA__CLIENT_SECRET (secret; or DIMMI_SERVICES__JIRA__CLIENT_SECRET_FILE naming a file)
+    webhook_secret: ""  # DIMMI_SERVICES__JIRA__WEBHOOK_SECRET (secret; or DIMMI_SERVICES__JIRA__WEBHOOK_SECRET_FILE naming a file)
+  # TrackersConfig holds what linked issues need beyond the apps: the
+  # secret GitHub repository webhooks are signed with. Fake answers every
+  # tool from canned data instead of calling it, and only a development
+  # build honors it.
+  trackers:
+    github_webhook_secret: ""  # DIMMI_SERVICES__TRACKERS__GITHUB_WEBHOOK_SECRET (secret; or DIMMI_SERVICES__TRACKERS__GITHUB_WEBHOOK_SECRET_FILE naming a file)
+    fake: false  # DIMMI_SERVICES__TRACKERS__FAKE
+
+# IntegrationsConfig sets how integrations behave. Enabled lists the
+# providers this install offers. RefreshSkew is how long before expiry a
+# token is renewed, and HealthInterval how often each installation is
+# checked.
+integrations:
+  enabled: [slack, notion, intercom, zendesk, github, linear, jira, incident_io, rootly, pagerduty]  # DIMMI_INTEGRATIONS__ENABLED
+  refresh_skew: 5m  # DIMMI_INTEGRATIONS__REFRESH_SKEW
+  health_interval: 24h  # DIMMI_INTEGRATIONS__HEALTH_INTERVAL
