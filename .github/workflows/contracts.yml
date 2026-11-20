@@ -1,5 +1,5 @@
 # The public contracts: the REST API, the webhooks and the SDKs built from
-# them never break (docs/api/versioning.md). main.yml's Go tests keep
+# them never break (contracts/VERSIONING.md). main.yml's Go tests keep
 # tests/contracts/*.json in step with the code; these checks compare those
 # contracts and the SDKs with what clients already depend on.
 

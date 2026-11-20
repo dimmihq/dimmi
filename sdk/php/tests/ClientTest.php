@@ -75,6 +75,12 @@ final class ClientTest extends TestCase
         $this->assertSame('http://localhost:8098/api/v1', $dimmi->baseUrl());
     }
 
+    public function testDefaultsToDimmiCloud(): void
+    {
+        $dimmi = new Client('t', null, null, ['handler' => new MockHandler([])]);
+        $this->assertSame('https://app.trydimmi.com/api/v1', $dimmi->baseUrl());
+    }
+
     public function testReadsCredentialsFromTheEnvironment(): void
     {
         $_ENV['DIMMI_TOKEN'] = 'env_token';

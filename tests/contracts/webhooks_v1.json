@@ -505,14 +505,6 @@
       "named_only": false
     },
     {
-      "type": "ticket.update_sent",
-      "object": "ticket",
-      "group": "Tickets",
-      "description": "A tracker's message to its linked customers finished sending.",
-      "notes_opt_in": false,
-      "named_only": false
-    },
-    {
       "type": "ticket.sla_warning",
       "object": "ticket",
       "group": "Tickets",

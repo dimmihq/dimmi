@@ -2,8 +2,9 @@
  * How a user from your app becomes the claims of an identity token. You
  * hand over a plain object, never claims, and it is checked here: the id
  * is required, an email counts as verified only when you say so, and
- * attributes must be flat values under snake_case keys. Empty fields are
- * left out of the token rather than sent as null.
+ * attributes must be flat values under snake_case keys that start with a
+ * letter, as the server requires. Empty fields are left out of the token
+ * rather than sent as null.
  */
 
 export interface IdentityCompany {
@@ -44,7 +45,7 @@ export class DimmiIdentityError extends Error {
   }
 }
 
-const attributeKey = /^[a-z0-9_]{1,64}$/;
+const attributeKey = /^[a-z][a-z0-9_]{0,63}$/;
 const known = new Set([
   "id",
   "email",
@@ -128,7 +129,10 @@ function checkAttributes(attributes: Record<string, AttributeValue>): Record<str
   }
   for (const key of keys) {
     if (!attributeKey.test(key)) {
-      throw new DimmiIdentityError("attribute_key_invalid", `use snake_case keys such as plan_name, not ${key}.`);
+      throw new DimmiIdentityError(
+        "attribute_key_invalid",
+        `use snake_case keys that start with a letter, such as plan_name, not ${key}.`,
+      );
     }
     const value = attributes[key];
     if (value !== null && typeof value === "object") {

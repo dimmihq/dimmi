@@ -13,8 +13,8 @@ PHP 8.2 or newer. Using Laravel? Install [`dimmi/dimmi-laravel`](../laravel) ins
 ```php
 $dimmi = new Dimmi\Client(
     token: getenv('DIMMI_TOKEN'),          // falls back to DIMMI_TOKEN
-    workspace: getenv('DIMMI_WORKSPACE'),  // falls back to DIMMI_WORKSPACE
-    baseUrl: 'https://dimmi.acme.com',     // falls back to DIMMI_BASE_URL; "/api/v1" is added
+    workspace: getenv('DIMMI_WORKSPACE'),  // optional: a token works in its own workspace; falls back to DIMMI_WORKSPACE
+    baseUrl: 'https://dimmi.acme.com',     // falls back to DIMMI_BASE_URL, then https://app.trydimmi.com; "/api/v1" is added
 );
 
 $contact = $dimmi->contacts->store(['email' => 'ada@example.com', 'name' => 'Ada']);
@@ -55,7 +55,7 @@ Both take an operation id too: `$dimmi->paginate('conversations.messages.index',
 
 ### Retries and idempotency
 
-429 and 503 answers and connection failures are retried twice by default, waiting as long as `Retry-After` says (or backing off from 0.5 s). Every `POST` carries an `Idempotency-Key`, the same one on each retry, so a retried write never runs twice. Pass your own to make a write safe across your own retries:
+429 and 503 answers and connection failures are retried twice by default, waiting as long as `Retry-After` says (or backing off from 0.5 s). Every `POST` carries an `Idempotency-Key`, the same one on each retry. Only [some endpoints](https://trydimmi.com/docs/developers/api/idempotency/) read the key: a retried write to one of them never runs twice, and to any other it may. Pass your own to make a write to one of them safe across your own retries:
 
 ```php
 $dimmi->contacts->store($body, options: ['idempotencyKey' => "signup-{$user->id}"]);

@@ -45,7 +45,7 @@ export default function RootLayout({ children }) {
 
 `<Dimmi appId host identity />` is the same without children. In client components use `useDimmi()`, `useUnreadCount()` and `<DimmiButton>`. After signing someone in or out without a page load, call `refreshDimmiIdentity()`; on sign-out, `dimmiLogout()`.
 
-Set `DIMMI_IDENTITY_SECRET` and `DIMMI_IDENTITY_KID` on the server. Pages-router apps use `createPagesHandler(config)`; route handlers `createTokenRoute(config)`.
+Set `DIMMI_IDENTITY_SECRET` on the server; `DIMMI_IDENTITY_KID` is optional for it (required with `DIMMI_IDENTITY_PRIVATE_KEY`). Pages-router apps use `createPagesHandler(config)`; route handlers `createTokenRoute(config)`.
 
 ## Regenerating after API changes
 

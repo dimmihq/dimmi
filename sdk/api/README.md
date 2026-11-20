@@ -14,7 +14,7 @@ import { createDimmiApi, paginate, unwrap } from "@dimmi/api";
 const api = createDimmiApi({
   host: "https://dimmi.example.com", // or baseUrl: "https://.../api/v1"
   token: process.env.DIMMI_TOKEN!, // a personal or app access token
-  workspace: "ws_...", // sent as Dimmi-Workspace
+  workspace: "ws_...", // optional: a token works in its own workspace; sent as Dimmi-Workspace
   autoIdempotency: true, // Idempotency-Key on every POST
 });
 
@@ -22,16 +22,16 @@ const { data, error } = await api.GET("/contacts/{contact}", { params: { path: {
 
 const created = await unwrap(api.POST("/contacts", { body: { email: "ada@example.com" } }));
 
-for await (const contact of paginate(api, "/contacts", { params: { query: { limit: 100 } } })) {
+for await (const contact of paginate(api, "/contacts", { params: { query: { limit: "100" } } })) {
   console.log(contact.email);
 }
 ```
 
 ## What it adds to openapi-fetch
 
-- `Authorization: Bearer <token>` and `Dimmi-Workspace` on every call.
+- `Authorization: Bearer <token>` on every call, and `Dimmi-Workspace` when `workspace` is set. A token works in its own workspace; naming another is refused.
 - 429 answers are retried after `Retry-After` (seconds or a date); `maxRetries` (3) and `maxRetryDelay` (30 s) tune it.
-- `autoIdempotency` adds an `Idempotency-Key` to POSTs; retries reuse it. Pass your own per call with `headers: { "Idempotency-Key": key }`.
+- `autoIdempotency` adds an `Idempotency-Key` to POSTs; retries reuse it. Only [some endpoints](https://trydimmi.com/docs/developers/api/idempotency/) read the key. Pass your own per call with `headers: { "Idempotency-Key": key }`.
 - `paginate(api, path, init)` walks every item; `pages()` every page. Lists page by `cursor` (`meta.next_cursor`), by `after`, or by `offset` (`meta.total`), whichever the endpoint uses.
 - `unwrap(call)` answers `data` or throws a `DimmiApiError` with `status`, `code`, `errors`.
 - Types: `paths`, `operations`, `components`, and `Schemas` (`Schemas["Contact"]`).

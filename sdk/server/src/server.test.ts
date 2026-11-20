@@ -66,6 +66,10 @@ describe("identity tokens", () => {
     });
     expect(() => toClaims({ id: "" })).toThrow(DimmiIdentityError);
     expect(() => toClaims({ id: "u", attributes: { "Plan Name": "x" } })).toThrow(/attribute_key_invalid/);
+    expect(() => toClaims({ id: "u", attributes: { "2fa_enabled": true } })).toThrow(/attribute_key_invalid/);
+    expect(() => toClaims({ id: "u", attributes: { _plan: "x" } })).toThrow(/attribute_key_invalid/);
+    expect(() => toClaims({ id: "u", attributes: { [`a${"b".repeat(63)}`]: 1 } })).not.toThrow();
+    expect(() => toClaims({ id: "u", attributes: { [`a${"b".repeat(64)}`]: 1 } })).toThrow(/attribute_key_invalid/);
     expect(() => toClaims({ id: "u", plan: "pro" } as never)).toThrow(/user_field_unknown/);
   });
 

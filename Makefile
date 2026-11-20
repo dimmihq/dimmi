@@ -207,7 +207,7 @@ email-matrix:
 pseudo-locale:
 	node scripts/pseudo-locale.ts
 
-# Public API and SDK contracts (AGENTS.md, docs/api/versioning.md).
+# Public API and SDK contracts (AGENTS.md, contracts/VERSIONING.md).
 .PHONY: api-snapshot api-compat sdk-generate sdk-check sdk-compat sdk-compat-update sdk-release-plan
 
 # Rewrites tests/contracts/*.json, the REST, messenger and webhook

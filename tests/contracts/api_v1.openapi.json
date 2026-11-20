@@ -3781,6 +3781,15 @@
             ]
           },
           "goal": {},
+          "holds": {
+            "items": {
+              "type": "string"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
           "id": {
             "type": "string"
           },
@@ -3859,6 +3868,12 @@
           "subject": {
             "type": "string"
           },
+          "ticket_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
           "topic_id": {
             "type": [
               "string",
@@ -3899,6 +3914,8 @@
           "schedule_kind",
           "scheduled_at",
           "goal",
+          "ticket_id",
+          "holds",
           "counts",
           "started_at",
           "finished_at",
@@ -3924,6 +3941,17 @@
             "type": "string"
           },
           "goal": {},
+          "holds": {
+            "items": {
+              "enum": [
+                "customer_waiting",
+                "team_replied"
+              ],
+              "type": "string"
+            },
+            "maxItems": 2,
+            "type": "array"
+          },
           "name": {
             "maxLength": 120,
             "type": "string"
@@ -4358,6 +4386,10 @@
       "BroadcastTopic": {
         "additionalProperties": false,
         "properties": {
+          "broadcast_count": {
+            "format": "int64",
+            "type": "integer"
+          },
           "consent": {
             "type": "string"
           },
@@ -4376,6 +4408,14 @@
           },
           "object": {
             "type": "string"
+          },
+          "subscribed_count": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "unsubscribed_count": {
+            "format": "int64",
+            "type": "integer"
           }
         },
         "required": [
@@ -4384,7 +4424,10 @@
           "name",
           "description",
           "consent",
-          "created_at"
+          "created_at",
+          "subscribed_count",
+          "unsubscribed_count",
+          "broadcast_count"
         ],
         "type": "object"
       },
@@ -4636,6 +4679,89 @@
           "input_per_mtok",
           "output_per_mtok",
           "cached_input_per_mtok"
+        ],
+        "type": "object"
+      },
+      "ChangelogAnalytics": {
+        "additionalProperties": false,
+        "properties": {
+          "daily": {
+            "items": {
+              "$ref": "#/components/schemas/ChangelogDailyViews"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "days": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "object": {
+            "type": "string"
+          },
+          "reactions": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "since": {
+            "type": "string"
+          },
+          "subscribers": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "subscribers_joined": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "subscribers_unsubscribed": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "top_entries": {
+            "items": {
+              "$ref": "#/components/schemas/TopChangelogEntry"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "views": {
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "object",
+          "days",
+          "since",
+          "views",
+          "daily",
+          "top_entries",
+          "reactions",
+          "subscribers",
+          "subscribers_joined",
+          "subscribers_unsubscribed"
+        ],
+        "type": "object"
+      },
+      "ChangelogDailyViews": {
+        "additionalProperties": false,
+        "properties": {
+          "date": {
+            "type": "string"
+          },
+          "views": {
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "date",
+          "views"
         ],
         "type": "object"
       },
@@ -6681,6 +6807,65 @@
         "type": "object"
       },
       "CollectionContactMetaStruct": {
+        "additionalProperties": false,
+        "properties": {
+          "next_cursor": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "per_page": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "prev_cursor": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "total": {
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "next_cursor",
+          "prev_cursor",
+          "per_page"
+        ],
+        "type": "object"
+      },
+      "CollectionContactNote": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/ContactNote"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "links": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/CollectionContactNoteMetaStruct"
+          }
+        },
+        "required": [
+          "data",
+          "meta"
+        ],
+        "type": "object"
+      },
+      "CollectionContactNoteMetaStruct": {
         "additionalProperties": false,
         "properties": {
           "next_cursor": {
@@ -10133,65 +10318,6 @@
         ],
         "type": "object"
       },
-      "CollectionTicketUpdateDraft": {
-        "additionalProperties": false,
-        "properties": {
-          "data": {
-            "items": {
-              "$ref": "#/components/schemas/TicketUpdateDraft"
-            },
-            "type": [
-              "array",
-              "null"
-            ]
-          },
-          "links": {
-            "additionalProperties": {
-              "type": "string"
-            },
-            "type": "object"
-          },
-          "meta": {
-            "$ref": "#/components/schemas/CollectionTicketUpdateDraftMetaStruct"
-          }
-        },
-        "required": [
-          "data",
-          "meta"
-        ],
-        "type": "object"
-      },
-      "CollectionTicketUpdateDraftMetaStruct": {
-        "additionalProperties": false,
-        "properties": {
-          "next_cursor": {
-            "type": [
-              "string",
-              "null"
-            ]
-          },
-          "per_page": {
-            "format": "int64",
-            "type": "integer"
-          },
-          "prev_cursor": {
-            "type": [
-              "string",
-              "null"
-            ]
-          },
-          "total": {
-            "format": "int64",
-            "type": "integer"
-          }
-        },
-        "required": [
-          "next_cursor",
-          "prev_cursor",
-          "per_page"
-        ],
-        "type": "object"
-      },
       "CollectionTimelineEntry": {
         "additionalProperties": false,
         "properties": {
@@ -11701,6 +11827,78 @@
         ],
         "type": "object"
       },
+      "ContactNote": {
+        "additionalProperties": false,
+        "properties": {
+          "author": {
+            "$ref": "#/components/schemas/ContactNoteAuthor"
+          },
+          "body": {
+            "type": "string"
+          },
+          "company_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "contact_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "created_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "editable": {
+            "type": "boolean"
+          },
+          "id": {
+            "type": "string"
+          },
+          "object": {
+            "type": "string"
+          },
+          "pinned": {
+            "type": "boolean"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "object",
+          "contact_id",
+          "company_id",
+          "body",
+          "pinned",
+          "editable",
+          "author",
+          "created_at",
+          "updated_at"
+        ],
+        "type": "object"
+      },
+      "ContactNoteAuthor": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name"
+        ],
+        "type": "object"
+      },
       "ContactRef": {
         "additionalProperties": false,
         "properties": {
@@ -12356,7 +12554,7 @@
         "additionalProperties": false,
         "properties": {
           "data": {
-            "$ref": "#/components/schemas/DataStruct3"
+            "$ref": "#/components/schemas/DataStruct2"
           }
         },
         "required": [
@@ -13005,33 +13203,6 @@
       "DataStruct2": {
         "additionalProperties": false,
         "properties": {
-          "held": {
-            "items": {
-              "$ref": "#/components/schemas/HeldRecipient"
-            },
-            "type": [
-              "array",
-              "null"
-            ]
-          },
-          "recipients": {
-            "format": "int64",
-            "type": "integer"
-          },
-          "update": {
-            "$ref": "#/components/schemas/TicketUpdate"
-          }
-        },
-        "required": [
-          "recipients",
-          "held",
-          "update"
-        ],
-        "type": "object"
-      },
-      "DataStruct3": {
-        "additionalProperties": false,
-        "properties": {
           "ticket": {
             "$ref": "#/components/schemas/Ticket"
           },
@@ -13051,7 +13222,7 @@
         ],
         "type": "object"
       },
-      "DataStruct4": {
+      "DataStruct3": {
         "additionalProperties": false,
         "properties": {
           "body": {
@@ -14858,22 +15029,6 @@
         },
         "required": [
           "group"
-        ],
-        "type": "object"
-      },
-      "HeldRecipient": {
-        "additionalProperties": false,
-        "properties": {
-          "conversation_id": {
-            "type": "string"
-          },
-          "reason": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "conversation_id",
-          "reason"
         ],
         "type": "object"
       },
@@ -19065,6 +19220,22 @@
         ],
         "type": "object"
       },
+      "MessageBroadcast": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name"
+        ],
+        "type": "object"
+      },
       "MessageOriginal": {
         "additionalProperties": false,
         "properties": {
@@ -22720,6 +22891,18 @@
         ],
         "type": "object"
       },
+      "ResourceChangelogAnalytics": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/ChangelogAnalytics"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
       "ResourceChangelogEntry": {
         "additionalProperties": false,
         "properties": {
@@ -22809,6 +22992,18 @@
         "properties": {
           "data": {
             "$ref": "#/components/schemas/ContactExport"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "ResourceContactNote": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/ContactNote"
           }
         },
         "required": [
@@ -23614,24 +23809,6 @@
         ],
         "type": "object"
       },
-      "ResourceListTicketUpdate": {
-        "additionalProperties": false,
-        "properties": {
-          "data": {
-            "items": {
-              "$ref": "#/components/schemas/TicketUpdate"
-            },
-            "type": [
-              "array",
-              "null"
-            ]
-          }
-        },
-        "required": [
-          "data"
-        ],
-        "type": "object"
-      },
       "ResourceListTrackerSuggestion": {
         "additionalProperties": false,
         "properties": {
@@ -24388,18 +24565,6 @@
         "properties": {
           "data": {
             "$ref": "#/components/schemas/TicketType"
-          }
-        },
-        "required": [
-          "data"
-        ],
-        "type": "object"
-      },
-      "ResourceTicketUpdateDraft": {
-        "additionalProperties": false,
-        "properties": {
-          "data": {
-            "$ref": "#/components/schemas/TicketUpdateDraft"
           }
         },
         "required": [
@@ -27459,13 +27624,31 @@
               "email",
               "chat",
               "post",
-              "slack"
+              "slack",
+              "conversation"
             ],
             "type": "string"
+          },
+          "holds": {
+            "items": {
+              "enum": [
+                "customer_waiting",
+                "team_replied"
+              ],
+              "type": "string"
+            },
+            "maxItems": 2,
+            "type": [
+              "array",
+              "null"
+            ]
           },
           "name": {
             "maxLength": 120,
             "minLength": 1,
+            "type": "string"
+          },
+          "ticket_id": {
             "type": "string"
           }
         },
@@ -27490,6 +27673,20 @@
         },
         "type": "object"
       },
+      "StoreCompanyNoteRequestBody": {
+        "additionalProperties": false,
+        "properties": {
+          "body": {
+            "maxLength": 10000,
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "body"
+        ],
+        "type": "object"
+      },
       "StoreContactExportRequestBody": {
         "additionalProperties": false,
         "properties": {
@@ -27497,6 +27694,20 @@
             "type": "boolean"
           }
         },
+        "type": "object"
+      },
+      "StoreContactNoteRequestBody": {
+        "additionalProperties": false,
+        "properties": {
+          "body": {
+            "maxLength": 10000,
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "body"
+        ],
         "type": "object"
       },
       "StoreConversationRequestBody": {
@@ -28681,25 +28892,6 @@
         "required": [
           "type_id",
           "title"
-        ],
-        "type": "object"
-      },
-      "StoreTicketUpdateRequestBody": {
-        "additionalProperties": false,
-        "properties": {
-          "body": {
-            "maxLength": 20000,
-            "type": "string"
-          },
-          "dry_run": {
-            "type": "boolean"
-          },
-          "resolve": {
-            "type": "boolean"
-          }
-        },
-        "required": [
-          "body"
         ],
         "type": "object"
       },
@@ -30628,239 +30820,6 @@
         ],
         "type": "object"
       },
-      "TicketUpdate": {
-        "additionalProperties": false,
-        "properties": {
-          "author_id": {
-            "type": [
-              "string",
-              "null"
-            ]
-          },
-          "body": {
-            "type": "string"
-          },
-          "created_at": {
-            "format": "date-time",
-            "type": "string"
-          },
-          "delivered": {
-            "format": "int32",
-            "type": "integer"
-          },
-          "deliveries": {
-            "items": {
-              "$ref": "#/components/schemas/TicketUpdateDelivery"
-            },
-            "type": [
-              "array",
-              "null"
-            ]
-          },
-          "failed": {
-            "format": "int32",
-            "type": "integer"
-          },
-          "finished_at": {
-            "format": "date-time",
-            "type": [
-              "string",
-              "null"
-            ]
-          },
-          "held": {
-            "format": "int32",
-            "type": "integer"
-          },
-          "id": {
-            "type": "string"
-          },
-          "object": {
-            "type": "string"
-          },
-          "recipients": {
-            "format": "int32",
-            "type": "integer"
-          },
-          "resolve": {
-            "type": "boolean"
-          },
-          "status": {
-            "type": "string"
-          },
-          "ticket_id": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "object",
-          "id",
-          "ticket_id",
-          "body",
-          "resolve",
-          "status",
-          "recipients",
-          "delivered",
-          "held",
-          "failed",
-          "author_id",
-          "deliveries",
-          "created_at",
-          "finished_at"
-        ],
-        "type": "object"
-      },
-      "TicketUpdateDelivery": {
-        "additionalProperties": false,
-        "properties": {
-          "attempts": {
-            "format": "int32",
-            "type": "integer"
-          },
-          "contact_email": {
-            "type": [
-              "string",
-              "null"
-            ]
-          },
-          "contact_name": {
-            "type": [
-              "string",
-              "null"
-            ]
-          },
-          "conversation_id": {
-            "type": "string"
-          },
-          "conversation_number": {
-            "format": "int64",
-            "type": "integer"
-          },
-          "reason": {
-            "type": [
-              "string",
-              "null"
-            ]
-          },
-          "sent_at": {
-            "format": "date-time",
-            "type": [
-              "string",
-              "null"
-            ]
-          },
-          "status": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "conversation_id",
-          "conversation_number",
-          "contact_name",
-          "contact_email",
-          "status",
-          "reason",
-          "attempts",
-          "sent_at"
-        ],
-        "type": "object"
-      },
-      "TicketUpdateDraft": {
-        "additionalProperties": false,
-        "properties": {
-          "author_name": {
-            "type": "string"
-          },
-          "body": {
-            "type": "string"
-          },
-          "created_at": {
-            "format": "date-time",
-            "type": "string"
-          },
-          "decided_at": {
-            "format": "date-time",
-            "type": [
-              "string",
-              "null"
-            ]
-          },
-          "held": {
-            "additionalProperties": {
-              "format": "int64",
-              "type": "integer"
-            },
-            "type": "object"
-          },
-          "id": {
-            "type": "string"
-          },
-          "issue_id": {
-            "type": [
-              "string",
-              "null"
-            ]
-          },
-          "object": {
-            "type": "string"
-          },
-          "reason": {
-            "type": "string"
-          },
-          "recipients": {
-            "format": "int64",
-            "type": "integer"
-          },
-          "resolve": {
-            "type": "boolean"
-          },
-          "source": {
-            "type": "string"
-          },
-          "status": {
-            "type": "string"
-          },
-          "ticket_id": {
-            "type": "string"
-          },
-          "update_id": {
-            "type": [
-              "string",
-              "null"
-            ]
-          }
-        },
-        "required": [
-          "object",
-          "id",
-          "ticket_id",
-          "issue_id",
-          "source",
-          "reason",
-          "body",
-          "author_name",
-          "status",
-          "resolve",
-          "update_id",
-          "recipients",
-          "held",
-          "decided_at",
-          "created_at"
-        ],
-        "type": "object"
-      },
-      "TicketUpdatePlanOutputBody": {
-        "additionalProperties": false,
-        "properties": {
-          "data": {
-            "$ref": "#/components/schemas/DataStruct2"
-          }
-        },
-        "required": [
-          "data"
-        ],
-        "type": "object"
-      },
       "TimelineEntry": {
         "additionalProperties": false,
         "properties": {
@@ -30887,6 +30846,9 @@
           },
           "body_format": {
             "type": "string"
+          },
+          "broadcast": {
+            "$ref": "#/components/schemas/MessageBroadcast"
           },
           "conversation_id": {
             "type": "string"
@@ -31147,6 +31109,44 @@
           "views",
           "helpful",
           "unhelpful"
+        ],
+        "type": "object"
+      },
+      "TopChangelogEntry": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "published_at": {
+            "format": "date-time",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "reactions": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "slug": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "views": {
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "slug",
+          "published_at",
+          "views",
+          "reactions"
         ],
         "type": "object"
       },
@@ -31488,7 +31488,7 @@
         "additionalProperties": false,
         "properties": {
           "data": {
-            "$ref": "#/components/schemas/DataStruct4"
+            "$ref": "#/components/schemas/DataStruct3"
           },
           "meta": {
             "$ref": "#/components/schemas/MetaStruct"
@@ -31695,6 +31695,20 @@
         "required": [
           "status"
         ],
+        "type": "object"
+      },
+      "UpdateContactNoteRequestBody": {
+        "additionalProperties": false,
+        "properties": {
+          "body": {
+            "maxLength": 10000,
+            "minLength": 1,
+            "type": "string"
+          },
+          "pinned": {
+            "type": "boolean"
+          }
+        },
         "type": "object"
       },
       "UpdateContactRequestBody": {
@@ -33037,29 +33051,6 @@
             "type": "boolean"
           }
         },
-        "type": "object"
-      },
-      "UpdateTicketUpdateDraftRequestBody": {
-        "additionalProperties": false,
-        "properties": {
-          "body": {
-            "maxLength": 20000,
-            "type": "string"
-          },
-          "resolve": {
-            "type": "boolean"
-          },
-          "status": {
-            "enum": [
-              "sent",
-              "discarded"
-            ],
-            "type": "string"
-          }
-        },
-        "required": [
-          "status"
-        ],
         "type": "object"
       },
       "UpdateTokenRequestBody": {
@@ -35883,7 +35874,8 @@
         },
         "x-abilities": [
           "ai:keys"
-        ]
+        ],
+        "x-internal": true
       }
     },
     "/ai/chatgpt/connect": {
@@ -35923,7 +35915,8 @@
         },
         "x-abilities": [
           "ai:keys"
-        ]
+        ],
+        "x-internal": true
       }
     },
     "/ai/keys": {
@@ -36152,7 +36145,8 @@
         },
         "x-abilities": [
           "ai:write"
-        ]
+        ],
+        "x-internal": true
       }
     },
     "/ai/usage": {
@@ -36765,7 +36759,8 @@
         },
         "x-abilities": [
           "audiences:read"
-        ]
+        ],
+        "x-internal": true
       }
     },
     "/audience-fields": {
@@ -36795,7 +36790,8 @@
         },
         "x-abilities": [
           "audiences:read"
-        ]
+        ],
+        "x-internal": true
       }
     },
     "/audience-previews": {
@@ -36835,7 +36831,8 @@
         },
         "x-abilities": [
           "audiences:read"
-        ]
+        ],
+        "x-internal": true
       }
     },
     "/audiences": {
@@ -37157,7 +37154,8 @@
         },
         "x-abilities": [
           "audiences:read"
-        ]
+        ],
+        "x-internal": true
       }
     },
     "/audit-logs": {
@@ -37351,7 +37349,8 @@
             },
             "description": "Error"
           }
-        }
+        },
+        "x-internal": true
       }
     },
     "/broadcast-preferences/{token}": {
@@ -37388,7 +37387,8 @@
             },
             "description": "Error"
           }
-        }
+        },
+        "x-internal": true
       },
       "patch": {
         "operationId": "broadcast-preferences.update",
@@ -37433,7 +37433,8 @@
             },
             "description": "Error"
           }
-        }
+        },
+        "x-internal": true
       }
     },
     "/broadcast-topics": {
@@ -37585,6 +37586,7 @@
                 "chat",
                 "post",
                 "slack",
+                "conversation",
                 ""
               ],
               "type": "string"
@@ -38596,7 +38598,8 @@
         },
         "x-abilities": [
           "settings:write"
-        ]
+        ],
+        "x-internal": true
       }
     },
     "/channels/{channel}/credentials": {
@@ -38646,7 +38649,8 @@
         },
         "x-abilities": [
           "settings:write"
-        ]
+        ],
+        "x-internal": true
       }
     },
     "/channels/{channel}/rooms": {
@@ -39256,6 +39260,94 @@
         ]
       }
     },
+    "/companies/{company}/notes": {
+      "get": {
+        "operationId": "companies.notes.index",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "company",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CollectionContactNote"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseError"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "x-abilities": [
+          "contacts:read"
+        ]
+      },
+      "post": {
+        "operationId": "companies.notes.store",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "company",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StoreCompanyNoteRequestBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResourceContactNote"
+                }
+              }
+            },
+            "description": "Created"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseError"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "x-abilities": [
+          "contacts:write"
+        ]
+      }
+    },
     "/companies/{company}/series": {
       "get": {
         "operationId": "companies.series.index",
@@ -39538,6 +39630,87 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ResourceTaggedList"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseError"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "x-abilities": [
+          "contacts:write"
+        ]
+      }
+    },
+    "/contact-notes/{note}": {
+      "delete": {
+        "operationId": "contact-notes.destroy",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "note",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseError"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "x-abilities": [
+          "contacts:write"
+        ]
+      },
+      "patch": {
+        "operationId": "contact-notes.update",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "note",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateContactNoteRequestBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResourceContactNote"
                 }
               }
             },
@@ -40366,6 +40539,94 @@
         ]
       }
     },
+    "/contacts/{contact}/notes": {
+      "get": {
+        "operationId": "contacts.notes.index",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "contact",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CollectionContactNote"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseError"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "x-abilities": [
+          "contacts:read"
+        ]
+      },
+      "post": {
+        "operationId": "contacts.notes.store",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "contact",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StoreContactNoteRequestBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResourceContactNote"
+                }
+              }
+            },
+            "description": "Created"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseError"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "x-abilities": [
+          "contacts:write"
+        ]
+      }
+    },
     "/contacts/{contact}/series": {
       "get": {
         "operationId": "contacts.series.index",
@@ -40513,7 +40774,8 @@
         },
         "x-abilities": [
           "conversations:read"
-        ]
+        ],
+        "x-internal": true
       }
     },
     "/conversation-rating-settings": {
@@ -40618,7 +40880,8 @@
             },
             "description": "Error"
           }
-        }
+        },
+        "x-internal": true
       },
       "patch": {
         "operationId": "conversation-ratings.update",
@@ -40663,7 +40926,8 @@
             },
             "description": "Error"
           }
-        }
+        },
+        "x-internal": true
       }
     },
     "/conversation-views": {
@@ -40703,7 +40967,8 @@
         },
         "x-abilities": [
           "conversations:read"
-        ]
+        ],
+        "x-internal": true
       },
       "patch": {
         "operationId": "conversation-views.reorder",
@@ -40741,7 +41006,8 @@
         },
         "x-abilities": [
           "conversations:write"
-        ]
+        ],
+        "x-internal": true
       },
       "post": {
         "operationId": "conversation-views.store",
@@ -40779,7 +41045,8 @@
         },
         "x-abilities": [
           "conversations:write"
-        ]
+        ],
+        "x-internal": true
       }
     },
     "/conversation-views/{view}": {
@@ -40812,7 +41079,8 @@
         },
         "x-abilities": [
           "conversations:write"
-        ]
+        ],
+        "x-internal": true
       },
       "get": {
         "operationId": "conversation-views.show",
@@ -40850,7 +41118,8 @@
         },
         "x-abilities": [
           "conversations:read"
-        ]
+        ],
+        "x-internal": true
       },
       "patch": {
         "operationId": "conversation-views.update",
@@ -40898,7 +41167,8 @@
         },
         "x-abilities": [
           "conversations:write"
-        ]
+        ],
+        "x-internal": true
       }
     },
     "/conversations": {
@@ -41605,7 +41875,8 @@
         },
         "x-abilities": [
           "conversations:read"
-        ]
+        ],
+        "x-internal": true
       }
     },
     "/conversations/{conversation}/merges": {
@@ -42439,7 +42710,8 @@
         },
         "x-abilities": [
           "conversations:read"
-        ]
+        ],
+        "x-internal": true
       }
     },
     "/conversations/{conversation}/notes": {
@@ -42546,7 +42818,8 @@
         },
         "x-abilities": [
           "conversations:read"
-        ]
+        ],
+        "x-internal": true
       }
     },
     "/conversations/{conversation}/ratings": {
@@ -42626,7 +42899,8 @@
         },
         "x-abilities": [
           "conversations:read"
-        ]
+        ],
+        "x-internal": true
       },
       "patch": {
         "operationId": "conversations.read-state.update",
@@ -42674,7 +42948,8 @@
         },
         "x-abilities": [
           "conversations:read"
-        ]
+        ],
+        "x-internal": true
       }
     },
     "/conversations/{conversation}/replies": {
@@ -43009,7 +43284,8 @@
         },
         "x-abilities": [
           "tickets:read"
-        ]
+        ],
+        "x-internal": true
       }
     },
     "/conversations/{conversation}/tickets": {
@@ -43089,7 +43365,8 @@
         },
         "x-abilities": [
           "tickets:read"
-        ]
+        ],
+        "x-internal": true
       }
     },
     "/conversations/{conversation}/typing-indicators": {
@@ -43139,7 +43416,8 @@
         },
         "x-abilities": [
           "conversations:write"
-        ]
+        ],
+        "x-internal": true
       }
     },
     "/data-exports": {
@@ -43389,7 +43667,8 @@
         },
         "x-abilities": [
           "conversations:read"
-        ]
+        ],
+        "x-internal": true
       },
       "post": {
         "operationId": "drafts.store",
@@ -43437,7 +43716,8 @@
         },
         "x-abilities": [
           "conversations:write"
-        ]
+        ],
+        "x-internal": true
       }
     },
     "/drafts/{draft}": {
@@ -43470,7 +43750,8 @@
         },
         "x-abilities": [
           "conversations:write"
-        ]
+        ],
+        "x-internal": true
       },
       "patch": {
         "operationId": "drafts.update",
@@ -43518,7 +43799,8 @@
         },
         "x-abilities": [
           "conversations:write"
-        ]
+        ],
+        "x-internal": true
       }
     },
     "/email-addresses": {
@@ -43827,7 +44109,8 @@
         },
         "x-abilities": [
           "settings:read"
-        ]
+        ],
+        "x-internal": true
       }
     },
     "/email-addresses/{address}/tests": {
@@ -43952,7 +44235,8 @@
             },
             "description": "Error"
           }
-        }
+        },
+        "x-internal": true
       }
     },
     "/email-changes/{change}": {
@@ -43999,7 +44283,8 @@
             },
             "description": "Error"
           }
-        }
+        },
+        "x-internal": true
       }
     },
     "/email-domains": {
@@ -44489,7 +44774,8 @@
         },
         "x-abilities": [
           "settings:read"
-        ]
+        ],
+        "x-internal": true
       }
     },
     "/email-signatures/{signature}": {
@@ -44671,7 +44957,8 @@
             },
             "description": "Error"
           }
-        }
+        },
+        "x-internal": true
       }
     },
     "/email-verifications/{verification}": {
@@ -44718,7 +45005,8 @@
             },
             "description": "Error"
           }
-        }
+        },
+        "x-internal": true
       }
     },
     "/event-definitions": {
@@ -45598,7 +45886,8 @@
         },
         "x-abilities": [
           "conversations:write"
-        ]
+        ],
+        "x-internal": true
       }
     },
     "/help-centers": {
@@ -45965,6 +46254,57 @@
         },
         "x-abilities": [
           "articles:write"
+        ]
+      }
+    },
+    "/help-centers/{help_center}/changelog-analytics": {
+      "get": {
+        "operationId": "help-centers.changelog-analytics.show",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "help_center",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "explode": false,
+            "in": "query",
+            "name": "days",
+            "schema": {
+              "format": "int64",
+              "maximum": 90,
+              "minimum": 0,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResourceChangelogAnalytics"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseError"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "x-abilities": [
+          "changelog:read"
         ]
       }
     },
@@ -46837,7 +47177,8 @@
         },
         "x-abilities": [
           "articles:write"
-        ]
+        ],
+        "x-internal": true
       }
     },
     "/identity-secrets": {
@@ -47108,7 +47449,8 @@
             },
             "description": "Error"
           }
-        }
+        },
+        "x-internal": true
       }
     },
     "/identity-verification/stats": {
@@ -47191,7 +47533,8 @@
         },
         "x-abilities": [
           "settings:read"
-        ]
+        ],
+        "x-internal": true
       }
     },
     "/imports": {
@@ -47554,7 +47897,8 @@
         },
         "x-abilities": [
           "conversations:read"
-        ]
+        ],
+        "x-internal": true
       },
       "patch": {
         "operationId": "inbox-preferences.update",
@@ -47592,7 +47936,8 @@
         },
         "x-abilities": [
           "conversations:read"
-        ]
+        ],
+        "x-internal": true
       }
     },
     "/inboxes": {
@@ -47981,6 +48326,14 @@
               "maxLength": 200,
               "type": "string"
             }
+          },
+          {
+            "explode": false,
+            "in": "query",
+            "name": "refresh",
+            "schema": {
+              "type": "boolean"
+            }
           }
         ],
         "responses": {
@@ -48007,7 +48360,8 @@
         },
         "x-abilities": [
           "tickets:read"
-        ]
+        ],
+        "x-internal": true
       }
     },
     "/integration-installations/{installation}/issue-settings": {
@@ -48109,6 +48463,14 @@
             "schema": {
               "type": "string"
             }
+          },
+          {
+            "explode": false,
+            "in": "query",
+            "name": "refresh",
+            "schema": {
+              "type": "boolean"
+            }
           }
         ],
         "responses": {
@@ -48135,7 +48497,8 @@
         },
         "x-abilities": [
           "tickets:read"
-        ]
+        ],
+        "x-internal": true
       }
     },
     "/integration-installations/{installation}/issues": {
@@ -48372,7 +48735,8 @@
             },
             "description": "Error"
           }
-        }
+        },
+        "x-internal": true
       }
     },
     "/integrations/{integration}/member-grants/{grant}": {
@@ -48410,7 +48774,8 @@
             },
             "description": "Error"
           }
-        }
+        },
+        "x-internal": true
       }
     },
     "/integrations/{integration}/slack-channels": {
@@ -48450,7 +48815,8 @@
         },
         "x-abilities": [
           "settings:read"
-        ]
+        ],
+        "x-internal": true
       }
     },
     "/integrations/{provider}/installations": {
@@ -48497,7 +48863,8 @@
             },
             "description": "Error"
           }
-        }
+        },
+        "x-internal": true
       }
     },
     "/integrations/{provider}/key-installations": {
@@ -48547,7 +48914,8 @@
         },
         "x-abilities": [
           "settings:write"
-        ]
+        ],
+        "x-internal": true
       }
     },
     "/invitations": {
@@ -48692,7 +49060,8 @@
             },
             "description": "Error"
           }
-        }
+        },
+        "x-internal": true
       }
     },
     "/invitations/{invitation}": {
@@ -48980,7 +49349,8 @@
         },
         "x-abilities": [
           "settings:write"
-        ]
+        ],
+        "x-internal": true
       }
     },
     "/knowledge/sources/previews": {
@@ -49020,7 +49390,8 @@
         },
         "x-abilities": [
           "settings:write"
-        ]
+        ],
+        "x-internal": true
       }
     },
     "/knowledge/sources/trees": {
@@ -49060,7 +49431,8 @@
         },
         "x-abilities": [
           "settings:write"
-        ]
+        ],
+        "x-internal": true
       }
     },
     "/knowledge/sources/{source}": {
@@ -49607,7 +49979,8 @@
         },
         "x-abilities": [
           "settings:read"
-        ]
+        ],
+        "x-internal": true
       }
     },
     "/knowledge/uploads": {
@@ -49726,7 +50099,8 @@
             },
             "description": "Error"
           }
-        }
+        },
+        "x-internal": true
       }
     },
     "/me": {
@@ -49818,7 +50192,8 @@
             },
             "description": "Error"
           }
-        }
+        },
+        "x-internal": true
       }
     },
     "/members": {
@@ -50019,7 +50394,8 @@
         },
         "x-abilities": [
           "conversations:write"
-        ]
+        ],
+        "x-internal": true
       }
     },
     "/members/{member}": {
@@ -50169,7 +50545,8 @@
             },
             "description": "Error"
           }
-        }
+        },
+        "x-internal": true
       }
     },
     "/members/{member}/two-factor-resets": {
@@ -50206,7 +50583,8 @@
             },
             "description": "Error"
           }
-        }
+        },
+        "x-internal": true
       }
     },
     "/notification-deliveries": {
@@ -50296,7 +50674,8 @@
         },
         "x-abilities": [
           "notifications:read"
-        ]
+        ],
+        "x-internal": true
       }
     },
     "/notification-destinations": {
@@ -50326,7 +50705,8 @@
         },
         "x-abilities": [
           "notifications:read"
-        ]
+        ],
+        "x-internal": true
       },
       "post": {
         "operationId": "notification-destinations.store",
@@ -50364,7 +50744,8 @@
         },
         "x-abilities": [
           "notifications:write"
-        ]
+        ],
+        "x-internal": true
       }
     },
     "/notification-destinations/{destination}": {
@@ -50397,7 +50778,8 @@
         },
         "x-abilities": [
           "notifications:write"
-        ]
+        ],
+        "x-internal": true
       },
       "get": {
         "operationId": "notification-destinations.show",
@@ -50435,7 +50817,8 @@
         },
         "x-abilities": [
           "notifications:read"
-        ]
+        ],
+        "x-internal": true
       },
       "patch": {
         "operationId": "notification-destinations.update",
@@ -50483,7 +50866,8 @@
         },
         "x-abilities": [
           "notifications:write"
-        ]
+        ],
+        "x-internal": true
       }
     },
     "/notification-destinations/{destination}/tests": {
@@ -50523,7 +50907,8 @@
         },
         "x-abilities": [
           "notifications:write"
-        ]
+        ],
+        "x-internal": true
       }
     },
     "/notification-focus": {
@@ -50553,7 +50938,8 @@
             },
             "description": "Error"
           }
-        }
+        },
+        "x-internal": true
       }
     },
     "/notification-preferences": {
@@ -50583,7 +50969,8 @@
         },
         "x-abilities": [
           "notifications:write"
-        ]
+        ],
+        "x-internal": true
       },
       "get": {
         "operationId": "notification-preferences.index",
@@ -50611,7 +50998,8 @@
         },
         "x-abilities": [
           "notifications:read"
-        ]
+        ],
+        "x-internal": true
       },
       "patch": {
         "operationId": "notification-preferences.update",
@@ -50649,7 +51037,8 @@
         },
         "x-abilities": [
           "notifications:write"
-        ]
+        ],
+        "x-internal": true
       }
     },
     "/notification-settings": {
@@ -50689,7 +51078,8 @@
         },
         "x-abilities": [
           "notifications:write"
-        ]
+        ],
+        "x-internal": true
       }
     },
     "/notification-tests": {
@@ -50722,7 +51112,8 @@
         },
         "x-abilities": [
           "notifications:write"
-        ]
+        ],
+        "x-internal": true
       }
     },
     "/notification-unsubscribes/{token}": {
@@ -50760,7 +51151,8 @@
             },
             "description": "Error"
           }
-        }
+        },
+        "x-internal": true
       },
       "get": {
         "operationId": "notification-unsubscribes.show",
@@ -50796,7 +51188,8 @@
             },
             "description": "Error"
           }
-        }
+        },
+        "x-internal": true
       },
       "patch": {
         "operationId": "notification-unsubscribes.update",
@@ -50832,7 +51225,8 @@
             },
             "description": "Error"
           }
-        }
+        },
+        "x-internal": true
       }
     },
     "/notifications": {
@@ -50906,7 +51300,8 @@
         },
         "x-abilities": [
           "notifications:read"
-        ]
+        ],
+        "x-internal": true
       },
       "patch": {
         "operationId": "notifications.update-many",
@@ -50944,7 +51339,8 @@
         },
         "x-abilities": [
           "notifications:write"
-        ]
+        ],
+        "x-internal": true
       }
     },
     "/notifications/{notification}/deliveries": {
@@ -50984,7 +51380,8 @@
         },
         "x-abilities": [
           "notifications:read"
-        ]
+        ],
+        "x-internal": true
       }
     },
     "/oauth/authorization": {
@@ -51023,7 +51420,8 @@
             },
             "description": "Error"
           }
-        }
+        },
+        "x-internal": true
       }
     },
     "/oauth/authorizations": {
@@ -51060,7 +51458,8 @@
             },
             "description": "Error"
           }
-        }
+        },
+        "x-internal": true
       }
     },
     "/operator/changesets": {
@@ -51115,7 +51514,8 @@
         },
         "x-abilities": [
           "conversations:read"
-        ]
+        ],
+        "x-internal": true
       }
     },
     "/operator/changesets/{changeset}/applications": {
@@ -51155,7 +51555,8 @@
         },
         "x-abilities": [
           "conversations:write"
-        ]
+        ],
+        "x-internal": true
       }
     },
     "/operator/changesets/{changeset}/declines": {
@@ -51195,7 +51596,8 @@
         },
         "x-abilities": [
           "conversations:read"
-        ]
+        ],
+        "x-internal": true
       }
     },
     "/operator/changesets/{changeset}/reversions": {
@@ -51235,7 +51637,8 @@
         },
         "x-abilities": [
           "conversations:write"
-        ]
+        ],
+        "x-internal": true
       }
     },
     "/operator/memories": {
@@ -51265,7 +51668,8 @@
         },
         "x-abilities": [
           "conversations:read"
-        ]
+        ],
+        "x-internal": true
       }
     },
     "/operator/memories/{memory}": {
@@ -51298,7 +51702,8 @@
         },
         "x-abilities": [
           "conversations:read"
-        ]
+        ],
+        "x-internal": true
       }
     },
     "/operator/settings": {
@@ -51328,7 +51733,8 @@
         },
         "x-abilities": [
           "conversations:read"
-        ]
+        ],
+        "x-internal": true
       },
       "patch": {
         "operationId": "operator.settings.update",
@@ -51366,7 +51772,8 @@
         },
         "x-abilities": [
           "ai:write"
-        ]
+        ],
+        "x-internal": true
       }
     },
     "/operator/threads": {
@@ -51417,7 +51824,8 @@
         },
         "x-abilities": [
           "conversations:read"
-        ]
+        ],
+        "x-internal": true
       },
       "post": {
         "operationId": "operator.threads.store",
@@ -51455,7 +51863,8 @@
         },
         "x-abilities": [
           "conversations:read"
-        ]
+        ],
+        "x-internal": true
       }
     },
     "/operator/threads/{thread}": {
@@ -51488,7 +51897,8 @@
         },
         "x-abilities": [
           "conversations:read"
-        ]
+        ],
+        "x-internal": true
       },
       "get": {
         "operationId": "operator.threads.show",
@@ -51526,7 +51936,8 @@
         },
         "x-abilities": [
           "conversations:read"
-        ]
+        ],
+        "x-internal": true
       }
     },
     "/operator/threads/{thread}/messages": {
@@ -51576,7 +51987,8 @@
         },
         "x-abilities": [
           "conversations:read"
-        ]
+        ],
+        "x-internal": true
       }
     },
     "/operator/usage": {
@@ -51616,7 +52028,8 @@
         },
         "x-abilities": [
           "ai:read"
-        ]
+        ],
+        "x-internal": true
       }
     },
     "/organization-domains": {
@@ -51643,7 +52056,8 @@
             },
             "description": "Error"
           }
-        }
+        },
+        "x-internal": true
       },
       "post": {
         "operationId": "organization-domains.store",
@@ -51678,7 +52092,8 @@
             },
             "description": "Error"
           }
-        }
+        },
+        "x-internal": true
       }
     },
     "/organization-domains/{domain}": {
@@ -51708,7 +52123,8 @@
             },
             "description": "Error"
           }
-        }
+        },
+        "x-internal": true
       },
       "patch": {
         "operationId": "organization-domains.update",
@@ -51753,7 +52169,8 @@
             },
             "description": "Error"
           }
-        }
+        },
+        "x-internal": true
       }
     },
     "/organization-domains/{domain}/checks": {
@@ -51790,7 +52207,8 @@
             },
             "description": "Error"
           }
-        }
+        },
+        "x-internal": true
       }
     },
     "/password-resets": {
@@ -51827,7 +52245,8 @@
             },
             "description": "Error"
           }
-        }
+        },
+        "x-internal": true
       }
     },
     "/password-resets/{reset}": {
@@ -51879,7 +52298,8 @@
             },
             "description": "Error"
           }
-        }
+        },
+        "x-internal": true
       }
     },
     "/permissions": {
@@ -52201,7 +52621,8 @@
             },
             "description": "Error"
           }
-        }
+        },
+        "x-internal": true
       }
     },
     "/push-subscriptions": {
@@ -52228,7 +52649,8 @@
             },
             "description": "Error"
           }
-        }
+        },
+        "x-internal": true
       },
       "post": {
         "operationId": "push-subscriptions.store",
@@ -52263,7 +52685,8 @@
             },
             "description": "Error"
           }
-        }
+        },
+        "x-internal": true
       }
     },
     "/push-subscriptions/{subscription}": {
@@ -52293,7 +52716,8 @@
             },
             "description": "Error"
           }
-        }
+        },
+        "x-internal": true
       }
     },
     "/redaction-rules": {
@@ -52520,7 +52944,8 @@
         },
         "x-abilities": [
           "settings:write"
-        ]
+        ],
+        "x-internal": true
       }
     },
     "/report-digest": {
@@ -52543,7 +52968,8 @@
         },
         "x-abilities": [
           "conversations:read"
-        ]
+        ],
+        "x-internal": true
       },
       "get": {
         "operationId": "report-digest.show",
@@ -52571,7 +52997,8 @@
         },
         "x-abilities": [
           "conversations:read"
-        ]
+        ],
+        "x-internal": true
       },
       "patch": {
         "operationId": "report-digest.update",
@@ -52609,7 +53036,8 @@
         },
         "x-abilities": [
           "conversations:read"
-        ]
+        ],
+        "x-internal": true
       }
     },
     "/reports": {
@@ -53289,7 +53717,8 @@
         },
         "x-abilities": [
           "settings:read"
-        ]
+        ],
+        "x-internal": true
       }
     },
     "/roles": {
@@ -53354,7 +53783,8 @@
             },
             "description": "Error"
           }
-        }
+        },
+        "x-internal": true
       }
     },
     "/roles/{role}": {
@@ -53384,7 +53814,8 @@
             },
             "description": "Error"
           }
-        }
+        },
+        "x-internal": true
       },
       "get": {
         "operationId": "roles.show",
@@ -53467,7 +53898,8 @@
             },
             "description": "Error"
           }
-        }
+        },
+        "x-internal": true
       }
     },
     "/saved-replies": {
@@ -53939,7 +54371,8 @@
         },
         "x-abilities": [
           "conversations:read"
-        ]
+        ],
+        "x-internal": true
       }
     },
     "/series": {
@@ -54950,7 +55383,8 @@
             },
             "description": "Error"
           }
-        }
+        },
+        "x-internal": true
       },
       "get": {
         "operationId": "sessions.index",
@@ -54975,7 +55409,8 @@
             },
             "description": "Error"
           }
-        }
+        },
+        "x-internal": true
       },
       "post": {
         "operationId": "sessions.store",
@@ -55015,7 +55450,8 @@
             },
             "description": "Error"
           }
-        }
+        },
+        "x-internal": true
       }
     },
     "/sessions/{session}": {
@@ -55045,7 +55481,8 @@
             },
             "description": "Error"
           }
-        }
+        },
+        "x-internal": true
       }
     },
     "/sla-policies": {
@@ -55262,7 +55699,8 @@
         },
         "x-abilities": [
           "conversations:read"
-        ]
+        ],
+        "x-internal": true
       }
     },
     "/snooze-lists/{scope}": {
@@ -55312,7 +55750,8 @@
         },
         "x-abilities": [
           "settings:write"
-        ]
+        ],
+        "x-internal": true
       }
     },
     "/snooze-options": {
@@ -55352,7 +55791,8 @@
         },
         "x-abilities": [
           "conversations:read"
-        ]
+        ],
+        "x-internal": true
       }
     },
     "/sso-connections": {
@@ -55379,7 +55819,8 @@
             },
             "description": "Error"
           }
-        }
+        },
+        "x-internal": true
       },
       "post": {
         "operationId": "sso-connections.store",
@@ -55414,7 +55855,8 @@
             },
             "description": "Error"
           }
-        }
+        },
+        "x-internal": true
       }
     },
     "/sso-connections/{connection}": {
@@ -55444,7 +55886,8 @@
             },
             "description": "Error"
           }
-        }
+        },
+        "x-internal": true
       },
       "get": {
         "operationId": "sso-connections.show",
@@ -55479,7 +55922,8 @@
             },
             "description": "Error"
           }
-        }
+        },
+        "x-internal": true
       },
       "patch": {
         "operationId": "sso-connections.update",
@@ -55524,7 +55968,8 @@
             },
             "description": "Error"
           }
-        }
+        },
+        "x-internal": true
       }
     },
     "/sso-connections/{connection}/tests": {
@@ -55568,7 +56013,8 @@
             },
             "description": "Error"
           }
-        }
+        },
+        "x-internal": true
       }
     },
     "/sso-lookups": {
@@ -55605,7 +56051,8 @@
             },
             "description": "Error"
           }
-        }
+        },
+        "x-internal": true
       }
     },
     "/tags": {
@@ -56280,6 +56727,14 @@
             "schema": {
               "type": "string"
             }
+          },
+          {
+            "explode": false,
+            "in": "query",
+            "name": "remove_from_tool",
+            "schema": {
+              "type": "boolean"
+            }
           }
         ],
         "responses": {
@@ -56919,56 +57374,6 @@
         },
         "x-abilities": [
           "settings:write"
-        ]
-      }
-    },
-    "/ticket-update-drafts/{draft}": {
-      "patch": {
-        "operationId": "ticket-update-drafts.update",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "draft",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/UpdateTicketUpdateDraftRequestBody"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ResourceTicketUpdateDraft"
-                }
-              }
-            },
-            "description": "OK"
-          },
-          "default": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ResponseError"
-                }
-              }
-            },
-            "description": "Error"
-          }
-        },
-        "x-abilities": [
-          "tickets:write"
         ]
       }
     },
@@ -57639,6 +58044,47 @@
         ]
       }
     },
+    "/tickets/{ticket}/issues/refresh": {
+      "post": {
+        "operationId": "tickets.issues.refresh",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "ticket",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CollectionTicketIssue"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseError"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "x-abilities": [
+          "tickets:read"
+        ],
+        "x-internal": true
+      }
+    },
     "/tickets/{ticket}/links": {
       "get": {
         "operationId": "tickets.links.index",
@@ -57897,134 +58343,6 @@
         ]
       }
     },
-    "/tickets/{ticket}/update-drafts": {
-      "get": {
-        "operationId": "tickets.update-drafts.index",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "ticket",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CollectionTicketUpdateDraft"
-                }
-              }
-            },
-            "description": "OK"
-          },
-          "default": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ResponseError"
-                }
-              }
-            },
-            "description": "Error"
-          }
-        },
-        "x-abilities": [
-          "tickets:read"
-        ]
-      }
-    },
-    "/tickets/{ticket}/updates": {
-      "get": {
-        "operationId": "tickets.updates.index",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "ticket",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ResourceListTicketUpdate"
-                }
-              }
-            },
-            "description": "OK"
-          },
-          "default": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ResponseError"
-                }
-              }
-            },
-            "description": "Error"
-          }
-        },
-        "x-abilities": [
-          "tickets:read"
-        ]
-      },
-      "post": {
-        "operationId": "tickets.updates.store",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "ticket",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/StoreTicketUpdateRequestBody"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/TicketUpdatePlanOutputBody"
-                }
-              }
-            },
-            "description": "OK"
-          },
-          "default": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ResponseError"
-                }
-              }
-            },
-            "description": "Error"
-          }
-        },
-        "x-abilities": [
-          "tickets:write"
-        ]
-      }
-    },
     "/tokens": {
       "get": {
         "operationId": "tokens.index",
@@ -58083,7 +58401,8 @@
             },
             "description": "Error"
           }
-        }
+        },
+        "x-internal": true
       },
       "post": {
         "operationId": "tokens.store",
@@ -58125,7 +58444,8 @@
             },
             "description": "Error"
           }
-        }
+        },
+        "x-internal": true
       }
     },
     "/tokens/abilities": {
@@ -58152,7 +58472,8 @@
             },
             "description": "Error"
           }
-        }
+        },
+        "x-internal": true
       }
     },
     "/tokens/{token}": {
@@ -58182,7 +58503,8 @@
             },
             "description": "Error"
           }
-        }
+        },
+        "x-internal": true
       },
       "get": {
         "operationId": "tokens.show",
@@ -58224,7 +58546,8 @@
             },
             "description": "Error"
           }
-        }
+        },
+        "x-internal": true
       },
       "patch": {
         "operationId": "tokens.update",
@@ -58276,7 +58599,8 @@
             },
             "description": "Error"
           }
-        }
+        },
+        "x-internal": true
       }
     },
     "/two-factor-resets/{reset}": {
@@ -58323,7 +58647,8 @@
             },
             "description": "Error"
           }
-        }
+        },
+        "x-internal": true
       }
     },
     "/user": {
@@ -58353,7 +58678,8 @@
             },
             "description": "Error"
           }
-        }
+        },
+        "x-internal": true
       },
       "get": {
         "operationId": "user.show",
@@ -58378,7 +58704,8 @@
             },
             "description": "Error"
           }
-        }
+        },
+        "x-internal": true
       },
       "patch": {
         "operationId": "user.update",
@@ -58413,7 +58740,8 @@
             },
             "description": "Error"
           }
-        }
+        },
+        "x-internal": true
       }
     },
     "/user/auth-factors": {
@@ -58433,7 +58761,8 @@
             },
             "description": "Error"
           }
-        }
+        },
+        "x-internal": true
       },
       "get": {
         "operationId": "user.auth-factors.index",
@@ -58458,7 +58787,8 @@
             },
             "description": "Error"
           }
-        }
+        },
+        "x-internal": true
       },
       "post": {
         "operationId": "user.auth-factors.store",
@@ -58500,7 +58830,8 @@
             },
             "description": "Error"
           }
-        }
+        },
+        "x-internal": true
       }
     },
     "/user/auth-factors/{factor}": {
@@ -58530,7 +58861,8 @@
             },
             "description": "Error"
           }
-        }
+        },
+        "x-internal": true
       },
       "patch": {
         "operationId": "user.auth-factors.update",
@@ -58582,7 +58914,8 @@
             },
             "description": "Error"
           }
-        }
+        },
+        "x-internal": true
       }
     },
     "/user/avatar": {
@@ -58602,7 +58935,8 @@
             },
             "description": "Error"
           }
-        }
+        },
+        "x-internal": true
       },
       "put": {
         "operationId": "user.avatar.update",
@@ -58649,7 +58983,8 @@
             },
             "description": "Error"
           }
-        }
+        },
+        "x-internal": true
       }
     },
     "/user/confirmation": {
@@ -58676,7 +59011,8 @@
             },
             "description": "Error"
           }
-        }
+        },
+        "x-internal": true
       },
       "post": {
         "operationId": "user.confirmation.store",
@@ -58711,7 +59047,8 @@
             },
             "description": "Error"
           }
-        }
+        },
+        "x-internal": true
       }
     },
     "/user/confirmation-codes": {
@@ -58738,7 +59075,8 @@
             },
             "description": "Error"
           }
-        }
+        },
+        "x-internal": true
       }
     },
     "/user/connected-apps": {
@@ -58765,7 +59103,8 @@
             },
             "description": "Error"
           }
-        }
+        },
+        "x-internal": true
       }
     },
     "/user/connected-apps/{app}": {
@@ -58795,7 +59134,8 @@
             },
             "description": "Error"
           }
-        }
+        },
+        "x-internal": true
       }
     },
     "/user/deletion-preview": {
@@ -58822,7 +59162,8 @@
             },
             "description": "Error"
           }
-        }
+        },
+        "x-internal": true
       }
     },
     "/user/identities": {
@@ -58849,7 +59190,8 @@
             },
             "description": "Error"
           }
-        }
+        },
+        "x-internal": true
       }
     },
     "/user/identities/{identity}": {
@@ -58879,7 +59221,8 @@
             },
             "description": "Error"
           }
-        }
+        },
+        "x-internal": true
       }
     },
     "/user/memberships": {
@@ -58940,7 +59283,8 @@
             },
             "description": "Error"
           }
-        }
+        },
+        "x-internal": true
       },
       "post": {
         "operationId": "user.memberships.store",
@@ -58975,7 +59319,8 @@
             },
             "description": "Error"
           }
-        }
+        },
+        "x-internal": true
       }
     },
     "/user/memberships/{membership}": {
@@ -59005,7 +59350,8 @@
             },
             "description": "Error"
           }
-        }
+        },
+        "x-internal": true
       }
     },
     "/user/password": {
@@ -59042,7 +59388,8 @@
             },
             "description": "Error"
           }
-        }
+        },
+        "x-internal": true
       }
     },
     "/user/security-events": {
@@ -59095,7 +59442,8 @@
             },
             "description": "Error"
           }
-        }
+        },
+        "x-internal": true
       }
     },
     "/users": {
@@ -59139,7 +59487,8 @@
             },
             "description": "Error"
           }
-        }
+        },
+        "x-internal": true
       }
     },
     "/webhook-deliveries/{delivery}": {
@@ -59996,7 +60345,8 @@
         },
         "x-abilities": [
           "settings:read"
-        ]
+        ],
+        "x-internal": true
       }
     },
     "/workflows": {
@@ -60448,7 +60798,8 @@
             },
             "description": "Error"
           }
-        }
+        },
+        "x-internal": true
       },
       "get": {
         "operationId": "workspace.show",
@@ -60576,7 +60927,8 @@
             },
             "description": "Error"
           }
-        }
+        },
+        "x-internal": true
       }
     },
     "/workspace/entitlements": {
@@ -60716,7 +61068,8 @@
         },
         "x-abilities": [
           "settings:write"
-        ]
+        ],
+        "x-internal": true
       }
     },
     "/workspace/onboarding/test-conversations": {
@@ -60746,7 +61099,8 @@
         },
         "x-abilities": [
           "conversations:write"
-        ]
+        ],
+        "x-internal": true
       }
     },
     "/workspaces": {
@@ -60783,7 +61137,8 @@
             },
             "description": "Error"
           }
-        }
+        },
+        "x-internal": true
       }
     },
     "/workspaces/{workspace}": {
@@ -60830,7 +61185,8 @@
             },
             "description": "Error"
           }
-        }
+        },
+        "x-internal": true
       }
     }
   },

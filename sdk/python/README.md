@@ -14,7 +14,7 @@ from dimmi import Dimmi
 
 client = Dimmi(
     token="dmi_...",            # or DIMMI_API_TOKEN / DIMMI_TOKEN
-    workspace="ws_...",         # or DIMMI_WORKSPACE
+    workspace="ws_...",         # optional: a token works in its own workspace; or DIMMI_WORKSPACE
     base_url="https://app.trydimmi.com",  # or DIMMI_BASE_URL; your origin when self-hosting
     max_retries=3,
     timeout=30,
@@ -28,7 +28,7 @@ conversation = client.post(
     idempotency_key="order-1234-help",
 )["data"]
 
-for item in client.paginate("/conversations", {"status": "open"}):   # cursor lists
+for item in client.paginate("/conversations", {"filter[status]": "open"}):   # cursor lists
     print(item["id"])
 
 for article in client.pages("/some-page-numbered-list"):            # page-number lists
@@ -37,12 +37,16 @@ for article in client.pages("/some-page-numbered-list"):            # page-numbe
 client.request("PATCH", f"/contacts/{contact['id']}", json={"name": "Ada L."})
 ```
 
-- Every request carries `Authorization: Bearer` and `Dimmi-Workspace`.
+- Every request carries `Authorization: Bearer`, and `Dimmi-Workspace` when
+  a workspace is set. A token works in its own workspace; naming another
+  is refused.
 - 429 and 503 answers are retried `max_retries` times. The wait follows
   `Retry-After`, capped at 60 seconds; otherwise exponential backoff.
 - Connection failures are retried too.
 - Every POST gets an `Idempotency-Key` (a uuid4 unless you pass
-  `idempotency_key=`), so a retried POST never acts twice.
+  `idempotency_key=`). Only [some endpoints](https://trydimmi.com/docs/developers/api/idempotency/)
+  read the key: a retried POST to one of them never acts twice, and to
+  any other it may.
 - Responses of 400 and above raise typed errors.
 
 ### Every operation, generated

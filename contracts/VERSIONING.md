@@ -43,7 +43,7 @@ Deprecate first, remove only in a new API version.
 routing.Get(g, "/old", "things.old", c.things.Old).Deprecated(routing.Deprecation{
 	Since:  time.Date(2026, 11, 1, 0, 0, 0, 0, time.UTC),
 	Sunset: time.Date(2027, 11, 1, 0, 0, 0, 0, time.UTC), // at least 12 months later
-	Link:   "https://docs.trydimmi.com/changelog/things-old",
+	Link:   "https://trydimmi.com/docs/developers/api/versioning/",
 })
 ```
 
@@ -51,6 +51,20 @@ routing.Get(g, "/old", "things.old", c.things.Old).Deprecated(routing.Deprecatio
 - The OpenAPI operation is marked `deprecated: true` with `x-sunset`, so generated SDKs flag it.
 - For a field, add the replacement beside it and describe the old one as deprecated. Keep sending it.
 - Announce in the changelog, and optionally in an SDK changeset.
+
+## Internal routes
+
+Routes built for dimmi's own app, such as signing in, a person's own account, inbox screen state and settings previews, are marked internal:
+
+```go
+routing.Get(g, "/gif-search", "gif-search.index", c.Search).Internal()
+g.Internal() // or every route of a group
+```
+
+- The operation carries `x-internal: true` in the OpenAPI document.
+- The route stays in the contract, the compatibility checks and every SDK, served like any other.
+- The public API reference (`docs/`) leaves it out.
+- Mark a new route internal when customers have no use for it outside the app.
 
 ## Shipping a break anyway
 

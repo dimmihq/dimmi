@@ -9,7 +9,7 @@ The REST API (`/api/v1`), the messenger API (`/widget/v1`), webhooks and every S
 - Changes are additive only: new paths, optional parameters, optional request fields, response fields, events.
 - Never remove or rename a path, operation id (route name), parameter, field, enum value, schema or webhook event. Never change a type. Never make something optional required.
 - Never break an SDK's public surface: keep old functions, types and arguments; add new ones beside them.
-- A break ships only in a new API version, or with an approved entry in `contracts/breaking-changes.json`; the next platform release then raises a major version of every SDK that exposes the API. See `docs/api/versioning.md`.
+- A break ships only in a new API version, or with an approved entry in `contracts/breaking-changes.json`; the next platform release then raises a major version of every SDK that exposes the API. See `contracts/VERSIONING.md`.
 
 ## SDK generated code is never committed
 
@@ -49,6 +49,15 @@ CI (`.github/workflows/contracts.yml`) runs all of these.
 
 - Never publish to npm, Packagist or PyPI, never push tags, and never push to the SDK mirrors (`dimmihq/dimmi-go`, `dimmi-php`, `dimmi-laravel`). Only `.github/workflows/sdk-release.yml` generates, splits and publishes, on a platform release tag.
 - The last released contract is the one at the newest platform release tag (`vX.Y.Z`); `make api-compat` compares with it. After a release, remove the `contracts/breaking-changes.json` entries it shipped; `make api-compat` lists them as matching nothing.
+
+## Documentation
+
+The docs live in `docs/` (Astro, served at trydimmi.com/docs).
+
+- Before writing or changing a page, read `docs/WRITING.md` and the stop-slop skill (`.claude/skills/stop-slop/`), and start from the page's template in `docs/templates/`.
+- Write only what the product cannot say for itself: no form walkthroughs, no restated error messages, short paragraphs. `docs/WRITING.md` sections 1 and 2 set the tests and limits.
+- A change to what users see or do (an endpoint, a field, an event, a setting, a default, an interface label, an install step) updates the docs in the same commit.
+- Never hand-write the API reference: it is generated from the API contract. Routes marked `.Internal()` stay out of it.
 
 ## Repository conventions
 

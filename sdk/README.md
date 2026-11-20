@@ -33,10 +33,10 @@ pnpm exec tsc --noEmit -p tsconfig.sdk.json
 
 ## Regenerating after API changes
 
-Only `@dimmi/api` has a generated layer (`sdk/api/src/schema.ts`, `sdk/api/src/paging.ts`). Both are committed.
+Of the JavaScript packages only `@dimmi/api` has a generated layer (`sdk/api/src/schema.ts`, `sdk/api/src/paging.ts`). Neither is committed: both are gitignored and produced from `tests/contracts/api_v1.openapi.json` by `make sdk-generate`, which also generates the Go, PHP and Python layers. Run it after cloning and after every contract change; never hand-edit generated code.
 
 ```sh
-pnpm sdk:generate && pnpm sdk:build api && pnpm sdk:test
+make sdk-generate && pnpm sdk:build api && pnpm sdk:test
 ```
 
 ## Compatibility

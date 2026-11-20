@@ -279,7 +279,7 @@ if (blocking.length > 0) {
     process.stderr.write(`  ✗ [${f.id}] ${f.operation}: ${f.text}\n`);
   }
   process.stderr.write(`
-The public API and webhooks are additive only (docs/api/versioning.md).
+The public API and webhooks are additive only (contracts/VERSIONING.md).
 Keep the old field, parameter, path or event and add the new one beside it.
 A break that must ship needs a new API version, or an entry in
 ${allowlistFile} with a reason, deprecation and sunset dates and an approver.

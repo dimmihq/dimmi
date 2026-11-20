@@ -32,11 +32,11 @@ Each package's README in `node_modules/@dimmi/<name>/README.md` has a complete e
 
 Sign on the server, never in the browser:
 
-1. `@dimmi/server` (or `@dimmi/nextjs/server`) with `DIMMI_IDENTITY_SECRET` and `DIMMI_IDENTITY_KID` in server env (never `NEXT_PUBLIC_`/`VITE_`).
+1. `@dimmi/server` (or `@dimmi/nextjs/server`) with `DIMMI_IDENTITY_SECRET` in server env (never `NEXT_PUBLIC_`/`VITE_`). `DIMMI_IDENTITY_KID` is optional for that HS256 secret; with a private key (`DIMMI_IDENTITY_PRIVATE_KEY`, RS256/ES256/EdDSA) it is required.
 2. Expose the token:
    - Next.js: `dimmi.config.ts` with `defineDimmi({ identify: clerk() })` (or `authjs`, `supabase`, `betterAuth` adapters, or your own `identify`), a `"use server"` action returning `identityToken(config)`, passed as `identity`.
    - Express: `app.get("/api/dimmi/token", dimmiIdentity((req) => req.user && { id: req.user.id, email: req.user.email }))` from `@dimmi/server/express`. Hono: `@dimmi/server/hono`.
-   - SvelteKit, Remix, Astro, Nuxt (Nitro), workers: `createIdentityHandler(identify)` from `@dimmi/server` as a GET route.
+   - `const handler = createIdentityHandler(identify)` from `@dimmi/server`, where `identify` maps your user to `{ id, email, name, ... }` (extra fields go under `attributes`). Workers, Bun and Deno take `handler` as is. SvelteKit and Astro: `export const GET = ({ request }) => handler(request)`. Remix/React Router: `export const loader = ({ request }) => handler(request)`. Nuxt (h3): `defineEventHandler((event) => handler(toWebRequest(event)))`.
 3. In the browser pass `identity: async () => (await (await fetch("/api/dimmi/token")).json()).token`, or `identityUrl: "/api/dimmi/token"`.
 4. After a sign-in without a page load call `identify()`; in the sign-out handler call `shutdown()`.
 
@@ -44,7 +44,7 @@ Sign on the server, never in the browser:
 
 `show()`, `hide()`, `toggle()`, `showNewMessage("text")`, `update({ appearance: { position: "left", primary_color: "#0f766e" } })`, `onUnreadCountChange(fn)` / `useUnreadCount()`. For a strict CSP pass `nonce` and allow the dimmi host in `script-src` and `connect-src`. Behind a proxy pass `apiBase`.
 
-`trackEvent()` is wired but the messenger does not run it yet; record events from the server with `@dimmi/api`: `api.POST("/contact-events", { body: { ... } })`.
+`trackEvent(name, metadata)` records what the visitor did; the messenger sends it once the visitor has a session. To record events from the server use `@dimmi/api`: `api.POST("/contact-events", { body: { ... } })`.
 
 ## 5. Server-side API
 

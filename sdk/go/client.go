@@ -70,6 +70,7 @@ type Option func(*Client)
 func WithToken(token string) Option { return func(c *Client) { c.token = token } }
 
 // WithWorkspace sets the workspace id, ws_..., DIMMI_WORKSPACE by default.
+// It is optional: a token works in its own workspace.
 func WithWorkspace(id string) Option { return func(c *Client) { c.workspace = id } }
 
 // WithBaseURL points the client at a self-hosted install, DIMMI_BASE_URL by default.
@@ -91,8 +92,9 @@ func WithTransport(rt http.RoundTripper) Option { return func(c *Client) { c.inn
 func WithUserAgent(ua string) Option { return func(c *Client) { c.userAgent = ua } }
 
 /*
-New makes a client. The token is required; the workspace is required by
-every workspace-scoped endpoint.
+New makes a client. The token is required. The workspace is optional: a
+token works in its own workspace, and a request that names another is
+refused.
 */
 func New(opts ...Option) (*Client, error) {
 	c := &Client{

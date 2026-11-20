@@ -59,9 +59,12 @@ export async function signIdentityToken(user: IdentityUser, options: IdentityOpt
 }
 
 /*
- * createIdentityHandler makes a Fetch API handler for GET /api/dimmi/token:
- * React Router and Remix resource routes, SvelteKit, Astro, Nuxt,
- * Workers, Bun and Deno take it as is.
+ * createIdentityHandler makes a Fetch API handler for GET /api/dimmi/token.
+ * Next.js route handlers, Workers, Bun and Deno call it with a Request and
+ * take it as is. The others pass an event or context, so hand over its
+ * request: SvelteKit and Astro `({ request }) => handler(request)`, Remix
+ * and React Router loaders `({ request }) => handler(request)`, Nuxt (h3)
+ * `defineEventHandler((event) => handler(toWebRequest(event)))`.
  */
 export function createIdentityHandler(
   identify: Identify<Request>,

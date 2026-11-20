@@ -43,7 +43,8 @@ With SSR, sign identity tokens in `server.ts` with `@dimmi/server/express`:
 import { dimmiIdentity } from "@dimmi/server/express";
 app.get(
   "/api/dimmi/token",
-  dimmiIdentity((req) => req.user ?? null),
+  // Map your user to the fields @dimmi/server knows; any other field throws user_field_unknown.
+  dimmiIdentity((req) => (req.user ? { id: req.user.id, email: req.user.email, name: req.user.name } : null)),
 );
 ```
 

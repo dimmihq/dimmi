@@ -8,7 +8,7 @@ OpenAPI spec works with the same auth and retries::
     from dimmi import Dimmi
     from dimmi._generated.api.default import conversations_index
 
-    client = Dimmi()  # DIMMI_API_TOKEN, DIMMI_WORKSPACE, DIMMI_BASE_URL
+    client = Dimmi()  # DIMMI_API_TOKEN or DIMMI_TOKEN, DIMMI_WORKSPACE, DIMMI_BASE_URL
     page = conversations_index.sync(client=client.api)
     contact = client.post("/contacts", json={"email": "ada@example.com"})
     for conversation in client.paginate("/conversations"):
@@ -97,7 +97,8 @@ class _Base:
         token = token or _env("DIMMI_API_TOKEN", "DIMMI_TOKEN")
         if not token:
             raise ValueError(
-                "[dimmi] token_missing: pass token= or set DIMMI_API_TOKEN to an API token from Settings > API."
+                "[dimmi] token_missing: pass token= or set DIMMI_API_TOKEN (or DIMMI_TOKEN) "
+                "to an API token from Settings → API tokens."
             )
         self.workspace = workspace or _env("DIMMI_WORKSPACE")
         self.base_url = _api_root(base_url or _env("DIMMI_BASE_URL") or DEFAULT_BASE_URL)

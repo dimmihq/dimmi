@@ -6,7 +6,7 @@
 #   gh workflow run sdk-release.yml -f version=v0.2.0
 #
 # scripts/sdk-release-plan.ts decides each SDK's release by comparing the
-# tag with the previous platform release (docs/api/versioning.md): none,
+# tag with the previous platform release (contracts/VERSIONING.md): none,
 # patch, minor or major, a committed changeset raising it, and the
 # current versions as-is for a first release. The run then generates,
 # builds, tests and compat-checks every SDK, and publishes:

@@ -2,7 +2,7 @@
 
 Changesets are optional. SDK versions are decided at each platform
 release (`vX.Y.Z` tag) by `scripts/sdk-release-plan.ts`; see
-docs/api/versioning.md. Add one with `pnpm changeset` at the repo root
+contracts/VERSIONING.md. Add one with `pnpm changeset` at the repo root
 only to:
 
 - force a higher level for a package than the plan would pick, such as

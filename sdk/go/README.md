@@ -22,14 +22,18 @@ import (
 
 client, err := dimmi.New(
 	dimmi.WithToken(os.Getenv("DIMMI_TOKEN")),    // default: $DIMMI_TOKEN
-	dimmi.WithWorkspace("ws_..."),                // default: $DIMMI_WORKSPACE
+	dimmi.WithWorkspace("ws_..."),                // optional: a token works in its own workspace; default $DIMMI_WORKSPACE
 	dimmi.WithBaseURL("https://support.acme.com"), // self-hosted; default dimmi cloud or $DIMMI_BASE_URL
 )
 
 // One typed method per operation, named after its operationId.
 res, err := client.API.ConversationsIndexWithResponse(ctx, nil)
 for _, c := range *res.JSON200.Data {
-	fmt.Println(c.Id, c.Subject)
+	subject := ""
+	if c.Subject != nil {
+		subject = *c.Subject
+	}
+	fmt.Println(c.Id, subject)
 }
 
 // Any path, decoded into your own type.
@@ -39,9 +43,9 @@ err = client.Do(ctx, "POST", "/contacts", nil, map[string]any{"email": "ada@exam
 
 Every request through the client:
 
-- carries `Authorization: Bearer <token>` and the `Dimmi-Workspace` header;
+- carries `Authorization: Bearer <token>`, and the `Dimmi-Workspace` header when a workspace is set. A token works in its own workspace, so set one only to have dimmi refuse a token that belongs to another;
 - retries 429, 503 and dropped connections up to 3 times (`WithMaxRetries`), honouring `Retry-After`;
-- sends an `Idempotency-Key` with each POST, reused by its own retries. To set your own key, use `dimmi.WithIdempotencyKey(ctx, key)` or the request editor `dimmi.IdempotencyKey(key)`.
+- sends an `Idempotency-Key` with each POST, reused by its own retries. Only [some endpoints](https://trydimmi.com/docs/developers/api/idempotency/) read the key; a retried POST to any other may run twice. To set your own key, use `dimmi.WithIdempotencyKey(ctx, key)` or the request editor `dimmi.IdempotencyKey(key)`.
 
 ### Errors
 

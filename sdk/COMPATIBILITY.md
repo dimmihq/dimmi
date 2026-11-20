@@ -51,7 +51,7 @@ Screenshots are in `tmp/proof/shots/sdk-<framework>-<version>-*.png`. The harnes
 | `@dimmi/api` + `@dimmi/server` | Node ESM and CJS, `tsc` NodeNext, TS 5.9 | Node 25 | 25 | ok | ok: walked 12 contacts over 3 cursor pages |
 | `@dimmi/browser` | plain page (`tmp/proof/sdk.mjs`) | n/a | n/a | ok | ok |
 
-Known gaps, in the messenger rather than the SDKs:
+Known gaps: none open. Both earlier gaps are closed in the messenger:
 
-- `trackEvent()` sends `Dimmi("track", ...)`, which the messenger does not run yet; it logs `unknown_command`. Record events server-side with `@dimmi/api` (`POST /contact-events`).
-- `onUnreadCountChange()` / `useUnreadCount()` listen for a `dimmi:unread` window event the messenger does not send yet, so they stay at 0.
+- `trackEvent()` sends `Dimmi("track", ...)`, which the messenger runs: it queues the event and sends it once the visitor has a session. Server-side events still go through `@dimmi/api` (`POST /contact-events`).
+- `onUnreadCountChange()` / `useUnreadCount()` follow the `dimmi:unread` window event the messenger sends at start and whenever the visitor's unread total changes.
