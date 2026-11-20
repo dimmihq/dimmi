@@ -1,0 +1,38 @@
+---
+title: "Set SLA policies"
+description: "Set first reply, next reply, follow-up and resolution targets, choose what they apply to and what happens on a breach."
+---
+
+Create SLA policies in **Settings → SLA policies**. [How SLA timers work](/tickets/how-sla-timers-work/) explains when each target's clock starts, pauses and stops.
+
+## Targets and clock
+
+- A policy needs at least one target. Each target is 1 minute to 1 year.
+- **Warn before a breach:** 15 minutes by default, up to 7 days.
+- **Office hours:** the [office hours](/inbox/office-hours/) schedule the clocks count in. A new policy uses the default schedule. **Around the clock (24/7)** counts all time.
+- **Pause while waiting on the customer:** on by default.
+- **Pause while waiting on another team:** off by default.
+
+A change to a target applies to clocks that start after you save.
+
+## What a policy applies to
+
+| Work | Gets a policy when |
+| --- | --- |
+| A new ticket | Its type and its priority match the policy's **Applies to** lists. An empty list matches any. |
+| A conversation | A workflow runs the **Apply an SLA** step. If the conversation has a customer ticket, the ticket gets the policy too. |
+
+- When several policies match a new ticket, the one created first applies.
+- A policy with both lists empty applies only from workflows.
+- dimmi matches a ticket once, when the ticket is created.
+
+## On breach
+
+- **Raise priority to** never lowers a priority that is already higher.
+- **Move to team** changes the team and keeps the assignee.
+
+To do more, start a workflow from the **SLA about to breach** or **SLA breached** trigger. See [triggers and steps](/workflows/triggers-and-steps/).
+
+## Archive
+
+Archiving a policy cancels every clock it is running, and you cannot undo it.

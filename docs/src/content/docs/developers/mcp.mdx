@@ -1,0 +1,64 @@
+---
+title: "Connect Claude, ChatGPT or Cursor over MCP"
+description: "Connect an AI assistant to your dimmi workspace through the MCP server at /mcp, with OAuth or an API token."
+---
+
+The dimmi MCP server is at `https://app.trydimmi.com/mcp`, or `/mcp` on your own dimmi address when self-hosted, and speaks Streamable HTTP.
+
+## Connect with OAuth
+
+Add the address as a remote MCP server or custom connector in your assistant. The assistant opens dimmi in your browser, where you pick the workspace and the access to give.
+
+```bash title="Claude Code"
+claude mcp add --transport http dimmi https://app.trydimmi.com/mcp
+```
+
+```json title=".cursor/mcp.json"
+{
+  "mcpServers": {
+    "dimmi": { "url": "https://app.trydimmi.com/mcp" }
+  }
+}
+```
+
+To disconnect an assistant, open **Settings → Connected apps**.
+
+## Connect with an API token
+
+A client that cannot open a browser sends an [API token](/developers/api/authentication/) in the `Authorization` header.
+
+```json title=".cursor/mcp.json"
+{
+  "mcpServers": {
+    "dimmi": {
+      "url": "https://app.trydimmi.com/mcp",
+      "headers": { "Authorization": "Bearer <api_token>" }
+    }
+  }
+}
+```
+
+## Tools
+
+- **One tool per REST API operation.** `dimmi_conversations_list` lists conversations, as the [REST API](/api-reference/) does. The assistant sees only the tools its [abilities](/developers/api/abilities/) allow.
+- **Your role applies.** Each call runs through the REST API as you, in one workspace.
+- **`dimmi_guide`** explains dimmi's records and common jobs to the assistant.
+- **No tool** exists for operations that upload a file, need your password confirmed or finish a sign-in in a browser.
+
+## Approvals
+
+dimmi asks you to approve each call of a tool that does one of these:
+
+- Reaches customers or the public: a reply, a published article.
+- Reads private data, such as an export or the audit log.
+- Deletes something, or changes settings, members, roles, keys or billing.
+
+An assistant that supports MCP elicitation shows you the question. Any other assistant gets a preview and a `confirmation_token`, shows you the preview, and calls the tool again with the token after you agree. The token works for 10 minutes and for the same arguments only.
+
+## Limits
+
+| Limit | Value |
+| --- | --- |
+| Request body | 1 MiB |
+| Transport | `POST` only, one JSON response per request, no session and no event stream |
+| Browser origins | The dimmi app's own origin only |

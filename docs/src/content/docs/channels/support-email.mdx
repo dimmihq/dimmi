@@ -1,0 +1,45 @@
+---
+title: "Connect a support email address"
+description: "How dimmi forwarding addresses, confirmation codes, the forwarding test and bulk mail handling work for a support address."
+---
+
+Your mail service keeps receiving mail for your support address and forwards a copy to a forwarding address in dimmi. Each forwarded email becomes a conversation.
+
+## Forwarding addresses
+
+Add your support address in **Settings → Email**. dimmi gives it a forwarding address on `inbound.trydimmi.com`, or on your [inbound domain](/self-hosting/email/) on a self-hosted server.
+
+- **First address:** a new workspace has one named after its slug, such as `acme@inbound.trydimmi.com`. Customers can write to it.
+- **Each address you add:** the slug, a dot and the part before the `@`. `support@acme.example` in the workspace `acme` gets `acme.support@inbound.trydimmi.com`. When that name is taken, dimmi adds a number: `acme.support-2`.
+
+The address's page shows a setup guide for your mail service, with your forwarding address filled in.
+
+- New addresses feed the workspace's first inbox. To change it, see [Set up inboxes and assignment](/inbox/inboxes-and-assignment/).
+- Replies leave from the forwarding address until you [verify your domain](/channels/sending-domain/).
+- Conversations your team starts leave from the default address. To change it, select **Make default** on another address.
+
+## Confirmation codes
+
+Gmail and Zoho Mail mail a code to a new forwarding address before they forward to it. dimmi shows the code in the **Confirmation code** row of the address's page within a minute. You enter it in your mail service: dimmi never confirms forwarding for you.
+
+Yahoo Mail and Cloudflare Email Routing mail a link instead. It arrives as a conversation in the address's inbox, closed if it looks automated.
+
+## Forwarding test
+
+**Test forwarding** sends one real email to your support address and waits for it to come back through your forward.
+
+- The test fails after 10 minutes without the email.
+- dimmi warns you when the email took more than 5 minutes.
+- You can run one test per address every 30 seconds, and 20 per workspace a day.
+
+On a self-hosted server that cannot send email, dimmi shows a subject line. Send an email with that subject to your support address yourself.
+
+## Bulk mail
+
+Bulk mail is newsletters, notifications and mail from no-reply senders. A bulk email that belongs to an existing conversation joins it. For one that starts no thread, the address's **Bulk mail** setting decides:
+
+| Option        | What dimmi does                                        |
+| ------------- | ------------------------------------------------------ |
+| **Close**     | Opens a conversation and closes it. The default.       |
+| **Keep open** | Opens a conversation and leaves it open.               |
+| **Drop**      | Opens no conversation.                                 |

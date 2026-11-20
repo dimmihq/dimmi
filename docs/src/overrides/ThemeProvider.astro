@@ -1,0 +1,84 @@
+---
+import { stripBase, withBase } from "~docs/base";
+import { markdownPath } from "~docs/markdown";
+
+/*
+ * Applies the saved theme before first paint, the way the marketing
+ * site and app do: BoardUI's "boardui:theme" key, falling back to the
+ * system setting, as a .dark class. data-theme mirrors it for Starlight's
+ * code blocks, which switch on that attribute.
+ *
+ * It also marks a page reached by a link from another docs page, so the
+ * content can play the app's page reveal; a fresh visit or a reload
+ * shows the page as it is, the way PageOutlet skips the first page.
+ *
+ * Page changes are cross-document view transitions. Their rules sit
+ * inline here, not in the stylesheet: the browser decides whether a new
+ * page takes part when it first renders it, and a stylesheet still being
+ * revalidated (or injected by the dev server) would arrive too late,
+ * aborting the transition and flashing a blank page. The expect link
+ * holds that first render until the page's content has been parsed
+ * (#docs-end closes PageFrame), so a long API page never shows half-built.
+ */
+
+// The page's Markdown copy, for agents that land on the HTML.
+const markdown = markdownPath(stripBase(Astro.url.pathname));
+---
+<link rel="expect" href="#docs-end" blocking="render" />
+{markdown && <link rel="alternate" type="text/markdown" href={withBase(markdown)} />}
+<style is:inline>
+  @view-transition {
+    navigation: auto;
+    types: docs-page;
+  }
+  ::view-transition-old(root),
+  ::view-transition-new(root) {
+    animation: none;
+    mix-blend-mode: normal;
+  }
+  ::view-transition-old(root) {
+    z-index: 1;
+  }
+  ::view-transition-new(root) {
+    z-index: 2;
+  }
+  /* The header tab underline slides to the new tab on BoardUI's tab timing. */
+  :root:active-view-transition-type(docs-page) .docs-tab-indicator {
+    view-transition-name: docs-tab;
+  }
+  ::view-transition-group(docs-tab) {
+    animation-duration: 200ms;
+    animation-timing-function: ease;
+  }
+  ::view-transition-old(docs-tab),
+  ::view-transition-new(docs-tab) {
+    animation: none;
+    height: 100%;
+  }
+  ::view-transition-old(docs-tab) {
+    display: none;
+  }
+</style>
+<script is:inline>
+  (() => {
+    const root = document.documentElement;
+    root.dataset.accent = "emerald";
+    let theme = null;
+    try {
+      theme = localStorage.getItem("boardui:theme");
+    } catch {}
+    const dark = theme ? theme === "dark" : matchMedia("(prefers-color-scheme: dark)").matches;
+    root.classList.toggle("dark", dark);
+    const sync = () => (root.dataset.theme = root.classList.contains("dark") ? "dark" : "light");
+    sync();
+    new MutationObserver(sync).observe(root, { attributes: true, attributeFilter: ["class"] });
+
+    try {
+      const from = document.referrer ? new URL(document.referrer) : null;
+      const type = performance.getEntriesByType("navigation")[0]?.type;
+      if (from?.origin === location.origin && from.pathname !== location.pathname && type !== "reload") {
+        root.dataset.navigated = "";
+      }
+    } catch {}
+  })();
+</script>

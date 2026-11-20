@@ -1,0 +1,52 @@
+---
+title: "Publish a changelog"
+description: "Where changelog entries appear, how scheduling and subscriber emails work, and the limits on labels and authors."
+---
+
+Write entries under **Changelog** in the sidebar. A published entry appears in three places:
+
+- **Help center:** at `/changelog`, linked from the header once the first entry is published. The home page lists the three newest.
+- **Messenger:** in the **What's new** tab.
+- **RSS:** at `/changelog/feed.xml`, and at `/changelog/labels/<label>/feed.xml` for one label.
+
+## Publish
+
+Saving an entry changes nothing for readers. **Publish** makes the saved text live, now or at a time you **Schedule**.
+
+- **Shipped on:** after publishing, set a past date in **Update settings** for a change that shipped earlier.
+- **Authors:** every teammate who saves the entry is an author, in the order they first saved. **Pick authors** names up to five instead.
+- **Labels:** a changelog starts with **New**, **Improved** and **Fixed** and holds up to 20. Deleting a label keeps its entries.
+- **Limits:** a title has up to 150 characters and a summary up to 300.
+
+## Email subscribers
+
+Check **Email N subscribers** when you publish. dimmi mails an entry to each confirmed subscriber once, however many times you publish it again.
+
+| Setting in **Settings → Changelog** | Default | What it does |
+| --- | --- | --- |
+| **Subscriptions** | On | Readers subscribe with their email on the changelog. |
+| **What the email holds** | **The full entry** | **A summary** sends the summary with a link to the entry. |
+| **Undo window** | **None** | dimmi waits 5 minutes, 15 minutes or 1 hour before mailing. Unpublish inside the window and nothing is sent. |
+
+- **Confirmation:** a reader who types an address gets no entries until they confirm from the email dimmi sends. A reader signed in to the help center with that address is subscribed at once.
+- **Resend:** dimmi sends a confirmation to one address at most every 10 minutes.
+- **Unsubscribe:** every email carries the subscriber's own unsubscribe link.
+
+## Reactions
+
+Readers react with one of five emoji: thumbs up, heart, party popper, rocket and eyes. Each reader counts once per emoji on an entry.
+
+## Analytics
+
+**Analytics** in **Changelog** covers the last 7, 30 or 90 days.
+
+| Number | Counts |
+| --- | --- |
+| **Views** | Times a reader opened an entry's page. Crawlers and the feed are left out. |
+| **Reactions** | Reactions left over those days. |
+| **Subscribers** | Confirmed subscribers now, with how many joined over those days. |
+| **Unsubscribed** | Subscribers who left over those days. |
+
+dimmi keeps daily counts for 400 days and never records who read.
+
+dimmi sends `changelog_entry.published`, `changelog_entry.updated` and `changelog_entry.unpublished` [webhook events](/developers/webhooks/events/).

@@ -1,0 +1,49 @@
+---
+title: "Customize the messenger"
+description: "The limits and behavior behind a messenger's settings: texts, links, allowed sites, audiences and the Help and What's new tabs."
+---
+
+A messenger's settings are on its page in **Settings → Messengers**. These are the rules that screen does not show.
+
+## Limits
+
+| Setting           | Limit                                                                        |
+| ----------------- | ---------------------------------------------------------------------------- |
+| **Greeting**      | 60 characters.                                                               |
+| **Away message**  | 280 characters.                                                              |
+| **Texts**         | Your own texts in up to 40 languages.                                        |
+| **Links**         | 6 links, each with a title of 1 to 40 characters.                            |
+| **Allowed sites** | 50 sites.                                                                    |
+
+An empty text field for one language uses the text for **All languages**, then the messenger's built-in words, which come in 11 languages.
+
+With **Launcher** set to **Hidden**, open the messenger from [your own buttons](/channels/install-the-messenger/#open-the-messenger-from-your-own-buttons).
+
+## Allowed sites
+
+Enter each site as an origin, separated by commas. An empty list allows any site.
+
+```text
+https://acme.example, https://*.acme.example
+```
+
+A wildcard `*.` covers one label: `https://*.acme.example` allows `https://app.acme.example` but not `https://acme.example`. To trust who a customer is, use [identity verification](/developers/messenger/identity-verification/).
+
+When your workspace requires signed-in customers, the messenger ignores **Anonymous visitors**.
+
+## Who sees it
+
+Each part of the messenger is open to everyone until you pick an [audience](/customers/audiences/).
+
+- **Launcher:** hides the launcher from everyone else. Replies and announcements still reach them.
+- **Starting a conversation:** everyone else can still read and answer their conversations. dimmi refuses an audience that reads the customer's page or anything a browser could claim.
+
+## Help and What's new tabs
+
+Both tabs show content from the [help center](/help-center/set-up/) the messenger is linked to. dimmi links a new messenger to the workspace's default help center, if one exists.
+
+A messenger created before the help center has no link. Set `help_center_id` with `PATCH /api/v1/widget-settings/{widget}`.
+
+## Powered by dimmi badge
+
+The API field `show_branding` on the same endpoint controls the badge. For when dimmi Cloud lets you hide it, see [dimmi Cloud and self-hosted compared](/cloud-vs-self-hosted/).

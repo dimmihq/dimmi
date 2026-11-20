@@ -1,0 +1,121 @@
+---
+/*
+ * Code samples in BoardUI's underline tabs, without a React island: the
+ * panels render once as static HTML and a small custom element switches
+ * them, sliding the underline as BoardUI's TabList does (200ms ease).
+ * Tabs sharing a `group` stay in step across the page and remember the
+ * choice, so picking Python once shows Python everywhere.
+ */
+import { Code } from "@astrojs/starlight/components";
+
+interface Props {
+  label: string;
+  group?: string;
+  items: { label: string; code: string; lang: string }[];
+}
+
+const { label, group, items } = Astro.props;
+---
+<docs-code-tabs data-group={group} class="not-prose block">
+  <div class="relative">
+    <div
+      role="tablist"
+      aria-label={label}
+      class="flex items-center gap-1 overflow-x-auto border-b border-separator-border [scrollbar-width:none]"
+    >
+      {items.map((item, index) => (
+        <button
+          type="button"
+          role="tab"
+          data-tab={item.label}
+          aria-selected={index === 0 ? "true" : "false"}
+          tabindex={index === 0 ? 0 : -1}
+          class="relative inline-flex cursor-pointer items-center px-2.5 py-2 whitespace-nowrap text-body-regular text-text-primary outline-none transition-colors duration-150 ease aria-selected:text-body-medium aria-selected:text-accent-600 focus-visible:rounded-sm focus-visible:ring-2 focus-visible:ring-border-focus-ring"
+        >
+          {item.label}
+        </button>
+      ))}
+    </div>
+    <span
+      aria-hidden="true"
+      data-indicator
+      class="pointer-events-none absolute bottom-0 left-0 h-0.5 bg-accent-600 opacity-0"
+    ></span>
+  </div>
+  {items.map((item, index) => (
+    <div role="tabpanel" data-panel={item.label} aria-label={item.label} hidden={index !== 0} class="pt-3">
+      <Code code={item.code} lang={item.lang} frame="code" />
+    </div>
+  ))}
+</docs-code-tabs>
+
+<script>
+  const KEY = "docs:code-tab:";
+
+  class DocsCodeTabs extends HTMLElement {
+    tabs: HTMLButtonElement[] = [];
+
+    connectedCallback() {
+      this.tabs = [...this.querySelectorAll<HTMLButtonElement>("[role=tab]")];
+      this.tabs.forEach((tab, index) => {
+        tab.addEventListener("click", () => this.choose(tab.dataset.tab ?? "", true));
+        tab.addEventListener("keydown", (event) => {
+          const step = event.key === "ArrowRight" ? 1 : event.key === "ArrowLeft" ? -1 : 0;
+          if (step) {
+            const next = this.tabs[(index + step + this.tabs.length) % this.tabs.length];
+            next.focus();
+            this.choose(next.dataset.tab ?? "", true);
+          }
+        });
+      });
+      const group = this.dataset.group;
+      let saved: string | null = null;
+      try {
+        saved = group ? localStorage.getItem(KEY + group) : null;
+      } catch {}
+      this.choose(saved ?? this.tabs[0]?.dataset.tab ?? "", false);
+      if (group) {
+        addEventListener("docs:code-tab", (event) => {
+          const detail = (event as CustomEvent<{ group: string; tab: string }>).detail;
+          if (detail.group === group) this.choose(detail.tab, false);
+        });
+      }
+      new ResizeObserver(() => this.place(false)).observe(this);
+    }
+
+    choose(label: string, fromUser: boolean) {
+      if (!this.tabs.some((tab) => tab.dataset.tab === label)) return;
+      for (const tab of this.tabs) {
+        const selected = tab.dataset.tab === label;
+        tab.setAttribute("aria-selected", String(selected));
+        tab.tabIndex = selected ? 0 : -1;
+      }
+      for (const panel of this.querySelectorAll<HTMLElement>("[role=tabpanel]")) {
+        panel.hidden = panel.dataset.panel !== label;
+      }
+      this.place(fromUser);
+      const group = this.dataset.group;
+      if (fromUser && group) {
+        try {
+          localStorage.setItem(KEY + group, label);
+        } catch {}
+        dispatchEvent(new CustomEvent("docs:code-tab", { detail: { group, tab: label } }));
+      }
+    }
+
+    // Moves the underline under the selected tab; it slides only when a
+    // person picks a tab, never on load.
+    place(animate: boolean) {
+      const indicator = this.querySelector<HTMLElement>("[data-indicator]");
+      const tab = this.tabs.find((t) => t.getAttribute("aria-selected") === "true");
+      const list = tab?.parentElement;
+      if (!indicator || !tab || !list) return;
+      indicator.style.transition = animate ? "translate 200ms ease, width 200ms ease" : "none";
+      indicator.style.translate = `${tab.offsetLeft - list.scrollLeft}px 0`;
+      indicator.style.width = `${tab.offsetWidth}px`;
+      indicator.style.opacity = "1";
+    }
+  }
+
+  customElements.define("docs-code-tabs", DocsCodeTabs);
+</script>

@@ -1,0 +1,26 @@
+---
+title: "Core concepts"
+description: "The objects in dimmi, one line each, and the path a customer's message takes to a teammate."
+---
+
+## The objects
+
+| Object       | What it is                                                                                                                                                                         |
+| ------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Workspace    | One company's dimmi: its inboxes, customers, settings and members.                                                                               |
+| Inbox        | Where conversations land, with its own team and [assignment rules](/inbox/inboxes-and-assignment/). A new workspace has one, named **Support**.                                    |
+| Channel      | The messenger, email, Slack or the API. Each connection, such as one messenger or one support address, belongs to one inbox.                            |
+| Conversation | One exchange with a customer, on any channel. Its status is open, snoozed or closed. Spam is a flag beside the status.                                                             |
+| Customer     | A person who writes to your team (`contact` in the API). A user is a customer your product identified; everyone else is a lead.                |
+| Teammate     | A workspace member who answers customers. A member's [role](/workspace/roles-and-permissions/) decides what they may do.                                                           |
+| Ticket       | [Tracked work](/tickets/how-tickets-work/) with a state the customer can see. Kinds: customer ticket, back-office ticket and tracker.       |
+| dimmi agent  | [The AI that answers customers](/ai/how-the-agent-works/) from your knowledge sources and hands over to a teammate. It is off in a new workspace.                                  |
+| Operator     | [The AI your team chats with](/operator/work-with-operator/) inside dimmi. It proposes changes as changesets, which a teammate approves.                                           |
+
+## How a message flows
+
+1. A customer sends a message through a channel.
+2. dimmi finds or creates the customer, then adds the message to its conversation or starts one in the inbox the channel connection belongs to.
+3. If the dimmi agent is on for that channel, it answers, and hands over to a teammate when it cannot help.
+4. The inbox's assignment rules give the conversation to a teammate or a team, or leave it in the **Unassigned** view.
+5. A teammate replies, then closes or snoozes the conversation. A closed conversation can reopen when the customer writes again.

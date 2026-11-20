@@ -1,0 +1,21 @@
+---
+import { RiArrowDownSLine } from "@remixicon/react";
+
+import { TableOfContents } from "~docs/components/react/page-parts";
+
+// Folds open on BoardUI's disclosure motion (docs.css).
+const { toc } = Astro.locals.starlightRoute;
+const items = (toc?.items ?? []).filter((item) => item.slug !== "_top");
+---
+{items.length > 0 && (
+  <details class="docs-disclosure group rounded-2xl border border-separator-border bg-background-secondary-default">
+    <summary class="flex cursor-pointer list-none items-center justify-between rounded-2xl px-4 py-3 text-body-medium text-text-primary outline-none focus-visible:ring-2 focus-visible:ring-border-focus-ring [&::-webkit-details-marker]:hidden">
+      On this page
+      <RiArrowDownSLine
+        className="size-4.5 text-foreground-icon-secondary transition-[rotate] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] group-open:rotate-180 motion-reduce:transition-none"
+        aria-hidden
+      />
+    </summary>
+    <div class="docs-disclosure-body px-4 pb-4"><TableOfContents items={items} showTitle={false} /></div>
+  </details>
+)}

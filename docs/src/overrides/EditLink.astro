@@ -1,0 +1,6 @@
+---
+import { EditLink } from "~docs/components/react/page-parts";
+
+const { editUrl } = Astro.locals.starlightRoute;
+---
+{editUrl ? <EditLink href={editUrl.href} /> : <span />}

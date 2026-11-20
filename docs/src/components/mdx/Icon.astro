@@ -1,0 +1,10 @@
+---
+import { icon } from "~docs/components/react/icons";
+
+interface Props {
+  name: string;
+  class?: string;
+}
+const Component = icon(Astro.props.name);
+---
+{Component && <Component className={`inline size-4.5 align-[-0.2em] ${Astro.props.class ?? ""}`} aria-hidden />}

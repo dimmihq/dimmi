@@ -1,0 +1,86 @@
+---
+title: "Receive webhooks"
+description: "Add a dimmi webhook endpoint, choose its events and handle each delivery once."
+---
+
+Add an endpoint in **Settings → Webhooks**, or with [Create webhook endpoint](/api-reference/webhooks/create-webhook-endpoint/). A workspace can have 20 endpoints, and dimmi Cloud requires an `https://` URL.
+
+## Choose events
+
+| Entry | Receives |
+| --- | --- |
+| `conversation.created` | That event type. |
+| `conversation.*` | Each event of the area, including ones dimmi adds later. |
+| `*` | Each event, including ones dimmi adds later. |
+
+Wildcards leave out `contact_event.tracked`; list it by name.
+
+## Read the envelope
+
+Each delivery is a `POST` with this JSON body:
+
+```json
+{
+  "id": "evt_01jd8y3q8k6m2v9x4t7b5n1c0r",
+  "object": "event",
+  "type": "conversation.created",
+  "api_version": "2026-11-01",
+  "created_at": "2026-11-19T10:42:07Z",
+  "workspace_id": "ws_01jd8xzp2g4h7k9m3q5s8v1w6y",
+  "sequence": 48213,
+  "test": false,
+  "truncated": false,
+  "actor": { "type": "contact", "id": "ctc_01jd8y2r6t9w3z5b8d1f4h7k0m" },
+  "data": {
+    "object": { "id": "conv_01jd8y3q7j5k1n8p2r6t9v3x0z", "object": "conversation" }
+  }
+}
+```
+
+| Field | Meaning |
+| --- | --- |
+| `id` | The same on each attempt of one event, and in the `webhook-id` header. |
+| `sequence` | For one object, a higher number carries a newer snapshot. |
+| `data.object` | The whole object, as the REST API returns it. The example is cut short. |
+
+[Webhook events](/developers/webhooks/events/) describes the other fields and lists the event types.
+
+## Handle each delivery once
+
+dimmi can send one event more than once, and deliveries can arrive out of order. Skip an `id` you have handled, and skip a `sequence` lower than the last one you applied to that object.
+
+```js title="server.js"
+import express from "express";
+import { Webhook } from "standardwebhooks";
+
+const app = express();
+const webhook = new Webhook(process.env.DIMMI_WEBHOOK_SECRET);
+
+const seen = new Set(); // Use your database in production.
+const latest = new Map(); // Object id -> highest sequence applied.
+
+app.post("/webhooks/dimmi", express.raw({ type: "application/json" }), (req, res) => {
+  let event;
+  try {
+    event = webhook.verify(req.body, req.headers);
+  } catch {
+    return res.status(400).end();
+  }
+  res.status(204).end();
+
+  const object = event.data.object;
+  if (seen.has(event.id) || (latest.get(object.id) ?? -1) >= event.sequence) {
+    return;
+  }
+  seen.add(event.id);
+  latest.set(object.id, event.sequence);
+
+  console.log(event.type, object.id);
+});
+
+app.listen(3000);
+```
+
+Set `DIMMI_WEBHOOK_SECRET` to the endpoint's signing secret. [Verify webhook signatures](/developers/webhooks/verify-signatures/) has the same check in Go, PHP, Laravel and Python.
+
+Answer with a `2xx` status within 15 seconds and do slow work after you answer. [Webhook delivery and retries](/developers/webhooks/delivery-and-retries/) lists what dimmi does with other answers.

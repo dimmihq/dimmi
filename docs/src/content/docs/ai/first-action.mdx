@@ -1,0 +1,59 @@
+---
+title: "Build your first action"
+description: "Add an endpoint to your own API and connect it so the dimmi agent can tell a customer which plan they are on."
+---
+import { Steps } from "~docs/components/mdx";
+
+You add one endpoint to your API and turn it into an action the dimmi agent calls for the customer it is talking to. You need an API on a public HTTPS address, an agent that [answers in the messenger](/ai/set-up-the-agent/) and [identity verification](/developers/messenger/identity-verification/).
+
+<Steps>
+
+1. Add an endpoint that returns a customer's subscription and checks a bearer token. Deploy it.
+
+   ```js title="server.js"
+   import express from "express";
+
+   const subscriptions = {
+     cus_1042: { plan: "Team", status: "active", renews_on: "2027-03-01" },
+   };
+
+   const app = express();
+
+   app.get("/subscriptions/:customerId", (req, res) => {
+     if (req.get("Authorization") !== `Bearer ${process.env.DIMMI_ACTIONS_TOKEN}`) {
+       return res.status(401).json({ message: "Invalid token" });
+     }
+     const subscription = subscriptions[req.params.customerId];
+     if (!subscription) {
+       return res.status(404).json({ message: "No subscription for this customer" });
+     }
+     res.json(subscription);
+   });
+
+   app.listen(3000);
+   ```
+
+   Replace the `subscriptions` object with a lookup in your own data. Its keys are the ids your identity tokens carry in `sub`.
+
+2. In **Settings → Actions**, add a **REST API** connection. Give it your API's address and, as its bearer token, the value of `DIMMI_ACTIONS_TOKEN`.
+
+3. On the connection, choose **New action** and fill in:
+
+   | Field | Value |
+   | --- | --- |
+   | **Title** | `Check a subscription` |
+   | **Instructions for the agent** | `Use when the customer asks which plan they are on, whether it is active or when it renews.` |
+   | **What it does** | **Only reads data** |
+   | **Endpoint** | `GET` `/subscriptions/{contact.external_id}` |
+
+   dimmi replaces `{contact.external_id}` with the `sub` of the verified customer. The agent cannot change it.
+
+4. Open **Test** and run a **Live** test with an id from your data, such as `cus_1042`. The result shows the JSON the agent reads.
+
+5. Choose **Publish**.
+
+6. Open your site as a signed-in customer and ask the messenger "Which plan am I on?". The agent calls your endpoint and answers with the plan.
+
+</Steps>
+
+To make an action that changes data and waits for approval, see [Connect actions to your systems](/ai/actions/).

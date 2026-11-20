@@ -1,0 +1,46 @@
+---
+title: "Connect actions to your systems"
+description: "Give the dimmi agent actions that read and change data in your own systems, and choose who must agree before a change runs."
+---
+
+An action is a call the dimmi agent makes to your API or MCP server during a conversation. Admins create actions in **Settings → Actions**; for what your endpoint receives, see [Let the dimmi agent call your API](/developers/agent-actions-api/).
+
+## Connections
+
+A connection holds the address and the secret its actions share. dimmi encrypts the secret, and the model never sees it.
+
+- **REST API:** an HTTPS base URL. You describe each action's method, path, query and body.
+- **MCP server:** a remote server over Streamable HTTP. **Sync tools** turns each tool into a draft action that changes data and asks the customer first, whatever the server says about the tool.
+
+## Reads and changes
+
+| | **Only reads data** | **Changes data** |
+| --- | --- | --- |
+| Runs | At once. | After the agreement you choose. |
+| Channels | **Messenger**, **Email**, **API**. | **Messenger** only. |
+| Retries | Once, after a 502, 503 or 504. | Never. |
+
+For an action that changes data, **Before it runs** and **Approval** decide who agrees:
+
+- **Customer confirms first:** the customer gets a card with **Confirm** and **Cancel**. It lapses after 15 minutes.
+- **A teammate approves:** the request appears in the conversation in the inbox, and any teammate can decide it.
+- **An admin approves:** only an admin can decide it.
+
+With both, the customer confirms before the team is asked. When nobody decides within the time limit (1 hour by default), the agent tells the customer and [hands over](/ai/handover/) with high priority.
+
+## Whose data an action touches
+
+The agent never picks the customer. dimmi fills `{contact.external_id}`, `{contact.email}` and `{contact.attr.<key>}` from the customer's proven identity, and offers the action only when it can:
+
+- In the messenger, when the session passed [identity verification](/developers/messenger/identity-verification/).
+- In conversations your server starts through the API.
+
+An action that uses only `{contact.email}` also works for an anonymous messenger visitor, who types a six-digit code that dimmi emails them. The code lasts 10 minutes and the proof 24 hours.
+
+## Test and publish
+
+- **Test:** a **Dry run** builds the request and sends nothing. **Live** sends it as the customer you enter.
+- **Publish:** the agent runs only the published version. Later edits wait for **Publish changes**.
+- **Used by:** tick **Operator** to give the action to [Operator](/operator/work-with-operator/) too.
+
+The agent is offered at most 20 actions in a conversation, the first 20 by tool name. Each call stays in the conversation's timeline.

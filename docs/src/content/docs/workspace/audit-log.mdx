@@ -1,0 +1,115 @@
+---
+title: "Audit log"
+description: "The events the dimmi audit log records, who can read it, how to export it and how long entries are kept."
+---
+
+**Settings → Audit log** lists who changed what in the workspace. Owners and Admins can read it (`audit_logs:read`).
+
+## Each entry
+
+| Column | What it holds |
+| --- | --- |
+| **Event** | What happened, from the lists below. |
+| **Actor** | The member, API token or connected app that did it, with how it reached dimmi and its IP address. dimmi's own actions show as **Automatic**. |
+| **Target** | What the event changed. |
+| **Time** | When it happened. |
+
+## Retention and export
+
+| Fact | Value |
+| --- | --- |
+| Retention on dimmi Cloud | 365 days. dimmi deletes older entries once a day. |
+| Retention when self-hosted | For ever, unless the server sets a [limit](/self-hosting/configuration-options/#retention). |
+| **Export CSV** | The entries matching the current filters, for a range of at most 366 days. Without a range, the last 30 days. |
+| Export limit | 10 exports an hour for the workspace. |
+| Export record | Each export is itself an entry: **Exported the audit log**. |
+
+## Events
+
+The **Event** filter groups events as below.
+
+### Sign-in
+
+| Event | Name |
+| --- | --- |
+| Signed in | `member.signed_in` |
+| Failed to sign in | `member.sign_in_failed` |
+| Sign-in blocked after failed attempts | `member.sign_in_locked` |
+| Signed out every other session | `member.sessions_revoked` |
+
+### Security settings
+
+| Event | Name |
+| --- | --- |
+| Turned on two-factor authentication | `member.two_factor_enabled` |
+| Turned off two-factor authentication | `member.two_factor_disabled` |
+| Added a second factor | `member.auth_factor_added` |
+| Removed a second factor | `member.auth_factor_removed` |
+| Used a recovery code | `member.recovery_code_used` |
+| Changed their password | `member.password_changed` |
+| Reset their password | `member.password_reset` |
+| Changed their email | `member.email_changed` |
+| Linked a sign-in provider | `member.identity_linked` |
+| Unlinked a sign-in provider | `member.identity_unlinked` |
+| Sent a two-factor reset link | `member.two_factor_reset_requested` |
+| Turned off two-factor with a reset link | `member.two_factor_reset_completed` |
+| Cleared a sign-in lock | `member.sign_in_lock_cleared` |
+| Changed the sign-in rules | `workspace.access_policy_changed` |
+
+### Members and teams
+
+| Event | Name |
+| --- | --- |
+| Created the workspace | `workspace.created` |
+| Changed workspace settings | `workspace.updated` |
+| Deleted the workspace | `workspace.deleted` |
+| Restored the workspace | `workspace.restored` |
+| Suspended the workspace | `workspace.suspended` |
+| Lifted the workspace's suspension | `workspace.unsuspended` |
+| Joined the workspace | `member.joined` |
+| Changed a role | `member.role_changed` |
+| Handed over ownership | `ownership.transferred` |
+| Deactivated a member | `member.deactivated` |
+| Reactivated a member | `member.reactivated` |
+| Left the workspace | `member.left` |
+| Invited someone | `invitation.created` |
+| Accepted an invitation | `invitation.accepted` |
+| Withdrew an invitation | `invitation.revoked` |
+| Created a team | `team.created` |
+| Renamed a team | `team.updated` |
+| Deleted a team | `team.deleted` |
+| Added someone to a team | `team.member_added` |
+| Removed someone from a team | `team.member_removed` |
+| Created a custom role | `role.created` |
+| Edited a custom role | `role.updated` |
+| Deleted a custom role | `role.deleted` |
+| Changed someone's custom role | `member.custom_role_changed` |
+
+### Tokens and apps
+
+| Event | Name |
+| --- | --- |
+| Created an API token | `token.created` |
+| Revoked an API token | `token.revoked` |
+
+### Inbox
+
+| Event | Name |
+| --- | --- |
+| Changed who can open an inbox | `inbox.access_changed` |
+| Added a redaction rule | `redaction_rule.created` |
+| Changed a redaction rule | `redaction_rule.updated` |
+| Deleted a redaction rule | `redaction_rule.deleted` |
+| Changed the built-in redaction rules | `redaction_settings.updated` |
+| Asked to erase a customer | `contact_erasure.requested` |
+| Canceled a customer's erasure | `contact_erasure.canceled` |
+| Held an erasure for retention | `contact_erasure.held` |
+| Erased a customer | `contact_erasure.completed` |
+| `contact.merged`: two customers were merged | `contact.merged` |
+
+### Data export
+
+| Event | Name |
+| --- | --- |
+| Exported the audit log | `audit_logs.exported` |
+| Exported the member list | `members.exported` |

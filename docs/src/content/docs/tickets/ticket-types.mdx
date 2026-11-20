@@ -1,0 +1,38 @@
+---
+title: "Set up ticket types and fields"
+description: "Create ticket types with their own states and custom fields, and preview how customers see them in the messenger."
+---
+
+Set up ticket types, their fields and the workspace's states in **Settings → Tickets**. A type's page shows a **Customer preview** of its form beside the settings.
+
+## What cannot change later
+
+- A type's kind.
+- A field's **Key** and **Data type**.
+- The group a state belongs to.
+
+Archiving a type or a field keeps it, with its values, on the tickets that already use it.
+
+## Types
+
+- **Routing:** new tickets of the type land in the **Inbox** and **Team** you pick. By default they stay in the conversation's inbox.
+- **Shown in the messenger and portal:** customers can open a ticket of this type themselves.
+- **Shared with the company:** everyone at the customer's company sees the ticket, but only customers with a [verified identity](/developers/messenger/identity-verification/).
+- **Reopen window:** 0 to 90 days. The default is 7.
+- **Auto-resolve:** 1 to 90 days. Off by default.
+
+## States
+
+Each type lists the states its tickets move through, in its own order. Types can share a state.
+
+- Removing a state from a type that still has tickets in it needs a state for them to move to. dimmi does not tell customers about that move.
+- Deleting a state moves its tickets to another state of the same group.
+
+## Fields
+
+A field has one of 12 data types: short text, long text, number, decimal, currency, yes or no, date, single choice, multiple choice, file, teammate and company.
+
+- A field can be required to create a ticket, apart for teammates and for customers, so the customer's form can ask less.
+- A field required to resolve applies to everyone: the inbox, the API, the dimmi agent and workflows. It also blocks closing the ticket's conversation.
+- **Show** hides a field until another field is filled, or holds one of the answers you pick. A hidden field is never required.
+- **How the AI fills it** tells dimmi what to look for in the conversation. dimmi suggests a value, and writes it without a teammate only when the field or its type fills automatically.

@@ -1,0 +1,44 @@
+---
+title: "Help center and custom domains"
+description: "Serve help centers from subdomains of your server or from customers' own domains with automatic TLS."
+---
+
+Each help center is served at `https://support.example.com/hc/<subdomain>` with no setup. You can also give each one a subdomain of a base domain, and let workspaces use domains of their own.
+
+## Give each help center a subdomain
+
+Add a wildcard A record, such as `*.help.example.com`, that points at the server. Then set the base domain and turn on certificates for other host names:
+
+```bash
+dimmictl set <<'EOF'
+DIMMI_HELP_CENTERS__BASE_DOMAIN=help.example.com
+DIMMI_CUSTOM_DOMAINS__DEFAULT=edge
+DIMMI_CUSTOM_DOMAINS__TLS__EDGE__DRIVER=caddyask
+EOF
+```
+
+A help center with the subdomain `acme` then answers at `https://acme.help.example.com`.
+
+## Let workspaces use their own domains
+
+A workspace can [serve its help center on its own domain](/help-center/custom-domain/), such as `help.acme.example`, by pointing a CNAME at your server's target host name.
+
+```bash
+dimmictl set <<'EOF'
+DIMMI_CUSTOM_DOMAINS__DEFAULT=edge
+DIMMI_CUSTOM_DOMAINS__TLS__EDGE__DRIVER=caddyask
+DIMMI_HELP_CENTERS__CUSTOM_DOMAIN_TARGET=support.example.com
+EOF
+```
+
+`DIMMI_HELP_CENTERS__CUSTOM_DOMAIN_TARGET` is the host name workspaces point their CNAME at. Left empty, it is `custom.<base domain>` when a base domain is set, else the app's own host name.
+
+- **Target.** The target must resolve to this server. Give it an A record.
+- **Ports.** Ports 80 and 443 must reach Caddy for every host name, not only the app's.
+- **Subdomains only.** A workspace cannot add a bare domain such as `acme.example`, because a bare domain cannot carry a CNAME.
+
+## How certificates are issued
+
+Caddy orders a certificate from Let's Encrypt on the first visit to a host name. Before each order it asks dimmi, and dimmi allows only host names that belong to a help center: a subdomain of the base domain, or a domain a workspace added.
+
+Without the two `DIMMI_CUSTOM_DOMAINS__` settings, dimmi refuses every host name except the app's own.

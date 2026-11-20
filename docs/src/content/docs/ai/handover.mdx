@@ -1,0 +1,33 @@
+---
+title: "Control handover"
+description: "When the dimmi agent hands a conversation to your team, what a handover changes and how to route and prioritize it."
+---
+
+Set the handover rules in **Settings → dimmi agent**, under **Answers** and **Handover**.
+
+## When the agent hands over
+
+- The customer asks for a person, or presses **Talk to a person** in the messenger.
+- The agent has no answer, as **When it doesn't know** says:
+
+  | Option | What happens |
+  | --- | --- |
+  | **Offer a teammate** | The agent says it doesn't know and the customer gets a **Talk to a person** button. A second unanswered question in a row hands over. Email has no button, so the first one hands over. |
+  | **Hand over straight away** | The first unanswered question hands over. |
+  | **Just say it doesn't know** | An unanswered question never hands over. |
+
+- The conversation reaches **Replies per conversation**, or the agent's replies in it have cost $0.10.
+- The conversation carries a tag listed in **Always hand over when tagged**.
+- **Agent's role** is **Triage only**. The agent then titles, tags and hands over every conversation, and never answers.
+- The agent was answering and can no longer continue: its hours ended, the [monthly cap](/ai/providers/#set-the-monthly-cap) was reached or the AI provider failed.
+- A teammate did not approve an [action](/ai/actions/) in time.
+
+## What a handover does
+
+1. The agent tells the customer. The message says a teammate replies later when no teammate is online or the inbox is outside its [office hours](/inbox/office-hours/).
+2. dimmi assigns the conversation to the team in **Hand over to**, unless it already has an assignee. **The inbox's usual routing** assigns no team.
+3. With **Raise priority on handover**, dimmi sets the priority to high. A customer who may be in danger gets high priority with or without the setting.
+4. The agent adds an internal note with a summary for the team, and dimmi notifies teammates.
+5. The agent stops replying in that conversation.
+
+A handover also starts workflows with the **dimmi hands over** [trigger](/workflows/triggers-and-steps/) and sends the `ai.handoff_requested` [webhook event](/developers/webhooks/events/).

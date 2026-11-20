@@ -1,0 +1,34 @@
+---
+title: "Install dimmi with an AI coding agent"
+description: "Give Claude Code, Cursor, Codex or another coding agent the dimmi-install skill so it adds the messenger and identity verification to your app."
+---
+
+The [`dimmi-install` skill](https://github.com/dimmihq/dimmi/tree/main/sdk/skills/dimmi-install) gives a coding agent the steps to install dimmi in your app.
+
+## Add the skill to Claude Code
+
+From your project's root:
+
+```bash
+mkdir -p .claude/skills/dimmi-install
+curl -fsSL https://raw.githubusercontent.com/dimmihq/dimmi/main/sdk/skills/dimmi-install/SKILL.md \
+  -o .claude/skills/dimmi-install/SKILL.md
+```
+
+## Add the rules to Cursor, Codex and other agents
+
+Append the skill's short rules to your `AGENTS.md`:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/dimmihq/dimmi/main/sdk/skills/dimmi-install/AGENTS.snippet.md >> AGENTS.md
+```
+
+## Ask for the install
+
+```text
+Install the dimmi messenger in this app with the dimmi-install skill.
+App ID: <app_id>. Host: https://app.trydimmi.com.
+Verify signed-in users with identity tokens.
+```
+
+`<app_id>` is your messenger's app ID (`wgt_...`) from **Settings → Messengers**. Add the identity secret to your server's environment yourself, never to the agent's chat.

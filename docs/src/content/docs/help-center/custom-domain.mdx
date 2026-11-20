@@ -1,0 +1,43 @@
+---
+title: "Use a custom domain for your help center"
+description: "The DNS records that put your help center on your own domain, how dimmi checks them and when the domain stops working."
+---
+
+Add a subdomain you own, such as `help.acme.example`, under **Custom domain** in **Settings → Help centers**, then create two DNS records.
+
+A bare domain such as `acme.example` cannot be used, because it cannot carry a `CNAME` record.
+
+## DNS records
+
+The **Custom domain** section shows both records with values to copy.
+
+| Record | Name | Value | Why |
+| --- | --- | --- | --- |
+| `CNAME` | `help.acme.example` | `custom.dimmi.help` on dimmi Cloud | Points your domain at dimmi. |
+| `TXT` | `_dimmi.help.acme.example` | `dimmi-verification=<token>` | Proves the domain is yours. |
+
+On a self-hosted server the `CNAME` value is your server's own target. See [help center and custom domains](/self-hosting/domains/).
+
+## Check schedule
+
+dimmi checks a new domain within a minute. While a record is missing, it checks again after 1, 2, 5, 10 and 30 minutes, then every hour.
+
+After 72 hours without both records, the domain is **Failed**. **Check now** starts a new 72-hour window.
+
+## When the domain is live
+
+- **Address:** the help center answers at your domain over HTTPS, with a certificate dimmi issues for it.
+- **Links:** the help center's links and canonical addresses use your domain.
+- **Old address:** the `dimmi.help` address keeps working.
+
+## Losing the records
+
+dimmi checks a **Live** domain once a day.
+
+When a check fails, the domain keeps serving and dimmi follows the check schedule again. After 72 hours without both records, the domain is **Failed** and the help center answers only at its old address.
+
+## Rules
+
+- A help center has one custom domain. Remove it before you add another.
+- A domain serves one help center.
+- After **Remove**, the domain stops answering within 30 seconds.

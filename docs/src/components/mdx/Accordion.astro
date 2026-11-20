@@ -1,0 +1,12 @@
+---
+import type { AccordionVariant } from "@/components/base/accordion/accordion";
+import { DocsAccordion } from "~docs/components/react/interactive";
+import { splitPanels } from "./split";
+
+interface Props {
+  variant?: AccordionVariant;
+}
+const { panels: items, assets } = splitPanels(await Astro.slots.render("default"), "docs-accordion-item");
+---
+<DocsAccordion client:visible items={items} variant={Astro.props.variant} />
+<Fragment set:html={assets} />

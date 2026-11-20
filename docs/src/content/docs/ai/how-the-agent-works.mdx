@@ -1,0 +1,25 @@
+---
+title: "How the dimmi agent works"
+description: "What the dimmi agent does with each customer message: when it replies, what it answers from and when it stays quiet."
+---
+
+The dimmi agent replies to customer messages from your knowledge, and hands the conversation to a teammate when it cannot help.
+
+## What happens to a message
+
+1. A customer sends a message. dimmi waits 1.5 seconds in the messenger and 2.5 seconds in Slack and API conversations, so several quick messages get one reply. Email has no wait.
+2. dimmi checks that the agent may reply: it is on, the channel and hours match its [settings](/ai/set-up-the-agent/), and no teammate has taken the conversation.
+3. The agent searches your help center and [knowledge sources](/ai/knowledge-sources/), follows a [procedure](/ai/procedures/) that fits the request and calls the [actions](/ai/actions/) it needs.
+4. dimmi checks the reply, then sends it. The agent writes in the customer's language.
+5. When the agent cannot answer, or a rule says so, it [hands over](/ai/handover/) and stops replying in that conversation.
+
+## Rules
+
+- **Never answered:** spam, deleted conversations and blocked customers.
+- **Never read:** internal notes. The agent reads the customer's messages, teammates' replies and its own. See [what reaches the model](/ai/customer-data/).
+- **No guessing:** a reply with no source behind it counts as "didn't know". Greetings and small talk need no source.
+- **Links:** dimmi removes any link that is not to your help center, a site in **Links it may share**, a page a source returned or an address the customer gave.
+- **Images and HTML:** dimmi removes them from replies.
+- **Length:** a reply holds at most 6,000 characters.
+- **Triage:** while it answers, the agent also titles and tags the conversation.
+- **Cost:** each reply adds to the month's spend, which the [monthly cap](/ai/providers/#set-the-monthly-cap) limits.

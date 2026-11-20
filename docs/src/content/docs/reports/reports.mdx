@@ -1,0 +1,130 @@
+---
+title: "What each report measures"
+description: "Every report in dimmi, what each metric means and how it is calculated."
+---
+
+**Reports** in the sidebar holds nine reports. Every number comes from the same per-conversation facts, which dimmi works out again within seconds of each change.
+
+## Rules for every report
+
+| Rule | Detail |
+| --- | --- |
+| Access | Reports show to members with `conversations:read`. A teammate who can see only some conversations gets numbers for only those. |
+| Range | Whole days in the workspace's time zone. The default is the last 30 days and the longest range is 400 days. |
+| **Compare** | Adds the period of the same length that ended where the range starts. |
+| **Office hours** | Counts durations only while the inbox's [office hours](/inbox/office-hours/) were open. |
+| Filters | **Inbox**, **Team**, **Teammate**, **Channel**, **Tag**, **Priority** and **AI**. |
+| Durations | The headline is the median, with the 90th percentile and the mean beside it. |
+| Dates | A number counts on the day it ends: a new conversation on its start, a close on the last close, a first response on the reply, a rating on the day it was given. |
+| Left out | Spam, test, deleted and merged-away conversations. |
+| Drill-down | Select a number to list the conversations behind it, up to 10,000. |
+
+## Shared definitions
+
+| Term | Definition |
+| --- | --- |
+| Start | The first customer message, or the creation time when the customer never wrote. |
+| First response | From the first customer message to the first public reply by a teammate. dimmi agent answers, automatic messages and notes do not count. |
+| First answer | As first response, but a dimmi agent answer counts. |
+| Reply time | From the first customer message nobody answered to the next teammate reply, for each customer turn. |
+| Resolution time | From the start to the last close. A reopened conversation counts again only when it closes again. |
+| First contact resolution | Closed conversations that never reopened and had at most one teammate reply, as a share of closed conversations. |
+| CSAT | [Ratings](/reports/conversation-ratings/) of 4 or 5, as a share of all ratings. |
+
+## Overview
+
+| Metric | Calculation |
+| --- | --- |
+| **New conversations** | Conversations started in the range. |
+| **Closed** | Conversations whose last close is in the range. |
+| **First response**, **Resolution time**, **CSAT**, **First contact resolution** | As defined above. |
+| **Busiest hours** | New conversations by weekday and hour. |
+| **Backlog at the end of each day** | Conversations open, unassigned and waiting over a week, counted when each day ends in the workspace's time zone. |
+
+## Responsiveness
+
+| Metric | Calculation |
+| --- | --- |
+| **First response**, **First answer, AI included**, **Reply time** | As defined above, each day and by channel, inbox, team and priority. |
+| **First responses within an hour** | First responses of 3,600 seconds or less, as a share of all first responses. |
+
+## Resolution
+
+| Metric | Calculation |
+| --- | --- |
+| **Time to first close** | From the start to the first close. |
+| **Reopen rate** | Closed conversations that had reopened, as a share of closed conversations. |
+| **Closed**, **Resolution time**, **First contact resolution** | As defined above. |
+
+## Team and teammates
+
+| Metric | Calculation |
+| --- | --- |
+| **Teammates who replied** | Teammates with at least one public reply in the range. |
+| **Conversations replied to**, **Replies** | Conversations a teammate replied in, and their replies. |
+| **Closed by a teammate** | Closes credited to the teammate who held the conversation when it closed. |
+| **Time held open** | How long a teammate held open conversations assigned to them. |
+| **CSAT**, **Ratings** | Ratings credited to the teammate the customer rated. |
+| **Open now** | Conversations assigned to the teammate that are not closed, whatever the range. |
+
+## Live workload
+
+This report ignores the range and refreshes every 30 seconds.
+
+| Metric | Calculation |
+| --- | --- |
+| **Open**, **Snoozed** | Conversations in each status now. |
+| **Unassigned** | Open conversations with no teammate assigned. |
+| **Waiting for a first response** | Open conversations without a first response. |
+| **Oldest open**, **Median open age** | Time since open conversations started. |
+
+## Satisfaction
+
+| Metric | Calculation |
+| --- | --- |
+| **CSAT** | As defined above. |
+| **Average rating** | The mean score, from 1 to 5. |
+| **Ratings of 1 or 2** | A count. |
+| CSAT by teammate | Each rating goes to the teammate it rated, or to dimmi when no teammate replied. |
+
+## dimmi agent
+
+This report follows the conversations started in the range.
+
+| Metric | Calculation |
+| --- | --- |
+| **AI involvement** | Conversations the dimmi agent answered in, as a share of conversations started. |
+| **AI resolution rate** | Resolutions as a share of conversations the agent answered in. A resolution has no teammate reply and no handover, and the customer confirmed it, the conversation closed, or the customer stayed quiet for 24 hours after the last answer. |
+| **Confirmed resolutions** | The customer said an answer helped, or rated 4 or 5. |
+| **Assumed resolutions** | Resolutions that are not confirmed. |
+| **Handover rate** | Conversations the agent [handed over](/ai/handover/), as a share of those it answered in. |
+| **Cost per resolution** | The AI cost of the conversations started in the range, divided by resolutions. |
+| **AI spend** | All AI cost in the range. |
+| **Questions the AI could not answer** | The 15 most asked. |
+
+## Help center
+
+This report needs `articles:read`. The conversation filters do not apply to it.
+
+| Metric | Calculation |
+| --- | --- |
+| **Article views** | Times an article was opened, on the web and in the messenger. dimmi keeps daily counts only, with no reader or session. |
+| **Searches**, **Searches with no result** | Reader searches, and the share that found nothing. |
+| **Most read articles** | Views, with the share of readers who said the article helped. |
+
+## Tickets and SLAs
+
+This report needs `tickets:read`.
+
+| Metric | Calculation |
+| --- | --- |
+| **Tickets created**, **Tickets resolved** | Counted in the range. **Open tickets** counts now. |
+| **Service levels kept** | [SLA](/tickets/sla-policies/) targets met, as a share of targets met or breached. A target counts on the day its clock ended. |
+| **Time in state** | For tickets created in the range, the time in each state, with repeat visits added up. Time spent resolved is left out. |
+| **Tracker impact** | [Trackers](/tickets/trackers/) ranked by the monthly revenue of the companies they reach, then by conversations. |
+
+## Export and email
+
+- **CSV** on a chart downloads that chart's data.
+- **Export facts CSV** builds one row per conversation started in the range, with the same filters. Download it from **Settings → Exports**. Times are UTC and durations are seconds.
+- **Email digest** mails you the **Overview**: **Daily** for the day before, or **Weekly** on Monday for the week before, at 8:00 in your time zone.

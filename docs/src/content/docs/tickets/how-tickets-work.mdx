@@ -1,0 +1,46 @@
+---
+title: "How tickets work"
+description: "The three kinds of ticket in dimmi (customer, back-office and tracker), their states, and how they connect to conversations."
+---
+
+A ticket is tracked work with a type, fields and a state. A new workspace has four [types](/tickets/ticket-types/): Question, Bug report, Back-office task and Tracker.
+
+## Kinds
+
+| Kind | What it is |
+| --- | --- |
+| Customer ticket | The customer's own request, tied to one conversation. The customer sees its state and can reply. |
+| Back-office ticket | Internal work for another team, linked to a customer ticket. |
+| Tracker | One problem many customers report. See [Trackers](/tickets/trackers/). |
+
+## States
+
+Each state belongs to one of five groups. A state has a name your team sees and a label the customer sees.
+
+| Group | Meaning |
+| --- | --- |
+| **Submitted** | A new request nobody has started. |
+| **In progress** | Someone is working on it. |
+| **Waiting on customer** | The ticket waits for the customer's answer. |
+| **Waiting on team** | Another team or a [linked issue](/tickets/linked-issues/) holds it. |
+| **Resolved** | Done. |
+
+When a ticket enters a state with **Notify** on, dimmi waits 2 minutes, then tells the customer the state the ticket is in by then, unless a teammate replied meanwhile.
+
+## Where customer tickets come from
+
+- A teammate chooses **Convert to ticket** on a conversation.
+- An inbox turns every new conversation into a ticket: see [inbox settings](/inbox/inboxes-and-assignment/).
+- A customer opens one from the messenger or the help center, for types shown to customers.
+
+## A ticket and its conversation move together
+
+- Closing the conversation resolves the ticket. Fields required to resolve must be filled first.
+- Reopening the conversation moves the ticket back to **In progress**.
+- A customer's reply moves a ticket in **Waiting on customer** back to **In progress**.
+- A customer's reply to a resolved ticket reopens it within the type's **Reopen window**, 7 days by default. After that, the conversation moves to a new follow-up ticket linked to the old one.
+- With **Auto-resolve** on, a ticket left in **Waiting on customer** for the type's number of days resolves. dimmi tells the customer one day before.
+
+## Escalating to another team
+
+**Escalate** opens a back-office ticket and moves the customer ticket to its first **Waiting on team** state. When the back-office ticket resolves, the customer ticket moves to **Close the loop**, so a teammate tells the customer.

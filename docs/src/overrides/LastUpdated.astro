@@ -1,0 +1,11 @@
+---
+import { LastUpdated } from "~docs/components/react/page-parts";
+
+const { lang, lastUpdated } = Astro.locals.starlightRoute;
+---
+{lastUpdated && (
+  <LastUpdated
+    iso={lastUpdated.toISOString()}
+    date={lastUpdated.toLocaleDateString(lang, { dateStyle: "medium", timeZone: "UTC" })}
+  />
+)}

@@ -1,0 +1,36 @@
+---
+import LanguageSelect from "virtual:starlight/components/LanguageSelect";
+import Search from "virtual:starlight/components/Search";
+import SiteTitle from "virtual:starlight/components/SiteTitle";
+import SocialIcons from "virtual:starlight/components/SocialIcons";
+import ThemeSelect from "virtual:starlight/components/ThemeSelect";
+
+import { MobileBar, OpenApp, SectionTabs } from "~docs/components/react/header";
+import { groupLabelFor } from "~docs/sidebar-model";
+
+// Wide screens show the tabs; small ones a bar that opens the drawer,
+// which carries the tabs instead.
+const { hasSidebar, entry, sidebar } = Astro.locals.starlightRoute;
+const path = Astro.url.pathname;
+const group = groupLabelFor(path, JSON.parse(JSON.stringify(sidebar)));
+---
+<div class="border-b border-separator-border bg-background-full/85 backdrop-blur-md">
+  <div class="mx-auto flex h-16 w-full max-w-[90rem] items-center gap-3 px-4 sm:px-6">
+    <SiteTitle />
+    <div class="ms-auto w-full max-w-72 md:ms-8"><Search /></div>
+    <div class="ms-auto hidden items-center gap-2 md:flex">
+      <SocialIcons />
+      <ThemeSelect />
+      <LanguageSelect />
+      <OpenApp />
+    </div>
+  </div>
+  <div class="mx-auto w-full max-w-[90rem] px-2 sm:px-4">
+    <SectionTabs path={path} />
+  </div>
+  {hasSidebar && (
+    <div class="border-t border-separator-border lg:hidden">
+      <MobileBar group={group} title={entry.data.title} />
+    </div>
+  )}
+</div>

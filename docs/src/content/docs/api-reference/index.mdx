@@ -1,0 +1,48 @@
+---
+title: API reference
+description: Read and change everything in your workspace over HTTPS. Every endpoint, generated from the API contract.
+---
+import { Callout, Card, CardGrid, Endpoint, Param } from "~docs/components/mdx";
+
+The API lives at `https://app.trydimmi.com/api/v1`. It takes and returns JSON, and every page here is generated from the same contract the SDKs are built from.
+
+<Endpoint method="GET" path="/api/v1/conversations" />
+
+## Authentication
+
+Send an API token in the `Authorization` header. Create tokens in **Settings → API tokens**; each one carries the abilities you give it, and every endpoint lists the ability it needs.
+
+```bash
+curl https://app.trydimmi.com/api/v1/me \
+  --header "Authorization: Bearer $DIMMI_TOKEN"
+```
+
+## Pagination
+
+List endpoints return a page of `data` and a `meta` block. Pass the cursor back to read the next page.
+
+<Param name="cursor" type="string">Where the next page starts, from `meta.next_cursor`.</Param>
+<Param name="per_page" type="integer" default="25">How many items to return, up to 100.</Param>
+
+## Errors
+
+Failed requests answer with a 4xx or 5xx status and a body that says what went wrong.
+
+```json
+{
+  "message": "The body field is required.",
+  "code": "validation_failed",
+  "errors": { "body": ["The body field is required."] }
+}
+```
+
+<Callout type="tip">Writes accept an `Idempotency-Key` header. Send the same key again and you get the first response back instead of a second write.</Callout>
+
+## Browse the API
+
+<CardGrid>
+  <Card title="Conversations" icon="chat-3" href="/api-reference/conversations/list-conversations/">Conversations, messages, replies, views and tags.</Card>
+  <Card title="Contacts and companies" icon="contacts-book" href="/api-reference/contacts-and-companies/list-contacts/">People, companies, attributes and audiences.</Card>
+  <Card title="AI agent" icon="sparkling-2" href="/api-reference/ai-agent/get-ai-agent/">The agent, its actions, knowledge and procedures.</Card>
+  <Card title="Webhooks" icon="webhook" href="/api-reference/webhooks/list-webhook-endpoints/">Endpoints, deliveries and event types.</Card>
+</CardGrid>

@@ -1,0 +1,47 @@
+---
+title: "How workflows work"
+description: "Which workflows start on a conversation, what stops a run, and how versions and the run history behave."
+---
+
+A workflow runs its [steps](/workflows/triggers-and-steps/) on one conversation each time its trigger fires.
+
+## Which workflows start
+
+When a trigger fires, dimmi offers the conversation to each live workflow with that trigger, from the top of the **Workflows** list down.
+
+- **Filters:** a workflow starts only when its **Audience**, **Channels**, **When it runs** and **Once per conversation** settings all pass.
+- **Customer-facing workflows:** a workflow with a **Start of conversation** trigger, a **Messages** step or **Let dimmi handle** holds the conversation while it runs. Only the first one that passes starts.
+- **Background workflows:** every other workflow that passes starts. They run one after another, in list order.
+- **Loops:** a workflow never starts from its own changes, and a chain of workflows that trigger each other stops at 3.
+
+When a customer-facing run ends on an open conversation that nobody is assigned to, the inbox's [assignment rules](/inbox/how-assignment-works/) take over.
+
+## What stops a run
+
+- A teammate's reply to the customer ends every customer-facing run on the conversation at once.
+- Closing the conversation, marking it as spam or deleting it ends every run.
+- A run fails after 200 steps.
+- Workflows send a conversation at most 20 messages an hour. A run skips the messages over the limit and continues.
+- When a conversation's runs reach 300 steps in an hour, no new run starts on it.
+
+## Versions
+
+Changes save to a draft as you make them. The live workflow keeps its published version until you press **Publish changes**, and a run finishes on the version it started with.
+
+**Pause** and **Archive** stop a workflow from starting new runs. An archived workflow leaves the list, and only the API brings it back.
+
+## Reusable workflows
+
+A workflow with the **Run from other workflows** trigger starts only from a **Run a workflow** step. The calling workflow waits for it, and the two share saved values. Calls nest 5 deep.
+
+## Run history
+
+**Runs** in the builder lists the workflow's 20 latest runs. Open a run to see what each step did.
+
+| Status | Meaning |
+| --- | --- |
+| **Waiting** | A step waits for an answer, a timer, the dimmi agent or another workflow. |
+| **Completed** | The run reached the end of its path. |
+| **Passed over** | A customer-facing run ended without sending or changing anything. |
+| **Exited** | The run ended early: a teammate replied, the conversation closed or the customer picked no button. |
+| **Failed** | The run hit the 200-step limit or an error. |

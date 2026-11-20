@@ -1,0 +1,41 @@
+---
+title: "Add knowledge sources"
+description: "The sources the dimmi agent can learn from, their limits and sync schedules, and how to exclude documents or turn them into articles."
+---
+
+Admins add sources in **Settings → Knowledge**. The dimmi agent already reads your help center; a source adds content that lives elsewhere.
+
+Connect GitHub, Notion, Intercom or Zendesk in **Settings → Integrations** first. A workspace connects one account of each, and its sources read through it.
+
+## Source types
+
+| Source | What dimmi reads | Sync, default first |
+| --- | --- | --- |
+| **Website** | Pages linked from a start address or listed in a sitemap. 500 pages by default, 5,000 at most. | **Every week**, **Every day**, **Only when I sync** |
+| **Markdown files** | A zip of Markdown files, or one file. Up to 50 MB, 2,000 files and 2 MB per file. | Upload again to replace the files. |
+| **GitHub** | Markdown files on one branch of a repository. | **Every day**, **Every hour**, **Every week**, **Only when I sync** |
+| **Notion** | The pages you share with dimmi and tick. | **Every day**, **Every week**, **Only when I sync** |
+| **Intercom** | Help center articles, with translations. | **Only when I sync**, **Every day**, **Every week** |
+| **Zendesk** | Help center articles, with translations. | **Only when I sync**, **Every day**, **Every week** |
+
+- A source holds up to 5,000 documents. dimmi reads the first 512 KB of a document.
+- The website crawler obeys `robots.txt` and asks each host for at most one page a second.
+
+## What a source becomes
+
+- **A synced copy:** dimmi keeps a read-only copy up to date. **Agent** lets the dimmi agent answer from it, and **Operator** lets [Operator](/operator/work-with-operator/) use it.
+- **Help center articles:** dimmi imports the documents once as articles you can edit. Folders become collections, pictures are copied and the old addresses redirect to the new articles. A website cannot be imported.
+
+**Turn into articles** on a synced source does the same import later. Importing again updates the same articles.
+
+## Syncs
+
+- A source runs one sync at a time. A sync reads only documents that changed and removes documents that are gone from the source.
+- dimmi closes a sync that makes no progress for 30 minutes as failed.
+- **Sync history** keeps the last 50 runs.
+
+## Documents dimmi leaves out
+
+The **Excluded** filter on a source lists each document with its reason: blocked by `robots.txt`, needs JavaScript, no text, a duplicate of another address or a draft at the source.
+
+To leave a document out yourself, exclude it in the list. It stays out through every later sync until you include it again.

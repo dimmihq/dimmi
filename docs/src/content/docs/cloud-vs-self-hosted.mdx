@@ -1,0 +1,21 @@
+---
+title: "dimmi Cloud and self-hosted compared"
+description: "The main differences between dimmi Cloud and a self-hosted server: who runs it, sign-up, email domains, limits, branding and cost."
+---
+
+dimmi Cloud and a self-hosted server run the same MIT-licensed code with the same features. They differ in these defaults.
+
+|                     | dimmi Cloud                                                         | Self-hosted                                                              |
+| ------------------- | ------------------------------------------------------------------- | ------------------------------------------------------------------------ |
+| Who runs it         | dimmi, at `app.trydimmi.com`                                        | You, on [one Linux server](/self-hosting/install/)                       |
+| Sign-up             | Open to anyone                                                      | By invitation                                                            |
+| Forwarded email     | Addresses on `inbound.trydimmi.com`                                 | Your own inbound domain; none until you set one                          |
+| Help center address | A subdomain of `dimmi.help`                                         | `/hc/<subdomain>` on your dimmi address, or a base domain you set        |
+| Invitations         | 100 per workspace a day                                             | No limit                                                                 |
+| Audit log           | Kept 365 days                                                       | Kept forever                                                             |
+| Messengers          | 10 per workspace                                                    | 10 per workspace until you change it                                     |
+| Email sending       | Paused at a 5% bounce rate or a 0.1% complaint rate                 | No pause                                                                 |
+| Branding            | Powered by dimmi badge until the workspace has paid an invoice      | No badge unless a messenger turns it on                                  |
+| Cost | Usage-based billing | Free |
+
+On a self-hosted server you also supply the credentials for outside services: [email](/self-hosting/email/), [AI providers](/self-hosting/ai-providers/) and [integrations](/self-hosting/integrations/) such as Slack.

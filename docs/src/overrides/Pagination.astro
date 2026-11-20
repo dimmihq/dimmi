@@ -1,0 +1,9 @@
+---
+import { Pagination } from "~docs/components/react/page-parts";
+import { paginationFor } from "~docs/sidebar-model";
+
+// Previous and next stay inside the current tab.
+const { sidebar } = Astro.locals.starlightRoute;
+const { prev, next } = paginationFor(Astro.url.pathname, JSON.parse(JSON.stringify(sidebar)));
+---
+<Pagination prev={prev} next={next} />

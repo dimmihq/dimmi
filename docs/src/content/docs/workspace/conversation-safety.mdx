@@ -1,0 +1,50 @@
+---
+title: "Protect conversations"
+description: "How redaction rules, link warnings and retention periods work in dimmi, with their defaults and limits."
+---
+
+**Settings → Conversation safety** holds three protections: redaction of sensitive text, warnings on links customers send, and retention periods.
+
+## Redaction
+
+dimmi replaces matching text before it stores a message, a note or a subject. Nothing keeps the original.
+
+- **Scope:** a rule acts on text that arrives after you save it. Stored messages never change, and attachments and images are not scanned.
+- **Card numbers:** on by default. dimmi masks payment card numbers and keeps the last four digits.
+- **US social security numbers:** off by default, because order and ticket numbers often share their shape.
+- **Your rules:** up to 10, applied after the built-in rules, top to bottom.
+
+| Field | Rule |
+| --- | --- |
+| **Pattern** | A regular expression in Go syntax (RE2), up to 256 characters. |
+| **Replace with** | Up to 80 characters. The default is `[redacted]`. |
+
+**Try your rules** shows what dimmi would store for text you paste, and stores nothing.
+
+## Link safety
+
+The checks run in your teammate's browser when a message shows, so a change applies to every message at once.
+
+- **Warn about suspicious links:** on by default. dimmi asks before opening a link whose text names another site, or that uses look-alike letters, a link shortener or a bare IP address.
+- **Hide links in email:** off by default. Links in incoming email show as plain text, and teammates with `email:read_raw` can show them.
+- **Allowed domains:** links to these domains, and the sites under them, open without a warning.
+- **Blocked domains:** links to these domains cannot be opened from a conversation.
+
+Each list holds up to 500 domains.
+
+## Retention
+
+| Period | Default | Range | What happens |
+| --- | --- | --- | --- |
+| **Closed conversations** | Kept | 30 to 3,650 days | After that many days closed with nothing new, the conversation moves to the trash. |
+| **Trash** | 30 days | 7 to 365 | dimmi empties the trash. |
+| **Spam** | 30 days | 7 to 365 | dimmi deletes spam. |
+| **Original emails** | 30 days | 0 to 365 | dimmi deletes the raw email. The message stays. |
+| **Data exports** | 7 days | 1 to 30 | The export can no longer be downloaded. |
+
+- **Daily run:** dimmi applies the **Closed conversations** period once a day.
+- **One-day wait:** a period you set or change waits until the next day's run, so nothing is removed on the day you choose it.
+- **Preview:** the first time you set the period, dimmi shows how many closed conversations are already past it.
+- **Trash first:** a conversation past the period goes to the trash, where the **Trash** period then applies. After the trash empties, the conversation is gone for good.
+
+To remove one customer's data, see [erase data](/customers/erase-data/).

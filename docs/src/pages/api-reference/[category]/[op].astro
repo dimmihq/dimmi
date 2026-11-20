@@ -1,0 +1,92 @@
+---
+/*
+ * One page per API operation, generated from the contract: the endpoint,
+ * its authorization, parameters, body and responses on the left, and
+ * code samples with example responses beside them.
+ */
+import StarlightPage from "@astrojs/starlight/components/StarlightPage.astro";
+
+import {
+  BASE_URL,
+  type Operation,
+  example,
+  fieldsOf,
+  operations,
+  parameterFields,
+  requestSchema,
+  responsesOf,
+  samples,
+} from "~docs/api/spec";
+import CodeTabs from "~docs/components/CodeTabs.astro";
+import { ApiFields, ApiSection, EndpointBar } from "~docs/components/react/api";
+
+export function getStaticPaths() {
+  return operations.map((op) => {
+    const [, , category, slug] = op.href.split("/");
+    return { params: { category, op: slug }, props: { op } };
+  });
+}
+
+const { op } = Astro.props as { op: Operation };
+const params = [
+  { title: "Path parameters", fields: parameterFields(op, "path") },
+  { title: "Query parameters", fields: parameterFields(op, "query") },
+  { title: "Headers", fields: parameterFields(op, "header") },
+].filter((group) => group.fields.length);
+const body = requestSchema(op);
+const responses = responsesOf(op);
+const examples = responses.filter((response) => response.schema);
+const auth = [
+  {
+    name: "Authorization",
+    type: "string",
+    required: true,
+    description: "An API token, sent as Bearer <token>.",
+    notes: op.abilities.length ? [`Needs the ${op.abilities.join(", ")} ability`] : [],
+    children: [],
+  },
+];
+---
+<StarlightPage
+  frontmatter={{
+    title: op.title,
+    tableOfContents: false,
+    editUrl: false,
+    lastUpdated: false,
+  }}
+>
+  <div class="not-prose grid gap-10 xl:grid-cols-[minmax(0,1fr)_minmax(0,25rem)]">
+    <div class="flex min-w-0 flex-col gap-10">
+      <EndpointBar method={op.method} path={op.path} base={new URL(BASE_URL).pathname} />
+      <ApiSection title="Authorization"><ApiFields fields={auth} /></ApiSection>
+      {params.map((group) => (
+        <ApiSection title={group.title}><ApiFields fields={group.fields} /></ApiSection>
+      ))}
+      {body && (
+        <ApiSection title="Body" meta="application/json"><ApiFields fields={fieldsOf(body)} /></ApiSection>
+      )}
+      {responses.map((response) => (
+        <ApiSection title={`Response ${response.status === "default" ? "error" : response.status}`} meta={response.label}>
+          {response.schema ? (
+            <ApiFields fields={fieldsOf(response.schema)} />
+          ) : (
+            <p class="py-4 text-body-regular text-text-secondary">No body.</p>
+          )}
+        </ApiSection>
+      ))}
+    </div>
+    <aside class="flex min-w-0 flex-col gap-6 xl:sticky xl:top-[calc(var(--docs-header)+2.5rem)] xl:max-h-[calc(100dvh-var(--docs-header)-5rem)] xl:self-start xl:overflow-y-auto xl:[scrollbar-width:thin]">
+      <CodeTabs label="Request example" group="language" items={samples(op)} />
+      {examples.length > 0 && (
+        <CodeTabs
+          label="Response example"
+          items={examples.map((response) => ({
+            label: response.status === "default" ? "Error" : response.status,
+            lang: "json",
+            code: JSON.stringify(example(response.schema), null, 2),
+          }))}
+        />
+      )}
+    </aside>
+  </div>
+</StarlightPage>

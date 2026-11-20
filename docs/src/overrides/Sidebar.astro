@@ -1,0 +1,12 @@
+---
+import MobileMenuFooter from "virtual:starlight/components/MobileMenuFooter";
+
+import { DocsSidebar } from "~docs/components/react/sidebar";
+import { sidebarFor } from "~docs/sidebar-model";
+
+// Only the current tab's groups; see src/sidebar-model.ts.
+const { sidebar } = Astro.locals.starlightRoute;
+const entries = sidebarFor(Astro.url.pathname, JSON.parse(JSON.stringify(sidebar)));
+---
+<DocsSidebar entries={entries} />
+<div class="mt-8 border-t border-separator-border pt-6 lg:hidden"><MobileMenuFooter /></div>

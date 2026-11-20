@@ -1,0 +1,96 @@
+---
+title: "Go SDK"
+description: "Install the dimmi Go SDK and call the REST API, page through lists and verify webhooks."
+---
+
+The Go SDK needs Go 1.22 or later.
+
+```bash
+go get github.com/dimmihq/dimmi-go
+```
+
+## Create a client and call an endpoint
+
+```go title="main.go"
+package main
+
+import (
+	"context"
+	"errors"
+	"fmt"
+	"log"
+	"net/url"
+	"os"
+
+	dimmi "github.com/dimmihq/dimmi-go"
+	"github.com/dimmihq/dimmi-go/api"
+)
+
+func main() {
+	ctx := context.Background()
+
+	client, err := dimmi.New(dimmi.WithToken(os.Getenv("DIMMI_TOKEN")))
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	res, err := client.API.ConversationsIndexWithResponse(ctx, nil)
+	if err != nil {
+		var apiErr *dimmi.Error
+		if errors.As(err, &apiErr) {
+			log.Fatal(apiErr.Status, " ", apiErr.Code, " ", apiErr.Fields)
+		}
+		log.Fatal(err)
+	}
+	for _, conversation := range *res.JSON200.Data {
+		fmt.Println(conversation.Id, conversation.Status)
+	}
+
+	open := dimmi.List[api.Conversation](client, "/conversations", url.Values{"filter[status]": {"open"}})
+	for open.Next(ctx) {
+		fmt.Println(open.Item().Id)
+	}
+	if err := open.Err(); err != nil {
+		log.Fatal(err)
+	}
+}
+```
+
+`DIMMI_TOKEN` holds your [API token](/developers/api/authentication/). `dimmi.New()` reads it without `WithToken` too.
+
+## Calls
+
+- **Generated methods.** `client.API` has one method per operation, named after its operation id: `conversations.index` is `ConversationsIndexWithResponse`.
+- **Any path.** `client.Do(ctx, method, path, query, body, &out)` sends a request to a path under `/api/v1` and decodes the JSON response into `out`.
+- **Lists.** `dimmi.List[T]` follows `meta.next_cursor`. `dimmi.Pages[T]` walks lists that page with `page`. Both return an iterator with `Next`, `Item`, `Err` and `All`.
+
+## Errors
+
+An error response comes back as `*dimmi.Error` with `Status`, `Code`, `Message`, `Fields` and `RetryAfter`. `errors.Is` matches these kinds by status:
+
+| Kind | Status |
+| --- | --- |
+| `dimmi.ErrBadRequest` | 400 |
+| `dimmi.ErrUnauthorized` | 401 |
+| `dimmi.ErrForbidden` | 403 |
+| `dimmi.ErrNotFound` | 404 |
+| `dimmi.ErrConflict` | 409 |
+| `dimmi.ErrValidation` | 422 |
+| `dimmi.ErrRateLimited` | 429 |
+| `dimmi.ErrServer` | 500 and above |
+
+## Client options
+
+| Option | Default | Effect |
+| --- | --- | --- |
+| `WithToken` | `DIMMI_TOKEN`, then `DIMMI_API_TOKEN` | The API token. |
+| `WithBaseURL` | `DIMMI_BASE_URL`, then `https://app.trydimmi.com` | Your dimmi address on a self-hosted install. |
+| `WithMaxRetries` | `3` | Retries after a `429`, a `503` or a dropped connection. |
+| `WithMaxRetryWait` | 60 seconds | Longest `Retry-After` the client waits for. A longer one returns the error. |
+| `WithTimeout` | 30 seconds | Timeout of one request, retries included. |
+
+The client sends an [`Idempotency-Key`](/developers/api/idempotency/) with each `POST` and reuses it on retries. To set your own, pass `dimmi.IdempotencyKey(key)` as the last argument of a generated method.
+
+## Webhooks and identity tokens
+
+`dimmi.NewWebhook(secret)` checks webhook signatures: see [Verify webhook signatures](/developers/webhooks/verify-signatures/). `dimmi.SignIdentityToken` signs tokens for [identity verification](/developers/messenger/identity-verification/).

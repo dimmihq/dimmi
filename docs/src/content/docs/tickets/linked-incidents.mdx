@@ -1,0 +1,44 @@
+---
+title: "Link incident.io, Rootly and PagerDuty incidents"
+description: "Link tickets to incidents in incident.io, Rootly or PagerDuty, so the incident's status moves the ticket."
+---
+
+Connect incident.io, Rootly or PagerDuty with an API key in **Settings → Integrations**. Incidents then link to tickets and sync the way [linked issues](/tickets/linked-issues/) do.
+
+## Receive changes from the tool
+
+On the integration's page, **Deliveries** shows a **Webhook address**. Add a webhook endpoint in the tool with that address, then paste the endpoint's secret into **Signing secret**. Subscribe it to these events:
+
+| Tool | Events |
+| --- | --- |
+| incident.io | `public_incident.incident_created_v2`, `public_incident.incident_updated_v2`, `public_incident.incident_status_updated_v2` |
+| Rootly | The `incident.*` events and `incident_event.created` |
+
+dimmi refuses deliveries until the secret is set. It still reads every open link again every 15 minutes.
+
+## Link or declare an incident
+
+**Link issue** on a ticket either links an existing incident or declares a new one with the severity you pick. Rootly incidents also take a service. Declaring in PagerDuty needs a service and pages whoever is on call for it.
+
+An incident someone declares in the tool opens nothing in dimmi. It reaches only the tickets a teammate links to it.
+
+## What dimmi writes on the incident
+
+A declared incident's summary lists the customer impact and links back to the ticket. dimmi keeps the impact current on linked incidents:
+
+- **incident.io:** the number of customers reached, in the number custom field picked under **Customer count field**.
+- **Rootly:** labels starting with `dimmi_`: customers, companies, conversations, revenue and the ticket's address. dimmi leaves other labels alone.
+
+Unlinking leaves them unless you tick **Also remove what dimmi wrote**. When another ticket still links the same incident, dimmi keeps that ticket's impact on it.
+
+Updates shared with an incident.io status change, and notes posted on a Rootly incident's timeline, arrive as internal notes on the ticket.
+
+## Which status moves a ticket where
+
+These apply until you map a status under **Statuses** on the integration's page.
+
+| Ticket moves to | incident.io status category | Rootly status | PagerDuty status |
+| --- | --- | --- | --- |
+| **Being worked on** | live, paused | Started, Mitigated | acknowledged |
+| **Close the loop** | learning, closed | Resolved, Closed | resolved |
+| **Won't fix** | declined, merged, canceled | Cancelled | None |

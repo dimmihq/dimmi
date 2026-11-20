@@ -1,0 +1,42 @@
+---
+title: "How automatic assignment works"
+description: "How dimmi picks a teammate for a conversation: eligibility, capacity, availability and what happens when nobody is free."
+---
+
+In an inbox set to **Round robin** or **Balanced**, dimmi gives each conversation nobody holds to one eligible teammate, or makes it wait until one frees up. Set the mode in [the inbox's settings](/inbox/inboxes-and-assignment/).
+
+## When dimmi assigns
+
+dimmi looks for a teammate when a conversation without an assignee:
+
+- is started by a customer
+- reopens
+- moves to another team
+- leaves a teammate who is **Away and reassigning**
+
+dimmi skips a conversation that is closed, snoozed, spam or deleted, that the dimmi agent or a workflow still handles, or whose customer is blocked.
+
+## Who is eligible
+
+The pool is the conversation's team. Without one it is the inbox's **Default team**, and without that every active teammate.
+
+A teammate in the pool is eligible when they are:
+
+- **Active**, or away while the inbox has **Include away teammates** on
+- under their capacity: their own limit when they have one, the inbox's **Capacity** otherwise
+- under the limit for the conversation's channel, when one is set
+
+Capacity counts open conversations. Snoozed, closed, spam and deleted conversations do not count.
+
+## Who dimmi picks
+
+- **Round robin:** the next eligible teammate after the last one picked, in a fixed order.
+- **Balanced:** the eligible teammate with the fewest open conversations. On a tie, the one whose last automatic assignment is oldest.
+
+## When nobody is eligible
+
+1. dimmi tries the inbox's **Overflow team** once, by the same rules.
+2. If nobody there can take it, the conversation keeps its team and waits. Its timeline says why.
+3. dimmi tries again when a teammate closes, snoozes, deletes or hands off a conversation, or changes availability, and every minute.
+
+Waiting conversations go out in the inbox's **Queue order**. A teammate can still take or assign a waiting conversation by hand.

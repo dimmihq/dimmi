@@ -1,0 +1,40 @@
+---
+title: "Write procedures"
+description: "Write the steps the dimmi agent follows for one kind of request, and know what publishing and turning off change."
+---
+
+A procedure tells the dimmi agent how your team handles one kind of request. Admins write them under **Procedures** in the sidebar.
+
+## How the agent uses a procedure
+
+The agent sees the name and **When dimmi uses this** of every published procedure. When a customer's request matches one, it reads the steps and follows them in order.
+
+Write **When dimmi uses this** as the request it covers, such as "The customer wants to change the email on their account". The agent matches a request against this text and the name.
+
+## Steps
+
+| Kind | Use it for |
+| --- | --- |
+| **Instruction** | What the agent says or does. |
+| **Condition** | A check the agent makes before it goes on: "If the order shipped, then …". |
+| **Action** | A call to one of your published [actions](/ai/actions/). |
+
+**Hand over to the team when** lists the cases where the agent stops and [hands over](/ai/handover/).
+
+## Limits
+
+- 1 to 30 steps, each up to 1,000 characters.
+- **When dimmi uses this:** up to 500 characters.
+- Up to 10 handover lines, each up to 300 characters.
+- Names are unique and up to 80 characters.
+
+## Publish and turn off
+
+- A new procedure is a draft the agent never reads. **Publish** makes it live.
+- Edits to a live procedure are saved and stay unpublished until **Publish changes**. The agent keeps following the last published copy.
+- dimmi refuses to publish a procedure with an action step whose action is missing or unpublished.
+- When a step's action is not available in a conversation, the agent hands over instead.
+- **Turn off** stops the agent from following the procedure at once and keeps your text.
+- With **Agent's role** set to **Triage only**, the agent follows no procedures.
+
+The list shows how many conversations each procedure was followed in over the last 30 days.

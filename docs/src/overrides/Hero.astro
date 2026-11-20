@@ -1,0 +1,8 @@
+---
+import { withBase } from "~docs/base";
+import { Hero } from "~docs/components/react/page-parts";
+
+const { data } = Astro.locals.starlightRoute.entry;
+const { title = data.title, tagline, actions = [] } = data.hero ?? {};
+---
+<Hero title={title} tagline={tagline} actions={actions.map(({ text, link, variant }) => ({ text, link: withBase(link), variant }))} />

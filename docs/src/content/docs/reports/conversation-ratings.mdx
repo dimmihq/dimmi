@@ -1,0 +1,31 @@
+---
+title: "Ask for conversation ratings"
+description: "When dimmi asks a customer to rate a closed conversation, on which channels, and what happens to the rating."
+---
+
+Turn on **Ask for a rating when a conversation closes** in **Settings → Conversation ratings**. It is off in a new workspace.
+
+The customer picks one of five faces, scored 1 to 5, and can add a comment of up to 2,000 characters.
+
+## When dimmi asks
+
+- **Channels:** only messenger and email conversations can carry an ask. Both are on once you turn asking on.
+- **Messenger:** a card with five faces at the end of the thread.
+- **Email:** an email in the same thread, from the address the conversation's replies use. Each face links to a rating page that needs no sign-in.
+- **Delay:** **Straight away**, **After 10 minutes** or **After an hour**. If the conversation reopens before the delay ends, dimmi sends nothing.
+- **dimmi agent closes:** conversations the agent closed ask only when **Include conversations closed by the agent** is on.
+- **Test conversations:** never ask.
+
+dimmi skips the email when the workspace has no address to send from, sending is paused, or the customer's address is missing or suppressed.
+
+## After the customer rates
+
+- **Changes:** the customer can change the score and the comment for 7 days after the ask went out.
+- **Timeline:** each answer joins the conversation's timeline under the customer's name.
+- **Credit:** the rating goes to the teammate assigned when the conversation closed, or to dimmi when no teammate replied. See [Satisfaction](/reports/reports/#satisfaction).
+- **Webhook:** dimmi sends [`conversation.rated`](/developers/webhooks/events/) for each answer.
+
+## Use ratings in workflows
+
+- **Trigger:** **Customer rates the conversation** starts a [workflow](/workflows/triggers-and-steps/) on the first answer only, so a changed rating does not run it again.
+- **Close step:** **Ask for a rating** on a workflow's close step asks even when the settings above would not. The conversation still has to be on the messenger or email.

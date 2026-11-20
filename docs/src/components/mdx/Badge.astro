@@ -1,0 +1,10 @@
+---
+import type { ChipColor } from "@/components/base/badges/chip";
+import { Badge } from "~docs/components/react/content";
+
+interface Props {
+  text: string;
+  color?: ChipColor;
+}
+---
+<Badge {...Astro.props} />

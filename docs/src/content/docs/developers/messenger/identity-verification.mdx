@@ -1,0 +1,159 @@
+---
+title: "Verify customer identity"
+description: "Sign an identity token on your server so the dimmi messenger knows which of your users is signed in."
+---
+import { Screenshot, TabItem, Tabs } from "~docs/components/mdx";
+
+Your server signs a short-lived JWT for the signed-in user, and the messenger signs them in as the customer its `sub` claim names.
+
+## Create a secret
+
+Create a **Shared secret (HS256)** in **Settings → Identity verification** and store its two values on your server:
+
+```bash title=".env"
+DIMMI_IDENTITY_SECRET=dmi_idsec_<secret>
+DIMMI_IDENTITY_KID=isk_<key_id>
+```
+
+To sign with your own RSA, P-256 or Ed25519 key instead, add its public key as a secret and set `DIMMI_IDENTITY_PRIVATE_KEY` to the private key's PEM text.
+
+<Screenshot name="identity-secrets" alt="The Secrets section of Settings → Identity verification, listing an HS256 secret named Production with Rotate and Revoke buttons." />
+
+## Sign a token on your server
+
+`@dimmi/server` and `@dimmi/nextjs` read those variables and sign tokens that live 600 seconds (`expiresIn`, at most 3,600).
+
+<Tabs>
+<TabItem label="Next.js">
+
+```bash
+npm install @dimmi/nextjs
+```
+
+```ts title="dimmi.config.ts"
+import { clerk } from "@dimmi/nextjs/clerk";
+import { defineDimmi } from "@dimmi/nextjs/config";
+
+export default defineDimmi({ identify: clerk() });
+```
+
+```ts title="app/dimmi-token.ts"
+"use server";
+
+import { identityToken } from "@dimmi/nextjs/server";
+
+import config from "../dimmi.config";
+
+export async function dimmiToken() {
+  return identityToken(config);
+}
+```
+
+```tsx title="app/layout.tsx"
+import { Dimmi } from "@dimmi/nextjs";
+import type { ReactNode } from "react";
+
+import { dimmiToken } from "./dimmi-token";
+
+export default function RootLayout({ children }: { children: ReactNode }) {
+  return (
+    <html lang="en">
+      <body>
+        {children}
+        <Dimmi appId="<app_id>" host="https://app.trydimmi.com" identity={dimmiToken} />
+      </body>
+    </html>
+  );
+}
+```
+
+| Auth library | `identify` | Import |
+| --- | --- | --- |
+| Clerk | `clerk()` | `@dimmi/nextjs/clerk` |
+| Auth.js | `authjs(auth)` | `@dimmi/nextjs/authjs` |
+| Supabase | `supabase()` | `@dimmi/nextjs/supabase` |
+| Better Auth | `betterAuth(auth)` | `@dimmi/nextjs/better-auth` |
+| Your own | A function returning a user object or `null` | None |
+
+</TabItem>
+<TabItem label="Express">
+
+```bash
+npm install @dimmi/server
+```
+
+```js title="server.mjs"
+import { dimmiIdentity } from "@dimmi/server/express";
+import express from "express";
+
+const app = express();
+
+// Your session middleware sets req.user.
+app.get(
+  "/api/dimmi/token",
+  dimmiIdentity((req) =>
+    req.user
+      ? { id: req.user.id, email: req.user.email, emailVerified: req.user.emailVerified }
+      : null,
+  ),
+);
+
+app.listen(3000);
+```
+
+</TabItem>
+</Tabs>
+
+The user object takes `id` (required), `email`, `emailVerified`, `name`, `phone`, `avatarUrl`, `locale`, `timezone`, `signedUpAt`, `company` and `attributes`.
+
+The [Go](/developers/sdks/go/), [PHP](/developers/sdks/php/), [Laravel](/developers/sdks/laravel/) and [Python](/developers/sdks/python/) SDKs sign tokens too. With any other JWT library, use the whole `dmi_idsec_` string as the HMAC key without base64-decoding it, and put the key ID in the `kid` header.
+
+## Pass the token to the messenger
+
+On Next.js, the `identity` prop in the layout does this. Every other package takes one of two options.
+
+- **`identityUrl`** (`data-identity-url` on the script tag), such as `/api/dimmi/token`: a URL on the page's own origin that answers `200` with `{"token": "<jwt>"}`, or `{"token": null}` when nobody is signed in.
+- **`identity`**: a function that returns the token or `null`.
+
+The messenger asks for a token on each page load. In a single-page app, call `identify()` after sign-in and `shutdown()` after sign-out (`refreshDimmiIdentity()` and `dimmiLogout()` in `@dimmi/nextjs`).
+
+## Claims
+
+dimmi requires `sub` and `exp`, and drops any other claim in the wrong shape.
+
+| Claim | Rule |
+| --- | --- |
+| `sub` | Your user's ID, a string of 1 to 255 characters. |
+| `exp` | Expiry in seconds since the epoch, at most 7 days after `iat`. dimmi forgives 60 seconds of clock skew. |
+| `aud` | `dimmi`, the messenger's app ID or the workspace ID. Leave it out to accept any messenger. |
+| `nonce` | Up to 128 characters. A token with a nonce works once. |
+| `email` | Up to 254 characters. |
+| `email_verified` | `true` makes the email a verified identity, which matches the customer's email conversations to them. |
+| `name` | 1 to 120 characters. |
+| `phone` | E.164 form, such as `+14155550100`. |
+| `avatar_url` | An `https` address, up to 2,048 characters. |
+| `locale`, `timezone` | A language tag such as `en-US`, an IANA time zone such as `Europe/Paris`. |
+| `company` | An object with `id` (required), `name`, `domain` and `custom_attributes`. |
+| `custom_attributes` | Up to 100 keys of lowercase letters, digits and underscores, starting with a letter. Values are numbers, booleans, strings up to 1,024 characters, or `null` to remove the attribute. |
+
+Attributes from a verified token are the only ones [dimmi agent actions](/ai/actions/) may bind to a customer.
+
+## Use your auth provider's tokens
+
+To skip signing, create a secret of the kind **Auth provider key set (JWKS)** with your provider's JWKS URL, then pass the provider's session token through `identity`. An empty **Issuer** means the key set address without its `/.well-known/` path.
+
+## Rotate or revoke a secret
+
+**Rotate** creates a new secret and keeps the old one working for 7 days. **Revoke** stops a secret at once, signs out every customer it signed in, and cannot be undone.
+
+## Limits
+
+| Limit | Value |
+| --- | --- |
+| Token size | 8 KB |
+| Messenger session after the last verified token | 24 hours |
+| Secrets per workspace | 5 |
+
+## Check a token or require sign-in
+
+Paste a token under **Check a token** in **Settings → Identity verification** to see its claims and why dimmi refuses it. On the same page, the **Required** sign-in mode hides the messenger from visitors who are not signed in.

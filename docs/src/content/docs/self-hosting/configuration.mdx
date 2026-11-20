@@ -1,0 +1,54 @@
+---
+title: "How configuration works"
+description: "Where a self-hosted dimmi keeps its settings, how a setting's key maps to a DIMMI_ environment variable, and how to change one."
+---
+
+A self-hosted dimmi reads its settings from environment variables in `/opt/dimmi/.env`.
+
+## Name a setting
+
+Each setting has a dotted key. Its variable is `DIMMI_`, then the key in upper case with two underscores between levels.
+
+| Key | Variable |
+| --- | --- |
+| `log.level` | `DIMMI_LOG__LEVEL` |
+| `auth.sessions.idle_lifetime` | `DIMMI_AUTH__SESSIONS__IDLE_LIFETIME` |
+| `mail.mailers.system.driver` | `DIMMI_MAIL__MAILERS__SYSTEM__DRIVER` |
+
+- **Lists:** separate the items with commas, such as `totp,passkey`.
+- **Durations:** a number and a unit, such as `15m` or `336h`.
+
+[Configuration options](/self-hosting/configuration-options/) lists the settings.
+
+## Change a setting
+
+```bash
+dimmictl set DIMMI_LOG__LEVEL=debug
+```
+
+`dimmictl set` writes the value to `/opt/dimmi/.env` and restarts the services it changes. Pass secrets on standard input to keep them out of your shell history:
+
+```bash
+dimmictl set <<'EOF'
+DIMMI_AI__MANAGED__ANTHROPIC__API_KEY=<anthropic_api_key>
+EOF
+```
+
+Two kinds of setting behave differently:
+
+- **Set by `compose.yaml`:** the app's address, database, cache, file storage, listeners and roles (`DIMMI_APP__URL`, `DIMMI_DATABASE__URL`, `DIMMI_REDIS__URL`, `DIMMI_FILESYSTEMS__*`, `DIMMI_HTTP__*`, `DIMMI_APP__ROLES`). A value in `.env` does not override them.
+- **Without the `DIMMI_` prefix:** `APP_DOMAIN`, `COMPOSE_PROFILES`, `NETWORK_SUBNET` and `CADDY_TLS` configure Docker Compose and Caddy. `dimmictl set` restarts Caddy or starts ClamAV when one changes.
+
+## See the settings in effect
+
+```bash
+docker compose -f /opt/dimmi/compose.yaml exec web /dimmi config:show
+```
+
+The output shows each secret as `[redacted]`.
+
+dimmi checks its settings when it starts. A value that cannot work stops the start, and `dimmictl logs web` names the key.
+
+## Keep the app key
+
+`DIMMI_APP__KEY` encrypts the secrets stored in the database. The installer generates it once. If you change or lose it, dimmi can no longer read that data, so include `/opt/dimmi/.env` in your [backups](/self-hosting/backups/).

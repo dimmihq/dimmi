@@ -1,0 +1,51 @@
+---
+title: "Paginate list responses"
+description: "The limit, cursor, filter, sort, include and search parameters of dimmi list endpoints, with their defaults and errors."
+---
+
+List endpoints return `data` and `meta`. To read the next page, send `meta.next_cursor` as `cursor`.
+
+```bash
+curl -G https://app.trydimmi.com/api/v1/conversations \
+  -H "Authorization: Bearer <api_token>" \
+  --data-urlencode "limit=50" \
+  --data-urlencode "filter[status]=open,snoozed" \
+  --data-urlencode "sort=-last_message_at" \
+  --data-urlencode "cursor=<next_cursor>"
+```
+
+Replace `<api_token>` with your [API token](/developers/api/authentication/) and `<next_cursor>` with the previous page's `meta.next_cursor`. Leave `cursor` out for the first page.
+
+## Parameters
+
+| Parameter | Format | Behavior |
+| --- | --- | --- |
+| `limit` | Whole number | Items per page. Default `25`, maximum `100`. |
+| `cursor` | String | The `meta.next_cursor` of the page you read last. |
+| `filter[<field>]` | Values separated by commas | Items that match any of the values. |
+| `sort` | Fields separated by commas | Ascending. Put `-` before a field for descending. |
+| `include` | Names separated by commas | Adds related records to each item. |
+| `q` | Text | Search. |
+
+Each endpoint's page in the [API reference](/api-reference/) lists the filters, sorts and includes it accepts. A few lists page with `offset`, `after` or `page` in place of `cursor`.
+
+## Response meta
+
+| Field | Value |
+| --- | --- |
+| `next_cursor` | Cursor of the next page, `null` on the last page. |
+| `prev_cursor` | Cursor of the previous page, or `null`. |
+| `per_page` | The `limit` dimmi used. |
+| `total` | Count of matching items, on the endpoints that count. |
+
+## Errors
+
+Each of these answers `400` and names the rejected value in `parameter`.
+
+| Code | Cause |
+| --- | --- |
+| `invalid_limit` | `limit` is not a whole number from 1 to the maximum, which the response gives in `max`. |
+| `invalid_cursor` | The cursor did not come from dimmi, or was changed. |
+| `invalid_filter` | The endpoint has no such filter. |
+| `invalid_sort` | The endpoint has no such sort. |
+| `invalid_include` | The endpoint has no such include. |

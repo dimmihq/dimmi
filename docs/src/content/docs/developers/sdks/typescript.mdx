@@ -1,0 +1,75 @@
+---
+title: "TypeScript SDK"
+description: "Install @dimmi/api and call the dimmi REST API from TypeScript with typed requests, pagination and retries."
+---
+
+`@dimmi/api` is [openapi-fetch](https://openapi-ts.dev/openapi-fetch/) with types generated from the dimmi API. It needs Node.js 20 or later, or another runtime with `fetch`.
+
+```bash
+npm install @dimmi/api
+```
+
+## Create a client and call an endpoint
+
+```ts title="dimmi.ts"
+import { createDimmiApi, unwrap } from "@dimmi/api";
+
+const api = createDimmiApi({
+  host: "https://app.trydimmi.com",
+  token: process.env.DIMMI_API_TOKEN!,
+});
+
+const created = await unwrap(
+  api.POST("/contacts", { body: { email: "ada@example.com", name: "Ada Lovelace" } }),
+);
+
+console.log(created.data.id);
+```
+
+`DIMMI_API_TOKEN` holds your [API token](/developers/api/authentication/). On a self-hosted install, set `host` to your own dimmi address.
+
+`api.GET`, `api.POST`, `api.PATCH`, `api.PUT` and `api.DELETE` take the paths in the [API reference](/api-reference/). Each returns `{ data, error, response }`, and `unwrap()` returns `data` or throws.
+
+## Page through a list
+
+```ts
+import { paginate } from "@dimmi/api";
+
+for await (const conversation of paginate(api, "/conversations", {
+  params: { query: { "filter[status]": "open" } },
+})) {
+  console.log(conversation.id);
+}
+```
+
+`paginate()` yields each item and requests the next page as you read. `pages()` takes the same arguments and yields each page's whole response.
+
+## Handle errors
+
+```ts
+import { DimmiApiError, unwrap } from "@dimmi/api";
+
+try {
+  await unwrap(api.POST("/contacts", { body: { email: "not-an-email" } }));
+} catch (error) {
+  if (error instanceof DimmiApiError) {
+    console.log(error.status, error.code, error.errors);
+  }
+}
+```
+
+`unwrap()`, `paginate()` and `pages()` throw `DimmiApiError`. Its `code` and `errors` are the fields in [API errors](/developers/api/errors/).
+
+## Client options
+
+| Option | Default | Effect |
+| --- | --- | --- |
+| `host` | none | Your dimmi address. The client adds `/api/v1`. |
+| `baseUrl` | none | The full API address, in place of `host`. |
+| `maxRetries` | `3` | Times the client sends a request again after a `429`. |
+| `maxRetryDelay` | `30000` | Longest wait before a retry, in milliseconds. The client waits for `Retry-After`. |
+| `autoIdempotency` | `false` | Adds an [`Idempotency-Key`](/developers/api/idempotency/) to each `POST` that has none. |
+| `headers` | none | Headers added to each request. |
+| `fetch` | `globalThis.fetch` | Your own `fetch` function. |
+
+The package has no webhook helper. To check webhook signatures in Node.js, see [Verify webhook signatures](/developers/webhooks/verify-signatures/).

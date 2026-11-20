@@ -1,0 +1,25 @@
+---
+import { TableOfContents } from "~docs/components/react/page-parts";
+
+const { toc } = Astro.locals.starlightRoute;
+// Starlight lists the page title first; the sidebar starts at the sections.
+const items = (toc?.items ?? []).filter((item) => item.slug !== "_top");
+---
+{items.length > 0 && <TableOfContents items={items} />}
+<script>
+  // Marks the section in view as current in every table of contents.
+  const links = [...document.querySelectorAll<HTMLAnchorElement>("[data-toc-link]")];
+  const headings = [...new Set(links.map((link) => link.dataset.tocLink))]
+    .map((id) => document.getElementById(id!))
+    .filter((el): el is HTMLElement => el !== null);
+  const mark = () => {
+    const offset = parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--docs-header")) * 16 + 32 || 140;
+    let current = headings[0]?.id;
+    for (const heading of headings) if (heading.getBoundingClientRect().top - offset <= 0) current = heading.id;
+    for (const link of links) link.setAttribute("aria-current", String(link.dataset.tocLink === current));
+  };
+  if (headings.length) {
+    addEventListener("scroll", mark, { passive: true });
+    mark();
+  }
+</script>

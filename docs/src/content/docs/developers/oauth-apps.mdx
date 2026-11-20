@@ -1,0 +1,122 @@
+---
+title: "Build an OAuth app"
+description: "Let other dimmi workspaces connect your app with OAuth 2: register it, run the authorization code flow with PKCE and refresh tokens."
+---
+
+Your app registers itself, sends a teammate to dimmi to approve it, and gets tokens that work on the [REST API](/api-reference/) and the [MCP server](/developers/mcp/).
+
+Server metadata is at `https://app.trydimmi.com/.well-known/oauth-authorization-server`. On a self-hosted install, use your own dimmi address.
+
+## Register the app
+
+```bash
+curl https://app.trydimmi.com/oauth/register \
+  -H "Content-Type: application/json" \
+  -d '{
+    "client_name": "Acme Reports",
+    "redirect_uris": ["https://acme.example.com/oauth/callback"],
+    "application_type": "web",
+    "token_endpoint_auth_method": "client_secret_basic",
+    "scope": "conversations:read contacts:read offline_access"
+  }'
+```
+
+The `201` response has your `client_id` (`dmi_oci_...`) and, for a confidential client, a `client_secret` (`dmi_ocs_...`) that dimmi shows once.
+
+| Field | Values |
+| --- | --- |
+| `client_name` | 1 to 100 characters. The consent page shows it. |
+| `redirect_uris` | 1 to 10 exact addresses: `https`, `http` on a loopback host (any port matches), or your app's own scheme. |
+| `application_type` | `native` (default) or `web`. A `web` app takes public `https` redirect addresses only. |
+| `token_endpoint_auth_method` | `none` (default, a public client), `client_secret_basic` or `client_secret_post`. |
+| `grant_types` | `authorization_code`, and `refresh_token` to receive refresh tokens. Default: both. |
+| `scope` | The most the app may ask for, separated by spaces. Default: every scope. |
+
+Scopes are the [API token abilities](/developers/api/abilities/) except `system:read` and `system:write`, plus `offline_access`, which dimmi accepts and ignores. A `:write` scope includes its `:read`.
+
+One address can register 20 apps per hour. The consent page tells the teammate that dimmi cannot verify who made the app.
+
+## Ask a teammate to approve
+
+```js title="authorize.mjs"
+import { createHash, randomBytes } from "node:crypto";
+
+const verifier = randomBytes(32).toString("base64url");
+const challenge = createHash("sha256").update(verifier).digest("base64url");
+const state = randomBytes(16).toString("base64url");
+
+const url = new URL("https://app.trydimmi.com/oauth/authorize");
+url.search = new URLSearchParams({
+  response_type: "code",
+  client_id: "<client_id>",
+  redirect_uri: "https://acme.example.com/oauth/callback",
+  scope: "conversations:read contacts:read offline_access",
+  state,
+  code_challenge: challenge,
+  code_challenge_method: "S256",
+}).toString();
+
+console.log({ verifier, state, url: url.toString() });
+```
+
+Keep `verifier` and `state` in the teammate's session, then redirect the teammate to `url`. dimmi accepts the `S256` challenge method only.
+
+The teammate picks one workspace and can untick scopes. dimmi then redirects to your address with `code`, `state` and `iss`, or with `error=access_denied`.
+
+## Exchange the code for tokens
+
+The code works once, for 1 minute.
+
+```bash
+curl https://app.trydimmi.com/oauth/token \
+  -u "<client_id>:<client_secret>" \
+  -d grant_type=authorization_code \
+  -d code=<code> \
+  -d redirect_uri=https://acme.example.com/oauth/callback \
+  -d code_verifier=<verifier>
+```
+
+```json
+{
+  "access_token": "dmi_oat_...",
+  "token_type": "Bearer",
+  "expires_in": 3600,
+  "refresh_token": "dmi_ort_...",
+  "scope": "conversations:read contacts:read offline_access"
+}
+```
+
+`<code>` is the `code` from the redirect and `<verifier>` the value from `authorize.mjs`. A public client sends `client_id` in the form and no secret.
+
+In the response, `scope` lists what the teammate granted.
+
+Send the access token as `Authorization: Bearer <access_token>`. It acts as that teammate in the workspace they picked, and their role still limits each request.
+
+## Refresh the access token
+
+```bash
+curl https://app.trydimmi.com/oauth/token \
+  -u "<client_id>:<client_secret>" \
+  -d grant_type=refresh_token \
+  -d refresh_token=<refresh_token>
+```
+
+- **Rotation.** Each refresh returns a new refresh token and spends the old one. Store the new one before you use the access token.
+- **Reuse.** A spent refresh token or code sent again revokes the grant and each token under it.
+- **Expiry.** A refresh token expires after 90 days without a refresh.
+
+## Revoke a token
+
+```bash
+curl https://app.trydimmi.com/oauth/revoke \
+  -u "<client_id>:<client_secret>" \
+  -d token=<token>
+```
+
+Revoking a refresh token ends the grant; revoking an access token ends that token. The answer is `200` either way.
+
+A teammate can disconnect your app in **Settings → Connected apps**. Your tokens also stop when the teammate leaves the workspace.
+
+## Errors
+
+The token, revoke and register endpoints answer errors as `{"error": "invalid_grant", "error_description": "..."}`. Request bodies are limited to 16 KB.

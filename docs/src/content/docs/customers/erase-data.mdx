@@ -1,0 +1,24 @@
+---
+title: "Erase a customer's data"
+description: "What erasing a customer removes, when it happens and how to cancel it within the grace period."
+---
+
+import { Callout } from "~docs/components/mdx";
+
+To erase a customer, open **Erase** in their row menu in **Customers**, with a role that may erase customers.
+
+## What happens
+
+1. At once, the customer disappears from the inbox and every list. dimmi frees their email address and other identities, so a new message from them starts a new customer.
+2. After 7 days, dimmi wipes the text and files of every message in their conversations and deletes the customer. It also removes what other features kept about them, such as article feedback notes, changelog subscriptions and broadcast addresses.
+3. The emptied conversations stay, under a placeholder customer.
+
+**Wipe now instead of in 7 days** skips the wait. dimmi asks for your password when you have not confirmed it recently.
+
+## Cancel an erasure
+
+The **Erasures** tab lists each request with its status and the date of the wipe. **Cancel erasure** works while the status is **Waiting** and brings the customer back with their identities.
+
+When another customer took one of those identities during the wait, it stays with them. dimmi names it so you can [merge](/customers/customers-and-companies/#merge-duplicates) the two.
+
+<Callout type="danger">After the wipe, the status is **Erased** and nothing can be restored.</Callout>

@@ -1,0 +1,33 @@
+---
+title: "Connect integrations"
+description: "Register the OAuth apps dimmi needs for Slack, Linear, Jira, GitHub and other integrations on your server."
+---
+
+A workspace can connect a service only after you register an OAuth app at that service and give dimmi its credentials.
+
+Give each app the redirect URL `https://<app_domain>/integrations/<service>/callback`, where `<app_domain>` is the domain you installed dimmi on and `<service>` is the name in the table. Then set the variables, each prefixed with `DIMMI_SERVICES__`:
+
+| Service | `<service>` | Variables |
+| --- | --- | --- |
+| Slack | `slack` | `SLACK__CLIENT_ID`, `SLACK__CLIENT_SECRET`, `SLACK__SIGNING_SECRET`, `SLACK__APP_ID` |
+| Linear | `linear` | `LINEAR__CLIENT_ID`, `LINEAR__CLIENT_SECRET`, `LINEAR__WEBHOOK_SECRET` |
+| Jira | `jira` | `JIRA__CLIENT_ID`, `JIRA__CLIENT_SECRET` |
+| GitHub | `github` | `GITHUB__CLIENT_ID`, `GITHUB__CLIENT_SECRET`, `TRACKERS__GITHUB_WEBHOOK_SECRET` |
+| Notion | `notion` | `NOTION__CLIENT_ID`, `NOTION__CLIENT_SECRET` |
+| Intercom | `intercom` | `INTERCOM__CLIENT_ID`, `INTERCOM__CLIENT_SECRET` |
+| Zendesk | `zendesk` | `ZENDESK__CLIENT_ID`, `ZENDESK__CLIENT_SECRET` |
+
+```bash
+dimmictl set <<'EOF'
+DIMMI_SERVICES__LINEAR__CLIENT_ID=<linear_client_id>
+DIMMI_SERVICES__LINEAR__CLIENT_SECRET=<linear_client_secret>
+DIMMI_SERVICES__LINEAR__WEBHOOK_SECRET=<linear_webhook_secret>
+EOF
+```
+
+- **Slack:** point the app's events at `https://<app_domain>/webhooks/slack/events` and its interactivity at `https://<app_domain>/webhooks/slack/interactions`. dimmi does not start with a Slack client ID and secret but no signing secret.
+- **Linear:** `WEBHOOK_SECRET` is the signing secret of the Linear app's webhook.
+- **GitHub:** one app serves the GitHub [knowledge source](/ai/knowledge-sources/) and [linked issues](/tickets/linked-issues/). dimmi signs the webhook of each linked repository with `TRACKERS__GITHUB_WEBHOOK_SECRET`, a random value you make up. [GitHub sign-in](/self-hosting/sign-in-providers/) uses a separate app.
+- **incident.io, Rootly, PagerDuty:** nothing to set. Each workspace connects with its own API key.
+
+To hide a service from every workspace, set `DIMMI_INTEGRATIONS__ENABLED` to the list of services to keep. The default is `slack,notion,intercom,zendesk,github,linear,jira,incident_io,rootly,pagerduty`.

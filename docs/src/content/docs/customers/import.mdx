@@ -1,0 +1,44 @@
+---
+title: "Import customers from a CSV"
+description: "The CSV format dimmi imports customers and companies from, how rows match existing records, and how to undo an import."
+---
+
+To import, press **Import** on the **People** or **Companies** tab of **Customers**, with a role that may write customers and manage imports.
+
+## File format
+
+A CSV with a header row, at most 10 MB and 50,000 rows. Each teammate can upload 10 files an hour.
+
+| Import | Fields a column can fill | Each row needs |
+| --- | --- | --- |
+| People | **Email**, **Name**, **External ID**, **Phone**, **Company name**, **Company domain**, **Tags**, any attribute | An email or an external ID |
+| Companies | **Name**, **Domain**, **External ID**, **Tags**, any attribute | A domain or an external ID |
+
+dimmi maps a column on its own when the header names a field or an attribute's key or label, such as `email`, `full_name`, `user_id`, `company` or `tags`.
+
+- **Tags:** separate them with `,`, `;` or `|`. A row adds at most 20, and dimmi creates tags that do not exist.
+- **Numbers:** `1,250` reads as 1250.
+- **Yes or no:** `true`, `yes`, `y`, `1`, `false`, `no`, `n` or `0`.
+- **Dates:** `2026-03-01`, `2026-03-01 14:30:00` or ISO 8601 with a time zone.
+- **New attribute:** dimmi defines the key as text or a number from its first value.
+- **Empty cells:** change nothing. An import never clears a value.
+
+## How rows match
+
+A row matches a customer by external ID, then by a verified email address. A company matches by external ID, then by domain. A person's row with a company name or domain finds or creates that company and puts the person in it.
+
+**When someone is already here** decides what a matching row does: **Update them** fills in what the file has, and **Leave them as they are** skips the row.
+
+The dry run counts **New**, **Updated**, **Skipped** and **Problems** without changing anything.
+
+## Failed rows
+
+A failed row does not stop the others. The report is a CSV of each failed row with its line number and the reason. dimmi keeps the first 10,000 failed rows, and deletes the uploaded file 30 days after the import finishes.
+
+## Undo an import
+
+A teammate whose role may roll back imports can undo a finished import once, within 7 days, from the past imports in the **Import** window.
+
+- Records the import added are removed, unless someone edited or tagged them since, or the customer had a conversation.
+- Fields the import changed get their old values back, unless someone changed them again.
+- Tags the import added come off.

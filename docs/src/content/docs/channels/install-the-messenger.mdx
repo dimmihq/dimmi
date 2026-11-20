@@ -1,0 +1,30 @@
+---
+title: "Install the messenger"
+description: "Add the dimmi messenger to your website with one script tag and open it from your own buttons."
+---
+import { Screenshot } from "~docs/components/mdx";
+
+Each messenger in **Settings → Messengers** has its own snippet. Paste it before the closing `</body>` tag of every page.
+
+```html title="index.html"
+<script async src="<dimmi_url>/widget/v1/loader.js" data-app-id="<app_id>"></script>
+```
+
+The copied snippet has `<dimmi_url>`, the address you open dimmi at, and `<app_id>`, the messenger's app id, filled in.
+
+- **Frameworks:** for Next.js, React, Vue, Angular or Svelte, see [Add the messenger to your app](/developers/messenger/install/).
+- **Content Security Policy:** if your site uses a script nonce, add the same `nonce` attribute to the snippet. See [Content Security Policy for the messenger](/developers/messenger/content-security-policy/).
+- **More messengers:** a workspace can have up to 10. Deleting a messenger stops its snippet on every site.
+
+<Screenshot name="messenger-install" alt="The Install section of a messenger's settings: a Framework picker, the snippet and a Copy snippet button." />
+
+## Open the messenger from your own buttons
+
+An element with a `data-dimmi` attribute controls the messenger when clicked. The values are `open`, `close` and `toggle`.
+
+```html title="index.html"
+<button type="button" data-dimmi="open">Contact us</button>
+<a href="#" data-dimmi="toggle">Chat with Acme support</a>
+```
+
+To open the messenger from code, use the [Messenger JavaScript API](/developers/messenger/javascript-api/).

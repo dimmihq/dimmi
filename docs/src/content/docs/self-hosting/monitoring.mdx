@@ -1,0 +1,51 @@
+---
+title: "Monitor your server"
+description: "Check dimmi's health, read its logs and export metrics and traces."
+---
+
+dimmi answers two health addresses on its public address and, when you turn them on, exports Prometheus metrics, OTLP traces and Sentry error reports.
+
+## Health
+
+| Address | Answer |
+| --- | --- |
+| `https://support.example.com/up` | `200` with `{"status":"up","release":"<revision>"}` while the process runs. |
+| `https://support.example.com/ready` | `200` unless one of the checks `database`, `valkey` and `maintenance` fails, then `503`. The body lists each check as `pass`, `warn` or `fail`. |
+
+Point an uptime monitor at `/ready`. The `maintenance` check reports `warn`, with a `200`, while the app is down after [`dimmi down`](/self-hosting/cli/).
+
+Docker runs `/dimmi health`, which asks `/ready`, inside `web` every 15 seconds and inside `worker` every 30 seconds. `dimmictl status` shows the result as `(healthy)` or `(unhealthy)` beside each service.
+
+## Logs
+
+```bash
+dimmictl logs web worker
+```
+
+`dimmictl logs` follows every service, or the ones you name. dimmi writes one JSON object per line.
+
+| Setting | Default | Values |
+| --- | --- | --- |
+| `DIMMI_LOG__LEVEL` | `info` | `debug`, `info`, `warn`, `error` |
+| `DIMMI_LOG__DRIVER` | `json` | `json`, `text` |
+
+On a server the installer prepared, Docker keeps 5 files of 20 MB for each container.
+
+## Metrics
+
+```bash
+dimmictl set DIMMI_TELEMETRY__METRICS=prometheus
+```
+
+`web` and `worker` then serve Prometheus metrics at `/metrics` on port 9090. The stack does not publish that port: run your scraper as a container on the Docker network `dimmi_dimmi` and scrape `web:9090` and `worker:9090`. With metrics off, `/metrics` answers `404`.
+
+## Traces and errors
+
+| Setting | Value |
+| --- | --- |
+| `DIMMI_TELEMETRY__TRACING` | `otlp` to send traces over HTTP. Default `none`. |
+| `DIMMI_TELEMETRY__OTLP_ENDPOINT` | The full URL that receives traces, such as `http://collector:4318/v1/traces`. |
+| `DIMMI_TELEMETRY__OTLP_HEADERS__<NAME>` | A header sent with each trace request, such as `DIMMI_TELEMETRY__OTLP_HEADERS__AUTHORIZATION`. |
+| `DIMMI_TELEMETRY__SENTRY_DSN` | A Sentry DSN. dimmi reports errors to it, tagged with the trace id. |
+
+Set them with [`dimmictl set`](/self-hosting/configuration/).

@@ -1,0 +1,34 @@
+---
+title: "Set up inboxes and assignment"
+description: "Create inboxes and choose how dimmi assigns their conversations: manually, round robin or balanced."
+---
+
+Create and change inboxes in **Settings → Inboxes**. Each channel connection, such as one messenger or one support address, sends its new conversations to one inbox.
+
+## Inbox settings
+
+- **Default team:** new conversations go to this team, and its members form the pool for automatic assignment. With **No team**, the pool is every active teammate.
+- **Tickets:** every new conversation becomes a [customer ticket](/tickets/how-tickets-work/) of the type you pick.
+- **Access:** with **Chosen teams and teammates**, only the people on the list, owners and admins can open the inbox and its conversations.
+- **Assign to whoever replies:** on in a new inbox.
+- **Reopen window:** how long after closing a customer's reply reopens the conversation. The default is 30 days.
+
+The default inbox cannot be deleted. Deleting another inbox moves its conversations and channels to the inbox you pick.
+
+## Automatic assignment
+
+| Mode | What dimmi does |
+| --- | --- |
+| **Manual** | Assigns nobody. The default. |
+| **Round robin** | Gives each new conversation to the next teammate in the pool. |
+| **Balanced** | Gives each new conversation to the teammate with the fewest open conversations. |
+
+[How automatic assignment works](/inbox/how-assignment-works/) has the rules for who is eligible and what happens when nobody is.
+
+- **Capacity:** the most open conversations a teammate holds before dimmi skips them. Limits for one teammate or one channel are set through the REST API.
+- **Overflow team:** the team dimmi tries when nobody in the first pool can take the conversation.
+- **Queue order:** which waiting conversation goes first when a teammate frees up. **Oldest waiting first** is the default.
+
+## Assignment status
+
+**Assignment status** lists the pool, each teammate's open conversations and why dimmi would skip them now: **Away**, **At capacity** or **At channel capacity**. It judges teammates as for a messenger conversation.

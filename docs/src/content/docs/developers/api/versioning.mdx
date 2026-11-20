@@ -1,0 +1,35 @@
+---
+title: "API versioning and deprecation"
+description: "How dimmi versions its API, which changes it makes inside a version and how it announces deprecations."
+---
+
+A dimmi API version is a date. The current one is `2026-11-01`, served under `/api/v1`, and dimmi changes it only by adding to it.
+
+The version is the `info.version` of the OpenAPI document at `/api/v1/openapi.json` and the `api_version` of each [webhook event](/developers/webhooks/receive/).
+
+## Changes inside a version
+
+dimmi can add these at any time, so write clients that ignore fields and events they do not know:
+
+- Endpoints, optional query parameters and optional request fields.
+- Response fields.
+- Webhook events and webhook envelope fields.
+- Accepted values of a request field.
+
+dimmi does not remove or rename an endpoint, parameter, field or webhook event, change a type, make an optional input required, or add a value to a response enum.
+
+## Breaking changes
+
+A breaking change ships as a new dated version. The old version keeps working, unchanged, for at least 12 months after the new one is released.
+
+## Deprecated endpoints
+
+A deprecated endpoint keeps working until its sunset date, at least 12 months after the deprecation. Each of its responses carries these headers:
+
+| Header | Value |
+| --- | --- |
+| `Deprecation` | `@` and the Unix time of the deprecation, such as `@1793491200`. |
+| `Sunset` | The HTTP date the endpoint stops answering. |
+| `Link` | The page about the replacement, with `rel="deprecation"`. |
+
+The OpenAPI document marks the operation `deprecated` and gives the sunset date in `x-sunset`. For a deprecated field, dimmi adds the replacement beside it and keeps sending the old one.

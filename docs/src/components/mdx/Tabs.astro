@@ -1,0 +1,11 @@
+---
+import { DocsTabs } from "~docs/components/react/interactive";
+import { splitPanels } from "./split";
+
+interface Props {
+  label?: string;
+}
+const { panels, assets } = splitPanels(await Astro.slots.render("default"), "docs-tab");
+---
+<DocsTabs client:visible panels={panels} label={Astro.props.label} />
+<Fragment set:html={assets} />

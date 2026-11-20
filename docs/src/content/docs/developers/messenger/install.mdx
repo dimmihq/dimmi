@@ -1,0 +1,166 @@
+---
+title: "Add the messenger to your app"
+description: "Install the dimmi messenger in a React, Next.js, Vue, Nuxt, Angular, Svelte or plain JavaScript app with a @dimmi package or a script tag."
+---
+import { TabItem, Tabs } from "~docs/components/mdx";
+
+Add one package, once, at the root of your app. `<app_id>` is the messenger's app ID (`wgt_...`) from **Settings → Messengers**, and a self-hosted server replaces `https://app.trydimmi.com` with its own address.
+
+<Tabs>
+<TabItem label="React">
+
+```bash
+npm install @dimmi/react
+```
+
+```tsx title="src/main.tsx"
+import { DimmiProvider } from "@dimmi/react";
+import { createRoot } from "react-dom/client";
+
+import App from "./App";
+
+createRoot(document.getElementById("root")!).render(
+  <DimmiProvider appId="<app_id>" host="https://app.trydimmi.com">
+    <App />
+  </DimmiProvider>,
+);
+```
+
+</TabItem>
+<TabItem label="Next.js">
+
+```bash
+npm install @dimmi/nextjs
+```
+
+```tsx title="app/layout.tsx"
+import { Dimmi } from "@dimmi/nextjs";
+import type { ReactNode } from "react";
+
+export default function RootLayout({ children }: { children: ReactNode }) {
+  return (
+    <html lang="en">
+      <body>
+        {children}
+        <Dimmi appId="<app_id>" host="https://app.trydimmi.com" />
+      </body>
+    </html>
+  );
+}
+```
+
+</TabItem>
+<TabItem label="Vue">
+
+```bash
+npm install @dimmi/vue
+```
+
+```ts title="src/main.ts"
+import { createDimmi } from "@dimmi/vue";
+import { createApp } from "vue";
+
+import App from "./App.vue";
+
+createApp(App)
+  .use(createDimmi({ appId: "<app_id>", host: "https://app.trydimmi.com" }))
+  .mount("#app");
+```
+
+</TabItem>
+<TabItem label="Nuxt">
+
+```bash
+npm install @dimmi/vue
+```
+
+```ts title="plugins/dimmi.client.ts"
+import { createDimmi } from "@dimmi/vue";
+
+export default defineNuxtPlugin((nuxtApp) => {
+  nuxtApp.vueApp.use(createDimmi({ appId: "<app_id>", host: "https://app.trydimmi.com" }));
+});
+```
+
+</TabItem>
+<TabItem label="Angular">
+
+```bash
+npm install @dimmi/angular
+```
+
+```ts title="src/app/app.config.ts"
+import { type ApplicationConfig } from "@angular/core";
+import { provideDimmi } from "@dimmi/angular";
+
+export const appConfig: ApplicationConfig = {
+  providers: [provideDimmi({ appId: "<app_id>", host: "https://app.trydimmi.com" })],
+};
+```
+
+</TabItem>
+<TabItem label="Svelte">
+
+```bash
+npm install @dimmi/svelte
+```
+
+```svelte title="src/routes/+layout.svelte"
+<script lang="ts">
+  import { initDimmi } from "@dimmi/svelte";
+  import { onMount } from "svelte";
+
+  let { children } = $props();
+
+  onMount(() => {
+    initDimmi({ appId: "<app_id>", host: "https://app.trydimmi.com" });
+  });
+</script>
+
+{@render children()}
+```
+
+</TabItem>
+<TabItem label="JavaScript">
+
+```bash
+npm install @dimmi/browser
+```
+
+```ts title="src/dimmi.ts"
+import { loadDimmi } from "@dimmi/browser";
+
+export const dimmi = loadDimmi({ appId: "<app_id>", host: "https://app.trydimmi.com" });
+```
+
+</TabItem>
+<TabItem label="HTML">
+
+```html title="index.html"
+<script async src="https://app.trydimmi.com/widget/v1/loader.js" data-app-id="<app_id>"></script>
+```
+
+</TabItem>
+</Tabs>
+
+To sign your users in, see [Verify customer identity](/developers/messenger/identity-verification/). To open the messenger from your own button, see [Messenger JavaScript API](/developers/messenger/javascript-api/).
+
+## Show the unread count
+
+```tsx title="src/HelpButton.tsx"
+import { DimmiButton, useUnreadCount } from "@dimmi/react";
+
+export function HelpButton() {
+  const unread = useUnreadCount();
+  return <DimmiButton>Chat with us ({unread})</DimmiButton>;
+}
+```
+
+| Package | Unread count |
+| --- | --- |
+| `@dimmi/react`, `@dimmi/nextjs` | `useUnreadCount()` |
+| `@dimmi/vue` | `useUnreadCount()`, a `Ref<number>` |
+| `@dimmi/angular` | `DimmiService.unreadCount`, a signal |
+| `@dimmi/svelte` | `unreadCount`, a store |
+| `@dimmi/browser` | `getDimmi().onUnreadCountChange(fn)` |
+| Script tag | `event.detail.count` of the `dimmi:unread` window event |

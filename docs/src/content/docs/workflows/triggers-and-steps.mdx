@@ -1,0 +1,121 @@
+---
+title: "Workflow triggers and steps"
+description: "Every trigger and step a dimmi workflow can use, with the steps each trigger allows and the paths each step has."
+---
+
+The triggers and steps the workflow builder offers, in the groups it shows them in.
+
+## Triggers
+
+A trigger limits the **Messages** steps its workflow may use. Every trigger allows the **Logic**, **Team** and **Tickets** steps.
+
+### Start of conversation
+
+| Trigger | Notes | Messages steps | Let dimmi handle |
+| --- | --- | --- | --- |
+| **Customer sends their first message** | Runs once per conversation. | All | Yes |
+| **Customer writes on a closed conversation** | | All | Yes |
+
+### During conversation
+
+| Trigger | Notes | Messages steps | Let dimmi handle |
+| --- | --- | --- | --- |
+| **Customer sends a message** | Fires on every customer message. | None | No |
+| **Customer stops replying** | Fires 1 hour, 4 hours, 1 day, 2 days or 7 days after a reply from a teammate, dimmi or either, when the customer wrote nothing since. Open conversations only. | All | Yes |
+
+### Team
+
+| Trigger | Notes | Messages steps | Let dimmi handle |
+| --- | --- | --- | --- |
+| **Teammate sends a reply** | | None | No |
+| **Teammate adds a note** | | None | No |
+| **Assignment changes** | | None | No |
+| **Conversation status changes** | Can be limited to a change to **Open**, **Snoozed** or **Closed**. | None | No |
+| **Customer waits for the team** | Fires 5 minutes, 15 minutes, 30 minutes, 1 hour or 4 hours after the customer began waiting with no reply. Once per waiting period. | **Send a message**, **Show reply time** | No |
+
+### Tickets
+
+Ticket triggers run on the ticket's conversation. A ticket without a conversation starts no workflow.
+
+| Trigger | Messages steps | Let dimmi handle |
+| --- | --- | --- |
+| **Ticket is created** | **Send a message** | No |
+| **Ticket state changes** | **Send a message** | No |
+| **Ticket fields change** | None | No |
+| **Customer replies on a ticket** | None | No |
+| **Ticket is linked** | None | No |
+| **Linked issue changes** | **Send a message** | No |
+| **Ticket needs the loop closed** | **Send a message** | No |
+
+### dimmi
+
+| Trigger | Messages steps | Let dimmi handle |
+| --- | --- | --- |
+| **dimmi hands over** | None | No |
+| **dimmi resolves a conversation** | **Send a message** | No |
+
+### Service levels
+
+| Trigger | Messages steps | Let dimmi handle |
+| --- | --- | --- |
+| **SLA about to breach** | None | No |
+| **SLA breached** | None | No |
+
+### Reusable
+
+| Trigger | Notes | Messages steps | Let dimmi handle |
+| --- | --- | --- | --- |
+| **Run from other workflows** | Starts only from a **Run a workflow** step. | All | Yes |
+
+## Steps
+
+### Messages
+
+| Step | What it does | Paths |
+| --- | --- | --- |
+| **Send a message** | Sends text with variables. | |
+| **Send an article** | Sends a published, public help center article. The messenger opens it in place. Other channels get a link. | |
+| **Reply buttons** | Asks a question with 2 to 6 buttons and waits for the answer. | One per button, **Typed an answer**, **No answer in time** |
+| **Collect data** | Asks for the customer's email, name or phone and saves it. Skips the question when dimmi has the value. | **Invalid answer**, **No answer in time** |
+| **Show reply time** | Replaces `{{reply_time}}` with an estimate from the last 14 days of replies, such as "in a few minutes", "within an hour", "in a few hours" or "within a day". Outside office hours, says when they open. | |
+
+### Logic
+
+| Step | What it does | Paths |
+| --- | --- | --- |
+| **Branch** | Takes the first of up to 10 paths whose condition matches. | One per condition, **Everyone else** |
+| **Sort by topic** | Asks your workspace's AI model which of 2 to 10 categories the customer's words fit. Reads at most 4,000 characters. | One per category, **None matched or AI unavailable** |
+| **Wait** | Pauses for 5 minutes to 7 days, or until office hours open. Can count only office hours. | |
+| **Run a workflow** | Runs a live reusable workflow on the conversation and waits for it to end. | |
+
+### dimmi
+
+| Step | What it does | Paths |
+| --- | --- | --- |
+| **Let dimmi handle** | Hands the conversation to the dimmi agent, with optional extra instructions and a reply limit. Hands over at once when the agent is off. A customer counts as quiet after 10 minutes in the messenger or 1 day by email unless you set another time. | **Resolved**, **Handed over**, **Customer went quiet** |
+
+### Team
+
+| Step | What it does | Paths |
+| --- | --- | --- |
+| **Assign** | Assigns to a team, to a team's teammates in turn, to the teammate in a team who holds the fewest conversations, or to one teammate. Leaves assigned conversations alone unless you turn that off. | |
+| **Unassign** | Removes the teammate, the team or both. | |
+| **Tag** | Adds tags. | |
+| **Remove tags** | Removes tags. | |
+| **Set priority** | Sets no priority, low, medium, high or urgent. | |
+| **Add a note** | Writes a note with variables. | |
+| **Update contact** | Sets the customer's name or phone. | |
+| **Snooze** | Snoozes for 5 minutes to 7 days, or until office hours open. | |
+| **Close** | Closes the conversation. Can skip conversations a teammate replied to, and can ask for a rating. | |
+| **Apply an SLA** | Applies an SLA policy to the conversation, and to its ticket when it has one. | |
+| **Call your system** | Sends an HTTP request. See [Workflow requests](/developers/workflow-requests/). | **Failed**, when turned on |
+
+### Tickets
+
+| Step | What it does |
+| --- | --- |
+| **Create a ticket** | Turns the conversation into a ticket of the type you pick. |
+| **Set ticket state** | Moves the conversation's ticket to a state. |
+| **Set ticket fields** | Sets fields on the conversation's ticket. |
+| **Escalate to a team** | Creates back-office work for a team. The ticket waits on the team until the work is done. |
+| **Add to a tracker** | Adds the conversation to a [tracker](/tickets/trackers/). |

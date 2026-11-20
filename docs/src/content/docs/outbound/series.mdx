@@ -1,0 +1,54 @@
+---
+title: "Build a series"
+description: "Who enters a series, what each step does, the sending limits, and what publishing, pausing and testing do to customers on it."
+---
+
+A series, built in **Series**, moves each customer through messages, waits and checks on their own schedule.
+
+With **Accounts** under **Who travels it**, a whole company travels the series once.
+
+## Who enters
+
+- **They match rules** or **They join a saved audience:** only customers who start to match after the series goes live enter, unless **People already matching** is on.
+- **They do an event:** the customer enters when dimmi records the [event](/developers/messenger/track-events/).
+- **A teammate or the API adds them.**
+
+dimmi checks a customer against the rules within seconds of a change to them, and every 15 minutes for rules that turn true with time, such as a trial that ends in 5 days.
+
+A customer enters once unless **Can travel it again** is on, and is never on the same series twice at a time. Blocked customers and customers who match the **Leave early** rules never enter.
+
+## Steps
+
+A series holds 200 steps, with at most 8 paths out of one step.
+
+| Step | What it does |
+| --- | --- |
+| **Email**, **Chat**, **Post**, **Slack** | Sends a message with the reach checks, pacing, tracking and reply handling of a [broadcast](/outbound/broadcasts/). |
+| **Wait** | Holds for up to 365 days, until a time of day in the customer's time zone, or until a date attribute such as `trial_ends_at`, moved by a number of days. A date in the past moves the customer on at once. |
+| **Wait for** | Holds until the customer does an event, matches rules, or opens, clicks or replies to an earlier message. Takes the other path when the time is up. |
+| **Check** | Takes the first path the customer matches, or the path for everyone else. |
+| **Split test** | Gives each customer one of 2 to 4 variants for good, by share. |
+| **AI path** | The AI reads the customer, their company and recent conversations, and picks a path. It takes the fallback path after 20 seconds or on any failure. |
+| **Tag**, **Remove tag**, **Set attribute**, **Topic** | Changes the customer, or the company in an account series. |
+| **Webhook** | Posts the customer and the step to your endpoint, without following redirects. See [Workflow requests](/developers/workflow-requests/). |
+
+## Sending limits
+
+- A customer gets at most two series messages a day, across every series. A message over the limit waits for the next day.
+- **Email only by day** holds email until 8:00 to 20:00 in the customer's time zone.
+
+## Leaving and the goal
+
+Before each step, dimmi checks the **Leave early** settings against the customer as they are at that moment. A customer who leaves gets nothing that was queued for them.
+
+The **Goal** window starts when the customer enters.
+
+## Publish, pause and archive
+
+- **Publish changes:** customers on the series follow the new version from the step they are on. A customer on a removed step moves to the next step that remains.
+- **Pause:** no message goes out and nobody moves. Waits that end during the pause carry on after **Resume**.
+- **Archive:** ends every journey. An archived series cannot go live again.
+
+## Test a series
+
+**Try it on me** enters the published version under the customer with your email address. The messages go out to you. Rules, quiet hours and the daily cap do not apply, you can skip each wait, and the journey counts in no report.

@@ -1,0 +1,636 @@
+/*
+ * The docs' stylesheet is the app's: BoardUI tokens, type scale, prose,
+ * fonts and the dimmi emerald accent. Starlight's own styles sit in a
+ * lower cascade layer, so Tailwind utilities always win over them; the
+ * overrides in src/overrides replace nearly all of its markup anyway.
+ */
+@layer starlight, base, theme, components, code, utilities;
+
+@import "@fontsource-variable/inter/opsz.css";
+@import "@fontsource-variable/jetbrains-mono";
+/*
+ * BoardUI's globals.css, minus its unlayered prose import: prose sits in
+ * the components layer here so utilities on our components beat it.
+ */
+@import "tailwindcss";
+@import "../../../resources/js/styles/theme.css";
+@import "../../../resources/js/styles/typography.css";
+@import "../../../resources/js/styles/prose.css" layer(components);
+
+@custom-variant dark (&:where(.dark, .dark *));
+@custom-variant rtl (&:dir(rtl));
+@custom-variant ltr (&:dir(ltr));
+
+@utility shadow-xs {
+  &:where(.dark .shadow-xs) {
+    --tw-shadow: var(--shadow-xs);
+  }
+}
+@utility shadow-sm {
+  &:where(.dark .shadow-sm) {
+    --tw-shadow: var(--shadow-sm);
+  }
+}
+@utility shadow-lg {
+  &:where(.dark .shadow-lg) {
+    --tw-shadow: var(--shadow-lg);
+  }
+}
+@utility shadow-dropdown {
+  &:where(.dark .shadow-dropdown) {
+    --tw-shadow: var(--shadow-dropdown);
+  }
+}
+
+/*
+ * The view transition rules (the opt-in, the root and the header tab
+ * underline) live inline in overrides/ThemeProvider.astro, so a new page
+ * has them before this stylesheet arrives. The content column's reveal:
+ */
+@theme {
+  --animate-page-in: page-in 400ms cubic-bezier(0.22, 1, 0.36, 1) backwards;
+
+  @keyframes page-in {
+    from {
+      opacity: 0;
+      transform: translateY(8px);
+      filter: blur(3px);
+    }
+  }
+}
+@media (prefers-reduced-motion: no-preference) {
+  :root[data-navigated] .docs-page {
+    animation: var(--animate-page-in);
+  }
+}
+
+.theme-transitioning,
+.theme-transitioning * {
+  /* biome-ignore lint/complexity/noImportantStyles: freezes every transition while ThemeToggle captures the next theme, as the app does */
+  transition: none !important;
+}
+
+html {
+  color-scheme: light;
+  background-color: var(--color-background-full);
+}
+html.dark {
+  color-scheme: dark;
+}
+
+@source "../";
+@source "../../../resources/js/components";
+@source "../../../resources/js/features/brand";
+
+:root {
+  --font-inter: "Inter Variable";
+  --font-mono-source: "JetBrains Mono Variable";
+
+  --color-accent-50: oklch(97.9% 0.021 166.113);
+  --color-accent-100: oklch(95% 0.052 163.051);
+  --color-accent-200: oklch(90.5% 0.093 164.15);
+  --color-accent-300: oklch(84.5% 0.143 164.978);
+  --color-accent-400: oklch(76.5% 0.177 163.223);
+  --color-accent-500: oklch(69.6% 0.17 162.48);
+  --color-accent-600: oklch(59.6% 0.145 163.225);
+  --color-accent-700: oklch(50.8% 0.118 165.612);
+  --color-accent-800: oklch(43.2% 0.095 166.913);
+  --color-accent-900: oklch(37.8% 0.077 168.94);
+  --color-accent-950: oklch(26.2% 0.051 172.552);
+
+  /* Starlight's layout variables: our header is 64px and main has no pad. */
+  --docs-header: 6.25rem;
+  --sl-nav-height: 6.25rem;
+  --sl-mobile-toc-height: 3rem;
+  --sl-main-pad: 0;
+  --sl-font: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --sl-font-mono: var(--font-mono-source), ui-monospace, monospace;
+  --sl-color-accent: var(--color-accent-600);
+  --sl-color-accent-high: var(--color-accent-800);
+  --sl-color-accent-low: var(--color-accent-100);
+  --sl-color-text: var(--color-text-secondary);
+  --sl-color-white: var(--color-text-primary);
+  --sl-color-gray-5: var(--color-separator-border);
+  --sl-color-bg: var(--color-background-full);
+}
+
+/*
+ * Components inside prose (cards, accordions, tabs) opt out with
+ * .not-prose, so prose spacing, headings, lists and links stay off them.
+ */
+@layer components {
+  /* Rows repeated hundreds of times on API pages, named once here. */
+  .docs-side-link {
+    @apply flex min-h-8 cursor-pointer items-center gap-2 rounded-2lg px-2 py-1.5 text-body-medium text-pretty text-text-secondary outline-none transition-colors hover:bg-background-secondary-hover hover:text-text-primary focus-visible:ring-2 focus-visible:ring-border-focus-ring;
+  }
+  .docs-side-link[aria-current="page"] {
+    @apply bg-background-secondary-default text-text-primary;
+  }
+  .docs-field {
+    @apply flex flex-col gap-2 border-b border-separator-border py-4 last:border-b-0;
+  }
+  .docs-field-head {
+    @apply flex flex-wrap items-center gap-2;
+  }
+  .docs-field-name {
+    @apply font-mono text-[0.8125rem] font-semibold text-text-primary;
+  }
+  .docs-field-type {
+    @apply font-mono text-caption-1-regular text-text-tertiary;
+  }
+  .docs-field-text {
+    @apply text-body-regular text-text-secondary;
+  }
+  .docs-field-note {
+    @apply text-caption-1-regular text-text-tertiary;
+  }
+
+  .prose .not-prose :is(h2, h3, h4) {
+    margin: 0;
+    color: inherit;
+    font-size: inherit;
+    font-weight: inherit;
+    line-height: inherit;
+    letter-spacing: inherit;
+  }
+
+  .prose .not-prose :is(ul, ol) {
+    padding: 0;
+    list-style: none;
+  }
+
+  .prose .not-prose li + li {
+    margin-top: 0;
+  }
+
+  .prose .not-prose table {
+    display: table;
+    width: 100%;
+    font-size: inherit;
+    line-height: inherit;
+  }
+
+  .prose .not-prose a {
+    color: inherit;
+    font-weight: inherit;
+    text-decoration: none;
+  }
+}
+
+/* Links in docs prose take the accent, darker in light and lighter in dark. */
+.prose {
+  --link: var(--color-accent-700);
+}
+.dark .prose {
+  --link: var(--color-accent-400);
+}
+
+/* The ground under the hero: muted surface, dot grid, a wedge of accent. */
+.site-panel {
+  background-color: var(--color-background-secondary-default);
+  background-image:
+    radial-gradient(
+      120% 90% at 100% 0%,
+      color-mix(in oklab, var(--color-accent-500) 14%, transparent) 0%,
+      transparent 55%
+    ),
+    radial-gradient(var(--color-separator-border) 1px, transparent 1px);
+  background-size:
+    100% 100%,
+    16px 16px;
+}
+
+@media (min-width: 72em) {
+  :root {
+    --sl-mobile-toc-height: 0rem;
+  }
+}
+
+body {
+  background-color: var(--color-background-full);
+  color: var(--color-text-primary);
+  font-family: var(--sl-font);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Code blocks: Expressive Code's styles sit in the "code" layer, above prose. */
+.prose .expressive-code {
+  margin-top: 1.25rem;
+}
+
+.prose .expressive-code .frame {
+  --button-spacing: 0.5rem;
+}
+
+/* Starlight's :::note style asides, drawn as our callouts. */
+.prose .starlight-aside {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  border: 1px solid var(--callout-border, var(--color-separator-border));
+  border-radius: 1rem;
+  background: var(--callout-bg, var(--color-background-secondary-default));
+  padding: 0.875rem 1rem;
+  font-size: 0.9375rem;
+  line-height: 1.5rem;
+}
+
+.prose .starlight-aside__title {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0;
+  color: var(--color-text-primary);
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.prose .starlight-aside__icon {
+  width: 1rem;
+  height: 1rem;
+  color: var(--callout-icon, var(--color-foreground-icon-secondary));
+}
+
+.prose .starlight-aside__content > * + * {
+  margin-top: 0.75rem;
+}
+
+.starlight-aside--tip {
+  --callout-bg: color-mix(in oklab, var(--color-accent-500) 9%, var(--color-background-full));
+  --callout-border: color-mix(in oklab, var(--color-accent-500) 28%, var(--color-background-full));
+  --callout-icon: var(--color-accent-600);
+}
+
+.starlight-aside--caution {
+  --callout-bg: var(--color-status-yellow-background);
+  --callout-border: color-mix(in oklab, var(--color-status-yellow-text) 28%, var(--color-background-full));
+  --callout-icon: var(--color-status-yellow-text);
+}
+
+.starlight-aside--danger {
+  --callout-bg: var(--color-status-rose-background);
+  --callout-border: color-mix(in oklab, var(--color-status-rose-text) 28%, var(--color-background-full));
+  --callout-icon: var(--color-status-rose-text);
+}
+
+/* Heading anchors Starlight adds beside each h2/h3. */
+.prose .sl-heading-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+}
+
+.prose .sl-heading-wrapper > :is(h2, h3, h4) {
+  margin: 0;
+}
+
+.prose .sl-heading-wrapper + * {
+  margin-top: 0.75rem;
+}
+
+.prose * + .sl-heading-wrapper.level-h2 {
+  margin-top: 2.5rem;
+}
+
+.prose * + .sl-heading-wrapper.level-h3 {
+  margin-top: 2rem;
+}
+
+.prose .sl-anchor-link {
+  display: inline-flex;
+  opacity: 0;
+  color: var(--color-text-tertiary);
+  transition: opacity 150ms ease;
+}
+
+.prose .sl-heading-wrapper:hover .sl-anchor-link,
+.prose .sl-anchor-link:focus-visible {
+  opacity: 1;
+}
+
+.prose .sl-anchor-icon svg {
+  width: 1rem;
+  height: 1rem;
+}
+
+/* Our ordered steps: a number on a rail beside each step. */
+.docs-steps > ol {
+  counter-reset: step;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.docs-steps > ol > li {
+  position: relative;
+  counter-increment: step;
+  padding-inline-start: 2.75rem;
+  padding-bottom: 1.5rem;
+}
+
+.docs-steps > ol > li + li {
+  margin-top: 0;
+}
+
+.docs-steps > ol > li::before {
+  content: counter(step);
+  position: absolute;
+  inset-inline-start: 0;
+  top: 0;
+  display: grid;
+  place-items: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  border: 1px solid var(--color-border-button-default);
+  border-radius: 9999px;
+  background: var(--color-background-full);
+  color: var(--color-text-primary);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.docs-steps > ol > li::after {
+  content: "";
+  position: absolute;
+  inset-inline-start: calc(0.875rem - 0.5px);
+  top: 2.25rem;
+  bottom: 0.5rem;
+  width: 1px;
+  background: var(--color-separator-border);
+}
+
+.docs-steps > ol > li:last-child::after {
+  display: none;
+}
+
+/* A step's instruction reads in the primary tone, at normal weight: bold
+   is kept for interface labels (docs/WRITING.md). */
+.docs-steps > ol > li > :first-child {
+  color: var(--color-text-primary);
+}
+
+.docs-steps > ol > li > :not(:first-child) {
+  margin-top: 0.75rem;
+}
+
+/* The scroll-spied entry in the table of contents. */
+[data-toc-link][aria-current="true"] {
+  color: var(--color-text-primary);
+  border-color: var(--color-accent-500);
+}
+
+/* Pagefind result excerpts mark the matched words. */
+.docs-search mark {
+  background: transparent;
+  color: var(--color-text-primary);
+  font-weight: 600;
+}
+
+/*
+ * The sidebar. On wide screens it sits beside the content; below lg the
+ * same element is a popover drawer on BoardUI's Drawer motion: a floating
+ * panel 8px in from the edges that slides in from past its edge and
+ * sharpens from a 4px blur over 300ms on the iOS sheet curve, over a
+ * black/40 backdrop that fades with it. Reduced motion fades instead.
+ */
+.docs-sidebar {
+  --drawer-ease: cubic-bezier(0.32, 0.72, 0, 1);
+  position: fixed;
+  inset: 0.5rem auto 0.5rem 0.5rem;
+  width: min(21rem, calc(100vw - 1rem));
+  height: auto;
+  max-height: none;
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  color: var(--color-text-primary);
+  background: var(--color-background-full);
+  border: 1px solid var(--color-separator-border);
+  border-radius: 1rem;
+  box-shadow: var(--shadow-lg);
+  translate: calc(-100% - 1.5rem) 0;
+  filter: blur(4px);
+  transition:
+    translate 300ms var(--drawer-ease),
+    filter 300ms var(--drawer-ease),
+    opacity 300ms var(--drawer-ease),
+    overlay 300ms allow-discrete,
+    display 300ms allow-discrete;
+}
+.docs-sidebar:popover-open {
+  translate: 0 0;
+  filter: blur(0);
+}
+@starting-style {
+  .docs-sidebar:popover-open {
+    translate: calc(-100% - 1.5rem) 0;
+    filter: blur(4px);
+  }
+}
+.docs-sidebar::backdrop {
+  background: rgb(0 0 0 / 0.4);
+  opacity: 0;
+  transition:
+    opacity 300ms ease-out,
+    overlay 300ms allow-discrete,
+    display 300ms allow-discrete;
+}
+.docs-sidebar:popover-open::backdrop {
+  opacity: 1;
+}
+@starting-style {
+  .docs-sidebar:popover-open::backdrop {
+    opacity: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .docs-sidebar {
+    translate: 0 0;
+    filter: none;
+    opacity: 0;
+  }
+  .docs-sidebar:popover-open {
+    opacity: 1;
+  }
+  @starting-style {
+    .docs-sidebar:popover-open {
+      translate: 0 0;
+      filter: none;
+      opacity: 0;
+    }
+  }
+}
+@media (min-width: 64rem) {
+  .docs-sidebar {
+    display: block;
+    position: sticky;
+    inset: auto;
+    top: var(--docs-header);
+    flex-shrink: 0;
+    width: 18.5rem;
+    height: calc(100dvh - var(--docs-header));
+    border: 0;
+    border-inline-end: 1px solid var(--color-separator-border);
+    border-radius: 0;
+    box-shadow: none;
+    translate: none;
+    filter: none;
+    opacity: 1;
+    transition: none;
+  }
+}
+
+/* Wider still on large screens, so endpoint names fit on one line. */
+@media (min-width: 80rem) {
+  .docs-sidebar {
+    width: 20rem;
+  }
+}
+
+/* Below lg the header gains the bar that opens the drawer. */
+@media (max-width: 63.99rem) {
+  :root {
+    --docs-header: 6.875rem;
+    --sl-nav-height: 6.875rem;
+  }
+}
+
+/*
+ * Folding groups (sidebar sections, the mobile table of contents) move
+ * like BoardUI's Accordion: the height eases over 300ms on the soft-landing
+ * curve while the content fades in, drops 4px into place and sharpens
+ * from a 4px blur. Browsers without ::details-content snap open.
+ */
+.docs-disclosure {
+  interpolate-size: allow-keywords;
+}
+.docs-disclosure::details-content {
+  height: 0;
+  overflow: clip;
+  transition:
+    height 300ms cubic-bezier(0.22, 1, 0.36, 1),
+    content-visibility 300ms allow-discrete;
+}
+.docs-disclosure[open]::details-content {
+  height: auto;
+}
+.docs-disclosure > .docs-disclosure-body,
+.docs-disclosure > :not(summary) > .docs-disclosure-body {
+  transition:
+    opacity 300ms cubic-bezier(0.22, 1, 0.36, 1),
+    translate 300ms cubic-bezier(0.22, 1, 0.36, 1),
+    filter 300ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+.docs-disclosure:not([open]) > .docs-disclosure-body,
+.docs-disclosure:not([open]) > :not(summary) > .docs-disclosure-body {
+  opacity: 0;
+  translate: 0 -0.25rem;
+  filter: blur(4px);
+}
+@media (prefers-reduced-motion: reduce) {
+  .docs-disclosure::details-content,
+  .docs-disclosure .docs-disclosure-body {
+    transition: none;
+  }
+}
+
+/*
+ * Code blocks keep a copy button in their corner, drawn as a small
+ * BoardUI icon button (Expressive Code shows its own only on hover).
+ * The icon turns to a check while "Copied" shows.
+ */
+.expressive-code .copy {
+  inset-block-start: 0.5rem;
+  inset-inline-end: 0.5rem;
+}
+/* Centred in a titled frame's 34.75px tab bar, or a terminal's 33.75px title bar. */
+.expressive-code .frame.has-title .copy {
+  inset-block-start: calc((2.171875rem - 1.5rem) / 2);
+  inset-inline-end: calc((2.171875rem - 1.5rem) / 2);
+}
+.expressive-code .frame.is-terminal .copy {
+  inset-block-start: calc((2.109375rem - 1.5rem) / 2);
+  inset-inline-end: calc((2.109375rem - 1.5rem) / 2);
+}
+.expressive-code .copy button,
+.expressive-code .copy button:not(:hover) {
+  width: 1.5rem;
+  height: 1.5rem;
+  opacity: 1;
+  border-radius: 0.5rem;
+  background: var(--color-background-primary-default);
+  box-shadow: 0 0 0 1px var(--color-border-button-default);
+  transition:
+    background-color 150ms ease,
+    box-shadow 150ms ease;
+}
+.expressive-code .copy button:hover {
+  background: var(--color-background-secondary-hover);
+  box-shadow: 0 0 0 1px var(--color-border-button-hover);
+}
+.expressive-code .copy button div,
+.expressive-code .copy button::before {
+  display: none;
+}
+.expressive-code .copy button::after {
+  margin: 0;
+  background-color: var(--color-foreground-icon-secondary);
+  mask:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M6.9998 6V3C6.9998 2.44772 7.44752 2 7.9998 2H19.9998C20.5521 2 20.9998 2.44772 20.9998 3V17C20.9998 17.5523 20.5521 18 19.9998 18H16.9998V20.9991C16.9998 21.5519 16.5499 22 15.993 22H4.00666C3.45059 22 3 21.5554 3 20.9991L3.0026 7.00087C3.0027 6.44811 3.45264 6 4.00942 6H6.9998ZM5.00242 8L5.00019 20H14.9998V8H5.00242ZM8.9998 6H16.9998V16H18.9998V4H8.9998V6Z'/%3E%3C/svg%3E")
+    center / 0.875rem no-repeat;
+  -webkit-mask:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M6.9998 6V3C6.9998 2.44772 7.44752 2 7.9998 2H19.9998C20.5521 2 20.9998 2.44772 20.9998 3V17C20.9998 17.5523 20.5521 18 19.9998 18H16.9998V20.9991C16.9998 21.5519 16.5499 22 15.993 22H4.00666C3.45059 22 3 21.5554 3 20.9991L3.0026 7.00087C3.0027 6.44811 3.45264 6 4.00942 6H6.9998ZM5.00242 8L5.00019 20H14.9998V8H5.00242ZM8.9998 6H16.9998V16H18.9998V4H8.9998V6Z'/%3E%3C/svg%3E")
+    center / 0.875rem no-repeat;
+}
+.expressive-code .copy button:hover::after {
+  background-color: var(--color-foreground-icon-primary);
+}
+.expressive-code .copy .feedback.show ~ button::after {
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M9.9997 15.1709L19.1921 5.97852L20.6063 7.39273L9.9997 17.9993L3.63574 11.6354L5.04996 10.2212L9.9997 15.1709Z'/%3E%3C/svg%3E");
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M9.9997 15.1709L19.1921 5.97852L20.6063 7.39273L9.9997 17.9993L3.63574 11.6354L5.04996 10.2212L9.9997 15.1709Z'/%3E%3C/svg%3E");
+}
+.expressive-code .copy .feedback {
+  --tooltip-bg: var(--color-text-primary);
+  color: var(--color-background-full);
+  border-radius: 0.5rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  html {
+    scroll-behavior: smooth;
+  }
+}
+
+/*
+ * Product screenshots (<Screenshot>): a framed picture in the reader's
+ * theme. Both themes are in the page; only one shows.
+ */
+.docs-shot {
+  margin-block: 1.5rem;
+}
+.docs-shot img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border: 1px solid var(--color-separator-border);
+  border-radius: 1rem;
+  background: var(--color-background-secondary-default);
+}
+.docs-shot .docs-shot-dark,
+.dark .docs-shot .docs-shot-light {
+  display: none;
+}
+.dark .docs-shot .docs-shot-dark {
+  display: block;
+}
+.docs-shot figcaption {
+  margin-top: 0.5rem;
+  text-align: center;
+  font-size: 0.8125rem;
+  color: var(--color-text-tertiary);
+}

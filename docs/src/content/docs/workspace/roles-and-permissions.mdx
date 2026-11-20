@@ -1,0 +1,161 @@
+---
+title: "Roles and permissions"
+description: "The permissions each built-in dimmi role holds, and the rules a custom role follows."
+---
+
+A workspace has three built-in roles, and each holds everything the role before it holds: Member (37 permissions), Admin (100) and Owner (111).
+
+An [API token](/developers/api/abilities/) never does more than the role of the member who created it.
+
+## Custom roles
+
+A custom role holds part of what Member or Admin holds. Create one in **Settings → Roles**.
+
+| Rule | Detail |
+| --- | --- |
+| Base role | Member or Admin, chosen when you create the role. It cannot change later. |
+| Always held | `members:read`. |
+| Out of reach | Owner permissions. |
+| Your own limit | You grant only permissions you hold, and you edit only roles that hold nothing you lack. |
+| Limit | 50 custom roles in a workspace, each with a unique name. |
+| Editing | A change applies to every holder on their next request. |
+| Assigning | An Owner never holds a custom role, and you cannot change your own. |
+| Deleting | Only when nobody holds the role. |
+
+The **New role** menu offers three starting points:
+
+| Preset | Base role | Holds |
+| --- | --- | --- |
+| **Support agent** | Member | Conversations, contacts, reading articles, notifications, own signature and AI features. |
+| **Read only** | Member | Every Member permission whose key ends in `:read`. |
+| **Billing admin** | Admin | `billing:read`, `billing:write`, `settings:read` and `members:read`. |
+
+## Member permissions
+
+| Permission | Key |
+| --- | --- |
+| See AI activity | `ai:read` |
+| Use AI features | `ai:write` |
+| Approve AI actions | `ai_action_calls:approve` |
+| See AI actions | `ai_actions:read` |
+| Read articles | `articles:read` |
+| Write articles | `articles:write` |
+| See audiences | `audiences:read` |
+| See broadcasts | `broadcasts:read` |
+| Write broadcasts | `broadcasts:write` |
+| Read the changelog | `changelog:read` |
+| Write the changelog | `changelog:write` |
+| Read contacts | `contacts:read` |
+| Edit contacts | `contacts:write` |
+| Assign conversations | `conversations:assign` |
+| Merge conversations | `conversations:merge` |
+| Read conversations | `conversations:read` |
+| Reply to conversations | `conversations:write` |
+| See email settings | `email:read` |
+| Manage own signature | `email_signatures:manage_own` |
+| See outbound | `engage:read` |
+| Write outbound | `engage:write` |
+| Read feature requests | `feedback:read` |
+| Answer feature requests | `feedback:write` |
+| See GitHub | `github:read` |
+| See help center settings | `help_centers:read_settings` |
+| See identity verification | `identity:read` |
+| Sync knowledge | `knowledge:sync` |
+| See members | `members:read` |
+| Read notifications | `notifications:read` |
+| Manage notifications | `notifications:write` |
+| See series | `series:read` |
+| Build series | `series:write` |
+| Read tickets | `tickets:read` |
+| Work tickets | `tickets:write` |
+| See the messenger | `widgets:read` |
+| See workflows | `workflows:read` |
+| Run workflows | `workflows:run` |
+
+## Admin permissions
+
+An Admin holds the Member permissions and these.
+
+| Permission | Key |
+| --- | --- |
+| Manage agent access | `agent_access:manage` |
+| Manage AI keys | `ai:keys` |
+| Manage AI actions | `ai_actions:manage` |
+| Manage the dimmi agent | `ai_agent:manage` |
+| Read AI run details | `ai_runs:read_payloads` |
+| Manage attributes | `attributes:manage` |
+| Manage audiences | `audiences:manage` |
+| Read the audit log | `audit_logs:read` |
+| See billing | `billing:read` |
+| Manage billing | `billing:write` |
+| Send broadcasts | `broadcasts:send` |
+| Inspect channels | `channels:inspect` |
+| Manage channels | `channels:manage` |
+| Delete companies | `companies:delete` |
+| Erase contacts | `contacts:erase` |
+| Export contacts | `contacts:export` |
+| Change contact ids | `contacts:manage_external_id` |
+| Delete conversations | `conversations:delete` |
+| Export conversations | `conversations:export` |
+| Manage others' notes | `conversations:manage_notes` |
+| Moderate conversations | `conversations:moderate` |
+| Manage docs sync | `docs_sync:manage` |
+| Manage email | `email:manage` |
+| Read raw email | `email:read_raw` |
+| Manage all signatures | `email_signatures:manage_any` |
+| Manage blocked addresses | `email_suppressions:manage` |
+| Manage outbound | `engage:manage` |
+| Delete feature requests | `feedback:delete` |
+| Manage feature request boards | `feedback:manage` |
+| Manage GitHub | `github:manage` |
+| Manage help centers | `help_centers:manage` |
+| Manage identity verification | `identity:manage` |
+| Run imports | `imports:manage` |
+| See imports | `imports:read` |
+| Undo imports | `imports:rollback` |
+| Manage inboxes | `inboxes:manage` |
+| Manage integrations | `integrations:manage` |
+| Manage knowledge | `knowledge:manage` |
+| Import members | `members:import` |
+| Manage conversation access | `members:manage_access` |
+| Manage availability | `members:manage_availability` |
+| Reset two-factor | `members:reset_two_factor` |
+| Manage members | `members:write` |
+| Receive alerts | `notification_alerts:receive` |
+| Manage alert destinations | `notification_destinations:manage` |
+| Manage app access | `oauth_grants:manage_any` |
+| Manage redaction | `redaction:manage` |
+| Manage roles | `roles:manage` |
+| Manage shared replies | `saved_replies:manage_shared` |
+| Manage office hours | `schedules:manage` |
+| Manage security rules | `security_policy:manage` |
+| Publish series | `series:publish` |
+| See settings | `settings:read` |
+| Change settings | `settings:write` |
+| Manage tags | `tags:manage` |
+| Delete tickets | `tickets:delete` |
+| Set up tickets | `tickets:manage` |
+| Manage all tokens | `tokens:manage_any` |
+| Manage shared views | `views:manage_shared` |
+| See webhooks | `webhooks:read` |
+| Manage webhooks | `webhooks:write` |
+| Manage the messenger | `widgets:manage` |
+| Manage workflows | `workflows:manage` |
+
+## Owner permissions
+
+An Owner holds the Member and Admin permissions and these. A workspace always keeps at least one active Owner.
+
+| Permission | Key |
+| --- | --- |
+| Lift spending caps | `billing:cap_unrestricted` |
+| Resume sending | `email:resume_sending` |
+| Rotate signing keys | `email:rotate_dkim` |
+| Lift complaint blocks | `email_suppressions:lift_complaint` |
+| Download exports | `exports:read` |
+| Start exports | `exports:write` |
+| Delete help centers | `help_centers:delete` |
+| Manage owners | `members:manage_owners` |
+| Manage directory sync | `scim:manage` |
+| Manage single sign-on | `sso:manage` |
+| Delete the workspace | `workspace:delete` |

@@ -1,0 +1,20 @@
+---
+import EditLink from "virtual:starlight/components/EditLink";
+import LastUpdated from "virtual:starlight/components/LastUpdated";
+import Pagination from "virtual:starlight/components/Pagination";
+
+import { stripBase } from "~docs/base";
+import { FooterBar } from "~docs/components/react/page-parts";
+
+// On wide API pages the footer stays under the fields column, beside
+// which the code samples sit (25rem plus the 2.5rem gap).
+const wide = /^\/api-reference\/[^/]+\/[^/]+\/?$/.test(stripBase(Astro.url.pathname));
+---
+<footer class:list={["mt-16 flex flex-col gap-8 print:hidden", wide && "xl:max-w-[calc(100%-27.5rem)]"]}>
+  <div class="flex flex-wrap items-center justify-between gap-3">
+    <EditLink />
+    <LastUpdated />
+  </div>
+  <Pagination />
+  <FooterBar />
+</footer>

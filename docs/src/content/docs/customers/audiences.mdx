@@ -1,0 +1,39 @@
+---
+title: "Build audiences"
+description: "How audience rules match customers, how the count is estimated, and how to freeze an audience or a CSV list into a tag."
+---
+
+An audience, built in **Customers → Audiences**, is a named rule that answers "who" for workflows, messenger settings, help center articles, broadcasts and series.
+
+dimmi never stores who is in an audience. Each use checks the rule against the customer as they are at that moment.
+
+## Rules
+
+- **Who** narrows the audience to **Everyone**, **Signed-in users**, **Leads**, **Visitors** or **Visitors and leads**.
+- A group matches all, any or none of its conditions. **People match** sets whether a customer needs all, any or none of the groups.
+- A condition reads the customer, their company, tags, attributes, event counts, the page and device, or another audience.
+- An event count can be limited to the last days you choose.
+- Audiences nest 2 levels deep, with no loops.
+
+## Matches
+
+The **Matches** column counts every customer in a workspace of up to 50,000. Above that, dimmi reads a random sample of about 20,000 and shows the count as "About".
+
+**Test a person** shows each condition with the customer's own value and **Yes**, **No** or **Unknown**. The result is **Depends on the page** when the rule has page conditions and **On page** is empty.
+
+## Freeze into a tag
+
+An audience changes as customers change. **Freeze into a tag** tags everyone who matches now, and the tag stays as it is afterward. dimmi refuses in a workspace with more than 100,000 customers.
+
+## Upload a list
+
+**Upload a list** tags every customer a CSV names, so a rule can use the tag.
+
+- The file needs a header row with an `email`, `external_id` or `user_id` column. dimmi uses the first one it finds.
+- At most 5 MB and 50,000 rows.
+- dimmi tags only customers it has. It creates nobody and reports the values that matched no one.
+- A customer who holds 50 tags is skipped.
+
+## Delete
+
+dimmi refuses to delete an audience that another audience, a live workflow, an article, a collection, a messenger, a live or paused series, or a scheduled or sending broadcast uses.

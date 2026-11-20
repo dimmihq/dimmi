@@ -1,0 +1,53 @@
+---
+title: "Secure your workspace"
+description: "The sign-in rules a dimmi workspace can set, what each one binds and the checks that stop you locking yourself out."
+---
+
+An Admin or Owner sets the workspace's sign-in rules in **Settings → Security**. dimmi checks them on every request inside the workspace, so a change applies to each member's next request.
+
+## What each rule binds
+
+| Rule | Browser and app sessions | API tokens |
+| --- | --- | --- |
+| **Sign-in methods** | Yes | No |
+| **Session length** | Yes | No |
+| **Dashboard IP allowlist** | Yes | No |
+| **API IP allowlist** | No | Yes |
+| **Require two-factor authentication** | Yes | Yes |
+
+A rule applies to this workspace only. A person keeps working in their other workspaces.
+
+## Sign-in methods
+
+The list shows the methods your dimmi offers: **Password**, **Email link or code**, **Google**, **GitHub** and **Single sign-on**. A self-hosted server shows the [sign-in providers](/self-hosting/sign-in-providers/) it has configured.
+
+- **All checked:** no rule. A method dimmi adds later also works.
+- **Google domains:** limits Google sign-in to accounts of those domains.
+- **Safety check:** dimmi refuses a list that leaves out the method you signed in with, or that no active Owner could meet.
+
+To send a whole email domain through your identity provider, see [single sign-on](/workspace/single-sign-on/).
+
+## Session length
+
+- **Sign in again after:** counted from the last full sign-in. Choices run from **1 hour** to **30 days**.
+- **Sign out when idle for:** choices run from **15 minutes** to **7 days**. dimmi notes activity every five minutes, so a session can outlast the limit by that long.
+
+Both start at **No limit**, and neither can exceed the limit your dimmi sets for every session.
+
+## IP allowlists
+
+Each allowlist takes up to 100 entries, each a single address or a range such as `203.0.113.0/24`. An empty list lets any address connect.
+
+- **Dashboard IP allowlist:** dimmi refuses a list that leaves out the address you are connecting from.
+- **API IP allowlist:** covers API tokens and the command line.
+
+## Two-factor authentication
+
+With **Require two-factor authentication** on, members without two-factor authentication cannot open the workspace until they add an authenticator app, and their API tokens stop working there too.
+
+- You need two-factor authentication on your own account first.
+- dimmi emails every active member who has none.
+
+## What dimmi records
+
+A change to the sign-in methods, the session length or an allowlist goes to the [audit log](/workspace/audit-log/) with its new values, and dimmi emails the other Owners.

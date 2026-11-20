@@ -1,0 +1,52 @@
+---
+title: "Run a feature requests board"
+description: "Open a feature requests board to customers, and how votes, statuses, merges and voter emails work."
+---
+
+Turn on **Open to customers** under **Settings → Feature requests** and save to publish the board at `/feedback` on your help center. It is off in a new workspace.
+
+Customers sign in to the help center to post, vote and comment, the same way they sign in to read [restricted articles](/help-center/limit-articles/#how-readers-sign-in).
+
+## Boards
+
+A help center starts with one board. Add more in **Settings → Feature requests**, such as one for feature requests and one for bugs.
+
+| Who sees it | Meaning |
+| --- | --- |
+| **Public** | Anyone reads it. Signed-in customers post. |
+| **Signed-in customers** | Only customers who signed in see it. |
+| **Internal** | Only your team sees it. |
+
+**Approve customers' posts before they show** holds each customer's post until a teammate approves it. The customer who posted it still sees it.
+
+## Statuses
+
+Statuses belong to the workspace. A new workspace has five, and you can rename, recolor, reorder, add and delete them.
+
+| Status | What it means |
+| --- | --- |
+| **Under consideration** | **Open**. New requests start in the first open status. |
+| **Planned** | **Planned** |
+| **In progress** | **In progress** |
+| **Shipped** | **Done** |
+| **Closed** | **Closed**. The request leaves the roadmap and keeps its page. |
+
+When you move a request, the **Email N voters and whoever posted it** box starts checked. dimmi then emails each voter, the author and the customers of linked conversations once, with your **Note**.
+
+When you move a request to a status that means **Done**, **Changelog update** links the [changelog](/help-center/changelog/) entry that shipped it. The email links to that entry.
+
+## Votes
+
+- **One vote:** each customer votes once for a request.
+- **For a customer:** a teammate can vote for a customer and set **How much it matters to them**.
+- **From a conversation:** **Link to feature request** in a conversation links it to a request and votes for that customer once.
+- **From a request:** **Link a conversation** on a request finds a conversation by its words, customer or number, and does the same.
+- **Trending:** a vote counts double for each week it is newer, so recent votes move a request up.
+
+## Comments and duplicates
+
+- **Comments:** customers and teammates reply one level deep, in up to 5,000 characters. An internal note shows only to your team.
+- **Merging:** votes, comments and linked conversations move to the request you keep, and each customer counts once. The merged request's page redirects there.
+- **Deleting:** deleting a request, a board or a status emails nobody.
+
+dimmi sends `feedback_post.*` [webhook events](/developers/webhooks/events/) when a request is posted, voted for, moved, merged or linked to a conversation.

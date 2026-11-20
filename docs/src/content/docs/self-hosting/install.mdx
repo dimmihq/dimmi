@@ -1,0 +1,42 @@
+---
+title: "Install dimmi on a server"
+description: "Install dimmi on a fresh Linux server with one command, create the first owner and sign in."
+---
+import { Steps } from "~docs/components/mdx";
+
+You need a server that meets the [requirements](/self-hosting/) and a host name you control, such as `support.example.com`.
+
+<Steps>
+
+1. At your DNS provider, add an A record for the host name that points at the server's public IPv4 address.
+
+2. On the server, as root, run the installer. It takes 3 to 5 minutes.
+
+   ```bash
+   curl -fsSL https://github.com/dimmihq/dimmi/releases/latest/download/install.sh \
+     | bash -s -- --domain support.example.com --email ops@example.com
+   ```
+
+   `--email` is where Let's Encrypt sends certificate notices. As a `sudo` user, pipe to `sudo bash -s -- ...` instead.
+
+3. Create the first account. A self-hosted dimmi is invite-only, so this owner invites everyone else from the app.
+
+   ```bash
+   dimmictl admin --email ada@example.com --name "Ada Lovelace" --workspace "Acme Inc"
+   ```
+
+   The command prints a generated password once.
+
+4. Sign in at `https://support.example.com` and change the password.
+
+</Steps>
+
+You can run the installer again with the same options at any time. It keeps the secrets it generated the first time. The other options are in the [command-line reference](/self-hosting/cli/).
+
+## Email before a mailer is set
+
+Until you [connect a mail provider](/self-hosting/email/), dimmi writes each email to the logs instead of sending it. To find an invitation or sign-in link:
+
+```bash
+dimmictl logs web worker | grep mail_fallback
+```

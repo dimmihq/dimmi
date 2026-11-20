@@ -1,0 +1,103 @@
+---
+title: "Messenger JavaScript API"
+description: "Every Dimmi() command, runtime setting, script tag attribute, window event and @dimmi/browser function of the dimmi messenger."
+---
+
+The messenger takes commands through the global `Dimmi(command, ...arguments)` and through the `@dimmi/browser` client, which every `@dimmi` package returns.
+
+## Commands
+
+| Command | Arguments | Client method | Effect |
+| --- | --- | --- | --- |
+| `open` | None | `show()` | Opens the messenger. |
+| `close` | None | `hide()` | Closes the messenger. |
+| `toggle` | None | `toggle()` | Opens or closes the messenger. |
+| `ask` | `text` | `showNewMessage(text)` | Starts a new conversation and sends `text` as the customer's first message. |
+| `update`, `boot` | `settings` | `update(settings)` | Merges the settings over the current ones and redraws the messenger. |
+| `identify` | `source`, optional | `identify(source?)` | Sets the function that returns the [identity token](/developers/messenger/identity-verification/). Without one, asks the current source again. |
+| `logout`, `shutdown` | None | `shutdown()` | Ends the customer's session in this browser and on the server. |
+| `track` | `name`, `metadata` | `trackEvent(name, metadata?)` | Records an [event](/developers/messenger/track-events/) for the customer. |
+
+To call `Dimmi()` in an inline script before the loader, define the queue first:
+
+```html
+<script>
+  window.Dimmi =
+    window.Dimmi ||
+    function () {
+      (Dimmi.q = Dimmi.q || []).push([].slice.call(arguments));
+    };
+</script>
+```
+
+## Settings
+
+`update` takes these keys. A key you leave out keeps its value from the messenger's settings in dimmi.
+
+| Key | Value |
+| --- | --- |
+| `appearance.primary_color` | Hex color, such as `#0f766e` |
+| `appearance.header_color`, `appearance.button_color` | Hex color |
+| `appearance.theme` | `"light"`, `"dark"` or `"auto"` |
+| `appearance.position` | `"right"` or `"left"` |
+| `appearance.padding_x`, `appearance.padding_y` | Pixels from the side and the bottom of the page |
+| `appearance.launcher.style` | `"bubble"`, `"tab"` or `"hidden"` |
+| `appearance.launcher.shape` | `"circle"` or `"squircle"` |
+| `appearance.launcher.label` | Text |
+| `appearance.font` | `"system"` or `"inherit"`, the page's font |
+| `appearance.sound` | Boolean |
+| `texts` | Object of texts by key, such as `greeting`, `chat_title` or `composer_placeholder` |
+| `language` | Language tag, such as `fr` or `pt-BR` |
+
+```js
+Dimmi("update", {
+  appearance: { primary_color: "#0f766e", launcher: { style: "tab", label: "Help" } },
+});
+```
+
+## Script tag attributes
+
+| Attribute | Value |
+| --- | --- |
+| `src` | `<host>/widget/v1/loader.js` |
+| `data-app-id` | The messenger's app ID, `wgt_...` |
+| `data-api-base` | Where the messenger's API calls go, when not the loader's host |
+| `data-identity-url` | A URL on your site that answers the identity token |
+| `nonce` | A [Content Security Policy](/developers/messenger/content-security-policy/) nonce |
+
+## data-dimmi attributes
+
+A click on an element with `data-dimmi="open"`, `"close"` or `"toggle"` runs that command.
+
+## Events
+
+The messenger dispatches `dimmi:unread` on `window` at start and on each change. `event.detail.count` holds the customer's unread message count.
+
+## @dimmi/browser
+
+Each function does nothing on a server.
+
+| Function | Effect |
+| --- | --- |
+| `loadDimmi(options)` | Adds the loader script once and returns the client. |
+| `getDimmi()` | Returns the client for a messenger loaded elsewhere, such as by the script tag. |
+| `dimmi(name, ...args)` | Sends one raw command, like the client's `command()`. |
+
+`loadDimmi()`, `<DimmiProvider>`, `<Dimmi>`, `createDimmi()`, `provideDimmi()` and `initDimmi()` take the same options. `<Dimmi>` in `@dimmi/nextjs` takes only `appId`, `host`, `identity` and `nonce`.
+
+| Option | Value |
+| --- | --- |
+| `appId` | Required. The messenger's app ID. |
+| `host` | Required. `https://app.trydimmi.com`, or your self-hosted address. |
+| `apiBase` | Sets `data-api-base`. |
+| `nonce` | Sets `nonce`. |
+| `identity` | A function that returns the identity token or `null`. |
+| `identityUrl` | Sets `data-identity-url`. |
+| `settings` | Settings to apply at start. |
+
+The client has the methods in [Commands](#commands), plus:
+
+| Member | Effect |
+| --- | --- |
+| `ready` | A promise that resolves when the loader script loads and rejects when the browser blocks it. |
+| `onUnreadCountChange(fn)` | Calls `fn(count)` on each `dimmi:unread` event. Returns a function that stops listening. |

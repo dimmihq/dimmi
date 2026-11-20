@@ -1,0 +1,59 @@
+---
+title: "Set up single sign-on"
+description: "Connect a SAML or OpenID Connect identity provider to dimmi, verify your email domain and require single sign-on."
+---
+import { Steps } from "~docs/components/mdx";
+
+An Owner connects an identity provider in **Settings → Single sign-on**, over SAML or OpenID Connect. A connection signs nobody in until it is tested, turned on and tied to a verified domain.
+
+<Steps>
+
+1. Select **New connection** and choose SAML or OpenID Connect. A SAML connection needs only your provider's metadata URL.
+
+2. Open **Details** on the connection and give your identity provider the values it lists.
+
+3. Select **Add domain** for the domain your teammates' email addresses end in. Create the `TXT` record at `_dimmi-verify.<your domain>`, then check it.
+
+4. Choose the connection for the domain, then select **Test** and sign in at your identity provider.
+
+5. Select **Turn on**.
+
+</Steps>
+
+## Connection statuses
+
+| Status | Meaning |
+| --- | --- |
+| **Draft** | Signs nobody in. A new connection starts here. |
+| **Tested** | An Owner completed a test sign-in. |
+| **On** | Signs in people whose email is under a domain routed to it. |
+| **Off** | Turned off by an Owner. Turning a connection off also stops requiring it. |
+
+Changing a connection's protocol settings or secret returns it to **Draft**, and it stops being required until you test it again.
+
+## Require single sign-on
+
+**Require** sends everyone with an email under the connection's domains to your identity provider, whichever sign-in method they try.
+
+- **Proof first:** you must have signed in through the connection yourself, or confirm a test from the last 24 hours.
+- **Owners:** an active Owner can still sign in another way, for the day your identity provider is down.
+- **Deleting:** select **Stop requiring** before you delete a required connection.
+
+## New people
+
+A person who signs in through the connection must already be an active member. **Add new people** changes that: dimmi adds anyone your identity provider signs in, as a Member.
+
+dimmi never brings back a member someone deactivated.
+
+## Domains
+
+- **Ownership:** the first company to verify a domain holds it. Public email domains such as `gmail.com` cannot be verified.
+- **Daily check:** dimmi looks up each verified domain's `TXT` record once a day. After 7 days without it, the domain fails, its connection stops being required and dimmi emails the Owners.
+- **Removing:** a domain routed to a required connection cannot be removed or moved.
+
+## Limits and upkeep
+
+- A company has up to 10 connections and 20 domains.
+- dimmi reads a SAML connection's **Metadata URL** again every day, so a rotated signing certificate is picked up.
+- dimmi warns the Owners 30, 7 and 1 day before your identity provider's signing certificate expires.
+- A connection turns on only when dimmi is served over HTTPS.

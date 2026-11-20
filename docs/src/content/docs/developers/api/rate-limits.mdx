@@ -1,0 +1,31 @@
+---
+title: "API rate limits"
+description: "The dimmi API's rate limits per token and workspace, and the headers that report them."
+---
+
+dimmi counts API requests in four windows and answers `429` with code `too_many_requests` when one is full.
+
+## Limits
+
+These are the defaults. On a self-hosted install, your administrator can change them in the [configuration options](/self-hosting/configuration-options/).
+
+| `X-RateLimit-Scope` | Counted per | Limit |
+| --- | --- | --- |
+| `burst` | API token | 100 requests per 10 seconds |
+| `token` | API token | 600 requests per minute |
+| `workspace` | All API tokens of a workspace together | 6,000 requests per minute |
+| `user` | Person, for requests made without an API token | 1,200 requests per minute |
+
+An IP address that sends 60 requests with a rejected token in one minute also gets `429` until the minute ends.
+
+## Headers
+
+| Header | On | Value |
+| --- | --- | --- |
+| `X-RateLimit-Limit` | Each response | Size of the token's one-minute window. |
+| `X-RateLimit-Remaining` | Each response | Requests left in that window. |
+| `X-RateLimit-Scope` | `429` | The limit that refused the request. |
+| `Retry-After` | `429` | Seconds to wait. |
+| `X-RateLimit-Reset` | `429` | Unix time, in seconds, when the window resets. |
+
+On a `429`, `X-RateLimit-Limit` and `X-RateLimit-Remaining` describe the limit that refused the request. The [SDKs](/developers/sdks/supported-versions/) wait for `Retry-After` and send the request again.

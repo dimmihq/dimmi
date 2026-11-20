@@ -1,0 +1,43 @@
+---
+/*
+ * The page's frame: a sticky header, then the sidebar beside the content.
+ * Below the lg breakpoint the same sidebar element is a popover drawer
+ * that slides in on BoardUI's drawer motion (docs.css), with the header's
+ * tabs at its top; one element serves both, so its links ship once.
+ */
+import MobileMenuToggle from "virtual:starlight/components/MobileMenuToggle";
+import SiteTitle from "virtual:starlight/components/SiteTitle";
+
+import { DrawerSections } from "~docs/components/react/header";
+
+const { hasSidebar } = Astro.locals.starlightRoute;
+---
+<div class="min-h-dvh bg-background-full">
+  <header class="sticky top-0 z-40 print:hidden"><slot name="header" /></header>
+  <div class="mx-auto flex w-full max-w-[90rem]">
+    {hasSidebar && (
+      <nav id="docs-sidebar" popover="auto" aria-label="Docs" class="docs-sidebar print:hidden">
+        <div class="sticky top-0 z-10 flex h-14 items-center justify-between border-b border-separator-border bg-background-full px-4 lg:hidden">
+          <SiteTitle />
+          <MobileMenuToggle />
+        </div>
+        <div class="border-b border-separator-border px-4 py-4 lg:hidden">
+          <DrawerSections path={Astro.url.pathname} />
+        </div>
+        <div class="px-4 py-6 lg:py-8"><slot name="sidebar" /></div>
+      </nav>
+    )}
+    <div class="docs-page min-w-0 flex-1"><slot /></div>
+  </div>
+</div>
+<!-- The first render waits for this (see ThemeProvider): the page is parsed. -->
+<div id="docs-end" hidden></div>
+<script>
+  // Brings the current page's link into view in a long sidebar.
+  const current = document.querySelector<HTMLElement>("#docs-sidebar [aria-current='page']");
+  const sidebar = document.getElementById("docs-sidebar");
+  if (current && sidebar && sidebar.scrollHeight > sidebar.clientHeight) {
+    const top = current.offsetTop - sidebar.clientHeight / 3;
+    if (current.getBoundingClientRect().bottom > sidebar.getBoundingClientRect().bottom) sidebar.scrollTop = top;
+  }
+</script>

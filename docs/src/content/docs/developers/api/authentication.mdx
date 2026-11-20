@@ -1,0 +1,20 @@
+---
+title: "Authenticate API requests"
+description: "Send a dimmi API token as a Bearer token to call the REST API."
+---
+
+Create an API token in **Settings → API tokens** and send it in the `Authorization` header of each request.
+
+```bash
+curl https://app.trydimmi.com/api/v1/workspace \
+  -H "Authorization: Bearer <api_token>"
+```
+
+Replace `<api_token>` with your token. On a self-hosted install, the API is at `/api/v1` on your own dimmi address.
+
+- **Workspace.** A token works only in the workspace that was open when you created it.
+- **Abilities.** Each endpoint needs one ability, such as `conversations:read`. See [API token abilities](/developers/api/abilities/).
+- **Role.** dimmi checks your role on each request, so a token cannot do more than you can.
+- **Limits.** You can hold 50 working tokens per workspace and create 20 per hour.
+
+The [TypeScript](/developers/sdks/typescript/), [Go](/developers/sdks/go/), [PHP](/developers/sdks/php/), [Laravel](/developers/sdks/laravel/) and [Python](/developers/sdks/python/) SDKs take the same token.

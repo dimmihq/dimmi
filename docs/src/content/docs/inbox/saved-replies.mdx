@@ -1,0 +1,34 @@
+---
+title: "Use saved replies"
+description: "Create saved replies with variables and actions, and share them with the team."
+---
+
+Create saved replies in **Settings → Saved replies**. In the composer, insert one from the add menu or type `#` and its shortcut.
+
+## Variables
+
+**Variable** in the editor's toolbar adds one. dimmi fills variables when you insert the reply, so you see and can edit the text the customer will read.
+
+| Variable | Value |
+| --- | --- |
+| `{{ contact.first_name }}` | The customer's first name. |
+| `{{ contact.name }}` | The customer's full name. |
+| `{{ contact.email }}` | The customer's email. |
+| `{{ company.name }}` | The customer's company. |
+| `{{ sender.first_name }}` | Your first name. |
+
+A variable with no value takes its fallback: `{{ contact.first_name | default: "there" }}`.
+
+## Actions
+
+Under **When it is sent**, a saved reply can set the status, set the priority, assign a teammate or a team and add up to 10 tags.
+
+- dimmi applies the actions after the reply is sent, as you. An action your role does not allow fails, and the reply is still sent.
+- When you send with close or snooze, your choice replaces the saved reply's status.
+
+## Sharing
+
+- **Only me:** the reply shows in your composer only.
+- **Everyone:** the whole team can insert it. This needs the **Manage shared replies** permission from your [role](/workspace/roles-and-permissions/).
+
+A workspace holds up to 2,000 saved replies. A title is up to 120 characters.

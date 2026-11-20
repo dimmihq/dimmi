@@ -1,0 +1,37 @@
+---
+title: "Link Linear, Jira and GitHub issues"
+description: "Link tickets to issues in Linear, Jira or GitHub, so the issue's status moves the ticket and engineering sees the customer impact."
+---
+
+Connect Linear, Jira or GitHub in **Settings → Integrations**, then use **Link issue** on a ticket to create an issue or link an existing one.
+
+## What moves between dimmi and the tool
+
+| Direction | What |
+| --- | --- |
+| Tool to dimmi | The issue's status moves the ticket to a dimmi state. Customers see only dimmi's states. |
+| Tool to dimmi | Comments on the issue arrive as internal notes on the ticket. |
+| dimmi to tool | The impact: customers, companies and conversations reached, the revenue at stake and up to 10 company names. dimmi rewrites it when the ticket's links change. |
+
+Changes reach dimmi by webhook, and dimmi reads every open link again every 15 minutes. **Refresh** on a ticket's linked issues reads them now.
+
+## Which status moves a ticket where
+
+Map each status to a state under **Statuses** on the integration's page. Linear and Jira list each team or project there, since each has its own statuses: open one to map its statuses. A status you leave unmapped follows its kind:
+
+| Status kind | Ticket moves to |
+| --- | --- |
+| Started | **Being worked on** |
+| Done | **Close the loop** |
+| Canceled | **Won't fix** |
+| Backlog or not started | The ticket stays where it is. |
+
+dimmi keeps the teams and statuses it reads from the tool for a day. After adding a team or a status in the tool, use **Refresh** to see it.
+
+When the ticket's own rules refuse a move, such as an empty field that is required to resolve, the ticket stays and the link shows a warning.
+
+## Closing the loop
+
+A finished issue moves its ticket to **Close the loop**. dimmi sends customers nothing on its own: a teammate replies, or a workflow with the **Ticket needs the loop closed** [trigger](/workflows/triggers-and-steps/) does.
+
+Unlinking leaves the issue in its tool. Tick **Also remove what dimmi wrote** to take back the impact and the link to the ticket too; in the API, pass `remove_from_tool=true`.

@@ -1,0 +1,9 @@
+---
+import { Callout, type CalloutType } from "~docs/components/react/content";
+
+interface Props {
+  type?: CalloutType;
+  title?: string;
+}
+---
+<Callout {...Astro.props}><slot /></Callout>

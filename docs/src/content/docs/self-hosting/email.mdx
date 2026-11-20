@@ -1,0 +1,69 @@
+---
+title: "Send and receive email"
+description: "Connect a mail provider so dimmi sends email and receives your customers' replies: SMTP, Amazon SES, Postmark, Mailgun, SendGrid, Resend or Cloudflare."
+---
+
+Until you set a mailer, dimmi writes each email to its logs and sends nothing.
+
+For Amazon SES, which needs an S3 bucket, an SNS topic and an IAM user, follow the [SES guide](https://github.com/dimmihq/dimmi/blob/main/deploy/selfhost/references/aws-ses.md).
+
+## Send email
+
+dimmi sends through two mailers. `system` carries sign-in links, invitations and notifications. `customer` carries replies and broadcasts, and uses `system` when you leave it unset.
+
+```bash
+dimmictl set <<'EOF'
+DIMMI_MAIL__FROM__NAME=Acme Support
+DIMMI_MAIL__FROM__EMAIL=no-reply@mail.example.com
+DIMMI_MAIL__MAILERS__SYSTEM__DRIVER=smtp
+DIMMI_MAIL__MAILERS__SYSTEM__HOST=smtp.example.net
+DIMMI_MAIL__MAILERS__SYSTEM__USERNAME=<smtp_username>
+DIMMI_MAIL__MAILERS__SYSTEM__PASSWORD=<smtp_password>
+EOF
+```
+
+Each driver reads its own options after `DIMMI_MAIL__MAILERS__SYSTEM__` or `DIMMI_MAIL__MAILERS__CUSTOMER__`:
+
+| `DRIVER` | Options |
+| --- | --- |
+| `smtp` | `HOST`, `PORT` (default `587`), `USERNAME`, `PASSWORD`, `TLS` (`true` for port 465) |
+| `ses` | `REGION` (default `us-east-1`), `ACCESS_KEY_ID`, `SECRET_ACCESS_KEY`, `CONFIGURATION_SET` |
+| `postmark` | `TOKEN`, `MESSAGE_STREAM` (default `outbound`) |
+| `mailgun` | `API_KEY`, `DOMAIN`, `ENDPOINT` (default `https://api.mailgun.net`; `https://api.eu.mailgun.net` for the EU) |
+| `sendgrid` | `API_KEY` |
+| `resend` | `API_KEY` |
+
+Verify the sending domain at your provider. This command explains what a sending domain still lacks:
+
+```bash
+docker compose -f /opt/dimmi/compose.yaml exec web /dimmi email:doctor mail.example.com
+```
+
+## Receive email
+
+Pick an inbound domain that only dimmi uses, such as `inbound.example.com`: every address on it belongs to dimmi. Point its MX records at your provider, then name the domain and the driver:
+
+```bash
+dimmictl set <<'EOF'
+DIMMI_CHANNELS__EMAIL__INBOUND_DOMAIN=inbound.example.com
+DIMMI_CHANNELS__EMAIL__INBOUND__DRIVERS=postmark
+DIMMI_MAILBOX__DEFAULT=postmark
+DIMMI_MAILBOX__SOURCES__POSTMARK__DRIVER=postmark
+DIMMI_MAILBOX__SOURCES__POSTMARK__USERNAME=<webhook_username>
+DIMMI_MAILBOX__SOURCES__POSTMARK__PASSWORD=<webhook_password>
+EOF
+```
+
+For another provider, replace `postmark` and `POSTMARK` with its driver and set its options. `<app_domain>` is the domain you installed dimmi on.
+
+| Driver | Options | At the provider |
+| --- | --- | --- |
+| `postmark` | `USERNAME`, `PASSWORD`: a long random pair you make up | An inbound stream that includes the raw email, with the webhook `https://<webhook_username>:<webhook_password>@<app_domain>/webhooks/postmark/inbound` |
+| `mailgun` | `SIGNING_KEY`: the HTTP webhook signing key | A receiving route that forwards to `https://<app_domain>/webhooks/mailgun/inbound/mime` |
+| `sendgrid` | `PUBLIC_KEY`: the webhook verification key | Inbound Parse that posts the raw MIME message, signed, to `https://<app_domain>/webhooks/sendgrid/inbound` |
+| `resend` | `WEBHOOK_SECRET`, `API_KEY` | A webhook for `email.received` to `https://<app_domain>/webhooks/resend/inbound` |
+| `cloudflare` | `SECRET`: a long random value you make up | A Worker with that secret, and a catch-all Email Routing rule that sends to it. `/dimmi email:cloudflare-worker` prints the Worker. |
+
+To check how email reaches the server, run `/dimmi email:inbound-doctor` the same way as `email:doctor`.
+
+Each team then [forwards its support address](/channels/support-email/) to its address on the inbound domain.

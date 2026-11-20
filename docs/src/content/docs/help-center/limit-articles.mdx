@@ -1,0 +1,44 @@
+---
+title: "Limit articles to some customers"
+description: "Keep an article to one audience, and the three ways a reader signs in to your help center to see it."
+---
+
+To keep an article to some customers, open **Article settings** and set **Audience** to one of your saved [audiences](/customers/audiences/).
+
+## What an audience limit does
+
+- **Readers:** the article leaves the help center's pages and search for everyone outside the audience.
+- **dimmi agent:** the agent never answers a customer from an article that customer could not read.
+- **Timing:** the change saves at once, without publishing the article.
+- **Collections:** to keep a whole collection to an audience, call `PATCH /api/v1/collections/{collection}/audience`.
+
+dimmi refuses an audience that uses page conditions or any value a browser could claim. An audience that decides access may use only what your own systems told dimmi about the customer.
+
+## How readers sign in
+
+The help center shows **Sign in** when an audience hides something from the reader, or when you set a login address. Set both options under **Readers sign in with** in **Settings → Help centers**.
+
+| Way in | How it works |
+| --- | --- |
+| **Email code** | On by default. The reader types their email and a 6-digit code. The code works for 10 minutes and 5 wrong tries cancel it. |
+| **Your product's login** | The reader signs in to your product, which sends them back with an identity token. |
+| Messenger | A customer the messenger already knows opens an article from the messenger signed in. |
+
+- **Email code limits:** one code every 30 seconds and 5 an hour for each address.
+- **Who the reader is:** a code signs the reader in as the customer with that email address, or as a new lead.
+- **Session:** a reader stays signed in for 7 days after their last visit, on that help center only.
+
+## Sign readers in through your product
+
+1. Set **Your product's login** to an `https` page of your product, such as `https://app.acme.example/help-login`.
+2. dimmi sends the reader to that page with a `return_to` query parameter.
+3. Your page signs the user in, then signs an [identity token](/developers/messenger/identity-verification/) for them on your server.
+4. Your page redirects to `return_to` with `#token=<identity_token>` added.
+
+```text
+https://acme.dimmi.help/sso?next=%2Farticles%2Fbilling#token=<identity_token>
+```
+
+Redirect only when `return_to` starts with your help center's address.
+
+A token with an `aud` claim must name `dimmi`, `dimmi-help` or the workspace ID. A token with a `nonce` claim works once.

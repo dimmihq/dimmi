@@ -1,0 +1,51 @@
+---
+title: "Requirements and architecture"
+description: "What a self-hosted dimmi needs: one Linux server, the services it runs and how they fit together."
+---
+
+A self-hosted dimmi is one Docker Compose project on one Linux server, installed and run with the `dimmictl` script.
+
+## Server
+
+| Requirement | Value |
+| --- | --- |
+| Operating system | Ubuntu 22.04 or 24.04, or Debian 12 |
+| CPU | 2 vCPU |
+| Memory | 4 GB, or 6 GB with malware scanning |
+| Disk | 40 GB |
+| Network | A public IPv4 address, with ports 80 and 443 open from the internet |
+| Access | root, or a user with `sudo` |
+
+On another Linux distribution, install Docker with the Compose plugin yourself and pass `--skip-prepare` to the [installer](/self-hosting/install/).
+
+## Domain
+
+dimmi needs one host name, such as `support.example.com`, with an A record that points at the server. The app, the API, uploaded files, help centers and incoming webhooks all answer on it.
+
+Caddy gets the certificate from Let's Encrypt, so the record must reach the server directly. On Cloudflare, set the record to DNS only.
+
+## Services
+
+| Service | Image | What it does |
+| --- | --- | --- |
+| `caddy` | `caddy:2.10` | The only published service. Takes ports 80 and 443, holds the certificates and proxies to `web`. |
+| `web` | `ghcr.io/dimmihq/dimmi` | The app and the API. |
+| `worker` | `ghcr.io/dimmihq/dimmi` | Background jobs and scheduled work. |
+| `migrate` | `ghcr.io/dimmihq/dimmi` | Applies database migrations, then exits. Runs before `web` and `worker` on each start. |
+| `postgres` | `pgvector/pgvector:pg18` | The database, including the job queue and sessions. |
+| `valkey` | `valkey/valkey:8` | Cache, rate limits and realtime messages. |
+| `seaweedfs` | `chrislusf/seaweedfs:3.97` | Uploaded files, behind an S3 API. dimmi serves them from its own address. |
+| `clamav` | `clamav/clamav:1.4` | Optional malware scanning of uploads and email attachments. Uses about 1.5 GB of memory. |
+
+Everything except `caddy` talks on a private Docker network.
+
+## Files on the server
+
+The stack lives in `/opt/dimmi`.
+
+| Path | Holds |
+| --- | --- |
+| `/opt/dimmi/.env` | Your settings and the generated secrets, including the app key. See [How configuration works](/self-hosting/configuration/). |
+| `/opt/dimmi/compose.yaml`, `Caddyfile` | The stack. [`dimmictl update`](/self-hosting/upgrade/) replaces them. |
+| `/opt/dimmi/VERSION` | The installed release. |
+| Docker volumes `dimmi_postgres`, `dimmi_seaweedfs` | Your data. See [Back up and restore](/self-hosting/backups/). |

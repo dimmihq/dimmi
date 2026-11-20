@@ -1,0 +1,102 @@
+---
+title: "Configuration options"
+description: "The settings a self-hosted dimmi operator changes, with each environment variable, its default and its meaning."
+---
+
+The settings an operator changes on a self-hosted dimmi, by area. [How configuration works](/self-hosting/configuration/) explains how to set one.
+
+## Server
+
+`dimmictl` writes these to `/opt/dimmi/.env` during the install.
+
+| Variable | Default | Description |
+| --- | --- | --- |
+| `APP_DOMAIN` | From `--domain` | The domain dimmi answers on. |
+| `ACME_EMAIL` | From `--email` | The address Caddy registers TLS certificates with. |
+| `IMAGE` | The installed release | The dimmi image. `dimmictl update` changes it. |
+| `DIMMI_APP__KEY` | Generated | Encrypts the secrets in the database. Never change it. |
+| `COMPOSE_PROFILES` | Empty | `clamav` runs the ClamAV malware scanner. The installer's `--clamav` option sets it. |
+| `NETWORK_SUBNET` | `172.29.0.0/24` | The private Docker network. |
+| `DIMMI_LOG__LEVEL` | `info` | `debug`, `info`, `warn` or `error`. |
+| `DIMMI_GATE__ENABLED` | `false` | Puts the whole app behind one shared password. |
+| `DIMMI_GATE__PASSWORD` | Empty | The shared password. |
+
+## Sign-up and sign-in
+
+Each variable starts with `DIMMI_AUTH__`. [Sign-in providers](/self-hosting/sign-in-providers/) covers Google and GitHub.
+
+| Variable | Default | Description |
+| --- | --- | --- |
+| `SIGNUP__MODE` | `invite_only` | `open` lets anyone create an account. |
+| `SIGNUP__MAX_PER_HOUR_PER_IP` | `20` | Accounts one IP address can create in an hour. |
+| `DISPOSABLE_EMAIL` | `off` | Sign-ups from throwaway mailboxes: `off`, `flag` or `block`. |
+| `VERIFICATION__REQUIRED` | `false` | Require a verified email before inviting people or creating tokens. |
+| `PASSWORDS__MIN_LENGTH` | `10` | Shortest password, in characters. At least `8`. |
+| `SESSIONS__IDLE_LIFETIME` | `336h` | An unused session ends after this long. |
+| `SESSIONS__ABSOLUTE_LIFETIME` | `720h` | Every session ends this long after sign-in. |
+| `MAGIC_LINK__ENABLED` | `true` | Sign-in links by email. |
+| `MAGIC_LINK__TTL` | `15m` | How long a sign-in link works. |
+| `FACTORS__ENABLED` | `totp,passkey,recovery_code` | The second factors people can add. |
+| `LOCKOUT__PER_IP_EMAIL` | `10` | Sign-in attempts a minute from one IP address at one email. |
+| `LOCKOUT__PER_EMAIL_SOFT_LOCK` | `30` | Failures an hour at one email that lock it for unknown devices. |
+| `LOCKOUT__PER_IP_SPRAY` | `100` | Failures an hour from one IP address that block it. |
+| `CAPTCHA__DRIVER` | `none` | `turnstile` adds Cloudflare Turnstile. |
+| `CAPTCHA__SITE_KEY`, `CAPTCHA__SECRET_KEY` | Empty | The Turnstile keys. Required with `turnstile`. |
+
+## Email
+
+Each variable starts with `DIMMI_CHANNELS__EMAIL__`. [Send and receive email](/self-hosting/email/) covers the mailers and the inbound domain.
+
+| Variable | Default | Description |
+| --- | --- | --- |
+| `DEFAULT_SENDER_DOMAIN` | The inbound domain | The domain replies come from until a workspace verifies its own. |
+| `INBOUND__MAX_MESSAGE_BYTES` | `31457280` | Largest email received. |
+| `INBOUND__MAX_ATTACHMENTS` | `50` | Files kept from one email. |
+| `INBOUND__MAX_ATTACHMENT_BYTES` | `26214400` | Largest file kept from an email. |
+| `INBOUND__REOPEN_WINDOW` | `720h` | How long after closing a reply reopens the conversation. A later reply starts a new one. |
+| `SENDING__MAX_ATTACHMENT_BYTES` | `20971520` | Largest total sent as attachments. The rest go as links. |
+| `SENDING__ATTACHMENT_LINK_TTL` | `168h` | How long those links work. |
+| `SENDING__LIMITS__PROVIDER_PER_MINUTE` | `0` | The sending quota your mail provider grants per minute. `0` means none. |
+| `SENDING__LIMITS__PROVIDER_PER_DAY` | `0` | The same quota per day. |
+| `SENDING__LIMITS__BROADCAST_SHARE_PERCENT` | `80` | The share of that quota broadcasts can use. |
+| `SENDING__REPUTATION__BOUNCE_PAUSE_RATE` | `0` | Bounce rate that pauses a workspace's sending, from `0` to `1`. `0` is off. |
+| `SENDING__REPUTATION__COMPLAINT_PAUSE_RATE` | `0` | Complaint rate that pauses a workspace's sending. `0` is off. |
+
+## AI
+
+Each variable starts with `DIMMI_AI__`. [AI provider keys](/self-hosting/ai-providers/) covers the keys, the spending cap and the off switch.
+
+| Variable | Default | Description |
+| --- | --- | --- |
+| `ANSWER_EFFORT` | `low` | How hard the answer model reasons: `low`, `medium` or `high`. |
+| `TRACES_STORE_PAYLOADS` | `true` | Keep the prompts and answers of each agent run. |
+| `TRACES_RETENTION_DAYS` | `30` | Days those prompts and answers are kept. |
+| `RUNS_RETENTION_DAYS` | `400` | Days the record of an agent run is kept. `0` keeps it forever. |
+
+## Limits
+
+| Variable | Default | Description |
+| --- | --- | --- |
+| `DIMMI_INVITATIONS__MAX_PER_DAY` | `0` | Invitations a workspace can send in a day. `0` means no limit. |
+| `DIMMI_INVITATIONS__TTL` | `168h` | How long an invitation link works. |
+| `DIMMI_TOKENS__MAX_PER_MEMBER` | `50` | Working API tokens one member can hold in a workspace. |
+| `DIMMI_API__LIMITS__TOKEN_PER_MINUTE` | `600` | API requests a minute per token. |
+| `DIMMI_API__LIMITS__USER_PER_MINUTE` | `1200` | API requests a minute per signed-in person. |
+| `DIMMI_API__LIMITS__WORKSPACE_PER_MINUTE` | `6000` | API requests a minute for all of a workspace's tokens. |
+| `DIMMI_WIDGET__MAX_WIDGETS_PER_WORKSPACE` | `10` | Messengers per workspace. `0` means no limit. |
+| `DIMMI_WEBHOOKS__MAX_ENDPOINTS` | `20` | Webhook endpoints per workspace. `0` means no limit. |
+| `DIMMI_WEBHOOKS__REQUIRE_HTTPS` | `false` | Refuse webhook endpoints on plain `http`. |
+| `DIMMI_INBOX__GIF__GIPHY_API_KEY` | Empty | A GIPHY key. Without one, the composer has no GIF search. |
+
+## Retention
+
+| Variable | Default | Description |
+| --- | --- | --- |
+| `DIMMI_AUDIT__RETENTION_DAYS` | `0` | Days audit log entries are kept. `0` keeps them forever. |
+| `DIMMI_SECURITY_EVENTS__RETENTION_DAYS` | `365` | Days security log entries are kept. `0` keeps them forever. |
+| `DIMMI_INBOX__DRAFTS__RETENTION_DAYS` | `30` | Days an untouched draft is kept. `0` keeps drafts forever. |
+| `DIMMI_WEBHOOKS__DELIVERY_RETENTION_DAYS` | `30` | Days the webhook delivery log is kept. |
+| `DIMMI_CHANNELS__INBOUND_EVENTS__PROCESSED_RETENTION_DAYS` | `7` | Days processed and ignored deliveries from chat apps are kept. `0` keeps them forever. |
+| `DIMMI_CHANNELS__INBOUND_EVENTS__FAILED_RETENTION_DAYS` | `30` | Days failed and held deliveries from chat apps are kept. `0` keeps them forever. |
+| `DIMMI_WORKSPACES__DELETION_GRACE_DAYS` | `30` | Days a deleted workspace can still be restored. |
+| `DIMMI_CONTACTS__ERASE_GRACE_DAYS` | `7` | Days a customer erasure waits before it wipes the data. |

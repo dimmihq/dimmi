@@ -1,0 +1,14 @@
+---
+import { ButtonLink } from "@/components/base/buttons/button";
+import { icon } from "~docs/components/react/icons";
+
+interface Props {
+  href: string;
+  variant?: "primary" | "secondary" | "ghost";
+  icon?: string;
+}
+const { href, variant = "secondary", icon: iconName } = Astro.props;
+---
+<span class="not-prose me-2 inline-flex [&_a]:no-underline">
+  <ButtonLink href={href} variant={variant} trailingIcon={icon(iconName)}><slot /></ButtonLink>
+</span>

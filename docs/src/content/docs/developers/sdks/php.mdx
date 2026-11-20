@@ -1,0 +1,81 @@
+---
+title: "PHP SDK"
+description: "Install dimmi/dimmi-php and call the dimmi REST API from PHP."
+---
+
+`dimmi/dimmi-php` needs PHP 8.2 or later. In a Laravel app, install the [Laravel SDK](/developers/sdks/laravel/), which includes this client.
+
+```bash
+composer require dimmi/dimmi-php
+```
+
+## Create a client and call an endpoint
+
+```php title="dimmi.php"
+<?php
+
+require __DIR__ . '/vendor/autoload.php';
+
+$dimmi = new Dimmi\Client(token: getenv('DIMMI_TOKEN'));
+
+try {
+    $contact = $dimmi->contacts->store(['email' => 'ada@example.com', 'name' => 'Ada Lovelace']);
+    echo $contact['data']['id'], "\n";
+} catch (Dimmi\ValidationException $e) {
+    print_r($e->fields);
+} catch (Dimmi\DimmiException $e) {
+    echo $e->status, ' ', $e->errorCode, "\n";
+}
+
+foreach ($dimmi->paginate('/conversations', ['filter[status]' => 'open']) as $conversation) {
+    echo $conversation['id'], "\n";
+}
+```
+
+`DIMMI_TOKEN` holds your [API token](/developers/api/authentication/). On a self-hosted install, pass `baseUrl:` with your dimmi address, or set `DIMMI_BASE_URL`.
+
+## Calls
+
+Each operation in the [API reference](/api-reference/) has three forms. Responses are decoded JSON arrays.
+
+| Form | Example |
+| --- | --- |
+| Resource method | `$dimmi->conversations->messages->store($id, ['body' => 'Hello'])` |
+| Operation id | `$dimmi->call('conversations.messages.store', path: [$id], body: ['body' => 'Hello'])` |
+| Method and path | `$dimmi->request('POST', "/conversations/{$id}/messages", body: ['body' => 'Hello'])` |
+
+A resource name is the operation id in camelCase: `webhook-endpoints.tests.store` is `$dimmi->webhookEndpoints->tests->store()`. Methods take path parameters first, then `$body` on writes, then `$query` and `$options`.
+
+## Lists
+
+- **`paginate()`** yields each item of a list and follows `meta.next_cursor`. It asks for 100 items per page unless you set `limit`.
+- **`pages()`** yields each page of a list that pages with `page`.
+
+Both take a path or an operation id: `$dimmi->paginate('conversations.messages.index', params: [$id])`.
+
+## Errors
+
+| Status | Exception |
+| --- | --- |
+| 400, 422 | `Dimmi\ValidationException` |
+| 401 | `Dimmi\AuthenticationException` |
+| 403 | `Dimmi\PermissionDeniedException` |
+| 404 | `Dimmi\NotFoundException` |
+| 429 | `Dimmi\RateLimitException`, with `retryAfter` in seconds |
+| 500 and above | `Dimmi\ServerException` |
+
+Each extends `Dimmi\DimmiException`, which has `status`, `errorCode` and `fields`.
+
+## Retries and idempotency
+
+The client retries a `429`, a `503` or a failed connection 2 times, waiting for `Retry-After`. It sends an [`Idempotency-Key`](/developers/api/idempotency/) with each `POST` and reuses it on retries.
+
+```php
+$dimmi = new Dimmi\Client(options: ['maxRetries' => 5, 'timeout' => 10, 'maxRetryDelay' => 30]);
+
+$dimmi->contacts->store(['email' => 'ada@example.com'], options: ['idempotencyKey' => 'signup-4821']);
+```
+
+## Webhooks and identity tokens
+
+`Dimmi\Webhook` checks webhook signatures: see [Verify webhook signatures](/developers/webhooks/verify-signatures/). `Dimmi\Identity::sign()` signs tokens for [identity verification](/developers/messenger/identity-verification/).

@@ -1,0 +1,25 @@
+---
+title: "Quickstart"
+description: "Add the dimmi messenger to your site and answer your first conversation from the inbox."
+---
+import { Screenshot, Steps } from "~docs/components/mdx";
+
+Create a workspace at [app.trydimmi.com/signup](https://app.trydimmi.com/signup). On a self-hosted server, create the first account with [`dimmictl admin`](/self-hosting/install/).
+
+<Steps>
+
+1. Open **Settings → Messengers**, select the **Website** messenger and copy its snippet. Paste it before the closing `</body>` tag of your site.
+
+   ```html
+   <script async src="https://app.trydimmi.com/widget/v1/loader.js" data-app-id="<app_id>"></script>
+   ```
+
+   The copied snippet has your `<app_id>` filled in.
+
+2. Open your site and send a message from the messenger.
+
+3. In dimmi, open **Inbox**, choose the **Unassigned** view and reply to the conversation.
+
+</Steps>
+
+<Screenshot name="inbox-reply" alt="A conversation open in the dimmi inbox, with a reply typed in the composer and the customer details on the right." />

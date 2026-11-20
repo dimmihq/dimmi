@@ -1,0 +1,37 @@
+---
+title: "Content Security Policy for the messenger"
+description: "The Content-Security-Policy directives and nonce the dimmi messenger needs on a page with a strict policy."
+---
+
+Add `<dimmi_host>` to three directives: `https://app.trydimmi.com` on dimmi Cloud, or your self-hosted server's address.
+
+| Directive | Add |
+| --- | --- |
+| `script-src` | `<dimmi_host>`, or a nonce with `'strict-dynamic'`. Also the CDN origin, when a self-hosted server serves the messenger's files from one. |
+| `connect-src` | `<dimmi_host>`, plus your proxy's origin when you set `apiBase` |
+| `img-src` | `<dimmi_host>` and `data:`. Also your file storage's origin, when conversation images come from signed links to it. |
+| `media-src` | Your file storage's origin, for voice messages |
+| `style-src` | Nothing |
+
+```http
+Content-Security-Policy: script-src 'self' https://app.trydimmi.com; connect-src 'self' https://app.trydimmi.com; img-src 'self' https://app.trydimmi.com data:
+```
+
+## Use a nonce with 'strict-dynamic'
+
+Browsers ignore host sources in `script-src` under `'strict-dynamic'`, so put your nonce on the loader's script tag. With a package, pass it as the `nonce` option.
+
+```http
+Content-Security-Policy: script-src 'nonce-<nonce>' 'strict-dynamic'; connect-src 'self' https://app.trydimmi.com; img-src 'self' https://app.trydimmi.com data:
+```
+
+```html title="index.html"
+<script
+  async
+  nonce="<nonce>"
+  src="https://app.trydimmi.com/widget/v1/loader.js"
+  data-app-id="<app_id>"
+></script>
+```
+
+`<nonce>` is the nonce your server generates for each response, and `<app_id>` is your messenger's app ID.

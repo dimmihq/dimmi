@@ -1,0 +1,40 @@
+---
+title: "Set up the dimmi agent"
+description: "The defaults of a new dimmi agent, what must be in place before it can answer and what each setting changes."
+---
+
+Set up the dimmi agent in **Settings → dimmi agent**. Only admins can change it.
+
+## Turn it on
+
+**Answer customers** is off in a new workspace. The switch unlocks once the agent has:
+
+- A working connection in **Settings → AI providers**. See [AI providers](/ai/providers/).
+- An **Answer model** on that connection.
+- At least one channel ticked under **Channels**.
+
+Add [knowledge sources](/ai/knowledge-sources/) first: the agent answers only from your help center and those sources.
+
+## Settings and defaults
+
+| Setting | Default | What it changes |
+| --- | --- | --- |
+| **Name** | dimmi | Shown on the agent's replies. Up to 60 characters. |
+| **Tone** | **Friendly** | |
+| **Guidance** | Empty | Rules the agent follows in every reply. Up to 2,000 characters. |
+| **Channels** | **Messenger** | Also **Email**, **API** and **Slack**. |
+| **Hours** | **Always** | The other two options follow the [office hours](/inbox/office-hours/) of each conversation's inbox. |
+| **Once a teammate is assigned** | **Step back while a teammate is active** | See below. |
+| **Replies per conversation** | 5 replies | 3, 5, 10 or 20. The agent then [hands over](/ai/handover/). |
+| **When it doesn't know** | **Offer a teammate** | See [Control handover](/ai/handover/). |
+| **Links it may share** | Empty | One site per line. `*.example.com` covers `example.com` and every subdomain. |
+| **Hide personal data** | On | See [customer data](/ai/customer-data/). |
+| **Monthly cap** | $25 | See [the monthly cap](/ai/providers/#set-the-monthly-cap). |
+
+## When a teammate is assigned
+
+- **Step back while a teammate is active:** the agent stays quiet while the assigned teammate is online, or has replied in the conversation in the last 24 hours.
+- **Stop once someone is assigned:** the agent never replies in an assigned conversation.
+- **Keep answering:** the agent replies even when a teammate is assigned.
+
+With every option, the agent skips a customer message that a teammate has already answered.

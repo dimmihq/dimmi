@@ -1,0 +1,8 @@
+---
+import { CardGrid } from "~docs/components/react/content";
+
+interface Props {
+  cols?: 2 | 3;
+}
+---
+<CardGrid {...Astro.props}><slot /></CardGrid>

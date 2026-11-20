@@ -1,0 +1,159 @@
+---
+title: "Verify webhook signatures"
+description: "Check that a webhook request came from dimmi with the endpoint's signing secret, and rotate that secret."
+---
+import { TabItem, Tabs } from "~docs/components/mdx";
+
+dimmi signs each request with the endpoint's signing secret, following [Standard Webhooks](https://www.standardwebhooks.com). Copy the secret from the endpoint's page in **Settings → Webhooks**.
+
+| Header | Value |
+| --- | --- |
+| `webhook-id` | The event's `id`. |
+| `webhook-timestamp` | The time dimmi sent this attempt, in Unix seconds. |
+| `webhook-signature` | `v1,` and a base64 HMAC-SHA256 of `<webhook-id>.<webhook-timestamp>.<body>`. |
+
+## Verify a request
+
+Verify the raw body, before any JSON parsing. Each library rejects a timestamp more than 5 minutes from your server's clock.
+
+<Tabs>
+<TabItem label="Node.js">
+
+```js title="server.js"
+import express from "express";
+import { Webhook } from "standardwebhooks";
+
+const app = express();
+const webhook = new Webhook(process.env.DIMMI_WEBHOOK_SECRET);
+
+app.post("/webhooks/dimmi", express.raw({ type: "application/json" }), (req, res) => {
+  let event;
+  try {
+    event = webhook.verify(req.body, req.headers);
+  } catch {
+    return res.status(400).end();
+  }
+
+  console.log(event.type, event.data.object.id);
+  res.status(204).end();
+});
+
+app.listen(3000);
+```
+
+</TabItem>
+<TabItem label="Go">
+
+```go title="main.go"
+package main
+
+import (
+	"log"
+	"net/http"
+	"os"
+
+	dimmi "github.com/dimmihq/dimmi-go"
+)
+
+func main() {
+	wh, err := dimmi.NewWebhook(os.Getenv("DIMMI_WEBHOOK_SECRET"))
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	http.Handle("/webhooks/dimmi", wh.Handler(func(r *http.Request, e *dimmi.Event) error {
+		log.Println(e.Type, e.ID)
+		return nil
+	}))
+
+	log.Fatal(http.ListenAndServe(":3000", nil))
+}
+```
+
+</TabItem>
+<TabItem label="PHP">
+
+```php title="webhook.php"
+<?php
+
+require __DIR__ . '/vendor/autoload.php';
+
+$webhook = new Dimmi\Webhook(getenv('DIMMI_WEBHOOK_SECRET'));
+
+try {
+    $event = $webhook->verify(file_get_contents('php://input'), getallheaders());
+} catch (Dimmi\WebhookVerificationException $e) {
+    http_response_code(400);
+    exit;
+}
+
+error_log($event->type . ' ' . $event->id);
+http_response_code(204);
+```
+
+</TabItem>
+<TabItem label="Laravel">
+
+```php title="routes/web.php"
+use Illuminate\Support\Facades\Route;
+
+Route::dimmiWebhooks('webhooks/dimmi');
+```
+
+```php title="app/Providers/AppServiceProvider.php"
+<?php
+
+namespace App\Providers;
+
+use Dimmi\WebhookEvent;
+use Illuminate\Support\Facades\Event;
+use Illuminate\Support\ServiceProvider;
+
+class AppServiceProvider extends ServiceProvider
+{
+    public function boot(): void
+    {
+        Event::listen('dimmi.webhook.conversation.created', function (WebhookEvent $event) {
+            logger('dimmi', ['conversation' => $event->object()['id']]);
+        });
+    }
+}
+```
+
+The route reads the secret from `DIMMI_WEBHOOK_SECRET` in `.env`.
+
+</TabItem>
+<TabItem label="Python">
+
+```python title="app.py"
+import os
+
+from fastapi import FastAPI, Request, Response
+
+from dimmi import Webhook, WebhookVerificationError
+
+app = FastAPI()
+webhook = Webhook(os.environ["DIMMI_WEBHOOK_SECRET"])
+
+
+@app.post("/webhooks/dimmi")
+async def receive(request: Request) -> Response:
+    try:
+        event = webhook.verify(await request.body(), request.headers)
+    except WebhookVerificationError:
+        return Response(status_code=400)
+
+    print(event.type, event.object["id"])
+    return Response(status_code=204)
+```
+
+</TabItem>
+</Tabs>
+
+Install `standardwebhooks` from npm for Node.js, or the dimmi [Go](/developers/sdks/go/), [PHP](/developers/sdks/php/), [Laravel](/developers/sdks/laravel/) or [Python](/developers/sdks/python/) SDK.
+
+## Rotate the secret
+
+Click **Rotate** on the endpoint's page. dimmi signs each request with both secrets for 1 day, so your server passes with either one while you deploy the new secret.
+
+With [Create webhook endpoint secret rotation](/api-reference/webhooks/create-webhook-endpoint-secret-rotation/), you choose the overlap in `overlap_seconds`, from `0` to `604800` (7 days). The default `0` stops the old secret at once.

@@ -1,0 +1,10 @@
+---
+const { banner } = Astro.locals.starlightRoute.entry.data;
+---
+{banner && (
+  <div
+    data-pagefind-ignore
+    class="mb-8 rounded-2xl border border-separator-border bg-background-secondary-default px-4 py-3 text-body-regular text-text-secondary [&_a]:text-text-primary [&_a]:underline"
+    set:html={banner.content}
+  />
+)}

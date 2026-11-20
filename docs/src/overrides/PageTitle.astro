@@ -1,0 +1,23 @@
+---
+import { PageActions } from "~docs/components/react/page-actions";
+import { PageTitle } from "~docs/components/react/page-parts";
+import { stripBase, withBase } from "~docs/base";
+import { markdownPath } from "~docs/markdown";
+import { groupLabelFor } from "~docs/sidebar-model";
+
+const { entry, sidebar } = Astro.locals.starlightRoute;
+const path = Astro.url.pathname;
+const eyebrow = groupLabelFor(path, JSON.parse(JSON.stringify(sidebar)));
+const inDocs = markdownPath(stripBase(path));
+const markdown = inDocs && withBase(inDocs);
+---
+<div class="flex flex-col sm:flex-row sm:items-start sm:justify-between sm:gap-6">
+  <div class="min-w-0 flex-1">
+    <PageTitle title={entry.data.title} description={entry.data.description} eyebrow={eyebrow} />
+  </div>
+  {markdown && (
+    <div class="-mt-4 mb-8 shrink-0 sm:m-0">
+      <PageActions client:idle markdownUrl={markdown} site={Astro.site?.origin ?? ""} />
+    </div>
+  )}
+</div>

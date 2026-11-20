@@ -1,0 +1,12 @@
+---
+import { Param } from "~docs/components/react/content";
+
+interface Props {
+  name: string;
+  type: string;
+  required?: boolean;
+  default?: string;
+}
+const { default: defaultValue, ...props } = Astro.props;
+---
+<Param {...props} defaultValue={defaultValue}><slot /></Param>

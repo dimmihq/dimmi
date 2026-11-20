@@ -1,0 +1,12 @@
+---
+/*
+ * A folder layout from a nested Markdown list: a trailing / marks a
+ * folder, words after the name are a note, and a **bold** name is
+ * highlighted. Drawn in BoardUI's tree view.
+ */
+import { FileTree } from "~docs/components/react/interactive";
+import { parseList } from "./split";
+
+const nodes = parseList(await Astro.slots.render("default"));
+---
+<FileTree client:visible nodes={nodes} />

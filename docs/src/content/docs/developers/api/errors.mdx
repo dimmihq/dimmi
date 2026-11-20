@@ -1,0 +1,65 @@
+---
+title: "API errors"
+description: "The shape of dimmi API error responses, their status codes and error codes."
+---
+
+Each failed request returns the same JSON body. Branch on `code`: dimmi writes `message` in the token owner's language.
+
+```json
+{
+  "code": "validation_failed",
+  "message": "The email field must be a valid email address.",
+  "errors": {
+    "email": ["The email field must be a valid email address."]
+  }
+}
+```
+
+## Fields
+
+| Field | Type | Value |
+| --- | --- | --- |
+| `code` | string | Stable name of the error. |
+| `message` | string | Text for a person. |
+| `errors` | object | Messages per rejected request field. Present only when a field is at fault. |
+| Other fields | any | Details of that code, such as `required_ability` or `parameter`. |
+
+## Status codes
+
+| Status | Meaning |
+| --- | --- |
+| `400` | Malformed request, such as a bad list parameter. |
+| `401` | Missing, invalid, expired or revoked token. |
+| `403` | The token or your role may not do this. |
+| `404` | No such record in the token's workspace. |
+| `405` | The path does not take this HTTP method. |
+| `409` | The request conflicts with the record's current state. |
+| `410` | The record is gone for good. |
+| `413` | The request body is too large. |
+| `422` | The input is invalid. |
+| `424` | A service the request depends on failed. |
+| `429` | Rate limited. See [API rate limits](/developers/api/rate-limits/). |
+| `500` | A fault in dimmi. |
+| `503` | dimmi is unavailable for a short time. Send the request again. |
+
+## Codes shared by all endpoints
+
+Endpoints add their own codes beside these.
+
+| Code | Status | Cause |
+| --- | --- | --- |
+| `unauthenticated` | 401 | The request has no token. |
+| `invalid_token` | 401 | dimmi does not know the token. |
+| `token_expired` | 401 | The token is past its expiry date. |
+| `token_revoked` | 401 | Someone revoked the token. |
+| `missing_ability` | 403 | The token lacks the ability in `required_ability`. See [API token abilities](/developers/api/abilities/). |
+| `credential_not_accepted` | 403 | The endpoint does not take API tokens. |
+| `forbidden` | 403 | Your role does not allow the action. |
+| `not_found` | 404 | No such path or record. |
+| `method_not_allowed` | 405 | The path does not take this HTTP method. |
+| `payload_too_large` | 413 | The request body is too large. |
+| `validation_failed` | 422 | Fields failed validation. `errors` lists them. |
+| `invalid_cursor`, `invalid_filter`, `invalid_sort`, `invalid_include`, `invalid_limit` | 400 | See [Paginate list responses](/developers/api/pagination/). |
+| `invalid_idempotency_key`, `idempotency_key_reused`, `idempotency_key_in_use` | 422, 422, 409 | See [idempotency keys](/developers/api/idempotency/). |
+| `too_many_requests` | 429 | See [API rate limits](/developers/api/rate-limits/). |
+| `internal_error` | 500 | A fault in dimmi. |

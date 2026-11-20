@@ -1,0 +1,20 @@
+---
+import MobileTableOfContents from "virtual:starlight/components/MobileTableOfContents";
+
+import { stripBase } from "~docs/base";
+
+// API endpoint pages are wider: their code samples sit beside the fields.
+const { toc } = Astro.locals.starlightRoute;
+const wide = /^\/api-reference\/[^/]+\/[^/]+\/?$/.test(stripBase(Astro.url.pathname));
+---
+<div class="flex gap-12 px-5 py-10 sm:px-8 lg:px-12">
+  <div class:list={["mx-auto w-full min-w-0", wide ? "max-w-6xl" : "max-w-3xl"]}>
+    {toc && <div class="mb-8 xl:hidden"><MobileTableOfContents /></div>}
+    <slot />
+  </div>
+  {toc && (
+    <aside class="hidden w-56 shrink-0 xl:block print:hidden">
+      <div class="sticky top-[calc(var(--docs-header)+2.5rem)]"><slot name="right-sidebar" /></div>
+    </aside>
+  )}
+</div>

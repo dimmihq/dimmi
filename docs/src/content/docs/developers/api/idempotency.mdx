@@ -1,0 +1,43 @@
+---
+title: "Retry requests safely with idempotency keys"
+description: "Send an Idempotency-Key header so retried POST requests to the dimmi API never run twice."
+---
+
+Send an `Idempotency-Key` header with a `POST`, and a retry with the same key returns the first response without running the request again.
+
+```bash
+curl https://app.trydimmi.com/api/v1/contacts \
+  -H "Authorization: Bearer <api_token>" \
+  -H "Idempotency-Key: <key>" \
+  -H "Content-Type: application/json" \
+  -d '{"email": "ada@example.com", "name": "Ada Lovelace"}'
+```
+
+Replace `<api_token>` with your [API token](/developers/api/authentication/) and `<key>` with a value unique to this operation, such as a UUID, of at most 255 characters.
+
+## Endpoints that read the key
+
+Other endpoints ignore the header.
+
+| Method and path |
+| --- |
+| `POST /contacts` |
+| `POST /conversations` |
+| `POST /conversations/{conversation}/messages` |
+| `POST /conversations/{conversation}/replies` |
+| `POST /conversations/{conversation}/notes` |
+| `POST /widget-settings` |
+| `POST /ai/actions` |
+| `POST /ai/action-connections` |
+| `POST /ai/keys` |
+
+## How dimmi treats a key
+
+- **Storage.** dimmi keeps a key and its response for 24 hours, per token owner and workspace.
+- **Replay.** A replayed response has the first response's status and body, plus the header `Idempotent-Replayed: true`.
+- **Server errors.** dimmi does not store a `5xx` response, so the retry runs the request again.
+- **Different request.** The same key with another path, query or body gets `422` with code `idempotency_key_reused`.
+- **Still running.** A retry sent before the first request finishes gets `409` with code `idempotency_key_in_use`. After 5 minutes without a response, the next retry runs the request.
+- **Long key.** A key over 255 characters gets `422` with code `invalid_idempotency_key`.
+
+The [Go](/developers/sdks/go/), [PHP](/developers/sdks/php/) and [Python](/developers/sdks/python/) SDKs send a key with each `POST`. The [TypeScript SDK](/developers/sdks/typescript/) does so with `autoIdempotency: true`.
