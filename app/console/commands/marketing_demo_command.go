@@ -21,6 +21,7 @@ package commands
 import (
 	"context"
 	"fmt"
+	"slices"
 	"strings"
 	"time"
 
@@ -69,131 +70,10 @@ Flags names the workspace and the owner the demo acts as.
 func (c MarketingDemoCommand) Flags(flags *console.Flags) {
 	flags.String("workspace", "", "the workspace's public id, ws_...")
 	flags.String("member", "", "the owner's member public id, mem_...")
-	flags.String("owner-email", "", "instead of --workspace and --member: create a new Lumen workspace owned by this account")
-}
-
-/*
-marketingTeammates are the people on the demo team, in the order the
-stories hand conversations to them.
-*/
-var marketingTeammates = []string{"Priya Moreau", "Kofi Mensah", "Lena Fischer", "Mateo Reyes", "Hana Tanaka"}
-
-/*
-marketingTurn is one message in a story: who says it and what.
-*/
-type marketingTurn struct {
-	by   string // "customer", "agent" or "note"
-	body string
-}
-
-/*
-marketingStory is one conversation: who wrote in, through which
-channel, what about, how it went, where it stands and how long ago it
-last moved.
-*/
-type marketingStory struct {
-	name, company, channel, subject string
-	turns                           []marketingTurn
-	status                          string // open, closed, snoozed
-	teammate                        int    // index into marketingTeammates, -1 for nobody
-	ago                             time.Duration
-}
-
-var marketingStories = []marketingStory{
-	{
-		name: "Omar Haddad", company: "Northwind Labs", channel: "email", subject: "Webhook deliveries failing since 9am",
-		turns: []marketingTurn{
-			{"customer", "Hi team, every webhook to our endpoint has failed since about 9:00 UTC. Nothing changed on our side. Can you check what you see?"},
-			{"note", "Their endpoint answers 301 to our requests since they moved to a new domain. Our sender doesn't follow redirects."},
-			{"agent", "Thanks Omar, I can see it. Since 08:57 UTC your endpoint answers every delivery with a 301 redirect to api.northwind.dev, and webhooks don't follow redirects. If you update the endpoint URL in Settings → Webhooks, the failed deliveries will retry on their own within the hour."},
-			{"customer", "That's it, we moved domains last night. Updated now, I can see deliveries coming through again. Thank you!"},
-		},
-		status: "open", teammate: 0, ago: 3 * time.Minute,
-	},
-	{
-		name: "Hana Kowalski", company: "Fieldnote", channel: "widget", subject: "Adding a teammate to our workspace",
-		turns: []marketingTurn{
-			{"customer", "How do I add a new teammate? I can't find the invite button."},
-			{"agent", "Open Settings, then Team, and choose Invite. They get an email link that's good for 7 days."},
-		},
-		status: "open", teammate: 1, ago: 11 * time.Minute,
-	},
-	{
-		name: "Sven Larsen", company: "Brightwave", channel: "email", subject: "SSO broken after certificate rotation",
-		turns: []marketingTurn{
-			{"customer", "We rotated our SAML signing certificate this morning and now nobody on the team can sign in."},
-		},
-		status: "open", teammate: -1, ago: 24 * time.Minute,
-	},
-	{
-		name: "Ada Okafor", company: "Pinecrest", channel: "widget", subject: "Charged twice for November",
-		turns: []marketingTurn{
-			{"customer", "Looks like we were charged twice for November. Can you refund one of them?"},
-			{"agent", "You're right, there are two $49.00 charges on November 3. I've refunded the duplicate; it shows on your card in 5 to 10 days."},
-			{"customer", "Perfect, thanks for the quick fix."},
-		},
-		status: "closed", teammate: 2, ago: 38 * time.Minute,
-	},
-	{
-		name: "Mateo Silva", company: "Larkspur", channel: "api", subject: "Rate limits on the contacts API",
-		turns: []marketingTurn{
-			{"customer", "We're importing about 80k contacts and keep hitting 429s. What's the limit and is there a bulk endpoint?"},
-		},
-		status: "open", teammate: 3, ago: 52 * time.Minute,
-	},
-	{
-		name: "Yara Ibrahim", company: "Quill & Co", channel: "email", subject: "Export all conversations to CSV?",
-		turns: []marketingTurn{
-			{"customer", "Is there a way to export every conversation from last quarter to CSV for our QA review?"},
-			{"agent", "Not as a CSV yet, but it's on our board. I've added your vote, and you'll get an email as soon as it ships."},
-		},
-		status: "snoozed", teammate: 4, ago: 75 * time.Minute,
-	},
-	{
-		name: "Wes Novak", company: "Tidewater", channel: "widget", subject: "Messenger not showing on mobile",
-		turns: []marketingTurn{
-			{"customer", "The chat bubble shows on desktop but not on our mobile site. Any ideas?"},
-			{"agent", "Check Settings → Messenger → Visibility: mobile is switched off for your site. Turn it on and it appears right away."},
-		},
-		status: "closed", teammate: 0, ago: 2 * time.Hour,
-	},
-	{
-		name: "Tara Mensah", company: "Oakline", channel: "email", subject: "Custom domain for our help center",
-		turns: []marketingTurn{
-			{"customer", "We'd like our help center on help.oakline.io. What DNS records do we need?"},
-		},
-		status: "open", teammate: 1, ago: 3 * time.Hour,
-	},
-	{
-		name: "Eli Nakamura", company: "Northwind Labs", channel: "api", subject: "Identity verification with Next.js",
-		turns: []marketingTurn{
-			{"customer", "Following the Next.js guide, but the messenger still shows visitors as anonymous after sign-in."},
-			{"agent", "Your token route returns the token as plain text; the messenger expects JSON like {\"token\": \"...\"}. Wrapping it fixes it."},
-		},
-		status: "closed", teammate: 3, ago: 5 * time.Hour,
-	},
-	{
-		name: "Rosa Costa", company: "Fieldnote", channel: "widget", subject: "Office hours in two time zones",
-		turns: []marketingTurn{
-			{"customer", "Our team is split between Lisbon and Toronto. Can office hours cover both?"},
-		},
-		status: "open", teammate: -1, ago: 7 * time.Hour,
-	},
-	{
-		name: "Ivan Adeyemi", company: "Brightwave", channel: "email", subject: "Upgrade to annual billing",
-		turns: []marketingTurn{
-			{"customer", "We'd like to move to annual billing from next month. Can you set that up?"},
-			{"agent", "Done. Annual billing starts on your next renewal, December 1, and your invoice goes to billing@brightwave.com."},
-		},
-		status: "closed", teammate: 2, ago: 26 * time.Hour,
-	},
-	{
-		name: "Nia Lindqvist", company: "Pinecrest", channel: "widget", subject: "Translate articles into German",
-		turns: []marketingTurn{
-			{"customer", "Can our help center serve German versions of the articles?"},
-		},
-		status: "open", teammate: 4, ago: 30 * time.Hour,
-	},
+	flags.String(
+		"owner-email", "",
+		"instead of --workspace and --member: create a new Lumen workspace owned by this account",
+	)
 }
 
 /*
@@ -205,34 +85,12 @@ func (c MarketingDemoCommand) Handle(
 	workspace, member := in.String("workspace"), in.String("member")
 
 	if email := in.String("owner-email"); email != "" {
-		user, err := models.New(c.App.DB).FindUserByEmail(ctx, strings.ToLower(email))
+		var err error
+
+		workspace, member, err = c.createLumen(ctx, email, out)
 		if err != nil {
-			return fmt.Errorf("find --owner-email: %w", err)
+			return err
 		}
-
-		// Retire an earlier demo so the new one gets the /lumen address again.
-		if _, err := c.App.DB.Exec(ctx, `UPDATE workspaces SET deleted_at = now(),
-				slug = 'lumen-retired-' || extract(epoch FROM now())::bigint
-			WHERE slug = 'lumen' AND created_by_user_id = $1`, user.ID); err != nil {
-			return fmt.Errorf("retire earlier demo: %w", err)
-		}
-
-		created, err := c.App.Actions.CreateWorkspace.Handle(ctx, workspaces.CreateWorkspaceInput{
-			Owner: user, Name: "Lumen", JoinedVia: "cli",
-		})
-		if err != nil {
-			return fmt.Errorf("create workspace: %w", err)
-		}
-
-		// The demo workspace skips onboarding, so shots open straight on the inbox.
-		if _, err := c.App.DB.Exec(ctx, `UPDATE workspaces SET onboarding_step = 'done', onboarding_completed_at = now()
-			WHERE id = $1`, created.Workspace.ID); err != nil {
-			return fmt.Errorf("finish onboarding: %w", err)
-		}
-
-		workspace = models.PublicID(models.PrefixWorkspace, created.Workspace.ID)
-		member = models.PublicID(models.PrefixMember, created.Owner.ID)
-		out.Line("created workspace %s at /w/%s", workspace, created.Workspace.Slug)
 	}
 
 	owner, err := SeriesDemoCommand(c).membership(ctx, workspace, member)
@@ -242,25 +100,17 @@ func (c MarketingDemoCommand) Handle(
 
 	ctx = tenancy.With(ctx, owner.Workspace.ID.String())
 
-	team, err := c.team(ctx, owner)
+	stage, err := c.stage(ctx, owner)
 	if err != nil {
 		return err
 	}
 
-	inbox, err := models.New(c.App.DB).FindDefaultInbox(ctx, owner.Workspace.ID)
-	if err != nil {
-		return fmt.Errorf("find default inbox: %w", err)
-	}
-
-	channels, err := c.channels(ctx, owner.Workspace.ID, inbox.ID)
-	if err != nil {
-		return err
-	}
+	stories := marketingStories()
 
 	// The oldest story first, so the newest lands on top of the list.
-	for i := len(marketingStories) - 1; i >= 0; i-- {
-		if err := c.story(ctx, owner, team, inbox.ID, channels, marketingStories[i]); err != nil {
-			return fmt.Errorf("story %q: %w", marketingStories[i].subject, err)
+	for _, s := range slices.Backward(stories) {
+		if err := c.story(ctx, stage, s); err != nil {
+			return fmt.Errorf("story %q: %w", s.subject, err)
 		}
 	}
 
@@ -268,9 +118,72 @@ func (c MarketingDemoCommand) Handle(
 		return err
 	}
 
-	out.Line("added %d teammates (password %s) and %d conversations", len(team), demoPassword, len(marketingStories))
+	out.Line("added %d teammates (password %s) and %d conversations", len(stage.team), demoPassword, len(stories))
 
 	return nil
+}
+
+/*
+stage adds the teammates and finds the inbox and channel connections
+every story plays out against.
+*/
+func (c MarketingDemoCommand) stage(ctx context.Context, owner authz.Membership) (marketingStage, error) {
+	team, err := c.team(ctx, owner)
+	if err != nil {
+		return marketingStage{}, err
+	}
+
+	inbox, err := models.New(c.App.DB).FindDefaultInbox(ctx, owner.Workspace.ID)
+	if err != nil {
+		return marketingStage{}, fmt.Errorf("find default inbox: %w", err)
+	}
+
+	channels, err := c.channels(ctx, owner.Workspace.ID, inbox.ID)
+	if err != nil {
+		return marketingStage{}, err
+	}
+
+	return marketingStage{owner: owner, team: team, inbox: inbox.ID, channels: channels}, nil
+}
+
+/*
+createLumen makes a fresh Lumen workspace owned by the account with this
+email, retiring an earlier one, and returns the public ids of the
+workspace and its owner's membership.
+*/
+func (c MarketingDemoCommand) createLumen(
+	ctx context.Context, email string, out *console.Output,
+) (workspace, member string, err error) {
+	user, err := models.New(c.App.DB).FindUserByEmail(ctx, strings.ToLower(email))
+	if err != nil {
+		return "", "", fmt.Errorf("find --owner-email: %w", err)
+	}
+
+	// Retire an earlier demo so the new one gets the /lumen address again.
+	if _, err := c.App.DB.Exec(ctx, `UPDATE workspaces SET deleted_at = now(),
+			slug = 'lumen-retired-' || extract(epoch FROM now())::bigint
+		WHERE slug = 'lumen' AND created_by_user_id = $1`, user.ID); err != nil {
+		return "", "", fmt.Errorf("retire earlier demo: %w", err)
+	}
+
+	created, err := c.App.Actions.CreateWorkspace.Handle(ctx, workspaces.CreateWorkspaceInput{
+		Owner: user, Name: "Lumen", JoinedVia: "cli",
+	})
+	if err != nil {
+		return "", "", fmt.Errorf("create workspace: %w", err)
+	}
+
+	// The demo workspace skips onboarding, so shots open straight on the inbox.
+	if _, err := c.App.DB.Exec(ctx, `UPDATE workspaces SET onboarding_step = 'done', onboarding_completed_at = now()
+		WHERE id = $1`, created.Workspace.ID); err != nil {
+		return "", "", fmt.Errorf("finish onboarding: %w", err)
+	}
+
+	workspace = models.PublicID(models.PrefixWorkspace, created.Workspace.ID)
+	member = models.PublicID(models.PrefixMember, created.Owner.ID)
+	out.Line("created workspace %s at /w/%s", workspace, created.Workspace.Slug)
+
+	return workspace, member, nil
 }
 
 /*
@@ -285,9 +198,10 @@ func (c MarketingDemoCommand) team(ctx context.Context, owner authz.Membership) 
 
 	q := models.New(c.App.DB)
 	stamp := c.App.Clock.Now().Unix()
-	team := make([]authz.Membership, 0, len(marketingTeammates))
+	names := marketingTeammates()
+	team := make([]authz.Membership, 0, len(names))
 
-	for i, name := range marketingTeammates {
+	for i, name := range names {
 		user, err := c.App.Actions.CreateUser.Handle(ctx, users.CreateUserInput{
 			Name: name, Email: fmt.Sprintf("%s.%d@lumen.test", strings.ToLower(strings.Fields(name)[0]), stamp),
 			PasswordHash: &hash, Verified: true, CreatedVia: appauth.CreatedViaRegister,
@@ -359,13 +273,32 @@ func (c MarketingDemoCommand) channels(ctx context.Context, ws, inbox ids.UUID) 
 }
 
 /*
+marketingStage is what every story plays out against: the owner the
+demo acts as, the teammates, the inbox and a connection per channel.
+*/
+type marketingStage struct {
+	owner    authz.Membership
+	team     []authz.Membership
+	inbox    ids.UUID
+	channels map[string]ids.UUID
+}
+
+/*
+marketingThread is one story's conversation and who speaks in it: the
+owner on the customer's behalf and the teammate handling it.
+*/
+type marketingThread struct {
+	owner, agent authz.Membership
+	ref          conversations.Ref
+}
+
+/*
 story plays one conversation out through the real actions, then moves
 it to its channel and back in time.
 */
-func (c MarketingDemoCommand) story(
-	ctx context.Context, owner authz.Membership, team []authz.Membership, inbox ids.UUID,
-	channels map[string]ids.UUID, s marketingStory,
-) error {
+func (c MarketingDemoCommand) story(ctx context.Context, stage marketingStage, s marketingStory) error {
+	owner, inbox := stage.owner, stage.inbox
+
 	email := strings.ToLower(strings.ReplaceAll(s.name, " ", ".")) + "@" +
 		strings.ToLower(strings.NewReplacer(" ", "", "&", "and").Replace(s.company)) + ".test"
 
@@ -378,32 +311,56 @@ func (c MarketingDemoCommand) story(
 		return fmt.Errorf("create: %w", err)
 	}
 
-	ref := conversations.Ref{ID: loaded.Conversation.ID}
-
-	agent := owner
+	thread := marketingThread{owner: owner, agent: owner, ref: conversations.Ref{ID: loaded.Conversation.ID}}
 	if s.teammate >= 0 {
-		agent = team[s.teammate]
+		thread.agent = stage.team[s.teammate]
 	}
 
-	acts := c.App.Actions.Inbox
-
 	for _, turn := range s.turns[1:] {
-		switch turn.by {
-		case "agent":
-			_, err = acts.Reply.Handle(ctx, messages.ReplyInput{Membership: agent, Ref: ref, Body: turn.body})
-		case "note":
-			_, err = acts.AddNote.Handle(ctx, messages.NoteInput{Membership: agent, Ref: ref, Body: turn.body})
-		default:
-			_, err = acts.AddContactMessage.Handle(ctx, messages.ContactMessageInput{
-				Membership: owner, Ref: ref, Body: turn.body,
-			})
-		}
-
-		if err != nil {
+		if err := c.turn(ctx, thread, turn); err != nil {
 			return fmt.Errorf("%s turn: %w", turn.by, err)
 		}
 	}
 
+	if err := c.settle(ctx, thread, s); err != nil {
+		return err
+	}
+
+	return c.place(ctx, marketingPlacement{
+		workspace: owner.Workspace.ID, conversation: loaded.Conversation.ID,
+		channel: stage.channels[s.channel], ago: s.ago,
+	})
+}
+
+/*
+turn adds one message after the first: a teammate's reply or note, or
+the customer writing again.
+*/
+func (c MarketingDemoCommand) turn(ctx context.Context, t marketingThread, turn marketingTurn) error {
+	acts := c.App.Actions.Inbox
+	owner, agent, ref := t.owner, t.agent, t.ref
+
+	var err error
+
+	switch turn.by {
+	case "agent":
+		_, err = acts.Reply.Handle(ctx, messages.ReplyInput{Membership: agent, Ref: ref, Body: turn.body})
+	case "note":
+		_, err = acts.AddNote.Handle(ctx, messages.NoteInput{Membership: agent, Ref: ref, Body: turn.body})
+	default:
+		_, err = acts.AddContactMessage.Handle(ctx, messages.ContactMessageInput{
+			Membership: owner, Ref: ref, Body: turn.body,
+		})
+	}
+
+	return err
+}
+
+/*
+settle leaves the conversation where its story says: closed, snoozed or
+open, and assigned to its teammate.
+*/
+func (c MarketingDemoCommand) settle(ctx context.Context, t marketingThread, s marketingStory) error {
 	ch := conversations.Changes{}
 
 	switch s.status {
@@ -425,22 +382,35 @@ func (c MarketingDemoCommand) story(
 		ch.AssignMember = true
 	}
 
-	if ch.Status != nil || ch.AssignMember {
-		_, err = acts.ApplyChanges.Handle(ctx, conversations.ApplyChangesInput{Membership: agent, Ref: ref, Changes: ch})
-		if err != nil {
-			return fmt.Errorf("settle: %w", err)
-		}
+	if ch.Status == nil && !ch.AssignMember {
+		return nil
 	}
 
-	return c.place(ctx, owner.Workspace.ID, loaded.Conversation.ID, channels[s.channel], s.ago)
+	in := conversations.ApplyChangesInput{Membership: t.agent, Ref: t.ref, Changes: ch}
+	if _, err := c.App.Actions.Inbox.ApplyChanges.Handle(ctx, in); err != nil {
+		return fmt.Errorf("settle: %w", err)
+	}
+
+	return nil
+}
+
+/*
+marketingPlacement says where a story's conversation goes: its channel
+and how long ago it last moved.
+*/
+type marketingPlacement struct {
+	workspace, conversation, channel ids.UUID
+	ago                              time.Duration
 }
 
 /*
 place moves a conversation to the channel its story names and back in
-time, so the list reads like a real morning: the last message s.ago ago
+time, so the list reads like a real morning: the last message p.ago ago
 and each earlier one a few minutes before it.
 */
-func (c MarketingDemoCommand) place(ctx context.Context, ws, id, channel ids.UUID, ago time.Duration) error {
+func (c MarketingDemoCommand) place(ctx context.Context, p marketingPlacement) error {
+	ws, id, channel, ago := p.workspace, p.conversation, p.channel, p.ago
+
 	return c.App.DB.Transaction(ctx, func(ctx context.Context, tx *database.Tx) error {
 		if channel != (ids.UUID{}) {
 			if _, err := tx.Exec(ctx, `UPDATE conversations SET channel_connection_id = $3
@@ -456,7 +426,8 @@ func (c MarketingDemoCommand) place(ctx context.Context, ws, id, channel ids.UUI
 			UPDATE messages m SET
 				created_at = now() - $3::interval - (o.back * interval '4 minutes'),
 				updated_at = now() - $3::interval - (o.back * interval '4 minutes'),
-				sent_at = CASE WHEN m.sent_at IS NULL THEN NULL ELSE now() - $3::interval - (o.back * interval '4 minutes') END
+				sent_at = CASE WHEN m.sent_at IS NULL THEN NULL
+					ELSE now() - $3::interval - (o.back * interval '4 minutes') END
 			FROM ordered o WHERE m.id = o.id`, ws, id, ago.String()); err != nil {
 			return fmt.Errorf("move messages: %w", err)
 		}
@@ -464,8 +435,10 @@ func (c MarketingDemoCommand) place(ctx context.Context, ws, id, channel ids.UUI
 		shift := `now() - $3::interval`
 		_, err := tx.Exec(ctx, `UPDATE conversations SET
 				updated_at = `+shift+`, last_message_at = `+shift+`, last_activity_at = `+shift+`,
-				created_at = LEAST(created_at, (SELECT min(created_at) FROM messages WHERE workspace_id = $1 AND conversation_id = $2)),
-				first_customer_message_at = (SELECT min(created_at) FROM messages WHERE workspace_id = $1 AND conversation_id = $2),
+				created_at = LEAST(created_at, (SELECT min(created_at) FROM messages
+					WHERE workspace_id = $1 AND conversation_id = $2)),
+				first_customer_message_at = (SELECT min(created_at) FROM messages
+					WHERE workspace_id = $1 AND conversation_id = $2),
 				waiting_since = CASE WHEN waiting_since IS NULL THEN NULL ELSE `+shift+` END
 			WHERE workspace_id = $1 AND id = $2`, ws, id, ago.String())
 		if err != nil {

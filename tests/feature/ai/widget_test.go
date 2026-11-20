@@ -87,7 +87,10 @@ func aiState(t *testing.T, d tests.Desk, conv ids.UUID) (string, int) {
 	var state string
 	var agentLines int
 	err := d.TC.Operator().QueryRow(t.Context(), `
-		SELECT c.ai_state, (SELECT count(*) FROM messages m WHERE m.conversation_id = c.id AND m.author_type = 'agent')
+		SELECT c.ai_state, (
+			SELECT count(*) FROM messages m
+			WHERE m.conversation_id = c.id AND m.author_type = 'agent' AND m.type = 'message'
+		)
 		FROM conversations c WHERE c.id = $1`, conv).Scan(&state, &agentLines)
 	require.NoError(t, err)
 
