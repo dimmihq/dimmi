@@ -1,43 +1,41 @@
 ---
 title: "Use a custom domain for your help center"
-description: "The DNS records that put your help center on your own domain, how dimmi checks them and when the domain stops working."
+description: "Point a subdomain like help.example.com at your dimmi help center with two DNS records and automatic HTTPS."
 ---
 
-Add a subdomain you own, such as `help.acme.example`, under **Custom domain** in **Settings → Help centers**, then create two DNS records.
+Open **Settings → Help centers**, enter a subdomain you own (such as `help.acme.example`) under **Custom domain**, and add two DNS records at your DNS provider.
 
-A bare domain such as `acme.example` cannot be used, because it cannot carry a `CNAME` record.
+You must use a subdomain. Apex domains like `acme.example` cannot hold a `CNAME` record.
 
-## DNS records
+## DNS records to add
 
-The **Custom domain** section shows both records with values to copy.
+Copy the exact values shown under **Custom domain**:
 
-| Record | Name | Value | Why |
+| Record | Name | Value | Purpose |
 | --- | --- | --- | --- |
-| `CNAME` | `help.acme.example` | `custom.dimmi.help` on dimmi Cloud | Points your domain at dimmi. |
-| `TXT` | `_dimmi.help.acme.example` | `dimmi-verification=<token>` | Proves the domain is yours. |
+| `CNAME` | `help.acme.example` | `custom.dimmi.help` (on dimmi Cloud) | Routes traffic to dimmi. |
+| `TXT` | `_dimmi.help.acme.example` | `dimmi-verification=<token>` | Proves you own the domain. |
 
-On a self-hosted server the `CNAME` value is your server's own target. See [help center and custom domains](/self-hosting/domains/).
+On a self-hosted server, the `CNAME` points to your own server target. See [Help center and custom domains](/self-hosting/domains/).
 
-## Check schedule
+## How verification works
 
-dimmi checks a new domain within a minute. While a record is missing, it checks again after 1, 2, 5, 10 and 30 minutes, then every hour.
+dimmi checks your new domain within 1 minute. If a record is not live yet, dimmi retries after 1, 2, 5, 10, and 30 minutes, then once every hour.
 
-After 72 hours without both records, the domain is **Failed**. **Check now** starts a new 72-hour window.
+If both records are still missing after 72 hours, the domain moves to **Failed**. Click **Check now** to start a fresh 72-hour window.
 
-## When the domain is live
+## Once your domain is live
 
-- **Address:** the help center answers at your domain over HTTPS, with a certificate dimmi issues for it.
-- **Links:** the help center's links and canonical addresses use your domain.
-- **Old address:** the `dimmi.help` address keeps working.
+- **Automatic HTTPS:** dimmi issues and renews an SSL certificate for your domain.
+- **Canonical URLs:** links and canonical tags across the help center switch to your custom domain.
+- **Fallback address:** your original `dimmi.help` URL keeps working.
 
-## Losing the records
+## If DNS records break later
 
-dimmi checks a **Live** domain once a day.
+dimmi rechecks **Live** domains once a day. If a check fails, your domain stays up while dimmi retries on the same schedule. If both records stay missing for 72 hours, the domain becomes **Failed** and the help center falls back to its original address.
 
-When a check fails, the domain keeps serving and dimmi follows the check schedule again. After 72 hours without both records, the domain is **Failed** and the help center answers only at its old address.
+## Limits
 
-## Rules
-
-- A help center has one custom domain. Remove it before you add another.
-- A domain serves one help center.
-- After **Remove**, the domain stops answering within 30 seconds.
+- Each help center supports one custom domain. Remove the current one before adding another.
+- One custom domain can only point to one help center.
+- After clicking **Remove**, the domain stops answering within 30 seconds.

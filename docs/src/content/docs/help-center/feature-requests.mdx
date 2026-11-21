@@ -1,52 +1,52 @@
 ---
 title: "Run a feature requests board"
-description: "Open a feature requests board to customers, and how votes, statuses, merges and voter emails work."
+description: "Publish a public or private feature request board on your help center, manage votes and statuses, and notify voters when you ship."
 ---
 
-Turn on **Open to customers** under **Settings → Feature requests** and save to publish the board at `/feedback` on your help center. It is off in a new workspace.
+Open **Settings → Feature requests**, turn on **Open to customers**, and save. Your board goes live at `/feedback` on your help center. It starts turned off in a new workspace.
 
-Customers sign in to the help center to post, vote and comment, the same way they sign in to read [restricted articles](/help-center/limit-articles/#how-readers-sign-in).
+Customers sign in to post, vote, and comment using the same sign-in flow as [restricted articles](/help-center/limit-articles/#how-readers-sign-in).
 
-## Boards
+## Set up boards
 
-A help center starts with one board. Add more in **Settings → Feature requests**, such as one for feature requests and one for bugs.
+Every help center starts with one board. Add more in **Settings → Feature requests** if you want separate spaces for feature ideas and bug reports.
 
-| Who sees it | Meaning |
+| Visibility | Who can view and post |
 | --- | --- |
-| **Public** | Anyone reads it. Signed-in customers post. |
-| **Signed-in customers** | Only customers who signed in see it. |
-| **Internal** | Only your team sees it. |
+| **Public** | Anyone can read. Signed-in customers can post and vote. |
+| **Signed-in customers** | Only signed-in customers can see the board. |
+| **Internal** | Only your team can see it. |
 
-**Approve customers' posts before they show** holds each customer's post until a teammate approves it. The customer who posted it still sees it.
+Turn on **Approve customers' posts before they show** to hold new submissions in a queue until a teammate approves them. Authors can still see their own pending posts.
 
-## Statuses
+## Statuses and voter updates
 
-Statuses belong to the workspace. A new workspace has five, and you can rename, recolor, reorder, add and delete them.
+Statuses are shared across your workspace. Five come ready out of the box, and you can rename, recolor, reorder, add, or delete them.
 
-| Status | What it means |
+| Default status | Meaning |
 | --- | --- |
-| **Under consideration** | **Open**. New requests start in the first open status. |
-| **Planned** | **Planned** |
-| **In progress** | **In progress** |
-| **Shipped** | **Done** |
-| **Closed** | **Closed**. The request leaves the roadmap and keeps its page. |
+| **Under consideration** | **Open.** New requests land in the first open status. |
+| **Planned** | **Planned.** |
+| **In progress** | **In progress.** |
+| **Shipped** | **Done.** |
+| **Closed** | **Closed.** Leaves the roadmap while keeping its page live. |
 
-When you move a request, the **Email N voters and whoever posted it** box starts checked. dimmi then emails each voter, the author and the customers of linked conversations once, with your **Note**.
+When you change a request's status, **Email N voters and whoever posted it** is checked by default. dimmi emails the author, every voter, and customers from linked conversations once, along with your **Note**.
 
-When you move a request to a status that means **Done**, **Changelog update** links the [changelog](/help-center/changelog/) entry that shipped it. The email links to that entry.
+When moving a request to a **Done** status, pick a **Changelog update** to link the [changelog](/help-center/changelog/) entry that shipped it. The voter email includes a link to that entry.
 
-## Votes
+## Votes and linking conversations
 
-- **One vote:** each customer votes once for a request.
-- **For a customer:** a teammate can vote for a customer and set **How much it matters to them**.
-- **From a conversation:** **Link to feature request** in a conversation links it to a request and votes for that customer once.
-- **From a request:** **Link a conversation** on a request finds a conversation by its words, customer or number, and does the same.
-- **Trending:** a vote counts double for each week it is newer, so recent votes move a request up.
+- **One vote per customer:** each customer can vote once on a request.
+- **Vote on a customer's behalf:** teammates can add a vote for a customer and record **How much it matters to them**.
+- **Link from the inbox:** click **Link to feature request** inside a conversation to connect it and add a vote for that customer.
+- **Link from the board:** click **Link a conversation** on a request to search by text, customer, or number and attach it.
+- **Trending sort:** recent votes carry double weight for each week newer they are, pushing fresh demand to the top.
 
-## Comments and duplicates
+## Comments, duplicates, and webhooks
 
-- **Comments:** customers and teammates reply one level deep, in up to 5,000 characters. An internal note shows only to your team.
-- **Merging:** votes, comments and linked conversations move to the request you keep, and each customer counts once. The merged request's page redirects there.
-- **Deleting:** deleting a request, a board or a status emails nobody.
+- **Comments:** customers and teammates can reply one level deep. Internal notes stay visible only to your team.
+- **Merge duplicates:** merging moves all votes, comments, and linked conversations onto the request you keep, deduplicates voters, and redirects the old URL.
+- **Deleting:** deleting a request, board, or status does not email anyone.
 
-dimmi sends `feedback_post.*` [webhook events](/developers/webhooks/events/) when a request is posted, voted for, moved, merged or linked to a conversation.
+dimmi emits `feedback_post.*` [webhook events](/developers/webhooks/events/) when requests are created, voted on, updated, merged, or linked to conversations.

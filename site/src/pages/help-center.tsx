@@ -22,18 +22,18 @@ import { FinalCta } from "../sections/final-cta";
 
 const steps = [
   {
-    title: "Write in a plain editor",
-    body: "Type a slash for headings, callouts, images, and tables. Markdown works too, if that's your habit.",
+    title: "Write in a clean editor",
+    body: "Use slash commands for headings, callouts, images, and tables, or paste Markdown straight in.",
     visual: <WriterFragment />,
   },
   {
-    title: "Sort into collections",
-    body: "Nest collections as deep as you like. Readers open them in place, without leaving the page.",
+    title: "Group into collections",
+    body: "Nest collections as deep as you need. Readers browse in place without losing their spot.",
     visual: <CollectionsFragment />,
   },
   {
     title: "Publish on your domain",
-    body: "Add two DNS records. dimmi checks them and issues the certificate for you.",
+    body: "Add two DNS records. dimmi checks them and sets up HTTPS for you.",
     visual: <DomainFragment />,
   },
 ];
@@ -41,92 +41,93 @@ const steps = [
 const how = [
   {
     title: "Readers ask in one box",
-    body: "With the agent on, the box asks the agent. With it off, the box searches your articles.",
+    body: "With the AI agent on, the box answers their question. With it off, it searches your articles.",
   },
   {
-    title: "The agent answers from your articles",
-    body: "Every answer links the article it came from. It never uses an article that reader can't see.",
+    title: "Answers come from your docs",
+    body: "Every reply links the exact article it used and respects private audience rules.",
   },
   {
-    title: "Your team picks up the same thread",
-    body: "When a person should take over, the chat lands in your inbox with a summary.",
+    title: "Your team picks up the chat",
+    body: "When a person should help, the chat opens in your inbox with a quick summary.",
   },
 ];
 
 const more = [
-  { icon: Globe, title: "Your own domain", body: "help.yourcompany.com. We handle the certificate." },
-  { icon: PaintBrush, title: "Your brand", body: "Your logo, color, and greeting, in light and dark." },
+  { icon: Globe, title: "Your own domain", body: "Host at help.yourcompany.com with automatic HTTPS." },
+  { icon: PaintBrush, title: "Your brand", body: "Match your logo, colors, and greeting in light and dark mode." },
   {
     icon: LockKey,
     title: "Private articles",
-    body: "Keep an article to signed-in readers in one audience, or to the agent alone.",
+    body: "Keep private articles visible only to chosen audiences or the AI agent.",
   },
   {
     icon: DownloadSimple,
-    title: "Bring your articles",
-    body: "Import from Zendesk, Intercom, Notion, or a website. Old links redirect to the new ones.",
+    title: "Import from old tools",
+    body: "Bring articles over from Zendesk, Intercom, Notion, or your site with automatic redirects.",
   },
   {
     icon: Smiley,
-    title: "Reader feedback",
-    body: "Readers say if an article helped. A no asks what was missing.",
+    title: "Article feedback",
+    body: "Readers vote if an article helped, and tell you what was missing when it did not.",
   },
   {
     icon: ChartLineUp,
-    title: "Analytics",
-    body: "Views by day, the most read articles, and the searches that found nothing.",
+    title: "Search insights",
+    body: "See daily views, top articles, and the questions people searched that found nothing.",
   },
   {
     icon: ClockCounterClockwise,
     title: "Version history",
-    body: "Every published version is kept. Restore one in a click.",
+    body: "Every published version is saved so you can roll back in one click.",
   },
   {
     icon: MarkdownLogo,
     title: "Ready for AI tools",
-    body: "Every page has a Markdown copy, and a menu to open it in ChatGPT or Claude.",
+    body: "Every article has a clean Markdown URL plus a menu to open it in ChatGPT or Claude.",
   },
   {
     icon: Translate,
-    title: "Every language you support",
-    body: "One article, many languages. dimmi drafts the translation and flags it when the original changes.",
+    title: "Multi-language docs",
+    body: "Draft translations beside each article and get flagged whenever the original changes.",
   },
 ];
 
 const questions = [
   {
-    question: "Can it run on our domain, or are we stuck on yours?",
+    question: "Can it run on our own domain?",
     answer:
-      "Yours. Add a CNAME and a TXT record. Once dimmi verifies them, the help center answers there with its own certificate. The old address keeps working.",
+      "Yes. Point a CNAME and TXT record at dimmi and we handle the SSL certificate on your domain. Your old help center address keeps working too.",
   },
   {
-    question: "Does the AI agent actually read our articles?",
+    question: "Does the AI agent read our help center automatically?",
     answer:
-      "Yes. It answers from your articles and links the one it used. Articles kept to an audience are only used for readers in that audience.",
+      "Every published article feeds the agent and gets cited in its replies. Restricted articles are only used for readers who belong to that audience.",
   },
   {
-    question: "Do we have to retype everything from our old tool?",
+    question: "Do we have to copy and paste everything from Zendesk or Intercom?",
     answer:
-      "No. Connect Zendesk, Intercom, Notion, or a website, then turn what it synced into articles, filed in the same collections. The old addresses redirect.",
+      "Never. Connect Zendesk, Intercom, Notion, or an existing website and import articles into matching collections, with redirects from the old URLs.",
   },
   {
-    question: "Can one article exist in several languages?",
+    question: "How do translations work when an article changes?",
     answer:
-      "Yes. Add a language and each article gets a translation beside the original. dimmi drafts it, a teammate checks it, and readers get their own language. When the original changes, the translation is flagged as stale.",
+      "Add your languages and dimmi drafts translations beside the original for a teammate to review. Whenever you edit the main article, translations get flagged as stale.",
   },
   {
-    question: "Can I host our API docs on it?",
+    question: "Can I host our developer API docs here?",
     answer:
-      "No. There's no API reference generator and no versioned docs. It's a help center for customers. Developer docs deserve a docs tool.",
+      "Use a dedicated docs tool for that. dimmi is built for customer help centers, not OpenAPI reference generators or versioned developer docs.",
   },
   {
-    question: "Can we run more than one?",
-    answer: "Yes. Run one per product or brand, each with its own address, articles, and look.",
+    question: "Can we run separate help centers for different brands?",
+    answer:
+      "Yes. Create one help center per product or brand, each with its own custom domain, articles, and styling.",
   },
   {
-    question: "Will Google index it?",
+    question: "Will Google index our help articles?",
     answer:
-      "Yes, unless you turn indexing off. Pages are plain, fast HTML with a canonical address on your own domain.",
+      "Yes, unless you switch indexing off. Pages render as fast HTML with canonical links on your own domain.",
   },
 ];
 
@@ -135,24 +136,24 @@ export function HelpCenterPage() {
     <>
       <ProductHero
         eyebrow="Help center"
-        title="Answers customers find without you."
-        body="Write articles, publish them on your own domain, and let the AI agent answer from them. Your team gets what the articles can't cover."
+        title="One help center for customers and your AI agent."
+        body="Publish articles on your own domain. Customers find answers fast, and your AI agent reads from the exact same docs."
         visual={<HelpHomeFragment />}
       />
-      <Steps title="Write it, sort it, publish it." items={steps} />
+      <Steps title="From draft to live on your domain." items={steps} />
       <HowItWorks
-        label="Ask, don't search"
-        title="One box that answers."
-        body="Readers type a question instead of guessing your keywords. The agent replies from your articles. A person is one step away."
+        label="Ask, not search"
+        title="One box that answers real questions."
+        body="Readers ask what they need instead of guessing your keywords. A teammate is always one click away."
         steps={how}
         visual={(step) => <AskFlowFragment step={step} />}
       />
       <FeatureGrid
-        title="The rest of the help center."
-        body="The parts that make it yours, and the ones that tell you what to write next."
+        title="Everything you need to run docs customers read."
+        body="Match your brand, import old articles, and see which questions still need answers."
         items={more}
       />
-      <Questions body="What people ask before they publish their first article." items={questions} />
+      <Questions body="What teams ask before publishing their first article." items={questions} />
       <FinalCta />
     </>
   );

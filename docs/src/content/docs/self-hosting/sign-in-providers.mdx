@@ -1,18 +1,18 @@
 ---
 title: "Enable Google and GitHub sign-in"
-description: "Let teammates sign in to your self-hosted dimmi with Google or GitHub."
+description: "Add Google or GitHub OAuth sign-in buttons to your self-hosted dimmi login screen."
 ---
 
-dimmi shows a Google or GitHub button on the sign-in page once that provider's client ID is set.
+Once you set a provider's client ID and secret, dimmi shows its sign-in button automatically on the login page.
 
-Create an OAuth app at the provider with this callback URL:
+Create an OAuth app with the matching callback URL (`<app_domain>` is your dimmi hostname):
 
-| Provider | Where to create the app | Callback URL |
+| Provider | Where to register | Callback URL |
 | --- | --- | --- |
-| Google | Google Cloud console, **APIs & Services → Credentials**, an OAuth client of type Web application | `https://<app_domain>/auth/google/callback` |
-| GitHub | **Settings → Developer settings → OAuth Apps** | `https://<app_domain>/auth/github/callback` |
+| **Google** | Google Cloud Console → **APIs & Services → Credentials** → Web application OAuth client | `https://<app_domain>/auth/google/callback` |
+| **GitHub** | **Settings → Developer settings → OAuth Apps** | `https://<app_domain>/auth/github/callback` |
 
-Then give dimmi the app's client ID and secret:
+Save the credentials for whichever provider(s) you want:
 
 ```bash
 dimmictl set <<'EOF'
@@ -23,8 +23,6 @@ DIMMI_AUTH__OAUTH__GITHUB__CLIENT_SECRET=<github_client_secret>
 EOF
 ```
 
-`<app_domain>` is the domain you installed dimmi on. Set only the provider you want.
+New users still need an invitation unless you set `DIMMI_AUTH__SIGNUP__MODE=open`.
 
-A person who has no dimmi account still needs an invitation to sign in this way, unless `DIMMI_AUTH__SIGNUP__MODE` is `open`.
-
-For SAML or OIDC through a company's identity provider, each workspace sets up [single sign-on](/workspace/single-sign-on/) itself.
+Need corporate SAML or OIDC login? Each workspace configures [single sign-on](/workspace/single-sign-on/) on its own in Settings.

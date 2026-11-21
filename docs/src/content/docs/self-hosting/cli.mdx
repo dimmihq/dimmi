@@ -1,112 +1,112 @@
 ---
 title: "Command-line reference"
-description: "Every dimmictl and dimmi command an operator runs, with its options."
+description: "Reference for every dimmictl server command and every /dimmi app command inside your containers."
 ---
 
-`dimmictl` manages the stack on the server. `dimmi` is the app's own binary inside the containers.
+Use `dimmictl` on the host to manage your Docker stack, and `/dimmi` inside containers for app administration, migrations, and diagnostics.
 
-## dimmictl commands
+## `dimmictl` commands
 
-Run `dimmictl` as root. With no command it runs `install`.
+Run `dimmictl` as `root`. Calling `dimmictl` with no arguments runs `install`.
 
 | Command | What it does |
 | --- | --- |
-| `install` | Runs `prepare`, `configure`, `start` and `check`. |
-| `prepare` | Installs Docker, the firewall, swap and automatic security updates. |
-| `configure` | Fetches the stack's files into `/opt/dimmi` and writes `.env`. Keeps existing secrets. |
-| `start` | Pulls missing images, migrates the database and starts every service. |
-| `check` | Checks the DNS record, HTTPS and `/up`. |
-| `admin --email <email> --name <name> --workspace <workspace>` | Creates the first account as owner of a new workspace and prints a generated password. |
-| `set KEY=value ...` | Saves settings to `.env` and restarts the services they change. Reads `KEY=value` lines from stdin when given no arguments. |
-| `update` | Moves to the latest release, or the one `--version` names, migrates and restarts. Keeps a `compose.yaml` or `Caddyfile` that differs from the new one as `<file>.bak`. |
-| `status` | Lists the services and their health. |
-| `logs [service ...]` | Follows the logs, starting from the last 100 lines. |
-| `help` | Prints the command list. |
+| `install` | Runs `prepare`, `configure`, `start`, and `check`. |
+| `prepare` | Installs Docker, firewall rules, swap, and unattended security updates. |
+| `configure` | Downloads stack files into `/opt/dimmi` and writes `.env` (preserving existing secrets). |
+| `start` | Pulls images, runs database migrations, and starts all services. |
+| `check` | Verifies DNS, HTTPS, and `/up`. |
+| `admin --email <email> --name <name> --workspace <workspace>` | Creates the first Owner account and workspace, printing a generated password once. |
+| `set KEY=value ...` | Writes settings to `.env` and restarts affected services. Reads `KEY=value` lines from stdin if given no arguments. |
+| `update` | Upgrades to the latest release (or `--version`), migrates, and restarts. Saves customized `compose.yaml` or `Caddyfile` as `.bak`. |
+| `status` | Lists running services and their health status. |
+| `logs [service ...]` | Tails logs starting from the last 100 lines. |
+| `help` | Prints available commands. |
 
-## dimmictl options
+## `dimmictl` options
 
-`set` and `logs` take no options.
+`set` and `logs` take no flags.
 
-| Option | Used by | Meaning |
+| Option | Commands | Purpose |
 | --- | --- | --- |
-| `--domain <host>` | `install`, `configure` | The host name dimmi answers on, without `https://` or a path. |
-| `--email <email>` | `install`, `configure`, `admin` | For `install` and `configure`, where Let's Encrypt sends certificate notices. For `admin`, the account's email. |
-| `--version <vX.Y.Z>` | `install`, `configure`, `update` | The release to install. Default: the latest. Also read from `DIMMI_VERSION`. |
-| `--clamav` | `install`, `configure` | Runs ClamAV and scans uploads and email attachments. |
-| `--skip-prepare` | `install` | Skips `prepare`. |
-| `--image <image>` | `install`, `configure`, `update` | Runs another container image than the release's. |
-| `--dir <path>` | all | Where the stack lives. Default `/opt/dimmi`. Also read from `DIMMI_DIR`. |
-| `--local-tls` | `install`, `configure`, `check` | Uses a self-signed certificate. For tests on a machine with no public DNS. |
-| `--name <name>`, `--workspace <workspace>` | `admin` | The person's full name and the name of the workspace to create. |
+| `--domain <host>` | `install`, `configure` | Hostname for dimmi (no `https://` or path). |
+| `--email <email>` | `install`, `configure`, `admin` | Let's Encrypt email for setup; user email for `admin`. |
+| `--version <vX.Y.Z>` | `install`, `configure`, `update` | Release tag (defaults to latest; also reads `DIMMI_VERSION`). |
+| `--clamav` | `install`, `configure` | Enables ClamAV malware scanning for uploads and email attachments. |
+| `--skip-prepare` | `install` | Skips OS preparation (`prepare`). |
+| `--image <image>` | `install`, `configure`, `update` | Overrides the default release container image. |
+| `--dir <path>` | All | Stack install path (default `/opt/dimmi`; also reads `DIMMI_DIR`). |
+| `--local-tls` | `install`, `configure`, `check` | Uses a self-signed certificate for local testing without public DNS. |
+| `--name <name>`, `--workspace <workspace>` | `admin` | Full name and workspace name for the initial Owner. |
 
-## Run a dimmi command
+## Running `/dimmi` commands
 
 ```bash
 docker compose -f /opt/dimmi/compose.yaml exec web /dimmi <command>
 ```
 
-Every command takes `--no-interaction` (`-n`), which answers each question with its default, and `--help`.
+Every `/dimmi` command accepts `--help` and `--no-interaction` (`-n`, which accepts prompt defaults).
 
-## Server
-
-| Command | What it does |
-| --- | --- |
-| `serve` | Runs the app. `--roles web,worker,scheduler` picks the roles; `--no-migrate` skips migrating on boot. The stack runs this for you. |
-| `health` | Exits 0 when the running process is ready, else 1. |
-| `config:show` | Prints the settings in effect, with secrets masked. |
-| `down` | Turns every visitor away for maintenance. `--message <text>` says why; `--force` skips the confirmation. |
-| `up` | Ends maintenance. |
-
-## Migrations
-
-`web` connects to the database as a role that cannot change the schema. Run these in the `migrate` service, which connects as the owner: `docker compose -f /opt/dimmi/compose.yaml run --rm migrate <command>`.
+## Server management
 
 | Command | What it does |
 | --- | --- |
-| `migrate` | Applies every pending migration. Asks first unless you pass `--force`. |
-| `migrate:status` | Lists every migration and whether it ran. |
-| `migrate:plan` | Shows what `migrate` would apply. |
-| `migrate:rollback` | Undoes the newest applied migration, which can drop data. Asks you to type its version; with `--force`, pass `--confirm-version <version>`. |
+| `serve` | Starts the app (`--roles web,worker,scheduler`, `--no-migrate`). Managed automatically by Compose. |
+| `health` | Exits `0` if ready, `1` otherwise. |
+| `config:show` | Prints active settings with secrets redacted. |
+| `down` | Enables maintenance mode (`--message <text>`, `--force`). |
+| `up` | Exits maintenance mode. |
+
+## Database migrations
+
+`web` connects with a non-DDL database role. Run migration commands via the `migrate` service instead: `docker compose -f /opt/dimmi/compose.yaml run --rm migrate <command>`.
+
+| Command | What it does |
+| --- | --- |
+| `migrate` | Applies pending migrations (prompts unless `--force` is passed). |
+| `migrate:status` | Lists every migration and whether it has run. |
+| `migrate:plan` | Previews migrations that `migrate` would run. |
+| `migrate:rollback` | Reverts the latest migration (can drop data). Prompts for version confirmation (or pass `--force --confirm-version <version>`). |
 
 ## Users
 
 | Command | What it does |
 | --- | --- |
-| `user:create` | Creates a verified account. Takes `--email`, `--name` and either `--password <password>` or `--generate-password`. On an empty server the account owns a new workspace named by `--workspace`. Afterwards, `--workspace-slug <slug>` with `--role owner`, `admin` or `member` adds the account to a workspace. |
-| `user:list` | Lists accounts with their second factors and workspaces. `--json` prints JSON. |
-| `user:reset-password <email>` | Prints a password reset link. With `--password <password>`, sets the password and signs the user out. |
-| `user:verify-email <email>` | Marks the email as verified. |
-| `user:logout <email>` | Signs the user out of every browser and app. |
-| `user:disable-2fa <email>` | Removes every second factor from an account that is locked out. |
+| `user:create` | Creates a verified user (`--email`, `--name`, and `--password <password>` or `--generate-password`). On a fresh server, pass `--workspace` to create the first workspace; afterward pass `--workspace-slug <slug> --role owner\|admin\|member`. |
+| `user:list` | Lists accounts, 2FA factors, and workspaces (`--json`). |
+| `user:reset-password <email>` | Prints a reset link, or sets a new password and signs the user out with `--password <password>`. |
+| `user:verify-email <email>` | Marks the email address verified. |
+| `user:logout <email>` | Revokes every active browser and app session for the user. |
+| `user:disable-2fa <email>` | Clears all second factors for a locked-out account. |
 
 ## Workspaces
 
-`<slug>` is the workspace's address, the part after `/w/` in the app.
+`<slug>` is the workspace identifier after `/w/` in the app URL.
 
 | Command | What it does |
 | --- | --- |
-| `workspace:list` | Lists workspaces as active or suspended. `--with-deleted` adds the ones in the trash; `--json` prints JSON. |
-| `workspace:suspend <slug> --reason <text>` | Stops every change to a workspace. Members can still read it. |
-| `workspace:unsuspend <slug>` | Lifts a suspension. |
-| `workspace:restore <slug>` | Takes a workspace out of the trash during its grace period. |
-| `workspace:purge <slug> --force` | Deletes a workspace in the trash for good. |
-| `workspace:repair [slug]` | Recreates missing defaults in one workspace, or in every workspace when you leave out the slug. |
-| `workspace:clear-access-policy <slug>` | Clears a workspace's sign-in rules when they lock everyone out. `--only ip_allowlist` clears that part alone. |
+| `workspace:list` | Lists active and suspended workspaces (`--with-deleted`, `--json`). |
+| `workspace:suspend <slug> --reason <text>` | Freezes writes on a workspace (members keep read access). |
+| `workspace:unsuspend <slug>` | Restores writes to a suspended workspace. |
+| `workspace:restore <slug>` | Restores a deleted workspace during its grace window. |
+| `workspace:purge <slug> --force` | Permanently deletes a trashed workspace. |
+| `workspace:repair [slug]` | Recreates missing defaults for one workspace (or all workspaces if omitted). |
+| `workspace:clear-access-policy <slug>` | Clears lockout sign-in rules (`--only ip_allowlist` clears only IP rules). |
 
 ## Single sign-on and API tokens
 
 | Command | What it does |
 | --- | --- |
-| `sso:verify-domain <domain>` | Verifies a domain a workspace added, without a DNS record. `--workspace <slug>` picks the workspace when several added it. |
-| `sso:disable <slug>` | Turns off every single sign-on connection of a workspace. |
-| `token:create` | Creates an API token for a member and prints it once. Requires `--email`, `--workspace-slug`, `--name` and `--abilities`, a comma-separated list of [ability groups](/developers/api/abilities/) or `*`. `--expires 90d` sets an expiry; `--json` prints JSON. |
+| `sso:verify-domain <domain>` | Verifies a workspace SSO domain without DNS (`--workspace <slug>` if multiple workspaces claimed it). |
+| `sso:disable <slug>` | Disables all SSO connections for a workspace. |
+| `token:create` | Creates an API token and prints it once (`--email`, `--workspace-slug`, `--name`, `--abilities` comma list or `*`, optional `--expires 90d`, `--json`). See [API token abilities](/developers/api/abilities/). |
 
-## Email and AI
+## Email and AI diagnostics
 
 | Command | What it does |
 | --- | --- |
-| `email:doctor <domain>` | Lists what stops mail from a sending domain from arriving. |
-| `email:inbound-doctor` | Checks how mail reaches the server and names what to fix. |
-| `email:cloudflare-worker` | Prints the Cloudflare Email Routing Worker that hands mail to the server. |
-| `email:resend-backfill --since <YYYY-MM-DD>` | Feeds through the mail Resend received since a date. |
-| `ai:doctor` | Lists what stops the dimmi agent from answering. Exits with a failure when something blocks answers. |
+| `email:doctor <domain>` | Checks DNS and provider config for an outbound sending domain. |
+| `email:inbound-doctor` | Diagnoses inbound mail delivery issues. |
+| `email:cloudflare-worker` | Outputs the Cloudflare Email Routing Worker script. |
+| `email:resend-backfill --since <YYYY-MM-DD>` | Replays inbound emails received by Resend since a date. |
+| `ai:doctor` | Reports anything blocking the dimmi agent from answering and exits non-zero on failure. |

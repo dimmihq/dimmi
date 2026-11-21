@@ -1,30 +1,30 @@
 ---
 title: "Supported versions"
-description: "The languages, frameworks and versions each dimmi SDK supports."
+description: "Check the runtime, language, and framework versions supported and tested for every dimmi SDK."
 ---
 
-Each SDK's package states the versions it needs, and dimmi tests each one in a real project on the versions in the last column.
+Each SDK declares its minimum version in its package manifest, and dimmi runs integration tests against every version listed in the right column.
 
 ## Server SDKs
 
-| SDK | Package | Needs | Tested on |
+| SDK | Package | Minimum version | Tested on |
 | --- | --- | --- | --- |
-| [TypeScript](/developers/sdks/typescript/) | `@dimmi/api` on npm | Node.js 20 or later | Node.js 25, TypeScript 5.9 |
-| Identity tokens for Node.js | `@dimmi/server` on npm | Node.js 20 or later | Node.js 25 |
-| [Go](/developers/sdks/go/) | `github.com/dimmihq/dimmi-go` | Go 1.22 or later | Go 1.22, 1.23, 1.24, 1.26 |
-| [PHP](/developers/sdks/php/) | `dimmi/dimmi-php` on Packagist | PHP 8.2 or later | PHP 8.2, 8.3, 8.4 |
-| [Laravel](/developers/sdks/laravel/) | `dimmi/dimmi-laravel` on Packagist | Laravel 10, 11 or 12, PHP 8.2 or later | Laravel 10, 11, 12 |
-| [Python](/developers/sdks/python/) | `dimmi-sdk` on PyPI | Python 3.10 or later | Python 3.10, 3.12, 3.13 |
+| [TypeScript](/developers/sdks/typescript/) | `@dimmi/api` (npm) | Node.js 20+ | Node.js 25, TypeScript 5.9 |
+| Node.js identity tokens | `@dimmi/server` (npm) | Node.js 20+ | Node.js 25 |
+| [Go](/developers/sdks/go/) | `github.com/dimmihq/dimmi-go` | Go 1.22+ | Go 1.22, 1.23, 1.24, 1.26 |
+| [PHP](/developers/sdks/php/) | `dimmi/dimmi-php` (Packagist) | PHP 8.2+ | PHP 8.2, 8.3, 8.4 |
+| [Laravel](/developers/sdks/laravel/) | `dimmi/dimmi-laravel` (Packagist) | Laravel 10, 11, or 12, PHP 8.2+ | Laravel 10, 11, 12 |
+| [Python](/developers/sdks/python/) | `dimmi-sdk` (PyPI) | Python 3.10+ | Python 3.10, 3.12, 3.13 |
 
 ## Messenger SDKs
 
-[Install the messenger](/developers/messenger/install/) shows how to use each package.
+See [Add the messenger to your app](/developers/messenger/install/) for setup snippets.
 
-| Package on npm | Needs | Tested on |
+| Package (npm) | Minimum version | Tested on |
 | --- | --- | --- |
-| `@dimmi/browser` | A browser | A plain page |
-| `@dimmi/react` | React 18 or later | React 18.3, 19.3 |
-| `@dimmi/nextjs` | Next.js 14 or later, React 18 or later, Node.js 20 or later | Next.js 14.2, 15.5 (app router) |
-| `@dimmi/vue` | Vue 3.3 or later | Vue 3.4, 3.5, Nuxt 3.21 |
-| `@dimmi/angular` | Angular 17 or later | Angular 17.3, 18.2, 19.2 |
-| `@dimmi/svelte` | Svelte 4 or later | SvelteKit 2.70 and 3.2 on Svelte 5.57 |
+| `@dimmi/browser` | Any modern browser | Plain HTML page |
+| `@dimmi/react` | React 18+ | React 18.3, 19.3 |
+| `@dimmi/nextjs` | Next.js 14+, React 18+, Node.js 20+ | Next.js 14.2, 15.5 (App Router) |
+| `@dimmi/vue` | Vue 3.3+ | Vue 3.4, 3.5, Nuxt 3.21 |
+| `@dimmi/angular` | Angular 17+ | Angular 17.3, 18.2, 19.2 |
+| `@dimmi/svelte` | Svelte 4+ | SvelteKit 2.70 and 3.2 on Svelte 5.57 |

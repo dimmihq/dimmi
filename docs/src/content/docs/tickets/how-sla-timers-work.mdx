@@ -1,41 +1,43 @@
 ---
 title: "How SLA timers work"
-description: "When SLA clocks start, pause and stop in dimmi, and how warnings and breaches are decided."
+description: "See when each SLA clock starts, pauses, warns, and breaches on tickets and conversations."
 ---
 
-Each target of an [SLA policy](/tickets/sla-policies/) runs as its own clock on a ticket or a conversation. A clock ends met, breached or canceled.
+Every target in an [SLA policy](/tickets/sla-policies/) runs as its own clock on a ticket or conversation. Each clock ends in one of three ways: met, breached, or canceled.
 
-## When each clock starts and stops
+## When clocks start and stop
 
-| Target | Starts | Met |
+| Target | Starts when | Met when |
 | --- | --- | --- |
-| **First reply** | When the policy is applied and no teammate has replied yet, or the customer's first message arrives. | A teammate replies. |
-| **Next reply** | The customer writes after a teammate has replied. | A teammate replies. |
-| **Follow-up** | A teammate replies. | A teammate replies again. A customer's message cancels it. |
-| **Resolution** | The policy is applied. | The ticket is resolved, or the conversation is closed. |
+| **First reply** | The policy is applied with no teammate reply yet, or the customer sends their first message. | A teammate replies to the customer. |
+| **Next reply** | The customer writes after a teammate has replied. | A teammate replies to the customer. |
+| **Follow-up** | A teammate replies. | A teammate replies again. A customer reply cancels this clock. |
+| **Resolution** | The policy is applied. | The ticket resolves, or the conversation closes. |
 
-- Only a teammate's reply to the customer meets a reply target. Notes and dimmi agent replies do not.
-- Resolving cancels the reply clocks still open. Reopening starts the clocks again.
-- A customer ticket with a policy owns the clocks of its conversation. A conversation without a ticket follows the policy a workflow applied.
+Keep these rules in mind:
+
+- **Public human replies only:** internal notes and dimmi agent replies do not meet reply targets.
+- **Resolve and reopen:** resolving cancels open reply clocks; reopening starts them again.
+- **Tickets take priority:** if a conversation has a customer ticket with a policy, that policy owns its clocks. Otherwise, the conversation uses any policy applied by a workflow.
 
 ## Office hours
 
-A clock counts only the open hours of the policy's schedule. dimmi works out the due time when the clock starts.
+Each clock counts only the open hours in its policy's schedule. dimmi calculates the exact due time the moment the clock starts.
 
-## Pauses
+## Paused clocks
 
-| Policy setting | The clocks pause while |
+| Policy setting | Clock pauses while |
 | --- | --- |
-| **Pause while waiting on the customer** | The ticket is in a **Waiting on customer** state, or the conversation is snoozed. |
-| **Pause while waiting on another team** | The ticket is in a **Waiting on team** state. |
+| **Pause while waiting on the customer** | The ticket is in **Waiting on customer**, or the conversation is snoozed. |
+| **Pause while waiting on another team** | The ticket is in **Waiting on team**. |
 
-A paused clock keeps its time left. When it resumes, the due time moves by the time it waited. A paused clock neither warns nor breaches.
+A paused clock freezes its remaining time. When it resumes, dimmi shifts the due time forward by the time spent paused. Paused clocks never warn or breach.
 
 ## Warnings and breaches
 
-dimmi checks running clocks every minute, so a warning or breach can come up to a minute late. Each clock warns once and breaches once.
+dimmi checks active clocks once per minute, so warnings and breaches can fire up to 1 minute after the exact timestamp. Each clock warns once and breaches once.
 
-- A warning fires at the due time minus **Warn before a breach**. A clock shorter than that never warns.
-- A warning sends the `ticket.sla_warning` webhook event and a breach sends `ticket.sla_breached`, for clocks on tickets. See [webhook events](/developers/webhooks/events/).
-- On a conversation or a customer ticket, both also start workflows with the matching SLA trigger.
-- A breach also applies the policy's **On breach** settings.
+- **Warning time:** fires at the due time minus **Warn before a breach**. Targets shorter than the warning window never warn.
+- **Webhooks:** ticket clocks send `ticket.sla_warning` on warning and `ticket.sla_breached` on breach. See [webhook events](/developers/webhooks/events/).
+- **Workflows:** both warnings and breaches start workflows using the matching SLA trigger.
+- **Breach actions:** breaching runs the policy's **On breach** actions automatically.

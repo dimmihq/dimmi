@@ -1,10 +1,10 @@
 ---
 title: "Add the messenger to your app"
-description: "Install the dimmi messenger in a React, Next.js, Vue, Nuxt, Angular, Svelte or plain JavaScript app with a @dimmi package or a script tag."
+description: "Install the dimmi messenger in React, Next.js, Vue, Nuxt, Angular, Svelte, or plain JavaScript."
 ---
 import { TabItem, Tabs } from "~docs/components/mdx";
 
-Add one package, once, at the root of your app. `<app_id>` is the messenger's app ID (`wgt_...`) from **Settings → Messengers**, and a self-hosted server replaces `https://trydimmi.com` with its own address.
+Install one package at the root of your app. Copy `<app_id>` (`wgt_...`) from **Settings → Messengers**. If you self-host, replace `https://trydimmi.com` with your server URL.
 
 <Tabs>
 <TabItem label="React">
@@ -143,9 +143,11 @@ export const dimmi = loadDimmi({ appId: "<app_id>", host: "https://trydimmi.com"
 </TabItem>
 </Tabs>
 
-To sign your users in, see [Verify customer identity](/developers/messenger/identity-verification/). To open the messenger from your own button, see [Messenger JavaScript API](/developers/messenger/javascript-api/).
+Next, sign in your logged-in users with [Verify customer identity](/developers/messenger/identity-verification/), or trigger chat from custom buttons using the [Messenger JavaScript API](/developers/messenger/javascript-api/).
 
 ## Show the unread count
+
+Display an unread badge on your own help button:
 
 ```tsx title="src/HelpButton.tsx"
 import { DimmiButton, useUnreadCount } from "@dimmi/react";
@@ -156,11 +158,11 @@ export function HelpButton() {
 }
 ```
 
-| Package | Unread count |
+| Package | How to read unread count |
 | --- | --- |
 | `@dimmi/react`, `@dimmi/nextjs` | `useUnreadCount()` |
-| `@dimmi/vue` | `useUnreadCount()`, a `Ref<number>` |
-| `@dimmi/angular` | `DimmiService.unreadCount`, a signal |
-| `@dimmi/svelte` | `unreadCount`, a store |
+| `@dimmi/vue` | `useUnreadCount()` (`Ref<number>`) |
+| `@dimmi/angular` | `DimmiService.unreadCount` (signal) |
+| `@dimmi/svelte` | `unreadCount` (store) |
 | `@dimmi/browser` | `getDimmi().onUnreadCountChange(fn)` |
-| Script tag | `event.detail.count` of the `dimmi:unread` window event |
+| Script tag | `event.detail.count` on the `dimmi:unread` window event |

@@ -1,25 +1,25 @@
 ---
 title: "Content Security Policy for the messenger"
-description: "The Content-Security-Policy directives and nonce the dimmi messenger needs on a page with a strict policy."
+description: "Configure Content-Security-Policy directives and script nonces so the dimmi messenger loads on strict pages."
 ---
 
-Add `<dimmi_host>` to three directives: `https://trydimmi.com` on dimmi Cloud, or your self-hosted server's address.
+Add `<dimmi_host>` (`https://trydimmi.com` on dimmi Cloud, or your self-hosted URL) to three CSP directives:
 
-| Directive | Add |
+| Directive | What to allow |
 | --- | --- |
-| `script-src` | `<dimmi_host>`, or a nonce with `'strict-dynamic'`. Also the CDN origin, when a self-hosted server serves the messenger's files from one. |
-| `connect-src` | `<dimmi_host>`, plus your proxy's origin when you set `apiBase` |
-| `img-src` | `<dimmi_host>` and `data:`. Also your file storage's origin, when conversation images come from signed links to it. |
-| `media-src` | Your file storage's origin, for voice messages |
-| `style-src` | Nothing |
+| `script-src` | `<dimmi_host>`, or a nonce with `'strict-dynamic'`. Add your CDN origin too if you self-host assets on a CDN. |
+| `connect-src` | `<dimmi_host>`, plus your proxy origin if you set `apiBase`. |
+| `img-src` | `<dimmi_host>` and `data:`. Add your file storage origin if conversation images use signed storage URLs. |
+| `media-src` | Your file storage origin (needed only for voice messages). |
+| `style-src` | No changes needed. |
 
 ```http
 Content-Security-Policy: script-src 'self' https://trydimmi.com; connect-src 'self' https://trydimmi.com; img-src 'self' https://trydimmi.com data:
 ```
 
-## Use a nonce with 'strict-dynamic'
+## Using a nonce with `'strict-dynamic'`
 
-Browsers ignore host sources in `script-src` under `'strict-dynamic'`, so put your nonce on the loader's script tag. With a package, pass it as the `nonce` option.
+Under `'strict-dynamic'`, browsers ignore host allowlists in `script-src`. Pass your per-response nonce on the loader script tag (or via the `nonce` option in any `@dimmi` package):
 
 ```http
 Content-Security-Policy: script-src 'nonce-<nonce>' 'strict-dynamic'; connect-src 'self' https://trydimmi.com; img-src 'self' https://trydimmi.com data:
@@ -34,4 +34,4 @@ Content-Security-Policy: script-src 'nonce-<nonce>' 'strict-dynamic'; connect-sr
 ></script>
 ```
 
-`<nonce>` is the nonce your server generates for each response, and `<app_id>` is your messenger's app ID.
+Replace `<nonce>` with your server's per-request nonce and `<app_id>` with your messenger app ID.

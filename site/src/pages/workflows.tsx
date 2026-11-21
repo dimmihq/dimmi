@@ -16,29 +16,29 @@ import { FinalCta } from "../sections/final-cta";
 
 const how = [
   {
-    title: "Something happens",
-    body: "A first message, a tag, a product event, a customer gone quiet, an SLA about to breach, or a schedule you set.",
+    title: "Start from an event",
+    body: "Trigger on a first message, tag, app event, quiet thread, SLA alert, or timer.",
   },
   {
-    title: "Your conditions get checked",
-    body: "Plan, channel, tag, SLA state, a keyword, or a question the AI answers by reading the conversation.",
+    title: "Check your rules",
+    body: "Branch on plan, channel, tag, SLA state, keywords, or an AI topic check.",
   },
   {
-    title: "dimmi does the work",
-    body: "It routes, replies, escalates, creates a ticket, calls your system, or hands the conversation to the agent.",
+    title: "Take action",
+    body: "Route to a team, reply, open a ticket, call your API, or hand to the dimmi agent.",
   },
 ];
 
 const stepKinds = [
-  { icon: ChatText, title: "Send messages", body: "Replies, articles, and buttons the customer can press." },
-  { icon: ClipboardText, title: "Collect details", body: "Ask what your team would ask, before a human joins." },
-  { icon: Signpost, title: "Sort by topic", body: "The AI reads the message and picks the path." },
-  { icon: Hash, title: "Assign and tag", body: "Send it to the right person or team, already labeled." },
-  { icon: Alarm, title: "Apply SLAs", body: "Set reply targets, then act before one slips." },
-  { icon: Hourglass, title: "Wait and follow up", body: "Pause for a reply. Then nudge, snooze, or close." },
-  { icon: Ticket, title: "Create tickets", body: "Open a ticket without anyone clicking." },
-  { icon: Globe, title: "Call your systems", body: "A step can send a request to your API." },
-  { icon: Sparkle, title: "Hand to the agent", body: "dimmi answers when the path calls for it." },
+  { icon: ChatText, title: "Send messages", body: "Send replies, help articles, or quick reply buttons." },
+  { icon: ClipboardText, title: "Collect details", body: "Gather order IDs or screenshots before a teammate joins." },
+  { icon: Signpost, title: "Sort by topic", body: "Let AI read the message and pick the right branch." },
+  { icon: Hash, title: "Assign and tag", body: "Route to the right person or team with tags already added." },
+  { icon: Alarm, title: "Apply SLAs", body: "Set reply targets and alert your team before a breach." },
+  { icon: Hourglass, title: "Wait and follow up", body: "Pause for a reply, then nudge, snooze, or close the chat." },
+  { icon: Ticket, title: "Create tickets", body: "Turn bug reports or requests into tickets with zero clicks." },
+  { icon: Globe, title: "Call your API", body: "Send HTTP requests to your backend and use the response." },
+  { icon: Sparkle, title: "Hand to the AI agent", body: "Let the dimmi agent take over when a path calls for AI." },
 ];
 
 const templates = [
@@ -54,32 +54,34 @@ const templates = [
 
 const questions = [
   {
-    question: "Do I need a developer to build one?",
+    question: "Do I need a developer to build a workflow?",
     answer:
-      "No. Start from a template, draw it on the canvas, or describe what you want and let dimmi draft it. You only need code if a step calls your own API.",
+      "Not unless a step calls your own API. Pick a template, drag steps on the canvas, or describe what you want in plain English and let dimmi draft it.",
   },
   {
-    question: "Can one run on a timer, like every Monday?",
+    question: "Can workflows run on a schedule or office hours?",
     answer:
-      "Yes. Run one on a schedule: every Monday at 9:00, the first of the month, or every hour. You can also limit any workflow to office hours, or to outside them.",
+      "Yes. Run them every Monday at 9:00, every hour, or only inside or outside your workspace office hours.",
   },
   {
     question: "So can I cancel Zapier?",
     answer:
-      "No. Workflows are about conversations and customers. They route, reply, escalate, and call your API. If you need your CRM to update a spreadsheet, keep the tool built for that.",
+      "Probably not, unless you only used Zapier for helpdesk rules. Workflows route chats, trigger SLAs, and call your API, but keep Zapier for syncing your CRM to spreadsheets.",
   },
   {
-    question: "Can it touch anything outside dimmi?",
-    answer: "Yes. A step can send a request to any system with an API, then use the answer in later steps.",
-  },
-  {
-    question: "What if no workflow matches?",
+    question: "Can a workflow talk to our own backend?",
     answer:
-      "Nothing breaks. The conversation carries on and lands in the inbox as usual. Every branch can have a fallback path too.",
+      "Yes. Add an HTTP request step to call any API with auth headers, then branch later steps on the JSON it returns.",
   },
   {
-    question: "How do I see what one did at 3am?",
-    answer: "Read the log. Every run is recorded step by step, on the workflow and on the conversation it ran for.",
+    question: "What happens if no workflow matches a chat?",
+    answer:
+      "Nothing breaks. The conversation lands in your inbox like normal, and every branch on the canvas supports a fallback path.",
+  },
+  {
+    question: "How do I debug what ran at 3am?",
+    answer:
+      "Open the run log on the workflow or right on the conversation. Every step and branch choice is recorded in order.",
   },
 ];
 
@@ -88,29 +90,29 @@ export function WorkflowsPage() {
     <>
       <ProductHero
         eyebrow="Workflows"
-        title="Automate the dull support work."
-        body="A workflow waits for a trigger, checks your conditions, then acts. It routes, replies, escalates, or hands the conversation to the agent."
+        title="Automate routing, SLAs, and follow-ups on every plan."
+        body="Set a trigger, check your rules, and let dimmi sort, reply, open tickets, or call your API. No enterprise upgrade required."
         shot="workflow"
         shotAlt="The workflow builder: a first message sorted by topic into billing, bug and everything else"
       />
       <HowItWorks
         label="How it works"
-        title="Trigger, check, act."
-        body="A workflow reads the message, checks it against your rules, then does the work."
+        title="Wait for an event, check rules, take action."
+        body="Every run logs each step in order so you can trace what fired at 3am."
         steps={how}
         visual={(step) => <WorkflowStack step={step} />}
       />
       <FeatureGrid
-        title="The steps you get."
-        body="Mix messages, logic, team actions, and your own systems on one canvas."
+        title="Everything you can drop on the canvas."
+        body="Mix messages, logic, team routing, and API calls in one visual flow."
         items={stepKinds}
       />
       <LinkList
-        title="Eight templates to start from."
-        body="Pick one and it opens on the canvas, ready to edit. Or describe what you want in a sentence and dimmi drafts it."
+        title="Start from a template, or describe what you want."
+        body="Open a template on the canvas to tweak it, or write one sentence and let dimmi draft the flow."
         items={templates}
       />
-      <Questions body="Worth reading before you build your first workflow." items={questions} />
+      <Questions body="What teams ask before building their first workflow." items={questions} />
       <FinalCta />
     </>
   );

@@ -1,35 +1,35 @@
 ---
 title: "Manage topics and subscriptions"
-description: "How topics, the preferences page and unsubscribe links decide who receives a broadcast or series email."
+description: "Let customers opt out of specific broadcast or series topics without unsubscribing from everything."
 ---
 
-A topic is a list customers can leave without leaving every broadcast.
+A topic is a subscription category (like Product updates or Security notices) so customers can opt out of one kind of email without muting everything you send.
 
-Manage topics under **Subscriptions → Topics** in **Broadcasts**, then set one as the **Subscription topic** of a broadcast or the **Topic** of a series.
+Create topics under **Broadcasts → Subscriptions → Topics**, then attach a topic to any broadcast or series.
 
-## Opt in or opt out
+## Opt-out vs. opt-in topics
 
-| Consent | Who receives the topic |
+| Consent mode | Who receives emails on this topic |
 | --- | --- |
-| **Everyone, until they opt out** | Every customer who has not left it. |
-| **Only people who opt in** | Only customers who chose it. |
+| **Everyone, until they opt out** | Every reachable customer who has not unsubscribed. |
+| **Only people who opt in** | Only customers who explicitly opted in. |
 
-You set consent when you create a topic, and it cannot change afterward. A name holds up to 80 characters. **Archive** keeps every choice customers made.
+You pick the consent mode when creating a topic and cannot change it later. Archiving a topic preserves all customer subscription choices.
 
-## What the counts mean
+## Understanding topic counts
 
-| Column | Counts |
+| Column | What it counts |
 | --- | --- |
-| **Subscribed** | The people the topic reaches now. For an opt-out topic, that is everyone who has not left it or left all broadcasts. |
-| **Unsubscribed** | The people who left this topic. |
-| **Broadcasts** | The broadcasts that use this topic. |
+| **Subscribed** | Customers reachable on this topic right now. For opt-out topics, that is everyone who has not left this topic or unsubscribed from all broadcasts. |
+| **Unsubscribed** | Customers who opted out of this topic. |
+| **Broadcasts** | Broadcasts linked to this topic. |
 
-## How customers unsubscribe
+## How customers manage preferences
 
-Every broadcast email ends with a footer that links to a preferences page. The page needs no sign-in, because the link is signed for that one recipient.
+Every broadcast email includes a footer link to a personal preferences page. No sign-in is required because each link is signed for that recipient.
 
-- **Preferences page:** the customer switches each topic on or off, or picks **Unsubscribe from all**.
-- **One-click unsubscribe:** leaves the email's topic, or every broadcast when the email has no topic.
-- **Series:** a **Topic** step subscribes or unsubscribes a customer as they pass it.
+- **Preferences page:** customers toggle individual topics on or off, or click **Unsubscribe from all**.
+- **One-click unsubscribe:** opts the customer out of the email's topic (or all broadcasts if no topic was set).
+- **Series step:** use a **Topic** step in a series to subscribe or unsubscribe customers automatically.
 
-dimmi honors an unsubscribe at once. It does not stop a broadcast marked **Important notice**, a series with **Service messages** on, or the replies in a conversation.
+Unsubscribes take effect right away. They never block broadcasts marked **Important notice**, series with **Service messages** enabled, or normal support conversation replies.

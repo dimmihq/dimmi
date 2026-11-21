@@ -1,11 +1,9 @@
 ---
 title: "Messenger API"
-description: "The HTTP API the dimmi messenger uses, for building your own chat interface."
+description: "Build a custom web or mobile chat client on top of dimmi's /widget/v1 HTTP API."
 ---
 
-The messenger's HTTP API is at `/widget/v1` on `https://trydimmi.com`, or on your own dimmi address when self-hosted.
-
-Requests and responses are JSON, and the API reads and sets no cookies.
+The Messenger API lives at `/widget/v1` on `https://trydimmi.com` (or your self-hosted server URL). It uses JSON requests and responses and never reads or sets cookies.
 
 ## Start a session
 
@@ -15,17 +13,17 @@ curl https://trydimmi.com/widget/v1/sessions \
   -d '{"app_id": "<app_id>"}'
 ```
 
-`<app_id>` is the messenger's app ID (`wgt_...`) from **Settings → Messengers**. The `201` response carries `data.token` (`dmi_ws_...`) once: store it and send it as `Authorization: Bearer <session_token>` on each later request.
+Copy `<app_id>` (`wgt_...`) from **Settings → Messengers**. The `201` response returns `data.token` (`dmi_ws_...`) once. Save it and send `Authorization: Bearer <session_token>` on every later call.
 
-| Field | Use |
+| Optional field | Purpose |
 | --- | --- |
-| `user_jwt` | An [identity token](/developers/messenger/identity-verification/). The session then belongs to that customer. |
-| `previous_token` | The session token you held before, sent with `user_jwt`. dimmi merges an anonymous session's customer into the signed-in one. |
-| `locale`, `timezone` | The customer's language tag and IANA time zone. |
-| `page` | The page the customer is on: `url` (required), `title`, `referrer`. |
-| `website` | Leave it out. dimmi treats a session that fills it as a bot and files its conversations as spam. |
+| `user_jwt` | An [identity token](/developers/messenger/identity-verification/) that binds the session to a signed-in customer. |
+| `previous_token` | Sent alongside `user_jwt` to merge an anonymous session's threads into the signed-in customer. |
+| `locale`, `timezone` | Language tag and IANA time zone. |
+| `page` | Current page object: `url` (required), `title`, and `referrer`. |
+| `website` | Honeypot field. Leave omitted; filling it flags the session as a bot and marks threads as spam. |
 
-## Send a message and read replies
+## Send messages and poll for updates
 
 ```bash
 curl https://trydimmi.com/widget/v1/conversations \
@@ -37,73 +35,71 @@ curl "https://trydimmi.com/widget/v1/updates?since=<cursor>" \
   -H "Authorization: Bearer <session_token>"
 ```
 
-`client_id` is a UUID you create for each message. A retry with the same `client_id` stores the message once.
+Generate a fresh UUID for `client_id` on every message so retries never create duplicates.
 
-Leave `since` out on the first call to `/updates`. Each response has `meta.cursor` to pass as the next `since`, `meta.poll_after_ms` to wait before asking again, and `meta.has_more`.
+Omit `since` on your first `/updates` call. Each response gives you `meta.cursor` (pass as the next `since`), `meta.poll_after_ms` (wait interval), and `meta.has_more`.
 
 | `event` in `/updates` | `payload` |
 | --- | --- |
-| `message.created`, `message.updated`, `message.deleted` | The message. |
-| `conversation.updated`, `conversation.closed` | The conversation. |
+| `message.created`, `message.updated`, `message.deleted` | Message object |
+| `conversation.updated`, `conversation.closed` | Conversation object |
 
-## Endpoints without a session
+## Public endpoints (no session token)
 
-Each of these names the messenger in its path or body.
-
-| Endpoint | Returns or does |
+| Endpoint | What it does |
 | --- | --- |
 | `POST /sessions` | Starts a session. |
-| `GET /apps/{app}/config` | The messenger's settings: appearance, texts, features. |
-| `GET /apps/{app}/availability` | Whether the team is in office hours, and the reply time to show. |
-| `GET /apps/{app}/help` | The help center collections and articles anyone may read. |
-| `GET /apps/{app}/changelog` | Published changelog entries. |
-| `GET /apps/{app}/ticket-types` | The ticket types a customer may open. |
-| `POST /apps/{app}/article-views` | Counts one article view. |
+| `GET /apps/{app}/config` | Returns messenger appearance, copy, and enabled features. |
+| `GET /apps/{app}/availability` | Returns office hours status and estimated reply time. |
+| `GET /apps/{app}/help` | Returns public help center collections and articles. |
+| `GET /apps/{app}/changelog` | Returns published changelog entries. |
+| `GET /apps/{app}/ticket-types` | Returns customer-visible ticket types. |
+| `POST /apps/{app}/article-views` | Records an article view. |
 
-## Endpoints with a session
+## Authenticated endpoints (session token required)
 
-| Endpoint | Returns or does |
+| Endpoint | What it does |
 | --- | --- |
-| `GET /session` | The session, its customer and unread count. |
-| `PATCH /session` | Renews a signed-in session with a fresh `user_jwt`. |
+| `GET /session` | Returns the session, contact profile, and unread count. |
+| `PATCH /session` | Refreshes a signed-in session with a new `user_jwt`. |
 | `DELETE /session` | Ends the session. |
-| `GET /contact`, `PATCH /contact` | The customer's profile. `PATCH` takes `name`, `email`, `phone` and `custom_attributes`. |
-| `POST /email-verifications` | Mails a code to `email`. |
-| `POST /email-verifications/checks` | Checks the `code` the customer typed. |
-| `GET /conversations` | The customer's conversations, latest activity first. `filter[status]` takes `open` or `closed`. |
-| `POST /conversations` | Starts a conversation with a first message. |
-| `POST /openers` | Starts a conversation before the customer writes, so a [workflow](/workflows/how-workflows-work/) can greet them. |
-| `GET /conversations/{conversation}` | One conversation. |
-| `GET /conversations/{conversation}/messages` | Messages, oldest first. Takes `before`, `after` and `limit` (at most 100). |
-| `POST /conversations/{conversation}/messages` | Sends a message: `client_id`, `body`, `attachment_ids` (at most 10), or `choice` for a button the customer picked. |
+| `GET /contact`, `PATCH /contact` | Reads or updates `name`, `email`, `phone`, and `custom_attributes`. |
+| `POST /email-verifications` | Sends a 6-digit verification code to `email`. |
+| `POST /email-verifications/checks` | Verifies the customer's `code`. |
+| `GET /conversations` | Lists customer conversations, newest first. Filter with `filter[status]=open` or `closed`. |
+| `POST /conversations` | Starts a conversation with an opening message. |
+| `POST /openers` | Opens a thread before the customer types so a [workflow](/workflows/how-workflows-work/) can greet them. |
+| `GET /conversations/{conversation}` | Fetches one conversation. |
+| `GET /conversations/{conversation}/messages` | Lists messages oldest first (`before`, `after`, `limit` up to 100). |
+| `POST /conversations/{conversation}/messages` | Sends a message (`client_id`, `body`, up to 10 `attachment_ids`, or `choice` for reply buttons). |
 | `PATCH /conversations/{conversation}/read-state` | Marks messages read up to `last_read_message_id`. |
-| `POST /conversations/{conversation}/typing-indicators` | Shows the team that the customer is typing. |
+| `POST /conversations/{conversation}/typing-indicators` | Sends a customer typing indicator. |
 | `POST /conversations/{conversation}/ai/helped` | Confirms the dimmi agent resolved the conversation. |
-| `POST /conversations/{conversation}/ai/handoff` | Asks for a handover to a teammate. |
-| `GET`, `PATCH /conversations/{conversation}/action-calls/{call}` | An [action](/ai/actions/) waiting for the customer. `PATCH` takes `status`: `confirmed` or `canceled`. |
-| `GET`, `PATCH /conversations/{conversation}/rating` | The conversation's rating. `PATCH` takes `score` (1 to 5) and `comment`. |
-| `POST /attachments` | Announces a file: `filename`, `content_type`, `size_bytes`. Send the bytes to `data.upload.url` with its `method` and `headers`. |
-| `PATCH /attachments/{attachment}` | With `status: "uploaded"`, finishes the upload so a message can name it in `attachment_ids`. |
-| `GET /ticket-types`, `GET /tickets`, `GET /tickets/{ticket}` | The ticket types and the customer's tickets. |
-| `POST /tickets` | Opens a ticket: `client_id`, `type_id`, `title`, `description`, `fields`. |
-| `GET /help` | The help center content this customer may read. |
-| `POST /help-passes` | A link that opens the help center with the customer signed in. |
-| `POST /article-views`, `POST /article-ratings` | Counts an article view, stores an article rating. |
-| `POST /events` | Records 1 to 20 [events](/developers/messenger/track-events/) for the customer. |
-| `POST /pings` | Records the page the customer is on. |
-| `POST /realtime-tokens` | A token for the live event stream the dimmi messenger reads instead of polling. |
-| `GET /updates` | What changed since a cursor, at most 100 changes per response. |
+| `POST /conversations/{conversation}/ai/handoff` | Requests handover to a human teammate. |
+| `GET`, `PATCH /conversations/{conversation}/action-calls/{call}` | Reads or resolves a pending [action](/ai/actions/) confirmation (`status`: `confirmed` or `canceled`). |
+| `GET`, `PATCH /conversations/{conversation}/rating` | Reads or submits a conversation rating (`score` 1 to 5, optional `comment`). |
+| `POST /attachments` | Requests a presigned upload (`filename`, `content_type`, `size_bytes`), then upload bytes to `data.upload.url`. |
+| `PATCH /attachments/{attachment}` | Finalizes an upload with `status: "uploaded"` so messages can reference it in `attachment_ids`. |
+| `GET /ticket-types`, `GET /tickets`, `GET /tickets/{ticket}` | Lists ticket types and the customer's tickets. |
+| `POST /tickets` | Creates a ticket (`client_id`, `type_id`, `title`, `description`, `fields`). |
+| `GET /help` | Returns help center articles this customer is allowed to read. |
+| `POST /help-passes` | Generates a signed link to open the help center already signed in. |
+| `POST /article-views`, `POST /article-ratings` | Records an article view or helpfulness rating. |
+| `POST /events` | Sends 1 to 20 [events](/developers/messenger/track-events/). |
+| `POST /pings` | Records the customer's current page. |
+| `POST /realtime-tokens` | Issues a realtime stream token to receive updates without polling. |
+| `GET /updates` | Fetches up to 100 changes since a cursor. |
 
-## Errors and limits
+## Errors, CORS, and rate limits
 
-An error response is `{"code": "...", "message": "...", "errors": {}}`. A `401` with the code `session_invalid`, `session_expired` or `session_revoked` means the session is over: start a new one.
+Errors return `{"code": "...", "message": "...", "errors": {}}`. If you get `401` with `session_invalid`, `session_expired`, or `session_revoked`, start a new session.
 
-A browser request must come from a site in **Allowed sites** in the messenger's settings, when that list has entries. A request with no `Origin` header then needs the messenger's `native_apps_enabled` setting, which the [REST API](/api-reference/) sets.
+Browser requests must come from a domain listed in **Allowed sites** when that list is non-empty. Requests without an `Origin` header (such as native mobile apps) require `native_apps_enabled` to be turned on via the [REST API](/api-reference/).
 
-| Limit | Each session | Each network |
+| Resource | Per session | Per IP / network |
 | --- | --- | --- |
-| Messages | 20 per minute | 600 per hour |
-| New conversations | 5 per hour | 60 per hour |
-| File uploads | 10 per minute | 300 per hour |
-| Event batches | 30 per minute | 3,000 per hour |
-| Message `body` | 64 KB | |
+| Messages | 20 / minute | 600 / hour |
+| New conversations | 5 / hour | 60 / hour |
+| File uploads | 10 / minute | 300 / hour |
+| Event batches | 30 / minute | 3,000 / hour |
+| Max message `body` | 64 KB | |

@@ -1,49 +1,48 @@
 ---
 title: "Set up a help center"
-description: "Where your help center lives, how collections and articles publish, and the defaults you can change."
+description: "Configure your help center address, organize collections and articles, and run multiple help centers for different products or languages."
 ---
 
-A new workspace already has one help center, named after the workspace. Change it in **Settings → Help centers** and write articles under **Help center** in the sidebar.
+Every new workspace comes with a help center ready to go. Change its settings in **Settings → Help centers**, and write articles under **Help center** in the sidebar.
 
-## Address
+## Your help center address
 
 - **dimmi Cloud:** `https://<subdomain>.dimmi.help`.
 - **Self-hosted:** `/hc/<subdomain>` on your server, or a subdomain of your [help domain](/self-hosting/domains/).
-- **Subdomain:** 3 to 40 lowercase letters, digits and dashes, unique across every workspace.
-- **Your own domain:** see [custom domain](/help-center/custom-domain/).
+- **Subdomain format:** 3 to 40 lowercase letters, digits, and dashes, unique across all workspaces.
+- **Custom domain:** put your help center on your own domain with [Use a custom domain](/help-center/custom-domain/).
 
-## Several help centers
+## Run multiple help centers
 
-**New help center** adds another one, such as one per product or language, with its own address, articles and settings.
+Click **New help center** to spin up another help center for a second product or another language. Each one has its own address, articles, and settings.
 
-- **Languages:** English, French, German, Spanish, Portuguese (Brazil), Italian, Dutch and Japanese.
-- **Default:** the first help center is the default and cannot be deleted. New messengers show it.
-- **Deleting:** only an Owner can delete a help center. Its articles go with it, and messengers that showed it show the default instead.
-- **dimmi agent:** it answers from the published articles of every help center.
+- **Supported languages:** English, French, German, Spanish, Portuguese (Brazil), Italian, Dutch, and Japanese.
+- **Default help center:** your first help center is the default and cannot be deleted. New messengers show it automatically.
+- **Deleting:** only an Owner can delete a help center. Deleting removes its articles and switches any messengers using it back to the default.
+- **dimmi agent:** answers from published articles across all of your help centers.
 
 ## Collections and articles
 
-- **Depth:** collections nest three levels deep.
-- **Deleting a collection:** its articles stay, without a collection.
-- **Publishing:** saving an article changes nothing for readers. **Publish** makes the saved text live and keeps a version you can restore.
-- **Who can read it:** **Public** articles show on the help center. **Agent only** articles stay hidden, and only the dimmi agent reads them.
-- **Addresses:** when you change the address of a published article or a collection, the old address redirects to the new one.
+- **Nesting:** collections can nest up to 3 levels deep. Deleting a collection leaves its articles intact without a collection.
+- **Drafts and publishing:** saving edits keeps them as a draft. Click **Publish** to make them live and save a version you can restore later.
+- **Visibility:** **Public** articles show on the help center. **Agent only** articles stay hidden from readers and are read only by the dimmi agent.
+- **Automatic redirects:** renaming the URL slug of a published article or collection redirects the old link to the new one automatically.
 
-To show an article only to some customers, see [restricted articles](/help-center/limit-articles/).
+Want to hide an article from everyone except specific customers? See [Limit articles to some customers](/help-center/limit-articles/).
 
-## Defaults
+## Default settings
 
-| Setting | Default | Limit |
+| Setting | Default | Notes |
 | --- | --- | --- |
-| **Brand color** | `#10b981` | A hex color. |
-| **Home title** | "How can we help?" | 80 characters. dimmi cuts longer text. |
-| **Home subtitle** | Empty | 200 characters. |
-| **Footer** | Empty | 500 characters. |
-| **Contact link** | None | An `https` address. |
-| **Show the messenger** | On, with your first messenger | One messenger per help center. |
-| **Ask AI** | On | |
-| **Search engines** | On | |
+| **Brand color** | `#10b981` | Any hex color. |
+| **Home title** | "How can we help?" | Shown at the top of your help center. |
+| **Home subtitle** | Empty | Short intro line under the title. |
+| **Footer** | Empty | Shown at the bottom of every page. |
+| **Contact link** | None | Any `https` URL. |
+| **Show the messenger** | On (uses your first messenger) | Link one messenger per help center. |
+| **Ask AI** | On | Lets readers ask questions in the help center. |
+| **Search engines** | On | Allows search engines to index public articles. |
 
-Reader search covers published **Public** articles the reader may read.
+Reader search covers all published **Public** articles the visitor has permission to view.
 
-The header links to your [changelog](/help-center/changelog/) once it has a published entry, and to [feature requests](/help-center/feature-requests/) once the board is open to customers.
+Your help center header adds links to your [changelog](/help-center/changelog/) once you publish an entry, and to [feature requests](/help-center/feature-requests/) once you open the board to customers.

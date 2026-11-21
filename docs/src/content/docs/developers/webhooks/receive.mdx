@@ -1,23 +1,23 @@
 ---
 title: "Receive webhooks"
-description: "Add a dimmi webhook endpoint, choose its events and handle each delivery once."
+description: "Create a webhook endpoint, subscribe to dimmi events, verify signatures, and process deliveries idempotently."
 ---
 
-Add an endpoint in **Settings → Webhooks**, or with [Create webhook endpoint](/api-reference/webhooks/create-webhook-endpoint/). A workspace can have 20 endpoints, and dimmi Cloud requires an `https://` URL.
+Add a webhook endpoint in **Settings → Webhooks**, or via [Create webhook endpoint](/api-reference/webhooks/create-webhook-endpoint/). Each workspace supports up to 20 endpoints, and dimmi Cloud requires `https://` URLs.
 
-## Choose events
+## Subscribe to events
 
-| Entry | Receives |
+| Pattern | Events delivered |
 | --- | --- |
-| `conversation.created` | That event type. |
-| `conversation.*` | Each event of the area, including ones dimmi adds later. |
-| `*` | Each event, including ones dimmi adds later. |
+| `conversation.created` | Only that event. |
+| `conversation.*` | Every event in that group, including future additions. |
+| `*` | Every event type, including future additions. |
 
-Wildcards leave out `contact_event.tracked`; list it by name.
+Wildcards exclude `contact_event.tracked`. List `contact_event.tracked` explicitly if you want it.
 
-## Read the envelope
+## Event envelope
 
-Each delivery is a `POST` with this JSON body:
+Every delivery is an HTTP `POST` with a JSON envelope:
 
 ```json
 {
@@ -37,17 +37,17 @@ Each delivery is a `POST` with this JSON body:
 }
 ```
 
-| Field | Meaning |
+| Field | What it tells you |
 | --- | --- |
-| `id` | The same on each attempt of one event, and in the `webhook-id` header. |
-| `sequence` | For one object, a higher number carries a newer snapshot. |
-| `data.object` | The whole object, as the REST API returns it. The example is cut short. |
+| `id` | Stable event ID, repeated on retries and in the `webhook-id` header. |
+| `sequence` | Increasing version number per object so you can ignore stale snapshots. |
+| `data.object` | Full REST API representation of the object (trimmed in the sample above). |
 
-[Webhook events](/developers/webhooks/events/) describes the other fields and lists the event types.
+See [Webhook events](/developers/webhooks/events/) for every envelope field and event type.
 
-## Handle each delivery once
+## Process each event once
 
-dimmi can send one event more than once, and deliveries can arrive out of order. Skip an `id` you have handled, and skip a `sequence` lower than the last one you applied to that object.
+Because webhooks can retry or arrive out of order, deduplicate by `id` and ignore any `sequence` lower than the latest one you already applied to that object:
 
 ```js title="server.js"
 import express from "express";
@@ -81,6 +81,6 @@ app.post("/webhooks/dimmi", express.raw({ type: "application/json" }), (req, res
 app.listen(3000);
 ```
 
-Set `DIMMI_WEBHOOK_SECRET` to the endpoint's signing secret. [Verify webhook signatures](/developers/webhooks/verify-signatures/) has the same check in Go, PHP, Laravel and Python.
+Set `DIMMI_WEBHOOK_SECRET` to the endpoint's signing secret. Need Go, PHP, Laravel, or Python examples? See [Verify webhook signatures](/developers/webhooks/verify-signatures/).
 
-Answer with a `2xx` status within 15 seconds and do slow work after you answer. [Webhook delivery and retries](/developers/webhooks/delivery-and-retries/) lists what dimmi does with other answers.
+Return any `2xx` status within 15 seconds and push slow work to a background job. See [Webhook delivery and retries](/developers/webhooks/delivery-and-retries/) for retry timing and failure handling.

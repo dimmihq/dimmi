@@ -13,41 +13,41 @@ import { FinalCta } from "../sections/final-cta";
 
 const steps = [
   {
-    title: "Brief me",
-    body: "One click, and it reads the thread and the customer's history so you don't have to. The brief stays as a note.",
+    title: "Brief me fast",
+    body: "One click sums up a long chat and past tickets into a private note.",
     visual: <BriefFragment />,
   },
   {
     title: "Draft a reply",
-    body: "Operator writes it from your knowledge and drops it in the reply box. You edit it. You send it.",
+    body: "Writes an answer from your docs right in the box. You edit and send it.",
     visual: <DraftFragment />,
   },
   {
-    title: "Apply its changes",
-    body: "Tags, an owner, a priority. Each change waits for your OK and can be undone after.",
+    title: "Apply changes safely",
+    body: "Proposes tags, owners, or priorities. Approve with one click, or undo after.",
     visual: <ChangeFragment />,
   },
 ];
 
 const rows = [
   {
-    label: "Questions",
+    label: "Customer history",
     title: "Ask about the customer in front of you.",
-    body: "Has Omar written before? What did we promise him last time? Operator searches past conversations and answers right in the thread.",
+    body: "Has Omar written before? What did we promise last time? Operator checks past chats and answers right beside the thread.",
     visual: (
       <ShotFlow name="operator" alt="Asking Operator about the customer's past issues" maxHeight={430} maxWidth={400} />
     ),
   },
   {
     label: "Workspace",
-    title: "Or ask about the whole workspace.",
-    body: "Volume, response times, what the AI agent got up to. Operator pulls the report and tells you what changed.",
+    title: "Ask about your whole support queue.",
+    body: "Check volume spikes, reply times, or what the AI agent answered this week. Operator pulls the numbers and explains what moved.",
     visual: <WorkspaceFragment />,
   },
   {
     label: "Control",
-    title: "You set what it can change.",
-    body: "Each kind of change gets a setting: on its own, ask first, or off. What it does on its own still shows in the chat and can be undone.",
+    title: "You pick what it can change.",
+    body: "Set each change type to automatic, ask first, or off. Every edit shows in the chat log and can be undone.",
     visual: <PolicyFragment />,
   },
 ];
@@ -56,57 +56,60 @@ const more = [
   {
     icon: Tray,
     title: "Triage on arrival",
-    body: "Switch it on and Operator proposes tags, an owner, and a priority for each new conversation.",
+    body: "Turn it on to suggest tags, an owner, and a priority for every new chat.",
   },
   {
     icon: ChatsCircle,
-    title: "In Slack too",
-    body: "Ask it from your team's internal Slack channels and direct messages.",
+    title: "Works in Slack too",
+    body: "Ask Operator questions from your team's Slack channels and DMs.",
   },
   {
     icon: ShieldCheck,
-    title: "It sees what you see",
-    body: "Operator reads the workspace as the teammate who asked. Same role, same rules, no extra access.",
+    title: "Matches your permissions",
+    body: "Operator only sees what the teammate asking is allowed to see.",
   },
   {
     icon: Brain,
-    title: "Remembers how you work",
-    body: "Tell it how you like your answers and it remembers. Only you see what it keeps.",
+    title: "Remembers your style",
+    body: "Tell it how you like summaries or drafts, and it keeps that preference for you.",
   },
   {
     icon: Lightning,
     title: "Runs your actions",
-    body: "It can look up an order in your own systems. Changing anything there always waits for you.",
+    body: "Looks up orders in your backend. Actions that change data always wait for your OK.",
   },
   {
     icon: ListMagnifyingGlass,
-    title: "Shows its work",
-    body: "Every answer comes with a log of what Operator read and searched to get there.",
+    title: "Shows every source",
+    body: "Every answer lists the chats, docs, and tools Operator checked.",
   },
 ];
 
 const questions = [
   {
-    question: "Will a customer ever see what it writes?",
+    question: "Can a customer ever see what Operator writes?",
     answer:
-      "No. Operator talks to your team, never to customers. A draft only reaches a customer when a teammate sends it.",
+      "Never. Operator only talks to your team. A draft reaches a customer only after a teammate reviews it and clicks send.",
   },
   {
-    question: "Isn't this just the AI agent again?",
+    question: "How is Operator different from the dimmi agent?",
     answer:
-      "No. The agent answers customers. Operator works for your team: it briefs you, answers your questions, and drafts replies.",
+      "The dimmi agent replies to customers. Operator works backstage for your team, summing up chats, answering questions, and drafting replies.",
   },
   {
-    question: "Will it change things behind my back?",
-    answer: "Only where you allow it. Until you say otherwise, every change waits for a teammate to apply it.",
+    question: "Will it edit my workspace behind my back?",
+    answer:
+      "Only for change types you allow. By default, every tag, assignment, or setting change waits as a changeset for a teammate to approve.",
   },
   {
-    question: "Does it run when nobody asked it to?",
-    answer: "No, unless you switch on briefs as conversations open or triage of new conversations. Both start off.",
+    question: "How is Operator billed on dimmi Cloud?",
+    answer:
+      "Each thread a teammate starts with Operator counts as one AI conversation, no matter how many follow-up questions you ask. You can also skip Operator and connect Claude or Cursor over MCP for $0.",
   },
   {
-    question: "Can it undo everything it does?",
-    answer: "No. Actions in your own systems can't be undone, so they always wait for you.",
+    question: "Can it undo external API actions?",
+    answer:
+      "External actions in your own systems cannot be undone once sent, so Operator always asks a teammate to approve them first.",
   },
 ];
 
@@ -115,15 +118,15 @@ export function OperatorPage() {
     <>
       <ProductHero
         eyebrow="Operator"
-        title="An AI teammate beside every conversation."
-        body="Operator briefs you, digs up the customer's history, drafts replies, and proposes changes. Your customers never see it."
+        title="An AI teammate that works for your team, not your customers."
+        body="Operator sums up long chats, searches customer history, drafts replies, and proposes edits you can undo. Customers never see it."
         shot="inbox-operator"
         shotAlt="Operator beside a conversation's details, ready to brief, draft a reply or suggest tags and an owner"
       />
-      <Steps title="Catch up in one click." items={steps} />
-      <Rows title="Ask it what you'd ask a colleague." rows={rows} />
-      <FeatureGrid title="Not just a chat box." items={more} />
-      <Questions body="What you'd ask before your team starts asking it." items={questions} />
+      <Steps title="Catch up on any thread in seconds." items={steps} />
+      <Rows title="Ask it what you would ask a senior teammate." rows={rows} />
+      <FeatureGrid title="More than a chat sidebar." items={more} />
+      <Questions body="What teams ask before letting Operator into the inbox." items={questions} />
       <FinalCta />
     </>
   );

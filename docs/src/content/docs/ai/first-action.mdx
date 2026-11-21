@@ -1,14 +1,20 @@
 ---
 title: "Build your first action"
-description: "Add an endpoint to your own API and connect it so the dimmi agent can tell a customer which plan they are on."
+description: "Add one endpoint to your API and connect it so the dimmi agent can tell a customer which plan they are on."
 ---
 import { Steps } from "~docs/components/mdx";
 
-You add one endpoint to your API and turn it into an action the dimmi agent calls for the customer it is talking to. You need an API on a public HTTPS address, an agent that [answers in the messenger](/ai/set-up-the-agent/) and [identity verification](/developers/messenger/identity-verification/).
+In this guide, you will add one endpoint to your API and wire it up as an action. By the end, the dimmi agent can check a customer's plan live in the messenger.
+
+Before you start, make sure you have:
+
+- **A public HTTPS API** you can deploy to.
+- **The dimmi agent** turned on in the messenger. See [Set up the dimmi agent](/ai/set-up-the-agent/).
+- **Identity verification** turned on in the messenger. See [Identity verification](/developers/messenger/identity-verification/).
 
 <Steps>
 
-1. Add an endpoint that returns a customer's subscription and checks a bearer token. Deploy it.
+1. Add an endpoint that returns a customer's plan and checks a bearer token, then deploy it.
 
    ```js title="server.js"
    import express from "express";
@@ -33,27 +39,27 @@ You add one endpoint to your API and turn it into an action the dimmi agent call
    app.listen(3000);
    ```
 
-   Replace the `subscriptions` object with a lookup in your own data. Its keys are the ids your identity tokens carry in `sub`.
+   Swap out the `subscriptions` object for a real lookup in your database. The keys match the customer IDs your identity tokens send in `sub`.
 
-2. In **Settings → Actions**, add a **REST API** connection. Give it your API's address and, as its bearer token, the value of `DIMMI_ACTIONS_TOKEN`.
+2. Open **Settings → Actions** and add a **REST API** connection. Enter your API's base URL and paste the value of `DIMMI_ACTIONS_TOKEN` as the bearer token.
 
-3. On the connection, choose **New action** and fill in:
+3. Inside that connection, click **New action** and fill in these fields:
 
    | Field | Value |
    | --- | --- |
    | **Title** | `Check a subscription` |
-   | **Instructions for the agent** | `Use when the customer asks which plan they are on, whether it is active or when it renews.` |
+   | **Instructions for the agent** | `Use when the customer asks which plan they are on, whether it is active, or when it renews.` |
    | **What it does** | **Only reads data** |
    | **Endpoint** | `GET` `/subscriptions/{contact.external_id}` |
 
-   dimmi replaces `{contact.external_id}` with the `sub` of the verified customer. The agent cannot change it.
+   dimmi fills `{contact.external_id}` from the verified customer's `sub` claim. The AI model cannot change it.
 
-4. Open **Test** and run a **Live** test with an id from your data, such as `cus_1042`. The result shows the JSON the agent reads.
+4. Open the **Test** tab and run a **Live** test with a real ID, such as `cus_1042`. Check that the JSON response looks right.
 
-5. Choose **Publish**.
+5. Click **Publish**.
 
-6. Open your site as a signed-in customer and ask the messenger "Which plan am I on?". The agent calls your endpoint and answers with the plan.
+6. Open your site as a signed-in customer and ask the messenger, "Which plan am I on?" The agent calls your endpoint and replies with the customer's plan.
 
 </Steps>
 
-To make an action that changes data and waits for approval, see [Connect actions to your systems](/ai/actions/).
+Ready to let the agent make changes with confirmation and approval? Read [Connect actions to your systems](/ai/actions/).

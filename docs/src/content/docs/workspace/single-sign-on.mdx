@@ -1,59 +1,59 @@
 ---
 title: "Set up single sign-on"
-description: "Connect a SAML or OpenID Connect identity provider to dimmi, verify your email domain and require single sign-on."
+description: "Connect a SAML or OpenID Connect identity provider, verify your email domain, and require SSO for your team."
 ---
 import { Steps } from "~docs/components/mdx";
 
-An Owner connects an identity provider in **Settings → Single sign-on**, over SAML or OpenID Connect. A connection signs nobody in until it is tested, turned on and tied to a verified domain.
+Owners connect SAML or OpenID Connect (OIDC) providers in **Settings → Single sign-on**. A connection stays inactive until you test it, turn it on, and attach a verified domain.
 
 <Steps>
 
-1. Select **New connection** and choose SAML or OpenID Connect. A SAML connection needs only your provider's metadata URL.
+1. Click **New connection** and pick **SAML** or **OpenID Connect**. For SAML, you only need your provider's metadata URL.
 
-2. Open **Details** on the connection and give your identity provider the values it lists.
+2. Open **Details** on the connection and copy the listed values into your identity provider.
 
-3. Select **Add domain** for the domain your teammates' email addresses end in. Create the `TXT` record at `_dimmi-verify.<your domain>`, then check it.
+3. Click **Add domain** for your team's email domain, create the `TXT` record at `_dimmi-verify.<your domain>`, and verify it.
 
-4. Choose the connection for the domain, then select **Test** and sign in at your identity provider.
+4. Link the connection to that domain, click **Test**, and complete a sign-in at your identity provider.
 
-5. Select **Turn on**.
+5. Click **Turn on**.
 
 </Steps>
 
 ## Connection statuses
 
-| Status | Meaning |
+| Status | What it means |
 | --- | --- |
-| **Draft** | Signs nobody in. A new connection starts here. |
-| **Tested** | An Owner completed a test sign-in. |
-| **On** | Signs in people whose email is under a domain routed to it. |
-| **Off** | Turned off by an Owner. Turning a connection off also stops requiring it. |
+| **Draft** | Inactive. Every new connection starts here. |
+| **Tested** | An Owner completed a live test sign-in. |
+| **On** | Active for anyone signing in with a routed email domain. |
+| **Off** | Disabled by an Owner. Turning a connection off also stops requiring it. |
 
-Changing a connection's protocol settings or secret returns it to **Draft**, and it stops being required until you test it again.
+Editing protocol settings or secrets resets a connection back to **Draft** and removes enforcement until you test it again.
 
 ## Require single sign-on
 
-**Require** sends everyone with an email under the connection's domains to your identity provider, whichever sign-in method they try.
+Click **Require** to route every teammate under your verified domains to your identity provider, no matter which login button they click.
 
-- **Proof first:** you must have signed in through the connection yourself, or confirm a test from the last 24 hours.
-- **Owners:** an active Owner can still sign in another way, for the day your identity provider is down.
-- **Deleting:** select **Stop requiring** before you delete a required connection.
+- **Test required first:** you must have signed in through the connection yourself, or run a test within the last 24 hours.
+- **Owner fallback:** active Owners can still sign in another way in case your identity provider goes down.
+- **Before deleting:** click **Stop requiring** first before deleting a required connection.
 
-## New people
+## Add teammates automatically
 
-A person who signs in through the connection must already be an active member. **Add new people** changes that: dimmi adds anyone your identity provider signs in, as a Member.
+By default, someone signing in with SSO must already be an active workspace member. Turn on **Add new people** to automatically create a Member account for anyone your identity provider authenticates.
 
-dimmi never brings back a member someone deactivated.
+dimmi never reactivates a member who was previously deactivated.
 
-## Domains
+## Verified domains
 
-- **Ownership:** the first company to verify a domain holds it. Public email domains such as `gmail.com` cannot be verified.
-- **Daily check:** dimmi looks up each verified domain's `TXT` record once a day. After 7 days without it, the domain fails, its connection stops being required and dimmi emails the Owners.
-- **Removing:** a domain routed to a required connection cannot be removed or moved.
+- **Exclusive ownership:** the first company to verify a domain owns it. Public domains like `gmail.com` cannot be verified.
+- **Daily DNS checks:** dimmi rechecks each domain's `TXT` record daily. If it stays missing for 7 days, verification fails, enforcement turns off, and Owners are emailed.
+- **Protected while required:** domains linked to a required connection cannot be moved or removed.
 
-## Limits and upkeep
+## Limits and certificate rotation
 
-- A company has up to 10 connections and 20 domains.
-- dimmi reads a SAML connection's **Metadata URL** again every day, so a rotated signing certificate is picked up.
-- dimmi warns the Owners 30, 7 and 1 day before your identity provider's signing certificate expires.
-- A connection turns on only when dimmi is served over HTTPS.
+- Up to 10 SSO connections and 20 verified domains per company.
+- dimmi refreshes SAML **Metadata URL** daily to pick up rotated signing certificates automatically.
+- Owners receive email warnings 30, 7, and 1 day before a signing certificate expires.
+- SSO connections require dimmi to run over HTTPS.

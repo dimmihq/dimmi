@@ -1,15 +1,15 @@
 ---
 title: "Python SDK"
-description: "Install dimmi-sdk and call the dimmi REST API from Python, page through lists and verify webhooks."
+description: "Install dimmi-sdk to call the REST API (sync or async), paginate lists, sign identity tokens, and verify webhooks."
 ---
 
-`dimmi-sdk` needs Python 3.10 or later. You import it as `dimmi`.
+`dimmi-sdk` requires Python 3.10 or later and imports as `dimmi`.
 
 ```bash
 pip install dimmi-sdk
 ```
 
-## Create a client and call an endpoint
+## Create a client and make a call
 
 ```python title="main.py"
 import os
@@ -30,18 +30,20 @@ for conversation in client.paginate("/conversations", {"filter[status]": "open"}
     print(conversation["id"])
 ```
 
-`DIMMI_API_TOKEN` holds your [API token](/developers/api/authentication/). `Dimmi()` reads it without `token=` too, then tries `DIMMI_TOKEN`. On a self-hosted install, pass `base_url=` with your dimmi address, or set `DIMMI_BASE_URL`.
+Set `DIMMI_API_TOKEN` (or `DIMMI_TOKEN`) to your [API token](/developers/api/authentication/). `Dimmi()` reads those environment variables automatically if you omit `token=`. When self-hosting, pass `base_url=` or set `DIMMI_BASE_URL`.
 
-## Calls
+## Ways to call the API
 
-- **Any path.** `client.get`, `post`, `put`, `patch`, `delete` and `request(method, path)` take the paths in the [API reference](/api-reference/) and return the decoded JSON.
-- **Lists.** `client.paginate()` yields each item and follows `meta.next_cursor`. `client.pages()` does the same for lists that page with `page`. Both ask for 100 items per page unless you set `limit`.
-- **Async.** `AsyncDimmi` has the same methods as coroutines: `async with AsyncDimmi() as client`.
-- **Generated calls.** `dimmi._generated.api.default` has one module per operation id, such as `conversations_index.sync(client=client.api)`.
+- **HTTP helpers:** `client.get`, `post`, `put`, `patch`, `delete`, and `request(method, path)` accept any path from the [API reference](/api-reference/) and return decoded JSON.
+- **Pagination:** `client.paginate()` iterates cursor-paginated lists (`meta.next_cursor`), and `client.pages()` iterates page-numbered lists. Both request 100 items per page unless you set `limit`.
+- **Async support:** use `async with AsyncDimmi() as client:` for async/await code with the same methods.
+- **Generated modules:** `dimmi._generated.api.default` exposes one typed module per operation ID (such as `conversations_index.sync(client=client.api)`).
 
-## Errors
+## Exceptions
 
-| Status | Exception |
+Every exception inherits from `DimmiError` with `status`, `code`, `message`, and `fields`:
+
+| HTTP status | Exception |
 | --- | --- |
 | 400 | `BadRequestError` |
 | 401 | `AuthenticationError` |
@@ -49,21 +51,19 @@ for conversation in client.paginate("/conversations", {"filter[status]": "open"}
 | 404 | `NotFoundError` |
 | 409 | `ConflictError` |
 | 422 | `ValidationError` |
-| 429 | `RateLimitError`, with `retry_after` in seconds |
-| 500 and above | `ServerError` |
-
-Each extends `DimmiError`, which has `status`, `code`, `message` and `fields`.
+| 429 | `RateLimitError` (includes `retry_after` in seconds) |
+| 500+ | `ServerError` |
 
 ## Retries and idempotency
 
-| Argument of `Dimmi()` | Default | Effect |
+| `Dimmi()` argument | Default | What it does |
 | --- | --- | --- |
-| `max_retries` | `3` | Retries after a `429`, a `503` or a failed connection. |
-| `max_retry_wait` | `60.0` | Longest wait before a retry, in seconds. The client waits for `Retry-After`. |
-| `timeout` | `30.0` | Timeout of one attempt, in seconds. |
+| `max_retries` | `3` | Retries on `429`, `503`, or connection errors. |
+| `max_retry_wait` | `60.0` | Max retry delay in seconds (honors `Retry-After`). |
+| `timeout` | `30.0` | Per-attempt timeout in seconds. |
 
-The client sends an [`Idempotency-Key`](/developers/api/idempotency/) with each `POST` and reuses it on retries. To set your own, pass `idempotency_key=` to `client.post()`.
+Every `POST` automatically sends an [`Idempotency-Key`](/developers/api/idempotency/) and reuses it across retries. Pass `idempotency_key=` to `client.post()` to set your own.
 
 ## Webhooks and identity tokens
 
-`dimmi.Webhook` checks webhook signatures: see [Verify webhook signatures](/developers/webhooks/verify-signatures/). `dimmi.sign_identity_token()` signs tokens for [identity verification](/developers/messenger/identity-verification/).
+Use `dimmi.Webhook` to check webhook signatures (see [Verify webhook signatures](/developers/webhooks/verify-signatures/)) and `dimmi.sign_identity_token()` to sign JWTs for [identity verification](/developers/messenger/identity-verification/).

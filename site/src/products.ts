@@ -24,27 +24,27 @@ export const PRODUCT_GROUPS: { title: string; products: Product[] }[] = [
   {
     title: "AI",
     products: [
-      { name: "AI agent", href: "/agent", blurb: "Answers, acts and hands over.", icon: Sparkle },
-      { name: "Operator", href: "/operator", blurb: "An AI teammate in the inbox.", icon: MagicWand },
-      { name: "Procedures", href: "/procedures", blurb: "Steps the agent follows.", icon: ListChecks },
+      { name: "AI agent", href: "/agent", blurb: "Cites your docs and knows when to stop.", icon: Sparkle },
+      { name: "Operator", href: "/operator", blurb: "Backstage AI teammate for your team.", icon: MagicWand },
+      { name: "Procedures", href: "/procedures", blurb: "Playbooks the AI runs in plain English.", icon: ListChecks },
     ],
   },
   {
     title: "Support",
     products: [
-      { name: "Inbox", href: "/inbox", blurb: "Every channel in one queue.", icon: Tray },
-      { name: "Tickets", href: "/tickets", blurb: "Track work past the chat.", icon: Ticket },
-      { name: "Workflows", href: "/workflows", blurb: "Automate routing and replies.", icon: FlowArrow },
-      { name: "Reports", href: "/reports", blurb: "Volume, speed and satisfaction.", icon: ChartLineUp },
+      { name: "Inbox", href: "/inbox", blurb: "Every channel, unlimited free seats.", icon: Tray },
+      { name: "Tickets", href: "/tickets", blurb: "Tracked work linked to engineering.", icon: Ticket },
+      { name: "Workflows", href: "/workflows", blurb: "Visual routing, SLAs, and API steps.", icon: FlowArrow },
+      { name: "Reports", href: "/reports", blurb: "Support metrics you can click into.", icon: ChartLineUp },
     ],
   },
   {
     title: "Engage",
     products: [
-      { name: "Help center", href: "/help-center", blurb: "Articles people and AI read.", icon: BookOpenText },
-      { name: "Broadcasts", href: "/broadcasts", blurb: "Emails that get replies.", icon: Megaphone },
-      { name: "Changelog", href: "/changelog", blurb: "Tell customers what shipped.", icon: Newspaper },
-      { name: "Feedback", href: "/feedback", blurb: "Collect and rank requests.", icon: Lightbulb },
+      { name: "Help center", href: "/help-center", blurb: "Docs for customers and your AI.", icon: BookOpenText },
+      { name: "Broadcasts", href: "/broadcasts", blurb: "Updates people can reply to.", icon: Megaphone },
+      { name: "Changelog", href: "/changelog", blurb: "Release notes in app and email.", icon: Newspaper },
+      { name: "Feedback", href: "/feedback", blurb: "Feature votes and public roadmap.", icon: Lightbulb },
     ],
   },
 ];

@@ -47,22 +47,23 @@ function Hero() {
 
 function WhatCounts() {
   const rules = [
-    { title: "One thread, one charge", body: "Until it goes quiet for 7 days." },
-    { title: "AI or human", body: "AI if the agent replied at least once." },
-    { title: "Long AI threads", body: "Every 10 AI replies count as one more." },
-    { title: "Messages you send first", body: "Free until the customer replies." },
+    { title: "One thread, one charge", body: "A conversation counts once until it stays quiet for 7 days." },
+    { title: "AI or human rate", body: "It counts as AI if the dimmi agent replies at least once." },
+    { title: "Long AI threads", body: "Every 10 AI replies in the same thread count as one more." },
+    { title: "Messages you send first", body: "Outbound messages stay free until the customer replies." },
   ];
   return (
     <Section frameClassName="flex flex-col gap-12">
       <Intro
-        title="What you actually pay for."
-        body="Conversations with customers, and the Operator threads your team starts. Nothing else."
+        title="What you pay for."
+        body="Customer conversations and the Operator threads your team starts. Nothing else."
       />
-      <dl className="grid grid-cols-1 gap-x-10 gap-y-8 sm:grid-cols-2 lg:grid-cols-4 [&>*]:min-w-0">
-        {rules.map((rule) => (
-          <div key={rule.title} className="flex flex-col gap-1">
-            <dt className="text-[16px] leading-7 text-text-primary">{rule.title}</dt>
-            <dd className="text-[15px] leading-6 text-pretty text-text-secondary">{rule.body}</dd>
+      <dl className="grid grid-cols-1 gap-px overflow-hidden border border-border-button-default bg-separator-border sm:grid-cols-2 [&>*]:min-w-0">
+        {rules.map((rule, i) => (
+          <div key={rule.title} className="flex flex-col gap-2 bg-background-full p-7">
+            <span className={`text-text-tertiary ${mono}`}>{String(i + 1).padStart(2, "0")}</span>
+            <dt className="text-[18px] leading-7 font-medium tracking-[-0.015em] text-text-primary">{rule.title}</dt>
+            <dd className="text-[15px] leading-6 text-text-secondary">{rule.body}</dd>
           </div>
         ))}
       </dl>
@@ -86,10 +87,10 @@ function PriceBook() {
         <dl className="grid grid-cols-1 gap-x-8 gap-y-4 sm:grid-cols-3">
           {[
             { label: "Seats", value: "free, unlimited" },
-            { label: "Help center and messenger views", value: "free" },
-            { label: "Broadcast and series emails", value: `${dollars(EMAIL_PER_THOUSAND)} per 1,000` },
+            { label: "Help center & changelogs", value: "free" },
+            { label: "Broadcast & series emails", value: `${dollars(EMAIL_PER_THOUSAND)} per 1,000` },
           ].map((item) => (
-            <div key={item.label} className="flex flex-col gap-0.5">
+            <div key={item.label} className="flex flex-col justify-between gap-0.5">
               <dt className="text-[14px] leading-5 text-text-secondary">{item.label}</dt>
               <dd className="text-[16px] leading-7 text-text-primary">{item.value}</dd>
             </div>
@@ -110,18 +111,18 @@ function LessMoney() {
   const own = bill({ conversations: example, aiShare: 1, operator: 0, ownModel: true }).total;
   const ways = [
     {
-      title: "Bring your own model key",
-      body: "Anthropic, OpenAI, or your ChatGPT plan. AI conversations drop to the human price.",
+      title: "Bring your own model keys",
+      body: "Use Anthropic, OpenAI, or your ChatGPT plan. AI threads drop to the human rate, saving 50% to 83%.",
       note: `${example.toLocaleString("en-US")} AI conversations: ${dollars(own)} instead of ${dollars(included)}`,
     },
     {
       title: "Skip Operator, use MCP",
-      body: "Operator threads are billed. The assistant you already pay for, connected over MCP, isn't.",
+      body: "Operator threads count as AI conversations. The AI assistant you already pay for over MCP costs $0.",
       note: "MCP calls: $0",
     },
     {
       title: "Self-host it",
-      body: "Same product, MIT license, your server. We get a GitHub star if you're feeling generous.",
+      body: "Same full code under MIT on your own server. We get a GitHub star if you feel generous.",
       note: "Paid to dimmi: $0",
       link: { href: "#self-host", label: "See what a server costs" },
     },

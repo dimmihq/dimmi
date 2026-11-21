@@ -1,30 +1,32 @@
 ---
 title: "Choose an AI provider and spending cap"
-description: "Which AI providers the dimmi agent can answer through, how to use your own keys and how the monthly cap counts and stops spend."
+description: "Connect your own AI provider keys or use dimmi's built-in provider, and set a monthly spending cap."
 ---
 
-Admins add provider connections in **Settings → AI providers**, then pick the connection and model in **Settings → dimmi agent**, under **Model**. [Operator](/operator/work-with-operator/) answers through the same connection.
+Admins add provider connections in **Settings → AI providers**. Once connected, pick your connection and model in **Settings → dimmi agent**, under **Model**.
 
-## Providers
+[Operator](/operator/work-with-operator/) uses the same provider connection as the dimmi agent.
 
-| Provider | What you give |
+## Supported providers
+
+You can add up to 20 connections per workspace.
+
+| Provider | What you enter |
 | --- | --- |
-| **dimmi** | Nothing: it is built in. On a self-hosted server it appears once the server has [AI provider keys](/self-hosting/ai-providers/). |
-| **Anthropic** | An API key. |
-| **OpenAI** | An API key. |
-| **Baseten** | An API key. |
-| **OpenAI-compatible** | The base URL of a server with OpenAI-style `/v1` endpoints, such as Ollama, vLLM or LiteLLM. The API key is optional. |
-| **ChatGPT subscription** | A sign-in with your ChatGPT plan. Offered only where the server allows it. |
+| **dimmi** | Nothing. It works out of the box on dimmi cloud. On a self-hosted server, it appears after you add [AI provider keys](/self-hosting/ai-providers/). |
+| **Anthropic** | Your Anthropic API key. |
+| **OpenAI** | Your OpenAI API key. |
+| **Baseten** | Your Baseten API key. |
+| **OpenAI-compatible** | The base URL of any server with OpenAI-style `/v1` endpoints, such as Ollama, vLLM, or LiteLLM. The API key is optional. |
+| **ChatGPT subscription** | Sign in with your ChatGPT plan. Shown only where the server allows it. |
 
-- A workspace holds up to 20 connections.
-- With your own key, the provider bills you at its prices.
-- When the agent's connection stops working, the agent [hands over](/ai/handover/) the conversations it was answering and stays quiet in new ones.
+When you bring your own API key, your AI provider bills you at its normal rates. If your connection ever stops working, the agent [hands over](/ai/handover/) active conversations and stays quiet on new ones until you fix it.
 
 ## Set the monthly cap
 
-Set **Monthly cap** in **Settings → dimmi agent**, under **Spend**. A new workspace starts at $25; the lowest cap is $1.
+Set **Monthly cap** in **Settings → dimmi agent**, under **Spend**. New workspaces start at $25, and the lowest cap is $1.
 
-- **What counts:** the dimmi agent's replies and Operator's runs, on every connection. dimmi prices each one from its own list of model prices, in US dollars. A model with no price on that list counts as $0.
-- **The month:** a calendar month in UTC.
-- **At the cap:** the agent hands over the conversations it was answering and stays quiet in new ones. Operator stops answering. Both start again on the first of the next month.
-- **During a capped month:** raising the cap above the month's spend, or switching to **No cap**, restarts them.
+- **What counts:** every dimmi agent reply and Operator run across all connections. dimmi estimates spend in US dollars from its built-in model price list. Models not on that list count as $0.
+- **When it resets:** on the first of each calendar month in UTC.
+- **When you hit the cap:** the agent hands over active conversations and stays quiet on new ones. Operator stops answering until the next month.
+- **How to resume early:** raise the cap above your current month's spend, or switch to **No cap**. Both the agent and Operator start again right away.

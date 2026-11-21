@@ -15,18 +15,18 @@ import { FinalCta } from "../sections/final-cta";
 
 const steps = [
   {
-    title: "Convert in one step",
-    body: "Pick a type. The AI fills the fields it can from the conversation. You check its work, then create.",
+    title: "Convert in one click",
+    body: "Pick a ticket type and let AI fill fields from the chat. Check it and create.",
     visual: <ConvertFragment />,
   },
   {
-    title: "Pass it to another team",
-    body: "Escalate to billing or engineering with an internal ticket. The customer's ticket shows who has it.",
+    title: "Escalate without losing track",
+    body: "Open an internal ticket for billing or engineering while keeping the customer thread linked.",
     visual: <EscalateFragment />,
   },
   {
-    title: "Customers see where it is",
-    body: 'The messenger shows where their request stands, in words you choose. Expect fewer "any update?" messages.',
+    title: "Show customers where things stand",
+    body: 'Display live status labels right inside the messenger so you get fewer "any update?" pings.',
     visual: <CustomerStripFragment />,
   },
 ];
@@ -34,26 +34,26 @@ const steps = [
 const rows = [
   {
     label: "Types and states",
-    title: "Your process, not ours.",
-    body: "Make a type for each kind of request, with its own fields and states. Each state gets a label customers read. Internal ones stay internal.",
+    title: "Match your own workflow.",
+    body: "Create ticket types for bugs, billing, or onboarding with custom fields and states. Customers see the labels you choose while internal states stay private.",
     visual: <StatesFragment />,
   },
   {
     label: "SLAs",
-    title: "Promises with a clock on them.",
-    body: "Set first reply, next reply, and resolution targets per policy. Clocks count business hours and pause while you wait on the customer. They warn you before a breach.",
+    title: "Reply promises with a live clock.",
+    body: "Set first reply, next reply, and resolution targets by policy. Clocks respect your office hours, pause while waiting on the customer, and warn before a breach.",
     visual: <SlaFragment />,
   },
   {
     label: "Trackers",
-    title: "One problem, every customer told.",
-    body: "Link everyone who reported the outage or bug to one tracker. Write the update once. Each customer gets it in their own conversation.",
+    title: "Update every affected customer at once.",
+    body: "Link every chat hit by the same bug or outage to one tracker. Write one update and dimmi sends it to every customer in their own thread.",
     visual: <TrackerFragment />,
   },
   {
     label: "Engineering tools",
-    title: "Linked to the issue, closed with it.",
-    body: "Create or link issues in Linear, Jira, and GitHub, or incidents in incident.io, Rootly, and PagerDuty. When the work is done, dimmi drafts the reply. You send it.",
+    title: "Linked to your engineering tools.",
+    body: "Connect issues in Linear, Jira, GitHub, or incidents in incident.io, Rootly, PagerDuty, and more. When the work closes, dimmi drafts the update for you to send.",
     visual: <IssuesFragment />,
   },
 ];
@@ -62,59 +62,65 @@ const more = [
   {
     icon: ListChecks,
     title: "Custom fields",
-    body: "Text, numbers, choices, dates, files, teammates, and companies.",
+    body: "Add text, numbers, choices, dates, files, teammates, or companies to any type.",
   },
   {
     icon: Sparkle,
-    title: "AI-filled fields",
-    body: "Suggestions sit under each field. One button keeps them.",
+    title: "AI field suggestions",
+    body: "dimmi suggests values from the conversation so teammates confirm instead of typing.",
   },
   {
     icon: SquaresFour,
     title: "Request forms",
-    body: "Customers open a request of a type you choose, inside the messenger.",
+    body: "Let customers open structured tickets straight from the messenger.",
   },
   {
     icon: Funnel,
     title: "Views per type",
-    body: "Each type gets its own view in the inbox, with search and filters.",
+    body: "Filter, search, and manage each ticket type in its own inbox view.",
   },
   {
     icon: ClockCounterClockwise,
-    title: "Full history",
-    body: "Every state change, note, and link on the ticket, in order.",
+    title: "Full timeline",
+    body: "Every state change, internal note, and linked issue stays in one audit trail.",
   },
   {
     icon: BracketsCurly,
     title: "API and webhooks",
-    body: "Create and update tickets from your code. Hear about every change.",
+    body: "Create and update tickets from your code, or react to changes via webhooks.",
   },
 ];
 
 const questions = [
   {
-    question: "Isn't a ticket just a conversation with a number?",
+    question: "How is a ticket different from a conversation?",
     answer:
-      "No. A conversation is the thread with the customer. A ticket is the work it needs, with a type, a state, fields, and an owner. The two stay linked.",
+      "A conversation is the chat thread with the customer. A ticket is the tracked work behind it, with a type, state, fields, and owner that stays linked to the chat.",
   },
   {
-    question: "How much of this do customers see?",
+    question: "What do customers see on a ticket?",
     answer:
-      "Only what you choose. On a customer ticket, that's the label you give each state and the fields you mark visible. Internal tickets and notes never reach them.",
+      "Only what you mark visible: the customer label for each state and the fields you expose. Internal tickets and team notes stay hidden.",
   },
   {
-    question: "Do you link to GitLab or Asana?",
+    question: "Can tickets replace Linear or Jira for engineering?",
     answer:
-      "No. Six tools today: Linear, Jira, and GitHub for issues, and incident.io, Rootly, and PagerDuty for incidents. If your engineers work somewhere else, issue linking won't help you yet.",
+      "Keep your engineering tracker for sprints and code. dimmi tickets track the customer side and link straight to your engineering issues so both teams stay in sync.",
   },
   {
-    question: "Will dimmi message my customers on its own when an issue closes?",
-    answer: "No. It drafts the update and shows who it would reach. A teammate edits it and sends it.",
+    question: "What if our engineers use another tracker?",
+    answer:
+      "Linear, Jira, GitHub, incident.io, Rootly, and PagerDuty work out of the box, and we are always adding new connectors. Need another tool? Open a feature request and we will ship it as soon as we can, or add your own since dimmi is open source.",
   },
   {
-    question: "Can a workflow open tickets for me?",
+    question: "Does dimmi email customers automatically when a Linear issue closes?",
     answer:
-      "Yes. A workflow step can create a ticket, so every bug report or refund request becomes one without a click.",
+      "Never without your eyes on it. dimmi drafts the update and shows who will get it so a teammate edits and clicks send.",
+  },
+  {
+    question: "Can a workflow create tickets for me?",
+    answer:
+      "Yes. Add a ticket step to any workflow so bug reports or refund requests open structured tickets on arrival.",
   },
 ];
 
@@ -123,14 +129,14 @@ export function TicketsPage() {
     <>
       <ProductHero
         eyebrow="Tickets"
-        title="Turn a conversation into tracked work."
-        body="Every request gets a type, a state, and an owner. Send it to the right team, link the engineering work, and tell the customer where it stands."
+        title="Stop losing bug reports inside long chat threads."
+        body="Turn any chat into tracked work with custom states, SLAs, and links to Linear, Jira, GitHub, and more."
         visual={<TicketsHeroFragment />}
       />
-      <Steps title="Conversation to ticket, no retyping." items={steps} />
-      <Rows title="For the work behind the reply." rows={rows} />
+      <Steps title="From chat to tracked work, with no retyping." items={steps} />
+      <Rows title="Built for the work behind the reply." rows={rows} />
       <FeatureGrid title="Details that keep tickets moving." items={more} />
-      <Questions body="Worth reading before you set up tickets." items={questions} />
+      <Questions body="What teams ask before setting up tickets." items={questions} />
       <FinalCta />
     </>
   );

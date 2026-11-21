@@ -1,15 +1,15 @@
 ---
 title: "Track customer events"
-description: "Record what customers do in your product as events, from your server with POST /api/v1/contact-events or from the browser with trackEvent()."
+description: "Record product actions like order.placed or checkout.started from your server API or the browser messenger."
 ---
 
-[Audiences](/customers/audiences/) and [series](/outbound/series/) filter on a customer's events, and each event sends the `contact_event.tracked` [webhook](/developers/webhooks/events/).
+Tracked events power [audiences](/customers/audiences/), trigger [series](/outbound/series/), and emit the `contact_event.tracked` [webhook](/developers/webhooks/events/).
 
-An event name is 1 to 64 lowercase letters, digits and `_ . : -`. Metadata is optional: at most 20 keys and 2 KB.
+Event names use 1 to 64 lowercase letters, digits, and `_ . : -`. Optional metadata supports up to 20 keys and 2 KB per event.
 
-## Send events from your server
+## Track events from your server
 
-[`POST /api/v1/contact-events`](/api-reference/contacts-and-companies/create-contact-event/) needs an API token with the `contacts:write` ability.
+Send events to [`POST /api/v1/contact-events`](/api-reference/contacts-and-companies/create-contact-event/) using an API token with `contacts:write`:
 
 ```bash
 curl -X POST https://trydimmi.com/api/v1/contact-events \
@@ -23,11 +23,11 @@ curl -X POST https://trydimmi.com/api/v1/contact-events \
   }'
 ```
 
-- Name the customer with exactly one of `contact_id`, `email` or `external_id`, which is the `sub` of their [identity token](/developers/messenger/identity-verification/).
-- dimmi counts an `idempotency_key` once in 48 hours.
-- To send up to 100 events in one request, put them in an `events` array.
+- **Identify the customer:** pass one of `contact_id`, `email`, or `external_id` (the `sub` claim from their [identity token](/developers/messenger/identity-verification/)).
+- **Avoid duplicates:** dimmi deduplicates matching `idempotency_key` values for 48 hours.
+- **Batch events:** wrap up to 100 events in an `events` array to send them in one request.
 
-## Send events from the browser
+## Track events from the browser
 
 ```ts title="src/checkout.ts"
 import { getDimmi } from "@dimmi/browser";
@@ -35,8 +35,8 @@ import { getDimmi } from "@dimmi/browser";
 getDimmi().trackEvent("checkout.started", { plan: "team", seats: 5 });
 ```
 
-With the script tag, call `Dimmi("track", "checkout.started", { plan: "team", seats: 5 })`.
+Using the script tag instead? Call `Dimmi("track", "checkout.started", { plan: "team", seats: 5 })`.
 
-Anyone on the page can forge a browser event. The messenger sends only the event names you switch on under **Events** in **Settings → Attributes**, or every name with **Accept any event from the messenger**. Send from your server any event an audience or series must trust.
+Because anyone can call browser JavaScript, dimmi only accepts browser event names you enable under **Settings → Attributes → Events** (unless you turn on **Accept any event from the messenger**). Always send security-sensitive or billing events from your server.
 
-The messenger holds events until the customer has a session: a signed-in customer, or a visitor who has written before.
+The messenger queues browser events until the visitor has an active session (signed in, or previously started a chat).

@@ -1,34 +1,34 @@
 ---
 title: "Roles and permissions"
-description: "The permissions each built-in dimmi role holds, and the rules a custom role follows."
+description: "See every permission included in Member, Admin, and Owner roles, and how to create custom roles."
 ---
 
-A workspace has three built-in roles, and each holds everything the role before it holds: Member (37 permissions), Admin (100) and Owner (111).
+Every workspace starts with three built-in roles, where each tier includes everything below it: **Member** (37 permissions), **Admin** (100), and **Owner** (111).
 
-An [API token](/developers/api/abilities/) never does more than the role of the member who created it.
+An [API token](/developers/api/abilities/) can never do more than the role of the teammate who created it.
 
 ## Custom roles
 
-A custom role holds part of what Member or Admin holds. Create one in **Settings → Roles**.
+Create custom roles in **Settings → Roles** to give teammates a narrower set of Member or Admin permissions.
 
-| Rule | Detail |
+| Rule | How it works |
 | --- | --- |
-| Base role | Member or Admin, chosen when you create the role. It cannot change later. |
-| Always held | `members:read`. |
-| Out of reach | Owner permissions. |
-| Your own limit | You grant only permissions you hold, and you edit only roles that hold nothing you lack. |
-| Limit | 50 custom roles in a workspace, each with a unique name. |
-| Editing | A change applies to every holder on their next request. |
-| Assigning | An Owner never holds a custom role, and you cannot change your own. |
-| Deleting | Only when nobody holds the role. |
+| **Base role** | Pick Member or Admin at creation. Cannot change later. |
+| **Always included** | `members:read` is always granted. |
+| **Owner permissions** | Cannot be granted to custom roles. |
+| **Privilege guard** | You can only grant permissions you hold, and edit roles that contain no permissions you lack. |
+| **Limit** | Up to 50 custom roles per workspace, each with a unique name. |
+| **Live updates** | Editing a role takes effect on each member's next request. |
+| **Assigning** | Owners cannot hold custom roles, and you cannot edit your own role. |
+| **Deleting** | Allowed only after no one holds the role. |
 
-The **New role** menu offers three starting points:
+Click **New role** to start from scratch or pick one of three presets:
 
-| Preset | Base role | Holds |
+| Preset | Base role | Includes |
 | --- | --- | --- |
-| **Support agent** | Member | Conversations, contacts, reading articles, notifications, own signature and AI features. |
-| **Read only** | Member | Every Member permission whose key ends in `:read`. |
-| **Billing admin** | Admin | `billing:read`, `billing:write`, `settings:read` and `members:read`. |
+| **Support agent** | Member | Conversations, contacts, reading articles, notifications, personal signature, and AI features. |
+| **Read only** | Member | Every Member permission ending in `:read`. |
+| **Billing admin** | Admin | `billing:read`, `billing:write`, `settings:read`, and `members:read`. |
 
 ## Member permissions
 
@@ -74,7 +74,7 @@ The **New role** menu offers three starting points:
 
 ## Admin permissions
 
-An Admin holds the Member permissions and these.
+Admins hold all Member permissions plus these:
 
 | Permission | Key |
 | --- | --- |
@@ -144,7 +144,7 @@ An Admin holds the Member permissions and these.
 
 ## Owner permissions
 
-An Owner holds the Member and Admin permissions and these. A workspace always keeps at least one active Owner.
+Owners hold all Member and Admin permissions plus these. Every workspace always keeps at least one active Owner.
 
 | Permission | Key |
 | --- | --- |

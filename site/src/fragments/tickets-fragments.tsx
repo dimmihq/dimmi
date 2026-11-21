@@ -23,6 +23,7 @@ import {
 import type { ReactNode } from "react";
 
 import { Chip, type ChipColor } from "@/components/base/badges/chip";
+import { ToolMark, ToolTile } from "@/features/tickets/issues/tool-logos";
 import { cx } from "@/utils/cx";
 
 type Group = "submitted" | "in_progress" | "waiting_customer" | "waiting_team" | "resolved";
@@ -251,6 +252,7 @@ export function TicketsHeroFragment() {
         </Block>
         <Block label="Issues">
           <span className="flex items-center gap-2 text-body-2-regular">
+            <ToolMark provider="linear" />
             <span className="text-body-2-medium text-text-primary">ENG-412</span>
             <span className="min-w-0 flex-1 truncate text-text-secondary">Export truncates final row</span>
             <Chip variant="caption" color="blue">
@@ -518,10 +520,10 @@ export function TrackerFragment() {
   );
 }
 
-const issues: { tool: string; key: string; title: string; status: string; color: ChipColor }[] = [
-  { tool: "Linear", key: "ENG-412", title: "Export truncates final row", status: "Done", color: "lime" },
-  { tool: "Jira", key: "OPS-88", title: "EU webhook queue backlog", status: "In Progress", color: "blue" },
-  { tool: "GitHub", key: "#1904", title: "Flush the last CSV chunk", status: "Closed", color: "lime" },
+const issues: { provider: string; tool: string; key: string; title: string; status: string; color: ChipColor }[] = [
+  { provider: "linear", tool: "Linear", key: "ENG-412", title: "Export truncates final row", status: "Done", color: "lime" },
+  { provider: "jira", tool: "Jira", key: "OPS-88", title: "EU webhook queue backlog", status: "In Progress", color: "blue" },
+  { provider: "github", tool: "GitHub", key: "#1904", title: "Flush the last CSV chunk", status: "Closed", color: "lime" },
 ];
 
 /* The engineering work behind a ticket, and the update it drafted. */
@@ -532,7 +534,10 @@ export function IssuesFragment() {
       <ul className="flex flex-col">
         {issues.map((issue) => (
           <li key={issue.key} className="flex items-center gap-3 border-b border-separator-border px-4 py-3">
-            <span className="w-12 shrink-0 text-caption-1-medium text-text-tertiary">{issue.tool}</span>
+            <span title={issue.tool} className="flex shrink-0 items-center">
+              <ToolTile provider={issue.provider} size="sm" />
+              <span className="sr-only">{issue.tool}</span>
+            </span>
             <span className="shrink-0 text-body-2-medium text-text-primary">{issue.key}</span>
             <span className="min-w-0 flex-1 truncate text-body-2-regular text-text-secondary">{issue.title}</span>
             <RiExternalLinkLine className="size-3.5 shrink-0 text-foreground-icon-tertiary" aria-hidden />

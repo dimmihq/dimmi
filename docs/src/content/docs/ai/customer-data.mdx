@@ -1,34 +1,38 @@
 ---
 title: "What customer data the dimmi agent sees"
-description: "What the dimmi agent sends to the AI provider about a customer, what dimmi masks first and what you can switch off."
+description: "See what dimmi sends to your AI provider, what personal data gets masked automatically, and what you can turn off."
 ---
 
-The dimmi agent sends the AI provider the conversation's messages and, at most, the customer's first name and locale. Change both settings in **Settings → dimmi agent**, under **Privacy**.
+By default, the dimmi agent sends your AI provider only the conversation messages and the customer's first name and locale. You can change these privacy settings in **Settings → dimmi agent**, under **Privacy**.
 
-## What reaches the model
+## What reaches the AI model
 
-- **Messages:** the customer's messages, teammates' replies and the agent's own replies. Internal notes never.
-- **Customer details:** with **Basic**, the default, the customer's first name and locale. With **None**, nothing.
-- **Knowledge:** the passages a search of your help center and [knowledge sources](/ai/knowledge-sources/) returned.
-- **Action results:** only the fields listed in the action's **Fields to keep**, or the whole response when none are listed.
+Each time the agent writes a reply, dimmi sends four things to the model:
 
-The values dimmi binds to an [action](/ai/actions/), such as `{contact.email}`, go to your API and not to the model.
+- **Messages:** customer messages, teammate replies, and past agent replies. Internal notes are never sent.
+- **Customer details:** with **Basic** (the default), only the customer's first name and locale. With **None**, no profile details are sent.
+- **Knowledge:** matching passages from your help center and [knowledge sources](/ai/knowledge-sources/).
+- **Action results:** only the fields you listed in **Fields to keep**, or the full response if you left that list empty.
+
+Bound values on an [action](/ai/actions/), such as `{contact.email}`, go straight to your API and are never shown to the AI model.
 
 ## Hide personal data
 
-**Hide personal data** is on by default. dimmi then masks these in every message before it leaves:
+**Hide personal data** is on by default. Before any message leaves dimmi, sensitive strings are replaced with placeholders:
 
-| In the message | The model reads |
+| In the message | What the model sees |
 | --- | --- |
-| An email address | `[email]` |
-| A phone number | `[phone]` |
-| A payment card number | `[card ending 4242]` |
-| An IBAN | `[iban]` |
-| A US social security number | `[ssn]` |
-| An API key, token or password | `[secret]` |
+| Email address | `[email]` |
+| Phone number | `[phone]` |
+| Payment card number | `[card ending 4242]` |
+| IBAN | `[iban]` |
+| US Social Security number | `[ssn]` |
+| API key, token, or password | `[secret]` |
 
-- Order numbers, dates and invoice ids pass unmasked, so the agent can still look things up.
-- The traces dimmi keeps of each reply hold the masked text.
-- Action results always have card numbers, IBANs, social security numbers and secrets masked, with the setting on or off.
+A few details to keep in mind:
 
-With the setting on, the agent cannot read an email address a customer types. An action that needs the address should take it from `{contact.email}`.
+- **Order details stay readable:** order numbers, dates, and invoice IDs pass through unmasked so the agent can look them up.
+- **Saved traces match:** the reply traces dimmi stores keep the masked text.
+- **Action results stay protected:** card numbers, IBANs, Social Security numbers, and secrets are always masked in action responses, even if you turn **Hide personal data** off.
+
+With masking on, the agent cannot read an email address typed in chat. If an action needs the customer's email, bind `{contact.email}` on the action instead.

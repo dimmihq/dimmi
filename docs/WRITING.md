@@ -1,226 +1,283 @@
-# Writing the dimmi docs
+# Writing the dimmi documentation
 
-How to decide what goes in the dimmi docs (`docs/`, served at trydimmi.com/docs) and how to write it. People and agents both follow it. Before you write or edit a page, also read the stop-slop skill in `.claude/skills/stop-slop/` and apply it.
+How to plan, structure, and write every page in `docs/` (served at `trydimmi.com/docs`, plus `/docs/<page>.md`, `/docs/llms.txt`, and `/docs/llms-full.txt`). Before writing or editing any page, read the root [WRITING.md](../WRITING.md), [stop-slop](../.claude/skills/stop-slop/SKILL.md), and [make-it-skim](../.claude/skills/make-it-skim/SKILL.md).
 
-Most documentation is too long. Readers are developers and support leads who can read a screen, a form and an error message without help. The docs exist for what the product cannot say for itself.
+Our documentation is warm, calm, pragmatic, example-rich, and structured so a newcomer gets to a working result in minutes while an experienced engineer can scan straight to an edge case in seconds.
 
-## 1. Decide what is worth writing
+## Why our previous docs fell short (and what changed)
 
-Write it only if the reader cannot get it from the product in under a minute.
+Our first docs guideline pushed extreme minimalism (150 to 400 word ceilings, one-sentence intros, zero scenarios, zero context). That made pages read like terse database specs rather than guides written for humans trying to ship customer support.
 
-Worth writing:
+We are keeping the strict factual rigor of the old guide while replacing its clipped austerity with generous, example-first technical teaching:
 
-- **Code the reader must write or paste:** snippets, SDK calls, signature checks, config.
-- **Facts the interface does not show:** limits, defaults, retry schedules, formats, what happens in the background.
-- **How a feature behaves,** when that takes more than one screen to see: how assignment picks a teammate, when an SLA clock pauses.
-- **Choices with consequences:** which mode to pick and what it changes.
-- **Reference data:** events, options, commands.
+- **Keep:** verify every single limit, default, endpoint, and UI label in the codebase; never narrate obvious UI buttons field by field; never lecture readers on generic industry concepts like "what is OAuth"; keep every page self-contained for AI coding agents.
+- **Change:** drop artificial 150-to-400-word caps; open pages with a warm, grounded introduction that builds the mental model; show realistic, complete examples (real code, real procedures, real workflows) before listing limits; guide readers smoothly from the 80% happy path into customization and edge cases.
 
-Not worth writing. Link to the screen and stop:
+## Documentation philosophy
 
-- **Walking through a form or wizard.** Sign-up, onboarding, "create an API token", "add a webhook endpoint". Say where it is (**Settings → API tokens**) and name only the field whose meaning is not obvious.
-- **What a labeled control does.** A toggle named **Show launcher** needs no sentence.
-- **Error messages that already say the fix.** Document an error only when its fix is not in the message.
-- **Summaries of a file the reader can open.** Link the file.
-- **Test rigs and detours.** No throwaway test pages, no local web servers, no "check that it worked" for things that visibly work.
-- **Generic knowledge.** What a webhook is, what CSP is, what OAuth is.
-- **Internals and unshipped things.** Token prefixes nobody creates, settings nobody should touch, plans.
-- **Self-hosting details on product pages.** Configuration keys and environment variables belong only under Self-hosting.
+> **Write like a calm, experienced senior teammate sitting beside the reader. Help them understand the mental model, get something real working fast, and avoid the traps you already know about.**
 
-Tests before you keep a page, a section or a sentence:
+Five principles define great dimmi documentation:
 
-1. **Delete test.** Remove it. Does a competent reader now fail or get something wrong? If not, it stays deleted.
-2. **Screen test.** Does the product already show this on the screen where the reader needs it? Then link to the screen.
-3. **Merge test.** A page under about 150 words belongs as a few bullets on its parent page.
+### 1. Documentation is part of the product
 
-## 2. Keep it short
+Developers and support leads judge dimmi by how quickly our docs make things click. Clear, generous docs turn first-time evaluators into power users and let teams self-serve without filing support tickets.
 
-Budgets. Going over means the page is doing too much: cut, don't squeeze.
+### 2. Mental models before mechanics
 
-| Thing                       | Limit                                                          |
-| --------------------------- | -------------------------------------------------------------- |
-| Paragraph                   | 1 to 2 sentences, about 40 words. Never more than 3 sentences. |
-| Sentence                    | About 20 words.                                                |
-| How-to or explanation       | 150 to 400 words of prose, plus code.                          |
-| Overview or comparison page | 5 to 7 short paragraphs or lists in total.                     |
-| Steps in one procedure      | 5. More means you are narrating a form.                        |
-| Opening                     | One sentence. Then the content.                                |
-| Callouts                    | At most one per page.                                          |
-| Reference page              | As long as its data, with no prose beyond a line per group.    |
+Never drop a reader straight into a table of limits or settings without explaining *why* the feature exists and *how* to think about it. Ground every introduction in a recognizable problem:
 
-- Prefer a list or table to a paragraph whenever items are parallel.
-- No "Before you begin", "Check that it worked", "Troubleshooting", "What you built" or "Next steps" section by default. Add one only when it passes the delete test. A prerequisite is usually one inline link.
-- Say each fact once, on one page. Link to it from elsewhere.
-- No recap of what the page said, and no preview of what it will say.
+- On **Procedures**: explain why plain-English step-by-step instructions work better than stuffing edge cases into a giant system prompt, and clarify when to use a **procedure** (AI-guided judgment) versus a **workflow** (deterministic routing).
+- On **Tickets**: explain the clean split between a **conversation** (the chat with the customer) and a **ticket** (the tracked work behind it that can link to Linear or Jira).
+- On **Actions**: explain how dimmi resolves the customer's verified identity on the server so the language model can never spoof another customer's account ID.
 
-### Bold
+### 3. Optimize for the happy path first
 
-Bold is for two things only:
+Structure every page using **progressive disclosure** from top to bottom:
 
-- **Interface labels** the reader clicks or looks for: **Settings → Webhooks**, **Rotate**.
-- **The lead word of a list item** in a list of definitions or options, when it helps scanning.
+1. **80% Happy Path:** show the cleanest, most common working setup immediately. A reader who wants the default behavior should succeed without scrolling past advanced knobs.
+2. **Customization & Real-World Patterns:** walk through the common variations (`##` and `###` sections) one capability at a time.
+3. **Rules, Limits & Edge Cases:** put exact timeouts, caps, retry schedules, and boundary conditions in clean tables or scannable lists near the bottom (or under their own descriptive heading) so anyone looking up a hard limit finds it instantly via the table of contents without overwhelming beginners at line 5.
 
-Never bold for emphasis, never bold a whole sentence, never bold product terms in running text. If a paragraph has more than two bold phrases, it is a form walkthrough: cut it.
+### 4. Show real examples, not abstract placeholders
 
-## 3. Pick one page type
+Abstract descriptions make readers guess; concrete examples make features click in five seconds.
 
-Every page is one of four [Diátaxis](https://diataxis.fr) types. Keep a page to its type and to one topic.
+- For **developer pages**, show complete, runnable snippets with realistic payloads (`cus_1042`, `ada@example.com`, `Acme Inc`), imports included, and realistic JSON responses where helpful.
+- For **product pages** (Procedures, Workflows, SLAs, Broadcasts, Assignment), show a realistic concrete example: a real 5-step duplicate-charge refund procedure, a real Enterprise SLA policy, or a concrete walkthrough of what happens when a teammate goes away with 4 open conversations.
 
-| Type        | The reader wants to                      | Title pattern                              | Template                    |
-| ----------- | ---------------------------------------- | ------------------------------------------ | --------------------------- |
-| Tutorial    | Build one working thing, start to finish | "Build your first action"                  | `templates/tutorial.mdx`    |
-| How-to      | Reach one goal they already have         | Verb + object: "Verify webhook signatures" | `templates/how-to.mdx`      |
-| Reference   | Look up a fact                           | Noun: "Webhook events"                     | `templates/reference.mdx`   |
-| Explanation | Understand how something works           | "How assignment works"                     | `templates/explanation.mdx` |
+### 5. Warmth without fluff or condescension
 
-Tutorials are rare: write one only where the reader builds something with code. Background goes on an explanation page and options on a reference page, linked from the how-to.
+Great docs feel welcoming because they anticipate the reader's questions and reassure them at the exact moment they might hesitate (*"You don't need to configure an outbound mailer before your first sign-in. Until you connect one, dimmi writes outbound links to the server logs."*).
 
-The REST API reference is generated from the API contract. Never write it by hand, and never restate its fields on other pages: link to the endpoint.
+Deliver that exact warmth **without** borrowing filler adverbs (`simply`, `just`, `easily`, `thankfully`, `blazingly`, `seamlessly`) or hype adjectives (`robust`, `elegant`, `powerful`). Calm precision and genuine empathy for the reader's job create warmth on their own.
 
-## 4. Get the facts from the code
+## What belongs in the docs (and what stays out)
 
-Docs describe what the code does today. Read the code; never write from memory, a design or the marketing site. Every name, default, limit and command on a page is one you checked.
+Write what makes a reader confident and accurate. Skip what wastes their time.
 
-| Fact                                              | Source of truth                                                                                                                                                                   |
-| ------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| REST endpoints, fields, types, required abilities | `tests/contracts/api_v1.openapi.json`, generated from `routes/*.go`                                                                                                               |
-| Webhook events and payloads                       | `tests/contracts/webhooks_v1.json`                                                                                                                                                |
-| Messenger API (the messenger's HTTP API)          | `tests/contracts/widget_v1.openapi.json`; messenger code in `resources/widget/`                                                                                                   |
-| Messenger JavaScript API                          | `resources/widget/core.ts` (commands), `sdk/browser/src/`                                                                                                                         |
-| SDK usage                                         | `sdk/<language>/` and each SDK's README. Generated code is not committed; run `make sdk-generate` to read it.                                                                     |
-| Configuration keys and environment variables      | `config/*.go` and `framework/foundation/config.go` (the `koanf` tags and `default` values), `deploy/selfhost/.env.example`, `deploy/selfhost/references/`                         |
-| What a request actually does                      | `routes/*.go`, then the controller in `app/http/controllers/`, then the action in `app/actions/`                                                                                  |
-| Background work and its timing                    | `app/jobs/`, `app/listeners/`                                                                                                                                                     |
-| Words in the app's interface                      | `resources/js/features/shell/navigation.ts` (every area and settings page, with its one-line description), the screens in `resources/js/features/`, `resources/js/lang/en/*.json` |
-| Permissions and roles                             | `app/auth/permissions.go`, `app/auth/abilities.go`                                                                                                                                |
-| Self-hosting                                      | `deploy/selfhost/` (`install.sh` is `dimmictl`, `compose.yaml`, `Caddyfile`, `references/`)                                                                                       |
-| Cloud vs self-hosted differences                  | `config/edition_*.go` and the `settle()` functions in `config/*.go`                                                                                                               |
-| API compatibility promises                        | `contracts/VERSIONING.md`                                                                                                                                                         |
+**Always include:**
 
-- Operations marked `x-internal: true` exist for dimmi's own app. Never document them.
-- Copy interface labels exactly as the dashboard shows them.
-- Don't document what isn't shipped or isn't reachable by users.
-- When code and a comment or README disagree, the code wins. Report the stale text.
-- On self-hosting pages, a key `auth.sessions.idle_lifetime` is the variable `DIMMI_AUTH__SESSIONS__IDLE_LIFETIME`.
+- **Mental models and tradeoffs:** why a feature works the way it does, how sibling features relate, and which mode to choose.
+- **Concrete, runnable examples:** SDK calls, webhook signature checks, API payloads, sample procedures, workflow structures, and server commands.
+- **Behavior the screen cannot show:** exact timings, retry schedules, capacity rules, SLA clock pauses, security guarantees, and background jobs.
+- **Practical gotchas and safe testing:** how to dry-run an action, test the agent without emailing customers, or inspect logs before going live.
+- **Complete reference data:** events, configuration keys, environment variables, abilities, and CLI flags.
 
-## 5. Use one name for each thing
+**Still leave out:**
 
-Use the term in the first column, always. When the API names it differently, give the API name once, in code: "a customer (`contact` in the API)".
+- **Internal plumbing readers do not care about:** leave out behind-the-scenes details that do not change how someone sets up or uses the feature (such as message debounce milliseconds, internal reply character caps, token-trimming mechanics, or internal pipeline flags). Ask: *"Does knowing this change what the reader configures, expects, or debugs?"* If not, cut it.
+- **Click-by-click form narration:** never write five steps to click "New", type a name, and click "Save". Name the screen (**Settings → Webhooks**) and explain only the fields or choices whose consequences matter.
+- **Obvious UI controls:** a toggle labeled **Show launcher** needs no sentence explaining what it shows.
+- **Self-explanatory error messages:** document an error only when the fix is non-obvious.
+- **Generic industry primers:** do not explain what HTTP webhooks, OAuth 2.0, or DNS CNAME records are; link to an authoritative source if needed.
+- **Self-hosting configuration on cloud/product pages:** keep `.env` keys and Docker details strictly inside `/self-hosting/`.
+- **Internal or unshipped features:** never document `x-internal: true` routes, internal flags, or planned features that are not live in the codebase.
 
-| Use                      | Not                               | Meaning                                                                                                                                |
-| ------------------------ | --------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
-| dimmi                    | Dimmi, DIMMI                      | The product. Always lower case, even at the start of a sentence.                                                                       |
-| workspace                | organization, account, team       | One company's dimmi: its inboxes, customers, settings and members.                                                                     |
-| customer                 | user, visitor, end user           | A person who writes to your team. `contact` in the API. A visitor is a customer we know nothing about yet.                             |
-| teammate                 | agent, operator, staff, user      | A person on your team who answers customers. Use **member** only for workspace membership: invitations, roles, **Settings → Members**. |
-| conversation             | chat, thread, ticket              | One exchange with a customer, on any channel.                                                                                          |
-| inbox                    | queue, mailbox                    | A container conversations are routed into, with its own team and assignment rules.                                                     |
-| view                     | filter, folder                    | A saved way to list conversations: **My inbox**, **Unassigned**, or one you create.                                                    |
-| ticket                   | case, issue                       | Tracked work with a state the customer can see. Kinds: customer ticket, back-office ticket, tracker.                                   |
-| tracker                  | incident, master ticket           | A ticket for one problem many customers report, updated once for all of them. Not Linear or Jira.                                      |
-| linked issue             | tracker, external ticket          | A ticket's link to Linear, Jira or GitHub.                                                                                             |
-| messenger                | widget, chat bubble, live chat    | The chat on your website and app. Its HTTP API is the Messenger API.                                                                   |
-| dimmi agent              | bot, AI assistant, Fin            | The AI that answers customers and hands over to teammates.                                                                             |
-| Operator                 | copilot, assistant                | The AI your team chats with inside dimmi. It proposes changes as changesets.                                                           |
-| handover                 | handoff, escalation, transfer     | The dimmi agent passing a conversation to a teammate.                                                                                  |
-| saved reply              | macro, canned response, snippet   | Reusable reply text, with variables and actions.                                                                                       |
-| office hours             | business hours, opening hours     | The workspace schedules used by SLAs and the dimmi agent.                                                                              |
-| SLA policy               | SLA rule                          | Reply and resolution targets for conversations and tickets.                                                                            |
-| workflow                 | automation, rule, flow            | An automation with a trigger and steps.                                                                                                |
-| procedure                | playbook, runbook                 | Step-by-step instructions the dimmi agent follows for a kind of request.                                                               |
-| action                   | tool, integration, function       | A call the dimmi agent can make to your own system.                                                                                    |
-| knowledge source         | data source, content source       | Where the dimmi agent learns answers: a website, files, GitHub, Notion, Intercom, Zendesk.                                             |
-| help center              | knowledge base, docs site         | Your public articles, collections and search.                                                                                          |
-| feature requests         | feedback, feedback board, roadmap | The public board of ideas customers post and vote on. `feedback-*` in the API.                                                         |
-| broadcast                | campaign, blast                   | A one-off message to many customers.                                                                                                   |
-| series                   | journey, drip, sequence           | An automated, multi-step outbound journey.                                                                                             |
-| API token                | API key, personal access token    | The credential for the REST API. Its permissions are **abilities**; OAuth calls them scopes.                                           |
-| identity verification    | user hash, HMAC                   | Signing a customer's identity so the messenger can trust it.                                                                           |
-| sign in, sign-in         | log in, login                     | The verb and the noun.                                                                                                                 |
-| dimmi Cloud, self-hosted | SaaS, on-prem, enterprise         | The two ways to run dimmi.                                                                                                             |
+## Anatomy of a dimmi doc page
 
-When the product renames something, update this table and every page in the same change.
+Every feature guide follows a predictable, scannable top-to-bottom rhythm. Readers learn where to look on any page in seconds.
 
-## 6. Write like this
+### 1. Frontmatter
 
-- State the fact or the action. No lead-in, no restating the title.
-- Address the reader as "you". Active voice, present tense: "dimmi retries 12 times over 24 hours".
-- Condition before instruction: "To rotate the secret, open **Settings → Webhooks**".
-- Name things: "pass the `session_token` to `createSession()`", not "pass this value".
-- Exact numbers and names from the code. Never "several", "a few", "some settings".
-- Plain words, American spelling, no idioms. Many readers read English as a second language.
-- "dimmi" is lower case, always.
+- **Sidebar label** (`label` in `docs/src/nav.ts`): 1 to 3 words. The sidebar group provides context (under `Webhooks`: `Receive`, `Signatures`, `Retries`, `Events`).
+- **Title:** clear and standalone for search and AI agents (`Procedures`, `Verify webhook signatures`, `Automatic assignment`).
+- **Description:** one concrete sentence under 160 characters stating what the page helps the reader understand or accomplish. Never open with `"Learn about..."`.
 
-Never write:
+### 2. Introduction (no heading required above it)
 
-- "simply", "just", "easy", "quickly", "obviously", "please", "we'll", "let's", exclamation marks.
-- "In this section", "the above", "as mentioned", "note that", "it's worth noting", "keep in mind".
-- "coming soon", "will support".
-- Em dashes. Use a comma, a colon or a period.
-- Anything on the stop-slop lists (`.claude/skills/stop-slop/references/`), with one exception: docs may use passive voice and "never" where they are the exact truth.
+Start directly under the page title with **2 to 3 short paragraphs** (1 to 3 sentences each):
 
-### Titles, sidebar labels, descriptions, headings
+- Ground the feature in the real problem a support team or developer faces.
+- State clearly what dimmi provides and how it fits with the rest of the workspace.
+- If a reader commonly confuses two features (e.g., **procedures** vs. **workflows**, **dimmi agent** vs. **Operator**, **tickets** vs. **conversations**), draw that distinction cleanly right here or in an immediate `##` subsection.
 
-- **Sidebar label** (`label` in `docs/src/nav.ts`): one to three words. The group gives the context: under Messenger, "Install", not "Install the messenger in your app". Under Webhooks, "Signatures", "Retries", "Events".
-- **Title:** specific enough to stand alone in search and for agents: "Verify webhook signatures". It can be longer than the sidebar label.
-- **Description:** one sentence, under 160 characters, saying what the page gives the reader. Never "Learn about …", never a list of everything on the page.
-- **Headings:** sentence case, unique on the page, meaningful alone: "Rotate the secret", not "More options".
+### 3. Happy path (working example first)
 
-### Code samples
+Show the simplest real-world setup or usage right after the introduction. Give the reader something concrete they can copy, adapt, or picture immediately before introducing optional parameters or edge cases.
 
-- Language on every block, and a file name when there is one: ` ```ts title="app/layout.tsx" `.
-- Complete enough to paste and run: imports and setup included.
-- Only the languages and frameworks the reader needs. When the same task differs per framework, use `<Tabs>`.
-- Placeholders in `<angle_brackets>`, each explained in a few words after the block. Realistic fake values: Acme Inc, `ada@example.com`.
-- No shell prompts. Output goes in its own block, only when it isn't obvious.
-- Never a real secret, token or customer.
+### 4. Core capabilities (`##` and `###` Layer-Cake sections)
 
-## 7. Make pages work for agents
+Walk through each major capability in logical order. Use the **prose-example rhythm** inside every section:
 
-Agents fetch one page, or one section of it, as Markdown (`/docs/<page>.md`, `/docs/llms.txt`, `/docs/llms-full.txt`) and act on it. Short, exact pages serve them best.
+1. **Setup (1 to 3 sentences):** state *when* and *why* you would use this capability.
+2. **Concrete example:** a runnable code block, realistic procedure/rule example, or structured table.
+3. **Clarification (1 to 2 sentences):** explain the non-obvious behavior, default, or return value.
+4. **Optional `<Callout>`:** surface a genuine gotcha, security warning, or helpful shortcut (`note`, `tip`, `caution`, `danger`). Keep to 1 to 2 callouts per page so they stay high-signal.
 
-- A page makes sense alone. Link a prerequisite in one line instead of assuming the previous page.
-- A section makes sense from its heading: name the feature again instead of "it".
-- Exact names, numbers and units, spelled as in the code.
-- Nothing important only in a picture. Every screenshot has alt text that says what it shows.
-- Agents read every tab. Put shared content before the tabs.
-- When a page moves, add a redirect in `docs/astro.config.mjs`.
-- Everything in `docs/` is public. Internal notes stay out of `docs/src/content/`.
+### 5. Behavior, rules, and limits
 
-## 8. Screenshots
+Place exact system rules, caps, retry schedules, and limits under a clear heading (such as `## Rules and limits` or `## How replies are filtered`) using tables or front-loaded bullet lists. Every number must come straight from the codebase.
 
-Use a screenshot only where a picture saves the reader a search: a screen that is hard to find, or a result they must recognize. Most pages need none. Pictures are real captures, made by `docs/shots/capture.ts` (see `docs/shots/README.md`), shown with `<Screenshot name="…" alt="…" />`. Mark one still to capture with `{/* SHOT: name | path | what to show | alt */}`.
+### 6. Testing and contextual next steps (only when genuinely useful)
 
-## 9. Components
+- When a feature supports safe testing (dry runs, test mode, `mail_fallback` logs), explain how to verify it before touching live customers.
+- Close with 1 to 2 natural, contextual inline links to what the reader typically sets up next (e.g., *"Once your messenger is live, set up [identity verification](/developers/messenger/identity-verification/) so the dimmi agent can securely read signed-in customer data."*). Never add a padded generic "Next steps" list just to fill space.
 
-Import from `~docs/components/mdx`. Use one only when it helps.
+## Page shapes and templates
 
-| Component                            | Use for                                                                                               | Avoid                                                                    |
-| ------------------------------------ | ----------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------ |
-| `<Steps>`                            | The numbered steps of a tutorial or how-to                                                            | Anything that is not a sequence                                          |
-| `<Tabs>` / `<TabItem label>`         | The same task in several languages or platforms                                                       | Different information in each tab; content shared by all tabs            |
-| `<Callout type>`                     | `note` (useful aside), `tip` (a better way), `caution` (can go wrong), `danger` (data loss, security) | More than two per page; content the reader must read belongs in the text |
-| `<Card>`, `<CardGrid>`, `<LinkCard>` | Index and overview pages that route readers onward                                                    | Inside how-tos and reference                                             |
-| `<Endpoint method path>`, `<Param>`  | Showing one endpoint inside a how-to or explanation                                                   | Rebuilding the API reference by hand                                     |
-| `<FileTree>`                         | A folder layout the reader must create or find                                                        | Lists that are not files                                                 |
-| `<Accordion>`                        | Frequently asked questions                                                                            | Steps or required information                                            |
-| `<Badge>`                            | Marking status, such as "Beta", in running text                                                       | Emphasis                                                                 |
+Choose the shape that fits the reader's intent. Start from the matching template in `docs/templates/`.
 
-## 10. Checklist
+| Shape | When to use | Template |
+| --- | --- | --- |
+| **Feature guide** | Teaching how a dimmi feature works and how to configure it end to end (the default guide chapter) | `docs/templates/explanation.mdx` |
+| **Task / integration guide** | Reaching one specific technical goal (installing the messenger, verifying webhook signatures, connecting Slack) | `docs/templates/how-to.mdx` |
+| **Quickstart / tutorial** | Building one working integration from scratch step by step | `docs/templates/tutorial.mdx` |
+| **Reference** | Looking up structured facts: webhook events, configuration keys, CLI flags, abilities | `docs/templates/reference.mdx` |
 
-- [ ] The page passes the delete, screen and merge tests (section 1).
-- [ ] Every paragraph is 1 to 3 sentences. The page is inside its budget (section 2).
-- [ ] Bold only on interface labels and list lead words.
-- [ ] No form walkthroughs, no restated error messages, no generic explanations, no self-hosting configuration on product pages.
-- [ ] One type, one topic. The sidebar label is one to three words.
-- [ ] Every name, default, limit and command was checked in the code.
-- [ ] Terms match section 5. Labels match the dashboard.
-- [ ] Code samples paste and run. No real secrets.
-- [ ] No banned words (section 6) and nothing from the stop-slop lists.
-- [ ] The page is in `docs/src/nav.ts`, and `pnpm docs:build` passes.
+The REST API reference is generated automatically from `tests/contracts/api_v1.openapi.json`. Never hand-write endpoint schemas or duplicate full parameter tables on guide pages; link directly to the endpoint instead.
 
-## 11. Keep the docs true
+## Combining human warmth with `stop-slop` and `make-it-skim`
 
-A change that alters what a reader must know (an endpoint, a field, an event, a limit, a default, an install step) updates the docs in the same commit. When a feature is removed, remove its page and redirect the URL. If the docs are wrong, the product is wrong for the reader.
+Great docs read smoothly top to bottom *and* reward a reader who only skims headings and code blocks. Apply both skills deliberately:
 
-To test the docs with agents, keep a saved set of real customer questions with the facts a good answer needs, and rerun it after big changes. It calls real models, so it runs only when the owner asks.
+### Applying `stop-slop` in docs
+
+- **Active, concrete prose:** `"dimmi waits 1.5 seconds in the messenger so rapid follow-up messages get a single reply"` beats `"A 1.5 second delay is applied to consolidate messages."`
+- **No AI clichés or filler:** cut `"simply"`, `"just"`, `"easily"`, `"obviously"`, `"thankfully"`, `"blazing"`, `"seamless"`, `"robust"`, `"in this section, we'll"`, `"it's worth noting"`, `"keep in mind"`, binary contrasts (`"Not X. Y."`), and em dashes (`—`).
+- **Keep functional precision adverbs:** words like `automatically`, `immediately`, `synchronously`, `only`, and `by default` carry real technical meaning and stay.
+- **Keep passive voice only where exact:** when the actor does not matter and passive voice is clearer (`"Drafts are never read by the agent"` or `"Secrets are encrypted at rest"`).
+
+### Applying `make-it-skim` and plain English in docs
+
+- **Grade 5 English or lower:** use exact code and product terms (`webhook`, `SAML`, `Postgres`), and keep every surrounding word plain and everyday. Write *"check"* instead of *"verify"*, *"set up"* instead of *"configure"*, *"same every time"* instead of *"deterministic"*, and *"what happens"* instead of *"lifecycle"*. See the plain-word table in [WRITING.md](../WRITING.md).
+- **Short, focused paragraphs:** 1 to 2 short sentences (**max 30 to 40 words**, 2 to 3 lines on screen), strictly one idea per paragraph. Break anything longer with a blank line, bullet list, table, or code block.
+- **Layer-Cake headings:** write descriptive sentence-case headings that mirror what a reader scans the right-hand table of contents for (`## Check the signature`, `## Retry schedule`, `## When nobody is free`). Never put a redundant `## Introduction` heading over a 2-sentence opening unless the page has a long multi-section outline where a clear top anchor helps navigation.
+- **Front-load every bullet:** put the key subject or rule in the first 3 words, and vary the opening word across consecutive bullets so scanners do not glaze over.
+- **Bold anchors with discipline:** bold interface labels (**Settings → Actions**), list lead-ins, coined terms on first definition, and genuinely load-bearing defaults or limits (at most one prose anchor per paragraph). Never bold full sentences.
+- **Use digits for concrete values:** write `1.5 seconds`, `7 days`, `30 steps`, `6,000 characters`, `5% bounce rate` as digits so scanning eyes catch them immediately.
+- **Tables for structured comparisons:** whenever items share 2 or more attributes (kinds, states, limits, HTTP codes), use a table instead of nested prose.
+
+## Real dimmi before/after rewrites
+
+These examples take real pages from `docs/src/content/docs/` and show how to elevate them from clipped specs into warm, example-first dimmi docs.
+
+### 1. Procedures (`docs/src/content/docs/ai/procedures.mdx`)
+
+**Before (clipped spec, zero mental model, no real example):**
+> A procedure tells the dimmi agent how your team handles one kind of request. Admins write them under **Procedures** in the sidebar.
+> ## How the agent uses a procedure
+> The agent sees the name and **When dimmi uses this** of every published procedure. When a customer's request matches one, it reads the steps and follows them in order.
+> ## Limits
+> - 1 to 30 steps, each up to 1,000 characters.
+
+**After (grounded intro, real mental model, concrete example, limits cleanly placed below):**
+> When customers ask how a feature works, your help center articles are enough. When they ask to refund a duplicate charge, cancel a subscription, or verify an account change, the dimmi agent needs your team's exact process.
+>
+> **Procedures** let you write that process in plain English under **Procedures** in the sidebar. Instead of cramming every edge case into one giant prompt, you give the agent focused, step-by-step playbooks for specific requests.
+>
+> ### Procedures vs. workflows
+>
+> Use a **procedure** when the dimmi agent needs judgment, conversation, and natural-language instructions to resolve a request. Use a [workflow](/workflows/how-workflows-work/) when you want deterministic routing, tagging, or SLA rules that run identically every time without AI.
+>
+> ### Writing your first procedure
+>
+> Every procedure has three parts: when it applies, the ordered steps to follow, and when to hand the conversation to a human. Here is how a billing team handles duplicate charges:
+>
+> - **When dimmi uses this:** `The customer reports being charged twice for the same invoice or billing period.`
+> - **Step 1 (Instruction):** Ask for the invoice number or billing email if it is not already on the customer's profile.
+> - **Step 2 (Action):** Call `Look up recent charges` to check whether two identical payments settled within 48 hours.
+> - **Step 3 (Condition):** If two matching charges exist and the amount is under $200, continue to Step 4. Otherwise, hand over to the Billing team with the charge IDs.
+> - **Step 4 (Action):** Call `Issue refund` (configured to require teammate approval) and let the customer know a specialist is confirming the refund.
+> - **Hand over to the team when:** The customer disputes a charge older than 30 days, or threatens a chargeback.
+>
+> *(Followed by `## How matching works`, `## Step kinds`, `## Drafts, publishing, and pausing`, and `## Limits`.)*
+
+### 2. How the dimmi agent works (`docs/src/content/docs/ai/how-the-agent-works.mdx`)
+
+**Before (cold rule dump full of internal plumbing):**
+> The dimmi agent replies to customer messages from your knowledge, and hands the conversation to a teammate when it cannot help.
+> ## What happens to a message
+> 1. A customer sends a message. dimmi waits 1.5 seconds in the messenger and 2.5 seconds in Slack and API conversations, so several quick messages get one reply. Email has no wait.
+
+**After (clear mental model, focused only on what matters to the reader):**
+> The **dimmi agent** works in the same shared inbox as your team. When you turn it on for a channel, it reads the chat, searches your help center and [knowledge sources](/ai/knowledge-sources/), follows matching [procedures](/ai/procedures/), and hands off when a human should take over.
+>
+> In a new workspace, the agent starts **off**. You can add your docs, write playbooks, and test it on past chats before any customer sees it.
+>
+> ## How a reply works
+>
+> 1. **Checks if it should reply:** confirms the agent is on for that channel, inside its [office hours](/ai/set-up-the-agent/), and not already being handled by a teammate.
+> 2. **Checks playbooks and docs:** reads the thread and customer info, checks for a matching [procedure](/ai/procedures/), searches your help center and [knowledge sources](/ai/knowledge-sources/), and runs any [actions](/ai/actions/) needed.
+> 3. **Replies with sources:** answers in the customer's language, attaches links to the exact articles it used, and titles and tags the chat.
+> 4. **Hands over when needed:** if it cannot find an answer or hits a rule, it [hands over](/ai/handover/) with a private summary for your team and stops replying.
+
+## Get every fact from the code
+
+Docs describe what the code ships today. Read the source; never write from memory, old design docs, or the marketing site. Every route, default, limit, config key, and UI label must be verified.
+
+| Fact | Source of truth |
+| --- | --- |
+| REST endpoints, fields, types, required abilities | `tests/contracts/api_v1.openapi.json` (generated from `routes/*.go`) |
+| Webhook events and payloads | `tests/contracts/webhooks_v1.json` |
+| Messenger HTTP API | `tests/contracts/widget_v1.openapi.json`; messenger code in `resources/widget/` |
+| Messenger JavaScript API | `resources/widget/core.ts` (commands), `sdk/browser/src/` |
+| SDK usage | `sdk/<language>/` and each SDK's README (run `make sdk-generate` to inspect generated types) |
+| Config keys and env vars | `config/*.go`, `framework/foundation/config.go` (`koanf` tags and defaults), `deploy/selfhost/.env.example`, `deploy/selfhost/references/` |
+| Request behavior | `routes/*.go` → `app/http/controllers/` → `app/actions/` |
+| Background jobs and timings | `app/jobs/`, `app/listeners/` |
+| Dashboard UI labels | `resources/js/features/shell/navigation.ts`, `resources/js/features/`, `resources/js/lang/en/*.json` |
+| Roles, permissions, abilities | `app/auth/permissions.go`, `app/auth/abilities.go` |
+| Self-hosting installer & stack | `deploy/selfhost/` (`install.sh` / `dimmictl`, `compose.yaml`, `Caddyfile`, `references/`) |
+| Cloud vs. self-hosted differences | `config/edition_*.go` and `settle()` in `config/*.go` |
+| API versioning and compatibility | `contracts/VERSIONING.md` |
+
+- Operations marked `x-internal: true` exist only for dimmi's own app. Never document them.
+- Copy interface labels verbatim from the dashboard.
+- When code and a comment or README disagree, the code wins. Fix or report the stale text.
+- On self-hosting pages, a config key like `auth.sessions.idle_lifetime` maps to the environment variable `DIMMI_AUTH__SESSIONS__IDLE_LIFETIME`.
+
+## Code samples
+
+- Set the language on every code fence, and add a file name when relevant: ```` ```ts title="app/layout.tsx" ````.
+- Make every snippet complete enough to paste and run: include imports, client setup, and error handling where it matters.
+- Use `<Tabs>` when the same task differs across languages or frameworks. Put shared explanation *before* the tabs.
+- Put placeholders in `<angle_brackets>` and explain each one briefly below the block. Use realistic fake data (`Acme Inc`, `ada@example.com`, `cus_1042`).
+- Omit shell prompts (`$`) so readers can copy commands cleanly. Show output in its own block only when it helps the reader recognize success.
+- Never include a real secret, token, or customer record.
+
+## Making pages work for AI coding agents
+
+AI agents fetch individual pages as Markdown (`/docs/<page>.md`, `/docs/llms.txt`, `/docs/llms-full.txt`) and act on them directly. Clear, progressive structure serves humans and agents equally well when you keep these habits:
+
+- **Every page stands alone:** link prerequisites inline rather than assuming the reader read the previous sidebar item.
+- **Every section stands alone:** name the feature under each heading instead of opening with an ambiguous `"It"`.
+- **Exact names and units:** spell endpoints, config keys, headers, and limits exactly as they appear in code.
+- **Text carries every critical fact:** never hide a step or value exclusively inside a screenshot; give every `<Screenshot>` descriptive `alt` text.
+- **Shared context before `<Tabs>`:** agents read every tab, so avoid duplicating shared explanations across tabs.
+- **Redirects on moves:** whenever a page URL changes, add a redirect in `docs/astro.config.mjs`.
+- **Public only:** everything in `docs/src/content/` is public. Keep internal notes out.
+
+## Screenshots and MDX components
+
+Use screenshots sparingly: only where seeing a screen saves a reader from hunting, or shows an outcome they need to recognize. Captures are real screenshots generated by `docs/shots/capture.ts` (see `docs/shots/README.md`) and embedded with `<Screenshot name="..." alt="..." />`. Mark a screenshot still to capture with `{/* SHOT: name | path | what to show | alt */}`.
+
+Import components from `~docs/components/mdx` only when they genuinely clarify the structure:
+
+| Component | Use for | Avoid |
+| --- | --- | --- |
+| `<Steps>` | Sequential numbered procedures in a quickstart or tutorial | Non-sequential lists or form narration |
+| `<Tabs>` / `<TabItem label>` | The same task across languages or frameworks | Splitting unrelated information across tabs |
+| `<Callout type>` | `note` (helpful context), `tip` (better practice), `caution` (gotcha), `danger` (security or data loss) | More than 2 per page; hiding core instructions in callouts |
+| `<Card>`, `<CardGrid>`, `<LinkCard>` | Landing and overview pages that route readers onward | Inside detailed guides or reference tables |
+| `<Endpoint method path>`, `<Param>` | Highlighting a specific endpoint inside a guide | Rebuilding the auto-generated API reference |
+| `<FileTree>` | Directory layouts the reader needs to create or locate | Ordinary non-file lists |
+| `<Accordion>` | Optional FAQs | Required instructions or core rules |
+| `<Badge>` | Status markers such as "Beta" inline | Visual emphasis |
+
+## Pre-publish checklist
+
+- [ ] **Code-verified truth:** Every endpoint, config key, limit, default, command, and UI label was checked in the codebase.
+- [ ] **Progressive flow:** The page opens with a clear mental model, delivers the happy path with a concrete example early, and places edge cases and limits cleanly below.
+- [ ] **No filler narration:** No click-by-click form walkthroughs, no generic concept lectures, no self-hosting config on product pages.
+- [ ] **Terminology & labels:** Terms match [WRITING.md](../WRITING.md) (`dimmi` lowercase, `Operator` capitalized) and UI labels match the dashboard.
+- [ ] **Runnable code:** Every code block includes imports, realistic fake values, and zero real secrets.
+- [ ] **`stop-slop` pass:** Warm and human with zero filler adverbs (`simply`, `easily`, `just`, `thankfully`), zero AI clichés, zero binary contrasts, and zero em dashes. Rubric score 40/50 or higher.
+- [ ] **`make-it-skim` & plain-English pass:** English stays below Grade 6 (plain words around exact technical terms), paragraphs are 1 to 2 short sentences (max ~35 words), headings pass the Layer-Cake scan, bullets are front-loaded with varied openings, load-bearing numbers use digits, and the Skim and Difference tests pass.
+- [ ] **Navigation and build:** The page is registered in `docs/src/nav.ts` (with a 1-to-3-word sidebar label) and `pnpm docs:build` passes.
+
+## Keeping the docs true
+
+Any code change that alters what a reader needs to know (an endpoint, field, event, limit, default, UI label, or install step) updates the docs in the same commit. When a feature is removed, delete its page and add a redirect in `docs/astro.config.mjs`.
+
+To test docs against real customer questions with AI agents, maintain a saved evaluation set of real questions and expected facts and run it only when the owner explicitly approves live LLM runs.

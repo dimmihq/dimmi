@@ -1,53 +1,53 @@
 ---
 title: "API token abilities"
-description: "Every ability an API token can hold and the endpoints each one opens."
+description: "See every ability an API token can hold and which REST API endpoints each ability opens."
 ---
 
-Each endpoint in the [API reference](/api-reference/) names the ability it needs. A request without it gets `403` with code `missing_ability` and the ability's name in `required_ability`.
+Every endpoint in the [API reference](/api-reference/) lists the ability it requires. Calling an endpoint without that ability returns `403` with `code: "missing_ability"` and the missing scope in `required_ability`.
 
-## Abilities
+## Available abilities
 
-You can give a token only the abilities your role holds a permission in.
+You can only grant abilities that your own workspace role has permission to use.
 
-| Ability | Opens |
+| Ability | What it opens |
 | --- | --- |
-| `conversations:read` | Read conversations, messages, inboxes, tags, saved replies, conversation reports and data exports. |
-| `conversations:write` | Create and change conversations, send replies and notes, change saved replies, create tags. |
-| `contacts:read` | Read customers (`contact` in the API), companies, attribute and event definitions, email suppressions. |
-| `contacts:write` | Create, change, import and erase customers and companies, track customer events. |
-| `attributes:write` | Change attribute and event definitions. |
+| `conversations:read` | Read conversations, messages, inboxes, tags, saved replies, conversation reports, and data exports. |
+| `conversations:write` | Create and update conversations, send replies and notes, manage saved replies, create tags. |
+| `contacts:read` | Read customers (`contact` in the API), companies, attribute/event definitions, and email suppressions. |
+| `contacts:write` | Create, update, import, and erase customers and companies, and track customer events. |
+| `attributes:write` | Manage attribute and event definitions. |
 | `audiences:read` | Read audiences. |
-| `audiences:write` | Create, change and delete audiences. |
-| `tickets:read` | Read tickets, their events, types, states and ticket reports. |
-| `tickets:write` | Create and change tickets, their links and linked issues. |
-| `articles:read` | Read help centers, articles and collections. |
-| `articles:write` | Create and change articles and collections. |
-| `changelog:read` | Read changelog entries, labels and subscribers. |
-| `changelog:write` | Create and change changelog entries, labels and subscribers. |
-| `feedback:read` | Read feature request boards, posts and statuses. |
-| `feedback:write` | Create and change feature request posts and comments. |
+| `audiences:write` | Create, update, and delete audiences. |
+| `tickets:read` | Read tickets, events, types, states, and ticket reports. |
+| `tickets:write` | Create and update tickets, tracker links, and linked issues. |
+| `articles:read` | Read help centers, articles, and collections. |
+| `articles:write` | Create and update articles and collections. |
+| `changelog:read` | Read changelog entries, labels, and subscribers. |
+| `changelog:write` | Create and update changelog entries, labels, and subscribers. |
+| `feedback:read` | Read feature request boards, posts, and statuses. |
+| `feedback:write` | Create and update feature request posts and comments. |
 | `broadcasts:read` | Read broadcasts and topics. |
-| `broadcasts:write` | Create and change broadcasts and topics. |
-| `series:read` | Read series and their enrollments. |
-| `series:write` | Create and change series. |
+| `broadcasts:write` | Create and update broadcasts and topics. |
+| `series:read` | Read series and enrollments. |
+| `series:write` | Create and update series. |
 | `workflows:read` | Read workflows and schedules. |
-| `workflows:write` | Create and change workflows and schedules. |
-| `ai:read` | Read the dimmi agent's settings, actions, runs and procedures. |
-| `ai:write` | Change the dimmi agent's settings and procedures. |
-| `ai:actions` | Create, change and publish actions and their connections. |
-| `ai:keys` | Add, change and delete AI provider keys. |
-| `members:read` | Read members, invitations, teams, roles and permissions. |
-| `members:write` | Change members, invitations and teams. |
-| `webhooks:read` | Read webhook endpoints, deliveries and event types. |
-| `webhooks:write` | Create and change webhook endpoints, send deliveries again. |
-| `settings:read` | Read workspace settings: channels, email, messenger settings, integrations, knowledge sources, SLA policies, the audit log. |
-| `settings:write` | Change those settings, and inboxes, help centers, ticket types, states and fields, feature request boards. |
+| `workflows:write` | Create and update workflows and schedules. |
+| `ai:read` | Read dimmi agent settings, actions, runs, and procedures. |
+| `ai:write` | Update dimmi agent settings and procedures. |
+| `ai:actions` | Create, update, and publish actions and connections. |
+| `ai:keys` | Add, update, and remove AI provider keys. |
+| `members:read` | Read members, invitations, teams, roles, and permissions. |
+| `members:write` | Manage members, invitations, and teams. |
+| `webhooks:read` | Read webhook endpoints, deliveries, and event types. |
+| `webhooks:write` | Manage webhook endpoints and retry deliveries. |
+| `settings:read` | Read workspace settings: channels, email, messengers, integrations, knowledge sources, SLA policies, and audit log. |
+| `settings:write` | Update those settings, plus inboxes, help centers, ticket types/states/fields, and feature request boards. |
 
-The abilities `notifications:read`, `notifications:write`, `exports:read`, `exports:write`, `engage:read`, `engage:write`, `billing:read`, `billing:write`, `system:read` and `system:write` open no endpoint in the API reference.
+Note: `notifications:read`, `notifications:write`, `exports:read`, `exports:write`, `engage:read`, `engage:write`, `billing:read`, `billing:write`, `system:read`, and `system:write` are reserved and do not open public API endpoints.
 
 ## Endpoints without an ability
 
-| Endpoints | Token access |
+| Endpoints | Token behavior |
 | --- | --- |
-| `GET /me`, `GET /workspace`, `GET /workspace/entitlements` | Any token. |
-| Other endpoints with no ability in the reference, such as single sign-on and custom role changes | None. They answer `403` with code `credential_not_accepted`. |
+| `GET /me`, `GET /workspace`, `GET /workspace/entitlements` | Accessible with any valid API token. |
+| Internal admin endpoints with no listed ability (such as SSO or custom role edits) | Not available to API tokens; return `403` with `code: "credential_not_accepted"`. |

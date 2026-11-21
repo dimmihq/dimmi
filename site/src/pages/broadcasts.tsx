@@ -25,18 +25,18 @@ import { FinalCta } from "../sections/final-cta";
 
 const steps = [
   {
-    title: "Pick who it's for",
-    body: "A saved audience, a rule written for this send, or a list you upload.",
+    title: "Pick who gets it",
+    body: "Choose a saved audience, filter customers for this send, or upload a CSV list.",
     visual: <AudienceFragment />,
   },
   {
-    title: "Write it once",
-    body: "Name each person with variables, then preview it the way they'll read it.",
+    title: "Write and preview",
+    body: "Personalize with customer fields and preview the exact message before sending.",
     visual: <WriteFragment />,
   },
   {
-    title: "Send from your own inbox",
-    body: "From a teammate, on an address you connected. Replies come back to your team.",
+    title: "Send from your address",
+    body: "Send from a real teammate on your own domain so replies land right in your inbox.",
     visual: <DeliveryFragment />,
   },
 ];
@@ -44,36 +44,36 @@ const steps = [
 const rows = [
   {
     label: "Channels",
-    title: "Six ways to reach people.",
-    body: "Email, SMS, WhatsApp, a chat message or an announcement card in the messenger, or a post in each customer's shared Slack channel.",
+    title: "Reach customers where they read.",
+    body: "Send by email, SMS, WhatsApp, chat message, messenger card, or straight into each customer's shared Slack channel.",
     visual: <ChannelFragment />,
   },
   {
     label: "Replies",
-    title: "Every reply is a conversation.",
-    body: "Replies open in the inbox, assigned to the team you picked. The agent can answer them first, or you can leave them all to your team.",
+    title: "Every reply opens a real conversation.",
+    body: "Replies arrive in your shared inbox assigned to the team you picked. Let the AI agent take the first pass, or route straight to humans.",
     visual: <ReplyFragment />,
   },
   {
     label: "Reports",
-    title: "See who got there, not just who opened.",
-    body: "Follow each broadcast from sent to the goal you set, with the people, links, and accounts behind every number.",
+    title: "Track real goals, not vanity opens.",
+    body: "Follow each broadcast from delivery to the goal event you set, and click any number to inspect the people behind it.",
     visual: <FunnelFragment />,
   },
 ];
 
 const series = [
   {
-    title: "Pick who enters",
-    body: "People who match a rule, join an audience, or do an event. A teammate or the API can add them too.",
+    title: "Choose who enters",
+    body: "Start a series when someone joins an audience, fires an app event, or gets added via the API.",
   },
   {
-    title: "Send, wait, and check",
-    body: "Email, chat, posts, and Slack, with waits between them, or a wait for something they do.",
+    title: "Send, wait, and branch",
+    body: "Combine email, chat, posts, and Slack with timed waits or checks on what customers did.",
   },
   {
-    title: "Follow up, or step aside",
-    body: "Nudge the people who need it. Anyone who reaches the goal, replies, or unsubscribes leaves at once.",
+    title: "Stop at the right moment",
+    body: "Nudge people who still need help, and exit anyone who hits the goal, replies, or unsubscribes.",
   },
 ];
 
@@ -81,60 +81,80 @@ const more = [
   {
     icon: ListChecks,
     title: "Subscription topics",
-    body: "People choose what they hear about, and unsubscribe in one click.",
+    body: "Let customers pick which updates they want and opt out in one click.",
   },
-  { icon: HandPalm, title: "A frequency cap", body: "Nobody gets one message right after another, across every send." },
-  { icon: Clock, title: "Their own time zone", body: "Schedule a send for 9:00 wherever each person is." },
+  {
+    icon: HandPalm,
+    title: "Frequency caps",
+    body: "Stop customers from getting flooded when multiple sends overlap.",
+  },
+  {
+    icon: Clock,
+    title: "Local time zones",
+    body: "Schedule sends for 9:00 AM wherever each customer lives.",
+  },
   {
     icon: ShieldCheck,
-    title: "Pauses on its own",
-    body: "Too many bounces or spam reports and sending stops, to protect your domain.",
+    title: "Auto pause on bounces",
+    body: "dimmi pauses sending if bounce or spam rates spike to protect your domain.",
   },
-  { icon: Flag, title: "Goals", body: "Name the event that counts as working, and the window to reach it." },
+  {
+    icon: Flag,
+    title: "Goal tracking",
+    body: "Pick the product event that counts as success and the window to hit it.",
+  },
   {
     icon: Megaphone,
-    title: "Important notices",
-    body: "Account and service news still reaches people who unsubscribed.",
+    title: "Service notices",
+    body: "Deliver urgent billing or outage alerts even to people who opted out of news.",
   },
-  { icon: GitFork, title: "Split tests", body: "Send part of a series down another path and compare." },
-  { icon: Sparkle, title: "AI paths", body: "Describe the paths in plain words. The AI picks one for each person." },
+  {
+    icon: GitFork,
+    title: "Split tests",
+    body: "Test two messages in a series and see which branch hits your goal faster.",
+  },
+  {
+    icon: Sparkle,
+    title: "AI paths",
+    body: "Describe each branch in plain English and let AI route every person.",
+  },
   {
     icon: ChartLineUp,
-    title: "Results on every step",
-    body: "See how many reached, left, or finished each step of a series.",
+    title: "Step metrics",
+    body: "See how many people entered, exited, or finished every step of a series.",
   },
 ];
 
 const questions = [
   {
-    question: "Do our emails go out from some shared domain?",
+    question: "Do our emails send from a shared dimmi domain?",
     answer:
-      "No. They go from an address you connected, on a domain you verified. dimmi never sends your broadcasts from a shared domain, so your reputation stays your own.",
+      "Never. Broadcasts go out from your own verified domain and connected address, so your sender reputation stays yours.",
   },
   {
-    question: "Does it send SMS or WhatsApp?",
+    question: "Can we send SMS or WhatsApp broadcasts too?",
     answer:
-      "Yes, both. Connect your own Twilio number or WhatsApp Business account. Your carrier bills you for each message, and replies land in the inbox like any other.",
+      "Yes. Connect your own Twilio number or WhatsApp Business account. You pay your carrier yourself, and replies open in your inbox.",
   },
   {
-    question: "Can this replace our marketing automation tool?",
+    question: "Can this replace HubSpot or Customer.io for marketing?",
     answer:
-      "No. There are no landing pages, no lead scoring, and no ad audiences. Broadcasts are for telling customers things and hearing back. Keep your marketing tool for the funnel.",
+      "Keep your marketing tool for ad funnels and campaigns. dimmi has no landing pages, lead scoring, or ad audiences. Broadcasts are built for talking to customers and getting replies.",
   },
   {
-    question: "Broadcast or series: which one do I want?",
+    question: "When should I use a broadcast vs. a series?",
     answer:
-      "A broadcast, if it's one message. It goes out once, now or at a set time. A series runs over days, with waits, checks, and paths.",
+      "Use a broadcast for a single send like an outage notice or release update. Use a series for onboarding or check-ins that run over days with waits and branches.",
   },
   {
-    question: "Can people drop one kind of email and keep the rest?",
+    question: "Can people unsubscribe from one topic without dropping all emails?",
     answer:
-      "Yes. Each broadcast can belong to a topic, and people pick their topics on a preferences page linked from every email.",
+      "Yes. Assign each broadcast to a topic, and every email links to a preferences page where customers toggle what they want.",
   },
   {
-    question: "Can our own product start a series?",
+    question: "Can our app trigger a series when a user signs up or upgrades?",
     answer:
-      "Yes. Send events to dimmi and a series can start when someone does one. You can also add people through the API.",
+      "Yes. Track product events from your app or add customers through the REST API to start a series automatically.",
   },
 ];
 
@@ -143,21 +163,21 @@ export function BroadcastsPage() {
     <>
       <ProductHero
         eyebrow="Broadcasts"
-        title="Messages people can reply to."
-        body="Send announcements and multi-step series by email, SMS, WhatsApp, messenger, and Slack, from your own address. Replies land in your inbox, not a no-reply void."
+        title="Send updates your customers can reply to."
+        body="Reach customers by email, SMS, WhatsApp, chat, and Slack from your own address. Every reply opens right in your inbox."
         visual={<BroadcastReportFragment />}
       />
-      <Steps title="Pick, write, send." items={steps} />
-      <Rows title="The send is the easy part." rows={rows} />
+      <Steps title="Pick your audience, write once, hit send." items={steps} />
+      <Rows title="Sending is half the job. Replies are the rest." rows={rows} />
       <HowItWorks
         label="Series"
-        title="Messages that follow what people do."
-        body="A series sends the next message when it fits, and knows when to stop."
+        title="Follow-up messages that react to what people do."
+        body="Send the next message at the right moment, and stop automatically when a customer replies."
         steps={series}
         visual={(step) => <SeriesStack step={step} />}
       />
-      <FeatureGrid title="How not to become spam." items={more} />
-      <Questions body="What people ask before their first send." items={questions} />
+      <FeatureGrid title="Built to protect your domain reputation." items={more} />
+      <Questions body="What teams ask before sending their first broadcast." items={questions} />
       <FinalCta />
     </>
   );

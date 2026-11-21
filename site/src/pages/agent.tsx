@@ -8,17 +8,17 @@ import { FinalCta } from "../sections/final-cta";
 const steps = [
   {
     title: "Already in your inbox",
-    body: "The agent works the same channels and threads your team does. No second tool to check.",
+    body: "Turn it on per channel across chat, email, Slack, and API threads. No second tool to check.",
     visual: <ExchangeFragment />,
   },
   {
-    title: "Add your docs",
-    body: "Point it at your help center, website, and files. Every answer cites where it came from.",
+    title: "Learns from your docs",
+    body: "Connect your help center, site, files, Notion, or GitHub. Every answer links to the page it used.",
     visual: <KnowledgeFragment />,
   },
   {
-    title: "Test, then go live",
-    body: "Run it on real conversations and read its reasoning. Nothing gets sent until you switch it on.",
+    title: "Test on past chats first",
+    body: "Run safe tests on real threads and check every source and reply before going live.",
     visual: <TestFragment />,
   },
 ];
@@ -26,72 +26,76 @@ const steps = [
 const rows = [
   {
     label: "Knowledge",
-    title: "Every answer shows its work.",
-    body: "Replies link to the article they came from. Check an answer before it reaches a customer, or after.",
+    title: "Every answer links its source.",
+    body: "Replies link to the exact help article or doc the agent read. When your docs do not cover a question, it hands over instead of guessing.",
     visual: <AgentStill story={0} />,
   },
   {
     label: "Procedures",
-    title: "It follows your steps and asks before the risky ones.",
-    body: "Write a procedure once in plain words, like how to refund a duplicate charge. The agent follows it and waits for approval where you say so.",
+    title: "Follows your steps, asks on risky ones.",
+    body: "Write playbooks like refunding a duplicate charge in plain English. The agent runs your steps and drops an approval card before anything you cannot undo.",
     visual: <ShotStill name="procedure" alt="A procedure in the editor: refunding a duplicate charge, step by step" />,
   },
   {
     label: "Handover",
-    title: "It knows when to stop.",
-    body: "When a person should take over, it passes the conversation to the right team with a summary. Then it gets out of the way.",
+    title: "Steps aside with a quick summary.",
+    body: "When a customer asks for a human or hits a rule you set, the agent routes the thread with a private note and stays quiet.",
     visual: <AgentStill story={2} />,
   },
   {
-    label: "Voice",
-    title: "It sounds like your team.",
-    body: "Give it a name, a tone, and guidance in plain words. No prompt engineering degree needed.",
+    label: "Voice & safety",
+    title: "Sounds like your team, follows your rules.",
+    body: "Pick the agent's name, tone, and rules in plain English. dimmi blocks unknown links, images, and raw HTML before any reply reaches a customer.",
     visual: <ShotStill name="agent-voice" alt="The agent's name, tone and guidance in settings" />,
   },
   {
-    label: "Your key",
-    title: "Your model, your bill.",
-    body: "Bring your own model key and pay your provider directly. AI conversations then cost the same as human ones.",
+    label: "Your model keys",
+    title: "Use your own keys, save up to 83%.",
+    body: "Plug in your OpenAI or Anthropic keys and pay your provider yourself. AI threads drop to the human rate, cutting dimmi fees by 50% to 83%.",
     visual: <ModelFragment />,
   },
 ];
 
 const questions = [
   {
-    question: "Where does it actually answer?",
+    question: "Where can the agent reply?",
     answer:
-      "On every channel the inbox has: the messenger, email, Slack, Microsoft Teams, Discord, WhatsApp, SMS, and the phone. You pick which channels and which customers.",
+      "Across every channel in your inbox: messenger, email, Slack, Teams, Discord, WhatsApp, SMS, phone, and API. You pick which channels and hours it covers.",
   },
   {
     question: "Does it read the whole thread?",
-    answer: "Yes, all of it. It also reads the customer's details and their history before it answers.",
+    answer:
+      "Yes. It reads the full chat and customer details before it replies. Internal team notes stay hidden from the model.",
   },
   {
-    question: "Will it talk over my team?",
-    answer: "No. It steps back the moment a teammate joins and leaves a summary, so nobody starts from zero.",
+    question: "What if a teammate jumps in?",
+    answer:
+      "By default, the agent steps back while an assigned teammate is online or replied in the last 24 hours. You can also set it to stop once anyone takes the thread.",
   },
   {
     question: "Can it answer the phone?",
     answer:
-      "Yes. It picks up, answers from the same knowledge, and follows the same procedures. When a person should take over, it transfers the call with a summary.",
+      "Yes. It picks up using the same docs and playbooks, then transfers the call with a summary when a human should take over.",
   },
   {
-    question: "Does it speak my customers' language?",
-    answer: "Yes. It replies in the language the customer wrote in, from articles written in yours.",
-  },
-  {
-    question: "Will it ever get one wrong?",
+    question: "Does it speak my customers' languages?",
     answer:
-      "Yes, sometimes. It's a language model, not an oracle. That's why every answer links its source, risky steps wait for approval, and test runs exist. If one wrong answer would be a disaster, keep a person on that topic.",
+      "Out of the box. Write your help center in your language and the agent replies in whatever language the customer used.",
   },
   {
-    question: "Can I try it without it messaging a real customer?",
-    answer: "Yes. Test runs show the reply it would send on real conversations. Nothing is sent.",
-  },
-  {
-    question: "What does it cost?",
+    question: "Will it ever make things up?",
     answer:
-      "Nothing per answer. AI is in the conversation price. On your own model key, an AI conversation costs the same as a human one.",
+      "Any AI model can miss an edge case, and vendors claiming 100% accuracy are lying. That is why dimmi requires real sources, blocks unknown links, pauses risky actions for approval, and gives you dry runs. Keep humans on topics where one mistake is too costly.",
+  },
+  {
+    question: "Can I test it without messaging real customers?",
+    answer:
+      "Yes. Run test chats inside dimmi using your real docs and playbooks. You see the exact draft reply and sources while zero messages go out.",
+  },
+  {
+    question: "Do you charge $0.99 per AI resolution like Intercom?",
+    answer:
+      "Never. AI is included in our conversation rates (10¢ down to 6¢ as you grow), with 100 free threads each month. Add your own OpenAI or Anthropic keys and AI drops to the human rate, from 5¢ down to 1¢.",
   },
 ];
 
@@ -105,13 +109,13 @@ export function AgentPage() {
     <>
       <ProductHero
         eyebrow="AI agent"
-        title="An AI agent that answers, acts, and hands over."
-        body="It works the same threads your team does. You pick what it knows, what it may do, and how it sounds before a customer ever meets it."
+        title="An AI agent that cites its sources and knows when to stop."
+        body="It works in your shared inbox, follows your written steps, and asks before risky actions. Bring your own AI keys and save up to 83%."
         visual={<HeroDemo />}
       />
-      <Steps title="Set it up in three steps." items={steps} />
-      <Rows title="It does the work. You set the rules." rows={rows} />
-      <Questions body="What you'd ask before letting it near customers." items={questions} />
+      <Steps title="Go live without risking a single chat." items={steps} />
+      <Rows title="Built for teams who want control over AI." rows={rows} />
+      <Questions body="What smart teams ask before turning an AI agent on." items={questions} />
       <FinalCta />
     </>
   );

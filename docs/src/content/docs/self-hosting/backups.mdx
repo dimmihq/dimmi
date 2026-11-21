@@ -1,55 +1,53 @@
 ---
 title: "Back up and restore"
-description: "Back up your dimmi database, files and app key, and restore them onto a new server."
+description: "Back up your .env secrets, Postgres database, and SeaweedFS uploads, and restore dimmi onto a fresh server."
 ---
 
-A full backup is three things: `/opt/dimmi/.env`, a database dump and the files volume. Keep all three off the server.
+A complete dimmi backup has three pieces: `/opt/dimmi/.env`, a Postgres dump, and the uploaded files volume. Store all three off the server.
 
-## Back up
+## What to back up
 
-| What | Where | When |
+| Asset | Source | Suggested schedule |
 | --- | --- | --- |
-| Settings and secrets | `/opt/dimmi/.env` | Once, and after each `dimmictl set` |
-| Database | A `pg_dump` of the `dimmi` database | Daily, and before each update |
-| Uploaded files | The Docker volume `dimmi_seaweedfs` | Daily |
+| **Config and secrets** | `/opt/dimmi/.env` | Once, and after every `dimmictl set` |
+| **Database** | `pg_dump` of `dimmi` | Daily, and before every upgrade |
+| **Uploaded files** | Docker volume `dimmi_seaweedfs` | Daily |
 
-`.env` holds `DIMMI_APP__KEY`. Without that key, nobody can read the encrypted values in the database, and nothing can recover it. `.env` also holds the passwords the database and file store were created with.
+Keep `/opt/dimmi/.env` safe: it holds `DIMMI_APP__KEY` (required to decrypt database secrets) plus your database and storage passwords. Valkey stores only cache, rate limits, and realtime messages, so it does not need backups.
 
-Dump the database:
+Create a database dump:
 
 ```bash
 docker compose -f /opt/dimmi/compose.yaml exec -T postgres \
   pg_dump -U postgres -Fc dimmi > dimmi-$(date +%F).dump
 ```
 
-Archive the files:
+Archive uploaded files:
 
 ```bash
 tar -czf dimmi-files-$(date +%F).tar.gz \
   -C /var/lib/docker/volumes/dimmi_seaweedfs/_data .
 ```
 
-Valkey holds only the cache, rate limits and realtime messages, so it needs no backup.
+## Restore onto a fresh server
 
-## Restore onto a new server
+1. Copy your backed-up `.env` to `/opt/dimmi/.env` on the new server.
 
-1. Copy your saved `.env` to `/opt/dimmi/.env` on the new server.
-
-2. Run the [installer](/self-hosting/install/) with the release you ran before. It keeps an existing `.env`, so the new database and file store get the same passwords and app key.
+2. Run the [installer](/self-hosting/install/) pinned to the exact release from your old `/opt/dimmi/VERSION` (prefixed with `v`, like `v1.2.3`). It preserves your `.env` so Postgres and SeaweedFS initialize with your existing passwords and `DIMMI_APP__KEY`:
 
    ```bash
    curl -fsSL https://github.com/dimmihq/dimmi/releases/download/<version>/install.sh \
      | bash -s -- --version <version> --domain support.example.com --email ops@example.com
    ```
 
-3. Stop the stack and put the files back.
+3. Stop the stack and restore the file archive:
 
    ```bash
    docker compose -f /opt/dimmi/compose.yaml stop
    tar -xzf dimmi-files-<date>.tar.gz -C /var/lib/docker/volumes/dimmi_seaweedfs/_data
    ```
 
-4. Start the database alone and load the dump.
+4. Start Postgres alone and restore the database dump:
 
    ```bash
    docker compose -f /opt/dimmi/compose.yaml start postgres
@@ -57,6 +55,8 @@ Valkey holds only the cache, rate limits and realtime messages, so it needs no b
      pg_restore -U postgres -d dimmi --clean < dimmi-<date>.dump
    ```
 
-5. Start everything with `dimmictl start`.
+5. Bring the full stack back online:
 
-`<version>` is the release in the old server's `/opt/dimmi/VERSION` with a `v` in front, such as `v1.2.3`. `<date>` is the date in your backup's file name.
+   ```bash
+   dimmictl start
+   ```

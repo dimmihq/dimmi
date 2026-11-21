@@ -1,51 +1,55 @@
 ---
 title: "Monitor your server"
-description: "Check dimmi's health, read its logs and export metrics and traces."
+description: "Check health endpoints, tail JSON logs, scrape Prometheus metrics, and send OpenTelemetry traces or Sentry errors."
 ---
 
-dimmi answers two health addresses on its public address and, when you turn them on, exports Prometheus metrics, OTLP traces and Sentry error reports.
+dimmi exposes two public health checks out of the box and optionally exports Prometheus metrics, OpenTelemetry (OTLP) traces, and Sentry errors.
 
-## Health
+## Health checks
 
-| Address | Answer |
+| Endpoint | Response |
 | --- | --- |
-| `https://support.example.com/up` | `200` with `{"status":"up","release":"<revision>"}` while the process runs. |
-| `https://support.example.com/ready` | `200` unless one of the checks `database`, `valkey` and `maintenance` fails, then `503`. The body lists each check as `pass`, `warn` or `fail`. |
+| `https://support.example.com/up` | `200` with `{"status":"up","release":"<revision>"}` whenever the process is running. |
+| `https://support.example.com/ready` | `200` when healthy, or `503` if `database`, `valkey`, or `maintenance` fails. Body marks each check `pass`, `warn`, or `fail`. |
 
-Point an uptime monitor at `/ready`. The `maintenance` check reports `warn`, with a `200`, while the app is down after [`dimmi down`](/self-hosting/cli/).
+Point your uptime monitor at `/ready`. During maintenance mode ([`dimmi down`](/self-hosting/cli/)), `maintenance` reports `warn` while still returning `200`.
 
-Docker runs `/dimmi health`, which asks `/ready`, inside `web` every 15 seconds and inside `worker` every 30 seconds. `dimmictl status` shows the result as `(healthy)` or `(unhealthy)` beside each service.
+Docker runs `/dimmi health` (which checks `/ready`) every 15 seconds on `web` and every 30 seconds on `worker`. Run `dimmictl status` to view `(healthy)` or `(unhealthy)` beside each container.
 
-## Logs
+## View logs
+
+Follow live logs for all services or specific containers:
 
 ```bash
 dimmictl logs web worker
 ```
 
-`dimmictl logs` follows every service, or the ones you name. dimmi writes one JSON object per line.
+Logs output one JSON object per line by default. Tune them with `dimmictl set`:
 
-| Setting | Default | Values |
+| Variable | Default | Options |
 | --- | --- | --- |
 | `DIMMI_LOG__LEVEL` | `info` | `debug`, `info`, `warn`, `error` |
 | `DIMMI_LOG__DRIVER` | `json` | `json`, `text` |
 
-On a server the installer prepared, Docker keeps 5 files of 20 MB for each container.
+On servers prepared by the installer, Docker rotates logs at 5 files of 20 MB per container.
 
-## Metrics
+## Prometheus metrics
+
+Enable metrics scraping:
 
 ```bash
 dimmictl set DIMMI_TELEMETRY__METRICS=prometheus
 ```
 
-`web` and `worker` then serve Prometheus metrics at `/metrics` on port 9090. The stack does not publish that port: run your scraper as a container on the Docker network `dimmi_dimmi` and scrape `web:9090` and `worker:9090`. With metrics off, `/metrics` answers `404`.
+`web` and `worker` expose `/metrics` on port `9090` inside the private `dimmi_dimmi` Docker network (never exposed publicly). Attach your Prometheus scraper to `dimmi_dimmi` and scrape `web:9090` and `worker:9090`. When disabled, `/metrics` returns `404`.
 
-## Traces and errors
+## Traces and error tracking
 
-| Setting | Value |
+Configure these with [`dimmictl set`](/self-hosting/configuration/):
+
+| Variable | Value |
 | --- | --- |
-| `DIMMI_TELEMETRY__TRACING` | `otlp` to send traces over HTTP. Default `none`. |
-| `DIMMI_TELEMETRY__OTLP_ENDPOINT` | The full URL that receives traces, such as `http://collector:4318/v1/traces`. |
-| `DIMMI_TELEMETRY__OTLP_HEADERS__<NAME>` | A header sent with each trace request, such as `DIMMI_TELEMETRY__OTLP_HEADERS__AUTHORIZATION`. |
-| `DIMMI_TELEMETRY__SENTRY_DSN` | A Sentry DSN. dimmi reports errors to it, tagged with the trace id. |
-
-Set them with [`dimmictl set`](/self-hosting/configuration/).
+| `DIMMI_TELEMETRY__TRACING` | Set `otlp` to export traces over HTTP (default `none`). |
+| `DIMMI_TELEMETRY__OTLP_ENDPOINT` | Collector URL, such as `http://collector:4318/v1/traces`. |
+| `DIMMI_TELEMETRY__OTLP_HEADERS__<NAME>` | Extra header on trace exports, such as `DIMMI_TELEMETRY__OTLP_HEADERS__AUTHORIZATION`. |
+| `DIMMI_TELEMETRY__SENTRY_DSN` | Sentry DSN; reported errors include trace IDs automatically. |

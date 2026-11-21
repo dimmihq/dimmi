@@ -1,25 +1,25 @@
 ---
 title: "Webhook delivery and retries"
-description: "How dimmi decides a webhook was delivered, when it retries, and when it turns an endpoint off."
+description: "How dimmi handles webhook responses, retries failed deliveries over 24 hours, and pauses broken endpoints."
 ---
 import { Screenshot } from "~docs/components/mdx";
 
-dimmi tries each webhook delivery up to 12 times over 24 hours.
+dimmi attempts every webhook delivery up to 12 times over 24 hours.
 
-## What counts as delivered
+## How dimmi treats your response
 
-| Your server's answer | Result |
+| Your server's response | What dimmi does |
 | --- | --- |
-| A `2xx` status | Delivered. |
-| A `3xx` redirect | Failed. dimmi does not follow redirects. |
-| `410 Gone` | Failed, and dimmi turns the endpoint off at once. |
-| Another status, a connection error, or no answer within 15 seconds | Failed, then retried. |
+| `2xx` status | Marks the delivery successful. |
+| `3xx` redirect | Marks failed (dimmi does not follow redirects). |
+| `410 Gone` | Marks failed and disables the endpoint right away. |
+| Any other error, connection failure, or no response within 15 seconds | Marks failed and schedules a retry. |
 
 ## Retry schedule
 
-| Attempt | After the first attempt |
+| Attempt | Time after first attempt |
 | --- | --- |
-| 1 | Immediately |
+| 1 | Right away |
 | 2 | 30 seconds |
 | 3 | 2 minutes |
 | 4 | 10 minutes |
@@ -32,9 +32,9 @@ dimmi tries each webhook delivery up to 12 times over 24 hours.
 | 11 | 20 hours |
 | 12 | 24 hours |
 
-A `Retry-After` header in your answer, in seconds or as an HTTP date, delays the next attempt by at least that long.
+If your server returns a `Retry-After` header (in seconds or HTTP date format), dimmi waits at least that long before retrying.
 
-After attempt 12 fails, dimmi stops. To send the delivery again, click **Send again** or call [Create webhook delivery redelivery](/api-reference/webhooks/create-webhook-delivery-redelivery/).
+After 12 failed attempts, retries stop. You can replay any failed delivery manually with **Send again** or via [Create webhook delivery redelivery](/api-reference/webhooks/create-webhook-delivery-redelivery/).
 
 <Screenshot name="webhook-deliveries" alt="The Recent deliveries section of a webhook endpoint, showing a failed webhook.test delivery with its error, attempt count and a View button." />
 
@@ -42,17 +42,17 @@ After attempt 12 fails, dimmi stops. To send the delivery again, click **Send ag
 
 | Limit | Value |
 | --- | --- |
-| Rate per endpoint | 25 requests per second |
-| Largest body | 256 KiB |
-| Delivery log | Kept 30 days |
+| Max delivery rate per endpoint | 25 requests / second |
+| Max payload size | 256 KiB |
+| Delivery log retention | 30 days |
 
-A larger event has `truncated: true`, and its `data.object` holds only `id`, `object` and, where available, `links.self`.
+Payloads larger than 256 KiB arrive with `truncated: true`, and `data.object` contains only `id`, `object`, and `links.self` (when available).
 
-## When dimmi turns an endpoint off
+## Auto-disabling broken endpoints
 
-| Endpoint failing for | Result |
+| Failure duration | Action taken |
 | --- | --- |
-| 24 hours | Owners and Admins get an email. |
-| 72 hours | dimmi turns the endpoint off, cancels its waiting deliveries and emails Owners and Admins. |
+| 24 hours | Emails workspace Owners and Admins. |
+| 72 hours | Disables the endpoint, cancels queued retries, and emails Owners and Admins. |
 
-After you turn an endpoint back on, dimmi sends new events only.
+When you re-enable an endpoint, dimmi delivers new events going forward.

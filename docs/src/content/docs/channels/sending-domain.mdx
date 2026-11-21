@@ -1,46 +1,46 @@
 ---
 title: "Send email from your own domain"
-description: "The DNS records dimmi needs to send replies from your domain, how often it checks them and what happens when they go missing."
+description: "Verify your domain with DNS records so email replies and broadcasts leave from your own support address."
 ---
 import { Screenshot } from "~docs/components/mdx";
 
-Add your domain under **Sending domains** in **Settings → Email**. Once dimmi verifies its DNS records, replies leave from your own address.
+Add your domain under **Sending domains** in **Settings → Email**. Once dimmi verifies your DNS records, replies leave from your own domain instead of a forwarding address.
 
-A domain covers addresses on that domain only: `help.acme.example` needs its own verification.
+Each domain or subdomain verifies separately. If you send from `help.acme.example`, add and verify `help.acme.example` on its own.
 
-## DNS records
+## DNS records to add
 
-The domain's page lists each record with its value. dimmi Cloud sends through Amazon SES:
+Open your domain's page to copy the exact values. On dimmi Cloud (which sends through Amazon SES), you will see:
 
-| Record | Name | Why |
+| Record | Name | Why it is needed |
 | --- | --- | --- |
-| Ownership, `TXT` | `_dimmi-verification` | Proves the domain is yours, so no other workspace sends as it. |
-| Signing key, 3 `CNAME` | `<key>._domainkey` | Lets Amazon SES sign your mail with DKIM. |
-| Return path, `MX` | `bounce` | Receives bounces on your domain. |
-| Return path SPF, `TXT` | `bounce` | Authorizes your mail service to send for the return path. |
-| DMARC, `TXT` | `_dmarc` | Gmail, Yahoo and Outlook expect one. |
+| **Ownership** (`TXT`) | `_dimmi-verification` | Proves you own the domain so no other workspace can send as it. |
+| **Signing key** (3 `CNAME` records) | `<key>._domainkey` | Lets Amazon SES sign your mail with DKIM. |
+| **Return path** (`MX`) | `bounce` | Receives bounce reports on your domain. |
+| **Return path SPF** (`TXT`) | `bounce` | Authorizes the mail server to send for the bounce domain. |
+| **DMARC** (`TXT`) | `_dmarc` | Expected by Gmail, Yahoo, and Outlook for strong deliverability. |
 
-Verification needs the ownership and signing key records. The others are recommended.
+Only the ownership and signing key records are required to pass verification. Adding the rest is strongly recommended.
 
-On a self-hosted server, the records after ownership depend on the [email provider](/self-hosting/email/). With an SMTP relay, dimmi signs your mail and the signing key is one `TXT` record.
+On a self-hosted server, the records after ownership depend on your [email provider](/self-hosting/email/). With an SMTP relay, dimmi signs mail itself and asks for one `TXT` signing key record.
 
 <Screenshot name="sending-domain-records" alt="The DNS records section of a sending domain in dimmi, listing each record's type, name and value with copy buttons and a Missing status." />
 
-## Check schedule
+## Verification schedule
 
-dimmi starts checking when you select **Check now**: every minute for 10 minutes, every 5 minutes for the first hour, every 15 minutes for the first day, then every hour.
+Click **Check now** after adding your records. dimmi checks every minute for 10 minutes, every 5 minutes for the first hour, every 15 minutes for the first day, and then once an hour.
 
-After 72 hours without the required records, the domain is **Failed**. **Check now** starts a new 72-hour window.
+If required records are still missing after 72 hours, the domain moves to **Failed**. Click **Check now** to start a new 72-hour check window.
 
-## Losing verification
+## If DNS records go missing later
 
-dimmi checks a verified domain about once a day, and every hour after a failed check.
+dimmi rechecks verified domains about once a day, switching to hourly checks if a check fails.
 
-- **Two failed checks in a row:** the domain is **Records missing** and replies leave from your forwarding address. The next passing check verifies it again.
-- **Seven days in Records missing:** the domain is **Failed** and dimmi stops checking until you select **Check now**.
+- **Two failed checks in a row:** status changes to **Records missing**, and replies temporarily fall back to your forwarding address until the next passing check.
+- **Seven days missing:** status changes to **Failed**, and checks stop until you click **Check now**.
 
-## Rotate the DKIM key
+## Rotate your DKIM key (self-hosted SMTP)
 
-**Rotate key** shows only to an Owner, on a self-hosted server that sends through an SMTP relay. Elsewhere the email provider manages the key.
+Owners on a self-hosted SMTP relay can click **Rotate key** to roll signing keys without downtime. Other email providers handle key rotation for you.
 
-It adds a **New signing key** record, and the current key keeps signing until dimmi finds the new one in DNS. Wait at least a week before you delete the old `_domainkey` record.
+Rotating adds a **New signing key** DNS record while the old key keeps signing until dimmi sees the new record live. Wait at least 1 week before removing the old `_domainkey` record.

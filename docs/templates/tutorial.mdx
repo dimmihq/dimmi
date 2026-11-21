@@ -1,25 +1,30 @@
 ---
-title: Build the thing, such as "Build your first action"
-description: One sentence under 160 characters on what the reader builds.
+title: Build one working thing, such as "Build your first action"
+description: One concrete sentence under 160 characters stating what the reader builds from start to finish.
 ---
 import { Steps } from "~docs/components/mdx";
 
 {/*
-  Tutorial (docs/WRITING.md). Rare: only where the reader builds something
-  with code and learns by doing. Every step works as written. No options,
-  no theory, no walking through forms. Delete these comments before publishing.
+  Quickstart / tutorial (docs/WRITING.md). Zero-friction path from 0 to one
+  working real-world result. Open with 1 to 2 warm sentences naming what the
+  reader will build and linking prerequisites inline. Every snippet must run
+  verbatim with realistic fake data. End with how to see it work and 1 to 2
+  natural next-step links. Run stop-slop and make-it-skim.
+  Delete these comments before publishing.
 */}
 
-One sentence: what the reader builds and what they need (inline links).
+State what the reader will build and what the end result looks like in 1 to 2 short sentences. Link prerequisites inline (such as a running workspace or identity verification).
 
 <Steps>
 
-1. Action, starting with a verb.
+1. **<First concrete milestone>.** Explain why this step exists in one line, then give the exact command or runnable snippet.
 
    ```bash
    command
    ```
 
-2. Next action, with the result the reader sees when it isn't obvious.
+2. **<Next milestone>.** Show the non-obvious configuration or code change, plus what the reader should see when it works.
 
 </Steps>
+
+Close with a brief note on what to configure next once this works (with inline links to the relevant guide).

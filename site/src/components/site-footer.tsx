@@ -26,7 +26,7 @@ export function SiteFooter() {
         <div className="col-span-full flex flex-col gap-4 lg:col-span-1">
           <DimmiLogo className="h-6 w-auto self-start text-text-primary" title="dimmi" />
           <p className="max-w-60 text-body-regular text-text-secondary">
-            Open-source customer support. MIT licensed, on our cloud or your servers.
+            Customer support you own. Open source under MIT, on our cloud or your own server.
           </p>
           <a href={GITHUB_URL} className="text-body-medium text-text-primary underline-offset-4 hover:underline">
             github.com/dimmihq/dimmi

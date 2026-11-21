@@ -2,11 +2,17 @@ import { Panel, Points, Section, SplitHead } from "../components/container";
 import { ShotFlow } from "../scenes/shot-flow";
 
 const points = [
-  { title: "Briefs you in seconds", body: "The thread and the customer, summed up before you read a word." },
-  { title: "Drafts in your voice", body: "Replies written from your knowledge and past answers. You edit, you send." },
   {
-    title: "Answers from your data",
-    body: "Ask about the customer, their history or your docs, in the thread or in Slack.",
+    title: "Catch up in 5 seconds",
+    body: "Reads a long thread and past tickets, then leaves a private summary right in the inbox.",
+  },
+  {
+    title: "Drafts from your docs",
+    body: "Writes a reply in your team's voice right in the box. You edit and send it.",
+  },
+  {
+    title: "Changes you approve first",
+    body: "Ask it to tag threads, pull reports, or edit a playbook. Every change waits for your OK.",
   },
 ];
 
@@ -15,9 +21,9 @@ export function Operator() {
     <Section anchor="operator" frameClassName="flex flex-col gap-12">
       <SplitHead
         tag="Operator"
-        title="An AI teammate that stays backstage."
-        body="Operator works beside each conversation. Only your team sees it, and nothing reaches a customer until you press send."
-        link={{ href: "/operator", label: "See Operator" }}
+        title="An internal AI teammate that never messages your customers."
+        body="Operator sits beside every thread and in Slack. Ask about a customer, draft a reply, or review workspace edits you can undo."
+        link={{ href: "/operator", label: "Explore Operator" }}
       />
       <div className="grid grid-cols-1 items-start gap-x-16 gap-y-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,464px)] [&>*]:min-w-0">
         <Points items={points} />

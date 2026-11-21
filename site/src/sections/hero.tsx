@@ -54,12 +54,12 @@ export function Hero() {
             you own.
           </h1>
           <p className="max-w-[30rem] text-[17px] leading-7 text-pretty text-text-secondary">
-            The inbox, AI agent, and help center your team runs support on. Open source under MIT. Use our cloud, or
-            take the code and never pay us.
+            Your inbox, AI agent, tickets, workflows, and help center, all open source under MIT. Use our cloud with
+            free seats, or host it yourself for $0.
           </p>
           <div className="flex flex-wrap items-center gap-3">
             <ButtonLink href={`${APP_URL}/signup`} trailingIcon={RiArrowRightLine}>
-              Start free
+              Start free, no card
             </ButtonLink>
             <ButtonLink href={GITHUB_URL} variant="secondary" leadingIcon={RiGithubFill}>
               Star on GitHub
@@ -67,7 +67,7 @@ export function Hero() {
           </div>
           <div className="flex w-full flex-col gap-2">
             <span className="font-mono text-[12px] leading-5 font-medium tracking-[0.04em] text-text-tertiary uppercase">
-              Or skip us and run it yourself
+              Or skip our cloud and self-host in 3 minutes
             </span>
             <InstallCommand />
           </div>

@@ -1,40 +1,40 @@
 ---
 title: "Connect Instagram and Messenger"
-description: "How Instagram direct messages and Facebook Messenger work in dimmi: connecting an account or Page, how long you can reply, and what each message becomes."
+description: "Bring Instagram DMs and Facebook Messenger chats into your dimmi inbox, and learn Meta's reply windows and file limits."
 ---
 
-Connect an Instagram account in **Settings → Integrations → Instagram**, and a Facebook Page in **Settings → Integrations → Facebook Messenger**. Each person who messages it gets a conversation in its inbox, and your replies reach them there.
+Connect an Instagram account in **Settings → Integrations → Instagram**, or a Facebook Page in **Settings → Integrations → Facebook Messenger**. Incoming messages open conversations in the channel's inbox, and your replies post back to Instagram or Messenger.
 
-- **Connect** opens Meta's sign-in. Pick your business portfolio and the accounts or Pages to share, then pick the one to connect in dimmi.
-- The Instagram account must be a professional account, business or creator. Meta gives apps no access to personal accounts.
-- In the Instagram app, turn on **Allow access to messages** under **Settings → Messages and story replies → Message controls → Connected tools**. Meta sends dimmi nothing while it is off.
-- You can connect several accounts and Pages. Each one feeds one inbox, which you change on its page.
+- **Connect through Meta:** click **Connect**, pick your business portfolio and the accounts or Pages to share, then choose which one to attach in dimmi.
+- **Professional Instagram accounts only:** Meta only allows apps to connect business or creator accounts, not personal accounts.
+- **Enable connected tools in Instagram:** open the Instagram app and turn on **Allow access to messages** under **Settings → Messages and story replies → Message controls → Connected tools**. Without this on, Meta sends nothing to dimmi.
+- **Multiple accounts:** connect multiple Instagram accounts and Facebook Pages and route each to its own inbox.
 
-## How long you can reply
+## Reply windows
 
-Meta sets the time from the customer's last message. The composer counts it down.
+Meta limits how long you can reply after a customer's last message. The composer counts down the remaining time.
 
-| Since their last message | Who can reply |
+| Time since customer's last message | Who can reply |
 | --- | --- |
-| Up to 24 hours | Anyone, the AI agent included |
+| Up to 24 hours | Teammates and the dimmi agent |
 | 24 hours to 7 days | Teammates only |
-| More than 7 days | Nobody, until they write again |
+| Over 7 days | Nobody, until the customer writes again |
 
-You cannot start a conversation. The customer writes first.
+You cannot start a new thread on Instagram or Facebook Messenger. The customer must message you first.
 
-## Message requests
+## Instagram message requests
 
-Instagram files a first message from someone the account does not follow under **Requests**. dimmi receives nothing from that person until you accept the request in the Instagram app.
+When someone your Instagram account does not follow messages you for the first time, Instagram places it in **Requests**. Accept the request in the Instagram app first so Meta starts forwarding their messages to dimmi.
 
-## Messages and files
+## Supported messages and files
 
-| From the customer | In dimmi |
+| From the customer | How it appears in dimmi |
 | --- | --- |
-| Text | The same text |
-| Pictures and videos | Files on the message. Several sent together stay on one message. A file dimmi cannot copy, such as one over 25 MB, is named in a line. |
-| A reply to your story, or a story that mentions you | A line with a link to the story. The link stops working when the story expires. |
-| A shared post, reel or link | A link |
-| An edited message | The new text |
-| A view-once picture, and anything else Meta does not hand over | "Sent something only the Instagram app can show." |
+| Text | Plain text |
+| Photos and videos | Attachments on the message (grouped if sent together). Files dimmi cannot download (such as over 25 MB) show their filename instead. |
+| Story reply or mention | A link to the story (valid until the story expires) |
+| Shared post, reel, or link | A link |
+| Edited message | Updated text |
+| View-once media or unsupported items | "Sent something only the Instagram app can show." |
 
-Replies go out as plain text. dimmi sends pictures up to 8 MB and video, audio and files up to 25 MB. Instagram takes only PDF files; Messenger takes any. A reply longer than Instagram's 1,000 bytes or Messenger's 2,000 characters goes out as several messages.
+Outbound replies send as plain text. You can attach images up to 8 MB and video, audio, or files up to 25 MB (Instagram accepts PDF files only; Messenger accepts any file). Replies longer than Instagram's 1,000-byte limit or Messenger's 2,000-character limit split automatically into multiple messages.

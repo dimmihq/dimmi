@@ -1,45 +1,49 @@
 ---
 title: "How the inbox works"
-description: "How conversations arrive in dimmi, the views that list them, and how statuses, snoozing and reopening work."
+description: "How customer conversations arrive in dimmi, move between open, snoozed, and closed, and get assigned to teammates."
 ---
 
-A conversation lands in the inbox its channel belongs to and is open, snoozed or closed. Spam and the trash are flags beside the status.
+Every channel connection in dimmi (a messenger, support email, Slack channel, or API source) delivers new chats into one inbox. Inside the inbox, every conversation has one status: **open**, **snoozed**, or **closed**.
 
-## Views
+Spam and trash sit beside those statuses as separate flags so you can clean up junk or recover a deleted thread without losing history.
 
-Below the fixed views, dimmi lists your [saved views](/inbox/views/), then a view for each ticket type, team and teammate.
+## Sidebar views
 
-- **Unassigned:** hidden from teammates whose access leaves out conversations nobody holds.
-- **Snoozed:** only the snoozed conversations you hold.
-- **Deleted:** the trash, shown only to roles that can delete conversations.
-- **Inboxes:** a view for each inbox, once the workspace has two.
+Your sidebar groups conversations into built-in lists, followed by your [saved views](/inbox/views/) and quick views for each ticket type, team, and teammate.
+
+- **Unassigned:** open chats nobody holds yet. Hidden from teammates whose role restricts access to unassigned threads.
+- **Snoozed:** only the snoozed chats assigned to you, keeping other people's reminders out of your way.
+- **Deleted:** trashed conversations, shown only to roles allowed to delete threads.
+- **Inboxes:** appears once your workspace has **2 or more inboxes**, giving each inbox its own list.
 
 ## Closing and reopening
 
-A customer's reply within the inbox's **Reopen window** reopens a closed conversation. A later reply starts a new conversation. The window is 30 days in a new inbox.
+When a customer replies to a closed thread within the inbox's **Reopen window** (**30 days** by default), dimmi reopens that same conversation. If they write back after the window passes, dimmi opens a fresh conversation instead.
 
-Automatic mail, such as an out-of-office reply, never reopens or wakes a conversation.
+Automated emails like out-of-office auto-replies never reopen a closed thread or wake a snoozed one.
 
-## Snoozing
+## Snoozing a conversation
 
-Snooze presets use your time zone, or the workspace's when yours is not set.
+Snoozing hides a waiting thread until it is time to follow up. Presets use your personal time zone (or the workspace time zone if yours is unset):
 
-| Preset | Wakes |
+| Preset | Wakes up |
 | --- | --- |
-| **Later today** | In 3 hours, rounded up to the quarter hour. |
-| **Tomorrow** | Tomorrow at 09:00. |
-| **Next week** | Next Monday at 09:00. |
-| **In one week** | In 7 days, at 09:00. |
+| **Later today** | In **3 hours**, rounded up to the next quarter hour |
+| **Tomorrow** | Tomorrow at **09:00** |
+| **Next week** | Next Monday at **09:00** |
+| **In one week** | In **7 days** at **09:00** |
 
-- A snooze lasts at least 1 minute and at most 1 year.
-- A customer's message wakes a snoozed conversation. By default, so does a teammate's reply.
-- A closed conversation cannot be snoozed. Reopen it first.
+A few helpful rules to know:
 
-## Who holds a conversation
+- **Customer replies wake it early:** if the customer writes back before the timer ends, the chat moves right back to **open**. By default, a teammate's reply wakes it too.
+- **Custom snooze range:** pick any custom time from **1 minute** up to **1 year** out.
+- **Open threads only:** reopen a closed conversation before snoozing it.
 
-The first teammate to reply to an unassigned conversation takes it, unless the inbox turns off **Assign to whoever replies**. To give new conversations to teammates without a reply, [set an assignment mode](/inbox/inboxes-and-assignment/).
+## Who owns a conversation
 
-## Spam and the trash
+When a teammate replies to an unassigned conversation, dimmi assigns it to them so two people never answer the same customer twice. You can change that toggle (**Assign to whoever replies**) or turn on automatic routing in [Inboxes and assignment](/inbox/inboxes-and-assignment/).
 
-- **Spam:** after you mark a conversation as spam, new conversations from the same customer start in **Spam**. So do conversations from a blocked customer.
-- **Deleted:** a deleted conversation leaves every list and count but keeps its messages, so you can restore it.
+## Spam and trash
+
+- **Spam:** marking a thread as spam moves future conversations from that customer straight into **Spam**. Blocked customers land there too.
+- **Deleted:** deleting a conversation removes it from normal queues and counts, but keeps its messages so an authorized teammate can restore it later.

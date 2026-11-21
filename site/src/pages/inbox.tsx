@@ -39,36 +39,36 @@ import { FinalCta } from "../sections/final-cta";
 
 const features: Feature[] = [
   {
-    title: "Assign it in one click",
-    body: "Give it to a person or a team. Or let round robin deal out the new ones.",
+    title: "Assign with one click",
+    body: "Hand a chat to a person or team, or let round robin split new threads fairly.",
     flow: "assign",
     alt: "Assigning a conversation to a teammate",
     anchor: "top-right",
   },
   {
-    title: "Snooze it. It comes back",
-    body: "It returns at the time you pick, or as soon as the customer replies.",
+    title: "Snooze until it matters",
+    body: "Clear your queue for now. The thread comes back on time, or sooner if they reply.",
     flow: "snooze",
     alt: "Snoozing a conversation until tomorrow",
     anchor: "top-right",
   },
   {
-    title: "A queue you can read at a glance",
-    body: "Every row shows the channel, the owner, and the wait.",
+    title: "Scan the whole queue fast",
+    body: "See the channel, owner, and wait time on every row without clicking in.",
     flow: "queue",
     alt: "Switching between open, snoozed and closed conversations",
     anchor: "top",
   },
   {
-    title: "The customer, beside every reply",
-    body: "Status, priority, and tags up top. Their history underneath.",
+    title: "Customer info next to every chat",
+    body: "Plan, tags, and priority sit up top, with past chats and app events right below.",
     flow: "details",
     alt: "Setting a conversation's priority from the details panel",
     anchor: "top",
   },
   {
-    title: "Operator does the reading",
-    body: "It briefs you, drafts the reply, and answers from your data.",
+    title: "Operator sums up long threads",
+    body: "Skip reading 40 messages. Ask Operator for a quick brief or a draft reply.",
     flow: "operator",
     alt: "Asking Operator about the customer",
     anchor: "bottom",
@@ -78,23 +78,63 @@ const features: Feature[] = [
 const more = [
   {
     icon: Keyboard,
-    title: "Keyboard first",
-    body: "Every action has a shortcut. The command menu finds the ones you forgot.",
+    title: "Keyboard shortcuts",
+    body: "Every action has a shortcut, and the command menu finds the ones you forget.",
   },
-  { icon: ArrowCounterClockwise, title: "Undo send", body: "A few seconds to pull a reply back. We've all needed it." },
-  { icon: Files, title: "Saved replies", body: "Send the answer, then close, tag, or assign in the same step." },
-  { icon: Checks, title: "Bulk actions", body: "Assign, tag, or close a pile of conversations at once." },
-  { icon: GitMerge, title: "Merge", body: "One customer, two threads? Make them one conversation." },
-  { icon: Smiley, title: "Ratings", body: "When you close, the customer rates the help they got." },
-  { icon: Timer, title: "SLAs", body: "Reply targets by plan or priority. You get a warning before one slips." },
-  { icon: Ticket, title: "Tickets", body: "Turn a conversation into tracked work your engineers can follow." },
-  { icon: ChartPieSlice, title: "Reports", body: "Volume, response times, and ratings by team, channel, and tag." },
-  { icon: At, title: "Notes and mentions", body: "Ask a teammate inside the thread. The customer never sees it." },
-  { icon: Translate, title: "Live translation", body: "Read and reply in your language. The customer reads theirs." },
+  {
+    icon: ArrowCounterClockwise,
+    title: "Undo send",
+    body: "Catch a typo and pull a reply back before it goes out.",
+  },
+  {
+    icon: Files,
+    title: "Saved replies",
+    body: "Send a common answer, then tag, assign, or close the chat in one move.",
+  },
+  {
+    icon: Checks,
+    title: "Bulk actions",
+    body: "Assign, tag, or close dozens of conversations in one shot.",
+  },
+  {
+    icon: GitMerge,
+    title: "Merge threads",
+    body: "Same customer on chat and email? Combine both into one thread.",
+  },
+  {
+    icon: Smiley,
+    title: "Customer ratings",
+    body: "Ask how the chat went right when you close it, in chat or email.",
+  },
+  {
+    icon: Timer,
+    title: "SLAs",
+    body: "Set reply targets by plan or priority and get warned before one slips.",
+  },
+  {
+    icon: Ticket,
+    title: "Tickets",
+    body: "Turn a support chat into tracked work linked to Linear, Jira, GitHub, and more.",
+  },
+  {
+    icon: ChartPieSlice,
+    title: "Reports",
+    body: "Track volume, reply times, and CSAT by team, channel, and tag.",
+  },
+  {
+    icon: At,
+    title: "Internal notes",
+    body: "Tag a teammate right inside the thread. Customers never see notes.",
+  },
+  {
+    icon: Translate,
+    title: "Live translation",
+    body: "Read and write in your language while customers read in theirs.",
+  },
   {
     icon: DeviceMobile,
     title: "Mobile apps",
-    body: "The inbox on iOS and Android, with push for what's assigned to you.",
+    body: "Answer from iOS and Android, with push alerts for threads assigned to you.",
   },
 ];
 
@@ -102,53 +142,53 @@ const related = [
   {
     icon: Sparkle,
     title: "AI agent",
-    body: "It answers first. Your team gets the rest, with a summary.",
-    link: { href: "/agent", label: "Meet the AI agent" },
+    body: "Takes the first reply from your docs and hands over with a summary.",
+    link: { href: "/agent", label: "Explore the AI agent" },
   },
   {
     icon: FlowArrow,
     title: "Workflows",
-    body: "Sorting, routing, and follow-ups that nobody has to remember.",
-    link: { href: "/workflows", label: "See workflows" },
+    body: "Route chats, trigger SLAs, and send follow-ups without manual work.",
+    link: { href: "/workflows", label: "Explore workflows" },
   },
   {
     icon: BookOpenText,
     title: "Help center",
-    body: "Answers customers find on their own, on your domain.",
-    link: { href: "/help-center", label: "See the help center" },
+    body: "Publish articles on your domain that help both customers and the AI.",
+    link: { href: "/help-center", label: "Explore the help center" },
   },
 ];
 
 const questions = [
   {
-    question: "Which channels actually land in the inbox?",
+    question: "Which channels land in the inbox?",
     answer:
-      "All of them. The messenger on your site or app, email, Slack, Microsoft Teams, Discord, WhatsApp, SMS, Instagram, Facebook Messenger, phone calls, and anything you send through the REST API. One queue.",
+      "All of them: the messenger on your site or app, email, Slack, Microsoft Teams, Discord, WhatsApp, SMS, Instagram, Facebook Messenger, phone calls, and the REST API.",
   },
   {
-    question: "Do you do phone, WhatsApp, and SMS?",
+    question: "Do you charge extra for WhatsApp, SMS, or phone?",
     answer:
-      "Yes. Connect your own Twilio number or WhatsApp Business account. Calls arrive with a recording and a transcript. Your carrier bills you for minutes and messages. We don't add a markup.",
+      "Not a cent from us. Connect your own Twilio number or WhatsApp Business account and pay your carrier yourself. Calls arrive with a recording and transcript.",
   },
   {
-    question: "Can I run a call center on it?",
+    question: "Can I run a call center on dimmi?",
     answer:
-      "No. Calls land in the inbox, but there's no power dialer, wallboard, or shift scheduling. If you run a 200-seat phone floor, pick a tool built for that.",
+      "If you run a 200-seat phone floor, pick a tool built for call centers. Calls land in dimmi, but we do not ship power dialers, wallboards, or shift schedules.",
   },
   {
-    question: "Will Operator bill me per answer?",
+    question: "Do engineers and founders need paid seats to read a thread?",
     answer:
-      "No. It bills per thread. Each thread a teammate starts with Operator counts as one AI conversation, however many questions they ask in it.",
+      "Never. Seats are free and unlimited on dimmi Cloud, so anyone on your team can read a bug report or leave an internal note without raising your bill.",
   },
   {
-    question: "Is the self-hosted inbox a cut-down one?",
+    question: "Is the self-hosted inbox missing features?",
     answer:
-      "No. The self-hosted edition has the same inbox. It runs on your server, with your data in your own database.",
+      "It is the exact same inbox. You get every channel, rule, and shortcut on your own server, with all your data in your own Postgres database.",
   },
   {
-    question: "Do I have to retype my customers?",
+    question: "How do I bring my existing customers over?",
     answer:
-      "No. Import customers and companies from a spreadsheet. Map the columns, try a dry run, then run it for real.",
+      "Upload a CSV of customers and companies, map your columns, run a dry run to check the results, and import them in minutes.",
   },
 ];
 
@@ -157,8 +197,8 @@ export function InboxPage() {
     <>
       <ProductHero
         eyebrow="Inbox"
-        title="One inbox for every channel."
-        body="Chat, email, Slack, and the rest land in one queue. The customer sits beside every reply."
+        title="One inbox your whole company can afford to open."
+        body="Chat, email, Slack, WhatsApp, SMS, and phone land in one queue. Seats are free, so any engineer can jump into a thread."
         shot="inbox"
         shotAlt="The dimmi inbox: conversation list, thread and details"
       />
@@ -177,13 +217,13 @@ export function InboxPage() {
         ]}
       />
       <FeatureCards
-        title="Answer without leaving the thread."
-        body="Triage, context, and teamwork sit in one view. Nobody opens a sixth tab to answer a question."
+        title="Answer without jumping across five tabs."
+        body="Triage, customer info, and teamwork live in one view. Nobody opens another tool to find an order."
         features={features}
       />
-      <FeatureGrid title="Small things you use all day." items={more} />
-      <FeatureGrid title="The rest of dimmi plugs in." items={related} />
-      <Questions items={questions} />
+      <FeatureGrid title="Everything your team uses all day." items={more} />
+      <FeatureGrid title="Works with the rest of dimmi." items={related} />
+      <Questions body="What teams ask before moving their inbox over." items={questions} />
       <FinalCta />
     </>
   );

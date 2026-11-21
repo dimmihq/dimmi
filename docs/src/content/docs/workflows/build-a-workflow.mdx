@@ -1,42 +1,44 @@
 ---
 title: "Build a workflow"
-description: "Choose a trigger, add steps and paths, and publish a workflow."
+description: "Pick a trigger, add steps and branches, use variables in messages, and publish your workflow."
 ---
 
-Press **New workflow** in **Workflows** and pick a trigger: a workflow keeps it for good, and it decides which [steps](/workflows/triggers-and-steps/) the builder offers.
+Open **Workflows** and click **New workflow**, then pick a trigger. You cannot change a workflow's trigger later, and it decides which [steps](/workflows/triggers-and-steps/) appear in the builder.
 
-## Set who the workflow runs for
+## Choose who the workflow runs for
 
-Select the **Trigger** card. Its settings filter the conversations the workflow starts on:
+Click the **Trigger** card to limit which conversations start the workflow:
 
 - **Audience:** everyone, or one [saved audience](/customers/audiences/).
-- **Channels:** all channels, the messenger or email.
-- **When it runs:** any time, or only inside or outside [office hours](/inbox/office-hours/).
-- **Once per conversation:** some triggers have this on for good.
+- **Channels:** all channels, the messenger, or email.
+- **When it runs:** any time, only during [office hours](/inbox/office-hours/), or only outside them.
+- **Once per conversation:** prevents the workflow from firing twice on the same thread. Some triggers turn this on permanently.
 
 ## Add steps and paths
 
-A step with paths sends the run down one of them.
+Some steps split the workflow into paths based on what happens next:
 
-- **Reply buttons:** 2 to 6 buttons. On a channel that cannot draw buttons, such as email, the customer answers with a button's number, its name or their own words.
-- **Collect data:** saves the answer as the customer's email, name or phone. dimmi asks once more after an invalid answer. A typed email is saved unverified, and only when the customer has none.
-- **Branch:** up to 10 paths. The first path whose condition matches wins, and the rest take **Everyone else**.
-- **Sort by topic:** 2 to 10 categories, picked by your workspace's AI model from the customer's words.
-- **Wait:** a length of time, or until office hours open.
-- **Call your system:** see [Workflow requests](/developers/workflow-requests/).
+- **Reply buttons:** offer 2 to 6 buttons. On channels without buttons (like email), customers can reply with a button's number, its label, or their own words.
+- **Collect data:** asks for an email, name, or phone number and saves it. If the answer is invalid, dimmi asks once more. Typed emails are saved unverified, and only if the customer does not already have one.
+- **Branch:** check up to 10 conditions. The first matching path wins, and anything else goes to **Everyone else**.
+- **Sort by topic:** define 2 to 10 topics and let your workspace's AI model pick the right path from the customer's message.
+- **Wait:** pause for a set time, or until office hours open.
+- **Call your system:** send an HTTP request to your backend. See [Workflow requests](/developers/workflow-requests/).
 
-## Use variables in messages
+## Personalize messages with variables
 
-Messages, notes and request bodies take variables:
+Messages, internal notes, and HTTP request bodies support variables:
 
 ```text
 Hi {{contact.first_name | fallback: "there"}}, your order {{run.vars.order_number}} is on its way.
 ```
 
-`contact.custom.<key>` reads a customer [attribute](/customers/attributes-and-events/). `run.vars.<key>` reads a value an earlier step saved. A variable with no value and no fallback leaves nothing.
+- `contact.custom.<key>` reads a custom customer [attribute](/customers/attributes-and-events/).
+- `run.vars.<key>` reads a value saved by an earlier step.
+- If a variable is empty and has no fallback, dimmi leaves it blank.
 
-## Publish
+## Publish your workflow
 
-**Publish** is disabled while the count beside it, such as **2 to fix**, is not zero. Press the count to jump to the first problem.
+The **Publish** button stays disabled while there are unfinished steps. Look at the badge beside it (such as **2 to fix**) and click it to jump straight to the first issue.
 
-After a workflow is live, edits stay in a draft until you press **Publish changes**. [How workflows work](/workflows/how-workflows-work/) covers versions, priority between workflows and the run history.
+Once live, new edits save to a draft until you click **Publish changes**. See [How workflows work](/workflows/how-workflows-work/) to learn about versions, workflow order, and run history.

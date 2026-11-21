@@ -1,60 +1,58 @@
 ---
 title: "Send a broadcast"
-description: "What each broadcast channel reaches, who dimmi leaves out, how email is paced and where replies go."
+description: "Send one-time updates over email, messenger, Slack, or active conversations, with smart safeguards and reply routing."
 ---
 
-A broadcast, created in **Broadcasts**, sends one message to an audience on one channel, which cannot change afterward.
+Create one-time announcements in **Broadcasts**. Pick your channel when creating the broadcast (you cannot switch channels later), pick your audience, and send or schedule it.
 
-## Channels
+## Broadcast channels
 
-| Channel | Reaches | How it arrives |
+| Channel | Who it reaches | How it arrives |
 | --- | --- | --- |
-| **Email** | Customers with an email address. | One email each, from a connected address on a [verified sending domain](/channels/sending-domain/). dimmi never sends broadcasts from an address of its own. |
-| **Chat** | Customers who have used the messenger. | A conversation from the teammate in **Sent as**. It shows at once in an open messenger and waits unread otherwise. |
-| **Post** | Customers who have used the messenger. | The same, drawn as a card with a title. |
-| **Slack** | Each customer [Slack channel](/channels/slack/), or the ones you pick. | One post per channel, as the dimmi app or as the teammate's own Slack user. |
-| **Conversation** | Each customer's newest conversation, or the conversations linked to a [tracker](/tickets/trackers/). | A reply from the teammate in **Sent as**, inside that conversation, on whatever channel it uses. |
+| **Email** | Customers with an email address. | Individual emails from a connected address on your [verified sending domain](/channels/sending-domain/). dimmi never sends broadcasts from its own domain. |
+| **Chat** | Customers who have used the messenger. | A message from the teammate in **Sent as**. Shows right away if open, or waits unread. |
+| **Post** | Customers who have used the messenger. | Same as Chat, displayed as a titled card. |
+| **Slack** | All customer [Slack channels](/channels/slack/), or specific channels you pick. | One post per channel, sent as the dimmi app or the teammate's Slack user. |
+| **Conversation** | Each customer's latest thread, or every thread linked to a [tracker](/tickets/trackers/). | A reply from **Sent as** inside that thread, on whatever channel it uses. |
 
-## Who gets it
+## Who receives it
 
-dimmi fixes the recipients when sending starts. Customers who match the [audience](/customers/audiences/) later do not get it.
+dimmi locks the recipient list the moment sending begins. Customers who match your [audience](/customers/audiences/) afterward do not receive it.
 
-dimmi leaves out:
+By default, dimmi skips:
 
-- Blocked customers, and customers the channel cannot reach.
-- Email addresses that bounced or reported spam before.
-- A second customer with the same email address.
-- Customers who unsubscribed from everything, or from the broadcast's [topic](/outbound/topics/).
-- Customers who got another broadcast in the last 72 hours, unless **Ignore the frequency cap** is on.
+- Blocked customers, or anyone unreachable on that channel.
+- Email addresses that previously bounced or marked you as spam.
+- Duplicate customer profiles sharing the same email address.
+- Customers who unsubscribed globally or from the broadcast's [topic](/outbound/topics/).
+- Customers who received another broadcast in the last 72 hours (unless you enable **Ignore the frequency cap**).
 
-**Important notice** skips the last two checks. It never reaches a bounced or spam-reporting address.
+Marking a broadcast as an **Important notice** bypasses unsubscribes and the 72-hour cap, though it still skips bounced and spam-flagged addresses.
 
-A conversation broadcast skips these checks and answers each customer once. It can leave out customers waiting on an answer, and, for a tracker, customers a teammate answered since the tracker last changed state.
+Conversation broadcasts skip these filters and reply once per customer. You can optionally exclude customers still waiting on a reply, or (for trackers) anyone a teammate updated since the last tracker state change.
 
-The count on the review step reads at most 50,000 customers. The report lists every customer left out, with the reason.
+The preview step counts up to 50,000 recipients. After sending, the broadcast report lists every skipped customer and why.
 
-## Variables
+## Personalize with variables
 
 ```text
 Hi {{contact.first_name | default: "there"}}, a note from {{sender.first_name}} at {{workspace.name}}.
 ```
 
-A message takes `contact.name`, `contact.first_name`, `contact.email`, `company.name`, `sender.name`, `sender.first_name` and `workspace.name`. `contact.<key>` and `company.<key>` read an [attribute](/customers/attributes-and-events/).
+Available variables include `contact.name`, `contact.first_name`, `contact.email`, `company.name`, `sender.name`, `sender.first_name`, and `workspace.name`, plus any custom customer or company [attribute](/customers/attributes-and-events/) via `contact.<key>` and `company.<key>`.
 
 ## Test and schedule
 
-- **Send test** works for email and Slack. The test uses your own details, has `[Test]` before its subject and counts in no report.
-- **In each person's time zone** sends at the set clock time in each customer's zone. A customer whose time already passed gets it at once.
+- **Send test:** available for email and Slack. Uses your own profile details, prefixes `[Test]` to the subject, and stays out of reports.
+- **Local time zone delivery:** turn on **In each person's time zone** to deliver at the chosen wall-clock time for each customer. Anyone whose local time already passed receives it right away.
 
-## Email pacing
+## Email warm-up and automatic pause
 
-- **Warm-up:** an address new to broadcasts sends 500 broadcast emails on its first day and twice as many each day after. The rest wait their turn. The limit ends once the daily allowance reaches 50,000.
-- **Automatic pause:** after 100 sent emails, dimmi pauses a broadcast when more than 5% bounce or more than 0.3% are reported as spam.
+- **Warm-up:** a new broadcast sending address starts at 500 emails on day 1 and doubles each day until it reaches 50,000/day. Extra recipients queue for the next day.
+- **Bounce protection:** after 100 emails sent, dimmi pauses the broadcast automatically if bounce rates pass 5% or spam complaints pass 0.3%.
 
-## Replies
+## Where replies go
 
-A reply by email, in the messenger or in the Slack thread opens a conversation that starts with the broadcast. It goes to the **Team** and **Assigned to** you set, and the dimmi agent answers only when **The agent answers replies** is on.
+When a customer replies over email, messenger, or Slack, dimmi opens a conversation starting with your broadcast and routes it to the **Team** and **Assigned to** settings you picked. The dimmi agent only answers if **The agent answers replies** is enabled.
 
-A messenger broadcast creates its conversations closed, so they stay out of your open views until the customer replies.
-
-A conversation broadcast opens nothing new: the customer's reply lands in the conversation it went into.
+Messenger broadcasts start out closed so they do not clutter your inbox until a customer replies. Conversation broadcasts post inside the existing thread without creating a new one.

@@ -1,40 +1,66 @@
 ---
 title: "Write procedures"
-description: "Write the steps the dimmi agent follows for one kind of request, and know what publishing and turning off change."
+description: "Write playbooks for the dimmi agent in plain English, mix instructions with API actions, and publish edits safely."
 ---
+import { Callout } from "~docs/components/mdx";
 
-A procedure tells the dimmi agent how your team handles one kind of request. Admins write them under **Procedures** in the sidebar.
+Help articles work great when customers ask how something works. They are not enough when a customer needs action, like refunding a duplicate charge or changing an account email.
 
-## How the agent uses a procedure
+**Procedures** let admins write those team playbooks in plain English under **Procedures** in the sidebar. Instead of stuffing every rule into one big prompt, you give the dimmi agent clear, ordered steps for each request.
 
-The agent sees the name and **When dimmi uses this** of every published procedure. When a customer's request matches one, it reads the steps and follows them in order.
+## Procedures vs. workflows
 
-Write **When dimmi uses this** as the request it covers, such as "The customer wants to change the email on their account". The agent matches a request against this text and the name.
+Both automate support work, so pick the right tool for the job:
 
-## Steps
+- **Procedures** guide the **dimmi agent** through chats that need judgment, follow-up questions, or policy checks.
+- **[Workflows](/workflows/how-workflows-work/)** run fixed rules that act the same every time without AI: routing chats to teams, adding tags, setting SLAs, and sending follow-ups.
 
-| Kind | Use it for |
-| --- | --- |
-| **Instruction** | What the agent says or does. |
-| **Condition** | A check the agent makes before it goes on: "If the order shipped, then …". |
-| **Action** | A call to one of your published [actions](/ai/actions/). |
+## Example: refunding a duplicate charge
 
-**Hand over to the team when** lists the cases where the agent stops and [hands over](/ai/handover/).
+Every procedure has three parts: **When dimmi uses this** (when to trigger), ordered **Steps**, and **Hand over to the team when** (when to stop and bring in a human).
 
-## Limits
+A billing team handling duplicate charges can set up a procedure like this:
 
-- 1 to 30 steps, each up to 1,000 characters.
-- **When dimmi uses this:** up to 500 characters.
-- Up to 10 handover lines, each up to 300 characters.
-- Names are unique and up to 80 characters.
+- **Name:** `Duplicate charge refund`
+- **When dimmi uses this:** `The customer says they were charged twice for the same invoice or billing period.`
+- **Step 1 (Instruction):** `Check if the customer gave an invoice number. If not, ask for the invoice ID or the date and amount of the charge.`
+- **Step 2 (Action):** Call `Look up recent charges` to see if two matching payments went through within 48 hours.
+- **Step 3 (Condition):** `If two matching charges went through within 48 hours and the amount is under $200, go to Step 4. Otherwise, hand over to Billing with both charge IDs.`
+- **Step 4 (Action):** Call `Issue refund` (set to need teammate approval) and tell the customer a billing specialist is confirming the refund.
+- **Hand over to the team when:** `The charge is older than 30 days`, or `The customer mentions a bank dispute or chargeback.`
 
-## Publish and turn off
+Because Step 4 runs an [action](/ai/actions/) that changes data, dimmi pauses and puts an approval card in your inbox before any money moves.
 
-- A new procedure is a draft the agent never reads. **Publish** makes it live.
-- Edits to a live procedure are saved and stay unpublished until **Publish changes**. The agent keeps following the last published copy.
-- dimmi refuses to publish a procedure with an action step whose action is missing or unpublished.
-- When a step's action is not available in a conversation, the agent hands over instead.
-- **Turn off** stops the agent from following the procedure at once and keeps your text.
-- With **Agent's role** set to **Triage only**, the agent follows no procedures.
+## How the agent picks a procedure
 
-The list shows how many conversations each procedure was followed in over the last 30 days.
+On every customer message, the dimmi agent sees the name and **When dimmi uses this** text of each live procedure. When a chat matches one, the agent loads its steps *before* searching your docs and follows them in order for the rest of the chat.
+
+<Callout type="tip" title="Write triggers the way customers ask">
+  Write **When dimmi uses this** as the customer's request, like `The customer wants to change the email on their account`, not `Account email policy`. Clear triggers stop two procedures from getting mixed up.
+</Callout>
+
+## Step kinds
+
+Build a procedure from three kinds of steps:
+
+| Step kind | What it does | Example |
+| --- | --- | --- |
+| **Instruction** | Tells the agent what to ask, explain, or check | `Ask for the workspace slug before checking SSO.` |
+| **Condition** | Decides which path to take next | `If the order already shipped, share the tracking link instead of canceling.` |
+| **Action** | Runs one of your live [actions](/ai/actions/) against your API or MCP server | Call `Cancel subscription` or `Look up order` |
+
+Use **Hand over to the team when** to list cases where the agent must stop and [hand over](/ai/handover/) right away. If a step's action is unavailable in a chat (for instance, an anonymous visitor has not passed [identity verification](/developers/messenger/identity-verification/)), the agent hands over instead of guessing.
+
+## Drafts, publishing, and pausing
+
+You can write and edit procedures without breaking live chats:
+
+- **Drafts stay private:** a new procedure starts as a draft the agent never sees. Click **Publish** when it is ready.
+- **Safe edits:** changes to a live procedure save to a draft while the agent keeps using the published copy. Edits go live only when you click **Publish changes**.
+- **Checks before going live:** dimmi checks every step before publishing and blocks it if a required field is empty or an action is missing or unpublished.
+- **Quick pause:** **Turn off** stops the agent from using a procedure right away while keeping all your text.
+- **Triage-only mode:** if **Agent's role** is set to **Triage only** in [agent settings](/ai/set-up-the-agent/), the agent skips all procedures.
+
+The **Procedures** list shows how many chats used each procedure in the last **30 days**. Each procedure supports up to **30 steps** and **10 handover rules**; if a process grows larger than that, split it into two focused procedures.
+
+To let your procedures read or update live customer data, head to [Connect actions to your systems](/ai/actions/) or [Build your first action](/ai/first-action/).

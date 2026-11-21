@@ -1,11 +1,11 @@
 ---
 title: "Secure your workspace"
-description: "The sign-in rules a dimmi workspace can set, what each one binds and the checks that stop you locking yourself out."
+description: "Restrict sign-in methods, set session timeouts, add IP allowlists, and require two-factor authentication."
 ---
 
-An Admin or Owner sets the workspace's sign-in rules in **Settings → Security**. dimmi checks them on every request inside the workspace, so a change applies to each member's next request.
+Admins and Owners manage workspace security rules in **Settings → Security**. dimmi checks these rules on every request, so changes apply on each teammate's very next action.
 
-## What each rule binds
+## What each rule covers
 
 | Rule | Browser and app sessions | API tokens |
 | --- | --- | --- |
@@ -15,39 +15,39 @@ An Admin or Owner sets the workspace's sign-in rules in **Settings → Security*
 | **API IP allowlist** | No | Yes |
 | **Require two-factor authentication** | Yes | Yes |
 
-A rule applies to this workspace only. A person keeps working in their other workspaces.
+Every rule applies only to this workspace. Teammates can still access their other workspaces normally.
 
 ## Sign-in methods
 
-The list shows the methods your dimmi offers: **Password**, **Email link or code**, **Google**, **GitHub** and **Single sign-on**. A self-hosted server shows the [sign-in providers](/self-hosting/sign-in-providers/) it has configured.
+Choose which login options teammates can use: **Password**, **Email link or code**, **Google**, **GitHub**, or **Single sign-on**. Self-hosted servers show whichever [sign-in providers](/self-hosting/sign-in-providers/) you turned on.
 
-- **All checked:** no rule. A method dimmi adds later also works.
-- **Google domains:** limits Google sign-in to accounts of those domains.
-- **Safety check:** dimmi refuses a list that leaves out the method you signed in with, or that no active Owner could meet.
+- **All checked:** no restriction. Future sign-in methods work too.
+- **Google domains:** limit Google sign-in to specific company domains.
+- **Lockout guard:** dimmi rejects any rule that excludes your own sign-in method or leaves no active Owner able to sign in.
 
-To send a whole email domain through your identity provider, see [single sign-on](/workspace/single-sign-on/).
+To enforce SSO for an entire email domain, see [Set up single sign-on](/workspace/single-sign-on/).
 
-## Session length
+## Session timeouts
 
-- **Sign in again after:** counted from the last full sign-in. Choices run from **1 hour** to **30 days**.
-- **Sign out when idle for:** choices run from **15 minutes** to **7 days**. dimmi notes activity every five minutes, so a session can outlast the limit by that long.
+- **Sign in again after:** max session age from full sign-in (1 hour to 30 days).
+- **Sign out when idle for:** idle timeout (15 minutes to 7 days). Activity refreshes every 5 minutes, so a session can stay active up to 5 minutes past the exact limit.
 
-Both start at **No limit**, and neither can exceed the limit your dimmi sets for every session.
+Both default to **No limit**, capped by your server's global session limits.
 
 ## IP allowlists
 
-Each allowlist takes up to 100 entries, each a single address or a range such as `203.0.113.0/24`. An empty list lets any address connect.
+Each allowlist accepts up to 100 entries (single IPs or CIDR ranges like `203.0.113.0/24`). Leave empty to allow all IPs.
 
-- **Dashboard IP allowlist:** dimmi refuses a list that leaves out the address you are connecting from.
-- **API IP allowlist:** covers API tokens and the command line.
+- **Dashboard IP allowlist:** blocks saving a list that excludes your current IP address.
+- **API IP allowlist:** applies to API tokens and CLI traffic.
 
-## Two-factor authentication
+## Require two-factor authentication
 
-With **Require two-factor authentication** on, members without two-factor authentication cannot open the workspace until they add an authenticator app, and their API tokens stop working there too.
+When turned on, teammates without an authenticator app cannot open the workspace, and their API tokens stop working there until they enroll.
 
-- You need two-factor authentication on your own account first.
-- dimmi emails every active member who has none.
+- You must turn on two-factor authentication on your own account first.
+- dimmi emails every active teammate who has not set it up yet.
 
-## What dimmi records
+## Audit trail and Owner alerts
 
-A change to the sign-in methods, the session length or an allowlist goes to the [audit log](/workspace/audit-log/) with its new values, and dimmi emails the other Owners.
+Changes to sign-in methods, session timeouts, or IP allowlists are written to the [audit log](/workspace/audit-log/) with the new values, and dimmi notifies the other Owners by email.
