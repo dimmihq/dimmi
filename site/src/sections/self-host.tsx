@@ -58,10 +58,9 @@ dimmi.trackEvent("plan_upgraded", { plan: "growth" });`,
 ];
 
 function CodeCard() {
-  const { ref, started, inView } = useStartInView<HTMLDivElement>(0.35);
+  const { ref, started, inView } = useStartInView<HTMLElement>(0.35);
   const [active, setActive] = useState(0);
   const [paused, setPaused] = useState(false);
-  const [cycle, setCycle] = useState(0);
   const pausedRef = useRef(false);
   pausedRef.current = paused;
 
@@ -69,22 +68,19 @@ function CodeCard() {
     if (!started || !inView || paused) {
       return;
     }
+    const next = (active + 1) % snippets.length;
     const timer = setTimeout(() => {
       if (!pausedRef.current) {
-        setActive((current) => (current + 1) % snippets.length);
+        setActive(next);
       }
     }, TAB_DURATION);
     return () => clearTimeout(timer);
-  }, [started, inView, paused, active, cycle]);
-
-  const choose = (index: number) => {
-    setActive(index);
-    setCycle((c) => c + 1);
-  };
+  }, [started, inView, paused, active]);
 
   return (
-    <div
+    <section
       ref={ref}
+      aria-label="SDK code examples"
       onMouseEnter={() => setPaused(true)}
       onMouseLeave={() => setPaused(false)}
       onFocus={() => setPaused(true)}
@@ -98,7 +94,7 @@ function CodeCard() {
             type="button"
             role="tab"
             aria-selected={active === i}
-            onClick={() => choose(i)}
+            onClick={() => setActive(i)}
             className={cx(
               "relative overflow-hidden rounded-md px-2.5 py-1 text-body-medium transition-colors",
               active === i
@@ -109,7 +105,7 @@ function CodeCard() {
             {snippet.name}
             {active === i && started && inView && !paused ? (
               <span
-                key={`${active}-${cycle}`}
+                key={active}
                 aria-hidden
                 className="absolute inset-x-0 bottom-0 h-0.5 bg-accent-500"
                 style={{ animation: `site-fill-x ${TAB_DURATION}ms linear forwards` }}
@@ -121,7 +117,7 @@ function CodeCard() {
       <div key={snippets[active].name} className="site-code-enter h-[268px]">
         <Code code={snippets[active].code} />
       </div>
-    </div>
+    </section>
   );
 }
 

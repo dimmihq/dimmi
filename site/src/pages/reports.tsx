@@ -93,8 +93,7 @@ const questions = [
   },
   {
     question: "Can I pull report data into our own tools?",
-    answer:
-      "Yes. Export one CSV row per conversation in the background, or query every report through the REST API.",
+    answer: "Yes. Export one CSV row per conversation in the background, or query every report through the REST API.",
   },
   {
     question: "Can everyone see everyone else's metrics?",

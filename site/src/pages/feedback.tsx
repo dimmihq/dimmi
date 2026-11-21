@@ -64,8 +64,16 @@ const rows = [
 const more = [
   { icon: Kanban, title: "Multiple boards", body: "Split feature requests, bug ideas, or separate products." },
   { icon: LockKey, title: "Access controls", body: "Make each board public, customer-only, or private to your team." },
-  { icon: CheckCircle, title: "Moderation queue", body: "Review new submissions before they show up on a public board." },
-  { icon: ArrowsMerge, title: "Merge duplicates", body: "Combine duplicate posts and move every vote and comment over." },
+  {
+    icon: CheckCircle,
+    title: "Moderation queue",
+    body: "Review new submissions before they show up on a public board.",
+  },
+  {
+    icon: ArrowsMerge,
+    title: "Merge duplicates",
+    body: "Combine duplicate posts and move every vote and comment over.",
+  },
   { icon: Note, title: "Internal notes", body: "Debate priorities under a request where customers never see." },
   {
     icon: UserPlus,
@@ -77,7 +85,11 @@ const more = [
     title: "Linked to changelog",
     body: "Every shipped item points straight to the changelog update that launched it.",
   },
-  { icon: Broadcast, title: "Webhooks", body: "Listen for new posts, votes, merges, and status changes in your tools." },
+  {
+    icon: Broadcast,
+    title: "Webhooks",
+    body: "Listen for new posts, votes, merges, and status changes in your tools.",
+  },
   { icon: Code, title: "REST API", body: "Read and manage boards, statuses, and requests from your own code." },
 ];
 
@@ -94,8 +106,7 @@ const questions = [
   },
   {
     question: "Can we keep a board private to customers or our team?",
-    answer:
-      "Yes. Set any board to signed-in customers only, or internal so only your workspace members see it.",
+    answer: "Yes. Set any board to signed-in customers only, or internal so only your workspace members see it.",
   },
   {
     question: "What happens when a teammate links a chat to a request?",

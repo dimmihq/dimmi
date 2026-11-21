@@ -25,7 +25,7 @@ Developers and support leads judge dimmi by how quickly our docs make things cli
 
 ### 2. Mental models before mechanics
 
-Never drop a reader straight into a table of limits or settings without explaining *why* the feature exists and *how* to think about it. Ground every introduction in a recognizable problem:
+Never drop a reader straight into a table of limits or settings without explaining _why_ the feature exists and _how_ to think about it. Ground every introduction in a recognizable problem:
 
 - On **Procedures**: explain why plain-English step-by-step instructions work better than stuffing edge cases into a giant system prompt, and clarify when to use a **procedure** (AI-guided judgment) versus a **workflow** (deterministic routing).
 - On **Tickets**: explain the clean split between a **conversation** (the chat with the customer) and a **ticket** (the tracked work behind it that can link to Linear or Jira).
@@ -48,7 +48,7 @@ Abstract descriptions make readers guess; concrete examples make features click 
 
 ### 5. Warmth without fluff or condescension
 
-Great docs feel welcoming because they anticipate the reader's questions and reassure them at the exact moment they might hesitate (*"You don't need to configure an outbound mailer before your first sign-in. Until you connect one, dimmi writes outbound links to the server logs."*).
+Great docs feel welcoming because they anticipate the reader's questions and reassure them at the exact moment they might hesitate (_"You don't need to configure an outbound mailer before your first sign-in. Until you connect one, dimmi writes outbound links to the server logs."_).
 
 Deliver that exact warmth **without** borrowing filler adverbs (`simply`, `just`, `easily`, `thankfully`, `blazingly`, `seamlessly`) or hype adjectives (`robust`, `elegant`, `powerful`). Calm precision and genuine empathy for the reader's job create warmth on their own.
 
@@ -66,7 +66,7 @@ Write what makes a reader confident and accurate. Skip what wastes their time.
 
 **Still leave out:**
 
-- **Internal plumbing readers do not care about:** leave out behind-the-scenes details that do not change how someone sets up or uses the feature (such as message debounce milliseconds, internal reply character caps, token-trimming mechanics, or internal pipeline flags). Ask: *"Does knowing this change what the reader configures, expects, or debugs?"* If not, cut it.
+- **Internal plumbing readers do not care about:** leave out behind-the-scenes details that do not change how someone sets up or uses the feature (such as message debounce milliseconds, internal reply character caps, token-trimming mechanics, or internal pipeline flags). Ask: _"Does knowing this change what the reader configures, expects, or debugs?"_ If not, cut it.
 - **Click-by-click form narration:** never write five steps to click "New", type a name, and click "Save". Name the screen (**Settings → Webhooks**) and explain only the fields or choices whose consequences matter.
 - **Obvious UI controls:** a toggle labeled **Show launcher** needs no sentence explaining what it shows.
 - **Self-explanatory error messages:** document an error only when the fix is non-obvious.
@@ -100,7 +100,7 @@ Show the simplest real-world setup or usage right after the introduction. Give t
 
 Walk through each major capability in logical order. Use the **prose-example rhythm** inside every section:
 
-1. **Setup (1 to 3 sentences):** state *when* and *why* you would use this capability.
+1. **Setup (1 to 3 sentences):** state _when_ and _why_ you would use this capability.
 2. **Concrete example:** a runnable code block, realistic procedure/rule example, or structured table.
 3. **Clarification (1 to 2 sentences):** explain the non-obvious behavior, default, or return value.
 4. **Optional `<Callout>`:** surface a genuine gotcha, security warning, or helpful shortcut (`note`, `tip`, `caution`, `danger`). Keep to 1 to 2 callouts per page so they stay high-signal.
@@ -112,24 +112,24 @@ Place exact system rules, caps, retry schedules, and limits under a clear headin
 ### 6. Testing and contextual next steps (only when genuinely useful)
 
 - When a feature supports safe testing (dry runs, test mode, `mail_fallback` logs), explain how to verify it before touching live customers.
-- Close with 1 to 2 natural, contextual inline links to what the reader typically sets up next (e.g., *"Once your messenger is live, set up [identity verification](/developers/messenger/identity-verification/) so the dimmi agent can securely read signed-in customer data."*). Never add a padded generic "Next steps" list just to fill space.
+- Close with 1 to 2 natural, contextual inline links to what the reader typically sets up next (e.g., _"Once your messenger is live, set up [identity verification](/developers/messenger/identity-verification/) so the dimmi agent can securely read signed-in customer data."_). Never add a padded generic "Next steps" list just to fill space.
 
 ## Page shapes and templates
 
 Choose the shape that fits the reader's intent. Start from the matching template in `docs/templates/`.
 
-| Shape | When to use | Template |
-| --- | --- | --- |
-| **Feature guide** | Teaching how a dimmi feature works and how to configure it end to end (the default guide chapter) | `docs/templates/explanation.mdx` |
-| **Task / integration guide** | Reaching one specific technical goal (installing the messenger, verifying webhook signatures, connecting Slack) | `docs/templates/how-to.mdx` |
-| **Quickstart / tutorial** | Building one working integration from scratch step by step | `docs/templates/tutorial.mdx` |
-| **Reference** | Looking up structured facts: webhook events, configuration keys, CLI flags, abilities | `docs/templates/reference.mdx` |
+| Shape                        | When to use                                                                                                     | Template                         |
+| ---------------------------- | --------------------------------------------------------------------------------------------------------------- | -------------------------------- |
+| **Feature guide**            | Teaching how a dimmi feature works and how to configure it end to end (the default guide chapter)               | `docs/templates/explanation.mdx` |
+| **Task / integration guide** | Reaching one specific technical goal (installing the messenger, verifying webhook signatures, connecting Slack) | `docs/templates/how-to.mdx`      |
+| **Quickstart / tutorial**    | Building one working integration from scratch step by step                                                      | `docs/templates/tutorial.mdx`    |
+| **Reference**                | Looking up structured facts: webhook events, configuration keys, CLI flags, abilities                           | `docs/templates/reference.mdx`   |
 
 The REST API reference is generated automatically from `tests/contracts/api_v1.openapi.json`. Never hand-write endpoint schemas or duplicate full parameter tables on guide pages; link directly to the endpoint instead.
 
 ## Combining human warmth with `stop-slop` and `make-it-skim`
 
-Great docs read smoothly top to bottom *and* reward a reader who only skims headings and code blocks. Apply both skills deliberately:
+Great docs read smoothly top to bottom _and_ reward a reader who only skims headings and code blocks. Apply both skills deliberately:
 
 ### Applying `stop-slop` in docs
 
@@ -140,7 +140,7 @@ Great docs read smoothly top to bottom *and* reward a reader who only skims head
 
 ### Applying `make-it-skim` and plain English in docs
 
-- **Grade 5 English or lower:** use exact code and product terms (`webhook`, `SAML`, `Postgres`), and keep every surrounding word plain and everyday. Write *"check"* instead of *"verify"*, *"set up"* instead of *"configure"*, *"same every time"* instead of *"deterministic"*, and *"what happens"* instead of *"lifecycle"*. See the plain-word table in [WRITING.md](../WRITING.md).
+- **Grade 5 English or lower:** use exact code and product terms (`webhook`, `SAML`, `Postgres`), and keep every surrounding word plain and everyday. Write _"check"_ instead of _"verify"_, _"set up"_ instead of _"configure"_, _"same every time"_ instead of _"deterministic"_, and _"what happens"_ instead of _"lifecycle"_. See the plain-word table in [WRITING.md](../WRITING.md).
 - **Short, focused paragraphs:** 1 to 2 short sentences (**max 30 to 40 words**, 2 to 3 lines on screen), strictly one idea per paragraph. Break anything longer with a blank line, bullet list, table, or code block.
 - **Layer-Cake headings:** write descriptive sentence-case headings that mirror what a reader scans the right-hand table of contents for (`## Check the signature`, `## Retry schedule`, `## When nobody is free`). Never put a redundant `## Introduction` heading over a 2-sentence opening unless the page has a long multi-section outline where a clear top anchor helps navigation.
 - **Front-load every bullet:** put the key subject or rule in the first 3 words, and vary the opening word across consecutive bullets so scanners do not glaze over.
@@ -181,7 +181,7 @@ These examples take real pages from `docs/src/content/docs/` and show how to ele
 > - **Step 4 (Action):** Call `Issue refund` (configured to require teammate approval) and let the customer know a specialist is confirming the refund.
 > - **Hand over to the team when:** The customer disputes a charge older than 30 days, or threatens a chargeback.
 >
-> *(Followed by `## How matching works`, `## Step kinds`, `## Drafts, publishing, and pausing`, and `## Limits`.)*
+> _(Followed by `## How matching works`, `## Step kinds`, `## Drafts, publishing, and pausing`, and `## Limits`.)_
 
 ### 2. How the dimmi agent works (`docs/src/content/docs/ai/how-the-agent-works.mdx`)
 
@@ -206,21 +206,21 @@ These examples take real pages from `docs/src/content/docs/` and show how to ele
 
 Docs describe what the code ships today. Read the source; never write from memory, old design docs, or the marketing site. Every route, default, limit, config key, and UI label must be verified.
 
-| Fact | Source of truth |
-| --- | --- |
-| REST endpoints, fields, types, required abilities | `tests/contracts/api_v1.openapi.json` (generated from `routes/*.go`) |
-| Webhook events and payloads | `tests/contracts/webhooks_v1.json` |
-| Messenger HTTP API | `tests/contracts/widget_v1.openapi.json`; messenger code in `resources/widget/` |
-| Messenger JavaScript API | `resources/widget/core.ts` (commands), `sdk/browser/src/` |
-| SDK usage | `sdk/<language>/` and each SDK's README (run `make sdk-generate` to inspect generated types) |
-| Config keys and env vars | `config/*.go`, `framework/foundation/config.go` (`koanf` tags and defaults), `deploy/selfhost/.env.example`, `deploy/selfhost/references/` |
-| Request behavior | `routes/*.go` → `app/http/controllers/` → `app/actions/` |
-| Background jobs and timings | `app/jobs/`, `app/listeners/` |
-| Dashboard UI labels | `resources/js/features/shell/navigation.ts`, `resources/js/features/`, `resources/js/lang/en/*.json` |
-| Roles, permissions, abilities | `app/auth/permissions.go`, `app/auth/abilities.go` |
-| Self-hosting installer & stack | `deploy/selfhost/` (`install.sh` / `dimmictl`, `compose.yaml`, `Caddyfile`, `references/`) |
-| Cloud vs. self-hosted differences | `config/edition_*.go` and `settle()` in `config/*.go` |
-| API versioning and compatibility | `contracts/VERSIONING.md` |
+| Fact                                              | Source of truth                                                                                                                            |
+| ------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| REST endpoints, fields, types, required abilities | `tests/contracts/api_v1.openapi.json` (generated from `routes/*.go`)                                                                       |
+| Webhook events and payloads                       | `tests/contracts/webhooks_v1.json`                                                                                                         |
+| Messenger HTTP API                                | `tests/contracts/widget_v1.openapi.json`; messenger code in `resources/widget/`                                                            |
+| Messenger JavaScript API                          | `resources/widget/core.ts` (commands), `sdk/browser/src/`                                                                                  |
+| SDK usage                                         | `sdk/<language>/` and each SDK's README (run `make sdk-generate` to inspect generated types)                                               |
+| Config keys and env vars                          | `config/*.go`, `framework/foundation/config.go` (`koanf` tags and defaults), `deploy/selfhost/.env.example`, `deploy/selfhost/references/` |
+| Request behavior                                  | `routes/*.go` → `app/http/controllers/` → `app/actions/`                                                                                   |
+| Background jobs and timings                       | `app/jobs/`, `app/listeners/`                                                                                                              |
+| Dashboard UI labels                               | `resources/js/features/shell/navigation.ts`, `resources/js/features/`, `resources/js/lang/en/*.json`                                       |
+| Roles, permissions, abilities                     | `app/auth/permissions.go`, `app/auth/abilities.go`                                                                                         |
+| Self-hosting installer & stack                    | `deploy/selfhost/` (`install.sh` / `dimmictl`, `compose.yaml`, `Caddyfile`, `references/`)                                                 |
+| Cloud vs. self-hosted differences                 | `config/edition_*.go` and `settle()` in `config/*.go`                                                                                      |
+| API versioning and compatibility                  | `contracts/VERSIONING.md`                                                                                                                  |
 
 - Operations marked `x-internal: true` exist only for dimmi's own app. Never document them.
 - Copy interface labels verbatim from the dashboard.
@@ -229,9 +229,9 @@ Docs describe what the code ships today. Read the source; never write from memor
 
 ## Code samples
 
-- Set the language on every code fence, and add a file name when relevant: ```` ```ts title="app/layout.tsx" ````.
+- Set the language on every code fence, and add a file name when relevant: ` ```ts title="app/layout.tsx" `.
 - Make every snippet complete enough to paste and run: include imports, client setup, and error handling where it matters.
-- Use `<Tabs>` when the same task differs across languages or frameworks. Put shared explanation *before* the tabs.
+- Use `<Tabs>` when the same task differs across languages or frameworks. Put shared explanation _before_ the tabs.
 - Put placeholders in `<angle_brackets>` and explain each one briefly below the block. Use realistic fake data (`Acme Inc`, `ada@example.com`, `cus_1042`).
 - Omit shell prompts (`$`) so readers can copy commands cleanly. Show output in its own block only when it helps the reader recognize success.
 - Never include a real secret, token, or customer record.
@@ -254,16 +254,16 @@ Use screenshots sparingly: only where seeing a screen saves a reader from huntin
 
 Import components from `~docs/components/mdx` only when they genuinely clarify the structure:
 
-| Component | Use for | Avoid |
-| --- | --- | --- |
-| `<Steps>` | Sequential numbered procedures in a quickstart or tutorial | Non-sequential lists or form narration |
-| `<Tabs>` / `<TabItem label>` | The same task across languages or frameworks | Splitting unrelated information across tabs |
-| `<Callout type>` | `note` (helpful context), `tip` (better practice), `caution` (gotcha), `danger` (security or data loss) | More than 2 per page; hiding core instructions in callouts |
-| `<Card>`, `<CardGrid>`, `<LinkCard>` | Landing and overview pages that route readers onward | Inside detailed guides or reference tables |
-| `<Endpoint method path>`, `<Param>` | Highlighting a specific endpoint inside a guide | Rebuilding the auto-generated API reference |
-| `<FileTree>` | Directory layouts the reader needs to create or locate | Ordinary non-file lists |
-| `<Accordion>` | Optional FAQs | Required instructions or core rules |
-| `<Badge>` | Status markers such as "Beta" inline | Visual emphasis |
+| Component                            | Use for                                                                                                 | Avoid                                                      |
+| ------------------------------------ | ------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------- |
+| `<Steps>`                            | Sequential numbered procedures in a quickstart or tutorial                                              | Non-sequential lists or form narration                     |
+| `<Tabs>` / `<TabItem label>`         | The same task across languages or frameworks                                                            | Splitting unrelated information across tabs                |
+| `<Callout type>`                     | `note` (helpful context), `tip` (better practice), `caution` (gotcha), `danger` (security or data loss) | More than 2 per page; hiding core instructions in callouts |
+| `<Card>`, `<CardGrid>`, `<LinkCard>` | Landing and overview pages that route readers onward                                                    | Inside detailed guides or reference tables                 |
+| `<Endpoint method path>`, `<Param>`  | Highlighting a specific endpoint inside a guide                                                         | Rebuilding the auto-generated API reference                |
+| `<FileTree>`                         | Directory layouts the reader needs to create or locate                                                  | Ordinary non-file lists                                    |
+| `<Accordion>`                        | Optional FAQs                                                                                           | Required instructions or core rules                        |
+| `<Badge>`                            | Status markers such as "Beta" inline                                                                    | Visual emphasis                                            |
 
 ## Pre-publish checklist
 

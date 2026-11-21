@@ -521,9 +521,30 @@ export function TrackerFragment() {
 }
 
 const issues: { provider: string; tool: string; key: string; title: string; status: string; color: ChipColor }[] = [
-  { provider: "linear", tool: "Linear", key: "ENG-412", title: "Export truncates final row", status: "Done", color: "lime" },
-  { provider: "jira", tool: "Jira", key: "OPS-88", title: "EU webhook queue backlog", status: "In Progress", color: "blue" },
-  { provider: "github", tool: "GitHub", key: "#1904", title: "Flush the last CSV chunk", status: "Closed", color: "lime" },
+  {
+    provider: "linear",
+    tool: "Linear",
+    key: "ENG-412",
+    title: "Export truncates final row",
+    status: "Done",
+    color: "lime",
+  },
+  {
+    provider: "jira",
+    tool: "Jira",
+    key: "OPS-88",
+    title: "EU webhook queue backlog",
+    status: "In Progress",
+    color: "blue",
+  },
+  {
+    provider: "github",
+    tool: "GitHub",
+    key: "#1904",
+    title: "Flush the last CSV chunk",
+    status: "Closed",
+    color: "lime",
+  },
 ];
 
 /* The engineering work behind a ticket, and the update it drafted. */

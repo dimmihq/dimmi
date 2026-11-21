@@ -62,8 +62,16 @@ const rows = [
 
 const more = [
   { icon: Tag, title: "Custom labels", body: "Starts with New, Improved, and Fixed. Add your own labels and colors." },
-  { icon: CalendarCheck, title: "Scheduled launches", body: "Write release notes ahead of time and let them go live on cue." },
-  { icon: ImageSquare, title: "Cover images", body: "Add a crisp screenshot or header image on the page and in email." },
+  {
+    icon: CalendarCheck,
+    title: "Scheduled launches",
+    body: "Write release notes ahead of time and let them go live on cue.",
+  },
+  {
+    icon: ImageSquare,
+    title: "Cover images",
+    body: "Add a crisp screenshot or header image on the page and in email.",
+  },
   { icon: UsersThree, title: "Named authors", body: "Credit everyone on the team who helped ship the release." },
   {
     icon: ChartBar,
@@ -93,8 +101,7 @@ const questions = [
   },
   {
     question: "Will fixing a typo email subscribers a second time?",
-    answer:
-      "Never. Edits save as a draft until you publish them, and subscribers only get emailed once per release.",
+    answer: "Never. Edits save as a draft until you publish them, and subscribers only get emailed once per release.",
   },
   {
     question: "Can I use the changelog without a help center?",

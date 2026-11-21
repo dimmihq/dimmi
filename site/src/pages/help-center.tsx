@@ -121,13 +121,11 @@ const questions = [
   },
   {
     question: "Can we run separate help centers for different brands?",
-    answer:
-      "Yes. Create one help center per product or brand, each with its own custom domain, articles, and styling.",
+    answer: "Yes. Create one help center per product or brand, each with its own custom domain, articles, and styling.",
   },
   {
     question: "Will Google index our help articles?",
-    answer:
-      "Yes, unless you switch indexing off. Pages render as fast HTML with canonical links on your own domain.",
+    answer: "Yes, unless you switch indexing off. Pages render as fast HTML with canonical links on your own domain.",
   },
 ];
 

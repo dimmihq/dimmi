@@ -60,8 +60,7 @@ const questions = [
   },
   {
     question: "Can workflows run on a schedule or office hours?",
-    answer:
-      "Yes. Run them every Monday at 9:00, every hour, or only inside or outside your workspace office hours.",
+    answer: "Yes. Run them every Monday at 9:00, every hour, or only inside or outside your workspace office hours.",
   },
   {
     question: "So can I cancel Zapier?",
