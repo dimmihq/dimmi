@@ -2,6 +2,14 @@
 # behind nginx. Build from the repository root, since both share the
 # app's BoardUI components and tokens and the docs read the API contract:
 #   docker build -f site/Dockerfile -t dimmi-site .
+#
+# CI builds the files on the runner instead, where pnpm's store is warm,
+# and only packs them here:
+#   docker buildx build -f site/Dockerfile --build-arg SITE=prebuilt \
+#     --build-context prebuilt=site/dist .
+
+ARG SITE=source
+
 FROM --platform=$BUILDPLATFORM node:24.11-bookworm-slim AS build
 WORKDIR /app
 RUN corepack enable
@@ -14,7 +22,21 @@ COPY site site
 COPY docs docs
 RUN pnpm site:build
 
-FROM nginx:1.29-alpine
+FROM scratch AS source-site
+COPY --from=build /app/site/dist /dist
+
+# Empty unless the build replaces it with --build-context prebuilt=<dist>.
+FROM scratch AS prebuilt
+FROM scratch AS prebuilt-site
+COPY --from=prebuilt . /dist
+
+FROM ${SITE}-site AS release-site
+
+# nginx as an unprivileged user, on port 8080.
+FROM nginxinc/nginx-unprivileged:1.29-alpine
+ARG REVISION=unknown
+LABEL org.opencontainers.image.source=https://github.com/dimmihq/dimmi
+LABEL org.opencontainers.image.revision=$REVISION
 COPY site/nginx.conf /etc/nginx/conf.d/default.conf
-COPY --from=build /app/site/dist /usr/share/nginx/html
+COPY --from=release-site /dist /usr/share/nginx/html
 EXPOSE 8080

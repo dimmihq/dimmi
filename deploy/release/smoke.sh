@@ -4,7 +4,8 @@
 #   deploy/release/smoke.sh https://staging.trydimmi.com [expect-gate]
 #
 # The certificate must verify, health must answer, plain HTTP must redirect to
-# HTTPS, and the gate must be on exactly where it is expected. GATE_KEY, when
+# HTTPS, the marketing site and its docs must answer on the host without the
+# gate, and the gate must be on exactly where it is expected. GATE_KEY, when
 # set, is sent as the gate's CI key header. EXPECT_RELEASE, when set, must
 # be the release /up reports, so the check proves the new build answers.
 
@@ -30,6 +31,11 @@ fi
 
 code="$(status "http://$HOST/")"
 case "$code" in 301 | 308) ;; *) fail "http://$HOST/ answered $code, expected a redirect to HTTPS" ;; esac
+
+for path in / /docs/ /pricing; do
+  code="$(status "$BASE$path")"
+  [ "$code" = "200" ] || fail "the site's $BASE$path answered $code"
+done
 
 code="$(status "$BASE/d")"
 if [ -n "$EXPECT_GATE" ]; then

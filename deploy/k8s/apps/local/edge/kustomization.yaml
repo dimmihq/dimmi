@@ -1,0 +1,27 @@
+# The edge on this machine: Caddy serves dimmi.localhost with its own local
+# certificate, published on the host at https://dimmi.localhost:18443
+# (curl -k; browsers resolve *.localhost to this machine on their own).
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: dimmi-local
+resources:
+  - ../../base/edge
+configMapGenerator:
+  - name: edge
+    literals:
+      - HOST=dimmi.localhost
+      - FILES_HOST=files.dimmi.localhost
+      - ACME_EMAIL=ops@trydimmi.com
+      - SITE_ROBOTS=noindex
+      - HOST_TLS=tls internal
+patches:
+  - target:
+      kind: Service
+      name: edge
+    patch: |
+      - op: add
+        path: /spec/ports/0/nodePort
+        value: 30081
+      - op: add
+        path: /spec/ports/1/nodePort
+        value: 30443
