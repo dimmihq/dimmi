@@ -1,40 +1,44 @@
 ---
 title: "Set up the dimmi agent"
-description: "The defaults of a new dimmi agent, what must be in place before it can answer and what each setting changes."
+description: "Turn on the dimmi agent, see its defaults, and choose how it works alongside your team."
 ---
 
-Set up the dimmi agent in **Settings → dimmi agent**. Only admins can change it.
+The dimmi agent starts turned off in a new workspace. You set it up in **Settings → dimmi agent**, and only admins can change these settings.
 
-## Turn it on
+Add your [knowledge sources](/ai/knowledge-sources/) before you switch it on. The agent only answers from your help center and the sources you connect.
 
-**Answer customers** is off in a new workspace. The switch unlocks once the agent has:
+## Turn the agent on
 
-- A working connection in **Settings → AI providers**. See [AI providers](/ai/providers/).
-- An **Answer model** on that connection.
-- At least one channel ticked under **Channels**.
+The **Answer customers** switch unlocks as soon as three things are in place:
 
-Add [knowledge sources](/ai/knowledge-sources/) first: the agent answers only from your help center and those sources.
+- **A provider connection:** set up and working in **Settings → AI providers**. See [AI providers](/ai/providers/).
+- **An answer model:** picked on that connection.
+- **At least one channel:** ticked under **Channels**.
 
 ## Settings and defaults
 
+Start with the defaults and tune them once you see the agent answer real conversations.
+
 | Setting | Default | What it changes |
 | --- | --- | --- |
-| **Name** | dimmi | Shown on the agent's replies. Up to 60 characters. |
-| **Tone** | **Friendly** | |
-| **Guidance** | Empty | Rules the agent follows in every reply. Up to 2,000 characters. |
-| **Channels** | **Messenger** | Also **Email**, **API** and **Slack**. |
-| **Hours** | **Always** | The other two options follow the [office hours](/inbox/office-hours/) of each conversation's inbox. |
-| **Once a teammate is assigned** | **Step back while a teammate is active** | See below. |
-| **Replies per conversation** | 5 replies | 3, 5, 10 or 20. The agent then [hands over](/ai/handover/). |
-| **When it doesn't know** | **Offer a teammate** | See [Control handover](/ai/handover/). |
+| **Name** | `dimmi` | The name shown on the agent's replies. |
+| **Tone** | **Friendly** | How formal or casual the agent sounds. |
+| **Guidance** | Empty | Plain rules the agent follows in every reply. |
+| **Channels** | **Messenger** | Also **Email**, **API**, and **Slack**. |
+| **Hours** | **Always** | The other options follow the [office hours](/inbox/office-hours/) of each inbox. |
+| **Once a teammate is assigned** | **Step back while a teammate is active** | How the agent shares a thread with a teammate. See below. |
+| **Replies per conversation** | 5 replies | Choose 3, 5, 10, or 20. After that, the agent [hands over](/ai/handover/). |
+| **When it doesn't know** | **Offer a teammate** | What happens when the agent has no answer. See [Control handover](/ai/handover/). |
 | **Links it may share** | Empty | One site per line. `*.example.com` covers `example.com` and every subdomain. |
-| **Hide personal data** | On | See [customer data](/ai/customer-data/). |
-| **Monthly cap** | $25 | See [the monthly cap](/ai/providers/#set-the-monthly-cap). |
+| **Hide personal data** | On | Masks sensitive details before sending text to the AI provider. See [customer data](/ai/customer-data/). |
+| **Monthly cap** | $25 | Stops AI spend at your limit. See [the monthly cap](/ai/providers/#set-the-monthly-cap). |
 
-## When a teammate is assigned
+## How the agent shares threads with teammates
 
-- **Step back while a teammate is active:** the agent stays quiet while the assigned teammate is online, or has replied in the conversation in the last 24 hours.
-- **Stop once someone is assigned:** the agent never replies in an assigned conversation.
+Pick how the agent behaves once a conversation has an assigned teammate:
+
+- **Step back while a teammate is active:** the agent stays quiet while the assigned teammate is online, or replied in the last 24 hours.
+- **Stop once someone is assigned:** the agent stops replying in any assigned conversation.
 - **Keep answering:** the agent replies even when a teammate is assigned.
 
-With every option, the agent skips a customer message that a teammate has already answered.
+No matter which option you pick, the agent never replies to a customer message that a teammate already answered.

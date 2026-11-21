@@ -1,17 +1,19 @@
 ---
 title: "Slack room modes"
-description: "What each Slack room mode does: who counts as a customer, what becomes a conversation and how replies flow."
+description: "Pick the right room mode for each Slack channel so dimmi knows who counts as a customer and how replies should flow."
 ---
 
-A room mode tells dimmi who the customer is in a Slack channel. Set it under **Who is the customer** in the channel's settings, on the [Slack page](/channels/slack/).
+A room mode tells dimmi who counts as a customer in a Slack channel. Set it under **Who is the customer** in each channel's settings on the [Slack integration page](/channels/slack/).
 
-| Mode | Who is the customer | What becomes a conversation | How replies flow |
+| Mode | Who counts as a customer | What opens a conversation | How replies flow |
 | --- | --- | --- | --- |
-| **Shared with a customer** | People from the other organization, and guests of your Slack workspace. | Customer messages, by the channel's [trigger](/channels/slack/#triggers). | Inbox and dimmi agent replies post in the customer's thread. A reply from any member of your Slack workspace who is not a guest stops the agent, but dimmi records only linked teammates' replies. |
-| **Community** | Everyone who is not a linked teammate. | Customer messages, by the trigger. | The same, but only a linked teammate's reply stops the agent. |
-| **Help desk** | Your colleagues who are not linked teammates. | Colleagues' messages, by the trigger. | As in **Community**. The app's **Home** tab shows each colleague their own requests. |
-| **Team only** | Nobody. | Nothing. | A linked teammate's message under a triage card becomes a note. One that starts with `>>` goes to the customer. |
+| **Shared with a customer** | People from the external organization, plus Slack guests. | Customer messages matching the channel's [trigger](/channels/slack/#triggers). | Inbox and agent replies post in the customer's thread. Any non-guest member of your Slack workspace stops the agent, though only linked teammates' replies record under their name. |
+| **Community** | Anyone who is not a linked dimmi teammate. | Customer messages matching the trigger. | Same flow, except only a linked teammate's reply stops the agent. |
+| **Help desk** | Internal colleagues who are not linked teammates. | Colleagues' messages matching the trigger. | Same as **Community**. Each colleague sees their own requests in the app's **Home** tab. |
+| **Team only** | Nobody. | Nothing. | Linked teammates' replies under a triage card save as internal notes. Messages starting with `>>` send to the customer. |
 
-- **Defaults:** a Slack Connect channel shared with another organization starts as **Shared with a customer**, and any other channel as **Community**. dimmi never changes it afterward.
-- **Linked teammate:** a Slack user whose Slack email is the verified sign-in email of an active workspace member.
-- **Shared channels:** when the other organization changes, dimmi unlinks the channel's company, so the new organization sees none of the first one's data.
+A few defaults and safeguards:
+
+- **Smart defaults:** Slack Connect channels shared with another org start as **Shared with a customer**; all other channels start as **Community**. dimmi never changes the mode after you connect a channel.
+- **Linked teammate:** any Slack user whose Slack email matches the verified sign-in email of an active workspace member.
+- **Org swap protection:** if the external organization in a shared channel changes, dimmi unlinks the channel's company so the new org never sees the old org's data.

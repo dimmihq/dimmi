@@ -1,13 +1,13 @@
 ---
-title: "Connect Claude, ChatGPT or Cursor over MCP"
-description: "Connect an AI assistant to your dimmi workspace through the MCP server at /mcp, with OAuth or an API token."
+title: "Connect Claude, ChatGPT, or Cursor over MCP"
+description: "Give AI assistants secure access to your dimmi workspace through the remote MCP server at /mcp."
 ---
 
-The dimmi MCP server is at `https://trydimmi.com/mcp`, or `/mcp` on your own dimmi address when self-hosted, and speaks Streamable HTTP.
+The dimmi MCP server runs over Streamable HTTP at `https://trydimmi.com/mcp` (or `/mcp` on your self-hosted server).
 
 ## Connect with OAuth
 
-Add the address as a remote MCP server or custom connector in your assistant. The assistant opens dimmi in your browser, where you pick the workspace and the access to give.
+Add the URL as a remote MCP server in your assistant. It opens dimmi in your browser so you can choose a workspace and approve scopes.
 
 ```bash title="Claude Code"
 claude mcp add --transport http dimmi https://trydimmi.com/mcp
@@ -21,11 +21,11 @@ claude mcp add --transport http dimmi https://trydimmi.com/mcp
 }
 ```
 
-To disconnect an assistant, open **Settings → Connected apps**.
+Revoke access anytime in **Settings → Connected apps**.
 
 ## Connect with an API token
 
-A client that cannot open a browser sends an [API token](/developers/api/authentication/) in the `Authorization` header.
+If your client cannot open a browser for OAuth, pass an [API token](/developers/api/authentication/) in the `Authorization` header:
 
 ```json title=".cursor/mcp.json"
 {
@@ -38,27 +38,27 @@ A client that cannot open a browser sends an [API token](/developers/api/authent
 }
 ```
 
-## Tools
+## Available tools
 
-- **One tool per REST API operation.** `dimmi_conversations_list` lists conversations, as the [REST API](/api-reference/) does. The assistant sees only the tools its [abilities](/developers/api/abilities/) allow.
-- **Your role applies.** Each call runs through the REST API as you, in one workspace.
-- **`dimmi_guide`** explains dimmi's records and common jobs to the assistant.
-- **No tool** exists for operations that upload a file, need your password confirmed or finish a sign-in in a browser.
+- **Matches the REST API:** every endpoint becomes a tool (like `dimmi_conversations_list`), filtered by the token's [abilities](/developers/api/abilities/).
+- **Scoped to your role:** every call runs through the REST API as you inside one workspace.
+- **Built-in guide:** `dimmi_guide` teaches your assistant dimmi's data model and common workflows.
+- **Excluded operations:** endpoints that upload files, require password confirmation, or need browser sign-in are omitted.
 
-## Approvals
+## Built-in safety approvals
 
-dimmi asks you to approve each call of a tool that does one of these:
+dimmi pauses for your explicit confirmation before running sensitive tools:
 
-- Reaches customers or the public: a reply, a published article.
-- Reads private data, such as an export or the audit log.
-- Deletes something, or changes settings, members, roles, keys or billing.
+- Sending customer-facing or public content (such as replies or publishing articles).
+- Reading sensitive records (such as data exports or the audit log).
+- Deleting records or changing settings, members, roles, keys, or billing.
 
-An assistant that supports MCP elicitation shows you the question. Any other assistant gets a preview and a `confirmation_token`, shows you the preview, and calls the tool again with the token after you agree. The token works for 10 minutes and for the same arguments only.
+Clients with MCP elicitation prompt you inline. Other clients receive a preview and a `confirmation_token` (valid for 10 minutes for the exact same arguments) to confirm after you approve.
 
-## Limits
+## Transport limits
 
 | Limit | Value |
 | --- | --- |
-| Request body | 1 MiB |
-| Transport | `POST` only, one JSON response per request, no session and no event stream |
-| Browser origins | The dimmi app's own origin only |
+| Max request body | 1 MiB |
+| Transport | `POST` only, single JSON response per call (no sessions or SSE stream) |
+| Browser CORS | Restricted to dimmi's own app origin |

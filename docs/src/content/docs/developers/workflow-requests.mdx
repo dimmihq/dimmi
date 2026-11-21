@@ -1,24 +1,24 @@
 ---
 title: "Call your system from workflows and series"
-description: "Call your own API from a workflow step or a series webhook step, and map the response into dimmi."
+description: "Send HTTP requests from workflow steps or series webhook steps and save JSON values back into dimmi."
 ---
 
-A workflow's **Call your system** step sends one request to your API and can save values from the JSON answer, and a series' **Webhook** step posts the customer to your endpoint and moves on.
+Workflows use the **Call your system** step to fetch or send data and save response fields for later steps. Series use the **Webhook** step to notify your backend as customers move through a journey.
 
 ## Workflow step: Call your system
 
-The step carries no signature and no dimmi header. To authenticate it, pick a **Connection**: a REST API connection from **Settings → Actions**, whose credential and default headers dimmi adds as it does for [agent actions](/developers/agent-actions-api/).
+This step does not add dimmi headers or signatures. To authenticate, select a REST API **Connection** from **Settings → Actions** so dimmi attaches its credentials and default headers (same as [agent actions](/developers/agent-actions-api/)).
 
-| Setting | Rule |
+| Setting | Rules |
 | --- | --- |
-| **Connection** | With one, write a **Path** under its base URL. Without one, write a full `https://` **URL**, and the request has no credentials. |
-| **Method** | `GET`, `POST`, `PUT`, `PATCH` or `DELETE`. |
-| **Headers** | Up to 10. dimmi refuses `Authorization`, `Cookie`, `Host`, `Content-Length`, `Proxy-Authorization` and names starting with `X-Api-Key`. |
-| **Body** | JSON, up to 8,000 characters, for `POST`, `PUT` and `PATCH`. dimmi sends it as `application/json`. |
-| **Give up after** | 2, 5, 8 or 10 seconds. The default is 8. |
-| **Save from the response** | Up to 10 values. |
+| **Connection** | With a connection, enter a relative **Path**. Without one, enter a full `https://` **URL** (sent without credentials). |
+| **Method** | `GET`, `POST`, `PUT`, `PATCH`, or `DELETE`. |
+| **Headers** | Up to 10 custom headers. Blocks `Authorization`, `Cookie`, `Host`, `Content-Length`, `Proxy-Authorization`, and `X-Api-Key*`. |
+| **Body** | JSON up to 8,000 characters (for `POST`, `PUT`, and `PATCH`), sent as `application/json`. |
+| **Give up after** | 2, 5, 8 (default), or 10 seconds. |
+| **Save from the response** | Map up to 10 JSON paths into variables or customer attributes. |
 
-The URL, header values and body take variables such as `{{contact.email}}` or `{{contact.email | fallback: "unknown"}}`. dimmi escapes each value for its place, so a customer's text cannot break the JSON or add a header. [Triggers and steps](/workflows/triggers-and-steps/) lists the variables.
+URLs, headers, and bodies support variables like `{{contact.email}}` or `{{contact.email | fallback: "unknown"}}`. dimmi escapes every value safely for its context so customer text cannot break JSON or inject headers. See [Triggers and steps](/workflows/triggers-and-steps/).
 
 ```json title="Body"
 {
@@ -27,18 +27,18 @@ The URL, header values and body take variables such as `{{contact.email}}` or `{
 }
 ```
 
-### How dimmi reads the answer
+### Handling the response
 
-- **`2xx`.** The workflow goes on. dimmi reads up to 256 KB of JSON and copies each saved path, such as `data.plan` or `items.0.id`, to a run variable (`{{run.vars.<key>}}` in later steps) or a customer attribute. A path that finds nothing saves nothing, and an object or list is saved as JSON text.
-- **Anything else.** A redirect, another status, a timeout or a refused address fails the step. The workflow takes the failure path when **Take a separate path when the call fails** is on, and goes on otherwise.
+- **`2xx` status:** reads up to 256 KB of JSON and saves mapped paths (like `data.plan` or `items.0.id`) into `{{run.vars.<key>}}` or customer attributes. Missing paths save nothing; objects and arrays save as JSON strings.
+- **Any failure:** redirects, non-`2xx` codes, timeouts, or blocked hosts fail the step. Turn on **Take a separate path when the call fails** to branch on errors; otherwise the workflow continues.
 
-dimmi sends the request once and never retries it. It refuses private, loopback and link-local addresses.
+dimmi sends workflow requests once with no retries and blocks private, loopback, and link-local addresses.
 
-The run's trace keeps the status and one of these reasons, never the body: `http_status`, `timeout`, `unreachable`, `host_blocked`, `response_too_large`, `body_invalid`, `connection_disabled`.
+The run trace logs the HTTP status and one reason code (never the response body): `http_status`, `timeout`, `unreachable`, `host_blocked`, `response_too_large`, `body_invalid`, or `connection_disabled`.
 
 ## Series step: Webhook
 
-The **Webhook** step sends this `POST` to its **Endpoint**:
+A series **Webhook** step sends this `POST` payload to your endpoint:
 
 ```json
 {
@@ -53,7 +53,7 @@ The **Webhook** step sends this `POST` to its **Endpoint**:
 }
 ```
 
-- **`company_id`** is the customer's company and is left out when they have none. In a series that enrolls companies, `contacts` lists the company's people.
-- **`Idempotency-Key`**, a request header, is the same on each attempt for one enrollment and step. Skip a key you have handled.
-- **No signature.** dimmi does not sign the request, so put a secret in the address and check it.
-- **Answer.** dimmi waits up to 10 seconds, ignores the body and moves the customer to the next step whatever the status.
+- **`company_id`:** included when the customer belongs to a company. In account-level series, `contacts` lists every person at that company.
+- **`Idempotency-Key` header:** identical across retries for the same enrollment and step so you can deduplicate safely.
+- **Authentication:** requests are not signed, so include a secret token in your endpoint URL and verify it on your server.
+- **Timeout:** waits up to 10 seconds, ignores the response body, and advances the customer to the next step regardless of HTTP status.

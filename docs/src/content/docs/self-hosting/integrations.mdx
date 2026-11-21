@@ -1,23 +1,25 @@
 ---
 title: "Connect integrations"
-description: "Register the OAuth apps dimmi needs for Slack, Linear, Jira, GitHub and other integrations on your server."
+description: "Register OAuth apps for Slack, Linear, Jira, GitHub, Notion, WhatsApp, Instagram, and Facebook on your self-hosted server."
 ---
 
-A workspace can connect a service only after you register an OAuth app at that service and give dimmi its credentials.
+Before workspaces can connect OAuth integrations, register an app with each provider and store its credentials on your server.
 
-Give each app the redirect URL `https://<app_domain>/integrations/<service>/callback`, where `<app_domain>` is the domain you installed dimmi on and `<service>` is the name in the table. Then set the variables, each prefixed with `DIMMI_SERVICES__`:
+Set each OAuth app's redirect URI to `https://<app_domain>/integrations/<service>/callback` (`<app_domain>` is your dimmi hostname). Prefix every variable below with `DIMMI_SERVICES__`:
 
-| Service | `<service>` | Variables |
+| Integration | `<service>` | Variables |
 | --- | --- | --- |
-| Slack | `slack` | `SLACK__CLIENT_ID`, `SLACK__CLIENT_SECRET`, `SLACK__SIGNING_SECRET`, `SLACK__APP_ID` |
-| Linear | `linear` | `LINEAR__CLIENT_ID`, `LINEAR__CLIENT_SECRET`, `LINEAR__WEBHOOK_SECRET` |
-| Jira | `jira` | `JIRA__CLIENT_ID`, `JIRA__CLIENT_SECRET` |
-| GitHub | `github` | `GITHUB__CLIENT_ID`, `GITHUB__CLIENT_SECRET`, `TRACKERS__GITHUB_WEBHOOK_SECRET` |
-| Notion | `notion` | `NOTION__CLIENT_ID`, `NOTION__CLIENT_SECRET` |
-| Intercom | `intercom` | `INTERCOM__CLIENT_ID`, `INTERCOM__CLIENT_SECRET` |
-| Zendesk | `zendesk` | `ZENDESK__CLIENT_ID`, `ZENDESK__CLIENT_SECRET` |
-| WhatsApp | none | `WHATSAPP__APP_ID`, `WHATSAPP__APP_SECRET`, `WHATSAPP__CONFIG_ID`, `WHATSAPP__VERIFY_TOKEN` |
-| Instagram, Messenger | none | `META__APP_ID`, `META__APP_SECRET`, `META__VERIFY_TOKEN`, `INSTAGRAM__CONFIG_ID`, `FACEBOOK__CONFIG_ID` |
+| **Slack** | `slack` | `SLACK__CLIENT_ID`, `SLACK__CLIENT_SECRET`, `SLACK__SIGNING_SECRET`, `SLACK__APP_ID` |
+| **Linear** | `linear` | `LINEAR__CLIENT_ID`, `LINEAR__CLIENT_SECRET`, `LINEAR__WEBHOOK_SECRET` |
+| **Jira** | `jira` | `JIRA__CLIENT_ID`, `JIRA__CLIENT_SECRET` |
+| **GitHub** | `github` | `GITHUB__CLIENT_ID`, `GITHUB__CLIENT_SECRET`, `TRACKERS__GITHUB_WEBHOOK_SECRET` |
+| **Notion** | `notion` | `NOTION__CLIENT_ID`, `NOTION__CLIENT_SECRET` |
+| **Intercom** | `intercom` | `INTERCOM__CLIENT_ID`, `INTERCOM__CLIENT_SECRET` |
+| **Zendesk** | `zendesk` | `ZENDESK__CLIENT_ID`, `ZENDESK__CLIENT_SECRET` |
+| **WhatsApp** | None | `WHATSAPP__APP_ID`, `WHATSAPP__APP_SECRET`, `WHATSAPP__CONFIG_ID`, `WHATSAPP__VERIFY_TOKEN` |
+| **Instagram, Messenger** | None | `META__APP_ID`, `META__APP_SECRET`, `META__VERIFY_TOKEN`, `INSTAGRAM__CONFIG_ID`, `FACEBOOK__CONFIG_ID` |
+
+Example using `dimmictl set`:
 
 ```bash
 dimmictl set <<'EOF'
@@ -27,11 +29,13 @@ DIMMI_SERVICES__LINEAR__WEBHOOK_SECRET=<linear_webhook_secret>
 EOF
 ```
 
-- **Slack:** point the app's events at `https://<app_domain>/webhooks/slack/events` and its interactivity at `https://<app_domain>/webhooks/slack/interactions`. dimmi does not start with a Slack client ID and secret but no signing secret.
-- **Linear:** `WEBHOOK_SECRET` is the signing secret of the Linear app's webhook.
-- **WhatsApp:** the Meta app needs no redirect URL. Point its webhook at `https://<app_domain>/webhooks/whatsapp` with `VERIFY_TOKEN`, a random value you make up, as the verify token. `CONFIG_ID` is the app's Embedded Signup configuration. Without these, each workspace [connects its number](/channels/whatsapp/) with a token of its own Meta app.
-- **Instagram, Messenger:** one Meta app serves both, and WhatsApp too: leave the `META__` variables out to reuse the WhatsApp app. Each `CONFIG_ID` is a Facebook Login for Business configuration with a system-user token: Instagram accounts as the asset for one, Pages for the other. Point the app's `instagram` webhook at `https://<app_domain>/webhooks/instagram` and its `page` webhook at `https://<app_domain>/webhooks/facebook`, and add `https://<app_domain>/d/whatsapp-return` as a valid OAuth redirect URI. Meta delivers messages only once the app is live.
-- **GitHub:** one app serves the GitHub [knowledge source](/ai/knowledge-sources/) and [linked issues](/tickets/linked-issues/). dimmi signs the webhook of each linked repository with `TRACKERS__GITHUB_WEBHOOK_SECRET`, a random value you make up. [GitHub sign-in](/self-hosting/sign-in-providers/) uses a separate app.
-- **incident.io, Rootly, PagerDuty:** nothing to set. Each workspace connects with its own API key.
+## Provider-specific notes
 
-To hide a service from every workspace, set `DIMMI_INTEGRATIONS__ENABLED` to the list of services to keep. The default is `slack,notion,intercom,zendesk,github,linear,jira,incident_io,rootly,pagerduty`.
+- **Slack:** point Events to `https://<app_domain>/webhooks/slack/events` and Interactivity to `https://<app_domain>/webhooks/slack/interactions`. dimmi refuses to start if `CLIENT_ID` and `CLIENT_SECRET` are set without `SIGNING_SECRET`.
+- **Linear:** set `WEBHOOK_SECRET` to your Linear app's webhook signing secret.
+- **WhatsApp:** no OAuth redirect URL needed. Point webhooks to `https://<app_domain>/webhooks/whatsapp` using a random `VERIFY_TOKEN` you choose, and set `CONFIG_ID` to your Embedded Signup config ID. Without these, workspaces can still [connect numbers](/channels/whatsapp/) using their own Meta app tokens.
+- **Instagram and Messenger:** one Meta app can serve Instagram, Messenger, and WhatsApp (omit `META__*` to reuse your WhatsApp app credentials). Set each `CONFIG_ID` to a Facebook Login for Business config with a system-user token (Instagram assets for one, Pages for the other). Point the `instagram` webhook to `https://<app_domain>/webhooks/instagram`, the `page` webhook to `https://<app_domain>/webhooks/facebook`, and add `https://<app_domain>/d/whatsapp-return` as a valid OAuth redirect URI. Meta only delivers messages once the app is live.
+- **GitHub:** one OAuth app powers both [knowledge sources](/ai/knowledge-sources/) and [linked issues](/tickets/linked-issues/). Set `TRACKERS__GITHUB_WEBHOOK_SECRET` to a random string dimmi uses to sign repo webhooks. [GitHub sign-in](/self-hosting/sign-in-providers/) uses a separate OAuth app.
+- **incident.io, Rootly, PagerDuty:** no server setup required; each workspace connects with its own API key.
+
+To hide specific integrations server-wide, set `DIMMI_INTEGRATIONS__ENABLED` to the comma-separated list you want to keep (default: `slack,notion,intercom,zendesk,github,linear,jira,incident_io,rootly,pagerduty`).

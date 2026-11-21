@@ -1,163 +1,163 @@
 ---
 title: "Webhook events"
-description: "Each webhook event type dimmi sends, when it fires, and the fields of the event envelope."
+description: "Reference for every dimmi webhook event type, when each fires, and every field in the JSON envelope."
 ---
 
-The event types a webhook endpoint can receive, and the envelope each delivery carries. [List webhook event types](/api-reference/webhooks/list-webhook-event-types/) returns the same list.
+Every event type a webhook endpoint can subscribe to, plus the JSON envelope sent on each delivery. You can fetch the same list via [List webhook event types](/api-reference/webhooks/list-webhook-event-types/).
 
-## Envelope
+## Event envelope
 
 | Field | Type | Description |
 | --- | --- | --- |
-| `id` | string | The event's ID (`evt_...`). The same on each attempt and endpoint, and in the `webhook-id` header. |
-| `object` | string | `event`. |
-| `type` | string | The event type, such as `conversation.created`. |
-| `api_version` | string | The payload version, `2026-11-01`. |
-| `created_at` | string (date-time) | The time of the event, in UTC. |
-| `workspace_id` | string | The workspace's ID (`ws_...`). |
-| `sequence` | integer | For one object, a higher `sequence` carries a newer snapshot. `0` on test sends. |
-| `test` | boolean | `true` on a test send, with a sample in `data.object`. |
-| `truncated` | boolean | `true` for an envelope over 256 KiB, with a reference in `data.object`. See [Webhook delivery and retries](/developers/webhooks/delivery-and-retries/). |
-| `actor.type` | string | `member` (a teammate), `contact` (a customer), `agent` (the dimmi agent), `system` or `integration`. |
-| `actor.id` | string or null | The teammate's ID (`mem_...`) or the customer's ID (`ctc_...`). `null` for the other types. |
-| `data.object` | object | The object the event is about. |
-| `data.*` | | The event's other fields, in the "Also in `data`" column below. |
+| `id` | string | Unique event ID (`evt_...`), repeated on retries and in `webhook-id`. |
+| `object` | string | Always `event`. |
+| `type` | string | Event name, such as `conversation.created`. |
+| `api_version` | string | Payload version (`2026-11-01`). |
+| `created_at` | string (date-time) | UTC timestamp of the event. |
+| `workspace_id` | string | Workspace ID (`ws_...`). |
+| `sequence` | integer | Monotonic per-object version (`0` on test events). Higher numbers are newer. |
+| `test` | boolean | `true` for test deliveries with sample data. |
+| `truncated` | boolean | `true` when the payload exceeds 256 KiB and `data.object` is reduced to a reference. See [Webhook delivery and retries](/developers/webhooks/delivery-and-retries/). |
+| `actor.type` | string | `member` (teammate), `contact` (customer), `agent` (dimmi agent), `system`, or `integration`. |
+| `actor.id` | string or null | Teammate ID (`mem_...`) or customer ID (`ctc_...`), or `null` for system/agent/integration. |
+| `data.object` | object | Primary resource for the event. |
+| `data.*` | varies | Extra event-specific fields listed under "Also in `data`" below. |
 
-## The object in data.object
+## Shapes of `data.object`
 
-`data.object` has the shape the REST API returns. For an object that no longer exists, it is `{"id": "...", "object": "<kind>", "deleted": true}`.
+`data.object` matches the REST API response format. Deleted objects send `{"id": "...", "object": "<kind>", "deleted": true}`.
 
-| `object` | Same shape as |
+| `object` | Matches REST API endpoint |
 | --- | --- |
 | `conversation` | [Get conversation](/api-reference/conversations/get-conversation/), plus `deleted_at`. |
-| `message` | An entry of [List conversation messages](/api-reference/conversations/list-conversation-messages/). |
+| `message` | Item from [List conversation messages](/api-reference/conversations/list-conversation-messages/). |
 | `contact` | [Get contact](/api-reference/contacts-and-companies/get-contact/). |
-| `tag` | An entry of [List tags](/api-reference/conversations/list-tags/). |
+| `tag` | Item from [List tags](/api-reference/conversations/list-tags/). |
 | `changelog_entry` | [Get changelog entry](/api-reference/feedback-and-changelog/get-changelog-entry/). |
 | `feedback_post` | [Get feedback post](/api-reference/feedback-and-changelog/get-feedback-post/). |
 | `broadcast` | [Get broadcast](/api-reference/broadcasts-and-series/get-broadcast/). |
 | `series` | [Get series](/api-reference/broadcasts-and-series/get-series/). |
 | `ticket` | [Get ticket](/api-reference/tickets/get-ticket/). |
-| `series_enrollment` | One person's journey through a series. |
-| `contact_event` | `id`, `object`, `contact`, `occurred_at`, `name` and `ref`. |
+| `series_enrollment` | One customer's journey through a series. |
+| `contact_event` | `id`, `object`, `contact`, `occurred_at`, `name`, and `ref`. |
 
 ## Conversations
 
-A `changes` entry is an object with `from` and `to`.
+Each `changes` entry is an object with `from` and `to`.
 
 | Event | Fires when | Also in `data` |
 | --- | --- | --- |
-| `conversation.created` | A conversation started. | |
-| `conversation.updated` | A conversation's subject or inbox changed. | `changes` |
-| `conversation.assigned` | A conversation's assignee or team changed. | `changes`, `reason` |
-| `conversation.closed` | A conversation was closed. | `reason` |
-| `conversation.rated` | A customer rated a closed conversation or changed their rating. | `rating` |
-| `conversation.reopened` | A closed conversation opened again. | `reason` |
-| `conversation.snoozed` | A conversation was snoozed. | `snoozed_until` |
-| `conversation.unsnoozed` | A snooze ended. | `reason` |
-| `conversation.priority_changed` | A conversation's priority changed. | `changes` |
-| `conversation.tagged` | Tags were added to a conversation. | `tag_ids` |
-| `conversation.untagged` | Tags were removed from a conversation. | `tag_ids` |
-| `conversation.marked_spam` | A conversation was marked as spam. | |
-| `conversation.unmarked_spam` | A conversation was taken out of spam. | |
-| `conversation.merged` | Another conversation was merged into this one. | `merged_id` |
-| `conversation.participants_changed` | People were added to or removed from a conversation. | `added`, `removed` |
-| `conversation.deleted` | A conversation moved to the trash. | |
+| `conversation.created` | A conversation starts. | |
+| `conversation.updated` | Subject or inbox changes. | `changes` |
+| `conversation.assigned` | Assignee or team changes. | `changes`, `reason` |
+| `conversation.closed` | A conversation closes. | `reason` |
+| `conversation.rated` | A customer submits or edits a rating. | `rating` |
+| `conversation.reopened` | A closed conversation reopens. | `reason` |
+| `conversation.snoozed` | A conversation is snoozed. | `snoozed_until` |
+| `conversation.unsnoozed` | A snooze ends. | `reason` |
+| `conversation.priority_changed` | Priority changes. | `changes` |
+| `conversation.tagged` | Tags are added. | `tag_ids` |
+| `conversation.untagged` | Tags are removed. | `tag_ids` |
+| `conversation.marked_spam` | Marked as spam. | |
+| `conversation.unmarked_spam` | Removed from spam. | |
+| `conversation.merged` | Another conversation merges into this one. | `merged_id` |
+| `conversation.participants_changed` | Participants are added or removed. | `added`, `removed` |
+| `conversation.deleted` | Moved to trash. | |
 
 ## Messages
 
-dimmi sends note events, including `ticket.note_created`, only to endpoints with **Internal notes** turned on.
+Note events (including `ticket.note_created`) only deliver to endpoints with **Internal notes** turned on.
 
 | Event | Fires when | Also in `data` |
 | --- | --- | --- |
-| `message.created` | A message or note was added to a conversation. | |
-| `message.updated` | A note was edited. | |
-| `message.deleted` | A message or note was deleted. | |
-| `message.delivery_updated` | A sent message was delivered, read or failed. | `delivery_status`, `delivery_error` |
+| `message.created` | A message or note is added. | |
+| `message.updated` | A note is edited. | |
+| `message.deleted` | A message or note is deleted. | |
+| `message.delivery_updated` | Delivery status changes (delivered, read, or failed). | `delivery_status`, `delivery_error` |
 
 ## Contacts
 
-Wildcards leave out `contact_event.tracked`, whose `data.object` is a `contact_event`; list it by name.
+Wildcards exclude `contact_event.tracked` (whose `data.object` is a `contact_event`). Subscribe to it by name.
 
 | Event | Fires when | Also in `data` |
 | --- | --- | --- |
-| `contact.created` | A contact was added. | |
-| `contact.updated` | A contact's details changed. | `changes`, `changed_attributes` |
-| `contact.deleted` | A contact was erased. | |
-| `contact.merged` | Another contact was merged into this one. | `merged_id`, `moved` |
-| `contact_event.tracked` | Your app tracked an event for a contact. | `name`, `ref` |
+| `contact.created` | A contact is created. | |
+| `contact.updated` | Contact fields or attributes change. | `changes`, `changed_attributes` |
+| `contact.deleted` | A contact is erased. | |
+| `contact.merged` | Another contact merges into this one. | `merged_id`, `moved` |
+| `contact_event.tracked` | An event is tracked for a contact. | `name`, `ref` |
 
 ## Tags
 
 | Event | Fires when |
 | --- | --- |
-| `tag.created` | A tag was added. |
-| `tag.updated` | A tag was renamed or recolored. |
-| `tag.deleted` | A tag was deleted. |
+| `tag.created` | A tag is created. |
+| `tag.updated` | A tag is renamed or recolored. |
+| `tag.deleted` | A tag is deleted. |
 
 ## dimmi agent
 
 | Event | Fires when | Also in `data` |
 | --- | --- | --- |
-| `ai.handoff_requested` | The dimmi agent handed a conversation to the team. `data.object` is the `conversation`. | `handoff` |
+| `ai.handoff_requested` | The dimmi agent hands a conversation to your team (`data.object` is the `conversation`). | `handoff` |
 
 ## Changelog
 
 | Event | Fires when |
 | --- | --- |
-| `changelog_entry.published` | A changelog entry went live. |
-| `changelog_entry.updated` | A live changelog entry was published again with edits. |
-| `changelog_entry.unpublished` | A changelog entry was taken back to a draft. |
+| `changelog_entry.published` | A changelog entry publishes. |
+| `changelog_entry.updated` | A live changelog entry republishes with edits. |
+| `changelog_entry.unpublished` | A changelog entry returns to draft. |
 
 ## Feature requests
 
 | Event | Fires when | Also in `data` |
 | --- | --- | --- |
-| `feedback_post.created` | A feature request was posted. | |
-| `feedback_post.status_changed` | A feature request moved to another status. | `changes` |
-| `feedback_post.voted` | A customer's vote for a feature request was counted. | `vote` |
-| `feedback_post.merged` | A duplicate feature request was merged into this one. | `merged_id` |
-| `feedback_post.linked_conversation` | A conversation was linked to a feature request. | `conversation_id` |
+| `feedback_post.created` | A feature request is posted. | |
+| `feedback_post.status_changed` | Status changes. | `changes` |
+| `feedback_post.voted` | A customer votes on a request. | `vote` |
+| `feedback_post.merged` | A duplicate request merges into this one. | `merged_id` |
+| `feedback_post.linked_conversation` | A conversation links to a request. | `conversation_id` |
 
 ## Broadcasts
 
 | Event | Fires when | Also in `data` |
 | --- | --- | --- |
-| `broadcast.sent` | A broadcast finished sending. | |
-| `broadcast.paused` | A sending broadcast was paused, by a teammate or for bounces or complaints. | `reason` |
+| `broadcast.sent` | A broadcast finishes sending. | |
+| `broadcast.paused` | A broadcast pauses (manually, or for bounces/complaints). | `reason` |
 
 ## Series
 
 | Event | Fires when | Also in `data` |
 | --- | --- | --- |
-| `series.published` | A series went live with a new version. | `version_id` |
-| `series.journey_completed` | A person's journey through a series ended: finished, reached the goal or left. `data.object` is a `series_enrollment`. | `reason`, `goal_reached` |
+| `series.published` | A new series version goes live. | `version_id` |
+| `series.journey_completed` | A customer finishes, hits the goal, or exits (`data.object` is a `series_enrollment`). | `reason`, `goal_reached` |
 
 ## Tickets
 
-Each ticket event also carries `kind`, the ticket's kind, and `changes` in `data`.
+Every ticket event also includes `kind` and `changes` inside `data`.
 
 | Event | Fires when |
 | --- | --- |
-| `ticket.created` | A ticket was created or a conversation converted. |
-| `ticket.updated` | A ticket's title, description or field values changed. |
-| `ticket.state_changed` | A ticket moved to another state. |
-| `ticket.resolved` | A ticket entered a resolved state. |
-| `ticket.reopened` | A resolved ticket left the resolved states. |
-| `ticket.assigned` | A ticket's teammate or team changed. |
-| `ticket.type_changed` | A ticket moved to another type. |
-| `ticket.linked` | A ticket was linked to another ticket or a conversation. |
-| `ticket.unlinked` | A ticket link was removed. |
-| `ticket.issue_linked` | A Linear, Jira or GitHub issue or an engineering incident was linked. |
-| `ticket.issue_updated` | A linked issue's status changed. |
-| `ticket.note_created` | A teammate left an internal note on a ticket. |
-| `ticket.sla_warning` | A ticket's service level target is about to be missed. |
-| `ticket.sla_breached` | A ticket missed a service level target. |
-| `ticket.deleted` | A ticket moved to the trash. |
-| `ticket.restored` | A ticket came back from the trash. |
+| `ticket.created` | A ticket is created or converted from a conversation. |
+| `ticket.updated` | Title, description, or custom fields change. |
+| `ticket.state_changed` | Ticket state changes. |
+| `ticket.resolved` | Ticket enters a resolved state. |
+| `ticket.reopened` | A resolved ticket reopens. |
+| `ticket.assigned` | Teammate or team assignment changes. |
+| `ticket.type_changed` | Ticket type changes. |
+| `ticket.linked` | Linked to another ticket or conversation. |
+| `ticket.unlinked` | A ticket link is removed. |
+| `ticket.issue_linked` | Linked to a Linear, Jira, or GitHub issue, or an engineering incident. |
+| `ticket.issue_updated` | A linked issue's status changes. |
+| `ticket.note_created` | A teammate adds an internal note on a ticket. |
+| `ticket.sla_warning` | An SLA target is about to breach. |
+| `ticket.sla_breached` | An SLA target breaches. |
+| `ticket.deleted` | Moved to trash. |
+| `ticket.restored` | Restored from trash. |
 
 ## Test event
 
 | Event | Fires when |
 | --- | --- |
-| `webhook.test` | You click **Send test** or call [Test webhook endpoint](/api-reference/webhooks/test-webhook-endpoint/). You can't subscribe to it. |
+| `webhook.test` | You click **Send test** or call [Test webhook endpoint](/api-reference/webhooks/test-webhook-endpoint/). Cannot be subscribed to. |

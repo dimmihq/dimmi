@@ -1,16 +1,16 @@
 ---
 title: API reference
-description: Read and change everything in your workspace over HTTPS. Every endpoint, generated from the API contract.
+description: Read and change everything in your dimmi workspace over HTTPS using our JSON REST API.
 ---
 import { Callout, Card, CardGrid, Endpoint, Param } from "~docs/components/mdx";
 
-The API lives at `https://trydimmi.com/api/v1`. It takes and returns JSON, and every page here is generated from the same contract the SDKs are built from.
+The dimmi REST API lives at `https://trydimmi.com/api/v1` (or `https://<your-domain>/api/v1` when self-hosting). Every request and response uses JSON, and every reference page here is built from the exact OpenAPI contract behind our SDKs.
 
 <Endpoint method="GET" path="/api/v1/conversations" />
 
 ## Authentication
 
-Send an API token in the `Authorization` header. Create tokens in **Settings → API tokens**; each one carries the abilities you give it, and every endpoint lists the ability it needs.
+Create an API token in **Settings → API tokens** and send it in the `Authorization` header. Each token only gets the [abilities](/developers/api/abilities/) you pick, and every endpoint lists the ability it requires.
 
 ```bash
 curl https://trydimmi.com/api/v1/me \
@@ -19,14 +19,14 @@ curl https://trydimmi.com/api/v1/me \
 
 ## Pagination
 
-List endpoints return a page of `data` and a `meta` block. Pass the cursor back to read the next page.
+List endpoints return a `data` array and a `meta` object. Pass `meta.next_cursor` back as `cursor` to read the next page.
 
-<Param name="cursor" type="string">Where the next page starts, from `meta.next_cursor`.</Param>
-<Param name="per_page" type="integer" default="25">How many items to return, up to 100.</Param>
+<Param name="cursor" type="string">Cursor from `meta.next_cursor` for the next page.</Param>
+<Param name="per_page" type="integer" default="25">Items per page, up to 100.</Param>
 
 ## Errors
 
-Failed requests answer with a 4xx or 5xx status and a body that says what went wrong.
+When a request fails, dimmi returns a `4xx` or `5xx` status code with a clear message and machine-readable `code`.
 
 ```json
 {
@@ -36,13 +36,15 @@ Failed requests answer with a 4xx or 5xx status and a body that says what went w
 }
 ```
 
-<Callout type="tip">Writes accept an `Idempotency-Key` header. Send the same key again and you get the first response back instead of a second write.</Callout>
+<Callout type="tip">
+  Send an `Idempotency-Key` header on supported `POST` requests. If your network retries the same key, dimmi returns the original response instead of creating a duplicate. See [Idempotency](/developers/api/idempotency/).
+</Callout>
 
 ## Browse the API
 
 <CardGrid>
-  <Card title="Conversations" icon="chat-3" href="/api-reference/conversations/list-conversations/">Conversations, messages, replies, views and tags.</Card>
-  <Card title="Contacts and companies" icon="contacts-book" href="/api-reference/contacts-and-companies/list-contacts/">People, companies, attributes and audiences.</Card>
-  <Card title="AI agent" icon="sparkling-2" href="/api-reference/ai-agent/get-ai-agent/">The agent, its actions, knowledge and procedures.</Card>
-  <Card title="Webhooks" icon="webhook" href="/api-reference/webhooks/list-webhook-endpoints/">Endpoints, deliveries and event types.</Card>
+  <Card title="Conversations" icon="chat-3" href="/api-reference/conversations/list-conversations/">Threads, messages, replies, views, and tags.</Card>
+  <Card title="Contacts and companies" icon="contacts-book" href="/api-reference/contacts-and-companies/list-contacts/">Customers, companies, attributes, and audiences.</Card>
+  <Card title="AI agent" icon="sparkling-2" href="/api-reference/ai-agent/get-ai-agent/">Agent settings, actions, knowledge, and procedures.</Card>
+  <Card title="Webhooks" icon="webhook" href="/api-reference/webhooks/list-webhook-endpoints/">Webhook endpoints, deliveries, and event types.</Card>
 </CardGrid>

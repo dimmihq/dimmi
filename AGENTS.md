@@ -50,17 +50,24 @@ CI (`.github/workflows/contracts.yml`) runs all of these.
 - Never publish to npm, Packagist or PyPI, never push tags, and never push to the SDK mirrors (`dimmihq/dimmi-go`, `dimmi-php`, `dimmi-laravel`). Only `.github/workflows/sdk-release.yml` generates, splits and publishes, on a platform release tag.
 - The last released contract is the one at the newest platform release tag (`vX.Y.Z`); `make api-compat` compares with it. After a release, remove the `contracts/breaking-changes.json` entries it shipped; `make api-compat` lists them as matching nothing.
 
-## Documentation
+## Copywriting and documentation
 
-The docs live in `docs/` (Astro, served at trydimmi.com/docs).
+The marketing site lives in `site/` (React + Vite, served at trydimmi.com) and the docs live in `docs/` (Astro, served at trydimmi.com/docs).
 
-- Before writing or changing a page, read `docs/WRITING.md` and the stop-slop skill (`.claude/skills/stop-slop/`), and start from the page's template in `docs/templates/`.
-- Write only what the product cannot say for itself: no form walkthroughs, no restated error messages, short paragraphs. `docs/WRITING.md` sections 1 and 2 set the tests and limits.
+- Before writing or changing customer-facing copy anywhere, read `WRITING.md`, `.claude/skills/stop-slop/SKILL.md`, and `.claude/skills/make-it-skim/SKILL.md`.
+- For marketing copy (`site/`, README, changelogs), follow `site/VOICE.md` (opinionated, candid, human, varied rhythm, no corporate fluff).
+- For documentation (`docs/`), follow `docs/WRITING.md` (warm mental models, happy-path examples first, code-verified facts, scannable layout) and start from the matching template in `docs/templates/`.
 - A change to what users see or do (an endpoint, a field, an event, a setting, a default, an interface label, an install step) updates the docs in the same commit.
 - Never hand-write the API reference: it is generated from the API contract. Routes marked `.Internal()` stay out of it.
 
+## Commits and pull requests
+
+- Never include model or AI attribution anywhere (no `Co-Authored-By` trailers, no agent or model names in commits or pull requests).
+- Commit messages must be lowercase and follow Conventional Commits format (for example, `docs: rewrite marketing site and docs`). Keep them short and straight to the point without extra fluff.
+- Pull request titles must also be lowercase and follow Conventional Commits format.
+- Pull request descriptions should be light, direct, and easy to scan: state what the PR changed using short paragraphs (at most 3 sentences each) and bullet lists, with minimal code snippets.
+
 ## Repository conventions
 
-- Commit straight to `main`; no feature branches or pull requests.
 - Run only the tests related to a change, never the whole suite; CI runs everything.
 - Never run anything that calls a real LLM without the owner's explicit approval for that run.

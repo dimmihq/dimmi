@@ -5,7 +5,7 @@
  * out of the page.
  */
 const TOKEN =
-  /(\/\/[^\n]*)|("(?:[^"\\]|\\.)*"|`(?:[^`\\]|\\.)*`)|\b(import|from|export|function|return|const|await|async)\b|([A-Za-z_$][\w$]*)(?=\()|([{}()[\];,.<>/=]+)/g;
+  /(\/\/[^\n]*|#[^\n]*)|("(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'|`(?:[^`\\]|\\.)*`)|\b(import|from|export|function|return|const|await|async|for|in|range|func|var|def|with|as|if|else|nil|True|False)\b|([A-Za-z_$][\w$]*)(?=\()|([{}()[\];,.<>/=:]+)/g;
 
 const kinds = ["c", "s", "k", "f", "p"];
 

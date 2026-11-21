@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { cx } from "@/utils/cx";
 
@@ -6,6 +6,9 @@ import { Code } from "../components/code";
 import { Intro, MonoLink, Panel, Section } from "../components/container";
 import { GITHUB_URL } from "../links";
 import { TerminalScene } from "../scenes/terminal-scene";
+import { useStartInView } from "../scenes/use-scene";
+
+const TAB_DURATION = 4200;
 
 const snippets = [
   {
@@ -22,14 +25,26 @@ export function App() {
 }`,
   },
   {
-    name: "Browser",
-    code: `import { loadDimmi } from "@dimmi/browser";
+    name: "Go",
+    code: `import dimmi "github.com/dimmihq/dimmi-go"
 
-const dimmi = loadDimmi({
-  appId: "wgt_...",
-});
+client, _ := dimmi.New(
+  dimmi.WithToken(os.Getenv("DIMMI_TOKEN")),
+)
 
-dimmi.showNewMessage("I need help with billing");`,
+res, _ := client.API.ConversationsIndexWithResponse(
+  ctx, nil,
+)`,
+  },
+  {
+    name: "Python",
+    code: `from dimmi import Dimmi
+
+client = Dimmi(token="dmi_...")
+
+# Paginate open conversations with automatic retries.
+for thread in client.paginate("/conversations"):
+  print(thread["id"], thread["status"])`,
   },
   {
     name: "Events",
@@ -37,15 +52,41 @@ dimmi.showNewMessage("I need help with billing");`,
 
 const dimmi = loadDimmi({ appId: "wgt_..." });
 
-// Workflows and audiences can act on anything you track.
+// Workflows and audiences act on tracked events.
 dimmi.trackEvent("plan_upgraded", { plan: "growth" });`,
   },
 ];
 
 function CodeCard() {
+  const { ref, started, inView } = useStartInView<HTMLElement>(0.35);
   const [active, setActive] = useState(0);
+  const [paused, setPaused] = useState(false);
+  const pausedRef = useRef(false);
+  pausedRef.current = paused;
+
+  useEffect(() => {
+    if (!started || !inView || paused) {
+      return;
+    }
+    const next = (active + 1) % snippets.length;
+    const timer = setTimeout(() => {
+      if (!pausedRef.current) {
+        setActive(next);
+      }
+    }, TAB_DURATION);
+    return () => clearTimeout(timer);
+  }, [started, inView, paused, active]);
+
   return (
-    <div className="w-full overflow-hidden rounded-t-xl border border-b-0 border-border-button-default bg-background-full shadow-[0_24px_60px_-28px_rgb(0_0_0/0.25)]">
+    <section
+      ref={ref}
+      aria-label="SDK code examples"
+      onMouseEnter={() => setPaused(true)}
+      onMouseLeave={() => setPaused(false)}
+      onFocus={() => setPaused(true)}
+      onBlur={() => setPaused(false)}
+      className="w-full overflow-hidden rounded-t-xl border border-b-0 border-border-button-default bg-background-full shadow-[0_24px_60px_-28px_rgb(0_0_0/0.25)]"
+    >
       <div role="tablist" aria-label="Code examples" className="flex gap-1 border-b border-separator-border px-3 py-2">
         {snippets.map((snippet, i) => (
           <button
@@ -55,20 +96,28 @@ function CodeCard() {
             aria-selected={active === i}
             onClick={() => setActive(i)}
             className={cx(
-              "rounded-md px-2.5 py-1 text-body-medium transition-colors",
+              "relative overflow-hidden rounded-md px-2.5 py-1 text-body-medium transition-colors",
               active === i
                 ? "bg-background-secondary-default text-text-primary"
                 : "text-text-tertiary hover:text-text-secondary",
             )}
           >
             {snippet.name}
+            {active === i && started && inView && !paused ? (
+              <span
+                key={active}
+                aria-hidden
+                className="absolute inset-x-0 bottom-0 h-0.5 bg-accent-500"
+                style={{ animation: `site-fill-x ${TAB_DURATION}ms linear forwards` }}
+              />
+            ) : null}
           </button>
         ))}
       </div>
-      <div className="h-[268px]">
+      <div key={snippets[active].name} className="site-code-enter h-[268px]">
         <Code code={snippets[active].code} />
       </div>
-    </div>
+    </section>
   );
 }
 
@@ -103,14 +152,14 @@ export function SelfHost() {
   return (
     <Section frameClassName="flex flex-col gap-16">
       <Intro
-        title="Open source. Actually open."
-        body="MIT license, no enterprise edition held back. Run it on our cloud or your servers, and build on it with the SDKs and the API."
+        title="Open source with nothing held back."
+        body="Self-hosting runs the exact same MIT code as dimmi Cloud: SAML SSO, AI playbooks, workflows, and all 11 SDKs. Keep every byte in your own Postgres."
       />
       <div className="grid grid-cols-1 gap-x-6 gap-y-14 lg:grid-cols-2 [&>*]:min-w-0">
         <Card
           anchor="self-host"
           title="Self-host"
-          body="One command installs it on a server, with HTTPS and updates. It's the same product as our cloud, and we never see a cent."
+          body="Run one script on a Linux server for HTTPS, Postgres, and easy updates with dimmictl. You pay your host, and we take $0."
           link={{ href: GITHUB_URL, label: "View on GitHub" }}
         >
           <TerminalScene />
@@ -118,7 +167,7 @@ export function SelfHost() {
         <Card
           anchor="developers"
           title="SDKs and API"
-          body="Typed SDKs for 11 stacks, a REST API, signed webhooks, and llms.txt for coding agents."
+          body="Build with typed SDKs for 11 stacks, a REST API, signed webhooks, an MCP server, and llms.txt for coding agents."
           link={{ href: "/docs", label: "Read the docs" }}
         >
           <CodeCard />

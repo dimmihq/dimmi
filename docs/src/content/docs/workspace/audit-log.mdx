@@ -1,32 +1,32 @@
 ---
 title: "Audit log"
-description: "The events the dimmi audit log records, who can read it, how to export it and how long entries are kept."
+description: "Track who changed what in your workspace, see every logged event, and export filtered CSV reports."
 ---
 
-**Settings → Audit log** lists who changed what in the workspace. Owners and Admins can read it (`audit_logs:read`).
+Open **Settings → Audit log** to see a record of security and configuration changes across your workspace. Owners and Admins can view it (`audit_logs:read`).
 
-## Each entry
+## What each entry records
 
-| Column | What it holds |
+| Column | Details |
 | --- | --- |
-| **Event** | What happened, from the lists below. |
-| **Actor** | The member, API token or connected app that did it, with how it reached dimmi and its IP address. dimmi's own actions show as **Automatic**. |
-| **Target** | What the event changed. |
-| **Time** | When it happened. |
+| **Event** | What happened (full list below). |
+| **Actor** | The teammate, API token, or connected app behind the change, along with access method and IP address. System actions appear as **Automatic**. |
+| **Target** | The item that changed. |
+| **Time** | Exact timestamp. |
 
-## Retention and export
+## Retention and CSV exports
 
-| Fact | Value |
+| Setting | Behavior |
 | --- | --- |
-| Retention on dimmi Cloud | 365 days. dimmi deletes older entries once a day. |
-| Retention when self-hosted | For ever, unless the server sets a [limit](/self-hosting/configuration-options/#retention). |
-| **Export CSV** | The entries matching the current filters, for a range of at most 366 days. Without a range, the last 30 days. |
-| Export limit | 10 exports an hour for the workspace. |
-| Export record | Each export is itself an entry: **Exported the audit log**. |
+| **dimmi Cloud retention** | 365 days. Older entries purge daily. |
+| **Self-hosted retention** | Kept forever unless you set a [retention limit](/self-hosting/configuration-options/#retention). |
+| **Export CSV** | Downloads filtered entries for up to 366 days (defaults to last 30 days). |
+| **Export rate limit** | Up to 10 exports per hour per workspace. |
+| **Export logging** | Every CSV download logs its own **Exported the audit log** event. |
 
-## Events
+## Logged events
 
-The **Event** filter groups events as below.
+Use the **Event** filter to browse by category.
 
 ### Sign-in
 

@@ -1,42 +1,44 @@
 ---
 title: "How automatic assignment works"
-description: "How dimmi picks a teammate for a conversation: eligibility, capacity, availability and what happens when nobody is free."
+description: "How dimmi chooses the next teammate in Round robin or Balanced mode, respects capacity, and handles waiting queues."
 ---
 
-In an inbox set to **Round robin** or **Balanced**, dimmi gives each conversation nobody holds to one eligible teammate, or makes it wait until one frees up. Set the mode in [the inbox's settings](/inbox/inboxes-and-assignment/).
+When an inbox uses **Round robin** or **Balanced** mode, dimmi assigns unassigned conversations to available teammates automatically so new chats never sit untouched. Turn on a mode in [Inboxes and assignment](/inbox/inboxes-and-assignment/).
 
-## When dimmi assigns
+## When dimmi runs assignment
 
-dimmi looks for a teammate when a conversation without an assignee:
+dimmi looks for an available teammate whenever an unassigned conversation:
 
-- is started by a customer
-- reopens
-- moves to another team
-- leaves a teammate who is **Away and reassigning**
+- Starts from a new customer message
+- Reopens after being closed
+- Moves to a different team
+- Leaves a teammate whose status is **Away and reassigning**
 
-dimmi skips a conversation that is closed, snoozed, spam or deleted, that the dimmi agent or a workflow still handles, or whose customer is blocked.
+dimmi skips chats that are closed, snoozed, spam, deleted, or from a blocked customer, as well as threads the **dimmi agent** or a **workflow** is still handling.
 
-## Who is eligible
+## Who can receive a conversation
 
-The pool is the conversation's team. Without one it is the inbox's **Default team**, and without that every active teammate.
+First, dimmi builds the candidate pool from the conversation's team. If no team is set, it uses the inbox's **Default team** (or every active teammate if the inbox has no default team).
 
-A teammate in the pool is eligible when they are:
+A teammate in that pool can take the conversation when all three are true:
 
-- **Active**, or away while the inbox has **Include away teammates** on
-- under their capacity: their own limit when they have one, the inbox's **Capacity** otherwise
-- under the limit for the conversation's channel, when one is set
+- **Available:** their status is **Active** (or **Away** when the inbox turns on **Include away teammates**).
+- **Under capacity:** they hold fewer open chats than their personal limit (or the inbox's **Capacity** limit).
+- **Under channel cap:** they are below any limit set for that specific channel.
 
-Capacity counts open conversations. Snoozed, closed, spam and deleted conversations do not count.
+Only **open** conversations count toward capacity. Snoozed, closed, spam, and deleted threads do not take up a slot.
 
-## Who dimmi picks
+## How dimmi picks between teammates
 
-- **Round robin:** the next eligible teammate after the last one picked, in a fixed order.
-- **Balanced:** the eligible teammate with the fewest open conversations. On a tie, the one whose last automatic assignment is oldest.
+- **Round robin:** picks the next available teammate after whoever received the last automatic assignment, moving in a steady rotation.
+- **Balanced:** picks the available teammate with the fewest open chats. If two teammates tie, the one who has waited longest since their last automatic assignment gets it.
 
-## When nobody is eligible
+## When everyone is busy
 
-1. dimmi tries the inbox's **Overflow team** once, by the same rules.
-2. If nobody there can take it, the conversation keeps its team and waits. Its timeline says why.
-3. dimmi tries again when a teammate closes, snoozes, deletes or hands off a conversation, or changes availability, and every minute.
+If nobody in the main pool can take the conversation right now:
 
-Waiting conversations go out in the inbox's **Queue order**. A teammate can still take or assign a waiting conversation by hand.
+1. **Try overflow once:** dimmi checks the inbox's **Overflow team** using the same availability and capacity rules.
+2. **Hold in the queue:** if nobody there is free either, the conversation stays with its team and waits. Its timeline notes why it is waiting.
+3. **Retry automatically:** dimmi tries again whenever a teammate closes, snoozes, deletes, or hands off a chat, switches back to **Active**, and once every minute.
+
+Waiting conversations are handed out in the inbox's **Queue order**. Any teammate can still pick up or assign a waiting chat by hand at any time.

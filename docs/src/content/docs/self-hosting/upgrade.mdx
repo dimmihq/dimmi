@@ -1,33 +1,33 @@
 ---
 title: "Upgrade dimmi"
-description: "Upgrade a self-hosted dimmi to a new release, pin a version and run database migrations safely."
+description: "Upgrade your self-hosted server to the latest release or a pinned version, and learn how to roll back safely."
 ---
 
-`dimmictl update` moves the server to the latest release. [Back up the database](/self-hosting/backups/) first.
+Always [back up your database](/self-hosting/backups/) first, then upgrade to the latest release with one command:
 
 ```bash
 dimmictl update
 ```
 
-To install one release, name it. Releases and their notes are at [github.com/dimmihq/dimmi/releases](https://github.com/dimmihq/dimmi/releases).
+Want a specific version? Pass `--version` (browse releases at [github.com/dimmihq/dimmi/releases](https://github.com/dimmihq/dimmi/releases)):
 
 ```bash
 dimmictl update --version v1.2.3
 ```
 
-`cat /opt/dimmi/VERSION` prints the installed release.
+Check which version you are currently running with `cat /opt/dimmi/VERSION`.
 
-## What an update does
+## What `dimmictl update` does
 
 1. Downloads the release's stack files into `/opt/dimmi`.
-2. Sets `IMAGE` in `/opt/dimmi/.env` to `ghcr.io/dimmihq/dimmi:<version>` and pulls it.
-3. Runs the `migrate` service, which applies the new database migrations.
-4. Starts `web` and `worker` on the new image, only after `migrate` succeeds, and waits up to 3 minutes for `web` to report healthy.
+2. Updates `IMAGE` in `/opt/dimmi/.env` to `ghcr.io/dimmihq/dimmi:<version>` and pulls it.
+3. Runs `migrate` to apply database migrations.
+4. Starts `web` and `worker` on the new image only if migrations succeed, then waits up to 3 minutes for `web` to become healthy.
 
-The download replaces `compose.yaml`, `Caddyfile`, `postgres-init.sh` and `.env.example`. A `compose.yaml` or `Caddyfile` that differs from the new one is kept beside it as `compose.yaml.bak` or `Caddyfile.bak`; copy your edits back from there. `.env` is kept.
+Updates refresh `compose.yaml`, `Caddyfile`, `postgres-init.sh`, and `.env.example`, while keeping your `.env` untouched. If you customized `compose.yaml` or `Caddyfile`, your previous copy is saved beside it as `.bak`.
 
-When a migration fails, `web` and `worker` do not start on the new image. Read the reason with `dimmictl logs migrate`.
+If a migration fails, `web` and `worker` stay off the new image. Inspect the error with `dimmictl logs migrate`.
 
-## Go back to an earlier release
+## Roll back to an earlier release
 
-`dimmictl update --version <earlier_version>` changes the image and does not undo migrations the newer release applied. To go back, [restore the database dump](/self-hosting/backups/) you took before the update, then run the command with the earlier version.
+Running `dimmictl update --version <earlier_version>` switches the container image, but it does not undo database migrations. To roll back safely, [restore your pre-upgrade database backup](/self-hosting/backups/) first, then run `dimmictl update --version <earlier_version>`.

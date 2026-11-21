@@ -1,36 +1,36 @@
 ---
 title: "Let the dimmi agent call your API"
-description: "Prepare your API for dimmi agent actions: authentication, the headers dimmi sends, timeouts, retries and how dimmi reads your response."
+description: "Configure your API endpoints or MCP server for dimmi agent actions: auth, request headers, status codes, timeouts, and retries."
 ---
 
-An [action](/ai/actions/) is one HTTPS request from dimmi to your API, built from the connection and the action you set up in **Settings → Actions**.
+Every [agent action](/ai/actions/) sends one HTTPS request from dimmi to your backend using the connection configured in **Settings → Actions**.
 
-Your API must be on a public address: dimmi refuses private, loopback and link-local addresses.
+Your endpoint must sit on a public address. dimmi blocks private, loopback, and link-local IPs.
 
-## Authenticate dimmi
+## Authentication methods
 
-The connection's **Authentication** decides the credential dimmi adds to each request.
+Pick how dimmi authenticates on your connection:
 
-| Authentication | dimmi sends |
+| Connection setting | What dimmi sends |
 | --- | --- |
-| **No auth** | No credential. |
+| **No auth** | No credentials. |
 | **Bearer token** | `Authorization: Bearer <token>` |
-| **API key in a header** | The key in the header you name. |
-| **API key in the query** | The key in the query parameter you name. |
-| **Username and password** | `Authorization: Basic <base64 of username:password>` |
+| **API key in a header** | Your key in the header name you specify. |
+| **API key in the query** | Your key in the query parameter you specify. |
+| **Username and password** | `Authorization: Basic <base64(username:password)>` |
 
-## Read the request headers
+## Headers dimmi sends
 
 | Header | Value |
 | --- | --- |
-| `Dimmi-Action` | The action's tool name, such as `refund_invoice`. |
-| `Dimmi-Action-Call` | The call's ID, `aax_...`. |
-| `Dimmi-Workspace` | The workspace's ID, `ws_...`. |
-| `Idempotency-Key` | The call's ID again, on actions set to **Changes data**. |
+| `Dimmi-Action` | Tool name, such as `refund_invoice`. |
+| `Dimmi-Action-Call` | Unique call ID (`aax_...`). |
+| `Dimmi-Workspace` | Workspace ID (`ws_...`). |
+| `Idempotency-Key` | Same call ID, included on actions set to **Changes data**. |
 | `User-Agent` | `Dimmi-Actions/1 (+https://trydimmi.com/docs/ai/actions/)` |
-| `Content-Type` | `application/json`, or `application/x-www-form-urlencoded` when **Body encoding** is form. |
+| `Content-Type` | `application/json`, or `application/x-www-form-urlencoded` for form encoding. |
 
-The path, query and body are the action's own, with `{input.*}` filled by the dimmi agent and `{contact.*}` filled by dimmi from a [verified customer](/developers/messenger/identity-verification/). The agent cannot choose a `{contact.*}` value, so your API can treat it as the caller's identity.
+dimmi fills `{input.*}` from the agent and `{contact.*}` from the customer's [verified identity](/developers/messenger/identity-verification/). Because the AI model cannot alter `{contact.*}` values, your backend can trust them as the caller's identity.
 
 ```js title="server.js"
 import express from "express";
@@ -68,38 +68,38 @@ app.post("/v1/invoices/:id/refunds", (req, res) => {
 app.listen(3000);
 ```
 
-Set `DIMMI_ACTIONS_TOKEN` to the token you stored on the connection. The action's body here is `{"customer_id": "{contact.external_id}"}`.
+Set `DIMMI_ACTIONS_TOKEN` to your connection's bearer token, and configure the action body as `{"customer_id": "{contact.external_id}"}`.
 
-## Answer with a status dimmi understands
+## How dimmi handles your HTTP status
 
-| Your status | What dimmi does |
+| Status code | Behavior |
 | --- | --- |
-| `2xx` | Gives the agent the JSON fields listed under **Fields to keep**, or the whole body when none are listed. A body that is not JSON arrives as text. |
-| `400`, `409`, `422` | Tells the agent the request was refused, with the first 300 characters of your message. Name its place in the body, such as `error.message`, in the action's `error_message_path` through the [REST API](/api-reference/). |
+| `2xx` | Passes the fields listed in **Fields to keep** (or the full body) to the agent. Non-JSON bodies pass as text. |
+| `400`, `409`, `422` | Tells the agent the call was declined, including up to 300 characters from your error message (configure `error_message_path`, like `error.message`, via the [REST API](/api-reference/)). |
 | `404` | Tells the agent nothing was found, with the same message. |
-| `401`, `403` | Fails the call. After 3 in a row, the connection's actions stop until **Test connection** passes. |
+| `401`, `403` | Fails the call. Three consecutive auth failures pause the connection until **Test connection** succeeds. |
 | `429` | Fails the call as rate limited. |
-| `3xx` | Fails the call. dimmi never follows redirects. |
-| `502`, `503`, `504`, a timeout or no connection | Retries once for an action set to **Only reads data**. An action set to **Changes data** is sent once, never again. |
+| `3xx` | Fails the call (dimmi never follows redirects). |
+| `502`, `503`, `504`, timeout, or connection error | Retries once for **Only reads data** actions. Never retries **Changes data** actions. |
 | Any other status | Fails the call. |
 
-## Limits
+## Limits and timeouts
 
 | Limit | Value |
 | --- | --- |
-| Timeout | 8 seconds by default; **Timeout** on the connection takes 2 to 15 seconds. |
-| Response body | 65,536 bytes by default. `response_max_bytes` in the API takes 1,024 to 262,144. |
-| Result the agent reads | 8 KB after mapping. Lists keep 20 items, plain text 4,000 characters. |
-| Default headers on a connection | 10, each value up to 256 characters. |
+| Request timeout | 8 seconds default (configurable 2 to 15 seconds on the connection). |
+| Max response body | 65,536 bytes default (`response_max_bytes` configurable 1,024 to 262,144 via API). |
+| Result given to the agent | Up to 8 KB after field mapping (lists capped at 20 items, plain text at 4,000 chars). |
+| Default headers per connection | Up to 10 headers (256 characters per value). |
 
-An action that needs approval sends the same request after the customer confirms or a teammate approves, up to 7 days after the agent proposed it.
+Actions requiring customer confirmation or teammate approval send the exact same request once approved, up to 7 days after the agent proposed it.
 
 ## Connect an MCP server instead
 
-A connection of the kind **MCP server** calls a remote server over Streamable HTTP, and each of its tools becomes an action.
+Create an **MCP server** connection to call a remote Streamable HTTP MCP server, turning each synced tool into an action.
 
-- **Authentication** is **No auth**, **Bearer token** or **API key in a header**.
-- **Headers.** dimmi sends `Dimmi-Action`, `Dimmi-Action-Call` and `Dimmi-Workspace`, and `Idempotency-Key` for a tool set to **Changes data**.
-- **Sessions.** Each call opens a new session and closes it.
-- **Results.** dimmi maps `structuredContent` like a JSON body and falls back to the text. A result with `isError` reaches the agent as a refusal with its first 300 characters.
-- **Sync tools** reads up to 200 tools.
+- **Auth:** supports **No auth**, **Bearer token**, or **API key in a header**.
+- **Headers:** sends `Dimmi-Action`, `Dimmi-Action-Call`, `Dimmi-Workspace`, and `Idempotency-Key` (on **Changes data** tools).
+- **Sessions:** opens and closes a fresh session per tool call.
+- **Responses:** maps `structuredContent` like JSON (falling back to text). Tools returning `isError` pass up to 300 characters as a refusal to the agent.
+- **Tool sync limit:** **Sync tools** imports up to 200 tools per server.

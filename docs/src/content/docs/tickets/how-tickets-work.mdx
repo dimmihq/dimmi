@@ -1,46 +1,48 @@
 ---
 title: "How tickets work"
-description: "The three kinds of ticket in dimmi (customer, back-office and tracker), their states, and how they connect to conversations."
+description: "Learn the three kinds of tickets in dimmi, how ticket states work, and how tickets stay in sync with conversations."
 ---
 
-A ticket is tracked work with a type, fields and a state. A new workspace has four [types](/tickets/ticket-types/): Question, Bug report, Back-office task and Tracker.
+A ticket tracks structured work with its own type, custom fields, and state. Every new workspace starts with four [ticket types](/tickets/ticket-types/): Question, Bug report, Back-office task, and Tracker.
 
-## Kinds
+## Three kinds of tickets
 
-| Kind | What it is |
+| Kind | What it is for |
 | --- | --- |
-| Customer ticket | The customer's own request, tied to one conversation. The customer sees its state and can reply. |
-| Back-office ticket | Internal work for another team, linked to a customer ticket. |
-| Tracker | One problem many customers report. See [Trackers](/tickets/trackers/). |
+| **Customer ticket** | A customer's request, tied to one conversation. The customer can see its state and reply. |
+| **Back-office ticket** | Internal work for another team, linked to a customer ticket. |
+| **Tracker** | One shared issue reported by many customers. See [Trackers](/tickets/trackers/). |
 
-## States
+## Ticket states
 
-Each state belongs to one of five groups. A state has a name your team sees and a label the customer sees.
+Every state belongs to one of five groups. Each state has an internal name for your team and a customer-facing label.
 
-| Group | Meaning |
+| Group | What it means |
 | --- | --- |
-| **Submitted** | A new request nobody has started. |
-| **In progress** | Someone is working on it. |
-| **Waiting on customer** | The ticket waits for the customer's answer. |
-| **Waiting on team** | Another team or a [linked issue](/tickets/linked-issues/) holds it. |
-| **Resolved** | Done. |
+| **Submitted** | A new request no one has started yet. |
+| **In progress** | Someone on your team is working on it. |
+| **Waiting on customer** | You need a reply from the customer before moving forward. |
+| **Waiting on team** | Another team or a [linked issue](/tickets/linked-issues/) is working on it. |
+| **Resolved** | The work is done. |
 
-When a ticket enters a state with **Notify** on, dimmi waits 2 minutes, then tells the customer the state the ticket is in by then, unless a teammate replied meanwhile.
+When a ticket enters a state with **Notify** turned on, dimmi waits 2 minutes before emailing the customer. If you change the state again or a teammate replies during those 2 minutes, dimmi sends only the latest state (or skips the notice if a teammate replied).
 
-## Where customer tickets come from
+## How customer tickets get created
 
-- A teammate chooses **Convert to ticket** on a conversation.
-- An inbox turns every new conversation into a ticket: see [inbox settings](/inbox/inboxes-and-assignment/).
-- A customer opens one from the messenger or the help center, for types shown to customers.
+- **From an open thread:** a teammate clicks **Convert to ticket** on a conversation.
+- **Automatically in an inbox:** turn on auto-tickets in [inbox settings](/inbox/inboxes-and-assignment/) so every new conversation becomes a ticket.
+- **Self-service:** customers open a ticket in the messenger or help center for any type you make visible.
 
-## A ticket and its conversation move together
+## Tickets and conversations stay in sync
 
-- Closing the conversation resolves the ticket. Fields required to resolve must be filled first.
-- Reopening the conversation moves the ticket back to **In progress**.
-- A customer's reply moves a ticket in **Waiting on customer** back to **In progress**.
-- A customer's reply to a resolved ticket reopens it within the type's **Reopen window**, 7 days by default. After that, the conversation moves to a new follow-up ticket linked to the old one.
-- With **Auto-resolve** on, a ticket left in **Waiting on customer** for the type's number of days resolves. dimmi tells the customer one day before.
+- **Closing resolves the ticket:** closing the conversation resolves its ticket. Any fields required to resolve must be filled first.
+- **Reopening resumes work:** reopening the conversation moves the ticket back to **In progress**.
+- **Customer replies move waiting tickets:** when a customer replies to a ticket in **Waiting on customer**, it moves back to **In progress**.
+- **Reopen window:** replying to a resolved ticket reopens it within the type's **Reopen window** (7 days by default). After that window, dimmi opens a new follow-up ticket linked to the old one.
+- **Auto-resolve:** when turned on, a ticket sitting in **Waiting on customer** resolves after your set number of days. dimmi warns the customer 1 day before.
 
-## Escalating to another team
+## Escalate to another team
 
-**Escalate** opens a back-office ticket and moves the customer ticket to its first **Waiting on team** state. When the back-office ticket resolves, the customer ticket moves to **Close the loop**, so a teammate tells the customer.
+Click **Escalate** to create a back-office ticket for another team. The customer ticket moves to its first **Waiting on team** state while they work on it.
+
+When the back-office ticket resolves, the customer ticket moves to **Close the loop** so a teammate can update the customer.

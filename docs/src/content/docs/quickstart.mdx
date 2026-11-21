@@ -1,25 +1,41 @@
 ---
 title: "Quickstart"
-description: "Add the dimmi messenger to your site and answer your first conversation from the inbox."
+description: "Create your workspace, add the dimmi messenger to your site, and answer your first chat in under 5 minutes."
 ---
-import { Screenshot, Steps } from "~docs/components/mdx";
+import { Callout, Screenshot, Steps } from "~docs/components/mdx";
 
-Create a workspace at [trydimmi.com/signup](https://trydimmi.com/signup). On a self-hosted server, create the first account with [`dimmictl admin`](/self-hosting/install/).
+You can go from a fresh workspace to your first live reply in about **5 minutes**. Every new workspace comes with a **Support** inbox and a **Website** messenger ready to use.
+
+On **dimmi Cloud**, your first **100 conversations** each month are free with unlimited seats. To host dimmi on your own server instead, run the [server installer](/self-hosting/install/) first, then follow the steps below.
 
 <Steps>
 
-1. Open **Settings → Messengers**, select the **Website** messenger and copy its snippet. Paste it before the closing `</body>` tag of your site.
+1. **Create your workspace.** Sign up at [trydimmi.com/signup](https://trydimmi.com/signup) on dimmi Cloud. On a self-hosted server, run [`dimmictl admin`](/self-hosting/install/) in your terminal to create the first owner account, then sign in.
 
-   ```html
+2. **Add the messenger to your site.** Open **Settings → Messengers**, pick the **Website** messenger, and copy its script tag. Paste it right before the closing `</body>` tag in your HTML:
+
+   ```html title="index.html"
    <script async src="https://trydimmi.com/widget/v1/loader.js" data-app-id="<app_id>"></script>
    ```
 
-   The copied snippet has your `<app_id>` filled in.
+   Your copied snippet already has your `<app_id>` filled in (and your own domain if you self-host).
 
-2. Open your site and send a message from the messenger.
+   <Callout type="tip" title="Using React, Next.js, Vue, Angular, or Svelte?">
+     Use one of our framework packages to load and control the messenger in code. See [Add the messenger to your app](/developers/messenger/install/).
+   </Callout>
 
-3. In dimmi, open **Inbox**, choose the **Unassigned** view and reply to the conversation.
+3. **Send a test message.** Reload your site, open the chat bubble in the corner, and send yourself a message. dimmi creates a visitor record and opens a new thread in your **Support** inbox.
+
+4. **Reply from the inbox.** Back in dimmi, open **Inbox** and pick **Unassigned**. Click your test chat, type a reply, and send it. Your reply shows up live in the chat on your site.
 
 </Steps>
 
 <Screenshot name="inbox-reply" alt="A conversation open in the dimmi inbox, with a reply typed in the composer and the customer details on the right." />
+
+## What to set up next
+
+Once your first chat works, most teams add these next:
+
+- **Identify signed-in users:** turn on [identity verification](/developers/messenger/identity-verification/) so your team sees customer details next to each chat and the dimmi agent can safely call your API.
+- **Connect email or Slack:** forward your support address in [Email](/channels/support-email/), or link customer channels in [Slack](/channels/slack/).
+- **Turn on the dimmi agent:** add your help center or site as a [knowledge source](/ai/knowledge-sources/), run safe tests on past chats, and [set up the dimmi agent](/ai/set-up-the-agent/).

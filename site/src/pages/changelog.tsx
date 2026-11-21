@@ -24,17 +24,17 @@ import { FinalCta } from "../sections/final-cta";
 const steps = [
   {
     title: "Write the update",
-    body: "The same editor as your articles, with labels, a version, a cover, and everyone who worked on it.",
+    body: "Use the same clean editor as your help center, with labels, versions, covers, and authors.",
     visual: <EntryFragment />,
   },
   {
-    title: "Publish now, or later",
-    body: "Pick a time and it goes live on its own. Change your mind and it goes back to a draft.",
+    title: "Publish or schedule",
+    body: "Ship right away or pick a launch time. Pull it back to draft anytime before it goes live.",
     visual: <PublishFragment />,
   },
   {
-    title: "Customers hear about it",
-    body: "On your changelog page, in the messenger's changelog tab, and in subscribers' inboxes.",
+    title: "Reach customers everywhere",
+    body: "Updates appear on your changelog page, inside the messenger tab, and in subscriber inboxes.",
     visual: <MessengerChangelogFragment compact />,
   },
 ];
@@ -42,69 +42,76 @@ const steps = [
 const rows = [
   {
     label: "Messenger",
-    title: "News where customers already are.",
-    body: "The messenger gets a changelog tab. A dot marks what a customer hasn't seen yet.",
+    title: "News right inside your app.",
+    body: "Add a changelog tab to the messenger with an unread dot so customers spot new releases without leaving your product.",
     visual: <MessengerChangelogFragment />,
   },
   {
     label: "Email",
-    title: "One email when you ship.",
-    body: "Readers subscribe from the changelog and confirm by email. Each update can email them once, in your brand.",
+    title: "One clean email when you ship.",
+    body: "Readers subscribe from your changelog page and confirm by email. Each release emails subscribers once in your brand.",
     visual: <EmailFragment />,
   },
   {
     label: "Feedback",
-    title: "Find out what they think.",
-    body: "Readers react with an emoji, or ask your team about it in the messenger, straight from the update.",
+    title: "Hear what customers think right away.",
+    body: "Readers leave quick reactions or open the messenger from any update to ask your team a question.",
     visual: <EntryFooterFragment />,
   },
 ];
 
 const more = [
-  { icon: Tag, title: "Labels", body: "Starts with New, Improved, and Fixed. Add your own, with a color each." },
-  { icon: CalendarCheck, title: "Scheduling", body: "Write ahead and pick a time. It publishes on its own." },
-  { icon: ImageSquare, title: "Covers", body: "A picture at the top of an update, on the page and in the email." },
-  { icon: UsersThree, title: "Authors", body: "Everyone who worked on an update is named on it." },
+  { icon: Tag, title: "Custom labels", body: "Starts with New, Improved, and Fixed. Add your own labels and colors." },
+  {
+    icon: CalendarCheck,
+    title: "Scheduled launches",
+    body: "Write release notes ahead of time and let them go live on cue.",
+  },
+  {
+    icon: ImageSquare,
+    title: "Cover images",
+    body: "Add a crisp screenshot or header image on the page and in email.",
+  },
+  { icon: UsersThree, title: "Named authors", body: "Credit everyone on the team who helped ship the release." },
   {
     icon: ChartBar,
     title: "Release strip",
-    body: "A year of releases at a glance, one mark for each week you shipped.",
+    body: "Show a full year of shipping momentum, week by week, at the top.",
   },
-  { icon: RssSimple, title: "RSS", body: "A feed for every label, for readers who'd rather not get email." },
+  { icon: RssSimple, title: "RSS feeds", body: "Every label gets an RSS feed for readers who skip email." },
   {
     icon: ChatCircleText,
-    title: "Questions, in place",
-    body: "A button on every update opens the messenger to ask about it.",
+    title: "Ask about an update",
+    body: "One button on every post opens the messenger with context attached.",
   },
-  { icon: MarkdownLogo, title: "Markdown copies", body: "Every update has a plain Markdown version for AI tools." },
-  { icon: Code, title: "API and MCP", body: "Write, publish, and list updates from your own tools or an AI client." },
+  { icon: MarkdownLogo, title: "Markdown copies", body: "Every release has a plain Markdown URL ready for AI tools." },
+  { icon: Code, title: "API and MCP", body: "Draft, label, and publish updates from CI scripts or coding agents." },
 ];
 
 const questions = [
   {
-    question: "Is this one more subdomain to set up?",
+    question: "Do I have to set up another subdomain?",
     answer:
-      "No. It lives on your help center, under /changelog, with the same header, brand, and domain. It also shows in the messenger's changelog tab.",
+      "Not at all. Your changelog lives right on your help center at /changelog, sharing the same domain, header, and brand.",
   },
   {
-    question: "How do people subscribe, and can they leave?",
+    question: "How do people subscribe and unsubscribe?",
     answer:
-      "By email, and yes. They enter it on the changelog page and confirm with a link. Every email has a link to unsubscribe. There's an RSS feed too.",
+      "They enter their email on the changelog page and confirm via a link. Every email includes a one-click unsubscribe link, and RSS feeds are built in.",
   },
   {
-    question: "Do subscribers get emailed again when I fix a typo?",
-    answer:
-      "No. Edits wait as unpublished changes until you publish them, and subscribers are never emailed about the same update twice.",
+    question: "Will fixing a typo email subscribers a second time?",
+    answer: "Never. Edits save as a draft until you publish them, and subscribers only get emailed once per release.",
   },
   {
-    question: "Can I run the changelog without a help center?",
+    question: "Can I use the changelog without a help center?",
     answer:
-      "No. The changelog is part of a help center and uses its address, header, and brand. If release notes are all you want, you still set up a help center first.",
+      "The changelog lives inside a help center and shares its domain and header. If you only want release notes, you still turn on a help center first.",
   },
   {
-    question: "Can our release script publish updates?",
+    question: "Can our deploy pipeline draft changelog posts?",
     answer:
-      "Yes. The REST API and the MCP server can write, label, and publish updates, so a script or an AI client can draft them for you.",
+      "Yes. Both the REST API and MCP server can create, label, and publish entries straight from your release scripts or AI client.",
   },
 ];
 
@@ -113,14 +120,14 @@ export function ChangelogPage() {
     <>
       <ProductHero
         eyebrow="Changelog"
-        title="Tell customers what you shipped."
-        body="Publish updates on a public changelog, in the messenger, and in their inbox. Then find out what they think."
+        title="Shipped something good? Make sure customers see it."
+        body="Publish updates once and reach people on your changelog, inside the messenger, and in their inbox."
         visual={<ChangelogPageFragment />}
       />
-      <Steps title="One update, three places." items={steps} />
-      <Rows title="Updates people actually see." rows={rows} />
-      <FeatureGrid title="The small stuff, done right." items={more} />
-      <Questions body="What people ask before they publish their first update." items={questions} />
+      <Steps title="Write once, reach customers in three places." items={steps} />
+      <Rows title="Updates people read instead of missing." rows={rows} />
+      <FeatureGrid title="All the details you expect from a changelog." items={more} />
+      <Questions body="What teams ask before publishing their first update." items={questions} />
       <FinalCta />
     </>
   );

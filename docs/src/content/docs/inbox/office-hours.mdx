@@ -1,30 +1,34 @@
 ---
 title: "Set office hours and availability"
-description: "Define your team's office hours and set teammates as online or away, so assignment, SLAs and the dimmi agent follow them."
+description: "Set your team's schedule and individual teammate availability so SLAs, workflows, assignment, and the dimmi agent stay accurate."
 ---
 
-Set the workspace's office hours in **Settings → Office hours**, and your own availability under **Availability** in the account menu.
+**Office hours** tell dimmi when your team works, while **availability** tells dimmi whether a specific teammate can take new chats right now. Manage workspace schedules in **Settings → Office hours**, and change your own status under **Availability** in your account menu.
 
 ## Office hours
 
-A new workspace is open Monday to Friday, 09:00 to 17:00, in the workspace's time zone. A holiday closes the whole day.
+New workspaces start with a default schedule of **Monday to Friday, 09:00 to 17:00** in your workspace time zone. Adding a holiday marks that entire date closed.
 
-Three features read the hours:
+Three parts of dimmi follow your office hours:
 
-- **dimmi agent:** when set to answer during or outside office hours, it follows the hours of the conversation's inbox.
-- **Workflows:** conditions and waits can count only office hours. A change applies to waits that start after you save.
-- **SLA policies:** each [SLA policy](/tickets/sla-policies/) counts time in the schedule you pick for it.
+- **dimmi agent:** if set to reply only during or outside business hours, it reads the hours of the conversation's inbox.
+- **Workflows:** conditions and wait timers can count business hours only. Schedule edits apply to new waits started after you save.
+- **SLA policies:** each [SLA policy](/tickets/sla-policies/) counts reply and resolution clocks using the schedule you pick for it.
 
-The page edits the default schedule. Through the REST API you can add more schedules and give an inbox hours of its own. You cannot delete the default schedule, or one an inbox or a workflow still uses.
+The settings page edits your default schedule. To add extra regional schedules or give an inbox its own hours, use the REST API. You cannot delete the default schedule or any schedule still attached to an inbox or workflow.
 
-## Availability
+## Teammate availability
 
-| Status | What changes |
+Each teammate chooses one of three statuses:
+
+| Status | Effect on your queue |
 | --- | --- |
-| **Active** | [Automatic assignment](/inbox/how-assignment-works/) can give you conversations. |
-| **Away** | Automatic assignment skips you, unless the inbox has **Include away teammates** on. You keep your conversations. |
-| **Away and reassigning** | As **Away**. Also, when a customer writes in a conversation you hold, it leaves you and stays with its team. |
+| **Active** | [Automatic assignment](/inbox/how-assignment-works/) can route new conversations to you. |
+| **Away** | Automatic assignment skips you (unless the inbox turns on **Include away teammates**). You keep your current chats. |
+| **Away and reassigning** | Same as **Away**, plus any open chat you hold leaves your queue if the customer writes back so your team can pick it up. |
 
-- A conversation that left you does not come back when you return to **Active**.
-- The messenger shows you to customers only while you are **Active** and have dimmi open.
-- Changing another teammate's status needs the **Manage availability** permission from your [role](/workspace/roles-and-permissions/).
+A few details to keep in mind:
+
+- **Reassigned chats stay moved:** conversations that left you during **Away and reassigning** do not bounce back when you switch to **Active**.
+- **Messenger presence:** customers only see you as online in the messenger when you are **Active** and have dimmi open.
+- **Changing someone else's status:** requires the **Manage availability** permission in your [role](/workspace/roles-and-permissions/).

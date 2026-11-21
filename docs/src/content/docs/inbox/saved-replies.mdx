@@ -1,34 +1,38 @@
 ---
 title: "Use saved replies"
-description: "Create saved replies with variables and actions, and share them with the team."
+description: "Build reusable replies with customer variables and automatic follow-up actions, then share them with your team."
 ---
 
-Create saved replies in **Settings → Saved replies**. In the composer, insert one from the add menu or type `#` and its shortcut.
+When your team answers the same refund, password reset, or setup question ten times a day, **saved replies** turn that response into a two-second shortcut. Manage them in **Settings → Saved replies**.
 
-## Variables
+Inside any conversation composer, open the add menu or type `#` followed by the reply's shortcut to drop it in.
 
-**Variable** in the editor's toolbar adds one. dimmi fills variables when you insert the reply, so you see and can edit the text the customer will read.
+## Personalizing with variables
 
-| Variable | Value |
+Click **Variable** in the saved reply editor to insert customer or teammate fields. dimmi fills every variable the moment you insert the reply into the composer, so you can read and tweak the final text before sending.
+
+| Variable | Inserts |
 | --- | --- |
-| `{{ contact.first_name }}` | The customer's first name. |
-| `{{ contact.name }}` | The customer's full name. |
-| `{{ contact.email }}` | The customer's email. |
-| `{{ company.name }}` | The customer's company. |
-| `{{ sender.first_name }}` | Your first name. |
+| `{{ contact.first_name }}` | Customer's first name |
+| `{{ contact.name }}` | Customer's full name |
+| `{{ contact.email }}` | Customer's email address |
+| `{{ company.name }}` | Customer's company name |
+| `{{ sender.first_name }}` | Your first name |
 
-A variable with no value takes its fallback: `{{ contact.first_name | default: "there" }}`.
+Add a fallback whenever a field might be empty:
 
-## Actions
+```text
+Hi {{ contact.first_name | default: "there" }}, here is your invoice receipt.
+```
 
-Under **When it is sent**, a saved reply can set the status, set the priority, assign a teammate or a team and add up to 10 tags.
+## Pairing replies with actions
 
-- dimmi applies the actions after the reply is sent, as you. An action your role does not allow fails, and the reply is still sent.
-- When you send with close or snooze, your choice replaces the saved reply's status.
+Under **When it is sent**, a saved reply can also tidy up the thread automatically: change status, set priority, assign a teammate or team, or add up to **10 tags**.
 
-## Sharing
+- **Runs with your permissions:** dimmi applies actions right after your reply sends. If your role lacks permission for one action, your reply still sends while that action is skipped.
+- **Send buttons win:** if you pick **Send and close** or **Send and snooze** in the composer, your choice overrides the saved reply's status action.
 
-- **Only me:** the reply shows in your composer only.
-- **Everyone:** the whole team can insert it. This needs the **Manage shared replies** permission from your [role](/workspace/roles-and-permissions/).
+## Sharing with your team
 
-A workspace holds up to 2,000 saved replies. A title is up to 120 characters.
+- **Only me:** appears only in your own composer.
+- **Everyone:** shared across the whole workspace. Requires the **Manage shared replies** permission in your [role](/workspace/roles-and-permissions/).

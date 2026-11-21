@@ -31,91 +31,91 @@ export const routes: Route[] = [
     path: "/",
     title: "dimmi: customer support you own",
     description:
-      "Open-source customer support: shared inbox, AI agent, help center, workflows, broadcasts, changelog and feedback. On our cloud or your servers.",
+      "Inbox, AI agent, tickets, workflows, and help center, all open source under MIT. Run on dimmi Cloud with free seats or self-host for $0.",
     page: HomePage,
   },
   {
     path: "/inbox",
-    title: "Inbox: every conversation in one place | dimmi",
+    title: "Inbox: one queue with unlimited free seats | dimmi",
     description:
-      "One inbox for the messenger, email, Slack and the API, with customer context, notes, assignment, snoozes and an AI teammate.",
+      "Chat, email, Slack, WhatsApp, SMS, and phone in one inbox beside customer history. Seats are free so your whole team can jump in.",
     page: InboxPage,
   },
   {
     path: "/agent",
-    title: "AI agent: answers, acts and hands over | dimmi",
+    title: "AI agent: cites your docs and knows when to stop | dimmi",
     description:
-      "An AI support agent that answers from your knowledge, follows your procedures and hands over cleanly, on your own model key.",
+      "An AI support agent that cites your docs, follows written playbooks, asks before risky actions, and saves up to 83% with your own AI keys.",
     page: AgentPage,
   },
   {
     path: "/workflows",
-    title: "Workflows: automate support work | dimmi",
+    title: "Workflows: automate routing, SLAs, and follow-ups | dimmi",
     description:
-      "Build support automations on a visual canvas: trigger from anything, check conditions, then route, reply, escalate or hand to the AI agent.",
+      "Build visual support workflows included on every plan. Trigger on events, branch on rules, open tickets, or call your own API.",
     page: WorkflowsPage,
   },
   {
     path: "/pricing",
     title: "Pricing: pay per conversation, never per seat | dimmi",
     description:
-      "Unlimited seats, AI included, first 100 conversations free every month. Half price on AI with your own model key. Free to self-host under MIT.",
+      "Unlimited free seats, 100 free conversations every month, and up to 83% off AI threads with your own model keys. Free to self-host under MIT.",
     page: PricingPage,
   },
   {
     path: "/operator",
-    title: "Operator: an AI teammate beside every conversation | dimmi",
+    title: "Operator: an internal AI teammate in your inbox | dimmi",
     description:
-      "Operator briefs your team, answers questions about the customer, drafts replies and proposes changes you apply. Only your team sees it.",
+      "Operator sums up long chats, searches customer history, drafts replies, and proposes edits you can undo. Customers never see it.",
     page: OperatorPage,
   },
   {
     path: "/procedures",
-    title: "Procedures: teach the AI agent your team's way | dimmi",
+    title: "Procedures: teach the AI agent your team's playbooks | dimmi",
     description:
-      "Write how your team handles a request, step by step, in plain words. The agent follows it, calls your systems, and waits for approval where you say.",
+      "Write how your team handles requests in plain English. The dimmi agent follows your steps, calls your API, and asks before risky actions.",
     page: ProceduresPage,
   },
   {
     path: "/tickets",
-    title: "Tickets: turn conversations into tracked work | dimmi",
+    title: "Tickets: stop losing bugs inside long chat threads | dimmi",
     description:
-      "Tickets with your own types and states, SLAs, internal hand-offs, and links to Linear, Jira and GitHub. Customers see progress without asking.",
+      "Turn chats into tracked tickets with custom states, SLAs, outage trackers, and links to Linear, Jira, GitHub, and more.",
     page: TicketsPage,
   },
   {
     path: "/reports",
-    title: "Reports: know how your support is really doing | dimmi",
+    title: "Reports: support metrics you can click into | dimmi",
     description:
-      "Volume, response and resolution times, CSAT, team performance and how often the AI agent resolves. Every number opens the conversations behind it.",
+      "Track volume, reply times, CSAT, and AI results by team or channel. Click any bar to inspect the conversations behind it.",
     page: ReportsPage,
   },
   {
     path: "/help-center",
-    title: "Help center: answers customers find on their own | dimmi",
+    title: "Help center: one source for customers and AI | dimmi",
     description:
-      "Write articles, publish them on your own domain, and let the AI agent answer from them. An open-source help center, built into dimmi.",
+      "Publish help articles on your own domain. Customers get instant answers, and the dimmi agent reads from the same docs.",
     page: HelpCenterPage,
   },
   {
     path: "/broadcasts",
-    title: "Broadcasts: messages that start conversations | dimmi",
+    title: "Broadcasts: customer updates people can reply to | dimmi",
     description:
-      "Send broadcasts and series by email, messenger and Slack, from your own inbox. Every reply lands in the inbox as a conversation.",
+      "Send broadcasts and series by email, SMS, WhatsApp, chat, and Slack from your own domain. Every reply opens in your inbox.",
     page: BroadcastsPage,
   },
   {
     path: "/changelog",
-    title: "Changelog: tell customers what you shipped | dimmi",
+    title: "Changelog: release notes customers see | dimmi",
     description:
-      "Publish product updates on a public changelog, in the messenger and by email. Labels, versions, scheduling and reactions included.",
+      "Publish product updates once and reach customers on your changelog, inside the messenger, and by email.",
     page: ChangelogPage,
   },
   {
     path: "/feedback",
-    title: "Feedback: know what to build next | dimmi",
+    title: "Feedback: feature boards linked to your inbox | dimmi",
     description:
-      "Feature request boards and a public roadmap on your help center. Customers vote, your team links conversations, and voters hear when it ships.",
+      "Collect customer votes on your help center, link live support chats, and email every voter the day you ship.",
     page: FeedbackPage,
   },
 ];

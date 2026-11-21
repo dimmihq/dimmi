@@ -1,52 +1,49 @@
 ---
 title: "Publish a changelog"
-description: "Where changelog entries appear, how scheduling and subscriber emails work, and the limits on labels and authors."
+description: "Publish product updates to your help center, messenger, RSS feed, and email subscribers."
 ---
 
-Write entries under **Changelog** in the sidebar. A published entry appears in three places:
+Write product updates under **Changelog** in the sidebar. Every published entry appears in three places at once:
 
-- **Help center:** at `/changelog`, linked from the header once the first entry is published. The home page lists the three newest.
-- **Messenger:** in the **What's new** tab.
-- **RSS:** at `/changelog/feed.xml`, and at `/changelog/labels/<label>/feed.xml` for one label.
+- **Help center:** live at `/changelog` and linked from your header as soon as you publish your first entry. Your home page highlights the 3 newest entries.
+- **Messenger:** shown inside the **What's new** tab.
+- **RSS feeds:** available at `/changelog/feed.xml`, or per label at `/changelog/labels/<label>/feed.xml`.
 
-## Publish
+## Write and publish entries
 
-Saving an entry changes nothing for readers. **Publish** makes the saved text live, now or at a time you **Schedule**.
+Saving edits keeps an entry as a draft. Click **Publish** to push it live right away, or **Schedule** to publish at a future time.
 
-- **Shipped on:** after publishing, set a past date in **Update settings** for a change that shipped earlier.
-- **Authors:** every teammate who saves the entry is an author, in the order they first saved. **Pick authors** names up to five instead.
-- **Labels:** a changelog starts with **New**, **Improved** and **Fixed** and holds up to 20. Deleting a label keeps its entries.
-- **Limits:** a title has up to 150 characters and a summary up to 300.
+- **Backdate releases:** after publishing, set a past **Shipped on** date in **Update settings** for earlier releases.
+- **Authors:** every teammate who saves an entry is listed as an author by default, or use **Pick authors** to choose up to 5.
+- **Labels:** starts with **New**, **Improved**, and **Fixed** (up to 20 labels total). Deleting a label keeps its entries intact.
 
 ## Email subscribers
 
-Check **Email N subscribers** when you publish. dimmi mails an entry to each confirmed subscriber once, however many times you publish it again.
+Check **Email N subscribers** when publishing to notify readers by email. dimmi sends each entry to each confirmed subscriber only once, even if you republish edits later.
 
 | Setting in **Settings → Changelog** | Default | What it does |
 | --- | --- | --- |
-| **Subscriptions** | On | Readers subscribe with their email on the changelog. |
-| **What the email holds** | **The full entry** | **A summary** sends the summary with a link to the entry. |
-| **Undo window** | **None** | dimmi waits 5 minutes, 15 minutes or 1 hour before mailing. Unpublish inside the window and nothing is sent. |
+| **Subscriptions** | On | Lets readers subscribe with their email on `/changelog`. |
+| **What the email holds** | **The full entry** | Switch to **A summary** to send the summary with a link to read more. |
+| **Undo window** | **None** | Wait 5 minutes, 15 minutes, or 1 hour before emailing. Unpublish inside that window to cancel the send. |
 
-- **Confirmation:** a reader who types an address gets no entries until they confirm from the email dimmi sends. A reader signed in to the help center with that address is subscribed at once.
-- **Resend:** dimmi sends a confirmation to one address at most every 10 minutes.
-- **Unsubscribe:** every email carries the subscriber's own unsubscribe link.
+- **Double opt-in:** visitors who type an email must confirm via a link before receiving updates. Readers already signed in to your help center subscribe right away.
+- **Resend throttle:** dimmi sends at most 1 confirmation email per address every 10 minutes.
+- **One-click unsubscribe:** every email includes a personal unsubscribe link.
 
-## Reactions
+## Reactions and analytics
 
-Readers react with one of five emoji: thumbs up, heart, party popper, rocket and eyes. Each reader counts once per emoji on an entry.
+Readers can react with thumbs up, heart, party popper, rocket, or eyes. Each reader counts once per emoji on an entry.
 
-## Analytics
+Open **Analytics** under **Changelog** to view stats for the last 7, 30, or 90 days:
 
-**Analytics** in **Changelog** covers the last 7, 30 or 90 days.
-
-| Number | Counts |
+| Metric | What it counts |
 | --- | --- |
-| **Views** | Times a reader opened an entry's page. Crawlers and the feed are left out. |
-| **Reactions** | Reactions left over those days. |
-| **Subscribers** | Confirmed subscribers now, with how many joined over those days. |
-| **Unsubscribed** | Subscribers who left over those days. |
+| **Views** | Page opens, excluding crawlers and RSS feeds. |
+| **Reactions** | Reactions left during the period. |
+| **Subscribers** | Current confirmed subscribers, plus new signups during the period. |
+| **Unsubscribed** | Subscribers who left during the period. |
 
-dimmi keeps daily counts for 400 days and never records who read.
+dimmi keeps daily totals for 400 days and does not track individual readers.
 
-dimmi sends `changelog_entry.published`, `changelog_entry.updated` and `changelog_entry.unpublished` [webhook events](/developers/webhooks/events/).
+Publishing, updating, or unpublishing an entry sends `changelog_entry.published`, `changelog_entry.updated`, and `changelog_entry.unpublished` [webhook events](/developers/webhooks/events/).

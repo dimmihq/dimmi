@@ -1,44 +1,44 @@
 ---
 title: "How Operator changesets work"
-description: "What an Operator changeset can change, who applies it, when Operator applies one on its own and what undoing puts back."
+description: "How Operator proposes workspace changes as reviewable cards, when changes apply on their own, and how undo works."
 ---
 
-Operator makes every change through a changeset: a card of up to 50 changes that a teammate applies, declines or undoes as one.
+Whenever **Operator** wants to edit your workspace, it bundles the changes into a **changeset**: a single review card (up to **50 changes**) that a teammate can apply, decline, or undo in one click.
 
-## What a changeset can hold
+This keeps your team in control so AI never silently breaks tags, routing, or live help articles.
 
-Admins set each group in **Settings → Operator**, under **What Operator may change**, to **Ask first** (the default), **On its own** or **Off**.
+## What Operator can change
 
-| Group | Changes | **On its own** allowed |
+Admins choose a policy for each group under **Settings → Operator → What Operator may change**: **Ask first** (the default), **On its own**, or **Off**.
+
+| Group | What it can change | Allowed **On its own**? |
 | --- | --- | --- |
-| **Conversations** | Tags, assignment, priority, status and subject. | Yes |
-| **Internal notes** | A note on a conversation. | Yes |
-| **Customers** | A customer's name. | Yes |
-| **Help articles** | A new draft, or an edit to a draft. | No |
-| **Procedures** | An edit to a procedure's working copy. | No |
-| **Workspace actions** | A run of an [action](/ai/actions/) that changes data. | No |
+| **Conversations** | Tags, assignment, priority, status, and subject | Yes |
+| **Internal notes** | Adding a private note to a thread | Yes |
+| **Customers** | Updating a customer's name | Yes |
+| **Help articles** | Creating a new draft or editing a draft | No |
+| **Procedures** | Editing a procedure's working draft | No |
+| **Workspace actions** | Running an [action](/ai/actions/) that changes data | No |
 
-Operator never publishes an article or a procedure.
+Operator never publishes a help article or a procedure. Publishing always stays with a teammate.
 
-Even with **On its own**, a changeset waits for a teammate when Operator read a conversation or an action's result while it worked on the answer, and when it triaged a new conversation.
+Even when a group is set to **On its own**, Operator still asks a teammate first whenever it triages a new chat or bases its edit on untrusted conversation text or an external action response.
 
-## States
+## Changeset states
 
-| Card shows | What happened |
+| Card badge | Meaning |
 | --- | --- |
-| **Waiting for you** | Nothing changed yet. |
-| **Applied**, **Applied on its own** | Every change was made. |
-| **Declined** | Nothing changed. |
-| **Not applied** | One change failed, so none was made. The card says why, and **Try again** applies it again. |
-| **Undone** | The changes were put back. |
+| **Waiting for you** | Proposed and waiting for a teammate to apply or decline. |
+| **Applied** / **Applied on its own** | Every change in the card succeeded. |
+| **Declined** | Rejected; nothing in your workspace changed. |
+| **Not applied** | One item failed, so dimmi rolled back the whole card. Fix the issue and click **Try again**. |
+| **Undone** | Previous values were restored. |
 
-## Rules
+## How apply and undo work
 
-- **All or nothing:** dimmi applies a changeset in one transaction.
-- **Who decides:** the teammate Operator proposed it to. Any teammate who can see the conversation decides a changeset from **Triage new conversations**.
-- **Permissions:** every change runs as the teammate who applies it, so their role must allow it. A run of an action that needs an admin's approval needs an admin.
-- **Undo:** dimmi puts back the value each change replaced, newest change first, and skips a field someone changed since.
-- **Undo of content:** a note is deleted. A drafted article is deleted only while it was never published. An edit is put back only while the draft still holds Operator's text.
-- **No undo:** a run of an action.
-- **Slack:** the card in the thread has the same **Apply**, **Decline** and **Undo** buttons.
-- **Audit log:** each apply and undo is recorded under the teammate who decided. See the [audit log](/workspace/audit-log/).
+- **All or nothing:** dimmi applies every change in a changeset inside one transaction, so partial edits never happen.
+- **Runs as you:** every change checks the permissions of the teammate who clicks **Apply**. Actions that require an admin must be approved by an admin.
+- **Smart undo:** clicking **Undo** restores each previous value in reverse order and skips any field a teammate edited afterward.
+- **Content undo:** internal notes are removed; drafted articles are removed only if never published; draft edits revert only if nobody edited the text since.
+- **External actions cannot undo:** once a workspace action calls your external API, dimmi cannot roll it back.
+- **Works in Slack and audit logs:** Slack cards show the same **Apply**, **Decline**, and **Undo** buttons, and every decision is logged under the teammate in the [audit log](/workspace/audit-log/).
