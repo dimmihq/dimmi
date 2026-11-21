@@ -27,8 +27,24 @@ http:// {
 	redir https://{host}{uri} 308
 }
 
+# The environment's host serves the marketing site and its docs (the site
+# service, static files) beside the app: the site's pages and assets go to
+# the site, everything else (the dashboard at /d, the API, sign-in, the
+# messenger) to the app. The site's CI job checks that every top-level path
+# of its build is listed here (scripts/check-site-paths.sh). The app's gate
+# never covers the site; SITE_ROBOTS keeps a non-production site out of
+# search engines. HOST_TLS is empty on a server; a machine with no public
+# name (local.sh) sets it to "tls internal" for a certificate of Caddy's own.
 {$HOST} {
-	reverse_proxy web:8080
+	{$HOST_TLS}
+	@site path / /favicon.svg /docs /docs/* /assets/* /logos/* /shots/* /agent /agent/* /broadcasts /broadcasts/* /changelog /changelog/* /feedback /feedback/* /help-center /help-center/* /inbox /inbox/* /operator /operator/* /pricing /pricing/* /procedures /procedures/* /reports /reports/* /tickets /tickets/* /workflows /workflows/*
+	handle @site {
+		header X-Robots-Tag {$SITE_ROBOTS:all}
+		reverse_proxy site:8080
+	}
+	handle {
+		reverse_proxy web:8080
+	}
 }
 
 # The file store's public host. Browsers read and upload files through
@@ -36,6 +52,7 @@ http:// {
 # signature itself; customers' sites upload from other origins, which the
 # store allows here. Environments without a store host leave it unset.
 {$FILES_HOST:files.invalid} {
+	{$HOST_TLS}
 	@preflight method OPTIONS
 	header {
 		Access-Control-Allow-Origin "*"

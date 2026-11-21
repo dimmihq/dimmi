@@ -1,8 +1,9 @@
 # Every push to main and every pull request: check everything, and build
-# the release image alongside the checks. A push to main releases the image
-# to staging (staging.yml) as soon as it is pushed, while the checks still
-# run: staging shows each commit within minutes, and a failed check marks
-# the commit red. Production releases only commits whose checks all passed.
+# the release image and the site image alongside the checks. A push to main
+# releases both to staging (staging.yml) as soon as they are pushed, while
+# the checks still run: staging shows each commit within minutes, and a
+# failed check marks the commit red. Production releases only commits
+# whose checks all passed.
 
 name: main
 
@@ -83,11 +84,55 @@ jobs:
           name: image
           mode: save
 
+  # The marketing site and its docs, built in a job of their own beside the
+  # image so neither waits for the other. The files are built here with
+  # pnpm's store warm and only packed by Docker. Pushes to main push the
+  # image as the app package's site-<sha> tag, which staging releases with
+  # the app.
+  site:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      packages: write
+    env:
+      PUSH: ${{ github.event_name == 'push' }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile --ignore-scripts
+      - run: pnpm site:build
+      - name: Check the edge sends every site path to the site
+        run: scripts/check-site-paths.sh site/dist
+      - uses: docker/setup-buildx-action@v3
+      - if: env.PUSH == 'true'
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: site/Dockerfile
+          platforms: linux/amd64
+          build-args: |
+            SITE=prebuilt
+            REVISION=${{ github.sha }}
+          build-contexts: prebuilt=site/dist
+          push: ${{ env.PUSH == 'true' }}
+          tags: ghcr.io/dimmihq/dimmi:site-${{ github.sha }}
+
   # Each check is its own job, so they run side by side and each shows its
   # own result (.github/actions/check runs one). The Go tests run once, as
   # the cloud runs: the cloud build as the application role, split eight
   # ways by package (scripts/test-shard.ts). A public repository runs at
-  # most 20 jobs at once; a run uses 19, and its staging release one more.
+  # most 20 jobs at once; a run starts 20, and its staging release takes the
+  # first slot a finished check frees.
   #
   # Go's build cache is kept per kind of build, not per job, so the caches
   # of a run fit under GitHub's 10 GB together and none is evicted by its
@@ -195,7 +240,7 @@ jobs:
 
   staging:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    needs: image
+    needs: [image, site]
     permissions:
       contents: read
       packages: write
