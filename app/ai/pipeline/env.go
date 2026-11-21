@@ -43,26 +43,28 @@ const transcriptSize = 30
 env is the run's loaded world.
 */
 type env struct {
-	Workspace     models.Workspace
-	Agent         models.AiAgent
-	Conversation  models.Conversation
-	Contact       *models.Contact
-	Trigger       models.Message
-	History       []models.Message
-	Pending       []models.Message
-	Newest        ids.UUID
-	ReplyAfter    string
-	ChannelType   string
-	AnswerKey     *models.AiProviderKey
-	ClassifierKey *models.AiProviderKey
-	Facts         facts
-	Triage        triageFacts
-	Version       string
-	Defaults      map[string]string
-	WorkflowStep  *workflowspec.AgentHandling
-	Procedures    []liveProcedure
-	TicketTypes   []tickets.AgentType
-	now           time.Time
+	Workspace       models.Workspace
+	Agent           models.AiAgent
+	Conversation    models.Conversation
+	Contact         *models.Contact
+	Trigger         models.Message
+	History         []models.Message
+	Pending         []models.Message
+	Newest          ids.UUID
+	ReplyAfter      string
+	ChannelType     string
+	AnswerKey       *models.AiProviderKey
+	ClassifierKey   *models.AiProviderKey
+	Facts           facts
+	Triage          triageFacts
+	Version         string
+	Defaults        map[string]string
+	WorkflowStep    *workflowspec.AgentHandling
+	Procedures      []liveProcedure
+	AllProcedures   []liveProcedure
+	ActiveProcedure *activeProcedure
+	TicketTypes     []tickets.AgentType
+	now             time.Time
 }
 
 /*
@@ -116,12 +118,15 @@ func (r *Runner) loadEnv(ctx context.Context, tx *database.Tx, args Args) (*env,
 		return nil, err
 	}
 
-	if err := loadProcedures(ctx, q, e); err != nil {
+	loadTicketContext(ctx, q, e)
+	if err := r.loadFacts(ctx, q, e); err != nil {
 		return nil, err
 	}
-	loadTicketContext(ctx, q, e)
+	if err := r.loadProcedures(ctx, q, e); err != nil {
+		return nil, err
+	}
 
-	return e, r.loadFacts(ctx, q, e)
+	return e, loadActiveProcedure(ctx, q, e)
 }
 
 /*

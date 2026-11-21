@@ -33,8 +33,9 @@ proposeDescription tells the model how to propose changes.
 */
 const proposeDescription = "Propose changes to the workspace as one changeset a teammate reviews: tag or untag, " +
 	"assign to a teammate or team, set priority, open or close, rename, add an internal note, update a " +
-	"customer's name, create a help article draft, edit an article's draft, or edit a procedure's working " +
-	"copy. Give a short title and the reason."
+	"customer's name, create a help article draft, edit an article's draft, edit a procedure's working " +
+	"copy, or add a regression test to a procedure from a conversation that went wrong. Give a short title " +
+	"and the reason, citing the conversations."
 
 /*
 proposeSchema is the schema of a proposal.
@@ -46,7 +47,7 @@ const proposeSchema = `{"type":"object","required":["title","reason","operations
 "properties":{
 "kind":{"type":"string","enum":["conversation.tag","conversation.untag","conversation.assign",
 "conversation.priority","conversation.status","conversation.title","conversation.note","contact.update",
-"article.create_draft","article.edit_draft","procedure.edit_draft"]},
+"article.create_draft","article.edit_draft","procedure.edit_draft","procedure.create_test_case"]},
 "conversation":{"type":"integer","description":"Conversation number; leave out for this thread's."},
 "tags":{"type":"array","items":{"type":"string"},"description":"Tag names, for tag and untag."},
 "member":{"type":"string","description":"Teammate id (mem_...) to assign, or none."},
@@ -60,7 +61,12 @@ const proposeSchema = `{"type":"object","required":["title","reason","operations
 "help_center":{"type":"string","description":"Help center id (hc_...); leave out for the default."},
 "article":{"type":"string","description":"Article id (art_...)."},
 "procedure":{"type":"string","description":"Procedure id (prc_...)."},
-"definition":{"type":"object","description":"The procedure's whole new working copy, as get_procedure shows it."}
+"definition":{"type":"object","description":"The procedure's whole new working copy, as get_procedure shows it."},
+"test_case":{"type":"object","description":"For procedure.create_test_case: the test, with name, messages ` +
+	`([{text}], the customer's turns), persona ({verified, external_id, channel, attributes}), action_mocks ` +
+	`({action id: {status, body}}), assertions ([{type, ...}], types procedure_matched, action_called, ` +
+	`action_not_called, action_order, branch_taken, handed_off, reply_contains, reply_not_contains) and ` +
+	`source_conversation (its number)."}
 }}}}}`
 
 /*
@@ -91,6 +97,7 @@ type opInput struct {
 	Article      string          `json:"article"`
 	Procedure    string          `json:"procedure"`
 	Definition   json.RawMessage `json:"definition"`
+	TestCase     json.RawMessage `json:"test_case"`
 }
 
 /*

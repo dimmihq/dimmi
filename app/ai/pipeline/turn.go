@@ -47,7 +47,8 @@ const maxModelCalls = 6
 /*
 loop is the turn's conversation with the answer model: the driver, the
 rendered system prompt, the brief of the conversation's action
-requests, the turns so far and why the last call ended.
+requests, the turns so far and why the last call ended. When set, the
+limit caps the model calls of the next tool loop below maxModelCalls.
 */
 type loop struct {
 	llm      contracts.LLM
@@ -56,6 +57,7 @@ type loop struct {
 	messages []contracts.ChatMessage
 	stop     contracts.StopReason
 	newest   int
+	limit    int
 }
 
 /*
@@ -77,9 +79,13 @@ which it returns.
 */
 func (r *Runner) agentLoop(ctx context.Context, st *run) (string, error) {
 	lp := st.loop
+	most := maxModelCalls
+	if lp.limit > 0 {
+		most = lp.limit
+	}
 	for calls := 1; ; calls++ {
 		var tools []contracts.ToolSpec
-		if calls < maxModelCalls && !st.actions.closed {
+		if calls < most && !st.actions.closed {
 			tools = r.toolSpecs(st)
 		}
 
@@ -124,9 +130,15 @@ func (r *Runner) callTool(ctx context.Context, st *run, call contracts.ToolCall)
 	if st.layer != nil && st.layer.set.Has(call.Name) {
 		err = errors.New(st.layer.set.Misdirected(call.Name))
 	}
+	blocked, refused := "", false
+	if allowed {
+		blocked, refused = r.gateProcedure(st, call.Name, t)
+	}
 	switch {
 	case st.layer != nil && (call.Name == toolset.LoadTool || call.Name == toolset.CallTool):
 		ran, result, err = r.layerCall(ctx, st, call)
+	case refused:
+		result, err = blocked, nil
 	case allowed:
 		result, err = t.handle(ctx, st, call.Arguments)
 	}
@@ -138,7 +150,7 @@ func (r *Runner) callTool(ctx context.Context, st *run, call contracts.ToolCall)
 	if err != nil {
 		return "error: " + err.Error(), true
 	}
-	return result, false
+	return result, refused
 }
 
 /*
@@ -175,6 +187,9 @@ func (r *Runner) generate(ctx context.Context, st *run, tools []contracts.ToolSp
 	system := []contracts.SystemBlock{{Text: lp.system, Cacheable: true}}
 	if lp.brief != "" {
 		system = append(system, contracts.SystemBlock{Text: lp.brief})
+	}
+	if block := r.procedureBlock(st); block != "" {
+		system = append(system, contracts.SystemBlock{Text: block})
 	}
 	req := contracts.ChatRequest{
 		Model: model, System: system,

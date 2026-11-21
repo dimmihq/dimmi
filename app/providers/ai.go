@@ -72,6 +72,12 @@ func bootAI(ctx context.Context, a *app.App) error {
 	runner.Actions = &actionkit.Kit{
 		DB: a.DB, Clock: a.Clock, HTTP: a.HTTP, Keys: a.Keys, Events: a.Events, Queue: a.Queue,
 	}
+	if p := a.Actions.Procedures; p != nil {
+		p.Simulator, p.Judge = runner, runner
+		if a.Vectors != nil {
+			p.Vectors, runner.ProcedureVectors = a.Vectors, a.Vectors
+		}
+	}
 
 	a.Actions.AI = aiActions(a, runner, runner.Prices)
 

@@ -66,22 +66,35 @@ the agent still answers from its knowledge.
 */
 func (r *Runner) offerActions(ctx context.Context, st *run) {
 	e := st.env
-	if r.Actions == nil || !e.Agent.ActionsEnabled || e.Conversation.ID == (ids.UUID{}) ||
-		st.args.Kind == playgroundKind {
+	if r.Actions == nil || !e.Agent.ActionsEnabled || st.args.Kind == playgroundKind ||
+		(e.Conversation.ID == (ids.UUID{}) && st.sim == nil) {
 		return
 	}
-	if st.actions.followUp == nil {
+	if st.actions.followUp == nil && st.sim == nil {
 		st.actions.identity = identityOf(e.ChannelType, e.Trigger, e.Contact)
 	}
-	offered, err := r.Actions.Offer(ctx, actionkit.OfferInput{
-		WorkspaceID: e.Workspace.ID, ChannelType: e.ChannelType, Identity: st.actions.identity,
-		NoWrites: st.actions.noWrites, Agent: actionkit.AgentDimmi,
-	})
+	in := r.offerInput(st)
+	in.MustInclude = mustInclude(st)
+	offered, err := r.Actions.Offer(ctx, in)
 	if err == nil {
 		st.actions.offered = offered
 	}
+	if st.sim != nil {
+		return
+	}
 	if brief, err := r.Actions.Brief(ctx, e.Workspace.ID, e.Conversation.ID); err == nil {
 		st.loop.brief = brief
+	}
+}
+
+/*
+offerInput is what decides the turn's actions.
+*/
+func (r *Runner) offerInput(st *run) actionkit.OfferInput {
+	e := st.env
+	return actionkit.OfferInput{
+		WorkspaceID: e.Workspace.ID, ChannelType: e.ChannelType, Identity: st.actions.identity,
+		NoWrites: st.actions.noWrites, Agent: actionkit.AgentDimmi,
 	}
 }
 
@@ -107,6 +120,9 @@ func (r *Runner) actionHandler(live actionkit.Live) func(context.Context, *run, 
 		if write && st.actions.closed {
 			return oneWritePerTurn, nil
 		}
+		if st.sim != nil {
+			return r.mockAction(ctx, st, live, args), nil
+		}
 		e := st.env
 		reply, err := r.Actions.Call(ctx, actionkit.CallInput{
 			WorkspaceID: e.Workspace.ID, ConversationID: e.Conversation.ID, ContactID: e.Conversation.ContactID,
@@ -118,6 +134,11 @@ func (r *Runner) actionHandler(live actionkit.Live) func(context.Context, *run, 
 			return "", err
 		}
 		st.record(live, reply)
+		var result json.RawMessage
+		if reply.Call != nil {
+			result = reply.Call.Result
+		}
+		r.recordProcedureCall(st, live, reply, result)
 		return reply.Text, nil
 	}
 }

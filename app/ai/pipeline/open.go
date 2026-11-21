@@ -39,7 +39,9 @@ called, whether it followed one of the team's procedures, the
 procedures it already checked or handed over, and how well the
 decision model found each procedure to fit. The cited chunks are the
 passages the reply's markers name, each once; the cited claims are, by
-chunk id, the reply's sentences citing it.
+chunk id, the reply's sentences citing it. The procedure the run follows
+is proc, those it stopped following procEnded, and the simulator's setup
+of a simulated run sim.
 */
 type run struct {
 	env            *env
@@ -68,6 +70,9 @@ type run struct {
 	annotated      string
 	citedChunks    []source
 	citedClaims    map[string]string
+	proc           *procRun
+	procEnded      []*procRun
+	sim            *simulation
 }
 
 /*
@@ -243,7 +248,7 @@ func (r *Runner) createRun(ctx context.Context, tx *database.Tx, e *env, args Ar
 	}
 	conversation, trigger, actor := runSubject(e, kind)
 	actorType := "contact"
-	if kind == playgroundKind {
+	if kind == playgroundKind || kind == simulationKind || kind == judgeKind {
 		actorType, actor = "member", args.MemberID
 	}
 	now := r.Clock.Now()

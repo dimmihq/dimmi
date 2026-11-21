@@ -25,6 +25,7 @@ import { FilterBar } from "./filter-bar";
 import { formatRange } from "./format";
 import { DigestButton, FactsExportButton } from "./header-actions";
 import { MetricTiles, MetricTilesSkeleton } from "./metric-tiles";
+import { ProceduresTable } from "./procedures-table";
 import { type ReportSearch, reportFilters, withoutDrill, writeDrillBy } from "./search";
 
 const route = "/d/reports/$report";
@@ -204,6 +205,16 @@ function useReport(workspace: string, key: string, search: ReportSearch) {
   };
 }
 
+/*
+ * procedureRange is the range the procedures table reads: the report's
+ * own, the last 30 days when none is picked.
+ */
+function procedureRange(search: ReportSearch): { from?: string; to?: string } {
+  const filters = reportFilters(search);
+
+  return { from: filters.from, to: filters.to };
+}
+
 export function ReportsPage() {
   const { report: key } = useParams({ from: route });
   const search = useSearch({ from: route });
@@ -246,6 +257,7 @@ export function ReportsPage() {
                 <FilterBar workspace={workspace} search={search} live={view.live} onChange={change} />
                 {view.data ? <Caption report={view.data} summary={view.type?.summary} /> : null}
                 {body}
+                {key === "ai" ? <ProceduresTable workspace={workspace} {...procedureRange(search)} /> : null}
               </>
             )}
           </div>

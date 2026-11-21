@@ -18,6 +18,7 @@ export interface OperatorSettings {
   enabled: boolean;
   brief_on_open: boolean;
   triage_on_arrival: boolean;
+  procedure_qa_weekly: boolean;
   instructions: string;
   policies: Record<OperatorGroup, OperatorPolicy>;
   auto_groups: OperatorGroup[];
@@ -28,6 +29,7 @@ export interface OperatorSettingsChange {
   enabled?: boolean;
   brief_on_open?: boolean;
   triage_on_arrival?: boolean;
+  procedure_qa_weekly?: boolean;
   instructions?: string;
   policies?: Partial<Record<OperatorGroup, OperatorPolicy>>;
   model?: string;
@@ -263,4 +265,11 @@ export function operatorMemoriesQuery(workspace: string) {
 
 export function forgetOperatorMemory(workspace: string, id: string) {
   return request<void>("DELETE", `/operator/memories/${encodeURIComponent(id)}`, undefined, { workspace });
+}
+
+/*
+ * startWorkspaceThread starts a fresh thread about the whole workspace.
+ */
+export function startWorkspaceThread(workspace: string) {
+  return request<OperatorThreadView>("POST", "/operator/threads", { fresh: true }, { workspace });
 }

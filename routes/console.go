@@ -31,6 +31,7 @@ package routes
 
 import (
 	"github.com/dimmihq/dimmi/app"
+	aijobs "github.com/dimmihq/dimmi/app/ai/jobs"
 	"github.com/dimmihq/dimmi/app/jobs"
 )
 
@@ -123,9 +124,11 @@ func scheduleNotifications(a *app.App) {
 /*
 scheduleKnowledge declares the knowledge and help center jobs: the
 vector sweep, the source syncs that are due, the custom domain checks
-that are due, and the prune of old view and search counts.
+that are due, and the prune of old view and search counts; and
+Operator's weekly review of the procedures, on Monday mornings.
 */
 func scheduleKnowledge(a *app.App) {
+	a.Schedule.Job(aijobs.ReviewProceduresWeeklyArgs{}).Cron("0 6 * * 1")
 	a.Schedule.Job(jobs.SweepKnowledgeEmbeddingsArgs{}).DailyAt("04:10")
 	a.Schedule.Job(jobs.ScheduleKnowledgeSyncsArgs{}).Cron("*/5 * * * *")
 	a.Schedule.Job(jobs.ScheduleHelpCenterDomainChecksArgs{}).EveryMinute()

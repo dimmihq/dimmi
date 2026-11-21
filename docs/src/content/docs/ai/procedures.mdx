@@ -1,12 +1,12 @@
 ---
 title: "Write procedures"
-description: "Write playbooks for the dimmi agent in plain English, mix instructions with API actions, and publish edits safely."
+description: "Write playbooks for the dimmi agent in plain English, bind your actions inline, decide branches exactly, and test before you publish."
 ---
 import { Callout } from "~docs/components/mdx";
 
 Help articles work great when customers ask how something works. They are not enough when a customer needs action, like refunding a duplicate charge or changing an account email.
 
-**Procedures** let admins write those team playbooks in plain English under **Procedures** in the sidebar. Instead of stuffing every rule into one big prompt, you give the dimmi agent clear, ordered steps for each request.
+**Procedures** let admins write those team playbooks in plain English under **Procedures** in the sidebar. Instead of stuffing every rule into one big prompt, you give the dimmi agent clear, ordered steps for each request, and dimmi's own code holds the agent to the parts that must happen.
 
 ## Procedures vs. workflows
 
@@ -15,41 +15,130 @@ Both automate support work, so pick the right tool for the job:
 - **Procedures** guide the **dimmi agent** through chats that need judgment, follow-up questions, or policy checks.
 - **[Workflows](/workflows/how-workflows-work/)** run fixed rules that act the same every time without AI: routing chats to teams, adding tags, setting SLAs, and sending follow-ups.
 
-## Example: refunding a duplicate charge
+## Example: refunding a damaged order
 
 Every procedure has three parts: **When dimmi uses this** (when to trigger), ordered **Steps**, and **Hand over to the team when** (when to stop and bring in a human).
 
-A billing team handling duplicate charges can set up a procedure like this:
+A support team handling damaged orders writes this procedure. Words after `@` are chips that point at real things in your workspace:
 
-- **Name:** `Duplicate charge refund`
-- **When dimmi uses this:** `The customer says they were charged twice for the same invoice or billing period.`
-- **Step 1 (Instruction):** `Check if the customer gave an invoice number. If not, ask for the invoice ID or the date and amount of the charge.`
-- **Step 2 (Action):** Call `Look up recent charges` to see if two matching payments went through within 48 hours.
-- **Step 3 (Condition):** `If two matching charges went through within 48 hours and the amount is under $200, go to Step 4. Otherwise, hand over to Billing with both charge IDs.`
-- **Step 4 (Action):** Call `Issue refund` (set to need teammate approval) and tell the customer a billing specialist is confirming the refund.
-- **Hand over to the team when:** `The charge is older than 30 days`, or `The customer mentions a bank dispute or chargeback.`
+- **When dimmi uses this:** `The customer wants a refund for an order that arrived damaged.`
+- **Step 1 (Instruction):** `Ask for the order number, then look it up with @Look up order.`
+- **Step 2 (Rule):** `contact.attr.plan is pro` **or** `action.lookup_order.days_since_purchase is at most 30`
+  - **Then:** `Refund it with @Refund order and tell them when the money arrives.`
+  - **Else:** `Explain the 30-day policy from @Refund policy and offer store credit with @Issue credit.`
+- **Hand over to the team when:** `The customer mentions a chargeback.`
 
-Because Step 4 runs an [action](/ai/actions/) that changes data, dimmi pauses and puts an approval card in your inbox before any money moves.
+Here is what dimmi does with it:
 
-## How the agent picks a procedure
+- **Step 2 waits** until `Look up order` has run, because its rule reads that action's result.
+- **Code picks the side.** The agent never sees the other side, so it can't refund an order outside the window.
+- **`Refund order` can't jump the line.** If the agent tries it before the lookup, dimmi refuses the call and tells the agent which step comes first.
 
-On every customer message, the dimmi agent sees the name and **When dimmi uses this** text of each live procedure. When a chat matches one, the agent loads its steps *before* searching your docs and follows them in order for the rest of the chat.
+## How the agent picks and keeps a procedure
+
+On every customer message, the dimmi agent sees the name and **When dimmi uses this** text of each live procedure that applies to the chat. When the chat matches one, the agent loads its steps *before* searching your docs.
+
+From then on, dimmi keeps the procedure for that chat across messages. Each new reply starts with the steps marked done, the step that comes next, and what the procedure's actions returned so far. The procedure ends when:
+
+- **Every required action** on its path has run.
+- **The customer moves on** to something else, and the agent says so.
+- **A teammate replies** in the chat, or the chat is closed or handed over.
 
 <Callout type="tip" title="Write triggers the way customers ask">
   Write **When dimmi uses this** as the customer's request, like `The customer wants to change the email on their account`, not `Account email policy`. Clear triggers stop two procedures from getting mixed up.
 </Callout>
 
-## Step kinds
+With more than **15** procedures that apply to a chat, dimmi offers the agent the **12** whose description is closest to what the customer wrote. The procedure the chat is already following always stays in the list.
 
-Build a procedure from three kinds of steps:
+## Write steps with @ chips
 
-| Step kind | What it does | Example |
-| --- | --- | --- |
-| **Instruction** | Tells the agent what to ask, explain, or check | `Ask for the workspace slug before checking SSO.` |
-| **Condition** | Decides which path to take next | `If the order already shipped, share the tracking link instead of canceling.` |
-| **Action** | Runs one of your live [actions](/ai/actions/) against your API or MCP server | Call `Cancel subscription` or `Look up order` |
+Type `@` in any step to insert a chip. The list groups what a chip can point at, and the arrow keys, **Enter** and **Esc** work as you expect.
 
-Use **Hand over to the team when** to list cases where the agent must stop and [hand over](/ai/handover/) right away. If a step's action is unavailable in a chat (for instance, an anonymous visitor has not passed [identity verification](/developers/messenger/identity-verification/)), the agent hands over instead of guessing.
+| Chip | What dimmi does with it |
+| --- | --- |
+| **Actions** | Always offers that [action](/ai/actions/) while the procedure runs, even in a workspace with many actions. |
+| **Customer & company** | Names a trusted detail, like a custom attribute or a field an earlier action returned. |
+| **Help articles** | Loads the article as a source the agent cites, if the customer's audience may read it. |
+| **Inbox actions** | Tags the chat, hands it to a team, or opens a ticket of a type. |
+| **Sub-procedures** | Follows another procedure's steps right here. |
+
+Click an action chip to set how strictly dimmi treats it:
+
+- **Execution:** **Required** means the agent must call it before replying. **Only when it applies** means the agent calls it when it fits, and skipping it never holds a reply back.
+- **Run only after:** pick earlier actions that must succeed first.
+- **If unavailable:** hand over to the team, or continue without it, when the action can't run in a chat (for instance, an anonymous visitor on an action that needs a signed-in customer).
+
+## Conditions: exact rules or plain English
+
+Every condition step has a switch at the top:
+
+- **Rule (exact):** dimmi checks the rule in code and shows the agent only the side that matched. Pick **Match all** or **Match any**, then add rules like `contact.attr.plan is pro`.
+- **Plain English (AI):** the agent weighs the words itself and sees both sides. Actions under it are **only when it applies** unless you set them to **Required**.
+
+Rules read fields like these:
+
+| Field | Reads |
+| --- | --- |
+| `contact.email`, `contact.name`, `contact.external_id` | The customer's own fields |
+| `contact.attr.<key>`, `company.attr.<key>` | Trusted custom attributes only, never values the browser set |
+| `conversation.channel`, `conversation.verified` | Where the chat happens, and whether the customer is signed in |
+| `action.<action_name>.<field>` | What an action returned, such as `action.lookup_order.status` |
+
+The field picker suggests every field an action returned the last time you ran a live test of it under **Settings → Actions**. A rule that reads an action's result stays locked, and shows neither side, until that action runs.
+
+## Required actions and the guardrails
+
+dimmi checks the procedure's rules before every reply, so a missed step can't slip through:
+
+1. **Out-of-order calls are refused.** If the agent calls an action before the actions it waits for, dimmi blocks the call and names the step that must run first.
+2. **Skipped required actions send the reply back.** The agent gets a note naming the action and its step, up to **3** times.
+3. **Still skipped after 3 reminders, the chat goes to the team.** The handover reason is `procedure_guard`, with a note naming the step and the action. Set a step to **warn only** through the API to log the miss instead.
+
+A required action never holds a reply back when it sits on a side the rule did not take, under a plain-English condition, when it can't run in the chat, or while it waits for the customer's confirmation or a teammate's approval. If the action needs input only the customer can give, like an order number, the agent may ask for it first.
+
+## Sub-procedures and where a procedure applies
+
+Write a shared playbook once, like `Verify identity`, and pull it into other procedures with a **Sub-procedure** step or chip. Tick **Only as a sub-procedure of other procedures** under **Where it applies** so dimmi never starts it on its own.
+
+**Where it applies** also narrows a procedure to some channels, inboxes, saved [audiences](/customers/audiences/), or signed-in customers. Empty lists mean everywhere the agent answers.
+
+Publishing refuses a sub-procedure that is not live, a loop like `Refunds → Verify identity → Refunds`, and chains deeper than **3**. You can't turn off or delete a procedure that live procedures still follow.
+
+## Test before you publish
+
+The **Test** tab talks to the agent as a made-up customer, following your working copy. No action ever reaches your systems while you test. Each one answers with the JSON you write beside it, which starts as that action's last live test result.
+
+- **Pick the customer:** signed in or not, the channel, a user ID, and attributes.
+- **Replay a real chat:** paste a conversation ID and click **Load from real conversation**.
+- **Step through approvals:** a write that needs a confirmation shows **Simulate customer confirm** or **Simulate teammate approve**.
+- **Watch the steps:** each step shows as done, active, locked, or the side its rule took, with every guardrail event.
+
+Click **Save as test case** to keep a chat as a regression test. Each test checks what must hold after its messages:
+
+| Check | Example |
+| --- | --- |
+| The procedure matched | It followed `Refund a damaged order` |
+| An action was called (or not) | `lookup_order` was called with `order_id` `1042` |
+| One action ran before another | `lookup_order` succeeded before `refund_order` |
+| A rule took a side | Step `s_2` took `else` |
+| It was handed over | Optionally to a team, at a priority |
+| A reply says (or doesn't say) | The reply mentions `30 days` |
+| A rubric | `Explains the policy politely`, judged by your answer model |
+
+**Run all** runs every saved test against the working copy, and the editor shows how many pass beside **Publish**. Test runs count toward your workspace's monthly AI spend like any other run.
+
+## Versions, rollback, and how a procedure did
+
+Every publish keeps a numbered version with who published it and the note they left. The **History** tab compares any two versions, or a version and your working copy, step by step. **Restore to draft** puts an old version back to look over; **Publish this** makes it live at once.
+
+The **Analytics** tab shows the last 7, 30, or 90 days, for every version or one:
+
+- **AI resolution rate:** counted the same way as **Reports → dimmi agent**, so the numbers add up.
+- **Handovers by reason:** splits the procedure's own handovers from guardrail handovers and failures.
+- **Guardrails:** how often calls were refused, replies were sent back, or chats were handed over.
+- **Steps and actions:** how far chats got, which side each rule took, and each action's errors and speed.
+
+**Reports → dimmi agent** lists every procedure side by side. Click **Review recent runs with Operator** to have [Operator](/operator/work-with-operator/) read the runs that went wrong and propose a fix to the working copy plus a regression test from the failing chat, as one changeset you review. Turn on **Review procedures every week** in Operator's settings to run that review every Monday.
 
 ## Drafts, publishing, and pausing
 
@@ -57,10 +146,26 @@ You can write and edit procedures without breaking live chats:
 
 - **Drafts stay private:** a new procedure starts as a draft the agent never sees. Click **Publish** when it is ready.
 - **Safe edits:** changes to a live procedure save to a draft while the agent keeps using the published copy. Edits go live only when you click **Publish changes**.
-- **Checks before going live:** dimmi checks every step before publishing and blocks it if a required field is empty or an action is missing or unpublished.
+- **Checks before going live:** dimmi blocks publishing while a step is empty, or anything a chip points at is missing: an unpublished action or article, a deleted team, tag, ticket type, or audience.
 - **Quick pause:** **Turn off** stops the agent from using a procedure right away while keeping all your text.
 - **Triage-only mode:** if **Agent's role** is set to **Triage only** in [agent settings](/ai/set-up-the-agent/), the agent skips all procedures.
 
-The **Procedures** list shows how many chats used each procedure in the last **30 days**. Each procedure supports up to **30 steps** and **10 handover rules**; if a process grows larger than that, split it into two focused procedures.
+Procedures you wrote before chips and rules keep working as they are. An old **Action** step counts as a required action chip.
 
-To let your procedures read or update live customer data, head to [Connect actions to your systems](/ai/actions/) or [Build your first action](/ai/first-action/).
+## Rules and limits
+
+| Limit | Value |
+| --- | --- |
+| Top-level steps | 1 to 30 |
+| Steps including nested then and else steps | 80 |
+| Words per step | 1,000 characters |
+| **When dimmi uses this** | 500 characters |
+| Handover rules | 10, each up to 300 characters |
+| Then and else nesting | 2 levels deep |
+| Rules per condition | 10 |
+| Sub-procedure depth | 3 |
+| Reminders before a guardrail handover | 3 |
+| Saved tests per procedure | 100, each with 1 to 12 customer messages and up to 30 checks |
+| Tests per run | 20 |
+
+The [API reference](/api-reference/) covers the simulator, saved tests, versions, and scorecard endpoints. To let your procedures read or update live customer data, head to [Connect actions to your systems](/ai/actions/) or [Build your first action](/ai/first-action/).

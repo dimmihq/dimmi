@@ -26,28 +26,29 @@ import (
 AiRun is one run of the agent.
 */
 type AiRun struct {
-	ID              string      `json:"id"`
-	ConversationID  *string     `json:"conversation_id"`
-	Kind            string      `json:"kind"`
-	Status          string      `json:"status"`
-	Outcome         *string     `json:"outcome"`
-	SkipReason      *string     `json:"skip_reason"`
-	HandoffReason   *string     `json:"handoff_reason"`
-	Language        *string     `json:"language"`
-	AnswerMessageID *string     `json:"answer_message_id"`
-	InputTokens     int64       `json:"input_tokens"`
-	OutputTokens    int64       `json:"output_tokens"`
-	CostMicros      int64       `json:"cost_micros"`
-	LatencyMs       *int32      `json:"latency_ms"`
-	FirstTokenMs    *int32      `json:"first_token_ms"`
-	PromptVersion   string      `json:"prompt_version"`
-	Flags           []string    `json:"flags"`
-	Error           any         `json:"error"`
-	Steps           []AiRunStep `json:"steps,omitempty"`
-	Payloads        *bool       `json:"payloads_visible,omitempty"`
-	Feedback        *string     `json:"feedback"`
-	CreatedAt       time.Time   `json:"created_at"`
-	CompletedAt     *time.Time  `json:"completed_at"`
+	ID              string          `json:"id"`
+	ConversationID  *string         `json:"conversation_id"`
+	Kind            string          `json:"kind"`
+	Status          string          `json:"status"`
+	Outcome         *string         `json:"outcome"`
+	SkipReason      *string         `json:"skip_reason"`
+	HandoffReason   *string         `json:"handoff_reason"`
+	Language        *string         `json:"language"`
+	AnswerMessageID *string         `json:"answer_message_id"`
+	InputTokens     int64           `json:"input_tokens"`
+	OutputTokens    int64           `json:"output_tokens"`
+	CostMicros      int64           `json:"cost_micros"`
+	LatencyMs       *int32          `json:"latency_ms"`
+	FirstTokenMs    *int32          `json:"first_token_ms"`
+	PromptVersion   string          `json:"prompt_version"`
+	Flags           []string        `json:"flags"`
+	Error           any             `json:"error"`
+	Steps           []AiRunStep     `json:"steps,omitempty"`
+	Payloads        *bool           `json:"payloads_visible,omitempty"`
+	Feedback        *string         `json:"feedback"`
+	CreatedAt       time.Time       `json:"created_at"`
+	CompletedAt     *time.Time      `json:"completed_at"`
+	ProcedureTrace  json.RawMessage `json:"procedure_trace,omitempty"`
 }
 
 /*
@@ -71,6 +72,7 @@ func NewAiRun(r models.AiRun) AiRun {
 		FirstTokenMs:    r.FirstTokenMs,
 		PromptVersion:   r.PromptVersion,
 		Flags:           orEmpty(r.Flags),
+		ProcedureTrace:  r.ProcedureTrace,
 		Error:           runError(r),
 		Feedback:        r.Feedback,
 		CreatedAt:       r.CreatedAt,

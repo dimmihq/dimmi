@@ -42,6 +42,8 @@ const (
 	KindArticleEdit  Kind = "article.edit_draft"
 	KindProcedureSet Kind = "procedure.edit_draft"
 	KindAction       Kind = "action.run"
+
+	KindProcedureTestCaseNew Kind = "procedure.create_test_case"
 )
 
 /*
@@ -50,7 +52,7 @@ Kinds lists every operation kind.
 func Kinds() []Kind {
 	return []Kind{
 		KindTag, KindUntag, KindAssign, KindPriority, KindStatus, KindTitle, KindNote, KindContact,
-		KindArticleNew, KindArticleEdit, KindProcedureSet, KindAction,
+		KindArticleNew, KindArticleEdit, KindProcedureSet, KindAction, KindProcedureTestCaseNew,
 	}
 }
 
@@ -80,7 +82,8 @@ Conversation for conversation kinds, Contact, Article and HelpCenter,
 Procedure; Tags for tagging; Member and Team for assignment, Unassign
 to clear both; Value for priority, status, title, note body or contact
 name; Title and Body for articles; Definition for procedures, or an
-action's arguments; Action and Version for the workspace action to run.
+action's arguments, or a new test case of the procedure; Action and
+Version for the workspace action to run.
 Before
 and After are filled when it is applied, Created names a note or
 article it made, and Outcome says what became of it.

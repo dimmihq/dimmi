@@ -1106,6 +1106,77 @@ func (q *Queries) ListConversationActionCalls(ctx context.Context, arg ListConve
 	return items, nil
 }
 
+const listRunActionCalls = `-- name: ListRunActionCalls :many
+SELECT id, workspace_id, action_id, action_version_id, connection_id, mode, side_effect, confirmation, approval, state, error_code, http_status, run_id, report_run_id, conversation_id, contact_id, message_id, tool_call_id, title, summary, input, bindings, request, response, result, decided_by_member_id, decision_reason, customer_message, cancel_reason, attempts, latency_ms, requested_at, confirmed_at, decided_at, sent_at, completed_at, expires_at, reported_at, created_at, updated_at FROM ai_action_calls WHERE workspace_id = $1 AND run_id = $2 ORDER BY created_at, id
+`
+
+type ListRunActionCallsParams struct {
+	WorkspaceID ids.UUID  `json:"workspace_id"`
+	RunID       *ids.UUID `json:"run_id"`
+}
+
+// ListRunActionCalls returns the action calls one run made, oldest first.
+func (q *Queries) ListRunActionCalls(ctx context.Context, arg ListRunActionCallsParams) ([]AiActionCall, error) {
+	rows, err := q.db.Query(ctx, listRunActionCalls, arg.WorkspaceID, arg.RunID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []AiActionCall
+	for rows.Next() {
+		var i AiActionCall
+		if err := rows.Scan(
+			&i.ID,
+			&i.WorkspaceID,
+			&i.ActionID,
+			&i.ActionVersionID,
+			&i.ConnectionID,
+			&i.Mode,
+			&i.SideEffect,
+			&i.Confirmation,
+			&i.Approval,
+			&i.State,
+			&i.ErrorCode,
+			&i.HttpStatus,
+			&i.RunID,
+			&i.ReportRunID,
+			&i.ConversationID,
+			&i.ContactID,
+			&i.MessageID,
+			&i.ToolCallID,
+			&i.Title,
+			&i.Summary,
+			&i.Input,
+			&i.Bindings,
+			&i.Request,
+			&i.Response,
+			&i.Result,
+			&i.DecidedByMemberID,
+			&i.DecisionReason,
+			&i.CustomerMessage,
+			&i.CancelReason,
+			&i.Attempts,
+			&i.LatencyMs,
+			&i.RequestedAt,
+			&i.ConfirmedAt,
+			&i.DecidedAt,
+			&i.SentAt,
+			&i.CompletedAt,
+			&i.ExpiresAt,
+			&i.ReportedAt,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const markActionCallReported = `-- name: MarkActionCallReported :exec
 UPDATE ai_action_calls SET reported_at = $1::timestamptz, report_run_id = $2, updated_at = $1::timestamptz
 WHERE workspace_id = $3 AND id = $4 AND reported_at IS NULL

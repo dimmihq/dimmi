@@ -31,9 +31,13 @@ import (
 )
 
 /*
-maxOffered caps the actions offered in one run.
+maxOffered caps the actions offered in one run; actions a procedure
+pins may raise it to maxPinned.
 */
-const maxOffered = 20
+const (
+	maxOffered = 20
+	maxPinned  = 30
+)
 
 /*
 Live is a published action as a run offers it: its id, the version it
@@ -50,6 +54,8 @@ OfferInput is what decides a run's actions: the workspace, the
 conversation's channel, who the customer is, whether writes may be
 offered at all, and the agent asking, dimmi when empty. Operator works
 for the team, so the customer's channel does not limit its actions.
+MustInclude pins the actions a procedure the run follows takes: each
+one the run may call is offered first, whatever the cap.
 */
 type OfferInput struct {
 	WorkspaceID ids.UUID
@@ -57,6 +63,7 @@ type OfferInput struct {
 	Identity    Identity
 	NoWrites    bool
 	Agent       string
+	MustInclude []ids.UUID
 }
 
 /*
@@ -74,19 +81,84 @@ func (k *Kit) Offer(ctx context.Context, in OfferInput) ([]Live, error) {
 	}
 
 	contact := ContactValues(in.Identity)
-	var out []Live
+	var pinned, other []Live
 	for _, v := range versions {
 		s, err := FromVersion(v)
 		if err != nil || !offered(s, in, contact) {
 			continue
 		}
-		out = append(out, Live{ActionID: v.ActionID, VersionID: v.ID, Spec: s})
+		live := Live{ActionID: v.ActionID, VersionID: v.ID, Spec: s}
+		if slices.Contains(in.MustInclude, v.ActionID) {
+			pinned = append(pinned, live)
+			continue
+		}
+		other = append(other, live)
 	}
-	slices.SortFunc(out, func(a, b Live) int { return strings.Compare(a.Spec.Name, b.Spec.Name) })
-	if len(out) > maxOffered {
-		out = out[:maxOffered]
+	return pin(pinned, other), nil
+}
+
+/*
+pin keeps every pinned action, up to maxPinned, and fills the rest of
+the cap with the others by name; the result is sorted by name so the
+prompt stays cacheable.
+*/
+func pin(pinned, other []Live) []Live {
+	byName := func(a, b Live) int { return strings.Compare(a.Spec.Name, b.Spec.Name) }
+	slices.SortFunc(pinned, byName)
+	slices.SortFunc(other, byName)
+	if len(pinned) > maxPinned {
+		pinned = pinned[:maxPinned]
 	}
-	return out, nil
+	room := max(maxOffered, len(pinned)) - len(pinned)
+	out := slices.Concat(pinned, other[:min(room, len(other))])
+	slices.SortFunc(out, byName)
+	return out
+}
+
+/*
+Unavailable says why an action cannot be offered in the run, empty when
+it can: identity_unverified, channel_unsupported, writes_held or
+connection_disabled when it is not live at all.
+*/
+func (k *Kit) Unavailable(ctx context.Context, in OfferInput, actionID ids.UUID) string {
+	var versions []models.AiActionVersion
+	err := k.DB.Transaction(ctx, func(ctx context.Context, tx *database.Tx) error {
+		var err error
+		versions, err = models.New(tx).ListLiveActionVersions(ctx, in.WorkspaceID)
+		return err
+	})
+	if err != nil {
+		return "connection_disabled"
+	}
+	for _, v := range versions {
+		if v.ActionID != actionID {
+			continue
+		}
+		s, err := FromVersion(v)
+		if err != nil {
+			return "connection_disabled"
+		}
+		return unavailableReason(s, in, ContactValues(in.Identity))
+	}
+	return "connection_disabled"
+}
+
+/*
+unavailableReason names why one action cannot be offered.
+*/
+func unavailableReason(s Spec, in OfferInput, contact map[string]any) string {
+	agent := cmp.Or(in.Agent, AgentDimmi)
+	switch {
+	case !s.UsableBy(agent):
+		return "connection_disabled"
+	case agent == AgentDimmi && !slices.Contains(s.Channels, in.ChannelType):
+		return "channel_unsupported"
+	case in.NoWrites && s.SideEffect == SideEffectWrite:
+		return "writes_held"
+	case s.UsesContact() && !bindable(s, contact) && !awaitsEmail(s, in.Identity):
+		return "identity_unverified"
+	}
+	return ""
 }
 
 /*

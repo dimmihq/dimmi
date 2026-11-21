@@ -188,6 +188,8 @@ export interface Action {
   published_version: ActionVersionRef | null;
   created_at: string;
   updated_at: string;
+  /* The result of the last successful live test, as the model read it. */
+  last_test_response?: unknown;
 }
 
 /*

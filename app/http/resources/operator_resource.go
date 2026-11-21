@@ -35,6 +35,7 @@ type OperatorSettings struct {
 	Policies        map[string]string `json:"policies"`
 	AutoGroups      []string          `json:"auto_groups"`
 	Model           *string           `json:"model"`
+	ProcedureQA     bool              `json:"procedure_qa_weekly"`
 }
 
 /*
@@ -44,7 +45,7 @@ func NewOperatorSettings(s operator.Settings) OperatorSettings {
 	out := OperatorSettings{
 		Object: "operator_settings", Enabled: s.Enabled, BriefOnOpen: s.BriefOnOpen,
 		TriageOnArrival: s.TriageOnArrival, Instructions: s.Instructions, Policies: map[string]string{},
-		AutoGroups: []string{}, Model: optionalText(s.Model),
+		AutoGroups: []string{}, Model: optionalText(s.Model), ProcedureQA: s.ProcedureQA,
 	}
 	for _, g := range operator.Groups() {
 		out.Policies[g] = string(s.PolicyFor(g))

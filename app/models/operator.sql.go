@@ -313,7 +313,7 @@ func (q *Queries) FindOperatorChangeset(ctx context.Context, arg FindOperatorCha
 }
 
 const findOperatorSettings = `-- name: FindOperatorSettings :one
-SELECT workspace_id, enabled, brief_on_open, triage_on_arrival, instructions, policies, model, created_at, updated_at, tool_layer, compact_results, effort FROM operator_settings WHERE workspace_id = $1
+SELECT workspace_id, enabled, brief_on_open, triage_on_arrival, instructions, policies, model, created_at, updated_at, tool_layer, compact_results, effort, procedure_qa_weekly FROM operator_settings WHERE workspace_id = $1
 `
 
 // FindOperatorSettings returns the workspace's Operator settings.
@@ -333,6 +333,7 @@ func (q *Queries) FindOperatorSettings(ctx context.Context, workspaceID ids.UUID
 		&i.ToolLayer,
 		&i.CompactResults,
 		&i.Effort,
+		&i.ProcedureQaWeekly,
 	)
 	return i, err
 }
@@ -637,7 +638,7 @@ ON CONFLICT (workspace_id) DO UPDATE SET
     enabled = EXCLUDED.enabled, brief_on_open = EXCLUDED.brief_on_open,
     triage_on_arrival = EXCLUDED.triage_on_arrival, instructions = EXCLUDED.instructions,
     policies = EXCLUDED.policies, model = EXCLUDED.model, updated_at = EXCLUDED.updated_at
-RETURNING workspace_id, enabled, brief_on_open, triage_on_arrival, instructions, policies, model, created_at, updated_at, tool_layer, compact_results, effort
+RETURNING workspace_id, enabled, brief_on_open, triage_on_arrival, instructions, policies, model, created_at, updated_at, tool_layer, compact_results, effort, procedure_qa_weekly
 `
 
 type SaveOperatorSettingsParams struct {
@@ -677,6 +678,7 @@ func (q *Queries) SaveOperatorSettings(ctx context.Context, arg SaveOperatorSett
 		&i.ToolLayer,
 		&i.CompactResults,
 		&i.Effort,
+		&i.ProcedureQaWeekly,
 	)
 	return i, err
 }
@@ -696,6 +698,26 @@ type SetOperatorCompactResultsParams struct {
 // SetOperatorCompactResults turns Operator's compact results on or off.
 func (q *Queries) SetOperatorCompactResults(ctx context.Context, arg SetOperatorCompactResultsParams) error {
 	_, err := q.db.Exec(ctx, setOperatorCompactResults, arg.WorkspaceID, arg.CompactResults, arg.Now)
+	return err
+}
+
+const setOperatorProcedureQA = `-- name: SetOperatorProcedureQA :exec
+INSERT INTO operator_settings (workspace_id, procedure_qa_weekly, created_at, updated_at)
+VALUES ($1, $2, $3, $3)
+ON CONFLICT (workspace_id) DO UPDATE SET procedure_qa_weekly = EXCLUDED.procedure_qa_weekly,
+    updated_at = EXCLUDED.updated_at
+`
+
+type SetOperatorProcedureQAParams struct {
+	WorkspaceID       ids.UUID  `json:"workspace_id"`
+	ProcedureQaWeekly bool      `json:"procedure_qa_weekly"`
+	Now               time.Time `json:"now"`
+}
+
+// SetOperatorProcedureQA turns Operator's weekly review of the
+// procedures on or off.
+func (q *Queries) SetOperatorProcedureQA(ctx context.Context, arg SetOperatorProcedureQAParams) error {
+	_, err := q.db.Exec(ctx, setOperatorProcedureQA, arg.WorkspaceID, arg.ProcedureQaWeekly, arg.Now)
 	return err
 }
 

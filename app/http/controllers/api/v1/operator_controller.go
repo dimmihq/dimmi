@@ -83,7 +83,7 @@ func (c *OperatorController) UpdateSettings(ctx context.Context, in *requests.Up
 	s, err := c.Settings.Update(ctx, operatorchat.SettingsInput{
 		Membership: membership(ctx), Enabled: in.Body.Enabled, BriefOnOpen: in.Body.BriefOnOpen,
 		TriageOnArrival: in.Body.TriageOnArrival, Instructions: in.Body.Instructions, Policies: in.Body.Policies,
-		Model: in.Body.Model,
+		Model: in.Body.Model, ProcedureQA: in.Body.ProcedureQA,
 	})
 	if err != nil {
 		return nil, err

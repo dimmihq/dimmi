@@ -434,6 +434,8 @@ const (
 	PrefixSchedule        Prefix = "sch"
 	PrefixSLAPolicy       Prefix = "sla"
 	PrefixProcedure       Prefix = "prc"
+	PrefixProcedureVer    Prefix = "prcv"
+	PrefixProcedureTest   Prefix = "prct"
 	PrefixAudience        Prefix = "audn"
 	PrefixAttribute       Prefix = "atd"
 	PrefixEvent           Prefix = "edf"
@@ -452,6 +454,8 @@ func workflowPublicIDs() []PublicIDEntry {
 		{PrefixSchedule, "schedules"},
 		{PrefixSLAPolicy, "sla_policies"},
 		{PrefixProcedure, "procedures"},
+		{PrefixProcedureVer, "procedure_versions"},
+		{PrefixProcedureTest, "procedure_test_cases"},
 		{PrefixAudience, "audiences"},
 		{PrefixAttribute, "attribute_definitions"},
 		{PrefixEvent, "event_definitions"},

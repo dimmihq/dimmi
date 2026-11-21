@@ -39,7 +39,7 @@ INSERT INTO ai_actions (
     $23, $24, $25::text[], $26, $27, $28, $28, $29::timestamptz,
     $29::timestamptz
 )
-RETURNING id, workspace_id, connection_id, name, title, description, kind, side_effect, confirmation, approval, approval_timeout_minutes, status, published_version_id, method, path_template, query, headers, body_template, body_encoding, mcp_tool_name, bound_arguments, input_schema, response_fields, error_message_path, response_max_bytes, timeout_ms, channels, spec_hash, source, created_by_member_id, updated_by_member_id, deleted_at, created_at, updated_at, agents
+RETURNING id, workspace_id, connection_id, name, title, description, kind, side_effect, confirmation, approval, approval_timeout_minutes, status, published_version_id, method, path_template, query, headers, body_template, body_encoding, mcp_tool_name, bound_arguments, input_schema, response_fields, error_message_path, response_max_bytes, timeout_ms, channels, spec_hash, source, created_by_member_id, updated_by_member_id, deleted_at, created_at, updated_at, agents, last_test_response
 `
 
 type CreateActionParams struct {
@@ -144,6 +144,7 @@ func (q *Queries) CreateAction(ctx context.Context, arg CreateActionParams) (AiA
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.Agents,
+		&i.LastTestResponse,
 	)
 	return i, err
 }
@@ -220,7 +221,7 @@ func (q *Queries) DeleteAction(ctx context.Context, arg DeleteActionParams) erro
 }
 
 const findAction = `-- name: FindAction :one
-SELECT id, workspace_id, connection_id, name, title, description, kind, side_effect, confirmation, approval, approval_timeout_minutes, status, published_version_id, method, path_template, query, headers, body_template, body_encoding, mcp_tool_name, bound_arguments, input_schema, response_fields, error_message_path, response_max_bytes, timeout_ms, channels, spec_hash, source, created_by_member_id, updated_by_member_id, deleted_at, created_at, updated_at, agents FROM ai_actions WHERE workspace_id = $1 AND id = $2 AND deleted_at IS NULL
+SELECT id, workspace_id, connection_id, name, title, description, kind, side_effect, confirmation, approval, approval_timeout_minutes, status, published_version_id, method, path_template, query, headers, body_template, body_encoding, mcp_tool_name, bound_arguments, input_schema, response_fields, error_message_path, response_max_bytes, timeout_ms, channels, spec_hash, source, created_by_member_id, updated_by_member_id, deleted_at, created_at, updated_at, agents, last_test_response FROM ai_actions WHERE workspace_id = $1 AND id = $2 AND deleted_at IS NULL
 `
 
 type FindActionParams struct {
@@ -268,12 +269,13 @@ func (q *Queries) FindAction(ctx context.Context, arg FindActionParams) (AiActio
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.Agents,
+		&i.LastTestResponse,
 	)
 	return i, err
 }
 
 const findActionByName = `-- name: FindActionByName :one
-SELECT id, workspace_id, connection_id, name, title, description, kind, side_effect, confirmation, approval, approval_timeout_minutes, status, published_version_id, method, path_template, query, headers, body_template, body_encoding, mcp_tool_name, bound_arguments, input_schema, response_fields, error_message_path, response_max_bytes, timeout_ms, channels, spec_hash, source, created_by_member_id, updated_by_member_id, deleted_at, created_at, updated_at, agents FROM ai_actions WHERE workspace_id = $1 AND name = $2 AND deleted_at IS NULL
+SELECT id, workspace_id, connection_id, name, title, description, kind, side_effect, confirmation, approval, approval_timeout_minutes, status, published_version_id, method, path_template, query, headers, body_template, body_encoding, mcp_tool_name, bound_arguments, input_schema, response_fields, error_message_path, response_max_bytes, timeout_ms, channels, spec_hash, source, created_by_member_id, updated_by_member_id, deleted_at, created_at, updated_at, agents, last_test_response FROM ai_actions WHERE workspace_id = $1 AND name = $2 AND deleted_at IS NULL
 `
 
 type FindActionByNameParams struct {
@@ -321,12 +323,13 @@ func (q *Queries) FindActionByName(ctx context.Context, arg FindActionByNamePara
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.Agents,
+		&i.LastTestResponse,
 	)
 	return i, err
 }
 
 const findActionByToolName = `-- name: FindActionByToolName :one
-SELECT id, workspace_id, connection_id, name, title, description, kind, side_effect, confirmation, approval, approval_timeout_minutes, status, published_version_id, method, path_template, query, headers, body_template, body_encoding, mcp_tool_name, bound_arguments, input_schema, response_fields, error_message_path, response_max_bytes, timeout_ms, channels, spec_hash, source, created_by_member_id, updated_by_member_id, deleted_at, created_at, updated_at, agents FROM ai_actions
+SELECT id, workspace_id, connection_id, name, title, description, kind, side_effect, confirmation, approval, approval_timeout_minutes, status, published_version_id, method, path_template, query, headers, body_template, body_encoding, mcp_tool_name, bound_arguments, input_schema, response_fields, error_message_path, response_max_bytes, timeout_ms, channels, spec_hash, source, created_by_member_id, updated_by_member_id, deleted_at, created_at, updated_at, agents, last_test_response FROM ai_actions
 WHERE workspace_id = $1 AND connection_id = $2 AND mcp_tool_name = $3
     AND deleted_at IS NULL
 LIMIT 1
@@ -379,6 +382,7 @@ func (q *Queries) FindActionByToolName(ctx context.Context, arg FindActionByTool
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.Agents,
+		&i.LastTestResponse,
 	)
 	return i, err
 }
@@ -408,6 +412,39 @@ func (q *Queries) FindActionVersion(ctx context.Context, arg FindActionVersionPa
 		&i.CreatedAt,
 	)
 	return i, err
+}
+
+const listActionTestResponses = `-- name: ListActionTestResponses :many
+SELECT id, name, last_test_response FROM ai_actions
+WHERE workspace_id = $1 AND deleted_at IS NULL AND last_test_response IS NOT NULL
+`
+
+type ListActionTestResponsesRow struct {
+	ID               ids.UUID        `json:"id"`
+	Name             string          `json:"name"`
+	LastTestResponse json.RawMessage `json:"last_test_response"`
+}
+
+// ListActionTestResponses returns the last test result of every action
+// that has one.
+func (q *Queries) ListActionTestResponses(ctx context.Context, workspaceID ids.UUID) ([]ListActionTestResponsesRow, error) {
+	rows, err := q.db.Query(ctx, listActionTestResponses, workspaceID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListActionTestResponsesRow
+	for rows.Next() {
+		var i ListActionTestResponsesRow
+		if err := rows.Scan(&i.ID, &i.Name, &i.LastTestResponse); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const listActionVersions = `-- name: ListActionVersions :many
@@ -453,7 +490,7 @@ func (q *Queries) ListActionVersions(ctx context.Context, arg ListActionVersions
 }
 
 const listActions = `-- name: ListActions :many
-SELECT id, workspace_id, connection_id, name, title, description, kind, side_effect, confirmation, approval, approval_timeout_minutes, status, published_version_id, method, path_template, query, headers, body_template, body_encoding, mcp_tool_name, bound_arguments, input_schema, response_fields, error_message_path, response_max_bytes, timeout_ms, channels, spec_hash, source, created_by_member_id, updated_by_member_id, deleted_at, created_at, updated_at, agents FROM ai_actions
+SELECT id, workspace_id, connection_id, name, title, description, kind, side_effect, confirmation, approval, approval_timeout_minutes, status, published_version_id, method, path_template, query, headers, body_template, body_encoding, mcp_tool_name, bound_arguments, input_schema, response_fields, error_message_path, response_max_bytes, timeout_ms, channels, spec_hash, source, created_by_member_id, updated_by_member_id, deleted_at, created_at, updated_at, agents, last_test_response FROM ai_actions
 WHERE workspace_id = $1 AND deleted_at IS NULL
     AND ($2::text IS NULL OR status = $2::text)
     AND ($3::uuid IS NULL OR connection_id = $3::uuid)
@@ -513,6 +550,7 @@ func (q *Queries) ListActions(ctx context.Context, arg ListActionsParams) ([]AiA
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.Agents,
+			&i.LastTestResponse,
 		); err != nil {
 			return nil, err
 		}
@@ -609,7 +647,7 @@ const publishAction = `-- name: PublishAction :one
 UPDATE ai_actions SET
     status = 'published', published_version_id = $1, updated_by_member_id = $2, updated_at = $3::timestamptz
 WHERE workspace_id = $4 AND id = $5 AND deleted_at IS NULL
-RETURNING id, workspace_id, connection_id, name, title, description, kind, side_effect, confirmation, approval, approval_timeout_minutes, status, published_version_id, method, path_template, query, headers, body_template, body_encoding, mcp_tool_name, bound_arguments, input_schema, response_fields, error_message_path, response_max_bytes, timeout_ms, channels, spec_hash, source, created_by_member_id, updated_by_member_id, deleted_at, created_at, updated_at, agents
+RETURNING id, workspace_id, connection_id, name, title, description, kind, side_effect, confirmation, approval, approval_timeout_minutes, status, published_version_id, method, path_template, query, headers, body_template, body_encoding, mcp_tool_name, bound_arguments, input_schema, response_fields, error_message_path, response_max_bytes, timeout_ms, channels, spec_hash, source, created_by_member_id, updated_by_member_id, deleted_at, created_at, updated_at, agents, last_test_response
 `
 
 type PublishActionParams struct {
@@ -666,14 +704,33 @@ func (q *Queries) PublishAction(ctx context.Context, arg PublishActionParams) (A
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.Agents,
+		&i.LastTestResponse,
 	)
 	return i, err
+}
+
+const setActionLastTestResponse = `-- name: SetActionLastTestResponse :exec
+UPDATE ai_actions SET last_test_response = $1
+WHERE workspace_id = $2 AND id = $3
+`
+
+type SetActionLastTestResponseParams struct {
+	Response    json.RawMessage `json:"response"`
+	WorkspaceID ids.UUID        `json:"workspace_id"`
+	ID          ids.UUID        `json:"id"`
+}
+
+// SetActionLastTestResponse keeps the result of an action's last
+// successful live test.
+func (q *Queries) SetActionLastTestResponse(ctx context.Context, arg SetActionLastTestResponseParams) error {
+	_, err := q.db.Exec(ctx, setActionLastTestResponse, arg.Response, arg.WorkspaceID, arg.ID)
+	return err
 }
 
 const setActionStatus = `-- name: SetActionStatus :one
 UPDATE ai_actions SET status = $1, updated_by_member_id = $2, updated_at = $3::timestamptz
 WHERE workspace_id = $4 AND id = $5 AND deleted_at IS NULL
-RETURNING id, workspace_id, connection_id, name, title, description, kind, side_effect, confirmation, approval, approval_timeout_minutes, status, published_version_id, method, path_template, query, headers, body_template, body_encoding, mcp_tool_name, bound_arguments, input_schema, response_fields, error_message_path, response_max_bytes, timeout_ms, channels, spec_hash, source, created_by_member_id, updated_by_member_id, deleted_at, created_at, updated_at, agents
+RETURNING id, workspace_id, connection_id, name, title, description, kind, side_effect, confirmation, approval, approval_timeout_minutes, status, published_version_id, method, path_template, query, headers, body_template, body_encoding, mcp_tool_name, bound_arguments, input_schema, response_fields, error_message_path, response_max_bytes, timeout_ms, channels, spec_hash, source, created_by_member_id, updated_by_member_id, deleted_at, created_at, updated_at, agents, last_test_response
 `
 
 type SetActionStatusParams struct {
@@ -730,6 +787,7 @@ func (q *Queries) SetActionStatus(ctx context.Context, arg SetActionStatusParams
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.Agents,
+		&i.LastTestResponse,
 	)
 	return i, err
 }
@@ -745,7 +803,7 @@ UPDATE ai_actions SET
     channels = $21, agents = $22::text[], spec_hash = $23, updated_by_member_id = $24,
     updated_at = $25::timestamptz
 WHERE workspace_id = $26 AND id = $27 AND deleted_at IS NULL
-RETURNING id, workspace_id, connection_id, name, title, description, kind, side_effect, confirmation, approval, approval_timeout_minutes, status, published_version_id, method, path_template, query, headers, body_template, body_encoding, mcp_tool_name, bound_arguments, input_schema, response_fields, error_message_path, response_max_bytes, timeout_ms, channels, spec_hash, source, created_by_member_id, updated_by_member_id, deleted_at, created_at, updated_at, agents
+RETURNING id, workspace_id, connection_id, name, title, description, kind, side_effect, confirmation, approval, approval_timeout_minutes, status, published_version_id, method, path_template, query, headers, body_template, body_encoding, mcp_tool_name, bound_arguments, input_schema, response_fields, error_message_path, response_max_bytes, timeout_ms, channels, spec_hash, source, created_by_member_id, updated_by_member_id, deleted_at, created_at, updated_at, agents, last_test_response
 `
 
 type UpdateActionParams struct {
@@ -846,6 +904,7 @@ func (q *Queries) UpdateAction(ctx context.Context, arg UpdateActionParams) (AiA
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.Agents,
+		&i.LastTestResponse,
 	)
 	return i, err
 }
