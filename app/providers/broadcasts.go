@@ -61,7 +61,8 @@ func bootBroadcasts(a *app.App) error {
 			broadcasts.ChannelChat: messenger,
 			broadcasts.ChannelPost: messenger,
 			broadcasts.ChannelConversation: &broadcasts.ConversationSender{
-				DB: a.DB, Events: a.Events, Delivery: conversations.Delivery{Channels: a.Channels, Queue: a.Queue}, Now: a.Clock.Now,
+				DB: a.DB, Events: a.Events, Now: a.Clock.Now,
+				Delivery: conversations.Delivery{Channels: a.Channels, Queue: a.Queue},
 			},
 		},
 	}

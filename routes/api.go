@@ -182,7 +182,8 @@ func userRoutes(user *routing.Router, c controllers) {
 	routing.Post(user, "/user/memberships", "user.memberships.store", c.memberships.Store).Internal()
 	routing.Post(user, "/workspaces", "workspaces.store", c.workspaces.Store).Internal().Status(fhttp.StatusCreated)
 	routing.Patch(user, "/workspaces/{workspace}", "workspaces.update", c.workspaces.Update).Internal()
-	routing.Delete(user, "/user/memberships/{membership}", "user.memberships.destroy", c.memberships.Destroy).Internal().
+	routing.Delete(user, "/user/memberships/{membership}", "user.memberships.destroy", c.memberships.Destroy).
+		Internal().
 		Status(fhttp.StatusNoContent)
 	authFactorRoutes(user, c.authFactors)
 	routing.Get(user, "/user/security-events", "user.security-events.index", c.securityEvents.Index).Internal().
@@ -205,7 +206,8 @@ func workspaceRoutes(workspace *routing.Router, c controllers) {
 		Use(c.members.ServeCSV).Lists(v1.MemberListing()).Query(csvQuery())
 	routing.Get(workspace, "/members/{member}", "members.show", c.members.Show).Ability("members:read").
 		Lists(v1.MemberShowing())
-	routing.Patch(workspace, "/members/me", "members.me.update", c.members.UpdateMe).Internal().Ability("conversations:write")
+	routing.Patch(workspace, "/members/me", "members.me.update", c.members.UpdateMe).
+		Internal().Ability("conversations:write")
 	routing.Patch(workspace, "/members/{member}", "members.update", c.members.Update).Ability("members:write")
 	routing.Patch(workspace, "/members", "members.update-many", c.members.UpdateMany).Ability("members:write")
 	routing.Get(workspace, "/audit-logs", "audit-logs.index", c.auditLogs.Index).Ability("settings:read").
@@ -265,7 +267,8 @@ func tokenRoutes(tokens *routing.Router, c controllers) {
 	routing.Get(tokens, "/tokens/abilities", "tokens.abilities.index", c.tokenAbilities.Index).Internal()
 	routing.Get(tokens, "/tokens/{token}", "tokens.show", c.tokens.ShowToken).Internal()
 	routing.Patch(tokens, "/tokens/{token}", "tokens.update", c.tokens.Update).Internal()
-	routing.Delete(tokens, "/tokens/{token}", "tokens.destroy", c.tokens.Destroy).Internal().Status(fhttp.StatusNoContent)
+	routing.Delete(tokens, "/tokens/{token}", "tokens.destroy", c.tokens.Destroy).
+		Internal().Status(fhttp.StatusNoContent)
 }
 
 /*
@@ -444,7 +447,8 @@ code, which proves the factor works.
 */
 func authFactorRoutes(user *routing.Router, c *v1.AuthFactorController) {
 	routing.Get(user, "/user/auth-factors", "user.auth-factors.index", c.Index).Internal()
-	routing.Post(user, "/user/auth-factors", "user.auth-factors.store", c.Store).Internal().Middleware("password.confirm")
+	routing.Post(user, "/user/auth-factors", "user.auth-factors.store", c.Store).
+		Internal().Middleware("password.confirm")
 	routing.Patch(user, "/user/auth-factors/{factor}", "user.auth-factors.update", c.Update).Internal()
 	routing.Delete(user, "/user/auth-factors", "user.auth-factors.destroy-many", c.DestroyMany).Internal().
 		Middleware("password.confirm").Status(fhttp.StatusNoContent)

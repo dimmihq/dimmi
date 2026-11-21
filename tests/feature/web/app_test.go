@@ -163,6 +163,17 @@ func TestAppPage(t *testing.T) {
 		assert.Equal(t, "/d", res.Header.Get("Location"))
 	})
 
+	t.Run("lets only the app show pictures from Meta's servers", func(t *testing.T) {
+		t.Parallel()
+		tc := tests.New(t, withBuild())
+
+		policy := ownPolicy(t, tc,
+			tc.Client().Send(fhttp.MethodGet, "/d/inbox", nil).AssertOK().Header.Get("Content-Security-Policy"))
+		assert.Contains(t, policy, "img-src 'self' data: blob: "+metaImages+";")
+		assert.NotContains(t, tc.Client().Send(fhttp.MethodGet, "/login", nil).Header.Get("Content-Security-Policy"),
+			"fbcdn")
+	})
+
 	t.Run("lets only the app reach GIPHY, and only once the instance has a key", func(t *testing.T) {
 		t.Parallel()
 		off := tests.New(t, withBuild())
@@ -173,7 +184,7 @@ func TestAppPage(t *testing.T) {
 
 		policy := ownPolicy(t, on,
 			on.Client().Send(fhttp.MethodGet, "/d/inbox", nil).AssertOK().Header.Get("Content-Security-Policy"))
-		assert.Contains(t, policy, "img-src 'self' data: blob: https://*.giphy.com;")
+		assert.Contains(t, policy, "img-src 'self' data: blob: "+metaImages+" https://*.giphy.com;")
 		assert.Contains(t, policy, "connect-src 'self' https://api.giphy.com;")
 		assert.NotContains(t, on.Client().Send(fhttp.MethodGet, "/login", nil).Header.Get("Content-Security-Policy"),
 			"giphy")
@@ -282,3 +293,9 @@ func TestBuildFiles(t *testing.T) {
 		tc.Client().Send(fhttp.MethodGet, "/build/assets/missing.js", nil).AssertNotFound()
 	})
 }
+
+/*
+metaImages are the hosts the dashboard shows Meta's pictures from:
+Facebook Pages' and Instagram accounts' pictures, and mentioned stories.
+*/
+const metaImages = "https://*.fbcdn.net https://*.cdninstagram.com https://lookaside.fbsbx.com"

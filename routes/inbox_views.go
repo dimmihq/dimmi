@@ -30,7 +30,8 @@ func inboxViewRoutes(r *routing.Router, a *app.App) {
 	prefs := &v1.InboxPreferenceController{Show: acts.ShowPreferences, Update: acts.UpdatePreferences}
 
 	routing.Get(r, "/inbox-preferences", "inbox-preferences.show", prefs.Get).Internal().Ability("conversations:read")
-	routing.Patch(r, "/inbox-preferences", "inbox-preferences.update", prefs.Patch).Internal().Ability("conversations:read")
+	routing.Patch(r, "/inbox-preferences", "inbox-preferences.update", prefs.Patch).
+		Internal().Ability("conversations:read")
 
 	views := &v1.ConversationViewController{
 		List: acts.ListViews, Show: acts.ShowView, Create: acts.CreateView, Update: acts.UpdateView,
@@ -38,9 +39,11 @@ func inboxViewRoutes(r *routing.Router, a *app.App) {
 	}
 	view := "/conversation-views/{view}"
 
-	routing.Get(r, "/conversation-views", "conversation-views.index", views.Index).Internal().Ability("conversations:read").
+	routing.Get(r, "/conversation-views", "conversation-views.index", views.Index).
+		Internal().Ability("conversations:read").
 		Query(routing.QueryParam{Name: "q", Description: "Only views whose name holds this text."})
-	routing.Post(r, "/conversation-views", "conversation-views.store", views.Store).Internal().Ability("conversations:write")
+	routing.Post(r, "/conversation-views", "conversation-views.store", views.Store).
+		Internal().Ability("conversations:write")
 	routing.Patch(r, "/conversation-views", "conversation-views.reorder", views.ReorderShared).Internal().
 		Ability("conversations:write")
 	routing.Get(r, view, "conversation-views.show", views.Get).Internal().Ability("conversations:read")

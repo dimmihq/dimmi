@@ -82,45 +82,45 @@ export function Gallery({
             <p className="text-body-2-regular text-text-secondary">{group.detail}</p>
           </div>
           <div className="flex flex-col gap-0.5 rounded-2xl bg-background-secondary-default p-1">
-            {group.kinds.map((t) => {
-              const away = Boolean(t.integration) && !connected(t);
-
-              return (
-                <button
-                  key={t.type}
-                  type="button"
-                  onClick={() => onPick(t)}
-                  aria-label={away ? `Connect ${t.name} in Integrations` : undefined}
-                  className="flex w-full cursor-pointer items-center gap-3 rounded-xl px-2.5 py-2 text-start outline-none transition-colors duration-150 hover:bg-background-primary-hover focus-visible:ring-2 focus-visible:ring-border-focus-ring"
-                >
-                  <span className={away ? "opacity-50" : undefined}>
-                    <SourceLogo logo={t.logo} />
-                  </span>
-                  <span className="flex min-w-0 flex-1 flex-col">
-                    <span
-                      className={away ? "text-body-regular text-text-tertiary" : "text-body-regular text-text-primary"}
-                    >
-                      {t.name}
-                    </span>
-                    <span className="text-body-2-regular text-text-secondary">
-                      {away ? `Not connected. Connect it in Integrations first.` : t.summary}
-                    </span>
-                  </span>
-                  {away ? (
-                    <RiExternalLinkLine aria-hidden className="size-4 shrink-0 text-foreground-icon-tertiary" />
-                  ) : (
-                    <RiArrowRightSLine
-                      aria-hidden
-                      className="size-5 shrink-0 text-foreground-icon-tertiary rtl:-scale-x-100"
-                    />
-                  )}
-                </button>
-              );
-            })}
+            {group.kinds.map((t) => (
+              <SourceRow key={t.type} type={t} away={Boolean(t.integration) && !connected(t)} onPick={onPick} />
+            ))}
           </div>
         </section>
       ))}
     </div>
+  );
+}
+
+/*
+ * SourceRow is one kind of source to pick; one whose service is not
+ * connected yet is greyed and leads to Integrations instead.
+ */
+function SourceRow({ type: t, away, onPick }: { type: SourceType; away: boolean; onPick: (type: SourceType) => void }) {
+  return (
+    <button
+      type="button"
+      onClick={() => onPick(t)}
+      aria-label={away ? `Connect ${t.name} in Integrations` : undefined}
+      className="flex w-full cursor-pointer items-center gap-3 rounded-xl px-2.5 py-2 text-start outline-none transition-colors duration-150 hover:bg-background-primary-hover focus-visible:ring-2 focus-visible:ring-border-focus-ring"
+    >
+      <span className={away ? "opacity-50" : undefined}>
+        <SourceLogo logo={t.logo} />
+      </span>
+      <span className="flex min-w-0 flex-1 flex-col">
+        <span className={away ? "text-body-regular text-text-tertiary" : "text-body-regular text-text-primary"}>
+          {t.name}
+        </span>
+        <span className="text-body-2-regular text-text-secondary">
+          {away ? "Not connected. Connect it in Integrations first." : t.summary}
+        </span>
+      </span>
+      {away ? (
+        <RiExternalLinkLine aria-hidden className="size-4 shrink-0 text-foreground-icon-tertiary" />
+      ) : (
+        <RiArrowRightSLine aria-hidden className="size-5 shrink-0 text-foreground-icon-tertiary rtl:-scale-x-100" />
+      )}
+    </button>
   );
 }
 

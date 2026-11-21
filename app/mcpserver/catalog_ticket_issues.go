@@ -37,6 +37,11 @@ func ticketIssueLinkDocs() map[string]Doc {
 				"last seen.",
 			Returns: "the links with provider, key, URL, status, status group, warning and sync error.",
 		},
+		"tickets.issues.refresh.store": {
+			Title:   "Refresh a ticket's linked issues",
+			Use:     "Fetches each linked issue's status from its tool now, instead of waiting for the next sync.",
+			Returns: "the links with their status as just read.",
+		},
 		"tickets.issues.store": {
 			Title: "Create or link an issue",
 			Use: "Creates an issue in a connected tool (installation_id, team_id, project_id, title) with the " +

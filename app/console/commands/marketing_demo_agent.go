@@ -81,7 +81,8 @@ func (c MarketingDemoCommand) agentSetup(ctx context.Context, owner authz.Member
 		ProductName:   ai.Optional[string]{Set: true, Value: new("Lumen")},
 		HandoffTeamID: ai.Optional[ids.UUID]{Set: true, Value: new(teamIDs["Engineering"])},
 	}
-	if _, err := a.Actions.AI.UpdateAgent.Handle(ctx, ai.UpdateAgentInput{Membership: owner, Patch: patch}); err != nil {
+	update := ai.UpdateAgentInput{Membership: owner, Patch: patch}
+	if _, err := a.Actions.AI.UpdateAgent.Handle(ctx, update); err != nil {
 		return fmt.Errorf("configure agent: %w", err)
 	}
 
@@ -102,12 +103,27 @@ func (c MarketingDemoCommand) procedure(ctx context.Context, owner authz.Members
 		Description: "The customer says they were charged twice for the same period and asks for one charge back.",
 		Steps: []procedure.Step{
 			{ID: "account", Kind: procedure.KindInstruction, Text: "Look up the customer's account and plan."},
-			{ID: "charges", Kind: procedure.KindInstruction, Text: "Find the charges for the month they name, and confirm two match."},
-			{ID: "single", Kind: procedure.KindCondition, Text: "If there is only one charge, explain what it covers and stop."},
-			{ID: "refund", Kind: procedure.KindInstruction, Text: "Refund the duplicate charge once someone on the Billing team approves it."},
-			{ID: "tell", Kind: procedure.KindInstruction, Text: "Tell the customer the amount and that it shows on their card in 5 to 10 days."},
+			{
+				ID: "charges", Kind: procedure.KindInstruction,
+				Text: "Find the charges for the month they name, and confirm two match.",
+			},
+			{
+				ID: "single", Kind: procedure.KindCondition,
+				Text: "If there is only one charge, explain what it covers and stop.",
+			},
+			{
+				ID: "refund", Kind: procedure.KindInstruction,
+				Text: "Refund the duplicate charge once someone on the Billing team approves it.",
+			},
+			{
+				ID: "tell", Kind: procedure.KindInstruction,
+				Text: "Tell the customer the amount and that it shows on their card in 5 to 10 days.",
+			},
 		},
-		Handover: []string{"The charges are more than 90 days old.", "The customer disputes the charge with their bank."},
+		Handover: []string{
+			"The charges are more than 90 days old.",
+			"The customer disputes the charge with their bank.",
+		},
 	}
 
 	made, err := a.Actions.Procedures.Create(ctx, owner, "Refund a duplicate charge")
@@ -144,13 +160,36 @@ func (c MarketingDemoCommand) workflow(
 		return nil
 	}
 
+	raw, _ := json.Marshal(marketingWorkflowSpec(teamIDs, tagIDs))
+
+	made, err := a.Actions.Workflows.Create(ctx, workflows.CreateInput{
+		Membership: owner, Name: "Sort new conversations by topic", Trigger: "conversation.first_message", Spec: raw,
+	})
+	if err != nil {
+		return fmt.Errorf("create workflow: %w", err)
+	}
+
+	if _, err := a.Actions.Workflows.Publish(ctx, workflows.PublishInput{
+		Membership: owner, ID: made.ID, AcknowledgeWarnings: true,
+	}); err != nil {
+		return fmt.Errorf("publish workflow: %w", err)
+	}
+
+	return nil
+}
+
+/*
+marketingWorkflowSpec builds the spec of the topic-sorting workflow,
+pointing its steps at the demo's teams and tags.
+*/
+func marketingWorkflowSpec(teamIDs, tagIDs map[string]ids.UUID) map[string]any {
 	step := func(id, kind string, settings map[string]any) map[string]any {
 		return map[string]any{"id": id, "kind": kind, "settings": settings}
 	}
 	team := func(name string) string { return models.PublicID(models.PrefixTeam, teamIDs[name]) }
 	tag := func(name string) string { return models.PublicID(models.PrefixTag, tagIDs[name]) }
 
-	spec := map[string]any{
+	return map[string]any{
 		"schema": 1, "trigger": "conversation.first_message",
 		"steps": []any{map[string]any{
 			"id": "s_sorttopic1", "kind": "classify",
@@ -174,21 +213,4 @@ func (c MarketingDemoCommand) workflow(
 			},
 		}},
 	}
-
-	raw, _ := json.Marshal(spec)
-
-	made, err := a.Actions.Workflows.Create(ctx, workflows.CreateInput{
-		Membership: owner, Name: "Sort new conversations by topic", Trigger: "conversation.first_message", Spec: raw,
-	})
-	if err != nil {
-		return fmt.Errorf("create workflow: %w", err)
-	}
-
-	if _, err := a.Actions.Workflows.Publish(ctx, workflows.PublishInput{
-		Membership: owner, ID: made.ID, AcknowledgeWarnings: true,
-	}); err != nil {
-		return fmt.Errorf("publish workflow: %w", err)
-	}
-
-	return nil
 }

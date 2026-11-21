@@ -105,7 +105,8 @@ func redactionRoutes(r *routing.Router, a *app.App) {
 		Status(http.StatusOK)
 
 	previews := &v1.RetentionController{Preview: acts.PreviewRetention}
-	routing.Post(r, "/retention-previews", "retention-previews.store", previews.Store).Internal().Ability("settings:read").
+	routing.Post(r, "/retention-previews", "retention-previews.store", previews.Store).
+		Internal().Ability("settings:read").
 		Status(http.StatusOK)
 }
 

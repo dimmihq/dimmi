@@ -22,6 +22,7 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/dimmihq/dimmi/framework/clock"
@@ -53,7 +54,8 @@ send. Actions, when set, gives the agent the workspace's own actions as
 tools. Delivery, when set, queues each reply on a channel that pushes.
 Decider, when set, checks that a procedure the agent asks for fits the
 request; DecisionPrice is what one of its input tokens costs, in
-millionths of a dollar.
+millionths of a dollar. It remembers each unpriced model it has logged,
+so each is logged once.
 */
 type Runner struct {
 	DB            *database.DB
@@ -77,6 +79,8 @@ type Runner struct {
 
 	redactor *pii.Redactor
 	guard    *linkguard.Guard
+
+	unpricedSeen sync.Map
 }
 
 /*

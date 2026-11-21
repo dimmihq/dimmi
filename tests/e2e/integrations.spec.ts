@@ -121,15 +121,16 @@ it.describe("Integrations", () => {
     await expect(page.getByRole("heading", { name: "Integrations" })).toBeVisible();
     await expect(page.getByText("Answer customers in Slack channels", { exact: false })).toBeVisible();
 
-    await page.getByRole("button", { name: "Connect", exact: true }).click();
+    await page.getByRole("button", { name: "Connect Slack" }).click();
     await expect(page).toHaveURL(/\/settings\/integrations$/);
     expect(sent.find((call) => call.path === "/integrations/slack/installations")?.body).toEqual({
       return_to: expect.stringMatching(/^\/d\/[^/]+\/settings\/integrations$/),
     });
     await expect(page.getByText("Connected. Every feature can use it now.")).toBeVisible();
-    await expect(page.getByText("Needs permissions")).toBeVisible();
+    const slack = page.getByRole("button", { name: "Open Slack" });
+    await expect(slack.getByLabel("Needs permissions")).toBeVisible();
 
-    await page.getByRole("button", { name: "Manage Slack" }).click();
+    await slack.click();
     await expect(page.getByRole("heading", { name: "Acme" })).toBeVisible();
     await expect(page.getByText("Needs permission for im:history", { exact: false })).toBeVisible();
     await expect(page.getByRole("button", { name: "Update permissions" })).toBeVisible();

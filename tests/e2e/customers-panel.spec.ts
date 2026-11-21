@@ -40,14 +40,16 @@ it.describe("customer panel", () => {
     await edit.getByRole("button", { name: "Save" }).click();
     await expect(details.getByRole("link", { name: "Emily J." })).toBeVisible();
 
-    const notes = details.getByRole("textbox", { name: "Notes" });
-    await notes.fill("Prefers email");
-    await notes.blur();
+    await details.getByRole("textbox", { name: "New note" }).fill("Prefers email");
+    await details.getByRole("button", { name: "Add note" }).click();
+    await expect(details.getByRole("list", { name: "Customer notes" })).toContainText("Prefers email");
     await expect
-      .poll(
-        async () => (await api<{ notes: string | null }>(page, "GET", `/contacts/${conversation.contact.id}`)).notes,
+      .poll(async () =>
+        (await api<{ body: string }[]>(page, "GET", `/contacts/${conversation.contact.id}/notes`)).map(
+          (note) => note.body,
+        ),
       )
-      .toBe("Prefers email");
+      .toEqual(["Prefers email"]);
 
     await details.getByRole("link", { name: /Older question/ }).click();
     await expect(page).toHaveURL(new RegExp(`/d/[^/]+/inbox/unassigned/${older}$`));

@@ -12,7 +12,6 @@
 package app
 
 import (
-	"github.com/dimmihq/dimmi/app/actions/channels"
 	"github.com/dimmihq/dimmi/framework/mailbox"
 
 	"github.com/dimmihq/dimmi/app/actions/accesspolicy"
@@ -23,6 +22,7 @@ import (
 	"github.com/dimmihq/dimmi/app/actions/auth"
 	"github.com/dimmihq/dimmi/app/actions/broadcasts"
 	"github.com/dimmihq/dimmi/app/actions/changelog"
+	"github.com/dimmihq/dimmi/app/actions/channels"
 	"github.com/dimmihq/dimmi/app/actions/contactlists"
 	"github.com/dimmihq/dimmi/app/actions/conversations"
 	"github.com/dimmihq/dimmi/app/actions/email"

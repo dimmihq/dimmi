@@ -40,7 +40,7 @@ func ticketIssueRoutes(workspace *routing.Router, a *app.App) {
 	routing.Get(workspace, one+"/issues", "tickets.issues.index", ic.Index).Ability("tickets:read")
 	routing.Post(workspace, one+"/issues", "tickets.issues.store", ic.Store).Ability("tickets:write").
 		Status(fhttp.StatusCreated)
-	routing.Post(workspace, one+"/issues/refresh", "tickets.issues.refresh", ic.Refresh).Internal().
+	routing.Post(workspace, one+"/issues/refresh", "tickets.issues.refresh.store", ic.Refresh).Internal().
 		Ability("tickets:read").Status(fhttp.StatusOK)
 	routing.Delete(workspace, "/ticket-issues/{issue}", "ticket-issues.destroy", ic.Destroy).
 		Ability("tickets:write").Status(fhttp.StatusNoContent)
@@ -61,7 +61,8 @@ func issueToolRoutes(workspace *routing.Router, a *app.App) {
 
 	routing.Get(workspace, inst+"/issue-teams", "integration-installations.issue-teams.index", tc.Teams).Internal().
 		Ability("tickets:read")
-	routing.Get(workspace, inst+"/issue-options", "integration-installations.issue-options.index", tc.Options).Internal().
+	routing.Get(workspace, inst+"/issue-options", "integration-installations.issue-options.index", tc.Options).
+		Internal().
 		Ability("tickets:read")
 	routing.Get(workspace, inst+"/issues", "integration-installations.issues.index", tc.Search).
 		Ability("tickets:read")

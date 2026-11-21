@@ -1,4 +1,109 @@
 {
   "$comment": "Intentional breaking changes, reviewed one by one. See contracts/VERSIONING.md. Each entry needs id, operation (or event), reason, deprecated, sunset and approved_by. Entries are cleared when make api-baseline records a release.",
-  "entries": []
+  "entries": [
+    {
+      "id": "api-operation-id-removed",
+      "operation": "GET /channels/facebook/signup-config",
+      "reason": "Internal route, never released: renamed to the resource-style operation id the route naming rule requires.",
+      "deprecated": "2026-11-20",
+      "sunset": "2026-11-20",
+      "approved_by": "Frantz Kati"
+    },
+    {
+      "id": "api-operation-id-removed",
+      "operation": "POST /channels/facebook/signups",
+      "reason": "Internal route, never released: renamed to the resource-style operation id the route naming rule requires.",
+      "deprecated": "2026-11-20",
+      "sunset": "2026-11-20",
+      "approved_by": "Frantz Kati"
+    },
+    {
+      "id": "api-operation-id-removed",
+      "operation": "GET /channels/facebook/{channel}/check",
+      "reason": "Internal route, never released: renamed to the resource-style operation id the route naming rule requires.",
+      "deprecated": "2026-11-20",
+      "sunset": "2026-11-20",
+      "approved_by": "Frantz Kati"
+    },
+    {
+      "id": "api-operation-id-removed",
+      "operation": "GET /channels/instagram/signup-config",
+      "reason": "Internal route, never released: renamed to the resource-style operation id the route naming rule requires.",
+      "deprecated": "2026-11-20",
+      "sunset": "2026-11-20",
+      "approved_by": "Frantz Kati"
+    },
+    {
+      "id": "api-operation-id-removed",
+      "operation": "POST /channels/instagram/signups",
+      "reason": "Internal route, never released: renamed to the resource-style operation id the route naming rule requires.",
+      "deprecated": "2026-11-20",
+      "sunset": "2026-11-20",
+      "approved_by": "Frantz Kati"
+    },
+    {
+      "id": "api-operation-id-removed",
+      "operation": "GET /channels/instagram/{channel}/check",
+      "reason": "Internal route, never released: renamed to the resource-style operation id the route naming rule requires.",
+      "deprecated": "2026-11-20",
+      "sunset": "2026-11-20",
+      "approved_by": "Frantz Kati"
+    },
+    {
+      "id": "api-operation-id-removed",
+      "operation": "POST /channels/whatsapp/accounts",
+      "reason": "Internal route, never released: renamed to the resource-style operation id the route naming rule requires.",
+      "deprecated": "2026-11-20",
+      "sunset": "2026-11-20",
+      "approved_by": "Frantz Kati"
+    },
+    {
+      "id": "api-operation-id-removed",
+      "operation": "GET /channels/whatsapp/signup-config",
+      "reason": "Internal route, never released: renamed to the resource-style operation id the route naming rule requires.",
+      "deprecated": "2026-11-20",
+      "sunset": "2026-11-20",
+      "approved_by": "Frantz Kati"
+    },
+    {
+      "id": "api-operation-id-removed",
+      "operation": "POST /channels/whatsapp/signups",
+      "reason": "Internal route, never released: renamed to the resource-style operation id the route naming rule requires.",
+      "deprecated": "2026-11-20",
+      "sunset": "2026-11-20",
+      "approved_by": "Frantz Kati"
+    },
+    {
+      "id": "api-operation-id-removed",
+      "operation": "GET /channels/whatsapp/{channel}/templates",
+      "reason": "Internal route, never released: renamed to the resource-style operation id the route naming rule requires.",
+      "deprecated": "2026-11-20",
+      "sunset": "2026-11-20",
+      "approved_by": "Frantz Kati"
+    },
+    {
+      "id": "api-removed-without-deprecation",
+      "operation": "PUT /channels/whatsapp/{channel}/templates/{template}",
+      "reason": "Internal route, never released: editing a WhatsApp template changes part of it, so it moved from PUT to PATCH.",
+      "deprecated": "2026-11-20",
+      "sunset": "2026-11-20",
+      "approved_by": "Frantz Kati"
+    },
+    {
+      "id": "api-operation-id-removed",
+      "operation": "POST /conversations/{conversation}/whatsapp-templates",
+      "reason": "Internal route, never released: renamed to the resource-style operation id the route naming rule requires.",
+      "deprecated": "2026-11-20",
+      "sunset": "2026-11-20",
+      "approved_by": "Frantz Kati"
+    },
+    {
+      "id": "api-operation-id-removed",
+      "operation": "POST /tickets/{ticket}/issues/refresh",
+      "reason": "Internal route, never released: renamed to the resource-style operation id the route naming rule requires.",
+      "deprecated": "2026-11-20",
+      "sunset": "2026-11-20",
+      "approved_by": "Frantz Kati"
+    }
+  ]
 }

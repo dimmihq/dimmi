@@ -77,10 +77,12 @@ it.describe("feature requests", () => {
     await expect(row).toContainText("Under consideration");
     await row.getByRole("rowheader").click();
     await expect(page.getByText("We would use this every week.")).toBeVisible();
-    await page.locator("label", { hasText: "Internal note" }).click();
+    await page.getByRole("radiogroup", { name: "Write" }).getByRole("radio", { name: "Note" }).click();
     await page.getByRole("textbox", { name: "Internal note" }).fill("Needs the export service first.");
     await page.getByRole("button", { name: "Add note" }).click();
     await expect(page.getByText("Needs the export service first.")).toBeVisible();
+    // The note box takes focus back once it has cleared, which would close a menu opened before.
+    await expect(page.getByRole("textbox", { name: "Internal note" })).toBeFocused();
 
     await page.getByRole("button", { name: /Status/ }).click();
     await page.getByRole("option", { name: "Planned" }).click();
@@ -145,11 +147,11 @@ it.describe("feature requests", () => {
     await page.getByRole("rowheader", { name: /Slack integration/ }).click();
     await page.getByRole("button", { name: "Vote for a customer" }).click();
     const vote = page.getByRole("dialog", { name: "Vote for a customer" });
-    await vote.getByLabel("Customer").fill("cy.diaz");
-    await vote.getByRole("button", { name: /Cy Diaz/ }).click();
+    await vote.getByRole("combobox", { name: "Customer" }).fill("cy.diaz");
+    await page.getByRole("option", { name: /Cy Diaz/ }).click();
     await vote.getByText("Must have").click();
     await vote.getByRole("button", { name: "Add vote" }).click();
-    await expect(page.getByText("1 vote", { exact: true })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Votes 1" })).toBeVisible();
     await expect(page.getByText(/Must have/)).toBeVisible();
 
     await page.getByRole("button", { name: "Merge" }).click();
@@ -157,7 +159,7 @@ it.describe("feature requests", () => {
     await merge.getByRole("button", { name: /Slack app/ }).click();
     await merge.getByRole("button", { name: "Merge" }).click();
     await expect(page.getByText("Merged into #1")).toBeVisible();
-    await expect(page.getByText("1 vote", { exact: true })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Votes 1" })).toBeVisible();
   });
 
   it("reorders statuses from the keyboard and keeps the order after a reload", async ({ page }) => {

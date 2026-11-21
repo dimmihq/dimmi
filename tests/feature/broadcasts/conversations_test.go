@@ -66,7 +66,8 @@ func TestConversationBroadcasts(t *testing.T) {
 		}).AssertCreated().String("data.id")
 
 		id := d.Owner.PostJSON("/api/v1/broadcasts", testkit.JSON{
-			"name": "Export fix", "channel": "conversation", "ticket_id": tracker, "holds": []string{"customer_waiting"},
+			"name": "Export fix", "channel": "conversation", "ticket_id": tracker,
+			"holds": []string{"customer_waiting"},
 		}).AssertCreated().
 			AssertJSONPath("data.ticket_id", tracker).
 			AssertJSONPath("data.holds.0", "customer_waiting").
@@ -86,12 +87,7 @@ func TestConversationBroadcasts(t *testing.T) {
 			d.TC.DrainLater()
 		}
 
-		statuses := map[string]string{}
-		for _, r := range (desk{tc: d.TC, owner: d.Owner}).recipients(id) {
-			require.NotNil(t, r.ConversationID)
-			statuses[models.PublicID(models.PrefixConversation, *r.ConversationID)] = r.Status + "/" + deref(r.Reason)
-		}
-
+		statuses := conversationStatuses(t, d, id)
 		assert.Equal(t, map[string]string{ann: "sent/", ben: "sent/", cat: "skipped/customer_waiting"}, statuses)
 		assert.NotContains(t, statuses, dee)
 
@@ -100,12 +96,7 @@ func TestConversationBroadcasts(t *testing.T) {
 		said.AssertJSONPath("data.#(body==\"Hi ann, the export works again.\").broadcast.id", id)
 		said.AssertJSONPath("data.#(body==\"Hi ann, the export works again.\").broadcast.name", "Export fix")
 
-		var annRecipient models.BroadcastRecipient
-		for _, r := range (desk{tc: d.TC, owner: d.Owner}).recipients(id) {
-			if models.PublicID(models.PrefixConversation, *r.ConversationID) == ann {
-				annRecipient = r
-			}
-		}
+		annRecipient := recipientIn(d, id, ann)
 		require.NotNil(t, annRecipient.ExternalRef)
 		message, err := ids.Parse(*annRecipient.ExternalRef)
 		require.NoError(t, err)
@@ -118,12 +109,9 @@ func TestConversationBroadcasts(t *testing.T) {
 			d.TC.DrainLater()
 		}
 
-		for _, r := range (desk{tc: d.TC, owner: d.Owner}).recipients(id) {
-			if r.ID == annRecipient.ID {
-				assert.Equal(t, "failed", r.Status)
-				assert.Equal(t, "no_sending_address", deref(r.Reason))
-			}
-		}
+		failed := recipientIn(d, id, ann)
+		assert.Equal(t, "failed", failed.Status)
+		assert.Equal(t, "no_sending_address", deref(failed.Reason))
 		d.Owner.GetJSON("/api/v1/broadcasts/"+id+"/report").AssertOK().AssertJSONPath("data.counts.failed", float64(1))
 	})
 
@@ -142,6 +130,36 @@ func TestConversationBroadcasts(t *testing.T) {
 			"name": "Outage", "channel": "chat", "holds": []string{"customer_waiting"},
 		}).AssertStatus(422).AssertJSONPath("code", "broadcast_holds_invalid")
 	})
+}
+
+/*
+conversationStatuses returns each recipient's status and reason, keyed
+by the public id of the conversation they were answered in.
+*/
+func conversationStatuses(t *testing.T, d tests.Desk, id string) map[string]string {
+	t.Helper()
+
+	statuses := map[string]string{}
+	for _, r := range (desk{tc: d.TC, owner: d.Owner}).recipients(id) {
+		require.NotNil(t, r.ConversationID)
+		statuses[models.PublicID(models.PrefixConversation, *r.ConversationID)] = r.Status + "/" + deref(r.Reason)
+	}
+
+	return statuses
+}
+
+/*
+recipientIn returns the broadcast's recipient answered in the
+conversation, or an empty one when there is none.
+*/
+func recipientIn(d tests.Desk, id, conv string) models.BroadcastRecipient {
+	for _, r := range (desk{tc: d.TC, owner: d.Owner}).recipients(id) {
+		if r.ConversationID != nil && models.PublicID(models.PrefixConversation, *r.ConversationID) == conv {
+			return r
+		}
+	}
+
+	return models.BroadcastRecipient{}
 }
 
 /*

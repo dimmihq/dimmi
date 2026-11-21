@@ -84,7 +84,7 @@ it.describe("email signatures", () => {
     await page.getByRole("button", { name: "Back" }).click();
     await leaving.getByRole("button", { name: "Leave" }).click();
     await expect(page).toHaveURL(/\/settings\/profile#signature$/);
-    expect(await storedBodies(page, "filter[member]=me")).toEqual(["Thanks,\n{{member_name}}\n{{member_title}}"]);
+    expect(await storedBodies(page, "filter[member]=me")).toEqual(["Thanks,\n{{member_name}}\n{{company_name}}"]);
   });
 
   it("returns to the address or the teammates list a signature was opened from", async ({

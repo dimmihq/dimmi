@@ -286,7 +286,9 @@ func (run *ingestRun) conversation(
 	}
 
 	if found != nil {
-		stale, err := PastReopenWindow(ctx, run.q, *found, run.r.Clock.Now(), run.r.ReopenWindow)
+		stale, err := PastReopenWindow(ctx, run.q, *found, Reopening{
+			Now: run.r.Clock.Now(), Fallback: run.r.ReopenWindow,
+		})
 		if err != nil {
 			return models.Conversation{}, false, err
 		}
@@ -301,20 +303,24 @@ func (run *ingestRun) conversation(
 		return models.Conversation{}, false, err
 	}
 
+	return run.open(ctx, conn, contact, spam)
+}
+
+/*
+open starts a new conversation for the message, set aside as spam when
+spam is true, and returns it as created.
+*/
+func (run *ingestRun) open(
+	ctx context.Context, conn models.ChannelConnection, contact models.Contact, spam bool,
+) (models.Conversation, bool, error) {
 	number, err := run.q.AllocateConversationNumber(ctx, run.ws)
 	if err != nil {
 		return models.Conversation{}, false, fmt.Errorf("allocate conversation number: %w", err)
 	}
 
-	source := json.RawMessage(`{}`)
-
-	if run.msg.Source != nil {
-		encoded, err := json.Marshal(run.msg.Source)
-		if err != nil {
-			return models.Conversation{}, false, fmt.Errorf("encode conversation source: %w", err)
-		}
-
-		source = encoded
+	source, err := run.source()
+	if err != nil {
+		return models.Conversation{}, false, err
 	}
 
 	subject := optional(run.msg.Subject)
@@ -334,6 +340,23 @@ func (run *ingestRun) conversation(
 	conv.Spam = spam
 
 	return run.setAside(ctx, conv)
+}
+
+/*
+source encodes where the message came from for a new conversation, or
+an empty object when the channel names nothing.
+*/
+func (run *ingestRun) source() (json.RawMessage, error) {
+	if run.msg.Source == nil {
+		return json.RawMessage(`{}`), nil
+	}
+
+	encoded, err := json.Marshal(run.msg.Source)
+	if err != nil {
+		return nil, fmt.Errorf("encode conversation source: %w", err)
+	}
+
+	return encoded, nil
 }
 
 /*
@@ -399,18 +422,27 @@ func ClosedBefore(conv models.Conversation, cutoff time.Time) bool {
 }
 
 /*
+Reopening is when a reply arrives and the reopen window to use when the
+conversation's inbox sets none.
+*/
+type Reopening struct {
+	Now      time.Time
+	Fallback time.Duration
+}
+
+/*
 PastReopenWindow reports whether the conversation closed too long ago
 for a reply to reopen it. The window is the one its inbox sets, or the
 fallback when the inbox sets none.
 */
 func PastReopenWindow(
-	ctx context.Context, q *models.Queries, conv models.Conversation, now time.Time, fallback time.Duration,
+	ctx context.Context, q *models.Queries, conv models.Conversation, at Reopening,
 ) (bool, error) {
 	if conv.Status != string(enums.ConversationStatusClosed) {
 		return false, nil
 	}
 
-	window := fallback
+	window := at.Fallback
 
 	inbox, err := q.FindInbox(ctx, models.FindInboxParams{WorkspaceID: conv.WorkspaceID, ID: conv.InboxID})
 	if err != nil && !errors.Is(err, database.ErrNotFound) {
@@ -418,10 +450,10 @@ func PastReopenWindow(
 	}
 
 	if err == nil {
-		window = inbox.ReopenWindow(fallback)
+		window = inbox.ReopenWindow(at.Fallback)
 	}
 
-	return ClosedBefore(conv, now.Add(-window)), nil
+	return ClosedBefore(conv, at.Now.Add(-window)), nil
 }
 
 /*

@@ -158,7 +158,9 @@ given. A sender that finds its people some other way, such as through
 the conversations linked to a tracker, narrows them with it.
 */
 func (a *Audiences) Keep(ctx context.Context, q *models.Queries, in KeepInput) ([]models.Contact, error) {
-	program, err := a.programOf(ctx, q, MatchInput{WorkspaceID: in.WorkspaceID, AudienceID: in.AudienceID, Rules: in.Rules})
+	program, err := a.programOf(ctx, q, MatchInput{
+		WorkspaceID: in.WorkspaceID, AudienceID: in.AudienceID, Rules: in.Rules,
+	})
 	if err != nil || program == nil || len(in.Contacts) == 0 {
 		return in.Contacts, err
 	}

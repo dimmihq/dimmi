@@ -53,24 +53,24 @@ type sendInput struct {
 }
 
 /*
-send writes the message as dimmi and dispatches it, returning the
-message id, or nil when the customer cannot be reached.
+send writes the message as dimmi and dispatches it. A customer who
+cannot be reached is skipped without an error.
 */
 func (t *Tickets) send(
 	ctx context.Context, cw *conversations.Writer, ws ids.UUID, in sendInput,
-) (*ids.UUID, error) {
+) error {
 	c, err := cw.Q.FindConversation(ctx, models.FindConversationParams{WorkspaceID: ws, ID: in.conversation})
 	if err != nil {
-		return nil, fmt.Errorf("find conversation to tell: %w", err)
+		return fmt.Errorf("find conversation to tell: %w", err)
 	}
 
 	route, err := t.route(ctx, cw.Q, c)
 	if errors.Is(err, exceptions.ErrContactUnreachable) || errors.Is(err, exceptions.ErrChannelUnsupported) {
-		return nil, nil //nolint:nilnil // nobody to tell is not a failure
+		return nil
 	}
 
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	msg := conversations.NewMessage{
@@ -83,14 +83,10 @@ func (t *Tickets) send(
 
 	sent, _, err := cw.AsSystem().Append(ctx, c, msg)
 	if err != nil {
-		return nil, fmt.Errorf("tell customer: %w", err)
+		return fmt.Errorf("tell customer: %w", err)
 	}
 
-	if err := t.Delivery.Dispatch(ctx, cw.Tx, sent); err != nil {
-		return nil, err
-	}
-
-	return &sent.ID, nil
+	return t.Delivery.Dispatch(ctx, cw.Tx, sent)
 }
 
 /*
@@ -184,7 +180,7 @@ func (t *Tickets) tellState(ctx context.Context, w *Writer, ticket models.Ticket
 	body := fmt.Sprintf("**%s** · %s\n\n%s", Reference(ticket.Number), ticket.Title, state.CustomerLabel)
 	key := "ticket-state:" + ticket.ID.String() + ":" + state.ID.String() + ":" + ticket.StateSince.String()
 
-	if _, err := t.send(ctx, w.Writer, ticket.WorkspaceID, sendInput{
+	if err := t.send(ctx, w.Writer, ticket.WorkspaceID, sendInput{
 		conversation: *ticket.ConversationID, body: body, dedupe: key,
 	}); err != nil {
 		return err
