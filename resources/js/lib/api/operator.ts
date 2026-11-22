@@ -103,7 +103,7 @@ export interface OperatorMemory {
   created_at: string;
 }
 
-export type OperatorPurpose = "ask" | "brief" | "triage";
+export type OperatorPurpose = "ask" | "brief" | "triage" | "routine";
 
 export interface OperatorUsageRun {
   id: string;

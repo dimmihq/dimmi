@@ -12,6 +12,7 @@ import {
   RiAtLine,
   RiBarChart2Line,
   RiBookOpenLine,
+  RiCalendarScheduleLine,
   RiChatQuoteLine,
   RiChatSmile3Line,
   RiContactsBook3Line,
@@ -138,6 +139,13 @@ export const workspacePages = {
     RiListOrdered2,
     "/d/procedures",
     "Step-by-step instructions dimmi follows for particular requests.",
+  ),
+  routines: page(
+    "routines",
+    "Routines",
+    RiCalendarScheduleLine,
+    "/d/routines",
+    "Operator on a clock: it checks what changed and suggests fixes for the team to review.",
   ),
   helpCenter: page(
     "help-center",
@@ -463,7 +471,7 @@ export function appSections(
     {
       key: "automation",
       label: "Automation",
-      items: [workspacePages.agent, workspacePages.workflows, workspacePages.procedures],
+      items: [workspacePages.agent, workspacePages.workflows, workspacePages.procedures, workspacePages.routines],
     },
     {
       key: "customers",

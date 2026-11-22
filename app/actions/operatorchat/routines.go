@@ -118,21 +118,52 @@ func (a *Routines) Templates(m authz.Membership) ([]operator.RoutineTemplate, er
 
 /*
 List returns the workspace's routines, newest first, of one status when
-asked.
+asked, each with its next runs and what it spent this month.
 */
-func (a *Routines) List(ctx context.Context, m authz.Membership, status *string) ([]models.OperatorRoutine, error) {
+func (a *Routines) List(ctx context.Context, m authz.Membership, status *string) ([]RoutineView, error) {
 	if !m.Can("ai:read") {
 		return nil, exceptions.ErrForbidden
 	}
-	var out []models.OperatorRoutine
+	var out []RoutineView
 	err := a.DB.Transaction(ctx, func(ctx context.Context, tx *database.Tx) error {
-		var err error
-		out, err = models.New(tx).ListOperatorRoutines(ctx, models.ListOperatorRoutinesParams{
+		q := models.New(tx)
+		rows, err := q.ListOperatorRoutines(ctx, models.ListOperatorRoutinesParams{
 			WorkspaceID: m.Workspace.ID, Status: status, RowLimit: routinesListed,
 		})
-		return err
+		if err != nil {
+			return err
+		}
+		spend, err := a.monthSpend(ctx, q, m.Workspace.ID)
+		if err != nil {
+			return err
+		}
+		for _, r := range rows {
+			v := a.schedule(r)
+			v.MonthSpend = spend[r.ID]
+			out = append(out, v)
+		}
+		return nil
 	})
 	return out, err
+}
+
+/*
+monthSpend is what each routine of the workspace spent this month.
+*/
+func (a *Routines) monthSpend(ctx context.Context, q *models.Queries, ws ids.UUID) (map[ids.UUID]int64, error) {
+	now := a.Clock.Now().UTC()
+	start := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, time.UTC)
+	rows, err := q.ListOperatorRoutineCosts(ctx, models.ListOperatorRoutineCostsParams{
+		WorkspaceID: ws, Since: start, Until: start.AddDate(0, 1, 0), RowLimit: routinesListed,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("sum routine costs: %w", err)
+	}
+	out := make(map[ids.UUID]int64, len(rows))
+	for _, r := range rows {
+		out[r.ID] = r.CostMicros
+	}
+	return out, nil
 }
 
 /*
@@ -159,18 +190,26 @@ func (a *Routines) Show(ctx context.Context, m authz.Membership, id ids.UUID) (R
 view reads a routine's next runs and this month's spend.
 */
 func (a *Routines) view(ctx context.Context, q *models.Queries, r models.OperatorRoutine) (RoutineView, error) {
-	out := RoutineView{Routine: r}
+	out := a.schedule(r)
 	now := a.Clock.Now().UTC()
-	if r.Status == "active" && r.NextRunAt != nil {
-		if s, err := operator.ScheduleOf(r); err == nil {
-			out.NextRuns = append([]time.Time{*r.NextRunAt}, s.NextN(*r.NextRunAt, nextRunsShown-1)...)
-		}
-	}
 	spend, err := q.SumOperatorRoutineCost(ctx, models.SumOperatorRoutineCostParams{
 		WorkspaceID: r.WorkspaceID, RoutineID: r.ID, Since: time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, time.UTC),
 	})
 	out.MonthSpend = spend
 	return out, err
+}
+
+/*
+schedule is a routine with its next three runs.
+*/
+func (a *Routines) schedule(r models.OperatorRoutine) RoutineView {
+	out := RoutineView{Routine: r}
+	if r.Status == "active" && r.NextRunAt != nil {
+		if s, err := operator.ScheduleOf(r); err == nil {
+			out.NextRuns = append([]time.Time{*r.NextRunAt}, s.NextN(*r.NextRunAt, nextRunsShown-1)...)
+		}
+	}
+	return out
 }
 
 /*

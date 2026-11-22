@@ -53,6 +53,8 @@ import { Route as DProceduresIndexRouteImport } from './routes/d/procedures/inde
 import { Route as DProceduresProcedureRouteImport } from './routes/d/procedures/$procedure'
 import { Route as DReportsIndexRouteImport } from './routes/d/reports/index'
 import { Route as DReportsReportRouteImport } from './routes/d/reports/$report'
+import { Route as DRoutinesIndexRouteImport } from './routes/d/routines/index'
+import { Route as DRoutinesNewRouteImport } from './routes/d/routines/new'
 import { Route as DSeriesIndexRouteImport } from './routes/d/series/index'
 import { Route as DSeriesSeriesRouteImport } from './routes/d/series/$series'
 import { Route as DSettingsIndexRouteImport } from './routes/d/settings/index'
@@ -67,6 +69,7 @@ import { Route as DCustomersAudiencesAudienceRouteImport } from './routes/d/cust
 import { Route as DCustomersCompaniesCompanyRouteImport } from './routes/d/customers/companies/$company'
 import { Route as DInboxViewIndexRouteImport } from './routes/d/inbox/$view/index'
 import { Route as DInboxViewConversationRouteImport } from './routes/d/inbox/$view/$conversation'
+import { Route as DRoutinesRoutineIndexRouteImport } from './routes/d/routines/$routine/index'
 import { Route as DSettingsActionsActionRouteImport } from './routes/d/settings/actions.$action'
 import { Route as DSettingsInboxesInboxRouteImport } from './routes/d/settings/inboxes.$inbox'
 import { Route as DSettingsIntegrationsIntegrationRouteImport } from './routes/d/settings/integrations.$integration'
@@ -82,6 +85,7 @@ import { Route as DSettingsTicketsTypeRouteImport } from './routes/d/settings/ti
 import { Route as DSettingsWebhooksEndpointRouteImport } from './routes/d/settings/webhooks.$endpoint'
 import { Route as DCustomersListsAudiencesIndexRouteImport } from './routes/d/customers/_lists/audiences/index'
 import { Route as DCustomersListsCompaniesIndexRouteImport } from './routes/d/customers/_lists/companies/index'
+import { Route as DRoutinesRoutineThreadsThreadRouteImport } from './routes/d/routines/$routine/threads/$thread'
 import { Route as DSeriesSeriesComposeStepRouteImport } from './routes/d/series/$series_.compose.$step'
 import { Route as DSettingsEmailAddressesAddressRouteImport } from './routes/d/settings/email.addresses.$address'
 import { Route as DSettingsEmailDomainsDomainRouteImport } from './routes/d/settings/email.domains.$domain'
@@ -308,6 +312,16 @@ const DReportsReportRoute = DReportsReportRouteImport.update({
   path: '/$report',
   getParentRoute: () => DReportsRoute,
 } as any)
+const DRoutinesIndexRoute = DRoutinesIndexRouteImport.update({
+  id: '/routines/',
+  path: '/routines/',
+  getParentRoute: () => DRouteRoute,
+} as any)
+const DRoutinesNewRoute = DRoutinesNewRouteImport.update({
+  id: '/routines/new',
+  path: '/routines/new',
+  getParentRoute: () => DRouteRoute,
+} as any)
 const DSeriesIndexRoute = DSeriesIndexRouteImport.update({
   id: '/series/',
   path: '/series/',
@@ -379,6 +393,11 @@ const DInboxViewConversationRoute = DInboxViewConversationRouteImport.update({
   id: '/$conversation',
   path: '/$conversation',
   getParentRoute: () => DInboxViewRouteRoute,
+} as any)
+const DRoutinesRoutineIndexRoute = DRoutinesRoutineIndexRouteImport.update({
+  id: '/routines/$routine/',
+  path: '/routines/$routine/',
+  getParentRoute: () => DRouteRoute,
 } as any)
 const DSettingsActionsActionRoute = DSettingsActionsActionRouteImport.update({
   id: '/settings/actions/$action',
@@ -465,6 +484,12 @@ const DCustomersListsCompaniesIndexRoute =
     path: '/companies/',
     getParentRoute: () => DCustomersListsRoute,
   } as any)
+const DRoutinesRoutineThreadsThreadRoute =
+  DRoutinesRoutineThreadsThreadRouteImport.update({
+    id: '/routines/$routine/threads/$thread',
+    path: '/routines/$routine/threads/$thread',
+    getParentRoute: () => DRouteRoute,
+  } as any)
 const DSeriesSeriesComposeStepRoute =
   DSeriesSeriesComposeStepRouteImport.update({
     id: '/series/$series_/compose/$step',
@@ -545,6 +570,7 @@ export interface FileRoutesByFullPath {
   '/d/help-center/$article': typeof DHelpCenterArticleRoute
   '/d/procedures/$procedure': typeof DProceduresProcedureRoute
   '/d/reports/$report': typeof DReportsReportRoute
+  '/d/routines/new': typeof DRoutinesNewRoute
   '/d/series/$series': typeof DSeriesSeriesRoute
   '/d/settings/$section': typeof DSettingsSectionRoute
   '/d/tickets/$ticket': typeof DTicketsTicketRoute
@@ -556,6 +582,7 @@ export interface FileRoutesByFullPath {
   '/d/inbox/': typeof DInboxIndexRoute
   '/d/procedures/': typeof DProceduresIndexRoute
   '/d/reports/': typeof DReportsIndexRoute
+  '/d/routines/': typeof DRoutinesIndexRoute
   '/d/series/': typeof DSeriesIndexRoute
   '/d/settings/': typeof DSettingsIndexRoute
   '/d/workflows/': typeof DWorkflowsIndexRoute
@@ -579,6 +606,8 @@ export interface FileRoutesByFullPath {
   '/d/settings/webhooks/$endpoint': typeof DSettingsWebhooksEndpointRoute
   '/d/customers/': typeof DCustomersListsIndexRoute
   '/d/inbox/$view/': typeof DInboxViewIndexRoute
+  '/d/routines/$routine/': typeof DRoutinesRoutineIndexRoute
+  '/d/routines/$routine/threads/$thread': typeof DRoutinesRoutineThreadsThreadRoute
   '/d/series/$series/compose/$step': typeof DSeriesSeriesComposeStepRoute
   '/d/settings/email/addresses/$address': typeof DSettingsEmailAddressesAddressRoute
   '/d/settings/email/domains/$domain': typeof DSettingsEmailDomainsDomainRoute
@@ -620,6 +649,7 @@ export interface FileRoutesByTo {
   '/d/help-center/$article': typeof DHelpCenterArticleRoute
   '/d/procedures/$procedure': typeof DProceduresProcedureRoute
   '/d/reports/$report': typeof DReportsReportRoute
+  '/d/routines/new': typeof DRoutinesNewRoute
   '/d/series/$series': typeof DSeriesSeriesRoute
   '/d/settings/$section': typeof DSettingsSectionRoute
   '/d/tickets/$ticket': typeof DTicketsTicketRoute
@@ -631,6 +661,7 @@ export interface FileRoutesByTo {
   '/d/inbox': typeof DInboxIndexRoute
   '/d/procedures': typeof DProceduresIndexRoute
   '/d/reports': typeof DReportsIndexRoute
+  '/d/routines': typeof DRoutinesIndexRoute
   '/d/series': typeof DSeriesIndexRoute
   '/d/settings': typeof DSettingsIndexRoute
   '/d/workflows': typeof DWorkflowsIndexRoute
@@ -653,6 +684,8 @@ export interface FileRoutesByTo {
   '/d/settings/tickets/$type': typeof DSettingsTicketsTypeRoute
   '/d/settings/webhooks/$endpoint': typeof DSettingsWebhooksEndpointRoute
   '/d/inbox/$view': typeof DInboxViewIndexRoute
+  '/d/routines/$routine': typeof DRoutinesRoutineIndexRoute
+  '/d/routines/$routine/threads/$thread': typeof DRoutinesRoutineThreadsThreadRoute
   '/d/series/$series/compose/$step': typeof DSeriesSeriesComposeStepRoute
   '/d/settings/email/addresses/$address': typeof DSettingsEmailAddressesAddressRoute
   '/d/settings/email/domains/$domain': typeof DSettingsEmailDomainsDomainRoute
@@ -702,6 +735,7 @@ export interface FileRoutesById {
   '/d/help-center/$article': typeof DHelpCenterArticleRoute
   '/d/procedures/$procedure': typeof DProceduresProcedureRoute
   '/d/reports/$report': typeof DReportsReportRoute
+  '/d/routines/new': typeof DRoutinesNewRoute
   '/d/series/$series': typeof DSeriesSeriesRoute
   '/d/settings/$section': typeof DSettingsSectionRoute
   '/d/tickets/$ticket': typeof DTicketsTicketRoute
@@ -713,6 +747,7 @@ export interface FileRoutesById {
   '/d/inbox/': typeof DInboxIndexRoute
   '/d/procedures/': typeof DProceduresIndexRoute
   '/d/reports/': typeof DReportsIndexRoute
+  '/d/routines/': typeof DRoutinesIndexRoute
   '/d/series/': typeof DSeriesIndexRoute
   '/d/settings/': typeof DSettingsIndexRoute
   '/d/workflows/': typeof DWorkflowsIndexRoute
@@ -736,6 +771,8 @@ export interface FileRoutesById {
   '/d/settings/webhooks/$endpoint': typeof DSettingsWebhooksEndpointRoute
   '/d/customers/_lists/': typeof DCustomersListsIndexRoute
   '/d/inbox/$view/': typeof DInboxViewIndexRoute
+  '/d/routines/$routine/': typeof DRoutinesRoutineIndexRoute
+  '/d/routines/$routine/threads/$thread': typeof DRoutinesRoutineThreadsThreadRoute
   '/d/series/$series_/compose/$step': typeof DSeriesSeriesComposeStepRoute
   '/d/settings/email/addresses/$address': typeof DSettingsEmailAddressesAddressRoute
   '/d/settings/email/domains/$domain': typeof DSettingsEmailDomainsDomainRoute
@@ -785,6 +822,7 @@ export interface FileRouteTypes {
     | '/d/help-center/$article'
     | '/d/procedures/$procedure'
     | '/d/reports/$report'
+    | '/d/routines/new'
     | '/d/series/$series'
     | '/d/settings/$section'
     | '/d/tickets/$ticket'
@@ -796,6 +834,7 @@ export interface FileRouteTypes {
     | '/d/inbox/'
     | '/d/procedures/'
     | '/d/reports/'
+    | '/d/routines/'
     | '/d/series/'
     | '/d/settings/'
     | '/d/workflows/'
@@ -819,6 +858,8 @@ export interface FileRouteTypes {
     | '/d/settings/webhooks/$endpoint'
     | '/d/customers/'
     | '/d/inbox/$view/'
+    | '/d/routines/$routine/'
+    | '/d/routines/$routine/threads/$thread'
     | '/d/series/$series/compose/$step'
     | '/d/settings/email/addresses/$address'
     | '/d/settings/email/domains/$domain'
@@ -860,6 +901,7 @@ export interface FileRouteTypes {
     | '/d/help-center/$article'
     | '/d/procedures/$procedure'
     | '/d/reports/$report'
+    | '/d/routines/new'
     | '/d/series/$series'
     | '/d/settings/$section'
     | '/d/tickets/$ticket'
@@ -871,6 +913,7 @@ export interface FileRouteTypes {
     | '/d/inbox'
     | '/d/procedures'
     | '/d/reports'
+    | '/d/routines'
     | '/d/series'
     | '/d/settings'
     | '/d/workflows'
@@ -893,6 +936,8 @@ export interface FileRouteTypes {
     | '/d/settings/tickets/$type'
     | '/d/settings/webhooks/$endpoint'
     | '/d/inbox/$view'
+    | '/d/routines/$routine'
+    | '/d/routines/$routine/threads/$thread'
     | '/d/series/$series/compose/$step'
     | '/d/settings/email/addresses/$address'
     | '/d/settings/email/domains/$domain'
@@ -941,6 +986,7 @@ export interface FileRouteTypes {
     | '/d/help-center/$article'
     | '/d/procedures/$procedure'
     | '/d/reports/$report'
+    | '/d/routines/new'
     | '/d/series/$series'
     | '/d/settings/$section'
     | '/d/tickets/$ticket'
@@ -952,6 +998,7 @@ export interface FileRouteTypes {
     | '/d/inbox/'
     | '/d/procedures/'
     | '/d/reports/'
+    | '/d/routines/'
     | '/d/series/'
     | '/d/settings/'
     | '/d/workflows/'
@@ -975,6 +1022,8 @@ export interface FileRouteTypes {
     | '/d/settings/webhooks/$endpoint'
     | '/d/customers/_lists/'
     | '/d/inbox/$view/'
+    | '/d/routines/$routine/'
+    | '/d/routines/$routine/threads/$thread'
     | '/d/series/$series_/compose/$step'
     | '/d/settings/email/addresses/$address'
     | '/d/settings/email/domains/$domain'
@@ -1304,6 +1353,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DReportsReportRouteImport
       parentRoute: typeof DReportsRoute
     }
+    '/d/routines/': {
+      id: '/d/routines/'
+      path: '/routines'
+      fullPath: '/d/routines/'
+      preLoaderRoute: typeof DRoutinesIndexRouteImport
+      parentRoute: typeof DRouteRoute
+    }
+    '/d/routines/new': {
+      id: '/d/routines/new'
+      path: '/routines/new'
+      fullPath: '/d/routines/new'
+      preLoaderRoute: typeof DRoutinesNewRouteImport
+      parentRoute: typeof DRouteRoute
+    }
     '/d/series/': {
       id: '/d/series/'
       path: '/series'
@@ -1401,6 +1464,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/d/inbox/$view/$conversation'
       preLoaderRoute: typeof DInboxViewConversationRouteImport
       parentRoute: typeof DInboxViewRouteRoute
+    }
+    '/d/routines/$routine/': {
+      id: '/d/routines/$routine/'
+      path: '/routines/$routine'
+      fullPath: '/d/routines/$routine/'
+      preLoaderRoute: typeof DRoutinesRoutineIndexRouteImport
+      parentRoute: typeof DRouteRoute
     }
     '/d/settings/actions/$action': {
       id: '/d/settings/actions/$action'
@@ -1506,6 +1576,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/d/customers/companies/'
       preLoaderRoute: typeof DCustomersListsCompaniesIndexRouteImport
       parentRoute: typeof DCustomersListsRoute
+    }
+    '/d/routines/$routine/threads/$thread': {
+      id: '/d/routines/$routine/threads/$thread'
+      path: '/routines/$routine/threads/$thread'
+      fullPath: '/d/routines/$routine/threads/$thread'
+      preLoaderRoute: typeof DRoutinesRoutineThreadsThreadRouteImport
+      parentRoute: typeof DRouteRoute
     }
     '/d/series/$series_/compose/$step': {
       id: '/d/series/$series_/compose/$step'
@@ -1681,6 +1758,7 @@ interface DRouteRouteChildren {
   DInboxViewRouteRoute: typeof DInboxViewRouteRouteWithChildren
   DBroadcastsBroadcastRoute: typeof DBroadcastsBroadcastRoute
   DProceduresProcedureRoute: typeof DProceduresProcedureRoute
+  DRoutinesNewRoute: typeof DRoutinesNewRoute
   DSeriesSeriesRoute: typeof DSeriesSeriesRoute
   DSettingsSectionRoute: typeof DSettingsSectionRoute
   DTicketsTicketRoute: typeof DTicketsTicketRoute
@@ -1688,6 +1766,7 @@ interface DRouteRouteChildren {
   DBroadcastsIndexRoute: typeof DBroadcastsIndexRoute
   DInboxIndexRoute: typeof DInboxIndexRoute
   DProceduresIndexRoute: typeof DProceduresIndexRoute
+  DRoutinesIndexRoute: typeof DRoutinesIndexRoute
   DSeriesIndexRoute: typeof DSeriesIndexRoute
   DSettingsIndexRoute: typeof DSettingsIndexRoute
   DWorkflowsIndexRoute: typeof DWorkflowsIndexRoute
@@ -1704,6 +1783,8 @@ interface DRouteRouteChildren {
   DSettingsTeamsTeamRoute: typeof DSettingsTeamsTeamRoute
   DSettingsTicketsTypeRoute: typeof DSettingsTicketsTypeRoute
   DSettingsWebhooksEndpointRoute: typeof DSettingsWebhooksEndpointRoute
+  DRoutinesRoutineIndexRoute: typeof DRoutinesRoutineIndexRoute
+  DRoutinesRoutineThreadsThreadRoute: typeof DRoutinesRoutineThreadsThreadRoute
   DSeriesSeriesComposeStepRoute: typeof DSeriesSeriesComposeStepRoute
   DSettingsEmailAddressesAddressRoute: typeof DSettingsEmailAddressesAddressRoute
   DSettingsEmailDomainsDomainRoute: typeof DSettingsEmailDomainsDomainRoute
@@ -1727,6 +1808,7 @@ const DRouteRouteChildren: DRouteRouteChildren = {
   DInboxViewRouteRoute: DInboxViewRouteRouteWithChildren,
   DBroadcastsBroadcastRoute: DBroadcastsBroadcastRoute,
   DProceduresProcedureRoute: DProceduresProcedureRoute,
+  DRoutinesNewRoute: DRoutinesNewRoute,
   DSeriesSeriesRoute: DSeriesSeriesRoute,
   DSettingsSectionRoute: DSettingsSectionRoute,
   DTicketsTicketRoute: DTicketsTicketRoute,
@@ -1734,6 +1816,7 @@ const DRouteRouteChildren: DRouteRouteChildren = {
   DBroadcastsIndexRoute: DBroadcastsIndexRoute,
   DInboxIndexRoute: DInboxIndexRoute,
   DProceduresIndexRoute: DProceduresIndexRoute,
+  DRoutinesIndexRoute: DRoutinesIndexRoute,
   DSeriesIndexRoute: DSeriesIndexRoute,
   DSettingsIndexRoute: DSettingsIndexRoute,
   DWorkflowsIndexRoute: DWorkflowsIndexRoute,
@@ -1750,6 +1833,8 @@ const DRouteRouteChildren: DRouteRouteChildren = {
   DSettingsTeamsTeamRoute: DSettingsTeamsTeamRoute,
   DSettingsTicketsTypeRoute: DSettingsTicketsTypeRoute,
   DSettingsWebhooksEndpointRoute: DSettingsWebhooksEndpointRoute,
+  DRoutinesRoutineIndexRoute: DRoutinesRoutineIndexRoute,
+  DRoutinesRoutineThreadsThreadRoute: DRoutinesRoutineThreadsThreadRoute,
   DSeriesSeriesComposeStepRoute: DSeriesSeriesComposeStepRoute,
   DSettingsEmailAddressesAddressRoute: DSettingsEmailAddressesAddressRoute,
   DSettingsEmailDomainsDomainRoute: DSettingsEmailDomainsDomainRoute,

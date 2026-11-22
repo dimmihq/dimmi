@@ -34,6 +34,7 @@ export const pages = new Set([
   "changelog",
   "shortcuts",
   "procedures",
+  "routines",
   "workflows",
   "operator",
   /* Where Meta's sign-in popup returns; it belongs to no workspace. */

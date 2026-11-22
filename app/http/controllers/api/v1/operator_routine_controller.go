@@ -78,7 +78,7 @@ func (c *OperatorRoutineController) Index(ctx context.Context, _ *requests.NoInp
 	if err != nil {
 		return nil, err
 	}
-	page := pagination.Page[resources.OperatorRoutine]{Items: resources.NewOperatorRoutines(rows), Limit: 200}
+	page := pagination.Page[resources.OperatorRoutine]{Items: resources.NewOperatorRoutineViews(rows), Limit: 200}
 	return &OperatorRoutinesOutput{Body: fhttp.NewCollection(page)}, nil
 }
 

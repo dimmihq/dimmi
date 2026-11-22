@@ -21246,12 +21246,18 @@
         "additionalProperties": false,
         "properties": {
           "after": {},
+          "article_id": {
+            "type": "string"
+          },
           "before": {},
           "conversation_number": {
             "format": "int64",
             "type": "integer"
           },
           "created_id": {
+            "type": "string"
+          },
+          "help_center_id": {
             "type": "string"
           },
           "kind": {
@@ -21263,7 +21269,16 @@
           "outcome": {
             "type": "string"
           },
+          "procedure_id": {
+            "type": "string"
+          },
           "text": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "visibility": {
             "type": "string"
           }
         },

@@ -1,0 +1,72 @@
+---
+title: "How Operator routines work"
+description: "Put Operator on a clock to find knowledge gaps, stale articles and procedure fixes, then review what it suggests."
+---
+
+Some checks matter every week and nobody remembers to run them: which questions the AI agent kept handing over, which articles contradict each other, which procedure step keeps failing. A **routine** gives that job to **Operator**. You write the prompt once, pick when it runs, and Operator leaves its findings as [changesets](/operator/changesets/) for your team to review.
+
+Open **Routines** in the sidebar and pick a template, or start from scratch.
+
+## Templates
+
+| Template | Runs | What it suggests |
+| --- | --- | --- |
+| **Knowledge gap finder** | Mondays at 09:00 | Articles and agent-only snippets for questions the AI agent could not answer |
+| **Pull requests to docs** | Every day at 08:30 | Edits to help articles that merged pull requests made out of date |
+| **Knowledge conflict and staleness audit** | Wednesdays at 09:00 | Fixes for articles that contradict each other, 15 articles a run |
+| **Weekly QA and procedure tune-up** | Fridays at 15:00 | A digest of the week, plus fixes and regression tests for procedures |
+
+A template only fills the builder. You can change the prompt, the schedule and everything else before you create the routine.
+
+## What a run does
+
+Each run opens a thread that anyone who can read the routine can open from the routine's **Runs** tab. The thread shows the prompt, each step Operator took, its report, and the changes it suggested. Reply in the thread to ask for more; Operator answers with your permissions.
+
+- **Suggests, never applies:** a routine's changes always wait for a teammate, whatever your **Settings → Operator** policies say.
+- **Remembers between runs:** Operator saves a small state, such as the last pull request it read, so the next run starts where this one stopped.
+- **Skips repeats:** Operator does not suggest a change again while the same suggestion waits, or for 30 days after a teammate declines it.
+- **Stays quiet:** a run that suggests nothing tells nobody, unless the routine reports after every run.
+
+Use **Dry run** to try a routine on real data. A dry run shows what it would suggest, but you cannot apply those changes, it keeps no state, and it tells nobody.
+
+## Who the routine runs as
+
+A routine runs as the admin who created it, with only the permissions and inboxes you pick in the builder. You cannot give a routine a permission you do not hold.
+
+If that admin leaves or loses a permission the routine needs, the routine **pauses** instead of running as anyone else. Resume it from the routine's page once someone with the right access owns it.
+
+Only teammates who can see every inbox the routine reads can open its runs. A routine that reads every inbox shows its runs only to teammates who see every conversation.
+
+## Telling the team
+
+| Setting | Tells the team |
+| --- | --- |
+| **When it suggests something** (default) | After a run that suggested changes |
+| **After every run** | After every finished run, for digests |
+| **Only when it fails** | After a failed run |
+
+dimmi always tells the team when a routine pauses. Pick who hears about it:
+
+- **Notify in dimmi** sends a notification to the teammates you pick.
+- **Email the report** sends the report and every suggestion.
+- **Post to Slack** posts the report to a Slack channel, then one card per suggestion with **Apply** and **Decline**. Add the channel first under **Settings → Integrations → Slack**.
+
+## Cost
+
+Every run is an Operator run, billed like a question to Operator. Runs count toward your workspace's monthly AI budget and show as **Routines** in Operator's usage.
+
+Set a **Monthly budget** on a routine to cap it on its own. Once a routine spends it, its runs skip until the next month.
+
+## Rules and limits
+
+| Rule | Value |
+| --- | --- |
+| Most frequent schedule | Once an hour |
+| Run time | Up to 4 minutes |
+| Model calls per run | 16 by default, up to 30 |
+| Tool calls per run | 50 by default, up to 100 |
+| Failed model calls retried | Twice, when the provider timed out or was overloaded |
+| Failures before a routine pauses | 3 in a row |
+| Prompt length | 8,000 characters |
+| Monthly days | 1 to 28, or the last day of the month |
+| GitHub repositories per routine | 20 |

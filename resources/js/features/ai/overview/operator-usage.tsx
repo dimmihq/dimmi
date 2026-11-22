@@ -5,7 +5,14 @@
  * what became of the changes it proposed, and its latest runs. Operator
  * and dimmi share one monthly cap, so its spend is shown against both.
  */
-import { RiArrowRightSLine, RiChat3Line, RiFileList3Line, RiInboxArchiveLine, RiRobot2Line } from "@remixicon/react";
+import {
+  RiArrowRightSLine,
+  RiCalendarScheduleLine,
+  RiChat3Line,
+  RiFileList3Line,
+  RiInboxArchiveLine,
+  RiRobot2Line,
+} from "@remixicon/react";
 import { useQuery } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
 
@@ -35,6 +42,7 @@ const purposes: Record<OperatorPurpose, { label: string; icon: typeof RiChat3Lin
   ask: { label: "Questions from teammates", icon: RiChat3Line },
   brief: { label: "Briefs on conversations", icon: RiFileList3Line },
   triage: { label: "Triage as conversations arrive", icon: RiInboxArchiveLine },
+  routine: { label: "Routines", icon: RiCalendarScheduleLine },
 };
 
 /*
@@ -288,6 +296,7 @@ export function OperatorUsageTab({ workspace, view }: { workspace: string; view:
   return (
     <>
       {settings ? <StatusCard settings={settings} view={view} /> : <Skeleton className="h-[84px] rounded-2xl" />}
+      <RoutinesCard />
       <section aria-label="Operator this month" className="flex flex-col gap-2">
         <h2 className="px-3 text-body-2-medium text-text-secondary">This month</h2>
         <MonthStats usage={usage} />
@@ -300,5 +309,26 @@ export function OperatorUsageTab({ workspace, view }: { workspace: string; view:
         </>
       ) : null}
     </>
+  );
+}
+
+/*
+ * RoutinesCard leads to the routines: what Operator does on its own.
+ */
+function RoutinesCard() {
+  return (
+    <Link
+      to="/d/routines"
+      className="flex items-center gap-3 rounded-2xl bg-background-secondary-default p-4 outline-none transition-colors duration-150 hover:bg-background-secondary-hover focus-visible:ring-2 focus-visible:ring-border-focus-ring"
+    >
+      <Glyph icon={RiCalendarScheduleLine} />
+      <span className="flex min-w-0 flex-1 flex-col">
+        <span className="text-body-medium text-text-primary">Routines</span>
+        <span className="text-body-2-regular text-text-secondary">
+          Put Operator on a clock to find knowledge gaps, stale articles and procedure fixes.
+        </span>
+      </span>
+      <RiArrowRightSLine aria-hidden className="size-5 text-foreground-icon-tertiary rtl:-scale-x-100" />
+    </Link>
   );
 }

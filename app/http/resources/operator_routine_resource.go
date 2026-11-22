@@ -122,12 +122,12 @@ func NewOperatorRoutine(v operatorchat.RoutineView) OperatorRoutine {
 }
 
 /*
-NewOperatorRoutines shapes routines as a list shows them.
+NewOperatorRoutineViews shapes routines as a list shows them.
 */
-func NewOperatorRoutines(rows []models.OperatorRoutine) []OperatorRoutine {
+func NewOperatorRoutineViews(rows []operatorchat.RoutineView) []OperatorRoutine {
 	out := make([]OperatorRoutine, len(rows))
-	for i, r := range rows {
-		out[i] = NewOperatorRoutine(operatorchat.RoutineView{Routine: r})
+	for i, v := range rows {
+		out[i] = NewOperatorRoutine(v)
 	}
 	return out
 }
