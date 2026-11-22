@@ -95,6 +95,7 @@ export function AgentSidePanel({
           agent={draft.id}
           name={draft.draft.name}
           as={shown}
+          liveVersion={draft.server.live_version}
           sources={sources}
           flush={draft.flush}
         />

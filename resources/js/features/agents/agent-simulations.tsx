@@ -2,9 +2,10 @@
  * An agent's simulations, the way a procedure's work: chats the agent
  * must keep getting right, each with the checks that judge it, run
  * against the draft or the live version. Each keeps how it last went
- * on both. The list says how many pass; opening one slides in its
+ * on both. The list says how many pass, and flags a simulation whose
+ * draft and live results disagree; opening one slides in its
  * conversation and checks, where a check is removed or one is added in
- * plain words.
+ * plain words, and Compare puts its draft and live runs side by side.
  */
 import {
   RiArrowLeftSLine,
@@ -14,6 +15,7 @@ import {
   RiCloseCircleFill,
   RiCloseLine,
   RiDeleteBinLine,
+  RiGitPullRequestLine,
   RiPlayFill,
 } from "@remixicon/react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -55,10 +57,11 @@ import {
 } from "../automation/procedure-simulator/simulator";
 import { type LiveRun, useLiveRuns } from "../automation/procedure-simulator/use-live-runs";
 import type { ChipSources } from "../automation/procedure-writer/procedure-suggestions";
-
-type CheckResult = TestResult["assertion_results"][number];
+import { SimCompare, Talk } from "./agent-sim-compare";
 
 const pressedConfirm = "Pressed Confirm on the card";
+
+type CheckResult = TestResult["assertion_results"][number];
 
 function Mark({ result }: { result?: CheckResult }) {
   if (!result || result.skipped) {
@@ -104,36 +107,6 @@ function statusNow(result: TestResult | null, busy: boolean, live?: LiveRun): { 
   const turn = live && live.turns.length > 0 ? ` · turn ${live.turns.length}` : "";
 
   return { label: `Running${turn}`, color: "blue" };
-}
-
-function Talk({ sim, result, sources }: { sim: AgentSimulation; result: TestResult | null; sources: ChipSources }) {
-  if (!result || result.turns.length === 0) {
-    return (
-      <div className="flex flex-col gap-3">
-        {sim.messages.map((m, index) => (
-          // biome-ignore lint/suspicious/noArrayIndexKey: a simulation's messages never reorder.
-          <p key={index} className={fromCustomer}>
-            {m.text || pressedConfirm}
-          </p>
-        ))}
-      </div>
-    );
-  }
-
-  return (
-    <ol aria-label="Simulated conversation" className="flex flex-col gap-5">
-      {result.turns.map((t, index) => (
-        // biome-ignore lint/suspicious/noArrayIndexKey: a run's turns never reorder.
-        <li key={index} className="flex flex-col gap-5">
-          <p className={fromCustomer}>{t.confirm || !t.message ? pressedConfirm : t.message}</p>
-          <div className="flex flex-col gap-2">
-            <MessageBody text={t.reply || words(t.outcome)} className="text-body-regular text-text-primary" />
-            <Did calls={t.calls} outcome={t.outcome} sources={sources} />
-          </div>
-        </li>
-      ))}
-    </ol>
-  );
 }
 
 function LiveTalk({ run, sources }: { run?: LiveRun; sources: ChipSources }) {
@@ -270,6 +243,7 @@ function Detail({
   onRun,
   onDelete,
   onChecks,
+  onCompare,
 }: {
   sim: AgentSimulation;
   as: AnswerAs;
@@ -281,6 +255,7 @@ function Detail({
   onRun: () => void;
   onDelete: () => void;
   onChecks: (assertions: Assertion[]) => void;
+  onCompare?: () => void;
 }) {
   const result = resultOf(sim, as);
   const status = statusNow(result, busy, live);
@@ -306,6 +281,11 @@ function Detail({
             aria-label={`Delete ${sim.name}`}
             onClick={onDelete}
           />
+          {onCompare ? (
+            <Button variant="tertiary" size="xs" leadingIcon={RiGitPullRequestLine} disabled={busy} onClick={onCompare}>
+              Compare
+            </Button>
+          ) : null}
           <Button variant="tertiary" size="xs" leadingIcon={RiPlayFill} loading={busy} disabled={busy} onClick={onRun}>
             Run
           </Button>
@@ -334,6 +314,11 @@ function Detail({
   );
 }
 
+/* disagrees says the draft and the live version last went different ways. */
+function disagrees(sim: AgentSimulation): boolean {
+  return sim.draft_result !== null && sim.live_result !== null && sim.draft_result.passed !== sim.live_result.passed;
+}
+
 function said(sim: AgentSimulation): string {
   const first = sim.messages[0]?.text ?? "";
 
@@ -345,6 +330,7 @@ export function AgentSimulations({
   agent,
   name,
   as,
+  liveVersion,
   sources,
   flush,
 }: {
@@ -352,6 +338,8 @@ export function AgentSimulations({
   agent: string;
   name: string;
   as: AnswerAs;
+  /* The live version's number, 0 before the first publish. */
+  liveVersion: number;
   sources: ChipSources;
   flush: () => Promise<void>;
 }) {
@@ -360,6 +348,7 @@ export function AgentSimulations({
   const [openId, setOpenId] = useState<string | null>(null);
   const [running, setRunning] = useState<string[]>([]);
   const [deleting, setDeleting] = useState<AgentSimulation | null>(null);
+  const [comparing, setComparing] = useState(false);
   const refresh = () => queryClient.invalidateQueries(agentSimulationsQuery(workspace, agent));
   const live = useLiveRuns(workspace, sources);
   const opened = list.find((sim) => sim.id === openId);
@@ -430,6 +419,7 @@ export function AgentSimulations({
       onRun={() => void run([opened.id])}
       onDelete={() => setDeleting(opened)}
       onChecks={(assertions) => void setChecks(opened, assertions)}
+      onCompare={liveVersion > 0 ? () => setComparing(true) : undefined}
     />
   ) : null;
 
@@ -475,6 +465,11 @@ export function AgentSimulations({
                     <span className="truncate text-body-regular text-text-primary">{sim.name}</span>
                     {said(sim) ? <span className={cx(hint, "truncate")}>{said(sim)}</span> : null}
                   </span>
+                  {liveVersion > 0 && disagrees(sim) ? (
+                    <Chip variant="caption" color="orange" className="shrink-0 py-0.5">
+                      Live differs
+                    </Chip>
+                  ) : null}
                   <Chip variant="caption" color={status.color} className="shrink-0 py-0.5">
                     {status.label}
                   </Chip>
@@ -497,6 +492,17 @@ export function AgentSimulations({
         {detail ?? (list.length === 0 ? none : all)}
       </Swap>
       {confirm}
+      {comparing && opened ? (
+        <SimCompare
+          workspace={workspace}
+          agent={agent}
+          sim={opened}
+          liveVersion={liveVersion}
+          sources={sources}
+          flush={flush}
+          onClose={() => setComparing(false)}
+        />
+      ) : null}
     </div>
   );
 }

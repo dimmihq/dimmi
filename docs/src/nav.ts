@@ -70,6 +70,7 @@ export const sidebar: Group[] = [
     items: [
       { label: "Overview", link: "/ai/how-the-agent-works/" },
       { label: "Setup", link: "/ai/set-up-the-agent/" },
+      { label: "Several agents", link: "/ai/multiple-agents/" },
       { label: "Knowledge", link: "/ai/knowledge-sources/" },
       { label: "Procedures", link: "/ai/procedures/" },
       { label: "Actions", link: "/ai/actions/" },
