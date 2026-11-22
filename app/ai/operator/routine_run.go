@@ -218,7 +218,8 @@ func (e *Engine) overBudget(ctx context.Context, q *models.Queries, r models.Ope
 /*
 applyRoutineSettings lays the routine's model, effort and write policies
 over the workspace's: a policy is the stricter of the two, and nothing
-ever applies on its own.
+ever applies on its own. A routine is offered its few tools directly
+and reads full ids, which its report quotes to the team.
 */
 func (e *Engine) applyRoutineSettings(s *session) {
 	row := s.routine.row
@@ -242,6 +243,7 @@ func (e *Engine) applyRoutineSettings(s *session) {
 		policies[g] = p
 	}
 	s.settings.Policies = policies
+	s.settings.ToolLayer, s.settings.CompactResults = false, false
 }
 
 /*
@@ -287,6 +289,8 @@ func (e *Engine) renderPrompt(s *session, now time.Time) string {
 	return strings.NewReplacer(
 		"{{workspace_name}}", s.m.Workspace.Name, "{{routine_name}}", r.Name, "{{last_run_at}}", last,
 		"{{window_start}}", start.UTC().Format(time.RFC3339), "{{window_end}}", now.UTC().Format(time.RFC3339),
+		"{{window_start_date}}", start.UTC().Format(time.DateOnly),
+		"{{window_end_date}}", now.UTC().AddDate(0, 0, 1).Format(time.DateOnly),
 	).Replace(r.Prompt)
 }
 

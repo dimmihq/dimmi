@@ -70,9 +70,10 @@ const proposeSchema = `{"type":"object","required":["title","reason","operations
 "definition":{"type":"object","description":"The procedure's whole new working copy, as get_procedure shows it."},
 "test_case":{"type":"object","description":"For procedure.create_test_case: the test, with name, messages ` +
 	`([{text}], the customer's turns), persona ({verified, external_id, channel, attributes}), action_mocks ` +
-	`({action id: {status, body}}), assertions ([{type, ...}], types procedure_matched, action_called, ` +
-	`action_not_called, action_order, branch_taken, handed_off, reply_contains, reply_not_contains) and ` +
-	`source_conversation (its number)."}
+	`({action name: {status: HTTP status as a number such as 200, body: any JSON}}), assertions ([{type, ...}]: ` +
+	`procedure_matched; action_called and action_not_called with action (its name); action_order with action ` +
+	`and before; branch_taken with step_id and branch; handed_off with handed_off true or false; ` +
+	`reply_contains and reply_not_contains with text) and source_conversation (its number)."}
 }}}}}`
 
 /*

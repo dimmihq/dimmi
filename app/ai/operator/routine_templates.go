@@ -164,9 +164,10 @@ const knowledgeGapsPrompt = `Run the weekly knowledge gap audit for {{workspace_
 {{window_end}}.
 
 1. Call routine_get_state to see the topics earlier runs already covered.
-2. Call workspace_report for the window to see handoff reasons, top tags and the least helpful articles.
-3. Call list_conversations for conversations the AI agent handed to the team, and read up to 10 of the
-   most telling with get_conversation and agent_runs.
+2. Call workspace_report with since {{window_start_date}} and until {{window_end_date}} to see handoff
+   reasons, top tags and the least helpful articles.
+3. Call list_conversations with ai handed_off and status any, and read up to 10 of the most telling with
+   get_conversation and agent_runs, passing each conversation's number.
 4. Group the questions the agent could not answer: at least 2 conversations each, or 1 about billing or
    policy, or an article with 2 or more "not helpful" votes.
 5. Before suggesting anything, call search_knowledge, list_articles and list_recent_changesets. Never
@@ -201,10 +202,12 @@ articles, and suggest updates to any article they made out of date.
 
 const stalenessPrompt = `Audit the help center for articles that contradict each other or have gone stale.
 
-1. Call routine_get_state for next_offset and audited_article_hashes.
-2. Call list_articles and take the next 15 articles from next_offset, wrapping around at the end.
+1. Call routine_get_state for next_offset and audited_article_hashes; with none saved, start at 0.
+2. Call list_articles with offset next_offset and limit 15; when it shows fewer than 15, list from 0
+   again to fill the batch.
 3. Read each with get_article. Skip an article audited before whose content has not changed, unless it was
-   audited more than 90 days ago and readers rated it poorly since (see workspace_report).
+   audited more than 90 days ago and readers rated it poorly since (see workspace_report for the last
+   30 days).
 4. Compare facts across articles with search_knowledge: refund windows, limits, prices, plan names, steps.
 5. Call list_recent_changesets so you never repeat a waiting or declined suggestion.
 6. For each contradiction or stale fact, call propose_changes with article.edit_draft and a dedup_key like
@@ -215,7 +218,8 @@ const stalenessPrompt = `Audit the help center for articles that contradict each
 const qaDigestPrompt = `Write the weekly support digest for {{workspace_name}}, covering {{window_start}} to
 {{window_end}}, then tune the procedures that went wrong.
 
-1. Call workspace_report for the window: volume and its trend, median first reply and resolution time,
+1. Call workspace_report with since {{window_start_date}} and until {{window_end_date}}: volume and its
+   trend, median first reply and resolution time,
    the AI agent's resolution and handoff rates, the top handoff reasons and tags.
 2. Write the digest in a few short bullet points, leading with what changed since last week.
 3. For each live procedure, call list_procedure_anomalies and read the runs that went wrong with

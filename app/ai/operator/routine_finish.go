@@ -86,16 +86,18 @@ func (e *Engine) finishRoutine(ctx context.Context, s *session, text, status str
 
 /*
 outcomeOf is how a run ended: failed when the model did not finish,
-noop when it found nothing and said so, else findings.
+findings when it suggested changes, else noop. Models often forget
+mark_noop, so a run is quiet whenever it suggested nothing; a routine
+that reports every time notifies on every run instead.
 */
 func outcomeOf(s *session, status string) string {
 	switch {
 	case status != "done":
 		return RunFailed
-	case len(s.proposed) == 0 && s.routine.noop:
-		return RunNoop
+	case len(s.proposed) > 0:
+		return RunFindings
 	}
-	return RunFindings
+	return RunNoop
 }
 
 /*

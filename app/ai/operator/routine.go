@@ -167,7 +167,19 @@ func (r *routineRun) allows(e *Engine, t tool) bool {
 	case t.group == RoutineGroupGitHub:
 		return r.hasGroup(RoutineGroupGitHub) && r.scope.GitHub != nil && e.Services.GitHub != nil
 	}
-	return r.hasGroup(ownGroupOf(t))
+	return r.hasGroup(routineGroupOf(t))
+}
+
+/*
+routineGroupOf is the routine tool group of one of Operator's own
+tools: searching the knowledge base belongs with the articles it
+searches, though the layer offers it beside the conversations.
+*/
+func routineGroupOf(t tool) string {
+	if t.spec.Name == "search_knowledge" {
+		return RoutineGroupKnowledge
+	}
+	return ownGroupOf(t)
 }
 
 /*
@@ -419,8 +431,10 @@ answer is the report the team reads later on the routine's thread.
   or what the team declined. Give every suggestion a stable dedup_key.
 - Suggest changes with propose_changes; nothing you suggest applies until a teammate approves it.
 - Before you finish, save what the next run needs with routine_set_state.
-- When nothing needs the team's attention, call mark_noop with a one-line reason and keep your
-  answer to one sentence.
+- When you suggest nothing and the routine asks for no report, you must call mark_noop with a
+  one-line reason, then answer in one sentence; otherwise the team is told about a run with
+  nothing in it.
+- workspace_report reads whole days; a window that starts or ends mid-day is fine as it is.
 - Never put customers' names, emails, phone numbers, order ids or companies in an article or
   snippet; cite conversations by number only in a suggestion's reason.
 - Lead the report with what needs attention, in a few bullet points.`

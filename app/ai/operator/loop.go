@@ -69,7 +69,7 @@ func (e *Engine) converse(ctx context.Context, s *session) (string, string) {
 		if calls < modelCalls && s.toolCalls < toolCalls {
 			tools = e.toolSpecs(s)
 		}
-		out, err := e.generate(ctx, s, p, tools)
+		out, err := e.generateWithRetry(ctx, s, p, tools)
 		written.WriteString(out.text)
 		if err != nil {
 			return strings.TrimSpace(written.String()), statusOf(err)
@@ -88,6 +88,48 @@ func (e *Engine) converse(ctx context.Context, s *session) (string, string) {
 			return strings.TrimSpace(written.String()), statusOf(ctx.Err())
 		}
 	}
+}
+
+/*
+routineRetries is how many more times a routine's run tries a model
+call that failed before it produced anything.
+*/
+const routineRetries = 2
+
+/*
+generateWithRetry runs one model call. Nobody watches a routine's run,
+so a call that timed out or hit an overloaded provider before writing
+anything is tried again after a short wait instead of failing the run;
+a teammate's question fails at once, since they can ask again.
+*/
+func (e *Engine) generateWithRetry(ctx context.Context, s *session, p prompt, tools []contracts.ToolSpec,
+) (streamed, error) {
+	out, err := e.generate(ctx, s, p, tools)
+	for try := 1; try <= routineRetries && s.routine != nil && retriable(out, err); try++ {
+		if e.RetryWait > 0 {
+			select {
+			case <-ctx.Done():
+				return out, err
+			case <-e.Clock.After(time.Duration(try) * e.RetryWait):
+			}
+		}
+		s.failure = nil
+		out, err = e.generate(ctx, s, p, tools)
+	}
+	return out, err
+}
+
+/*
+retriable reports whether a failed call produced nothing and failed in
+a way that may pass: a timeout, a dropped connection, throttling or an
+overloaded or failing provider.
+*/
+func retriable(out streamed, err error) bool {
+	if err == nil || out.text != "" || len(out.calls) > 0 {
+		return false
+	}
+	llmErr, ok := errors.AsType[*contracts.LLMError](err)
+	return ok && llmErr.Retryable()
 }
 
 /*

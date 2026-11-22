@@ -155,12 +155,25 @@ func (r resolver) procedureOp(ctx context.Context, in opInput) (Operation, error
 		return r.testCaseOp(ctx, op, p, in)
 	}
 	var shape map[string]any
+	in.Definition = objectArg(in.Definition)
 	if len(in.Definition) == 0 || json.Unmarshal(in.Definition, &shape) != nil {
 		return op, fmt.Errorf("%w: give the whole working copy as a JSON object", errBadArguments)
 	}
 	op.Procedure, op.Definition = &id, in.Definition
 	op.Label = fmt.Sprintf("Edit the working copy of the procedure “%s”", p.Name)
 	return op, nil
+}
+
+/*
+objectArg reads an argument meant as a JSON object that a model sent
+encoded as a string instead, as models often do with nested objects.
+*/
+func objectArg(raw json.RawMessage) json.RawMessage {
+	var text string
+	if len(raw) == 0 || raw[0] != '"' || json.Unmarshal(raw, &text) != nil {
+		return raw
+	}
+	return json.RawMessage(text)
 }
 
 /*
@@ -184,8 +197,11 @@ resolved to its id.
 */
 func (r resolver) testCaseOp(ctx context.Context, op Operation, p models.Procedure, in opInput) (Operation, error) {
 	var t proposedTest
-	if len(in.TestCase) == 0 || json.Unmarshal(in.TestCase, &t) != nil {
+	if len(in.TestCase) == 0 {
 		return op, fmt.Errorf("%w: give the test case as a JSON object", errBadArguments)
+	}
+	if err := json.Unmarshal(objectArg(in.TestCase), &t); err != nil {
+		return op, fmt.Errorf("%w: the test case does not fit its shape: %s", errBadArguments, err.Error())
 	}
 	t.Name = strings.TrimSpace(t.Name)
 	if t.Name == "" || len([]rune(t.Name)) > 120 || len(t.Messages) == 0 || len(t.Messages) > 12 {

@@ -44,9 +44,11 @@ func (e *Engine) knowledgeTools() []tool {
 		}, handle: e.searchKnowledge},
 		{spec: contracts.ToolSpec{
 			Name: "list_articles", Description: "List help center articles, drafts included, optionally " +
-				"matching words in the title. Returns ids, status and whether unpublished changes wait.",
+				"matching words in the title, numbered from 0. Returns ids, status and whether unpublished " +
+				"changes wait. Offset and limit page through a long list.",
 			Schema: schema(`{"type":"object","properties":{"query":{"type":"string"},` +
-				`"status":{"type":"string","enum":["draft","published","archived"]}}}`),
+				`"status":{"type":"string","enum":["draft","published","archived"]},` +
+				`"offset":{"type":"integer","minimum":0},"limit":{"type":"integer","minimum":1,"maximum":100}}}`),
 		}, handle: e.listArticles},
 		{spec: contracts.ToolSpec{
 			Name: "get_article", Description: "Read one article's working copy in Markdown.",
@@ -101,22 +103,42 @@ func (e *Engine) searchKnowledge(ctx context.Context, s *session, args json.RawM
 }
 
 /*
+window is one page of a numbered list.
+*/
+type window struct {
+	offset, limit int
+}
+
+/*
+has reports whether the page shows the item at the index.
+*/
+func (w window) has(i int) bool {
+	return i >= w.offset && i < w.offset+w.limit
+}
+
+/*
 listArticles lists the articles of every help center.
 */
 func (e *Engine) listArticles(ctx context.Context, s *session, args json.RawMessage) (result, error) {
 	var in struct {
 		Query  string `json:"query"`
 		Status string `json:"status"`
+		Offset int    `json:"offset"`
+		Limit  int    `json:"limit"`
 	}
 	if err := decode(args, &in); err != nil {
 		return result{}, err
+	}
+	page := window{offset: max(in.Offset, 0), limit: in.Limit}
+	if page.limit <= 0 || page.limit > 100 {
+		page.limit = 100
 	}
 	centers, err := e.helpCenters(ctx, s)
 	if err != nil {
 		return result{}, err
 	}
 	var b strings.Builder
-	count := 0
+	count, shown := 0, 0
 	for _, hc := range centers {
 		list, err := e.Services.Articles.List(ctx, s.m, helpcenters.ArticleFilter{
 			HelpCenterID: hc.ID, Status: in.Status, Query: in.Query, Limit: 100,
@@ -126,12 +148,16 @@ func (e *Engine) listArticles(ctx context.Context, s *session, args json.RawMess
 		}
 		fmt.Fprintf(&b, "Help center %s (id %s):\n", hc.Name, models.PublicID(models.PrefixHelpCenter, hc.ID))
 		for _, a := range list {
-			fmt.Fprintf(&b, "- %s · %s%s · updated %s (id %s)\n", a.Title, a.Status, pendingMark(a),
-				a.UpdatedAt.UTC().Format("2006-01-02"), models.PublicID(models.PrefixArticle, a.ID))
+			if page.has(count) {
+				fmt.Fprintf(&b, "%d. %s · %s%s · updated %s (id %s)\n", count, a.Title, a.Status, pendingMark(a),
+					a.UpdatedAt.UTC().Format("2006-01-02"), models.PublicID(models.PrefixArticle, a.ID))
+				shown++
+			}
+			count++
 		}
-		count += len(list)
 	}
-	summary := fmt.Sprintf("Listed %d articles", count)
+	fmt.Fprintf(&b, "Showing %d of %d articles from %d.", shown, count, page.offset)
+	summary := fmt.Sprintf("Listed %d of %d articles", shown, count)
 	return result{text: b.String(), step: Step{Tool: "list_articles", Summary: summary}}, nil
 }
 

@@ -41,13 +41,6 @@ const (
 )
 
 /*
-routineToolNames are the routine tools, offered outside the layer.
-*/
-func routineToolNames() []string {
-	return []string{"list_recent_changesets", "mark_noop", "routine_get_state", "routine_set_state"}
-}
-
-/*
 routineTools are the tools of a routine's run, and the listing of
 recent suggestions every run may use.
 */
@@ -122,7 +115,8 @@ func (e *Engine) routineSetState(ctx context.Context, s *session, args json.RawM
 	step := Step{Tool: "routine_set_state", Summary: "Saved the routine's state"}
 	if s.routine.dryRun {
 		step.Summary = "Would save the routine's state (dry run)"
-		return result{text: "Dry run: the state was not saved.", step: step}, nil
+		return result{text: "Saved for this dry run only: a dry run never keeps state, which is expected. " +
+			"Carry on as if it was saved.", step: step}, nil
 	}
 	err = e.DB.Transaction(ctx, func(ctx context.Context, tx *database.Tx) error {
 		return models.New(tx).SetOperatorRoutineState(ctx, models.SetOperatorRoutineStateParams{

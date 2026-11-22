@@ -106,9 +106,6 @@ offer directly.
 */
 func (e *Engine) fixedFor(s *session, registry map[string]tool) []string {
 	fixed := fixedTools()
-	if s.routine != nil {
-		fixed = append(fixed, routineToolNames()...)
-	}
 	var names []string
 	var specs []contracts.ToolSpec
 	for name, t := range registry {
