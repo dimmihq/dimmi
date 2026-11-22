@@ -54,11 +54,15 @@ SimulationInput is one simulated turn: the workspace and teammate, the
 procedure under test with the definition to test, the conversation so
 far, the customer's new message, the persona, the mocks by action
 public id, the state the last turn handed back, and the waiting writes
-the tester confirmed or approved since.
+the tester confirmed or approved since. With AgentID the turn answers
+as that agent, in the definition given when there is one, and no
+procedure is under test; without it, as the workspace's default agent.
 */
 type SimulationInput struct {
 	WorkspaceID ids.UUID
 	MemberID    ids.UUID
+	AgentID     *ids.UUID
+	Agent       *agents.Definition
 	ProcedureID ids.UUID
 	Name        string
 	Definition  procedure.Definition
@@ -187,7 +191,7 @@ simulatedEnv is the run's world with the persona as the customer and
 the scripted turns as the conversation.
 */
 func (r *Runner) simulatedEnv(ctx context.Context, q *models.Queries, in SimulationInput) (*env, error) {
-	agent, err := agents.DefaultAnswerer(ctx, q, in.WorkspaceID)
+	agent, err := simulatedAgent(ctx, q, in)
 	if err != nil {
 		return nil, err
 	}
@@ -243,69 +247,6 @@ func simulatedTurns(in SimulationInput) ([]models.Message, []models.Message) {
 		}}
 	}
 	return history, pending
-}
-
-/*
-loadSimProcedures offers the live procedures that apply to the persona,
-with the one under test in the definition given, and picks up the
-state handed back.
-*/
-func (r *Runner) loadSimProcedures(ctx context.Context, q *models.Queries, e *env, sim *simulation) error {
-	in := sim.in
-	rows, err := q.ListLiveProcedures(ctx, in.WorkspaceID)
-	if err != nil {
-		return fmt.Errorf("list procedures: %w", err)
-	}
-	tested := liveProcedure{
-		row: models.ListLiveProceduresRow{ID: in.ProcedureID, Name: in.Name}, def: in.Definition, version: in.Version,
-	}
-	sim.tested = tested.publicID()
-	e.AllProcedures = append(e.AllProcedures, tested)
-	for _, row := range rows {
-		if row.ID == in.ProcedureID {
-			continue
-		}
-		if def, err := procedure.Parse(row.Live); err == nil {
-			e.AllProcedures = append(e.AllProcedures, liveProcedure{row: row, def: def, version: row.Version})
-		}
-	}
-	if e.Procedures, err = r.inScope(ctx, q, e, e.AllProcedures); err != nil {
-		return err
-	}
-	if s := in.State; s != nil {
-		sim.pending = slices.Clone(s.Pending)
-	}
-	if s := in.State; s != nil && s.Status == procedureActive && s.ProcedureID != "" {
-		for _, p := range e.AllProcedures {
-			if p.publicID() == s.ProcedureID {
-				outputs, _ := json.Marshal(s.Outputs)
-				branches, _ := json.Marshal(cmpSides(s.Branches))
-				e.ActiveProcedure = &activeProcedure{proc: p, state: models.ConversationProcedureState{
-					Status: procedureActive, CalledActionIds: s.Called, CompletedStepIds: s.Completed,
-					StepOutputs: outputs, Branches: branches,
-				}}
-			}
-		}
-	}
-	return nil
-}
-
-/*
-loadTestResponses answers every action the test gives no mock for with
-the result of its last live test.
-*/
-func (r *Runner) loadTestResponses(ctx context.Context, q *models.Queries, ws ids.UUID, sim *simulation) error {
-	rows, err := q.ListActionTestResponses(ctx, ws)
-	if err != nil {
-		return fmt.Errorf("list action test responses: %w", err)
-	}
-	for _, row := range rows {
-		public := models.PublicID(models.PrefixAiAction, row.ID)
-		if _, ok := sim.mocks[public]; !ok {
-			sim.mocks[public] = actionkit.Mock{Status: 200, Body: row.LastTestResponse, Shaped: true}
-		}
-	}
-	return nil
 }
 
 /*

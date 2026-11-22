@@ -22,6 +22,7 @@ import (
 
 	"github.com/dimmihq/dimmi/framework/database"
 	"github.com/dimmihq/dimmi/framework/events"
+	"github.com/dimmihq/dimmi/framework/httpclient"
 	"github.com/dimmihq/dimmi/framework/queue"
 	"github.com/dimmihq/dimmi/framework/tenancy"
 
@@ -33,11 +34,13 @@ import (
 	"github.com/dimmihq/dimmi/app/actions/schedules"
 	"github.com/dimmihq/dimmi/app/ai/actionkit"
 	"github.com/dimmihq/dimmi/app/ai/agents"
+	"github.com/dimmihq/dimmi/app/ai/costsim"
 	aijobs "github.com/dimmihq/dimmi/app/ai/jobs"
 	"github.com/dimmihq/dimmi/app/ai/pipeline"
 	"github.com/dimmihq/dimmi/app/ai/verdicts"
 	"github.com/dimmihq/dimmi/app/contracts"
 	"github.com/dimmihq/dimmi/app/drivers/decision/typesafe"
+	"github.com/dimmihq/dimmi/app/enums"
 	appevents "github.com/dimmihq/dimmi/app/events"
 	"github.com/dimmihq/dimmi/app/managers"
 	"github.com/dimmihq/dimmi/app/models"
@@ -125,6 +128,9 @@ func newRunner(ctx context.Context, a *app.App) (*pipeline.Runner, error) {
 			Keys: a.Keys, HTTP: a.HTTP, Config: a.Config.AI, Clock: a.Clock, DB: a.DB,
 		})
 	}
+	if a.Config.AI.Offline {
+		answerOffline(a)
+	}
 
 	loader, err := prompts.NewLoader(a.Config.AI.Prompts.Version, nil)
 	if err != nil {
@@ -137,7 +143,7 @@ func newRunner(ctx context.Context, a *app.App) (*pipeline.Runner, error) {
 		Timeouts: a.Config.AI.Timeouts, StorePayloads: a.Config.AI.TracesStorePayloads,
 		AnswerEffort: contracts.Effort(a.Config.AI.AnswerEffort),
 	}
-	if ts := a.Config.AI.Decisions.TypeSafe; ts.APIKey != "" {
+	if ts := a.Config.AI.Decisions.TypeSafe; ts.APIKey != "" && !a.Config.AI.Offline {
 		decider, err := typesafe.New(a.HTTP, a.Clock, typesafe.Config{
 			APIKey: ts.APIKey, BaseURL: ts.BaseURL, Model: ts.Model, Timeout: ts.Timeout,
 		})
@@ -283,4 +289,21 @@ func loadPrices(_ *app.App) *aiprices.Table {
 		return nil
 	}
 	return table
+}
+
+/*
+answerOffline makes every provider answer with the local stand-in
+model, so nothing leaves the process and nothing is spent.
+*/
+func answerOffline(a *app.App) {
+	for _, provider := range []enums.AIProvider{
+		enums.AIProviderDimmi, enums.AIProviderAnthropic, enums.AIProviderOpenAI, enums.AIProviderChatGPT,
+		enums.AIProviderEngy, enums.AIProviderBaseten, enums.AIProviderOpenAICompatible,
+	} {
+		a.LLM.Extend(provider, func(_ context.Context, _ *managers.LLMManager, _ models.AiProviderKey,
+			_ managers.Credentials, _ *httpclient.Client,
+		) (contracts.LLM, error) {
+			return costsim.NewOffline(contracts.LLMProvider(provider)), nil
+		})
+	}
 }

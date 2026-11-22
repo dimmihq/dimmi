@@ -14,6 +14,7 @@ package app
 
 import (
 	"github.com/dimmihq/dimmi/app/actions/agentactions"
+	"github.com/dimmihq/dimmi/app/actions/agentsims"
 	"github.com/dimmihq/dimmi/app/actions/ai"
 	"github.com/dimmihq/dimmi/app/actions/widget"
 	"github.com/dimmihq/dimmi/app/ai/actionkit"
@@ -23,7 +24,8 @@ import (
 AIActions groups the agent's actions.
 */
 type AIActions struct {
-	Agents *ai.Agents
+	Agents      *ai.Agents
+	Simulations *agentsims.Simulations
 
 	ListProviderKeys  *ai.ListProviderKeys
 	CreateProviderKey *ai.CreateProviderKey

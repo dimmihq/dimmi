@@ -102,9 +102,33 @@ func aiAgentRoutes(r *routing.Router, a *app.App) {
 	routing.Delete(r, one+"/publications", "ai.agents.publications.destroy", c.Unpublish).
 		Ability("ai:write").Status(fhttp.StatusOK)
 
+	aiAgentSimulationRoutes(r, a, one)
+
 	versions := one + "/versions"
 	routing.Get(r, versions, "ai.agents.versions.index", c.Versions).Ability("ai:read")
 	routing.Get(r, versions+"/{version}", "ai.agents.versions.show", c.ShowVersion).Ability("ai:read")
 	routing.Post(r, versions+"/{version}/restore", "ai.agents.versions.restore.store", c.RestoreVersion).
 		Ability("ai:write").Status(fhttp.StatusOK)
+}
+
+/*
+aiAgentSimulationRoutes declares an agent's preview and simulations.
+*/
+func aiAgentSimulationRoutes(r *routing.Router, a *app.App, one string) {
+	if a.Actions.AI.Simulations == nil {
+		return
+	}
+	c := &v1.AIAgentSimulationController{Simulations: a.Actions.AI.Simulations, IDs: a.IDs}
+	sims := one + "/simulations"
+
+	routing.Post(r, one+"/preview", "ai.agents.preview.store", c.Preview).Ability("ai:write").Status(fhttp.StatusOK)
+	routing.Get(r, sims, "ai.agents.simulations.index", c.Index).Ability("ai:read")
+	routing.Post(r, sims, "ai.agents.simulations.store", c.Store).Ability("ai:write").Status(fhttp.StatusCreated)
+	routing.Post(r, sims+"/run", "ai.agents.simulations.run.store", c.Run).Ability("ai:write").Status(fhttp.StatusOK)
+	routing.Post(r, sims+"/from-conversation", "ai.agents.simulations.from-conversation.store", c.Import).
+		Ability("ai:write").Status(fhttp.StatusCreated)
+	routing.Get(r, sims+"/{simulation}", "ai.agents.simulations.show", c.Show).Ability("ai:read")
+	routing.Patch(r, sims+"/{simulation}", "ai.agents.simulations.update", c.Update).Ability("ai:write")
+	routing.Delete(r, sims+"/{simulation}", "ai.agents.simulations.destroy", c.Destroy).
+		Ability("ai:write").Status(fhttp.StatusNoContent)
 }

@@ -200,6 +200,24 @@ type AiAgent struct {
 	LiveVersionID                *ids.UUID       `json:"live_version_id"`
 }
 
+type AiAgentTestCase struct {
+	ID                   ids.UUID        `json:"id"`
+	WorkspaceID          ids.UUID        `json:"workspace_id"`
+	AgentID              ids.UUID        `json:"agent_id"`
+	Name                 string          `json:"name"`
+	SourceConversationID *ids.UUID       `json:"source_conversation_id"`
+	Persona              json.RawMessage `json:"persona"`
+	Messages             json.RawMessage `json:"messages"`
+	ActionMocks          json.RawMessage `json:"action_mocks"`
+	Assertions           json.RawMessage `json:"assertions"`
+	SimulatedAt          *time.Time      `json:"simulated_at"`
+	DraftResult          json.RawMessage `json:"draft_result"`
+	LiveResult           json.RawMessage `json:"live_result"`
+	CreatedByMemberID    *ids.UUID       `json:"created_by_member_id"`
+	CreatedAt            time.Time       `json:"created_at"`
+	UpdatedAt            time.Time       `json:"updated_at"`
+}
+
 type AiAgentVersion struct {
 	ID                  ids.UUID        `json:"id"`
 	WorkspaceID         ids.UUID        `json:"workspace_id"`

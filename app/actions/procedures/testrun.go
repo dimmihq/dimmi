@@ -33,13 +33,15 @@ import (
 
 /*
 simulated is one saved simulation to run: who runs it, the procedure,
-the saved case and who watches.
+the saved case, who watches, and what answers each turn: the
+procedure's own Simulate when turn is nil.
 */
 type simulated struct {
-	m  authz.Membership
-	id ids.UUID
-	c  models.ProcedureTestCase
-	w  watch
+	m    authz.Membership
+	id   ids.UUID
+	c    models.ProcedureTestCase
+	w    watch
+	turn TurnFunc
 }
 
 /*
@@ -109,7 +111,11 @@ func (p *Procedures) playTurn(ctx context.Context, run simulated, chat *played, 
 	turnAt := countTurns(chat.history)
 	run.w.tell(ctx, runTurnStarted, map[string]any{"turn": turnAt, "message": msg.Text, "confirm": msg.Confirm})
 	script := scriptOf(run.c)
-	turn, err := p.Simulate(ctx, SimulateInput{
+	answer := run.turn
+	if answer == nil {
+		answer = p.Simulate
+	}
+	turn, err := answer(ctx, SimulateInput{
 		Membership: run.m, ID: run.id, History: chat.history, Message: msg.Text, Persona: script.persona,
 		Mocks: script.mocks, State: chat.state, Confirmed: confirmed(msg, chat.state),
 		StreamID: run.w.turnStream(turnAt), Now: run.c.SimulatedAt,

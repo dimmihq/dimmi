@@ -14,6 +14,7 @@ package providers
 import (
 	"github.com/dimmihq/dimmi/app"
 	"github.com/dimmihq/dimmi/app/actions/agentactions"
+	"github.com/dimmihq/dimmi/app/actions/agentsims"
 	"github.com/dimmihq/dimmi/app/actions/ai"
 	"github.com/dimmihq/dimmi/app/actions/widget"
 	"github.com/dimmihq/dimmi/app/ai/actionkit"
@@ -47,6 +48,11 @@ func aiActions(a *app.App, answerer any, prices *aiprices.Table) *app.AIActions 
 		ListRuns:  &ai.ListConversationRuns{DB: a.DB},
 		ShowRun:   &ai.ShowRun{DB: a.DB},
 		ShowUsage: &ai.ShowUsage{DB: a.DB, Clock: a.Clock},
+	}
+	if runner, ok := answerer.(*pipeline.Runner); ok {
+		out.Simulations = &agentsims.Simulations{
+			DB: a.DB, Clock: a.Clock, Simulator: runner, Procedures: a.Actions.Procedures,
+		}
 	}
 	if runner, ok := answerer.(*pipeline.Runner); ok && runner.Actions != nil {
 		addActionActions(a, out, runner.Actions)

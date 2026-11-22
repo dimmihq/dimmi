@@ -20,6 +20,11 @@ AIConfig configures the AI agent.
 type AIConfig struct {
 	Enabled bool `default:"true" koanf:"enabled"`
 
+	// Offline answers every model call with a local stand-in instead of
+	// a provider, and skips the decision model, so an install can be
+	// tried end to end without spending on AI. For development only.
+	Offline bool `default:"false" koanf:"offline"`
+
 	Managed AIManagedConfig `koanf:"managed"`
 	ChatGPT AIChatGPTConfig `koanf:"chatgpt"`
 

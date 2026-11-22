@@ -262,6 +262,7 @@ func assistantPublicIDs() []PublicIDEntry {
 	return []PublicIDEntry{
 		{PrefixAiAgent, "ai_agents"},
 		{PrefixAiAgentVersion, "ai_agent_versions"},
+		{PrefixAiAgentTestCase, "ai_agent_test_cases"},
 		{PrefixAiProviderKey, "ai_provider_keys"},
 		{PrefixAiRun, "ai_runs"},
 		{PrefixAiRunStep, "ai_run_steps"},
@@ -282,6 +283,7 @@ The prefixes of the AI agent's and Operator's tables.
 const (
 	PrefixAiAgent            Prefix = "aia"
 	PrefixAiAgentVersion     Prefix = "aiav"
+	PrefixAiAgentTestCase    Prefix = "aias"
 	PrefixAiProviderKey      Prefix = "aik"
 	PrefixAiRun              Prefix = "air"
 	PrefixAiRunStep          Prefix = "ais"
