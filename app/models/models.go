@@ -1104,6 +1104,7 @@ type ConversationFact struct {
 	AiConfirmed                  bool       `json:"ai_confirmed"`
 	AiCostMicros                 int64      `json:"ai_cost_micros"`
 	ComputedAt                   time.Time  `json:"computed_at"`
+	AiAgentID                    *ids.UUID  `json:"ai_agent_id"`
 }
 
 type ConversationMemberFact struct {

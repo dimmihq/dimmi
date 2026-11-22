@@ -32,14 +32,21 @@ function roleOf(role: string): string {
   return roles[role] ?? "Custom";
 }
 
-/* whereOf names where an agent's live version takes new conversations. */
-function whereOf(agent: Agent, places: PlacementTarget[]): string {
+/*
+ * whereOf names where an agent's live version takes new conversations,
+ * or, for an agent placed nowhere, the agents that hand over to it.
+ */
+function whereOf(agent: Agent, places: PlacementTarget[], agents: Agent[]): string {
   const names = places.filter((p) => p.agent_id === agent.id).map((p) => (p.kind === "room" ? `#${p.name}` : p.name));
   if (agent.is_default) {
     return names.length > 0 ? `${names.join(", ")}, and everything else` : "Everything no other agent takes";
   }
+  if (names.length > 0) {
+    return names.join(", ");
+  }
+  const givers = agents.filter((a) => a.transfer_agent_ids.includes(agent.id)).map((a) => a.name);
 
-  return names.length > 0 ? names.join(", ") : "Not placed on a channel yet";
+  return givers.length > 0 ? `Takes handovers from ${givers.join(", ")}` : "Not placed on a channel yet";
 }
 
 /*
@@ -60,13 +67,13 @@ export function SimulationsChip({ results }: { results: (TestResult | null)[] })
   );
 }
 
-function AgentRow({ agent, places }: { agent: Agent; places: PlacementTarget[] }) {
+function AgentRow({ agent, places, agents }: { agent: Agent; places: PlacementTarget[]; agents: Agent[] }) {
   return (
     <OpenRow
       target={{ to: "/d/agents/$agent", params: { agent: agent.id } }}
       mark={<AgentMark agent={agent} />}
       title={agent.name}
-      detail={`${roleOf(agent.role)} · ${whereOf(agent, places)}`}
+      detail={`${roleOf(agent.role)} · ${whereOf(agent, places, agents)}`}
     >
       {agent.status !== "draft" && agent.has_unpublished_changes ? (
         <Chip variant="caption" color="yellow" className="py-0.5">
@@ -101,7 +108,7 @@ export function AgentList({ workspace }: { workspace: string }) {
         loading={isPending}
         rows={1}
       >
-        {first ? <AgentRow agent={first} places={places} /> : null}
+        {first ? <AgentRow agent={first} places={places} agents={agents ?? []} /> : null}
       </Section>
       <Section title="Other agents" description="Unlimited on every plan." loading={isPending} rows={2}>
         {rest.length === 0 ? (
@@ -109,7 +116,7 @@ export function AgentList({ workspace }: { workspace: string }) {
             No other agents yet. Make one for sales, onboarding or your own team.
           </p>
         ) : (
-          rest.map((a) => <AgentRow key={a.id} agent={a} places={places} />)
+          rest.map((a) => <AgentRow key={a.id} agent={a} places={places} agents={agents ?? []} />)
         )}
       </Section>
       {creating ? <NewAgentModal workspace={workspace} onClose={() => setCreating(false)} /> : null}

@@ -268,7 +268,7 @@ func (q *Queries) ReportBackfillBounds(ctx context.Context, workspaceID ids.UUID
 const reportConversationInputs = `-- name: ReportConversationInputs :many
 SELECT c.id, c.workspace_id, c.number, c.inbox_id, ch.type AS channel, c.assignee_member_id, c.assignee_team_id,
     c.priority, c.status, c.spam, c.is_test, c.deleted_at, c.merged_into_id, c.created_at, c.closed_at,
-    c.ai_cost_micros, c.ai_handed_off_at, c.ai_handoff_reason,
+    c.ai_cost_micros, c.ai_handed_off_at, c.ai_handoff_reason, c.ai_agent_id,
     COALESCE((c.source ->> 'imported')::boolean, false)::boolean AS imported
 FROM conversations c
 JOIN channel_connections ch ON ch.id = c.channel_connection_id
@@ -299,6 +299,7 @@ type ReportConversationInputsRow struct {
 	AiCostMicros     int64      `json:"ai_cost_micros"`
 	AiHandedOffAt    *time.Time `json:"ai_handed_off_at"`
 	AiHandoffReason  *string    `json:"ai_handoff_reason"`
+	AiAgentID        *ids.UUID  `json:"ai_agent_id"`
 	Imported         bool       `json:"imported"`
 }
 
@@ -333,6 +334,7 @@ func (q *Queries) ReportConversationInputs(ctx context.Context, arg ReportConver
 			&i.AiCostMicros,
 			&i.AiHandedOffAt,
 			&i.AiHandoffReason,
+			&i.AiAgentID,
 			&i.Imported,
 		); err != nil {
 			return nil, err

@@ -59744,6 +59744,15 @@
               ],
               "type": "string"
             }
+          },
+          {
+            "explode": false,
+            "in": "query",
+            "name": "filter[agent]",
+            "schema": {
+              "maxLength": 2000,
+              "type": "string"
+            }
           }
         ],
         "responses": {
@@ -59916,6 +59925,15 @@
                 "not_involved",
                 ""
               ],
+              "type": "string"
+            }
+          },
+          {
+            "explode": false,
+            "in": "query",
+            "name": "filter[agent]",
+            "schema": {
+              "maxLength": 2000,
               "type": "string"
             }
           }

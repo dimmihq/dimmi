@@ -193,14 +193,11 @@ pipeline does.
 */
 func (r *run) aiRuns(ctx context.Context) error {
 	a := r.s.App
-	agent, err := models.New(a.DB).FindDefaultAgent(ctx, r.ws.ID)
-	if err != nil {
-		return fmt.Errorf("find agent: %w", err)
-	}
-	h := &history{run: r, agent: agent.ID, rnd: NewRandom(r.s.Seed ^ 0xa1), answered: map[ids.UUID]int64{}}
+	h := &history{run: r, rnd: NewRandom(r.s.Seed ^ 0xa1), answered: map[ids.UUID]int64{}}
 	if a.AI != nil {
 		h.prices = a.AI.Prices
 	}
+	var err error
 	if h.actions, err = r.publishedActions(ctx); err != nil {
 		return err
 	}
@@ -219,6 +216,7 @@ what each conversation's answers cost.
 type history struct {
 	run      *run
 	agent    ids.UUID
+	held     [][]any
 	prices   *aiprices.Table
 	rnd      *Random
 	runs     [][]any
@@ -244,12 +242,17 @@ answering the customer message before it.
 func (h *history) conversation(c Conversation) {
 	var trigger ids.UUID
 	follow := h.follow(c)
+	pending := h.route(c)
 	for k, m := range c.Messages {
 		id := stableID(m.At, fmt.Sprintf("%s/%d", c.ID, k))
 		switch m.Author {
 		case "contact":
 			trigger = id
 		case "agent":
+			if pending {
+				h.transfer(c, k, trigger)
+				pending = false
+			}
 			last := k == len(c.Messages)-1 || c.Messages[k+1].Author != "contact" || k > 1
 			h.reply(c, k, reply{trigger: trigger, answer: id, handoff: c.AI == "handed_off" && last, follow: follow})
 		}
@@ -349,6 +352,9 @@ func (h *history) write(ctx context.Context) error {
 			}
 		}
 		if err := h.costs(ctx, tx); err != nil {
+			return err
+		}
+		if err := h.holders(ctx, tx); err != nil {
 			return err
 		}
 		_, err := tx.Exec(ctx, `INSERT INTO ai_spend_periods (workspace_id, period_start, cost_micros, input_tokens,

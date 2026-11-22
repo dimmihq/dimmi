@@ -77,6 +77,7 @@ func (s *statement) filters(q Query) []string {
 		{"f.assignee_member_id", f.Members, len(f.Members), "uuid[]"},
 		{"f.channel", f.Channels, len(f.Channels), "text[]"},
 		{"f.priority", f.Priorities, len(f.Priorities), "smallint[]"},
+		{"f.ai_agent_id", f.Agents, len(f.Agents), "uuid[]"},
 	}
 	for _, l := range lists {
 		if l.n > 0 {

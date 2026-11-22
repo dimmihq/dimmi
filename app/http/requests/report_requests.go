@@ -30,6 +30,7 @@ type ReportFilters struct {
 	Tag           string `query:"filter[tag]"      maxLength:"2000"`
 	Priority      string `query:"filter[priority]" maxLength:"100"`
 	AI            string `query:"filter[ai]"       enum:"involved,not_involved,"`
+	Agent         string `query:"filter[agent]"    maxLength:"2000"`
 }
 
 /*

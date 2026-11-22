@@ -46,6 +46,7 @@ import { cx } from "@/utils/cx";
 import { StatusChip } from "../automation/parts";
 import type { ChipSources } from "../automation/procedure-writer/procedure-suggestions";
 import { useChipSources } from "../automation/procedure-writer/use-chip-sources";
+import { AgentAnalytics } from "./agent-analytics";
 import { AgentBuild } from "./agent-build";
 import { AgentHistory } from "./agent-history";
 import { SimulationsChip } from "./agent-list";
@@ -58,10 +59,11 @@ const visible = { overflow: "visible" } as const;
 const pane = { group: "dimmi:agent", editor: "agent", details: "details", operator: "operator" } as const;
 const pressed = "border-border-button-active bg-background-primary-active";
 
-type Tabbed = "build" | "history";
+type Tabbed = "build" | "analytics" | "history";
 
 const tabs: { id: Tabbed; label: string }[] = [
   { id: "build", label: "Build" },
+  { id: "analytics", label: "Analytics" },
   { id: "history", label: "History" },
 ];
 
@@ -308,6 +310,7 @@ function MainPanel({
       </div>
       <ScrollArea>
         {tab === "build" ? <AgentBuild draft={draft} view={view} workspace={workspace} sources={sources} /> : null}
+        {tab === "analytics" ? <AgentAnalytics workspace={workspace} agent={draft.id} /> : null}
         {tab === "history" ? <AgentHistory workspace={workspace} draft={draft} /> : null}
       </ScrollArea>
     </Panel>

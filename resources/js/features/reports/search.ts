@@ -30,6 +30,7 @@ export interface ReportSearch {
   tag?: string;
   priority?: string;
   ai?: "involved" | "not_involved";
+  agent?: string;
   /** The metric whose conversations are open. */
   drill?: string;
   /** The first and last day the open list is narrowed to. */
@@ -78,6 +79,7 @@ export function validateReportSearch(search: Record<string, unknown>): ReportSea
     tag: text(search.tag),
     priority: text(search.priority),
     ai: search.ai === "involved" || search.ai === "not_involved" ? search.ai : undefined,
+    agent: text(search.agent),
     ...drillSearch(search),
   };
 
