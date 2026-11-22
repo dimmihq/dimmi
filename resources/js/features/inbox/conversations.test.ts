@@ -96,6 +96,29 @@ describe("toEntry", () => {
   });
 });
 
+describe("transfer events", () => {
+  it("show which agent handed the conversation to which, and why", () => {
+    const moved = toEntry(
+      reply({
+        type: "event",
+        body: null,
+        event: {
+          name: "ai.agent_transferred",
+          actor: { type: "agent", id: "aia_1", name: "Sky" },
+          to_agent: { id: "aia_2", name: "Rio" },
+          summary: "Prospect asking which plan fits",
+        },
+      }),
+    );
+    expect(moved).toMatchObject({
+      kind: "transfer",
+      from: "Sky",
+      to: "Rio",
+      why: "Prospect asking which plan fits",
+    });
+  });
+});
+
 describe("closed events", () => {
   const closed = (reason?: string) =>
     toEntry(

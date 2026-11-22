@@ -110,7 +110,8 @@ export type ThreadEntry =
       tool?: string;
     }
   | { kind: "event"; id: string; at: string; iso?: string; text: string }
-  | { kind: "call"; id: string; at: string; iso?: string; call: ActionCall };
+  | { kind: "call"; id: string; at: string; iso?: string; call: ActionCall }
+  | { kind: "transfer"; id: string; at: string; iso?: string; from: string; to: string; why: string };
 
 const statusWords: Record<string, string> = {
   "conversation.closed": "closed the conversation",
@@ -279,6 +280,17 @@ function eventEntry(message: Message, event: TimelineEvent): ThreadEntry {
   const decided = callOfEvent(event);
   if (decided) {
     return { kind: "call", id: message.id, at, iso: message.created_at, call: decided };
+  }
+  if (event.name === "ai.agent_transferred") {
+    return {
+      kind: "transfer",
+      id: message.id,
+      at,
+      iso: message.created_at,
+      from: event.actor.name || "The AI agent",
+      to: event.to_agent?.name || "another agent",
+      why: event.summary ?? "",
+    };
   }
   const closedWhy: Record<string, string> = {
     source_deleted: "Closed: the customer deleted their message",
