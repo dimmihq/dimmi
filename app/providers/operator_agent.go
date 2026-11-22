@@ -24,10 +24,13 @@ import (
 	"github.com/dimmihq/dimmi/framework/tenancy"
 
 	"github.com/dimmihq/dimmi/app"
+	"github.com/dimmihq/dimmi/app/actions/notifications"
 	"github.com/dimmihq/dimmi/app/actions/operatorchat"
+	"github.com/dimmihq/dimmi/app/actions/operatorroutines"
 	aijobs "github.com/dimmihq/dimmi/app/ai/jobs"
 	"github.com/dimmihq/dimmi/app/ai/operator"
 	appevents "github.com/dimmihq/dimmi/app/events"
+	appmail "github.com/dimmihq/dimmi/app/mail"
 	"github.com/dimmihq/dimmi/app/models"
 )
 
@@ -105,4 +108,21 @@ func enqueueTriage(ctx context.Context, a *app.App, e appevents.ConversationCrea
 	return a.Queue.Push(context.WithoutCancel(ctx), aijobs.TriageWithOperatorArgs{
 		WorkspaceID: e.WorkspaceID, ConversationID: e.ConversationID,
 	}, queue.At(a.Clock.Now().Add(triageDelay)), queue.Unique(queue.UniqueOpts{ByArgs: true}))
+}
+
+/*
+bootRoutineDelivery has a routine's people told how each run went: in
+the app, by email, and in Slack when the install has the Slack app.
+*/
+func bootRoutineDelivery(a *app.App) error {
+	delivery := &operatorroutines.Delivery{
+		DB: a.DB, Clock: a.Clock, Queue: a.Queue, Mail: a.Mail,
+		Links: notifications.Links{Base: a.Application.Config.App.URL},
+	}
+	if a.Actions.NotificationDestinations != nil {
+		delivery.Slack = a.Actions.NotificationDestinations.Channel
+	}
+	appmail.RegisterOperatorRoutines(a.Mail)
+	a.Actions.OperatorAgent.Engine.Finished = aijobs.PushRoutineDelivery(a.Queue)
+	return queue.Register(a.Queue, &aijobs.DeliverOperatorRoutine{Delivery: delivery})
 }

@@ -91,7 +91,7 @@ type RoutineInput struct {
 	MonthlyBudgetMicros *int64
 	ClearBudget         bool
 	NotifyPolicy        *string
-	Delivery            json.RawMessage
+	Delivery            *operator.RoutineDelivery
 	Status              *string
 	ResetState          bool
 }

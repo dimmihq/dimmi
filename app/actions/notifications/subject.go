@@ -47,6 +47,8 @@ type subject struct {
 	team         string
 	action       string
 	first        bool
+	routine      string
+	outcome      string
 }
 
 /*
@@ -78,7 +80,73 @@ func readSubject(ctx context.Context, q *models.Queries, ev Event) (subject, boo
 		}
 		s.action = call.Title
 	}
+	if ev.RoutineRunID != nil {
+		if err := s.readRoutineRun(ctx, q, ev); err != nil {
+			return s, false, err
+		}
+	}
 	return s, true, nil
+}
+
+/*
+readRoutineRun loads the routine a run belongs to and how the run went,
+as the alert's title and excerpt say.
+*/
+func (s *subject) readRoutineRun(ctx context.Context, q *models.Queries, ev Event) error {
+	run, err := q.FindOperatorRoutineRunByID(ctx, models.FindOperatorRoutineRunByIDParams{
+		WorkspaceID: ev.WorkspaceID, ID: *ev.RoutineRunID,
+	})
+	if err != nil {
+		return fmt.Errorf("load routine run: %w", err)
+	}
+	r, err := q.FindAnyOperatorRoutine(ctx, models.FindAnyOperatorRoutineParams{
+		WorkspaceID: ev.WorkspaceID, ID: run.RoutineID,
+	})
+	if err != nil {
+		return fmt.Errorf("load routine: %w", err)
+	}
+	s.routine, s.outcome = r.Name, routineOutcome(run, r)
+	s.excerpt = routineExcerpt(run, r)
+	return nil
+}
+
+/*
+routineOutcome names the title an alert about a run carries: findings,
+noop, failed or paused.
+*/
+func routineOutcome(run models.OperatorRoutineRun, r models.OperatorRoutine) string {
+	if r.Status == "paused" && r.PauseReason != nil {
+		return "paused"
+	}
+	if run.Outcome == nil {
+		return "noop"
+	}
+	return *run.Outcome
+}
+
+/*
+routineExcerpt says in a line what the run left: how many suggestions,
+or why it failed or paused.
+*/
+func routineExcerpt(run models.OperatorRoutineRun, r models.OperatorRoutine) string {
+	switch routineOutcome(run, r) {
+	case "paused":
+		return "Paused: " + strings.ReplaceAll(*r.PauseReason, "_", " ") + "."
+	case "failed":
+		if run.ErrorMessage != nil {
+			return truncate(*run.ErrorMessage, excerptLength)
+		}
+		return "The run failed."
+	case "findings":
+		if run.ChangesetsCount == 1 {
+			return "1 suggested change is waiting for review."
+		}
+		return strconv.Itoa(int(run.ChangesetsCount)) + " suggested changes are waiting for review."
+	}
+	if run.NoopReason != nil {
+		return truncate(*run.NoopReason, excerptLength)
+	}
+	return "Nothing needs attention."
 }
 
 /*
@@ -197,6 +265,12 @@ func (s *subject) alert(ev Event, choices Choices, links Links) *Alert {
 	if ev.Trigger == TriggerAssigned && s.actor == "" {
 		a.TitleKey = "conversation_assigned_system"
 	}
+	if ev.Trigger == TriggerRoutineFinished {
+		a.TitleKey, a.Link = ev.Trigger+"_"+s.outcome, links.Operator(s.workspace.Slug)
+		if !choices.Settings.ShowPreviews {
+			a.Body = s.excerpt
+		}
+	}
 	return a
 }
 
@@ -208,7 +282,9 @@ func (s *subject) titleArgs() map[string]string {
 	if name == "" && s.conversation != nil {
 		name = "#" + strconv.FormatInt(s.conversation.Number, 10)
 	}
-	return map[string]string{"name": name, "actor": s.actor, "team": s.team, "action": s.action}
+	return map[string]string{
+		"name": name, "actor": s.actor, "team": s.team, "action": s.action, "routine": s.routine,
+	}
 }
 
 /*
@@ -233,6 +309,13 @@ Settings links the member's notification settings.
 */
 func (l Links) Settings(slug string) string {
 	return strings.TrimRight(l.Base, "/") + "/d/" + slug + "/settings/notifications"
+}
+
+/*
+Operator links Operator's page in the workspace, where routines live.
+*/
+func (l Links) Operator(slug string) string {
+	return strings.TrimRight(l.Base, "/") + "/d/" + slug + "/agent?tab=operator"
 }
 
 /*

@@ -21544,6 +21544,39 @@
         ],
         "type": "object"
       },
+      "OperatorRoutineDeliveryInput": {
+        "additionalProperties": false,
+        "properties": {
+          "email_member_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "in_app_member_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "slack_destination_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          }
+        },
+        "type": "object"
+      },
       "OperatorRoutineGitHubScope": {
         "additionalProperties": false,
         "properties": {
@@ -30940,7 +30973,9 @@
           "cron_expression": {
             "type": "string"
           },
-          "delivery": {},
+          "delivery": {
+            "$ref": "#/components/schemas/OperatorRoutineDeliveryInput"
+          },
           "description": {
             "type": "string"
           },
@@ -35596,7 +35631,9 @@
           "cron_expression": {
             "type": "string"
           },
-          "delivery": {},
+          "delivery": {
+            "$ref": "#/components/schemas/OperatorRoutineDeliveryInput"
+          },
           "description": {
             "type": "string"
           },

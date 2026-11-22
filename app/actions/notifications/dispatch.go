@@ -51,6 +51,7 @@ type Event struct {
 	ActorID        *ids.UUID  `json:"actor_id,omitempty"`
 	Targets        []ids.UUID `json:"targets,omitempty"`
 	Approval       string     `json:"approval,omitempty"`
+	RoutineRunID   *ids.UUID  `json:"routine_run_id,omitempty"`
 	OccurredAt     time.Time  `json:"occurred_at"`
 }
 
@@ -238,7 +239,7 @@ holder, the team, or everyone (an empty list). Nil means nobody.
 */
 func (d *Dispatcher) targets(ctx context.Context, q *models.Queries, ev Event, s *subject) ([]ids.UUID, error) {
 	switch ev.Trigger {
-	case TriggerAssigned, TriggerMentioned, TriggerTeamJoined:
+	case TriggerAssigned, TriggerMentioned, TriggerTeamJoined, TriggerRoutineFinished:
 		if len(ev.Targets) == 0 {
 			return nil, nil
 		}

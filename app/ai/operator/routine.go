@@ -96,6 +96,25 @@ type GitHubScope struct {
 }
 
 /*
+RoutineDelivery is who a routine tells about its runs: teammates in the
+app, teammates by email, and Slack destinations.
+*/
+type RoutineDelivery struct {
+	InAppMemberIDs      []ids.UUID `json:"in_app_member_ids,omitempty"`
+	EmailMemberIDs      []ids.UUID `json:"email_member_ids,omitempty"`
+	SlackDestinationIDs []ids.UUID `json:"slack_destination_ids,omitempty"`
+}
+
+/*
+DeliveryOf reads a routine's stored delivery.
+*/
+func DeliveryOf(raw json.RawMessage) RoutineDelivery {
+	var out RoutineDelivery
+	_ = json.Unmarshal(raw, &out)
+	return out
+}
+
+/*
 ScopeOf reads a routine's stored scope.
 */
 func ScopeOf(raw json.RawMessage) RoutineScope {

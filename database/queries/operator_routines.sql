@@ -92,6 +92,11 @@ RETURNING *;
 -- FindOperatorRoutineRun returns one run of a routine.
 SELECT * FROM operator_routine_runs WHERE workspace_id = @workspace_id AND routine_id = @routine_id AND id = @id;
 
+-- name: FindOperatorRoutineRunByID :one
+-- FindOperatorRoutineRunByID returns one run, whichever routine it
+-- belongs to.
+SELECT * FROM operator_routine_runs WHERE workspace_id = @workspace_id AND id = @id;
+
 -- name: LockOperatorRoutineRun :one
 -- LockOperatorRoutineRun returns one run, held until the transaction ends.
 SELECT * FROM operator_routine_runs WHERE workspace_id = @workspace_id AND id = @id FOR UPDATE;
@@ -172,3 +177,9 @@ LIMIT 1;
 SELECT * FROM operator_changesets
 WHERE workspace_id = @workspace_id AND routine_run_id = @routine_run_id
 ORDER BY created_at, id;
+
+-- name: MarkOperatorRoutineRunNotified :exec
+-- MarkOperatorRoutineRunNotified records that a run's people were told,
+-- and what reached whom.
+UPDATE operator_routine_runs SET notified = true, delivery_results = @delivery_results, updated_at = @now
+WHERE workspace_id = @workspace_id AND id = @id;

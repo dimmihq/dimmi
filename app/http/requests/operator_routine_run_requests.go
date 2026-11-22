@@ -50,3 +50,14 @@ type StoreOperatorRoutineRunRequest struct {
 		DryRun bool `json:"dry_run,omitempty"`
 	}
 }
+
+/*
+OperatorRoutineDeliveryInput is who a routine tells about its runs:
+teammates in the app and by email by member id, and Slack destinations
+by destination id.
+*/
+type OperatorRoutineDeliveryInput struct {
+	InAppMemberIDs      []string `json:"in_app_member_ids,omitempty"     validate:"omitempty,max=100"`
+	EmailMemberIDs      []string `json:"email_member_ids,omitempty"      validate:"omitempty,max=100"`
+	SlackDestinationIDs []string `json:"slack_destination_ids,omitempty" validate:"omitempty,max=20"`
+}

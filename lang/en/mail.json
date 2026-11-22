@@ -267,5 +267,15 @@
     "intro": "Here is how your team did from {{.from}} to {{.to}}, compared with the period before.",
     "action": "Open reports",
     "footer": "You get this because you subscribed in Reports. Change or stop it there."
+  },
+  "operator_routine": {
+    "subject_findings": "{{.routine}}: {{.count}} suggested changes in {{.workspace}}",
+    "subject_noop": "{{.routine}}: nothing to change in {{.workspace}}",
+    "subject_failed": "{{.routine}} failed in {{.workspace}}",
+    "subject_paused": "{{.routine}} paused in {{.workspace}}",
+    "intro": "Operator ran the routine {{.routine}}. Here is what it found.",
+    "suggestions": "Waiting for your review",
+    "action": "Review in dimmi",
+    "footer": "You get this because an admin added you to this routine's email list."
   }
 }

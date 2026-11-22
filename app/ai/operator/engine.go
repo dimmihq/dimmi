@@ -73,10 +73,11 @@ type Services struct {
 /*
 Engine runs Operator. Publisher streams each run to the teammate who
 asked; IDs reads and writes the public ids tools speak in;
-StorePayloads keeps request and response text on the run's steps;
-RetryWait is how long a routine's run waits before it tries a failed
-model call again, two seconds when zero, a test's way to skip waiting
-when negative.
+StorePayloads keeps request and response text on the run's steps.
+Finished queues the delivery of a routine's run that ended, in the
+transaction that recorded it. RetryWait is how long a routine's run
+waits before it tries a failed model call again: two seconds when
+zero, no wait when negative, a test's way to skip waiting.
 */
 type Engine struct {
 	DB            *database.DB
@@ -90,6 +91,7 @@ type Engine struct {
 	StorePayloads bool
 	Catalog       Catalog
 	RetryWait     time.Duration
+	Finished      PushRun
 }
 
 /*

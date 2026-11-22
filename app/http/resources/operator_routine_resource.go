@@ -152,11 +152,12 @@ func routineScope(raw json.RawMessage) OperatorRoutineScope {
 routineDelivery shapes where a routine reports, as stored.
 */
 func routineDelivery(raw json.RawMessage) OperatorRoutineDelivery {
-	var out OperatorRoutineDelivery
-	_ = json.Unmarshal(raw, &out)
-	out.InAppMemberIDs, out.SlackDestinationIDs = orStrings(out.InAppMemberIDs), orStrings(out.SlackDestinationIDs)
-	out.EmailMemberIDs = orStrings(out.EmailMemberIDs)
-	return out
+	d := operator.DeliveryOf(raw)
+	return OperatorRoutineDelivery{
+		InAppMemberIDs:      publicIDs(models.PrefixMember, d.InAppMemberIDs),
+		EmailMemberIDs:      publicIDs(models.PrefixMember, d.EmailMemberIDs),
+		SlackDestinationIDs: publicIDs(models.PrefixDestination, d.SlackDestinationIDs),
+	}
 }
 
 /*

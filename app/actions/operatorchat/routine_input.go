@@ -52,6 +52,9 @@ func (a *Routines) apply(ctx context.Context, q *models.Queries, r *models.Opera
 	if err := applyLimits(r, in); err != nil {
 		return err
 	}
+	if err := applyDelivery(ctx, q, r, in); err != nil {
+		return err
+	}
 	if err := applyOwner(ctx, q, r, in); err != nil {
 		return err
 	}
@@ -85,17 +88,6 @@ func applyText(r *models.OperatorRoutine, in RoutineInput) error {
 	}
 	if !slices.Contains([]string{"on_findings", "always", "on_error_only"}, r.NotifyPolicy) {
 		return invalid("notify_policy_invalid", "Notify on_findings, always or on_error_only.", "notify_policy")
-	}
-	if in.Delivery != nil {
-		var d struct {
-			InApp []string `json:"in_app_member_ids"`
-			Slack []string `json:"slack_destination_ids"`
-			Email []string `json:"email_member_ids"`
-		}
-		if json.Unmarshal(in.Delivery, &d) != nil || len(d.InApp) > 100 || len(d.Slack) > 20 || len(d.Email) > 100 {
-			return invalid("delivery_invalid", "Delivery lists members and Slack destinations.", "delivery")
-		}
-		r.Delivery, _ = json.Marshal(d)
 	}
 	return nil
 }
@@ -455,4 +447,63 @@ invalid is a validation fault on one field.
 */
 func invalid(code, message, field string) error {
 	return fault.New(fault.Invalid, code, message).OnField(field)
+}
+
+/*
+applyDelivery checks who the routine tells: active teammates of the
+workspace, and its Slack destinations.
+*/
+func applyDelivery(ctx context.Context, q *models.Queries, r *models.OperatorRoutine, in RoutineInput) error {
+	d := in.Delivery
+	if d == nil {
+		return nil
+	}
+	if len(d.InAppMemberIDs) > 100 || len(d.EmailMemberIDs) > 100 || len(d.SlackDestinationIDs) > 20 {
+		return invalid("delivery_invalid", "Tell at most 100 teammates and 20 Slack destinations.", "delivery")
+	}
+	ws := in.Membership.Workspace.ID
+	if err := checkMembers(ctx, q, ws, slices.Concat(d.InAppMemberIDs, d.EmailMemberIDs)); err != nil {
+		return err
+	}
+	if err := checkDestinations(ctx, q, ws, d.SlackDestinationIDs); err != nil {
+		return err
+	}
+	r.Delivery, _ = json.Marshal(d)
+	return nil
+}
+
+/*
+checkMembers refuses anyone who is not an active teammate of the
+workspace.
+*/
+func checkMembers(ctx context.Context, q *models.Queries, ws ids.UUID, list []ids.UUID) error {
+	for _, id := range list {
+		member, err := q.FindWorkspaceMember(ctx, models.FindWorkspaceMemberParams{WorkspaceID: ws, ID: id})
+		if errors.Is(err, database.ErrNotFound) || (err == nil && member.Status != string(enums.MemberStatusActive)) {
+			return invalid("delivery_member_invalid", "Pick active teammates of this workspace.", "delivery")
+		}
+		if err != nil {
+			return fmt.Errorf("find member: %w", err)
+		}
+	}
+	return nil
+}
+
+/*
+checkDestinations refuses anything but the workspace's Slack
+destinations.
+*/
+func checkDestinations(ctx context.Context, q *models.Queries, ws ids.UUID, list []ids.UUID) error {
+	for _, id := range list {
+		row, err := q.FindNotificationDestination(ctx, models.FindNotificationDestinationParams{
+			WorkspaceID: ws, ID: id,
+		})
+		if errors.Is(err, database.ErrNotFound) || (err == nil && !strings.HasPrefix(row.Type, "slack")) {
+			return invalid("delivery_destination_invalid", "Pick Slack destinations of this workspace.", "delivery")
+		}
+		if err != nil {
+			return fmt.Errorf("find destination: %w", err)
+		}
+	}
+	return nil
 }

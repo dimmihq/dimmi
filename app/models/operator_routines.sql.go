@@ -525,6 +525,47 @@ func (q *Queries) FindOperatorRoutineRun(ctx context.Context, arg FindOperatorRo
 	return i, err
 }
 
+const findOperatorRoutineRunByID = `-- name: FindOperatorRoutineRunByID :one
+SELECT id, workspace_id, routine_id, trigger, triggered_by_member_id, scheduled_for, thread_id, ai_run_id, status, outcome, noop_reason, skip_reason, error_code, error_message, changesets_count, cost_micros, notified, delivery_results, started_at, completed_at, created_at, updated_at FROM operator_routine_runs WHERE workspace_id = $1 AND id = $2
+`
+
+type FindOperatorRoutineRunByIDParams struct {
+	WorkspaceID ids.UUID `json:"workspace_id"`
+	ID          ids.UUID `json:"id"`
+}
+
+// FindOperatorRoutineRunByID returns one run, whichever routine it
+// belongs to.
+func (q *Queries) FindOperatorRoutineRunByID(ctx context.Context, arg FindOperatorRoutineRunByIDParams) (OperatorRoutineRun, error) {
+	row := q.db.QueryRow(ctx, findOperatorRoutineRunByID, arg.WorkspaceID, arg.ID)
+	var i OperatorRoutineRun
+	err := row.Scan(
+		&i.ID,
+		&i.WorkspaceID,
+		&i.RoutineID,
+		&i.Trigger,
+		&i.TriggeredByMemberID,
+		&i.ScheduledFor,
+		&i.ThreadID,
+		&i.AiRunID,
+		&i.Status,
+		&i.Outcome,
+		&i.NoopReason,
+		&i.SkipReason,
+		&i.ErrorCode,
+		&i.ErrorMessage,
+		&i.ChangesetsCount,
+		&i.CostMicros,
+		&i.Notified,
+		&i.DeliveryResults,
+		&i.StartedAt,
+		&i.CompletedAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const listOperatorRoutineCosts = `-- name: ListOperatorRoutineCosts :many
 SELECT r.id, r.name, COUNT(x.id)::bigint AS runs_count, COALESCE(SUM(x.cost_micros), 0)::bigint AS cost_micros
 FROM operator_routines r
@@ -907,6 +948,30 @@ func (q *Queries) LockOperatorRoutineRun(ctx context.Context, arg LockOperatorRo
 		&i.UpdatedAt,
 	)
 	return i, err
+}
+
+const markOperatorRoutineRunNotified = `-- name: MarkOperatorRoutineRunNotified :exec
+UPDATE operator_routine_runs SET notified = true, delivery_results = $1, updated_at = $2
+WHERE workspace_id = $3 AND id = $4
+`
+
+type MarkOperatorRoutineRunNotifiedParams struct {
+	DeliveryResults json.RawMessage `json:"delivery_results"`
+	Now             time.Time       `json:"now"`
+	WorkspaceID     ids.UUID        `json:"workspace_id"`
+	ID              ids.UUID        `json:"id"`
+}
+
+// MarkOperatorRoutineRunNotified records that a run's people were told,
+// and what reached whom.
+func (q *Queries) MarkOperatorRoutineRunNotified(ctx context.Context, arg MarkOperatorRoutineRunNotifiedParams) error {
+	_, err := q.db.Exec(ctx, markOperatorRoutineRunNotified,
+		arg.DeliveryResults,
+		arg.Now,
+		arg.WorkspaceID,
+		arg.ID,
+	)
+	return err
 }
 
 const operatorRoutinesDue = `-- name: OperatorRoutinesDue :many

@@ -1,0 +1,39 @@
+package accounts
+
+import "github.com/dimmihq/dimmi/framework/i18n"
+
+/*
+RoutineSuggestion is one change a routine suggested, written out: its
+title and the operations inside it.
+*/
+type RoutineSuggestion struct {
+	Title      string   `json:"title"`
+	Operations []string `json:"operations"`
+}
+
+/*
+OperatorRoutineReport is what a routine's run found: its report a
+paragraph at a time, the changes it suggested, and a link to review
+them.
+*/
+
+templ OperatorRoutineReport(subject, name, intro string, report []string, suggestions []RoutineSuggestion, reviewURL string) {
+	@layout(subject) {
+		@greeting(name)
+		<p>{ intro }</p>
+		for _, line := range report {
+			<p style="margin:8px 0;">{ line }</p>
+		}
+		if len(suggestions) > 0 {
+			<p style="margin:20px 0 8px;font-weight:600;color:#111;">{ i18n.T(ctx, "mail.operator_routine.suggestions", nil) }</p>
+			for _, s := range suggestions {
+				<p style="margin:12px 0 4px;font-weight:600;color:#111;">{ s.Title }</p>
+				for _, op := range s.Operations {
+					<p style="margin:2px 0 2px 12px;color:#555;">{ op }</p>
+				}
+			}
+		}
+		@button(reviewURL, i18n.T(ctx, "mail.operator_routine.action", nil))
+		<p style="color:#888;font-size:13px;">{ i18n.T(ctx, "mail.operator_routine.footer", nil) }</p>
+	}
+}

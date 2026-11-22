@@ -11,7 +11,6 @@
 package requests
 
 import (
-	"encoding/json"
 	"time"
 )
 
@@ -40,7 +39,8 @@ type OperatorRoutineBody struct {
 	MaxToolCalls        *int32                     `json:"max_tool_calls,omitempty"`
 	MonthlyBudgetMicros *int64                     `json:"monthly_budget_micros,omitempty"`
 	NotifyPolicy        *string                    `json:"notify_policy,omitempty"         validate:"omitempty,max=20"`
-	Delivery            json.RawMessage            `json:"delivery,omitempty"`
+
+	Delivery *OperatorRoutineDeliveryInput `json:"delivery,omitempty"`
 }
 
 /*

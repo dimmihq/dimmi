@@ -215,7 +215,7 @@ func (c *OperatorRoutineController) input(m authz.Membership, b requests.Operato
 		CronExpr: b.CronExpression, RunAt: b.RunAt, Timezone: b.Timezone, Permissions: b.Permissions,
 		ToolGroups: b.ToolGroups, WritePolicies: b.WritePolicies, Model: b.Model, Effort: b.Effort,
 		MaxModelCalls: b.MaxModelCalls, MaxToolCalls: b.MaxToolCalls, MonthlyBudgetMicros: b.MonthlyBudgetMicros,
-		NotifyPolicy: b.NotifyPolicy, Delivery: b.Delivery,
+		NotifyPolicy: b.NotifyPolicy,
 	}
 	var err error
 	if in.OwnerMemberID, err = decodeField(c.IDs, models.PrefixMember, b.OwnerID,
@@ -229,6 +229,11 @@ func (c *OperatorRoutineController) input(m authz.Membership, b requests.Operato
 	}
 	if b.Scope != nil {
 		if in.Scope, err = c.scope(*b.Scope); err != nil {
+			return in, err
+		}
+	}
+	if b.Delivery != nil {
+		if in.Delivery, err = c.delivery(*b.Delivery); err != nil {
 			return in, err
 		}
 	}
@@ -255,6 +260,23 @@ func (c *OperatorRoutineController) scope(s requests.OperatorRoutineScopeInput) 
 		}
 	}
 	return out, nil
+}
+
+/*
+delivery maps who a routine tells to row ids.
+*/
+func (c *OperatorRoutineController) delivery(d requests.OperatorRoutineDeliveryInput,
+) (*operator.RoutineDelivery, error) {
+	out := &operator.RoutineDelivery{}
+	var err error
+	if out.InAppMemberIDs, err = c.decodeAll(models.PrefixMember, d.InAppMemberIDs, "delivery"); err != nil {
+		return nil, err
+	}
+	if out.EmailMemberIDs, err = c.decodeAll(models.PrefixMember, d.EmailMemberIDs, "delivery"); err != nil {
+		return nil, err
+	}
+	out.SlackDestinationIDs, err = c.decodeAll(models.PrefixDestination, d.SlackDestinationIDs, "delivery")
+	return out, err
 }
 
 /*

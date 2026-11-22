@@ -41,10 +41,14 @@ func (e *Engine) skipRoutine(ctx context.Context, s *session, why skip) error {
 		}
 		life := lifecycleOf(r.row)
 		life.lastRun, life.outcome = &now, new(RunSkipped)
-		if why.pause != "" {
-			life.status, life.pause, life.next = "paused", &why.pause, nil
+		if why.pause == "" {
+			return e.saveLifecycle(ctx, q, r.row, life)
 		}
-		return e.saveLifecycle(ctx, q, r.row, life)
+		life.status, life.pause, life.next = "paused", &why.pause, nil
+		if err := e.saveLifecycle(ctx, q, r.row, life); err != nil {
+			return err
+		}
+		return e.deliver(ctx, tx, r.run)
 	})
 	if err != nil {
 		return err
@@ -73,7 +77,10 @@ func (e *Engine) finishRoutine(ctx context.Context, s *session, text, status str
 		if err := e.saveRun(ctx, q, r.run); err != nil || r.dryRun {
 			return err
 		}
-		return e.saveLifecycle(ctx, q, r.row, e.afterRun(r, outcome, now))
+		if err := e.saveLifecycle(ctx, q, r.row, e.afterRun(r, outcome, now)); err != nil {
+			return err
+		}
+		return e.deliver(ctx, tx, r.run)
 	})
 	if err != nil {
 		return fmt.Errorf("finish routine run: %w", err)
@@ -82,6 +89,17 @@ func (e *Engine) finishRoutine(ctx context.Context, s *session, text, status str
 		e.publishAnswered(ctx, s, answered)
 	}
 	return nil
+}
+
+/*
+deliver queues the telling of a run that ended, when the engine has
+somewhere to tell.
+*/
+func (e *Engine) deliver(ctx context.Context, tx *database.Tx, run models.OperatorRoutineRun) error {
+	if e.Finished == nil {
+		return nil
+	}
+	return e.Finished(ctx, tx, run.WorkspaceID, run.ID)
 }
 
 /*
