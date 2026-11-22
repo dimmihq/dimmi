@@ -36247,6 +36247,12 @@
           "id": {
             "type": "string"
           },
+          "logo_url": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
           "name": {
             "type": "string"
           },
@@ -36275,6 +36281,7 @@
           "name",
           "slug",
           "role",
+          "logo_url",
           "previous_slugs"
         ],
         "type": "object"

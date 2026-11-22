@@ -5,18 +5,23 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 
+import { meQuery } from "@/lib/api/auth";
 import { removeLogo, uploadLogo } from "@/lib/api/workspace";
 
 const tooLarge = "The picture must be 2 MB or smaller.";
 
 /*
  * useLogo uploads and removes the workspace's logo, refreshing everything
- * that shows the workspace.
+ * that shows the workspace, the sidebar's workspace switcher among them.
  */
 export function useLogo(workspace: string) {
   const queryClient = useQueryClient();
   const [refused, setRefused] = useState<string | null>(null);
-  const refresh = () => queryClient.invalidateQueries({ queryKey: ["workspace", workspace] });
+  const refresh = () =>
+    Promise.all([
+      queryClient.invalidateQueries({ queryKey: ["workspace", workspace] }),
+      queryClient.invalidateQueries({ queryKey: meQuery.queryKey }),
+    ]);
   const upload = useMutation({ mutationFn: (file: File) => uploadLogo(workspace, file), onSuccess: refresh });
   const remove = useMutation({ mutationFn: () => removeLogo(workspace), onSuccess: refresh });
 
