@@ -92,12 +92,90 @@ func (r resolver) articleOp(ctx context.Context, in opInput) (Operation, error) 
 	if err != nil {
 		return op, err
 	}
-	if op.Title == nil && op.Body == nil {
-		return op, fmt.Errorf("%w: give a new title or body", errBadArguments)
+	if err := editBody(&op, a.BodyMarkdown, in.Edits); err != nil {
+		return op, err
 	}
 	op.Article, op.Label = &id, fmt.Sprintf("Edit the draft of “%s”", a.Title)
 	return op, nil
 }
+
+/*
+editBody sets the new working copy of an edit: the body sent, or the
+article with the edits written in. An edit that would cut most of the
+article away is refused, since it is a description of the change sent
+in place of the article.
+*/
+func editBody(op *Operation, current string, edits []passageEdit) error {
+	if len(edits) > 0 {
+		if op.Body != nil {
+			return fmt.Errorf("%w: give either a body or edits, not both", errBadArguments)
+		}
+		body, err := applyPassages(current, edits)
+		if err != nil {
+			return err
+		}
+		op.Body = &body
+	}
+	if op.Title == nil && op.Body == nil {
+		return fmt.Errorf("%w: give a new title, a body or edits", errBadArguments)
+	}
+	if op.Body != nil && shrinks(current, *op.Body) {
+		return fmt.Errorf("%w: the body replaces the whole article, which has %d characters; send "+
+			"edits with the exact passages to change, or the full article, never a description of the change",
+			errBadArguments, len([]rune(current)))
+	}
+	return nil
+}
+
+/*
+passageEdit replaces one passage of an article, found word for word.
+*/
+type passageEdit struct {
+	Find    string `json:"find"`
+	Replace string `json:"replace"`
+}
+
+/*
+applyPassages writes each edit into the article's working copy. Every
+passage must be found exactly once, so an edit never lands in the
+wrong place.
+*/
+func applyPassages(body string, edits []passageEdit) (string, error) {
+	if len(edits) > 20 {
+		return "", fmt.Errorf("%w: at most 20 edits", errBadArguments)
+	}
+	for i, e := range edits {
+		if strings.TrimSpace(e.Find) == "" {
+			return "", fmt.Errorf("%w: edit %d has nothing to find", errBadArguments, i+1)
+		}
+		switch strings.Count(body, e.Find) {
+		case 0:
+			return "", fmt.Errorf("%w: edit %d's find is not in the article; copy it word for word from "+
+				"get_article", errBadArguments, i+1)
+		case 1:
+			body = strings.Replace(body, e.Find, e.Replace, 1)
+		default:
+			return "", fmt.Errorf("%w: edit %d's find appears more than once; include more of the "+
+				"surrounding text", errBadArguments, i+1)
+		}
+	}
+	return body, nil
+}
+
+/*
+shrinks reports whether an edit would cut most of an article away, as
+an edit does when a model sends what to change instead of the article.
+*/
+func shrinks(before, after string) bool {
+	was, now := len([]rune(strings.TrimSpace(before))), len([]rune(strings.TrimSpace(after)))
+	return was >= minGuardedArticle && now*2 < was
+}
+
+/*
+minGuardedArticle is the shortest article whose edits are checked for
+cutting most of it away.
+*/
+const minGuardedArticle = 400
 
 /*
 newArticleOp checks a new article draft and its help center.

@@ -59,6 +59,11 @@ export interface OperatorOperation {
   conversation_number?: number;
   outcome?: "applied" | "reverted" | "skipped";
   created_id?: string;
+  article_id?: string;
+  help_center_id?: string;
+  procedure_id?: string;
+  title?: string;
+  visibility?: "public" | "agent_only";
 }
 
 export interface OperatorChangeset {
@@ -76,6 +81,10 @@ export interface OperatorChangeset {
   applied_at: string | null;
   reverted_at: string | null;
   created_at: string;
+  routine_id?: string | null;
+  routine_run_id?: string | null;
+  dedup_key?: string | null;
+  preview?: boolean;
 }
 
 export interface OperatorThread {
@@ -241,6 +250,19 @@ export function startConversationThread(workspace: string, conversation: string)
     { conversation_id: conversation, fresh: true },
     { workspace },
   );
+}
+
+/*
+ * pendingChangesetsQuery lists the changes waiting for review that the
+ * teammate may see, newest first.
+ */
+export function pendingChangesetsQuery(workspace: string) {
+  return queryOptions({
+    queryKey: operatorKeys.changesets(workspace, "pending"),
+    queryFn: () =>
+      request<OperatorChangeset[]>("GET", "/operator/changesets?filter[status]=pending", undefined, { workspace }),
+    staleTime: 15_000,
+  });
 }
 
 export type ChangesetDecision = "applications" | "declines" | "reversions";

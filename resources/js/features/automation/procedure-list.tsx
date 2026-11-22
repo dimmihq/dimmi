@@ -12,6 +12,8 @@ import { useNavigate } from "@tanstack/react-router";
 
 import { Button } from "@/components/base/buttons/button";
 import { toast } from "@/components/base/toast/toast";
+import { ProcedureChanges, SuggestedEdits } from "@/features/operator/suggested-edits";
+import { isProcedure } from "@/features/operator/suggestions";
 import { usePermission } from "@/features/settings/inboxes";
 import { Item, Section } from "@/features/settings/layout";
 import { useAccount } from "@/features/settings/use-account";
@@ -67,6 +69,12 @@ export function ProcedureList() {
         ) : null
       }
     >
+      <SuggestedEdits
+        workspace={workspace}
+        match={isProcedure}
+        description="Fixes and regression tests Operator suggested. Applying edits the working copy; publishing stays yours."
+        render={(c) => <ProcedureChanges workspace={workspace} changeset={c} />}
+      />
       <Section
         title="Procedures"
         description="dimmi picks the live procedure whose description matches what the customer asks."

@@ -20,6 +20,9 @@ import { Drawer } from "@/components/base/drawer/drawer";
 import { Input } from "@/components/base/input/input";
 import { Modal, ModalBody, ModalFooter, ModalHeader } from "@/components/base/modal/modal";
 import { Notification } from "@/components/base/notification/notification";
+import { ArticleChanges, SuggestedEdits } from "@/features/operator/suggested-edits";
+import { isArticle } from "@/features/operator/suggestions";
+import { useAccount } from "@/features/settings/use-account";
 import { PageHeader, Panel, ScrollArea } from "@/features/shell/page";
 import { PaneGroup, PaneHandle } from "@/features/shell/resizable";
 import { useWide } from "@/features/shell/use-wide";
@@ -218,6 +221,7 @@ function ArticleList({
   chips: ReactNode;
 }) {
   const moved = useMoved(pick);
+  const workspace = useAccount().workspace.id;
 
   return (
     <Panel label="Help center" className="h-full w-full flex-1">
@@ -251,6 +255,14 @@ function ArticleList({
       {chips}
       <ScrollArea>
         <div key={pick} className={cx("flex flex-col gap-1 px-2 pb-4", moved && "animate-page-in")}>
+          <div className="px-1 pb-2 empty:hidden">
+            <SuggestedEdits
+              workspace={workspace}
+              match={isArticle}
+              description="New articles and edits Operator drafted. Applying writes a draft; publishing stays yours."
+              render={(c) => <ArticleChanges workspace={workspace} changeset={c} />}
+            />
+          </div>
           {!isPending && articles.length === 0 ? (
             <p className="px-2 py-6 text-body-2-regular text-text-tertiary">
               No articles here yet. Write one; it stays a draft until you publish it.

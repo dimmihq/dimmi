@@ -261,7 +261,7 @@ func (a *Routines) fromTemplate(in RoutineInput) (models.OperatorRoutine, error)
 	}
 	r := models.OperatorRoutine{
 		Name: t.Name, Prompt: t.Prompt, Cadence: t.Cadence, CronExpr: &t.Expr, Permissions: t.Permissions,
-		ToolGroups: t.ToolGroups, InboxIds: []ids.UUID{}, WritePolicies: json.RawMessage("{}"),
+		ToolGroups: t.ToolGroups, InboxIds: []ids.UUID{}, WritePolicies: policiesOf(t.WritePolicies),
 		Scope: json.RawMessage("{}"), MaxModelCalls: 16, MaxToolCalls: 50, NotifyPolicy: t.NotifyPolicy,
 		Delivery: json.RawMessage("{}"), State: json.RawMessage("{}"), MaxConsecutiveFailures: 3,
 	}
@@ -463,4 +463,16 @@ func findRoutine(ctx context.Context, q *models.Queries, m authz.Membership, id 
 		return r, fmt.Errorf("find routine: %w", err)
 	}
 	return r, nil
+}
+
+/*
+policiesOf stores a template's write policies, none switched off when
+it has none.
+*/
+func policiesOf(p map[operator.Group]operator.Policy) json.RawMessage {
+	if len(p) == 0 {
+		return json.RawMessage("{}")
+	}
+	raw, _ := json.Marshal(p)
+	return raw
 }

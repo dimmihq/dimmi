@@ -58,7 +58,9 @@ const proposeSchema = `{"type":"object","required":["title","reason","operations
 "priority":{"type":"string","enum":["none","low","medium","high","urgent"]},
 "status":{"type":"string","enum":["open","closed"]},
 "title":{"type":"string","description":"Conversation subject or article title."},
-"body":{"type":"string","description":"Note text or article Markdown."},
+"body":{"type":"string","description":"Note text, or the article's whole Markdown. An article edit ` +
+	`replaces the draft: send the full article with your fix in place, never a summary of the change. ` +
+	`For a long article, send edits instead."},
 "contact":{"type":"string","description":"Customer id (ctc_...); leave out for this conversation's."},
 "name":{"type":"string","description":"The customer's new name."},
 "help_center":{"type":"string","description":"Help center id (hc_...); leave out for the default."},
@@ -66,6 +68,10 @@ const proposeSchema = `{"type":"object","required":["title","reason","operations
 "visibility":{"type":"string","enum":["public","agent_only"],"description":"For article.create_draft: ` +
 	`public for customers, or agent_only for a snippet only the AI agent reads. Public by default."},
 "article":{"type":"string","description":"Article id (art_...)."},
+"edits":{"type":"array","maxItems":20,"description":"For article.edit_draft, instead of body: the exact ` +
+	`passages to replace in the article, each find copied word for word from get_article and found once.",` +
+	`"items":{"type":"object","required":["find","replace"],"properties":{"find":{"type":"string"},` +
+	`"replace":{"type":"string"}}}},
 "procedure":{"type":"string","description":"Procedure id (prc_...)."},
 "definition":{"type":"object","description":"The procedure's whole new working copy, as get_procedure shows it."},
 "test_case":{"type":"object","description":"For procedure.create_test_case: the test, with name, messages ` +
@@ -108,6 +114,7 @@ type opInput struct {
 	Procedure    string          `json:"procedure"`
 	Definition   json.RawMessage `json:"definition"`
 	TestCase     json.RawMessage `json:"test_case"`
+	Edits        []passageEdit   `json:"edits"`
 }
 
 /*

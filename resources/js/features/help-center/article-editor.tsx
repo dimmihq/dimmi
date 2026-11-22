@@ -32,6 +32,7 @@ import {
 import { ArticleHeader } from "./article-header";
 import { ArticlePage } from "./article-page";
 import { ArticleSettings } from "./article-settings";
+import { ArticleSuggestions } from "./article-suggestions";
 import { collectionOptions, type Draft } from "./docs-format";
 import { useHistoryPane } from "./history-pane";
 
@@ -131,6 +132,17 @@ export function ArticleEditor({ id }: { id: string }) {
         onConfirm={setConfirm}
       />
       <ScrollArea>
+        <ArticleSuggestions
+          workspace={workspace}
+          article={id}
+          onApplied={() => {
+            void queryClient.fetchQuery({ ...articleQuery(workspace, id), staleTime: 0 }).then((fresh) => {
+              settle(fresh);
+              setDraft(draftOf(fresh));
+              setRevision((r) => r + 1);
+            });
+          }}
+        />
         <ArticlePage
           workspace={workspace}
           draft={draft}

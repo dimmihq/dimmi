@@ -26,6 +26,23 @@ type RoutineTemplate struct {
 	Permissions  []string
 	NotifyPolicy string
 	Requires     []string
+	// WritePolicies switches off the groups the template has no business
+	// changing.
+	WritePolicies map[Group]Policy
+}
+
+/*
+onlyChanges are write policies that leave only the groups named on.
+*/
+func onlyChanges(groups ...Group) map[Group]Policy {
+	out := map[Group]Policy{}
+	for _, g := range Groups() {
+		out[g] = PolicyOff
+	}
+	for _, g := range groups {
+		out[g] = PolicyAsk
+	}
+	return out
 }
 
 /*
@@ -75,6 +92,7 @@ func knowledgeGapsTemplate() RoutineTemplate {
 			"ai_actions:read", "help_centers:read_settings",
 		},
 		NotifyPolicy: "on_findings", Requires: []string{RequiresConversations, RequiresHelpCenter},
+		WritePolicies: onlyChanges(GroupArticles),
 	}
 }
 
@@ -90,6 +108,7 @@ func githubDocsTemplate() RoutineTemplate {
 		ToolGroups:   []string{RoutineGroupKnowledge, RoutineGroupGitHub, RoutineGroupChanges},
 		Permissions:  []string{"articles:read", "articles:write", "github:read", "help_centers:read_settings"},
 		NotifyPolicy: "on_findings", Requires: []string{RequiresGitHub, RequiresHelpCenter},
+		WritePolicies: onlyChanges(GroupArticles),
 	}
 }
 
@@ -107,6 +126,7 @@ func stalenessTemplate() RoutineTemplate {
 			"conversations:read", "articles:read", "articles:write", "ai:read", "help_centers:read_settings",
 		},
 		NotifyPolicy: "on_findings", Requires: []string{RequiresHelpCenter},
+		WritePolicies: onlyChanges(GroupArticles),
 	}
 }
 
@@ -127,6 +147,7 @@ func qaDigestTemplate() RoutineTemplate {
 			"ai_agent:manage",
 		},
 		NotifyPolicy: "always", Requires: []string{RequiresConversations, RequiresProcedures},
+		WritePolicies: onlyChanges(GroupProcedures),
 	}
 }
 
@@ -210,8 +231,8 @@ const stalenessPrompt = `Audit the help center for articles that contradict each
    30 days).
 4. Compare facts across articles with search_knowledge: refund windows, limits, prices, plan names, steps.
 5. Call list_recent_changesets so you never repeat a waiting or declined suggestion.
-6. For each contradiction or stale fact, call propose_changes with article.edit_draft and a dedup_key like
-   stale:<article id>, naming the conflicting article in the reason.
+6. For each contradiction or stale fact, call propose_changes with article.edit_draft, giving edits with the exact
+   passages to fix, and a dedup_key like stale:<article id>, naming the conflicting article in the reason.
 7. Save the new next_offset and the audited articles with routine_set_state.
 8. When everything checked holds up, call mark_noop with the reason.`
 

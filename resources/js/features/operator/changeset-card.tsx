@@ -14,7 +14,7 @@ import {
   RiErrorWarningLine,
   RiGitPullRequestLine,
 } from "@remixicon/react";
-import { useState } from "react";
+import { type ReactNode, useState } from "react";
 
 import { Chip, type ChipColor } from "@/components/base/badges/chip";
 import { Button } from "@/components/base/buttons/button";
@@ -103,9 +103,12 @@ function FullText({ text }: { text: string }) {
 export function ChangesetCard({
   changeset,
   onDecide,
+  children,
 }: {
   changeset: OperatorChangeset;
   onDecide: (id: string, decision: ChangesetDecision) => Promise<void>;
+  /* What the change looks like in place, such as a diff, under its operations. */
+  children?: ReactNode;
 }) {
   const [pending, setPending] = useState<ChangesetDecision | null>(null);
   const [failure, setFailure] = useState<string | null>(null);
@@ -129,12 +132,17 @@ export function ChangesetCard({
         <RiGitPullRequestLine aria-hidden className="size-4 shrink-0 text-foreground-icon-secondary" />
         <h3 className="min-w-0 flex-1 truncate text-body-2-medium text-text-primary">{changeset.title}</h3>
         <Chip variant="caption" color={statusColors[changeset.status]} className="shrink-0 py-0">
-          {changeset.auto && changeset.status === "applied" ? "Applied on its own" : statusLabels[changeset.status]}
+          {changeset.preview
+            ? "Dry run preview"
+            : changeset.auto && changeset.status === "applied"
+              ? "Applied on its own"
+              : statusLabels[changeset.status]}
         </Chip>
       </header>
       <div className="flex flex-col gap-2.5 px-3 py-2.5">
         {changeset.reason ? <p className="text-body-2-regular text-text-secondary">{changeset.reason}</p> : null}
         <Operations changeset={changeset} />
+        {children}
         {changeset.error || failure ? (
           <p className="flex items-start gap-1.5 text-body-2-regular text-text-error-primary">
             <RiErrorWarningLine aria-hidden className="mt-0.5 size-3.5 shrink-0" />
@@ -142,7 +150,7 @@ export function ChangesetCard({
           </p>
         ) : null}
       </div>
-      <Decisions changeset={changeset} pending={pending} decide={decide} />
+      {changeset.preview ? null : <Decisions changeset={changeset} pending={pending} decide={decide} />}
     </section>
   );
 }

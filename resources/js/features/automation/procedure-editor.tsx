@@ -38,7 +38,7 @@ import {
   RiTestTubeLine,
   RiWhatsappLine,
 } from "@remixicon/react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { Panel as Pane } from "react-resizable-panels";
@@ -76,6 +76,7 @@ import {
   type ProcedureScope,
   type ProcedureStep,
   type ProcedureStepKind,
+  procedureQuery,
   testCasesQuery,
 } from "@/lib/api/procedures";
 import { countOf } from "@/lib/i18n/format";
@@ -89,6 +90,7 @@ import { ProcedureHistory } from "./procedure-history";
 import { ProcedureOperatorPanel } from "./procedure-operator-panel";
 import { ProcedurePreview } from "./procedure-simulator/preview";
 import { ProcedureSimulations } from "./procedure-simulator/simulations";
+import { ProcedureSuggestions } from "./procedure-suggestions";
 import { ConditionBuilder } from "./procedure-writer/condition-builder";
 import { type ChipSources, fieldsOf, labelOf } from "./procedure-writer/procedure-suggestions";
 import { StepWriter } from "./procedure-writer/step-writer";
@@ -1074,6 +1076,11 @@ function DeleteStepDialog({
 
 export function ProcedureEditor({ workspace, procedure }: { workspace: string; procedure: Procedure }) {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const adoptFresh = () =>
+    void queryClient
+      .fetchQuery({ ...procedureQuery(workspace, procedure.id), staleTime: 0 })
+      .then((fresh) => draft.adopt(fresh));
   const readOnly = !usePermission(workspace, "ai_agent:manage");
   const draft = useProcedureDraft(workspace, procedure, () => void navigate({ to: "/d/procedures" }));
   const sources = useChipSources(workspace, procedure.id);
@@ -1161,9 +1168,12 @@ export function ProcedureEditor({ workspace, procedure }: { workspace: string; p
       </div>
       <ScrollArea>
         {tab === "steps" ? (
-          <fieldset disabled={readOnly} className="min-w-0">
-            <Document key={draft.generation} workspace={workspace} draft={draft} ctx={ctx} />
-          </fieldset>
+          <>
+            <ProcedureSuggestions workspace={workspace} procedure={procedure.id} onApplied={adoptFresh} />
+            <fieldset disabled={readOnly} className="min-w-0">
+              <Document key={draft.generation} workspace={workspace} draft={draft} ctx={ctx} />
+            </fieldset>
+          </>
         ) : null}
         {tab === "history" ? (
           <ProcedureHistory workspace={workspace} draft={draft} sources={sources} readOnly={readOnly} />
