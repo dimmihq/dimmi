@@ -97,13 +97,14 @@ type RoutineInput struct {
 }
 
 /*
-RoutineView is a routine with when it runs next and what it spent this
-month.
+RoutineView is a routine with when it runs next, what it spent this
+month, and how many of its suggestions are in each status.
 */
 type RoutineView struct {
-	Routine    models.OperatorRoutine
-	NextRuns   []time.Time
-	MonthSpend int64
+	Routine     models.OperatorRoutine
+	NextRuns    []time.Time
+	MonthSpend  int64
+	Suggestions map[string]int64
 }
 
 /*
@@ -137,9 +138,13 @@ func (a *Routines) List(ctx context.Context, m authz.Membership, status *string)
 		if err != nil {
 			return err
 		}
+		counts, err := suggestionCounts(ctx, q, m.Workspace.ID)
+		if err != nil {
+			return err
+		}
 		for _, r := range rows {
 			v := a.schedule(r)
-			v.MonthSpend = spend[r.ID]
+			v.MonthSpend, v.Suggestions = spend[r.ID], counts[r.ID]
 			out = append(out, v)
 		}
 		return nil
@@ -196,7 +201,31 @@ func (a *Routines) view(ctx context.Context, q *models.Queries, r models.Operato
 		WorkspaceID: r.WorkspaceID, RoutineID: r.ID, Since: time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, time.UTC),
 	})
 	out.MonthSpend = spend
+	if err != nil {
+		return out, err
+	}
+	counts, err := suggestionCounts(ctx, q, r.WorkspaceID)
+	out.Suggestions = counts[r.ID]
 	return out, err
+}
+
+/*
+suggestionCounts is how many suggestions each routine of the workspace
+has in each status.
+*/
+func suggestionCounts(ctx context.Context, q *models.Queries, ws ids.UUID) (map[ids.UUID]map[string]int64, error) {
+	rows, err := q.CountOperatorRoutineChangesets(ctx, ws)
+	if err != nil {
+		return nil, fmt.Errorf("count routine suggestions: %w", err)
+	}
+	out := map[ids.UUID]map[string]int64{}
+	for _, row := range rows {
+		if out[row.RoutineID] == nil {
+			out[row.RoutineID] = map[string]int64{}
+		}
+		out[row.RoutineID][row.Status] = row.ChangesetsCount
+	}
+	return out, nil
 }
 
 /*

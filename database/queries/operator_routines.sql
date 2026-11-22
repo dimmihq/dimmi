@@ -165,10 +165,12 @@ LIMIT @row_limit;
 
 -- name: FindOperatorChangesetByDedupKey :one
 -- FindOperatorChangesetByDedupKey returns the latest suggestion with the
--- key that still waits, or that the team declined since a moment.
+-- key that still waits, or that the team declined since a moment. One
+-- declined only because it went stale does not count.
 SELECT * FROM operator_changesets
 WHERE workspace_id = @workspace_id AND dedup_key = @dedup_key AND NOT preview
-  AND (status = 'pending' OR (status = 'declined' AND updated_at >= @declined_since))
+  AND (status = 'pending' OR (status = 'declined' AND updated_at >= @declined_since
+    AND (expires_at IS NULL OR updated_at < expires_at)))
 ORDER BY created_at DESC, id DESC
 LIMIT 1;
 
@@ -183,3 +185,18 @@ ORDER BY created_at, id;
 -- and what reached whom.
 UPDATE operator_routine_runs SET notified = true, delivery_results = @delivery_results, updated_at = @now
 WHERE workspace_id = @workspace_id AND id = @id;
+
+-- name: CountOperatorRoutineChangesets :many
+-- CountOperatorRoutineChangesets counts a workspace's routine suggestions
+-- by routine and status, dry run previews left out.
+SELECT routine_id::uuid AS routine_id, status, COUNT(*)::bigint AS changesets_count
+FROM operator_changesets
+WHERE workspace_id = @workspace_id AND routine_id IS NOT NULL AND NOT preview
+GROUP BY routine_id, status;
+
+-- name: ExpireOperatorChangesets :execrows
+-- ExpireOperatorChangesets declines the workspace's routine suggestions
+-- nobody decided before they went stale.
+UPDATE operator_changesets
+SET status = 'declined', error = 'Nobody decided it before it went stale.', updated_at = @now
+WHERE workspace_id = @workspace_id AND status = 'pending' AND expires_at IS NOT NULL AND expires_at <= @now;

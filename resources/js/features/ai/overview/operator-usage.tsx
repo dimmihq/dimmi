@@ -31,9 +31,11 @@ import {
   type OperatorPurpose,
   type OperatorSettings,
   type OperatorUsage,
+  type OperatorUsageRun,
   operatorSettingsQuery,
   operatorUsageQuery,
 } from "@/lib/api/operator";
+import { routinesQuery } from "@/lib/api/routines";
 
 import { modelsFor, operatorModel, usableKeys, usd } from "../format";
 import { ModelLogo } from "../logos";
@@ -214,6 +216,7 @@ function Splits({ usage, view }: { usage: OperatorUsage; view: AgentView | undef
           </Item>
         ))}
       </Section>
+      <ByRoutine usage={usage} />
       {usage.by_member.length > 0 ? (
         <Section title="By teammate" description="Who Operator worked for.">
           {usage.by_member.map((row) => (
@@ -246,6 +249,64 @@ function Splits({ usage, view }: { usage: OperatorUsage; view: AgentView | undef
   );
 }
 
+/*
+ * ByRoutine splits the month's routine runs by routine, each opening its
+ * page.
+ */
+function ByRoutine({ usage }: { usage: OperatorUsage }) {
+  if (usage.by_routine.length === 0) {
+    return null;
+  }
+  return (
+    <Section title="By routine" description="What each routine cost this month.">
+      {usage.by_routine.map((row) => (
+        <Item
+          key={row.routine_id}
+          mark={<Glyph icon={RiCalendarScheduleLine} />}
+          title={
+            <Link to="/d/routines/$routine" params={{ routine: row.routine_id }} className={rowLink}>
+              {row.name}
+            </Link>
+          }
+          detail={row.runs_count === 1 ? "1 run" : `${row.runs_count.toLocaleString()} runs`}
+        >
+          <span className="pe-3 text-body-2-medium text-text-primary tabular-nums">{usd(row.cost_micros)}</span>
+        </Item>
+      ))}
+    </Section>
+  );
+}
+
+/*
+ * RunTitle names a run, opening the routine thread or the conversation it
+ * was about.
+ */
+function RunTitle({ run, title }: { run: OperatorUsageRun; title: string }) {
+  if (run.routine_id && run.thread_id) {
+    return (
+      <Link
+        to="/d/routines/$routine/threads/$thread"
+        params={{ routine: run.routine_id, thread: run.thread_id }}
+        className={rowLink}
+      >
+        {title}
+      </Link>
+    );
+  }
+  if (run.conversation_id) {
+    return (
+      <Link
+        to="/d/inbox/$view/$conversation"
+        params={{ view: "all", conversation: run.conversation_id }}
+        className={rowLink}
+      >
+        {title}
+      </Link>
+    );
+  }
+  return <>{title}</>;
+}
+
 function Recent({ usage }: { usage: OperatorUsage }) {
   return (
     <Section title="Recent runs" description="Operator's latest work, newest first.">
@@ -259,19 +320,7 @@ function Recent({ usage }: { usage: OperatorUsage }) {
           <Item
             key={run.id}
             mark={<Glyph icon={purpose.icon} />}
-            title={
-              run.conversation_id ? (
-                <Link
-                  to="/d/inbox/$view/$conversation"
-                  params={{ view: "all", conversation: run.conversation_id }}
-                  className={rowLink}
-                >
-                  {title}
-                </Link>
-              ) : (
-                title
-              )
-            }
+            title={<RunTitle run={run} title={title} />}
             detail={[who, run.conversation_number ? `#${run.conversation_number}` : null, ago(run.created_at)]
               .filter(Boolean)
               .join(" · ")}
@@ -296,7 +345,7 @@ export function OperatorUsageTab({ workspace, view }: { workspace: string; view:
   return (
     <>
       {settings ? <StatusCard settings={settings} view={view} /> : <Skeleton className="h-[84px] rounded-2xl" />}
-      <RoutinesCard />
+      <RoutinesCard workspace={workspace} />
       <section aria-label="Operator this month" className="flex flex-col gap-2">
         <h2 className="px-3 text-body-2-medium text-text-secondary">This month</h2>
         <MonthStats usage={usage} />
@@ -313,9 +362,30 @@ export function OperatorUsageTab({ workspace, view }: { workspace: string; view:
 }
 
 /*
- * RoutinesCard leads to the routines: what Operator does on its own.
+ * routinesLine sums up the routines: how many run, and how many of their
+ * suggestions wait for a teammate.
  */
-function RoutinesCard() {
+function routinesLine(active: number, waiting: number): string {
+  const runs = active === 1 ? "1 routine running" : `${active} routines running`;
+  if (waiting === 0) {
+    return `${runs}, nothing waiting for review.`;
+  }
+  return `${runs}, ${waiting === 1 ? "1 suggestion" : `${waiting} suggestions`} waiting for review.`;
+}
+
+/*
+ * RoutinesCard leads to the routines: what Operator does on its own, and
+ * how many run and wait for review once there are some.
+ */
+function RoutinesCard({ workspace }: { workspace: string }) {
+  const { data: routines } = useQuery({ ...routinesQuery(workspace), enabled: workspace !== "" });
+  const active = (routines ?? []).filter((r) => r.status === "active").length;
+  const waiting = (routines ?? []).reduce((sum, r) => sum + r.suggestions.pending, 0);
+  const line =
+    routines && routines.length > 0
+      ? routinesLine(active, waiting)
+      : "Put Operator on a clock to find knowledge gaps, stale articles and procedure fixes.";
+
   return (
     <Link
       to="/d/routines"
@@ -324,9 +394,7 @@ function RoutinesCard() {
       <Glyph icon={RiCalendarScheduleLine} />
       <span className="flex min-w-0 flex-1 flex-col">
         <span className="text-body-medium text-text-primary">Routines</span>
-        <span className="text-body-2-regular text-text-secondary">
-          Put Operator on a clock to find knowledge gaps, stale articles and procedure fixes.
-        </span>
+        <span className="text-body-2-regular text-text-secondary">{line}</span>
       </span>
       <RiArrowRightSLine aria-hidden className="size-5 text-foreground-icon-tertiary rtl:-scale-x-100" />
     </Link>

@@ -19,6 +19,7 @@ SELECT r.id, r.status, r.cost_micros, r.latency_ms, r.created_at, c.id AS conver
     COALESCE(u.name, '')::text AS member_name,
     COALESCE(t.title, '')::text AS thread_title,
     tt.id AS thread_id,
+    tt.routine_id AS routine_id,
     c.number AS conversation_number
 FROM ai_runs r
 LEFT JOIN workspace_members m ON m.id = r.actor_id AND m.workspace_id = r.workspace_id AND r.actor_type = 'member'
@@ -64,12 +65,13 @@ type ListRecentOperatorRunsRow struct {
 	MemberName         string    `json:"member_name"`
 	ThreadTitle        string    `json:"thread_title"`
 	ThreadID           *ids.UUID `json:"thread_id"`
+	RoutineID          *ids.UUID `json:"routine_id"`
 	ConversationNumber *int64    `json:"conversation_number"`
 }
 
 // ListRecentOperatorRuns returns Operator's latest runs in a range,
 // newest first, with why each ran, who it ran for, the thread it
-// answered on and the conversation it was about. A run about a
+// answered on, the routine that thread belongs to, and the conversation it was about. A run about a
 // conversation the viewer may not see still counts, but names none.
 func (q *Queries) ListRecentOperatorRuns(ctx context.Context, arg ListRecentOperatorRunsParams) ([]ListRecentOperatorRunsRow, error) {
 	rows, err := q.db.Query(ctx, listRecentOperatorRuns,
@@ -101,6 +103,7 @@ func (q *Queries) ListRecentOperatorRuns(ctx context.Context, arg ListRecentOper
 			&i.MemberName,
 			&i.ThreadTitle,
 			&i.ThreadID,
+			&i.RoutineID,
 			&i.ConversationNumber,
 		); err != nil {
 			return nil, err

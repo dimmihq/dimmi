@@ -67,13 +67,14 @@ GROUP BY status ORDER BY status;
 -- name: ListRecentOperatorRuns :many
 -- ListRecentOperatorRuns returns Operator's latest runs in a range,
 -- newest first, with why each ran, who it ran for, the thread it
--- answered on and the conversation it was about. A run about a
+-- answered on, the routine that thread belongs to, and the conversation it was about. A run about a
 -- conversation the viewer may not see still counts, but names none.
 SELECT r.id, r.status, r.cost_micros, r.latency_ms, r.created_at, c.id AS conversation_id,
     COALESCE(r.config_snapshot->>'purpose', 'ask')::text AS purpose,
     COALESCE(u.name, '')::text AS member_name,
     COALESCE(t.title, '')::text AS thread_title,
     tt.id AS thread_id,
+    tt.routine_id AS routine_id,
     c.number AS conversation_number
 FROM ai_runs r
 LEFT JOIN workspace_members m ON m.id = r.actor_id AND m.workspace_id = r.workspace_id AND r.actor_type = 'member'

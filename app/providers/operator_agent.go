@@ -63,6 +63,7 @@ func bootOperatorAgent(a *app.App) error {
 		queue.Register(a.Queue, &aijobs.TriageWithOperator{Operator: engine}),
 		queue.Register(a.Queue, &aijobs.QueueOperatorRoutines{Operator: engine, Queue: a.Queue}),
 		queue.Register(a.Queue, &aijobs.RunOperatorRoutine{Operator: engine}),
+		queue.Register(a.Queue, &aijobs.ExpireOperatorSuggestions{Operator: engine}),
 	)
 }
 

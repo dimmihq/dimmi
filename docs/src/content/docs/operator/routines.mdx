@@ -26,8 +26,11 @@ Each run opens a thread that anyone who can read the routine can open from the r
 - **Remembers between runs:** Operator saves a small state, such as the last pull request it read, so the next run starts where this one stopped.
 - **Skips repeats:** Operator does not suggest a change again while the same suggestion waits, or for 30 days after a teammate declines it.
 - **Stays quiet:** a run that suggests nothing tells nobody, unless the routine reports after every run.
+- **Lets stale suggestions go:** a suggestion nobody applies or declines within four weeks is declined for you, so a later run can suggest it again from fresh data.
 
 Suggestions also wait where the content lives. The help center lists suggested articles and edits above its articles, and an article shows the edits suggested to it, line by line. Procedures do the same, step by step.
+
+The top of the **Runs** tab counts the routine's suggestions waiting for review, applied and declined, and what it spent this month.
 
 Use **Dry run** to try a routine on real data. A dry run shows what it would suggest, but you cannot apply those changes, it keeps no state, and it tells nobody.
 
@@ -55,7 +58,7 @@ dimmi always tells the team when a routine pauses. Pick who hears about it:
 
 ## Cost
 
-Every run is an Operator run, billed like a question to Operator. Runs count toward your workspace's monthly AI budget and show as **Routines** in Operator's usage.
+Every run is an Operator run, billed like a question to Operator. Runs count toward your workspace's monthly AI budget. Operator's usage, on the **Agent** page, splits them by routine, and each recent run opens its thread.
 
 Set a **Monthly budget** on a routine to cap it on its own. Once a routine spends it, its runs skip until the next month.
 
@@ -71,4 +74,5 @@ Set a **Monthly budget** on a routine to cap it on its own. Once a routine spend
 | Failures before a routine pauses | 3 in a row |
 | Prompt length | 8,000 characters |
 | Monthly days | 1 to 28, or the last day of the month |
+| Suggestions left undecided | Declined after 4 weeks |
 | GitHub repositories per routine | 20 |

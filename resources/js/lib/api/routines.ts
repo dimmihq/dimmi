@@ -36,6 +36,15 @@ export interface RoutineDelivery {
   slack_destination_ids: string[];
 }
 
+/* RoutineSuggestionCounts is how many of a routine's suggestions are in each status. */
+export interface RoutineSuggestionCounts {
+  pending: number;
+  applied: number;
+  declined: number;
+  reverted: number;
+  failed: number;
+}
+
 export interface Routine {
   id: string;
   name: string;
@@ -61,6 +70,7 @@ export interface Routine {
   max_tool_calls: number;
   monthly_budget_micros: number | null;
   month_spend_micros: number;
+  suggestions: RoutineSuggestionCounts;
   notify_policy: NotifyPolicy;
   delivery: RoutineDelivery;
   state: Record<string, unknown>;

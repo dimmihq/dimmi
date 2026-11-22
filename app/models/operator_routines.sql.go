@@ -13,6 +13,41 @@ import (
 	"github.com/dimmihq/dimmi/framework/ids"
 )
 
+const countOperatorRoutineChangesets = `-- name: CountOperatorRoutineChangesets :many
+SELECT routine_id::uuid AS routine_id, status, COUNT(*)::bigint AS changesets_count
+FROM operator_changesets
+WHERE workspace_id = $1 AND routine_id IS NOT NULL AND NOT preview
+GROUP BY routine_id, status
+`
+
+type CountOperatorRoutineChangesetsRow struct {
+	RoutineID       ids.UUID `json:"routine_id"`
+	Status          string   `json:"status"`
+	ChangesetsCount int64    `json:"changesets_count"`
+}
+
+// CountOperatorRoutineChangesets counts a workspace's routine suggestions
+// by routine and status, dry run previews left out.
+func (q *Queries) CountOperatorRoutineChangesets(ctx context.Context, workspaceID ids.UUID) ([]CountOperatorRoutineChangesetsRow, error) {
+	rows, err := q.db.Query(ctx, countOperatorRoutineChangesets, workspaceID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []CountOperatorRoutineChangesetsRow
+	for rows.Next() {
+		var i CountOperatorRoutineChangesetsRow
+		if err := rows.Scan(&i.RoutineID, &i.Status, &i.ChangesetsCount); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const createOperatorRoutine = `-- name: CreateOperatorRoutine :one
 INSERT INTO operator_routines (
     workspace_id, name, description, template_key, prompt, cadence, cron_expr, run_at, timezone, next_run_at,
@@ -256,6 +291,27 @@ func (q *Queries) DeleteOperatorRoutine(ctx context.Context, arg DeleteOperatorR
 	return result.RowsAffected(), nil
 }
 
+const expireOperatorChangesets = `-- name: ExpireOperatorChangesets :execrows
+UPDATE operator_changesets
+SET status = 'declined', error = 'Nobody decided it before it went stale.', updated_at = $1
+WHERE workspace_id = $2 AND status = 'pending' AND expires_at IS NOT NULL AND expires_at <= $1
+`
+
+type ExpireOperatorChangesetsParams struct {
+	Now         time.Time `json:"now"`
+	WorkspaceID ids.UUID  `json:"workspace_id"`
+}
+
+// ExpireOperatorChangesets declines the workspace's routine suggestions
+// nobody decided before they went stale.
+func (q *Queries) ExpireOperatorChangesets(ctx context.Context, arg ExpireOperatorChangesetsParams) (int64, error) {
+	result, err := q.db.Exec(ctx, expireOperatorChangesets, arg.Now, arg.WorkspaceID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
 const findActiveOperatorRoutineRun = `-- name: FindActiveOperatorRoutineRun :one
 SELECT id, workspace_id, routine_id, trigger, triggered_by_member_id, scheduled_for, thread_id, ai_run_id, status, outcome, noop_reason, skip_reason, error_code, error_message, changesets_count, cost_micros, notified, delivery_results, started_at, completed_at, created_at, updated_at FROM operator_routine_runs
 WHERE workspace_id = $1 AND routine_id = $2
@@ -387,7 +443,8 @@ func (q *Queries) FindAnyOperatorThread(ctx context.Context, arg FindAnyOperator
 const findOperatorChangesetByDedupKey = `-- name: FindOperatorChangesetByDedupKey :one
 SELECT id, workspace_id, thread_id, message_id, member_id, conversation_id, title, reason, operations, status, auto, error, decided_by_member_id, applied_at, reverted_at, created_at, updated_at, routine_id, routine_run_id, dedup_key, preview, expires_at FROM operator_changesets
 WHERE workspace_id = $1 AND dedup_key = $2 AND NOT preview
-  AND (status = 'pending' OR (status = 'declined' AND updated_at >= $3))
+  AND (status = 'pending' OR (status = 'declined' AND updated_at >= $3
+    AND (expires_at IS NULL OR updated_at < expires_at)))
 ORDER BY created_at DESC, id DESC
 LIMIT 1
 `
@@ -399,7 +456,8 @@ type FindOperatorChangesetByDedupKeyParams struct {
 }
 
 // FindOperatorChangesetByDedupKey returns the latest suggestion with the
-// key that still waits, or that the team declined since a moment.
+// key that still waits, or that the team declined since a moment. One
+// declined only because it went stale does not count.
 func (q *Queries) FindOperatorChangesetByDedupKey(ctx context.Context, arg FindOperatorChangesetByDedupKeyParams) (OperatorChangeset, error) {
 	row := q.db.QueryRow(ctx, findOperatorChangesetByDedupKey, arg.WorkspaceID, arg.DedupKey, arg.DeclinedSince)
 	var i OperatorChangeset

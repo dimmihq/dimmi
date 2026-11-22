@@ -85,6 +85,7 @@ type OperatorUsageRun struct {
 	LatencyMs          *int32    `json:"latency_ms"`
 	CreatedAt          time.Time `json:"created_at"`
 	ThreadID           *string   `json:"thread_id"`
+	RoutineID          *string   `json:"routine_id"`
 }
 
 /*
@@ -142,7 +143,8 @@ func newOperatorUsageRun(r models.ListRecentOperatorRunsRow) OperatorUsageRun {
 		ID: models.PublicID(models.PrefixAiRun, r.ID), Purpose: r.Purpose, Status: r.Status,
 		MemberName: r.MemberName, ThreadTitle: r.ThreadTitle, ConversationNumber: r.ConversationNumber,
 		CostMicros: r.CostMicros, LatencyMs: r.LatencyMs, CreatedAt: r.CreatedAt,
-		ThreadID: optionalID(models.PrefixOperatorThread, r.ThreadID),
+		ThreadID:  optionalID(models.PrefixOperatorThread, r.ThreadID),
+		RoutineID: optionalID(models.PrefixOperatorRoutine, r.RoutineID),
 	}
 	if r.ConversationID != nil {
 		id := models.PublicID(models.PrefixConversation, *r.ConversationID)

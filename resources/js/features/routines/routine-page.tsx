@@ -10,6 +10,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useBlocker, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 
+import { StatCards } from "@/components/application/dashboard/stat-cards";
 import { Chip } from "@/components/base/badges/chip";
 import { Button } from "@/components/base/buttons/button";
 import { IconButton } from "@/components/base/buttons/icon-button";
@@ -162,6 +163,7 @@ function Loaded({
               onResume={() => status.mutate("active")}
             />
           ) : null}
+          {tab === "runs" ? <RoutineStats routine={routine} /> : null}
           {tab === "runs" ? <Runs workspace={workspace} routine={routine} /> : null}
           {tab === "settings" ? (
             <RoutineFields workspace={workspace} draft={draft} disabled={!canManage} onChange={setDraft} />
@@ -221,6 +223,48 @@ function Paused({
         </Button>
       ) : null}
     </div>
+  );
+}
+
+/*
+ * RoutineStats says what came of the routine: its suggestions waiting,
+ * applied and declined, and what it cost this month.
+ */
+function RoutineStats({ routine }: { routine: Routine }) {
+  const c = routine.suggestions;
+  const decided = c.applied + c.declined + c.reverted;
+  const budget = routine.monthly_budget_micros;
+  const usd = (micros: number) => `$${(micros / 1_000_000).toFixed(2)}`;
+
+  return (
+    <StatCards
+      variant="compact"
+      className="gap-2"
+      stats={[
+        {
+          label: "Waiting for review",
+          hint: "Suggestions from this routine nobody has applied or declined yet.",
+          value: c.pending.toLocaleString(),
+        },
+        {
+          label: "Applied",
+          hint: "Suggestions a teammate applied and kept.",
+          value: c.applied.toLocaleString(),
+          caption: decided > 0 ? `${Math.round((c.applied / decided) * 100)}% of decided` : "None decided yet",
+        },
+        {
+          label: "Declined",
+          hint: "Suggestions declined, undone after applying, or gone stale after four weeks.",
+          value: (c.declined + c.reverted).toLocaleString(),
+        },
+        {
+          label: "Spend this month",
+          hint: "What this routine's runs cost this month, in US dollars.",
+          value: usd(routine.month_spend_micros),
+          caption: budget === null ? "No budget set" : `of ${usd(budget)} budget`,
+        },
+      ]}
+    />
   );
 }
 
