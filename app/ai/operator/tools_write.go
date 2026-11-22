@@ -134,6 +134,11 @@ func (e *Engine) proposeChanges(ctx context.Context, s *session, args json.RawMe
 	if err != nil {
 		return result{}, err
 	}
+	if s.routine != nil {
+		if err := oneTarget(ops); err != nil {
+			return result{}, err
+		}
+	}
 	if text, ok, err := e.duplicate(ctx, s, in.DedupKey); err != nil || ok {
 		return result{text: text, step: Step{Tool: "propose_changes", Summary: "Skipped a suggestion made before"}}, err
 	}

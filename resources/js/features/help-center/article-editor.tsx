@@ -5,6 +5,10 @@
  * Publish freezes it into the live version, and the history beside the
  * article can put any kept version back. A save made over someone
  * else's newer one is refused and says so, so nobody's words are lost.
+ * A change Operator requests is drawn inside the article, what goes
+ * struck through and what comes in green, to accept or decline from
+ * the header; accepting writes it into the working copy, and asks
+ * first when unsaved edits would be replaced.
  */
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
@@ -32,9 +36,10 @@ import {
 import { ArticleHeader } from "./article-header";
 import { ArticlePage } from "./article-page";
 import { ArticleSettings } from "./article-settings";
-import { ArticleSuggestions } from "./article-suggestions";
+import { type ArticleRequest, useArticleDecision } from "./change-requests";
 import { collectionOptions, type Draft } from "./docs-format";
 import { useHistoryPane } from "./history-pane";
+import { RequestNote } from "./request-note";
 
 function draftOf(article: Article): Draft {
   return {
@@ -59,6 +64,32 @@ function changeOf(draft: Draft, article: Article): ArticleChange {
   };
 }
 
+/*
+ * controlsOf is the header's Accept changes and Decline for a request.
+ */
+function controlsOf(
+  request: ArticleRequest | null,
+  decide: { isPending: boolean; mutate: (accepting: boolean) => void },
+  edited: boolean,
+  onConfirm: () => void,
+): { busy: boolean; onAccept: () => void; onDecline: () => void } | null {
+  if (!request) {
+    return null;
+  }
+  return {
+    busy: decide.isPending,
+    onAccept: () => (edited ? onConfirm() : decide.mutate(true)),
+    onDecline: () => decide.mutate(false),
+  };
+}
+
+/*
+ * proposedOf is what a request asks the article to read like.
+ */
+function proposedOf(request: ArticleRequest | null) {
+  return request && { title: request.op.title ?? null, body: request.op.text ?? null, whole: false };
+}
+
 export function ArticleEditor({ id }: { id: string }) {
   const workspace = useAccount().workspace.id;
   const enabled = workspace !== "";
@@ -74,7 +105,7 @@ export function ArticleEditor({ id }: { id: string }) {
   const [draft, setDraft] = useState<Draft | null>(null);
   const [settings, setSettings] = useState(false);
   const [revision, setRevision] = useState(0);
-  const [confirm, setConfirm] = useState<"publish" | "unpublish" | null>(null);
+  const [confirm, setConfirm] = useState<"publish" | "unpublish" | "accept" | null>(null);
 
   useEffect(() => {
     if (article && draft === null) {
@@ -100,6 +131,12 @@ export function ArticleEditor({ id }: { id: string }) {
     onSuccess: settle,
   });
   const unpublish = useMutation({ mutationFn: () => setArticleStatus(workspace, id, "draft"), onSuccess: settle });
+  const { request, waiting, decide } = useArticleDecision(workspace, id, async () => {
+    const fresh = await queryClient.fetchQuery({ ...articleQuery(workspace, id), staleTime: 0 });
+    settle(fresh);
+    setDraft(draftOf(fresh));
+    setRevision((r) => r + 1);
+  });
   const history = useHistoryPane(workspace, id, (restored) => {
     settle(restored);
     setDraft(draftOf(restored));
@@ -118,6 +155,7 @@ export function ArticleEditor({ id }: { id: string }) {
   const collectionName = options.find((o) => o.id === draft.collection && o.id !== "")?.label ?? "";
   const set = (change: Partial<Draft>) => setDraft({ ...draft, ...change });
   const failure = save.error ?? unpublish.error;
+  const edited = JSON.stringify(draft) !== JSON.stringify(draftOf(article));
   const live = article.status === "published" && center ? `${center.url}/articles/${article.slug}` : null;
 
   return history.layout(
@@ -130,19 +168,10 @@ export function ArticleEditor({ id }: { id: string }) {
         onSettings={() => setSettings(true)}
         onSave={() => save.mutate(false, { onSuccess: () => toast.success("Draft saved") })}
         onConfirm={setConfirm}
+        request={controlsOf(request, decide, edited, () => setConfirm("accept"))}
       />
       <ScrollArea>
-        <ArticleSuggestions
-          workspace={workspace}
-          article={id}
-          onApplied={() => {
-            void queryClient.fetchQuery({ ...articleQuery(workspace, id), staleTime: 0 }).then((fresh) => {
-              settle(fresh);
-              setDraft(draftOf(fresh));
-              setRevision((r) => r + 1);
-            });
-          }}
-        />
+        <RequestNote request={request} waiting={waiting} />
         <ArticlePage
           workspace={workspace}
           draft={draft}
@@ -152,6 +181,7 @@ export function ArticleEditor({ id }: { id: string }) {
           failure={failure}
           onChange={set}
           onPickCollection={() => setSettings(true)}
+          proposed={proposedOf(request)}
         />
       </ScrollArea>
       <AlertDialog
@@ -166,6 +196,15 @@ export function ArticleEditor({ id }: { id: string }) {
         }
         confirmLabel="Publish"
         onConfirm={() => save.mutateAsync(true)}
+      />
+      <AlertDialog
+        isOpen={confirm === "accept"}
+        onOpenChange={(open) => (open ? undefined : setConfirm(null))}
+        variant="default"
+        title="Replace your unsaved edits?"
+        description="Accepting writes the requested change into the saved draft, so the edits you have not saved are lost."
+        confirmLabel="Accept changes"
+        onConfirm={() => decide.mutateAsync(true)}
       />
       <AlertDialog
         isOpen={confirm === "unpublish"}

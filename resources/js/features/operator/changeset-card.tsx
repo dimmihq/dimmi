@@ -4,7 +4,9 @@
  * Waiting changes apply or are declined in one click; applied ones can
  * be undone, which puts back every value Operator replaced unless
  * someone changed it since. A change that failed says why and can be
- * tried again.
+ * tried again. A change to an article or a procedure is a short line
+ * per change with the way to review it in that editor, where it is
+ * accepted or declined.
  */
 import {
   RiArrowDownSLine,
@@ -14,6 +16,7 @@ import {
   RiErrorWarningLine,
   RiGitPullRequestLine,
 } from "@remixicon/react";
+import { useNavigate } from "@tanstack/react-router";
 import { type ReactNode, useState } from "react";
 
 import { Chip, type ChipColor } from "@/components/base/badges/chip";
@@ -23,6 +26,7 @@ import { Unfold } from "@/features/shell/reveal";
 import type { ChangesetDecision, ChangesetStatus, OperatorChangeset } from "@/lib/api/operator";
 import { cx } from "@/utils/cx";
 
+import { reviewTarget } from "./review-target";
 import { failureText } from "./use-operator-chat";
 
 const statusLabels: Record<ChangesetStatus, string> = {
@@ -106,12 +110,14 @@ export function ChangesetCard({
   children,
 }: {
   changeset: OperatorChangeset;
-  onDecide: (id: string, decision: ChangesetDecision) => Promise<void>;
+  onDecide: (id: string, decision: ChangesetDecision) => Promise<unknown>;
   /* What the change looks like in place, such as a diff, under its operations. */
   children?: ReactNode;
 }) {
   const [pending, setPending] = useState<ChangesetDecision | null>(null);
   const [failure, setFailure] = useState<string | null>(null);
+  const target = reviewTarget(changeset);
+  const navigate = useNavigate();
   const decide = async (decision: ChangesetDecision) => {
     setPending(decision);
     setFailure(null);
@@ -141,7 +147,7 @@ export function ChangesetCard({
       </header>
       <div className="flex flex-col gap-2.5 px-3 py-2.5">
         {changeset.reason ? <p className="text-body-2-regular text-text-secondary">{changeset.reason}</p> : null}
-        <Operations changeset={changeset} />
+        <Operations changeset={changeset} brief={target !== null} />
         {children}
         {changeset.error || failure ? (
           <p className="flex items-start gap-1.5 text-body-2-regular text-text-error-primary">
@@ -150,16 +156,24 @@ export function ChangesetCard({
           </p>
         ) : null}
       </div>
-      {changeset.preview ? null : <Decisions changeset={changeset} pending={pending} decide={decide} />}
+      {target && changeset.status === "pending" ? (
+        <footer className="flex gap-2 px-3 pb-3">
+          <Button size="small" onClick={() => void navigate(target)}>
+            Review
+          </Button>
+        </footer>
+      ) : changeset.preview ? null : (
+        <Decisions changeset={changeset} pending={pending} decide={decide} />
+      )}
     </section>
   );
 }
 
 /*
  * Operations lists what a changeset does, one plain line each, marked
- * once applied.
+ * once applied; brief leaves out the text, which its editor shows.
  */
-function Operations({ changeset }: { changeset: OperatorChangeset }) {
+function Operations({ changeset, brief }: { changeset: OperatorChangeset; brief: boolean }) {
   return (
     <ul className="flex flex-col gap-1.5">
       {changeset.operations.map((operation) => (
@@ -183,7 +197,7 @@ function Operations({ changeset }: { changeset: OperatorChangeset }) {
                 <span className="text-text-tertiary"> · {outcomeLabels[operation.outcome]}</span>
               ) : null}
             </span>
-            {operation.text ? <FullText text={operation.text} /> : null}
+            {operation.text && !brief ? <FullText text={operation.text} /> : null}
           </span>
         </li>
       ))}

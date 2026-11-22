@@ -35,6 +35,28 @@ func TestOperatorArticleEdits(t *testing.T) {
 		result := k.llm.Sent()[1].Messages[len(k.llm.Sent()[1].Messages)-1].Parts[0].Text
 		assert.Contains(t, result, "send edits with the exact passages")
 	})
+
+	t.Run("refuses an edit that changes nothing", func(t *testing.T) {
+		t.Parallel()
+		k := newDesk(t)
+		hc := k.d.Owner.GetJSON("/api/v1/help-centers").AssertOK().String("data.0.id")
+		article := k.d.Owner.PostJSON("/api/v1/help-centers/"+hc+"/articles", testkit.JSON{
+			"title": "Refunds", "body_markdown": "Refunds take five days.",
+		}).AssertCreated().String("data.id")
+		thread := k.thread("")
+		k.llm.Script(tools(call("propose_changes", map[string]any{
+			"title": "Fix refunds", "reason": "Out of date.",
+			"operations": []map[string]any{{
+				"kind": "article.edit_draft", "article": article,
+				"edits": []map[string]any{{"find": "five days", "replace": "five days"}},
+			}},
+		})), reply("Could not."))
+
+		k.ask(thread, "Fix the refunds article").AssertOK().AssertJSONPath("data.changesets.#", float64(0))
+
+		result := k.llm.Sent()[1].Messages[len(k.llm.Sent()[1].Messages)-1].Parts[0].Text
+		assert.Contains(t, result, "leaves the article exactly as it is")
+	})
 }
 
 func TestOperatorPassageEdits(t *testing.T) {

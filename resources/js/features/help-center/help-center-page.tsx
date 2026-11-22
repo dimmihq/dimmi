@@ -6,7 +6,8 @@
  * articles beside it; on a narrow one they are chips above the list, and
  * the tree slides in from the side. The address keeps the pick, so
  * coming back from an article returns to the same collection. Opening an
- * article edits it.
+ * article edits it. Change requests lists the articles Operator asked to
+ * change or write; opening one shows the change inside the article.
  */
 import { RiAddLine, RiArticleLine, RiCornerDownRightLine, RiExternalLinkLine, RiFolder3Line } from "@remixicon/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -20,9 +21,6 @@ import { Drawer } from "@/components/base/drawer/drawer";
 import { Input } from "@/components/base/input/input";
 import { Modal, ModalBody, ModalFooter, ModalHeader } from "@/components/base/modal/modal";
 import { Notification } from "@/components/base/notification/notification";
-import { ArticleChanges, SuggestedEdits } from "@/features/operator/suggested-edits";
-import { isArticle } from "@/features/operator/suggestions";
-import { useAccount } from "@/features/settings/use-account";
 import { PageHeader, Panel, ScrollArea } from "@/features/shell/page";
 import { PaneGroup, PaneHandle } from "@/features/shell/resizable";
 import { useWide } from "@/features/shell/use-wide";
@@ -35,13 +33,14 @@ import {
   type HelpCenter,
 } from "@/lib/api/help-centers";
 import { cx } from "@/utils/cx";
-
+import { useCenterRequests } from "./change-requests";
 import { CollectionPanel } from "./collection-panel";
 import { CollectionSelect } from "./collection-select";
-import { allKey, analyticsKey, articlesIn, childrenOf, unfiledKey } from "./collection-tree";
+import { allKey, analyticsKey, articlesIn, childrenOf, requestsKey, unfiledKey } from "./collection-tree";
 import { articleDetail, articleState } from "./docs-format";
 import { HelpAnalytics } from "./help-analytics";
 import { HelpCenterSwitcher } from "./help-center-switcher";
+import { RequestList } from "./request-list";
 import { useHelpCenterPick } from "./use-help-center-pick";
 
 type Dialog = "article" | "collections" | null;
@@ -60,6 +59,9 @@ function pickTitle(pick: string, collections: Collection[]): string {
   }
   if (pick === unfiledKey) {
     return "No collection";
+  }
+  if (pick === requestsKey) {
+    return "Change requests";
   }
   const picked = collections.find((c) => c.id === pick);
   const parent = collections.find((c) => c.id === picked?.parent_id);
@@ -95,7 +97,8 @@ export function HelpCenterPage() {
   const [pick, setPick] = usePick();
   const [dialog, setDialog] = useState<Dialog>(null);
   const wide = useWide(1024);
-  const inCollection = pick !== allKey && pick !== unfiledKey && pick !== analyticsKey ? pick : "";
+  const inCollection = [allKey, unfiledKey, analyticsKey, requestsKey].includes(pick) ? "" : pick;
+  const requests = useCenterRequests(workspace, hc, articles);
   const switcher = (
     <HelpCenterSwitcher
       workspace={workspace}
@@ -117,11 +120,15 @@ export function HelpCenterPage() {
       articles={articles}
       pick={pick}
       onPick={onPicked}
+      requests={requests.length}
     />
   );
+  const chips = wide ? null : <CollectionChips collections={collections} pick={pick} onPick={setPick} />;
   const list =
     pick === analyticsKey ? (
       <HelpAnalytics workspace={workspace} center={center} header={wide ? null : switcher} />
+    ) : pick === requestsKey ? (
+      <RequestList requests={requests} articles={articles} title={pickTitle(pick, collections)} chips={chips} />
     ) : (
       <ArticleList
         pick={pick}
@@ -131,7 +138,7 @@ export function HelpCenterPage() {
         collections={collections}
         isPending={docs.isPending}
         onDialog={setDialog}
-        chips={wide ? null : <CollectionChips collections={collections} pick={pick} onPick={setPick} />}
+        chips={chips}
       />
     );
 
@@ -221,7 +228,6 @@ function ArticleList({
   chips: ReactNode;
 }) {
   const moved = useMoved(pick);
-  const workspace = useAccount().workspace.id;
 
   return (
     <Panel label="Help center" className="h-full w-full flex-1">
@@ -255,14 +261,6 @@ function ArticleList({
       {chips}
       <ScrollArea>
         <div key={pick} className={cx("flex flex-col gap-1 px-2 pb-4", moved && "animate-page-in")}>
-          <div className="px-1 pb-2 empty:hidden">
-            <SuggestedEdits
-              workspace={workspace}
-              match={isArticle}
-              description="New articles and edits Operator drafted. Applying writes a draft; publishing stays yours."
-              render={(c) => <ArticleChanges workspace={workspace} changeset={c} />}
-            />
-          </div>
           {!isPending && articles.length === 0 ? (
             <p className="px-2 py-6 text-body-2-regular text-text-tertiary">
               No articles here yet. Write one; it stays a draft until you publish it.
@@ -298,7 +296,7 @@ function CollectionChips({
   onPick: (pick: string) => void;
 }) {
   const parent = collections.find((c) => c.id === pick)?.parent_id ?? null;
-  const openTop = parent ?? (pick === allKey || pick === unfiledKey || pick === analyticsKey ? null : pick);
+  const openTop = parent ?? ([allKey, unfiledKey, analyticsKey, requestsKey].includes(pick) ? null : pick);
   const subs = openTop ? childrenOf(collections, openTop) : [];
 
   return (
@@ -307,6 +305,7 @@ function CollectionChips({
         {[
           { id: analyticsKey, name: "Analytics" },
           { id: allKey, name: "All articles" },
+          { id: requestsKey, name: "Change requests" },
           ...childrenOf(collections, null),
         ].map((c) => {
           const on = pick === c.id || c.id === parent;

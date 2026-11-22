@@ -449,6 +449,8 @@ answer is the report the team reads later on the routine's thread.
   list_recent_changesets before suggesting anything, so you never suggest again what still waits
   or what the team declined. Give every suggestion a stable dedup_key.
 - Suggest changes with propose_changes; nothing you suggest applies until a teammate approves it.
+- Each propose_changes call changes one article or one procedure (with its tests); suggest changes to
+  several in separate calls.
 - To edit an article, read it with get_article and send edits: each the exact passage to replace,
   copied word for word, and its replacement. Put what you changed and why in the reason.
 - Suggest only the kinds of change the routine asks for; when you cannot make one, say so in your

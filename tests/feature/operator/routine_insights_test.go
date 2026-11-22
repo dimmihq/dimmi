@@ -85,3 +85,39 @@ func TestOperatorRoutineInsights(t *testing.T) {
 			AssertJSONPath("data.0.status", "pending")
 	})
 }
+
+func TestOperatorRoutineOneTarget(t *testing.T) {
+	t.Parallel()
+
+	t.Run("refuses a change request that touches two procedures", func(t *testing.T) {
+		t.Parallel()
+		k := newDesk(t)
+		definition := testkit.JSON{
+			"description": "Refund requests.",
+			"steps":       []testkit.JSON{{"id": "s1", "kind": "instruction", "text": "Check the charge."}},
+			"handover":    []string{},
+		}
+		var procs []string
+		for _, name := range []string{"Refunds", "Returns"} {
+			procs = append(procs, k.d.Owner.PostJSON("/api/v1/procedures", testkit.JSON{"name": name}).
+				AssertCreated().String("data.id"))
+		}
+		routine := k.routine(testkit.JSON{
+			"name": "Tuner", "prompt": "Tune procedures.",
+			"permissions": []string{"ai:read", "ai_actions:read", "ai_agent:manage"},
+		})
+		ops := []map[string]any{}
+		for _, p := range procs {
+			ops = append(ops, map[string]any{"kind": "procedure.edit_draft", "procedure": p, "definition": definition})
+		}
+		k.llm.Script(tools(call("propose_changes", map[string]any{
+			"title": "Tune both", "reason": "Both need it.", "operations": ops,
+		})), reply("Could not."))
+
+		k.runRoutine(routine, false).AssertJSONPath("data.changesets_count", float64(0))
+
+		sent := k.llm.Sent()
+		result := sent[len(sent)-1].Messages[len(sent[len(sent)-1].Messages)-1].Parts[0].Text
+		assert.Contains(t, result, "only one article or one procedure")
+	})
+}

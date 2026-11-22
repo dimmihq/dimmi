@@ -27,7 +27,7 @@ export const isProcedure = (op: OperatorOperation) =>
 /*
  * useSuggestions is the pending changes with an operation the test
  * matches, and how to decide one: deciding refreshes the workspace's
- * data, then tells onDecided with the decision.
+ * data, tells onDecided with the decision and returns the changeset.
  */
 export function useSuggestions(
   workspace: string,
@@ -41,6 +41,7 @@ export function useSuggestions(
     const changeset = await decideChangeset(workspace, id, decision);
     await queryClient.invalidateQueries({ queryKey: ["workspace", workspace] });
     onDecided?.(changeset, decision);
+    return changeset;
   };
   return { suggestions: found, decide };
 }

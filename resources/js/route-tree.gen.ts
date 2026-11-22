@@ -67,6 +67,7 @@ import { Route as DCustomersListsBlockedRouteImport } from './routes/d/customers
 import { Route as DCustomersListsErasuresRouteImport } from './routes/d/customers/_lists/erasures'
 import { Route as DCustomersAudiencesAudienceRouteImport } from './routes/d/customers/audiences/$audience'
 import { Route as DCustomersCompaniesCompanyRouteImport } from './routes/d/customers/companies/$company'
+import { Route as DHelpCenterRequestsChangesetRouteImport } from './routes/d/help-center/requests/$changeset'
 import { Route as DInboxViewIndexRouteImport } from './routes/d/inbox/$view/index'
 import { Route as DInboxViewConversationRouteImport } from './routes/d/inbox/$view/$conversation'
 import { Route as DRoutinesRoutineIndexRouteImport } from './routes/d/routines/$routine/index'
@@ -384,6 +385,12 @@ const DCustomersCompaniesCompanyRoute =
     path: '/companies/$company',
     getParentRoute: () => DCustomersRoute,
   } as any)
+const DHelpCenterRequestsChangesetRoute =
+  DHelpCenterRequestsChangesetRouteImport.update({
+    id: '/requests/$changeset',
+    path: '/requests/$changeset',
+    getParentRoute: () => DHelpCenterRoute,
+  } as any)
 const DInboxViewIndexRoute = DInboxViewIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -590,6 +597,7 @@ export interface FileRoutesByFullPath {
   '/d/customers/erasures': typeof DCustomersListsErasuresRoute
   '/d/customers/audiences/$audience': typeof DCustomersAudiencesAudienceRoute
   '/d/customers/companies/$company': typeof DCustomersCompaniesCompanyRoute
+  '/d/help-center/requests/$changeset': typeof DHelpCenterRequestsChangesetRoute
   '/d/inbox/$view/$conversation': typeof DInboxViewConversationRoute
   '/d/settings/actions/$action': typeof DSettingsActionsActionRoute
   '/d/settings/inboxes/$inbox': typeof DSettingsInboxesInboxRoute
@@ -669,6 +677,7 @@ export interface FileRoutesByTo {
   '/d/customers/erasures': typeof DCustomersListsErasuresRoute
   '/d/customers/audiences/$audience': typeof DCustomersAudiencesAudienceRoute
   '/d/customers/companies/$company': typeof DCustomersCompaniesCompanyRoute
+  '/d/help-center/requests/$changeset': typeof DHelpCenterRequestsChangesetRoute
   '/d/inbox/$view/$conversation': typeof DInboxViewConversationRoute
   '/d/settings/actions/$action': typeof DSettingsActionsActionRoute
   '/d/settings/inboxes/$inbox': typeof DSettingsInboxesInboxRoute
@@ -755,6 +764,7 @@ export interface FileRoutesById {
   '/d/customers/_lists/erasures': typeof DCustomersListsErasuresRoute
   '/d/customers/audiences/$audience': typeof DCustomersAudiencesAudienceRoute
   '/d/customers/companies/$company': typeof DCustomersCompaniesCompanyRoute
+  '/d/help-center/requests/$changeset': typeof DHelpCenterRequestsChangesetRoute
   '/d/inbox/$view/$conversation': typeof DInboxViewConversationRoute
   '/d/settings/actions/$action': typeof DSettingsActionsActionRoute
   '/d/settings/inboxes/$inbox': typeof DSettingsInboxesInboxRoute
@@ -842,6 +852,7 @@ export interface FileRouteTypes {
     | '/d/customers/erasures'
     | '/d/customers/audiences/$audience'
     | '/d/customers/companies/$company'
+    | '/d/help-center/requests/$changeset'
     | '/d/inbox/$view/$conversation'
     | '/d/settings/actions/$action'
     | '/d/settings/inboxes/$inbox'
@@ -921,6 +932,7 @@ export interface FileRouteTypes {
     | '/d/customers/erasures'
     | '/d/customers/audiences/$audience'
     | '/d/customers/companies/$company'
+    | '/d/help-center/requests/$changeset'
     | '/d/inbox/$view/$conversation'
     | '/d/settings/actions/$action'
     | '/d/settings/inboxes/$inbox'
@@ -1006,6 +1018,7 @@ export interface FileRouteTypes {
     | '/d/customers/_lists/erasures'
     | '/d/customers/audiences/$audience'
     | '/d/customers/companies/$company'
+    | '/d/help-center/requests/$changeset'
     | '/d/inbox/$view/$conversation'
     | '/d/settings/actions/$action'
     | '/d/settings/inboxes/$inbox'
@@ -1451,6 +1464,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DCustomersCompaniesCompanyRouteImport
       parentRoute: typeof DCustomersRoute
     }
+    '/d/help-center/requests/$changeset': {
+      id: '/d/help-center/requests/$changeset'
+      path: '/requests/$changeset'
+      fullPath: '/d/help-center/requests/$changeset'
+      preLoaderRoute: typeof DHelpCenterRequestsChangesetRouteImport
+      parentRoute: typeof DHelpCenterRoute
+    }
     '/d/inbox/$view/': {
       id: '/d/inbox/$view/'
       path: '/'
@@ -1705,11 +1725,13 @@ const DFeedbackRouteWithChildren = DFeedbackRoute._addFileChildren(
 interface DHelpCenterRouteChildren {
   DHelpCenterArticleRoute: typeof DHelpCenterArticleRoute
   DHelpCenterIndexRoute: typeof DHelpCenterIndexRoute
+  DHelpCenterRequestsChangesetRoute: typeof DHelpCenterRequestsChangesetRoute
 }
 
 const DHelpCenterRouteChildren: DHelpCenterRouteChildren = {
   DHelpCenterArticleRoute: DHelpCenterArticleRoute,
   DHelpCenterIndexRoute: DHelpCenterIndexRoute,
+  DHelpCenterRequestsChangesetRoute: DHelpCenterRequestsChangesetRoute,
 }
 
 const DHelpCenterRouteWithChildren = DHelpCenterRoute._addFileChildren(

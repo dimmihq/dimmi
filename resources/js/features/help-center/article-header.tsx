@@ -1,7 +1,8 @@
 /*
  * The article's header: back to the list, its title and state, and what
  * can be done with it. Publish and Unpublish ask first; reader feedback,
- * history and settings are icons.
+ * history and settings are icons. While Operator requests a change,
+ * Decline and Accept changes lead.
  */
 import { RiArrowLeftLine, RiChatQuoteLine, RiExternalLinkLine, RiHistoryLine, RiSettings3Line } from "@remixicon/react";
 import { Link } from "@tanstack/react-router";
@@ -24,6 +25,7 @@ export function ArticleHeader({
   onSettings,
   onSave,
   onConfirm,
+  request = null,
 }: {
   article: Article;
   live: string | null;
@@ -32,6 +34,7 @@ export function ArticleHeader({
   onSettings: () => void;
   onSave: () => void;
   onConfirm: (what: "publish" | "unpublish") => void;
+  request?: { busy: boolean; onAccept: () => void; onDecline: () => void } | null;
 }) {
   return (
     <PageHeader
@@ -76,9 +79,24 @@ export function ArticleHeader({
       <Button size="small" variant="secondary" onClick={onSave} disabled={saving}>
         Save draft
       </Button>
-      <Button size="small" onClick={() => onConfirm("publish")} disabled={saving}>
+      <Button
+        size="small"
+        variant={request ? "secondary" : "primary"}
+        onClick={() => onConfirm("publish")}
+        disabled={saving}
+      >
         {saving ? "Saving…" : "Publish"}
       </Button>
+      {request ? (
+        <>
+          <Button size="small" variant="secondary" onClick={request.onDecline} disabled={request.busy}>
+            Decline
+          </Button>
+          <Button size="small" onClick={request.onAccept} loading={request.busy}>
+            Accept changes
+          </Button>
+        </>
+      ) : null}
     </PageHeader>
   );
 }

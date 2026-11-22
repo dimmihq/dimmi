@@ -11,14 +11,17 @@
  * The writer owns its document once open: value is only where it starts,
  * so a slow render never puts older words back under the caret. To load
  * other words, such as a restored version, the page opens a new writer.
+ * A change request waiting on the article is drawn inside it: what it
+ * removes struck through in red, what it adds in green.
  */
 import { type Editor, EditorContent, useEditor } from "@tiptap/react";
-import { type CSSProperties, useRef, useState } from "react";
+import { type CSSProperties, useEffect, useRef, useState } from "react";
 
 import { type Suggested, suggestionExtension } from "@/features/inbox/composer/suggestion-extension";
 import { SuggestionList } from "@/features/inbox/composer/suggestion-list";
 
 import { articleExtensions, articleMarkdown } from "./article-markdown";
+import { ChangeRequest, changeRequestKey } from "./change-request";
 import { findCommands, runCommand, type SlashCommand } from "./slash-commands";
 import { imagesOf, useImageUpload } from "./use-image-upload";
 import { BlockPlus, ImageBar, SelectionBar } from "./writer-menus";
@@ -29,6 +32,10 @@ export interface ArticleWriterProps {
   label: string;
   brand?: string;
   onChange: (markdown: string) => void;
+  // proposed is a requested change to the article, in Markdown.
+  proposed?: string | null;
+  // whole draws the whole article as requested, for a new one.
+  whole?: boolean;
 }
 
 /*
@@ -38,7 +45,15 @@ function dropPosition(editor: Editor, event: DragEvent): number | undefined {
   return editor.view.posAtCoords({ left: event.clientX, top: event.clientY })?.pos;
 }
 
-export default function ArticleWriter({ workspace, value, label, brand, onChange }: ArticleWriterProps) {
+export default function ArticleWriter({
+  workspace,
+  value,
+  label,
+  brand,
+  onChange,
+  proposed = null,
+  whole = false,
+}: ArticleWriterProps) {
   const [slash, setSlash] = useState<Suggested<SlashCommand> | null>(null);
   const changed = useRef(onChange);
   changed.current = onChange;
@@ -61,6 +76,7 @@ export default function ArticleWriter({ workspace, value, label, brand, onChange
         apply: (e, range, command) => runCommand(e, range, command, { pickImage }),
         onChange: setSlash,
       }),
+      ChangeRequest,
     ]),
     content: value,
     contentType: "markdown",
@@ -92,6 +108,18 @@ export default function ArticleWriter({ workspace, value, label, brand, onChange
     onUpdate: ({ editor: e }) => changed.current(articleMarkdown(e.getMarkdown())),
   });
   editorRef.current = editor;
+
+  useEffect(() => {
+    if (!editor) {
+      return;
+    }
+    const parsed = proposed === null || !editor.markdown ? null : editor.markdown.parse(proposed);
+    const node = parsed ? editor.state.schema.nodeFromJSON(parsed) : null;
+    editor.commands.command(({ tr }) => {
+      tr.setMeta(changeRequestKey, { proposed: node, whole });
+      return true;
+    });
+  }, [editor, proposed, whole]);
 
   if (!editor) {
     return null;

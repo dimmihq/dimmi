@@ -103,7 +103,7 @@ func (r resolver) articleOp(ctx context.Context, in opInput) (Operation, error) 
 editBody sets the new working copy of an edit: the body sent, or the
 article with the edits written in. An edit that would cut most of the
 article away is refused, since it is a description of the change sent
-in place of the article.
+in place of the article, and one that changes nothing is refused.
 */
 func editBody(op *Operation, current string, edits []passageEdit) error {
 	if len(edits) > 0 {
@@ -118,6 +118,13 @@ func editBody(op *Operation, current string, edits []passageEdit) error {
 	}
 	if op.Title == nil && op.Body == nil {
 		return fmt.Errorf("%w: give a new title, a body or edits", errBadArguments)
+	}
+	if op.Body != nil && strings.TrimSpace(*op.Body) == strings.TrimSpace(current) {
+		op.Body = nil
+		if op.Title == nil {
+			return fmt.Errorf("%w: the edit leaves the article exactly as it is; check that each replace "+
+				"differs from its find, or suggest nothing", errBadArguments)
+		}
 	}
 	if op.Body != nil && shrinks(current, *op.Body) {
 		return fmt.Errorf("%w: the body replaces the whole article, which has %d characters; send "+

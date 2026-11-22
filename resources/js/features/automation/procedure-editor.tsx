@@ -11,7 +11,9 @@
  * made; publishing makes the saved copy what dimmi follows. Teammates
  * who may only read procedures see everything and change nothing. On
  * screens too narrow for both, the side opens in a drawer from the
- * header.
+ * header. A change Operator requests is drawn among the steps, reworded
+ * and removed steps struck through, new ones in green, to accept or
+ * decline from the header.
  */
 
 import {
@@ -40,7 +42,7 @@ import {
 } from "@remixicon/react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
+import { Fragment, useState } from "react";
 import { Panel as Pane } from "react-resizable-panels";
 
 import { Chip } from "@/components/base/badges/chip";
@@ -88,9 +90,10 @@ import { MultiPick, Pick } from "./pick";
 import { ProcedureAnalytics } from "./procedure-analytics";
 import { ProcedureHistory } from "./procedure-history";
 import { ProcedureOperatorPanel } from "./procedure-operator-panel";
+import { type Review, removedStep, useRequestReview } from "./procedure-review";
+import { AddedSteps, RequestButtons, Requested, RequestedText, RequestNote } from "./procedure-review-parts";
 import { ProcedurePreview } from "./procedure-simulator/preview";
 import { ProcedureSimulations } from "./procedure-simulator/simulations";
-import { ProcedureSuggestions } from "./procedure-suggestions";
 import { ConditionBuilder } from "./procedure-writer/condition-builder";
 import { type ChipSources, fieldsOf, labelOf } from "./procedure-writer/procedure-suggestions";
 import { StepWriter } from "./procedure-writer/step-writer";
@@ -160,6 +163,7 @@ interface Context {
   numbers: Map<string, string>;
   readOnly: boolean;
   steps: StepInteractions;
+  review: Review | null;
 }
 
 /*
@@ -202,8 +206,12 @@ function Side({
         <p className="text-body-2-regular text-text-tertiary">No steps: continue to next.</p>
       ) : (
         <ol className="flex flex-col">
+          <AddedSteps review={ctx.review} at={`start:${scope}`} sources={ctx.sources} />
           {steps.map((child) => (
-            <StepCard key={child.id} step={child} scope={scope} depth={depth} ctx={ctx} />
+            <Fragment key={child.id}>
+              <StepCard step={child} scope={scope} depth={depth} ctx={ctx} />
+              <AddedSteps review={ctx.review} at={child.id} sources={ctx.sources} />
+            </Fragment>
           ))}
         </ol>
       )}
@@ -416,6 +424,7 @@ function StepCard({ step, scope, depth, ctx }: { step: ProcedureStep; scope: str
     ctx.steps.dragging !== null &&
     ctx.steps.dragging.id !== step.id &&
     ctx.steps.dragging.scope === scope;
+  const requested = ctx.review?.changes.get(step.id);
 
   return (
     <li
@@ -439,6 +448,7 @@ function StepCard({ step, scope, depth, ctx }: { step: ProcedureStep; scope: str
         "flex items-start gap-2.5 border-b border-separator-border py-2.5 pe-2 transition-opacity last:border-b-0",
         isDragging && "opacity-50",
         isDropTarget && "rounded-xl ring-2 ring-accent-500",
+        requested?.change === "removed" && removedStep,
       )}
     >
       {ctx.readOnly ? null : (
@@ -475,6 +485,7 @@ function StepCard({ step, scope, depth, ctx }: { step: ProcedureStep; scope: str
       </span>
       <div className="flex min-w-0 flex-1 flex-col gap-2">
         <StepWords step={step} number={number} ctx={ctx} />
+        <Requested change={requested} sources={ctx.sources} />
         <LegacyActionPicker step={step} number={number} ctx={ctx} />
         {nests ? (
           <div className="flex flex-col gap-2.5 pt-1">
@@ -601,6 +612,7 @@ function Document({ workspace, draft, ctx }: { workspace: string; draft: Draft; 
             maxRows={6}
             onChange={(description) => draft.change((d) => ({ ...d, description }))}
           />
+          <RequestedText before={definition.description} after={ctx.review?.proposed.description} />
           {general.map((issue) => (
             <p key={issue.message} className="pt-1 text-body-2-regular text-text-error-primary">
               {issue.message}
@@ -616,8 +628,12 @@ function Document({ workspace, draft, ctx }: { workspace: string; draft: Draft; 
           <p className="px-3 py-2.5 text-body-2-regular text-text-secondary">No steps yet. Add the first one below.</p>
         ) : (
           <ol className="flex flex-col">
+            <AddedSteps review={ctx.review} at="start:root" sources={ctx.sources} />
             {definition.steps.map((step) => (
-              <StepCard key={step.id} step={step} scope="root" depth={0} ctx={ctx} />
+              <Fragment key={step.id}>
+                <StepCard step={step} scope="root" depth={0} ctx={ctx} />
+                <AddedSteps review={ctx.review} at={step.id} sources={ctx.sources} />
+              </Fragment>
             ))}
           </ol>
         )}
@@ -1101,6 +1117,7 @@ export function ProcedureEditor({ workspace, procedure }: { workspace: string; p
   const [tab, setTab] = useState<Tabbed>("steps");
   const [sideTab, setSideTab] = useState<SideTab>("preview");
   const stepUI = useStepInteractions(draft);
+  const { request, review, decide } = useRequestReview(workspace, procedure.id, draft.definition, adoptFresh);
 
   const toggle = (id: string) => ease(() => sides.toggle(id));
   const toggleDetails = () => (sideBySide ? toggle(pane.details) : setDetailsDrawer((open) => !open));
@@ -1122,6 +1139,7 @@ export function ProcedureEditor({ workspace, procedure }: { workspace: string; p
     numbers: stepNumbers(draft.definition.steps),
     readOnly,
     steps: stepUI.interactions,
+    review,
   };
 
   const mainPanel = (
@@ -1140,6 +1158,7 @@ export function ProcedureEditor({ workspace, procedure }: { workspace: string; p
           <span className="hidden truncate text-body-2-regular text-text-tertiary sm:inline">{saveLine(draft)}</span>
         </div>
         <div className="flex shrink-0 items-center gap-2">
+          <RequestButtons request={request} readOnly={readOnly} busy={decide.isPending} onDecide={decide.mutate} />
           {readOnly ? null : <Actions draft={draft} workspace={workspace} onTests={openSimulations} />}
           <IconButton
             size="small"
@@ -1169,7 +1188,7 @@ export function ProcedureEditor({ workspace, procedure }: { workspace: string; p
       <ScrollArea>
         {tab === "steps" ? (
           <>
-            <ProcedureSuggestions workspace={workspace} procedure={procedure.id} onApplied={adoptFresh} />
+            <RequestNote request={request} />
             <fieldset disabled={readOnly} className="min-w-0">
               <Document key={draft.generation} workspace={workspace} draft={draft} ctx={ctx} />
             </fieldset>
