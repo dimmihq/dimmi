@@ -92,6 +92,32 @@ func TestAiAgentTransfers(t *testing.T) {
 		require.Len(t, s.runs, 2)
 		outcomes := []string{*s.runs[0].Outcome, *s.runs[1].Outcome}
 		assert.Contains(t, outcomes, "transferred")
+		var counted int64
+		for _, run := range s.runs {
+			if *run.Outcome == "transferred" || *run.Outcome == "answered" {
+				counted += run.CostMicros
+			}
+		}
+		assert.Positive(t, counted)
+		assert.Equal(t, counted, s.conv.AiCostMicros, "the conversation's cost counts the transfer's turn too")
+	})
+
+	t.Run("the inbox lists the conversations moved between agents", func(t *testing.T) {
+		t.Parallel()
+		r := newTransferDesk(t)
+		support := models.PublicID(models.PrefixAiAgent, r.support)
+		r.llm.answer.Script(
+			tools(call("transfer_agent", `{"agent_id":"`+support+`","summary":"Existing customer"}`)),
+			reply("Happy to help with that."),
+		)
+		moved, trigger := r.start("We're customers and need help")
+		r.run(moved, trigger)
+		r.conversation("Just browsing")
+
+		res := r.d.Owner.GetJSON("/api/v1/conversations?filter[view]=all&filter[status]=any&filter[ai]=transferred").
+			AssertOK()
+		res.AssertJSONPath("data.#", 1)
+		res.AssertJSONPath("data.0.id", models.PublicID(models.PrefixConversation, moved))
 	})
 
 	t.Run("the team sees which agent wrote a reply", func(t *testing.T) {

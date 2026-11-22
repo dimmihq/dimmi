@@ -141,8 +141,8 @@ func (r *Runner) transferAgent(_ context.Context, st *run, args json.RawMessage)
 
 /*
 writeTransfer moves the conversation to the other agent: it records
-the agent it left, ends the procedure it followed and leaves the
-timeline entry the team reads.
+the agent it left, counts what the turn cost on the conversation, ends
+the procedure it followed and leaves the timeline entry the team reads.
 */
 func (r *Runner) writeTransfer(ctx context.Context, tx *database.Tx, st *run) error {
 	e, t := st.env, st.transfer
@@ -151,6 +151,11 @@ func (r *Runner) writeTransfer(ctx context.Context, tx *database.Tx, st *run) er
 		WorkspaceID: e.Workspace.ID, ID: e.Conversation.ID, ToAgentID: &t.to.ID, FromAgentID: e.Agent.ID,
 	}); err != nil {
 		return fmt.Errorf("transfer conversation: %w", err)
+	}
+	if err := q.AddConversationAiCost(ctx, models.AddConversationAiCostParams{
+		WorkspaceID: e.Workspace.ID, ID: e.Conversation.ID, CostMicros: st.rec.costMicros, Now: r.Clock.Now(),
+	}); err != nil {
+		return fmt.Errorf("count transfer cost: %w", err)
 	}
 	if err := q.EndProcedureStates(ctx, models.EndProcedureStatesParams{
 		WorkspaceID: e.Workspace.ID, ConversationID: e.Conversation.ID, Status: procedureExited, Now: r.Clock.Now(),

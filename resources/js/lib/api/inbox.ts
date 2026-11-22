@@ -101,7 +101,7 @@ export type AiState = "off" | "active" | "handed_off";
  * AiFilter narrows a list by the agent's part: any conversation it
  * touched, those it still answers, or those it handed over.
  */
-export type AiFilter = "any" | "active" | "handed_off";
+export type AiFilter = "any" | "active" | "handed_off" | "transferred";
 
 /*
  * TimelineEvent is what an event entry says happened: its name, who did

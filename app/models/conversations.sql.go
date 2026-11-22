@@ -13,6 +13,31 @@ import (
 	"github.com/dimmihq/dimmi/framework/ids"
 )
 
+const addConversationAiCost = `-- name: AddConversationAiCost :exec
+UPDATE conversations SET ai_cost_micros = ai_cost_micros + $1, updated_at = $2
+WHERE workspace_id = $3 AND id = $4
+`
+
+type AddConversationAiCostParams struct {
+	CostMicros  int64     `json:"cost_micros"`
+	Now         time.Time `json:"now"`
+	WorkspaceID ids.UUID  `json:"workspace_id"`
+	ID          ids.UUID  `json:"id"`
+}
+
+// AddConversationAiCost adds a run's cost to the agent's spend on the
+// conversation without counting a reply, as a transfer to another agent
+// costs a turn but answers nothing itself.
+func (q *Queries) AddConversationAiCost(ctx context.Context, arg AddConversationAiCostParams) error {
+	_, err := q.db.Exec(ctx, addConversationAiCost,
+		arg.CostMicros,
+		arg.Now,
+		arg.WorkspaceID,
+		arg.ID,
+	)
+	return err
+}
+
 const allocateConversationNumber = `-- name: AllocateConversationNumber :one
 UPDATE workspaces SET next_conversation_number = next_conversation_number + 1
 WHERE id = $1
