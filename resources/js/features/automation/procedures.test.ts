@@ -9,6 +9,7 @@ import {
   withoutStepById,
   withStepChange,
   withStepMoved,
+  withStepReordered,
 } from "./procedures";
 
 const d: ProcedureDefinition = {
@@ -73,6 +74,8 @@ describe("nested procedure steps", () => {
     expect(added.steps[1]?.else_steps).toHaveLength(1);
     expect(withStepChange(branch, "s_4", { text: "Tell them" }).steps[1]?.then_steps?.[1]?.text).toBe("Tell them");
     expect(withStepMoved(branch, "s_4", -1).steps[1]?.then_steps?.map((s) => s.id)).toEqual(["s_4", "s_3"]);
+    expect(withStepReordered(branch, "s_3", "s_4").steps[1]?.then_steps?.map((s) => s.id)).toEqual(["s_4", "s_3"]);
+    expect(withStepReordered(branch, "s_1", "s_3")).toBe(branch);
     expect(withoutStepById(branch, "s_3").steps[1]?.then_steps?.map((s) => s.id)).toEqual(["s_4"]);
   });
 

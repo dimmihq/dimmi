@@ -22304,6 +22304,13 @@
           "procedure_id": {
             "type": "string"
           },
+          "simulated_at": {
+            "format": "date-time",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
           "source_conversation_id": {
             "type": [
               "string",
@@ -22326,6 +22333,7 @@
           "action_mocks",
           "assertions",
           "last_result",
+          "simulated_at",
           "created_at",
           "updated_at"
         ],
@@ -26219,6 +26227,10 @@
       "RunTestCasesRequestBody": {
         "additionalProperties": false,
         "properties": {
+          "stream_id": {
+            "maxLength": 64,
+            "type": "string"
+          },
           "test_case_ids": {
             "items": {
               "type": "string"
@@ -28374,7 +28386,22 @@
       "SimState": {
         "additionalProperties": false,
         "properties": {
+          "branches": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object"
+          },
           "called_action_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "completed_step_ids": {
             "items": {
               "type": "string"
             },
@@ -28405,6 +28432,8 @@
         },
         "required": [
           "called_action_ids",
+          "completed_step_ids",
+          "branches",
           "step_outputs",
           "pending"
         ],
@@ -28413,7 +28442,22 @@
       "SimStateInput": {
         "additionalProperties": false,
         "properties": {
+          "branches": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object"
+          },
           "called_action_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "completed_step_ids": {
             "items": {
               "type": "string"
             },
@@ -28484,6 +28528,10 @@
             "$ref": "#/components/schemas/SimPersonaInput"
           },
           "source_conversation_id": {
+            "type": "string"
+          },
+          "stream_id": {
+            "maxLength": 64,
             "type": "string"
           },
           "target": {
@@ -31309,6 +31357,10 @@
           },
           "persona": {
             "$ref": "#/components/schemas/SimPersonaInput"
+          },
+          "simulated_at": {
+            "format": "date-time",
+            "type": "string"
           },
           "source_conversation_id": {
             "type": "string"

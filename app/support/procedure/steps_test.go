@@ -180,6 +180,57 @@ func TestProcedurePath(t *testing.T) {
 		}
 	}
 
+	t.Run("moves on from a step that takes no action only once dimmi says it is finished", func(t *testing.T) {
+		t.Parallel()
+		talk := procedure.Definition{
+			Description: "The customer wants to cancel.",
+			Steps: []procedure.Step{
+				{ID: "ask", Kind: procedure.KindInstruction, Text: "Ask why."},
+				{ID: "explain", Kind: procedure.KindInstruction, Text: "Explain what canceling does."},
+			},
+			Handover: []string{},
+		}
+		i := in(nil)
+		text := procedure.RenderPlan("Cancel", talk, procedure.Resolve(talk, i), i)
+		assert.Contains(t, text, "1. Ask why. [ACTIVE]")
+		assert.NotContains(t, text, "2. Explain what canceling does. [ACTIVE]")
+
+		i.Done = map[string]bool{"ask": true}
+		text = procedure.RenderPlan("Cancel", talk, procedure.Resolve(talk, i), i)
+		assert.Contains(t, text, "1. Ask why. [DONE]")
+		assert.Contains(t, text, "2. Explain what canceling does. [ACTIVE]")
+	})
+
+	t.Run("leaves the side of a plain-words condition that was not taken", func(t *testing.T) {
+		t.Parallel()
+		choice := procedure.Definition{
+			Description: "The customer wants their money back.",
+			Steps: []procedure.Step{
+				{ID: "ask", Kind: procedure.KindInstruction, Text: "Ask where they want the money."},
+				{
+					ID: "card", Kind: procedure.KindCondition, Text: "They want it on their card",
+					ThenSteps: []procedure.Step{{ID: "amount", Kind: procedure.KindInstruction, Text: "Ask how much."}},
+					ElseSteps: []procedure.Step{{ID: "keep", Kind: procedure.KindInstruction, Text: "Say it stays."}},
+				},
+			},
+			Handover: []string{},
+		}
+		i := in(nil)
+		i.Done = map[string]bool{"ask": true}
+		plan := procedure.Resolve(choice, i)
+		keep, _ := plan.Find("keep")
+		assert.NotEqual(t, procedure.StatusEvaluated, keep.Status, "both sides stay until one is begun")
+
+		i.Done["amount"] = true
+		plan = procedure.Resolve(choice, i)
+		keep, _ = plan.Find("keep")
+		assert.Equal(t, procedure.StatusEvaluated, keep.Status, "the other side is no longer to do")
+		assert.Contains(t, procedure.RenderPlan("Refund", choice, plan, i), "Say it stays. [NOT TAKEN]")
+		for _, n := range plan.Nodes {
+			assert.NotEqual(t, procedure.StatusActive, n.Status, "nothing is left to do")
+		}
+	})
+
 	t.Run("locks a branch until the action it reads has run", func(t *testing.T) {
 		t.Parallel()
 		i := in(nil)
@@ -333,11 +384,16 @@ func TestProcedureAssertions(t *testing.T) {
 		{Type: "llm_rubric", Rubric: "Polite"},
 	}
 	rs := procedure.Assert(as, o, "", nil)
-	for _, r := range rs {
+	for _, r := range rs[:8] {
 		assert.True(t, r.Passed, r.Type+": "+r.Message)
 	}
-	assert.True(t, rs[8].Skipped)
-	assert.True(t, procedure.Passed(rs))
+	assert.False(t, rs[8].Passed, "a check nobody could judge does not pass")
+	assert.False(t, rs[8].Skipped)
+	require.ErrorIs(t, rs[8].Err, procedure.ErrNoJudge)
+	assert.False(t, procedure.Passed(rs))
+
+	judged := procedure.Assert(as, o, "", func(string, string) (bool, string, error) { return true, "Met.", nil })
+	assert.True(t, procedure.Passed(judged))
 
 	fails := procedure.Assert([]procedure.Assertion{
 		{Type: "procedure_matched", Matched: &no},

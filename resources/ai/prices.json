@@ -108,6 +108,14 @@
     {
       "provider": "dimmi",
       "match": "exact",
+      "model": "deepseek-v4-flash",
+      "input_per_mtok": "0.19",
+      "cached_input_per_mtok": "0.012",
+      "output_per_mtok": "0.65"
+    },
+    {
+      "provider": "dimmi",
+      "match": "exact",
       "model": "glm-5.3-flash",
       "input_per_mtok": "0.05",
       "cached_input_per_mtok": "0.03",

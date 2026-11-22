@@ -31,11 +31,13 @@ type UpdateTestCaseRequest struct {
 /*
 RunTestCasesRequest is the input of POST
 /procedures/{procedure}/test-cases/run: the tests to run, every one when
-none is named.
+none is named. StreamID, chosen by the caller, makes the run report each
+turn as it happens on the caller's own realtime channel.
 */
 type RunTestCasesRequest struct {
 	Procedure string `path:"procedure"`
 	Body      *struct {
 		TestCaseIDs []string `json:"test_case_ids,omitempty" maxItems:"20"`
+		StreamID    string   `json:"stream_id,omitempty"     maxLength:"64"`
 	}
 }

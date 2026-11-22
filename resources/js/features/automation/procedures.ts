@@ -106,6 +106,33 @@ export function withStepMoved(d: ProcedureDefinition, id: string, by: -1 | 1): P
   return moved ? { ...d, steps } : d;
 }
 
+/*
+ * withStepReordered moves one step to another sibling's position within
+ * the same list (top-level, then_steps, or else_steps).
+ */
+export function withStepReordered(d: ProcedureDefinition, fromId: string, toId: string): ProcedureDefinition {
+  if (fromId === toId) {
+    return d;
+  }
+  let moved = false;
+  const steps = mapLists(d.steps, (list) => {
+    const from = list.findIndex((step) => step.id === fromId);
+    const to = list.findIndex((step) => step.id === toId);
+    if (from < 0 || to < 0 || from === to) {
+      return list;
+    }
+    const out = [...list];
+    const [step] = out.splice(from, 1);
+    if (step) {
+      out.splice(to, 0, step);
+      moved = true;
+    }
+    return out;
+  });
+
+  return moved ? { ...d, steps } : d;
+}
+
 export function withHandover(d: ProcedureDefinition, index: number, text: string | null): ProcedureDefinition {
   if (text === null) {
     return { ...d, handover: d.handover.filter((_, at) => at !== index) };

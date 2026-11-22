@@ -218,6 +218,7 @@ it.describe("automation", () => {
     await expect(page).toHaveURL(/\/d\/[^/]+\/procedures\/prc_[^/]+$/);
 
     await page.getByRole("button", { name: "Publish", exact: true }).click();
+    await page.getByRole("alertdialog").getByRole("button", { name: "Publish", exact: true }).click();
     await expect(page.getByText("Say when dimmi should use this, in 500 characters.")).toBeVisible();
 
     await page.getByRole("textbox", { name: "When dimmi uses this" }).fill("The customer cannot sign in.");
@@ -225,12 +226,14 @@ it.describe("automation", () => {
     await page.getByRole("textbox", { name: "Instruction 1" }).fill("Ask which email address they sign in with.");
     await page.getByRole("button", { name: "Condition", exact: true }).click();
     await page.getByRole("textbox", { name: "Condition 2" }).fill("If it is a work address, ask them to check spam.");
-    await page.getByRole("button", { name: "Move step 2 up" }).click();
+    await page.getByRole("button", { name: "Drag step 2" }).focus();
+    await page.keyboard.press("ArrowUp");
     await expect(page.getByRole("textbox", { name: "Condition 1" })).toBeVisible();
     await expect(page.getByText("Saved as draft")).toBeVisible();
 
     await page.getByRole("button", { name: "Publish", exact: true }).click();
-    await expect(page.getByRole("button", { name: "Turn off" })).toBeVisible();
+    await page.getByRole("alertdialog").getByRole("button", { name: "Publish", exact: true }).click();
+    await expect(page.getByText("Published", { exact: true })).toBeVisible();
     await page.reload();
     await expect(page.getByRole("textbox", { name: "Condition 1" })).toHaveText(
       "If it is a work address, ask them to check spam.",
@@ -262,13 +265,14 @@ it.describe("automation", () => {
     await expect(page.getByText("Saved as draft")).toBeVisible();
 
     await page.getByRole("button", { name: "Publish", exact: true }).click();
-    await expect(page.getByRole("button", { name: "Turn off" })).toBeVisible();
+    await page.getByRole("alertdialog").getByRole("button", { name: "Publish", exact: true }).click();
+    await expect(page.getByText("Published", { exact: true })).toBeVisible();
     await page.getByRole("tab", { name: "History" }).click();
-    await expect(page.getByText("Version 1 · live")).toBeVisible();
-    await page.getByRole("tab", { name: "Test" }).click();
-    await expect(page.getByRole("textbox", { name: "Customer message" })).toBeVisible();
+    await expect(page.getByText("Version 1", { exact: true })).toBeVisible();
+    await page.getByRole("tab", { name: "Preview" }).click();
+    await expect(page.getByRole("textbox", { name: "Write as the customer" })).toBeVisible();
     await page.getByRole("tab", { name: "Analytics" }).click();
-    await expect(page.getByText("AI resolution rate")).toBeVisible();
+    await expect(page.getByText("Resolved by AI")).toBeVisible();
   });
 });
 

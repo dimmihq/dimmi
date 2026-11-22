@@ -16,6 +16,7 @@ package procedure
 
 import (
 	"encoding/json"
+	"errors"
 	"slices"
 	"strings"
 )
@@ -97,7 +98,14 @@ type AssertionResult struct {
 	Passed  bool   `json:"passed"`
 	Message string `json:"message"`
 	Skipped bool   `json:"skipped,omitempty"`
+	Err     error  `json:"-"`
 }
+
+/*
+ErrNoJudge is the error of a check written as a sentence when nothing
+is set up to judge it.
+*/
+var ErrNoJudge = errors.New("no judge is set up")
 
 /*
 assertionChecks say, by assertion type, what is wrong with one, empty
@@ -155,8 +163,9 @@ func CheckAssertions(as []Assertion) []Issue {
 }
 
 /*
-Assert checks every assertion against what was observed. A rubric with
-no judge is skipped, never failed.
+Assert checks every assertion against what was observed. A rubric that
+could not be judged neither passes nor is skipped: its result fails and
+carries the error, so the run reports it.
 */
 func Assert(as []Assertion, o Observed, transcript string, judge Judge) []AssertionResult {
 	out := make([]AssertionResult, 0, len(as))
@@ -198,9 +207,7 @@ func assertOne(a Assertion, o Observed, transcript string, judge Judge) Assertio
 		ok := first >= 0 && second >= 0 && first < second && o.Calls[first].Succeeded
 		return verdict(ok, a.Action+" succeeded before "+a.Before, a.Action+" did not succeed before "+a.Before)
 	case AssertBranchTaken:
-		got := o.Branches[a.Step]
-		return verdict(got == a.Branch, "step "+a.Step+" took "+a.Branch,
-			"step "+a.Step+" took "+orNone(got)+", not "+a.Branch)
+		return branchTaken(a, o)
 	case AssertHandedOff:
 		return handedOff(a, o)
 	case AssertReplyContains, AssertReplyNotContains:
@@ -238,19 +245,35 @@ func replied(a Assertion, o Observed) AssertionResult {
 }
 
 /*
-rubric asks the judge, skipping when there is none or it fails.
+rubric asks the judge. With none, or when it fails, the check is not
+judged and its result carries the error.
 */
 func rubric(a Assertion, transcript string, judge Judge) AssertionResult {
 	if judge == nil {
-		return AssertionResult{Skipped: true, Passed: true, Message: "No judge model is set up; skipped."}
+		return AssertionResult{Message: "This check could not be judged.", Err: ErrNoJudge}
 	}
 
 	ok, why, err := judge(a.Rubric, transcript)
 	if err != nil {
-		return AssertionResult{Skipped: true, Passed: true, Message: "The judge failed: " + err.Error()}
+		return AssertionResult{Message: "This check could not be judged.", Err: err}
 	}
 
 	return AssertionResult{Passed: ok, Message: why}
+}
+
+/*
+branchTaken checks the side a step took, saying plainly when the chat
+never reached the step or went the other way.
+*/
+func branchTaken(a Assertion, o Observed) AssertionResult {
+	switch got := o.Branches[a.Step]; got {
+	case a.Branch:
+		return AssertionResult{Passed: true, Message: "step " + a.Step + " took " + a.Branch}
+	case "":
+		return AssertionResult{Message: "dimmi never reached this step."}
+	default:
+		return AssertionResult{Message: "It went the other way."}
+	}
 }
 
 /*
@@ -259,15 +282,21 @@ handedOff checks a handover, and its team and priority when named.
 func handedOff(a Assertion, o Observed) AssertionResult {
 	want := a.HandedOff == nil || *a.HandedOff
 	if o.HandedOff != want {
-		return verdict(false, "", "the conversation was handed over: "+boolWord(o.HandedOff))
+		if want {
+			return AssertionResult{Message: "dimmi kept the conversation and never handed it over."}
+		}
+		return AssertionResult{Message: "dimmi handed the conversation over."}
 	}
 
 	if want && a.Team != "" && a.Team != o.Team {
-		return AssertionResult{Message: "handed to " + orNone(o.Team) + ", not " + a.Team}
+		if o.Team == "" {
+			return AssertionResult{Message: "It was handed over, but to no particular team."}
+		}
+		return AssertionResult{Message: "It was handed to a different team."}
 	}
 
 	if want && a.Priority != "" && a.Priority != o.Priority {
-		return AssertionResult{Message: "handed over at " + orNone(o.Priority) + " priority, not " + a.Priority}
+		return AssertionResult{Message: "It was handed over at " + orNone(o.Priority) + " priority."}
 	}
 
 	return AssertionResult{Passed: true, Message: "handed over: " + boolWord(want)}

@@ -199,6 +199,9 @@ export interface SimState {
   procedure_id?: string;
   status?: string;
   called_action_ids: string[];
+  /* The steps dimmi finished, carried from one simulated turn to the next. */
+  completed_step_ids?: string[];
+  branches?: Record<string, string>;
   step_outputs: Record<string, unknown>;
   pending: SimPending[];
 }
@@ -263,6 +266,8 @@ export interface SimulateInput {
   active_state?: SimState;
   confirmed_action_ids?: string[];
   source_conversation_id?: string;
+  /* An id of the caller's choosing: each tool the turn finishes is sent live under it. */
+  stream_id?: string;
 }
 
 export function simulateProcedure(workspace: string, id: string, input: SimulateInput): Promise<Simulation> {
@@ -299,7 +304,17 @@ export interface Assertion {
 export interface TestResult {
   passed: boolean;
   ran_at: string;
-  turns: { message: string; reply: string; outcome: string; calls: ObservedCall[]; run_id: string }[];
+  turns: {
+    message: string;
+    /* The customer pressed Confirm on a card rather than writing. */
+    confirm?: boolean;
+    /* The simulated customer was asked for something the saved chat never gave. */
+    improvised?: boolean;
+    reply: string;
+    outcome: string;
+    calls: ObservedCall[];
+    run_id: string;
+  }[];
   assertion_results: { type: AssertionType; passed: boolean; message: string; skipped?: boolean }[];
   error?: string;
 }
@@ -315,12 +330,14 @@ export interface ProcedureTestCase {
   action_mocks: Record<string, ActionMock>;
   assertions: Assertion[];
   last_result: TestResult | null;
+  /* The moment every run happens at, or null to run at the real time. */
+  simulated_at: string | null;
   created_at: string;
   updated_at: string;
 }
 
 export type TestCaseInput = Partial<
-  Pick<ProcedureTestCase, "name" | "persona" | "messages" | "action_mocks" | "assertions">
+  Pick<ProcedureTestCase, "name" | "persona" | "messages" | "action_mocks" | "assertions" | "simulated_at">
 > & { source_conversation_id?: string };
 
 export function testCasesQuery(workspace: string, id: string) {
@@ -349,10 +366,15 @@ export function deleteTestCase(workspace: string, id: string, test: string): Pro
   return request<unknown>("DELETE", `${path(id)}/test-cases/${encodeURIComponent(test)}`, undefined, { workspace });
 }
 
-export function runTestCases(workspace: string, id: string, tests?: string[]): Promise<ProcedureTestCase[]> {
-  return request<ProcedureTestCase[]>("POST", `${path(id)}/test-cases/run`, tests ? { test_case_ids: tests } : {}, {
-    workspace,
-  });
+export function runTestCases(
+  workspace: string,
+  id: string,
+  tests?: string[],
+  stream?: string,
+): Promise<ProcedureTestCase[]> {
+  const body = { ...(tests ? { test_case_ids: tests } : {}), ...(stream ? { stream_id: stream } : {}) };
+
+  return request<ProcedureTestCase[]>("POST", `${path(id)}/test-cases/run`, body, { workspace });
 }
 
 /*

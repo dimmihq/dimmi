@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"slices"
 	"strings"
+	"time"
 	"unicode/utf8"
 
 	"github.com/dimmihq/dimmi/framework/database"
@@ -66,6 +67,16 @@ type Simulator interface {
 }
 
 /*
+Customer plays the customer of a saved simulation when it runs.
+*/
+type Customer interface {
+	/*
+		PlayCustomer returns the customer's next move.
+	*/
+	PlayCustomer(ctx context.Context, in pipeline.CustomerTurn) (pipeline.CustomerMove, error)
+}
+
+/*
 Vectors embeds a procedure's description.
 */
 type Vectors interface {
@@ -103,6 +114,8 @@ type SimulateInput struct {
 	State              *pipeline.SimState
 	Confirmed          []string
 	SourceConversation *ids.UUID
+	StreamID           string
+	Now                *time.Time
 }
 
 /*
@@ -140,6 +153,7 @@ func (p *Procedures) simulation(ctx context.Context, in SimulateInput) (pipeline
 	out := pipeline.SimulationInput{
 		WorkspaceID: m.Workspace.ID, MemberID: m.Member.ID, ProcedureID: in.ID, History: in.History,
 		Message: in.Message, Persona: in.Persona, Mocks: in.Mocks, State: in.State, Confirmed: in.Confirmed,
+		StreamID: in.StreamID, Now: in.Now,
 	}
 	err := p.DB.Transaction(ctx, func(ctx context.Context, tx *database.Tx) error {
 		q := models.New(tx)

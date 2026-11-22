@@ -41,6 +41,7 @@ func TestAiProcedureSimulator(t *testing.T) {
 		mocks := testkit.JSON{
 			r.lookup: testkit.JSON{"status": 200, "body": testkit.JSON{"status": "delivered", "eta": "Monday"}},
 		}
+		r.llm.judge(map[string]bool{"asks": true})
 		r.llm.answer.Script(
 			tools(call("follow_procedure", r.follow())),
 			tools(call("get_order", `{"order_id":"1042"}`)),

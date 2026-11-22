@@ -94,6 +94,9 @@ func MockCall(in MockInput) MockReply {
 	}
 
 	out := mockOutcome(s, in.Mock)
+	if in.Mock != nil && in.Mock.Shaped && out.Succeeded {
+		out.Result = echo(out.Result, input)
+	}
 	call.State = "failed"
 	if out.Succeeded {
 		call.State = "succeeded"
@@ -102,6 +105,33 @@ func MockCall(in MockInput) MockReply {
 		CallReply: CallReply{Text: wrap(s, call, out.Result), Call: &call, Succeeded: out.Succeeded},
 		Input:     input, Result: out.Result,
 	}
+}
+
+/*
+echo writes the arguments of a call over the fields of a recorded
+result that carry the same names, so a result kept from an earlier test
+answers for what was asked this time: changing to the Starter plan does
+not come back as the plan the last test picked.
+*/
+func echo(result json.RawMessage, input map[string]any) json.RawMessage {
+	var fields map[string]any
+	if json.Unmarshal(result, &fields) != nil {
+		return result
+	}
+	changed := false
+	for name, value := range input {
+		if _, ok := fields[name]; ok {
+			fields[name], changed = value, true
+		}
+	}
+	if !changed {
+		return result
+	}
+	out, err := json.Marshal(fields)
+	if err != nil {
+		return result
+	}
+	return out
 }
 
 /*

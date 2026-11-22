@@ -37,7 +37,7 @@ func (q *Queries) EndProcedureStates(ctx context.Context, arg EndProcedureStates
 }
 
 const findActiveProcedureState = `-- name: FindActiveProcedureState :one
-SELECT id, workspace_id, conversation_id, procedure_id, procedure_version_id, status, completed_step_ids, called_action_ids, step_outputs, started_run_id, last_run_id, started_at, updated_at, ended_at FROM conversation_procedure_states
+SELECT id, workspace_id, conversation_id, procedure_id, procedure_version_id, status, completed_step_ids, called_action_ids, step_outputs, started_run_id, last_run_id, started_at, updated_at, ended_at, branches FROM conversation_procedure_states
 WHERE workspace_id = $1 AND conversation_id = $2 AND status = 'active'
 `
 
@@ -66,6 +66,7 @@ func (q *Queries) FindActiveProcedureState(ctx context.Context, arg FindActivePr
 		&i.StartedAt,
 		&i.UpdatedAt,
 		&i.EndedAt,
+		&i.Branches,
 	)
 	return i, err
 }
@@ -96,12 +97,12 @@ func (q *Queries) MemberRepliedSince(ctx context.Context, arg MemberRepliedSince
 const startProcedureState = `-- name: StartProcedureState :one
 INSERT INTO conversation_procedure_states (
     workspace_id, conversation_id, procedure_id, procedure_version_id, status, completed_step_ids,
-    called_action_ids, step_outputs, started_run_id, last_run_id, started_at, updated_at, ended_at
+    called_action_ids, step_outputs, branches, started_run_id, last_run_id, started_at, updated_at, ended_at
 ) VALUES (
     $1, $2, $3, $4, $5, $6,
-    $7, $8, $9, $9, $10, $10, $11
+    $7, $8, $9, $10, $10, $11, $11, $12
 )
-RETURNING id, workspace_id, conversation_id, procedure_id, procedure_version_id, status, completed_step_ids, called_action_ids, step_outputs, started_run_id, last_run_id, started_at, updated_at, ended_at
+RETURNING id, workspace_id, conversation_id, procedure_id, procedure_version_id, status, completed_step_ids, called_action_ids, step_outputs, started_run_id, last_run_id, started_at, updated_at, ended_at, branches
 `
 
 type StartProcedureStateParams struct {
@@ -113,6 +114,7 @@ type StartProcedureStateParams struct {
 	CompletedStepIds   []string        `json:"completed_step_ids"`
 	CalledActionIds    []string        `json:"called_action_ids"`
 	StepOutputs        json.RawMessage `json:"step_outputs"`
+	Branches           json.RawMessage `json:"branches"`
 	RunID              *ids.UUID       `json:"run_id"`
 	Now                time.Time       `json:"now"`
 	EndedAt            *time.Time      `json:"ended_at"`
@@ -130,6 +132,7 @@ func (q *Queries) StartProcedureState(ctx context.Context, arg StartProcedureSta
 		arg.CompletedStepIds,
 		arg.CalledActionIds,
 		arg.StepOutputs,
+		arg.Branches,
 		arg.RunID,
 		arg.Now,
 		arg.EndedAt,
@@ -150,6 +153,7 @@ func (q *Queries) StartProcedureState(ctx context.Context, arg StartProcedureSta
 		&i.StartedAt,
 		&i.UpdatedAt,
 		&i.EndedAt,
+		&i.Branches,
 	)
 	return i, err
 }
@@ -157,9 +161,10 @@ func (q *Queries) StartProcedureState(ctx context.Context, arg StartProcedureSta
 const updateProcedureState = `-- name: UpdateProcedureState :one
 UPDATE conversation_procedure_states SET
     status = $1, completed_step_ids = $2, called_action_ids = $3,
-    step_outputs = $4, last_run_id = $5, updated_at = $6, ended_at = $7
-WHERE workspace_id = $8 AND id = $9
-RETURNING id, workspace_id, conversation_id, procedure_id, procedure_version_id, status, completed_step_ids, called_action_ids, step_outputs, started_run_id, last_run_id, started_at, updated_at, ended_at
+    step_outputs = $4, branches = $5, last_run_id = $6, updated_at = $7,
+    ended_at = $8
+WHERE workspace_id = $9 AND id = $10
+RETURNING id, workspace_id, conversation_id, procedure_id, procedure_version_id, status, completed_step_ids, called_action_ids, step_outputs, started_run_id, last_run_id, started_at, updated_at, ended_at, branches
 `
 
 type UpdateProcedureStateParams struct {
@@ -167,6 +172,7 @@ type UpdateProcedureStateParams struct {
 	CompletedStepIds []string        `json:"completed_step_ids"`
 	CalledActionIds  []string        `json:"called_action_ids"`
 	StepOutputs      json.RawMessage `json:"step_outputs"`
+	Branches         json.RawMessage `json:"branches"`
 	RunID            *ids.UUID       `json:"run_id"`
 	Now              time.Time       `json:"now"`
 	EndedAt          *time.Time      `json:"ended_at"`
@@ -182,6 +188,7 @@ func (q *Queries) UpdateProcedureState(ctx context.Context, arg UpdateProcedureS
 		arg.CompletedStepIds,
 		arg.CalledActionIds,
 		arg.StepOutputs,
+		arg.Branches,
 		arg.RunID,
 		arg.Now,
 		arg.EndedAt,
@@ -204,6 +211,7 @@ func (q *Queries) UpdateProcedureState(ctx context.Context, arg UpdateProcedureS
 		&i.StartedAt,
 		&i.UpdatedAt,
 		&i.EndedAt,
+		&i.Branches,
 	)
 	return i, err
 }

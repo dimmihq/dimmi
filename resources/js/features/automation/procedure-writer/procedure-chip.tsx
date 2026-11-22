@@ -16,6 +16,7 @@ import {
   RiUserLine,
 } from "@remixicon/react";
 import { type NodeViewProps, NodeViewWrapper } from "@tiptap/react";
+import { useContext } from "react";
 
 import { Popover, PopoverHeader, PopoverTrigger } from "@/components/base/popover/popover";
 import { SegmentedControl, SegmentedControlItem } from "@/components/base/segmented-control/segmented-control";
@@ -23,7 +24,8 @@ import type { BindingKind } from "@/lib/api/procedures";
 import { cx } from "@/utils/cx";
 
 import { Picks } from "../pick";
-import type { ChipOptions } from "./procedure-token";
+import { labelOf } from "./procedure-suggestions";
+import { ChipContext, type ChipOptions } from "./procedure-token";
 
 const icons: Record<BindingKind, typeof RiFlashlightLine> = {
   action: RiFlashlightLine,
@@ -80,9 +82,14 @@ function Choice({
 }
 
 export function ProcedureChip({ node, editor, extension, selected }: NodeViewProps) {
+  const live = useContext(ChipContext);
   const options = extension.options as ChipOptions;
   const chip = { kind: node.attrs.kind as BindingKind, ref: String(node.attrs.ref) };
-  const label = options.label(chip) || String(node.attrs.label) || chip.ref;
+  const binding = live
+    ? live.step.bindings?.find((b) => b.kind === chip.kind && b.ref === chip.ref)
+    : options.binding(chip);
+  const resolved = live ? labelOf(live.sources, chip) : options.label(chip);
+  const label = resolved || binding?.label || String(node.attrs.label) || chip.ref;
   const Icon = icons[chip.kind] ?? RiFlashlightLine;
   const pill = cx(
     "mx-px inline-flex items-center gap-0.5 rounded-md px-1 align-baseline outline-none",
@@ -104,8 +111,8 @@ export function ProcedureChip({ node, editor, extension, selected }: NodeViewPro
     );
   }
 
-  const binding = options.binding(chip);
-  const earlier = options.earlier().filter(([id]) => id !== chip.ref);
+  const earlier = (live ? live.earlier : options.earlier()).filter(([id]) => id !== chip.ref);
+  const requires = live ? (live.step.enforcement?.requires ?? []) : options.requires();
 
   return (
     <NodeViewWrapper as="span" data-chip={chip.kind} className="inline">
@@ -134,7 +141,7 @@ export function ProcedureChip({ node, editor, extension, selected }: NodeViewPro
             <span className="text-body-2-medium text-text-secondary">Run only after</span>
             <Picks
               choices={earlier}
-              value={options.requires()}
+              value={requires}
               empty="No earlier actions in this procedure."
               onChange={options.onRequires}
             />

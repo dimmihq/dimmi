@@ -81,7 +81,7 @@ func TestConversationMemory(t *testing.T) {
 		assert.Equal(t, 1, m.Folds)
 
 		s := h.load(conv, res.RunID)
-		assert.Equal(t, []string{"generate", "tool_call", "generate", "summarize"}, s.stepKinds())
+		assert.Equal(t, []string{"generate", "tool_call", "generate", "verify", "summarize"}, s.stepKinds())
 		var stepsCost int64
 		for _, st := range s.steps {
 			stepsCost += st.CostMicros

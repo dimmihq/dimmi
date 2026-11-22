@@ -55,7 +55,8 @@ func (r *Runner) procedureTrace(st *run) json.RawMessage {
 
 /*
 traceStep is one step of the trace: its status, the side code decided
-or what it waits for, and the actions it called.
+or the conversation settled, or what it waits for, and the actions it
+called.
 */
 func traceStep(n procedure.Node, in procedure.Input, p *procRun) map[string]any {
 	step := map[string]any{"step_id": n.ID, "kind": n.Step.Kind, "status": n.Status}
@@ -66,6 +67,9 @@ func traceStep(n procedure.Node, in procedure.Input, p *procRun) map[string]any 
 		} else {
 			step["branch_taken"] = n.Branch
 		}
+	}
+	if side := p.sides[n.ID]; side != "" {
+		step["branch_taken"] = side
 	}
 	var called []string
 	for _, b := range n.Step.Actions() {
@@ -129,6 +133,7 @@ func (r *Runner) writeProcedureState(ctx context.Context, q *models.Queries, st 
 		}
 	}
 	outputs, _ := json.Marshal(p.outputs)
+	branches, _ := json.Marshal(cmpSides(p.sides))
 	called := p.called
 	if called == nil {
 		called = []string{}
@@ -141,7 +146,8 @@ func (r *Runner) writeProcedureState(ctx context.Context, q *models.Queries, st 
 	if p.stateID != nil {
 		_, err := q.UpdateProcedureState(ctx, models.UpdateProcedureStateParams{
 			Status: p.status, CompletedStepIds: completed, CalledActionIds: called, StepOutputs: outputs,
-			RunID: &runID, Now: now, EndedAt: ended, WorkspaceID: e.Workspace.ID, ID: *p.stateID,
+			Branches: branches,
+			RunID:    &runID, Now: now, EndedAt: ended, WorkspaceID: e.Workspace.ID, ID: *p.stateID,
 		})
 		if err != nil {
 			return fmt.Errorf("update procedure state: %w", err)
@@ -151,7 +157,7 @@ func (r *Runner) writeProcedureState(ctx context.Context, q *models.Queries, st 
 	row, err := q.StartProcedureState(ctx, models.StartProcedureStateParams{
 		WorkspaceID: e.Workspace.ID, ConversationID: e.Conversation.ID, ProcedureID: p.live.row.ID,
 		ProcedureVersionID: p.live.row.LiveVersionID, Status: p.status, CompletedStepIds: completed,
-		CalledActionIds: called, StepOutputs: outputs, RunID: &runID, Now: now, EndedAt: ended,
+		CalledActionIds: called, StepOutputs: outputs, Branches: branches, RunID: &runID, Now: now, EndedAt: ended,
 	})
 	if err != nil {
 		return fmt.Errorf("start procedure state: %w", err)
@@ -229,4 +235,15 @@ func loadActiveProcedure(ctx context.Context, q *models.Queries, e *env) error {
 	}
 	e.ActiveProcedure = &activeProcedure{state: state, proc: e.AllProcedures[i]}
 	return nil
+}
+
+/*
+cmpSides returns the sides taken, never nil, so they are stored as an
+object.
+*/
+func cmpSides(sides map[string]string) map[string]string {
+	if sides == nil {
+		return map[string]string{}
+	}
+	return sides
 }

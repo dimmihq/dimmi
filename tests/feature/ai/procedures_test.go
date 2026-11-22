@@ -29,6 +29,20 @@ func (h *harness) liveProcedure(name string, def testkit.JSON) string {
 }
 
 /*
+fitChecks are the calls that asked the decision model which procedure
+fits, without the calls that judge a procedure's steps.
+*/
+func fitChecks(d *decisionfake.Decider) []contracts.DecisionRequest {
+	var out []contracts.DecisionRequest
+	for _, req := range d.Sent() {
+		if strings.Contains(req.State, "The team wrote procedures for a few kinds of request") {
+			out = append(out, req)
+		}
+	}
+	return out
+}
+
+/*
 decider gives the agent a scripted decision model and returns it.
 */
 func (h *harness) decider() *decisionfake.Decider {
@@ -160,9 +174,9 @@ func TestAiProcedureCheck(t *testing.T) {
 		conv, trigger := h.conversation("I can't sign in to my account")
 		res := h.run(conv, trigger)
 
-		require.Len(t, d.Sent(), 1)
-		assert.Contains(t, d.Sent()[0].State, "CUSTOMER: I can't sign in to my account")
-		assert.Equal(t, "The customer cannot sign in.", d.Sent()[0].Questions[id].True)
+		require.Len(t, fitChecks(d), 1)
+		assert.Contains(t, fitChecks(d)[0].State, "CUSTOMER: I can't sign in to my account")
+		assert.Equal(t, "The customer cannot sign in.", fitChecks(d)[0].Questions[id].True)
 		assert.Contains(t, sentText(h.llm.answer), "1. Ask which email address they sign in with.")
 		s := h.load(conv, res.RunID)
 		assert.True(t, followedProcedure(s.run.Flags))
@@ -189,7 +203,7 @@ func TestAiProcedureCheck(t *testing.T) {
 
 		assert.Contains(t, sentText(h.llm.answer), "1. Ask what made them decide to leave.",
 			"asking again gets the steps")
-		assert.Len(t, d.Sent(), 1, "and is not checked a second time")
+		assert.Len(t, fitChecks(d), 1, "and is not checked a second time")
 		assert.True(t, followedProcedure(h.load(conv, res.RunID).run.Flags))
 	})
 
@@ -250,7 +264,7 @@ func TestAiProcedureCheck(t *testing.T) {
 		conv, trigger := h.conversation("I can't sign in, and I want to cancel")
 		res := h.run(conv, trigger)
 
-		assert.Len(t, d.Sent(), 1)
+		assert.Len(t, fitChecks(d), 1)
 		assert.Len(t, h.load(conv, res.RunID).run.Flags, 2)
 	})
 
@@ -268,7 +282,7 @@ func TestAiProcedureCheck(t *testing.T) {
 		h.run(conv, trigger)
 		res := h.run(conv, h.add(conv, "contact", "message", "ok"))
 
-		assert.Len(t, d.Sent(), 1, "a short follow-up does not put the procedure in question")
+		assert.Len(t, fitChecks(d), 1, "a short follow-up does not put the procedure in question")
 		assert.True(t, followedProcedure(h.load(conv, res.RunID).run.Flags))
 	})
 

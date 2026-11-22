@@ -63,6 +63,8 @@ type Procedures struct {
 	Simulator Simulator
 	Vectors   Vectors
 	Judge     Judge
+	Live      Live
+	Customer  Customer
 }
 
 /*

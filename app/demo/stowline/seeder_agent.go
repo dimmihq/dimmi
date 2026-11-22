@@ -9,13 +9,16 @@
 | a monthly spend cap. It can call Stowline's own API through five
 | actions, three reads and two writes that need the customer's or a
 | teammate's agreement, and it follows three procedures for the
-| requests the team handles the same way every time. Its knowledge is
+| requests the team handles the same way every time, each published
+| three times as the team improved it. Its knowledge is
 | the help center. The agent is switched on only when the install has
 | a model to give it; otherwise it is saved switched off, ready.
 |
 | Past runs are written for every planned AI reply, with the steps and
 | token counts a real run of that size leaves and the cost the price
-| table gives them, so the usage pages read like a year of real use.
+| table gives them, so the usage pages read like a year of real use. A
+| run of a conversation on a procedure's topic followed that procedure:
+| it carries the trace of the steps it reached and the actions it called.
 |
 */
 
@@ -32,7 +35,6 @@ import (
 
 	"github.com/dimmihq/dimmi/app/actions/agentactions"
 	"github.com/dimmihq/dimmi/app/actions/ai"
-	"github.com/dimmihq/dimmi/app/actions/procedures"
 	"github.com/dimmihq/dimmi/app/actions/workflows"
 	"github.com/dimmihq/dimmi/app/enums"
 	"github.com/dimmihq/dimmi/app/models"
@@ -90,7 +92,8 @@ func (r *run) configureAgent(ctx context.Context) error {
 
 /*
 connectActions connects Stowline's API and publishes the agent's
-actions, returning their public ids by name.
+actions, each with the answer of its last test, returning their public
+ids by name.
 */
 func (r *run) connectActions(ctx context.Context) (map[string]string, error) {
 	a := r.s.App
@@ -112,32 +115,16 @@ func (r *run) connectActions(ctx context.Context) (map[string]string, error) {
 			return nil, fmt.Errorf("publish action %s: %w", *def.Name, err)
 		}
 		published[*def.Name] = models.PublicID(models.PrefixAiAction, made.Action.ID)
+		if sample, ok := TestResponses()[*def.Name]; ok {
+			body, _ := json.Marshal(sample)
+			if err := models.New(a.DB).SetActionLastTestResponse(ctx, models.SetActionLastTestResponseParams{
+				Response: body, WorkspaceID: r.ws.ID, ID: made.Action.ID,
+			}); err != nil {
+				return nil, fmt.Errorf("keep test response of %s: %w", *def.Name, err)
+			}
+		}
 	}
 	return published, nil
-}
-
-/*
-publishProcedures saves and publishes the team's procedures.
-*/
-func (r *run) publishProcedures(ctx context.Context, published map[string]string) error {
-	a := r.s.App
-	for _, p := range Procedures(published) {
-		made, err := a.Actions.Procedures.Create(ctx, r.owner, p.Name)
-		if err != nil {
-			return fmt.Errorf("create procedure %s: %w", p.Name, err)
-		}
-		def, _ := json.Marshal(p.Definition)
-		saved, err := a.Actions.Procedures.Save(ctx, procedures.SaveInput{
-			Membership: r.owner, ID: made.ID, LockVersion: made.LockVersion, Definition: def,
-		})
-		if err != nil {
-			return fmt.Errorf("save procedure %s: %w", p.Name, err)
-		}
-		if _, err := a.Actions.Procedures.Publish(ctx, r.owner, saved.ID); err != nil {
-			return fmt.Errorf("publish procedure %s: %w", p.Name, err)
-		}
-	}
-	return nil
 }
 
 /*
@@ -209,6 +196,9 @@ func (r *run) aiRuns(ctx context.Context) error {
 	if a.AI != nil {
 		h.prices = a.AI.Prices
 	}
+	if h.actions, err = r.publishedActions(ctx); err != nil {
+		return err
+	}
 	for _, c := range r.plan.Conversations {
 		if c.AI != "" {
 			h.conversation(c)
@@ -228,6 +218,8 @@ type history struct {
 	rnd      *Random
 	runs     [][]any
 	steps    [][]any
+	calls    [][]any
+	actions  map[string]publishedAction
 	answered map[ids.UUID]int64
 }
 
@@ -246,6 +238,7 @@ answering the customer message before it.
 */
 func (h *history) conversation(c Conversation) {
 	var trigger ids.UUID
+	follow := h.follow(c)
 	for k, m := range c.Messages {
 		id := stableID(m.At, fmt.Sprintf("%s/%d", c.ID, k))
 		switch m.Author {
@@ -253,18 +246,20 @@ func (h *history) conversation(c Conversation) {
 			trigger = id
 		case "agent":
 			last := k == len(c.Messages)-1 || c.Messages[k+1].Author != "contact" || k > 1
-			h.reply(c, k, reply{trigger: trigger, answer: id, handoff: c.AI == "handed_off" && last})
+			h.reply(c, k, reply{trigger: trigger, answer: id, handoff: c.AI == "handed_off" && last, follow: follow})
 		}
 	}
 }
 
 /*
 reply is one agent message: the customer message it answered, its own
-id, and whether it handed the conversation over.
+id, whether it handed the conversation over, and the procedure the
+conversation follows, if any.
 */
 type reply struct {
 	trigger, answer ids.UUID
 	handoff         bool
+	follow          *following
 }
 
 /*
@@ -312,7 +307,7 @@ func (h *history) reply(c Conversation, k int, rp reply) {
 		c.Channel, "completed", outcome, reason, c.Language, c.Subject,
 		jsonOf([]map[string]any{{"title": c.Article, "score": 0.62 + h.rnd.Float64()*0.3}}), rp.answer,
 		fresh, cached, output, total, 2400 + h.rnd.IntN(5000), 600 + h.rnd.IntN(900), started, m.At, started, m.At,
-		feedback,
+		feedback, rp.follow.flags(), h.trace(c, run, started, rp),
 	})
 }
 
@@ -339,7 +334,11 @@ answers' cost to it and sums the months' spend.
 */
 func (h *history) write(ctx context.Context) error {
 	return h.run.s.App.DB.Transaction(ctx, func(ctx context.Context, tx *database.Tx) error {
-		for _, set := range []rowSet{{"ai_runs", runColumns(), h.runs}, {"ai_run_steps", stepColumns(), h.steps}} {
+		for _, set := range []rowSet{
+			{"ai_runs", runColumns(), h.runs},
+			{"ai_run_steps", stepColumns(), h.steps},
+			{"ai_action_calls", callColumns(), h.calls},
+		} {
 			if err := insertMany(ctx, tx, set); err != nil {
 				return err
 			}
@@ -395,7 +394,8 @@ func runColumns() []string {
 		"id", "workspace_id", "agent_id", "kind", "conversation_id", "trigger_message_id", "actor_type", "actor_id",
 		"channel_type", "status", "outcome", "handoff_reason", "language", "query_original", "retrieval",
 		"answer_message_id", "input_tokens", "cached_input_tokens", "output_tokens", "cost_micros", "latency_ms",
-		"first_token_ms", "started_at", "completed_at", "created_at", "updated_at", "feedback",
+		"first_token_ms", "started_at", "completed_at", "created_at", "updated_at", "feedback", "flags",
+		"procedure_trace",
 	}
 }
 

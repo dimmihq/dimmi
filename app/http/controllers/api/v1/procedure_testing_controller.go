@@ -64,6 +64,7 @@ func (c *ProcedureController) Simulate(ctx context.Context, in *requests.Simulat
 	sim := procedures.SimulateInput{
 		Membership: membership(ctx), ID: id, Target: b.Target, Message: b.Message, Confirmed: b.Confirmed,
 		Persona: persona(b.Persona), Mocks: mocks(b.ActionMocks), State: simState(b.ActiveState),
+		StreamID: b.StreamID,
 	}
 	for _, h := range b.History {
 		sim.History = append(sim.History, pipeline.SimMessage{From: h.Role, Text: h.Text})
@@ -181,18 +182,19 @@ func (c *ProcedureController) RunTestCases(ctx context.Context, in *requests.Run
 		return nil, err
 	}
 
-	var only []ids.UUID
+	var run procedures.TestRun
 	if in.Body != nil {
+		run.StreamID = in.Body.StreamID
 		for _, public := range in.Body.TestCaseIDs {
 			test, err := c.IDs.Decode(string(models.PrefixProcedureTest), public)
 			if err != nil {
 				return nil, procedures.ErrTestCaseNotFound
 			}
-			only = append(only, test)
+			run.Only = append(run.Only, test)
 		}
 	}
 
-	rows, err := c.Procedures.RunTestCases(ctx, membership(ctx), id, only)
+	rows, err := c.Procedures.RunTestCases(ctx, membership(ctx), id, run)
 	if err != nil {
 		return nil, err
 	}
@@ -204,7 +206,7 @@ func (c *ProcedureController) RunTestCases(ctx context.Context, in *requests.Run
 testCaseInput reads a saved test's fields.
 */
 func (c *ProcedureController) testCaseInput(b requests.TestCaseBody) (procedures.TestCaseInput, error) {
-	out := procedures.TestCaseInput{Name: b.Name, Mocks: mocks(b.ActionMocks)}
+	out := procedures.TestCaseInput{Name: b.Name, Mocks: mocks(b.ActionMocks), SimulatedAt: b.SimulatedAt}
 	if b.Persona != nil {
 		p := persona(b.Persona)
 		out.Persona = &p
@@ -294,7 +296,8 @@ func simState(in *requests.SimStateInput) *pipeline.SimState {
 	}
 
 	out := &pipeline.SimState{
-		ProcedureID: in.ProcedureID, Status: in.Status, Called: in.CalledActionIDs, Outputs: in.StepOutputs,
+		ProcedureID: in.ProcedureID, Status: in.Status, Called: in.CalledActionIDs, Completed: in.CompletedSteps,
+		Outputs: in.StepOutputs, Branches: in.Branches,
 	}
 	for _, p := range in.Pending {
 		out.Pending = append(out.Pending, pipeline.SimPending{

@@ -227,6 +227,8 @@ func mark(n Node, plan Plan, in Input) string {
 		return " [DONE]"
 	case StatusActive:
 		return " [ACTIVE]"
+	case StatusEvaluated:
+		return " [NOT TAKEN]"
 	}
 
 	return ""

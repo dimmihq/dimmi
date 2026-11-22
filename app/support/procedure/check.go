@@ -300,7 +300,7 @@ func checkCondition(step string, c ConditionExpr) []Issue {
 					Message: "A rule compares in a way dimmi does not know.",
 				},
 			)
-		case r.Value == nil && r.Operator != OpExists && r.Operator != OpNotExists:
+		case blank(r.Value) && r.Operator != OpExists && r.Operator != OpNotExists:
 			out = append(
 				out,
 				Issue{Code: "missing_setting", StepID: step, Field: "condition", Message: "Give every rule a value."},
@@ -378,5 +378,22 @@ func hasActionChip(s Step) bool {
 		}
 	}
 
+	return false
+}
+
+/*
+blank reports whether a rule's value is missing: none at all, empty
+text, or an empty list. A rule that compares with nothing never holds,
+so it is never what the team meant; is set and is not set say that.
+*/
+func blank(v any) bool {
+	switch x := v.(type) {
+	case nil:
+		return true
+	case string:
+		return strings.TrimSpace(x) == ""
+	case []any:
+		return len(x) == 0
+	}
 	return false
 }

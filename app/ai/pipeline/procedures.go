@@ -166,9 +166,9 @@ func (r *Runner) followProcedure(ctx context.Context, st *run, args json.RawMess
 			if len(st.proc.articles) > 0 {
 				body["articles"] = strings.Join(st.proc.articles, "\n")
 			}
-			body["note"] = strings.TrimSpace(body["note"] + " Follow these steps now. Tools marked required " +
-				"are checked before your reply is sent. Call " + toolProcedureStatus + " when every step is done " +
-				"or the customer moves on.")
+			body["note"] = strings.TrimSpace(body["note"] + " Follow these steps now. " + stepByStep +
+				" Tools marked required are checked before your reply is sent. Call " + toolProcedureStatus +
+				" with completed when every step is done, or exited_topic_changed when the customer moves on.")
 		}
 		out, err := json.Marshal(body)
 
@@ -282,24 +282,10 @@ func (r *Runner) procedureFits(ctx context.Context, st *run) map[string]float64 
 		}
 	}
 
-	started := r.Clock.Now()
-	res, err := r.Decider.Decide(ctx, req)
-	rec := stepRecord{
-		kind: enums.AIRunStepKindVerify, provider: "typesafe", started: started, request: req.State, err: err,
-	}
 	fits := map[string]float64{}
-	if err == nil && res != nil {
-		for id, a := range res.Answers {
-			fits[id] = a.Noul
-		}
-		answers, _ := json.Marshal(fits)
-		cost := int64(float64(res.Usage.InputTokens) * r.DecisionPrice)
-		rec.model, rec.response, rec.cost = res.Model, string(answers), &cost
-		rec.usage = contracts.LLMUsage{
-			InputTokens: res.Usage.InputTokens, OutputTokens: res.Usage.OutputTokens, Reported: true,
-		}
+	for id, a := range r.decide(ctx, st, req) {
+		fits[id] = a.Noul
 	}
-	r.step(ctx, st, rec)
 
 	return fits
 }
@@ -309,14 +295,22 @@ procedureState is what the decision model reads: the conversation's
 latest messages, the customer's newest last.
 */
 func (r *Runner) procedureState(e *env) string {
+	return "A support conversation. The team wrote procedures for a few kinds of request. Judge what the " +
+		"customer is asking for now, in their latest message, read in the light of the conversation.\n" +
+		r.conversationLines(e)
+}
+
+/*
+conversationLines is the conversation's latest messages as the decision
+model reads them, one line each, the customer's newest last.
+*/
+func (r *Runner) conversationLines(e *env) string {
 	all := append(append([]models.Message{}, e.History...), e.Pending...)
 	if len(all) > procedureTurns {
 		all = all[len(all)-procedureTurns:]
 	}
 
 	var b strings.Builder
-	b.WriteString("A support conversation. The team wrote procedures for a few kinds of request. Judge what the " +
-		"customer is asking for now, in their latest message, read in the light of the conversation.\n")
 	for _, m := range all {
 		text := body(m)
 		if text == "" {

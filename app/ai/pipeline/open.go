@@ -50,6 +50,7 @@ type run struct {
 	settings       *TurnSettings
 	gate           *decision
 	loop           *loop
+	reply          *replyCheck
 	sources        []source
 	flags          []string
 	query          string

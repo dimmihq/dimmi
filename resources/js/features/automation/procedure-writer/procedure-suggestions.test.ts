@@ -48,7 +48,11 @@ describe("procedure chip suggestions", () => {
   });
 
   it("offers the fields earlier actions returned to rules", () => {
-    const fields = fieldsOf(sources).map((f) => f.field);
+    const typed = fieldsOf(sources);
+    expect(typed.find((f) => f.field === "conversation.verified")?.type).toBe("boolean");
+    expect(typed.find((f) => f.field === "conversation.channel")?.options?.[0]).toEqual(["widget", "Messenger"]);
+    expect(typed.find((f) => f.field === "action.lookup_order.status")?.type).toBe("text");
+    const fields = typed.map((f) => f.field);
     expect(fields).toContain("action.lookup_order.status");
     expect(fields).toContain("action.lookup_order.shipping.eta");
     expect(labelOf(sources, { kind: "attribute", ref: "action.lookup_order.status" })).toBe("Look up order → status");

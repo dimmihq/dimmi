@@ -10,7 +10,8 @@
 import type { Action } from "@/lib/api/ai-actions";
 import type { AttributeDefinition } from "@/lib/api/attributes";
 import type { BindingKind } from "@/lib/api/procedures";
-
+import type { Choices } from "../choices";
+import { type FieldType, typeOfValue } from "./rules";
 import type { Chip } from "./tokens";
 
 export interface Named {
@@ -74,6 +75,42 @@ export function actionHint(action: Action): string {
 export interface Field {
   field: string;
   label: string;
+  /* The kind of value it holds, which sets how a rule compares it. */
+  type: FieldType;
+  /* The values it can take, for a field with a fixed list, as id and name. */
+  options?: Choices;
+}
+
+/*
+ * The channels a conversation can happen on, as the rules read them.
+ */
+const channels: Choices = [
+  ["widget", "Messenger"],
+  ["email", "Email"],
+  ["slack", "Slack"],
+  ["whatsapp", "WhatsApp"],
+  ["instagram", "Instagram"],
+  ["facebook", "Facebook"],
+  ["api", "API"],
+];
+
+/*
+ * attributeType is the field type of a workspace attribute.
+ */
+function attributeType(attr: { data_type: string; options: string[] }): FieldType {
+  if (attr.options.length > 0) {
+    return "choice";
+  }
+  switch (attr.data_type) {
+    case "boolean":
+      return "boolean";
+    case "number":
+      return "number";
+    case "date":
+      return "date";
+    default:
+      return "text";
+  }
 }
 
 /*
@@ -83,16 +120,21 @@ export interface Field {
  */
 export function fieldsOf(sources: ChipSources): Field[] {
   const out: Field[] = [
-    { field: "conversation.channel", label: "Channel" },
-    { field: "conversation.verified", label: "Customer is signed in" },
-    { field: "contact.email", label: "Customer email" },
-    { field: "contact.name", label: "Customer name" },
-    { field: "contact.external_id", label: "Customer user id" },
+    { field: "conversation.channel", label: "Channel", type: "choice", options: channels },
+    { field: "conversation.verified", label: "Customer is signed in", type: "boolean" },
+    { field: "contact.email", label: "Customer email", type: "text" },
+    { field: "contact.name", label: "Customer name", type: "text" },
+    { field: "contact.external_id", label: "Customer user id", type: "text" },
   ];
   for (const attr of sources.attributes) {
     if (attr.status === "active") {
       const owner = attr.of === "contact" ? "Customer" : "Company";
-      out.push({ field: `${attr.of}.attr.${attr.key}`, label: `${owner} ${attr.label}` });
+      out.push({
+        field: `${attr.of}.attr.${attr.key}`,
+        label: `${owner} ${attr.label}`,
+        type: attributeType(attr),
+        ...(attr.options.length > 0 ? { options: attr.options.map((o) => [o, o] as const) } : {}),
+      });
     }
   }
   for (const action of sources.actions) {
@@ -113,10 +155,14 @@ function resultFields(action: Action): Field[] {
   const name = action.title || action.name;
   const out: Field[] = [];
   for (const [key, value] of Object.entries(sample as Record<string, unknown>)) {
-    out.push({ field: `action.${action.name}.${key}`, label: `${name} → ${key}` });
-    const nested = value && typeof value === "object" && !Array.isArray(value) ? Object.keys(value) : [];
-    for (const inner of nested) {
-      out.push({ field: `action.${action.name}.${key}.${inner}`, label: `${name} → ${key}.${inner}` });
+    out.push({ field: `action.${action.name}.${key}`, label: `${name} → ${key}`, type: typeOfValue(value) });
+    const nested = value && typeof value === "object" && !Array.isArray(value) ? value : {};
+    for (const [inner, held] of Object.entries(nested as Record<string, unknown>)) {
+      out.push({
+        field: `action.${action.name}.${key}.${inner}`,
+        label: `${name} → ${key}.${inner}`,
+        type: typeOfValue(held),
+      });
     }
   }
   return out;

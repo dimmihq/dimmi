@@ -219,7 +219,7 @@ require (
 	github.com/quagmt/udecimal v1.10.1 // indirect
 	github.com/riverqueue/river/riverdriver v0.51.0 // indirect
 	github.com/riverqueue/river/rivershared v0.51.0 // indirect
-	github.com/rivo/uniseg v0.4.7 // indirect
+	github.com/rivo/uniseg v0.4.7
 	github.com/segmentio/asm v1.2.1 // indirect
 	github.com/segmentio/encoding v0.5.4 // indirect
 	github.com/sergeymakinen/go-bmp v1.0.0 // indirect

@@ -75,6 +75,7 @@ type TestCaseInput struct {
 	Messages           []TestMessage
 	Mocks              map[string]actionkit.Mock
 	Assertions         []procedure.Assertion
+	SimulatedAt        *time.Time
 }
 
 /*
@@ -82,6 +83,8 @@ TestTurn is one turn of a test run.
 */
 type TestTurn struct {
 	Message        string                   `json:"message"`
+	Confirm        bool                     `json:"confirm,omitempty"`
+	Improvised     bool                     `json:"improvised,omitempty"`
 	Reply          string                   `json:"reply"`
 	Outcome        string                   `json:"outcome"`
 	Calls          []procedure.ObservedCall `json:"calls"`
@@ -179,7 +182,7 @@ func (p *Procedures) CreateTestCase(ctx context.Context, m authz.Membership, id 
 		out, err = q.CreateProcedureTestCase(ctx, models.CreateProcedureTestCaseParams{
 			WorkspaceID: m.Workspace.ID, ProcedureID: id, Name: row.Name, SourceConversationID: in.SourceConversation,
 			Persona: row.Persona, Messages: row.Messages, ActionMocks: row.ActionMocks, Assertions: row.Assertions,
-			MemberID: memberOf(m), Now: p.Clock.Now(),
+			SimulatedAt: row.SimulatedAt, MemberID: memberOf(m), Now: p.Clock.Now(),
 		})
 
 		return wrap("save procedure test", err)
@@ -249,7 +252,8 @@ func (p *Procedures) UpdateTestCase(ctx context.Context, m authz.Membership, ref
 
 		out, err = q.UpdateProcedureTestCase(ctx, models.UpdateProcedureTestCaseParams{
 			Name: row.Name, Persona: row.Persona, Messages: row.Messages, ActionMocks: row.ActionMocks,
-			Assertions: row.Assertions, Now: p.Clock.Now(), WorkspaceID: m.Workspace.ID, ProcedureID: id, ID: testID,
+			Assertions: row.Assertions, SimulatedAt: row.SimulatedAt, Now: p.Clock.Now(), WorkspaceID: m.Workspace.ID,
+			ProcedureID: id, ID: testID,
 		})
 
 		return wrap("save procedure test", err)
@@ -282,7 +286,7 @@ func (p *Procedures) DeleteTestCase(ctx context.Context, m authz.Membership, id,
 RunTestCases runs the named tests, or every one when none is named,
 against the working copy, keeping each one's result.
 */
-func (p *Procedures) RunTestCases(ctx context.Context, m authz.Membership, id ids.UUID, only []ids.UUID,
+func (p *Procedures) RunTestCases(ctx context.Context, m authz.Membership, id ids.UUID, run TestRun,
 ) ([]models.ProcedureTestCase, error) {
 	if !m.Can("ai_agent:manage") {
 		return nil, exceptions.ErrForbidden
@@ -297,153 +301,57 @@ func (p *Procedures) RunTestCases(ctx context.Context, m authz.Membership, id id
 		return nil, err
 	}
 
-	if len(only) > 0 {
-		cases = slices.DeleteFunc(cases, func(c models.ProcedureTestCase) bool { return !slices.Contains(only, c.ID) })
+	if len(run.Only) > 0 {
+		cases = slices.DeleteFunc(cases, func(c models.ProcedureTestCase) bool {
+			return !slices.Contains(run.Only, c.ID)
+		})
 	}
 
 	if len(cases) > maxTestsPerRun {
 		return nil, ErrTestCaseInvalid.With("reason", "Run at most 20 tests at once.")
 	}
 
+	broken, err := p.workingCopyProblem(ctx, m, id)
+	if err != nil {
+		return nil, err
+	}
+
 	out := make([]models.ProcedureTestCase, 0, len(cases))
 	for _, c := range cases {
-		res := p.runTestCase(ctx, m, id, c)
-		raw, _ := json.Marshal(res)
-		err := p.DB.Transaction(ctx, func(ctx context.Context, tx *database.Tx) error {
-			return models.New(tx).SetProcedureTestCaseResult(ctx, models.SetProcedureTestCaseResultParams{
-				LastResult: raw, WorkspaceID: m.Workspace.ID, ID: c.ID,
-			})
-		})
-		if err != nil {
-			return nil, wrap("keep test result", err)
+		one := simulated{m: m, id: id, c: c, w: p.watching(m, run, c)}
+		res := TestResult{RanAt: p.Clock.Now(), Turns: []TestTurn{}, Error: broken}
+		if broken == "" {
+			res = p.runTestCase(ctx, one)
 		}
-		c.LastResult = raw
-		out = append(out, c)
+		kept, err := p.keepResult(ctx, one, res)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, kept)
 	}
 
 	return out, nil
 }
 
 /*
-runTestCase plays a test's messages turn by turn and checks its
-assertions against what happened.
+keepResult saves how a test's run went, tells whoever watches, and
+returns the test with its new result.
 */
-func (p *Procedures) runTestCase(ctx context.Context, m authz.Membership, id ids.UUID, c models.ProcedureTestCase,
-) TestResult {
-	res := TestResult{RanAt: p.Clock.Now(), Turns: []TestTurn{}, AssertionResults: []procedure.AssertionResult{}}
-	var persona pipeline.SimPersona
-	var messages []TestMessage
-	mocks := map[string]actionkit.Mock{}
-	_ = json.Unmarshal(c.Persona, &persona)
-	_ = json.Unmarshal(c.Messages, &messages)
-	_ = json.Unmarshal(c.ActionMocks, &mocks)
-	assertions, _ := procedure.ParseAssertions(c.Assertions)
-
-	observed := procedure.Observed{Branches: map[string]string{}}
-	var history []pipeline.SimMessage
-	var state *pipeline.SimState
-	for _, msg := range messages {
-		in := SimulateInput{
-			Membership: m, ID: id, History: history, Message: msg.Text, Persona: persona, Mocks: mocks, State: state,
-		}
-		if msg.Confirm && state != nil {
-			for _, pending := range state.Pending {
-				in.Confirmed = append(in.Confirmed, pending.ActionID)
-			}
-		}
-		turn, err := p.Simulate(ctx, in)
-		if err != nil {
-			res.Error = err.Error()
-			return res
-		}
-		observe(&observed, turn)
-		res.Turns = append(res.Turns, TestTurn{
-			Message: msg.Text, Reply: turn.Reply, Outcome: turn.Outcome, Calls: turn.Calls,
-			ProcedureTrace: turn.ProcedureTrace, RunID: models.PublicID(models.PrefixAiRun, turn.RunID),
+func (p *Procedures) keepResult(ctx context.Context, one simulated, res TestResult) (models.ProcedureTestCase, error) {
+	m, w, c := one.m, one.w, one.c
+	raw, _ := json.Marshal(res)
+	w.tell(ctx, runFinished, map[string]any{"result": res})
+	err := p.DB.Transaction(ctx, func(ctx context.Context, tx *database.Tx) error {
+		return models.New(tx).SetProcedureTestCaseResult(ctx, models.SetProcedureTestCaseResultParams{
+			LastResult: raw, WorkspaceID: m.Workspace.ID, ID: c.ID,
 		})
-		history = append(history, pipeline.SimMessage{From: "customer", Text: msg.Text})
-		if turn.Reply != "" {
-			history = append(history, pipeline.SimMessage{From: "agent", Text: turn.Reply})
-		}
-		state = &turn.State
+	})
+	if err != nil {
+		return c, wrap("keep test result", err)
 	}
+	c.LastResult = raw
 
-	res.AssertionResults = procedure.Assert(assertions, observed, transcript(history), p.judge(ctx, m))
-	res.Passed = procedure.Passed(res.AssertionResults)
-
-	return res
-}
-
-/*
-observe folds one simulated turn into what the test saw.
-*/
-func observe(o *procedure.Observed, turn *pipeline.SimulationResult) {
-	if turn.Matched && !slices.Contains(o.Procedures, turn.State.ProcedureID) {
-		o.Procedures = append(o.Procedures, turn.State.ProcedureID)
-	}
-
-	o.Calls = append(o.Calls, turn.Calls...)
-	if turn.Reply != "" {
-		o.Replies = append(o.Replies, turn.Reply)
-	}
-
-	if h := turn.Handoff; h != nil {
-		o.HandedOff, o.Team, o.Priority = true, h.TeamID, h.Priority
-	}
-
-	var trace struct {
-		Steps []struct {
-			StepID string `json:"step_id"`
-			Branch string `json:"branch_taken"`
-		} `json:"steps"`
-		Guards []struct {
-			Type          string `json:"type"`
-			AttemptedTool string `json:"attempted_tool"`
-		} `json:"guard_events"`
-	}
-	_ = json.Unmarshal(turn.ProcedureTrace, &trace)
-	for _, s := range trace.Steps {
-		if s.Branch == "then" || s.Branch == "else" {
-			o.Branches[s.StepID] = s.Branch
-		}
-	}
-
-	for _, g := range trace.Guards {
-		if g.Type == "prerequisite_blocked" {
-			o.Calls = append(o.Calls, procedure.ObservedCall{Tool: g.AttemptedTool, Blocked: true})
-		}
-	}
-}
-
-/*
-judge is the rubric judge of a run, none when no judge is set up.
-*/
-func (p *Procedures) judge(ctx context.Context, m authz.Membership) procedure.Judge {
-	if p.Judge == nil {
-		return nil
-	}
-
-	return func(rubric, transcript string) (bool, string, error) {
-		return p.Judge.JudgeRubric(ctx, pipeline.Rubric{
-			WorkspaceID: m.Workspace.ID, MemberID: m.Member.ID, Rubric: rubric, Transcript: transcript,
-		})
-	}
-}
-
-/*
-transcript writes a simulated conversation for the judge.
-*/
-func transcript(history []pipeline.SimMessage) string {
-	var b strings.Builder
-	for _, msg := range history {
-		who := "AGENT"
-		if msg.From == "customer" {
-			who = "CUSTOMER"
-		}
-		b.WriteString(who + ": " + msg.Text + "\n")
-	}
-
-	return b.String()
+	return c, nil
 }
 
 /*
@@ -479,6 +387,10 @@ func testRow(current models.ProcedureTestCase, in TestCaseInput) (models.Procedu
 		row.Assertions, _ = json.Marshal(in.Assertions)
 	}
 
+	if in.SimulatedAt != nil {
+		row.SimulatedAt = in.SimulatedAt
+	}
+
 	return withDefaults(row), nil
 }
 
@@ -496,7 +408,11 @@ func checkTestInput(in TestCaseInput) error {
 	}
 
 	for _, msg := range in.Messages {
-		if n := utf8.RuneCountInString(strings.TrimSpace(msg.Text)); n == 0 || n > maxSimMessage {
+		n := utf8.RuneCountInString(strings.TrimSpace(msg.Text))
+		if msg.Confirm && n == 0 {
+			continue
+		}
+		if n == 0 || n > maxSimMessage {
 			return ErrTestCaseInvalid.With("reason", "Write each message in 1 to 4,000 characters.").OnField("messages")
 		}
 	}

@@ -45,7 +45,8 @@ func refundProcedure(lookup, refundID string) testkit.JSON {
 					"enforcement": testkit.JSON{"requires": []string{"s1"}},
 				}},
 				"else_steps": []testkit.JSON{{
-					"id": "s4", "kind": "instruction", "text": "Say it is on its way and when it arrives.",
+					"id": "s4", "kind": "instruction",
+					"text": "Say it is on its way and when it arrives, and ask whether that works for them.",
 				}},
 			},
 		},
@@ -117,13 +118,13 @@ first.
 func (r *refundDesk) procedureState(conv ids.UUID) []models.ConversationProcedureState {
 	r.t.Helper()
 	var out []models.ConversationProcedureState
-	rows, err := r.d.TC.Operator().Query(r.t.Context(), `SELECT status, called_action_ids
+	rows, err := r.d.TC.Operator().Query(r.t.Context(), `SELECT status, called_action_ids, completed_step_ids
 		FROM conversation_procedure_states WHERE conversation_id = $1 ORDER BY started_at DESC, id DESC`, conv)
 	require.NoError(r.t, err)
 	defer rows.Close()
 	for rows.Next() {
 		var s models.ConversationProcedureState
-		require.NoError(r.t, rows.Scan(&s.Status, &s.CalledActionIds))
+		require.NoError(r.t, rows.Scan(&s.Status, &s.CalledActionIds, &s.CompletedStepIds))
 		out = append(out, s)
 	}
 	require.NoError(r.t, rows.Err())
@@ -269,6 +270,7 @@ func TestAiProcedureGuardrails(t *testing.T) {
 		r := newRefundDesk(t)
 		conv, trigger := r.conversation("I want a refund")
 		r.signIn(conv)
+		r.llm.judge(map[string]bool{"asks": true})
 		r.llm.answer.Script(tools(call("follow_procedure", r.follow())), reply("Which order number is it?"))
 
 		res := r.run(conv, trigger)
@@ -318,6 +320,7 @@ func TestAiProcedureState(t *testing.T) {
 		)
 		conv, trigger := r.conversation("My order 1042 arrived broken")
 		r.signIn(conv)
+		r.llm.judge(map[string]bool{"asks": true})
 		r.llm.answer.Script(
 			tools(call("follow_procedure", r.follow())),
 			tools(call("get_order", `{"order_id":"1042"}`)),
@@ -355,11 +358,56 @@ func TestAiProcedureState(t *testing.T) {
 		assert.NotContains(t, r.system(third), "<active_procedure>", "a completed procedure is not followed again")
 	})
 
+	t.Run("stays on a step that talks to the customer until the agent says it is done", func(t *testing.T) {
+		t.Parallel()
+		r := newRefundDesk(t)
+		r.shipping("shipped")
+		conv, trigger := r.conversation("Where is my refund for order 1042?")
+		r.signIn(conv)
+		r.llm.judge(map[string]bool{"waits": true, "given": false})
+		r.llm.answer.Script(
+			tools(call("follow_procedure", r.follow())),
+			tools(call("get_order", `{"order_id":"1042"}`)),
+			tools(call("update_procedure_status", `{"status":"step_done","step":"2.1"}`)),
+			reply("It is on its way and arrives on Friday. Does that work for you?"),
+		)
+
+		res := r.run(conv, trigger)
+
+		assert.Equal(t, "answered", res.Outcome)
+		states := r.procedureState(conv)
+		require.Len(t, states, 1)
+		assert.Equal(t, "active", states[0].Status, "a step still follows the last action, so it is not over")
+		assert.NotContains(t, states[0].CompletedStepIds, "s4", "the customer has not replied to the step yet")
+		sent := r.llm.answer.Sent()
+		assert.Contains(t, r.toolResult(len(sent)-1), "has not given what step 2.1 needs yet")
+		assert.Contains(t, r.system(len(sent)-1), "one at a time", "it is told to follow the steps as a conversation")
+
+		r.llm.answer.Script(reply("Friday the 14th, by courier. Will someone be home to sign for it?"))
+		r.run(conv, r.add(conv, "contact", "message", "Which Friday do you mean?"))
+		states = r.procedureState(conv)
+		require.Len(t, states, 1)
+		assert.Equal(t, "active", states[0].Status, "a step may take several exchanges")
+		assert.NotContains(t, states[0].CompletedStepIds, "s4", "the agent has not said the step is done")
+
+		r.llm.judge(map[string]bool{"waits": true, "given": true})
+		r.llm.answer.Script(
+			tools(call("update_procedure_status", `{"status":"step_done","step":"2.1"}`)),
+			reply("Great. Anything else?"),
+		)
+		r.run(conv, r.add(conv, "contact", "message", "Yes, Friday is fine"))
+
+		states = r.procedureState(conv)
+		require.Len(t, states, 1)
+		assert.Contains(t, states[0].CompletedStepIds, "s4", "their reply let the step be finished")
+	})
+
 	t.Run("ends the procedure when the customer moves on", func(t *testing.T) {
 		t.Parallel()
 		r := newRefundDesk(t)
 		conv, trigger := r.conversation("I want a refund")
 		r.signIn(conv)
+		r.llm.judge(map[string]bool{"moved_on": true})
 		r.llm.answer.Script(
 			tools(call("follow_procedure", r.follow())),
 			tools(call("update_procedure_status", `{"status":"exited_topic_changed","reason":"asks about shipping"}`)),
@@ -377,6 +425,7 @@ func TestAiProcedureState(t *testing.T) {
 		r := newRefundDesk(t)
 		conv, trigger := r.conversation("I want a refund")
 		r.signIn(conv)
+		r.llm.judge(map[string]bool{"asks": true})
 		r.llm.answer.Script(tools(call("follow_procedure", r.follow())), reply("Which order number is it?"))
 		r.run(conv, trigger)
 		require.Equal(t, "active", r.procedureState(conv)[0].Status)

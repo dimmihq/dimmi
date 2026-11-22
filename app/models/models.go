@@ -1093,6 +1093,7 @@ type ConversationProcedureState struct {
 	StartedAt          time.Time       `json:"started_at"`
 	UpdatedAt          time.Time       `json:"updated_at"`
 	EndedAt            *time.Time      `json:"ended_at"`
+	Branches           json.RawMessage `json:"branches"`
 }
 
 type ConversationRating struct {
@@ -2351,6 +2352,7 @@ type ProcedureTestCase struct {
 	CreatedByMemberID    *ids.UUID       `json:"created_by_member_id"`
 	CreatedAt            time.Time       `json:"created_at"`
 	UpdatedAt            time.Time       `json:"updated_at"`
+	SimulatedAt          *time.Time      `json:"simulated_at"`
 }
 
 type ProcedureVersion struct {

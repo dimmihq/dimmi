@@ -26,6 +26,15 @@ import (
 )
 
 /*
+The sides of a condition: the steps followed when it holds, and those
+followed when it does not.
+*/
+const (
+	SideThen = "then"
+	SideElse = "else"
+)
+
+/*
 The status of a step on the path.
 */
 const (
@@ -47,14 +56,17 @@ type Sub struct {
 /*
 Input is what resolving and rendering read: the rule facts, the actions
 the conversation already called and those offered now, each by public
-id, which of them only read, why an action is not offered, the
-sub-procedures by public id, the names of the things chips point at,
-whether to mark each step's status, and the public id of the procedure
-itself, which its sub-procedures never expand again.
+id, the steps dimmi already finished by their scoped id, which of the
+actions only read, why an action is not offered, the sub-procedures by
+public id, the names of the things chips point at, whether to mark each
+step's status, and the public id of the procedure itself, which its
+sub-procedures never expand again.
 */
 type Input struct {
 	Facts       Facts
 	Called      map[string]bool
+	Done        map[string]bool
+	Sides       map[string]string
 	Tools       map[string]string
 	Reads       map[string]bool
 	Unavailable map[string]string
@@ -128,6 +140,17 @@ type resolver struct {
 	in      Input
 	plan    Plan
 	visited []string
+	sides   []sides
+}
+
+/*
+sides is a condition written in plain words with where each of its
+sides sits among the nodes: the first from one index up to the middle,
+the second from the middle up to the end.
+*/
+type sides struct {
+	id               string
+	from, middle, to int
 }
 
 /*
@@ -203,13 +226,24 @@ func (r *resolver) step(s Step, f frame, label string) {
 		n.Branch = "both"
 		r.add(n)
 		child.conditional = true
-		r.branchSide(s.ThenSteps, child, label+".", "If so:")
-		r.branchSide(s.ElseSteps, child, label+".", "If not:")
+		r.bothSides(n.ID, s, child, label)
 	default:
 		r.add(n)
 	}
 
 	r.expandSubs(s, f, label)
+}
+
+/*
+bothSides adds the two sides of a condition written in plain words and
+remembers where each begins, so the side not taken can be left later.
+*/
+func (r *resolver) bothSides(id string, s Step, f frame, label string) {
+	from := len(r.plan.Nodes)
+	r.branchSide(s.ThenSteps, f, label+".", "If so:")
+	middle := len(r.plan.Nodes)
+	r.branchSide(s.ElseSteps, f, label+".", "If not:")
+	r.sides = append(r.sides, sides{id: id, from: from, middle: middle, to: len(r.plan.Nodes)})
 }
 
 /*
@@ -342,9 +376,10 @@ func (r *resolver) actionsOf(ref, scope string) []string {
 /*
 statuses marks each step done, active, pending or locked. A step with
 actions is done once all of them were called; a step without is done
-once a step after it is.
+once dimmi said it finished it, or a step after it is done.
 */
 func (r *resolver) statuses() {
+	r.settleSides()
 	nodes := r.plan.Nodes
 	doneAfter := false
 	for i := len(nodes) - 1; i >= 0; i-- {
@@ -352,14 +387,7 @@ func (r *resolver) statuses() {
 		if n.Status == StatusLocked {
 			continue
 		}
-		actions := n.Step.Actions()
-		done := len(actions) > 0
-		for _, b := range actions {
-			done = done && r.in.Called[b.Ref]
-		}
-		if len(actions) == 0 {
-			done = doneAfter
-		}
+		done := r.finished(*n, doneAfter)
 		if done {
 			doneAfter = true
 		}
@@ -378,6 +406,65 @@ func (r *resolver) statuses() {
 			break
 		}
 	}
+}
+
+/*
+settleSides leaves the side of a plain-words condition that was not
+taken: the side decided for it, or else, once a step on one side is
+done and none on the other is, the side nothing was done on.
+*/
+func (r *resolver) settleSides() {
+	for _, s := range r.sides {
+		then, otherwise := r.begun(s.from, s.middle), r.begun(s.middle, s.to)
+		switch side := r.in.Sides[s.id]; {
+		case side == SideThen, side == "" && then && !otherwise:
+			r.leave(s.middle, s.to)
+		case side == SideElse, side == "" && otherwise && !then:
+			r.leave(s.from, s.middle)
+		}
+	}
+}
+
+/*
+begun reports whether a step among the nodes from one index up to
+another was itself done: dimmi said so, or every action it takes ran.
+*/
+func (r *resolver) begun(from, to int) bool {
+	for _, n := range r.plan.Nodes[from:to] {
+		if n.Status != StatusLocked && r.finished(n, false) {
+			return true
+		}
+	}
+
+	return false
+}
+
+/*
+leave marks the nodes from one index up to another as off the path.
+*/
+func (r *resolver) leave(from, to int) {
+	for i := from; i < to; i++ {
+		r.plan.Nodes[i].Status = StatusEvaluated
+	}
+}
+
+/*
+finished reports whether a step is done: every action it takes was
+called, or, for a step that takes none, dimmi said it finished it or a
+step after it is done.
+*/
+func (r *resolver) finished(n Node, doneAfter bool) bool {
+	actions := n.Step.Actions()
+	if len(actions) == 0 {
+		return doneAfter || r.in.Done[n.ID]
+	}
+	for _, b := range actions {
+		if !r.in.Called[b.Ref] {
+			return false
+		}
+	}
+
+	return true
 }
 
 /*

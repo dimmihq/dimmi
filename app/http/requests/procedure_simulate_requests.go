@@ -30,6 +30,8 @@ type SimStateInput struct {
 	ProcedureID     string            `json:"procedure_id,omitempty"`
 	Status          string            `json:"status,omitempty"`
 	CalledActionIDs []string          `json:"called_action_ids,omitempty"`
+	CompletedSteps  []string          `json:"completed_step_ids,omitempty"`
+	Branches        map[string]string `json:"branches,omitempty"`
 	StepOutputs     map[string]any    `json:"step_outputs,omitempty"`
 	Pending         []SimPendingInput `json:"pending,omitempty"`
 }
@@ -50,5 +52,6 @@ type SimulateProcedureRequest struct {
 		ActiveState          *SimStateInput             `json:"active_state,omitempty"`
 		Confirmed            []string                   `json:"confirmed_action_ids,omitempty"   maxItems:"10"`
 		SourceConversationID string                     `json:"source_conversation_id,omitempty"`
+		StreamID             string                     `json:"stream_id,omitempty"              maxLength:"64"`
 	}
 }

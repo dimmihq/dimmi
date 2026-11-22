@@ -52,9 +52,11 @@ SimState is the procedure state a simulated conversation carries from
 turn to turn.
 */
 type SimState struct {
-	ProcedureID string         `json:"procedure_id,omitempty"`
-	Status      string         `json:"status,omitempty"`
-	Called      []string       `json:"called_action_ids"`
-	Outputs     map[string]any `json:"step_outputs"`
-	Pending     []SimPending   `json:"pending"`
+	ProcedureID string            `json:"procedure_id,omitempty"`
+	Status      string            `json:"status,omitempty"`
+	Called      []string          `json:"called_action_ids"`
+	Completed   []string          `json:"completed_step_ids"`
+	Branches    map[string]string `json:"branches"`
+	Outputs     map[string]any    `json:"step_outputs"`
+	Pending     []SimPending      `json:"pending"`
 }

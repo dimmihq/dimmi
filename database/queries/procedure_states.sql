@@ -9,10 +9,10 @@ WHERE workspace_id = @workspace_id AND conversation_id = @conversation_id AND st
 -- procedure.
 INSERT INTO conversation_procedure_states (
     workspace_id, conversation_id, procedure_id, procedure_version_id, status, completed_step_ids,
-    called_action_ids, step_outputs, started_run_id, last_run_id, started_at, updated_at, ended_at
+    called_action_ids, step_outputs, branches, started_run_id, last_run_id, started_at, updated_at, ended_at
 ) VALUES (
     @workspace_id, @conversation_id, @procedure_id, @procedure_version_id, @status, @completed_step_ids,
-    @called_action_ids, @step_outputs, @run_id, @run_id, @now, @now, sqlc.narg(ended_at)
+    @called_action_ids, @step_outputs, @branches, @run_id, @run_id, @now, @now, sqlc.narg(ended_at)
 )
 RETURNING *;
 
@@ -21,7 +21,8 @@ RETURNING *;
 -- procedure, and whether it ended.
 UPDATE conversation_procedure_states SET
     status = @status, completed_step_ids = @completed_step_ids, called_action_ids = @called_action_ids,
-    step_outputs = @step_outputs, last_run_id = @run_id, updated_at = @now, ended_at = sqlc.narg(ended_at)
+    step_outputs = @step_outputs, branches = @branches, last_run_id = @run_id, updated_at = @now,
+    ended_at = sqlc.narg(ended_at)
 WHERE workspace_id = @workspace_id AND id = @id
 RETURNING *;
 

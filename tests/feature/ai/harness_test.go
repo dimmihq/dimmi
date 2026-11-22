@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"slices"
 	"strings"
 	"sync"
 	"testing"
@@ -44,10 +45,72 @@ router is the scripted driver around the answer fake. Hook runs before
 the next stream starts; stop overrides the streams' stop reason.
 */
 type router struct {
-	answer *fake.LLM
-	mu     sync.Mutex
-	hook   func()
-	stop   contracts.StopReason
+	answer    *fake.LLM
+	mu        sync.Mutex
+	hook      func()
+	stop      contracts.StopReason
+	verdicts  map[string]bool
+	judged    []contracts.ChatRequest
+	onVerdict func()
+	judgeErr  error
+}
+
+/*
+judge sets what the model answers to the yes-or-no questions the
+pipeline asks about a reply or a step, by question name; a step's
+question is named "waits". Questions left out keep their usual answer:
+the customer gave what a step needs, and nothing else is so.
+*/
+func (r *router) judge(verdicts map[string]bool) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.verdicts = verdicts
+}
+
+/*
+judgments are the judgment calls the pipeline made, in order.
+*/
+func (r *router) judgments() []contracts.ChatRequest {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	return slices.Clone(r.judged)
+}
+
+/*
+verdict answers one judgment call: true or false for each question the
+response schema names.
+*/
+func (r *router) verdict(req contracts.ChatRequest) (*contracts.ChatResponse, error) {
+	var schema struct {
+		Required []string `json:"required"`
+	}
+	if err := json.Unmarshal(req.Schema.Schema, &schema); err != nil {
+		return nil, err
+	}
+	r.mu.Lock()
+	r.judged = append(r.judged, req)
+	verdicts, after, failing := r.verdicts, r.onVerdict, r.judgeErr
+	r.mu.Unlock()
+	if failing != nil {
+		return nil, failing
+	}
+	if after != nil {
+		defer after()
+	}
+	out := map[string]bool{}
+	for _, name := range schema.Required {
+		key := name
+		if strings.HasPrefix(name, "s_") {
+			key = "waits"
+		}
+		answer, ok := verdicts[key]
+		if !ok {
+			answer = key == "given"
+		}
+		out[name] = answer
+	}
+	text, err := json.Marshal(out)
+	return &contracts.ChatResponse{Text: string(text), StopReason: contracts.StopReasonEnd, Model: req.Model}, err
 }
 
 func (r *router) Provider() contracts.LLMProvider { return contracts.LLMProviderAnthropic }
@@ -55,6 +118,9 @@ func (r *router) Provider() contracts.LLMProvider { return contracts.LLMProvider
 func (r *router) pick(string) *fake.LLM { return r.answer }
 
 func (r *router) Chat(ctx context.Context, req contracts.ChatRequest) (*contracts.ChatResponse, error) {
+	if req.Schema != nil && req.Schema.Name == "procedure_judgment" {
+		return r.verdict(req)
+	}
 	return r.pick(req.Model).Chat(ctx, req)
 }
 
@@ -101,9 +167,10 @@ func (s *stopStream) Next(ctx context.Context) (contracts.StreamEvent, error) {
 harness is one test's desk with a scripted agent and decision model.
 */
 type harness struct {
-	t   *testing.T
-	d   tests.Desk
-	llm *router
+	player *scriptedCustomer
+	t      *testing.T
+	d      tests.Desk
+	llm    *router
 }
 
 /*
@@ -116,6 +183,10 @@ func newHarness(t *testing.T, change func(*models.UpdateAgentParams)) *harness {
 
 	d := tests.NewDesk(t)
 	h := &harness{t: t, d: d, llm: &router{answer: fake.New(contracts.LLMProviderAnthropic)}}
+	h.player = &scriptedCustomer{}
+	if d.TC.App.Actions.Procedures != nil {
+		d.TC.App.Actions.Procedures.Customer = h.player
+	}
 
 	seed, err := knowledge.LoadSeed(t.Context(), d.TC.App.Storage, seedPath)
 	require.NoError(t, err)

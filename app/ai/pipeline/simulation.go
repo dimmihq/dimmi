@@ -31,8 +31,10 @@ import (
 	"maps"
 	"slices"
 	"strings"
+	"time"
 
 	"github.com/dimmihq/dimmi/framework/database"
+	"github.com/dimmihq/dimmi/framework/hashing"
 	"github.com/dimmihq/dimmi/framework/ids"
 
 	"github.com/dimmihq/dimmi/app/ai/actionkit"
@@ -66,6 +68,8 @@ type SimulationInput struct {
 	Mocks       map[string]actionkit.Mock
 	State       *SimState
 	Confirmed   []string
+	StreamID    string
+	Now         *time.Time
 }
 
 /*
@@ -193,7 +197,7 @@ func (r *Runner) simulatedEnv(ctx context.Context, q *models.Queries, in Simulat
 	if err != nil {
 		return nil, fmt.Errorf("find workspace: %w", err)
 	}
-	e := &env{Workspace: ws, Agent: agent, ChannelType: cmpOr(in.Persona.Channel, "widget"), now: r.Clock.Now()}
+	e := &env{Workspace: ws, Agent: agent, ChannelType: cmpOr(in.Persona.Channel, "widget"), now: simulatedNow(in, r)}
 	e.Conversation = models.Conversation{WorkspaceID: ws.ID}
 	if id, ok := decodePublic(models.PrefixInbox, in.Persona.InboxID); ok {
 		e.Conversation.InboxID = id
@@ -277,8 +281,10 @@ func (r *Runner) loadSimProcedures(ctx context.Context, q *models.Queries, e *en
 		for _, p := range e.AllProcedures {
 			if p.publicID() == s.ProcedureID {
 				outputs, _ := json.Marshal(s.Outputs)
+				branches, _ := json.Marshal(cmpSides(s.Branches))
 				e.ActiveProcedure = &activeProcedure{proc: p, state: models.ConversationProcedureState{
-					Status: procedureActive, CalledActionIds: s.Called, StepOutputs: outputs,
+					Status: procedureActive, CalledActionIds: s.Called, CompletedStepIds: s.Completed,
+					StepOutputs: outputs, Branches: branches,
 				}}
 			}
 		}
@@ -305,6 +311,17 @@ func (r *Runner) loadTestResponses(ctx context.Context, q *models.Queries, ws id
 }
 
 /*
+simulatedNow is the moment a simulated turn happens at: the one the
+simulation keeps, or else now.
+*/
+func simulatedNow(in SimulationInput, r *Runner) time.Time {
+	if in.Now != nil {
+		return *in.Now
+	}
+	return r.Clock.Now()
+}
+
+/*
 personaContact is the made-up customer as a contact, every attribute
 trusted.
 */
@@ -318,12 +335,27 @@ func personaContact(ws ids.UUID, p SimPersona) *models.Contact {
 		c.Name = new(p.Name)
 	}
 	if p.Email != "" {
-		c.Email = new(p.Email)
+		c.Email, c.EmailVerified = new(p.Email), p.Verified
 	}
-	if p.ExternalID != "" {
-		c.ExternalID, c.Kind = new(p.ExternalID), "user"
+	external := p.ExternalID
+	if external == "" && p.Verified && p.Email == "" {
+		external = testIdentity(p)
+	}
+	if external != "" {
+		c.ExternalID, c.Kind = new(external), "user"
 	}
 	return c
+}
+
+/*
+testIdentity is the id a made-up customer who is signed in but was given
+no id or email is known by. A signed-in customer is always known to the
+workspace by something, so actions that look them up can run, answered
+by their test results like any other; the id is drawn from the
+customer's name, so it stays the same on every run.
+*/
+func testIdentity(p SimPersona) string {
+	return "test_" + hashing.SHA256Hex([]byte(p.Name))[:12]
 }
 
 /*
@@ -455,7 +487,7 @@ simulationResult reports what the simulated turn did.
 func (r *Runner) simulationResult(st *run, d *decision) *SimulationResult {
 	out := &SimulationResult{RunID: st.rec.Run.ID, Outcome: d.outcome, Calls: st.sim.calls}
 	if d.writesMessage() {
-		out.Reply = r.reply(st.env, d)
+		out.Reply = strings.ReplaceAll(r.reply(st.env, d), ticketReference, sampleReference)
 	}
 	if out.Calls == nil {
 		out.Calls = []procedure.ObservedCall{}
@@ -473,7 +505,10 @@ func (r *Runner) simulationResult(st *run, d *decision) *SimulationResult {
 		}
 		out.Handoff = h
 	}
-	out.State = SimState{Called: []string{}, Outputs: map[string]any{}, Pending: st.sim.pending}
+	out.State = SimState{
+		Called: []string{}, Completed: []string{}, Branches: map[string]string{}, Outputs: map[string]any{},
+		Pending: st.sim.pending,
+	}
 	if out.State.Pending == nil {
 		out.State.Pending = []SimPending{}
 	}
@@ -484,7 +519,8 @@ func (r *Runner) simulationResult(st *run, d *decision) *SimulationResult {
 			out.State.Status = procedureHandedOff
 		}
 		out.State.Called = append(out.State.Called, p.called...)
-		out.State.Outputs = p.outputs
+		out.State.Completed = append(out.State.Completed, p.done...)
+		out.State.Outputs, out.State.Branches = p.outputs, cmpSides(p.sides)
 		out.ProcedureTrace = r.procedureTrace(st)
 	}
 	return out

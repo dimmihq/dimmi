@@ -84,6 +84,7 @@ type Runner struct {
 	guard    *linkguard.Guard
 
 	unpricedSeen sync.Map
+	stepWaits    sync.Map
 }
 
 /*
@@ -201,10 +202,7 @@ func (r *Runner) turn(ctx context.Context, st *run) *decision {
 
 	draft, err := r.agentLoop(ctx, st)
 	if err == nil {
-		draft, err = r.withoutUnknownLinks(ctx, st, draft)
-	}
-	if err == nil {
-		draft, err = r.verifyProcedureCompliance(ctx, st, draft)
+		draft, err = r.checked(ctx, st, draft)
 	}
 	r.routeProcedureHandoff(st)
 	r.settleProcedure(st)
@@ -229,6 +227,23 @@ func (r *Runner) timeout(ctx context.Context, d time.Duration) (context.Context,
 		timer.Stop()
 		cancel(context.Canceled)
 	}
+}
+
+/*
+checked passes a draft through the checks a reply must clear before it
+is sent, each of which may send it back to be written again: its links,
+the actions its procedure requires, and text never meant for the
+customer.
+*/
+func (r *Runner) checked(ctx context.Context, st *run, draft string) (string, error) {
+	draft, err := r.withoutUnknownLinks(ctx, st, draft)
+	if err == nil {
+		draft, err = r.verifyProcedureCompliance(ctx, st, draft)
+	}
+	if err == nil {
+		draft, err = r.withoutNotes(ctx, st, draft)
+	}
+	return draft, err
 }
 
 /*

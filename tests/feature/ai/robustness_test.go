@@ -48,7 +48,10 @@ func TestAiRunRobustness(t *testing.T) {
 
 		last := h.llm.answer.Sent()[5]
 		assert.Equal(t, "search limit reached for this turn; answer with what you have or say it isn't covered",
-			last.Messages[len(last.Messages)-1].Parts[0].Text)
+			last.Messages[len(last.Messages)-2].Parts[0].Text)
+		assert.Contains(t, last.Messages[len(last.Messages)-1].Parts[0].Text, "You have no tools left in this reply",
+			"the last call of a turn is told it can no longer act")
+		assert.Empty(t, last.Tools)
 	})
 
 	t.Run("feeds a tool error back to the model", func(t *testing.T) {

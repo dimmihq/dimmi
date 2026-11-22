@@ -10,6 +10,8 @@
 
 package requests
 
+import "time"
+
 /*
 TestMessageInput is one scripted customer message of a test.
 */
@@ -29,6 +31,7 @@ type TestCaseBody struct {
 	Messages             []TestMessageInput         `json:"messages,omitempty"               maxItems:"12"`
 	ActionMocks          map[string]ActionMockInput `json:"action_mocks,omitempty"`
 	Assertions           []map[string]any           `json:"assertions,omitempty"             maxItems:"30"`
+	SimulatedAt          *time.Time                 `json:"simulated_at,omitempty"`
 }
 
 /*

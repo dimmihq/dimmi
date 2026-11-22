@@ -6,7 +6,9 @@
 | What code, not the model, enforces while a procedure is followed: an
 | action whose prerequisites have not run is refused before it runs; a
 | reply that skips a required action is sent back with a note naming it,
-| up to the step's retries, then the conversation goes to the team; a
+| up to the step's retries, then the conversation goes to the team,
+| unless the reply asks the customer what an earlier step asks, since
+| the steps after it wait for the answer; a
 | procedure whose required actions all ran is done; and a handover made
 | while following it goes to the team and at the priority it names.
 |
@@ -139,7 +141,10 @@ func (r *Runner) verifyProcedureCompliance(ctx context.Context, st *run, draft s
 		}
 		a := missing[0]
 		tool := in.Tools[a.ActionID]
-		if r.asksForInput(st, a.ActionID, draft) {
+		if waitsOnCustomer(p, plan, a) {
+			return draft, nil
+		}
+		if r.asksForInput(ctx, st, a.ActionID, draft) {
 			p.guard(guardEvent{Type: "awaiting_input", MissingTool: tool, StepID: a.StepID})
 			return draft, nil
 		}
@@ -225,16 +230,37 @@ func (r *Runner) requiredInputs(st *run, public string) []string {
 /*
 asksForInput reports whether the reply asks the customer for what a
 required action needs: the action takes arguments only the customer can
-give, and the reply asks a question.
+give, and the reply asks them for something, in whatever words.
 */
-func (r *Runner) asksForInput(st *run, public, draft string) bool {
-	return len(r.requiredInputs(st, public)) > 0 && strings.Contains(draft, "?")
+func (r *Runner) asksForInput(ctx context.Context, st *run, public, draft string) bool {
+	return len(r.requiredInputs(st, public)) > 0 && r.replyAsks(ctx, st, draft)
+}
+
+/*
+waitsOnCustomer reports whether a required action is not due yet: the
+step being done now comes before the action's and asks the customer
+something. A procedure is followed as a conversation, so a step that
+asks waits for the answer before the steps after it run, however the
+reply words its question.
+*/
+func waitsOnCustomer(p *procRun, plan procedure.Plan, a procedure.Planned) bool {
+	for _, n := range plan.Nodes {
+		if n.ID == a.StepID {
+			return false
+		}
+		if n.Status == procedure.StatusActive {
+			return p.waitsOn(n.Step)
+		}
+	}
+
+	return false
 }
 
 /*
 settleProcedure completes a procedure once every required action on its
-path ran and no branch waits, so the next message starts fresh even
-when the last action closed the turn's tools.
+path ran, no branch waits and no step follows the last action, so the
+next message starts fresh even when the last action closed the turn's
+tools.
 */
 func (r *Runner) settleProcedure(st *run) {
 	if !st.proc.active() || st.handoff != nil || st.actions.waiting {
@@ -256,9 +282,40 @@ func (r *Runner) settleProcedure(st *run) {
 			return
 		}
 	}
+	if stepsRemain(st.proc, plan) {
+		return
+	}
 	if enforced > 0 {
 		st.proc.status, st.proc.reason = procedureCompleted, "every required action ran"
 	}
+}
+
+/*
+handoffChip opens the chip of a step that hands over to a team.
+*/
+const handoffChip = "[[handoff:"
+
+/*
+stepsRemain reports whether a step that needs the customer or the team
+is still to be done after the last step that takes an action: a
+procedure that goes on asking after its actions is not finished by
+them. A last step that only tells the customer the result is done by
+the reply that follows the action.
+*/
+func stepsRemain(p *procRun, plan procedure.Plan) bool {
+	last := -1
+	for i, n := range plan.Nodes {
+		if len(n.Step.Actions()) > 0 {
+			last = i
+		}
+	}
+	for _, n := range plan.Nodes[last+1:] {
+		open := n.Status == procedure.StatusActive || n.Status == procedure.StatusPending
+		if open && (p.waitsOn(n.Step) || strings.Contains(n.Step.Text, handoffChip)) {
+			return true
+		}
+	}
+	return false
 }
 
 /*

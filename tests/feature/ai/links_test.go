@@ -163,6 +163,7 @@ func TestImpliedHandoff(t *testing.T) {
 		t.Parallel()
 		h := newHarness(t, nil)
 		conv, trigger := h.conversation("Can I get a refund on last month's invoice?")
+		h.llm.judge(map[string]bool{"claims_handoff": true})
 		h.llm.answer.Script(search("refund invoice"),
 			reply("Monthly plans renew automatically [1]. "+
 				"I've asked the billing team to look at last month's invoice."))

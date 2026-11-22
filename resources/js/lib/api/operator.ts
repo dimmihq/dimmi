@@ -268,6 +268,30 @@ export function forgetOperatorMemory(workspace: string, id: string) {
 }
 
 /*
+ * workspaceThreadQuery opens, or reads, the teammate's latest thread
+ * about the whole workspace.
+ */
+export function workspaceThreadQuery(workspace: string) {
+  return queryOptions({
+    queryKey: [...operatorKeys.threads(workspace), "latest"] as const,
+    queryFn: () => request<OperatorThreadView>("POST", "/operator/threads", {}, { workspace }),
+    staleTime: 30_000,
+  });
+}
+
+/*
+ * workspaceThreadsQuery lists the teammate's past workspace-scoped
+ * Operator threads, latest first.
+ */
+export function workspaceThreadsQuery(workspace: string) {
+  return queryOptions({
+    queryKey: operatorKeys.threads(workspace),
+    queryFn: () =>
+      request<OperatorThread[]>("GET", "/operator/threads?filter[scope]=workspace", undefined, { workspace }),
+  });
+}
+
+/*
  * startWorkspaceThread starts a fresh thread about the whole workspace.
  */
 export function startWorkspaceThread(workspace: string) {

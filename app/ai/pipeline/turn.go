@@ -12,7 +12,10 @@
 | idle time between tokens, and the whole call. A tool that fails tells
 | the model so in its result instead of ending the turn. After
 | maxModelCalls calls the tools are withdrawn and the model must
-| answer with what it has.
+| answer with what it has, told in a note that it can no longer act, so
+| it does not say it did what it had no tool left to do. A turn that
+| follows a procedure gets more calls, since each step it finishes is
+| one.
 |
 */
 
@@ -43,6 +46,22 @@ import (
 maxModelCalls caps the answer model calls of one turn.
 */
 const maxModelCalls = 6
+
+/*
+procedureModelCalls caps the answer model calls of a turn that follows
+a procedure: looking something up, saying which steps are finished and
+handing over each take a call.
+*/
+const procedureModelCalls = 14
+
+/*
+outOfTools is the note the model reads before its last call of a turn,
+when the tools are withdrawn.
+*/
+const outOfTools = "<system_note>You have no tools left in this reply. Write the reply now from what the tool " +
+	"results above show. Say nothing was done, passed on or handed over unless a result above shows it, and " +
+	"do not say you are doing it now. If a step is left unfinished, end by asking the customer what you still " +
+	"need, or tell them plainly what you could not finish.</system_note>"
 
 /*
 loop is the turn's conversation with the answer model: the driver, the
@@ -79,14 +98,14 @@ which it returns.
 */
 func (r *Runner) agentLoop(ctx context.Context, st *run) (string, error) {
 	lp := st.loop
-	most := maxModelCalls
-	if lp.limit > 0 {
-		most = lp.limit
-	}
 	for calls := 1; ; calls++ {
+		most := callLimit(st)
 		var tools []contracts.ToolSpec
 		if calls < most && !st.actions.closed {
 			tools = r.toolSpecs(st)
+		}
+		if calls == most && calls > 1 {
+			lp.messages = append(lp.messages, userMessage(outOfTools))
 		}
 
 		out, err := r.generate(ctx, st, tools)
@@ -109,6 +128,20 @@ func (r *Runner) agentLoop(ctx context.Context, st *run) (string, error) {
 			})
 		}
 	}
+}
+
+/*
+callLimit is how many model calls the turn's tool loop gets: the limit
+set for it, or else more for a turn that follows a procedure.
+*/
+func callLimit(st *run) int {
+	switch {
+	case st.loop.limit > 0:
+		return st.loop.limit
+	case st.proc.active():
+		return procedureModelCalls
+	}
+	return maxModelCalls
 }
 
 /*
@@ -146,6 +179,9 @@ func (r *Runner) callTool(ctx context.Context, st *run, call contracts.ToolCall)
 	r.step(ctx, st, stepRecord{
 		kind: enums.AIRunStepKindToolCall, model: ran, started: started,
 		request: r.redactFor(st.env, string(call.Arguments)), response: withTrace(st, ran, result), err: err,
+	})
+	r.publishPreview(ctx, st, finished{
+		tool: ran, args: call.Arguments, result: result, failed: err != nil, refused: refused,
 	})
 	if err != nil {
 		return "error: " + err.Error(), true

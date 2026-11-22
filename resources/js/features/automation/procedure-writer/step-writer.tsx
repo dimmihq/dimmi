@@ -23,7 +23,7 @@ import { type Suggested, suggestionExtension } from "@/features/inbox/composer/s
 import { SuggestionList } from "@/features/inbox/composer/suggestion-list";
 import type { BindingKind, ProcedureBinding, ProcedureStep } from "@/lib/api/procedures";
 import { type ChipOption, type ChipSources, findChips, labelOf } from "./procedure-suggestions";
-import { ProcedureToken } from "./procedure-token";
+import { ChipContext, ProcedureToken } from "./procedure-token";
 import { type Chip, type DocNode, docToText, syncBindings, textToDoc } from "./tokens";
 
 const icons: Record<BindingKind, typeof RiFlashlightLine> = {
@@ -143,14 +143,16 @@ export function StepWriter(props: StepWriterProps) {
   }
 
   return (
-    <div className="relative rounded-2lg bg-background-tertiary-default px-3 ring-1 ring-transparent focus-within:ring-border-button-active">
-      <EditorContent editor={editor} />
-      <SuggestionList
-        label="Insert"
-        suggested={chips}
-        keyOf={(option) => `${option.kind}:${option.ref}`}
-        render={(option) => <Option option={option} />}
-      />
-    </div>
+    <ChipContext.Provider value={{ sources: props.sources, step: props.step, earlier: props.earlier }}>
+      <div className="relative rounded-2lg bg-background-tertiary-default px-3 ring-1 ring-transparent focus-within:ring-border-button-active">
+        <EditorContent editor={editor} />
+        <SuggestionList
+          label="Insert"
+          suggested={chips}
+          keyOf={(option) => `${option.kind}:${option.ref}`}
+          render={(option) => <Option option={option} />}
+        />
+      </div>
+    </ChipContext.Provider>
   );
 }

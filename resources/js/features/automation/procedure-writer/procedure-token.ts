@@ -9,11 +9,25 @@
  */
 import { Plugin } from "@tiptap/pm/state";
 import { mergeAttributes, Node, ReactNodeViewRenderer } from "@tiptap/react";
+import { createContext } from "react";
 
-import type { ProcedureBinding } from "@/lib/api/procedures";
+import type { ProcedureBinding, ProcedureStep } from "@/lib/api/procedures";
 
 import { ProcedureChip } from "./procedure-chip";
+import type { ChipSources } from "./procedure-suggestions";
 import { type Chip, marker } from "./tokens";
+
+/*
+ * ChipContext pushes live sources and step state into TipTap node views so
+ * chips re-render as soon as actions/articles load or bindings change.
+ */
+export interface ChipContextValue {
+  sources: ChipSources;
+  step: ProcedureStep;
+  earlier: (readonly [string, string])[];
+}
+
+export const ChipContext = createContext<ChipContextValue | null>(null);
 
 declare module "@tiptap/react" {
   interface Commands<ReturnType> {
