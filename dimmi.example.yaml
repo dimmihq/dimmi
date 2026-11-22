@@ -840,7 +840,6 @@ inbox:
 # AIConfig configures the AI agent.
 ai:
   enabled: true  # DIMMI_AI__ENABLED
-  offline: false  # DIMMI_AI__OFFLINE
   # AIManagedConfig holds the built-in provider's upstream credentials:
   # one key per model family, all optional so an install can run any
   # subset. On dimmi cloud these are dimmi's own keys; on self-host the
