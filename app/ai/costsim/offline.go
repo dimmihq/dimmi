@@ -104,10 +104,6 @@ func (o *Offline) answer(req contracts.ChatRequest) (string, []contracts.ToolCal
 		out, _ := json.Marshal(smallest(schema))
 		return string(out), nil
 	}
-	if hasTool(req.Tools, simulatedCustomerTool) {
-		args, _ := json.Marshal(map[string]any{"message": "", "done": true})
-		return "", []contracts.ToolCall{{ID: "call_offline_customer", Name: simulatedCustomerTool, Arguments: args}}
-	}
 	if req.Metadata[metaRole] == roleCustomer {
 		if replied(req.Messages) {
 			return DoneMarker, nil

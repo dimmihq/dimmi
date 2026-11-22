@@ -31,9 +31,6 @@ const DoneMarker = "[DONE]"
 const (
 	metaRole     = "costsim_role"
 	roleCustomer = "customer"
-
-	// Offline, the simulation customer's tool call ends the chat at once.
-	simulatedCustomerTool = "reply_as_customer"
 )
 
 /*
