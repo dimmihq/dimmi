@@ -28,6 +28,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"slices"
 	"strings"
 
 	"github.com/dimmihq/dimmi/framework/database"
@@ -45,11 +46,13 @@ toolProcedure is the procedure tool's name.
 const toolProcedure = "follow_procedure"
 
 /*
-liveProcedure is a procedure the agent may follow.
+liveProcedure is a procedure the agent may follow, with the number of
+its live version.
 */
 type liveProcedure struct {
-	row models.ListLiveProceduresRow
-	def procedure.Definition
+	row     models.ListLiveProceduresRow
+	def     procedure.Definition
+	version int32
 }
 
 /*
@@ -61,34 +64,44 @@ func (p liveProcedure) publicID() string {
 
 /*
 loadProcedures reads the workspace's live procedures, leaving out any
-that cannot be read.
+that cannot be read. Every one is kept for following as a sub-procedure;
+those the agent is offered exclude the reusable-only ones and those
+scoped away from this conversation.
 */
-func loadProcedures(ctx context.Context, q *models.Queries, e *env) error {
+func (r *Runner) loadProcedures(ctx context.Context, q *models.Queries, e *env) error {
 	rows, err := q.ListLiveProcedures(ctx, e.Conversation.WorkspaceID)
 	if err != nil {
 		return fmt.Errorf("list procedures: %w", err)
 	}
 
-	for _, r := range rows {
-		def, err := procedure.Parse(r.Live)
+	for _, row := range rows {
+		def, err := procedure.Parse(row.Live)
 		if err != nil {
 			continue
 		}
 
-		e.Procedures = append(e.Procedures, liveProcedure{row: r, def: def})
+		e.AllProcedures = append(e.AllProcedures, liveProcedure{row: row, def: def, version: row.Version})
 	}
 
-	return nil
+	e.Procedures, err = r.inScope(ctx, q, e, e.AllProcedures)
+
+	return err
 }
 
 /*
 procedureSpec describes the procedure tool, listing every procedure by
-its id, name and when it applies.
+its id, name and when it applies, the one being followed included.
 */
-func procedureSpec(e *env) contracts.ToolSpec {
-	known := make([]string, len(e.Procedures))
+func procedureSpec(st *run) contracts.ToolSpec {
+	listed := slices.Clone(st.env.Procedures)
+	if st.proc != nil && !slices.ContainsFunc(listed, func(p liveProcedure) bool {
+		return p.row.ID == st.proc.live.row.ID
+	}) {
+		listed = append(listed, st.proc.live)
+	}
+	known := make([]string, len(listed))
 	var list strings.Builder
-	for i, p := range e.Procedures {
+	for i, p := range listed {
 		known[i] = p.publicID()
 		list.WriteString("\n- " + p.publicID() + ": " + p.row.Name + ". Use when: " + p.def.Description)
 	}
@@ -131,7 +144,7 @@ func (r *Runner) followProcedure(ctx context.Context, st *run, args json.RawMess
 		return "", errToolArguments
 	}
 
-	for _, p := range st.env.Procedures {
+	for _, p := range r.followable(st) {
 		if p.publicID() != in.ID {
 			continue
 		}
@@ -143,7 +156,19 @@ func (r *Runner) followProcedure(ctx context.Context, st *run, args json.RawMess
 		}
 		if use != nil {
 			st.flags, st.followed = appendOnce(st.flags, "procedure:"+use.row.ID.String()), true
-			body["procedure"] = procedure.Render(use.row.Name, use.def, actionTools(st))
+			var fit *float64
+			if score, ok := st.procedureFits[use.publicID()]; ok {
+				fit = &score
+			}
+			r.startProcedure(ctx, st, *use, fit)
+			r.ensureProcedureActions(ctx, st)
+			body["procedure"] = r.renderProcedure(st)
+			if len(st.proc.articles) > 0 {
+				body["articles"] = strings.Join(st.proc.articles, "\n")
+			}
+			body["note"] = strings.TrimSpace(body["note"] + " Follow these steps now. " + stepByStep +
+				" Tools marked required are checked before your reply is sent. Call " + toolProcedureStatus +
+				" with completed when every step is done, or exited_topic_changed when the customer moves on.")
 		}
 		out, err := json.Marshal(body)
 
@@ -151,6 +176,21 @@ func (r *Runner) followProcedure(ctx context.Context, st *run, args json.RawMess
 	}
 
 	return "", errToolArguments
+}
+
+/*
+followable is every procedure the agent may ask for: those offered,
+and the one being followed.
+*/
+func (r *Runner) followable(st *run) []liveProcedure {
+	out := slices.Clone(st.env.Procedures)
+	if st.proc != nil && !slices.ContainsFunc(out, func(p liveProcedure) bool {
+		return p.row.ID == st.proc.live.row.ID
+	}) {
+		out = append(out, st.proc.live)
+	}
+
+	return out
 }
 
 /*
@@ -242,24 +282,10 @@ func (r *Runner) procedureFits(ctx context.Context, st *run) map[string]float64 
 		}
 	}
 
-	started := r.Clock.Now()
-	res, err := r.Decider.Decide(ctx, req)
-	rec := stepRecord{
-		kind: enums.AIRunStepKindVerify, provider: "typesafe", started: started, request: req.State, err: err,
-	}
 	fits := map[string]float64{}
-	if err == nil && res != nil {
-		for id, a := range res.Answers {
-			fits[id] = a.Noul
-		}
-		answers, _ := json.Marshal(fits)
-		cost := int64(float64(res.Usage.InputTokens) * r.DecisionPrice)
-		rec.model, rec.response, rec.cost = res.Model, string(answers), &cost
-		rec.usage = contracts.LLMUsage{
-			InputTokens: res.Usage.InputTokens, OutputTokens: res.Usage.OutputTokens, Reported: true,
-		}
+	for id, a := range r.decide(ctx, st, req) {
+		fits[id] = a.Noul
 	}
-	r.step(ctx, st, rec)
 
 	return fits
 }
@@ -269,14 +295,22 @@ procedureState is what the decision model reads: the conversation's
 latest messages, the customer's newest last.
 */
 func (r *Runner) procedureState(e *env) string {
+	return "A support conversation. The team wrote procedures for a few kinds of request. Judge what the " +
+		"customer is asking for now, in their latest message, read in the light of the conversation.\n" +
+		r.conversationLines(e)
+}
+
+/*
+conversationLines is the conversation's latest messages as the decision
+model reads them, one line each, the customer's newest last.
+*/
+func (r *Runner) conversationLines(e *env) string {
 	all := append(append([]models.Message{}, e.History...), e.Pending...)
 	if len(all) > procedureTurns {
 		all = all[len(all)-procedureTurns:]
 	}
 
 	var b strings.Builder
-	b.WriteString("A support conversation. The team wrote procedures for a few kinds of request. Judge what the " +
-		"customer is asking for now, in their latest message, read in the light of the conversation.\n")
 	for _, m := range all {
 		text := body(m)
 		if text == "" {

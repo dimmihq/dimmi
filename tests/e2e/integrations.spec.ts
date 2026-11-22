@@ -157,9 +157,11 @@ it.describe("Integrations", () => {
     });
     await expect(page.getByText("Shared with a customer · Requests the AI spots")).toBeVisible();
 
-    // The channel's dialog covers the page until it has closed.
+    // The channel's dialog covers the page until it has closed, and the
+    // toasts may still sit over the button, so it is pressed by keyboard.
     await expect(dialog).toBeHidden();
-    await page.getByRole("button", { name: "Disconnect", exact: true }).click();
+    await page.getByRole("button", { name: "Disconnect", exact: true }).focus();
+    await page.keyboard.press("Enter");
     await expect(page.getByRole("alertdialog", { name: "Disconnect Slack?" })).toBeVisible();
     await page.getByRole("button", { name: "Cancel" }).click();
   });

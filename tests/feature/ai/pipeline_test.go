@@ -31,7 +31,7 @@ func TestAiTurn(t *testing.T) {
 		s := h.load(conv, res.RunID)
 		assert.Equal(t, "completed", s.run.Status)
 		assert.Equal(t, "v2", s.run.PromptVersion)
-		assert.Equal(t, []string{"generate", "tool_call", "generate"}, s.stepKinds())
+		assert.Equal(t, []string{"generate", "tool_call", "generate", "verify"}, s.stepKinds())
 		var undated int
 		require.NoError(t, h.d.TC.Operator().QueryRow(t.Context(),
 			"SELECT count(*) FROM ai_run_steps WHERE run_id = $1 AND created_at < now() - interval '1 year'",
@@ -84,7 +84,7 @@ func TestAiTurn(t *testing.T) {
 		require.Equal(t, "answered", res.Outcome)
 
 		s := h.load(conv, res.RunID)
-		assert.Equal(t, []string{"generate", "tool_call", "generate", "tool_call", "generate"}, s.stepKinds())
+		assert.Equal(t, []string{"generate", "tool_call", "generate", "tool_call", "generate", "verify"}, s.stepKinds())
 		sources, _ := aiMeta(t, s.agentReplies()[0])["sources"].([]any)
 		urls := []any{}
 		for _, src := range sources {

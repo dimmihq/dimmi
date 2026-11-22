@@ -181,3 +181,7 @@ UPDATE ai_action_calls SET
     bindings = @bindings, state = @next_state, expires_at = @expires_at, updated_at = @now::timestamptz
 WHERE workspace_id = @workspace_id AND id = @id AND state = 'awaiting_verification'
 RETURNING *;
+
+-- name: ListRunActionCalls :many
+-- ListRunActionCalls returns the action calls one run made, oldest first.
+SELECT * FROM ai_action_calls WHERE workspace_id = @workspace_id AND run_id = @run_id ORDER BY created_at, id;

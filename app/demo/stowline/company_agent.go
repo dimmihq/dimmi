@@ -150,11 +150,53 @@ func AgentActions(conn ids.UUID) []agentactions.DefinitionInput {
 }
 
 /*
-NamedProcedure is one procedure and its definition.
+TestResponses are what each action answered when the team last tested
+it, as the agent reads it: the fields the action keeps, by their names.
+A preview or a simulation of a procedure answers the action with it, so
+the agent has a real plan, balance or parcel to talk about.
+*/
+func TestResponses() map[string]map[string]any {
+	return map[string]map[string]any{
+		"get_shipment_status": {
+			"status": "in_transit", "carrier": "ups", "estimated_delivery": "2026-11-15",
+			"latest_scan": "Departed from facility", "latest_scan_at": "2026-11-12T23:41:00Z",
+			"latest_location": "Louisville, KY",
+		},
+		"get_account_overview": {
+			"plan": "growth", "labels_used": 1184, "labels_included": 1500, "balance": "212.40",
+		},
+		"list_recent_invoices": {"invoices": invoices()["data"]},
+		"void_label":           {"status": "void_pending", "refund_status": "submitted"},
+		"request_balance_refund": {
+			"refund_id": "bref_01JCK2", "status": "pending_review",
+		},
+		"get_order": {
+			"store": "Shopify", "status": "shipped", "tracking_number": "1ZX4F1E40312345678",
+			"items": []map[string]any{{"sku": "MUG-BLU", "quantity": 2}, {"sku": "TEA-50", "quantity": 1}},
+		},
+		"change_plan":    {"plan": "pro", "effective_from": "2026-12-01"},
+		"unlock_account": {"status": "unlocked"},
+	}
+}
+
+/*
+NamedProcedure is one procedure: its definition as it stands, the topic
+whose conversations follow it, and how its first step read before the
+team reworded it.
 */
 type NamedProcedure struct {
 	Name       string
+	Topic      string
+	FirstDraft string
 	Definition procedure.Definition
+}
+
+/*
+chip is an action as a step's words name it, the way typing @ in the
+editor writes it.
+*/
+func chip(action string) string {
+	return "[[action:" + action + "]]"
 }
 
 /*
@@ -163,35 +205,47 @@ taking the published actions by their public ids.
 */
 func Procedures(actions map[string]string) []NamedProcedure {
 	return []NamedProcedure{
-		{"Parcel not moving", procedure.Definition{
+		{"Parcel not moving", "missing_tracking", "Ask the customer for their tracking number.", procedure.Definition{
 			Description: "The customer says one parcel's tracking has not changed, or asks where a parcel is. " +
 				"Not for a batch, an import or a print job that is stuck.",
 			Steps: []procedure.Step{
 				{ID: "ask", Kind: procedure.KindInstruction, Text: "Ask for the tracking number if the customer has not given it."},
-				{ID: "lookup", Kind: procedure.KindAction, Text: "Look the parcel up.", ActionID: actions["get_shipment_status"]},
+				{ID: "lookup", Kind: procedure.KindInstruction, Text: "Look the parcel up with " + chip(actions["get_shipment_status"]) + "."},
 				{ID: "wait", Kind: procedure.KindCondition, Text: "If the last scan is less than 5 business days old for a domestic parcel, or 10 for an international one, explain that gaps between scans are normal and when to check again."},
 				{ID: "trace", Kind: procedure.KindInstruction, Text: "Otherwise tell the customer we will open a trace with the carrier, and hand the conversation to the team."},
 			},
 			Handover: []string{"The parcel is marked delivered but the customer says it never arrived.", "The customer wants to file an insurance claim."},
 		}},
-		{"Refund for a voided label", procedure.Definition{
+		{"Refund for a voided label", "void_refund", "Tell the customer voided labels are refunded to the Stowline balance within a few weeks.", procedure.Definition{
 			Description: "The customer voided a label and asks where the money is.",
 			Steps: []procedure.Step{
 				{ID: "explain", Kind: procedure.KindInstruction, Text: "Explain that voided labels are refunded to the Stowline balance once the carrier confirms the label was never scanned: 14 to 21 days for USPS, within 7 days for most others."},
-				{ID: "check", Kind: procedure.KindAction, Text: "Check the customer's balance.", ActionID: actions["get_account_overview"]},
+				{ID: "check", Kind: procedure.KindInstruction, Text: "Check the customer's balance with " + chip(actions["get_account_overview"]) + "."},
 				{ID: "card", Kind: procedure.KindCondition, Text: "If the customer wants the money on their card instead, offer a balance refund for top-ups from the last 120 days."},
-				{ID: "refund", Kind: procedure.KindAction, Text: "Request the balance refund for the amount the customer agrees to.", ActionID: actions["request_balance_refund"]},
+				{ID: "refund", Kind: procedure.KindInstruction, Text: "Request the balance refund with " + chip(actions["request_balance_refund"]) + " for the amount the customer agrees to."},
 			},
 			Handover: []string{"The void is more than 30 days old and still not refunded."},
 		}},
-		{"Customer wants to cancel", procedure.Definition{
-			Description: "The customer asks to cancel their plan or close their account.",
+		{"Customer wants to cancel", "cancel_account", "Ask why they are leaving.", procedure.Definition{
+			Description: "The customer asks to cancel their plan, close their account or downgrade to Free.",
 			Steps: []procedure.Step{
-				{ID: "why", Kind: procedure.KindInstruction, Text: "Ask, once and kindly, what made them decide to leave."},
-				{ID: "how", Kind: procedure.KindInstruction, Text: "Explain that canceling moves the account to Free at the end of the period and keeps its history, and that the balance can be refunded to the card."},
-				{ID: "hand", Kind: procedure.KindInstruction, Text: "Hand the conversation to the Billing team with the reason."},
+				{ID: "why", Kind: procedure.KindInstruction, Text: "Say you are sorry to see them go, and ask what made them decide to cancel."},
+				{ID: "account", Kind: procedure.KindInstruction, Text: "Look up their plan and Stowline balance with " + chip(actions["get_account_overview"]) + "."},
+				{ID: "explain", Kind: procedure.KindInstruction, Text: "Explain what canceling does, using their plan and balance: the account moves to Free at the end of the billing period, their labels, tracking pages and history stay, and their balance can be refunded to their card. Then ask if they still want to cancel."},
+				{
+					ID: "confirm", Kind: procedure.KindCondition, Text: "The customer still wants to cancel",
+					ThenSteps: []procedure.Step{
+						{ID: "handover", Kind: procedure.KindInstruction, Text: "Tell them the Billing team will cancel the plan and confirm by email, then hand the conversation to the Billing team with their reason and their balance."},
+					},
+					ElseSteps: []procedure.Step{
+						{ID: "stay", Kind: procedure.KindInstruction, Text: "Thank them for staying, and offer to help with what made them want to leave."},
+					},
+				},
 			},
-			Handover: []string{"Always, after explaining."},
+			Handover: []string{
+				"The customer asks for a refund of this month's plan fee.",
+				"The customer is upset or mentions a chargeback.",
+			},
 		}},
 	}
 }

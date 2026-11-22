@@ -54,7 +54,8 @@ send. Actions, when set, gives the agent the workspace's own actions as
 tools. Delivery, when set, queues each reply on a channel that pushes.
 Decider, when set, checks that a procedure the agent asks for fits the
 request; DecisionPrice is what one of its input tokens costs, in
-millionths of a dollar. It remembers each unpriced model it has logged,
+millionths of a dollar. ProcedureVectors, when set, ranks a long list of
+procedures by meaning. It remembers each unpriced model it has logged,
 so each is logged once.
 */
 type Runner struct {
@@ -77,10 +78,13 @@ type Runner struct {
 	Decider       contracts.Decider
 	DecisionPrice float64
 
+	ProcedureVectors ProcedureVectors
+
 	redactor *pii.Redactor
 	guard    *linkguard.Guard
 
 	unpricedSeen sync.Map
+	stepWaits    sync.Map
 }
 
 /*
@@ -174,19 +178,34 @@ func (r *Runner) turn(ctx context.Context, st *run) *decision {
 		return failed("provider_unavailable", err)
 	}
 
-	stopTyping := r.typing(ctx, st.env)
-	defer stopTyping()
+	if st.sim == nil {
+		stopTyping := r.typing(ctx, st.env)
+		defer stopTyping()
+	}
 
 	st.loop = &loop{llm: llm, system: r.render(st.env, "answer.system.md", r.answerVars(st))}
-	st.loop.messages = r.withMemory(st, r.conversationMessages(st.env))
+	r.shortlistProcedures(ctx, st)
+	r.resumeProcedure(ctx, st)
+	messages := r.conversationMessages(st.env)
+	if st.sim != nil {
+		if update := r.confirmPending(ctx, st); update != "" {
+			messages = r.envelope(st.env, update)
+		}
+	}
+	st.loop.messages = r.withMemory(st, messages)
 	r.offerActions(ctx, st)
 	r.openLayer(ctx, st)
+	if st.proc != nil {
+		r.ensureProcedureActions(ctx, st)
+	}
 	st.loop.newest = len(st.loop.messages) - 1
 
 	draft, err := r.agentLoop(ctx, st)
 	if err == nil {
-		draft, err = r.withoutUnknownLinks(ctx, st, draft)
+		draft, err = r.checked(ctx, st, draft)
 	}
+	r.routeProcedureHandoff(st)
+	r.settleProcedure(st)
 	r.saveLayer(ctx, st)
 	if err != nil {
 		return failed("provider_error", err)
@@ -208,6 +227,23 @@ func (r *Runner) timeout(ctx context.Context, d time.Duration) (context.Context,
 		timer.Stop()
 		cancel(context.Canceled)
 	}
+}
+
+/*
+checked passes a draft through the checks a reply must clear before it
+is sent, each of which may send it back to be written again: its links,
+the actions its procedure requires, and text never meant for the
+customer.
+*/
+func (r *Runner) checked(ctx context.Context, st *run, draft string) (string, error) {
+	draft, err := r.withoutUnknownLinks(ctx, st, draft)
+	if err == nil {
+		draft, err = r.verifyProcedureCompliance(ctx, st, draft)
+	}
+	if err == nil {
+		draft, err = r.withoutNotes(ctx, st, draft)
+	}
+	return draft, err
 }
 
 /*

@@ -49,7 +49,9 @@ func bootWorkflows(a *app.App) {
 	a.Actions.WorkflowEngine = runner
 	a.Actions.Workflows = &workflows.Workflows{DB: a.DB, Clock: a.Clock, IDs: a.IDs, Live: runner}
 	a.Actions.Schedules = &schedules.Schedules{DB: a.DB, Clock: a.Clock, IDs: a.IDs}
-	a.Actions.Procedures = &procedures.Procedures{DB: a.DB, Clock: a.Clock, IDs: a.IDs}
+	a.Actions.Procedures = &procedures.Procedures{
+		DB: a.DB, Clock: a.Clock, IDs: a.IDs, Audit: a.Actions.RecordAuditLog,
+	}
 	a.Actions.Audiences = &audiences.Audiences{DB: a.DB, Clock: a.Clock, IDs: a.IDs}
 	a.Actions.Attributes = &attributes.Definitions{DB: a.DB, Clock: a.Clock, IDs: a.IDs}
 	a.Actions.Events = &events.Events{DB: a.DB, Cache: a.Cache, Clock: a.Clock, IDs: a.IDs, Dispatcher: a.Events}

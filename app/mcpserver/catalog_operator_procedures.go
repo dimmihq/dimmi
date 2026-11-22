@@ -21,7 +21,7 @@ func operatorProcedureDocs() map[string]Doc {
 	out := map[string]Doc{}
 	for _, part := range []map[string]Doc{
 		operatorThreadDocs(), operatorChangesetDocs(), operatorSettingsDocs(), procedureDocs(),
-		procedurePublishDocs(), workflowDocs(), workflowChangeDocs(),
+		procedurePublishDocs(), procedureTestingDocs(), workflowDocs(), workflowChangeDocs(),
 	} {
 		maps.Copy(out, part)
 	}

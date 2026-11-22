@@ -159,3 +159,11 @@ ON CONFLICT (workspace_id) DO UPDATE SET tool_layer = EXCLUDED.tool_layer, updat
 INSERT INTO operator_settings (workspace_id, compact_results, created_at, updated_at)
 VALUES (@workspace_id, @compact_results, @now, @now)
 ON CONFLICT (workspace_id) DO UPDATE SET compact_results = EXCLUDED.compact_results, updated_at = EXCLUDED.updated_at;
+
+-- name: SetOperatorProcedureQA :exec
+-- SetOperatorProcedureQA turns Operator's weekly review of the
+-- procedures on or off.
+INSERT INTO operator_settings (workspace_id, procedure_qa_weekly, created_at, updated_at)
+VALUES (@workspace_id, @procedure_qa_weekly, @now, @now)
+ON CONFLICT (workspace_id) DO UPDATE SET procedure_qa_weekly = EXCLUDED.procedure_qa_weekly,
+    updated_at = EXCLUDED.updated_at;

@@ -72,6 +72,7 @@
           "kind": {
             "type": "string"
           },
+          "last_test_response": {},
           "mcp_tool_name": {
             "type": [
               "string",
@@ -1759,6 +1760,19 @@
         },
         "type": "object"
       },
+      "ActionMockInput": {
+        "additionalProperties": false,
+        "properties": {
+          "body": {},
+          "status": {
+            "format": "int64",
+            "maximum": 599,
+            "minimum": 100,
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      },
       "AddReactionRequestBody": {
         "additionalProperties": false,
         "properties": {
@@ -2059,6 +2073,7 @@
           "payloads_visible": {
             "type": "boolean"
           },
+          "procedure_trace": {},
           "prompt_version": {
             "type": "string"
           },
@@ -9167,6 +9182,183 @@
         "type": "object"
       },
       "CollectionProcedureMetaStruct": {
+        "additionalProperties": false,
+        "properties": {
+          "next_cursor": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "per_page": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "prev_cursor": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "total": {
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "next_cursor",
+          "prev_cursor",
+          "per_page"
+        ],
+        "type": "object"
+      },
+      "CollectionProcedureReportRow": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/ProcedureReportRow"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "links": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/CollectionProcedureReportRowMetaStruct"
+          }
+        },
+        "required": [
+          "data",
+          "meta"
+        ],
+        "type": "object"
+      },
+      "CollectionProcedureReportRowMetaStruct": {
+        "additionalProperties": false,
+        "properties": {
+          "next_cursor": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "per_page": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "prev_cursor": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "total": {
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "next_cursor",
+          "prev_cursor",
+          "per_page"
+        ],
+        "type": "object"
+      },
+      "CollectionProcedureTestCase": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/ProcedureTestCase"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "links": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/CollectionProcedureTestCaseMetaStruct"
+          }
+        },
+        "required": [
+          "data",
+          "meta"
+        ],
+        "type": "object"
+      },
+      "CollectionProcedureTestCaseMetaStruct": {
+        "additionalProperties": false,
+        "properties": {
+          "next_cursor": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "per_page": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "prev_cursor": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "total": {
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "next_cursor",
+          "prev_cursor",
+          "per_page"
+        ],
+        "type": "object"
+      },
+      "CollectionProcedureVersion": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/ProcedureVersion"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "links": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/CollectionProcedureVersionMetaStruct"
+          }
+        },
+        "required": [
+          "data",
+          "meta"
+        ],
+        "type": "object"
+      },
+      "CollectionProcedureVersionMetaStruct": {
         "additionalProperties": false,
         "properties": {
           "next_cursor": {
@@ -20602,6 +20794,33 @@
         ],
         "type": "object"
       },
+      "ObservedCall": {
+        "additionalProperties": false,
+        "properties": {
+          "action_id": {
+            "type": "string"
+          },
+          "args": {
+            "additionalProperties": {},
+            "type": "object"
+          },
+          "blocked": {
+            "type": "boolean"
+          },
+          "succeeded": {
+            "type": "boolean"
+          },
+          "tool": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "action_id",
+          "tool",
+          "succeeded"
+        ],
+        "type": "object"
+      },
       "Onboarding": {
         "additionalProperties": false,
         "properties": {
@@ -20880,6 +21099,9 @@
             },
             "type": "object"
           },
+          "procedure_qa_weekly": {
+            "type": "boolean"
+          },
           "triage_on_arrival": {
             "type": "boolean"
           }
@@ -20892,7 +21114,8 @@
           "instructions",
           "policies",
           "auto_groups",
-          "model"
+          "model",
+          "procedure_qa_weekly"
         ],
         "type": "object"
       },
@@ -21620,6 +21843,562 @@
         ],
         "type": "object"
       },
+      "ProcedureActionFigure": {
+        "additionalProperties": false,
+        "properties": {
+          "action_id": {
+            "type": "string"
+          },
+          "calls": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "error_rate": {
+            "format": "double",
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "failed": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "mean_latency_ms": {
+            "format": "double",
+            "type": "number"
+          },
+          "name": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "action_id",
+          "name",
+          "calls",
+          "failed",
+          "error_rate",
+          "mean_latency_ms"
+        ],
+        "type": "object"
+      },
+      "ProcedureCSAT": {
+        "additionalProperties": false,
+        "properties": {
+          "mean": {
+            "format": "double",
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "positive": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "positive_rate": {
+            "format": "double",
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "rated": {
+            "format": "int32",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "rated",
+          "positive",
+          "positive_rate",
+          "mean"
+        ],
+        "type": "object"
+      },
+      "ProcedureHandoverReason": {
+        "additionalProperties": false,
+        "properties": {
+          "conversations": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "kind": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "reason",
+          "kind",
+          "conversations"
+        ],
+        "type": "object"
+      },
+      "ProcedureMetrics": {
+        "additionalProperties": false,
+        "properties": {
+          "actions": {
+            "items": {
+              "$ref": "#/components/schemas/ProcedureActionFigure"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "ai_assumed": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "ai_confirmed": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "ai_involved": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "ai_resolution_rate": {
+            "format": "double",
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "ai_resolved": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "csat": {
+            "$ref": "#/components/schemas/ProcedureCSAT"
+          },
+          "days": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "guardrails": {
+            "additionalProperties": {
+              "format": "int32",
+              "type": "integer"
+            },
+            "type": "object"
+          },
+          "handed_off": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "handover_rate": {
+            "format": "double",
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "handover_reasons": {
+            "items": {
+              "$ref": "#/components/schemas/ProcedureHandoverReason"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "matched_conversations": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "object": {
+            "type": "string"
+          },
+          "procedure_id": {
+            "type": "string"
+          },
+          "runs": {
+            "items": {
+              "$ref": "#/components/schemas/ProcedureRunFigure"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "steps": {
+            "items": {
+              "$ref": "#/components/schemas/ProcedureStepFigure"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "version": {
+            "format": "int32",
+            "type": [
+              "integer",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "object",
+          "procedure_id",
+          "days",
+          "version",
+          "matched_conversations",
+          "ai_involved",
+          "ai_resolved",
+          "ai_confirmed",
+          "ai_assumed",
+          "ai_resolution_rate",
+          "handed_off",
+          "handover_rate",
+          "handover_reasons",
+          "csat",
+          "guardrails",
+          "steps",
+          "actions",
+          "runs"
+        ],
+        "type": "object"
+      },
+      "ProcedureReportRow": {
+        "additionalProperties": false,
+        "properties": {
+          "ai_involved": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "ai_resolution_rate": {
+            "format": "double",
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "ai_resolved": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "guard_events": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "handed_off": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "handover_rate": {
+            "format": "double",
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "matched_conversations": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "mean_rating": {
+            "format": "double",
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "name": {
+            "type": "string"
+          },
+          "procedure_id": {
+            "type": "string"
+          },
+          "rated": {
+            "format": "int32",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "procedure_id",
+          "name",
+          "matched_conversations",
+          "ai_involved",
+          "ai_resolved",
+          "ai_resolution_rate",
+          "handed_off",
+          "handover_rate",
+          "rated",
+          "mean_rating",
+          "guard_events"
+        ],
+        "type": "object"
+      },
+      "ProcedureRunFigure": {
+        "additionalProperties": false,
+        "properties": {
+          "conversation_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "conversation_number": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "created_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "handoff_reason": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "outcome": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "procedure_trace": {},
+          "rating": {
+            "format": "int32",
+            "maximum": 32767,
+            "minimum": -32768,
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "reopens": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "run_id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "run_id",
+          "conversation_id",
+          "conversation_number",
+          "outcome",
+          "handoff_reason",
+          "rating",
+          "reopens",
+          "created_at"
+        ],
+        "type": "object"
+      },
+      "ProcedureSimulation": {
+        "additionalProperties": false,
+        "properties": {
+          "action_calls": {
+            "items": {
+              "$ref": "#/components/schemas/ObservedCall"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "active_state": {
+            "$ref": "#/components/schemas/SimState"
+          },
+          "handoff": {
+            "$ref": "#/components/schemas/SimHandoff"
+          },
+          "matched": {
+            "type": "boolean"
+          },
+          "object": {
+            "type": "string"
+          },
+          "outcome": {
+            "type": "string"
+          },
+          "procedure_trace": {},
+          "reply": {
+            "type": "string"
+          },
+          "run_id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "object",
+          "run_id",
+          "reply",
+          "outcome",
+          "matched",
+          "handoff",
+          "active_state",
+          "action_calls"
+        ],
+        "type": "object"
+      },
+      "ProcedureStepFigure": {
+        "additionalProperties": false,
+        "properties": {
+          "completion_rate": {
+            "format": "double",
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "done": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "reached": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "step_id": {
+            "type": "string"
+          },
+          "took_else": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "took_then": {
+            "format": "int32",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "step_id",
+          "reached",
+          "done",
+          "completion_rate",
+          "took_then",
+          "took_else"
+        ],
+        "type": "object"
+      },
+      "ProcedureTestCase": {
+        "additionalProperties": false,
+        "properties": {
+          "action_mocks": {},
+          "assertions": {},
+          "created_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "last_result": {},
+          "messages": {},
+          "name": {
+            "type": "string"
+          },
+          "object": {
+            "type": "string"
+          },
+          "persona": {},
+          "procedure_id": {
+            "type": "string"
+          },
+          "simulated_at": {
+            "format": "date-time",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "source_conversation_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "updated_at": {
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "object",
+          "procedure_id",
+          "name",
+          "source_conversation_id",
+          "persona",
+          "messages",
+          "action_mocks",
+          "assertions",
+          "last_result",
+          "simulated_at",
+          "created_at",
+          "updated_at"
+        ],
+        "type": "object"
+      },
+      "ProcedureVersion": {
+        "additionalProperties": false,
+        "properties": {
+          "change_note": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "conversations": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "definition": {},
+          "handed_off": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "object": {
+            "type": "string"
+          },
+          "procedure_id": {
+            "type": "string"
+          },
+          "published_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "published_by_member_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "version": {
+            "format": "int32",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "object",
+          "procedure_id",
+          "version",
+          "name",
+          "definition",
+          "change_note",
+          "published_by_member_id",
+          "published_at",
+          "conversations",
+          "handed_off"
+        ],
+        "type": "object"
+      },
       "Provider": {
         "additionalProperties": false,
         "properties": {
@@ -21700,6 +22479,16 @@
           },
           "scheduled_for": {
             "format": "date-time",
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "PublishProcedureRequestBody": {
+        "additionalProperties": false,
+        "properties": {
+          "change_note": {
+            "maxLength": 500,
             "type": "string"
           }
         },
@@ -24352,6 +25141,54 @@
         ],
         "type": "object"
       },
+      "ResourceProcedureMetrics": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/ProcedureMetrics"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "ResourceProcedureSimulation": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/ProcedureSimulation"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "ResourceProcedureTestCase": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/ProcedureTestCase"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "ResourceProcedureVersion": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/ProcedureVersion"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
       "ResourcePushConfig": {
         "additionalProperties": false,
         "properties": {
@@ -25145,6 +25982,19 @@
         ],
         "type": "object"
       },
+      "RestoreProcedureVersionRequestBody": {
+        "additionalProperties": false,
+        "properties": {
+          "lock_version": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "publish": {
+            "type": "boolean"
+          }
+        },
+        "type": "object"
+      },
       "Retention": {
         "additionalProperties": false,
         "properties": {
@@ -25372,6 +26222,26 @@
           "row",
           "message"
         ],
+        "type": "object"
+      },
+      "RunTestCasesRequestBody": {
+        "additionalProperties": false,
+        "properties": {
+          "stream_id": {
+            "maxLength": 64,
+            "type": "string"
+          },
+          "test_case_ids": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 20,
+            "type": [
+              "array",
+              "null"
+            ]
+          }
+        },
         "type": "object"
       },
       "SLAClock": {
@@ -27368,6 +28238,311 @@
         "required": [
           "sessions_revoked"
         ],
+        "type": "object"
+      },
+      "SimHandoff": {
+        "additionalProperties": false,
+        "properties": {
+          "note": {
+            "type": "string"
+          },
+          "priority": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string"
+          },
+          "team_id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "reason"
+        ],
+        "type": "object"
+      },
+      "SimMessageInput": {
+        "additionalProperties": false,
+        "properties": {
+          "role": {
+            "enum": [
+              "customer",
+              "agent"
+            ],
+            "type": "string"
+          },
+          "text": {
+            "maxLength": 4000,
+            "type": "string"
+          }
+        },
+        "required": [
+          "role",
+          "text"
+        ],
+        "type": "object"
+      },
+      "SimPending": {
+        "additionalProperties": false,
+        "properties": {
+          "action_id": {
+            "type": "string"
+          },
+          "args": {
+            "additionalProperties": {},
+            "type": "object"
+          },
+          "state": {
+            "type": "string"
+          },
+          "summary": {
+            "type": "string"
+          },
+          "tool": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "action_id",
+          "tool",
+          "args",
+          "state",
+          "summary"
+        ],
+        "type": "object"
+      },
+      "SimPendingInput": {
+        "additionalProperties": false,
+        "properties": {
+          "action_id": {
+            "type": "string"
+          },
+          "args": {
+            "additionalProperties": {},
+            "type": "object"
+          },
+          "state": {
+            "type": "string"
+          },
+          "summary": {
+            "type": "string"
+          },
+          "tool": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "action_id",
+          "tool"
+        ],
+        "type": "object"
+      },
+      "SimPersonaInput": {
+        "additionalProperties": false,
+        "properties": {
+          "attributes": {
+            "additionalProperties": {},
+            "type": "object"
+          },
+          "channel": {
+            "enum": [
+              "widget",
+              "email",
+              "slack",
+              "whatsapp",
+              "instagram",
+              "facebook",
+              "api",
+              ""
+            ],
+            "type": "string"
+          },
+          "company": {
+            "additionalProperties": {},
+            "type": "object"
+          },
+          "email": {
+            "maxLength": 320,
+            "type": "string"
+          },
+          "external_id": {
+            "maxLength": 200,
+            "type": "string"
+          },
+          "inbox_id": {
+            "maxLength": 64,
+            "type": "string"
+          },
+          "name": {
+            "maxLength": 200,
+            "type": "string"
+          },
+          "verified": {
+            "type": "boolean"
+          }
+        },
+        "type": "object"
+      },
+      "SimState": {
+        "additionalProperties": false,
+        "properties": {
+          "branches": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object"
+          },
+          "called_action_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "completed_step_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "pending": {
+            "items": {
+              "$ref": "#/components/schemas/SimPending"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "procedure_id": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "step_outputs": {
+            "additionalProperties": {},
+            "type": "object"
+          }
+        },
+        "required": [
+          "called_action_ids",
+          "completed_step_ids",
+          "branches",
+          "step_outputs",
+          "pending"
+        ],
+        "type": "object"
+      },
+      "SimStateInput": {
+        "additionalProperties": false,
+        "properties": {
+          "branches": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object"
+          },
+          "called_action_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "completed_step_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "pending": {
+            "items": {
+              "$ref": "#/components/schemas/SimPendingInput"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "procedure_id": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "step_outputs": {
+            "additionalProperties": {},
+            "type": "object"
+          }
+        },
+        "type": "object"
+      },
+      "SimulateProcedureRequestBody": {
+        "additionalProperties": false,
+        "properties": {
+          "action_mocks": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/ActionMockInput"
+            },
+            "type": "object"
+          },
+          "active_state": {
+            "$ref": "#/components/schemas/SimStateInput"
+          },
+          "confirmed_action_ids": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 10,
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "history": {
+            "items": {
+              "$ref": "#/components/schemas/SimMessageInput"
+            },
+            "maxItems": 40,
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "message": {
+            "maxLength": 4000,
+            "type": "string"
+          },
+          "persona": {
+            "$ref": "#/components/schemas/SimPersonaInput"
+          },
+          "source_conversation_id": {
+            "type": "string"
+          },
+          "stream_id": {
+            "maxLength": 64,
+            "type": "string"
+          },
+          "target": {
+            "enum": [
+              "draft",
+              "live",
+              ""
+            ],
+            "type": "string"
+          }
+        },
         "type": "object"
       },
       "SkippedTool": {
@@ -30146,6 +31321,53 @@
         },
         "type": "object"
       },
+      "TestCaseBody": {
+        "additionalProperties": false,
+        "properties": {
+          "action_mocks": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/ActionMockInput"
+            },
+            "type": "object"
+          },
+          "assertions": {
+            "items": {
+              "additionalProperties": {},
+              "type": "object"
+            },
+            "maxItems": 30,
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "messages": {
+            "items": {
+              "$ref": "#/components/schemas/TestMessageInput"
+            },
+            "maxItems": 12,
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "name": {
+            "maxLength": 120,
+            "type": "string"
+          },
+          "persona": {
+            "$ref": "#/components/schemas/SimPersonaInput"
+          },
+          "simulated_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "source_conversation_id": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
       "TestConversations": {
         "additionalProperties": false,
         "properties": {
@@ -30180,6 +31402,22 @@
           "code",
           "severity",
           "message"
+        ],
+        "type": "object"
+      },
+      "TestMessageInput": {
+        "additionalProperties": false,
+        "properties": {
+          "confirm": {
+            "type": "boolean"
+          },
+          "text": {
+            "maxLength": 4000,
+            "type": "string"
+          }
+        },
+        "required": [
+          "text"
         ],
         "type": "object"
       },
@@ -33382,6 +34620,9 @@
               "type": "string"
             },
             "type": "object"
+          },
+          "procedure_qa_weekly": {
+            "type": "boolean"
           },
           "triage_on_arrival": {
             "type": "boolean"
@@ -55016,6 +56257,66 @@
         ]
       }
     },
+    "/procedures/{procedure}/metrics": {
+      "get": {
+        "operationId": "procedures.metrics.show",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "procedure",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "explode": false,
+            "in": "query",
+            "name": "days",
+            "schema": {
+              "format": "int64",
+              "maximum": 90,
+              "minimum": 0,
+              "type": "integer"
+            }
+          },
+          {
+            "explode": false,
+            "in": "query",
+            "name": "version",
+            "schema": {
+              "maxLength": 10,
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResourceProcedureMetrics"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseError"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "x-abilities": [
+          "ai:read"
+        ]
+      }
+    },
     "/procedures/{procedure}/publications": {
       "delete": {
         "operationId": "procedures.publications.destroy",
@@ -55067,6 +56368,515 @@
             }
           }
         ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PublishProcedureRequestBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResourceProcedure"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseError"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "x-abilities": [
+          "ai:write"
+        ]
+      }
+    },
+    "/procedures/{procedure}/simulate": {
+      "post": {
+        "operationId": "procedures.simulate.store",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "procedure",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SimulateProcedureRequestBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResourceProcedureSimulation"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseError"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "x-abilities": [
+          "ai:write"
+        ]
+      }
+    },
+    "/procedures/{procedure}/test-cases": {
+      "get": {
+        "operationId": "procedures.test-cases.index",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "procedure",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CollectionProcedureTestCase"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseError"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "x-abilities": [
+          "ai:read"
+        ]
+      },
+      "post": {
+        "operationId": "procedures.test-cases.store",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "procedure",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TestCaseBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResourceProcedureTestCase"
+                }
+              }
+            },
+            "description": "Created"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseError"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "x-abilities": [
+          "ai:write"
+        ]
+      }
+    },
+    "/procedures/{procedure}/test-cases/run": {
+      "post": {
+        "operationId": "procedures.test-cases.run.store",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "procedure",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RunTestCasesRequestBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CollectionProcedureTestCase"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseError"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "x-abilities": [
+          "ai:write"
+        ]
+      }
+    },
+    "/procedures/{procedure}/test-cases/{test_case}": {
+      "delete": {
+        "operationId": "procedures.test-cases.destroy",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "procedure",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "test_case",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseError"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "x-abilities": [
+          "ai:write"
+        ]
+      },
+      "get": {
+        "operationId": "procedures.test-cases.show",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "procedure",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "test_case",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResourceProcedureTestCase"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseError"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "x-abilities": [
+          "ai:read"
+        ]
+      },
+      "patch": {
+        "operationId": "procedures.test-cases.update",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "procedure",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "test_case",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TestCaseBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResourceProcedureTestCase"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseError"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "x-abilities": [
+          "ai:write"
+        ]
+      }
+    },
+    "/procedures/{procedure}/versions": {
+      "get": {
+        "operationId": "procedures.versions.index",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "procedure",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "explode": false,
+            "in": "query",
+            "name": "before",
+            "schema": {
+              "format": "int32",
+              "minimum": 0,
+              "type": "integer"
+            }
+          },
+          {
+            "explode": false,
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "format": "int32",
+              "maximum": 100,
+              "minimum": 0,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CollectionProcedureVersion"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseError"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "x-abilities": [
+          "ai:read"
+        ]
+      }
+    },
+    "/procedures/{procedure}/versions/{version}": {
+      "get": {
+        "operationId": "procedures.versions.show",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "procedure",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "version",
+            "required": true,
+            "schema": {
+              "format": "int32",
+              "minimum": 1,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResourceProcedureVersion"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseError"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "x-abilities": [
+          "ai:read"
+        ]
+      }
+    },
+    "/procedures/{procedure}/versions/{version}/restore": {
+      "post": {
+        "operationId": "procedures.versions.restore.store",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "procedure",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "version",
+            "required": true,
+            "schema": {
+              "format": "int32",
+              "minimum": 1,
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RestoreProcedureVersionRequestBody"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "content": {
@@ -55564,6 +57374,56 @@
         },
         "x-abilities": [
           "conversations:read"
+        ]
+      }
+    },
+    "/reports/procedures": {
+      "get": {
+        "operationId": "reports.procedures.index",
+        "parameters": [
+          {
+            "explode": false,
+            "in": "query",
+            "name": "from",
+            "schema": {
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+              "type": "string"
+            }
+          },
+          {
+            "explode": false,
+            "in": "query",
+            "name": "to",
+            "schema": {
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CollectionProcedureReportRow"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseError"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "x-abilities": [
+          "ai:read"
         ]
       }
     },

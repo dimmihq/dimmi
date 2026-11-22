@@ -195,7 +195,14 @@ function Memories({ workspace }: { workspace: string }) {
  */
 function unsaved(settings: OperatorSettings, change: OperatorSettingsChange): OperatorSettingsChange {
   const result: OperatorSettingsChange = {};
-  for (const key of ["enabled", "brief_on_open", "triage_on_arrival", "instructions", "model"] as const) {
+  for (const key of [
+    "enabled",
+    "brief_on_open",
+    "triage_on_arrival",
+    "procedure_qa_weekly",
+    "instructions",
+    "model",
+  ] as const) {
     if (change[key] !== undefined && change[key] !== settings[key]) {
       Object.assign(result, { [key]: change[key] });
     }
@@ -316,6 +323,18 @@ export function OperatorSettingsView() {
                 isSelected={settings.triage_on_arrival}
                 isDisabled={!canManage || !settings.enabled}
                 onChange={(on) => draft.change({ triage_on_arrival: on })}
+              />
+            </Row>
+            <Row
+              label="Review procedures every week"
+              description="Once a week Operator reads the procedures' runs that went wrong and proposes fixes and tests for you to review. Spends tokens from the monthly AI budget."
+            >
+              <Switch
+                aria-label="Review procedures every week"
+                size="sm"
+                isSelected={settings.procedure_qa_weekly}
+                isDisabled={!canManage || !settings.enabled}
+                onChange={(on) => draft.change({ procedure_qa_weekly: on })}
               />
             </Row>
           </>

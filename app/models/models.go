@@ -51,6 +51,7 @@ type AiAction struct {
 	CreatedAt              time.Time       `json:"created_at"`
 	UpdatedAt              time.Time       `json:"updated_at"`
 	Agents                 []string        `json:"agents"`
+	LastTestResponse       json.RawMessage `json:"last_test_response"`
 }
 
 type AiActionCall struct {
@@ -258,6 +259,7 @@ type AiRun struct {
 	FeedbackAt          *time.Time      `json:"feedback_at"`
 	ShadowAgreed        *bool           `json:"shadow_agreed"`
 	ToolLayer           json.RawMessage `json:"tool_layer"`
+	ProcedureTrace      json.RawMessage `json:"procedure_trace"`
 }
 
 type AiRunStep struct {
@@ -1074,6 +1076,24 @@ type ConversationParticipant struct {
 	ContactID      ids.UUID  `json:"contact_id"`
 	Role           string    `json:"role"`
 	CreatedAt      time.Time `json:"created_at"`
+}
+
+type ConversationProcedureState struct {
+	ID                 ids.UUID        `json:"id"`
+	WorkspaceID        ids.UUID        `json:"workspace_id"`
+	ConversationID     ids.UUID        `json:"conversation_id"`
+	ProcedureID        ids.UUID        `json:"procedure_id"`
+	ProcedureVersionID *ids.UUID       `json:"procedure_version_id"`
+	Status             string          `json:"status"`
+	CompletedStepIds   []string        `json:"completed_step_ids"`
+	CalledActionIds    []string        `json:"called_action_ids"`
+	StepOutputs        json.RawMessage `json:"step_outputs"`
+	StartedRunID       *ids.UUID       `json:"started_run_id"`
+	LastRunID          *ids.UUID       `json:"last_run_id"`
+	StartedAt          time.Time       `json:"started_at"`
+	UpdatedAt          time.Time       `json:"updated_at"`
+	EndedAt            *time.Time      `json:"ended_at"`
+	Branches           json.RawMessage `json:"branches"`
 }
 
 type ConversationRating struct {
@@ -2182,18 +2202,19 @@ type OperatorMessage struct {
 }
 
 type OperatorSetting struct {
-	WorkspaceID     ids.UUID        `json:"workspace_id"`
-	Enabled         bool            `json:"enabled"`
-	BriefOnOpen     bool            `json:"brief_on_open"`
-	TriageOnArrival bool            `json:"triage_on_arrival"`
-	Instructions    string          `json:"instructions"`
-	Policies        json.RawMessage `json:"policies"`
-	Model           *string         `json:"model"`
-	CreatedAt       time.Time       `json:"created_at"`
-	UpdatedAt       time.Time       `json:"updated_at"`
-	ToolLayer       bool            `json:"tool_layer"`
-	CompactResults  bool            `json:"compact_results"`
-	Effort          string          `json:"effort"`
+	WorkspaceID       ids.UUID        `json:"workspace_id"`
+	Enabled           bool            `json:"enabled"`
+	BriefOnOpen       bool            `json:"brief_on_open"`
+	TriageOnArrival   bool            `json:"triage_on_arrival"`
+	Instructions      string          `json:"instructions"`
+	Policies          json.RawMessage `json:"policies"`
+	Model             *string         `json:"model"`
+	CreatedAt         time.Time       `json:"created_at"`
+	UpdatedAt         time.Time       `json:"updated_at"`
+	ToolLayer         bool            `json:"tool_layer"`
+	CompactResults    bool            `json:"compact_results"`
+	Effort            string          `json:"effort"`
+	ProcedureQaWeekly bool            `json:"procedure_qa_weekly"`
 }
 
 type OperatorSlackThread struct {
@@ -2299,19 +2320,51 @@ type PersonalAccessToken struct {
 }
 
 type Procedure struct {
-	ID                ids.UUID        `json:"id"`
-	WorkspaceID       ids.UUID        `json:"workspace_id"`
-	Name              string          `json:"name"`
-	Status            string          `json:"status"`
-	Draft             json.RawMessage `json:"draft"`
-	Live              json.RawMessage `json:"live"`
-	LockVersion       int32           `json:"lock_version"`
-	CreatedByMemberID *ids.UUID       `json:"created_by_member_id"`
-	UpdatedByMemberID *ids.UUID       `json:"updated_by_member_id"`
-	PublishedAt       *time.Time      `json:"published_at"`
-	DeletedAt         *time.Time      `json:"deleted_at"`
-	CreatedAt         time.Time       `json:"created_at"`
-	UpdatedAt         time.Time       `json:"updated_at"`
+	ID                   ids.UUID             `json:"id"`
+	WorkspaceID          ids.UUID             `json:"workspace_id"`
+	Name                 string               `json:"name"`
+	Status               string               `json:"status"`
+	Draft                json.RawMessage      `json:"draft"`
+	Live                 json.RawMessage      `json:"live"`
+	LockVersion          int32                `json:"lock_version"`
+	CreatedByMemberID    *ids.UUID            `json:"created_by_member_id"`
+	UpdatedByMemberID    *ids.UUID            `json:"updated_by_member_id"`
+	PublishedAt          *time.Time           `json:"published_at"`
+	DeletedAt            *time.Time           `json:"deleted_at"`
+	CreatedAt            time.Time            `json:"created_at"`
+	UpdatedAt            time.Time            `json:"updated_at"`
+	LiveVersionID        *ids.UUID            `json:"live_version_id"`
+	DescriptionEmbedding *database.HalfVector `json:"description_embedding"`
+	EmbeddingModelKey    *string              `json:"embedding_model_key"`
+}
+
+type ProcedureTestCase struct {
+	ID                   ids.UUID        `json:"id"`
+	WorkspaceID          ids.UUID        `json:"workspace_id"`
+	ProcedureID          ids.UUID        `json:"procedure_id"`
+	Name                 string          `json:"name"`
+	SourceConversationID *ids.UUID       `json:"source_conversation_id"`
+	Persona              json.RawMessage `json:"persona"`
+	Messages             json.RawMessage `json:"messages"`
+	ActionMocks          json.RawMessage `json:"action_mocks"`
+	Assertions           json.RawMessage `json:"assertions"`
+	LastResult           json.RawMessage `json:"last_result"`
+	CreatedByMemberID    *ids.UUID       `json:"created_by_member_id"`
+	CreatedAt            time.Time       `json:"created_at"`
+	UpdatedAt            time.Time       `json:"updated_at"`
+	SimulatedAt          *time.Time      `json:"simulated_at"`
+}
+
+type ProcedureVersion struct {
+	ID                  ids.UUID        `json:"id"`
+	WorkspaceID         ids.UUID        `json:"workspace_id"`
+	ProcedureID         ids.UUID        `json:"procedure_id"`
+	Version             int32           `json:"version"`
+	Name                string          `json:"name"`
+	Definition          json.RawMessage `json:"definition"`
+	ChangeNote          *string         `json:"change_note"`
+	PublishedByMemberID *ids.UUID       `json:"published_by_member_id"`
+	PublishedAt         time.Time       `json:"published_at"`
 }
 
 type PushSubscription struct {

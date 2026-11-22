@@ -47,6 +47,7 @@ type SettingsInput struct {
 	Instructions    *string
 	Policies        map[string]string
 	Model           *string
+	ProcedureQA     *bool
 }
 
 /*
@@ -114,7 +115,12 @@ func (a *Settings) Update(ctx context.Context, in SettingsInput) (operator.Setti
 		if err != nil {
 			return fmt.Errorf("save operator settings: %w", err)
 		}
-		return nil
+		if in.ProcedureQA == nil {
+			return nil
+		}
+		return q.SetOperatorProcedureQA(ctx, models.SetOperatorProcedureQAParams{
+			WorkspaceID: in.Membership.Workspace.ID, ProcedureQaWeekly: *in.ProcedureQA, Now: a.Clock.Now(),
+		})
 	})
 	return out, err
 }
@@ -160,6 +166,9 @@ func merge(s operator.Settings, in SettingsInput) operator.Settings {
 	}
 	if in.Model != nil {
 		s.Model = strings.TrimSpace(*in.Model)
+	}
+	if in.ProcedureQA != nil {
+		s.ProcedureQA = *in.ProcedureQA
 	}
 	policies := maps.Clone(s.Policies)
 	if policies == nil {

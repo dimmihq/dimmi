@@ -2,9 +2,11 @@
  * A field that searches as you type and offers what it finds in a
  * dropdown under it: skeleton rows while the search runs, the matches
  * to pick with the pointer or the arrow keys, and a line saying so when
- * nothing matches. Picking writes the pick's text into the field; typing
- * again lets go of the pick and searches anew. The caller runs the
- * search from the words it is told about and hands back what it found.
+ * nothing matches. The dropdown keeps one height through all three, so
+ * nothing under or around it moves as a search runs. Picking writes the
+ * pick's text into the field; typing again lets go of the pick and
+ * searches anew. The caller runs the search from the words it is told
+ * about and hands back what it found.
  */
 import { RiSearchLine } from "@remixicon/react";
 import { type ReactNode, useState } from "react";
@@ -20,7 +22,7 @@ export const minWords = 2;
 function Searching() {
   return (
     <div role="status" aria-label="Searching" className="flex flex-col gap-1 py-1">
-      {[0, 1, 2].map((row) => (
+      {[0, 1, 2, 3, 4, 5].map((row) => (
         <div key={row} className="flex items-center gap-3 px-2 py-2">
           <Skeleton shape="circle" className="size-3.5" />
           <Skeleton shape="text" className="h-3.5 w-24" />
@@ -80,6 +82,7 @@ export function SearchComboBox<T extends object>({
       leadingIcon={RiSearchLine}
       autoFocus={autoFocus}
       menuTrigger="input"
+      listClassName="h-60"
       allowsCustomValue
       inputValue={text}
       items={live && !searching ? items : []}

@@ -24,6 +24,8 @@ import { LogRow, ShimmerText, useLogMotion, WorkingRow } from "@/components/appl
 import type { OperatorStep } from "@/lib/api/operator";
 import { cx } from "@/utils/cx";
 
+import { merged } from "./merged-steps";
+
 type Icon = ComponentType<{ className?: string }>;
 
 /*
@@ -93,7 +95,8 @@ function headerLabel(steps: number, working: boolean) {
   return steps === 1 ? "Worked through 1 step" : `Worked through ${steps} steps`;
 }
 
-export function ActivityLog({ steps, working }: { steps: OperatorStep[]; working: boolean }) {
+export function ActivityLog({ steps: all, working }: { steps: OperatorStep[]; working: boolean }) {
+  const steps = merged(all);
   const reduce = useLogMotion();
   const [opened, setOpened] = useState<boolean | null>(null);
   const open = opened ?? working;

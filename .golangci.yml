@@ -147,6 +147,7 @@ linters:
             - codeberg.org/readeck/go-readability/v2
             - golang.org/x/net
             - golang.org/x/text
+            - github.com/rivo/uniseg
             - github.com/abadojack/whatlanggo
             # storage, mail, cloud
             - github.com/aws/aws-sdk-go-v2

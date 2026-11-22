@@ -12,7 +12,10 @@
 | idle time between tokens, and the whole call. A tool that fails tells
 | the model so in its result instead of ending the turn. After
 | maxModelCalls calls the tools are withdrawn and the model must
-| answer with what it has.
+| answer with what it has, told in a note that it can no longer act, so
+| it does not say it did what it had no tool left to do. A turn that
+| follows a procedure gets more calls, since each step it finishes is
+| one.
 |
 */
 
@@ -45,9 +48,26 @@ maxModelCalls caps the answer model calls of one turn.
 const maxModelCalls = 6
 
 /*
+procedureModelCalls caps the answer model calls of a turn that follows
+a procedure: looking something up, saying which steps are finished and
+handing over each take a call.
+*/
+const procedureModelCalls = 14
+
+/*
+outOfTools is the note the model reads before its last call of a turn,
+when the tools are withdrawn.
+*/
+const outOfTools = "<system_note>You have no tools left in this reply. Write the reply now from what the tool " +
+	"results above show. Say nothing was done, passed on or handed over unless a result above shows it, and " +
+	"do not say you are doing it now. If a step is left unfinished, end by asking the customer what you still " +
+	"need, or tell them plainly what you could not finish.</system_note>"
+
+/*
 loop is the turn's conversation with the answer model: the driver, the
 rendered system prompt, the brief of the conversation's action
-requests, the turns so far and why the last call ended.
+requests, the turns so far and why the last call ended. When set, the
+limit caps the model calls of the next tool loop below maxModelCalls.
 */
 type loop struct {
 	llm      contracts.LLM
@@ -56,6 +76,7 @@ type loop struct {
 	messages []contracts.ChatMessage
 	stop     contracts.StopReason
 	newest   int
+	limit    int
 }
 
 /*
@@ -78,9 +99,13 @@ which it returns.
 func (r *Runner) agentLoop(ctx context.Context, st *run) (string, error) {
 	lp := st.loop
 	for calls := 1; ; calls++ {
+		most := callLimit(st)
 		var tools []contracts.ToolSpec
-		if calls < maxModelCalls && !st.actions.closed {
+		if calls < most && !st.actions.closed {
 			tools = r.toolSpecs(st)
+		}
+		if calls == most && calls > 1 {
+			lp.messages = append(lp.messages, userMessage(outOfTools))
 		}
 
 		out, err := r.generate(ctx, st, tools)
@@ -106,6 +131,20 @@ func (r *Runner) agentLoop(ctx context.Context, st *run) (string, error) {
 }
 
 /*
+callLimit is how many model calls the turn's tool loop gets: the limit
+set for it, or else more for a turn that follows a procedure.
+*/
+func callLimit(st *run) int {
+	switch {
+	case st.loop.limit > 0:
+		return st.loop.limit
+	case st.proc.active():
+		return procedureModelCalls
+	}
+	return maxModelCalls
+}
+
+/*
 callTool runs one tool the model asked for, records it, and returns
 the result the model reads, which says what went wrong when it failed.
 */
@@ -124,9 +163,15 @@ func (r *Runner) callTool(ctx context.Context, st *run, call contracts.ToolCall)
 	if st.layer != nil && st.layer.set.Has(call.Name) {
 		err = errors.New(st.layer.set.Misdirected(call.Name))
 	}
+	blocked, refused := "", false
+	if allowed {
+		blocked, refused = r.gateProcedure(st, call.Name, t)
+	}
 	switch {
 	case st.layer != nil && (call.Name == toolset.LoadTool || call.Name == toolset.CallTool):
 		ran, result, err = r.layerCall(ctx, st, call)
+	case refused:
+		result, err = blocked, nil
 	case allowed:
 		result, err = t.handle(ctx, st, call.Arguments)
 	}
@@ -135,10 +180,13 @@ func (r *Runner) callTool(ctx context.Context, st *run, call contracts.ToolCall)
 		kind: enums.AIRunStepKindToolCall, model: ran, started: started,
 		request: r.redactFor(st.env, string(call.Arguments)), response: withTrace(st, ran, result), err: err,
 	})
+	r.publishPreview(ctx, st, finished{
+		tool: ran, args: call.Arguments, result: result, failed: err != nil, refused: refused,
+	})
 	if err != nil {
 		return "error: " + err.Error(), true
 	}
-	return result, false
+	return result, refused
 }
 
 /*
@@ -175,6 +223,9 @@ func (r *Runner) generate(ctx context.Context, st *run, tools []contracts.ToolSp
 	system := []contracts.SystemBlock{{Text: lp.system, Cacheable: true}}
 	if lp.brief != "" {
 		system = append(system, contracts.SystemBlock{Text: lp.brief})
+	}
+	if block := r.procedureBlock(st); block != "" {
+		system = append(system, contracts.SystemBlock{Text: block})
 	}
 	req := contracts.ChatRequest{
 		Model: model, System: system,

@@ -3,7 +3,7 @@
 | Tickets For The Agent
 |--------------------------------------------------------------------------
 |
-| When the team's guidance or a procedure asks for tickets, the agent
+| When the workspace has ticket types the agent may open, the agent
 | gets the open_ticket tool: it names the missing required fields to
 | ask for, then a summary for the customer to confirm, and only a
 | confirmed call opens the ticket. Like every write, the ticket is
@@ -40,37 +40,21 @@ const (
 )
 
 /*
-loadTicketContext reads, when the team's guidance mentions tickets, the
-types the agent may open. A failure costs only this context: the agent
-still answers.
+sampleReference stands in for a ticket's reference where none is made:
+in the reply a model checks before the ticket exists, and in a
+simulated turn, which opens no ticket.
+*/
+const sampleReference = "T-482"
+
+/*
+loadTicketContext reads the ticket types the agent may open; with none,
+the agent gets no ticket tool. A failure costs only this context: the
+agent still answers.
 */
 func loadTicketContext(ctx context.Context, q *models.Queries, e *env) {
-	if !mentionsTickets(e) {
-		return
-	}
-
 	if types, err := tickets.AgentTypes(ctx, q, e.Conversation.WorkspaceID, e.now); err == nil {
 		e.TicketTypes = types
 	}
-}
-
-/*
-mentionsTickets reports whether the agent's guidance or a live
-procedure asks for tickets.
-*/
-func mentionsTickets(e *env) bool {
-	if strings.Contains(strings.ToLower(e.Agent.Guidance), "ticket") {
-		return true
-	}
-
-	for _, p := range e.Procedures {
-		raw, _ := json.Marshal(p.def)
-		if strings.Contains(strings.ToLower(p.row.Name+" "+string(raw)), "ticket") {
-			return true
-		}
-	}
-
-	return false
 }
 
 /*

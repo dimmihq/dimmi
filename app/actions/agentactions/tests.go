@@ -181,6 +181,11 @@ func (d *Definitions) runTest(ctx context.Context, p prepared, summary string) (
 	if _, err := d.Kit.FinishTest(ctx, call, out); err != nil {
 		return TestResult{}, err
 	}
+	if out.Succeeded && len(out.Result) > 0 && len(out.Result) <= lastTestResponseMax {
+		if err := d.keepTestResponse(ctx, t.WorkspaceID, p.actionID, out.Result); err != nil {
+			return TestResult{}, err
+		}
+	}
 	status := "failed"
 	if out.Succeeded {
 		status = "succeeded"
@@ -234,4 +239,27 @@ func bound(s actionkit.Spec, contact map[string]any) bool {
 		}
 	}
 	return true
+}
+
+/*
+lastTestResponseMax is the largest result an action keeps from its last
+live test.
+*/
+const lastTestResponseMax = 32768
+
+/*
+keepTestResponse keeps the result of an action's successful live test,
+as the model read it: the procedure editor offers its fields in rules,
+and the procedure simulator answers with it when a test gives no mock.
+*/
+func (d *Definitions) keepTestResponse(ctx context.Context, ws, actionID ids.UUID, result json.RawMessage) error {
+	return d.DB.Transaction(ctx, func(ctx context.Context, tx *database.Tx) error {
+		err := models.New(tx).SetActionLastTestResponse(ctx, models.SetActionLastTestResponseParams{
+			Response: result, WorkspaceID: ws, ID: actionID,
+		})
+		if err != nil {
+			return fmt.Errorf("keep test response: %w", err)
+		}
+		return nil
+	})
 }

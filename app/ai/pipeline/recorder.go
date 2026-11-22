@@ -238,6 +238,9 @@ func estimate(text string) int64 {
 finishRun closes the run row with the decision and the run's sums.
 */
 func (r *Runner) finishRun(ctx context.Context, tx *database.Tx, st *run, d *decision) error {
+	if err := r.saveProcedureState(ctx, tx, st, d); err != nil {
+		return err
+	}
 	rec := st.rec
 	now := r.Clock.Now()
 	retrieval := retrievalJSON(st.sources)
@@ -265,7 +268,10 @@ func (r *Runner) finishRun(ctx context.Context, tx *database.Tx, st *run, d *dec
 		ErrorCode: nilable(d.errorCode), ErrorMessage: nilable(truncate(d.errorMessage, 500)),
 		CompletedAt: &now, Now: now,
 	})
-	return err
+	if err != nil {
+		return err
+	}
+	return r.saveProcedureTrace(ctx, tx, st)
 }
 
 /*

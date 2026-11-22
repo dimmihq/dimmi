@@ -4,7 +4,8 @@
  * lock version the last one returned; a save refused because someone else
  * saved first stops saving, so their work is never overwritten. Publishing
  * saves what is pending first, then publishes; what stops it is listed
- * beside the steps.
+ * beside the steps. A copy the server wrote, such as a restored
+ * version, is adopted whole.
  */
 import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
@@ -42,6 +43,7 @@ export function useProcedureDraft(workspace: string, procedure: Procedure, onDel
   const [state, setState] = useState<SaveState>("saved");
   const [issues, setIssues] = useState<ProcedureIssue[]>([]);
   const [busy, setBusy] = useState(false);
+  const [generation, setGeneration] = useState(0);
   const current = useRef(definition);
   const lock = useRef(procedure.lock_version);
   const wanted = useRef<Changes>({});
@@ -125,6 +127,24 @@ export function useProcedureDraft(workspace: string, procedure: Procedure, onDel
     state,
     issues,
     busy,
+    generation,
+    flush,
+    /*
+     * adopt takes a copy the server wrote, such as a restored version, as
+     * the working copy, redrawing every step.
+     */
+    adopt: (next: Procedure) => {
+      wanted.current = {};
+      lock.current = next.lock_version;
+      current.current = next.definition;
+      setDefinition(next.definition);
+      setName(next.name);
+      setServer(next);
+      setIssues([]);
+      setState("saved");
+      setGeneration((n) => n + 1);
+      void refresh();
+    },
     change: (edit: (d: ProcedureDefinition) => ProcedureDefinition) => {
       const next = edit(current.current);
       current.current = next;

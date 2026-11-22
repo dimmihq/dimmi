@@ -23,8 +23,12 @@ import (
 	"github.com/dimmihq/dimmi/framework/database"
 	"github.com/dimmihq/dimmi/framework/ids"
 
+	"github.com/dimmihq/dimmi/app/actions/procedures"
+	"github.com/dimmihq/dimmi/app/ai/actionkit"
+	"github.com/dimmihq/dimmi/app/ai/pipeline"
 	"github.com/dimmihq/dimmi/app/exceptions"
 	"github.com/dimmihq/dimmi/app/models"
+	"github.com/dimmihq/dimmi/app/support/procedure"
 )
 
 /*
@@ -132,11 +136,57 @@ func (r resolver) procedureOp(ctx context.Context, in opInput) (Operation, error
 	if err != nil {
 		return op, err
 	}
+	if in.Kind == KindProcedureTestCaseNew {
+		return r.testCaseOp(ctx, op, p, in)
+	}
 	var shape map[string]any
 	if len(in.Definition) == 0 || json.Unmarshal(in.Definition, &shape) != nil {
 		return op, fmt.Errorf("%w: give the whole working copy as a JSON object", errBadArguments)
 	}
 	op.Procedure, op.Definition = &id, in.Definition
 	op.Label = fmt.Sprintf("Edit the working copy of the procedure “%s”", p.Name)
+	return op, nil
+}
+
+/*
+proposedTest is a test case as Operator proposes it: the conversation it
+came from is named by number.
+*/
+type proposedTest struct {
+	Name               string                    `json:"name"`
+	SourceConversation int64                     `json:"source_conversation,omitempty"`
+	SourceID           string                    `json:"source_conversation_id,omitempty"`
+	Persona            *pipeline.SimPersona      `json:"persona,omitempty"`
+	Messages           []procedures.TestMessage  `json:"messages"`
+	Mocks              map[string]actionkit.Mock `json:"action_mocks,omitempty"`
+	Assertions         []procedure.Assertion     `json:"assertions"`
+}
+
+/*
+testCaseOp checks a new regression test of a procedure: a name, the
+customer's turns and what must hold, with the conversation it came from
+resolved to its id.
+*/
+func (r resolver) testCaseOp(ctx context.Context, op Operation, p models.Procedure, in opInput) (Operation, error) {
+	var t proposedTest
+	if len(in.TestCase) == 0 || json.Unmarshal(in.TestCase, &t) != nil {
+		return op, fmt.Errorf("%w: give the test case as a JSON object", errBadArguments)
+	}
+	t.Name = strings.TrimSpace(t.Name)
+	if t.Name == "" || len([]rune(t.Name)) > 120 || len(t.Messages) == 0 || len(t.Messages) > 12 {
+		return op, fmt.Errorf("%w: a test needs a name of 1 to 120 characters and 1 to 12 messages", errBadArguments)
+	}
+	if issues := procedure.CheckAssertions(t.Assertions); len(issues) > 0 {
+		return op, fmt.Errorf("%w: %s", errBadArguments, issues[0].Message)
+	}
+	if t.SourceConversation > 0 {
+		c, err := r.conversation(ctx, t.SourceConversation)
+		if err != nil {
+			return op, err
+		}
+		t.SourceID, t.SourceConversation = models.PublicID(models.PrefixConversation, c.ID), 0
+	}
+	op.Procedure, op.Definition = &p.ID, rawJSON(t)
+	op.Label = fmt.Sprintf("Add the test “%s” to the procedure “%s”", t.Name, p.Name)
 	return op, nil
 }

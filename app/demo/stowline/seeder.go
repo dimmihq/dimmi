@@ -101,6 +101,7 @@ type run struct {
 	tags     map[string]ids.UUID
 	center   ids.UUID
 	articles map[string]ids.UUID
+	followed map[string]*followedProcedure
 }
 
 /*
@@ -434,7 +435,8 @@ func CountedTables() []string {
 	return []string{
 		"workspace_members", "teams", "inboxes", "channel_connections", "tags", "saved_replies", "collections",
 		"articles", "knowledge_chunks", "companies", "contacts", "conversations", "messages", "conversation_tag",
-		"conversation_ratings", "ai_runs", "ai_run_steps", "ai_actions", "procedures", "workflows",
+		"conversation_ratings", "ai_runs", "ai_run_steps", "ai_actions", "ai_action_calls", "procedures",
+		"procedure_versions", "procedure_test_cases", "workflows",
 		"changelog_entries", "feedback_posts", "conversation_events",
 	}
 }

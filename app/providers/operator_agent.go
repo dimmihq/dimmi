@@ -15,6 +15,7 @@ package providers
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	"github.com/dimmihq/dimmi/framework/database"
@@ -52,7 +53,11 @@ func bootOperatorAgent(a *app.App) error {
 	events.Listen(a.Events, events.AfterCommit, func(ctx context.Context, e appevents.ConversationCreated) error {
 		return enqueueTriage(ctx, a, e)
 	})
-	return queue.Register(a.Queue, &aijobs.TriageWithOperator{Operator: engine})
+	return errors.Join(
+		queue.Register(a.Queue, &aijobs.TriageWithOperator{Operator: engine}),
+		queue.Register(a.Queue, &aijobs.ReviewProcedures{Operator: engine}),
+		queue.Register(a.Queue, &aijobs.ReviewProceduresWeekly{DB: a.DB, Queue: a.Queue}),
+	)
 }
 
 /*

@@ -133,3 +133,17 @@ SELECT EXISTS (
     WHERE workspace_id = @workspace_id AND conversation_id = @conversation_id AND id <> @before
         AND @flag::text = ANY(flags)
 );
+
+-- name: SetRunProcedureTrace :exec
+-- SetRunProcedureTrace keeps what a run did with the procedure it
+-- followed.
+UPDATE ai_runs SET procedure_trace = @procedure_trace WHERE workspace_id = @workspace_id AND id = @id;
+
+-- name: ListProcedureRuns :many
+-- ListProcedureRuns returns the conversation runs that followed a
+-- procedure since a moment, newest first.
+SELECT * FROM ai_runs
+WHERE workspace_id = @workspace_id AND kind = 'conversation' AND created_at >= @since
+    AND ('procedure:' || (@procedure_id::uuid)::text) = ANY (flags)
+ORDER BY created_at DESC, id DESC
+LIMIT @row_limit;

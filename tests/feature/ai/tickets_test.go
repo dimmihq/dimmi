@@ -38,8 +38,8 @@ func openTicket(args map[string]any) contracts.ToolCall {
 }
 
 /*
-TestAiOpensTickets lets the agent open a ticket when the team's
-guidance says so: it collects required fields, confirms, and tells the
+TestAiOpensTickets lets the agent open a ticket of any type the
+workspace offers it: it collects required fields, confirms, and tells the
 customer the reference.
 */
 func TestAiOpensTickets(t *testing.T) {
@@ -73,6 +73,29 @@ func TestAiOpensTickets(t *testing.T) {
 		assert.Contains(t, body, "Done: your ticket is "+tickets.String("data.ticket.reference")+".")
 	})
 
+	t.Run("keeps the conversation when the reply says the ticket's team will follow up", func(t *testing.T) {
+		t.Parallel()
+		h := newHarness(t, guided)
+		h.llm.judge(map[string]bool{"claims_handoff": true})
+		h.llm.answer.Script(tools(openTicket(map[string]any{
+			"type": "Bug report", "title": "CSV export crashes", "fields": map[string]any{"steps": "Click export"},
+			"confirmed": true,
+		})), reply("Your ticket is {ticket_reference}. The engineering team will email you."))
+
+		conv, trigger := h.conversation("Export crashes, yes please open it")
+		res := h.run(conv, trigger)
+
+		assert.NotEqual(t, "handoff", res.Outcome, "a ticket is how the team follows up, not a claimed handover")
+		require.NotEmpty(t, h.llm.judgments())
+		judged := h.llm.judgments()[0].Messages[0].Parts[0].Text
+		assert.NotContains(t, judged, "{ticket_reference}", "the reply is judged as the customer will read it")
+		assert.Contains(t, judged, "Your ticket is T-")
+
+		replies := h.load(conv, res.RunID).agentReplies()
+		require.NotEmpty(t, replies)
+		assert.Contains(t, str(replies[len(replies)-1].Body), "Your ticket is T-")
+	})
+
 	t.Run("asks for missing required fields and for confirmation first", func(t *testing.T) {
 		t.Parallel()
 		h := newHarness(t, guided)
@@ -103,16 +126,21 @@ func TestAiOpensTickets(t *testing.T) {
 		h.d.Owner.GetJSON("/api/v1/conversations/"+public+"/tickets").AssertOK().AssertJSONPath("data.ticket", nil)
 	})
 
-	t.Run("offers no ticket tool without guidance asking for tickets", func(t *testing.T) {
+	t.Run("offers the ticket tool whatever language the guidance is in", func(t *testing.T) {
 		t.Parallel()
-		h := newHarness(t, nil)
-		h.llm.answer.Script(reply("Hello!"))
+		h := newHarness(t, func(p *models.UpdateAgentParams) {
+			p.Guidance = "Quand un client signale un bug, ouvre une demande pour lui."
+		})
+		h.llm.answer.Script(reply("Bonjour !"))
 
-		conv, trigger := h.conversation("Hi")
+		conv, trigger := h.conversation("Salut")
 		h.run(conv, trigger)
 
+		names := []string{}
 		for _, spec := range h.llm.answer.Sent()[0].Tools {
-			assert.NotEqual(t, "open_ticket", spec.Name)
+			names = append(names, spec.Name)
 		}
+
+		assert.Contains(t, names, "open_ticket")
 	})
 }

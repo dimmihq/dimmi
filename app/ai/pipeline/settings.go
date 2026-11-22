@@ -105,6 +105,9 @@ const ToolActions = "actions"
 allows reports whether the turn may call the tool.
 */
 func (s *TurnSettings) allows(name string, action bool) bool {
+	if name == toolProcedureStatus {
+		name = toolProcedure
+	}
 	return slices.Contains(s.Tools, name) || action && slices.Contains(s.Tools, ToolActions)
 }
 

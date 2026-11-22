@@ -169,7 +169,7 @@ trigger of a conversation run, nothing for a playground question. A
 run with no trigger message names none.
 */
 func runSubject(e *env, kind string) (*ids.UUID, *ids.UUID, *ids.UUID) {
-	if kind == playgroundKind {
+	if kind == playgroundKind || kind == simulationKind || e.Conversation.ID == (ids.UUID{}) {
 		return nil, nil, nil
 	}
 	var trigger *ids.UUID

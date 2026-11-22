@@ -66,7 +66,8 @@ type tool struct {
 registry returns every tool by name.
 */
 func (e *Engine) registry(s *session) map[string]tool {
-	all := slices.Concat(e.conversationTools(), e.knowledgeTools(), e.insightTools(), e.writeTools(), e.actionTools(s))
+	all := slices.Concat(e.conversationTools(), e.knowledgeTools(), e.insightTools(), e.procedureTools(),
+		e.writeTools(), e.actionTools(s))
 	out := make(map[string]tool, len(all))
 	for _, t := range all {
 		out[t.spec.Name] = t
