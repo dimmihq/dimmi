@@ -687,6 +687,56 @@ func (q *Queries) ListAgentsByID(ctx context.Context, arg ListAgentsByIDParams) 
 	return items, nil
 }
 
+const listPlacementTargets = `-- name: ListPlacementTargets :many
+SELECT 'connection'::text AS kind, cc.id, cc.name, cc.type AS channel, cc.ai_agent_id
+FROM channel_connections cc
+WHERE cc.workspace_id = $1 AND cc.deleted_at IS NULL AND cc.status <> 'disconnected'
+UNION ALL
+SELECT 'room'::text, cr.id, cr.name, cr.kind, cr.ai_agent_id FROM channel_rooms cr
+WHERE cr.workspace_id = $1 AND cr.status <> 'removed'
+UNION ALL
+SELECT 'inbox'::text, ib.id, ib.name, 'inbox'::text, ib.ai_agent_id FROM inboxes ib
+WHERE ib.workspace_id = $1 AND ib.deleted_at IS NULL
+ORDER BY kind, name
+`
+
+type ListPlacementTargetsRow struct {
+	Kind      string    `json:"kind"`
+	ID        ids.UUID  `json:"id"`
+	Name      string    `json:"name"`
+	Channel   string    `json:"channel"`
+	AiAgentID *ids.UUID `json:"ai_agent_id"`
+}
+
+// ListPlacementTargets returns everywhere an agent can be placed: the
+// workspace's channel connections, Slack channels and inboxes, each
+// with its name, its channel and the agent placed there, if any.
+func (q *Queries) ListPlacementTargets(ctx context.Context, workspaceID ids.UUID) ([]ListPlacementTargetsRow, error) {
+	rows, err := q.db.Query(ctx, listPlacementTargets, workspaceID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListPlacementTargetsRow
+	for rows.Next() {
+		var i ListPlacementTargetsRow
+		if err := rows.Scan(
+			&i.Kind,
+			&i.ID,
+			&i.Name,
+			&i.Channel,
+			&i.AiAgentID,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const pauseAgent = `-- name: PauseAgent :one
 UPDATE ai_agents SET status = 'paused', enabled = false, updated_by_member_id = $1,
     updated_at = $2

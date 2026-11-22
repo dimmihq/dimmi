@@ -334,7 +334,7 @@ func (r *Runner) answerVars(st *run) prompts.Vars {
 	return prompts.Vars{
 		"agent_name": e.Agent.Name, "product_name": product, "rules": rulesText(e, st.settings),
 		"tone":     r.render(e, "tone_"+toneOf(e.Agent.Tone)+".md", nil),
-		"language": languageName(e.Agent.DefaultLanguage), "guidance": e.Agent.Guidance,
+		"language": languageName(e.Agent.DefaultLanguage), "guidance": guidanceText(st),
 		"channel": channel, "handoff": e.availability(),
 	}
 }

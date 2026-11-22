@@ -217,6 +217,9 @@ func (r *Runner) simulatedEnv(ctx context.Context, q *models.Queries, in Simulat
 	if e.Triage, err = loadTriage(ctx, q, e); err != nil {
 		return nil, err
 	}
+	if e.GuidanceArticles, err = guidanceArticles(ctx, q, agent); err != nil {
+		return nil, err
+	}
 	loadTicketContext(ctx, q, e)
 	online, err := q.CountOnlineMembers(ctx, ws.ID)
 	if err != nil {

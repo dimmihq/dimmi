@@ -65,7 +65,10 @@ type env struct {
 	AllProcedures   []liveProcedure
 	ActiveProcedure *activeProcedure
 	TicketTypes     []tickets.AgentType
-	now             time.Time
+	// GuidanceArticles names the articles the agent's guidance cites,
+	// by public id.
+	GuidanceArticles map[string]string
+	now              time.Time
 }
 
 /*
@@ -145,6 +148,9 @@ func loadAgent(ctx context.Context, q *models.Queries, e *env) (bool, error) {
 		return false, err
 	}
 	e.Agent = agent
+	if e.GuidanceArticles, err = guidanceArticles(ctx, q, agent); err != nil {
+		return false, err
+	}
 	if agent.Enabled {
 		return true, agents.Pin(ctx, q, e.Conversation, agent.ID)
 	}

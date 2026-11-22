@@ -3,9 +3,8 @@
  * workflow. First the starting point: one narrow dialog lists every
  * template group after group, each with its icon in the group's
  * colour, what it does and a chevron; searching keeps only the matches
- * and Enter picks the first. Then the name, what the template brings,
- * and whether the agent gets a widget of its own. Mockup: Create opens
- * the sample Sales agent.
+ * and Enter picks the first. Then the name and what the template
+ * brings. Create makes the agent as a draft and opens it.
  */
 import {
   RiAddLine,
@@ -20,19 +19,30 @@ import {
   RiTeamLine,
   RiUserStarLine,
 } from "@remixicon/react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { type ComponentType, useState } from "react";
 
 import type { ChipColor } from "@/components/base/badges/chip";
 import { Chip } from "@/components/base/badges/chip";
 import { Button } from "@/components/base/buttons/button";
-import { CheckboxCard } from "@/components/base/checkbox/checkbox-card";
 import { Input } from "@/components/base/input/input";
 import { Modal, ModalBody, ModalFooter, ModalHeader } from "@/components/base/modal/modal";
+import { toast } from "@/components/base/toast/toast";
 import { Swap } from "@/features/inbox/motion";
+import { type AgentTemplate, agentTemplatesQuery, createAgent } from "@/lib/api/agents";
+import { ApiError } from "@/lib/api/client";
 
 import { KindMark } from "../automation/parts";
-import { type Template, type TemplateGroup, templateGroups, templates } from "./mock";
+
+type Group = AgentTemplate["group"];
+
+const groups: { id: Group; name: string; detail: string }[] = [
+  { id: "support", name: "Support", detail: "Answer customers and fix what they ask about." },
+  { id: "growth", name: "Sales and onboarding", detail: "Turn visitors into customers and get them set up." },
+  { id: "internal", name: "Internal", detail: "Answer your own team, from docs customers never see." },
+  { id: "blank", name: "Blank", detail: "Write it yourself." },
+];
 
 const icons: Record<string, ComponentType<{ className?: string }>> = {
   support: RiCustomerService2Line,
@@ -42,30 +52,29 @@ const icons: Record<string, ComponentType<{ className?: string }>> = {
   sales: RiUserStarLine,
   onboarding: RiRocketLine,
   internal: RiTeamLine,
-  blank: RiAddLine,
 };
 
-const tints: Record<TemplateGroup, ChipColor> = {
+const tints: Record<Group, ChipColor> = {
   support: "lime",
   growth: "purple",
   internal: "blue",
   blank: "neutral",
 };
 
-function matches(t: Template, query: string): boolean {
+function matches(t: AgentTemplate, query: string): boolean {
   const q = query.toLowerCase();
 
   return q === "" || t.name.toLowerCase().includes(q) || t.description.toLowerCase().includes(q);
 }
 
-function Choice({ template, onPick }: { template: Template; onPick: (t: Template) => void }) {
+function Choice({ template, onPick }: { template: AgentTemplate; onPick: (t: AgentTemplate) => void }) {
   return (
     <button
       type="button"
       onClick={() => onPick(template)}
       className="flex w-full cursor-pointer items-center gap-3 rounded-xl px-2.5 py-2 text-start outline-none transition-colors duration-150 hover:bg-background-secondary-hover focus-visible:ring-2 focus-visible:ring-border-focus-ring"
     >
-      <KindMark icon={icons[template.id]} tint={tints[template.group]} />
+      <KindMark icon={icons[template.key] ?? RiAddLine} tint={tints[template.group]} />
       <span className="flex min-w-0 flex-1 flex-col">
         <span className="text-body-regular text-text-primary">{template.name}</span>
         <span className="text-body-2-regular text-text-secondary">{template.description}</span>
@@ -75,17 +84,17 @@ function Choice({ template, onPick }: { template: Template; onPick: (t: Template
   );
 }
 
-function Picker({ onPick }: { onPick: (t: Template) => void }) {
+function Picker({ templates, onPick }: { templates: AgentTemplate[]; onPick: (t: AgentTemplate) => void }) {
   const [query, setQuery] = useState("");
   const q = query.trim();
-  const found = templateGroups
+  const found = groups
     .map((group) => ({ ...group, items: templates.filter((t) => t.group === group.id && matches(t, q)) }))
     .filter((group) => group.items.length > 0);
   const first = found[0]?.items[0];
 
   return (
     <>
-      <ModalHeader title="New agent" description="Each template brings guidance, procedures and simulations." />
+      <ModalHeader title="New agent" description="Each template brings guidance written for the job." />
       <div className="shrink-0 px-6">
         <Input
           aria-label="Search templates"
@@ -102,7 +111,7 @@ function Picker({ onPick }: { onPick: (t: Template) => void }) {
         />
       </div>
       <ModalBody>
-        {found.length === 0 ? (
+        {templates.length === 0 ? null : found.length === 0 ? (
           <p className="py-8 text-center text-body-regular text-text-secondary">No template matches “{q}”</p>
         ) : (
           <div className="flex flex-col gap-5 pb-2">
@@ -114,7 +123,7 @@ function Picker({ onPick }: { onPick: (t: Template) => void }) {
                 </div>
                 <div className="flex flex-col gap-0.5 rounded-2xl bg-background-secondary-default p-1">
                   {group.items.map((t) => (
-                    <Choice key={t.id} template={t} onPick={onPick} />
+                    <Choice key={t.key || "blank"} template={t} onPick={onPick} />
                   ))}
                 </div>
               </section>
@@ -126,34 +135,73 @@ function Picker({ onPick }: { onPick: (t: Template) => void }) {
   );
 }
 
-function Details({ template, onBack, onClose }: { template: Template; onBack: () => void; onClose: () => void }) {
+function Details({
+  workspace,
+  template,
+  onBack,
+  onClose,
+}: {
+  workspace: string;
+  template: AgentTemplate;
+  onBack: () => void;
+  onClose: () => void;
+}) {
   const navigate = useNavigate();
-  const [name, setName] = useState(template.agentName);
-  const [widget, setWidget] = useState(template.widget);
+  const queryClient = useQueryClient();
+  const [name, setName] = useState(template.agent_name);
+  const [problem, setProblem] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  const create = async () => {
+    setSaving(true);
+    try {
+      const made = await createAgent(workspace, name.trim(), template.key);
+      void queryClient.invalidateQueries({ queryKey: ["workspace", workspace, "agents"] });
+      queryClient.setQueryData(["workspace", workspace, "agents", made.agent.id], made);
+      onClose();
+      void navigate({ to: "/d/agents/$agent", params: { agent: made.agent.id } });
+    } catch (error) {
+      if (error instanceof ApiError && error.fields.name) {
+        setProblem(error.fields.name);
+      } else {
+        toast.error(error instanceof Error ? error.message : "The agent was not made.");
+      }
+    } finally {
+      setSaving(false);
+    }
+  };
 
   return (
     <>
       <ModalHeader title={template.name} description={template.description} />
       <ModalBody className="flex flex-col gap-5">
-        <Input label="Name" placeholder="Sales" value={name} onChange={setName} autoFocus />
-        {template.kit.length > 0 ? (
+        <Input
+          label="Name"
+          placeholder="Sales"
+          value={name}
+          onChange={(next) => {
+            setName(next);
+            setProblem("");
+          }}
+          isInvalid={problem !== ""}
+          errorMessage={problem || undefined}
+          autoFocus
+          onKeyDown={(event) => {
+            if (event.key === "Enter" && name.trim()) {
+              void create();
+            }
+          }}
+        />
+        {template.key ? (
           <div className="flex flex-col gap-2">
             <span className="text-body-2-medium text-text-primary">Comes with</span>
             <span className="flex flex-wrap gap-1.5">
-              {template.kit.map((k) => (
-                <Chip key={k} variant="caption" color="soft" className="py-0.5">
-                  {k}
-                </Chip>
-              ))}
+              <Chip variant="caption" color="soft" className="py-0.5">
+                Guidance for {template.name.toLowerCase()}
+              </Chip>
             </span>
           </div>
         ) : null}
-        <CheckboxCard
-          title="Make a widget for it"
-          description="Its own messenger, for a pricing page or docs site."
-          isSelected={widget}
-          onChange={setWidget}
-        />
         <p className="text-body-2-regular text-text-tertiary">
           Starts as a draft. Nothing reaches customers until you publish.
         </p>
@@ -165,11 +213,7 @@ function Details({ template, onBack, onClose }: { template: Template; onBack: ()
         <Button variant="secondary" size="small" onClick={onClose}>
           Cancel
         </Button>
-        <Button
-          size="small"
-          disabled={name.trim() === ""}
-          onClick={() => void navigate({ to: "/d/agents/$agent", params: { agent: "agt_sales" } })}
-        >
+        <Button size="small" disabled={name.trim() === ""} loading={saving} onClick={() => void create()}>
           Create agent
         </Button>
       </ModalFooter>
@@ -177,8 +221,9 @@ function Details({ template, onBack, onClose }: { template: Template; onBack: ()
   );
 }
 
-export function NewAgentModal({ onClose }: { onClose: () => void }) {
-  const [picked, setPicked] = useState<Template | null>(null);
+export function NewAgentModal({ workspace, onClose }: { workspace: string; onClose: () => void }) {
+  const [picked, setPicked] = useState<AgentTemplate | null>(null);
+  const templates = useQuery(agentTemplatesQuery(workspace)).data ?? [];
 
   return (
     <Modal
@@ -187,11 +232,15 @@ export function NewAgentModal({ onClose }: { onClose: () => void }) {
       size="md"
       className="h-[min(640px,calc(100dvh-3rem))]"
     >
-      <Swap view={picked ? picked.id : "pick"} forward={picked !== null} className="flex min-h-0 flex-1 flex-col">
+      <Swap
+        view={picked ? picked.key || "blank" : "pick"}
+        forward={picked !== null}
+        className="flex min-h-0 flex-1 flex-col"
+      >
         {picked ? (
-          <Details template={picked} onBack={() => setPicked(null)} onClose={onClose} />
+          <Details workspace={workspace} template={picked} onBack={() => setPicked(null)} onClose={onClose} />
         ) : (
-          <Picker onPick={setPicked} />
+          <Picker templates={templates} onPick={setPicked} />
         )}
       </Swap>
     </Modal>

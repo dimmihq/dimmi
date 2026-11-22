@@ -197,3 +197,18 @@ WHERE workspace_id = @workspace_id AND id = ANY (@ids::uuid[]);
 -- PlaceAgentOnInboxes puts an agent on inboxes.
 UPDATE inboxes SET ai_agent_id = @agent_id
 WHERE workspace_id = @workspace_id AND id = ANY (@ids::uuid[]);
+
+-- name: ListPlacementTargets :many
+-- ListPlacementTargets returns everywhere an agent can be placed: the
+-- workspace's channel connections, Slack channels and inboxes, each
+-- with its name, its channel and the agent placed there, if any.
+SELECT 'connection'::text AS kind, cc.id, cc.name, cc.type AS channel, cc.ai_agent_id
+FROM channel_connections cc
+WHERE cc.workspace_id = @workspace_id AND cc.deleted_at IS NULL AND cc.status <> 'disconnected'
+UNION ALL
+SELECT 'room'::text, cr.id, cr.name, cr.kind, cr.ai_agent_id FROM channel_rooms cr
+WHERE cr.workspace_id = @workspace_id AND cr.status <> 'removed'
+UNION ALL
+SELECT 'inbox'::text, ib.id, ib.name, 'inbox'::text, ib.ai_agent_id FROM inboxes ib
+WHERE ib.workspace_id = @workspace_id AND ib.deleted_at IS NULL
+ORDER BY kind, name;

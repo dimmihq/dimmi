@@ -1,10 +1,10 @@
 /*
  * Agent Studio: one agent, edited the way the procedure editor edits a
- * procedure. On the left, Build (the whole agent on one canvas),
- * History and Analytics. Beside it, Preview and Simulations, answering
- * as the draft or the live version; then Operator. On screens too
- * narrow for both, the side opens in a drawer from the header. Mockup:
- * sample data, nothing saved.
+ * procedure. On the left, Build (the whole agent on one canvas) and
+ * History. Beside it, Preview and Simulations, answering as the draft
+ * or the live version; then Operator. On screens too narrow for both,
+ * the side opens in a drawer from the header. Every change is saved to
+ * the draft as it is made; Publish puts it in front of customers.
  */
 import {
   RiAddLine,
@@ -17,6 +17,7 @@ import {
   RiSparkling2Line,
   RiTestTubeLine,
 } from "@remixicon/react";
+import { useQuery } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { Panel as Pane } from "react-resizable-panels";
@@ -34,53 +35,41 @@ import {
 } from "@/components/base/dropdown/dropdown";
 import { AlertDialog } from "@/components/base/modal/modal";
 import { Tab, TabList, Tabs } from "@/components/base/tabs/tabs";
-import { toast } from "@/components/base/toast/toast";
 import { useSidePanes } from "@/features/inbox/use-side-panes";
 import { Panel, ScrollArea } from "@/features/shell/page";
 import { PaneGroup, PaneHandle } from "@/features/shell/resizable";
 import { useEasing } from "@/features/shell/use-easing";
 import { useWide } from "@/features/shell/use-wide";
+import { type AgentView, type AnswerAs, agentSimulationsQuery, agentsQuery, resultOf } from "@/lib/api/agents";
 import { cx } from "@/utils/cx";
 
 import { StatusChip } from "../automation/parts";
 import type { ChipSources } from "../automation/procedure-writer/procedure-suggestions";
 import { useChipSources } from "../automation/procedure-writer/use-chip-sources";
 import { AgentBuild } from "./agent-build";
-import { AgentAnalytics, AgentHistory } from "./agent-history";
+import { AgentHistory } from "./agent-history";
 import { SimulationsChip } from "./agent-list";
 import { AgentMark } from "./agent-mark";
 import { AgentOperatorPanel } from "./agent-operator-panel";
 import { AgentSidePanel, type SideTab } from "./agent-side-panel";
-import { agents, type MockAgent, sampleSources } from "./mock";
+import { type AgentDraft, useAgentDraft } from "./use-agent-draft";
 
 const visible = { overflow: "visible" } as const;
 const pane = { group: "dimmi:agent", editor: "agent", details: "details", operator: "operator" } as const;
 const pressed = "border-border-button-active bg-background-primary-active";
 
-type Tabbed = "build" | "history" | "analytics";
+type Tabbed = "build" | "history";
 
 const tabs: { id: Tabbed; label: string }[] = [
   { id: "build", label: "Build" },
   { id: "history", label: "History" },
-  { id: "analytics", label: "Analytics" },
 ];
 
-/*
- * withSamples fills each kind of chip the workspace has none of with
- * sample names, so the mockup's @ menu always has something to show.
- */
-function withSamples(real: ChipSources): ChipSources {
-  return {
-    ...real,
-    procedures: real.procedures.length > 0 ? real.procedures : sampleSources.procedures,
-    articles: real.articles.length > 0 ? real.articles : sampleSources.articles,
-    teams: real.teams.length > 0 ? real.teams : sampleSources.teams,
-  };
-}
-
-function AgentSwitcher({ agent }: { agent: MockAgent }) {
+function AgentSwitcher({ workspace, draft }: { workspace: string; draft: AgentDraft }) {
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
+  const agents = useQuery(agentsQuery(workspace)).data ?? [];
+  const self = { id: draft.id, name: draft.draft.name, is_default: draft.server.is_default };
 
   return (
     <Dropdown isOpen={open} onOpenChange={setOpen}>
@@ -88,8 +77,8 @@ function AgentSwitcher({ agent }: { agent: MockAgent }) {
         aria-label="Switch agent"
         className="flex min-w-16 items-center gap-2 rounded-lg px-1.5 py-1 outline-none transition-colors duration-150 hover:bg-background-secondary-hover focus-visible:ring-2 focus-visible:ring-border-focus-ring"
       >
-        <AgentMark agent={agent} size="sm" />
-        <h1 className="min-w-0 truncate text-body-medium text-text-primary">{agent.name}</h1>
+        <AgentMark agent={self} size="sm" />
+        <h1 className="min-w-0 truncate text-body-medium text-text-primary">{self.name}</h1>
         <RiArrowDownSLine aria-hidden className="size-4 shrink-0 text-foreground-icon-secondary" />
       </DropdownTrigger>
       <DropdownPopover aria-label="Agents" placement="bottom start" className="w-60">
@@ -104,7 +93,7 @@ function AgentSwitcher({ agent }: { agent: MockAgent }) {
           >
             <AgentMark agent={a} size="sm" />
             <span className="min-w-0 flex-1 truncate">{a.name}</span>
-            {a.id === agent.id ? <RiCheckLine aria-hidden className="size-4 shrink-0" /> : null}
+            {a.id === draft.id ? <RiCheckLine aria-hidden className="size-4 shrink-0" /> : null}
           </DropdownItem>
         ))}
         <DropdownDivider />
@@ -123,61 +112,102 @@ function AgentSwitcher({ agent }: { agent: MockAgent }) {
   );
 }
 
-function AgentMenu({ agent }: { agent: MockAgent }) {
+function AgentMenu({ draft }: { draft: AgentDraft }) {
   const [open, setOpen] = useState(false);
-
-  return (
-    <Dropdown isOpen={open} onOpenChange={setOpen}>
-      <DropdownTrigger
-        aria-label="Agent actions"
-        className="flex size-8 shrink-0 items-center justify-center rounded-lg text-foreground-icon-secondary transition-colors duration-150 hover:bg-background-secondary-hover"
-      >
-        <RiMore2Line aria-hidden className="size-4" />
-      </DropdownTrigger>
-      <DropdownPopover aria-label="Agent actions" placement="bottom end" className="w-52">
-        {agent.status === "live" ? (
-          <DropdownItem className="gap-2" onSelect={() => setOpen(false)}>
-            <RiPauseCircleLine aria-hidden className="size-4 shrink-0 text-foreground-icon-secondary" />
-            Turn off
-          </DropdownItem>
-        ) : null}
-        {agent.isDefault ? null : (
-          <>
-            <DropdownDivider />
-            <DropdownItem className="gap-2 text-text-error-primary" onSelect={() => setOpen(false)}>
-              <RiDeleteBinLine aria-hidden className="size-4 shrink-0" />
-              Delete agent
-            </DropdownItem>
-          </>
-        )}
-      </DropdownPopover>
-    </Dropdown>
-  );
-}
-
-function saveLine(agent: MockAgent): string {
-  if (agent.status === "draft") {
-    return "Saved as draft";
-  }
-
-  return agent.unpublished ? "Unpublished changes" : "Published";
-}
-
-function Publish({ agent }: { agent: MockAgent }) {
-  const [publishing, setPublishing] = useState(false);
-  const live = agent.status === "live";
-  const failing = agent.tests.total - agent.tests.passing;
-  const reach = live
-    ? "Customers get the new version from their next message."
-    : "It starts answering customers at once.";
-
-  if (agent.status !== "draft" && !agent.unpublished) {
+  const [deleting, setDeleting] = useState(false);
+  const agent = draft.server;
+  if (agent.status !== "live" && agent.is_default) {
     return null;
   }
 
   return (
     <>
-      <Button size="small" onClick={() => setPublishing(true)}>
+      <Dropdown isOpen={open} onOpenChange={setOpen}>
+        <DropdownTrigger
+          aria-label="Agent actions"
+          className="flex size-8 shrink-0 items-center justify-center rounded-lg text-foreground-icon-secondary transition-colors duration-150 hover:bg-background-secondary-hover"
+        >
+          <RiMore2Line aria-hidden className="size-4" />
+        </DropdownTrigger>
+        <DropdownPopover aria-label="Agent actions" placement="bottom end" className="w-52">
+          {agent.status === "live" ? (
+            <DropdownItem
+              className="gap-2"
+              onSelect={() => {
+                setOpen(false);
+                void draft.pause();
+              }}
+            >
+              <RiPauseCircleLine aria-hidden className="size-4 shrink-0 text-foreground-icon-secondary" />
+              Turn off
+            </DropdownItem>
+          ) : null}
+          {agent.is_default ? null : (
+            <>
+              {agent.status === "live" ? <DropdownDivider /> : null}
+              <DropdownItem
+                className="gap-2 text-text-error-primary"
+                onSelect={() => {
+                  setOpen(false);
+                  setDeleting(true);
+                }}
+              >
+                <RiDeleteBinLine aria-hidden className="size-4 shrink-0" />
+                Delete agent
+              </DropdownItem>
+            </>
+          )}
+        </DropdownPopover>
+      </Dropdown>
+      <AlertDialog
+        isOpen={deleting}
+        onOpenChange={setDeleting}
+        title={`Delete ${draft.draft.name}?`}
+        description="Its conversations go to the default agent. This cannot be undone."
+        confirmLabel="Delete agent"
+        onConfirm={() => {
+          setDeleting(false);
+
+          return draft.remove();
+        }}
+      />
+    </>
+  );
+}
+
+function saveLine(draft: AgentDraft): string {
+  if (draft.state === "saving") {
+    return "Saving…";
+  }
+  if (draft.state === "conflict") {
+    return "Someone else changed this agent. Reload to see it.";
+  }
+  if (draft.state === "failed") {
+    return "Not saved";
+  }
+  if (draft.server.status === "draft") {
+    return "Saved as draft";
+  }
+
+  return draft.server.has_unpublished_changes ? "Unpublished changes" : "Published";
+}
+
+function Publish({ draft, failing }: { draft: AgentDraft; failing: number }) {
+  const [publishing, setPublishing] = useState(false);
+  const agent = draft.server;
+  const live = agent.status === "live";
+  const reach = live
+    ? "Customers get the new version from their next message."
+    : "It starts answering customers at once.";
+
+  if (live && !agent.has_unpublished_changes && draft.state === "saved") {
+    return null;
+  }
+  const name = draft.draft.name;
+
+  return (
+    <>
+      <Button size="small" loading={draft.busy} onClick={() => setPublishing(true)}>
         {live ? "Publish changes" : "Publish"}
       </Button>
       <AlertDialog
@@ -185,12 +215,13 @@ function Publish({ agent }: { agent: MockAgent }) {
         onOpenChange={setPublishing}
         variant="default"
         icon={false}
-        title={live ? `Publish changes to ${agent.name}?` : `Publish ${agent.name}?`}
-        description={failing > 0 ? `${failing} simulation failed on the last run. ${reach}` : reach}
+        title={live ? `Publish changes to ${name}?` : `Publish ${name}?`}
+        description={failing > 0 ? `${failing} simulation failed on its last run on the draft. ${reach}` : reach}
         confirmLabel={live ? "Publish changes" : "Publish"}
         onConfirm={() => {
           setPublishing(false);
-          toast.success(`Version ${agent.version + 1} is live`);
+
+          return draft.publish();
         }}
       />
     </>
@@ -198,17 +229,24 @@ function Publish({ agent }: { agent: MockAgent }) {
 }
 
 function MainPanel({
-  agent,
+  workspace,
+  draft,
+  view,
   sources,
   testing,
   operator,
 }: {
-  agent: MockAgent;
+  workspace: string;
+  draft: AgentDraft;
+  view: AgentView;
   sources: ChipSources;
   testing: { shown: boolean; toggle: () => void; openSimulations: () => void };
   operator: { shown: boolean; toggle: () => void };
 }) {
   const [tab, setTab] = useState<Tabbed>("build");
+  const sims = useQuery(agentSimulationsQuery(workspace, draft.id)).data ?? [];
+  const results = sims.map((s) => resultOf(s, "draft"));
+  const failing = results.filter((r) => r && !r.passed).length;
 
   return (
     <Panel label="Agent" ground className="h-full w-full">
@@ -221,16 +259,16 @@ function MainPanel({
           >
             <RiArrowLeftSLine aria-hidden className="size-5 rtl:-scale-x-100" />
           </Link>
-          <AgentSwitcher agent={agent} />
+          <AgentSwitcher workspace={workspace} draft={draft} />
           <span className="hidden shrink-0 items-center gap-1.5 @lg:flex">
-            {agent.isDefault ? (
+            {draft.server.is_default ? (
               <Chip variant="caption" color="blue">
                 Default
               </Chip>
             ) : null}
-            <StatusChip status={agent.status} />
+            <StatusChip status={draft.server.status} />
           </span>
-          <span className="hidden truncate text-body-2-regular text-text-tertiary @3xl:inline">{saveLine(agent)}</span>
+          <span className="hidden truncate text-body-2-regular text-text-tertiary @3xl:inline">{saveLine(draft)}</span>
         </div>
         <div className="flex shrink-0 items-center gap-2">
           <button
@@ -239,10 +277,10 @@ function MainPanel({
             onClick={testing.openSimulations}
             className="hidden cursor-pointer rounded-md outline-none transition-opacity duration-150 hover:opacity-80 focus-visible:ring-2 focus-visible:ring-border-focus-ring @xl:flex"
           >
-            <SimulationsChip tests={agent.tests} />
+            <SimulationsChip results={results} />
           </button>
-          <Publish agent={agent} />
-          <AgentMenu agent={agent} />
+          <Publish draft={draft} failing={failing} />
+          <AgentMenu draft={draft} />
           <IconButton
             size="small"
             icon={RiTestTubeLine}
@@ -269,16 +307,17 @@ function MainPanel({
         </Tabs>
       </div>
       <ScrollArea>
-        {tab === "build" ? <AgentBuild agent={agent} sources={sources} /> : null}
-        {tab === "history" ? <AgentHistory /> : null}
-        {tab === "analytics" ? <AgentAnalytics agent={agent} /> : null}
+        {tab === "build" ? <AgentBuild draft={draft} view={view} workspace={workspace} sources={sources} /> : null}
+        {tab === "history" ? <AgentHistory workspace={workspace} draft={draft} /> : null}
       </ScrollArea>
     </Panel>
   );
 }
 
-export function AgentStudio({ agent, workspace }: { agent: MockAgent; workspace: string }) {
-  const sources = withSamples(useChipSources(workspace, ""));
+export function AgentStudio({ view, workspace }: { view: AgentView; workspace: string }) {
+  const navigate = useNavigate();
+  const draft = useAgentDraft(workspace, view, () => void navigate({ to: "/d/agents" }));
+  const sources = useChipSources(workspace, "");
   const sideBySide = useWide(1024);
   const sides = useSidePanes(
     pane.editor,
@@ -291,6 +330,7 @@ export function AgentStudio({ agent, workspace }: { agent: MockAgent; workspace:
   const [operatorDrawer, setOperatorDrawer] = useState(false);
   const [easing, ease] = useEasing();
   const [sideTab, setSideTab] = useState<SideTab>("preview");
+  const [as, setAs] = useState<AnswerAs>("draft");
 
   const toggle = (id: string) => ease(() => sides.toggle(id));
   const toggleDetails = () => (sideBySide ? toggle(pane.details) : setDetailsDrawer((open) => !open));
@@ -306,10 +346,33 @@ export function AgentStudio({ agent, workspace }: { agent: MockAgent; workspace:
 
   const main = (
     <MainPanel
-      agent={agent}
+      workspace={workspace}
+      draft={draft}
+      view={view}
       sources={sources}
       testing={{ shown: detailsShown, toggle: toggleDetails, openSimulations }}
       operator={{ shown: operatorShown, toggle: toggleOperator }}
+    />
+  );
+  const side = (onClose: () => void) => (
+    <AgentSidePanel
+      workspace={workspace}
+      draft={draft}
+      sources={sources}
+      sideTab={sideTab}
+      onSideTab={setSideTab}
+      as={as}
+      onAs={setAs}
+      onClose={onClose}
+      className="h-full w-full"
+    />
+  );
+  const operator = (onClose: () => void) => (
+    <AgentOperatorPanel
+      workspace={workspace}
+      agentName={draft.draft.name}
+      onClose={onClose}
+      className="h-full w-full"
     />
   );
 
@@ -325,13 +388,7 @@ export function AgentStudio({ agent, workspace }: { agent: MockAgent; workspace:
           aria-label="Testing"
           className="p-0"
         >
-          <AgentSidePanel
-            workspace={workspace}
-            sideTab={sideTab}
-            onSideTab={setSideTab}
-            onClose={() => setDetailsDrawer(false)}
-            className="h-full w-full"
-          />
+          {side(() => setDetailsDrawer(false))}
         </Drawer>
         <Drawer
           isOpen={operatorDrawer}
@@ -341,12 +398,7 @@ export function AgentStudio({ agent, workspace }: { agent: MockAgent; workspace:
           aria-label="Operator"
           className="p-0"
         >
-          <AgentOperatorPanel
-            workspace={workspace}
-            agentName={agent.name}
-            onClose={() => setOperatorDrawer(false)}
-            className="h-full w-full"
-          />
+          {operator(() => setOperatorDrawer(false))}
         </Drawer>
       </div>
     );
@@ -377,13 +429,7 @@ export function AgentStudio({ agent, workspace }: { agent: MockAgent; workspace:
         style={visible}
         className={cx("flex h-full", !detailsOpen && "invisible")}
       >
-        <AgentSidePanel
-          workspace={workspace}
-          sideTab={sideTab}
-          onSideTab={setSideTab}
-          onClose={() => toggle(pane.details)}
-          className="h-full w-full"
-        />
+        {side(() => toggle(pane.details))}
       </Pane>
       <PaneHandle hidden={!operatorOpen} />
       <Pane
@@ -400,12 +446,7 @@ export function AgentStudio({ agent, workspace }: { agent: MockAgent; workspace:
         style={visible}
         className={cx("flex h-full", !operatorOpen && "invisible")}
       >
-        <AgentOperatorPanel
-          workspace={workspace}
-          agentName={agent.name}
-          onClose={() => toggle(pane.operator)}
-          className="h-full w-full"
-        />
+        {operator(() => toggle(pane.operator))}
       </Pane>
     </PaneGroup>
   );

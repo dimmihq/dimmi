@@ -68,6 +68,23 @@ func TestAiAgentSimulations(t *testing.T) {
 		assert.NotContains(t, offered(r.llm.answer, before), "follow_procedure:", "no procedure once none is picked")
 	})
 
+	t.Run("spells out the chips in the guidance by name", func(t *testing.T) {
+		t.Parallel()
+		r := newRefundDesk(t)
+		path := agentPath(t, r.d)
+		r.d.Owner.PatchJSON(path, testkit.JSON{
+			"guidance": "Broken orders: follow [[sub_procedure:" + r.proc + "]]. Gone: [[tag:tag_missing]].",
+		}).AssertOK()
+		r.llm.answer.Script(reply("Sorry to hear that."))
+
+		r.d.Owner.PostJSON(path+"/preview", testkit.JSON{"message": "My order arrived broken"}).AssertOK()
+
+		sent := sentText(r.llm.answer)
+		assert.Contains(t, sent, `follow the "Refunds" procedure (start it with follow_procedure).`)
+		assert.Contains(t, sent, "Gone: something that no longer exists.")
+		assert.NotContains(t, sent, "[[sub_procedure:")
+	})
+
 	t.Run("saves simulations, runs them on the draft and keeps the result there", func(t *testing.T) {
 		t.Parallel()
 		h := newHarness(t, nil)

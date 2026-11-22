@@ -90,6 +90,7 @@ func aiAgentRoutes(r *routing.Router, a *app.App) {
 	routing.Get(r, "/ai/settings", "ai.settings.show", c.Settings).Ability("ai:read")
 	routing.Patch(r, "/ai/settings", "ai.settings.update", c.UpdateSettings).Ability("ai:write")
 	routing.Get(r, "/ai/agent-templates", "ai.agent-templates.index", c.Templates).Ability("ai:read")
+	routing.Get(r, "/ai/placements", "ai.placements.index", c.Placements).Ability("ai:read")
 
 	routing.Get(r, "/ai/agents", "ai.agents.index", c.Index).Ability("ai:read")
 	routing.Post(r, "/ai/agents", "ai.agents.store", c.Store).Ability("ai:write").

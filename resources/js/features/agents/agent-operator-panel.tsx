@@ -3,7 +3,7 @@
  * teammate's workspace threads, with suggestions for the open agent.
  * Nothing said here reaches customers.
  */
-import { RiQuestionAnswerLine, RiRobot2Line, RiSearchEyeLine, RiTestTubeLine } from "@remixicon/react";
+import { RiQuestionAnswerLine, RiRobot2Line, RiTestTubeLine } from "@remixicon/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 
@@ -57,25 +57,19 @@ export function AgentOperatorPanel({
       enabled={settings?.enabled ?? true}
       starting={fresh.isPending}
       heading={`Work on ${agentName} with Operator`}
-      blurb="Operator reads this agent's draft, its tests and recent conversations, and proposes changes for you to apply."
+      blurb="Operator reads this agent's draft, its simulations and recent conversations, and proposes changes for you to apply."
       suggestions={[
         {
-          icon: RiSearchEyeLine,
-          title: "Check the guidance",
-          detail: "Finds rules that conflict or overlap.",
-          onPick: () => chat.ask(`Review the guidance of the ${agentName} agent for rules that conflict or overlap.`),
-        },
-        {
           icon: RiTestTubeLine,
-          title: "Write tests from handovers",
-          detail: "Turns last week's handovers into saved tests.",
-          onPick: () => chat.ask(`Write tests for the ${agentName} agent from last week's handovers.`),
+          title: "Write simulations from handovers",
+          detail: "Turns last week's handovers into saved simulations.",
+          onPick: () => chat.ask(`Write simulations for the ${agentName} agent from last week's handovers.`),
         },
         {
           icon: RiQuestionAnswerLine,
-          title: "Explain a failing test",
+          title: "Explain a failing simulation",
           detail: "Reads the run and proposes a fix to the draft.",
-          onPick: () => chat.ask(`Why does the failing test of the ${agentName} agent fail?`),
+          onPick: () => chat.ask(`Why does the failing simulation of the ${agentName} agent fail?`),
         },
       ]}
       placeholder={`Ask Operator about ${agentName}`}

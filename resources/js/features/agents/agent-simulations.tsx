@@ -1,9 +1,10 @@
 /*
  * An agent's simulations, the way a procedure's work: chats the agent
  * must keep getting right, each with the checks that judge it, run
- * against the draft or the live version. The list says how many pass;
- * opening one slides in its conversation and checks. Mockup: sample
- * simulations, and Run only pretends.
+ * against the draft or the live version. Each keeps how it last went
+ * on both. The list says how many pass; opening one slides in its
+ * conversation and checks, where a check is removed or one is added in
+ * plain words.
  */
 import {
   RiArrowLeftSLine,
@@ -15,62 +16,184 @@ import {
   RiDeleteBinLine,
   RiPlayFill,
 } from "@remixicon/react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 
-import { Chip } from "@/components/base/badges/chip";
+import { Chip, type ChipColor } from "@/components/base/badges/chip";
 import { Button } from "@/components/base/buttons/button";
 import { IconButton } from "@/components/base/buttons/icon-button";
 import { Input } from "@/components/base/input/input";
+import { AlertDialog } from "@/components/base/modal/modal";
 import { toast } from "@/components/base/toast/toast";
 import { MessageBody } from "@/features/inbox/message-body";
 import { Swap } from "@/features/inbox/motion";
+import { ActivityLog } from "@/features/operator/activity-log";
 import { ScrollArea } from "@/features/shell/page";
+import {
+  type AgentSimulation,
+  type AnswerAs,
+  agentSimulationsQuery,
+  deleteAgentSimulation,
+  resultOf,
+  runAgentSimulations,
+  updateAgentSimulation,
+} from "@/lib/api/agents";
+import type { Assertion, TestResult } from "@/lib/api/procedures";
+import { formatRelative } from "@/lib/i18n/format";
 import { cx } from "@/utils/cx";
 
-import { card, fieldLabel, fromCustomer, hint } from "../automation/procedure-simulator/simulator";
-import { type Simulation, simulations } from "./mock";
+import { Did } from "../automation/procedure-simulator/parts";
+import {
+  type CriterionChoices,
+  card,
+  fieldLabel,
+  fromCustomer,
+  hint,
+  sentenceOf,
+  statusOf,
+  words,
+} from "../automation/procedure-simulator/simulator";
+import { type LiveRun, useLiveRuns } from "../automation/procedure-simulator/use-live-runs";
+import type { ChipSources } from "../automation/procedure-writer/procedure-suggestions";
 
-const look = {
-  pass: { color: "lime", label: "Passed" },
-  fail: { color: "rose", label: "Failed" },
-  unrun: { color: "neutral", label: "Not run" },
-} as const;
+type CheckResult = TestResult["assertion_results"][number];
 
-function Mark({ result }: { result: "pass" | "fail" | "unrun" }) {
-  if (result === "unrun") {
+const pressedConfirm = "Pressed Confirm on the card";
+
+function Mark({ result }: { result?: CheckResult }) {
+  if (!result || result.skipped) {
     return (
       <RiCheckboxBlankCircleLine aria-label="Not run" className="size-4.5 shrink-0 text-foreground-icon-quaternary" />
     );
   }
 
-  return result === "pass" ? (
+  return result.passed ? (
     <RiCheckboxCircleFill aria-label="Passed" className="size-4.5 shrink-0 text-notification-success-foreground" />
   ) : (
     <RiCloseCircleFill aria-label="Failed" className="size-4.5 shrink-0 text-foreground-icon-error" />
   );
 }
 
-/*
- * Checks are what judge a simulation, each with how it went on the last
- * run and why when it failed. A teammate removes one or adds one in
- * their own words; a model judges words, so "transfers to dimmi" works.
- */
-function Checks({ sim, result }: { sim: Simulation; result: Simulation["draft"] }) {
-  const [checks, setChecks] = useState(sim.checks);
+function sayOf(said: { kind: string; claim: string }, name: string): string {
+  const claim = said.claim.replace(/\bdimmi\b/g, name);
+  if (said.kind === "Reply") {
+    return `The reply ${claim}`;
+  }
+
+  return claim.startsWith(name) ? claim : words(claim);
+}
+
+function choicesOf(sources: ChipSources): CriterionChoices {
+  return {
+    actions: sources.actions.map((a) => [a.name, a.title || a.name] as const),
+    rules: [],
+    teams: sources.teams.map((t) => [t.id, t.name] as const),
+  };
+}
+
+function statusNow(result: TestResult | null, busy: boolean, live?: LiveRun): { label: string; color: ChipColor } {
+  if (!busy) {
+    return statusOf(result);
+  }
+  if (live?.result) {
+    return statusOf(live.result);
+  }
+  if (live?.judging) {
+    return { label: "Judging", color: "blue" };
+  }
+  const turn = live && live.turns.length > 0 ? ` · turn ${live.turns.length}` : "";
+
+  return { label: `Running${turn}`, color: "blue" };
+}
+
+function Talk({ sim, result, sources }: { sim: AgentSimulation; result: TestResult | null; sources: ChipSources }) {
+  if (!result || result.turns.length === 0) {
+    return (
+      <div className="flex flex-col gap-3">
+        {sim.messages.map((m, index) => (
+          // biome-ignore lint/suspicious/noArrayIndexKey: a simulation's messages never reorder.
+          <p key={index} className={fromCustomer}>
+            {m.text || pressedConfirm}
+          </p>
+        ))}
+      </div>
+    );
+  }
+
+  return (
+    <ol aria-label="Simulated conversation" className="flex flex-col gap-5">
+      {result.turns.map((t, index) => (
+        // biome-ignore lint/suspicious/noArrayIndexKey: a run's turns never reorder.
+        <li key={index} className="flex flex-col gap-5">
+          <p className={fromCustomer}>{t.confirm || !t.message ? pressedConfirm : t.message}</p>
+          <div className="flex flex-col gap-2">
+            <MessageBody text={t.reply || words(t.outcome)} className="text-body-regular text-text-primary" />
+            <Did calls={t.calls} outcome={t.outcome} sources={sources} />
+          </div>
+        </li>
+      ))}
+    </ol>
+  );
+}
+
+function LiveTalk({ run, sources }: { run?: LiveRun; sources: ChipSources }) {
+  const turns = run?.turns ?? [];
+
+  return (
+    <ol aria-label="Simulated conversation" aria-live="polite" className="flex flex-col gap-5">
+      {turns.map((t, index) => (
+        // biome-ignore lint/suspicious/noArrayIndexKey: a run's turns never reorder.
+        <li key={index} className="flex flex-col gap-5">
+          <p className={fromCustomer}>{t.message || pressedConfirm}</p>
+          <div className="flex flex-col gap-3">
+            <ActivityLog steps={t.steps} working={!t.result} />
+            {t.result ? (
+              <div className="flex flex-col gap-2">
+                <MessageBody
+                  text={t.result.reply || words(t.result.outcome)}
+                  className="text-body-regular text-text-primary"
+                />
+                <Did calls={t.result.calls} outcome={t.result.outcome} sources={sources} />
+              </div>
+            ) : null}
+          </div>
+        </li>
+      ))}
+      {turns.length === 0 ? (
+        <li>
+          <ActivityLog steps={[]} working />
+        </li>
+      ) : null}
+      {run?.judging ? <li className={hint}>Judging the checks…</li> : null}
+    </ol>
+  );
+}
+
+function Checks({
+  sim,
+  result,
+  name,
+  sources,
+  readOnly,
+  onChange,
+}: {
+  sim: AgentSimulation;
+  result: TestResult | null;
+  name: string;
+  sources: ChipSources;
+  readOnly: boolean;
+  onChange: (assertions: Assertion[]) => void;
+}) {
   const [adding, setAdding] = useState("");
+  const choices = choicesOf(sources);
+  /* Results line up with the checks only until the checks are edited. */
+  const lined = result && result.assertion_results.length === sim.assertions.length ? result.assertion_results : [];
   const add = () => {
-    const text = adding.trim();
-    if (text) {
-      setChecks([...checks, { text, passedOnFail: true, fresh: true }]);
+    const rubric = adding.trim();
+    if (rubric) {
+      onChange([...sim.assertions, { type: "llm_rubric", rubric }]);
       setAdding("");
     }
-  };
-  const outcome = (c: (typeof checks)[number]) => {
-    if (result === "unrun" || c.fresh) {
-      return "unrun";
-    }
-
-    return result === "fail" && !c.passedOnFail ? "fail" : "pass";
   };
 
   return (
@@ -80,52 +203,89 @@ function Checks({ sim, result }: { sim: Simulation; result: Simulation["draft"] 
         <span className={hint}>The simulation passes when all of these are true.</span>
       </div>
       <ul className="flex flex-col gap-1">
-        {checks.map((c) => (
-          <li key={c.text} className="flex items-start gap-2">
-            <span className="flex h-7 items-center">
-              <Mark result={outcome(c)} />
-            </span>
-            <span className="flex min-w-0 flex-1 flex-col py-1">
-              <span className="text-body-2-regular text-text-primary">{c.text}</span>
-              {outcome(c) === "fail" && c.why ? (
-                <span className="text-body-2-regular text-text-error-primary">{c.why}</span>
-              ) : null}
-            </span>
-            <IconButton
-              variant="quiet"
-              size="small"
-              icon={RiCloseLine}
-              aria-label="Remove check"
-              onClick={() => setChecks(checks.filter((other) => other !== c))}
-            />
-          </li>
-        ))}
+        {sim.assertions.map((a, index) => {
+          const outcome = lined[index];
+
+          return (
+            // biome-ignore lint/suspicious/noArrayIndexKey: checks change in place.
+            <li key={index} className="flex items-start gap-2">
+              <span className="flex h-7 items-center">
+                <Mark result={outcome} />
+              </span>
+              <span className="flex min-w-0 flex-1 flex-col py-1">
+                <span className="text-body-2-regular text-text-primary">{sayOf(sentenceOf(a, choices), name)}</span>
+                {outcome && !outcome.passed && !outcome.skipped ? (
+                  <span className="text-body-2-regular text-text-error-primary">{outcome.message}</span>
+                ) : null}
+              </span>
+              {readOnly ? null : (
+                <IconButton
+                  variant="quiet"
+                  size="small"
+                  icon={RiCloseLine}
+                  aria-label="Remove check"
+                  onClick={() => onChange(sim.assertions.filter((_, at) => at !== index))}
+                />
+              )}
+            </li>
+          );
+        })}
       </ul>
-      <div className="flex items-center gap-2">
-        <Input
-          aria-label="Add a check"
-          size="small"
-          placeholder="Add a check: the agent should…"
-          className="min-w-0 flex-1"
-          value={adding}
-          onChange={setAdding}
-          onKeyDown={(event) => {
-            if (event.key === "Enter") {
-              add();
-            }
-          }}
-        />
-        <Button variant="secondary" size="small" disabled={!adding.trim()} onClick={add}>
-          Add
-        </Button>
-      </div>
+      {readOnly ? null : (
+        <div className="flex items-center gap-2">
+          <Input
+            aria-label="Add a check"
+            size="small"
+            placeholder={`Add a check: ${name} should…`}
+            className="min-w-0 flex-1"
+            value={adding}
+            onChange={setAdding}
+            onKeyDown={(event) => {
+              if (event.key === "Enter") {
+                add();
+              }
+            }}
+          />
+          <Button variant="secondary" size="small" disabled={!adding.trim()} onClick={add}>
+            Add
+          </Button>
+        </div>
+      )}
     </div>
   );
 }
 
-function Detail({ sim, version, onBack }: { sim: Simulation; version: string; onBack: () => void }) {
-  const result = version === "live" ? sim.live : sim.draft;
-  const status = look[result];
+/*
+ * Detail is one simulation opened: its name, running and deleting it,
+ * how it went on the copy shown and its checks.
+ */
+function Detail({
+  sim,
+  as,
+  name,
+  sources,
+  busy,
+  live,
+  onBack,
+  onRun,
+  onDelete,
+  onChecks,
+}: {
+  sim: AgentSimulation;
+  as: AnswerAs;
+  name: string;
+  sources: ChipSources;
+  busy: boolean;
+  live?: LiveRun;
+  onBack: () => void;
+  onRun: () => void;
+  onDelete: () => void;
+  onChecks: (assertions: Assertion[]) => void;
+}) {
+  const result = resultOf(sim, as);
+  const status = statusNow(result, busy, live);
+  const shown = busy ? (live?.result ?? null) : result;
+  const when = result && !busy ? ` · ${formatRelative(result.ran_at)}` : "";
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
@@ -139,13 +299,14 @@ function Detail({ sim, version, onBack }: { sim: Simulation; version: string; on
         />
         <span className="min-w-0 flex-1 truncate text-body-medium text-text-primary">{sim.name}</span>
         <span className="flex shrink-0 items-center gap-1">
-          <IconButton variant="quiet" size="small" icon={RiDeleteBinLine} aria-label={`Delete ${sim.name}`} />
-          <Button
-            variant="tertiary"
-            size="xs"
-            leadingIcon={RiPlayFill}
-            onClick={() => toast.success("Ran 1 simulation")}
-          >
+          <IconButton
+            variant="quiet"
+            size="small"
+            icon={RiDeleteBinLine}
+            aria-label={`Delete ${sim.name}`}
+            onClick={onDelete}
+          />
+          <Button variant="tertiary" size="xs" leadingIcon={RiPlayFill} loading={busy} disabled={busy} onClick={onRun}>
             Run
           </Button>
         </span>
@@ -156,52 +317,152 @@ function Detail({ sim, version, onBack }: { sim: Simulation; version: string; on
             <Chip variant="caption" color={status.color} className="py-0.5">
               {status.label}
             </Chip>
-            <span className={hint}>{sim.source}</span>
+            <span className={hint}>
+              {as === "draft" ? "On the draft" : "On the live version"}
+              {when}
+            </span>
           </span>
+          {shown?.error ? <p className="text-body-2-regular text-text-error-primary">{shown.error}</p> : null}
           <div className="flex flex-col gap-2.5">
             <span className={fieldLabel}>Conversation</span>
-            <ol aria-label="Simulated conversation" className="flex flex-col gap-5">
-              {sim.turns.map((t) => (
-                <li key={t.customer} className="flex flex-col gap-5">
-                  <p className={fromCustomer}>{t.customer}</p>
-                  <MessageBody text={t.reply} className="text-body-regular text-text-primary" />
-                </li>
-              ))}
-            </ol>
+            {busy ? <LiveTalk run={live} sources={sources} /> : <Talk sim={sim} result={result} sources={sources} />}
           </div>
-          <Checks sim={sim} result={result} />
+          <Checks sim={sim} result={shown} name={name} sources={sources} readOnly={busy} onChange={onChecks} />
         </div>
       </ScrollArea>
     </div>
   );
 }
 
-export function AgentSimulations({ version }: { version: string }) {
+function said(sim: AgentSimulation): string {
+  const first = sim.messages[0]?.text ?? "";
+
+  return first && !first.startsWith(sim.name) ? `“${first}”` : "";
+}
+
+export function AgentSimulations({
+  workspace,
+  agent,
+  name,
+  as,
+  sources,
+  flush,
+}: {
+  workspace: string;
+  agent: string;
+  name: string;
+  as: AnswerAs;
+  sources: ChipSources;
+  flush: () => Promise<void>;
+}) {
+  const queryClient = useQueryClient();
+  const { data: list = [] } = useQuery(agentSimulationsQuery(workspace, agent));
   const [openId, setOpenId] = useState<string | null>(null);
-  const opened = simulations.find((s) => s.id === openId);
-  const passing = simulations.filter((s) => (version === "live" ? s.live : s.draft) === "pass").length;
+  const [running, setRunning] = useState<string[]>([]);
+  const [deleting, setDeleting] = useState<AgentSimulation | null>(null);
+  const refresh = () => queryClient.invalidateQueries(agentSimulationsQuery(workspace, agent));
+  const live = useLiveRuns(workspace, sources);
+  const opened = list.find((sim) => sim.id === openId);
+  const passing = list.filter((sim) => resultOf(sim, as)?.passed).length;
+
+  const run = async (ids?: string[]) => {
+    setRunning(ids ?? list.map((sim) => sim.id));
+    if (ids?.length === 1) {
+      setOpenId(ids[0]);
+    }
+    try {
+      if (as === "draft") {
+        await flush();
+      }
+      const ran = await runAgentSimulations(workspace, agent, {
+        simulation_ids: ids,
+        version: as,
+        stream_id: live.begin(),
+      });
+      await refresh();
+      const broken = ran.map((sim) => [sim, resultOf(sim, as)] as const).find(([, r]) => r?.error);
+      if (broken) {
+        toast.error(`${broken[0].name}: ${broken[1]?.error}`);
+      }
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "The simulations did not run.");
+    } finally {
+      setRunning([]);
+      live.end();
+    }
+  };
+
+  const setChecks = async (sim: AgentSimulation, assertions: Assertion[]) => {
+    try {
+      await updateAgentSimulation(workspace, agent, sim.id, { assertions });
+      await refresh();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "The check was not saved.");
+    }
+  };
+
+  const confirm = (
+    <AlertDialog
+      isOpen={deleting !== null}
+      onOpenChange={(open) => (open ? undefined : setDeleting(null))}
+      title={deleting ? `Delete ${deleting.name}?` : "Delete simulation?"}
+      description="This cannot be undone."
+      confirmLabel="Delete"
+      onConfirm={() => {
+        const sim = deleting;
+        setDeleting(null);
+        setOpenId(null);
+
+        return sim ? deleteAgentSimulation(workspace, agent, sim.id).then(refresh) : undefined;
+      }}
+    />
+  );
+
+  const detail = opened ? (
+    <Detail
+      sim={opened}
+      as={as}
+      name={name}
+      sources={sources}
+      busy={running.includes(opened.id)}
+      live={live.runs[opened.id]}
+      onBack={() => setOpenId(null)}
+      onRun={() => void run([opened.id])}
+      onDelete={() => setDeleting(opened)}
+      onChecks={(assertions) => void setChecks(opened, assertions)}
+    />
+  ) : null;
+
+  const none = (
+    <div className="flex flex-1 flex-col items-center justify-center gap-1 px-6 text-center">
+      <span className="text-body-medium text-text-primary">No simulations yet</span>
+      <span className={hint}>
+        A simulation is a chat {name} must keep getting right. Chat in Preview, then press Save as simulation.
+      </span>
+    </div>
+  );
 
   const all = (
     <>
       <div className="flex h-11 shrink-0 items-center justify-between gap-2 ps-4 pe-3">
         <p className={cx(hint, "min-w-0 truncate tabular-nums")}>
-          {passing} of {simulations.length} passing on the {version === "live" ? "live version" : "draft"}
+          {passing} of {list.length} passing on the {as === "draft" ? "draft" : "live version"}
         </p>
-        <span className="flex shrink-0 items-center gap-1">
-          <Button
-            variant="tertiary"
-            size="xs"
-            leadingIcon={RiPlayFill}
-            onClick={() => toast.success(`Ran ${simulations.length} simulations`)}
-          >
-            Run all
-          </Button>
-        </span>
+        <Button
+          variant="tertiary"
+          size="xs"
+          leadingIcon={RiPlayFill}
+          loading={running.length > 1}
+          disabled={running.length > 0}
+          onClick={() => void run()}
+        >
+          Run all
+        </Button>
       </div>
       <ScrollArea>
         <ul className={cx("mx-4 mt-1 mb-10 flex flex-col gap-0.5 p-1", card)}>
-          {simulations.map((sim) => {
-            const status = look[version === "live" ? sim.live : sim.draft];
+          {list.map((sim) => {
+            const status = statusNow(resultOf(sim, as), running.includes(sim.id), live.runs[sim.id]);
 
             return (
               <li key={sim.id}>
@@ -211,10 +472,8 @@ export function AgentSimulations({ version }: { version: string }) {
                   className="flex w-full cursor-pointer items-center gap-3 rounded-xl px-2.5 py-2 text-start outline-none transition-colors duration-150 hover:bg-background-primary-hover focus-visible:ring-2 focus-visible:ring-border-focus-ring"
                 >
                   <span className="flex min-w-0 flex-1 flex-col">
-                    <span className="flex min-w-0 items-center gap-1.5">
-                      <span className="truncate text-body-regular text-text-primary">{sim.name}</span>
-                    </span>
-                    <span className={cx(hint, "truncate")}>{sim.turns[0]?.customer}</span>
+                    <span className="truncate text-body-regular text-text-primary">{sim.name}</span>
+                    {said(sim) ? <span className={cx(hint, "truncate")}>{said(sim)}</span> : null}
                   </span>
                   <Chip variant="caption" color={status.color} className="shrink-0 py-0.5">
                     {status.label}
@@ -231,13 +490,13 @@ export function AgentSimulations({ version }: { version: string }) {
       </ScrollArea>
     </>
   );
-  const detail = opened ? <Detail sim={opened} version={version} onBack={() => setOpenId(null)} /> : null;
 
   return (
     <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden">
       <Swap view={opened ? opened.id : "list"} forward={opened !== undefined} className="flex min-h-0 flex-1 flex-col">
-        {detail ?? all}
+        {detail ?? (list.length === 0 ? none : all)}
       </Swap>
+      {confirm}
     </div>
   );
 }
