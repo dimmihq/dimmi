@@ -97,7 +97,7 @@ needs ai:write, and the action checks ai_agent:manage.
 */
 func operatorRoutineRoutes(r *routing.Router, a *app.App) {
 	c := &v1.OperatorRoutineController{Routines: a.Actions.OperatorAgent.Routines, IDs: a.IDs}
-	routing.Get(r, "/operator/routine-templates", "operator.routine_templates.index", c.Templates).Ability("ai:read")
+	routing.Get(r, "/operator/routine-templates", "operator.routine-templates.index", c.Templates).Ability("ai:read")
 	routing.Get(r, "/operator/routines", "operator.routines.index", c.Index).Ability("ai:read").Query(
 		routing.QueryParam{
 			Name: "filter[status]", Description: "Only routines in this state.",

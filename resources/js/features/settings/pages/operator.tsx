@@ -195,13 +195,7 @@ function Memories({ workspace }: { workspace: string }) {
  */
 function unsaved(settings: OperatorSettings, change: OperatorSettingsChange): OperatorSettingsChange {
   const result: OperatorSettingsChange = {};
-  for (const key of [
-    "enabled",
-    "brief_on_open",
-    "triage_on_arrival",
-    "instructions",
-    "model",
-  ] as const) {
+  for (const key of ["enabled", "brief_on_open", "triage_on_arrival", "instructions", "model"] as const) {
     if (change[key] !== undefined && change[key] !== settings[key]) {
       Object.assign(result, { [key]: change[key] });
     }

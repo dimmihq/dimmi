@@ -56536,7 +56536,7 @@
     },
     "/operator/routine-templates": {
       "get": {
-        "operationId": "operator.routine_templates.index",
+        "operationId": "operator.routine-templates.index",
         "responses": {
           "200": {
             "content": {

@@ -15,7 +15,7 @@ operatorRoutineDocs returns the entries for Operator's routines.
 */
 func operatorRoutineDocs() map[string]Doc {
 	return map[string]Doc{
-		"operator.routine_templates.index": {
+		"operator.routine-templates.index": {
 			Title:   "List routine templates",
 			Use:     "Lists the templates a routine can start from, with their prompt, cadence and what they need.",
 			Returns: "the templates, the custom one last.",
