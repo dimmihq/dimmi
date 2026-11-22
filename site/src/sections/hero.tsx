@@ -42,8 +42,8 @@ export function Hero() {
     <section className="relative overflow-hidden bg-background-full">
       <div className="relative mx-auto grid w-full max-w-[1200px] grid-cols-1 border-x border-separator-border lg:grid-cols-[minmax(0,1.05fr)_minmax(0,1fr)]">
         <div className="relative flex min-w-0 flex-col items-start justify-center gap-7 px-5 pt-16 pb-14 sm:px-12 lg:py-24">
-          <a href="#agent" className="group inline-flex items-center gap-2">
-            <Eyebrow>New · Procedures for the AI agent</Eyebrow>
+          <a href="/procedures" className="group inline-flex items-center gap-2">
+            <Eyebrow>New · Support policies your AI agent cannot break</Eyebrow>
             <RiArrowRightLine
               className="size-3.5 text-text-tertiary transition-transform group-hover:translate-x-0.5"
               aria-hidden

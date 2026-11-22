@@ -1,0 +1,74 @@
+---
+title: "Test procedures"
+description: "Chat with your working copy in Preview and run saved AI-played simulations before publishing changes to live customers."
+---
+import { Callout, Screenshot } from "~docs/components/mdx";
+
+Open the testing panel with the test-tube button in any [procedure's](/ai/procedures/) header. Both tabs (**Preview** and **Simulations**) test your working copy without sending a message to a real customer or touching your live backend.
+
+## Preview: chat as a customer
+
+**Preview** runs the real dimmi agent with the same prompt, tools, help center, and live procedures a customer gets. Two safeguards keep testing safe: no conversation is saved, and no [action](/ai/actions/) hits your production systems. Each action answers with the response from its last live test under **Settings → Actions**.
+
+Send a message and watch each step happen in real time:
+
+- **Live activity log:** shows the matched procedure, each finished step, every action called or refused, safety checks, and handovers as they run.
+- **Clean reply view:** once the reply lands, the log folds behind one line that you can click open anytime.
+- **Inline write checks:** actions that need confirmation show **Confirm as the customer** or **Approve as a teammate** right in the thread.
+
+Click the **+** button in the reply box to choose who you are testing as:
+
+- **Customer:** search by name or email to test with that real customer's ID, email, and attributes.
+- **Made-up customer:** dimmi picks a name and email, and you set their plan, signed-in state, and custom attributes.
+- **Conversation:** search by words, customer, or number, then press send to replay that real thread against your draft.
+
+## Simulations: chats that must keep working
+
+A simulation is a saved customer conversation your procedure must keep handling right as you edit it. Chat in **Preview** and click **Save as simulation** above the thread, or create one directly on the **Simulations** tab.
+
+<Screenshot
+  name="procedure-simulations"
+  alt="The Simulations side panel showing Duplicate $49 charge in March with four numbered callouts: 1 Pass status and Run button, 2 simulated conversation and actions called, 3 passed exact and plain-English checks, and 4 input to add a new plain-English check"
+  caption="A saved simulation showing the replayed conversation and every check that passed."
+/>
+
+1. **Verdict and replay:** shows when the simulation last passed or failed, with **Run** to replay it against your current working copy.
+2. **Replayed conversation:** displays the customer's messages, dimmi's replies, and badges for every action called.
+3. **Checks:** lists exact checks (procedure matched, actions called, branch taken, handover) alongside plain-English checks that dimmi grades against the reply.
+4. **Add a check:** write any new expectation in plain words, such as `explains the 5 to 10 day card timeline`.
+
+### How AI-played simulations run
+
+When you run a simulation, an AI plays the customer from the saved chat:
+
+- **Uses only saved facts:** it sends the first message as written, then answers whatever the agent asks using only what the customer said in the saved chat. It never leads the agent or invents details.
+- **Flags missing details:** if your edited procedure asks for something the saved customer never knew, the customer says they do not know and dimmi marks that turn.
+- **Pinned to the saved date:** every simulation runs on the exact day its chat happened, so date-based rules (like a 30-day refund window) give the same answer every time.
+- **Safe mock actions:** actions never run for real; each returns its saved test response from **Settings → Actions**.
+
+### Example: checking a refund scenario
+
+Here is a saved simulation for a duplicate-charge procedure:
+
+- **Customer:** Made-up customer (`plan: pro`, signed in)
+- **Saved message:** `We were charged twice for March. Can you refund one?`
+- **Checks:**
+  - `dimmi followed this procedure` (exact check)
+  - `Look up charges was called` (exact check)
+  - `Refund a charge was called` (exact check)
+  - `Step 2 took Then` (exact check)
+  - `dimmi's reply explains the 5 to 10 day card timeline` (plain-English check)
+
+Saved chats start with automatic exact checks for the matched procedure, actions called, branch sides taken, and handover outcome. Open any simulation to remove a check with **✕** or add a plain-English check.
+
+### Running simulations before publishing
+
+Plain-English checks are graded independently of the reply, and each run streams live turn by turn. If a check cannot be graded, the run reports an error instead of passing.
+
+Click **Run all** to run every simulation against your working copy. The editor shows how many passed right beside **Publish**. Preview and simulation runs count toward your workspace's monthly AI spend like any other run.
+
+<Callout type="note" title="Availability for self-hosted workspaces">
+  Workspaces using dimmi's built-in AI models get AI-played simulations out of the box. Self-hosted workspaces without built-in models enabled can still test drafts manually in **Preview**.
+</Callout>
+
+Once your tests pass and your procedure is live, see [Versions and analytics](/ai/procedure-versions/) to compare edits, roll back changes, and audit live performance.

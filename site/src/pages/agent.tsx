@@ -18,7 +18,7 @@ const steps = [
   },
   {
     title: "Test on past chats first",
-    body: "Run safe tests on real threads and check every source and reply before going live.",
+    body: "Test policy changes against real customer scenarios before a single live customer sees a reply.",
     visual: <TestFragment />,
   },
 ];
@@ -32,9 +32,14 @@ const rows = [
   },
   {
     label: "Procedures",
-    title: "Follows your steps, asks on risky ones.",
-    body: "Write playbooks like refunding a duplicate charge in plain English. The agent runs your steps and drops an approval card before anything you cannot undo.",
-    visual: <ShotStill name="procedure" alt="A procedure in the editor: refunding a duplicate charge, step by step" />,
+    title: "Follows your policies, never goes off-script.",
+    body: "Turn refund, cancellation, and account playbooks into clear steps. dimmi holds the agent to your limits, lets you test before launch, and asks your team before anything you cannot undo.",
+    visual: (
+      <ShotStill
+        name="procedure"
+        alt="A duplicate-charge refund policy in dimmi showing required account checks, a $500 refund cap, and automatic Billing handover"
+      />
+    ),
   },
   {
     label: "Handover",

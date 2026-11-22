@@ -1,112 +1,136 @@
-import { ArrowsClockwise, ChartBar, ClipboardText, FileDashed, Signpost, Sparkle } from "@phosphor-icons/react";
+import {
+  ChatCircleText,
+  ClockCounterClockwise,
+  GitBranch,
+  HandWaving,
+  Scales,
+  ShieldCheck,
+} from "@phosphor-icons/react";
 
 import { FeatureGrid, HowItWorks, ProductHero, Questions, Rows } from "../components/product-page";
-import {
-  ApprovalFragment,
-  FollowFragment,
-  GuardFragment,
-  ProcedureEditorFragment,
-} from "../fragments/procedure-fragments";
+import { ShotStill } from "../components/shot-still";
+import { ApprovalFragment, FollowFragment, ProcedureEditorFragment } from "../fragments/procedure-fragments";
 import { FinalCta } from "../sections/final-cta";
 
 const how = [
   {
-    title: "Say when it applies",
-    body: "Describe the customer request in one sentence so the agent knows when to pull up this playbook.",
+    title: "Pick the request it handles",
+    body: "Describe the customer problem, such as a duplicate charge or damaged order, so the agent knows when this policy applies.",
   },
   {
-    title: "List the steps in order",
-    body: "Mix plain instructions, conditions to branch on, and API actions that talk to your backend.",
+    title: "Spell out every step",
+    body: "Write what the agent should ask, check in your systems, and say next, including when to tag a team or open a ticket.",
   },
   {
-    title: "Draw the handover line",
-    body: "Name the cases where a human must step in. The agent also hands off if a chat goes in circles.",
+    title: "Set hard policy limits",
+    body: "Put firm rules on refund caps, plan tiers, and time windows so the agent cannot bend policy or skip a required check.",
   },
   {
-    title: "Publish when ready",
-    body: "Edits save as private drafts while live chats keep using your published copy until you publish.",
+    title: "Test before customers see it",
+    body: "Try your draft on real customer scenarios and confirm every check passes before publishing to your live queue.",
   },
 ];
 
 const rows = [
   {
-    label: "In the chat",
-    title: "Runs your steps in order.",
-    body: "When a chat matches, the agent follows your playbook from top to bottom instead of guessing what your policy says.",
+    label: "Zero policy drift",
+    title: "Your agent follows every step and cannot bend the rules.",
+    body: "Most support bots cave when a customer pushes back or skip a check three messages in. dimmi enforces your order and limits automatically, so an out-of-policy refund never goes through.",
     visual: <FollowFragment />,
   },
   {
-    label: "Approvals",
-    title: "Risky steps wait for your team.",
-    body: "Actions like refunds land in the inbox as an approval card. Approve, decline with a note, or take over the chat.",
+    label: "Safe launch",
+    title: "Test every policy change before a customer ever sees it.",
+    body: "Practice against real past conversations or made-up customers without sending a message or touching live accounts. Save tricky scenarios and replay them automatically so a quick edit never breaks what already works.",
+    visual: (
+      <ShotStill
+        name="procedure-simulations"
+        alt="A saved customer test scenario showing the conversation and every passed policy check before publishing"
+      />
+    ),
+  },
+  {
+    label: "Human sign-off",
+    title: "Keep your team in charge when money or accounts move.",
+    body: "Pause high-stakes steps for a teammate's approval right inside the inbox, or ask the customer to confirm first. Approve in one click, decline, or take over.",
     visual: <ApprovalFragment />,
   },
   {
-    label: "Actions",
-    title: "Talks to your own backend.",
-    body: "Connect any step to your REST API or MCP server. You choose who approves changes and how long requests stay open.",
-    visual: <GuardFragment />,
+    label: "Continuous QA",
+    title: "Catch slipping policies early and roll back in one click.",
+    body: "Track resolution rates, handovers, and CSAT for every policy. Compare changes across versions, roll back any edit in seconds, and let Operator flag weekly failures with suggested fixes ready to review.",
+    visual: (
+      <ShotStill
+        name="procedure-history"
+        alt="Policy version history showing published versions and a step-by-step comparison of what changed"
+      />
+    ),
   },
 ];
 
 const more = [
   {
-    icon: ClipboardText,
-    title: "Plain English",
-    body: "No fragile flowcharts. Write each playbook the way you brief a new hire.",
+    icon: ChatCircleText,
+    title: "One question at a time",
+    body: "The agent waits for each customer answer before moving on, and skips questions the customer already answered.",
   },
   {
-    icon: Signpost,
-    title: "Picks the right playbook",
-    body: "The agent matches the customer's question to the right procedure and ignores the rest.",
+    icon: GitBranch,
+    title: "Reuse shared checks",
+    body: "Write steps like verifying an account once, then drop them into every billing, cancellation, or return policy.",
   },
   {
-    icon: FileDashed,
-    title: "Safe drafts",
-    body: "Edit a live procedure anytime without changing what customers see until you publish.",
+    icon: ShieldCheck,
+    title: "Zero risk while testing",
+    body: "Test runs never email customers, issue real refunds, or touch your live billing and order systems.",
   },
   {
-    icon: ChartBar,
-    title: "Usage counts",
-    body: "See how many chats followed each procedure over the last 30 days.",
+    icon: Scales,
+    title: "Unbiased quality checks",
+    body: "A separate checker scores your test conversations against your standards, so the agent never grades its own work.",
   },
   {
-    icon: Sparkle,
-    title: "Draft edits with Operator",
-    body: "Ask Operator to tighten a playbook. Its edits wait for your review before going live.",
+    icon: ClockCounterClockwise,
+    title: "Instant version rollback",
+    body: "Every publish keeps a full version history. Compare what changed step by step and restore an older policy anytime.",
   },
   {
-    icon: ArrowsClockwise,
-    title: "Customer confirmation",
-    body: "Show customers a confirmation card spelling out what will change before an action runs.",
+    icon: HandWaving,
+    title: "Clean handovers with context",
+    body: "When a chat hits a sensitive rule like a bank dispute, the agent routes it with a clear team summary.",
   },
 ];
 
 const questions = [
   {
-    question: "Do I need an engineer to write a procedure?",
+    question: "Can a customer talk the AI into breaking our refund policy?",
     answer:
-      "Not for the steps themselves. You write instructions and conditions in plain English. An engineer only helps if you want a step to call your own API.",
+      "No. Hard rules like refund limits and time windows are enforced outside the AI's reply, and dimmi blocks the agent from issuing a refund before required account checks succeed.",
   },
   {
-    question: "Should I use a procedure or a workflow?",
+    question: "Will this feel robotic or trap customers in a rigid script?",
     answer:
-      "Use a procedure when the AI agent needs to talk with a customer and use judgment. Use a workflow for fixed routing, tagging, or SLA rules that run without AI.",
+      "Quite the opposite. Customers write naturally in any language, the agent asks one follow-up at a time, and if a customer already gave their order number in message one, it never asks twice.",
   },
   {
-    question: "What happens while the customer waits for approval?",
+    question: "How do I know a policy edit will not hurt CSAT?",
     answer:
-      "The agent tells the customer it checked with your team, then finishes the steps once someone approves or declines the card.",
+      "Edits stay in a private draft until you publish. Run your saved customer test scenarios right beside the Publish button, check every pass, and if live numbers dip later, roll back to the previous version in one click.",
   },
   {
-    question: "What if nobody approves the card in time?",
+    question: "Can my support leads manage policies without waiting on engineering?",
     answer:
-      "The request expires at the limit you set. The agent updates the customer and routes the chat to your team with high priority.",
+      "Yes. Engineering only connects your billing or order actions once. From there, support leads write policies, set limits, test changes, monitor resolution rates, and publish on their own.",
   },
   {
-    question: "Does this work if I turn the AI agent off?",
+    question: "What happens when a customer gets upset or threatens a chargeback?",
     answer:
-      "Procedures are playbooks for the dimmi agent, so nothing runs them while the agent is off. If you want automation without AI, use workflows instead.",
+      "You set clear handover triggers on every policy, such as chargebacks, high-value refunds, or older charges. The moment one hits, the agent stops replying and routes the thread to your team with a private summary.",
+  },
+  {
+    question: "When should we use a workflow instead of a procedure?",
+    answer:
+      "Use a workflow for background rules that never need a back-and-forth chat, such as routing, tagging, or SLA alerts. Use a procedure when the AI agent needs to talk with the customer and resolve a multi-step request.",
   },
 ];
 
@@ -115,21 +139,21 @@ export function ProceduresPage() {
     <>
       <ProductHero
         eyebrow="Procedures"
-        title="Write how your team handles a request. The AI follows it."
-        body="Turn policies like refunding a duplicate charge into clear steps in plain English. The agent runs them and asks before risky actions."
+        title="Support policies your AI agent cannot break."
+        body="Teach the dimmi agent how your team handles refunds, cancellations, and account changes. It follows every step in order, respects your limits, and never goes off-script."
         shot="procedure"
-        shotAlt="A procedure in the editor: when dimmi uses it, and five steps to refund a duplicate charge"
+        shotAlt="A duplicate-charge refund policy in dimmi showing required account checks, a $500 refund cap, and automatic Billing handover"
       />
       <HowItWorks
         label="How it works"
-        title="Say when, list the steps, set the stop line."
-        body="Write each playbook the way you would brief a smart new hire on day one."
+        title="Set your policy, test it safely, go live with confidence."
+        body="Turn the refund, billing, and cancellation playbooks your team already uses into clear steps your AI agent follows every single time."
         steps={how}
         visual={(step) => <ProcedureEditorFragment step={step} />}
       />
-      <Rows title="Real work, with your team in charge." rows={rows} />
-      <FeatureGrid title="Built to stay easy to manage." items={more} />
-      <Questions body="What teams ask before writing their first playbook." items={questions} />
+      <Rows title="Trust AI with the work that actually fills your queue." rows={rows} />
+      <FeatureGrid title="Higher resolution rates without risking your brand." items={more} />
+      <Questions body="What support leads ask before automating complex requests." items={questions} />
       <FinalCta />
     </>
   );

@@ -171,8 +171,64 @@ const steps: Step[] = [
       await page.goto(`${base}/d/lumen/procedures`);
       await page.getByText("Refund a duplicate charge").first().click();
       await page.getByText("When dimmi uses this").first().waitFor();
+      const hideTesting = page.getByRole("button", { name: "Hide testing", exact: true });
+      if (await hideTesting.isVisible().catch(() => false)) {
+        await hideTesting.click();
+        await page.waitForTimeout(300);
+      }
+      await page.getByRole("tab", { name: "History", exact: true }).click();
+      await page.getByRole("tab", { name: "Steps", exact: true }).click();
+      await page.getByText("is at least").first().waitFor();
     },
     save: [{ name: "procedure", clip: column("When dimmi uses this", 16, 800) }],
+  },
+  {
+    prepare: async (page) => {
+      await page.goto(`${base}/d/lumen/procedures`);
+      await page.getByText("Refund a duplicate charge").first().click();
+      await page.getByText("When dimmi uses this").first().waitFor();
+      const showTesting = page.getByRole("button", { name: "Show testing", exact: true });
+      if (await showTesting.isVisible().catch(() => false)) {
+        await showTesting.click();
+        await page.waitForTimeout(300);
+      }
+      await page.getByRole("tab", { name: /Simulations/ }).click();
+      await page.getByText("Duplicate $49 charge in March").first().click();
+      await page.getByText("explains the 5 to 10 day card timeline").first().waitFor();
+    },
+    save: [
+      {
+        name: "procedure-simulations",
+        clip: async (page) => {
+          const all = await panels(page);
+          const side = all[all.length - 1];
+          return {
+            x: Math.max(0, side.x - 4),
+            y: 0,
+            width: Math.min(1680 - Math.max(0, side.x - 4), side.width + 8),
+            height: 740,
+          };
+        },
+      },
+    ],
+  },
+  {
+    prepare: async (page) => {
+      await page.goto(`${base}/d/lumen/procedures`);
+      await page.getByText("Refund a duplicate charge").first().click();
+      await page.getByText("When dimmi uses this").first().waitFor();
+      const hideTesting = page.getByRole("button", { name: "Hide testing", exact: true });
+      if (await hideTesting.isVisible().catch(() => false)) {
+        await hideTesting.click();
+        await page.waitForTimeout(300);
+      }
+      await page.getByRole("tab", { name: "History", exact: true }).click();
+      await page.getByRole("button", { name: "Version 1 options", exact: true }).waitFor();
+      await page.getByRole("button", { name: "Version 1 options", exact: true }).click();
+      await page.getByText("Compare with working copy", { exact: true }).click();
+      await page.getByText("Added").first().waitFor();
+    },
+    save: [{ name: "procedure-history", clip: column("Compare", 24, 680) }],
   },
   {
     prepare: async (page) => {

@@ -55,7 +55,7 @@ Your team answers messenger, email and Slack conversations from one inbox. The A
 **Let AI do the first pass**
 
 - [AI agent](https://trydimmi.com/agent): answers from your help center and knowledge sources, then hands over to a person.
-- [Procedures](https://trydimmi.com/procedures): write how your team handles a request in plain words. The agent follows it and waits for approval where you say.
+- [Procedures](https://trydimmi.com/procedures): support policies your AI agent cannot deviate from, with enforced limits, pre-launch test scenarios, version history, and team approvals.
 - [Operator](https://trydimmi.com/operator): briefs your team on a conversation, drafts replies and proposes changes you apply.
 
 **Track the work**
