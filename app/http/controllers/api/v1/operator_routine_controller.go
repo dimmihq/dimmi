@@ -13,6 +13,7 @@ package v1
 
 import (
 	"context"
+	"encoding/json"
 
 	"github.com/dimmihq/dimmi/framework/fault"
 	fhttp "github.com/dimmihq/dimmi/framework/http"
@@ -215,7 +216,7 @@ func (c *OperatorRoutineController) input(m authz.Membership, b requests.Operato
 		CronExpr: b.CronExpression, RunAt: b.RunAt, Timezone: b.Timezone, Permissions: b.Permissions,
 		ToolGroups: b.ToolGroups, WritePolicies: b.WritePolicies, Model: b.Model, Effort: b.Effort,
 		MaxModelCalls: b.MaxModelCalls, MaxToolCalls: b.MaxToolCalls, MonthlyBudgetMicros: b.MonthlyBudgetMicros,
-		NotifyPolicy: b.NotifyPolicy, Delivery: b.Delivery,
+		NotifyPolicy: b.NotifyPolicy,
 	}
 	var err error
 	if in.OwnerMemberID, err = decodeField(c.IDs, models.PrefixMember, b.OwnerID,
@@ -231,6 +232,9 @@ func (c *OperatorRoutineController) input(m authz.Membership, b requests.Operato
 		if in.Scope, err = c.scope(*b.Scope); err != nil {
 			return in, err
 		}
+	}
+	if b.Delivery != nil {
+		in.Delivery, _ = json.Marshal(b.Delivery)
 	}
 	return in, nil
 }
