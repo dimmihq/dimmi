@@ -268,7 +268,7 @@ it.describe("automation", () => {
     await page.getByRole("alertdialog").getByRole("button", { name: "Publish", exact: true }).click();
     await expect(page.getByText("Published", { exact: true })).toBeVisible();
     await page.getByRole("tab", { name: "History" }).click();
-    await expect(page.getByText("Version 1", { exact: true })).toBeVisible();
+    await expect(page.getByRole("region", { name: "Versions" }).getByText("Version 1", { exact: true })).toBeVisible();
     await page.getByRole("tab", { name: "Preview" }).click();
     await expect(page.getByRole("textbox", { name: "Write as the customer" })).toBeVisible();
     await page.getByRole("tab", { name: "Analytics" }).click();

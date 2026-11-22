@@ -84,14 +84,14 @@ it.describe("small screens", () => {
     await expect(drawer).toBeHidden();
   });
 
-  it("opens the procedure settings in a drawer on a tablet", async ({ page }) => {
+  it("opens procedure testing in a drawer on a tablet", async ({ page }) => {
     await page.setViewportSize({ width: 900, height: 1000 });
     await page.goto("/d/procedures");
     await page.getByRole("button", { name: "New procedure" }).click();
     await expect(page).toHaveURL(/\/procedures\/prc_[^/]+$/);
-    await page.getByRole("button", { name: "Procedure settings" }).click();
-    const drawer = page.getByRole("dialog", { name: "Procedure settings" });
-    await expect(drawer.getByText("Delete this procedure")).toBeVisible();
+    await page.getByRole("button", { name: "Show testing" }).click();
+    const drawer = page.getByRole("dialog", { name: "Testing" });
+    await expect(drawer.getByRole("textbox", { name: "Write as the customer" })).toBeVisible();
   });
 
   it("makes an audience in a modal on a tablet", async ({ page }) => {

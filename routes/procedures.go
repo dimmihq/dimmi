@@ -43,14 +43,14 @@ func procedureRoutes(workspace *routing.Router, a *app.App) {
 	routing.Delete(workspace, one+"/publications", "procedures.publications.destroy", pc.Unpublish).
 		Ability("ai:write").Status(fhttp.StatusOK)
 
-	routing.Post(workspace, one+"/simulate", "procedures.simulate", pc.Simulate).
+	routing.Post(workspace, one+"/simulate", "procedures.simulate.store", pc.Simulate).
 		Ability("ai:write").Status(fhttp.StatusOK)
 
 	tests := one + "/test-cases"
 	routing.Get(workspace, tests, "procedures.test-cases.index", pc.TestCases).Ability("ai:read")
 	routing.Post(workspace, tests, "procedures.test-cases.store", pc.StoreTestCase).
 		Ability("ai:write").Status(fhttp.StatusCreated)
-	routing.Post(workspace, tests+"/run", "procedures.test-cases.run", pc.RunTestCases).
+	routing.Post(workspace, tests+"/run", "procedures.test-cases.run.store", pc.RunTestCases).
 		Ability("ai:write").Status(fhttp.StatusOK)
 	routing.Get(workspace, tests+"/{test_case}", "procedures.test-cases.show", pc.ShowTestCase).Ability("ai:read")
 	routing.Patch(workspace, tests+"/{test_case}", "procedures.test-cases.update", pc.UpdateTestCase).
@@ -61,7 +61,7 @@ func procedureRoutes(workspace *routing.Router, a *app.App) {
 	versions := one + "/versions"
 	routing.Get(workspace, versions, "procedures.versions.index", pc.Versions).Ability("ai:read")
 	routing.Get(workspace, versions+"/{version}", "procedures.versions.show", pc.ShowVersion).Ability("ai:read")
-	routing.Post(workspace, versions+"/{version}/restore", "procedures.versions.restore", pc.RestoreVersion).
+	routing.Post(workspace, versions+"/{version}/restore", "procedures.versions.restore.store", pc.RestoreVersion).
 		Ability("ai:write").Status(fhttp.StatusOK)
 
 	routing.Get(workspace, one+"/metrics", "procedures.metrics.show", pc.Metrics).Ability("ai:read")

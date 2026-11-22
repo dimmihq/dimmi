@@ -56406,7 +56406,7 @@
     },
     "/procedures/{procedure}/simulate": {
       "post": {
-        "operationId": "procedures.simulate",
+        "operationId": "procedures.simulate.store",
         "parameters": [
           {
             "in": "path",
@@ -56544,7 +56544,7 @@
     },
     "/procedures/{procedure}/test-cases/run": {
       "post": {
-        "operationId": "procedures.test-cases.run",
+        "operationId": "procedures.test-cases.run.store",
         "parameters": [
           {
             "in": "path",
@@ -56847,7 +56847,7 @@
     },
     "/procedures/{procedure}/versions/{version}/restore": {
       "post": {
-        "operationId": "procedures.versions.restore",
+        "operationId": "procedures.versions.restore.store",
         "parameters": [
           {
             "in": "path",
