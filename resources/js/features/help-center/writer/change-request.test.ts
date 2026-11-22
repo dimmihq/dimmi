@@ -61,6 +61,16 @@ describe("change request", () => {
     expect(added?.parentElement?.tagName).not.toBe("UL");
   });
 
+  it("marks only the changed row of a table", () => {
+    const dom = review(
+      "| Code | Status |\n| --- | --- |\n| A | 401 |\n| B | 422 |",
+      "| Code | Status |\n| --- | --- |\n| A | 401 |",
+    );
+
+    expect([...dom.querySelectorAll(".change-removed")].map((n) => n.tagName)).toEqual(["TR"]);
+    expect(dom.querySelectorAll("[data-change=added]")).toHaveLength(0);
+  });
+
   it("marks a new article whole", () => {
     const dom = review("One\n\nTwo", "One\n\nTwo", true);
 

@@ -109,7 +109,8 @@ export function useProcedureRequest(workspace: string, procedure: string) {
 /*
  * removedStep is the class of a step the request removes.
  */
-export const removedStep = "rounded-xl bg-status-rose-background [&_[contenteditable]]:line-through";
+export const removedStep =
+  "rounded-e-xl border-s-2 border-status-rose-text bg-status-rose-background/40 [&_[contenteditable]]:text-text-tertiary [&_[contenteditable]]:line-through";
 
 /*
  * useRequestReview is the request on a procedure read against its

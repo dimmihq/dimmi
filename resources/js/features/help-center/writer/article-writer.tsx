@@ -113,12 +113,24 @@ export default function ArticleWriter({
     if (!editor) {
       return;
     }
-    const parsed = proposed === null || !editor.markdown ? null : editor.markdown.parse(proposed);
-    const node = parsed ? editor.state.schema.nodeFromJSON(parsed) : null;
-    editor.commands.command(({ tr }) => {
-      tr.setMeta(changeRequestKey, { proposed: node, whole });
-      return true;
-    });
+    // The writer can hand over an editor that is not mounted yet, or one
+    // already torn down while React mounts it a second time.
+    const send = () => {
+      if (editor.isDestroyed) {
+        return;
+      }
+      const parsed = proposed === null || !editor.markdown ? null : editor.markdown.parse(proposed);
+      const node = parsed ? editor.state.schema.nodeFromJSON(parsed) : null;
+      editor.view.dispatch(editor.state.tr.setMeta(changeRequestKey, { proposed: node, whole }));
+    };
+    if (editor.isInitialized) {
+      send();
+      return;
+    }
+    editor.on("create", send);
+    return () => {
+      editor.off("create", send);
+    };
   }, [editor, proposed, whole]);
 
   if (!editor) {

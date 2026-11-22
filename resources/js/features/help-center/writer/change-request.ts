@@ -24,13 +24,14 @@ export interface Requested {
 export const changeRequestKey = new PluginKey<{ requested: Requested; marks: DecorationSet }>("changeRequest");
 
 export const removedClass =
-  "change-removed rounded-md bg-status-rose-background text-text-secondary line-through decoration-status-rose-text";
-export const addedClass = "change-added rounded-md bg-status-lime-background";
+  "change-removed rounded-e-md ps-2 border-s-2 border-status-rose-text bg-status-rose-background/40 text-text-tertiary line-through decoration-status-rose-text/60";
+export const addedClass =
+  "change-added rounded-e-md ps-2 border-s-2 border-status-lime-text bg-status-lime-background/40";
 
 /*
  * Unit is one line of the article as a request is read against it: a
- * block, or one item of a list, so a list with one reworded item marks
- * only that item.
+ * block, one item of a list or one row of a table, so a list or table
+ * with one reworded line marks only that line.
  */
 interface Unit {
   node: Node;
@@ -42,7 +43,7 @@ interface Unit {
   after: number;
 }
 
-const lists = new Set(["bulletList", "orderedList"]);
+const lists = new Set(["bulletList", "orderedList", "table"]);
 
 /*
  * unitsOf is a document's lines with where each starts, leaving out

@@ -87,12 +87,13 @@ export function ArticlePage({
           className={cx(
             bareField,
             "mt-2 text-display-4-medium tracking-tight text-balance text-text-primary",
-            retitled && "rounded-md bg-status-rose-background text-text-secondary line-through",
+            retitled &&
+              "rounded-e-md ps-2 border-s-2 border-status-rose-text bg-status-rose-background/40 text-text-tertiary line-through decoration-status-rose-text/60",
           )}
         />
       </TextField>
       {retitled ? (
-        <p className="mt-1 rounded-md bg-status-lime-background text-display-4-medium tracking-tight text-balance text-text-primary">
+        <p className="mt-1 rounded-e-md ps-2 border-s-2 border-status-lime-text bg-status-lime-background/40 text-display-4-medium tracking-tight text-balance text-text-primary">
           {proposed?.title}
         </p>
       ) : null}

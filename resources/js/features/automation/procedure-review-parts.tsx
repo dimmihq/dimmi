@@ -28,11 +28,11 @@ export function Requested({ change, sources }: { change: StepChange | undefined;
   return (
     <div className="flex flex-col gap-1">
       {before !== after ? (
-        <span className="rounded-md bg-status-rose-background px-1.5 py-0.5 text-body-2-regular text-text-secondary line-through">
+        <span className="rounded-e-md px-2 py-0.5 text-body-2-regular border-s-2 border-status-rose-text bg-status-rose-background/40 text-text-tertiary line-through decoration-status-rose-text/60">
           {before}
         </span>
       ) : null}
-      <span className="rounded-md bg-status-lime-background px-1.5 py-0.5 text-body-2-regular text-text-primary">
+      <span className="rounded-e-md px-2 py-0.5 text-body-2-regular text-text-primary border-s-2 border-status-lime-text bg-status-lime-background/40">
         {retyped ? `${kindWords[change.after.kind] ?? change.after.kind}: ` : ""}
         {after}
       </span>
@@ -43,7 +43,7 @@ export function Requested({ change, sources }: { change: StepChange | undefined;
 function AddedStep({ step, sources }: { step: ProcedureStep; sources: ChipSources }) {
   const children = [...(step.then_steps ?? []), ...(step.else_steps ?? [])];
   return (
-    <li className="my-1 flex flex-col gap-1 rounded-xl bg-status-lime-background px-3 py-2.5">
+    <li className="my-1 flex flex-col gap-1 rounded-e-xl px-3 py-2.5 border-s-2 border-status-lime-text bg-status-lime-background/40">
       <span className="flex items-center gap-2">
         <span className="text-caption-1-medium text-status-lime-text">New {kindWords[step.kind] ?? step.kind}</span>
       </span>
@@ -90,11 +90,11 @@ export function RequestedText({ before, after }: { before: string; after: string
   return (
     <div className="flex flex-col gap-1 pt-2">
       {before ? (
-        <span className="rounded-md bg-status-rose-background px-1.5 py-0.5 text-body-2-regular text-text-secondary line-through">
+        <span className="rounded-e-md px-2 py-0.5 text-body-2-regular border-s-2 border-status-rose-text bg-status-rose-background/40 text-text-tertiary line-through decoration-status-rose-text/60">
           {before}
         </span>
       ) : null}
-      <span className="rounded-md bg-status-lime-background px-1.5 py-0.5 text-body-2-regular text-text-primary">
+      <span className="rounded-e-md px-2 py-0.5 text-body-2-regular text-text-primary border-s-2 border-status-lime-text bg-status-lime-background/40">
         {after}
       </span>
     </div>
