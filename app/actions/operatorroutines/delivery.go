@@ -185,7 +185,8 @@ func wanted(policy, outcome string) bool {
 }
 
 /*
-report is what Operator wrote at the end of the run.
+report is what Operator wrote at the end of the run: the thread's last
+message, when a run wrote it.
 */
 func report(ctx context.Context, q *models.Queries, run models.OperatorRoutineRun) (string, error) {
 	if run.ThreadID == nil {
@@ -194,7 +195,7 @@ func report(ctx context.Context, q *models.Queries, run models.OperatorRoutineRu
 	msgs, err := q.ListOperatorMessages(ctx, models.ListOperatorMessagesParams{
 		WorkspaceID: run.WorkspaceID, ThreadID: *run.ThreadID, RowLimit: 1,
 	})
-	if err != nil || len(msgs) == 0 || msgs[0].Role != "assistant" {
+	if err != nil || len(msgs) == 0 || msgs[0].RunID == nil {
 		return "", err
 	}
 	return msgs[0].Body, nil
