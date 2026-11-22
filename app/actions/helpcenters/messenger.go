@@ -19,10 +19,10 @@ import (
 	"fmt"
 	"slices"
 
-	"github.com/dimmihq/dimmi/framework/database"
 	"github.com/dimmihq/dimmi/framework/fault"
 	"github.com/dimmihq/dimmi/framework/ids"
 
+	"github.com/dimmihq/dimmi/app/ai/agents"
 	"github.com/dimmihq/dimmi/app/models"
 )
 
@@ -82,20 +82,20 @@ func messengerOf(ctx context.Context, q *models.Queries, h models.HelpCenter) (M
 }
 
 /*
-agentAnswers reports whether the workspace's AI agent answers chats from
-the messenger: it is on, open to the messenger and not kept out of this
-one.
+agentAnswers reports whether an AI agent answers chats from the
+messenger: the agent placed on it, or the workspace's default when it
+is open to the messenger and not kept out of this one.
 */
 func agentAnswers(ctx context.Context, q *models.Queries, w models.WidgetSetting) (bool, error) {
-	agent, err := q.FindAgent(ctx, w.WorkspaceID)
-	if errors.Is(err, database.ErrNotFound) {
+	conn := w.ChannelConnectionID
+	agent, err := agents.Resolve(ctx, q, agents.Where{WorkspaceID: w.WorkspaceID, ChannelConnectionID: &conn})
+	if errors.Is(err, agents.ErrNoAgent) {
 		return false, nil
 	}
 	if err != nil {
-		return false, fmt.Errorf("find agent: %w", err)
+		return false, err
 	}
-	open := len(agent.EnabledChannels) == 0 || slices.Contains(agent.EnabledChannels, "widget")
-	return agent.Enabled && open && !slices.Contains(agent.ExcludedChannelConnectionIds, w.ChannelConnectionID), nil
+	return agents.AnswersOn(agent, "widget", conn), nil
 }
 
 /*

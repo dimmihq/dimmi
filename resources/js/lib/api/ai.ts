@@ -176,25 +176,44 @@ export interface AiRun {
   completed_at: string | null;
 }
 
-export interface AiPlaygroundAnswer {
-  object: "ai_playground_answer";
-  run_id: string | null;
-  outcome: string;
-  classification: { intent: string; language: string; query: string };
-  retrieved: { n: number; title: string; url: string; similarity: number; used: boolean; text: string }[];
-  answer: { body: string; citations: { n: number; title: string; url: string }[] };
-  usage: { input_tokens: number; cached_input_tokens: number; output_tokens: number; cost_micros: number };
-  timing: { first_token_ms: number; latency_ms: number };
-}
-
 export function aiKey(workspace: string) {
   return ["workspace", workspace, "ai"];
+}
+
+/*
+ * StoredAgent is an agent as /ai/agents answers it: what customers get,
+ * with the working copy under draft.
+ */
+interface StoredAgent extends Omit<AiAgent, "monthly_spend_cap_micros"> {
+  is_default: boolean;
+  status: "draft" | "live" | "paused";
+  has_unpublished_changes: boolean;
+  /* The working copy: what the settings page shows and edits. */
+  draft: Partial<AiAgent>;
+}
+
+interface StoredAgentView extends Omit<AgentView, "agent"> {
+  agent: StoredAgent;
+  settings: { monthly_spend_cap_micros: number | null };
+}
+
+/*
+ * defaultAgentView reads the workspace's default agent in the shape the
+ * settings page knows, with the workspace's spend cap folded in.
+ */
+async function defaultAgentView(workspace: string): Promise<AgentView> {
+  const list = await request<StoredAgent[]>("GET", "/ai/agents", undefined, { workspace });
+  const id = (list.find((a) => a.is_default) ?? list[0]).id;
+  const view = await request<StoredAgentView>("GET", `/ai/agents/${id}`, undefined, { workspace });
+  const { draft, ...stored } = view.agent;
+  const agent = { ...stored, ...draft, monthly_spend_cap_micros: view.settings.monthly_spend_cap_micros };
+  return { ...view, agent };
 }
 
 export function agentQuery(workspace: string) {
   return queryOptions({
     queryKey: [...aiKey(workspace), "agent"],
-    queryFn: () => request<AgentView>("GET", "/ai/agent", undefined, { workspace }),
+    queryFn: () => defaultAgentView(workspace),
   });
 }
 
@@ -265,8 +284,30 @@ export interface AgentPatch {
   always_handoff_tag_ids?: string[];
 }
 
-export function updateAgent(workspace: string, body: AgentPatch) {
-  return request<AgentView>("PATCH", "/ai/agent", body, { workspace });
+/*
+ * updateAgent saves a change to the default agent the way the settings
+ * page expects: at once. The cap goes to the workspace's shared AI
+ * settings; the rest goes to the agent's working copy, which is then
+ * published while the agent answers. Switching it on or off publishes
+ * it or turns it off.
+ */
+export async function updateAgent(workspace: string, body: AgentPatch): Promise<AgentView> {
+  const { enabled, monthly_cap_usd, ...rest } = body;
+  const current = await defaultAgentView(workspace);
+  const id = current.agent.id;
+  const live = enabled ?? current.agent.enabled;
+  if (monthly_cap_usd !== undefined) {
+    await request("PATCH", "/ai/settings", { monthly_cap_usd }, { workspace });
+  }
+  if (Object.keys(rest).length > 0) {
+    await request("PATCH", `/ai/agents/${id}`, rest, { workspace });
+  }
+  if (live && (enabled === true || Object.keys(rest).length > 0)) {
+    await request("POST", `/ai/agents/${id}/publications`, {}, { workspace });
+  } else if (enabled === false && current.agent.enabled) {
+    await request("DELETE", `/ai/agents/${id}/publications`, undefined, { workspace });
+  }
+  return defaultAgentView(workspace);
 }
 
 export interface NewAiKey {
@@ -291,10 +332,6 @@ export function deleteAiKey(workspace: string, keyId: string) {
 
 export function testAiKey(workspace: string, keyId: string) {
   return request<AiProviderKey>("POST", `/ai/keys/${keyId}/test`, undefined, { workspace });
-}
-
-export function askPlayground(workspace: string, body: { message: string; conversation?: string }) {
-  return request<AiPlaygroundAnswer>("POST", "/ai/playground", body, { workspace });
 }
 
 /*

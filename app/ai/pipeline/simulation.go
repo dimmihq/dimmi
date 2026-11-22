@@ -38,6 +38,7 @@ import (
 	"github.com/dimmihq/dimmi/framework/ids"
 
 	"github.com/dimmihq/dimmi/app/ai/actionkit"
+	"github.com/dimmihq/dimmi/app/ai/agents"
 	"github.com/dimmihq/dimmi/app/enums"
 	"github.com/dimmihq/dimmi/app/models"
 	"github.com/dimmihq/dimmi/app/support/procedure"
@@ -186,12 +187,9 @@ simulatedEnv is the run's world with the persona as the customer and
 the scripted turns as the conversation.
 */
 func (r *Runner) simulatedEnv(ctx context.Context, q *models.Queries, in SimulationInput) (*env, error) {
-	agent, err := q.FindAgent(ctx, in.WorkspaceID)
-	if errors.Is(err, database.ErrNotFound) {
-		return nil, ErrNoAgent
-	}
+	agent, err := agents.DefaultAnswerer(ctx, q, in.WorkspaceID)
 	if err != nil {
-		return nil, fmt.Errorf("find agent: %w", err)
+		return nil, err
 	}
 	ws, err := q.FindWorkspace(ctx, in.WorkspaceID)
 	if err != nil {

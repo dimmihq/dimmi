@@ -14,22 +14,109 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const agentNameTaken = `-- name: AgentNameTaken :one
+SELECT EXISTS (
+    SELECT 1 FROM ai_agents
+    WHERE workspace_id = $1 AND lower(name) = lower($2) AND id <> $3 AND deleted_at IS NULL
+)::boolean
+`
+
+type AgentNameTakenParams struct {
+	WorkspaceID ids.UUID `json:"workspace_id"`
+	Name        string   `json:"name"`
+	ID          ids.UUID `json:"id"`
+}
+
+// AgentNameTaken reports whether another agent has the name.
+func (q *Queries) AgentNameTaken(ctx context.Context, arg AgentNameTakenParams) (bool, error) {
+	row := q.db.QueryRow(ctx, agentNameTaken, arg.WorkspaceID, arg.Name, arg.ID)
+	var column_1 bool
+	err := row.Scan(&column_1)
+	return column_1, err
+}
+
+const clearAgentConnections = `-- name: ClearAgentConnections :exec
+UPDATE channel_connections SET ai_agent_id = NULL
+WHERE workspace_id = $1 AND ai_agent_id = $2
+`
+
+type ClearAgentConnectionsParams struct {
+	WorkspaceID ids.UUID  `json:"workspace_id"`
+	AgentID     *ids.UUID `json:"agent_id"`
+}
+
+// ClearAgentConnections takes an agent off every channel connection.
+func (q *Queries) ClearAgentConnections(ctx context.Context, arg ClearAgentConnectionsParams) error {
+	_, err := q.db.Exec(ctx, clearAgentConnections, arg.WorkspaceID, arg.AgentID)
+	return err
+}
+
+const clearAgentInboxes = `-- name: ClearAgentInboxes :exec
+UPDATE inboxes SET ai_agent_id = NULL
+WHERE workspace_id = $1 AND ai_agent_id = $2
+`
+
+type ClearAgentInboxesParams struct {
+	WorkspaceID ids.UUID  `json:"workspace_id"`
+	AgentID     *ids.UUID `json:"agent_id"`
+}
+
+// ClearAgentInboxes takes an agent off every inbox.
+func (q *Queries) ClearAgentInboxes(ctx context.Context, arg ClearAgentInboxesParams) error {
+	_, err := q.db.Exec(ctx, clearAgentInboxes, arg.WorkspaceID, arg.AgentID)
+	return err
+}
+
+const clearAgentRooms = `-- name: ClearAgentRooms :exec
+UPDATE channel_rooms SET ai_agent_id = NULL
+WHERE workspace_id = $1 AND ai_agent_id = $2
+`
+
+type ClearAgentRoomsParams struct {
+	WorkspaceID ids.UUID  `json:"workspace_id"`
+	AgentID     *ids.UUID `json:"agent_id"`
+}
+
+// ClearAgentRooms takes an agent off every Slack channel.
+func (q *Queries) ClearAgentRooms(ctx context.Context, arg ClearAgentRoomsParams) error {
+	_, err := q.db.Exec(ctx, clearAgentRooms, arg.WorkspaceID, arg.AgentID)
+	return err
+}
+
 const createAgent = `-- name: CreateAgent :one
-INSERT INTO ai_agents (workspace_id, monthly_spend_cap_micros, created_at, updated_at)
-VALUES ($1, $2, $3, $3)
-ON CONFLICT (workspace_id) WHERE deleted_at IS NULL DO NOTHING
-RETURNING id, workspace_id, name, avatar_attachment_id, enabled, product_name, tone, guidance, enabled_channels, excluded_channel_connection_ids, schedule, office_hours, assigned_behavior, answer_key_id, answer_model, classifier_key_id, classifier_model, fallback_key_id, fallback_model, temperature, max_output_tokens, max_ai_replies, unknown_behavior, grounding_mode, require_citations, min_similarity, languages, default_language, streaming, include_contact_context, contact_attribute_allowlist, pii_redaction, link_allowlist, handoff, messages, prompt_version, monthly_spend_cap_micros, actions_enabled, created_at, updated_at, deleted_at, min_vector_similarity, tool_layer, prefetch_search, compact_results, search_results, carry_passages
+INSERT INTO ai_agents (
+    workspace_id, name, role, template_key, draft, monthly_spend_cap_micros,
+    created_by_member_id, updated_by_member_id, created_at, updated_at
+) VALUES (
+    $1, $2, $3, $4, $5, NULL,
+    $6, $6, $7, $7
+)
+RETURNING id, workspace_id, name, avatar_attachment_id, enabled, product_name, tone, guidance, enabled_channels, excluded_channel_connection_ids, schedule, office_hours, assigned_behavior, answer_key_id, answer_model, classifier_key_id, classifier_model, fallback_key_id, fallback_model, temperature, max_output_tokens, max_ai_replies, unknown_behavior, grounding_mode, require_citations, min_similarity, languages, default_language, streaming, include_contact_context, contact_attribute_allowlist, pii_redaction, link_allowlist, handoff, messages, prompt_version, monthly_spend_cap_micros, actions_enabled, created_at, updated_at, deleted_at, min_vector_similarity, tool_layer, prefetch_search, compact_results, search_results, carry_passages, is_default, role, template_key, status, lock_version, draft, knowledge_scope, procedure_scope, action_scope, transfer_agent_ids, published_at, created_by_member_id, updated_by_member_id, live_version_id
 `
 
 type CreateAgentParams struct {
-	WorkspaceID           ids.UUID  `json:"workspace_id"`
-	MonthlySpendCapMicros *int64    `json:"monthly_spend_cap_micros"`
-	Now                   time.Time `json:"now"`
+	WorkspaceID ids.UUID        `json:"workspace_id"`
+	Name        string          `json:"name"`
+	Role        string          `json:"role"`
+	TemplateKey *string         `json:"template_key"`
+	Draft       json.RawMessage `json:"draft"`
+	MemberID    *ids.UUID       `json:"member_id"`
+	Now         time.Time       `json:"now"`
 }
 
-// CreateAgent makes the workspace's one agent with its defaults.
+// CreateAgent makes a new agent as a draft that has never been
+// published: its columns hold the defaults and its draft what it starts
+// from.
 func (q *Queries) CreateAgent(ctx context.Context, arg CreateAgentParams) (AiAgent, error) {
-	row := q.db.QueryRow(ctx, createAgent, arg.WorkspaceID, arg.MonthlySpendCapMicros, arg.Now)
+	row := q.db.QueryRow(ctx, createAgent,
+		arg.WorkspaceID,
+		arg.Name,
+		arg.Role,
+		arg.TemplateKey,
+		arg.Draft,
+		arg.MemberID,
+		arg.Now,
+	)
 	var i AiAgent
 	err := row.Scan(
 		&i.ID,
@@ -79,18 +166,40 @@ func (q *Queries) CreateAgent(ctx context.Context, arg CreateAgentParams) (AiAge
 		&i.CompactResults,
 		&i.SearchResults,
 		&i.CarryPassages,
+		&i.IsDefault,
+		&i.Role,
+		&i.TemplateKey,
+		&i.Status,
+		&i.LockVersion,
+		&i.Draft,
+		&i.KnowledgeScope,
+		&i.ProcedureScope,
+		&i.ActionScope,
+		&i.TransferAgentIds,
+		&i.PublishedAt,
+		&i.CreatedByMemberID,
+		&i.UpdatedByMemberID,
+		&i.LiveVersionID,
 	)
 	return i, err
 }
 
-const findAgent = `-- name: FindAgent :one
-SELECT id, workspace_id, name, avatar_attachment_id, enabled, product_name, tone, guidance, enabled_channels, excluded_channel_connection_ids, schedule, office_hours, assigned_behavior, answer_key_id, answer_model, classifier_key_id, classifier_model, fallback_key_id, fallback_model, temperature, max_output_tokens, max_ai_replies, unknown_behavior, grounding_mode, require_citations, min_similarity, languages, default_language, streaming, include_contact_context, contact_attribute_allowlist, pii_redaction, link_allowlist, handoff, messages, prompt_version, monthly_spend_cap_micros, actions_enabled, created_at, updated_at, deleted_at, min_vector_similarity, tool_layer, prefetch_search, compact_results, search_results, carry_passages FROM ai_agents
-WHERE workspace_id = $1 AND deleted_at IS NULL
+const createDefaultAgent = `-- name: CreateDefaultAgent :one
+INSERT INTO ai_agents (workspace_id, is_default, monthly_spend_cap_micros, created_at, updated_at)
+VALUES ($1, true, NULL, $2, $2)
+ON CONFLICT (workspace_id) WHERE is_default AND deleted_at IS NULL DO NOTHING
+RETURNING id, workspace_id, name, avatar_attachment_id, enabled, product_name, tone, guidance, enabled_channels, excluded_channel_connection_ids, schedule, office_hours, assigned_behavior, answer_key_id, answer_model, classifier_key_id, classifier_model, fallback_key_id, fallback_model, temperature, max_output_tokens, max_ai_replies, unknown_behavior, grounding_mode, require_citations, min_similarity, languages, default_language, streaming, include_contact_context, contact_attribute_allowlist, pii_redaction, link_allowlist, handoff, messages, prompt_version, monthly_spend_cap_micros, actions_enabled, created_at, updated_at, deleted_at, min_vector_similarity, tool_layer, prefetch_search, compact_results, search_results, carry_passages, is_default, role, template_key, status, lock_version, draft, knowledge_scope, procedure_scope, action_scope, transfer_agent_ids, published_at, created_by_member_id, updated_by_member_id, live_version_id
 `
 
-// FindAgent returns the workspace's live agent, if it exists.
-func (q *Queries) FindAgent(ctx context.Context, workspaceID ids.UUID) (AiAgent, error) {
-	row := q.db.QueryRow(ctx, findAgent, workspaceID)
+type CreateDefaultAgentParams struct {
+	WorkspaceID ids.UUID  `json:"workspace_id"`
+	Now         time.Time `json:"now"`
+}
+
+// CreateDefaultAgent makes the workspace's default agent with its
+// defaults, unless it has one already.
+func (q *Queries) CreateDefaultAgent(ctx context.Context, arg CreateDefaultAgentParams) (AiAgent, error) {
+	row := q.db.QueryRow(ctx, createDefaultAgent, arg.WorkspaceID, arg.Now)
 	var i AiAgent
 	err := row.Scan(
 		&i.ID,
@@ -140,6 +249,901 @@ func (q *Queries) FindAgent(ctx context.Context, workspaceID ids.UUID) (AiAgent,
 		&i.CompactResults,
 		&i.SearchResults,
 		&i.CarryPassages,
+		&i.IsDefault,
+		&i.Role,
+		&i.TemplateKey,
+		&i.Status,
+		&i.LockVersion,
+		&i.Draft,
+		&i.KnowledgeScope,
+		&i.ProcedureScope,
+		&i.ActionScope,
+		&i.TransferAgentIds,
+		&i.PublishedAt,
+		&i.CreatedByMemberID,
+		&i.UpdatedByMemberID,
+		&i.LiveVersionID,
+	)
+	return i, err
+}
+
+const deleteAgent = `-- name: DeleteAgent :exec
+UPDATE ai_agents SET deleted_at = $1, status = 'paused', enabled = false, updated_at = $1
+WHERE workspace_id = $2 AND id = $3 AND NOT is_default AND deleted_at IS NULL
+`
+
+type DeleteAgentParams struct {
+	Now         *time.Time `json:"now"`
+	WorkspaceID ids.UUID   `json:"workspace_id"`
+	ID          ids.UUID   `json:"id"`
+}
+
+// DeleteAgent removes an agent that is not the default.
+func (q *Queries) DeleteAgent(ctx context.Context, arg DeleteAgentParams) error {
+	_, err := q.db.Exec(ctx, deleteAgent, arg.Now, arg.WorkspaceID, arg.ID)
+	return err
+}
+
+const findAgentByID = `-- name: FindAgentByID :one
+SELECT id, workspace_id, name, avatar_attachment_id, enabled, product_name, tone, guidance, enabled_channels, excluded_channel_connection_ids, schedule, office_hours, assigned_behavior, answer_key_id, answer_model, classifier_key_id, classifier_model, fallback_key_id, fallback_model, temperature, max_output_tokens, max_ai_replies, unknown_behavior, grounding_mode, require_citations, min_similarity, languages, default_language, streaming, include_contact_context, contact_attribute_allowlist, pii_redaction, link_allowlist, handoff, messages, prompt_version, monthly_spend_cap_micros, actions_enabled, created_at, updated_at, deleted_at, min_vector_similarity, tool_layer, prefetch_search, compact_results, search_results, carry_passages, is_default, role, template_key, status, lock_version, draft, knowledge_scope, procedure_scope, action_scope, transfer_agent_ids, published_at, created_by_member_id, updated_by_member_id, live_version_id FROM ai_agents
+WHERE workspace_id = $1 AND id = $2 AND deleted_at IS NULL
+`
+
+type FindAgentByIDParams struct {
+	WorkspaceID ids.UUID `json:"workspace_id"`
+	ID          ids.UUID `json:"id"`
+}
+
+// FindAgentByID returns one of the workspace's agents.
+func (q *Queries) FindAgentByID(ctx context.Context, arg FindAgentByIDParams) (AiAgent, error) {
+	row := q.db.QueryRow(ctx, findAgentByID, arg.WorkspaceID, arg.ID)
+	var i AiAgent
+	err := row.Scan(
+		&i.ID,
+		&i.WorkspaceID,
+		&i.Name,
+		&i.AvatarAttachmentID,
+		&i.Enabled,
+		&i.ProductName,
+		&i.Tone,
+		&i.Guidance,
+		&i.EnabledChannels,
+		&i.ExcludedChannelConnectionIds,
+		&i.Schedule,
+		&i.OfficeHours,
+		&i.AssignedBehavior,
+		&i.AnswerKeyID,
+		&i.AnswerModel,
+		&i.ClassifierKeyID,
+		&i.ClassifierModel,
+		&i.FallbackKeyID,
+		&i.FallbackModel,
+		&i.Temperature,
+		&i.MaxOutputTokens,
+		&i.MaxAiReplies,
+		&i.UnknownBehavior,
+		&i.GroundingMode,
+		&i.RequireCitations,
+		&i.MinSimilarity,
+		&i.Languages,
+		&i.DefaultLanguage,
+		&i.Streaming,
+		&i.IncludeContactContext,
+		&i.ContactAttributeAllowlist,
+		&i.PiiRedaction,
+		&i.LinkAllowlist,
+		&i.Handoff,
+		&i.Messages,
+		&i.PromptVersion,
+		&i.MonthlySpendCapMicros,
+		&i.ActionsEnabled,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.DeletedAt,
+		&i.MinVectorSimilarity,
+		&i.ToolLayer,
+		&i.PrefetchSearch,
+		&i.CompactResults,
+		&i.SearchResults,
+		&i.CarryPassages,
+		&i.IsDefault,
+		&i.Role,
+		&i.TemplateKey,
+		&i.Status,
+		&i.LockVersion,
+		&i.Draft,
+		&i.KnowledgeScope,
+		&i.ProcedureScope,
+		&i.ActionScope,
+		&i.TransferAgentIds,
+		&i.PublishedAt,
+		&i.CreatedByMemberID,
+		&i.UpdatedByMemberID,
+		&i.LiveVersionID,
+	)
+	return i, err
+}
+
+const findDefaultAgent = `-- name: FindDefaultAgent :one
+SELECT id, workspace_id, name, avatar_attachment_id, enabled, product_name, tone, guidance, enabled_channels, excluded_channel_connection_ids, schedule, office_hours, assigned_behavior, answer_key_id, answer_model, classifier_key_id, classifier_model, fallback_key_id, fallback_model, temperature, max_output_tokens, max_ai_replies, unknown_behavior, grounding_mode, require_citations, min_similarity, languages, default_language, streaming, include_contact_context, contact_attribute_allowlist, pii_redaction, link_allowlist, handoff, messages, prompt_version, monthly_spend_cap_micros, actions_enabled, created_at, updated_at, deleted_at, min_vector_similarity, tool_layer, prefetch_search, compact_results, search_results, carry_passages, is_default, role, template_key, status, lock_version, draft, knowledge_scope, procedure_scope, action_scope, transfer_agent_ids, published_at, created_by_member_id, updated_by_member_id, live_version_id FROM ai_agents
+WHERE workspace_id = $1 AND is_default AND deleted_at IS NULL
+`
+
+// FindDefaultAgent returns the workspace's default agent, which answers
+// every conversation no other agent takes.
+func (q *Queries) FindDefaultAgent(ctx context.Context, workspaceID ids.UUID) (AiAgent, error) {
+	row := q.db.QueryRow(ctx, findDefaultAgent, workspaceID)
+	var i AiAgent
+	err := row.Scan(
+		&i.ID,
+		&i.WorkspaceID,
+		&i.Name,
+		&i.AvatarAttachmentID,
+		&i.Enabled,
+		&i.ProductName,
+		&i.Tone,
+		&i.Guidance,
+		&i.EnabledChannels,
+		&i.ExcludedChannelConnectionIds,
+		&i.Schedule,
+		&i.OfficeHours,
+		&i.AssignedBehavior,
+		&i.AnswerKeyID,
+		&i.AnswerModel,
+		&i.ClassifierKeyID,
+		&i.ClassifierModel,
+		&i.FallbackKeyID,
+		&i.FallbackModel,
+		&i.Temperature,
+		&i.MaxOutputTokens,
+		&i.MaxAiReplies,
+		&i.UnknownBehavior,
+		&i.GroundingMode,
+		&i.RequireCitations,
+		&i.MinSimilarity,
+		&i.Languages,
+		&i.DefaultLanguage,
+		&i.Streaming,
+		&i.IncludeContactContext,
+		&i.ContactAttributeAllowlist,
+		&i.PiiRedaction,
+		&i.LinkAllowlist,
+		&i.Handoff,
+		&i.Messages,
+		&i.PromptVersion,
+		&i.MonthlySpendCapMicros,
+		&i.ActionsEnabled,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.DeletedAt,
+		&i.MinVectorSimilarity,
+		&i.ToolLayer,
+		&i.PrefetchSearch,
+		&i.CompactResults,
+		&i.SearchResults,
+		&i.CarryPassages,
+		&i.IsDefault,
+		&i.Role,
+		&i.TemplateKey,
+		&i.Status,
+		&i.LockVersion,
+		&i.Draft,
+		&i.KnowledgeScope,
+		&i.ProcedureScope,
+		&i.ActionScope,
+		&i.TransferAgentIds,
+		&i.PublishedAt,
+		&i.CreatedByMemberID,
+		&i.UpdatedByMemberID,
+		&i.LiveVersionID,
+	)
+	return i, err
+}
+
+const keyUsedByAgents = `-- name: KeyUsedByAgents :one
+SELECT EXISTS (
+    SELECT 1 FROM ai_agents
+    WHERE workspace_id = $1 AND deleted_at IS NULL AND (
+        answer_key_id = $2 OR fallback_key_id = $2 OR classifier_key_id = $2
+        OR draft->>'answer_key_id' = ($2::uuid)::text
+        OR draft->>'fallback_key_id' = ($2::uuid)::text
+    )
+)::boolean
+`
+
+type KeyUsedByAgentsParams struct {
+	WorkspaceID ids.UUID  `json:"workspace_id"`
+	KeyID       *ids.UUID `json:"key_id"`
+}
+
+// KeyUsedByAgents reports whether any agent answers or falls back on a
+// connection, in its published settings or its draft.
+func (q *Queries) KeyUsedByAgents(ctx context.Context, arg KeyUsedByAgentsParams) (bool, error) {
+	row := q.db.QueryRow(ctx, keyUsedByAgents, arg.WorkspaceID, arg.KeyID)
+	var column_1 bool
+	err := row.Scan(&column_1)
+	return column_1, err
+}
+
+const listAgentPlacements = `-- name: ListAgentPlacements :many
+SELECT 'connection'::text AS kind, cc.id, cc.ai_agent_id::uuid AS agent_id FROM channel_connections cc
+WHERE cc.workspace_id = $1 AND cc.ai_agent_id IS NOT NULL
+UNION ALL
+SELECT 'room'::text, cr.id, cr.ai_agent_id::uuid FROM channel_rooms cr
+WHERE cr.workspace_id = $1 AND cr.ai_agent_id IS NOT NULL
+UNION ALL
+SELECT 'inbox'::text, ib.id, ib.ai_agent_id::uuid FROM inboxes ib
+WHERE ib.workspace_id = $1 AND ib.ai_agent_id IS NOT NULL
+`
+
+type ListAgentPlacementsRow struct {
+	Kind    string   `json:"kind"`
+	ID      ids.UUID `json:"id"`
+	AgentID ids.UUID `json:"agent_id"`
+}
+
+// ListAgentPlacements returns where each of the workspace's agents takes
+// new conversations: its channel connections, Slack channels and inboxes.
+func (q *Queries) ListAgentPlacements(ctx context.Context, workspaceID ids.UUID) ([]ListAgentPlacementsRow, error) {
+	rows, err := q.db.Query(ctx, listAgentPlacements, workspaceID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListAgentPlacementsRow
+	for rows.Next() {
+		var i ListAgentPlacementsRow
+		if err := rows.Scan(&i.Kind, &i.ID, &i.AgentID); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listAgents = `-- name: ListAgents :many
+SELECT id, workspace_id, name, avatar_attachment_id, enabled, product_name, tone, guidance, enabled_channels, excluded_channel_connection_ids, schedule, office_hours, assigned_behavior, answer_key_id, answer_model, classifier_key_id, classifier_model, fallback_key_id, fallback_model, temperature, max_output_tokens, max_ai_replies, unknown_behavior, grounding_mode, require_citations, min_similarity, languages, default_language, streaming, include_contact_context, contact_attribute_allowlist, pii_redaction, link_allowlist, handoff, messages, prompt_version, monthly_spend_cap_micros, actions_enabled, created_at, updated_at, deleted_at, min_vector_similarity, tool_layer, prefetch_search, compact_results, search_results, carry_passages, is_default, role, template_key, status, lock_version, draft, knowledge_scope, procedure_scope, action_scope, transfer_agent_ids, published_at, created_by_member_id, updated_by_member_id, live_version_id FROM ai_agents
+WHERE workspace_id = $1 AND deleted_at IS NULL
+ORDER BY is_default DESC, lower(name), id
+`
+
+// ListAgents returns the workspace's agents, the default first, then by
+// name.
+func (q *Queries) ListAgents(ctx context.Context, workspaceID ids.UUID) ([]AiAgent, error) {
+	rows, err := q.db.Query(ctx, listAgents, workspaceID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []AiAgent
+	for rows.Next() {
+		var i AiAgent
+		if err := rows.Scan(
+			&i.ID,
+			&i.WorkspaceID,
+			&i.Name,
+			&i.AvatarAttachmentID,
+			&i.Enabled,
+			&i.ProductName,
+			&i.Tone,
+			&i.Guidance,
+			&i.EnabledChannels,
+			&i.ExcludedChannelConnectionIds,
+			&i.Schedule,
+			&i.OfficeHours,
+			&i.AssignedBehavior,
+			&i.AnswerKeyID,
+			&i.AnswerModel,
+			&i.ClassifierKeyID,
+			&i.ClassifierModel,
+			&i.FallbackKeyID,
+			&i.FallbackModel,
+			&i.Temperature,
+			&i.MaxOutputTokens,
+			&i.MaxAiReplies,
+			&i.UnknownBehavior,
+			&i.GroundingMode,
+			&i.RequireCitations,
+			&i.MinSimilarity,
+			&i.Languages,
+			&i.DefaultLanguage,
+			&i.Streaming,
+			&i.IncludeContactContext,
+			&i.ContactAttributeAllowlist,
+			&i.PiiRedaction,
+			&i.LinkAllowlist,
+			&i.Handoff,
+			&i.Messages,
+			&i.PromptVersion,
+			&i.MonthlySpendCapMicros,
+			&i.ActionsEnabled,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.DeletedAt,
+			&i.MinVectorSimilarity,
+			&i.ToolLayer,
+			&i.PrefetchSearch,
+			&i.CompactResults,
+			&i.SearchResults,
+			&i.CarryPassages,
+			&i.IsDefault,
+			&i.Role,
+			&i.TemplateKey,
+			&i.Status,
+			&i.LockVersion,
+			&i.Draft,
+			&i.KnowledgeScope,
+			&i.ProcedureScope,
+			&i.ActionScope,
+			&i.TransferAgentIds,
+			&i.PublishedAt,
+			&i.CreatedByMemberID,
+			&i.UpdatedByMemberID,
+			&i.LiveVersionID,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listAgentsByID = `-- name: ListAgentsByID :many
+SELECT id, workspace_id, name, avatar_attachment_id, enabled, product_name, tone, guidance, enabled_channels, excluded_channel_connection_ids, schedule, office_hours, assigned_behavior, answer_key_id, answer_model, classifier_key_id, classifier_model, fallback_key_id, fallback_model, temperature, max_output_tokens, max_ai_replies, unknown_behavior, grounding_mode, require_citations, min_similarity, languages, default_language, streaming, include_contact_context, contact_attribute_allowlist, pii_redaction, link_allowlist, handoff, messages, prompt_version, monthly_spend_cap_micros, actions_enabled, created_at, updated_at, deleted_at, min_vector_similarity, tool_layer, prefetch_search, compact_results, search_results, carry_passages, is_default, role, template_key, status, lock_version, draft, knowledge_scope, procedure_scope, action_scope, transfer_agent_ids, published_at, created_by_member_id, updated_by_member_id, live_version_id FROM ai_agents
+WHERE workspace_id = $1 AND id = ANY ($2::uuid[]) AND deleted_at IS NULL
+`
+
+type ListAgentsByIDParams struct {
+	WorkspaceID ids.UUID   `json:"workspace_id"`
+	Ids         []ids.UUID `json:"ids"`
+}
+
+// ListAgentsByID returns the workspace's agents among some ids.
+func (q *Queries) ListAgentsByID(ctx context.Context, arg ListAgentsByIDParams) ([]AiAgent, error) {
+	rows, err := q.db.Query(ctx, listAgentsByID, arg.WorkspaceID, arg.Ids)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []AiAgent
+	for rows.Next() {
+		var i AiAgent
+		if err := rows.Scan(
+			&i.ID,
+			&i.WorkspaceID,
+			&i.Name,
+			&i.AvatarAttachmentID,
+			&i.Enabled,
+			&i.ProductName,
+			&i.Tone,
+			&i.Guidance,
+			&i.EnabledChannels,
+			&i.ExcludedChannelConnectionIds,
+			&i.Schedule,
+			&i.OfficeHours,
+			&i.AssignedBehavior,
+			&i.AnswerKeyID,
+			&i.AnswerModel,
+			&i.ClassifierKeyID,
+			&i.ClassifierModel,
+			&i.FallbackKeyID,
+			&i.FallbackModel,
+			&i.Temperature,
+			&i.MaxOutputTokens,
+			&i.MaxAiReplies,
+			&i.UnknownBehavior,
+			&i.GroundingMode,
+			&i.RequireCitations,
+			&i.MinSimilarity,
+			&i.Languages,
+			&i.DefaultLanguage,
+			&i.Streaming,
+			&i.IncludeContactContext,
+			&i.ContactAttributeAllowlist,
+			&i.PiiRedaction,
+			&i.LinkAllowlist,
+			&i.Handoff,
+			&i.Messages,
+			&i.PromptVersion,
+			&i.MonthlySpendCapMicros,
+			&i.ActionsEnabled,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.DeletedAt,
+			&i.MinVectorSimilarity,
+			&i.ToolLayer,
+			&i.PrefetchSearch,
+			&i.CompactResults,
+			&i.SearchResults,
+			&i.CarryPassages,
+			&i.IsDefault,
+			&i.Role,
+			&i.TemplateKey,
+			&i.Status,
+			&i.LockVersion,
+			&i.Draft,
+			&i.KnowledgeScope,
+			&i.ProcedureScope,
+			&i.ActionScope,
+			&i.TransferAgentIds,
+			&i.PublishedAt,
+			&i.CreatedByMemberID,
+			&i.UpdatedByMemberID,
+			&i.LiveVersionID,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const pauseAgent = `-- name: PauseAgent :one
+UPDATE ai_agents SET status = 'paused', enabled = false, updated_by_member_id = $1,
+    updated_at = $2
+WHERE workspace_id = $3 AND id = $4 AND deleted_at IS NULL AND status = 'live'
+RETURNING id, workspace_id, name, avatar_attachment_id, enabled, product_name, tone, guidance, enabled_channels, excluded_channel_connection_ids, schedule, office_hours, assigned_behavior, answer_key_id, answer_model, classifier_key_id, classifier_model, fallback_key_id, fallback_model, temperature, max_output_tokens, max_ai_replies, unknown_behavior, grounding_mode, require_citations, min_similarity, languages, default_language, streaming, include_contact_context, contact_attribute_allowlist, pii_redaction, link_allowlist, handoff, messages, prompt_version, monthly_spend_cap_micros, actions_enabled, created_at, updated_at, deleted_at, min_vector_similarity, tool_layer, prefetch_search, compact_results, search_results, carry_passages, is_default, role, template_key, status, lock_version, draft, knowledge_scope, procedure_scope, action_scope, transfer_agent_ids, published_at, created_by_member_id, updated_by_member_id, live_version_id
+`
+
+type PauseAgentParams struct {
+	MemberID    *ids.UUID `json:"member_id"`
+	Now         time.Time `json:"now"`
+	WorkspaceID ids.UUID  `json:"workspace_id"`
+	ID          ids.UUID  `json:"id"`
+}
+
+// PauseAgent stops the agent answering, keeping its published settings
+// and its draft.
+func (q *Queries) PauseAgent(ctx context.Context, arg PauseAgentParams) (AiAgent, error) {
+	row := q.db.QueryRow(ctx, pauseAgent,
+		arg.MemberID,
+		arg.Now,
+		arg.WorkspaceID,
+		arg.ID,
+	)
+	var i AiAgent
+	err := row.Scan(
+		&i.ID,
+		&i.WorkspaceID,
+		&i.Name,
+		&i.AvatarAttachmentID,
+		&i.Enabled,
+		&i.ProductName,
+		&i.Tone,
+		&i.Guidance,
+		&i.EnabledChannels,
+		&i.ExcludedChannelConnectionIds,
+		&i.Schedule,
+		&i.OfficeHours,
+		&i.AssignedBehavior,
+		&i.AnswerKeyID,
+		&i.AnswerModel,
+		&i.ClassifierKeyID,
+		&i.ClassifierModel,
+		&i.FallbackKeyID,
+		&i.FallbackModel,
+		&i.Temperature,
+		&i.MaxOutputTokens,
+		&i.MaxAiReplies,
+		&i.UnknownBehavior,
+		&i.GroundingMode,
+		&i.RequireCitations,
+		&i.MinSimilarity,
+		&i.Languages,
+		&i.DefaultLanguage,
+		&i.Streaming,
+		&i.IncludeContactContext,
+		&i.ContactAttributeAllowlist,
+		&i.PiiRedaction,
+		&i.LinkAllowlist,
+		&i.Handoff,
+		&i.Messages,
+		&i.PromptVersion,
+		&i.MonthlySpendCapMicros,
+		&i.ActionsEnabled,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.DeletedAt,
+		&i.MinVectorSimilarity,
+		&i.ToolLayer,
+		&i.PrefetchSearch,
+		&i.CompactResults,
+		&i.SearchResults,
+		&i.CarryPassages,
+		&i.IsDefault,
+		&i.Role,
+		&i.TemplateKey,
+		&i.Status,
+		&i.LockVersion,
+		&i.Draft,
+		&i.KnowledgeScope,
+		&i.ProcedureScope,
+		&i.ActionScope,
+		&i.TransferAgentIds,
+		&i.PublishedAt,
+		&i.CreatedByMemberID,
+		&i.UpdatedByMemberID,
+		&i.LiveVersionID,
+	)
+	return i, err
+}
+
+const pinConversationAgent = `-- name: PinConversationAgent :exec
+UPDATE conversations SET ai_agent_id = $1
+WHERE workspace_id = $2 AND id = $3 AND ai_agent_id IS NULL
+`
+
+type PinConversationAgentParams struct {
+	AgentID     *ids.UUID `json:"agent_id"`
+	WorkspaceID ids.UUID  `json:"workspace_id"`
+	ID          ids.UUID  `json:"id"`
+}
+
+// PinConversationAgent puts an agent on a conversation that has none, so
+// the same agent keeps answering it.
+func (q *Queries) PinConversationAgent(ctx context.Context, arg PinConversationAgentParams) error {
+	_, err := q.db.Exec(ctx, pinConversationAgent, arg.AgentID, arg.WorkspaceID, arg.ID)
+	return err
+}
+
+const placeAgentOnConnections = `-- name: PlaceAgentOnConnections :exec
+UPDATE channel_connections SET ai_agent_id = $1
+WHERE workspace_id = $2 AND id = ANY ($3::uuid[])
+`
+
+type PlaceAgentOnConnectionsParams struct {
+	AgentID     *ids.UUID  `json:"agent_id"`
+	WorkspaceID ids.UUID   `json:"workspace_id"`
+	Ids         []ids.UUID `json:"ids"`
+}
+
+// PlaceAgentOnConnections puts an agent on channel connections, taking
+// them from whichever agent had them.
+func (q *Queries) PlaceAgentOnConnections(ctx context.Context, arg PlaceAgentOnConnectionsParams) error {
+	_, err := q.db.Exec(ctx, placeAgentOnConnections, arg.AgentID, arg.WorkspaceID, arg.Ids)
+	return err
+}
+
+const placeAgentOnInboxes = `-- name: PlaceAgentOnInboxes :exec
+UPDATE inboxes SET ai_agent_id = $1
+WHERE workspace_id = $2 AND id = ANY ($3::uuid[])
+`
+
+type PlaceAgentOnInboxesParams struct {
+	AgentID     *ids.UUID  `json:"agent_id"`
+	WorkspaceID ids.UUID   `json:"workspace_id"`
+	Ids         []ids.UUID `json:"ids"`
+}
+
+// PlaceAgentOnInboxes puts an agent on inboxes.
+func (q *Queries) PlaceAgentOnInboxes(ctx context.Context, arg PlaceAgentOnInboxesParams) error {
+	_, err := q.db.Exec(ctx, placeAgentOnInboxes, arg.AgentID, arg.WorkspaceID, arg.Ids)
+	return err
+}
+
+const placeAgentOnRooms = `-- name: PlaceAgentOnRooms :exec
+UPDATE channel_rooms SET ai_agent_id = $1
+WHERE workspace_id = $2 AND id = ANY ($3::uuid[])
+`
+
+type PlaceAgentOnRoomsParams struct {
+	AgentID     *ids.UUID  `json:"agent_id"`
+	WorkspaceID ids.UUID   `json:"workspace_id"`
+	Ids         []ids.UUID `json:"ids"`
+}
+
+// PlaceAgentOnRooms puts an agent on Slack channels.
+func (q *Queries) PlaceAgentOnRooms(ctx context.Context, arg PlaceAgentOnRoomsParams) error {
+	_, err := q.db.Exec(ctx, placeAgentOnRooms, arg.AgentID, arg.WorkspaceID, arg.Ids)
+	return err
+}
+
+const publishAgent = `-- name: PublishAgent :one
+UPDATE ai_agents SET status = 'live', enabled = true, draft = NULL, live_version_id = $1,
+    published_at = $2, lock_version = lock_version + 1, updated_by_member_id = $3,
+    updated_at = $2
+WHERE workspace_id = $4 AND id = $5 AND deleted_at IS NULL
+RETURNING id, workspace_id, name, avatar_attachment_id, enabled, product_name, tone, guidance, enabled_channels, excluded_channel_connection_ids, schedule, office_hours, assigned_behavior, answer_key_id, answer_model, classifier_key_id, classifier_model, fallback_key_id, fallback_model, temperature, max_output_tokens, max_ai_replies, unknown_behavior, grounding_mode, require_citations, min_similarity, languages, default_language, streaming, include_contact_context, contact_attribute_allowlist, pii_redaction, link_allowlist, handoff, messages, prompt_version, monthly_spend_cap_micros, actions_enabled, created_at, updated_at, deleted_at, min_vector_similarity, tool_layer, prefetch_search, compact_results, search_results, carry_passages, is_default, role, template_key, status, lock_version, draft, knowledge_scope, procedure_scope, action_scope, transfer_agent_ids, published_at, created_by_member_id, updated_by_member_id, live_version_id
+`
+
+type PublishAgentParams struct {
+	LiveVersionID *ids.UUID  `json:"live_version_id"`
+	Now           *time.Time `json:"now"`
+	MemberID      *ids.UUID  `json:"member_id"`
+	WorkspaceID   ids.UUID   `json:"workspace_id"`
+	ID            ids.UUID   `json:"id"`
+}
+
+// PublishAgent marks the agent live on a version, its draft folded in.
+func (q *Queries) PublishAgent(ctx context.Context, arg PublishAgentParams) (AiAgent, error) {
+	row := q.db.QueryRow(ctx, publishAgent,
+		arg.LiveVersionID,
+		arg.Now,
+		arg.MemberID,
+		arg.WorkspaceID,
+		arg.ID,
+	)
+	var i AiAgent
+	err := row.Scan(
+		&i.ID,
+		&i.WorkspaceID,
+		&i.Name,
+		&i.AvatarAttachmentID,
+		&i.Enabled,
+		&i.ProductName,
+		&i.Tone,
+		&i.Guidance,
+		&i.EnabledChannels,
+		&i.ExcludedChannelConnectionIds,
+		&i.Schedule,
+		&i.OfficeHours,
+		&i.AssignedBehavior,
+		&i.AnswerKeyID,
+		&i.AnswerModel,
+		&i.ClassifierKeyID,
+		&i.ClassifierModel,
+		&i.FallbackKeyID,
+		&i.FallbackModel,
+		&i.Temperature,
+		&i.MaxOutputTokens,
+		&i.MaxAiReplies,
+		&i.UnknownBehavior,
+		&i.GroundingMode,
+		&i.RequireCitations,
+		&i.MinSimilarity,
+		&i.Languages,
+		&i.DefaultLanguage,
+		&i.Streaming,
+		&i.IncludeContactContext,
+		&i.ContactAttributeAllowlist,
+		&i.PiiRedaction,
+		&i.LinkAllowlist,
+		&i.Handoff,
+		&i.Messages,
+		&i.PromptVersion,
+		&i.MonthlySpendCapMicros,
+		&i.ActionsEnabled,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.DeletedAt,
+		&i.MinVectorSimilarity,
+		&i.ToolLayer,
+		&i.PrefetchSearch,
+		&i.CompactResults,
+		&i.SearchResults,
+		&i.CarryPassages,
+		&i.IsDefault,
+		&i.Role,
+		&i.TemplateKey,
+		&i.Status,
+		&i.LockVersion,
+		&i.Draft,
+		&i.KnowledgeScope,
+		&i.ProcedureScope,
+		&i.ActionScope,
+		&i.TransferAgentIds,
+		&i.PublishedAt,
+		&i.CreatedByMemberID,
+		&i.UpdatedByMemberID,
+		&i.LiveVersionID,
+	)
+	return i, err
+}
+
+const resolveAgent = `-- name: ResolveAgent :one
+SELECT a.id, a.workspace_id, a.name, a.avatar_attachment_id, a.enabled, a.product_name, a.tone, a.guidance, a.enabled_channels, a.excluded_channel_connection_ids, a.schedule, a.office_hours, a.assigned_behavior, a.answer_key_id, a.answer_model, a.classifier_key_id, a.classifier_model, a.fallback_key_id, a.fallback_model, a.temperature, a.max_output_tokens, a.max_ai_replies, a.unknown_behavior, a.grounding_mode, a.require_citations, a.min_similarity, a.languages, a.default_language, a.streaming, a.include_contact_context, a.contact_attribute_allowlist, a.pii_redaction, a.link_allowlist, a.handoff, a.messages, a.prompt_version, a.monthly_spend_cap_micros, a.actions_enabled, a.created_at, a.updated_at, a.deleted_at, a.min_vector_similarity, a.tool_layer, a.prefetch_search, a.compact_results, a.search_results, a.carry_passages, a.is_default, a.role, a.template_key, a.status, a.lock_version, a.draft, a.knowledge_scope, a.procedure_scope, a.action_scope, a.transfer_agent_ids, a.published_at, a.created_by_member_id, a.updated_by_member_id, a.live_version_id FROM ai_agents a
+JOIN (
+    SELECT 1 AS rank, $1::uuid AS agent_id
+    UNION ALL SELECT 2, $2::uuid
+    UNION ALL SELECT 3, (SELECT r.ai_agent_id FROM channel_rooms r
+        WHERE r.workspace_id = $3 AND r.id = $4::uuid)
+    UNION ALL SELECT 4, (SELECT c.ai_agent_id FROM channel_connections c
+        WHERE c.workspace_id = $3 AND c.id = $5::uuid)
+    UNION ALL SELECT 5, (SELECT i.ai_agent_id FROM inboxes i
+        WHERE i.workspace_id = $3 AND i.id = $6::uuid)
+    UNION ALL SELECT 6, (SELECT d.id FROM ai_agents d
+        WHERE d.workspace_id = $3 AND d.is_default AND d.deleted_at IS NULL)
+) c ON a.id = c.agent_id
+WHERE a.workspace_id = $3 AND a.deleted_at IS NULL
+ORDER BY c.rank
+LIMIT 1
+`
+
+type ResolveAgentParams struct {
+	WorkflowAgentID     *ids.UUID `json:"workflow_agent_id"`
+	ConversationAgentID *ids.UUID `json:"conversation_agent_id"`
+	WorkspaceID         ids.UUID  `json:"workspace_id"`
+	ChannelRoomID       *ids.UUID `json:"channel_room_id"`
+	ChannelConnectionID *ids.UUID `json:"channel_connection_id"`
+	InboxID             *ids.UUID `json:"inbox_id"`
+}
+
+type ResolveAgentRow struct {
+	AiAgent AiAgent `json:"ai_agent"`
+}
+
+// ResolveAgent picks the agent that answers a conversation, first found
+// of: the agent a workflow step names, the agent already on the
+// conversation, the agent its Slack channel, its channel connection or
+// its inbox names, and last the workspace's default.
+func (q *Queries) ResolveAgent(ctx context.Context, arg ResolveAgentParams) (ResolveAgentRow, error) {
+	row := q.db.QueryRow(ctx, resolveAgent,
+		arg.WorkflowAgentID,
+		arg.ConversationAgentID,
+		arg.WorkspaceID,
+		arg.ChannelRoomID,
+		arg.ChannelConnectionID,
+		arg.InboxID,
+	)
+	var i ResolveAgentRow
+	err := row.Scan(
+		&i.AiAgent.ID,
+		&i.AiAgent.WorkspaceID,
+		&i.AiAgent.Name,
+		&i.AiAgent.AvatarAttachmentID,
+		&i.AiAgent.Enabled,
+		&i.AiAgent.ProductName,
+		&i.AiAgent.Tone,
+		&i.AiAgent.Guidance,
+		&i.AiAgent.EnabledChannels,
+		&i.AiAgent.ExcludedChannelConnectionIds,
+		&i.AiAgent.Schedule,
+		&i.AiAgent.OfficeHours,
+		&i.AiAgent.AssignedBehavior,
+		&i.AiAgent.AnswerKeyID,
+		&i.AiAgent.AnswerModel,
+		&i.AiAgent.ClassifierKeyID,
+		&i.AiAgent.ClassifierModel,
+		&i.AiAgent.FallbackKeyID,
+		&i.AiAgent.FallbackModel,
+		&i.AiAgent.Temperature,
+		&i.AiAgent.MaxOutputTokens,
+		&i.AiAgent.MaxAiReplies,
+		&i.AiAgent.UnknownBehavior,
+		&i.AiAgent.GroundingMode,
+		&i.AiAgent.RequireCitations,
+		&i.AiAgent.MinSimilarity,
+		&i.AiAgent.Languages,
+		&i.AiAgent.DefaultLanguage,
+		&i.AiAgent.Streaming,
+		&i.AiAgent.IncludeContactContext,
+		&i.AiAgent.ContactAttributeAllowlist,
+		&i.AiAgent.PiiRedaction,
+		&i.AiAgent.LinkAllowlist,
+		&i.AiAgent.Handoff,
+		&i.AiAgent.Messages,
+		&i.AiAgent.PromptVersion,
+		&i.AiAgent.MonthlySpendCapMicros,
+		&i.AiAgent.ActionsEnabled,
+		&i.AiAgent.CreatedAt,
+		&i.AiAgent.UpdatedAt,
+		&i.AiAgent.DeletedAt,
+		&i.AiAgent.MinVectorSimilarity,
+		&i.AiAgent.ToolLayer,
+		&i.AiAgent.PrefetchSearch,
+		&i.AiAgent.CompactResults,
+		&i.AiAgent.SearchResults,
+		&i.AiAgent.CarryPassages,
+		&i.AiAgent.IsDefault,
+		&i.AiAgent.Role,
+		&i.AiAgent.TemplateKey,
+		&i.AiAgent.Status,
+		&i.AiAgent.LockVersion,
+		&i.AiAgent.Draft,
+		&i.AiAgent.KnowledgeScope,
+		&i.AiAgent.ProcedureScope,
+		&i.AiAgent.ActionScope,
+		&i.AiAgent.TransferAgentIds,
+		&i.AiAgent.PublishedAt,
+		&i.AiAgent.CreatedByMemberID,
+		&i.AiAgent.UpdatedByMemberID,
+		&i.AiAgent.LiveVersionID,
+	)
+	return i, err
+}
+
+const saveAgentDraft = `-- name: SaveAgentDraft :one
+UPDATE ai_agents SET name = $1, draft = $2, lock_version = lock_version + 1,
+    updated_by_member_id = $3, updated_at = $4
+WHERE workspace_id = $5 AND id = $6 AND deleted_at IS NULL AND lock_version = $7
+RETURNING id, workspace_id, name, avatar_attachment_id, enabled, product_name, tone, guidance, enabled_channels, excluded_channel_connection_ids, schedule, office_hours, assigned_behavior, answer_key_id, answer_model, classifier_key_id, classifier_model, fallback_key_id, fallback_model, temperature, max_output_tokens, max_ai_replies, unknown_behavior, grounding_mode, require_citations, min_similarity, languages, default_language, streaming, include_contact_context, contact_attribute_allowlist, pii_redaction, link_allowlist, handoff, messages, prompt_version, monthly_spend_cap_micros, actions_enabled, created_at, updated_at, deleted_at, min_vector_similarity, tool_layer, prefetch_search, compact_results, search_results, carry_passages, is_default, role, template_key, status, lock_version, draft, knowledge_scope, procedure_scope, action_scope, transfer_agent_ids, published_at, created_by_member_id, updated_by_member_id, live_version_id
+`
+
+type SaveAgentDraftParams struct {
+	Name        string          `json:"name"`
+	Draft       json.RawMessage `json:"draft"`
+	MemberID    *ids.UUID       `json:"member_id"`
+	Now         time.Time       `json:"now"`
+	WorkspaceID ids.UUID        `json:"workspace_id"`
+	ID          ids.UUID        `json:"id"`
+	LockVersion int32           `json:"lock_version"`
+}
+
+// SaveAgentDraft keeps the working copy when the editor started from the
+// stored lock version, and moves the version on. A nil draft says the
+// working copy is the published one again.
+func (q *Queries) SaveAgentDraft(ctx context.Context, arg SaveAgentDraftParams) (AiAgent, error) {
+	row := q.db.QueryRow(ctx, saveAgentDraft,
+		arg.Name,
+		arg.Draft,
+		arg.MemberID,
+		arg.Now,
+		arg.WorkspaceID,
+		arg.ID,
+		arg.LockVersion,
+	)
+	var i AiAgent
+	err := row.Scan(
+		&i.ID,
+		&i.WorkspaceID,
+		&i.Name,
+		&i.AvatarAttachmentID,
+		&i.Enabled,
+		&i.ProductName,
+		&i.Tone,
+		&i.Guidance,
+		&i.EnabledChannels,
+		&i.ExcludedChannelConnectionIds,
+		&i.Schedule,
+		&i.OfficeHours,
+		&i.AssignedBehavior,
+		&i.AnswerKeyID,
+		&i.AnswerModel,
+		&i.ClassifierKeyID,
+		&i.ClassifierModel,
+		&i.FallbackKeyID,
+		&i.FallbackModel,
+		&i.Temperature,
+		&i.MaxOutputTokens,
+		&i.MaxAiReplies,
+		&i.UnknownBehavior,
+		&i.GroundingMode,
+		&i.RequireCitations,
+		&i.MinSimilarity,
+		&i.Languages,
+		&i.DefaultLanguage,
+		&i.Streaming,
+		&i.IncludeContactContext,
+		&i.ContactAttributeAllowlist,
+		&i.PiiRedaction,
+		&i.LinkAllowlist,
+		&i.Handoff,
+		&i.Messages,
+		&i.PromptVersion,
+		&i.MonthlySpendCapMicros,
+		&i.ActionsEnabled,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.DeletedAt,
+		&i.MinVectorSimilarity,
+		&i.ToolLayer,
+		&i.PrefetchSearch,
+		&i.CompactResults,
+		&i.SearchResults,
+		&i.CarryPassages,
+		&i.IsDefault,
+		&i.Role,
+		&i.TemplateKey,
+		&i.Status,
+		&i.LockVersion,
+		&i.Draft,
+		&i.KnowledgeScope,
+		&i.ProcedureScope,
+		&i.ActionScope,
+		&i.TransferAgentIds,
+		&i.PublishedAt,
+		&i.CreatedByMemberID,
+		&i.UpdatedByMemberID,
+		&i.LiveVersionID,
 	)
 	return i, err
 }
@@ -156,7 +1160,7 @@ type SetAgentCarryPassagesParams struct {
 	ID            ids.UUID  `json:"id"`
 }
 
-// SetAgentCarryPassages turns the agent's carried knowledge on or off.
+// SetAgentCarryPassages turns an agent's carried knowledge on or off.
 func (q *Queries) SetAgentCarryPassages(ctx context.Context, arg SetAgentCarryPassagesParams) error {
 	_, err := q.db.Exec(ctx, setAgentCarryPassages,
 		arg.CarryPassages,
@@ -179,7 +1183,7 @@ type SetAgentToolLayerParams struct {
 	ID          ids.UUID  `json:"id"`
 }
 
-// SetAgentToolLayer turns the agent's tool layer on or off.
+// SetAgentToolLayer turns an agent's tool layer on or off.
 func (q *Queries) SetAgentToolLayer(ctx context.Context, arg SetAgentToolLayerParams) error {
 	_, err := q.db.Exec(ctx, setAgentToolLayer,
 		arg.ToolLayer,
@@ -208,9 +1212,11 @@ UPDATE ai_agents SET
     pii_redaction = $29, link_allowlist = $30,
     handoff = $31, messages = $32, prompt_version = $33,
     monthly_spend_cap_micros = $34, actions_enabled = $35,
-    updated_at = $36
-WHERE workspace_id = $37 AND id = $38 AND deleted_at IS NULL
-RETURNING id, workspace_id, name, avatar_attachment_id, enabled, product_name, tone, guidance, enabled_channels, excluded_channel_connection_ids, schedule, office_hours, assigned_behavior, answer_key_id, answer_model, classifier_key_id, classifier_model, fallback_key_id, fallback_model, temperature, max_output_tokens, max_ai_replies, unknown_behavior, grounding_mode, require_citations, min_similarity, languages, default_language, streaming, include_contact_context, contact_attribute_allowlist, pii_redaction, link_allowlist, handoff, messages, prompt_version, monthly_spend_cap_micros, actions_enabled, created_at, updated_at, deleted_at, min_vector_similarity, tool_layer, prefetch_search, compact_results, search_results, carry_passages
+    knowledge_scope = $36, procedure_scope = $37, action_scope = $38,
+    transfer_agent_ids = $39,
+    updated_at = $40
+WHERE workspace_id = $41 AND id = $42 AND deleted_at IS NULL
+RETURNING id, workspace_id, name, avatar_attachment_id, enabled, product_name, tone, guidance, enabled_channels, excluded_channel_connection_ids, schedule, office_hours, assigned_behavior, answer_key_id, answer_model, classifier_key_id, classifier_model, fallback_key_id, fallback_model, temperature, max_output_tokens, max_ai_replies, unknown_behavior, grounding_mode, require_citations, min_similarity, languages, default_language, streaming, include_contact_context, contact_attribute_allowlist, pii_redaction, link_allowlist, handoff, messages, prompt_version, monthly_spend_cap_micros, actions_enabled, created_at, updated_at, deleted_at, min_vector_similarity, tool_layer, prefetch_search, compact_results, search_results, carry_passages, is_default, role, template_key, status, lock_version, draft, knowledge_scope, procedure_scope, action_scope, transfer_agent_ids, published_at, created_by_member_id, updated_by_member_id, live_version_id
 `
 
 type UpdateAgentParams struct {
@@ -249,12 +1255,17 @@ type UpdateAgentParams struct {
 	PromptVersion                *string         `json:"prompt_version"`
 	MonthlySpendCapMicros        *int64          `json:"monthly_spend_cap_micros"`
 	ActionsEnabled               bool            `json:"actions_enabled"`
+	KnowledgeScope               json.RawMessage `json:"knowledge_scope"`
+	ProcedureScope               json.RawMessage `json:"procedure_scope"`
+	ActionScope                  json.RawMessage `json:"action_scope"`
+	TransferAgentIds             []ids.UUID      `json:"transfer_agent_ids"`
 	Now                          time.Time       `json:"now"`
 	WorkspaceID                  ids.UUID        `json:"workspace_id"`
 	ID                           ids.UUID        `json:"id"`
 }
 
-// UpdateAgent replaces the agent's mutable settings.
+// UpdateAgent replaces the agent's published settings: what customers
+// get. Publishing writes it from the draft.
 func (q *Queries) UpdateAgent(ctx context.Context, arg UpdateAgentParams) (AiAgent, error) {
 	row := q.db.QueryRow(ctx, updateAgent,
 		arg.Name,
@@ -292,6 +1303,10 @@ func (q *Queries) UpdateAgent(ctx context.Context, arg UpdateAgentParams) (AiAge
 		arg.PromptVersion,
 		arg.MonthlySpendCapMicros,
 		arg.ActionsEnabled,
+		arg.KnowledgeScope,
+		arg.ProcedureScope,
+		arg.ActionScope,
+		arg.TransferAgentIds,
 		arg.Now,
 		arg.WorkspaceID,
 		arg.ID,
@@ -345,6 +1360,20 @@ func (q *Queries) UpdateAgent(ctx context.Context, arg UpdateAgentParams) (AiAge
 		&i.CompactResults,
 		&i.SearchResults,
 		&i.CarryPassages,
+		&i.IsDefault,
+		&i.Role,
+		&i.TemplateKey,
+		&i.Status,
+		&i.LockVersion,
+		&i.Draft,
+		&i.KnowledgeScope,
+		&i.ProcedureScope,
+		&i.ActionScope,
+		&i.TransferAgentIds,
+		&i.PublishedAt,
+		&i.CreatedByMemberID,
+		&i.UpdatedByMemberID,
+		&i.LiveVersionID,
 	)
 	return i, err
 }

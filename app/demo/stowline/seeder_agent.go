@@ -58,11 +58,16 @@ install gives it a model.
 */
 func (r *run) configureAgent(ctx context.Context) error {
 	a := r.s.App
-	view, err := a.Actions.AI.GetAgent.Handle(ctx, ai.GetAgentInput{Membership: r.owner})
+	view, err := a.Actions.AI.Agents.Default(ctx, r.owner)
 	if err != nil {
 		return fmt.Errorf("provision agent: %w", err)
 	}
 	spendCap := int64(500_000_000)
+	if _, err := a.Actions.AI.Agents.UpdateSettings(ctx, r.owner, ai.SettingsPatch{
+		MonthlyCapMicros: ai.Optional[int64]{Set: true, Value: &spendCap},
+	}); err != nil {
+		return fmt.Errorf("set spend cap: %w", err)
+	}
 	mode := enums.AIHandoffModeFull
 	patch := ai.AgentPatch{
 		Name: new("Sky"), Tone: new("friendly"), Guidance: new(AgentGuidance), Schedule: new("always"),
@@ -71,19 +76,19 @@ func (r *run) configureAgent(ctx context.Context) error {
 		PiiRedaction: new(true), Streaming: new(true), EnabledChannels: &[]string{"widget", "email"},
 		Languages: &[]string{"en", "de", "fr", "es", "pt", "nl"}, LinkAllowlist: &[]string{Domain},
 		MaxAiReplies: new(int32(12)), ProductName: ai.Optional[string]{Set: true, Value: new(Name)},
-		HandoffTeamID:    ai.Optional[ids.UUID]{Set: true, Value: new(r.teams["Support"])},
-		MonthlyCapMicros: ai.Optional[int64]{Set: true, Value: &spendCap}, HandoffMode: &mode,
+		HandoffTeamID: ai.Optional[ids.UUID]{Set: true, Value: new(r.teams["Support"])}, HandoffMode: &mode,
 	}
-	_, err = a.Actions.AI.UpdateAgent.Handle(ctx, ai.UpdateAgentInput{Membership: r.owner, Patch: patch})
-	if err != nil {
+	if _, err := a.Actions.AI.Agents.Update(ctx, ai.UpdateAgentInput{
+		Membership: r.owner, AgentID: view.Agent.ID, Patch: patch,
+	}); err != nil {
 		return fmt.Errorf("configure agent: %w", err)
 	}
-	if view.Agent.AnswerKeyID == nil || view.Agent.AnswerModel == nil {
+	if !view.Ready {
 		r.s.Log("  the install offers no model, so the agent is saved switched off")
 		return nil
 	}
-	if _, err := a.Actions.AI.UpdateAgent.Handle(ctx, ai.UpdateAgentInput{
-		Membership: r.owner, Patch: ai.AgentPatch{Enabled: new(true)},
+	if _, err := a.Actions.AI.Agents.Publish(ctx, ai.PublishInput{
+		Membership: r.owner, AgentID: view.Agent.ID, ChangeNote: "Set up by the demo",
 	}); err != nil {
 		r.s.Log("  the agent is saved switched off: %v", err)
 	}
@@ -188,7 +193,7 @@ pipeline does.
 */
 func (r *run) aiRuns(ctx context.Context) error {
 	a := r.s.App
-	agent, err := models.New(a.DB).FindAgent(ctx, r.ws.ID)
+	agent, err := models.New(a.DB).FindDefaultAgent(ctx, r.ws.ID)
 	if err != nil {
 		return fmt.Errorf("find agent: %w", err)
 	}

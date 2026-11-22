@@ -33,6 +33,7 @@ import (
 	"github.com/dimmihq/dimmi/app/actions/conversations"
 	"github.com/dimmihq/dimmi/app/actions/tickets"
 	"github.com/dimmihq/dimmi/app/ai/actionkit"
+	"github.com/dimmihq/dimmi/app/ai/agents"
 	appbroadcasting "github.com/dimmihq/dimmi/app/broadcasting"
 	"github.com/dimmihq/dimmi/app/contracts"
 	"github.com/dimmihq/dimmi/app/managers"
@@ -268,3 +269,8 @@ func (r *Runner) withoutUnknownLinks(ctx context.Context, st *run, draft string)
 			"customer gave; when there is none, say in words where to go.</system_note>"))
 	return r.agentLoop(ctx, st)
 }
+
+/*
+ErrNoAgent marks a workspace without an agent to answer.
+*/
+var ErrNoAgent = agents.ErrNoAgent

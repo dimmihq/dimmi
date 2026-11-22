@@ -63,9 +63,58 @@ type Knowledge struct {
 
 /*
 Search returns the best passages of the workspace's published articles
-and of the sources feeding the search's surface.
+and of the sources feeding the search's surface. A scoped search looks
+wider, then keeps only the passages of the help centers and sources it
+may use, as many as it asked for.
 */
 func (k *Knowledge) Search(ctx context.Context, ws ids.UUID, query string, opts contracts.KnowledgeSearchOptions,
+) (contracts.KnowledgeSearchResult, error) {
+	if !opts.Scoped {
+		return k.searchAll(ctx, ws, query, opts)
+	}
+	want := opts.Limit
+	wide := opts
+	wide.Limit = max(want*scopedWidening, scopedWidening)
+	wide.Scoped = false
+	wide.ExcludeArticles = opts.ExcludeArticles || len(opts.HelpCenterIDs) == 0
+	wide.ExcludeSources = opts.ExcludeSources || len(opts.SourceIDs) == 0
+	res, err := k.searchAll(ctx, ws, query, wide)
+	if err != nil {
+		return res, err
+	}
+	res.Chunks = slices.DeleteFunc(res.Chunks, func(c contracts.KnowledgeChunk) bool {
+		return !inScope(c, opts)
+	})
+	if want > 0 && len(res.Chunks) > want {
+		res.Chunks = res.Chunks[:want]
+	}
+	return res, nil
+}
+
+/*
+scopedWidening is how many more passages a scoped search looks at, so
+dropping those out of scope still leaves enough.
+*/
+const scopedWidening = 4
+
+/*
+inScope reports whether a passage comes from a help center or source a
+scoped search may use.
+*/
+func inScope(c contracts.KnowledgeChunk, opts contracts.KnowledgeSearchOptions) bool {
+	switch {
+	case c.HelpCenterID != nil:
+		return slices.Contains(opts.HelpCenterIDs, *c.HelpCenterID)
+	case c.SourceID != nil:
+		return slices.Contains(opts.SourceIDs, *c.SourceID)
+	}
+	return false
+}
+
+/*
+searchAll searches every article and source the options let through.
+*/
+func (k *Knowledge) searchAll(ctx context.Context, ws ids.UUID, query string, opts contracts.KnowledgeSearchOptions,
 ) (contracts.KnowledgeSearchResult, error) {
 	terms := searchTerms(append([]string{query}, opts.Queries...))
 	if terms == "" {

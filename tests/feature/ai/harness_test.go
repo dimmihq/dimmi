@@ -230,12 +230,21 @@ func saveAgent(ctx context.Context, t *testing.T, d tests.Desk, change func(*mod
 		DefaultLanguage: "en", Languages: []string{}, ContactAttributeAllowlist: []string{},
 		LinkAllowlist: []string{}, Streaming: true, IncludeContactContext: "basic", PiiRedaction: false,
 		MinSimilarity: database.NumericFloat(0.35), Handoff: json.RawMessage("{}"),
-		Messages: json.RawMessage("{}"), Now: now,
+		Messages: json.RawMessage("{}"), Now: now, KnowledgeScope: json.RawMessage(`{"mode":"all"}`),
+		ProcedureScope: json.RawMessage(`{"mode":"all"}`), ActionScope: json.RawMessage(`{"mode":"all"}`),
+		TransferAgentIds: []ids.UUID{},
 	}
 	if change != nil {
 		change(&params)
 	}
 	if _, err = q.UpdateAgent(ctx, params); err != nil {
+		return err
+	}
+	// The spend cap is the workspace's, shared by every agent.
+	if _, err := d.TC.App.DB.Exec(ctx, `INSERT INTO workspace_ai_settings (workspace_id, monthly_spend_cap_micros)
+		VALUES ($1, $2) ON CONFLICT (workspace_id)
+		DO UPDATE SET monthly_spend_cap_micros = EXCLUDED.monthly_spend_cap_micros`,
+		params.WorkspaceID, params.MonthlySpendCapMicros); err != nil {
 		return err
 	}
 	if err := q.SetAgentCarryPassages(ctx, models.SetAgentCarryPassagesParams{
@@ -262,9 +271,9 @@ agentID returns the workspace's agent id, creating the row if needed.
 */
 func agentID(ctx context.Context, t *testing.T, d tests.Desk) ids.UUID {
 	t.Helper()
-	agent, err := models.New(d.TC.App.DB).FindAgent(ctx, d.TC.Workspace.Workspace.ID)
+	agent, err := models.New(d.TC.App.DB).FindDefaultAgent(ctx, d.TC.Workspace.Workspace.ID)
 	if err != nil {
-		agent, err = models.New(d.TC.App.DB).CreateAgent(ctx, models.CreateAgentParams{
+		agent, err = models.New(d.TC.App.DB).CreateDefaultAgent(ctx, models.CreateDefaultAgentParams{
 			WorkspaceID: d.TC.Workspace.Workspace.ID, Now: d.TC.App.Clock.Now(),
 		})
 		require.NoError(t, err)

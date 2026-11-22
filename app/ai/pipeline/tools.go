@@ -28,6 +28,7 @@ import (
 	"time"
 
 	"github.com/dimmihq/dimmi/app/ai/actionkit"
+	"github.com/dimmihq/dimmi/app/ai/agents"
 	"github.com/dimmihq/dimmi/app/contracts"
 )
 
@@ -222,12 +223,16 @@ func (r *Runner) searchKnowledge(ctx context.Context, st *run, args json.RawMess
 	if err != nil {
 		return "", err
 	}
-	res, err := r.Knowledge.Search(ctx, st.env.Workspace.ID, in.Query, contracts.KnowledgeSearchOptions{
+	opts := contracts.KnowledgeSearchOptions{
 		Limit: searchLimit, Surface: "agent", AllowedAudienceIDs: allowed, AudienceFiltered: filtered,
 		Visibility: []contracts.KnowledgeVisibility{
 			contracts.KnowledgeVisibilityPublic, contracts.KnowledgeVisibilityAgentOnly,
 		},
-	})
+	}
+	if k := agents.KnowledgeOf(st.env.Agent); k.Mode == agents.ScopeSelected {
+		opts.Scoped, opts.HelpCenterIDs, opts.SourceIDs = true, k.HelpCenterIDs, k.SourceIDs
+	}
+	res, err := r.Knowledge.Search(ctx, st.env.Workspace.ID, in.Query, opts)
 	if err != nil {
 		return "", err
 	}

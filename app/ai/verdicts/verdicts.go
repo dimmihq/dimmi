@@ -32,6 +32,7 @@ import (
 	"github.com/dimmihq/dimmi/framework/ids"
 	"github.com/dimmihq/dimmi/framework/tenancy"
 
+	"github.com/dimmihq/dimmi/app/ai/agents"
 	"github.com/dimmihq/dimmi/app/ai/pipeline"
 	"github.com/dimmihq/dimmi/app/contracts"
 	"github.com/dimmihq/dimmi/app/managers"
@@ -232,13 +233,13 @@ go to, classifier first.
 func candidatesOf(ctx context.Context, q *models.Queries, workspaceID ids.UUID) (
 	models.AiAgent, []candidate, error,
 ) {
-	agent, err := q.FindAgent(ctx, workspaceID)
-	if errors.Is(err, database.ErrNotFound) {
+	agent, err := agents.DefaultAnswerer(ctx, q, workspaceID)
+	if errors.Is(err, agents.ErrNoAgent) {
 		return agent, nil, ErrNoModel
 	}
 
 	if err != nil {
-		return agent, nil, fmt.Errorf("find agent: %w", err)
+		return agent, nil, err
 	}
 
 	var out []candidate

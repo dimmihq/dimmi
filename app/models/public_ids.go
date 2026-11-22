@@ -261,6 +261,7 @@ Operator.
 func assistantPublicIDs() []PublicIDEntry {
 	return []PublicIDEntry{
 		{PrefixAiAgent, "ai_agents"},
+		{PrefixAiAgentVersion, "ai_agent_versions"},
 		{PrefixAiProviderKey, "ai_provider_keys"},
 		{PrefixAiRun, "ai_runs"},
 		{PrefixAiRunStep, "ai_run_steps"},
@@ -280,6 +281,7 @@ The prefixes of the AI agent's and Operator's tables.
 */
 const (
 	PrefixAiAgent            Prefix = "aia"
+	PrefixAiAgentVersion     Prefix = "aiav"
 	PrefixAiProviderKey      Prefix = "aik"
 	PrefixAiRun              Prefix = "air"
 	PrefixAiRunStep          Prefix = "ais"
@@ -297,10 +299,11 @@ const (
 The prefixes of the help center's tables.
 */
 const (
-	PrefixHelpCenter     Prefix = "hc"
-	PrefixCollection     Prefix = "col"
-	PrefixArticle        Prefix = "art"
-	PrefixArticleVersion Prefix = "artv"
+	PrefixHelpCenter      Prefix = "hc"
+	PrefixCollection      Prefix = "col"
+	PrefixKnowledgeSource Prefix = "ks"
+	PrefixArticle         Prefix = "art"
+	PrefixArticleVersion  Prefix = "artv"
 )
 
 /*
@@ -318,7 +321,7 @@ func helpCenterPublicIDs() []PublicIDEntry {
 		{"hcd", "help_center_domains"},
 		{"rdr", "help_center_redirects"},
 		{"ast", "help_center_assets"},
-		{"ks", "knowledge_sources"},
+		{PrefixKnowledgeSource, "knowledge_sources"},
 		{"ksr", "knowledge_sync_runs"},
 		{"kd", "knowledge_documents"},
 		{"kc", "knowledge_chunks"},

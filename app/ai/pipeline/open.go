@@ -24,6 +24,7 @@ import (
 	"time"
 
 	"github.com/dimmihq/dimmi/framework/database"
+	"github.com/dimmihq/dimmi/framework/ids"
 
 	"github.com/dimmihq/dimmi/app/actions/tickets"
 	"github.com/dimmihq/dimmi/app/enums"
@@ -249,7 +250,7 @@ func (r *Runner) createRun(ctx context.Context, tx *database.Tx, e *env, args Ar
 	}
 	conversation, trigger, actor := runSubject(e, kind)
 	actorType := "contact"
-	if kind == playgroundKind || kind == simulationKind || kind == judgeKind {
+	if kind == simulationKind || kind == judgeKind {
 		actorType, actor = "member", args.MemberID
 	}
 	now := r.Clock.Now()
@@ -261,4 +262,20 @@ func (r *Runner) createRun(ctx context.Context, tx *database.Tx, e *env, args Ar
 		PromptVersion: e.Version, PromptHashes: hashes, ConfigSnapshot: snapshot,
 		StartedAt: &now, Now: now,
 	})
+}
+
+/*
+runSubject is what a run is about: the conversation, the message that
+triggered it and the customer. A simulation or a run with no
+conversation has none.
+*/
+func runSubject(e *env, kind string) (*ids.UUID, *ids.UUID, *ids.UUID) {
+	if kind == simulationKind || e.Conversation.ID == (ids.UUID{}) {
+		return nil, nil, nil
+	}
+	var trigger *ids.UUID
+	if e.Trigger.ID != (ids.UUID{}) {
+		trigger = &e.Trigger.ID
+	}
+	return &e.Conversation.ID, trigger, &e.Conversation.ContactID
 }

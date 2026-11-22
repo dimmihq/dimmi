@@ -27,19 +27,21 @@ import (
 )
 
 /*
-AIAgentRequest names the agent implicitly: the workspace has one.
+AIAgentRequest names no agent: the AI connection routes act on the
+workspace.
 */
 type AIAgentRequest struct{}
 
 /*
-AIUpdateAgentBody is the body of PATCH /ai/agent. Key, team and tag ids
-are public ids; monthly_cap_usd of 0 means no cap.
+AIUpdateAgentBody is the body of PATCH /ai/agents/{agent}: a change to
+the agent's working copy, which customers get once it is published.
+Key, team, tag, agent and channel ids are public ids. A lock_version,
+when sent, refuses the save if someone else saved since.
 */
 type AIUpdateAgentBody struct {
 	Name             *string   `json:"name,omitempty"                      validate:"omitempty,min=1,max=60"`
-	Enabled          *bool     `json:"enabled,omitempty"`
 	Tone             *string   `json:"tone,omitempty"                      validate:"omitempty,max=20"`
-	Guidance         *string   `json:"guidance,omitempty"                  validate:"omitempty,max=2000"`
+	Guidance         *string   `json:"guidance,omitempty"                  validate:"omitempty,max=20000"`
 	ProductName      *string   `json:"product_name,omitempty"              validate:"omitempty,max=80"`
 	EnabledChannels  *[]string `json:"enabled_channels,omitempty"          validate:"omitempty,max=10"`
 	Schedule         *string   `json:"schedule,omitempty"`
@@ -47,7 +49,6 @@ type AIUpdateAgentBody struct {
 	AnswerModel      *string   `json:"answer_model,omitempty"              validate:"omitempty,max=120"`
 	FallbackKeyID    *string   `json:"fallback_key_id,omitempty"           validate:"omitempty,max=64"`
 	FallbackModel    *string   `json:"fallback_model,omitempty"            validate:"omitempty,max=120"`
-	MonthlyCapUSD    *float64  `json:"monthly_cap_usd,omitempty"           validate:"omitempty,gte=0,lte=100000"`
 	MaxAiReplies     *int32    `json:"max_ai_replies,omitempty"            validate:"omitempty,gte=1,lte=50"`
 	RequireCitations *bool     `json:"require_citations,omitempty"`
 	PiiRedaction     *bool     `json:"pii_redaction,omitempty"`
@@ -62,13 +63,21 @@ type AIUpdateAgentBody struct {
 	RaisePriority    *bool     `json:"raise_priority_on_handoff,omitempty"`
 	HandoffMode      *string   `json:"handoff_mode,omitempty"`
 	AlwaysHandoffTag *[]string `json:"always_handoff_tag_ids,omitempty"    validate:"omitempty,max=50,dive,max=64"`
+
+	LockVersion      *int32                `json:"lock_version,omitempty"       validate:"omitempty,gte=1"`
+	KnowledgeScope   *AIKnowledgeScopeBody `json:"knowledge_scope,omitempty"`
+	ProcedureScope   *AIScopeBody          `json:"procedure_scope,omitempty"`
+	ActionScope      *AIScopeBody          `json:"action_scope,omitempty"`
+	TransferAgentIDs *[]string             `json:"transfer_agent_ids,omitempty" validate:"omitempty,max=20,dive,max=64"`
+	Placement        *AIPlacementBody      `json:"placement,omitempty"`
 }
 
 /*
-AIUpdateAgentRequest is the input of PATCH /ai/agent. RawBody tells a
-field sent as null from one left out.
+AIUpdateAgentRequest is the input of PATCH /ai/agents/{agent}. RawBody
+tells a field sent as null from one left out.
 */
 type AIUpdateAgentRequest struct {
+	Agent   string `path:"agent"`
 	Body    AIUpdateAgentBody
 	RawBody []byte
 }

@@ -184,6 +184,31 @@ type AiAgent struct {
 	CompactResults               bool            `json:"compact_results"`
 	SearchResults                int16           `json:"search_results"`
 	CarryPassages                bool            `json:"carry_passages"`
+	IsDefault                    bool            `json:"is_default"`
+	Role                         string          `json:"role"`
+	TemplateKey                  *string         `json:"template_key"`
+	Status                       string          `json:"status"`
+	LockVersion                  int32           `json:"lock_version"`
+	Draft                        json.RawMessage `json:"draft"`
+	KnowledgeScope               json.RawMessage `json:"knowledge_scope"`
+	ProcedureScope               json.RawMessage `json:"procedure_scope"`
+	ActionScope                  json.RawMessage `json:"action_scope"`
+	TransferAgentIds             []ids.UUID      `json:"transfer_agent_ids"`
+	PublishedAt                  *time.Time      `json:"published_at"`
+	CreatedByMemberID            *ids.UUID       `json:"created_by_member_id"`
+	UpdatedByMemberID            *ids.UUID       `json:"updated_by_member_id"`
+	LiveVersionID                *ids.UUID       `json:"live_version_id"`
+}
+
+type AiAgentVersion struct {
+	ID                  ids.UUID        `json:"id"`
+	WorkspaceID         ids.UUID        `json:"workspace_id"`
+	AgentID             ids.UUID        `json:"agent_id"`
+	Version             int32           `json:"version"`
+	Definition          json.RawMessage `json:"definition"`
+	ChangeNote          *string         `json:"change_note"`
+	PublishedByMemberID *ids.UUID       `json:"published_by_member_id"`
+	PublishedAt         time.Time       `json:"published_at"`
 }
 
 type AiProviderKey struct {
@@ -694,6 +719,7 @@ type ChannelConnection struct {
 	CreatedAt                 time.Time         `json:"created_at"`
 	UpdatedAt                 time.Time         `json:"updated_at"`
 	IntegrationInstallationID *ids.UUID         `json:"integration_installation_id"`
+	AiAgentID                 *ids.UUID         `json:"ai_agent_id"`
 }
 
 type ChannelContactState struct {
@@ -785,6 +811,7 @@ type ChannelRoom struct {
 	RemovedAt           *time.Time      `json:"removed_at"`
 	CreatedAt           time.Time       `json:"created_at"`
 	UpdatedAt           time.Time       `json:"updated_at"`
+	AiAgentID           *ids.UUID       `json:"ai_agent_id"`
 }
 
 type ChannelSocketSession struct {
@@ -983,6 +1010,8 @@ type Conversation struct {
 	WorkflowRunID          *ids.UUID               `json:"workflow_run_id"`
 	AiMode                 string                  `json:"ai_mode"`
 	AiMemory               json.RawMessage         `json:"ai_memory"`
+	AiAgentID              *ids.UUID               `json:"ai_agent_id"`
+	AiTransferredFromIds   []ids.UUID              `json:"ai_transferred_from_ids"`
 }
 
 type ConversationDraft struct {
@@ -1681,6 +1710,7 @@ type Inbox struct {
 	Access        string          `json:"access"`
 	ScheduleID    *ids.UUID       `json:"schedule_id"`
 	TicketTypeID  *ids.UUID       `json:"ticket_type_id"`
+	AiAgentID     *ids.UUID       `json:"ai_agent_id"`
 }
 
 type InboxAccess struct {
@@ -3221,6 +3251,19 @@ type Workspace struct {
 	LogoPath               *string         `json:"logo_path"`
 	TicketSettings         json.RawMessage `json:"ticket_settings"`
 	NextTicketNumber       int64           `json:"next_ticket_number"`
+}
+
+type WorkspaceAiSetting struct {
+	WorkspaceID           ids.UUID  `json:"workspace_id"`
+	AnswerKeyID           *ids.UUID `json:"answer_key_id"`
+	AnswerModel           *string   `json:"answer_model"`
+	ClassifierKeyID       *ids.UUID `json:"classifier_key_id"`
+	ClassifierModel       *string   `json:"classifier_model"`
+	FallbackKeyID         *ids.UUID `json:"fallback_key_id"`
+	FallbackModel         *string   `json:"fallback_model"`
+	MonthlySpendCapMicros *int64    `json:"monthly_spend_cap_micros"`
+	CreatedAt             time.Time `json:"created_at"`
+	UpdatedAt             time.Time `json:"updated_at"`
 }
 
 type WorkspaceMember struct {

@@ -3,10 +3,9 @@
 | AI Trace Controller
 |--------------------------------------------------------------------------
 |
-| What the agent did and what it would do: a conversation's runs and
-| one run's steps for the inbox's "why" panel, a month's usage for the
-| settings overview, and the playground's test questions. The actions
-| decide who may see what; this only maps ids and shapes.
+| What the agent did: a conversation's runs and one run's steps for the
+| inbox's "why" panel, and a month's usage for the settings overview.
+| The actions decide who may see what; this only maps ids and shapes.
 |
 */
 
@@ -27,14 +26,13 @@ import (
 )
 
 /*
-AITraceController serves the agent's runs, usage and playground.
+AITraceController serves the agent's runs and usage.
 */
 type AITraceController struct {
-	ListRuns   *ai.ListConversationRuns
-	ShowRun    *ai.ShowRun
-	ShowUsage  *ai.ShowUsage
-	Playground *ai.AskPlayground
-	IDs        *ids.Registry
+	ListRuns  *ai.ListConversationRuns
+	ShowRun   *ai.ShowRun
+	ShowUsage *ai.ShowUsage
+	IDs       *ids.Registry
 }
 
 /*
@@ -56,13 +54,6 @@ AIUsageOutput is one month's usage.
 */
 type AIUsageOutput struct {
 	Body fhttp.Resource[resources.AiUsage]
-}
-
-/*
-AIPlaygroundOutput is what the agent would do with a test question.
-*/
-type AIPlaygroundOutput struct {
-	Body fhttp.Resource[resources.AiPlaygroundAnswer]
 }
 
 /*
@@ -115,26 +106,6 @@ func (c *AITraceController) Usage(ctx context.Context, in *requests.AIUsageReque
 		return nil, err
 	}
 	return &AIUsageOutput{Body: fhttp.NewResource(resources.NewAiUsage(*view))}, nil
-}
-
-/*
-Ask runs a test question through the agent.
-*/
-func (c *AITraceController) Ask(ctx context.Context, in *requests.AIPlaygroundRequest) (*AIPlaygroundOutput, error) {
-	input := ai.PlaygroundInput{Membership: membership(ctx), Message: in.Body.Message}
-	if in.Body.Conversation != "" {
-		conv, err := c.decode(models.PrefixConversation, in.Body.Conversation)
-		if err != nil {
-			return nil, err
-		}
-		input.ConversationID = &conv
-	}
-
-	answer, err := c.Playground.Handle(ctx, input)
-	if err != nil {
-		return nil, err
-	}
-	return &AIPlaygroundOutput{Body: fhttp.NewResource(resources.NewAiPlaygroundAnswer(*answer))}, nil
 }
 
 /*

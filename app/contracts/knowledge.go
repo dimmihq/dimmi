@@ -77,6 +77,9 @@ const (
 KnowledgeSearchOptions narrows one search. With AudienceFiltered set,
 only articles whose audiences are all in AllowedAudienceIDs are found,
 so an answer for a person never draws on what they could not read.
+With Scoped set, only articles of HelpCenterIDs and documents of
+SourceIDs are found, so an agent never draws on knowledge it was not
+given; empty lists then find nothing of that kind.
 */
 type KnowledgeSearchOptions struct {
 	Limit              int
@@ -87,6 +90,7 @@ type KnowledgeSearchOptions struct {
 	Locale             string
 	HelpCenterIDs      []ids.UUID
 	SourceIDs          []ids.UUID
+	Scoped             bool
 	ExcludeChunkIDs    []ids.UUID
 	ExcludeArticles    bool
 	ExcludeSources     bool
