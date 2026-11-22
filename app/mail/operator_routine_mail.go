@@ -61,7 +61,11 @@ func (m OperatorRoutineMail) Content(ctx context.Context) (mail.Content, error) 
 	args := i18n.Args{
 		"routine": m.Routine, "workspace": m.Workspace, "count": strconv.Itoa(len(m.Suggestions)),
 	}
-	subject := i18n.T(ctx, "mail.operator_routine.subject_"+outcome, args)
+	key := "mail.operator_routine.subject_" + outcome
+	if outcome == "findings" && len(m.Suggestions) == 1 {
+		key = "mail.operator_routine.subject_finding"
+	}
+	subject := i18n.T(ctx, key, args)
 	intro := i18n.T(ctx, "mail.operator_routine.intro", args)
 	c := mail.View(accounts.OperatorRoutineReport(subject, m.Name, intro, m.Report, m.Suggestions, m.ReviewURL))
 	c.Subject = subject

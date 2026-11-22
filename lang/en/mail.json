@@ -270,6 +270,7 @@
   },
   "operator_routine": {
     "subject_findings": "{{.routine}}: {{.count}} suggested changes in {{.workspace}}",
+    "subject_finding": "{{.routine}}: 1 suggested change in {{.workspace}}",
     "subject_noop": "{{.routine}}: nothing to change in {{.workspace}}",
     "subject_failed": "{{.routine}} failed in {{.workspace}}",
     "subject_paused": "{{.routine}} paused in {{.workspace}}",
