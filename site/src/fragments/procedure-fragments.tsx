@@ -1,9 +1,8 @@
 /*
- * Product fragments for the Procedures page: the procedure editor with
- * the part in play lit, a conversation where the agent follows one, the
- * approval card a teammate decides in the inbox, and the guard rails an
- * action carries. Drawn after resources/js/features/automation and
- * resources/js/features/inbox/thread/action-call-card.tsx.
+ * Product fragments for the Procedures page: the redesigned procedure
+ * editor with @ chips, exact Rule branches and simulation pass counts,
+ * a conversation where code checks enforce step order, and the approval
+ * card a teammate decides in the inbox.
  */
 import {
   RiArrowDownSLine,
@@ -11,9 +10,11 @@ import {
   RiCheckboxCircleLine,
   RiCheckLine,
   RiCloseCircleLine,
+  RiErrorWarningLine,
   RiFlashlightLine,
-  RiGitBranchLine,
   RiShieldUserLine,
+  RiSplitCellsHorizontal,
+  RiTestTubeLine,
   RiTimeLine,
   RiUserReceivedLine,
   RiUserStarLine,
@@ -36,20 +37,15 @@ function KindMark({ icon: Icon, tint }: { icon: Glyph; tint: ChipColor }) {
   );
 }
 
-const kinds = {
-  instruction: { icon: RiArrowRightLine, tint: "neutral", name: "Instruction" },
-  condition: { icon: RiGitBranchLine, tint: "purple", name: "Condition" },
-  action: { icon: RiFlashlightLine, tint: "lime", name: "Action" },
-} as const;
-
-const steps: { kind: keyof typeof kinds; text: string; action?: string }[] = [
-  { kind: "instruction", text: "Look up the customer's account and plan." },
-  { kind: "condition", text: "If there is only one charge, explain what it covers and stop." },
-  { kind: "action", text: "Refund the duplicate charge.", action: "Refund a charge" },
-  { kind: "instruction", text: "Tell the customer it shows on their card in 5 to 10 days." },
-];
-
-const handovers = ["The customer disputes a charge with their bank", "The refund is over $500"];
+/* Inline @ chip pill as StepWriter renders it inside a step. */
+function ActionChip({ label }: { label: string }) {
+  return (
+    <span className="mx-0.5 inline-flex items-center gap-1 rounded-md border border-border-button-default bg-background-full px-1.5 py-px align-baseline text-caption-1-medium text-text-primary">
+      <RiFlashlightLine className="size-3 text-status-lime-text" aria-hidden />
+      {label}
+    </span>
+  );
+}
 
 /* One part of the editor, lit when it is the one in play. */
 function Part({ label, lit, children }: { label: string; lit: boolean; children: ReactNode }) {
@@ -69,14 +65,15 @@ function Part({ label, lit, children }: { label: string; lit: boolean; children:
 }
 
 /*
- * The editor, a part lit per step: 0 when it applies, 1 the steps,
- * 2 the handovers, 3 publishing.
+ * The redesigned editor, one part lit per HowItWorks step:
+ * 0 when it applies, 1 steps with @ chips, 2 exact code Rule branch,
+ * 3 simulations passing and publishing.
  */
 export function ProcedureEditorFragment({ step }: { step: number }) {
   const live = step === 3;
   return (
     <div
-      className="flex h-[500px] w-[420px] max-w-full flex-col gap-1.5 overflow-hidden rounded-2xl border border-border-button-default bg-background-secondary-default p-2 shadow-[0_24px_60px_-28px_rgb(0_0_0/0.25)]"
+      className="flex h-[510px] w-[440px] max-w-full flex-col gap-1.5 overflow-hidden rounded-2xl border border-border-button-default bg-background-secondary-default p-2 shadow-[0_24px_60px_-28px_rgb(0_0_0/0.25)]"
       aria-hidden
     >
       <div
@@ -86,7 +83,10 @@ export function ProcedureEditorFragment({ step }: { step: number }) {
         )}
       >
         <span className="min-w-0 flex-1 truncate text-body-medium text-text-primary">Refund a duplicate charge</span>
-        <span className="text-caption-1-regular text-text-tertiary">{live ? "Published" : "Saved as draft"}</span>
+        <span className="inline-flex items-center gap-1 rounded-md bg-status-lime-bg px-2 py-0.5 text-caption-1-medium text-status-lime-text tabular-nums">
+          <RiTestTubeLine className="size-3" aria-hidden />
+          3/3
+        </span>
         <span
           className={cx(
             "inline-flex h-7 items-center rounded-lg px-2.5 text-body-2-medium transition-colors duration-500",
@@ -95,7 +95,7 @@ export function ProcedureEditorFragment({ step }: { step: number }) {
               : "bg-linear-to-b from-accent-500 to-accent-600 text-white",
           )}
         >
-          Publish
+          {live ? "Published" : "Publish"}
         </span>
       </div>
       <Part label="When dimmi uses this" lit={step === 0}>
@@ -104,60 +104,53 @@ export function ProcedureEditorFragment({ step }: { step: number }) {
         </p>
       </Part>
       <Part label="Steps" lit={step === 1}>
-        <ol className="flex flex-col gap-1.5">
-          {steps.map((item, i) => {
-            const kind = kinds[item.kind];
-            return (
-              <li key={item.text} className="flex items-start gap-2">
-                <span className="w-3 shrink-0 pt-0.5 text-end text-caption-1-medium text-text-tertiary tabular-nums">
-                  {i + 1}
-                </span>
-                <KindMark icon={kind.icon} tint={kind.tint} />
-                <span className="flex min-w-0 flex-1 flex-col gap-1">
-                  <span className="truncate rounded-md bg-background-tertiary-default px-2 py-0.5 text-body-2-regular text-text-primary">
-                    {item.text}
-                  </span>
-                  {item.action ? (
-                    <span className="inline-flex w-fit items-center gap-1 rounded-md border border-border-button-default bg-background-full px-1.5 py-0.5 text-caption-1-medium text-text-primary">
-                      <RiFlashlightLine className="size-3 text-foreground-icon-tertiary" />
-                      {item.action}
-                      <RiArrowDownSLine className="size-3 text-foreground-icon-tertiary" />
-                    </span>
-                  ) : null}
-                </span>
-              </li>
-            );
-          })}
-        </ol>
+        <div className="flex items-start gap-2">
+          <span className="w-3 shrink-0 pt-0.5 text-end text-caption-1-medium text-text-tertiary tabular-nums">1</span>
+          <KindMark icon={RiArrowRightLine} tint="neutral" />
+          <p className="min-w-0 flex-1 rounded-md bg-background-tertiary-default px-2 py-1 text-body-2-regular leading-5 text-text-primary">
+            Check the month they named with <ActionChip label="Look up charges" />.
+          </p>
+        </div>
       </Part>
-      <Part label="Hand over to the team when" lit={step === 2}>
-        <ul className="flex flex-col gap-1.5">
-          {handovers.map((h) => (
-            <li
-              key={h}
-              className="truncate rounded-md bg-background-tertiary-default px-2 py-0.5 text-body-2-regular text-text-primary"
-            >
-              {h}
-            </li>
-          ))}
-        </ul>
+      <Part label="Policy limit" lit={step === 2}>
+        <div className="flex items-start gap-2">
+          <span className="w-3 shrink-0 pt-0.5 text-end text-caption-1-medium text-text-tertiary tabular-nums">2</span>
+          <KindMark icon={RiSplitCellsHorizontal} tint="purple" />
+          <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+            <span className="rounded-md bg-background-tertiary-default px-2 py-1 text-caption-1-medium text-text-primary">
+              Duplicate confirmed · Refund up to $500
+            </span>
+            <div className="flex flex-col gap-1 border-s-2 border-status-lime-text/60 ps-2.5">
+              <span className="text-caption-1-medium text-status-lime-text">Then</span>
+              <span className="text-body-2-regular text-text-primary">
+                Refund with <ActionChip label="Refund a charge" /> and share the 5 to 10 day timeline.
+              </span>
+            </div>
+            <div className="flex flex-col gap-1 border-s-2 border-border-error-default/60 ps-2.5">
+              <span className="text-caption-1-medium text-text-error-primary">Else</span>
+              <span className="text-body-2-regular text-text-secondary">
+                Explain the charge or hand over to Billing.
+              </span>
+            </div>
+          </div>
+        </div>
       </Part>
       <div
         className={cx(
-          "mt-auto flex items-center gap-2 px-3 py-2 transition-opacity duration-500",
+          "mt-auto flex items-center gap-2 px-3 py-1.5 transition-opacity duration-500",
           live ? "opacity-100" : "opacity-0",
         )}
       >
         <Chip variant="caption" color="lime" className="py-0">
-          Live
+          v3 · Live
         </Chip>
-        <span className="text-body-2-regular text-text-secondary">dimmi follows this</span>
+        <span className="text-body-2-regular text-text-secondary">3 of 3 test scenarios passed</span>
       </div>
     </div>
   );
 }
 
-/* A conversation where the agent follows the procedure and waits for approval. */
+/* A conversation where code checks enforce step order and exact rules. */
 export function FollowFragment() {
   return (
     <div className="flex w-full max-w-[460px] flex-col overflow-hidden rounded-t-2xl border border-b-0 border-border-button-default bg-background-full shadow-[0_24px_60px_-28px_rgb(0_0_0/0.25)]">
@@ -167,17 +160,21 @@ export function FollowFragment() {
           Messenger
         </span>
       </div>
-      <div className="flex h-[384px] flex-col gap-3 overflow-hidden px-5 py-4">
+      <div className="flex h-[412px] flex-col gap-2.5 overflow-hidden px-5 py-3.5">
         <Customer name="Omar Haddad">I was charged twice for March. Can I get one back?</Customer>
+        <div className="me-auto inline-flex items-center gap-1.5 rounded-lg border border-amber-300/70 bg-amber-50 px-2.5 py-1 text-caption-1-medium text-amber-800 dark:border-amber-500/30 dark:bg-amber-950/40 dark:text-amber-300">
+          <RiErrorWarningLine className="size-3.5 shrink-0" aria-hidden />
+          Held back · Charges must be verified before refunding
+        </div>
         <Procedure
           name="Refund a duplicate charge"
           steps={[
-            { label: "Looked up the account", detail: "Lumen Pro, monthly", state: "done" },
-            { label: "Found two matching charges", detail: "$49.00 on March 1, twice", state: "done" },
-            { label: "Refund the duplicate", detail: "Waiting for Billing to approve", state: "waiting" },
+            { label: "Look up charges", detail: "Found two $49.00 charges on March 1", state: "done" },
+            { label: "Policy limit met", detail: "Duplicate confirmed · $49 (within $500 limit)", state: "done" },
+            { label: "Refund a charge", detail: "Waiting for Billing to approve", state: "waiting" },
           ]}
         />
-        <Agent>I found both $49.00 charges. I've asked our billing team to approve the refund.</Agent>
+        <Agent>I found both $49.00 charges. I asked our Billing team to approve the refund.</Agent>
       </div>
     </div>
   );

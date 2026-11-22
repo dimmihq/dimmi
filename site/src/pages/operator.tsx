@@ -80,8 +80,8 @@ const more = [
   },
   {
     icon: ListMagnifyingGlass,
-    title: "Shows every source",
-    body: "Every answer lists the chats, docs, and tools Operator checked.",
+    title: "Audits your support policies",
+    body: "Reviews failed AI conversations on demand or every Monday, drafting policy fixes and test scenarios for your team.",
   },
 ];
 
