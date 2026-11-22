@@ -20,7 +20,7 @@ versions and procedure metrics.
 */
 func procedureTestingDocs() map[string]Doc {
 	out := map[string]Doc{}
-	for _, part := range []map[string]Doc{procedureSimulationDocs(), procedureVersionDocs()} {
+	for _, part := range []map[string]Doc{procedureSimulationDocs(), procedureTestCaseDocs(), procedureVersionDocs()} {
 		maps.Copy(out, part)
 	}
 
@@ -28,8 +28,7 @@ func procedureTestingDocs() map[string]Doc {
 }
 
 /*
-procedureSimulationDocs returns the entries for preview turns and saved
-simulations.
+procedureSimulationDocs returns the entry for a preview turn.
 */
 func procedureSimulationDocs() map[string]Doc {
 	return map[string]Doc{
@@ -46,6 +45,14 @@ func procedureSimulationDocs() map[string]Doc {
 				"target":       "draft tests the working copy, live the published one.",
 			},
 		},
+	}
+}
+
+/*
+procedureTestCaseDocs returns the entries for saved simulations.
+*/
+func procedureTestCaseDocs() map[string]Doc {
+	return map[string]Doc{
 		"procedures.test-cases.index": {
 			Title:   "List a procedure's simulations",
 			Use:     "Lists the saved simulations of a procedure and how each last went.",
