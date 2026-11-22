@@ -100,11 +100,15 @@ func transferSpec(targets []models.AiAgent) contracts.ToolSpec {
 	for i, a := range targets {
 		choices[i] = models.PublicID(models.PrefixAiAgent, a.ID)
 		who.WriteString("\n- " + choices[i] + ": " + a.Name + " (" + strings.ReplaceAll(a.Role, "_", " ") + ")")
+		if purpose := agentPurpose(a); purpose != "" {
+			who.WriteString(". " + purpose)
+		}
 	}
 	return contracts.ToolSpec{
 		Name: toolTransfer,
 		Description: "Hand this conversation to another AI agent of the team when the customer's request is " +
-			"that agent's job, not yours. The other agent answers the customer's message itself, so after " +
+			"that agent's job, not yours, even if you could answer it yourself. Each agent below says who it " +
+			"is for. The other agent answers the customer's message itself, so after " +
 			"calling this write nothing more. The customer is not told; the team sees the transfer. Agents:" +
 			who.String(),
 		Schema: objectSchema(map[string]any{

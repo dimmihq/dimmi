@@ -94,6 +94,33 @@ func TestAiAgentTransfers(t *testing.T) {
 		assert.Contains(t, outcomes, "transferred")
 	})
 
+	t.Run("the team sees which agent wrote a reply", func(t *testing.T) {
+		t.Parallel()
+		r := newTransferDesk(t)
+		r.llm.answer.Script(reply("Growth fits 500 labels a month."))
+		conv, trigger := r.start("Which plan fits 500 labels?")
+
+		r.run(conv, trigger)
+
+		path := "/api/v1/conversations/" + models.PublicID(models.PrefixConversation, conv) + "/messages"
+		var page struct {
+			Data []struct {
+				Author struct {
+					Type string `json:"type"`
+					Name string `json:"name"`
+				} `json:"author"`
+			} `json:"data"`
+		}
+		r.d.Owner.GetJSON(path).AssertOK().Decode(&page)
+		var names []string
+		for _, m := range page.Data {
+			if m.Author.Type == "agent" {
+				names = append(names, m.Author.Name)
+			}
+		}
+		assert.Equal(t, []string{"Sales"}, names)
+	})
+
 	t.Run("never hands a conversation back to an agent it left", func(t *testing.T) {
 		t.Parallel()
 		r := newTransferDesk(t)
