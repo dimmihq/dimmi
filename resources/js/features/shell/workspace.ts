@@ -26,6 +26,7 @@ export const pages = new Set([
   "customers",
   "notifications",
   "agent",
+  "agents",
   "help-center",
   "feedback",
   "announcements",
