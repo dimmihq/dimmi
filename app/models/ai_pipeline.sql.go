@@ -468,7 +468,7 @@ SELECT EXISTS (
       AND conversation_id = $2
       AND $3::uuid = ANY(included_message_ids)
       AND status IN ('completed', 'failed')
-      AND outcome NOT IN ('superseded', 'skipped')
+      AND outcome NOT IN ('superseded', 'skipped', 'transferred')
 )::boolean
 `
 

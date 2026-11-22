@@ -131,6 +131,8 @@ export interface TimelineEvent {
   score?: number;
   label?: string;
   comment?: string;
+  /* ai.agent_transferred: the agent the conversation went to. */
+  to_agent?: { id: string; name: string };
 }
 
 /*

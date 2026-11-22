@@ -171,6 +171,20 @@ function handoffText(event: TimelineEvent): string | null {
 }
 
 /*
+ * transferText says that one AI agent handed the conversation to
+ * another, and why; null for any other event.
+ */
+function transferText(event: TimelineEvent): string | null {
+  if (event.name !== "ai.agent_transferred") {
+    return null;
+  }
+  const from = event.actor.name || "The AI agent";
+  const to = event.to_agent?.name || "another agent";
+
+  return `${from} transferred the conversation to ${to}${event.summary ? `: ${event.summary}` : ""}`;
+}
+
+/*
  * ticketText names the ticket a conversation became; null for any other
  * event.
  */
@@ -186,7 +200,7 @@ function ticketText(event: TimelineEvent): string | null {
  * eventText says in words what an event entry records.
  */
 export function eventText(event: TimelineEvent): string {
-  return handoffText(event) ?? ticketText(event) ?? changeText(event);
+  return handoffText(event) ?? transferText(event) ?? ticketText(event) ?? changeText(event);
 }
 
 /*

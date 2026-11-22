@@ -59,6 +59,7 @@ type run struct {
 	searches       int
 	lastSearch     searchTrace
 	handoff        *handoffRequest
+	transfer       *transferRequest
 	changes        changeSet
 	actions        actionState
 	followed       bool

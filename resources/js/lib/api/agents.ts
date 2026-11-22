@@ -226,6 +226,8 @@ export interface AgentPreview {
   active_state: SimState;
   procedure_trace?: ProcedureTrace;
   action_calls: ObservedCall[];
+  /* The agent the turn handed the conversation to, which then answered. */
+  transfer: { agent_id: string; name: string; from_name: string; summary: string } | null;
 }
 
 export interface AgentPreviewInput {

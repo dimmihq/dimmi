@@ -117,16 +117,28 @@ func (r *Runner) agentLoop(ctx context.Context, st *run) (string, error) {
 			return out.text, nil
 		}
 
-		lp.messages = append(lp.messages, contracts.ChatMessage{
-			Role: contracts.ChatRoleAssistant, Parts: textParts(out.text), ToolCalls: out.calls,
-		})
-		for _, call := range out.calls {
-			result, failed := r.callTool(ctx, st, call)
-			lp.messages = append(lp.messages, contracts.ChatMessage{
-				Role: contracts.ChatRoleTool, ToolCallID: call.ID, ToolError: failed,
-				Parts: []contracts.ContentPart{{Text: result}},
-			})
+		r.runCalls(ctx, st, out)
+		if st.transfer != nil {
+			return "", nil
 		}
+	}
+}
+
+/*
+runCalls runs the tools the model asked for and adds the call and each
+result to the conversation the model reads next.
+*/
+func (r *Runner) runCalls(ctx context.Context, st *run, out streamed) {
+	lp := st.loop
+	lp.messages = append(lp.messages, contracts.ChatMessage{
+		Role: contracts.ChatRoleAssistant, Parts: textParts(out.text), ToolCalls: out.calls,
+	})
+	for _, call := range out.calls {
+		result, failed := r.callTool(ctx, st, call)
+		lp.messages = append(lp.messages, contracts.ChatMessage{
+			Role: contracts.ChatRoleTool, ToolCallID: call.ID, ToolError: failed,
+			Parts: []contracts.ContentPart{{Text: result}},
+		})
 	}
 }
 

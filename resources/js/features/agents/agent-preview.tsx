@@ -161,6 +161,21 @@ function AddedRow({
   );
 }
 
+/*
+ * Transferred is the line the team sees when one agent hands the chat
+ * to another; the customer never sees it.
+ */
+function Transferred({ transfer }: { transfer: NonNullable<AgentPreview["transfer"]> }) {
+  return (
+    <span className="flex items-center gap-2 self-stretch text-center text-body-2-regular text-text-tertiary">
+      <span className="h-px min-w-4 flex-1 bg-separator-border" />
+      {transfer.from_name} transferred to {transfer.name}
+      {transfer.summary ? `: ${transfer.summary}` : ""}
+      <span className="h-px min-w-4 flex-1 bg-separator-border" />
+    </span>
+  );
+}
+
 function Blank({ name, as }: { name: string; as: AnswerAs }) {
   return (
     <li className="flex flex-col items-center gap-3 text-center">
@@ -350,6 +365,7 @@ export function AgentPreviewChat({
             // biome-ignore lint/suspicious/noArrayIndexKey: turns only grow.
             <li key={index} className="flex flex-col gap-5">
               {t.message ? <p className={fromCustomer}>{t.message}</p> : null}
+              {t.result.transfer ? <Transferred transfer={t.result.transfer} /> : null}
               <div className="flex flex-col gap-3">
                 <ActivityLog steps={t.steps} working={false} />
                 <Reveal animate={index >= seen.current}>

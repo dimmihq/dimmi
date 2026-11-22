@@ -3,8 +3,10 @@
  * workflow. First the starting point: one narrow dialog lists every
  * template group after group, each with its icon in the group's
  * colour, what it does and a chevron; searching keeps only the matches
- * and Enter picks the first. Then the name and what the template
- * brings. Create makes the agent as a draft and opens it.
+ * and Enter picks the first. Then the name, what the template brings,
+ * and whether the agent gets a messenger of its own, for a page such as
+ * pricing. Create makes the agent as a draft, with its messenger placed
+ * on it, and opens it.
  */
 import {
   RiAddLine,
@@ -26,12 +28,15 @@ import { type ComponentType, useState } from "react";
 import type { ChipColor } from "@/components/base/badges/chip";
 import { Chip } from "@/components/base/badges/chip";
 import { Button } from "@/components/base/buttons/button";
+import { CheckboxCard } from "@/components/base/checkbox/checkbox-card";
 import { Input } from "@/components/base/input/input";
 import { Modal, ModalBody, ModalFooter, ModalHeader } from "@/components/base/modal/modal";
 import { toast } from "@/components/base/toast/toast";
 import { Swap } from "@/features/inbox/motion";
-import { type AgentTemplate, agentTemplatesQuery, createAgent } from "@/lib/api/agents";
+import { type AgentTemplate, type AgentView, agentTemplatesQuery, createAgent, saveAgent } from "@/lib/api/agents";
 import { ApiError } from "@/lib/api/client";
+import { inboxesQuery } from "@/lib/api/inboxes";
+import { createWidget } from "@/lib/api/widget-settings";
 
 import { KindMark } from "../automation/parts";
 
@@ -151,11 +156,27 @@ function Details({
   const [name, setName] = useState(template.agent_name);
   const [problem, setProblem] = useState("");
   const [saving, setSaving] = useState(false);
+  const [widget, setWidget] = useState(template.widget);
+  const inbox = useQuery(inboxesQuery(workspace)).data?.[0];
+
+  /* withWidget gives the new agent a messenger of its own, placed on it in the draft. */
+  const withWidget = async (made: AgentView): Promise<AgentView> => {
+    if (!widget || !inbox) {
+      return made;
+    }
+    const messenger = await createWidget(workspace, `${made.agent.name} messenger`, inbox.id);
+    void queryClient.invalidateQueries({ queryKey: ["workspace", workspace, "widget-settings"] });
+
+    return saveAgent(workspace, made.agent.id, {
+      placement: { channel_connection_ids: [messenger.channel_connection_id] },
+      lock_version: made.agent.lock_version,
+    });
+  };
 
   const create = async () => {
     setSaving(true);
     try {
-      const made = await createAgent(workspace, name.trim(), template.key);
+      const made = await withWidget(await createAgent(workspace, name.trim(), template.key));
       void queryClient.invalidateQueries({ queryKey: ["workspace", workspace, "agents"] });
       queryClient.setQueryData(["workspace", workspace, "agents", made.agent.id], made);
       onClose();
@@ -202,6 +223,12 @@ function Details({
             </span>
           </div>
         ) : null}
+        <CheckboxCard
+          title="Make a widget for it"
+          description="Its own messenger, for a pricing page or docs site."
+          isSelected={widget}
+          onChange={setWidget}
+        />
         <p className="text-body-2-regular text-text-tertiary">
           Starts as a draft. Nothing reaches customers until you publish.
         </p>

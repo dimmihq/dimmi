@@ -1244,6 +1244,31 @@ func (q *Queries) SetAgentToolLayer(ctx context.Context, arg SetAgentToolLayerPa
 	return err
 }
 
+const transferConversationAgent = `-- name: TransferConversationAgent :exec
+UPDATE conversations
+SET ai_agent_id = $1, ai_transferred_from_ids = array_append(ai_transferred_from_ids, $2::uuid)
+WHERE workspace_id = $3 AND id = $4
+`
+
+type TransferConversationAgentParams struct {
+	ToAgentID   *ids.UUID `json:"to_agent_id"`
+	FromAgentID ids.UUID  `json:"from_agent_id"`
+	WorkspaceID ids.UUID  `json:"workspace_id"`
+	ID          ids.UUID  `json:"id"`
+}
+
+// TransferConversationAgent hands a conversation to another agent and
+// records the agent it left, so it never comes back to it.
+func (q *Queries) TransferConversationAgent(ctx context.Context, arg TransferConversationAgentParams) error {
+	_, err := q.db.Exec(ctx, transferConversationAgent,
+		arg.ToAgentID,
+		arg.FromAgentID,
+		arg.WorkspaceID,
+		arg.ID,
+	)
+	return err
+}
+
 const updateAgent = `-- name: UpdateAgent :one
 UPDATE ai_agents SET
     name = $1, avatar_attachment_id = $2, enabled = $3,

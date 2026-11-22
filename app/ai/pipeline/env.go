@@ -68,7 +68,10 @@ type env struct {
 	// GuidanceArticles names the articles the agent's guidance cites,
 	// by public id.
 	GuidanceArticles map[string]string
-	now              time.Time
+	// TransferTargets are the agents the answering agent may hand the
+	// conversation to.
+	TransferTargets []models.AiAgent
+	now             time.Time
 }
 
 /*
@@ -148,7 +151,7 @@ func loadAgent(ctx context.Context, q *models.Queries, e *env) (bool, error) {
 		return false, err
 	}
 	e.Agent = agent
-	if e.GuidanceArticles, err = guidanceArticles(ctx, q, agent); err != nil {
+	if err := loadAgentExtras(ctx, q, e); err != nil {
 		return false, err
 	}
 	if agent.Enabled {

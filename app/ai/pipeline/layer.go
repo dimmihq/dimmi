@@ -69,7 +69,7 @@ that procedures exist, so it could not tell a request matched one and
 almost never followed any.
 */
 func fixedTools() []string {
-	return []string{toolSearchKnowledge, toolHandoff, toolProcedure}
+	return []string{toolSearchKnowledge, toolHandoff, toolProcedure, toolTransfer}
 }
 
 /*

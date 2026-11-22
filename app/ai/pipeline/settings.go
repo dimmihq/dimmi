@@ -81,7 +81,7 @@ func settingsFor(e *env) *TurnSettings {
 
 	s := &TurnSettings{
 		Mode: ModeFull, Tools: []string{
-			toolSearchKnowledge, toolHandoff, toolTriage, toolProcedure, toolOpenTicket, ToolActions,
+			toolSearchKnowledge, toolHandoff, toolTriage, toolProcedure, toolOpenTicket, ToolActions, toolTransfer,
 		},
 		AlwaysHandoffTags: h.AlwaysTags, HandoffTeamID: h.TargetTeamID, RaisePriority: h.RaisePriority,
 		MaxReplies: e.Agent.MaxAiReplies,

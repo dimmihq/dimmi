@@ -33,6 +33,7 @@ type AIAgentPreview struct {
 	ActiveState    pipeline.SimState        `json:"active_state"`
 	ProcedureTrace json.RawMessage          `json:"procedure_trace,omitempty"`
 	ActionCalls    []procedure.ObservedCall `json:"action_calls"`
+	Transfer       *pipeline.SimTransfer    `json:"transfer"`
 }
 
 /*
@@ -42,7 +43,7 @@ func NewAIAgentPreview(r *pipeline.SimulationResult) AIAgentPreview {
 	return AIAgentPreview{
 		Object: "ai_agent_preview", RunID: models.PublicID(models.PrefixAiRun, r.RunID), Reply: r.Reply,
 		Outcome: r.Outcome, Handoff: r.Handoff, ActiveState: r.State, ProcedureTrace: r.ProcedureTrace,
-		ActionCalls: r.Calls,
+		ActionCalls: r.Calls, Transfer: r.Transfer,
 	}
 }
 

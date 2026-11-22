@@ -101,6 +101,7 @@ type SimulationResult struct {
 	ProcedureTrace json.RawMessage
 	Calls          []procedure.ObservedCall
 	Matched        bool
+	Transfer       *SimTransfer
 }
 
 /*
@@ -217,7 +218,7 @@ func (r *Runner) simulatedEnv(ctx context.Context, q *models.Queries, in Simulat
 	if e.Triage, err = loadTriage(ctx, q, e); err != nil {
 		return nil, err
 	}
-	if e.GuidanceArticles, err = guidanceArticles(ctx, q, agent); err != nil {
+	if err := loadAgentExtras(ctx, q, e); err != nil {
 		return nil, err
 	}
 	loadTicketContext(ctx, q, e)
@@ -427,7 +428,7 @@ func (r *Runner) runMock(st *run, live actionkit.Live, args json.RawMessage, agr
 simulationResult reports what the simulated turn did.
 */
 func (r *Runner) simulationResult(st *run, d *decision) *SimulationResult {
-	out := &SimulationResult{RunID: st.rec.Run.ID, Outcome: d.outcome, Calls: st.sim.calls}
+	out := &SimulationResult{RunID: st.rec.Run.ID, Outcome: d.outcome, Calls: st.sim.calls, Transfer: simTransfer(st)}
 	if d.writesMessage() {
 		out.Reply = strings.ReplaceAll(r.reply(st.env, d), ticketReference, sampleReference)
 	}

@@ -116,6 +116,11 @@ func (r *Runner) registry(st *run) map[string]tool {
 		toolHandoff:         {spec: handoffSpec(), effect: sideEffectWrite, handle: r.requestHandoff},
 		toolTriage:          {spec: triageSpec(st.env), effect: sideEffectWrite, handle: r.triage},
 	}
+	if len(st.env.TransferTargets) > 0 {
+		tools[toolTransfer] = tool{
+			spec: transferSpec(st.env.TransferTargets), effect: sideEffectWrite, handle: r.transferAgent,
+		}
+	}
 	if len(st.env.TicketTypes) > 0 {
 		tools[toolOpenTicket] = tool{spec: openTicketSpec(st.env), effect: sideEffectWrite, handle: r.openTicket}
 	}

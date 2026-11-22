@@ -212,3 +212,10 @@ UNION ALL
 SELECT 'inbox'::text, ib.id, ib.name, 'inbox'::text, ib.ai_agent_id FROM inboxes ib
 WHERE ib.workspace_id = @workspace_id AND ib.deleted_at IS NULL
 ORDER BY kind, name;
+
+-- name: TransferConversationAgent :exec
+-- TransferConversationAgent hands a conversation to another agent and
+-- records the agent it left, so it never comes back to it.
+UPDATE conversations
+SET ai_agent_id = sqlc.narg(to_agent_id), ai_transferred_from_ids = array_append(ai_transferred_from_ids, @from_agent_id::uuid)
+WHERE workspace_id = @workspace_id AND id = @id;

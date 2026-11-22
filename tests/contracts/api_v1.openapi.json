@@ -1357,6 +1357,9 @@
           },
           "run_id": {
             "type": "string"
+          },
+          "transfer": {
+            "$ref": "#/components/schemas/SimTransfer"
           }
         },
         "required": [
@@ -1366,7 +1369,8 @@
           "outcome",
           "handoff",
           "active_state",
-          "action_calls"
+          "action_calls",
+          "transfer"
         ],
         "type": "object"
       },
@@ -29525,6 +29529,30 @@
             "type": "object"
           }
         },
+        "type": "object"
+      },
+      "SimTransfer": {
+        "additionalProperties": false,
+        "properties": {
+          "agent_id": {
+            "type": "string"
+          },
+          "from_name": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "summary": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "agent_id",
+          "name",
+          "from_name",
+          "summary"
+        ],
         "type": "object"
       },
       "SimulateProcedureRequestBody": {

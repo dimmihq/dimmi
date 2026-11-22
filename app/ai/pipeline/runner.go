@@ -151,6 +151,9 @@ func (r *Runner) RunConversationTurn(ctx context.Context, args Args, settings *T
 		return nil, fmt.Errorf("pipeline commit: %w", err)
 	}
 	r.remember(ctx, st, res)
+	if res.Outcome == outcomeTransferred {
+		return r.RunConversationTurn(ctx, args, settings)
+	}
 	return res, nil
 }
 
@@ -202,7 +205,7 @@ func (r *Runner) turn(ctx context.Context, st *run) *decision {
 	st.loop.newest = len(st.loop.messages) - 1
 
 	draft, err := r.agentLoop(ctx, st)
-	if err == nil {
+	if err == nil && st.transfer == nil {
 		draft, err = r.checked(ctx, st, draft)
 	}
 	r.routeProcedureHandoff(st)
@@ -211,7 +214,7 @@ func (r *Runner) turn(ctx context.Context, st *run) *decision {
 	if err != nil {
 		return failed("provider_error", err)
 	}
-	return r.review(ctx, st, draft)
+	return r.reviewOrTransfer(ctx, st, draft)
 }
 
 /*

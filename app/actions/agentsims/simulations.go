@@ -131,31 +131,6 @@ func (s *Simulations) Preview(ctx context.Context, in PreviewInput) (*pipeline.S
 }
 
 /*
-turn answers simulated turns as one copy of an agent.
-*/
-func (s *Simulations) turn(agentID ids.UUID, version string) procedures.TurnFunc {
-	return func(ctx context.Context, in procedures.SimulateInput) (*pipeline.SimulationResult, error) {
-		if s.Simulator == nil {
-			return nil, ErrSimulatorOff
-		}
-		def, err := s.copyOf(ctx, in.Membership, agentID, version)
-		if err != nil {
-			return nil, err
-		}
-		m := in.Membership
-		res, err := s.Simulator.Simulate(ctx, pipeline.SimulationInput{
-			WorkspaceID: m.Workspace.ID, MemberID: m.Member.ID, AgentID: &agentID, Agent: def,
-			History: in.History, Message: in.Message, Persona: in.Persona, Mocks: in.Mocks, State: in.State,
-			Confirmed: in.Confirmed, StreamID: in.StreamID, Now: in.Now,
-		})
-		if errors.Is(err, pipeline.ErrNoAgent) {
-			return nil, ErrSimulatorOff
-		}
-		return res, err
-	}
-}
-
-/*
 copyOf is the definition a simulation answers as: the working copy, or
 nil for the live version the agent's columns hold.
 */
