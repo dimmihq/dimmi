@@ -134,7 +134,10 @@ func (e *Engine) proposeChanges(ctx context.Context, s *session, args json.RawMe
 	if err != nil {
 		return result{}, err
 	}
-	auto := autoApplies(s.settings, ops) && !s.tainted && !s.background
+	if text, ok, err := e.duplicate(ctx, s, in.DedupKey); err != nil || ok {
+		return result{text: text, step: Step{Tool: "propose_changes", Summary: "Skipped a suggestion made before"}}, err
+	}
+	auto := autoApplies(s.settings, ops) && !s.tainted && !s.background && s.routine == nil
 	row, err := e.createChangeset(ctx, s, changeset{proposal: in, ops: ops, auto: auto})
 	if err != nil {
 		return result{}, err
@@ -169,14 +172,21 @@ operation shares when they share one.
 */
 func (e *Engine) createChangeset(ctx context.Context, s *session, in changeset) (models.OperatorChangeset, error) {
 	var row models.OperatorChangeset
+	now := e.Clock.Now()
+	params := models.CreateOperatorChangesetParams{
+		WorkspaceID: s.m.Workspace.ID, ThreadID: s.threadRef(), MemberID: s.memberRef(),
+		ConversationID: sharedConversation(in.ops), Title: truncate(strings.TrimSpace(in.Title), 200),
+		Reason: truncate(strings.TrimSpace(in.Reason), 2000), Operations: encodeOperations(in.ops), Auto: in.auto,
+		RoutineID: s.thread.RoutineID, RoutineRunID: s.thread.RoutineRunID, DedupKey: nilable(dedupKey(in.DedupKey)),
+		Now: now,
+	}
+	if s.routine != nil {
+		params.Preview = s.routine.dryRun
+		params.ExpiresAt = new(now.Add(suggestionLife))
+	}
 	err := e.DB.Transaction(ctx, func(ctx context.Context, tx *database.Tx) error {
 		var err error
-		row, err = models.New(tx).CreateOperatorChangeset(ctx, models.CreateOperatorChangesetParams{
-			WorkspaceID: s.m.Workspace.ID, ThreadID: s.threadRef(), MemberID: s.memberRef(),
-			ConversationID: sharedConversation(in.ops), Title: truncate(strings.TrimSpace(in.Title), 200),
-			Reason: truncate(strings.TrimSpace(in.Reason), 2000), Operations: encodeOperations(in.ops), Auto: in.auto,
-			Now: e.Clock.Now(),
-		})
+		row, err = models.New(tx).CreateOperatorChangeset(ctx, params)
 		return err
 	})
 	if err != nil {
@@ -199,10 +209,11 @@ func (s *session) threadRef() *ids.UUID {
 /*
 memberRef is who a run's changesets were proposed to, nobody for a run
 Operator started on its own, which any teammate who sees the
-conversation may review.
+conversation may review, or for a run on a routine's thread, whose
+changesets belong to the routine.
 */
 func (s *session) memberRef() *ids.UUID {
-	if s.background {
+	if s.background || s.thread.RoutineID != nil {
 		return nil
 	}
 	return &s.m.Member.ID

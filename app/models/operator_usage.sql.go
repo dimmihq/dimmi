@@ -18,16 +18,18 @@ SELECT r.id, r.status, r.cost_micros, r.latency_ms, r.created_at, c.id AS conver
     COALESCE(r.config_snapshot->>'purpose', 'ask')::text AS purpose,
     COALESCE(u.name, '')::text AS member_name,
     COALESCE(t.title, '')::text AS thread_title,
+    tt.id AS thread_id,
     c.number AS conversation_number
 FROM ai_runs r
 LEFT JOIN workspace_members m ON m.id = r.actor_id AND m.workspace_id = r.workspace_id AND r.actor_type = 'member'
 LEFT JOIN users u ON u.id = m.user_id
 LEFT JOIN LATERAL (
-    SELECT th.title FROM operator_messages om
+    SELECT th.id, th.title FROM operator_messages om
     JOIN operator_threads th ON th.id = om.thread_id AND th.workspace_id = om.workspace_id
     WHERE om.workspace_id = r.workspace_id AND om.run_id = r.id
     LIMIT 1
 ) t ON true
+LEFT JOIN operator_threads tt ON tt.id = t.id AND tt.workspace_id = r.workspace_id
 LEFT JOIN conversations c ON c.id = r.conversation_id AND c.workspace_id = r.workspace_id
     AND c.deleted_at IS NULL AND dimmi_conversation_visible(
         c.assignee_member_id, c.assignee_team_id, c.inbox_id, $1::text,
@@ -61,6 +63,7 @@ type ListRecentOperatorRunsRow struct {
 	Purpose            string    `json:"purpose"`
 	MemberName         string    `json:"member_name"`
 	ThreadTitle        string    `json:"thread_title"`
+	ThreadID           *ids.UUID `json:"thread_id"`
 	ConversationNumber *int64    `json:"conversation_number"`
 }
 
@@ -97,6 +100,7 @@ func (q *Queries) ListRecentOperatorRuns(ctx context.Context, arg ListRecentOper
 			&i.Purpose,
 			&i.MemberName,
 			&i.ThreadTitle,
+			&i.ThreadID,
 			&i.ConversationNumber,
 		); err != nil {
 			return nil, err

@@ -52,6 +52,7 @@ func (e *Engine) applyContent(ctx context.Context, m authz.Membership, op *Opera
 		var a models.Article
 		a, err = e.Services.Articles.Create(ctx, helpcenters.ArticleInput{
 			Membership: m, HelpCenterID: *op.HelpCenter, CollectionID: op.Collection, Title: op.Title, Body: op.Body,
+			Visibility: op.Visibility,
 		})
 		op.Created = &a.ID
 	case KindArticleEdit:

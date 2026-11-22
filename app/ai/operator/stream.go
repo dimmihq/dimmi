@@ -73,7 +73,14 @@ func (e *Engine) publish(ctx context.Context, s *session, m fbroadcasting.Messag
 	if e.Publisher == nil || s.background {
 		return
 	}
-	_ = e.Publisher.Publish(ctx, []string{appbroadcasting.MemberChannel(s.m.Member.ID)}, m)
+	to := &s.m.Member.ID
+	if s.routine != nil {
+		to = s.routine.watcher
+	}
+	if to == nil {
+		return
+	}
+	_ = e.Publisher.Publish(ctx, []string{appbroadcasting.MemberChannel(*to)}, m)
 }
 
 /*

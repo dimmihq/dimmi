@@ -22,7 +22,11 @@ import (
 
 /*
 OperatorChangeset is one set of changes Operator proposed. ProposedTo
-is nil when Operator proposed it on its own.
+is nil when Operator proposed it on its own. RoutineID and RoutineRunID
+name the routine and run that suggested it; DedupKey is the key that
+keeps it from being suggested twice; Preview marks a dry run's
+suggestion, which is never applied; ExpiresAt is when a routine's
+suggestion counts as stale.
 */
 type OperatorChangeset struct {
 	ID             string              `json:"id"`
@@ -41,6 +45,11 @@ type OperatorChangeset struct {
 	AppliedAt      *time.Time          `json:"applied_at"`
 	RevertedAt     *time.Time          `json:"reverted_at"`
 	CreatedAt      time.Time           `json:"created_at"`
+	RoutineID      *string             `json:"routine_id"`
+	RoutineRunID   *string             `json:"routine_run_id"`
+	DedupKey       *string             `json:"dedup_key"`
+	Preview        bool                `json:"preview"`
+	ExpiresAt      *time.Time          `json:"expires_at"`
 }
 
 /*
@@ -74,6 +83,9 @@ func NewOperatorChangeset(c models.OperatorChangeset) OperatorChangeset {
 		DecidedBy:      optionalID(models.PrefixMember, c.DecidedByMemberID),
 		Title:          c.Title, Reason: c.Reason, Status: c.Status, Auto: c.Auto, Error: c.Error,
 		AppliedAt: c.AppliedAt, RevertedAt: c.RevertedAt, CreatedAt: c.CreatedAt,
+		RoutineID:    optionalID(models.PrefixOperatorRoutine, c.RoutineID),
+		RoutineRunID: optionalID(models.PrefixOperatorRoutineRun, c.RoutineRunID),
+		DedupKey:     c.DedupKey, Preview: c.Preview, ExpiresAt: c.ExpiresAt,
 	}
 	ops := operator.Operations(c.Operations)
 	out.Operations = make([]OperatorOperation, len(ops))

@@ -22,7 +22,6 @@ type UpdateOperatorSettingsRequest struct {
 		Instructions    *string           `json:"instructions,omitempty"      validate:"omitempty,max=8000"`
 		Policies        map[string]string `json:"policies,omitempty"`
 		Model           *string           `json:"model,omitempty"             validate:"omitempty,max=200"`
-		ProcedureQA     *bool             `json:"procedure_qa_weekly,omitempty"`
 	}
 }
 

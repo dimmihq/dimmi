@@ -12,9 +12,6 @@
 | conversation, as one changeset the team reviews. It never edits a
 | procedure on its own.
 |
-| Once a week, when the workspace turns it on, Operator reviews every
-| live procedure by itself and leaves its proposals for the team.
-|
 */
 
 package operator
@@ -28,7 +25,6 @@ import (
 	"strings"
 
 	"github.com/dimmihq/dimmi/framework/database"
-	"github.com/dimmihq/dimmi/framework/ids"
 
 	"github.com/dimmihq/dimmi/app/contracts"
 	"github.com/dimmihq/dimmi/app/enums"
@@ -46,17 +42,6 @@ const (
 	anomalyDaysMax    = 90
 	anomalyDaysNormal = 14
 )
-
-/*
-ProcedureQAQuestion is what Operator is asked when it reviews the
-procedures by itself.
-*/
-const ProcedureQAQuestion = `Review how the live procedures did this week. For each one, call
-list_procedure_anomalies, read the traces of the runs that went wrong with read_procedure_trace,
-and when a step is unclear or keeps failing, propose one changeset per procedure with
-propose_changes: an edit of its working copy that fixes it (procedure.edit_draft), and a
-regression test made from a failing conversation (procedure.create_test_case) that would have
-caught it. Cite the conversations by number. Propose nothing when the procedures did fine.`
 
 /*
 procedureTools are the tools that review procedures.
@@ -193,63 +178,4 @@ func orNull(raw json.RawMessage) json.RawMessage {
 		return json.RawMessage("null")
 	}
 	return raw
-}
-
-/*
-ReviewProcedures has Operator review the workspace's live procedures by
-itself, as the first owner, when the workspace turned weekly reviews
-on. Its proposals wait for the team.
-*/
-func (e *Engine) ReviewProcedures(ctx context.Context, workspaceID ids.UUID) error {
-	e.prepare()
-	s, err := e.openReview(ctx, workspaceID)
-	if errors.Is(err, errSkip) {
-		return nil
-	}
-	if err != nil {
-		return err
-	}
-	if s.llm, err = e.LLM.ForKey(ctx, s.key); err != nil {
-		return fmt.Errorf("open operator model: %w", err)
-	}
-	_, status := e.converse(ctx, s)
-	return e.DB.Transaction(context.WithoutCancel(ctx), func(ctx context.Context, tx *database.Tx) error {
-		if err := e.finishRun(ctx, models.New(tx), s, status); err != nil {
-			return err
-		}
-		return addSpend(ctx, tx, e, s)
-	})
-}
-
-/*
-openReview loads what a review run needs, as the workspace's first
-owner, and opens its run; a workspace that did not ask for reviews, or
-has no live procedure, is skipped.
-*/
-func (e *Engine) openReview(ctx context.Context, workspaceID ids.UUID) (*session, error) {
-	s := &session{background: true, question: ProcedureQAQuestion}
-	err := e.DB.Transaction(ctx, func(ctx context.Context, tx *database.Tx) error {
-		q := models.New(tx)
-		settings, err := LoadSettings(ctx, q, workspaceID)
-		if err != nil {
-			return err
-		}
-		if !settings.Enabled || !settings.ProcedureQA {
-			return errSkip
-		}
-		s.settings = settings
-		if s.m, err = ownerMembership(ctx, q, workspaceID); err != nil {
-			return err
-		}
-		live, err := q.ListLiveProcedures(ctx, workspaceID)
-		if err != nil || len(live) == 0 {
-			return errors.Join(errSkip, err)
-		}
-		if err := e.loadModel(ctx, q, s); err != nil {
-			return errors.Join(errSkip, err)
-		}
-		s.run, err = e.startRun(ctx, q, s)
-		return err
-	})
-	return s, err
 }

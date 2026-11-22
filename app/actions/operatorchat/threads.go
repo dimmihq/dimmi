@@ -87,11 +87,13 @@ type Threads struct {
 
 /*
 ListFilter narrows a teammate's threads: only those about the whole
-workspace, or only those about one conversation.
+workspace, or only those about one conversation; or names a routine
+whose shared threads to list instead.
 */
 type ListFilter struct {
 	WorkspaceOnly bool
 	Conversation  *ids.UUID
+	Routine       *ids.UUID
 }
 
 /*
@@ -111,14 +113,37 @@ func (a *Threads) List(ctx context.Context, m authz.Membership, filter ListFilte
 				return err
 			}
 		}
+		if filter.Routine != nil {
+			var err error
+			out, err = routineThreads(ctx, q, m, *filter.Routine)
+			return err
+		}
 		var err error
 		out, err = q.ListOperatorThreads(ctx, models.ListOperatorThreadsParams{
-			WorkspaceID: m.Workspace.ID, MemberID: m.Member.ID, WorkspaceOnly: filter.WorkspaceOnly,
+			WorkspaceID: m.Workspace.ID, MemberID: &m.Member.ID, WorkspaceOnly: filter.WorkspaceOnly,
 			ConversationID: filter.Conversation, RowLimit: threadsListed,
 		})
 		return err
 	})
 	return out, err
+}
+
+/*
+routineThreads lists a routine's shared threads, when the teammate may
+read what the routine reads.
+*/
+func routineThreads(ctx context.Context, q *models.Queries, m authz.Membership, id ids.UUID,
+) ([]models.OperatorThread, error) {
+	r, err := q.FindAnyOperatorRoutine(ctx, models.FindAnyOperatorRoutineParams{WorkspaceID: m.Workspace.ID, ID: id})
+	if errors.Is(err, database.ErrNotFound) || (err == nil && !operator.RoutineReadable(m, r)) {
+		return nil, exceptions.ErrNotFound
+	}
+	if err != nil {
+		return nil, fmt.Errorf("find routine: %w", err)
+	}
+	return q.ListOperatorRoutineThreads(ctx, models.ListOperatorRoutineThreadsParams{
+		WorkspaceID: m.Workspace.ID, RoutineID: &id, RowLimit: threadsListed,
+	})
 }
 
 /*
@@ -164,14 +189,14 @@ func (a *Threads) thread(ctx context.Context, q *models.Queries, m authz.Members
 	}
 	if in.conversation != nil && !in.fresh {
 		latest, err := q.FindConversationOperatorThread(ctx, models.FindConversationOperatorThreadParams{
-			WorkspaceID: m.Workspace.ID, MemberID: m.Member.ID, ConversationID: in.conversation,
+			WorkspaceID: m.Workspace.ID, MemberID: &m.Member.ID, ConversationID: in.conversation,
 		})
 		if err == nil || !errors.Is(err, database.ErrNotFound) {
 			return latest, wrapFind(err)
 		}
 	}
 	thread, err := q.CreateOperatorThread(ctx, models.CreateOperatorThreadParams{
-		WorkspaceID: m.Workspace.ID, MemberID: m.Member.ID, ConversationID: in.conversation, Now: a.Clock.Now(),
+		WorkspaceID: m.Workspace.ID, MemberID: &m.Member.ID, ConversationID: in.conversation, Now: a.Clock.Now(),
 	})
 	if err != nil {
 		return thread, fmt.Errorf("open operator thread: %w", err)
@@ -218,7 +243,7 @@ func (a *Threads) Delete(ctx context.Context, m authz.Membership, id ids.UUID) e
 	}
 	return a.DB.Transaction(ctx, func(ctx context.Context, tx *database.Tx) error {
 		n, err := models.New(tx).DeleteOperatorThread(ctx, models.DeleteOperatorThreadParams{
-			WorkspaceID: m.Workspace.ID, MemberID: m.Member.ID, ID: id,
+			WorkspaceID: m.Workspace.ID, MemberID: &m.Member.ID, ID: id,
 		})
 		if err != nil {
 			return fmt.Errorf("delete operator thread: %w", err)
@@ -312,18 +337,14 @@ func (a *Threads) throttle(ctx context.Context, m authz.Membership) error {
 }
 
 /*
-find returns one of the teammate's threads, refusing one about a
-conversation they can no longer see.
+find returns a thread the teammate may read: one of their own, or a
+routine's they may read, refusing one about a conversation they can no
+longer see.
 */
 func find(ctx context.Context, q *models.Queries, m authz.Membership, id ids.UUID) (models.OperatorThread, error) {
-	thread, err := q.FindOperatorThread(ctx, models.FindOperatorThreadParams{
-		WorkspaceID: m.Workspace.ID, MemberID: m.Member.ID, ID: id,
-	})
-	if errors.Is(err, database.ErrNotFound) {
-		return thread, exceptions.ErrNotFound
-	}
+	thread, err := operator.FindThread(ctx, q, m, id)
 	if err != nil {
-		return thread, fmt.Errorf("find operator thread: %w", err)
+		return thread, err
 	}
 	if thread.ConversationID != nil {
 		_, err = conversations.Find(ctx, q, m, conversations.Ref{ID: *thread.ConversationID})
@@ -346,20 +367,22 @@ func load(ctx context.Context, q *models.Queries, m authz.Membership, thread mod
 	}
 	slices.Reverse(messages)
 	out.Messages = messages
-	out.Changesets, err = q.ListOperatorChangesets(ctx, changesetParams(m, changesetFilter{thread: &thread.ID}))
+	out.Changesets, err = q.ListOperatorChangesets(ctx, operator.ChangesetParams(m, operator.ChangesetFilter{
+		Thread: &thread.ID, Limit: changesetsListed,
+	}))
 	if err != nil {
 		return out, fmt.Errorf("list operator changesets: %w", err)
 	}
 	if thread.ConversationID == nil {
 		return out, nil
 	}
-	filter := changesetFilter{conversation: thread.ConversationID}
-	about, err := q.ListOperatorChangesets(ctx, changesetParams(m, filter))
+	filter := operator.ChangesetFilter{Conversation: thread.ConversationID, Limit: changesetsListed}
+	about, err := q.ListOperatorChangesets(ctx, operator.ChangesetParams(m, filter))
 	if err != nil {
 		return out, fmt.Errorf("list operator changesets: %w", err)
 	}
 	for _, c := range about {
-		if c.MemberID == nil {
+		if c.MemberID == nil && c.RoutineID == nil {
 			out.Changesets = append(out.Changesets, c)
 		}
 	}

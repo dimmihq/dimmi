@@ -107,6 +107,7 @@ type Operation struct {
 	Value        *string         `json:"value,omitempty"`
 	Title        *string         `json:"title,omitempty"`
 	Body         *string         `json:"body,omitempty"`
+	Visibility   *string         `json:"visibility,omitempty"`
 	Definition   json.RawMessage `json:"definition,omitempty"`
 	Before       json.RawMessage `json:"before,omitempty"`
 	After        json.RawMessage `json:"after,omitempty"`

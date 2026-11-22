@@ -8917,6 +8917,183 @@
         ],
         "type": "object"
       },
+      "CollectionOperatorRoutine": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/OperatorRoutine"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "links": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/CollectionOperatorRoutineMetaStruct"
+          }
+        },
+        "required": [
+          "data",
+          "meta"
+        ],
+        "type": "object"
+      },
+      "CollectionOperatorRoutineMetaStruct": {
+        "additionalProperties": false,
+        "properties": {
+          "next_cursor": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "per_page": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "prev_cursor": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "total": {
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "next_cursor",
+          "prev_cursor",
+          "per_page"
+        ],
+        "type": "object"
+      },
+      "CollectionOperatorRoutineRun": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/OperatorRoutineRun"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "links": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/CollectionOperatorRoutineRunMetaStruct"
+          }
+        },
+        "required": [
+          "data",
+          "meta"
+        ],
+        "type": "object"
+      },
+      "CollectionOperatorRoutineRunMetaStruct": {
+        "additionalProperties": false,
+        "properties": {
+          "next_cursor": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "per_page": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "prev_cursor": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "total": {
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "next_cursor",
+          "prev_cursor",
+          "per_page"
+        ],
+        "type": "object"
+      },
+      "CollectionOperatorRoutineTemplate": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/OperatorRoutineTemplate"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "links": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/CollectionOperatorRoutineTemplateMetaStruct"
+          }
+        },
+        "required": [
+          "data",
+          "meta"
+        ],
+        "type": "object"
+      },
+      "CollectionOperatorRoutineTemplateMetaStruct": {
+        "additionalProperties": false,
+        "properties": {
+          "next_cursor": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "per_page": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "prev_cursor": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "total": {
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "next_cursor",
+          "prev_cursor",
+          "per_page"
+        ],
+        "type": "object"
+      },
       "CollectionOperatorThread": {
         "additionalProperties": false,
         "properties": {
@@ -20896,7 +21073,20 @@
               "null"
             ]
           },
+          "dedup_key": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
           "error": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "expires_at": {
+            "format": "date-time",
             "type": [
               "string",
               "null"
@@ -20923,6 +21113,9 @@
               "null"
             ]
           },
+          "preview": {
+            "type": "boolean"
+          },
           "proposed_to": {
             "type": [
               "string",
@@ -20934,6 +21127,18 @@
           },
           "reverted_at": {
             "format": "date-time",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "routine_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "routine_run_id": {
             "type": [
               "string",
               "null"
@@ -20968,7 +21173,12 @@
           "operations",
           "applied_at",
           "reverted_at",
-          "created_at"
+          "created_at",
+          "routine_id",
+          "routine_run_id",
+          "dedup_key",
+          "preview",
+          "expires_at"
         ],
         "type": "object"
       },
@@ -21063,6 +21273,589 @@
         ],
         "type": "object"
       },
+      "OperatorRoutine": {
+        "additionalProperties": false,
+        "properties": {
+          "cadence": {
+            "type": "string"
+          },
+          "consecutive_failures": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "created_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "created_by": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "cron_expression": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "delivery": {
+            "$ref": "#/components/schemas/OperatorRoutineDelivery"
+          },
+          "description": {
+            "type": "string"
+          },
+          "effort": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "id": {
+            "type": "string"
+          },
+          "inbox_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "last_outcome": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "last_run_at": {
+            "format": "date-time",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "last_success_at": {
+            "format": "date-time",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "max_consecutive_failures": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "max_model_calls": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "max_tool_calls": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "model": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "month_spend_micros": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "monthly_budget_micros": {
+            "format": "int64",
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "name": {
+            "type": "string"
+          },
+          "next_run_at": {
+            "format": "date-time",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "next_runs": {
+            "items": {
+              "format": "date-time",
+              "type": "string"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "notify_policy": {
+            "type": "string"
+          },
+          "object": {
+            "type": "string"
+          },
+          "owner_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "pause_reason": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "permissions": {
+            "items": {
+              "type": "string"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "prompt": {
+            "type": "string"
+          },
+          "run_at": {
+            "format": "date-time",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "scope": {
+            "$ref": "#/components/schemas/OperatorRoutineScope"
+          },
+          "state": {},
+          "status": {
+            "type": "string"
+          },
+          "template_key": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "timezone": {
+            "type": "string"
+          },
+          "tool_groups": {
+            "items": {
+              "type": "string"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "updated_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "write_policies": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object"
+          }
+        },
+        "required": [
+          "id",
+          "object",
+          "name",
+          "description",
+          "template_key",
+          "prompt",
+          "cadence",
+          "cron_expression",
+          "run_at",
+          "timezone",
+          "next_run_at",
+          "next_runs",
+          "created_by",
+          "owner_id",
+          "permissions",
+          "tool_groups",
+          "inbox_ids",
+          "write_policies",
+          "scope",
+          "model",
+          "effort",
+          "max_model_calls",
+          "max_tool_calls",
+          "monthly_budget_micros",
+          "month_spend_micros",
+          "notify_policy",
+          "delivery",
+          "state",
+          "status",
+          "pause_reason",
+          "consecutive_failures",
+          "max_consecutive_failures",
+          "last_run_at",
+          "last_success_at",
+          "last_outcome",
+          "created_at",
+          "updated_at"
+        ],
+        "type": "object"
+      },
+      "OperatorRoutineDelivery": {
+        "additionalProperties": false,
+        "properties": {
+          "email_member_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "in_app_member_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "slack_destination_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "in_app_member_ids",
+          "slack_destination_ids",
+          "email_member_ids"
+        ],
+        "type": "object"
+      },
+      "OperatorRoutineGitHubScope": {
+        "additionalProperties": false,
+        "properties": {
+          "base_branch": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "ignore_labels": {
+            "items": {
+              "type": "string"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "installation_id": {
+            "type": "string"
+          },
+          "repositories": {
+            "items": {
+              "type": "string"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "installation_id",
+          "repositories",
+          "base_branch",
+          "ignore_labels"
+        ],
+        "type": "object"
+      },
+      "OperatorRoutineGitHubScopeInput": {
+        "additionalProperties": false,
+        "properties": {
+          "base_branch": {
+            "type": "string"
+          },
+          "ignore_labels": {
+            "items": {
+              "type": "string"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "installation_id": {
+            "type": "string"
+          },
+          "repositories": {
+            "items": {
+              "type": "string"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "installation_id",
+          "repositories"
+        ],
+        "type": "object"
+      },
+      "OperatorRoutineRun": {
+        "additionalProperties": false,
+        "properties": {
+          "ai_run_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "changesets_count": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "completed_at": {
+            "format": "date-time",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "cost_micros": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "created_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "delivery_results": {},
+          "error_code": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "error_message": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "id": {
+            "type": "string"
+          },
+          "noop_reason": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "notified": {
+            "type": "boolean"
+          },
+          "object": {
+            "type": "string"
+          },
+          "outcome": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "routine_id": {
+            "type": "string"
+          },
+          "scheduled_for": {
+            "format": "date-time",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "skip_reason": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "started_at": {
+            "format": "date-time",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "status": {
+            "type": "string"
+          },
+          "thread_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "trigger": {
+            "type": "string"
+          },
+          "triggered_by": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "object",
+          "routine_id",
+          "trigger",
+          "triggered_by",
+          "scheduled_for",
+          "thread_id",
+          "ai_run_id",
+          "status",
+          "outcome",
+          "noop_reason",
+          "skip_reason",
+          "error_code",
+          "error_message",
+          "changesets_count",
+          "cost_micros",
+          "notified",
+          "delivery_results",
+          "started_at",
+          "completed_at",
+          "created_at"
+        ],
+        "type": "object"
+      },
+      "OperatorRoutineScope": {
+        "additionalProperties": false,
+        "properties": {
+          "github": {
+            "$ref": "#/components/schemas/OperatorRoutineGitHubScope"
+          },
+          "help_center_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "help_center_ids",
+          "github"
+        ],
+        "type": "object"
+      },
+      "OperatorRoutineScopeInput": {
+        "additionalProperties": false,
+        "properties": {
+          "github": {
+            "$ref": "#/components/schemas/OperatorRoutineGitHubScopeInput"
+          },
+          "help_center_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          }
+        },
+        "type": "object"
+      },
+      "OperatorRoutineTemplate": {
+        "additionalProperties": false,
+        "properties": {
+          "cadence": {
+            "type": "string"
+          },
+          "cron_expression": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "key": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "notify_policy": {
+            "type": "string"
+          },
+          "object": {
+            "type": "string"
+          },
+          "permissions": {
+            "items": {
+              "type": "string"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "prompt": {
+            "type": "string"
+          },
+          "requires": {
+            "items": {
+              "type": "string"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "tool_groups": {
+            "items": {
+              "type": "string"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "key",
+          "object",
+          "name",
+          "description",
+          "prompt",
+          "cadence",
+          "cron_expression",
+          "tool_groups",
+          "permissions",
+          "notify_policy",
+          "requires"
+        ],
+        "type": "object"
+      },
       "OperatorSettings": {
         "additionalProperties": false,
         "properties": {
@@ -21099,9 +21892,6 @@
             },
             "type": "object"
           },
-          "procedure_qa_weekly": {
-            "type": "boolean"
-          },
           "triage_on_arrival": {
             "type": "boolean"
           }
@@ -21114,8 +21904,7 @@
           "instructions",
           "policies",
           "auto_groups",
-          "model",
-          "procedure_qa_weekly"
+          "model"
         ],
         "type": "object"
       },
@@ -21145,6 +21934,18 @@
           "object": {
             "type": "string"
           },
+          "routine_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "routine_run_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
           "title": {
             "type": "string"
           }
@@ -21155,7 +21956,9 @@
           "conversation_id",
           "title",
           "last_message_at",
-          "created_at"
+          "created_at",
+          "routine_id",
+          "routine_run_id"
         ],
         "type": "object"
       },
@@ -21203,6 +22006,18 @@
           "object": {
             "type": "string"
           },
+          "routine_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "routine_run_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
           "title": {
             "type": "string"
           }
@@ -21215,7 +22030,9 @@
           "conversation_id",
           "title",
           "last_message_at",
-          "created_at"
+          "created_at",
+          "routine_id",
+          "routine_run_id"
         ],
         "type": "object"
       },
@@ -21247,6 +22064,15 @@
           "by_purpose": {
             "items": {
               "$ref": "#/components/schemas/OperatorUsagePurpose"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "by_routine": {
+            "items": {
+              "$ref": "#/components/schemas/OperatorUsageRoutine"
             },
             "type": [
               "array",
@@ -21325,7 +22151,8 @@
           "by_member",
           "by_model",
           "changesets",
-          "recent"
+          "recent",
+          "by_routine"
         ],
         "type": "object"
       },
@@ -21394,6 +22221,32 @@
         ],
         "type": "object"
       },
+      "OperatorUsageRoutine": {
+        "additionalProperties": false,
+        "properties": {
+          "cost_micros": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "name": {
+            "type": "string"
+          },
+          "routine_id": {
+            "type": "string"
+          },
+          "runs_count": {
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "routine_id",
+          "name",
+          "runs_count",
+          "cost_micros"
+        ],
+        "type": "object"
+      },
       "OperatorUsageRun": {
         "additionalProperties": false,
         "properties": {
@@ -21437,6 +22290,12 @@
           "status": {
             "type": "string"
           },
+          "thread_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
           "thread_title": {
             "type": "string"
           }
@@ -21451,7 +22310,8 @@
           "conversation_number",
           "cost_micros",
           "latency_ms",
-          "created_at"
+          "created_at",
+          "thread_id"
         ],
         "type": "object"
       },
@@ -25050,6 +25910,30 @@
         "properties": {
           "data": {
             "$ref": "#/components/schemas/OperatorChangeset"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "ResourceOperatorRoutine": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/OperatorRoutine"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "ResourceOperatorRoutineRun": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/OperatorRoutineRun"
           }
         },
         "required": [
@@ -30047,6 +30931,108 @@
         ],
         "type": "object"
       },
+      "StoreOperatorRoutineRequestBody": {
+        "additionalProperties": false,
+        "properties": {
+          "cadence": {
+            "type": "string"
+          },
+          "cron_expression": {
+            "type": "string"
+          },
+          "delivery": {},
+          "description": {
+            "type": "string"
+          },
+          "effort": {
+            "type": "string"
+          },
+          "inbox_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "max_model_calls": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "max_tool_calls": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "model": {
+            "type": "string"
+          },
+          "monthly_budget_micros": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "name": {
+            "type": "string"
+          },
+          "notify_policy": {
+            "type": "string"
+          },
+          "owner_id": {
+            "type": "string"
+          },
+          "permissions": {
+            "items": {
+              "type": "string"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "prompt": {
+            "type": "string"
+          },
+          "run_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "scope": {
+            "$ref": "#/components/schemas/OperatorRoutineScopeInput"
+          },
+          "template_key": {
+            "maxLength": 64,
+            "type": "string"
+          },
+          "timezone": {
+            "type": "string"
+          },
+          "tool_groups": {
+            "items": {
+              "type": "string"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "write_policies": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object"
+          }
+        },
+        "type": "object"
+      },
+      "StoreOperatorRoutineRunRequestBody": {
+        "additionalProperties": false,
+        "properties": {
+          "dry_run": {
+            "type": "boolean"
+          }
+        },
+        "type": "object"
+      },
       "StoreOperatorThreadRequestBody": {
         "additionalProperties": false,
         "properties": {
@@ -34598,6 +35584,105 @@
         ],
         "type": "object"
       },
+      "UpdateOperatorRoutineRequestBody": {
+        "additionalProperties": false,
+        "properties": {
+          "cadence": {
+            "type": "string"
+          },
+          "clear_budget": {
+            "type": "boolean"
+          },
+          "cron_expression": {
+            "type": "string"
+          },
+          "delivery": {},
+          "description": {
+            "type": "string"
+          },
+          "effort": {
+            "type": "string"
+          },
+          "inbox_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "max_model_calls": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "max_tool_calls": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "model": {
+            "type": "string"
+          },
+          "monthly_budget_micros": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "name": {
+            "type": "string"
+          },
+          "notify_policy": {
+            "type": "string"
+          },
+          "owner_id": {
+            "type": "string"
+          },
+          "permissions": {
+            "items": {
+              "type": "string"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "prompt": {
+            "type": "string"
+          },
+          "reset_state": {
+            "type": "boolean"
+          },
+          "run_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "scope": {
+            "$ref": "#/components/schemas/OperatorRoutineScopeInput"
+          },
+          "status": {
+            "maxLength": 20,
+            "type": "string"
+          },
+          "timezone": {
+            "type": "string"
+          },
+          "tool_groups": {
+            "items": {
+              "type": "string"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "write_policies": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object"
+          }
+        },
+        "type": "object"
+      },
       "UpdateOperatorSettingsRequestBody": {
         "additionalProperties": false,
         "properties": {
@@ -34620,9 +35705,6 @@
               "type": "string"
             },
             "type": "object"
-          },
-          "procedure_qa_weekly": {
-            "type": "boolean"
           },
           "triage_on_arrival": {
             "type": "boolean"
@@ -55213,6 +56295,14 @@
             }
           },
           {
+            "description": "Only changes this routine suggested (ort_...).",
+            "in": "query",
+            "name": "filter[routine]",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
             "description": "Only changes in this state.",
             "in": "query",
             "name": "filter[status]",
@@ -55444,6 +56534,383 @@
         "x-internal": true
       }
     },
+    "/operator/routine-templates": {
+      "get": {
+        "operationId": "operator.routine_templates.index",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CollectionOperatorRoutineTemplate"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseError"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "x-abilities": [
+          "ai:read"
+        ],
+        "x-internal": true
+      }
+    },
+    "/operator/routines": {
+      "get": {
+        "operationId": "operator.routines.index",
+        "parameters": [
+          {
+            "description": "Only routines in this state.",
+            "in": "query",
+            "name": "filter[status]",
+            "schema": {
+              "enum": [
+                "active",
+                "paused",
+                "completed"
+              ],
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CollectionOperatorRoutine"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseError"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "x-abilities": [
+          "ai:read"
+        ],
+        "x-internal": true
+      },
+      "post": {
+        "operationId": "operator.routines.store",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StoreOperatorRoutineRequestBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResourceOperatorRoutine"
+                }
+              }
+            },
+            "description": "Created"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseError"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "x-abilities": [
+          "ai:write"
+        ],
+        "x-internal": true
+      }
+    },
+    "/operator/routines/{routine}": {
+      "delete": {
+        "operationId": "operator.routines.destroy",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "routine",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseError"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "x-abilities": [
+          "ai:write"
+        ],
+        "x-internal": true
+      },
+      "get": {
+        "operationId": "operator.routines.show",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "routine",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResourceOperatorRoutine"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseError"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "x-abilities": [
+          "ai:read"
+        ],
+        "x-internal": true
+      },
+      "patch": {
+        "operationId": "operator.routines.update",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "routine",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateOperatorRoutineRequestBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResourceOperatorRoutine"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseError"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "x-abilities": [
+          "ai:write"
+        ],
+        "x-internal": true
+      }
+    },
+    "/operator/routines/{routine}/runs": {
+      "get": {
+        "operationId": "operator.routines.runs.index",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "routine",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CollectionOperatorRoutineRun"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseError"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "x-abilities": [
+          "ai:read"
+        ],
+        "x-internal": true
+      },
+      "post": {
+        "operationId": "operator.routines.runs.store",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "routine",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StoreOperatorRoutineRunRequestBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResourceOperatorRoutineRun"
+                }
+              }
+            },
+            "description": "Accepted"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseError"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "x-abilities": [
+          "ai:write"
+        ],
+        "x-internal": true
+      }
+    },
+    "/operator/routines/{routine}/runs/{run}": {
+      "get": {
+        "operationId": "operator.routines.runs.show",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "routine",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "run",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResourceOperatorRoutineRun"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseError"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "x-abilities": [
+          "ai:read"
+        ],
+        "x-internal": true
+      }
+    },
     "/operator/settings": {
       "get": {
         "operationId": "operator.settings.show",
@@ -55533,6 +57000,14 @@
             "description": "Only threads about this conversation (conv_...).",
             "in": "query",
             "name": "filter[conversation]",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "The shared threads of this routine's runs (ort_...).",
+            "in": "query",
+            "name": "filter[routine]",
             "schema": {
               "type": "string"
             }

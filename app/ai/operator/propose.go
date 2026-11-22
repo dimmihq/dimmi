@@ -43,6 +43,9 @@ proposeSchema is the schema of a proposal.
 const proposeSchema = `{"type":"object","required":["title","reason","operations"],"properties":{
 "title":{"type":"string","maxLength":200,"description":"What the changeset does, like 'Route to Billing'."},
 "reason":{"type":"string","maxLength":2000},
+"dedup_key":{"type":"string","maxLength":200,"description":"A stable key for what this suggests, like ` +
+	`'gap:sso-setup' or 'gh-pr:acme/app#412:art_...'. A suggestion with the same key that still waits, or ` +
+	`was declined in the last 30 days, is not made again."},
 "operations":{"type":"array","minItems":1,"maxItems":50,"items":{"type":"object","required":["kind"],
 "properties":{
 "kind":{"type":"string","enum":["conversation.tag","conversation.untag","conversation.assign",
@@ -59,6 +62,9 @@ const proposeSchema = `{"type":"object","required":["title","reason","operations
 "contact":{"type":"string","description":"Customer id (ctc_...); leave out for this conversation's."},
 "name":{"type":"string","description":"The customer's new name."},
 "help_center":{"type":"string","description":"Help center id (hc_...); leave out for the default."},
+"collection":{"type":"string","description":"For article.create_draft: collection id (col_...)."},
+"visibility":{"type":"string","enum":["public","agent_only"],"description":"For article.create_draft: ` +
+	`public for customers, or agent_only for a snippet only the AI agent reads. Public by default."},
 "article":{"type":"string","description":"Article id (art_...)."},
 "procedure":{"type":"string","description":"Procedure id (prc_...)."},
 "definition":{"type":"object","description":"The procedure's whole new working copy, as get_procedure shows it."},
@@ -75,6 +81,7 @@ proposal is a proposal as the model sent it.
 type proposal struct {
 	Title      string    `json:"title"`
 	Reason     string    `json:"reason"`
+	DedupKey   string    `json:"dedup_key"`
 	Operations []opInput `json:"operations"`
 }
 
@@ -94,6 +101,8 @@ type opInput struct {
 	Contact      string          `json:"contact"`
 	Name         string          `json:"name"`
 	HelpCenter   string          `json:"help_center"`
+	Collection   string          `json:"collection"`
+	Visibility   string          `json:"visibility"`
 	Article      string          `json:"article"`
 	Procedure    string          `json:"procedure"`
 	Definition   json.RawMessage `json:"definition"`

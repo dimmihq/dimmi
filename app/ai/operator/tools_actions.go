@@ -54,9 +54,14 @@ func (e *Engine) offerActions(ctx context.Context, s *session) {
 			identity = actionkit.Identity{Verified: true, Contact: &c}
 		}
 	}
-	offered, err := e.Services.Actions.Offer(ctx, actionkit.OfferInput{
-		WorkspaceID: s.m.Workspace.ID, Identity: identity, Agent: actionkit.AgentOperator,
-	})
+	in := actionkit.OfferInput{WorkspaceID: s.m.Workspace.ID, Identity: identity, Agent: actionkit.AgentOperator}
+	if s.routine != nil {
+		if !s.routine.hasGroup(groupActions) {
+			return
+		}
+		in.NoWrites = s.settings.PolicyFor(GroupActions) == PolicyOff
+	}
+	offered, err := e.Services.Actions.Offer(ctx, in)
 	if err == nil {
 		s.actions, s.identity = offered, identity
 	}

@@ -31,7 +31,6 @@ import (
 	"github.com/dimmihq/dimmi/app/ai/pipeline"
 	"github.com/dimmihq/dimmi/app/auth/authz"
 	"github.com/dimmihq/dimmi/app/contracts"
-	"github.com/dimmihq/dimmi/app/exceptions"
 	"github.com/dimmihq/dimmi/app/models"
 )
 
@@ -51,7 +50,8 @@ model it runs with, what the thread said before, and what the run has
 done so far. Tainted turns true once the run read text a customer
 wrote; from then on no change it proposes applies on its own.
 Background marks a run Operator started on its own, with no thread and
-no teammate waiting.
+no teammate waiting. Routine is set on a run of a routine, which runs
+as a narrowed copy of the routine's owner on a thread of its own.
 */
 type session struct {
 	m            authz.Membership
@@ -77,6 +77,7 @@ type session struct {
 	failure      error
 	toolCalls    int
 	layer        *layerState
+	routine      *routineRun
 }
 
 /*
@@ -123,14 +124,9 @@ needs, refusing when Operator may not answer.
 */
 func (e *Engine) load(ctx context.Context, q *models.Queries, s *session, in Question) error {
 	ws := s.m.Workspace.ID
-	thread, err := q.FindOperatorThread(ctx, models.FindOperatorThreadParams{
-		WorkspaceID: ws, MemberID: s.m.Member.ID, ID: in.ThreadID,
-	})
-	if errors.Is(err, database.ErrNotFound) {
-		return exceptions.ErrNotFound
-	}
+	thread, err := FindThread(ctx, q, s.m, in.ThreadID)
 	if err != nil {
-		return fmt.Errorf("find operator thread: %w", err)
+		return err
 	}
 	s.thread = thread
 	if err := e.loadConversation(ctx, q, s); err != nil {

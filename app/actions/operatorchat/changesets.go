@@ -4,8 +4,9 @@
 |--------------------------------------------------------------------------
 |
 | The changes Operator proposed, for the teammate to apply, decline or
-| undo. A teammate sees their own and those Operator proposed on its own
-| about conversations they can see; applying needs the right to change
+| undo. A teammate sees their own, those Operator proposed on its own
+| about conversations they can see, and those a routine left when they
+| may read what the routine reads; applying needs the right to change
 | conversations, and every operation inside still checks its own
 | permission as it runs.
 |
@@ -32,11 +33,12 @@ changesetsListed is the most changesets one list shows.
 const changesetsListed = 100
 
 /*
-ChangesetFilter narrows a list of changesets to one conversation or one
-status.
+ChangesetFilter narrows a list of changesets to one conversation, one
+routine or one status.
 */
 type ChangesetFilter struct {
 	Conversation *ids.UUID
+	Routine      *ids.UUID
 	Status       *string
 }
 
@@ -69,8 +71,8 @@ func (a *Changesets) List(ctx context.Context, m authz.Membership, f ChangesetFi
 	var out []models.OperatorChangeset
 	err := a.DB.Transaction(ctx, func(ctx context.Context, tx *database.Tx) error {
 		var err error
-		out, err = models.New(tx).ListOperatorChangesets(ctx, changesetParams(m, changesetFilter{
-			conversation: f.Conversation, status: f.Status,
+		out, err = models.New(tx).ListOperatorChangesets(ctx, operator.ChangesetParams(m, operator.ChangesetFilter{
+			Conversation: f.Conversation, Routine: f.Routine, Status: f.Status, Limit: changesetsListed,
 		}))
 		if err != nil {
 			return fmt.Errorf("list operator changesets: %w", err)
@@ -108,24 +110,4 @@ func (a *Changesets) Revert(ctx context.Context, m authz.Membership, id ids.UUID
 		return models.OperatorChangeset{}, err
 	}
 	return a.Operator.Revert(ctx, m, id)
-}
-
-/*
-changesetFilter narrows the changeset query.
-*/
-type changesetFilter struct {
-	conversation, thread *ids.UUID
-	status               *string
-}
-
-/*
-changesetParams scopes the changeset query to what the teammate sees.
-*/
-func changesetParams(m authz.Membership, f changesetFilter) models.ListOperatorChangesetsParams {
-	scope := m.ConversationScope().Params()
-	return models.ListOperatorChangesetsParams{
-		WorkspaceID: m.Workspace.ID, MemberID: &m.Member.ID, ConversationID: f.conversation, ThreadID: f.thread,
-		Status: f.status, AccessMode: scope.Mode, AccessViewer: scope.Viewer, AccessTeams: scope.Teams,
-		AccessUnassigned: scope.Unassigned, AccessHiddenInboxes: scope.HiddenInboxes, RowLimit: changesetsListed,
-	}
 }

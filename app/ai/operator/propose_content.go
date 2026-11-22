@@ -119,7 +119,22 @@ func (r resolver) newArticleOp(ctx context.Context, op Operation, in opInput) (O
 			return op, err
 		}
 	}
+	if in.Collection != "" {
+		collection, err := r.e.publicID(in.Collection, models.PrefixCollection)
+		if err != nil {
+			return op, err
+		}
+		op.Collection = &collection
+	}
 	op.HelpCenter, op.Label = &center, fmt.Sprintf("Draft a new article “%s”", *op.Title)
+	switch in.Visibility {
+	case "", "public":
+	case "agent_only":
+		op.Visibility = &in.Visibility
+		op.Label = fmt.Sprintf("Draft a new snippet for the AI agent “%s”", *op.Title)
+	default:
+		return op, fmt.Errorf("%w: visibility is public or agent_only", errBadArguments)
+	}
 	return op, nil
 }
 

@@ -106,6 +106,9 @@ offer directly.
 */
 func (e *Engine) fixedFor(s *session, registry map[string]tool) []string {
 	fixed := fixedTools()
+	if s.routine != nil {
+		fixed = append(fixed, routineToolNames()...)
+	}
 	var names []string
 	var specs []contracts.ToolSpec
 	for name, t := range registry {
@@ -170,7 +173,7 @@ func (e *Engine) openLayer(ctx context.Context, s *session) {
 	}
 	groups := ownGroups()
 	ls := &layerState{catalog: map[string]bool{}, fixed: fixed}
-	if e.Catalog != nil {
+	if e.Catalog != nil && s.routine == nil {
 		seen := map[string]bool{}
 		for _, c := range e.Catalog.Tools() {
 			entries = append(entries, toolset.Entry{Spec: c.Spec, Group: c.Group, Reads: true})

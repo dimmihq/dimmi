@@ -7,7 +7,7 @@
 | and spends from the agent's budget, reads and changes the workspace
 | through the inbox, help center and procedure actions, and, when a
 | workspace asks for it, looks at every conversation a customer starts a
-| little after it arrives.
+| little after it arrives, and runs the routines admins put it on.
 |
 */
 
@@ -49,14 +49,17 @@ func bootOperatorAgent(a *app.App) error {
 		Changesets: &operatorchat.Changesets{DB: a.DB, Operator: engine},
 		Memories:   &operatorchat.Memories{DB: a.DB},
 		Usage:      &operatorchat.Usage{DB: a.DB, Clock: a.Clock},
+		Routines: &operatorchat.Routines{
+			DB: a.DB, Clock: a.Clock, Audit: a.Actions.RecordAuditLog, Push: aijobs.PushRoutineRun(a.Queue),
+		},
 	}
 	events.Listen(a.Events, events.AfterCommit, func(ctx context.Context, e appevents.ConversationCreated) error {
 		return enqueueTriage(ctx, a, e)
 	})
 	return errors.Join(
 		queue.Register(a.Queue, &aijobs.TriageWithOperator{Operator: engine}),
-		queue.Register(a.Queue, &aijobs.ReviewProcedures{Operator: engine}),
-		queue.Register(a.Queue, &aijobs.ReviewProceduresWeekly{DB: a.DB, Queue: a.Queue}),
+		queue.Register(a.Queue, &aijobs.QueueOperatorRoutines{Operator: engine, Queue: a.Queue}),
+		queue.Register(a.Queue, &aijobs.RunOperatorRoutine{Operator: engine}),
 	)
 }
 
@@ -76,6 +79,7 @@ func newOperatorEngine(a *app.App) *operator.Engine {
 			Note: inbox.AddNote, Delete: inbox.DeleteMessage, Contacts: inbox.UpdateContact,
 			Articles: a.Actions.Articles, Procedures: a.Actions.Procedures, Audit: a.Actions.RecordAuditLog,
 			Actions: a.AI.Actions,
+			GitHub:  &operator.GitHubAPI{HTTP: a.HTTP, Tokens: a.Actions.Integrations.Tokens},
 		},
 	}
 }

@@ -65,7 +65,8 @@ func (e *Engine) converse(ctx context.Context, s *session) (string, string) {
 	var written strings.Builder
 	for calls := 1; ; calls++ {
 		var tools []contracts.ToolSpec
-		if calls < maxModelCalls && s.toolCalls < maxToolCalls {
+		modelCalls, toolCalls := s.limits()
+		if calls < modelCalls && s.toolCalls < toolCalls {
 			tools = e.toolSpecs(s)
 		}
 		out, err := e.generate(ctx, s, p, tools)

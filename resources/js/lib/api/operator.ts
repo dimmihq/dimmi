@@ -18,7 +18,6 @@ export interface OperatorSettings {
   enabled: boolean;
   brief_on_open: boolean;
   triage_on_arrival: boolean;
-  procedure_qa_weekly: boolean;
   instructions: string;
   policies: Record<OperatorGroup, OperatorPolicy>;
   auto_groups: OperatorGroup[];
@@ -29,7 +28,6 @@ export interface OperatorSettingsChange {
   enabled?: boolean;
   brief_on_open?: boolean;
   triage_on_arrival?: boolean;
-  procedure_qa_weekly?: boolean;
   instructions?: string;
   policies?: Partial<Record<OperatorGroup, OperatorPolicy>>;
   model?: string;

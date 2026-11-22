@@ -124,11 +124,11 @@ func scheduleNotifications(a *app.App) {
 /*
 scheduleKnowledge declares the knowledge and help center jobs: the
 vector sweep, the source syncs that are due, the custom domain checks
-that are due, and the prune of old view and search counts; and
-Operator's weekly review of the procedures, on Monday mornings.
+that are due, and the prune of old view and search counts; and the
+Operator routines that came due, every minute.
 */
 func scheduleKnowledge(a *app.App) {
-	a.Schedule.Job(aijobs.ReviewProceduresWeeklyArgs{}).Cron("0 6 * * 1")
+	a.Schedule.Job(aijobs.QueueOperatorRoutinesArgs{}).EveryMinute()
 	a.Schedule.Job(jobs.SweepKnowledgeEmbeddingsArgs{}).DailyAt("04:10")
 	a.Schedule.Job(jobs.ScheduleKnowledgeSyncsArgs{}).Cron("*/5 * * * *")
 	a.Schedule.Job(jobs.ScheduleHelpCenterDomainChecksArgs{}).EveryMinute()

@@ -66,6 +66,7 @@ type Services struct {
 	Procedures *procedures.Procedures
 	Audit      *audit.RecordAuditLog
 	Actions    *actionkit.Kit
+	GitHub     GitHub
 }
 
 /*

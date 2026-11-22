@@ -77,10 +77,11 @@ LIMIT @row_limit;
 -- CreateOperatorChangeset stores the changes Operator wants to make.
 INSERT INTO operator_changesets (
     workspace_id, thread_id, message_id, member_id, conversation_id, title, reason, operations, status, auto,
-    created_at, updated_at
+    routine_id, routine_run_id, dedup_key, preview, expires_at, created_at, updated_at
 ) VALUES (
     @workspace_id, sqlc.narg('thread_id'), sqlc.narg('message_id'), sqlc.narg('member_id'),
-    sqlc.narg('conversation_id'), @title, @reason, @operations, 'pending', @auto, @now, @now
+    sqlc.narg('conversation_id'), @title, @reason, @operations, 'pending', @auto, sqlc.narg('routine_id'),
+    sqlc.narg('routine_run_id'), sqlc.narg('dedup_key'), @preview, sqlc.narg('expires_at'), @now, @now
 )
 RETURNING *;
 
@@ -101,16 +102,28 @@ WHERE workspace_id = @workspace_id AND id = ANY (@ids::uuid[]);
 
 -- name: ListOperatorChangesets :many
 -- ListOperatorChangesets returns the changesets a member may review,
--- newest first: their own, and those Operator proposed on its own about
--- conversations they can see, of one conversation, thread or status
--- when asked.
+-- newest first: their own, those Operator proposed on its own about
+-- conversations they can see, and those a routine left when the member
+-- reads what the routine reads; of one conversation, thread, routine or
+-- status, or since a moment, when asked. A routine reads every inbox
+-- when it names none, so only members who see every conversation read
+-- its suggestions; one that names inboxes is read by members who see all
+-- of them.
 SELECT s.* FROM operator_changesets s
 LEFT JOIN conversations c ON c.id = s.conversation_id
+LEFT JOIN operator_routines r ON r.id = s.routine_id
 WHERE s.workspace_id = @workspace_id
-  AND (s.member_id = @member_id OR (s.member_id IS NULL AND s.conversation_id IS NOT NULL))
+  AND (s.member_id = @member_id
+    OR (s.member_id IS NULL AND s.routine_id IS NULL AND s.conversation_id IS NOT NULL)
+    OR (s.member_id IS NULL AND s.routine_id IS NOT NULL AND @reads_routines::boolean
+      AND (@sees_everything::boolean OR (@sees_all_modes::boolean AND cardinality(r.inbox_ids) > 0
+        AND NOT (r.inbox_ids && @access_hidden_inboxes::uuid[])))))
   AND (sqlc.narg('conversation_id')::uuid IS NULL OR s.conversation_id = sqlc.narg('conversation_id')::uuid)
   AND (sqlc.narg('thread_id')::uuid IS NULL OR s.thread_id = sqlc.narg('thread_id')::uuid)
+  AND (sqlc.narg('routine_id')::uuid IS NULL OR s.routine_id = sqlc.narg('routine_id')::uuid)
   AND (sqlc.narg('status')::text IS NULL OR s.status = sqlc.narg('status')::text)
+  AND (sqlc.narg('since')::timestamptz IS NULL OR s.created_at >= sqlc.narg('since')::timestamptz)
+  AND (NOT @without_previews::boolean OR NOT s.preview)
   AND (s.conversation_id IS NULL OR (c.deleted_at IS NULL AND dimmi_conversation_visible(
       c.assignee_member_id, c.assignee_team_id, c.inbox_id, @access_mode::text,
       sqlc.narg(access_viewer)::uuid, @access_teams::uuid[], @access_unassigned::boolean,
@@ -159,11 +172,3 @@ ON CONFLICT (workspace_id) DO UPDATE SET tool_layer = EXCLUDED.tool_layer, updat
 INSERT INTO operator_settings (workspace_id, compact_results, created_at, updated_at)
 VALUES (@workspace_id, @compact_results, @now, @now)
 ON CONFLICT (workspace_id) DO UPDATE SET compact_results = EXCLUDED.compact_results, updated_at = EXCLUDED.updated_at;
-
--- name: SetOperatorProcedureQA :exec
--- SetOperatorProcedureQA turns Operator's weekly review of the
--- procedures on or off.
-INSERT INTO operator_settings (workspace_id, procedure_qa_weekly, created_at, updated_at)
-VALUES (@workspace_id, @procedure_qa_weekly, @now, @now)
-ON CONFLICT (workspace_id) DO UPDATE SET procedure_qa_weekly = EXCLUDED.procedure_qa_weekly,
-    updated_at = EXCLUDED.updated_at;

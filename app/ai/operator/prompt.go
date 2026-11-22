@@ -55,8 +55,13 @@ func (e *Engine) systemPrompt(s *session) string {
 	var b strings.Builder
 	b.WriteString(rules)
 	today := e.Clock.Now().UTC().Format("Monday 2 January 2006")
-	fmt.Fprintf(&b, "\n\nWorkspace: %s. You are talking with %s, %s. Today is %s (UTC).",
-		s.m.Workspace.Name, cmp.Or(s.askerName, "a teammate"), s.m.Member.Role, today)
+	if s.routine != nil {
+		fmt.Fprintf(&b, "\n\nWorkspace: %s. Today is %s (UTC).\n\n%s", s.m.Workspace.Name, today,
+			strings.ReplaceAll(routineRules, "{{name}}", s.routine.row.Name))
+	} else {
+		fmt.Fprintf(&b, "\n\nWorkspace: %s. You are talking with %s, %s. Today is %s (UTC).",
+			s.m.Workspace.Name, cmp.Or(s.askerName, "a teammate"), s.m.Member.Role, today)
+	}
 	if s.conversation != nil {
 		fmt.Fprintf(&b, "\n\nThis thread is about conversation #%d. Read it with get_conversation before "+
 			"answering about it.", s.conversation.Number)

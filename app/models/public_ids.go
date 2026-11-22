@@ -272,6 +272,8 @@ func assistantPublicIDs() []PublicIDEntry {
 		{PrefixOperatorMessage, "operator_messages"},
 		{PrefixOperatorChangeset, "operator_changesets"},
 		{PrefixOperatorMemory, "operator_memories"},
+		{PrefixOperatorRoutine, "operator_routines"},
+		{PrefixOperatorRoutineRun, "operator_routine_runs"},
 	}
 }
 
@@ -291,6 +293,8 @@ const (
 	PrefixOperatorMessage    Prefix = "opm"
 	PrefixOperatorChangeset  Prefix = "opc"
 	PrefixOperatorMemory     Prefix = "opy"
+	PrefixOperatorRoutine    Prefix = "ort"
+	PrefixOperatorRoutineRun Prefix = "orr"
 )
 
 /*

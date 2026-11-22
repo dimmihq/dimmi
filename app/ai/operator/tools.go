@@ -54,12 +54,16 @@ type handler func(ctx context.Context, s *session, args json.RawMessage) (result
 
 /*
 tool is one tool: its spec, the operation kinds it may write, and its
-handler.
+handler. Routine marks a tool only a routine's run is offered; group
+names the routine tool group it belongs to when that is not the group
+the layer files it under.
 */
 type tool struct {
-	spec   contracts.ToolSpec
-	writes []Kind
-	handle handler
+	spec    contracts.ToolSpec
+	writes  []Kind
+	handle  handler
+	routine bool
+	group   string
 }
 
 /*
@@ -67,7 +71,7 @@ registry returns every tool by name.
 */
 func (e *Engine) registry(s *session) map[string]tool {
 	all := slices.Concat(e.conversationTools(), e.knowledgeTools(), e.insightTools(), e.procedureTools(),
-		e.writeTools(), e.actionTools(s))
+		e.writeTools(), e.actionTools(s), e.routineTools(), e.githubTools())
 	out := make(map[string]tool, len(all))
 	for _, t := range all {
 		out[t.spec.Name] = t
@@ -99,9 +103,17 @@ func (e *Engine) toolSpecs(s *session) []contracts.ToolSpec {
 
 /*
 offers reports whether a tool is offered under the settings: reading
-tools always, writing tools while any group they write is on.
+tools always, writing tools while any group they write is on. A routine
+is offered only the groups it was given, never drafts or memories, and
+the routine tools only to a routine.
 */
 func (e *Engine) offers(s *session, t tool) bool {
+	if s.routine == nil && t.routine {
+		return false
+	}
+	if s.routine != nil && !s.routine.allows(e, t) {
+		return false
+	}
 	if len(t.writes) == 0 {
 		return true
 	}

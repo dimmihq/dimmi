@@ -38,10 +38,12 @@ type OperatorUsage struct {
 	ByModel               []AiUsageModel            `json:"by_model"`
 	Changesets            []OperatorUsageChangesets `json:"changesets"`
 	Recent                []OperatorUsageRun        `json:"recent"`
+	ByRoutine             []OperatorUsageRoutine    `json:"by_routine"`
 }
 
 /*
-OperatorUsagePurpose is the runs for one reason: ask, brief or triage.
+OperatorUsagePurpose is the runs for one reason: ask, brief, triage or
+routine.
 */
 type OperatorUsagePurpose struct {
 	Purpose    string `json:"purpose"`
@@ -82,6 +84,7 @@ type OperatorUsageRun struct {
 	CostMicros         int64     `json:"cost_micros"`
 	LatencyMs          *int32    `json:"latency_ms"`
 	CreatedAt          time.Time `json:"created_at"`
+	ThreadID           *string   `json:"thread_id"`
 }
 
 /*
@@ -97,6 +100,13 @@ func NewOperatorUsage(v operatorchat.UsageView) OperatorUsage {
 		ByMember: make([]OperatorUsageMember, len(v.ByMember)), ByModel: make([]AiUsageModel, len(v.ByModel)),
 		Changesets: make([]OperatorUsageChangesets, len(v.Changesets)),
 		Recent:     make([]OperatorUsageRun, len(v.Recent)),
+		ByRoutine:  make([]OperatorUsageRoutine, len(v.ByRoutine)),
+	}
+	for i, r := range v.ByRoutine {
+		out.ByRoutine[i] = OperatorUsageRoutine{
+			RoutineID: models.PublicID(models.PrefixOperatorRoutine, r.ID), Name: r.Name, RunsCount: r.RunsCount,
+			CostMicros: r.CostMicros,
+		}
 	}
 	for i, d := range v.Daily {
 		out.Daily[i] = AiUsageDay{
@@ -132,6 +142,7 @@ func newOperatorUsageRun(r models.ListRecentOperatorRunsRow) OperatorUsageRun {
 		ID: models.PublicID(models.PrefixAiRun, r.ID), Purpose: r.Purpose, Status: r.Status,
 		MemberName: r.MemberName, ThreadTitle: r.ThreadTitle, ConversationNumber: r.ConversationNumber,
 		CostMicros: r.CostMicros, LatencyMs: r.LatencyMs, CreatedAt: r.CreatedAt,
+		ThreadID: optionalID(models.PrefixOperatorThread, r.ThreadID),
 	}
 	if r.ConversationID != nil {
 		id := models.PublicID(models.PrefixConversation, *r.ConversationID)
