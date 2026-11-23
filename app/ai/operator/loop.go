@@ -19,7 +19,6 @@ import (
 	"context"
 	"errors"
 	"io"
-	"slices"
 	"strings"
 	"time"
 
@@ -98,10 +97,12 @@ const (
 )
 
 /*
-closingTools are the tools that close a routine's run: suggesting,
-saving what the next run needs, and saying nothing needs attention.
+closes reports whether a tool closes a routine's run: suggesting,
+saving what the next run needs, or saying nothing needs attention.
 */
-var closingTools = []string{"mark_noop", "propose_changes", "routine_set_state"}
+func closes(name string) bool {
+	return name == "mark_noop" || name == "propose_changes" || name == "routine_set_state"
+}
 
 /*
 offered is the tools a model call may use: all of them within the run's
@@ -121,7 +122,7 @@ func (e *Engine) offered(s *session, calls int) []contracts.ToolSpec {
 	}
 	var out []contracts.ToolSpec
 	for _, spec := range e.toolSpecs(s) {
-		if slices.Contains(closingTools, spec.Name) {
+		if closes(spec.Name) {
 			out = append(out, spec)
 		}
 	}
