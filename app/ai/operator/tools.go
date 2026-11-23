@@ -14,9 +14,8 @@
 | the MCP tool cannot meet inside a run:
 |
 |   - The tools that read conversations, customers, AI runs, reports
-|     and GitHub mark the run as having read what a customer wrote, and
-|     a routine reads through its owner's narrowed access (its inboxes
-|     and permissions), which an API token cannot carry.
+|     and GitHub answer in trimmed text a run can afford, and mark the
+|     run as having read what a customer wrote.
 |   - list_articles pages every help center by offset, which a
 |     routine's saved state counts on; the MCP lists one help center.
 |   - The propose tools, save_routine_state and
@@ -27,6 +26,8 @@
 |
 | search_knowledge, list_recent_suggestions, get_skill_by_name and the
 | suggestion checks are one implementation, which the MCP tools call.
+| A chat reads the rest of the MCP catalog through the tool layer; a
+| routine is offered a few of its reads by name, as its narrowed owner.
 |
 */
 
@@ -97,7 +98,7 @@ registry returns every tool by name.
 func (e *Engine) registry(s *session) map[string]tool {
 	all := slices.Concat(e.conversationTools(), e.knowledgeTools(), e.insightTools(), e.procedureTools(),
 		e.writeTools(), e.actionTools(s), e.routineTools(), e.githubTools(),
-		[]tool{e.subagentsTool(), e.suggestionTool()})
+		[]tool{e.subagentsTool(), e.suggestionTool()}, e.catalogTools(s))
 	out := make(map[string]tool, len(all))
 	for _, t := range all {
 		if handle, was := t.handle, t.was; len(was) > 0 {

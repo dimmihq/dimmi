@@ -7,6 +7,8 @@
 | carries a short-lived token of the teammate's own, limited to the read
 | abilities, so the API's permission checks, the teammate's role and the
 | workspace's rules all apply as they would to the teammate's own token.
+| A routine reads as a narrowed copy of its owner, and each call keeps
+| that narrowing: only the routine's permissions and inboxes.
 | The token lives only in memory and expires within the quarter hour.
 | The catalog is built on first use, once every route is declared.
 |
@@ -137,7 +139,7 @@ func (c *operatorCatalog) Call(ctx context.Context, m authz.Membership, call ope
 			return "", err
 		}
 	}
-	return c.reads.Call(ctx, mcpserver.ReadCall{
+	return c.reads.Call(authz.WithNarrowed(ctx, m), mcpserver.ReadCall{
 		Name: call.Name, Args: decoded, Authorization: "Bearer " + plain, Raw: call.Raw,
 	})
 }

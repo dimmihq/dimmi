@@ -199,6 +199,9 @@ tools: searching the knowledge base belongs with the articles it
 searches, though the layer offers it beside the conversations.
 */
 func routineGroupOf(t tool) string {
+	if t.group != "" {
+		return t.group
+	}
 	if t.spec.Name == "search_knowledge" {
 		return RoutineGroupKnowledge
 	}
