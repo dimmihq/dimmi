@@ -45,7 +45,7 @@ func dataExportDocs() map[string]Doc {
 				"include_notes": "true to include the team's internal notes, only if you may moderate " +
 					"conversations.",
 				"selection": "What to export: ids (picked ids), or filter (the list's filter[...] keys and " +
-					"values) with search_text, or view_id (a saved inbox view), or for contacts conditions, as " +
+					"values) with q, or view_id (a saved inbox view), or for contacts conditions, as " +
 					"dimmi_list_contacts reads them. Empty means everything.",
 			},
 			Hint: "export_too_large: narrow the selection or pick a format that covers more rows.",

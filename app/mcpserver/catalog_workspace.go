@@ -193,7 +193,7 @@ func invitationDocs() map[string]Doc {
 	return map[string]Doc{
 		"invitations.index": {
 			Title:   "List invitations",
-			Use:     "Lists the workspace's invitations, newest first. Only pending ones unless filter_status asks.",
+			Use:     "Lists the workspace's invitations, newest first. Only pending ones unless filter[status] asks.",
 			Returns: "a page of invitations with email, role, status, expiry and send count, and next_cursor.",
 			Params:  map[string]string{"filter[status]": "pending (default), accepted, revoked or expired."},
 		},

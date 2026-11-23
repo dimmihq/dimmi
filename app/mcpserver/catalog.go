@@ -52,13 +52,10 @@ and abilities when set. Params explains arguments the API document
 leaves unexplained, by the API's name of each. Hint is shown with a
 failure of this tool, to steer the agent to the fix it most often
 needs. Name is the tool's name, without the dimmi_ prefix, when the one
-worked out from the operation does not say what the tool does. Rename
-names arguments the model reads wrong under the name worked out for
-them, each by the API's name.
+worked out from the operation does not say what the tool does.
 */
 type Doc struct {
 	Name    string
-	Rename  map[string]string
 	Title   string
 	Use     string
 	Returns string

@@ -3,14 +3,13 @@
 | Argument Names
 |--------------------------------------------------------------------------
 |
-| The API names a record in a path by what it is, {article}, and a field
-| by the shortest word that fits, name or body. A model that reads only
-| those names fills them wrong: a title where an id belongs, the wrong
-| text in body. So a tool's arguments are named for what they hold: an
-| id ends in _id, a filter starts with filter_, and a word too bare to
-| read alone carries the thing it belongs to, such as reply_body. The
-| API keeps its own names; a call is turned back into them before it is
-| made, and an argument sent under another likely name is still read.
+| A tool's arguments carry the very names the API gives them, in the
+| path, the query and the body, so what a model reads from one tool it
+| can send to another and what the API reference says holds for the
+| tools too. Clarity comes from each argument's description, not from a
+| second vocabulary. A model that half remembers a name is still read:
+| article_id for article, search_text for q, filter_status for
+| filter[status], id for the record a path ends with.
 |
 */
 
@@ -18,7 +17,6 @@ package mcpserver
 
 import (
 	"maps"
-	"regexp"
 	"slices"
 	"strings"
 
@@ -26,53 +24,24 @@ import (
 )
 
 /*
-conversationArgument is the argument that names a conversation in a
-path, where the API takes its id or its number.
+customFilter starts the filters by a custom attribute, such as
+filter[custom.plan], which no schema can list since the keys are the
+workspace's own.
 */
-const conversationArgument = "conversation_id_or_number"
+const customFilter = "filter[custom."
 
 /*
-searchArgument is the argument that carries search words.
-*/
-const searchArgument = "search_text"
-
-/*
-bareWords are argument names that say nothing alone, so each is named
-after the thing the tool is about.
+bareWords are argument names that say nothing alone, so each is also
+read under the name of the thing the tool is about: reply_body for
+body.
 */
 func bareWords() []string {
 	return []string{"name", "title", "body", "description", "subject", "number", "since", "text"}
 }
 
 /*
-plainPaths are the path arguments that are not ids, or whose record
-goes by another word here, with the name each goes by.
-*/
-func plainPaths() map[string]string {
-	return map[string]string{
-		"emoji": "emoji", "provider": "integration_provider", "report": "report_name", "scope": "snooze_list_scope",
-		"changeset": "suggestion_id", "skill": "skill_name", "status": "feedback_status_key",
-	}
-}
-
-/*
-plainFilters are the filters named by hand: a view is an id or a word
-such as mine, and the tags of which any one matches read better said
-that way round.
-*/
-func plainFilters() map[string]string {
-	return map[string]string{"view": "filter_view", "tag_any": "filter_any_tag_id"}
-}
-
-/*
-idExample finds what says an argument takes ids in its description: an
-id written as an example, such as (conv_...), or the word itself.
-*/
-var idExample = regexp.MustCompile(`\b[a-z]{2,6}_\.{3}|(?i)\bids?\b`)
-
-/*
-naming is how one tool's arguments are named: the API's name of each,
-and the other names an argument is still read under.
+naming is the arguments of one tool by name, and the other names each
+is still read under.
 */
 type naming struct {
 	api     map[string]string
@@ -80,31 +49,21 @@ type naming struct {
 }
 
 /*
-namingOf works out the names of an operation's arguments.
+namingOf lists an operation's arguments and the other names they are
+read under.
 */
-func namingOf(op mcp.Operation, doc Doc) naming {
+func namingOf(op mcp.Operation) naming {
 	n := naming{api: map[string]string{}, aliases: map[string]string{}}
-	properties := asMap(op.Input["properties"])
 	path := pathArguments(op.Path)
 
-	names := slices.Sorted(maps.Keys(properties))
-	for _, name := range names {
-		renamed := argumentName(op, doc, name, asMap(properties[name]))
-		if _, taken := properties[renamed]; taken && renamed != name {
-			renamed = name
-		}
-
-		if _, taken := n.api[renamed]; taken {
-			renamed = name
-		}
-
-		n.api[renamed] = name
+	for name := range asMap(op.Input["properties"]) {
+		n.api[name] = name
 	}
 
-	for renamed, name := range n.api {
-		for _, alias := range aliasesOf(name, renamed, path) {
+	for name := range n.api {
+		for _, alias := range aliasesOf(op, name, path) {
 			if _, named := n.api[alias]; !named {
-				n.aliases[alias] = renamed
+				n.aliases[alias] = name
 			}
 		}
 	}
@@ -113,152 +72,41 @@ func namingOf(op mcp.Operation, doc Doc) naming {
 }
 
 /*
-argumentName names one argument for the model: the catalog's name when
-it gives one, else by what the argument holds.
+aliasesOf are the other names an argument is read under: what a model
+that half remembers the name is likely to send.
 */
-func argumentName(op mcp.Operation, doc Doc, name string, schema map[string]any) string {
-	if renamed, ok := doc.Rename[name]; ok {
-		return renamed
-	}
+func aliasesOf(op mcp.Operation, name string, path []string) []string {
+	var out []string
 
-	if slices.Contains(pathArguments(op.Path), name) {
-		if plain, ok := plainPaths()[name]; ok {
-			return plain
+	if slices.Contains(path, name) {
+		out = append(out, strings.TrimSuffix(name, "_id")+"_id")
+		if path[len(path)-1] == name {
+			out = append(out, "id")
 		}
-
-		if name == "conversation" {
-			return conversationArgument
-		}
-
-		return strings.TrimSuffix(name, "_id") + "_id"
 	}
 
 	if field, ok := strings.CutPrefix(name, "filter["); ok {
-		description, _ := schema["description"].(string)
-		if text, ok := doc.Params[name]; ok {
-			description = text
-		}
-
-		return filterName(strings.TrimSuffix(field, "]"), description)
+		field = strings.TrimSuffix(field, "]")
+		out = append(out, field, "filter_"+field, "filter_"+field+"_id")
 	}
 
-	if name == "q" || name == "query" {
-		return searchArgument
+	switch name {
+	case "conversation":
+		out = append(out, "conversation_number", "conversation_id_or_number", "number")
+	case "q", "query":
+		out = append(out, "search_text", "search", "q", "query")
 	}
 
 	if word := resourceWord(op.ID); word != "" && slices.Contains(bareWords(), name) {
-		return word + "_" + name
-	}
-
-	return name
-}
-
-/*
-filterName names a filter: by hand when it has a name of its own, else
-after its field, saying so when its description says it takes ids.
-*/
-func filterName(field, description string) string {
-	if plain, ok := plainFilters()[field]; ok {
-		return plain
-	}
-
-	if idExample.MatchString(description) && !strings.HasSuffix(field, "_id") {
-		field += "_id"
-	}
-
-	return "filter_" + field
-}
-
-/*
-aliasesOf are the other names an argument is read under: the API's own
-name, and what a model that half remembers the name is likely to send.
-*/
-func aliasesOf(name, renamed string, path []string) []string {
-	out := []string{name}
-
-	if field, ok := strings.CutPrefix(renamed, "filter_"); ok {
-		out = append(out, field, strings.TrimSuffix(field, "_id"), "filter_"+strings.TrimSuffix(field, "_id"))
-	}
-
-	switch renamed {
-	case conversationArgument:
-		out = append(out, "conversation_id", "conversation_number", "number")
-	case searchArgument:
-		out = append(out, "q", "query", "search")
-	}
-
-	if len(path) > 0 && path[len(path)-1] == name {
-		out = append(out, "id")
+		out = append(out, word+"_"+name)
 	}
 
 	return out
 }
 
 /*
-customFilters is the API's way of filtering a list by a custom
-attribute, filter[custom.<key>], which no schema can list since the
-keys are the workspace's own.
-*/
-const customFilters = "filter[custom.<key>]"
-
-/*
-customArgument is the argument that carries those filters as one
-object, a value for each attribute key.
-*/
-const customArgument = "filter_custom_attributes"
-
-/*
-names lists the arguments by the names the model sees.
+names lists the arguments by name.
 */
 func (n naming) names() []string {
 	return slices.Sorted(maps.Keys(n.api))
-}
-
-/*
-shown is the name the model sees for one of the API's names, which may
-be a field inside an argument, such as contact.email.
-*/
-func (n naming) shown(name string) string {
-	head, rest, nested := strings.Cut(name, ".")
-
-	for renamed, api := range n.api {
-		if api != head {
-			continue
-		}
-
-		if nested {
-			return renamed + "." + rest
-		}
-
-		return renamed
-	}
-
-	return name
-}
-
-/*
-toAPI turns a call's arguments back into the names the API expects.
-*/
-func (n naming) toAPI(args map[string]any) map[string]any {
-	out := make(map[string]any, len(args))
-
-	for name, value := range args {
-		if name == customArgument {
-			for key, wanted := range asMap(value) {
-				out["filter[custom."+key+"]"] = wanted
-			}
-
-			continue
-		}
-
-		if api, ok := n.api[name]; ok {
-			out[api] = value
-
-			continue
-		}
-
-		out[name] = value
-	}
-
-	return out
 }

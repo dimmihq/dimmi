@@ -162,8 +162,8 @@ func otherTextsPart4() map[string]map[string]string {
 				"as {\"fr\":{\"greeting\":\"Bonjour\"},\"de\":null}.",
 		},
 		"list_conversations_behind_report_number": {
-			"report_name": "The key of the report the number is on: overview, responsiveness, resolution, " +
-				"team, live, satisfaction, ai or help_center. Such as overview.",
+			"report": "The key of the report the number is on: overview, responsiveness, resolution, team, " +
+				"live, satisfaction, ai or help_center. Such as overview.",
 		},
 		"list_imports": {
 			"kind": "Which imports to list: contacts (imports of customers) or companies. Required. Such as " +

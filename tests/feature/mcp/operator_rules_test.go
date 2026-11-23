@@ -73,16 +73,16 @@ func TestOperatorWorkRules(t *testing.T) {
 
 		made := w.ok("dimmi_propose_article_edit", edit(id, map[string]any{"routine_id": routine, "dry_run": true}))
 		saved := w.ok("dimmi_save_routine_state", map[string]any{
-			"routine_id": routine, "state": map[string]any{"next_offset": 15}, "dry_run": true,
+			"routine": routine, "state": map[string]any{"next_offset": 15}, "dry_run": true,
 		})
 		quiet := w.ok("dimmi_report_nothing_to_change", map[string]any{
-			"routine_id": routine, "reason": "Nothing.", "dry_run": true,
+			"routine": routine, "reason": "Nothing.", "dry_run": true,
 		})
 
 		assert.Equal(t, true, inner(made, "suggestion")["preview"])
 		assert.Equal(t, false, saved["saved"])
 		assert.Equal(t, false, quiet["recorded"])
-		assert.Equal(t, testkit.JSON{}, w.ok("dimmi_get_routine_state", map[string]any{"routine_id": routine})["state"])
+		assert.Equal(t, testkit.JSON{}, w.ok("dimmi_get_routine_state", map[string]any{"routine": routine})["state"])
 		assert.Empty(t, w.ok("dimmi_list_recent_suggestions", nil)["items"])
 		w.d.Owner.GetJSON("/api/v1/operator/routines/"+routine+"/runs").AssertOK().AssertJSONPath("data.#", float64(0))
 	})
@@ -140,7 +140,7 @@ func TestOperatorWorkRules(t *testing.T) {
 		_, token := w.d.TC.MintToken(member, "*")
 
 		res, err := agent(t, w.d, token).CallTool(t.Context(), "dimmi_save_routine_state", map[string]any{
-			"routine_id": routine, "state": map[string]any{"next_offset": 15},
+			"routine": routine, "state": map[string]any{"next_offset": 15},
 		})
 
 		assert.NoError(t, err)
@@ -192,8 +192,8 @@ func TestOperatorWorkKinds(t *testing.T) {
 		w := newWorker(t)
 
 		listed := w.call("dimmi_list_skills", nil)
-		read := w.ok("dimmi_get_skill_by_name", map[string]any{"skill_name": "audit_articles"})
-		wrong := w.call("dimmi_get_skill_by_name", map[string]any{"skill_name": "audit"})
+		read := w.ok("dimmi_get_skill_by_name", map[string]any{"skill": "audit_articles"})
+		wrong := w.call("dimmi_get_skill_by_name", map[string]any{"skill": "audit"})
 
 		assert.Contains(t, listed.Text, "audit_articles")
 		assert.Contains(t, read["steps"], "How to")

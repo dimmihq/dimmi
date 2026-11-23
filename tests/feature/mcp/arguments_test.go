@@ -28,7 +28,7 @@ func article(t *testing.T, d tests.Desk, body string) string {
 func TestArguments(t *testing.T) {
 	t.Parallel()
 
-	t.Run("names every argument for what it holds", func(t *testing.T) {
+	t.Run("names every argument as the API does and explains it", func(t *testing.T) {
 		t.Parallel()
 		d := tests.NewDesk(t)
 		_, token := d.TC.MintToken(d.TC.Workspace.Owner, "*")
@@ -41,13 +41,12 @@ func TestArguments(t *testing.T) {
 			schemas[tool.Name] = string(tool.InputSchema)
 		}
 
-		assert.Contains(t, schemas["dimmi_get_article_by_id"], `"required":["article_id"]`)
+		assert.Contains(t, schemas["dimmi_get_article_by_id"], `"required":["article"]`)
 		assert.Contains(t, schemas["dimmi_get_article_by_id"], "starting with art_")
-		assert.Contains(t, schemas["dimmi_create_tag"], `"tag_name"`)
-		assert.Contains(t, schemas["dimmi_apply_operator_suggestion"], `"suggestion_id"`)
-		assert.Contains(t, schemas["dimmi_list_conversations"], `"filter_team_id"`)
-		assert.Contains(t, schemas["dimmi_list_conversations"], `"filter_channel"`)
-		assert.Contains(t, schemas["dimmi_list_conversations"], `"filter_view"`)
+		assert.Contains(t, schemas["dimmi_create_tag"], `"name"`)
+		assert.Contains(t, schemas["dimmi_apply_operator_suggestion"], `"changeset"`)
+		assert.Contains(t, schemas["dimmi_list_conversations"], `"filter[team]"`)
+		assert.Contains(t, schemas["dimmi_list_conversations"], `"q"`)
 		assert.Contains(t, schemas["dimmi_create_ticket"], "Id of the teammate (workspace member)")
 		assert.Contains(t, schemas["dimmi_update_tag"], "The name of the tag")
 	})
@@ -59,21 +58,21 @@ func TestArguments(t *testing.T) {
 		_, token := d.TC.MintToken(d.TC.Workspace.Owner, "*")
 
 		res, err := agent(t, d, token).CallTool(t.Context(), "dimmi_get_article_by_id",
-			map[string]any{"article_id": id})
+			map[string]any{"article": id})
 		require.NoError(t, err)
 
 		assert.False(t, res.IsError, res.Text)
 		assert.Contains(t, res.Text, "Refunds take 5 days.")
 	})
 
-	t.Run("still reads an argument sent under the API's name or as id", func(t *testing.T) {
+	t.Run("still reads an argument sent as article_id or id", func(t *testing.T) {
 		t.Parallel()
 		d := tests.NewDesk(t)
 		id := article(t, d, "Refunds take 5 days.")
 		_, token := d.TC.MintToken(d.TC.Workspace.Owner, "*")
 		c := agent(t, d, token)
 
-		for _, name := range []string{"article", "id"} {
+		for _, name := range []string{"article_id", "id"} {
 			res, err := c.CallTool(t.Context(), "dimmi_get_article_by_id", map[string]any{name: id})
 			require.NoError(t, err)
 			assert.False(t, res.IsError, res.Text)
@@ -103,7 +102,7 @@ func TestArguments(t *testing.T) {
 		require.NoError(t, err)
 
 		assert.True(t, res.IsError)
-		assert.Contains(t, res.Text, `"article_id" is required and missing`)
+		assert.Contains(t, res.Text, `"article" is required and missing`)
 		assert.Contains(t, res.Text, "starting with art_")
 		assert.Contains(t, res.Text, "dimmi_list_help_center_articles")
 	})
@@ -115,7 +114,7 @@ func TestArguments(t *testing.T) {
 		_, token := d.TC.MintToken(d.TC.Workspace.Owner, "*")
 
 		res, err := agent(t, d, token).CallTool(t.Context(), "dimmi_update_article",
-			map[string]any{"article_id": id, "markdown": "New text."})
+			map[string]any{"article": id, "markdown": "New text."})
 		require.NoError(t, err)
 
 		assert.True(t, res.IsError)
@@ -129,11 +128,11 @@ func TestArguments(t *testing.T) {
 		_, token := d.TC.MintToken(d.TC.Workspace.Owner, "*")
 
 		res, err := agent(t, d, token).CallTool(t.Context(), "dimmi_get_article_by_id",
-			map[string]any{"article_id": "Refunds"})
+			map[string]any{"article": "Refunds"})
 		require.NoError(t, err)
 
 		assert.True(t, res.IsError)
-		assert.Contains(t, res.Text, `article_id: you sent "Refunds". That is not an id`)
+		assert.Contains(t, res.Text, `article: you sent "Refunds". That is not an id`)
 		assert.Contains(t, res.Text, "starts with art_")
 	})
 
@@ -144,7 +143,7 @@ func TestArguments(t *testing.T) {
 		_, token := d.TC.MintToken(d.TC.Workspace.Owner, "*")
 
 		res, err := agent(t, d, token).CallTool(t.Context(), "dimmi_update_conversation",
-			map[string]any{"conversation_id_or_number": id, "priority": "whenever"})
+			map[string]any{"conversation": id, "priority": "whenever"})
 		require.NoError(t, err)
 
 		assert.True(t, res.IsError)
@@ -157,11 +156,11 @@ func TestArguments(t *testing.T) {
 		_, token := d.TC.MintToken(d.TC.Workspace.Owner, "*")
 
 		res, err := agent(t, d, token).CallTool(t.Context(), "dimmi_create_tag",
-			map[string]any{"tag_name": strings.Repeat("x", 300)})
+			map[string]any{"name": strings.Repeat("x", 300)})
 		require.NoError(t, err)
 
 		assert.True(t, res.IsError)
-		assert.Contains(t, res.Text, `"tag_name" takes at most`)
+		assert.Contains(t, res.Text, `"name" takes at most`)
 		assert.Contains(t, res.Text, "you sent 300")
 	})
 
@@ -179,7 +178,7 @@ func TestArguments(t *testing.T) {
 		_, token := d.TC.MintToken(d.TC.Workspace.Owner, "*")
 
 		res, err := agent(t, d, token).CallTool(t.Context(), "dimmi_list_contacts",
-			map[string]any{"filter_custom_attributes": map[string]any{"plan": "pro"}})
+			map[string]any{"filter[custom.plan]": "pro"})
 		require.NoError(t, err)
 
 		assert.False(t, res.IsError, res.Text)
@@ -218,7 +217,7 @@ func TestArguments(t *testing.T) {
 		_, token := d.TC.MintToken(d.TC.Workspace.Owner, "*")
 
 		res, err := agent(t, d, token).CallTool(t.Context(), "dimmi_create_conversation", map[string]any{
-			"inbox_id": d.InboxID(), "conversation_body": "Hello", "author": "contact",
+			"inbox_id": d.InboxID(), "body": "Hello", "author": "contact",
 			"contact": map[string]any{"mail": "ana@example.com"},
 		})
 		require.NoError(t, err)
@@ -250,10 +249,10 @@ func TestArguments(t *testing.T) {
 		d := tests.NewDesk(t)
 		_, token := d.TC.MintToken(d.TC.Workspace.Owner, "conversations:write", "conversations:read")
 
-		res, err := agent(t, d, token).CallTool(t.Context(), "dimmi_create_tag", map[string]any{"tag_name": " "})
+		res, err := agent(t, d, token).CallTool(t.Context(), "dimmi_create_tag", map[string]any{"name": " "})
 		require.NoError(t, err)
 
 		assert.True(t, res.IsError)
-		assert.Contains(t, res.Text, "- tag_name:")
+		assert.Contains(t, res.Text, "- name:")
 	})
 }

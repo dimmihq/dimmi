@@ -110,12 +110,12 @@ func TestOperatorWork(t *testing.T) {
 		routine := w.routine()
 		center := w.d.Owner.GetJSON("/api/v1/help-centers").AssertOK().String("data.0.id")
 
-		listed := w.call("dimmi_list_help_center_articles", map[string]any{"help_center_id": center})
+		listed := w.call("dimmi_list_help_center_articles", map[string]any{"help_center": center})
 		assert.Contains(t, listed.Text, id)
-		read := w.call("dimmi_get_article_by_id", map[string]any{"article_id": id})
+		read := w.call("dimmi_get_article_by_id", map[string]any{"article": id})
 		assert.Contains(t, read.Text, "Refunds take 5 days")
 		assert.False(t, w.call("dimmi_search_knowledge", map[string]any{"search_text": "refund"}).IsError)
-		assert.Equal(t, testkit.JSON{}, w.ok("dimmi_get_routine_state", map[string]any{"routine_id": routine})["state"])
+		assert.Equal(t, testkit.JSON{}, w.ok("dimmi_get_routine_state", map[string]any{"routine": routine})["state"])
 		assert.Empty(t, w.ok("dimmi_list_recent_suggestions", map[string]any{"routine_id": routine})["items"])
 
 		made := w.ok("dimmi_propose_article_edit", map[string]any{
@@ -131,14 +131,14 @@ func TestOperatorWork(t *testing.T) {
 		assert.Contains(t, recent.Text, "Fix the refund window")
 
 		saved := w.ok("dimmi_save_routine_state", map[string]any{
-			"routine_id": routine, "state": map[string]any{"next_offset": 15},
+			"routine": routine, "state": map[string]any{"next_offset": 15},
 		})
 		assert.Equal(t, testkit.JSON{"next_offset": 15.0}, saved["state"])
 		assert.Equal(t, testkit.JSON{"next_offset": 15.0},
-			w.ok("dimmi_get_routine_state", map[string]any{"routine_id": routine})["state"])
+			w.ok("dimmi_get_routine_state", map[string]any{"routine": routine})["state"])
 
 		quiet := w.ok("dimmi_report_nothing_to_change", map[string]any{
-			"routine_id": routine, "reason": "Read 1 article; nothing else is stale.",
+			"routine": routine, "reason": "Read 1 article; nothing else is stale.",
 		})
 		assert.Equal(t, true, quiet["recorded"])
 		w.d.Owner.GetJSON("/api/v1/operator/routines/"+routine+"/runs").AssertOK().

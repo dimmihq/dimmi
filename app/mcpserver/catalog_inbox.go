@@ -84,7 +84,7 @@ func conversationListDocs() map[string]Doc {
 		"conversations.index": {
 			Title: "List conversations",
 			Use: "Lists a page of one inbox view. With no filters it shows only your own open conversations " +
-				"(filter_view=mine), so pass filter_view=all to see the whole inbox. Each row has an id " +
+				"(filter[view]=mine), so pass filter[view]=all to see the whole inbox. Each row has an id " +
 				"(conv_...) and a #number; either works in every conversation tool. Use filters rather than " +
 				"reading conversations one by one.",
 			Returns: "a page of conversations, newest activity first by default, each with status, priority, " +
@@ -119,7 +119,7 @@ func conversationListDocs() map[string]Doc {
 			Use: "Quick search across every status (never spam or the trash): a few conversations whose subject " +
 				"or messages match, each with an excerpt, and a few contacts by name, email or id. A #number " +
 				"or conv_ id answers that conversation as jump. For a full filtered list use " +
-				"dimmi_list_conversations with search_text.",
+				"dimmi_list_conversations with q.",
 			Returns: "jump (an exact hit or null), conversations with the matching message, and contacts.",
 			Next: []string{
 				"dimmi_get_conversation_by_id_or_number: open a hit", "dimmi_get_contact_by_id: open a contact",

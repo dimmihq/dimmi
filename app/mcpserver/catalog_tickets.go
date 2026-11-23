@@ -8,7 +8,7 @@
 | state and setting fields with the same required field rules the inbox
 | obeys, notes and links, and the conversations a tracker reaches. A
 | recipe for an agent triaging a bug report: read the conversation,
-| list trackers with search_text, link it to the right one or create one, then
+| list trackers with q, link it to the right one or create one, then
 | file the issue.
 |
 */
@@ -123,8 +123,7 @@ func ticketActivityDocs() map[string]Doc {
 		},
 		"tickets.links.index": {Title: "List a ticket's links", Use: "Reads back-office, tracker, follow-up links."},
 		"tickets.links.store": {
-			Rename: map[string]string{"ticket": "from_ticket_id", "ticket_id": "to_ticket_id"},
-			Title:  "Link a ticket",
+			Title: "Link a ticket",
 			Use: "Links a tracker to a conversation (kind tracker), a customer ticket to back-office " +
 				"work, or any two tickets (related, follow_up). Linking twice changes nothing.",
 		},

@@ -36,9 +36,9 @@ func viewDocs() map[string]Doc {
 		"conversation-views.index": {
 			Title: "List saved views",
 			Use: "Lists the saved views you can open, the shared ones and your own personal ones, on one page. " +
-				"Pass a view's id as filter_view to dimmi_list_conversations to see its conversations.",
+				"Pass a view's id as filter[view] to dimmi_list_conversations to see its conversations.",
 			Returns: "the views with their name, scope, conditions, sort and status.",
-			Next:    []string{"dimmi_list_conversations: list a view's conversations with filter_view=cvw_..."},
+			Next:    []string{"dimmi_list_conversations: list a view's conversations with filter[view]=cvw_..."},
 			Params:  map[string]string{"q": "Only views whose name holds this text."},
 		},
 		"conversation-views.show": {
@@ -52,7 +52,7 @@ func viewDocs() map[string]Doc {
 				"view shows for the whole team (200 at most) and needs views:manage_shared. The conditions " +
 				"are checked as the list will run them.",
 			Returns: "the new view.",
-			Next:    []string{"dimmi_list_conversations: open it with filter_view set to its id"},
+			Next:    []string{"dimmi_list_conversations: open it with filter[view] set to its id"},
 			Params: map[string]string{
 				"scope":         "personal or shared.",
 				"name":          "Up to 60 characters.",

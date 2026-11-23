@@ -48,19 +48,12 @@ If your client cannot open a browser for OAuth, pass an [API token](/developers/
 
 ## Tool arguments
 
-Arguments are named so a model fills them right without reading the REST reference:
+A tool takes the same arguments as its REST endpoint, under the same names: path parameters, query parameters, and body fields side by side.
 
-| REST API | MCP tool argument |
-| --- | --- |
-| A record in the path, like `{article}` | `article_id` |
-| A conversation in the path | `conversation_id_or_number` |
-| `filter[status]` | `filter_status` |
-| A filter that takes ids, like `filter[team]` | `filter_team_id` |
-| `filter[custom.plan]=pro` | `filter_custom_attributes: {"plan": "pro"}` |
-| `q` | `search_text` |
-| A bare field, like `name` on a tag | `tag_name` |
-
-A call that sends the REST name still works. A call with a missing, unknown, or out-of-range argument is refused before anything runs, and the error names the argument and what belongs in it.
+- **Same names as the API reference:** `article`, `filter[status]`, `q`, `body`.
+- **Every argument is described:** what it takes, its allowed values, and an example.
+- **Forgiving:** likely spellings such as `article_id`, `id`, or `search_text` are still read.
+- **Refused before anything runs:** a missing, unknown, or out-of-range argument is named, with what belongs in it. So is a field inside an argument, by its path, such as `contact.mail`.
 
 ## Do Operator's work with your own agent
 

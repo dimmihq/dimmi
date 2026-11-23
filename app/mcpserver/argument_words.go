@@ -17,6 +17,7 @@ package mcpserver
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 
 	"github.com/dimmihq/dimmi/framework/mcp"
@@ -104,8 +105,8 @@ when its name says what it is: an id, a list of ids, a length of time,
 a word of the tool's own thing, or a word that means the same
 everywhere. Empty when the name does not say.
 */
-func knownText(op mcp.Operation, name, api string, schema map[string]any) string {
-	if text := idText(api); text != "" {
+func knownText(op mcp.Operation, name string, schema map[string]any) string {
+	if text := idText(name); text != "" {
 		return text
 	}
 
@@ -119,8 +120,8 @@ func knownText(op mcp.Operation, name, api string, schema map[string]any) string
 		}
 	}
 
-	if word := resourceWord(op.ID); word != "" && name == word+"_"+api && name != api {
-		return ownText(strings.ReplaceAll(word, "_", " "), api, schema)
+	if word := resourceWord(op.ID); word != "" && slices.Contains(bareWords(), name) {
+		return ownText(strings.ReplaceAll(word, "_", " "), name, schema)
 	}
 
 	return ""

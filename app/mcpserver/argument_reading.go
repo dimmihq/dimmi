@@ -64,11 +64,12 @@ func (b built) read(args map[string]any) (map[string]any, error) {
 
 /*
 target is the argument a sent name is read as: itself, or the argument
-it is another name for unless that one was sent too. It reports whether
-the tool knows the name at all.
+it is another name for unless that one was sent too. A filter by a
+custom attribute is itself. It reports whether the tool knows the name
+at all.
 */
 func (b built) target(name string, args map[string]any) (string, bool) {
-	if _, ok := asMap(b.schema["properties"])[name]; ok {
+	if _, ok := asMap(b.schema["properties"])[name]; ok || strings.HasPrefix(name, customFilter) {
 		return name, true
 	}
 

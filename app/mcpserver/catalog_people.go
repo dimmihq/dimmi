@@ -37,15 +37,13 @@ func contactReadDocs() map[string]Doc {
 		"contacts.index": {
 			Title: "List contacts",
 			Use: "Lists the workspace's customers (users, who have an external id) and leads, most recently seen " +
-				"first. Blocked contacts stay out unless filter_blocked=true. To find people by a saved rule, " +
-				"pass conditions with an audience, or use dimmi_create_audience_preview to only count them.",
+				"first. Blocked contacts stay out unless filter[blocked]=true. To match a custom attribute, send " +
+				"filter[custom.<key>], such as filter[custom.plan]=pro, three at most. To find people by a saved " +
+				"rule, pass conditions with an audience, or use dimmi_create_audience_preview to only count them.",
 			Returns: "a page of contacts with their attributes, tags and company, and next_cursor for more.",
 			Next:    []string{"dimmi_get_contact_by_id: read one contact in full"},
 			Params: map[string]string{
-				"filter[kind]": "user or lead.",
-				"filter[custom.<key>]": "Custom attribute values the contacts must have, as an object of " +
-					"attribute key to value, such as {\"plan\": \"pro\"}. true, false and numbers are read as " +
-					"such. Three at most.",
+				"filter[kind]":             "user or lead.",
 				"filter[company]":          "The id of a company, such as cmp_01jx2m8k4t: only its people.",
 				"filter[tag]":              "Tag ids separated by commas, such as tag_01jx2m8k4t.",
 				"filter[email]":            "An email address to match exactly, such as ana@example.com.",
@@ -193,7 +191,7 @@ func companyDocs() map[string]Doc {
 	return map[string]Doc{
 		"companies.index": {
 			Title:   "List companies",
-			Use:     "Lists the companies your customers belong to. search_text searches by name or domain.",
+			Use:     "Lists the companies your customers belong to. q searches by name or domain.",
 			Returns: "a page of companies, with next_cursor for more.",
 			Next:    []string{"dimmi_get_company_by_id: read one company in full"},
 			Params: map[string]string{

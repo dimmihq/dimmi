@@ -42,8 +42,8 @@ func ticketTextsPart1() map[string]map[string]string {
 				"\"refund\": true}.",
 		},
 		"create_integration_key_installation": {
-			"integration_provider": "The name of the tool to connect with an API key: incident_io, rootly or " +
-				"pagerduty, such as \"pagerduty\".",
+			"provider": "The name of the tool to connect with an API key: incident_io, rootly or pagerduty, " +
+				"such as \"pagerduty\".",
 		},
 		"create_sla_policy": {
 			"breach_priority": "The priority a ticket or conversation is raised to when it misses a target of " +

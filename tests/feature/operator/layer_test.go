@@ -216,8 +216,8 @@ func TestOperatorCompactResults(t *testing.T) {
 	k.llm.Script(
 		tools(loadTools("dimmi_list_inboxes", "dimmi_get_inbox_by_id")),
 		tools(callTool("dimmi_list_inboxes", map[string]any{"fields": []string{"name"}})),
-		tools(callTool("dimmi_get_inbox_by_id", map[string]any{"inbox_id": "i1"})),
-		tools(callTool("dimmi_get_inbox_by_id", map[string]any{"inbox_id": "i7"})),
+		tools(callTool("dimmi_get_inbox_by_id", map[string]any{"inbox": "i1"})),
+		tools(callTool("dimmi_get_inbox_by_id", map[string]any{"inbox": "i7"})),
 		reply("One inbox."),
 	)
 

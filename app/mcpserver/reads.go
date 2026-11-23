@@ -168,7 +168,7 @@ func (r *Reads) Call(ctx context.Context, in ReadCall) (string, error) {
 	header := fhttp.Header{}
 	header.Set("Authorization", in.Authorization)
 	api := mcp.API{Handler: r.api, Prefix: apiPrefix}
-	a, err := b.op.Call(ctx, api, b.names.toAPI(args), mcp.Origin{Header: header})
+	a, err := b.op.Call(ctx, api, args, mcp.Origin{Header: header})
 	if err != nil {
 		return "", err
 	}

@@ -29,14 +29,12 @@ Report is what the audit found. Undocumented lists callable operations
 without an entry, Stale entries without an operation, Incomplete
 entries missing a title or a use, and Unknown references to tools that
 do not exist, as "where: name". Duplicate lists names two operations
-would share, Unclear arguments a model could not read from their
-name alone, and Unwritten arguments nobody explained, left with only
-what their name and type say, both as "tool: argument". Tools lists
-every tool name.
+would share, and Unwritten arguments nobody explained, left with only
+what their name and type say, as "tool: argument". Tools lists every
+tool name.
 */
 type Report struct {
 	Duplicate    []string
-	Unclear      []string
 	Unwritten    []string
 	Undocumented []string
 	Stale        []string
@@ -49,8 +47,7 @@ type Report struct {
 Clean reports whether the audit found nothing wrong.
 */
 func (r Report) Clean() bool {
-	return len(r.Undocumented)+len(r.Stale)+len(r.Incomplete)+len(r.Unknown)+len(r.Duplicate)+len(r.Unclear)+
-		len(r.Unwritten) == 0
+	return len(r.Undocumented)+len(r.Stale)+len(r.Incomplete)+len(r.Unknown)+len(r.Duplicate)+len(r.Unwritten) == 0
 }
 
 /*
@@ -109,7 +106,6 @@ func check(r *Report, op mcp.Operation, docs map[string]Doc, known map[string]bo
 
 	known[name] = true
 	b := build(op, entry)
-	r.Unclear = append(r.Unclear, unclear(b)...)
 	r.Unwritten = append(r.Unwritten, unwritten(b)...)
 
 	switch {
@@ -125,36 +121,10 @@ sort orders every list of the report.
 */
 func (r Report) sort() {
 	for _, list := range [][]string{
-		r.Undocumented, r.Stale, r.Incomplete, r.Unknown, r.Duplicate, r.Unclear, r.Unwritten, r.Tools,
+		r.Undocumented, r.Stale, r.Incomplete, r.Unknown, r.Duplicate, r.Unwritten, r.Tools,
 	} {
 		slices.Sort(list)
 	}
-}
-
-/*
-unclear lists the arguments of a tool a model could not read from their
-name alone: a bare word, a search called q, a filter in brackets, a
-record named in the path without saying it is an id, or an argument
-nothing explains.
-*/
-func unclear(b built) []string {
-	var out []string
-
-	path := pathArguments(b.op.Path)
-	for name, api := range b.names.api {
-		_, plain := plainPaths()[api]
-		schema := asMap(asMap(b.schema["properties"])[name])
-		text, _ := schema["description"].(string)
-
-		switch {
-		case slices.Contains(bareWords(), name), name == "q", strings.Contains(name, "["), text == "":
-			out = append(out, b.def.Name+": "+name)
-		case slices.Contains(path, api) && !plain && !strings.Contains(name, "_id"):
-			out = append(out, b.def.Name+": "+name)
-		}
-	}
-
-	return out
 }
 
 /*

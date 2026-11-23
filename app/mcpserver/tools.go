@@ -111,7 +111,7 @@ type built struct {
 build makes the tool of an operation.
 */
 func build(op mcp.Operation, doc Doc) built {
-	b := built{op: op, doc: doc, names: namingOf(op, doc)}
+	b := built{op: op, doc: doc, names: namingOf(op)}
 	b.written = writtenTexts()[strings.TrimPrefix(toolName(op, doc), toolPrefix)]
 	b.schema = b.inputSchema()
 	b.def = b.definition()
@@ -154,23 +154,18 @@ func describe(doc Doc, r Risk) string {
 }
 
 /*
-inputSchema copies an operation's input schema under the names the
-model reads, with every argument explained, and the approval argument
-added to tools that need one.
+inputSchema copies an operation's input schema with every argument
+explained, and the approval argument added to tools that need one.
 */
 func (b built) inputSchema() map[string]any {
 	input := maps.Clone(b.op.Input)
 	fields := asMap(input["properties"])
 	properties := map[string]any{}
 
-	for name, api := range b.names.api {
-		schema := b.describeFields(maps.Clone(asMap(fields[api])), name)
-		schema["description"] = b.argumentText(name, api, schema)
+	for name := range b.names.api {
+		schema := b.describeFields(maps.Clone(asMap(fields[name])), name)
+		schema["description"] = b.argumentText(name, schema)
 		properties[name] = schema
-	}
-
-	if text, ok := b.doc.Params[customFilters]; ok {
-		properties[customArgument] = map[string]any{"type": "object", "description": text}
 	}
 
 	if riskOf(b.op, b.doc).confirms() {
@@ -182,15 +177,6 @@ func (b built) inputSchema() map[string]any {
 	}
 
 	input["properties"] = properties
-
-	if required := asList(input["required"]); len(required) > 0 {
-		renamed := make([]any, len(required))
-		for i, name := range required {
-			renamed[i] = b.names.shown(fmt.Sprint(name))
-		}
-
-		input["required"] = renamed
-	}
 
 	return input
 }
@@ -250,8 +236,8 @@ written for it by tool and name, else what is known about the record a
 path names or an argument every list shares, else the API document's
 words, else what its name and type say.
 */
-func (b built) argumentText(name, api string, schema map[string]any) string {
-	if text, ok := b.doc.Params[api]; ok {
+func (b built) argumentText(name string, schema map[string]any) string {
+	if text, ok := b.doc.Params[name]; ok {
 		return text
 	}
 
@@ -259,13 +245,13 @@ func (b built) argumentText(name, api string, schema map[string]any) string {
 		return text
 	}
 
-	if slices.Contains(pathArguments(b.op.Path), api) {
-		if guide, ok := idGuides()[api]; ok {
+	if slices.Contains(pathArguments(b.op.Path), name) {
+		if guide, ok := idGuides()[name]; ok {
 			return guide.String()
 		}
 	}
 
-	if text, ok := listArguments()[api]; ok {
+	if text, ok := listArguments()[name]; ok {
 		return text
 	}
 
@@ -273,12 +259,12 @@ func (b built) argumentText(name, api string, schema map[string]any) string {
 		return text
 	}
 
-	if field, ok := strings.CutPrefix(api, "filter["); ok {
+	if field, ok := strings.CutPrefix(name, "filter["); ok {
 		return "Only items whose " + strings.TrimSuffix(field, "]") + " matches. Several values separated by " +
 			"commas match any of them."
 	}
 
-	if text := knownText(b.op, name, api, schema); text != "" {
+	if text := knownText(b.op, name, schema); text != "" {
 		return text
 	}
 

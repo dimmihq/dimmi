@@ -103,7 +103,7 @@ func inboxSetupDocs() map[string]Doc {
 			Title:   "List inboxes",
 			Use:     "Lists the inboxes you can open. Conversations land in an inbox from the channels it connects.",
 			Returns: "the inboxes with their access, default team and settings.",
-			Next:    []string{"dimmi_list_conversations: list one inbox with filter_view=inbox:inbox_..."},
+			Next:    []string{"dimmi_list_conversations: list one inbox with filter[view]=inbox:inbox_..."},
 		},
 		"inboxes.show": {
 			Title:   "Get an inbox",

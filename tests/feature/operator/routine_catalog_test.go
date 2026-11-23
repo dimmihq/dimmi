@@ -99,9 +99,9 @@ func TestOperatorRoutineCatalog(t *testing.T) {
 		narrowed := whole
 		narrowed.HiddenInboxes = []ids.UUID{hidden}
 
-		all, err := k.catalog(whole, "dimmi_list_conversations", map[string]any{"filter_view": "all"})
+		all, err := k.catalog(whole, "dimmi_list_conversations", map[string]any{"filter[view]": "all"})
 		require.NoError(t, err)
-		some, err := k.catalog(narrowed, "dimmi_list_conversations", map[string]any{"filter_view": "all"})
+		some, err := k.catalog(narrowed, "dimmi_list_conversations", map[string]any{"filter[view]": "all"})
 		require.NoError(t, err)
 
 		assert.Contains(t, all, "Billing question")
@@ -115,7 +115,7 @@ func TestOperatorRoutineCatalog(t *testing.T) {
 		narrowed := k.owner()
 		narrowed.Principal.Permissions = []string{"members:read"}
 
-		_, err := k.catalog(narrowed, "dimmi_list_conversations", map[string]any{"filter_view": "all"})
+		_, err := k.catalog(narrowed, "dimmi_list_conversations", map[string]any{"filter[view]": "all"})
 
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "403")

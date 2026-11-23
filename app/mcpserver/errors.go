@@ -59,8 +59,7 @@ func refusal(b built, sent map[string]any, a mcp.Response) *apiError {
 		e.fields = map[string][]string{}
 		for name, list := range fields {
 			for _, item := range asList(list) {
-				shown := e.names.shown(name)
-				e.fields[shown] = append(e.fields[shown], fmt.Sprint(item))
+				e.fields[name] = append(e.fields[name], fmt.Sprint(item))
 			}
 		}
 	}
@@ -180,12 +179,11 @@ func (e *apiError) notFound() string {
 			continue
 		}
 
-		name := e.names.shown(p)
-		sent := fmt.Sprint(e.sent[name])
-		check := fmt.Sprintf("%s: you sent %q.", name, sent)
+		sent := fmt.Sprint(e.sent[p])
+		check := fmt.Sprintf("%s: you sent %q.", p, sent)
 
 		if prefix, _, _ := strings.Cut(guide.prefix, " "); prefix != "" && !strings.Contains(sent, "_") &&
-			name != conversationArgument {
+			p != "conversation" {
 			check += fmt.Sprintf(" That is not an id: the id of a %s starts with %s_, never its name or title.",
 				guide.what, prefix)
 		}

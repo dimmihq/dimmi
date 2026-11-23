@@ -107,7 +107,7 @@ func register(s *mcp.Server, api fhttp.Handler, op mcp.Operation, docs map[strin
 	err := mcp.SchemaTool(s, b.def, b.schema, func(ctx context.Context, args map[string]any) (any, error) {
 		delete(args, confirmArgument)
 
-		a, err := call(ctx, api, op, b.names.toAPI(args))
+		a, err := call(ctx, api, op, args)
 		if err != nil {
 			return nil, err
 		}
