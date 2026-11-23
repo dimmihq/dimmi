@@ -390,7 +390,7 @@ function Header({
 }) {
   const look = lookOf(routine.template_key);
   return (
-    <header className="flex h-12 shrink-0 items-center justify-between gap-3 ps-2.5 pe-2.5 pt-[7px]">
+    <header className="@container flex h-12 shrink-0 items-center justify-between gap-3 ps-2.5 pe-2.5 pt-[7px]">
       <div className="flex min-w-0 flex-1 items-center gap-2">
         <Link
           to="/d/routines"
@@ -401,8 +401,10 @@ function Header({
         </Link>
         <KindMark icon={look.icon} tint={look.tint} size="sm" />
         <h1 className="min-w-0 truncate text-body-medium text-text-primary">{routine.name}</h1>
-        <OutcomeChip routine={routine} />
-        <span className="hidden truncate text-body-2-regular text-text-tertiary md:inline">
+        <span className="hidden shrink-0 @2xl:flex">
+          <OutcomeChip routine={routine} />
+        </span>
+        <span className="hidden truncate text-body-2-regular text-text-tertiary @4xl:inline">
           {describeRoutine(routine)}
         </span>
       </div>

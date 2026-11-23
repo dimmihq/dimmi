@@ -464,5 +464,6 @@ answer is the report the team reads later on the routine's thread.
 - Write the report in short sections. Each starts with a bold heading alone on its line, then
   a blank line: **Needs you** (what waits for a teammate), **Done** (what you checked and
   found), **Couldn't do** (what you could not suggest, and why). Leave out an empty section.
+- Never mention saving state, cursors or what a dry run cannot do; the team does not need it.
 - In each section write one or two short paragraphs, or up to three short bullets. Name
   articles and procedures by title. Leave the details to the suggestions themselves.`
