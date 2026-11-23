@@ -45,8 +45,9 @@ func (e *Engine) knowledgeTools() []tool {
 		}, handle: e.searchKnowledge},
 		{spec: contracts.ToolSpec{
 			Name: "list_articles", Description: "List help center articles, drafts included, optionally " +
-				"matching words in the title, numbered from 0. Returns ids, status and whether unpublished " +
-				"changes wait. Offset and limit page through a long list.",
+				"matching words in the title, numbered from 0. Returns ids, status, whether unpublished " +
+				"changes wait, and each article's link in dimmi and public link. Offset and limit page " +
+				"through a long list.",
 			Schema: schema(`{"type":"object","properties":{"query":{"type":"string","description":"Only ` +
 				`articles with these words in the title; leave out for all."},` +
 				`"status":{"type":"string","enum":["draft","published","archived"],"description":"Only ` +
@@ -172,6 +173,7 @@ func (e *Engine) listArticles(ctx context.Context, s *session, args json.RawMess
 			if page.has(count) {
 				fmt.Fprintf(&b, "%d. %s · %s%s · updated %s (id %s)\n", count, a.Title, a.Status, pendingMark(a),
 					a.UpdatedAt.UTC().Format("2006-01-02"), models.PublicID(models.PrefixArticle, a.ID))
+				b.WriteString(e.listedLinks(s, hc, a))
 				shown++
 			}
 			count++
@@ -180,6 +182,23 @@ func (e *Engine) listArticles(ctx context.Context, s *session, args json.RawMess
 	fmt.Fprintf(&b, "Showing %d of %d articles from %d.", shown, count, page.offset)
 	summary := fmt.Sprintf("Listed %d of %d articles", shown, count)
 	return result{text: b.String(), step: Step{Tool: "list_articles", Summary: summary}}, nil
+}
+
+/*
+listedLinks are a listed article's links, indented under its line, for
+a teammate's question; a routine lists hundreds of articles and reads
+an article before it cites one, so its lists carry none.
+*/
+func (e *Engine) listedLinks(s *session, hc models.HelpCenter, a models.Article) string {
+	if s.routine != nil {
+		return ""
+	}
+	public := ""
+	if root := e.Addresses.Root(hc); root != "" && a.Status == "published" {
+		public = root + "/articles/" + a.Slug
+	}
+	lines := links(e.link(s, linkArticle, models.PrefixArticle, a.ID), public)
+	return "   " + strings.ReplaceAll(strings.TrimRight(lines, "\n"), "\n", "\n   ") + "\n"
 }
 
 /*

@@ -1,6 +1,7 @@
 package operator_test
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -138,21 +139,23 @@ func TestOperatorTools(t *testing.T) {
 		k.llm.Script(
 			tools(call("get_conversation_by_number", map[string]any{}), call("get_article_by_id", map[string]any{
 				"article_id": article,
-			})),
+			}), call("list_articles", map[string]any{})),
 			reply("Here."),
 		)
 
 		k.ask(k.thread(conv), "Send me the links").AssertOK()
 
 		sent := k.llm.Sent()
-		assert.Contains(t, sent[0].System[0].Text, "Never build, shorten or guess an address")
+		assert.Contains(t, sent[0].System[0].Text, "Always write a link as Markdown on the name of what it opens")
 		assert.Contains(t, sent[0].System[0].Text,
 			"Give the public link when asked for the live, public or external page")
-		results := sent[1].Messages[len(sent[1].Messages)-2].Parts[0].Text +
-			sent[1].Messages[len(sent[1].Messages)-1].Parts[0].Text
+		results := ""
+		for _, m := range sent[1].Messages[len(sent[1].Messages)-3:] {
+			results += m.Parts[0].Text
+		}
 		assert.Contains(t, results, "/inbox/all/"+conv)
 		assert.Contains(t, results, "Link in dimmi, for the team: ")
-		assert.Contains(t, results, "/help-center/"+article)
+		assert.Equal(t, 2, strings.Count(results, "/help-center/"+article), "read and listed, each with its link")
 		assert.Contains(t, results, "Public link: none yet, it is not published.")
 	})
 
