@@ -35,6 +35,7 @@ import {
 } from "@/components/base/dropdown/dropdown";
 import { AlertDialog } from "@/components/base/modal/modal";
 import { Tab, TabList, Tabs } from "@/components/base/tabs/tabs";
+import { Swap } from "@/features/inbox/motion";
 import { useSidePanes } from "@/features/inbox/use-side-panes";
 import { Panel, ScrollArea } from "@/features/shell/page";
 import { PaneGroup, PaneHandle } from "@/features/shell/resizable";
@@ -54,6 +55,7 @@ import { AgentMark } from "./agent-mark";
 import { AgentOperatorPanel } from "./agent-operator-panel";
 import { AgentSidePanel, type SideTab } from "./agent-side-panel";
 import { type AgentDraft, useAgentDraft } from "./use-agent-draft";
+import { useHeading } from "./use-heading";
 
 const visible = { overflow: "visible" } as const;
 const pane = { group: "dimmi:agent", editor: "agent", details: "details", operator: "operator" } as const;
@@ -250,6 +252,8 @@ function MainPanel({
   const results = sims.map((s) => resultOf(s, "draft"));
   const failing = results.filter((r) => r && !r.passed).length;
 
+  const forward = useHeading(tabs, tab);
+
   return (
     <Panel label="Agent" ground className="h-full w-full">
       <header className="@container flex h-12 shrink-0 items-center justify-between gap-3 ps-2.5 pe-2.5 pt-[7px]">
@@ -309,9 +313,11 @@ function MainPanel({
         </Tabs>
       </div>
       <ScrollArea>
-        {tab === "build" ? <AgentBuild draft={draft} view={view} workspace={workspace} sources={sources} /> : null}
-        {tab === "analytics" ? <AgentAnalytics workspace={workspace} agent={draft.id} /> : null}
-        {tab === "history" ? <AgentHistory workspace={workspace} draft={draft} /> : null}
+        <Swap view={tab} forward={forward}>
+          {tab === "build" ? <AgentBuild draft={draft} view={view} workspace={workspace} sources={sources} /> : null}
+          {tab === "analytics" ? <AgentAnalytics workspace={workspace} agent={draft.id} /> : null}
+          {tab === "history" ? <AgentHistory workspace={workspace} draft={draft} /> : null}
+        </Swap>
       </ScrollArea>
     </Panel>
   );

@@ -9,6 +9,7 @@ import { RiCloseLine } from "@remixicon/react";
 import { IconButton } from "@/components/base/buttons/icon-button";
 import { SegmentedControl, SegmentedControlItem } from "@/components/base/segmented-control/segmented-control";
 import { Tab, TabList, Tabs } from "@/components/base/tabs/tabs";
+import { Swap } from "@/features/inbox/motion";
 import { Panel } from "@/features/shell/page";
 import type { AnswerAs } from "@/lib/api/agents";
 
@@ -16,6 +17,7 @@ import type { ChipSources } from "../automation/procedure-writer/procedure-sugge
 import { AgentPreviewChat } from "./agent-preview";
 import { AgentSimulations } from "./agent-simulations";
 import type { AgentDraft } from "./use-agent-draft";
+import { useHeading } from "./use-heading";
 
 export type SideTab = "preview" | "simulations";
 
@@ -52,6 +54,7 @@ export function AgentSidePanel({
 }) {
   const published = draft.server.live_version > 0;
   const shown = published ? as : "draft";
+  const forward = useHeading(sideTabs, sideTab);
 
   return (
     <Panel label="Testing" className={className}>
@@ -78,28 +81,30 @@ export function AgentSidePanel({
           {onClose ? <IconButton size="small" icon={RiCloseLine} aria-label="Close testing" onClick={onClose} /> : null}
         </span>
       </header>
-      {sideTab === "preview" ? (
-        <AgentPreviewChat
-          key={shown}
-          workspace={workspace}
-          agent={draft.id}
-          name={draft.draft.name}
-          as={shown}
-          sources={sources}
-          flush={draft.flush}
-          onSaved={() => onSideTab("simulations")}
-        />
-      ) : (
-        <AgentSimulations
-          workspace={workspace}
-          agent={draft.id}
-          name={draft.draft.name}
-          as={shown}
-          liveVersion={draft.server.live_version}
-          sources={sources}
-          flush={draft.flush}
-        />
-      )}
+      <Swap view={sideTab} forward={forward} className="flex min-h-0 flex-1 flex-col">
+        {sideTab === "preview" ? (
+          <AgentPreviewChat
+            key={shown}
+            workspace={workspace}
+            agent={draft.id}
+            name={draft.draft.name}
+            as={shown}
+            sources={sources}
+            flush={draft.flush}
+            onSaved={() => onSideTab("simulations")}
+          />
+        ) : (
+          <AgentSimulations
+            workspace={workspace}
+            agent={draft.id}
+            name={draft.draft.name}
+            as={shown}
+            liveVersion={draft.server.live_version}
+            sources={sources}
+            flush={draft.flush}
+          />
+        )}
+      </Swap>
     </Panel>
   );
 }
