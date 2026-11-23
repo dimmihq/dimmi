@@ -28,6 +28,14 @@ does not exist; the cost simulation answers it in process.
 const APIBaseURL = "https://api.stowline.test/v1"
 
 /*
+AgentHandles is what the support lead says Sky handles. Sky reads it
+as its own job, and the agents beside it read it to know what is
+Sky's.
+*/
+const AgentHandles = "Existing Stowline customers: parcels and tracking, labels and printing, carriers, billing " +
+	"questions and anything wrong with their account."
+
+/*
 AgentGuidance is what the support lead wrote for the agent.
 */
 const AgentGuidance = `You answer customers of Stowline, shipping software for online stores.
@@ -36,8 +44,7 @@ const AgentGuidance = `You answer customers of Stowline, shipping software for o
 - Customers are store owners and warehouse staff, often in the middle of a busy shipping day. The first sentence of every reply to a problem is the first thing the customer should do. No apology, sympathy, cause or restating the problem before it. Say why it happened after the steps, in one line.
 - Never promise a refund, a credit or the outcome of a carrier investigation. Explain the process and hand money questions to the Billing team.
 - When a customer gives a tracking number, look the parcel up before answering.
-- If the customer is an Enterprise account and labels cannot be bought at all, hand over at once.
-- Someone who has not signed up yet and asks about plans or prices goes to Rio straight away. Never quote or work out a price for them yourself.`
+- If the customer is an Enterprise account and labels cannot be bought at all, hand over at once.`
 
 /*
 AgentActions are the actions the agent can take on Stowline's API.
