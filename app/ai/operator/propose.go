@@ -31,52 +31,45 @@ import (
 /*
 proposeDescription tells the model how to propose changes.
 */
-const proposeDescription = "Propose changes to the workspace as one changeset a teammate reviews: tag or untag, " +
-	"assign to a teammate or team, set priority, open or close, rename, add an internal note, update a " +
-	"customer's name, create a help article draft, edit an article's draft, edit a procedure's working " +
-	"copy, or add a regression test to a procedure from a conversation that went wrong. Give a short title " +
-	"and the reason, both in plain words a teammate reads at a glance."
+const proposeDescription = "Propose changes to conversations, customers and procedures as one changeset a " +
+	"teammate reviews: tag or untag, assign to a teammate or team, set priority, open or close, rename, add " +
+	"an internal note, update a customer's name, edit a procedure's working copy, or add a regression test " +
+	"to a procedure from a conversation that went wrong. Help articles have their own tools: " +
+	"propose_article_edit and propose_article. Give a short title and the reason, both in plain words a " +
+	"teammate reads at a glance."
 
 /*
 proposeSchema is the schema of a proposal.
 */
 const proposeSchema = `{"type":"object","required":["title","reason","operations"],"properties":{
 "title":{"type":"string","maxLength":200,"description":"What it does in a few everyday words, like ` +
-	`'Route to Billing' or 'Fix the refund window in the returns guide'."},
+	`'Route to Billing'."},
 "reason":{"type":"string","maxLength":2000,"description":"Why, as you would tell a teammate in one or two short, ` +
-	`plain sentences: what is wrong for customers today and what this changes. No tool names or ids; ` +
-	`cite conversations by number."},
+	`plain sentences: what is wrong today and what this changes. No tool names or ids; cite conversations ` +
+	`by number."},
 "dedup_key":{"type":"string","maxLength":200,"description":"A stable key for what this suggests, like ` +
-	`'gap:sso-setup' or 'gh-pr:acme/app#412:art_...'. A suggestion with the same key that still waits, or ` +
-	`was declined in the last 30 days, is not made again."},
+	`'qa:prc_...:step-2'. A suggestion with the same key that still waits, or was declined in the last 30 ` +
+	`days, is not made again."},
 "operations":{"type":"array","minItems":1,"maxItems":50,"items":{"type":"object","required":["kind"],
 "properties":{
 "kind":{"type":"string","enum":["conversation.tag","conversation.untag","conversation.assign",
 "conversation.priority","conversation.status","conversation.title","conversation.note","contact.update",
-"article.create_draft","article.edit_draft","procedure.edit_draft","procedure.create_test_case"]},
+"procedure.edit_draft","procedure.create_test_case"]},
 "conversation":{"type":"integer","description":"Conversation number; leave out for this thread's."},
-"tags":{"type":"array","items":{"type":"string"},"description":"Tag names, for tag and untag."},
-"member":{"type":"string","description":"Teammate id (mem_...) to assign, or none."},
-"team":{"type":"string","description":"Team id (team_...) to assign, or none."},
-"priority":{"type":"string","enum":["none","low","medium","high","urgent"]},
-"status":{"type":"string","enum":["open","closed"]},
-"title":{"type":"string","description":"Conversation subject or article title."},
-"body":{"type":"string","description":"Note text, or the article's whole Markdown. An article edit ` +
-	`replaces the draft: send the full article with your fix in place, never a summary of the change. ` +
-	`For a long article, send edits instead."},
-"contact":{"type":"string","description":"Customer id (ctc_...); leave out for this conversation's."},
-"name":{"type":"string","description":"The customer's new name."},
-"help_center":{"type":"string","description":"Help center id (hc_...); leave out for the default."},
-"collection":{"type":"string","description":"For article.create_draft: collection id (col_...)."},
-"visibility":{"type":"string","enum":["public","agent_only"],"description":"For article.create_draft: ` +
-	`public for customers, or agent_only for a snippet only the AI agent reads. Public by default."},
-"article":{"type":"string","description":"Article id (art_...)."},
-"edits":{"type":"array","maxItems":20,"description":"For article.edit_draft, instead of body: the exact ` +
-	`passages to replace in the article, each find copied word for word from get_article and found once.",` +
-	`"items":{"type":"object","required":["find","replace"],"properties":{"find":{"type":"string"},` +
-	`"replace":{"type":"string"}}}},
-"procedure":{"type":"string","description":"Procedure id (prc_...)."},
-"definition":{"type":"object","description":"The procedure's whole new working copy, as get_procedure shows it."},
+"tags":{"type":"array","items":{"type":"string"},"description":"For conversation.tag and untag: tag names."},
+"member":{"type":"string","description":"For conversation.assign: teammate id (mem_...), or none."},
+"team":{"type":"string","description":"For conversation.assign: team id (team_...), or none."},
+"priority":{"type":"string","enum":["none","low","medium","high","urgent"],
+"description":"For conversation.priority."},
+"status":{"type":"string","enum":["open","closed"],"description":"For conversation.status."},
+"title":{"type":"string","description":"For conversation.title: the new subject."},
+"body":{"type":"string","description":"For conversation.note: the note's text."},
+"contact":{"type":"string","description":"For contact.update: customer id (ctc_...); leave out for this ` +
+	`conversation's."},
+"name":{"type":"string","description":"For contact.update: the customer's new name."},
+"procedure":{"type":"string","description":"For the procedure kinds: procedure id (prc_...)."},
+"definition":{"type":"object","description":"For procedure.edit_draft: the procedure's whole new working ` +
+	`copy, as get_procedure shows it."},
 "test_case":{"type":"object","description":"For procedure.create_test_case: the test, with name, messages ` +
 	`([{text}], the customer's turns), persona ({verified, external_id, channel, attributes}), action_mocks ` +
 	`({action name: {status: HTTP status as a number such as 200, body: any JSON}}), assertions ([{type, ...}]: ` +
@@ -117,7 +110,7 @@ type opInput struct {
 	Procedure    string          `json:"procedure"`
 	Definition   json.RawMessage `json:"definition"`
 	TestCase     json.RawMessage `json:"test_case"`
-	Edits        []passageEdit   `json:"edits"`
+	Edits        passageEdits    `json:"edits"`
 }
 
 /*
@@ -151,13 +144,23 @@ func (e *Engine) operations(ctx context.Context, s *session, in []opInput) ([]Op
 			}
 			op, err := r.resolve(ctx, raw)
 			if err != nil {
-				return fmt.Errorf("operation %d (%s): %w", i+1, raw.Kind, err)
+				return placed(err, in, i)
 			}
 			out = append(out, op)
 		}
 		return nil
 	})
 	return out, err
+}
+
+/*
+placed says which operation an error is about when there are several.
+*/
+func placed(err error, in []opInput, i int) error {
+	if len(in) == 1 {
+		return err
+	}
+	return fmt.Errorf("operation %d (%s): %w", i+1, in[i].Kind, err)
 }
 
 /*

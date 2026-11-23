@@ -85,15 +85,19 @@ func (r resolver) articleOp(ctx context.Context, in opInput) (Operation, error) 
 		return r.newArticleOp(ctx, op, in)
 	}
 	if strings.TrimSpace(in.Article) == "" {
-		return op, fmt.Errorf("%w: name the article to edit in \"article\", by the id get_article showed "+
-			"(art_...)", errBadArguments)
+		return op, fmt.Errorf("%w: \"article\" is missing; send the id of the article to edit, as "+
+			"get_article and list_articles show it (art_...)", errBadArguments)
 	}
 	id, err := r.e.publicID(in.Article, models.PrefixArticle)
 	if err != nil {
-		return op, fmt.Errorf("%w: there is no article %q; use the id get_article showed (art_...)",
-			errBadArguments, in.Article)
+		return op, fmt.Errorf("%w: there is no article %q; \"article\" is the id get_article and "+
+			"list_articles show (art_...), never the title", errBadArguments, in.Article)
 	}
 	a, err := r.e.Services.Articles.Show(ctx, r.s.m, id)
+	if errors.Is(err, exceptions.ErrNotFound) {
+		return op, fmt.Errorf("%w: there is no article %q; \"article\" is the id get_article and "+
+			"list_articles show (art_...)", errBadArguments, in.Article)
+	}
 	if err != nil {
 		return op, err
 	}
@@ -115,20 +119,21 @@ func editBody(op *Operation, current string, edits []passageEdit) error {
 		if op.Body != nil {
 			return fmt.Errorf("%w: give either a body or edits, not both", errBadArguments)
 		}
-		body, err := applyPassages(current, edits)
+		body, notes, err := applyPassages(current, edits)
 		if err != nil {
 			return err
 		}
-		op.Body = &body
+		op.Body, op.Note = &body, strings.Join(notes, " ")
 	}
 	if op.Title == nil && op.Body == nil {
-		return fmt.Errorf("%w: give a new title, a body or edits", errBadArguments)
+		return fmt.Errorf("%w: \"edits\" is missing; send the passages to replace, each as {find, replace}",
+			errBadArguments)
 	}
 	if op.Body != nil && strings.TrimSpace(*op.Body) == strings.TrimSpace(current) {
 		op.Body = nil
 		if op.Title == nil {
-			return fmt.Errorf("%w: the edit leaves the article exactly as it is; check that each replace "+
-				"differs from its find, or suggest nothing", errBadArguments)
+			return fmt.Errorf("%w: the edit leaves the article exactly as it is; each replace must differ "+
+				"from its find. When the article is already right, suggest nothing", errBadArguments)
 		}
 	}
 	if op.Body != nil && shrinks(current, *op.Body) {
@@ -137,41 +142,6 @@ func editBody(op *Operation, current string, edits []passageEdit) error {
 			errBadArguments, len([]rune(current)))
 	}
 	return nil
-}
-
-/*
-passageEdit replaces one passage of an article, found word for word.
-*/
-type passageEdit struct {
-	Find    string `json:"find"`
-	Replace string `json:"replace"`
-}
-
-/*
-applyPassages writes each edit into the article's working copy. Every
-passage must be found exactly once, so an edit never lands in the
-wrong place.
-*/
-func applyPassages(body string, edits []passageEdit) (string, error) {
-	if len(edits) > 20 {
-		return "", fmt.Errorf("%w: at most 20 edits", errBadArguments)
-	}
-	for i, e := range edits {
-		if strings.TrimSpace(e.Find) == "" {
-			return "", fmt.Errorf("%w: edit %d has nothing to find", errBadArguments, i+1)
-		}
-		switch strings.Count(body, e.Find) {
-		case 0:
-			return "", fmt.Errorf("%w: edit %d's find is not in the article; copy it word for word from "+
-				"get_article", errBadArguments, i+1)
-		case 1:
-			body = strings.Replace(body, e.Find, e.Replace, 1)
-		default:
-			return "", fmt.Errorf("%w: edit %d's find appears more than once; include more of the "+
-				"surrounding text", errBadArguments, i+1)
-		}
-	}
-	return body, nil
 }
 
 /*

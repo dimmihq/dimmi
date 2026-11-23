@@ -40,7 +40,7 @@ const (
 writeTools are the tools that leave something behind.
 */
 func (e *Engine) writeTools() []tool {
-	return []tool{
+	return append(e.articleTools(), []tool{
 		{spec: contracts.ToolSpec{
 			Name: "draft_reply",
 			Description: "Draft a reply to the customer of this thread's conversation. It lands in the " +
@@ -58,15 +58,17 @@ func (e *Engine) writeTools() []tool {
 			Schema: schema(`{"type":"object","required":["fact"],"properties":{"fact":{"type":"string",` +
 				`"maxLength":1000}}}`),
 		}, handle: e.remember},
-	}
+	}...)
 }
 
 /*
-changeKinds are the kinds propose_changes writes; workspace actions are
-proposed through their own tools.
+changeKinds are the kinds propose_changes writes; workspace actions and
+help articles are proposed through their own tools.
 */
 func changeKinds() []Kind {
-	return slices.DeleteFunc(Kinds(), func(k Kind) bool { return k == KindAction })
+	return slices.DeleteFunc(Kinds(), func(k Kind) bool {
+		return k == KindAction || k == KindArticleEdit || k == KindArticleNew
+	})
 }
 
 /*
@@ -127,6 +129,14 @@ func (e *Engine) proposeChanges(ctx context.Context, s *session, args json.RawMe
 	if err := decode(args, &in); err != nil {
 		return result{}, err
 	}
+	return e.propose(ctx, s, in)
+}
+
+/*
+propose checks a proposal and stores it as a changeset, whichever tool
+it came through.
+*/
+func (e *Engine) propose(ctx context.Context, s *session, in proposal) (result, error) {
 	if err := in.check(); err != nil {
 		return result{}, err
 	}
@@ -151,14 +161,28 @@ func (e *Engine) proposeChanges(ctx context.Context, s *session, args json.RawMe
 	public := models.PublicID(models.PrefixOperatorChangeset, row.ID)
 	st := Step{Tool: "propose_changes", Summary: "Proposed: " + row.Title, Changeset: public}
 	if !auto {
-		return result{text: fmt.Sprintf("Changeset %s is waiting for the teammate to review %d change(s).",
-			public, len(ops)), step: st}, nil
+		return result{text: fmt.Sprintf("Changeset %s is waiting for the teammate to review %d change(s).%s",
+			public, len(ops), notesOf(ops)), step: st}, nil
 	}
 	if _, err := e.Apply(ctx, s.m, row.ID); err != nil {
 		return result{text: "The changes could not be applied: " + refusal(err), step: st}, nil
 	}
 	st.Summary = "Applied: " + row.Title
 	return result{text: fmt.Sprintf("Applied changeset %s; the teammate can undo it.", public), step: st}, nil
+}
+
+/*
+notesOf is what the operations were matched to when that differs from
+what the model sent, for the model to read.
+*/
+func notesOf(ops []Operation) string {
+	var b strings.Builder
+	for _, op := range ops {
+		if op.Note != "" {
+			b.WriteString(" " + op.Note)
+		}
+	}
+	return b.String()
 }
 
 /*

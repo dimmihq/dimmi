@@ -48,7 +48,7 @@ func oneTarget(ops []Operation) error {
 		}
 		if (seen != "" && t != seen) || news > 1 {
 			return fmt.Errorf("%w: each changeset may change only one article or one procedure (with its "+
-				"tests); call propose_changes once per article or procedure", errBadArguments)
+				"tests); suggest each article or procedure in a call of its own", errBadArguments)
 		}
 		seen = t
 	}

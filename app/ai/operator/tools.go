@@ -153,8 +153,9 @@ func refusal(err error) string {
 /*
 errSpent refuses a reading tool once a routine's run may only close.
 */
-var errSpent = errors.New("you are out of reading steps for this run. Suggest what you already found with " +
-	"propose_changes, save progress with routine_set_state, or call mark_noop; then write your message")
+var errSpent = errors.New("you are out of reading steps for this run. Suggest what you already found " +
+	"with propose_article_edit, propose_article or propose_changes, save progress with routine_set_state, or " +
+	"call mark_noop; then write your message")
 
 /*
 errBadArguments marks a tool call whose arguments make no sense.

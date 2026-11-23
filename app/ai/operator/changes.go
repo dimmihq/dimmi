@@ -113,6 +113,7 @@ type Operation struct {
 	After        json.RawMessage `json:"after,omitempty"`
 	Created      *ids.UUID       `json:"created_id,omitempty"`
 	Outcome      string          `json:"outcome,omitempty"`
+	Note         string          `json:"-"`
 }
 
 /*

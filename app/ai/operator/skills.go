@@ -133,9 +133,9 @@ const knowledgeGapsSkill = `How to find knowledge gaps.
    policy, or an article with 2 or more "not helpful" votes.
 5. Before suggesting anything, call search_knowledge, list_articles and list_recent_changesets. Never
    suggest what an article, a draft, a waiting suggestion or one declined lately already covers.
-6. For each real gap, at most 5, call propose_changes with a dedup_key like gap:<topic-slug>:
-   - article.edit_draft when an article exists but is unclear or incomplete;
-   - article.create_draft with visibility public for a customer guide, or agent_only for a short
+6. For each real gap, at most 5, suggest one change with a dedup_key like gap:<topic-slug>:
+   - propose_article_edit when an article exists but is unclear or incomplete;
+   - propose_article with visibility public for a customer guide, or agent_only for a short
      policy or edge-case snippet only the AI agent reads.
    Keep every customer detail out of the article. Cite conversation numbers only in the reason.
 7. Save the end of the run's window and the topics you covered with routine_set_state.
@@ -153,9 +153,9 @@ const auditArticlesSkill = `How to audit help articles.
 4. Compare facts across articles with search_knowledge: refund windows, limits, prices, plan names,
    steps.
 5. Call list_recent_changesets so you never repeat a waiting or declined suggestion.
-6. For each contradiction or stale fact, call propose_changes with article.edit_draft, giving edits
-   with the exact passages to fix, and a dedup_key like stale:<article id>. Name the conflicting
-   article in the reason.
+6. For each contradiction or stale fact, call propose_article_edit with the article's id, edits
+   with the exact sentences to fix, and a dedup_key like stale:<article id>. Name the conflicting
+   article by its title in the reason.
 7. Save the new next_offset and the audited articles with routine_set_state.
 8. When everything checked holds up, call mark_noop with the reason.`
 
@@ -172,8 +172,8 @@ const pullRequestsSkill = `How to keep help articles in line with merged pull re
 4. Find the articles each change affects with search_knowledge and list_articles, and read them
    with get_article.
 5. Call list_recent_changesets so you never repeat a waiting or declined suggestion.
-6. For each article now wrong or missing the change, call propose_changes with article.edit_draft
-   (or article.create_draft for a major new feature) and a dedup_key like
+6. For each article now wrong or missing the change, call propose_article_edit (or
+   propose_article for a major new feature) with a dedup_key like
    gh-pr:<owner/repo>#<number>:<article id>. Say which pull request changed what in the reason.
 7. Save each repository's newest last_merged_at and the numbers you read (the last 200) with
    routine_set_state, as {"repos": {"owner/repo": {"last_merged_at": "...", "processed_prs": [..]}}}.
