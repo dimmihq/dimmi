@@ -104,6 +104,7 @@ type Question struct {
 	ThreadID   ids.UUID
 	Text       string
 	Hidden     bool
+	Viewing    Viewing
 }
 
 /*
@@ -138,6 +139,8 @@ func (e *Engine) Ask(ctx context.Context, q Question) (Answer, error) {
 	if err != nil {
 		return Answer{}, err
 	}
+	s.viewing = q.Viewing
+	s.looking = e.lookAt(ctx, s)
 	text, status := e.converse(ctx, s)
 	answer, err := e.finish(context.WithoutCancel(ctx), s, text, status)
 	answer.Asked = asked

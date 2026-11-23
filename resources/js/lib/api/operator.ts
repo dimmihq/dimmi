@@ -201,11 +201,27 @@ export function operatorThreadQuery(workspace: string, id: string) {
   });
 }
 
-export function askOperator(workspace: string, thread: string, body: string, signal?: AbortSignal) {
+/*
+ * OperatorViewing is what the teammate has open when they ask: an article
+ * or a procedure, and the suggested change shown on it.
+ */
+export interface OperatorViewing {
+  article_id?: string;
+  procedure_id?: string;
+  changeset_id?: string;
+}
+
+export function askOperator(
+  workspace: string,
+  thread: string,
+  body: string,
+  signal?: AbortSignal,
+  viewing?: OperatorViewing,
+) {
   return request<OperatorAnswer>(
     "POST",
     `/operator/threads/${encodeURIComponent(thread)}/messages`,
-    { body },
+    viewing ? { body, viewing } : { body },
     { workspace, signal },
   );
 }

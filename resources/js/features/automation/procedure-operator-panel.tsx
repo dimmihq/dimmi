@@ -24,12 +24,15 @@ export function ProcedureOperatorPanel({
   workspace,
   procedureId,
   procedureName,
+  suggestion = null,
   onClose,
   className,
 }: {
   workspace: string;
   procedureId: string;
   procedureName: string;
+  /* The suggested change shown on the procedure, when one waits. */
+  suggestion?: string | null;
   onClose: () => void;
   className?: string;
 }) {
@@ -44,7 +47,10 @@ export function ProcedureOperatorPanel({
       : operatorKeys.thread(workspace, picked);
   const { data: past = [] } = useQuery(workspaceThreadsQuery(workspace));
   const { data: settings } = useQuery(operatorSettingsQuery(workspace));
-  const chat = useOperatorChat(workspace, thread, key);
+  const chat = useOperatorChat(workspace, thread, key, {
+    procedure_id: procedureId,
+    changeset_id: suggestion ?? undefined,
+  });
   const fresh = useMutation({
     mutationFn: () => startWorkspaceThread(workspace),
     onSuccess: (started) => {
@@ -79,10 +85,7 @@ export function ProcedureOperatorPanel({
           icon: RiSearchEyeLine,
           title: "Review this procedure for gaps",
           detail: "Finds unclear steps and missing edge cases.",
-          onPick: () =>
-            chat.ask(
-              `Review ${about} and suggest any unclear steps, missing edge cases, or improvements.`,
-            ),
+          onPick: () => chat.ask(`Review ${about} and suggest any unclear steps, missing edge cases, or improvements.`),
         },
         {
           icon: RiTestTubeLine,

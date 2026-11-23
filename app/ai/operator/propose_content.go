@@ -101,10 +101,14 @@ func (r resolver) articleOp(ctx context.Context, in opInput) (Operation, error) 
 	if err != nil {
 		return op, err
 	}
-	if err := editBody(&op, a.BodyMarkdown, in.Edits); err != nil {
+	current := a.BodyMarkdown
+	if text, ok := r.s.suggested(id); ok {
+		current = text
+	}
+	if err := editBody(&op, current, in.Edits); err != nil {
 		return op, fmt.Errorf("article %q: %w", a.Title, err)
 	}
-	op.Article, op.Current, op.Label = &id, a.BodyMarkdown, fmt.Sprintf("Edit the draft of “%s”", a.Title)
+	op.Article, op.Current, op.Label = &id, current, fmt.Sprintf("Edit the draft of “%s”", a.Title)
 	return op, nil
 }
 

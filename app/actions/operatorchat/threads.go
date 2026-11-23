@@ -61,6 +61,7 @@ type AskInput struct {
 	Membership authz.Membership
 	ThreadID   ids.UUID
 	Body       string
+	Viewing    operator.Viewing
 }
 
 /*
@@ -265,7 +266,9 @@ func (a *Threads) Ask(ctx context.Context, in AskInput) (operator.Answer, error)
 	if err := a.throttle(ctx, in.Membership); err != nil {
 		return operator.Answer{}, err
 	}
-	return a.Operator.Ask(ctx, operator.Question{Membership: in.Membership, ThreadID: in.ThreadID, Text: in.Body})
+	return a.Operator.Ask(ctx, operator.Question{
+		Membership: in.Membership, ThreadID: in.ThreadID, Text: in.Body, Viewing: in.Viewing,
+	})
 }
 
 /*

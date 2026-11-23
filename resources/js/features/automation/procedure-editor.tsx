@@ -1245,6 +1245,7 @@ export function ProcedureEditor({ workspace, procedure }: { workspace: string; p
             workspace={workspace}
             procedureId={procedure.id}
             procedureName={draft.name || procedure.name}
+            suggestion={request?.changeset.id ?? null}
             onClose={() => setOperatorDrawer(false)}
             className="h-full w-full"
           />
@@ -1310,6 +1311,7 @@ export function ProcedureEditor({ workspace, procedure }: { workspace: string; p
             workspace={workspace}
             procedureId={procedure.id}
             procedureName={draft.name || procedure.name}
+            suggestion={request?.changeset.id ?? null}
             onClose={() => toggle(pane.operator)}
             className="h-full w-full"
           />

@@ -80,6 +80,10 @@ type session struct {
 	layer        *layerState
 	routine      *routineRun
 	sub          *subagent
+	/* What the teammate has open, the note that says so, and the suggestion shown on it. */
+	viewing Viewing
+	looking string
+	viewed  *models.OperatorChangeset
 }
 
 /*

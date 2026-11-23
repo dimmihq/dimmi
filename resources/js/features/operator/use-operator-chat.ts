@@ -17,6 +17,7 @@ import {
   decideChangeset,
   type OperatorStep,
   type OperatorThreadView,
+  type OperatorViewing,
   operatorKeys,
 } from "@/lib/api/operator";
 import { callerQuery } from "@/lib/api/workspace";
@@ -51,7 +52,13 @@ export function failureText(error: unknown): string {
   return "Operator could not answer just now. Try again in a moment.";
 }
 
-export function useOperatorChat(workspace: string, thread: OperatorThreadView | undefined, threadKey: QueryKey) {
+export function useOperatorChat(
+  workspace: string,
+  thread: OperatorThreadView | undefined,
+  threadKey: QueryKey,
+  /* What the teammate has open, sent with each question so Operator works on it. */
+  viewing?: OperatorViewing,
+) {
   const client = useQueryClient();
   const { data: caller } = useQuery(callerQuery(workspace));
   const member = caller?.member?.id ?? null;
@@ -63,6 +70,7 @@ export function useOperatorChat(workspace: string, thread: OperatorThreadView | 
     Promise.all([
       client.invalidateQueries({ queryKey: threadKey }),
       client.invalidateQueries({ queryKey: operatorKeys.threads(workspace) }),
+      client.invalidateQueries({ queryKey: operatorKeys.changesets(workspace, "pending") }),
     ]);
 
   const onEnvelope = (envelope: Envelope) => {
@@ -105,7 +113,7 @@ export function useOperatorChat(workspace: string, thread: OperatorThreadView | 
     if (!thread || running.current) {
       return;
     }
-    void run(question, (signal) => askOperator(workspace, thread.id, question, signal));
+    void run(question, (signal) => askOperator(workspace, thread.id, question, signal, viewing));
   };
 
   const decide = async (id: string, decision: ChangesetDecision) => {

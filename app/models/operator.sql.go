@@ -689,6 +689,59 @@ func (q *Queries) LockOperatorChangeset(ctx context.Context, arg LockOperatorCha
 	return i, err
 }
 
+const reviseOperatorChangeset = `-- name: ReviseOperatorChangeset :one
+UPDATE operator_changesets
+SET operations = $1, reason = $2, updated_at = $3
+WHERE workspace_id = $4 AND id = $5 AND status = 'pending'
+RETURNING id, workspace_id, thread_id, message_id, member_id, conversation_id, title, reason, operations, status, auto, error, decided_by_member_id, applied_at, reverted_at, created_at, updated_at, routine_id, routine_run_id, dedup_key, preview, expires_at
+`
+
+type ReviseOperatorChangesetParams struct {
+	Operations  json.RawMessage `json:"operations"`
+	Reason      string          `json:"reason"`
+	Now         time.Time       `json:"now"`
+	WorkspaceID ids.UUID        `json:"workspace_id"`
+	ID          ids.UUID        `json:"id"`
+}
+
+// ReviseOperatorChangeset replaces what a changeset that still waits
+// would change, and why, when Operator amends it for a teammate.
+func (q *Queries) ReviseOperatorChangeset(ctx context.Context, arg ReviseOperatorChangesetParams) (OperatorChangeset, error) {
+	row := q.db.QueryRow(ctx, reviseOperatorChangeset,
+		arg.Operations,
+		arg.Reason,
+		arg.Now,
+		arg.WorkspaceID,
+		arg.ID,
+	)
+	var i OperatorChangeset
+	err := row.Scan(
+		&i.ID,
+		&i.WorkspaceID,
+		&i.ThreadID,
+		&i.MessageID,
+		&i.MemberID,
+		&i.ConversationID,
+		&i.Title,
+		&i.Reason,
+		&i.Operations,
+		&i.Status,
+		&i.Auto,
+		&i.Error,
+		&i.DecidedByMemberID,
+		&i.AppliedAt,
+		&i.RevertedAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.RoutineID,
+		&i.RoutineRunID,
+		&i.DedupKey,
+		&i.Preview,
+		&i.ExpiresAt,
+	)
+	return i, err
+}
+
 const saveOperatorSettings = `-- name: SaveOperatorSettings :one
 INSERT INTO operator_settings (
     workspace_id, enabled, brief_on_open, triage_on_arrival, instructions, policies, model, created_at, updated_at

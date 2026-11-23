@@ -337,6 +337,9 @@ func (e *Engine) transcript(s *session) []contracts.ChatMessage {
 		out[len(out)-1].Cacheable = true
 	}
 	question := contracts.ChatMessage{Role: contracts.ChatRoleUser, Parts: textParts(s.question)}
+	if s.looking != "" {
+		question.Parts = append(question.Parts, contracts.ContentPart{Text: s.looking})
+	}
 	if s.layer != nil {
 		if note := toolset.Note(s.layer.earlier, s.layer.suggested); note != "" {
 			question.Parts = append(question.Parts, contracts.ContentPart{Text: note})

@@ -172,3 +172,11 @@ ON CONFLICT (workspace_id) DO UPDATE SET tool_layer = EXCLUDED.tool_layer, updat
 INSERT INTO operator_settings (workspace_id, compact_results, created_at, updated_at)
 VALUES (@workspace_id, @compact_results, @now, @now)
 ON CONFLICT (workspace_id) DO UPDATE SET compact_results = EXCLUDED.compact_results, updated_at = EXCLUDED.updated_at;
+
+-- name: ReviseOperatorChangeset :one
+-- ReviseOperatorChangeset replaces what a changeset that still waits
+-- would change, and why, when Operator amends it for a teammate.
+UPDATE operator_changesets
+SET operations = @operations, reason = @reason, updated_at = @now
+WHERE workspace_id = @workspace_id AND id = @id AND status = 'pending'
+RETURNING *;

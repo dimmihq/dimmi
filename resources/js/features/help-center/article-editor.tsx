@@ -34,6 +34,7 @@ import {
 } from "@/lib/api/help-centers";
 
 import { ArticleHeader } from "./article-header";
+import { ArticleOperatorPanel } from "./article-operator-panel";
 import { ArticlePage } from "./article-page";
 import { ArticleSettings } from "./article-settings";
 import { type ArticleRequest, useArticleDecision } from "./change-requests";
@@ -137,11 +138,25 @@ export function ArticleEditor({ id }: { id: string }) {
     setDraft(draftOf(fresh));
     setRevision((r) => r + 1);
   });
-  const history = useHistoryPane(workspace, id, (restored) => {
-    settle(restored);
-    setDraft(draftOf(restored));
-    setRevision((r) => r + 1);
-  });
+  const history = useHistoryPane(
+    workspace,
+    id,
+    (restored) => {
+      settle(restored);
+      setDraft(draftOf(restored));
+      setRevision((r) => r + 1);
+    },
+    (className, close) => (
+      <ArticleOperatorPanel
+        workspace={workspace}
+        articleId={id}
+        articleTitle={article?.title ?? ""}
+        suggestion={request?.changeset.id ?? null}
+        onClose={close}
+        className={className}
+      />
+    ),
+  );
 
   if (!article || !draft) {
     return (

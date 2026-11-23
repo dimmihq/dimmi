@@ -133,6 +133,23 @@ func (e *Engine) proposeChanges(ctx context.Context, s *session, args json.RawMe
 }
 
 /*
+already settles a proposal that needs no new changeset: a routine's
+that reaches past one target or repeats a waiting suggestion, and a
+teammate's change to the suggestion they have open, which is added to
+it in place.
+*/
+func (e *Engine) already(ctx context.Context, s *session, in proposal, ops []Operation) (result, bool, error) {
+	if s.routine == nil {
+		return e.amend(ctx, s, in, ops)
+	}
+	if err := oneTarget(ops); err != nil {
+		return result{}, false, err
+	}
+	text, ok, err := e.repeated(ctx, s, ops)
+	return result{text: text, step: Step{Tool: "propose_changes", Summary: "Skipped a suggestion made before"}}, ok, err
+}
+
+/*
 propose checks a proposal and stores it as a changeset, whichever tool
 it came through.
 */
@@ -144,14 +161,8 @@ func (e *Engine) propose(ctx context.Context, s *session, in proposal) (result, 
 	if err != nil {
 		return result{}, err
 	}
-	if s.routine != nil {
-		if err := oneTarget(ops); err != nil {
-			return result{}, err
-		}
-		if text, ok, err := e.repeated(ctx, s, ops); err != nil || ok {
-			skipped := Step{Tool: "propose_changes", Summary: "Skipped a suggestion made before"}
-			return result{text: text, step: skipped}, err
-		}
+	if out, ok, err := e.already(ctx, s, in, ops); err != nil || ok {
+		return out, err
 	}
 	if text, ok, err := e.duplicate(ctx, s, in.DedupKey); err != nil || ok {
 		return result{text: text, step: Step{Tool: "propose_changes", Summary: "Skipped a suggestion made before"}}, err

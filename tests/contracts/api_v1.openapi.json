@@ -2712,6 +2712,9 @@
           "body": {
             "maxLength": 8000,
             "type": "string"
+          },
+          "viewing": {
+            "$ref": "#/components/schemas/OperatorViewing"
           }
         },
         "required": [
@@ -22328,6 +22331,24 @@
           "thread_id",
           "routine_id"
         ],
+        "type": "object"
+      },
+      "OperatorViewing": {
+        "additionalProperties": false,
+        "properties": {
+          "article_id": {
+            "maxLength": 64,
+            "type": "string"
+          },
+          "changeset_id": {
+            "maxLength": 64,
+            "type": "string"
+          },
+          "procedure_id": {
+            "maxLength": 64,
+            "type": "string"
+          }
+        },
         "type": "object"
       },
       "Option": {

@@ -4,7 +4,14 @@
  * history and settings are icons. While Operator requests a change,
  * Decline and Accept changes lead.
  */
-import { RiArrowLeftLine, RiChatQuoteLine, RiExternalLinkLine, RiHistoryLine, RiSettings3Line } from "@remixicon/react";
+import {
+  RiArrowLeftLine,
+  RiChatQuoteLine,
+  RiExternalLinkLine,
+  RiHistoryLine,
+  RiSettings3Line,
+  RiSparkling2Line,
+} from "@remixicon/react";
 import { Link } from "@tanstack/react-router";
 
 import { Chip } from "@/components/base/badges/chip";
@@ -74,6 +81,7 @@ export function ArticleHeader({
       {article.status === "published" ? (
         <SideButton icon={RiChatQuoteLine} label="Reader feedback" view="feedback" history={history} />
       ) : null}
+      <SideButton icon={RiSparkling2Line} label="Operator" view="operator" history={history} />
       <SideButton icon={RiHistoryLine} label="Version history" view="history" history={history} />
       <IconButton size="small" icon={RiSettings3Line} aria-label="Article settings" onClick={onSettings} />
       <Button size="small" variant="secondary" onClick={onSave} disabled={saving}>

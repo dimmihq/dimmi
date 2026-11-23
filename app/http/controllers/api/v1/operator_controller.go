@@ -21,6 +21,7 @@ import (
 	"github.com/dimmihq/dimmi/framework/ids"
 
 	"github.com/dimmihq/dimmi/app/actions/operatorchat"
+	"github.com/dimmihq/dimmi/app/ai/operator"
 	"github.com/dimmihq/dimmi/app/exceptions"
 	"github.com/dimmihq/dimmi/app/http/requests"
 	"github.com/dimmihq/dimmi/app/http/resources"
@@ -177,12 +178,38 @@ func (c *OperatorController) Ask(ctx context.Context, in *requests.AskOperatorRe
 		return nil, err
 	}
 	answer, err := c.Threads.Ask(ctx, operatorchat.AskInput{
-		Membership: membership(ctx), ThreadID: id, Body: in.Body.Body,
+		Membership: membership(ctx), ThreadID: id, Body: in.Body.Body, Viewing: c.viewing(in),
 	})
 	if err != nil {
 		return nil, err
 	}
 	return &OperatorAnswerOutput{Body: fhttp.NewResource(resources.NewOperatorAnswer(answer))}, nil
+}
+
+/*
+viewing reads what the teammate has open. An id that does not decode is
+left out: the question is still answered, only without that context.
+*/
+func (c *OperatorController) viewing(req *requests.AskOperatorRequest) operator.Viewing {
+	var out operator.Viewing
+	in := req.Body.Viewing
+	if in == nil {
+		return out
+	}
+	read := func(prefix models.Prefix, public *string) *ids.UUID {
+		if public == nil {
+			return nil
+		}
+		id, err := c.decode(prefix, *public)
+		if err != nil {
+			return nil
+		}
+		return &id
+	}
+	out.Article = read(models.PrefixArticle, in.ArticleID)
+	out.Procedure = read(models.PrefixProcedure, in.ProcedureID)
+	out.Changeset = read(models.PrefixOperatorChangeset, in.ChangesetID)
+	return out
 }
 
 /*
