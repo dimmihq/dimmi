@@ -36,6 +36,28 @@ be written again rather than being cut out.
 func TestReplyCheck(t *testing.T) {
 	t.Parallel()
 
+	t.Run("sends a reply that explains what the agent could not find back once", func(t *testing.T) {
+		t.Parallel()
+		h := newHarness(t, nil)
+		conv, trigger := h.conversation("Do you work with Outlook?")
+		h.llm.answer.Script(search("outlook calendar integration"),
+			reply("I couldn't find anything about Outlook in our help center, so I can't confirm it."),
+			reply("Not sure about Outlook."))
+		h.llm.judge(map[string]bool{"about_itself": true})
+
+		res := h.run(conv, trigger)
+
+		assert.NotEqual(t, "handoff", res.Outcome, "how a reply reads never hands a conversation over")
+		s := h.load(conv, res.RunID)
+		assert.Contains(t, s.run.Flags, "reply_reworded")
+		assert.NotContains(t, s.run.Flags, "reply_withheld", "a reply is never kept back for how it reads")
+		sent := h.llm.answer.Sent()
+		require.Len(t, sent, 3, "the reply was written once more, and only once, though the judge still says so")
+		last := sent[2].Messages[len(sent[2].Messages)-1].Parts[0].Text
+		assert.Contains(t, last, "tells the customer about your own knowledge", "the agent is told why")
+		assert.Equal(t, "Not sure about Outlook.", *s.agentReplies()[0].Body)
+	})
+
 	t.Run("sends a reply with a note to itself back to be written again", func(t *testing.T) {
 		t.Parallel()
 		h := newHarness(t, nil)

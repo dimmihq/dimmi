@@ -29,6 +29,7 @@ func TestJudgmentFiles(t *testing.T) {
 	}{
 		{name: "reply_claims_handoff", state: true, vars: []string{"reply"}},
 		{name: "reply_not_for_customer", vars: []string{}},
+		{name: "reply_about_itself", vars: []string{}},
 		{name: "reply_asks", state: true, vars: []string{"reply"}},
 		{name: "step_waits", state: true, vars: []string{"steps", "step"}},
 		{name: "condition_clear", state: true, vars: []string{"condition", "today", "lookups", "conversation"}},

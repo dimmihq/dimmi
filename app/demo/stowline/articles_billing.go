@@ -17,7 +17,10 @@ func billingArticles() []Article {
 	var rows [][]string
 	for _, p := range Plans() {
 		price := "Free"
-		if p.MonthlyUSD > 0 {
+		switch {
+		case p.ByContract:
+			price = "Priced per contract"
+		case p.MonthlyUSD > 0:
 			price = fmt.Sprintf("$%d a month", p.MonthlyUSD)
 		}
 		over := "No overage; buying stops at the limit"
