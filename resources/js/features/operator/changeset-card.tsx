@@ -32,6 +32,7 @@ import { Unfold } from "@/features/shell/reveal";
 import type { ChangesetDecision, ChangesetStatus, OperatorChangeset } from "@/lib/api/operator";
 import { cx } from "@/utils/cx";
 
+import { emphasized } from "./emphasized";
 import { reviewTarget } from "./review-target";
 import { failureText } from "./use-operator-chat";
 
@@ -242,27 +243,6 @@ function Reason({ text }: { text: string }) {
       {emphasized(text)}
     </button>
   );
-}
-
-/*
- * emphasized shows the bold and italics Operator writes inline, so a
- * reason never shows its asterisks.
- */
-function emphasized(text: string): ReactNode[] {
-  return text.split(/(\*\*[^*]+\*\*|\*[^*\s][^*]*\*)/g).map((part, i) => {
-    const key = `${i}:${part}`;
-    if (part.startsWith("**") && part.endsWith("**") && part.length > 4) {
-      return (
-        <strong key={key} className="font-medium text-text-primary">
-          {part.slice(2, -2)}
-        </strong>
-      );
-    }
-    if (part.startsWith("*") && part.endsWith("*") && part.length > 2) {
-      return <em key={key}>{part.slice(1, -1)}</em>;
-    }
-    return part;
-  });
 }
 
 /*

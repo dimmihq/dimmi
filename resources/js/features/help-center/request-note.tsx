@@ -4,6 +4,8 @@
  */
 import { RiSparkling2Line } from "@remixicon/react";
 
+import { emphasized } from "@/features/operator/emphasized";
+
 import type { ArticleRequest } from "./change-requests";
 
 /*
@@ -18,7 +20,7 @@ export function RequestNote({ request, waiting }: { request: ArticleRequest | nu
       <RiSparkling2Line aria-hidden className="mt-0.5 size-4 shrink-0 text-foreground-icon-secondary" />
       <p className="min-w-0 text-body-2-regular text-text-secondary">
         <span className="text-body-2-medium text-text-primary">Operator requests a change: </span>
-        {request.changeset.reason || request.changeset.title}
+        {emphasized(request.changeset.reason || request.changeset.title)}
         {request.fresh ? null : (
           <span className="text-text-tertiary">
             {" "}

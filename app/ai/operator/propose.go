@@ -39,14 +39,22 @@ const proposeDescription = "Propose changes to conversations, customers and proc
 	"teammate reads at a glance."
 
 /*
+reasonHelp tells the model how to write the reason of a suggestion,
+which a teammate reads on its card and above the change under review.
+*/
+const reasonHelp = "Why, written so a 12-year-old could follow it. Two or three very short sentences in " +
+	"everyday words, one idea in each: what is wrong today, what is true, what this changes. Like: 'This " +
+	"page says refunds take 30 days. **Refund timing** says 14 days. This fix makes them match.' Name " +
+	"another article by its title in **bold**, and conversations by number. Never join ideas with 'so', " +
+	"'which' or 'while'. No jargon, no ids, no tool names."
+
+/*
 proposeSchema is the schema of a proposal.
 */
 const proposeSchema = `{"type":"object","required":["suggestion_title","reason","operations"],"properties":{
 "suggestion_title":{"type":"string","maxLength":200,"description":"What it does in a few everyday words, like ` +
 	`'Route to Billing'."},
-"reason":{"type":"string","maxLength":2000,"description":"Why, as you would tell a teammate in one or two short, ` +
-	`plain sentences: what is wrong today and what this changes. No tool names or ids; cite conversations ` +
-	`by number."},
+"reason":{"type":"string","maxLength":2000,"description":"` + reasonHelp + `"},
 "dedup_key":{"type":"string","maxLength":200,"description":"A stable key for what this suggests, like ` +
 	`'qa:prc_...:step-2'. A suggestion with the same key that still waits, or was declined in the last 30 ` +
 	`days, is not made again."},

@@ -8,6 +8,7 @@
 import { RiSparkling2Line } from "@remixicon/react";
 
 import { Button } from "@/components/base/buttons/button";
+import { emphasized } from "@/features/operator/emphasized";
 
 import type { ProcedureStep } from "@/lib/api/procedures";
 import type { ProcedureRequest, Review } from "./procedure-review";
@@ -115,7 +116,7 @@ export function RequestNote({ request }: { request: ProcedureRequest | null }) {
       <div className="flex min-w-0 flex-col gap-1 text-body-2-regular text-text-secondary">
         <p>
           <span className="text-body-2-medium text-text-primary">Operator requests a change: </span>
-          {request.changeset.reason || request.changeset.title}
+          {emphasized(request.changeset.reason || request.changeset.title)}
         </p>
         {request.tests.length > 0 ? (
           <p className="text-text-tertiary">

@@ -22,7 +22,7 @@ import (
 /*
 promptVersion names the prompt the runs record.
 */
-const promptVersion = "operator-6"
+const promptVersion = "operator-7"
 
 /*
 rules are the standing instructions every run reads.
@@ -70,6 +70,9 @@ I suggested a fix for each. They are below."
 - Very short paragraphs: one to three sentences, never more.
 - Put a blank line after every paragraph and around every list.
 - When you explain more than one thing, use a list. Each item is one short line.
+- A suggestion's reason is two or three of those short sentences: what is wrong today, what is
+  true, what the suggestion changes. "This page says refunds take 30 days. **Refund timing** says
+  14 days. This fix makes them match."
 - Be as brief as you can. Say it once. Never over-explain, and never explain what was not asked.
 - Lead with the answer or the finding. In the first person: what you looked at, what you found,
   what should happen next.

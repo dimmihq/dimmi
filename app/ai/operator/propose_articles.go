@@ -42,8 +42,7 @@ const articleEditSchema = `{"type":"object","required":["article_id","edits","su
 	`remove the passage."}}}},
 "suggestion_title":{"type":"string","maxLength":200,"description":"What the fix does in a few everyday words, like ` +
 	`'Fix the refund window in the returns guide'. Not the article's title."},
-"reason":{"type":"string","maxLength":2000,"description":"Why, in one or two short, plain sentences: what is ` +
-	`wrong for readers today and what this changes. Name the article that disagrees by its title. No ids."},
+"reason":{"type":"string","maxLength":2000,"description":"` + reasonHelp + `"},
 "dedup_key":{"type":"string","maxLength":200,"description":"A stable key for this fix, like ` +
 	`'stale:art_...'. A suggestion with the same key that still waits, or was declined in the last 30 days, ` +
 	`is not made again."},
@@ -59,8 +58,7 @@ const articleNewSchema = `{"type":"object",
 "article_body":{"type":"string","description":"The whole article in Markdown."},
 "suggestion_title":{"type":"string","maxLength":200,"description":"What the suggestion is in a few everyday ` +
 	`words, like 'Add a guide to SSO setup'."},
-"reason":{"type":"string","maxLength":2000,"description":"Why, in one or two short, plain sentences: what ` +
-	`customers could not find and what this adds. Cite conversations by number. No ids."},
+"reason":{"type":"string","maxLength":2000,"description":"` + reasonHelp + `"},
 "visibility":{"type":"string","enum":["public","agent_only"],"description":"public for customers, or ` +
 	`agent_only for a snippet only the AI agent reads. Public by default."},
 "dedup_key":{"type":"string","maxLength":200,"description":"A stable key for this article, like ` +
