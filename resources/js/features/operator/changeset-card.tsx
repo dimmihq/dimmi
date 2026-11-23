@@ -11,7 +11,6 @@
  */
 import {
   RiArrowDownSLine,
-  RiArrowGoBackLine,
   RiArticleLine,
   RiCheckLine,
   RiCloseLine,
@@ -27,6 +26,7 @@ import { type ReactNode, useState } from "react";
 
 import { Chip, type ChipColor } from "@/components/base/badges/chip";
 import { Button } from "@/components/base/buttons/button";
+import { AlertDialog } from "@/components/base/modal/modal";
 import { MessageBody } from "@/features/inbox/message-body";
 import { Unfold } from "@/features/shell/reveal";
 import type { ChangesetDecision, ChangesetStatus, OperatorChangeset } from "@/lib/api/operator";
@@ -343,6 +343,7 @@ function Decisions({
   pending: ChangesetDecision | null;
   decide: (decision: ChangesetDecision) => void;
 }) {
+  const [asking, setAsking] = useState(false);
   const open = changeset.status === "pending" || changeset.status === "failed";
   const undoable = changeset.status === "applied" && changeset.operations.some((op) => op.kind !== "action.run");
   if (!open && !undoable) {
@@ -367,16 +368,20 @@ function Decisions({
           </Button>
         </>
       ) : (
-        <Button
-          size="small"
-          variant="secondary"
-          leadingIcon={RiArrowGoBackLine}
-          loading={pending === "reversions"}
-          onClick={() => decide("reversions")}
-        >
+        <Button size="small" variant="secondary" loading={pending === "reversions"} onClick={() => setAsking(true)}>
           Undo
         </Button>
       )}
+      {asking ? (
+        <AlertDialog
+          isOpen
+          onOpenChange={(shown) => (shown ? undefined : setAsking(false))}
+          title="Undo this change?"
+          description={`“${changeset.title}” is taken back: every value Operator replaced goes back to what it was, unless someone changed it since.`}
+          confirmLabel="Undo change"
+          onConfirm={() => decide("reversions")}
+        />
+      ) : null}
     </footer>
   );
 }
