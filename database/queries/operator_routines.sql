@@ -179,6 +179,20 @@ WHERE workspace_id = @workspace_id AND dedup_key = @dedup_key AND NOT preview
 ORDER BY created_at DESC, id DESC
 LIMIT 1;
 
+-- name: ListOperatorArticleSuggestions :many
+-- ListOperatorArticleSuggestions returns the suggestions about one
+-- article that a new one could repeat: those that still wait, a dry
+-- run's previews only for that same run, and those the team declined
+-- since a moment. One declined only because it went stale does not count.
+SELECT * FROM operator_changesets
+WHERE workspace_id = @workspace_id
+  AND operations @> jsonb_build_array(jsonb_build_object('article_id', @article_id::text))
+  AND ((status = 'pending' AND (NOT preview OR routine_run_id = sqlc.narg('routine_run_id')))
+    OR (NOT preview AND status = 'declined' AND updated_at >= @declined_since
+      AND (expires_at IS NULL OR updated_at < expires_at)))
+ORDER BY created_at DESC, id DESC
+LIMIT 50;
+
 -- name: ListOperatorRunChangesets :many
 -- ListOperatorRunChangesets returns the suggestions one routine run left.
 SELECT * FROM operator_changesets

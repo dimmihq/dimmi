@@ -135,7 +135,7 @@ func (e *Engine) offers(s *session, t tool) bool {
 refusal says in plain words why a tool call did not work.
 */
 func refusal(err error) string {
-	if errors.Is(err, errSpent) {
+	if errors.Is(err, errSpent) || errors.Is(err, errReadEnough) {
 		return err.Error()
 	}
 	if errors.Is(err, exceptions.ErrNotFound) {
@@ -162,6 +162,19 @@ errSpent refuses a reading tool once a routine's run may only close.
 var errSpent = errors.New("you are out of reading steps for this run. Suggest what you already found " +
 	"with propose_article_edit, propose_new_article or propose_changes, save progress with save_routine_state, or " +
 	"call report_nothing_to_change; then write your message")
+
+/*
+maxArticleReads is how many articles one run of a routine may read, so
+a run works through one batch and leaves the rest to the next.
+*/
+const maxArticleReads = 20
+
+/*
+errReadEnough refuses another article once a routine's run read its
+share.
+*/
+var errReadEnough = errors.New("this run has read 20 articles, the most one run reads. Read no more. Suggest " +
+	"fixes for what you found, save where you stopped, and write your message; the next run reads the rest")
 
 /*
 errBadArguments marks a tool call whose arguments make no sense.

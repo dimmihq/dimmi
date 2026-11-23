@@ -114,6 +114,7 @@ type Operation struct {
 	Created      *ids.UUID       `json:"created_id,omitempty"`
 	Outcome      string          `json:"outcome,omitempty"`
 	Note         string          `json:"-"`
+	Current      string          `json:"-"`
 }
 
 /*

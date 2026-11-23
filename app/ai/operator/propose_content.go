@@ -104,7 +104,7 @@ func (r resolver) articleOp(ctx context.Context, in opInput) (Operation, error) 
 	if err := editBody(&op, a.BodyMarkdown, in.Edits); err != nil {
 		return op, err
 	}
-	op.Article, op.Label = &id, fmt.Sprintf("Edit the draft of “%s”", a.Title)
+	op.Article, op.Current, op.Label = &id, a.BodyMarkdown, fmt.Sprintf("Edit the draft of “%s”", a.Title)
 	return op, nil
 }
 

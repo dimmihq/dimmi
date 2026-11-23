@@ -628,6 +628,76 @@ func (q *Queries) FindOperatorRoutineRunByID(ctx context.Context, arg FindOperat
 	return i, err
 }
 
+const listOperatorArticleSuggestions = `-- name: ListOperatorArticleSuggestions :many
+SELECT id, workspace_id, thread_id, message_id, member_id, conversation_id, title, reason, operations, status, auto, error, decided_by_member_id, applied_at, reverted_at, created_at, updated_at, routine_id, routine_run_id, dedup_key, preview, expires_at FROM operator_changesets
+WHERE workspace_id = $1
+  AND operations @> jsonb_build_array(jsonb_build_object('article_id', $2::text))
+  AND ((status = 'pending' AND (NOT preview OR routine_run_id = $3))
+    OR (NOT preview AND status = 'declined' AND updated_at >= $4
+      AND (expires_at IS NULL OR updated_at < expires_at)))
+ORDER BY created_at DESC, id DESC
+LIMIT 50
+`
+
+type ListOperatorArticleSuggestionsParams struct {
+	WorkspaceID   ids.UUID  `json:"workspace_id"`
+	ArticleID     string    `json:"article_id"`
+	RoutineRunID  *ids.UUID `json:"routine_run_id"`
+	DeclinedSince time.Time `json:"declined_since"`
+}
+
+// ListOperatorArticleSuggestions returns the suggestions about one
+// article that a new one could repeat: those that still wait, a dry
+// run's previews only for that same run, and those the team declined
+// since a moment. One declined only because it went stale does not count.
+func (q *Queries) ListOperatorArticleSuggestions(ctx context.Context, arg ListOperatorArticleSuggestionsParams) ([]OperatorChangeset, error) {
+	rows, err := q.db.Query(ctx, listOperatorArticleSuggestions,
+		arg.WorkspaceID,
+		arg.ArticleID,
+		arg.RoutineRunID,
+		arg.DeclinedSince,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []OperatorChangeset
+	for rows.Next() {
+		var i OperatorChangeset
+		if err := rows.Scan(
+			&i.ID,
+			&i.WorkspaceID,
+			&i.ThreadID,
+			&i.MessageID,
+			&i.MemberID,
+			&i.ConversationID,
+			&i.Title,
+			&i.Reason,
+			&i.Operations,
+			&i.Status,
+			&i.Auto,
+			&i.Error,
+			&i.DecidedByMemberID,
+			&i.AppliedAt,
+			&i.RevertedAt,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.RoutineID,
+			&i.RoutineRunID,
+			&i.DedupKey,
+			&i.Preview,
+			&i.ExpiresAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listOperatorRoutineCosts = `-- name: ListOperatorRoutineCosts :many
 SELECT r.id, r.name, COUNT(x.id)::bigint AS runs_count, COALESCE(SUM(x.cost_micros), 0)::bigint AS cost_micros
 FROM operator_routines r

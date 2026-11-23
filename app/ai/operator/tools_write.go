@@ -148,6 +148,10 @@ func (e *Engine) propose(ctx context.Context, s *session, in proposal) (result, 
 		if err := oneTarget(ops); err != nil {
 			return result{}, err
 		}
+		if text, ok, err := e.repeated(ctx, s, ops); err != nil || ok {
+			skipped := Step{Tool: "propose_changes", Summary: "Skipped a suggestion made before"}
+			return result{text: text, step: skipped}, err
+		}
 	}
 	if text, ok, err := e.duplicate(ctx, s, in.DedupKey); err != nil || ok {
 		return result{text: text, step: Step{Tool: "propose_changes", Summary: "Skipped a suggestion made before"}}, err
