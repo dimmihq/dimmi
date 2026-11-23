@@ -25814,14 +25814,17 @@
         "additionalProperties": false,
         "properties": {
           "article_id": {
+            "description": "The id of the help article the person has open, such as art_01jx2m8k4t. Leave out when none is.",
             "maxLength": 64,
             "type": "string"
           },
           "changeset_id": {
+            "description": "The id of the suggestion shown on that article or procedure, such as opc_01jx2m8k4t. A change the person asks for is added to it while it still waits for review. Leave out when none is shown.",
             "maxLength": 64,
             "type": "string"
           },
           "procedure_id": {
+            "description": "The id of the procedure the person has open, such as prc_01jx2m8k4t. Leave out when none is.",
             "maxLength": 64,
             "type": "string"
           }

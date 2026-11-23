@@ -61,20 +61,7 @@ func operatorThreadDocs() map[string]Doc {
 			Use:   "Deletes one of your own threads with Operator and its messages. Changes already applied stay.",
 			Risk:  new(RiskWrite),
 		},
-		"operator.threads.messages.store": {
-			Name:  "ask_operator",
-			Title: "Ask Operator",
-			Use: "Asks Operator a question or gives it a task on a thread and waits for its answer. Every " +
-				"question runs real models and spends the workspace's AI budget. Operator proposes changes as " +
-				"changesets to apply; groups set to auto in its settings apply at once.",
-			Returns: "your message, Operator's answer and the changesets it proposed.",
-			Next: []string{
-				"dimmi_apply_operator_suggestion: apply a proposed change the person approved",
-				"dimmi_decline_operator_suggestion: turn a proposed change down",
-			},
-			Params: map[string]string{"body": "What to ask, in plain words, up to 8000 characters."},
-			Hint:   "A teammate may ask at most 30 questions a minute; wait and try again.",
-		},
+		"operator.threads.messages.store": askOperatorDoc(),
 		"operator.usage.show": {
 			Title: "Get Operator usage",
 			Use: "Reads one month of Operator's runs: cost, tokens, failures, by purpose, teammate and model, " +
@@ -225,5 +212,37 @@ func procedurePublishDocs() map[string]Doc {
 			Returns: "the procedure, unpublished.",
 			Risk:    new(RiskReach),
 		},
+	}
+}
+
+/*
+askOperatorDoc is the entry that asks Operator a question.
+*/
+func askOperatorDoc() Doc {
+	return Doc{
+		Name:  "ask_operator",
+		Title: "Ask Operator",
+		Use: "Asks Operator a question or gives it a task on a thread and waits for its answer. Every " +
+			"question runs real models and spends the workspace's AI budget. Operator proposes changes as " +
+			"changesets to apply; groups set to auto in its settings apply at once.",
+		Returns: "your message, Operator's answer and the changesets it proposed.",
+		Next: []string{
+			"dimmi_apply_operator_suggestion: apply a proposed change the person approved",
+			"dimmi_decline_operator_suggestion: turn a proposed change down",
+		},
+		Params: map[string]string{
+			"body": "What to ask, in plain words, up to 8000 characters.",
+			"viewing": "What the person has open while they ask, so Operator explains or changes that: an " +
+				"object with article_id or procedure_id, and changeset_id for the suggestion shown on it, " +
+				"such as {\"article_id\": \"art_01jx2m8k4t\"}. Leave out when nothing is open.",
+			"viewing.article_id": "The id of the help article the person has open, such as art_01jx2m8k4t. " +
+				"Leave out when none is.",
+			"viewing.procedure_id": "The id of the procedure the person has open, such as prc_01jx2m8k4t. " +
+				"Leave out when none is.",
+			"viewing.changeset_id": "The id of the suggestion shown on that article or procedure, such as " +
+				"opc_01jx2m8k4t. A change the person asks for is added to it while it still waits for " +
+				"review. Leave out when none is shown.",
+		},
+		Hint: "A teammate may ask at most 30 questions a minute; wait and try again.",
 	}
 }
