@@ -25,6 +25,7 @@ import (
 	"github.com/dimmihq/dimmi/framework/ids"
 
 	"github.com/dimmihq/dimmi/app/contracts"
+	"github.com/dimmihq/dimmi/app/support/procedure"
 	"github.com/dimmihq/dimmi/app/support/prompts"
 )
 
@@ -35,11 +36,17 @@ const judgeKind = "judge"
 
 /*
 clearlyMet is how likely the judge must find a check met for it to
-pass. A check guards a change on its way to customers, so one the judge
-only leans toward does not pass: it fails as not clearly met, which
-tells the team to look at the reply or sharpen the check.
+pass. Below it and down to an even chance the judge is unsure: the
+check neither passes nor fails, and the team is told to look. Under an
+even chance the check is not met.
 */
-const clearlyMet = 0.8
+const clearlyMet = 0.6
+
+/*
+unsureMessage is what the team reads under a check the judge could not
+tell either way.
+*/
+const unsureMessage = "The judge could not tell. Read the reply, or make the check more specific."
 
 /*
 Rubric is a rubric to judge: the workspace and teammate who asked, the
@@ -56,17 +63,17 @@ type Rubric struct {
 JudgeRubric asks whether a simulated conversation meets a rubric. The
 decision model reads the transcript and answers how likely it is; when
 it fails it is asked once more, and then ErrNoJudgment is returned. The
-call is recorded as a judge run. A check passes only when the judge
-finds it clearly met; one it leans toward without being sure fails as
-not clearly met. The verdict says that and nothing more: how likely
-the judge found it is its own working, kept on the run and not shown
-to the team.
+call is recorded as a judge run. A check passes when the judge finds it
+clearly met and fails when it finds it not met; in between the judge is
+unsure, and the check does neither. The verdict says that and nothing
+more: how likely the judge found it is its own working, kept on the
+run and not shown to the team.
 */
-func (r *Runner) JudgeRubric(ctx context.Context, in Rubric) (bool, string, error) {
+func (r *Runner) JudgeRubric(ctx context.Context, in Rubric) (procedure.Judgment, error) {
 	r.prepare()
 	st, err := r.openJudge(ctx, in)
 	if err != nil {
-		return false, "", err
+		return procedure.Judgment{}, err
 	}
 	q := prompts.Judgment("simulation_check", prompts.Vars{"transcript": in.Transcript, "check": in.Rubric})
 	answers := r.decideTwice(ctx, st, contracts.DecisionRequest{
@@ -88,15 +95,15 @@ func (r *Runner) JudgeRubric(ctx context.Context, in Rubric) (bool, string, erro
 		return r.recordSpend(ctx, tx, st, d)
 	})
 	if err != nil {
-		return false, "", err
+		return procedure.Judgment{}, err
 	}
 	switch {
 	case met >= clearlyMet:
-		return true, "Met.", nil
+		return procedure.Judgment{Passed: true, Message: "Met."}, nil
 	case met >= judged:
-		return false, "Not clearly met.", nil
+		return procedure.Judgment{Unsure: true, Message: unsureMessage}, nil
 	}
-	return false, "Not met.", nil
+	return procedure.Judgment{Message: "Not met."}, nil
 }
 
 /*

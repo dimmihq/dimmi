@@ -97,9 +97,9 @@ Judge decides whether a transcript meets a rubric.
 */
 type Judge interface {
 	/*
-		JudgeRubric answers pass or fail, with its reason.
+		JudgeRubric answers met, not met or unsure.
 	*/
-	JudgeRubric(ctx context.Context, in pipeline.Rubric) (bool, string, error)
+	JudgeRubric(ctx context.Context, in pipeline.Rubric) (procedure.Judgment, error)
 }
 
 /*

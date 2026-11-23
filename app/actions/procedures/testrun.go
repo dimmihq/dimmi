@@ -377,7 +377,7 @@ func (p *Procedures) judge(ctx context.Context, m authz.Membership) procedure.Ju
 		return nil
 	}
 
-	return func(rubric, transcript string) (bool, string, error) {
+	return func(rubric, transcript string) (procedure.Judgment, error) {
 		return p.Judge.JudgeRubric(ctx, pipeline.Rubric{
 			WorkspaceID: m.Workspace.ID, MemberID: m.Member.ID, Rubric: rubric, Transcript: transcript,
 		})

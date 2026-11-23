@@ -251,11 +251,21 @@ func TestSimulationJudge(t *testing.T) {
 			AssertJSONPath("data.0.last_result.assertion_results.0.message", "Not met.")
 	})
 
-	t.Run("fails a sentence check the decision model only leans toward", func(t *testing.T) {
+	t.Run("marks a sentence check the decision model only leans toward as unsure, without failing the run",
+		func(t *testing.T) {
+			t.Parallel()
+			res, _, _ := sentence(t, 0.58)
+			res.AssertJSONPath("data.0.last_result.passed", true).
+				AssertJSONPath("data.0.last_result.assertion_results.0.passed", false).
+				AssertJSONPath("data.0.last_result.assertion_results.0.unsure", true)
+			assert.Contains(t, res.String("data.0.last_result.assertion_results.0.message"), "could not tell")
+		})
+
+	t.Run("passes a sentence check from sixty in a hundred", func(t *testing.T) {
 		t.Parallel()
-		res, _, _ := sentence(t, 0.58)
-		res.AssertJSONPath("data.0.last_result.passed", false).
-			AssertJSONPath("data.0.last_result.assertion_results.0.message", "Not clearly met.")
+		res, _, _ := sentence(t, 0.61)
+		res.AssertJSONPath("data.0.last_result.passed", true).
+			AssertJSONPath("data.0.last_result.assertion_results.0.message", "Met.")
 	})
 
 	t.Run("fails the simulation when the decision model cannot judge a sentence check twice", func(t *testing.T) {

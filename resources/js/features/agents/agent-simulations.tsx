@@ -92,7 +92,14 @@ function Checks({
               <span className="flex min-w-0 flex-1 flex-col py-1">
                 <span className="text-body-2-regular text-text-primary">{sayOf(sentenceOf(a, choices), name)}</span>
                 {outcome && !outcome.passed && !outcome.skipped ? (
-                  <span className="text-body-2-regular text-text-error-primary">{outcome.message}</span>
+                  <span
+                    className={cx(
+                      "text-body-2-regular",
+                      outcome.unsure ? "text-text-secondary" : "text-text-error-primary",
+                    )}
+                  >
+                    {outcome.message}
+                  </span>
                 ) : null}
               </span>
               {readOnly ? null : (

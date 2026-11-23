@@ -4,7 +4,13 @@
  * failed. Run both saves the draft, then runs it and the live version at
  * the same time, each column streaming its own run as it happens.
  */
-import { RiCheckboxBlankCircleLine, RiCheckboxCircleFill, RiCloseCircleFill, RiPlayFill } from "@remixicon/react";
+import {
+  RiCheckboxBlankCircleLine,
+  RiCheckboxCircleFill,
+  RiCloseCircleFill,
+  RiPlayFill,
+  RiQuestionFill,
+} from "@remixicon/react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 
@@ -42,6 +48,10 @@ export function Mark({ result }: { result?: CheckResult }) {
     return (
       <RiCheckboxBlankCircleLine aria-label="Not run" className="size-4.5 shrink-0 text-foreground-icon-quaternary" />
     );
+  }
+
+  if (result.unsure) {
+    return <RiQuestionFill aria-label="Unsure" className="size-4.5 shrink-0 text-status-yellow-text" />;
   }
 
   return result.passed ? (
@@ -89,7 +99,14 @@ export function CheckList({
             <span className="flex min-w-0 flex-1 flex-col py-1">
               <span className="text-body-2-regular text-text-primary">{sayOf(sentenceOf(a, choices), name)}</span>
               {outcome && !outcome.passed && !outcome.skipped ? (
-                <span className="text-body-2-regular text-text-error-primary">{outcome.message}</span>
+                <span
+                  className={cx(
+                    "text-body-2-regular",
+                    outcome.unsure ? "text-text-secondary" : "text-text-error-primary",
+                  )}
+                >
+                  {outcome.message}
+                </span>
               ) : null}
             </span>
           </li>

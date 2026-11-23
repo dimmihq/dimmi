@@ -392,8 +392,19 @@ func TestProcedureAssertions(t *testing.T) {
 	require.ErrorIs(t, rs[8].Err, procedure.ErrNoJudge)
 	assert.False(t, procedure.Passed(rs))
 
-	judged := procedure.Assert(as, o, "", func(string, string) (bool, string, error) { return true, "Met.", nil })
+	met := func(string, string) (procedure.Judgment, error) {
+		return procedure.Judgment{Passed: true, Message: "Met."}, nil
+	}
+	judged := procedure.Assert(as, o, "", met)
 	assert.True(t, procedure.Passed(judged))
+
+	unsure := procedure.Assert([]procedure.Assertion{{Type: procedure.AssertLLMRubric, Rubric: "polite"}}, o, "",
+		func(string, string) (procedure.Judgment, error) {
+			return procedure.Judgment{Unsure: true, Message: "The judge could not tell."}, nil
+		})
+	assert.False(t, unsure[0].Passed)
+	assert.True(t, unsure[0].Unsure)
+	assert.True(t, procedure.Passed(unsure), "a check the judge was unsure of does not fail the run")
 
 	fails := procedure.Assert([]procedure.Assertion{
 		{Type: "procedure_matched", Matched: &no},
@@ -401,7 +412,9 @@ func TestProcedureAssertions(t *testing.T) {
 		{Type: "branch_taken", Step: "s2", Branch: "else"},
 		{Type: "handed_off", Team: "team_2"},
 		{Type: "llm_rubric", Rubric: "x"},
-	}, o, "", func(string, string) (bool, string, error) { return false, "rude", nil })
+	}, o, "", func(string, string) (procedure.Judgment, error) {
+		return procedure.Judgment{Message: "rude"}, nil
+	})
 	for _, r := range fails {
 		assert.False(t, r.Passed, r.Type)
 	}
