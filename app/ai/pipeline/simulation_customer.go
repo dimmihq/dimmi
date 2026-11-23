@@ -21,6 +21,9 @@
 |     this customer came for: a press the saved chat holds, or an
 |     action the scenario and saved messages show them asking for.
 |
+| A message the model writes in its own words is then held to what is
+| known about the customer, in simulation_customer_grounded.go.
+|
 | Whether a reply asks for something is the decision model's call.
 | Where no decision model is set up, or it cannot answer, the customer
 | model is asked every turn instead and decides for itself.
@@ -107,7 +110,9 @@ CustomerTurn is where a simulated chat stands when the customer moves
 next: who the customer is, the simulation's scenario, the saved chat
 with what has been sent of it, the chat of this run so far, and the
 card dimmi is waiting on, if any. Whether the customer may press
-Confirm on that card is worked out when the turn is played.
+Confirm on that card is worked out when the turn is played, and so is
+an answer of the customer's model that strayed from what is known
+about the customer and is being asked again.
 */
 type CustomerTurn struct {
 	WorkspaceID ids.UUID
@@ -118,6 +123,7 @@ type CustomerTurn struct {
 	Run         []SimMessage
 	Confirming  string
 	confirmable bool
+	strayed     string
 }
 
 /*
@@ -172,6 +178,9 @@ func (r *Runner) PlayCustomer(ctx context.Context, in CustomerTurn) (CustomerMov
 		if move, err = r.askCustomer(ctx, asked, in); err == nil {
 			break
 		}
+	}
+	if err == nil {
+		move = r.grounded(ctx, asked, in, move)
 	}
 
 	return move, r.closeCustomer(ctx, st, err)
@@ -608,5 +617,10 @@ func customerStatus(in CustomerTurn) string {
 		status += "\nNo card is waiting."
 	}
 
-	return "<status>\n" + status + "\n</status>\nMake the customer's next move."
+	note := ""
+	if in.strayed != "" {
+		note = strayedNote(in.strayed)
+	}
+
+	return note + "<status>\n" + status + "\n</status>\nMake the customer's next move."
 }

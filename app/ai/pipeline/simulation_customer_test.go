@@ -2,6 +2,7 @@ package pipeline
 
 import (
 	"encoding/json"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -118,6 +119,25 @@ func TestCustomerChat(t *testing.T) {
 	assert.Contains(t, chat[4].Parts[0].Text, "No card is waiting.")
 }
 
+func TestStrayedAnswerIsNamed(t *testing.T) {
+	t.Parallel()
+
+	in := voidChat()
+	in.strayed = "I tried that and it still fails"
+	chat := customerChat(in)
+	last := chat[len(chat)-1].Parts[0].Text
+
+	assert.Contains(t, last, "<not_the_customer>")
+	assert.Contains(t, last, "Your last answer was not sent: \"I tried that and it still fails\"")
+	assert.Less(t, strings.Index(last, "<not_the_customer>"), strings.Index(last, "<status>"),
+		"the correction comes before where the chat stands")
+
+	assert.True(t, ownWords(CustomerMove{Message: "No thanks"}))
+	assert.False(t, ownWords(CustomerMove{Message: "Keep the balance", Saved: 3}), "a saved message is the customer's")
+	assert.False(t, ownWords(CustomerMove{Done: true}))
+	assert.False(t, ownWords(CustomerMove{Confirm: true}))
+}
+
 func TestCustomerSpec(t *testing.T) {
 	t.Parallel()
 
@@ -145,7 +165,7 @@ func TestCustomerPrompt(t *testing.T) {
 	assert.Contains(t, system, customerTool)
 	assert.NotContains(t, system, "<!--", "the editors' note is never sent")
 	assert.NotEmpty(t, prompts.Task("simulation/scenario", nil))
-	for _, name := range []string{"reply_asks", "simulation_check", "customer_wants"} {
+	for _, name := range []string{"reply_asks", "simulation_check", "customer_wants", "customer_answer"} {
 		q := prompts.Judgment(name, prompts.Vars{"reply": "R", "transcript": "T", "check": "C", "card": "K"})
 		assert.NotEmpty(t, q.State, name)
 		assert.NotEmpty(t, q.Ask, name)
