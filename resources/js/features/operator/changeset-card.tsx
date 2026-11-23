@@ -154,7 +154,7 @@ export function ChangesetCard({
           <p className="truncate text-body-2-regular text-text-tertiary">{targetLine(changeset)}</p>
         </div>
         {reviewing ? (
-          <Button size="small" onClick={() => void navigate(target)} className="shrink-0">
+          <Button size="xs" variant="secondary" onClick={() => void navigate(target)} className="mt-0.5 shrink-0">
             Review
           </Button>
         ) : (
@@ -239,9 +239,30 @@ function Reason({ text }: { text: string }) {
         !open && "line-clamp-2",
       )}
     >
-      {text}
+      {emphasized(text)}
     </button>
   );
+}
+
+/*
+ * emphasized shows the bold and italics Operator writes inline, so a
+ * reason never shows its asterisks.
+ */
+function emphasized(text: string): ReactNode[] {
+  return text.split(/(\*\*[^*]+\*\*|\*[^*\s][^*]*\*)/g).map((part, i) => {
+    const key = `${i}:${part}`;
+    if (part.startsWith("**") && part.endsWith("**") && part.length > 4) {
+      return (
+        <strong key={key} className="font-medium text-text-primary">
+          {part.slice(2, -2)}
+        </strong>
+      );
+    }
+    if (part.startsWith("*") && part.endsWith("*") && part.length > 2) {
+      return <em key={key}>{part.slice(1, -1)}</em>;
+    }
+    return part;
+  });
 }
 
 /*
