@@ -6,7 +6,9 @@
 | What a new agent can start from: an agent for a job real teams run,
 | with its tone and guidance already written, or nothing at all. A
 | template only fills the first draft; the agent is the team's own from
-| then on.
+| then on. A template whose root system prompt leaves every business
+| decision to the team starts with guidance that makes each of them,
+| kept in its own file under resources/prompts/guidance.
 |
 */
 
@@ -16,6 +18,7 @@ import (
 	"slices"
 
 	"github.com/dimmihq/dimmi/app/ai/agents"
+	"github.com/dimmihq/dimmi/app/support/prompts"
 )
 
 /*
@@ -61,9 +64,22 @@ func (t Template) Definition(blank agents.Definition) agents.Definition {
 	if t.Tone != "" {
 		def.Tone = t.Tone
 	}
-	def.Guidance = t.Guidance
+	def.Guidance = t.StartingGuidance()
 	def.Description = t.Handles
 	return def
+}
+
+/*
+StartingGuidance is the guidance a new agent made from the template
+starts with: the template's own guidance file when it has one, written
+in full because its root system prompt holds none of the business's
+decisions, and the short guidance written here otherwise.
+*/
+func (t Template) StartingGuidance() string {
+	if written, ok := prompts.TemplateGuidance(t.Key); ok {
+		return written
+	}
+	return t.Guidance
 }
 
 func (t Template) keyOrNil() *string {
@@ -150,11 +166,6 @@ func growthTemplates() []Template {
 			Description: "Answers pricing questions, qualifies leads and books demos.",
 			AgentName:   "Sales", Role: "sales", Tone: "professional", Widget: true,
 			Handles: "People who have not bought yet: prices, which plan fits, trials and demos.",
-			Guidance: "## Who you talk to\n\nPeople who have not bought yet. Be consultative, never pushy.\n\n" +
-				"## Qualifying\n\nLearn company size, use case and timeline in three questions or fewer. " +
-				"Ask one question at a time.\n\n## Accuracy\n\nQuote prices only from the pricing page. " +
-				"Never promise a roadmap date or a discount.\n\n## Existing customers\n\nA customer who " +
-				"reports a bug or a billing problem goes to the team.\n",
 		},
 		{
 			Key: "onboarding", Group: TemplateGroupGrowth, Name: "Onboarding coach",

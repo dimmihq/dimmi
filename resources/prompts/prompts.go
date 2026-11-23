@@ -28,3 +28,11 @@ and playing a simulated customer, one file per job.
 //
 //go:embed all:tasks
 var Tasks embed.FS
+
+/*
+Guidance is the whole guidance/ tree: the guidance a new agent starts
+with, one file per template.
+*/
+//
+//go:embed all:guidance
+var Guidance embed.FS

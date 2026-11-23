@@ -347,6 +347,14 @@ func (r *Runner) collect(out *streamed, b *strings.Builder, ev contracts.StreamE
 }
 
 /*
+rootOf is the root system prompt the run's agent answers from: the one
+written for the job its template names, the support root otherwise.
+*/
+func rootOf(e *env) string {
+	return prompts.RootFor(strv(e.Agent.TemplateKey))
+}
+
+/*
 answerVars fills the answer prompt's placeholders.
 */
 func (r *Runner) answerVars(st *run) prompts.Vars {

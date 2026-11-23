@@ -233,7 +233,7 @@ func (r *Runner) createRun(ctx context.Context, tx *database.Tx, e *env, args Ar
 	hashes := json.RawMessage("{}")
 	if r.Prompts != nil {
 		if fp, err := r.Prompts.Fingerprint(e.Version, r.family(e.AnswerKey, e.Agent.AnswerModel),
-			[]string{"answer.system.md"}); err == nil {
+			[]string{rootOf(e)}); err == nil {
 			hashes, _ = json.Marshal(fp.Hashes)
 		}
 	}

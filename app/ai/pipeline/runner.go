@@ -187,7 +187,7 @@ func (r *Runner) turn(ctx context.Context, st *run) *decision {
 		defer stopTyping()
 	}
 
-	st.loop = &loop{llm: llm, system: r.render(st.env, "answer.system.md", r.answerVars(st))}
+	st.loop = &loop{llm: llm, system: r.render(st.env, rootOf(st.env), r.answerVars(st))}
 	r.shortlistProcedures(ctx, st)
 	r.resumeProcedure(ctx, st)
 	messages := r.conversationMessages(st.env)
