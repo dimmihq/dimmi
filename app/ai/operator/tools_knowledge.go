@@ -40,21 +40,21 @@ func (e *Engine) knowledgeTools() []tool {
 		{spec: contracts.ToolSpec{
 			Name: "search_knowledge", Description: "Search the knowledge the AI agent answers customers from: " +
 				"published help articles and connected sources. Returns passages with titles and links.",
-			Schema: schema(`{"type":"object","required":["query"],"properties":{"query":{"type":"string",` +
-				`"description":"What to look for, in a few words."}}}`),
-		}, handle: e.searchKnowledge},
+			Schema: schema(`{"type":"object","required":["search_text"],"properties":{"search_text":{` +
+				`"type":"string","description":"What to look for, in a few words, such as refund window."}}}`),
+		}, handle: e.searchKnowledge, was: wasQuery()},
 		{spec: contracts.ToolSpec{
 			Name: "list_articles", Description: "List help center articles, drafts included, optionally " +
 				"matching words in the title, numbered from 0. Returns ids, status and whether unpublished " +
 				"changes wait. Offset and limit page through a long list.",
-			Schema: schema(`{"type":"object","properties":{"query":{"type":"string","description":"Only ` +
+			Schema: schema(`{"type":"object","properties":{"search_text":{"type":"string","description":"Only ` +
 				`articles with these words in the title; leave out for all."},` +
 				`"status":{"type":"string","enum":["draft","published","archived"],"description":"Only ` +
 				`articles with this status; leave out for all."},` +
 				`"offset":{"type":"integer","minimum":0,"description":"How many articles to skip; 0 starts ` +
 				`at the first."},"limit":{"type":"integer","minimum":1,"maximum":100,"description":"How ` +
 				`many articles to list."}}}`),
-		}, handle: e.listArticles},
+		}, handle: e.listArticles, was: wasQuery()},
 		{spec: contracts.ToolSpec{
 			Name: "get_article_by_id", Description: "Read one article's working copy in Markdown.",
 			Schema: idSchema("article_id", "Article id, such as art_..."),
@@ -76,7 +76,7 @@ searchKnowledge searches the agent's knowledge.
 */
 func (e *Engine) searchKnowledge(ctx context.Context, s *session, args json.RawMessage) (result, error) {
 	var in struct {
-		Query string `json:"query"`
+		Query string `json:"search_text"`
 	}
 	if err := decode(args, &in); err != nil {
 		return result{}, err
@@ -150,7 +150,7 @@ listArticles lists the articles of every help center.
 */
 func (e *Engine) listArticles(ctx context.Context, s *session, args json.RawMessage) (result, error) {
 	var in struct {
-		Query  string `json:"query"`
+		Query  string `json:"search_text"`
 		Status string `json:"status"`
 		Offset int    `json:"offset"`
 		Limit  int    `json:"limit"`

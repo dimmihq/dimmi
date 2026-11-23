@@ -61,10 +61,10 @@ func (e *Engine) conversationTools() []tool {
 			Name: "search_conversations",
 			Description: "Search conversations and contacts by words, a customer's name or email, or " +
 				"#number. Returns up to 20 conversations, newest first.",
-			Schema: schema(`{"type":"object","required":["query"],"properties":{` +
-				`"query":{"type":"string","maxLength":256,"description":"The words, name, email or #number ` +
-				`to search for."}}}`),
-		}, handle: e.searchConversations},
+			Schema: schema(`{"type":"object","required":["search_text"],"properties":{` +
+				`"search_text":{"type":"string","maxLength":256,"description":"The words, name, email or ` +
+				`#number to search for, such as refund or #1042."}}}`),
+		}, handle: e.searchConversations, was: wasQuery()},
 		{spec: contracts.ToolSpec{
 			Name: "get_customer_by_conversation_number", Schema: schema(numberSchema),
 			Description: "Read the customer of a conversation: their profile, attributes, company and " +
@@ -201,7 +201,7 @@ searchConversations searches conversations and contacts.
 */
 func (e *Engine) searchConversations(ctx context.Context, s *session, args json.RawMessage) (result, error) {
 	var in struct {
-		Query string `json:"query"`
+		Query string `json:"search_text"`
 	}
 	if err := decode(args, &in); err != nil {
 		return result{}, err

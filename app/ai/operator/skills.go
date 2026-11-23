@@ -78,9 +78,9 @@ skills.
 */
 func skillList() string {
 	var b strings.Builder
-	b.WriteString("Skills: before you start, call read_skill for each skill below that fits what the routine " +
-		"asks, or the skill your task names, and follow it. A routine may need more than one. When none " +
-		"fits, work it out with your tools.")
+	b.WriteString("Skills: before you start, call get_skill_by_name for each skill below that fits what the " +
+		"routine asks, or the skill your task names, and follow it. A routine may need more than one. When " +
+		"none fits, work it out with your tools.")
 	for _, s := range skills() {
 		fmt.Fprintf(&b, "\n- %s: when %s.", s.name, s.when)
 	}
@@ -100,7 +100,7 @@ func (e *Engine) readSkill(_ context.Context, _ *session, args json.RawMessage) 
 	for _, s := range skills() {
 		if s.name == in.Name {
 			label := strings.ReplaceAll(s.name, "_", " ")
-			return result{text: s.body, step: Step{Tool: "read_skill", Summary: "Read how to " + label}}, nil
+			return result{text: s.body, step: Step{Tool: "get_skill_by_name", Summary: "Read how to " + label}}, nil
 		}
 	}
 	names := make([]string, 0, len(skills()))
@@ -116,7 +116,7 @@ skillTool is the tool that reads a skill.
 */
 func (e *Engine) skillTool() tool {
 	return tool{spec: contracts.ToolSpec{
-		Name:        "read_skill",
+		Name:        "get_skill_by_name",
 		Description: "Read how to do one kind of routine work well, by the skill's name, before starting it.",
 		Schema: schema(`{"type":"object","required":["skill_name"],"properties":{` +
 			`"skill_name":{"type":"string","maxLength":100,"description":"The skill's name, such as ` +

@@ -6,6 +6,9 @@
 | Tools and their arguments are named for what they are, as plainly as
 | the words allow, so the weakest model fills them right: a tool that
 | reads an article by its id is get_article_by_id and takes article_id.
+| They are the names the MCP server gives the same tools, less its
+| dimmi_ prefix, so a prompt, a skill or a habit learned on one works on
+| the other.
 | Threads written before a name changed still hold the old one, and a
 | model that reads them may send it again, so a former tool name still
 | finds its tool and a former argument name is read as the new one.
@@ -34,6 +37,7 @@ func formerNames() map[string]string {
 		"mark_noop":              "report_nothing_to_change",
 		"list_recent_changesets": "list_recent_suggestions",
 		"propose_article_edit":   "propose_article_edits",
+		"read_skill":             "get_skill_by_name",
 	}
 }
 
@@ -91,4 +95,11 @@ wasTitle is the former name of a suggestion's title.
 */
 func wasTitle() map[string]string {
 	return map[string]string{"title": "suggestion_title"}
+}
+
+/*
+wasQuery is the former name of the words a search looks for.
+*/
+func wasQuery() map[string]string {
+	return map[string]string{"query": "search_text"}
 }

@@ -393,7 +393,7 @@ func TestOperatorRoutineTools(t *testing.T) {
 			return names
 		}
 		assert.Equal(t, offered(0), offered(1))
-		assert.Contains(t, offered(0), "read_skill")
+		assert.Contains(t, offered(0), "get_skill_by_name")
 		assert.Contains(t, offered(0), "search_knowledge")
 		assert.Contains(t, offered(0), "list_conversations")
 		assert.NotContains(t, offered(0), "draft_reply")

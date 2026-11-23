@@ -9,6 +9,25 @@
 | the teammate with a one-line step, and a tool that is refused says so
 | plainly instead of failing the run.
 |
+| The MCP server offers the same work under the same names with a
+| dimmi_ prefix. The tools below stay Operator's own, each for a reason
+| the MCP tool cannot meet inside a run:
+|
+|   - The tools that read conversations, customers, AI runs, reports
+|     and GitHub mark the run as having read what a customer wrote, and
+|     a routine reads through its owner's narrowed access (its inboxes
+|     and permissions), which an API token cannot carry.
+|   - list_articles pages every help center by offset, which a
+|     routine's saved state counts on; the MCP lists one help center.
+|   - The propose tools, save_routine_state and
+|     report_nothing_to_change write to the run itself: its thread, its
+|     outcome and whether it is a dry run.
+|   - draft_reply and remember belong to the teammate's thread.
+|   - The workspace's actions run with the conversation's customer.
+|
+| search_knowledge, list_recent_suggestions, get_skill_by_name and the
+| suggestion checks are one implementation, which the MCP tools call.
+|
 */
 
 package operator

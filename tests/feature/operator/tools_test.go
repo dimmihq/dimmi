@@ -22,7 +22,7 @@ func TestOperatorTools(t *testing.T) {
 		k.llm.Script(
 			tools(call("list_tags", map[string]any{}), call("list_teammates", map[string]any{}),
 				call("get_customer_by_conversation_number", map[string]any{}),
-				call("search_conversations", map[string]any{"query": "order"})),
+				call("search_conversations", map[string]any{"search_text": "order"})),
 			reply("Done."),
 		)
 
@@ -75,7 +75,8 @@ func TestOperatorTools(t *testing.T) {
 			String("data.id")
 		thread := k.thread(conv)
 		k.llm.Script(
-			tools(call("search_knowledge", map[string]any{"query": "refund"}), call("list_articles", map[string]any{}),
+			tools(call("search_knowledge", map[string]any{"search_text": "refund"}),
+				call("list_articles", map[string]any{}),
 				call("get_article_by_id", map[string]any{"article_id": article}),
 				call("list_procedures", map[string]any{}),
 				call("get_procedure_by_id", map[string]any{"procedure_id": procedure}),
