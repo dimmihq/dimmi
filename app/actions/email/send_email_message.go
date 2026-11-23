@@ -99,6 +99,7 @@ func (a *SendEmailMessage) Send(
 
 	message := inbound.Compose(out.draft)
 	message.Tags = map[string]string{"stream": "customer", "kind": out.row.Kind}
+	message.ConfigurationSet = a.Config.Sending.SES.ConfigurationSet
 
 	mailer, err := a.Mail.Mailer(a.Config.Mailer)
 	if err != nil {

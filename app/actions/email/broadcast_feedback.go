@@ -50,13 +50,13 @@ func (run reportRun) broadcastFailed(ctx context.Context, o outcome) error {
 	reason := bounceReason(o)
 
 	if _, err := run.q.MarkBroadcastRecipientFailed(ctx, models.MarkBroadcastRecipientFailedParams{
-		WorkspaceID: r.WorkspaceID, ID: r.ID, Status: o.overall, Reason: &reason, Now: run.a.Clock.Now(),
+		WorkspaceID: r.WorkspaceID, ID: r.ID, Status: o.overall, Reason: &reason, Now: run.clock.Now(),
 	}); err != nil && !errors.Is(err, database.ErrNotFound) {
 		return fmt.Errorf("fail broadcast recipient: %w", err)
 	}
 
-	return run.a.Events.Dispatch(ctx, run.tx, appevents.BroadcastRecipientChanged{
-		Base:        appevents.Base{ID: ids.New(), WorkspaceID: r.WorkspaceID, OccurredAt: run.a.Clock.Now()},
+	return run.events.Dispatch(ctx, run.tx, appevents.BroadcastRecipientChanged{
+		Base:        appevents.Base{ID: ids.New(), WorkspaceID: r.WorkspaceID, OccurredAt: run.clock.Now()},
 		BroadcastID: r.BroadcastID, RecipientID: r.ID,
 	})
 }

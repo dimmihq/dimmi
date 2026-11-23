@@ -39,6 +39,29 @@ Verify your sending domain at your mail provider, then diagnose any missing reco
 docker compose -f /opt/dimmi/compose.yaml exec web /dimmi email:doctor mail.example.com
 ```
 
+## Bounces and spam complaints
+
+dimmi reads the bounce and spam reports that mailbox providers mail back to your inbound domain. Each one stops mail to that address, and the lasting ones count toward the [bulk email pause](/channels/sending-domain/#when-bulk-email-pauses).
+
+Amazon SES reports bounces and complaints as events of its own instead. To count them, give your customer mail a configuration set that publishes `Bounce` and `Complaint` events to an SNS topic, then name both:
+
+```bash
+dimmictl set <<'EOF'
+DIMMI_CHANNELS__EMAIL__SENDING__SES__CONFIGURATION_SET=dimmi-customer
+DIMMI_CHANNELS__EMAIL__SENDING__SES__EVENTS_TOPIC_ARN=arn:aws:sns:us-east-1:<account>:dimmi-events
+EOF
+```
+
+Subscribe the topic to `https://<app_domain>/webhooks/ses/events` after saving those settings. dimmi confirms the subscription itself and refuses posts from any other topic. The [SES guide](https://github.com/dimmihq/dimmi/blob/main/deploy/selfhost/references/aws-ses.md) has the commands.
+
+| SES event | Mail to the address | Counts toward the pause |
+| --- | --- | --- |
+| Permanent bounce | Stops for good | Yes, as a bounce |
+| Transient bounce | Stops for 72 hours | No |
+| Complaint | Stops for good | Yes, as a spam report |
+
+A report that reaches dimmi both by mail and as an event counts once. On the other providers, dimmi counts the reports that arrive by mail.
+
 ## Inbound email
 
 Dedicate one domain solely to dimmi inbound mail (such as `inbound.example.com`). Point its `MX` records at your mail provider, then configure the inbound domain and driver:

@@ -306,6 +306,7 @@ func (a *SendEmailAddressTest) send(
 ) (models.EmailAddressTest, error) {
 	message := start.message
 	message.Tags = map[string]string{"stream": "customer", "kind": string(enums.OutboundEmailKindTest)}
+	message.ConfigurationSet = a.Config.Sending.SES.ConfigurationSet
 
 	res, sendErr := mailer.Send(ctx, message)
 	if sendErr != nil {

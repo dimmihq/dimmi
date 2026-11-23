@@ -155,6 +155,7 @@ func (a *SendRatingEmail) prepare(ctx context.Context, q *models.Queries, in Rat
 
 	message := inbound.Compose(draft)
 	message.Tags = map[string]string{"stream": "customer", "kind": string(enums.OutboundEmailKindRating)}
+	message.ConfigurationSet = a.Config.Sending.SES.ConfigurationSet
 
 	if previous.ID != ids.Nil() {
 		return previous, message, q.StartOutboundEmailAttempt(ctx, models.StartOutboundEmailAttemptParams{

@@ -26,6 +26,20 @@ SELECT * FROM outbound_emails WHERE workspace_id = @workspace_id AND message_id_
 ORDER BY created_at DESC
 LIMIT 1;
 
+-- name: FindOutboundEmailWorkspace :one
+-- FindOutboundEmailWorkspace finds whose email the sending provider's
+-- id belongs to, across every workspace, before any workspace is known.
+SELECT r.workspace_id::uuid AS workspace_id
+FROM email_outbound_workspace(@transport::text, @provider_message_id::text) r;
+
+-- name: LockOutboundEmailByProviderMessageID :one
+-- LockOutboundEmailByProviderMessageID returns the email the sending
+-- provider knows by the id, held so two reports about it are recorded
+-- one after the other.
+SELECT * FROM outbound_emails
+WHERE workspace_id = @workspace_id AND transport = @transport AND provider_message_id = @provider_message_id::text
+FOR UPDATE;
+
 -- name: StartOutboundEmailAttempt :exec
 -- StartOutboundEmailAttempt counts one more attempt at handing the
 -- email over.
