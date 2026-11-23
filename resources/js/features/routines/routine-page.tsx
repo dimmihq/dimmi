@@ -23,6 +23,7 @@ import { Item, Section } from "@/features/settings/layout";
 import { SaveBar } from "@/features/settings/save-bar";
 import { useAccount } from "@/features/settings/use-account";
 import { Panel, ScrollArea } from "@/features/shell/page";
+import { PushPane } from "@/features/shell/push-pane";
 import { useWide } from "@/features/shell/use-wide";
 import {
   deleteRoutine,
@@ -96,7 +97,13 @@ function Loaded({
   const [draft, setDraft] = useState<RoutineDraft>(() => draftFromRoutine(routine));
   const [deleting, setDeleting] = useState(false);
   const [generation, setGeneration] = useState(0);
+  /* The run in the side panel stays the last one picked while the panel slides shut. */
   const [watching, setWatching] = useState<string | null>(null);
+  const [panel, setPanel] = useState(false);
+  const watch = (run: string) => {
+    setWatching(run);
+    setPanel(true);
+  };
   const wide = useWide(1024);
   const queryClient = useQueryClient();
   const navigate = useNavigate();
@@ -126,9 +133,8 @@ function Loaded({
     onSuccess: (r) => {
       setTab("runs");
       void queryClient.invalidateQueries({ queryKey: routineKeys.runs(workspace, routine.id) });
-      toast.success(r.trigger === "dry_run" ? "Dry run started. Nothing it finds is applied." : "Run started.");
       if (wide) {
-        setWatching(r.id);
+        watch(r.id);
       } else {
         void navigate({ to: "/d/routines/$routine/runs/$run", params: { routine: routine.id, run: r.id } });
       }
@@ -144,93 +150,102 @@ function Loaded({
   const blocking = problems(draft);
   useRoutineWatch(workspace, routine.id);
 
-  return (
-    <div className="flex h-full min-w-0 flex-1 gap-2">
-      <Panel label="Routine" ground className="relative h-full min-w-0 flex-1">
-        <Header
-          routine={routine}
-          canManage={canManage}
-          running={run.isPending ? run.variables : null}
-          onRun={(dryRun) => run.mutate(dryRun)}
-          onToggle={() => status.mutate(routine.status === "active" ? "paused" : "active")}
-          onDelete={() => setDeleting(true)}
-        />
-        <div className="shrink-0 px-4">
-          <Tabs selectedKey={tab} onSelectionChange={(key) => setTab(String(key) as Tabbed)}>
-            <TabList
-              aria-label="Routine"
-              items={[
-                { id: "runs", label: "Runs" },
-                { id: "settings", label: "Settings" },
-              ]}
-            >
-              {(item) => <Tab id={item.id}>{item.label}</Tab>}
-            </TabList>
-          </Tabs>
-        </div>
-        <ScrollArea ground>
-          <div className="mx-auto flex w-full max-w-[760px] flex-col gap-8 px-4 pt-6 pb-28 sm:px-6">
-            {routine.status === "paused" && routine.pause_reason ? (
-              <Paused
-                routine={routine}
-                resuming={status.isPending}
-                canManage={canManage}
-                onResume={() => status.mutate("active")}
-              />
-            ) : null}
-            {tab === "runs" ? <RoutineStats routine={routine} /> : null}
-            {tab === "runs" ? (
-              <Runs workspace={workspace} routine={routine} onOpen={wide ? setWatching : undefined} />
-            ) : null}
-            {tab === "settings" ? (
-              <RoutineFields
-                key={generation}
-                workspace={workspace}
-                draft={draft}
-                disabled={!canManage}
-                onChange={setDraft}
-              />
-            ) : null}
-          </div>
-        </ScrollArea>
-        <div className="pointer-events-none absolute inset-x-0 bottom-4 z-10 px-4 sm:px-6">
-          <div className="pointer-events-auto mx-auto w-full max-w-[632px]">
-            <SaveBar
-              dirty={dirty}
-              saving={save.isPending}
-              canSave={dirty && blocking.length === 0}
-              error={save.error ? save.error.message : blocking[0] && dirty ? blocking[0] : null}
-              onSave={() => save.mutate()}
-              onDiscard={() => {
-                setDraft(saved);
-                setGeneration((g) => g + 1);
-              }}
+  const main = (
+    <Panel label="Routine" ground className="relative h-full min-w-0 flex-1">
+      <Header
+        routine={routine}
+        canManage={canManage}
+        running={run.isPending ? run.variables : null}
+        onRun={(dryRun) => run.mutate(dryRun)}
+        onToggle={() => status.mutate(routine.status === "active" ? "paused" : "active")}
+        onDelete={() => setDeleting(true)}
+      />
+      <div className="shrink-0 px-4">
+        <Tabs selectedKey={tab} onSelectionChange={(key) => setTab(String(key) as Tabbed)}>
+          <TabList
+            aria-label="Routine"
+            items={[
+              { id: "runs", label: "Runs" },
+              { id: "settings", label: "Settings" },
+            ]}
+          >
+            {(item) => <Tab id={item.id}>{item.label}</Tab>}
+          </TabList>
+        </Tabs>
+      </div>
+      <ScrollArea ground>
+        <div className="mx-auto flex w-full max-w-[760px] flex-col gap-8 px-4 pt-6 pb-28 sm:px-6">
+          {routine.status === "paused" && routine.pause_reason ? (
+            <Paused
+              routine={routine}
+              resuming={status.isPending}
+              canManage={canManage}
+              onResume={() => status.mutate("active")}
             />
-          </div>
+          ) : null}
+          {tab === "runs" ? <RoutineStats routine={routine} /> : null}
+          {tab === "runs" ? <Runs workspace={workspace} routine={routine} onOpen={wide ? watch : undefined} /> : null}
+          {tab === "settings" ? (
+            <RoutineFields
+              key={generation}
+              workspace={workspace}
+              draft={draft}
+              disabled={!canManage}
+              onChange={setDraft}
+            />
+          ) : null}
         </div>
-        <AlertDialog
-          isOpen={deleting}
-          onOpenChange={setDeleting}
-          title={`Delete ${routine.name}?`}
-          description="It stops running for good. Its past runs, threads and suggestions stay."
-          confirmLabel="Delete routine"
-          onConfirm={async () => {
-            await deleteRoutine(workspace, routine.id);
-            refresh();
-            void navigate({ to: "/d/routines" });
-          }}
-        />
-      </Panel>
-      {watching ? (
-        <RunPanel
-          workspace={workspace}
-          routine={routine}
-          run={watching}
-          onPick={setWatching}
-          onClose={() => setWatching(null)}
-        />
-      ) : null}
-    </div>
+      </ScrollArea>
+      <div className="pointer-events-none absolute inset-x-0 bottom-4 z-10 px-4 sm:px-6">
+        <div className="pointer-events-auto mx-auto w-full max-w-[632px]">
+          <SaveBar
+            dirty={dirty}
+            saving={save.isPending}
+            canSave={dirty && blocking.length === 0}
+            error={save.error ? save.error.message : blocking[0] && dirty ? blocking[0] : null}
+            onSave={() => save.mutate()}
+            onDiscard={() => {
+              setDraft(saved);
+              setGeneration((g) => g + 1);
+            }}
+          />
+        </div>
+      </div>
+      <AlertDialog
+        isOpen={deleting}
+        onOpenChange={setDeleting}
+        title={`Delete ${routine.name}?`}
+        description="It stops running for good. Its past runs, threads and suggestions stay."
+        confirmLabel="Delete routine"
+        onConfirm={async () => {
+          await deleteRoutine(workspace, routine.id);
+          refresh();
+          void navigate({ to: "/d/routines" });
+        }}
+      />
+    </Panel>
+  );
+
+  return (
+    <PushPane
+      name="dimmi:routine"
+      label="Run"
+      open={panel && watching !== null}
+      onOpenChange={setPanel}
+      width={420}
+      main={main}
+      side={
+        watching ? (
+          <RunPanel
+            workspace={workspace}
+            routine={routine}
+            run={watching}
+            onPick={watch}
+            onClose={() => setPanel(false)}
+          />
+        ) : null
+      }
+    />
   );
 }
 

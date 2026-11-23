@@ -66,7 +66,7 @@ export function RunPanel({
         }
       }}
       onClose={onClose}
-      className="h-full w-[420px] shrink-0"
+      className="h-full w-full"
     />
   );
 }
