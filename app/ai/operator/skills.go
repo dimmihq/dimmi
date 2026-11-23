@@ -165,11 +165,13 @@ When you are a subagent, or auditing 25 or fewer yourself:
    list_recent_suggestions so you never repeat a waiting or declined suggestion.
 2. In one step, read every article with get_article_by_id.
 3. In one step, compare their facts with the rest of the help center using search_knowledge:
-   refund windows, limits, prices, plan names, steps. Read another article only when a search
-   result is not enough to tell.
+   refund windows, limits, prices, plan names, steps. Search once per fact worth checking, not
+   once per article: about 15 searches is plenty, and your tool calls are limited. Read another
+   article only when a search result is not enough to tell.
 4. Call propose_article_edits once, with one fix for each article that has a contradiction or
    stale fact: the article's id, edits with the exact sentences to fix, and a dedup_key like
-   stale:<article id>. Name the conflicting article by its title in the reason.`
+   stale:<article id>. Name the conflicting article by its title in the reason. A fix must
+   change the text; what only needs a person to look at goes in your report, not in a fix.`
 
 const pullRequestsSkill = `How to keep help articles in line with merged pull requests.
 

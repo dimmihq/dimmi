@@ -133,7 +133,8 @@ func editBody(op *Operation, current string, edits []passageEdit) error {
 		op.Body = nil
 		if op.Title == nil {
 			return fmt.Errorf("%w: the edit leaves the article exactly as it is; each replace must differ "+
-				"from its find. When the article is already right, suggest nothing", errBadArguments)
+				"from its find. To point something out for a person to check, say it in your message "+
+				"instead; do not send this fix again", errBadArguments)
 		}
 	}
 	if op.Body != nil && shrinks(current, *op.Body) {
