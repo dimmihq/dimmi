@@ -1,6 +1,7 @@
 package operator_test
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -57,7 +58,8 @@ func TestOperatorViewing(t *testing.T) {
 		second.AssertJSONPath("data.changesets.#", float64(0))
 		sent := k.llm.Sent()
 		asked := sent[2].Messages[len(sent[2].Messages)-1]
-		note := asked.Parts[len(asked.Parts)-1].Text
+		note := asked.Parts[len(asked.Parts)-2].Text
+		assert.Contains(t, asked.Parts[len(asked.Parts)-1].Text, "Write your answer for a busy teammate")
 		assert.Contains(t, note, `The help article "Batches" is open.`)
 		assert.Contains(t, note, "article_id: "+article)
 		assert.Contains(t, note, "suggestion_id: "+suggestion)
@@ -90,7 +92,7 @@ func TestOperatorViewing(t *testing.T) {
 
 		res.AssertJSONPath("data.changesets.#", float64(1))
 		asked := k.llm.Sent()[0].Messages[len(k.llm.Sent()[0].Messages)-1]
-		note := asked.Parts[len(asked.Parts)-1].Text
+		note := asked.Parts[len(asked.Parts)-2].Text
 		assert.Contains(t, note, `The help article "Batches" is open.`)
 		assert.Contains(t, note, "article_id: "+article)
 		assert.Contains(t, note, "The article as it reads now:")
@@ -118,13 +120,18 @@ func TestOperatorViewing(t *testing.T) {
 
 		sent := k.llm.Sent()
 		last := func(i int) string {
-			parts := sent[i].Messages[len(sent[i].Messages)-1].Parts
-			return parts[len(parts)-1].Text
+			var all []string
+			for _, part := range sent[i].Messages[len(sent[i].Messages)-1].Parts {
+				all = append(all, part.Text)
+			}
+			return strings.Join(all, "\n")
 		}
 		assert.Contains(t, last(0), "Conversation #")
 		assert.Contains(t, last(0), "My export is stuck.")
+		assert.Contains(t, last(0), "How this workspace replies to customers.")
+		assert.Contains(t, last(0), "How to draft a reply:")
 		assert.Contains(t, last(1), "A help center is open.")
 		assert.Contains(t, last(1), "help_center_id: "+hc)
-		assert.Equal(t, "And this?", last(2), "a kind of page Operator does not know adds nothing")
+		assert.NotContains(t, last(2), "has open right now", "a kind of page Operator does not know adds nothing")
 	})
 }

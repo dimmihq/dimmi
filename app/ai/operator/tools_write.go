@@ -43,10 +43,13 @@ func (e *Engine) writeTools() []tool {
 	return append(e.articleTools(), []tool{
 		{spec: contracts.ToolSpec{
 			Name: "draft_reply",
-			Description: "Draft a reply to the customer of this thread's conversation. It lands in the " +
-				"teammate's reply box for them to edit and send; it is never sent by you.",
+			Description: "Draft a reply to the customer of this thread's conversation, following how this " +
+				"workspace replies to customers: its tone, languages and guidance, given with the open " +
+				"conversation. It lands in the teammate's reply box for them to edit and send; it is never " +
+				"sent by you.",
 			Schema: schema(`{"type":"object","required":["body"],"properties":{"body":{"type":"string",` +
-				`"description":"The reply in Markdown, written to the customer."}}}`),
+				`"description":"The whole reply in Markdown, written to the customer in their language and the ` +
+				`workspace's tone."}}}`),
 		}, handle: e.draftReply},
 		{spec: contracts.ToolSpec{
 			Name: "propose_changes", Description: proposeDescription, Schema: schema(proposeSchema),

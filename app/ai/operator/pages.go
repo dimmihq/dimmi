@@ -138,8 +138,57 @@ func (e *Engine) conversationPage(ctx context.Context, s *session, id ids.UUID) 
 		loaded.Conversation.Number)
 	writeConversation(&b, loaded)
 	writeTimeline(&b, timeline)
+	b.WriteString("\n" + e.replyGuide(s))
 	return b.String(), nil
 }
+
+/*
+replyGuide is how this workspace replies to customers, for a draft
+Operator writes on a conversation: the product, tone, languages and
+guidance the workspace gave its AI agent, and how to write the draft.
+A draft is the one thing Operator writes for a customer, so it follows
+the workspace's voice and never Operator's own way of talking to
+teammates.
+*/
+func (e *Engine) replyGuide(s *session) string {
+	a := s.agent
+	product := strings.TrimSpace(deref(a.ProductName))
+	if product == "" {
+		product = s.m.Workspace.Name
+	}
+	var b strings.Builder
+	b.WriteString("How this workspace replies to customers. Follow it for every reply you draft with " +
+		"draft_reply; it replaces your own way of writing, which is only for teammates.\n")
+	fmt.Fprintf(&b, "Product: %s\nTone: %s\n", product, a.Tone)
+	if len(a.Languages) > 0 {
+		fmt.Fprintf(&b, "Languages the team replies in: %s. Default: %s.\n", strings.Join(a.Languages, ", "),
+			a.DefaultLanguage)
+	}
+	if guidance := strings.TrimSpace(a.Guidance); guidance != "" {
+		fmt.Fprintf(&b, "The workspace's own guidance, to follow exactly:\n%s\n", truncate(guidance, 8000))
+	}
+	b.WriteString(replyDrafting)
+	return b.String()
+}
+
+/*
+replyDrafting is how Operator drafts a reply to a customer.
+*/
+const replyDrafting = `How to draft a reply:
+- Draft only when the teammate asks for a reply, or the conversation waits on the team.
+- Answer the customer's latest message. Lead with the fix or the answer, then the reason.
+- Reply in the language the customer writes in when the team replies in it, else the default.
+- Check every fact about the product with search_knowledge first. Never state a price, limit,
+  date, policy or step you did not find there or in this conversation. When you cannot confirm
+  something, leave it out of the draft and tell the teammate what to check.
+- Never promise what only a person can decide: a refund, a credit, an exception, a date.
+- Write as the team, to the customer, in the workspace's tone. Never mention Operator, an AI,
+  internal notes, tags, ids or what teammates said to each other.
+- Match the channel: an email opens with a greeting and closes with a sign-off; a chat reply
+  is a few short lines with neither.
+- Keep it as short as the answer allows. No filler, no apology unless something went wrong.
+- Call draft_reply once with the whole reply. Then tell the teammate in one line what you
+  drafted, and in one more anything they should check before sending.`
 
 /*
 apiPage describes a page Operator has no reader of its own for, by

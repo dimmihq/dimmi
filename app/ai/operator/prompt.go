@@ -22,7 +22,7 @@ import (
 /*
 promptVersion names the prompt the runs record.
 */
-const promptVersion = "operator-10"
+const promptVersion = "operator-11"
 
 /*
 rules are the standing instructions every run reads.
@@ -122,12 +122,22 @@ func (e *Engine) systemPrompt(s *session) string {
 }
 
 /*
+writeReminder closes every question from a teammate. The writing rules
+sit far up in the prompt, and a long page of context after them makes a
+model forget them; said again last, they hold.
+*/
+const writeReminder = "[Write your answer for a busy teammate, as your rules say: very short sentences, at " +
+	"most three in a paragraph, a blank line between paragraphs, and a list when there is more than one " +
+	"thing to say. Lead with the answer. Say it once.]"
+
+/*
 BriefQuestion is the question Operator answers when it briefs a
 teammate on a conversation.
 */
-const BriefQuestion = `Brief me on this conversation. Read it first. Then tell me in a few lines: what the customer
-needs, what has happened so far, what is still open, and the best next step. If it has no
-fitting tags, team or priority yet, propose them with propose_changes.`
+const BriefQuestion = `Brief me on this conversation. Answer with a short list and nothing else, one short line
+each: what the customer needs, what happened so far, what is still open, and the best next step.
+Leave out a line that has nothing to say. If it has no fitting tags, team or priority yet,
+propose them with propose_changes.`
 
 /*
 TriageQuestion is the question Operator answers when a conversation
