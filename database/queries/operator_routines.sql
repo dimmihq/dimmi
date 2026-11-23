@@ -133,6 +133,15 @@ WHERE workspace_id = @workspace_id AND routine_id = @routine_id
 ORDER BY created_at DESC, id DESC
 LIMIT @row_limit;
 
+-- name: CountWaitingOperatorRoutineSuggestions :many
+-- CountWaitingOperatorRoutineSuggestions counts, for each run of a
+-- routine, its suggestions nobody has applied or declined yet. A dry
+-- run's previews wait for nobody.
+SELECT routine_run_id::uuid AS run_id, COUNT(*)::int AS waiting FROM operator_changesets
+WHERE workspace_id = @workspace_id AND routine_id = @routine_id AND routine_run_id IS NOT NULL
+  AND status = 'pending' AND NOT preview
+GROUP BY routine_run_id;
+
 -- name: SumOperatorRoutineCost :one
 -- SumOperatorRoutineCost is what a routine's runs cost since a moment.
 SELECT COALESCE(SUM(cost_micros), 0)::bigint FROM operator_routine_runs

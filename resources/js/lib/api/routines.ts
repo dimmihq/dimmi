@@ -91,6 +91,10 @@ export interface RoutineRun {
   error_code: string | null;
   error_message: string | null;
   changesets_count: number;
+  /* How many of the run's suggestions nobody has applied or declined yet. */
+  suggestions_waiting: number;
+  /* What the run read to do its work, each counted once. */
+  read: { articles: number; conversations: number; procedures: number };
   cost_micros: number;
   notified: boolean;
   /* steps is what the run has done so far; it grows while the run works. */

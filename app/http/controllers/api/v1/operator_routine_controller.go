@@ -165,7 +165,7 @@ func (c *OperatorRoutineController) StoreRun(ctx context.Context, in *requests.S
 	if err != nil {
 		return nil, err
 	}
-	return &OperatorRoutineRunOutput{Body: fhttp.NewResource(resources.NewOperatorRoutineRun(run))}, nil
+	return &OperatorRoutineRunOutput{Body: fhttp.NewResource(resources.NewOperatorRoutineRun(run, 0))}, nil
 }
 
 /*
@@ -181,7 +181,12 @@ func (c *OperatorRoutineController) Runs(ctx context.Context, in *requests.Opera
 	if err != nil {
 		return nil, err
 	}
-	page := pagination.Page[resources.OperatorRoutineRun]{Items: resources.NewOperatorRoutineRuns(rows), Limit: 100}
+	waiting, err := c.Routines.Waiting(ctx, membership(ctx), id)
+	if err != nil {
+		return nil, err
+	}
+	items := resources.NewOperatorRoutineRuns(rows, waiting)
+	page := pagination.Page[resources.OperatorRoutineRun]{Items: items, Limit: 100}
 	return &OperatorRoutineRunsOutput{Body: fhttp.NewCollection(page)}, nil
 }
 
@@ -202,7 +207,11 @@ func (c *OperatorRoutineController) ShowRun(ctx context.Context, in *requests.Op
 	if err != nil {
 		return nil, err
 	}
-	return &OperatorRoutineRunOutput{Body: fhttp.NewResource(resources.NewOperatorRoutineRun(row))}, nil
+	waiting, err := c.Routines.Waiting(ctx, membership(ctx), routine)
+	if err != nil {
+		return nil, err
+	}
+	return &OperatorRoutineRunOutput{Body: fhttp.NewResource(resources.NewOperatorRoutineRun(row, waiting[run]))}, nil
 }
 
 /*
