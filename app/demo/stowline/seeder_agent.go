@@ -49,6 +49,7 @@ func (r *run) agent(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
+	r.actions = published
 	return r.publishProcedures(ctx, published)
 }
 
