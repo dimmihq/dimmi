@@ -496,7 +496,12 @@ answer is the message the team reads later on the routine's thread.
 suggestingRules are how anyone in a routine's run suggests changes: the
 main agent and its subagents alike.
 */
-const suggestingRules = `- Call list_recent_suggestions before suggesting anything, so you never suggest again
+const suggestingRules = `- Every step re-reads everything you have read so far, so take few steps. Call tools together
+  whenever one does not need another's answer: read every article of a batch in one step, and
+  run all your searches in one step.
+- Read and compare first. Then make all your suggestions in one step: one call per fix, all
+  sent together. Never suggest one fix per step.
+- Call list_recent_suggestions before suggesting anything, so you never suggest again
   what still waits or what the team declined. Give every suggestion a stable dedup_key.
 - Suggest a fix to a help article with propose_article_edit, a new article with propose_new_article,
   and anything else with propose_changes; nothing you suggest applies until a teammate approves it.

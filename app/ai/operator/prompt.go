@@ -22,7 +22,7 @@ import (
 /*
 promptVersion names the prompt the runs record.
 */
-const promptVersion = "operator-8"
+const promptVersion = "operator-9"
 
 /*
 rules are the standing instructions every run reads.

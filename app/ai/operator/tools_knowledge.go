@@ -85,7 +85,7 @@ func (e *Engine) searchKnowledge(ctx context.Context, s *session, args json.RawM
 		return result{}, fmt.Errorf("%w: knowledge is not available", errBadArguments)
 	}
 	found, err := e.Services.Knowledge.Search(ctx, s.m.Workspace.ID, in.Query, contracts.KnowledgeSearchOptions{
-		Limit: 8, Surface: "operator", Visibility: []contracts.KnowledgeVisibility{
+		Limit: passagesFor(s), Surface: "operator", Visibility: []contracts.KnowledgeVisibility{
 			contracts.KnowledgeVisibilityPublic, contracts.KnowledgeVisibilityAgentOnly,
 		},
 	})
@@ -98,13 +98,29 @@ func (e *Engine) searchKnowledge(ctx context.Context, s *session, args json.RawM
 		if c.ArticleID != nil {
 			fmt.Fprintf(&b, " (article %s)", models.PublicID(models.PrefixArticle, *c.ArticleID))
 		}
-		fmt.Fprintf(&b, " %s\n%s\n\n", c.URL, truncate(c.Text, 1500))
+		if s.routine == nil {
+			b.WriteString(" " + c.URL)
+		}
+		fmt.Fprintf(&b, "\n%s\n\n", truncate(c.Text, 1500))
 	}
 	if b.Len() == 0 {
 		b.WriteString("Nothing in the knowledge matches.")
 	}
 	summary := fmt.Sprintf("Searched knowledge for %q: %d passages", in.Query, len(found.Chunks))
 	return result{text: b.String(), step: Step{Tool: "search_knowledge", Summary: summary}}, nil
+}
+
+/*
+passagesFor is how many passages a knowledge search returns. A routine
+searches many times in one run and keeps every result in what it
+re-reads, so it gets the best five and no links; a teammate's question
+gets eight, with the links they may want to open.
+*/
+func passagesFor(s *session) int {
+	if s.routine != nil {
+		return 5
+	}
+	return 8
 }
 
 /*
