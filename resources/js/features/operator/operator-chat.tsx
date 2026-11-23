@@ -16,10 +16,10 @@ import { ScrollArea } from "@/features/shell/page";
 import { Reveal } from "@/features/shell/reveal";
 import type { OperatorChangeset, OperatorMessage, OperatorStep, OperatorThreadView } from "@/lib/api/operator";
 import { cx } from "@/utils/cx";
-
 import { ActivityLog } from "./activity-log";
 import { ChangesetCard } from "./changeset-card";
 import { InstructionsCard } from "./instructions-card";
+import { RichLink } from "./rich-link";
 import type { Scope } from "./scope";
 import type { OperatorChat as Chat, Live } from "./use-operator-chat";
 
@@ -160,6 +160,7 @@ function Answer({
       {message.body ? (
         <MessageBody
           text={message.body}
+          link={RichLink}
           className={cx(answerText, message.status === "failed" && "text-text-tertiary")}
         />
       ) : null}
