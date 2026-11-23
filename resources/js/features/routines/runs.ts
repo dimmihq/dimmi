@@ -23,4 +23,21 @@ export function runLine(r: RoutineRun): string {
   return r.noop_reason ? `Nothing to change: ${r.noop_reason}` : "Nothing to change";
 }
 
+/*
+ * tookOf says how long a finished run took, empty while it has not
+ * finished.
+ */
+export function tookOf(r: Pick<RoutineRun, "started_at" | "completed_at">): string {
+  if (!r.started_at || !r.completed_at) {
+    return "";
+  }
+  const seconds = Math.max(1, Math.round((Date.parse(r.completed_at) - Date.parse(r.started_at)) / 1000));
+  if (seconds < 60) {
+    return `took ${seconds} s`;
+  }
+  const rest = seconds % 60;
+
+  return rest ? `took ${Math.floor(seconds / 60)} min ${rest} s` : `took ${Math.floor(seconds / 60)} min`;
+}
+
 export const triggers = { scheduled: "On schedule", manual: "Run now", dry_run: "Dry run" } as const;

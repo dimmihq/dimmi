@@ -10,7 +10,6 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useBlocker, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 
-import { StatCards } from "@/components/application/dashboard/stat-cards";
 import { Chip } from "@/components/base/badges/chip";
 import { Button } from "@/components/base/buttons/button";
 import { IconButton } from "@/components/base/buttons/icon-button";
@@ -43,11 +42,11 @@ import { lookOf } from "./looks";
 import { RoutineFields } from "./routine-fields";
 import { OutcomeChip } from "./routine-list";
 import { RunPanel } from "./run-panel";
-import { runLine, triggers } from "./runs";
+import { runLine, tookOf, triggers } from "./runs";
 import { describeRoutine } from "./timing";
 import { useRoutineWatch } from "./use-run-live";
 
-type Tabbed = "runs" | "settings";
+type Tabbed = "build" | "runs";
 
 const pauses: Record<string, string> = {
   consecutive_failures: "It paused after failing three runs in a row.",
@@ -58,7 +57,7 @@ const pauses: Record<string, string> = {
 export function RoutinePage({ id }: { id: string }) {
   const workspace = useAccount().workspace.id;
   const { data: routine, isError } = useQuery(routineQuery(workspace, id));
-  const [tab, setTab] = useState<Tabbed>("runs");
+  const [tab, setTab] = useState<Tabbed>("build");
 
   if (isError) {
     return (
@@ -165,8 +164,8 @@ function Loaded({
           <TabList
             aria-label="Routine"
             items={[
+              { id: "build", label: "Build" },
               { id: "runs", label: "Runs" },
-              { id: "settings", label: "Settings" },
             ]}
           >
             {(item) => <Tab id={item.id}>{item.label}</Tab>}
@@ -183,9 +182,8 @@ function Loaded({
               onResume={() => status.mutate("active")}
             />
           ) : null}
-          {tab === "runs" ? <RoutineStats routine={routine} /> : null}
           {tab === "runs" ? <Runs workspace={workspace} routine={routine} onOpen={wide ? watch : undefined} /> : null}
-          {tab === "settings" ? (
+          {tab === "build" ? (
             <RoutineFields
               key={generation}
               workspace={workspace}
@@ -277,46 +275,6 @@ function Paused({
   );
 }
 
-/*
- * RoutineStats says what came of the routine: its suggestions waiting,
- * applied and declined, and what it cost this month.
- */
-function RoutineStats({ routine }: { routine: Routine }) {
-  const c = routine.suggestions;
-  const decided = c.applied + c.declined + c.reverted;
-  const usd = (micros: number) => `$${(micros / 1_000_000).toFixed(2)}`;
-
-  return (
-    <StatCards
-      variant="compact"
-      className="gap-2"
-      stats={[
-        {
-          label: "Waiting for review",
-          hint: "Suggestions from this routine nobody has applied or declined yet.",
-          value: c.pending.toLocaleString(),
-        },
-        {
-          label: "Applied",
-          hint: "Suggestions a teammate applied and kept.",
-          value: c.applied.toLocaleString(),
-          caption: decided > 0 ? `${Math.round((c.applied / decided) * 100)}% of decided` : "None decided yet",
-        },
-        {
-          label: "Declined",
-          hint: "Suggestions declined, undone after applying, or gone stale after four weeks.",
-          value: (c.declined + c.reverted).toLocaleString(),
-        },
-        {
-          label: "Spend this month",
-          hint: "What this routine's runs cost this month, in US dollars.",
-          value: usd(routine.month_spend_micros),
-        },
-      ]}
-    />
-  );
-}
-
 function Runs({
   workspace,
   routine,
@@ -368,12 +326,13 @@ function runTint(r: RoutineRun): "rose" | "lime" | "neutral" {
  */
 function RunRow({ routine, run: r, onOpen }: { routine: string; run: RoutineRun; onOpen?: (run: string) => void }) {
   const live = r.status === "running" || r.status === "queued";
-  const cost = `$${(r.cost_micros / 1_000_000).toFixed(3)}`;
   const row = (
     <Item
       mark={<KindMark icon={r.trigger === "dry_run" ? RiFlaskLine : RiPlayLine} tint={runTint(r)} />}
       title={runLine(r)}
-      detail={`${triggers[r.trigger]} · ${formatDateTime(r.started_at ?? r.created_at)} · ${cost}`}
+      detail={[triggers[r.trigger], formatDateTime(r.started_at ?? r.created_at), tookOf(r)]
+        .filter(Boolean)
+        .join(" · ")}
     >
       {live ? (
         <Chip variant="caption" color="blue">
