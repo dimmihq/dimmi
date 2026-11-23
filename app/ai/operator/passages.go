@@ -77,13 +77,15 @@ func applyPassages(body string, edits []passageEdit) (string, []string, error) {
 		return "", nil, fmt.Errorf("%w: at most %d edits", errBadArguments, maxPassageEdits)
 	}
 	var notes []string
+	done := map[string]bool{}
 	for i, e := range edits {
 		if strings.TrimSpace(e.Find) == "" {
 			return "", nil, fmt.Errorf("%w: edit %d has nothing to find", errBadArguments, i+1)
 		}
-		if e.Find == e.Replace {
+		if e.Find == e.Replace || done[e.Find] {
 			continue
 		}
+		done[e.Find] = true
 		find, note, err := locate(body, e.Find, i+1)
 		if err != nil {
 			return "", nil, err
@@ -113,8 +115,7 @@ func locate(body, find string, n int) (string, string, error) {
 	}
 	passage, distance := nearest([]rune(body), []rune(strings.TrimSpace(find)))
 	if passage == "" {
-		return "", "", fmt.Errorf("%w: edit %d's find is not in the article; copy the passage word for word "+
-			"from get_article_by_id", errBadArguments, n)
+		return "", "", fmt.Errorf("%w: edit %d's find is not in the article. %s", errBadArguments, n, elsewhere)
 	}
 	want := []rune(strings.TrimSpace(find))
 	if len(want) >= minRepeatedFind && distance*looseness <= len(want) && digits(passage) == digits(find) {
@@ -122,12 +123,19 @@ func locate(body, find string, n int) (string, string, error) {
 			"replaced this passage: %q", n, passage), nil
 	}
 	if distance*3 > len(want) {
-		return "", "", fmt.Errorf("%w: edit %d's find is not in the article; copy the passage word for word "+
-			"from get_article_by_id", errBadArguments, n)
+		return "", "", fmt.Errorf("%w: edit %d's find is not in the article. %s", errBadArguments, n, elsewhere)
 	}
 	return "", "", fmt.Errorf("%w: edit %d's find is not in the article. The closest passage is %q: send "+
 		"exactly that as find if it is the one you mean", errBadArguments, n, passage)
 }
+
+/*
+elsewhere is what to do when nothing in the article resembles a quote:
+most often the quote belongs to another article than the one named.
+*/
+const elsewhere = "Nothing in this article is close to it, so the passage most likely belongs to another " +
+	"article: check the article_id against the article you read it in. Do not send this find for this " +
+	"article again."
 
 /*
 nearest is the passage of body closest to want and how many characters

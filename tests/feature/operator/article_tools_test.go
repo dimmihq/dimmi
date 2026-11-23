@@ -115,6 +115,41 @@ func TestOperatorArticleTools(t *testing.T) {
 		assert.Contains(t, k.toolResult(), `The closest passage is "The Free plan stops at 50 labels a month."`)
 	})
 
+	t.Run("says a passage belongs to another article when nothing here is close to it", func(t *testing.T) {
+		t.Parallel()
+		k := newDesk(t)
+		article := k.article("Label limit")
+		k.llm.Script(tools(call("propose_article_edit", map[string]any{
+			"article_id": article, "suggestion_title": "Fix", "reason": "x",
+			"edits": []map[string]any{{
+				"find": "Within four business hours on Growth, two on Pro and one on Enterprise.", "replace": "y",
+			}},
+		})), reply("Could not."))
+
+		k.ask(k.thread(""), "Fix it").AssertOK().AssertJSONPath("data.changesets.#", float64(0))
+
+		assert.Contains(t, k.toolResult(), `article "Label limit"`)
+		assert.Contains(t, k.toolResult(), "most likely belongs to another article")
+	})
+
+	t.Run("takes the same edit sent twice as one", func(t *testing.T) {
+		t.Parallel()
+		k := newDesk(t)
+		article := k.article("Batches")
+		same := map[string]any{
+			"find":    "A batch can hold at most 1,000 shipments, or 25 on the Free plan.",
+			"replace": "A batch can hold at most 1,000 shipments.",
+		}
+		k.llm.Script(tools(call("propose_article_edit", map[string]any{
+			"article_id": article, "suggestion_title": "Fix the batch limit", "reason": "x",
+			"edits": []map[string]any{same, same},
+		})), reply("Suggested."))
+
+		res := k.ask(k.thread(""), "Fix the batch article").AssertOK()
+
+		assert.Equal(t, 0, strings.Count(res.String("data.changesets.0.operations.0.text"), "25 on the Free plan"))
+	})
+
 	t.Run("reads edits a model sent as a string", func(t *testing.T) {
 		t.Parallel()
 		k := newDesk(t)
