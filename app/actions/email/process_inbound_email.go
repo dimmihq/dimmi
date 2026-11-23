@@ -90,6 +90,8 @@ type ProcessInboundEmail struct {
 	Events   *events.Dispatcher
 	Receiver contracts.InboundReceiver
 	Replies  BroadcastReplies
+
+	Reputation *Reputation
 }
 
 /*
@@ -232,8 +234,8 @@ func (a *ProcessInboundEmail) process(ctx context.Context, mail *received) error
 	}{
 		{enums.EmailClassificationLoop, func() error { return a.ignore(ctx, mail.row, ignoreLoop) }},
 		{enums.EmailClassificationSystemNotice, func() error { return a.notice(ctx, mail, insp) }},
-		{enums.EmailClassificationComplaint, func() error { return a.complaint(ctx, mail) }},
-		{enums.EmailClassificationBounce, func() error { return a.bounce(ctx, mail) }},
+		{enums.EmailClassificationComplaint, func() error { return a.judged(ctx, mail, a.complaint) }},
+		{enums.EmailClassificationBounce, func() error { return a.judged(ctx, mail, a.bounce) }},
 	}
 
 	for _, h := range handlers {

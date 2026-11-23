@@ -254,6 +254,14 @@
     "error": "What went wrong: {{.error}}",
     "action": "Open the source"
   },
+  "email_sending_paused": {
+    "subject": "Bulk email paused for {{.workspace}}",
+    "intro": "dimmi paused broadcasts, series and rating emails for {{.workspace}} to protect the addresses you send from. Replies to customers still go out.",
+    "bounces": "In the last 7 days, {{.failed}} of {{.sent}} emails bounced because the address does not exist.",
+    "complaints": "In the last 7 days, {{.failed}} of {{.sent}} emails were reported as spam.",
+    "next": "Clean the list you send to, then an owner can resume sending. The count starts again from there.",
+    "action": "Open email settings"
+  },
   "conversation_rating": {
     "subject": "How did {{.workspace}} do?",
     "greeting": "Hi {{.name}},",

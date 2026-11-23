@@ -738,8 +738,10 @@ channels:
         provider_per_minute: 0  # DIMMI_CHANNELS__EMAIL__SENDING__LIMITS__PROVIDER_PER_MINUTE
         provider_per_day: 0  # DIMMI_CHANNELS__EMAIL__SENDING__LIMITS__PROVIDER_PER_DAY
         broadcast_share_percent: 80  # DIMMI_CHANNELS__EMAIL__SENDING__LIMITS__BROADCAST_SHARE_PERCENT
-      # EmailReputation holds the rates that pause a workspace's sending. Zero turns
-      # a rate off.
+      # EmailReputation holds the shares of a workspace's customer email, between
+      # 0 and 1, that pause its broadcasts, series and rating emails once passed:
+      # emails that bounced for good, and emails reported as spam. Zero turns a
+      # rate off.
       reputation:
         bounce_pause_rate: 0  # DIMMI_CHANNELS__EMAIL__SENDING__REPUTATION__BOUNCE_PAUSE_RATE
         complaint_pause_rate: 0  # DIMMI_CHANNELS__EMAIL__SENDING__REPUTATION__COMPLAINT_PAUSE_RATE

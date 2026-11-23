@@ -15,6 +15,7 @@ package broadcasts
 import (
 	"context"
 	"errors"
+	"time"
 
 	"github.com/dimmihq/dimmi/framework/mail"
 
@@ -76,10 +77,21 @@ func (s *EmailSender) Deliver(ctx context.Context, d Delivery) (Delivered, error
 }
 
 /*
-emailFailure sorts a failed send: an address or a refusal that will not
-change fails the recipient, anything else is tried again.
+pausedRetry is how long a recipient waits when the workspace's sending
+paused under a broadcast that had not paused with it yet.
+*/
+const pausedRetry = 15 * time.Minute
+
+/*
+emailFailure sorts a failed send: a workspace whose sending is paused
+keeps the recipient waiting, an address or a refusal that will not
+change fails the recipient, and anything else is tried again.
 */
 func emailFailure(err error) error {
+	if errors.Is(err, email.ErrSendingPaused) {
+		return &contracts.RateLimitedError{RetryAfter: pausedRetry}
+	}
+
 	if errors.Is(err, email.ErrBroadcastUnverified) || errors.Is(err, email.ErrBroadcastAddress) ||
 		errors.Is(err, email.ErrBroadcastPaused) {
 		return &UndeliverableError{Status: "failed", Reason: "sending_address_unavailable"}

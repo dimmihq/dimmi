@@ -24,9 +24,11 @@ import (
 	"github.com/dimmihq/dimmi/framework/queue"
 
 	"github.com/dimmihq/dimmi/app"
+	"github.com/dimmihq/dimmi/app/actions/audit"
 	"github.com/dimmihq/dimmi/app/actions/email"
 	appbroadcasting "github.com/dimmihq/dimmi/app/broadcasting"
 	"github.com/dimmihq/dimmi/app/jobs"
+	appmail "github.com/dimmihq/dimmi/app/mail"
 	"github.com/dimmihq/dimmi/config"
 )
 
@@ -44,6 +46,14 @@ func bootEmailSending(a *app.App) error {
 	domains.Provider, domains.Region = domainProvider(a, domains.Driver, cfg.Sending)
 	a.EmailDomains = domains
 	a.Actions.SendEmailMessage.Senders = domains
+
+	a.EmailReputation = &email.Reputation{
+		DB: a.DB, Clock: a.Clock, Mail: a.Mail, Links: a.Links, Rates: cfg.Sending.Reputation,
+		Audit: &audit.RecordAuditLog{DB: a.DB, Clock: a.Clock},
+	}
+	a.Actions.SendEmailMessage.Reputation = a.EmailReputation
+	a.Actions.ProcessInboundEmail.Reputation = a.EmailReputation
+	appmail.RegisterSendingNotices(a.Mail)
 
 	(&appbroadcasting.EmailSending{Server: a.Broadcast}).Listen(a.Events)
 

@@ -23,7 +23,7 @@ export type Hold = "customer_waiting" | "team_replied";
 
 export type BroadcastStatus = "draft" | "scheduled" | "sending" | "paused" | "sent" | "stopped";
 
-export type PauseReason = "bounce_rate" | "complaint_rate" | "paused_by_teammate";
+export type PauseReason = "bounce_rate" | "complaint_rate" | "paused_by_teammate" | "sending_paused";
 
 export type ScheduleKind = "now" | "at" | "local";
 

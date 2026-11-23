@@ -129,6 +129,7 @@ type App struct {
 	AI                    *pipeline.Runner
 	EmailChannel          *email.Channel
 	EmailDomains          *emailactions.Domains
+	EmailReputation       *emailactions.Reputation
 
 	Realtime *appbroadcasting.Connections
 	Viewers  *appbroadcasting.Viewers

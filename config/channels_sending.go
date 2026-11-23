@@ -140,6 +140,10 @@ func (c *EmailSendingConfig) check() error {
 		{c.MaxAttachmentBytes <= 0, "channels.email.sending.max_attachment_bytes"},
 		{c.AttachmentLinkTTL <= 0, "channels.email.sending.attachment_link_ttl"},
 		{c.Reputation.BouncePauseRate < 0 || c.Reputation.BouncePauseRate > 1, "channels.email.sending.reputation"},
+		{
+			c.Reputation.ComplaintPauseRate < 0 || c.Reputation.ComplaintPauseRate > 1,
+			"channels.email.sending.reputation",
+		},
 		{connect.Enabled && connect.PrivateKey == "", "channels.email.sending.domain_connect.private_key"},
 		{trip.Enabled && trip.Workspace == "", "channels.email.sending.round_trip.workspace"},
 	}
