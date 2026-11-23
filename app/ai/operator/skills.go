@@ -144,8 +144,9 @@ const knowledgeGapsSkill = `How to find knowledge gaps.
 const auditArticlesSkill = `How to audit help articles.
 
 1. Call routine_get_state for next_offset and audited_article_hashes; with none saved, start at 0.
-2. Call list_articles with offset next_offset and limit 15; when it shows fewer than 15, list from 0
-   again to fill the batch.
+2. Call list_articles once, with offset next_offset and limit 15; when it shows fewer than 15, list
+   from 0 again to fill the batch. A run audits one batch of 15, never more: the next run takes
+   the next batch.
 3. Read each with get_article. Skip an article audited before whose content has not changed, unless
    it was audited more than 90 days ago and readers rated it poorly since (see workspace_report for
    the last 30 days).

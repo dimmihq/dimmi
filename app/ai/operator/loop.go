@@ -7,7 +7,9 @@
 | Each call streams: its text reaches the teammate as it is written, and
 | each tool it runs shows as a step. After a set number of model calls
 | or tool calls the tools are withdrawn, so the model has to answer with
-| what it has found.
+| what it has found. A routine keeps the tools that close a run for a
+| few calls more, so a run that read too much can still suggest what it
+| found.
 |
 */
 
@@ -17,6 +19,7 @@ import (
 	"context"
 	"errors"
 	"io"
+	"slices"
 	"strings"
 	"time"
 
@@ -64,11 +67,7 @@ func (e *Engine) converse(ctx context.Context, s *session) (string, string) {
 	}
 	var written strings.Builder
 	for calls := 1; ; calls++ {
-		var tools []contracts.ToolSpec
-		modelCalls, toolCalls := s.limits()
-		if calls < modelCalls && s.toolCalls < toolCalls {
-			tools = e.toolSpecs(s)
-		}
+		tools := e.offered(s, calls)
 		out, err := e.generateWithRetry(ctx, s, p, tools)
 		written.WriteString(out.text)
 		if err != nil {
@@ -88,6 +87,45 @@ func (e *Engine) converse(ctx context.Context, s *session) (string, string) {
 			return strings.TrimSpace(written.String()), statusOf(ctx.Err())
 		}
 	}
+}
+
+/*
+The calls a routine keeps for closing its run once its reading is spent.
+*/
+const (
+	closingModelCalls = 3
+	closingToolCalls  = 8
+)
+
+/*
+closingTools are the tools that close a routine's run: suggesting,
+saving what the next run needs, and saying nothing needs attention.
+*/
+var closingTools = []string{"mark_noop", "propose_changes", "routine_set_state"}
+
+/*
+offered is the tools a model call may use: all of them within the run's
+bounds, then for a routine only the closing ones for a few calls, then
+none.
+*/
+func (e *Engine) offered(s *session, calls int) []contracts.ToolSpec {
+	modelCalls, toolCalls := s.limits()
+	if calls < modelCalls && s.toolCalls < toolCalls {
+		return e.toolSpecs(s)
+	}
+	if s.routine == nil || calls >= modelCalls+closingModelCalls || s.toolCalls >= toolCalls+closingToolCalls {
+		return nil
+	}
+	if s.layer != nil {
+		return e.toolSpecs(s)
+	}
+	var out []contracts.ToolSpec
+	for _, spec := range e.toolSpecs(s) {
+		if slices.Contains(closingTools, spec.Name) {
+			out = append(out, spec)
+		}
+	}
+	return out
 }
 
 /*

@@ -419,6 +419,22 @@ func TestOperatorRoutineTools(t *testing.T) {
 		assert.Contains(t, taught, "How to audit help articles.")
 	})
 
+	t.Run("keeps the tools that close a run once its reading is spent", func(t *testing.T) {
+		t.Parallel()
+		k := newDesk(t)
+		routine := k.routine(testkit.JSON{"name": "Audit", "prompt": "Audit articles."})
+		k.setRoutine(routine, "max_tool_calls = 1")
+		k.llm.Script(tools(call("list_articles", map[string]any{})), reply("Done."))
+
+		k.runRoutine(routine, true)
+
+		var names []string
+		for _, spec := range k.llm.Sent()[1].Tools {
+			names = append(names, spec.Name)
+		}
+		assert.Equal(t, []string{"mark_noop", "propose_changes", "routine_set_state"}, names)
+	})
+
 	t.Run("reads a test case a model sent as a string", func(t *testing.T) {
 		t.Parallel()
 		k := newDesk(t)
