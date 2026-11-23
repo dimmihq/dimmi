@@ -1,0 +1,233 @@
+/*
+|--------------------------------------------------------------------------
+| Reading A Call's Arguments
+|--------------------------------------------------------------------------
+|
+| A model sends what it thinks a tool takes, and a weak one is often
+| nearly right: the API's name of an argument, a number where text is
+| meant, one value where a list is. Each is read as what it plainly
+| means. What cannot be read is refused before anything runs, in words
+| the model can act on: which argument is missing and what belongs in
+| it, which one the tool does not have and what it is likely called.
+|
+*/
+
+package mcpserver
+
+import (
+	"fmt"
+	"maps"
+	"regexp"
+	"slices"
+	"strconv"
+	"strings"
+)
+
+/*
+refusedProperty finds where the schema names the argument it refused.
+*/
+var refusedProperty = regexp.MustCompile(`validating /properties/([^:/]+)[^:]*: `)
+
+/*
+read turns the arguments a model sent into the ones the tool takes, or
+says what to fix.
+*/
+func (b built) read(args map[string]any) (map[string]any, error) {
+	properties := asMap(b.schema["properties"])
+	out := map[string]any{}
+	problem := &argumentError{tool: b}
+
+	for _, name := range slices.Sorted(maps.Keys(args)) {
+		target, known := b.target(name, args)
+		if !known {
+			problem.unknown = append(problem.unknown, name)
+		}
+
+		if target != "" && args[name] != nil {
+			out[target] = coerce(args[name], asMap(properties[target]))
+		}
+	}
+
+	for _, name := range b.required() {
+		if value, ok := out[name]; !ok || value == "" {
+			problem.missing = append(problem.missing, name)
+		}
+	}
+
+	if len(problem.unknown)+len(problem.missing) > 0 {
+		return nil, problem
+	}
+
+	return out, nil
+}
+
+/*
+target is the argument a sent name is read as: itself, or the argument
+it is another name for unless that one was sent too. It reports whether
+the tool knows the name at all.
+*/
+func (b built) target(name string, args map[string]any) (string, bool) {
+	if _, ok := asMap(b.schema["properties"])[name]; ok {
+		return name, true
+	}
+
+	alias, known := b.names.aliases[name]
+	if _, sent := args[alias]; sent {
+		return "", known
+	}
+
+	return alias, known
+}
+
+/*
+invalid explains arguments the schema refused.
+*/
+func (b built) invalid(err error) error {
+	reason := err.Error()
+	for _, prefix := range []string{"validate arguments: ", "validating root: "} {
+		reason = strings.TrimPrefix(reason, prefix)
+	}
+
+	reason = refusedProperty.ReplaceAllString(reason, `"$1": `)
+
+	return &argumentError{tool: b, reason: reason}
+}
+
+/*
+coerce reads a value as the type its argument takes when the model sent
+it as another: a number or true for text, text for a number, one value
+for a list.
+*/
+func coerce(value any, schema map[string]any) any {
+	kind, _ := schema["type"].(string)
+
+	switch v := value.(type) {
+	case float64:
+		if kind == "string" {
+			return strconv.FormatFloat(v, 'f', -1, 64)
+		}
+	case bool:
+		if kind == "string" {
+			return strconv.FormatBool(v)
+		}
+	case string:
+		return fromText(v, kind)
+	}
+
+	if _, list := value.([]any); kind == "array" && !list {
+		return []any{value}
+	}
+
+	return value
+}
+
+/*
+fromText reads text as the number, switch or list its argument takes.
+*/
+func fromText(v, kind string) any {
+	switch kind {
+	case "integer", "number":
+		if n, err := strconv.ParseFloat(strings.TrimPrefix(strings.TrimSpace(v), "#"), 64); err == nil {
+			return n
+		}
+	case "boolean":
+		if on, err := strconv.ParseBool(strings.TrimSpace(v)); err == nil {
+			return on
+		}
+	case "array":
+		return []any{v}
+	}
+
+	return v
+}
+
+/*
+argumentError is a call whose arguments do not fit its tool: arguments
+it must carry and does not, arguments the tool does not have, or a
+value the schema refuses.
+*/
+type argumentError struct {
+	tool    built
+	missing []string
+	unknown []string
+	reason  string
+}
+
+/*
+Error describes the refused call in one line.
+*/
+func (e *argumentError) Error() string {
+	return e.tool.def.Name + " was called with arguments that do not fit"
+}
+
+/*
+ToolResult writes the refusal for the agent: what is wrong with each
+argument, what the tool takes, and what to do now.
+*/
+func (e *argumentError) ToolResult() (string, any) {
+	var b strings.Builder
+	name := e.tool.def.Name
+	properties := asMap(e.tool.schema["properties"])
+
+	fmt.Fprintf(&b, "%s was not run: fix the arguments and call %s again. Nothing was changed.\n",
+		title(e.tool.doc, name), name)
+
+	for _, arg := range e.missing {
+		text, _ := asMap(properties[arg])["description"].(string)
+		fmt.Fprintf(&b, "- %q is required and missing. %s\n", arg, text)
+	}
+
+	for _, arg := range e.unknown {
+		fmt.Fprintf(&b, "- %q is not an argument of this tool.%s\n", arg, e.suggest(arg))
+	}
+
+	if e.reason != "" {
+		fmt.Fprintf(&b, "- %s\n", e.reason)
+	}
+
+	fmt.Fprintf(&b, "Arguments of %s: %s.\n", name, strings.Join(e.signature(), ", "))
+
+	return b.String(), map[string]any{"error": map[string]any{
+		"code": "invalid_arguments", "missing": e.missing, "unknown": e.unknown, "reason": e.reason,
+		"arguments": e.signature(),
+	}}
+}
+
+/*
+signature lists the tool's arguments, the required ones marked.
+*/
+func (e *argumentError) signature() []string {
+	required := e.tool.required()
+
+	var out []string
+	for _, name := range slices.Sorted(maps.Keys(asMap(e.tool.schema["properties"]))) {
+		if name == confirmArgument {
+			continue
+		}
+
+		if slices.Contains(required, name) {
+			name += " (required)"
+		}
+
+		out = append(out, name)
+	}
+
+	if len(out) == 0 {
+		return []string{"none"}
+	}
+
+	return out
+}
+
+/*
+suggest names the argument an unknown one was most likely meant to be.
+*/
+func (e *argumentError) suggest(unknown string) string {
+	for _, name := range e.tool.names.names() {
+		if strings.Contains(name, unknown) || strings.Contains(unknown, name) {
+			return fmt.Sprintf(" Did you mean %q?", name)
+		}
+	}
+
+	return ""
+}

@@ -37,10 +37,10 @@ func contactReadDocs() map[string]Doc {
 		"contacts.index": {
 			Title: "List contacts",
 			Use: "Lists the workspace's customers (users, who have an external id) and leads, most recently seen " +
-				"first. Blocked contacts stay out unless filter[blocked]=true. To find people by a saved rule, " +
-				"pass conditions with an audience, or use dimmi_audience_previews_create to only count them.",
+				"first. Blocked contacts stay out unless filter_blocked=true. To find people by a saved rule, " +
+				"pass conditions with an audience, or use dimmi_create_audience_preview to only count them.",
 			Returns: "a page of contacts with their attributes, tags and company, and next_cursor for more.",
-			Next:    []string{"dimmi_contacts_get: read one contact in full"},
+			Next:    []string{"dimmi_get_contact_by_id: read one contact in full"},
 			Params: map[string]string{
 				"filter[kind]": "user or lead.",
 				"filter[custom.<key>]": "A custom attribute's value, such as filter[custom.plan]=pro. " +
@@ -58,15 +58,15 @@ func contactReadDocs() map[string]Doc {
 			Use:     "Reads one customer or lead: details, custom attributes, tags, company and notes.",
 			Returns: "the contact.",
 			Next: []string{
-				"dimmi_contacts_conversations_list: see what they wrote about",
-				"dimmi_contacts_event_summaries_list: see what they did in your product",
+				"dimmi_list_contact_conversations: see what they wrote about",
+				"dimmi_list_contact_event_summaries: see what they did in your product",
 			},
 		},
 		"contacts.conversations.index": {
 			Title:   "List a contact's conversations",
 			Use:     "Lists the conversations of one customer that you may see, newest first.",
 			Returns: "a page of conversations, with next_cursor for more.",
-			Next:    []string{"dimmi_conversations_messages_list: read one of them"},
+			Next:    []string{"dimmi_list_conversation_messages: read one of them"},
 		},
 	}
 }
@@ -86,8 +86,8 @@ func contactWriteDocs() map[string]Doc {
 				"upsert":      "true to find or add by external id, then email. Only this mode accepts company.",
 				"external_id": "Your product's id for this person. A contact with one is a user, without a lead.",
 				"custom_attributes": "An object of custom attribute values by key. Keys and types follow " +
-					"dimmi_attribute_definitions_list; a value of the wrong type is dropped and listed by " +
-					"dimmi_attribute_problems_list.",
+					"dimmi_list_attribute_definitions; a value of the wrong type is dropped and listed by " +
+					"dimmi_list_attribute_problems.",
 				"company": "The person's company by external_id, name or domain; found or added, then linked.",
 			},
 			Hint: "contact_exists or contact_email_exists means someone already has it: retry with upsert=true.",
@@ -122,7 +122,7 @@ func contactRemovalDocs() map[string]Doc {
 				"erase=true, starts a privacy erasure: the person vanishes from lists now, and after a grace " +
 				"period every message, file and record of them is wiped for good. Use only when the person asked.",
 			Returns: "nothing for a plain delete, or the erasure request with its scheduled_for time.",
-			Next:    []string{"dimmi_contact_erasures_update: withdraw the erasure during its grace period"},
+			Next:    []string{"dimmi_update_contact_erasure: withdraw the erasure during its grace period"},
 			Params: map[string]string{
 				"erase": "true to erase the person and everything they wrote, after a grace period (7 days by " +
 					"default).",
@@ -136,14 +136,14 @@ func contactRemovalDocs() map[string]Doc {
 			Use: "Lists how a customer appears on channels: email addresses, phone numbers, chat app users. " +
 				"Messages from any of them land in this contact's history.",
 			Returns: "the identities, with their ids.",
-			Next:    []string{"dimmi_contacts_identities_delete: detach one attached by mistake"},
+			Next:    []string{"dimmi_delete_contact_identity: detach one attached by mistake"},
 		},
 		"contacts.identities.destroy": {
 			Title: "Detach a contact identity",
 			Use: "Detaches an address or account attached to the wrong customer. The next message from it " +
 				"starts a new lead instead of joining this contact's history; past messages stay where they are.",
 			Params: map[string]string{
-				"identity": "Id of the identity, from dimmi_contacts_identities_list.",
+				"identity": "Id of the identity, from dimmi_list_contact_identities.",
 			},
 		},
 	}
@@ -183,9 +183,9 @@ func companyDocs() map[string]Doc {
 	return map[string]Doc{
 		"companies.index": {
 			Title:   "List companies",
-			Use:     "Lists the companies your customers belong to. q searches by name or domain.",
+			Use:     "Lists the companies your customers belong to. search_text searches by name or domain.",
 			Returns: "a page of companies, with next_cursor for more.",
-			Next:    []string{"dimmi_companies_get: read one company in full"},
+			Next:    []string{"dimmi_get_company_by_id: read one company in full"},
 			Params: map[string]string{
 				"filter[tag]": "Id of a tag (tag_...) the companies carry.",
 				"page":        "A numbered page from 1, instead of a cursor.",
@@ -197,19 +197,19 @@ func companyDocs() map[string]Doc {
 			Use:     "Reads one company: name, domain, external id, custom attributes, tags and notes.",
 			Returns: "the company.",
 			Next: []string{
-				"dimmi_companies_contacts_list: see its people",
-				"dimmi_companies_conversations_list: see what its people wrote about",
+				"dimmi_list_company_contacts: see its people",
+				"dimmi_list_company_conversations: see what its people wrote about",
 			},
 		},
 		"companies.store": {
 			Title: "Add a company",
 			Use: "Adds a company. With upsert=true it finds the company by external id, then domain, and " +
-				"updates it instead, so it is safe to repeat. Link people to it with dimmi_contacts_update.",
+				"updates it instead, so it is safe to repeat. Link people to it with dimmi_update_contact.",
 			Returns: "the company, and with upsert meta.upserted (created or updated).",
 			Params: map[string]string{
 				"upsert": "true to find or add by external id, then domain. A plain create needs a name.",
 				"custom_attributes": "An object of custom attribute values by key, as " +
-					"dimmi_attribute_definitions_list defines them for companies.",
+					"dimmi_list_attribute_definitions defines them for companies.",
 			},
 			Hint: "company_exists: another company has this external id; retry with upsert=true.",
 		},
@@ -247,7 +247,7 @@ func companyChangeDocs() map[string]Doc {
 			Title:   "List a company's conversations",
 			Use:     "Lists the conversations of all the company's people that you may see, newest first.",
 			Returns: "a page of conversations, with next_cursor for more.",
-			Next:    []string{"dimmi_conversations_messages_list: read one of them"},
+			Next:    []string{"dimmi_list_conversation_messages: read one of them"},
 		},
 	}
 }

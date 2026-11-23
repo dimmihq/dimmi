@@ -15,6 +15,7 @@ package mcpserver
 
 import (
 	"fmt"
+	"maps"
 	"regexp"
 	"slices"
 	"strings"
@@ -27,9 +28,13 @@ import (
 Report is what the audit found. Undocumented lists callable operations
 without an entry, Stale entries without an operation, Incomplete
 entries missing a title or a use, and Unknown references to tools that
-do not exist, as "where: name". Tools lists every tool name.
+do not exist, as "where: name". Duplicate lists names two operations
+would share, and Unclear arguments a model could not read from their
+name alone, as "tool: argument". Tools lists every tool name.
 */
 type Report struct {
+	Duplicate    []string
+	Unclear      []string
 	Undocumented []string
 	Stale        []string
 	Incomplete   []string
@@ -41,7 +46,7 @@ type Report struct {
 Clean reports whether the audit found nothing wrong.
 */
 func (r Report) Clean() bool {
-	return len(r.Undocumented)+len(r.Stale)+len(r.Incomplete)+len(r.Unknown) == 0
+	return len(r.Undocumented)+len(r.Stale)+len(r.Incomplete)+len(r.Unknown)+len(r.Duplicate)+len(r.Unclear) == 0
 }
 
 /*
@@ -65,41 +70,85 @@ func Audit(router *routing.Router) (Report, error) {
 
 	docs := catalog()
 	known := map[string]bool{toolPrefix + "guide": true}
+	live := map[string]bool{}
 
 	var r Report
 
 	for _, op := range ops {
-		known[toolName(op.ID)] = true
-		entry, ok := docs[op.ID]
-
-		if !ok {
-			r.Undocumented = append(r.Undocumented, op.ID)
-
-			continue
-		}
-
-		if strings.TrimSpace(entry.Title) == "" || strings.TrimSpace(entry.Use) == "" {
-			r.Incomplete = append(r.Incomplete, op.ID)
-		}
+		live[op.ID] = true
+		check(&r, op, docs, known)
 	}
 
 	for id := range docs {
-		if !known[toolName(id)] {
+		if !live[id] {
 			r.Stale = append(r.Stale, id)
 		}
 	}
 
 	r.Unknown = unknownReferences(docs, known)
-
-	for name := range known {
-		r.Tools = append(r.Tools, name)
-	}
-
-	for _, list := range [][]string{r.Undocumented, r.Stale, r.Incomplete, r.Unknown, r.Tools} {
-		slices.Sort(list)
-	}
+	r.Tools = slices.Collect(maps.Keys(known))
+	r.sort()
 
 	return r, nil
+}
+
+/*
+check audits one operation: its entry, its name and its arguments.
+*/
+func check(r *Report, op mcp.Operation, docs map[string]Doc, known map[string]bool) {
+	entry, ok := docs[op.ID]
+	name := toolName(op, entry)
+
+	if known[name] {
+		r.Duplicate = append(r.Duplicate, name)
+	}
+
+	known[name] = true
+	r.Unclear = append(r.Unclear, unclear(build(op, entry))...)
+
+	switch {
+	case !ok:
+		r.Undocumented = append(r.Undocumented, op.ID)
+	case strings.TrimSpace(entry.Title) == "" || strings.TrimSpace(entry.Use) == "":
+		r.Incomplete = append(r.Incomplete, op.ID)
+	}
+}
+
+/*
+sort orders every list of the report.
+*/
+func (r Report) sort() {
+	for _, list := range [][]string{
+		r.Undocumented, r.Stale, r.Incomplete, r.Unknown, r.Duplicate, r.Unclear, r.Tools,
+	} {
+		slices.Sort(list)
+	}
+}
+
+/*
+unclear lists the arguments of a tool a model could not read from their
+name alone: a bare word, a search called q, a filter in brackets, a
+record named in the path without saying it is an id, or an argument
+nothing explains.
+*/
+func unclear(b built) []string {
+	var out []string
+
+	path := pathArguments(b.op.Path)
+	for name, api := range b.names.api {
+		_, plain := plainPaths()[api]
+		schema := asMap(asMap(b.schema["properties"])[name])
+		text, _ := schema["description"].(string)
+
+		switch {
+		case slices.Contains(bareWords(), name), name == "q", strings.Contains(name, "["), text == "":
+			out = append(out, b.def.Name+": "+name)
+		case slices.Contains(path, api) && !plain && !strings.Contains(name, "_id"):
+			out = append(out, b.def.Name+": "+name)
+		}
+	}
+
+	return out
 }
 
 /*

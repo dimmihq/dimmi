@@ -32,8 +32,8 @@ func seriesDocs() map[string]Doc {
 				"graph of steps, plus its settings and lock_version.",
 			Returns: "the series with its spec, settings, status and lock_version.",
 			Next: []string{
-				"dimmi_series_update: change the working copy",
-				"dimmi_series_report_get: how it performs",
+				"dimmi_update_series: change the working copy",
+				"dimmi_get_series_report: how it performs",
 			},
 		},
 		"series.store": {
@@ -42,8 +42,8 @@ func seriesDocs() map[string]Doc {
 				"Nothing runs until it is published.",
 			Returns: "the draft series.",
 			Next: []string{
-				"dimmi_series_update: build its steps",
-				"dimmi_series_check_create: see what it still misses",
+				"dimmi_update_series: build its steps",
+				"dimmi_check_series: see what it still misses",
 			},
 			Params: map[string]string{
 				"name":    "A name for the team, up to 120 characters and unlike the other series.",
@@ -61,7 +61,7 @@ func seriesDocs() map[string]Doc {
 			Use:     "Deletes a draft series that never went live. One that went live is archived instead.",
 			Returns: "nothing once it is deleted.",
 			Risk:    new(RiskWrite),
-			Hint:    "series_not_draft means it went live once: archive it with dimmi_series_archive_create.",
+			Hint:    "series_not_draft means it went live once: archive it with dimmi_archive_series.",
 		},
 	}
 }
@@ -78,7 +78,7 @@ func seriesDraftDocs() map[string]Doc {
 				"published. Every field but spec is saved as sent, so send them all as read; spec left out " +
 				"keeps the working copy.",
 			Returns: "the series as it now is, with its new lock_version.",
-			Next:    []string{"dimmi_series_publications_create: make the change live"},
+			Next:    []string{"dimmi_publish_series: make the change live"},
 			Params:  seriesParams(),
 			Hint:    "edit_conflict means someone saved since you read it: read it again and redo the change.",
 		},
@@ -94,7 +94,7 @@ func seriesDraftDocs() map[string]Doc {
 			Title:   "List a series' versions",
 			Use:     "Lists every published version of a series, newest first.",
 			Returns: "the versions with their number, note, who published them and when.",
-			Next:    []string{"dimmi_series_versions_restore_create: copy an old version back"},
+			Next:    []string{"dimmi_restore_series_version: copy an old version back"},
 		},
 		"series.versions.restore.store": {
 			Title: "Restore a series version",
@@ -102,7 +102,7 @@ func seriesDraftDocs() map[string]Doc {
 				"published again.",
 			Returns: "the series with the restored working copy.",
 			Params: map[string]string{
-				"version": "Version (srsv_...) to restore. Find it with dimmi_series_versions_list.",
+				"version": "Version (srsv_...) to restore. Find it with dimmi_list_series_versions.",
 			},
 		},
 	}
@@ -112,7 +112,7 @@ func seriesDraftDocs() map[string]Doc {
 seriesSpec explains a series definition.
 */
 func seriesSpec() string {
-	return "The definition as JSON, in the shape dimmi_series_get returns: entry (audience_id, rules or " +
+	return "The definition as JSON, in the shape dimmi_get_series_by_id returns: entry (audience_id, rules or " +
 		"event, include_existing, reentry), exit, goal and the graph of nodes (id, kind, settings) joined " +
 		"by edges (from, path, to). Kinds are entry, email, chat, post, slack, wait, wait_for, condition, " +
 		"split, ai_path, tag, untag, set_attribute, topic, webhook and exit. Step ids never change."
@@ -127,9 +127,9 @@ func seriesParams() map[string]string {
 		"name":             "A name for the team, up to 120 characters.",
 		"description":      "What the series is for, up to 500 characters.",
 		"spec":             seriesSpec(),
-		"topic_id":         "Topic (bctp_...) its messages go under. Find it with dimmi_broadcast_topics_list.",
+		"topic_id":         "Topic (bctp_...) its messages go under. Find it with dimmi_list_broadcast_topics.",
 		"service":          "true marks its messages as service notices that reach people who left topics.",
-		"email_address_id": "Sending email address (ema_...). Find it with dimmi_email_addresses_list.",
+		"email_address_id": "Sending email address (ema_...). Find it with dimmi_list_email_addresses.",
 		"sender_id":        "Teammate (mem_...) its messages come from.",
 		"slack_as":         "bot posts as the dimmi app, member as the sender's own Slack account.",
 		"reply_team_id":    "Team (team_...) that gets the replies.",

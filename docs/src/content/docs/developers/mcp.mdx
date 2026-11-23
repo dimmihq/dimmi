@@ -40,10 +40,25 @@ If your client cannot open a browser for OAuth, pass an [API token](/developers/
 
 ## Available tools
 
-- **Matches the REST API:** every endpoint becomes a tool (like `dimmi_conversations_list`), filtered by the token's [abilities](/developers/api/abilities/).
+- **Matches the REST API:** every endpoint becomes a tool, filtered by the token's [abilities](/developers/api/abilities/).
+- **Named for what they do:** verb first, like `dimmi_list_conversations`, `dimmi_get_article_by_id`, or `dimmi_publish_article`.
 - **Scoped to your role:** every call runs through the REST API as you inside one workspace.
 - **Built-in guide:** `dimmi_guide` teaches your assistant dimmi's data model and common workflows.
 - **Excluded operations:** endpoints that upload files, require password confirmation, or need browser sign-in are omitted.
+
+## Tool arguments
+
+Arguments are named so a model fills them right without reading the REST reference:
+
+| REST API | MCP tool argument |
+| --- | --- |
+| A record in the path, like `{article}` | `article_id` |
+| A conversation in the path | `conversation_id_or_number` |
+| `filter[status]` | `filter_status` |
+| `q` | `search_text` |
+| A bare field, like `name` on a tag | `tag_name` |
+
+A call that sends the REST name still works. A call with a missing or unknown argument is refused before anything runs, and the error names the argument and what belongs in it.
 
 ## Built-in safety approvals
 

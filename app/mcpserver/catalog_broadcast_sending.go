@@ -22,10 +22,10 @@ func broadcastSendDocs() map[string]Doc {
 			Use: "Checks everything the broadcast needs, then sends it now or holds it for its schedule. It " +
 				"reaches real people and cannot be taken back. Needs the permission to send broadcasts.",
 			Returns: "the broadcast with its new status.",
-			Next:    []string{"dimmi_broadcasts_report_get: follow the results"},
+			Next:    []string{"dimmi_get_broadcast_report: follow the results"},
 			Risk:    new(RiskReach),
 			Hint: "A missing audience, body, subject or sender is named in the error; fix it with " +
-				"dimmi_broadcasts_update.",
+				"dimmi_update_broadcast.",
 		},
 		"broadcasts.pause.store": {
 			Title:   "Pause a broadcast",

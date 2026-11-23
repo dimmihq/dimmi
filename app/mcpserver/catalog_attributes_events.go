@@ -45,7 +45,7 @@ func attributeDocs() map[string]Doc {
 			Title: "Define a custom attribute",
 			Use: "Defines a custom attribute so its values are typed and checked, and audience rules and filters " +
 				"can offer it. Its key and type never change afterwards. Values are set with " +
-				"dimmi_contacts_update or dimmi_companies_update.",
+				"dimmi_update_contact or dimmi_update_company.",
 			Returns: "the definition.",
 			Params: map[string]string{
 				"object": "contact or company.",
@@ -81,7 +81,7 @@ func attributeCleanupDocs() map[string]Doc {
 		"attribute-definitions.destroy": {
 			Title: "Delete a custom attribute",
 			Use: "Deletes an archived custom attribute and removes its value from every contact or company " +
-				"for good. Archive it with dimmi_attribute_definitions_update first.",
+				"for good. Archive it with dimmi_update_attribute_definition first.",
 			Hint: "attribute_active: archive the attribute before deleting it.",
 		},
 		"attribute-problems.index": {

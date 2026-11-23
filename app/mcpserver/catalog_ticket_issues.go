@@ -48,10 +48,10 @@ func ticketIssueLinkDocs() map[string]Doc {
 				"customer impact and a link back, or links an existing one by url or key. With an incident tool " +
 				"it declares the incident there (service_id for PagerDuty, severity_id).",
 			Returns: "the link.",
-			Next:    []string{"dimmi_integration_installations_issue_teams_list: pick the team first"},
+			Next:    []string{"dimmi_list_integration_installation_issue_teams: pick the team first"},
 			Params: map[string]string{
-				"installation_id": "An installation id from dimmi_integrations_list.",
-				"team_id":         "A team id from dimmi_integration_installations_issue_teams_list.",
+				"installation_id": "An installation id from dimmi_list_integrations.",
+				"team_id":         "A team id from dimmi_list_integration_installation_issue_teams.",
 				"url":             "A pasted issue URL; the tool is found from it.",
 			},
 		},

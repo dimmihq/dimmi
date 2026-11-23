@@ -45,8 +45,8 @@ func helpCenterDocs() map[string]Doc {
 				"and feature request tool needs. The first call makes the default help center when there is none.",
 			Returns: "every help center with its name, public url, status and settings, the default one marked.",
 			Next: []string{
-				"dimmi_help_centers_articles_list: see its articles",
-				"dimmi_help_centers_collections_list: see how its articles are grouped",
+				"dimmi_list_help_center_articles: see its articles",
+				"dimmi_list_help_center_collections: see how its articles are grouped",
 			},
 		},
 		"help-centers.show": {
@@ -73,7 +73,7 @@ func helpCenterDocs() map[string]Doc {
 			Title:   "List collections",
 			Use:     "Lists a help center's collections, the groups articles are filed under, up to three levels deep.",
 			Returns: "every collection with its parent, slug, position and audience.",
-			Next:    []string{"dimmi_help_centers_articles_list: list the articles of one collection"},
+			Next:    []string{"dimmi_list_help_center_articles: list the articles of one collection"},
 		},
 	}
 }
@@ -88,7 +88,7 @@ func collectionDocs() map[string]Doc {
 			Use: "Adds a collection to file articles under. Collections nest three levels deep at most. " +
 				"The slug is made from the name when left out.",
 			Returns: "the new collection.",
-			Next:    []string{"dimmi_articles_update: move articles into it with collection_id"},
+			Next:    []string{"dimmi_update_article: move articles into it with collection_id"},
 			Params: map[string]string{
 				"parent_id": "Id of the parent collection (col_...); leave out for a top-level collection.",
 				"slug":      "Lowercase letters, digits and single dashes, unique in the help center.",
@@ -137,10 +137,10 @@ func articleDocs() map[string]Doc {
 	return map[string]Doc{
 		"help-centers.articles.index": {
 			Title: "List articles",
-			Use: "Lists a help center's articles, up to 200, without their bodies. Use dimmi_articles_get for " +
+			Use: "Lists a help center's articles, up to 200, without their bodies. Use dimmi_get_article_by_id for " +
 				"an article's text.",
 			Returns: "the articles with status, visibility, has_unpublished_changes and lock_version.",
-			Next:    []string{"dimmi_articles_get: read one article's body"},
+			Next:    []string{"dimmi_get_article_by_id: read one article's body"},
 			Params: map[string]string{
 				"status":        "draft, published or archived; leave out for all.",
 				"collection_id": "Id of a collection (col_...) to list only its articles.",
@@ -150,9 +150,9 @@ func articleDocs() map[string]Doc {
 		"help-centers.articles.store": {
 			Title: "Create an article draft",
 			Use: "Writes a new article as a draft. Readers see nothing until it is published with " +
-				"dimmi_articles_publications_create.",
+				"dimmi_publish_article.",
 			Returns: "the draft with its id and lock_version.",
-			Next:    []string{"dimmi_articles_publications_create: publish it once the person approves the text"},
+			Next:    []string{"dimmi_publish_article: publish it once the person approves the text"},
 			Params: map[string]string{
 				"body_markdown": "The article in Markdown, at most 256 KB.",
 				"collection_id": "Id of the collection (col_...) to file it under; leave out to leave it unfiled.",
@@ -181,7 +181,7 @@ func articleChangeDocs() map[string]Doc {
 				"published again. Sending status instead unpublishes it to a draft or archives it, which takes it " +
 				"off the help center at once and ignores the other fields.",
 			Returns: "the article as it now is, with its new lock_version.",
-			Next:    []string{"dimmi_articles_publications_create: make the saved changes live"},
+			Next:    []string{"dimmi_publish_article: make the saved changes live"},
 			Params: map[string]string{
 				"lock_version": "The lock_version the article had when you read it. Send it with every save.",
 				"body_markdown": "The full new article in Markdown, at most 256 KB; it replaces the old text " +
@@ -208,16 +208,16 @@ func articleChangeDocs() map[string]Doc {
 			Title:   "List article versions",
 			Use:     "Lists the kept versions of an article, newest first: each publish, restore and snapshot.",
 			Returns: "the versions with their id, number, kind and title.",
-			Next:    []string{"dimmi_articles_restorations_create: put an older version back"},
+			Next:    []string{"dimmi_restore_article: put an older version back"},
 		},
 		"articles.restorations.store": {
 			Title: "Restore an article version",
 			Use: "Puts a kept version's words, address and placing back into the working copy. Readers see " +
 				"nothing until it is published, and the restore can itself be undone by restoring again.",
 			Returns: "the article with the restored working copy.",
-			Next:    []string{"dimmi_articles_publications_create: make the restored text live"},
+			Next:    []string{"dimmi_publish_article: make the restored text live"},
 			Params: map[string]string{
-				"version_id": "Id of the version (artv_...) to put back. Find it with dimmi_articles_versions_list.",
+				"version_id": "Id of the version (artv_...) to put back. Find it with dimmi_list_article_versions.",
 			},
 		},
 	}

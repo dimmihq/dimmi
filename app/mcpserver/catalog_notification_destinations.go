@@ -47,7 +47,7 @@ func destinationChangeDocs() map[string]Doc {
 			Use: "Makes a Slack channel of the workspace hear about the team's work, or links the person's own " +
 				"Slack direct message. A workspace posts to at most 25 channels.",
 			Returns: "the destination.",
-			Next:    []string{"dimmi_notification_destinations_tests_create: check it works"},
+			Next:    []string{"dimmi_test_notification_destination: check it works"},
 			Params:  destinationParams(),
 		},
 		"notification-destinations.update": {
@@ -72,8 +72,8 @@ func destinationParams() map[string]string {
 	return map[string]string{
 		"type": "slack_channel for a channel of the workspace, slack_dm for the person's own direct message.",
 		"integration_id": "Slack installation (itg_...) it posts through. Find it with " +
-			"dimmi_integrations_list.",
-		"channel_id": "For slack_channel: the Slack channel id. Find it with dimmi_integrations_slack_channels_list.",
+			"dimmi_list_integrations.",
+		"channel_id": "For slack_channel: the Slack channel id. Find it with dimmi_list_integration_slack_channels.",
 		"name":       "A name for the team, up to 80 characters.",
 		"triggers": "What it hears about: new_conversation, customer_replied, conversation_assigned, " +
 			"ai_handoff_requested and snooze_expired.",

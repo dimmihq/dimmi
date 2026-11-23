@@ -38,7 +38,7 @@ func operatorRoutineDocs() map[string]Doc {
 				"leaving suggestions the team reviews. Every run spends the workspace's AI budget. Confirm the " +
 				"prompt and cadence with the person first.",
 			Returns: "the routine with its next runs.",
-			Next:    []string{"dimmi_operator_routines_runs_create: try it now as a dry run"},
+			Next:    []string{"dimmi_run_operator_routine: try it now as a dry run"},
 			Risk:    new(RiskDanger),
 			Hint:    "A routine runs at most once an hour and is never given more than you hold.",
 		},
@@ -63,11 +63,12 @@ operatorRoutineRunDocs returns the entries for a routine's runs.
 func operatorRoutineRunDocs() map[string]Doc {
 	return map[string]Doc{
 		"operator.routines.runs.store": {
+			Name:  "run_operator_routine",
 			Title: "Run an Operator routine now",
 			Use: "Runs a routine now. A dry run reads real data but leaves only previews and keeps no state; a " +
 				"live run leaves real suggestions. Both spend the AI budget.",
 			Returns: "the queued run; read it again to see how it went.",
-			Next:    []string{"dimmi_operator_routines_runs_get: see how the run went"},
+			Next:    []string{"dimmi_get_operator_routine_run_by_id: see how the run went"},
 			Risk:    new(RiskWrite),
 			Hint:    "A live run is refused while another is going; a dry run never is.",
 		},

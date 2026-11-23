@@ -104,8 +104,8 @@ func TestOperatorToolLayer(t *testing.T) {
 		k.d.Owner.PostJSON("/api/v1/tags", testkit.JSON{"name": "billing"}).AssertCreated()
 		thread := k.thread("")
 		k.llm.Script(
-			tools(loadTools("dimmi_tags_list", "dimmi_tags_create")),
-			tools(callTool("dimmi_tags_list", map[string]any{"fields": []string{"name"}})),
+			tools(loadTools("dimmi_list_tags", "dimmi_create_tag")),
+			tools(callTool("dimmi_list_tags", map[string]any{"fields": []string{"name"}})),
 			reply("One tag."),
 		)
 
@@ -113,7 +113,7 @@ func TestOperatorToolLayer(t *testing.T) {
 
 		sent := k.llm.Sent()
 		loaded := lastResult(sent[1]).Parts[0].Text
-		assert.Contains(t, loaded, `"not_found":["dimmi_tags_create"]`)
+		assert.Contains(t, loaded, `"not_found":["dimmi_create_tag"]`)
 		assert.Contains(t, loaded, `"fields"`)
 		read := lastResult(sent[2])
 		require.False(t, read.ToolError, read.Parts[0].Text)
@@ -189,10 +189,10 @@ func TestOperatorCompactResults(t *testing.T) {
 	inbox := k.d.InboxID()
 	thread := k.thread("")
 	k.llm.Script(
-		tools(loadTools("dimmi_inboxes_list", "dimmi_inboxes_get")),
-		tools(callTool("dimmi_inboxes_list", map[string]any{"fields": []string{"name"}})),
-		tools(callTool("dimmi_inboxes_get", map[string]any{"inbox": "i1"})),
-		tools(callTool("dimmi_inboxes_get", map[string]any{"inbox": "i7"})),
+		tools(loadTools("dimmi_list_inboxes", "dimmi_get_inbox_by_id")),
+		tools(callTool("dimmi_list_inboxes", map[string]any{"fields": []string{"name"}})),
+		tools(callTool("dimmi_get_inbox_by_id", map[string]any{"inbox_id": "i1"})),
+		tools(callTool("dimmi_get_inbox_by_id", map[string]any{"inbox_id": "i7"})),
 		reply("One inbox."),
 	)
 

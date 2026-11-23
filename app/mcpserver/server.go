@@ -72,7 +72,7 @@ func New(opts Options) (*mcp.Server, error) {
 	titles := map[string]string{}
 
 	for _, op := range ops {
-		titles[toolName(op.ID)] = docs[op.ID].Title
+		titles[toolName(op, docs[op.ID])] = docs[op.ID].Title
 	}
 
 	s := mcp.New(mcp.ServerOptions{
@@ -102,21 +102,21 @@ func register(s *mcp.Server, api fhttp.Handler, op mcp.Operation, docs map[strin
 		return fmt.Errorf("%w: %s", ErrUndocumented, op.ID)
 	}
 
-	def := definition(op, doc)
+	b := build(op, doc)
 
-	err := mcp.SchemaTool(s, def, inputSchema(op, doc), func(ctx context.Context, args map[string]any) (any, error) {
+	err := mcp.SchemaTool(s, b.def, b.schema, func(ctx context.Context, args map[string]any) (any, error) {
 		delete(args, confirmArgument)
 
-		a, err := call(ctx, api, op, args)
+		a, err := call(ctx, api, op, b.names.toAPI(args))
 		if err != nil {
 			return nil, err
 		}
 
 		if a.Status >= fhttp.StatusBadRequest {
-			return nil, refusal(def.Name, doc, op, a)
+			return nil, refusal(b, args, a)
 		}
 
-		return render(doc, def.Name, a), nil
+		return render(doc, b.def.Name, a), nil
 	})
 	if err != nil {
 		return fmt.Errorf("register %s: %w", op.ID, err)

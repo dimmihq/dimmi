@@ -20,7 +20,7 @@ func trackerDocs() map[string]Doc {
 			Title:   "List trackers suggested for a conversation",
 			Use:     "Reads the open trackers the AI thinks the conversation reports, best first.",
 			Returns: "trackers with reference, title and how many conversations each already reaches.",
-			Next:    []string{"dimmi_tickets_links_create: link the conversation to the tracker"},
+			Next:    []string{"dimmi_create_ticket_link: link the conversation to the tracker"},
 		},
 		"tickets.summary.show": {
 			Title: "Summarize a tracker",

@@ -143,6 +143,7 @@ func redactionDocs() map[string]Doc {
 			Returns: "the built-in switches and the workspace's rules in order.",
 		},
 		"redaction-rules.settings": {
+			Name:  "update_redaction_settings",
 			Title: "Update redaction settings",
 			Use: "Turns the built-in redaction rules on or off and puts the workspace's own rules in a new order. " +
 				"Applies to messages stored from now on; earlier messages are never rewritten.",
@@ -152,14 +153,14 @@ func redactionDocs() map[string]Doc {
 				"us_ssn":       "true masks US social security numbers.",
 				"order":        "Every rule id (rxr_...) exactly once, in the order they should run.",
 			},
-			Hint: "An order must name every rule; read them again with dimmi_redaction_rules_list.",
+			Hint: "An order must name every rule; read them again with dimmi_list_redaction_rules.",
 		},
 		"redaction-rules.store": {
 			Title: "Create a redaction rule",
 			Use: "Adds a pattern whose matches are replaced in every message stored from now on, with no copy of " +
 				"the original kept. It runs after the others. A workspace keeps at most 10 rules.",
 			Returns: "the rule as saved.",
-			Next:    []string{"dimmi_redaction_tests_create: try the rules on a sample text first"},
+			Next:    []string{"dimmi_create_redaction_test: try the rules on a sample text first"},
 			Params: map[string]string{
 				"pattern":     "An RE2 regular expression, at most 256 characters.",
 				"replacement": "Text written in place of a match, at most 80 characters; defaults to [redacted].",
@@ -208,7 +209,7 @@ func redactionChangeDocs() map[string]Doc {
 				"the person sets it. Nothing changes.",
 			Returns: "the count of conversations the period would move.",
 			Risk:    new(RiskRead),
-			Next:    []string{"dimmi_workspace_update: set the period under retention once the person agrees"},
+			Next:    []string{"dimmi_update_workspace: set the period under retention once the person agrees"},
 			Params: map[string]string{
 				"closed_conversation_days": "The period in days, from 30 to 3650.",
 			},
@@ -245,7 +246,7 @@ func widgetDocs() map[string]Doc {
 				"pick it up within a minute. Only the fields sent change.",
 			Returns: "the messenger as it now is.",
 			Risk:    new(RiskReach),
-			Next:    []string{"dimmi_widget_settings_preview: check the result before saving"},
+			Next:    []string{"dimmi_preview_widget_settings: check the result before saving"},
 			Params:  widgetParams(),
 			Hint:    "A help tab needs help_center_id set, and only a paying cloud workspace may hide the badge.",
 		},
@@ -284,7 +285,7 @@ func widgetChangeDocs() map[string]Doc {
 				"start":    "An audience rule for who may start a conversation; null means everyone.",
 				"tabs":     "A rule per tab, keyed help or changelog.",
 			},
-			Hint: "Rules use the audience rule language; dimmi_audience_fields_list lists the fields they can test.",
+			Hint: "Rules use the audience rule language; dimmi_list_audience_fields lists the fields they can test.",
 		},
 	}
 }
@@ -305,7 +306,7 @@ func widgetParams() map[string]string {
 		"collect_email":     "When to ask for an email: never, offline or always.",
 		"max_attachment_mb": "Largest file customers may attach, 1 to 25.",
 		"help_center_id": "Id of the help center (hc_...) the help tab shows. Find it with " +
-			"dimmi_help_centers_list.",
+			"dimmi_list_help_centers.",
 		"home_links": "Replaces the home screen links: each a title, an https or mailto url and an icon " +
 			"(calendar, book or link).",
 	}

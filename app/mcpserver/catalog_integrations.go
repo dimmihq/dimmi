@@ -62,7 +62,7 @@ func installationDocs() map[string]Doc {
 			Title:   "List an integration's Slack channels",
 			Use:     "Lists the Slack channels a Slack installation's bot can post in, to pick a destination from.",
 			Returns: "the channels with their id and name.",
-			Next:    []string{"dimmi_notification_destinations_create: post alerts in one"},
+			Next:    []string{"dimmi_create_notification_destination: post alerts in one"},
 		},
 	}
 }
@@ -79,10 +79,10 @@ func slackConnectionDocs() map[string]Doc {
 				"secrets come along, or waiting for them, with the manifest that creates the app. Secrets are " +
 				"checked with Slack. Only use secrets the person gave you for this.",
 			Returns: "the connection with how to set its app up; secrets never come back.",
-			Next:    []string{"dimmi_channels_credentials_create: add the secrets later"},
+			Next:    []string{"dimmi_create_channel_credentials: add the secrets later"},
 			Params: slackAppParams(map[string]string{
 				"name":     "A name for the team, up to 80 characters.",
-				"inbox_id": "Inbox (inbox_...) its conversations land in. Find it with dimmi_inboxes_list.",
+				"inbox_id": "Inbox (inbox_...) its conversations land in. Find it with dimmi_list_inboxes.",
 				"inbound_transport": "webhook (Slack calls dimmi) or socket (dimmi keeps a connection open, " +
 					"which needs app_token).",
 			}),

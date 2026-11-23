@@ -45,7 +45,7 @@ func operatorThreadDocs() map[string]Doc {
 			Use: "Opens your latest thread with Operator about a conversation, or starts one; without a " +
 				"conversation it starts a thread about the whole workspace. Opening spends nothing.",
 			Returns: "the thread with its messages, oldest first, and the changes Operator proposed in it.",
-			Next:    []string{"dimmi_operator_threads_messages_create: ask Operator something on it"},
+			Next:    []string{"dimmi_ask_operator: ask Operator something on it"},
 			Params: map[string]string{
 				"conversation_id": "Conversation (conv_...) the thread is about; leave out for the workspace.",
 				"fresh":           "true starts a new thread even when one about the conversation exists.",
@@ -62,14 +62,15 @@ func operatorThreadDocs() map[string]Doc {
 			Risk:  new(RiskWrite),
 		},
 		"operator.threads.messages.store": {
+			Name:  "ask_operator",
 			Title: "Ask Operator",
 			Use: "Asks Operator a question or gives it a task on a thread and waits for its answer. Every " +
 				"question runs real models and spends the workspace's AI budget. Operator proposes changes as " +
 				"changesets to apply; groups set to auto in its settings apply at once.",
 			Returns: "your message, Operator's answer and the changesets it proposed.",
 			Next: []string{
-				"dimmi_operator_changesets_applications_create: apply a proposed change the person approved",
-				"dimmi_operator_changesets_declines_create: turn a proposed change down",
+				"dimmi_apply_operator_suggestion: apply a proposed change the person approved",
+				"dimmi_decline_operator_suggestion: turn a proposed change down",
 			},
 			Params: map[string]string{"body": "What to ask, in plain words, up to 8000 characters."},
 			Hint:   "A teammate may ask at most 30 questions a minute; wait and try again.",
@@ -92,6 +93,7 @@ changes and memories.
 func operatorChangesetDocs() map[string]Doc {
 	return map[string]Doc{
 		"operator.changesets.index": {
+			Name:  "list_operator_suggestions",
 			Title: "List Operator changesets",
 			Use: "Lists the changes Operator proposed that you may review, newest first: pending, applied, " +
 				"declined, reverted or failed.",
@@ -103,7 +105,7 @@ func operatorChangesetDocs() map[string]Doc {
 				"assignments, statuses, notes, contacts, article drafts, and can run AI actions in the " +
 				"workspace's systems. Show the operations and apply only when the person agrees.",
 			Returns: "the changeset as applied, or failed with why and nothing changed.",
-			Next:    []string{"dimmi_operator_changesets_reversions_create: undo it if it was wrong"},
+			Next:    []string{"dimmi_revert_operator_suggestion: undo it if it was wrong"},
 			Risk:    new(RiskDanger),
 			Hint:    "A failed changeset changed nothing; fix the cause and apply again, or decline it.",
 		},
@@ -180,7 +182,7 @@ func procedureDocs() map[string]Doc {
 			Title:   "Create a procedure",
 			Use:     "Creates an empty draft procedure. The agent does not follow it until published.",
 			Returns: "the draft procedure.",
-			Next:    []string{"dimmi_procedures_update: write its steps"},
+			Next:    []string{"dimmi_update_procedure: write its steps"},
 			Params:  map[string]string{"name": "A name unique in the workspace, 1 to 80 characters."},
 		},
 		"procedures.update": {
@@ -188,7 +190,7 @@ func procedureDocs() map[string]Doc {
 			Use: "Saves the name or the working copy of a procedure. Customers see no change until it is " +
 				"published.",
 			Returns: "the procedure as saved, with its new lock_version.",
-			Next:    []string{"dimmi_procedures_publications_create: make it live"},
+			Next:    []string{"dimmi_publish_procedure: make it live"},
 			Params: map[string]string{
 				"definition": "JSON with description (when it applies, up to 500 characters), steps (1 to 30, " +
 					"each with id, kind instruction, condition or action, text, and action_id for an action) " +
@@ -215,7 +217,7 @@ func procedurePublishDocs() map[string]Doc {
 				"Every action it takes must exist and be published.",
 			Returns: "the procedure, published.",
 			Risk:    new(RiskReach),
-			Hint:    "procedure_invalid lists the problems; fix them with dimmi_procedures_update.",
+			Hint:    "procedure_invalid lists the problems; fix them with dimmi_update_procedure.",
 		},
 		"procedures.publications.destroy": {
 			Title:   "Unpublish a procedure",

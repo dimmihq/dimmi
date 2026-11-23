@@ -40,7 +40,7 @@ func emailAddressDocs() map[string]Doc {
 			Use: "Lists the public addresses customers write to, such as support@company.com, the default first, " +
 				"each with the forwarding address it must forward to, the inbox it feeds and what it sends as now.",
 			Returns: "every address of the workspace with its forwarding address, sending state and setup guides.",
-			Next:    []string{"dimmi_email_addresses_get: read one address in full"},
+			Next:    []string{"dimmi_get_email_address_by_id: read one address in full"},
 		},
 		"email-addresses.show": {
 			Title: "Get an email address",
@@ -48,8 +48,8 @@ func emailAddressDocs() map[string]Doc {
 				"forwarding was confirmed and what it sends as (its own verified domain or the default sender).",
 			Returns: "the address with its settings, sending state and setup guides.",
 			Next: []string{
-				"dimmi_email_addresses_tests_create: prove forwarding works",
-				"dimmi_email_addresses_update: change how it replies",
+				"dimmi_test_email_address: prove forwarding works",
+				"dimmi_update_email_address: change how it replies",
 			},
 		},
 		"email-addresses.store": {
@@ -59,14 +59,14 @@ func emailAddressDocs() map[string]Doc {
 				"address becomes its default.",
 			Returns: "the new address with the forwarding address to set up and the setup guide that fits its domain.",
 			Next: []string{
-				"dimmi_email_addresses_tests_create: check forwarding once the person has set it up",
-				"dimmi_email_domains_create: send from the address's own domain",
+				"dimmi_test_email_address: check forwarding once the person has set it up",
+				"dimmi_create_email_domain: send from the address's own domain",
 			},
 			Params: map[string]string{
 				"address":      "The public address, such as support@company.com. It cannot be on dimmi's own domain.",
 				"display_name": "The name replies are sent under, at most 80 characters.",
 				"inbox_id": "Id of the inbox (inbox_...) new conversations land in. Find it with " +
-					"dimmi_inboxes_list.",
+					"dimmi_list_inboxes.",
 			},
 			Hint: "An address already connected cannot be connected again; list the addresses to find it.",
 		},
@@ -128,7 +128,7 @@ func emailAddressMailDocs() map[string]Doc {
 				"what the address has saved. Nothing changes and nothing is sent.",
 			Returns: "the sample reply as HTML and plain text.",
 			Risk:    new(RiskRead),
-			Next:    []string{"dimmi_email_addresses_update: save the style under settings"},
+			Next:    []string{"dimmi_update_email_address: save the style under settings"},
 			Params: map[string]string{
 				"template":        "plain or branded.",
 				"brand_color":     "A six digit hex color, such as #1a73e8.",
@@ -141,7 +141,7 @@ func emailAddressMailDocs() map[string]Doc {
 				"forwarding, proving the setup works. One test per address every thirty seconds, twenty a day.",
 			Returns: "the test, waiting for its mail, with the address it was sent to.",
 			Risk:    new(RiskWrite),
-			Next:    []string{"dimmi_email_addresses_tests_get: read the result after a few seconds"},
+			Next:    []string{"dimmi_get_email_address_test_by_id: read the result after a few seconds"},
 			Hint: "When no mailer is available the test is still stored; ask the person to send the mail " +
 				"themselves with the subject the error gives.",
 		},
@@ -151,7 +151,7 @@ func emailAddressMailDocs() map[string]Doc {
 				"went wrong and how long the mail took.",
 			Returns: "the test with its status, findings and latency.",
 			Params: map[string]string{
-				"test": "Id of the forwarding test, starting with eat_, from dimmi_email_addresses_tests_create.",
+				"test": "Id of the forwarding test, starting with eat_, from dimmi_test_email_address.",
 			},
 		},
 	}
@@ -181,7 +181,7 @@ func signatureDocs() map[string]Doc {
 				"teammate and address.",
 			Returns: "the signature as saved.",
 			Risk:    new(RiskReach),
-			Next:    []string{"dimmi_email_signatures_renderings_create: check how it reads before saving"},
+			Next:    []string{"dimmi_create_email_signature_rendering: check how it reads before saving"},
 			Params: map[string]string{
 				"kind":             "personal (default) or address.",
 				"member_id":        "Id of the teammate (mem_...) for another teammate's personal signature.",
@@ -256,8 +256,8 @@ func emailDomainDocs() map[string]Doc {
 				"It starts pending: the person publishes the DNS records it returns, then it is checked.",
 			Returns: "the pending domain with the DNS records to publish.",
 			Next: []string{
-				"dimmi_email_domains_dns_setups_create: let the DNS host add the records in one approval",
-				"dimmi_email_domains_checks_create: check once the records are published",
+				"dimmi_start_email_domain_dns_setup: let the DNS host add the records in one approval",
+				"dimmi_check_email_domain: check once the records are published",
 			},
 			Params: map[string]string{
 				"domain":              "The domain, such as company.com. Mailbox domains like gmail.com are refused.",
@@ -299,22 +299,25 @@ func emailDomainChangeDocs() map[string]Doc {
 				"pending or failed domain starts a fresh three day verification window. Once every ten seconds.",
 			Returns: "the domain, with the check queued.",
 			Risk:    new(RiskWrite),
-			Next:    []string{"dimmi_email_domains_get: read the records' state after the check"},
+			Next:    []string{"dimmi_get_email_domain_by_id: read the records' state after the check"},
 		},
 		"email-domains.dns-setups.store": {
+			Name:  "start_email_domain_dns_setup",
 			Title: "Start automatic DNS setup",
 			Use: "Gets a link the person opens to approve adding every record at their DNS host in one step, where " +
 				"the host supports it. Nothing changes until they approve there; copying records by hand always works.",
 			Returns: "the DNS host's name and the apply_url to give the person.",
 			Risk:    new(RiskWrite),
-			Hint:    "When the host does not support it, give the person the records from dimmi_email_domains_get.",
+			Hint: "When the host does not support it, give the person the records from " +
+				"dimmi_get_email_domain_by_id.",
 		},
 		"email-domains.dkim-rotations.store": {
+			Name:  "rotate_email_domain_signing_key",
 			Title: "Rotate a domain's signing key",
 			Use: "Starts a new DKIM signing key for a domain dimmi signs for. The current key signs until the new " +
 				"record is published and seen. Domains sent through SES rotate their own keys.",
 			Returns: "the domain with the new record to publish.",
-			Next:    []string{"dimmi_email_domains_checks_create: check once the new record is published"},
+			Next:    []string{"dimmi_check_email_domain: check once the new record is published"},
 		},
 	}
 }

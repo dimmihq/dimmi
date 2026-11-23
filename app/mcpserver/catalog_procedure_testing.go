@@ -68,7 +68,7 @@ func procedureTestCaseDocs() map[string]Doc {
 			Use: "Saves a chat as a simulation: an AI-played customer replays it against the procedure, on the " +
 				"date it was saved, and the checks say whether the agent did what it should.",
 			Returns: "the saved simulation.",
-			Next:    []string{"dimmi_procedures_test_cases_run_create: run it"},
+			Next:    []string{"dimmi_run_procedure_test_case: run it"},
 			Params: map[string]string{
 				"messages":   "The customer's messages, oldest first, at most 12.",
 				"assertions": "Checks such as procedure_matched, action_called, handed_off or llm_rubric.",
@@ -117,7 +117,7 @@ func procedureVersionDocs() map[string]Doc {
 			Use: "Copies a published version into the working copy. Customers see no change until it is " +
 				"published again.",
 			Returns: "the procedure with the restored working copy.",
-			Next:    []string{"dimmi_procedures_publications_create: make it live again"},
+			Next:    []string{"dimmi_publish_procedure: make it live again"},
 		},
 		"procedures.metrics.show": {
 			Title:   "Get a procedure's metrics",
@@ -129,6 +129,7 @@ func procedureVersionDocs() map[string]Doc {
 			},
 		},
 		"reports.procedures.index": {
+			Name:    "report_procedures",
 			Title:   "Report on procedures",
 			Use:     "Compares every procedure's runs, completions and handovers over a period.",
 			Returns: "one row per procedure with its counts and rates.",

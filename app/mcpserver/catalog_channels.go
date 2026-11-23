@@ -42,7 +42,7 @@ func whatsappDocs() map[string]Doc {
 			Use: "Reads the numbers on a WhatsApp business account with a token of the workspace's own Meta " +
 				"app, before one is connected. Only use a token the person gave you for this.",
 			Returns: "the account and its numbers, each marked when it is connected already.",
-			Next:    []string{"dimmi_channels_whatsapp_create: connect one of its numbers"},
+			Next:    []string{"dimmi_create_channel_whatsapp: connect one of its numbers"},
 		},
 		"channels.whatsapp.store": {
 			Title: "Connect a WhatsApp number with a token",
@@ -63,9 +63,10 @@ func whatsappDocs() map[string]Doc {
 			Title: "Read a conversation's WhatsApp window",
 			Use: "Says whether free text can still go to the customer, until when, and which templates the " +
 				"number can send once the 24 hours are over.",
-			Next: []string{"dimmi_conversations_whatsapp_templates_create: send a template when the window closed"},
+			Next: []string{"dimmi_send_whatsapp_template_to_conversation: send a template when the window closed"},
 		},
 		"conversations.whatsapp-templates.store": {
+			Name:  "send_whatsapp_template_to_conversation",
 			Title: "Send a WhatsApp template",
 			Use: "Replies with an approved template, the only message WhatsApp accepts more than 24 hours " +
 				"after the customer last wrote. Every variable needs a value.",

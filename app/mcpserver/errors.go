@@ -30,6 +30,8 @@ type apiError struct {
 	tool       string
 	doc        Doc
 	op         mcp.Operation
+	names      naming
+	sent       map[string]any
 	status     int
 	statusText string
 	code       string
@@ -42,10 +44,11 @@ type apiError struct {
 /*
 refusal reads the API's error answer.
 */
-func refusal(tool string, doc Doc, op mcp.Operation, a mcp.Response) *apiError {
+func refusal(b built, sent map[string]any, a mcp.Response) *apiError {
 	e := &apiError{
-		tool: tool, doc: doc, op: op, status: a.Status, statusText: a.StatusText(),
-		retryWait: a.Header.Get("Retry-After"), requestID: a.Header.Get("X-Request-Id"),
+		tool: b.def.Name, doc: b.doc, op: b.op, names: b.names, sent: sent, status: a.Status,
+		statusText: a.StatusText(),
+		retryWait:  a.Header.Get("Retry-After"), requestID: a.Header.Get("X-Request-Id"),
 	}
 
 	body := asMap(a.Decoded())
@@ -56,7 +59,8 @@ func refusal(tool string, doc Doc, op mcp.Operation, a mcp.Response) *apiError {
 		e.fields = map[string][]string{}
 		for name, list := range fields {
 			for _, item := range asList(list) {
-				e.fields[name] = append(e.fields[name], fmt.Sprint(item))
+				shown := e.names.shown(name)
+				e.fields[shown] = append(e.fields[shown], fmt.Sprint(item))
 			}
 		}
 	}
@@ -162,24 +166,39 @@ func (e *apiError) forbidden() string {
 }
 
 /*
-notFound explains a record that does not exist or cannot be seen.
+notFound explains a record that does not exist or cannot be seen: what
+was sent for each id, whether it even looks like one, and where the
+right one is found.
 */
 func (e *apiError) notFound() string {
-	var finders []string
+	var checks []string
 
-	guide := argumentGuide()
+	guides := idGuides()
 	for _, p := range pathArguments(e.op.Path) {
-		if text, ok := guide[p]; ok {
-			finders = append(finders, p+": "+text)
+		guide, ok := guides[p]
+		if !ok {
+			continue
 		}
+
+		name := e.names.shown(p)
+		sent := fmt.Sprint(e.sent[name])
+		check := fmt.Sprintf("%s: you sent %q.", name, sent)
+
+		if prefix, _, _ := strings.Cut(guide.prefix, " "); prefix != "" && !strings.Contains(sent, "_") &&
+			name != conversationArgument {
+			check += fmt.Sprintf(" That is not an id: the id of a %s starts with %s_, never its name or title.",
+				guide.what, prefix)
+		}
+
+		checks = append(checks, check+" "+guide.String())
 	}
 
 	advice := "Nothing with that id exists in this workspace, or the person cannot see it. Do not guess ids."
-	if len(finders) == 0 {
+	if len(checks) == 0 {
 		return advice + " Find the right one with a list or search tool, then call again."
 	}
 
-	return advice + " Check each id: " + strings.Join(finders, " ")
+	return advice + " Check each id. " + strings.Join(checks, " ")
 }
 
 /*

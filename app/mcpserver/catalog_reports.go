@@ -24,16 +24,17 @@ func reportDocs() map[string]Doc {
 				"workload, satisfaction, AI, help center and any others the workspace has.",
 			Returns: "each report's key, title and one line about it, and whether it shows the present " +
 				"instead of a range.",
-			Next: []string{"dimmi_reports_get: read one report"},
+			Next: []string{"dimmi_get_report_by_name: read one report"},
 			Risk: new(RiskRead),
 		},
 		"reports.conversations.index": {
+			Name:  "list_conversations_behind_report_number",
 			Title: "List the conversations behind a number",
 			Use: "Lists the conversations one of a report's numbers counts, with the same range and filters, each " +
 				"with the value it added. Stops at ten thousand.",
 			Returns: "the conversations with number, subject, status, channel, start, close, assignee and value, " +
 				"slowest or newest first, and how many there are.",
-			Next: []string{"dimmi_conversations_get: open one conversation"},
+			Next: []string{"dimmi_get_conversation_by_id_or_number: open one conversation"},
 			Risk: new(RiskRead),
 			Params: map[string]string{
 				"metric": "the drill key the number names, such as first_response, resolution, csat or open.",
@@ -53,13 +54,14 @@ reportShowDoc returns the entry for reading one report.
 */
 func reportShowDoc() Doc {
 	return Doc{
+		Name:  "get_report_by_name",
 		Title: "Read a report",
 		Use: "Reads one report for a range of days in the workspace's time zone, counting only conversations the " +
 			"caller may see. Durations are medians in seconds with the 90th percentile and mean beside them. " +
 			"Spam, test, deleted and merged-away conversations never count.",
 		Returns: "the headline numbers, each with its unit, value, value in the period before when compare is " +
 			"set, sample size and the metric that lists its conversations; and the charts as series or tables.",
-		Next: []string{"dimmi_reports_conversations_list: list the conversations behind a number"},
+		Next: []string{"dimmi_list_conversations_behind_report_number: list the conversations behind a number"},
 		Risk: new(RiskRead),
 		Params: map[string]string{
 			"report": "the report's key, such as overview, responsiveness, resolution, team, live, satisfaction, " +

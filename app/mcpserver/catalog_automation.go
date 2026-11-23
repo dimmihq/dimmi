@@ -39,21 +39,22 @@ func agentDocs() map[string]Doc {
 				"the agent, to see what is set today.",
 			Returns: "the agent's settings with the provider keys and models it answers with.",
 			Next: []string{
-				"dimmi_ai_agent_update: change how the agent answers",
-				"dimmi_ai_usage_get: see what the agent costs this month",
+				"dimmi_update_ai_agent: change how the agent answers",
+				"dimmi_get_ai_usage: see what the agent costs this month",
 			},
 		},
 		"ai.usage.show": {
 			Title: "Get AI agent usage",
 			Use: "Reads one month of the AI agent's work: what it spent, tokens, how many conversations it " +
 				"answered, did not know or handed over, day by day and by model. Months are counted in UTC. " +
-				"Operator's own spend is in dimmi_operator_usage_get.",
+				"Operator's own spend is in dimmi_get_operator_usage.",
 			Returns: "the month's cost in micro-dollars, counts by outcome, daily series, spend by model and the cap.",
 			Params: map[string]string{
 				"period": "The month as YYYY-MM, such as 2026-11. Leave out for the current month.",
 			},
 		},
 		"ai.playground.store": {
+			Name:  "test_ai_agent",
 			Title: "Test the AI agent",
 			Use: "Asks the AI agent a test question and shows what it would answer, without writing any message " +
 				"or changing a conversation. Each question runs the real model and spends real tokens from the " +
@@ -61,8 +62,8 @@ func agentDocs() map[string]Doc {
 			Returns: "the answer with its outcome, how the question was read, the knowledge found, tokens, cost " +
 				"and timing.",
 			Next: []string{
-				"dimmi_ai_agent_update: adjust guidance or tone if the answer was off",
-				"dimmi_ai_usage_get: check the month's spend",
+				"dimmi_update_ai_agent: adjust guidance or tone if the answer was off",
+				"dimmi_get_ai_usage: check the month's spend",
 			},
 			Params: map[string]string{
 				"message": "The test question, as a customer would write it, up to 4000 characters.",
@@ -85,7 +86,7 @@ func agentSettingsDocs() map[string]Doc {
 				"channels, schedule, models, spending cap and handoff. Customers get the change on their next " +
 				"message. Only the fields sent change; null clears a field that may be empty.",
 			Returns: "the agent's settings as they now are.",
-			Next:    []string{"dimmi_ai_playground_create: try a question with the new settings"},
+			Next:    []string{"dimmi_test_ai_agent: try a question with the new settings"},
 			Risk:    new(RiskReach),
 			Params: map[string]string{
 				"enabled": "true lets the agent answer customers. Switching on needs a usable answer model and " +
@@ -96,7 +97,7 @@ func agentSettingsDocs() map[string]Doc {
 					"and api.",
 				"schedule": "When it answers: always, outside_office_hours or inside_office_hours.",
 				"answer_key_id": "Provider key (aik_...) the agent answers with. Find it with " +
-					"dimmi_ai_keys_list.",
+					"dimmi_list_ai_keys.",
 				"answer_model":    "Model id on that key, from the models the key lists.",
 				"fallback_key_id": "Provider key (aik_...) used when the answer key fails; null clears it.",
 				"monthly_cap_usd": "Most the agent may spend a month, in US dollars; 0 or null means no cap. " +
@@ -116,7 +117,7 @@ func agentSettingsDocs() map[string]Doc {
 				"languages":        "Language tags the agent answers in, such as en or pt-BR, replacing the list.",
 				"default_language": "Language tag used when the customer's language is unknown.",
 			},
-			Hint: "A field error names the value refused; read the agent with dimmi_ai_agent_get for what is " +
+			Hint: "A field error names the value refused; read the agent with dimmi_get_ai_agent for what is " +
 				"set now.",
 		},
 	}
@@ -138,7 +139,7 @@ func keyDocs() map[string]Doc {
 				"provider as it saves; a key the provider refuses is not kept. Only add a key the person gave " +
 				"you for this.",
 			Returns: "the key with its status and the models it offers, the secret hidden.",
-			Next:    []string{"dimmi_ai_agent_update: point the agent at the new key with answer_key_id"},
+			Next:    []string{"dimmi_update_ai_agent: point the agent at the new key with answer_key_id"},
 			Params: map[string]string{
 				"provider": "anthropic, openai, engy or openai_compatible. ChatGPT plans connect in the browser " +
 					"instead.",
@@ -157,7 +158,7 @@ func keyDocs() map[string]Doc {
 		"ai.keys.destroy": {
 			Title: "Remove an AI provider key",
 			Use: "Deletes a provider key and its secret. Refused while the agent still answers with it: point " +
-				"the agent at another key with dimmi_ai_agent_update first.",
+				"the agent at another key with dimmi_update_ai_agent first.",
 		},
 		"ai.keys.test.store": {
 			Title:   "Check an AI provider key",
