@@ -84,9 +84,14 @@ func (r resolver) articleOp(ctx context.Context, in opInput) (Operation, error) 
 	if in.Kind == KindArticleNew {
 		return r.newArticleOp(ctx, op, in)
 	}
+	if strings.TrimSpace(in.Article) == "" {
+		return op, fmt.Errorf("%w: name the article to edit in \"article\", by the id get_article showed "+
+			"(art_...)", errBadArguments)
+	}
 	id, err := r.e.publicID(in.Article, models.PrefixArticle)
 	if err != nil {
-		return op, err
+		return op, fmt.Errorf("%w: there is no article %q; use the id get_article showed (art_...)",
+			errBadArguments, in.Article)
 	}
 	a, err := r.e.Services.Articles.Show(ctx, r.s.m, id)
 	if err != nil {

@@ -129,6 +129,12 @@ func (e *Engine) offers(s *session, t tool) bool {
 refusal says in plain words why a tool call did not work.
 */
 func refusal(err error) string {
+	if errors.Is(err, errSpent) {
+		return err.Error()
+	}
+	if errors.Is(err, exceptions.ErrNotFound) {
+		return "not found, or not visible to this teammate: check the ids you sent"
+	}
 	if f, ok := errors.AsType[*fault.Error](err); ok {
 		return f.Message()
 	}
@@ -143,6 +149,12 @@ func refusal(err error) string {
 		return "failed: " + err.Error()
 	}
 }
+
+/*
+errSpent refuses a reading tool once a routine's run may only close.
+*/
+var errSpent = errors.New("you are out of reading steps for this run. Suggest what you already found with " +
+	"propose_changes, save progress with routine_set_state, or call mark_noop; then write your message")
 
 /*
 errBadArguments marks a tool call whose arguments make no sense.
