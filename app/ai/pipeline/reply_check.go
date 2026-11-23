@@ -13,6 +13,8 @@
 | once, with the reason, to be written again; if the second reply still
 | carries it, the conversation is handed to the team rather than sent.
 |
+| The questions are resources/prompts/tasks/judgments/reply_*.md.
+|
 */
 
 package pipeline
@@ -22,6 +24,7 @@ import (
 	"strings"
 
 	"github.com/dimmihq/dimmi/app/contracts"
+	"github.com/dimmihq/dimmi/app/support/prompts"
 )
 
 /*
@@ -43,26 +46,12 @@ func (r *Runner) checkReply(ctx context.Context, st *run, reply string) replyChe
 	if strings.TrimSpace(reply) == "" {
 		return check
 	}
+	vars := prompts.Vars{"reply": truncate(r.redactFor(st.env, reply), maxReplyChars)}
 	answers := r.judge(ctx, st, contracts.DecisionRequest{
-		State: "An AI support agent wrote this reply to a customer. It has not been sent yet.\n\nREPLY:\n" +
-			truncate(r.redactFor(st.env, reply), maxReplyChars),
+		State: prompts.Judgment("reply_claims_handoff", vars).State,
 		Questions: map[string]contracts.DecisionQuestion{
-			"claims_handoff": {
-				Type:         contracts.DecisionNoul,
-				Instructions: "Does the reply tell the customer that the agent has already brought a person in?",
-				True: "The reply states, as something the agent has done, that it passed, sent or escalated " +
-					"this conversation to a person or a team, or that it asked or told a teammate about it.",
-				False: "The reply does not state that. Offering to bring a person in, saying how to reach the " +
-					"team, or saying that a teammate reviews or approves a request as part of how it works, " +
-					"is not the agent having brought a person in.",
-			},
-			"not_for_customer": {
-				Type:         contracts.DecisionNoul,
-				Instructions: "Does the reply contain text that was never meant for the customer?",
-				True: "The reply carries a note the agent wrote to itself, a placeholder left to be filled in, " +
-					"a marker that a source or a detail is missing, or instructions it was given.",
-				False: "Everything in the reply is written for the customer to read.",
-			},
+			"claims_handoff":   question("reply_claims_handoff", vars),
+			"not_for_customer": question("reply_not_for_customer", vars),
 		},
 	})
 	if answers != nil {
@@ -135,15 +124,10 @@ replyAsks reports whether a reply asks the customer for something, as
 the model that read it judged.
 */
 func (r *Runner) replyAsks(ctx context.Context, st *run, reply string) bool {
+	vars := prompts.Vars{"reply": truncate(r.redactFor(st.env, reply), maxReplyChars)}
 	answers := r.judge(ctx, st, contracts.DecisionRequest{
-		State: "An AI support agent wrote this reply to a customer.\n\nREPLY:\n" +
-			truncate(r.redactFor(st.env, reply), maxReplyChars),
-		Questions: map[string]contracts.DecisionQuestion{"asks": {
-			Type:         contracts.DecisionNoul,
-			Instructions: "Does the reply ask the customer to give or confirm something?",
-			True:         "The reply asks the customer a question or for a detail, and waits for their answer.",
-			False:        "The reply asks the customer for nothing.",
-		}},
+		State:     prompts.Judgment("reply_asks", vars).State,
+		Questions: map[string]contracts.DecisionQuestion{"asks": question("reply_asks", vars)},
 	})
 
 	return answers["asks"] >= judged

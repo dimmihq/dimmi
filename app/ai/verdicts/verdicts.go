@@ -50,6 +50,21 @@ var (
 )
 
 /*
+The task files the verdicts read their instructions from, under
+resources/prompts/tasks/.
+*/
+const (
+	taskDraftJudge       = "verdicts/draft_judge"
+	taskRequest          = "verdicts/request"
+	taskRequestEager     = "verdicts/request_eager"
+	taskWorkflowCategory = "verdicts/workflow_category"
+	taskTrackerSummary   = "verdicts/tracker_summary"
+	taskSeriesPath       = "verdicts/series_path"
+	taskTicketFill       = "verdicts/ticket_fill"
+	taskTicketMatch      = "verdicts/ticket_match"
+)
+
+/*
 defaultTimeout is how long a question waits when none is set.
 */
 const defaultTimeout = 3 * time.Second

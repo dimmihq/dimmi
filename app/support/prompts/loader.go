@@ -145,6 +145,9 @@ func NewLoader(version string, override fs.FS) (*Loader, error) {
 	if _, ok := l.versions[version]; !ok {
 		return nil, fmt.Errorf("%w: version %s is not compiled in", ErrInvalid, version)
 	}
+	if err := CheckTasks(); err != nil {
+		return nil, err
+	}
 	return l, nil
 }
 

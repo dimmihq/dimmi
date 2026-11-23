@@ -274,7 +274,7 @@ titleOf names a thread after its first question, or Brief when it began
 with a brief.
 */
 func titleOf(question string) string {
-	if strings.TrimSpace(question) == strings.TrimSpace(BriefQuestion) {
+	if strings.TrimSpace(question) == strings.TrimSpace(BriefQuestion()) {
 		return briefTitle
 	}
 	line, _, _ := strings.Cut(strings.TrimSpace(question), "\n")

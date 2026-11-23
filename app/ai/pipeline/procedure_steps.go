@@ -21,6 +21,7 @@ import (
 
 	"github.com/dimmihq/dimmi/app/contracts"
 	"github.com/dimmihq/dimmi/app/support/procedure"
+	"github.com/dimmihq/dimmi/app/support/prompts"
 )
 
 /*
@@ -225,16 +226,10 @@ is the customer's call, never the agent's: an agent that finds a step
 awkward is held to it. When no model can say, the agent's word stands.
 */
 func (r *Runner) movedOn(ctx context.Context, st *run) bool {
+	vars := prompts.Vars{"request": st.proc.live.def.Description, "conversation": r.conversationLines(st.env)}
 	answers := r.judge(ctx, st, contracts.DecisionRequest{
-		State: "A support conversation. The AGENT follows a procedure its team wrote for this request:\n" +
-			st.proc.live.def.Description + "\n\nThe conversation so far:\n" + r.conversationLines(st.env),
-		Questions: map[string]contracts.DecisionQuestion{"moved_on": {
-			Type:         contracts.DecisionNoul,
-			Instructions: "Has the customer moved on from this request?",
-			True: "The CUSTOMER now asks about something else, says they no longer want this, or the request is " +
-				"fully settled.",
-			False: "The CUSTOMER still wants what the procedure is for.",
-		}},
+		State:     prompts.Judgment("moved_on", vars).State,
+		Questions: map[string]contracts.DecisionQuestion{"moved_on": question("moved_on", vars)},
 	})
 	moved, ok := answers["moved_on"]
 
