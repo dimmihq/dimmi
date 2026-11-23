@@ -46,7 +46,7 @@ function showChange(root: HTMLElement, before: string) {
   const plain = (text: string) => text.replace(/[*_`#>\-\s]+/g, " ").trim();
   const earlier = plain(before);
   const added = [...root.querySelectorAll<HTMLElement>(".change-added")];
-  const fresh = added.find((el) => !earlier.includes(plain(el.textContent ?? "").slice(0, 80)));
+  const fresh = added.find((el) => !earlier.includes(plain(el.textContent ?? "")));
   (fresh ?? added[0])?.scrollIntoView({ block: "center", behavior: "smooth" });
 }
 

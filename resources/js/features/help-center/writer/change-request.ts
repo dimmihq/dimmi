@@ -120,7 +120,8 @@ function marksOf(doc: Node, requested: Requested): DecorationSet {
   )) {
     if (change.kind === "add") {
       const unit = after[change.to];
-      const key = `add:${change.to}:${unit.node.textContent.slice(0, 40)}`;
+      // The whole line is the key, so a line whose wording changed anywhere is drawn again.
+      const key = `add:${change.to}:${unit.key}`;
       const where = inList && !unit.list ? blockEnd : at;
       marks.push(Decoration.widget(where, addedWidget(unit, inList), { side: change.to, key }));
       continue;
