@@ -21849,6 +21849,7 @@
           "status": {
             "type": "string"
           },
+          "steps": {},
           "thread_id": {
             "type": [
               "string",
@@ -21884,6 +21885,7 @@
           "cost_micros",
           "notified",
           "delivery_results",
+          "steps",
           "started_at",
           "completed_at",
           "created_at"

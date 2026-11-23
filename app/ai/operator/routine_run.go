@@ -97,6 +97,7 @@ func (e *Engine) openRoutine(ctx context.Context, workspaceID, runID ids.UUID) (
 	if skipped != nil {
 		return nil, e.skipRoutine(ctx, s, *skipped)
 	}
+	e.publishRun(ctx, s.routine.run)
 	if s.llm, err = e.LLM.ForKey(ctx, s.key); err != nil {
 		s.failure = err
 		return nil, e.finishRoutine(context.WithoutCancel(ctx), s, "", "failed")
@@ -164,7 +165,6 @@ func (e *Engine) lockRun(ctx context.Context, q *models.Queries, s *session, ref
 	}
 	s.routine = &routineRun{
 		row: row, run: run, scope: ScopeOf(row.Scope), dryRun: run.Trigger == TriggerDryRun,
-		watcher: run.TriggeredByMemberID,
 	}
 	s.m.Workspace.ID = ref.workspace
 	return nil

@@ -152,7 +152,7 @@ const (
 
 /*
 routineRun is a routine's run in progress: the routine, its run row, the
-scope it reads, whether it is a dry run, who watches it live, and what
+scope it reads, whether it is a dry run, and what
 it said about its findings.
 */
 type routineRun struct {
@@ -160,7 +160,6 @@ type routineRun struct {
 	run        models.OperatorRoutineRun
 	scope      RoutineScope
 	dryRun     bool
-	watcher    *ids.UUID
 	noop       bool
 	noopReason string
 }

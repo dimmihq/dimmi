@@ -7,6 +7,7 @@
 import { queryOptions } from "@tanstack/react-query";
 
 import { request } from "./client";
+import type { OperatorStep } from "./operator";
 
 export type RoutineCadence = "daily" | "weekly" | "monthly" | "cron" | "once";
 export type RoutineStatus = "active" | "paused" | "completed";
@@ -124,6 +125,8 @@ export interface RoutineRun {
   changesets_count: number;
   cost_micros: number;
   notified: boolean;
+  /* steps is what the run has done so far; it grows while the run works. */
+  steps: OperatorStep[];
   started_at: string | null;
   completed_at: string | null;
   created_at: string;
@@ -210,6 +213,20 @@ export function routineRunsQuery(workspace: string, id: string) {
     queryFn: () => request<RoutineRun[]>("GET", `${one(id)}/runs`, undefined, { workspace }),
     refetchInterval: (query) =>
       query.state.data?.some((r) => r.status === "queued" || r.status === "running") ? 3000 : false,
+  });
+}
+
+/*
+ * routineRunQuery reads one run, and keeps reading every few seconds
+ * until it has finished.
+ */
+export function routineRunQuery(workspace: string, routine: string, run: string) {
+  return queryOptions({
+    queryKey: [...routineKeys.runs(workspace, routine), run] as const,
+    queryFn: () =>
+      request<RoutineRun>("GET", `${one(routine)}/runs/${encodeURIComponent(run)}`, undefined, { workspace }),
+    refetchInterval: (query) =>
+      query.state.data?.status === "queued" || query.state.data?.status === "running" ? 3000 : false,
   });
 }
 

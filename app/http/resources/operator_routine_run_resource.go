@@ -20,7 +20,8 @@ import (
 
 /*
 OperatorRoutineRun is one run of a routine: what started it, how it
-went, what it suggested and cost, and the thread it wrote on.
+went, what it suggested and cost, the thread it wrote on, and the steps
+it has finished, which grow while it runs.
 */
 type OperatorRoutineRun struct {
 	ID              string          `json:"id"`
@@ -41,6 +42,7 @@ type OperatorRoutineRun struct {
 	CostMicros      int64           `json:"cost_micros"`
 	Notified        bool            `json:"notified"`
 	DeliveryResults json.RawMessage `json:"delivery_results"`
+	Steps           json.RawMessage `json:"steps"`
 	StartedAt       *time.Time      `json:"started_at"`
 	CompletedAt     *time.Time      `json:"completed_at"`
 	CreatedAt       time.Time       `json:"created_at"`
@@ -58,11 +60,14 @@ func NewOperatorRoutineRun(r models.OperatorRoutineRun) OperatorRoutineRun {
 		AIRunID: optionalID(models.PrefixAiRun, r.AiRunID), Status: r.Status, Outcome: r.Outcome,
 		NoopReason: r.NoopReason, SkipReason: r.SkipReason, ErrorCode: r.ErrorCode, ErrorMessage: r.ErrorMessage,
 		ChangesetsCount: r.ChangesetsCount, CostMicros: r.CostMicros, Notified: r.Notified,
-		DeliveryResults: r.DeliveryResults, StartedAt: r.StartedAt, CompletedAt: r.CompletedAt,
+		DeliveryResults: r.DeliveryResults, Steps: r.Steps, StartedAt: r.StartedAt, CompletedAt: r.CompletedAt,
 		CreatedAt: r.CreatedAt,
 	}
 	if len(out.DeliveryResults) == 0 {
 		out.DeliveryResults = json.RawMessage("[]")
+	}
+	if len(out.Steps) == 0 {
+		out.Steps = json.RawMessage("[]")
 	}
 	return out
 }

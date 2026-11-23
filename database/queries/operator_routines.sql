@@ -121,6 +121,11 @@ UPDATE operator_routine_runs SET
 WHERE workspace_id = @workspace_id AND id = @id
 RETURNING *;
 
+-- name: SaveOperatorRoutineRunSteps :exec
+-- SaveOperatorRoutineRunSteps keeps the steps a run has finished so far.
+UPDATE operator_routine_runs SET steps = @steps, updated_at = @now
+WHERE workspace_id = @workspace_id AND id = @id;
+
 -- name: ListOperatorRoutineRuns :many
 -- ListOperatorRoutineRuns returns a routine's runs, newest first.
 SELECT * FROM operator_routine_runs

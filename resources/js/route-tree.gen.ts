@@ -86,6 +86,7 @@ import { Route as DSettingsTicketsTypeRouteImport } from './routes/d/settings/ti
 import { Route as DSettingsWebhooksEndpointRouteImport } from './routes/d/settings/webhooks.$endpoint'
 import { Route as DCustomersListsAudiencesIndexRouteImport } from './routes/d/customers/_lists/audiences/index'
 import { Route as DCustomersListsCompaniesIndexRouteImport } from './routes/d/customers/_lists/companies/index'
+import { Route as DRoutinesRoutineRunsRunRouteImport } from './routes/d/routines/$routine/runs/$run'
 import { Route as DRoutinesRoutineThreadsThreadRouteImport } from './routes/d/routines/$routine/threads/$thread'
 import { Route as DSeriesSeriesComposeStepRouteImport } from './routes/d/series/$series_.compose.$step'
 import { Route as DSettingsEmailAddressesAddressRouteImport } from './routes/d/settings/email.addresses.$address'
@@ -491,6 +492,11 @@ const DCustomersListsCompaniesIndexRoute =
     path: '/companies/',
     getParentRoute: () => DCustomersListsRoute,
   } as any)
+const DRoutinesRoutineRunsRunRoute = DRoutinesRoutineRunsRunRouteImport.update({
+  id: '/routines/$routine/runs/$run',
+  path: '/routines/$routine/runs/$run',
+  getParentRoute: () => DRouteRoute,
+} as any)
 const DRoutinesRoutineThreadsThreadRoute =
   DRoutinesRoutineThreadsThreadRouteImport.update({
     id: '/routines/$routine/threads/$thread',
@@ -615,6 +621,7 @@ export interface FileRoutesByFullPath {
   '/d/customers/': typeof DCustomersListsIndexRoute
   '/d/inbox/$view/': typeof DInboxViewIndexRoute
   '/d/routines/$routine/': typeof DRoutinesRoutineIndexRoute
+  '/d/routines/$routine/runs/$run': typeof DRoutinesRoutineRunsRunRoute
   '/d/routines/$routine/threads/$thread': typeof DRoutinesRoutineThreadsThreadRoute
   '/d/series/$series/compose/$step': typeof DSeriesSeriesComposeStepRoute
   '/d/settings/email/addresses/$address': typeof DSettingsEmailAddressesAddressRoute
@@ -694,6 +701,7 @@ export interface FileRoutesByTo {
   '/d/settings/webhooks/$endpoint': typeof DSettingsWebhooksEndpointRoute
   '/d/inbox/$view': typeof DInboxViewIndexRoute
   '/d/routines/$routine': typeof DRoutinesRoutineIndexRoute
+  '/d/routines/$routine/runs/$run': typeof DRoutinesRoutineRunsRunRoute
   '/d/routines/$routine/threads/$thread': typeof DRoutinesRoutineThreadsThreadRoute
   '/d/series/$series/compose/$step': typeof DSeriesSeriesComposeStepRoute
   '/d/settings/email/addresses/$address': typeof DSettingsEmailAddressesAddressRoute
@@ -782,6 +790,7 @@ export interface FileRoutesById {
   '/d/customers/_lists/': typeof DCustomersListsIndexRoute
   '/d/inbox/$view/': typeof DInboxViewIndexRoute
   '/d/routines/$routine/': typeof DRoutinesRoutineIndexRoute
+  '/d/routines/$routine/runs/$run': typeof DRoutinesRoutineRunsRunRoute
   '/d/routines/$routine/threads/$thread': typeof DRoutinesRoutineThreadsThreadRoute
   '/d/series/$series_/compose/$step': typeof DSeriesSeriesComposeStepRoute
   '/d/settings/email/addresses/$address': typeof DSettingsEmailAddressesAddressRoute
@@ -870,6 +879,7 @@ export interface FileRouteTypes {
     | '/d/customers/'
     | '/d/inbox/$view/'
     | '/d/routines/$routine/'
+    | '/d/routines/$routine/runs/$run'
     | '/d/routines/$routine/threads/$thread'
     | '/d/series/$series/compose/$step'
     | '/d/settings/email/addresses/$address'
@@ -949,6 +959,7 @@ export interface FileRouteTypes {
     | '/d/settings/webhooks/$endpoint'
     | '/d/inbox/$view'
     | '/d/routines/$routine'
+    | '/d/routines/$routine/runs/$run'
     | '/d/routines/$routine/threads/$thread'
     | '/d/series/$series/compose/$step'
     | '/d/settings/email/addresses/$address'
@@ -1036,6 +1047,7 @@ export interface FileRouteTypes {
     | '/d/customers/_lists/'
     | '/d/inbox/$view/'
     | '/d/routines/$routine/'
+    | '/d/routines/$routine/runs/$run'
     | '/d/routines/$routine/threads/$thread'
     | '/d/series/$series_/compose/$step'
     | '/d/settings/email/addresses/$address'
@@ -1597,6 +1609,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DCustomersListsCompaniesIndexRouteImport
       parentRoute: typeof DCustomersListsRoute
     }
+    '/d/routines/$routine/runs/$run': {
+      id: '/d/routines/$routine/runs/$run'
+      path: '/routines/$routine/runs/$run'
+      fullPath: '/d/routines/$routine/runs/$run'
+      preLoaderRoute: typeof DRoutinesRoutineRunsRunRouteImport
+      parentRoute: typeof DRouteRoute
+    }
     '/d/routines/$routine/threads/$thread': {
       id: '/d/routines/$routine/threads/$thread'
       path: '/routines/$routine/threads/$thread'
@@ -1806,6 +1825,7 @@ interface DRouteRouteChildren {
   DSettingsTicketsTypeRoute: typeof DSettingsTicketsTypeRoute
   DSettingsWebhooksEndpointRoute: typeof DSettingsWebhooksEndpointRoute
   DRoutinesRoutineIndexRoute: typeof DRoutinesRoutineIndexRoute
+  DRoutinesRoutineRunsRunRoute: typeof DRoutinesRoutineRunsRunRoute
   DRoutinesRoutineThreadsThreadRoute: typeof DRoutinesRoutineThreadsThreadRoute
   DSeriesSeriesComposeStepRoute: typeof DSeriesSeriesComposeStepRoute
   DSettingsEmailAddressesAddressRoute: typeof DSettingsEmailAddressesAddressRoute
@@ -1856,6 +1876,7 @@ const DRouteRouteChildren: DRouteRouteChildren = {
   DSettingsTicketsTypeRoute: DSettingsTicketsTypeRoute,
   DSettingsWebhooksEndpointRoute: DSettingsWebhooksEndpointRoute,
   DRoutinesRoutineIndexRoute: DRoutinesRoutineIndexRoute,
+  DRoutinesRoutineRunsRunRoute: DRoutinesRoutineRunsRunRoute,
   DRoutinesRoutineThreadsThreadRoute: DRoutinesRoutineThreadsThreadRoute,
   DSeriesSeriesComposeStepRoute: DSeriesSeriesComposeStepRoute,
   DSettingsEmailAddressesAddressRoute: DSettingsEmailAddressesAddressRoute,

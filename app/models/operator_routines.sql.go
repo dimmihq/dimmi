@@ -173,7 +173,7 @@ INSERT INTO operator_routine_runs (
     $1, $2, $3, $4, $5, $6,
     $7, $8, $9, $10, $10
 )
-RETURNING id, workspace_id, routine_id, trigger, triggered_by_member_id, scheduled_for, thread_id, ai_run_id, status, outcome, noop_reason, skip_reason, error_code, error_message, changesets_count, cost_micros, notified, delivery_results, started_at, completed_at, created_at, updated_at
+RETURNING id, workspace_id, routine_id, trigger, triggered_by_member_id, scheduled_for, thread_id, ai_run_id, status, outcome, noop_reason, skip_reason, error_code, error_message, changesets_count, cost_micros, notified, delivery_results, started_at, completed_at, created_at, updated_at, steps
 `
 
 type CreateOperatorRoutineRunParams struct {
@@ -227,6 +227,7 @@ func (q *Queries) CreateOperatorRoutineRun(ctx context.Context, arg CreateOperat
 		&i.CompletedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.Steps,
 	)
 	return i, err
 }
@@ -313,7 +314,7 @@ func (q *Queries) ExpireOperatorChangesets(ctx context.Context, arg ExpireOperat
 }
 
 const findActiveOperatorRoutineRun = `-- name: FindActiveOperatorRoutineRun :one
-SELECT id, workspace_id, routine_id, trigger, triggered_by_member_id, scheduled_for, thread_id, ai_run_id, status, outcome, noop_reason, skip_reason, error_code, error_message, changesets_count, cost_micros, notified, delivery_results, started_at, completed_at, created_at, updated_at FROM operator_routine_runs
+SELECT id, workspace_id, routine_id, trigger, triggered_by_member_id, scheduled_for, thread_id, ai_run_id, status, outcome, noop_reason, skip_reason, error_code, error_message, changesets_count, cost_micros, notified, delivery_results, started_at, completed_at, created_at, updated_at, steps FROM operator_routine_runs
 WHERE workspace_id = $1 AND routine_id = $2
   AND status IN ('queued', 'running') AND trigger <> 'dry_run'
 LIMIT 1
@@ -352,6 +353,7 @@ func (q *Queries) FindActiveOperatorRoutineRun(ctx context.Context, arg FindActi
 		&i.CompletedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.Steps,
 	)
 	return i, err
 }
@@ -543,7 +545,7 @@ func (q *Queries) FindOperatorRoutine(ctx context.Context, arg FindOperatorRouti
 }
 
 const findOperatorRoutineRun = `-- name: FindOperatorRoutineRun :one
-SELECT id, workspace_id, routine_id, trigger, triggered_by_member_id, scheduled_for, thread_id, ai_run_id, status, outcome, noop_reason, skip_reason, error_code, error_message, changesets_count, cost_micros, notified, delivery_results, started_at, completed_at, created_at, updated_at FROM operator_routine_runs WHERE workspace_id = $1 AND routine_id = $2 AND id = $3
+SELECT id, workspace_id, routine_id, trigger, triggered_by_member_id, scheduled_for, thread_id, ai_run_id, status, outcome, noop_reason, skip_reason, error_code, error_message, changesets_count, cost_micros, notified, delivery_results, started_at, completed_at, created_at, updated_at, steps FROM operator_routine_runs WHERE workspace_id = $1 AND routine_id = $2 AND id = $3
 `
 
 type FindOperatorRoutineRunParams struct {
@@ -579,12 +581,13 @@ func (q *Queries) FindOperatorRoutineRun(ctx context.Context, arg FindOperatorRo
 		&i.CompletedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.Steps,
 	)
 	return i, err
 }
 
 const findOperatorRoutineRunByID = `-- name: FindOperatorRoutineRunByID :one
-SELECT id, workspace_id, routine_id, trigger, triggered_by_member_id, scheduled_for, thread_id, ai_run_id, status, outcome, noop_reason, skip_reason, error_code, error_message, changesets_count, cost_micros, notified, delivery_results, started_at, completed_at, created_at, updated_at FROM operator_routine_runs WHERE workspace_id = $1 AND id = $2
+SELECT id, workspace_id, routine_id, trigger, triggered_by_member_id, scheduled_for, thread_id, ai_run_id, status, outcome, noop_reason, skip_reason, error_code, error_message, changesets_count, cost_micros, notified, delivery_results, started_at, completed_at, created_at, updated_at, steps FROM operator_routine_runs WHERE workspace_id = $1 AND id = $2
 `
 
 type FindOperatorRoutineRunByIDParams struct {
@@ -620,6 +623,7 @@ func (q *Queries) FindOperatorRoutineRunByID(ctx context.Context, arg FindOperat
 		&i.CompletedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.Steps,
 	)
 	return i, err
 }
@@ -682,7 +686,7 @@ func (q *Queries) ListOperatorRoutineCosts(ctx context.Context, arg ListOperator
 }
 
 const listOperatorRoutineRuns = `-- name: ListOperatorRoutineRuns :many
-SELECT id, workspace_id, routine_id, trigger, triggered_by_member_id, scheduled_for, thread_id, ai_run_id, status, outcome, noop_reason, skip_reason, error_code, error_message, changesets_count, cost_micros, notified, delivery_results, started_at, completed_at, created_at, updated_at FROM operator_routine_runs
+SELECT id, workspace_id, routine_id, trigger, triggered_by_member_id, scheduled_for, thread_id, ai_run_id, status, outcome, noop_reason, skip_reason, error_code, error_message, changesets_count, cost_micros, notified, delivery_results, started_at, completed_at, created_at, updated_at, steps FROM operator_routine_runs
 WHERE workspace_id = $1 AND routine_id = $2
 ORDER BY created_at DESC, id DESC
 LIMIT $3
@@ -727,6 +731,7 @@ func (q *Queries) ListOperatorRoutineRuns(ctx context.Context, arg ListOperatorR
 			&i.CompletedAt,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.Steps,
 		); err != nil {
 			return nil, err
 		}
@@ -969,7 +974,7 @@ func (q *Queries) LockOperatorRoutine(ctx context.Context, arg LockOperatorRouti
 }
 
 const lockOperatorRoutineRun = `-- name: LockOperatorRoutineRun :one
-SELECT id, workspace_id, routine_id, trigger, triggered_by_member_id, scheduled_for, thread_id, ai_run_id, status, outcome, noop_reason, skip_reason, error_code, error_message, changesets_count, cost_micros, notified, delivery_results, started_at, completed_at, created_at, updated_at FROM operator_routine_runs WHERE workspace_id = $1 AND id = $2 FOR UPDATE
+SELECT id, workspace_id, routine_id, trigger, triggered_by_member_id, scheduled_for, thread_id, ai_run_id, status, outcome, noop_reason, skip_reason, error_code, error_message, changesets_count, cost_micros, notified, delivery_results, started_at, completed_at, created_at, updated_at, steps FROM operator_routine_runs WHERE workspace_id = $1 AND id = $2 FOR UPDATE
 `
 
 type LockOperatorRoutineRunParams struct {
@@ -1004,6 +1009,7 @@ func (q *Queries) LockOperatorRoutineRun(ctx context.Context, arg LockOperatorRo
 		&i.CompletedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.Steps,
 	)
 	return i, err
 }
@@ -1115,7 +1121,7 @@ UPDATE operator_routine_runs SET
     notified = $11, delivery_results = $12, started_at = $13,
     completed_at = $14, updated_at = $15
 WHERE workspace_id = $16 AND id = $17
-RETURNING id, workspace_id, routine_id, trigger, triggered_by_member_id, scheduled_for, thread_id, ai_run_id, status, outcome, noop_reason, skip_reason, error_code, error_message, changesets_count, cost_micros, notified, delivery_results, started_at, completed_at, created_at, updated_at
+RETURNING id, workspace_id, routine_id, trigger, triggered_by_member_id, scheduled_for, thread_id, ai_run_id, status, outcome, noop_reason, skip_reason, error_code, error_message, changesets_count, cost_micros, notified, delivery_results, started_at, completed_at, created_at, updated_at, steps
 `
 
 type SaveOperatorRoutineRunParams struct {
@@ -1183,8 +1189,32 @@ func (q *Queries) SaveOperatorRoutineRun(ctx context.Context, arg SaveOperatorRo
 		&i.CompletedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.Steps,
 	)
 	return i, err
+}
+
+const saveOperatorRoutineRunSteps = `-- name: SaveOperatorRoutineRunSteps :exec
+UPDATE operator_routine_runs SET steps = $1, updated_at = $2
+WHERE workspace_id = $3 AND id = $4
+`
+
+type SaveOperatorRoutineRunStepsParams struct {
+	Steps       json.RawMessage `json:"steps"`
+	Now         time.Time       `json:"now"`
+	WorkspaceID ids.UUID        `json:"workspace_id"`
+	ID          ids.UUID        `json:"id"`
+}
+
+// SaveOperatorRoutineRunSteps keeps the steps a run has finished so far.
+func (q *Queries) SaveOperatorRoutineRunSteps(ctx context.Context, arg SaveOperatorRoutineRunStepsParams) error {
+	_, err := q.db.Exec(ctx, saveOperatorRoutineRunSteps,
+		arg.Steps,
+		arg.Now,
+		arg.WorkspaceID,
+		arg.ID,
+	)
+	return err
 }
 
 const setOperatorRoutineState = `-- name: SetOperatorRoutineState :exec

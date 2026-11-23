@@ -154,6 +154,7 @@ func (e *Engine) finishCall(ctx context.Context, s *session, p *pending) contrac
 		out.text = s.layer.set.Compact(out.text)
 	}
 	s.steps = append(s.steps, out.step)
+	e.keepSteps(ctx, s)
 	e.publishStep(ctx, s, out.step)
 	name := p.call.Name
 	if p.ran != "" {

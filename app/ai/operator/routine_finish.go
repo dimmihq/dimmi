@@ -53,6 +53,7 @@ func (e *Engine) skipRoutine(ctx context.Context, s *session, why skip) error {
 	if err != nil {
 		return err
 	}
+	e.publishRun(ctx, r.run)
 	return errRoutineDone
 }
 
@@ -88,6 +89,7 @@ func (e *Engine) finishRoutine(ctx context.Context, s *session, text, status str
 	if answered.ID != (ids.UUID{}) {
 		e.publishAnswered(ctx, s, answered)
 	}
+	e.publishRun(ctx, r.run)
 	return nil
 }
 

@@ -5,7 +5,14 @@
  * real data but changes nothing, pauses or resumes it, and deletes it. A
  * routine that paused itself says why, with the way back.
  */
-import { RiArrowLeftSLine, RiDeleteBin6Line, RiFlaskLine, RiPauseLine, RiPlayLine } from "@remixicon/react";
+import {
+  RiArrowLeftSLine,
+  RiCloseLine,
+  RiDeleteBin6Line,
+  RiFlaskLine,
+  RiPauseLine,
+  RiPlayLine,
+} from "@remixicon/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useBlocker, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
@@ -23,6 +30,7 @@ import { Item, Section } from "@/features/settings/layout";
 import { SaveBar } from "@/features/settings/save-bar";
 import { useAccount } from "@/features/settings/use-account";
 import { Panel, ScrollArea } from "@/features/shell/page";
+import { useWide } from "@/features/shell/use-wide";
 import {
   deleteRoutine,
   type Routine,
@@ -39,7 +47,10 @@ import { draftFromRoutine, inputOf, problems, type RoutineDraft, sameDraft } fro
 import { lookOf } from "./looks";
 import { RoutineFields } from "./routine-fields";
 import { OutcomeChip } from "./routine-list";
+import { RunView } from "./run-view";
+import { runLine, triggers } from "./runs";
 import { describeRoutine } from "./timing";
+import { useRoutineWatch } from "./use-run-live";
 
 type Tabbed = "runs" | "settings";
 
@@ -91,6 +102,8 @@ function Loaded({
   const [draft, setDraft] = useState<RoutineDraft>(() => draftFromRoutine(routine));
   const [deleting, setDeleting] = useState(false);
   const [generation, setGeneration] = useState(0);
+  const [watching, setWatching] = useState<string | null>(null);
+  const wide = useWide(1024);
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const saved = draftFromRoutine(routine);
@@ -120,6 +133,11 @@ function Loaded({
       setTab("runs");
       void queryClient.invalidateQueries({ queryKey: routineKeys.runs(workspace, routine.id) });
       toast.success(r.trigger === "dry_run" ? "Dry run started. Nothing it finds is applied." : "Run started.");
+      if (wide) {
+        setWatching(r.id);
+      } else {
+        void navigate({ to: "/d/routines/$routine/runs/$run", params: { routine: routine.id, run: r.id } });
+      }
     },
     onError: (error) => toast.error(error.message),
   });
@@ -130,81 +148,87 @@ function Loaded({
   });
 
   const blocking = problems(draft);
+  useRoutineWatch(workspace, routine.id);
 
   return (
-    <Panel label="Routine" ground className="relative h-full flex-1">
-      <Header
-        routine={routine}
-        canManage={canManage}
-        running={run.isPending ? run.variables : null}
-        onRun={(dryRun) => run.mutate(dryRun)}
-        onToggle={() => status.mutate(routine.status === "active" ? "paused" : "active")}
-        onDelete={() => setDeleting(true)}
-      />
-      <div className="shrink-0 px-4">
-        <Tabs selectedKey={tab} onSelectionChange={(key) => setTab(String(key) as Tabbed)}>
-          <TabList
-            aria-label="Routine"
-            items={[
-              { id: "runs", label: "Runs" },
-              { id: "settings", label: "Settings" },
-            ]}
-          >
-            {(item) => <Tab id={item.id}>{item.label}</Tab>}
-          </TabList>
-        </Tabs>
-      </div>
-      <ScrollArea ground>
-        <div className="mx-auto flex w-full max-w-[760px] flex-col gap-8 px-4 pt-6 pb-28 sm:px-6">
-          {routine.status === "paused" && routine.pause_reason ? (
-            <Paused
-              routine={routine}
-              resuming={status.isPending}
-              canManage={canManage}
-              onResume={() => status.mutate("active")}
-            />
-          ) : null}
-          {tab === "runs" ? <RoutineStats routine={routine} /> : null}
-          {tab === "runs" ? <Runs workspace={workspace} routine={routine} /> : null}
-          {tab === "settings" ? (
-            <RoutineFields
-              key={generation}
-              workspace={workspace}
-              draft={draft}
-              disabled={!canManage}
-              onChange={setDraft}
-            />
-          ) : null}
+    <div className="flex h-full min-w-0 flex-1 gap-2">
+      <Panel label="Routine" ground className="relative h-full min-w-0 flex-1">
+        <Header
+          routine={routine}
+          canManage={canManage}
+          running={run.isPending ? run.variables : null}
+          onRun={(dryRun) => run.mutate(dryRun)}
+          onToggle={() => status.mutate(routine.status === "active" ? "paused" : "active")}
+          onDelete={() => setDeleting(true)}
+        />
+        <div className="shrink-0 px-4">
+          <Tabs selectedKey={tab} onSelectionChange={(key) => setTab(String(key) as Tabbed)}>
+            <TabList
+              aria-label="Routine"
+              items={[
+                { id: "runs", label: "Runs" },
+                { id: "settings", label: "Settings" },
+              ]}
+            >
+              {(item) => <Tab id={item.id}>{item.label}</Tab>}
+            </TabList>
+          </Tabs>
         </div>
-      </ScrollArea>
-      <div className="pointer-events-none absolute inset-x-0 bottom-4 z-10 px-4 sm:px-6">
-        <div className="pointer-events-auto mx-auto w-full max-w-[632px]">
-          <SaveBar
-            dirty={dirty}
-            saving={save.isPending}
-            canSave={dirty && blocking.length === 0}
-            error={save.error ? save.error.message : blocking[0] && dirty ? blocking[0] : null}
-            onSave={() => save.mutate()}
-            onDiscard={() => {
-              setDraft(saved);
-              setGeneration((g) => g + 1);
-            }}
-          />
+        <ScrollArea ground>
+          <div className="mx-auto flex w-full max-w-[760px] flex-col gap-8 px-4 pt-6 pb-28 sm:px-6">
+            {routine.status === "paused" && routine.pause_reason ? (
+              <Paused
+                routine={routine}
+                resuming={status.isPending}
+                canManage={canManage}
+                onResume={() => status.mutate("active")}
+              />
+            ) : null}
+            {tab === "runs" ? <RoutineStats routine={routine} /> : null}
+            {tab === "runs" ? <Runs workspace={workspace} routine={routine} /> : null}
+            {tab === "settings" ? (
+              <RoutineFields
+                key={generation}
+                workspace={workspace}
+                draft={draft}
+                disabled={!canManage}
+                onChange={setDraft}
+              />
+            ) : null}
+          </div>
+        </ScrollArea>
+        <div className="pointer-events-none absolute inset-x-0 bottom-4 z-10 px-4 sm:px-6">
+          <div className="pointer-events-auto mx-auto w-full max-w-[632px]">
+            <SaveBar
+              dirty={dirty}
+              saving={save.isPending}
+              canSave={dirty && blocking.length === 0}
+              error={save.error ? save.error.message : blocking[0] && dirty ? blocking[0] : null}
+              onSave={() => save.mutate()}
+              onDiscard={() => {
+                setDraft(saved);
+                setGeneration((g) => g + 1);
+              }}
+            />
+          </div>
         </div>
-      </div>
-      <AlertDialog
-        isOpen={deleting}
-        onOpenChange={setDeleting}
-        title={`Delete ${routine.name}?`}
-        description="It stops running for good. Its past runs, threads and suggestions stay."
-        confirmLabel="Delete routine"
-        onConfirm={async () => {
-          await deleteRoutine(workspace, routine.id);
-          refresh();
-          void navigate({ to: "/d/routines" });
-        }}
-      />
-    </Panel>
+        <AlertDialog
+          isOpen={deleting}
+          onOpenChange={setDeleting}
+          title={`Delete ${routine.name}?`}
+          description="It stops running for good. Its past runs, threads and suggestions stay."
+          confirmLabel="Delete routine"
+          onConfirm={async () => {
+            await deleteRoutine(workspace, routine.id);
+            refresh();
+            void navigate({ to: "/d/routines" });
+          }}
+        />
+      </Panel>
+      {watching ? (
+        <WatchPanel workspace={workspace} routine={routine} run={watching} onClose={() => setWatching(null)} />
+      ) : null}
+    </div>
   );
 }
 
@@ -278,28 +302,6 @@ function RoutineStats({ routine }: { routine: Routine }) {
   );
 }
 
-/*
- * runLine says what a run did, in a few words.
- */
-function runLine(r: RoutineRun): string {
-  switch (r.status) {
-    case "queued":
-      return "Waiting to start";
-    case "running":
-      return "Running now";
-    case "skipped":
-      return `Skipped: ${(r.skip_reason ?? "").replaceAll("_", " ")}`;
-    case "failed":
-      return `Failed: ${r.error_message ?? r.error_code ?? "unknown error"}`;
-  }
-  if (r.outcome === "findings") {
-    return r.changesets_count === 1 ? "1 suggested change" : `${r.changesets_count} suggested changes`;
-  }
-  return r.noop_reason ? `Nothing to change: ${r.noop_reason}` : "Nothing to change";
-}
-
-const triggers = { scheduled: "On schedule", manual: "Run now", dry_run: "Dry run" } as const;
-
 function Runs({ workspace, routine }: { workspace: string; routine: Routine }) {
   const { data, isPending } = useQuery(routineRunsQuery(workspace, routine.id));
   const next = routine.status === "active" && routine.next_run_at;
@@ -338,7 +340,7 @@ function runTint(r: RoutineRun): "rose" | "lime" | "neutral" {
 }
 
 /*
- * RunRow is one run, opening its thread when it wrote one.
+ * RunRow is one run, opening it as it happens or as it went.
  */
 function RunRow({ routine, run: r }: { routine: string; run: RoutineRun }) {
   const live = r.status === "running" || r.status === "queued";
@@ -356,13 +358,10 @@ function RunRow({ routine, run: r }: { routine: string; run: RoutineRun }) {
       ) : null}
     </Item>
   );
-  if (!r.thread_id) {
-    return row;
-  }
   return (
     <Link
-      to="/d/routines/$routine/threads/$thread"
-      params={{ routine, thread: r.thread_id }}
+      to="/d/routines/$routine/runs/$run"
+      params={{ routine, run: r.id }}
       className="-ms-3 block ps-3 transition-colors duration-150 first:rounded-t-2xl last:rounded-b-2xl hover:bg-background-secondary-hover"
     >
       {row}
@@ -431,5 +430,37 @@ function Header({
         </div>
       ) : null}
     </header>
+  );
+}
+
+/*
+ * WatchPanel is the run just started, beside the routine, as it works.
+ */
+function WatchPanel({
+  workspace,
+  routine,
+  run,
+  onClose,
+}: {
+  workspace: string;
+  routine: Routine;
+  run: string;
+  onClose: () => void;
+}) {
+  return (
+    <Panel label="Run" className="h-full w-[420px] shrink-0">
+      <header className="flex h-12 shrink-0 items-center gap-2 ps-4 pe-2.5 pt-[7px]">
+        <h2 className="min-w-0 flex-1 truncate text-body-medium text-text-primary">Run</h2>
+        <Link
+          to="/d/routines/$routine/runs/$run"
+          params={{ routine: routine.id, run }}
+          className="text-body-2-regular text-text-secondary hover:text-text-primary"
+        >
+          Open
+        </Link>
+        <IconButton size="small" icon={RiCloseLine} aria-label="Close run" onClick={onClose} />
+      </header>
+      <RunView workspace={workspace} routine={routine.id} run={run} label={routine.name} />
+    </Panel>
   );
 }
