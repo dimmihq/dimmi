@@ -75,8 +75,8 @@ func (e *Engine) systemPrompt(s *session) string {
 	b.WriteString(rules)
 	today := e.Clock.Now().UTC().Format("Monday 2 January 2006")
 	if s.routine != nil {
-		fmt.Fprintf(&b, "\n\nWorkspace: %s. Today is %s (UTC).\n\n%s", s.m.Workspace.Name, today,
-			strings.ReplaceAll(routineRules, "{{name}}", s.routine.row.Name))
+		fmt.Fprintf(&b, "\n\nWorkspace: %s. Today is %s (UTC).\n\n%s\n\n%s\n\n%s", s.m.Workspace.Name, today,
+			strings.ReplaceAll(routineRules, "{{name}}", s.routine.row.Name), e.runWindow(s), skillList())
 	} else {
 		fmt.Fprintf(&b, "\n\nWorkspace: %s. You are talking with %s, %s. Today is %s (UTC).",
 			s.m.Workspace.Name, cmp.Or(s.askerName, "a teammate"), s.m.Member.Role, today)

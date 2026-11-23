@@ -65,21 +65,6 @@ func (c *OperatorRoutineController) Templates(ctx context.Context, _ *requests.N
 }
 
 /*
-Tools lists the tools a routine's prompt may name, for the builder's @
-menu.
-*/
-func (c *OperatorRoutineController) Tools(ctx context.Context, _ *requests.NoInput,
-) (*OperatorRoutineToolsOutput, error) {
-	list, err := c.Routines.Tools(membership(ctx))
-	if err != nil {
-		return nil, err
-	}
-	items := resources.NewOperatorRoutineTools(list)
-	page := pagination.Page[resources.OperatorRoutineTool]{Items: items, Limit: len(items)}
-	return &OperatorRoutineToolsOutput{Body: fhttp.NewCollection(page)}, nil
-}
-
-/*
 Index lists the workspace's routines, of filter[status] when sent.
 */
 func (c *OperatorRoutineController) Index(ctx context.Context, _ *requests.NoInput,
@@ -143,7 +128,7 @@ func (c *OperatorRoutineController) Update(ctx context.Context, in *requests.Upd
 	if err != nil {
 		return nil, err
 	}
-	input.Status, input.ClearBudget, input.ResetState = in.Body.Status, in.Body.ClearBudget, in.Body.ResetState
+	input.Status, input.ResetState = in.Body.Status, in.Body.ResetState
 	view, err := c.Routines.Update(ctx, id, input)
 	if err != nil {
 		return nil, err
@@ -227,9 +212,7 @@ func (c *OperatorRoutineController) input(m authz.Membership, b requests.Operato
 ) (operatorchat.RoutineInput, error) {
 	in := operatorchat.RoutineInput{
 		Membership: m, Name: b.Name, Description: b.Description, Prompt: b.Prompt, Cadence: b.Cadence,
-		CronExpr: b.CronExpression, RunAt: b.RunAt, Timezone: b.Timezone, Permissions: b.Permissions,
-		ToolGroups: b.ToolGroups, WritePolicies: b.WritePolicies, Model: b.Model, Effort: b.Effort,
-		MaxModelCalls: b.MaxModelCalls, MaxToolCalls: b.MaxToolCalls, MonthlyBudgetMicros: b.MonthlyBudgetMicros,
+		CronExpr: b.CronExpression, RunAt: b.RunAt, Timezone: b.Timezone,
 		NotifyPolicy: b.NotifyPolicy,
 	}
 	var err error

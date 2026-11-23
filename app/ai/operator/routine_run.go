@@ -276,22 +276,50 @@ func (e *Engine) startRoutine(ctx context.Context, q *models.Queries, s *session
 }
 
 /*
-renderPrompt fills the routine's prompt variables.
+window is what a run covers: from the last run that went well, or a
+week back for a first run, until now.
 */
-func (e *Engine) renderPrompt(s *session, now time.Time) string {
+func (e *Engine) window(s *session) (time.Time, time.Time, *time.Time) {
 	r := s.routine.row
-	start := now.Add(-firstWindow)
-	last := "never"
+	now := e.Clock.Now()
 	if r.LastSuccessAt != nil {
-		start = *r.LastSuccessAt
-		last = r.LastSuccessAt.UTC().Format(time.RFC3339)
+		return *r.LastSuccessAt, now, r.LastSuccessAt
+	}
+	return now.Add(-firstWindow), now, nil
+}
+
+/*
+runWindow tells the model what the run covers, so a routine's
+instructions can say "since the last run" and mean it.
+*/
+func (e *Engine) runWindow(s *session) string {
+	start, end, last := e.window(s)
+	ran := "This is the routine's first run."
+	if last != nil {
+		ran = "Its last run that went well was at " + last.UTC().Format(time.RFC3339) + "."
+	}
+	return fmt.Sprintf("This run covers %s to %s (UTC); for reports that take whole days, since %s until %s. %s",
+		start.UTC().Format(time.RFC3339), end.UTC().Format(time.RFC3339), start.UTC().Format(time.DateOnly),
+		end.UTC().AddDate(0, 0, 1).Format(time.DateOnly), ran)
+}
+
+/*
+renderPrompt fills the variables older routines wrote into their
+instructions; new ones need none, since every run is told its window.
+*/
+func (e *Engine) renderPrompt(s *session, _ time.Time) string {
+	r := s.routine.row
+	start, end, at := e.window(s)
+	last := "never"
+	if at != nil {
+		last = at.UTC().Format(time.RFC3339)
 	}
 	return strings.NewReplacer(
 		"{{workspace_name}}", s.m.Workspace.Name, "{{routine_name}}", r.Name, "{{last_run_at}}", last,
-		"{{window_start}}", start.UTC().Format(time.RFC3339), "{{window_end}}", now.UTC().Format(time.RFC3339),
+		"{{window_start}}", start.UTC().Format(time.RFC3339), "{{window_end}}", end.UTC().Format(time.RFC3339),
 		"{{window_start_date}}", start.UTC().Format(time.DateOnly),
-		"{{window_end_date}}", now.UTC().AddDate(0, 0, 1).Format(time.DateOnly),
-	).Replace(spellTools(r.Prompt))
+		"{{window_end_date}}", end.UTC().AddDate(0, 0, 1).Format(time.DateOnly),
+	).Replace(r.Prompt)
 }
 
 /*

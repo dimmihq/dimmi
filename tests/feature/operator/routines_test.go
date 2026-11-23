@@ -28,6 +28,18 @@ func (k *desk) routine(body testkit.JSON) string {
 }
 
 /*
+setRoutine changes a routine's row directly, for what the API does not
+take.
+*/
+func (k *desk) setRoutine(routine, set string) {
+	k.t.Helper()
+	id, err := k.d.TC.App.IDs.Decode(string(models.PrefixOperatorRoutine), routine)
+	require.NoError(k.t, err)
+	_, err = k.d.TC.Operator().Exec(k.t.Context(), "UPDATE operator_routines SET "+set+" WHERE id = $1", id)
+	require.NoError(k.t, err)
+}
+
+/*
 runRoutine starts a run of the routine now, runs its job and returns the
 run as the API shows it.
 */
@@ -66,7 +78,10 @@ func TestOperatorRoutines(t *testing.T) {
 		}).AssertCreated()
 		res.AssertJSONPath("data.cadence", "weekly").AssertJSONPath("data.cron_expression", "0 9 * * 1").
 			AssertJSONPath("data.status", "active").AssertJSONPath("data.notify_policy", "on_findings").
-			AssertJSONPath("data.next_runs.#", float64(3)).AssertJSONPath("data.monthly_budget_micros", nil)
+			AssertJSONPath("data.next_runs.#", float64(3)).
+			AssertJSONPath("data.prompt", "Find the questions the AI agent could not answer since the last run, "+
+				"and draft the help articles that would have answered them.").
+			AssertJSONMissing("data.permissions").AssertJSONMissing("data.tool_groups")
 		assert.Equal(t, models.PublicID(models.PrefixMember, k.d.TC.Workspace.Owner.ID), res.String("data.owner_id"))
 
 		k.d.Owner.GetJSON("/api/v1/operator/routines").AssertOK().AssertJSONPath("data.#", float64(1))
@@ -80,13 +95,14 @@ func TestOperatorRoutines(t *testing.T) {
 		}).AssertStatus(422).AssertJSONPath("code", "routine_too_frequent")
 	})
 
-	t.Run("refuses permissions the caller does not hold", func(t *testing.T) {
+	t.Run("takes no tools, permissions, model or budget from the caller", func(t *testing.T) {
 		t.Parallel()
 		k := newDesk(t)
-		admin, _ := k.d.Join(t, enums.RoleAdmin)
-		admin.PostJSON("/api/v1/operator/routines", testkit.JSON{
-			"name": "Exports", "prompt": "Export.", "permissions": []string{"exports:read"},
-		}).AssertStatus(422).AssertJSONPath("code", "permission_not_held")
+		for _, field := range []string{"permissions", "tool_groups", "model", "monthly_budget_micros"} {
+			k.d.Owner.PostJSON("/api/v1/operator/routines", testkit.JSON{
+				"name": "Watcher", "prompt": "Check.", field: nil,
+			}).AssertStatus(422)
+		}
 	})
 
 	t.Run("lets only admins who manage the AI create routines", func(t *testing.T) {
@@ -207,7 +223,8 @@ func TestOperatorRoutineRuns(t *testing.T) {
 	t.Run("skips a run once its monthly budget is spent", func(t *testing.T) {
 		t.Parallel()
 		k := newDesk(t)
-		routine := k.routine(testkit.JSON{"name": "Watcher", "prompt": "Check.", "monthly_budget_micros": 1})
+		routine := k.routine(testkit.JSON{"name": "Watcher", "prompt": "Check."})
+		k.setRoutine(routine, "monthly_budget_micros = 1")
 		k.llm.Script(reply("Done."))
 		k.runRoutine(routine, false).AssertJSONPath("data.status", "completed")
 
@@ -356,25 +373,50 @@ func TestOperatorRoutineRetries(t *testing.T) {
 func TestOperatorRoutineTools(t *testing.T) {
 	t.Parallel()
 
-	t.Run("offers a routine its tools directly, knowledge search included", func(t *testing.T) {
+	t.Run("offers every routine the same tools and skills, whatever it was made from", func(t *testing.T) {
 		t.Parallel()
 		k := newDesk(t)
 		k.withToolLayer()
-		routine := k.routine(testkit.JSON{
-			"name": "Audit", "prompt": "Audit articles.", "tool_groups": []string{"knowledge", "changes"},
-		})
-		k.llm.Script(reply("Done."))
-		k.runRoutine(routine, true)
+		scratch := k.routine(testkit.JSON{"name": "Audit", "prompt": "Audit articles."})
+		templated := k.routine(testkit.JSON{"template_key": operator.TemplateStaleness})
+		k.llm.Script(reply("Done."), reply("Done."))
+		k.runRoutine(scratch, true)
+		k.runRoutine(templated, true)
 
-		var names []string
-		for _, spec := range k.llm.Sent()[0].Tools {
-			names = append(names, spec.Name)
+		sent := k.llm.Sent()
+		offered := func(i int) []string {
+			var names []string
+			for _, spec := range sent[i].Tools {
+				names = append(names, spec.Name)
+			}
+			return names
 		}
-		assert.Contains(t, names, "search_knowledge")
-		assert.Contains(t, names, "list_articles")
-		assert.NotContains(t, names, "list_conversations")
-		assert.NotContains(t, names, "draft_reply")
-		assert.NotContains(t, names, "load_tools", "a routine never runs behind the tool layer")
+		assert.Equal(t, offered(0), offered(1))
+		assert.Contains(t, offered(0), "read_skill")
+		assert.Contains(t, offered(0), "search_knowledge")
+		assert.Contains(t, offered(0), "list_conversations")
+		assert.NotContains(t, offered(0), "draft_reply")
+		assert.NotContains(t, offered(0), "github_list_merged_prs", "no repositories were picked")
+		assert.NotContains(t, offered(0), "load_tools", "a routine never runs behind the tool layer")
+		var system string
+		for _, block := range sent[0].System {
+			system += block.Text
+		}
+		assert.Contains(t, system, "audit_articles")
+		assert.Contains(t, system, "This is the routine's first run.")
+	})
+
+	t.Run("teaches a skill when the model reads it", func(t *testing.T) {
+		t.Parallel()
+		k := newDesk(t)
+		routine := k.routine(testkit.JSON{"name": "Audit", "prompt": "Audit articles."})
+		k.llm.Script(tools(call("read_skill", map[string]any{"name": "audit_articles"})), reply("Done."))
+
+		k.runRoutine(routine, true).AssertJSONPath("data.steps.0.summary", "Read how to audit articles")
+
+		sent := k.llm.Sent()
+		taught := sent[1].Messages[len(sent[1].Messages)-1].Parts[0].Text
+		assert.Contains(t, taught, "How to audit help articles.")
 	})
 
 	t.Run("reads a test case a model sent as a string", func(t *testing.T) {

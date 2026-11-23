@@ -118,16 +118,6 @@ func (a *Routines) Templates(m authz.Membership) ([]operator.RoutineTemplate, er
 }
 
 /*
-Tools lists the tools a routine's prompt may name.
-*/
-func (a *Routines) Tools(m authz.Membership) ([]operator.RoutineTool, error) {
-	if !m.Can("ai:read") {
-		return nil, exceptions.ErrForbidden
-	}
-	return operator.RoutineTools(), nil
-}
-
-/*
 List returns the workspace's routines, newest first, of one status when
 asked, each with its next runs and what it spent this month.
 */
@@ -299,8 +289,8 @@ func (a *Routines) fromTemplate(in RoutineInput) (models.OperatorRoutine, error)
 		return models.OperatorRoutine{}, invalid("template_invalid", "There is no such template.", "template_key")
 	}
 	r := models.OperatorRoutine{
-		Name: t.Name, Prompt: t.Prompt, Cadence: t.Cadence, CronExpr: &t.Expr, Permissions: t.Permissions,
-		ToolGroups: t.ToolGroups, InboxIds: []ids.UUID{}, WritePolicies: policiesOf(t.WritePolicies),
+		Name: t.Name, Prompt: t.Prompt, Cadence: t.Cadence, CronExpr: &t.Expr, Permissions: abilitiesOf(in.Membership),
+		ToolGroups: operator.RoutineGroups(), InboxIds: []ids.UUID{}, WritePolicies: json.RawMessage("{}"),
 		Scope: json.RawMessage("{}"), MaxModelCalls: 16, MaxToolCalls: 50, NotifyPolicy: t.NotifyPolicy,
 		Delivery: json.RawMessage("{}"), State: json.RawMessage("{}"), MaxConsecutiveFailures: 3,
 	}
@@ -505,13 +495,15 @@ func findRoutine(ctx context.Context, q *models.Queries, m authz.Membership, id 
 }
 
 /*
-policiesOf stores a template's write policies, none switched off when
-it has none.
+abilitiesOf is what a routine runs with: every routine ability its
+creator holds.
 */
-func policiesOf(p map[operator.Group]operator.Policy) json.RawMessage {
-	if len(p) == 0 {
-		return json.RawMessage("{}")
+func abilitiesOf(m authz.Membership) []string {
+	out := []string{}
+	for _, p := range operator.RoutineAbilities() {
+		if m.Can(p) {
+			out = append(out, p)
+		}
 	}
-	raw, _ := json.Marshal(p)
-	return raw
+	return out
 }

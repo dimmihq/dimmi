@@ -96,8 +96,6 @@ type OperatorRoutineTemplate struct {
 	Prompt         string   `json:"prompt"`
 	Cadence        string   `json:"cadence"`
 	CronExpression string   `json:"cron_expression"`
-	ToolGroups     []string `json:"tool_groups"`
-	Permissions    []string `json:"permissions"`
 	NotifyPolicy   string   `json:"notify_policy"`
 	Requires       []string `json:"requires"`
 }
@@ -110,33 +108,8 @@ func NewOperatorRoutineTemplates(list []operator.RoutineTemplate) []OperatorRout
 	for i, t := range list {
 		out[i] = OperatorRoutineTemplate{
 			Key: t.Key, Object: "operator_routine_template", Name: t.Name, Description: t.Description,
-			Prompt: t.Prompt, Cadence: t.Cadence, CronExpression: t.Expr, ToolGroups: orStrings(t.ToolGroups),
-			Permissions: orStrings(t.Permissions), NotifyPolicy: t.NotifyPolicy, Requires: orStrings(t.Requires),
-		}
-	}
-	return out
-}
-
-/*
-OperatorRoutineTool is one of Operator's tools a routine's prompt may
-name: its name, the tool group that gives it to a routine ("routine" for
-those every routine has), and what it does.
-*/
-type OperatorRoutineTool struct {
-	Name        string `json:"name"`
-	Object      string `json:"object"`
-	Group       string `json:"group"`
-	Description string `json:"description"`
-}
-
-/*
-NewOperatorRoutineTools shapes the tools.
-*/
-func NewOperatorRoutineTools(list []operator.RoutineTool) []OperatorRoutineTool {
-	out := make([]OperatorRoutineTool, len(list))
-	for i, t := range list {
-		out[i] = OperatorRoutineTool{
-			Name: t.Name, Object: "operator_routine_tool", Group: t.Group, Description: t.Description,
+			Prompt: t.Prompt, Cadence: t.Cadence, CronExpression: t.Expr, NotifyPolicy: t.NotifyPolicy,
+			Requires: orStrings(t.Requires),
 		}
 	}
 	return out

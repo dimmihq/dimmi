@@ -24,13 +24,6 @@ type OperatorRoutineTemplatesOutput struct {
 }
 
 /*
-OperatorRoutineToolsOutput is the tools a routine's prompt may name.
-*/
-type OperatorRoutineToolsOutput struct {
-	Body fhttp.Collection[resources.OperatorRoutineTool]
-}
-
-/*
 OperatorRoutineRunsOutput is a routine's runs.
 */
 type OperatorRoutineRunsOutput struct {

@@ -109,12 +109,13 @@ func TestOperatorPassageEdits(t *testing.T) {
 		assert.Contains(t, result, "is not in the article")
 	})
 
-	t.Run("lets a knowledge template change only articles", func(t *testing.T) {
+	t.Run("refuses a kind of change switched off for the routine", func(t *testing.T) {
 		t.Parallel()
 		k := newDesk(t)
 		conv := k.conversation("Refund please")
 		number := k.d.Owner.GetJSON("/api/v1/conversations/" + conv).AssertOK().String("data.number")
 		routine := k.routine(testkit.JSON{"template_key": operator.TemplateStaleness})
+		k.setRoutine(routine, `write_policies = '{"conversations":"off"}'`)
 		k.llm.Script(tools(call("propose_changes", tagging(t, number, ""))), reply("Tried."))
 
 		k.runRoutine(routine, true).AssertJSONPath("data.changesets_count", float64(0))

@@ -180,10 +180,10 @@ func (r *routineRun) allows(e *Engine, t tool) bool {
 	switch {
 	case t.spec.Name == "remember" || t.spec.Name == "draft_reply":
 		return false
-	case t.routine || t.spec.Name == "list_recent_changesets":
-		return true
 	case t.group == RoutineGroupGitHub:
 		return r.hasGroup(RoutineGroupGitHub) && r.scope.GitHub != nil && e.Services.GitHub != nil
+	case t.routine || t.spec.Name == "list_recent_changesets":
+		return true
 	}
 	return r.hasGroup(routineGroupOf(t))
 }
@@ -433,6 +433,18 @@ func dedupKey(key string) string {
 }
 
 /*
+RoutineAbilities are the permissions a routine runs with, of those its
+owner holds: enough to read what support work touches and to suggest
+changes to articles and procedures, and nothing else of the owner's.
+*/
+func RoutineAbilities() []string {
+	return []string{
+		"conversations:read", "contacts:read", "articles:read", "articles:write", "help_centers:read_settings",
+		"ai:read", "ai_actions:read", "ai_agent:manage", "github:read",
+	}
+}
+
+/*
 ErrRoutineRunning refuses a run while the routine's last one is still
 going.
 */
@@ -453,6 +465,8 @@ answer is the message the team reads later on the routine's thread.
 - To edit an article, read it with get_article and send edits: each the exact passage to replace,
   copied word for word, and its replacement. When a passage appears more than once in the
   article, copy more of the sentences around it until it appears only once, and try again.
+- Never tag, assign, note or otherwise change a conversation unless the routine's instructions ask
+  for exactly that.
 - Suggest only the kinds of change the routine asks for; when you cannot make one, say so in your
   message instead of suggesting something else.
 - Before you finish, save what the next run needs with routine_set_state.

@@ -46,6 +46,7 @@ recent suggestions every run may use.
 */
 func (e *Engine) routineTools() []tool {
 	return []tool{
+		e.skillTool(),
 		{spec: contracts.ToolSpec{
 			Name:        "routine_get_state",
 			Description: "Read what this routine kept from its earlier runs, such as cursors and what it covered.",

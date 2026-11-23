@@ -20,25 +20,17 @@ come from the template named, or the custom one; on update, fields left
 out keep their values.
 */
 type OperatorRoutineBody struct {
-	Name                *string                    `json:"name,omitempty"                  validate:"omitempty,max=120"`
-	Description         *string                    `json:"description,omitempty"           validate:"omitempty,max=500"`
-	Prompt              *string                    `json:"prompt,omitempty"                validate:"max=8000"`
-	Cadence             *string                    `json:"cadence,omitempty"               validate:"omitempty,max=20"`
-	CronExpression      *string                    `json:"cron_expression,omitempty"       validate:"omitempty,max=100"`
-	RunAt               *time.Time                 `json:"run_at,omitempty"`
-	Timezone            *string                    `json:"timezone,omitempty"              validate:"omitempty,max=64"`
-	OwnerID             *string                    `json:"owner_id,omitempty"              validate:"omitempty,max=64"`
-	Permissions         []string                   `json:"permissions,omitempty"           validate:"omitempty,max=64"`
-	ToolGroups          []string                   `json:"tool_groups,omitempty"           validate:"omitempty,max=16"`
-	InboxIDs            []string                   `json:"inbox_ids,omitempty"             validate:"omitempty,max=100"`
-	WritePolicies       map[string]string          `json:"write_policies,omitempty"`
-	Scope               *OperatorRoutineScopeInput `json:"scope,omitempty"`
-	Model               *string                    `json:"model,omitempty"                 validate:"omitempty,max=200"`
-	Effort              *string                    `json:"effort,omitempty"                validate:"omitempty,max=10"`
-	MaxModelCalls       *int32                     `json:"max_model_calls,omitempty"`
-	MaxToolCalls        *int32                     `json:"max_tool_calls,omitempty"`
-	MonthlyBudgetMicros *int64                     `json:"monthly_budget_micros,omitempty"`
-	NotifyPolicy        *string                    `json:"notify_policy,omitempty"         validate:"omitempty,max=20"`
+	Name           *string                    `json:"name,omitempty"                  validate:"omitempty,max=120"`
+	Description    *string                    `json:"description,omitempty"           validate:"omitempty,max=500"`
+	Prompt         *string                    `json:"prompt,omitempty"                validate:"max=8000"`
+	Cadence        *string                    `json:"cadence,omitempty"               validate:"omitempty,max=20"`
+	CronExpression *string                    `json:"cron_expression,omitempty"       validate:"omitempty,max=100"`
+	RunAt          *time.Time                 `json:"run_at,omitempty"`
+	Timezone       *string                    `json:"timezone,omitempty"              validate:"omitempty,max=64"`
+	OwnerID        *string                    `json:"owner_id,omitempty"              validate:"omitempty,max=64"`
+	InboxIDs       []string                   `json:"inbox_ids,omitempty"             validate:"omitempty,max=100"`
+	Scope          *OperatorRoutineScopeInput `json:"scope,omitempty"`
+	NotifyPolicy   *string                    `json:"notify_policy,omitempty"         validate:"omitempty,max=20"`
 
 	Delivery *OperatorRoutineDeliveryInput `json:"delivery,omitempty"`
 }
@@ -55,17 +47,15 @@ type StoreOperatorRoutineRequest struct {
 
 /*
 UpdateOperatorRoutineRequest is the input of PATCH
-/operator/routines/{routine}: settings to change, active or paused,
-clear_budget to drop the monthly budget, and reset_state to forget what
-the routine kept between runs.
+/operator/routines/{routine}: settings to change, active or paused, and
+reset_state to forget what the routine kept between runs.
 */
 type UpdateOperatorRoutineRequest struct {
 	Routine string `path:"routine"`
 	Body    struct {
 		OperatorRoutineBody
-		Status      *string `json:"status,omitempty"       validate:"omitempty,max=20"`
-		ClearBudget bool    `json:"clear_budget,omitempty"`
-		ResetState  bool    `json:"reset_state,omitempty"`
+		Status     *string `json:"status,omitempty"       validate:"omitempty,max=20"`
+		ResetState bool    `json:"reset_state,omitempty"`
 	}
 }
 

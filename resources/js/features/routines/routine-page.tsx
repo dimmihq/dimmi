@@ -5,14 +5,7 @@
  * real data but changes nothing, pauses or resumes it, and deletes it. A
  * routine that paused itself says why, with the way back.
  */
-import {
-  RiArrowLeftSLine,
-  RiCloseLine,
-  RiDeleteBin6Line,
-  RiFlaskLine,
-  RiPauseLine,
-  RiPlayLine,
-} from "@remixicon/react";
+import { RiArrowLeftSLine, RiDeleteBin6Line, RiFlaskLine, RiPauseLine, RiPlayLine } from "@remixicon/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useBlocker, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
@@ -42,12 +35,13 @@ import {
   updateRoutine,
 } from "@/lib/api/routines";
 import { formatDateTime, formatRelative } from "@/lib/i18n/format";
+import { cx } from "@/utils/cx";
 
 import { draftFromRoutine, inputOf, problems, type RoutineDraft, sameDraft } from "./draft";
 import { lookOf } from "./looks";
 import { RoutineFields } from "./routine-fields";
 import { OutcomeChip } from "./routine-list";
-import { RunView } from "./run-view";
+import { RunPanel } from "./run-panel";
 import { runLine, triggers } from "./runs";
 import { describeRoutine } from "./timing";
 import { useRoutineWatch } from "./use-run-live";
@@ -185,7 +179,9 @@ function Loaded({
               />
             ) : null}
             {tab === "runs" ? <RoutineStats routine={routine} /> : null}
-            {tab === "runs" ? <Runs workspace={workspace} routine={routine} /> : null}
+            {tab === "runs" ? (
+              <Runs workspace={workspace} routine={routine} onOpen={wide ? setWatching : undefined} />
+            ) : null}
             {tab === "settings" ? (
               <RoutineFields
                 key={generation}
@@ -226,7 +222,13 @@ function Loaded({
         />
       </Panel>
       {watching ? (
-        <WatchPanel workspace={workspace} routine={routine} run={watching} onClose={() => setWatching(null)} />
+        <RunPanel
+          workspace={workspace}
+          routine={routine}
+          run={watching}
+          onPick={setWatching}
+          onClose={() => setWatching(null)}
+        />
       ) : null}
     </div>
   );
@@ -267,7 +269,6 @@ function Paused({
 function RoutineStats({ routine }: { routine: Routine }) {
   const c = routine.suggestions;
   const decided = c.applied + c.declined + c.reverted;
-  const budget = routine.monthly_budget_micros;
   const usd = (micros: number) => `$${(micros / 1_000_000).toFixed(2)}`;
 
   return (
@@ -295,14 +296,22 @@ function RoutineStats({ routine }: { routine: Routine }) {
           label: "Spend this month",
           hint: "What this routine's runs cost this month, in US dollars.",
           value: usd(routine.month_spend_micros),
-          caption: budget === null ? "No budget set" : `of ${usd(budget)} budget`,
         },
       ]}
     />
   );
 }
 
-function Runs({ workspace, routine }: { workspace: string; routine: Routine }) {
+function Runs({
+  workspace,
+  routine,
+  onOpen,
+}: {
+  workspace: string;
+  routine: Routine;
+  /* Opens a run beside the routine; without it a run opens on its own page. */
+  onOpen?: (run: string) => void;
+}) {
   const { data, isPending } = useQuery(routineRunsQuery(workspace, routine.id));
   const next = routine.status === "active" && routine.next_run_at;
 
@@ -322,7 +331,7 @@ function Runs({ workspace, routine }: { workspace: string; routine: Routine }) {
         />
       ) : null}
       {(data ?? []).map((r) => (
-        <RunRow key={r.id} routine={routine.id} run={r} />
+        <RunRow key={r.id} routine={routine.id} run={r} onOpen={onOpen} />
       ))}
     </Section>
   );
@@ -342,7 +351,7 @@ function runTint(r: RoutineRun): "rose" | "lime" | "neutral" {
 /*
  * RunRow is one run, opening it as it happens or as it went.
  */
-function RunRow({ routine, run: r }: { routine: string; run: RoutineRun }) {
+function RunRow({ routine, run: r, onOpen }: { routine: string; run: RoutineRun; onOpen?: (run: string) => void }) {
   const live = r.status === "running" || r.status === "queued";
   const cost = `$${(r.cost_micros / 1_000_000).toFixed(3)}`;
   const row = (
@@ -358,12 +367,21 @@ function RunRow({ routine, run: r }: { routine: string; run: RoutineRun }) {
       ) : null}
     </Item>
   );
+  const shape =
+    "-ms-3 block ps-3 transition-colors duration-150 first:rounded-t-2xl last:rounded-b-2xl hover:bg-background-secondary-hover";
+  if (onOpen) {
+    return (
+      <button
+        type="button"
+        onClick={() => onOpen(r.id)}
+        className={cx(shape, "w-[calc(100%+0.75rem)] cursor-pointer text-start")}
+      >
+        {row}
+      </button>
+    );
+  }
   return (
-    <Link
-      to="/d/routines/$routine/runs/$run"
-      params={{ routine, run: r.id }}
-      className="-ms-3 block ps-3 transition-colors duration-150 first:rounded-t-2xl last:rounded-b-2xl hover:bg-background-secondary-hover"
-    >
+    <Link to="/d/routines/$routine/runs/$run" params={{ routine, run: r.id }} className={shape}>
       {row}
     </Link>
   );
@@ -432,37 +450,5 @@ function Header({
         </div>
       ) : null}
     </header>
-  );
-}
-
-/*
- * WatchPanel is the run just started, beside the routine, as it works.
- */
-function WatchPanel({
-  workspace,
-  routine,
-  run,
-  onClose,
-}: {
-  workspace: string;
-  routine: Routine;
-  run: string;
-  onClose: () => void;
-}) {
-  return (
-    <Panel label="Run" className="h-full w-[420px] shrink-0">
-      <header className="flex h-12 shrink-0 items-center gap-2 ps-4 pe-2.5 pt-[7px]">
-        <h2 className="min-w-0 flex-1 truncate text-body-medium text-text-primary">Run</h2>
-        <Link
-          to="/d/routines/$routine/runs/$run"
-          params={{ routine: routine.id, run }}
-          className="text-body-2-regular text-text-secondary hover:text-text-primary"
-        >
-          Open
-        </Link>
-        <IconButton size="small" icon={RiCloseLine} aria-label="Close run" onClick={onClose} />
-      </header>
-      <RunView workspace={workspace} routine={routine.id} run={run} label={routine.name} />
-    </Panel>
   );
 }

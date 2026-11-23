@@ -13,17 +13,6 @@ export type RoutineCadence = "daily" | "weekly" | "monthly" | "cron" | "once";
 export type RoutineStatus = "active" | "paused" | "completed";
 export type NotifyPolicy = "on_findings" | "always" | "on_error_only";
 export type RoutineOutcome = "findings" | "noop" | "failed" | "skipped";
-export type RoutineToolGroup = "conversations" | "knowledge" | "insights" | "changes" | "actions" | "github";
-
-export const ROUTINE_TOOL_GROUPS: RoutineToolGroup[] = [
-  "conversations",
-  "knowledge",
-  "insights",
-  "changes",
-  "actions",
-  "github",
-];
-
 export interface RoutineGitHubScope {
   installation_id: string;
   repositories: string[];
@@ -60,16 +49,8 @@ export interface Routine {
   next_runs: string[];
   created_by: string | null;
   owner_id: string | null;
-  permissions: string[];
-  tool_groups: RoutineToolGroup[];
   inbox_ids: string[];
-  write_policies: Record<string, string>;
   scope: { help_center_ids: string[]; github: RoutineGitHubScope | null };
-  model: string | null;
-  effort: "low" | "medium" | "high" | null;
-  max_model_calls: number;
-  max_tool_calls: number;
-  monthly_budget_micros: number | null;
   month_spend_micros: number;
   suggestions: RoutineSuggestionCounts;
   notify_policy: NotifyPolicy;
@@ -85,17 +66,6 @@ export interface Routine {
   updated_at: string;
 }
 
-/*
- * RoutineTool is one of Operator's tools a routine's prompt may name, with
- * the tool group that gives it to a routine: "routine" for those every
- * routine has.
- */
-export interface RoutineTool {
-  name: string;
-  group: RoutineToolGroup | "routine";
-  description: string;
-}
-
 export interface RoutineTemplate {
   key: string;
   name: string;
@@ -103,8 +73,6 @@ export interface RoutineTemplate {
   prompt: string;
   cadence: RoutineCadence;
   cron_expression: string;
-  tool_groups: RoutineToolGroup[];
-  permissions: string[];
   notify_policy: NotifyPolicy;
   requires: string[];
 }
@@ -146,17 +114,11 @@ export interface RoutineInput {
   run_at?: string;
   timezone?: string;
   owner_id?: string;
-  permissions?: string[];
-  tool_groups?: RoutineToolGroup[];
   inbox_ids?: string[];
   scope?: {
     help_center_ids?: string[];
     github?: { installation_id: string; repositories: string[]; base_branch?: string; ignore_labels?: string[] };
   };
-  model?: string;
-  effort?: string;
-  monthly_budget_micros?: number;
-  clear_budget?: boolean;
   notify_policy?: NotifyPolicy;
   delivery?: RoutineDelivery;
   status?: "active" | "paused";
@@ -184,14 +146,6 @@ export function routineTemplatesQuery(workspace: string) {
   return queryOptions({
     queryKey: routineKeys.templates(workspace),
     queryFn: () => request<RoutineTemplate[]>("GET", "/operator/routine-templates", undefined, { workspace }),
-    staleTime: 5 * 60_000,
-  });
-}
-
-export function routineToolsQuery(workspace: string) {
-  return queryOptions({
-    queryKey: [...routineKeys.all(workspace), "tools"],
-    queryFn: () => request<RoutineTool[]>("GET", "/operator/routine-tools", undefined, { workspace }),
     staleTime: 5 * 60_000,
   });
 }

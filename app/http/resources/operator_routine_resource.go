@@ -92,16 +92,8 @@ type OperatorRoutine struct {
 	NextRuns               []time.Time             `json:"next_runs"`
 	CreatedBy              *string                 `json:"created_by"`
 	OwnerID                *string                 `json:"owner_id"`
-	Permissions            []string                `json:"permissions"`
-	ToolGroups             []string                `json:"tool_groups"`
 	InboxIDs               []string                `json:"inbox_ids"`
-	WritePolicies          map[string]string       `json:"write_policies"`
 	Scope                  OperatorRoutineScope    `json:"scope"`
-	Model                  *string                 `json:"model"`
-	Effort                 *string                 `json:"effort"`
-	MaxModelCalls          int32                   `json:"max_model_calls"`
-	MaxToolCalls           int32                   `json:"max_tool_calls"`
-	MonthlyBudgetMicros    *int64                  `json:"monthly_budget_micros"`
 	MonthSpendMicros       int64                   `json:"month_spend_micros"`
 	Suggestions            OperatorRoutineCounts   `json:"suggestions"`
 	NotifyPolicy           string                  `json:"notify_policy"`
@@ -129,17 +121,14 @@ func NewOperatorRoutine(v operatorchat.RoutineView) OperatorRoutine {
 		CronExpression: r.CronExpr, RunAt: r.RunAt, Timezone: r.Timezone, NextRunAt: r.NextRunAt,
 		NextRuns:  orTimes(v.NextRuns),
 		CreatedBy: optionalID(models.PrefixMember, r.CreatedByMemberID),
-		OwnerID:   optionalID(models.PrefixMember, r.OwnerMemberID), Permissions: orStrings(r.Permissions),
-		ToolGroups: orStrings(r.ToolGroups), InboxIDs: publicIDs(models.PrefixInbox, r.InboxIds),
-		WritePolicies: map[string]string{}, Scope: routineScope(r.Scope), Model: r.Model, Effort: r.Effort,
-		MaxModelCalls: r.MaxModelCalls, MaxToolCalls: r.MaxToolCalls, MonthlyBudgetMicros: r.MonthlyBudgetMicros,
+		OwnerID:   optionalID(models.PrefixMember, r.OwnerMemberID),
+		InboxIDs:  publicIDs(models.PrefixInbox, r.InboxIds), Scope: routineScope(r.Scope),
 		MonthSpendMicros: v.MonthSpend, Suggestions: countsOf(v.Suggestions), NotifyPolicy: r.NotifyPolicy,
 		Delivery: routineDelivery(r.Delivery),
 		State:    r.State, Status: r.Status, PauseReason: r.PauseReason, ConsecutiveFailures: r.ConsecutiveFailures,
 		MaxConsecutiveFailures: r.MaxConsecutiveFailures, LastRunAt: r.LastRunAt, LastSuccessAt: r.LastSuccessAt,
 		LastOutcome: r.LastOutcome, CreatedAt: r.CreatedAt, UpdatedAt: r.UpdatedAt,
 	}
-	_ = json.Unmarshal(r.WritePolicies, &out.WritePolicies)
 	if len(out.State) == 0 {
 		out.State = json.RawMessage("{}")
 	}

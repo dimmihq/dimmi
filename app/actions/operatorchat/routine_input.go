@@ -175,9 +175,6 @@ func applyAccess(ctx context.Context, q *models.Queries, r *models.OperatorRouti
 	if err := applyScope(ctx, q, r, in); err != nil {
 		return err
 	}
-	if slices.Contains(r.ToolGroups, operator.RoutineGroupGitHub) && operator.ScopeOf(r.Scope).GitHub == nil {
-		return invalid("github_scope_required", "Pick the GitHub repositories the routine reads.", "scope.github")
-	}
 	return nil
 }
 
