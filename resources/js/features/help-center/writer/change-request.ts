@@ -76,14 +76,16 @@ function unitsOf(doc: Node): Unit[] {
  * addedWidget draws one requested line, read-only, in green: an item
  * inside the list it joins, or a list or block of its own.
  */
-function addedWidget(unit: Unit, inList: boolean): () => HTMLElement {
+function addedWidget(unit: Unit, inList: boolean, together: Unit[] = [unit]): () => HTMLElement {
   return () => {
     const serializer = DOMSerializer.fromSchema(unit.node.type.schema);
     let dom: HTMLElement;
     if (unit.list && inList) {
       dom = serializer.serializeNode(unit.node) as HTMLElement;
     } else if (unit.list) {
-      dom = serializer.serializeNode(unit.list.create(null, Fragment.from(unit.node))) as HTMLElement;
+      // A new list or table is drawn whole, its items or rows together, not one list per item.
+      const items = Fragment.from(together.map((u) => u.node));
+      dom = serializer.serializeNode(unit.list.create(null, items)) as HTMLElement;
     } else {
       dom = document.createElement("div");
       dom.appendChild(serializer.serializeNode(unit.node));
@@ -93,6 +95,28 @@ function addedWidget(unit: Unit, inList: boolean): () => HTMLElement {
     dom.dataset.change = "added";
     return dom;
   };
+}
+
+/*
+ * runOf is the added line at a change and the added lines right after
+ * it that belong to the same new list or table.
+ */
+function runOf(changes: ReturnType<typeof diffBlocks>, at: number, after: Unit[]): Unit[] {
+  const first = changes[at];
+  if (first.kind !== "add") {
+    return [];
+  }
+  const unit = after[first.to];
+  const run = [unit];
+  for (let i = at + 1; unit.list && i < changes.length; i++) {
+    const next = changes[i];
+    const more = next.kind === "add" ? after[next.to] : undefined;
+    if (!more || more.list !== unit.list || more.after !== unit.after) {
+      break;
+    }
+    run.push(more);
+  }
+  return run;
 }
 
 /*
@@ -109,21 +133,34 @@ function marksOf(doc: Node, requested: Requested): DecorationSet {
       before.map((u) => Decoration.node(u.pos, u.pos + u.node.nodeSize, { class: addedClass })),
     );
   }
-  const after = unitsOf(requested.proposed);
+  return DecorationSet.create(doc, changeMarks(before, unitsOf(requested.proposed)));
+}
+
+/*
+ * changeMarks marks the lines a request removes and draws the lines it
+ * adds, each where it belongs among the document's lines.
+ */
+function changeMarks(before: Unit[], after: Unit[]): Decoration[] {
   const marks: Decoration[] = [];
-  let at = before[0]?.pos ?? 0;
-  let inList = Boolean(before[0]?.list);
-  let blockEnd = before[0]?.after ?? 0;
-  for (const change of diffBlocks(
+  const first = before[0];
+  let at = first ? first.pos : 0;
+  let inList = Boolean(first?.list);
+  let blockEnd = first ? first.after : 0;
+  const changes = diffBlocks(
     before.map((u) => u.key),
     after.map((u) => u.key),
-  )) {
+  );
+  for (let i = 0; i < changes.length; i++) {
+    const change = changes[i];
     if (change.kind === "add") {
       const unit = after[change.to];
+      // The items or rows of one new list or table that follow each other are drawn as one.
+      const together = inList ? [unit] : runOf(changes, i, after);
+      i += together.length - 1;
       // The whole line is the key, so a line whose wording changed anywhere is drawn again.
-      const key = `add:${change.to}:${unit.key}`;
+      const key = `add:${change.to}:${together.map((u) => u.key).join("|")}`;
       const where = inList && !unit.list ? blockEnd : at;
-      marks.push(Decoration.widget(where, addedWidget(unit, inList), { side: change.to, key }));
+      marks.push(Decoration.widget(where, addedWidget(unit, inList, together), { side: change.to, key }));
       continue;
     }
     const unit = before[change.from];
@@ -134,7 +171,7 @@ function marksOf(doc: Node, requested: Requested): DecorationSet {
     inList = Boolean(unit.list);
     blockEnd = unit.after;
   }
-  return DecorationSet.create(doc, marks);
+  return marks;
 }
 
 /*

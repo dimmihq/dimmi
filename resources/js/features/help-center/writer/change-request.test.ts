@@ -59,6 +59,16 @@ describe("change request", () => {
     expect(added).toEqual([long.replace("the counter", "the post office counter")]);
   });
 
+  it("draws a new list and a new table whole, not one per item or row", () => {
+    const table = "| Plan | Labels |\n| --- | --- |\n| Free | 50 |\n| Growth | 1,500 |";
+    const dom = review("Intro", `Intro\n\n- one\n- two\n- three\n\n${table}`);
+
+    const added = [...dom.querySelectorAll("[data-change=added]")];
+    expect(added.map((n) => n.tagName)).toEqual(["UL", "TABLE"]);
+    expect(added[0].querySelectorAll("li")).toHaveLength(3);
+    expect(added[1].querySelectorAll("tr")).toHaveLength(3);
+  });
+
   it("marks a reworded paragraph and adds a new one after it", () => {
     const dom = review("First\n\nSecond", "First\n\nSecond, reworded\n\nThird");
 
