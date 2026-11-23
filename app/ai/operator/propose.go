@@ -57,17 +57,17 @@ const proposeSchema = `{"type":"object","required":["title","reason","operations
 "procedure.edit_draft","procedure.create_test_case"]},
 "conversation":{"type":"integer","description":"Conversation number; leave out for this thread's."},
 "tags":{"type":"array","items":{"type":"string"},"description":"For conversation.tag and untag: tag names."},
-"member":{"type":"string","description":"For conversation.assign: teammate id (mem_...), or none."},
-"team":{"type":"string","description":"For conversation.assign: team id (team_...), or none."},
+"member_id":{"type":"string","description":"For conversation.assign: teammate id (mem_...), or none."},
+"team_id":{"type":"string","description":"For conversation.assign: team id (team_...), or none."},
 "priority":{"type":"string","enum":["none","low","medium","high","urgent"],
 "description":"For conversation.priority."},
 "status":{"type":"string","enum":["open","closed"],"description":"For conversation.status."},
 "title":{"type":"string","description":"For conversation.title: the new subject."},
 "body":{"type":"string","description":"For conversation.note: the note's text."},
-"contact":{"type":"string","description":"For contact.update: customer id (ctc_...); leave out for this ` +
+"contact_id":{"type":"string","description":"For contact.update: customer id (ctc_...); leave out for this ` +
 	`conversation's."},
 "name":{"type":"string","description":"For contact.update: the customer's new name."},
-"procedure":{"type":"string","description":"For the procedure kinds: procedure id (prc_...)."},
+"procedure_id":{"type":"string","description":"For the procedure kinds: procedure id (prc_...)."},
 "definition":{"type":"object","description":"For procedure.edit_draft: the procedure's whole new working ` +
 	`copy, as get_procedure shows it."},
 "test_case":{"type":"object","description":"For procedure.create_test_case: the test, with name, messages ` +
@@ -111,6 +111,25 @@ type opInput struct {
 	Definition   json.RawMessage `json:"definition"`
 	TestCase     json.RawMessage `json:"test_case"`
 	Edits        passageEdits    `json:"edits"`
+	MemberID     string          `json:"member_id"`
+	TeamID       string          `json:"team_id"`
+	ContactID    string          `json:"contact_id"`
+	HelpCenterID string          `json:"help_center_id"`
+	CollectionID string          `json:"collection_id"`
+	ArticleID    string          `json:"article_id"`
+	ProcedureID  string          `json:"procedure_id"`
+}
+
+/*
+named is the operation with every id under one name, whether the model
+sent it as article_id or, as older prompts did, as article.
+*/
+func (in opInput) named() opInput {
+	in.Member, in.Team = either(in.MemberID, in.Member), either(in.TeamID, in.Team)
+	in.Contact, in.Procedure = either(in.ContactID, in.Contact), either(in.ProcedureID, in.Procedure)
+	in.HelpCenter, in.Collection = either(in.HelpCenterID, in.HelpCenter), either(in.CollectionID, in.Collection)
+	in.Article = either(in.ArticleID, in.Article)
+	return in
 }
 
 /*
@@ -136,6 +155,7 @@ func (e *Engine) operations(ctx context.Context, s *session, in []opInput) ([]Op
 	err := e.DB.Transaction(ctx, func(ctx context.Context, tx *database.Tx) error {
 		r := resolver{e: e, s: s, q: models.New(tx)}
 		for i, raw := range in {
+			raw = raw.named()
 			if !slices.Contains(Kinds(), raw.Kind) || raw.Kind == KindAction {
 				return fmt.Errorf("%w: operation %d has an unknown kind %q", errBadArguments, i+1, raw.Kind)
 			}

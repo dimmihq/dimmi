@@ -52,7 +52,7 @@ func (e *Engine) knowledgeTools() []tool {
 		}, handle: e.listArticles},
 		{spec: contracts.ToolSpec{
 			Name: "get_article", Description: "Read one article's working copy in Markdown.",
-			Schema: idSchema("article", "Article id, such as art_..."),
+			Schema: idSchema("article_id", "Article id, such as art_..."),
 		}, handle: e.getArticle},
 		{spec: contracts.ToolSpec{
 			Name: "list_procedures", Description: "List the procedures the AI agent follows, with how often " +
@@ -61,7 +61,7 @@ func (e *Engine) knowledgeTools() []tool {
 		}, handle: e.listProcedures},
 		{spec: contracts.ToolSpec{
 			Name: "get_procedure", Description: "Read one procedure's working copy and live copy as JSON.",
-			Schema: idSchema("procedure", "Procedure id, such as prc_..."),
+			Schema: idSchema("procedure_id", "Procedure id, such as prc_..."),
 		}, handle: e.getProcedure},
 	}
 }
@@ -196,7 +196,7 @@ func (e *Engine) helpCenters(ctx context.Context, s *session) ([]models.HelpCent
 getArticle reads one article's working copy.
 */
 func (e *Engine) getArticle(ctx context.Context, s *session, args json.RawMessage) (result, error) {
-	id, err := e.idArg(args, "article", models.PrefixArticle)
+	id, err := e.idArg(args, "article_id", models.PrefixArticle)
 	if err != nil {
 		return result{}, err
 	}
@@ -234,7 +234,7 @@ func (e *Engine) listProcedures(ctx context.Context, s *session, _ json.RawMessa
 getProcedure reads one procedure.
 */
 func (e *Engine) getProcedure(ctx context.Context, s *session, args json.RawMessage) (result, error) {
-	id, err := e.idArg(args, "procedure", models.PrefixProcedure)
+	id, err := e.idArg(args, "procedure_id", models.PrefixProcedure)
 	if err != nil {
 		return result{}, err
 	}
@@ -256,7 +256,18 @@ func (e *Engine) idArg(args json.RawMessage, field string, prefix models.Prefix)
 	if err := decode(args, &in); err != nil {
 		return ids.UUID{}, err
 	}
-	return e.publicID(in[field], prefix)
+	return e.publicID(either(in[field], in[strings.TrimSuffix(field, "_id")]), prefix)
+}
+
+/*
+either is the first of two values that is set: an id argument under its
+name, or under the shorter name models also send it by.
+*/
+func either(a, b string) string {
+	if strings.TrimSpace(a) != "" {
+		return a
+	}
+	return b
 }
 
 /*

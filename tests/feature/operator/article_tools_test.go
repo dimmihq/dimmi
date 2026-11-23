@@ -49,7 +49,7 @@ func TestOperatorArticleTools(t *testing.T) {
 			schema := string(spec.Schema)
 			if spec.Name == "propose_article_edit" {
 				found = true
-				assert.Contains(t, schema, `"required":["article","edits","title","reason"]`)
+				assert.Contains(t, schema, `"required":["article_id","edits","title","reason"]`)
 			}
 			if spec.Name == "propose_changes" {
 				assert.NotContains(t, schema, "article.edit_draft")
@@ -63,7 +63,7 @@ func TestOperatorArticleTools(t *testing.T) {
 		k := newDesk(t)
 		article := k.article("Label limit")
 		k.llm.Script(tools(call("propose_article_edit", map[string]any{
-			"article": article, "title": "Fix the label allowance", "reason": "Plans changed.",
+			"article_id": article, "title": "Fix the label allowance", "reason": "Plans changed.",
 			"edits": []map[string]any{{
 				"find": "Your plan's monthly label allowance is used up and your plan does not allow overage. " +
 					"The Free plan stops at 50 labels a month.",
@@ -83,7 +83,7 @@ func TestOperatorArticleTools(t *testing.T) {
 		k := newDesk(t)
 		article := k.article("Batches")
 		k.llm.Script(tools(call("propose_article_edit", map[string]any{
-			"article": article, "title": "Fix the batch limit", "reason": "Free has no lower limit.",
+			"article_id": article, "title": "Fix the batch limit", "reason": "Free has no lower limit.",
 			"edits": []map[string]any{
 				{
 					"find":    "A batch can hold at most 1,000 shipments, or 25 on the Free plan.",
@@ -106,7 +106,7 @@ func TestOperatorArticleTools(t *testing.T) {
 		k := newDesk(t)
 		article := k.article("Label limit")
 		k.llm.Script(tools(call("propose_article_edit", map[string]any{
-			"article": article, "title": "Fix", "reason": "x",
+			"article_id": article, "title": "Fix", "reason": "x",
 			"edits": []map[string]any{{"find": "The Free plan stops at 80 labels a month.", "replace": "y"}},
 		})), reply("Could not."))
 
@@ -120,7 +120,7 @@ func TestOperatorArticleTools(t *testing.T) {
 		k := newDesk(t)
 		article := k.article("Label limit")
 		k.llm.Script(tools(call("propose_article_edit", map[string]any{
-			"article": article, "title": "Fix", "reason": "x",
+			"article_id": article, "title": "Fix", "reason": "x",
 			"edits": `[{"find":"The Free plan stops at 50 labels a month.","replace":"Free stops at 50."}]`,
 		})), reply("Suggested."))
 
@@ -136,7 +136,7 @@ func TestOperatorArticleTools(t *testing.T) {
 		k.llm.Script(
 			tools(call("propose_article_edit", map[string]any{"title": "Fix", "reason": "x"})),
 			tools(call("propose_article_edit", map[string]any{
-				"article": "Label limit", "title": "Fix", "reason": "x",
+				"article_id": "Label limit", "title": "Fix", "reason": "x",
 				"edits": []map[string]any{{"find": "a", "replace": "b"}},
 			})),
 			reply("Could not."),
@@ -144,7 +144,7 @@ func TestOperatorArticleTools(t *testing.T) {
 
 		k.ask(k.thread(""), "Fix it").AssertOK().AssertJSONPath("data.changesets.#", float64(0))
 
-		assert.Contains(t, k.toolResult(), `"article" is missing`)
+		assert.Contains(t, k.toolResult(), `"article_id" is missing`)
 		sent := k.llm.Sent()[2].Messages
 		assert.Contains(t, sent[len(sent)-1].Parts[0].Text, "never the title")
 	})

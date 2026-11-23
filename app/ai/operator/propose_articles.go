@@ -31,8 +31,8 @@ const (
 /*
 articleEditSchema is the schema of a suggested fix to one article.
 */
-const articleEditSchema = `{"type":"object","required":["article","edits","title","reason"],"properties":{
-"article":{"type":"string","description":"The id of the article to fix, as get_article and list_articles ` +
+const articleEditSchema = `{"type":"object","required":["article_id","edits","title","reason"],"properties":{
+"article_id":{"type":"string","description":"The id of the article to fix, as get_article and list_articles ` +
 	`show it (art_...). Never its title."},
 "edits":{"type":"array","minItems":1,"maxItems":20,"description":"The passages to replace. Read the article ` +
 	`with get_article first.","items":{"type":"object","required":["find","replace"],"properties":{
@@ -64,8 +64,8 @@ const articleNewSchema = `{"type":"object","required":["article_title","body","t
 "dedup_key":{"type":"string","maxLength":200,"description":"A stable key for this article, like ` +
 	`'gap:sso-setup'. A suggestion with the same key that still waits, or was declined in the last 30 days, ` +
 	`is not made again."},
-"collection":{"type":"string","description":"Collection id (col_...); leave out for none."},
-"help_center":{"type":"string","description":"Help center id (hc_...); leave out for the default."}}}`
+"collection_id":{"type":"string","description":"Collection id (col_...); leave out for none."},
+"help_center_id":{"type":"string","description":"Help center id (hc_...); leave out for the default."}}}`
 
 /*
 articleTools are the tools that suggest changes to help articles.
@@ -93,13 +93,14 @@ proposeArticleEdit suggests a fix to one article.
 */
 func (e *Engine) proposeArticleEdit(ctx context.Context, s *session, args json.RawMessage) (result, error) {
 	var in struct {
-		Article  string       `json:"article"`
-		Edits    passageEdits `json:"edits"`
-		Title    string       `json:"title"`
-		Reason   string       `json:"reason"`
-		DedupKey string       `json:"dedup_key"`
-		NewTitle string       `json:"new_title"`
-		Body     string       `json:"body"`
+		ArticleID string       `json:"article_id"`
+		Article   string       `json:"article"`
+		Edits     passageEdits `json:"edits"`
+		Title     string       `json:"title"`
+		Reason    string       `json:"reason"`
+		DedupKey  string       `json:"dedup_key"`
+		NewTitle  string       `json:"new_title"`
+		Body      string       `json:"body"`
 	}
 	if err := decode(args, &in); err != nil {
 		return result{}, err
@@ -107,7 +108,8 @@ func (e *Engine) proposeArticleEdit(ctx context.Context, s *session, args json.R
 	return e.propose(ctx, s, proposal{
 		Title: in.Title, Reason: in.Reason, DedupKey: in.DedupKey,
 		Operations: []opInput{{
-			Kind: KindArticleEdit, Article: in.Article, Edits: in.Edits, Title: in.NewTitle, Body: in.Body,
+			Kind: KindArticleEdit, Article: either(in.ArticleID, in.Article), Edits: in.Edits,
+			Title: in.NewTitle, Body: in.Body,
 		}},
 	})
 }
@@ -125,6 +127,8 @@ func (e *Engine) proposeArticle(ctx context.Context, s *session, args json.RawMe
 		DedupKey     string `json:"dedup_key"`
 		Collection   string `json:"collection"`
 		HelpCenter   string `json:"help_center"`
+		CollectionID string `json:"collection_id"`
+		HelpCenterID string `json:"help_center_id"`
 	}
 	if err := decode(args, &in); err != nil {
 		return result{}, err
@@ -136,7 +140,7 @@ func (e *Engine) proposeArticle(ctx context.Context, s *session, args json.RawMe
 		Title: in.Title, Reason: in.Reason, DedupKey: in.DedupKey,
 		Operations: []opInput{{
 			Kind: KindArticleNew, Title: in.ArticleTitle, Body: in.Body, Visibility: in.Visibility,
-			Collection: in.Collection, HelpCenter: in.HelpCenter,
+			Collection: either(in.CollectionID, in.Collection), HelpCenter: either(in.HelpCenterID, in.HelpCenter),
 		}},
 	})
 }
