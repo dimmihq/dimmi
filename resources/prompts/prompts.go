@@ -22,7 +22,7 @@ var Files embed.FS
 
 /*
 Tasks is the whole tasks/ tree: the prompt of every job a model does
-besides answering as an agent, such as judging, summarising, sorting
+besides answering as an agent, such as judging, summarizing, sorting
 and playing a simulated customer, one file per job.
 */
 //
