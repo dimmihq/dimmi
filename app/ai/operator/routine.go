@@ -28,7 +28,6 @@ import (
 	"fmt"
 	"slices"
 	"strings"
-	"sync/atomic"
 	"time"
 
 	"github.com/dimmihq/dimmi/framework/database"
@@ -163,7 +162,6 @@ type routineRun struct {
 	dryRun     bool
 	noop       bool
 	noopReason string
-	reads      atomic.Int32
 }
 
 /*

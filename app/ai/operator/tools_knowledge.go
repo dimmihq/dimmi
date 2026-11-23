@@ -205,9 +205,6 @@ func (e *Engine) getArticle(ctx context.Context, s *session, args json.RawMessag
 	if err != nil {
 		return result{}, err
 	}
-	if s.routine != nil && s.routine.reads.Add(1) > maxArticleReads {
-		return result{}, errReadEnough
-	}
 	a, err := e.Services.Articles.Show(ctx, s.m, id)
 	if err != nil {
 		return result{}, err

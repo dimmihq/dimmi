@@ -148,8 +148,7 @@ const auditArticlesSkill = `How to audit help articles.
 1. Call get_routine_state for next_offset and audited_article_hashes; with none saved, start at 0.
 2. Call list_articles once, with offset next_offset and limit 15; when it shows fewer than 15, list
    from 0 again to fill the batch. A run audits one batch of 15, never more: the next run takes
-   the next batch. A run may read 20 articles in all, so keep the other 5 for articles you must
-   compare against.
+   the next batch.
 3. Read each with get_article_by_id. Skip an article audited before whose content has not changed, unless
    it was audited more than 90 days ago and readers rated it poorly since (see get_workspace_report for
    the last 30 days).

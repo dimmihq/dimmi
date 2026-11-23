@@ -1,14 +1,12 @@
 package operator_test
 
 import (
-	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 
 	"github.com/dimmihq/dimmi/framework/testkit"
 
-	"github.com/dimmihq/dimmi/app/contracts"
 	"github.com/dimmihq/dimmi/app/drivers/llm/fake"
 )
 
@@ -27,8 +25,7 @@ func batchFix(article, title, key, replace string) fake.Step {
 
 /*
 TestOperatorRoutineRepeats covers what keeps a routine from repeating
-itself: a fix already waiting is not suggested again whatever its key,
-and one run reads only its share of articles.
+itself: a fix already waiting is not suggested again, whatever its key.
 */
 func TestOperatorRoutineRepeats(t *testing.T) {
 	t.Parallel()
@@ -72,30 +69,5 @@ func TestOperatorRoutineRepeats(t *testing.T) {
 
 		k.runRoutine(routine, false).AssertJSONPath("data.changesets_count", float64(1))
 		k.runRoutine(routine, false).AssertJSONPath("data.changesets_count", float64(1))
-	})
-
-	t.Run("lets one run read only its share of articles", func(t *testing.T) {
-		t.Parallel()
-		k := newDesk(t)
-		article := k.article("Batches")
-		routine := k.routine(testkit.JSON{"name": "Audit", "prompt": "Audit articles."})
-		k.setRoutine(routine, "max_tool_calls = 40")
-		reads := make([]contracts.ToolCall, 21)
-		for i := range reads {
-			reads[i] = call("get_article_by_id", map[string]any{"article_id": article})
-		}
-		k.llm.Script(tools(reads...), reply("Read what I could."))
-
-		k.runRoutine(routine, true)
-
-		refused := 0
-		for _, m := range k.llm.Sent()[1].Messages {
-			for _, part := range m.Parts {
-				if strings.Contains(part.Text, "has read 20 articles") {
-					refused++
-				}
-			}
-		}
-		assert.Equal(t, 1, refused)
 	})
 }
