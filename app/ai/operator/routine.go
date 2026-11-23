@@ -451,7 +451,8 @@ answer is the message the team reads later on the routine's thread.
 - Each propose_changes call changes one article or one procedure (with its tests); suggest changes to
   several in separate calls.
 - To edit an article, read it with get_article and send edits: each the exact passage to replace,
-  copied word for word, and its replacement.
+  copied word for word, and its replacement. When a passage appears more than once in the
+  article, copy more of the sentences around it until it appears only once, and try again.
 - Suggest only the kinds of change the routine asks for; when you cannot make one, say so in your
   message instead of suggesting something else.
 - Before you finish, save what the next run needs with routine_set_state.
@@ -468,4 +469,7 @@ answer is the message the team reads later on the routine's thread.
   sentence or two. Two to four short paragraphs is usually enough.
 - Never mention saving progress for the next run or what a dry run cannot do; the team does
   not need it.
-- Name articles and procedures by title.`
+- Name articles and procedures by title, never by their position in a list ("articles
+  31 to 44"); say how many you read.
+- When you could not make a change, say what is wrong and that it needs a person, not why your
+  edit failed.`
