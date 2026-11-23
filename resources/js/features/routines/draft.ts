@@ -21,6 +21,18 @@ export interface GitHubPick {
   baseBranch: string;
 }
 
+export type NotifyChannel = "in_app" | "email" | "slack";
+
+/*
+ * Notify is who hears about a run and how: the channels, the teammates
+ * told in dimmi and by email, and the Slack channels posted to.
+ */
+export interface Notify {
+  channels: NotifyChannel[];
+  people: string[];
+  slack: string[];
+}
+
 export interface RoutineDraft {
   templateKey: string | null;
   name: string;
@@ -36,10 +48,41 @@ export interface RoutineDraft {
   model: string;
   budgetDollars: string;
   notifyPolicy: NotifyPolicy;
-  delivery: RoutineDelivery;
+  notify: Notify;
 }
 
-const noDelivery: RoutineDelivery = { in_app_member_ids: [], email_member_ids: [], slack_destination_ids: [] };
+/*
+ * notifyOf reads a saved delivery as channels, people and Slack channels.
+ */
+export function notifyOf(d: RoutineDelivery): Notify {
+  const channels: NotifyChannel[] = [];
+  if (d.in_app_member_ids.length > 0) {
+    channels.push("in_app");
+  }
+  if (d.email_member_ids.length > 0) {
+    channels.push("email");
+  }
+  if (d.slack_destination_ids.length > 0) {
+    channels.push("slack");
+  }
+  return {
+    channels,
+    people: [...new Set([...d.in_app_member_ids, ...d.email_member_ids])],
+    slack: [...d.slack_destination_ids],
+  };
+}
+
+/*
+ * deliveryOf is who hears about a run, as the API takes it.
+ */
+export function deliveryOf(n: Notify): RoutineDelivery {
+  const on = (c: NotifyChannel) => n.channels.includes(c);
+  return {
+    in_app_member_ids: on("in_app") ? n.people : [],
+    email_member_ids: on("email") ? n.people : [],
+    slack_destination_ids: on("slack") ? n.slack : [],
+  };
+}
 
 /*
  * draftFromTemplate is a new routine as the template fills it, told to
@@ -59,7 +102,7 @@ export function draftFromTemplate(t: RoutineTemplate, timezone: string, me: stri
     model: "",
     budgetDollars: "",
     notifyPolicy: t.notify_policy,
-    delivery: { ...noDelivery, in_app_member_ids: [me], email_member_ids: [me] },
+    notify: { channels: ["in_app", "email"], people: [me], slack: [] },
   };
 }
 
@@ -83,11 +126,7 @@ export function draftFromRoutine(r: Routine): RoutineDraft {
     model: r.model ?? "",
     budgetDollars: r.monthly_budget_micros === null ? "" : String(r.monthly_budget_micros / 1_000_000),
     notifyPolicy: r.notify_policy,
-    delivery: {
-      in_app_member_ids: [...r.delivery.in_app_member_ids],
-      email_member_ids: [...r.delivery.email_member_ids],
-      slack_destination_ids: [...r.delivery.slack_destination_ids],
-    },
+    notify: notifyOf(r.delivery),
   };
 }
 
@@ -119,7 +158,7 @@ export function inputOf(d: RoutineDraft): RoutineInput {
     inbox_ids: d.inboxIds,
     model: d.model,
     notify_policy: d.notifyPolicy,
-    delivery: d.delivery,
+    delivery: deliveryOf(d.notify),
   };
   if (t.kind === "once") {
     input.run_at = t.runAt ? instantOf(t.runAt, t.timezone) : undefined;
@@ -148,6 +187,29 @@ export function inputOf(d: RoutineDraft): RoutineInput {
 }
 
 /*
+ * createInputOf is the draft as creating a routine takes it: a new
+ * routine has no budget to clear.
+ */
+export function createInputOf(d: RoutineDraft): RoutineInput {
+  const { clear_budget: _, ...input } = inputOf(d);
+  return input;
+}
+
+/*
+ * notifyProblems lists what keeps who hears about a run from being whole.
+ */
+function notifyProblems(n: Notify): string[] {
+  const out: string[] = [];
+  if ((n.channels.includes("in_app") || n.channels.includes("email")) && n.people.length === 0) {
+    out.push("Pick who hears about each run.");
+  }
+  if (n.channels.includes("slack") && n.slack.length === 0) {
+    out.push("Pick the Slack channels to post to.");
+  }
+  return out;
+}
+
+/*
  * problems lists what keeps the draft from saving, as the builder says
  * it before the server has to.
  */
@@ -168,6 +230,7 @@ export function problems(d: RoutineDraft): string[] {
   if (d.toolGroups.includes("github") && (!d.github?.installationId || d.github.repositories.length === 0)) {
     out.push("Pick the GitHub repositories the routine reads.");
   }
+  out.push(...notifyProblems(d.notify));
   if (d.budgetDollars.trim() !== "" && budgetMicros(d.budgetDollars) === null) {
     out.push("A monthly budget is an amount above zero.");
   }

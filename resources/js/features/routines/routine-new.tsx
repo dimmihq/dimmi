@@ -15,7 +15,7 @@ import { Panel, ScrollArea } from "@/features/shell/page";
 import { createRoutine, type RoutineTemplate, routineKeys, routineTemplatesQuery } from "@/lib/api/routines";
 import { callerQuery, workspaceQuery } from "@/lib/api/workspace";
 
-import { draftFromTemplate, inputOf, problems, type RoutineDraft } from "./draft";
+import { createInputOf, draftFromTemplate, problems, type RoutineDraft } from "./draft";
 import { RoutineFields } from "./routine-fields";
 
 export function RoutineNew({ template }: { template: string }) {
@@ -51,7 +51,7 @@ function Builder({
   const queryClient = useQueryClient();
   const blocking = problems(draft);
   const create = useMutation({
-    mutationFn: () => createRoutine(workspace, inputOf(draft)),
+    mutationFn: () => createRoutine(workspace, createInputOf(draft)),
     onSuccess: (r) => {
       void queryClient.invalidateQueries({ queryKey: routineKeys.all(workspace) });
       toast.success(`${r.name} is on. Try a dry run to see what it finds.`);
@@ -91,7 +91,7 @@ function Builder({
         </div>
       </header>
       <ScrollArea ground>
-        <div className="mx-auto flex w-full max-w-220 flex-col gap-8 px-4 pt-6 pb-16 sm:px-6">
+        <div className="mx-auto flex w-full max-w-[760px] flex-col gap-8 px-4 pt-6 pb-16 sm:px-6">
           <RoutineFields workspace={workspace} draft={draft} disabled={false} onChange={setDraft} />
         </div>
       </ScrollArea>

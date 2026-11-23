@@ -65,6 +65,21 @@ func (c *OperatorRoutineController) Templates(ctx context.Context, _ *requests.N
 }
 
 /*
+Tools lists the tools a routine's prompt may name, for the builder's @
+menu.
+*/
+func (c *OperatorRoutineController) Tools(ctx context.Context, _ *requests.NoInput,
+) (*OperatorRoutineToolsOutput, error) {
+	list, err := c.Routines.Tools(membership(ctx))
+	if err != nil {
+		return nil, err
+	}
+	items := resources.NewOperatorRoutineTools(list)
+	page := pagination.Page[resources.OperatorRoutineTool]{Items: items, Limit: len(items)}
+	return &OperatorRoutineToolsOutput{Body: fhttp.NewCollection(page)}, nil
+}
+
+/*
 Index lists the workspace's routines, of filter[status] when sent.
 */
 func (c *OperatorRoutineController) Index(ctx context.Context, _ *requests.NoInput,

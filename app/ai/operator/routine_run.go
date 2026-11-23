@@ -291,7 +291,7 @@ func (e *Engine) renderPrompt(s *session, now time.Time) string {
 		"{{window_start}}", start.UTC().Format(time.RFC3339), "{{window_end}}", now.UTC().Format(time.RFC3339),
 		"{{window_start_date}}", start.UTC().Format(time.DateOnly),
 		"{{window_end_date}}", now.UTC().AddDate(0, 0, 1).Format(time.DateOnly),
-	).Replace(r.Prompt)
+	).Replace(spellTools(r.Prompt))
 }
 
 /*

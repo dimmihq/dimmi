@@ -2,7 +2,15 @@ import { describe, expect, it } from "vitest";
 
 import type { Routine, RoutineTemplate } from "@/lib/api/routines";
 
-import { budgetMicros, draftFromRoutine, draftFromTemplate, inputOf, problems, sameDraft } from "./draft";
+import {
+  budgetMicros,
+  createInputOf,
+  draftFromRoutine,
+  draftFromTemplate,
+  inputOf,
+  problems,
+  sameDraft,
+} from "./draft";
 
 const template: RoutineTemplate = {
   key: "tpl_github_pr_docs_sync",
@@ -21,7 +29,11 @@ describe("drafts", () => {
   it("fills a new routine from its template, told to its creator", () => {
     const d = draftFromTemplate(template, "Europe/Berlin", "mem_me");
     expect(d.timing).toMatchObject({ kind: "daily", hour: 8, minute: 30, timezone: "Europe/Berlin" });
-    expect(d.delivery.email_member_ids).toEqual(["mem_me"]);
+    expect(inputOf(d).delivery).toEqual({
+      in_app_member_ids: ["mem_me"],
+      email_member_ids: ["mem_me"],
+      slack_destination_ids: [],
+    });
     expect(d.github).not.toBeNull();
     expect(problems(d)).toEqual(["Pick the GitHub repositories the routine reads."]);
   });
@@ -70,6 +82,27 @@ describe("drafts", () => {
     expect(d.timing).toMatchObject({ kind: "monthly", monthDay: 0 });
     expect(d.budgetDollars).toBe("2.5");
     expect(sameDraft(d, draftFromRoutine(routine))).toBe(true);
+  });
+
+  it("tells the same people on each channel picked", () => {
+    const d = draftFromTemplate(template, "UTC", "mem_me");
+    d.github = { installationId: "itg_1", repositories: ["acme/app"], baseBranch: "" };
+    d.notify = { channels: ["email", "slack"], people: ["mem_me", "mem_ana"], slack: [] };
+    expect(problems(d)).toEqual(["Pick the Slack channels to post to."]);
+    d.notify.slack = ["dst_1"];
+    expect(inputOf(d).delivery).toEqual({
+      in_app_member_ids: [],
+      email_member_ids: ["mem_me", "mem_ana"],
+      slack_destination_ids: ["dst_1"],
+    });
+    d.notify = { channels: ["in_app"], people: [], slack: [] };
+    expect(problems(d)).toEqual(["Pick who hears about each run."]);
+  });
+
+  it("creates a routine without a budget to clear", () => {
+    const d = draftFromTemplate(template, "UTC", "mem_me");
+    expect(inputOf(d).clear_budget).toBe(true);
+    expect(createInputOf(d)).not.toHaveProperty("clear_budget");
   });
 
   it("reads budgets", () => {

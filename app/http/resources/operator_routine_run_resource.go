@@ -111,3 +111,28 @@ func NewOperatorRoutineTemplates(list []operator.RoutineTemplate) []OperatorRout
 	}
 	return out
 }
+
+/*
+OperatorRoutineTool is one of Operator's tools a routine's prompt may
+name: its name, the tool group that gives it to a routine ("routine" for
+those every routine has), and what it does.
+*/
+type OperatorRoutineTool struct {
+	Name        string `json:"name"`
+	Object      string `json:"object"`
+	Group       string `json:"group"`
+	Description string `json:"description"`
+}
+
+/*
+NewOperatorRoutineTools shapes the tools.
+*/
+func NewOperatorRoutineTools(list []operator.RoutineTool) []OperatorRoutineTool {
+	out := make([]OperatorRoutineTool, len(list))
+	for i, t := range list {
+		out[i] = OperatorRoutineTool{
+			Name: t.Name, Object: "operator_routine_tool", Group: t.Group, Description: t.Description,
+		}
+	}
+	return out
+}

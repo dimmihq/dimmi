@@ -121,3 +121,51 @@ func TestOperatorRoutineOneTarget(t *testing.T) {
 		assert.Contains(t, result, "only one article or one procedure")
 	})
 }
+
+func TestOperatorRoutineToolCatalog(t *testing.T) {
+	t.Parallel()
+
+	t.Run("lists the tools a prompt may name, by group", func(t *testing.T) {
+		t.Parallel()
+		k := newDesk(t)
+
+		res := k.d.Owner.GetJSON("/api/v1/operator/routine-tools").AssertOK()
+
+		var body struct {
+			Data []struct{ Name, Group string } `json:"data"`
+		}
+		res.Decode(&body)
+		groups := map[string]string{}
+		for _, tool := range body.Data {
+			groups[tool.Name] = tool.Group
+		}
+		assert.Equal(t, "routine", groups["list_recent_changesets"])
+		assert.Equal(t, "changes", groups["propose_changes"])
+		assert.Equal(t, "knowledge", groups["search_knowledge"])
+		assert.Equal(t, "github", groups["github_list_merged_prs"])
+		assert.NotContains(t, groups, "remember")
+		assert.NotContains(t, groups, "draft_reply")
+	})
+
+	t.Run("spells each tool chip as the tool's name for the model", func(t *testing.T) {
+		t.Parallel()
+		k := newDesk(t)
+		routine := k.routine(testkit.JSON{
+			"name": "Checker", "prompt": "Call [[tool:list_recent_changesets]] first.",
+		})
+		k.llm.Script(reply("Nothing."))
+
+		k.runRoutine(routine, true)
+
+		sent := k.llm.Sent()
+		require.NotEmpty(t, sent)
+		var prompt string
+		for _, m := range sent[0].Messages {
+			for _, p := range m.Parts {
+				prompt += p.Text
+			}
+		}
+		assert.Contains(t, prompt, "Call list_recent_changesets first.")
+		assert.NotContains(t, prompt, "[[tool:")
+	})
+}

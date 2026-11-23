@@ -18,6 +18,10 @@ Open **Routines** in the sidebar and pick a template, or start from scratch.
 
 A template only fills the builder. You can change the prompt, the schedule and everything else before you create the routine.
 
+## Writing the instructions
+
+The instructions are the prompt Operator follows on every run. Type **@** to call one of Operator's tools, such as **List recent changesets**, and **/** for headings and lists. A tool from a group the routine does not have yet, marked **gives access**, turns that group on when you pick it.
+
 ## What a run does
 
 Each run opens a thread that anyone who can read the routine can open from the routine's **Runs** tab. The thread shows the prompt, each step Operator took, its report, and the changes it suggested. Reply in the thread to ask for more; Operator answers with your permissions.
@@ -57,11 +61,11 @@ Only teammates who can see every inbox the routine reads can open its runs. A ro
 | **After every run** | After every finished run, for digests |
 | **Only when it fails** | After a failed run |
 
-dimmi always tells the team when a routine pauses. Pick who hears about it:
+dimmi always tells the team when a routine pauses. Under **Who hears about it**, pick the **Channels**, then the **People** they reach:
 
-- **Notify in dimmi** sends a notification to the teammates you pick.
-- **Email the report** sends the report and every suggestion.
-- **Post to Slack** posts the report to a Slack channel, then one card per suggestion with **Apply** and **Decline**. Add the channel first under **Settings → Integrations → Slack**.
+- **In dimmi** sends a notification.
+- **Email** sends the report and every suggestion.
+- **Slack** posts the report to the channels you pick, then one card per suggestion with **Apply** and **Decline**. With no Slack channel yet, **Connect Slack** or **Add a Slack channel** takes you to where you add one.
 
 ## Cost
 

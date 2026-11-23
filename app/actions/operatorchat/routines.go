@@ -118,6 +118,16 @@ func (a *Routines) Templates(m authz.Membership) ([]operator.RoutineTemplate, er
 }
 
 /*
+Tools lists the tools a routine's prompt may name.
+*/
+func (a *Routines) Tools(m authz.Membership) ([]operator.RoutineTool, error) {
+	if !m.Can("ai:read") {
+		return nil, exceptions.ErrForbidden
+	}
+	return operator.RoutineTools(), nil
+}
+
+/*
 List returns the workspace's routines, newest first, of one status when
 asked, each with its next runs and what it spent this month.
 */

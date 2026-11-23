@@ -90,6 +90,7 @@ function Loaded({
   const canManage = usePermission(workspace, "ai_agent:manage");
   const [draft, setDraft] = useState<RoutineDraft>(() => draftFromRoutine(routine));
   const [deleting, setDeleting] = useState(false);
+  const [generation, setGeneration] = useState(0);
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const saved = draftFromRoutine(routine);
@@ -154,7 +155,7 @@ function Loaded({
         </Tabs>
       </div>
       <ScrollArea ground>
-        <div className="mx-auto flex w-full max-w-220 flex-col gap-8 px-4 pt-6 pb-28 sm:px-6">
+        <div className="mx-auto flex w-full max-w-[760px] flex-col gap-8 px-4 pt-6 pb-28 sm:px-6">
           {routine.status === "paused" && routine.pause_reason ? (
             <Paused
               routine={routine}
@@ -166,7 +167,13 @@ function Loaded({
           {tab === "runs" ? <RoutineStats routine={routine} /> : null}
           {tab === "runs" ? <Runs workspace={workspace} routine={routine} /> : null}
           {tab === "settings" ? (
-            <RoutineFields workspace={workspace} draft={draft} disabled={!canManage} onChange={setDraft} />
+            <RoutineFields
+              key={generation}
+              workspace={workspace}
+              draft={draft}
+              disabled={!canManage}
+              onChange={setDraft}
+            />
           ) : null}
         </div>
       </ScrollArea>
@@ -178,7 +185,10 @@ function Loaded({
             canSave={dirty && blocking.length === 0}
             error={save.error ? save.error.message : blocking[0] && dirty ? blocking[0] : null}
             onSave={() => save.mutate()}
-            onDiscard={() => setDraft(saved)}
+            onDiscard={() => {
+              setDraft(saved);
+              setGeneration((g) => g + 1);
+            }}
           />
         </div>
       </div>

@@ -84,6 +84,17 @@ export interface Routine {
   updated_at: string;
 }
 
+/*
+ * RoutineTool is one of Operator's tools a routine's prompt may name, with
+ * the tool group that gives it to a routine: "routine" for those every
+ * routine has.
+ */
+export interface RoutineTool {
+  name: string;
+  group: RoutineToolGroup | "routine";
+  description: string;
+}
+
 export interface RoutineTemplate {
   key: string;
   name: string;
@@ -170,6 +181,14 @@ export function routineTemplatesQuery(workspace: string) {
   return queryOptions({
     queryKey: routineKeys.templates(workspace),
     queryFn: () => request<RoutineTemplate[]>("GET", "/operator/routine-templates", undefined, { workspace }),
+    staleTime: 5 * 60_000,
+  });
+}
+
+export function routineToolsQuery(workspace: string) {
+  return queryOptions({
+    queryKey: [...routineKeys.all(workspace), "tools"],
+    queryFn: () => request<RoutineTool[]>("GET", "/operator/routine-tools", undefined, { workspace }),
     staleTime: 5 * 60_000,
   });
 }
