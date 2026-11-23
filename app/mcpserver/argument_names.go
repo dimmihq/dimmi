@@ -51,7 +51,7 @@ goes by another word here, with the name each goes by.
 func plainPaths() map[string]string {
 	return map[string]string{
 		"emoji": "emoji", "provider": "integration_provider", "report": "report_name", "scope": "snooze_list_scope",
-		"changeset": "suggestion_id",
+		"changeset": "suggestion_id", "skill": "skill_name",
 	}
 }
 

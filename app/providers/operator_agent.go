@@ -52,6 +52,7 @@ func bootOperatorAgent(a *app.App) error {
 		Changesets: &operatorchat.Changesets{DB: a.DB, Operator: engine},
 		Memories:   &operatorchat.Memories{DB: a.DB},
 		Usage:      &operatorchat.Usage{DB: a.DB, Clock: a.Clock},
+		Agents:     &operatorchat.Agents{Operator: engine},
 		Routines: &operatorchat.Routines{
 			DB: a.DB, Clock: a.Clock, Audit: a.Actions.RecordAuditLog, Push: aijobs.PushRoutineRun(a.Queue),
 		},

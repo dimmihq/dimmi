@@ -60,6 +60,27 @@ Arguments are named so a model fills them right without reading the REST referen
 
 A call that sends the REST name still works. A call with a missing or unknown argument is refused before anything runs, and the error names the argument and what belongs in it.
 
+## Do Operator's work with your own agent
+
+Any connected agent can do what Operator does. Its suggestions wait for a teammate's review; nothing it suggests applies by itself.
+
+| Tool | What it does |
+| --- | --- |
+| `dimmi_search_knowledge` | Searches what the AI agent answers from. |
+| `dimmi_list_recent_suggestions` | Lists recent suggestions with their `dedup_key`, so nothing is suggested twice. |
+| `dimmi_propose_article_edit` | Suggests a fix to one article by quoting the passages to replace. |
+| `dimmi_propose_new_article` | Suggests a new article as a draft. |
+| `dimmi_propose_procedure_edit` | Suggests an edit to one procedure. |
+| `dimmi_propose_changes` | Suggests tags, assignments, notes, and other conversation changes. |
+| `dimmi_get_routine_state`, `dimmi_save_routine_state` | Keeps what a routine needs between runs. |
+| `dimmi_report_nothing_to_change` | Records a routine run that found nothing, so nobody is notified. |
+| `dimmi_list_skills`, `dimmi_get_skill_by_name` | Reads the steps Operator follows for each kind of routine work. |
+
+- **Same rules as Operator:** a kind of change switched off in **Settings → Operator** is refused.
+- **Routines:** pass `routine_id` to tie a suggestion to a routine. It needs the right to manage the AI agent.
+- **Dry runs:** pass `dry_run: true` with `routine_id` to leave only a preview and keep no state.
+- **Forgiving edits:** a quoted passage that slipped a word still matches, and the answer says what it matched.
+
 ## Built-in safety approvals
 
 dimmi pauses for your explicit confirmation before running sensitive tools:

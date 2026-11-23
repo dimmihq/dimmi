@@ -40,7 +40,9 @@ const (
 labelFields name a record, in the order the first present one is used.
 */
 func labelFields() []string {
-	return []string{"name", "title", "subject", "email", "label", "slug", "key", "kind", "type"}
+	return []string{
+		"name", "title", "suggestion_title", "skill_name", "subject", "email", "label", "slug", "key", "kind", "type",
+	}
 }
 
 /*
@@ -50,6 +52,7 @@ func factFields() []string {
 	return []string{
 		"number", "status", "state", "priority", "role", "channel", "visibility", "enabled", "published",
 		"assignee", "team", "contact", "unread", "created_at", "updated_at", "last_message_at",
+		"suggested_on", "dedup_key", "article_id", "when_to_use",
 	}
 }
 
@@ -211,6 +214,12 @@ func listLine(record map[string]any, raw any) string {
 
 	if who := label(asMap(record["author"])); who != "" {
 		text += ", by " + who
+	}
+
+	for _, change := range asList(record["changes"]) {
+		if said, ok := change.(string); ok {
+			text += "\n  - " + clip(said)
+		}
 	}
 
 	for _, field := range untrustedFields() {

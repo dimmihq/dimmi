@@ -84,11 +84,7 @@ func (e *Engine) searchKnowledge(ctx context.Context, s *session, args json.RawM
 	if e.Services.Knowledge == nil {
 		return result{}, fmt.Errorf("%w: knowledge is not available", errBadArguments)
 	}
-	found, err := e.Services.Knowledge.Search(ctx, s.m.Workspace.ID, in.Query, contracts.KnowledgeSearchOptions{
-		Limit: passagesFor(s), Surface: "operator", Visibility: []contracts.KnowledgeVisibility{
-			contracts.KnowledgeVisibilityPublic, contracts.KnowledgeVisibilityAgentOnly,
-		},
-	})
+	found, err := e.Services.Knowledge.Search(ctx, s.m.Workspace.ID, in.Query, knowledgeSearch(passagesFor(s)))
 	if err != nil {
 		return result{}, err
 	}
@@ -121,6 +117,18 @@ func passagesFor(s *session) int {
 		return 5
 	}
 	return 8
+}
+
+/*
+knowledgeSearch is how Operator searches the knowledge: the best few
+passages of what customers and the AI agent may read.
+*/
+func knowledgeSearch(passages int) contracts.KnowledgeSearchOptions {
+	return contracts.KnowledgeSearchOptions{
+		Limit: passages, Surface: "operator", Visibility: []contracts.KnowledgeVisibility{
+			contracts.KnowledgeVisibilityPublic, contracts.KnowledgeVisibilityAgentOnly,
+		},
+	}
 }
 
 /*

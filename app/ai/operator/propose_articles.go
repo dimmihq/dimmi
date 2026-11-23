@@ -3,10 +3,10 @@
 | Article Suggestions
 |--------------------------------------------------------------------------
 |
-| Suggesting a fix to a help article, or a new one, each through a tool
-| of its own. A tool that does one thing can require what that thing
+| Suggesting a fix to a help article, a new one, or an edit to a
+| procedure, each through a tool of its own. A tool that does one thing can require what that thing
 | needs, so a model cannot leave out the article or its edits the way
-| it can in a tool that takes every kind of change. Both end in the
+| it can in a tool that takes every kind of change. All end in the
 | same changeset a teammate reviews.
 |
 */
@@ -225,5 +225,62 @@ func (e *Engine) proposeArticle(ctx context.Context, s *session, args json.RawMe
 			Kind: KindArticleNew, Title: in.ArticleTitle, Body: in.Body, Visibility: in.Visibility,
 			Collection: either(in.CollectionID, in.Collection), HelpCenter: either(in.HelpCenterID, in.HelpCenter),
 		}},
+	})
+}
+
+/*
+toolProcedureEdit is the name of the tool that suggests an edit to a
+procedure.
+*/
+const toolProcedureEdit = "propose_procedure_edit"
+
+/*
+procedureEditSchema is the schema of a suggested edit to one procedure.
+*/
+const procedureEditSchema = `{"type":"object",
+"required":["procedure_id","procedure_definition","suggestion_title","reason"],"properties":{
+"procedure_id":{"type":"string","description":"The id of the procedure to edit, as get_procedure_by_id and ` +
+	`list_procedures show it (prc_...). Never its name."},
+"procedure_definition":{"type":"object","description":"The procedure's whole new working copy, as ` +
+	`get_procedure_by_id shows it, with your changes made. Read the procedure first."},
+"suggestion_title":{"type":"string","maxLength":200,"description":"What the edit does in a few everyday ` +
+	`words, like 'Ask for the order number before refunding'. Not the procedure's name."},
+"reason":{"type":"string","maxLength":2000,"description":"Why, in one or two short, plain sentences: what ` +
+	`goes wrong today and what this changes. Cite conversations by number. No ids."},
+"dedup_key":{"type":"string","maxLength":200,"description":"A stable key for this edit, like ` +
+	`'qa:prc_...:step-2'. A suggestion with the same key that still waits, or was declined in the last 30 ` +
+	`days, is not made again."}}}`
+
+/*
+procedureEditTool is the tool that suggests an edit to one procedure.
+*/
+func (e *Engine) procedureEditTool() tool {
+	return tool{
+		spec: contracts.ToolSpec{
+			Name: toolProcedureEdit,
+			Description: "Suggest an edit to one procedure's working copy. A teammate reviews it; the " +
+				"procedure changes only when they approve. Call it once per procedure.",
+			Schema: schema(procedureEditSchema),
+		}, writes: []Kind{KindProcedureSet}, handle: e.proposeProcedureEdit,
+	}
+}
+
+/*
+proposeProcedureEdit suggests an edit to one procedure.
+*/
+func (e *Engine) proposeProcedureEdit(ctx context.Context, s *session, args json.RawMessage) (result, error) {
+	var in struct {
+		ProcedureID string          `json:"procedure_id"`
+		Definition  json.RawMessage `json:"procedure_definition"`
+		Title       string          `json:"suggestion_title"`
+		Reason      string          `json:"reason"`
+		DedupKey    string          `json:"dedup_key"`
+	}
+	if err := decode(args, &in); err != nil {
+		return result{}, err
+	}
+	return e.propose(ctx, s, proposal{
+		Title: in.Title, Reason: in.Reason, DedupKey: in.DedupKey,
+		Operations: []opInput{{Kind: KindProcedureSet, ProcedureID: in.ProcedureID, NewWorking: in.Definition}},
 	})
 }

@@ -12,14 +12,14 @@ import (
 )
 
 /*
-article creates a help article and returns its id.
+article creates a help article called Refunds and returns its id.
 */
-func article(t *testing.T, d tests.Desk, title, body string) string {
+func article(t *testing.T, d tests.Desk, body string) string {
 	t.Helper()
 	center := d.Owner.GetJSON("/api/v1/help-centers").AssertOK().String("data.0.id")
 
 	return d.Owner.PostJSON("/api/v1/help-centers/"+center+"/articles", testkit.JSON{
-		"title": title, "body_markdown": body,
+		"title": "Refunds", "body_markdown": body,
 	}).AssertCreated().String("data.id")
 }
 
@@ -48,7 +48,7 @@ func TestArguments(t *testing.T) {
 	t.Run("reads an article by its id", func(t *testing.T) {
 		t.Parallel()
 		d := tests.NewDesk(t)
-		id := article(t, d, "Refunds", "Refunds take 5 days.")
+		id := article(t, d, "Refunds take 5 days.")
 		_, token := d.TC.MintToken(d.TC.Workspace.Owner, "*")
 
 		res, err := agent(t, d, token).CallTool(t.Context(), "dimmi_get_article_by_id",
@@ -62,7 +62,7 @@ func TestArguments(t *testing.T) {
 	t.Run("still reads an argument sent under the API's name or as id", func(t *testing.T) {
 		t.Parallel()
 		d := tests.NewDesk(t)
-		id := article(t, d, "Refunds", "Refunds take 5 days.")
+		id := article(t, d, "Refunds take 5 days.")
 		_, token := d.TC.MintToken(d.TC.Workspace.Owner, "*")
 		c := agent(t, d, token)
 
@@ -104,7 +104,7 @@ func TestArguments(t *testing.T) {
 	t.Run("names an argument the tool does not have and the one meant", func(t *testing.T) {
 		t.Parallel()
 		d := tests.NewDesk(t)
-		id := article(t, d, "Refunds", "Refunds take 5 days.")
+		id := article(t, d, "Refunds take 5 days.")
 		_, token := d.TC.MintToken(d.TC.Workspace.Owner, "*")
 
 		res, err := agent(t, d, token).CallTool(t.Context(), "dimmi_update_article",

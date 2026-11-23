@@ -50,8 +50,10 @@ model it runs with, what the thread said before, and what the run has
 done so far. Tainted turns true once the run read text a customer
 wrote; from then on no change it proposes applies on its own.
 Background marks a run Operator started on its own, with no thread and
-no teammate waiting. Routine is set on a run of a routine, which runs
-as a narrowed copy of the routine's owner on a thread of its own.
+no teammate waiting. Outside marks a call from an agent a teammate
+connected, which has no thread either. Routine is set on a run of a
+routine, which runs as a narrowed copy of the routine's owner on a
+thread of its own.
 */
 type session struct {
 	m            authz.Membership
@@ -75,6 +77,7 @@ type session struct {
 	tainted      bool
 	closing      bool
 	background   bool
+	outside      bool
 	failure      error
 	toolCalls    int
 	layer        *layerState

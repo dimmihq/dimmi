@@ -59,6 +59,37 @@ func operatorRoutes(r *routing.Router, a *app.App) {
 	routing.Get(r, "/operator/usage", "operator.usage.show", usage.Show).Ability("ai:read")
 	operatorChangesetRoutes(r, a)
 	operatorRoutineRoutes(r, a)
+	operatorAgentRoutes(r, a)
+}
+
+/*
+operatorAgentRoutes declares the routes an agent a teammate connected
+does Operator's work through: suggestions for the team to review, a
+routine's state, a run that found nothing, and the skills. Suggesting
+needs conversations:read, as talking with Operator does; a routine's
+state reads with ai:read and changes with ai:write.
+*/
+func operatorAgentRoutes(r *routing.Router, a *app.App) {
+	c := &v1.OperatorAgentController{Agents: a.Actions.OperatorAgent.Agents, IDs: a.IDs}
+	routing.Post(r, "/operator/suggestions/article-edits", "operator.suggestions.article-edits.store",
+		c.SuggestArticleEdit).Ability("conversations:read").Status(fhttp.StatusCreated)
+	routing.Post(r, "/operator/suggestions/new-articles", "operator.suggestions.new-articles.store",
+		c.SuggestNewArticle).Ability("conversations:read").Status(fhttp.StatusCreated)
+	routing.Post(r, "/operator/suggestions/procedure-edits", "operator.suggestions.procedure-edits.store",
+		c.SuggestProcedureEdit).Ability("conversations:read").Status(fhttp.StatusCreated)
+	routing.Post(r, "/operator/suggestions/changes", "operator.suggestions.changes.store", c.SuggestChanges).
+		Ability("conversations:read").Status(fhttp.StatusCreated)
+	routing.Get(r, "/operator/suggestions/recent", "operator.suggestions.recent.index", c.Recent).
+		Ability("conversations:read")
+	routing.Get(r, "/operator/routines/{routine}/state", "operator.routines.state.show", c.State).Ability("ai:read")
+	routing.Put(r, "/operator/routines/{routine}/state", "operator.routines.state.update", c.SaveState).
+		Ability("ai:write")
+	routing.Post(r, "/operator/routines/{routine}/nothing-to-change", "operator.routines.nothing-to-change.store",
+		c.NothingToChange).Ability("ai:write").Status(fhttp.StatusOK)
+	routing.Get(r, "/operator/knowledge/search", "operator.knowledge.search.index", c.SearchKnowledge).
+		Ability("conversations:read")
+	routing.Get(r, "/operator/skills", "operator.skills.index", c.Skills).Ability("ai:read")
+	routing.Get(r, "/operator/skills/{skill}", "operator.skills.show", c.Skill).Ability("ai:read")
 }
 
 /*

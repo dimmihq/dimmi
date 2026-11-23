@@ -40,7 +40,7 @@ const (
 writeTools are the tools that leave something behind.
 */
 func (e *Engine) writeTools() []tool {
-	return append(e.articleTools(), []tool{
+	return append(append(e.articleTools(), e.procedureEditTool()), []tool{
 		{spec: contracts.ToolSpec{
 			Name: "draft_reply",
 			Description: "Draft a reply to the customer of this thread's conversation. It lands in the " +
@@ -241,10 +241,10 @@ func (e *Engine) createChangeset(ctx context.Context, s *session, in changeset) 
 
 /*
 threadRef is the thread a run's changesets belong to, none for a run
-Operator started on its own.
+Operator started on its own or a call from an outside agent.
 */
 func (s *session) threadRef() *ids.UUID {
-	if s.background {
+	if s.background || s.outside {
 		return nil
 	}
 	return &s.thread.ID
