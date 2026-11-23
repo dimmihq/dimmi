@@ -196,6 +196,11 @@ func (a *Threads) thread(ctx context.Context, q *models.Queries, m authz.Members
 			return latest, wrapFind(err)
 		}
 	}
+	if in.conversation == nil && !in.fresh {
+		if latest, ok, err := a.recent(ctx, q, m); err != nil || ok {
+			return latest, err
+		}
+	}
 	thread, err := q.CreateOperatorThread(ctx, models.CreateOperatorThreadParams{
 		WorkspaceID: m.Workspace.ID, MemberID: &m.Member.ID, ConversationID: in.conversation, Now: a.Clock.Now(),
 	})
@@ -204,6 +209,31 @@ func (a *Threads) thread(ctx context.Context, q *models.Queries, m authz.Members
 	}
 	return thread, nil
 }
+
+/*
+recent is the teammate's latest chat about the whole workspace, when
+they used it lately enough to pick it up again.
+*/
+func (a *Threads) recent(ctx context.Context, q *models.Queries, m authz.Membership,
+) (models.OperatorThread, bool, error) {
+	latest, err := q.FindWorkspaceOperatorThread(ctx, models.FindWorkspaceOperatorThreadParams{
+		WorkspaceID: m.Workspace.ID, MemberID: &m.Member.ID,
+	})
+	if errors.Is(err, database.ErrNotFound) {
+		return latest, false, nil
+	}
+	if err != nil {
+		return latest, false, wrapFind(err)
+	}
+	return latest, a.Clock.Now().Sub(latest.UpdatedAt) < workspaceThreadLife, nil
+}
+
+/*
+workspaceThreadLife is how long a teammate's chat about the whole
+workspace stays the one Operator's panel opens: they pick the chat up
+where they left it on the next page, and start clean after a break.
+*/
+const workspaceThreadLife = time.Hour
 
 /*
 wrapFind says what failed when finding the latest thread did.

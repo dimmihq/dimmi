@@ -13,6 +13,19 @@ import (
 func TestOperatorConversationThreads(t *testing.T) {
 	t.Parallel()
 
+	t.Run("opens the teammate's recent chat about the workspace again, and a new one when asked", func(t *testing.T) {
+		t.Parallel()
+		k := newDesk(t)
+		first := k.thread("")
+		k.llm.Script(reply("Hello."))
+		k.ask(first, "Hello").AssertOK()
+
+		assert.Equal(t, first, k.thread(""))
+		fresh := k.d.Owner.PostJSON("/api/v1/operator/threads", testkit.JSON{"fresh": true}).AssertOK().
+			String("data.id")
+		assert.NotEqual(t, first, fresh)
+	})
+
 	t.Run("keeps several threads about one conversation and opens the latest", func(t *testing.T) {
 		t.Parallel()
 		k := newDesk(t)

@@ -35,6 +35,16 @@ WHERE workspace_id = @workspace_id AND member_id = @member_id AND conversation_i
 ORDER BY updated_at DESC, id DESC
 LIMIT 1;
 
+-- name: FindWorkspaceOperatorThread :one
+-- FindWorkspaceOperatorThread returns the member's latest thread about
+-- the whole workspace: one they opened themselves, about no conversation
+-- and no routine.
+SELECT * FROM operator_threads
+WHERE workspace_id = @workspace_id AND member_id = @member_id AND conversation_id IS NULL
+  AND routine_id IS NULL
+ORDER BY updated_at DESC, id DESC
+LIMIT 1;
+
 -- name: ListOperatorThreads :many
 -- ListOperatorThreads returns the member's threads with messages, latest
 -- first: only those about the whole workspace when asked, or only those

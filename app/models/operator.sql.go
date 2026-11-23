@@ -391,6 +391,40 @@ func (q *Queries) FindOperatorThread(ctx context.Context, arg FindOperatorThread
 	return i, err
 }
 
+const findWorkspaceOperatorThread = `-- name: FindWorkspaceOperatorThread :one
+SELECT id, workspace_id, member_id, conversation_id, title, last_message_at, created_at, updated_at, routine_id, routine_run_id FROM operator_threads
+WHERE workspace_id = $1 AND member_id = $2 AND conversation_id IS NULL
+  AND routine_id IS NULL
+ORDER BY updated_at DESC, id DESC
+LIMIT 1
+`
+
+type FindWorkspaceOperatorThreadParams struct {
+	WorkspaceID ids.UUID  `json:"workspace_id"`
+	MemberID    *ids.UUID `json:"member_id"`
+}
+
+// FindWorkspaceOperatorThread returns the member's latest thread about
+// the whole workspace: one they opened themselves, about no conversation
+// and no routine.
+func (q *Queries) FindWorkspaceOperatorThread(ctx context.Context, arg FindWorkspaceOperatorThreadParams) (OperatorThread, error) {
+	row := q.db.QueryRow(ctx, findWorkspaceOperatorThread, arg.WorkspaceID, arg.MemberID)
+	var i OperatorThread
+	err := row.Scan(
+		&i.ID,
+		&i.WorkspaceID,
+		&i.MemberID,
+		&i.ConversationID,
+		&i.Title,
+		&i.LastMessageAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.RoutineID,
+		&i.RoutineRunID,
+	)
+	return i, err
+}
+
 const listOperatorChangesets = `-- name: ListOperatorChangesets :many
 SELECT s.id, s.workspace_id, s.thread_id, s.message_id, s.member_id, s.conversation_id, s.title, s.reason, s.operations, s.status, s.auto, s.error, s.decided_by_member_id, s.applied_at, s.reverted_at, s.created_at, s.updated_at, s.routine_id, s.routine_run_id, s.dedup_key, s.preview, s.expires_at FROM operator_changesets s
 LEFT JOIN conversations c ON c.id = s.conversation_id
