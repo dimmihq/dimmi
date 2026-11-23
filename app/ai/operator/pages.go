@@ -175,7 +175,8 @@ func (e *Engine) replyGuide(s *session) string {
 replyDrafting is how Operator drafts a reply to a customer.
 */
 const replyDrafting = `How to draft a reply:
-- Draft only when the teammate asks for a reply, or the conversation waits on the team.
+- Draft a reply only when the teammate asks for one in so many words. A brief, a question or
+  any other request is answered in the chat, never with a draft.
 - Answer the customer's latest message. Lead with the fix or the answer, then the reason.
 - Reply in the language the customer writes in when the team replies in it, else the default.
 - Check every fact about the product with search_knowledge first. Never state a price, limit,

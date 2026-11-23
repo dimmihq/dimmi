@@ -160,15 +160,26 @@ func (e *Engine) prepare() {
 }
 
 /*
-statusOf names how a run ended from the error that ended it.
+statusOf names how a run ended from the error that ended it. A
+teammate who presses Stop cancels the request; a model call cut short
+by that reports its own canceled error, which is a stop, not a failure.
 */
 func statusOf(err error) string {
 	switch {
 	case err == nil:
 		return "done"
-	case errors.Is(err, context.Canceled):
+	case errors.Is(err, context.Canceled) || canceled(err):
 		return "stopped"
 	default:
 		return "failed"
 	}
+}
+
+/*
+canceled reports whether a model call ended because its request was
+canceled.
+*/
+func canceled(err error) bool {
+	llmErr, ok := errors.AsType[*contracts.LLMError](err)
+	return ok && llmErr.Kind == contracts.LLMErrorCanceled
 }
