@@ -26,18 +26,28 @@ import (
 )
 
 /*
+messengerPrefix is where the messenger API is served: what the
+messenger and its SDKs call for a customer.
+*/
+const messengerPrefix = "/widget/v1"
+
+/*
 schemaPrefix starts a reference to one of the document's schemas.
 */
 const schemaPrefix = "#/components/schemas/"
 
 /*
 apiDocument is an API document being described: its schemas, the
-catalog, the written texts and the endpoint each tool stands for.
+entries of its operations, the texts written for its request fields by
+operation, for the fields operations share and for its schemas, and the
+endpoint each tool stands for.
 */
 type apiDocument struct {
 	schemas   map[string]any
 	docs      map[string]Doc
 	written   map[string]map[string]string
+	shared    map[string]string
+	texts     map[string]map[string]string
 	endpoints map[string]string
 	claims    map[string][]claim
 	fieldOf   map[string]map[string]any
@@ -45,22 +55,31 @@ type apiDocument struct {
 
 /*
 DescribeAPI writes into the document of the API the tools are built
-from what every operation is for and what every parameter and request
-field takes. Other documents are left as they are.
+from, and into the messenger API's, what every operation is for and
+what every parameter and field holds. Other documents are left as they
+are.
 */
 func DescribeAPI(prefix string, doc map[string]any) {
-	if prefix != apiPrefix {
+	d := apiDocument{
+		schemas: asMap(asMap(doc["components"])["schemas"]), endpoints: map[string]string{},
+		claims: map[string][]claim{}, fieldOf: map[string]map[string]any{},
+	}
+
+	switch prefix {
+	case apiPrefix:
+		d.docs, d.written, d.shared, d.texts = catalog(), writtenTexts(), sharedTexts(), schemaTexts()
+	case messengerPrefix:
+		d.docs, d.texts = messengerDocs(), messengerSchemaTexts()
+	default:
 		return
 	}
 
-	d := apiDocument{
-		schemas: asMap(asMap(doc["components"])["schemas"]), docs: catalog(), written: writtenTexts(),
-		endpoints: map[string]string{}, claims: map[string][]claim{}, fieldOf: map[string]map[string]any{},
-	}
 	ops := d.operations(doc)
 
 	for _, op := range ops {
-		d.endpoints[toolName(op.operation, d.docs[op.operation.ID])] = op.operation.Method + " " + op.operation.Path
+		if prefix == apiPrefix {
+			d.endpoints[toolName(op.operation, d.docs[op.operation.ID])] = op.operation.Method + " " + op.operation.Path
+		}
 	}
 
 	for _, op := range ops {
@@ -214,11 +233,9 @@ settle writes each field's description: the one written for a field
 several operations explain differently, else what the operations say.
 */
 func (d apiDocument) settle() {
-	shared := sharedTexts()
-
 	for key, claims := range d.claims {
 		text := claims[0].text
-		if merged, ok := shared[key]; ok {
+		if merged, ok := d.shared[key]; ok {
 			text = merged
 		}
 
@@ -234,8 +251,6 @@ that still has none: the text written for it by schema and field, else
 what a field of that name means in every record.
 */
 func (d apiDocument) schemaFields() {
-	texts := schemaTexts()
-
 	for name, raw := range d.schemas {
 		for field, value := range asMap(asMap(raw)["properties"]) {
 			property := asMap(value)
@@ -243,7 +258,7 @@ func (d apiDocument) schemaFields() {
 				continue
 			}
 
-			text := texts[name][field]
+			text := d.texts[name][field]
 			if text == "" {
 				text = commonText(name, field)
 			}
