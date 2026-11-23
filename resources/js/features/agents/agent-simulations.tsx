@@ -10,9 +10,6 @@
 import {
   RiArrowLeftSLine,
   RiArrowRightSLine,
-  RiCheckboxBlankCircleLine,
-  RiCheckboxCircleFill,
-  RiCloseCircleFill,
   RiCloseLine,
   RiDeleteBinLine,
   RiGitPullRequestLine,
@@ -21,15 +18,14 @@ import {
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 
-import { Chip, type ChipColor } from "@/components/base/badges/chip";
+import { Chip } from "@/components/base/badges/chip";
 import { Button } from "@/components/base/buttons/button";
 import { IconButton } from "@/components/base/buttons/icon-button";
 import { Input } from "@/components/base/input/input";
 import { AlertDialog } from "@/components/base/modal/modal";
+import { Textarea } from "@/components/base/textarea/textarea";
 import { toast } from "@/components/base/toast/toast";
-import { MessageBody } from "@/features/inbox/message-body";
 import { Swap } from "@/features/inbox/motion";
-import { ActivityLog } from "@/features/operator/activity-log";
 import { ScrollArea } from "@/features/shell/page";
 import {
   type AgentSimulation,
@@ -44,103 +40,11 @@ import type { Assertion, TestResult } from "@/lib/api/procedures";
 import { formatRelative } from "@/lib/i18n/format";
 import { cx } from "@/utils/cx";
 
-import { Did } from "../automation/procedure-simulator/parts";
-import {
-  type CriterionChoices,
-  card,
-  fieldLabel,
-  fromCustomer,
-  hint,
-  sentenceOf,
-  statusOf,
-  words,
-} from "../automation/procedure-simulator/simulator";
+import { card, fieldLabel, hint, sentenceOf } from "../automation/procedure-simulator/simulator";
 import { type LiveRun, useLiveRuns } from "../automation/procedure-simulator/use-live-runs";
 import type { ChipSources } from "../automation/procedure-writer/procedure-suggestions";
-import { SimCompare, Talk } from "./agent-sim-compare";
-
-const pressedConfirm = "Pressed Confirm on the card";
-
-type CheckResult = TestResult["assertion_results"][number];
-
-function Mark({ result }: { result?: CheckResult }) {
-  if (!result || result.skipped) {
-    return (
-      <RiCheckboxBlankCircleLine aria-label="Not run" className="size-4.5 shrink-0 text-foreground-icon-quaternary" />
-    );
-  }
-
-  return result.passed ? (
-    <RiCheckboxCircleFill aria-label="Passed" className="size-4.5 shrink-0 text-notification-success-foreground" />
-  ) : (
-    <RiCloseCircleFill aria-label="Failed" className="size-4.5 shrink-0 text-foreground-icon-error" />
-  );
-}
-
-function sayOf(said: { kind: string; claim: string }, name: string): string {
-  const claim = said.claim.replace(/\bdimmi\b/g, name);
-  if (said.kind === "Reply") {
-    return `The reply ${claim}`;
-  }
-
-  return claim.startsWith(name) ? claim : words(claim);
-}
-
-function choicesOf(sources: ChipSources): CriterionChoices {
-  return {
-    actions: sources.actions.map((a) => [a.name, a.title || a.name] as const),
-    rules: [],
-    teams: sources.teams.map((t) => [t.id, t.name] as const),
-  };
-}
-
-function statusNow(result: TestResult | null, busy: boolean, live?: LiveRun): { label: string; color: ChipColor } {
-  if (!busy) {
-    return statusOf(result);
-  }
-  if (live?.result) {
-    return statusOf(live.result);
-  }
-  if (live?.judging) {
-    return { label: "Judging", color: "blue" };
-  }
-  const turn = live && live.turns.length > 0 ? ` · turn ${live.turns.length}` : "";
-
-  return { label: `Running${turn}`, color: "blue" };
-}
-
-function LiveTalk({ run, sources }: { run?: LiveRun; sources: ChipSources }) {
-  const turns = run?.turns ?? [];
-
-  return (
-    <ol aria-label="Simulated conversation" aria-live="polite" className="flex flex-col gap-5">
-      {turns.map((t, index) => (
-        // biome-ignore lint/suspicious/noArrayIndexKey: a run's turns never reorder.
-        <li key={index} className="flex flex-col gap-5">
-          <p className={fromCustomer}>{t.message || pressedConfirm}</p>
-          <div className="flex flex-col gap-3">
-            <ActivityLog steps={t.steps} working={!t.result} />
-            {t.result ? (
-              <div className="flex flex-col gap-2">
-                <MessageBody
-                  text={t.result.reply || words(t.result.outcome)}
-                  className="text-body-regular text-text-primary"
-                />
-                <Did calls={t.result.calls} outcome={t.result.outcome} sources={sources} />
-              </div>
-            ) : null}
-          </div>
-        </li>
-      ))}
-      {turns.length === 0 ? (
-        <li>
-          <ActivityLog steps={[]} working />
-        </li>
-      ) : null}
-      {run?.judging ? <li className={hint}>Judging the checks…</li> : null}
-    </ol>
-  );
-}
+import { LiveTalk, Mark, SimCompare, Talk } from "./agent-sim-compare";
+import { choicesOf, sayOf, statusNow } from "./agent-sim-words";
 
 function Checks({
   sim,
@@ -232,6 +136,57 @@ function Checks({
  * Detail is one simulation opened: its name, running and deleting it,
  * how it went on the copy shown and its checks.
  */
+/*
+ * Scenario is who the simulation's customer is and what they came for,
+ * in the team's words. It is written when the simulation is saved and
+ * edited here; a change waits for Save, since the next run plays from it.
+ */
+function Scenario({
+  sim,
+  readOnly,
+  onSave,
+}: {
+  sim: AgentSimulation;
+  readOnly: boolean;
+  onSave: (scenario: string) => Promise<void>;
+}) {
+  const [text, setText] = useState(sim.scenario);
+  const [saving, setSaving] = useState(false);
+  const changed = text.trim() !== sim.scenario;
+  const save = async () => {
+    setSaving(true);
+    await onSave(text.trim());
+    setSaving(false);
+  };
+
+  return (
+    <div className="flex flex-col gap-2">
+      <Textarea
+        label="Customer's situation"
+        hint="Who they are and what they came for. The simulated customer answers from this, and only agrees to what it says they want."
+        placeholder="A prospect shipping 300 parcels a month wants a plan recommendation. They have not asked to buy anything."
+        rows={3}
+        autoResize
+        maxRows={8}
+        maxLength={1000}
+        isReadOnly={readOnly}
+        value={text}
+        onChange={setText}
+      />
+      {changed && !readOnly ? (
+        <span className="flex items-center justify-end gap-2">
+          <Button variant="secondary" size="xs" disabled={saving} onClick={() => setText(sim.scenario)}>
+            Discard
+          </Button>
+          <Button size="xs" loading={saving} onClick={() => void save()}>
+            Save
+          </Button>
+        </span>
+      ) : null}
+    </div>
+  );
+}
+
 function Detail({
   sim,
   as,
@@ -243,6 +198,7 @@ function Detail({
   onRun,
   onDelete,
   onChecks,
+  onScenario,
   onCompare,
 }: {
   sim: AgentSimulation;
@@ -255,6 +211,7 @@ function Detail({
   onRun: () => void;
   onDelete: () => void;
   onChecks: (assertions: Assertion[]) => void;
+  onScenario: (scenario: string) => Promise<void>;
   onCompare?: () => void;
 }) {
   const result = resultOf(sim, as);
@@ -303,6 +260,7 @@ function Detail({
             </span>
           </span>
           {shown?.error ? <p className="text-body-2-regular text-text-error-primary">{shown.error}</p> : null}
+          <Scenario key={`${sim.id}:${sim.scenario}`} sim={sim} readOnly={busy} onSave={onScenario} />
           <div className="flex flex-col gap-2.5">
             <span className={fieldLabel}>Conversation</span>
             {busy ? <LiveTalk run={live} sources={sources} /> : <Talk sim={sim} result={result} sources={sources} />}
@@ -390,6 +348,15 @@ export function AgentSimulations({
     }
   };
 
+  const setScenario = async (sim: AgentSimulation, scenario: string) => {
+    try {
+      await updateAgentSimulation(workspace, agent, sim.id, { scenario });
+      await refresh();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "The customer's situation was not saved.");
+    }
+  };
+
   const confirm = (
     <AlertDialog
       isOpen={deleting !== null}
@@ -419,6 +386,7 @@ export function AgentSimulations({
       onRun={() => void run([opened.id])}
       onDelete={() => setDeleting(opened)}
       onChecks={(assertions) => void setChecks(opened, assertions)}
+      onScenario={(scenario) => setScenario(opened, scenario)}
       onCompare={liveVersion > 0 ? () => setComparing(true) : undefined}
     />
   ) : null;
@@ -497,6 +465,7 @@ export function AgentSimulations({
           workspace={workspace}
           agent={agent}
           sim={opened}
+          name={name}
           liveVersion={liveVersion}
           sources={sources}
           flush={flush}

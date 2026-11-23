@@ -1399,6 +1399,9 @@
             "type": "string"
           },
           "persona": {},
+          "scenario": {
+            "type": "string"
+          },
           "simulated_at": {
             "format": "date-time",
             "type": [
@@ -1427,6 +1430,7 @@
           "messages",
           "action_mocks",
           "assertions",
+          "scenario",
           "draft_result",
           "live_result",
           "simulated_at",
@@ -23311,6 +23315,9 @@
           "procedure_id": {
             "type": "string"
           },
+          "scenario": {
+            "type": "string"
+          },
           "simulated_at": {
             "format": "date-time",
             "type": [
@@ -23339,6 +23346,7 @@
           "messages",
           "action_mocks",
           "assertions",
+          "scenario",
           "last_result",
           "simulated_at",
           "created_at",
@@ -32424,6 +32432,10 @@
           },
           "persona": {
             "$ref": "#/components/schemas/SimPersonaInput"
+          },
+          "scenario": {
+            "maxLength": 1000,
+            "type": "string"
           },
           "simulated_at": {
             "format": "date-time",

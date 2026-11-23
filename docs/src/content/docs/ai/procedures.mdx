@@ -145,15 +145,17 @@ A write that needs a confirmation shows **Confirm as the customer** or **Approve
 
 A simulation is a chat the agent must keep getting right. To make one, chat in **Preview**, then click **Save as simulation** above the chat.
 
-When a simulation runs, an AI plays the customer from that saved chat. It sends the first message as written, then answers whatever the agent asks, using only what the customer said before. It never steers the agent. If the agent asks for something the saved chat never gave, the customer says they don't know, and the turn is marked.
+When a simulation runs, the customer from that saved chat is played again. Their saved messages go out word for word, in order, and each is sent once. When the agent asks for something, an AI answers as the customer, using only what the customer said before and the simulation's scenario. It never steers the agent. If the agent asks for something neither gives, the customer says they don't know, and the turn is marked. The chat ends when the agent asks nothing more and every saved message has been sent.
+
+Each simulation has a scenario: a few sentences on who the customer is and what they came for, like `A prospect shipping 300 parcels a month wants a plan recommendation. They have not asked to buy anything.` dimmi writes it when you save the chat. The simulated customer only agrees to what the scenario or the saved chat shows them wanting. If the agent offers something else, such as an upgrade, the customer declines, and it presses **Confirm** on a card only for an action they came for. Over the API, the scenario is the `scenario` field of a test case.
 
 A simulation runs on the day its chat happened, so rules about dates, like a refund window, give the same answer every time. Actions never run for real: each one answers with the result of its last test in **Settings → Actions**. To test another result, save another simulation.
 
 To test without a real customer, pick **Made-up customer** from the **+** menu in Preview. dimmi draws a name and email, and you set their plan and other details. A simulation saved from that chat keeps the same customer.
 
-Each simulation carries checks. A saved chat starts with these: the agent followed this procedure, called the same actions, took the same side at every condition, and ended the same way, handed over to the same team or not. Open a simulation to see the conversation and each check with a tick or a cross. Remove a check with **✕**, or add one in plain words, like `dimmi should offer store credit`. A separate decision model judges checks you write this way, so the agent never grades its own replies. Each result shows how sure the judge was, like `Met (93% likely)`.
+Each simulation carries checks. A saved chat starts with these: the agent followed this procedure, called the same actions, took the same side at every condition, and ended the same way, handed over to the same team or not. Open a simulation to see the conversation and each check with a tick or a cross. Remove a check with **✕**, or add one in plain words, like `dimmi should offer store credit`. A separate decision model judges checks you write this way, so the agent never grades its own replies. A check passes only when the judge finds it clearly met. One it isn't sure about fails as `Not clearly met`: look at the reply, or make the check more specific.
 
-Run a simulation and you watch it happen: each customer message, what the agent does as it works, each reply, then the verdict. A check that no model could judge gives the run an error, not a pass.
+Run a simulation and you watch it happen: each customer message, what the agent does as it works, each reply, then the verdict. If the judge can't answer, it is asked once more. If it still can't, the run fails with an error asking you to run it again. It never counts as a pass.
 
 **Run all** runs every simulation against the working copy, and the editor shows how many pass beside **Publish**. Preview and simulation runs count toward your workspace's monthly AI spend like any other run.
 

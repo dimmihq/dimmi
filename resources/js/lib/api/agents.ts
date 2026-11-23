@@ -256,6 +256,8 @@ export interface AgentSimulation {
   messages: { text: string; confirm?: boolean }[];
   action_mocks: Record<string, ActionMock>;
   assertions: Assertion[];
+  /* Who the customer is and what they came for; the simulated customer plays from it. */
+  scenario: string;
   draft_result: TestResult | null;
   live_result: TestResult | null;
   simulated_at: string | null;
@@ -264,7 +266,7 @@ export interface AgentSimulation {
 }
 
 export type AgentSimulationInput = Partial<
-  Pick<AgentSimulation, "name" | "persona" | "messages" | "action_mocks" | "assertions" | "simulated_at">
+  Pick<AgentSimulation, "name" | "persona" | "messages" | "action_mocks" | "assertions" | "simulated_at" | "scenario">
 >;
 
 export function agentSimulationsQuery(workspace: string, id: string) {

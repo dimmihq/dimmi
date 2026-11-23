@@ -62,6 +62,7 @@ type AIAgentSimulation struct {
 	Messages             json.RawMessage `json:"messages"`
 	ActionMocks          json.RawMessage `json:"action_mocks"`
 	Assertions           json.RawMessage `json:"assertions"`
+	Scenario             string          `json:"scenario"`
 	DraftResult          json.RawMessage `json:"draft_result"`
 	LiveResult           json.RawMessage `json:"live_result"`
 	SimulatedAt          *time.Time      `json:"simulated_at"`
@@ -78,6 +79,7 @@ func NewAIAgentSimulation(c models.AiAgentTestCase) AIAgentSimulation {
 		AgentID: models.PublicID(models.PrefixAiAgent, c.AgentID), Name: c.Name,
 		SourceConversationID: publicPtr(models.PrefixConversation, c.SourceConversationID),
 		Persona:              c.Persona, Messages: c.Messages, ActionMocks: c.ActionMocks, Assertions: c.Assertions,
+		Scenario:    c.Scenario,
 		DraftResult: jsonOrNull(c.DraftResult), LiveResult: jsonOrNull(c.LiveResult), SimulatedAt: c.SimulatedAt,
 		CreatedAt: c.CreatedAt, UpdatedAt: c.UpdatedAt,
 	}

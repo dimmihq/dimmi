@@ -16,12 +16,12 @@ import (
 const createAgentTestCase = `-- name: CreateAgentTestCase :one
 INSERT INTO ai_agent_test_cases (
     workspace_id, agent_id, name, source_conversation_id, persona, messages, action_mocks, assertions,
-    simulated_at, created_by_member_id, created_at, updated_at
+    simulated_at, scenario, created_by_member_id, created_at, updated_at
 ) VALUES (
     $1, $2, $3, $4, $5, $6, $7,
-    $8, $9, $10, $11, $11
+    $8, $9, $10, $11, $12, $12
 )
-RETURNING id, workspace_id, agent_id, name, source_conversation_id, persona, messages, action_mocks, assertions, simulated_at, draft_result, live_result, created_by_member_id, created_at, updated_at
+RETURNING id, workspace_id, agent_id, name, source_conversation_id, persona, messages, action_mocks, assertions, simulated_at, draft_result, live_result, created_by_member_id, created_at, updated_at, scenario
 `
 
 type CreateAgentTestCaseParams struct {
@@ -34,6 +34,7 @@ type CreateAgentTestCaseParams struct {
 	ActionMocks          json.RawMessage `json:"action_mocks"`
 	Assertions           json.RawMessage `json:"assertions"`
 	SimulatedAt          *time.Time      `json:"simulated_at"`
+	Scenario             string          `json:"scenario"`
 	MemberID             *ids.UUID       `json:"member_id"`
 	Now                  time.Time       `json:"now"`
 }
@@ -50,6 +51,7 @@ func (q *Queries) CreateAgentTestCase(ctx context.Context, arg CreateAgentTestCa
 		arg.ActionMocks,
 		arg.Assertions,
 		arg.SimulatedAt,
+		arg.Scenario,
 		arg.MemberID,
 		arg.Now,
 	)
@@ -70,6 +72,7 @@ func (q *Queries) CreateAgentTestCase(ctx context.Context, arg CreateAgentTestCa
 		&i.CreatedByMemberID,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.Scenario,
 	)
 	return i, err
 }
@@ -91,7 +94,7 @@ func (q *Queries) DeleteAgentTestCase(ctx context.Context, arg DeleteAgentTestCa
 }
 
 const findAgentTestCase = `-- name: FindAgentTestCase :one
-SELECT id, workspace_id, agent_id, name, source_conversation_id, persona, messages, action_mocks, assertions, simulated_at, draft_result, live_result, created_by_member_id, created_at, updated_at FROM ai_agent_test_cases
+SELECT id, workspace_id, agent_id, name, source_conversation_id, persona, messages, action_mocks, assertions, simulated_at, draft_result, live_result, created_by_member_id, created_at, updated_at, scenario FROM ai_agent_test_cases
 WHERE workspace_id = $1 AND agent_id = $2 AND id = $3
 `
 
@@ -121,12 +124,13 @@ func (q *Queries) FindAgentTestCase(ctx context.Context, arg FindAgentTestCasePa
 		&i.CreatedByMemberID,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.Scenario,
 	)
 	return i, err
 }
 
 const listAgentTestCases = `-- name: ListAgentTestCases :many
-SELECT id, workspace_id, agent_id, name, source_conversation_id, persona, messages, action_mocks, assertions, simulated_at, draft_result, live_result, created_by_member_id, created_at, updated_at FROM ai_agent_test_cases
+SELECT id, workspace_id, agent_id, name, source_conversation_id, persona, messages, action_mocks, assertions, simulated_at, draft_result, live_result, created_by_member_id, created_at, updated_at, scenario FROM ai_agent_test_cases
 WHERE workspace_id = $1 AND agent_id = $2
 ORDER BY created_at, id
 `
@@ -162,6 +166,7 @@ func (q *Queries) ListAgentTestCases(ctx context.Context, arg ListAgentTestCases
 			&i.CreatedByMemberID,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.Scenario,
 		); err != nil {
 			return nil, err
 		}
@@ -212,9 +217,9 @@ func (q *Queries) SetAgentTestCaseLiveResult(ctx context.Context, arg SetAgentTe
 const updateAgentTestCase = `-- name: UpdateAgentTestCase :one
 UPDATE ai_agent_test_cases SET name = $1, persona = $2, messages = $3,
     action_mocks = $4, assertions = $5, simulated_at = $6,
-    updated_at = $7
-WHERE workspace_id = $8 AND agent_id = $9 AND id = $10
-RETURNING id, workspace_id, agent_id, name, source_conversation_id, persona, messages, action_mocks, assertions, simulated_at, draft_result, live_result, created_by_member_id, created_at, updated_at
+    scenario = $7, updated_at = $8
+WHERE workspace_id = $9 AND agent_id = $10 AND id = $11
+RETURNING id, workspace_id, agent_id, name, source_conversation_id, persona, messages, action_mocks, assertions, simulated_at, draft_result, live_result, created_by_member_id, created_at, updated_at, scenario
 `
 
 type UpdateAgentTestCaseParams struct {
@@ -224,6 +229,7 @@ type UpdateAgentTestCaseParams struct {
 	ActionMocks json.RawMessage `json:"action_mocks"`
 	Assertions  json.RawMessage `json:"assertions"`
 	SimulatedAt *time.Time      `json:"simulated_at"`
+	Scenario    string          `json:"scenario"`
 	Now         time.Time       `json:"now"`
 	WorkspaceID ids.UUID        `json:"workspace_id"`
 	AgentID     ids.UUID        `json:"agent_id"`
@@ -239,6 +245,7 @@ func (q *Queries) UpdateAgentTestCase(ctx context.Context, arg UpdateAgentTestCa
 		arg.ActionMocks,
 		arg.Assertions,
 		arg.SimulatedAt,
+		arg.Scenario,
 		arg.Now,
 		arg.WorkspaceID,
 		arg.AgentID,
@@ -261,6 +268,7 @@ func (q *Queries) UpdateAgentTestCase(ctx context.Context, arg UpdateAgentTestCa
 		&i.CreatedByMemberID,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.Scenario,
 	)
 	return i, err
 }

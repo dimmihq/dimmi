@@ -221,6 +221,7 @@ func (s *Simulations) Create(ctx context.Context, m authz.Membership, agentID id
 		return models.AiAgentTestCase{}, procedures.ErrTestCaseInvalid.With("reason", "Name the simulation.").
 			OnField("name")
 	}
+	in = s.Procedures.WithScenario(ctx, m, in)
 	var out models.AiAgentTestCase
 	err := s.DB.Transaction(ctx, func(ctx context.Context, tx *database.Tx) error {
 		q := models.New(tx)
@@ -236,7 +237,7 @@ func (s *Simulations) Create(ctx context.Context, m authz.Membership, agentID id
 			WorkspaceID: m.Workspace.ID, AgentID: agentID, Name: row.Name,
 			SourceConversationID: in.SourceConversation, Persona: row.Persona, Messages: row.Messages,
 			ActionMocks: row.ActionMocks, Assertions: row.Assertions, SimulatedAt: row.SimulatedAt,
-			MemberID: memberOf(m), Now: s.Clock.Now(),
+			Scenario: row.Scenario, MemberID: memberOf(m), Now: s.Clock.Now(),
 		})
 		if err != nil {
 			return fmt.Errorf("save agent simulation: %w", err)
@@ -298,7 +299,7 @@ func (s *Simulations) Update(ctx context.Context, m authz.Membership, ref Simula
 		out, err = q.UpdateAgentTestCase(ctx, models.UpdateAgentTestCaseParams{
 			WorkspaceID: m.Workspace.ID, AgentID: ref.Agent, ID: ref.Simulation, Name: row.Name,
 			Persona: row.Persona, Messages: row.Messages, ActionMocks: row.ActionMocks, Assertions: row.Assertions,
-			SimulatedAt: row.SimulatedAt, Now: s.Clock.Now(),
+			SimulatedAt: row.SimulatedAt, Scenario: row.Scenario, Now: s.Clock.Now(),
 		})
 		if err != nil {
 			return fmt.Errorf("save agent simulation: %w", err)
@@ -421,8 +422,8 @@ func asProcedureCase(c models.AiAgentTestCase) models.ProcedureTestCase {
 	return models.ProcedureTestCase{
 		ID: c.ID, WorkspaceID: c.WorkspaceID, Name: c.Name, SourceConversationID: c.SourceConversationID,
 		Persona: c.Persona, Messages: c.Messages, ActionMocks: c.ActionMocks, Assertions: c.Assertions,
-		SimulatedAt: c.SimulatedAt, CreatedByMemberID: c.CreatedByMemberID, CreatedAt: c.CreatedAt,
-		UpdatedAt: c.UpdatedAt,
+		SimulatedAt: c.SimulatedAt, Scenario: c.Scenario, CreatedByMemberID: c.CreatedByMemberID,
+		CreatedAt: c.CreatedAt, UpdatedAt: c.UpdatedAt,
 	}
 }
 

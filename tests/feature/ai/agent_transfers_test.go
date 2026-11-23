@@ -11,6 +11,8 @@ import (
 	"github.com/dimmihq/dimmi/framework/ids"
 	"github.com/dimmihq/dimmi/framework/testkit"
 
+	"github.com/dimmihq/dimmi/app/contracts"
+	decisionfake "github.com/dimmihq/dimmi/app/drivers/decision/fake"
 	"github.com/dimmihq/dimmi/app/models"
 )
 
@@ -145,6 +147,45 @@ func TestAiAgentTransfers(t *testing.T) {
 			}
 		}
 		assert.Equal(t, []string{"Sales"}, names)
+	})
+
+	t.Run("a simulation stays with the agent it was transferred to, and its judge reads who answered", func(t *testing.T) {
+		t.Parallel()
+		r := newTransferDesk(t)
+		r.allowBack()
+		d := r.decider()
+		d.Script(decisionfake.Step{Answers: map[string]contracts.DecisionAnswer{
+			"met": {Type: contracts.DecisionNoul, Noul: 0.94},
+		}})
+		sales := models.PublicID(models.PrefixAiAgent, r.sales)
+		path := "/api/v1/ai/agents/" + models.PublicID(models.PrefixAiAgent, r.support) + "/simulations"
+		id := r.d.Owner.PostJSON(path, testkit.JSON{
+			"name":       "Pricing goes to sales",
+			"messages":   []testkit.JSON{{"text": "Which plan fits 500 labels?"}, {"text": "About 20 a day"}},
+			"assertions": []testkit.JSON{{"type": "llm_rubric", "rubric": "Stays with the agent it was transferred to"}},
+		}).AssertCreated().String("data.id")
+		r.llm.answer.Script(
+			tools(call("transfer_agent", `{"agent_id":"`+sales+`","summary":"Prospect asking about plans"}`)),
+			reply("Happy to help. How many a day?"),
+			reply("Growth fits that."),
+		)
+
+		ran := r.d.Owner.PostJSON(path+"/run", testkit.JSON{"simulation_ids": []string{id}}).AssertOK()
+
+		ran.AssertJSONPath("data.0.draft_result.passed", true)
+		ran.AssertJSONPath("data.0.draft_result.turns.1.reply", "Growth fits that.")
+		ran.AssertJSONPath("data.0.draft_result.turns.0.transfer.name", "Sales")
+		ran.AssertJSONPath("data.0.draft_result.turns.0.transfer.summary", "Prospect asking about plans")
+		require.Len(t, r.llm.answer.Sent(), 3, "the second message goes straight to the agent holding the chat")
+		var state string
+		for _, asked := range d.Sent() {
+			if _, ok := asked.Questions["met"]; ok {
+				state = asked.State
+			}
+		}
+		assert.Contains(t, state, "CUSTOMER: Which plan fits 500 labels?\n[")
+		assert.Contains(t, state, " transferred the conversation to Sales. Its note for Sales: Prospect asking about plans]")
+		assert.Contains(t, state, "SALES: Happy to help. How many a day?\nCUSTOMER: About 20 a day\nSALES: Growth fits that.")
 	})
 
 	t.Run("never hands a conversation back to an agent it left", func(t *testing.T) {

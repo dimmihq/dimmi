@@ -216,6 +216,7 @@ type AiAgentTestCase struct {
 	CreatedByMemberID    *ids.UUID       `json:"created_by_member_id"`
 	CreatedAt            time.Time       `json:"created_at"`
 	UpdatedAt            time.Time       `json:"updated_at"`
+	Scenario             string          `json:"scenario"`
 }
 
 type AiAgentVersion struct {
@@ -2402,6 +2403,7 @@ type ProcedureTestCase struct {
 	CreatedAt            time.Time       `json:"created_at"`
 	UpdatedAt            time.Time       `json:"updated_at"`
 	SimulatedAt          *time.Time      `json:"simulated_at"`
+	Scenario             string          `json:"scenario"`
 }
 
 type ProcedureVersion struct {

@@ -13,10 +13,10 @@ WHERE workspace_id = @workspace_id AND agent_id = @agent_id AND id = @id;
 -- CreateAgentTestCase saves a simulation of an agent.
 INSERT INTO ai_agent_test_cases (
     workspace_id, agent_id, name, source_conversation_id, persona, messages, action_mocks, assertions,
-    simulated_at, created_by_member_id, created_at, updated_at
+    simulated_at, scenario, created_by_member_id, created_at, updated_at
 ) VALUES (
     @workspace_id, @agent_id, @name, sqlc.narg(source_conversation_id), @persona, @messages, @action_mocks,
-    @assertions, sqlc.narg(simulated_at), sqlc.narg(member_id), @now, @now
+    @assertions, sqlc.narg(simulated_at), @scenario, sqlc.narg(member_id), @now, @now
 )
 RETURNING *;
 
@@ -24,7 +24,7 @@ RETURNING *;
 -- UpdateAgentTestCase saves a changed simulation.
 UPDATE ai_agent_test_cases SET name = @name, persona = @persona, messages = @messages,
     action_mocks = @action_mocks, assertions = @assertions, simulated_at = sqlc.narg(simulated_at),
-    updated_at = @now
+    scenario = @scenario, updated_at = @now
 WHERE workspace_id = @workspace_id AND agent_id = @agent_id AND id = @id
 RETURNING *;
 

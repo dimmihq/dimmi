@@ -14,6 +14,7 @@ package procedures
 
 import (
 	"context"
+	"strings"
 
 	"github.com/dimmihq/dimmi/framework/database"
 	"github.com/dimmihq/dimmi/framework/ids"
@@ -34,6 +35,32 @@ and checks them the way a procedure's are.
 */
 func BuildTestCase(current models.ProcedureTestCase, in TestCaseInput) (models.ProcedureTestCase, error) {
 	return testRow(current, in)
+}
+
+/*
+WithScenario gives a simulation being saved its scenario when the
+teammate wrote none: the customer's model writes it from the saved
+messages. A scenario that cannot be written is left empty, and the
+simulation runs from its messages alone; saving never fails over it.
+*/
+func (p *Procedures) WithScenario(ctx context.Context, m authz.Membership, in TestCaseInput) TestCaseInput {
+	if in.Scenario != nil || p.Customer == nil || len(in.Messages) == 0 {
+		return in
+	}
+	profile := pipeline.CustomerProfile{WorkspaceID: m.Workspace.ID, MemberID: m.Member.ID}
+	if in.Persona != nil {
+		profile.Name = in.Persona.Name
+	}
+	for _, msg := range in.Messages {
+		profile.Saved = append(profile.Saved, pipeline.SavedMessage{Text: msg.Text, Confirm: msg.Confirm})
+	}
+	written, err := p.Customer.DescribeCustomer(ctx, profile)
+	if err != nil || strings.TrimSpace(written) == "" {
+		return in
+	}
+	in.Scenario = &written
+
+	return in
 }
 
 /*

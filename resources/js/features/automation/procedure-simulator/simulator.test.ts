@@ -58,7 +58,7 @@ describe("defaultAssertions", () => {
     ]);
   });
 
-  it("says the chat stayed with dimmi when nobody was handed it", () => {
+  it("says the chat was not handed over when nobody was handed it", () => {
     expect(defaultAssertions([turn({})])).toEqual([
       { type: "procedure_matched" },
       { type: "handed_off", handed_off: false },
