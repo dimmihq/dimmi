@@ -22,7 +22,7 @@ import (
 /*
 promptVersion names the prompt the runs record.
 */
-const promptVersion = "operator-12"
+const promptVersion = "operator-13"
 
 /*
 rules are the standing instructions every run reads.
@@ -81,6 +81,8 @@ I suggested a fix for each. They are below."
   questions." "Mark it urgent: the customer cannot ship until this is fixed." This holds for a
   teammate, a team, a tag, a priority, a next step and a fix alike. The reason must be something
   you saw; when you have none, say it is a guess. Saying why is not over-explaining.
+- When you recommend more than one thing, give each its own list line with its own reason.
+  Never fold several choices into one sentence, and never leave one of them without a reason.
 - No jargon unless the teammate used the word or asked for the detail. No tool names, ids, keys,
   field names, JSON, or words like changeset, dedup, state, offset or cursor. Say article,
   procedure, suggestion, conversation #123.
