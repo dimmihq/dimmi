@@ -13,6 +13,40 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const addSimulationSpend = `-- name: AddSimulationSpend :exec
+INSERT INTO ai_spend_periods (
+    workspace_id, period_start, simulation_cost_micros, simulation_runs_count, updated_at
+) VALUES (
+    $1, $2, $3, $4, $5
+)
+ON CONFLICT (workspace_id, period_start) DO UPDATE SET
+    simulation_cost_micros = ai_spend_periods.simulation_cost_micros + $3,
+    simulation_runs_count = ai_spend_periods.simulation_runs_count + $4,
+    updated_at = $5
+`
+
+type AddSimulationSpendParams struct {
+	WorkspaceID ids.UUID    `json:"workspace_id"`
+	PeriodStart pgtype.Date `json:"period_start"`
+	CostMicros  int64       `json:"cost_micros"`
+	RunsCount   int32       `json:"runs_count"`
+	Now         time.Time   `json:"now"`
+}
+
+// AddSimulationSpend adds what rehearsing the agent cost, and how many
+// simulations ran, to the period's own tally of them. It leaves
+// cost_micros alone, so simulations never count toward the spend cap.
+func (q *Queries) AddSimulationSpend(ctx context.Context, arg AddSimulationSpendParams) error {
+	_, err := q.db.Exec(ctx, addSimulationSpend,
+		arg.WorkspaceID,
+		arg.PeriodStart,
+		arg.CostMicros,
+		arg.RunsCount,
+		arg.Now,
+	)
+	return err
+}
+
 const addSpend = `-- name: AddSpend :one
 INSERT INTO ai_spend_periods (
     workspace_id, period_start, cost_micros, input_tokens, cached_input_tokens, output_tokens,
@@ -32,7 +66,7 @@ ON CONFLICT (workspace_id, period_start) DO UPDATE SET
     handoff_count = ai_spend_periods.handoff_count + $10,
     silent_count = ai_spend_periods.silent_count + $11,
     updated_at = $12
-RETURNING workspace_id, period_start, cost_micros, input_tokens, cached_input_tokens, output_tokens, runs_count, answered_count, unknown_count, handoff_count, silent_count, thresholds_notified, capped_at, updated_at
+RETURNING workspace_id, period_start, cost_micros, input_tokens, cached_input_tokens, output_tokens, runs_count, answered_count, unknown_count, handoff_count, silent_count, thresholds_notified, capped_at, updated_at, simulation_cost_micros, simulation_runs_count
 `
 
 type AddSpendParams struct {
@@ -82,12 +116,14 @@ func (q *Queries) AddSpend(ctx context.Context, arg AddSpendParams) (AiSpendPeri
 		&i.ThresholdsNotified,
 		&i.CappedAt,
 		&i.UpdatedAt,
+		&i.SimulationCostMicros,
+		&i.SimulationRunsCount,
 	)
 	return i, err
 }
 
 const getSpendPeriod = `-- name: GetSpendPeriod :one
-SELECT workspace_id, period_start, cost_micros, input_tokens, cached_input_tokens, output_tokens, runs_count, answered_count, unknown_count, handoff_count, silent_count, thresholds_notified, capped_at, updated_at FROM ai_spend_periods
+SELECT workspace_id, period_start, cost_micros, input_tokens, cached_input_tokens, output_tokens, runs_count, answered_count, unknown_count, handoff_count, silent_count, thresholds_notified, capped_at, updated_at, simulation_cost_micros, simulation_runs_count FROM ai_spend_periods
 WHERE workspace_id = $1 AND period_start = $2
 `
 
@@ -115,6 +151,8 @@ func (q *Queries) GetSpendPeriod(ctx context.Context, arg GetSpendPeriodParams) 
 		&i.ThresholdsNotified,
 		&i.CappedAt,
 		&i.UpdatedAt,
+		&i.SimulationCostMicros,
+		&i.SimulationRunsCount,
 	)
 	return i, err
 }

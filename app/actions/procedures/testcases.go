@@ -347,6 +347,10 @@ func (p *Procedures) keepResult(ctx context.Context, one simulated, res TestResu
 	raw, _ := json.Marshal(res)
 	w.tell(ctx, runFinished, map[string]any{"result": res})
 	err := p.DB.Transaction(ctx, func(ctx context.Context, tx *database.Tx) error {
+		ran := pipeline.SimulationSpend{WorkspaceID: m.Workspace.ID, At: p.Clock.Now(), Runs: 1}
+		if err := pipeline.AddSimulationSpend(ctx, tx, ran); err != nil {
+			return err
+		}
 		return models.New(tx).SetProcedureTestCaseResult(ctx, models.SetProcedureTestCaseResultParams{
 			LastResult: raw, WorkspaceID: m.Workspace.ID, ID: c.ID,
 		})

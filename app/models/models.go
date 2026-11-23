@@ -343,20 +343,22 @@ type AiRunStep struct {
 }
 
 type AiSpendPeriod struct {
-	WorkspaceID        ids.UUID    `json:"workspace_id"`
-	PeriodStart        pgtype.Date `json:"period_start"`
-	CostMicros         int64       `json:"cost_micros"`
-	InputTokens        int64       `json:"input_tokens"`
-	CachedInputTokens  int64       `json:"cached_input_tokens"`
-	OutputTokens       int64       `json:"output_tokens"`
-	RunsCount          int32       `json:"runs_count"`
-	AnsweredCount      int32       `json:"answered_count"`
-	UnknownCount       int32       `json:"unknown_count"`
-	HandoffCount       int32       `json:"handoff_count"`
-	SilentCount        int32       `json:"silent_count"`
-	ThresholdsNotified []int32     `json:"thresholds_notified"`
-	CappedAt           *time.Time  `json:"capped_at"`
-	UpdatedAt          time.Time   `json:"updated_at"`
+	WorkspaceID          ids.UUID    `json:"workspace_id"`
+	PeriodStart          pgtype.Date `json:"period_start"`
+	CostMicros           int64       `json:"cost_micros"`
+	InputTokens          int64       `json:"input_tokens"`
+	CachedInputTokens    int64       `json:"cached_input_tokens"`
+	OutputTokens         int64       `json:"output_tokens"`
+	RunsCount            int32       `json:"runs_count"`
+	AnsweredCount        int32       `json:"answered_count"`
+	UnknownCount         int32       `json:"unknown_count"`
+	HandoffCount         int32       `json:"handoff_count"`
+	SilentCount          int32       `json:"silent_count"`
+	ThresholdsNotified   []int32     `json:"thresholds_notified"`
+	CappedAt             *time.Time  `json:"capped_at"`
+	UpdatedAt            time.Time   `json:"updated_at"`
+	SimulationCostMicros int64       `json:"simulation_cost_micros"`
+	SimulationRunsCount  int32       `json:"simulation_runs_count"`
 }
 
 type Article struct {

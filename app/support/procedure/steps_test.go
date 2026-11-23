@@ -231,6 +231,18 @@ func TestProcedurePath(t *testing.T) {
 		}
 	})
 
+	t.Run("stops asking for an action once the customer turned its step down", func(t *testing.T) {
+		t.Parallel()
+		i := in(nil)
+		require.Len(t, procedure.Resolve(refund(), i).Missing(i.Called, i.Tools), 1)
+
+		i.Done = map[string]bool{"s1": true}
+		plan := procedure.Resolve(refund(), i)
+		assert.Empty(t, plan.Missing(i.Called, i.Tools), "the lookup is no longer required of the reply")
+		assert.Equal(t, procedure.StatusDone, plan.Nodes[0].Status)
+		assert.NotContains(t, procedure.RenderPlan("Refund", refund(), plan, i), "order number. [ACTIVE]")
+	})
+
 	t.Run("locks a branch until the action it reads has run", func(t *testing.T) {
 		t.Parallel()
 		i := in(nil)

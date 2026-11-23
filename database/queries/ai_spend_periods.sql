@@ -25,6 +25,20 @@ ON CONFLICT (workspace_id, period_start) DO UPDATE SET
     updated_at = @now
 RETURNING *;
 
+-- name: AddSimulationSpend :exec
+-- AddSimulationSpend adds what rehearsing the agent cost, and how many
+-- simulations ran, to the period's own tally of them. It leaves
+-- cost_micros alone, so simulations never count toward the spend cap.
+INSERT INTO ai_spend_periods (
+    workspace_id, period_start, simulation_cost_micros, simulation_runs_count, updated_at
+) VALUES (
+    @workspace_id, @period_start, @cost_micros, @runs_count, @now
+)
+ON CONFLICT (workspace_id, period_start) DO UPDATE SET
+    simulation_cost_micros = ai_spend_periods.simulation_cost_micros + @cost_micros,
+    simulation_runs_count = ai_spend_periods.simulation_runs_count + @runs_count,
+    updated_at = @now;
+
 -- name: SetSpendCap :exec
 -- SetSpendCap marks the period capped, or clears it when the cap
 -- lifted.

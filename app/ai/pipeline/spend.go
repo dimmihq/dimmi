@@ -8,6 +8,11 @@
 | behind the runs that spent it. Crossing 50, 80 and 100 percent of a
 | cap is marked once each; reaching 100 percent caps the month.
 |
+| Rehearsing the agent is tallied apart: what simulations and their
+| judging cost, and how many simulations ran. That tally has no limit
+| and is no part of the cap, so testing an agent never stops it
+| answering customers.
+|
 */
 
 package pipeline
@@ -19,6 +24,7 @@ import (
 	"time"
 
 	"github.com/dimmihq/dimmi/framework/database"
+	"github.com/dimmihq/dimmi/framework/ids"
 
 	"github.com/dimmihq/dimmi/app/models"
 )
@@ -51,6 +57,9 @@ func (r *Runner) addSpend(ctx context.Context, tx *database.Tx, st *run, delta s
 	e := st.env
 	counts := delta.counts
 	now := r.Clock.Now()
+	if kind := st.args.Kind; kind == simulationKind || kind == judgeKind {
+		return AddSimulationSpend(ctx, tx, SimulationSpend{WorkspaceID: e.Workspace.ID, At: now, Cost: delta.cost})
+	}
 	period, err := models.New(tx).AddSpend(ctx, models.AddSpendParams{
 		WorkspaceID: e.Workspace.ID, PeriodStart: database.Date(monthStart(now)),
 		CostMicros: delta.cost, InputTokens: delta.input, CachedInputTokens: delta.cached,
@@ -61,6 +70,34 @@ func (r *Runner) addSpend(ctx context.Context, tx *database.Tx, st *run, delta s
 		return fmt.Errorf("add spend: %w", err)
 	}
 	return checkThresholds(ctx, tx, spendLimit{now: now, capMicros: e.Agent.MonthlySpendCapMicros}, period)
+}
+
+/*
+SimulationSpend is what rehearsing the agent adds to the month's tally
+of simulations at a moment: what a run of it cost, and how many saved
+simulations finished.
+*/
+type SimulationSpend struct {
+	WorkspaceID ids.UUID
+	At          time.Time
+	Cost        int64
+	Runs        int32
+}
+
+/*
+AddSimulationSpend adds to the month's tally of simulations, in the
+caller's transaction. It checks no cap: simulations are tracked, not
+limited.
+*/
+func AddSimulationSpend(ctx context.Context, tx *database.Tx, s SimulationSpend) error {
+	err := models.New(tx).AddSimulationSpend(ctx, models.AddSimulationSpendParams{
+		WorkspaceID: s.WorkspaceID, PeriodStart: database.Date(monthStart(s.At)),
+		CostMicros: s.Cost, RunsCount: s.Runs, Now: s.At,
+	})
+	if err != nil {
+		return fmt.Errorf("add simulation spend: %w", err)
+	}
+	return nil
 }
 
 /*

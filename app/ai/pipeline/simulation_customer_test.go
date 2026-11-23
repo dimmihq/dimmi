@@ -51,9 +51,8 @@ func TestReadMove(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, CustomerMove{Confirm: true, Saved: 2}, move, "the press is the saved chat's own")
 
-	move, err = readMove(&contracts.ChatResponse{Text: " No thanks, that's all. "}, in)
-	require.NoError(t, err)
-	assert.Equal(t, CustomerMove{Message: "No thanks, that's all."}, move, "words without the tool are the answer")
+	_, err = readMove(&contracts.ChatResponse{Text: "The agent offered a card refund she never asked for, so..."}, in)
+	require.ErrorIs(t, err, ErrCustomerFailed, "words written outside the tool are never sent as the customer")
 
 	move, err = readMove(call(`{"move":"end","saved":0,"message":"","unknown":false}`), in)
 	require.NoError(t, err)

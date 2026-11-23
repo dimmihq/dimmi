@@ -34,6 +34,7 @@ func TestJudgmentFiles(t *testing.T) {
 		{name: "condition_clear", state: true, vars: []string{"condition", "today", "lookups", "conversation"}},
 		{name: "condition_holds", vars: []string{}},
 		{name: "step_given", state: true, vars: []string{"step", "conversation"}},
+		{name: "step_declined", state: true, vars: []string{"step", "conversation"}},
 		{name: "moved_on", state: true, vars: []string{"request", "conversation"}},
 		{name: "procedure_fits", state: true, vars: []string{"conversation", "name", "description"}},
 	}

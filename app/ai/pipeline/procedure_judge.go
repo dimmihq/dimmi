@@ -205,6 +205,23 @@ func (r *Runner) decideSide(ctx context.Context, st *run, n procedure.Node) bool
 }
 
 /*
+stepDeclined reports whether the customer turned down what a step that
+takes an action would do, as the decision model reads their messages.
+With no decision model, or none that answers, it cannot be told and the
+step stands.
+*/
+func (r *Runner) stepDeclined(ctx context.Context, st *run, n procedure.Node) bool {
+	vars := prompts.Vars{"step": n.Step.Text, "conversation": r.conversationLines(st.env)}
+	req := contracts.DecisionRequest{
+		State:     prompts.Judgment("step_declined", vars).State,
+		Questions: map[string]contracts.DecisionQuestion{"declined": question("step_declined", vars)},
+	}
+	declined, ok := r.judge(ctx, st, req)["declined"]
+
+	return ok && declined >= judged
+}
+
+/*
 stepGiven asks the decision model how likely it is that the customer
 has given what a step needs from them. The second result is false when
 it could not be asked.

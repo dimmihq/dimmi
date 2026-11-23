@@ -51,7 +51,7 @@ const (
 	searchResults           = 5
 	searchesPerTurn         = 4
 	defaultSimilarity       = 0.35
-	defaultVectorSimilarity = 0.50
+	defaultVectorSimilarity = 0.40
 	searchTimeout           = 5 * time.Second
 )
 
@@ -195,8 +195,9 @@ handoffSpec describes handoff.
 func handoffSpec() contracts.ToolSpec {
 	return contracts.ToolSpec{
 		Name: toolHandoff,
-		Description: "Hand the conversation to a human teammate. Returns the handoff mode (available, later or " +
-			"unavailable) so your last sentence to the customer matches it.",
+		Description: "Hand the conversation to a human teammate. Returns the team's availability right now " +
+			"(available, later or unavailable): a fact about when a teammate can pick it up. What you tell the " +
+			"customer about the handoff follows the workspace's guidance and the procedure step you are on.",
 		Schema: objectSchema(map[string]any{
 			"reason": enumProperty(handoffReasons()),
 			"note_for_team": textProperty("The note the teammate reads first, four lines: " +
@@ -243,7 +244,10 @@ func (r *Runner) searchKnowledge(ctx context.Context, st *run, args json.RawMess
 	}
 
 	results := st.kept(res.Chunks)
-	st.lastSearch = searchTrace{Mode: res.Mode, Degraded: res.Degraded, Found: len(res.Chunks), Kept: len(results)}
+	st.lastSearch = searchTrace{
+		Mode: res.Mode, Degraded: res.Degraded, Found: len(res.Chunks), Kept: len(results),
+		Ms: milliseconds(res.Timings),
+	}
 	for i := range results {
 		if st.carried[results[i].ID] {
 			results[i].Text = "(in product_knowledge above)"
@@ -282,14 +286,29 @@ type searchResult struct {
 
 /*
 searchTrace is how the last search went, for the run's trace: how it
-searched, why it went without vectors, and how many passages it found
-and kept.
+searched, why it went without vectors, how many passages it found and
+kept, and how long each part of it took, in milliseconds.
 */
 type searchTrace struct {
-	Mode     string `json:"mode"`
-	Degraded string `json:"degraded,omitempty"`
-	Found    int    `json:"found"`
-	Kept     int    `json:"kept"`
+	Mode     string           `json:"mode"`
+	Degraded string           `json:"degraded,omitempty"`
+	Found    int              `json:"found"`
+	Kept     int              `json:"kept"`
+	Ms       map[string]int64 `json:"ms,omitempty"`
+}
+
+/*
+milliseconds writes a search's timings in whole milliseconds.
+*/
+func milliseconds(timings map[string]time.Duration) map[string]int64 {
+	if len(timings) == 0 {
+		return nil
+	}
+	out := make(map[string]int64, len(timings))
+	for part, took := range timings {
+		out[part] = took.Milliseconds()
+	}
+	return out
 }
 
 /*

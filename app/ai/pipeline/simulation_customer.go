@@ -28,13 +28,15 @@
 | Where no decision model is set up, or it cannot answer, the customer
 | model is asked every turn instead and decides for itself.
 |
-| The customer is played by a small, cheap open-weight model on dimmi's
-| built-in provider, which moves to another host when one cannot serve.
-| Its prompt is resources/prompts/tasks/simulation/customer.md. Its move
-| comes back through a single tool whose arguments are checked in code;
-| a call that fails, or a move the chat does not allow, is asked once
-| more, and after that the run fails and can simply be run again. Every
-| call is recorded on a simulation run and spends like any other.
+| The customer is played on dimmi's built-in provider by Claude Haiku
+| 5.5, or by GPT-6 Luna on an install with no Anthropic upstream: a
+| model that keeps to a role and to the tool it is given. Its prompt is
+| resources/prompts/tasks/simulation/customer.md. Its move comes back
+| through a single tool whose arguments are checked in code; a call
+| that fails, a reply with no tool call, or a move the chat does not
+| allow is asked once more, and after that the run fails and can simply
+| be run again. Every call is recorded on a simulation run and spends
+| like any other.
 |
 */
 
@@ -54,14 +56,27 @@ import (
 	"github.com/dimmihq/dimmi/app/contracts"
 	"github.com/dimmihq/dimmi/app/enums"
 	"github.com/dimmihq/dimmi/app/models"
+	"github.com/dimmihq/dimmi/app/support/aimodels"
 	"github.com/dimmihq/dimmi/app/support/prompts"
 )
 
 /*
-customerModel is the model that plays the customer, served by the
-built-in provider's open-weight hosts.
+customerModel is the model that plays the customer on this install, on
+the built-in provider: Claude Haiku 5.5, GPT-6 Luna on an install with
+no Anthropic upstream, and empty when it has neither. Both keep to a
+role and answer through the tool they are given, which playing a
+customer needs.
 */
-const customerModel = "deepseek-v4-flash"
+func (r *Runner) customerModel() string {
+	served := r.LLM.ManagedModels()
+	for _, id := range []string{"claude-haiku-5-5", "gpt-6-luna"} {
+		if aimodels.Find(served, id) != nil {
+			return id
+		}
+	}
+
+	return ""
+}
 
 /*
 customerTool is the one tool the simulated customer answers through.
@@ -95,9 +110,10 @@ const (
 
 /*
 ErrCustomerUnavailable is returned when dimmi's built-in provider, which
-plays the customer, is not set up for the workspace.
+plays the customer, is not set up for the workspace, or serves neither
+of the models that play it.
 */
-var ErrCustomerUnavailable = errors.New("the simulated customer needs dimmi's built-in models")
+var ErrCustomerUnavailable = errors.New("the simulated customer needs dimmi's built-in Claude or GPT models")
 
 /*
 ErrCustomerFailed is returned when the simulated customer gave no
@@ -157,6 +173,10 @@ PlayCustomer returns the simulated customer's next move.
 */
 func (r *Runner) PlayCustomer(ctx context.Context, in CustomerTurn) (CustomerMove, error) {
 	r.prepare()
+	model := r.customerModel()
+	if model == "" {
+		return CustomerMove{}, ErrCustomerUnavailable
+	}
 	st, key, err := r.openCustomer(ctx, in.WorkspaceID, in.MemberID)
 	if err != nil {
 		return CustomerMove{}, err
@@ -171,7 +191,7 @@ func (r *Runner) PlayCustomer(ctx context.Context, in CustomerTurn) (CustomerMov
 	if err != nil {
 		return CustomerMove{}, r.closeCustomer(ctx, st, err)
 	}
-	asked := customerCall{st: st, llm: llm, key: key}
+	asked := customerCall{st: st, llm: llm, key: key, model: model}
 	var move CustomerMove
 	err = ErrCustomerFailed
 	for range customerTries {
@@ -338,12 +358,13 @@ func (r *Runner) closeCustomer(ctx context.Context, st *run, err error) error {
 
 /*
 customerCall is where a call to the customer's model goes and is kept:
-its run, the model's connection and the key it is billed to.
+its run, the model, its connection and the key it is billed to.
 */
 type customerCall struct {
-	st  *run
-	llm contracts.LLM
-	key models.AiProviderKey
+	st    *run
+	llm   contracts.LLM
+	key   models.AiProviderKey
+	model string
 }
 
 /*
@@ -352,7 +373,7 @@ askCustomer makes one call to the customer's model and reads its move.
 func (r *Runner) askCustomer(ctx context.Context, c customerCall, in CustomerTurn) (CustomerMove, error) {
 	st, llm, key := c.st, c.llm, c.key
 	req := contracts.ChatRequest{
-		Model:      customerModel,
+		Model:      c.model,
 		System:     []contracts.SystemBlock{{Text: prompts.Task("simulation/customer", nil), Cacheable: true}},
 		Messages:   customerChat(in),
 		Tools:      []contracts.ToolSpec{customerSpec(in)},
@@ -368,7 +389,7 @@ func (r *Runner) askCustomer(ctx context.Context, c customerCall, in CustomerTur
 	calls, _ := json.Marshal(res.ToolCalls)
 	r.step(ctx, st, stepRecord{
 		kind: enums.AIRunStepKindGenerate, llm: llm, key: &keyRef{id: key.ID, provider: key.Provider},
-		model: customerModel, started: started, request: transcriptOf(req), response: res.Text + "\n" + string(calls),
+		model: c.model, started: started, request: transcriptOf(req), response: res.Text + "\n" + string(calls),
 		usage: res.Usage, err: err, requestID: res.RequestID, responseModel: res.Model,
 	})
 	if err != nil {
@@ -462,9 +483,10 @@ type toldMove struct {
 /*
 readMove reads the customer's move from its tool call. A call that
 cannot be read, or asks for a move the chat does not allow, is refused
-and asked again. A model that skips the tool and simply writes what the
-customer says has still answered: forced tool use is never sent, since
-some models reject it, so its words are taken as the customer's answer.
+and asked again. So is a reply with no tool call: words written outside
+the tool are the model thinking aloud as often as they are the
+customer's answer, and nothing tells the two apart, so they are never
+sent as the customer.
 */
 func readMove(res *contracts.ChatResponse, in CustomerTurn) (CustomerMove, error) {
 	for _, call := range res.ToolCalls {
@@ -479,9 +501,6 @@ func readMove(res *contracts.ChatResponse, in CustomerTurn) (CustomerMove, error
 			return move, nil
 		}
 		return CustomerMove{}, ErrCustomerFailed
-	}
-	if move, ok := allowed(toldMove{Move: moveAnswer, Message: res.Text}, in); ok && len(res.ToolCalls) == 0 {
-		return move, nil
 	}
 
 	return CustomerMove{}, ErrCustomerFailed

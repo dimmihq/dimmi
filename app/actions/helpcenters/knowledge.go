@@ -28,6 +28,7 @@ import (
 	"regexp"
 	"slices"
 	"strings"
+	"time"
 
 	"github.com/dimmihq/dimmi/framework/database"
 	"github.com/dimmihq/dimmi/framework/ids"
@@ -45,20 +46,24 @@ candidates is how many articles a search ranks sections of.
 const candidates = 12
 
 /*
-defaultPerDocument is how many chunks of one article a hybrid result
-keeps.
+defaultPerDocument is how many chunks of one article a search by
+meaning keeps.
 */
 const defaultPerDocument = 3
 
 /*
 Knowledge is the agent's index over published articles. Vectors, when
-set, adds the meaning half of a hybrid search.
+set, searches by meaning, and Reranker, when set, orders what that
+search found by how well each passage answers the question, waiting
+RerankTimeout for it at most.
 */
 type Knowledge struct {
-	DB        *database.DB
-	Addresses Addresses
-	Fallback  contracts.Knowledge
-	Vectors   *knowledge.Vectors
+	DB            *database.DB
+	Addresses     Addresses
+	Fallback      contracts.Knowledge
+	Vectors       *knowledge.Vectors
+	Reranker      contracts.Reranker
+	RerankTimeout time.Duration
 }
 
 /*
@@ -113,8 +118,60 @@ func inScope(c contracts.KnowledgeChunk, opts contracts.KnowledgeSearchOptions) 
 
 /*
 searchAll searches every article and source the options let through.
+A workspace with an embedding model is searched two ways at once, by
+meaning and by keywords, and what both found is ranked together, as
+meaning.go says. One with no model, or a search that asked for
+keywords, is searched by keywords alone. When the search by meaning
+could not be done, because the question's vector could not be had even
+after its retry or nothing is embedded yet, the keyword passages are
+the answer, as the last resort, and the result says so.
 */
 func (k *Knowledge) searchAll(ctx context.Context, ws ids.UUID, query string, opts contracts.KnowledgeSearchOptions,
+) (contracts.KnowledgeSearchResult, error) {
+	if k.Vectors == nil || opts.Mode == "keyword" || strings.TrimSpace(query) == "" {
+		return k.byKeyword(ctx, ws, query, opts)
+	}
+	wide := opts
+	wide.Limit = max(opts.Limit, keywordCandidates)
+	found := make(chan keywordHits, 1)
+	go func() {
+		started := k.Vectors.Clock.Now()
+		res, err := k.byKeyword(ctx, ws, query, wide)
+		found <- keywordHits{res: res, err: err, took: k.Vectors.Clock.Now().Sub(started)}
+	}()
+	s := search{ws: ws, query: query, opts: opts}
+	vec, vecErr := k.Vectors.SearchChunks(ctx, ws, query, opts)
+	keyword := <-found
+	if err := cmp.Or(vecErr, keyword.err); err != nil {
+		return contracts.KnowledgeSearchResult{}, err
+	}
+	vec.Timings["keyword"] = keyword.took
+	res, err := k.ranked(ctx, s, vec, keyword.res.Chunks)
+	if err != nil || res.Degraded == "" {
+		return res, err
+	}
+	out := keyword.res
+	out.Chunks = out.Chunks[:min(len(out.Chunks), cmp.Or(max(opts.Limit, 0), defaultLimit))]
+	out.Degraded, out.Timings = res.Degraded, res.Timings
+	if res.Degraded != "no_embeddings_key" {
+		out.Mode = "fts_fallback"
+	}
+	return out, nil
+}
+
+/*
+keywordHits is what the keyword search found, and how long it took.
+*/
+type keywordHits struct {
+	res  contracts.KnowledgeSearchResult
+	err  error
+	took time.Duration
+}
+
+/*
+byKeyword searches by the words of the query.
+*/
+func (k *Knowledge) byKeyword(ctx context.Context, ws ids.UUID, query string, opts contracts.KnowledgeSearchOptions,
 ) (contracts.KnowledgeSearchResult, error) {
 	terms := searchTerms(append([]string{query}, opts.Queries...))
 	if terms == "" {
@@ -139,11 +196,7 @@ func (k *Knowledge) searchAll(ctx context.Context, ws ids.UUID, query string, op
 	for _, r := range found.documents {
 		docs = append(docs, sourceDocumentOf(r))
 	}
-	res, err := knowledge.NewSeed(docs).Search(ctx, ws, query, opts)
-	if err != nil || k.Vectors == nil || opts.Mode == "keyword" {
-		return res, err
-	}
-	return k.hybrid(ctx, search{ws: ws, query: query, opts: opts, restrictions: found.restrictions}, res)
+	return knowledge.NewSeed(docs).Search(ctx, ws, query, opts)
 }
 
 /*

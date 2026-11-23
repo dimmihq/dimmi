@@ -1,6 +1,7 @@
 <!--
-Who reads this: the small open-weight model that also plays the simulated customer
-(DescribeCustomer in app/ai/pipeline/simulation_scenario.go). It runs once, when a chat is saved
+Who reads this: the model that also plays the simulated customer, Claude Haiku 5.5, or GPT-6
+Luna on an install with no Anthropic upstream (DescribeCustomer in
+app/ai/pipeline/simulation_scenario.go). It runs once, when a chat is saved
 as a simulation and the teammate wrote no scenario of their own.
 
 What it must get right: the scenario is the simulated customer's whole idea of what it wants.

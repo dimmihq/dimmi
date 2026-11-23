@@ -394,6 +394,10 @@ func (s *Simulations) keep(ctx context.Context, m authz.Membership, c models.AiA
 	raw, _ := json.Marshal(k.result)
 	err := s.DB.Transaction(ctx, func(ctx context.Context, tx *database.Tx) error {
 		q := models.New(tx)
+		ran := pipeline.SimulationSpend{WorkspaceID: m.Workspace.ID, At: s.Clock.Now(), Runs: 1}
+		if err := pipeline.AddSimulationSpend(ctx, tx, ran); err != nil {
+			return err
+		}
 		if k.version == VersionLive {
 			return q.SetAgentTestCaseLiveResult(ctx, models.SetAgentTestCaseLiveResultParams{
 				Result: raw, WorkspaceID: m.Workspace.ID, ID: c.ID,

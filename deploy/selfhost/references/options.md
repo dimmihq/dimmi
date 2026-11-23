@@ -93,10 +93,10 @@ DIMMI_AI__MANAGED__OPENAI__API_KEY=sk-...
 DIMMI_AI__MANAGED__EMBEDDINGS__API_KEY=...       # semantic search of help articles
 ```
 
-Embeddings default to DeepInfra's OpenAI-compatible API
-(`DIMMI_AI__MANAGED__EMBEDDINGS__BASE_URL`, model `Qwen/Qwen3-Embedding-8B`,
-1024 dimensions). Any OpenAI-compatible endpoint with a 1024-dimension model
-works; set `__BASE_URL` and `__MODEL`. `DIMMI_AI__DEFAULT_MONTHLY_CAP_USD`
+Embeddings use Voyage AI: the key is a Voyage API key, the model
+`voyage-4-lite` at 1024 dimensions, and search results are reordered by
+`rerank-2.5-lite` on the same key (`__MODEL`, `__RERANK_MODEL`; an empty
+rerank model turns reranking off). `DIMMI_AI__DEFAULT_MONTHLY_CAP_USD`
 caps each workspace's spend (25 by default). `DIMMI_AI__ENABLED=false` turns
 AI off. Check with `... exec web /dimmi ai:doctor`.
 

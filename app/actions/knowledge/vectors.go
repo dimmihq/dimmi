@@ -174,9 +174,12 @@ func (v *Vectors) queryVector(ctx context.Context, ws ids.UUID, query string, ti
 	}
 	embedCtx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
-	resp, err := drv.Embed(embedCtx, contracts.EmbedRequest{
-		Model: model.Model, Inputs: []string{query}, Dimensions: int(model.Dims),
-		InputType: contracts.EmbedInputQuery,
+	hedge := time.Duration(v.Config.Knowledge.QueryEmbedHedgeMS) * time.Millisecond
+	resp, err := hedged(embedCtx, hedge, func(ctx context.Context) (*contracts.EmbedResponse, error) {
+		return drv.Embed(ctx, contracts.EmbedRequest{
+			Model: model.Model, Inputs: []string{query}, Dimensions: int(model.Dims),
+			InputType: contracts.EmbedInputQuery,
+		})
 	})
 	if err != nil {
 		if embedCtx.Err() != nil && ctx.Err() == nil {

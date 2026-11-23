@@ -282,11 +282,14 @@ func annotatedOf(m models.Message) string {
 replyFocus closes the newest turn of a conversation the agent already
 answered in. Guidance placed in the newest turn is what a fast model
 follows best mid-conversation, and repeating earlier steps, questions
-and offers is the habit long conversations show most.
+and offers is the habit long conversations show most. It asks for a
+short reply only by default: what the workspace's procedure or guidance
+says to tell the customer is never cut to fit.
 */
 const replyFocus = "Your earlier replies above are settled: they stand as given, whether or not their knowledge " +
 	"is in front of you now, and the customer already has every step, tip, question and offer in them. " +
-	"This reply answers only what is new in the latest message, short and easy to scan."
+	"This reply answers only what is new in the latest message, short and easy to scan. What a procedure step " +
+	"or the workspace's guidance tells you to say now is still said in full."
 
 /*
 repliedBefore reports whether the agent has replied earlier in the

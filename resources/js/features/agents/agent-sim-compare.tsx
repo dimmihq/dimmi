@@ -2,7 +2,10 @@
  * One simulation answered by the draft and by the live version, side by
  * side: how each went, what each said turn by turn, and the checks each
  * failed. Run both saves the draft, then runs it and the live version at
- * the same time, each column streaming its own run as it happens.
+ * the same time, each column streaming its own run as it happens. Each
+ * column is a fixed height: its chat scrolls and follows the run as it
+ * is written, and its checks sit in a card pinned under it, always in
+ * view.
  */
 import {
   RiCheckboxBlankCircleLine,
@@ -12,7 +15,7 @@ import {
   RiQuestionFill,
 } from "@remixicon/react";
 import { useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { type ReactNode, useEffect, useRef, useState } from "react";
 
 import { Chip } from "@/components/base/badges/chip";
 import { Button } from "@/components/base/buttons/button";
@@ -203,6 +206,40 @@ export function LiveTalk({
   );
 }
 
+/*
+ * Following keeps a chat's newest line in view while it is being
+ * written: the box scrolls to its end each time what is inside grows.
+ * A finished chat is left where the reader put it.
+ */
+function Following({ follow, children }: { follow: boolean; children: ReactNode }) {
+  const box = useRef<HTMLDivElement>(null);
+  const inside = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const scroller = box.current;
+    const content = inside.current;
+    if (!follow || !scroller || !content) {
+      return;
+    }
+    const toEnd = () => {
+      scroller.scrollTop = scroller.scrollHeight;
+    };
+    toEnd();
+    const watch = new ResizeObserver(toEnd);
+    watch.observe(content);
+
+    return () => watch.disconnect();
+  }, [follow]);
+
+  return (
+    <div ref={box} className="min-h-0 flex-1 overflow-y-auto pe-2 [scrollbar-width:thin]">
+      <div ref={inside} className="pb-2">
+        {children}
+      </div>
+    </div>
+  );
+}
+
 function Side({
   title,
   sim,
@@ -223,8 +260,8 @@ function Side({
   const status = statusNow(result, running, live);
 
   return (
-    <section aria-label={title} className="flex min-w-0 flex-col gap-4">
-      <span className="flex flex-wrap items-center gap-2">
+    <section aria-label={title} className="flex h-[min(68vh,680px)] min-w-0 flex-col gap-3">
+      <span className="flex shrink-0 flex-wrap items-center gap-2">
         <span className="text-body-medium text-text-primary">{title}</span>
         <Chip variant="caption" color={status.color} className="py-0.5">
           {status.label}
@@ -232,17 +269,16 @@ function Side({
         {result && !running ? <span className={hint}>{formatRelative(result.ran_at)}</span> : null}
       </span>
       {running ? null : result?.error ? (
-        <p className="text-body-2-regular text-text-error-primary">{result.error}</p>
+        <p className="shrink-0 text-body-2-regular text-text-error-primary">{result.error}</p>
       ) : null}
-      <div className="flex flex-col gap-2.5">
-        <span className={fieldLabel}>Conversation</span>
+      <Following follow={running}>
         {running ? (
           <LiveTalk run={live} sources={sources} bubble={fromCustomerOnPrimary} />
         ) : (
           <Talk sim={sim} result={result} sources={sources} bubble={fromCustomerOnPrimary} />
         )}
-      </div>
-      <div className="flex flex-col gap-1.5">
+      </Following>
+      <div className="flex max-h-[45%] shrink-0 flex-col gap-1.5 overflow-y-auto rounded-xl bg-background-secondary-default p-3 [scrollbar-width:thin]">
         <span className={fieldLabel}>Checks</span>
         <CheckList sim={sim} result={running ? (live?.result ?? null) : result} name={name} sources={sources} />
       </div>
@@ -305,7 +341,7 @@ export function SimCompare({
     <Modal isOpen onOpenChange={(open) => (open ? undefined : onClose())} size="xl">
       <ModalHeader title={sim.name} description="The same simulation on your draft and on what customers get now." />
       <ModalBody>
-        <div className="grid grid-cols-1 gap-8 pb-4 md:grid-cols-2">
+        <div className="grid grid-cols-1 gap-8 pb-2 md:grid-cols-2">
           <Side
             title="Draft"
             sim={sim}

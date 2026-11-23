@@ -57,6 +57,10 @@ DescribeCustomer writes the scenario of a saved chat's customer.
 */
 func (r *Runner) DescribeCustomer(ctx context.Context, in CustomerProfile) (string, error) {
 	r.prepare()
+	model := r.customerModel()
+	if model == "" {
+		return "", ErrCustomerUnavailable
+	}
 	st, key, err := r.openCustomer(ctx, in.WorkspaceID, in.MemberID)
 	if err != nil {
 		return "", err
@@ -67,7 +71,7 @@ func (r *Runner) DescribeCustomer(ctx context.Context, in CustomerProfile) (stri
 	}
 
 	req := contracts.ChatRequest{
-		Model:           customerModel,
+		Model:           model,
 		System:          []contracts.SystemBlock{{Text: prompts.Task("simulation/scenario", nil), Cacheable: true}},
 		Messages:        []contracts.ChatMessage{userMessage(savedChat(in.Name, in.Saved))},
 		MaxOutputTokens: scenarioTokens, Effort: contracts.EffortLow,
@@ -81,7 +85,7 @@ func (r *Runner) DescribeCustomer(ctx context.Context, in CustomerProfile) (stri
 	}
 	r.step(ctx, st, stepRecord{
 		kind: enums.AIRunStepKindGenerate, llm: llm, key: &keyRef{id: key.ID, provider: key.Provider},
-		model: customerModel, started: started, request: transcriptOf(req), response: res.Text,
+		model: model, started: started, request: transcriptOf(req), response: res.Text,
 		usage: res.Usage, err: err, requestID: res.RequestID, responseModel: res.Model,
 	})
 	if err != nil {

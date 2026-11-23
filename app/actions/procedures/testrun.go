@@ -197,7 +197,7 @@ The reasons a run stops without a verdict because the customer could
 not be played.
 */
 const (
-	noCustomer = "The simulated customer needs dimmi's built-in models, which this workspace does not have."
+	noCustomer = "The simulated customer needs dimmi's built-in Claude or GPT models, which this workspace lacks."
 	silent     = "The simulated customer did not answer, so this run does not count. Run it again."
 )
 
