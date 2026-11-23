@@ -8,7 +8,9 @@
 | back, what to do next and how risky it is. The tools themselves are
 | generated from the API document, so they never drift from the API; the
 | catalog is what makes them teach. A new API operation without an entry
-| fails the catalog test, so no tool ever ships undescribed.
+| fails the catalog test, so no tool ever ships undescribed. The
+| operations that are not tools have entries too: the API document is
+| described from this catalog, and it explains every operation.
 |
 */
 
@@ -73,7 +75,7 @@ func catalog() map[string]Doc {
 	for _, area := range []map[string]Doc{
 		inboxDocs(), peopleDocs(), knowledgeDocs(), automationDocs(), workspaceDocs(), settingsDocs(),
 		outreachDocs(), sourceDocs(), integrationDocs(), webhookDocs(), mergeDocs(), ticketDocs(), trackerDocs(),
-		slaDocs(), ticketIssueDocs(), ticketReportDocs(), channelDocs(), noteDocs(),
+		slaDocs(), ticketIssueDocs(), ticketReportDocs(), channelDocs(), noteDocs(), unexposedDocs(),
 	} {
 		maps.Copy(out, area)
 	}

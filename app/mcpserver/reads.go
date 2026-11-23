@@ -110,10 +110,11 @@ documented builds the tool of every operation the catalog describes.
 */
 func documented(ops []mcp.Operation) []built {
 	docs := catalog()
+	tools := toolsByEndpoint(ops, docs)
 	var out []built
 	for _, op := range ops {
 		if d, ok := docs[op.ID]; ok {
-			out = append(out, build(op, d))
+			out = append(out, build(op, d, tools))
 		}
 	}
 	return out

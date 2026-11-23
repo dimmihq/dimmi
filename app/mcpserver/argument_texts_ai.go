@@ -57,7 +57,7 @@ func aiTextsPart1() map[string]map[string]string {
 				"and _, path is a dotted path into the JSON, such as [{\"name\": \"status\", \"path\": " +
 				"\"order.status\", \"description\": \"Order status\"}].",
 			"status": "Has no effect when creating: a new action always starts as a draft and goes live " +
-				"through publish_ai_action. Leave it out.",
+				"through dimmi_publish_ai_action. Leave it out.",
 		},
 		"create_ai_action_connection": {
 			"auth_config": "Non-secret auth settings as an object with header_name, query_param and prefix, " +
@@ -80,8 +80,8 @@ func aiTextsPart2() map[string]map[string]string {
 				"\"2024-01\"}. Not allowed: Authorization, Content-Type, Cookie, Host, User-Agent and names " +
 				"starting with Dimmi-.",
 			"status": "Must be \"active\" or \"disabled\" if sent, but has no effect when creating: a new " +
-				"connection always starts active. Leave it out; use update_ai_action_connection to disable " +
-				"one.",
+				"connection always starts active. Leave it out; use dimmi_update_ai_action_connection to " +
+				"disable one.",
 		},
 		"create_ai_key": {
 			"config": "Optional provider settings, as an object. Keys dimmi reads: anthropic_version, " +
@@ -215,7 +215,7 @@ func aiTextsPart5() map[string]map[string]string {
 				"\"order.status\", \"description\": \"Order status\"}].",
 			"status": "Switches an action that was published before off or back on: \"disabled\" or " +
 				"\"published\". Any other value is refused, and \"published\" is refused for an action never " +
-				"published; use publish_ai_action for a draft. Such as \"disabled\".",
+				"published; use dimmi_publish_ai_action for a draft. Such as \"disabled\".",
 		},
 		"update_ai_action_connection": {
 			"auth_config": "Non-secret auth settings as an object with header_name, query_param and prefix, " +

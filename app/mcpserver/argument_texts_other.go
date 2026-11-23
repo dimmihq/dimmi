@@ -171,8 +171,9 @@ func otherTextsPart4() map[string]map[string]string {
 		},
 		"preview_widget_settings": {
 			"request_body": "Object of unsaved messenger settings to preview, with the same fields " +
-				"update_widget_settings takes (name, appearance, texts, locale, show_branding and so on); " +
-				"nothing is saved. Such as {\"texts\":{\"greeting\":\"Hi there\"},\"help_tab_enabled\":true}.",
+				"dimmi_update_widget_settings takes (name, appearance, texts, locale, show_branding and so " +
+				"on); nothing is saved. Such as {\"texts\":{\"greeting\":\"Hi " +
+				"there\"},\"help_tab_enabled\":true}.",
 		},
 		"resend_invitation": {
 			"channel": "How to deliver the fresh invitation link: email mails it to the invited person (the " +

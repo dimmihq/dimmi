@@ -98,10 +98,44 @@ func (r *Router) OpenAPI(prefix string) ([]byte, error) {
 			return nil, fmt.Errorf("encode openapi %s: %w", prefix, err)
 		}
 
-		return constrain(doc, spec, r.table.routes)
+		out, err := constrain(doc, spec, r.table.routes)
+		if err != nil || r.table.explain == nil {
+			return out, err
+		}
+
+		return explained(out, prefix, r.table.explain)
 	}
 
 	return nil, fmt.Errorf("openapi %s: %w", prefix, ErrUnknownAPI)
+}
+
+/*
+Describe sets the function that writes into every API document the
+words the routes themselves do not carry: what each operation is for
+and what each parameter and field takes. It is given the prefix of the
+API and the document to change in place, after the routes are read.
+*/
+func (r *Router) Describe(explain func(prefix string, doc map[string]any)) {
+	r.table.explain = explain
+}
+
+/*
+explained passes a document through the function that describes it.
+*/
+func explained(raw []byte, prefix string, explain func(string, map[string]any)) ([]byte, error) {
+	var doc map[string]any
+	if err := json.Unmarshal(raw, &doc); err != nil {
+		return nil, fmt.Errorf("read openapi %s: %w", prefix, err)
+	}
+
+	explain(prefix, doc)
+
+	out, err := json.Marshal(doc)
+	if err != nil {
+		return nil, fmt.Errorf("encode openapi %s: %w", prefix, err)
+	}
+
+	return out, nil
 }
 
 /*

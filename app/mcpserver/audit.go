@@ -5,7 +5,7 @@
 |
 | The tools follow the API by construction, but the catalog is written by
 | hand, so it is checked: every operation an agent can call has an entry,
-| every entry belongs to an operation that exists, every entry is
+| every entry belongs to an operation of the API, every entry is
 | complete, and every tool a text names is a real tool. The test suite
 | runs the audit, so the MCP server cannot fall behind the API.
 |
@@ -76,8 +76,19 @@ func Audit(router *routing.Router) (Report, error) {
 	var r Report
 
 	for _, op := range ops {
-		live[op.ID] = true
 		check(&r, op, docs, known)
+	}
+
+	r.Tools = slices.Collect(maps.Keys(known))
+
+	every, err := mcp.Operations(doc, nil)
+	if err != nil {
+		return Report{}, fmt.Errorf("read api operations: %w", err)
+	}
+
+	for _, op := range every {
+		live[op.ID] = true
+		known[toolName(op, docs[op.ID])] = true
 	}
 
 	for id := range docs {
@@ -87,7 +98,6 @@ func Audit(router *routing.Router) (Report, error) {
 	}
 
 	r.Unknown = unknownReferences(docs, known)
-	r.Tools = slices.Collect(maps.Keys(known))
 	r.sort()
 
 	return r, nil
@@ -105,7 +115,7 @@ func check(r *Report, op mcp.Operation, docs map[string]Doc, known map[string]bo
 	}
 
 	known[name] = true
-	b := build(op, entry)
+	b := build(op, entry, nil)
 	r.Unwritten = append(r.Unwritten, unwritten(b)...)
 
 	switch {

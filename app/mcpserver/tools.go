@@ -95,8 +95,9 @@ func (r Risk) caution() string {
 
 /*
 built is one operation as a tool: its catalog entry, its definition,
-how its arguments are named, the schema the model fills and the texts
-written for its arguments.
+how its arguments are named, the schema the model fills, the texts
+written for its arguments and the tool that stands for each endpoint
+the API document names.
 */
 type built struct {
 	op      mcp.Operation
@@ -105,13 +106,14 @@ type built struct {
 	names   naming
 	schema  map[string]any
 	written map[string]string
+	tools   map[string]string
 }
 
 /*
 build makes the tool of an operation.
 */
-func build(op mcp.Operation, doc Doc) built {
-	b := built{op: op, doc: doc, names: namingOf(op)}
+func build(op mcp.Operation, doc Doc, tools map[string]string) built {
+	b := built{op: op, doc: doc, names: namingOf(op), tools: tools}
 	b.written = writtenTexts()[strings.TrimPrefix(toolName(op, doc), toolPrefix)]
 	b.schema = b.inputSchema()
 	b.def = b.definition()
@@ -145,17 +147,28 @@ describe writes a tool's description: what it does and when to use it,
 what it returns, and how careful to be.
 */
 func describe(doc Doc, r Risk) string {
+	return purpose(doc) + " " + r.caution()
+}
+
+/*
+purpose says what an operation does, when to use it and what it
+returns, the same for the tool and the endpoint.
+*/
+func purpose(doc Doc) string {
 	parts := []string{strings.TrimSpace(doc.Use)}
 	if doc.Returns != "" {
 		parts = append(parts, "Returns "+strings.TrimSpace(doc.Returns))
 	}
 
-	return strings.Join(append(parts, r.caution()), " ")
+	return strings.Join(parts, " ")
 }
 
 /*
 inputSchema copies an operation's input schema with every argument
-explained, and the approval argument added to tools that need one.
+explained in the API document's own words, an endpoint it names said
+as the tool that stands for it, and the approval argument added to
+tools that need one. An argument the document says nothing of is
+explained the way the document would be.
 */
 func (b built) inputSchema() map[string]any {
 	input := maps.Clone(b.op.Input)
@@ -164,7 +177,12 @@ func (b built) inputSchema() map[string]any {
 
 	for name := range b.names.api {
 		schema := b.describeFields(maps.Clone(asMap(fields[name])), name)
-		schema["description"] = b.argumentText(name, schema)
+		if text, _ := schema["description"].(string); text != "" && b.tools != nil {
+			schema["description"] = toolWords(text, b.tools)
+		} else {
+			schema["description"] = b.argumentText(name, schema)
+		}
+
 		properties[name] = schema
 	}
 
@@ -182,8 +200,9 @@ func (b built) inputSchema() map[string]any {
 }
 
 /*
-describeFields returns a schema with the fields inside it explained,
-each by its path from the argument: contact.email, or edits.find for a
+describeFields returns a schema with the fields inside it explained:
+in the API document's words, else by the text written for the field's
+path from the argument, such as contact.email, or edits.find for a
 field of each item of a list. Only what it changes is copied.
 */
 func (b built) describeFields(schema map[string]any, path string) map[string]any {
@@ -201,7 +220,9 @@ func (b built) describeFields(schema map[string]any, path string) map[string]any
 			at := path + "." + name
 			field = b.describeFields(maps.Clone(field), at)
 
-			if text, ok := b.written[at]; ok {
+			if text, _ := field["description"].(string); text != "" {
+				field["description"] = toolWords(text, b.tools)
+			} else if text, ok := b.written[at]; ok {
 				field["description"] = text
 			}
 

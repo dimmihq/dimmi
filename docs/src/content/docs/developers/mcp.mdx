@@ -51,7 +51,7 @@ If your client cannot open a browser for OAuth, pass an [API token](/developers/
 A tool takes the same arguments as its REST endpoint, under the same names: path parameters, query parameters, and body fields side by side.
 
 - **Same names as the API reference:** `article`, `filter[status]`, `q`, `body`.
-- **Every argument is described:** what it takes, its allowed values, and an example.
+- **Every argument is described:** what it takes, its allowed values, and an example. The text is the API reference's own; where the reference names an endpoint, the tool names the tool.
 - **Forgiving:** likely spellings such as `article_id`, `id`, or `search_text` are still read.
 - **Refused before anything runs:** a missing, unknown, or out-of-range argument is named, with what belongs in it. So is a field inside an argument, by its path, such as `contact.mail`.
 

@@ -84,8 +84,15 @@ func New(opts Options) (*mcp.Server, error) {
 		return nil, err
 	}
 
+	tools := toolsByEndpoint(ops, docs)
+
 	for _, op := range ops {
-		if err := register(s, api, op, docs); err != nil {
+		doc, ok := docs[op.ID]
+		if !ok {
+			return nil, fmt.Errorf("%w: %s", ErrUndocumented, op.ID)
+		}
+
+		if err := register(s, api, build(op, doc, tools)); err != nil {
 			return nil, err
 		}
 	}
@@ -94,15 +101,10 @@ func New(opts Options) (*mcp.Server, error) {
 }
 
 /*
-register adds the tool of one operation.
+register adds one tool.
 */
-func register(s *mcp.Server, api fhttp.Handler, op mcp.Operation, docs map[string]Doc) error {
-	doc, ok := docs[op.ID]
-	if !ok {
-		return fmt.Errorf("%w: %s", ErrUndocumented, op.ID)
-	}
-
-	b := build(op, doc)
+func register(s *mcp.Server, api fhttp.Handler, b built) error {
+	op, doc := b.op, b.doc
 
 	err := mcp.SchemaTool(s, b.def, b.schema, func(ctx context.Context, args map[string]any) (any, error) {
 		delete(args, confirmArgument)
