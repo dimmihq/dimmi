@@ -41,7 +41,7 @@ func TestOperatorViewing(t *testing.T) {
 		)
 		suggestion := k.ask(thread, "Fix the batch article").AssertOK().String("data.changesets.0.id")
 		k.llm.Script(
-			tools(call("get_suggestion_by_id", map[string]any{"suggestion_id": suggestion})),
+			tools(call("get_suggestion_by_id", map[string]any{"suggestion_id": suggestion[:len(suggestion)-1]})),
 			tools(call("propose_article_edits", map[string]any{"fixes": []map[string]any{{
 				"article_id": article, "suggestion_title": "Say 500", "reason": "The teammate asked for 500.",
 				"edits": []map[string]any{{
@@ -60,6 +60,7 @@ func TestOperatorViewing(t *testing.T) {
 		note := asked.Parts[len(asked.Parts)-1].Text
 		assert.Contains(t, note, `the help article "Batches"`)
 		assert.Contains(t, note, `A suggestion waits for review on it: "Fix the batch limit"`)
+		assert.NotContains(t, note, suggestion, "the model never has to type the open suggestion's id")
 		read := sent[3].Messages[len(sent[3].Messages)-1].Parts[0].Text
 		assert.Contains(t, read, "Lines it removes:")
 		assert.Contains(t, read, "The article as suggested")

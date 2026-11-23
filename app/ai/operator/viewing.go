@@ -68,10 +68,10 @@ func (e *Engine) lookAt(ctx context.Context, s *session) string {
 		"propose_changes for a procedure. It shows on their page for them to accept."
 	if c, ok := e.viewedSuggestion(ctx, s); ok {
 		s.viewed = &c
-		note += fmt.Sprintf(" A suggestion waits for review on it: %q (%s). Read it with get_suggestion_by_id "+
-			"before you explain it or change it. Changes you make to this article or procedure are added to "+
-			"that suggestion, so quote passages from the text it shows as suggested, not from the article as "+
-			"published.", c.Title, models.PublicID(models.PrefixOperatorChangeset, c.ID))
+		note += fmt.Sprintf(" A suggestion waits for review on it: %q. Read it by calling get_suggestion_by_id "+
+			"with no arguments before you explain it or change it. Changes you make to this article or "+
+			"procedure are added to that suggestion, so quote passages from the text it shows as suggested, "+
+			"not from the article as published.", c.Title)
 	}
 	return note + "]"
 }
@@ -179,9 +179,10 @@ func (e *Engine) suggestionTool() tool {
 	return tool{spec: contracts.ToolSpec{
 		Name: "get_suggestion_by_id",
 		Description: "Read one suggested change: what it would change, why, what made it, and for an article " +
-			"the lines it removes and adds with the article's full text as suggested.",
-		Schema: schema(`{"type":"object","required":["suggestion_id"],"properties":{"suggestion_id":{` +
-			`"type":"string","description":"The suggestion's id, such as opc_..."}}}`),
+			"the lines it removes and adds with the article's full text as suggested. With no arguments it " +
+			"reads the suggestion the teammate has open.",
+		Schema: schema(`{"type":"object","properties":{"suggestion_id":{"type":"string","description":"Leave ` +
+			`out to read the suggestion the teammate has open. Give an id (opc_...) only for another one."}}}`),
 	}, handle: e.getSuggestion}
 }
 
@@ -190,8 +191,12 @@ getSuggestion reads one suggestion the teammate may see.
 */
 func (e *Engine) getSuggestion(ctx context.Context, s *session, args json.RawMessage) (result, error) {
 	id, err := e.idArg(args, "suggestion_id", models.PrefixOperatorChangeset)
+	if err != nil && s.viewed == nil {
+		return result{}, fmt.Errorf("%w: there is no suggestion with that id; list them with "+
+			"list_recent_suggestions", errBadArguments)
+	}
 	if err != nil {
-		return result{}, err
+		id = s.viewed.ID
 	}
 	var c models.OperatorChangeset
 	made := "in a chat with Operator"
@@ -215,7 +220,8 @@ func (e *Engine) getSuggestion(ctx context.Context, s *session, args json.RawMes
 		return nil
 	})
 	if errors.Is(err, database.ErrNotFound) {
-		return result{}, fmt.Errorf("%w: there is no suggestion with that id", errBadArguments)
+		return result{}, fmt.Errorf("%w: there is no suggestion with that id; list them with "+
+			"list_recent_suggestions", errBadArguments)
 	}
 	if err != nil {
 		return result{}, err
