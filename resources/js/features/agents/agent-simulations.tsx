@@ -2,8 +2,12 @@
  * An agent's simulations, the way a procedure's work: chats the agent
  * must keep getting right, each with the checks that judge it, run
  * against the draft or the live version. Each keeps how it last went
- * on both. The list says how many pass, and flags a simulation whose
- * draft and live results disagree; opening one slides in its
+ * on both, and how its latest runs went: an agent's answers vary, so a
+ * simulation reads as passing, flaky or failing over its last runs on
+ * the agent as it stands now. The list says how many pass, and flags a
+ * simulation whose draft and live results disagree; opening one slides
+ * in its past runs first, where choosing a run slides that run's chat
+ * and checks into place, then its
  * conversation and checks, where a check is removed or one is added in
  * plain words, and Compare puts its draft and live runs side by side.
  */
@@ -25,26 +29,28 @@ import { Input } from "@/components/base/input/input";
 import { AlertDialog } from "@/components/base/modal/modal";
 import { Textarea } from "@/components/base/textarea/textarea";
 import { toast } from "@/components/base/toast/toast";
-import { Swap } from "@/features/inbox/motion";
+import { Resize, Swap } from "@/features/inbox/motion";
 import { ScrollArea } from "@/features/shell/page";
 import {
   type AgentSimulation,
+  type AgentSimulationRun,
   type AnswerAs,
   agentSimulationsQuery,
   deleteAgentSimulation,
+  historyOf,
   resultOf,
   runAgentSimulations,
   updateAgentSimulation,
 } from "@/lib/api/agents";
 import type { Assertion, TestResult } from "@/lib/api/procedures";
-import { formatRelative } from "@/lib/i18n/format";
 import { cx } from "@/utils/cx";
 
 import { card, fieldLabel, hint, sentenceOf } from "../automation/procedure-simulator/simulator";
 import { type LiveRun, useLiveRuns } from "../automation/procedure-simulator/use-live-runs";
 import type { ChipSources } from "../automation/procedure-writer/procedure-suggestions";
 import { LiveTalk, Mark, SimCompare, Talk } from "./agent-sim-compare";
-import { choicesOf, sayOf, statusNow } from "./agent-sim-words";
+import { Dots, PastRuns } from "./agent-sim-history";
+import { choicesOf, lastRun, sayOf, statusNow } from "./agent-sim-words";
 
 function Checks({
   sim,
@@ -194,7 +200,68 @@ function Scenario({
   );
 }
 
+/*
+ * usePastRun holds which past run is on screen in place of the latest,
+ * and whether the one just chosen is newer than the one before it, so
+ * its chat slides in from the side time moves. A run in progress shows
+ * itself, whatever was chosen.
+ */
+function usePastRun(busy: boolean, latest: TestResult | null) {
+  const [past, setPast] = useState<{ run: AgentSimulationRun; at: number } | null>(null);
+  const [newer, setNewer] = useState(true);
+  const view = (run: AgentSimulationRun | null, at: number) => {
+    setNewer(at < (past?.at ?? 0));
+    setPast(run ? { run, at } : null);
+  };
+
+  const viewing = busy ? null : (past?.run ?? null);
+  const showing = busy ? "live" : (viewing?.id ?? `latest:${latest?.ran_at ?? ""}`);
+
+  return { viewing, newer, view, result: viewing ? viewing.result : latest, showing };
+}
+
+/*
+ * Ran is one run of a simulation: what went wrong if it could not
+ * finish, its chat, and its checks. Live is the run as it happens,
+ * null before its first moment and left out once it is over.
+ */
+function Ran({
+  sim,
+  name,
+  sources,
+  result,
+  shown,
+  live,
+  readOnly,
+  onChecks,
+}: {
+  sim: AgentSimulation;
+  name: string;
+  sources: ChipSources;
+  result: TestResult | null;
+  shown: TestResult | null;
+  live?: LiveRun | null;
+  readOnly: boolean;
+  onChecks: (assertions: Assertion[]) => void;
+}) {
+  return (
+    <>
+      {shown?.error ? <p className="text-body-2-regular text-text-error-primary">{shown.error}</p> : null}
+      <div className="flex flex-col gap-2.5">
+        <span className={fieldLabel}>Conversation</span>
+        {live === undefined ? (
+          <Talk sim={sim} result={result} sources={sources} />
+        ) : (
+          <LiveTalk run={live ?? undefined} sources={sources} />
+        )}
+      </div>
+      <Checks sim={sim} result={shown} name={name} sources={sources} readOnly={readOnly} onChange={onChecks} />
+    </>
+  );
+}
+
 function Detail({
+  workspace,
   sim,
   as,
   name,
@@ -208,6 +275,7 @@ function Detail({
   onScenario,
   onCompare,
 }: {
+  workspace: string;
   sim: AgentSimulation;
   as: AnswerAs;
   name: string;
@@ -221,10 +289,12 @@ function Detail({
   onScenario: (scenario: string) => Promise<void>;
   onCompare?: () => void;
 }) {
-  const result = resultOf(sim, as);
-  const status = statusNow(result, busy, live);
+  const history = historyOf(sim, as);
+  const latest = resultOf(sim, as);
+  const { viewing, newer, view, result, showing } = usePastRun(busy, latest);
+  const status = statusNow(latest, busy, live, history);
   const shown = busy ? (live?.result ?? null) : result;
-  const when = result && !busy ? ` · ${formatRelative(result.ran_at)}` : "";
+  const when = busy ? "" : lastRun(latest, history);
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
@@ -250,7 +320,17 @@ function Detail({
               Compare
             </Button>
           ) : null}
-          <Button variant="tertiary" size="xs" leadingIcon={RiPlayFill} loading={busy} disabled={busy} onClick={onRun}>
+          <Button
+            variant="tertiary"
+            size="xs"
+            leadingIcon={RiPlayFill}
+            loading={busy}
+            disabled={busy}
+            onClick={() => {
+              view(null, 0);
+              onRun();
+            }}
+          >
             Run
           </Button>
         </span>
@@ -261,18 +341,37 @@ function Detail({
             <Chip variant="caption" color={status.color} className="py-0.5">
               {status.label}
             </Chip>
+            {history && !busy ? <Dots history={history} /> : null}
             <span className={hint}>
               {as === "draft" ? "On the draft" : "On the live version"}
               {when}
             </span>
           </span>
-          {shown?.error ? <p className="text-body-2-regular text-text-error-primary">{shown.error}</p> : null}
+          {busy ? null : (
+            <PastRuns
+              workspace={workspace}
+              agent={sim.agent_id}
+              simulation={sim.id}
+              as={as}
+              viewing={viewing?.id ?? null}
+              onView={view}
+            />
+          )}
           <Scenario key={`${sim.id}:${sim.scenario}`} sim={sim} readOnly={busy} onSave={onScenario} />
-          <div className="flex flex-col gap-2.5">
-            <span className={fieldLabel}>Conversation</span>
-            {busy ? <LiveTalk run={live} sources={sources} /> : <Talk sim={sim} result={result} sources={sources} />}
-          </div>
-          <Checks sim={sim} result={shown} name={name} sources={sources} readOnly={busy} onChange={onChecks} />
+          <Resize>
+            <Swap view={showing} forward={newer} className="flex flex-col gap-6">
+              <Ran
+                sim={sim}
+                name={name}
+                sources={sources}
+                result={result}
+                shown={shown}
+                live={busy ? (live ?? null) : undefined}
+                readOnly={busy || viewing !== null}
+                onChecks={onChecks}
+              />
+            </Swap>
+          </Resize>
         </div>
       </ScrollArea>
     </div>
@@ -317,7 +416,16 @@ export function AgentSimulations({
   const refresh = () => queryClient.invalidateQueries(agentSimulationsQuery(workspace, agent));
   const live = useLiveRuns(workspace, sources);
   const opened = list.find((sim) => sim.id === openId);
-  const passing = list.filter((sim) => resultOf(sim, as)?.passed).length;
+  const standings = list.map((sim) => historyOf(sim, as)?.state ?? "none");
+  const count = (state: string) => standings.filter((s) => s === state).length;
+  const summary = [
+    `${count("passing")} of ${list.length} passing`,
+    count("flaky") > 0 ? `${count("flaky")} flaky` : "",
+    count("failing") > 0 ? `${count("failing")} failing` : "",
+    count("none") > 0 ? `${count("none")} not run` : "",
+  ]
+    .filter(Boolean)
+    .join(", ");
 
   const run = async (ids?: string[]) => {
     setRunning(ids ?? list.map((sim) => sim.id));
@@ -383,6 +491,8 @@ export function AgentSimulations({
 
   const detail = opened ? (
     <Detail
+      key={`${opened.id}:${as}`}
+      workspace={workspace}
       sim={opened}
       as={as}
       name={name}
@@ -411,7 +521,7 @@ export function AgentSimulations({
     <>
       <div className="flex h-11 shrink-0 items-center justify-between gap-2 ps-4 pe-3">
         <p className={cx(hint, "min-w-0 truncate tabular-nums")}>
-          {passing} of {list.length} passing on the {as === "draft" ? "draft" : "live version"}
+          {summary} on the {as === "draft" ? "draft" : "live version"}
         </p>
         <Button
           variant="tertiary"
@@ -427,7 +537,9 @@ export function AgentSimulations({
       <ScrollArea>
         <ul className={cx("mx-4 mt-1 mb-10 flex flex-col gap-0.5 p-1", card)}>
           {list.map((sim) => {
-            const status = statusNow(resultOf(sim, as), running.includes(sim.id), live.runs[sim.id]);
+            const history = historyOf(sim, as);
+            const busy = running.includes(sim.id);
+            const status = statusNow(resultOf(sim, as), busy, live.runs[sim.id], history);
 
             return (
               <li key={sim.id}>
@@ -438,7 +550,10 @@ export function AgentSimulations({
                 >
                   <span className="flex min-w-0 flex-1 flex-col">
                     <span className="truncate text-body-regular text-text-primary">{sim.name}</span>
-                    {said(sim) ? <span className={cx(hint, "truncate")}>{said(sim)}</span> : null}
+                    <span className="flex min-w-0 items-center gap-2">
+                      {history && !busy ? <Dots history={history} /> : null}
+                      {said(sim) ? <span className={cx(hint, "truncate")}>{said(sim)}</span> : null}
+                    </span>
                   </span>
                   {liveVersion > 0 && disagrees(sim) ? (
                     <Chip variant="caption" color="orange" className="shrink-0 py-0.5">

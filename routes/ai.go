@@ -129,6 +129,7 @@ func aiAgentSimulationRoutes(r *routing.Router, a *app.App, one string) {
 	routing.Post(r, sims+"/from-conversation", "ai.agents.simulations.from-conversation.store", c.Import).
 		Ability("ai:write").Status(fhttp.StatusCreated)
 	routing.Get(r, sims+"/{simulation}", "ai.agents.simulations.show", c.Show).Ability("ai:read")
+	routing.Get(r, sims+"/{simulation}/runs", "ai.agents.simulations.runs.index", c.Runs).Ability("ai:read")
 	routing.Patch(r, sims+"/{simulation}", "ai.agents.simulations.update", c.Update).Ability("ai:write")
 	routing.Delete(r, sims+"/{simulation}", "ai.agents.simulations.destroy", c.Destroy).
 		Ability("ai:write").Status(fhttp.StatusNoContent)

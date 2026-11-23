@@ -78,14 +78,19 @@ type CaseRun struct {
 
 /*
 PlayCase plays one saved simulation with the engine procedures use,
-each turn answered by the run's own TurnFunc.
+each turn answered by the run's own TurnFunc, and tells whoever watches
+how it went as soon as it is judged. Without that, a simulation run
+beside others would read as still being judged until the last of them
+was done.
 */
 func (p *Procedures) PlayCase(ctx context.Context, c CaseRun) TestResult {
 	w := p.watching(c.Membership, c.Run, c.Case)
 	if c.PublicID != "" {
 		w.test = c.PublicID
 	}
-	return p.runTestCase(ctx, simulated{m: c.Membership, c: c.Case, w: w, turn: c.Turn})
+	res := p.runTestCase(ctx, simulated{m: c.Membership, c: c.Case, w: w, turn: c.Turn})
+	w.tell(ctx, runFinished, map[string]any{"result": res})
+	return res
 }
 
 /*

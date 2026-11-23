@@ -4,7 +4,9 @@
  * going.
  */
 import type { ChipColor } from "@/components/base/badges/chip";
+import type { AgentSimulationHistory } from "@/lib/api/agents";
 import type { TestResult } from "@/lib/api/procedures";
+import { formatRelative } from "@/lib/i18n/format";
 
 import { type CriterionChoices, statusOf, words } from "../automation/procedure-simulator/simulator";
 import type { LiveRun } from "../automation/procedure-simulator/use-live-runs";
@@ -27,13 +29,52 @@ export function choicesOf(sources: ChipSources): CriterionChoices {
   };
 }
 
+const historyWords: Record<AgentSimulationHistory["state"], { word: string; color: ChipColor }> = {
+  passing: { word: "Passing", color: "lime" },
+  flaky: { word: "Flaky", color: "yellow" },
+  failing: { word: "Failing", color: "rose" },
+};
+
+/*
+ * How a simulation stands on its latest runs: passing, flaky or
+ * failing, with how many passed of how many. A run that could not
+ * finish says nothing about the agent, so it shows as itself. With no
+ * run on the agent as it stands now, it reads as not run, whatever an
+ * older run said.
+ */
+export function standing(
+  result: TestResult | null,
+  history: AgentSimulationHistory | null,
+): { label: string; color: ChipColor } {
+  if (result?.error) {
+    return statusOf(result);
+  }
+  if (!history) {
+    return statusOf(null);
+  }
+  const { word, color } = historyWords[history.state];
+
+  return { label: `${word} · ${history.passed} of ${history.total}`, color };
+}
+
+/* lastRun says when a simulation last ran, and whether that was before the agent last changed. */
+export function lastRun(result: TestResult | null, history: AgentSimulationHistory | null): string {
+  if (!result) {
+    return "";
+  }
+  const stale = history || result.error ? "" : ", before the last change";
+
+  return ` · last run ${formatRelative(result.ran_at)}${stale}`;
+}
+
 export function statusNow(
   result: TestResult | null,
   busy: boolean,
   live?: LiveRun,
+  history: AgentSimulationHistory | null = null,
 ): { label: string; color: ChipColor } {
   if (!busy) {
-    return statusOf(result);
+    return standing(result, history);
   }
   if (live?.result) {
     return statusOf(live.result);

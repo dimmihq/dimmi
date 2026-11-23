@@ -4,7 +4,8 @@
 |--------------------------------------------------------------------------
 |
 | Running an agent's simulations against its draft or its live version,
-| and saving a real conversation as a simulation.
+| reading a simulation's past runs, and saving a real conversation as a
+| simulation.
 |
 */
 
@@ -45,4 +46,15 @@ AIImportAgentSimulationRequest is the input of POST
 type AIImportAgentSimulationRequest struct {
 	Agent string `path:"agent"`
 	Body  AIImportAgentSimulationBody
+}
+
+/*
+AIAgentSimulationRunsRequest is the input of GET
+/ai/agents/{agent}/simulations/{simulation}/runs. Version is the copy
+of the agent whose runs to list, the draft when left out.
+*/
+type AIAgentSimulationRunsRequest struct {
+	Agent      string `path:"agent"`
+	Simulation string `path:"simulation"`
+	Version    string `query:"version" enum:"draft,live" required:"false"`
 }

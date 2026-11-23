@@ -218,6 +218,20 @@ type AiAgentTestCase struct {
 	CreatedAt            time.Time       `json:"created_at"`
 	UpdatedAt            time.Time       `json:"updated_at"`
 	Scenario             string          `json:"scenario"`
+	DraftHistory         json.RawMessage `json:"draft_history"`
+	LiveHistory          json.RawMessage `json:"live_history"`
+}
+
+type AiAgentTestCaseRun struct {
+	ID          ids.UUID        `json:"id"`
+	WorkspaceID ids.UUID        `json:"workspace_id"`
+	TestCaseID  ids.UUID        `json:"test_case_id"`
+	Version     string          `json:"version"`
+	Fingerprint string          `json:"fingerprint"`
+	Passed      bool            `json:"passed"`
+	Errored     bool            `json:"errored"`
+	Result      json.RawMessage `json:"result"`
+	RanAt       time.Time       `json:"ran_at"`
 }
 
 type AiAgentVersion struct {

@@ -21,7 +21,7 @@ INSERT INTO ai_agent_test_cases (
     $1, $2, $3, $4, $5, $6, $7,
     $8, $9, $10, $11, $12, $12
 )
-RETURNING id, workspace_id, agent_id, name, source_conversation_id, persona, messages, action_mocks, assertions, simulated_at, draft_result, live_result, created_by_member_id, created_at, updated_at, scenario
+RETURNING id, workspace_id, agent_id, name, source_conversation_id, persona, messages, action_mocks, assertions, simulated_at, draft_result, live_result, created_by_member_id, created_at, updated_at, scenario, draft_history, live_history
 `
 
 type CreateAgentTestCaseParams struct {
@@ -73,6 +73,8 @@ func (q *Queries) CreateAgentTestCase(ctx context.Context, arg CreateAgentTestCa
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.Scenario,
+		&i.DraftHistory,
+		&i.LiveHistory,
 	)
 	return i, err
 }
@@ -94,7 +96,7 @@ func (q *Queries) DeleteAgentTestCase(ctx context.Context, arg DeleteAgentTestCa
 }
 
 const findAgentTestCase = `-- name: FindAgentTestCase :one
-SELECT id, workspace_id, agent_id, name, source_conversation_id, persona, messages, action_mocks, assertions, simulated_at, draft_result, live_result, created_by_member_id, created_at, updated_at, scenario FROM ai_agent_test_cases
+SELECT id, workspace_id, agent_id, name, source_conversation_id, persona, messages, action_mocks, assertions, simulated_at, draft_result, live_result, created_by_member_id, created_at, updated_at, scenario, draft_history, live_history FROM ai_agent_test_cases
 WHERE workspace_id = $1 AND agent_id = $2 AND id = $3
 `
 
@@ -125,12 +127,112 @@ func (q *Queries) FindAgentTestCase(ctx context.Context, arg FindAgentTestCasePa
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.Scenario,
+		&i.DraftHistory,
+		&i.LiveHistory,
 	)
 	return i, err
 }
 
+const insertAgentTestCaseRun = `-- name: InsertAgentTestCaseRun :one
+INSERT INTO ai_agent_test_case_runs (
+    workspace_id, test_case_id, version, fingerprint, passed, errored, result, ran_at
+) VALUES (
+    $1, $2, $3, $4, $5, $6, $7, $8
+)
+RETURNING id, workspace_id, test_case_id, version, fingerprint, passed, errored, result, ran_at
+`
+
+type InsertAgentTestCaseRunParams struct {
+	WorkspaceID ids.UUID        `json:"workspace_id"`
+	TestCaseID  ids.UUID        `json:"test_case_id"`
+	Version     string          `json:"version"`
+	Fingerprint string          `json:"fingerprint"`
+	Passed      bool            `json:"passed"`
+	Errored     bool            `json:"errored"`
+	Result      json.RawMessage `json:"result"`
+	RanAt       time.Time       `json:"ran_at"`
+}
+
+// InsertAgentTestCaseRun keeps one run of a simulation.
+func (q *Queries) InsertAgentTestCaseRun(ctx context.Context, arg InsertAgentTestCaseRunParams) (AiAgentTestCaseRun, error) {
+	row := q.db.QueryRow(ctx, insertAgentTestCaseRun,
+		arg.WorkspaceID,
+		arg.TestCaseID,
+		arg.Version,
+		arg.Fingerprint,
+		arg.Passed,
+		arg.Errored,
+		arg.Result,
+		arg.RanAt,
+	)
+	var i AiAgentTestCaseRun
+	err := row.Scan(
+		&i.ID,
+		&i.WorkspaceID,
+		&i.TestCaseID,
+		&i.Version,
+		&i.Fingerprint,
+		&i.Passed,
+		&i.Errored,
+		&i.Result,
+		&i.RanAt,
+	)
+	return i, err
+}
+
+const listAgentTestCaseRuns = `-- name: ListAgentTestCaseRuns :many
+SELECT id, workspace_id, test_case_id, version, fingerprint, passed, errored, result, ran_at FROM ai_agent_test_case_runs
+WHERE workspace_id = $1 AND test_case_id = $2 AND version = $3
+ORDER BY ran_at DESC, id DESC
+LIMIT $4
+`
+
+type ListAgentTestCaseRunsParams struct {
+	WorkspaceID ids.UUID `json:"workspace_id"`
+	TestCaseID  ids.UUID `json:"test_case_id"`
+	Version     string   `json:"version"`
+	RowLimit    int32    `json:"row_limit"`
+}
+
+// ListAgentTestCaseRuns returns a simulation's runs on one copy of the
+// agent, newest first.
+func (q *Queries) ListAgentTestCaseRuns(ctx context.Context, arg ListAgentTestCaseRunsParams) ([]AiAgentTestCaseRun, error) {
+	rows, err := q.db.Query(ctx, listAgentTestCaseRuns,
+		arg.WorkspaceID,
+		arg.TestCaseID,
+		arg.Version,
+		arg.RowLimit,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []AiAgentTestCaseRun
+	for rows.Next() {
+		var i AiAgentTestCaseRun
+		if err := rows.Scan(
+			&i.ID,
+			&i.WorkspaceID,
+			&i.TestCaseID,
+			&i.Version,
+			&i.Fingerprint,
+			&i.Passed,
+			&i.Errored,
+			&i.Result,
+			&i.RanAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listAgentTestCases = `-- name: ListAgentTestCases :many
-SELECT id, workspace_id, agent_id, name, source_conversation_id, persona, messages, action_mocks, assertions, simulated_at, draft_result, live_result, created_by_member_id, created_at, updated_at, scenario FROM ai_agent_test_cases
+SELECT id, workspace_id, agent_id, name, source_conversation_id, persona, messages, action_mocks, assertions, simulated_at, draft_result, live_result, created_by_member_id, created_at, updated_at, scenario, draft_history, live_history FROM ai_agent_test_cases
 WHERE workspace_id = $1 AND agent_id = $2
 ORDER BY created_at, id
 `
@@ -167,6 +269,8 @@ func (q *Queries) ListAgentTestCases(ctx context.Context, arg ListAgentTestCases
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.Scenario,
+			&i.DraftHistory,
+			&i.LiveHistory,
 		); err != nil {
 			return nil, err
 		}
@@ -178,39 +282,81 @@ func (q *Queries) ListAgentTestCases(ctx context.Context, arg ListAgentTestCases
 	return items, nil
 }
 
+const pruneAgentTestCaseRuns = `-- name: PruneAgentTestCaseRuns :exec
+DELETE FROM ai_agent_test_case_runs r
+WHERE r.workspace_id = $1 AND r.test_case_id = $2 AND r.version = $3
+  AND r.id NOT IN (
+      SELECT k.id FROM ai_agent_test_case_runs k
+      WHERE k.workspace_id = $1 AND k.test_case_id = $2 AND k.version = $3
+      ORDER BY k.ran_at DESC, k.id DESC
+      LIMIT $4
+  )
+`
+
+type PruneAgentTestCaseRunsParams struct {
+	WorkspaceID ids.UUID `json:"workspace_id"`
+	TestCaseID  ids.UUID `json:"test_case_id"`
+	Version     string   `json:"version"`
+	Keep        int32    `json:"keep"`
+}
+
+// PruneAgentTestCaseRuns drops a simulation's runs on one copy past the
+// newest it keeps.
+func (q *Queries) PruneAgentTestCaseRuns(ctx context.Context, arg PruneAgentTestCaseRunsParams) error {
+	_, err := q.db.Exec(ctx, pruneAgentTestCaseRuns,
+		arg.WorkspaceID,
+		arg.TestCaseID,
+		arg.Version,
+		arg.Keep,
+	)
+	return err
+}
+
 const setAgentTestCaseDraftResult = `-- name: SetAgentTestCaseDraftResult :exec
-UPDATE ai_agent_test_cases SET draft_result = $1
-WHERE workspace_id = $2 AND id = $3
+UPDATE ai_agent_test_cases SET draft_result = $1, draft_history = $2
+WHERE workspace_id = $3 AND id = $4
 `
 
 type SetAgentTestCaseDraftResultParams struct {
 	Result      json.RawMessage `json:"result"`
+	History     json.RawMessage `json:"history"`
 	WorkspaceID ids.UUID        `json:"workspace_id"`
 	ID          ids.UUID        `json:"id"`
 }
 
 // SetAgentTestCaseDraftResult keeps how a simulation last went on the
-// agent's draft.
+// agent's draft, and its recent history there.
 func (q *Queries) SetAgentTestCaseDraftResult(ctx context.Context, arg SetAgentTestCaseDraftResultParams) error {
-	_, err := q.db.Exec(ctx, setAgentTestCaseDraftResult, arg.Result, arg.WorkspaceID, arg.ID)
+	_, err := q.db.Exec(ctx, setAgentTestCaseDraftResult,
+		arg.Result,
+		arg.History,
+		arg.WorkspaceID,
+		arg.ID,
+	)
 	return err
 }
 
 const setAgentTestCaseLiveResult = `-- name: SetAgentTestCaseLiveResult :exec
-UPDATE ai_agent_test_cases SET live_result = $1
-WHERE workspace_id = $2 AND id = $3
+UPDATE ai_agent_test_cases SET live_result = $1, live_history = $2
+WHERE workspace_id = $3 AND id = $4
 `
 
 type SetAgentTestCaseLiveResultParams struct {
 	Result      json.RawMessage `json:"result"`
+	History     json.RawMessage `json:"history"`
 	WorkspaceID ids.UUID        `json:"workspace_id"`
 	ID          ids.UUID        `json:"id"`
 }
 
 // SetAgentTestCaseLiveResult keeps how a simulation last went on the
-// agent's live version.
+// agent's live version, and its recent history there.
 func (q *Queries) SetAgentTestCaseLiveResult(ctx context.Context, arg SetAgentTestCaseLiveResultParams) error {
-	_, err := q.db.Exec(ctx, setAgentTestCaseLiveResult, arg.Result, arg.WorkspaceID, arg.ID)
+	_, err := q.db.Exec(ctx, setAgentTestCaseLiveResult,
+		arg.Result,
+		arg.History,
+		arg.WorkspaceID,
+		arg.ID,
+	)
 	return err
 }
 
@@ -219,7 +365,7 @@ UPDATE ai_agent_test_cases SET name = $1, persona = $2, messages = $3,
     action_mocks = $4, assertions = $5, simulated_at = $6,
     scenario = $7, updated_at = $8
 WHERE workspace_id = $9 AND agent_id = $10 AND id = $11
-RETURNING id, workspace_id, agent_id, name, source_conversation_id, persona, messages, action_mocks, assertions, simulated_at, draft_result, live_result, created_by_member_id, created_at, updated_at, scenario
+RETURNING id, workspace_id, agent_id, name, source_conversation_id, persona, messages, action_mocks, assertions, simulated_at, draft_result, live_result, created_by_member_id, created_at, updated_at, scenario, draft_history, live_history
 `
 
 type UpdateAgentTestCaseParams struct {
@@ -269,6 +415,8 @@ func (q *Queries) UpdateAgentTestCase(ctx context.Context, arg UpdateAgentTestCa
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.Scenario,
+		&i.DraftHistory,
+		&i.LiveHistory,
 	)
 	return i, err
 }

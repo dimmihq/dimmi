@@ -262,9 +262,39 @@ export interface AgentSimulation {
   scenario: string;
   draft_result: TestResult | null;
   live_result: TestResult | null;
+  /* How the latest runs went on the agent as it stands now; null until one counts. */
+  draft_history: AgentSimulationHistory | null;
+  live_history: AgentSimulationHistory | null;
   simulated_at: string | null;
   created_at: string;
   updated_at: string;
+}
+
+/*
+ * A simulation's latest runs on one copy of the agent, newest first:
+ * passing when every one passed, failing when none did, flaky between.
+ * Runs made before the agent, its procedures or the simulation changed
+ * are left out. Window is how many runs a score looks at.
+ */
+export interface AgentSimulationHistory {
+  state: "passing" | "flaky" | "failing";
+  passed: number;
+  total: number;
+  window: number;
+  runs: { id: string; passed: boolean; ran_at: string }[];
+}
+
+/* One kept run of a simulation; counted says it still speaks for the agent as it stands. */
+export interface AgentSimulationRun {
+  id: string;
+  object: "ai_agent_simulation_run";
+  simulation_id: string;
+  version: AnswerAs;
+  passed: boolean;
+  errored: boolean;
+  counted: boolean;
+  result: TestResult;
+  ran_at: string;
 }
 
 export type AgentSimulationInput = Partial<
@@ -307,6 +337,24 @@ export function runAgentSimulations(
   input: { simulation_ids?: string[]; version?: AnswerAs; stream_id?: string },
 ): Promise<AgentSimulation[]> {
   return request<AgentSimulation[]>("POST", `${path(id)}/simulations/run`, input, { workspace });
+}
+
+export function agentSimulationRunsQuery(workspace: string, id: string, simulation: string, as: AnswerAs) {
+  return queryOptions({
+    queryKey: ["workspace", workspace, "agents", id, "simulations", simulation, "runs", as],
+    queryFn: () =>
+      request<AgentSimulationRun[]>(
+        "GET",
+        `${path(id)}/simulations/${encodeURIComponent(simulation)}/runs?version=${as}`,
+        undefined,
+        { workspace },
+      ),
+  });
+}
+
+/* historyOf is how a simulation's latest runs went against the copy asked for. */
+export function historyOf(sim: AgentSimulation, as: AnswerAs): AgentSimulationHistory | null {
+  return as === "live" ? sim.live_history : sim.draft_history;
 }
 
 /* resultOf is how a simulation last went against the copy asked for. */

@@ -16,7 +16,6 @@ package agentsims
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"slices"
@@ -171,13 +170,18 @@ func (s *Simulations) List(ctx context.Context, m authz.Membership, agentID ids.
 	var out []models.AiAgentTestCase
 	err := s.DB.Transaction(ctx, func(ctx context.Context, tx *database.Tx) error {
 		q := models.New(tx)
-		if _, err := findAgent(ctx, q, m.Workspace.ID, agentID); err != nil {
+		agent, err := findAgent(ctx, q, m.Workspace.ID, agentID)
+		if err != nil {
 			return err
 		}
-		var err error
 		out, err = q.ListAgentTestCases(ctx, models.ListAgentTestCasesParams{
 			WorkspaceID: m.Workspace.ID, AgentID: agentID,
 		})
+		if err != nil {
+			return err
+		}
+		t, err := testedNow(ctx, tx, agent)
+		current(t, out)
 		return err
 	})
 	return out, err
@@ -205,7 +209,12 @@ func (s *Simulations) Show(ctx context.Context, m authz.Membership, ref Simulati
 		out, err = findSimulation(ctx, models.New(tx), m.Workspace.ID, ref)
 		return err
 	})
-	return out, err
+	if err != nil {
+		return out, err
+	}
+	one := []models.AiAgentTestCase{out}
+	err = s.fresh(ctx, m, ref.Agent, one)
+	return one[0], err
 }
 
 /*
@@ -306,7 +315,12 @@ func (s *Simulations) Update(ctx context.Context, m authz.Membership, ref Simula
 		}
 		return nil
 	})
-	return out, err
+	if err != nil {
+		return out, err
+	}
+	one := []models.AiAgentTestCase{out}
+	err = s.fresh(ctx, m, ref.Agent, one)
+	return one[0], err
 }
 
 /*
@@ -375,47 +389,7 @@ func (s *Simulations) Run(ctx context.Context, m authz.Membership, agentID ids.U
 		}
 		out = append(out, kept)
 	}
-	return out, nil
-}
-
-/*
-keptResult is how one run went, on which copy.
-*/
-type keptResult struct {
-	version string
-	result  procedures.TestResult
-}
-
-/*
-keep saves how a simulation's run went on the copy it ran against.
-*/
-func (s *Simulations) keep(ctx context.Context, m authz.Membership, c models.AiAgentTestCase, k keptResult,
-) (models.AiAgentTestCase, error) {
-	raw, _ := json.Marshal(k.result)
-	err := s.DB.Transaction(ctx, func(ctx context.Context, tx *database.Tx) error {
-		q := models.New(tx)
-		ran := pipeline.SimulationSpend{WorkspaceID: m.Workspace.ID, At: s.Clock.Now(), Runs: 1}
-		if err := pipeline.AddSimulationSpend(ctx, tx, ran); err != nil {
-			return err
-		}
-		if k.version == VersionLive {
-			return q.SetAgentTestCaseLiveResult(ctx, models.SetAgentTestCaseLiveResultParams{
-				Result: raw, WorkspaceID: m.Workspace.ID, ID: c.ID,
-			})
-		}
-		return q.SetAgentTestCaseDraftResult(ctx, models.SetAgentTestCaseDraftResultParams{
-			Result: raw, WorkspaceID: m.Workspace.ID, ID: c.ID,
-		})
-	})
-	if err != nil {
-		return c, fmt.Errorf("keep simulation result: %w", err)
-	}
-	if k.version == VersionLive {
-		c.LiveResult = raw
-	} else {
-		c.DraftResult = raw
-	}
-	return c, nil
+	return out, s.fresh(ctx, m, agentID, out)
 }
 
 /*
