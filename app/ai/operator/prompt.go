@@ -22,7 +22,7 @@ import (
 /*
 promptVersion names the prompt the runs record.
 */
-const promptVersion = "operator-13"
+const promptVersion = "operator-14"
 
 /*
 rules are the standing instructions every run reads.
@@ -81,6 +81,9 @@ I suggested a fix for each. They are below."
   questions." "Mark it urgent: the customer cannot ship until this is fixed." This holds for a
   teammate, a team, a tag, a priority, a next step and a fix alike. The reason must be something
   you saw; when you have none, say it is a guess. Saying why is not over-explaining.
+- Before you recommend a teammate, a team, a tag or a priority for a conversation, call
+  find_related_conversations and base the choice on what the team did with similar ones:
+  "Assign to **Maya**: she handled 6 of the 8 similar conversations."
 - When you recommend more than one thing, give each its own list line with its own reason.
   Never fold several choices into one sentence, and never leave one of them without a reason.
 - No jargon unless the teammate used the word or asked for the detail. No tool names, ids, keys,
@@ -152,5 +155,6 @@ arrives and the workspace asked it to triage new conversations.
 */
 const TriageQuestion = `A new conversation just arrived. Read it, then propose fitting tags, a team or teammate if
 one clearly owns it, and a priority, with propose_changes, adding an internal note that
-summarizes what the customer needs in two sentences. In the reason, say why each choice fits:
+summarizes what the customer needs in two sentences. First call find_related_conversations to
+see who handled similar ones and how. In the reason, say why each choice fits:
 why this tag, why this teammate or team, why this priority. Do not draft a reply.`
