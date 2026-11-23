@@ -85,7 +85,11 @@ export function useOperatorChat(
       setLive((current) => current && { ...current, text: "", steps: [...current.steps, step] });
       // A step that changed or suggested something shows on the page at once, not when the answer ends.
       if (step.changeset_id) {
-        void client.invalidateQueries({ queryKey: ["workspace", workspace] });
+        // The chat itself is left alone: reloading it mid-answer would show the question twice.
+        void client.invalidateQueries({
+          queryKey: ["workspace", workspace],
+          predicate: (query) => !(query.queryKey[2] === "operator" && String(query.queryKey[3]).startsWith("thread")),
+        });
       }
     } else if (envelope.event === "operator.answered" && !running.current) {
       void refresh();
