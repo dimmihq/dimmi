@@ -59,6 +59,8 @@ func conversationListFilters() map[string]string {
 		"filter[created_after]":      "An RFC 3339 time, such as 2026-11-01T00:00:00Z: started at or after it.",
 		"filter[created_before]":     "An RFC 3339 time: started before it.",
 		"filter[waiting]":            "true for conversations waiting for a reply from the team.",
+		"filter[where]": "Unsaved view conditions as a JSON list, the same shape a saved view's conditions " +
+			"have. Leave out unless you filter by conditions no other filter covers.",
 		"filter[unread]":             "true for conversations with entries you have not read.",
 		"filter[assignment_waiting]": "true for conversations automatic assignment could not place yet.",
 		"filter[ai]": "handed_off (the AI agent passed it to the team), active (the AI agent is still " +

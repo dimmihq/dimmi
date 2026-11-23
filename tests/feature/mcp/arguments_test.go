@@ -1,6 +1,7 @@
 package mcp_test
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -43,6 +44,11 @@ func TestArguments(t *testing.T) {
 		assert.Contains(t, schemas["dimmi_get_article_by_id"], "starting with art_")
 		assert.Contains(t, schemas["dimmi_create_tag"], `"tag_name"`)
 		assert.Contains(t, schemas["dimmi_apply_operator_suggestion"], `"suggestion_id"`)
+		assert.Contains(t, schemas["dimmi_list_conversations"], `"filter_team_id"`)
+		assert.Contains(t, schemas["dimmi_list_conversations"], `"filter_channel"`)
+		assert.Contains(t, schemas["dimmi_list_conversations"], `"filter_view"`)
+		assert.Contains(t, schemas["dimmi_create_ticket"], "Id of the teammate (workspace member)")
+		assert.Contains(t, schemas["dimmi_update_tag"], "The name of the tag")
 	})
 
 	t.Run("reads an article by its id", func(t *testing.T) {
@@ -128,6 +134,56 @@ func TestArguments(t *testing.T) {
 		assert.True(t, res.IsError)
 		assert.Contains(t, res.Text, `article_id: you sent "Refunds". That is not an id`)
 		assert.Contains(t, res.Text, "starts with art_")
+	})
+
+	t.Run("says in plain words which values an argument takes", func(t *testing.T) {
+		t.Parallel()
+		d := tests.NewDesk(t)
+		id := conversation(t, d, "Hello")
+		_, token := d.TC.MintToken(d.TC.Workspace.Owner, "*")
+
+		res, err := agent(t, d, token).CallTool(t.Context(), "dimmi_update_conversation",
+			map[string]any{"conversation_id_or_number": id, "priority": "whenever"})
+		require.NoError(t, err)
+
+		assert.True(t, res.IsError)
+		assert.Contains(t, res.Text, `"priority" must be one of none, low, medium, high, urgent; you sent "whenever".`)
+	})
+
+	t.Run("says how long a text may be", func(t *testing.T) {
+		t.Parallel()
+		d := tests.NewDesk(t)
+		_, token := d.TC.MintToken(d.TC.Workspace.Owner, "*")
+
+		res, err := agent(t, d, token).CallTool(t.Context(), "dimmi_create_tag",
+			map[string]any{"tag_name": strings.Repeat("x", 300)})
+		require.NoError(t, err)
+
+		assert.True(t, res.IsError)
+		assert.Contains(t, res.Text, `"tag_name" takes at most`)
+		assert.Contains(t, res.Text, "you sent 300")
+	})
+
+	t.Run("filters contacts by a custom attribute", func(t *testing.T) {
+		t.Parallel()
+		d := tests.NewDesk(t)
+		d.Owner.PostJSON("/api/v1/attribute-definitions", testkit.JSON{
+			"object": "contact", "key": "plan", "label": "Plan", "data_type": "string",
+		}).AssertCreated()
+		for email, plan := range map[string]string{"ana@example.com": "pro", "bo@example.com": "free"} {
+			d.Owner.PostJSON("/api/v1/contacts", testkit.JSON{
+				"email": email, "custom_attributes": testkit.JSON{"plan": plan},
+			}).AssertCreated()
+		}
+		_, token := d.TC.MintToken(d.TC.Workspace.Owner, "*")
+
+		res, err := agent(t, d, token).CallTool(t.Context(), "dimmi_list_contacts",
+			map[string]any{"filter_custom_attributes": map[string]any{"plan": "pro"}})
+		require.NoError(t, err)
+
+		assert.False(t, res.IsError, res.Text)
+		assert.Contains(t, res.Text, "ana@example.com")
+		assert.NotContains(t, res.Text, "bo@example.com")
 	})
 
 	t.Run("names the API's refused field by the argument the model sent", func(t *testing.T) {

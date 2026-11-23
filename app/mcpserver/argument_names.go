@@ -56,10 +56,19 @@ func plainPaths() map[string]string {
 }
 
 /*
-idExample finds an id written as an example in a description, such as
-(conv_...).
+plainFilters are the filters named by hand: a view is an id or a word
+such as mine, and the tags of which any one matches read better said
+that way round.
 */
-var idExample = regexp.MustCompile(`\b[a-z]{2,6}_\.{3}`)
+func plainFilters() map[string]string {
+	return map[string]string{"view": "filter_view", "tag_any": "filter_any_tag_id"}
+}
+
+/*
+idExample finds what says an argument takes ids in its description: an
+id written as an example, such as (conv_...), or the word itself.
+*/
+var idExample = regexp.MustCompile(`\b[a-z]{2,6}_\.{3}|(?i)\bids?\b`)
 
 /*
 naming is how one tool's arguments are named: the API's name of each,
@@ -125,14 +134,12 @@ func argumentName(op mcp.Operation, doc Doc, name string, schema map[string]any)
 	}
 
 	if field, ok := strings.CutPrefix(name, "filter["); ok {
-		field = strings.TrimSuffix(field, "]")
 		description, _ := schema["description"].(string)
-
-		if idExample.MatchString(description) && !strings.HasSuffix(field, "_id") {
-			field += "_id"
+		if text, ok := doc.Params[name]; ok {
+			description = text
 		}
 
-		return "filter_" + field
+		return filterName(strings.TrimSuffix(field, "]"), description)
 	}
 
 	if name == "q" || name == "query" {
@@ -147,6 +154,22 @@ func argumentName(op mcp.Operation, doc Doc, name string, schema map[string]any)
 }
 
 /*
+filterName names a filter: by hand when it has a name of its own, else
+after its field, saying so when its description says it takes ids.
+*/
+func filterName(field, description string) string {
+	if plain, ok := plainFilters()[field]; ok {
+		return plain
+	}
+
+	if idExample.MatchString(description) && !strings.HasSuffix(field, "_id") {
+		field += "_id"
+	}
+
+	return "filter_" + field
+}
+
+/*
 aliasesOf are the other names an argument is read under: the API's own
 name, and what a model that half remembers the name is likely to send.
 */
@@ -154,7 +177,7 @@ func aliasesOf(name, renamed string, path []string) []string {
 	out := []string{name}
 
 	if field, ok := strings.CutPrefix(renamed, "filter_"); ok {
-		out = append(out, field, strings.TrimSuffix(field, "_id"))
+		out = append(out, field, strings.TrimSuffix(field, "_id"), "filter_"+strings.TrimSuffix(field, "_id"))
 	}
 
 	switch renamed {
@@ -170,6 +193,19 @@ func aliasesOf(name, renamed string, path []string) []string {
 
 	return out
 }
+
+/*
+customFilters is the API's way of filtering a list by a custom
+attribute, filter[custom.<key>], which no schema can list since the
+keys are the workspace's own.
+*/
+const customFilters = "filter[custom.<key>]"
+
+/*
+customArgument is the argument that carries those filters as one
+object, a value for each attribute key.
+*/
+const customArgument = "filter_custom_attributes"
 
 /*
 names lists the arguments by the names the model sees.
@@ -207,6 +243,14 @@ func (n naming) toAPI(args map[string]any) map[string]any {
 	out := make(map[string]any, len(args))
 
 	for name, value := range args {
+		if name == customArgument {
+			for key, wanted := range asMap(value) {
+				out["filter[custom."+key+"]"] = wanted
+			}
+
+			continue
+		}
+
 		if api, ok := n.api[name]; ok {
 			out[api] = value
 

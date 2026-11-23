@@ -45,6 +45,9 @@ func (b built) read(args map[string]any) (map[string]any, error) {
 
 		if target != "" && args[name] != nil {
 			out[target] = coerce(args[name], asMap(properties[target]))
+			if wrong := refuse(target, out[target], asMap(properties[target])); wrong != "" {
+				problem.wrong = append(problem.wrong, wrong)
+			}
 		}
 	}
 
@@ -54,7 +57,7 @@ func (b built) read(args map[string]any) (map[string]any, error) {
 		}
 	}
 
-	if len(problem.unknown)+len(problem.missing) > 0 {
+	if len(problem.unknown)+len(problem.missing)+len(problem.wrong) > 0 {
 		return nil, problem
 	}
 
@@ -99,7 +102,7 @@ it as another: a number or true for text, text for a number, one value
 for a list.
 */
 func coerce(value any, schema map[string]any) any {
-	kind, _ := schema["type"].(string)
+	kind := kindOf(schema)
 
 	switch v := value.(type) {
 	case float64:
@@ -119,6 +122,80 @@ func coerce(value any, schema map[string]any) any {
 	}
 
 	return value
+}
+
+/*
+refuse says in plain words why an argument does not take the value
+sent, empty when it does: a value outside the few it allows, text too
+long or too short, or a number out of range.
+*/
+func refuse(name string, value any, schema map[string]any) string {
+	sent := fmt.Sprint(value)
+
+	if allowed := asList(schema["enum"]); len(allowed) > 0 {
+		words := make([]string, 0, len(allowed))
+		for _, v := range allowed {
+			if fmt.Sprint(v) != "" {
+				words = append(words, fmt.Sprint(v))
+			}
+		}
+
+		if !slices.Contains(words, sent) && sent != "" {
+			return fmt.Sprintf("%q must be one of %s; you sent %q.", name, strings.Join(words, ", "), sent)
+		}
+
+		return ""
+	}
+
+	switch v := value.(type) {
+	case string:
+		return refuseText(name, v, schema)
+	case float64:
+		low, hasLow := schema["minimum"].(float64)
+		high, hasHigh := schema["maximum"].(float64)
+
+		if (hasLow && v < low) || (hasHigh && v > high) {
+			return fmt.Sprintf("%q must be %s; you sent %s.", name, between(schema), sent)
+		}
+	}
+
+	return ""
+}
+
+/*
+refuseText says why text is too long or too short for an argument.
+*/
+func refuseText(name, v string, schema map[string]any) string {
+	length := len([]rune(v))
+
+	if limit, ok := schema["maxLength"].(float64); ok && length > int(limit) {
+		return fmt.Sprintf("%q takes at most %d characters; you sent %d. Shorten it.", name, int(limit), length)
+	}
+
+	if least, ok := schema["minLength"].(float64); ok && length < int(least) {
+		return fmt.Sprintf("%q needs at least %d characters; you sent %d.", name, int(least), length)
+	}
+
+	return ""
+}
+
+/*
+between says the range a number must be in.
+*/
+func between(schema map[string]any) string {
+	low, hasLow := schema["minimum"].(float64)
+	high, hasHigh := schema["maximum"].(float64)
+
+	switch {
+	case hasLow && hasHigh:
+		return fmt.Sprintf("from %v to %v", low, high)
+	case hasLow:
+		return fmt.Sprintf("%v or more", low)
+	case hasHigh:
+		return fmt.Sprintf("%v or less", high)
+	default:
+		return "a number"
+	}
 }
 
 /*
@@ -143,13 +220,14 @@ func fromText(v, kind string) any {
 
 /*
 argumentError is a call whose arguments do not fit its tool: arguments
-it must carry and does not, arguments the tool does not have, or a
-value the schema refuses.
+it must carry and does not, arguments the tool does not have, values
+an argument does not take, or anything else the schema refuses.
 */
 type argumentError struct {
 	tool    built
 	missing []string
 	unknown []string
+	wrong   []string
 	reason  string
 }
 
@@ -181,6 +259,10 @@ func (e *argumentError) ToolResult() (string, any) {
 		fmt.Fprintf(&b, "- %q is not an argument of this tool.%s\n", arg, e.suggest(arg))
 	}
 
+	for _, wrong := range e.wrong {
+		fmt.Fprintf(&b, "- %s\n", wrong)
+	}
+
 	if e.reason != "" {
 		fmt.Fprintf(&b, "- %s\n", e.reason)
 	}
@@ -188,7 +270,8 @@ func (e *argumentError) ToolResult() (string, any) {
 	fmt.Fprintf(&b, "Arguments of %s: %s.\n", name, strings.Join(e.signature(), ", "))
 
 	return b.String(), map[string]any{"error": map[string]any{
-		"code": "invalid_arguments", "missing": e.missing, "unknown": e.unknown, "reason": e.reason,
+		"code": "invalid_arguments", "missing": e.missing, "unknown": e.unknown, "wrong": e.wrong,
+		"reason":    e.reason,
 		"arguments": e.signature(),
 	}}
 }

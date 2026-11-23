@@ -55,10 +55,12 @@ Arguments are named so a model fills them right without reading the REST referen
 | A record in the path, like `{article}` | `article_id` |
 | A conversation in the path | `conversation_id_or_number` |
 | `filter[status]` | `filter_status` |
+| A filter that takes ids, like `filter[team]` | `filter_team_id` |
+| `filter[custom.plan]=pro` | `filter_custom_attributes: {"plan": "pro"}` |
 | `q` | `search_text` |
 | A bare field, like `name` on a tag | `tag_name` |
 
-A call that sends the REST name still works. A call with a missing or unknown argument is refused before anything runs, and the error names the argument and what belongs in it.
+A call that sends the REST name still works. A call with a missing, unknown, or out-of-range argument is refused before anything runs, and the error names the argument and what belongs in it.
 
 ## Do Operator's work with your own agent
 

@@ -14,6 +14,19 @@ package mcpserver
 import "maps"
 
 /*
+The words the report tools share for the filters they share.
+*/
+const (
+	reportInboxes    = "Inbox ids separated by commas, such as inbox_01jx2m8k4t. Find them with dimmi_list_inboxes."
+	reportTeams      = "Team ids separated by commas, such as team_01jx2m8k4t. Find them with dimmi_list_teams."
+	reportMembers    = "Ids of the teammates holding the conversations, separated by commas, such as mem_01jx2m8k4t."
+	reportChannels   = "Channel types separated by commas, such as email,widget."
+	reportTags       = "Tag ids separated by commas, such as tag_01jx2m8k4t. Find them with dimmi_list_tags."
+	reportPriorities = "Priorities separated by commas, such as high,urgent."
+	reportAI         = "involved or not_involved: conversations the AI answered in, or not."
+)
+
+/*
 reportDocs returns the entries for the reports.
 */
 func reportDocs() map[string]Doc {
@@ -37,9 +50,16 @@ func reportDocs() map[string]Doc {
 			Next: []string{"dimmi_get_conversation_by_id_or_number: open one conversation"},
 			Risk: new(RiskRead),
 			Params: map[string]string{
-				"metric": "the drill key the number names, such as first_response, resolution, csat or open.",
-				"limit":  "how many to return, at most 100.",
-				"offset": "how many to skip, for the next page.",
+				"metric":           "the drill key the number names, such as first_response, resolution, csat or open.",
+				"filter[inbox]":    reportInboxes,
+				"filter[team]":     reportTeams,
+				"filter[member]":   reportMembers,
+				"filter[channel]":  reportChannels,
+				"filter[tag]":      reportTags,
+				"filter[priority]": reportPriorities,
+				"filter[ai]":       reportAI,
+				"limit":            "how many to return, at most 100.",
+				"offset":           "how many to skip, for the next page.",
 			},
 		},
 	}
@@ -70,13 +90,13 @@ func reportShowDoc() Doc {
 			"to":               "the last day, included.",
 			"compare":          "true sets each number beside the same number of days just before.",
 			"business_hours":   "true counts durations only while the inbox's office hours were open.",
-			"filter[inbox]":    "a comma list of inbox ids.",
-			"filter[team]":     "a comma list of team ids.",
-			"filter[member]":   "a comma list of teammate ids holding the conversation.",
-			"filter[channel]":  "a comma list of channel types, such as email,widget.",
-			"filter[tag]":      "a comma list of tag ids.",
-			"filter[priority]": "a comma list of priorities.",
-			"filter[ai]":       "involved or not_involved: conversations the AI answered in, or not.",
+			"filter[inbox]":    reportInboxes,
+			"filter[team]":     reportTeams,
+			"filter[member]":   reportMembers,
+			"filter[channel]":  reportChannels,
+			"filter[tag]":      reportTags,
+			"filter[priority]": reportPriorities,
+			"filter[ai]":       reportAI,
 		},
 	}
 }

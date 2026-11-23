@@ -168,6 +168,7 @@ func TestServer(t *testing.T) {
 		assert.True(t, res.IsError)
 		assert.Contains(t, res.Text, "urgent")
 		assert.Contains(t, res.Text, "Arguments of dimmi_update_conversation")
+		assert.NotContains(t, res.Text, "validating")
 	})
 
 	t.Run("explains what the API refused and what to do", func(t *testing.T) {

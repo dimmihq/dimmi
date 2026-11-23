@@ -43,8 +43,18 @@ func contactReadDocs() map[string]Doc {
 			Next:    []string{"dimmi_get_contact_by_id: read one contact in full"},
 			Params: map[string]string{
 				"filter[kind]": "user or lead.",
-				"filter[custom.<key>]": "A custom attribute's value, such as filter[custom.plan]=pro. " +
-					"true, false and numbers are read as such. Three at most.",
+				"filter[custom.<key>]": "Custom attribute values the contacts must have, as an object of " +
+					"attribute key to value, such as {\"plan\": \"pro\"}. true, false and numbers are read as " +
+					"such. Three at most.",
+				"filter[company]":          "The id of a company, such as cmp_01jx2m8k4t: only its people.",
+				"filter[tag]":              "Tag ids separated by commas, such as tag_01jx2m8k4t.",
+				"filter[email]":            "An email address to match exactly, such as ana@example.com.",
+				"filter[external_id]":      "Your own system's id of the person, such as user_8421.",
+				"filter[blocked]":          "true to list blocked contacts too. false when left out.",
+				"filter[created_after]":    "Only contacts created after this time, such as 2026-01-31T09:00:00Z.",
+				"filter[created_before]":   "Only contacts created before this time, such as 2026-01-31T09:00:00Z.",
+				"filter[last_seen_after]":  "Only contacts last seen after this time, such as 2026-01-31T09:00:00Z.",
+				"filter[last_seen_before]": "Only contacts last seen before this time, such as 2026-01-31T09:00:00Z.",
 				"conditions": "A JSON list of {field, op, value or values}. Fields: name, email, phone, user_id, " +
 					"kind, tags, company, last_seen, created, custom.<key>, and audience with op in_any or " +
 					"in_none and values of audience ids (audn_...). Ten at most.",

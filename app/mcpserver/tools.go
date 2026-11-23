@@ -166,6 +166,10 @@ func (b built) inputSchema() map[string]any {
 		properties[name] = schema
 	}
 
+	if text, ok := b.doc.Params[customFilters]; ok {
+		properties[customArgument] = map[string]any{"type": "object", "description": text}
+	}
+
 	if riskOf(b.op, b.doc).confirms() {
 		properties[confirmArgument] = map[string]any{
 			"type": "string",
@@ -229,8 +233,8 @@ func (b built) argumentText(name, api string, schema map[string]any) string {
 			"commas match any of them."
 	}
 
-	if guide, ok := idGuides()[strings.TrimSuffix(api, "_id")]; ok && strings.HasSuffix(api, "_id") {
-		return guide.String()
+	if text := knownText(b.op, name, api, schema); text != "" {
+		return text
 	}
 
 	return plainText(name, schema)
@@ -262,7 +266,7 @@ func plainText(name string, schema map[string]any) string {
 valueText says what a value of an argument looks like, from its type.
 */
 func valueText(name string, schema map[string]any) string {
-	kind, _ := schema["type"].(string)
+	kind := kindOf(schema)
 	format, _ := schema["format"].(string)
 
 	switch {
