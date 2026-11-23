@@ -35,9 +35,12 @@ type Icon = ComponentType<{ className?: string }>;
 const toolIcons: [string, Icon][] = [
   ["search_", RiSearchLine],
   ["workspace_report", RiBarChartLine],
+  ["get_workspace_report", RiBarChartLine],
   ["agent_runs", RiBarChartLine],
+  ["get_ai_agent_runs", RiBarChartLine],
   ["get_conversation", RiChat3Line],
   ["get_contact", RiUserLine],
+  ["get_customer", RiUserLine],
   ["list_teammates", RiUserLine],
   ["get_article", RiBookOpenLine],
   ["list_articles", RiBookOpenLine],

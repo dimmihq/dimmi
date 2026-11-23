@@ -21,7 +21,8 @@ func TestOperatorTools(t *testing.T) {
 		thread := k.thread(conv)
 		k.llm.Script(
 			tools(call("list_tags", map[string]any{}), call("list_teammates", map[string]any{}),
-				call("get_customer", map[string]any{}), call("search_conversations", map[string]any{"query": "order"})),
+				call("get_customer_by_conversation_number", map[string]any{}),
+				call("search_conversations", map[string]any{"query": "order"})),
 			reply("Done."),
 		)
 
@@ -75,8 +76,10 @@ func TestOperatorTools(t *testing.T) {
 		thread := k.thread(conv)
 		k.llm.Script(
 			tools(call("search_knowledge", map[string]any{"query": "refund"}), call("list_articles", map[string]any{}),
-				call("get_article", map[string]any{"article": article}), call("list_procedures", map[string]any{}),
-				call("get_procedure", map[string]any{"procedure": procedure}), call("agent_runs", map[string]any{})),
+				call("get_article_by_id", map[string]any{"article_id": article}),
+				call("list_procedures", map[string]any{}),
+				call("get_procedure_by_id", map[string]any{"procedure_id": procedure}),
+				call("get_ai_agent_runs", map[string]any{})),
 			reply("Done."),
 		)
 
@@ -95,9 +98,9 @@ func TestOperatorTools(t *testing.T) {
 		k := newDesk(t)
 		thread := k.thread("")
 		k.llm.Script(
-			tools(call("get_conversation", map[string]any{}), call("make_coffee", map[string]any{}),
-				call("get_article", map[string]any{"article": "nope"}),
-				call("workspace_report", map[string]any{"since": "yesterday"}),
+			tools(call("get_conversation_by_number", map[string]any{}), call("make_coffee", map[string]any{}),
+				call("get_article_by_id", map[string]any{"article": "nope"}),
+				call("get_workspace_report", map[string]any{"since": "yesterday"}),
 				call("draft_reply", map[string]any{"body": "Hi"})),
 			reply("Some of that failed."),
 		)
@@ -118,7 +121,7 @@ func TestOperatorTools(t *testing.T) {
 			"UPDATE workspace_members SET conversation_access = 'assigned' WHERE id = $1", row.ID)
 		require.NoError(t, err)
 		thread := member.PostJSON("/api/v1/operator/threads", testkit.JSON{}).AssertOK().String("data.id")
-		k.llm.Script(tools(call("workspace_report", map[string]any{})), reply("I cannot."))
+		k.llm.Script(tools(call("get_workspace_report", map[string]any{})), reply("I cannot."))
 
 		res := member.PostJSON("/api/v1/operator/threads/"+thread+"/messages", testkit.JSON{"body": "Report"}).
 			AssertOK()
@@ -143,7 +146,7 @@ func TestOperatorTools(t *testing.T) {
 		for _, spec := range k.llm.Sent()[0].Tools {
 			assert.NotEqual(t, "propose_changes", spec.Name)
 			assert.NotEqual(t, "propose_article_edit", spec.Name)
-			assert.NotEqual(t, "propose_article", spec.Name)
+			assert.NotEqual(t, "propose_new_article", spec.Name)
 		}
 	})
 

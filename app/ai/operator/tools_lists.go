@@ -36,10 +36,10 @@ const listSchema = `{"type":"object","properties":{` +
 	`"description":"Which conversations by status. Defaults to open."},` +
 	`"assignee":{"type":"string","enum":["anyone","me","unassigned"],` +
 	`"description":"Whose conversations. Defaults to anyone."},` +
-	`"ai":{"type":"string","enum":["any","handed_off","answered_by_ai"],` +
+	`"ai_agent":{"type":"string","enum":["any","handed_off","answered_by_ai"],` +
 	`"description":"Only those the AI agent handed to the team, or ones it is answering."},` +
-	`"waiting":{"type":"boolean","description":"Only those where the customer wrote last and is waiting ` +
-	`for the team."},` +
+	`"customer_waiting":{"type":"boolean","description":"true for only those where the customer wrote last ` +
+	`and is waiting for the team."},` +
 	`"limit":{"type":"integer","minimum":1,"maximum":25,"description":"How many, at most 25. Defaults to 15."}}}`
 
 /*
@@ -48,8 +48,8 @@ listArgs are list_conversations' filters.
 type listArgs struct {
 	Status   string `json:"status"`
 	Assignee string `json:"assignee"`
-	AI       string `json:"ai"`
-	Waiting  bool   `json:"waiting"`
+	AI       string `json:"ai_agent"`
+	Waiting  bool   `json:"customer_waiting"`
 	Limit    int    `json:"limit"`
 }
 
@@ -66,7 +66,7 @@ func (e *Engine) listTool() tool {
 			"last and since when the customer has waited, so read a conversation only when a line is " +
 			"not enough. Use search_conversations only to find conversations by their words or a customer.",
 		Schema: schema(listSchema),
-	}, handle: e.listConversations}
+	}, handle: e.listConversations, was: map[string]string{"ai": "ai_agent", "waiting": "customer_waiting"}}
 }
 
 /*

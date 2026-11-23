@@ -42,7 +42,7 @@ func TestOperatorRoutineLive(t *testing.T) {
 		routine := k.routine(testkit.JSON{"name": "Watcher", "prompt": "Check."})
 		listener := k.d.TC.ListenAs(k.d.TC.Owner, k.d.TC.RealtimeURL())
 		require.Nil(t, listener.Subscribe(k.routineChannel(routine)).Error)
-		k.llm.Script(tools(call("list_recent_changesets", map[string]any{})), reply("All fine."))
+		k.llm.Script(tools(call("list_recent_suggestions", map[string]any{})), reply("All fine."))
 
 		run := k.runRoutine(routine, true)
 
@@ -57,8 +57,8 @@ func TestOperatorRoutineLive(t *testing.T) {
 		assert.Contains(t, events["operator.routine_run.changed"][0], `"status":"running"`)
 		assert.Contains(t, events["operator.routine_run.changed"][1], `"status":"completed"`)
 		require.Len(t, events["operator.step"], 1)
-		assert.Contains(t, events["operator.step"][0], "list_recent_changesets")
-		assert.Equal(t, "list_recent_changesets", run.String("data.steps.0.tool"))
+		assert.Contains(t, events["operator.step"][0], "list_recent_suggestions")
+		assert.Equal(t, "list_recent_suggestions", run.String("data.steps.0.tool"))
 	})
 }
 

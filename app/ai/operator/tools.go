@@ -64,6 +64,7 @@ type tool struct {
 	handle  handler
 	routine bool
 	group   string
+	was     map[string]string
 }
 
 /*
@@ -74,6 +75,11 @@ func (e *Engine) registry(s *session) map[string]tool {
 		e.writeTools(), e.actionTools(s), e.routineTools(), e.githubTools())
 	out := make(map[string]tool, len(all))
 	for _, t := range all {
+		if handle, was := t.handle, t.was; len(was) > 0 {
+			t.handle = func(ctx context.Context, s *session, args json.RawMessage) (result, error) {
+				return handle(ctx, s, renamed(args, was))
+			}
+		}
 		out[t.spec.Name] = t
 	}
 	return out
@@ -154,8 +160,8 @@ func refusal(err error) string {
 errSpent refuses a reading tool once a routine's run may only close.
 */
 var errSpent = errors.New("you are out of reading steps for this run. Suggest what you already found " +
-	"with propose_article_edit, propose_article or propose_changes, save progress with routine_set_state, or " +
-	"call mark_noop; then write your message")
+	"with propose_article_edit, propose_new_article or propose_changes, save progress with save_routine_state, or " +
+	"call report_nothing_to_change; then write your message")
 
 /*
 errBadArguments marks a tool call whose arguments make no sense.

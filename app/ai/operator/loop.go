@@ -107,7 +107,7 @@ saving what the next run needs, or saying nothing needs attention.
 */
 func closes(name string) bool {
 	switch name {
-	case "mark_noop", "routine_set_state", "propose_changes", toolArticleEdit, toolArticleNew:
+	case "report_nothing_to_change", "save_routine_state", "propose_changes", toolArticleEdit, toolArticleNew:
 		return true
 	}
 	return false

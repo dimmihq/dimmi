@@ -80,7 +80,9 @@ func TestOperatorToolLayer(t *testing.T) {
 			"AND provider_request_id = 'chatcmpl_provider_1' AND response_model IS NOT NULL"),
 			"the provider's id for the call and the model that answered are kept")
 
-		want := []string{"call_tool", "get_conversation", "load_tools", "search_conversations", "search_knowledge"}
+		want := []string{
+			"call_tool", "get_conversation_by_number", "load_tools", "search_conversations", "search_knowledge",
+		}
 		for _, req := range k.llm.Sent() {
 			assert.Equal(t, want, offered(req))
 			assert.True(t, req.System[0].Cacheable)
@@ -148,7 +150,7 @@ func TestOperatorToolLayer(t *testing.T) {
 		k.llm.Script(
 			tools(loadTools("propose_changes")),
 			tools(callTool("propose_changes", map[string]any{
-				"title": "File as billing", "reason": "A double charge.",
+				"suggestion_title": "File as billing", "reason": "A double charge.",
 				"operations": []map[string]any{{"kind": "conversation.tag", "tags": []string{"billing"}}},
 			})),
 			reply("Proposed."),

@@ -107,20 +107,28 @@ githubTools are the tools that read pull requests.
 */
 func (e *Engine) githubTools() []tool {
 	return []tool{
-		{spec: contracts.ToolSpec{
-			Name: "github_list_merged_prs",
-			Description: "List pull requests merged into one of this routine's repositories since a moment, " +
-				"newest first, without those carrying an ignored label.",
-			Schema: schema(`{"type":"object","required":["repository"],"properties":{` +
-				`"repository":{"type":"string","description":"owner/repo, one of this routine's repositories."},` +
-				`"since":{"type":"string","description":"ISO 8601 time; 7 days ago by default, at most 30."}}}`),
-		}, handle: e.listMergedPulls, routine: true, group: RoutineGroupGitHub},
-		{spec: contracts.ToolSpec{
-			Name:        "github_get_pr_diff",
-			Description: "Read one pull request's description and the files it changed, with shortened patches.",
-			Schema: schema(`{"type":"object","required":["repository","number"],"properties":{` +
-				`"repository":{"type":"string"},"number":{"type":"integer","minimum":1}}}`),
-		}, handle: e.readPull, routine: true, group: RoutineGroupGitHub},
+		{
+			spec: contracts.ToolSpec{
+				Name: "github_list_merged_pull_requests",
+				Description: "List pull requests merged into one of this routine's repositories since a moment, " +
+					"newest first, without those carrying an ignored label.",
+				Schema: schema(`{"type":"object","required":["repository"],"properties":{` +
+					`"repository":{"type":"string","description":"owner/repo, one of this routine's repositories."},` +
+					`"merged_since":{"type":"string","description":"Only pull requests merged after this ISO 8601 ` +
+					`time; 7 days ago by default, at most 30."}}}`),
+			}, handle: e.listMergedPulls, routine: true, group: RoutineGroupGitHub,
+			was: map[string]string{"since": "merged_since"},
+		},
+		{
+			spec: contracts.ToolSpec{
+				Name:        "github_get_pull_request_diff",
+				Description: "Read one pull request's description and the files it changed, with shortened patches.",
+				Schema: schema(`{"type":"object","required":["repository","pull_request_number"],"properties":{` +
+					`"repository":{"type":"string","description":"owner/repo, one of this routine's repositories."},` +
+					`"pull_request_number":{"type":"integer","minimum":1}}}`),
+			}, handle: e.readPull, routine: true, group: RoutineGroupGitHub,
+			was: map[string]string{"number": "pull_request_number"},
+		},
 	}
 }
 
@@ -143,7 +151,7 @@ listMergedPulls lists the merged pull requests of a repository.
 func (e *Engine) listMergedPulls(ctx context.Context, s *session, args json.RawMessage) (result, error) {
 	var in struct {
 		Repository string `json:"repository"`
-		Since      string `json:"since"`
+		Since      string `json:"merged_since"`
 	}
 	if err := decode(args, &in); err != nil {
 		return result{}, err
@@ -187,7 +195,8 @@ func (e *Engine) listMergedPulls(ctx context.Context, s *session, args json.RawM
 		fmt.Fprintf(&b, "No pull requests were merged into %s since %s.", repo, since.UTC().Format(time.RFC3339))
 	}
 	return result{text: b.String(), step: Step{
-		Tool: "github_list_merged_prs", Summary: fmt.Sprintf("Listed %d merged pull requests of %s", shown, repo),
+		Tool:    "github_list_merged_pull_requests",
+		Summary: fmt.Sprintf("Listed %d merged pull requests of %s", shown, repo),
 	}}, nil
 }
 
@@ -197,7 +206,7 @@ readPull reads one pull request and its changed files.
 func (e *Engine) readPull(ctx context.Context, s *session, args json.RawMessage) (result, error) {
 	var in struct {
 		Repository string `json:"repository"`
-		Number     int    `json:"number"`
+		Number     int    `json:"pull_request_number"`
 	}
 	if err := decode(args, &in); err != nil {
 		return result{}, err
@@ -233,7 +242,7 @@ func (e *Engine) readPull(ctx context.Context, s *session, args json.RawMessage)
 		fmt.Fprintf(&b, "\n%s\n", untrusted(patch))
 	}
 	return result{text: b.String(), step: Step{
-		Tool: "github_get_pr_diff", Summary: fmt.Sprintf("Read %s#%d", repo, pull.Number),
+		Tool: "github_get_pull_request_diff", Summary: fmt.Sprintf("Read %s#%d", repo, pull.Number),
 	}}, nil
 }
 

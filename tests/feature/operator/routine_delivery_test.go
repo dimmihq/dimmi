@@ -118,7 +118,8 @@ func TestOperatorRoutineDelivery(t *testing.T) {
 				"in_app_member_ids": []string{k.ownerID()}, "email_member_ids": []string{k.ownerID()},
 			},
 		})
-		k.llm.Script(tools(call("mark_noop", map[string]any{"reason": "Quiet week."})), reply("Quiet week."))
+		quiet := tools(call("report_nothing_to_change", map[string]any{"reason": "Quiet week."}))
+		k.llm.Script(quiet, reply("Quiet week."))
 
 		k.runRoutine(routine, false).AssertJSONPath("data.outcome", "noop")
 		k.d.TC.Drain()

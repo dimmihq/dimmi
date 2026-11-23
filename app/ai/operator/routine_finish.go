@@ -107,8 +107,9 @@ func (e *Engine) deliver(ctx context.Context, tx *database.Tx, run models.Operat
 /*
 outcomeOf is how a run ended: failed when the model did not finish,
 findings when it suggested changes, else noop. Models often forget
-mark_noop, so a run is quiet whenever it suggested nothing; a routine
-that reports every time notifies on every run instead.
+report_nothing_to_change, so a run is quiet whenever it suggested
+nothing; a routine that reports every time notifies on every run
+instead.
 */
 func outcomeOf(s *session, status string) string {
 	switch {

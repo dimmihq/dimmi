@@ -76,11 +76,11 @@ the layer on, only the fixed tools may be called by name.
 */
 func (e *Engine) resolve(s *session, registry map[string]tool, call contracts.ToolCall) *pending {
 	if s.layer != nil && (call.Name == toolset.LoadTool || call.Name == toolset.CallTool) {
-		t, ok := registry[innerName(call.Arguments)]
+		t, ok := lookup(registry, innerName(call.Arguments))
 		return &pending{call: call, tool: t, known: ok && e.offers(s, t), layer: true}
 	}
-	t, ok := registry[call.Name]
-	fixed := s.layer == nil || slices.Contains(s.layer.fixed, call.Name)
+	t, ok := lookup(registry, call.Name)
+	fixed := s.layer == nil || slices.Contains(s.layer.fixed, t.spec.Name)
 	return &pending{call: call, tool: t, known: ok && e.offers(s, t) && fixed}
 }
 

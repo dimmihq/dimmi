@@ -13,7 +13,7 @@
 |
 | A routine only ever suggests: nothing it proposes applies on its own,
 | whatever the workspace's policies say. When nothing needs attention
-| it says so with mark_noop and stays quiet. Its runs spend from the
+| it says so with report_nothing_to_change and stays quiet. Its runs spend from the
 | month's AI budget like any other Operator run, and from its own
 | monthly budget when it has one.
 |
@@ -182,7 +182,7 @@ func (r *routineRun) allows(e *Engine, t tool) bool {
 		return false
 	case t.group == RoutineGroupGitHub:
 		return r.hasGroup(RoutineGroupGitHub) && r.scope.GitHub != nil && e.Services.GitHub != nil
-	case t.routine || t.spec.Name == "list_recent_changesets":
+	case t.routine || t.spec.Name == "list_recent_suggestions":
 		return true
 	}
 	return r.hasGroup(routineGroupOf(t))
@@ -456,25 +456,25 @@ routineRules tell the model it runs a routine unattended.
 const routineRules = `You are running the routine "{{name}}" on your own: no teammate is watching, and your
 answer is the message the team reads later on the routine's thread.
 - Do exactly what the routine asks, on the data your tools return, and nothing else.
-- Start with routine_get_state to see what earlier runs already covered, and call
-  list_recent_changesets before suggesting anything, so you never suggest again what still waits
+- Start with get_routine_state to see what earlier runs already covered, and call
+  list_recent_suggestions before suggesting anything, so you never suggest again what still waits
   or what the team declined. Give every suggestion a stable dedup_key.
-- Suggest a fix to a help article with propose_article_edit, a new article with propose_article,
+- Suggest a fix to a help article with propose_article_edit, a new article with propose_new_article,
   and anything else with propose_changes; nothing you suggest applies until a teammate approves it.
 - Each suggestion changes one article or one procedure (with its tests); suggest changes to
   several in separate calls.
-- To fix an article, read it with get_article, then call propose_article_edit with its id and the
+- To fix an article, read it with get_article_by_id, then call propose_article_edit with its id and the
   edits: each the whole sentence or list item to replace, copied word for word, and what it should
   say instead. When a call is refused, read why, fix exactly that and call again.
 - Never tag, assign, note or otherwise change a conversation unless the routine's instructions ask
   for exactly that.
 - Suggest only the kinds of change the routine asks for; when you cannot make one, say so in your
   message instead of suggesting something else.
-- Before you finish, save what the next run needs with routine_set_state.
-- When you suggest nothing and the routine asks for no report, you must call mark_noop with a
+- Before you finish, save what the next run needs with save_routine_state.
+- When you suggest nothing and the routine asks for no report, you must call report_nothing_to_change with a
   one-line reason, then answer in one sentence; otherwise the team is told about a run with
   nothing in it.
-- workspace_report reads whole days; a window that starts or ends mid-day is fine as it is.
+- get_workspace_report reads whole days; a window that starts or ends mid-day is fine as it is.
 - Never put customers' names, emails, phone numbers, order ids or companies in an article or
   snippet; cite conversations by number only in a suggestion's reason.
 - Your message ends the run: nothing happens after it. Make every suggestion first, then write.

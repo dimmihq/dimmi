@@ -40,18 +40,23 @@ func (e *Engine) knowledgeTools() []tool {
 		{spec: contracts.ToolSpec{
 			Name: "search_knowledge", Description: "Search the knowledge the AI agent answers customers from: " +
 				"published help articles and connected sources. Returns passages with titles and links.",
-			Schema: schema(`{"type":"object","required":["query"],"properties":{"query":{"type":"string"}}}`),
+			Schema: schema(`{"type":"object","required":["query"],"properties":{"query":{"type":"string",` +
+				`"description":"What to look for, in a few words."}}}`),
 		}, handle: e.searchKnowledge},
 		{spec: contracts.ToolSpec{
 			Name: "list_articles", Description: "List help center articles, drafts included, optionally " +
 				"matching words in the title, numbered from 0. Returns ids, status and whether unpublished " +
 				"changes wait. Offset and limit page through a long list.",
-			Schema: schema(`{"type":"object","properties":{"query":{"type":"string"},` +
-				`"status":{"type":"string","enum":["draft","published","archived"]},` +
-				`"offset":{"type":"integer","minimum":0},"limit":{"type":"integer","minimum":1,"maximum":100}}}`),
+			Schema: schema(`{"type":"object","properties":{"query":{"type":"string","description":"Only ` +
+				`articles with these words in the title; leave out for all."},` +
+				`"status":{"type":"string","enum":["draft","published","archived"],"description":"Only ` +
+				`articles with this status; leave out for all."},` +
+				`"offset":{"type":"integer","minimum":0,"description":"How many articles to skip; 0 starts ` +
+				`at the first."},"limit":{"type":"integer","minimum":1,"maximum":100,"description":"How ` +
+				`many articles to list."}}}`),
 		}, handle: e.listArticles},
 		{spec: contracts.ToolSpec{
-			Name: "get_article", Description: "Read one article's working copy in Markdown.",
+			Name: "get_article_by_id", Description: "Read one article's working copy in Markdown.",
 			Schema: idSchema("article_id", "Article id, such as art_..."),
 		}, handle: e.getArticle},
 		{spec: contracts.ToolSpec{
@@ -60,7 +65,7 @@ func (e *Engine) knowledgeTools() []tool {
 			Schema: schema(`{"type":"object","properties":{}}`),
 		}, handle: e.listProcedures},
 		{spec: contracts.ToolSpec{
-			Name: "get_procedure", Description: "Read one procedure's working copy and live copy as JSON.",
+			Name: "get_procedure_by_id", Description: "Read one procedure's working copy and live copy as JSON.",
 			Schema: idSchema("procedure_id", "Procedure id, such as prc_..."),
 		}, handle: e.getProcedure},
 	}
@@ -207,7 +212,7 @@ func (e *Engine) getArticle(ctx context.Context, s *session, args json.RawMessag
 	text := fmt.Sprintf("Article %s (id %s)\nStatus: %s%s\nVisibility: %s\nDescription: %s\n\n%s",
 		a.Title, models.PublicID(models.PrefixArticle, a.ID), a.Status, pendingMark(a), a.Visibility,
 		deref(a.Description), truncate(a.BodyMarkdown, 20000))
-	return result{text: text, step: Step{Tool: "get_article", Summary: "Read the article " + a.Title}}, nil
+	return result{text: text, step: Step{Tool: "get_article_by_id", Summary: "Read the article " + a.Title}}, nil
 }
 
 /*
@@ -245,7 +250,7 @@ func (e *Engine) getProcedure(ctx context.Context, s *session, args json.RawMess
 	text := fmt.Sprintf("Procedure %s (id %s), %s\nWorking copy: %s\nLive copy: %s", p.Name,
 		models.PublicID(models.PrefixProcedure, p.ID), p.Status, truncate(string(p.Draft), 20000),
 		truncate(string(p.Live), 20000))
-	return result{text: text, step: Step{Tool: "get_procedure", Summary: "Read the procedure " + p.Name}}, nil
+	return result{text: text, step: Step{Tool: "get_procedure_by_id", Summary: "Read the procedure " + p.Name}}, nil
 }
 
 /*

@@ -27,7 +27,7 @@ func TestOperatorRoutineLoop(t *testing.T) {
 		k.llm.Script(
 			tools(call("list_articles", map[string]any{})),
 			tools(call("list_articles", map[string]any{})),
-			tools(call("mark_noop", map[string]any{"reason": "All fine"})),
+			tools(call("report_nothing_to_change", map[string]any{"reason": "All fine"})),
 			reply("Nothing to change."),
 		)
 

@@ -49,7 +49,7 @@ func TestOperatorArticleTools(t *testing.T) {
 			schema := string(spec.Schema)
 			if spec.Name == "propose_article_edit" {
 				found = true
-				assert.Contains(t, schema, `"required":["article_id","edits","title","reason"]`)
+				assert.Contains(t, schema, `"required":["article_id","edits","suggestion_title","reason"]`)
 			}
 			if spec.Name == "propose_changes" {
 				assert.NotContains(t, schema, "article.edit_draft")
@@ -63,7 +63,7 @@ func TestOperatorArticleTools(t *testing.T) {
 		k := newDesk(t)
 		article := k.article("Label limit")
 		k.llm.Script(tools(call("propose_article_edit", map[string]any{
-			"article_id": article, "title": "Fix the label allowance", "reason": "Plans changed.",
+			"article_id": article, "suggestion_title": "Fix the label allowance", "reason": "Plans changed.",
 			"edits": []map[string]any{{
 				"find": "Your plan's monthly label allowance is used up and your plan does not allow overage. " +
 					"The Free plan stops at 50 labels a month.",
@@ -83,7 +83,7 @@ func TestOperatorArticleTools(t *testing.T) {
 		k := newDesk(t)
 		article := k.article("Batches")
 		k.llm.Script(tools(call("propose_article_edit", map[string]any{
-			"article_id": article, "title": "Fix the batch limit", "reason": "Free has no lower limit.",
+			"article_id": article, "suggestion_title": "Fix the batch limit", "reason": "Free has no lower limit.",
 			"edits": []map[string]any{
 				{
 					"find":    "A batch can hold at most 1,000 shipments, or 25 on the Free plan.",
@@ -152,14 +152,48 @@ func TestOperatorArticleTools(t *testing.T) {
 	t.Run("drafts a new article", func(t *testing.T) {
 		t.Parallel()
 		k := newDesk(t)
-		k.llm.Script(tools(call("propose_article", map[string]any{
-			"article_title": "Set up SSO", "body": "Turn on SSO under Settings.",
-			"title": "Add a guide to SSO setup", "reason": "Three customers asked.",
+		k.llm.Script(tools(call("propose_new_article", map[string]any{
+			"article_title": "Set up SSO", "article_body": "Turn on SSO under Settings.",
+			"suggestion_title": "Add a guide to SSO setup", "reason": "Three customers asked.",
 		})), reply("Suggested."))
 
 		res := k.ask(k.thread(""), "Write an SSO guide").AssertOK()
 
 		assert.Equal(t, "Add a guide to SSO setup", res.String("data.changesets.0.title"))
 		assert.Equal(t, "article.create_draft", res.String("data.changesets.0.operations.0.kind"))
+	})
+}
+
+func TestOperatorToolNames(t *testing.T) {
+	t.Parallel()
+
+	t.Run("names every argument that carries an id or a number for what it is", func(t *testing.T) {
+		t.Parallel()
+		k := newDesk(t)
+		k.llm.Script(reply("Hello."))
+
+		k.ask(k.thread(""), "Hello").AssertOK()
+
+		schemas := map[string]string{}
+		for _, spec := range k.llm.Sent()[0].Tools {
+			schemas[spec.Name] = string(spec.Schema)
+		}
+		assert.Contains(t, schemas["get_article_by_id"], `"required":["article_id"]`)
+		assert.Contains(t, schemas["get_procedure_by_id"], `"required":["procedure_id"]`)
+		assert.Contains(t, schemas["get_conversation_by_number"], `"conversation_number"`)
+		assert.Contains(t, schemas["get_customer_by_conversation_number"], `"conversation_number"`)
+		assert.Contains(t, schemas["propose_changes"], `"required":["suggestion_title","reason","operations"]`)
+		assert.NotContains(t, schemas, "get_article")
+	})
+
+	t.Run("still runs a tool called by the name and arguments it had before", func(t *testing.T) {
+		t.Parallel()
+		k := newDesk(t)
+		article := k.article("Label limit")
+		k.llm.Script(tools(call("get_article", map[string]any{"article": article})), reply("Read."))
+
+		k.ask(k.thread(""), "Read the label article").AssertOK()
+
+		assert.Contains(t, k.toolResult(), "The Free plan stops at 50 labels a month.")
 	})
 }

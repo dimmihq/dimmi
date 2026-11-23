@@ -4,7 +4,7 @@
 |--------------------------------------------------------------------------
 |
 | With the layer on, Operator is offered search_knowledge,
-| get_conversation and search_conversations, plus load_tools and
+| get_conversation_by_number and search_conversations, plus load_tools and
 | call_tool, the same on every call. Its other tools, and the read-only
 | tools of the API catalog, sit in groups named in the system prompt:
 | call_tool runs one once it is loaded, with its arguments checked and a
@@ -96,7 +96,7 @@ type layerState struct {
 fixedTools are the tools offered outside the layer.
 */
 func fixedTools() []string {
-	return []string{"get_conversation", "search_conversations", "search_knowledge"}
+	return []string{"get_conversation_by_number", "search_conversations", "search_knowledge"}
 }
 
 /*
@@ -142,7 +142,7 @@ func ownGroupOf(t tool) string {
 		return groupActions
 	case len(t.writes) > 0 || t.spec.Name == "remember" || t.spec.Name == "draft_reply":
 		return groupChanges
-	case t.spec.Name == "workspace_report" || t.spec.Name == "agent_runs":
+	case t.spec.Name == "get_workspace_report" || t.spec.Name == "get_ai_agent_runs":
 		return groupInsights
 	case strings.Contains(t.spec.Name, "article") || strings.Contains(t.spec.Name, "procedure"):
 		return groupKnowledge

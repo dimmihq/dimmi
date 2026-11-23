@@ -50,7 +50,7 @@ func (e *Engine) writeTools() []tool {
 		}, handle: e.draftReply},
 		{spec: contracts.ToolSpec{
 			Name: "propose_changes", Description: proposeDescription, Schema: schema(proposeSchema),
-		}, writes: changeKinds(), handle: e.proposeChanges},
+		}, writes: changeKinds(), handle: e.proposeChanges, was: wasTitle()},
 		{spec: contracts.ToolSpec{
 			Name: "remember",
 			Description: "Remember something the teammate asked you to keep in mind for every future " +

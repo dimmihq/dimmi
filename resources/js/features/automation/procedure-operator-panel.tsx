@@ -81,7 +81,7 @@ export function ProcedureOperatorPanel({
           detail: "Finds unclear steps and missing edge cases.",
           onPick: () =>
             chat.ask(
-              `Review ${about} using get_procedure and suggest any unclear steps, missing edge cases, or improvements.`,
+              `Review ${about} and suggest any unclear steps, missing edge cases, or improvements.`,
             ),
         },
         {

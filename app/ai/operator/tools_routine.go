@@ -48,33 +48,42 @@ func (e *Engine) routineTools() []tool {
 	return []tool{
 		e.skillTool(),
 		{spec: contracts.ToolSpec{
-			Name:        "routine_get_state",
+			Name:        "get_routine_state",
 			Description: "Read what this routine kept from its earlier runs, such as cursors and what it covered.",
 			Schema:      schema(`{"type":"object","properties":{}}`),
 		}, handle: e.routineGetState, routine: true},
 		{spec: contracts.ToolSpec{
-			Name: "routine_set_state",
+			Name: "save_routine_state",
 			Description: "Save what the next run of this routine needs, as a JSON object of at most 64 KB. " +
-				"Keys given replace the saved ones; with replace true the object replaces everything.",
+				"Keys given replace the saved ones; every other saved key stays.",
 			Schema: schema(`{"type":"object","required":["state"],"properties":{` +
-				`"state":{"type":"object"},"replace":{"type":"boolean"}}}`),
-		}, handle: e.routineSetState, routine: true},
+				`"state":{"type":"object","description":"What to save, such as {\"next_offset\": 15}."},` +
+				`"replace_everything":{"type":"boolean","description":"true to drop every key saved before ` +
+				`and keep only this object. Leave out to keep them."}}}`),
+		}, handle: e.routineSetState, routine: true, was: map[string]string{"replace": "replace_everything"}},
 		{spec: contracts.ToolSpec{
-			Name: "mark_noop",
+			Name: "report_nothing_to_change",
 			Description: "Say that nothing needs the team's attention this run, so nobody is notified. " +
 				"Ignored when this run already suggested changes.",
 			Schema: schema(`{"type":"object","required":["reason"],"properties":{` +
-				`"reason":{"type":"string","maxLength":500}}}`),
+				`"reason":{"type":"string","maxLength":500,"description":"One line on what you checked and ` +
+				`why nothing needs changing."}}}`),
 		}, handle: e.markNoop, routine: true},
-		{spec: contracts.ToolSpec{
-			Name: "list_recent_changesets",
-			Description: "List the changes Operator suggested lately, newest first, with their status (pending, " +
-				"applied, declined, reverted, failed), dedup_key and operations, to avoid suggesting them again.",
-			Schema: schema(`{"type":"object","properties":{` +
-				`"since_days":{"type":"integer","minimum":1,"maximum":90,"description":"30 by default."},` +
-				`"status":{"type":"string","enum":["pending","applied","declined","reverted","failed"]},` +
-				`"routine_only":{"type":"boolean","description":"Only this routine's suggestions."}}}`),
-		}, handle: e.listRecentChangesets},
+		{
+			spec: contracts.ToolSpec{
+				Name: "list_recent_suggestions",
+				Description: "List the changes Operator suggested lately, newest first, with their status (pending, " +
+					"applied, declined, reverted, failed), dedup_key and operations, to avoid suggesting them again.",
+				Schema: schema(`{"type":"object","properties":{` +
+					`"days_back":{"type":"integer","minimum":1,"maximum":90,"description":"How many days back to ` +
+					`look; 30 by default."},` +
+					`"status":{"type":"string","enum":["pending","applied","declined","reverted","failed"],` +
+					`"description":"Only suggestions with this status; leave out for all."},` +
+					`"only_this_routine":{"type":"boolean","description":"true for only this routine's ` +
+					`suggestions."}}}`),
+			}, handle: e.listRecentChangesets,
+			was: map[string]string{"since_days": "days_back", "routine_only": "only_this_routine"},
+		},
 	}
 }
 
@@ -86,7 +95,7 @@ func (e *Engine) routineGetState(_ context.Context, s *session, _ json.RawMessag
 	if len(state) == 0 {
 		state = json.RawMessage("{}")
 	}
-	return result{text: string(state), step: Step{Tool: "routine_get_state", Summary: "Read the routine's state"}}, nil
+	return result{text: string(state), step: Step{Tool: "get_routine_state", Summary: "Read the routine's state"}}, nil
 }
 
 /*
@@ -96,7 +105,7 @@ a dry run only says what it would save.
 func (e *Engine) routineSetState(ctx context.Context, s *session, args json.RawMessage) (result, error) {
 	var in struct {
 		State   map[string]json.RawMessage `json:"state"`
-		Replace bool                       `json:"replace"`
+		Replace bool                       `json:"replace_everything"`
 	}
 	if err := decode(args, &in); err != nil {
 		return result{}, err
@@ -113,7 +122,7 @@ func (e *Engine) routineSetState(ctx context.Context, s *session, args json.RawM
 	if err != nil || len(encoded) > maxRoutineState {
 		return result{}, fmt.Errorf("%w: the state is a JSON object of at most 64 KB", errBadArguments)
 	}
-	step := Step{Tool: "routine_set_state", Summary: "Saved the routine's state"}
+	step := Step{Tool: "save_routine_state", Summary: "Saved the routine's state"}
 	if s.routine.dryRun {
 		step.Summary = "Would save the routine's state (dry run)"
 		return result{text: "Saved for this dry run only: a dry run never keeps state, which is expected. " +
@@ -145,13 +154,13 @@ func (e *Engine) markNoop(_ context.Context, s *session, args json.RawMessage) (
 	if len(s.proposed) > 0 {
 		return result{
 			text: "Ignored: this run already suggested changes, so the team is told.",
-			step: Step{Tool: "mark_noop", Summary: "Kept the findings"},
+			step: Step{Tool: "report_nothing_to_change", Summary: "Kept the findings"},
 		}, nil
 	}
 	s.routine.noop, s.routine.noopReason = true, reason
 	return result{
 		text: "Noted: nothing needs attention.",
-		step: Step{Tool: "mark_noop", Summary: "Nothing needs attention: " + truncate(reason, 80)},
+		step: Step{Tool: "report_nothing_to_change", Summary: "Nothing needs attention: " + truncate(reason, 80)},
 	}, nil
 }
 
@@ -161,9 +170,9 @@ were made lately.
 */
 func (e *Engine) listRecentChangesets(ctx context.Context, s *session, args json.RawMessage) (result, error) {
 	var in struct {
-		SinceDays   int    `json:"since_days"`
+		SinceDays   int    `json:"days_back"`
 		Status      string `json:"status"`
-		RoutineOnly bool   `json:"routine_only"`
+		RoutineOnly bool   `json:"only_this_routine"`
 	}
 	if err := decode(args, &in); err != nil {
 		return result{}, err
@@ -205,7 +214,7 @@ func (e *Engine) listRecentChangesets(ctx context.Context, s *session, args json
 		fmt.Fprintf(&b, "No changes were suggested in the last %d days.", days)
 	}
 	return result{text: b.String(), step: Step{
-		Tool: "list_recent_changesets", Summary: fmt.Sprintf("Listed %d recent suggestions", len(rows)),
+		Tool: "list_recent_suggestions", Summary: fmt.Sprintf("Listed %d recent suggestions", len(rows)),
 	}}, nil
 }
 

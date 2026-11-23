@@ -35,14 +35,14 @@ const proposeDescription = "Propose changes to conversations, customers and proc
 	"teammate reviews: tag or untag, assign to a teammate or team, set priority, open or close, rename, add " +
 	"an internal note, update a customer's name, edit a procedure's working copy, or add a regression test " +
 	"to a procedure from a conversation that went wrong. Help articles have their own tools: " +
-	"propose_article_edit and propose_article. Give a short title and the reason, both in plain words a " +
+	"propose_article_edit and propose_new_article. Give a short title and the reason, both in plain words a " +
 	"teammate reads at a glance."
 
 /*
 proposeSchema is the schema of a proposal.
 */
-const proposeSchema = `{"type":"object","required":["title","reason","operations"],"properties":{
-"title":{"type":"string","maxLength":200,"description":"What it does in a few everyday words, like ` +
+const proposeSchema = `{"type":"object","required":["suggestion_title","reason","operations"],"properties":{
+"suggestion_title":{"type":"string","maxLength":200,"description":"What it does in a few everyday words, like ` +
 	`'Route to Billing'."},
 "reason":{"type":"string","maxLength":2000,"description":"Why, as you would tell a teammate in one or two short, ` +
 	`plain sentences: what is wrong today and what this changes. No tool names or ids; cite conversations ` +
@@ -55,34 +55,35 @@ const proposeSchema = `{"type":"object","required":["title","reason","operations
 "kind":{"type":"string","enum":["conversation.tag","conversation.untag","conversation.assign",
 "conversation.priority","conversation.status","conversation.title","conversation.note","contact.update",
 "procedure.edit_draft","procedure.create_test_case"]},
-"conversation":{"type":"integer","description":"Conversation number; leave out for this thread's."},
+"conversation_number":{"type":"integer","description":"Conversation number, such as 123 for #123; leave ` +
+	`out for this thread's."},
 "tags":{"type":"array","items":{"type":"string"},"description":"For conversation.tag and untag: tag names."},
 "member_id":{"type":"string","description":"For conversation.assign: teammate id (mem_...), or none."},
 "team_id":{"type":"string","description":"For conversation.assign: team id (team_...), or none."},
 "priority":{"type":"string","enum":["none","low","medium","high","urgent"],
 "description":"For conversation.priority."},
 "status":{"type":"string","enum":["open","closed"],"description":"For conversation.status."},
-"title":{"type":"string","description":"For conversation.title: the new subject."},
-"body":{"type":"string","description":"For conversation.note: the note's text."},
+"new_subject":{"type":"string","description":"For conversation.title: the conversation's new subject."},
+"note_text":{"type":"string","description":"For conversation.note: the note's text."},
 "contact_id":{"type":"string","description":"For contact.update: customer id (ctc_...); leave out for this ` +
 	`conversation's."},
-"name":{"type":"string","description":"For contact.update: the customer's new name."},
+"customer_name":{"type":"string","description":"For contact.update: the customer's new name."},
 "procedure_id":{"type":"string","description":"For the procedure kinds: procedure id (prc_...)."},
-"definition":{"type":"object","description":"For procedure.edit_draft: the procedure's whole new working ` +
-	`copy, as get_procedure shows it."},
+"procedure_definition":{"type":"object","description":"For procedure.edit_draft: the procedure's whole new working ` +
+	`copy, as get_procedure_by_id shows it."},
 "test_case":{"type":"object","description":"For procedure.create_test_case: the test, with name, messages ` +
 	`([{text}], the customer's turns), persona ({verified, external_id, channel, attributes}), action_mocks ` +
 	`({action name: {status: HTTP status as a number such as 200, body: any JSON}}), assertions ([{type, ...}]: ` +
 	`procedure_matched; action_called and action_not_called with action (its name); action_order with action ` +
 	`and before; branch_taken with step_id and branch; handed_off with handed_off true or false; ` +
-	`reply_contains and reply_not_contains with text) and source_conversation (its number)."}
+	`reply_contains and reply_not_contains with text) and source_conversation_number."}
 }}}}}`
 
 /*
 proposal is a proposal as the model sent it.
 */
 type proposal struct {
-	Title      string    `json:"title"`
+	Title      string    `json:"suggestion_title"`
 	Reason     string    `json:"reason"`
 	DedupKey   string    `json:"dedup_key"`
 	Operations []opInput `json:"operations"`
@@ -118,6 +119,11 @@ type opInput struct {
 	CollectionID string          `json:"collection_id"`
 	ArticleID    string          `json:"article_id"`
 	ProcedureID  string          `json:"procedure_id"`
+	Number       int64           `json:"conversation_number"`
+	Subject      string          `json:"new_subject"`
+	NoteText     string          `json:"note_text"`
+	CustomerName string          `json:"customer_name"`
+	NewWorking   json.RawMessage `json:"procedure_definition"`
 }
 
 /*
@@ -129,6 +135,19 @@ func (in opInput) named() opInput {
 	in.Contact, in.Procedure = either(in.ContactID, in.Contact), either(in.ProcedureID, in.Procedure)
 	in.HelpCenter, in.Collection = either(in.HelpCenterID, in.HelpCenter), either(in.CollectionID, in.Collection)
 	in.Article = either(in.ArticleID, in.Article)
+	in.Name = either(in.CustomerName, in.Name)
+	if in.Number != 0 {
+		in.Conversation = in.Number
+	}
+	if len(in.NewWorking) > 0 {
+		in.Definition = in.NewWorking
+	}
+	if in.Kind == KindTitle {
+		in.Title = either(in.Subject, in.Title)
+	}
+	if in.Kind == KindNote {
+		in.Body = either(in.NoteText, in.Body)
+	}
 	return in
 }
 
@@ -138,10 +157,10 @@ check refuses a proposal without a title or operations.
 func (p proposal) check() error {
 	title := strings.TrimSpace(p.Title)
 	if title == "" || len([]rune(title)) > 200 {
-		return fmt.Errorf("%w: a title of 1 to 200 characters is required", errBadArguments)
+		return fmt.Errorf("%w: \"suggestion_title\" is missing; give 1 to 200 characters", errBadArguments)
 	}
 	if len(p.Operations) == 0 || len(p.Operations) > maxOperations {
-		return fmt.Errorf("%w: give 1 to %d operations", errBadArguments, maxOperations)
+		return fmt.Errorf("%w: \"operations\" must hold 1 to %d operations", errBadArguments, maxOperations)
 	}
 	return nil
 }

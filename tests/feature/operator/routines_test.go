@@ -125,7 +125,7 @@ func TestOperatorRoutineRuns(t *testing.T) {
 		routine := k.routine(testkit.JSON{"name": "Tagger", "prompt": "Tag refunds."})
 		k.llm.Script(
 			tools(call("propose_changes", tagging(t, number, "tag:"+number))),
-			tools(call("routine_set_state", map[string]any{"state": map[string]any{"seen": number}})),
+			tools(call("save_routine_state", map[string]any{"state": map[string]any{"seen": number}})),
 			reply("Tagged one refund."),
 		)
 
@@ -168,7 +168,8 @@ func TestOperatorRoutineRuns(t *testing.T) {
 		t.Parallel()
 		k := newDesk(t)
 		routine := k.routine(testkit.JSON{"name": "Watcher", "prompt": "Check things."})
-		k.llm.Script(tools(call("mark_noop", map[string]any{"reason": "Nothing new."})), reply("Nothing new."))
+		quiet := tools(call("report_nothing_to_change", map[string]any{"reason": "Nothing new."}))
+		k.llm.Script(quiet, reply("Nothing new."))
 
 		k.runRoutine(routine, false).AssertJSONPath("data.outcome", "noop").
 			AssertJSONPath("data.noop_reason", "Nothing new.")
@@ -335,8 +336,8 @@ func TestOperatorRoutineGitHub(t *testing.T) {
 			}},
 		})
 		k.llm.Script(
-			tools(call("github_list_merged_prs", map[string]any{"repository": "acme/secret"})),
-			tools(call("github_list_merged_prs", map[string]any{"repository": "acme/app"})),
+			tools(call("github_list_merged_pull_requests", map[string]any{"repository": "acme/secret"})),
+			tools(call("github_list_merged_pull_requests", map[string]any{"repository": "acme/app"})),
 			reply("Nothing to change."),
 		)
 
@@ -396,7 +397,7 @@ func TestOperatorRoutineTools(t *testing.T) {
 		assert.Contains(t, offered(0), "search_knowledge")
 		assert.Contains(t, offered(0), "list_conversations")
 		assert.NotContains(t, offered(0), "draft_reply")
-		assert.NotContains(t, offered(0), "github_list_merged_prs", "no repositories were picked")
+		assert.NotContains(t, offered(0), "github_list_merged_pull_requests", "no repositories were picked")
 		assert.NotContains(t, offered(0), "load_tools", "a routine never runs behind the tool layer")
 		var system string
 		for _, block := range sent[0].System {

@@ -29,7 +29,7 @@ import (
 
 /*
 timelineSize is how many of a conversation's latest entries
-get_conversation reads.
+get_conversation_by_number reads.
 */
 const timelineSize = 60
 
@@ -37,13 +37,13 @@ const timelineSize = 60
 numberArgs names a conversation by number; zero means the thread's.
 */
 type numberArgs struct {
-	Number int64 `json:"number"`
+	Number int64 `json:"conversation_number"`
 }
 
 /*
 numberSchema is the schema of a tool that takes a conversation number.
 */
-const numberSchema = `{"type":"object","properties":{"number":{"type":"integer",` +
+const numberSchema = `{"type":"object","properties":{"conversation_number":{"type":"integer",` +
 	`"description":"Conversation number, such as 123 for #123. Leave out for this thread's conversation."}}}`
 
 /*
@@ -52,23 +52,24 @@ conversationTools are the tools that read conversations and people.
 func (e *Engine) conversationTools() []tool {
 	return []tool{
 		{spec: contracts.ToolSpec{
-			Name: "get_conversation", Schema: schema(numberSchema),
+			Name: "get_conversation_by_number", Schema: schema(numberSchema),
 			Description: "Read one conversation: its details, tags, assignee, customer, and its latest " +
 				"messages and internal notes, oldest first.",
-		}, handle: e.getConversation},
+		}, handle: e.getConversation, was: wasNumber()},
 		e.listTool(),
 		{spec: contracts.ToolSpec{
 			Name: "search_conversations",
 			Description: "Search conversations and contacts by words, a customer's name or email, or " +
 				"#number. Returns up to 20 conversations, newest first.",
 			Schema: schema(`{"type":"object","required":["query"],"properties":{` +
-				`"query":{"type":"string","maxLength":256}}}`),
+				`"query":{"type":"string","maxLength":256,"description":"The words, name, email or #number ` +
+				`to search for."}}}`),
 		}, handle: e.searchConversations},
 		{spec: contracts.ToolSpec{
-			Name: "get_customer", Schema: schema(numberSchema),
+			Name: "get_customer_by_conversation_number", Schema: schema(numberSchema),
 			Description: "Read the customer of a conversation: their profile, attributes, company and " +
 				"their other recent conversations.",
-		}, handle: e.getCustomer},
+		}, handle: e.getCustomer, was: wasNumber()},
 		{spec: contracts.ToolSpec{
 			Name: "list_tags", Schema: schema(`{"type":"object","properties":{}}`),
 			Description: "List the workspace's tags.",
@@ -121,7 +122,8 @@ func (e *Engine) getConversation(ctx context.Context, s *session, args json.RawM
 	writeConversation(&b, loaded)
 	writeTimeline(&b, timeline)
 	n := loaded.Conversation.Number
-	return result{text: b.String(), step: Step{Tool: "get_conversation", Summary: fmt.Sprintf("Read #%d", n)}}, nil
+	st := Step{Tool: "get_conversation_by_number", Summary: fmt.Sprintf("Read #%d", n)}
+	return result{text: b.String(), step: st}, nil
 }
 
 /*
@@ -254,5 +256,5 @@ func (e *Engine) getCustomer(ctx context.Context, s *session, args json.RawMessa
 			p.Conversation.Status, p.Conversation.CreatedAt.UTC().Format("2006-01-02"))
 	}
 	summary := "Read the customer " + truncate(deref(c.Name), 60)
-	return result{text: b.String(), step: Step{Tool: "get_customer", Summary: summary}}, nil
+	return result{text: b.String(), step: Step{Tool: "get_customer_by_conversation_number", Summary: summary}}, nil
 }

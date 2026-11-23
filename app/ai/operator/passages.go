@@ -114,7 +114,7 @@ func locate(body, find string, n int) (string, string, error) {
 	passage, distance := nearest([]rune(body), []rune(strings.TrimSpace(find)))
 	if passage == "" {
 		return "", "", fmt.Errorf("%w: edit %d's find is not in the article; copy the passage word for word "+
-			"from get_article", errBadArguments, n)
+			"from get_article_by_id", errBadArguments, n)
 	}
 	want := []rune(strings.TrimSpace(find))
 	if len(want) >= minRepeatedFind && distance*looseness <= len(want) && digits(passage) == digits(find) {
@@ -123,7 +123,7 @@ func locate(body, find string, n int) (string, string, error) {
 	}
 	if distance*3 > len(want) {
 		return "", "", fmt.Errorf("%w: edit %d's find is not in the article; copy the passage word for word "+
-			"from get_article", errBadArguments, n)
+			"from get_article_by_id", errBadArguments, n)
 	}
 	return "", "", fmt.Errorf("%w: edit %d's find is not in the article. The closest passage is %q: send "+
 		"exactly that as find if it is the one you mean", errBadArguments, n, passage)

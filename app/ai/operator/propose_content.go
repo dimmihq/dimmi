@@ -86,16 +86,16 @@ func (r resolver) articleOp(ctx context.Context, in opInput) (Operation, error) 
 	}
 	if strings.TrimSpace(in.Article) == "" {
 		return op, fmt.Errorf("%w: \"article_id\" is missing; send the id of the article to edit, as "+
-			"get_article and list_articles show it (art_...)", errBadArguments)
+			"get_article_by_id and list_articles show it (art_...)", errBadArguments)
 	}
 	id, err := r.e.publicID(in.Article, models.PrefixArticle)
 	if err != nil {
-		return op, fmt.Errorf("%w: there is no article %q; \"article_id\" is the id get_article and "+
+		return op, fmt.Errorf("%w: there is no article %q; \"article_id\" is the id get_article_by_id and "+
 			"list_articles show (art_...), never the title", errBadArguments, in.Article)
 	}
 	a, err := r.e.Services.Articles.Show(ctx, r.s.m, id)
 	if errors.Is(err, exceptions.ErrNotFound) {
-		return op, fmt.Errorf("%w: there is no article %q; \"article_id\" is the id get_article and "+
+		return op, fmt.Errorf("%w: there is no article %q; \"article_id\" is the id get_article_by_id and "+
 			"list_articles show (art_...)", errBadArguments, in.Article)
 	}
 	if err != nil {
@@ -243,6 +243,7 @@ came from is named by number.
 type proposedTest struct {
 	Name               string                    `json:"name"`
 	SourceConversation int64                     `json:"source_conversation,omitempty"`
+	SourceNumber       int64                     `json:"source_conversation_number,omitempty"`
 	SourceID           string                    `json:"source_conversation_id,omitempty"`
 	Persona            *pipeline.SimPersona      `json:"persona,omitempty"`
 	Messages           []procedures.TestMessage  `json:"messages"`
@@ -269,6 +270,9 @@ func (r resolver) testCaseOp(ctx context.Context, op Operation, p models.Procedu
 	}
 	if issues := procedure.CheckAssertions(t.Assertions); len(issues) > 0 {
 		return op, fmt.Errorf("%w: %s", errBadArguments, issues[0].Message)
+	}
+	if t.SourceNumber > 0 {
+		t.SourceConversation, t.SourceNumber = t.SourceNumber, 0
 	}
 	if t.SourceConversation > 0 {
 		c, err := r.conversation(ctx, t.SourceConversation)

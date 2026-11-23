@@ -55,8 +55,9 @@ func (e *Engine) procedureTools() []tool {
 				"conversation went to the team, the customer rated it 1 or 2, or reopened it. Newest first.",
 			Schema: schema(`{"type":"object","required":["procedure_id"],"properties":{` +
 				`"procedure_id":{"type":"string","description":"Procedure id, such as prc_..."},` +
-				`"days":{"type":"integer","minimum":1,"maximum":90,"description":"How far back; 14 by default."}}}`),
-		}, handle: e.listProcedureAnomalies},
+				`"days_back":{"type":"integer","minimum":1,"maximum":90,"description":"How many days back to ` +
+				`look; 14 by default."}}}`),
+		}, handle: e.listProcedureAnomalies, was: map[string]string{"days": "days_back", "procedure": "procedure_id"}},
 		{spec: contracts.ToolSpec{
 			Name: "read_procedure_trace",
 			Description: "Read what one run did with its procedure, step by step: the branches code decided, " +
@@ -73,7 +74,7 @@ listProcedureAnomalies lists a procedure's runs that went wrong.
 func (e *Engine) listProcedureAnomalies(ctx context.Context, s *session, args json.RawMessage) (result, error) {
 	var in struct {
 		Procedure string `json:"procedure_id"`
-		Days      int    `json:"days"`
+		Days      int    `json:"days_back"`
 	}
 	if err := decode(args, &in); err != nil {
 		return result{}, err
