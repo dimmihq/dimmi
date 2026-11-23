@@ -6,6 +6,9 @@
 | A workspace whose time in the trash ran out is deleted for good: its
 | files, then its rows a batch at a time, then the workspace itself, and
 | its organization is marked deleted once it holds no live workspace.
+| Its files are everything in its own folder, the archives uploaded as
+| knowledge, the pictures placed in its articles and the stored source
+| of the email it received.
 | The retention guard is asked first; a held workspace stays in the
 | trash, untouched, and is asked about again on the next daily round.
 |
@@ -33,7 +36,9 @@ import (
 	"github.com/dimmihq/dimmi/framework/queue"
 	"github.com/dimmihq/dimmi/framework/tenancy"
 
+	"github.com/dimmihq/dimmi/app/actions/retention"
 	"github.com/dimmihq/dimmi/app/contracts"
+	"github.com/dimmihq/dimmi/app/integrations/knowledge/sources/upload"
 	"github.com/dimmihq/dimmi/app/models"
 )
 
@@ -43,10 +48,11 @@ a run works before handing over to the next, how long the next waits,
 and how often a failing purge is tried.
 */
 const (
-	purgeBatchRows = 5000
-	purgeRunBudget = 20 * time.Second
-	purgeHandOver  = time.Second
-	purgeAttempts  = 10
+	purgeBatchRows  = 5000
+	purgeBatchFiles = 200
+	purgeRunBudget  = 20 * time.Second
+	purgeHandOver   = time.Second
+	purgeAttempts   = 10
 )
 
 /*
@@ -55,6 +61,14 @@ every file of the workspace, which a purge deletes with it.
 */
 func WorkspaceStoragePrefix(workspaceID ids.UUID) string {
 	return "workspaces/" + workspaceID.String() + "/"
+}
+
+/*
+WorkspaceUploadPrefix returns the folder of the default disk that holds
+the archives the workspace uploaded as knowledge.
+*/
+func WorkspaceUploadPrefix(workspaceID ids.UUID) string {
+	return upload.Prefix + workspaceID.String() + "/"
 }
 
 /*
@@ -85,14 +99,17 @@ func (PurgeWorkspaceArgs) Options() queue.Options {
 }
 
 /*
-PurgeWorkspace deletes a workspace in the trash for good. Revoke, when
-set, gives the workspace's integration tokens back to their providers
-before any row goes.
+PurgeWorkspace deletes a workspace in the trash for good. Disk is the
+default disk, which holds the workspace's folders and article pictures,
+and Storage opens the disks its received email is stored on. Revoke,
+when set, gives the workspace's integration tokens back to their
+providers before any row goes.
 */
 type PurgeWorkspace struct {
 	DB        *database.DB
 	Clock     clock.Clock
 	Disk      filesystem.Filesystem
+	Storage   retention.Disks
 	Retention contracts.RetentionGuard
 	Log       log.Logger
 	Revoke    func(ctx context.Context, workspaceID ids.UUID) error
@@ -221,15 +238,37 @@ func (w *PurgeWorkspace) begin(ctx context.Context, id ids.UUID) (bool, error) {
 
 /*
 deleteFiles deletes the workspace's files until none are left, or the
-run's time is up, and reports whether none are left.
+run's time is up, and reports whether none are left: its own folder,
+its knowledge uploads, the pictures in its articles and its stored
+email.
 */
 func (w *PurgeWorkspace) deleteFiles(ctx context.Context, id ids.UUID, deadline time.Time) (bool, error) {
-	for entry, err := range w.Disk.List(ctx, WorkspaceStoragePrefix(id)) {
+	for _, prefix := range []string{WorkspaceStoragePrefix(id), WorkspaceUploadPrefix(id)} {
+		done, err := w.deleteFolder(ctx, prefix, deadline)
+		if err != nil || !done {
+			return false, err
+		}
+	}
+
+	done, err := w.deleteImages(ctx, id, deadline)
+	if err != nil || !done {
+		return false, err
+	}
+
+	return w.deleteRawEmails(ctx, id, deadline)
+}
+
+/*
+deleteFolder deletes every file under the prefix of the default disk,
+until the run's time is up, and reports whether none are left.
+*/
+func (w *PurgeWorkspace) deleteFolder(ctx context.Context, prefix string, deadline time.Time) (bool, error) {
+	for entry, err := range w.Disk.List(ctx, prefix) {
 		if err != nil {
 			return false, fmt.Errorf("list workspace files: %w", err)
 		}
 
-		if err := w.Disk.Delete(ctx, entry.Path); err != nil {
+		if err := w.Disk.Delete(ctx, entry.Path); err != nil && !errors.Is(err, filesystem.ErrNotFound) {
 			return false, fmt.Errorf("delete workspace file: %w", err)
 		}
 
@@ -239,6 +278,117 @@ func (w *PurgeWorkspace) deleteFiles(ctx context.Context, id ids.UUID, deadline 
 	}
 
 	return true, nil
+}
+
+/*
+deleteImages deletes the pictures the workspace placed in articles, and
+the rows that named them, a batch at a time.
+*/
+func (w *PurgeWorkspace) deleteImages(ctx context.Context, id ids.UUID, deadline time.Time) (bool, error) {
+	for {
+		var images []models.ListHelpCenterImagesRow
+
+		err := w.DB.Transaction(ctx, func(ctx context.Context, tx *database.Tx) error {
+			var err error
+
+			images, err = models.New(tx).ListHelpCenterImages(ctx, models.ListHelpCenterImagesParams{
+				WorkspaceID: id, RowLimit: purgeBatchFiles,
+			})
+
+			return err
+		})
+		if err != nil {
+			return false, fmt.Errorf("list article pictures: %w", err)
+		}
+
+		if len(images) == 0 {
+			return true, nil
+		}
+
+		gone := make([]ids.UUID, 0, len(images))
+
+		for _, image := range images {
+			if err := w.Disk.Delete(ctx, image.Path); err != nil && !errors.Is(err, filesystem.ErrNotFound) {
+				return false, fmt.Errorf("delete article picture: %w", err)
+			}
+
+			gone = append(gone, image.ID)
+		}
+
+		err = w.DB.Transaction(ctx, func(ctx context.Context, tx *database.Tx) error {
+			_, err := models.New(tx).DeleteHelpCenterImages(ctx, models.DeleteHelpCenterImagesParams{
+				WorkspaceID: id, Ids: gone,
+			})
+
+			return err
+		})
+		if err != nil {
+			return false, fmt.Errorf("forget article pictures: %w", err)
+		}
+
+		if w.Clock.Now().After(deadline) {
+			return false, nil
+		}
+	}
+}
+
+/*
+deleteRawEmails deletes the stored source of the email the workspace
+received, a batch at a time. An email another workspace also received
+stays for that workspace.
+*/
+func (w *PurgeWorkspace) deleteRawEmails(ctx context.Context, id ids.UUID, deadline time.Time) (bool, error) {
+	if w.Storage == nil {
+		return true, nil
+	}
+
+	for {
+		var rows []models.ListWorkspaceRawEmailsRow
+
+		err := w.DB.Transaction(ctx, func(ctx context.Context, tx *database.Tx) error {
+			var err error
+
+			rows, err = models.New(tx).ListWorkspaceRawEmails(ctx, models.ListWorkspaceRawEmailsParams{
+				WorkspaceID: id, RowLimit: purgeBatchFiles,
+			})
+
+			return err
+		})
+		if err != nil {
+			return false, fmt.Errorf("list raw email: %w", err)
+		}
+
+		if len(rows) == 0 {
+			return true, nil
+		}
+
+		raws := make([]retention.RawEmail, 0, len(rows))
+		gone := make([]ids.UUID, 0, len(rows))
+
+		for _, row := range rows {
+			raws = append(raws, retention.RawEmail{ID: row.ID, Disk: row.RawDisk, Path: *row.RawPath})
+			gone = append(gone, row.ID)
+		}
+
+		if err := retention.DeleteRawEmails(ctx, w.DB, w.Storage, raws); err != nil {
+			return false, err
+		}
+
+		err = w.DB.Transaction(ctx, func(ctx context.Context, tx *database.Tx) error {
+			_, err := models.New(tx).ClearRawEmails(ctx, models.ClearRawEmailsParams{
+				Now: w.Clock.Now(), WorkspaceID: id, Ids: gone,
+			})
+
+			return err
+		})
+		if err != nil {
+			return false, fmt.Errorf("clear raw email: %w", err)
+		}
+
+		if w.Clock.Now().After(deadline) {
+			return false, nil
+		}
+	}
 }
 
 /*

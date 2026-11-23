@@ -37,10 +37,22 @@ func NewEmailSuppressions(rows []models.EmailSuppression) []EmailSuppression {
 	out := make([]EmailSuppression, 0, len(rows))
 	for _, r := range rows {
 		out = append(out, EmailSuppression{
-			ID: models.PublicID(models.PrefixEmailSuppression, r.ID), Object: "email_suppression", Email: r.Email,
+			ID: models.PublicID(models.PrefixEmailSuppression, r.ID), Object: "email_suppression", Email: suppressedEmail(r),
 			Reason: r.Reason, Scope: r.Scope, Source: r.Source, ExpiresAt: r.ExpiresAt, CreatedAt: r.CreatedAt,
 		})
 	}
 
 	return out
+}
+
+/*
+suppressedEmail returns the suppressed address, empty for a suppression
+kept as a hash after its customer was erased.
+*/
+func suppressedEmail(r models.EmailSuppression) string {
+	if r.Email == nil {
+		return ""
+	}
+
+	return *r.Email
 }

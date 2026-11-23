@@ -1339,7 +1339,7 @@ type EmailSignature struct {
 type EmailSuppression struct {
 	ID                ids.UUID        `json:"id"`
 	WorkspaceID       ids.UUID        `json:"workspace_id"`
-	Email             string          `json:"email"`
+	Email             *string         `json:"email"`
 	Reason            string          `json:"reason"`
 	Scope             string          `json:"scope"`
 	Source            string          `json:"source"`
@@ -1349,6 +1349,7 @@ type EmailSuppression struct {
 	CreatedByMemberID *ids.UUID       `json:"created_by_member_id"`
 	CreatedAt         time.Time       `json:"created_at"`
 	UpdatedAt         time.Time       `json:"updated_at"`
+	EmailHash         *string         `json:"email_hash"`
 }
 
 type EmailThread struct {
@@ -1510,6 +1511,13 @@ type HelpCenterDomain struct {
 	VerifiedAt        *time.Time `json:"verified_at"`
 	CreatedAt         time.Time  `json:"created_at"`
 	UpdatedAt         time.Time  `json:"updated_at"`
+}
+
+type HelpCenterImage struct {
+	ID          ids.UUID  `json:"id"`
+	WorkspaceID ids.UUID  `json:"workspace_id"`
+	Path        string    `json:"path"`
+	CreatedAt   time.Time `json:"created_at"`
 }
 
 type HelpCenterRedirect struct {
