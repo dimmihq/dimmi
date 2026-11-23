@@ -26,6 +26,7 @@ import (
 
 	"github.com/dimmihq/dimmi/app/contracts"
 	"github.com/dimmihq/dimmi/app/models"
+	"github.com/dimmihq/dimmi/app/support/prompts"
 )
 
 /*
@@ -91,26 +92,64 @@ func transferTargets(ctx context.Context, q *models.Queries, e *env) ([]models.A
 }
 
 /*
+agentLines lists the agents a conversation may be passed to, one a
+line: its id, its name and role, and what the team says it handles. An
+agent the team has not described says so, so the answering agent goes
+by its name and role alone.
+*/
+func agentLines(targets []models.AiAgent) string {
+	lines := make([]string, len(targets))
+	for i, a := range targets {
+		handles := strings.TrimSpace(a.Description)
+		if handles == "" {
+			handles = "The team has not described what it handles."
+		}
+		lines[i] = "- " + a.Name + " (id " + models.PublicID(models.PrefixAiAgent, a.ID) + ", " +
+			strings.ReplaceAll(a.Role, "_", " ") + " agent): " + handles
+	}
+	return strings.Join(lines, "\n")
+}
+
+/*
+jobText is the part of the system prompt that tells the agent its own
+job, as the team described it, or nothing when it has no description.
+*/
+func (r *Runner) jobText(e *env) string {
+	job := strings.TrimSpace(e.Agent.Description)
+	if job == "" {
+		return ""
+	}
+	return r.render(e, "job.md", prompts.Vars{"job": job})
+}
+
+/*
+transfersText is the part of the system prompt that lists the agents
+this conversation may be passed to, with what each handles and when to
+pass it on. It is empty when no transfer is possible, so an agent that
+cannot transfer is never told about one.
+*/
+func (r *Runner) transfersText(e *env) string {
+	if len(e.TransferTargets) == 0 {
+		return ""
+	}
+	return r.render(e, "transfers.md", prompts.Vars{"agents": agentLines(e.TransferTargets)})
+}
+
+/*
 transferSpec describes transfer_agent, naming every agent it may hand
 the conversation to.
 */
 func transferSpec(targets []models.AiAgent) contracts.ToolSpec {
 	choices := make([]string, len(targets))
-	var who strings.Builder
 	for i, a := range targets {
 		choices[i] = models.PublicID(models.PrefixAiAgent, a.ID)
-		who.WriteString("\n- " + choices[i] + ": " + a.Name + " (" + strings.ReplaceAll(a.Role, "_", " ") + ")")
-		if purpose := agentPurpose(a); purpose != "" {
-			who.WriteString(". " + purpose)
-		}
 	}
 	return contracts.ToolSpec{
 		Name: toolTransfer,
-		Description: "Hand this conversation to another AI agent of the team when the customer's request is " +
-			"that agent's job, not yours, even if you could answer it yourself. Each agent below says who it " +
-			"is for. The other agent answers the customer's message itself, so after " +
-			"calling this write nothing more. The customer is not told; the team sees the transfer. Agents:" +
-			who.String(),
+		Description: "Pass this conversation to another AI agent of the team, when the customer's request is " +
+			"that agent's job as your instructions describe it. The other agent answers the customer's " +
+			"message itself, so after calling this write nothing more. The customer is not told; the team " +
+			"sees the transfer. Agents:\n" + agentLines(targets),
 		Schema: objectSchema(map[string]any{
 			"agent_id": enumProperty(choices),
 			"summary":  textProperty("One sentence for the team: what the customer needs and why it moves."),

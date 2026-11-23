@@ -56,7 +56,7 @@ RETURNING *;
 -- get. Publishing writes it from the draft.
 UPDATE ai_agents SET
     name = @name, avatar_attachment_id = @avatar_attachment_id, enabled = @enabled,
-    product_name = @product_name, tone = @tone, guidance = @guidance,
+    product_name = @product_name, tone = @tone, guidance = @guidance, description = @description,
     enabled_channels = @enabled_channels, excluded_channel_connection_ids = @excluded_channel_connection_ids,
     schedule = @schedule, assigned_behavior = @assigned_behavior,
     answer_key_id = @answer_key_id, answer_model = @answer_model,

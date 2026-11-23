@@ -941,6 +941,9 @@
           "default_language": {
             "type": "string"
           },
+          "description": {
+            "type": "string"
+          },
           "draft": {
             "$ref": "#/components/schemas/AIAgentDefinition"
           },
@@ -1126,6 +1129,7 @@
           "product_name",
           "tone",
           "guidance",
+          "description",
           "enabled_channels",
           "schedule",
           "assigned_behavior",
@@ -1185,6 +1189,9 @@
             "type": "string"
           },
           "default_language": {
+            "type": "string"
+          },
+          "description": {
             "type": "string"
           },
           "enabled_channels": {
@@ -1299,6 +1306,7 @@
           "product_name",
           "tone",
           "guidance",
+          "description",
           "enabled_channels",
           "schedule",
           "assigned_behavior",
@@ -2372,6 +2380,10 @@
           },
           "default_language": {
             "maxLength": 35,
+            "type": "string"
+          },
+          "description": {
+            "maxLength": 400,
             "type": "string"
           },
           "enabled_channels": {

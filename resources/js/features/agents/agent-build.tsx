@@ -7,9 +7,11 @@
  * reaches customers until it is published.
  */
 import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
 
 import { RadioGroup } from "@/components/base/radio/radio";
 import { RadioCard } from "@/components/base/radio/radio-card";
+import { Textarea } from "@/components/base/textarea/textarea";
 import { Field } from "@/features/settings/controls";
 import { Row, Section } from "@/features/settings/layout";
 import { type AgentPlacement, type AgentView, agentsQuery, placementsQuery, type ScopeMode } from "@/lib/api/agents";
@@ -265,6 +267,40 @@ function Model({ draft, view }: { draft: AgentDraft; view: AgentView }) {
   );
 }
 
+/*
+ * Handles is what the agent is for, in a sentence or two. The agent
+ * reads it as its own job, and every agent that may pass it a
+ * conversation reads it to know when a request is this agent's. It is
+ * the one thing the team writes about transfers; when to transfer is
+ * the system's own instruction, not theirs to spell out in guidance.
+ */
+function Handles({ draft }: { draft: AgentDraft }) {
+  const [text, setText] = useState(draft.draft.description);
+
+  return (
+    <Section
+      title="What it handles"
+      description="Who it is for and what they ask about. Other agents read this to know when to pass it a conversation."
+    >
+      <div className="py-2.5 pe-2.5">
+        <Textarea
+          aria-label="What it handles"
+          placeholder="People who have not bought yet: prices, which plan fits, trials and demos."
+          rows={2}
+          autoResize
+          maxRows={6}
+          maxLength={400}
+          value={text}
+          onChange={(next) => {
+            setText(next);
+            draft.change({ description: next.trim() });
+          }}
+        />
+      </div>
+    </Section>
+  );
+}
+
 export function AgentBuild({
   draft,
   view,
@@ -293,6 +329,7 @@ export function AgentBuild({
           />
         </div>
       </Section>
+      <Handles key={`handles-${draft.generation}`} draft={draft} />
       <AgentGuidance
         key={`guidance-${draft.generation}`}
         markdown={draft.draft.guidance}

@@ -98,7 +98,10 @@ func Variables() map[string][]string {
 	return map[string][]string{
 		"answer.system.md": {
 			"agent_name", "product_name", "tone", "language", "guidance", "channel", "handoff", "rules",
+			"job", "transfers",
 		},
+		"job.md":               {"job"},
+		"transfers.md":         {"agents"},
 		"tone_friendly.md":     {},
 		"tone_professional.md": {},
 		"tone_concise.md":      {},

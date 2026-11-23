@@ -198,6 +198,7 @@ type AiAgent struct {
 	CreatedByMemberID            *ids.UUID       `json:"created_by_member_id"`
 	UpdatedByMemberID            *ids.UUID       `json:"updated_by_member_id"`
 	LiveVersionID                *ids.UUID       `json:"live_version_id"`
+	Description                  string          `json:"description"`
 }
 
 type AiAgentTestCase struct {

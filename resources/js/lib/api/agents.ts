@@ -46,6 +46,8 @@ export interface AgentDefinition {
   product_name: string | null;
   tone: string;
   guidance: string;
+  /* What the agent handles; other agents read it to know when to pass it a conversation. */
+  description: string;
   enabled_channels: string[];
   schedule: string;
   assigned_behavior: string;

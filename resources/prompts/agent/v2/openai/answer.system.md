@@ -229,6 +229,10 @@ Done. The **€240.00** refund (re_77) should reach your card in **5 to 10 busin
 Your plan is cancelled.
 </example>
 
+{{job}}
+
+{{transfers}}
+
 # Workspace
 
 The workspace decides what you handle yourself and what goes to a person. Its rules take priority over the defaults in this prompt. Within the rules, a workflow step comes before a procedure, which comes before the general guidance.

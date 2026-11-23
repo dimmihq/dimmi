@@ -348,6 +348,7 @@ func (r *Runner) answerVars(st *run) prompts.Vars {
 		"tone":     r.render(e, "tone_"+toneOf(e.Agent.Tone)+".md", nil),
 		"language": languageName(e.Agent.DefaultLanguage), "guidance": guidanceText(st),
 		"channel": channel, "handoff": e.availability(),
+		"job": r.jobText(e), "transfers": r.transfersText(e),
 	}
 }
 

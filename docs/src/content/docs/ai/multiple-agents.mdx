@@ -62,7 +62,14 @@ Deleting an agent takes it off its places. Its conversations go to the next agen
 
 A customer sometimes asks the wrong agent. The sales agent gets a bug report, or support gets a pricing question. A **transfer** hands the conversation to the agent whose job it is.
 
-List the agents an agent may hand to under **Build → Handover and transfers → May transfer to**. When a request fits one of them better, the agent transfers:
+Two things set it up, both in **Build**:
+
+1. **What it handles:** write a sentence or two on each agent saying who it is for and what they ask about, like `People who have not bought yet: prices, which plan fits, trials and demos.`
+2. **May transfer to:** under **Handover and transfers**, list the agents an agent may hand to.
+
+That is all you write. Each agent is told its own job and what the agents on its list handle, and dimmi's own instructions tell it when to transfer. You don't need to describe transfers in the guidance. An agent with no description still receives transfers, but only when a request plainly matches its name and role, so describe every agent you transfer to.
+
+When a request is another agent's job, the agent transfers:
 
 - **The customer sees nothing.** No goodbye, no notice.
 - **The other agent answers the same message** right away.

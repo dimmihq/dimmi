@@ -91,7 +91,7 @@ INSERT INTO ai_agents (
     $1, $2, $3, $4, $5, NULL,
     $6, $6, $7, $7
 )
-RETURNING id, workspace_id, name, avatar_attachment_id, enabled, product_name, tone, guidance, enabled_channels, excluded_channel_connection_ids, schedule, office_hours, assigned_behavior, answer_key_id, answer_model, classifier_key_id, classifier_model, fallback_key_id, fallback_model, temperature, max_output_tokens, max_ai_replies, unknown_behavior, grounding_mode, require_citations, min_similarity, languages, default_language, streaming, include_contact_context, contact_attribute_allowlist, pii_redaction, link_allowlist, handoff, messages, prompt_version, monthly_spend_cap_micros, actions_enabled, created_at, updated_at, deleted_at, min_vector_similarity, tool_layer, prefetch_search, compact_results, search_results, carry_passages, is_default, role, template_key, status, lock_version, draft, knowledge_scope, procedure_scope, action_scope, transfer_agent_ids, published_at, created_by_member_id, updated_by_member_id, live_version_id
+RETURNING id, workspace_id, name, avatar_attachment_id, enabled, product_name, tone, guidance, enabled_channels, excluded_channel_connection_ids, schedule, office_hours, assigned_behavior, answer_key_id, answer_model, classifier_key_id, classifier_model, fallback_key_id, fallback_model, temperature, max_output_tokens, max_ai_replies, unknown_behavior, grounding_mode, require_citations, min_similarity, languages, default_language, streaming, include_contact_context, contact_attribute_allowlist, pii_redaction, link_allowlist, handoff, messages, prompt_version, monthly_spend_cap_micros, actions_enabled, created_at, updated_at, deleted_at, min_vector_similarity, tool_layer, prefetch_search, compact_results, search_results, carry_passages, is_default, role, template_key, status, lock_version, draft, knowledge_scope, procedure_scope, action_scope, transfer_agent_ids, published_at, created_by_member_id, updated_by_member_id, live_version_id, description
 `
 
 type CreateAgentParams struct {
@@ -180,6 +180,7 @@ func (q *Queries) CreateAgent(ctx context.Context, arg CreateAgentParams) (AiAge
 		&i.CreatedByMemberID,
 		&i.UpdatedByMemberID,
 		&i.LiveVersionID,
+		&i.Description,
 	)
 	return i, err
 }
@@ -188,7 +189,7 @@ const createDefaultAgent = `-- name: CreateDefaultAgent :one
 INSERT INTO ai_agents (workspace_id, is_default, monthly_spend_cap_micros, created_at, updated_at)
 VALUES ($1, true, NULL, $2, $2)
 ON CONFLICT (workspace_id) WHERE is_default AND deleted_at IS NULL DO NOTHING
-RETURNING id, workspace_id, name, avatar_attachment_id, enabled, product_name, tone, guidance, enabled_channels, excluded_channel_connection_ids, schedule, office_hours, assigned_behavior, answer_key_id, answer_model, classifier_key_id, classifier_model, fallback_key_id, fallback_model, temperature, max_output_tokens, max_ai_replies, unknown_behavior, grounding_mode, require_citations, min_similarity, languages, default_language, streaming, include_contact_context, contact_attribute_allowlist, pii_redaction, link_allowlist, handoff, messages, prompt_version, monthly_spend_cap_micros, actions_enabled, created_at, updated_at, deleted_at, min_vector_similarity, tool_layer, prefetch_search, compact_results, search_results, carry_passages, is_default, role, template_key, status, lock_version, draft, knowledge_scope, procedure_scope, action_scope, transfer_agent_ids, published_at, created_by_member_id, updated_by_member_id, live_version_id
+RETURNING id, workspace_id, name, avatar_attachment_id, enabled, product_name, tone, guidance, enabled_channels, excluded_channel_connection_ids, schedule, office_hours, assigned_behavior, answer_key_id, answer_model, classifier_key_id, classifier_model, fallback_key_id, fallback_model, temperature, max_output_tokens, max_ai_replies, unknown_behavior, grounding_mode, require_citations, min_similarity, languages, default_language, streaming, include_contact_context, contact_attribute_allowlist, pii_redaction, link_allowlist, handoff, messages, prompt_version, monthly_spend_cap_micros, actions_enabled, created_at, updated_at, deleted_at, min_vector_similarity, tool_layer, prefetch_search, compact_results, search_results, carry_passages, is_default, role, template_key, status, lock_version, draft, knowledge_scope, procedure_scope, action_scope, transfer_agent_ids, published_at, created_by_member_id, updated_by_member_id, live_version_id, description
 `
 
 type CreateDefaultAgentParams struct {
@@ -263,6 +264,7 @@ func (q *Queries) CreateDefaultAgent(ctx context.Context, arg CreateDefaultAgent
 		&i.CreatedByMemberID,
 		&i.UpdatedByMemberID,
 		&i.LiveVersionID,
+		&i.Description,
 	)
 	return i, err
 }
@@ -285,7 +287,7 @@ func (q *Queries) DeleteAgent(ctx context.Context, arg DeleteAgentParams) error 
 }
 
 const findAgentByID = `-- name: FindAgentByID :one
-SELECT id, workspace_id, name, avatar_attachment_id, enabled, product_name, tone, guidance, enabled_channels, excluded_channel_connection_ids, schedule, office_hours, assigned_behavior, answer_key_id, answer_model, classifier_key_id, classifier_model, fallback_key_id, fallback_model, temperature, max_output_tokens, max_ai_replies, unknown_behavior, grounding_mode, require_citations, min_similarity, languages, default_language, streaming, include_contact_context, contact_attribute_allowlist, pii_redaction, link_allowlist, handoff, messages, prompt_version, monthly_spend_cap_micros, actions_enabled, created_at, updated_at, deleted_at, min_vector_similarity, tool_layer, prefetch_search, compact_results, search_results, carry_passages, is_default, role, template_key, status, lock_version, draft, knowledge_scope, procedure_scope, action_scope, transfer_agent_ids, published_at, created_by_member_id, updated_by_member_id, live_version_id FROM ai_agents
+SELECT id, workspace_id, name, avatar_attachment_id, enabled, product_name, tone, guidance, enabled_channels, excluded_channel_connection_ids, schedule, office_hours, assigned_behavior, answer_key_id, answer_model, classifier_key_id, classifier_model, fallback_key_id, fallback_model, temperature, max_output_tokens, max_ai_replies, unknown_behavior, grounding_mode, require_citations, min_similarity, languages, default_language, streaming, include_contact_context, contact_attribute_allowlist, pii_redaction, link_allowlist, handoff, messages, prompt_version, monthly_spend_cap_micros, actions_enabled, created_at, updated_at, deleted_at, min_vector_similarity, tool_layer, prefetch_search, compact_results, search_results, carry_passages, is_default, role, template_key, status, lock_version, draft, knowledge_scope, procedure_scope, action_scope, transfer_agent_ids, published_at, created_by_member_id, updated_by_member_id, live_version_id, description FROM ai_agents
 WHERE workspace_id = $1 AND id = $2 AND deleted_at IS NULL
 `
 
@@ -360,12 +362,13 @@ func (q *Queries) FindAgentByID(ctx context.Context, arg FindAgentByIDParams) (A
 		&i.CreatedByMemberID,
 		&i.UpdatedByMemberID,
 		&i.LiveVersionID,
+		&i.Description,
 	)
 	return i, err
 }
 
 const findDefaultAgent = `-- name: FindDefaultAgent :one
-SELECT id, workspace_id, name, avatar_attachment_id, enabled, product_name, tone, guidance, enabled_channels, excluded_channel_connection_ids, schedule, office_hours, assigned_behavior, answer_key_id, answer_model, classifier_key_id, classifier_model, fallback_key_id, fallback_model, temperature, max_output_tokens, max_ai_replies, unknown_behavior, grounding_mode, require_citations, min_similarity, languages, default_language, streaming, include_contact_context, contact_attribute_allowlist, pii_redaction, link_allowlist, handoff, messages, prompt_version, monthly_spend_cap_micros, actions_enabled, created_at, updated_at, deleted_at, min_vector_similarity, tool_layer, prefetch_search, compact_results, search_results, carry_passages, is_default, role, template_key, status, lock_version, draft, knowledge_scope, procedure_scope, action_scope, transfer_agent_ids, published_at, created_by_member_id, updated_by_member_id, live_version_id FROM ai_agents
+SELECT id, workspace_id, name, avatar_attachment_id, enabled, product_name, tone, guidance, enabled_channels, excluded_channel_connection_ids, schedule, office_hours, assigned_behavior, answer_key_id, answer_model, classifier_key_id, classifier_model, fallback_key_id, fallback_model, temperature, max_output_tokens, max_ai_replies, unknown_behavior, grounding_mode, require_citations, min_similarity, languages, default_language, streaming, include_contact_context, contact_attribute_allowlist, pii_redaction, link_allowlist, handoff, messages, prompt_version, monthly_spend_cap_micros, actions_enabled, created_at, updated_at, deleted_at, min_vector_similarity, tool_layer, prefetch_search, compact_results, search_results, carry_passages, is_default, role, template_key, status, lock_version, draft, knowledge_scope, procedure_scope, action_scope, transfer_agent_ids, published_at, created_by_member_id, updated_by_member_id, live_version_id, description FROM ai_agents
 WHERE workspace_id = $1 AND is_default AND deleted_at IS NULL
 `
 
@@ -436,6 +439,7 @@ func (q *Queries) FindDefaultAgent(ctx context.Context, workspaceID ids.UUID) (A
 		&i.CreatedByMemberID,
 		&i.UpdatedByMemberID,
 		&i.LiveVersionID,
+		&i.Description,
 	)
 	return i, err
 }
@@ -505,7 +509,7 @@ func (q *Queries) ListAgentPlacements(ctx context.Context, workspaceID ids.UUID)
 }
 
 const listAgents = `-- name: ListAgents :many
-SELECT id, workspace_id, name, avatar_attachment_id, enabled, product_name, tone, guidance, enabled_channels, excluded_channel_connection_ids, schedule, office_hours, assigned_behavior, answer_key_id, answer_model, classifier_key_id, classifier_model, fallback_key_id, fallback_model, temperature, max_output_tokens, max_ai_replies, unknown_behavior, grounding_mode, require_citations, min_similarity, languages, default_language, streaming, include_contact_context, contact_attribute_allowlist, pii_redaction, link_allowlist, handoff, messages, prompt_version, monthly_spend_cap_micros, actions_enabled, created_at, updated_at, deleted_at, min_vector_similarity, tool_layer, prefetch_search, compact_results, search_results, carry_passages, is_default, role, template_key, status, lock_version, draft, knowledge_scope, procedure_scope, action_scope, transfer_agent_ids, published_at, created_by_member_id, updated_by_member_id, live_version_id FROM ai_agents
+SELECT id, workspace_id, name, avatar_attachment_id, enabled, product_name, tone, guidance, enabled_channels, excluded_channel_connection_ids, schedule, office_hours, assigned_behavior, answer_key_id, answer_model, classifier_key_id, classifier_model, fallback_key_id, fallback_model, temperature, max_output_tokens, max_ai_replies, unknown_behavior, grounding_mode, require_citations, min_similarity, languages, default_language, streaming, include_contact_context, contact_attribute_allowlist, pii_redaction, link_allowlist, handoff, messages, prompt_version, monthly_spend_cap_micros, actions_enabled, created_at, updated_at, deleted_at, min_vector_similarity, tool_layer, prefetch_search, compact_results, search_results, carry_passages, is_default, role, template_key, status, lock_version, draft, knowledge_scope, procedure_scope, action_scope, transfer_agent_ids, published_at, created_by_member_id, updated_by_member_id, live_version_id, description FROM ai_agents
 WHERE workspace_id = $1 AND deleted_at IS NULL
 ORDER BY is_default DESC, lower(name), id
 `
@@ -583,6 +587,7 @@ func (q *Queries) ListAgents(ctx context.Context, workspaceID ids.UUID) ([]AiAge
 			&i.CreatedByMemberID,
 			&i.UpdatedByMemberID,
 			&i.LiveVersionID,
+			&i.Description,
 		); err != nil {
 			return nil, err
 		}
@@ -595,7 +600,7 @@ func (q *Queries) ListAgents(ctx context.Context, workspaceID ids.UUID) ([]AiAge
 }
 
 const listAgentsByID = `-- name: ListAgentsByID :many
-SELECT id, workspace_id, name, avatar_attachment_id, enabled, product_name, tone, guidance, enabled_channels, excluded_channel_connection_ids, schedule, office_hours, assigned_behavior, answer_key_id, answer_model, classifier_key_id, classifier_model, fallback_key_id, fallback_model, temperature, max_output_tokens, max_ai_replies, unknown_behavior, grounding_mode, require_citations, min_similarity, languages, default_language, streaming, include_contact_context, contact_attribute_allowlist, pii_redaction, link_allowlist, handoff, messages, prompt_version, monthly_spend_cap_micros, actions_enabled, created_at, updated_at, deleted_at, min_vector_similarity, tool_layer, prefetch_search, compact_results, search_results, carry_passages, is_default, role, template_key, status, lock_version, draft, knowledge_scope, procedure_scope, action_scope, transfer_agent_ids, published_at, created_by_member_id, updated_by_member_id, live_version_id FROM ai_agents
+SELECT id, workspace_id, name, avatar_attachment_id, enabled, product_name, tone, guidance, enabled_channels, excluded_channel_connection_ids, schedule, office_hours, assigned_behavior, answer_key_id, answer_model, classifier_key_id, classifier_model, fallback_key_id, fallback_model, temperature, max_output_tokens, max_ai_replies, unknown_behavior, grounding_mode, require_citations, min_similarity, languages, default_language, streaming, include_contact_context, contact_attribute_allowlist, pii_redaction, link_allowlist, handoff, messages, prompt_version, monthly_spend_cap_micros, actions_enabled, created_at, updated_at, deleted_at, min_vector_similarity, tool_layer, prefetch_search, compact_results, search_results, carry_passages, is_default, role, template_key, status, lock_version, draft, knowledge_scope, procedure_scope, action_scope, transfer_agent_ids, published_at, created_by_member_id, updated_by_member_id, live_version_id, description FROM ai_agents
 WHERE workspace_id = $1 AND id = ANY ($2::uuid[]) AND deleted_at IS NULL
 `
 
@@ -676,6 +681,7 @@ func (q *Queries) ListAgentsByID(ctx context.Context, arg ListAgentsByIDParams) 
 			&i.CreatedByMemberID,
 			&i.UpdatedByMemberID,
 			&i.LiveVersionID,
+			&i.Description,
 		); err != nil {
 			return nil, err
 		}
@@ -741,7 +747,7 @@ const pauseAgent = `-- name: PauseAgent :one
 UPDATE ai_agents SET status = 'paused', enabled = false, updated_by_member_id = $1,
     updated_at = $2
 WHERE workspace_id = $3 AND id = $4 AND deleted_at IS NULL AND status = 'live'
-RETURNING id, workspace_id, name, avatar_attachment_id, enabled, product_name, tone, guidance, enabled_channels, excluded_channel_connection_ids, schedule, office_hours, assigned_behavior, answer_key_id, answer_model, classifier_key_id, classifier_model, fallback_key_id, fallback_model, temperature, max_output_tokens, max_ai_replies, unknown_behavior, grounding_mode, require_citations, min_similarity, languages, default_language, streaming, include_contact_context, contact_attribute_allowlist, pii_redaction, link_allowlist, handoff, messages, prompt_version, monthly_spend_cap_micros, actions_enabled, created_at, updated_at, deleted_at, min_vector_similarity, tool_layer, prefetch_search, compact_results, search_results, carry_passages, is_default, role, template_key, status, lock_version, draft, knowledge_scope, procedure_scope, action_scope, transfer_agent_ids, published_at, created_by_member_id, updated_by_member_id, live_version_id
+RETURNING id, workspace_id, name, avatar_attachment_id, enabled, product_name, tone, guidance, enabled_channels, excluded_channel_connection_ids, schedule, office_hours, assigned_behavior, answer_key_id, answer_model, classifier_key_id, classifier_model, fallback_key_id, fallback_model, temperature, max_output_tokens, max_ai_replies, unknown_behavior, grounding_mode, require_citations, min_similarity, languages, default_language, streaming, include_contact_context, contact_attribute_allowlist, pii_redaction, link_allowlist, handoff, messages, prompt_version, monthly_spend_cap_micros, actions_enabled, created_at, updated_at, deleted_at, min_vector_similarity, tool_layer, prefetch_search, compact_results, search_results, carry_passages, is_default, role, template_key, status, lock_version, draft, knowledge_scope, procedure_scope, action_scope, transfer_agent_ids, published_at, created_by_member_id, updated_by_member_id, live_version_id, description
 `
 
 type PauseAgentParams struct {
@@ -823,6 +829,7 @@ func (q *Queries) PauseAgent(ctx context.Context, arg PauseAgentParams) (AiAgent
 		&i.CreatedByMemberID,
 		&i.UpdatedByMemberID,
 		&i.LiveVersionID,
+		&i.Description,
 	)
 	return i, err
 }
@@ -902,7 +909,7 @@ UPDATE ai_agents SET status = 'live', enabled = true, draft = NULL, live_version
     published_at = $2, lock_version = lock_version + 1, updated_by_member_id = $3,
     updated_at = $2
 WHERE workspace_id = $4 AND id = $5 AND deleted_at IS NULL
-RETURNING id, workspace_id, name, avatar_attachment_id, enabled, product_name, tone, guidance, enabled_channels, excluded_channel_connection_ids, schedule, office_hours, assigned_behavior, answer_key_id, answer_model, classifier_key_id, classifier_model, fallback_key_id, fallback_model, temperature, max_output_tokens, max_ai_replies, unknown_behavior, grounding_mode, require_citations, min_similarity, languages, default_language, streaming, include_contact_context, contact_attribute_allowlist, pii_redaction, link_allowlist, handoff, messages, prompt_version, monthly_spend_cap_micros, actions_enabled, created_at, updated_at, deleted_at, min_vector_similarity, tool_layer, prefetch_search, compact_results, search_results, carry_passages, is_default, role, template_key, status, lock_version, draft, knowledge_scope, procedure_scope, action_scope, transfer_agent_ids, published_at, created_by_member_id, updated_by_member_id, live_version_id
+RETURNING id, workspace_id, name, avatar_attachment_id, enabled, product_name, tone, guidance, enabled_channels, excluded_channel_connection_ids, schedule, office_hours, assigned_behavior, answer_key_id, answer_model, classifier_key_id, classifier_model, fallback_key_id, fallback_model, temperature, max_output_tokens, max_ai_replies, unknown_behavior, grounding_mode, require_citations, min_similarity, languages, default_language, streaming, include_contact_context, contact_attribute_allowlist, pii_redaction, link_allowlist, handoff, messages, prompt_version, monthly_spend_cap_micros, actions_enabled, created_at, updated_at, deleted_at, min_vector_similarity, tool_layer, prefetch_search, compact_results, search_results, carry_passages, is_default, role, template_key, status, lock_version, draft, knowledge_scope, procedure_scope, action_scope, transfer_agent_ids, published_at, created_by_member_id, updated_by_member_id, live_version_id, description
 `
 
 type PublishAgentParams struct {
@@ -985,12 +992,13 @@ func (q *Queries) PublishAgent(ctx context.Context, arg PublishAgentParams) (AiA
 		&i.CreatedByMemberID,
 		&i.UpdatedByMemberID,
 		&i.LiveVersionID,
+		&i.Description,
 	)
 	return i, err
 }
 
 const resolveAgent = `-- name: ResolveAgent :one
-SELECT a.id, a.workspace_id, a.name, a.avatar_attachment_id, a.enabled, a.product_name, a.tone, a.guidance, a.enabled_channels, a.excluded_channel_connection_ids, a.schedule, a.office_hours, a.assigned_behavior, a.answer_key_id, a.answer_model, a.classifier_key_id, a.classifier_model, a.fallback_key_id, a.fallback_model, a.temperature, a.max_output_tokens, a.max_ai_replies, a.unknown_behavior, a.grounding_mode, a.require_citations, a.min_similarity, a.languages, a.default_language, a.streaming, a.include_contact_context, a.contact_attribute_allowlist, a.pii_redaction, a.link_allowlist, a.handoff, a.messages, a.prompt_version, a.monthly_spend_cap_micros, a.actions_enabled, a.created_at, a.updated_at, a.deleted_at, a.min_vector_similarity, a.tool_layer, a.prefetch_search, a.compact_results, a.search_results, a.carry_passages, a.is_default, a.role, a.template_key, a.status, a.lock_version, a.draft, a.knowledge_scope, a.procedure_scope, a.action_scope, a.transfer_agent_ids, a.published_at, a.created_by_member_id, a.updated_by_member_id, a.live_version_id FROM ai_agents a
+SELECT a.id, a.workspace_id, a.name, a.avatar_attachment_id, a.enabled, a.product_name, a.tone, a.guidance, a.enabled_channels, a.excluded_channel_connection_ids, a.schedule, a.office_hours, a.assigned_behavior, a.answer_key_id, a.answer_model, a.classifier_key_id, a.classifier_model, a.fallback_key_id, a.fallback_model, a.temperature, a.max_output_tokens, a.max_ai_replies, a.unknown_behavior, a.grounding_mode, a.require_citations, a.min_similarity, a.languages, a.default_language, a.streaming, a.include_contact_context, a.contact_attribute_allowlist, a.pii_redaction, a.link_allowlist, a.handoff, a.messages, a.prompt_version, a.monthly_spend_cap_micros, a.actions_enabled, a.created_at, a.updated_at, a.deleted_at, a.min_vector_similarity, a.tool_layer, a.prefetch_search, a.compact_results, a.search_results, a.carry_passages, a.is_default, a.role, a.template_key, a.status, a.lock_version, a.draft, a.knowledge_scope, a.procedure_scope, a.action_scope, a.transfer_agent_ids, a.published_at, a.created_by_member_id, a.updated_by_member_id, a.live_version_id, a.description FROM ai_agents a
 JOIN (
     SELECT 1 AS rank, $1::uuid AS agent_id
     UNION ALL SELECT 2, $2::uuid
@@ -1097,6 +1105,7 @@ func (q *Queries) ResolveAgent(ctx context.Context, arg ResolveAgentParams) (Res
 		&i.AiAgent.CreatedByMemberID,
 		&i.AiAgent.UpdatedByMemberID,
 		&i.AiAgent.LiveVersionID,
+		&i.AiAgent.Description,
 	)
 	return i, err
 }
@@ -1105,7 +1114,7 @@ const saveAgentDraft = `-- name: SaveAgentDraft :one
 UPDATE ai_agents SET name = $1, draft = $2, lock_version = lock_version + 1,
     updated_by_member_id = $3, updated_at = $4
 WHERE workspace_id = $5 AND id = $6 AND deleted_at IS NULL AND lock_version = $7
-RETURNING id, workspace_id, name, avatar_attachment_id, enabled, product_name, tone, guidance, enabled_channels, excluded_channel_connection_ids, schedule, office_hours, assigned_behavior, answer_key_id, answer_model, classifier_key_id, classifier_model, fallback_key_id, fallback_model, temperature, max_output_tokens, max_ai_replies, unknown_behavior, grounding_mode, require_citations, min_similarity, languages, default_language, streaming, include_contact_context, contact_attribute_allowlist, pii_redaction, link_allowlist, handoff, messages, prompt_version, monthly_spend_cap_micros, actions_enabled, created_at, updated_at, deleted_at, min_vector_similarity, tool_layer, prefetch_search, compact_results, search_results, carry_passages, is_default, role, template_key, status, lock_version, draft, knowledge_scope, procedure_scope, action_scope, transfer_agent_ids, published_at, created_by_member_id, updated_by_member_id, live_version_id
+RETURNING id, workspace_id, name, avatar_attachment_id, enabled, product_name, tone, guidance, enabled_channels, excluded_channel_connection_ids, schedule, office_hours, assigned_behavior, answer_key_id, answer_model, classifier_key_id, classifier_model, fallback_key_id, fallback_model, temperature, max_output_tokens, max_ai_replies, unknown_behavior, grounding_mode, require_citations, min_similarity, languages, default_language, streaming, include_contact_context, contact_attribute_allowlist, pii_redaction, link_allowlist, handoff, messages, prompt_version, monthly_spend_cap_micros, actions_enabled, created_at, updated_at, deleted_at, min_vector_similarity, tool_layer, prefetch_search, compact_results, search_results, carry_passages, is_default, role, template_key, status, lock_version, draft, knowledge_scope, procedure_scope, action_scope, transfer_agent_ids, published_at, created_by_member_id, updated_by_member_id, live_version_id, description
 `
 
 type SaveAgentDraftParams struct {
@@ -1194,6 +1203,7 @@ func (q *Queries) SaveAgentDraft(ctx context.Context, arg SaveAgentDraftParams) 
 		&i.CreatedByMemberID,
 		&i.UpdatedByMemberID,
 		&i.LiveVersionID,
+		&i.Description,
 	)
 	return i, err
 }
@@ -1272,26 +1282,26 @@ func (q *Queries) TransferConversationAgent(ctx context.Context, arg TransferCon
 const updateAgent = `-- name: UpdateAgent :one
 UPDATE ai_agents SET
     name = $1, avatar_attachment_id = $2, enabled = $3,
-    product_name = $4, tone = $5, guidance = $6,
-    enabled_channels = $7, excluded_channel_connection_ids = $8,
-    schedule = $9, assigned_behavior = $10,
-    answer_key_id = $11, answer_model = $12,
-    classifier_key_id = $13, classifier_model = $14,
-    fallback_key_id = $15, fallback_model = $16,
-    temperature = $17, max_output_tokens = $18, max_ai_replies = $19,
-    unknown_behavior = $20, grounding_mode = $21,
-    require_citations = $22, min_similarity = $23,
-    languages = $24, default_language = $25, streaming = $26,
-    include_contact_context = $27,
-    contact_attribute_allowlist = $28,
-    pii_redaction = $29, link_allowlist = $30,
-    handoff = $31, messages = $32, prompt_version = $33,
-    monthly_spend_cap_micros = $34, actions_enabled = $35,
-    knowledge_scope = $36, procedure_scope = $37, action_scope = $38,
-    transfer_agent_ids = $39,
-    updated_at = $40
-WHERE workspace_id = $41 AND id = $42 AND deleted_at IS NULL
-RETURNING id, workspace_id, name, avatar_attachment_id, enabled, product_name, tone, guidance, enabled_channels, excluded_channel_connection_ids, schedule, office_hours, assigned_behavior, answer_key_id, answer_model, classifier_key_id, classifier_model, fallback_key_id, fallback_model, temperature, max_output_tokens, max_ai_replies, unknown_behavior, grounding_mode, require_citations, min_similarity, languages, default_language, streaming, include_contact_context, contact_attribute_allowlist, pii_redaction, link_allowlist, handoff, messages, prompt_version, monthly_spend_cap_micros, actions_enabled, created_at, updated_at, deleted_at, min_vector_similarity, tool_layer, prefetch_search, compact_results, search_results, carry_passages, is_default, role, template_key, status, lock_version, draft, knowledge_scope, procedure_scope, action_scope, transfer_agent_ids, published_at, created_by_member_id, updated_by_member_id, live_version_id
+    product_name = $4, tone = $5, guidance = $6, description = $7,
+    enabled_channels = $8, excluded_channel_connection_ids = $9,
+    schedule = $10, assigned_behavior = $11,
+    answer_key_id = $12, answer_model = $13,
+    classifier_key_id = $14, classifier_model = $15,
+    fallback_key_id = $16, fallback_model = $17,
+    temperature = $18, max_output_tokens = $19, max_ai_replies = $20,
+    unknown_behavior = $21, grounding_mode = $22,
+    require_citations = $23, min_similarity = $24,
+    languages = $25, default_language = $26, streaming = $27,
+    include_contact_context = $28,
+    contact_attribute_allowlist = $29,
+    pii_redaction = $30, link_allowlist = $31,
+    handoff = $32, messages = $33, prompt_version = $34,
+    monthly_spend_cap_micros = $35, actions_enabled = $36,
+    knowledge_scope = $37, procedure_scope = $38, action_scope = $39,
+    transfer_agent_ids = $40,
+    updated_at = $41
+WHERE workspace_id = $42 AND id = $43 AND deleted_at IS NULL
+RETURNING id, workspace_id, name, avatar_attachment_id, enabled, product_name, tone, guidance, enabled_channels, excluded_channel_connection_ids, schedule, office_hours, assigned_behavior, answer_key_id, answer_model, classifier_key_id, classifier_model, fallback_key_id, fallback_model, temperature, max_output_tokens, max_ai_replies, unknown_behavior, grounding_mode, require_citations, min_similarity, languages, default_language, streaming, include_contact_context, contact_attribute_allowlist, pii_redaction, link_allowlist, handoff, messages, prompt_version, monthly_spend_cap_micros, actions_enabled, created_at, updated_at, deleted_at, min_vector_similarity, tool_layer, prefetch_search, compact_results, search_results, carry_passages, is_default, role, template_key, status, lock_version, draft, knowledge_scope, procedure_scope, action_scope, transfer_agent_ids, published_at, created_by_member_id, updated_by_member_id, live_version_id, description
 `
 
 type UpdateAgentParams struct {
@@ -1301,6 +1311,7 @@ type UpdateAgentParams struct {
 	ProductName                  *string         `json:"product_name"`
 	Tone                         string          `json:"tone"`
 	Guidance                     string          `json:"guidance"`
+	Description                  string          `json:"description"`
 	EnabledChannels              []string        `json:"enabled_channels"`
 	ExcludedChannelConnectionIds []ids.UUID      `json:"excluded_channel_connection_ids"`
 	Schedule                     string          `json:"schedule"`
@@ -1349,6 +1360,7 @@ func (q *Queries) UpdateAgent(ctx context.Context, arg UpdateAgentParams) (AiAge
 		arg.ProductName,
 		arg.Tone,
 		arg.Guidance,
+		arg.Description,
 		arg.EnabledChannels,
 		arg.ExcludedChannelConnectionIds,
 		arg.Schedule,
@@ -1449,6 +1461,7 @@ func (q *Queries) UpdateAgent(ctx context.Context, arg UpdateAgentParams) (AiAge
 		&i.CreatedByMemberID,
 		&i.UpdatedByMemberID,
 		&i.LiveVersionID,
+		&i.Description,
 	)
 	return i, err
 }

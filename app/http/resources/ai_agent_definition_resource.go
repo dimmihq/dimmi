@@ -56,6 +56,7 @@ type AIAgentDefinition struct {
 	ProductName           *string          `json:"product_name"`
 	Tone                  string           `json:"tone"`
 	Guidance              string           `json:"guidance"`
+	Description           string           `json:"description"`
 	EnabledChannels       []string         `json:"enabled_channels"`
 	Schedule              string           `json:"schedule"`
 	AssignedBehavior      string           `json:"assigned_behavior"`
@@ -89,7 +90,7 @@ NewAIAgentDefinition shapes a definition for the API.
 func NewAIAgentDefinition(d agents.Definition) AIAgentDefinition {
 	handoff := ai.ReadHandoff(d.Handoff)
 	return AIAgentDefinition{
-		Name: d.Name, ProductName: d.ProductName, Tone: d.Tone, Guidance: d.Guidance,
+		Name: d.Name, ProductName: d.ProductName, Tone: d.Tone, Guidance: d.Guidance, Description: d.Description,
 		EnabledChannels: orEmpty(d.EnabledChannels), Schedule: d.Schedule, AssignedBehavior: d.AssignedBehavior,
 		AnswerKeyID: publicPtr(models.PrefixAiProviderKey, d.AnswerKeyID), AnswerModel: d.AnswerModel,
 		FallbackKeyID: publicPtr(models.PrefixAiProviderKey, d.FallbackKeyID), FallbackModel: d.FallbackModel,

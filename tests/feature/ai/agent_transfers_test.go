@@ -205,6 +205,31 @@ func TestAiAgentTransfers(t *testing.T) {
 		require.Len(t, sent, 2)
 		assert.Contains(t, offered(r.llm.answer, 0), "transfer_agent:", "Sales may transfer")
 		assert.NotContains(t, offered(r.llm.answer, 1), "transfer_agent:", "the default agent may not send it back")
+		assert.Contains(t, systemOf(sent[0]), "# Other agents", "Sales is told who it may pass the chat to")
+		assert.NotContains(t, systemOf(sent[1]), "# Other agents",
+			"an agent that cannot transfer is told nothing about other agents")
+	})
+
+	t.Run("tells each agent its own job and what the agents it may pass to handle", func(t *testing.T) {
+		t.Parallel()
+		r := newTransferDesk(t)
+		r.allowBack()
+		r.operator(`UPDATE ai_agents SET description = 'Existing customers with a problem in their account.'
+			WHERE id = $1`, r.support)
+		r.operator(`UPDATE ai_agents SET description = 'People who have not bought yet: prices and plans.'
+			WHERE id = $1`, r.sales)
+		r.llm.answer.Script(reply("Growth fits 500 labels a month."))
+		conv, trigger := r.conversation("Which plan fits 500 labels?")
+
+		r.run(conv, trigger)
+
+		system := systemOf(r.llm.answer.Sent()[0])
+		assert.Contains(t, system, "# Your job")
+		assert.Contains(t, system, "Existing customers with a problem in their account.")
+		assert.Contains(t, system, "# Other agents")
+		assert.Contains(t, system, "- Sales (id "+models.PublicID(models.PrefixAiAgent, r.sales)+", sales agent): "+
+			"People who have not bought yet: prices and plans.")
+		assert.Contains(t, system, "Transfer even when you could answer the question yourself.")
 	})
 
 	t.Run("offers no transfer to an agent that is not live", func(t *testing.T) {

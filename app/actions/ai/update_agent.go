@@ -56,6 +56,7 @@ agents it may hand to; Placement where it answers.
 */
 type AgentPatch struct {
 	Name, Tone, Guidance, Schedule     *string
+	Description                        *string
 	AssignedBehavior, UnknownBehavior  *string
 	DefaultLanguage, IncludeContact    *string
 	RequireCitations                   *bool
@@ -214,6 +215,9 @@ func applyPatch(agent *models.AiAgent, p AgentPatch) {
 	set(&agent.Name, p.Name)
 	set(&agent.Tone, p.Tone)
 	set(&agent.Guidance, p.Guidance)
+	if p.Description != nil {
+		agent.Description = strings.TrimSpace(*p.Description)
+	}
 	set(&agent.Schedule, p.Schedule)
 	set(&agent.AssignedBehavior, p.AssignedBehavior)
 	set(&agent.UnknownBehavior, p.UnknownBehavior)
