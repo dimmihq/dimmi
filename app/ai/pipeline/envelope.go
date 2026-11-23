@@ -300,3 +300,15 @@ func repliedBefore(history []models.Message) bool {
 	}
 	return false
 }
+
+/*
+cmpOr returns the first non-empty text.
+*/
+func cmpOr(values ...string) string {
+	for _, v := range values {
+		if v != "" {
+			return v
+		}
+	}
+	return ""
+}
