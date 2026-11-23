@@ -22,7 +22,7 @@ import (
 /*
 promptVersion names the prompt the runs record.
 */
-const promptVersion = "operator-14"
+const promptVersion = "operator-15"
 
 /*
 rules are the standing instructions every run reads.
@@ -114,8 +114,9 @@ func (e *Engine) systemPrompt(s *session) string {
 			s.m.Workspace.Name, cmp.Or(s.askerName, "a teammate"), s.m.Member.Role, today)
 	}
 	if s.conversation != nil {
-		fmt.Fprintf(&b, "\n\nThis thread is about conversation #%d. Read it with get_conversation_by_number before "+
-			"answering about it.", s.conversation.Number)
+		fmt.Fprintf(&b, "\n\nThis thread is about conversation #%d. When the conversation is given in full "+
+			"with the question, use that and do not read it again; otherwise read it with "+
+			"get_conversation_by_number before answering about it.", s.conversation.Number)
 	}
 	if text := strings.TrimSpace(s.settings.Instructions); text != "" {
 		b.WriteString("\n\nThe workspace's instructions for you:\n")
