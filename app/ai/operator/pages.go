@@ -138,6 +138,11 @@ func (e *Engine) conversationPage(ctx context.Context, s *session, id ids.UUID) 
 		loaded.Conversation.Number)
 	writeConversation(&b, loaded)
 	writeTimeline(&b, timeline)
+	if hits, err := e.alikeTo(ctx, s, id, upFront); err == nil && len(hits) > 0 {
+		b.WriteString("\nThe conversations most like this one, and what the team did with them. Base any " +
+			"teammate, team, tag or priority you recommend on these, and cite them by number:\n")
+		b.WriteString(relatedText(hits) + "\n")
+	}
 	b.WriteString("\n" + e.replyGuide(s))
 	return b.String(), nil
 }
@@ -182,6 +187,10 @@ const replyDrafting = `How to draft a reply:
 - Check every fact about the product with search_knowledge first. Never state a price, limit,
   date, policy or step you did not find there or in this conversation. When you cannot confirm
   something, leave it out of the draft and tell the teammate what to check.
+- When the help center has no answer, look at how the team answered the same question in the
+  similar conversations you were given, or find them with find_related_conversations, and base
+  the draft on that answer. Tell the teammate the draft rests on a past reply, and which
+  conversation, so they can check it still holds.
 - Never promise what only a person can decide: a refund, a credit, an exception, a date.
 - Write as the team, to the customer, in the workspace's tone. Never mention Operator, an AI,
   internal notes, tags, ids or what teammates said to each other.

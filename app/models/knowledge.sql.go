@@ -128,7 +128,7 @@ SELECT c.id, c.workspace_id, c.subject, c.closed_at,
        AND m.author_type IN ('member', 'agent') AND m.deleted_at IS NULL
      ORDER BY m.created_at DESC, m.id DESC LIMIT 1), '')::text AS last_reply
 FROM conversations c
-WHERE c.workspace_id = $1 AND c.id = $2 AND c.status = 'closed' AND c.deleted_at IS NULL
+WHERE c.workspace_id = $1 AND c.id = $2 AND c.deleted_at IS NULL
 `
 
 type FindConversationForEmbeddingParams struct {
@@ -145,9 +145,9 @@ type FindConversationForEmbeddingRow struct {
 	LastReply    string     `json:"last_reply"`
 }
 
-// FindConversationForEmbedding returns what a closed conversation is
-// remembered by: its subject, the customer's first message and the
-// team's last reply.
+// FindConversationForEmbedding returns what a conversation is
+// remembered by, open or closed: its subject, the customer's first
+// message and the team's last reply.
 func (q *Queries) FindConversationForEmbedding(ctx context.Context, arg FindConversationForEmbeddingParams) (FindConversationForEmbeddingRow, error) {
 	row := q.db.QueryRow(ctx, findConversationForEmbedding, arg.WorkspaceID, arg.ID)
 	var i FindConversationForEmbeddingRow
@@ -477,6 +477,45 @@ func (q *Queries) ListConversationEmbedInputs(ctx context.Context, arg ListConve
 			return nil, err
 		}
 		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listConversationsToRemember = `-- name: ListConversationsToRemember :many
+SELECT c.id FROM conversations c
+LEFT JOIN knowledge_conversations k ON k.conversation_id = c.id
+WHERE c.workspace_id = $1 AND c.deleted_at IS NULL
+  AND (k.conversation_id IS NULL OR k.updated_at < c.updated_at)
+  AND (c.status = 'closed' OR c.updated_at < $2)
+ORDER BY c.updated_at DESC, c.id
+LIMIT $3
+`
+
+type ListConversationsToRememberParams struct {
+	WorkspaceID ids.UUID  `json:"workspace_id"`
+	QuietBefore time.Time `json:"quiet_before"`
+	RowLimit    int32     `json:"row_limit"`
+}
+
+// ListConversationsToRemember returns conversations whose memory is
+// missing or older than the conversation: closed ones, and open ones
+// that have been quiet since a moment, newest first.
+func (q *Queries) ListConversationsToRemember(ctx context.Context, arg ListConversationsToRememberParams) ([]ids.UUID, error) {
+	rows, err := q.db.Query(ctx, listConversationsToRemember, arg.WorkspaceID, arg.QuietBefore, arg.RowLimit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ids.UUID
+	for rows.Next() {
+		var id ids.UUID
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		items = append(items, id)
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err
@@ -1122,7 +1161,7 @@ type UpsertKnowledgeConversationParams struct {
 	Now            time.Time `json:"now"`
 }
 
-// UpsertKnowledgeConversation stores a closed conversation's text.
+// UpsertKnowledgeConversation stores a conversation's text.
 func (q *Queries) UpsertKnowledgeConversation(ctx context.Context, arg UpsertKnowledgeConversationParams) error {
 	_, err := q.db.Exec(ctx, upsertKnowledgeConversation,
 		arg.ConversationID,

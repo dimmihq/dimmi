@@ -82,8 +82,8 @@ func newOperatorEngine(a *app.App) *operator.Engine {
 			Messages: inbox.ListMessages, Runs: a.Actions.AI.ListRuns, Change: inbox.ApplyChanges,
 			Note: inbox.AddNote, Delete: inbox.DeleteMessage, Contacts: inbox.UpdateContact,
 			Articles: a.Actions.Articles, Procedures: a.Actions.Procedures, Audit: a.Actions.RecordAuditLog,
-			Actions: a.AI.Actions,
-			GitHub:  &operator.GitHubAPI{HTTP: a.HTTP, Tokens: a.Actions.Integrations.Tokens},
+			Actions: a.AI.Actions, Memory: a.Vectors,
+			GitHub: &operator.GitHubAPI{HTTP: a.HTTP, Tokens: a.Actions.Integrations.Tokens},
 		},
 	}
 }

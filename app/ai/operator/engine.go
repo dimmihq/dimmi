@@ -35,6 +35,7 @@ import (
 	"github.com/dimmihq/dimmi/app/actions/contacts"
 	"github.com/dimmihq/dimmi/app/actions/conversations"
 	"github.com/dimmihq/dimmi/app/actions/helpcenters"
+	"github.com/dimmihq/dimmi/app/actions/knowledge"
 	"github.com/dimmihq/dimmi/app/actions/messages"
 	"github.com/dimmihq/dimmi/app/actions/procedures"
 	"github.com/dimmihq/dimmi/app/ai/actionkit"
@@ -68,6 +69,20 @@ type Services struct {
 	Audit      *audit.RecordAuditLog
 	Actions    *actionkit.Kit
 	GitHub     GitHub
+	Memory     Memory
+}
+
+/*
+Memory is the workspace's memory of its conversations: what each was
+about and how the team answered, searched by keywords and by meaning.
+*/
+type Memory interface {
+	/*
+		SimilarConversations returns the conversations most like one, best
+		first, among those the teammate may see.
+	*/
+	SimilarConversations(ctx context.Context, m authz.Membership, conversation ids.UUID, limit int,
+	) ([]knowledge.SimilarConversation, error)
 }
 
 /*

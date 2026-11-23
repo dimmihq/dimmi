@@ -23,15 +23,21 @@ import (
 	"strings"
 	"time"
 
+	"github.com/dimmihq/dimmi/framework/ids"
+
 	"github.com/dimmihq/dimmi/app/actions/conversations"
 	"github.com/dimmihq/dimmi/app/contracts"
 	"github.com/dimmihq/dimmi/app/enums"
 )
 
 /*
-relatedLimit is how many related conversations one search shows.
+relatedLimit is how many related conversations one search shows, and
+upFront how many a conversation's page hands Operator without asking.
 */
-const relatedLimit = 15
+const (
+	relatedLimit = 15
+	upFront      = 5
+)
 
 /*
 relatedTool is the tool that finds related conversations.
@@ -39,22 +45,32 @@ relatedTool is the tool that finds related conversations.
 func (e *Engine) relatedTool() tool {
 	return tool{spec: contracts.ToolSpec{
 		Name: "find_related_conversations",
-		Description: "Find past conversations on a topic and see what the team did with each: who handled it, " +
-			"in which team, its tags and priority, how it ended and how long it took, with a count of who " +
-			"handled the most. Call it before you recommend a teammate, a team, a tag or a priority, so the " +
-			"recommendation rests on what the team does.",
-		Schema: schema(`{"type":"object","required":["topic"],"properties":{` +
-			`"topic":{"type":"string","maxLength":256,"description":"What the conversation is about, in two to ` +
-			`four plain words a customer would use, like 'USPS account rates' or 'refund voided label'. ` +
-			`Fewer words find more."},` +
-			`"conversation_number":{"type":"integer","description":"The conversation you want relatives of, ` +
-			`which is left out of the results. Leave out for the one that is open."}}}`),
+		Description: "Find past conversations like one and see what the team did with each: what was asked " +
+			"and how it was answered, who handled it, in which team, its tags and priority, how it ended " +
+			"and how long it took, with a count of who handled the most. With no topic it finds the ones " +
+			"most like the conversation by meaning. Call it before you recommend a teammate, a team, a tag " +
+			"or a priority, and to see how the team answered the same question before.",
+		Schema: schema(`{"type":"object","properties":{` +
+			`"conversation_number":{"type":"integer","description":"The conversation you want relatives of. ` +
+			`Leave out for the one that is open."},` +
+			`"topic":{"type":"string","maxLength":256,"description":"Leave out to find the conversations most ` +
+			`like this one. Give two to four plain words, like 'refund voided label', only to look for ` +
+			`another topic."}}}`),
 	}, handle: e.findRelated}
 }
 
 /*
-findRelated finds conversations on a topic, leaving out the one asked
-about, and says who handled each.
+related is one related conversation: how it stands and what the
+workspace remembers of it.
+*/
+type related struct {
+	loaded conversations.Loaded
+	text   string
+}
+
+/*
+findRelated finds conversations like one, or on a topic, and says who
+handled each.
 */
 func (e *Engine) findRelated(ctx context.Context, s *session, args json.RawMessage) (result, error) {
 	var in struct {
@@ -65,39 +81,111 @@ func (e *Engine) findRelated(ctx context.Context, s *session, args json.RawMessa
 		return result{}, err
 	}
 	topic := strings.TrimSpace(in.Topic)
+	var hits []related
+	var err error
+	what := "this one"
 	if topic == "" {
-		return result{}, fmt.Errorf("%w: \"topic\" is missing; send two to four words on what the "+
-			"conversation is about", errBadArguments)
+		hits, err = e.alike(ctx, s, in.Number, relatedLimit)
+	} else {
+		what = fmt.Sprintf("%q", topic)
+		hits, err = e.onTopic(ctx, s, topic, in.Number)
 	}
-	found, err := e.Services.Search.Handle(ctx, conversations.SearchInput{
-		Membership: s.m, Query: topic, Limit: relatedLimit + 1,
-	})
 	if err != nil {
 		return result{}, err
 	}
 	s.tainted = true
-	own := in.Number
+	st := Step{Tool: "find_related_conversations", Summary: fmt.Sprintf("Looked for conversations like %s: %d found",
+		what, len(hits))}
+	if len(hits) == 0 {
+		return result{text: "No related conversations found. Try a topic of two to four plain words; when " +
+			"there are none, say your recommendation is a guess.", step: st}, nil
+	}
+	return result{text: relatedText(hits), step: st}, nil
+}
+
+/*
+alike finds the conversations most like one, by keywords and meaning,
+from the workspace's memory.
+*/
+func (e *Engine) alike(ctx context.Context, s *session, number int64, limit int) ([]related, error) {
+	if e.Services.Memory == nil {
+		return nil, nil
+	}
+	r, err := ref(s, number)
+	if err != nil {
+		return nil, err
+	}
+	own, err := e.Services.Show.Handle(ctx, conversations.ShowConversationInput{Membership: s.m, Ref: r})
+	if err != nil {
+		return nil, err
+	}
+	return e.alikeTo(ctx, s, own.Conversation.ID, limit)
+}
+
+/*
+alikeTo finds the conversations most like the one with the id.
+*/
+func (e *Engine) alikeTo(ctx context.Context, s *session, id ids.UUID, limit int) ([]related, error) {
+	if e.Services.Memory == nil {
+		return nil, nil
+	}
+	similar, err := e.Services.Memory.SimilarConversations(ctx, s.m, id, limit)
+	if err != nil {
+		return nil, err
+	}
+	var hits []related
+	for _, one := range similar {
+		loaded, err := e.Services.Show.Handle(ctx, conversations.ShowConversationInput{
+			Membership: s.m, Ref: conversations.Ref{ID: one.ID},
+		})
+		if err != nil {
+			continue
+		}
+		hits = append(hits, related{loaded: loaded, text: one.Text})
+	}
+	return hits, nil
+}
+
+/*
+onTopic finds conversations by the words of a topic, leaving out the
+one asked about.
+*/
+func (e *Engine) onTopic(ctx context.Context, s *session, topic string, number int64) ([]related, error) {
+	found, err := e.Services.Search.Handle(ctx, conversations.SearchInput{
+		Membership: s.m, Query: topic, Limit: relatedLimit + 1,
+	})
+	if err != nil {
+		return nil, err
+	}
+	own := number
 	if own == 0 && s.conversation != nil {
 		own = s.conversation.Number
 	}
-	var hits []conversations.Loaded
+	var hits []related
 	for _, hit := range found.Conversations {
 		if hit.Conversation.Conversation.Number != own && len(hits) < relatedLimit {
-			hits = append(hits, hit.Conversation)
+			hits = append(hits, related{loaded: hit.Conversation})
 		}
 	}
-	summary := fmt.Sprintf("Looked for conversations like %q: %d found", topic, len(hits))
-	st := Step{Tool: "find_related_conversations", Summary: summary}
-	if len(hits) == 0 {
-		return result{text: "No related conversations found for these words. Try fewer or other words; when " +
-			"there are none, say your recommendation is a guess.", step: st}, nil
-	}
+	return hits, nil
+}
+
+/*
+relatedText writes related conversations and the count of who handled
+them.
+*/
+func relatedText(hits []related) string {
 	var b strings.Builder
-	for _, l := range hits {
-		writeRelated(&b, l)
+	loaded := make([]conversations.Loaded, len(hits))
+	for i, hit := range hits {
+		loaded[i] = hit.loaded
+		writeRelated(&b, hit.loaded)
+		if text := strings.TrimSpace(hit.text); text != "" {
+			fmt.Fprintf(&b, "  what was asked and how it was answered: %s\n", untrusted(truncate(text, 600)))
+		}
 	}
-	b.WriteString("\n" + handlers(hits))
-	return result{text: b.String(), step: st}, nil
+	b.WriteString("\n" + handlers(loaded))
+	return b.String()
 }
 
 /*
