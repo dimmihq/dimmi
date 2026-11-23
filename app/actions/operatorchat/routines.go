@@ -291,7 +291,7 @@ func (a *Routines) fromTemplate(in RoutineInput) (models.OperatorRoutine, error)
 	r := models.OperatorRoutine{
 		Name: t.Name, Prompt: t.Prompt, Cadence: t.Cadence, CronExpr: &t.Expr, Permissions: abilitiesOf(in.Membership),
 		ToolGroups: operator.RoutineGroups(), InboxIds: []ids.UUID{}, WritePolicies: json.RawMessage("{}"),
-		Scope: json.RawMessage("{}"), MaxModelCalls: 16, MaxToolCalls: 50, NotifyPolicy: t.NotifyPolicy,
+		Scope: json.RawMessage("{}"), MaxModelCalls: 16, MaxToolCalls: 75, NotifyPolicy: t.NotifyPolicy,
 		Delivery: json.RawMessage("{}"), State: json.RawMessage("{}"), MaxConsecutiveFailures: 3,
 	}
 	if key != operator.TemplateCustom {
