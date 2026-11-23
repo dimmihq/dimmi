@@ -127,6 +127,10 @@ func (e *Engine) runCall(ctx context.Context, s *session, p *pending) {
 	if !p.known {
 		return
 	}
+	if s.closing && !closes(p.tool.spec.Name) {
+		p.err = errSpent
+		return
+	}
 	args := p.call.Arguments
 	if s.layer != nil {
 		if args, p.err = s.layer.set.Expand(args); p.err != nil {

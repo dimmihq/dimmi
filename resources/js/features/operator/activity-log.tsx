@@ -55,8 +55,26 @@ function iconFor(step: OperatorStep): Icon {
   return toolIcons.find(([prefix]) => step.tool.startsWith(prefix))?.[1] ?? RiListCheck3;
 }
 
+/*
+ * Note is something Operator said while it worked, shown whole where it
+ * was said so the log reads in the order things happened.
+ */
+function Note({ step, first, last, reduce }: { step: OperatorStep; first: boolean; last: boolean; reduce: boolean }) {
+  return (
+    <LogRow first={first} last={last} reduce={reduce}>
+      <span className="flex min-w-0 items-start gap-1.5 py-1 text-body-2-regular text-text-tertiary">
+        <RiChat3Line aria-hidden className="mt-0.5 size-3.5 shrink-0 text-foreground-icon-tertiary" />
+        <span className="min-w-0 italic">{step.summary}</span>
+      </span>
+    </LogRow>
+  );
+}
+
 function Row({ step, first, last, reduce }: { step: OperatorStep; first: boolean; last: boolean; reduce: boolean }) {
   const Glyph = iconFor(step);
+  if (step.tool === "note") {
+    return <Note step={step} first={first} last={last} reduce={reduce} />;
+  }
 
   return (
     <LogRow first={first} last={last} reduce={reduce}>

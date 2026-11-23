@@ -74,7 +74,7 @@ export function useOperatorChat(workspace: string, thread: OperatorThreadView | 
       setLive((current) => current && { ...current, text: current.text + (data.text ?? "") });
     } else if (envelope.event === "operator.step" && data.step) {
       const step = data.step;
-      setLive((current) => current && { ...current, steps: [...current.steps, step] });
+      setLive((current) => current && { ...current, text: "", steps: [...current.steps, step] });
     } else if (envelope.event === "operator.answered" && !running.current) {
       void refresh();
     }

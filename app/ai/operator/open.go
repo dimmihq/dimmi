@@ -73,6 +73,7 @@ type session struct {
 	actions      []actionkit.Live
 	identity     actionkit.Identity
 	tainted      bool
+	closing      bool
 	background   bool
 	failure      error
 	toolCalls    int

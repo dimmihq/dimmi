@@ -59,7 +59,7 @@ export function useRunLive(workspace: string, run: RoutineRun | undefined): Live
       const step = data.step;
       setStreamed((current) => {
         const at = base(current);
-        return { ...at, steps: [...at.steps, step] };
+        return { ...at, text: "", steps: [...at.steps, step] };
       });
     } else if (envelope.event === "operator.delta") {
       setStreamed((current) => {
