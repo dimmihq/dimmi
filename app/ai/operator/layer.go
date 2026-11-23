@@ -10,7 +10,9 @@
 | call_tool runs one once it is loaded, with its arguments checked and a
 | reading tool's result trimmed. The layer never widens what Operator
 | may do: its own tools keep their write policies and changesets, and
-| the catalog is reached only to read, as the teammate. A model without
+| the catalog is reached only to read, as the teammate. A catalog read
+| may hold what a customer wrote, so a run that made one applies
+| nothing on its own afterwards. A model without
 | a prompt cache gets every tool instead: each load re-reads the prefix
 | at full price, which cost more than the layer saved on the benchmark.
 |
@@ -271,6 +273,7 @@ func (e *Engine) layerCall(ctx context.Context, s *session, p *pending) (result,
 		if err != nil {
 			return result{}, err
 		}
+		s.tainted = true
 		return result{text: set.Shape(out, c.Fields), step: Step{Tool: c.Name, Summary: "Read " +
 			strings.TrimPrefix(c.Name, "dimmi_")}}, nil
 	}

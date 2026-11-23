@@ -142,6 +142,31 @@ func TestOperatorToolLayer(t *testing.T) {
 		assert.Equal(t, []string{"propose_changes"}, k.layerRecord().Stats.NotFound)
 	})
 
+	t.Run("applies nothing on its own once the run read the catalog", func(t *testing.T) {
+		t.Parallel()
+		k := newDesk(t)
+		k.withToolLayer()
+		k.d.Owner.PatchJSON("/api/v1/operator/settings", testkit.JSON{
+			"policies": testkit.JSON{"conversations": "auto"},
+		}).AssertOK()
+		k.conversation("Charged twice.")
+		thread := k.thread("")
+		k.llm.Script(
+			tools(loadTools("dimmi_list_tags", "propose_changes")),
+			tools(callTool("dimmi_list_tags", map[string]any{})),
+			tools(callTool("propose_changes", map[string]any{
+				"suggestion_title": "File as billing", "reason": "A double charge.",
+				"operations": []map[string]any{{
+					"kind": "conversation.tag", "conversation_number": 1, "tags": []string{"billing"},
+				}},
+			})),
+			reply("Proposed."),
+		)
+
+		res := k.ask(thread, "File #1").AssertOK()
+		assert.Equal(t, "pending", res.String("data.changesets.0.status"))
+	})
+
 	t.Run("proposes changes through call_tool as a changeset that waits for review", func(t *testing.T) {
 		t.Parallel()
 		k := newDesk(t)
