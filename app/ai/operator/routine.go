@@ -476,6 +476,8 @@ answer is the message the team reads later on the routine's thread.
 - workspace_report reads whole days; a window that starts or ends mid-day is fine as it is.
 - Never put customers' names, emails, phone numbers, order ids or companies in an article or
   snippet; cite conversations by number only in a suggestion's reason.
+- Your message ends the run: nothing happens after it. Make every suggestion first, then write.
+  Never write that you are still checking, or what you will do next.
 - Your answer is a message to the team, read later. Open with what you went through, in one
   sentence. Then say what you think should change and why it matters to customers, and that
   your suggestions are below. Do not retell each suggestion; its card says what it changes.
