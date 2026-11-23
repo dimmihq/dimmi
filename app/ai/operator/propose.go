@@ -35,14 +35,17 @@ const proposeDescription = "Propose changes to the workspace as one changeset a 
 	"assign to a teammate or team, set priority, open or close, rename, add an internal note, update a " +
 	"customer's name, create a help article draft, edit an article's draft, edit a procedure's working " +
 	"copy, or add a regression test to a procedure from a conversation that went wrong. Give a short title " +
-	"and the reason, citing the conversations."
+	"and the reason, both in plain words a teammate reads at a glance."
 
 /*
 proposeSchema is the schema of a proposal.
 */
 const proposeSchema = `{"type":"object","required":["title","reason","operations"],"properties":{
-"title":{"type":"string","maxLength":200,"description":"What the changeset does, like 'Route to Billing'."},
-"reason":{"type":"string","maxLength":2000},
+"title":{"type":"string","maxLength":200,"description":"What it does in a few everyday words, like ` +
+	`'Route to Billing' or 'Fix the refund window in the returns guide'."},
+"reason":{"type":"string","maxLength":2000,"description":"Why, as you would tell a teammate in one or two ` +
+	`plain sentences: what is wrong for customers today and what this changes. No tool names or ids; ` +
+	`cite conversations by number."},
 "dedup_key":{"type":"string","maxLength":200,"description":"A stable key for what this suggests, like ` +
 	`'gap:sso-setup' or 'gh-pr:acme/app#412:art_...'. A suggestion with the same key that still waits, or ` +
 	`was declined in the last 30 days, is not made again."},

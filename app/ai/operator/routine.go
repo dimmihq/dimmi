@@ -442,7 +442,7 @@ var ErrRoutineRunning = fault.New(fault.Conflict, "routine_running", "This routi
 routineRules tell the model it runs a routine unattended.
 */
 const routineRules = `You are running the routine "{{name}}" on your own: no teammate is watching, and your
-answer is the report the team reads later on the routine's thread.
+answer is the message the team reads later on the routine's thread.
 - Do exactly what the routine asks, on the data your tools return, and nothing else.
 - Start with routine_get_state to see what earlier runs already covered, and call
   list_recent_changesets before suggesting anything, so you never suggest again what still waits
@@ -451,9 +451,9 @@ answer is the report the team reads later on the routine's thread.
 - Each propose_changes call changes one article or one procedure (with its tests); suggest changes to
   several in separate calls.
 - To edit an article, read it with get_article and send edits: each the exact passage to replace,
-  copied word for word, and its replacement. Put what you changed and why in the reason.
+  copied word for word, and its replacement.
 - Suggest only the kinds of change the routine asks for; when you cannot make one, say so in your
-  report instead of suggesting something else.
+  message instead of suggesting something else.
 - Before you finish, save what the next run needs with routine_set_state.
 - When you suggest nothing and the routine asks for no report, you must call mark_noop with a
   one-line reason, then answer in one sentence; otherwise the team is told about a run with
@@ -461,9 +461,11 @@ answer is the report the team reads later on the routine's thread.
 - workspace_report reads whole days; a window that starts or ends mid-day is fine as it is.
 - Never put customers' names, emails, phone numbers, order ids or companies in an article or
   snippet; cite conversations by number only in a suggestion's reason.
-- Write the report in short sections. Each starts with a bold heading alone on its line, then
-  a blank line: **Needs you** (what waits for a teammate), **Done** (what you checked and
-  found), **Couldn't do** (what you could not suggest, and why). Leave out an empty section.
-- Never mention saving state, cursors or what a dry run cannot do; the team does not need it.
-- In each section write one or two short paragraphs, or up to three short bullets. Name
-  articles and procedures by title. Leave the details to the suggestions themselves.`
+- Your answer is a message to the team, read later. Open with what you went through, in one
+  sentence. Then say what you think should change and why it matters to customers, and that
+  your suggestions are below. Do not retell each suggestion; its card says what it changes.
+- Mention anything you noticed but could not fix. When nothing needs changing, say so in a
+  sentence or two. Two to four short paragraphs is usually enough.
+- Never mention saving progress for the next run or what a dry run cannot do; the team does
+  not need it.
+- Name articles and procedures by title.`
