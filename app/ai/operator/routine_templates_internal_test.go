@@ -17,5 +17,7 @@ func TestUnwrapPrompt(t *testing.T) {
 func TestSpellTools(t *testing.T) {
 	t.Parallel()
 
-	assert.Equal(t, "Call list_articles, then mark_noop.", spellTools("Call [[tool:list_articles]], then [[tool:mark_noop]]."))
+	got := spellTools("Call [[tool:list_articles]], then [[tool:mark_noop]].")
+
+	assert.Equal(t, "Call list_articles, then mark_noop.", got)
 }
