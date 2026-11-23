@@ -39,6 +39,18 @@ export interface ArticleWriterProps {
 }
 
 /*
+ * showChange scrolls to the first added passage the request did not have
+ * before, so a change made while the teammate watches is never off screen.
+ */
+function showChange(root: HTMLElement, before: string) {
+  const plain = (text: string) => text.replace(/[*_`#>\-\s]+/g, " ").trim();
+  const earlier = plain(before);
+  const added = [...root.querySelectorAll<HTMLElement>(".change-added")];
+  const fresh = added.find((el) => !earlier.includes(plain(el.textContent ?? "").slice(0, 80)));
+  (fresh ?? added[0])?.scrollIntoView({ block: "center", behavior: "smooth" });
+}
+
+/*
  * dropPosition is where in the document a drop landed, if anywhere.
  */
 function dropPosition(editor: Editor, event: DragEvent): number | undefined {
@@ -109,6 +121,7 @@ export default function ArticleWriter({
   });
   editorRef.current = editor;
 
+  const shown = useRef<string | null>(null);
   useEffect(() => {
     if (!editor) {
       return;
@@ -122,6 +135,13 @@ export default function ArticleWriter({
       const parsed = proposed === null || !editor.markdown ? null : editor.markdown.parse(proposed);
       const node = parsed ? editor.state.schema.nodeFromJSON(parsed) : null;
       editor.view.dispatch(editor.state.tr.setMeta(changeRequestKey, { proposed: node, whole }));
+      // A request that changed while the article is open, as when Operator
+      // edits it for the teammate, is brought into view where it changed.
+      const before = shown.current;
+      shown.current = proposed;
+      if (before !== null && proposed !== null && before !== proposed) {
+        window.requestAnimationFrame(() => showChange(editor.view.dom, before));
+      }
     };
     if (editor.isInitialized) {
       send();
