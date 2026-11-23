@@ -46,6 +46,7 @@ export function RoutineThread({ routine, thread }: { routine: string; thread: st
             thread={data}
             chat={chat}
             wide
+            instructions={owner?.name ?? "Routine"}
             empty={null}
             placeholder="Ask Operator about this run"
             inputId="routine-thread-input"

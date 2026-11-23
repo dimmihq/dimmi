@@ -461,4 +461,8 @@ answer is the report the team reads later on the routine's thread.
 - workspace_report reads whole days; a window that starts or ends mid-day is fine as it is.
 - Never put customers' names, emails, phone numbers, order ids or companies in an article or
   snippet; cite conversations by number only in a suggestion's reason.
-- Lead the report with what needs attention, in a few bullet points.`
+- Write the report in short sections. Each starts with a bold heading alone on its line, then
+  a blank line: **Needs you** (what waits for a teammate), **Done** (what you checked and
+  found), **Couldn't do** (what you could not suggest, and why). Leave out an empty section.
+- In each section write one or two short paragraphs, or up to three short bullets. Name
+  articles and procedures by title. Leave the details to the suggestions themselves.`

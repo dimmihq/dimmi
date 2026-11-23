@@ -52,6 +52,7 @@ function Thread({ workspace, run, label }: { workspace: string; run: RoutineRun;
       thread={data}
       chat={shown}
       wide
+      instructions={label}
       empty={null}
       placeholder={live ? "Operator is still working" : "Ask Operator about this run"}
       inputId={`routine-run-${run.id}`}
