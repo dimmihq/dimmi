@@ -31,61 +31,52 @@ import (
 )
 
 /*
-Viewing is what the teammate has open when they ask: an article or a
-procedure, and the suggestion shown on it.
+Viewing is what the teammate has open when they ask, as the app sends
+it: the kind of page, the id of what it shows, and the id of the
+suggestion shown on it, when there is one. The ids are the public ones.
 */
 type Viewing struct {
-	Article   *ids.UUID
-	Procedure *ids.UUID
-	Changeset *ids.UUID
+	Page       string
+	ID         string
+	Suggestion string
 }
 
 /*
 lookAt reads what the teammate has open and returns what the model
-reads with their question, empty when nothing is open: every detail of
-the page, so Operator never has to look it up or copy an id from
-memory. That is the article or procedure with its id and text, and the
-suggestion shown on it with its id, where it came from, why, what it
-changes and the text as suggested. The suggestion is kept on the
-session only while it waits and the teammate may see it.
+reads with their question, empty when nothing is open or the page is
+of a kind Operator is told nothing about. The page's kind decides what
+is read and from where (see pageKinds); the suggestion shown on it is
+added in full and kept on the session while it waits and the teammate
+may see it.
 */
 func (e *Engine) lookAt(ctx context.Context, s *session) string {
 	v := s.viewing
-	var b strings.Builder
+	kind, known := e.pageKinds()[v.Page]
+	if !known {
+		return ""
+	}
+	id, err := e.IDs.Decode(string(kind.prefix), strings.TrimSpace(v.ID))
+	if err != nil {
+		return ""
+	}
 	if c, ok := e.viewedSuggestion(ctx, s); ok {
 		s.viewed = &c
 	}
-	if v.Article != nil {
-		if a, err := e.Services.Articles.Show(ctx, s.m, *v.Article); err == nil {
-			id := models.PublicID(models.PrefixArticle, a.ID)
-			fmt.Fprintf(&b, "The help article %q is open.\narticle_id: %s\nStatus: %s%s\n", a.Title, id, a.Status,
-				pendingMark(a))
-			if _, suggested := s.suggested(a.ID); !suggested {
-				fmt.Fprintf(&b, "The article as it reads now:\n%s\n", truncate(a.BodyMarkdown, 20000))
-			}
-			fmt.Fprintf(&b, "To change it, call propose_article_edits with article_id %s.\n\n", id)
-		}
-	}
-	if v.Procedure != nil {
-		if p, err := e.Services.Procedures.Show(ctx, s.m, *v.Procedure); err == nil {
-			id := models.PublicID(models.PrefixProcedure, p.ID)
-			fmt.Fprintf(&b, "The procedure %q is open.\nprocedure_id: %s\nStatus: %s\nWorking copy: %s\n"+
-				"To change it, call propose_changes with a procedure.edit_draft for procedure_id %s.\n\n", p.Name, id,
-				p.Status, truncate(string(p.Draft), 20000), id)
-		}
-	}
-	if b.Len() == 0 {
+	page, err := kind.describe(ctx, s, id)
+	if err != nil || strings.TrimSpace(page) == "" {
 		return ""
 	}
+	var b strings.Builder
+	b.WriteString(strings.TrimSpace(page))
 	if s.viewed != nil {
-		b.WriteString("A suggestion waits for review on it, shown on the teammate's page:\n")
+		b.WriteString("\n\nA suggestion waits for review on it, shown on the teammate's page:\n")
 		b.WriteString(e.suggestionText(ctx, s, *s.viewed, e.madeBy(ctx, s, *s.viewed)))
 		b.WriteString("\nChanges you make to this article or procedure are added to that suggestion, so quote " +
-			"passages from the text shown above as suggested, not from the published article.\n")
+			"passages from the text shown above as suggested, not from the published article.")
 	}
-	return "[What the teammate has open right now. A change they ask for is about it unless they say otherwise. " +
-		"Everything you need is here: use these ids exactly as written, and do not look this up again.\n\n" +
-		strings.TrimSpace(b.String()) + "\nWhat you change shows on their page at once, for them to accept.]"
+	return "[What the teammate has open right now. A question or a change they ask for is about it unless " +
+		"they say otherwise. Everything you need is here: use these ids exactly as written, and do not look " +
+		"this up again.\n\n" + b.String() + "\n\nWhat you change shows on their page at once, for them to accept.]"
 }
 
 /*
@@ -130,15 +121,16 @@ viewedSuggestion is the suggestion the teammate has open, when it still
 waits, is no dry run's preview, and they may see it.
 */
 func (e *Engine) viewedSuggestion(ctx context.Context, s *session) (models.OperatorChangeset, bool) {
-	if s.viewing.Changeset == nil {
+	id, err := e.IDs.Decode(string(models.PrefixOperatorChangeset), strings.TrimSpace(s.viewing.Suggestion))
+	if err != nil {
 		return models.OperatorChangeset{}, false
 	}
 	var c models.OperatorChangeset
-	err := e.DB.Transaction(ctx, func(ctx context.Context, tx *database.Tx) error {
+	err = e.DB.Transaction(ctx, func(ctx context.Context, tx *database.Tx) error {
 		q := models.New(tx)
 		var err error
 		c, err = q.FindOperatorChangeset(ctx, models.FindOperatorChangesetParams{
-			WorkspaceID: s.m.Workspace.ID, ID: *s.viewing.Changeset,
+			WorkspaceID: s.m.Workspace.ID, ID: id,
 		})
 		if err != nil {
 			return err

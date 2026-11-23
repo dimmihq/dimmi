@@ -14,9 +14,9 @@ suggestions are open.
 */
 func (k *desk) askViewing(thread, text, article, changeset string) *testkit.Response {
 	k.t.Helper()
-	viewing := testkit.JSON{"article_id": article}
+	viewing := testkit.JSON{"page": "article", "id": article}
 	if changeset != "" {
-		viewing["changeset_id"] = changeset
+		viewing["suggestion_id"] = changeset
 	}
 	return k.d.Owner.PostJSON("/api/v1/operator/threads/"+thread+"/messages", testkit.JSON{
 		"body": text, "viewing": viewing,
@@ -96,5 +96,35 @@ func TestOperatorViewing(t *testing.T) {
 		assert.Contains(t, note, "The article as it reads now:")
 		assert.Contains(t, note, "or 25 on the Free plan")
 		assert.NotContains(t, note, "A suggestion waits")
+	})
+
+	t.Run("tells the model about an open conversation and help center, each from its source", func(t *testing.T) {
+		t.Parallel()
+		k := newDesk(t)
+		conv := k.conversation("My export is stuck.")
+		hc := k.d.Owner.GetJSON("/api/v1/help-centers").AssertOK().String("data.0.id")
+		thread := k.thread("")
+		k.llm.Script(reply("It is about an export."), reply("That is your help center."), reply("Nothing open."))
+
+		k.d.Owner.PostJSON("/api/v1/operator/threads/"+thread+"/messages", testkit.JSON{
+			"body": "What is this about?", "viewing": testkit.JSON{"page": "conversation", "id": conv},
+		}).AssertOK()
+		k.d.Owner.PostJSON("/api/v1/operator/threads/"+thread+"/messages", testkit.JSON{
+			"body": "What is this?", "viewing": testkit.JSON{"page": "help_center", "id": hc},
+		}).AssertOK()
+		k.d.Owner.PostJSON("/api/v1/operator/threads/"+thread+"/messages", testkit.JSON{
+			"body": "And this?", "viewing": testkit.JSON{"page": "spaceship", "id": hc},
+		}).AssertOK()
+
+		sent := k.llm.Sent()
+		last := func(i int) string {
+			parts := sent[i].Messages[len(sent[i].Messages)-1].Parts
+			return parts[len(parts)-1].Text
+		}
+		assert.Contains(t, last(0), "Conversation #")
+		assert.Contains(t, last(0), "My export is stuck.")
+		assert.Contains(t, last(1), "A help center is open.")
+		assert.Contains(t, last(1), "help_center_id: "+hc)
+		assert.Equal(t, "And this?", last(2), "a kind of page Operator does not know adds nothing")
 	})
 }

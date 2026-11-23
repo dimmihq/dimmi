@@ -16,6 +16,7 @@ import { Button } from "@/components/base/buttons/button";
 import { IconButton } from "@/components/base/buttons/icon-button";
 import { AlertDialog } from "@/components/base/modal/modal";
 import { toast } from "@/components/base/toast/toast";
+import { useViewing } from "@/features/operator/viewing";
 import { useAccount } from "@/features/settings/use-account";
 import { PageHeader, Panel, ScrollArea } from "@/features/shell/page";
 import {
@@ -118,6 +119,7 @@ export function EntryEditor({ id }: { id: string }) {
   const workspace = useAccount().workspace.id;
   const navigate = useNavigate();
   const { entry, settle } = useEntry(workspace, id);
+  useViewing("changelog_entry", id);
   const { data: centers = [] } = useQuery({ ...helpCentersQuery(workspace), enabled: workspace !== "" });
   const center = centers.find((c) => c.id === entry?.help_center_id);
   const { data: labels = [] } = useQuery(labelsQuery(workspace, entry?.help_center_id ?? ""));

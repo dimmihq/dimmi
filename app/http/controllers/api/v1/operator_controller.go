@@ -187,28 +187,18 @@ func (c *OperatorController) Ask(ctx context.Context, in *requests.AskOperatorRe
 }
 
 /*
-viewing reads what the teammate has open. An id that does not decode is
-left out: the question is still answered, only without that context.
+viewing reads what the teammate has open, as sent; Operator checks the
+ids and what the teammate may see when it reads the page.
 */
 func (c *OperatorController) viewing(req *requests.AskOperatorRequest) operator.Viewing {
-	var out operator.Viewing
 	in := req.Body.Viewing
 	if in == nil {
-		return out
+		return operator.Viewing{}
 	}
-	read := func(prefix models.Prefix, public *string) *ids.UUID {
-		if public == nil {
-			return nil
-		}
-		id, err := c.decode(prefix, *public)
-		if err != nil {
-			return nil
-		}
-		return &id
+	out := operator.Viewing{Page: in.Page, ID: in.ID}
+	if in.SuggestionID != nil {
+		out.Suggestion = *in.SuggestionID
 	}
-	out.Article = read(models.PrefixArticle, in.ArticleID)
-	out.Procedure = read(models.PrefixProcedure, in.ProcedureID)
-	out.Changeset = read(models.PrefixOperatorChangeset, in.ChangesetID)
 	return out
 }
 

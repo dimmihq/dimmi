@@ -16,6 +16,7 @@ import { useEffect, useState } from "react";
 
 import { AlertDialog } from "@/components/base/modal/modal";
 import { toast } from "@/components/base/toast/toast";
+import { useViewing } from "@/features/operator/viewing";
 import { useAccount } from "@/features/settings/use-account";
 import { PageHeader, Panel, ScrollArea } from "@/features/shell/page";
 import {
@@ -149,7 +150,6 @@ export function ArticleEditor({ id }: { id: string }) {
     (className, close) => (
       <ArticleOperatorPanel
         workspace={workspace}
-        articleId={id}
         articleTitle={article?.title ?? ""}
         suggestion={request?.changeset.id ?? null}
         onClose={close}
@@ -157,6 +157,8 @@ export function ArticleEditor({ id }: { id: string }) {
       />
     ),
   );
+
+  useViewing("article", id, request?.changeset.id);
 
   if (!article || !draft) {
     return (

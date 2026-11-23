@@ -40,6 +40,7 @@ import { ActionProvider } from "@/features/inbox/actions/action-provider";
 import { OpenNotificationsContext } from "@/features/notifications/notification-center-context";
 import { NotificationsPanel } from "@/features/notifications/notifications-panel";
 import { useNotificationFocus } from "@/features/notifications/use-notification-focus";
+import { ViewingProvider } from "@/features/operator/viewing-provider";
 import { ConnectionIndicator } from "@/features/realtime/connection-indicator";
 import { type Me, meQuery, signOut } from "@/lib/api/auth";
 import { countsQuery } from "@/lib/api/inbox";
@@ -203,9 +204,11 @@ export function AppShell({ children }: { children: ReactNode }) {
   }
 
   return (
-    <SignedInShell me={me} path={path} drawerOpen={drawerOpen} setDrawerOpen={setDrawerOpen}>
-      {children}
-    </SignedInShell>
+    <ViewingProvider>
+      <SignedInShell me={me} path={path} drawerOpen={drawerOpen} setDrawerOpen={setDrawerOpen}>
+        {children}
+      </SignedInShell>
+    </ViewingProvider>
   );
 }
 
