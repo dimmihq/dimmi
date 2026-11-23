@@ -58,9 +58,14 @@ func TestOperatorViewing(t *testing.T) {
 		sent := k.llm.Sent()
 		asked := sent[2].Messages[len(sent[2].Messages)-1]
 		note := asked.Parts[len(asked.Parts)-1].Text
-		assert.Contains(t, note, `the help article "Batches"`)
-		assert.Contains(t, note, `A suggestion waits for review on it: "Fix the batch limit"`)
-		assert.NotContains(t, note, suggestion, "the model never has to type the open suggestion's id")
+		assert.Contains(t, note, `The help article "Batches" is open.`)
+		assert.Contains(t, note, "article_id: "+article)
+		assert.Contains(t, note, "suggestion_id: "+suggestion)
+		assert.Contains(t, note, `Made in a chat with Operator`)
+		assert.Contains(t, note, "Reason: Free has no lower limit.")
+		assert.Contains(t, note, "Lines it removes:")
+		assert.Contains(t, note, "The article as suggested")
+		assert.Contains(t, note, "- A batch can hold at most 1,000 shipments.")
 		read := sent[3].Messages[len(sent[3].Messages)-1].Parts[0].Text
 		assert.Contains(t, read, "Lines it removes:")
 		assert.Contains(t, read, "The article as suggested")
@@ -85,7 +90,11 @@ func TestOperatorViewing(t *testing.T) {
 
 		res.AssertJSONPath("data.changesets.#", float64(1))
 		asked := k.llm.Sent()[0].Messages[len(k.llm.Sent()[0].Messages)-1]
-		assert.Contains(t, asked.Parts[len(asked.Parts)-1].Text, `the help article "Batches"`)
-		assert.NotContains(t, asked.Parts[len(asked.Parts)-1].Text, "A suggestion waits")
+		note := asked.Parts[len(asked.Parts)-1].Text
+		assert.Contains(t, note, `The help article "Batches" is open.`)
+		assert.Contains(t, note, "article_id: "+article)
+		assert.Contains(t, note, "The article as it reads now:")
+		assert.Contains(t, note, "or 25 on the Free plan")
+		assert.NotContains(t, note, "A suggestion waits")
 	})
 }

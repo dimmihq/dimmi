@@ -41,39 +41,88 @@ type Viewing struct {
 }
 
 /*
-lookAt reads what the teammate has open and returns the note the model
-reads with their question, empty when nothing is open. The suggestion
-is kept on the session only while it waits and the teammate may see it.
+lookAt reads what the teammate has open and returns what the model
+reads with their question, empty when nothing is open: every detail of
+the page, so Operator never has to look it up or copy an id from
+memory. That is the article or procedure with its id and text, and the
+suggestion shown on it with its id, where it came from, why, what it
+changes and the text as suggested. The suggestion is kept on the
+session only while it waits and the teammate may see it.
 */
 func (e *Engine) lookAt(ctx context.Context, s *session) string {
 	v := s.viewing
-	var open []string
+	var b strings.Builder
+	if c, ok := e.viewedSuggestion(ctx, s); ok {
+		s.viewed = &c
+	}
 	if v.Article != nil {
 		if a, err := e.Services.Articles.Show(ctx, s.m, *v.Article); err == nil {
-			open = append(open, fmt.Sprintf("the help article %q (%s)", a.Title,
-				models.PublicID(models.PrefixArticle, a.ID)))
+			id := models.PublicID(models.PrefixArticle, a.ID)
+			fmt.Fprintf(&b, "The help article %q is open.\narticle_id: %s\nStatus: %s%s\n", a.Title, id, a.Status,
+				pendingMark(a))
+			if _, suggested := s.suggested(a.ID); !suggested {
+				fmt.Fprintf(&b, "The article as it reads now:\n%s\n", truncate(a.BodyMarkdown, 20000))
+			}
+			fmt.Fprintf(&b, "To change it, call propose_article_edits with article_id %s.\n\n", id)
 		}
 	}
 	if v.Procedure != nil {
 		if p, err := e.Services.Procedures.Show(ctx, s.m, *v.Procedure); err == nil {
-			open = append(open, fmt.Sprintf("the procedure %q (%s)", p.Name,
-				models.PublicID(models.PrefixProcedure, p.ID)))
+			id := models.PublicID(models.PrefixProcedure, p.ID)
+			fmt.Fprintf(&b, "The procedure %q is open.\nprocedure_id: %s\nStatus: %s\nWorking copy: %s\n"+
+				"To change it, call propose_changes with a procedure.edit_draft for procedure_id %s.\n\n", p.Name, id,
+				p.Status, truncate(string(p.Draft), 20000), id)
 		}
 	}
-	if len(open) == 0 {
+	if b.Len() == 0 {
 		return ""
 	}
-	note := "[The teammate has this open: " + strings.Join(open, " and ") + ". A change they ask for is about it " +
-		"unless they say otherwise: read it, then make the change with propose_article_edits for an article or " +
-		"propose_changes for a procedure. It shows on their page for them to accept."
-	if c, ok := e.viewedSuggestion(ctx, s); ok {
-		s.viewed = &c
-		note += fmt.Sprintf(" A suggestion waits for review on it: %q. Read it by calling get_suggestion_by_id "+
-			"with no arguments before you explain it or change it. Changes you make to this article or "+
-			"procedure are added to that suggestion, so quote passages from the text it shows as suggested, "+
-			"not from the article as published.", c.Title)
+	if s.viewed != nil {
+		b.WriteString("A suggestion waits for review on it, shown on the teammate's page:\n")
+		b.WriteString(e.suggestionText(ctx, s, *s.viewed, e.madeBy(ctx, s, *s.viewed)))
+		b.WriteString("\nChanges you make to this article or procedure are added to that suggestion, so quote " +
+			"passages from the text shown above as suggested, not from the published article.\n")
 	}
-	return note + "]"
+	return "[What the teammate has open right now. A change they ask for is about it unless they say otherwise. " +
+		"Everything you need is here: use these ids exactly as written, and do not look this up again.\n\n" +
+		strings.TrimSpace(b.String()) + "\nWhat you change shows on their page at once, for them to accept.]"
+}
+
+/*
+madeBy says where a suggestion came from: a routine, by name, or a chat
+with Operator.
+*/
+func (e *Engine) madeBy(ctx context.Context, s *session, c models.OperatorChangeset) string {
+	if c.RoutineID == nil {
+		return "in a chat with Operator"
+	}
+	made := "by a routine"
+	_ = e.DB.Transaction(ctx, func(ctx context.Context, tx *database.Tx) error {
+		routine, err := models.New(tx).FindAnyOperatorRoutine(ctx, models.FindAnyOperatorRoutineParams{
+			WorkspaceID: s.m.Workspace.ID, ID: *c.RoutineID,
+		})
+		if err == nil {
+			made = fmt.Sprintf("by the routine %q", routine.Name)
+		}
+		return nil
+	})
+	return made
+}
+
+/*
+suggestionText is everything about one suggestion: its id, status,
+where it came from, why, and what each of its changes does.
+*/
+func (e *Engine) suggestionText(ctx context.Context, s *session, c models.OperatorChangeset, made string) string {
+	var b strings.Builder
+	fmt.Fprintf(&b, "Suggestion %q\nsuggestion_id: %s\nStatus: %s\nMade %s on %s\nReason: %s\n", c.Title,
+		models.PublicID(models.PrefixOperatorChangeset, c.ID), c.Status, made,
+		c.CreatedAt.UTC().Format("2006-01-02"), c.Reason)
+	for _, op := range Operations(c.Operations) {
+		fmt.Fprintf(&b, "\n%s\n", op.Label)
+		e.describeChange(ctx, s, &b, op)
+	}
+	return b.String()
 }
 
 /*
@@ -199,7 +248,6 @@ func (e *Engine) getSuggestion(ctx context.Context, s *session, args json.RawMes
 		id = s.viewed.ID
 	}
 	var c models.OperatorChangeset
-	made := "in a chat with Operator"
 	err = e.DB.Transaction(ctx, func(ctx context.Context, tx *database.Tx) error {
 		q := models.New(tx)
 		var err error
@@ -208,16 +256,7 @@ func (e *Engine) getSuggestion(ctx context.Context, s *session, args json.RawMes
 		}); err != nil {
 			return err
 		}
-		if err := Visible(ctx, q, s.m, c); err != nil || c.RoutineID == nil {
-			return err
-		}
-		routine, err := q.FindAnyOperatorRoutine(ctx, models.FindAnyOperatorRoutineParams{
-			WorkspaceID: s.m.Workspace.ID, ID: *c.RoutineID,
-		})
-		if err == nil {
-			made = fmt.Sprintf("by the routine %q", routine.Name)
-		}
-		return nil
+		return Visible(ctx, q, s.m, c)
 	})
 	if errors.Is(err, database.ErrNotFound) {
 		return result{}, fmt.Errorf("%w: there is no suggestion with that id; list them with "+
@@ -226,16 +265,9 @@ func (e *Engine) getSuggestion(ctx context.Context, s *session, args json.RawMes
 	if err != nil {
 		return result{}, err
 	}
-	var b strings.Builder
-	fmt.Fprintf(&b, "Suggestion %q (%s)\nStatus: %s\nMade %s on %s\nReason: %s\n", c.Title,
-		models.PublicID(models.PrefixOperatorChangeset, c.ID), c.Status, made,
-		c.CreatedAt.UTC().Format("2006-01-02"), c.Reason)
-	for _, op := range Operations(c.Operations) {
-		fmt.Fprintf(&b, "\n%s\n", op.Label)
-		e.describeChange(ctx, s, &b, op)
-	}
+	text := e.suggestionText(ctx, s, c, e.madeBy(ctx, s, c))
 	st := Step{Tool: "get_suggestion_by_id", Summary: "Read the suggestion " + c.Title}
-	return result{text: b.String(), step: st}, nil
+	return result{text: text, step: st}, nil
 }
 
 /*
