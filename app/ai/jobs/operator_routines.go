@@ -96,9 +96,10 @@ type RunOperatorRoutine struct {
 
 /*
 Timeout gives a run longer than the queue's default: Operator works for
-up to four minutes, and the run then stores what it found.
+up to twelve minutes, waiting for its subagents when it split the work,
+and the run then stores what it found.
 */
-func (w *RunOperatorRoutine) Timeout() time.Duration { return 6 * time.Minute }
+func (w *RunOperatorRoutine) Timeout() time.Duration { return 15 * time.Minute }
 
 /*
 Handle runs it.

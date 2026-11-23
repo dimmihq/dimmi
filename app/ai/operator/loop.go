@@ -169,10 +169,7 @@ func (e *Engine) note(ctx context.Context, s *session, text string) {
 	if text == "" {
 		return
 	}
-	st := Step{Tool: "note", Summary: truncate(text, noteLength), OK: true}
-	s.steps = append(s.steps, st)
-	e.keepSteps(ctx, s)
-	e.publishStep(ctx, s, st)
+	e.addStep(ctx, s, Step{Tool: "note", Summary: truncate(text, noteLength), OK: true})
 }
 
 /*

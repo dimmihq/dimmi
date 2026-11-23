@@ -35,7 +35,7 @@ without moving before it counts as stalled.
 */
 const (
 	dueBatch     = 100
-	stalledAfter = 15 * time.Minute
+	stalledAfter = 20 * time.Minute
 )
 
 /*

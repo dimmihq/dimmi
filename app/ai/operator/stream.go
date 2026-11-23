@@ -35,7 +35,7 @@ const (
 publishDelta sends a piece of the answer's text.
 */
 func (e *Engine) publishDelta(ctx context.Context, s *session, text string) {
-	if text == "" {
+	if text == "" || s.sub != nil {
 		return
 	}
 	e.publish(ctx, s, fbroadcasting.Message{

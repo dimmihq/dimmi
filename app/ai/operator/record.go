@@ -57,6 +57,9 @@ func (e *Engine) startRun(ctx context.Context, q *models.Queries, s *session) (m
 		config["routine_id"] = models.PublicID(models.PrefixOperatorRoutine, s.routine.row.ID)
 		config["routine_name"] = s.routine.row.Name
 	}
+	if s.sub != nil {
+		config["subagent"] = s.sub.n
+	}
 	snapshot, _ := json.Marshal(config)
 	run, err := q.CreateRun(ctx, models.CreateRunParams{
 		WorkspaceID: s.m.Workspace.ID, AgentID: s.agent.ID, Kind: runKind,

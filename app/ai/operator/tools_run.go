@@ -88,7 +88,7 @@ func (e *Engine) resolve(s *session, registry map[string]tool, call contracts.To
 writes reports whether the call may change anything, so it runs alone.
 */
 func (p *pending) writes() bool {
-	return p.known && len(p.tool.writes) > 0
+	return p.known && (len(p.tool.writes) > 0 || p.tool.alone)
 }
 
 /*
@@ -157,9 +157,7 @@ func (e *Engine) finishCall(ctx context.Context, s *session, p *pending) contrac
 	} else if s.layer != nil {
 		out.text = s.layer.set.Compact(out.text)
 	}
-	s.steps = append(s.steps, out.step)
-	e.keepSteps(ctx, s)
-	e.publishStep(ctx, s, out.step)
+	e.addStep(ctx, s, out.step)
 	name := p.call.Name
 	if p.ran != "" {
 		name = p.ran

@@ -160,7 +160,7 @@ endRun fills the run row with how it ended.
 func (e *Engine) endRun(s *session, status, outcome string, now time.Time) {
 	run := &s.routine.run
 	run.Status, run.Outcome, run.CompletedAt = "completed", &outcome, &now
-	run.CostMicros = s.tally.cost
+	run.CostMicros = s.tally.cost + s.routine.helpersCost
 	run.ChangesetsCount = 0
 	for range s.proposed {
 		run.ChangesetsCount++

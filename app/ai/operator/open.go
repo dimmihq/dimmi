@@ -79,6 +79,7 @@ type session struct {
 	toolCalls    int
 	layer        *layerState
 	routine      *routineRun
+	sub          *subagent
 }
 
 /*

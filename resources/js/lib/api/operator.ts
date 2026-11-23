@@ -39,6 +39,8 @@ export interface OperatorStep {
   ok: boolean;
   draft?: string;
   changeset_id?: string;
+  /* Which subagent took the step, counted from 1; absent for the main agent. */
+  subagent?: number;
 }
 
 export interface OperatorMessage {

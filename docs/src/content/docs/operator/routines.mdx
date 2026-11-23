@@ -13,7 +13,7 @@ Open **Routines** in the sidebar and pick a template, or start from scratch.
 | --- | --- | --- |
 | **Knowledge gap finder** | Mondays at 09:00 | Articles and agent-only snippets for questions the AI agent could not answer |
 | **Pull requests to docs** | Every day at 08:30 | Edits to help articles that merged pull requests made out of date |
-| **Help center audit** | Wednesdays at 09:00 | Fixes for articles that contradict each other, 15 articles a run |
+| **Help center audit** | Wednesdays at 09:00 | Fixes for articles that contradict each other, up to 100 articles a run |
 | **Weekly digest and procedure tune-up** | Fridays at 15:00 | A digest of the week, plus fixes and regression tests for procedures |
 
 A template only fills in a name, a sentence of instructions and a schedule. Change any of them, or write the same sentence from scratch: the routine runs the same either way.
@@ -33,6 +33,7 @@ You can watch a run while it works. Its steps and text appear as Operator writes
 - **Suggests, never applies:** a routine's changes always wait for a teammate, whatever your **Settings → Operator** policies say.
 - **Remembers between runs:** Operator saves a small state, such as the last pull request it read, so the next run starts where this one stopped.
 - **Skips repeats:** Operator does not suggest a change again while the same suggestion waits, or for 30 days after a teammate declines it.
+- **Splits big jobs:** when there is more to read than one run can hold, Operator hands parts of the work to **subagents** that work at the same time. Each suggests its own changes and reports back. Their steps show under each subagent's name in the run.
 - **Stays quiet:** a run that suggests nothing tells nobody, unless the routine reports after every run.
 - **Lets stale suggestions go:** a suggestion nobody applies or declines within four weeks is declined for you, so a later run can suggest it again from fresh data.
 
@@ -73,16 +74,17 @@ dimmi always tells the team when a routine pauses. Under **Who hears about it**,
 
 ## Cost
 
-Every run is an Operator run, billed like a question to Operator. Runs count toward your workspace's monthly AI budget. Operator's usage, on the **Agent** page, splits them by routine, and each recent run opens its thread.
+Every run is an Operator run, billed like a question to Operator. A run that splits its work costs more: each subagent is billed the same way. Runs count toward your workspace's monthly AI budget. Operator's usage, on the **Agent** page, splits them by routine, and each recent run opens its thread.
 
 ## Rules and limits
 
 | Rule | Value |
 | --- | --- |
 | Most frequent schedule | Once an hour |
-| Run time | Up to 4 minutes |
-| Model calls per run | 16 |
-| Tool calls per run | 50 |
+| Run time | Up to 12 minutes |
+| Model calls per run | 16, and 16 for each subagent |
+| Tool calls per run | 50, and 50 for each subagent |
+| Subagents per run | 8, up to 4 at a time |
 | Failed model calls retried | Twice, when the provider timed out or was overloaded |
 | Failures before a routine pauses | 3 in a row |
 | Instructions length | 8,000 characters |

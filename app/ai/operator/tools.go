@@ -36,6 +36,7 @@ type Step struct {
 	OK        bool   `json:"ok"`
 	Draft     string `json:"draft,omitempty"`
 	Changeset string `json:"changeset_id,omitempty"`
+	Subagent  int    `json:"subagent,omitempty"`
 }
 
 /*
@@ -65,6 +66,8 @@ type tool struct {
 	routine bool
 	group   string
 	was     map[string]string
+	/* Whether subagents are kept from the tool, and whether it runs with no other call beside it. */
+	mainOnly, alone bool
 }
 
 /*
@@ -72,7 +75,7 @@ registry returns every tool by name.
 */
 func (e *Engine) registry(s *session) map[string]tool {
 	all := slices.Concat(e.conversationTools(), e.knowledgeTools(), e.insightTools(), e.procedureTools(),
-		e.writeTools(), e.actionTools(s), e.routineTools(), e.githubTools())
+		e.writeTools(), e.actionTools(s), e.routineTools(), e.githubTools(), []tool{e.subagentsTool()})
 	out := make(map[string]tool, len(all))
 	for _, t := range all {
 		if handle, was := t.handle, t.was; len(was) > 0 {
@@ -115,6 +118,9 @@ the routine tools only to a routine.
 */
 func (e *Engine) offers(s *session, t tool) bool {
 	if s.routine == nil && t.routine {
+		return false
+	}
+	if s.sub != nil && t.mainOnly {
 		return false
 	}
 	if s.routine != nil && !s.routine.allows(e, t) {

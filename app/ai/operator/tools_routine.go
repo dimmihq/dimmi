@@ -51,16 +51,19 @@ func (e *Engine) routineTools() []tool {
 			Name:        "get_routine_state",
 			Description: "Read what this routine kept from its earlier runs, such as cursors and what it covered.",
 			Schema:      schema(`{"type":"object","properties":{}}`),
-		}, handle: e.routineGetState, routine: true},
-		{spec: contracts.ToolSpec{
-			Name: "save_routine_state",
-			Description: "Save what the next run of this routine needs, as a JSON object of at most 64 KB. " +
-				"Keys given replace the saved ones; every other saved key stays.",
-			Schema: schema(`{"type":"object","required":["state"],"properties":{` +
-				`"state":{"type":"object","description":"What to save, such as {\"next_offset\": 15}."},` +
-				`"replace_everything":{"type":"boolean","description":"true to drop every key saved before ` +
-				`and keep only this object. Leave out to keep them."}}}`),
-		}, handle: e.routineSetState, routine: true, was: map[string]string{"replace": "replace_everything"}},
+		}, handle: e.routineGetState, routine: true, mainOnly: true},
+		{
+			spec: contracts.ToolSpec{
+				Name: "save_routine_state",
+				Description: "Save what the next run of this routine needs, as a JSON object of at most 64 KB. " +
+					"Keys given replace the saved ones; every other saved key stays.",
+				Schema: schema(`{"type":"object","required":["state"],"properties":{` +
+					`"state":{"type":"object","description":"What to save, such as {\"next_offset\": 15}."},` +
+					`"replace_everything":{"type":"boolean","description":"true to drop every key saved before ` +
+					`and keep only this object. Leave out to keep them."}}}`),
+			}, handle: e.routineSetState, routine: true, mainOnly: true,
+			was: map[string]string{"replace": "replace_everything"},
+		},
 		{spec: contracts.ToolSpec{
 			Name: "report_nothing_to_change",
 			Description: "Say that nothing needs the team's attention this run, so nobody is notified. " +
@@ -68,7 +71,7 @@ func (e *Engine) routineTools() []tool {
 			Schema: schema(`{"type":"object","required":["reason"],"properties":{` +
 				`"reason":{"type":"string","maxLength":500,"description":"One line on what you checked and ` +
 				`why nothing needs changing."}}}`),
-		}, handle: e.markNoop, routine: true},
+		}, handle: e.markNoop, routine: true, mainOnly: true},
 		{
 			spec: contracts.ToolSpec{
 				Name: "list_recent_suggestions",
