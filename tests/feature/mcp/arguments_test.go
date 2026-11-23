@@ -1,6 +1,7 @@
 package mcp_test
 
 import (
+	"encoding/json"
 	"strings"
 	"testing"
 
@@ -184,6 +185,64 @@ func TestArguments(t *testing.T) {
 		assert.False(t, res.IsError, res.Text)
 		assert.Contains(t, res.Text, "ana@example.com")
 		assert.NotContains(t, res.Text, "bo@example.com")
+	})
+
+	t.Run("explains the fields inside an argument", func(t *testing.T) {
+		t.Parallel()
+		d := tests.NewDesk(t)
+		_, token := d.TC.MintToken(d.TC.Workspace.Owner, "*")
+
+		tools, _, err := agent(t, d, token).ListTools(t.Context(), "")
+		require.NoError(t, err)
+
+		for _, tool := range tools {
+			if tool.Name != "dimmi_create_conversation" {
+				continue
+			}
+
+			var schema struct {
+				Properties map[string]struct {
+					Properties map[string]struct {
+						Description string `json:"description"`
+					} `json:"properties"`
+				} `json:"properties"`
+			}
+			require.NoError(t, json.Unmarshal(tool.InputSchema, &schema))
+			assert.Contains(t, schema.Properties["contact"].Properties["email"].Description, "@")
+		}
+	})
+
+	t.Run("names a field an argument does not have, and the fields it has", func(t *testing.T) {
+		t.Parallel()
+		d := tests.NewDesk(t)
+		_, token := d.TC.MintToken(d.TC.Workspace.Owner, "*")
+
+		res, err := agent(t, d, token).CallTool(t.Context(), "dimmi_create_conversation", map[string]any{
+			"inbox_id": d.InboxID(), "conversation_body": "Hello", "author": "contact",
+			"contact": map[string]any{"mail": "ana@example.com"},
+		})
+		require.NoError(t, err)
+
+		assert.True(t, res.IsError)
+		assert.Contains(t, res.Text, `"contact.mail" is not a field of "contact".`)
+		assert.Contains(t, res.Text, "Its fields: email, external_id, id, name.")
+		assert.NotContains(t, res.Text, "validating")
+	})
+
+	t.Run("names a field missing inside a list's item", func(t *testing.T) {
+		t.Parallel()
+		d := tests.NewDesk(t)
+		id := article(t, d, "Refunds take 5 days.")
+		_, token := d.TC.MintToken(d.TC.Workspace.Owner, "*")
+
+		res, err := agent(t, d, token).CallTool(t.Context(), "dimmi_propose_article_edit", map[string]any{
+			"article_id": id, "suggestion_title": "Fix", "reason": "Stale.",
+			"edits": []map[string]any{{"replace": "10 days"}},
+		})
+		require.NoError(t, err)
+
+		assert.True(t, res.IsError)
+		assert.Contains(t, res.Text, `"edits.find" is required and missing.`)
 	})
 
 	t.Run("names the API's refused field by the argument the model sent", func(t *testing.T) {

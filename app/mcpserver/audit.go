@@ -159,7 +159,8 @@ func unclear(b built) []string {
 
 /*
 unwritten lists the arguments of a tool nobody explained: those whose
-description is only what their name and type say.
+description is only what their name and type say, and the fields
+inside an argument that have none.
 */
 func unwritten(b built) []string {
 	var out []string
@@ -169,6 +170,37 @@ func unwritten(b built) []string {
 		if text, _ := schema["description"].(string); text == plainText(name, schema) {
 			out = append(out, b.def.Name+": "+name)
 		}
+
+		for _, path := range undescribed(schema, name) {
+			out = append(out, b.def.Name+": "+path)
+		}
+	}
+
+	return out
+}
+
+/*
+undescribed lists the fields inside a schema that nothing explains, by
+their path.
+*/
+func undescribed(schema map[string]any, path string) []string {
+	var out []string
+
+	for name, raw := range asMap(schema["properties"]) {
+		field := asMap(raw)
+		if field == nil {
+			continue
+		}
+
+		if text, _ := field["description"].(string); text == "" {
+			out = append(out, path+"."+name)
+		}
+
+		out = append(out, undescribed(field, path+"."+name)...)
+	}
+
+	if items := asMap(schema["items"]); items != nil {
+		out = append(out, undescribed(items, path)...)
 	}
 
 	return out

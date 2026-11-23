@@ -164,7 +164,7 @@ func (b built) inputSchema() map[string]any {
 	properties := map[string]any{}
 
 	for name, api := range b.names.api {
-		schema := maps.Clone(asMap(fields[api]))
+		schema := b.describeFields(maps.Clone(asMap(fields[api])), name)
 		schema["description"] = b.argumentText(name, api, schema)
 		properties[name] = schema
 	}
@@ -193,6 +193,43 @@ func (b built) inputSchema() map[string]any {
 	}
 
 	return input
+}
+
+/*
+describeFields returns a schema with the fields inside it explained,
+each by its path from the argument: contact.email, or edits.find for a
+field of each item of a list. Only what it changes is copied.
+*/
+func (b built) describeFields(schema map[string]any, path string) map[string]any {
+	if fields := asMap(schema["properties"]); fields != nil {
+		described := make(map[string]any, len(fields))
+
+		for name, raw := range fields {
+			field := asMap(raw)
+			if field == nil {
+				described[name] = raw
+
+				continue
+			}
+
+			at := path + "." + name
+			field = b.describeFields(maps.Clone(field), at)
+
+			if text, ok := b.written[at]; ok {
+				field["description"] = text
+			}
+
+			described[name] = field
+		}
+
+		schema["properties"] = described
+	}
+
+	if items := asMap(schema["items"]); items != nil {
+		schema["items"] = b.describeFields(maps.Clone(items), path)
+	}
+
+	return schema
 }
 
 /*

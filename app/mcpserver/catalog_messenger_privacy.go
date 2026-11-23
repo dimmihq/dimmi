@@ -308,7 +308,7 @@ func widgetParams() map[string]string {
 		"help_center_id": "Id of the help center (hc_...) the help tab shows. Find it with " +
 			"dimmi_list_help_centers.",
 		"home_links": "Replaces the home screen links: each a title, an https or mailto url and an icon " +
-			"(calendar, book or link).",
+			"(link, calendar, book, mail, phone, chat, video or help).",
 	}
 }
 

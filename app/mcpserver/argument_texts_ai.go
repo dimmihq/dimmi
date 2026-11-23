@@ -11,8 +11,6 @@
 
 package mcpserver
 
-import "maps"
-
 /*
 aiTexts returns the texts written for these tools.
 */
@@ -20,16 +18,17 @@ func aiTexts() map[string]map[string]string {
 	out := map[string]map[string]string{}
 	for _, part := range []map[string]map[string]string{
 		aiTextsPart1(), aiTextsPart2(), aiTextsPart3(), aiTextsPart4(), aiTextsPart5(), aiTextsPart6(),
-		aiTextsPart7(), aiTextsPart8(), aiTextsPart9(),
+		aiTextsPart7(), aiTextsPart8(),
 	} {
-		maps.Copy(out, part)
+		mergeTexts(out, part)
 	}
 
 	return out
 }
 
 /*
-aiTextsPart1 returns the texts of create_ai_action.
+aiTextsPart1 returns texts of create_ai_action,
+create_ai_action_connection.
 */
 func aiTextsPart1() map[string]map[string]string {
 	return map[string]map[string]string{
@@ -60,20 +59,22 @@ func aiTextsPart1() map[string]map[string]string {
 			"status": "Has no effect when creating: a new action always starts as a draft and goes live " +
 				"through publish_ai_action. Leave it out.",
 		},
-	}
-}
-
-/*
-aiTextsPart2 returns the texts of create_ai_action_connection,
-create_ai_key.
-*/
-func aiTextsPart2() map[string]map[string]string {
-	return map[string]map[string]string{
 		"create_ai_action_connection": {
 			"auth_config": "Non-secret auth settings as an object with header_name, query_param and prefix, " +
 				"each optional. auth_type api_key_header needs header_name, such as {\"header_name\": " +
 				"\"X-Api-Key\"}; api_key_query needs query_param, such as {\"query_param\": \"api_key\"}; " +
 				"bearer may set prefix to replace \"Bearer\".",
+		},
+	}
+}
+
+/*
+aiTextsPart2 returns texts of create_ai_action_connection, create_ai_key
+and the tools after them.
+*/
+func aiTextsPart2() map[string]map[string]string {
+	return map[string]map[string]string{
+		"create_ai_action_connection": {
 			"default_headers": "Headers sent with every request through this connection, as an object of " +
 				"header name to value, at most 10, values at most 256 characters, such as {\"X-Api-Version\": " +
 				"\"2024-01\"}. Not allowed: Authorization, Content-Type, Cookie, Host, User-Agent and names " +
@@ -88,15 +89,6 @@ func aiTextsPart2() map[string]map[string]string {
 				"(true or false); context_tokens, max_output_tokens (numbers). Such as {\"supports_tools\": " +
 				"false, \"context_tokens\": 32000}.",
 		},
-	}
-}
-
-/*
-aiTextsPart3 returns the texts of create_operator_routine,
-create_procedure_test_case.
-*/
-func aiTextsPart3() map[string]map[string]string {
-	return map[string]map[string]string{
 		"create_operator_routine": {
 			"cadence": "How often the routine runs: \"daily\", \"weekly\", \"monthly\", \"cron\" or \"once\". " +
 				"\"once\" also needs run_at; the exact time otherwise comes from cron_expression. A routine " +
@@ -114,6 +106,17 @@ func aiTextsPart3() map[string]map[string]string {
 				"help center ids) and github with installation_id, repositories (1 to 20, as owner/repo), " +
 				"base_branch and ignore_labels, such as {\"help_center_ids\": [\"hc_abc123\"], \"github\": " +
 				"{\"installation_id\": \"itg_abc123\", \"repositories\": [\"acme/app\"]}}.",
+		},
+	}
+}
+
+/*
+aiTextsPart3 returns texts of create_operator_routine,
+create_procedure_test_case and the tools after them.
+*/
+func aiTextsPart3() map[string]map[string]string {
+	return map[string]map[string]string{
+		"create_operator_routine": {
 			"template_key": "The template the new routine starts from; fields you leave out take its values. " +
 				"One of tpl_knowledge_gap_finder, tpl_github_pr_docs_sync, tpl_knowledge_staleness_audit, " +
 				"tpl_qa_procedure_digest or tpl_custom. Left out, it is tpl_custom. Such as " +
@@ -131,15 +134,6 @@ func aiTextsPart3() map[string]map[string]string {
 			"simulated_at": "The date and time the test pretends it is when it runs, as an ISO 8601 time, such " +
 				"as \"2026-12-24T18:00:00Z\". Left out, the test runs at the real current time.",
 		},
-	}
-}
-
-/*
-aiTextsPart4 returns the texts of publish_ai_action, publish_procedure
-and the tools after them.
-*/
-func aiTextsPart4() map[string]map[string]string {
-	return map[string]map[string]string{
 		"publish_ai_action": {
 			"acknowledge_warnings": "A list of text values that is accepted but not used: publishing an action " +
 				"reads only its note. Leave it out.",
@@ -154,6 +148,15 @@ func aiTextsPart4() map[string]map[string]string {
 				"own realtime channel while it happens. Only useful to a client listening on that channel; " +
 				"leave it out otherwise. Such as \"sim-7f3a2c\".",
 		},
+	}
+}
+
+/*
+aiTextsPart4 returns texts of simulate_procedure, test_ai_action and the
+tools after them.
+*/
+func aiTextsPart4() map[string]map[string]string {
+	return map[string]map[string]string{
 		"simulate_procedure": {
 			"action_mocks": "What each action answers instead of really being called, as an object keyed by " +
 				"action id; each value has status (HTTP status, 100 to 599) and body (any JSON), such as " +
@@ -175,14 +178,6 @@ func aiTextsPart4() map[string]map[string]string {
 			"version": "An optional text of at most 16 characters that is accepted but not used: a test always " +
 				"runs the action's working copy. Leave it out.",
 		},
-	}
-}
-
-/*
-aiTextsPart5 returns the texts of update_ai_action.
-*/
-func aiTextsPart5() map[string]map[string]string {
-	return map[string]map[string]string{
 		"update_ai_action": {
 			"body_encoding": "How the request body is sent: \"json\" or \"form\". Left out, it is \"json\". " +
 				"With \"form\" the body_template must be a flat object of plain values, such as {\"email\": " +
@@ -193,6 +188,17 @@ func aiTextsPart5() map[string]map[string]string {
 			"bound_arguments": "For an action on an MCP connection: arguments you fix yourself, hidden from " +
 				"the model and laid over what the model sends. An object of argument name to value; values may " +
 				"hold placeholders, such as {\"account_id\": \"{connection.account_id}\", \"limit\": 10}.",
+		},
+	}
+}
+
+/*
+aiTextsPart5 returns texts of update_ai_action,
+update_ai_action_connection.
+*/
+func aiTextsPart5() map[string]map[string]string {
+	return map[string]map[string]string{
+		"update_ai_action": {
 			"error_message_path": "Dotted path to the error message in the other system's JSON response, read " +
 				"when a call fails. Letters, digits, _ , - and # joined by dots, at most 200 characters, such " +
 				"as \"error.message\".",
@@ -211,14 +217,6 @@ func aiTextsPart5() map[string]map[string]string {
 				"\"published\". Any other value is refused, and \"published\" is refused for an action never " +
 				"published; use publish_ai_action for a draft. Such as \"disabled\".",
 		},
-	}
-}
-
-/*
-aiTextsPart6 returns the texts of update_ai_action_connection.
-*/
-func aiTextsPart6() map[string]map[string]string {
-	return map[string]map[string]string{
 		"update_ai_action_connection": {
 			"auth_config": "Non-secret auth settings as an object with header_name, query_param and prefix, " +
 				"each optional. auth_type api_key_header needs header_name, such as {\"header_name\": " +
@@ -234,19 +232,22 @@ func aiTextsPart6() map[string]map[string]string {
 				"starting with Dimmi-.",
 			"kind": "The connection's kind, \"http\" or \"mcp\". It is set when the connection is created and " +
 				"an update does not change it, so leave it out.",
-			"variables": "Named values the connection's actions can use in their templates as " +
-				"{connection.name}, as an object of name to text. At most 20; names are lowercase letters, " +
-				"digits and _, up to 40 characters; values up to 256 characters. Such as {\"account_id\": " +
-				"\"acct_42\", \"region\": \"eu\"}.",
 		},
 	}
 }
 
 /*
-aiTextsPart7 returns the texts of update_ai_agent, update_ai_key.
+aiTextsPart6 returns texts of update_ai_action_connection,
+update_ai_agent and the tools after them.
 */
-func aiTextsPart7() map[string]map[string]string {
+func aiTextsPart6() map[string]map[string]string {
 	return map[string]map[string]string{
+		"update_ai_action_connection": {
+			"variables": "Named values the connection's actions can use in their templates as " +
+				"{connection.name}, as an object of name to text. At most 20; names are lowercase letters, " +
+				"digits and _, up to 40 characters; values up to 256 characters. Such as {\"account_id\": " +
+				"\"acct_42\", \"region\": \"eu\"}.",
+		},
 		"update_ai_agent": {
 			"fallback_model": "The name of the backup model, saved alongside fallback_key_id (the backup " +
 				"provider connection). At most 120 characters; send null or empty to clear it. Use a model " +
@@ -269,18 +270,21 @@ func aiTextsPart7() map[string]map[string]string {
 				"json_schema, prompt_cache (true or false); context_tokens, max_output_tokens (numbers). Such " +
 				"as {\"supports_tools\": false, \"context_tokens\": 32000}.",
 		},
-	}
-}
-
-/*
-aiTextsPart8 returns the texts of update_operator_routine.
-*/
-func aiTextsPart8() map[string]map[string]string {
-	return map[string]map[string]string{
 		"update_operator_routine": {
 			"cadence": "How often the routine runs: \"daily\", \"weekly\", \"monthly\", \"cron\" or \"once\". " +
 				"\"once\" also needs run_at; the exact time otherwise comes from cron_expression. A routine " +
 				"runs at most once an hour. Such as \"weekly\".",
+		},
+	}
+}
+
+/*
+aiTextsPart7 returns texts of update_operator_routine,
+update_procedure_test_case.
+*/
+func aiTextsPart7() map[string]map[string]string {
+	return map[string]map[string]string{
+		"update_operator_routine": {
 			"delivery": "Who is told about the routine's runs, as an object of id lists: in_app_member_ids and " +
 				"email_member_ids (active teammates, at most 100 each) and slack_destination_ids (Slack " +
 				"notification destinations, at most 20), such as {\"in_app_member_ids\": [\"mem_abc123\"], " +
@@ -300,14 +304,6 @@ func aiTextsPart8() map[string]map[string]string {
 				"and works out the next run from now; a one-off routine with no run left also needs a new " +
 				"run_at. Such as \"paused\".",
 		},
-	}
-}
-
-/*
-aiTextsPart9 returns the texts of update_procedure_test_case.
-*/
-func aiTextsPart9() map[string]map[string]string {
-	return map[string]map[string]string{
 		"update_procedure_test_case": {
 			"action_mocks": "What each action answers instead of really being called, as an object keyed by " +
 				"action id; each value has status (HTTP status, 100 to 599) and body (any JSON), such as " +
@@ -317,6 +313,16 @@ func aiTextsPart9() map[string]map[string]string {
 				"handed_off, action_called or action_not_called (with action), action_order (action, before), " +
 				"branch_taken (step_id, branch then or else), reply_contains or reply_not_contains (text), " +
 				"llm_rubric (rubric). Such as [{\"type\": \"action_called\", \"action\": \"aac_abc123\"}].",
+		},
+	}
+}
+
+/*
+aiTextsPart8 returns texts of update_procedure_test_case.
+*/
+func aiTextsPart8() map[string]map[string]string {
+	return map[string]map[string]string{
+		"update_procedure_test_case": {
 			"messages": "The customer's scripted messages in order, 1 to 12, each an object with text (1 to " +
 				"4,000 characters) and optional confirm (true first confirms the writes waiting from the turn " +
 				"before; text may then be empty). Such as [{\"text\": \"I want a refund for order 1042\"}, " +

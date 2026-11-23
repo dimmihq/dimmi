@@ -11,8 +11,6 @@
 
 package mcpserver
 
-import "maps"
-
 /*
 otherTexts returns the texts written for these tools.
 */
@@ -20,16 +18,16 @@ func otherTexts() map[string]map[string]string {
 	out := map[string]map[string]string{}
 	for _, part := range []map[string]map[string]string{
 		otherTextsPart1(), otherTextsPart2(), otherTextsPart3(), otherTextsPart4(), otherTextsPart5(),
-		otherTextsPart6(), otherTextsPart7(), otherTextsPart8(), otherTextsPart9(), otherTextsPart10(),
+		otherTextsPart6(), otherTextsPart7(), otherTextsPart8(), otherTextsPart9(),
 	} {
-		maps.Copy(out, part)
+		mergeTexts(out, part)
 	}
 
 	return out
 }
 
 /*
-otherTextsPart1 returns the texts of change_feedback_status,
+otherTextsPart1 returns texts of change_feedback_status,
 create_attribute_definition and the tools after them.
 */
 func otherTextsPart1() map[string]map[string]string {
@@ -66,7 +64,7 @@ func otherTextsPart1() map[string]map[string]string {
 }
 
 /*
-otherTextsPart2 returns the texts of create_channel_whatsapp,
+otherTextsPart2 returns texts of create_channel_whatsapp,
 create_channel_whatsapp_account and the tools after them.
 */
 func otherTextsPart2() map[string]map[string]string {
@@ -103,8 +101,8 @@ func otherTextsPart2() map[string]map[string]string {
 }
 
 /*
-otherTextsPart3 returns the texts of create_conversation_bulk_change,
-create_conversation_feedback_post.
+otherTextsPart3 returns texts of create_conversation_bulk_change,
+create_conversation_feedback_post and the tools after them.
 */
 func otherTextsPart3() map[string]map[string]string {
 	return map[string]map[string]string{
@@ -121,14 +119,6 @@ func otherTextsPart3() map[string]map[string]string {
 				"characters. Only used when a new request is made with a title, not when post_id names an " +
 				"existing one. Such as Customers want to **export** reports as CSV.",
 		},
-	}
-}
-
-/*
-otherTextsPart4 returns the texts of create_widget_settings.
-*/
-func otherTextsPart4() map[string]map[string]string {
-	return map[string]map[string]string{
 		"create_widget_settings": {
 			"allow_anonymous": "Whether visitors may write in the messenger before they sign in to your " +
 				"product. true lets anonymous visitors start a session, false refuses them. New messengers " +
@@ -148,6 +138,17 @@ func otherTextsPart4() map[string]map[string]string {
 				"message while the team is away. Off by default. Example: true.",
 			"show_availability": "Whether the messenger shows visitors the team's availability. Part of the " +
 				"config the messenger loads; new messengers start with true. Example: false.",
+		},
+	}
+}
+
+/*
+otherTextsPart4 returns texts of create_widget_settings,
+list_conversations_behind_report_number and the tools after them.
+*/
+func otherTextsPart4() map[string]map[string]string {
+	return map[string]map[string]string{
+		"create_widget_settings": {
 			"show_branding": "Whether the messenger shows the 'Powered by' badge: true shows it, false hides " +
 				"it. On dimmi cloud, hiding is refused until the workspace has paid an invoice. Example: true.",
 			"show_team_avatars": "Whether the messenger shows visitors the team's avatars. Part of the config " +
@@ -160,16 +161,6 @@ func otherTextsPart4() map[string]map[string]string {
 				"the same keys as texts. null for a language removes all its words; up to 40 languages. Such " +
 				"as {\"fr\":{\"greeting\":\"Bonjour\"},\"de\":null}.",
 		},
-	}
-}
-
-/*
-otherTextsPart5 returns the texts of
-list_conversations_behind_report_number, list_imports and the tools
-after them.
-*/
-func otherTextsPart5() map[string]map[string]string {
-	return map[string]map[string]string{
 		"list_conversations_behind_report_number": {
 			"report_name": "The key of the report the number is on: overview, responsiveness, resolution, " +
 				"team, live, satisfaction, ai or help_center. Such as overview.",
@@ -188,6 +179,15 @@ func otherTextsPart5() map[string]map[string]string {
 				"default), link only returns it to pass on by hand. Either way the link sent before stops " +
 				"working. Such as link.",
 		},
+	}
+}
+
+/*
+otherTextsPart5 returns texts of send_whatsapp_template_to_conversation,
+update_attribute_definition and the tools after them.
+*/
+func otherTextsPart5() map[string]map[string]string {
+	return map[string]map[string]string{
 		"send_whatsapp_template_to_conversation": {
 			"client_message_id": "An id you make up for this send, 1 to 64 characters, so that a retried " +
 				"request finds the first message instead of sending twice. Such as 7f3c2b1a-send-1.",
@@ -201,15 +201,6 @@ func otherTextsPart5() map[string]map[string]string {
 				"the old list. Only for attributes whose data type is list; other types refuse any options. " +
 				"Such as [\"free\",\"pro\",\"enterprise\"].",
 		},
-	}
-}
-
-/*
-otherTextsPart6 returns the texts of update_broadcast,
-update_channel_whatsapp_template and the tools after them.
-*/
-func otherTextsPart6() map[string]map[string]string {
-	return map[string]map[string]string{
 		"update_broadcast": {
 			"holds": "List of who to leave out of a conversation broadcast, replacing the old list; only " +
 				"allowed on a draft whose channel is conversation. Values: customer_waiting (customers still " +
@@ -228,6 +219,17 @@ func otherTextsPart6() map[string]map[string]string {
 			"category": "The template's category at Meta: utility or marketing. Required. Such as utility.",
 			"footer": "Optional footer line under the message: plain text of at most 60 characters with no " +
 				"{{variables}}. Such as Reply STOP to opt out.",
+		},
+	}
+}
+
+/*
+otherTextsPart6 returns texts of update_channel_whatsapp_template,
+update_event_definition and the tools after them.
+*/
+func otherTextsPart6() map[string]map[string]string {
+	return map[string]map[string]string{
+		"update_channel_whatsapp_template": {
 			"header": "Optional text header above the message: at most 60 characters, with at most one " +
 				"variable written {{1}}, which needs a sample under \"header.1\". Such as Order {{1}}.",
 			"samples": "Object with a sample value for every variable in the header and body, which Meta " +
@@ -239,15 +241,6 @@ func otherTextsPart6() map[string]map[string]string {
 				"opens the event name to the messenger, false closes it. Example: true.",
 			"label": "The new name people see for the event, 1 to 80 characters. Such as Checkout started.",
 		},
-	}
-}
-
-/*
-otherTextsPart7 returns the texts of update_event_settings,
-update_feedback_board and the tools after them.
-*/
-func otherTextsPart7() map[string]map[string]string {
-	return map[string]map[string]string{
 		"update_event_settings": {
 			"messenger_new_events": "Whether the messenger may send any event name, defining the ones the " +
 				"workspace has not seen before. A plain boolean; leaving it out counts as false. Example: " +
@@ -269,6 +262,15 @@ func otherTextsPart7() map[string]map[string]string {
 			"indexing_enabled": "Whether search engines such as Google may index the help center's articles. " +
 				"false marks the site as not to be indexed. Example: true.",
 		},
+	}
+}
+
+/*
+otherTextsPart7 returns texts of update_inbox_preferences, update_member
+and the tools after them.
+*/
+func otherTextsPart7() map[string]map[string]string {
+	return map[string]map[string]string{
 		"update_inbox_preferences": {
 			"sidebar": "Free-form object of the caller's own inbox sidebar settings. It replaces the whole " +
 				"stored object, so send every key to keep. The dimmi app keeps keys such as pinned_views, " +
@@ -285,15 +287,6 @@ func otherTextsPart7() map[string]map[string]string {
 				"keys are widget, email or api, values are whole numbers from 1 to 500. It replaces the whole " +
 				"stored object. Such as {\"email\":20,\"widget\":5}.",
 		},
-	}
-}
-
-/*
-otherTextsPart8 returns the texts of update_my_availability,
-update_notification_settings and the tools after them.
-*/
-func otherTextsPart8() map[string]map[string]string {
-	return map[string]map[string]string{
 		"update_my_availability": {
 			"conversation_access": "Which conversations the member sees: all, assigned, teams or " +
 				"all_except_teams. This tool changes the caller's own member, and nobody can change their own " +
@@ -308,6 +301,15 @@ func otherTextsPart8() map[string]map[string]string {
 			"status": "Whether the caller's own member is active or deactivated. Members cannot deactivate " +
 				"themselves, so deactivated is refused here. Such as active.",
 		},
+	}
+}
+
+/*
+otherTextsPart8 returns texts of update_notification_settings,
+update_report_digest and the tools after them.
+*/
+func otherTextsPart8() map[string]map[string]string {
+	return map[string]map[string]string{
 		"update_notification_settings": {
 			"quiet_hours_enabled": "Whether the caller's own quiet hours are on. The hours themselves are set " +
 				"with quiet_hours_start, quiet_hours_end and quiet_hours_days. Example: true.",
@@ -317,14 +319,6 @@ func otherTextsPart8() map[string]map[string]string {
 				"the old list; conversations are matched on their channel, such as widget, email, api, slack, " +
 				"whatsapp, facebook, instagram. The values are not checked. Such as [\"email\",\"widget\"].",
 		},
-	}
-}
-
-/*
-otherTextsPart9 returns the texts of update_widget_settings.
-*/
-func otherTextsPart9() map[string]map[string]string {
-	return map[string]map[string]string{
 		"update_widget_settings": {
 			"allow_anonymous": "Whether visitors may write in the messenger before they sign in to your " +
 				"product. true lets anonymous visitors start a session, false refuses them. New messengers " +
@@ -346,6 +340,17 @@ func otherTextsPart9() map[string]map[string]string {
 				"config the messenger loads; new messengers start with true. Example: false.",
 			"show_branding": "Whether the messenger shows the 'Powered by' badge: true shows it, false hides " +
 				"it. On dimmi cloud, hiding is refused until the workspace has paid an invoice. Example: true.",
+		},
+	}
+}
+
+/*
+otherTextsPart9 returns texts of update_widget_settings,
+update_workspace.
+*/
+func otherTextsPart9() map[string]map[string]string {
+	return map[string]map[string]string{
+		"update_widget_settings": {
 			"show_team_avatars": "Whether the messenger shows visitors the team's avatars. Part of the config " +
 				"the messenger loads; new messengers start with true. Example: false.",
 			"texts": "Object of the messenger's own words: text key to plain text. Only known keys such as " +
@@ -356,14 +361,6 @@ func otherTextsPart9() map[string]map[string]string {
 				"the same keys as texts. null for a language removes all its words; up to 40 languages. Such " +
 				"as {\"fr\":{\"greeting\":\"Bonjour\"},\"de\":null}.",
 		},
-	}
-}
-
-/*
-otherTextsPart10 returns the texts of update_workspace.
-*/
-func otherTextsPart10() map[string]map[string]string {
-	return map[string]map[string]string{
 		"update_workspace": {
 			"gif_picker": "Whether teammates may search GIFs from the reply composer. On unless turned off; " +
 				"the picker also needs the install to have a GIF search key. Example: false.",

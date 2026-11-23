@@ -45,9 +45,7 @@ func (b built) read(args map[string]any) (map[string]any, error) {
 
 		if target != "" && args[name] != nil {
 			out[target] = coerce(args[name], asMap(properties[target]))
-			if wrong := refuse(target, out[target], asMap(properties[target])); wrong != "" {
-				problem.wrong = append(problem.wrong, wrong)
-			}
+			problem.wrong = append(problem.wrong, refuseAll(target, out[target], asMap(properties[target]))...)
 		}
 	}
 
@@ -122,6 +120,63 @@ func coerce(value any, schema map[string]any) any {
 	}
 
 	return value
+}
+
+/*
+refuseAll says in plain words everything wrong with a value and the
+fields inside it: a value its argument does not take, a field an object
+does not have, a field it must have and lacks.
+*/
+func refuseAll(path string, value any, schema map[string]any) []string {
+	var out []string
+	if wrong := refuse(path, value, schema); wrong != "" {
+		out = append(out, wrong)
+	}
+
+	if items, list := value.([]any); list {
+		for _, item := range items {
+			out = append(out, refuseAll(path, item, asMap(schema["items"]))...)
+		}
+
+		return out
+	}
+
+	return append(out, refuseFields(path, asMap(value), schema)...)
+}
+
+/*
+refuseFields says what is wrong with an object's fields: one it does
+not have, one it must have and lacks, and what each one's value breaks.
+*/
+func refuseFields(path string, object, schema map[string]any) []string {
+	fields := asMap(schema["properties"])
+	if object == nil || fields == nil {
+		return nil
+	}
+
+	var out []string
+
+	for _, name := range slices.Sorted(maps.Keys(object)) {
+		field, known := fields[name]
+		if !known && schema["additionalProperties"] == false {
+			out = append(out, fmt.Sprintf("%q is not a field of %q. Its fields: %s.", path+"."+name, path,
+				strings.Join(slices.Sorted(maps.Keys(fields)), ", ")))
+		}
+
+		if known && object[name] != nil {
+			out = append(out, refuseAll(path+"."+name, object[name], asMap(field))...)
+		}
+	}
+
+	for _, required := range asList(schema["required"]) {
+		name := fmt.Sprint(required)
+		if _, sent := object[name]; !sent {
+			text, _ := asMap(fields[name])["description"].(string)
+			out = append(out, strings.TrimSpace(fmt.Sprintf("%q is required and missing. %s", path+"."+name, text)))
+		}
+	}
+
+	return out
 }
 
 /*

@@ -11,8 +11,6 @@
 
 package mcpserver
 
-import "maps"
-
 /*
 ticketTexts returns the texts written for these tools.
 */
@@ -22,14 +20,14 @@ func ticketTexts() map[string]map[string]string {
 		ticketTextsPart1(), ticketTextsPart2(), ticketTextsPart3(), ticketTextsPart4(), ticketTextsPart5(),
 		ticketTextsPart6(), ticketTextsPart7(), ticketTextsPart8(), ticketTextsPart9(),
 	} {
-		maps.Copy(out, part)
+		mergeTexts(out, part)
 	}
 
 	return out
 }
 
 /*
-ticketTextsPart1 returns the texts of convert_conversation_to_ticket,
+ticketTextsPart1 returns texts of convert_conversation_to_ticket,
 create_integration_key_installation and the tools after them.
 */
 func ticketTextsPart1() map[string]map[string]string {
@@ -68,7 +66,7 @@ func ticketTextsPart1() map[string]map[string]string {
 }
 
 /*
-ticketTextsPart2 returns the texts of create_ticket_issue,
+ticketTextsPart2 returns texts of create_ticket_issue,
 create_ticket_link and the tools after them.
 */
 func ticketTextsPart2() map[string]map[string]string {
@@ -104,7 +102,8 @@ func ticketTextsPart2() map[string]map[string]string {
 }
 
 /*
-ticketTextsPart3 returns the texts of create_ticket_type.
+ticketTextsPart3 returns texts of create_ticket_type,
+create_ticket_type_field.
 */
 func ticketTextsPart3() map[string]map[string]string {
 	return map[string]map[string]string{
@@ -127,14 +126,6 @@ func ticketTextsPart3() map[string]map[string]string {
 				"tickets go: a list of objects with the dropped state and one of the kept states, such as " +
 				"[{\"from_state_id\": \"tkts_...\", \"to_state_id\": \"tkts_...\"}].",
 		},
-	}
-}
-
-/*
-ticketTextsPart4 returns the texts of create_ticket_type_field.
-*/
-func ticketTextsPart4() map[string]map[string]string {
-	return map[string]map[string]string{
 		"create_ticket_type_field": {
 			"ai_auto": "true to let the AI save its proposed value straight into this field on a new ticket " +
 				"when the field is empty; false to keep it as a suggestion a teammate accepts.",
@@ -145,6 +136,17 @@ func ticketTextsPart4() map[string]map[string]string {
 				"\"single_choice\". Set when the field is added; it cannot be changed later.",
 			"editable_customer": "true to let the customer fill or change this field on their own tickets; " +
 				"false for team only. Turning it on also makes the field visible to the customer.",
+		},
+	}
+}
+
+/*
+ticketTextsPart4 returns texts of create_ticket_type_field,
+delete_ticket_issue and the tools after them.
+*/
+func ticketTextsPart4() map[string]map[string]string {
+	return map[string]map[string]string{
+		"create_ticket_type_field": {
 			"key": "The short name field values are stored under: lowercase letters, digits and underscores, " +
 				"starting with a letter, at most 40 characters, such as \"order_number\". Unique within the " +
 				"type; set when the field is added and cannot be changed later.",
@@ -164,15 +166,6 @@ func ticketTextsPart4() map[string]map[string]string {
 			"visible_customer": "true to show this field and its value to the customer on their tickets; false " +
 				"to keep it for the team. It is always true while editable_customer is true.",
 		},
-	}
-}
-
-/*
-ticketTextsPart5 returns the texts of delete_ticket_issue,
-delete_ticket_state and the tools after them.
-*/
-func ticketTextsPart5() map[string]map[string]string {
-	return map[string]map[string]string{
 		"delete_ticket_issue": {
 			"remove_from_tool": "true to also take back what dimmi wrote on the issue in its tool, such as the " +
 				"customer impact and the link back to the ticket; false or left out leaves them there. The " +
@@ -182,6 +175,15 @@ func ticketTextsPart5() map[string]map[string]string {
 			"move_to": "Required. The id of another live state of the same group that this state's tickets, " +
 				"and the types using it, move to, such as \"tkts_01hzy3v8k2m4n6p8q0r2s4t6v8\".",
 		},
+	}
+}
+
+/*
+ticketTextsPart5 returns texts of escalate_ticket,
+list_integration_installation_issue_options and the tools after them.
+*/
+func ticketTextsPart5() map[string]map[string]string {
+	return map[string]map[string]string{
 		"escalate_ticket": {
 			"fields": "A JSON object of field values, keyed by the field keys of the back-office ticket type " +
 				"in type_id. Text is a string, numbers a number, boolean true or false, date \"YYYY-MM-DD\", " +
@@ -197,15 +199,6 @@ func ticketTextsPart5() map[string]map[string]string {
 				"states of Linear or Jira, or a repository like \"acme/api\" for GitHub environments. Leave " +
 				"out for lists with no parent, such as teams.",
 		},
-	}
-}
-
-/*
-ticketTextsPart6 returns the texts of list_tickets,
-update_integration_installation_issue_settings.
-*/
-func ticketTextsPart6() map[string]map[string]string {
-	return map[string]map[string]string{
 		"list_tickets": {
 			"created_after": "Only tickets created at or after this time, as an RFC 3339 date and time with a " +
 				"time zone, such as \"2026-01-15T00:00:00Z\".",
@@ -225,6 +218,18 @@ func ticketTextsPart6() map[string]map[string]string {
 			"deploy_environment": "The GitHub environment whose successful deployments count as a fix shipped, " +
 				"by name from the \"environments\" list of the repository, such as \"production\". Empty means " +
 				"any environment of the deploy repository.",
+		},
+	}
+}
+
+/*
+ticketTextsPart6 returns texts of
+update_integration_installation_issue_settings, update_sla_policy and
+the tools after them.
+*/
+func ticketTextsPart6() map[string]map[string]string {
+	return map[string]map[string]string{
+		"update_integration_installation_issue_settings": {
 			"deploy_repository": "The GitHub repository whose successful deployments mark done issues as " +
 				"shipped, as owner/name from the tool's \"teams\" list, such as \"acme/api\". Empty turns this " +
 				"off.",
@@ -238,14 +243,6 @@ func ticketTextsPart6() map[string]map[string]string {
 				"ticket state a ticket moves to, such as {\"started\": \"tkts_01hzy3v8k2m4n6p8q0r2s4t6v8\"}. " +
 				"It replaces the whole mapping; an empty value drops that status.",
 		},
-	}
-}
-
-/*
-ticketTextsPart7 returns the texts of update_sla_policy, update_ticket.
-*/
-func ticketTextsPart7() map[string]map[string]string {
-	return map[string]map[string]string{
 		"update_sla_policy": {
 			"breach_priority": "The priority a ticket or conversation is raised to when it misses a target of " +
 				"this policy: low, medium, high or urgent, such as \"urgent\". It is only raised, never " +
@@ -261,6 +258,16 @@ func ticketTextsPart7() map[string]map[string]string {
 		"update_ticket": {
 			"accept_suggestions": "The keys of fields whose AI-suggested value should be saved as the field's " +
 				"value, as a list such as [\"order_number\", \"reason\"]. Keys with no suggestion are skipped.",
+		},
+	}
+}
+
+/*
+ticketTextsPart7 returns texts of update_ticket, update_ticket_field.
+*/
+func ticketTextsPart7() map[string]map[string]string {
+	return map[string]map[string]string{
+		"update_ticket": {
 			"fields": "A JSON object of field values to change, keyed by the field keys of the ticket's type; " +
 				"other fields stay. A null removes a value. Dates are \"YYYY-MM-DD\", choices must be among " +
 				"the field's options, such as {\"order_number\": \"A-1042\", \"reason\": null}.",
@@ -268,15 +275,6 @@ func ticketTextsPart7() map[string]map[string]string {
 			"version": "The version number of the ticket you last read, such as 7. When sent, the change is " +
 				"refused if the ticket has changed since. Leave out to change it regardless.",
 		},
-	}
-}
-
-/*
-ticketTextsPart8 returns the texts of update_ticket_field,
-update_ticket_settings.
-*/
-func ticketTextsPart8() map[string]map[string]string {
-	return map[string]map[string]string{
 		"update_ticket_field": {
 			"ai_auto": "true to let the AI save its proposed value straight into this field on a new ticket " +
 				"when the field is empty; false to keep it as a suggestion a teammate accepts.",
@@ -296,6 +294,17 @@ func ticketTextsPart8() map[string]map[string]string {
 				"ticket; false if it may be left empty.",
 			"required_create_customer": "true if a customer must fill this field when they open a ticket " +
 				"themselves; false if they may leave it empty.",
+		},
+	}
+}
+
+/*
+ticketTextsPart8 returns texts of update_ticket_field,
+update_ticket_settings and the tools after them.
+*/
+func ticketTextsPart8() map[string]map[string]string {
+	return map[string]map[string]string{
+		"update_ticket_field": {
 			"required_resolve": "true if this field must have a value before a ticket can move to a resolved " +
 				"state; false if not.",
 			"show_when": "Show this field only when another field of the same type has a value: a JSON object " +
@@ -308,15 +317,6 @@ func ticketTextsPart8() map[string]map[string]string {
 			"auto_link_duplicates": "true to link a new conversation to the tracker ticket it best matches " +
 				"without asking; false to only suggest the match for a teammate to accept.",
 		},
-	}
-}
-
-/*
-ticketTextsPart9 returns the texts of update_ticket_state,
-update_ticket_type.
-*/
-func ticketTextsPart9() map[string]map[string]string {
-	return map[string]map[string]string{
 		"update_ticket_state": {
 			"customer_label": "What the customer sees as the status while a ticket is in this state, such as " +
 				"\"With our billing team\". At most 80 characters. Left empty, the state name is used.",
@@ -334,6 +334,16 @@ func ticketTextsPart9() map[string]map[string]string {
 				"not hear back.\" At most 2000 characters. Send null to send no message.",
 			"company_sharing": "true to let verified customers also see tickets of this type opened by others " +
 				"in their own company; false to show each customer only their own.",
+		},
+	}
+}
+
+/*
+ticketTextsPart9 returns texts of update_ticket_type.
+*/
+func ticketTextsPart9() map[string]map[string]string {
+	return map[string]map[string]string{
+		"update_ticket_type": {
 			"customer_visible": "true to let customers open tickets of this type and see them; false to keep " +
 				"the type for the team only.",
 			"kind": "The type's kind: customer, back_office or tracker. It is set when the type is added and " +
