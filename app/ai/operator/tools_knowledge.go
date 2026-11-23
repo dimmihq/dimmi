@@ -225,9 +225,10 @@ func (e *Engine) getArticle(ctx context.Context, s *session, args json.RawMessag
 	if err != nil {
 		return result{}, err
 	}
-	text := fmt.Sprintf("Article %s (id %s)\nStatus: %s%s\nVisibility: %s\nDescription: %s\n\n%s",
+	text := fmt.Sprintf("Article %s (id %s)\nStatus: %s%s\nVisibility: %s\nLink: %s\nDescription: %s\n\n%s",
 		a.Title, models.PublicID(models.PrefixArticle, a.ID), a.Status, pendingMark(a), a.Visibility,
-		deref(a.Description), truncate(a.BodyMarkdown, 20000))
+		e.link(s, linkArticle, models.PrefixArticle, a.ID), deref(a.Description),
+		truncate(a.BodyMarkdown, 20000))
 	return result{text: text, step: Step{Tool: "get_article_by_id", Summary: "Read the article " + a.Title}}, nil
 }
 
@@ -263,8 +264,9 @@ func (e *Engine) getProcedure(ctx context.Context, s *session, args json.RawMess
 	if err != nil {
 		return result{}, err
 	}
-	text := fmt.Sprintf("Procedure %s (id %s), %s\nWorking copy: %s\nLive copy: %s", p.Name,
-		models.PublicID(models.PrefixProcedure, p.ID), p.Status, truncate(string(p.Draft), 20000),
+	text := fmt.Sprintf("Procedure %s (id %s), %s\nLink: %s\nWorking copy: %s\nLive copy: %s", p.Name,
+		models.PublicID(models.PrefixProcedure, p.ID), p.Status,
+		e.link(s, linkProcedure, models.PrefixProcedure, p.ID), truncate(string(p.Draft), 20000),
 		truncate(string(p.Live), 20000))
 	return result{text: text, step: Step{Tool: "get_procedure_by_id", Summary: "Read the procedure " + p.Name}}, nil
 }

@@ -100,7 +100,7 @@ func (e *Engine) findRelated(ctx context.Context, s *session, args json.RawMessa
 		return result{text: "No related conversations found. Try a topic of two to four plain words; when " +
 			"there are none, say your recommendation is a guess.", step: st}, nil
 	}
-	return result{text: relatedText(hits), step: st}, nil
+	return result{text: e.relatedText(s, hits), step: st}, nil
 }
 
 /*
@@ -174,12 +174,13 @@ func (e *Engine) onTopic(ctx context.Context, s *session, topic string, number i
 relatedText writes related conversations and the count of who handled
 them.
 */
-func relatedText(hits []related) string {
+func (e *Engine) relatedText(s *session, hits []related) string {
 	var b strings.Builder
 	loaded := make([]conversations.Loaded, len(hits))
 	for i, hit := range hits {
 		loaded[i] = hit.loaded
 		writeRelated(&b, hit.loaded)
+		fmt.Fprintf(&b, "  link %s\n", e.conversationLink(s, hit.loaded.Conversation.ID))
 		if text := strings.TrimSpace(hit.text); text != "" {
 			fmt.Fprintf(&b, "  what was asked and how it was answered: %s\n", untrusted(truncate(text, 600)))
 		}

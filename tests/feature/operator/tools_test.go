@@ -130,6 +130,28 @@ func TestOperatorTools(t *testing.T) {
 		member.PatchJSON("/api/v1/operator/settings", testkit.JSON{"enabled": false}).AssertForbidden()
 	})
 
+	t.Run("gives a real link with a conversation and an article it reads", func(t *testing.T) {
+		t.Parallel()
+		k := newDesk(t)
+		conv := k.conversation("Where is my refund?")
+		article := k.article("Refunds")
+		k.llm.Script(
+			tools(call("get_conversation_by_number", map[string]any{}), call("get_article_by_id", map[string]any{
+				"article_id": article,
+			})),
+			reply("Here."),
+		)
+
+		k.ask(k.thread(conv), "Send me the links").AssertOK()
+
+		sent := k.llm.Sent()
+		assert.Contains(t, sent[0].System[0].Text, "Never build,\n  shorten or guess an address")
+		results := sent[1].Messages[len(sent[1].Messages)-2].Parts[0].Text +
+			sent[1].Messages[len(sent[1].Messages)-1].Parts[0].Text
+		assert.Contains(t, results, "/inbox/all/"+conv)
+		assert.Contains(t, results, "/help-center/"+article)
+	})
+
 	t.Run("withholds tools whose changes are switched off", func(t *testing.T) {
 		t.Parallel()
 		k := newDesk(t)

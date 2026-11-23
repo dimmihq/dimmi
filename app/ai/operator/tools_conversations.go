@@ -120,6 +120,7 @@ func (e *Engine) getConversation(ctx context.Context, s *session, args json.RawM
 	s.tainted = true
 	var b strings.Builder
 	writeConversation(&b, loaded)
+	fmt.Fprintf(&b, "Link: %s\n", e.conversationLink(s, loaded.Conversation.ID))
 	writeTimeline(&b, timeline)
 	n := loaded.Conversation.Number
 	st := Step{Tool: "get_conversation_by_number", Summary: fmt.Sprintf("Read #%d", n)}
@@ -214,8 +215,9 @@ func (e *Engine) searchConversations(ctx context.Context, s *session, args json.
 	var b strings.Builder
 	for _, hit := range found.Conversations {
 		c := hit.Conversation.Conversation
-		fmt.Fprintf(&b, "#%d %s · %s · %s · %s\n", c.Number, untrusted(deref(c.Subject)), c.Status,
-			untrusted(deref(hit.Conversation.Contact.Name)), c.CreatedAt.UTC().Format("2006-01-02"))
+		fmt.Fprintf(&b, "#%d %s · %s · %s · %s · link %s\n", c.Number, untrusted(deref(c.Subject)), c.Status,
+			untrusted(deref(hit.Conversation.Contact.Name)), c.CreatedAt.UTC().Format("2006-01-02"),
+			e.conversationLink(s, c.ID))
 		if hit.Highlight != "" {
 			fmt.Fprintf(&b, "  match: %s\n", untrusted(hit.Highlight))
 		}
@@ -252,8 +254,9 @@ func (e *Engine) getCustomer(ctx context.Context, s *session, args json.RawMessa
 	fmt.Fprintf(&b, "Attributes: %s\n", untrusted(string(c.CustomAttributes)))
 	fmt.Fprintf(&b, "Other conversations (%d):\n", about.PastTotal)
 	for _, p := range about.Past {
-		fmt.Fprintf(&b, "  #%d %s · %s · %s\n", p.Conversation.Number, untrusted(deref(p.Conversation.Subject)),
-			p.Conversation.Status, p.Conversation.CreatedAt.UTC().Format("2006-01-02"))
+		fmt.Fprintf(&b, "  #%d %s · %s · %s · link %s\n", p.Conversation.Number,
+			untrusted(deref(p.Conversation.Subject)), p.Conversation.Status,
+			p.Conversation.CreatedAt.UTC().Format("2006-01-02"), e.conversationLink(s, p.Conversation.ID))
 	}
 	summary := "Read the customer " + truncate(deref(c.Name), 60)
 	return result{text: b.String(), step: Step{Tool: "get_customer_by_conversation_number", Summary: summary}}, nil

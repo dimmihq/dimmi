@@ -95,14 +95,16 @@ waits before it tries a failed model call again: two seconds when
 zero, no wait when negative, a test's way to skip waiting.
 */
 type Engine struct {
-	DB            *database.DB
-	IDs           *ids.Registry
-	Clock         clock.Clock
-	LLM           *managers.LLMManager
-	Prices        *aiprices.Table
-	Publisher     appbroadcasting.Publisher
-	Timeouts      config.AITimeoutsConfig
-	Services      Services
+	DB        *database.DB
+	IDs       *ids.Registry
+	Clock     clock.Clock
+	LLM       *managers.LLMManager
+	Prices    *aiprices.Table
+	Publisher appbroadcasting.Publisher
+	Timeouts  config.AITimeoutsConfig
+	Services  Services
+	/* AppURL is the address of the app, which the links Operator gives start with. */
+	AppURL        string
 	StorePayloads bool
 	Catalog       Catalog
 	RetryWait     time.Duration

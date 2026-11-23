@@ -90,8 +90,8 @@ func (e *Engine) articlePage(ctx context.Context, s *session, id ids.UUID) (stri
 	}
 	public := models.PublicID(models.PrefixArticle, a.ID)
 	var b strings.Builder
-	fmt.Fprintf(&b, "The help article %q is open.\narticle_id: %s\nStatus: %s%s\n", a.Title, public, a.Status,
-		pendingMark(a))
+	fmt.Fprintf(&b, "The help article %q is open.\narticle_id: %s\nStatus: %s%s\nLink: %s\n", a.Title, public,
+		a.Status, pendingMark(a), e.link(s, linkArticle, models.PrefixArticle, a.ID))
 	if _, suggested := s.suggested(a.ID); !suggested {
 		fmt.Fprintf(&b, "The article as it reads now:\n%s\n", truncate(a.BodyMarkdown, 20000))
 	}
@@ -109,9 +109,10 @@ func (e *Engine) procedurePage(ctx context.Context, s *session, id ids.UUID) (st
 		return "", err
 	}
 	public := models.PublicID(models.PrefixProcedure, p.ID)
-	return fmt.Sprintf("The procedure %q is open.\nprocedure_id: %s\nStatus: %s\nWorking copy: %s\n"+
+	return fmt.Sprintf("The procedure %q is open.\nprocedure_id: %s\nStatus: %s\nLink: %s\nWorking copy: %s\n"+
 		"To change it, call propose_changes with a procedure.edit_draft for procedure_id %s.", p.Name, public,
-		p.Status, truncate(string(p.Draft), 20000), public), nil
+		p.Status, e.link(s, linkProcedure, models.PrefixProcedure, p.ID), truncate(string(p.Draft), 20000),
+		public), nil
 }
 
 /*
@@ -137,11 +138,12 @@ func (e *Engine) conversationPage(ctx context.Context, s *session, id ids.UUID) 
 	fmt.Fprintf(&b, "Conversation #%d is open.\nconversation_number: %d\n", loaded.Conversation.Number,
 		loaded.Conversation.Number)
 	writeConversation(&b, loaded)
+	fmt.Fprintf(&b, "Link: %s\n", e.conversationLink(s, id))
 	writeTimeline(&b, timeline)
 	if hits, err := e.alikeTo(ctx, s, id, upFront); err == nil && len(hits) > 0 {
 		b.WriteString("\nThe conversations most like this one, and what the team did with them. Base any " +
 			"teammate, team, tag or priority you recommend on these, and cite them by number:\n")
-		b.WriteString(relatedText(hits) + "\n")
+		b.WriteString(e.relatedText(s, hits) + "\n")
 	}
 	b.WriteString("\n" + e.replyGuide(s))
 	return b.String(), nil
