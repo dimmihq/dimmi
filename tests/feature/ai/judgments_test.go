@@ -14,6 +14,7 @@ import (
 	"github.com/dimmihq/dimmi/app/ai/pipeline"
 	"github.com/dimmihq/dimmi/app/contracts"
 	decisionfake "github.com/dimmihq/dimmi/app/drivers/decision/fake"
+	"github.com/dimmihq/dimmi/app/drivers/llm/fake"
 )
 
 /*
@@ -57,6 +58,26 @@ func TestReplyCheck(t *testing.T) {
 		assert.Contains(t, last, "That reply was not sent", "the agent is told why")
 		assert.Equal(t, "Pro costs $12 per seat per month.", *s.agentReplies()[0].Body,
 			"what the customer reads is the second reply, whole")
+	})
+
+	t.Run("sends the reply the agent wrote beside a tool call when it then adds nothing", func(t *testing.T) {
+		t.Parallel()
+		h := newHarness(t, nil)
+		conv, trigger := h.conversation("How much is Pro per seat?")
+		h.llm.answer.Script(search("pro plan price per seat"),
+			fake.Step{
+				Text:      "Pro costs $12 per seat per month [1].",
+				ToolCalls: []contracts.ToolCall{call("triage_conversation", `{"title":"Pro price per seat"}`)},
+				Usage:     contracts.LLMUsage{InputTokens: 1200, OutputTokens: 80, Reported: true},
+			},
+			reply(""))
+
+		res := h.run(conv, trigger)
+
+		assert.Equal(t, "answered", res.Outcome, "the reply was written; saying nothing more is not an unknown")
+		s := h.load(conv, res.RunID)
+		require.Len(t, s.agentReplies(), 1)
+		assert.Equal(t, "Pro costs $12 per seat per month.", *s.agentReplies()[0].Body)
 	})
 
 	t.Run("hands over rather than send a reply that still carries it", func(t *testing.T) {

@@ -95,9 +95,17 @@ type streamed struct {
 /*
 agentLoop runs model calls and tools until the model writes its reply,
 which it returns.
+
+A model often writes its whole reply and, in the same step, calls a
+tool that only keeps a record, such as marking a procedure finished.
+Asked again, it has nothing to add and says nothing. Its reply is then
+what it already wrote: the words beside its latest tool calls. Words
+written beside a call that failed are dropped, since what they say may
+no longer be true, and so is anything said before it.
 */
 func (r *Runner) agentLoop(ctx context.Context, st *run) (string, error) {
 	lp := st.loop
+	said := ""
 	for calls := 1; ; calls++ {
 		most := callLimit(st)
 		var tools []contracts.ToolSpec
@@ -114,10 +122,10 @@ func (r *Runner) agentLoop(ctx context.Context, st *run) (string, error) {
 		}
 		lp.stop = out.stop
 		if len(out.calls) == 0 || len(tools) == 0 {
-			return out.text, nil
+			return cmpOr(strings.TrimSpace(out.text), said), nil
 		}
 
-		r.runCalls(ctx, st, out)
+		said = r.runCalls(ctx, st, out, said)
 		if st.transfer != nil {
 			return "", nil
 		}
@@ -126,20 +134,28 @@ func (r *Runner) agentLoop(ctx context.Context, st *run) (string, error) {
 
 /*
 runCalls runs the tools the model asked for and adds the call and each
-result to the conversation the model reads next.
+result to the conversation the model reads next. It returns the reply
+the model has written so far: the words beside these calls, or else
+what it had said before them, and nothing when a call failed.
 */
-func (r *Runner) runCalls(ctx context.Context, st *run, out streamed) {
+func (r *Runner) runCalls(ctx context.Context, st *run, out streamed, said string) string {
 	lp := st.loop
 	lp.messages = append(lp.messages, contracts.ChatMessage{
 		Role: contracts.ChatRoleAssistant, Parts: textParts(out.text), ToolCalls: out.calls,
 	})
+	anyFailed := false
 	for _, call := range out.calls {
 		result, failed := r.callTool(ctx, st, call)
+		anyFailed = anyFailed || failed
 		lp.messages = append(lp.messages, contracts.ChatMessage{
 			Role: contracts.ChatRoleTool, ToolCallID: call.ID, ToolError: failed,
 			Parts: []contracts.ContentPart{{Text: result}},
 		})
 	}
+	if anyFailed {
+		return ""
+	}
+	return cmpOr(strings.TrimSpace(out.text), said)
 }
 
 /*
