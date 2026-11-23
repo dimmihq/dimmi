@@ -83,6 +83,10 @@ export function useOperatorChat(
     } else if (envelope.event === "operator.step" && data.step) {
       const step = data.step;
       setLive((current) => current && { ...current, text: "", steps: [...current.steps, step] });
+      // A step that changed or suggested something shows on the page at once, not when the answer ends.
+      if (step.changeset_id) {
+        void client.invalidateQueries({ queryKey: ["workspace", workspace] });
+      }
     } else if (envelope.event === "operator.answered" && !running.current) {
       void refresh();
     }
