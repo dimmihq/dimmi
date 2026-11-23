@@ -43,7 +43,7 @@ proposeSchema is the schema of a proposal.
 const proposeSchema = `{"type":"object","required":["title","reason","operations"],"properties":{
 "title":{"type":"string","maxLength":200,"description":"What it does in a few everyday words, like ` +
 	`'Route to Billing' or 'Fix the refund window in the returns guide'."},
-"reason":{"type":"string","maxLength":2000,"description":"Why, as you would tell a teammate in one or two ` +
+"reason":{"type":"string","maxLength":2000,"description":"Why, as you would tell a teammate in one or two short, ` +
 	`plain sentences: what is wrong for customers today and what this changes. No tool names or ids; ` +
 	`cite conversations by number."},
 "dedup_key":{"type":"string","maxLength":200,"description":"A stable key for what this suggests, like ` +

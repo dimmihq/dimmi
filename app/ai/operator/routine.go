@@ -483,10 +483,11 @@ answer is the message the team reads later on the routine's thread.
 - Say you suggested a change only when propose_changes returned it in this run. When you found
   something and did not suggest it, say that plainly.
 - Your answer is a message to the team, read later. Open with what you went through, in one
-  sentence. Then say what you think should change and why it matters to customers, and that
-  your suggestions are below. Do not retell each suggestion; its card says what it changes.
-- Mention anything you noticed but could not fix. When nothing needs changing, say so in a
-  sentence or two. Two to four short paragraphs is usually enough.
+  short sentence. Then what you found, as a short list when there is more than one thing. Then
+  one line saying your suggestions are below. Do not retell each suggestion; its card says what
+  it changes.
+- Mention anything you noticed but could not fix, one short line each. When nothing needs
+  changing, say so in a sentence or two.
 - Never mention saving progress for the next run or what a dry run cannot do; the team does
   not need it.
 - Name articles and procedures by title, never by their position in a list ("articles
