@@ -132,6 +132,7 @@ func TestOperatorViewing(t *testing.T) {
 		assert.Contains(t, last(0), "How to draft a reply:")
 		assert.Contains(t, last(1), "A help center is open.")
 		assert.Contains(t, last(1), "help_center_id: "+hc)
+		assert.Contains(t, last(1), "Public link, what customers see: http")
 		assert.NotContains(t, last(2), "has open right now", "a kind of page Operator does not know adds nothing")
 	})
 }

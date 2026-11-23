@@ -225,10 +225,9 @@ func (e *Engine) getArticle(ctx context.Context, s *session, args json.RawMessag
 	if err != nil {
 		return result{}, err
 	}
-	text := fmt.Sprintf("Article %s (id %s)\nStatus: %s%s\nVisibility: %s\nLink: %s\nDescription: %s\n\n%s",
+	text := fmt.Sprintf("Article %s (id %s)\nStatus: %s%s\nVisibility: %s\n%sDescription: %s\n\n%s",
 		a.Title, models.PublicID(models.PrefixArticle, a.ID), a.Status, pendingMark(a), a.Visibility,
-		e.link(s, linkArticle, models.PrefixArticle, a.ID), deref(a.Description),
-		truncate(a.BodyMarkdown, 20000))
+		e.articleLinks(ctx, s, a), deref(a.Description), truncate(a.BodyMarkdown, 20000))
 	return result{text: text, step: Step{Tool: "get_article_by_id", Summary: "Read the article " + a.Title}}, nil
 }
 

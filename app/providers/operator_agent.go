@@ -24,6 +24,7 @@ import (
 	"github.com/dimmihq/dimmi/framework/tenancy"
 
 	"github.com/dimmihq/dimmi/app"
+	"github.com/dimmihq/dimmi/app/actions/helpcenters"
 	"github.com/dimmihq/dimmi/app/actions/notifications"
 	"github.com/dimmihq/dimmi/app/actions/operatorchat"
 	"github.com/dimmihq/dimmi/app/actions/operatorroutines"
@@ -77,6 +78,9 @@ func newOperatorEngine(a *app.App) *operator.Engine {
 		DB: a.DB, IDs: a.IDs, Clock: a.Clock, LLM: a.LLM, Prices: a.AI.Prices, Publisher: a.Broadcast,
 		Timeouts: a.Config.AI.Timeouts, StorePayloads: a.Config.AI.TracesStorePayloads, Catalog: newOperatorCatalog(a),
 		AppURL: a.Application.Config.App.URL,
+		Addresses: helpcenters.Addresses{
+			BaseDomain: a.Config.HelpCenters.BaseDomain, AppURL: a.Application.Config.App.URL,
+		},
 		Services: operator.Services{
 			Knowledge: a.Knowledge, Show: inbox.ShowConversation, Search: inbox.Search, List: inbox.ListConversations,
 			Context:  inbox.ShowContext,

@@ -103,6 +103,8 @@ type Engine struct {
 	Publisher appbroadcasting.Publisher
 	Timeouts  config.AITimeoutsConfig
 	Services  Services
+	/* Addresses says where a help center's public pages start. */
+	Addresses helpcenters.Addresses
 	/* AppURL is the address of the app, which the links Operator gives start with. */
 	AppURL        string
 	StorePayloads bool

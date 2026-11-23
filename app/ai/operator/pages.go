@@ -63,18 +63,32 @@ func (e *Engine) pageKinds() map[string]pageKind {
 		PageProcedure:    {prefix: models.PrefixProcedure, describe: e.procedurePage},
 		PageConversation: {prefix: models.PrefixConversation, describe: e.conversationPage},
 		PageHelpCenter: {
-			prefix:   models.PrefixHelpCenter,
-			describe: e.apiPage("help center", "dimmi_help_centers_get", "help_center", models.PrefixHelpCenter),
+			prefix: models.PrefixHelpCenter,
+			describe: e.apiPage(apiSource{
+				what: "help center", tool: "dimmi_help_centers_get", argument: "help_center",
+				prefix: models.PrefixHelpCenter, public: func(r apiRecord, _ string) string { return r.URL },
+				live: func(r apiRecord) bool { return r.Status == "active" },
+			}),
 		},
 		PageFeatureRequest: {
 			prefix: models.PrefixFeedbackPost,
-			describe: e.apiPage("feature request", "dimmi_feedback_posts_get", "post",
-				models.PrefixFeedbackPost),
+			describe: e.apiPage(apiSource{
+				what: "feature request", tool: "dimmi_feedback_posts_get", argument: "post",
+				prefix: models.PrefixFeedbackPost, page: linkFeedback,
+				public: func(r apiRecord, root string) string {
+					return fmt.Sprintf("%s/feedback/%d-%s", root, r.Number, r.Slug)
+				},
+				live: func(r apiRecord) bool { return r.Moderation == "approved" },
+			}),
 		},
 		PageChangelogEntry: {
 			prefix: models.PrefixChangelogEntry,
-			describe: e.apiPage("changelog entry", "dimmi_changelog_entries_get", "entry",
-				models.PrefixChangelogEntry),
+			describe: e.apiPage(apiSource{
+				what: "changelog entry", tool: "dimmi_changelog_entries_get", argument: "entry",
+				prefix: models.PrefixChangelogEntry, page: linkChangelog,
+				public: func(r apiRecord, root string) string { return root + "/changelog/" + r.Slug },
+				live:   func(r apiRecord) bool { return r.Status == "published" },
+			}),
 		},
 	}
 }
@@ -90,8 +104,8 @@ func (e *Engine) articlePage(ctx context.Context, s *session, id ids.UUID) (stri
 	}
 	public := models.PublicID(models.PrefixArticle, a.ID)
 	var b strings.Builder
-	fmt.Fprintf(&b, "The help article %q is open.\narticle_id: %s\nStatus: %s%s\nLink: %s\n", a.Title, public,
-		a.Status, pendingMark(a), e.link(s, linkArticle, models.PrefixArticle, a.ID))
+	fmt.Fprintf(&b, "The help article %q is open.\narticle_id: %s\nStatus: %s%s\n%s", a.Title, public,
+		a.Status, pendingMark(a), e.articleLinks(ctx, s, a))
 	if _, suggested := s.suggested(a.ID); !suggested {
 		fmt.Fprintf(&b, "The article as it reads now:\n%s\n", truncate(a.BodyMarkdown, 20000))
 	}
@@ -203,22 +217,79 @@ const replyDrafting = `How to draft a reply:
   drafted, and in one more anything they should check before sending.`
 
 /*
-apiPage describes a page Operator has no reader of its own for, by
-reading the record from the API route the page calls, as the teammate.
+apiSource says how a page with no reader of Operator's own is read: by
+which API read, under which argument, which id it carries, the page it
+has in dimmi, and its public address from the record and the root of
+its help center.
 */
-func (e *Engine) apiPage(what, tool, argument string, prefix models.Prefix,
-) func(ctx context.Context, s *session, id ids.UUID) (string, error) {
+type apiSource struct {
+	what, tool, argument string
+	prefix               models.Prefix
+	page                 string
+	public               func(record apiRecord, root string) string
+	live                 func(record apiRecord) bool
+}
+
+/*
+apiRecord is what a link needs from a record the API returned.
+*/
+type apiRecord struct {
+	Slug         string `json:"slug"`
+	Status       string `json:"status"`
+	URL          string `json:"url"`
+	Number       int64  `json:"number"`
+	Moderation   string `json:"moderation"`
+	HelpCenterID string `json:"help_center_id"`
+}
+
+/*
+apiPage describes a page Operator has no reader of its own for, by
+reading the record from the API route the page calls, as the teammate,
+with its links.
+*/
+func (e *Engine) apiPage(src apiSource) func(ctx context.Context, s *session, id ids.UUID) (string, error) {
 	return func(ctx context.Context, s *session, id ids.UUID) (string, error) {
 		if e.Catalog == nil {
 			return "", nil
 		}
-		public := models.PublicID(prefix, id)
-		args, _ := json.Marshal(map[string]string{argument: public})
-		text, err := e.Catalog.Call(ctx, s.m, CatalogCall{Name: tool, Args: args})
+		public := models.PublicID(src.prefix, id)
+		args, _ := json.Marshal(map[string]string{src.argument: public})
+		text, err := e.Catalog.Call(ctx, s.m, CatalogCall{Name: src.tool, Args: args})
 		if err != nil {
 			return "", err
 		}
-		return fmt.Sprintf("A %s is open.\n%s_id: %s\n%s", what, strings.ReplaceAll(what, " ", "_"), public,
-			truncate(text, 20000)), nil
+		return fmt.Sprintf("A %s is open.\n%s_id: %s\n%s%s", src.what, strings.ReplaceAll(src.what, " ", "_"),
+			public, e.apiLinks(ctx, s, src, id), truncate(text, 20000)), nil
 	}
+}
+
+/*
+apiLinks are the links of a page read from the API: its page in dimmi
+when it has one, and its public page once it is live.
+*/
+func (e *Engine) apiLinks(ctx context.Context, s *session, src apiSource, id ids.UUID) string {
+	args, _ := json.Marshal(map[string]string{src.argument: models.PublicID(src.prefix, id)})
+	raw, err := e.Catalog.Call(ctx, s.m, CatalogCall{Name: src.tool, Args: args, Raw: true})
+	if err != nil {
+		return ""
+	}
+	var body struct {
+		Data apiRecord `json:"data"`
+	}
+	if json.Unmarshal([]byte(raw), &body) != nil {
+		return ""
+	}
+	r := body.Data
+	app := strings.TrimRight(e.AppURL, "/") + "/d/" + s.m.Workspace.Slug + "/" + linkArticle
+	if src.page != "" {
+		app = e.link(s, src.page, src.prefix, id)
+	}
+	root := ""
+	if center, err := e.IDs.Decode(string(models.PrefixHelpCenter), r.HelpCenterID); err == nil {
+		root = e.publicRoot(ctx, s, center)
+	}
+	if !src.live(r) || (root == "" && r.URL == "") {
+		return links(app, "")
+	}
+	return links(app, src.public(r, root))
 }

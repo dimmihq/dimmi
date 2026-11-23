@@ -145,11 +145,15 @@ func TestOperatorTools(t *testing.T) {
 		k.ask(k.thread(conv), "Send me the links").AssertOK()
 
 		sent := k.llm.Sent()
-		assert.Contains(t, sent[0].System[0].Text, "Never build,\n  shorten or guess an address")
+		assert.Contains(t, sent[0].System[0].Text, "Never build, shorten or guess an address")
+		assert.Contains(t, sent[0].System[0].Text,
+			"Give the public link when asked for the live, public or external page")
 		results := sent[1].Messages[len(sent[1].Messages)-2].Parts[0].Text +
 			sent[1].Messages[len(sent[1].Messages)-1].Parts[0].Text
 		assert.Contains(t, results, "/inbox/all/"+conv)
+		assert.Contains(t, results, "Link in dimmi, for the team: ")
 		assert.Contains(t, results, "/help-center/"+article)
+		assert.Contains(t, results, "Public link: none yet, it is not published.")
 	})
 
 	t.Run("withholds tools whose changes are switched off", func(t *testing.T) {
