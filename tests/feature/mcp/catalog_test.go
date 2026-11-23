@@ -38,6 +38,18 @@ func TestCatalog(t *testing.T) {
 		assert.Empty(t, report.Unknown)
 	})
 
+	t.Run("gives every tool its own name and every argument a clear one", func(t *testing.T) {
+		t.Parallel()
+		assert.Empty(t, report.Duplicate)
+		assert.Empty(t, report.Unclear)
+	})
+
+	t.Run("leaves no argument with only what its name and type say", func(t *testing.T) {
+		t.Parallel()
+		assert.Empty(t, report.Unwritten, "write a text in app/mcpserver/argument_texts*.go for:\n"+
+			strings.Join(report.Unwritten, "\n"))
+	})
+
 	t.Run("finds nothing wrong", func(t *testing.T) {
 		t.Parallel()
 		assert.True(t, report.Clean())

@@ -95,14 +95,16 @@ func (r Risk) caution() string {
 
 /*
 built is one operation as a tool: its catalog entry, its definition,
-how its arguments are named and the schema the model fills.
+how its arguments are named, the schema the model fills and the texts
+written for its arguments.
 */
 type built struct {
-	op     mcp.Operation
-	doc    Doc
-	def    mcp.ToolDef
-	names  naming
-	schema map[string]any
+	op      mcp.Operation
+	doc     Doc
+	def     mcp.ToolDef
+	names   naming
+	schema  map[string]any
+	written map[string]string
 }
 
 /*
@@ -110,6 +112,7 @@ build makes the tool of an operation.
 */
 func build(op mcp.Operation, doc Doc) built {
 	b := built{op: op, doc: doc, names: namingOf(op, doc)}
+	b.written = writtenTexts()[strings.TrimPrefix(toolName(op, doc), toolPrefix)]
 	b.schema = b.inputSchema()
 	b.def = b.definition()
 	b.def.Arguments, b.def.Invalid = b.read, b.invalid
@@ -205,12 +208,17 @@ func (b built) required() []string {
 }
 
 /*
-argumentText explains an argument: the catalog's words, else what is
-known about the record a path names or an argument every list shares,
-else the API document's words, else what its name and type say.
+argumentText explains an argument: the catalog's words, else the words
+written for it by tool and name, else what is known about the record a
+path names or an argument every list shares, else the API document's
+words, else what its name and type say.
 */
 func (b built) argumentText(name, api string, schema map[string]any) string {
 	if text, ok := b.doc.Params[api]; ok {
+		return text
+	}
+
+	if text, ok := b.written[name]; ok {
 		return text
 	}
 

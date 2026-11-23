@@ -29,12 +29,15 @@ Report is what the audit found. Undocumented lists callable operations
 without an entry, Stale entries without an operation, Incomplete
 entries missing a title or a use, and Unknown references to tools that
 do not exist, as "where: name". Duplicate lists names two operations
-would share, and Unclear arguments a model could not read from their
-name alone, as "tool: argument". Tools lists every tool name.
+would share, Unclear arguments a model could not read from their
+name alone, and Unwritten arguments nobody explained, left with only
+what their name and type say, both as "tool: argument". Tools lists
+every tool name.
 */
 type Report struct {
 	Duplicate    []string
 	Unclear      []string
+	Unwritten    []string
 	Undocumented []string
 	Stale        []string
 	Incomplete   []string
@@ -46,7 +49,8 @@ type Report struct {
 Clean reports whether the audit found nothing wrong.
 */
 func (r Report) Clean() bool {
-	return len(r.Undocumented)+len(r.Stale)+len(r.Incomplete)+len(r.Unknown)+len(r.Duplicate)+len(r.Unclear) == 0
+	return len(r.Undocumented)+len(r.Stale)+len(r.Incomplete)+len(r.Unknown)+len(r.Duplicate)+len(r.Unclear)+
+		len(r.Unwritten) == 0
 }
 
 /*
@@ -104,7 +108,9 @@ func check(r *Report, op mcp.Operation, docs map[string]Doc, known map[string]bo
 	}
 
 	known[name] = true
-	r.Unclear = append(r.Unclear, unclear(build(op, entry))...)
+	b := build(op, entry)
+	r.Unclear = append(r.Unclear, unclear(b)...)
+	r.Unwritten = append(r.Unwritten, unwritten(b)...)
 
 	switch {
 	case !ok:
@@ -119,7 +125,7 @@ sort orders every list of the report.
 */
 func (r Report) sort() {
 	for _, list := range [][]string{
-		r.Undocumented, r.Stale, r.Incomplete, r.Unknown, r.Duplicate, r.Unclear, r.Tools,
+		r.Undocumented, r.Stale, r.Incomplete, r.Unknown, r.Duplicate, r.Unclear, r.Unwritten, r.Tools,
 	} {
 		slices.Sort(list)
 	}
@@ -144,6 +150,23 @@ func unclear(b built) []string {
 		case slices.Contains(bareWords(), name), name == "q", strings.Contains(name, "["), text == "":
 			out = append(out, b.def.Name+": "+name)
 		case slices.Contains(path, api) && !plain && !strings.Contains(name, "_id"):
+			out = append(out, b.def.Name+": "+name)
+		}
+	}
+
+	return out
+}
+
+/*
+unwritten lists the arguments of a tool nobody explained: those whose
+description is only what their name and type say.
+*/
+func unwritten(b built) []string {
+	var out []string
+
+	for name := range b.names.api {
+		schema := asMap(asMap(b.schema["properties"])[name])
+		if text, _ := schema["description"].(string); text == plainText(name, schema) {
 			out = append(out, b.def.Name+": "+name)
 		}
 	}

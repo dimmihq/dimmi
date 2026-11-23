@@ -23,6 +23,7 @@ func feedbackStatusDocs() map[string]Doc {
 			Returns: "the statuses with their key, name, color, category and whether the roadmap shows them, in order.",
 		},
 		"feedback-statuses.update": {
+			Name:    "reorder_feedback_statuses",
 			Title:   "Reorder feature request statuses",
 			Use:     "Sets the order the portal and the app show the statuses in.",
 			Returns: "the statuses in their new order.",
@@ -45,7 +46,7 @@ func feedbackStatusDocs() map[string]Doc {
 			},
 		},
 		"feedback-statuses.change": {
-			Name:    "change_feedback_post_status",
+			Name:    "change_feedback_status",
 			Title:   "Change a feature request status",
 			Use:     "Renames, recolors or recategorizes a status, named by its key. Its requests keep it.",
 			Returns: "the status as it now is.",

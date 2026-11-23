@@ -203,8 +203,8 @@ func ticketIDArguments() map[string]idGuide {
 		"state":  idArgument("ticket state", "tkts", "dimmi_list_ticket_states"),
 		"link":   idArgument("ticket link", "tktl", "dimmi_list_ticket_links"),
 		"issue":  idArgument("linked issue", "tkti", "dimmi_list_ticket_issues"),
-		"status": {what: "feature request status", text: "Id of the feature request status. Find it with " +
-			"dimmi_list_feedback_statuses."},
+		"status": {what: "feature request status", text: "Key of the feature request status, such as planned. " +
+			"Find it with dimmi_list_feedback_statuses."},
 		"node": {what: "step of the series", text: "Id of the step in the series, as dimmi_get_series_by_id shows it."},
 	}
 }
