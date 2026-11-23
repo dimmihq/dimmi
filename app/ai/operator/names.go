@@ -33,6 +33,7 @@ func formerNames() map[string]string {
 		"routine_set_state":      "save_routine_state",
 		"mark_noop":              "report_nothing_to_change",
 		"list_recent_changesets": "list_recent_suggestions",
+		"propose_article_edit":   "propose_article_edits",
 	}
 }
 

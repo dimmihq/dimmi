@@ -47,8 +47,9 @@ func TestOperatorArticleTools(t *testing.T) {
 		var found bool
 		for _, spec := range k.llm.Sent()[0].Tools {
 			schema := string(spec.Schema)
-			if spec.Name == "propose_article_edit" {
+			if spec.Name == "propose_article_edits" {
 				found = true
+				assert.Contains(t, schema, `"required":["fixes"]`)
 				assert.Contains(t, schema, `"required":["article_id","edits","suggestion_title","reason"]`)
 			}
 			if spec.Name == "propose_changes" {
@@ -182,6 +183,46 @@ func TestOperatorArticleTools(t *testing.T) {
 		assert.Contains(t, k.toolResult(), `"article_id" is missing`)
 		sent := k.llm.Sent()[2].Messages
 		assert.Contains(t, sent[len(sent)-1].Parts[0].Text, "never the title")
+	})
+
+	t.Run("suggests every fix of one call and says which were refused", func(t *testing.T) {
+		t.Parallel()
+		k := newDesk(t)
+		batches, labels := k.article("Batches"), k.article("Label limit")
+		k.llm.Script(tools(call("propose_article_edits", map[string]any{"fixes": []map[string]any{
+			{
+				"article_id": batches, "suggestion_title": "Fix the batch limit", "reason": "Free has no lower limit.",
+				"edits": []map[string]any{{
+					"find":    "A batch can hold at most 1,000 shipments, or 25 on the Free plan.",
+					"replace": "A batch can hold at most 1,000 shipments.",
+				}},
+			},
+			{
+				"article_id": labels, "suggestion_title": "Fix support hours", "reason": "x",
+				"edits": []map[string]any{{
+					"find": "Support answers within four business hours on Growth.", "replace": "y",
+				}},
+			},
+			{
+				"article_id": labels, "suggestion_title": "Fix the label limit", "reason": "Plans changed.",
+				"edits": []map[string]any{{
+					"find":    "The Free plan stops at 50 labels a month.",
+					"replace": "The Free plan stops at 40 labels a month.",
+				}},
+			},
+		}})), reply("Suggested two fixes."))
+
+		res := k.ask(k.thread(""), "Fix the articles").AssertOK()
+
+		res.AssertJSONPath("data.changesets.#", float64(2))
+		back := k.toolResult()
+		assert.Contains(t, back, "Fix 1 (Fix the batch limit): Changeset")
+		assert.Contains(t, back, "Fix 2 (Fix support hours): NOT suggested")
+		assert.Contains(t, back, "Fix 3 (Fix the label limit): Changeset")
+		assert.Contains(t, back, "Send again only the fixes that were not suggested")
+		steps := res.String("data.message.steps")
+		assert.Equal(t, 2, strings.Count(steps, `"summary":"Proposed:`))
+		assert.Equal(t, 1, strings.Count(steps, `"ok":false`))
 	})
 
 	t.Run("drafts a new article", func(t *testing.T) {

@@ -165,25 +165,14 @@ func (e *Engine) propose(ctx context.Context, s *session, in proposal) (result, 
 	public := models.PublicID(models.PrefixOperatorChangeset, row.ID)
 	st := Step{Tool: "propose_changes", Summary: "Proposed: " + row.Title, Changeset: public}
 	if !auto {
-		return result{text: fmt.Sprintf("Changeset %s is waiting for the teammate to review %d change(s).%s%s",
-			public, len(ops), notesOf(ops), together(s)), step: st}, nil
+		return result{text: fmt.Sprintf("Changeset %s is waiting for the teammate to review %d change(s).%s",
+			public, len(ops), notesOf(ops)), step: st}, nil
 	}
 	if _, err := e.Apply(ctx, s.m, row.ID); err != nil {
 		return result{text: "The changes could not be applied: " + refusal(err), step: st}, nil
 	}
 	st.Summary = "Applied: " + row.Title
 	return result{text: fmt.Sprintf("Applied changeset %s; the teammate can undo it.", public), step: st}, nil
-}
-
-/*
-together reminds a routine's agent to send what it still has to suggest
-in one step, since every step re-reads all it has read.
-*/
-func together(s *session) string {
-	if s.routine == nil {
-		return ""
-	}
-	return " If you have more fixes to suggest, send them all together in your next step."
 }
 
 /*

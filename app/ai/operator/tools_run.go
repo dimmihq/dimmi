@@ -157,7 +157,9 @@ func (e *Engine) finishCall(ctx context.Context, s *session, p *pending) contrac
 	} else if s.layer != nil {
 		out.text = s.layer.set.Compact(out.text)
 	}
-	e.addStep(ctx, s, out.step)
+	if !out.quiet || err != nil {
+		e.addStep(ctx, s, out.step)
+	}
 	name := p.call.Name
 	if p.ran != "" {
 		name = p.ran

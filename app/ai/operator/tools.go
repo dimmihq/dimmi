@@ -46,6 +46,8 @@ the teammate sees.
 type result struct {
 	text string
 	step Step
+	/* A tool that added its own steps to the run's timeline asks for none to be added for the call. */
+	quiet bool
 }
 
 /*
@@ -166,7 +168,7 @@ func refusal(err error) string {
 errSpent refuses a reading tool once a routine's run may only close.
 */
 var errSpent = errors.New("you are out of reading steps for this run. Suggest what you already found " +
-	"with propose_article_edit, propose_new_article or propose_changes, save progress with save_routine_state, or " +
+	"with propose_article_edits, propose_new_article or propose_changes, save progress with save_routine_state, or " +
 	"call report_nothing_to_change; then write your message")
 
 /*

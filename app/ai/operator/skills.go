@@ -137,7 +137,7 @@ const knowledgeGapsSkill = `How to find knowledge gaps.
 5. Before suggesting anything, call search_knowledge, list_articles and list_recent_suggestions. Never
    suggest what an article, a draft, a waiting suggestion or one declined lately already covers.
 6. For each real gap, at most 5, suggest one change with a dedup_key like gap:<topic-slug>:
-   - propose_article_edit when an article exists but is unclear or incomplete;
+   - propose_article_edits when an article exists but is unclear or incomplete;
    - propose_new_article with visibility public for a customer guide, or agent_only for a short
      policy or edge-case snippet only the AI agent reads.
    Keep every customer detail out of the article. Cite conversation numbers only in the reason.
@@ -167,8 +167,8 @@ When you are a subagent, or auditing 25 or fewer yourself:
 3. In one step, compare their facts with the rest of the help center using search_knowledge:
    refund windows, limits, prices, plan names, steps. Read another article only when a search
    result is not enough to tell.
-4. In one step, call propose_article_edit once for each contradiction or stale fact, all
-   together: the article's id, edits with the exact sentences to fix, and a dedup_key like
+4. Call propose_article_edits once, with one fix for each article that has a contradiction or
+   stale fact: the article's id, edits with the exact sentences to fix, and a dedup_key like
    stale:<article id>. Name the conflicting article by its title in the reason.`
 
 const pullRequestsSkill = `How to keep help articles in line with merged pull requests.
@@ -184,7 +184,7 @@ const pullRequestsSkill = `How to keep help articles in line with merged pull re
 4. Find the articles each change affects with search_knowledge and list_articles, and read them
    with get_article_by_id.
 5. Call list_recent_suggestions so you never repeat a waiting or declined suggestion.
-6. For each article now wrong or missing the change, call propose_article_edit (or
+6. For each article now wrong or missing the change, call propose_article_edits (or
    propose_new_article for a major new feature) with a dedup_key like
    gh-pr:<owner/repo>#<number>:<article id>. Say which pull request changed what in the reason.
 7. Save each repository's newest last_merged_at and the numbers you read (the last 200) with

@@ -35,7 +35,7 @@ const proposeDescription = "Propose changes to conversations, customers and proc
 	"teammate reviews: tag or untag, assign to a teammate or team, set priority, open or close, rename, add " +
 	"an internal note, update a customer's name, edit a procedure's working copy, or add a regression test " +
 	"to a procedure from a conversation that went wrong. Help articles have their own tools: " +
-	"propose_article_edit and propose_new_article. Give a short title and the reason, both in plain words a " +
+	"propose_article_edits and propose_new_article. Give a short title and the reason, both in plain words a " +
 	"teammate reads at a glance."
 
 /*

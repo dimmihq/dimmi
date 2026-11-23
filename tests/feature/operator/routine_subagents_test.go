@@ -72,7 +72,7 @@ func TestOperatorRoutineSubagents(t *testing.T) {
 		for _, name := range []string{"run_subagents", "save_routine_state", "report_nothing_to_change"} {
 			assert.NotContains(t, toolNames(sent[1]), name)
 		}
-		assert.Contains(t, toolNames(sent[1]), "propose_article_edit")
+		assert.Contains(t, toolNames(sent[1]), "propose_article_edits")
 		back := sent[3].Messages[len(sent[3].Messages)-1].Parts[0].Text
 		assert.Contains(t, back, `Suggestions it made: "Fix the batch limit"`)
 		assert.Contains(t, back, "I read 25 articles and suggested one fix")

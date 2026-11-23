@@ -145,7 +145,7 @@ func TestOperatorTools(t *testing.T) {
 
 		for _, spec := range k.llm.Sent()[0].Tools {
 			assert.NotEqual(t, "propose_changes", spec.Name)
-			assert.NotEqual(t, "propose_article_edit", spec.Name)
+			assert.NotEqual(t, "propose_article_edits", spec.Name)
 			assert.NotEqual(t, "propose_new_article", spec.Name)
 		}
 	})
