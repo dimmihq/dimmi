@@ -45,8 +45,10 @@ which a teammate reads on its card and above the change under review.
 const reasonHelp = "Why, written so a 12-year-old could follow it. Two or three very short sentences in " +
 	"everyday words, one idea in each: what is wrong today, what is true, what this changes. Like: 'This " +
 	"page says refunds take 30 days. **Refund timing** says 14 days. This fix makes them match.' Name " +
-	"another article by its title in **bold**, and conversations by number. Never join ideas with 'so', " +
-	"'which' or 'while'. No jargon, no ids, no tool names."
+	"another article by its title in **bold**, and conversations by number. When the change picks " +
+	"something (a teammate, a team, a tag, a priority), say why that one, from what you saw: 'Maya " +
+	"answered the last three billing questions.' Never join ideas with 'so', 'which' or 'while'. No " +
+	"jargon, no ids, no tool names."
 
 /*
 proposeSchema is the schema of a proposal.

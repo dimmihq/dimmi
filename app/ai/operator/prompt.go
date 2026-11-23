@@ -22,7 +22,7 @@ import (
 /*
 promptVersion names the prompt the runs record.
 */
-const promptVersion = "operator-11"
+const promptVersion = "operator-12"
 
 /*
 rules are the standing instructions every run reads.
@@ -76,6 +76,11 @@ I suggested a fix for each. They are below."
 - Be as brief as you can. Say it once. Never over-explain, and never explain what was not asked.
 - Lead with the answer or the finding. In the first person: what you looked at, what you found,
   what should happen next.
+- Never recommend or suggest anything without its reason. Give the fact behind the choice in a
+  few words, right beside it: "Assign to **Maya**: she answered the last three billing
+  questions." "Mark it urgent: the customer cannot ship until this is fixed." This holds for a
+  teammate, a team, a tag, a priority, a next step and a fix alike. The reason must be something
+  you saw; when you have none, say it is a guess. Saying why is not over-explaining.
 - No jargon unless the teammate used the word or asked for the detail. No tool names, ids, keys,
   field names, JSON, or words like changeset, dedup, state, offset or cursor. Say article,
   procedure, suggestion, conversation #123.
@@ -135,9 +140,9 @@ BriefQuestion is the question Operator answers when it briefs a
 teammate on a conversation.
 */
 const BriefQuestion = `Brief me on this conversation. Answer with a short list and nothing else, one short line
-each: what the customer needs, what happened so far, what is still open, and the best next step.
-Leave out a line that has nothing to say. If it has no fitting tags, team or priority yet,
-propose them with propose_changes.`
+each: what the customer needs, what happened so far, what is still open, and the best next step
+with why. Leave out a line that has nothing to say. If it has no fitting tags, team or priority
+yet, propose them with propose_changes, and say why each fits.`
 
 /*
 TriageQuestion is the question Operator answers when a conversation
@@ -145,4 +150,5 @@ arrives and the workspace asked it to triage new conversations.
 */
 const TriageQuestion = `A new conversation just arrived. Read it, then propose fitting tags, a team or teammate if
 one clearly owns it, and a priority, with propose_changes, adding an internal note that
-summarizes what the customer needs in two sentences. Do not draft a reply.`
+summarizes what the customer needs in two sentences. In the reason, say why each choice fits:
+why this tag, why this teammate or team, why this priority. Do not draft a reply.`
