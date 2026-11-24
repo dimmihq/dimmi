@@ -33,7 +33,7 @@ export type Route = {
 export const routes: Route[] = [
   {
     path: "/",
-    title: "dimmi: customer support you own",
+    title: "dimmi: the open customer support platform",
     description:
       "Shared inbox, specialized support agents, tickets, workflows, and help center, all open source under MIT. Run on dimmi Cloud with free seats or self-host for $0.",
     page: HomePage,
