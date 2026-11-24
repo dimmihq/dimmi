@@ -71246,6 +71246,16 @@
             }
           },
           {
+            "description": "for the ai report, the key of the choice or yes-or-no AI attribute its Conversations by attribute table splits by; left out, the first active one.",
+            "explode": false,
+            "in": "query",
+            "name": "ai_breakdown",
+            "schema": {
+              "pattern": "^[a-z][a-z0-9_]{0,63}$",
+              "type": "string"
+            }
+          },
+          {
             "description": "the first day, 2026-11-01; with to left out, the thirty days ending today.",
             "explode": false,
             "in": "query",
@@ -71364,6 +71374,26 @@
             "name": "filter[agent]",
             "schema": {
               "maxLength": 2000,
+              "type": "string"
+            }
+          },
+          {
+            "description": "The key of an AI conversation attribute, such as reason: only conversations it was found on. Find keys with GET /ai/conversation-attributes.",
+            "explode": false,
+            "in": "query",
+            "name": "filter[ai_attribute]",
+            "schema": {
+              "pattern": "^[a-z][a-z0-9_]{0,63}$",
+              "type": "string"
+            }
+          },
+          {
+            "description": "With filter[ai_attribute], only conversations where it holds this value, as text: an option of a choice, true or false for yes or no.",
+            "explode": false,
+            "in": "query",
+            "name": "filter[ai_attribute_value]",
+            "schema": {
+              "maxLength": 500,
               "type": "string"
             }
           }
@@ -71565,6 +71595,26 @@
             "name": "filter[agent]",
             "schema": {
               "maxLength": 2000,
+              "type": "string"
+            }
+          },
+          {
+            "description": "The key of an AI conversation attribute, such as reason: only conversations it was found on. Find keys with GET /ai/conversation-attributes.",
+            "explode": false,
+            "in": "query",
+            "name": "filter[ai_attribute]",
+            "schema": {
+              "pattern": "^[a-z][a-z0-9_]{0,63}$",
+              "type": "string"
+            }
+          },
+          {
+            "description": "With filter[ai_attribute], only conversations where it holds this value, as text: an option of a choice, true or false for yes or no.",
+            "explode": false,
+            "in": "query",
+            "name": "filter[ai_attribute_value]",
+            "schema": {
+              "maxLength": 500,
               "type": "string"
             }
           }

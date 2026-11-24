@@ -9,7 +9,10 @@
 | durations only while the inbox's office hours were open; and the
 | filters, each a comma list: filter[inbox], filter[team],
 | filter[member], filter[channel], filter[tag] and filter[priority],
-| with filter[ai] narrowing to conversations the AI answered in or not.
+| with filter[ai] narrowing to conversations the AI answered in or not,
+| and filter[ai_attribute] with filter[ai_attribute_value] to those where
+| an AI conversation attribute was found or holds a value. The AI report
+| reads ai_breakdown, the attribute its table splits conversations by.
 |
 */
 
@@ -31,13 +34,16 @@ type ReportFilters struct {
 	Priority      string `query:"filter[priority]" maxLength:"100"`
 	AI            string `query:"filter[ai]"       enum:"involved,not_involved,"`
 	Agent         string `query:"filter[agent]"    maxLength:"2000"`
+	AIAttribute   string `query:"filter[ai_attribute]"       pattern:"^[a-z][a-z0-9_]{0,63}$"`
+	AIValue       string `query:"filter[ai_attribute_value]" maxLength:"500"`
 }
 
 /*
 ShowReportRequest is the input of GET /reports/{report}.
 */
 type ShowReportRequest struct {
-	Report string `path:"report" maxLength:"64"`
+	Report      string `path:"report"        maxLength:"64"`
+	AIBreakdown string `query:"ai_breakdown" pattern:"^[a-z][a-z0-9_]{0,63}$"`
 	ReportFilters
 }
 

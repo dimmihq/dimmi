@@ -5,8 +5,8 @@
 |
 | Every report is asked the same way: a range of whole days in the
 | workspace's time zone, the period before it to compare with, and
-| filters on inbox, team, teammate, channel, tag, priority and whether
-| the AI took part. Durations are counted in calendar time, or in the
+| filters on inbox, team, teammate, channel, tag, priority, whether
+| the AI took part and the value an AI conversation attribute holds. Durations are counted in calendar time, or in the
 | time the inbox's office hours were open. Who asks decides what is
 | counted: a teammate who may see only some conversations sees reports
 | of only those.
@@ -43,6 +43,11 @@ const (
 /*
 Filters narrow what a report counts. From and To are whole days,
 "2006-01-02", To included; empty means the last thirty days.
+AIAttribute is the key of an AI conversation attribute: alone it keeps
+the conversations it was found on, with AIValue only those where it
+holds that value, as text ("true" or "false" for yes or no).
+AIBreakdown is the key of the choice or yes-or-no attribute the AI
+report splits conversations by, empty for the first active one.
 */
 type Filters struct {
 	From          string
@@ -56,6 +61,9 @@ type Filters struct {
 	Priorities    []int16
 	AI            string
 	Agents        []ids.UUID
+	AIAttribute   string
+	AIValue       string
+	AIBreakdown   string
 	BusinessHours bool
 }
 

@@ -8,7 +8,7 @@
 | or assumed from a close or a day of silence, how many it handed to the
 | team and why, and what each resolution cost. Questions it could not
 | answer and searches that found no article show where knowledge is
-| missing.
+| missing. A table splits the conversations by an AI attribute's value.
 |
 */
 
@@ -109,7 +109,7 @@ func (AI) Charts(ctx context.Context, tx *database.Tx, q Query) ([]Chart, error)
 		return nil, err
 	}
 
-	return []Chart{
+	return r.withAttributeTable(ctx, []Chart{
 		{
 			Key: "ai_daily", Title: "AI involvement and resolution", Kind: ChartLine, Unit: UnitPercent, Axis: AxisDay,
 			Series: []Series{
@@ -136,7 +136,7 @@ func (AI) Charts(ctx context.Context, tx *database.Tx, q Query) ([]Chart, error)
 		},
 		agents,
 		questions,
-	}, nil
+	})
 }
 
 /*

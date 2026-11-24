@@ -17,13 +17,18 @@ import "maps"
 The words the report tools share for the filters they share.
 */
 const (
-	reportInboxes    = "Inbox ids separated by commas, such as inbox_01jx2m8k4t. Find them with dimmi_list_inboxes."
-	reportTeams      = "Team ids separated by commas, such as team_01jx2m8k4t. Find them with dimmi_list_teams."
-	reportMembers    = "Ids of the teammates holding the conversations, separated by commas, such as mem_01jx2m8k4t."
-	reportChannels   = "Channel types separated by commas, such as email,widget."
-	reportTags       = "Tag ids separated by commas, such as tag_01jx2m8k4t. Find them with dimmi_list_tags."
-	reportPriorities = "Priorities separated by commas, such as high,urgent."
-	reportAI         = "involved or not_involved: conversations the AI answered in, or not."
+	reportInboxes     = "Inbox ids separated by commas, such as inbox_01jx2m8k4t. Find them with dimmi_list_inboxes."
+	reportTeams       = "Team ids separated by commas, such as team_01jx2m8k4t. Find them with dimmi_list_teams."
+	reportMembers     = "Ids of the teammates holding the conversations, separated by commas, such as mem_01jx2m8k4t."
+	reportChannels    = "Channel types separated by commas, such as email,widget."
+	reportTags        = "Tag ids separated by commas, such as tag_01jx2m8k4t. Find them with dimmi_list_tags."
+	reportPriorities  = "Priorities separated by commas, such as high,urgent."
+	reportAI          = "involved or not_involved: conversations the AI answered in, or not."
+	reportMetric      = "the drill key the number names, such as first_response, resolution, csat or open."
+	reportAIAttribute = "The key of an AI conversation attribute, such as reason: only conversations it was found " +
+		"on. Find keys with dimmi_list_ai_conversation_attributes."
+	reportAIValue = "With filter[ai_attribute], only conversations where it holds this value, as text: an " +
+		"option of a choice, true or false for yes or no."
 )
 
 /*
@@ -50,16 +55,18 @@ func reportDocs() map[string]Doc {
 			Next: []string{"dimmi_get_conversation_by_id_or_number: open one conversation"},
 			Risk: new(RiskRead),
 			Params: map[string]string{
-				"metric":           "the drill key the number names, such as first_response, resolution, csat or open.",
-				"filter[inbox]":    reportInboxes,
-				"filter[team]":     reportTeams,
-				"filter[member]":   reportMembers,
-				"filter[channel]":  reportChannels,
-				"filter[tag]":      reportTags,
-				"filter[priority]": reportPriorities,
-				"filter[ai]":       reportAI,
-				"limit":            "how many to return, at most 100.",
-				"offset":           "how many to skip, for the next page.",
+				"metric":                     reportMetric,
+				"filter[inbox]":              reportInboxes,
+				"filter[team]":               reportTeams,
+				"filter[member]":             reportMembers,
+				"filter[channel]":            reportChannels,
+				"filter[tag]":                reportTags,
+				"filter[priority]":           reportPriorities,
+				"filter[ai]":                 reportAI,
+				"filter[ai_attribute]":       reportAIAttribute,
+				"filter[ai_attribute_value]": reportAIValue,
+				"limit":                      "how many to return, at most 100.",
+				"offset":                     "how many to skip, for the next page.",
 			},
 		},
 	}
@@ -86,17 +93,21 @@ func reportShowDoc() Doc {
 		Params: map[string]string{
 			"report": "the report's key, such as overview, responsiveness, resolution, team, live, satisfaction, " +
 				"ai or help_center.",
-			"from":             "the first day, 2026-11-01; with to left out, the thirty days ending today.",
-			"to":               "the last day, included.",
-			"compare":          "true sets each number beside the same number of days just before.",
-			"business_hours":   "true counts durations only while the inbox's office hours were open.",
-			"filter[inbox]":    reportInboxes,
-			"filter[team]":     reportTeams,
-			"filter[member]":   reportMembers,
-			"filter[channel]":  reportChannels,
-			"filter[tag]":      reportTags,
-			"filter[priority]": reportPriorities,
-			"filter[ai]":       reportAI,
+			"from":                       "the first day, 2026-11-01; with to left out, the thirty days ending today.",
+			"to":                         "the last day, included.",
+			"compare":                    "true sets each number beside the same number of days just before.",
+			"business_hours":             "true counts durations only while the inbox's office hours were open.",
+			"filter[inbox]":              reportInboxes,
+			"filter[team]":               reportTeams,
+			"filter[member]":             reportMembers,
+			"filter[channel]":            reportChannels,
+			"filter[tag]":                reportTags,
+			"filter[priority]":           reportPriorities,
+			"filter[ai]":                 reportAI,
+			"filter[ai_attribute]":       reportAIAttribute,
+			"filter[ai_attribute_value]": reportAIValue,
+			"ai_breakdown": "for the ai report, the key of the choice or yes-or-no AI attribute its " +
+				"Conversations by attribute table splits by; left out, the first active one.",
 		},
 	}
 }
