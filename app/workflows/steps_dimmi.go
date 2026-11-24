@@ -1,6 +1,6 @@
 /*
 |--------------------------------------------------------------------------
-| Letting dimmi Handle A Conversation
+| Handing A Conversation To An AI Agent
 |--------------------------------------------------------------------------
 |
 | The agent speaks in a conversation a workflow holds only while this
@@ -111,15 +111,10 @@ func (st *state) stepAgent(d workflowspec.DimmiSettings) *ids.UUID {
 }
 
 /*
-agentWait is the wait of an active agent step: the guidance and limits
-the agent reads on every turn, and the quiet timer.
+agentWait is the wait of an active agent step: which agent answers and
+how, read on every turn, and the quiet timer.
 */
 func (st *state) agentWait(ctx context.Context, d workflowspec.DimmiSettings) (*waitState, error) {
-	instructions, err := st.render(ctx, d.Instructions)
-	if err != nil {
-		return nil, err
-	}
-
 	quiet, err := st.quietAfter(ctx, d.QuietAfter)
 	if err != nil {
 		return nil, err
@@ -131,7 +126,7 @@ func (st *state) agentWait(ctx context.Context, d workflowspec.DimmiSettings) (*
 	return &waitState{
 		Kind: workflowspec.WaitAgent, Since: &now, Until: &until, Quiet: quiet.String(),
 		Agent: &workflowspec.AgentHandling{
-			AgentID: st.stepAgent(d), Instructions: instructions, MaxReplies: d.MaxReplies,
+			AgentID: st.stepAgent(d), AllowTransfers: workflowspec.On(d.AllowTransfers, false),
 			ConfirmResolution: workflowspec.On(d.ConfirmResolution, true),
 		},
 	}, nil

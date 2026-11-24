@@ -51,6 +51,7 @@ type SaveInput struct {
 	ReplyTeamID    *ids.UUID
 	ReplyMemberID  *ids.UUID
 	AIReplies      bool
+	ReplyAgentID   *ids.UUID
 }
 
 /*
@@ -62,7 +63,7 @@ func CurrentSettings(row models.Series) SaveInput {
 		ID: row.ID, LockVersion: row.LockVersion, Name: row.Name, Description: row.Description,
 		TopicID: row.TopicID, Service: row.Service, EmailAddressID: row.EmailAddressID,
 		SenderMemberID: row.SenderMemberID, SlackAs: row.SlackAs, ReplyTeamID: row.ReplyTeamID,
-		ReplyMemberID: row.ReplyMemberID, AIReplies: row.AiReplies,
+		ReplyMemberID: row.ReplyMemberID, AIReplies: row.AiReplies, ReplyAgentID: row.ReplyAgentID,
 	}
 }
 
@@ -123,6 +124,6 @@ func saveParams(in SaveInput, working []byte, hash string, now time.Time) models
 		Description: strings.TrimSpace(in.Description), Working: working, WorkingHash: hash, TopicID: in.TopicID,
 		Service: in.Service, EmailAddressID: in.EmailAddressID, SenderMemberID: in.SenderMemberID,
 		SlackAs: in.SlackAs, ReplyTeamID: in.ReplyTeamID, ReplyMemberID: in.ReplyMemberID,
-		AiReplies: in.AIReplies, MemberID: &in.Membership.Member.ID, Now: now,
+		AiReplies: in.AIReplies, ReplyAgentID: in.ReplyAgentID, MemberID: &in.Membership.Member.ID, Now: now,
 	}
 }

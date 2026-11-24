@@ -88,6 +88,18 @@ type AIAgentView struct {
 	ReadinessErrors []string                     `json:"readiness_errors"`
 	Managed         bool                         `json:"managed"`
 	PromptVersion   string                       `json:"prompt_version"`
+	Ties            []AIAgentTie                 `json:"ties"`
+}
+
+/*
+AIAgentTie is one thing that still relies on an agent, which stops it
+being archived: a workflow, a series, a place it answers on, or another
+agent that may transfer to it.
+*/
+type AIAgentTie struct {
+	Kind string `json:"kind"`
+	ID   string `json:"id"`
+	Name string `json:"name"`
 }
 
 /*
@@ -100,6 +112,17 @@ func NewAIAgentView(v ai.AgentView) AIAgentView {
 		}, v.LiveVersion),
 		Settings: NewAISettings(v.Settings), Keys: NewAIProviderKeys(v.Keys), Providers: v.Providers,
 		Catalog: v.Catalog, Ready: v.Ready, ReadinessErrors: orEmpty(v.ReadinessErrs), Managed: v.Managed,
-		PromptVersion: v.PromptVersion,
+		PromptVersion: v.PromptVersion, Ties: agentTies(v.Ties),
 	}
+}
+
+/*
+agentTies shapes an agent's ties for the API.
+*/
+func agentTies(ties []ai.Tie) []AIAgentTie {
+	out := make([]AIAgentTie, 0, len(ties))
+	for _, t := range ties {
+		out = append(out, AIAgentTie{Kind: t.Kind, ID: ai.TiePublicID(t), Name: t.Name})
+	}
+	return out
 }

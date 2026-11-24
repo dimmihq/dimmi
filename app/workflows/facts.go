@@ -224,6 +224,7 @@ func (s *subject) conversationField(name string) any {
 		"priority": string(enums.ConversationPriorityOf(c.Priority)), "tags": s.conversationTags,
 		"assignee_id": publicID(models.PrefixMember, c.AssigneeMemberID),
 		"team_id":     publicID(models.PrefixTeam, c.AssigneeTeamID), "ai_state": c.AiState, "subject": c.Subject,
+		"ai_agent_id":   publicID(models.PrefixAiAgent, c.AiAgentID),
 		"message_count": c.MessageCount, "waiting_minutes": waiting, "created_at": c.CreatedAt, "is_test": c.IsTest,
 	}[name]
 }

@@ -35,6 +35,14 @@ func schemaTextsFromAIAgentAndAIAgentView() map[string]map[string]string {
 				"configured\" or \"no channels enabled\". Empty when ready.",
 			"ready": "True when the agent could go live: it has a usable answer model and at least one " +
 				"channel.",
+			"ties": "What still relies on the agent: workflows and series that name it, places it " +
+				"answers on and agents that may transfer to it. The agent can be archived only once " +
+				"this is empty.",
+		},
+		"AIAgentTie": {
+			"id":   "The id of what relies on the agent, such as wf_..., chn_... or aia_....",
+			"kind": "What relies on the agent: workflow, series, connection, room, inbox or agent.",
+			"name": "Its name.",
 		},
 		"AIChatGPTConnection": {
 			"account_id": "The ChatGPT plan account that signed in. Left out while the sign-in is " +

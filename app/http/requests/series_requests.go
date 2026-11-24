@@ -58,6 +58,7 @@ type SeriesBody struct {
 	ReplyTeamID    string          `json:"reply_team_id,omitempty"`
 	ReplyMemberID  string          `json:"reply_member_id,omitempty"`
 	AIReplies      bool            `json:"ai_replies,omitempty"`
+	ReplyAgentID   string          `json:"reply_agent_id,omitempty"`
 }
 
 /*

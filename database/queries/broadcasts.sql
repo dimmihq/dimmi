@@ -33,8 +33,8 @@ UPDATE broadcasts SET name = @name, audience_id = sqlc.narg(audience_id), rules 
     room_ids = @room_ids, topic_id = sqlc.narg(topic_id), service = @service, subject = @subject, preview = @preview,
     body = @body, sender_member_id = sqlc.narg(sender_member_id), email_address_id = sqlc.narg(email_address_id),
     slack_as = @slack_as, reply_team_id = sqlc.narg(reply_team_id), reply_member_id = sqlc.narg(reply_member_id),
-    ai_replies = @ai_replies, track_clicks = @track_clicks, skip_frequency_cap = @skip_frequency_cap,
-    schedule_kind = @schedule_kind, scheduled_at = sqlc.narg(scheduled_at), goal = sqlc.narg(goal),
+    ai_replies = @ai_replies, reply_agent_id = sqlc.narg(reply_agent_id), track_clicks = @track_clicks,
+    skip_frequency_cap = @skip_frequency_cap, schedule_kind = @schedule_kind, scheduled_at = sqlc.narg(scheduled_at), goal = sqlc.narg(goal),
     holds = @holds::text[], updated_at = @now::timestamptz
 WHERE workspace_id = @workspace_id AND id = @id AND deleted_at IS NULL AND status IN ('draft', 'scheduled')
 RETURNING *;

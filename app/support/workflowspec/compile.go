@@ -43,6 +43,7 @@ type References struct {
 	Workflows   []string `json:"workflows,omitempty"`
 	Audiences   []string `json:"audiences,omitempty"`
 	Connections []string `json:"connections,omitempty"`
+	Agents      []string `json:"agents,omitempty"`
 }
 
 /*
@@ -145,6 +146,7 @@ func collectReferences(s Step, r *References) {
 		ScheduleID       string     `json:"schedule_id"`
 		WorkflowID       string     `json:"workflow_id"`
 		ConnectionID     string     `json:"connection_id"`
+		AgentID          string     `json:"agent_id"`
 		MentionMemberIDs []string   `json:"mention_member_ids"`
 		Until            *WaitUntil `json:"until"`
 	}
@@ -159,6 +161,7 @@ func collectReferences(s Step, r *References) {
 	r.Schedules = appendUnique(r.Schedules, refs.ScheduleID)
 	r.Workflows = appendUnique(r.Workflows, refs.WorkflowID)
 	r.Connections = appendUnique(r.Connections, refs.ConnectionID)
+	r.Agents = appendUnique(r.Agents, refs.AgentID)
 
 	if refs.Until != nil {
 		r.Schedules = appendUnique(r.Schedules, refs.Until.ScheduleID)

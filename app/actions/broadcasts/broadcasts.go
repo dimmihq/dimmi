@@ -100,21 +100,24 @@ Draft is everything the composer can change. Room ids pick Slack
 channels by hand; Rules apply when no saved audience is named.
 */
 type Draft struct {
-	Name             string
-	AudienceID       *ids.UUID
-	Rules            json.RawMessage
-	RoomIDs          []ids.UUID
-	TopicID          *ids.UUID
-	Service          bool
-	Subject          string
-	Preview          string
-	Body             string
-	SenderMemberID   *ids.UUID
-	EmailAddressID   *ids.UUID
-	SlackAs          string
-	ReplyTeamID      *ids.UUID
-	ReplyMemberID    *ids.UUID
-	AIReplies        bool
+	Name           string
+	AudienceID     *ids.UUID
+	Rules          json.RawMessage
+	RoomIDs        []ids.UUID
+	TopicID        *ids.UUID
+	Service        bool
+	Subject        string
+	Preview        string
+	Body           string
+	SenderMemberID *ids.UUID
+	EmailAddressID *ids.UUID
+	SlackAs        string
+	ReplyTeamID    *ids.UUID
+	ReplyMemberID  *ids.UUID
+	AIReplies      bool
+	// ReplyAgentID names the AI agent that answers replies when
+	// AIReplies is on; nil leaves it to the agent placed on the channel.
+	ReplyAgentID     *ids.UUID
 	TrackClicks      bool
 	SkipFrequencyCap bool
 	ScheduleKind     string

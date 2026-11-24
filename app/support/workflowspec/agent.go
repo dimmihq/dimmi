@@ -3,9 +3,9 @@
 | Agent Handling
 |--------------------------------------------------------------------------
 |
-| While a run waits on the step that lets dimmi handle a conversation,
-| its stored wait carries what the agent must honor on every turn: the
-| step's extra guidance, its reply limit and whether answers ask the
+| While a run waits on the step that hands a conversation to an agent,
+| its stored wait carries what the agent must honor on every turn: which
+| agent answers, whether it may transfer, and whether answers ask the
 | customer to confirm. The agent reads it from the run itself, so the
 | step's settings are never copied anywhere that could drift.
 |
@@ -26,14 +26,13 @@ const WaitAgent = "dimmi"
 
 /*
 AgentHandling is what an active agent step tells the agent: which
-agent answers (nil for the one the conversation would get anyway), extra
-instructions, the most replies it may send (zero for the agent's own
-limit) and whether answers ask the customer to confirm them.
+agent answers (nil for the one the conversation would get anyway),
+whether a named agent may transfer the conversation, and whether
+answers ask the customer to confirm them.
 */
 type AgentHandling struct {
 	AgentID           *ids.UUID `json:"agent_id,omitempty"`
-	Instructions      string    `json:"instructions,omitempty"`
-	MaxReplies        int       `json:"max_replies,omitempty"`
+	AllowTransfers    bool      `json:"allow_transfers,omitempty"`
 	ConfirmResolution bool      `json:"confirm_resolution"`
 }
 

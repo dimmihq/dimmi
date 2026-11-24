@@ -145,13 +145,15 @@ WHERE w.workspace_id = @workspace_id AND w.status = 'live' AND w.deleted_at IS N
 
 -- name: MissingWorkflowReferences :many
 -- MissingWorkflowReferences returns the referenced ids that name no live
--- team, active member, tag, schedule or saved audience of the workspace.
+-- team, active member, tag, schedule, saved audience or AI agent of the
+-- workspace.
 SELECT r.kind::text AS kind, r.id::uuid AS id FROM (
     SELECT 'team' AS kind, x AS id FROM unnest(@team_ids::uuid[]) AS x
     UNION ALL SELECT 'member', x FROM unnest(@member_ids::uuid[]) AS x
     UNION ALL SELECT 'tag', x FROM unnest(@tag_ids::uuid[]) AS x
     UNION ALL SELECT 'schedule', x FROM unnest(@schedule_ids::uuid[]) AS x
     UNION ALL SELECT 'audience', x FROM unnest(@audience_ids::uuid[]) AS x
+    UNION ALL SELECT 'agent', x FROM unnest(@agent_ids::uuid[]) AS x
 ) r
 WHERE NOT CASE r.kind
     WHEN 'team' THEN EXISTS (
@@ -162,6 +164,8 @@ WHERE NOT CASE r.kind
     WHEN 'tag' THEN EXISTS (SELECT 1 FROM tags g WHERE g.workspace_id = @workspace_id AND g.id = r.id)
     WHEN 'audience' THEN EXISTS (
         SELECT 1 FROM audiences a WHERE a.workspace_id = @workspace_id AND a.id = r.id AND a.deleted_at IS NULL)
+    WHEN 'agent' THEN EXISTS (
+        SELECT 1 FROM ai_agents g WHERE g.workspace_id = @workspace_id AND g.id = r.id AND g.deleted_at IS NULL)
     ELSE EXISTS (
         SELECT 1 FROM schedules s WHERE s.workspace_id = @workspace_id AND s.id = r.id AND s.deleted_at IS NULL)
 END;

@@ -586,6 +586,7 @@ type Broadcast struct {
 	SeriesNodeID      *string         `json:"series_node_id"`
 	TicketID          *ids.UUID       `json:"ticket_id"`
 	Holds             []string        `json:"holds"`
+	ReplyAgentID      *ids.UUID       `json:"reply_agent_id"`
 }
 
 type BroadcastLink struct {
@@ -2675,6 +2676,7 @@ type Series struct {
 	ArchivedAt        *time.Time      `json:"archived_at"`
 	CreatedAt         time.Time       `json:"created_at"`
 	UpdatedAt         time.Time       `json:"updated_at"`
+	ReplyAgentID      *ids.UUID       `json:"reply_agent_id"`
 }
 
 type SeriesEnrollment struct {

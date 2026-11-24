@@ -268,6 +268,7 @@ func (c *SeriesController) saveInput(b requests.SeriesBody) (series.SaveInput, e
 		{&in.SenderMemberID, b.SenderID, models.PrefixMember},
 		{&in.ReplyTeamID, b.ReplyTeamID, models.PrefixTeam},
 		{&in.ReplyMemberID, b.ReplyMemberID, models.PrefixMember},
+		{&in.ReplyAgentID, b.ReplyAgentID, models.PrefixAiAgent},
 	}
 
 	for _, r := range refs {

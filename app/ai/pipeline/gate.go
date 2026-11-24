@@ -36,6 +36,9 @@ func (r *Runner) gate(e *env, s *TurnSettings) *decision {
 	if s.Workflow.Controlled && !s.Workflow.StepActive {
 		return skipped("workflow_controls_ai")
 	}
+	if e.WorkflowAnswered {
+		return skipped("workflow_answered")
+	}
 	if confirmsAnswer(e, s) {
 		return skipped("resolution_confirmed")
 	}

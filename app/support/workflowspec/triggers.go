@@ -46,6 +46,7 @@ const (
 	TriggerTeammateQuiet     = "conversation.teammate_quiet"
 	TriggerDimmiHandedOver   = "dimmi.handed_over"
 	TriggerDimmiResolved     = "dimmi.resolved"
+	TriggerAgentTransferred  = "agent.transferred"
 	TriggerSLAWarning        = "sla.warning"
 	TriggerSLABreached       = "sla.breached"
 	TriggerReusable          = "reusable"
@@ -175,12 +176,16 @@ otherTriggers returns the dimmi, service level and reusable triggers.
 func otherTriggers() []Trigger {
 	return []Trigger{
 		{
-			Key: TriggerDimmiHandedOver, Name: "dimmi hands over", Group: GroupDimmi, Reentry: reentryAny(),
+			Key: TriggerDimmiHandedOver, Name: "AI agent hands over", Group: GroupDimmi, Reentry: reentryAny(),
 			Default: ReentryEveryTime, ConversationFields: true,
 		},
 		{
-			Key: TriggerDimmiResolved, Name: "dimmi resolves a conversation", Group: GroupDimmi, Reentry: reentryAny(),
-			Default: ReentryEveryTime, Talks: []string{KindMessage}, ConversationFields: true,
+			Key: TriggerDimmiResolved, Name: "AI agent resolves a conversation", Group: GroupDimmi,
+			Reentry: reentryAny(), Default: ReentryEveryTime, Talks: []string{KindMessage}, ConversationFields: true,
+		},
+		{
+			Key: TriggerAgentTransferred, Name: "AI agent transfers to another agent", Group: GroupDimmi,
+			Reentry: reentryAny(), Default: ReentryEveryTime, ConversationFields: true,
 		},
 		{
 			Key: TriggerSLAWarning, Name: "SLA about to breach", Group: GroupSLA, Reentry: reentryAny(),

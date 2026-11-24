@@ -46,18 +46,18 @@ type ResponseSave struct {
 }
 
 /*
-DimmiSettings hands the conversation to dimmi until it resolves,
+DimmiSettings hands the conversation to an AI agent until it resolves,
 hands over or the customer goes quiet. AgentID, a public agent id,
-picks the agent that answers; empty leaves it to the conversation's
-channel and the workspace's default.
+picks the agent that answers; empty leaves it to the agent placed on
+the conversation's channel, then the workspace's default. The agent
+answers by its own guidance and procedures; the step adds none.
+AllowTransfers lets a named agent pass the conversation to the agents
+it may transfer to; the agent placed on the channel always may.
 */
 type DimmiSettings struct {
-	AgentID                string `json:"agent_id,omitempty"`
-	Instructions           string `json:"instructions,omitempty"`
-	MaxReplies             int    `json:"max_replies,omitempty"`
-	QuietAfter             string `json:"quiet_after,omitempty"`
-	ConfirmResolution      *bool  `json:"confirm_resolution,omitempty"`
-	CloseOnResolved        *bool  `json:"close_on_resolved,omitempty"`
-	AskEmailBeforeHandover *bool  `json:"ask_email_before_handover,omitempty"`
-	HandoverNotice         string `json:"handover_notice,omitempty"`
+	AgentID           string `json:"agent_id,omitempty"`
+	AllowTransfers    *bool  `json:"allow_transfers,omitempty"`
+	QuietAfter        string `json:"quiet_after,omitempty"`
+	ConfirmResolution *bool  `json:"confirm_resolution,omitempty"`
+	CloseOnResolved   *bool  `json:"close_on_resolved,omitempty"`
 }

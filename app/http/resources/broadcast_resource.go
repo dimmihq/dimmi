@@ -44,6 +44,7 @@ type Broadcast struct {
 	ReplyTeamID      *string         `json:"reply_team_id"`
 	ReplyMemberID    *string         `json:"reply_member_id"`
 	AIReplies        bool            `json:"ai_replies"`
+	ReplyAgentID     *string         `json:"reply_agent_id"`
 	TrackClicks      bool            `json:"track_clicks"`
 	SkipFrequencyCap bool            `json:"skip_frequency_cap"`
 	ScheduleKind     string          `json:"schedule_kind"`
@@ -76,7 +77,7 @@ func NewBroadcast(b models.Broadcast) Broadcast {
 		EmailAddressID: broadcastRef(models.PrefixEmailAddress, b.EmailAddressID), SlackAs: b.SlackAs,
 		ReplyTeamID:   broadcastRef(models.PrefixTeam, b.ReplyTeamID),
 		ReplyMemberID: broadcastRef(models.PrefixMember, b.ReplyMemberID),
-		AIReplies:     b.AiReplies, TrackClicks: b.TrackClicks, SkipFrequencyCap: b.SkipFrequencyCap,
+		AIReplies:     b.AiReplies, ReplyAgentID: broadcastRef(models.PrefixAiAgent, b.ReplyAgentID), TrackClicks: b.TrackClicks, SkipFrequencyCap: b.SkipFrequencyCap,
 		ScheduleKind: b.ScheduleKind, ScheduledAt: b.ScheduledAt, Goal: b.Goal, Counts: b.Counts,
 		TicketID: broadcastRef(models.PrefixTicket, b.TicketID), Holds: nonNilHolds(b.Holds),
 		StartedAt: b.StartedAt, FinishedAt: b.FinishedAt, CreatedAt: b.CreatedAt, UpdatedAt: b.UpdatedAt,

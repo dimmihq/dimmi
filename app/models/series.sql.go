@@ -18,7 +18,7 @@ INSERT INTO series (workspace_id, name, subject, working, working_hash, sender_m
     updated_by_member_id, created_at, updated_at)
 VALUES ($1, $2, $3, $4, $5, $6, $6, $6,
     $7::timestamptz, $7::timestamptz)
-RETURNING id, workspace_id, name, description, subject, status, working, working_hash, live_version_id, lock_version, topic_id, service, email_address_id, sender_member_id, slack_as, reply_team_id, reply_member_id, ai_replies, counts, created_by_member_id, updated_by_member_id, published_at, paused_at, archived_at, created_at, updated_at
+RETURNING id, workspace_id, name, description, subject, status, working, working_hash, live_version_id, lock_version, topic_id, service, email_address_id, sender_member_id, slack_as, reply_team_id, reply_member_id, ai_replies, counts, created_by_member_id, updated_by_member_id, published_at, paused_at, archived_at, created_at, updated_at, reply_agent_id
 `
 
 type CreateSeriesParams struct {
@@ -70,6 +70,7 @@ func (q *Queries) CreateSeries(ctx context.Context, arg CreateSeriesParams) (Ser
 		&i.ArchivedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.ReplyAgentID,
 	)
 	return i, err
 }
@@ -144,7 +145,7 @@ func (q *Queries) DeleteSeries(ctx context.Context, arg DeleteSeriesParams) (int
 }
 
 const findSeries = `-- name: FindSeries :one
-SELECT id, workspace_id, name, description, subject, status, working, working_hash, live_version_id, lock_version, topic_id, service, email_address_id, sender_member_id, slack_as, reply_team_id, reply_member_id, ai_replies, counts, created_by_member_id, updated_by_member_id, published_at, paused_at, archived_at, created_at, updated_at FROM series WHERE workspace_id = $1 AND id = $2
+SELECT id, workspace_id, name, description, subject, status, working, working_hash, live_version_id, lock_version, topic_id, service, email_address_id, sender_member_id, slack_as, reply_team_id, reply_member_id, ai_replies, counts, created_by_member_id, updated_by_member_id, published_at, paused_at, archived_at, created_at, updated_at, reply_agent_id FROM series WHERE workspace_id = $1 AND id = $2
 `
 
 type FindSeriesParams struct {
@@ -183,12 +184,13 @@ func (q *Queries) FindSeries(ctx context.Context, arg FindSeriesParams) (Series,
 		&i.ArchivedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.ReplyAgentID,
 	)
 	return i, err
 }
 
 const findSeriesBroadcast = `-- name: FindSeriesBroadcast :one
-SELECT id, workspace_id, name, channel, status, pause_reason, audience_id, rules, room_ids, topic_id, service, subject, preview, body, sender_member_id, email_address_id, slack_as, reply_team_id, reply_member_id, ai_replies, track_clicks, skip_frequency_cap, schedule_kind, scheduled_at, goal, counts, created_by_member_id, sent_by_member_id, started_at, finished_at, deleted_at, created_at, updated_at, kind, series_id, series_node_id, ticket_id, holds FROM broadcasts
+SELECT id, workspace_id, name, channel, status, pause_reason, audience_id, rules, room_ids, topic_id, service, subject, preview, body, sender_member_id, email_address_id, slack_as, reply_team_id, reply_member_id, ai_replies, track_clicks, skip_frequency_cap, schedule_kind, scheduled_at, goal, counts, created_by_member_id, sent_by_member_id, started_at, finished_at, deleted_at, created_at, updated_at, kind, series_id, series_node_id, ticket_id, holds, reply_agent_id FROM broadcasts
 WHERE workspace_id = $1 AND series_id = $2 AND series_node_id = $3
 `
 
@@ -241,6 +243,7 @@ func (q *Queries) FindSeriesBroadcast(ctx context.Context, arg FindSeriesBroadca
 		&i.SeriesNodeID,
 		&i.TicketID,
 		&i.Holds,
+		&i.ReplyAgentID,
 	)
 	return i, err
 }
@@ -275,7 +278,7 @@ func (q *Queries) FindSeriesVersion(ctx context.Context, arg FindSeriesVersionPa
 }
 
 const listLiveSeries = `-- name: ListLiveSeries :many
-SELECT s.id, s.workspace_id, s.name, s.description, s.subject, s.status, s.working, s.working_hash, s.live_version_id, s.lock_version, s.topic_id, s.service, s.email_address_id, s.sender_member_id, s.slack_as, s.reply_team_id, s.reply_member_id, s.ai_replies, s.counts, s.created_by_member_id, s.updated_by_member_id, s.published_at, s.paused_at, s.archived_at, s.created_at, s.updated_at, v.id, v.workspace_id, v.series_id, v.number, v.spec, v.spec_hash, v.note, v.moves, v.published_by_member_id, v.restored_from_version_id, v.created_at FROM series s
+SELECT s.id, s.workspace_id, s.name, s.description, s.subject, s.status, s.working, s.working_hash, s.live_version_id, s.lock_version, s.topic_id, s.service, s.email_address_id, s.sender_member_id, s.slack_as, s.reply_team_id, s.reply_member_id, s.ai_replies, s.counts, s.created_by_member_id, s.updated_by_member_id, s.published_at, s.paused_at, s.archived_at, s.created_at, s.updated_at, s.reply_agent_id, v.id, v.workspace_id, v.series_id, v.number, v.spec, v.spec_hash, v.note, v.moves, v.published_by_member_id, v.restored_from_version_id, v.created_at FROM series s
 JOIN series_versions v ON v.id = s.live_version_id
 WHERE s.workspace_id = $1 AND s.status = 'live'
 ORDER BY s.created_at, s.id
@@ -324,6 +327,7 @@ func (q *Queries) ListLiveSeries(ctx context.Context, workspaceID ids.UUID) ([]L
 			&i.Series.ArchivedAt,
 			&i.Series.CreatedAt,
 			&i.Series.UpdatedAt,
+			&i.Series.ReplyAgentID,
 			&i.SeriesVersion.ID,
 			&i.SeriesVersion.WorkspaceID,
 			&i.SeriesVersion.SeriesID,
@@ -347,7 +351,7 @@ func (q *Queries) ListLiveSeries(ctx context.Context, workspaceID ids.UUID) ([]L
 }
 
 const listSeriesBroadcasts = `-- name: ListSeriesBroadcasts :many
-SELECT id, workspace_id, name, channel, status, pause_reason, audience_id, rules, room_ids, topic_id, service, subject, preview, body, sender_member_id, email_address_id, slack_as, reply_team_id, reply_member_id, ai_replies, track_clicks, skip_frequency_cap, schedule_kind, scheduled_at, goal, counts, created_by_member_id, sent_by_member_id, started_at, finished_at, deleted_at, created_at, updated_at, kind, series_id, series_node_id, ticket_id, holds FROM broadcasts WHERE workspace_id = $1 AND series_id = $2 ORDER BY created_at
+SELECT id, workspace_id, name, channel, status, pause_reason, audience_id, rules, room_ids, topic_id, service, subject, preview, body, sender_member_id, email_address_id, slack_as, reply_team_id, reply_member_id, ai_replies, track_clicks, skip_frequency_cap, schedule_kind, scheduled_at, goal, counts, created_by_member_id, sent_by_member_id, started_at, finished_at, deleted_at, created_at, updated_at, kind, series_id, series_node_id, ticket_id, holds, reply_agent_id FROM broadcasts WHERE workspace_id = $1 AND series_id = $2 ORDER BY created_at
 `
 
 type ListSeriesBroadcastsParams struct {
@@ -404,6 +408,7 @@ func (q *Queries) ListSeriesBroadcasts(ctx context.Context, arg ListSeriesBroadc
 			&i.SeriesNodeID,
 			&i.TicketID,
 			&i.Holds,
+			&i.ReplyAgentID,
 		); err != nil {
 			return nil, err
 		}
@@ -416,7 +421,7 @@ func (q *Queries) ListSeriesBroadcasts(ctx context.Context, arg ListSeriesBroadc
 }
 
 const listSeriesPage = `-- name: ListSeriesPage :many
-SELECT id, workspace_id, name, description, subject, status, working, working_hash, live_version_id, lock_version, topic_id, service, email_address_id, sender_member_id, slack_as, reply_team_id, reply_member_id, ai_replies, counts, created_by_member_id, updated_by_member_id, published_at, paused_at, archived_at, created_at, updated_at FROM series
+SELECT id, workspace_id, name, description, subject, status, working, working_hash, live_version_id, lock_version, topic_id, service, email_address_id, sender_member_id, slack_as, reply_team_id, reply_member_id, ai_replies, counts, created_by_member_id, updated_by_member_id, published_at, paused_at, archived_at, created_at, updated_at, reply_agent_id FROM series
 WHERE workspace_id = $1
   AND ($2::text IS NULL OR status = $2::text)
   AND ($2::text IS NOT NULL OR status <> 'archived')
@@ -477,6 +482,7 @@ func (q *Queries) ListSeriesPage(ctx context.Context, arg ListSeriesPageParams) 
 			&i.ArchivedAt,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.ReplyAgentID,
 		); err != nil {
 			return nil, err
 		}
@@ -532,7 +538,7 @@ func (q *Queries) ListSeriesVersions(ctx context.Context, arg ListSeriesVersions
 }
 
 const lockSeries = `-- name: LockSeries :one
-SELECT id, workspace_id, name, description, subject, status, working, working_hash, live_version_id, lock_version, topic_id, service, email_address_id, sender_member_id, slack_as, reply_team_id, reply_member_id, ai_replies, counts, created_by_member_id, updated_by_member_id, published_at, paused_at, archived_at, created_at, updated_at FROM series WHERE workspace_id = $1 AND id = $2 FOR UPDATE
+SELECT id, workspace_id, name, description, subject, status, working, working_hash, live_version_id, lock_version, topic_id, service, email_address_id, sender_member_id, slack_as, reply_team_id, reply_member_id, ai_replies, counts, created_by_member_id, updated_by_member_id, published_at, paused_at, archived_at, created_at, updated_at, reply_agent_id FROM series WHERE workspace_id = $1 AND id = $2 FOR UPDATE
 `
 
 type LockSeriesParams struct {
@@ -571,6 +577,7 @@ func (q *Queries) LockSeries(ctx context.Context, arg LockSeriesParams) (Series,
 		&i.ArchivedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.ReplyAgentID,
 	)
 	return i, err
 }
@@ -579,10 +586,10 @@ const saveSeries = `-- name: SaveSeries :one
 UPDATE series SET name = $1, description = $2, working = $3, working_hash = $4,
     topic_id = $5, service = $6, email_address_id = $7,
     sender_member_id = $8, slack_as = $9, reply_team_id = $10,
-    reply_member_id = $11, ai_replies = $12,
-    updated_by_member_id = $13, lock_version = lock_version + 1, updated_at = $14::timestamptz
-WHERE workspace_id = $15 AND id = $16 AND lock_version = $17 AND status <> 'archived'
-RETURNING id, workspace_id, name, description, subject, status, working, working_hash, live_version_id, lock_version, topic_id, service, email_address_id, sender_member_id, slack_as, reply_team_id, reply_member_id, ai_replies, counts, created_by_member_id, updated_by_member_id, published_at, paused_at, archived_at, created_at, updated_at
+    reply_member_id = $11, ai_replies = $12, reply_agent_id = $13,
+    updated_by_member_id = $14, lock_version = lock_version + 1, updated_at = $15::timestamptz
+WHERE workspace_id = $16 AND id = $17 AND lock_version = $18 AND status <> 'archived'
+RETURNING id, workspace_id, name, description, subject, status, working, working_hash, live_version_id, lock_version, topic_id, service, email_address_id, sender_member_id, slack_as, reply_team_id, reply_member_id, ai_replies, counts, created_by_member_id, updated_by_member_id, published_at, paused_at, archived_at, created_at, updated_at, reply_agent_id
 `
 
 type SaveSeriesParams struct {
@@ -598,6 +605,7 @@ type SaveSeriesParams struct {
 	ReplyTeamID    *ids.UUID       `json:"reply_team_id"`
 	ReplyMemberID  *ids.UUID       `json:"reply_member_id"`
 	AiReplies      bool            `json:"ai_replies"`
+	ReplyAgentID   *ids.UUID       `json:"reply_agent_id"`
 	MemberID       *ids.UUID       `json:"member_id"`
 	Now            time.Time       `json:"now"`
 	WorkspaceID    ids.UUID        `json:"workspace_id"`
@@ -621,6 +629,7 @@ func (q *Queries) SaveSeries(ctx context.Context, arg SaveSeriesParams) (Series,
 		arg.ReplyTeamID,
 		arg.ReplyMemberID,
 		arg.AiReplies,
+		arg.ReplyAgentID,
 		arg.MemberID,
 		arg.Now,
 		arg.WorkspaceID,
@@ -655,6 +664,7 @@ func (q *Queries) SaveSeries(ctx context.Context, arg SaveSeriesParams) (Series,
 		&i.ArchivedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.ReplyAgentID,
 	)
 	return i, err
 }
@@ -704,7 +714,7 @@ UPDATE series SET status = $1, live_version_id = COALESCE($2, live_version_id),
     published_at = COALESCE($3, published_at), paused_at = $4,
     archived_at = $5, updated_at = $6::timestamptz
 WHERE workspace_id = $7 AND id = $8
-RETURNING id, workspace_id, name, description, subject, status, working, working_hash, live_version_id, lock_version, topic_id, service, email_address_id, sender_member_id, slack_as, reply_team_id, reply_member_id, ai_replies, counts, created_by_member_id, updated_by_member_id, published_at, paused_at, archived_at, created_at, updated_at
+RETURNING id, workspace_id, name, description, subject, status, working, working_hash, live_version_id, lock_version, topic_id, service, email_address_id, sender_member_id, slack_as, reply_team_id, reply_member_id, ai_replies, counts, created_by_member_id, updated_by_member_id, published_at, paused_at, archived_at, created_at, updated_at, reply_agent_id
 `
 
 type SetSeriesStatusParams struct {
@@ -759,6 +769,7 @@ func (q *Queries) SetSeriesStatus(ctx context.Context, arg SetSeriesStatusParams
 		&i.ArchivedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.ReplyAgentID,
 	)
 	return i, err
 }
@@ -766,19 +777,20 @@ func (q *Queries) SetSeriesStatus(ctx context.Context, arg SetSeriesStatusParams
 const upsertSeriesBroadcast = `-- name: UpsertSeriesBroadcast :one
 INSERT INTO broadcasts (workspace_id, name, channel, status, kind, series_id, series_node_id, topic_id, service,
     subject, preview, body, sender_member_id, email_address_id, slack_as, reply_team_id, reply_member_id,
-    ai_replies, track_clicks, skip_frequency_cap, started_at, created_at, updated_at)
+    ai_replies, reply_agent_id, track_clicks, skip_frequency_cap, started_at, created_at, updated_at)
 VALUES ($1, $2, $3, $4, 'series', $5, $6, $7, $8,
     $9, $10, $11, $12, $13, $14,
-    $15, $16, $17, $18, true, $19::timestamptz,
-    $19::timestamptz, $19::timestamptz)
+    $15, $16, $17, $18, $19, true,
+    $20::timestamptz,
+    $20::timestamptz, $20::timestamptz)
 ON CONFLICT (series_id, series_node_id) WHERE series_id IS NOT NULL DO UPDATE SET
     name = EXCLUDED.name, channel = EXCLUDED.channel, status = EXCLUDED.status, topic_id = EXCLUDED.topic_id,
     service = EXCLUDED.service, subject = EXCLUDED.subject, preview = EXCLUDED.preview, body = EXCLUDED.body,
     sender_member_id = EXCLUDED.sender_member_id, email_address_id = EXCLUDED.email_address_id,
     slack_as = EXCLUDED.slack_as, reply_team_id = EXCLUDED.reply_team_id,
     reply_member_id = EXCLUDED.reply_member_id, ai_replies = EXCLUDED.ai_replies,
-    track_clicks = EXCLUDED.track_clicks, updated_at = EXCLUDED.updated_at
-RETURNING id, workspace_id, name, channel, status, pause_reason, audience_id, rules, room_ids, topic_id, service, subject, preview, body, sender_member_id, email_address_id, slack_as, reply_team_id, reply_member_id, ai_replies, track_clicks, skip_frequency_cap, schedule_kind, scheduled_at, goal, counts, created_by_member_id, sent_by_member_id, started_at, finished_at, deleted_at, created_at, updated_at, kind, series_id, series_node_id, ticket_id, holds
+    reply_agent_id = EXCLUDED.reply_agent_id, track_clicks = EXCLUDED.track_clicks, updated_at = EXCLUDED.updated_at
+RETURNING id, workspace_id, name, channel, status, pause_reason, audience_id, rules, room_ids, topic_id, service, subject, preview, body, sender_member_id, email_address_id, slack_as, reply_team_id, reply_member_id, ai_replies, track_clicks, skip_frequency_cap, schedule_kind, scheduled_at, goal, counts, created_by_member_id, sent_by_member_id, started_at, finished_at, deleted_at, created_at, updated_at, kind, series_id, series_node_id, ticket_id, holds, reply_agent_id
 `
 
 type UpsertSeriesBroadcastParams struct {
@@ -799,6 +811,7 @@ type UpsertSeriesBroadcastParams struct {
 	ReplyTeamID    *ids.UUID `json:"reply_team_id"`
 	ReplyMemberID  *ids.UUID `json:"reply_member_id"`
 	AiReplies      bool      `json:"ai_replies"`
+	ReplyAgentID   *ids.UUID `json:"reply_agent_id"`
 	TrackClicks    bool      `json:"track_clicks"`
 	Now            time.Time `json:"now"`
 }
@@ -824,6 +837,7 @@ func (q *Queries) UpsertSeriesBroadcast(ctx context.Context, arg UpsertSeriesBro
 		arg.ReplyTeamID,
 		arg.ReplyMemberID,
 		arg.AiReplies,
+		arg.ReplyAgentID,
 		arg.TrackClicks,
 		arg.Now,
 	)
@@ -867,6 +881,7 @@ func (q *Queries) UpsertSeriesBroadcast(ctx context.Context, arg UpsertSeriesBro
 		&i.SeriesNodeID,
 		&i.TicketID,
 		&i.Holds,
+		&i.ReplyAgentID,
 	)
 	return i, err
 }

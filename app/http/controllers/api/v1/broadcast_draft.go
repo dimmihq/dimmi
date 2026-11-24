@@ -71,6 +71,7 @@ func (c *BroadcastController) mergeRefs(d *broadcasts.Draft, in requests.Broadca
 		{&d.EmailAddressID, in.EmailAddressID, models.PrefixEmailAddress},
 		{&d.ReplyTeamID, in.ReplyTeamID, models.PrefixTeam},
 		{&d.ReplyMemberID, in.ReplyMemberID, models.PrefixMember},
+		{&d.ReplyAgentID, in.ReplyAgentID, models.PrefixAiAgent},
 	}
 
 	for _, r := range refs {

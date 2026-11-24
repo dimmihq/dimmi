@@ -35,6 +35,97 @@ func (q *Queries) AgentNameTaken(ctx context.Context, arg AgentNameTakenParams) 
 	return column_1, err
 }
 
+const agentTies = `-- name: AgentTies :many
+SELECT 'workflow'::text AS kind, w.id, w.name FROM workflows w
+LEFT JOIN workflow_versions v ON v.id = w.live_version_id
+WHERE w.workspace_id = $1 AND w.deleted_at IS NULL AND (
+    jsonb_path_exists(w.draft, '$.**.settings.agent_id ? (@ == $id)', jsonb_build_object('id', $2::text))
+    OR jsonb_path_exists(COALESCE(v.spec, '{}'), '$.**.settings.agent_id ? (@ == $id)', jsonb_build_object('id', $2::text))
+)
+UNION ALL
+SELECT 'series'::text, s.id, s.name FROM series s
+WHERE s.workspace_id = $1 AND s.archived_at IS NULL AND s.reply_agent_id = $3
+UNION ALL
+SELECT 'connection'::text, cc.id, cc.name FROM channel_connections cc
+WHERE cc.workspace_id = $1 AND cc.ai_agent_id = $3
+UNION ALL
+SELECT 'room'::text, cr.id, cr.name FROM channel_rooms cr
+WHERE cr.workspace_id = $1 AND cr.ai_agent_id = $3
+UNION ALL
+SELECT 'inbox'::text, ib.id, ib.name FROM inboxes ib
+WHERE ib.workspace_id = $1 AND ib.ai_agent_id = $3
+UNION ALL
+SELECT 'agent'::text, a.id, a.name FROM ai_agents a
+WHERE a.workspace_id = $1 AND a.deleted_at IS NULL AND a.id <> $3 AND (
+    $3::uuid = ANY (a.transfer_agent_ids)
+    OR jsonb_path_exists(COALESCE(a.draft, '{}'), '$.transfer_agent_ids[*] ? (@ == $id)', jsonb_build_object('id', ($3::uuid)::text))
+)
+ORDER BY 1, 3
+`
+
+type AgentTiesParams struct {
+	WorkspaceID ids.UUID  `json:"workspace_id"`
+	PublicID    string    `json:"public_id"`
+	AgentID     *ids.UUID `json:"agent_id"`
+}
+
+type AgentTiesRow struct {
+	Kind string   `json:"kind"`
+	ID   ids.UUID `json:"id"`
+	Name string   `json:"name"`
+}
+
+// AgentTies lists what still relies on an agent, so it is never archived
+// from under them: workflows whose working copy or live version names it
+// in a step, series whose replies go to it, the places it answers on,
+// and the other agents that may transfer to it, live or in their draft.
+func (q *Queries) AgentTies(ctx context.Context, arg AgentTiesParams) ([]AgentTiesRow, error) {
+	rows, err := q.db.Query(ctx, agentTies, arg.WorkspaceID, arg.PublicID, arg.AgentID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []AgentTiesRow
+	for rows.Next() {
+		var i AgentTiesRow
+		if err := rows.Scan(&i.Kind, &i.ID, &i.Name); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const assignConversationAgent = `-- name: AssignConversationAgent :execrows
+UPDATE conversations SET ai_agent_id = $1, updated_at = $2
+WHERE workspace_id = $3 AND id = $4 AND ai_agent_id IS DISTINCT FROM $1
+`
+
+type AssignConversationAgentParams struct {
+	AgentID     *ids.UUID `json:"agent_id"`
+	Now         time.Time `json:"now"`
+	WorkspaceID ids.UUID  `json:"workspace_id"`
+	ID          ids.UUID  `json:"id"`
+}
+
+// AssignConversationAgent puts an agent on a conversation in place of
+// the one it had, as a workflow step chooses it.
+func (q *Queries) AssignConversationAgent(ctx context.Context, arg AssignConversationAgentParams) (int64, error) {
+	result, err := q.db.Exec(ctx, assignConversationAgent,
+		arg.AgentID,
+		arg.Now,
+		arg.WorkspaceID,
+		arg.ID,
+	)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
 const clearAgentConnections = `-- name: ClearAgentConnections :exec
 UPDATE channel_connections SET ai_agent_id = NULL
 WHERE workspace_id = $1 AND ai_agent_id = $2

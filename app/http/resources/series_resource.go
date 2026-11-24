@@ -43,6 +43,7 @@ type Series struct {
 	ReplyTeamID    *string          `json:"reply_team_id"`
 	ReplyMemberID  *string          `json:"reply_member_id"`
 	AIReplies      bool             `json:"ai_replies"`
+	ReplyAgentID   *string          `json:"reply_agent_id"`
 	Counts         json.RawMessage  `json:"counts"`
 	Totals         *SeriesTotals    `json:"totals,omitempty"`
 	PublishedAt    *time.Time       `json:"published_at"`
@@ -86,7 +87,7 @@ func NewSeries(s models.Series, liveHash string) Series {
 		SenderID:       broadcastRef(models.PrefixMember, s.SenderMemberID), SlackAs: s.SlackAs,
 		ReplyTeamID: broadcastRef(models.PrefixTeam, s.ReplyTeamID), ReplyMemberID: broadcastRef(models.PrefixMember,
 			s.ReplyMemberID),
-		AIReplies: s.AiReplies, Counts: s.Counts, PublishedAt: s.PublishedAt, PausedAt: s.PausedAt,
+		AIReplies: s.AiReplies, ReplyAgentID: broadcastRef(models.PrefixAiAgent, s.ReplyAgentID), Counts: s.Counts, PublishedAt: s.PublishedAt, PausedAt: s.PausedAt,
 		ArchivedAt: s.ArchivedAt, CreatedAt: s.CreatedAt, UpdatedAt: s.UpdatedAt,
 	}
 }

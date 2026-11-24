@@ -31,7 +31,7 @@ LIMIT @row_limit::bigint OFFSET @row_offset::bigint;
 UPDATE series SET name = @name, description = @description, working = @working, working_hash = @working_hash,
     topic_id = sqlc.narg(topic_id), service = @service, email_address_id = sqlc.narg(email_address_id),
     sender_member_id = sqlc.narg(sender_member_id), slack_as = @slack_as, reply_team_id = sqlc.narg(reply_team_id),
-    reply_member_id = sqlc.narg(reply_member_id), ai_replies = @ai_replies,
+    reply_member_id = sqlc.narg(reply_member_id), ai_replies = @ai_replies, reply_agent_id = sqlc.narg(reply_agent_id),
     updated_by_member_id = sqlc.narg(member_id), lock_version = lock_version + 1, updated_at = @now::timestamptz
 WHERE workspace_id = @workspace_id AND id = @id AND lock_version = @lock_version AND status <> 'archived'
 RETURNING *;
@@ -84,10 +84,11 @@ ORDER BY number DESC;
 -- through in step with the step and the series' sending settings.
 INSERT INTO broadcasts (workspace_id, name, channel, status, kind, series_id, series_node_id, topic_id, service,
     subject, preview, body, sender_member_id, email_address_id, slack_as, reply_team_id, reply_member_id,
-    ai_replies, track_clicks, skip_frequency_cap, started_at, created_at, updated_at)
+    ai_replies, reply_agent_id, track_clicks, skip_frequency_cap, started_at, created_at, updated_at)
 VALUES (@workspace_id, @name, @channel, @status, 'series', @series_id, @series_node_id, sqlc.narg(topic_id), @service,
     @subject, @preview, @body, sqlc.narg(sender_member_id), sqlc.narg(email_address_id), @slack_as,
-    sqlc.narg(reply_team_id), sqlc.narg(reply_member_id), @ai_replies, @track_clicks, true, @now::timestamptz,
+    sqlc.narg(reply_team_id), sqlc.narg(reply_member_id), @ai_replies, sqlc.narg(reply_agent_id), @track_clicks, true,
+    @now::timestamptz,
     @now::timestamptz, @now::timestamptz)
 ON CONFLICT (series_id, series_node_id) WHERE series_id IS NOT NULL DO UPDATE SET
     name = EXCLUDED.name, channel = EXCLUDED.channel, status = EXCLUDED.status, topic_id = EXCLUDED.topic_id,
@@ -95,7 +96,7 @@ ON CONFLICT (series_id, series_node_id) WHERE series_id IS NOT NULL DO UPDATE SE
     sender_member_id = EXCLUDED.sender_member_id, email_address_id = EXCLUDED.email_address_id,
     slack_as = EXCLUDED.slack_as, reply_team_id = EXCLUDED.reply_team_id,
     reply_member_id = EXCLUDED.reply_member_id, ai_replies = EXCLUDED.ai_replies,
-    track_clicks = EXCLUDED.track_clicks, updated_at = EXCLUDED.updated_at
+    reply_agent_id = EXCLUDED.reply_agent_id, track_clicks = EXCLUDED.track_clicks, updated_at = EXCLUDED.updated_at
 RETURNING *;
 
 -- name: SetSeriesBroadcastsStatus :exec

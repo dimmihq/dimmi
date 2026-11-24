@@ -63,6 +63,7 @@ func (e *Engine) Listen(d *events.Dispatcher) {
 	})
 	events.ListenQueued(d, rated)
 	events.ListenQueued(d, agentHandedOver)
+	events.ListenQueued(d, agentTransferred)
 	e.listenStatus(d)
 	e.listenTickets(d)
 }
@@ -297,6 +298,26 @@ func agentHandedOver(ev appevents.AiHandoffRequested) queue.Args {
 	raw, err := json.Marshal(Event{
 		WorkspaceID: ev.WorkspaceID, ConversationID: ev.ConversationID, Trigger: workflowspec.TriggerDimmiHandedOver,
 		EventID: ev.ID.String(), Chain: ev.WorkflowChain, Data: map[string]any{"dimmi.handover_reason": ev.Reason},
+	})
+	if err != nil {
+		return nil
+	}
+
+	return jobs.MatchWorkflowsArgs{Event: raw}
+}
+
+/*
+agentTransferred matches an AI agent passing a conversation to another
+agent. The agent made this change, so it is matched even though
+changes the agent makes start nothing else.
+*/
+func agentTransferred(ev appevents.AiAgentTransferred) queue.Args {
+	raw, err := json.Marshal(Event{
+		WorkspaceID: ev.WorkspaceID, ConversationID: ev.ConversationID, Trigger: workflowspec.TriggerAgentTransferred,
+		EventID: ev.ID.String(), Chain: ev.WorkflowChain, Data: map[string]any{
+			"agent.from_id": models.PublicID(models.PrefixAiAgent, ev.FromAgentID),
+			"agent.to_id":   models.PublicID(models.PrefixAiAgent, ev.ToAgentID),
+		},
 	})
 	if err != nil {
 		return nil

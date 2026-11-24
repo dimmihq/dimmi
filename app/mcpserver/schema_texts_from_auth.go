@@ -84,6 +84,8 @@ func schemaTextsFromAuthFactor() map[string]map[string]string {
 		},
 		"Broadcast": {
 			"ai_replies": "Whether the AI agent may answer replies to this broadcast.",
+			"reply_agent_id": "The AI agent that answers replies when ai_replies is true, such as aia_.... Null " +
+				"leaves it to the agent placed on the channel the reply comes in on.",
 			"audience_id": "Id of the saved audience the broadcast goes to, such as audn_... Null when " +
 				"it uses its own rules or hand-picked Slack channels.",
 			"body": "The message's text, up to 50000 characters.",

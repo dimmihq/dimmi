@@ -42,8 +42,7 @@ const (
 /*
 TurnSettings shape one turn. Mode is full or triage only; Tools lists
 the tools the agent may call, by name, where ToolActions stands for
-every action the workspace published; Instructions is a mandatory
-procedure that follows the workspace guidance; AlwaysHandoffTags are
+every action the workspace published; AlwaysHandoffTags are
 the tags whose presence makes a handoff mandatory; HandoffTeamID and
 RaisePriority route a handoff; ConfirmResolution asks the customer
 whether the answer solved it; MaxReplies caps the agent's replies in
@@ -53,7 +52,6 @@ conversation's AI.
 type TurnSettings struct {
 	Mode              string
 	Tools             []string
-	Instructions      string
 	AlwaysHandoffTags []ids.UUID
 	HandoffTeamID     *ids.UUID
 	RaisePriority     bool
@@ -137,9 +135,6 @@ func rulesText(e *env, s *TurnSettings) string {
 			"The system shows the customer a way to reach a teammate, and a second unanswered question in a row "+
 			"goes to the team automatically, so you never ask whether they want a teammate; if they ask for one, "+
 			"hand off.")
-	}
-	if text := strings.TrimSpace(s.Instructions); text != "" {
-		lines = append(lines, text)
 	}
 	if len(lines) == 0 {
 		return "No extra rules."
