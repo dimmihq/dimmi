@@ -182,7 +182,7 @@ Workflows and series get the agent studio's shell: Build, Analytics and History 
 - **Triggers and conditions:** AI agent transfers to another agent; AI attribute changed; the AI agent, transferred from and transferred to fields.
 - **Teammates:** Turn off AI and Turn on AI in the conversation's menu (`ai_enabled` on the conversation update).
 - **Replies:** broadcasts and series pick the agent that answers replies.
-- **Studio:** workflows and series use the agent studio layout, with Analytics (per-step counts, drop-off, versions, failed runs, goal), History (compare and restore), Simulations (workflows: saved, run all, draft vs live, from a conversation; series: dry runs) and Operator (reads, edits on the canvas with Accept or Decline, drafts from a description, explains a run).
+- **Studio:** workflows and series use the agent studio layout, with Analytics (per-step counts, drop-off, versions, failed runs, goal), History (compare and restore), Simulations (workflows: saved, run all, draft vs live, from a conversation; series: dry runs) and Operator (reads, edits on the canvas with Accept or Decline, drafts from a description, explains a workflow run and a person's series journeys, sees the selected series step).
 - **AI:** one decision primitive behind Sort by topic, AI path and Extract; AI conversation attributes with a settings page.
 - **Series:** control groups with lift in the report.
 - **Templates:** six workflow templates in the new-workflow dialog; a Workflow check-up Operator routine.
@@ -192,5 +192,4 @@ Workflows and series get the agent studio's shell: Build, Analytics and History 
 ### Left for later
 
 - A/B paths inside workflows.
-- Series run explanations in Operator.
 - Simulating the Extract and Run an action steps beyond recording them, a customer interrupting a wait, and a called workflow's own steps.

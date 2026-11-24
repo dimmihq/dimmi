@@ -46,7 +46,19 @@ A reply to a series message opens a conversation in the inbox, routed to the **R
 
 On **Series**, click **Describe it** and say who it is for and what each step sends. [Operator](/operator/work-with-operator/) drafts the whole series, messages included. **Create draft** opens the builder, and nothing is sent until you publish.
 
-Inside the builder, open **Operator** to add a follow-up, rewrite a message or change the goal. Its changes show in the builder for you to accept.
+Inside the builder, open **Operator** to add a follow-up, rewrite a message or change the goal. Its changes show in the builder for you to accept. Operator also sees the step you have selected, so "shorten this step" means that one.
+
+### Ask why someone got a message, or never entered
+
+Ask Operator about a person, by email or contact, or about one journey: "Why did ada@example.com get the trial reminder?" It reads each journey they took and answers with:
+
+- **Entry:** when they entered and how (rules, event, by hand or the API).
+- **Steps:** each one they reached, in order, with the path it took.
+- **Waiting:** what the journey waits for now, and until when.
+- **Messages:** what each message step sent, with opens, clicks and replies.
+- **Ending:** the goal, and why the journey ended.
+
+For someone who never entered, Operator tests the live version's entry and exit rules on them as they are now. It names the condition that keeps them out and the value they have, such as `plan` being `free`. People who already matched when the series went live stay out unless the entry lets them in.
 
 ## Exit rules and goals
 

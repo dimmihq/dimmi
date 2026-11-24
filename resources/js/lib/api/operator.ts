@@ -213,7 +213,8 @@ export function operatorThreadQuery(workspace: string, id: string) {
 
 /*
  * OperatorViewing is what the teammate has open when they ask: the kind
- * of page, the id of what it shows, and the suggested change shown on it.
+ * of page, the id of what it shows, the suggested change shown on it,
+ * and, in the series builder, the step selected on the canvas.
  */
 export interface OperatorViewing {
   page:
@@ -227,6 +228,7 @@ export interface OperatorViewing {
     | "series";
   id: string;
   suggestion_id?: string;
+  step_id?: string;
 }
 
 export function askOperator(

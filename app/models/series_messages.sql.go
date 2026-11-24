@@ -306,6 +306,82 @@ func (q *Queries) ListDueSeriesRecipients(ctx context.Context, arg ListDueSeries
 	return items, nil
 }
 
+const listSeriesEnrollmentMessages = `-- name: ListSeriesEnrollmentMessages :many
+SELECT r.id, s.node_id, s.kind, r.status, coalesce(r.reason, '')::text AS reason, r.address, r.contact_id,
+    r.room_id, r.conversation_id, r.due_at, r.sent_at, r.delivered_at, r.opened_at, r.clicked_at, r.replied_at,
+    r.unsubscribed_at, r.created_at
+FROM broadcast_recipients r
+JOIN series_steps s ON s.id = r.series_step_id
+WHERE r.workspace_id = $1 AND r.series_enrollment_id = $2
+ORDER BY r.created_at, r.id LIMIT 200
+`
+
+type ListSeriesEnrollmentMessagesParams struct {
+	WorkspaceID        ids.UUID  `json:"workspace_id"`
+	SeriesEnrollmentID *ids.UUID `json:"series_enrollment_id"`
+}
+
+type ListSeriesEnrollmentMessagesRow struct {
+	ID             ids.UUID   `json:"id"`
+	NodeID         string     `json:"node_id"`
+	Kind           string     `json:"kind"`
+	Status         string     `json:"status"`
+	Reason         string     `json:"reason"`
+	Address        string     `json:"address"`
+	ContactID      *ids.UUID  `json:"contact_id"`
+	RoomID         *ids.UUID  `json:"room_id"`
+	ConversationID *ids.UUID  `json:"conversation_id"`
+	DueAt          time.Time  `json:"due_at"`
+	SentAt         *time.Time `json:"sent_at"`
+	DeliveredAt    *time.Time `json:"delivered_at"`
+	OpenedAt       *time.Time `json:"opened_at"`
+	ClickedAt      *time.Time `json:"clicked_at"`
+	RepliedAt      *time.Time `json:"replied_at"`
+	UnsubscribedAt *time.Time `json:"unsubscribed_at"`
+	CreatedAt      time.Time  `json:"created_at"`
+}
+
+// ListSeriesEnrollmentMessages returns every message a journey sent or
+// tried to send, in order, with the step that sent it and how the
+// traveler engaged with it.
+func (q *Queries) ListSeriesEnrollmentMessages(ctx context.Context, arg ListSeriesEnrollmentMessagesParams) ([]ListSeriesEnrollmentMessagesRow, error) {
+	rows, err := q.db.Query(ctx, listSeriesEnrollmentMessages, arg.WorkspaceID, arg.SeriesEnrollmentID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListSeriesEnrollmentMessagesRow
+	for rows.Next() {
+		var i ListSeriesEnrollmentMessagesRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.NodeID,
+			&i.Kind,
+			&i.Status,
+			&i.Reason,
+			&i.Address,
+			&i.ContactID,
+			&i.RoomID,
+			&i.ConversationID,
+			&i.DueAt,
+			&i.SentAt,
+			&i.DeliveredAt,
+			&i.OpenedAt,
+			&i.ClickedAt,
+			&i.RepliedAt,
+			&i.UnsubscribedAt,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const seriesEnrollmentEngagement = `-- name: SeriesEnrollmentEngagement :one
 SELECT coalesce(bool_or(replied_at IS NOT NULL), false)::boolean AS replied,
     coalesce(bool_or(unsubscribed_at IS NOT NULL), false)::boolean AS unsubscribed

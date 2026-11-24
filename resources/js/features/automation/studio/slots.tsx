@@ -62,7 +62,7 @@ export const seriesSlots: {
     <SeriesHistory workspace={workspace} series={series} onAdopt={onAdopt} />
   ),
   simulations: ({ workspace, series }) => <SeriesSimulations workspace={workspace} series={series.id} />,
-  operator: ({ workspace, series, onClose, className }) => (
-    <SeriesOperatorPanel workspace={workspace} series={series.id} onClose={onClose} className={className} />
+  operator: ({ workspace, series, step, onClose, className }) => (
+    <SeriesOperatorPanel workspace={workspace} series={series.id} step={step} onClose={onClose} className={className} />
   ),
 };

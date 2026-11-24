@@ -4,7 +4,8 @@
  * The panel says the series is open, with the suggestion waiting on it,
  * so every question carries the series in full and a change Operator
  * makes is added to that suggestion. The suggestion shows in the builder
- * as soon as Operator makes it (see series-review.ts).
+ * as soon as Operator makes it (see series-review.ts). The step selected
+ * on the canvas goes with it, so "this step" means that one.
  */
 import { RiMailSendLine, RiRouteLine, RiSearchEyeLine, RiTimerLine } from "@remixicon/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -28,11 +29,13 @@ import { useSeriesRequest } from "./series-review";
 export function SeriesOperatorPanel({
   workspace,
   series,
+  step,
   onClose,
   className,
 }: {
   workspace: string;
   series: string;
+  step?: string;
   onClose?: () => void;
   className?: string;
 }) {
@@ -49,7 +52,7 @@ export function SeriesOperatorPanel({
   const { data: settings } = useQuery(operatorSettingsQuery(workspace));
   const { data: shown } = useQuery(seriesQuery(workspace, series));
   const { request } = useSeriesRequest(workspace, series, shown?.spec);
-  useViewing("series", series, request?.changeset.id);
+  useViewing("series", series, request?.changeset.id, step);
   const chat = useOperatorChat(workspace, thread, key);
   const fresh = useMutation({
     mutationFn: () => startWorkspaceThread(workspace),

@@ -27732,6 +27732,11 @@
             "maxLength": 64,
             "type": "string"
           },
+          "step_id": {
+            "description": "On a series, the id of the step selected in its builder, such as wait-1. Operator takes \"this step\" to mean that one. Leave out when no step is selected.",
+            "maxLength": 64,
+            "type": "string"
+          },
           "suggestion_id": {
             "description": "The id of the suggestion shown on that page, such as opc_01jx2m8k4t. A change the person asks for is added to it while it still waits for review. Leave out when none is shown.",
             "maxLength": 64,

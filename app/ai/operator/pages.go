@@ -30,6 +30,7 @@ import (
 
 	"github.com/dimmihq/dimmi/app/actions/conversations"
 	"github.com/dimmihq/dimmi/app/actions/messages"
+	"github.com/dimmihq/dimmi/app/actions/series"
 	"github.com/dimmihq/dimmi/app/models"
 	"github.com/dimmihq/dimmi/app/support/prompts"
 )
@@ -169,7 +170,36 @@ func (e *Engine) seriesPage(ctx context.Context, s *session, id ids.UUID) (strin
 	if err != nil {
 		return "", err
 	}
-	return "The series builder is open on this series.\n" + text, nil
+	return "The series builder is open on this series.\n" + e.selectedStep(s, row) + text, nil
+}
+
+/*
+selectedStep says which step the teammate has selected in the series
+builder, as the working copy shows it, so "this step" means that one.
+*/
+func (e *Engine) selectedStep(s *session, row models.Series) string {
+	id := strings.TrimSpace(s.viewing.Step)
+	if id == "" {
+		return ""
+	}
+	spec, err := series.SpecOf(row)
+	if err != nil {
+		return ""
+	}
+	if suggested, ok := s.suggestedSeries(row.ID); ok {
+		spec = suggested
+	}
+	for _, n := range spec.Nodes {
+		if n.ID != id {
+			continue
+		}
+		line := fmt.Sprintf("Selected step: %s · %s", n.ID, n.Kind)
+		if len(n.Settings) > 0 {
+			line += " · settings " + truncate(compactJSON(n.Settings), 2000)
+		}
+		return line + "\nWhen the teammate says this step, they mean step " + n.ID + ".\n"
+	}
+	return ""
 }
 
 /*

@@ -23,6 +23,8 @@ export interface SeriesSlotProps {
   series: Series;
   /* Hands a working copy the slot changed, such as a restored version, to the open editor. */
   onAdopt?: (next: Series) => void;
+  /* The step selected on the canvas, which Operator is told about. */
+  step?: string;
 }
 
 /*
