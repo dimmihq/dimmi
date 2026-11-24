@@ -40,11 +40,15 @@ type MessageAI struct {
 }
 
 /*
-MessageAISource is one source an answer cites.
+MessageAISource is one source an answer cites. Excerpt is a line or two
+of what it says and Slug the help article it is, left out for a source
+a customer may not read.
 */
 type MessageAISource struct {
-	Title string `json:"title"`
-	URL   string `json:"url"`
+	Title   string `json:"title"`
+	URL     string `json:"url"`
+	Excerpt string `json:"excerpt,omitempty"`
+	Slug    string `json:"slug,omitempty"`
 }
 
 /*

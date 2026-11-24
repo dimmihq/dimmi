@@ -90,5 +90,6 @@
   "verify_send": "Envoyer le code",
   "verify_sent": "Saisissez le code à 6 chiffres envoyé à {email}",
   "verify_submit": "Vérifier",
-  "welcome_message": ""
+  "welcome_message": "",
+  "more_sources": "{count} de plus"
 }

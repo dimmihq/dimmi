@@ -90,5 +90,6 @@
   "verify_send": "コードを送信",
   "verify_sent": "{email} に送信した6桁のコードを入力してください",
   "verify_submit": "確認する",
-  "welcome_message": ""
+  "welcome_message": "",
+  "more_sources": "他{count}件"
 }

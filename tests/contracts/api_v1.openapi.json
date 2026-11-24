@@ -24607,6 +24607,14 @@
         "properties": {
           "id": {
             "description": "The id of this record. Send it wherever an endpoint asks for this record; never use its name or title in its place.",
+          "excerpt": {
+            "description": "A line or two of what the cited source says: a help article's description, or the start of the passage the answer drew on. Left out for a source customers may not read.",
+            "type": "string"
+          },
+          "slug": {
+            "description": "Slug of the published help article the source is, for opening it in a help center or the messenger. Left out when the source is not a public help article.",
+            "type": "string"
+          },
             "type": "string"
           },
           "name": {

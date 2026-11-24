@@ -253,10 +253,15 @@ func documentTags(numbers string, sources, docs []source) ([]string, []source) {
 citationOf is the metadata entry for a cited source.
 */
 func citationOf(s source) citation {
-	return citation{
+	c := citation{
 		N: s.n, ChunkID: s.chunk.ID.String(), DocumentID: s.chunk.DocumentID.String(),
 		Title: s.chunk.Title, URL: s.chunk.URL, Similarity: similarityOf(s.chunk.Similarity),
+		articleID: s.chunk.ArticleID,
 	}
+	if s.chunk.Visibility == contracts.KnowledgeVisibilityPublic {
+		c.Excerpt = sourceExcerpt(s.chunk.Text)
+	}
+	return c
 }
 
 /*

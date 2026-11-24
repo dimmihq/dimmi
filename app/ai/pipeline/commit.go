@@ -240,6 +240,9 @@ func (r *Runner) post(ctx context.Context, tx *database.Tx, st *run, d *decision
 	if err != nil {
 		return err
 	}
+	if err := describeCitations(ctx, tx, e.Workspace.ID, d.citations); err != nil {
+		return err
+	}
 	text := withConfirmation(r.reply(e, d), st, d)
 	msg, conv, err := r.agentWriter(tx, e).Append(ctx, e.Conversation, conversations.NewMessage{
 		Type: string(enums.MessageTypeMessage), Body: text, BodyFormat: new("markdown"),
@@ -299,7 +302,8 @@ func (r *Runner) reply(e *env, d *decision) string {
 /*
 metadata is what every agent reply carries under "ai" for the widget,
 the channels and the trace: generated, the run, the outcome, the
-sources it cites as title and url, whether a person is offered or on
+sources it cites as title and url with an excerpt and an article slug
+where a customer may read them, whether a person is offered or on
 the way, and the action calls it reports with any confirmation card.
 */
 func (r *Runner) metadata(st *run, d *decision) json.RawMessage {
@@ -310,7 +314,14 @@ func (r *Runner) metadata(st *run, d *decision) json.RawMessage {
 	if len(d.citations) > 0 {
 		sources := make([]map[string]any, 0, len(d.citations))
 		for _, c := range d.citations {
-			sources = append(sources, map[string]any{"n": c.N, "title": c.Title, "url": c.URL})
+			source := map[string]any{"n": c.N, "title": c.Title, "url": c.URL}
+			if c.Excerpt != "" {
+				source["excerpt"] = c.Excerpt
+			}
+			if c.Slug != "" {
+				source["slug"] = c.Slug
+			}
+			sources = append(sources, source)
 		}
 		ai["sources"] = sources
 		if st.annotated != "" {

@@ -296,7 +296,14 @@ export function toSources(ai: api.AiAnswer | null | undefined): Source[] {
     }
     const url = source.url && /^https?:\/\//.test(source.url) ? source.url : undefined;
 
-    return [url ? { title: source.title, url } : { title: source.title }];
+    return [
+      {
+        title: source.title,
+        ...(url ? { url } : {}),
+        ...(source.excerpt ? { excerpt: source.excerpt } : {}),
+        ...(source.slug ? { slug: source.slug } : {}),
+      },
+    ];
   });
 }
 

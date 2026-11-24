@@ -1408,6 +1408,7 @@ export class Live {
     };
   }
 
+      moreSources: t.more_sources,
   /*
    * decideAction sends the visitor's Confirm or Cancel on an action card.
    * The card waits with a spinner until the server answers, then shows

@@ -159,6 +159,10 @@ func schemaTextsFromMessageAIConfirmation() map[string]map[string]string {
 			"name": "Display name of the teammate who approved or declined the action call.",
 		},
 		"MessageAISource": {
+			"excerpt": "A line or two of what the cited source says: a help article's description, or the " +
+				"start of the passage the answer drew on. Left out for a source customers may not read.",
+			"slug": "Slug of the published help article the source is, for opening it in a help center " +
+				"or the messenger. Left out when the source is not a public help article.",
 			"title": "Title of a source the AI answer cites, such as a help article's title.",
 			"url":   "Web address of the cited source, for checking the answer against it.",
 		},

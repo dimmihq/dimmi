@@ -89,7 +89,13 @@ export const sample: Content = {
       from: "agent",
       author: "dimmi agent",
       body: "That usually means the webhook was not created. Open Settings, then GitHub, and choose Reconnect.",
-      sources: [{ title: "GitHub integration guide" }],
+      sources: [
+        {
+          title: "Connect a GitHub repository",
+          excerpt: "Sync docs and changelog drafts from your repository.",
+          slug: "connect-github",
+        },
+      ],
       at: "10:03",
     },
     { from: "visitor", attachment: { kind: "voice", name: "Voice note", duration: "0:14" }, at: "10:04" },

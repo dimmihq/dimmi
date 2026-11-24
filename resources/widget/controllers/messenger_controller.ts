@@ -90,6 +90,18 @@ export class MessengerController extends Controller {
       this.dispatch("view", { article: open.slice("article:".length) });
     }
   }
+  /*
+   * cite opens an article an answer cites in place when the messenger has
+   * it, and otherwise lets its link open the article in a new tab.
+   */
+  cite(event: Event): void {
+    const open = (event.target as Element).closest<HTMLElement>("[data-open]")?.dataset.open;
+    if (open && this.#view(open)) {
+      event.preventDefault();
+      this.visit(event);
+    }
+  }
+
 
   /*
    * rate marks the face the visitor picked under an article and thanks

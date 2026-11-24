@@ -527,10 +527,12 @@ describe("a connected messenger", () => {
 
     const thread = root.querySelector(".thread") as HTMLElement;
     expect(thread.querySelector(".byline")?.textContent).toContain("AI");
-    const link = thread.querySelector<HTMLAnchorElement>("a.source");
+    const link = thread.querySelector<HTMLAnchorElement>(".sources a.article");
     expect(link?.href).toBe("https://help.shop.example/invoices");
     expect(link?.target).toBe("_blank");
-    expect(thread.querySelectorAll("a.source")).toHaveLength(1);
+    expect(thread.querySelectorAll(".sources a.article")).toHaveLength(1);
+    expect(thread.querySelectorAll(".sources .article")).toHaveLength(2);
+    expect(thread.querySelector(".bubble .article")).toBeNull();
     expect(thread.querySelector(".ai-actions")?.textContent).toContain("That helped");
 
     thread.querySelector<HTMLButtonElement>('[data-ai="helped"]')?.click();

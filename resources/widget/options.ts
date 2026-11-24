@@ -90,6 +90,7 @@ export interface Texts {
 
 export interface Options {
   appearance: Appearance;
+  more_sources: string;
   texts: Texts;
   tabs: Tab[];
   show_branding: boolean;
@@ -187,6 +188,7 @@ export const defaults: Options = {
   branding_url: "https://trydimmi.com",
   launcher_ruled_out: false,
   locale: "",
+    more_sources: "{count} more",
   dir: "ltr",
 };
 

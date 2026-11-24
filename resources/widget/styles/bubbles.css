@@ -81,34 +81,6 @@
   color: var(--on-brand);
 }
 
-.sources {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  margin-block-start: 10px;
-  white-space: normal;
-}
-
-.source {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 4px 10px 4px 8px;
-  border: 1px solid var(--border-button);
-  border-radius: 999px;
-  background: var(--bg-full);
-  color: var(--text-primary);
-  font-size: 12px;
-  font-weight: 500;
-  line-height: 16px;
-}
-
-.source > svg {
-  inline-size: 14px;
-  block-size: 14px;
-  color: var(--accent);
-}
-
 .file {
   display: flex;
   align-items: center;
@@ -294,4 +266,73 @@
 
 .bubble[data-state="failed"] {
   opacity: 0.55;
+}
+
+/*
+ * A help article under a message, cited by an answer or sent by a
+ * workflow, is a card of its own: the title, a line or two of what it
+ * says, and the whole card to tap. The first few an answer cites show;
+ * the rest fold under a quiet line.
+ */
+.sources {
+  display: grid;
+  gap: 6px;
+  inline-size: 100%;
+  min-inline-size: min(240px, 100%);
+}
+
+.article {
+  align-items: flex-start;
+  min-inline-size: min(240px, 100%);
+  padding: 10px 12px 10px 10px;
+}
+
+.article .text strong,
+.article .text small {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  white-space: normal;
+}
+
+.article .text strong {
+  font-size: 14px;
+  line-height: 20px;
+}
+
+.article > svg {
+  flex: none;
+  align-self: center;
+  inline-size: 16px;
+  block-size: 16px;
+}
+
+.sources-more {
+  display: grid;
+  gap: 6px;
+}
+
+.sources-more > summary {
+  justify-self: start;
+  padding: 2px 4px;
+  border-radius: 6px;
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 16px;
+  cursor: pointer;
+  list-style: none;
+}
+
+.sources-more > summary::-webkit-details-marker {
+  display: none;
+}
+
+.sources-more > summary:hover {
+  color: var(--text-primary);
+}
+
+.sources-more[open] > summary {
+  display: none;
 }
