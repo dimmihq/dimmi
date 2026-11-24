@@ -42,8 +42,8 @@ export function Hero() {
     <section className="relative overflow-hidden bg-background-full">
       <div className="relative mx-auto grid w-full max-w-[1200px] grid-cols-1 border-x border-separator-border lg:grid-cols-[minmax(0,1.05fr)_minmax(0,1fr)]">
         <div className="relative flex min-w-0 flex-col items-start justify-center gap-7 px-5 pt-16 pb-14 sm:px-12 lg:py-24">
-          <a href="/procedures" className="group inline-flex items-center gap-2">
-            <Eyebrow>New · Support policies your AI agent cannot break</Eyebrow>
+          <a href="/agents" className="group inline-flex items-center gap-2">
+            <Eyebrow>New · Dedicated support agents for every queue and brand</Eyebrow>
             <RiArrowRightLine
               className="size-3.5 text-text-tertiary transition-transform group-hover:translate-x-0.5"
               aria-hidden
@@ -54,8 +54,8 @@ export function Hero() {
             you own.
           </h1>
           <p className="max-w-[30rem] text-[17px] leading-7 text-pretty text-text-secondary">
-            Your inbox, AI agent, tickets, workflows, and help center, all open source under MIT. Use our cloud with
-            free seats, or host it yourself for $0.
+            Your shared inbox, specialized support agents, tickets, workflows, and help center, all open source under
+            MIT. Run on our cloud with free seats, or host it yourself for $0.
           </p>
           <div className="flex flex-wrap items-center gap-3">
             <ButtonLink href={`${APP_URL}/signup`} trailingIcon={RiArrowRightLine}>

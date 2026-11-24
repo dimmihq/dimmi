@@ -58,10 +58,13 @@ export function ProductShot({
           </>
         ) : (
           <div
-            className="site-dots flex items-center justify-center text-body-medium text-text-tertiary"
+            className="site-dots flex w-full flex-col items-center justify-center gap-2 px-8 py-12 text-center"
             style={{ aspectRatio: `${shot.width} / ${shot.height}` }}
           >
-            {alt}
+            <span className="rounded-md border border-dashed border-border-button-default bg-background-full/90 px-2.5 py-1 font-mono text-[11px] tracking-[0.06em] text-text-tertiary uppercase">
+              Screenshot · {name}
+            </span>
+            <p className="max-w-md text-[14px] leading-6 text-pretty text-text-secondary">{alt}</p>
           </div>
         )}
       </div>

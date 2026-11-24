@@ -141,9 +141,9 @@ const more = [
 const related = [
   {
     icon: Sparkle,
-    title: "AI agent",
-    body: "Takes the first reply from your docs and hands over with a summary.",
-    link: { href: "/agent", label: "Explore the AI agent" },
+    title: "Agents",
+    body: "Specialized support agents that cite your docs, follow policies, and hand over with a summary.",
+    link: { href: "/agents", label: "Explore agents" },
   },
   {
     icon: FlowArrow,

@@ -99,12 +99,17 @@ Run the finished prose through [.claude/skills/make-it-skim/SKILL.md](.claude/sk
 
 Whenever voice warmth, editorial style, `stop-slop`, and `make-it-skim` appear to pull in opposite directions, follow these binding rules:
 
-1. **Warmth without filler adverbs.** Warm documentation comes from clear mental models, concrete scenarios, and anticipating the reader's next question, never from filler words like "simply", "easily", "thankfully", or "blazing speed". Keep functional adverbs only when they carry exact technical meaning (`automatically`, `immediately`, `synchronously`, `only`, `by default`).
-2. **No em dashes anywhere.** Use a period, comma, colon, or parentheses instead. Never use `—` or `–` as a clause break in prose.
-3. **Varied rhythm beats clipped minimalism.** Never split every sentence at a second comma or stack 4-word fragments back to back. Mix short, medium, and occasional longer sentences so the writing sounds like a thoughtful human talking, not a clipped bot.
-4. **Bold anchors, not bold walls.** Bold interface labels (**Settings → Webhooks**), list lead-ins, and genuinely load-bearing terms or limits (at most one per prose paragraph). If everything is bold, nothing is.
-5. **Digits for concrete facts.** Use digits for every price, limit, timeout, percentage, count, and duration that a reader scans for (`3 steps`, `7 days`, `100 free conversations`, `5% bounce rate`). Spell out casual non-anchor counts from one to nine in running prose only when the number is incidental ("a couple of minutes", "two teams").
-6. **Active voice by default, exact truth always.** Put the real actor at the front of the sentence ("dimmi retries 12 times over 24 hours"). Use passive voice in docs only when the actor is genuinely irrelevant and passive voice states the system rule more clearly.
+1. **Lead with buyer value, never internal mechanics.** On marketing pages, never write headlines about how a feature is provisioned (*"ships in every workspace"*) or invent fake pain (*"finally in one place"*). State the real business outcome the buyer gets.
+2. **Never hardcode counts that will go stale.** Do not write *"Four built-in routines"* or *"Seven templates"* on marketing pages. Use *"Built-in routines"* or *"Ready-made templates"* so adding new items never breaks the copy.
+3. **Never make claims you cannot guarantee.** Avoid absolute promises like *"without risking a single dollar"* or *"never makes a mistake"*. Name the real safeguard instead: policy caps, human approval, and testing before launch.
+4. **Keep competitor names out of primary headlines.** Competitors belong in comparison tables and candid supporting copy, never in an `<h1>` heading.
+5. **Call them agents, not bots.** Use plain **agents** in headings, eyebrows, and navigation (mentioning "AI agents" once in a subhead where context helps). Never drift into calling dimmi agents "bots" or "chatbots".
+6. **Warmth without filler adverbs.** Warm documentation comes from clear mental models, concrete scenarios, and anticipating the reader's next question, never from filler words like "simply", "easily", "thankfully", or "blazing speed". Keep functional adverbs only when they carry exact technical meaning (`automatically`, `immediately`, `synchronously`, `only`, `by default`).
+7. **No em dashes anywhere.** Use a period, comma, colon, or parentheses instead. Never use `—` or `–` as a clause break in prose.
+8. **Varied rhythm beats clipped minimalism.** Never split every sentence at a second comma or stack 4-word fragments back to back. Mix short, medium, and occasional longer sentences so the writing sounds like a thoughtful human talking, not a clipped bot.
+9. **Bold anchors, not bold walls.** Bold interface labels (**Settings → Webhooks**), list lead-ins, and genuinely load-bearing terms or limits (at most one per prose paragraph). If everything is bold, nothing is.
+10. **Digits for concrete facts.** Use digits for every price, limit, timeout, percentage, count, and duration that a reader scans for (`3 steps`, `7 days`, `100 free conversations`, `5% bounce rate`). Spell out casual non-anchor counts from one to nine in running prose only when the number is incidental ("a couple of minutes", "two teams").
+11. **Active voice by default, exact truth always.** Put the real actor at the front of the sentence ("dimmi retries 12 times over 24 hours"). Use passive voice in docs only when the actor is genuinely irrelevant and passive voice states the system rule more clearly.
 
 ## Canonical terminology
 

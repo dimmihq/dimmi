@@ -3,7 +3,12 @@ import { GITHUB_URL } from "../links";
 import { PRODUCT_GROUPS } from "../products";
 
 // Links that have a page; the rest of the footer is still plain text.
-const pages = new Map(PRODUCT_GROUPS.flatMap((group) => group.products.map((p) => [p.name, p.href])));
+const pages = new Map<string, string>([
+  ...PRODUCT_GROUPS.flatMap((group) => group.products.map((p) => [p.name, p.href] as const)),
+  ["Pricing", "/pricing"],
+  ["Compare", "/compare"],
+  ["Self-host", "/#self-host"],
+]);
 
 const columns = [
   {
@@ -16,7 +21,7 @@ const columns = [
   },
   { title: "Run it", links: ["Self-host", "dimmi Cloud", "Security", "Migrate to dimmi"] },
   { title: "Developers", links: ["Docs", "API reference", "SDKs", "Webhooks", "GitHub"] },
-  { title: "Company", links: ["Pricing", "About", "Careers", "Contact", "Privacy", "Terms"] },
+  { title: "Company", links: ["Pricing", "Compare", "About", "Careers", "Contact", "Privacy", "Terms"] },
 ];
 
 export function SiteFooter() {

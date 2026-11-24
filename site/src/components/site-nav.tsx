@@ -10,6 +10,7 @@ import { APP_URL, GITHUB_URL } from "../links";
 import { PRODUCT_GROUPS, PRODUCT_PATHS } from "../products";
 
 const links = [
+  { label: "Compare", href: "/compare" },
   { label: "Self-host", href: "/#self-host" },
   { label: "Pricing", href: "/pricing" },
 ];

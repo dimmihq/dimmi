@@ -80,8 +80,9 @@ const more = [
   },
   {
     icon: ListMagnifyingGlass,
-    title: "Audits your support policies",
-    body: "Reviews failed AI conversations on demand or every Monday, drafting policy fixes and test scenarios for your team.",
+    title: "Runs on a schedule with Routines",
+    body: "Sync merged GitHub PRs to help articles, catch knowledge gaps, and tune up policies every week.",
+    link: { href: "/routines", label: "Explore Routines" },
   },
 ];
 

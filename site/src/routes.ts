@@ -5,9 +5,10 @@
  */
 import type { ComponentType } from "react";
 
-import { AgentPage } from "./pages/agent";
+import { AgentsPage } from "./pages/agents";
 import { BroadcastsPage } from "./pages/broadcasts";
 import { ChangelogPage } from "./pages/changelog";
+import { ComparePage } from "./pages/compare";
 import { FeedbackPage } from "./pages/feedback";
 import { HelpCenterPage } from "./pages/help-center";
 import { HomePage } from "./pages/home";
@@ -16,6 +17,7 @@ import { OperatorPage } from "./pages/operator";
 import { PricingPage } from "./pages/pricing";
 import { ProceduresPage } from "./pages/procedures";
 import { ReportsPage } from "./pages/reports";
+import { RoutinesPage } from "./pages/routines";
 import { TicketsPage } from "./pages/tickets";
 import { WorkflowsPage } from "./pages/workflows";
 
@@ -31,7 +33,7 @@ export const routes: Route[] = [
     path: "/",
     title: "dimmi: customer support you own",
     description:
-      "Inbox, AI agent, tickets, workflows, and help center, all open source under MIT. Run on dimmi Cloud with free seats or self-host for $0.",
+      "Shared inbox, specialized support agents, tickets, workflows, and help center, all open source under MIT. Run on dimmi Cloud with free seats or self-host for $0.",
     page: HomePage,
   },
   {
@@ -42,11 +44,25 @@ export const routes: Route[] = [
     page: InboxPage,
   },
   {
-    path: "/agent",
-    title: "AI agent: cites your docs and knows when to stop | dimmi",
+    path: "/agents",
+    title: "Agents: dedicated support agents for every customer need | dimmi",
     description:
-      "An AI support agent that cites your docs, follows written playbooks, asks before risky actions, and saves up to 83% with your own AI keys.",
-    page: AgentPage,
+      "Run one frontline support agent or build specialists for billing, technical docs, orders, and brands. Cites your docs and saves 50% to 83% with your own model keys.",
+    page: AgentsPage,
+  },
+  {
+    path: "/routines",
+    title: "Operator Routines: scheduled doc sync, gap audits, and QA | dimmi",
+    description:
+      "Put Operator on a daily or weekly schedule to sync merged GitHub PRs to help articles, catch knowledge gaps, and review edits inline.",
+    page: RoutinesPage,
+  },
+  {
+    path: "/compare",
+    title: "Compare dimmi: customer support features and real monthly cost | dimmi",
+    description:
+      "Side-by-side comparison of specialized support agents, policy procedures, scheduled routines, real monthly bills, and open-source self-hosting.",
+    page: ComparePage,
   },
   {
     path: "/workflows",
@@ -59,7 +75,7 @@ export const routes: Route[] = [
     path: "/pricing",
     title: "Pricing: pay per conversation, never per seat | dimmi",
     description:
-      "Unlimited free seats, 100 free conversations every month, and up to 83% off AI threads with your own model keys. Free to self-host under MIT.",
+      "Unlimited free seats, 100 free conversations every month, and 50% to 83% off AI fees with your own model keys. Free to self-host under MIT.",
     page: PricingPage,
   },
   {
@@ -71,9 +87,9 @@ export const routes: Route[] = [
   },
   {
     path: "/procedures",
-    title: "Procedures: teach the AI agent your team's playbooks | dimmi",
+    title: "Procedures: support policies your agents cannot break | dimmi",
     description:
-      "Write how your team handles requests in plain English. The dimmi agent follows your steps, calls your API, and asks before risky actions.",
+      "Write how your team handles refunds, cancellations, and account changes. Agents follow every step, respect hard limits, and pause for approval.",
     page: ProceduresPage,
   },
   {
@@ -92,9 +108,9 @@ export const routes: Route[] = [
   },
   {
     path: "/help-center",
-    title: "Help center: one source for customers and AI | dimmi",
+    title: "Help center: one source for customers and agents | dimmi",
     description:
-      "Publish help articles on your own domain. Customers get instant answers, and the dimmi agent reads from the same docs.",
+      "Publish help articles on your own domain. Customers get instant answers, and your support agents read from the same docs.",
     page: HelpCenterPage,
   },
   {

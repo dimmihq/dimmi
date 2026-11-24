@@ -35,7 +35,7 @@ const rows = [
   {
     label: "Zero policy drift",
     title: "Your agent follows every step and cannot bend the rules.",
-    body: "Most support bots cave when a customer pushes back or skip a check three messages in. dimmi enforces your order and limits automatically, so an out-of-policy refund never goes through.",
+    body: "Most AI agents cave when a customer pushes back or skip a check three messages in. dimmi enforces your order and limits automatically, so an out-of-policy refund never goes through.",
     visual: <FollowFragment />,
   },
   {
@@ -46,6 +46,8 @@ const rows = [
       <ShotStill
         name="procedure-simulations"
         alt="A saved customer test scenario showing the conversation and every passed policy check before publishing"
+        anchor="bottom"
+        maxWidth={368}
       />
     ),
   },

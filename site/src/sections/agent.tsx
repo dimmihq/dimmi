@@ -26,15 +26,15 @@ export function Agent() {
   return (
     <Section anchor="agent" frameClassName="flex flex-col gap-16 md:gap-20">
       <Intro
-        title="An AI agent you can trust near real customers."
-        body="Most bots make things up and charge $0.99 per reply. dimmi cites your docs, follows your steps, and asks before risky actions."
+        title="Support agents you can trust near real customers."
+        body="Most tools charge $0.99 per resolution or lock multi-brand support behind $132 seats. dimmi lets you run unlimited support agents in one shared inbox."
       />
       <div className="flex flex-col gap-10">
         <SplitHead
-          tag="AI agent"
-          title="Real sources, simple steps, and honest pricing."
-          body="Pick which channels it covers and what it reads. Bring your own OpenAI or Anthropic keys and cut AI costs by up to 83%."
-          link={{ href: "/agent", label: "Explore the AI agent" }}
+          tag="Agents"
+          title="Real sources, strict boundaries, and honest pricing."
+          body="Run one frontline support agent or split billing, technical docs, and brands into specialists. Bring your own model keys and save 50% to 83% on dimmi AI fees."
+          link={{ href: "/agents", label: "Explore agents" }}
         />
         <Panel className="flex justify-center px-4 pt-10 sm:pt-14">
           <AgentDemoCard stories={stories} />
