@@ -587,15 +587,14 @@ export function TermsPage() {
         anchor="publicity"
         number="14"
         title="Publicity"
-        summary="For self-serve accounts, we may list your name and logo unless you email us to opt out. For Order Form customers, we always ask first."
+        summary="We never use your name or logo without asking first. You can withdraw permission at any time."
       >
         <p>
-          For self-serve Customers, dimmi may display Customer's business name and standard logo on our website and
-          customer lists to identify Customer as a dimmi Cloud user, strictly following any brand guidelines Customer
-          provides. Customer may opt out at any time by emailing{" "}
+          dimmi will not use Customer's business name or logo on our website, customer lists, or marketing materials
+          without Customer's prior written consent (email is sufficient). Where Customer consents, dimmi will follow any
+          brand guidelines Customer provides. Customer may withdraw consent at any time by emailing{" "}
           <LegalLink href={`mailto:${LEGAL_CONTACTS.support}`}>{LEGAL_CONTACTS.support}</LegalLink>, and we will remove
-          Customer's name and logo within 10 business days. For Customers under an executed Order Form, dimmi will not
-          use Customer's name or logo without Customer's prior written consent.
+          Customer's name and logo within 10 business days.
         </p>
       </Clause>
 
@@ -693,7 +692,7 @@ export function TermsPage() {
         anchor="liability"
         number="18"
         title="Limitation of liability"
-        summary="Neither party pays indirect damages. General liability is capped at 12 months' fees (US$500 floor), with a 2x super-cap for data protection and confidentiality. Fraud, willful misconduct, and gross negligence are uncapped."
+        summary="Neither party pays indirect damages. General liability is capped at 12 months' fees (US$500 floor), with a 2x super-cap for data protection and confidentiality. Fraud, willful misconduct, and gross negligence are uncapped. An Order Form can set higher caps."
       >
         <p className="font-medium text-text-primary">
           18.1 EXCLUSION OF INDIRECT DAMAGES: TO THE MAXIMUM EXTENT PERMITTED BY APPLICABLE LAW, NEITHER PARTY WILL BE
@@ -723,6 +722,11 @@ export function TermsPage() {
           injury caused by negligence; (d) Customer's payment obligations under Clause 12; or (e) any liability that
           cannot lawfully be limited or excluded under applicable law (including statutory data-subject rights under the
           NDPA or EU Standard Contractual Clauses).
+        </p>
+        <p>
+          <strong className="font-medium text-text-primary">18.5 Higher caps by Order Form:</strong> The caps in Clauses
+          18.2 and 18.3 are the defaults for self-serve use. dimmi and Customer may agree higher caps, including fixed
+          amounts, in an executed Order Form, and those agreed caps then apply in place of the defaults.
         </p>
       </Clause>
 
@@ -812,15 +816,15 @@ export function TermsPage() {
         anchor="support"
         number="22"
         title="Support and service levels"
-        summary="Email support is included for all cloud workspaces. Formal uptime SLAs and service credits apply only under an executed Enterprise Order Form."
+        summary="Email support is included for every cloud workspace. Uptime commitments, service credits, extended support hours, and response-time SLAs are available under an Order Form."
       >
         <p>
           Standard support for dimmi Cloud is provided via email at{" "}
           <LegalLink href={`mailto:${LEGAL_CONTACTS.support}`}>{LEGAL_CONTACTS.support}</LegalLink> and through our
-          documentation during Nigerian business hours (Monday to Friday, 09:00 to 18:00 WAT, excluding Nigerian public
-          holidays). No contractual uptime percentage or service credit applies to self-serve Workspaces. Customers
-          requiring guaranteed monthly uptime targets, service credits, or severity-based response SLAs may execute an
-          Order Form with dimmi.
+          documentation, Monday to Friday, 09:00 to 18:00 West Africa Time (08:00 to 17:00 UTC), excluding Nigerian
+          public holidays. Customers who need a guaranteed monthly uptime target, service credits, extended or
+          round-the-clock support hours, or severity-based response times can agree them with dimmi in an Order Form.
+          Without an Order Form, no contractual uptime percentage or service credit applies.
         </p>
       </Clause>
 
@@ -851,7 +855,7 @@ export function TermsPage() {
         anchor="governing-law"
         number="24"
         title="Governing law and dispute resolution"
-        summary="Nigerian law governs. We negotiate in good faith for 30 days first; unresolved disputes go to binding arbitration in Lagos under Nigeria's Arbitration and Mediation Act 2023."
+        summary="Nigerian law governs. We negotiate in good faith for 30 days first; unresolved disputes go to binding arbitration in Lagos under Nigeria's Arbitration and Mediation Act 2023. An Order Form can name a different law and seat."
       >
         <p>
           This Agreement and any dispute or claim arising out of or in connection with it (including non-contractual
@@ -874,6 +878,11 @@ export function TermsPage() {
           intellectual property or Confidential Information, nor does it restrict any non-waivable statutory right of a
           data subject to bring claims before a Federal or State High Court under Article 47 of the GAID 2025 or before
           an EU/UK supervisory authority or court under the Standard Contractual Clauses.
+        </p>
+        <p>
+          dimmi and Customer may agree a different governing law, arbitration seat, or arbitration rules in an executed
+          Order Form (for example, the laws of England and Wales with arbitration seated in London under the LCIA
+          Rules). Where they do, the Order Form governs in place of the first and third paragraphs of this Clause.
         </p>
       </Clause>
 
