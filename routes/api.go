@@ -129,6 +129,7 @@ func featureRoutes(workspace *routing.Router, a *app.App) {
 	knowledgeSourceRoutes(workspace, a)
 	webhookEndpointRoutes(workspace, a)
 	attributeRoutes(workspace, a)
+	aiAttributeRoutes(workspace, a)
 	eventRoutes(workspace, a)
 	slackChannelRoutes(workspace, a)
 	slackRoomRoutes(workspace, a)

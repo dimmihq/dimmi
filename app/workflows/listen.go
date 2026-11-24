@@ -66,6 +66,7 @@ func (e *Engine) Listen(d *events.Dispatcher) {
 	events.ListenQueued(d, agentTransferred)
 	e.listenStatus(d)
 	e.listenTickets(d)
+	e.listenAI(d)
 }
 
 /*

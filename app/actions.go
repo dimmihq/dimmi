@@ -15,6 +15,7 @@ import (
 	"github.com/dimmihq/dimmi/framework/mailbox"
 
 	"github.com/dimmihq/dimmi/app/actions/accesspolicy"
+	"github.com/dimmihq/dimmi/app/actions/aiattributes"
 	"github.com/dimmihq/dimmi/app/actions/assignment"
 	"github.com/dimmihq/dimmi/app/actions/attributes"
 	"github.com/dimmihq/dimmi/app/actions/audiences"
@@ -173,6 +174,7 @@ type Actions struct {
 	Broadcasts                 *broadcasts.Broadcasts
 	Series                     *series.Series
 	Attributes                 *attributes.Definitions
+	AIAttributes               *aiattributes.Attributes
 	Events                     *events.Events
 	ContactLists               *contactlists.Lists
 	WorkflowEngine             *engine.Engine

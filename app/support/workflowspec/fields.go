@@ -24,7 +24,7 @@ import (
 Catalog returns the fields workflow rules may read.
 */
 func Catalog() *audience.Catalog {
-	fields := slices.Concat(conversationFields(), eventFields(), ticketFields(), ticketEventFields())
+	fields := slices.Concat(conversationFields(), eventFields(), ticketFields(), ticketEventFields(), aiFields())
 
 	return audience.Base().With(fields...)
 }

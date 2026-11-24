@@ -17,6 +17,7 @@ import type { ViewCondition } from "@/lib/api/views";
 import { membersQuery } from "@/lib/api/workspace";
 
 import { priorityLabel } from "../priority/labels";
+import { useAIViewFields } from "./ai-attribute-fields";
 import { defaultValue, durations, fieldSpecs, opFor, type ValueKind } from "./fields";
 
 interface Option {
@@ -106,19 +107,33 @@ function ValueControl({
   workspace,
   kind,
   value,
+  choices,
   onChange,
 }: {
   workspace: string;
   kind: ValueKind | undefined;
   value: unknown;
+  choices?: Option[];
   onChange: (value: unknown) => void;
 }): ReactNode {
-  const options = useOptions(workspace, kind);
+  const listedOptions = useOptions(workspace, kind);
+  const options = kind === "choice" ? (choices ?? []) : listedOptions;
   if (kind === undefined) {
     return null;
   }
   if (kind === "text") {
     return <Input aria-label="Value" value={String(value ?? "")} onChange={onChange} className="w-full" />;
+  }
+  if (kind === "number") {
+    return (
+      <Input
+        aria-label="Value"
+        type="number"
+        value={String(value ?? 0)}
+        onChange={(typed) => onChange(Number(typed) || 0)}
+        className="w-full"
+      />
+    );
   }
   const listed = listKinds.includes(kind);
   const current = listed ? (value as string[] | undefined)?.[0] : String(value ?? "");
@@ -148,6 +163,7 @@ export function ConditionRow({
   onChange: (condition: ViewCondition) => void;
   onRemove: () => void;
 }) {
+  useAIViewFields(workspace);
   const spec = fieldSpecs.find((f) => f.field === condition.field);
   const op = opFor(condition);
 
@@ -184,6 +200,7 @@ export function ConditionRow({
           <ValueControl
             workspace={workspace}
             kind={op.kind}
+            choices={spec?.choices}
             value={condition.value}
             onChange={(value) => onChange({ ...condition, value })}
           />

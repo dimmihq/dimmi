@@ -37,7 +37,7 @@ func (r *run) enter(ctx context.Context, n Node, stepID string) (outcome, error)
 		return r.condition(ctx, n)
 	case n.Kind == KindSplit:
 		return r.split(n), nil
-	case n.Kind == KindAIPath || n.Kind == KindWebhook:
+	case n.Kind == KindAIPath || n.Kind == KindWebhook || n.Kind == KindExtract || n.Kind == KindRunAction:
 		return r.call(n), nil
 	}
 
@@ -68,7 +68,7 @@ func (r *run) resume(ctx context.Context, n Node, w wait) (outcome, error) {
 	case "match":
 		return r.waitFor(ctx, n, w, due)
 	case "call":
-		return r.called(n, w), nil
+		return r.called(ctx, n, w)
 	}
 
 	return outcome{path: PathNext}, nil

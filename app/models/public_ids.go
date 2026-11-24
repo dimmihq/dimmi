@@ -452,6 +452,7 @@ const (
 	PrefixAudience        Prefix = "audn"
 	PrefixAttribute       Prefix = "atd"
 	PrefixEvent           Prefix = "edf"
+	PrefixAIAttribute     Prefix = "aica"
 )
 
 /*
@@ -474,6 +475,7 @@ func workflowPublicIDs() []PublicIDEntry {
 		{PrefixAudience, "audiences"},
 		{PrefixAttribute, "attribute_definitions"},
 		{PrefixEvent, "event_definitions"},
+		{PrefixAIAttribute, "ai_conversation_attributes"},
 	}
 }
 

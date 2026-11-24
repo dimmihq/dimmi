@@ -18,6 +18,7 @@ import {
   RiLinksLine,
   RiMessage2Line,
   RiReplyLine,
+  RiScan2Line,
   RiSparkling2Line,
   RiStarSmileLine,
   RiStickyNoteLine,
@@ -41,6 +42,7 @@ export type TriggerKind =
   | "message.customer"
   | "conversation.customer_quiet"
   | "conversation.rated"
+  | "conversation.ai_attribute_changed"
   | "message.teammate"
   | "note.created"
   | "conversation.assignment_changed"
@@ -143,6 +145,14 @@ export const triggers: Record<TriggerKind, Trigger> = {
     icon: RiStarSmileLine,
     runs: false,
     talks: ["message"],
+  },
+  "conversation.ai_attribute_changed": {
+    group: "during",
+    name: "AI attribute changes",
+    detail: "Route by what the AI found, like the customer's intent.",
+    icon: RiScan2Line,
+    runs: true,
+    talks: [],
   },
   "message.teammate": {
     group: "team",

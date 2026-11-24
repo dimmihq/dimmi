@@ -21,6 +21,7 @@ Your trigger decides which **Messages** steps and AI handoffs you can use. Every
 | Trigger | Notes | Messages steps | Hand to an AI agent |
 | --- | --- | --- | --- |
 | **Customer sends a message** | Fires on every customer message. | None | No |
+| **AI attribute changes** | Fires when the AI sets or changes one of your [AI attributes](/ai/ai-attributes/). Conditions can read which one changed and its new value. | None | No |
 | **Customer stops replying** | Fires 1 hour, 4 hours, 1 day, 2 days, or 7 days after a reply from a teammate, dimmi, or either, with no customer reply since. Open threads only. | All | Yes |
 
 ### Team
@@ -87,7 +88,8 @@ To act on one agent only, add a branch on **AI agent**. Under the transfer trigg
 | Step | What it does | Paths |
 | --- | --- | --- |
 | **Branch** | Follows the first of up to 10 matching conditions. | One per condition, **Everyone else** |
-| **Sort by topic** | Asks your workspace's AI model to pick from 2 to 10 topics based on the customer's message. | One per category, **None matched or AI unavailable** |
+| **Sort by topic** | Asks AI to read the conversation and pick one of 2 to 10 topics. | One per category, **None matched or AI unavailable** |
+| **Extract with AI** | Asks AI to read the conversation and save up to 10 typed values (text, number, date, yes or no, one of a list) to run variables or contact attributes. A value the AI isn't sure of takes its fallback. | **None matched or AI unavailable** (when turned on), for a value with no fallback |
 | **Wait** | Pauses for 5 minutes to 7 days, or until office hours open. Can count only office hours. | |
 | **Run a workflow** | Runs a live reusable workflow and waits for it to finish. | |
 
@@ -114,7 +116,7 @@ To act on one agent only, add a branch on **AI agent**. Under the transfer trigg
 | **Snooze** | Snoozes for 5 minutes to 7 days, or until office hours open. | |
 | **Close** | Closes the conversation. Can skip threads a teammate replied to, and can ask for a rating. | |
 | **Apply an SLA** | Applies an SLA policy to the conversation (and its ticket, if it has one). | |
-| **Call your system** | Sends an HTTP request. See [Workflow requests](/developers/workflow-requests/). | **Failed** (when turned on) |
+| **Run an action** | Calls one of your published [actions](/ai/actions/), the same ones your agents use, with inputs picked from contact details, AI attributes or run variables. Saves the outputs you pick. Runs without customer confirmation or teammate approval, since your team set it up. | **Failed** (when turned on) |
 
 ### Tickets
 

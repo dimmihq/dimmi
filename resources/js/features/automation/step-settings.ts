@@ -173,6 +173,24 @@ function called(step: Step, names: Names): string {
   return method === "GET" ? `GET ${where}` : `${method} to ${where}`;
 }
 
+function extracting(step: Step): string {
+  const fields = Array.isArray(step.settings?.fields)
+    ? (step.settings.fields as { key?: string; label?: string }[])
+    : [];
+  const named = fields.map((field) => field.label?.trim() || field.key?.trim() || "").filter(Boolean);
+
+  return named.length > 0 ? `Find ${named.join(", ")}` : unsetSummary;
+}
+
+function acting(step: Step): string {
+  if (!text(step.settings, "action_id")) {
+    return unsetSummary;
+  }
+  const saves = Array.isArray(step.settings?.save) ? step.settings.save.length : 0;
+
+  return saves > 0 ? `Run the action and save ${saves === 1 ? "1 output" : `${saves} outputs`}` : "Run the action";
+}
+
 function sorted(step: Step): string {
   const categories = (step.paths ?? []).filter((path) => !path.outcome).map((path) => path.label?.trim() ?? "");
   const named = categories.filter(Boolean);
@@ -193,6 +211,8 @@ const describers: Partial<Record<StepKind, (step: Step, names: Names) => string>
   reply_time: (step) => text(step.settings, "text").trim() || replyTimeText,
   branch: () => "Go down the first path that matches",
   classify: sorted,
+  extract: extracting,
+  run_action: acting,
   run_workflow: (step, names) => {
     const workflow = text(step.settings, "workflow_id");
 

@@ -77,6 +77,21 @@ function sorted(detail: Record<string, unknown>): string {
   return [into, reason].filter(Boolean).join(" · ");
 }
 
+function extracted(detail: Record<string, unknown>): string {
+  const list = (name: string) =>
+    Array.isArray(detail[name]) ? (detail[name] as unknown[]).filter((item) => typeof item === "string") : [];
+  const saved = list("saved");
+  const unsure = list("unsure");
+
+  return [
+    saved.length > 0 ? `Saved ${saved.join(", ")}` : "",
+    unsure.length > 0 ? `not found: ${unsure.join(", ")}` : "",
+    word(detail, "reason"),
+  ]
+    .filter(Boolean)
+    .join(" · ");
+}
+
 function ran(detail: Record<string, unknown>, workflows: ReadonlyMap<string, string>): string {
   const id = word(detail, "workflow_id");
   const name = workflows.get(id) ?? "another workflow";
@@ -101,7 +116,10 @@ export function detailLine(step: RunStep, workflows: ReadonlyMap<string, string>
   const detail = step.detail ?? {};
   switch (step.kind) {
     case "http_request":
+    case "run_action":
       return called(detail);
+    case "extract":
+      return extracted(detail);
     case "classify":
       return sorted(detail);
     case "run_workflow":

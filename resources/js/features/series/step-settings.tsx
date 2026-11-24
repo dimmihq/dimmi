@@ -15,7 +15,7 @@ import { LinkButton } from "@/components/base/buttons/link-button";
 import { useEvents, useTopics } from "@/features/broadcasts/sources";
 import { Row, Section } from "@/features/settings/layout";
 import type { NodeSettings, SeriesNode, SeriesSpec } from "@/lib/api/series";
-
+import { ExtractStep, RunActionStep } from "./automation-steps";
 import { Amount, Body, Field, Flag, Pick, Rules, Text } from "./inputs";
 import { nodeLook } from "./looks";
 import { isMessage, newID } from "./model";
@@ -553,6 +553,10 @@ export function StepSettings(props: StepProps) {
       return <SplitStep {...props} />;
     case "ai_path":
       return <AIPathStep {...props} />;
+    case "extract":
+      return <ExtractStep {...props} />;
+    case "run_action":
+      return <RunActionStep {...props} />;
     default:
       return <ActionStep {...props} />;
   }

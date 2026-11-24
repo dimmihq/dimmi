@@ -3,10 +3,10 @@
 | Sorting A Conversation By Topic
 |--------------------------------------------------------------------------
 |
-| A classify step asks the workspace's own model which of the team's
-| categories the customer's words belong to, and takes that category's
-| path. The customer's words are untrusted: the classifier reads them
-| as data and must answer with one of the categories, nothing else. A
+| A classify step asks the AI decision step which of the team's
+| categories the conversation belongs to, and takes that category's
+| path. The conversation is untrusted: the models read it as data and
+| must answer with one of the categories, nothing else. A
 | workspace with no model, over its spend cap, or a model that fails or
 | is unsure, takes the none path, so a conversation is never stuck on
 | a step that cannot decide. The model is asked by a job, off the
@@ -19,43 +19,13 @@ package workflows
 import (
 	"context"
 	"fmt"
+	"slices"
 	"strings"
 
-	"github.com/dimmihq/dimmi/framework/ids"
-
-	"github.com/dimmihq/dimmi/app/enums"
+	"github.com/dimmihq/dimmi/app/ai/aidecision"
 	"github.com/dimmihq/dimmi/app/models"
 	"github.com/dimmihq/dimmi/app/support/workflowspec"
 )
-
-/*
-maxClassifyText is the most of the customer's words the model reads.
-*/
-const maxClassifyText = 4000
-
-/*
-Classifier sorts a conversation into one of a step's categories.
-*/
-type Classifier interface {
-	/*
-		Classify returns the category the words belong to, an empty id
-		when none fits.
-	*/
-	Classify(ctx context.Context, q ClassifyQuestion) (ClassifyAnswer, error)
-}
-
-/*
-ClassifyQuestion is what a classifier reads: the workspace and
-conversation it spends for, the team's instructions, the categories
-and the customer's words.
-*/
-type ClassifyQuestion struct {
-	WorkspaceID    ids.UUID
-	ConversationID ids.UUID
-	Instructions   string
-	Categories     []Category
-	Text           string
-}
 
 /*
 Category is one category of a classify step: its path id, label and
@@ -68,20 +38,11 @@ type Category struct {
 }
 
 /*
-ClassifyAnswer is the category picked and how sure the model was: low,
-medium or high.
-*/
-type ClassifyAnswer struct {
-	CategoryID string
-	Confidence string
-}
-
-/*
 runClassify waits for the classifier, which a job asks off the
 conversation.
 */
 func runClassify(_ context.Context, st *state, s workflowspec.Step) (outcome, error) {
-	if st.e.Classifier == nil {
+	if st.e.Decisions == nil {
 		return unsorted(s, "ai_unavailable"), nil
 	}
 
@@ -95,7 +56,7 @@ answer instead when there is nothing to sort.
 func (st *state) prepareQuestion(ctx context.Context, s workflowspec.Step) (*call, error) {
 	c := settings[workflowspec.ClassifySettings](s)
 
-	text, err := st.customerWords(ctx, c.Source)
+	text, err := st.conversationText(ctx, c.Source)
 	if err != nil {
 		return nil, err
 	}
@@ -104,12 +65,14 @@ func (st *state) prepareQuestion(ctx context.Context, s workflowspec.Step) (*cal
 		return &call{answer: &callAnswer{Reason: "no_text"}}, nil
 	}
 
-	q := ClassifyQuestion{
-		WorkspaceID: st.conv.WorkspaceID, ConversationID: st.conv.ID, Instructions: c.Question, Text: text,
-		Categories: categories(s),
+	var options []aidecision.Option
+	for _, cat := range categories(s) {
+		options = append(options, aidecision.Option{ID: cat.ID, Label: cat.Label, Description: cat.Description})
 	}
 
-	return &call{kind: s.Kind, question: q}, nil
+	q := aidecision.Choice{Subject: st.decisionSubject(text), Instructions: c.Question, Options: options}
+
+	return &call{kind: s.Kind, choice: q}, nil
 }
 
 /*
@@ -125,20 +88,20 @@ func categories(s workflowspec.Step) []Category {
 }
 
 /*
-ask asks the classifier; one that cannot answer leaves the step
+ask asks the decision step; one that cannot answer leaves the step
 unsorted instead of failing the run.
 */
-func (e *Engine) ask(ctx context.Context, q ClassifyQuestion) *callAnswer {
-	if e.Classifier == nil {
+func (e *Engine) ask(ctx context.Context, q aidecision.Choice) *callAnswer {
+	if e.Decisions == nil {
 		return &callAnswer{Reason: "ai_unavailable"}
 	}
 
-	answer, err := e.Classifier.Classify(ctx, q)
+	answer, err := e.Decisions.Choose(ctx, q)
 	if err != nil {
 		return &callAnswer{Reason: "ai_unavailable"}
 	}
 
-	return &callAnswer{Category: answer.CategoryID, Confidence: answer.Confidence}
+	return &callAnswer{Category: answer.OptionID, Confidence: answer.Confidence}
 }
 
 /*
@@ -155,7 +118,7 @@ func resumeClassify(ctx context.Context, st *state, s workflowspec.Step, _ Input
 		return unsorted(s, "no_match"), nil
 	}
 
-	if !sureEnough(answer.Confidence, c.MinConfidence) {
+	if !aidecision.SureEnough(answer.Confidence, c.MinConfidence) {
 		out := unsorted(s, "low_confidence")
 		out.detail["category"], out.detail["confidence"] = label, answer.Confidence
 
@@ -197,47 +160,33 @@ func categoryLabel(categories []Category, id string) (string, bool) {
 }
 
 /*
-sureEnough reports whether a confidence meets the step's least.
+conversationText is what a decision reads: the whole conversation, or
+the customer's newest message.
 */
-func sureEnough(confidence, least string) bool {
-	rank := map[string]int{"low": 1, "medium": 2, "high": 3}
-
-	return least == "" || rank[confidence] >= rank[least]
-}
-
-/*
-customerWords is what the customer wrote: their newest message, or
-everything they wrote with the subject, cut to the newest words.
-*/
-func (st *state) customerWords(ctx context.Context, source string) (string, error) {
-	msgs, err := st.q.ListMessages(ctx, models.ListMessagesParams{
-		WorkspaceID: st.conv.WorkspaceID, ConversationID: st.conv.ID, RowLimit: 100,
+func (st *state) conversationText(ctx context.Context, source string) (string, error) {
+	now := st.now()
+	msgs, err := st.q.ListLatestPublicMessages(ctx, models.ListLatestPublicMessagesParams{
+		WorkspaceID: st.conv.WorkspaceID, ConversationID: st.conv.ID, Now: &now, RowLimit: 100,
 	})
 	if err != nil {
 		return "", fmt.Errorf("list messages: %w", err)
 	}
 
-	var parts []string
-	if source != "last_message" && st.conv.Subject != nil {
-		parts = append(parts, "Subject: "+*st.conv.Subject)
+	slices.Reverse(msgs)
+
+	if source == "last_message" {
+		return aidecision.LastCustomerMessage(msgs), nil
 	}
 
-	var said []string
-	for _, m := range msgs {
-		if m.AuthorType == string(enums.AuthorTypeContact) && m.Type == string(enums.MessageTypeMessage) &&
-			m.Body != nil {
-			said = append(said, *m.Body)
-		}
-	}
+	return aidecision.Transcript(st.conv.Subject, msgs), nil
+}
 
-	if source == "last_message" && len(said) > 0 {
-		said = said[len(said)-1:]
-	}
+/*
+decisionSubject is the conversation a decision is about, with what it
+reads.
+*/
+func (st *state) decisionSubject(text string) aidecision.Subject {
+	conv := st.conv.ID
 
-	text := strings.Join(append(parts, said...), "\n\n")
-	if runes := []rune(text); len(runes) > maxClassifyText {
-		text = string(runes[len(runes)-maxClassifyText:])
-	}
-
-	return text, nil
+	return aidecision.Subject{WorkspaceID: st.conv.WorkspaceID, ConversationID: &conv, Context: text}
 }

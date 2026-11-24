@@ -54,15 +54,18 @@ The task files the verdicts read their instructions from, under
 resources/prompts/tasks/.
 */
 const (
-	taskDraftJudge       = "verdicts/draft_judge"
-	taskRequest          = "verdicts/request"
-	taskRequestEager     = "verdicts/request_eager"
-	taskWorkflowCategory = "verdicts/workflow_category"
-	taskTrackerSummary   = "verdicts/tracker_summary"
-	taskSeriesPath       = "verdicts/series_path"
-	taskTicketFill       = "verdicts/ticket_fill"
-	taskTicketMatch      = "verdicts/ticket_match"
+	taskDraftJudge     = "verdicts/draft_judge"
+	taskRequest        = "verdicts/request"
+	taskRequestEager   = "verdicts/request_eager"
+	taskTrackerSummary = "verdicts/tracker_summary"
+	taskTicketFill     = "verdicts/ticket_fill"
+	taskTicketMatch    = "verdicts/ticket_match"
 )
+
+/*
+maxProfileRunes is the most of a text most verdicts read.
+*/
+const maxProfileRunes = 4000
 
 /*
 defaultTimeout is how long a question waits when none is set.
@@ -94,6 +97,7 @@ type question struct {
 	text           string
 	schemaName     string
 	schema         json.RawMessage
+	maxTokens      int
 }
 
 /*
@@ -133,6 +137,14 @@ func (v *Verdicts) ask(ctx context.Context, q question, out any) error {
 		return err
 	}
 
+	return v.askWith(ctx, q, a, out)
+}
+
+/*
+askWith asks one model the question and decodes its answer.
+*/
+func (v *Verdicts) askWith(ctx context.Context, q question, a asked, out any) error {
+	var err error
 	if a.run, err = v.start(ctx, q, a); err != nil {
 		return err
 	}
@@ -141,7 +153,7 @@ func (v *Verdicts) ask(ctx context.Context, q question, out any) error {
 	defer cancel()
 
 	resp, err := a.llm.Chat(ctx, contracts.ChatRequest{
-		Model: a.model, System: []contracts.SystemBlock{{Text: q.system}}, MaxOutputTokens: 200,
+		Model: a.model, System: []contracts.SystemBlock{{Text: q.system}}, MaxOutputTokens: v.outputTokens(q),
 		Schema: &contracts.ResponseSchema{Name: q.schemaName, Schema: q.schema},
 		Messages: []contracts.ChatMessage{{
 			Role: contracts.ChatRoleUser, Parts: []contracts.ContentPart{{Text: untrusted(q.text)}},
@@ -164,6 +176,18 @@ func (v *Verdicts) ask(ctx context.Context, q question, out any) error {
 }
 
 /*
+outputTokens bounds the model's answer: a word or two for most
+verdicts, more for values a decision step pulls out.
+*/
+func (v *Verdicts) outputTokens(q question) int {
+	if q.maxTokens > 0 {
+		return q.maxTokens
+	}
+
+	return 200
+}
+
+/*
 timeout is how long a question waits.
 */
 func (v *Verdicts) timeout() time.Duration {
@@ -180,6 +204,20 @@ schema: the agent's classifier model, then its answer model. A
 workspace with none, or over its spend cap, has no model to ask.
 */
 func (v *Verdicts) choose(ctx context.Context, q question) (asked, error) {
+	all, err := v.chooseAll(ctx, q)
+	if err != nil {
+		return asked{}, err
+	}
+
+	return all[0], nil
+}
+
+/*
+chooseAll returns every model of the workspace that keeps to a schema,
+the classifier model first; none, or a month over its spend cap, is an
+error.
+*/
+func (v *Verdicts) chooseAll(ctx context.Context, q question) ([]asked, error) {
 	var (
 		agent      models.AiAgent
 		candidates []candidate
@@ -202,17 +240,31 @@ func (v *Verdicts) choose(ctx context.Context, q question) (asked, error) {
 		return err
 	})
 	if err != nil {
-		return asked{}, err
+		return nil, err
 	}
+
+	all := v.usable(ctx, agent, candidates)
+	if len(all) == 0 {
+		return nil, ErrNoModel
+	}
+
+	return all, nil
+}
+
+/*
+usable returns the candidates whose model keeps to a schema, in order.
+*/
+func (v *Verdicts) usable(ctx context.Context, agent models.AiAgent, candidates []candidate) []asked {
+	var out []asked
 
 	for _, c := range candidates {
 		llm, err := v.LLM.ForKey(ctx, c.key)
 		if err == nil && llm.Capabilities(c.model).JSONSchema {
-			return asked{agent: agent, key: c.key, model: c.model, llm: llm}, nil
+			out = append(out, asked{agent: agent, key: c.key, model: c.model, llm: llm})
 		}
 	}
 
-	return asked{}, ErrNoModel
+	return out
 }
 
 /*

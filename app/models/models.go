@@ -245,6 +245,19 @@ type AiAgentVersion struct {
 	PublishedAt         time.Time       `json:"published_at"`
 }
 
+type AiConversationAttribute struct {
+	ID          ids.UUID  `json:"id"`
+	WorkspaceID ids.UUID  `json:"workspace_id"`
+	Key         string    `json:"key"`
+	Label       string    `json:"label"`
+	Description string    `json:"description"`
+	DataType    string    `json:"data_type"`
+	Options     []string  `json:"options"`
+	Status      string    `json:"status"`
+	CreatedAt   time.Time `json:"created_at"`
+	UpdatedAt   time.Time `json:"updated_at"`
+}
+
 type AiProviderKey struct {
 	ID                   ids.UUID          `json:"id"`
 	WorkspaceID          ids.UUID          `json:"workspace_id"`
@@ -1049,6 +1062,16 @@ type Conversation struct {
 	AiMemory               json.RawMessage         `json:"ai_memory"`
 	AiAgentID              *ids.UUID               `json:"ai_agent_id"`
 	AiTransferredFromIds   []ids.UUID              `json:"ai_transferred_from_ids"`
+}
+
+type ConversationAiValue struct {
+	ConversationID   ids.UUID        `json:"conversation_id"`
+	WorkspaceID      ids.UUID        `json:"workspace_id"`
+	Values           json.RawMessage `json:"values"`
+	CheckedMessageID *ids.UUID       `json:"checked_message_id"`
+	CheckedAt        *time.Time      `json:"checked_at"`
+	CreatedAt        time.Time       `json:"created_at"`
+	UpdatedAt        time.Time       `json:"updated_at"`
 }
 
 type ConversationDraft struct {

@@ -67,6 +67,8 @@ const starts: Partial<Record<StepKind, Step["settings"]>> = {
   note: { text: "" },
   update_contact: { set: [{ field: "contact.name", value: "" }] },
   http_request: { method: "GET", url: "" },
+  extract: { fields: [{ key: "value", label: "", type: "text" }] },
+  run_action: { action_id: "" },
 };
 
 /*

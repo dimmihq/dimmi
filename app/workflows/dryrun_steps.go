@@ -20,6 +20,7 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/dimmihq/dimmi/app/ai/aidecision"
 	"github.com/dimmihq/dimmi/app/models"
 	"github.com/dimmihq/dimmi/app/support/audience"
 	"github.com/dimmihq/dimmi/app/support/workflowspec"
@@ -307,18 +308,18 @@ func (d *dry) classify(ctx context.Context, s workflowspec.Step) outcome {
 	if reason != "" {
 		return unsorted(s, reason)
 	}
-	label, ok := categoryLabel(cats, answer.CategoryID)
+	label, ok := categoryLabel(cats, answer.Category)
 	if !ok {
 		return unsorted(s, "no_match")
 	}
-	if !sureEnough(answer.Confidence, c.MinConfidence) {
+	if !aidecision.SureEnough(answer.Confidence, c.MinConfidence) {
 		return withDetail(unsorted(s, "low_confidence"), "category", label)
 	}
 	if c.SaveTo != "" {
 		d.store(c.SaveTo, label)
 	}
 
-	return outcome{path: answer.CategoryID, outcome: outcomeMatched, detail: map[string]any{
+	return outcome{path: answer.Category, outcome: outcomeMatched, detail: map[string]any{
 		"category": label, "confidence": answer.Confidence,
 	}}
 }
@@ -328,16 +329,16 @@ sorted is the category a classify step's mock names, or the one the
 classifier picks, with why there is none when there is not.
 */
 func (d *dry) sorted(ctx context.Context, s workflowspec.Step, c workflowspec.ClassifySettings, cats []Category,
-) (ClassifyAnswer, string) {
+) (callAnswer, string) {
 	if mock, ok := d.in.Mocks[s.ID]; ok {
 		var picked struct {
 			PathID string `json:"path_id"`
 		}
 		_ = json.Unmarshal(mock.Body, &picked)
-		return ClassifyAnswer{CategoryID: picked.PathID, Confidence: "high"}, ""
+		return callAnswer{Category: picked.PathID, Confidence: "high"}, ""
 	}
-	if d.e.Classifier == nil {
-		return ClassifyAnswer{}, "ai_unavailable"
+	if d.e.Decisions == nil {
+		return callAnswer{}, "ai_unavailable"
 	}
 	said := d.in.Driver.Words()
 	if c.Source == "last_message" && len(said) > 0 {
@@ -345,16 +346,21 @@ func (d *dry) sorted(ctx context.Context, s workflowspec.Step, c workflowspec.Cl
 	}
 	text := strings.Join(said, "\n\n")
 	if strings.TrimSpace(text) == "" {
-		return ClassifyAnswer{}, "no_text"
+		return callAnswer{}, "no_text"
 	}
-	got, err := d.e.Classifier.Classify(ctx, ClassifyQuestion{
-		WorkspaceID: d.in.WorkspaceID, ConversationID: d.conv.ID, Instructions: c.Question, Categories: cats,
-		Text: text,
+	options := make([]aidecision.Option, 0, len(cats))
+	for _, cat := range cats {
+		options = append(options, aidecision.Option{ID: cat.ID, Label: cat.Label, Description: cat.Description})
+	}
+	conv := d.conv.ID
+	got := d.e.ask(ctx, aidecision.Choice{
+		Subject:      aidecision.Subject{WorkspaceID: d.in.WorkspaceID, ConversationID: &conv, Context: text},
+		Instructions: c.Question, Options: options,
 	})
-	if err != nil {
-		return ClassifyAnswer{}, "ai_unavailable"
+	if got.Reason != "" {
+		return callAnswer{}, got.Reason
 	}
-	return got, ""
+	return *got, ""
 }
 
 /*

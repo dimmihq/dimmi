@@ -3,7 +3,8 @@
 | Steps That Call Out
 |--------------------------------------------------------------------------
 |
-| An AI path and a webhook leave the database, so they never run inside
+| An AI path, an extract step, an action and a webhook leave the
+| database, so they never run inside
 | the lock that moves the journey. The step waits, a job of its own
 | makes the call and stores the answer on the wait, and the journey
 | moves on with it. An AI that cannot choose, fails or takes too long
@@ -25,6 +26,8 @@ import (
 
 	"github.com/dimmihq/dimmi/framework/database"
 
+	"github.com/dimmihq/dimmi/app/ai/actionkit"
+	"github.com/dimmihq/dimmi/app/ai/aidecision"
 	"github.com/dimmihq/dimmi/app/jobs"
 	"github.com/dimmihq/dimmi/app/models"
 )
@@ -34,7 +37,7 @@ call holds the traveler while the step's call is made.
 */
 func (r *run) call(n Node) outcome {
 	timeout := time.Duration(max(r.s.Config.AITimeoutSeconds, 1)) * time.Second
-	if n.Kind == KindWebhook {
+	if n.Kind == KindWebhook || n.Kind == KindRunAction {
 		timeout = time.Duration(max(r.s.Config.WebhookTimeoutSeconds, 1)) * time.Second
 	}
 
@@ -44,45 +47,53 @@ func (r *run) call(n Node) outcome {
 /*
 called follows the call's answer, or the fallback once the time is up.
 */
-func (r *run) called(n Node, w wait) outcome {
+func (r *run) called(ctx context.Context, n Node, w wait) (outcome, error) {
 	if w.Result == "" && r.now.Before(w.Until) {
-		return outcome{stay: true}
+		return outcome{stay: true}, nil
 	}
 
-	if n.Kind == KindWebhook {
-		return outcome{path: PathNext, result: "webhook:" + cut(w.Result, 30)}
+	switch n.Kind {
+	case KindWebhook:
+		return outcome{path: PathNext, result: "webhook:" + cut(w.Result, 30)}, nil
+	case KindExtract:
+		return r.extracted(ctx, n, w)
+	case KindRunAction:
+		return r.acted(ctx, n, w)
 	}
 
 	paths := pathIDs(settingsOf[AIPathSettings](n).Paths, func(p AIPath) string { return p.ID })
 	if slices.Contains(paths, w.Result) {
-		return outcome{path: w.Result, result: "ai:" + w.Result}
+		return outcome{path: w.Result, result: "ai:" + w.Result}, nil
 	}
 
-	return outcome{path: PathFallback, result: "ai_fallback"}
+	return outcome{path: PathFallback, result: "ai_fallback"}, nil
 }
 
 /*
 Call makes the call a waiting step needs and moves the journey on.
 */
 func (s *Series) Call(ctx context.Context, a jobs.CallSeriesStepArgs) error {
-	var r *run
-	var n Node
+	var c *stepCall
 
 	err := s.inTx(ctx, a.WorkspaceID, func(ctx context.Context, tx *database.Tx) error {
-		var err error
-		r, n, err = s.callee(ctx, tx, a)
+		r, n, err := s.callee(ctx, tx, a)
+		if err != nil || r == nil {
+			return err
+		}
+
+		c, err = s.prepareCall(ctx, r, n)
 
 		return err
 	})
-	if err != nil || r == nil {
+	if err != nil || c == nil {
 		return gone(err, "read call")
 	}
 
-	result := s.answer(ctx, r, n)
+	result, values := s.answer(ctx, c)
 
 	return s.inWorkspace(ctx, a.WorkspaceID, func(ctx context.Context, q *models.Queries) error {
-		w := r.waitOf()
-		w.Result = result
+		w := c.r.waitOf()
+		w.Result, w.Values = result, values
 		raw, _ := json.Marshal(w)
 
 		if err := q.SetSeriesEnrollmentWait(ctx, models.SetSeriesEnrollmentWaitParams{
@@ -129,15 +140,52 @@ func (s *Series) callee(ctx context.Context, tx *database.Tx, a jobs.CallSeriesS
 }
 
 /*
-answer makes the call and returns what the step follows.
+stepCall is what a call needs, read in the journey's transaction: the
+journey, the step, and the person as the AI reads them.
 */
-func (s *Series) answer(ctx context.Context, r *run, n Node) string {
-	if n.Kind == KindWebhook {
-		return s.postWebhook(ctx, r, n)
+type stepCall struct {
+	r       *run
+	n       Node
+	profile string
+	action  *actionkit.AutomationCall
+}
+
+/*
+prepareCall reads what the step's call needs.
+*/
+func (s *Series) prepareCall(ctx context.Context, r *run, n Node) (*stepCall, error) {
+	c := &stepCall{r: r, n: n}
+
+	var err error
+
+	switch n.Kind {
+	case KindAIPath, KindExtract:
+		c.profile, err = profileWithEvents(ctx, r)
+	case KindRunAction:
+		c.action = s.prepareAction(ctx, r, n)
 	}
 
-	if s.Picker == nil {
-		return PathFallback
+	return c, err
+}
+
+/*
+answer makes the call and returns what the step follows, with the
+values it writes to the person.
+*/
+func (s *Series) answer(ctx context.Context, c *stepCall) (string, map[string]json.RawMessage) {
+	r, n := c.r, c.n
+
+	switch n.Kind {
+	case KindWebhook:
+		return s.postWebhook(ctx, r, n), nil
+	case KindExtract:
+		return s.extract(ctx, c)
+	case KindRunAction:
+		return s.runAction(ctx, c)
+	}
+
+	if s.Decisions == nil {
+		return PathFallback, nil
 	}
 
 	settings := settingsOf[AIPathSettings](n)
@@ -145,14 +193,20 @@ func (s *Series) answer(ctx context.Context, r *run, n Node) string {
 	ctx, cancel := context.WithTimeout(ctx, time.Duration(max(s.Config.AITimeoutSeconds, 1))*time.Second)
 	defer cancel()
 
-	picked, err := s.Picker.Pick(ctx, PickInput{
-		WorkspaceID: r.e.WorkspaceID, Prompt: settings.Prompt, Paths: settings.Paths, Profile: profileOf(r),
-	})
-	if err != nil || picked == "" {
-		return PathFallback
+	options := make([]aidecision.Option, 0, len(settings.Paths))
+	for _, p := range settings.Paths {
+		options = append(options, aidecision.Option{ID: p.ID, Label: p.Label, Description: p.Description})
 	}
 
-	return picked
+	picked, err := s.Decisions.Choose(ctx, aidecision.Choice{
+		Subject:      aidecision.Subject{WorkspaceID: r.e.WorkspaceID, Context: c.profile},
+		Instructions: settings.Prompt, Options: options,
+	})
+	if err != nil || picked.OptionID == "" {
+		return PathFallback, nil
+	}
+
+	return picked.OptionID, nil
 }
 
 /*

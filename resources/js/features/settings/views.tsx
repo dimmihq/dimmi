@@ -13,6 +13,7 @@ import { SLASettings } from "@/features/tickets/sla/sla-settings";
 
 import { PreferencesSettings, ProfileSettings, SecuritySettings } from "./pages/account";
 import { WorkspaceSecuritySettings } from "./pages/admin";
+import { AIAttributesSettings } from "./pages/ai-attributes";
 import { AttributesSettings } from "./pages/attributes";
 import { AuditLogSettings } from "./pages/audit-log";
 import { ConnectedAppsSettings } from "./pages/connected-apps";
@@ -60,6 +61,7 @@ export const settingsViews: Record<SettingsSection, ComponentType> = {
   agent: AgentSettings,
   operator: OperatorSettingsView,
   actions: ActionsSettings,
+  "ai-attributes": AIAttributesSettings,
   "ai-providers": ProvidersSettings,
   "help-centers": HelpCentersSettings,
   knowledge: KnowledgeSettings,

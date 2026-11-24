@@ -35,6 +35,7 @@ import (
 	"github.com/dimmihq/dimmi/framework/ids"
 
 	"github.com/dimmihq/dimmi/app/actions/audiences"
+	"github.com/dimmihq/dimmi/app/ai/aidecision"
 	"github.com/dimmihq/dimmi/app/auth/authz"
 	"github.com/dimmihq/dimmi/app/exceptions"
 	"github.com/dimmihq/dimmi/app/models"
@@ -424,15 +425,22 @@ when it cannot choose.
 */
 func (r *simRun) aiPath(ctx context.Context, n Node) outcome {
 	settings := settingsOf[AIPathSettings](n)
-	if r.s.Picker == nil {
+	if r.s.Decisions == nil {
 		return outcome{path: PathFallback, result: "ai_fallback"}
 	}
 	ctx, cancel := context.WithTimeout(ctx, time.Duration(max(r.s.Config.AITimeoutSeconds, 1))*time.Second)
 	defer cancel()
-	picked, err := r.s.Picker.Pick(ctx, PickInput{
-		WorkspaceID: r.ws, Prompt: settings.Prompt, Paths: settings.Paths,
-		Profile: profileOf(&run{people: []models.Contact{r.person}}),
+	options := make([]aidecision.Option, 0, len(settings.Paths))
+	for _, p := range settings.Paths {
+		options = append(options, aidecision.Option{ID: p.ID, Label: p.Label, Description: p.Description})
+	}
+	chosen, err := r.s.Decisions.Choose(ctx, aidecision.Choice{
+		Subject: aidecision.Subject{
+			WorkspaceID: r.ws, Context: profileOf(&run{people: []models.Contact{r.person}}),
+		},
+		Instructions: settings.Prompt, Options: options,
 	})
+	picked := chosen.OptionID
 	paths := pathIDs(settings.Paths, func(p AIPath) string { return p.ID })
 	if err != nil || !slices.Contains(paths, picked) {
 		return outcome{path: PathFallback, result: "ai_fallback"}
