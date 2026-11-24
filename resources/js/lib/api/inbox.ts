@@ -283,6 +283,7 @@ export interface ConversationChanges {
   team_id?: string | null;
   unread?: boolean;
   spam?: boolean;
+  ai_enabled?: boolean;
   add_tags?: string[];
   remove_tags?: string[];
 }

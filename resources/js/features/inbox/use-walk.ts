@@ -112,13 +112,27 @@ export function useWalk(
         void caze.markUnread();
       },
       toggleSpam: thenNextIf(!conversation.spam, () => caze.setSpam(!conversation.spam)),
+      aiOff: conversation.ai_state === "handed_off",
+      toggleAI: () => caze.setAI(conversation.ai_state === "handed_off"),
       merge: panels.openMerge,
       ticket: panels.openTicket,
       next: () => open(next),
       previous: () => open(previous),
       advance: () => open(next ?? previous),
     };
-  }, [caze, conversation.id, conversation.status, conversation.spam, navigate, next, previous, view, panels, canTrash]);
+  }, [
+    caze,
+    conversation.id,
+    conversation.status,
+    conversation.spam,
+    conversation.ai_state,
+    navigate,
+    next,
+    previous,
+    view,
+    panels,
+    canTrash,
+  ]);
 
   useConversationMoves(moves);
 

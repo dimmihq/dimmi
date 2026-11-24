@@ -41621,6 +41621,9 @@
               "null"
             ]
           },
+          "ai_enabled": {
+            "type": "boolean"
+          },
           "assignee_id": {
             "description": "Who the conversation, or each one in a bulk change, goes to: a teammate's id starting with mem_, such as mem_01jx2m8k4t (find it with GET /members), me for yourself, or null to hand it to nobody.",
             "type": "string"

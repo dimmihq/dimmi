@@ -53,6 +53,9 @@ type Changes struct {
 	AddTags      tags.Refs
 	RemoveTags   []ids.UUID
 	Unread       *bool
+	// AIEnabled turns AI agents off the conversation, false, or lets the
+	// agent answer it again after a handover, true.
+	AIEnabled *bool
 }
 
 /*
@@ -158,7 +161,7 @@ apply runs each step in order.
 */
 func (ap *applier) apply(ctx context.Context, ch Changes) error {
 	for _, step := range []func(context.Context, Changes) error{
-		ap.spam, ap.assign, ap.status, ap.attributes, ap.tags, ap.unread,
+		ap.spam, ap.assign, ap.status, ap.attributes, ap.tags, ap.unread, ap.ai,
 	} {
 		if err := step(ctx, ch); err != nil {
 			return err
@@ -352,4 +355,46 @@ func (ap *applier) snoozeUntil(ctx context.Context, ch Changes) (time.Time, erro
 		Until: ch.SnoozedUntil, Preset: ch.SnoozePreset, Option: ch.SnoozeOption,
 		Location: Location(ap.w.Timezone, ap.m.Workspace),
 	})
+}
+
+/*
+turnedOffByTeammate is the handoff reason of a teammate turning AI off.
+*/
+const turnedOffByTeammate = "turned_off_by_teammate"
+
+/*
+ai turns AI agents off the conversation, as a handover does, or lets the
+agent answer it again.
+*/
+func (ap *applier) ai(ctx context.Context, ch Changes) error {
+	if ch.AIEnabled == nil {
+		return nil
+	}
+
+	off := ap.c.AiState == "handed_off"
+	if *ch.AIEnabled != off {
+		return nil
+	}
+
+	now := ap.w.Now
+	if *ch.AIEnabled {
+		if err := ap.w.Q.ReadyConversationAi(ctx, models.ReadyConversationAiParams{
+			WorkspaceID: ap.c.WorkspaceID, ID: ap.c.ID, Now: now,
+		}); err != nil {
+			return fmt.Errorf("turn on ai: %w", err)
+		}
+		ap.c.AiState = "off"
+	} else {
+		reason := turnedOffByTeammate
+		if err := ap.w.Q.HandoffConversationAi(ctx, models.HandoffConversationAiParams{
+			WorkspaceID: ap.c.WorkspaceID, ID: ap.c.ID, Reason: &reason, Now: &now,
+		}); err != nil {
+			return fmt.Errorf("turn off ai: %w", err)
+		}
+		ap.c.AiState = "handed_off"
+	}
+
+	ap.changed = append(ap.changed, "ai_state")
+
+	return nil
 }

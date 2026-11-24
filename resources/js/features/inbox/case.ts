@@ -83,6 +83,7 @@ export function useCase(workspace: string, conversation: Conversation) {
     removeTag: (id: string) => change.mutate({ remove_tags: [id] }),
     trash: () => trash.mutate(),
     setSpam: (spam: boolean) => change.mutate({ spam }),
+    setAI: (ai_enabled: boolean) => change.mutate({ ai_enabled }),
     /*
      * markUnread calls the server directly: the screen leaves the
      * conversation first, so opening it does not read it again.

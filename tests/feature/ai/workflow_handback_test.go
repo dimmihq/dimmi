@@ -187,3 +187,19 @@ func TestWorkflowAgentTransfers(t *testing.T) {
 		assert.Contains(t, noteTexts(s), "Moved between agents")
 	})
 }
+
+func TestTeammateTurnsAI(t *testing.T) {
+	t.Parallel()
+
+	t.Run("turns the agent off a conversation and back on", func(t *testing.T) {
+		t.Parallel()
+		h := newHarness(t, nil)
+		conv, _ := h.conversation("Hello")
+		path := "/api/v1/conversations/" + models.PublicID(models.PrefixConversation, conv)
+
+		h.d.Owner.PatchJSON(path, testkit.JSON{"ai_enabled": false}).AssertOK().
+			AssertJSONPath("data.ai_state", "handed_off").AssertJSONPath("meta.changed", []string{"ai_state"})
+		h.d.Owner.PatchJSON(path, testkit.JSON{"ai_enabled": true}).AssertOK().AssertJSONPath("data.ai_state", "off")
+		h.d.Owner.PatchJSON(path, testkit.JSON{"ai_enabled": true}).AssertOK().AssertJSONPath("meta.changed", []string{})
+	})
+}
