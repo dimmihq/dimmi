@@ -1898,6 +1898,29 @@
         ],
         "type": "object"
       },
+      "AIAgentTie": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "description": "The id of what relies on the agent, such as wf_..., chn_... or aia_....",
+            "type": "string"
+          },
+          "kind": {
+            "description": "What relies on the agent: workflow, series, connection, room, inbox or agent.",
+            "type": "string"
+          },
+          "name": {
+            "description": "Its name.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "id",
+          "name"
+        ],
+        "type": "object"
+      },
       "AIAgentVersion": {
         "additionalProperties": false,
         "properties": {
@@ -2016,6 +2039,16 @@
           },
           "settings": {
             "$ref": "#/components/schemas/AISettings"
+          },
+          "ties": {
+            "description": "What still relies on the agent: workflows and series that name it, places it answers on and agents that may transfer to it. The agent can be archived only once this is empty.",
+            "items": {
+              "$ref": "#/components/schemas/AIAgentTie"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
           }
         },
         "required": [
@@ -2027,7 +2060,8 @@
           "ready",
           "readiness_errors",
           "managed",
-          "prompt_version"
+          "prompt_version",
+          "ties"
         ],
         "type": "object"
       },
@@ -5426,6 +5460,13 @@
             "description": "The preview line an email shows after its subject, up to 200 characters. Empty when none.",
             "type": "string"
           },
+          "reply_agent_id": {
+            "description": "The AI agent that answers replies when ai_replies is true, such as aia_.... Null leaves it to the agent placed on the channel the reply comes in on.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
           "reply_member_id": {
             "description": "Id of the teammate replies are assigned to, such as mem_... Null when none is set.",
             "type": [
@@ -5545,6 +5586,7 @@
           "reply_team_id",
           "reply_member_id",
           "ai_replies",
+          "reply_agent_id",
           "track_clicks",
           "skip_frequency_cap",
           "schedule_kind",
@@ -5603,6 +5645,10 @@
           "preview": {
             "description": "Email preview text, up to 200 characters.",
             "maxLength": 200,
+            "type": "string"
+          },
+          "reply_agent_id": {
+            "description": "The AI agent (aia_...) that answers replies when ai_replies is true; empty leaves it to the agent placed on the channel.",
             "type": "string"
           },
           "reply_member_id": {
@@ -33747,6 +33793,13 @@
               "null"
             ]
           },
+          "reply_agent_id": {
+            "description": "The AI agent that answers replies when ai_replies is true, such as aia_.... Null leaves it to the agent placed on the channel the reply comes in on.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
           "reply_member_id": {
             "description": "Id of the teammate replies to the series are assigned to, such as mem_...; null for none.",
             "type": [
@@ -33823,6 +33876,7 @@
           "reply_team_id",
           "reply_member_id",
           "ai_replies",
+          "reply_agent_id",
           "counts",
           "published_at",
           "paused_at",
@@ -33857,6 +33911,10 @@
             "description": "A name for the team, up to 120 characters.",
             "maxLength": 120,
             "minLength": 1,
+            "type": "string"
+          },
+          "reply_agent_id": {
+            "description": "The AI agent (aia_...) that answers replies when ai_replies is true; empty leaves it to the agent placed on the channel.",
             "type": "string"
           },
           "reply_member_id": {
@@ -46987,7 +47045,7 @@
     },
     "/ai/agents/{agent}": {
       "delete": {
-        "description": "Deletes an agent that is not the default, with its versions and simulations. Conversations it would have taken go to the default agent. Returns nothing.",
+        "description": "Archives an agent that is not the default: it is switched off and leaves the list, while its conversations, versions and history stay. It is refused with agent_in_use while anything still relies on the agent; the error lists each tie. Returns nothing.",
         "operationId": "ai.agents.destroy",
         "parameters": [
           {
@@ -47015,7 +47073,7 @@
             "description": "Error"
           }
         },
-        "summary": "Delete an AI agent",
+        "summary": "Archive an AI agent",
         "x-abilities": [
           "ai:write"
         ]
