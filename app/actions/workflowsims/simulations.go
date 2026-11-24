@@ -7,10 +7,11 @@
 | anyone does: a saved simulation plays a made-up customer, or one made
 | from a real conversation, through the workflow's draft or its live
 | version. The customer is played by AI: it taps buttons, answers what
-| collect steps ask and lets timeouts pass. dimmi's turns inside agent
-| steps run on the agent simulator. Nothing reaches a customer or the
-| team's systems: the workflow's actions are only recorded, and its
-| HTTP requests answer with their mocks.
+| collect steps ask, lets timeouts pass, and writes during a wait or
+| lets it run out. dimmi's turns inside agent steps run on the agent
+| simulator, and a called workflow's steps run inline. Nothing reaches
+| a customer or the team's systems: the workflow's actions are only
+| recorded, and its HTTP requests and actions answer with their mocks.
 |
 | Each run keeps its trace: whether the trigger would start the
 | workflow, every step and path, the variables, the actions that would

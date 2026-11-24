@@ -58,7 +58,9 @@ type DryMessage struct {
 /*
 DryAsk is what the workflow waits on from the customer: the step and
 its kind, the question, the buttons, whether only a button will do,
-and whether the wait can run out.
+and whether the wait can run out. At a wait step, Waiting says how
+long the workflow waits: the customer may write before then, which
+interrupts it, or let the time pass.
 */
 type DryAsk struct {
 	StepID      string
@@ -67,6 +69,7 @@ type DryAsk struct {
 	Choices     []string
 	ChoicesOnly bool
 	CanWait     bool
+	Waiting     string
 }
 
 /*

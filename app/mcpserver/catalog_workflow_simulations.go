@@ -12,11 +12,11 @@
 package mcpserver
 
 /*
-workflowSimulationDocs returns the entries for workflow and series
-simulations.
+workflowSimulationParams returns the texts of a saved simulation's
+fields.
 */
-func workflowSimulationDocs() map[string]Doc {
-	params := map[string]string{
+func workflowSimulationParams() map[string]string {
+	return map[string]string{
 		"name":     "What the team calls the simulation, up to 120 characters.",
 		"scenario": "Who the customer is and what they came for; the simulated customer answers from it.",
 		"messages": "The customer's messages, oldest first, each an object with text.",
@@ -25,7 +25,19 @@ func workflowSimulationDocs() map[string]Doc {
 		"source_conversation_id": "The real conversation (conv_...) the simulation was made from, when it was.",
 		"persona": "The made-up customer, an object with fields such as name, email, channel and " +
 			"attributes, such as {\"name\": \"Ada\", \"channel\": \"widget\"}.",
+		"action_mocks": "What steps answer instead of real calls, keyed by step id, each with status and body: " +
+			"an HTTP request or run action step (also keyed by action id, aac_...) its response, where a " +
+			"status outside 2xx takes the failure path; an extract step the values by key, such as " +
+			"{\"s_extract\": {\"body\": {\"order_number\": \"A-1\"}}}; a classify step {\"path_id\": ...}.",
 	}
+}
+
+/*
+workflowSimulationDocs returns the entries for workflow and series
+simulations.
+*/
+func workflowSimulationDocs() map[string]Doc {
+	params := workflowSimulationParams()
 
 	return map[string]Doc{
 		"workflows.simulations.index": {
@@ -96,7 +108,8 @@ func workflowSimulationRunDocs() map[string]Doc {
 			Name:  "simulate_series",
 			Title: "Walk one person through a series",
 			Use: "Walks a contact, or a made-up person, through a series' draft or live version without sending " +
-				"anything, skipping every wait. AI paths still ask the AI.",
+				"anything, skipping every wait. AI paths and extract steps still ask the AI unless mocked; run " +
+				"action steps never run the action, and answer with their mock.",
 			Returns: "each step with the path it took, the messages that would go out, the changes, and whether " +
 				"the person reached the goal.",
 			Params: map[string]string{
@@ -105,6 +118,10 @@ func workflowSimulationRunDocs() map[string]Doc {
 				"person":     "A made-up person, with name, email and attributes.",
 				"events":     "Events the person does on the way, by name.",
 				"engaged":    "Whether they open, click or reply to the messages: opened, clicked or replied.",
+				"action_mocks": "What extract and run action steps answer instead of the AI or the action, keyed " +
+					"by step id or action id (aac_...): a status and a body. An extract step's body holds the " +
+					"values by key; a run action step's body is the action's result, and a status outside 2xx " +
+					"takes the failed path.",
 			},
 		},
 	}
@@ -122,7 +139,9 @@ func workflowSimulationSchemaTexts() map[string]map[string]string {
 
 	return map[string]map[string]string{
 		"WorkflowSimulation": {
-			"action_mocks": "What each mocked HTTP step answers, by step id, each with a status and a body.",
+			"action_mocks": "What each mocked step answers instead of a real call, by step id, each with a " +
+				"status and a body: an HTTP request or run action step (also keyed by action id, aac_...) its " +
+				"response, an extract step the values by key, a classify step the path as path_id.",
 			"assertions":   "What must hold after the run, as a JSON array of checks.",
 			"draft_result": result("draft"),
 			"live_result":  result("live version"),

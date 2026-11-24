@@ -36,16 +36,21 @@ type DryVerdict struct {
 
 /*
 DryStep is one step a dry run took: which, how it went, the path it
-left by with the path's label, and what it noted.
+left by with the path's label, and what it noted. A step of a called
+workflow sits one level deeper for each call, with the workflow's
+public id and name.
 */
 type DryStep struct {
-	StepID    string         `json:"step_id"`
-	Kind      string         `json:"kind"`
-	Outcome   string         `json:"outcome"`
-	PathID    string         `json:"path_id,omitempty"`
-	PathLabel string         `json:"path_label,omitempty"`
-	Skipped   bool           `json:"skipped,omitempty"`
-	Detail    map[string]any `json:"detail,omitempty"`
+	StepID     string         `json:"step_id"`
+	Kind       string         `json:"kind"`
+	Outcome    string         `json:"outcome"`
+	PathID     string         `json:"path_id,omitempty"`
+	PathLabel  string         `json:"path_label,omitempty"`
+	Skipped    bool           `json:"skipped,omitempty"`
+	Detail     map[string]any `json:"detail,omitempty"`
+	Depth      int            `json:"depth,omitempty"`
+	WorkflowID string         `json:"workflow_id,omitempty"`
+	Workflow   string         `json:"workflow,omitempty"`
 }
 
 /*

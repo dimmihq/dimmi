@@ -113,6 +113,8 @@ func (s *Simulations) judgeRun(ctx context.Context, ch *chat, trace *engine.DryT
 
 /*
 ownResult checks one of the workflow's own checks against its trace.
+They name the workflow's own steps, so the steps of a workflow it calls
+never count.
 */
 func ownResult(a procedure.Assertion, trace *engine.DryTrace) procedure.AssertionResult {
 	verdict := func(ok bool, yes, no string) procedure.AssertionResult {
@@ -127,11 +129,13 @@ func ownResult(a procedure.Assertion, trace *engine.DryTrace) procedure.Assertio
 		return verdict(trace.Verdict.Started == want, "the workflow started as expected",
 			"the workflow did not start as expected")
 	case AssertStepReached:
-		reached := slices.ContainsFunc(trace.Steps, func(s engine.DryStep) bool { return s.StepID == a.Step })
+		reached := slices.ContainsFunc(trace.Steps, func(s engine.DryStep) bool {
+			return s.Depth == 0 && s.StepID == a.Step
+		})
 		return verdict(reached, "step "+a.Step+" was reached", "the workflow never reached step "+a.Step+".")
 	}
 	for _, s := range trace.Steps {
-		if s.StepID != a.Step {
+		if s.Depth > 0 || s.StepID != a.Step {
 			continue
 		}
 		label := cmp.Or(s.PathLabel, s.PathID, "its own path")
