@@ -4,8 +4,11 @@
  * The teammate picks a real contact or describes a made-up person, says
  * what they would do with the messages, and sees each step with the
  * path it took, every message that would go out, the changes that would
- * be made, and whether the goal was reached. Try it on me stays the way
- * to get the real messages.
+ * be made, and whether the goal was reached. Extract and run action
+ * steps take the answers the teammate sets here in place of the AI or
+ * the action, and what they find, like the tags earlier steps add, is
+ * read by the rules after them. Try it on me stays the way to get the
+ * real messages.
  */
 import { RiPlayFill } from "@remixicon/react";
 import { useQuery } from "@tanstack/react-query";
@@ -18,9 +21,11 @@ import { ComboBox, ComboBoxItem } from "@/components/base/combobox/combobox";
 import { Input } from "@/components/base/input/input";
 import { SegmentedControl, SegmentedControlItem } from "@/components/base/segmented-control/segmented-control";
 import { Select, SelectItem } from "@/components/base/select/select";
+import { Textarea } from "@/components/base/textarea/textarea";
 import { toast } from "@/components/base/toast/toast";
 import { KindMark } from "@/features/automation/parts";
 import { card, fieldLabel, hint, words } from "@/features/automation/procedure-simulator/simulator";
+import { type MockDraft, mocksOf } from "@/features/automation/studio/workflow-sim-words";
 import { ScrollArea } from "@/features/shell/page";
 import type { AnswerAs } from "@/lib/api/agents";
 import { attributesQuery } from "@/lib/api/attributes";
@@ -32,6 +37,7 @@ import { cx } from "@/utils/cx";
 
 import { endReasonName, nodeLook } from "../looks";
 import { summary } from "../model";
+import { mockableNodes, walkedNote } from "./series-sim-words";
 
 const travelers = [
   ["contact", "A contact"],
@@ -215,8 +221,14 @@ const pathWords: Record<string, string> = {
 function WalkedStep({ step, spec }: { step: SeriesSimulation["steps"][number]; spec?: SeriesSpec }) {
   const node = spec?.nodes.find((n) => n.id === step.node_id);
   const look = nodeLook[step.kind as NodeKind];
+  const failedAction = step.kind === "run_action" && step.path === "failed";
   const path =
-    step.path && step.path !== "next" ? (pathWords[step.path] ?? String(step.detail?.label ?? step.path)) : "";
+    step.path && step.path !== "next"
+      ? failedAction
+        ? "failed"
+        : (pathWords[step.path] ?? String(step.detail?.label ?? step.path))
+      : "";
+  const note = walkedNote(step);
 
   return (
     <li className="flex items-center gap-3 rounded-xl px-2.5 py-2">
@@ -226,6 +238,7 @@ function WalkedStep({ step, spec }: { step: SeriesSimulation["steps"][number]; s
           {node && spec ? summary(node, spec) : (look?.name ?? step.kind)}
         </span>
         {path ? <span className="text-body-2-regular text-text-secondary">Took the path {path}</span> : null}
+        {note ? <span className="break-words text-body-2-regular text-text-secondary">{note}</span> : null}
       </span>
       <Chip variant="caption" color={step.skipped ? "neutral" : "soft"} className="shrink-0 py-0.5">
         {step.skipped ? "Skipped" : words(step.result.replace(/^ai:/, "AI picked "))}
@@ -302,6 +315,79 @@ function Walked({ result, spec }: { result: SeriesSimulation; spec?: SeriesSpec 
   );
 }
 
+/*
+ * Answers are what extract and run action steps get in place of the AI
+ * and the action. The action never runs; an extract step with no answer
+ * asks the AI.
+ */
+function Answers({
+  nodes,
+  drafts,
+  bad,
+  onChange,
+}: {
+  nodes: { id: string; kind: "extract" | "run_action" }[];
+  drafts: Record<string, MockDraft>;
+  bad: string[];
+  onChange: (drafts: Record<string, MockDraft>) => void;
+}) {
+  if (nodes.length === 0) {
+    return null;
+  }
+
+  return (
+    <div className="flex flex-col gap-3">
+      <div className="flex flex-col">
+        <span className={fieldLabel}>Answers in place of the AI and actions</span>
+        <span className={hint}>No action runs. One with no answer succeeds with nothing.</span>
+      </div>
+      {nodes.map(({ id, kind }) => {
+        const look = nodeLook[kind as NodeKind];
+        const draft = drafts[id] ?? { status: "", body: "" };
+        const set = (next: Partial<MockDraft>) => onChange({ ...drafts, [id]: { ...draft, ...next } });
+        const wrong = bad.includes(id);
+
+        return (
+          <div key={id} className="flex flex-col gap-2">
+            <span className="flex items-center gap-2">
+              {look ? <KindMark icon={look.icon} tint={look.tint} size="sm" /> : null}
+              <span className="text-body-2-medium text-text-primary">{look?.name ?? kind}</span>
+              <span className={hint}>{id}</span>
+            </span>
+            {kind === "run_action" ? (
+              <Input
+                label="Status"
+                size="small"
+                inputMode="numeric"
+                placeholder="200"
+                value={draft.status}
+                onChange={(status) => set({ status })}
+              />
+            ) : null}
+            <Textarea
+              label={kind === "extract" ? "Values" : "Result"}
+              hint={
+                wrong
+                  ? "Write a status from 100 to 599 and the answer in JSON."
+                  : kind === "extract"
+                    ? "The values it finds, by attribute. Left empty, the AI reads the person."
+                    : "The action's result, by response field. A status outside 2xx takes the failed path."
+              }
+              isInvalid={wrong}
+              placeholder={kind === "extract" ? '{"fit": "team"}' : '{"seats": 12}'}
+              rows={2}
+              autoResize
+              maxRows={8}
+              value={draft.body}
+              onChange={(body) => set({ body })}
+            />
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 export function SeriesSimulations({ workspace, series }: { workspace: string; series: string }) {
   const row = useQuery(seriesQuery(workspace, series)).data;
   const [who, setWho] = useState<"contact" | "made_up">("made_up");
@@ -312,9 +398,12 @@ export function SeriesSimulations({ workspace, series }: { workspace: string; se
   const [as, setAs] = useState<AnswerAs>("draft");
   const [running, setRunning] = useState(false);
   const [result, setResult] = useState<SeriesSimulation | null>(null);
+  const [drafts, setDrafts] = useState<Record<string, MockDraft>>({});
   const hasLive = Boolean(row?.live_version_id);
   const copy = hasLive ? as : "draft";
-  const ready = who === "contact" ? contact !== "" : true;
+  const answering = mockableNodes(row?.spec?.nodes ?? []);
+  const { mocks, bad } = mocksOf({}, drafts);
+  const ready = (who === "contact" ? contact !== "" : true) && bad.length === 0;
 
   const run = async () => {
     setRunning(true);
@@ -333,6 +422,7 @@ export function SeriesSimulations({ workspace, series }: { workspace: string; se
               }),
           engaged,
           events,
+          action_mocks: mocks,
         }),
       );
     } catch (error) {
@@ -391,6 +481,7 @@ export function SeriesSimulations({ workspace, series }: { workspace: string; se
             )}
           </div>
           <Doing workspace={workspace} engaged={engaged} events={events} onEngaged={setEngaged} onEvents={setEvents} />
+          <Answers nodes={answering} drafts={drafts} bad={bad} onChange={setDrafts} />
           {result ? <Walked result={result} spec={copy === "draft" ? row?.spec : undefined} /> : null}
           <p className={hint}>
             Waits are skipped and every message stays here. To get the real messages, use Try it on me.

@@ -3,8 +3,10 @@
  * view: the chat as the customer met it (the workflow's messages with
  * their buttons, what the customer tapped or typed, a wait they let run
  * out, and dimmi's replies inside agent steps), the workflow's trace
- * (whether the trigger started it, each step with the path it took, and
- * the actions that would have run), and the checks as a run left them.
+ * (whether the trigger started it, each step with the path it took and
+ * what it found or saved, a called workflow's steps nested under the
+ * call, and the actions that would have run), and the checks as a run
+ * left them.
  * A run in progress streams its lines and steps as they happen.
  */
 import { RiCursorLine, RiTimerLine } from "@remixicon/react";
@@ -23,7 +25,7 @@ import type { ChipSources } from "../procedure-writer/procedure-suggestions";
 import { stepLook } from "../step-kinds";
 import type { StepKind } from "../workflows";
 import type { LiveWfRun } from "./use-workflow-live-runs";
-import { type CheckResult, checkSentence, lined, pathNamed, type Steps } from "./workflow-sim-words";
+import { type CheckResult, checkSentence, lined, pathNamed, type Steps, stepNote } from "./workflow-sim-words";
 
 /* CheckLine is one check with its mark and, after a run, why it failed or what the judge said. */
 export function CheckLine({
@@ -194,21 +196,38 @@ const verdictWords: Record<string, string> = {
   schedule: "it is outside the office hours it runs in",
 };
 
-/* StepRow is one step the run took, the way the runs view reads it. */
-function StepRow({ done, steps }: { done: DryStep; steps: Steps }) {
+/* nested indents a called workflow's steps one step deeper per call. */
+const nested = ["", "ps-5", "ps-10", "ps-14", "ps-18", "ps-22"];
+
+/*
+ * StepRow is one step the run took, the way the runs view reads it: a
+ * called workflow's steps sit indented under the call, the first one
+ * naming the workflow.
+ */
+function StepRow({ done, steps, opens }: { done: DryStep; steps: Steps; opens: boolean }) {
   const look = stepLook[done.kind as StepKind];
-  const took = done.path_id ? pathNamed(steps, done.step_id, done.path_id) || done.path_label : "";
+  const deep = (done.depth ?? 0) > 0;
+  const took = done.path_id
+    ? deep
+      ? done.path_label
+      : pathNamed(steps, done.step_id, done.path_id) || done.path_label
+    : "";
+  const note = stepNote(done);
 
   return (
-    <li className="flex items-start gap-2.5 py-1.5">
-      {look ? <KindMark icon={look.icon} tint={look.tint} size="sm" /> : null}
-      <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-        <span className="text-body-2-medium text-text-primary">{look?.name ?? words(done.kind)}</span>
-        {took ? <span className="text-body-2-regular text-text-secondary">Took the path {took}</span> : null}
+    <li className={cx("flex flex-col", nested[Math.min(done.depth ?? 0, nested.length - 1)])}>
+      {opens ? <span className={cx(hint, "pt-1.5")}>Inside “{done.workflow}”</span> : null}
+      <span className="flex items-start gap-2.5 py-1.5">
+        {look ? <KindMark icon={look.icon} tint={look.tint} size="sm" /> : null}
+        <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+          <span className="text-body-2-medium text-text-primary">{look?.name ?? words(done.kind)}</span>
+          {took ? <span className="text-body-2-regular text-text-secondary">Took the path {took}</span> : null}
+          {note ? <span className="break-words text-body-2-regular text-text-secondary">{note}</span> : null}
+        </span>
+        <Chip variant="caption" color={done.skipped ? "neutral" : "soft"} className="shrink-0 py-0.5">
+          {done.skipped ? (done.kind === "wait" ? "Skipped" : words(done.outcome)) : words(done.outcome)}
+        </Chip>
       </span>
-      <Chip variant="caption" color={done.skipped ? "neutral" : "soft"} className="shrink-0 py-0.5">
-        {done.skipped ? (done.kind === "wait" ? "Skipped" : words(done.outcome)) : words(done.outcome)}
-      </Chip>
     </li>
   );
 }
@@ -293,7 +312,12 @@ export function Trace({ trace, steps, live }: { trace?: DryTrace; steps: Steps; 
       {done.length > 0 ? (
         <ol aria-label="Steps the workflow took" className="flex flex-col">
           {done.map((step, index) => (
-            <StepRow key={`${step.step_id}-${String(index)}`} done={step} steps={steps} />
+            <StepRow
+              key={`${step.step_id}-${String(index)}`}
+              done={step}
+              steps={steps}
+              opens={(step.depth ?? 0) > 0 && (done[index - 1]?.depth ?? 0) < (step.depth ?? 0)}
+            />
           ))}
         </ol>
       ) : null}
