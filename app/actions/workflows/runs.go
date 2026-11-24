@@ -6,7 +6,8 @@
 | Every member who may read workflows may see how they ran: the newest
 | runs of a workflow, each with the trace of the steps it executed, the
 | path it took and the few facts each step kept. Traces never hold
-| message or request bodies, so they are safe to show to the team.
+| message or request bodies, so they are safe to show to the team. Each
+| run names the version that handled it.
 |
 */
 
@@ -33,8 +34,9 @@ const maxRunsListed = 50
 RunTrace is one run with the steps it executed, in order.
 */
 type RunTrace struct {
-	Run   models.WorkflowRun
-	Steps []models.WorkflowRunStep
+	Run           models.WorkflowRun
+	Steps         []models.WorkflowRunStep
+	VersionNumber int32
 }
 
 /*
@@ -64,6 +66,11 @@ func (w *Workflows) Runs(ctx context.Context, m authz.Membership, id ids.UUID, l
 			return fmt.Errorf("list workflow runs: %w", err)
 		}
 
+		numbers, err := versionNumbers(ctx, q, m.Workspace.ID, id)
+		if err != nil {
+			return err
+		}
+
 		for _, run := range runs {
 			steps, err := q.ListWorkflowRunSteps(ctx, models.ListWorkflowRunStepsParams{
 				WorkspaceID: m.Workspace.ID, RunID: run.ID,
@@ -72,11 +79,35 @@ func (w *Workflows) Runs(ctx context.Context, m authz.Membership, id ids.UUID, l
 				return fmt.Errorf("list run steps: %w", err)
 			}
 
-			out = append(out, RunTrace{Run: run, Steps: steps})
+			trace := RunTrace{Run: run, Steps: steps}
+			if run.VersionID != nil {
+				trace.VersionNumber = numbers[*run.VersionID]
+			}
+
+			out = append(out, trace)
 		}
 
 		return nil
 	})
 
 	return out, err
+}
+
+/*
+versionNumbers maps a workflow's version ids to their numbers.
+*/
+func versionNumbers(ctx context.Context, q *models.Queries, ws, id ids.UUID) (map[ids.UUID]int32, error) {
+	versions, err := q.ListWorkflowVersions(ctx, models.ListWorkflowVersionsParams{
+		WorkspaceID: ws, WorkflowID: id, RowLimit: 1000,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("list workflow versions: %w", err)
+	}
+
+	out := make(map[ids.UUID]int32, len(versions))
+	for _, v := range versions {
+		out[v.ID] = v.Number
+	}
+
+	return out, nil
 }

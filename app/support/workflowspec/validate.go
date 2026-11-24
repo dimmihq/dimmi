@@ -124,6 +124,7 @@ func (c *checker) checkHead() {
 
 	c.checkTriggerSettings()
 	c.checkReentry()
+	c.checkGoal()
 }
 
 /*
