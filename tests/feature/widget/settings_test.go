@@ -411,6 +411,32 @@ func TestWidgetSettingsUpdate(t *testing.T) {
 		config.AssertJSONPath("data.appearance.background.gradient.from", "#000000")
 	})
 
+	t.Run("picks the sounds for a sent message and a reply and serves them in the config", func(t *testing.T) {
+		t.Parallel()
+		tc := tests.New(t)
+
+		owner(tc).GetJSON(settingsPath(t, tc)).AssertOK().
+			AssertJSONPath("data.appearance.sent_sound", "none").AssertJSONPath("data.appearance.reply_sound", "pop")
+		tc.Client().GetJSON(configPath(t, tc)).AssertOK().
+			AssertJSONPath("data.appearance.sent_sound", "none").AssertJSONPath("data.appearance.reply_sound", "pop")
+
+		picked := func(res *testkit.Response) {
+			res.AssertJSONPath("data.appearance.sent_sound", "swoosh").
+				AssertJSONPath("data.appearance.reply_sound", "chime")
+		}
+		picked(patch(t, tc, testkit.JSON{"appearance": testkit.JSON{"sent_sound": "swoosh", "reply_sound": "chime"}}))
+		picked(tc.Client().GetJSON(configPath(t, tc)).AssertOK())
+
+		as, path := owner(tc), settingsPath(t, tc)
+		as.PatchJSON(path, testkit.JSON{"appearance": testkit.JSON{"reply_sound": "klaxon"}}).
+			AssertStatus(fhttp.StatusUnprocessableEntity).AssertValidationError("appearance.reply_sound")
+		as.PatchJSON(path, testkit.JSON{"appearance": testkit.JSON{"sent_sound": true}}).
+			AssertStatus(fhttp.StatusUnprocessableEntity).AssertValidationError("appearance.sent_sound")
+
+		patch(t, tc, testkit.JSON{"appearance": testkit.JSON{"reply_sound": nil}}).
+			AssertJSONPath("data.appearance.reply_sound", "pop")
+	})
+
 	t.Run("refuses a name too long for the list", func(t *testing.T) {
 		t.Parallel()
 		tc := tests.New(t)

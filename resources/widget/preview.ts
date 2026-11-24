@@ -33,7 +33,7 @@ export interface Sent {
  * answer shows what the visitor sent in the thread, then the team typing
  * and a placeholder reply, the way a real conversation unfolds.
  */
-export function answer(root: ShadowRoot, sent: Sent) {
+export function answer(root: ShadowRoot, sent: Sent, replied?: () => void) {
   const thread = root.querySelector<HTMLElement>(".thread");
   const list = thread?.querySelector<HTMLElement>(".loaded") ?? thread;
   if (!thread || !list) {
@@ -70,6 +70,7 @@ export function answer(root: ShadowRoot, sent: Sent) {
     );
     connect();
     scroll();
+    replied?.();
   }, 1600);
 }
 

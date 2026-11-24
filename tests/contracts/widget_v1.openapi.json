@@ -545,6 +545,14 @@
             "description": "The messenger's brand color as #RRGGBB, such as #1f2328.",
             "type": "string"
           },
+          "reply_sound": {
+            "description": "The sound to play when a reply arrives: none, pop, chime, bubble, swoosh or tick.",
+            "type": "string"
+          },
+          "sent_sound": {
+            "description": "The sound to play when the visitor sends a message: none, pop, chime, bubble, swoosh or tick.",
+            "type": "string"
+          },
           "sound": {
             "description": "True when the messenger plays a sound for new messages.",
             "type": "boolean"
@@ -567,7 +575,9 @@
           "padding_y",
           "launcher",
           "font",
-          "sound"
+          "sound",
+          "sent_sound",
+          "reply_sound"
         ],
         "type": "object"
       },
@@ -1301,6 +1311,14 @@
       "MessageAISource": {
         "additionalProperties": false,
         "properties": {
+          "excerpt": {
+            "description": "A line or two of what the cited source says: a help article's description, or the start of the passage the answer drew on. Left out for a source customers may not read.",
+            "type": "string"
+          },
+          "slug": {
+            "description": "Slug of the published help article the source is, for opening it in a help center or the messenger. Left out when the source is not a public help article.",
+            "type": "string"
+          },
           "title": {
             "description": "Title of a source the AI answer cites, such as a help article's title.",
             "type": "string"
@@ -1311,14 +1329,6 @@
           }
         },
         "required": [
-          "excerpt": {
-            "description": "A line or two of what the cited source says: a help article's description, or the start of the passage the answer drew on. Left out for a source customers may not read.",
-            "type": "string"
-          },
-          "slug": {
-            "description": "Slug of the published help article the source is, for opening it in a help center or the messenger. Left out when the source is not a public help article.",
-            "type": "string"
-          },
           "title",
           "url"
         ],

@@ -10,6 +10,8 @@
  * turns ink or white by its lightness.
  */
 
+import type { Sound } from "./lib/sound";
+
 export type Tab = "home" | "messages" | "changelog" | "help";
 
 export interface Launcher {
@@ -29,6 +31,8 @@ export interface Appearance {
   launcher: Launcher;
   font: "system" | "inherit";
   sound: boolean;
+  sent_sound: Sound;
+  reply_sound: Sound;
 }
 
 export interface Texts {
@@ -86,11 +90,11 @@ export interface Texts {
   verify_submit: string;
   verify_resend: string;
   verify_other: string;
+  more_sources: string;
 }
 
 export interface Options {
   appearance: Appearance;
-  more_sources: string;
   texts: Texts;
   tabs: Tab[];
   show_branding: boolean;
@@ -126,6 +130,8 @@ export const defaults: Options = {
     launcher: { style: "bubble", shape: "circle", label: "" },
     font: "system",
     sound: true,
+    sent_sound: "none",
+    reply_sound: "pop",
   },
   texts: {
     greeting_intro: "Hey there.",
@@ -182,13 +188,13 @@ export const defaults: Options = {
     verify_submit: "Verify",
     verify_resend: "Send a new code",
     verify_other: "Use another email",
+    more_sources: "{count} more",
   },
   tabs: ["home", "messages", "changelog", "help"],
   show_branding: true,
   branding_url: "https://trydimmi.com",
   launcher_ruled_out: false,
   locale: "",
-    more_sources: "{count} more",
   dir: "ltr",
 };
 

@@ -24,6 +24,13 @@ async function started() {
   return widget;
 }
 
+/*
+ * settle lets the messenger's lazy chunks, such as its sounds, load.
+ */
+function settle() {
+  return new Promise((resolve) => setTimeout(resolve, 20));
+}
+
 function shadow() {
   return document.getElementById("dimmi-messenger")?.shadowRoot as ShadowRoot;
 }
@@ -938,13 +945,53 @@ describe("core", () => {
     await started();
 
     win.Dimmi?.("open");
-    expect(notes).toHaveBeenCalledTimes(2);
+    await vi.waitFor(() => expect(notes).toHaveBeenCalledTimes(2));
     win.Dimmi?.("update", { texts: { greeting: "Hey" } });
+    await settle();
     expect(notes).toHaveBeenCalledTimes(2);
     win.Dimmi?.("close");
     win.Dimmi?.("update", { appearance: { sound: false } });
     win.Dimmi?.("open");
+    await settle();
     expect(notes).toHaveBeenCalledTimes(2);
+  });
+
+  it("plays the sounds the settings pick when the visitor sends and a reply arrives", async () => {
+    const waves: string[] = [];
+    const param = () => ({ value: 0, setValueAtTime: vi.fn(), exponentialRampToValueAtTime: vi.fn() });
+    vi.stubGlobal(
+      "AudioContext",
+      class {
+        currentTime = 0;
+        destination = {};
+        createBiquadFilter() {
+          return { type: "", frequency: param(), Q: param(), connect: (to: unknown) => to };
+        }
+        createGain() {
+          return { gain: param(), connect: (to: unknown) => to };
+        }
+        createOscillator() {
+          const note = { type: "", frequency: param(), connect: (to: unknown) => to, start: vi.fn(), stop: vi.fn() };
+          queueMicrotask(() => waves.push(note.type));
+          return note;
+        }
+      },
+    );
+    await started();
+    win.Dimmi?.("update", { appearance: { sent_sound: "tick", reply_sound: "chime" } });
+    const messenger = shadow().querySelector(".messenger") as HTMLElement;
+    expect(messenger.dataset.sentSound).toBe("tick");
+
+    shadow().dispatchEvent(new CustomEvent("dimmi:send", { detail: { body: "Hi", files: [] } }));
+    await vi.waitFor(() => expect(waves).toEqual(["triangle"]));
+
+    win.Dimmi?.("simulate", { message: "Hello" });
+    await vi.waitFor(() => expect(waves).toEqual(["triangle", "sine", "sine"]));
+
+    win.Dimmi?.("update", { appearance: { sound: false } });
+    win.Dimmi?.("simulate", { message: "Again" });
+    await settle();
+    expect(waves).toHaveLength(3);
   });
 
   it("warns about commands it does not know", async () => {

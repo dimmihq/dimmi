@@ -36,7 +36,6 @@
 import { Notice } from "../components/notice";
 import type { Incoming } from "../content";
 import { Controller } from "../lib/controller";
-import { pop } from "../lib/sound";
 import { loadThread } from "../lib/threads";
 
 export class MessengerController extends Controller {
@@ -90,6 +89,7 @@ export class MessengerController extends Controller {
       this.dispatch("view", { article: open.slice("article:".length) });
     }
   }
+
   /*
    * cite opens an article an answer cites in place when the messenger has
    * it, and otherwise lets its link open the article in a new tab.
@@ -101,7 +101,6 @@ export class MessengerController extends Controller {
       this.visit(event);
     }
   }
-
 
   /*
    * rate marks the face the visitor picked under an article and thanks
@@ -129,6 +128,7 @@ export class MessengerController extends Controller {
     this.#preview(message);
 
     if (this.isOpen && this.tab === "conversation") {
+      this.replied();
       return;
     }
 
@@ -148,8 +148,29 @@ export class MessengerController extends Controller {
       notice.innerHTML = String(Notice({ message }));
       notice.hidden = false;
     }
-    if (this.element.dataset.sound === "true") {
-      pop();
+    this.replied();
+  }
+
+  /*
+   * replied plays the sound the settings pick for a reply arriving, and
+   * sent the one for the visitor's own message leaving, both unless the
+   * messenger's sound is off.
+   */
+  replied(): void {
+    this.#play(this.element.dataset.replySound, "pop");
+  }
+
+  sent(): void {
+    this.#play(this.element.dataset.sentSound, "none");
+  }
+
+  /*
+   * play plays a sound unless the messenger's sound is off. The sounds
+   * load on first use, so a page that never hears one never fetches them.
+   */
+  #play(name: string | undefined, fallback: "pop" | "none"): void {
+    if (this.element.dataset.sound === "true" && name !== "none") {
+      void import("../lib/sound").then((sounds) => sounds.play(sounds.soundOf(name, fallback)));
     }
   }
 
@@ -441,8 +462,8 @@ export class MessengerController extends Controller {
     if (open && current) {
       this.#load(current);
     }
-    if (open && sound && this.element.dataset.sound === "true") {
-      pop();
+    if (open && sound) {
+      this.#play("pop", "pop");
     }
     this.dispatch(open ? "open" : "close");
   }

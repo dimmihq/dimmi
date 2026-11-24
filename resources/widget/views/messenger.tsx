@@ -93,6 +93,8 @@ export function Messenger({ options, content }: { options: Options; content: Con
       data-side={appearance.position}
       data-font={appearance.font}
       data-sound={String(appearance.sound)}
+      data-sent-sound={appearance.sent_sound}
+      data-reply-sound={appearance.reply_sound}
     >
       <section
         className="panel"

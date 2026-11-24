@@ -53,6 +53,12 @@ export function installSnippet(origin: string, widget: string): string {
 }
 
 /*
+ * MessengerSound is one of the built-in sounds a messenger plays when the
+ * customer sends a message or a reply arrives.
+ */
+export type MessengerSound = "none" | "pop" | "chime" | "bubble" | "swoosh" | "tick";
+
+/*
  * WidgetAppearance is a messenger's look as its settings store it.
  */
 export interface WidgetAppearance {
@@ -70,6 +76,8 @@ export interface WidgetAppearance {
   padding_y: number;
   font: "system" | "inherit";
   sound: boolean;
+  sent_sound: MessengerSound;
+  reply_sound: MessengerSound;
   launcher: { style: "bubble" | "tab" | "hidden"; shape: "circle" | "squircle"; label: string; icon: string };
 }
 

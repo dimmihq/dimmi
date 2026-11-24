@@ -32,8 +32,12 @@ func schemaTextsFromAllowedAddressBody() map[string]map[string]string {
 				"0 to 200. Defaults to 20.",
 			"position":      "Which side of the page the launcher sits on: right or left.",
 			"primary_color": "The messenger's main color as #RRGGBB. Defaults to #1f2328.",
-			"sound":         "Whether the messenger plays a sound. On by default.",
-			"theme":         "The messenger's color scheme: light, dark or auto.",
+			"reply_sound": "The sound the messenger plays when a reply arrives: none, pop, chime, bubble, " +
+				"swoosh or tick. Defaults to pop.",
+			"sent_sound": "The sound the messenger plays when the customer sends a message: none, pop, " +
+				"chime, bubble, swoosh or tick. Defaults to none.",
+			"sound": "Whether the messenger plays a sound. On by default.",
+			"theme": "The messenger's color scheme: light, dark or auto.",
 		},
 		"Article": {
 			"audience_id": "Id of the saved audience set on the article, such as audn_... Null when " +

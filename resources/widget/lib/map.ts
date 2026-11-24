@@ -56,6 +56,8 @@ export function fromConfig(config: Config): OptionsUpdate {
         "padding_y",
         "font",
         "sound",
+        "sent_sound",
+        "reply_sound",
       ]),
       launcher: {
         ...(a.launcher?.style === "bubble" || a.launcher?.style === "tab" || a.launcher?.style === "hidden"
