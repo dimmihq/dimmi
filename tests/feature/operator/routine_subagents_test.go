@@ -104,6 +104,28 @@ func TestOperatorRoutineSubagents(t *testing.T) {
 		assert.Contains(t, body, "2 subagents reported")
 	})
 
+	t.Run("lists a subagent's run under the routine's thread, named as a subagent", func(t *testing.T) {
+		t.Parallel()
+		k := newDesk(t)
+		routine := k.routine(testkit.JSON{"name": "Audit", "prompt": "Audit articles."})
+		k.llm.Script(
+			tools(split("Articles 1 to 25")),
+			reply("Nothing needed changing."),
+			reply("I read 25 articles. Nothing to change."),
+		)
+
+		k.runRoutine(routine, true)
+
+		usage := k.d.Owner.GetJSON("/api/v1/operator/usage").AssertOK()
+		usage.AssertJSONMissing("data.recent.2")
+		titles := []string{usage.String("data.recent.0.thread_title"), usage.String("data.recent.1.thread_title")}
+		assert.Equal(t, usage.String("data.recent.0.thread_id"), usage.String("data.recent.1.thread_id"))
+		assert.NotEmpty(t, usage.String("data.recent.0.thread_id"))
+		assert.Equal(t, routine, usage.String("data.recent.0.routine_id"))
+		assert.Equal(t, routine, usage.String("data.recent.1.routine_id"))
+		assert.Contains(t, strings.Join(titles, "|"), " · subagent 1")
+	})
+
 	t.Run("refuses a split wider than a call or a run allows, and one from a subagent", func(t *testing.T) {
 		t.Parallel()
 		k := newDesk(t)

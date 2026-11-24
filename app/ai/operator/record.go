@@ -47,7 +47,9 @@ type tally struct {
 }
 
 /*
-startRun opens the run row for the session.
+startRun opens the run row for the session. The row names its thread:
+a subagent's run writes no message, so nothing else ties it to the
+thread it worked for.
 */
 func (e *Engine) startRun(ctx context.Context, q *models.Queries, s *session) (models.AiRun, error) {
 	now := e.Clock.Now()
@@ -59,6 +61,9 @@ func (e *Engine) startRun(ctx context.Context, q *models.Queries, s *session) (m
 	}
 	if s.sub != nil {
 		config["subagent"] = s.sub.n
+	}
+	if s.thread.ID != (ids.UUID{}) {
+		config["thread"] = s.thread.ID.String()
 	}
 	snapshot, _ := json.Marshal(config)
 	run, err := q.CreateRun(ctx, models.CreateRunParams{
