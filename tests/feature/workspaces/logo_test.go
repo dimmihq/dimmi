@@ -31,7 +31,7 @@ func logoPicture(t *testing.T, width, height int) []byte {
 func TestWorkspaceLogo(t *testing.T) {
 	t.Parallel()
 
-	t.Run("an admin uploads a logo, which is served re-encoded and shown on the workspace and in the member's list", func(t *testing.T) {
+	t.Run("an admin's logo is served re-encoded and shown on the workspace and the member's list", func(t *testing.T) {
 		t.Parallel()
 		tc := tests.New(t)
 		owner := tc.ActingAsOwner()
