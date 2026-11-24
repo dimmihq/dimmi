@@ -214,6 +214,7 @@ func (c *WorkflowSimulationController) SimulateSeries(ctx context.Context, in *r
 	b := in.Body
 	input := series.SimulateInput{
 		Membership: membership(ctx), ID: id, Version: b.Version, Events: b.Events, Engaged: b.Engaged,
+		Mocks: mocks(b.ActionMocks),
 	}
 	if b.ContactID != "" {
 		contact, err := c.IDs.Decode(string(models.PrefixContact), b.ContactID)

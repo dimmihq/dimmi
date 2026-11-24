@@ -17,13 +17,15 @@ import (
 
 /*
 tapper plays the customer of a workflow simulation: it taps the button
-it is told to, answers a question with its answer, or says nothing.
+it is told to, answers a question with its answer, writes during a wait
+when told to interrupt it, or says nothing.
 */
 type tapper struct {
-	mu     sync.Mutex
-	tap    int
-	answer string
-	asked  []pipeline.CustomerTurn
+	mu        sync.Mutex
+	tap       int
+	answer    string
+	interrupt string
+	asked     []pipeline.CustomerTurn
 }
 
 func (p *tapper) PlayCustomer(_ context.Context, in pipeline.CustomerTurn) (pipeline.CustomerMove, error) {
@@ -31,6 +33,10 @@ func (p *tapper) PlayCustomer(_ context.Context, in pipeline.CustomerTurn) (pipe
 	defer p.mu.Unlock()
 	p.asked = append(p.asked, in)
 	switch {
+	case in.Waiting != "" && p.interrupt != "":
+		return pipeline.CustomerMove{Message: p.interrupt}, nil
+	case in.Waiting != "":
+		return pipeline.CustomerMove{Waited: true}, nil
 	case len(in.Choices) > 0 && p.tap > 0:
 		return pipeline.CustomerMove{Message: in.Choices[p.tap-1], Choice: p.tap}, nil
 	case p.answer != "":

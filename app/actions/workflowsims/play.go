@@ -10,7 +10,8 @@
 |
 |   - When the workflow asks, the simulated customer moves: a saved
 |     message, an answer of its own, a tap on a button, or nothing,
-|     which lets the wait run out.
+|     which lets the wait run out. At a wait step it may write before
+|     the time is up, which interrupts the wait, or let the time pass.
 |   - In an agent step, dimmi answers on the agent simulator, as the
 |     agent the step names or the workspace's default, and the customer
 |     answers it, until dimmi hands over, the customer is done (the
@@ -148,8 +149,9 @@ func (s *Simulations) play(ctx context.Context, p playing) Result {
 		trigger["message.body"] = first
 	}
 	in := engine.DryRun{
-		WorkspaceID: p.m.Workspace.ID, Spec: p.copy.spec, Conversation: p.c.SourceConversationID,
-		Person: dryPerson(ch.script.persona), Trigger: trigger, Mocks: ch.script.mocks, Driver: ch,
+		WorkspaceID: p.m.Workspace.ID, WorkflowID: p.c.WorkflowID, Spec: p.copy.spec,
+		Conversation: p.c.SourceConversationID, Person: dryPerson(ch.script.persona), Trigger: trigger,
+		Mocks: ch.script.mocks, Driver: ch,
 	}
 	trace, err := s.Engine.DryRun(ctx, in)
 	res.Transcript, res.Turns, res.Trace = ch.lines, ch.turns, trace
@@ -320,7 +322,7 @@ Customer asks the simulated customer for its answer to the workflow.
 */
 func (c *chat) Customer(ctx context.Context, ask engine.DryAsk) (engine.DryAnswer, error) {
 	move, err := c.move(ctx, pipeline.CustomerTurn{
-		Choices: ask.Choices, ChoicesOnly: ask.ChoicesOnly, CanWait: ask.CanWait,
+		Choices: ask.Choices, ChoicesOnly: ask.ChoicesOnly, CanWait: ask.CanWait, Waiting: ask.Waiting,
 	})
 	if err != nil {
 		return engine.DryAnswer{}, err

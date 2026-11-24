@@ -6,8 +6,10 @@
  * lets timeouts pass, and dimmi answers inside agent steps. Nothing is
  * sent and no action runs for real. Each simulation keeps how it last
  * went on both copies and how its latest runs went, so it reads as
- * passing, flaky or failing. Opening one shows its past runs, the chat,
- * each step and path the workflow took, and its checks; Compare puts
+ * passing, flaky or failing. Opening one shows its past runs, the
+ * answers its HTTP requests, actions and extract steps get in place of
+ * real calls, the chat, each step and path the workflow took (a called
+ * workflow's steps nested under the call), and its checks; Compare puts
  * the draft and live runs side by side.
  */
 import {
@@ -55,6 +57,7 @@ import { formatRelative } from "@/lib/i18n/format";
 import { cx } from "@/utils/cx";
 
 import { Dots } from "../../agents/agent-sim-history";
+import { KindMark } from "../parts";
 import { card, fieldLabel, hint } from "../procedure-simulator/simulator";
 import type { ChipSources } from "../procedure-writer/procedure-suggestions";
 import { useChipSources } from "../procedure-writer/use-chip-sources";
@@ -63,7 +66,17 @@ import { pathName, type StepKind } from "../workflows";
 import { type LiveWfRun, useWorkflowLiveRuns } from "./use-workflow-live-runs";
 import { WorkflowSimCompare } from "./workflow-sim-compare";
 import { CheckLine, LiveWfTalk, Trace, WfTalk } from "./workflow-sim-parts";
-import { lined, liveStatus, ranWhen, type Steps, simStanding } from "./workflow-sim-words";
+import {
+  lined,
+  liveStatus,
+  type MockKind,
+  mockableSteps,
+  mockDrafts,
+  mocksOf,
+  ranWhen,
+  type Steps,
+  simStanding,
+} from "./workflow-sim-words";
 
 /* The copies a simulation runs against, and where a new one starts from. */
 const copies = [
@@ -245,6 +258,124 @@ function Scenario({
             onClick={() => {
               setSaving(true);
               void onSave(text.trim()).finally(() => setSaving(false));
+            }}
+          >
+            Save
+          </Button>
+        </span>
+      ) : null}
+    </div>
+  );
+}
+
+/* What each kind of mocked step answers, in words, with an example body. */
+const mockWords: Record<MockKind, { hint: string; example: string; status: boolean }> = {
+  http_request: {
+    hint: "The response the request gets. A status of 400 or more takes the failure path.",
+    example: '{"plan": "pro"}',
+    status: true,
+  },
+  run_action: {
+    hint: "The action's result, by response field. A status outside 2xx takes the failure path.",
+    example: '{"plan": "pro"}',
+    status: true,
+  },
+  extract: {
+    hint: "The values it finds, by key. Left empty, the AI reads what the customer wrote.",
+    example: '{"order": "A-1234"}',
+    status: false,
+  },
+};
+
+/*
+ * Mocks are what the steps that would leave dimmi answer in a run: an
+ * HTTP request or an action its status and body, an extract step the
+ * values it finds. No request or action runs for real either way. A
+ * change waits for Save, since the next run plays from it.
+ */
+function Mocks({
+  sim,
+  steps,
+  readOnly,
+  onSave,
+}: {
+  sim: WorkflowSimulation;
+  steps: Steps;
+  readOnly: boolean;
+  onSave: (mocks: WorkflowSimulation["action_mocks"]) => Promise<void>;
+}) {
+  const list = mockableSteps(steps);
+  const start = mockDrafts(
+    sim.action_mocks,
+    list.map((s) => s.id),
+  );
+  const [drafts, setDrafts] = useState(start);
+  const [saving, setSaving] = useState(false);
+  if (list.length === 0) {
+    return null;
+  }
+  const { mocks, bad } = mocksOf(sim.action_mocks, drafts);
+  const changed = JSON.stringify(drafts) !== JSON.stringify(start);
+
+  return (
+    <div className="flex flex-col gap-3">
+      <div className="flex flex-col">
+        <span className={fieldLabel}>Answers in place of real calls</span>
+        <span className={hint}>
+          Nothing leaves dimmi. A request or action with no answer here succeeds with nothing.
+        </span>
+      </div>
+      {list.map(({ id, kind }) => {
+        const look = stepLook[kind as StepKind];
+        const said = mockWords[kind];
+        const draft = drafts[id] ?? { status: "", body: "" };
+        const set = (next: Partial<typeof draft>) => setDrafts({ ...drafts, [id]: { ...draft, ...next } });
+
+        return (
+          <div key={id} className="flex flex-col gap-2">
+            <span className="flex items-center gap-2">
+              {look ? <KindMark icon={look.icon} tint={look.tint} size="sm" /> : null}
+              <span className="text-body-2-medium text-text-primary">{look?.name ?? kind}</span>
+              <span className={hint}>{id}</span>
+            </span>
+            {said.status ? (
+              <Input
+                label="Status"
+                size="small"
+                inputMode="numeric"
+                placeholder="200"
+                isReadOnly={readOnly}
+                value={draft.status}
+                onChange={(status) => set({ status })}
+              />
+            ) : null}
+            <Textarea
+              label={kind === "extract" ? "Values" : "Body"}
+              hint={bad.includes(id) ? "Write a status from 100 to 599 and a body in JSON." : said.hint}
+              isInvalid={bad.includes(id)}
+              placeholder={said.example}
+              rows={2}
+              autoResize
+              maxRows={8}
+              isReadOnly={readOnly}
+              value={draft.body}
+              onChange={(body) => set({ body })}
+            />
+          </div>
+        );
+      })}
+      {changed && !readOnly ? (
+        <span className="flex items-center justify-end gap-2">
+          <Button variant="secondary" size="xs" disabled={saving} onClick={() => setDrafts(start)}>
+            Discard
+          </Button>
+          <Button
+            size="xs"
+            loading={saving}
+            disabled={bad.length > 0}
+            onClick={() => {
+              setSaving(true);
+              void onSave(mocks).finally(() => setSaving(false));
             }}
           >
             Save
@@ -440,6 +571,7 @@ function Detail({
   onDelete,
   onChecks,
   onScenario,
+  onMocks,
   onCompare,
 }: {
   workspace: string;
@@ -455,6 +587,7 @@ function Detail({
   onDelete: () => void;
   onChecks: (assertions: WorkflowAssertion[]) => void;
   onScenario: (scenario: string) => Promise<void>;
+  onMocks: (mocks: WorkflowSimulation["action_mocks"]) => Promise<void>;
   onCompare?: () => void;
 }) {
   const latest = simResultOf(sim, as);
@@ -502,6 +635,13 @@ function Detail({
             />
           )}
           <Scenario key={`${sim.id}:${sim.scenario}`} sim={sim} readOnly={busy} onSave={onScenario} />
+          <Mocks
+            key={`${sim.id}:${JSON.stringify(sim.action_mocks)}`}
+            sim={sim}
+            steps={steps}
+            readOnly={busy}
+            onSave={onMocks}
+          />
           <Resize>
             <Swap
               view={busy ? "live" : (viewing?.id ?? `latest:${latest?.ran_at ?? ""}`)}
@@ -795,6 +935,7 @@ export function WorkflowSimulations({
       onDelete={() => setDeleting(opened)}
       onChecks={(assertions) => void save(opened, { assertions }, "The check was not saved.")}
       onScenario={(scenario) => save(opened, { scenario }, "The customer's situation was not saved.")}
+      onMocks={(mocks) => save(opened, { action_mocks: mocks }, "The answers were not saved.")}
       onCompare={hasLive ? () => setComparing(true) : undefined}
     />
   ) : null;

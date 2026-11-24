@@ -50,10 +50,6 @@ func dryActions() map[string]dryAction {
 			id := settings[workflowspec.ApplySLASettings](s).SLAPolicyID
 			return d.act(s, "Would apply an SLA policy", map[string]any{"sla_policy_id": id})
 		},
-		workflowspec.KindRunWorkflow: func(d *dry, _ context.Context, s workflowspec.Step) outcome {
-			id := settings[workflowspec.RunWorkflowSettings](s).WorkflowID
-			return d.act(s, "Would run another workflow", map[string]any{"workflow_id": id})
-		},
 	}
 }
 

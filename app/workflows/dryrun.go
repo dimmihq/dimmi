@@ -18,13 +18,19 @@
 |     keeps the chat.
 |   - Buttons and collect steps ask the driver for the customer's move:
 |     a tap, a typed answer, or no answer, which lets the timeout pass.
-|   - Waits are skipped, and recorded as skipped.
+|   - Waits ask the driver whether the customer writes first: a message
+|     takes the interrupted path, and silence lets the time pass at
+|     once, recorded as skipped.
+|   - A run workflow step walks the live reusable workflow it names
+|     inline, one level deeper, on the same variables.
 |   - A split takes the variant a live run of the conversation would.
 |   - A step that lets dimmi handle the conversation hands the chat to
 |     the driver, which plays the agent's turns and says how it ended.
-|   - Actions are recorded as what would run. HTTP requests answer with
-|     their mock, or succeed with nothing, and classify steps take the
-|     mocked category or ask the classifier.
+|   - Actions are recorded as what would run. HTTP requests and run
+|     action steps answer with their mock, or succeed with nothing, and
+|     never leave dimmi. Classify and extract steps take their mock or
+|     ask the decision models about what the customer wrote; extracted
+|     values land in the run's variables for the steps after them.
 |
 | The driver lives with the caller, which owns the customer, the agent
 | and the stream; this file only knows the workflow.
@@ -58,12 +64,14 @@ const maxDrySteps = 200
 
 /*
 DryRun is what a dry run walks: the workspace, the definition, the
-conversation whose facts it reads or the made-up customer instead, the
-trigger's data, the mocks by step id, and the driver that plays the
-customer and the agent.
+workflow it is a copy of when known, the conversation whose facts it
+reads or the made-up customer instead, the trigger's data, the mocks
+by step id (or by action id for a run action step), and the driver
+that plays the customer and the agent.
 */
 type DryRun struct {
 	WorkspaceID  ids.UUID
+	WorkflowID   ids.UUID
 	Spec         json.RawMessage
 	Conversation *ids.UUID
 	Person       DryPerson
@@ -111,6 +119,9 @@ type dry struct {
 	conv   models.Conversation
 	out    *DryTrace
 	cursor string
+	depth  int
+	called *dryCall
+	taken  int
 }
 
 /*
@@ -246,34 +257,60 @@ walk runs the steps until the path ends, the run would end, or the
 steps run out.
 */
 func (d *dry) walk(ctx context.Context) error {
-	for range maxDrySteps {
+	end, err := d.walkPath(ctx)
+	if err != nil {
+		return err
+	}
+	d.finish(end)
+
+	return nil
+}
+
+/*
+walkPath runs the steps from the cursor until the path ends, a step
+ends the run, or the dry run's steps run out, and says how it ended.
+A called workflow walks its own steps the same way.
+*/
+func (d *dry) walkPath(ctx context.Context) (string, error) {
+	for d.taken < maxDrySteps {
 		if d.cursor == "" {
-			d.finish(EndCompleted)
-			return nil
+			return EndCompleted, nil
 		}
 		step, ok := d.index.Step(d.cursor)
 		if !ok {
-			d.finish(EndDefinitionError)
-			return nil
+			return EndDefinitionError, nil
 		}
-		out, err := d.step(ctx, step)
+		d.taken++
+		out, err := d.take(ctx, step)
 		if err != nil {
-			return fmt.Errorf("dry run step %s: %w", step.ID, err)
+			return "", fmt.Errorf("dry run step %s: %w", step.ID, err)
 		}
-		d.record(ctx, step, out)
 		switch {
 		case out.end != "":
-			d.finish(out.end)
-			return nil
+			return out.end, nil
 		case out.path != "":
 			d.cursor = d.index.Enter(step.ID, out.path)
 		default:
 			d.cursor = d.index.Next(step.ID)
 		}
 	}
-	d.finish(EndStepBudget)
 
-	return nil
+	return EndStepBudget, nil
+}
+
+/*
+take runs one step and records it; a call records its own.
+*/
+func (d *dry) take(ctx context.Context, step workflowspec.Step) (outcome, error) {
+	if step.Kind == workflowspec.KindRunWorkflow {
+		return d.call(ctx, step)
+	}
+	out, err := d.step(ctx, step)
+	if err == nil {
+		d.record(ctx, step, out)
+	}
+
+	return out, err
 }
 
 /*
@@ -289,9 +326,22 @@ func (d *dry) finish(reason string) {
 record keeps a step's trace and tells the driver.
 */
 func (d *dry) record(ctx context.Context, step workflowspec.Step, out outcome) {
+	s := d.traced(step, out)
+	d.out.Steps = append(d.out.Steps, s)
+	d.in.Driver.Stepped(ctx, s)
+}
+
+/*
+traced is a step's trace: how it went, the path it took with the
+path's label, and the called workflow it belongs to, if any.
+*/
+func (d *dry) traced(step workflowspec.Step, out outcome) DryStep {
 	s := DryStep{
 		StepID: step.ID, Kind: step.Kind, Outcome: out.outcome, PathID: out.path, Detail: out.detail,
-		Skipped: out.status == "skipped",
+		Skipped: out.status == "skipped", Depth: d.depth,
+	}
+	if d.called != nil {
+		s.WorkflowID, s.Workflow = d.called.id, d.called.name
 	}
 	for _, p := range step.Paths {
 		if p.ID == out.path {
@@ -301,8 +351,8 @@ func (d *dry) record(ctx context.Context, step workflowspec.Step, out outcome) {
 			}
 		}
 	}
-	d.out.Steps = append(d.out.Steps, s)
-	d.in.Driver.Stepped(ctx, s)
+
+	return s
 }
 
 /*
@@ -375,4 +425,17 @@ decode reads a public id.
 func (d *dry) decode(prefix models.Prefix, public string) (ids.UUID, bool) {
 	id, err := d.e.IDs.Decode(string(prefix), public)
 	return id, err == nil
+}
+
+/*
+conversation is the real conversation a dry run reads, nil for a
+made-up customer, whose conversation is not stored.
+*/
+func (d *dry) conversation() *ids.UUID {
+	if d.in.Conversation == nil {
+		return nil
+	}
+	id := *d.in.Conversation
+
+	return &id
 }

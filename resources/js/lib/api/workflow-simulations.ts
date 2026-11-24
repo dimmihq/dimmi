@@ -4,7 +4,8 @@
  * through the draft or the live version, taps buttons, answers
  * questions and lets timeouts pass, and keeps the workflow's trace with
  * how it went. A series takes a dry simulation of one person: every
- * wait skipped and nothing sent. Every id is a public one (wf_, wfs_,
+ * wait skipped and nothing sent, its extract and run action steps
+ * answered by mocks. Every id is a public one (wf_, wfs_,
  * wfsr_, ser_, ctc_, cnv_).
  */
 import { queryOptions } from "@tanstack/react-query";
@@ -22,7 +23,12 @@ export type WorkflowAssertion = Omit<Assertion, "type" | "branch"> & {
   branch?: string;
 };
 
-/* One step a run took: how it went, the path it left by, and whether it was skipped, as a wait is. */
+/*
+ * One step a run took: how it went, the path it left by, and whether it
+ * was skipped, as a wait the time passed on is. A step of a workflow a
+ * run workflow step called sits one level deeper, with that workflow's
+ * id and name.
+ */
 export interface DryStep {
   step_id: string;
   kind: string;
@@ -31,6 +37,9 @@ export interface DryStep {
   path_label?: string;
   skipped?: boolean;
   detail?: Record<string, unknown>;
+  depth?: number;
+  workflow_id?: string;
+  workflow?: string;
 }
 
 /* An action the workflow would take; none of them reaches anyone. */
@@ -100,7 +109,11 @@ export interface WorkflowSimulation {
   source_conversation_id: string | null;
   persona: SimPersona;
   messages: { text: string; confirm?: boolean }[];
-  /* By step id: what an HTTP request step answers, or for a classify step the path it takes. */
+  /*
+   * By step id: what an HTTP request or run action step answers (a run
+   * action step also by action id), the values an extract step finds as
+   * its body, or for a classify step the path it takes.
+   */
   action_mocks: Record<string, ActionMock>;
   assertions: WorkflowAssertion[];
   scenario: string;
@@ -234,6 +247,8 @@ export interface SeriesSimulationInput {
   person?: { name?: string; email?: string; attributes?: Record<string, unknown> };
   events?: string[];
   engaged?: Engagement[];
+  /* What extract and run action steps answer, by step id or action id, instead of the AI or the action. */
+  action_mocks?: Record<string, ActionMock>;
 }
 
 export function simulateSeries(

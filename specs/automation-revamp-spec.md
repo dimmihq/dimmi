@@ -189,6 +189,8 @@ Workflows and series get the agent studio's shell: Build, Analytics and History 
 - **Reports:** a Workflows table in the AI report; an AI attribute filter on every report and a Conversations by AI attribute table in the AI report.
 - **Inbox:** an AI attributes section in the conversation's details panel, refreshed when a value changes.
 
+- **Simulations:** a customer can interrupt a wait, a called workflow's steps run nested in the trace, Extract and Run an action take mocks or ask the AI (series too), reply times are worked out and articles named.
+
 ### Left for later
 
-- Simulating the Extract and Run an action steps beyond recording them, a customer interrupting a wait, and a called workflow's own steps.
+- Nothing from the spec; see the final report for open items.

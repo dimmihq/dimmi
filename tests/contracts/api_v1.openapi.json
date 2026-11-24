@@ -33070,6 +33070,13 @@
       "RunSeriesSimulationBody": {
         "additionalProperties": false,
         "properties": {
+          "action_mocks": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/ActionMockInput"
+            },
+            "description": "What extract and run action steps answer instead of the AI or the action, keyed by step id or action id (aac_...): a status and a body. An extract step's body holds the values by key; a run action step's body is the action's result, and a status outside 2xx takes the failed path.",
+            "type": "object"
+          },
           "contact_id": {
             "description": "The contact to walk through (cnt_...); or leave out and describe a person.",
             "maxLength": 64,
@@ -46930,7 +46937,7 @@
         "additionalProperties": false,
         "properties": {
           "action_mocks": {
-            "description": "What each mocked HTTP step answers, by step id, each with a status and a body."
+            "description": "What each mocked step answers instead of a real call, by step id, each with a status and a body: an HTTP request or run action step (also keyed by action id, aac_...) its response, an extract step the values by key, a classify step the path as path_id."
           },
           "assertions": {
             "description": "What must hold after the run, as a JSON array of checks."
@@ -73350,7 +73357,7 @@
     },
     "/series/{series}/simulations/run": {
       "post": {
-        "description": "Walks a contact, or a made-up person, through a series' draft or live version without sending anything, skipping every wait. AI paths still ask the AI. Returns each step with the path it took, the messages that would go out, the changes, and whether the person reached the goal.",
+        "description": "Walks a contact, or a made-up person, through a series' draft or live version without sending anything, skipping every wait. AI paths and extract steps still ask the AI unless mocked; run action steps never run the action, and answer with their mock. Returns each step with the path it took, the messages that would go out, the changes, and whether the person reached the goal.",
         "operationId": "series.simulations.run.store",
         "parameters": [
           {

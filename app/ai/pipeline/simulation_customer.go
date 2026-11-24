@@ -130,10 +130,13 @@ with what has been sent of it, the chat of this run so far, and the
 card dimmi is waiting on, if any. In a workflow, Choices are the
 buttons the customer may tap now, ChoicesOnly says they may not type
 instead, and CanWait says the workflow waits for an answer the customer
-may simply not give, so that a timeout passes. Whether the customer may press
-Confirm on that card is worked out when the turn is played, and so is
-an answer of the customer's model that strayed from what is known
-about the customer and is being asked again.
+may simply not give, so that a timeout passes. Waiting says the
+workflow is in a wait step, and for how long: the customer may write
+before the time is up, which interrupts it, or let the time pass.
+Whether the customer may press Confirm on that card is worked out when
+the turn is played, and so is an answer of the customer's model that
+strayed from what is known about the customer and is being asked
+again.
 */
 type CustomerTurn struct {
 	WorkspaceID ids.UUID
@@ -146,6 +149,7 @@ type CustomerTurn struct {
 	Choices     []string
 	ChoicesOnly bool
 	CanWait     bool
+	Waiting     string
 	confirmable bool
 	strayed     string
 }

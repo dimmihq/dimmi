@@ -52,4 +52,15 @@ func TestWorkflowCustomerMoves(t *testing.T) {
 	require.NoError(t, json.Unmarshal(customerSpec(CustomerTurn{}).Schema, &schema))
 	assert.NotContains(t, schema.Required, "choice", "an agent's simulation keeps the tool it had")
 	assert.Contains(t, customerStatus(menu), "1. Billing")
+
+	waiting := CustomerTurn{
+		Run:     []SimMessage{{From: "agent", Text: "We'll check back in a day."}},
+		CanWait: true, Waiting: "1d",
+	}
+	assert.Equal(t, []string{moveAnswer, moveWait, moveEnd}, movesNow(waiting), "a wait lets the customer write or not")
+	assert.Contains(t, customerStatus(waiting), "waits 1d before it goes on")
+	assert.Contains(t, workflowMoves(waiting), "let the time pass")
+	move, err = readMove(call(`{"move":"answer","saved":0,"message":"Any news?","unknown":false}`), waiting)
+	require.NoError(t, err)
+	assert.Equal(t, "Any news?", move.Message, "writing during a wait interrupts it")
 }

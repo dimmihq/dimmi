@@ -51,5 +51,5 @@ func (a *Audiences) Matching(
 		return nil, err
 	}
 
-	return judge{program: program, env: env}.matching(ctx, q, contacts)
+	return judge{program: program, env: env, adjust: in.Adjust}.matching(ctx, q, contacts)
 }

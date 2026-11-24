@@ -9,7 +9,8 @@
 | what a real one does with them: tap one of the buttons, type an
 | answer instead when the workflow lets them, or say nothing and let
 | the wait run out. Tapping is the only move when the buttons are all
-| the workflow accepts.
+| the workflow accepts. In a wait step the customer may write before the
+| time is up, which interrupts the wait, or let the time pass.
 |
 | The tool the customer moves through is built here too, for agents and
 | workflows alike: it offers only the moves the chat allows now.
@@ -46,7 +47,10 @@ func workflowMoves(in CustomerTurn) string {
 	if len(in.Choices) > 0 {
 		out += " " + moveTap + ": tap one of the buttons the workflow offers."
 	}
-	if in.CanWait {
+	switch {
+	case in.Waiting != "":
+		out += " " + moveWait + ": say nothing and let the time pass."
+	case in.CanWait:
 		out += " " + moveWait + ": say nothing and let the workflow's wait run out."
 	}
 
@@ -91,7 +95,11 @@ func workflowStatus(in CustomerTurn) string {
 			b.WriteString("\nThe customer can only tap a button here, not type.")
 		}
 	}
-	if in.CanWait {
+	switch {
+	case in.Waiting != "":
+		b.WriteString("\nThe workflow now waits " + escape(in.Waiting) + " before it goes on. The customer may " +
+			"write now, which interrupts the wait, or say nothing and let the time pass.")
+	case in.CanWait:
 		b.WriteString("\nThe workflow waits for an answer; the customer may also say nothing.")
 	}
 

@@ -34,14 +34,9 @@ func (d *dry) step(ctx context.Context, s workflowspec.Step) (outcome, error) {
 	case workflowspec.KindMessage:
 		return d.say(ctx, s, settings[workflowspec.MessageSettings](s).Text), nil
 	case workflowspec.KindArticle:
-		a := settings[workflowspec.ArticleSettings](s)
-		return d.say(ctx, s, strings.TrimSpace(a.Text+"\n\n[Help article "+a.Article+"]")), nil
+		return d.article(ctx, s)
 	case workflowspec.KindReplyTime:
-		text := settings[workflowspec.ReplyTimeSettings](s).Text
-		if text == "" {
-			text = "The team will reply {{reply_time}}."
-		}
-		return d.say(ctx, s, strings.ReplaceAll(text, "{{reply_time}}", "soon")), nil
+		return d.replyTime(ctx, s)
 	case workflowspec.KindButtons:
 		return d.buttons(ctx, s)
 	case workflowspec.KindCollect:
@@ -51,13 +46,17 @@ func (d *dry) step(ctx context.Context, s workflowspec.Step) (outcome, error) {
 	case workflowspec.KindClassify:
 		return d.classify(ctx, s), nil
 	case workflowspec.KindWait:
-		return outcome{outcome: outcomeElapsed, status: "skipped", detail: map[string]any{"wait": "skipped"}}, nil
+		return d.wait(ctx, s)
 	case workflowspec.KindDimmi:
 		return d.handle(ctx, s)
 	case workflowspec.KindHTTPRequest:
 		return d.request(s), nil
 	case workflowspec.KindSplit:
 		return splitOutcome(s, d.conv.ID.String()), nil
+	case workflowspec.KindExtract:
+		return d.extract(ctx, s), nil
+	case workflowspec.KindRunAction:
+		return d.runAction(ctx, s), nil
 	}
 
 	return d.action(ctx, s), nil
@@ -354,9 +353,10 @@ func (d *dry) sorted(ctx context.Context, s workflowspec.Step, c workflowspec.Cl
 	for _, cat := range cats {
 		options = append(options, aidecision.Option{ID: cat.ID, Label: cat.Label, Description: cat.Description})
 	}
-	conv := d.conv.ID
 	got := d.e.ask(ctx, aidecision.Choice{
-		Subject:      aidecision.Subject{WorkspaceID: d.in.WorkspaceID, ConversationID: &conv, Context: text},
+		Subject: aidecision.Subject{
+			WorkspaceID: d.in.WorkspaceID, ConversationID: d.conversation(), Context: text,
+		},
 		Instructions: c.Question, Options: options,
 	})
 	if got.Reason != "" {

@@ -83,10 +83,22 @@ An AI customer then plays the chat:
 
 - **Taps buttons** that fit what they came for, or types instead when the step allows it.
 - **Answers collect steps** from their situation, and says nothing when they would not know, so the timeout path runs.
-- **Skips every wait**, so a 2-day wait passes at once.
+- **Writes during a wait** or lets it pass at once. A message takes the wait's **Cut short** path, as a real reply would.
 - **Talks to the agent** in a **Let dimmi handle** step, as your agent would answer.
 
-Nothing leaves the simulation. Messages are not sent, and tags, assignments, notes, tickets and HTTP requests are only listed under **Would have run**. An HTTP request step answers with its mock, or succeeds with an empty body.
+A **Run a workflow** step walks the live workflow it calls right there in the run. Its steps show nested under the call, and both share the same variables.
+
+Nothing leaves the simulation. Messages are not sent, and tags, assignments, notes, tickets, HTTP requests and actions are only listed under **Would have run**. Reply time steps work out the real estimate, and article steps name the article they would share.
+
+Under **Answers in place of real calls**, set what each step that calls out gets back:
+
+| Step | Its answer | Without one |
+| --- | --- | --- |
+| **Call your system** | A status and a JSON body. 400 or more takes the failure path. | Succeeds with an empty body. |
+| **Run an action** | A status and the action's result, such as `{"plan": "pro"}`. A status outside 2xx takes the failure path. | Succeeds with nothing saved. The action never runs. |
+| **Extract with AI** | The values it finds, such as `{"order_number": "A-1234"}`. | The AI reads what the customer wrote. |
+
+Extracted values and saved outputs land in the run's variables, so later branches and messages read them.
 
 Each run shows the chat, every step with the path it took, and the variables it set. Add checks in plain words ("the workflow tags billing questions"), or pick **Check the path a step takes**. A model judges the written checks and can answer unsure.
 
