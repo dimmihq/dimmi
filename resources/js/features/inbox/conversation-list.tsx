@@ -170,7 +170,7 @@ function Row({
             </span>
             <DraftMark drafted={drafted} />
             <Waiting conversation={conversation} />
-            <AiBadge state={conversation.ai_state} />
+            <AiBadge state={conversation.ai_state} reason={conversation.ai_handoff_reason} />
             <ApprovalBadge count={conversation.ai_pending_approvals} />
             <PriorityChip priority={conversation.priority} />
             <AssigneeAvatar assignee={conversation.assignee} />
