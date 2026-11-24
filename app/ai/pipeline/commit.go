@@ -145,6 +145,10 @@ func (r *Runner) write(ctx context.Context, tx *database.Tx, st *run, d *decisio
 		return r.writeHandoff(ctx, tx, st, d)
 	case outcomeTransferred:
 		return r.writeTransfer(ctx, tx, st)
+	case outcomeSkipped:
+		if d.skipReason == skipResolutionConfirmed {
+			return r.writeResolved(ctx, tx, st)
+		}
 	case outcomeError:
 		if e.Conversation.AiState != aiStateActive {
 			return nil

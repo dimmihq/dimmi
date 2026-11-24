@@ -48,3 +48,18 @@ type AiAgentTransferred struct {
 EventName names the event.
 */
 func (AiAgentTransferred) EventName() string { return "ai.agent_transferred" }
+
+/*
+AiResolutionConfirmed is dispatched when a customer confirms that the
+answer an AI agent gave inside a workflow's agent step solved the
+problem.
+*/
+type AiResolutionConfirmed struct {
+	Base
+	ConversationRef
+}
+
+/*
+EventName names the event.
+*/
+func (AiResolutionConfirmed) EventName() string { return "ai.resolution_confirmed" }

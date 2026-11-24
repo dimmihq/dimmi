@@ -53,6 +53,11 @@ func (e *Engine) Listen(d *events.Dispatcher) {
 	events.ListenQueued(d, queuedMessage)
 	events.ListenQueued(d, resumeOnMessage)
 	events.ListenQueued(d, armQuiet)
+	events.ListenQueued(d, func(ev appevents.AiResolutionConfirmed) queue.Args {
+		return jobs.ResumeWorkflowOnAgentArgs{
+			WorkspaceID: ev.WorkspaceID, ConversationID: ev.ConversationID, Reason: ReasonResolved, EventID: ev.ID,
+		}
+	})
 	events.ListenQueued(d, func(ev appevents.AiHandoffRequested) queue.Args {
 		return jobs.ResumeWorkflowOnAgentArgs{
 			WorkspaceID: ev.WorkspaceID, ConversationID: ev.ConversationID, Reason: ev.Reason, EventID: ev.ID,

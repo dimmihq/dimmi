@@ -75,15 +75,6 @@ func applyWorkflowStep(e *env, s *TurnSettings) {
 }
 
 /*
-confirmsAnswer reports whether the pending message confirms the
-agent's answer right before it, which the workflow resolves.
-*/
-func confirmsAnswer(e *env, s *TurnSettings) bool {
-	return s.Workflow.StepActive && s.ConfirmResolution &&
-		e.ReplyAfter == string(enums.AuthorTypeAgent) && resolution.Confirms(e.pendingText())
-}
-
-/*
 withConfirmation ends an answer with the question that asks the
 customer to confirm it, when the turn asks for confirmation.
 */

@@ -194,6 +194,10 @@ func (r *Runner) turn(ctx context.Context, st *run) *decision {
 		defer stopTyping()
 	}
 
+	if r.confirmsResolution(ctx, st) {
+		return skipped(skipResolutionConfirmed)
+	}
+
 	st.loop = &loop{llm: llm, system: r.render(st.env, rootOf(st.env), r.answerVars(st))}
 	r.shortlistProcedures(ctx, st)
 	r.resumeProcedure(ctx, st)

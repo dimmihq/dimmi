@@ -123,11 +123,22 @@ func (e *Engine) ResumeOnMessage(ctx context.Context, workspace, conversation, m
 
 /*
 ResumeOnAgent tells the conversation's runs waiting on the agent that
-it handed the conversation over, and why.
+it handed the conversation over, and why, or that the customer
+confirmed its answer solved the problem.
 */
 func (e *Engine) ResumeOnAgent(ctx context.Context, workspace, conversation ids.UUID, reason string) error {
+	if reason == ReasonResolved {
+		return e.resumeWaiting(ctx, workspace, conversation, Input{Kind: InputAgentResolved})
+	}
+
 	return e.resumeWaiting(ctx, workspace, conversation, Input{Kind: InputAgentHandover, Reason: reason})
 }
+
+/*
+ReasonResolved is the agent signal that the customer confirmed the
+answer solved the problem, rather than a handover reason.
+*/
+const ReasonResolved = "resolution_confirmed"
 
 /*
 resumeWaiting hands the input to every waiting run of the conversation;

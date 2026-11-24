@@ -39,9 +39,6 @@ func (r *Runner) gate(e *env, s *TurnSettings) *decision {
 	if e.WorkflowAnswered {
 		return skipped("workflow_answered")
 	}
-	if confirmsAnswer(e, s) {
-		return skipped("resolution_confirmed")
-	}
 	if reason := humanGate(e); reason != "" {
 		return skipped(reason)
 	}

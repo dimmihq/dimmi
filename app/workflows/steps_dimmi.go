@@ -33,7 +33,6 @@ import (
 	"github.com/dimmihq/dimmi/app/enums"
 	"github.com/dimmihq/dimmi/app/jobs"
 	"github.com/dimmihq/dimmi/app/models"
-	"github.com/dimmihq/dimmi/app/support/resolution"
 	"github.com/dimmihq/dimmi/app/support/workflowspec"
 )
 
@@ -186,8 +185,11 @@ func resumeDimmi(ctx context.Context, st *state, s workflowspec.Step, in Input) 
 	switch in.Kind {
 	case InputAgentHandover:
 		return handedOver(s, in.Reason), nil
-	case InputMessage:
-		return st.maybeResolved(ctx, s, in)
+	case InputAgentResolved:
+		if st.wait.Agent == nil || !st.wait.Agent.ConfirmResolution {
+			return st.keepWaiting(), nil
+		}
+		return st.resolved(ctx, s)
 	case InputTimer:
 		return st.maybeQuiet(ctx, s)
 	}
@@ -212,30 +214,6 @@ func (st *state) keepWaiting() outcome {
 	w := st.wait
 
 	return outcome{wait: &w}
-}
-
-/*
-maybeResolved takes the resolved path when the customer confirms the
-answer right before their message solved it.
-*/
-func (st *state) maybeResolved(ctx context.Context, s workflowspec.Step, in Input) (outcome, error) {
-	if st.wait.Agent == nil || !st.wait.Agent.ConfirmResolution || in.MessageID == nil ||
-		!resolution.Confirms(in.Text) {
-		return st.keepWaiting(), nil
-	}
-
-	before, err := st.q.PublicAuthorBefore(ctx, models.PublicAuthorBeforeParams{
-		WorkspaceID: st.conv.WorkspaceID, ConversationID: st.conv.ID, MessageID: *in.MessageID,
-	})
-	if errors.Is(err, database.ErrNotFound) || err == nil && before != string(enums.AuthorTypeAgent) {
-		return st.keepWaiting(), nil
-	}
-
-	if err != nil {
-		return outcome{}, fmt.Errorf("find answer before: %w", err)
-	}
-
-	return st.resolved(ctx, s)
 }
 
 /*

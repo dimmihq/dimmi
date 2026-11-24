@@ -37,6 +37,7 @@ func TestJudgmentFiles(t *testing.T) {
 		{name: "step_given", state: true, vars: []string{"step", "conversation"}},
 		{name: "step_declined", state: true, vars: []string{"step", "conversation"}},
 		{name: "moved_on", state: true, vars: []string{"request", "conversation"}},
+		{name: "confirms_resolution", state: true, vars: []string{"answer", "reply"}},
 		{name: "procedure_fits", state: true, vars: []string{"conversation", "name", "description"}},
 	}
 	for _, c := range cases {
