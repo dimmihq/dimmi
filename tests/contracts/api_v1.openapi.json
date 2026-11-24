@@ -2074,9 +2074,11 @@
             "type": "string"
           },
           "data_type": {
+            "description": "What the value is: text, number, date, boolean or choice.",
             "type": "string"
           },
           "description": {
+            "description": "What the AI looks for. Empty when not set.",
             "type": "string"
           },
           "id": {
@@ -2084,9 +2086,11 @@
             "type": "string"
           },
           "key": {
+            "description": "The attribute's key, as conditions and variables name it: conversation.ai.\u003ckey\u003e.",
             "type": "string"
           },
           "label": {
+            "description": "What the team calls the attribute.",
             "type": "string"
           },
           "object": {
@@ -2094,6 +2098,7 @@
             "type": "string"
           },
           "options": {
+            "description": "With choice, the values it may take. Empty otherwise.",
             "items": {
               "type": "string"
             },
@@ -2103,6 +2108,7 @@
             ]
           },
           "status": {
+            "description": "active while the AI reads it, archived once it stopped.",
             "type": "string"
           },
           "updated_at": {
@@ -2135,7 +2141,9 @@
             "description": "The kind of record this is, the same for every record of its kind, such as article.",
             "type": "string"
           },
-          "value": {}
+          "value": {
+            "description": "What the AI found, in the attribute's type: text, a number, a YYYY-MM-DD date, true or false, or one of its options."
+          }
         },
         "required": [
           "object",
@@ -16548,6 +16556,7 @@
         "additionalProperties": false,
         "properties": {
           "checked_at": {
+            "description": "When the AI last read the conversation. Null when it never has.",
             "format": "date-time",
             "type": [
               "string",
@@ -16559,6 +16568,7 @@
             "type": "string"
           },
           "values": {
+            "description": "Each value found, with its attribute. An attribute with nothing found is left out.",
             "items": {
               "$ref": "#/components/schemas/AIAttributeValue"
             },
@@ -36985,7 +36995,7 @@
         "additionalProperties": false,
         "properties": {
           "data_type": {
-            "description": "Data type: one of text, number, date, boolean, choice.",
+            "description": "text, number, date, boolean or choice.",
             "enum": [
               "text",
               "number",
@@ -36996,22 +37006,22 @@
             "type": "string"
           },
           "description": {
-            "description": "The description of the conversation attribute, at most 500 characters.",
+            "description": "What to look for, for the AI, up to 500 characters.",
             "maxLength": 500,
             "type": "string"
           },
           "key": {
-            "description": "Key: text of at most 64 characters.",
+            "description": "The attribute's key, lowercase letters, digits and underscores, such as order_number.",
             "maxLength": 64,
             "type": "string"
           },
           "label": {
-            "description": "Label: text of at most 80 characters.",
+            "description": "What the team calls it, up to 80 characters, such as Order number.",
             "maxLength": 80,
             "type": "string"
           },
           "options": {
-            "description": "Options: a list, such as [\"...\"].",
+            "description": "With choice, the values it may take, at most 30, such as [\"billing\", \"bug\"].",
             "items": {
               "type": "string"
             },
@@ -42136,17 +42146,17 @@
         "additionalProperties": false,
         "properties": {
           "description": {
-            "description": "The description of the conversation attribute, at most 500 characters.",
+            "description": "What to look for, for the AI, up to 500 characters.",
             "maxLength": 500,
             "type": "string"
           },
           "label": {
-            "description": "Label: text of at most 80 characters.",
+            "description": "What the team calls it, up to 80 characters, such as Order number.",
             "maxLength": 80,
             "type": "string"
           },
           "options": {
-            "description": "Options: a list, such as [\"...\"].",
+            "description": "With choice, the values it may take, at most 30, such as [\"billing\", \"bug\"].",
             "items": {
               "type": "string"
             },
@@ -42154,7 +42164,7 @@
             "type": "array"
           },
           "status": {
-            "description": "Status: one of active, archived.",
+            "description": "active to keep reading it, archived to stop.",
             "enum": [
               "active",
               "archived"
@@ -49533,6 +49543,7 @@
     },
     "/ai/conversation-attributes": {
       "get": {
+        "description": "Lists the facts the AI reads off each conversation, active and archived. Returns the attributes with their key, type, options and status.",
         "operationId": "ai.conversation-attributes.index",
         "responses": {
           "200": {
@@ -49556,11 +49567,13 @@
             "description": "Error"
           }
         },
+        "summary": "List AI conversation attributes",
         "x-abilities": [
           "conversations:read"
         ]
       },
       "post": {
+        "description": "Adds a fact the AI reads off each conversation and checks again as the customer writes. Workflows can start when it changes and branch on its value. Returns the attribute.",
         "operationId": "ai.conversation-attributes.store",
         "requestBody": {
           "content": {
@@ -49594,6 +49607,7 @@
             "description": "Error"
           }
         },
+        "summary": "Add an AI conversation attribute",
         "x-abilities": [
           "ai:write"
         ]
@@ -49601,6 +49615,7 @@
     },
     "/ai/conversation-attributes/{attribute}": {
       "patch": {
+        "description": "Changes an attribute's label, description or options, or archives it. Its key and type stay. Returns the attribute as saved.",
         "operationId": "ai.conversation-attributes.update",
         "parameters": [
           {
@@ -49645,6 +49660,7 @@
             "description": "Error"
           }
         },
+        "summary": "Edit an AI conversation attribute",
         "x-abilities": [
           "ai:write"
         ]
@@ -56769,6 +56785,7 @@
     },
     "/conversations/{conversation}/ai-attributes": {
       "get": {
+        "description": "Reads what the AI found on a conversation for each active attribute. Returns each value found with its attribute, and when the conversation was last read.",
         "operationId": "conversations.ai-attributes.index",
         "parameters": [
           {
@@ -56803,6 +56820,7 @@
             "description": "Error"
           }
         },
+        "summary": "Get a conversation's AI attributes",
         "x-abilities": [
           "conversations:read"
         ]
