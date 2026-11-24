@@ -14,10 +14,29 @@ package config
 import "time"
 
 /*
-AIDecisionsConfig configures the decision model.
+AIDecisionsConfig configures the decision model. Clef answers when its
+account is set, TypeSafe otherwise; with neither, the workspace's
+answer model judges in its place.
 */
 type AIDecisionsConfig struct {
+	Clef     AIClefConfig     `koanf:"clef"`
 	TypeSafe AITypeSafeConfig `koanf:"typesafe"`
+}
+
+/*
+AIClefConfig is the Cloudflare account Clef runs on: its id, an API
+token allowed to run Workers AI, the API base URL, the model (clef or
+clef-flash), the timeout of one call and the price of a million input
+tokens in US dollars (output is free). Workers AI keeps no request
+after answering it and trains on none.
+*/
+type AIClefConfig struct {
+	AccountID         string        `koanf:"account_id"`
+	APIToken          string        `koanf:"api_token"                              secret:"true"`
+	BaseURL           string        `default:"https://api.cloudflare.com/client/v4" koanf:"base_url"`
+	Model             string        `default:"clef"                                 koanf:"model"`
+	Timeout           time.Duration `default:"3s"                                   koanf:"timeout"`
+	InputPricePerMtok float64       `default:"0.24"                                 koanf:"input_price_per_mtok"`
 }
 
 /*

@@ -37,6 +37,7 @@ import (
 	"github.com/dimmihq/dimmi/app/ai/pipeline"
 	"github.com/dimmihq/dimmi/app/ai/verdicts"
 	"github.com/dimmihq/dimmi/app/contracts"
+	"github.com/dimmihq/dimmi/app/drivers/decision/clef"
 	"github.com/dimmihq/dimmi/app/drivers/decision/typesafe"
 	appevents "github.com/dimmihq/dimmi/app/events"
 	"github.com/dimmihq/dimmi/app/managers"
@@ -139,17 +140,50 @@ func newRunner(ctx context.Context, a *app.App) (*pipeline.Runner, error) {
 		Timeouts: a.Config.AI.Timeouts, StorePayloads: a.Config.AI.TracesStorePayloads,
 		AnswerEffort: contracts.Effort(a.Config.AI.AnswerEffort),
 	}
+	decides, err := decisionModel(a)
+	if err != nil {
+		return nil, fmt.Errorf("decision model: %w", err)
+	}
+	runner.Decider, runner.DecisionProvider, runner.DecisionPrice = decides.decider, decides.provider, decides.price
+
+	return runner, nil
+}
+
+/*
+decisionSetup is the decision model an install set up: the driver, the
+name its steps are recorded under and the price of a million input
+tokens. It is empty when none is set up.
+*/
+type decisionSetup struct {
+	decider  contracts.Decider
+	provider string
+	price    float64
+}
+
+/*
+decisionModel is the decision model the install set up: Clef when its
+account is set, else TypeSafe, else none.
+*/
+func decisionModel(a *app.App) (decisionSetup, error) {
+	if c := a.Config.AI.Decisions.Clef; c.AccountID != "" && c.APIToken != "" {
+		decider, err := clef.New(a.HTTP, a.Clock, clef.Config{
+			AccountID: c.AccountID, APIToken: c.APIToken, BaseURL: c.BaseURL, Model: c.Model, Timeout: c.Timeout,
+		})
+		if err != nil {
+			return decisionSetup{}, err
+		}
+		return decisionSetup{decider: decider, provider: "clef", price: c.InputPricePerMtok}, nil
+	}
 	if ts := a.Config.AI.Decisions.TypeSafe; ts.APIKey != "" {
 		decider, err := typesafe.New(a.HTTP, a.Clock, typesafe.Config{
 			APIKey: ts.APIKey, BaseURL: ts.BaseURL, Model: ts.Model, Timeout: ts.Timeout,
 		})
 		if err != nil {
-			return nil, fmt.Errorf("decision model: %w", err)
+			return decisionSetup{}, err
 		}
-		runner.Decider, runner.DecisionPrice = decider, ts.InputPricePerMtok
+		return decisionSetup{decider: decider, provider: "typesafe", price: ts.InputPricePerMtok}, nil
 	}
-
-	return runner, nil
+	return decisionSetup{}, nil
 }
 
 /*
