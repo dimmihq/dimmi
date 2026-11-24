@@ -5,6 +5,7 @@ import (
 	"errors"
 	"slices"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -15,6 +16,7 @@ import (
 	"github.com/dimmihq/dimmi/framework/httpclient"
 	"github.com/dimmihq/dimmi/framework/testkit"
 
+	"github.com/dimmihq/dimmi/app/actions/helpcenters"
 	"github.com/dimmihq/dimmi/app/contracts"
 	"github.com/dimmihq/dimmi/app/drivers/embeddings/fake"
 	"github.com/dimmihq/dimmi/app/managers"
@@ -25,7 +27,7 @@ import (
 /*
 builtinModel is the built-in embedder's model key at its defaults.
 */
-const builtinModel = "dimmi:Qwen/Qwen3-Embedding-8B@1024"
+const builtinModel = "dimmi:voyage-4-lite@1024"
 
 /*
 index is one workspace with a scripted built-in embedder.
@@ -35,6 +37,79 @@ type index struct {
 	owner  *testkit.Client
 	center string
 	embed  *fake.Embedder
+	rerank *reranker
+}
+
+/*
+reranker stands in for the built-in reranker. It puts the passages
+holding its word first, fails when told to, and otherwise is absent.
+*/
+type reranker struct {
+	mu      sync.Mutex
+	first   string
+	err     error
+	calls   int
+	queries []string
+}
+
+/*
+prefer makes the reranker put passages holding the word first.
+*/
+func (r *reranker) prefer(word string) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.first, r.err = word, nil
+}
+
+/*
+fail makes every rerank fail.
+*/
+func (r *reranker) fail(err error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.err = err
+}
+
+/*
+asked is how many times the reranker was called.
+*/
+func (r *reranker) asked() int {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	return r.calls
+}
+
+/*
+read are the queries the reranker was asked to rank against, sorted.
+*/
+func (r *reranker) read() []string {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	out := slices.Clone(r.queries)
+	slices.Sort(out)
+	return out
+}
+
+/*
+Rerank orders the documents holding the preferred word first.
+*/
+func (r *reranker) Rerank(_ context.Context, req contracts.RerankRequest) (*contracts.RerankResponse, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.calls++
+	r.queries = append(r.queries, req.Query)
+	if r.err != nil {
+		return nil, r.err
+	}
+	out := &contracts.RerankResponse{}
+	for _, want := range []bool{true, false} {
+		for i, doc := range req.Documents {
+			if (r.first != "" && strings.Contains(doc, r.first)) == want {
+				out.Results = append(out.Results, contracts.RerankResult{Index: i, Score: 1})
+			}
+		}
+	}
+	return out, nil
 }
 
 /*
@@ -70,7 +145,14 @@ func boot(t *testing.T, opts ...tests.Option) index {
 	})
 	owner := tc.In(tc.Owner)
 	center := owner.GetJSON("/api/v1/help-centers").AssertOK().String("data.0.id")
-	return index{tc: tc, owner: owner, center: center, embed: embed}
+	x := index{tc: tc, owner: owner, center: center, embed: embed, rerank: &reranker{}}
+	k, ok := tc.App.Knowledge.(*helpcenters.Knowledge)
+	require.True(t, ok)
+	k.Reranker = nil
+	if tc.App.Embeddings.Builtin() {
+		k.Reranker = x.rerank
+	}
+	return x
 }
 
 /*
@@ -185,7 +267,7 @@ func TestKnowledgeEmbeddings(t *testing.T) {
 		assert.NotContains(t, titles(keyword.Chunks), "Changing plans")
 
 		res := x.search(t, query, "")
-		require.Equal(t, "hybrid", res.Mode, res.Degraded)
+		require.Equal(t, "reranked", res.Mode, res.Degraded)
 		require.NotEmpty(t, res.Chunks)
 		top := res.Chunks[0]
 		assert.Equal(t, "Changing plans", top.Title)
@@ -197,24 +279,75 @@ func TestKnowledgeEmbeddings(t *testing.T) {
 
 		queries := x.queries()
 		require.Len(t, queries, 1)
-		assert.Equal(t, "Qwen/Qwen3-Embedding-8B", queries[0].Model)
+		assert.Equal(t, "voyage-4-lite", queries[0].Model)
 		assert.Equal(t, 1024, queries[0].Dimensions)
 
 		x.search(t, "  will i be BILLED less when I switch tiers halfway?", "")
 		assert.Len(t, x.queries(), 1, "a repeated query comes from the cache")
 	})
 
-	t.Run("answers from keywords when the embedder fails or times out", func(t *testing.T) {
+	t.Run("ranks what meaning and keywords found together, and shared words alone do not win", func(t *testing.T) {
+		t.Parallel()
+		x := newIndex(t)
+		x.embed.Script("switch tiers", fake.Axis(0, 1024)).Script("prorated", fake.Axis(0, 1024)).
+			Script("Tiers of shelving", fake.Axis(1, 1024))
+		x.publish(t, "Changing plans", "Plans can be changed any time; upgrades are prorated.")
+		x.publish(t, "Tiers of shelving", "Switch shelving tiers halfway up the rack when billed by the pallet.")
+		x.tc.Drain()
+
+		res := x.search(t, "Will I be billed less when I switch tiers halfway?", "")
+		require.Len(t, res.Chunks, 2)
+		assert.Equal(t, "Changing plans", res.Chunks[0].Title, "the passage that answers leads")
+		shelving := res.Chunks[1]
+		assert.Equal(t, "Tiers of shelving", shelving.Title)
+		assert.Contains(t, shelving.MatchedBy, "vector")
+		assert.Contains(t, shelving.MatchedBy, "bm25",
+			"a passage both searches found is one candidate, found both ways")
+		assert.NotNil(t, shelving.Coverage)
+		assert.Contains(t, res.Timings, "keyword")
+	})
+
+	t.Run("the reranker orders the candidates, and its failure costs the order only", func(t *testing.T) {
+		t.Parallel()
+		x := newIndex(t)
+		x.embed.Script("refund", fake.Axis(0, 1024))
+		x.publish(t, "Refund policy", "A refund takes five business days.")
+		x.publish(t, "Refund exceptions", "A refund is never paid on custom pallets.")
+		x.tc.Drain()
+
+		x.rerank.prefer("custom pallets")
+		res := x.search(t, "can I get a refund on a custom pallet", "")
+		require.Equal(t, "reranked", res.Mode)
+		require.Len(t, res.Chunks, 2)
+		assert.Equal(t, "Refund exceptions", res.Chunks[0].Title)
+		assert.Contains(t, res.Timings, "rerank")
+
+		x.rerank.prefer("five business days")
+		res = x.search(t, "can I get a refund on a custom pallet", "")
+		assert.Equal(t, "Refund policy", res.Chunks[0].Title)
+
+		x.rerank.fail(&contracts.LLMError{Kind: contracts.LLMErrorServer, Message: "down"})
+		res = x.search(t, "can I get a refund on a custom pallet", "")
+		assert.Equal(t, "hybrid", res.Mode, "the two rankings are fused by rank")
+		assert.Contains(t, res.RerankSkipped, "failed", "why the reranker was not used is kept")
+		assert.Empty(t, res.Degraded, "a failed rerank is not a fallback to keywords")
+		assert.Len(t, res.Chunks, 2)
+	})
+
+	t.Run("answers from keywords only when the embedder fails after its retry, or times out", func(t *testing.T) {
 		t.Parallel()
 		x := newIndex(t)
 		x.publish(t, "Refund policy", "Refunds take five business days.")
 		x.tc.Drain()
 
 		x.embed.Fail(&contracts.LLMError{Kind: contracts.LLMErrorServer, Message: "down"})
+		before := len(x.queries())
 		res := x.search(t, "how long do refunds take", "")
 		assert.Equal(t, "fts_fallback", res.Mode)
 		assert.Equal(t, "embedding_error", res.Degraded)
 		assert.Contains(t, titles(res.Chunks), "Refund policy")
+		assert.Equal(t, 2, len(x.queries())-before, "the embedder was asked twice before keywords answered")
+		assert.Zero(t, x.rerank.asked(), "keyword results are not reranked")
 
 		x.embed.Fail(nil).Hang()
 		res, err := x.tc.App.Knowledge.Search(t.Context(), x.tc.Workspace.Workspace.ID, "refunds for annual plans",
@@ -227,10 +360,12 @@ func TestKnowledgeEmbeddings(t *testing.T) {
 	t.Run("hands back a section repeated across articles once", func(t *testing.T) {
 		t.Parallel()
 		x := newIndex(t)
-		faq := "\n\n## Questions\n\nIs there a sandbox? Use a test key; sandbox data never reaches carriers."
-		x.publish(t, "Listing orders", "Returns your orders a page at a time."+faq)
-		x.publish(t, "Creating an order", "Creates an order from a store connection."+faq)
-		x.publish(t, "Deleting an order", "Deletes an order that has no labels."+faq)
+		faq := "\n\n## Questions\n\nIs there a sandbox? Use a test key; sandbox data never reaches carriers." +
+			strings.Repeat(" Sandbox labels are free and are never sent to a carrier.", 5)
+		more := strings.Repeat(" Every call is signed with your key and answers in JSON.", 6)
+		x.publish(t, "Listing orders", "Returns your orders a page at a time."+more+faq)
+		x.publish(t, "Creating an order", "Creates an order from a store connection."+more+faq)
+		x.publish(t, "Deleting an order", "Deletes an order that has no labels."+more+faq)
 		x.publish(t, "Test mode", "A sandbox test key starts with sk_test and is free to use.")
 		x.tc.Drain()
 
@@ -279,7 +414,7 @@ func TestKnowledgeModelSwitch(t *testing.T) {
 
 		x.owner.PatchJSON("/api/v1/knowledge/settings", testkit.JSON{"dims": 512}).AssertOK().
 			AssertJSONPath("data.active_model", builtinModel).
-			AssertJSONPath("data.pending_model", "dimmi:Qwen/Qwen3-Embedding-8B@512").
+			AssertJSONPath("data.pending_model", "dimmi:voyage-4-lite@512").
 			AssertJSONPath("data.embeddings_status", "ready")
 
 		res := x.search(t, "how long do refunds take", "")
@@ -290,11 +425,11 @@ func TestKnowledgeModelSwitch(t *testing.T) {
 
 		x.tc.Drain()
 		x.owner.GetJSON("/api/v1/knowledge/settings").AssertOK().
-			AssertJSONPath("data.active_model", "dimmi:Qwen/Qwen3-Embedding-8B@512").
+			AssertJSONPath("data.active_model", "dimmi:voyage-4-lite@512").
 			AssertJSONPath("data.previous_model", builtinModel).
 			AssertJSONPath("data.pending_model", nil)
 		res = x.search(t, "how long do refunds take", "")
-		assert.Equal(t, "dimmi:Qwen/Qwen3-Embedding-8B@512", res.EmbeddingModel)
+		assert.Equal(t, "dimmi:voyage-4-lite@512", res.EmbeddingModel)
 		queries := x.queries()
 		assert.Equal(t, 512, queries[len(queries)-1].Dimensions)
 	})
@@ -318,7 +453,7 @@ func TestKnowledgeModelSwitch(t *testing.T) {
 		}
 		require.NoError(t, rows.Err())
 		assert.Contains(t, jobs, builtinModel)
-		assert.Contains(t, jobs, "dimmi:Qwen/Qwen3-Embedding-8B@512")
+		assert.Contains(t, jobs, "dimmi:voyage-4-lite@512")
 	})
 
 	t.Run("refuses a model the test embedding cannot reach", func(t *testing.T) {

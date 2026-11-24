@@ -3,9 +3,9 @@ title: "Choose an AI provider and spending cap"
 description: "Connect your own AI provider keys or use dimmi's built-in provider, and set a monthly spending cap."
 ---
 
-Admins add provider connections in **Settings → AI providers**. Once connected, pick your connection and model in **Settings → dimmi agent**, under **Model**.
+Admins add provider connections in **Settings → AI providers**. Once connected, pick a model for each agent in [Agent Studio](/ai/set-up-the-agent/), under **Build → Model → Answers with**. An agent left on **Workspace default** answers with the workspace's model.
 
-[Operator](/operator/work-with-operator/) uses the same provider connection as the dimmi agent.
+[Operator](/operator/work-with-operator/) uses the same provider connections as your agents.
 
 ## Supported providers
 
@@ -24,9 +24,9 @@ When you bring your own API key, your AI provider bills you at its normal rates.
 
 ## Set the monthly cap
 
-Set **Monthly cap** in **Settings → dimmi agent**, under **Spend**. New workspaces start at $25, and the lowest cap is $1.
+Set **Monthly cap** in **Settings → dimmi agent**, under **Spend**. The cap covers the whole workspace: every agent and Operator share it. New workspaces start at $25, and the lowest cap is $1.
 
-- **What counts:** every dimmi agent reply and Operator run across all connections. dimmi estimates spend in US dollars from its built-in model price list. Models not on that list count as $0.
+- **What counts:** every reply from any agent and every Operator run, across all connections. dimmi estimates spend in US dollars from its built-in model price list. Models not on that list count as $0.
 - **When it resets:** on the first of each calendar month in UTC.
-- **When you hit the cap:** the agent hands over active conversations and stays quiet on new ones. Operator stops answering until the next month.
-- **How to resume early:** raise the cap above your current month's spend, or switch to **No cap**. Both the agent and Operator start again right away.
+- **When you hit the cap:** every agent hands over active conversations and stays quiet on new ones. Operator stops answering until the next month.
+- **How to resume early:** raise the cap above your current month's spend, or switch to **No cap**. Your agents and Operator start again right away.

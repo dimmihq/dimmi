@@ -58,7 +58,7 @@ func (AI) Metrics(ctx context.Context, tx *database.Tx, q Query) ([]Metric, erro
 	started, involved, handed, resolved, confirmed := s.count(0), s.count(1), s.count(2), s.count(3), s.count(4)
 
 	spend, err := models.New(tx).ReportAiSpend(ctx, models.ReportAiSpendParams{
-		WorkspaceID: q.Membership.Workspace.ID, Since: q.Start, Until: q.End,
+		WorkspaceID: q.Membership.Workspace.ID, Since: q.Start, Until: q.End, Agents: q.Filters.Agents,
 	})
 	if err != nil {
 		return nil, err
@@ -104,6 +104,11 @@ func (AI) Charts(ctx context.Context, tx *database.Tx, q Query) ([]Chart, error)
 		return nil, err
 	}
 
+	agents, err := r.agentsTable(ctx)
+	if err != nil {
+		return nil, err
+	}
+
 	return []Chart{
 		{
 			Key: "ai_daily", Title: "AI involvement and resolution", Kind: ChartLine, Unit: UnitPercent, Axis: AxisDay,
@@ -129,6 +134,7 @@ func (AI) Charts(ctx context.Context, tx *database.Tx, q Query) ([]Chart, error)
 			Axis:  AxisCategory,
 			Drill: "ai_handoff", Series: []Series{reasonSeries},
 		},
+		agents,
 		questions,
 	}, nil
 }
@@ -160,6 +166,7 @@ first.
 func (r reader) unanswered(ctx context.Context) (Chart, error) {
 	rows, err := models.New(r.tx).ReportUnansweredQuestions(ctx, models.ReportUnansweredQuestionsParams{
 		WorkspaceID: r.q.Membership.Workspace.ID, Since: r.q.Start, Until: r.q.End, RowLimit: listed,
+		Agents: r.q.Filters.Agents,
 	})
 	if err != nil {
 		return Chart{}, err

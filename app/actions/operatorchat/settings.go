@@ -25,6 +25,7 @@ import (
 	"github.com/dimmihq/dimmi/framework/fault"
 
 	"github.com/dimmihq/dimmi/app/actions/conversations"
+	"github.com/dimmihq/dimmi/app/ai/agents"
 	"github.com/dimmihq/dimmi/app/ai/operator"
 	"github.com/dimmihq/dimmi/app/auth/authz"
 	"github.com/dimmihq/dimmi/app/exceptions"
@@ -190,12 +191,12 @@ func checkModel(ctx context.Context, q *models.Queries, in SettingsInput) error 
 	}
 	refused := fault.New(fault.Invalid, "model_unavailable", "The agent's AI connection does not offer this model.").
 		OnField("model")
-	agent, err := q.FindAgent(ctx, in.Membership.Workspace.ID)
-	if errors.Is(err, database.ErrNotFound) || (err == nil && agent.AnswerKeyID == nil) {
+	agent, err := agents.DefaultAnswerer(ctx, q, in.Membership.Workspace.ID)
+	if errors.Is(err, agents.ErrNoAgent) || (err == nil && agent.AnswerKeyID == nil) {
 		return refused
 	}
 	if err != nil {
-		return fmt.Errorf("find agent: %w", err)
+		return err
 	}
 	key, err := q.FindProviderKey(ctx, models.FindProviderKeyParams{
 		WorkspaceID: agent.WorkspaceID, ID: *agent.AnswerKeyID,

@@ -18,7 +18,7 @@ UPDATE channel_rooms
 SET mode = coalesce($1, mode), trigger = coalesce($2, trigger),
     settings = (settings || $3::jsonb) - $4::text[], updated_at = $5::timestamptz
 WHERE workspace_id = $6 AND channel_connection_id = $7 AND id = $8
-RETURNING id, workspace_id, channel_connection_id, kind, external_id, name, status, mode, trigger, agent_enabled, company_id, settings, is_shared_external, last_error, last_seen_event_at, removed_at, created_at, updated_at
+RETURNING id, workspace_id, channel_connection_id, kind, external_id, name, status, mode, trigger, agent_enabled, company_id, settings, is_shared_external, last_error, last_seen_event_at, removed_at, created_at, updated_at, ai_agent_id
 `
 
 type ChangeChannelRoomSettingsParams struct {
@@ -66,12 +66,13 @@ func (q *Queries) ChangeChannelRoomSettings(ctx context.Context, arg ChangeChann
 		&i.RemovedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.AiAgentID,
 	)
 	return i, err
 }
 
 const findChannelRoom = `-- name: FindChannelRoom :one
-SELECT id, workspace_id, channel_connection_id, kind, external_id, name, status, mode, trigger, agent_enabled, company_id, settings, is_shared_external, last_error, last_seen_event_at, removed_at, created_at, updated_at FROM channel_rooms WHERE workspace_id = $1 AND id = $2
+SELECT id, workspace_id, channel_connection_id, kind, external_id, name, status, mode, trigger, agent_enabled, company_id, settings, is_shared_external, last_error, last_seen_event_at, removed_at, created_at, updated_at, ai_agent_id FROM channel_rooms WHERE workspace_id = $1 AND id = $2
 `
 
 type FindChannelRoomParams struct {
@@ -102,12 +103,13 @@ func (q *Queries) FindChannelRoom(ctx context.Context, arg FindChannelRoomParams
 		&i.RemovedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.AiAgentID,
 	)
 	return i, err
 }
 
 const findChannelRoomByExternalID = `-- name: FindChannelRoomByExternalID :one
-SELECT id, workspace_id, channel_connection_id, kind, external_id, name, status, mode, trigger, agent_enabled, company_id, settings, is_shared_external, last_error, last_seen_event_at, removed_at, created_at, updated_at FROM channel_rooms
+SELECT id, workspace_id, channel_connection_id, kind, external_id, name, status, mode, trigger, agent_enabled, company_id, settings, is_shared_external, last_error, last_seen_event_at, removed_at, created_at, updated_at, ai_agent_id FROM channel_rooms
 WHERE workspace_id = $1 AND channel_connection_id = $2
   AND external_id = $3
 `
@@ -142,12 +144,13 @@ func (q *Queries) FindChannelRoomByExternalID(ctx context.Context, arg FindChann
 		&i.RemovedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.AiAgentID,
 	)
 	return i, err
 }
 
 const listChannelRooms = `-- name: ListChannelRooms :many
-SELECT id, workspace_id, channel_connection_id, kind, external_id, name, status, mode, trigger, agent_enabled, company_id, settings, is_shared_external, last_error, last_seen_event_at, removed_at, created_at, updated_at FROM channel_rooms
+SELECT id, workspace_id, channel_connection_id, kind, external_id, name, status, mode, trigger, agent_enabled, company_id, settings, is_shared_external, last_error, last_seen_event_at, removed_at, created_at, updated_at, ai_agent_id FROM channel_rooms
 WHERE workspace_id = $1 AND channel_connection_id = $2
 ORDER BY name, id
 `
@@ -186,6 +189,7 @@ func (q *Queries) ListChannelRooms(ctx context.Context, arg ListChannelRoomsPara
 			&i.RemovedAt,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.AiAgentID,
 		); err != nil {
 			return nil, err
 		}
@@ -302,7 +306,7 @@ UPDATE channel_rooms
 SET is_shared_external = $1, company_id = NULL, updated_at = $2::timestamptz
 WHERE workspace_id = $3 AND channel_connection_id = $4
   AND external_id = $5
-RETURNING id, workspace_id, channel_connection_id, kind, external_id, name, status, mode, trigger, agent_enabled, company_id, settings, is_shared_external, last_error, last_seen_event_at, removed_at, created_at, updated_at
+RETURNING id, workspace_id, channel_connection_id, kind, external_id, name, status, mode, trigger, agent_enabled, company_id, settings, is_shared_external, last_error, last_seen_event_at, removed_at, created_at, updated_at, ai_agent_id
 `
 
 type ShareChannelRoomParams struct {
@@ -344,6 +348,7 @@ func (q *Queries) ShareChannelRoom(ctx context.Context, arg ShareChannelRoomPara
 		&i.RemovedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.AiAgentID,
 	)
 	return i, err
 }
@@ -371,7 +376,7 @@ UPDATE channel_rooms
 SET status = $1, mode = $2, trigger = $3, agent_enabled = $4, settings = $5,
     company_id = $6, updated_at = $7::timestamptz
 WHERE workspace_id = $8 AND id = $9
-RETURNING id, workspace_id, channel_connection_id, kind, external_id, name, status, mode, trigger, agent_enabled, company_id, settings, is_shared_external, last_error, last_seen_event_at, removed_at, created_at, updated_at
+RETURNING id, workspace_id, channel_connection_id, kind, external_id, name, status, mode, trigger, agent_enabled, company_id, settings, is_shared_external, last_error, last_seen_event_at, removed_at, created_at, updated_at, ai_agent_id
 `
 
 type UpdateChannelRoomParams struct {
@@ -419,6 +424,7 @@ func (q *Queries) UpdateChannelRoom(ctx context.Context, arg UpdateChannelRoomPa
 		&i.RemovedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.AiAgentID,
 	)
 	return i, err
 }
@@ -436,7 +442,7 @@ ON CONFLICT (channel_connection_id, external_id) DO UPDATE
 SET name = excluded.name, is_shared_external = excluded.is_shared_external,
     status = CASE WHEN channel_rooms.status IN ('removed', 'error') THEN 'active' ELSE channel_rooms.status END,
     removed_at = NULL, last_error = NULL, updated_at = excluded.updated_at
-RETURNING id, workspace_id, channel_connection_id, kind, external_id, name, status, mode, trigger, agent_enabled, company_id, settings, is_shared_external, last_error, last_seen_event_at, removed_at, created_at, updated_at
+RETURNING id, workspace_id, channel_connection_id, kind, external_id, name, status, mode, trigger, agent_enabled, company_id, settings, is_shared_external, last_error, last_seen_event_at, removed_at, created_at, updated_at, ai_agent_id
 `
 
 type UpsertChannelRoomParams struct {
@@ -486,6 +492,7 @@ func (q *Queries) UpsertChannelRoom(ctx context.Context, arg UpsertChannelRoomPa
 		&i.RemovedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.AiAgentID,
 	)
 	return i, err
 }

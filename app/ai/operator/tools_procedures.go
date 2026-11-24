@@ -48,17 +48,6 @@ const (
 )
 
 /*
-ProcedureQAQuestion is what Operator is asked when it reviews the
-procedures by itself.
-*/
-const ProcedureQAQuestion = `Review how the live procedures did this week. For each one, call
-list_procedure_anomalies, read the traces of the runs that went wrong with read_procedure_trace,
-and when a step is unclear or keeps failing, propose one changeset per procedure with
-propose_changes: an edit of its working copy that fixes it (procedure.edit_draft), and a
-regression test made from a failing conversation (procedure.create_test_case) that would have
-caught it. Cite the conversations by number. Propose nothing when the procedures did fine.`
-
-/*
 procedureTools are the tools that review procedures.
 */
 func (e *Engine) procedureTools() []tool {
@@ -227,7 +216,7 @@ owner, and opens its run; a workspace that did not ask for reviews, or
 has no live procedure, is skipped.
 */
 func (e *Engine) openReview(ctx context.Context, workspaceID ids.UUID) (*session, error) {
-	s := &session{background: true, question: ProcedureQAQuestion}
+	s := &session{background: true, question: ProcedureQAQuestion()}
 	err := e.DB.Transaction(ctx, func(ctx context.Context, tx *database.Tx) error {
 		q := models.New(tx)
 		settings, err := LoadSettings(ctx, q, workspaceID)

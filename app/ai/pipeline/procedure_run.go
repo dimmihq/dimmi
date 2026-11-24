@@ -518,9 +518,10 @@ func procedureStatusSpec() contracts.ToolSpec {
 			"status": enumProperty([]string{"step_done", "step_skipped", "completed", "exited_topic_changed"}),
 			"step":   textProperty("With step_done or step_skipped, the number of the step, such as 2 or 2.1."),
 			"reason": textProperty("In a few words, why. With step_skipped, the customer's words that cover the step."),
-			"still_missing": textProperty("With step_done or step_skipped: read the step's words again and list " +
-				"every single thing it asks the customer for that they have NOT given yet. Empty only when they " +
-				"gave all of it. A step that asks for four things is not done after one."),
+			"still_missing": listProperty("With step_done or step_skipped: read the step's words again and list " +
+				"every single thing it asks the customer for that they have NOT given yet, one item each. An " +
+				"empty list when they gave all of it, or when the step asks the customer for nothing. A step " +
+				"that asks for four things is not done after one."),
 		}, "status", "still_missing"),
 	}
 }
@@ -531,16 +532,19 @@ the procedure being followed.
 */
 func (r *Runner) updateProcedureStatus(ctx context.Context, st *run, args json.RawMessage) (string, error) {
 	var in struct {
-		Status  string `json:"status"`
-		Step    string `json:"step"`
-		Reason  string `json:"reason"`
-		Missing string `json:"still_missing"`
+		Status  string  `json:"status"`
+		Step    string  `json:"step"`
+		Reason  string  `json:"reason"`
+		Missing missing `json:"still_missing"`
 	}
 	if err := json.Unmarshal(args, &in); err != nil || st.proc == nil {
 		return "", errToolArguments
 	}
-	if missing := strings.TrimSpace(in.Missing); missing != "" && strings.HasPrefix(in.Status, "step_") {
-		return stepUnfinished(in.Step, missing)
+	if in.Missing.Sentence {
+		return listNote()
+	}
+	if len(in.Missing.Items) > 0 && strings.HasPrefix(in.Status, "step_") {
+		return stepUnfinished(in.Step, strings.Join(in.Missing.Items, "; "))
 	}
 	switch in.Status {
 	case "step_done":
@@ -566,16 +570,4 @@ func (r *Runner) updateProcedureStatus(ctx context.Context, st *run, args json.R
 	st.proc.reason = truncate(in.Reason, 200)
 	out, err := json.Marshal(map[string]any{"ok": true, "status": st.proc.status})
 	return string(out), err
-}
-
-/*
-cmpOr returns the first non-empty text.
-*/
-func cmpOr(values ...string) string {
-	for _, v := range values {
-		if v != "" {
-			return v
-		}
-	}
-	return ""
 }

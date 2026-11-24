@@ -26,11 +26,13 @@ import (
 	"github.com/dimmihq/dimmi/framework/tenancy"
 
 	"github.com/dimmihq/dimmi/app"
+	"github.com/dimmihq/dimmi/app/actions/ai"
 	"github.com/dimmihq/dimmi/app/actions/conversations"
 	"github.com/dimmihq/dimmi/app/actions/helpcenters"
 	"github.com/dimmihq/dimmi/app/actions/knowledge"
 	"github.com/dimmihq/dimmi/app/actions/schedules"
 	"github.com/dimmihq/dimmi/app/ai/actionkit"
+	"github.com/dimmihq/dimmi/app/ai/agents"
 	aijobs "github.com/dimmihq/dimmi/app/ai/jobs"
 	"github.com/dimmihq/dimmi/app/ai/pipeline"
 	"github.com/dimmihq/dimmi/app/ai/verdicts"
@@ -80,6 +82,7 @@ func bootAI(ctx context.Context, a *app.App) error {
 	}
 
 	a.Actions.AI = aiActions(a, runner, runner.Prices)
+	a.WorkspaceInitializers.Register(&ai.EnsureAI{Agents: a.Actions.AI.Agents})
 
 	events.Listen(a.Events, events.AfterCommit, func(ctx context.Context, e appevents.MessageCreated) error {
 		return enqueueAnswer(ctx, a, e)
@@ -115,6 +118,8 @@ func newRunner(ctx context.Context, a *app.App) (*pipeline.Runner, error) {
 			DB: a.DB, Fallback: seed, Vectors: a.Vectors, Addresses: helpcenters.Addresses{
 				BaseDomain: a.Config.HelpCenters.BaseDomain, AppURL: a.Application.Config.App.URL,
 			},
+			Reranker:      builtinReranker(a),
+			RerankTimeout: time.Duration(a.Config.AI.Knowledge.RerankTimeoutMS) * time.Millisecond,
 		}
 	}
 	if a.LLM == nil {
@@ -208,9 +213,9 @@ type answerTarget struct {
 }
 
 /*
-answerable is the cheap check before queueing: the workspace has an
-enabled agent and the conversation is live and not handed to the
-team. It returns the conversation's channel type for the debounce.
+answerable is the cheap check before queueing: the agent that would
+answer the conversation is on and the conversation is live and not
+handed to the team. It returns the conversation's channel type for the debounce.
 */
 func answerable(ctx context.Context, a *app.App, e appevents.MessageCreated) (answerTarget, error) {
 	var t answerTarget
@@ -218,21 +223,24 @@ func answerable(ctx context.Context, a *app.App, e appevents.MessageCreated) (an
 
 	err := a.DB.Transaction(ctx, func(ctx context.Context, tx *database.Tx) error {
 		q := models.New(tx)
-		agent, err := q.FindAgent(ctx, e.WorkspaceID)
-		if errors.Is(err, database.ErrNotFound) {
-			return nil
-		}
-		if err != nil {
-			return err
-		}
 		conv, err := q.FindConversation(ctx, models.FindConversationParams{
 			WorkspaceID: e.WorkspaceID, ID: e.ConversationID,
 		})
 		if err != nil {
 			return err
 		}
+		agent, err := agents.Resolve(ctx, q, agents.ForConversation(conv, nil))
+		if errors.Is(err, agents.ErrNoAgent) {
+			return nil
+		}
+		if err != nil {
+			return err
+		}
 		t.agent = agent
-		t.eligible = agent.Enabled && conv.AiState != "handed_off" && conv.DeletedAt == nil && !conv.Spam
+		// A workflow step may hand the conversation to another agent;
+		// the pipeline resolves it and checks it is on.
+		on := agent.Enabled || conv.AiMode == "workflow"
+		t.eligible = on && conv.AiState != "handed_off" && conv.DeletedAt == nil && !conv.Spam
 		if conn, err := q.FindChannelConnection(ctx, models.FindChannelConnectionParams{
 			WorkspaceID: e.WorkspaceID, ID: conv.ChannelConnectionID,
 		}); err == nil {

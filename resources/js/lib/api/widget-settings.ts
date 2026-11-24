@@ -12,6 +12,8 @@ import { request } from "./client";
 export interface WidgetSummary {
   id: string;
   name: string;
+  /* The channel connection the messenger's conversations come in on. */
+  channel_connection_id: string;
   enabled: boolean;
   inbox: { id: string; name: string };
   last_boot_at: string | null;

@@ -81,14 +81,15 @@ func settingsFor(e *env) *TurnSettings {
 
 	s := &TurnSettings{
 		Mode: ModeFull, Tools: []string{
-			toolSearchKnowledge, toolHandoff, toolTriage, toolProcedure, toolOpenTicket, ToolActions,
+			toolSearchKnowledge, toolHandoff, toolTriage, toolNote, toolProcedure, toolOpenTicket, ToolActions,
+			toolTransfer,
 		},
 		AlwaysHandoffTags: h.AlwaysTags, HandoffTeamID: h.TargetTeamID, RaisePriority: h.RaisePriority,
 		MaxReplies: e.Agent.MaxAiReplies,
 		Workflow:   WorkflowControl{Controlled: e.Conversation.AiMode == "workflow"},
 	}
 	if h.Mode == enums.AIHandoffModeTriageOnly {
-		s.Mode, s.Tools = ModeTriageOnly, []string{toolHandoff, toolTriage}
+		s.Mode, s.Tools = ModeTriageOnly, []string{toolHandoff, toolTriage, toolNote}
 	}
 
 	applyWorkflowStep(e, s)

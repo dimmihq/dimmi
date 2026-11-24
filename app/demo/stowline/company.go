@@ -30,11 +30,14 @@ Domain is the made-up domain the company's people and links use.
 const Domain = "stowline.test"
 
 /*
-PricePlan is one of the company's price plans.
+PricePlan is one of the company's price plans. A plan sold ByContract
+has no list price: its MonthlyUSD is what such a contract usually comes
+to, and the help center says only that the team prices it.
 */
 type PricePlan struct {
 	Key, Name     string
 	MonthlyUSD    int
+	ByContract    bool
 	Labels        int
 	Seats         int
 	OverageCents  int
@@ -58,8 +61,9 @@ func Plans() []PricePlan {
 			SupportsAPI: true, ShareOfBuyers: 0.21,
 		},
 		{
-			Key: "enterprise", Name: "Enterprise", MonthlyUSD: 899, Labels: 60000, Seats: 50, OverageCents: 3,
-			SupportsSSO: true, SupportsAPI: true, ShareOfBuyers: 0.07,
+			Key: "enterprise", Name: "Enterprise", MonthlyUSD: 899, ByContract: true, Labels: 60000, Seats: 50,
+			OverageCents: 3,
+			SupportsSSO:  true, SupportsAPI: true, ShareOfBuyers: 0.07,
 		},
 	}
 }

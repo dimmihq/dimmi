@@ -88,7 +88,7 @@ func loadNames(ctx context.Context, tx *database.Tx, ws ids.UUID) (names, error)
 		return nil, fmt.Errorf("read names: %w", err)
 	}
 
-	out := names{"inbox": {}, "team": {}, "member": {}}
+	out := names{"inbox": {}, "team": {}, "member": {}, "agent": {}}
 	for _, r := range rows {
 		out[r.Kind][r.ID] = r.Name
 	}
@@ -110,6 +110,7 @@ func groupKinds() map[string][3]string {
 		groupInbox:            {"inbox", "inbox", string(models.PrefixInbox)},
 		groupTeam:             team,
 		groupMember:           member,
+		groupAgent:            {"agent", "agent", string(models.PrefixAiAgent)},
 		"f.closed_by_team_id": team,
 		"f.rated_member_id":   member,
 	}
@@ -148,7 +149,7 @@ noneLabels names the row of conversations in no inbox, team or
 teammate.
 */
 func noneLabels() map[string]string {
-	return map[string]string{"inbox": "No inbox", "team": "No team", "member": "Unassigned"}
+	return map[string]string{"inbox": "No inbox", "team": "No team", "member": "Unassigned", "agent": "No agent"}
 }
 
 /*

@@ -110,7 +110,8 @@ export type ThreadEntry =
       tool?: string;
     }
   | { kind: "event"; id: string; at: string; iso?: string; text: string }
-  | { kind: "call"; id: string; at: string; iso?: string; call: ActionCall };
+  | { kind: "call"; id: string; at: string; iso?: string; call: ActionCall }
+  | { kind: "transfer"; id: string; at: string; iso?: string; from: string; to: string; why: string };
 
 const statusWords: Record<string, string> = {
   "conversation.closed": "closed the conversation",
@@ -171,6 +172,20 @@ function handoffText(event: TimelineEvent): string | null {
 }
 
 /*
+ * transferText says that one AI agent handed the conversation to
+ * another, and why; null for any other event.
+ */
+function transferText(event: TimelineEvent): string | null {
+  if (event.name !== "ai.agent_transferred") {
+    return null;
+  }
+  const from = event.actor.name || "The AI agent";
+  const to = event.to_agent?.name || "another agent";
+
+  return `${from} transferred the conversation to ${to}${event.summary ? `: ${event.summary}` : ""}`;
+}
+
+/*
  * ticketText names the ticket a conversation became; null for any other
  * event.
  */
@@ -186,7 +201,7 @@ function ticketText(event: TimelineEvent): string | null {
  * eventText says in words what an event entry records.
  */
 export function eventText(event: TimelineEvent): string {
-  return handoffText(event) ?? ticketText(event) ?? changeText(event);
+  return handoffText(event) ?? transferText(event) ?? ticketText(event) ?? changeText(event);
 }
 
 /*
@@ -265,6 +280,17 @@ function eventEntry(message: Message, event: TimelineEvent): ThreadEntry {
   const decided = callOfEvent(event);
   if (decided) {
     return { kind: "call", id: message.id, at, iso: message.created_at, call: decided };
+  }
+  if (event.name === "ai.agent_transferred") {
+    return {
+      kind: "transfer",
+      id: message.id,
+      at,
+      iso: message.created_at,
+      from: event.actor.name || "The AI agent",
+      to: event.to_agent?.name || "another agent",
+      why: event.summary ?? "",
+    };
   }
   const closedWhy: Record<string, string> = {
     source_deleted: "Closed: the customer deleted their message",

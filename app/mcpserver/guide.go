@@ -79,7 +79,7 @@ func guideTopics() map[string]string {
    dimmi_contacts_conversations_list.
 	- Write help content: dimmi_help_centers_list, then dimmi_help_centers_articles_create for a draft,
    dimmi_articles_update to edit, and dimmi_articles_publications_create to publish (needs approval).
-	- Check how the AI agent is doing: dimmi_ai_usage_get, dimmi_ai_agent_get, and dimmi_conversations_list
+	- Check how the AI agent is doing: dimmi_ai_usage_get, dimmi_ai_agents_list, and dimmi_conversations_list
    with filter[ai].
 	- Work with Operator: dimmi_operator_threads_create, dimmi_operator_threads_messages_create to ask, and
    dimmi_operator_changesets_list to review what it proposed.`,

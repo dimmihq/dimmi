@@ -93,7 +93,7 @@ func merge(into *contracts.KnowledgeChunk, ch contracts.KnowledgeChunk) {
 	}
 	if ch.Coverage != nil {
 		into.Coverage = ch.Coverage
-		if !slices.Contains(into.MatchedBy, "vector") {
+		if !slices.Contains(into.MatchedBy, "vector") && !slices.Contains(ch.MatchedBy, "vector") {
 			into.Similarity = ch.Coverage
 		}
 	}
