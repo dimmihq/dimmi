@@ -1746,21 +1746,27 @@ func (q *Queries) StampBroadcastConversationClosed(ctx context.Context, arg Stam
 }
 
 const suppressedEmailsAmong = `-- name: SuppressedEmailsAmong :many
-SELECT DISTINCT lower(email::text)::text AS email FROM email_suppressions
-WHERE workspace_id = $1 AND lower(email::text) = ANY ($2::text[]) AND scope = 'all'
-  AND (expires_at IS NULL OR expires_at > $3::timestamptz)
+SELECT DISTINCT lower(e.email)::text AS email FROM unnest($1::text[]) AS e (email)
+WHERE EXISTS (
+    SELECT 1 FROM email_suppressions s
+    WHERE s.workspace_id = $2 AND s.scope = 'all'
+      AND (s.expires_at IS NULL OR s.expires_at > $3::timestamptz)
+      AND (lower(s.email::text) = lower(e.email)
+          OR s.email_hash = dimmi_email_suppression_hash($2, e.email))
+)
 `
 
 type SuppressedEmailsAmongParams struct {
-	WorkspaceID ids.UUID  `json:"workspace_id"`
 	Emails      []string  `json:"emails"`
+	WorkspaceID ids.UUID  `json:"workspace_id"`
 	Now         time.Time `json:"now"`
 }
 
 // SuppressedEmailsAmong returns which of the addresses must not be
-// mailed now.
+// mailed now, in lower case. A suppression kept as a hash after its
+// customer was erased stops the address like any other.
 func (q *Queries) SuppressedEmailsAmong(ctx context.Context, arg SuppressedEmailsAmongParams) ([]string, error) {
-	rows, err := q.db.Query(ctx, suppressedEmailsAmong, arg.WorkspaceID, arg.Emails, arg.Now)
+	rows, err := q.db.Query(ctx, suppressedEmailsAmong, arg.Emails, arg.WorkspaceID, arg.Now)
 	if err != nil {
 		return nil, err
 	}

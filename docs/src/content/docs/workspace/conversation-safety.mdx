@@ -29,14 +29,27 @@ Link checks run inside your teammate's browser, so changes apply to every conver
 | Item | Default | Allowed range | What happens when expired |
 | --- | --- | --- | --- |
 | **Closed conversations** | Kept | 30 to 3,650 days | Moves quiet closed threads to the trash. |
-| **Trash** | 30 days | 7 to 365 days | Permanently empties the trash. |
-| **Spam** | 30 days | 7 to 365 days | Permanently deletes spam. |
-| **Original emails** | 30 days | 0 to 365 days | Deletes raw email source while keeping the parsed message. |
+| **Trash** | 30 days | 7 to 365 days | Permanently deletes trashed conversations with their messages, attachments, and email records. |
+| **Spam** | 30 days | 7 to 365 days | Permanently deletes spam the same way, counted from when it was marked. |
+| **Original emails** | 30 days | 0 to 365 days | Deletes raw email source while keeping the parsed message. Email that never became a message (ignored, quarantined, or failed) is removed entirely. |
 | **Data exports** | 7 days | 1 to 30 days | Expires download links. |
 
-- **Daily sweep:** closed conversation retention runs once a day.
+- **Daily sweep:** every retention period is applied once a day.
 - **One-day buffer:** new or edited retention periods wait until the next day's run so nothing deletes the same day you save.
 - **Impact preview:** the first time you set a closed conversation limit, dimmi shows how many threads are already past it.
 - **Trash before permanent delete:** expired threads move to trash first, then follow your **Trash** retention window before disappearing for good.
+
+### What dimmi cleans up on its own
+
+Some records only exist to let someone in. Once they stop working, dimmi deletes them every night:
+
+| Record | Deleted |
+| --- | --- |
+| **Anonymous Messenger sessions** | Once expired, 180 days after the visitor's last visit. |
+| **Team invitations** | 30 days after they expire or are revoked. |
+| **Access tokens** | 30 days after they expire or are revoked. |
+| **Idempotency keys** | Once expired, 24 hours after the request. |
+
+Permanently deleting a workspace also deletes its files: attachments, knowledge uploads, help center images, and raw email.
 
 Need to remove a single customer right away? See [Erase a customer's data](/customers/erase-data/).

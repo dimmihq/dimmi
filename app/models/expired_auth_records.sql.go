@@ -10,6 +10,20 @@ import (
 	"time"
 )
 
+const deleteDeadOAuthTokens = `-- name: DeleteDeadOAuthTokens :execrows
+DELETE FROM oauth_tokens WHERE expires_at < $1::timestamptz OR revoked_at < $1::timestamptz
+`
+
+// DeleteDeadOAuthTokens removes connected apps' tokens that expired or
+// were revoked before the cutoff.
+func (q *Queries) DeleteDeadOAuthTokens(ctx context.Context, endedBefore time.Time) (int64, error) {
+	result, err := q.db.Exec(ctx, deleteDeadOAuthTokens, endedBefore)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
 const deleteExpiredPasswordResets = `-- name: DeleteExpiredPasswordResets :execrows
 DELETE FROM password_reset_tokens WHERE expires_at <= $1
 `
@@ -68,4 +82,58 @@ func (q *Queries) DeleteSpentOneTimeTokensBefore(ctx context.Context, before tim
 		return 0, err
 	}
 	return result.RowsAffected(), nil
+}
+
+const purgeDeadAccessTokens = `-- name: PurgeDeadAccessTokens :one
+SELECT dimmi_purge_dead_access_tokens($1::timestamptz, $2::integer)::bigint
+`
+
+type PurgeDeadAccessTokensParams struct {
+	EndedBefore time.Time `json:"ended_before"`
+	MaxRows     int32     `json:"max_rows"`
+}
+
+// PurgeDeadAccessTokens deletes a batch of access tokens that expired or
+// were revoked before the cutoff, across every workspace.
+func (q *Queries) PurgeDeadAccessTokens(ctx context.Context, arg PurgeDeadAccessTokensParams) (int64, error) {
+	row := q.db.QueryRow(ctx, purgeDeadAccessTokens, arg.EndedBefore, arg.MaxRows)
+	var column_1 int64
+	err := row.Scan(&column_1)
+	return column_1, err
+}
+
+const purgeExpiredInvitations = `-- name: PurgeExpiredInvitations :one
+SELECT dimmi_purge_expired_invitations($1::timestamptz, $2::integer)::bigint
+`
+
+type PurgeExpiredInvitationsParams struct {
+	EndedBefore time.Time `json:"ended_before"`
+	MaxRows     int32     `json:"max_rows"`
+}
+
+// PurgeExpiredInvitations deletes a batch of invitations that expired or
+// were revoked before the cutoff, across every workspace.
+func (q *Queries) PurgeExpiredInvitations(ctx context.Context, arg PurgeExpiredInvitationsParams) (int64, error) {
+	row := q.db.QueryRow(ctx, purgeExpiredInvitations, arg.EndedBefore, arg.MaxRows)
+	var column_1 int64
+	err := row.Scan(&column_1)
+	return column_1, err
+}
+
+const purgeExpiredWidgetSessions = `-- name: PurgeExpiredWidgetSessions :one
+SELECT dimmi_purge_expired_widget_sessions($1::timestamptz, $2::integer)::bigint
+`
+
+type PurgeExpiredWidgetSessionsParams struct {
+	ExpiredBefore time.Time `json:"expired_before"`
+	MaxRows       int32     `json:"max_rows"`
+}
+
+// PurgeExpiredWidgetSessions deletes a batch of anonymous messenger
+// sessions that expired before the cutoff, across every workspace.
+func (q *Queries) PurgeExpiredWidgetSessions(ctx context.Context, arg PurgeExpiredWidgetSessionsParams) (int64, error) {
+	row := q.db.QueryRow(ctx, purgeExpiredWidgetSessions, arg.ExpiredBefore, arg.MaxRows)
+	var column_1 int64
+	err := row.Scan(&column_1)
+	return column_1, err
 }

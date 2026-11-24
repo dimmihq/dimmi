@@ -11,7 +11,12 @@ Open **Customers**, open the row menu for the person you want to remove, and cli
 
 1. **Hidden right away:** the customer disappears from your inbox and customer lists. Their email and other identities are freed so future messages create a fresh profile.
 2. **Wiped after 7 days:** dimmi permanently erases every message body and attachment in their conversations, deletes the customer profile, and removes related data such as article feedback notes, changelog subscriptions, and broadcast addresses.
-3. **Empty thread shells remain:** stripped conversations stay for reporting under a placeholder customer.
+3. **Email records go too:** dimmi deletes the raw emails they sent and the records of receiving them, and strips their address and the subject from the delivery records of email sent to them.
+4. **Empty thread shells remain:** stripped conversations stay for reporting under a placeholder customer.
+
+### The one thing dimmi keeps
+
+If the customer unsubscribed or marked your email as spam, erasing them must not start mailing them again. dimmi keeps that suppression as a one-way hash of their address, with no readable email, so a later import or sign-up with the same address still gets no mail. Every other suppression on their address, such as a bounce, is deleted.
 
 Check **Wipe now instead of in 7 days** to skip the grace window. dimmi asks for your password if you have not confirmed it recently.
 

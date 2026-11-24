@@ -438,5 +438,19 @@ func registerJobs(a *app.App) error {
 			DB: a.DB, Clock: a.Clock, PendingFactor: a.Config.Auth.Factors.PendingTTL,
 			SessionIdle: a.Config.Auth.Sessions.IdleLifetime,
 		}),
+		queue.Register(a.Queue, accessPurge(a)),
 	)
+}
+
+/*
+accessPurge builds the nightly purge of ended access records, which
+prunes idempotency keys where the application keeps them.
+*/
+func accessPurge(a *app.App) *jobs.PurgeExpiredAccessRecords {
+	purge := &jobs.PurgeExpiredAccessRecords{DB: a.DB, Clock: a.Clock}
+	if a.Idempotency != nil {
+		purge.Idempotency = a.Idempotency
+	}
+
+	return purge
 }
