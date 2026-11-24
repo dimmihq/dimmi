@@ -71,6 +71,7 @@ func Articles() []Article {
 	out = append(out, accountArticles()...)
 	out = append(out, returnsArticles()...)
 	out = append(out, internalArticles()...)
+	out = append(out, plantedArticles()...)
 
 	for _, c := range Carriers() {
 		out = append(out, carrierArticles(c)...)

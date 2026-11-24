@@ -106,7 +106,7 @@ func TestPlan(t *testing.T) {
 		p := stowline.NewPlan(size, 7, planAt())
 		require.Len(t, p.Companies, size.Companies)
 		require.Len(t, p.Contacts, size.Contacts)
-		require.Len(t, p.Conversations, size.Conversations)
+		require.Len(t, p.Conversations, size.Conversations+stowline.PlantedCases())
 		require.Len(t, p.Team, size.Teammates)
 
 		checkUnique(t, p)
@@ -239,4 +239,39 @@ func checkUnique(t *testing.T, p stowline.Plan) {
 		assert.False(t, seen[c.ID.String()], "duplicate id")
 		seen[c.ID.String()] = true
 	}
+}
+
+func TestPlantedCases(t *testing.T) {
+	t.Parallel()
+
+	p := stowline.NewPlan(small(t), 7, planAt())
+	planted := p.Conversations[len(p.Conversations)-stowline.PlantedCases():]
+
+	bySubject := map[string]int{}
+	waiting := 0
+
+	for _, c := range planted {
+		bySubject[c.Subject]++
+
+		last := c.Messages[len(c.Messages)-1]
+		if c.Status == "open" && last.Author == "contact" {
+			waiting++
+
+			assert.Greater(t, p.Now.Sub(last.At), 20*time.Hour-time.Minute, "%s has waited", c.Subject)
+		}
+
+		assert.False(t, c.CreatedAt.After(p.Now), "%s starts before now", c.Subject)
+	}
+
+	assert.Equal(t, 6, waiting, "four who need a person today and two small ones")
+	assert.Equal(t, 4, bySubject["Pausing our plan"], "the knowledge gap")
+	assert.Equal(t, 2, bySubject["UPS to a PO box"], "the question answered two ways")
+	assert.Equal(t, 5, bySubject["Export to Google Sheets"], "the feature request")
+
+	titles := map[string]bool{}
+	for _, a := range stowline.Articles() {
+		titles[a.Title] = true
+	}
+
+	assert.True(t, titles["Lost parcel checklist"], "the article that disagrees on the claims window")
 }

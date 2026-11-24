@@ -327,7 +327,7 @@ func (r *run) conversationRow(sets *conversationSets, number int, c Conversation
 		member, team, aiState, nilIfZero(c.SnoozedUntil), c.Messages[0].At, nilIfZero(th.lastCustomer),
 		nilIfZero(th.firstReply), nilIfZero(th.lastReply), th.last, nilIfZero(c.ClosedAt), th.count, waiting, updated,
 		th.lastID, c.Priority, th.agent, c.Language, handedAt, nilIfEmpty(c.HandoffReason), c.CreatedAt, updated,
-		jsonOf(map[string]string{"seed": Slug, "topic": c.Topic}),
+		jsonOf(sourceOf(c)),
 	})
 	r.tagRows(&sets.tags, c, member)
 	if c.Rating > 0 {
@@ -337,6 +337,18 @@ func (r *run) conversationRow(sets *conversationSets, number int, c Conversation
 			nilIfEmpty(c.RatingComment), c.ClosedAt.Add(47 * time.Minute), c.ClosedAt, c.ClosedAt,
 		})
 	}
+}
+
+/*
+sourceOf is what a seeded conversation says of where it came from: the
+seed, its topic, and that it is a hand-written case when it is one.
+*/
+func sourceOf(c Conversation) map[string]string {
+	source := map[string]string{"seed": Slug, "topic": c.Topic}
+	if c.Planted {
+		source["planted"] = "yes"
+	}
+	return source
 }
 
 /*
