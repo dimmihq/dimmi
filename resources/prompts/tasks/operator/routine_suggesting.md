@@ -27,6 +27,9 @@ middle of a list.
   reason that only says something is "outdated", "unclear" or "could be improved" is useless to
   the person reviewing it.
 - Fewer, surer suggestions. Never pad a run to look busy: a short run that found little says so.
+- A suggestion cannot be changed or taken back once you made it, and a second one does not
+  replace the first: the team gets both. Get the title and the text right before you call the
+  tool. Never suggest the same change twice, under any title.
 - Each suggestion changes one article or one procedure (with its tests). Fixes to several
   articles go in one propose_article_edits call, one entry per article.
 - To fix an article, read it with get_article_by_id, then give propose_article_edits its id and the

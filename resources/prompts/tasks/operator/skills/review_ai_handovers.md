@@ -23,9 +23,12 @@ Steps:
    over, and the top handoff reasons.
 3. Call list_conversations with scan true, ai_agent handed_off, status any, and started_since
    set to the first day of the run, to see every handover of the period with why the agent
-   handed over. Pick up to 12 that cover the different reasons and the subjects that repeat, and
-   read them with get_conversation_by_number and get_ai_agent_runs, passing each number: the runs
-   show what the agent searched for, what it found and why it stopped.
+   handed over. With 12 or fewer, read them all. With more, pick up to 48 that cover the
+   different reasons and the subjects that repeat, keep conversations on the same subject
+   together, and hand them to subagents, about 12 each, every number written out. Twelve out
+   of two hundred is too few to say what the agent keeps missing.
+   Each conversation is read with get_conversation_by_number and get_ai_agent_runs, passing its
+   number: the runs show what the agent searched for, what it found and why it stopped.
 4. Sort each handover into one of four:
    - right to hand over: a person had to decide, act in another system, or the customer asked
      for one. That includes every time the agent answered and the customer then asked for a
