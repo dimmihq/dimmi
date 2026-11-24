@@ -143,7 +143,7 @@ export function LegalDocument({
 
       {/* Main two-column editorial body */}
       <section className="relative bg-background-full">
-        <div className="mx-auto grid w-full max-w-[1200px] grid-cols-1 border-x border-separator-border lg:grid-cols-[272px_minmax(0,1fr)]">
+        <div className="mx-auto grid w-full max-w-[1200px] grid-cols-1 border-x border-separator-border lg:grid-cols-[312px_minmax(0,1fr)]">
           <aside className="border-b border-separator-border px-5 py-8 sm:px-8 lg:border-e lg:border-b-0 lg:py-12">
             <div className="flex flex-col gap-6 lg:sticky lg:top-24 lg:max-h-[calc(100vh-8rem)] lg:overflow-y-auto lg:pe-3">
               <nav aria-label="Document sections" className="flex flex-col gap-6">
@@ -326,41 +326,58 @@ export function LegalList({ items }: { items: ReactNode[] }) {
   );
 }
 
+/*
+ * A set of records, each with the same fields. The legal column is too
+ * narrow for a table of four or five columns, where every cell wraps to a
+ * word a line, so a record is laid out as its name with its fields
+ * labelled beneath it, two abreast. A pair of columns, a term and what it
+ * means, reads as a plain definition list.
+ */
 export function LegalTable({ headers, rows, caption }: { headers: string[]; rows: ReactNode[][]; caption?: string }) {
+  if (headers.length <= 2) {
+    return (
+      <dl
+        aria-label={caption}
+        className="my-1 divide-y divide-separator-border rounded-xl border border-separator-border bg-background-full"
+      >
+        {rows.map((row, rowIdx) => (
+          // biome-ignore lint/suspicious/noArrayIndexKey: static legal rows
+          <div key={rowIdx} className="grid grid-cols-1 gap-1 px-5 py-3.5 sm:grid-cols-[200px_minmax(0,1fr)] sm:gap-6">
+            <dt className="text-[14px] leading-6 font-medium text-text-primary">{row[0]}</dt>
+            <dd className="text-[14px] leading-6 text-text-secondary">{row[1]}</dd>
+          </div>
+        ))}
+      </dl>
+    );
+  }
+
+  const fields = headers.slice(1);
+
   return (
-    <div className="my-1 overflow-x-auto rounded-xl border border-separator-border">
-      <table className="w-full border-collapse text-left text-[14px] leading-6">
-        {caption ? <caption className="sr-only">{caption}</caption> : null}
-        <thead>
-          <tr className="border-b border-separator-border bg-background-secondary-default/65">
-            {headers.map((header) => (
-              <th
-                key={header}
-                scope="col"
-                className="px-4 py-3 font-mono text-[11px] font-medium tracking-[0.06em] text-text-tertiary uppercase"
+    <ul
+      aria-label={caption}
+      className="my-1 divide-y divide-separator-border rounded-xl border border-separator-border bg-background-full"
+    >
+      {rows.map((row, rowIdx) => (
+        // biome-ignore lint/suspicious/noArrayIndexKey: static legal rows
+        <li key={rowIdx} className="px-5 py-4">
+          <div className="text-[15px] leading-6 font-medium text-text-primary">{row[0]}</div>
+          <dl className="mt-3 grid grid-cols-1 gap-x-8 gap-y-3 sm:grid-cols-2">
+            {fields.map((field, fieldIdx) => (
+              <div
+                key={field}
+                className={cx(fields.length % 2 === 1 && fieldIdx === fields.length - 1 && "sm:col-span-2")}
               >
-                {header}
-              </th>
+                <dt className="font-mono text-[11px] font-medium tracking-[0.06em] text-text-tertiary uppercase">
+                  {field}
+                </dt>
+                <dd className="mt-1 text-[14px] leading-6 text-text-secondary">{row[fieldIdx + 1]}</dd>
+              </div>
             ))}
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-separator-border bg-background-full">
-          {rows.map((row, rowIdx) => (
-            // biome-ignore lint/suspicious/noArrayIndexKey: static legal table rows
-            <tr key={rowIdx} className="align-top">
-              {row.map((cell, cellIdx) => (
-                <td
-                  key={headers[cellIdx] ?? `col-${cellIdx}`}
-                  className={cx("px-4 py-3 text-text-secondary", cellIdx === 0 && "font-medium text-text-primary")}
-                >
-                  {cell}
-                </td>
-              ))}
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
+          </dl>
+        </li>
+      ))}
+    </ul>
   );
 }
 
