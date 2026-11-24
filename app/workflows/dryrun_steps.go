@@ -254,7 +254,7 @@ func (d *dry) branch(ctx context.Context, s workflowspec.Step) (outcome, error) 
 		return nil
 	})
 	if err != nil || taken != nil {
-		return deref2(taken), err
+		return outcomeOrNone(taken), err
 	}
 
 	return withDetail(fixedOrNext(s, workflowspec.OutcomeElse), "failed", failed), nil
@@ -287,9 +287,9 @@ func (d *dry) holds(ctx context.Context, q *models.Queries, p workflowspec.Path)
 }
 
 /*
-deref2 returns the outcome, none for nil.
+outcomeOrNone returns the outcome, none for nil.
 */
-func deref2(o *outcome) outcome {
+func outcomeOrNone(o *outcome) outcome {
 	if o == nil {
 		return outcome{}
 	}
