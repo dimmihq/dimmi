@@ -24,7 +24,7 @@ export function ProductShot({
   return (
     <div
       className={cx(
-        "overflow-hidden rounded-2xl border border-border-button-default bg-background-secondary-default p-1.5 shadow-[0_24px_60px_-24px_rgb(0_0_0/0.25)]",
+        "w-full overflow-hidden rounded-2xl border border-border-button-default bg-background-secondary-default p-1.5 shadow-[0_24px_60px_-24px_rgb(0_0_0/0.25)]",
         bleed && "rounded-b-none border-b-0 pb-0",
         className,
       )}
@@ -34,6 +34,7 @@ export function ProductShot({
           "overflow-hidden rounded-xl border border-separator-border bg-background-full",
           bleed && "rounded-b-none border-b-0",
         )}
+        style={{ aspectRatio: `${shot.width} / ${shot.height}` }}
       >
         {shot.ready ? (
           <>
@@ -44,7 +45,7 @@ export function ProductShot({
               height={shot.height}
               loading="lazy"
               decoding="async"
-              className="block h-auto w-full dark:hidden"
+              className="block h-full w-full object-cover dark:hidden"
             />
             <img
               src={`/shots/${name}-dark.webp`}
@@ -53,14 +54,11 @@ export function ProductShot({
               height={shot.height}
               loading="lazy"
               decoding="async"
-              className="hidden h-auto w-full dark:block"
+              className="hidden h-full w-full object-cover dark:block"
             />
           </>
         ) : (
-          <div
-            className="site-dots flex w-full flex-col items-center justify-center gap-2 px-8 py-12 text-center"
-            style={{ aspectRatio: `${shot.width} / ${shot.height}` }}
-          >
+          <div className="site-dots flex h-full w-full flex-col items-center justify-center gap-2 px-8 py-12 text-center">
             <span className="rounded-md border border-dashed border-border-button-default bg-background-full/90 px-2.5 py-1 font-mono text-[11px] tracking-[0.06em] text-text-tertiary uppercase">
               Screenshot · {name}
             </span>

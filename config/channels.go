@@ -185,6 +185,10 @@ func (c *ChannelsConfig) check() error {
 			"channels.email.inbound.sender_quarantine",
 		},
 		{email.Outbound.ReferencesMax < 1, "channels.email.outbound.references_max"},
+		{
+			c.Slack.DataDeletionGraceDays < 0 || c.Slack.DataDeletionGraceDays > MaxSlackDataDeletionGraceDays,
+			"channels.slack.data_deletion_grace_days",
+		},
 	}
 
 	for _, p := range problems {

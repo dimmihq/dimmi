@@ -17,6 +17,7 @@ import {
 import { Intro, MonoLink, Section } from "../components/container";
 import { FeatureGrid, ProductHero, Questions, Rows } from "../components/product-page";
 import { ShotStill } from "../components/shot-still";
+import { ShotVideo } from "../components/shot-video";
 import { ModelFragment } from "../fragments/agent-fragments";
 import { AgentDemoCard, AgentStill } from "../scenes/agent-demo";
 import { useAgentStories } from "../scenes/use-agent-stories";
@@ -85,8 +86,8 @@ const rows = [
     body: "Lock each agent to its own help centers, procedures, and actions. When a billing dispute lands in general support, the agent hands it quietly to your Billing specialist with full context.",
     visual: (
       <ShotStill
-        name="agent-scope"
-        alt="Agent scope settings locking a Billing agent to verified customers, billing policies, and refund actions"
+        name="agent-studio-guidance"
+        alt="Agent Studio Build settings locking an agent to its own knowledge sources, procedures, actions, and peer transfer targets"
       />
     ),
   },
@@ -102,13 +103,15 @@ const rows = [
     ),
   },
   {
-    label: "Test before launch",
-    title: "Compare draft edits against your live agent before customers see them.",
-    body: "Changes stay in a private draft while your live agent keeps working. Run saved customer simulations side by side against live and roll back any version in one click.",
+    label: "Agent Studio",
+    title: "Catch flaky replies and compare Draft against Live before publishing.",
+    body: "Test edits in Preview, run multi-run simulations, compare Draft against Live side by side, and ask Operator to diagnose any failing test inside Agent Studio.",
     visual: (
-      <ShotStill
-        name="agent-compare"
-        alt="Comparing an agent draft against the live version across saved customer simulations"
+      <ShotVideo
+        name="agent-studio-compare"
+        poster="agent-studio-compare"
+        alt="Comparing Draft against Live side by side in Agent Studio before publishing"
+        maxWidth={560}
       />
     ),
   },
@@ -231,7 +234,10 @@ function SupportSpecialists() {
               Launch additional specialists from a template or start from scratch.
             </span>
           </div>
-          <MonoLink href="/compare">See how dimmi compares</MonoLink>
+          <div className="flex flex-wrap items-center gap-5">
+            <MonoLink href="/agent-studio">Explore Agent Studio</MonoLink>
+            <MonoLink href="/compare">See how dimmi compares</MonoLink>
+          </div>
         </div>
         <div className="grid grid-cols-1 divide-y divide-separator-border sm:grid-cols-2 sm:divide-y-0 lg:grid-cols-4 lg:divide-x">
           {moreTemplates.map((template) => (

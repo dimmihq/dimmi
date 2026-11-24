@@ -170,12 +170,6 @@ func collaborationDocs() map[string]Doc {
 				"composer":     "reply (default) or note; typing a note is never shown.",
 			},
 		},
-		"gif-search.show": {
-			Title: "Get the GIF search setup",
-			Use: "Returns the key the dashboard's composer uses to search GIFs with GIPHY, when the instance " +
-				"has one and the workspace allows GIFs. Agents have no use for it.",
-			Returns: "whether GIF search is on, and its key.",
-		},
 	}
 }
 

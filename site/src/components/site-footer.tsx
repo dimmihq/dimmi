@@ -1,4 +1,5 @@
 import { DimmiLogo } from "@/features/brand/logo";
+import { LEGAL_ENTITY } from "../legal/constants";
 import { GITHUB_URL } from "../links";
 import { PRODUCT_GROUPS } from "../products";
 
@@ -8,6 +9,15 @@ const pages = new Map<string, string>([
   ["Pricing", "/pricing"],
   ["Compare", "/compare"],
   ["Self-host", "/#self-host"],
+  ["Security", "/privacy#security-overview"],
+  ["Terms", "/terms"],
+  ["Acceptable Use", "/terms#acceptable-use"],
+  ["Self-Hosting Notice", "/terms#self-hosting-notice"],
+  ["Privacy", "/privacy"],
+  ["DPA", "/privacy#dpa"],
+  ["Subprocessors", "/privacy#subprocessors"],
+  ["Cookies", "/privacy#cookie-notice"],
+  ["AI Transparency", "/privacy#ai-transparency"],
 ]);
 
 const columns = [
@@ -19,9 +29,12 @@ const columns = [
     title: "Channels",
     links: ["Messenger", "Email", "Slack", "Microsoft Teams", "Discord", "WhatsApp & SMS", "Phone", "Headless & API"],
   },
-  { title: "Run it", links: ["Self-host", "dimmi Cloud", "Security", "Migrate to dimmi"] },
+  { title: "Run it", links: ["Self-host", "dimmi Cloud", "Security", "Self-Hosting Notice", "AI Transparency"] },
   { title: "Developers", links: ["Docs", "API reference", "SDKs", "Webhooks", "GitHub"] },
-  { title: "Company", links: ["Pricing", "Compare", "About", "Careers", "Contact", "Privacy", "Terms"] },
+  {
+    title: "Company & Legal",
+    links: ["Pricing", "Compare", "Terms", "Acceptable Use", "Privacy", "DPA", "Subprocessors", "Cookies"],
+  },
 ];
 
 export function SiteFooter() {
@@ -60,7 +73,23 @@ export function SiteFooter() {
         ))}
       </div>
       <div className="mx-auto w-full max-w-[1200px] border-x border-separator-border px-5 sm:px-12 flex flex-wrap items-center justify-between gap-4 border-t border-separator-border py-6 text-caption-1-regular text-text-tertiary">
-        <span>© 2026 dimmi. MIT licensed.</span>
+        <span>
+          © 2026 {LEGAL_ENTITY.name} ({LEGAL_ENTITY.rcNumber}) · {LEGAL_ENTITY.address} · dimmi is MIT licensed.
+        </span>
+        <div className="flex flex-wrap items-center gap-4">
+          <a href="/privacy" className="hover:text-text-primary">
+            Privacy Policy
+          </a>
+          <a href="/privacy#cookie-notice" className="hover:text-text-primary">
+            Cookie Notice
+          </a>
+          <a href="/terms" className="hover:text-text-primary">
+            Terms of Service
+          </a>
+          <a href="/privacy#dpa" className="hover:text-text-primary">
+            DPA
+          </a>
+        </div>
       </div>
     </footer>
   );

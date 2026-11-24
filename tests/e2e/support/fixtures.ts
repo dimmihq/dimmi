@@ -94,7 +94,13 @@ export const inbox = /\/d\/[^/]+\/inbox\/unassigned$/;
  */
 export async function createAccount(request: APIRequestContext, person: Person, workspace?: string) {
   const response = await request.post("/api/v1/users", {
-    data: { name: person.name, email: person.email, password: person.password, workspace_name: workspace },
+    data: {
+      name: person.name,
+      email: person.email,
+      password: person.password,
+      workspace_name: workspace,
+      terms_accepted: true,
+    },
   });
   expect(response.status(), await response.text()).toBe(201);
   if (!workspace) {

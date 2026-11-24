@@ -230,7 +230,12 @@ export function Rows({
 /*
  * How something works, in numbered steps: the steps advance on their own
  * and the visual follows the one in play. Clicking a step picks it.
+ * Motion follows BoardUI's Accordion and Reveal curves: height eases over
+ * 320ms on cubic-bezier(0.22, 1, 0.36, 1) while copy softens in from a
+ * 4px blur and short lift. Reduced motion switches transitions off.
  */
+const BOARDUI_EASE = "ease-[cubic-bezier(0.22,1,0.36,1)]";
+
 export function HowItWorks({
   label,
   title,
@@ -244,13 +249,13 @@ export function HowItWorks({
   steps: { title: string; body: string }[];
   visual: (step: number) => ReactNode;
 }) {
-  const { ref, step } = useScene(steps.length, { interval: 3200, hold: 3200 });
+  const { ref, step } = useScene(steps.length, { interval: 3600, hold: 3600 });
   const [picked, setPicked] = useState<number | null>(null);
   const active = picked ?? step;
 
   return (
-    <Section frameClassName="grid grid-cols-1 gap-x-16 gap-y-12 lg:grid-cols-[minmax(0,440px)_1fr] [&>*]:min-w-0">
-      <div className="flex flex-col gap-5">
+    <Section frameClassName="grid grid-cols-1 gap-x-16 gap-y-12 lg:grid-cols-[minmax(0,440px)_1fr] lg:items-start [&>*]:min-w-0">
+      <div className="flex flex-col gap-5 lg:min-h-[628px]">
         <span className="font-mono text-[12px] leading-5 font-medium tracking-[0.04em] text-text-tertiary uppercase">
           {label}
         </span>
@@ -258,42 +263,73 @@ export function HowItWorks({
           {title}
         </h2>
         <p className="text-[16px] leading-7 text-pretty text-text-secondary">{body}</p>
-        <ol className="mt-auto flex flex-col pt-10">
-          {steps.map((item, i) => (
-            <li key={item.title} className="border-t border-separator-border">
-              <button
-                type="button"
-                onClick={() => setPicked(i)}
-                aria-expanded={active === i}
-                className="flex w-full items-start gap-4 py-4 text-start"
-              >
-                <span
+        <ol className="flex flex-col pt-6">
+          {steps.map((item, i) => {
+            const open = active === i;
+            return (
+              <li key={item.title} className="border-t border-separator-border">
+                <button
+                  type="button"
+                  onClick={() => setPicked(i)}
+                  aria-expanded={open}
                   className={cx(
-                    "flex size-6 shrink-0 items-center justify-center rounded-md font-mono text-[12px] font-medium transition-colors",
-                    active === i ? "bg-background-secondary-default text-text-primary" : "text-text-tertiary",
+                    "group flex w-full cursor-pointer items-start gap-4 rounded-lg py-4 text-start outline-none",
+                    "transition-colors duration-200 focus-visible:ring-2 focus-visible:ring-border-focus-ring",
+                    BOARDUI_EASE,
                   )}
                 >
-                  {i + 1}
-                </span>
-                <span className="flex flex-col gap-1">
                   <span
                     className={cx(
-                      "text-[16px] leading-6 transition-colors",
-                      active === i ? "text-text-primary" : "text-text-tertiary",
+                      "mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-md font-mono text-[12px] font-medium",
+                      "transition-[background-color,color,transform] duration-300 motion-reduce:transition-none",
+                      BOARDUI_EASE,
+                      open
+                        ? "bg-background-secondary-default text-text-primary shadow-[inset_0_0_0_1px_var(--color-border-button-default)]"
+                        : "text-text-tertiary group-hover:text-text-secondary",
                     )}
                   >
-                    {item.title}
+                    {i + 1}
                   </span>
-                  {active === i ? (
-                    <span className="text-[15px] leading-6 text-pretty text-text-secondary">{item.body}</span>
-                  ) : null}
-                </span>
-              </button>
-            </li>
-          ))}
+                  <span className="flex min-w-0 flex-1 flex-col">
+                    <span
+                      className={cx(
+                        "text-[16px] leading-6 font-medium transition-colors duration-300 motion-reduce:transition-none",
+                        BOARDUI_EASE,
+                        open ? "text-text-primary" : "text-text-tertiary group-hover:text-text-secondary",
+                      )}
+                    >
+                      {item.title}
+                    </span>
+                    <span
+                      className={cx(
+                        "grid transition-[grid-template-rows] duration-300 motion-reduce:transition-none",
+                        BOARDUI_EASE,
+                        open ? "grid-rows-[1fr]" : "grid-rows-[0fr]",
+                      )}
+                    >
+                      <span className="overflow-hidden">
+                        <span
+                          className={cx(
+                            "block pt-1.5 text-[15px] leading-6 text-pretty text-text-secondary",
+                            "transition-[opacity,transform,filter] duration-300 motion-reduce:transition-none",
+                            BOARDUI_EASE,
+                            open
+                              ? "translate-y-0 opacity-100 blur-none"
+                              : "motion-safe:-translate-y-1 opacity-0 motion-safe:blur-[4px]",
+                          )}
+                        >
+                          {item.body}
+                        </span>
+                      </span>
+                    </span>
+                  </span>
+                </button>
+              </li>
+            );
+          })}
         </ol>
       </div>
-      <Panel className="site-dots flex min-h-[520px] items-center justify-center px-6 py-12">
+      <Panel className="site-dots flex h-[580px] items-center justify-center px-6 py-8">
         <div ref={ref}>{visual(active)}</div>
       </Panel>
     </Section>

@@ -81,6 +81,9 @@
     "contact": {
       "merged": "Merged two customers"
     },
+    "slack_data": {
+      "deleted": "Slack data deleted after uninstall"
+    },
     "inbox": {
       "access_changed": "Changed who can open an inbox"
     }

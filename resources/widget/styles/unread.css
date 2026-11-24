@@ -61,6 +61,13 @@
   gap: 8px;
 }
 
+.notice-who {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-inline-size: 0;
+}
+
 .notice-body {
   display: -webkit-box;
   overflow: hidden;

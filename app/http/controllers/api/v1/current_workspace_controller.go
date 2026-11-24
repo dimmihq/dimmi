@@ -62,7 +62,6 @@ func (c *CurrentWorkspaceController) Update(
 		UndoSendSeconds:         in.Body.UndoSendSeconds,
 		SeenReceipts:            in.Body.SeenReceipts,
 		SeenReceiptName:         in.Body.SeenReceiptName,
-		GIFPicker:               in.Body.GIFPicker,
 		TeamMentions:            in.Body.TeamMentions,
 		LinkSafety:              linkSafetyChange(in.Body.LinkSafety),
 		Retention:               retentionChange(in.Body.Retention, in.RawBody),

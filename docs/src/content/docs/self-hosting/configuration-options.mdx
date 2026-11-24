@@ -42,6 +42,8 @@ Prefix every variable below with `DIMMI_AUTH__`. For Google and GitHub login, se
 | `LOCKOUT__PER_IP_SPRAY` | `100` | Failed attempts per hour per IP before blocking. |
 | `CAPTCHA__DRIVER` | `none` | Set `turnstile` to enable Cloudflare Turnstile. |
 | `CAPTCHA__SITE_KEY`, `CAPTCHA__SECRET_KEY` | Empty | Cloudflare Turnstile keys (required when `turnstile` is enabled). |
+| `TERMS__SITE_URL` | Empty | Site that publishes your legal terms at `/terms` and `/privacy`. When set, people tick a box accepting them before creating an account, and an email sign-up without it is refused. |
+| `TERMS__VERSION` | `1.0` | Version of the terms recorded on each account that accepts them. |
 
 ## Email
 
@@ -86,7 +88,6 @@ Prefix every variable below with `DIMMI_AI__`. See [Add AI provider keys](/self-
 | `DIMMI_WIDGET__MAX_WIDGETS_PER_WORKSPACE` | `10` | Max messengers per workspace (`0` disables). |
 | `DIMMI_WEBHOOKS__MAX_ENDPOINTS` | `20` | Max webhook endpoints per workspace (`0` disables). |
 | `DIMMI_WEBHOOKS__REQUIRE_HTTPS` | `false` | Require `https://` for webhook URLs. |
-| `DIMMI_INBOX__GIF__GIPHY_API_KEY` | Empty | GIPHY API key to enable GIF search in the inbox composer. |
 
 ## Retention
 

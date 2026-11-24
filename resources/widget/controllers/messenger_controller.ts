@@ -38,6 +38,7 @@ import type { Incoming } from "../content";
 import { Controller } from "../lib/controller";
 import { pop } from "../lib/sound";
 import { loadThread } from "../lib/threads";
+import type { AiTexts } from "../text";
 
 export class MessengerController extends Controller {
   #stack: string[] = [];
@@ -128,12 +129,12 @@ export class MessengerController extends Controller {
    * while the messenger is closed and plays the sound, without touching a
    * thread the connection draws itself.
    */
-  alert(message: Incoming): void {
+  alert(message: Incoming, ai?: AiTexts): void {
     this.#alerted = String(message.conversation);
     this.#unread(this.#count + 1);
     const notice = this.target("notice");
     if (notice && !this.isOpen) {
-      notice.innerHTML = String(Notice({ message }));
+      notice.innerHTML = String(Notice({ message, ai }));
       notice.hidden = false;
     }
     if (this.element.dataset.sound === "true") {

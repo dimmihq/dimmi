@@ -235,6 +235,7 @@ func TestMembersUpdateStatus(t *testing.T) {
 
 		res := tc.Client().PostJSON("/api/v1/users", testkit.JSON{
 			"name": "Alt", "email": "alt@example.com", "password": factories.Password, "invitation_token": token,
+			"terms_accepted": true,
 		})
 		assert.NotEqual(t, fhttp.StatusCreated, res.Status)
 		tc.Table("workspace_members").AssertCount(0, testkit.Row{"role": "admin", "status": "active"})

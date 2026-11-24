@@ -40,10 +40,11 @@ You can only grant abilities that your own workspace role has permission to use.
 | `members:write` | Manage members, invitations, and teams. |
 | `webhooks:read` | Read webhook endpoints, deliveries, and event types. |
 | `webhooks:write` | Manage webhook endpoints and retry deliveries. |
+| `exports:write` | Start an export of the whole workspace. Owners only, and the token also needs `conversations:read`. |
 | `settings:read` | Read workspace settings: channels, email, messengers, integrations, knowledge sources, SLA policies, and audit log. |
 | `settings:write` | Update those settings, plus inboxes, help centers, ticket types/states/fields, and feature request boards. |
 
-Note: `notifications:read`, `notifications:write`, `exports:read`, `exports:write`, `engage:read`, `engage:write`, `billing:read`, `billing:write`, `system:read`, and `system:write` are reserved and do not open public API endpoints.
+Note: `notifications:read`, `notifications:write`, `exports:read`, `engage:read`, `engage:write`, `billing:read`, `billing:write`, `system:read`, and `system:write` are reserved and do not open public API endpoints.
 
 ## Endpoints without an ability
 

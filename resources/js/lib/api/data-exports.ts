@@ -3,7 +3,8 @@
  * rows picked, or a list's filters as the list itself reads them, and is
  * built in the background; only the member who asked sees it. Each
  * format has a ceiling on how many rows it covers, which the server
- * checks when the export is asked for.
+ * checks when the export is asked for. An owner can also export the
+ * whole workspace as one zip, which downloads from a signed link.
  */
 import { queryOptions } from "@tanstack/react-query";
 
@@ -12,11 +13,14 @@ import { request } from "./client";
 export type ExportKind = "conversations" | "contacts";
 export type ExportFormat = "txt" | "csv" | "json";
 
+/* WORKSPACE_EXPORT is the permission a whole-workspace export needs. */
+export const WORKSPACE_EXPORT = "exports:write";
+
 export interface DataExport {
   id: string;
   object: "data_export";
-  kind: ExportKind;
-  format: ExportFormat | "pdf";
+  kind: ExportKind | "conversation_facts" | "workspace";
+  format: ExportFormat | "pdf" | "zip";
   status: "pending" | "running" | "ready" | "failed" | "expired";
   include_notes: boolean;
   row_count: number | null;
@@ -58,6 +62,27 @@ export function dataExportsQuery(workspace: string) {
 
 export function requestDataExport(workspace: string, body: ExportRequest): Promise<DataExport> {
   return request<DataExport>("POST", "/data-exports", body, { workspace });
+}
+
+/*
+ * requestWorkspaceExport starts an export of everything the workspace
+ * owns, as one zip.
+ */
+export function requestWorkspaceExport(workspace: string): Promise<DataExport> {
+  return request<DataExport>("POST", "/data-exports", { kind: "workspace", format: "zip" }, { workspace });
+}
+
+/*
+ * dataExportLink signs a link a ready export's file downloads from for
+ * a few minutes, so a large file goes straight to the browser's
+ * downloads instead of through memory.
+ */
+export async function dataExportLink(workspace: string, id: string): Promise<string> {
+  const link = await request<{ url: string }>("GET", `/data-exports/${encodeURIComponent(id)}/link`, undefined, {
+    workspace,
+  });
+
+  return link.url;
 }
 
 export function deleteDataExport(workspace: string, id: string): Promise<unknown> {

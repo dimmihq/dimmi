@@ -220,11 +220,12 @@ func TestSignUpWithInvitation(t *testing.T) {
 
 		tc.Client().PostJSON("/api/v1/users", testkit.JSON{
 			"name": "Grace Hopper", "email": "grace@example.com", "password": "analytical-engine-1843",
+			"terms_accepted": true,
 		}).AssertForbidden().AssertJSONPath("code", "signup_closed")
 
 		tc.Client().PostJSON("/api/v1/users", testkit.JSON{
 			"name": "Grace Hopper", "email": "Grace@Example.com", "password": "analytical-engine-1843",
-			"invitation_token": token,
+			"invitation_token": token, "terms_accepted": true,
 		}).AssertCreated().
 			AssertJSONPath("data.user.email_verified", true).
 			AssertJSONPath("data.workspace.id", workspaceID(tc)).
@@ -243,6 +244,7 @@ func TestSignUpWithInvitation(t *testing.T) {
 		token := mailedToken(tc, fake, "grace@example.com", "member")
 		body := testkit.JSON{
 			"name": "Ada", "email": "ada@example.com", "password": "analytical-engine-1843", "invitation_token": token,
+			"terms_accepted": true,
 		}
 
 		tc.Client().PostJSON("/api/v1/users", body).AssertForbidden().

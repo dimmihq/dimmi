@@ -20,6 +20,16 @@ export const config: AuthConfig = {
   locales: [{ code: "en", name: "English" }],
 };
 
+/*
+ * terms is the legal terms of a server that publishes them.
+ */
+export const terms = {
+  version: "1.0",
+  terms_url: "https://legal.test/terms",
+  privacy_url: "https://legal.test/privacy",
+  data_processing_url: "https://legal.test/privacy#dpa",
+};
+
 export function renderWithQueries(ui: ReactNode) {
   const client = new QueryClient({ defaultOptions: { mutations: { retry: false } } });
 

@@ -52,7 +52,8 @@ import (
 /*
 OAuthCallbackInput is the person the provider vouches for, what the
 attempt was for, the user a link or fresh sign-in was started for, the
-invitation token the browser carried, and the client.
+invitation token the browser carried, whether the person accepted the
+legal terms before leaving for the provider, and the client.
 */
 type OAuthCallbackInput struct {
 	Identity   providers.ExternalIdentity
@@ -60,6 +61,20 @@ type OAuthCallbackInput struct {
 	UserID     ids.UUID
 	Invitation string
 	Client     appauth.Client
+
+	TermsAccepted bool
+}
+
+/*
+terms returns the acceptance of the legal terms the person gave before
+leaving for the provider, nil when they gave none.
+*/
+func (in OAuthCallbackInput) terms() *users.TermsAcceptance {
+	if !in.TermsAccepted {
+		return nil
+	}
+
+	return acceptanceFrom(in.Client)
 }
 
 /*
@@ -87,14 +102,16 @@ Rules:
     that never proved its address is claimed and verified.
   - An unknown address signs up, verified and without a password, when
     signup is open, the carried invitation is for it, or an invitation
-    to it is pending. Its picture is fetched afterwards.
+    to it is pending. Its picture is fetched afterwards. The legal
+    terms the person accepted before leaving are recorded on it.
   - A fresh sign-in must resolve to the user it was started for, before
     anything is written.
 
 Events: [appevents.UserRegistered] for a new account.
 
 Errors: [exceptions.ErrOAuthEmailUnverified],
-[exceptions.ErrSignupClosed], [exceptions.ErrReauthUserMismatch],
+[exceptions.ErrSignupClosed], [exceptions.ErrTermsNotAccepted],
+[exceptions.ErrReauthUserMismatch],
 [exceptions.ErrSSORequired], [exceptions.ErrAuthBusy], those of
 [LinkOAuthIdentity], [users.CreateUser] and [CompletePrimaryAuth], or a
 wrapped error.
@@ -106,6 +123,7 @@ type HandleOAuthCallback struct {
 	Queue               *queue.Queue
 	LoginPolicy         appauth.LoginPolicyResolver
 	Signup              config.SignupConfig
+	Terms               config.TermsConfig
 	CreateUser          *users.CreateUser
 	ClaimAccount        *ClaimAccount
 	Link                *LinkOAuthIdentity
@@ -268,17 +286,22 @@ func (a *HandleOAuthCallback) adopt(
 
 /*
 signUp creates the verified, passwordless account of an unknown
-address, linked to the provider account, when the install lets it.
+address, linked to the provider account, when the install lets it. An
+install that publishes terms creates none for a person who did not
+accept them on the page they started from.
 */
 func (a *HandleOAuthCallback) signUp(ctx context.Context, tx *database.Tx, in OAuthCallbackInput) (models.User, error) {
 	identity := in.Identity
 	if err := a.admit(ctx, in); err != nil {
 		return models.User{}, err
 	}
+	if a.Terms.SiteURL != "" && !in.TermsAccepted {
+		return models.User{}, exceptions.ErrTermsNotAccepted
+	}
 
 	user, err := a.CreateUser.Handle(ctx, users.CreateUserInput{
 		Name: cmp.Or(strings.TrimSpace(identity.Name), nameFromEmail(identity.Email)), Email: identity.Email,
-		Verified: true, CreatedVia: identity.Provider,
+		Verified: true, CreatedVia: identity.Provider, Terms: in.terms(),
 	})
 	if err != nil {
 		return models.User{}, err

@@ -121,8 +121,8 @@ export function OperatorPage() {
         eyebrow="Operator"
         title="An AI teammate that works for your team, not your customers."
         body="Operator sums up long chats, searches customer history, drafts replies, and proposes edits you can undo. Customers never see it."
-        shot="inbox-operator"
-        shotAlt="Operator beside a conversation's details, ready to brief, draft a reply or suggest tags and an owner"
+        shot="operator-hero"
+        shotAlt="Operator open beside a live customer conversation in the dimmi inbox, ready to brief, draft a reply, or propose workspace changes"
       />
       <Steps title="Catch up on any thread in seconds." items={steps} />
       <Rows title="Ask it what you would ask a senior teammate." rows={rows} />

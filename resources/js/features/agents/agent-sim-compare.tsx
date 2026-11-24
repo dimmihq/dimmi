@@ -23,7 +23,13 @@ import { Modal, ModalBody, ModalFooter, ModalHeader } from "@/components/base/mo
 import { toast } from "@/components/base/toast/toast";
 import { MessageBody } from "@/features/inbox/message-body";
 import { ActivityLog } from "@/features/operator/activity-log";
-import { type AgentSimulation, type AnswerAs, agentSimulationsQuery, runAgentSimulations } from "@/lib/api/agents";
+import {
+  type AgentSimulation,
+  type AgentSimulationHistory,
+  type AnswerAs,
+  agentSimulationsQuery,
+  runAgentSimulations,
+} from "@/lib/api/agents";
 import type { TestResult } from "@/lib/api/procedures";
 import { formatRelative } from "@/lib/i18n/format";
 import { cx } from "@/utils/cx";
@@ -242,6 +248,7 @@ function Side({
   title,
   sim,
   result,
+  history,
   running,
   live,
   name,
@@ -250,12 +257,13 @@ function Side({
   title: string;
   sim: AgentSimulation;
   result: TestResult | null;
+  history: AgentSimulationHistory | null;
   running: boolean;
   live?: LiveRun;
   name: string;
   sources: ChipSources;
 }) {
-  const status = statusNow(result, running, live);
+  const status = statusNow(result, running, live, history);
 
   return (
     <section aria-label={title} className="flex h-[min(68vh,680px)] min-w-0 flex-col gap-3">
@@ -344,6 +352,7 @@ export function SimCompare({
             title="Draft"
             sim={sim}
             result={sim.draft_result}
+            history={sim.draft_history}
             running={running}
             live={draft.runs[sim.id]}
             name={name}
@@ -353,6 +362,7 @@ export function SimCompare({
             title={`Live · version ${liveVersion}`}
             sim={sim}
             result={sim.live_result}
+            history={sim.live_history}
             running={running}
             live={live.runs[sim.id]}
             name={name}

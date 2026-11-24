@@ -168,6 +168,7 @@ export function signUpWithInvitation(input: {
   email: string;
   password: string;
   invitation_token: string;
+  terms_accepted?: boolean;
 }): Promise<Me> {
   return request<Me>("POST", "/users", input);
 }

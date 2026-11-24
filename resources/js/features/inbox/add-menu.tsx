@@ -4,8 +4,7 @@
  * bring into the message. Each source opens a searchable list in the
  * same panel: the team's saved replies, the help center's articles, feature requests and changelog
  * entries; typing narrows the list, Enter takes the first match and the
- * down arrow moves into the list. Emoji and, when the workspace allows
- * it, GIFs from GIPHY have pickers of their own. A pick drops in a line
+ * down arrow moves into the list. Emoji has a picker of its own. A pick drops in a line
  * naming it with its link, so it reaches the customer with the message;
  * a saved reply drops in its text and hands its macro to the composer.
  * Files are not offered until replies can carry them. Moving between the menu
@@ -19,7 +18,6 @@ import {
   RiArticleLine,
   RiChatQuoteLine,
   RiEmotionLine,
-  RiFileGifLine,
   RiHistoryLine,
   RiLightbulbLine,
   RiSearchLine,
@@ -34,7 +32,6 @@ import type { SavedReply } from "@/lib/api/saved-replies";
 import { cx } from "@/utils/cx";
 
 import { EmojiPicker } from "./composer/emoji-picker";
-import { GifPicker, type PickedGif } from "./composer/gif-picker";
 import { useInbox } from "./conversations";
 import { type LibraryItem, type SourceKind, useLibrary } from "./library";
 import { Resize, Swap } from "./motion";
@@ -210,17 +207,7 @@ function Picker({
   );
 }
 
-/*
- * Gifs is the GIF search the add menu may offer: GIPHY's key and the
- * teammate searching, or null when the workspace has none.
- */
-export interface Gifs {
-  apiKey: string;
-  member: string;
-  onPick: (picked: PickedGif) => void;
-}
-
-type Panel = Source | "emoji" | "gif";
+type Panel = Source | "emoji";
 
 const emojiRow: Source = {
   kind: "article",
@@ -228,14 +215,6 @@ const emojiRow: Source = {
   description: "Add an emoji",
   icon: RiEmotionLine,
   noun: "emoji",
-};
-
-const gifRow: Source = {
-  kind: "article",
-  label: "GIF",
-  description: "Search GIPHY",
-  icon: RiFileGifLine,
-  noun: "GIFs",
 };
 
 function panelKey(panel: Panel | null): string {
@@ -250,12 +229,10 @@ export function AddMenu({
   onInsert,
   onEmoji,
   onSavedReply,
-  gifs,
 }: {
   onInsert: (text: string) => void;
   onEmoji: (emoji: string) => void;
   onSavedReply: (reply: SavedReply) => void;
-  gifs: Gifs | null;
 }) {
   const [open, setOpen] = useState(false);
   const [source, setSource] = useState<Panel | null>(null);
@@ -305,18 +282,6 @@ export function AddMenu({
                       }}
                     />
                   </>
-                ) : source === "gif" && gifs ? (
-                  <>
-                    <Back label="GIF" onBack={() => setSource(null)} />
-                    <GifPicker
-                      apiKey={gifs.apiKey}
-                      member={gifs.member}
-                      onPick={(picked) => {
-                        gifs.onPick(picked);
-                        toggle(false);
-                      }}
-                    />
-                  </>
                 ) : source && typeof source !== "string" ? (
                   <Picker source={source} onBack={() => setSource(null)} onPick={pick} />
                 ) : (
@@ -326,7 +291,6 @@ export function AddMenu({
                         <Row key={item.kind} source={item} onPress={() => setSource(item)} />
                       ))}
                       <Row source={emojiRow} onPress={() => setSource("emoji")} />
-                      {gifs ? <Row source={gifRow} onPress={() => setSource("gif")} /> : null}
                     </Section>
                     <Section title="From your workspace">
                       {workspace.map((item) => (

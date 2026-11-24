@@ -1,6 +1,7 @@
 {
   "password": "The {{.field}} is too common. Choose another one.",
   "password_personal": "The {{.field}} must not be your email or name.",
+  "terms_accepted": "Accept the terms to create your account.",
   "registered": "The selected {{.field}} is invalid.",
   "prohibited": "The {{.field}} field is not allowed in this request.",
   "preference": "The {{.field}} field has the wrong kind of value.",

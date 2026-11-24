@@ -6,6 +6,9 @@
 # The application itself only ever sees plain HTTP from here.
 {
 	email {$ACME_EMAIL}
+	# One certificate authority, named in the privacy pages: Let's Encrypt.
+	# Without this Caddy may also order from ZeroSSL.
+	acme_ca https://acme-v02.api.letsencrypt.org/directory
 	admin off
 	servers {
 		listener_wrappers {
@@ -37,7 +40,7 @@ http:// {
 # name (local.sh) sets it to "tls internal" for a certificate of Caddy's own.
 {$HOST} {
 	{$HOST_TLS}
-	@site path / /favicon.svg /docs /docs/* /assets/* /logos/* /shots/* /agent /agent/* /broadcasts /broadcasts/* /changelog /changelog/* /feedback /feedback/* /help-center /help-center/* /inbox /inbox/* /operator /operator/* /pricing /pricing/* /procedures /procedures/* /reports /reports/* /tickets /tickets/* /workflows /workflows/*
+	@site path / /favicon.svg /docs /docs/* /assets/* /logos/* /shots/* /agent /agent/* /agent-studio /agent-studio/* /agents /agents/* /broadcasts /broadcasts/* /changelog /changelog/* /compare /compare/* /feedback /feedback/* /help-center /help-center/* /inbox /inbox/* /operator /operator/* /pricing /pricing/* /privacy /privacy/* /procedures /procedures/* /reports /reports/* /routines /routines/* /terms /terms/* /tickets /tickets/* /workflows /workflows/*
 	handle @site {
 		header X-Robots-Tag {$SITE_ROBOTS:all}
 		reverse_proxy site:8080

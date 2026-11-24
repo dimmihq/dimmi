@@ -7,6 +7,7 @@ import {
   BookOpenText,
   CalendarCheck,
   ChartLineUp,
+  Flask,
   FlowArrow,
   Lightbulb,
   ListChecks,
@@ -26,6 +27,12 @@ export const PRODUCT_GROUPS: { title: string; products: Product[] }[] = [
     title: "AI",
     products: [
       { name: "Agents", href: "/agents", blurb: "Specialized support agents that cite your docs.", icon: Sparkle },
+      {
+        name: "Agent Studio",
+        href: "/agent-studio",
+        blurb: "Build, simulate, compare, and tune every agent.",
+        icon: Flask,
+      },
       {
         name: "Procedures",
         href: "/procedures",

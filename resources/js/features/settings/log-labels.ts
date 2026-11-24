@@ -91,6 +91,7 @@ const groups: { id: string; events: string[] }[] = [
       "contact_erasure.held",
       "contact_erasure.completed",
       "contact.merged",
+      "slack_data.deleted",
     ],
   },
   { id: "email", events: [] },

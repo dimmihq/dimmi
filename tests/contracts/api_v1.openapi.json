@@ -4420,6 +4420,9 @@
           },
           "sso_available": {
             "type": "boolean"
+          },
+          "terms": {
+            "$ref": "#/components/schemas/Terms"
           }
         },
         "required": [
@@ -4433,6 +4436,7 @@
           "password_login",
           "magic_link",
           "captcha",
+          "terms",
           "mail_configured",
           "password_min_length",
           "providers",
@@ -14800,6 +14804,27 @@
         ],
         "type": "object"
       },
+      "DataExportLink": {
+        "additionalProperties": false,
+        "properties": {
+          "expires_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "object": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "object",
+          "url",
+          "expires_at"
+        ],
+        "type": "object"
+      },
       "DataStruct": {
         "additionalProperties": false,
         "properties": {
@@ -16588,36 +16613,6 @@
         },
         "required": [
           "tag"
-        ],
-        "type": "object"
-      },
-      "GIFSearch": {
-        "additionalProperties": false,
-        "properties": {
-          "api_key": {
-            "type": [
-              "string",
-              "null"
-            ]
-          },
-          "enabled": {
-            "type": "boolean"
-          },
-          "object": {
-            "type": "string"
-          },
-          "provider": {
-            "type": [
-              "string",
-              "null"
-            ]
-          }
-        },
-        "required": [
-          "object",
-          "enabled",
-          "provider",
-          "api_key"
         ],
         "type": "object"
       },
@@ -25396,6 +25391,18 @@
         ],
         "type": "object"
       },
+      "ResourceDataExportLink": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/DataExportLink"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
       "ResourceDeletionPreview": {
         "additionalProperties": false,
         "properties": {
@@ -25581,18 +25588,6 @@
         "properties": {
           "data": {
             "$ref": "#/components/schemas/FeedbackStatus"
-          }
-        },
-        "required": [
-          "data"
-        ],
-        "type": "object"
-      },
-      "ResourceGIFSearch": {
-        "additionalProperties": false,
-        "properties": {
-          "data": {
-            "$ref": "#/components/schemas/GIFSearch"
           }
         },
         "required": [
@@ -30841,7 +30836,8 @@
               "txt",
               "pdf",
               "csv",
-              "json"
+              "json",
+              "zip"
             ],
             "type": "string"
           },
@@ -30852,7 +30848,8 @@
             "enum": [
               "conversations",
               "contacts",
-              "conversation_facts"
+              "conversation_facts",
+              "workspace"
             ],
             "type": "string"
           },
@@ -32033,6 +32030,9 @@
             "maxLength": 256,
             "type": "string"
           },
+          "terms_accepted": {
+            "type": "boolean"
+          },
           "workspace_name": {
             "maxLength": 80,
             "type": "string"
@@ -32569,6 +32569,30 @@
           "email",
           "email_verified",
           "avatar_url"
+        ],
+        "type": "object"
+      },
+      "Terms": {
+        "additionalProperties": false,
+        "properties": {
+          "data_processing_url": {
+            "type": "string"
+          },
+          "privacy_url": {
+            "type": "string"
+          },
+          "terms_url": {
+            "type": "string"
+          },
+          "version": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "version",
+          "terms_url",
+          "privacy_url",
+          "data_processing_url"
         ],
         "type": "object"
       },
@@ -35133,9 +35157,6 @@
             "maxLength": 80,
             "type": "string"
           },
-          "gif_picker": {
-            "type": "boolean"
-          },
           "link_safety": {
             "$ref": "#/components/schemas/LinkSafetyBody"
           },
@@ -36411,7 +36432,6 @@
       "UpdateWorkspaceRequestBody": {
         "additionalProperties": false,
         "properties": {
-          "gif_picker": {},
           "link_safety": {},
           "locale": {},
           "name": {},
@@ -38509,9 +38529,6 @@
               "null"
             ]
           },
-          "gif_picker": {
-            "type": "boolean"
-          },
           "id": {
             "type": "string"
           },
@@ -38592,7 +38609,6 @@
           "link_safety",
           "retention",
           "undo_send_seconds",
-          "gif_picker",
           "team_mentions_enabled",
           "onboarding",
           "deleted_at",
@@ -49514,8 +49530,53 @@
                 "schema": {
                   "type": "string"
                 }
+              },
+              "Location": {
+                "schema": {
+                  "type": "string"
+                }
               }
             }
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseError"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "x-abilities": [
+          "conversations:read"
+        ]
+      }
+    },
+    "/data-exports/{data_export}/link": {
+      "get": {
+        "operationId": "data-exports.link.show",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "data_export",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResourceDataExportLink"
+                }
+              }
+            },
+            "description": "OK"
           },
           "default": {
             "content": {
@@ -51773,37 +51834,6 @@
         "x-abilities": [
           "settings:write"
         ]
-      }
-    },
-    "/gif-search": {
-      "get": {
-        "operationId": "gif-search.show",
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ResourceGIFSearch"
-                }
-              }
-            },
-            "description": "OK"
-          },
-          "default": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ResponseError"
-                }
-              }
-            },
-            "description": "Error"
-          }
-        },
-        "x-abilities": [
-          "conversations:write"
-        ],
-        "x-internal": true
       }
     },
     "/help-centers": {

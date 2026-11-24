@@ -5,7 +5,8 @@
 |
 | POST /data-exports starts an export (202); GET /data-exports lists the
 | caller's own; GET and DELETE /data-exports/{data_export} show and
-| remove one, and GET .../download returns its file. A selection by
+| remove one, GET .../download returns its file and GET .../link a
+| signed link to it. A selection by
 | filter reads the same filters the conversation list and the customer
 | directory read, so an export covers exactly what the member was
 | looking at.
@@ -45,13 +46,23 @@ type DataExportsOutput struct {
 }
 
 /*
-DataExportFileOutput is an export's file.
+DataExportFileOutput is an export's file. A workspace export answers
+307 with Location, a signed link the file downloads from.
 */
 type DataExportFileOutput struct {
+	Status             int
+	Location           string `header:"Location"`
 	ContentType        string `header:"Content-Type"`
 	ContentDisposition string `header:"Content-Disposition"`
 	CacheControl       string `header:"Cache-Control"`
 	Body               []byte
+}
+
+/*
+DataExportLinkOutput is a signed link to an export's file.
+*/
+type DataExportLinkOutput struct {
+	Body fhttp.Resource[resources.DataExportLink]
 }
 
 /*
@@ -62,6 +73,7 @@ type DataExportController struct {
 	List     *dataexports.ListDataExports
 	Show     *dataexports.ShowDataExport
 	Download *dataexports.DownloadDataExport
+	Link     *dataexports.LinkDataExport
 	Remove   *dataexports.DeleteDataExport
 	IDs      *ids.Registry
 	Clock    clock.Clock
@@ -83,6 +95,7 @@ func (c *DataExportController) Store(
 		input.Contacts, err = c.contactSelection(ctx, in.Body.Selection)
 	case dataexports.KindFacts:
 		input.Facts, err = reportFiltersOf(c.IDs, in.Body.Selection.Filter)
+	case dataexports.KindWorkspace:
 	default:
 		input.Conversations, err = c.conversationSelection(in.Body.Selection)
 	}
@@ -146,10 +159,36 @@ func (c *DataExportController) File(
 		return nil, err
 	}
 
+	if file.Redirect != "" {
+		return &DataExportFileOutput{
+			Status: fhttp.StatusTemporaryRedirect, Location: file.Redirect, CacheControl: "no-store",
+		}, nil
+	}
+
 	return &DataExportFileOutput{
-		ContentType: file.ContentType, CacheControl: "no-store",
+		Status: fhttp.StatusOK, ContentType: file.ContentType, CacheControl: "no-store",
 		ContentDisposition: `attachment; filename="` + file.Name + `"`, Body: file.Data,
 	}, nil
+}
+
+/*
+SignedLink returns a signed link a ready export's file downloads from
+for a few minutes, without the caller's credentials.
+*/
+func (c *DataExportController) SignedLink(
+	ctx context.Context, in *requests.DataExportRequest,
+) (*DataExportLinkOutput, error) {
+	input, err := c.input(ctx, in)
+	if err != nil {
+		return nil, err
+	}
+
+	link, err := c.Link.Handle(ctx, input)
+	if err != nil {
+		return nil, err
+	}
+
+	return &DataExportLinkOutput{Body: fhttp.NewResource(resources.NewDataExportLink(link))}, nil
 }
 
 /*

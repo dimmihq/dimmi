@@ -1,6 +1,6 @@
 ---
 title: "Protect conversations"
-description: "Auto-redact sensitive text before storage, warn teammates about risky links, and set data retention schedules."
+description: "Auto-redact sensitive text before storage, warn teammates about risky links, set data retention schedules, and export your whole workspace."
 ---
 
 Open **Settings → Conversation safety** to turn on three workspace protections: automatic text redaction, suspicious link warnings, and retention schedules.
@@ -51,5 +51,26 @@ Some records only exist to let someone in. Once they stop working, dimmi deletes
 | **Idempotency keys** | Once expired, 24 hours after the request. |
 
 Permanently deleting a workspace also deletes its files: attachments, knowledge uploads, help center images, and raw email.
+
+## Export your whole workspace
+
+Owners can take everything out of dimmi at any time. Open **Settings → Exports** and choose **Export workspace**. dimmi builds one zip in the background and lists it on the same page once it is ready.
+
+The archive holds:
+
+- **One `.ndjson` file per kind of record**, one JSON object per line: conversations, messages and internal notes, customers, companies, tickets, help center articles with their versions, changelog entries, knowledge sources and documents, feature requests, broadcasts and series with each recipient's outcome, workflows, procedures, agent settings, saved replies, teams, inboxes, schedules, SLA policies, roles, and members.
+- **`attachments/`:** files from messages, help center images, and knowledge uploads. The record that owns a file names it in `archive_path`.
+- **`manifest.json`:** the workspace, when the export ran, format version `1`, and each file with its record count.
+
+The archive leaves out:
+
+- **Secrets:** passwords, two-factor secrets, sessions, API tokens, AI provider keys, channel and integration credentials, webhook signing secrets, and DKIM private keys.
+- **The audit log**, which has [its own export](/workspace/audit-log/).
+- **Working data:** embeddings, search indexes, report totals, AI run traces, and delivery logs.
+- **Files the malware scan has not cleared.** `manifest.json` lists each one under `skipped_files`.
+
+The archive stays available for the **Data exports** period above, 7 days unless you changed it. Delete it sooner from **Settings → Exports**.
+
+To script it, send `POST /api/v1/data-exports` with `{"kind": "workspace", "format": "zip"}` using an owner's token that has `conversations:read` and `exports:write`. Once the export is `ready`, `GET /api/v1/data-exports/{id}/link` returns a signed download link that lasts 10 minutes.
 
 Need to remove a single customer right away? See [Erase a customer's data](/customers/erase-data/).

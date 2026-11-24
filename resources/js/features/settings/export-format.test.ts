@@ -30,6 +30,13 @@ describe("export format", () => {
     expect(exportDetail({ ...base, format: "txt", row_count: 3 })).toMatch(/^Transcripts of conversations, 3 rows/);
   });
 
+  it("names an export of the whole workspace and counts its records", () => {
+    const whole = { ...base, kind: "workspace" as const, format: "zip" as const };
+
+    expect(exportDetail(whole)).toMatch(/^Archive of the whole workspace · /);
+    expect(exportDetail({ ...whole, row_count: 1200 })).toMatch(/^Archive of the whole workspace, 1200 records · /);
+  });
+
   it("says until when a ready export downloads", () => {
     const ready = { ...base, status: "ready" as const, expires_at: "2026-11-12T10:00:00Z" };
 

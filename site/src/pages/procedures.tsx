@@ -143,8 +143,8 @@ export function ProceduresPage() {
         eyebrow="Procedures"
         title="Support policies your AI agent cannot break."
         body="Teach the dimmi agent how your team handles refunds, cancellations, and account changes. It follows every step in order, respects your limits, and never goes off-script."
-        shot="procedure"
-        shotAlt="A duplicate-charge refund policy in dimmi showing required account checks, a $500 refund cap, and automatic Billing handover"
+        shot="procedure-hero"
+        shotAlt="The dimmi Procedures editor showing ordered refund steps with action chips, conditional branches, and the Simulations test panel"
       />
       <HowItWorks
         label="How it works"

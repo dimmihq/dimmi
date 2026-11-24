@@ -4,7 +4,7 @@
  * produces an empty HTML file.
  */
 import type { ComponentType } from "react";
-
+import { AgentStudioPage } from "./pages/agent-studio";
 import { AgentsPage } from "./pages/agents";
 import { BroadcastsPage } from "./pages/broadcasts";
 import { ChangelogPage } from "./pages/changelog";
@@ -15,9 +15,11 @@ import { HomePage } from "./pages/home";
 import { InboxPage } from "./pages/inbox";
 import { OperatorPage } from "./pages/operator";
 import { PricingPage } from "./pages/pricing";
+import { PrivacyPage } from "./pages/privacy";
 import { ProceduresPage } from "./pages/procedures";
 import { ReportsPage } from "./pages/reports";
 import { RoutinesPage } from "./pages/routines";
+import { TermsPage } from "./pages/terms";
 import { TicketsPage } from "./pages/tickets";
 import { WorkflowsPage } from "./pages/workflows";
 
@@ -49,6 +51,13 @@ export const routes: Route[] = [
     description:
       "Run one frontline support agent or build specialists for billing, technical docs, orders, and brands. Cites your docs and saves 50% to 83% with your own model keys.",
     page: AgentsPage,
+  },
+  {
+    path: "/agent-studio",
+    title: "Agent Studio: build, simulate, and compare support agents | dimmi",
+    description:
+      "Write guidance with @ chips, catch flaky replies with multi-run simulations, compare Draft against Live side by side, and diagnose failures with Operator.",
+    page: AgentStudioPage,
   },
   {
     path: "/routines",
@@ -133,6 +142,20 @@ export const routes: Route[] = [
     description:
       "Collect customer votes on your help center, link live support chats, and email every voter the day you ship.",
     page: FeedbackPage,
+  },
+  {
+    path: "/terms",
+    title: "Terms of Service | dimmi",
+    description:
+      "Complete dimmi Cloud Terms of Service, Product-Specific Terms, Acceptable Use Policy, and Self-Hosting Notice by Hivy Technologies Limited (RC 9601398).",
+    page: TermsPage,
+  },
+  {
+    path: "/privacy",
+    title: "Privacy Policy & Data Governance | dimmi",
+    description:
+      "Complete dimmi Cloud Privacy Policy, End-User Notice, Cookie Notice, Subprocessor List, AI Transparency, Security Overview, and Global DPA.",
+    page: PrivacyPage,
   },
 ];
 

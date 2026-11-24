@@ -41,6 +41,17 @@ type Worker[A Args] interface {
 }
 
 /*
+Timed is a Worker whose jobs may run longer, or must stop sooner, than
+the queue's job timeout. Timeout returns how long one run may take.
+*/
+type Timed interface {
+	/*
+		Timeout returns how long one run of the worker's jobs may take.
+	*/
+	Timeout() time.Duration
+}
+
+/*
 Job is one run of a job: its id, args and queue, which attempt this is
 out of how many, and when the job was pushed.
 */
@@ -139,6 +150,18 @@ func (w *riverWorker[A]) Work(ctx context.Context, job *river.Job[A]) error {
 	}
 
 	return err
+}
+
+/*
+Timeout returns the time a Timed worker asked for, or zero to keep the
+queue's job timeout.
+*/
+func (w *riverWorker[A]) Timeout(*river.Job[A]) time.Duration {
+	if timed, ok := w.worker.(Timed); ok {
+		return timed.Timeout()
+	}
+
+	return 0
 }
 
 /*

@@ -31,9 +31,10 @@ export function ShotStill({
     >
       <div
         className={cx(
-          "overflow-hidden border border-separator-border",
+          "overflow-hidden border border-separator-border bg-background-full",
           bottom ? "rounded-b-lg border-t-0" : "rounded-t-lg border-b-0",
         )}
+        style={{ aspectRatio: `${shot.width} / ${shot.height}` }}
       >
         {shot.ready ? (
           <>
@@ -44,7 +45,7 @@ export function ShotStill({
               height={shot.height}
               loading="lazy"
               decoding="async"
-              className="block h-auto w-full dark:hidden"
+              className="block h-full w-full object-cover dark:hidden"
             />
             <img
               src={`/shots/${name}-dark.webp`}
@@ -53,14 +54,11 @@ export function ShotStill({
               height={shot.height}
               loading="lazy"
               decoding="async"
-              className="hidden h-auto w-full dark:block"
+              className="hidden h-full w-full object-cover dark:block"
             />
           </>
         ) : (
-          <div
-            className="site-dots flex flex-col items-center justify-center gap-2 px-6 py-12 text-center"
-            style={{ aspectRatio: `${shot.width} / ${shot.height}` }}
-          >
+          <div className="site-dots flex h-full w-full flex-col items-center justify-center gap-2 px-6 py-12 text-center">
             <span className="rounded-md border border-dashed border-border-button-default bg-background-full/90 px-2.5 py-1 font-mono text-[11px] tracking-[0.06em] text-text-tertiary uppercase">
               Screenshot · {name}
             </span>

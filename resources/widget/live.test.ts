@@ -526,7 +526,10 @@ describe("a connected messenger", () => {
     }
 
     const thread = root.querySelector(".thread") as HTMLElement;
-    expect(thread.querySelector(".byline")?.textContent).toContain("AI");
+    const badge = thread.querySelector(".byline .ai-badge");
+    expect(badge?.textContent).toBe("AI");
+    expect(badge?.getAttribute("aria-label")).toBe("AI agent");
+    expect(root.querySelector(".whoami .ai-badge")?.getAttribute("aria-label")).toBe("AI agent");
     const link = thread.querySelector<HTMLAnchorElement>("a.source");
     expect(link?.href).toBe("https://help.shop.example/invoices");
     expect(link?.target).toBe("_blank");
@@ -540,7 +543,7 @@ describe("a connected messenger", () => {
     expect(thread.querySelector(".ai-thanks")?.textContent).toContain("Glad it helped.");
   });
 
-  it("hands the conversation to the team when the visitor asks for a person", async () => {
+  it("offers nothing to press under a reply that answered nothing, and marks the agent as AI", async () => {
     localStorage.setItem("dimmi:wgt_1:token", "dmi_ws_1");
     const calls = serve({
       "GET /apps/wgt_1/config": () => ({ status: 200, body: config }),
@@ -577,14 +580,12 @@ describe("a connected messenger", () => {
       await settle();
     }
 
-    expect(root.querySelector('[data-ai="helped"]')).toBeNull();
-    expect(root.querySelector(".ai-actions")?.textContent).toContain("Talk to a person");
-    root.querySelector<HTMLButtonElement>('[data-ai="handoff"]')?.click();
-    await settle();
-
-    expect(calls).toContain("POST /conversations/conv_1/ai/handoff");
-    expect(widget?.live?.store.conversations[0]?.ai_state).toBe("handed_off");
     expect(root.querySelector(".ai-actions")).toBeNull();
+    expect(root.querySelector('[data-ai="handoff"]')).toBeNull();
+    expect(root.querySelector(".whoami .ai-badge")).not.toBeNull();
+    expect(root.querySelector(".byline .ai-badge")).not.toBeNull();
+    expect(calls).not.toContain("POST /conversations/conv_1/ai/handoff");
+    expect(widget?.live?.store.conversations[0]?.ai_state).toBe("active");
   });
 
   it("confirms an action card, then checks on it until the team decides", async () => {

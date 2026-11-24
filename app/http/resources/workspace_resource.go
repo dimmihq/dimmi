@@ -33,9 +33,8 @@ while it is in the trash: when it was deleted, and when it is purged for
 good unless restored. UndoSendSeconds is how long replies wait before
 they leave. Onboarding is how far its setup has come: the step reached,
 and when it finished, null until then. LogoURL is the address of its
-logo on this server, null without one. GIFPicker says whether teammates
-may search GIFs from the composer, and TeamMentions whether a note may
-mention a whole team.
+logo on this server, null without one. TeamMentions says whether a note
+may mention a whole team.
 */
 type Workspace struct {
 	ID                 string            `json:"id"`
@@ -54,7 +53,6 @@ type Workspace struct {
 	LinkSafety         models.LinkSafety `json:"link_safety"`
 	Retention          models.Retention  `json:"retention"`
 	UndoSendSeconds    int               `json:"undo_send_seconds"`
-	GIFPicker          bool              `json:"gif_picker"`
 	TeamMentions       bool              `json:"team_mentions_enabled"`
 	Onboarding         Onboarding        `json:"onboarding"`
 	DeletedAt          *time.Time        `json:"deleted_at"`
@@ -90,7 +88,6 @@ func NewWorkspace(w models.Workspace) Workspace {
 		LinkSafety:         w.LinkSafety(),
 		Retention:          w.Retention(),
 		UndoSendSeconds:    w.UndoSendSeconds(),
-		GIFPicker:          w.GIFPickerOn(),
 		TeamMentions:       w.TeamMentionsOn(),
 		Onboarding:         Onboarding{Step: w.OnboardingStep, CompletedAt: w.OnboardingCompletedAt},
 		DeletedAt:          w.DeletedAt,

@@ -15,6 +15,7 @@ package config
 import (
 	"fmt"
 	"slices"
+	"strings"
 )
 
 /*
@@ -39,7 +40,8 @@ const (
 
 /*
 AuthConfig groups the authentication settings. DisposableEmail is off,
-flag or block: how a signup from a throwaway mailbox is treated.
+flag or block: how a signup from a throwaway mailbox is treated. Terms
+is the legal terms a person accepts when creating an account.
 */
 type AuthConfig struct {
 	Signup               SignupConfig                   `koanf:"signup"`
@@ -53,6 +55,23 @@ type AuthConfig struct {
 	OAuth                map[string]OAuthProviderConfig `koanf:"oauth"`
 	Captcha              CaptchaConfig                  `koanf:"captcha"`
 	DisposableEmail      string                         `koanf:"disposable_email"`
+	Terms                TermsConfig                    `koanf:"terms"`
+}
+
+/*
+cloudLegalSite is the site that publishes dimmi cloud's legal pages.
+*/
+const cloudLegalSite = "https://trydimmi.com"
+
+/*
+TermsConfig describes the legal terms a person accepts when creating an
+account. SiteURL is the site that publishes them, at /terms and
+/privacy; with none, nothing is asked. Version is the version in force,
+recorded on each account that accepts it.
+*/
+type TermsConfig struct {
+	SiteURL string `koanf:"site_url"`
+	Version string `default:"1.0" koanf:"version"`
 }
 
 /*
@@ -94,6 +113,19 @@ func (c *AuthConfig) settle(edition Edition) {
 	if c.Verification.Required == nil {
 		c.Verification.Required = &cloud
 	}
+
+	if cloud && c.Terms.SiteURL == "" {
+		c.Terms.SiteURL = cloudLegalSite
+	}
+
+	c.Terms.SiteURL = strings.TrimRight(strings.TrimSpace(c.Terms.SiteURL), "/")
+}
+
+/*
+webAddress reports whether the address opens in a browser.
+*/
+func webAddress(address string) bool {
+	return strings.HasPrefix(address, "https://") || strings.HasPrefix(address, "http://")
 }
 
 /*
@@ -117,6 +149,8 @@ func (c *AuthConfig) check() error {
 		{c.MagicLink.TTL <= 0, "auth.magic_link.ttl"},
 		{c.Factors.MaxPerUser < 2, "auth.factors.max_per_user"},
 		{c.Factors.PendingTTL <= 0, "auth.factors.pending_ttl"},
+		{c.Terms.Version == "" || len(c.Terms.Version) > 40, "auth.terms.version"},
+		{c.Terms.SiteURL != "" && !webAddress(c.Terms.SiteURL), "auth.terms.site_url"},
 	}
 
 	for _, p := range problems {

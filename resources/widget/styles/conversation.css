@@ -23,6 +23,12 @@
   font-size: 15px;
 }
 
+.whoami-name {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
 .whoami small {
   display: flex;
   align-items: center;

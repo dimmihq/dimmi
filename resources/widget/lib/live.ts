@@ -36,7 +36,7 @@ interface HelpIndex {
 }
 
 import type { Options, OptionsUpdate, Tab, Texts } from "../options";
-import type { ActionTexts } from "../text";
+import type { ActionTexts, AiTexts } from "../text";
 import { type Availability, type Config, content, fromConfig, reading } from "./map";
 import { patch } from "./patch";
 import { report } from "./report";
@@ -48,7 +48,7 @@ export interface Host {
   root: ShadowRoot;
   options(): Options;
   update(changes: OptionsUpdate): void;
-  notify(message: { conversation: string; body: string; author: string }): void;
+  notify(message: { conversation: string; body: string; author: string; agent: boolean }): void;
   showing(conversation: string): boolean;
 }
 
@@ -245,6 +245,7 @@ export class Live {
   private changelog: Pick<Content, "changelog" | "unread_changelog"> | undefined;
   private greeting = false;
   private locked = false;
+  private headed = false;
   private readonly expecting = new Map<string, { after: number; until: number }>();
   private latestEntry = "";
   private readonly rated = new Map<string, "yes" | "no">();
@@ -1014,6 +1015,7 @@ export class Live {
       conversation: message.conversation_id,
       body: message.body ?? "",
       author: message.author.name ?? "",
+      agent: message.author.type === "agent",
     });
   }
 
@@ -1108,14 +1110,29 @@ export class Live {
     if ((change === "messages" || change === "typing" || change === "seen") && conversation === this.open) {
       this.drawThread();
     }
+    this.markAi();
+  }
+
+  /*
+   * markAi redraws the header when who answers the open conversation
+   * changed between the agent and the team.
+   */
+  private markAi() {
+    const found = this.store.conversations.find((c) => c.id === this.open);
+    if ((found?.ai_state === "active") !== this.headed) {
+      this.drawHeader();
+    }
   }
 
   /*
    * drawHeader redraws who the visitor talks to once the team's
-   * availability is known.
+   * availability is known, and whenever the AI agent takes or leaves the
+   * open conversation, so its mark is at the top while it answers.
    */
   private drawHeader() {
-    const markup = String(Whoami({ content: this.content() }));
+    const content = this.content();
+    this.headed = Boolean(content.ai);
+    const markup = String(Whoami({ content, ai: this.aiTexts() }));
     for (const whoami of this.host.root.querySelectorAll<HTMLElement>('[data-target="whoami"]')) {
       whoami.outerHTML = markup;
     }
@@ -1160,6 +1177,7 @@ export class Live {
    * reply.
    */
   private drawThread() {
+    this.markAi();
     const thread = this.host.root.querySelector<HTMLElement>(".thread");
     const loaded = thread?.querySelector<HTMLElement>(".loaded");
     if (!thread || !loaded) {
@@ -1178,7 +1196,7 @@ export class Live {
     const last = messages.at(-1);
     const parts = [
       this.statusLine(),
-      String(t.Thread({ messages, texts: this.actionTexts(), team: this.content().company })),
+      String(t.Thread({ messages, texts: this.actionTexts(), team: this.content().company, ai: this.aiTexts() })),
     ];
     const ticket = this.store.conversations.find((c) => c.id === open)?.ticket;
     const strip = tickets()?.Strip;
@@ -1220,25 +1238,23 @@ export class Live {
   }
 
   /*
-   * aiActions offers the visitor the actions under the agent's latest
-   * reply while the agent still holds the conversation: That helped only
-   * under an answer, Talk to a person under any reply, and nothing once
-   * the conversation is with the team.
+   * aiActions offers the visitor That helped under the agent's latest
+   * answer while the agent still holds the conversation, and nothing
+   * under a reply that answered nothing or once the conversation is with
+   * the team.
    */
   private aiActions(last: { from: string; id?: string; outcome?: string } | undefined, t: Parts): string {
     const found = this.store.conversations.find((c) => c.id === this.open);
     if (last?.from !== "agent" || !last.id || found?.ai_state !== "active") {
       return "";
     }
+    const helped = this.helped.has(last.id);
+    if (!helped && last.outcome !== "answered" && last.outcome !== "partial") {
+      return "";
+    }
     const texts = this.host.options().texts;
 
-    return String(
-      t.AiActions({
-        texts: { helped: texts.ai_helped, handoff: texts.talk_to_human, thanks: texts.ai_thanks },
-        helped: this.helped.has(last.id),
-        answered: last.outcome === "answered" || last.outcome === "partial",
-      }),
-    );
+    return String(t.AiActions({ texts: { helped: texts.ai_helped, thanks: texts.ai_thanks }, helped }));
   }
 
   /*
@@ -1280,11 +1296,10 @@ export class Live {
   }
 
   /*
-   * aiAction tells the server the agent's answer helped, or hands the
-   * conversation to the team. The thread changes at once; a refusal puts
-   * it back.
+   * aiAction tells the server the agent's answer helped. The thread
+   * changes at once; a refusal puts it back.
    */
-  async aiAction(kind: "helped" | "handoff") {
+  async aiAction() {
     const open = this.open;
     const found = this.store.conversations.find((c) => c.id === open);
     const last = this.content().thread.at(-1);
@@ -1292,27 +1307,14 @@ export class Live {
       return;
     }
     const answer = last.id;
-    if (kind === "helped") {
-      this.helped.add(answer);
-      this.drawThread();
-    } else {
-      this.store.upsertConversation({ ...found, ai_state: "handed_off" });
-      this.drawThread();
-    }
+    this.helped.add(answer);
+    this.drawThread();
 
     try {
-      await this.http.post(`/conversations/${open}/ai/${kind}`);
+      await this.http.post(`/conversations/${open}/ai/helped`);
     } catch (error) {
-      const code = error instanceof ApiError ? error.code : "network";
-      report(
-        "warn",
-        code,
-        kind === "helped" ? "the answer could not be marked helpful." : "the team could not be asked.",
-      );
+      report("warn", error instanceof ApiError ? error.code : "network", "the answer could not be marked helpful.");
       this.helped.delete(answer);
-      if (kind === "handoff") {
-        this.store.upsertConversation(found);
-      }
       this.drawThread();
     }
   }
@@ -1383,6 +1385,12 @@ export class Live {
     }
     this.verifying.set(call, { step: "email", email: current.email });
     this.drawThread();
+  }
+
+  private aiTexts(): AiTexts {
+    const t = this.host.options().texts;
+
+    return { label: t.ai_label, name: t.ai_agent };
   }
 
   private actionTexts(): ActionTexts {
