@@ -328,8 +328,8 @@ export function TermsPage() {
           OAuth grants, webhook secrets, and connected Third-Party Platform keys; (b) configuring Workspace roles,
           access policies, two-factor authentication, and IP allowlists appropriate to its risk profile; and (c) all
           activity occurring under its Workspace and Team Member accounts. Customer must notify dimmi promptly at{" "}
-          <LegalLink href={`mailto:${LEGAL_CONTACTS.legal}`}>{LEGAL_CONTACTS.legal}</LegalLink> upon becoming aware of
-          any unauthorized access or suspected compromise of Workspace credentials.
+          <LegalLink href={`mailto:${LEGAL_CONTACTS.support}`}>{LEGAL_CONTACTS.support}</LegalLink> upon becoming aware
+          of any unauthorized access or suspected compromise of Workspace credentials.
         </p>
       </Clause>
 
@@ -865,8 +865,8 @@ export function TermsPage() {
         </p>
         <p>
           Before initiating formal proceedings, either party must deliver written notice of the dispute to the other
-          party (for dimmi, to <LegalLink href={`mailto:${LEGAL_CONTACTS.legal}`}>{LEGAL_CONTACTS.legal}</LegalLink>),
-          and senior representatives of both parties will negotiate in good faith for 30 days to resolve it.
+          party (for dimmi, to <LegalLink href={`mailto:${LEGAL_CONTACTS.support}`}>{LEGAL_CONTACTS.support}</LegalLink>
+          ), and senior representatives of both parties will negotiate in good faith for 30 days to resolve it.
         </p>
         <p>
           If the dispute is not resolved within 30 days, it will be referred to and finally resolved by binding
@@ -915,9 +915,9 @@ export function TermsPage() {
             </>,
             <>
               <strong className="font-medium text-text-primary">Notices:</strong> Legal notices to dimmi must be sent by
-              email to <LegalLink href={`mailto:${LEGAL_CONTACTS.legal}`}>{LEGAL_CONTACTS.legal}</LegalLink> with a copy
-              (for formal dispute notices) to {LEGAL_ENTITY.name}, {LEGAL_ENTITY.address}. Legal notices to Customer
-              will be sent to the Workspace owner's email address on file or posted in-app.
+              email to <LegalLink href={`mailto:${LEGAL_CONTACTS.support}`}>{LEGAL_CONTACTS.support}</LegalLink> with a
+              copy (for formal dispute notices) to {LEGAL_ENTITY.name}, {LEGAL_ENTITY.address}. Legal notices to
+              Customer will be sent to the Workspace owner's email address on file or posted in-app.
             </>,
             <>
               <strong className="font-medium text-text-primary">Force majeure:</strong> Neither party is liable for

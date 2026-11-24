@@ -311,8 +311,8 @@ export function TermsAupAndSelfHosting() {
         <p>
           To report spam, phishing, infringement, illegal content, or other abuse originating from a dimmi Cloud
           workspace or help center, email{" "}
-          <LegalLink href={`mailto:${LEGAL_CONTACTS.legal}`}>{LEGAL_CONTACTS.legal}</LegalLink> with the relevant URL,
-          timestamps, headers, or screenshots.
+          <LegalLink href={`mailto:${LEGAL_CONTACTS.support}`}>{LEGAL_CONTACTS.support}</LegalLink> with the relevant
+          URL, timestamps, headers, or screenshots.
         </p>
       </Clause>
 
@@ -347,7 +347,7 @@ export function TermsAupAndSelfHosting() {
           <strong className="font-medium text-text-primary">dimmi</strong> name, wordmark, or logo to imply endorsement
           or market a competing hosted service as "dimmi" or "dimmi Cloud." You may truthfully state that your instance
           is "Powered by dimmi." Licensing questions may be sent to{" "}
-          <LegalLink href={`mailto:${LEGAL_CONTACTS.legal}`}>{LEGAL_CONTACTS.legal}</LegalLink>.
+          <LegalLink href={`mailto:${LEGAL_CONTACTS.support}`}>{LEGAL_CONTACTS.support}</LegalLink>.
         </p>
       </Clause>
     </>

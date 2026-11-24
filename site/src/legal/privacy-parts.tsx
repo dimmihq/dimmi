@@ -80,8 +80,8 @@ export function PrivacySupportingParts() {
             <>
               <strong className="font-medium text-text-primary">Exercising your rights:</strong> Contact the business
               you wrote to directly. If you cannot reach them, email{" "}
-              <LegalLink href={`mailto:${LEGAL_CONTACTS.legal}`}>{LEGAL_CONTACTS.legal}</LegalLink> naming the business
-              and we will forward your request promptly.
+              <LegalLink href={`mailto:${LEGAL_CONTACTS.support}`}>{LEGAL_CONTACTS.support}</LegalLink> naming the
+              business and we will forward your request promptly.
             </>,
           ]}
         />
@@ -201,7 +201,7 @@ export function PrivacySupportingParts() {
           in the log on this page (with a 30-day objection right under{" "}
           <LegalLink href="#dpa-subprocessors">DPA section VII.3</LegalLink>). Non-owners may subscribe to change
           notices or submit objections via{" "}
-          <LegalLink href={`mailto:${LEGAL_CONTACTS.legal}`}>{LEGAL_CONTACTS.legal}</LegalLink>.
+          <LegalLink href={`mailto:${LEGAL_CONTACTS.support}`}>{LEGAL_CONTACTS.support}</LegalLink>.
         </p>
         <LegalTable
           caption="Subprocessor change log"
@@ -313,9 +313,10 @@ export function PrivacySupportingParts() {
             </>,
             <>
               <strong className="font-medium text-text-primary">Vulnerability disclosure:</strong> Report security
-              issues privately to <LegalLink href={`mailto:${LEGAL_CONTACTS.legal}`}>{LEGAL_CONTACTS.legal}</LegalLink>{" "}
-              (subject: "Security Report"). We acknowledge good-faith reports within 2 business days and will not pursue
-              legal action against researchers following responsible disclosure.
+              issues privately to{" "}
+              <LegalLink href={`mailto:${LEGAL_CONTACTS.support}`}>{LEGAL_CONTACTS.support}</LegalLink> (subject:
+              "Security Report"). We acknowledge good-faith reports within 2 business days and will not pursue legal
+              action against researchers following responsible disclosure.
             </>,
           ]}
         />
@@ -335,7 +336,7 @@ export function PrivacyDpaPart() {
         numeral="VII"
         title="Data Processing Agreement (DPA)"
         binding="Automatically incorporated in Terms of Service"
-        subtitle="Global DPA covering NDPA 2023, GAID 2025 (Art. 34(2)), GDPR (Art. 28 & EU SCCs 2021/914), UK GDPR, Swiss FADP, and US state privacy laws (CCPA/CPRA). Countersigned PDF copies available via legal@trydimmi.com."
+        subtitle="Global DPA covering NDPA 2023, GAID 2025 (Art. 34(2)), GDPR (Art. 28 & EU SCCs 2021/914), UK GDPR, Swiss FADP, and US state privacy laws (CCPA/CPRA). Countersigned PDF copies available via support@trydimmi.com."
       />
 
       <Clause anchor="dpa-parties" number="VII.1" title="Parties, recitals, definitions, and roles">
@@ -348,7 +349,7 @@ export function PrivacyDpaPart() {
           <strong className="font-medium text-text-primary">"Principal Agreement"</strong>). Under Article 34(2) of the
           GAID 2025, upon crossing statutory thresholds under NDPA Section 44, {LEGAL_ENTITY.name} will register with
           the NDPC and make registration evidence available on request at{" "}
-          <LegalLink href={`mailto:${LEGAL_CONTACTS.legal}`}>{LEGAL_CONTACTS.legal}</LegalLink>.
+          <LegalLink href={`mailto:${LEGAL_CONTACTS.support}`}>{LEGAL_CONTACTS.support}</LegalLink>.
         </p>
         <p>
           <strong className="font-medium text-text-primary">Roles and definitions:</strong> For{" "}
@@ -404,7 +405,7 @@ export function PrivacyDpaPart() {
               <LegalLink href="#annex-3">Annex 3</LegalLink>. dimmi gives at least 30 days' advance email notice, and
               records the change on the Subprocessor List, before authorizing any new Subprocessor (except emergencies,
               with prompt notice). Customer may object on reasonable data-protection grounds within 30 days to{" "}
-              <LegalLink href={`mailto:${LEGAL_CONTACTS.legal}`}>{LEGAL_CONTACTS.legal}</LegalLink>; if unresolved
+              <LegalLink href={`mailto:${LEGAL_CONTACTS.support}`}>{LEGAL_CONTACTS.support}</LegalLink>; if unresolved
               within 30 days, Customer may terminate the affected service for a pro-rata refund of prepaid unused fees.
               dimmi binds every Subprocessor in writing and remains liable for its performance.
             </>,
@@ -434,7 +435,7 @@ export function PrivacyDpaPart() {
               Customer without undue delay and within{" "}
               <strong className="font-medium text-text-primary">72 hours</strong> of becoming aware of a confirmed
               Security Incident affecting Customer Personal Data, providing the elements required by GAID Article 33 and
-              GDPR Article 33(3) (nature, affected scope, contact {LEGAL_CONTACTS.legal}, likely consequences, and
+              GDPR Article 33(3) (nature, affected scope, contact {LEGAL_CONTACTS.support}, likely consequences, and
               mitigation). Notice is not an admission of fault.
             </>,
             <>

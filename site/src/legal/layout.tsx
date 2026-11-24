@@ -170,19 +170,10 @@ export function LegalDocument({
 
               <div className="border-t border-separator-border pt-5 text-[12px] leading-5 text-text-tertiary">
                 <p className="font-mono text-[10px] font-medium tracking-[0.1em] text-text-tertiary uppercase">
-                  Official contacts
+                  Official contact
                 </p>
                 <p className="mt-1.5">
-                  Legal, privacy, DPA, security &amp; abuse:{" "}
-                  <a
-                    href={`mailto:${LEGAL_CONTACTS.legal}`}
-                    className="font-medium text-text-primary underline decoration-separator-border-strong underline-offset-2 hover:decoration-text-primary"
-                  >
-                    {LEGAL_CONTACTS.legal}
-                  </a>
-                </p>
-                <p className="mt-1">
-                  Support &amp; billing:{" "}
+                  Support, billing, legal, privacy, DPA, security &amp; abuse:{" "}
                   <a
                     href={`mailto:${LEGAL_CONTACTS.support}`}
                     className="font-medium text-text-primary underline decoration-separator-border-strong underline-offset-2 hover:decoration-text-primary"
@@ -399,9 +390,8 @@ export function LegalEntityFooter() {
         {LEGAL_ENTITY.incorporationAct}. Registered office: {LEGAL_ENTITY.address}.
       </p>
       <p className="mt-2">
-        Version v{LEGAL_VERSION.version} · Effective {LEGAL_VERSION.effectiveDate}. Legal, privacy, security &amp;
-        abuse: <LegalLink href={`mailto:${LEGAL_CONTACTS.legal}`}>{LEGAL_CONTACTS.legal}</LegalLink> · Support &amp;
-        billing: <LegalLink href={`mailto:${LEGAL_CONTACTS.support}`}>{LEGAL_CONTACTS.support}</LegalLink>.
+        Version v{LEGAL_VERSION.version} · Effective {LEGAL_VERSION.effectiveDate}. Support, billing, legal, privacy,
+        security &amp; abuse: <LegalLink href={`mailto:${LEGAL_CONTACTS.support}`}>{LEGAL_CONTACTS.support}</LegalLink>.
       </p>
     </footer>
   );

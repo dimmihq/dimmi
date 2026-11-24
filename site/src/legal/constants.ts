@@ -18,7 +18,6 @@ export const LEGAL_ENTITY = {
 } as const;
 
 export const LEGAL_CONTACTS = {
-  legal: "legal@trydimmi.com",
   support: "support@trydimmi.com",
 } as const;
 

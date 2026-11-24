@@ -154,20 +154,14 @@ export function PrivacyPage() {
             ],
             ["Registered office", LEGAL_ENTITY.address],
             [
-              "Privacy and legal contact",
-              <LegalLink key="legal" href={`mailto:${LEGAL_CONTACTS.legal}`}>
-                {LEGAL_CONTACTS.legal}
-              </LegalLink>,
-            ],
-            [
-              "General & account support",
+              "Contact (support, privacy, legal, and security)",
               <LegalLink key="support" href={`mailto:${LEGAL_CONTACTS.support}`}>
                 {LEGAL_CONTACTS.support}
               </LegalLink>,
             ],
             [
               "Data Protection Officer & EU/UK Representatives",
-              "Privacy inquiries are handled directly via legal@trydimmi.com. When processing crosses statutory thresholds under the NDPA/GAID (for a formal DPO) or GDPR/UK GDPR Article 27 (for EU/UK representatives), named details will be published here and notified to the NDPC.",
+              "Privacy inquiries are handled directly via support@trydimmi.com. When processing crosses statutory thresholds under the NDPA/GAID (for a formal DPO) or GDPR/UK GDPR Article 27 (for EU/UK representatives), named details will be published here and notified to the NDPC.",
             ],
           ]}
         />
@@ -213,9 +207,9 @@ export function PrivacyPage() {
           If you contacted a business through a dimmi web messenger, support email, WhatsApp, Messenger, Instagram,
           Slack channel, or help center, that business is the Data Controller of your information. Please contact that
           business directly to exercise your rights. If you write to{" "}
-          <LegalLink href={`mailto:${LEGAL_CONTACTS.legal}`}>{LEGAL_CONTACTS.legal}</LegalLink>, we will forward your
-          request to the business promptly. See <LegalLink href="#end-user-notice">Part II (End-User Notice)</LegalLink>
-          .
+          <LegalLink href={`mailto:${LEGAL_CONTACTS.support}`}>{LEGAL_CONTACTS.support}</LegalLink>, we will forward
+          your request to the business promptly. See{" "}
+          <LegalLink href="#end-user-notice">Part II (End-User Notice)</LegalLink>.
         </p>
       </Clause>
 
@@ -411,8 +405,8 @@ export function PrivacyPage() {
         <p>
           We respond to verified privacy requests within{" "}
           <strong className="font-medium text-text-primary">30 days</strong>. Email{" "}
-          <LegalLink href={`mailto:${LEGAL_CONTACTS.legal}`}>{LEGAL_CONTACTS.legal}</LegalLink> from your account email
-          to exercise any right below.
+          <LegalLink href={`mailto:${LEGAL_CONTACTS.support}`}>{LEGAL_CONTACTS.support}</LegalLink> from your account
+          email to exercise any right below.
         </p>
 
         <SubHeading>Nigeria (NDPA 2023 &amp; GAID 2025)</SubHeading>
@@ -421,7 +415,7 @@ export function PrivacyPage() {
           data, object to processing (absolutely for direct marketing), withdraw consent as easily as giving it, and
           avoid solely automated decisions with legal or similarly significant effects. You may send us a Standard
           Notice to Address Grievance (SNAG) at{" "}
-          <LegalLink href={`mailto:${LEGAL_CONTACTS.legal}`}>{LEGAL_CONTACTS.legal}</LegalLink>, complain to the{" "}
+          <LegalLink href={`mailto:${LEGAL_CONTACTS.support}`}>{LEGAL_CONTACTS.support}</LegalLink>, complain to the{" "}
           <strong className="font-medium text-text-primary">Nigeria Data Protection Commission (NDPC)</strong>{" "}
           (ndpc.gov.ng), or seek judicial redress before the nearest Federal or State High Court (GAID Art. 47).
         </p>
@@ -453,7 +447,7 @@ export function PrivacyPage() {
           visitors or account holders. dimmi Cloud is a B2B platform strictly for individuals aged 18 and older (never
           directed at children under 13 under US COPPA or minors under 18 under NDPA Section 31). If you believe a child
           submitted personal data, email{" "}
-          <LegalLink href={`mailto:${LEGAL_CONTACTS.legal}`}>{LEGAL_CONTACTS.legal}</LegalLink> for prompt deletion.
+          <LegalLink href={`mailto:${LEGAL_CONTACTS.support}`}>{LEGAL_CONTACTS.support}</LegalLink> for prompt deletion.
         </p>
       </Clause>
 
@@ -476,7 +470,7 @@ export function PrivacyPage() {
         <p>
           We provide at least 30 days' advance email and in-app notice for material updates to this Privacy Policy. For
           questions, privacy rights requests, or complaints, email{" "}
-          <LegalLink href={`mailto:${LEGAL_CONTACTS.legal}`}>{LEGAL_CONTACTS.legal}</LegalLink> or write to{" "}
+          <LegalLink href={`mailto:${LEGAL_CONTACTS.support}`}>{LEGAL_CONTACTS.support}</LegalLink> or write to{" "}
           {LEGAL_ENTITY.name}, {LEGAL_ENTITY.address}. We aim to resolve every complaint within 30 days, and you always
           retain the right to complain to the NDPC or your local data protection regulator.
         </p>
