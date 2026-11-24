@@ -173,3 +173,24 @@ Workflows and series get the agent studio's shell: Build, Analytics and History 
 - **Extra instructions, reply cap, ask-email and handover-notice settings are removed** from the agent step outright, not hidden. There is no production data, so this break is accepted.
 - **Studio layout.** Workflows and series move to the agent studio layout: Build, Analytics and History tabs, with a Preview, Simulations and Operator side panel.
 - **Routines stay Operator-only.** Workflows start only from events, never on a schedule.
+
+## What shipped on this branch (2026-11-24)
+
+- **Agents:** archive replaces delete and is refused while workflows, series, places or other agents rely on the agent; the dialog lists each tie. The agent's page lists the workflows that hand conversations to it.
+- **Hand back:** a finished customer-facing run hands the conversation back to the placed agent, which answers from the next customer message. A message the workflow took never gets a second answer.
+- **Steps:** "Hand to an AI agent" (agent picker, May transfer, no extra instructions or reply cap), Assign an AI agent, Turn off AI, Turn on AI, Extract with AI, Run an action. The HTTP request and series webhook steps still run but leave the menus.
+- **Triggers and conditions:** AI agent transfers to another agent; AI attribute changed; the AI agent, transferred from and transferred to fields.
+- **Teammates:** Turn off AI and Turn on AI in the conversation's menu (`ai_enabled` on the conversation update).
+- **Replies:** broadcasts and series pick the agent that answers replies.
+- **Studio:** workflows and series use the agent studio layout, with Analytics (per-step counts, drop-off, versions, failed runs, goal), History (compare and restore), Simulations (workflows: saved, run all, draft vs live, from a conversation; series: dry runs) and Operator (reads, edits on the canvas with Accept or Decline, drafts from a description, explains a run).
+- **AI:** one decision primitive behind Sort by topic, AI path and Extract; AI conversation attributes with a settings page.
+- **Series:** control groups with lift in the report.
+- **Templates:** six workflow templates in the new-workflow dialog; a Workflow check-up Operator routine.
+- **Reports:** a Workflows table in the AI report.
+
+### Left for later
+
+- A/B paths inside workflows.
+- A reports breakdown by AI attribute, and a conversation sidebar panel showing attribute values.
+- Series run explanations in Operator.
+- Simulating the Extract and Run an action steps beyond recording them, a customer interrupting a wait, and a called workflow's own steps.
