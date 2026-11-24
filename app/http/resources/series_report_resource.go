@@ -31,6 +31,7 @@ type SeriesReport struct {
 	Reasons  []SeriesCount               `json:"reasons"`
 	Days     []SeriesDay                 `json:"days"`
 	Steps    map[string]SeriesStepReport `json:"steps"`
+	Control  *SeriesControl              `json:"control,omitempty"`
 }
 
 /*
@@ -80,6 +81,8 @@ func NewSeriesReport(r series.Report) SeriesReport {
 		Exited: r.Totals.Exited, Goal: r.Totals.Goal, Reasons: []SeriesCount{}, Days: []SeriesDay{},
 		Steps: map[string]SeriesStepReport{},
 	}
+
+	out.Control = newSeriesControl(r.Control)
 
 	for _, reason := range r.Reasons {
 		out.Reasons = append(out.Reasons, SeriesCount{Reason: reason.Reason, Count: reason.N})

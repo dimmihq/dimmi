@@ -1,10 +1,10 @@
 /*
  * The runs view beside the canvas: the workflow's latest runs, newest
- * first, each with its status, what started it, when, and the
- * conversation it ran on. Opening a run lists what each of its steps did,
- * in order: the step as its card reads, how it ended, the path it took
- * and what it found. Steps since removed from the workflow read by their
- * kind's name.
+ * first, each with its status, what started it, when, the version
+ * that handled it, and the conversation it ran on. Opening a run lists
+ * what each of its steps did, in order: the step as its card reads, how
+ * it ended, the path it took and what it found. Steps since removed from
+ * the workflow read by their kind's name.
  */
 import { RiArrowDownSLine, RiCloseLine, RiHistoryLine } from "@remixicon/react";
 import { useQuery } from "@tanstack/react-query";
@@ -73,6 +73,7 @@ function RunEntry({ run, reading }: { run: WorkflowRun; reading: Reading }) {
           <span className="truncate text-body-regular text-text-primary">{trigger}</span>
           <span className="truncate text-body-2-regular text-text-secondary">
             {when}
+            {run.version_number ? ` · version ${run.version_number}` : ""}
             {run.parent_run_id ? " · from another workflow" : ""}
           </span>
         </span>

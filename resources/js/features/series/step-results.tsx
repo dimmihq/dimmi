@@ -3,7 +3,8 @@
  * wait on it now, how many left by each path, what its message did, and
  * for a split each variant's goal with a button that sends everyone
  * down the winner. On the entry step, the series' own totals and why
- * people left. While anyone is there, a button opens a search to take
+ * people left, and with a control group, each group's goal and the
+ * lift the series gave. While anyone is there, a button opens a search to take
  * someone off the series.
  */
 import { RiUserUnfollowLine } from "@remixicon/react";
@@ -12,6 +13,7 @@ import { useState } from "react";
 
 import { Button } from "@/components/base/buttons/button";
 import { toast } from "@/components/base/toast/toast";
+import { lift } from "@/features/automation/studio/workflow-numbers";
 import { Row, Section } from "@/features/settings/layout";
 import { pickSeriesWinner, type SeriesNode, type SeriesReport, seriesKey } from "@/lib/api/series";
 import { countOf, formatNumber } from "@/lib/i18n/format";
@@ -41,6 +43,7 @@ function Totals({ report }: { report: SeriesReport }) {
           <Value>{`${formatNumber(report.goal)} · ${percent(report.goal, report.entered)}`}</Value>
         </Row>
       </Section>
+      {report.control ? <Control control={report.control} /> : null}
       {report.reasons.length > 0 ? (
         <Section title="Why people left">
           {report.reasons.map((r) => (
@@ -51,6 +54,33 @@ function Totals({ report }: { report: SeriesReport }) {
         </Section>
       ) : null}
     </>
+  );
+}
+
+/*
+ * Control compares the people held out with everyone else: each group's
+ * goal rate, and how many points the series added.
+ */
+function Control({ control }: { control: NonNullable<SeriesReport["control"]> }) {
+  const group = (name: "control" | "treated") =>
+    control.groups.find((g) => g.group === name) ?? { group: name, entered: 0, goal: 0 };
+  const [held, treated] = [group("control"), group("treated")];
+
+  return (
+    <Section
+      title="Control group"
+      description={`${control.percent}% of people enter but get nothing. Both groups count toward the goal.`}
+    >
+      <Row label="Got the series" description={countOf(treated.entered, "person", "people")}>
+        <Value>{percent(treated.goal, treated.entered)}</Value>
+      </Row>
+      <Row label="Held out" description={countOf(held.entered, "person", "people")}>
+        <Value>{percent(held.goal, held.entered)}</Value>
+      </Row>
+      <Row label="Lift" description="Goal rate of those who got the series, less the control group's.">
+        <Value>{lift(treated, held)}</Value>
+      </Row>
+    </Section>
   );
 }
 

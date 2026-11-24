@@ -26,6 +26,7 @@ import { KindMark } from "./parts";
 import { Pick, Picks } from "./pick";
 import { type Lists, StepFields } from "./step-fields";
 import { stepLook } from "./step-kinds";
+import { WorkflowGoalSettings } from "./studio/workflow-goal";
 import { type TriggerKind, tintOf, triggers } from "./triggers";
 import type { Step, StepKind } from "./workflows";
 
@@ -230,6 +231,7 @@ function TriggerSettings({ spec, head }: { spec: Spec; head: Head }) {
           />
         </Row>
       </Section>
+      <WorkflowGoalSettings spec={spec} onSpec={head.onSpec} />
       <Section title="Archive">
         <Row
           label="Archive this workflow"

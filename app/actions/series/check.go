@@ -217,6 +217,10 @@ func (c *checker) goal() {
 		c.add("goal_window_invalid", at("", "goal.days"), "The goal window is 1 to 90 days.")
 	}
 
+	if g.ControlPercent < 0 || g.ControlPercent > MaxControlPercent {
+		c.add("goal_control_invalid", at("", "goal.control_percent"), "The control group is 0 to 50 percent.")
+	}
+
 	c.rules("goal", "", "goal.rules", g.Rules)
 }
 

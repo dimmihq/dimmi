@@ -8,7 +8,8 @@
 | many reached it, wait on it now and left by each path. A message step
 | adds what its broadcast counted: sent, opened, clicked, replied,
 | bounced. A split adds, per variant, how many took it and reached the
-| goal. Test journeys never count.
+| goal. A series with a control group adds each group's entries and
+| goals, so the lift shows. Test journeys never count.
 |
 */
 
@@ -34,6 +35,16 @@ type Report struct {
 	Reasons []models.SeriesEndReasonsRow
 	Days    []models.SeriesEntriesByDayRow
 	Steps   map[string]*StepReport
+	Control *ControlReport
+}
+
+/*
+ControlReport is how the control group and everyone else did: the
+share held out, and per group how many entered and reached the goal.
+*/
+type ControlReport struct {
+	Percent int
+	Groups  []models.SeriesVariantGoalsRow
 }
 
 /*
@@ -85,10 +96,38 @@ func (s *Series) Report(ctx context.Context, m authz.Membership, id ids.UUID, da
 			return wrap("count days", err)
 		}
 
+		if err := s.controlReport(ctx, q, row, &out); err != nil {
+			return err
+		}
+
 		return s.stepReports(ctx, q, row, &out)
 	})
 
 	return out, err
+}
+
+/*
+controlReport counts the control group and everyone else, when the
+series holds one out or did.
+*/
+func (s *Series) controlReport(ctx context.Context, q *models.Queries, row models.Series, out *Report) error {
+	groups, err := q.SeriesVariantGoals(ctx, models.SeriesVariantGoalsParams{
+		WorkspaceID: row.WorkspaceID, SeriesID: row.ID, NodeID: ControlKey,
+	})
+	if err != nil {
+		return wrap("count control group", err)
+	}
+
+	percent := 0
+	if spec, err := SpecOf(row); err == nil && spec.Goal != nil {
+		percent = spec.Goal.ControlPercent
+	}
+
+	if percent > 0 || len(groups) > 0 {
+		out.Control = &ControlReport{Percent: percent, Groups: groups}
+	}
+
+	return nil
 }
 
 /*

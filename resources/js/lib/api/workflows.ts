@@ -7,10 +7,10 @@
  * published unseen. Reading takes workflows:read; changing them takes
  * the workflows:manage permission, which the server checks.
  */
-import { queryOptions } from "@tanstack/react-query";
+import { keepPreviousData, queryOptions } from "@tanstack/react-query";
 
 import type { AudienceRules } from "./audiences";
-import { request } from "./client";
+import { type Page, request, requestPage } from "./client";
 
 export type WorkflowStatus = "draft" | "live" | "paused";
 
@@ -49,6 +49,17 @@ export interface SpecStep {
 }
 
 /*
+ * WorkflowGoal is what analytics counts as the workflow working: the
+ * conversation resolved without going to a person, or rated at least
+ * min_rating, within the window after the run started ("7d").
+ */
+export interface WorkflowGoal {
+  kind: "resolved" | "csat";
+  window?: string;
+  min_rating?: number;
+}
+
+/*
  * Spec is a workflow definition, exactly as the server stores it.
  */
 export interface Spec {
@@ -60,6 +71,7 @@ export interface Spec {
   schedule: { mode: string; schedule_id?: string };
   reentry: { mode: string; cooldown?: string };
   exclusive: boolean;
+  goal?: WorkflowGoal | null;
   steps: SpecStep[];
 }
 
@@ -107,6 +119,10 @@ export interface WorkflowVersion {
   note: string | null;
   published_by_member_id: string | null;
   created_at: string;
+  kind?: string;
+  published_via?: string | null;
+  restored_from_version_id?: string | null;
+  spec?: Spec;
 }
 
 export type RunStatus = "running" | "waiting" | "completed" | "passed" | "exited" | "canceled" | "failed" | "expired";
@@ -139,9 +155,77 @@ export interface WorkflowRun {
   trigger: string;
   conversation_id: string | null;
   parent_run_id: string | null;
+  /* The version that handled the run; null for a test run. */
+  version_id?: string | null;
+  version_number?: number | null;
   started_at: string;
   ended_at: string | null;
   steps: RunStep[];
+}
+
+/*
+ * WorkflowStepMetrics is what one step did over a range: runs that
+ * reached it, wait on it now, failed on it, ended on it without
+ * completing, and left by each path.
+ */
+export interface WorkflowStepMetrics {
+  reached: number;
+  waiting: number;
+  failed: number;
+  dropped: number;
+  paths: Record<string, number>;
+}
+
+/*
+ * WorkflowMetrics is how a workflow did over a range, for every version
+ * or one. goal_met is null when the workflow has no goal.
+ */
+export interface WorkflowMetrics {
+  workflow_id: string;
+  from: string;
+  to: string;
+  version: number | null;
+  goal: { kind: "resolved" | "csat"; window: string; min_rating: number | null } | null;
+  triggered: number;
+  engaged: number;
+  completed: number;
+  active: number;
+  handed_over: number;
+  failed: number;
+  goal_met: number | null;
+  days: { day: string; triggered: number; completed: number; failed: number }[];
+  steps: Record<string, WorkflowStepMetrics>;
+}
+
+/*
+ * MetricsRange narrows analytics: whole days from and to (YYYY-MM-DD),
+ * and a version number, 0 for every version.
+ */
+export interface MetricsRange {
+  from?: string;
+  to?: string;
+  version?: number;
+}
+
+/*
+ * WorkflowFailure is one run that failed, or one of whose steps failed,
+ * with the first failing step and the conversation it worked.
+ */
+export interface WorkflowFailure {
+  id: string;
+  run_id: string;
+  status: RunStatus;
+  end_reason: string | null;
+  error: { code?: string; message?: string } | null;
+  conversation_id: string | null;
+  conversation_number: number | null;
+  version_number: number | null;
+  step_id: string | null;
+  step_kind: string | null;
+  outcome: string | null;
+  detail: Record<string, unknown>;
+  started_at: string;
+  ended_at: string | null;
 }
 
 const path = (id: string) => `/workflows/${encodeURIComponent(id)}`;
@@ -177,6 +261,62 @@ export function workflowRunsQuery(workspace: string, id: string) {
     queryKey: ["workspace", workspace, "workflows", id, "runs"],
     queryFn: () => request<WorkflowRun[]>("GET", `${path(id)}/runs?limit=20`, undefined, { workspace }),
   });
+}
+
+function rangeParams(range: MetricsRange): URLSearchParams {
+  const query = new URLSearchParams();
+  if (range.from) {
+    query.set("from", range.from);
+  }
+  if (range.to) {
+    query.set("to", range.to);
+  }
+  if (range.version) {
+    query.set("version", String(range.version));
+  }
+
+  return query;
+}
+
+/*
+ * workflowMetricsQuery reads a workflow's analytics over a range.
+ */
+export function workflowMetricsQuery(workspace: string, id: string, range: MetricsRange = {}) {
+  return queryOptions({
+    queryKey: ["workspace", workspace, "workflows", id, "metrics", range],
+    queryFn: () =>
+      request<WorkflowMetrics>("GET", `${path(id)}/metrics?${rangeParams(range)}`, undefined, { workspace }),
+    placeholderData: keepPreviousData,
+  });
+}
+
+/*
+ * workflowFailuresPage reads a page of a workflow's failed runs, newest
+ * first, narrowed to one step when step is set.
+ */
+export function workflowFailuresPage(
+  workspace: string,
+  id: string,
+  range: MetricsRange & { step?: string; before?: string } = {},
+): Promise<Page<WorkflowFailure>> {
+  const query = rangeParams(range);
+  query.set("limit", "25");
+  if (range.step) {
+    query.set("step_id", range.step);
+  }
+  if (range.before) {
+    query.set("before", range.before);
+  }
+
+  return requestPage<WorkflowFailure>(`${path(id)}/failures?${query}`, { workspace });
+}
+
+/*
+ * restoreWorkflowVersion copies a version into the working copy, ready
+ * to check and publish again; the live version keeps running.
+ */
+export function restoreWorkflowVersion(workspace: string, id: string, version: string): Promise<Workflow> {
+  return request<Workflow>("PATCH", path(id), { restore_version_id: version }, { workspace });
 }
 
 export function createWorkflow(workspace: string, name: string, trigger: string): Promise<Workflow> {
