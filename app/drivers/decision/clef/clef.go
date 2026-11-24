@@ -174,8 +174,8 @@ Decide asks the questions, in one request when the API takes them all
 and otherwise in as many as it needs, a few at once, each with the same
 state. Every question asked must come back answered with a probability
 in range, or the call counts as failed: a missing answer read as zero
-would be a confident no. One request that fails fails the call, so a
-caller never acts on half the answers.
+would be a confident no. When one request fails the whole call does,
+so a caller never acts on half the answers.
 */
 func (d *Driver) Decide(ctx context.Context, req contracts.DecisionRequest) (*contracts.DecisionResponse, error) {
 	started := d.clock.Now()

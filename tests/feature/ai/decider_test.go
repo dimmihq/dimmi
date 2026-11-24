@@ -3,7 +3,6 @@ package ai_test
 import (
 	"encoding/json"
 	"fmt"
-	nethttp "net/http"
 	"slices"
 	"testing"
 	"time"
@@ -12,6 +11,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/dimmihq/dimmi/framework/foundation"
+	fhttp "github.com/dimmihq/dimmi/framework/http"
 	"github.com/dimmihq/dimmi/framework/httpclient"
 	"github.com/dimmihq/dimmi/framework/httpclient/httpclienttest"
 
@@ -297,14 +297,14 @@ func TestClefDecider(t *testing.T) {
 		}
 		return req
 	}
-	echo := func(broken string) nethttp.Handler {
-		return nethttp.HandlerFunc(func(w nethttp.ResponseWriter, req *nethttp.Request) {
+	echo := func(broken string) fhttp.Handler {
+		return fhttp.HandlerFunc(func(w fhttp.ResponseWriter, req *fhttp.Request) {
 			var body struct {
 				Questions map[string]any `json:"questions"`
 			}
 			_ = json.NewDecoder(req.Body).Decode(&body)
 			if _, hit := body.Questions[broken]; hit {
-				w.WriteHeader(nethttp.StatusServiceUnavailable)
+				w.WriteHeader(fhttp.StatusServiceUnavailable)
 				_, _ = w.Write([]byte(`{"success":false}`))
 				return
 			}

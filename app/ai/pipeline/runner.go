@@ -55,9 +55,9 @@ send. Actions, when set, gives the agent the workspace's own actions as
 tools. Delivery, when set, queues each reply on a channel that pushes.
 Decider, when set, checks that a procedure the agent asks for fits the
 request; DecisionProvider names it in a run's steps and DecisionPrice
-is what one of its input tokens costs, in millionths of a dollar. ProcedureVectors, when set, ranks a long list of
-procedures by meaning. It remembers each unpriced model it has logged,
-so each is logged once.
+is what one of its input tokens costs, in millionths of a dollar.
+ProcedureVectors, when set, ranks a long list of procedures by meaning.
+It remembers each unpriced model it has logged, so each is logged once.
 */
 type Runner struct {
 	DB               *database.DB

@@ -2,7 +2,6 @@ package ai_test
 
 import (
 	"fmt"
-	"os"
 	"slices"
 	"sync"
 	"testing"
@@ -11,6 +10,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/dimmihq/dimmi/framework/clock"
 	"github.com/dimmihq/dimmi/framework/testkit"
 
 	"github.com/dimmihq/dimmi/app/contracts"
@@ -23,8 +23,8 @@ liveClef is the real Clef driver on the account the environment names,
 with the timeout production gives one call. The live tests run only
 with DIMMI_LIVE_CLEF=1, CLOUDFLARE_ACCOUNT_ID and a
 CLOUDFLARE_WORKERS_AI_TOKEN allowed to run Workers AI; every run spends
-real money, a cent or less, and CI never sets them. DIMMI_LIVE_CLEF_MODEL
-picks clef-flash over clef.
+real money, a cent or less, and CI never sets them. Calls are timed with
+the system clock: the test application's own stands still.
 */
 func liveClef(t *testing.T) *clef.Driver {
 	t.Helper()
@@ -34,7 +34,7 @@ func liveClef(t *testing.T) *clef.Driver {
 	tc := tests.New(t)
 	d, err := clef.New(tc.App.HTTP, tc.App.Clock, clef.Config{
 		AccountID: testkit.Env(t, "CLOUDFLARE_ACCOUNT_ID"), APIToken: testkit.Env(t, "CLOUDFLARE_WORKERS_AI_TOKEN"),
-		Model: os.Getenv("DIMMI_LIVE_CLEF_MODEL"), Timeout: 3 * time.Second,
+		Timeout: 3 * time.Second,
 	})
 	require.NoError(t, err)
 	return d
@@ -125,7 +125,7 @@ func TestLiveClefJudgesInManyLanguages(t *testing.T) {
 		{"French", "Je veux parler à un conseiller humain, pas à un robot.", true},
 		{"French", "Ma facture indique un montant incorrect ce mois-ci.", false},
 		{"Spanish", "Por favor, páseme con una persona de su equipo.", true},
-		{"Spanish", "¿Cuánto tarda el envío a Sevilla?", false},
+		{"Spanish", "¿Cuándo llega mi paquete a Sevilla?", false},
 		{"Portuguese", "Quero falar com um atendente de verdade, por favor.", true},
 		{"Portuguese", "Não consigo redefinir a minha senha.", false},
 		{"German", "Bitte verbinden Sie mich mit einem Mitarbeiter.", true},
@@ -211,9 +211,9 @@ func TestLiveClefHoldsUnderLoad(t *testing.T) {
 	for range workers {
 		wg.Go(func() {
 			for range jobs {
-				started := time.Now()
+				started := clock.System().Now()
 				res, first := decideTwice(t, d, req)
-				took := time.Since(started)
+				took := clock.System().Now().Sub(started)
 				mu.Lock()
 				latencies = append(latencies, took)
 				billing = append(billing, res.Answers["billing"].Noul)
@@ -264,9 +264,10 @@ func TestLiveClefTakesAFullRequest(t *testing.T) {
 			Type: contracts.DecisionNoul, Instructions: "Is the conversation about an invoice?",
 		}
 	}
-	started := time.Now()
+	started := clock.System().Now()
 	res, _ := decideTwice(t, d, req)
-	t.Logf("%d questions, %d input tokens, %s", len(res.Answers), res.Usage.InputTokens, time.Since(started))
+	took := clock.System().Now().Sub(started)
+	t.Logf("%d questions, %d input tokens, %s", len(res.Answers), res.Usage.InputTokens, took)
 	require.Len(t, res.Answers, clef.MaxQuestions)
 	for name, a := range res.Answers {
 		assert.Greater(t, a.Noul, 0.5, name)
@@ -294,9 +295,10 @@ func TestLiveClefSplitsALongList(t *testing.T) {
 			Type: contracts.DecisionNoul, Instructions: ask,
 		}
 	}
-	started := time.Now()
+	started := clock.System().Now()
 	res, _ := decideTwice(t, d, req)
-	t.Logf("%d questions, %d input tokens, %s", len(res.Answers), res.Usage.InputTokens, time.Since(started))
+	took := clock.System().Now().Sub(started)
+	t.Logf("%d questions, %d input tokens, %s", len(res.Answers), res.Usage.InputTokens, took)
 	require.Len(t, res.Answers, asked)
 	for i := range asked {
 		name := fmt.Sprintf("q%03d", i)
