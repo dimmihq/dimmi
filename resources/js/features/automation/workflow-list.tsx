@@ -17,10 +17,11 @@ import { toast } from "@/components/base/toast/toast";
 import { usePermission } from "@/features/settings/inboxes";
 import { Item, Section } from "@/features/settings/layout";
 import { useAccount } from "@/features/settings/use-account";
-import { createWorkflow, type Workflow, workflowsQuery } from "@/lib/api/workflows";
+import { createWorkflow, type Spec, saveWorkflow, type Workflow, workflowsQuery } from "@/lib/api/workflows";
 
 import { freshName } from "./fresh-name";
 import { KindMark, ListPage, OpenRow, StatusChip } from "./parts";
+import type { WorkflowTemplate } from "./templates";
 import { TriggerPicker } from "./trigger-picker";
 import { type TriggerKind, tintOf, triggers } from "./triggers";
 
@@ -36,8 +37,19 @@ export function WorkflowList() {
   const queryClient = useQueryClient();
   const { data: workflows, isPending } = useQuery(workflowsQuery(workspace));
   const create = useMutation({
-    mutationFn: (trigger: TriggerKind) =>
-      createWorkflow(workspace, freshName((workflows ?? []).map((workflow) => workflow.name)), trigger),
+    mutationFn: async (from: TriggerKind | WorkflowTemplate) => {
+      const names = (workflows ?? []).map((workflow) => workflow.name);
+      if (typeof from === "string") {
+        return createWorkflow(workspace, freshName(names), from);
+      }
+      const made = await createWorkflow(
+        workspace,
+        names.includes(from.name) ? freshName(names) : from.name,
+        from.trigger,
+      );
+
+      return saveWorkflow(workspace, made.id, { spec: from.build(made.spec as Spec), lock_version: made.lock_version });
+    },
     onSuccess: (workflow) => {
       void queryClient.invalidateQueries({ queryKey: ["workspace", workspace, "workflows"] });
       void navigate({ to: "/d/workflows/$workflow", params: { workflow: workflow.id } });
@@ -63,6 +75,10 @@ export function WorkflowList() {
         onPick={(trigger) => {
           setPicking(false);
           create.mutate(trigger);
+        }}
+        onTemplate={(template) => {
+          setPicking(false);
+          create.mutate(template);
         }}
       />
       <Section

@@ -5,6 +5,17 @@ description: "Pick a trigger, add steps and branches, use variables in messages,
 
 Open **Workflows** and click **New workflow**, then pick a trigger. You cannot change a workflow's trigger later, and it decides which [steps](/workflows/triggers-and-steps/) appear in the builder.
 
+To skip the blank canvas, pick a template at the top of the same dialog instead. It starts on its trigger with the steps in place:
+
+| Template | Trigger | Steps |
+| --- | --- | --- |
+| **Greet, then hand to your AI agent** | Customer sends their first message | **Send a message**, then **Hand to an AI agent** |
+| **Take an email out of hours** | Customer sends their first message, outside office hours | **Show reply time**, then **Collect data** |
+| **Keep AI off email** | Customer sends their first message, on email | **Turn off AI** |
+| **Brief the team after a handover** | AI agent hands over | **Set priority** and **Add a note** |
+| **Thank the customer when the agent resolves** | AI agent resolves a conversation | **Send a message** |
+| **Escalate a breached SLA** | SLA breached | **Set priority** to urgent and **Add a note** |
+
 ## Choose who the workflow runs for
 
 Click the **Trigger** card to limit which conversations start the workflow:
