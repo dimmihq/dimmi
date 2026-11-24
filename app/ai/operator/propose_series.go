@@ -4,8 +4,7 @@
 |--------------------------------------------------------------------------
 |
 | A series edit is applied to the working copy, or to the suggestion
-| open on it, and checked as publishing checks it. A new series may
-| leave out only what a fresh, empty one misses too, such as who enters.
+| open on it, and checked as publishing checks it.
 |
 */
 
@@ -67,39 +66,6 @@ func (r resolver) seriesOp(ctx context.Context, a automationInput) (Operation, e
 	op.Series, op.Definition = &id, raw
 	op.Label = fmt.Sprintf("Edit the working copy of the series “%s”", row.Name)
 	op.Note = "\nThe series would read:\n" + seriesOutline(next) + problemText(problems)
-	return op, nil
-}
-
-/*
-newSeriesOp checks a new draft series. Only what a fresh, empty series
-misses too, such as who enters, may stay for the teammate to fill in.
-*/
-func (r resolver) newSeriesOp(_ context.Context, a automationInput) (Operation, error) {
-	op := Operation{Kind: KindSeriesNew}
-	if !r.s.m.Can("series:write") {
-		return op, exceptions.ErrForbidden
-	}
-	name := strings.TrimSpace(a.Name)
-	if name == "" || len([]rune(name)) > 120 {
-		return op, fmt.Errorf("%w: give the series a name of 1 to 120 characters", errBadArguments)
-	}
-	if a.Subject != series.SubjectContact && a.Subject != series.SubjectCompany {
-		return op, fmt.Errorf("%w: subject is contact or company", errBadArguments)
-	}
-	if len(a.Spec) == 0 {
-		return op, fmt.Errorf("%w: give the whole definition as spec", errBadArguments)
-	}
-	spec, err := readSeries(a.Spec)
-	if err != nil {
-		return op, err
-	}
-	problems := series.Check(spec, a.Subject)
-	if added := freshProblems(series.Check(series.NewSpec(), a.Subject), problems); len(added) > 0 {
-		return op, refusedSeries(added, spec)
-	}
-	op.Definition = rawJSON(newSeriesDraft{Name: name, Subject: a.Subject, Spec: rawJSON(spec)})
-	op.Label = fmt.Sprintf("Draft a new series “%s”", name)
-	op.Note = "\nThe series would read:\n" + seriesOutline(spec) + problemText(problems)
 	return op, nil
 }
 

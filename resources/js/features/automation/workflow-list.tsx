@@ -3,11 +3,11 @@
  * and whether it is live, in the order they run when two share a
  * trigger. A new workflow begins by picking its trigger; it is made on
  * the server at once, as a draft named so it never clashes with another,
- * and its studio opens on it, empty or from a template. Or the teammate describes it and Operator
- * drafts the whole workflow. Teammates who may only read workflows see
- * the list without the button.
+ * and its studio opens on it, empty or from a template, where Operator
+ * helps build it. Teammates who may only read workflows see the list
+ * without the button.
  */
-import { RiAddLine, RiFlowChart, RiSparkling2Line } from "@remixicon/react";
+import { RiAddLine, RiFlowChart } from "@remixicon/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
@@ -15,7 +15,6 @@ import { useState } from "react";
 import { Chip } from "@/components/base/badges/chip";
 import { Button } from "@/components/base/buttons/button";
 import { toast } from "@/components/base/toast/toast";
-import { DraftFromDescription } from "@/features/operator/draft-from-description";
 import { usePermission } from "@/features/settings/inboxes";
 import { Item, Section } from "@/features/settings/layout";
 import { useAccount } from "@/features/settings/use-account";
@@ -35,7 +34,6 @@ export function WorkflowList() {
   const workspace = useAccount().workspace.id;
   const canManage = usePermission(workspace, "workflows:manage");
   const [picking, setPicking] = useState(false);
-  const [describing, setDescribing] = useState(false);
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { data: workflows, isPending } = useQuery(workflowsQuery(workspace));
@@ -66,18 +64,12 @@ export function WorkflowList() {
       description="Route conversations, ask the right questions and keep the team's work tidy."
       action={
         canManage ? (
-          <div className="flex items-center gap-2">
-            <Button size="small" variant="secondary" leadingIcon={RiSparkling2Line} onClick={() => setDescribing(true)}>
-              Describe it
-            </Button>
-            <Button size="small" leadingIcon={RiAddLine} onClick={() => setPicking(true)}>
-              New workflow
-            </Button>
-          </div>
+          <Button size="small" leadingIcon={RiAddLine} onClick={() => setPicking(true)}>
+            New workflow
+          </Button>
         ) : null
       }
     >
-      <DraftFromDescription workspace={workspace} kind="workflow" isOpen={describing} onOpenChange={setDescribing} />
       <TriggerPicker
         isOpen={picking}
         onOpenChange={setPicking}

@@ -4,7 +4,6 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 
 	"github.com/dimmihq/dimmi/framework/testkit"
 )
@@ -33,18 +32,8 @@ func (k *desk) lastToolResult() string {
 }
 
 /*
-toolResultAt is what the last tool call before the model call at index
-i returned.
-*/
-func (k *desk) toolResultAt(i int) string {
-	k.t.Helper()
-	sent := k.llm.Sent()[i].Messages
-	return sent[len(sent)-1].Parts[0].Text
-}
-
-/*
-TestOperatorWorkflows covers Operator reading, editing and drafting
-workflows, and explaining what they did.
+TestOperatorWorkflows covers Operator reading and editing workflows,
+and explaining what they did.
 */
 func TestOperatorWorkflows(t *testing.T) {
 	t.Parallel()
@@ -109,38 +98,6 @@ func TestOperatorWorkflows(t *testing.T) {
 		assert.Contains(t, back, "publishing would refuse this")
 		assert.Contains(t, back, "missing_setting: Write the text.")
 		assert.Equal(t, 0, k.count("SELECT count(*) FROM operator_changesets"))
-	})
-
-	t.Run("drafts a new workflow from a description, created only once accepted", func(t *testing.T) {
-		t.Parallel()
-		k := newDesk(t)
-		k.llm.Script(
-			tools(call("get_workflow_reference", map[string]any{"trigger": "sla.breached"})),
-			tools(call("propose_new_workflow", map[string]any{
-				"suggestion_title": "Flag breached SLAs", "reason": "Breaches need a person.",
-				"name": "Breached SLA", "trigger": "sla.breached",
-				"spec": map[string]any{"steps": []map[string]any{
-					{"kind": "priority", "settings": map[string]any{"value": "urgent"}},
-					{"kind": "note", "settings": map[string]any{"text": "SLA breached."}},
-				}},
-			})),
-			reply("Drafted."),
-		)
-
-		res := k.ask(k.thread(""), "When an SLA breaches, mark it urgent and leave a note").AssertOK()
-		reference := k.toolResultAt(1)
-		assert.Contains(t, reference, "- sla.breached: SLA breached.")
-		assert.Contains(t, reference, "- priority: settings {value: string}")
-		assert.NotContains(t, reference, "- conversation.opener:")
-		res.AssertJSONPath("data.changesets.0.operations.0.kind", "workflow.create_draft")
-		assert.Equal(t, 0, k.count("SELECT count(*) FROM workflows WHERE name = 'Breached SLA'"))
-
-		applied := k.d.Owner.PostJSON("/api/v1/operator/changesets/"+res.String("data.changesets.0.id")+
-			"/applications", testkit.JSON{}).AssertOK()
-		created := applied.String("data.operations.0.created_id")
-		require.NotEmpty(t, created)
-		k.d.Owner.GetJSON("/api/v1/workflows/"+created).AssertOK().AssertJSONPath("data.trigger", "sla.breached").
-			AssertJSONPath("data.status", "draft").AssertJSONPath("data.spec.steps.#", float64(2))
 	})
 
 	t.Run("reads the open workflow into the question, and edits on top of its open suggestion", func(t *testing.T) {
@@ -345,36 +302,5 @@ func TestOperatorSeries(t *testing.T) {
 		k.d.Owner.PostJSON("/api/v1/operator/changesets/"+id+"/reversions", testkit.JSON{}).AssertOK().
 			AssertJSONPath("data.operations.0.outcome", "reverted")
 		k.d.Owner.GetJSON("/api/v1/series/"+srs).AssertOK().AssertJSONPath("data.spec.nodes.#", float64(1))
-	})
-
-	t.Run("refuses a message without a body, and drafts a new series once it reads right", func(t *testing.T) {
-		t.Parallel()
-		k := newDesk(t)
-		spec := func(body string) map[string]any {
-			return map[string]any{
-				"nodes": []map[string]any{
-					{"id": "entry", "kind": "entry"},
-					{"id": "hello", "kind": "email", "settings": map[string]any{"subject": "Hi", "body": body}},
-				},
-				"edges": []map[string]any{{"from": "entry", "path": "next", "to": "hello"}},
-			}
-		}
-		k.llm.Script(tools(call("propose_new_series", map[string]any{
-			"suggestion_title": "Welcome series", "reason": "Say hello.", "name": "Welcome", "subject": "contact",
-			"spec": spec(""),
-		})), reply("Could not."))
-		k.ask(k.thread(""), "Draft a welcome series").AssertOK().AssertJSONPath("data.changesets.#", float64(0))
-		assert.Contains(t, k.lastToolResult(), "message_body_missing: Write the message. (step hello, setting body)")
-
-		k.llm.Script(tools(call("propose_new_series", map[string]any{
-			"suggestion_title": "Welcome series", "reason": "Say hello.", "name": "Welcome", "subject": "contact",
-			"spec": spec("Welcome aboard."),
-		})), reply("Drafted."))
-		res := k.ask(k.thread(""), "Draft a welcome series").AssertOK()
-		applied := k.d.Owner.PostJSON("/api/v1/operator/changesets/"+res.String("data.changesets.0.id")+
-			"/applications", testkit.JSON{}).AssertOK()
-		created := applied.String("data.operations.0.created_id")
-		k.d.Owner.GetJSON("/api/v1/series/"+created).AssertOK().AssertJSONPath("data.status", "draft").
-			AssertJSONPath("data.name", "Welcome")
 	})
 }

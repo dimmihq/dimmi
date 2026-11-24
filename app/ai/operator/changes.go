@@ -46,9 +46,7 @@ const (
 	KindProcedureTestCaseNew Kind = "procedure.create_test_case"
 
 	KindWorkflowSet Kind = "workflow.edit_draft"
-	KindWorkflowNew Kind = "workflow.create_draft"
 	KindSeriesSet   Kind = "series.edit_draft"
-	KindSeriesNew   Kind = "series.create_draft"
 )
 
 /*
@@ -58,7 +56,7 @@ func Kinds() []Kind {
 	return []Kind{
 		KindTag, KindUntag, KindAssign, KindPriority, KindStatus, KindTitle, KindNote, KindContact,
 		KindArticleNew, KindArticleEdit, KindProcedureSet, KindAction, KindProcedureTestCaseNew,
-		KindWorkflowSet, KindWorkflowNew, KindSeriesSet, KindSeriesNew,
+		KindWorkflowSet, KindSeriesSet,
 	}
 }
 

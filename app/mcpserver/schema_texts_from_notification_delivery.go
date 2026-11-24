@@ -287,7 +287,7 @@ func schemaTextsFromOperatorOperation() map[string]map[string]string {
 				"for other kinds.",
 			"kind": "What it does: conversation.tag, .untag, .assign, .priority, .status, .title or " +
 				".note, contact.update, article.create_draft, article.edit_draft, procedure.edit_draft, " +
-				"workflow.edit_draft, workflow.create_draft, series.edit_draft, series.create_draft or " +
+				"workflow.edit_draft, series.edit_draft or " +
 				"action.run.",
 			"label": "One line saying what the operation does, for a reviewer to read.",
 			"outcome": "What became of it: applied, reverted or skipped. Left out until the changeset " +

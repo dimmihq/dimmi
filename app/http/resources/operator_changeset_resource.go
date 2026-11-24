@@ -150,13 +150,8 @@ func created(op operator.Operation) *string {
 	if op.Created == nil {
 		return nil
 	}
-	switch op.Kind {
-	case operator.KindNote:
+	if op.Kind == operator.KindNote {
 		return optionalID(models.PrefixMessage, op.Created)
-	case operator.KindWorkflowNew:
-		return optionalID(models.PrefixWorkflow, op.Created)
-	case operator.KindSeriesNew:
-		return optionalID(models.PrefixSeries, op.Created)
 	}
 	return optionalID(models.PrefixArticle, op.Created)
 }

@@ -5,7 +5,7 @@
  * goal, published ones first. Totals across them sit on top. A new series starts from a template, for contacts or for
  * whole accounts, and opens in its builder.
  */
-import { RiAddLine, RiBuilding2Line, RiFlowChart, RiSparkling2Line, RiUser3Line } from "@remixicon/react";
+import { RiAddLine, RiBuilding2Line, RiFlowChart, RiUser3Line } from "@remixicon/react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
@@ -19,7 +19,6 @@ import { RadioCard } from "@/components/base/radio/radio-card";
 import { toast } from "@/components/base/toast/toast";
 import { KindMark, ListPage, OpenRow } from "@/features/automation/parts";
 import { useWorkspace } from "@/features/customers/names";
-import { DraftFromDescription } from "@/features/operator/draft-from-description";
 import { Item, Section } from "@/features/settings/layout";
 import { createSeries, type Series, type SeriesSubject, seriesListQuery } from "@/lib/api/series";
 import { formatNumber } from "@/lib/i18n/format";
@@ -178,7 +177,6 @@ function NewSeries({ workspace, onClose }: { workspace: string; onClose: () => v
 export function SeriesList() {
   const workspace = useWorkspace();
   const [making, setMaking] = useState(false);
-  const [describing, setDescribing] = useState(false);
   const list = useQuery(seriesListQuery(workspace));
   const all = list.data ?? [];
   const published = all.filter((series) => series.status === "live" || series.status === "paused");
@@ -190,17 +188,11 @@ export function SeriesList() {
       title="Series"
       description="Messages that reach people on their own, step by step, over days or weeks."
       action={
-        <div className="flex items-center gap-2">
-          <Button size="small" variant="secondary" leadingIcon={RiSparkling2Line} onClick={() => setDescribing(true)}>
-            Describe it
-          </Button>
-          <Button size="small" leadingIcon={RiAddLine} onClick={() => setMaking(true)}>
-            New series
-          </Button>
-        </div>
+        <Button size="small" leadingIcon={RiAddLine} onClick={() => setMaking(true)}>
+          New series
+        </Button>
       }
     >
-      <DraftFromDescription workspace={workspace} kind="series" isOpen={describing} onOpenChange={setDescribing} />
       {all.length > 0 ? <Totals list={all} /> : null}
       <Section
         title="Published"

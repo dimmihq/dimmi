@@ -3,8 +3,8 @@
 | Proposing Workflows And Series
 |--------------------------------------------------------------------------
 |
-| Operator suggests a change to a workflow's or a series' working copy,
-| or a whole new draft, as a changeset the teammate reviews in the
+| Operator suggests a change to a workflow's or a series' working copy
+| as a changeset the teammate reviews in the
 | builder. Edits are applied to the working copy (or to the suggestion
 | the teammate has open on it), and the result is checked the way
 | publishing checks it: an edit that adds a problem publishing would
@@ -28,38 +28,13 @@ import (
 
 /*
 automationInput is a proposal about a workflow or a series: which one,
-or the name and trigger or subject of a new one, and either a whole
-spec or edits to the working copy.
+and either a whole spec or edits to the working copy.
 */
 type automationInput struct {
-	ID          string
-	Name        string
-	Description string
-	Trigger     string
-	Subject     string
-	Spec        json.RawMessage
-	Workflow    []workflowEdit
-	Series      []seriesEdit
-}
-
-/*
-newWorkflowDraft is the draft a new workflow starts as, kept on its
-operation until a teammate accepts it.
-*/
-type newWorkflowDraft struct {
-	Name        string          `json:"name"`
-	Description string          `json:"description,omitempty"`
-	Trigger     string          `json:"trigger"`
-	Spec        json.RawMessage `json:"spec"`
-}
-
-/*
-newSeriesDraft is the draft a new series starts as.
-*/
-type newSeriesDraft struct {
-	Name    string          `json:"name"`
-	Subject string          `json:"subject"`
-	Spec    json.RawMessage `json:"spec"`
+	ID       string
+	Spec     json.RawMessage
+	Workflow []workflowEdit
+	Series   []seriesEdit
 }
 
 /*
@@ -67,9 +42,7 @@ Tool names of the automation proposals.
 */
 const (
 	toolWorkflowEdit = "propose_workflow_edit"
-	toolWorkflowNew  = "propose_new_workflow"
 	toolSeriesEdit   = "propose_series_edit"
-	toolSeriesNew    = "propose_new_series"
 )
 
 /*
@@ -116,20 +89,6 @@ const workflowEditSchema = `{"type":"object","required":["suggestion_title","rea
 }}`
 
 /*
-workflowNewSchema is the schema of propose_new_workflow.
-*/
-const workflowNewSchema = `{"type":"object","required":["suggestion_title","reason","name","trigger","spec"],
-"properties":{
-` + suggestionArgs + `,
-"name":{"type":"string","maxLength":80,"description":"The workflow's name, unlike any other workflow's."},
-"description":{"type":"string","maxLength":500,"description":"What it is for, in one line."},
-"trigger":{"type":"string","description":"The trigger key it starts on, such as conversation.first_message. It ` +
-	`never changes later."},
-"spec":{"type":"object","description":"The whole definition: {trigger, trigger_settings, channels, audience, ` +
-	`schedule, reentry, exclusive, steps}. Leave the ids of steps and paths out."}
-}}`
-
-/*
 seriesEditSchema is the schema of propose_series_edit.
 */
 const seriesEditSchema = `{"type":"object","required":["suggestion_title","reason","series_id"],"properties":{
@@ -156,19 +115,6 @@ const seriesEditSchema = `{"type":"object","required":["suggestion_title","reaso
 }}`
 
 /*
-seriesNewSchema is the schema of propose_new_series.
-*/
-const seriesNewSchema = `{"type":"object","required":["suggestion_title","reason","name","subject","spec"],
-"properties":{
-` + suggestionArgs + `,
-"name":{"type":"string","maxLength":120,"description":"The series' name, unlike any other series'."},
-"subject":{"type":"string","enum":["contact","company"],"description":"Who travels it. It never changes later."},
-"spec":{"type":"object","description":"The whole definition: {entry, exit, goal, quiet_hours, nodes, edges}. ` +
-	`nodes holds the step with the id entry and kind entry, then each step {id, kind, settings}; edges joins them, ` +
-	`{from, path, to}."}
-}}`
-
-/*
 automationTools are the tools that suggest workflow and series changes.
 */
 func (e *Engine) automationTools() []tool {
@@ -182,13 +128,7 @@ func (e *Engine) automationTools() []tool {
 					"would check it, and shows on the teammate's builder for them to accept. Call it once per " +
 					"workflow.",
 				Schema: schema(workflowEditSchema),
-			}, writes: []Kind{KindWorkflowSet}, handle: e.proposeWorkflowEdit},
-			tool{spec: contracts.ToolSpec{
-				Name: toolWorkflowNew,
-				Description: "Suggest a new draft workflow from what the teammate described. It is checked as " +
-					"publishing would check it; accepting it creates the draft, which runs only once published.",
-				Schema: schema(workflowNewSchema),
-			}, writes: []Kind{KindWorkflowNew}, handle: e.proposeNewWorkflow})
+			}, writes: []Kind{KindWorkflowSet}, handle: e.proposeWorkflowEdit})
 	}
 	if e.Services.Series != nil {
 		out = append(out,
@@ -198,13 +138,7 @@ func (e *Engine) automationTools() []tool {
 					"or cut paths, or change who enters, what makes them leave and the goal. It is checked as " +
 					"publishing would check it, and shows on the teammate's builder for them to accept.",
 				Schema: schema(seriesEditSchema),
-			}, writes: []Kind{KindSeriesSet}, handle: e.proposeSeriesEdit},
-			tool{spec: contracts.ToolSpec{
-				Name: toolSeriesNew,
-				Description: "Suggest a new draft series from what the teammate described. It is checked as " +
-					"publishing would check it; accepting it creates the draft, which sends nothing until published.",
-				Schema: schema(seriesNewSchema),
-			}, writes: []Kind{KindSeriesNew}, handle: e.proposeNewSeries})
+			}, writes: []Kind{KindSeriesSet}, handle: e.proposeSeriesEdit})
 	}
 	return out
 }
@@ -213,17 +147,13 @@ func (e *Engine) automationTools() []tool {
 automationArgs are the arguments every automation proposal reads.
 */
 type automationArgs struct {
-	Title       string          `json:"suggestion_title"`
-	Reason      string          `json:"reason"`
-	DedupKey    string          `json:"dedup_key"`
-	WorkflowID  string          `json:"workflow_id"`
-	SeriesID    string          `json:"series_id"`
-	Name        string          `json:"name"`
-	Description string          `json:"description"`
-	Trigger     string          `json:"trigger"`
-	Subject     string          `json:"subject"`
-	Spec        json.RawMessage `json:"spec"`
-	Edits       json.RawMessage `json:"edits"`
+	Title      string          `json:"suggestion_title"`
+	Reason     string          `json:"reason"`
+	DedupKey   string          `json:"dedup_key"`
+	WorkflowID string          `json:"workflow_id"`
+	SeriesID   string          `json:"series_id"`
+	Spec       json.RawMessage `json:"spec"`
+	Edits      json.RawMessage `json:"edits"`
 }
 
 /*
@@ -234,10 +164,7 @@ func (e *Engine) proposeAutomation(ctx context.Context, s *session, args json.Ra
 	if err := decode(args, &in); err != nil {
 		return result{}, err
 	}
-	a := &automationInput{
-		ID: either(in.WorkflowID, in.SeriesID), Name: in.Name, Description: in.Description, Trigger: in.Trigger,
-		Subject: in.Subject, Spec: objectArg(in.Spec),
-	}
+	a := &automationInput{ID: either(in.WorkflowID, in.SeriesID), Spec: objectArg(in.Spec)}
 	if edits := listArg(in.Edits); len(edits) > 0 {
 		var err error
 		if kind == KindSeriesSet {
@@ -258,16 +185,8 @@ func (e *Engine) proposeWorkflowEdit(ctx context.Context, s *session, args json.
 	return e.proposeAutomation(ctx, s, args, KindWorkflowSet)
 }
 
-func (e *Engine) proposeNewWorkflow(ctx context.Context, s *session, args json.RawMessage) (result, error) {
-	return e.proposeAutomation(ctx, s, args, KindWorkflowNew)
-}
-
 func (e *Engine) proposeSeriesEdit(ctx context.Context, s *session, args json.RawMessage) (result, error) {
 	return e.proposeAutomation(ctx, s, args, KindSeriesSet)
-}
-
-func (e *Engine) proposeNewSeries(ctx context.Context, s *session, args json.RawMessage) (result, error) {
-	return e.proposeAutomation(ctx, s, args, KindSeriesNew)
 }
 
 /*

@@ -155,9 +155,9 @@ function TriggerSettings({ spec, head }: { spec: Spec; head: Head }) {
   return (
     <>
       <Section title="Name">
-        <Row label="Name">
-          <Field label="Workflow name" value={head.name} onChange={head.onRename} />
-        </Row>
+        <div className="py-2.5 pe-2.5">
+          <Field label="Workflow name" value={head.name} width="w-full" onChange={head.onRename} />
+        </div>
       </Section>
       <Section
         title="When it starts"

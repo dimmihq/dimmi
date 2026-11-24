@@ -17,7 +17,6 @@ import (
 	"context"
 
 	"github.com/dimmihq/dimmi/framework/database"
-	"github.com/dimmihq/dimmi/framework/ids"
 
 	"github.com/dimmihq/dimmi/app/auth/authz"
 	"github.com/dimmihq/dimmi/app/exceptions"
@@ -58,22 +57,4 @@ func (w *Workflows) CheckDraft(ctx context.Context, m authz.Membership, wf model
 	})
 
 	return report, err
-}
-
-/*
-NameTaken reports whether another workflow of the workspace has the
-name.
-*/
-func (w *Workflows) NameTaken(ctx context.Context, m authz.Membership, name string) (bool, error) {
-	var taken bool
-	err := w.DB.Transaction(ctx, func(ctx context.Context, tx *database.Tx) error {
-		var err error
-		taken, err = models.New(tx).WorkflowNameTaken(ctx, models.WorkflowNameTakenParams{
-			WorkspaceID: m.Workspace.ID, Name: name, ID: ids.Nil(),
-		})
-
-		return err
-	})
-
-	return taken, err
 }

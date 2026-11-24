@@ -134,7 +134,7 @@ func ownGroups() []toolset.Group {
 		{Name: groupChanges, Line: "draft replies, propose changes the teammate applies, remember notes"},
 		{Name: groupActions, Line: "the workspace's own actions on its systems"},
 		{Name: groupAutomation, Line: "workflows and series: read them, explain what workflows did on a " +
-			"conversation and what series did with a person, suggest edits and new drafts"},
+			"conversation and what series did with a person, suggest edits"},
 	}
 }
 

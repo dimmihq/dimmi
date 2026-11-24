@@ -32,19 +32,13 @@ automationOp checks a workflow or series operation by its kind.
 */
 func (r resolver) automationOp(ctx context.Context, in opInput) (Operation, error) {
 	if in.auto == nil {
-		return Operation{}, fmt.Errorf("%w: suggest workflow and series changes with %s, %s, %s or %s",
-			errBadArguments, toolWorkflowEdit, toolWorkflowNew, toolSeriesEdit, toolSeriesNew)
+		return Operation{}, fmt.Errorf("%w: suggest workflow and series changes with %s or %s",
+			errBadArguments, toolWorkflowEdit, toolSeriesEdit)
 	}
-	switch in.Kind {
-	case KindWorkflowSet:
+	if in.Kind == KindWorkflowSet {
 		return r.workflowOp(ctx, *in.auto)
-	case KindWorkflowNew:
-		return r.newWorkflowOp(ctx, *in.auto)
-	case KindSeriesSet:
-		return r.seriesOp(ctx, *in.auto)
-	default:
-		return r.newSeriesOp(ctx, *in.auto)
 	}
+	return r.seriesOp(ctx, *in.auto)
 }
 
 /*
@@ -107,8 +101,8 @@ func (r resolver) checkedEdit(ctx context.Context, wf models.Workflow, base, nex
 ) (json.RawMessage, workflowspec.Report, error) {
 	if next.Trigger != wf.Trigger {
 		return nil, workflowspec.Report{}, fmt.Errorf("%w: a workflow's trigger never changes; this one starts "+
-			"on %s. To start on %s, draft a new workflow with %s", errBadArguments, wf.Trigger, next.Trigger,
-			toolWorkflowNew)
+			"on %s. To start on %s, a teammate makes a new workflow on that trigger", errBadArguments, wf.Trigger,
+			next.Trigger)
 	}
 	raw, err := canonicalWorkflow(&next)
 	if err != nil {
@@ -130,88 +124,6 @@ func (r resolver) checkedEdit(ctx context.Context, wf models.Workflow, base, nex
 		return nil, after, refusedWorkflow(added, next)
 	}
 	return raw, after, nil
-}
-
-/*
-newWorkflowOp checks a new draft workflow.
-*/
-func (r resolver) newWorkflowOp(ctx context.Context, a automationInput) (Operation, error) {
-	op := Operation{Kind: KindWorkflowNew}
-	if !r.s.m.Can("workflows:manage") {
-		return op, exceptions.ErrForbidden
-	}
-	name, err := r.freeWorkflowName(ctx, a.Name)
-	if err != nil {
-		return op, err
-	}
-	spec, err := newWorkflowSpec(a)
-	if err != nil {
-		return op, err
-	}
-	raw, err := canonicalWorkflow(&spec)
-	if err != nil {
-		return op, err
-	}
-	report, err := r.e.Services.Workflows.CheckDraft(ctx, r.s.m, models.Workflow{Trigger: spec.Trigger}, spec)
-	if err != nil {
-		return op, err
-	}
-	if len(report.Errors) > 0 {
-		return op, refusedWorkflow(report.Errors, spec)
-	}
-	op.Definition = rawJSON(newWorkflowDraft{
-		Name: name, Description: strings.TrimSpace(a.Description), Trigger: spec.Trigger, Spec: raw,
-	})
-	op.Label = fmt.Sprintf("Draft a new workflow “%s”", name)
-	op.Note = "\nThe workflow would read:\n" + workflowOutline(spec) + reportText(report)
-	return op, nil
-}
-
-/*
-freeWorkflowName is a new workflow's name, refused when it is empty,
-too long or taken.
-*/
-func (r resolver) freeWorkflowName(ctx context.Context, name string) (string, error) {
-	name = strings.TrimSpace(name)
-	if name == "" || len([]rune(name)) > 80 {
-		return "", fmt.Errorf("%w: give the workflow a name of 1 to 80 characters", errBadArguments)
-	}
-	taken, err := r.e.Services.Workflows.NameTaken(ctx, r.s.m, name)
-	if err != nil {
-		return "", err
-	}
-	if taken {
-		return "", fmt.Errorf("%w: another workflow is called %q; pick another name", errBadArguments, name)
-	}
-	return name, nil
-}
-
-/*
-newWorkflowSpec reads a new workflow's definition, with its trigger and
-the trigger's defaults.
-*/
-func newWorkflowSpec(a automationInput) (workflowspec.Spec, error) {
-	if len(a.Spec) == 0 {
-		return workflowspec.Spec{}, fmt.Errorf("%w: give the whole definition as spec", errBadArguments)
-	}
-	spec, err := workflowspec.Parse(a.Spec)
-	if err != nil {
-		return spec, specRefusal(err)
-	}
-	trigger := strings.TrimSpace(a.Trigger)
-	spec.Trigger = either(spec.Trigger, trigger)
-	t, ok := workflowspec.FindTrigger(spec.Trigger)
-	if !ok || (trigger != "" && trigger != spec.Trigger) {
-		return spec, fmt.Errorf("%w: give one trigger key that exists, the same in trigger and spec; "+
-			"get_workflow_reference lists them", errBadArguments)
-	}
-	if spec.Schedule.Mode == "" {
-		spec.Schedule.Mode = "any"
-	}
-	if spec.Reentry.Mode == "" {
-		spec.Reentry.Mode = t.Default
-	}
-	return spec, nil
 }
 
 /*

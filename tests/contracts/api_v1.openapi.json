@@ -26338,7 +26338,7 @@
             "type": "string"
           },
           "kind": {
-            "description": "What it does: conversation.tag, .untag, .assign, .priority, .status, .title or .note, contact.update, article.create_draft, article.edit_draft, procedure.edit_draft, workflow.edit_draft, workflow.create_draft, series.edit_draft, series.create_draft or action.run.",
+            "description": "What it does: conversation.tag, .untag, .assign, .priority, .status, .title or .note, contact.update, article.create_draft, article.edit_draft, procedure.edit_draft, workflow.edit_draft, series.edit_draft or action.run.",
             "type": "string"
           },
           "label": {
