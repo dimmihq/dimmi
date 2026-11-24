@@ -83,6 +83,7 @@ func bootAI(ctx context.Context, a *app.App) error {
 	}
 
 	a.Actions.AI = aiActions(a, runner, runner.Prices)
+	bootWorkflowSims(a, runner)
 	a.WorkspaceInitializers.Register(&ai.EnsureAI{Agents: a.Actions.AI.Agents})
 
 	events.Listen(a.Events, events.AfterCommit, func(ctx context.Context, e appevents.MessageCreated) error {

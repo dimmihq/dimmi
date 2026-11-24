@@ -125,6 +125,7 @@ func featureRoutes(workspace *routing.Router, a *app.App) {
 	importRoutes(workspace, a)
 	broadcastRoutes(workspace, a)
 	seriesRoutes(workspace, a)
+	simulationRoutes(workspace, a)
 	knowledgeSourceRoutes(workspace, a)
 	webhookEndpointRoutes(workspace, a)
 	attributeRoutes(workspace, a)

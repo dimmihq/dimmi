@@ -55,6 +55,7 @@ import (
 	"github.com/dimmihq/dimmi/app/actions/users"
 	"github.com/dimmihq/dimmi/app/actions/webhooks"
 	"github.com/dimmihq/dimmi/app/actions/workflows"
+	"github.com/dimmihq/dimmi/app/actions/workflowsims"
 	"github.com/dimmihq/dimmi/app/actions/workspaces"
 	engine "github.com/dimmihq/dimmi/app/workflows"
 )
@@ -175,6 +176,7 @@ type Actions struct {
 	Events                     *events.Events
 	ContactLists               *contactlists.Lists
 	WorkflowEngine             *engine.Engine
+	WorkflowSims               *workflowsims.Simulations
 	ShowAccessPolicy           *accesspolicy.ShowAccessPolicy
 	UpdateAccessPolicy         *accesspolicy.UpdateAccessPolicy
 	ClearAccessPolicy          *accesspolicy.ClearAccessPolicy

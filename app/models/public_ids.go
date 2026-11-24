@@ -442,6 +442,8 @@ const (
 	PrefixWorkflow        Prefix = "wf"
 	PrefixWorkflowVersion Prefix = "wfv"
 	PrefixWorkflowRun     Prefix = "wfr"
+	PrefixWorkflowSim     Prefix = "wfs"
+	PrefixWorkflowSimRun  Prefix = "wfsr"
 	PrefixSchedule        Prefix = "sch"
 	PrefixSLAPolicy       Prefix = "sla"
 	PrefixProcedure       Prefix = "prc"
@@ -462,6 +464,8 @@ func workflowPublicIDs() []PublicIDEntry {
 		{PrefixWorkflow, "workflows"},
 		{PrefixWorkflowVersion, "workflow_versions"},
 		{PrefixWorkflowRun, "workflow_runs"},
+		{PrefixWorkflowSim, "workflow_simulations"},
+		{PrefixWorkflowSimRun, "workflow_simulation_runs"},
 		{PrefixSchedule, "schedules"},
 		{PrefixSLAPolicy, "sla_policies"},
 		{PrefixProcedure, "procedures"},

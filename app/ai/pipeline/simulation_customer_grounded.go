@@ -36,7 +36,7 @@ ownWords reports whether a move is a message the customer's model
 wrote itself, which is what has to be held to the scenario.
 */
 func ownWords(move CustomerMove) bool {
-	return move.Message != "" && move.Saved == 0
+	return move.Message != "" && move.Saved == 0 && move.Choice == 0
 }
 
 /*
