@@ -81,6 +81,7 @@ type Runner struct {
 
 	ProcedureVectors ProcedureVectors
 
+	prepared sync.Once
 	redactor *pii.Redactor
 	guard    *linkguard.Guard
 
@@ -158,18 +159,23 @@ func (r *Runner) RunConversationTurn(ctx context.Context, args Args, settings *T
 }
 
 /*
-prepare fills the defaults a zero-configured runner lacks.
+prepare fills the defaults a zero-configured runner lacks, once. One
+runner answers every conversation, so two turns starting together both
+get here; filling the defaults unguarded let each write what the other
+was reading.
 */
 func (r *Runner) prepare() {
-	if r.Clock == nil {
-		r.Clock = clock.System()
-	}
-	if r.redactor == nil {
-		r.redactor = pii.New()
-	}
-	if r.guard == nil {
-		r.guard = linkguard.New()
-	}
+	r.prepared.Do(func() {
+		if r.Clock == nil {
+			r.Clock = clock.System()
+		}
+		if r.redactor == nil {
+			r.redactor = pii.New()
+		}
+		if r.guard == nil {
+			r.guard = linkguard.New()
+		}
+	})
 }
 
 /*
