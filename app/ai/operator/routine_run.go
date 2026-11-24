@@ -254,7 +254,11 @@ question, and its AI run, and marks the run as running.
 func (e *Engine) startRoutine(ctx context.Context, q *models.Queries, s *session) error {
 	r := s.routine
 	now := e.Clock.Now()
-	s.question = e.renderPrompt(s, now)
+	question, err := e.spellOut(ctx, s.m.Workspace.ID, e.renderPrompt(s, now))
+	if err != nil {
+		return err
+	}
+	s.question = question
 	title := truncate(r.row.Name+" · "+now.In(location(r.row.Timezone)).Format("2006-01-02"), 200)
 	if r.dryRun {
 		title = truncate("Dry run · "+title, 200)

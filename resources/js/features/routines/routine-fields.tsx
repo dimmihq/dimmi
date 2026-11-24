@@ -14,7 +14,6 @@ import { ComboBox, ComboBoxItem } from "@/components/base/combobox/combobox";
 import { Input } from "@/components/base/input/input";
 import { SegmentedControl, SegmentedControlItem } from "@/components/base/segmented-control/segmented-control";
 import { Select, SelectItem } from "@/components/base/select/select";
-import { Textarea } from "@/components/base/textarea/textarea";
 import { MultiPick } from "@/features/automation/pick";
 import { Action } from "@/features/settings/controls";
 import { Row, Section } from "@/features/settings/layout";
@@ -26,7 +25,9 @@ import type { NotifyPolicy, RoutineCadence } from "@/lib/api/routines";
 import { membersQuery } from "@/lib/api/workspace";
 
 import type { NotifyChannel, RoutineDraft } from "./draft";
+import { RoutineWriter } from "./routine-writer";
 import { ordinal, summarize, type Timing, WEEKDAYS } from "./timing";
+import { useMentionables } from "./use-mentionables";
 
 type Change = (next: RoutineDraft) => void;
 
@@ -72,7 +73,7 @@ export function RoutineFields({
 }) {
   return (
     <fieldset disabled={disabled} className="flex min-w-0 flex-col gap-8">
-      <Basics draft={draft} onChange={onChange} />
+      <Basics workspace={workspace} draft={draft} disabled={disabled} onChange={onChange} />
       <When draft={draft} onChange={onChange} />
       <Reads workspace={workspace} draft={draft} onChange={onChange} />
       <Delivery workspace={workspace} draft={draft} onChange={onChange} />
@@ -80,7 +81,19 @@ export function RoutineFields({
   );
 }
 
-function Basics({ draft, onChange }: { draft: RoutineDraft; onChange: Change }) {
+function Basics({
+  workspace,
+  draft,
+  disabled,
+  onChange,
+}: {
+  workspace: string;
+  draft: RoutineDraft;
+  disabled: boolean;
+  onChange: Change;
+}) {
+  const known = useMentionables(workspace);
+
   return (
     <>
       <Section title="Name">
@@ -97,16 +110,15 @@ function Basics({ draft, onChange }: { draft: RoutineDraft; onChange: Change }) 
       </Section>
       <Section
         title="What should Operator do?"
-        description="Say it the way you would ask a teammate. Operator works out how, and suggests changes for you to review."
+        description="Say it the way you would ask a teammate. Type @ to name a team, a teammate, a tag or an article."
       >
         <div className="py-2.5 pe-2.5">
-          <Textarea
-            aria-label="What should Operator do?"
-            value={draft.prompt}
+          <RoutineWriter
+            label="What should Operator do?"
+            markdown={draft.prompt}
+            known={known}
+            readOnly={disabled}
             placeholder="Find the questions customers asked this week that our help center does not answer, and draft articles for them."
-            rows={3}
-            autoResize
-            maxRows={16}
             onChange={(prompt) => onChange({ ...draft, prompt })}
           />
         </div>
