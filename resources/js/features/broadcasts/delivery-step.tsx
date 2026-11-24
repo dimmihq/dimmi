@@ -123,7 +123,7 @@ function RepliesSection({ workspace, draft, onChange }: StepProps) {
             label="Answered by"
             options={agents}
             value={draft.reply_agent_id ?? null}
-            placeholder="The agent placed on the channel"
+            placeholder="Agent on the channel"
             onChange={(reply_agent_id) => onChange({ reply_agent_id })}
           />
         </Row>

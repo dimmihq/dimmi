@@ -350,10 +350,7 @@ function SendingSettings({
           <Pick
             label="Answered by"
             value={sending.reply_agent_id || "placed"}
-            options={[
-              ["placed", "The agent placed on the channel"],
-              ...agents.map((a): [string, string] => [a.id, a.name]),
-            ]}
+            options={[["placed", "Agent on the channel"], ...agents.map((a): [string, string] => [a.id, a.name])]}
             onChange={(id) => set({ reply_agent_id: id === "placed" ? "" : id })}
             disabled={!editable}
           />

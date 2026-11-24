@@ -39,6 +39,7 @@ import (
 	"github.com/dimmihq/dimmi/framework/ids"
 
 	"github.com/dimmihq/dimmi/app/actions/audiences"
+	"github.com/dimmihq/dimmi/app/actions/broadcasts"
 	"github.com/dimmihq/dimmi/app/ai/actionkit"
 	"github.com/dimmihq/dimmi/app/ai/aidecision"
 	"github.com/dimmihq/dimmi/app/auth/authz"
@@ -100,6 +101,7 @@ type simRun struct {
 	out      *SimTrace
 	variants string
 	tags     map[string]bool
+	vars     map[string]string
 }
 
 /*
@@ -146,14 +148,19 @@ func (r *simRun) load(ctx context.Context) error {
 		r.g = compile(spec)
 		if r.in.ContactID == nil {
 			r.person = madeUpPerson(r.ws, *r.in.Person)
-			return nil
+		} else {
+			c, err := q.FindContact(ctx, models.FindContactParams{WorkspaceID: r.ws, ID: *r.in.ContactID})
+			if err != nil {
+				return notFound(err, "find contact")
+			}
+			r.person, r.variants = c, c.ID.String()
 		}
-		c, err := q.FindContact(ctx, models.FindContactParams{WorkspaceID: r.ws, ID: *r.in.ContactID})
+		row, err := find(ctx, q, r.ws, r.in.ID)
 		if err != nil {
-			return notFound(err, "find contact")
+			return err
 		}
-		r.person, r.variants = c, c.ID.String()
-		return nil
+		r.vars, err = broadcasts.PreviewVariables(ctx, q, row.SenderMemberID, r.person)
+		return err
 	})
 }
 
@@ -349,7 +356,8 @@ func (r *simRun) message(n Node) outcome {
 		return outcome{end: "undeliverable", result: "not_sent", details: details}
 	}
 	r.out.Messages = append(r.out.Messages, SimMessage{
-		NodeID: n.ID, Kind: n.Kind, To: to, Subject: m.Subject, Body: m.Body,
+		NodeID: n.ID, Kind: n.Kind, To: to,
+		Subject: broadcasts.FillVariables(m.Subject, r.vars), Body: broadcasts.FillVariables(m.Body, r.vars),
 	})
 	return outcome{path: PathNext, result: "would_send"}
 }

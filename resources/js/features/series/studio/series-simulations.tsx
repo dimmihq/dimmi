@@ -77,7 +77,13 @@ function ContactPick({
       inputValue={query}
       onInputChange={setQuery}
       selectedKey={value || null}
-      onSelectionChange={(key) => onChange(key ? String(key) : "")}
+      onSelectionChange={(key) => {
+        const picked = people.find((p) => p.id === key);
+        if (picked) {
+          setQuery(picked.name || picked.email || picked.id);
+        }
+        onChange(key ? String(key) : "");
+      }}
     >
       {(person) => {
         const name = person.name || person.email || person.id;
@@ -161,9 +167,9 @@ function Doing({
   onEngaged: (engaged: Engagement[]) => void;
   onEvents: (events: string[]) => void;
 }) {
-  const defined = (useQuery({ ...eventsQuery(workspace), retry: false }).data ?? []).filter(
-    (e) => e.status === "active" && !events.includes(e.name),
-  );
+  const all = useQuery({ ...eventsQuery(workspace), retry: false }).data ?? [];
+  const defined = all.filter((e) => e.status === "active" && !events.includes(e.name));
+  const labelOf = (name: string) => all.find((e) => e.name === name)?.label || name;
 
   return (
     <div className="flex flex-col gap-2.5">
@@ -184,7 +190,7 @@ function Doing({
         <span className="flex flex-wrap gap-1">
           {events.map((name) => (
             <Chip key={name} variant="caption" color="neutral" className="py-0.5">
-              Does {name}
+              {labelOf(name)}
             </Chip>
           ))}
         </span>

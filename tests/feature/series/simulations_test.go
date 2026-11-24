@@ -27,7 +27,7 @@ func TestSeriesDrySimulations(t *testing.T) {
 					"id": "opened", "label": "Opened",
 					"engagement": testkit.JSON{"node": "welcome", "action": "opened"},
 				}}}},
-				email("nudge", "Did you see this?"),
+				email("nudge", `{{ contact.first_name | default: "Hey" }}, did you see this?`),
 			},
 			"edges": []testkit.JSON{
 				edge("entry", "", "welcome"), edge("welcome", "", "wait"), edge("wait", "", "check"),
@@ -44,7 +44,7 @@ func TestSeriesDrySimulations(t *testing.T) {
 		res.AssertJSONPath("data.steps.2.skipped", true)
 		res.AssertJSONPath("data.steps.3.path", "else")
 		res.AssertJSONPath("data.messages.#", 2)
-		res.AssertJSONPath("data.messages.1.subject", "Did you see this?")
+		res.AssertJSONPath("data.messages.1.subject", "Ada, did you see this?")
 		res.AssertJSONPath("data.end", "finished")
 		assert.Equal(t, 0, mailCount(t, "ada@example.com"), "a dry simulation sends nothing")
 
