@@ -12,7 +12,7 @@ const PRODUCTION_INGRESS = STAGING_INGRESS;
 
 const staging: EnvironmentConfig = {
   name: "staging",
-  region: "us-east-2",
+  region: "eu-west-1",
   host: "staging.trydimmi.com",
   dnsZone: "trydimmi.com",
   mail: { inbound: "inbound.staging.trydimmi.com", system: "mail.staging.trydimmi.com" },

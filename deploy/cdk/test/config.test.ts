@@ -7,7 +7,7 @@ describe("environment config", () => {
   const staging = environments.staging;
 
   it("staging and production keep their mail in different regions", () => {
-    expect(environments.staging.region).toBe("us-east-2");
+    expect(environments.staging.region).toBe("eu-west-1");
     expect(environments.production.region).toBe("eu-central-1");
   });
 

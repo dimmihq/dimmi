@@ -240,7 +240,7 @@ describe("mail stack", () => {
     ]) {
       expect(output).toContain(name);
     }
-    expect(output).toContain("inbound-smtp.us-east-2.amazonaws.com");
+    expect(output).toContain("inbound-smtp.eu-west-1.amazonaws.com");
     expect(output).toContain("DkimDNSTokenName3");
   });
 
