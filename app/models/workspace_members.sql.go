@@ -670,9 +670,11 @@ SELECT
     m.workspace_name::text AS workspace_name,
     m.workspace_slug::citext AS workspace_slug,
     m.role::text AS role,
-    coalesce(p.previous_slugs, '[]'::jsonb)::jsonb AS previous_slugs
+    coalesce(p.previous_slugs, '[]'::jsonb)::jsonb AS previous_slugs,
+    coalesce(l.logo_path, '')::text AS logo_path
 FROM auth_user_memberships($1) AS m
 LEFT JOIN auth_user_previous_slugs($1) AS p ON p.workspace_id = m.workspace_id
+LEFT JOIN auth_user_workspace_logos($1) AS l ON l.workspace_id = m.workspace_id
 WHERE m.status = 'active' AND m.deleted_at IS NULL
 `
 
@@ -683,11 +685,12 @@ type ListUserWorkspacesRow struct {
 	WorkspaceSlug string          `json:"workspace_slug"`
 	Role          string          `json:"role"`
 	PreviousSlugs json.RawMessage `json:"previous_slugs"`
+	LogoPath      string          `json:"logo_path"`
 }
 
 // ListUserWorkspaces returns the live workspaces the user is an active
 // member of, the one used most recently first, with the slugs each gave
-// up and still holds. It runs before any workspace is chosen, through
+// up and still holds and its logo. It runs before any workspace is chosen, through
 // security definer functions.
 func (q *Queries) ListUserWorkspaces(ctx context.Context, userID ids.UUID) ([]ListUserWorkspacesRow, error) {
 	rows, err := q.db.Query(ctx, listUserWorkspaces, userID)
@@ -705,6 +708,7 @@ func (q *Queries) ListUserWorkspaces(ctx context.Context, userID ids.UUID) ([]Li
 			&i.WorkspaceSlug,
 			&i.Role,
 			&i.PreviousSlugs,
+			&i.LogoPath,
 		); err != nil {
 			return nil, err
 		}
