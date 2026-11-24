@@ -191,5 +191,4 @@ Workflows and series get the agent studio's shell: Build, Analytics and History 
 
 ### Left for later
 
-- A/B paths inside workflows.
 - Simulating the Extract and Run an action steps beyond recording them, a customer interrupting a wait, and a called workflow's own steps.
