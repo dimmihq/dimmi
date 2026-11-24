@@ -123,7 +123,7 @@ const tieKinds: Record<AgentTie["kind"], string> = {
   connection: "Answers on",
   room: "Answers in",
   inbox: "Answers in the inbox",
-  agent: "Transfers to it",
+  agent: "Can transfer to it",
 };
 
 /*
