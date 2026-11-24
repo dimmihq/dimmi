@@ -217,10 +217,44 @@ func assignSteps(steps []Step) []Step {
 			s.Paths = paths
 		}
 
+		s.Paths = withOpenPaths(s)
 		out[i] = s
 	}
 
 	return out
+}
+
+/*
+openPaths are the fixed paths a step of a kind always shows, so steps can
+follow each outcome: every outcome of an agent step, and the outcomes
+every step of its kind must have.
+*/
+func openPaths(k Kind) []string {
+	if k.Key == KindDimmi {
+		return k.Fixed
+	}
+
+	return k.Required
+}
+
+/*
+withOpenPaths adds the open paths a step leaves out, empty, so a step an
+agent or a script wrote reads in the builder like one made there.
+*/
+func withOpenPaths(s Step) []Path {
+	k, ok := FindKind(s.Kind)
+	if !ok {
+		return s.Paths
+	}
+
+	paths := s.Paths
+	for _, outcome := range openPaths(k) {
+		if !slices.ContainsFunc(paths, func(p Path) bool { return p.Outcome == outcome }) {
+			paths = append(paths, Path{ID: NewID("p_"), Outcome: outcome, Steps: []Step{}})
+		}
+	}
+
+	return paths
 }
 
 /*
