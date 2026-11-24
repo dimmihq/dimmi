@@ -64,15 +64,19 @@ func menu(tag string) testkit.JSON {
 	return testkit.JSON{
 		"schema": 1, "trigger": "conversation.first_message",
 		"steps": []testkit.JSON{
-			step("s_ask0001", "buttons", testkit.JSON{"text": "Hi {{contact.first_name}}, what is it about?",
-				"timeout": "1h"},
+			step("s_ask0001", "buttons", testkit.JSON{
+				"text":    "Hi {{contact.first_name}}, what is it about?",
+				"timeout": "1h",
+			},
 				path("p_billing", "Billing",
 					step("s_tag0001", "tag", testkit.JSON{"tag_ids": []string{tag}}),
 					step("s_wait001", "wait", testkit.JSON{"for": "2h"}),
 					step("s_thanks1", "message", testkit.JSON{"text": "Thanks, billing will reply soon."})),
 				path("p_other1", "Something else",
-					step("s_email01", "collect", testkit.JSON{"text": "What's your email?", "field": "run.vars.email",
-						"type": "email"}),
+					step("s_email01", "collect", testkit.JSON{
+						"text": "What's your email?", "field": "run.vars.email",
+						"type": "email",
+					}),
 					step("s_bye0001", "message", testkit.JSON{"text": "We'll write to {{run.vars.email}}."})),
 				testkit.JSON{"id": "p_timeout", "outcome": "timeout", "steps": []testkit.JSON{
 					step("s_late001", "message", testkit.JSON{"text": "We'll be in touch."}),

@@ -73,12 +73,12 @@ func (t tested) of(version string) string {
 fingerprint names what one run tests: the workflow's copy and the
 simulation as it stands.
 */
-func fingerprint(copy string, c models.WorkflowSimulation) string {
-	if copy == "" {
+func fingerprint(tested string, c models.WorkflowSimulation) string {
+	if tested == "" {
 		return ""
 	}
 	var all []byte
-	for _, p := range [][]byte{[]byte(copy), c.Persona, c.Messages, c.ActionMocks, c.Assertions, []byte(c.Scenario)} {
+	for _, p := range [][]byte{[]byte(tested), c.Persona, c.Messages, c.ActionMocks, c.Assertions, []byte(c.Scenario)} {
 		all = append(all, p...)
 		all = append(all, 0)
 	}
@@ -140,7 +140,7 @@ func (s *Simulations) keep(ctx context.Context, m authz.Membership, c models.Wor
 			return err
 		}
 		var err error
-		if history, err = record(ctx, q, c, k, raw); err != nil {
+		if history, err = record(ctx, q, c, k); err != nil {
 			return err
 		}
 		if k.version == VersionLive {
@@ -167,8 +167,9 @@ func (s *Simulations) keep(ctx context.Context, m authz.Membership, c models.Wor
 record keeps one run and returns the simulation's history on that copy
 with the run in it.
 */
-func record(ctx context.Context, q *models.Queries, c models.WorkflowSimulation, k keptResult, raw []byte,
+func record(ctx context.Context, q *models.Queries, c models.WorkflowSimulation, k keptResult,
 ) (json.RawMessage, error) {
+	raw, _ := json.Marshal(k.result)
 	mark := fingerprint(k.tested, c)
 	errored := k.result.Error != ""
 	run, err := q.InsertWorkflowSimulationRun(ctx, models.InsertWorkflowSimulationRunParams{
@@ -241,7 +242,8 @@ func (s *Simulations) Runs(ctx context.Context, m authz.Membership, ref Simulati
 		}
 		now := fingerprint(testedNow(wf).of(version), c)
 		for _, r := range rows {
-			out = append(out, PastRun{WorkflowSimulationRun: r, Counted: !r.Errored && now != "" && r.Fingerprint == now})
+			counted := !r.Errored && now != "" && r.Fingerprint == now
+			out = append(out, PastRun{WorkflowSimulationRun: r, Counted: counted})
 		}
 		return nil
 	})

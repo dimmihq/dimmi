@@ -206,7 +206,8 @@ func (s *Simulations) Create(ctx context.Context, m authz.Membership, workflowID
 	var out models.WorkflowSimulation
 	err := s.DB.Transaction(ctx, func(ctx context.Context, tx *database.Tx) error {
 		q := models.New(tx)
-		if err := roomFor(ctx, q, m.Workspace.ID, workflowID, in.SourceConversation); err != nil {
+		room := newSimulation{ws: m.Workspace.ID, workflow: workflowID, source: in.SourceConversation}
+		if err := roomFor(ctx, q, room); err != nil {
 			return err
 		}
 		row, err := build(models.ProcedureTestCase{}, in)
@@ -351,7 +352,9 @@ func (s *Simulations) Run(ctx context.Context, m authz.Membership, workflowID id
 		return nil, err
 	}
 	if len(in.Only) > 0 {
-		cases = slices.DeleteFunc(cases, func(c models.WorkflowSimulation) bool { return !slices.Contains(in.Only, c.ID) })
+		cases = slices.DeleteFunc(cases, func(c models.WorkflowSimulation) bool {
+			return !slices.Contains(in.Only, c.ID)
+		})
 	}
 	if len(cases) > maxSimulationsAtOnce {
 		return nil, ErrSimulationInvalid.With("reason", "Run at most 20 simulations at once.")
@@ -483,10 +486,21 @@ func findSimulation(ctx context.Context, q *models.Queries, ws ids.UUID, ref Sim
 }
 
 /*
+newSimulation is the workspace and workflow a simulation is saved for,
+and the conversation it was made from, if any.
+*/
+type newSimulation struct {
+	ws       ids.UUID
+	workflow ids.UUID
+	source   *ids.UUID
+}
+
+/*
 roomFor refuses a simulation past a workflow's limit, or one made from
 a conversation that does not exist.
 */
-func roomFor(ctx context.Context, q *models.Queries, ws, workflowID ids.UUID, source *ids.UUID) error {
+func roomFor(ctx context.Context, q *models.Queries, in newSimulation) error {
+	ws, workflowID, source := in.ws, in.workflow, in.source
 	if _, err := findWorkflow(ctx, q, ws, workflowID); err != nil {
 		return err
 	}

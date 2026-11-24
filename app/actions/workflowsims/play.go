@@ -25,12 +25,10 @@
 package workflowsims
 
 import (
-	"cmp"
 	"context"
 	"encoding/json"
 	"errors"
 	"maps"
-	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -61,12 +59,22 @@ const (
 The reasons a run stops without a verdict.
 */
 var (
-	errNoCustomer = errors.New("The simulated customer needs dimmi's built-in Claude or GPT models, " +
-		"which this workspace lacks.")
-	errSilent    = errors.New("The simulated customer did not answer, so this run does not count. Run it again.")
-	errTooLong   = errors.New("The customer made more moves than a simulation allows.")
-	errNoOpening = errors.New("This simulation has no message to start from.")
+	errNoCustomer = errors.New("workflowsims: no simulated customer")
+	errSilent     = errors.New("workflowsims: the simulated customer did not answer")
+	errTooLong    = errors.New("workflowsims: too many customer moves")
 )
+
+/*
+stopped is what a run that stopped without a verdict says, by why.
+*/
+func stopped() map[error]string {
+	return map[error]string{
+		errNoCustomer: "The simulated customer needs dimmi's built-in Claude or GPT models, " +
+			"which this workspace lacks.",
+		errSilent:  "The simulated customer did not answer, so this run does not count. Run it again.",
+		errTooLong: "The customer made more moves than a simulation allows.",
+	}
+}
 
 /*
 Result is how one run of a workflow simulation went: whether it passed,
@@ -134,7 +142,7 @@ func (s *Simulations) play(ctx context.Context, p playing) Result {
 	if spec.Trigger != workflowspec.TriggerOpener {
 		first, ok := ch.opening(ctx)
 		if !ok {
-			res.Error = errNoOpening.Error()
+			res.Error = "This simulation has no message to start from."
 			return res
 		}
 		trigger["message.body"] = first
@@ -151,7 +159,7 @@ func (s *Simulations) play(ctx context.Context, p playing) Result {
 	}
 
 	ch.tell(ctx, "judging", nil)
-	res.AssertionResults = s.judgeRun(ctx, p.m, ch.script.assertions, ch, trace)
+	res.AssertionResults = s.judgeRun(ctx, ch, trace)
 	res.Passed = procedure.Passed(res.AssertionResults)
 	res.Error = unjudged(res.AssertionResults)
 	return res
@@ -161,9 +169,9 @@ func (s *Simulations) play(ctx context.Context, p playing) Result {
 runError is what a run that could not be played to its end says.
 */
 func runError(err error) string {
-	for _, known := range []error{errNoCustomer, errSilent, errTooLong} {
+	for known, said := range stopped() {
 		if errors.Is(err, known) {
-			return known.Error()
+			return said
 		}
 	}
 	if errors.Is(err, engine.ErrDryRun) {
@@ -225,8 +233,10 @@ func (s *Simulations) newChat(p playing) *chat {
 	_ = json.Unmarshal(p.c.Messages, &sc.messages)
 	_ = json.Unmarshal(p.c.ActionMocks, &sc.mocks)
 	_ = json.Unmarshal(p.c.Assertions, &sc.assertions)
-	return &chat{s: s, p: p, script: sc, sent: make([]bool, len(sc.messages)), lines: []Line{},
-		turns: []procedures.TestTurn{}}
+	return &chat{
+		s: s, p: p, script: sc, sent: make([]bool, len(sc.messages)), lines: []Line{},
+		turns: []procedures.TestTurn{},
+	}
 }
 
 /*
@@ -332,7 +342,8 @@ func (c *chat) move(ctx context.Context, turn pipeline.CustomerTurn) (pipeline.C
 	if p == nil || p.Customer == nil {
 		return pipeline.CustomerMove{}, errNoCustomer
 	}
-	if c.moves++; c.moves > maxCustomerMove {
+	c.moves++
+	if c.moves > maxCustomerMove {
 		return pipeline.CustomerMove{}, errTooLong
 	}
 	saved := make([]pipeline.SavedMessage, len(c.script.messages))
@@ -352,197 +363,6 @@ func (c *chat) move(ctx context.Context, turn pipeline.CustomerTurn) (pipeline.C
 		c.sent[move.Saved-1] = true
 	}
 	return move, nil
-}
-
-/*
-Handle plays dimmi's turns in an agent step, the customer answering
-each, and says how they ended.
-*/
-func (c *chat) Handle(ctx context.Context, h engine.DryHandle) (engine.DryHandled, error) {
-	if c.s.Simulator == nil {
-		return engine.DryHandled{Outcome: workflowspec.OutcomeHandedOver, Reason: "agent_disabled"}, nil
-	}
-	agent := h.AgentID
-	confirm := false
-	for range maxAgentTurns {
-		if c.waiting == "" && !confirm {
-			move, err := c.move(ctx, pipeline.CustomerTurn{CanWait: true, Confirming: c.pendingSummary()})
-			if err != nil {
-				return engine.DryHandled{}, err
-			}
-			switch {
-			case move.Confirm:
-				confirm = true
-				c.add(ctx, Line{From: "customer", Text: "(pressed Confirm)"})
-			case move.Done:
-				return engine.DryHandled{Outcome: workflowspec.OutcomeResolved, Reason: "customer_done"}, nil
-			case move.Waited || move.Message == "":
-				c.add(ctx, Line{From: "customer", Silent: true, StepID: h.StepID})
-				return engine.DryHandled{Outcome: workflowspec.OutcomeQuiet, Reason: "customer_quiet"}, nil
-			default:
-				c.customerSaid(ctx, move.Message, Line{})
-			}
-		}
-		res, err := c.agentTurn(ctx, h.StepID, agent, confirm)
-		if errors.Is(err, pipeline.ErrNoAgent) {
-			return engine.DryHandled{Outcome: workflowspec.OutcomeHandedOver, Reason: "agent_disabled"}, nil
-		}
-		if err != nil {
-			return engine.DryHandled{}, err
-		}
-		confirm = false
-		if res.Handoff != nil {
-			return engine.DryHandled{Outcome: workflowspec.OutcomeHandedOver, Reason: res.Handoff.Reason}, nil
-		}
-		if res.Outcome == "error" || res.Outcome == "handoff" {
-			c.handedOff = true
-			return engine.DryHandled{Outcome: workflowspec.OutcomeHandedOver, Reason: "agent_" + res.Outcome}, nil
-		}
-	}
-
-	return engine.DryHandled{Outcome: workflowspec.OutcomeQuiet, Reason: "turn_limit"}, nil
-}
-
-/*
-pendingSummary is the card dimmi waits on the customer to confirm, if
-any.
-*/
-func (c *chat) pendingSummary() string {
-	if c.state == nil || len(c.state.Pending) == 0 {
-		return ""
-	}
-	return c.state.Pending[0].Summary
-}
-
-/*
-agentTurn answers the customer's waiting message as dimmi, following a
-transfer to the agent it hands the chat to, and keeps the turn.
-*/
-func (c *chat) agentTurn(ctx context.Context, stepID string, agent *ids.UUID, confirm bool,
-) (*pipeline.SimulationResult, error) {
-	m := c.p.m
-	at := len(c.turns)
-	msg := c.waiting
-	var confirmed []string
-	if confirm && c.state != nil {
-		for _, p := range c.state.Pending {
-			confirmed = append(confirmed, p.ActionID)
-		}
-	}
-	c.tell(ctx, "turn_started", map[string]any{"turn": at, "message": msg, "confirm": confirm, "step_id": stepID})
-	answering := agent
-	if c.heldBy != nil {
-		answering = c.heldBy
-	}
-	history := withoutLast(c.history, msg)
-	in := pipeline.SimulationInput{
-		WorkspaceID: m.Workspace.ID, MemberID: m.Member.ID, AgentID: answering, History: history, Message: msg,
-		Persona: c.script.persona, Mocks: c.script.mocks, State: c.state, Confirmed: confirmed,
-		StreamID: c.turnStream(at), Now: c.p.c.SimulatedAt,
-	}
-	res, err := c.s.Simulator.Simulate(ctx, in)
-	var moved *pipeline.SimTransfer
-	for hops := 0; err == nil && res.Transfer != nil && hops < maxTransfers; hops++ {
-		moved = res.Transfer
-		to := moved.To
-		in.AgentID = &to
-		res, err = c.s.Simulator.Simulate(ctx, in)
-	}
-	if err != nil {
-		return nil, err
-	}
-	if res.Transfer == nil {
-		res.Transfer = moved
-	}
-	if res.Transfer != nil {
-		to := res.Transfer.To
-		c.heldBy = &to
-	}
-	c.keepTurn(ctx, stepID, msg, confirm, res)
-	return res, nil
-}
-
-/*
-keepTurn keeps one of dimmi's turns: the reply in the chat, the calls
-and the handover in what was observed, and the turn itself.
-*/
-func (c *chat) keepTurn(ctx context.Context, stepID, msg string, confirm bool, res *pipeline.SimulationResult) {
-	if res.Model != "" && !slices.Contains(c.wrote, res.Model) {
-		c.wrote = append(c.wrote, res.Model)
-	}
-	if res.Reply != "" {
-		c.add(ctx, Line{From: "agent", Text: res.Reply, StepID: stepID, Name: res.AgentName})
-		c.history = append(c.history, pipeline.SimMessage{From: "agent", Text: res.Reply})
-	}
-	c.calls = append(c.calls, res.Calls...)
-	if h := res.Handoff; h != nil {
-		c.handedOff, c.team, c.priority = true, h.TeamID, h.Priority
-	}
-	c.state, c.waiting = &res.State, ""
-	turn := procedures.TestTurn{
-		Message: msg, Confirm: confirm, Reply: res.Reply, Outcome: res.Outcome, Calls: res.Calls,
-		ProcedureTrace: res.ProcedureTrace, RunID: models.PublicID(models.PrefixAiRun, res.RunID), Transfer: res.Transfer,
-	}
-	c.turns = append(c.turns, turn)
-	c.tell(ctx, "turn_finished", map[string]any{"turn": len(c.turns) - 1, "result": turn, "step_id": stepID})
-}
-
-/*
-transcript is the chat as the judge reads it.
-*/
-func (c *chat) transcript() string {
-	var b strings.Builder
-	for _, l := range c.lines {
-		switch {
-		case l.Silent:
-			b.WriteString("[The customer did not answer]\n")
-		case l.From == "customer" && l.Tapped:
-			b.WriteString("[The customer tapped the button: " + l.Text + "]\n")
-		case l.From == "customer":
-			b.WriteString("CUSTOMER: " + l.Text + "\n")
-		case l.From == "workflow":
-			b.WriteString("WORKFLOW: " + l.Text + "\n")
-			if len(l.Choices) > 0 {
-				b.WriteString("[Buttons: " + strings.Join(l.Choices, " | ") + "]\n")
-			}
-		default:
-			b.WriteString(strings.ToUpper(cmp.Or(l.Name, "AGENT")) + ": " + l.Text + "\n")
-		}
-	}
-	return strings.TrimSpace(b.String())
-}
-
-/*
-observed is what the run did, as the agent's checks read it: the
-workflow's actions as calls named by step id and kind, dimmi's own
-calls, every reply and the handover.
-*/
-func (c *chat) observed(trace *engine.DryTrace) procedure.Observed {
-	o := procedure.Observed{Branches: map[string]string{}, Calls: []procedure.ObservedCall{}, Replies: []string{}}
-	if trace != nil {
-		for _, a := range trace.Actions {
-			o.Calls = append(o.Calls, procedure.ObservedCall{ActionID: a.StepID, Tool: a.Kind, Args: a.Detail,
-				Succeeded: true})
-		}
-		if trace.End == engine.DryHandedOver {
-			o.HandedOff = true
-		}
-		for _, s := range trace.Steps {
-			if s.Kind == workflowspec.KindDimmi && s.Outcome == workflowspec.OutcomeHandedOver {
-				o.HandedOff = true
-			}
-		}
-	}
-	o.Calls = append(o.Calls, c.calls...)
-	for _, l := range c.lines {
-		if l.From != "customer" && l.Text != "" {
-			o.Replies = append(o.Replies, l.Text)
-		}
-	}
-	if c.handedOff {
-		o.HandedOff, o.Team, o.Priority = true, c.team, c.priority
-	}
-	return o
 }
 
 /*
@@ -568,20 +388,4 @@ func (c *chat) turnStream(turn int) string {
 		return ""
 	}
 	return c.p.stream + ":" + models.PublicID(models.PrefixWorkflowSim, c.p.c.ID) + ":" + strconv.Itoa(turn)
-}
-
-/*
-withoutLast is the history without the customer's last message with
-the text, which a turn sends as its message.
-*/
-func withoutLast(history []pipeline.SimMessage, text string) []pipeline.SimMessage {
-	if text == "" {
-		return history
-	}
-	for i := len(history) - 1; i >= 0; i-- {
-		if history[i].From == "customer" && history[i].Text == text {
-			return append(append([]pipeline.SimMessage{}, history[:i]...), history[i+1:]...)
-		}
-	}
-	return history
 }

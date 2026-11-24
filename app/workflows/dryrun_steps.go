@@ -17,11 +17,9 @@ package workflows
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"slices"
 	"strings"
 
-	"github.com/dimmihq/dimmi/app/enums"
 	"github.com/dimmihq/dimmi/app/models"
 	"github.com/dimmihq/dimmi/app/support/audience"
 	"github.com/dimmihq/dimmi/app/support/workflowspec"
@@ -81,7 +79,6 @@ matches nothing is asked again once, then ends the run.
 func (d *dry) buttons(ctx context.Context, s workflowspec.Step) (outcome, error) {
 	b := settings[workflowspec.ButtonsSettings](s)
 	text := d.render(ctx, b.Text)
-	paths := buttonPaths(s)
 	labels := labels(choiceLabels(s))
 	d.in.Driver.Said(ctx, DryMessage{StepID: s.ID, Text: text, Choices: labels})
 	typing := workflowspec.On(b.AllowTyping, true)
@@ -93,30 +90,40 @@ func (d *dry) buttons(ctx context.Context, s workflowspec.Step) (outcome, error)
 		if err != nil {
 			return outcome{}, err
 		}
-		if answer.Silent {
-			return withDetail(fixedOrEnd(s, workflowspec.OutcomeTimeout, EndNoChoice), "answer", "none"), nil
-		}
-		if answer.Choice >= 1 && answer.Choice <= len(paths) {
-			p := paths[answer.Choice-1]
-			return outcome{path: p.ID, outcome: "button", detail: map[string]any{"answer": p.Label}}, nil
-		}
-		if p, ok := matchChoice(paths, answer.Text); ok {
-			return outcome{path: p.ID, outcome: "button", detail: map[string]any{"answer": answer.Text}}, nil
-		}
-		if typed, ok := workflowspec.PathFor(s, workflowspec.OutcomeTyped); ok && typing {
-			return outcome{path: typed.ID, outcome: workflowspec.OutcomeTyped,
-				detail: map[string]any{"answer": answer.Text}}, nil
+		if out, ok := answered(s, answer, b); ok {
+			return out, nil
 		}
 		if try == 0 {
-			retry := b.RetryText
-			if retry == "" {
-				retry = "Please reply with one of the numbers above."
-			}
+			retry := cmpText(b.RetryText, "Please reply with one of the numbers above.")
 			d.in.Driver.Said(ctx, DryMessage{StepID: s.ID, Text: retry, Choices: labels})
 		}
 	}
 
 	return outcome{end: EndNoChoice, outcome: "no_choice"}, nil
+}
+
+/*
+answered is the path an answer to buttons takes, false when it named
+none and the step takes no typed answer.
+*/
+func answered(s workflowspec.Step, answer DryAnswer, b workflowspec.ButtonsSettings) (outcome, bool) {
+	paths, typing := buttonPaths(s), workflowspec.On(b.AllowTyping, true)
+	switch {
+	case answer.Silent:
+		return withDetail(fixedOrEnd(s, workflowspec.OutcomeTimeout, EndNoChoice), "answer", "none"), true
+	case answer.Choice >= 1 && answer.Choice <= len(paths):
+		p := paths[answer.Choice-1]
+		return outcome{path: p.ID, outcome: "button", detail: map[string]any{"answer": p.Label}}, true
+	}
+	if p, ok := matchChoice(paths, answer.Text); ok {
+		return outcome{path: p.ID, outcome: "button", detail: map[string]any{"answer": answer.Text}}, true
+	}
+	if typed, ok := workflowspec.PathFor(s, workflowspec.OutcomeTyped); ok && typing {
+		typedOut := outcome{path: typed.ID, outcome: workflowspec.OutcomeTyped}
+		return withDetail(typedOut, "answer", answer.Text), true
+	}
+
+	return outcome{}, false
 }
 
 /*
@@ -135,41 +142,50 @@ func (d *dry) collect(ctx context.Context, s workflowspec.Step) (outcome, error)
 		options = choices(c)
 	}
 	d.in.Driver.Said(ctx, DryMessage{StepID: s.ID, Text: text, Choices: options})
-	limit := c.MaxAttempts
+	limit := max(c.MaxAttempts, 0)
 	if limit == 0 {
 		limit = defaultAttempts
 	}
+	ask := DryAsk{StepID: s.ID, Kind: s.Kind, Question: text, Choices: options, CanWait: c.Timeout != "" || c.AllowSkip}
 	for attempt := 1; ; attempt++ {
-		answer, err := d.in.Driver.Customer(ctx, DryAsk{
-			StepID: s.ID, Kind: s.Kind, Question: text, Choices: options, CanWait: c.Timeout != "" || c.AllowSkip,
-		})
+		answer, err := d.in.Driver.Customer(ctx, ask)
 		if err != nil {
 			return outcome{}, err
 		}
-		if answer.Silent {
-			return withDetail(fixedOrNext(s, workflowspec.OutcomeTimeout), "answer", "none"), nil
-		}
-		raw := answer.Text
-		if answer.Choice >= 1 && answer.Choice <= len(options) {
-			raw = options[answer.Choice-1]
-		}
-		if value, ok := parseAnswer(c, raw); ok {
-			d.store(c.Field, value)
-			return outcome{outcome: outcomeCollected, acted: true, detail: map[string]any{
-				"field": c.Field, "value": value,
-			}}, nil
+		if out, done := d.collected(s, c, answer, options); done {
+			return out, nil
 		}
 		if attempt >= limit {
 			out := fixedOrNext(s, workflowspec.OutcomeInvalid)
 			out.outcome = outcomeInvalidAnswer
 			return out, nil
 		}
-		retry := c.InvalidText
-		if retry == "" {
-			retry = "Sorry, that doesn't look right. Could you try again?"
-		}
+		retry := cmpText(c.InvalidText, "Sorry, that doesn't look right. Could you try again?")
 		d.in.Driver.Said(ctx, DryMessage{StepID: s.ID, Text: retry})
 	}
+}
+
+/*
+collected saves a valid answer and says where the step goes, false for
+an answer to ask again.
+*/
+func (d *dry) collected(s workflowspec.Step, c workflowspec.CollectSettings, answer DryAnswer, options []string,
+) (outcome, bool) {
+	if answer.Silent {
+		return withDetail(fixedOrNext(s, workflowspec.OutcomeTimeout), "answer", "none"), true
+	}
+	raw := answer.Text
+	if answer.Choice >= 1 && answer.Choice <= len(options) {
+		raw = options[answer.Choice-1]
+	}
+	value, ok := parseAnswer(c, raw)
+	if !ok {
+		return outcome{}, false
+	}
+	d.store(c.Field, value)
+
+	detail := map[string]any{"field": c.Field, "value": value}
+	return outcome{outcome: outcomeCollected, acted: true, detail: detail}, true
 }
 
 /*
@@ -223,24 +239,15 @@ func (d *dry) branch(ctx context.Context, s workflowspec.Step) (outcome, error) 
 	var taken *outcome
 	err := d.read(ctx, func(ctx context.Context, q *models.Queries) error {
 		for _, p := range buttonPaths(s) {
-			rule, err := audience.ParseRule(p.Condition)
-			if err != nil {
-				continue
-			}
-			program, err := audience.CompileRule(rule, workflowspec.Catalog(), audience.WorkflowBranch())
-			if err != nil {
-				continue
-			}
-			if err := d.subj.withSaved(ctx, q, program); err != nil {
+			held, field, err := d.holds(ctx, q, p)
+			if err != nil || held {
+				if held {
+					taken = &outcome{path: p.ID, outcome: outcomeMatched, detail: map[string]any{"failed": failed}}
+				}
 				return err
 			}
-			explained := program.Explain(d.subj.env())
-			if explained.Result == audience.True {
-				taken = &outcome{path: p.ID, outcome: outcomeMatched, detail: map[string]any{"failed": failed}}
-				return nil
-			}
-			if leaf, ok := explained.FirstFailing(); ok {
-				failed[p.ID] = leaf.Field
+			if field != "" {
+				failed[p.ID] = field
 			}
 		}
 		return nil
@@ -250,6 +257,32 @@ func (d *dry) branch(ctx context.Context, s workflowspec.Step) (outcome, error) 
 	}
 
 	return withDetail(fixedOrNext(s, workflowspec.OutcomeElse), "failed", failed), nil
+}
+
+/*
+holds reports whether a branch path's condition holds, and the first
+field that failed when it does not. A condition that does not read
+never holds.
+*/
+func (d *dry) holds(ctx context.Context, q *models.Queries, p workflowspec.Path) (bool, string, error) {
+	rule, err := audience.ParseRule(p.Condition)
+	if err != nil {
+		return false, "", nil //nolint:nilerr // a condition that does not read never holds, as in a run
+	}
+	program, err := audience.CompileRule(rule, workflowspec.Catalog(), audience.WorkflowBranch())
+	if err != nil {
+		return false, "", nil //nolint:nilerr // a condition that does not compile never holds, as in a run
+	}
+	if err := d.subj.withSaved(ctx, q, program); err != nil {
+		return false, "", err
+	}
+	explained := program.Explain(d.subj.env())
+	if explained.Result == audience.True {
+		return true, "", nil
+	}
+	leaf, _ := explained.FirstFailing()
+
+	return false, leaf.Field, nil
 }
 
 /*
@@ -270,33 +303,9 @@ classifier picks from what the customer wrote.
 func (d *dry) classify(ctx context.Context, s workflowspec.Step) outcome {
 	c := settings[workflowspec.ClassifySettings](s)
 	cats := categories(s)
-	answer := ClassifyAnswer{}
-	if mock, ok := d.in.Mocks[s.ID]; ok {
-		var picked struct {
-			PathID string `json:"path_id"`
-		}
-		_ = json.Unmarshal(mock.Body, &picked)
-		answer.CategoryID, answer.Confidence = picked.PathID, "high"
-	} else {
-		if d.e.Classifier == nil {
-			return unsorted(s, "ai_unavailable")
-		}
-		said := d.in.Driver.Words()
-		if c.Source == "last_message" && len(said) > 0 {
-			said = said[len(said)-1:]
-		}
-		text := strings.Join(said, "\n\n")
-		if strings.TrimSpace(text) == "" {
-			return unsorted(s, "no_text")
-		}
-		got, err := d.e.Classifier.Classify(ctx, ClassifyQuestion{
-			WorkspaceID: d.in.WorkspaceID, ConversationID: d.conv.ID, Instructions: c.Question, Categories: cats,
-			Text: text,
-		})
-		if err != nil {
-			return unsorted(s, "ai_unavailable")
-		}
-		answer = got
+	answer, reason := d.sorted(ctx, s, c, cats)
+	if reason != "" {
+		return unsorted(s, reason)
 	}
 	label, ok := categoryLabel(cats, answer.CategoryID)
 	if !ok {
@@ -315,6 +324,40 @@ func (d *dry) classify(ctx context.Context, s workflowspec.Step) outcome {
 }
 
 /*
+sorted is the category a classify step's mock names, or the one the
+classifier picks, with why there is none when there is not.
+*/
+func (d *dry) sorted(ctx context.Context, s workflowspec.Step, c workflowspec.ClassifySettings, cats []Category,
+) (ClassifyAnswer, string) {
+	if mock, ok := d.in.Mocks[s.ID]; ok {
+		var picked struct {
+			PathID string `json:"path_id"`
+		}
+		_ = json.Unmarshal(mock.Body, &picked)
+		return ClassifyAnswer{CategoryID: picked.PathID, Confidence: "high"}, ""
+	}
+	if d.e.Classifier == nil {
+		return ClassifyAnswer{}, "ai_unavailable"
+	}
+	said := d.in.Driver.Words()
+	if c.Source == "last_message" && len(said) > 0 {
+		said = said[len(said)-1:]
+	}
+	text := strings.Join(said, "\n\n")
+	if strings.TrimSpace(text) == "" {
+		return ClassifyAnswer{}, "no_text"
+	}
+	got, err := d.e.Classifier.Classify(ctx, ClassifyQuestion{
+		WorkspaceID: d.in.WorkspaceID, ConversationID: d.conv.ID, Instructions: c.Question, Categories: cats,
+		Text: text,
+	})
+	if err != nil {
+		return ClassifyAnswer{}, "ai_unavailable"
+	}
+	return got, ""
+}
+
+/*
 handle lets dimmi handle the conversation: the driver plays the agent's
 turns, and the step takes the path of how they ended.
 */
@@ -330,8 +373,10 @@ func (d *dry) handle(ctx context.Context, s workflowspec.Step) (outcome, error) 
 		return outcome{}, err
 	}
 	fixed := got.Outcome
-	if !slices.Contains([]string{workflowspec.OutcomeResolved, workflowspec.OutcomeHandedOver,
-		workflowspec.OutcomeQuiet}, fixed) {
+	if !slices.Contains([]string{
+		workflowspec.OutcomeResolved, workflowspec.OutcomeHandedOver,
+		workflowspec.OutcomeQuiet,
+	}, fixed) {
 		fixed = workflowspec.OutcomeQuiet
 	}
 	out := fixedOrEnd(s, fixed, EndCompleted)
@@ -385,7 +430,7 @@ pathValue reads a plain dotted path from a decoded body.
 */
 func pathValue(body any, path string) any {
 	at := body
-	for _, key := range strings.Split(path, ".") {
+	for key := range strings.SplitSeq(path, ".") {
 		m, ok := at.(map[string]any)
 		if !ok {
 			return nil
@@ -405,102 +450,4 @@ func cmpText(text, fallback string) string {
 	}
 
 	return text
-}
-
-/*
-action records what an action would do and changes the dry run's copy
-of the conversation where a later step could read it.
-*/
-func (d *dry) action(ctx context.Context, s workflowspec.Step) outcome {
-	switch s.Kind {
-	case workflowspec.KindTag, workflowspec.KindUntag:
-		tags := settings[workflowspec.TagSettings](s).TagIDs
-		if s.Kind == workflowspec.KindTag {
-			for _, t := range tags {
-				if !slices.Contains(d.subj.conversationTags, t) {
-					d.subj.conversationTags = append(d.subj.conversationTags, t)
-				}
-			}
-			return d.act(s, "Would add tags", map[string]any{"tag_ids": tags})
-		}
-		d.subj.conversationTags = slices.DeleteFunc(d.subj.conversationTags, func(t string) bool {
-			return slices.Contains(tags, t)
-		})
-		return d.act(s, "Would remove tags", map[string]any{"tag_ids": tags})
-	case workflowspec.KindPriority:
-		value := settings[workflowspec.PrioritySettings](s).Value
-		if level, ok := enums.ConversationPriority(value).Level(); ok {
-			d.conv.Priority = level
-		}
-		return d.act(s, "Would set the priority to "+value, map[string]any{"priority": value})
-	case workflowspec.KindAssign:
-		return d.assign(s)
-	case workflowspec.KindUnassign:
-		what := settings[workflowspec.UnassignSettings](s).What
-		if what != "team" {
-			d.conv.AssigneeMemberID = nil
-		}
-		if what != "member" {
-			d.conv.AssigneeTeamID = nil
-		}
-		return d.act(s, "Would unassign the conversation", map[string]any{"what": what})
-	case workflowspec.KindNote:
-		text := d.render(ctx, settings[workflowspec.NoteSettings](s).Text)
-		return d.act(s, "Would leave a note", map[string]any{"text": text})
-	case workflowspec.KindUpdateContact:
-		var set []map[string]any
-		for _, c := range settings[workflowspec.UpdateContactSettings](s).Set {
-			value := d.render(ctx, c.Value)
-			d.store(c.Field, value)
-			set = append(set, map[string]any{"field": c.Field, "value": value})
-		}
-		return d.act(s, "Would update the contact", map[string]any{"set": set})
-	case workflowspec.KindSnooze:
-		d.conv.Status = "snoozed"
-		return d.act(s, "Would snooze the conversation", nil)
-	case workflowspec.KindClose:
-		d.conv.Status = "closed"
-		return d.act(s, "Would close the conversation", nil)
-	case workflowspec.KindApplySLA:
-		id := settings[workflowspec.ApplySLASettings](s).SLAPolicyID
-		return d.act(s, "Would apply an SLA policy", map[string]any{"sla_policy_id": id})
-	case workflowspec.KindRunWorkflow:
-		id := settings[workflowspec.RunWorkflowSettings](s).WorkflowID
-		return d.act(s, "Would run another workflow", map[string]any{"workflow_id": id})
-	}
-	if k, ok := workflowspec.FindKind(s.Kind); ok && k.Action {
-		var detail map[string]any
-		_ = json.Unmarshal(s.Settings, &detail)
-		return d.act(s, "Would run "+strings.ReplaceAll(s.Kind, "_", " "), detail)
-	}
-
-	return outcome{outcome: "not_simulated", status: "skipped"}
-}
-
-/*
-assign records an assignment and makes it in the dry run's copy.
-*/
-func (d *dry) assign(s workflowspec.Step) outcome {
-	a := settings[workflowspec.AssignSettings](s)
-	if workflowspec.On(a.KeepIfAssigned, true) && d.conv.AssigneeMemberID != nil {
-		return outcome{outcome: outcomeKept, acted: true}
-	}
-	detail := map[string]any{"mode": a.Mode}
-	if a.Mode == "member" {
-		if id, ok := d.decode(models.PrefixMember, a.MemberID); ok {
-			d.conv.AssigneeMemberID = &id
-		}
-		detail["member_id"] = a.MemberID
-		return d.act(s, "Would assign to a teammate", detail)
-	}
-	if id, ok := d.decode(models.PrefixTeam, a.TeamID); ok {
-		d.conv.AssigneeTeamID = &id
-	}
-	detail["team_id"] = a.TeamID
-	summary := "Would assign to a team"
-	if a.Mode != "team" {
-		summary = fmt.Sprintf("Would assign to a teammate of the team (%s)", strings.ReplaceAll(a.Mode, "_", " "))
-	}
-
-	return d.act(s, summary, detail)
 }

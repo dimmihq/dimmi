@@ -19,10 +19,13 @@ func TestSeriesDrySimulations(t *testing.T) {
 			"nodes": []testkit.JSON{
 				{"id": "entry", "kind": "entry"},
 				email("welcome", "Welcome to Acme"),
-				{"id": "wait", "kind": "wait", "settings": testkit.JSON{"mode": "duration", "amount": 2, "unit": "days"}},
-				{"id": "check", "kind": "condition", "settings": testkit.JSON{"paths": []testkit.JSON{
-					{"id": "opened", "label": "Opened", "engagement": testkit.JSON{"node": "welcome", "action": "opened"}},
-				}}},
+				{"id": "wait", "kind": "wait", "settings": testkit.JSON{
+					"mode": "duration", "amount": 2, "unit": "days",
+				}},
+				{"id": "check", "kind": "condition", "settings": testkit.JSON{"paths": []testkit.JSON{{
+					"id": "opened", "label": "Opened",
+					"engagement": testkit.JSON{"node": "welcome", "action": "opened"},
+				}}}},
 				email("nudge", "Did you see this?"),
 			},
 			"edges": []testkit.JSON{

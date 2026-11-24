@@ -81,54 +81,6 @@ type SimPerson struct {
 }
 
 /*
-SimTrace is what a dry simulation did: whether the person would enter,
-every step with the path it took, what would be sent, the changes that
-would be made, whether the goal was reached, and how it ended.
-*/
-type SimTrace struct {
-	Entered  bool         `json:"entered"`
-	Reason   string       `json:"reason,omitempty"`
-	Steps    []SimStep    `json:"steps"`
-	Messages []SimMessage `json:"messages"`
-	Actions  []SimAction  `json:"actions"`
-	Goal     bool         `json:"goal_reached"`
-	End      string       `json:"end"`
-}
-
-/*
-SimStep is one step a dry simulation took.
-*/
-type SimStep struct {
-	NodeID  string         `json:"node_id"`
-	Kind    string         `json:"kind"`
-	Path    string         `json:"path,omitempty"`
-	Result  string         `json:"result"`
-	Skipped bool           `json:"skipped,omitempty"`
-	Detail  map[string]any `json:"detail,omitempty"`
-}
-
-/*
-SimMessage is a message that would be sent: the step, its kind, who it
-goes to, and its subject and body as written.
-*/
-type SimMessage struct {
-	NodeID  string `json:"node_id"`
-	Kind    string `json:"kind"`
-	To      string `json:"to,omitempty"`
-	Subject string `json:"subject,omitempty"`
-	Body    string `json:"body"`
-}
-
-/*
-SimAction is a change that would be made.
-*/
-type SimAction struct {
-	NodeID string         `json:"node_id"`
-	Kind   string         `json:"kind"`
-	Detail map[string]any `json:"detail,omitempty"`
-}
-
-/*
 simRun is one dry simulation while it walks.
 */
 type simRun struct {
@@ -174,20 +126,9 @@ load reads the copy of the series and the person.
 */
 func (r *simRun) load(ctx context.Context) error {
 	return r.s.inWorkspace(ctx, r.ws, func(ctx context.Context, q *models.Queries) error {
-		row, err := find(ctx, q, r.ws, r.in.ID)
+		raw, err := r.copyOf(ctx, q)
 		if err != nil {
 			return err
-		}
-		raw := row.Working
-		if r.in.Version == "live" {
-			if row.LiveVersionID == nil {
-				return ErrSimNotLive
-			}
-			v, err := q.FindSeriesVersion(ctx, models.FindSeriesVersionParams{WorkspaceID: r.ws, ID: *row.LiveVersionID})
-			if err != nil {
-				return notFound(err, "find series version")
-			}
-			raw = v.Spec
 		}
 		spec, err := decode(raw)
 		if err != nil {
@@ -205,6 +146,24 @@ func (r *simRun) load(ctx context.Context) error {
 		r.person, r.variants = c, c.ID.String()
 		return nil
 	})
+}
+
+/*
+copyOf reads the definition of the series' draft or its live version.
+*/
+func (r *simRun) copyOf(ctx context.Context, q *models.Queries) (json.RawMessage, error) {
+	row, err := find(ctx, q, r.ws, r.in.ID)
+	if err != nil || r.in.Version != "live" {
+		return row.Working, err
+	}
+	if row.LiveVersionID == nil {
+		return nil, ErrSimNotLive
+	}
+	v, err := q.FindSeriesVersion(ctx, models.FindSeriesVersionParams{WorkspaceID: r.ws, ID: *row.LiveVersionID})
+	if err != nil {
+		return nil, notFound(err, "find series version")
+	}
+	return v.Spec, nil
 }
 
 /*

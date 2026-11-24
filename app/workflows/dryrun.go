@@ -37,6 +37,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"maps"
 	"slices"
 	"strings"
 
@@ -84,135 +85,6 @@ type DryPerson struct {
 }
 
 /*
-DryDriver plays what a dry run does not decide itself.
-*/
-type DryDriver interface {
-	/*
-		Said keeps what the workflow said to the customer.
-	*/
-	Said(ctx context.Context, m DryMessage)
-	/*
-		Customer returns the customer's answer to what the workflow
-		asked.
-	*/
-	Customer(ctx context.Context, ask DryAsk) (DryAnswer, error)
-	/*
-		Handle plays the agent's turns of a step that lets dimmi handle
-		the conversation, and says how they ended.
-	*/
-	Handle(ctx context.Context, h DryHandle) (DryHandled, error)
-	/*
-		Stepped is told of each step once it ran, for whoever watches.
-	*/
-	Stepped(ctx context.Context, s DryStep)
-	/*
-		Words returns what the customer wrote so far, oldest first.
-	*/
-	Words() []string
-}
-
-/*
-DryMessage is one message the workflow sends: the step, its words and
-the buttons it offers.
-*/
-type DryMessage struct {
-	StepID  string   `json:"step_id"`
-	Text    string   `json:"text"`
-	Choices []string `json:"choices,omitempty"`
-}
-
-/*
-DryAsk is what the workflow waits on from the customer: the step and
-its kind, the question, the buttons, whether only a button will do,
-and whether the wait can run out.
-*/
-type DryAsk struct {
-	StepID      string
-	Kind        string
-	Question    string
-	Choices     []string
-	ChoicesOnly bool
-	CanWait     bool
-}
-
-/*
-DryAnswer is the customer's move: what they wrote or the button they
-tapped, by its number counting from one, or no answer at all.
-*/
-type DryAnswer struct {
-	Text   string
-	Choice int
-	Silent bool
-}
-
-/*
-DryHandle is a step that lets dimmi handle the conversation: the step
-and the agent it names, if any.
-*/
-type DryHandle struct {
-	StepID  string
-	AgentID *ids.UUID
-}
-
-/*
-DryHandled is how the agent's turns ended: resolved, handed over or
-quiet, and why.
-*/
-type DryHandled struct {
-	Outcome string
-	Reason  string
-}
-
-/*
-DryTrace is what a dry run did: whether the workflow would start, every
-step and the path it took, the variables set, the actions that would
-run, and how it ended.
-*/
-type DryTrace struct {
-	Verdict DryVerdict     `json:"verdict"`
-	Steps   []DryStep      `json:"steps"`
-	Vars    map[string]any `json:"vars"`
-	Actions []DryAction    `json:"actions"`
-	End     string         `json:"end"`
-}
-
-/*
-DryVerdict says whether the trigger would start the workflow, and the
-check that refused it when not.
-*/
-type DryVerdict struct {
-	Started    bool   `json:"started"`
-	Reason     string `json:"reason,omitempty"`
-	FailedRule string `json:"failed_rule,omitempty"`
-}
-
-/*
-DryStep is one step a dry run took: which, how it went, the path it
-left by with the path's label, and what it noted.
-*/
-type DryStep struct {
-	StepID    string         `json:"step_id"`
-	Kind      string         `json:"kind"`
-	Outcome   string         `json:"outcome"`
-	PathID    string         `json:"path_id,omitempty"`
-	PathLabel string         `json:"path_label,omitempty"`
-	Skipped   bool           `json:"skipped,omitempty"`
-	Detail    map[string]any `json:"detail,omitempty"`
-}
-
-/*
-DryAction is an action the workflow would take: the step, its kind,
-what it would do in words, and whether a mock answered for it.
-*/
-type DryAction struct {
-	StepID  string         `json:"step_id"`
-	Kind    string         `json:"kind"`
-	Summary string         `json:"summary"`
-	Detail  map[string]any `json:"detail,omitempty"`
-	Mocked  bool           `json:"mocked,omitempty"`
-}
-
-/*
 The ends of a dry run besides a run's own.
 */
 const (
@@ -236,7 +108,6 @@ type dry struct {
 	index  *workflowspec.Index
 	subj   *subject
 	conv   models.Conversation
-	team   string
 	out    *DryTrace
 	cursor string
 }
@@ -300,9 +171,7 @@ func (d *dry) load(ctx context.Context) error {
 			d.subj.hours = nil
 		}
 		d.subj.trigger = map[string]any{}
-		for k, v := range d.in.Trigger {
-			d.subj.trigger[k] = v
-		}
+		maps.Copy(d.subj.trigger, d.in.Trigger)
 		d.subj.vars, d.subj.now = d.out.Vars, d.e.Clock.Now()
 
 		return nil

@@ -94,11 +94,10 @@ func marshal(checks []procedure.Assertion) json.RawMessage {
 judgeRun checks every check against the run: the workflow's own
 against its trace, the rest as an agent's are.
 */
-func (s *Simulations) judgeRun(ctx context.Context, m authz.Membership, checks []procedure.Assertion,
-	ch *chat, trace *engine.DryTrace,
-) []procedure.AssertionResult {
+func (s *Simulations) judgeRun(ctx context.Context, ch *chat, trace *engine.DryTrace) []procedure.AssertionResult {
+	checks := ch.script.assertions
 	transcript := ch.transcript()
-	judge := s.judge(ctx, m, checks, transcript, ch.wrote)
+	judge := s.judge(ctx, ch.p.m, ch)
 	out := make([]procedure.AssertionResult, 0, len(checks))
 	for _, a := range checks {
 		if own(a) {
@@ -146,14 +145,13 @@ judge is the judge of a run's checks written as sentences, none when no
 judge is set up. They are judged together, once, the first time one is
 asked for.
 */
-func (s *Simulations) judge(ctx context.Context, m authz.Membership, checks []procedure.Assertion,
-	transcript string, wrote []string,
-) procedure.Judge {
+func (s *Simulations) judge(ctx context.Context, m authz.Membership, ch *chat) procedure.Judge {
 	if s.Procedures == nil || s.Procedures.Judge == nil {
 		return nil
 	}
+	transcript, wrote := ch.transcript(), ch.wrote
 	var rubrics []string
-	for _, a := range checks {
+	for _, a := range ch.script.assertions {
 		if a.Type == procedure.AssertLLMRubric && !slices.Contains(rubrics, a.Rubric) {
 			rubrics = append(rubrics, a.Rubric)
 		}
