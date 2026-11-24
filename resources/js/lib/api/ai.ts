@@ -192,22 +192,54 @@ interface StoredAgent extends Omit<AiAgent, "monthly_spend_cap_micros"> {
   draft: Partial<AiAgent>;
 }
 
-interface StoredAgentView extends Omit<AgentView, "agent"> {
+/*
+ * SharedSettings is what every agent shares: the spend cap, and the
+ * models an agent answers with until it picks its own.
+ */
+interface SharedSettings {
+  monthly_spend_cap_micros: number | null;
+  answer_key_id?: string | null;
+  answer_model?: string | null;
+  fallback_key_id?: string | null;
+  fallback_model?: string | null;
+}
+
+export interface StoredAgentView extends Omit<AgentView, "agent"> {
   agent: StoredAgent;
-  settings: { monthly_spend_cap_micros: number | null };
+  settings: SharedSettings;
 }
 
 /*
- * defaultAgentView reads the workspace's default agent in the shape the
- * settings page knows, with the workspace's spend cap folded in.
+ * settingsPageView is an agent in the shape the settings page knows: its
+ * working copy over what is live, with the workspace's spend cap folded
+ * in. An agent that has picked no model answers with the workspace's
+ * shared one, so that is the model the page shows; without it a fresh
+ * workspace, which answers on the built-in models with no setup, reads
+ * as having no model chosen.
+ */
+export function settingsPageView(view: StoredAgentView): AgentView {
+  const { draft, ...stored } = view.agent;
+  const agent = { ...stored, ...draft, monthly_spend_cap_micros: view.settings.monthly_spend_cap_micros };
+  if (!agent.answer_key_id && !agent.answer_model) {
+    agent.answer_key_id = view.settings.answer_key_id ?? null;
+    agent.answer_model = view.settings.answer_model ?? null;
+  }
+  if (!agent.fallback_key_id && !agent.fallback_model) {
+    agent.fallback_key_id = view.settings.fallback_key_id ?? null;
+    agent.fallback_model = view.settings.fallback_model ?? null;
+  }
+  return { ...view, agent };
+}
+
+/*
+ * defaultAgentView reads the workspace's default agent for the settings
+ * page.
  */
 async function defaultAgentView(workspace: string): Promise<AgentView> {
   const list = await request<StoredAgent[]>("GET", "/ai/agents", undefined, { workspace });
   const id = (list.find((a) => a.is_default) ?? list[0]).id;
   const view = await request<StoredAgentView>("GET", `/ai/agents/${id}`, undefined, { workspace });
-  const { draft, ...stored } = view.agent;
-  const agent = { ...stored, ...draft, monthly_spend_cap_micros: view.settings.monthly_spend_cap_micros };
-  return { ...view, agent };
+  return settingsPageView(view);
 }
 
 export function agentQuery(workspace: string) {
