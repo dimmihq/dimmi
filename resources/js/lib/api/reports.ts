@@ -101,9 +101,10 @@ export interface ReportFilters {
   tag?: string;
   priority?: string;
   ai?: "involved" | "not_involved";
+  agent?: string;
 }
 
-export const filterKeys = ["inbox", "team", "member", "channel", "tag", "priority", "ai"] as const;
+export const filterKeys = ["inbox", "team", "member", "channel", "tag", "priority", "ai", "agent"] as const;
 export type FilterKey = (typeof filterKeys)[number];
 
 /*

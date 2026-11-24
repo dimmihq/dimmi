@@ -108,16 +108,67 @@ func (q *Queries) MarkReportDigestSent(ctx context.Context, arg MarkReportDigest
 	return err
 }
 
+const reportAiAgentRuns = `-- name: ReportAiAgentRuns :many
+SELECT agent_id, COALESCE(sum(cost_micros), 0)::bigint AS cost_micros,
+    count(*) FILTER (WHERE outcome = 'transferred')::bigint AS transfers
+FROM ai_runs
+WHERE workspace_id = $1 AND created_at >= $2::timestamptz AND created_at < $3::timestamptz
+  AND (cardinality($4::uuid[]) = 0 OR agent_id = ANY ($4::uuid[]))
+GROUP BY agent_id
+`
+
+type ReportAiAgentRunsParams struct {
+	WorkspaceID ids.UUID   `json:"workspace_id"`
+	Since       time.Time  `json:"since"`
+	Until       time.Time  `json:"until"`
+	Agents      []ids.UUID `json:"agents"`
+}
+
+type ReportAiAgentRunsRow struct {
+	AgentID    ids.UUID `json:"agent_id"`
+	CostMicros int64    `json:"cost_micros"`
+	Transfers  int64    `json:"transfers"`
+}
+
+// ReportAiAgentRuns sums, for each agent, what its runs cost in a range
+// and how many conversations it handed to another agent.
+func (q *Queries) ReportAiAgentRuns(ctx context.Context, arg ReportAiAgentRunsParams) ([]ReportAiAgentRunsRow, error) {
+	rows, err := q.db.Query(ctx, reportAiAgentRuns,
+		arg.WorkspaceID,
+		arg.Since,
+		arg.Until,
+		arg.Agents,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ReportAiAgentRunsRow
+	for rows.Next() {
+		var i ReportAiAgentRunsRow
+		if err := rows.Scan(&i.AgentID, &i.CostMicros, &i.Transfers); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const reportAiSpend = `-- name: ReportAiSpend :one
 SELECT COALESCE(sum(cost_micros), 0)::bigint AS cost_micros, count(*)::bigint AS runs
 FROM ai_runs
 WHERE workspace_id = $1 AND created_at >= $2::timestamptz AND created_at < $3::timestamptz
+  AND (cardinality($4::uuid[]) = 0 OR agent_id = ANY ($4::uuid[]))
 `
 
 type ReportAiSpendParams struct {
-	WorkspaceID ids.UUID  `json:"workspace_id"`
-	Since       time.Time `json:"since"`
-	Until       time.Time `json:"until"`
+	WorkspaceID ids.UUID   `json:"workspace_id"`
+	Since       time.Time  `json:"since"`
+	Until       time.Time  `json:"until"`
+	Agents      []ids.UUID `json:"agents"`
 }
 
 type ReportAiSpendRow struct {
@@ -128,7 +179,12 @@ type ReportAiSpendRow struct {
 // ReportAiSpend sums what the AI agent cost in a range, every kind of
 // run included.
 func (q *Queries) ReportAiSpend(ctx context.Context, arg ReportAiSpendParams) (ReportAiSpendRow, error) {
-	row := q.db.QueryRow(ctx, reportAiSpend, arg.WorkspaceID, arg.Since, arg.Until)
+	row := q.db.QueryRow(ctx, reportAiSpend,
+		arg.WorkspaceID,
+		arg.Since,
+		arg.Until,
+		arg.Agents,
+	)
 	var i ReportAiSpendRow
 	err := row.Scan(&i.CostMicros, &i.Runs)
 	return i, err
@@ -421,6 +477,8 @@ UNION ALL
 SELECT 'member', m.id, COALESCE(nullif(u.name, ''), u.email)::text
 FROM workspace_members m JOIN users u ON u.id = m.user_id
 WHERE m.workspace_id = $1
+UNION ALL
+SELECT 'agent', a.id, a.name FROM ai_agents a WHERE a.workspace_id = $1
 `
 
 type ReportNamesRow struct {
@@ -430,7 +488,7 @@ type ReportNamesRow struct {
 }
 
 // ReportNames returns the names reports show groups under: every inbox,
-// team and teammate of the workspace, removed ones included, so old
+// team, teammate and AI agent of the workspace, removed ones included, so old
 // figures still read.
 func (q *Queries) ReportNames(ctx context.Context, workspaceID ids.UUID) ([]ReportNamesRow, error) {
 	rows, err := q.db.Query(ctx, reportNames, workspaceID)
@@ -459,16 +517,18 @@ FROM ai_runs
 WHERE workspace_id = $1 AND kind = 'conversation' AND outcome IN ('unknown', 'handoff')
   AND created_at >= $2::timestamptz AND created_at < $3::timestamptz
   AND COALESCE(nullif(query_rewritten, ''), query_original) IS NOT NULL
+  AND (cardinality($4::uuid[]) = 0 OR agent_id = ANY ($4::uuid[]))
 GROUP BY 1
 ORDER BY asked DESC, 1
-LIMIT $4
+LIMIT $5
 `
 
 type ReportUnansweredQuestionsParams struct {
-	WorkspaceID ids.UUID  `json:"workspace_id"`
-	Since       time.Time `json:"since"`
-	Until       time.Time `json:"until"`
-	RowLimit    int32     `json:"row_limit"`
+	WorkspaceID ids.UUID   `json:"workspace_id"`
+	Since       time.Time  `json:"since"`
+	Until       time.Time  `json:"until"`
+	Agents      []ids.UUID `json:"agents"`
+	RowLimit    int32      `json:"row_limit"`
 }
 
 type ReportUnansweredQuestionsRow struct {
@@ -483,6 +543,7 @@ func (q *Queries) ReportUnansweredQuestions(ctx context.Context, arg ReportUnans
 		arg.WorkspaceID,
 		arg.Since,
 		arg.Until,
+		arg.Agents,
 		arg.RowLimit,
 	)
 	if err != nil {

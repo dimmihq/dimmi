@@ -33,6 +33,7 @@ import (
 	"github.com/dimmihq/dimmi/app/actions/conversations"
 	"github.com/dimmihq/dimmi/app/actions/tickets"
 	"github.com/dimmihq/dimmi/app/ai/actionkit"
+	"github.com/dimmihq/dimmi/app/ai/agents"
 	appbroadcasting "github.com/dimmihq/dimmi/app/broadcasting"
 	"github.com/dimmihq/dimmi/app/contracts"
 	"github.com/dimmihq/dimmi/app/managers"
@@ -80,6 +81,7 @@ type Runner struct {
 
 	ProcedureVectors ProcedureVectors
 
+	prepared sync.Once
 	redactor *pii.Redactor
 	guard    *linkguard.Guard
 
@@ -150,22 +152,30 @@ func (r *Runner) RunConversationTurn(ctx context.Context, args Args, settings *T
 		return nil, fmt.Errorf("pipeline commit: %w", err)
 	}
 	r.remember(ctx, st, res)
+	if res.Outcome == outcomeTransferred {
+		return r.RunConversationTurn(ctx, args, settings)
+	}
 	return res, nil
 }
 
 /*
-prepare fills the defaults a zero-configured runner lacks.
+prepare fills the defaults a zero-configured runner lacks, once. One
+runner answers every conversation, so two turns starting together both
+get here; filling the defaults unguarded let each write what the other
+was reading.
 */
 func (r *Runner) prepare() {
-	if r.Clock == nil {
-		r.Clock = clock.System()
-	}
-	if r.redactor == nil {
-		r.redactor = pii.New()
-	}
-	if r.guard == nil {
-		r.guard = linkguard.New()
-	}
+	r.prepared.Do(func() {
+		if r.Clock == nil {
+			r.Clock = clock.System()
+		}
+		if r.redactor == nil {
+			r.redactor = pii.New()
+		}
+		if r.guard == nil {
+			r.guard = linkguard.New()
+		}
+	})
 }
 
 /*
@@ -183,7 +193,7 @@ func (r *Runner) turn(ctx context.Context, st *run) *decision {
 		defer stopTyping()
 	}
 
-	st.loop = &loop{llm: llm, system: r.render(st.env, "answer.system.md", r.answerVars(st))}
+	st.loop = &loop{llm: llm, system: r.render(st.env, rootOf(st.env), r.answerVars(st))}
 	r.shortlistProcedures(ctx, st)
 	r.resumeProcedure(ctx, st)
 	messages := r.conversationMessages(st.env)
@@ -199,9 +209,10 @@ func (r *Runner) turn(ctx context.Context, st *run) *decision {
 		r.ensureProcedureActions(ctx, st)
 	}
 	st.loop.newest = len(st.loop.messages) - 1
+	r.searchAhead(ctx, st)
 
 	draft, err := r.agentLoop(ctx, st)
-	if err == nil {
+	if err == nil && st.transfer == nil {
 		draft, err = r.checked(ctx, st, draft)
 	}
 	r.routeProcedureHandoff(st)
@@ -210,7 +221,7 @@ func (r *Runner) turn(ctx context.Context, st *run) *decision {
 	if err != nil {
 		return failed("provider_error", err)
 	}
-	return r.review(ctx, st, draft)
+	return r.reviewOrTransfer(ctx, st, draft)
 }
 
 /*
@@ -268,3 +279,8 @@ func (r *Runner) withoutUnknownLinks(ctx context.Context, st *run, draft string)
 			"customer gave; when there is none, say in words where to go.</system_note>"))
 	return r.agentLoop(ctx, st)
 }
+
+/*
+ErrNoAgent marks a workspace without an agent to answer.
+*/
+var ErrNoAgent = agents.ErrNoAgent

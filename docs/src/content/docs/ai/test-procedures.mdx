@@ -39,9 +39,11 @@ A simulation is a saved customer conversation your procedure must keep handling 
 
 ### How AI-played simulations run
 
-When you run a simulation, an AI plays the customer from the saved chat:
+When you run a simulation, the customer from the saved chat is played again:
 
-- **Uses only saved facts:** it sends the first message as written, then answers whatever the agent asks using only what the customer said in the saved chat. It never leads the agent or invents details.
+- **Saved messages go out as written:** each one is sent word for word, in order, and only once.
+- **An AI answers the agent's questions:** when the agent asks for something, an AI replies as the customer, using only the saved chat and the simulation's scenario. It never leads the agent or invents details.
+- **A scenario says who the customer is:** a few sentences on who they are and what they came for, like `A prospect shipping 300 parcels a month wants a plan recommendation. They have not asked to buy anything.` dimmi writes it when you save the chat, and you can edit it. The simulated customer only agrees to what the scenario or the saved chat shows they want.
 - **Flags missing details:** if your edited procedure asks for something the saved customer never knew, the customer says they do not know and dimmi marks that turn.
 - **Pinned to the saved date:** every simulation runs on the exact day its chat happened, so date-based rules (like a 30-day refund window) give the same answer every time.
 - **Safe mock actions:** actions never run for real; each returns its saved test response from **Settings → Actions**.
@@ -63,9 +65,13 @@ Saved chats start with automatic exact checks for the matched procedure, actions
 
 ### Running simulations before publishing
 
-Plain-English checks are graded independently of the reply, and each run streams live turn by turn. If a check cannot be graded, the run reports an error instead of passing.
+Each run streams live, turn by turn. A different model from the one that wrote the replies then judges your plain-English checks, so the agent never grades its own work. It reads the whole conversation and gives each check a verdict with a one-sentence reason, shown under the check. If you disagree with a reason, the check is usually too loose: reword it to say what you mean.
 
-Click **Run all** to run every simulation against your working copy. The editor shows how many passed right beside **Publish**. Preview and simulation runs count toward your workspace's monthly AI spend like any other run.
+If the judge can't answer, it is asked once more. If it still can't, the run fails with an error asking you to run it again. It never counts as a pass.
+
+On an install with no built-in models, a decision model judges instead. It gives no reason, and it can also end a check as unsure, shown with a question mark, which does not fail the simulation.
+
+Click **Run all** to run every simulation against your working copy. The editor shows how many passed right beside **Publish**. Preview and simulation runs are tallied on their own. They never count toward the agent's monthly spend cap, so testing can't stop it answering customers.
 
 <Callout type="note" title="Availability for self-hosted workspaces">
   Workspaces using dimmi's built-in AI models get AI-played simulations out of the box. Self-hosted workspaces without built-in models enabled can still test drafts manually in **Preview**.

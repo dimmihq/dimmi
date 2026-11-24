@@ -56,7 +56,7 @@ SELECT EXISTS (
       AND conversation_id = @conversation_id
       AND @message_id::uuid = ANY(included_message_ids)
       AND status IN ('completed', 'failed')
-      AND outcome NOT IN ('superseded', 'skipped')
+      AND outcome NOT IN ('superseded', 'skipped', 'transferred')
 )::boolean;
 
 -- name: RunInFlightForMessage :one

@@ -52,7 +52,7 @@ func TestAiProviderKeys(t *testing.T) {
 
 		res.AssertJSONPath("data.key_hint", "••••1234")
 		list := d.Owner.GetJSON("/api/v1/ai/keys").AssertOK()
-		view := d.Owner.GetJSON("/api/v1/ai/agent").AssertOK()
+		view := d.Owner.GetJSON(agentPath(t, d)).AssertOK()
 		for _, body := range [][]byte{res.Body, list.Body, view.Body} {
 			assert.NotContains(t, string(body), "sk-ant-secret")
 			assert.NotContains(t, string(body), "credentials")
@@ -125,7 +125,7 @@ func TestAiProviderKeys(t *testing.T) {
 		d := tests.NewDesk(t)
 		answering(d, "claude-a")
 		id := createKey(t, d, "Anthropic")
-		d.Owner.PatchJSON("/api/v1/ai/agent", testkit.JSON{"answer_key_id": id, "answer_model": "claude-a"}).AssertOK()
+		d.Owner.PatchJSON(agentPath(t, d), testkit.JSON{"answer_key_id": id, "answer_model": "claude-a"}).AssertOK()
 
 		d.Owner.Delete("/api/v1/ai/keys/" + id).AssertStatus(409)
 	})

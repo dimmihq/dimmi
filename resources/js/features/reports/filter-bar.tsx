@@ -16,6 +16,7 @@ import {
   RiFlag2Line,
   RiInbox2Line,
   RiPriceTag3Line,
+  RiRobot2Line,
   RiSearchLine,
   RiSparkling2Line,
   RiTeamLine,
@@ -31,6 +32,7 @@ import { DateRangePicker, type DateRangePreset } from "@/components/base/date-pi
 import { InputBase } from "@/components/base/input/input";
 import { Popover, PopoverTrigger } from "@/components/base/popover/popover";
 import { Switch } from "@/components/base/switch/switch";
+import { agentsQuery } from "@/lib/api/agents";
 import { inboxesQuery } from "@/lib/api/inboxes";
 import { tagsQuery } from "@/lib/api/tags";
 import { teamsQuery } from "@/lib/api/teams";
@@ -45,7 +47,7 @@ const aiOptions: Option[] = [
   { id: "not_involved", label: "No AI" },
 ];
 
-type FilterKey = "inbox" | "team" | "member" | "channel" | "tag" | "priority" | "ai";
+type FilterKey = "inbox" | "team" | "member" | "channel" | "tag" | "priority" | "ai" | "agent";
 
 /*
  * FilterDef is one filter: what it is called, its mark, the values it
@@ -304,6 +306,7 @@ function useFilterDefs(workspace: string): FilterDef[] {
   const teams = useQuery({ ...teamsQuery(workspace), enabled });
   const members = useQuery({ ...membersQuery(workspace), enabled });
   const tags = useQuery({ ...tagsQuery(workspace), enabled });
+  const agents = useQuery({ ...agentsQuery(workspace), enabled });
 
   return [
     {
@@ -335,6 +338,12 @@ function useFilterDefs(workspace: string): FilterDef[] {
     },
     { key: "priority", label: "Priority", icon: RiFlag2Line, options: priorityOptions },
     { key: "ai", label: "AI", icon: RiSparkling2Line, options: aiOptions, single: true },
+    {
+      key: "agent",
+      label: "AI agent",
+      icon: RiRobot2Line,
+      options: (agents.data ?? []).map((a) => ({ id: a.id, label: a.name })),
+    },
   ];
 }
 

@@ -9,7 +9,15 @@ import type { ChipSources } from "../procedure-writer/procedure-suggestions";
 import { actionName, words } from "./simulator";
 
 /*
- * Did lists what dimmi did in one reply, as chips under it.
+ * The outcomes of a reply that simply answered. They say nothing the
+ * reply does not, so they get no chip.
+ */
+const routine = ["answered", "greeted"];
+
+/*
+ * Did lists what dimmi did in one reply, as chips under it: the
+ * procedure it followed, the actions it called, a handover, or an
+ * outcome worth a second look. A reply that only answered shows none.
  */
 export function Did({
   matched,
@@ -38,8 +46,11 @@ export function Did({
   if (handoff) {
     chips.push({ key: "handoff", color: "orange", text: `Handed over: ${words(handoff).toLowerCase()}` });
   }
-  if (chips.length === 0) {
+  if (chips.length === 0 && !routine.includes(outcome)) {
     chips.push({ key: "outcome", color: "neutral", text: words(outcome) });
+  }
+  if (chips.length === 0) {
+    return null;
   }
 
   return (

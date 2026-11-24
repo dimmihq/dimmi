@@ -16,7 +16,7 @@ import (
 const createChannelConnection = `-- name: CreateChannelConnection :one
 INSERT INTO channel_connections (workspace_id, inbox_id, type, name, status, external_id, config, created_at, updated_at)
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $8)
-RETURNING id, workspace_id, inbox_id, type, name, status, external_id, config, credentials_encrypted, last_error, last_error_at, last_activity_at, deleted_at, created_at, updated_at, integration_installation_id
+RETURNING id, workspace_id, inbox_id, type, name, status, external_id, config, credentials_encrypted, last_error, last_error_at, last_activity_at, deleted_at, created_at, updated_at, integration_installation_id, ai_agent_id
 `
 
 type CreateChannelConnectionParams struct {
@@ -62,12 +62,13 @@ func (q *Queries) CreateChannelConnection(ctx context.Context, arg CreateChannel
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.IntegrationInstallationID,
+		&i.AiAgentID,
 	)
 	return i, err
 }
 
 const findChannelConnection = `-- name: FindChannelConnection :one
-SELECT id, workspace_id, inbox_id, type, name, status, external_id, config, credentials_encrypted, last_error, last_error_at, last_activity_at, deleted_at, created_at, updated_at, integration_installation_id FROM channel_connections WHERE workspace_id = $1 AND id = $2
+SELECT id, workspace_id, inbox_id, type, name, status, external_id, config, credentials_encrypted, last_error, last_error_at, last_activity_at, deleted_at, created_at, updated_at, integration_installation_id, ai_agent_id FROM channel_connections WHERE workspace_id = $1 AND id = $2
 `
 
 type FindChannelConnectionParams struct {
@@ -97,12 +98,13 @@ func (q *Queries) FindChannelConnection(ctx context.Context, arg FindChannelConn
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.IntegrationInstallationID,
+		&i.AiAgentID,
 	)
 	return i, err
 }
 
 const listInboxesWithoutChannel = `-- name: ListInboxesWithoutChannel :many
-SELECT i.id, i.workspace_id, i.name, i.default_team_id, i.settings, i.deleted_at, i.created_at, i.updated_at, i.access, i.schedule_id, i.ticket_type_id FROM inboxes AS i
+SELECT i.id, i.workspace_id, i.name, i.default_team_id, i.settings, i.deleted_at, i.created_at, i.updated_at, i.access, i.schedule_id, i.ticket_type_id, i.ai_agent_id FROM inboxes AS i
 WHERE i.workspace_id = $1
   AND i.deleted_at IS NULL
   AND NOT EXISTS (
@@ -140,6 +142,7 @@ func (q *Queries) ListInboxesWithoutChannel(ctx context.Context, arg ListInboxes
 			&i.Access,
 			&i.ScheduleID,
 			&i.TicketTypeID,
+			&i.AiAgentID,
 		); err != nil {
 			return nil, err
 		}

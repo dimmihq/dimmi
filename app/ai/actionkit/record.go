@@ -22,6 +22,7 @@ import (
 	"github.com/dimmihq/dimmi/framework/ids"
 
 	"github.com/dimmihq/dimmi/app/actions/conversations"
+	"github.com/dimmihq/dimmi/app/ai/agents"
 	"github.com/dimmihq/dimmi/app/enums"
 	appevents "github.com/dimmihq/dimmi/app/events"
 	"github.com/dimmihq/dimmi/app/models"
@@ -135,11 +136,22 @@ func MessagePatch(call models.AiActionCall, actor conversations.Actor) map[strin
 }
 
 /*
-agentActor is the workspace's agent as the timeline names it.
+agentActor is the agent on a conversation as the timeline names it:
+the one pinned to it, or the workspace's default.
 */
-func agentActor(ctx context.Context, q *models.Queries, workspaceID ids.UUID) conversations.Actor {
+func agentActor(ctx context.Context, q *models.Queries, workspaceID ids.UUID,
+	conversationID *ids.UUID,
+) conversations.Actor {
 	actor := conversations.Actor{Type: string(enums.AuthorTypeAgent)}
-	if agent, err := q.FindAgent(ctx, workspaceID); err == nil {
+	where := agents.Where{WorkspaceID: workspaceID}
+	if conversationID != nil {
+		if c, err := q.FindConversation(ctx, models.FindConversationParams{
+			WorkspaceID: workspaceID, ID: *conversationID,
+		}); err == nil {
+			where = agents.ForConversation(c, nil)
+		}
+	}
+	if agent, err := agents.Resolve(ctx, q, where); err == nil {
 		actor.ID, actor.Name = agent.ID, agent.Name
 	}
 	return actor

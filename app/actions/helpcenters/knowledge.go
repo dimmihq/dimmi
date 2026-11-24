@@ -28,6 +28,7 @@ import (
 	"regexp"
 	"slices"
 	"strings"
+	"time"
 
 	"github.com/dimmihq/dimmi/framework/database"
 	"github.com/dimmihq/dimmi/framework/ids"
@@ -45,27 +46,148 @@ candidates is how many articles a search ranks sections of.
 const candidates = 12
 
 /*
-defaultPerDocument is how many chunks of one article a hybrid result
-keeps.
+defaultPerDocument is how many chunks of one article a search by
+meaning keeps.
 */
 const defaultPerDocument = 3
 
 /*
 Knowledge is the agent's index over published articles. Vectors, when
-set, adds the meaning half of a hybrid search.
+set, searches by meaning, and Reranker, when set, orders what that
+search found by how well each passage answers the question, waiting
+RerankTimeout for it at most.
 */
 type Knowledge struct {
-	DB        *database.DB
-	Addresses Addresses
-	Fallback  contracts.Knowledge
-	Vectors   *knowledge.Vectors
+	DB            *database.DB
+	Addresses     Addresses
+	Fallback      contracts.Knowledge
+	Vectors       *knowledge.Vectors
+	Reranker      contracts.Reranker
+	RerankTimeout time.Duration
 }
 
 /*
 Search returns the best passages of the workspace's published articles
-and of the sources feeding the search's surface.
+and of the sources feeding the search's surface. A scoped search looks
+wider, then keeps only the passages of the help centers and sources it
+may use, as many as it asked for.
 */
 func (k *Knowledge) Search(ctx context.Context, ws ids.UUID, query string, opts contracts.KnowledgeSearchOptions,
+) (contracts.KnowledgeSearchResult, error) {
+	if !opts.Scoped {
+		return k.searchAll(ctx, ws, query, opts)
+	}
+	want := opts.Limit
+	wide := opts
+	wide.Limit = max(want*scopedWidening, scopedWidening)
+	wide.Scoped = false
+	wide.ExcludeArticles = opts.ExcludeArticles || len(opts.HelpCenterIDs) == 0
+	wide.ExcludeSources = opts.ExcludeSources || len(opts.SourceIDs) == 0
+	res, err := k.searchAll(ctx, ws, query, wide)
+	if err != nil {
+		return res, err
+	}
+	res.Chunks = slices.DeleteFunc(res.Chunks, func(c contracts.KnowledgeChunk) bool {
+		return !inScope(c, opts)
+	})
+	if want > 0 && len(res.Chunks) > want {
+		res.Chunks = res.Chunks[:want]
+	}
+	return res, nil
+}
+
+/*
+scopedWidening is how many more passages a scoped search looks at, so
+dropping those out of scope still leaves enough.
+*/
+const scopedWidening = 4
+
+/*
+inScope reports whether a passage comes from a help center or source a
+scoped search may use.
+*/
+func inScope(c contracts.KnowledgeChunk, opts contracts.KnowledgeSearchOptions) bool {
+	switch {
+	case c.HelpCenterID != nil:
+		return slices.Contains(opts.HelpCenterIDs, *c.HelpCenterID)
+	case c.SourceID != nil:
+		return slices.Contains(opts.SourceIDs, *c.SourceID)
+	}
+	return false
+}
+
+/*
+searchAll searches every article and source the options let through,
+with the question and with each other way of asking it the options
+carry. Each is a search of its own, ranked against its own words, as
+several.go says; a search with one query, or by keywords alone, is one
+search.
+*/
+func (k *Knowledge) searchAll(ctx context.Context, ws ids.UUID, query string, opts contracts.KnowledgeSearchOptions,
+) (contracts.KnowledgeSearchResult, error) {
+	asked := knowledge.Asked(query, opts.Queries)
+	if k.Vectors == nil || opts.Mode == "keyword" || len(asked) < 2 {
+		return k.searchOne(ctx, ws, query, opts)
+	}
+	return k.searchEach(ctx, ws, asked, opts)
+}
+
+/*
+searchOne searches every article and source the options let through.
+A workspace with an embedding model is searched two ways at once, by
+meaning and by keywords, and what both found is ranked together, as
+meaning.go says. One with no model, or a search that asked for
+keywords, is searched by keywords alone. When the search by meaning
+could not be done, because the question's vector could not be had even
+after its retry or nothing is embedded yet, the keyword passages are
+the answer, as the last resort, and the result says so.
+*/
+func (k *Knowledge) searchOne(ctx context.Context, ws ids.UUID, query string, opts contracts.KnowledgeSearchOptions,
+) (contracts.KnowledgeSearchResult, error) {
+	if k.Vectors == nil || opts.Mode == "keyword" || strings.TrimSpace(query) == "" {
+		return k.byKeyword(ctx, ws, query, opts)
+	}
+	wide := opts
+	wide.Limit = max(opts.Limit, keywordCandidates)
+	found := make(chan keywordHits, 1)
+	go func() {
+		started := k.Vectors.Clock.Now()
+		res, err := k.byKeyword(ctx, ws, query, wide)
+		found <- keywordHits{res: res, err: err, took: k.Vectors.Clock.Now().Sub(started)}
+	}()
+	s := search{ws: ws, query: query, opts: opts}
+	vec, vecErr := k.Vectors.SearchChunks(ctx, ws, query, opts)
+	keyword := <-found
+	if err := cmp.Or(vecErr, keyword.err); err != nil {
+		return contracts.KnowledgeSearchResult{}, err
+	}
+	vec.Timings["keyword"] = keyword.took
+	res, err := k.ranked(ctx, s, vec, keyword.res.Chunks)
+	if err != nil || res.Degraded == "" {
+		return res, err
+	}
+	out := keyword.res
+	out.Chunks = out.Chunks[:min(len(out.Chunks), cmp.Or(max(opts.Limit, 0), defaultLimit))]
+	out.Degraded, out.Timings = res.Degraded, res.Timings
+	if res.Degraded != "no_embeddings_key" {
+		out.Mode = "fts_fallback"
+	}
+	return out, nil
+}
+
+/*
+keywordHits is what the keyword search found, and how long it took.
+*/
+type keywordHits struct {
+	res  contracts.KnowledgeSearchResult
+	err  error
+	took time.Duration
+}
+
+/*
+byKeyword searches by the words of the query.
+*/
+func (k *Knowledge) byKeyword(ctx context.Context, ws ids.UUID, query string, opts contracts.KnowledgeSearchOptions,
 ) (contracts.KnowledgeSearchResult, error) {
 	terms := searchTerms(append([]string{query}, opts.Queries...))
 	if terms == "" {
@@ -90,11 +212,7 @@ func (k *Knowledge) Search(ctx context.Context, ws ids.UUID, query string, opts 
 	for _, r := range found.documents {
 		docs = append(docs, sourceDocumentOf(r))
 	}
-	res, err := knowledge.NewSeed(docs).Search(ctx, ws, query, opts)
-	if err != nil || k.Vectors == nil || opts.Mode == "keyword" {
-		return res, err
-	}
-	return k.hybrid(ctx, search{ws: ws, query: query, opts: opts, restrictions: found.restrictions}, res)
+	return knowledge.NewSeed(docs).Search(ctx, ws, query, opts)
 }
 
 /*

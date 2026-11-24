@@ -26,6 +26,7 @@ import (
 	"github.com/dimmihq/dimmi/framework/database"
 	"github.com/dimmihq/dimmi/framework/ids"
 
+	"github.com/dimmihq/dimmi/app/ai/agents"
 	"github.com/dimmihq/dimmi/app/contracts"
 	"github.com/dimmihq/dimmi/app/models"
 )
@@ -55,7 +56,8 @@ conversation's channel, who the customer is, whether writes may be
 offered at all, and the agent asking, dimmi when empty. Operator works
 for the team, so the customer's channel does not limit its actions.
 MustInclude pins the actions a procedure the run follows takes: each
-one the run may call is offered first, whatever the cap.
+one the run may call is offered first, whatever the cap. Scope is
+which actions the answering agent may call; its zero value allows all.
 */
 type OfferInput struct {
 	WorkspaceID ids.UUID
@@ -64,6 +66,7 @@ type OfferInput struct {
 	NoWrites    bool
 	Agent       string
 	MustInclude []ids.UUID
+	Scope       agents.Scope
 }
 
 /*
@@ -84,7 +87,7 @@ func (k *Kit) Offer(ctx context.Context, in OfferInput) ([]Live, error) {
 	var pinned, other []Live
 	for _, v := range versions {
 		s, err := FromVersion(v)
-		if err != nil || !offered(s, in, contact) {
+		if err != nil || !in.Scope.Allows(v.ActionID) || !offered(s, in, contact) {
 			continue
 		}
 		live := Live{ActionID: v.ActionID, VersionID: v.ID, Spec: s}

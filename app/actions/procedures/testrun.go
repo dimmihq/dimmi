@@ -14,6 +14,7 @@
 package procedures
 
 import (
+	"cmp"
 	"context"
 	"encoding/json"
 	"errors"
@@ -33,13 +34,15 @@ import (
 
 /*
 simulated is one saved simulation to run: who runs it, the procedure,
-the saved case and who watches.
+the saved case, who watches, and what answers each turn: the
+procedure's own Simulate when turn is nil.
 */
 type simulated struct {
-	m  authz.Membership
-	id ids.UUID
-	c  models.ProcedureTestCase
-	w  watch
+	m    authz.Membership
+	id   ids.UUID
+	c    models.ProcedureTestCase
+	w    watch
+	turn TurnFunc
 }
 
 /*
@@ -58,7 +61,10 @@ func (p *Procedures) runTestCase(ctx context.Context, run simulated) TestResult 
 	}
 
 	limit := min(len(script.messages)+extraTurns, maxTestMessages)
-	chat := &played{observed: procedure.Observed{Branches: map[string]string{}}}
+	chat := &played{
+		observed: procedure.Observed{Branches: map[string]string{}}, sent: make([]bool, len(script.messages)),
+	}
+	chat.sent[0] = true
 	next := customerMove{message: script.messages[0]}
 	run.w.tell(ctx, runStarted, map[string]any{"turns": limit})
 	for i := range limit {
@@ -82,8 +88,9 @@ func (p *Procedures) runTestCase(ctx context.Context, run simulated) TestResult 
 	}
 
 	run.w.tell(ctx, runJudging, nil)
-	res.AssertionResults = procedure.Assert(script.assertions, chat.observed, transcript(chat.history),
-		p.judge(ctx, run.m))
+	transcript := strings.Join(chat.lines, "\n")
+	res.AssertionResults = procedure.Assert(script.assertions, chat.observed, transcript,
+		p.judge(ctx, run.m, judging{checks: script.assertions, transcript: transcript, wrote: chat.wrote}))
 	res.Passed = procedure.Passed(res.AssertionResults)
 	res.Error = unjudged(res.AssertionResults)
 
@@ -92,13 +99,51 @@ func (p *Procedures) runTestCase(ctx context.Context, run simulated) TestResult 
 
 /*
 played is a run's chat so far: what was said, the procedure's state,
-what was observed, and whether dimmi handed over.
+what was observed, and whether dimmi handed over. Sent marks the saved
+messages the customer has sent, so none goes out twice. HeldBy is the
+agent the chat was transferred to, which answers from then on. Lines is
+the chat as the judge reads it: who wrote each message, by name, with
+every transfer and handover recorded between them. Wrote are the
+models that wrote the agent's replies, so the judge is none of them.
 */
 type played struct {
 	history   []pipeline.SimMessage
 	state     *pipeline.SimState
 	observed  procedure.Observed
 	handedOff bool
+	sent      []bool
+	heldBy    *ids.UUID
+	lines     []string
+	wrote     []string
+}
+
+/*
+record writes one exchange into the judge's transcript: the customer's
+move, a transfer the turn made, the reply under the name of the agent
+that wrote it, and a handover to the team.
+*/
+func (c *played) record(msg TestMessage, turn *pipeline.SimulationResult) {
+	if msg.Confirm || msg.Text == "" {
+		c.lines = append(c.lines, "[The customer pressed Confirm on the card]")
+	} else {
+		c.lines = append(c.lines, "CUSTOMER: "+msg.Text)
+	}
+	if turn.Model != "" && !slices.Contains(c.wrote, turn.Model) {
+		c.wrote = append(c.wrote, turn.Model)
+	}
+	name := cmp.Or(turn.AgentName, "AGENT")
+	if t := turn.Transfer; t != nil {
+		name = cmp.Or(t.Name, name)
+		c.lines = append(c.lines, "["+cmp.Or(t.FromName, "The agent")+" transferred the conversation to "+name+
+			". Its note for "+name+": "+cmp.Or(t.Summary, "none")+"]")
+	}
+	if turn.Reply != "" {
+		c.lines = append(c.lines, strings.ToUpper(name)+": "+turn.Reply)
+	}
+	if turn.Handoff != nil {
+		c.lines = append(c.lines, "["+name+" handed the conversation over to the human team. Reason: "+
+			cmp.Or(turn.Handoff.Reason, "none given")+"]")
+	}
 }
 
 /*
@@ -109,18 +154,27 @@ func (p *Procedures) playTurn(ctx context.Context, run simulated, chat *played, 
 	turnAt := countTurns(chat.history)
 	run.w.tell(ctx, runTurnStarted, map[string]any{"turn": turnAt, "message": msg.Text, "confirm": msg.Confirm})
 	script := scriptOf(run.c)
-	turn, err := p.Simulate(ctx, SimulateInput{
+	answer := run.turn
+	if answer == nil {
+		answer = p.Simulate
+	}
+	turn, err := answer(ctx, SimulateInput{
 		Membership: run.m, ID: run.id, History: chat.history, Message: msg.Text, Persona: script.persona,
 		Mocks: script.mocks, State: chat.state, Confirmed: confirmed(msg, chat.state),
-		StreamID: run.w.turnStream(turnAt), Now: run.c.SimulatedAt,
+		StreamID: run.w.turnStream(turnAt), Now: run.c.SimulatedAt, HeldBy: chat.heldBy,
 	})
 	if err != nil {
 		return TestTurn{}, err
 	}
 	observe(&chat.observed, turn)
+	chat.record(msg, turn)
+	if turn.Transfer != nil {
+		chat.heldBy = &turn.Transfer.To
+	}
 	out := TestTurn{
 		Message: msg.Text, Confirm: msg.Confirm, Improvised: move.unknown, Reply: turn.Reply, Outcome: turn.Outcome,
 		Calls: turn.Calls, ProcedureTrace: turn.ProcedureTrace, RunID: models.PublicID(models.PrefixAiRun, turn.RunID),
+		Transfer: turn.Transfer,
 	}
 	run.w.tell(ctx, runTurnFinished, map[string]any{"turn": turnAt, "result": out})
 	chat.history = said(chat.history, msg.Text, turn.Reply)
@@ -149,7 +203,7 @@ The reasons a run stops without a verdict because the customer could
 not be played.
 */
 const (
-	noCustomer = "The simulated customer needs dimmi's built-in models, which this workspace does not have."
+	noCustomer = "The simulated customer needs dimmi's built-in Claude or GPT models, which this workspace lacks."
 	silent     = "The simulated customer did not answer, so this run does not count. Run it again."
 )
 
@@ -171,8 +225,9 @@ type customerMove struct {
 }
 
 /*
-nextMove asks the simulated customer what it does next. A press of
-Confirm with no card waiting, or nothing left to say, ends the chat.
+nextMove asks the simulated customer what it does next, and marks a
+saved message it sends as sent. A press of Confirm with no card
+waiting, or nothing left to say, ends the chat.
 */
 func (p *Procedures) nextMove(ctx context.Context, run simulated, chat *played) (customerMove, string) {
 	if p.Customer == nil {
@@ -181,15 +236,15 @@ func (p *Procedures) nextMove(ctx context.Context, run simulated, chat *played) 
 	script := scriptOf(run.c)
 	saved := make([]pipeline.SavedMessage, len(script.messages))
 	for i, msg := range script.messages {
-		saved[i] = pipeline.SavedMessage{Text: msg.Text, Confirm: msg.Confirm}
+		saved[i] = pipeline.SavedMessage{Text: msg.Text, Confirm: msg.Confirm, Sent: chat.sent[i]}
 	}
 	waiting := ""
 	if chat.state != nil && len(chat.state.Pending) > 0 {
 		waiting = chat.state.Pending[0].Summary
 	}
 	move, err := p.Customer.PlayCustomer(ctx, pipeline.CustomerTurn{
-		WorkspaceID: run.m.Workspace.ID, MemberID: run.m.Member.ID, Name: script.persona.Name, Saved: saved,
-		Run: chat.history, Confirming: waiting,
+		WorkspaceID: run.m.Workspace.ID, MemberID: run.m.Member.ID, Name: script.persona.Name,
+		Scenario: script.scenario, Saved: saved, Run: chat.history, Confirming: waiting,
 	})
 	if errors.Is(err, pipeline.ErrCustomerUnavailable) {
 		return customerMove{}, noCustomer
@@ -201,16 +256,21 @@ func (p *Procedures) nextMove(ctx context.Context, run simulated, chat *played) 
 	if move.Done || (move.Message == "" && !presses) {
 		return customerMove{done: true}, ""
 	}
+	if move.Saved >= 1 && move.Saved <= len(chat.sent) {
+		chat.sent[move.Saved-1] = true
+	}
 
 	return customerMove{message: TestMessage{Text: move.Message, Confirm: presses}, unknown: move.Unknown}, ""
 }
 
 /*
-script is a saved simulation as it is replayed: who the customer is,
-what they write, what the actions answer and what must hold.
+script is a saved simulation as it is replayed: who the customer is
+and what they came for, what they write, what the actions answer and
+what must hold.
 */
 type script struct {
 	persona    pipeline.SimPersona
+	scenario   string
 	messages   []TestMessage
 	mocks      map[string]actionkit.Mock
 	assertions []procedure.Assertion
@@ -220,7 +280,7 @@ type script struct {
 scriptOf reads a saved simulation's script.
 */
 func scriptOf(c models.ProcedureTestCase) script {
-	out := script{mocks: map[string]actionkit.Mock{}}
+	out := script{mocks: map[string]actionkit.Mock{}, scenario: c.Scenario}
 	_ = json.Unmarshal(c.Persona, &out.persona)
 	_ = json.Unmarshal(c.Messages, &out.messages)
 	_ = json.Unmarshal(c.ActionMocks, &out.mocks)
@@ -267,7 +327,7 @@ has no verdict, or empty when every check was decided.
 func unjudged(results []procedure.AssertionResult) string {
 	for _, r := range results {
 		if r.Err != nil {
-			return "A check could not be judged, so this run does not count: " + r.Err.Error() + ". Run it again."
+			return "The simulation failed: a check could not be judged (" + r.Err.Error() + "). Try again."
 		}
 	}
 
@@ -316,34 +376,48 @@ func observe(o *procedure.Observed, turn *pipeline.SimulationResult) {
 }
 
 /*
-judge is the rubric judge of a run, none when no judge is set up.
+judging is what the judge of one run reads: the run's checks, its
+transcript, and the models that wrote the agent's replies.
 */
-func (p *Procedures) judge(ctx context.Context, m authz.Membership) procedure.Judge {
-	if p.Judge == nil {
-		return nil
-	}
-
-	return func(rubric, transcript string) (bool, string, error) {
-		return p.Judge.JudgeRubric(ctx, pipeline.Rubric{
-			WorkspaceID: m.Workspace.ID, MemberID: m.Member.ID, Rubric: rubric, Transcript: transcript,
-		})
-	}
+type judging struct {
+	checks     []procedure.Assertion
+	transcript string
+	wrote      []string
 }
 
 /*
-transcript writes a simulated conversation for the judge.
+judge is the rubric judge of a run, none when no judge is set up. The
+run's written checks are judged together, once, the first time one of
+them is asked for; each check then reads its own verdict.
 */
-func transcript(history []pipeline.SimMessage) string {
-	var b strings.Builder
-	for _, msg := range history {
-		who := "AGENT"
-		if msg.From == "customer" {
-			who = "CUSTOMER"
-		}
-		b.WriteString(who + ": " + msg.Text + "\n")
+func (p *Procedures) judge(ctx context.Context, m authz.Membership, j judging) procedure.Judge {
+	if p.Judge == nil {
+		return nil
 	}
+	var rubrics []string
+	for _, a := range j.checks {
+		if a.Type == procedure.AssertLLMRubric && !slices.Contains(rubrics, a.Rubric) {
+			rubrics = append(rubrics, a.Rubric)
+		}
+	}
+	var verdicts []procedure.Judgment
+	var failed error
+	asked := false
 
-	return b.String()
+	return func(rubric, _ string) (procedure.Judgment, error) {
+		if !asked {
+			asked = true
+			verdicts, failed = p.Judge.JudgeRubrics(ctx, pipeline.Rubrics{
+				WorkspaceID: m.Workspace.ID, MemberID: m.Member.ID, Rubrics: rubrics, Transcript: j.transcript,
+				Wrote: j.wrote,
+			})
+		}
+		i := slices.Index(rubrics, rubric)
+		if failed != nil || i < 0 || i >= len(verdicts) {
+			return procedure.Judgment{}, cmp.Or(failed, pipeline.ErrNoJudgment)
+		}
+		return verdicts[i], nil
+	}
 }
 
 /*

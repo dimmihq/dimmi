@@ -8,11 +8,12 @@ export const aiFilters: { value: AiFilter | undefined; label: string }[] = [
   { value: "any", label: "Agent involved" },
   { value: "active", label: "Agent answering" },
   { value: "handed_off", label: "Handed over by agent" },
+  { value: "transferred", label: "Transferred between agents" },
 ];
 
 /*
  * isAiFilter says whether a value read from the address is a filter.
  */
 export function isAiFilter(value: unknown): value is AiFilter {
-  return value === "any" || value === "active" || value === "handed_off";
+  return value === "any" || value === "active" || value === "handed_off" || value === "transferred";
 }

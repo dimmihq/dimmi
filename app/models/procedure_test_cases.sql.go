@@ -16,12 +16,12 @@ import (
 const createProcedureTestCase = `-- name: CreateProcedureTestCase :one
 INSERT INTO procedure_test_cases (
     workspace_id, procedure_id, name, source_conversation_id, persona, messages, action_mocks, assertions,
-    simulated_at, created_by_member_id, created_at, updated_at
+    simulated_at, scenario, created_by_member_id, created_at, updated_at
 ) VALUES (
     $1, $2, $3, $4, $5, $6, $7,
-    $8, $9, $10, $11, $11
+    $8, $9, $10, $11, $12, $12
 )
-RETURNING id, workspace_id, procedure_id, name, source_conversation_id, persona, messages, action_mocks, assertions, last_result, created_by_member_id, created_at, updated_at, simulated_at
+RETURNING id, workspace_id, procedure_id, name, source_conversation_id, persona, messages, action_mocks, assertions, last_result, created_by_member_id, created_at, updated_at, simulated_at, scenario
 `
 
 type CreateProcedureTestCaseParams struct {
@@ -34,6 +34,7 @@ type CreateProcedureTestCaseParams struct {
 	ActionMocks          json.RawMessage `json:"action_mocks"`
 	Assertions           json.RawMessage `json:"assertions"`
 	SimulatedAt          *time.Time      `json:"simulated_at"`
+	Scenario             string          `json:"scenario"`
 	MemberID             *ids.UUID       `json:"member_id"`
 	Now                  time.Time       `json:"now"`
 }
@@ -50,6 +51,7 @@ func (q *Queries) CreateProcedureTestCase(ctx context.Context, arg CreateProcedu
 		arg.ActionMocks,
 		arg.Assertions,
 		arg.SimulatedAt,
+		arg.Scenario,
 		arg.MemberID,
 		arg.Now,
 	)
@@ -69,6 +71,7 @@ func (q *Queries) CreateProcedureTestCase(ctx context.Context, arg CreateProcedu
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.SimulatedAt,
+		&i.Scenario,
 	)
 	return i, err
 }
@@ -90,7 +93,7 @@ func (q *Queries) DeleteProcedureTestCase(ctx context.Context, arg DeleteProcedu
 }
 
 const findProcedureTestCase = `-- name: FindProcedureTestCase :one
-SELECT id, workspace_id, procedure_id, name, source_conversation_id, persona, messages, action_mocks, assertions, last_result, created_by_member_id, created_at, updated_at, simulated_at FROM procedure_test_cases
+SELECT id, workspace_id, procedure_id, name, source_conversation_id, persona, messages, action_mocks, assertions, last_result, created_by_member_id, created_at, updated_at, simulated_at, scenario FROM procedure_test_cases
 WHERE workspace_id = $1 AND procedure_id = $2 AND id = $3
 `
 
@@ -119,12 +122,13 @@ func (q *Queries) FindProcedureTestCase(ctx context.Context, arg FindProcedureTe
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.SimulatedAt,
+		&i.Scenario,
 	)
 	return i, err
 }
 
 const listProcedureTestCases = `-- name: ListProcedureTestCases :many
-SELECT id, workspace_id, procedure_id, name, source_conversation_id, persona, messages, action_mocks, assertions, last_result, created_by_member_id, created_at, updated_at, simulated_at FROM procedure_test_cases
+SELECT id, workspace_id, procedure_id, name, source_conversation_id, persona, messages, action_mocks, assertions, last_result, created_by_member_id, created_at, updated_at, simulated_at, scenario FROM procedure_test_cases
 WHERE workspace_id = $1 AND procedure_id = $2
 ORDER BY created_at, id
 `
@@ -159,6 +163,7 @@ func (q *Queries) ListProcedureTestCases(ctx context.Context, arg ListProcedureT
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.SimulatedAt,
+			&i.Scenario,
 		); err != nil {
 			return nil, err
 		}
@@ -190,9 +195,9 @@ func (q *Queries) SetProcedureTestCaseResult(ctx context.Context, arg SetProcedu
 const updateProcedureTestCase = `-- name: UpdateProcedureTestCase :one
 UPDATE procedure_test_cases SET name = $1, persona = $2, messages = $3,
     action_mocks = $4, assertions = $5, simulated_at = $6,
-    updated_at = $7
-WHERE workspace_id = $8 AND procedure_id = $9 AND id = $10
-RETURNING id, workspace_id, procedure_id, name, source_conversation_id, persona, messages, action_mocks, assertions, last_result, created_by_member_id, created_at, updated_at, simulated_at
+    scenario = $7, updated_at = $8
+WHERE workspace_id = $9 AND procedure_id = $10 AND id = $11
+RETURNING id, workspace_id, procedure_id, name, source_conversation_id, persona, messages, action_mocks, assertions, last_result, created_by_member_id, created_at, updated_at, simulated_at, scenario
 `
 
 type UpdateProcedureTestCaseParams struct {
@@ -202,6 +207,7 @@ type UpdateProcedureTestCaseParams struct {
 	ActionMocks json.RawMessage `json:"action_mocks"`
 	Assertions  json.RawMessage `json:"assertions"`
 	SimulatedAt *time.Time      `json:"simulated_at"`
+	Scenario    string          `json:"scenario"`
 	Now         time.Time       `json:"now"`
 	WorkspaceID ids.UUID        `json:"workspace_id"`
 	ProcedureID ids.UUID        `json:"procedure_id"`
@@ -217,6 +223,7 @@ func (q *Queries) UpdateProcedureTestCase(ctx context.Context, arg UpdateProcedu
 		arg.ActionMocks,
 		arg.Assertions,
 		arg.SimulatedAt,
+		arg.Scenario,
 		arg.Now,
 		arg.WorkspaceID,
 		arg.ProcedureID,
@@ -238,6 +245,7 @@ func (q *Queries) UpdateProcedureTestCase(ctx context.Context, arg UpdateProcedu
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.SimulatedAt,
+		&i.Scenario,
 	)
 	return i, err
 }

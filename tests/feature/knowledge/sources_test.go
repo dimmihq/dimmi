@@ -41,9 +41,9 @@ func TestWebsiteSource(t *testing.T) {
 		assert.Equal(t, site+"/docs/refunds", found.Chunks[0].URL)
 		assert.NotNil(t, found.Chunks[0].SourceID)
 
-		hybrid := x.search(t, "refund", "hybrid")
-		assert.Equal(t, "hybrid", hybrid.Mode)
-		assert.Contains(t, titles(hybrid.Chunks), "Refund policy")
+		meant := x.search(t, "refund", "")
+		assert.Equal(t, "reranked", meant.Mode)
+		assert.Contains(t, titles(meant.Chunks), "Refund policy")
 	})
 
 	t.Run("a second sync only reindexes what changed and removes what is gone", func(t *testing.T) {

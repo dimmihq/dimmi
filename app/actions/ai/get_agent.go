@@ -1,11 +1,12 @@
 /*
 |--------------------------------------------------------------------------
-| Get AI Agent
+| AI Provisioning
 |--------------------------------------------------------------------------
 |
-| The workspace's agent, ready to edit: it exists by the time the
-| caller sees it, the built-in connection exists beside it, and the
-| readiness answer says whether it could go live today.
+| What every workspace's AI needs before anyone edits an agent: the
+| built-in connection, refreshed to the models the install offers, the
+| providers a workspace can connect, the model catalog, and whether an
+| agent could go live today.
 |
 */
 
@@ -21,7 +22,6 @@ import (
 	"github.com/dimmihq/dimmi/framework/database"
 	"github.com/dimmihq/dimmi/framework/ids"
 
-	"github.com/dimmihq/dimmi/app/auth/authz"
 	"github.com/dimmihq/dimmi/app/enums"
 	"github.com/dimmihq/dimmi/app/models"
 	"github.com/dimmihq/dimmi/app/support/aimodels"
@@ -31,141 +31,11 @@ import (
 )
 
 /*
-GetAgentInput is who reads the agent.
-*/
-type GetAgentInput struct {
-	Membership authz.Membership
-}
-
-/*
-AgentView is the agent with everything the settings page needs: its
-connections, the providers it could connect, the model catalog,
-whether it could go live and the prompt version its answers use. It
-holds rows, so it is shaped by a resource before it leaves the server.
-*/
-type AgentView struct {
-	Agent         models.AiAgent
-	Keys          []models.AiProviderKey
-	Providers     []ProviderDescriptor
-	Catalog       map[string][]CatalogEntry
-	Ready         bool
-	ReadinessErrs []string
-	Managed       bool
-	PromptVersion string
-}
-
-/*
-GetAiAgent returns the workspace's agent, creating it and the
-built-in connection on first use.
-
-Rules:
-  - The caller needs ai:read.
-
-Errors: [exceptions.ErrForbidden], or a wrapped database error.
-*/
-type GetAiAgent struct {
-	DB     *database.DB
-	Clock  clock.Clock
-	Config config.AIConfig
-	Prices *aiprices.Table
-}
-
-/*
-Handle returns the agent view.
-*/
-func (a *GetAiAgent) Handle(ctx context.Context, in GetAgentInput) (*AgentView, error) {
-	if err := RequireAgentRead(in.Membership); err != nil {
-		return nil, err
-	}
-
-	var view *AgentView
-
-	err := a.DB.Transaction(ctx, func(ctx context.Context, tx *database.Tx) error {
-		agent, managedKey, err := a.provision(ctx, tx, in.Membership.Workspace.ID)
-		if err != nil {
-			return err
-		}
-
-		keys, err := models.New(tx).ListProviderKeys(ctx, in.Membership.Workspace.ID)
-		if err != nil {
-			return fmt.Errorf("list provider keys: %w", err)
-		}
-
-		view = &AgentView{
-			Agent:         agent,
-			Keys:          keys,
-			Providers:     providers(a.Config),
-			Catalog:       catalog(a.Prices),
-			Managed:       managedKey != nil,
-			PromptVersion: promptVersion(agent, a.Config),
-		}
-		view.Ready, view.ReadinessErrs = readiness(agent, keys)
-
-		return nil
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	return view, nil
-}
-
-/*
-provision makes sure the agent and, when the install offers one, the
-built-in connection exist, pointing a fresh agent's answer role at the
-built-in defaults.
-*/
-func (a *GetAiAgent) provision(ctx context.Context, tx *database.Tx,
-	workspaceID ids.UUID,
-) (models.AiAgent, *models.AiProviderKey, error) {
-	deps := seedDeps{clock: a.Clock, config: a.Config}
-
-	agent, err := ensureAgent(ctx, deps, tx, workspaceID)
-	if err != nil {
-		return agent, nil, err
-	}
-
-	managedKey, err := ensureManagedKey(ctx, deps, tx, workspaceID)
-	if err != nil {
-		return agent, nil, err
-	}
-	if !defaultRoles(&agent, managedKey, a.Config) {
-		return agent, managedKey, nil
-	}
-
-	agent, err = models.New(tx).UpdateAgent(ctx, updateParams(&agent, a.Clock.Now()))
-	if err != nil {
-		return agent, nil, fmt.Errorf("save default roles: %w", err)
-	}
-	return agent, managedKey, nil
-}
-
-/*
 seedDeps are the two things the provisioning helpers both need.
 */
 type seedDeps struct {
 	clock  clock.Clock
 	config config.AIConfig
-}
-
-/*
-ensureAgent returns the workspace's agent, creating it at defaults
-when missing.
-*/
-func ensureAgent(ctx context.Context, d seedDeps, tx *database.Tx, workspaceID ids.UUID) (models.AiAgent, error) {
-	agent, err := models.New(tx).FindAgent(ctx, workspaceID)
-	if err == nil {
-		return agent, nil
-	}
-
-	capMicros := int64(d.config.DefaultMonthlyCapUSD * 1_000_000)
-	agent, err = models.New(tx).CreateAgent(ctx, models.CreateAgentParams{
-		WorkspaceID: workspaceID, MonthlySpendCapMicros: &capMicros, Now: d.clock.Now(),
-	})
-	if err != nil {
-		return models.AiAgent{}, fmt.Errorf("create ai agent: %w", err)
-	}
-	return agent, nil
 }
 
 /*
@@ -292,21 +162,6 @@ func managedModelIDs() []string {
 }
 
 /*
-defaultRoles points an unconfigured agent's answer role at the managed
-connection and the cheapest model the install's upstreams can serve, so
-the agent can answer without any setup.
-*/
-func defaultRoles(agent *models.AiAgent, key *models.AiProviderKey, cfg config.AIConfig) bool {
-	answer := aimodels.DefaultAnswer(managedFamily(cfg))
-	if key == nil || agent.AnswerKeyID != nil || answer == "" {
-		return false
-	}
-	agent.AnswerKeyID = &key.ID
-	agent.AnswerModel = &answer
-	return true
-}
-
-/*
 providers lists the connectable providers, marking which the install
 can actually serve.
 */
@@ -361,9 +216,10 @@ func catalog(prices *aiprices.Table) map[string][]CatalogEntry {
 
 /*
 readiness answers whether the agent could go live and why not: it
-needs an answer model on a working connection that offers it, and at
-least one channel. Classifying a question is not a model role the
-workspace configures.
+needs an answer model on a working connection that offers it, and the
+default agent at least one channel. Any other agent answers where it
+is placed or where a workflow hands to it. Classifying a question is
+not a model role the workspace configures.
 */
 func readiness(agent models.AiAgent, keys []models.AiProviderKey) (bool, []string) {
 	var errs []string
@@ -371,7 +227,7 @@ func readiness(agent models.AiAgent, keys []models.AiProviderKey) (bool, []strin
 	if !answerUsable(agent, keys) {
 		errs = append(errs, "answer model not configured")
 	}
-	if len(agent.EnabledChannels) == 0 {
+	if agent.IsDefault && len(agent.EnabledChannels) == 0 {
 		errs = append(errs, "no channels enabled")
 	}
 

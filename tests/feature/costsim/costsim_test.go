@@ -208,7 +208,7 @@ func TestSimulation(t *testing.T) {
 		first := report.Conversations[0]
 		assert.Equal(t, stowline.Scenarios()[0].Key, first.Scenario)
 		assert.Positive(t, first.AIReplies)
-		assert.Equal(t, 1, first.Searches, "the agent searched the help center")
+		assert.Equal(t, 2, first.Searches, "the first message was searched ahead, and the agent searched once more")
 		assert.GreaterOrEqual(t, first.ModelCalls, 2)
 		assert.Positive(t, first.CostMicros, "the recorded runs carry a cost")
 		assert.Positive(t, first.ConvCost)

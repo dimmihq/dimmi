@@ -19,3 +19,20 @@ Files is the whole agent/ tree.
 //
 //go:embed all:agent
 var Files embed.FS
+
+/*
+Tasks is the whole tasks/ tree: the prompt of every job a model does
+besides answering as an agent, such as judging, summarizing, sorting
+and playing a simulated customer, one file per job.
+*/
+//
+//go:embed all:tasks
+var Tasks embed.FS
+
+/*
+Guidance is the whole guidance/ tree: the guidance a new agent starts
+with, one file per template.
+*/
+//
+//go:embed all:guidance
+var Guidance embed.FS

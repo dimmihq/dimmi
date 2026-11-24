@@ -25,6 +25,7 @@ import (
 	"github.com/dimmihq/dimmi/framework/ids"
 
 	"github.com/dimmihq/dimmi/app/actions/ai"
+	"github.com/dimmihq/dimmi/app/ai/agents"
 	"github.com/dimmihq/dimmi/app/auth/authz"
 	"github.com/dimmihq/dimmi/app/models"
 )
@@ -147,8 +148,8 @@ func (r month) totals(ctx context.Context, q *models.Queries, view *UsageView) e
 	if err == nil {
 		view.AgentCost = period.CostMicros
 	}
-	if agent, err := q.FindAgent(ctx, r.workspace); err == nil {
-		view.CapMicros = agent.MonthlySpendCapMicros
+	if settings, err := agents.Shared(ctx, q, r.workspace); err == nil {
+		view.CapMicros = settings.MonthlySpendCapMicros
 	}
 	return nil
 }

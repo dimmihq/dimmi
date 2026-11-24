@@ -63,7 +63,7 @@ openTriage loads what a triage run needs, as the workspace's first
 owner, and opens its run.
 */
 func (e *Engine) openTriage(ctx context.Context, workspaceID, conversationID ids.UUID) (*session, error) {
-	s := &session{background: true, question: TriageQuestion}
+	s := &session{background: true, question: TriageQuestion()}
 	err := e.DB.Transaction(ctx, func(ctx context.Context, tx *database.Tx) error {
 		q := models.New(tx)
 		settings, err := LoadSettings(ctx, q, workspaceID)

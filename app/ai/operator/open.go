@@ -28,6 +28,7 @@ import (
 
 	"github.com/dimmihq/dimmi/app/actions/conversations"
 	"github.com/dimmihq/dimmi/app/ai/actionkit"
+	"github.com/dimmihq/dimmi/app/ai/agents"
 	"github.com/dimmihq/dimmi/app/ai/pipeline"
 	"github.com/dimmihq/dimmi/app/auth/authz"
 	"github.com/dimmihq/dimmi/app/contracts"
@@ -169,16 +170,17 @@ func (e *Engine) loadConversation(ctx context.Context, q *models.Queries, s *ses
 }
 
 /*
-loadModel reads the agent's answer connection and model, and refuses
+loadModel reads the default agent's answer connection and model, or
+the workspace's when it names none, and refuses
 when there is none or the month's budget is spent.
 */
 func (e *Engine) loadModel(ctx context.Context, q *models.Queries, s *session) error {
-	agent, err := q.FindAgent(ctx, s.m.Workspace.ID)
-	if errors.Is(err, database.ErrNotFound) {
+	agent, err := agents.DefaultAnswerer(ctx, q, s.m.Workspace.ID)
+	if errors.Is(err, agents.ErrNoAgent) {
 		return ErrNoModel
 	}
 	if err != nil {
-		return fmt.Errorf("find agent: %w", err)
+		return err
 	}
 	if agent.AnswerKeyID == nil || agent.AnswerModel == nil || *agent.AnswerModel == "" {
 		return ErrNoModel
@@ -272,7 +274,7 @@ titleOf names a thread after its first question, or Brief when it began
 with a brief.
 */
 func titleOf(question string) string {
-	if strings.TrimSpace(question) == strings.TrimSpace(BriefQuestion) {
+	if strings.TrimSpace(question) == strings.TrimSpace(BriefQuestion()) {
 		return briefTitle
 	}
 	line, _, _ := strings.Cut(strings.TrimSpace(question), "\n")

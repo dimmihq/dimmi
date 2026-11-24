@@ -23,6 +23,9 @@
 | taken to wait on the customer, and it counts as answered once they
 | have replied to it.
 |
+| The questions are the step_*.md and condition_*.md files under
+| resources/prompts/tasks/judgments.
+|
 */
 
 package pipeline
@@ -37,6 +40,7 @@ import (
 
 	"github.com/dimmihq/dimmi/app/contracts"
 	"github.com/dimmihq/dimmi/app/support/procedure"
+	"github.com/dimmihq/dimmi/app/support/prompts"
 )
 
 /*
@@ -72,11 +76,9 @@ func (r *Runner) learnSteps(ctx context.Context, st *run) map[string]bool {
 	plan, _ := r.procedurePlan(st, triedToo)
 	waits := map[string]bool{}
 	req := contracts.DecisionRequest{Questions: map[string]contracts.DecisionQuestion{}}
-	var state strings.Builder
-	state.WriteString("A support team wrote this procedure for its AI agent to follow with a customer, one " +
-		"step at a time. Judge each step named in a question on its own.\n")
+	var steps strings.Builder
 	for _, n := range plan.Nodes {
-		state.WriteString("\nStep " + n.Label + ": " + n.Step.Text)
+		steps.WriteString("\nStep " + n.Label + ": " + n.Step.Text)
 		if len(n.Step.Actions()) > 0 || strings.TrimSpace(n.Step.Text) == "" {
 			continue
 		}
@@ -85,20 +87,12 @@ func (r *Runner) learnSteps(ctx context.Context, st *run) map[string]bool {
 			waits[key], _ = known.(bool)
 			continue
 		}
-		req.Questions[key] = contracts.DecisionQuestion{
-			Type: contracts.DecisionNoul,
-			Instructions: "Does step " + n.Label + " need something back from the customer before the agent " +
-				"can move on?",
-			True: "The step has the agent ask the customer a question, collect details from them, have them " +
-				"choose, or get their confirmation or agreement.",
-			False: "The step only has the agent tell the customer something, or decide or check something on " +
-				"its own. Nothing is needed back from the customer.",
-		}
+		req.Questions[key] = question("step_waits", prompts.Vars{"step": n.Label})
 	}
 	if len(req.Questions) == 0 {
 		return waits
 	}
-	req.State = state.String()
+	req.State = prompts.Judgment("step_waits", prompts.Vars{"steps": steps.String()}).State
 	for key, needs := range r.judge(ctx, st, req) {
 		waits[key] = needs >= judged
 		r.stepWaits.Store(key, waits[key])
@@ -182,27 +176,15 @@ are off the path from here on. It reports whether a side was taken.
 */
 func (r *Runner) decideSide(ctx context.Context, st *run, n procedure.Node) bool {
 	known, _ := json.Marshal(st.proc.outputs)
+	vars := prompts.Vars{
+		"condition": n.Step.Text, "today": st.env.now.Format("Monday 2 January 2006"),
+		"lookups": truncate(string(known), procedureChars), "conversation": r.conversationLines(st.env),
+	}
 	answers := r.judge(ctx, st, contracts.DecisionRequest{
-		State: "A support conversation. The AGENT follows a procedure its team wrote and has reached a point " +
-			"where the procedure goes one of two ways, depending on whether this is so:\n" + n.Step.Text +
-			"\n\nToday is " + st.env.now.Format("Monday 2 January 2006") + ". What the agent's lookups " +
-			"returned so far:\n" + truncate(string(known), procedureChars) +
-			"\n\nThe conversation so far:\n" + r.conversationLines(st.env),
+		State: prompts.Judgment("condition_clear", vars).State,
 		Questions: map[string]contracts.DecisionQuestion{
-			"clear": {
-				Type:         contracts.DecisionNoul,
-				Instructions: "Can it be told now whether this is so?",
-				True: "What the CUSTOMER wrote, or what the lookups returned, settles it one way or the " +
-					"other.",
-				False: "It cannot be told yet: it depends on something the customer has not said, or has " +
-					"not answered since the AGENT asked, and the lookups do not show it.",
-			},
-			"holds": {
-				Type:         contracts.DecisionNoul,
-				Instructions: "Is this so?",
-				True:         "From what the CUSTOMER wrote and what the lookups returned, it is so.",
-				False:        "It is not so, or it cannot be told.",
-			},
+			"clear": question("condition_clear", vars),
+			"holds": question("condition_holds", vars),
 		},
 	})
 	told, ok := answers["clear"]
@@ -223,23 +205,32 @@ func (r *Runner) decideSide(ctx context.Context, st *run, n procedure.Node) bool
 }
 
 /*
+stepDeclined reports whether the customer turned down what a step that
+takes an action would do, as the decision model reads their messages.
+With no decision model, or none that answers, it cannot be told and the
+step stands.
+*/
+func (r *Runner) stepDeclined(ctx context.Context, st *run, n procedure.Node) bool {
+	vars := prompts.Vars{"step": n.Step.Text, "conversation": r.conversationLines(st.env)}
+	req := contracts.DecisionRequest{
+		State:     prompts.Judgment("step_declined", vars).State,
+		Questions: map[string]contracts.DecisionQuestion{"declined": question("step_declined", vars)},
+	}
+	declined, ok := r.judge(ctx, st, req)["declined"]
+
+	return ok && declined >= judged
+}
+
+/*
 stepGiven asks the decision model how likely it is that the customer
 has given what a step needs from them. The second result is false when
 it could not be asked.
 */
 func (r *Runner) stepGiven(ctx context.Context, st *run, n procedure.Node) (float64, bool) {
+	vars := prompts.Vars{"step": n.Step.Text, "conversation": r.conversationLines(st.env)}
 	req := contracts.DecisionRequest{
-		State: "A support conversation. The AGENT follows a procedure its team wrote and is on this step of it:\n" +
-			n.Step.Text + "\n\nThe conversation so far:\n" + r.conversationLines(st.env),
-		Questions: map[string]contracts.DecisionQuestion{"given": {
-			Type:         contracts.DecisionNoul,
-			Instructions: "Has the customer already given everything this step needs from them?",
-			True: "Everything the step asks the customer for is in the CUSTOMER's messages. Where the step " +
-				"needs them to confirm, agree or choose, the AGENT put it to them in an earlier message and " +
-				"the CUSTOMER answered after that.",
-			False: "Something the step needs from the customer is missing or unclear, the AGENT has not " +
-				"asked for it yet, or the CUSTOMER has not answered since being asked.",
-		}},
+		State:     prompts.Judgment("step_given", vars).State,
+		Questions: map[string]contracts.DecisionQuestion{"given": question("step_given", vars)},
 	}
 	given, ok := r.judge(ctx, st, req)["given"]
 
