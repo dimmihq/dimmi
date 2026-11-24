@@ -21,7 +21,7 @@ func notificationDeliveryDocs() map[string]Doc {
 				"sent, failed and why, or skipped and why, such as quiet hours or a channel turned off. " +
 				"Someone who manages members may read another member's.",
 			Returns: "a page of deliveries, newest first, with next_cursor in meta.",
-			Next:    []string{"dimmi_notification_preferences_update: turn a channel back on"},
+			Next:    []string{"dimmi_update_notification_preferences: turn a channel back on"},
 			Params: map[string]string{
 				"filter[member]":  "A member id, mem_..., to read their log; needs members:write. Yours by default.",
 				"filter[channel]": "in_app, email, push or slack.",
@@ -30,6 +30,7 @@ func notificationDeliveryDocs() map[string]Doc {
 			},
 		},
 		"notifications.deliveries.index": {
+			Name:    "list_deliveries_of_notification",
 			Title:   "Show how a notification reached you",
 			Use:     "Lists each channel one of your own notifications went to, and how it ended.",
 			Returns: "the deliveries of the notification, oldest first.",

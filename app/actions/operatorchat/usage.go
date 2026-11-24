@@ -45,9 +45,9 @@ type UsageInput struct {
 
 /*
 UsageView is one month of Operator: its totals, the daily series, the
-splits by purpose, teammate and model, the changesets by status, its
-latest runs, and the agent's whole spend for the month with the cap it
-is held to, nil when there is none.
+splits by purpose, teammate, model and routine, the changesets by
+status, its latest runs, and the agent's whole spend for the month with
+the cap it is held to, nil when there is none.
 */
 type UsageView struct {
 	Start      time.Time
@@ -58,6 +58,7 @@ type UsageView struct {
 	ByModel    []models.OperatorUsageByModelRow
 	Changesets []models.OperatorChangesetsByStatusRow
 	Recent     []models.ListRecentOperatorRunsRow
+	ByRoutine  []models.ListOperatorRoutineCostsRow
 	AgentCost  int64
 	CapMicros  *int64
 }
@@ -190,6 +191,11 @@ func (r month) splits(ctx context.Context, q *models.Queries, view *UsageView) e
 		AccessUnassigned: r.scope.Unassigned, AccessHiddenInboxes: r.scope.HiddenInboxes,
 	}); err != nil {
 		return fmt.Errorf("list recent operator runs: %w", err)
+	}
+	if view.ByRoutine, err = q.ListOperatorRoutineCosts(ctx, models.ListOperatorRoutineCostsParams{
+		WorkspaceID: r.workspace, Since: r.since, Until: r.until, RowLimit: recentRuns,
+	}); err != nil {
+		return fmt.Errorf("list operator usage by routine: %w", err)
 	}
 	return nil
 }

@@ -93,6 +93,7 @@ type table struct {
 	routes  []*Route
 	names   map[string]*Route
 	apis    []*apiSpec
+	explain func(prefix string, doc map[string]any)
 	once    sync.Once
 	handler http.Handler
 	err     error

@@ -29,6 +29,7 @@ import {
   RiGitBranchLine,
   RiGroupLine,
   RiHistoryLine,
+  RiHome5Line,
   RiInbox2Line,
   RiKey2Line,
   RiLightbulbLine,
@@ -67,6 +68,8 @@ import type {
 export interface Page extends DashboardNavItem {
   href: string;
   description: string;
+  /* Other addresses the page holds, such as the pages opened from one of its tabs. */
+  also?: string[];
 }
 
 function page(key: string, label: string, icon: DashboardNavItem["icon"], href: string, description: string): Page {
@@ -104,6 +107,13 @@ export const inboxViews = {
 export type InboxView = keyof typeof inboxViews;
 
 export const workspacePages = {
+  home: page(
+    "home",
+    "Home",
+    RiHome5Line,
+    "/d/home",
+    "Who needs a person now, what Operator found and how the week is going.",
+  ),
   notifications: page(
     "notifications",
     "Notifications",
@@ -139,6 +149,16 @@ export const workspacePages = {
     "/d/procedures",
     "Step-by-step instructions dimmi follows for particular requests.",
   ),
+  operator: {
+    ...page(
+      "operator",
+      "Operator",
+      RiRobot2Line,
+      "/d/operator",
+      "Your team's own agent: its routines, what it suggests and what it costs.",
+    ),
+    also: ["/d/routines"],
+  },
   helpCenter: page(
     "help-center",
     "Help center",
@@ -455,6 +475,7 @@ export function appSections(
     {
       key: "you",
       items: [
+        workspacePages.home,
         { ...workspacePages.notifications, href: undefined, badge: unseen, panel: notifications },
         { ...inboxLink, badge: inboxBadge || undefined },
         ...(reports ? [workspacePages.reports] : []),
@@ -463,7 +484,7 @@ export function appSections(
     {
       key: "automation",
       label: "Automation",
-      items: [workspacePages.agent, workspacePages.workflows, workspacePages.procedures],
+      items: [workspacePages.agent, workspacePages.workflows, workspacePages.procedures, workspacePages.operator],
     },
     {
       key: "customers",
@@ -497,7 +518,7 @@ export function settingsSections(): DashboardNavSection[] {
   ];
 
   return [
-    { key: "back", items: [{ key: "back", label: "Back to inbox", icon: RiArrowLeftLine, href: "/d" }] },
+    { key: "back", items: [{ key: "back", label: "Back to inbox", icon: RiArrowLeftLine, href: "/d/inbox" }] },
     {
       key: "account",
       label: "Account",
@@ -531,7 +552,7 @@ export function settingsSections(): DashboardNavSection[] {
       label: "Channels",
       items: [pages.messenger, pages.email, pages.integrations],
     },
-    { key: "ai", label: "AI", items: [pages.agent, pages.operator, pages.actions, pages["ai-providers"]] },
+    { key: "ai", label: "AI", items: [pages.agent, pages.actions, pages["ai-providers"]] },
     {
       key: "content",
       label: "Content",
@@ -554,7 +575,8 @@ export function selectedKey(sections: DashboardNavSection[], extra: DashboardNav
     if (!href) {
       continue;
     }
-    const holds = path === href || path.startsWith(`${href}/`);
+    const held = [href, ...((item as Partial<Page>).also ?? [])];
+    const holds = held.some((address) => path === address || path.startsWith(`${address}/`));
     if (holds && href.length > best.length) {
       best = { key: item.key, length: href.length };
     }

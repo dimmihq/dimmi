@@ -47,12 +47,25 @@ type tally struct {
 }
 
 /*
-startRun opens the run row for the session.
+startRun opens the run row for the session. The row names its thread:
+a subagent's run writes no message, so nothing else ties it to the
+thread it worked for.
 */
 func (e *Engine) startRun(ctx context.Context, q *models.Queries, s *session) (models.AiRun, error) {
 	now := e.Clock.Now()
 	actor := "member"
-	snapshot, _ := json.Marshal(map[string]any{"answer_model": s.model, "operator": true, "purpose": purposeOf(s)})
+	config := map[string]any{"answer_model": s.model, "operator": true, "purpose": purposeOf(s)}
+	if s.routine != nil {
+		config["routine_id"] = models.PublicID(models.PrefixOperatorRoutine, s.routine.row.ID)
+		config["routine_name"] = s.routine.row.Name
+	}
+	if s.sub != nil {
+		config["subagent"] = s.sub.n
+	}
+	if s.thread.ID != (ids.UUID{}) {
+		config["thread"] = s.thread.ID.String()
+	}
+	snapshot, _ := json.Marshal(config)
 	run, err := q.CreateRun(ctx, models.CreateRunParams{
 		WorkspaceID: s.m.Workspace.ID, AgentID: s.agent.ID, Kind: runKind,
 		ConversationID: s.thread.ConversationID, IncludedMessageIds: []ids.UUID{},
@@ -68,13 +81,14 @@ func (e *Engine) startRun(ctx context.Context, q *models.Queries, s *session) (m
 
 /*
 The reasons an Operator run starts: a teammate's question, a brief on a
-conversation, or a triage when a conversation arrives. Usage reports
-split runs by them.
+conversation, a triage when a conversation arrives, or a routine. Usage
+reports split runs by them.
 */
 const (
-	PurposeAsk    = "ask"
-	PurposeBrief  = "brief"
-	PurposeTriage = "triage"
+	PurposeAsk     = "ask"
+	PurposeBrief   = "brief"
+	PurposeTriage  = "triage"
+	PurposeRoutine = "routine"
 )
 
 /*
@@ -82,6 +96,8 @@ purposeOf says why the session runs.
 */
 func purposeOf(s *session) string {
 	switch {
+	case s.routine != nil:
+		return PurposeRoutine
 	case s.background:
 		return PurposeTriage
 	case s.question == strings.TrimSpace(BriefQuestion()):

@@ -18,15 +18,24 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
+	"time"
+
+	"github.com/dimmihq/dimmi/framework/ids"
 
 	"github.com/dimmihq/dimmi/app/actions/conversations"
 	"github.com/dimmihq/dimmi/app/contracts"
+	"github.com/dimmihq/dimmi/app/support/querybuilder"
 )
 
 /*
-listLimit is the most conversations one list returns.
+listLimit is the most conversations one list returns in full, and
+scanLimit the most it returns as a scan: each as one short line, so a
+whole week fits in one result.
 */
-const listLimit = 25
+const (
+	listLimit = 25
+	scanLimit = 200
+)
 
 /*
 listSchema is the schema of list_conversations.
@@ -36,11 +45,30 @@ const listSchema = `{"type":"object","properties":{` +
 	`"description":"Which conversations by status. Defaults to open."},` +
 	`"assignee":{"type":"string","enum":["anyone","me","unassigned"],` +
 	`"description":"Whose conversations. Defaults to anyone."},` +
-	`"ai":{"type":"string","enum":["any","handed_off","answered_by_ai"],` +
+	`"ai_agent":{"type":"string","enum":["any","handed_off","answered_by_ai"],` +
 	`"description":"Only those the AI agent handed to the team, or ones it is answering."},` +
-	`"waiting":{"type":"boolean","description":"Only those where the customer wrote last and is waiting ` +
-	`for the team."},` +
-	`"limit":{"type":"integer","minimum":1,"maximum":25,"description":"How many, at most 25. Defaults to 15."}}}`
+	`"tag":{"type":"string","description":"Only those with this tag, by its name as list_tags shows it, ` +
+	`such as billing."},` +
+	`"customer_waiting":{"type":"boolean","description":"true for only those where the customer wrote last ` +
+	`and is waiting for the team."},` +
+	`"started_since":{"type":"string","format":"date","description":"Only conversations started on or ` +
+	`after this day, YYYY-MM-DD."},` +
+	`"started_until":{"type":"string","format":"date","description":"Only conversations started on or ` +
+	`before this day, YYYY-MM-DD."},` +
+	`"scan":{"type":"boolean","description":"true to look across many at once: up to 200, each as only its ` +
+	`number, subject, link and why the AI agent handed it over. Use it to see a whole period, then read the few ` +
+	`that matter."},` +
+	`"order":{"type":"string","enum":["latest_activity","longest_waiting"],` +
+	`"description":"latest_activity lists the most recently active first, the default. longest_waiting lists ` +
+	`the customers who have waited longest for the team first."},` +
+	`"limit":{"type":"integer","minimum":1,"maximum":200,"description":"How many: at most 25, or 200 ` +
+	`with scan. Defaults to 15, or 200 with scan."}}}`
+
+/*
+orderLongestWaiting lists the customers who waited longest first, which
+only makes sense among those still waiting.
+*/
+const orderLongestWaiting = "longest_waiting"
 
 /*
 listArgs are list_conversations' filters.
@@ -48,8 +76,13 @@ listArgs are list_conversations' filters.
 type listArgs struct {
 	Status   string `json:"status"`
 	Assignee string `json:"assignee"`
-	AI       string `json:"ai"`
-	Waiting  bool   `json:"waiting"`
+	AI       string `json:"ai_agent"`
+	Tag      string `json:"tag"`
+	Waiting  bool   `json:"customer_waiting"`
+	Since    string `json:"started_since"`
+	Until    string `json:"started_until"`
+	Scan     bool   `json:"scan"`
+	Order    string `json:"order"`
 	Limit    int    `json:"limit"`
 }
 
@@ -60,13 +93,14 @@ agent's part in them.
 func (e *Engine) listTool() tool {
 	return tool{spec: contracts.ToolSpec{
 		Name: "list_conversations",
-		Description: "List conversations by status, by who holds them and by the AI agent's part, newest " +
+		Description: "List conversations by status, by who holds them, by tag, by when they started and by the " +
+			"AI agent's part, newest " +
 			"activity first: open ones, ones waiting on the teammate, unassigned ones, ones the agent " +
 			"handed to the team, ones where the customer is waiting. Each line already says who wrote " +
 			"last and since when the customer has waited, so read a conversation only when a line is " +
 			"not enough. Use search_conversations only to find conversations by their words or a customer.",
 		Schema: schema(listSchema),
-	}, handle: e.listConversations}
+	}, handle: e.listConversations, was: map[string]string{"ai": "ai_agent", "waiting": "customer_waiting"}}
 }
 
 /*
@@ -78,9 +112,12 @@ func (e *Engine) listConversations(ctx context.Context, s *session, args json.Ra
 		return result{}, err
 	}
 
-	page, err := e.Services.List.Handle(ctx, conversations.ListConversationsInput{
-		Membership: s.m, Filters: filtersOf(in), DefaultSort: true, Limit: limitOf(in.Limit),
-	})
+	listing, refusal, err := e.listingOf(ctx, s, in)
+	if err != nil || refusal != "" {
+		return result{text: refusal}, err
+	}
+
+	page, err := e.Services.List.Handle(ctx, listing)
 	if err != nil {
 		return result{}, err
 	}
@@ -90,9 +127,17 @@ func (e *Engine) listConversations(ctx context.Context, s *session, args json.Ra
 	var b strings.Builder
 	for _, l := range page.Conversations {
 		c := l.Conversation
-		fmt.Fprintf(&b, "#%d %s · %s · %s · AI %s · %s · last from %s · %s\n", c.Number,
+		if in.Scan {
+			fmt.Fprintf(&b, "#%d %s · %s · started %s%s · link %s\n", c.Number, untrusted(deref(c.Subject)),
+				c.Status, c.CreatedAt.UTC().Format(time.DateOnly), handedOver(c.AiHandoffReason),
+				e.conversationLink(s, c.ID))
+
+			continue
+		}
+
+		fmt.Fprintf(&b, "#%d %s · %s · %s · AI %s · %s · last from %s · %s · link %s\n", c.Number,
 			untrusted(deref(c.Subject)), c.Status, assigneeOf(l), c.AiState, untrusted(deref(l.Contact.Name)),
-			lastFrom(l), waiting(l))
+			lastFrom(l), waiting(l), e.conversationLink(s, c.ID))
 	}
 
 	if b.Len() == 0 {
@@ -106,6 +151,42 @@ func (e *Engine) listConversations(ctx context.Context, s *session, args json.Ra
 	summary := fmt.Sprintf("Listed %d %s conversations", len(page.Conversations), describe(in))
 
 	return result{text: b.String(), step: Step{Tool: "list_conversations", Summary: summary}}, nil
+}
+
+/*
+listingOf is the list the arguments ask for: their filters, the tag
+looked up by name, and the order. It returns words for the model
+instead when the tag does not exist.
+*/
+func (e *Engine) listingOf(
+	ctx context.Context, s *session, in listArgs,
+) (conversations.ListConversationsInput, string, error) {
+	listing := conversations.ListConversationsInput{
+		Membership: s.m, Filters: filtersOf(in), DefaultSort: true, Limit: limitOf(in),
+	}
+
+	if refusal := between(in, &listing.Filters); refusal != "" {
+		return listing, refusal, nil
+	}
+
+	if name := strings.TrimSpace(in.Tag); name != "" {
+		tag, found, err := e.tagNamed(ctx, s, name)
+		if err != nil {
+			return listing, "", err
+		}
+
+		if !found {
+			return listing, fmt.Sprintf("No tag is named %q. list_tags shows the tags there are.", name), nil
+		}
+
+		listing.Filters.TagsAny = []ids.UUID{tag}
+	}
+
+	if in.Order == orderLongestWaiting {
+		listing.Filters.Waiting, listing.Sort, listing.DefaultSort = true, querybuilder.SortWaiting, false
+	}
+
+	return listing, "", nil
 }
 
 /*
@@ -143,14 +224,62 @@ func filtersOf(in listArgs) conversations.Filters {
 }
 
 /*
-limitOf is the list's size, the default when none is asked.
+limitOf is the list's size, the default when none is asked: a scan
+returns many short lines, a full list a few long ones.
 */
-func limitOf(asked int) int {
-	if asked <= 0 {
+func limitOf(in listArgs) int {
+	if in.Scan {
+		if in.Limit <= 0 {
+			return scanLimit
+		}
+
+		return min(in.Limit, scanLimit)
+	}
+
+	if in.Limit <= 0 {
 		return 15
 	}
 
-	return min(asked, listLimit)
+	return min(in.Limit, listLimit)
+}
+
+/*
+between narrows the filters to the days the arguments name, and returns
+words for the model when a day is not a date.
+*/
+func between(in listArgs, f *conversations.Filters) string {
+	if in.Since != "" {
+		day, err := time.Parse(time.DateOnly, in.Since)
+		if err != nil {
+			return "started_since must be a day like 2026-01-31."
+		}
+
+		f.CreatedAfter = &day
+	}
+
+	if in.Until != "" {
+		day, err := time.Parse(time.DateOnly, in.Until)
+		if err != nil {
+			return "started_until must be a day like 2026-01-31."
+		}
+
+		end := day.AddDate(0, 0, 1)
+		f.CreatedBefore = &end
+	}
+
+	return ""
+}
+
+/*
+handedOver says why the AI agent handed a conversation over, for a
+scan's line, and nothing when it did not.
+*/
+func handedOver(reason *string) string {
+	if reason == nil || *reason == "" {
+		return ""
+	}
+
+	return " · handed over: " + *reason
 }
 
 /*
@@ -166,8 +295,20 @@ func describe(in listArgs) string {
 		parts = append(parts, in.AI)
 	}
 
-	if in.Waiting {
+	if in.Tag != "" {
+		parts = append(parts, "tagged "+in.Tag)
+	}
+
+	if in.Since != "" {
+		parts = append(parts, "since "+in.Since)
+	}
+
+	if in.Waiting || in.Order == orderLongestWaiting {
 		parts = append(parts, "waiting")
+	}
+
+	if in.Order == orderLongestWaiting {
+		parts = append(parts, "longest wait first")
 	}
 
 	return strings.Join(parts, ", ")

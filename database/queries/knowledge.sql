@@ -232,9 +232,9 @@ ORDER BY (e.embedding::halfvec(1024)) <=> (@embedding::halfvec)::halfvec(1024)
 LIMIT @row_limit;
 
 -- name: FindConversationForEmbedding :one
--- FindConversationForEmbedding returns what a closed conversation is
--- remembered by: its subject, the customer's first message and the
--- team's last reply.
+-- FindConversationForEmbedding returns what a conversation is
+-- remembered by, open or closed: its subject, the customer's first
+-- message and the team's last reply.
 SELECT c.id, c.workspace_id, c.subject, c.closed_at,
     coalesce((SELECT m.body FROM messages m
      WHERE m.workspace_id = c.workspace_id AND m.conversation_id = c.id AND m.type = 'message'
@@ -245,10 +245,22 @@ SELECT c.id, c.workspace_id, c.subject, c.closed_at,
        AND m.author_type IN ('member', 'agent') AND m.deleted_at IS NULL
      ORDER BY m.created_at DESC, m.id DESC LIMIT 1), '')::text AS last_reply
 FROM conversations c
-WHERE c.workspace_id = @workspace_id AND c.id = @id AND c.status = 'closed' AND c.deleted_at IS NULL;
+WHERE c.workspace_id = @workspace_id AND c.id = @id AND c.deleted_at IS NULL;
+
+-- name: ListConversationsToRemember :many
+-- ListConversationsToRemember returns conversations whose memory is
+-- missing or older than the conversation: closed ones, and open ones
+-- that have been quiet since a moment, newest first.
+SELECT c.id FROM conversations c
+LEFT JOIN knowledge_conversations k ON k.conversation_id = c.id
+WHERE c.workspace_id = @workspace_id AND c.deleted_at IS NULL
+  AND (k.conversation_id IS NULL OR k.updated_at < c.updated_at)
+  AND (c.status = 'closed' OR c.updated_at < @quiet_before)
+ORDER BY c.updated_at DESC, c.id
+LIMIT @row_limit;
 
 -- name: UpsertKnowledgeConversation :exec
--- UpsertKnowledgeConversation stores a closed conversation's text.
+-- UpsertKnowledgeConversation stores a conversation's text.
 INSERT INTO knowledge_conversations (conversation_id, workspace_id, body, embed_hash, closed_at, updated_at)
 VALUES (@conversation_id, @workspace_id, @body, @embed_hash, @closed_at, @now)
 ON CONFLICT (conversation_id)

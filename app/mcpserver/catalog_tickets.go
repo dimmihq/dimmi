@@ -41,8 +41,8 @@ func ticketWorkDocs() map[string]Doc {
 				"Use kind=tracker&q=... to find the tracker a bug report belongs to.",
 			Returns: "a page of tickets with type, state and customer label, fields, version and linked issues.",
 			Next: []string{
-				"dimmi_tickets_get: read one with its links and clocks",
-				"dimmi_tickets_links_create: attach a conversation to the tracker found",
+				"dimmi_get_ticket_by_id: read one with its links and clocks",
+				"dimmi_create_ticket_link: attach a conversation to the tracker found",
 			},
 		},
 		"tickets.store": {
@@ -51,9 +51,9 @@ func ticketWorkDocs() map[string]Doc {
 				"a contact (which starts its conversation). Required fields are enforced: a 422 lists the missing " +
 				"keys. Send external_id to make retries safe.",
 			Returns: "the ticket with its reference, such as T-482.",
-			Next:    []string{"dimmi_tickets_links_create: link the conversations that report it"},
+			Next:    []string{"dimmi_create_ticket_link: link the conversations that report it"},
 			Params: map[string]string{
-				"type_id": "A type id from dimmi_ticket_types_list.",
+				"type_id": "A type id from dimmi_list_ticket_types.",
 				"fields":  "Values by field key; the type's fields say each key's data type and options.",
 				"link_to": "Links made at once, such as {kind: tracker, conversation_id} for each report.",
 			},
@@ -92,11 +92,12 @@ func ticketChangeDocs() map[string]Doc {
 			Returns: "the new back-office ticket.",
 		},
 		"conversations.ticket.store": {
+			Name:  "convert_conversation_to_ticket",
 			Title: "Convert a conversation to a ticket",
 			Use: "Turns a conversation into a customer ticket of a type. ai_fill proposes field values from the " +
 				"transcript, kept as suggestions until accepted.",
 			Returns: "the ticket.",
-			Next:    []string{"dimmi_tickets_update: accept suggestions or move state"},
+			Next:    []string{"dimmi_update_ticket: accept suggestions or move state"},
 		},
 	}
 }
@@ -111,6 +112,7 @@ func ticketActivityDocs() map[string]Doc {
 			Returns: "state, field, type, link, issue, assignment and note entries with who and when.",
 		},
 		"ticket-events.index": {
+			Name:  "list_all_ticket_events",
 			Title: "Export the ticket log",
 			Use:   "Follows every ticket change in the workspace after a cursor or since a time, deletes included.",
 			Risk:  new(RiskSensitive),

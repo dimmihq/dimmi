@@ -159,7 +159,7 @@ func TestConnectingAnApp(t *testing.T) {
 		require.NoError(t, err)
 		t.Cleanup(func() { _ = client.Close() })
 
-		res, err := client.CallTool(t.Context(), "dimmi_conversations_list", map[string]any{})
+		res, err := client.CallTool(t.Context(), "dimmi_list_conversations", map[string]any{})
 		require.NoError(t, err)
 		assert.False(t, res.IsError, res.Text)
 	})

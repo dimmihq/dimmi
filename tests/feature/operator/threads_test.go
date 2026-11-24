@@ -7,11 +7,37 @@ import (
 
 	"github.com/dimmihq/dimmi/framework/testkit"
 
+	"github.com/dimmihq/dimmi/app/contracts"
+	"github.com/dimmihq/dimmi/app/drivers/llm/fake"
 	"github.com/dimmihq/dimmi/app/enums"
 )
 
 func TestOperatorConversationThreads(t *testing.T) {
 	t.Parallel()
+
+	t.Run("opens the teammate's recent chat about the workspace again, and a new one when asked", func(t *testing.T) {
+		t.Parallel()
+		k := newDesk(t)
+		first := k.thread("")
+		k.llm.Script(reply("Hello."))
+		k.ask(first, "Hello").AssertOK()
+
+		assert.Equal(t, first, k.thread(""))
+		fresh := k.d.Owner.PostJSON("/api/v1/operator/threads", testkit.JSON{"fresh": true}).AssertOK().
+			String("data.id")
+		assert.NotEqual(t, first, fresh)
+	})
+
+	t.Run("says Stopped, not that something went wrong, when the teammate stops a model call", func(t *testing.T) {
+		t.Parallel()
+		k := newDesk(t)
+		k.llm.Script(fake.Step{Err: &contracts.LLMError{Kind: contracts.LLMErrorCanceled, Message: "request canceled"}})
+
+		res := k.ask(k.thread(""), "Hello").AssertOK()
+
+		res.AssertJSONPath("data.message.status", "stopped")
+		res.AssertJSONPath("data.message.body", "Stopped.")
+	})
 
 	t.Run("keeps several threads about one conversation and opens the latest", func(t *testing.T) {
 		t.Parallel()

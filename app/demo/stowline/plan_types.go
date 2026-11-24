@@ -75,4 +75,6 @@ type Conversation struct {
 	RatingComment string
 	Language      string
 	Article       string
+	// Planted marks a hand-written case, which nothing later in the seed may change.
+	Planted bool
 }

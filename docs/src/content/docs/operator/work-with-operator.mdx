@@ -20,7 +20,8 @@ In Slack, Operator only replies to [linked teammates](/channels/slack-room-modes
 Operator always runs with **your own role and permissions**. It only reads conversations you are allowed to open and only proposes changes your role permits.
 
 - **Search and summarize:** reads conversations, customers, tags, teammates, help center articles and drafts, procedures, knowledge sources, and up to **366 days** of reports.
-- **Draft replies:** writes a suggested reply straight from your docs for you to edit and send.
+- **Draft replies:** writes a suggested reply in your workspace's tone and language, following the guidance you gave your AI agent. It checks the help center first; when that has no answer, it leans on how your team answered the same question before, and tells you which conversation.
+- **Recommend with reasons:** when it suggests a teammate, a team, a tag or a priority, it says why. It looks at what your team did with similar conversations and cites them: "Assign to Maya: she handled 6 of the 8 similar conversations."
 - **Propose edits:** updates tags, assignment, priority, status, notes, customer names, article drafts, procedure drafts, and saved procedure simulations through [changesets](/operator/changesets/).
 - **Audit procedures:** reviews recent failed [procedure](/ai/procedure-versions/) runs and proposes working-copy fixes alongside [simulations](/ai/test-procedures/) made from the failing chats.
 - **Run workspace actions:** calls [actions](/ai/actions/) where **Operator** is ticked under **Used by**. Read lookups run right away; actions that change data always wait as a changeset.
@@ -35,7 +36,6 @@ Admins manage Operator in **Settings → Operator**:
 | **Operator** | On | Turns Operator on or off across dimmi and Slack. |
 | **Brief conversations as they open** | Off | Automatically writes a private summary when a teammate opens a thread. |
 | **Triage new conversations** | Off | Proposes tags, an owner, and a priority on every incoming chat. |
-| **Review procedures every week** | Off | Reviews failed procedure runs every Monday and proposes playbook fixes and saved simulations for you to review. |
 | **What Operator may change** | **Ask first** | Controls which changes wait for approval. See [Changesets](/operator/changesets/). |
 | **Model** | GPT-6 Luna | Runs on your agent's AI connection (falls back to the agent's answer model if unavailable). |
 | **Instructions** | Empty | Team guidance Operator follows on every question. |

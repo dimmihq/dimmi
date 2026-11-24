@@ -1,5 +1,5 @@
 import { verifyEmail } from "./support/database";
-import { createAccount, expect, inbox, test as it } from "./support/fixtures";
+import { createAccount, expect, home, test as it } from "./support/fixtures";
 import { mailedCode, mailedLink } from "./support/mail";
 
 it.describe("signing in by mail", () => {
@@ -20,14 +20,14 @@ it.describe("signing in by mail", () => {
     await page.getByLabel("Digit 1 of 6").click();
     await page.getByLabel("Digit 1 of 6").pressSequentially(await mailedCode(person.email, "sign-in link"));
 
-    await expect(page).toHaveURL(inbox);
+    await expect(page).toHaveURL(home);
   });
 
   it("signs in with the mailed link once, and explains a second use", async ({ page, person }) => {
     const link = await mailedLink(person.email, "sign-in link");
 
     await page.goto(link);
-    await expect(page).toHaveURL(inbox);
+    await expect(page).toHaveURL(home);
 
     await page.goto(link);
     await expect(page.getByRole("heading", { name: "This sign-in link no longer works" })).toBeVisible();

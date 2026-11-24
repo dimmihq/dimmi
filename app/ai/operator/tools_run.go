@@ -76,11 +76,11 @@ the layer on, only the fixed tools may be called by name.
 */
 func (e *Engine) resolve(s *session, registry map[string]tool, call contracts.ToolCall) *pending {
 	if s.layer != nil && (call.Name == toolset.LoadTool || call.Name == toolset.CallTool) {
-		t, ok := registry[innerName(call.Arguments)]
+		t, ok := lookup(registry, innerName(call.Arguments))
 		return &pending{call: call, tool: t, known: ok && e.offers(s, t), layer: true}
 	}
-	t, ok := registry[call.Name]
-	fixed := s.layer == nil || slices.Contains(s.layer.fixed, call.Name)
+	t, ok := lookup(registry, call.Name)
+	fixed := s.layer == nil || slices.Contains(s.layer.fixed, t.spec.Name)
 	return &pending{call: call, tool: t, known: ok && e.offers(s, t) && fixed}
 }
 
@@ -88,7 +88,7 @@ func (e *Engine) resolve(s *session, registry map[string]tool, call contracts.To
 writes reports whether the call may change anything, so it runs alone.
 */
 func (p *pending) writes() bool {
-	return p.known && len(p.tool.writes) > 0
+	return p.known && (len(p.tool.writes) > 0 || p.tool.alone)
 }
 
 /*
@@ -127,6 +127,10 @@ func (e *Engine) runCall(ctx context.Context, s *session, p *pending) {
 	if !p.known {
 		return
 	}
+	if s.closing && !closes(p.tool.spec.Name) {
+		p.err = errSpent
+		return
+	}
 	args := p.call.Arguments
 	if s.layer != nil {
 		if args, p.err = s.layer.set.Expand(args); p.err != nil {
@@ -153,8 +157,9 @@ func (e *Engine) finishCall(ctx context.Context, s *session, p *pending) contrac
 	} else if s.layer != nil {
 		out.text = s.layer.set.Compact(out.text)
 	}
-	s.steps = append(s.steps, out.step)
-	e.publishStep(ctx, s, out.step)
+	if !out.quiet || err != nil {
+		e.addStep(ctx, s, out.step)
+	}
 	name := p.call.Name
 	if p.ran != "" {
 		name = p.ran

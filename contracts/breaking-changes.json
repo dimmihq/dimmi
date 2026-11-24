@@ -200,6 +200,30 @@
       "deprecated": "2026-11-22",
       "sunset": "2026-11-22",
       "approved_by": "Frantz Kati"
+    },
+    {
+      "id": "response-required-property-removed",
+      "operation": "GET /operator/settings",
+      "reason": "Internal route: the weekly procedure review is replaced by Operator routines, and nothing is in production.",
+      "deprecated": "2026-11-22",
+      "sunset": "2026-11-22",
+      "approved_by": "Frantz Kati"
+    },
+    {
+      "id": "response-required-property-removed",
+      "operation": "PATCH /operator/settings",
+      "reason": "Internal route: the weekly procedure review is replaced by Operator routines, and nothing is in production.",
+      "deprecated": "2026-11-22",
+      "sunset": "2026-11-22",
+      "approved_by": "Frantz Kati"
+    },
+    {
+      "id": "request-property-removed",
+      "operation": "PATCH /operator/settings",
+      "reason": "Internal route: the weekly procedure review is replaced by Operator routines, and nothing is in production.",
+      "deprecated": "2026-11-22",
+      "sunset": "2026-11-22",
+      "approved_by": "Frantz Kati"
     }
   ]
 }

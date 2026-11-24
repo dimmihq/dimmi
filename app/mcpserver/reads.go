@@ -60,8 +60,7 @@ them.
 type Reads struct {
 	tools []ReadTool
 	left  []Left
-	ops   map[string]mcp.Operation
-	docs  map[string]Doc
+	built map[string]built
 	api   fhttp.Handler
 }
 
@@ -81,13 +80,9 @@ func NewReads(opts Options) (*Reads, error) {
 	if err != nil {
 		return nil, fmt.Errorf("build api handler: %w", err)
 	}
-	r := &Reads{ops: map[string]mcp.Operation{}, docs: catalog(), api: api}
-	for _, op := range ops {
-		d, ok := r.docs[op.ID]
-		if !ok {
-			continue
-		}
-		def := definition(op, d)
+	r := &Reads{built: map[string]built{}, api: api}
+	for _, b := range documented(ops) {
+		op, def := b.op, b.def
 		switch {
 		case !def.ReadOnly && op.Method == fhttp.MethodGet:
 			r.left = append(r.left, Left{Name: def.Name, Reason: leftSensitive})
@@ -96,11 +91,11 @@ func NewReads(opts Options) (*Reads, error) {
 			r.left = append(r.left, Left{Name: def.Name, Reason: leftWrites})
 			continue
 		}
-		schema, err := json.Marshal(inputSchema(op, d))
+		schema, err := json.Marshal(b.schema)
 		if err != nil {
 			return nil, fmt.Errorf("encode schema of %s: %w", op.ID, err)
 		}
-		r.ops[def.Name] = op
+		r.built[def.Name] = b
 		r.tools = append(r.tools, ReadTool{
 			Name: def.Name, Description: def.Description, Schema: schema, Group: groupOf(op.ID),
 		})
@@ -108,6 +103,21 @@ func NewReads(opts Options) (*Reads, error) {
 	slices.SortFunc(r.tools, func(a, b ReadTool) int { return strings.Compare(a.Name, b.Name) })
 	slices.SortFunc(r.left, func(a, b Left) int { return strings.Compare(a.Name, b.Name) })
 	return r, nil
+}
+
+/*
+documented builds the tool of every operation the catalog describes.
+*/
+func documented(ops []mcp.Operation) []built {
+	docs := catalog()
+	tools := toolsByEndpoint(ops, docs)
+	var out []built
+	for _, op := range ops {
+		if d, ok := docs[op.ID]; ok {
+			out = append(out, build(op, d, tools))
+		}
+	}
+	return out
 }
 
 /*
@@ -148,23 +158,26 @@ type ReadCall struct {
 Call runs a read-only tool with the caller's credential.
 */
 func (r *Reads) Call(ctx context.Context, in ReadCall) (string, error) {
-	name, args := in.Name, in.Args
-	op, ok := r.ops[name]
+	b, ok := r.built[in.Name]
 	if !ok {
-		return "", fmt.Errorf("%w: %s", ErrUndocumented, name)
+		return "", fmt.Errorf("%w: %s", ErrUndocumented, in.Name)
 	}
-	header := fhttp.Header{}
-	header.Set("Authorization", in.Authorization)
-	a, err := op.Call(ctx, mcp.API{Handler: r.api, Prefix: apiPrefix}, args, mcp.Origin{Header: header})
+	args, err := b.read(in.Args)
 	if err != nil {
 		return "", err
 	}
-	doc := r.docs[op.ID]
+	header := fhttp.Header{}
+	header.Set("Authorization", in.Authorization)
+	api := mcp.API{Handler: r.api, Prefix: apiPrefix}
+	a, err := b.op.Call(ctx, api, args, mcp.Origin{Header: header})
+	if err != nil {
+		return "", err
+	}
 	if a.Status >= fhttp.StatusBadRequest {
-		return "", refusal(name, doc, op, a)
+		return "", refusal(b, args, a)
 	}
 	if in.Raw {
 		return string(a.Body), nil
 	}
-	return render(doc, name, a).Text(), nil
+	return render(b.doc, in.Name, a).Text(), nil
 }

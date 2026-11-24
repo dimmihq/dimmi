@@ -3,13 +3,16 @@
 | Conversation Memory
 |--------------------------------------------------------------------------
 |
-| A closed conversation is remembered as one text: its subject, the
-| customer's first message and the team's last reply, which is what
-| tells the next teammate how it was solved. The text is searchable by
-| keywords at once and by meaning once its vector, embedded with the
-| workspace's models like any chunk, is stored. Closing it again after
-| a reopen remembers the new ending. Similar conversations fuse both
-| rankings; they are for members only and never reach a customer.
+| A conversation is remembered as one text: its subject, the customer's
+| first message and the team's last reply, which is what tells the next
+| teammate how it was solved. The text is searchable by keywords at once
+| and by meaning once its vector, embedded with the workspace's models
+| like any chunk, is stored. A conversation is remembered when it
+| closes, when it has been quiet a while, and the moment someone asks
+| what is like it; the sweep catches up on every one whose memory is
+| missing or stale, so old conversations count too. Similar
+| conversations fuse both rankings; they are for members only and never
+| reach a customer.
 |
 */
 
@@ -47,6 +50,7 @@ type SimilarConversation struct {
 	Number   int64
 	Subject  string
 	Excerpt  string
+	Text     string
 	ClosedAt time.Time
 	Score    float64
 }
@@ -66,9 +70,9 @@ func (w *EmbedConversation) Handle(ctx context.Context, job *queue.Job[jobs.Embe
 }
 
 /*
-RememberConversation stores the closed conversation's text and queues
-its vector for every model in use. A conversation open again, or
-gone, is left alone.
+RememberConversation stores the conversation's text and queues its
+vector for every model in use. A conversation that is gone is left
+alone.
 */
 func (v *Vectors) RememberConversation(ctx context.Context, ws, conversationID ids.UUID) error {
 	return v.inWorkspace(ctx, ws, func(ctx context.Context, tx *database.Tx, q *models.Queries) error {
@@ -144,7 +148,9 @@ remembered one, by keywords and by meaning, best first.
 Rules:
   - The caller needs conversations:read.
   - Only conversations the caller may see are compared or returned.
-  - A conversation not remembered yet has no similar ones.
+  - A conversation not remembered yet is remembered first, so one
+    still open has similar ones too: by keywords at once, by meaning
+    once its vector is stored.
 */
 func (v *Vectors) SimilarConversations(ctx context.Context, m authz.Membership, conversationID ids.UUID, limit int,
 ) ([]SimilarConversation, error) {
@@ -153,7 +159,7 @@ func (v *Vectors) SimilarConversations(ctx context.Context, m authz.Membership, 
 	}
 	ws, scope := m.Workspace.ID, m.ConversationScope()
 	var lists [][]SimilarConversation
-	err := v.inWorkspace(ctx, ws, func(ctx context.Context, _ *database.Tx, q *models.Queries) error {
+	err := v.inWorkspace(ctx, ws, func(ctx context.Context, tx *database.Tx, q *models.Queries) error {
 		conv, err := q.FindConversation(ctx, models.FindConversationParams{WorkspaceID: ws, ID: conversationID})
 		if errors.Is(err, database.ErrNotFound) || (err == nil && !scope.Contains(conv)) {
 			return exceptions.ErrNotFound
@@ -161,14 +167,12 @@ func (v *Vectors) SimilarConversations(ctx context.Context, m authz.Membership, 
 		if err != nil {
 			return fmt.Errorf("find conversation: %w", err)
 		}
-		self, err := q.FindKnowledgeConversation(ctx, models.FindKnowledgeConversationParams{
-			WorkspaceID: ws, ConversationID: conversationID,
-		})
+		self, err := v.remembered(ctx, tx, ws, conversationID)
 		if errors.Is(err, database.ErrNotFound) {
 			return nil
 		}
 		if err != nil {
-			return fmt.Errorf("find remembered conversation: %w", err)
+			return err
 		}
 		lists, err = v.similarLists(ctx, q, self, scope.Params())
 		return err
@@ -177,6 +181,69 @@ func (v *Vectors) SimilarConversations(ctx context.Context, m authz.Membership, 
 		return nil, err
 	}
 	return fuseConversations(limit, lists...), nil
+}
+
+/*
+remembered returns a conversation's memory, storing it first when it
+has none yet. A conversation with nothing to remember has none.
+*/
+func (v *Vectors) remembered(ctx context.Context, tx *database.Tx, ws, id ids.UUID,
+) (models.KnowledgeConversation, error) {
+	q := models.New(tx)
+	find := models.FindKnowledgeConversationParams{WorkspaceID: ws, ConversationID: id}
+	self, err := q.FindKnowledgeConversation(ctx, find)
+	if err == nil || !errors.Is(err, database.ErrNotFound) {
+		return self, err
+	}
+	c, err := q.FindConversationForEmbedding(ctx, models.FindConversationForEmbeddingParams{WorkspaceID: ws, ID: id})
+	if err != nil {
+		return self, err
+	}
+	if err := v.storeConversation(ctx, tx, c); err != nil {
+		return self, err
+	}
+	return q.FindKnowledgeConversation(ctx, find)
+}
+
+/*
+The bounds of catching up: how many conversations one sweep remembers
+in a workspace, and how long an open one must be quiet first.
+*/
+const (
+	rememberBatch = 2000
+	quietFor      = 30 * time.Minute
+)
+
+/*
+RememberStale remembers the conversations whose memory is missing or
+older than they are: closed ones, and open ones quiet for a while. It
+is how conversations from before memory, and ones still open, come to
+be found.
+*/
+func (v *Vectors) RememberStale(ctx context.Context, ws ids.UUID) error {
+	return v.inWorkspace(ctx, ws, func(ctx context.Context, tx *database.Tx, q *models.Queries) error {
+		list, err := q.ListConversationsToRemember(ctx, models.ListConversationsToRememberParams{
+			WorkspaceID: ws, QuietBefore: v.Clock.Now().Add(-quietFor), RowLimit: rememberBatch,
+		})
+		if err != nil {
+			return fmt.Errorf("list conversations to remember: %w", err)
+		}
+		for _, id := range list {
+			c, err := q.FindConversationForEmbedding(ctx, models.FindConversationForEmbeddingParams{
+				WorkspaceID: ws, ID: id,
+			})
+			if errors.Is(err, database.ErrNotFound) {
+				continue
+			}
+			if err != nil {
+				return fmt.Errorf("find conversation to remember: %w", err)
+			}
+			if err := v.storeConversation(ctx, tx, c); err != nil {
+				return err
+			}
+		}
+		return nil
+	})
 }
 
 /*
@@ -253,7 +320,7 @@ type remembered struct {
 similar builds one result, its excerpt the start of its text.
 */
 func similar(c remembered) SimilarConversation {
-	out := SimilarConversation{ID: c.id, Number: c.number, Excerpt: c.body, ClosedAt: c.closed}
+	out := SimilarConversation{ID: c.id, Number: c.number, Excerpt: c.body, Text: c.body, ClosedAt: c.closed}
 	if c.subject != nil {
 		out.Subject = *c.subject
 	}

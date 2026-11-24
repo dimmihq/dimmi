@@ -22,11 +22,12 @@ func sourceSetupDocs() map[string]Doc {
 			Use: "Tries settings against the real service before the source is added: the account they reach, " +
 				"how many documents the first page lists and how many the patterns keep. Nothing is saved.",
 			Returns: "the account, the counts and a sample of documents by name.",
-			Next:    []string{"dimmi_knowledge_sources_create: add it once it looks right"},
+			Next:    []string{"dimmi_create_knowledge_source: add it once it looks right"},
 			Risk:    new(RiskRead),
 			Params:  sourceParams(),
 		},
 		"knowledge.sources.trees.store": {
+			Name:  "list_new_knowledge_source_items",
 			Title: "List a new source's items",
 			Use: "Lists the items, such as spaces, folders or pages, that a source being added could read, " +
 				"from the connected account alone. Nothing is saved.",
@@ -35,13 +36,14 @@ func sourceSetupDocs() map[string]Doc {
 			Params:  sourceParams(),
 		},
 		"knowledge.sources.options.store": {
+			Name:  "list_knowledge_source_setting_values",
 			Title: "List a source setting's values",
 			Use: "Lists the values one setting of a source being added can take, read from the service with " +
 				"the settings chosen so far, such as a repository's branches. Nothing is saved.",
 			Returns: "the values to choose from.",
 			Risk:    new(RiskRead),
 			Params: map[string]string{
-				"type":     "Source type, from dimmi_knowledge_source_types_list.",
+				"type":     "Source type, from dimmi_list_knowledge_source_types.",
 				"field":    "Name of the setting whose values to list.",
 				"settings": "The settings chosen so far, secrets included.",
 			},
@@ -72,7 +74,7 @@ func syncDocs() map[string]Doc {
 			Returns: "the sync, now stopped.",
 			Risk:    new(RiskWrite),
 			Params: map[string]string{
-				"run": "Id of the sync, starting with ksr_. Find it with dimmi_knowledge_sources_syncs_list.",
+				"run": "Id of the sync, starting with ksr_. Find it with dimmi_list_knowledge_source_syncs.",
 			},
 		},
 	}
@@ -99,24 +101,27 @@ func sourceDocumentDocs() map[string]Doc {
 			Risk:    new(RiskWrite),
 		},
 		"knowledge.sources.documents.exclusion.store": {
+			Name:  "exclude_knowledge_source_document",
 			Title: "Set a document aside",
 			Use: "Leaves one document out of the knowledge for good: the agents stop answering from it, and " +
 				"it stays out through every later sync until let back in.",
 			Returns: "nothing once it is set aside.",
 		},
 		"knowledge.sources.documents.exclusion.destroy": {
+			Name:    "include_knowledge_source_document",
 			Title:   "Let a document back in",
 			Use:     "Lets a set-aside document back into the knowledge and reads it again.",
 			Returns: "the sync that reads it again.",
 		},
 		"knowledge.sources.imports.store": {
+			Name:  "import_knowledge_source_as_articles",
 			Title: "Turn a source into articles",
 			Use: "Turns a synced source's documents into articles of a help center, published unless the " +
 				"document was a draft. A document imported before updates its article instead.",
 			Returns: "nothing once the import is queued.",
 			Risk:    new(RiskReach),
 			Params: map[string]string{
-				"help_center_id": "Help center (hc_...) the articles go to. Find it with dimmi_help_centers_list.",
+				"help_center_id": "Help center (hc_...) the articles go to. Find it with dimmi_list_help_centers.",
 			},
 			Hint: "knowledge_source_nothing_to_import means it must sync first.",
 		},

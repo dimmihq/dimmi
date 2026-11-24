@@ -80,7 +80,9 @@ func TestOperatorToolLayer(t *testing.T) {
 			"AND provider_request_id = 'chatcmpl_provider_1' AND response_model IS NOT NULL"),
 			"the provider's id for the call and the model that answered are kept")
 
-		want := []string{"call_tool", "get_conversation", "load_tools", "search_conversations", "search_knowledge"}
+		want := []string{
+			"call_tool", "get_conversation_by_number", "load_tools", "search_conversations", "search_knowledge",
+		}
 		for _, req := range k.llm.Sent() {
 			assert.Equal(t, want, offered(req))
 			assert.True(t, req.System[0].Cacheable)
@@ -102,8 +104,8 @@ func TestOperatorToolLayer(t *testing.T) {
 		k.d.Owner.PostJSON("/api/v1/tags", testkit.JSON{"name": "billing"}).AssertCreated()
 		thread := k.thread("")
 		k.llm.Script(
-			tools(loadTools("dimmi_tags_list", "dimmi_tags_create")),
-			tools(callTool("dimmi_tags_list", map[string]any{"fields": []string{"name"}})),
+			tools(loadTools("dimmi_list_tags", "dimmi_create_tag")),
+			tools(callTool("dimmi_list_tags", map[string]any{"fields": []string{"name"}})),
 			reply("One tag."),
 		)
 
@@ -111,7 +113,7 @@ func TestOperatorToolLayer(t *testing.T) {
 
 		sent := k.llm.Sent()
 		loaded := lastResult(sent[1]).Parts[0].Text
-		assert.Contains(t, loaded, `"not_found":["dimmi_tags_create"]`)
+		assert.Contains(t, loaded, `"not_found":["dimmi_create_tag"]`)
 		assert.Contains(t, loaded, `"fields"`)
 		read := lastResult(sent[2])
 		require.False(t, read.ToolError, read.Parts[0].Text)
@@ -140,6 +142,31 @@ func TestOperatorToolLayer(t *testing.T) {
 		assert.Equal(t, []string{"propose_changes"}, k.layerRecord().Stats.NotFound)
 	})
 
+	t.Run("applies nothing on its own once the run read the catalog", func(t *testing.T) {
+		t.Parallel()
+		k := newDesk(t)
+		k.withToolLayer()
+		k.d.Owner.PatchJSON("/api/v1/operator/settings", testkit.JSON{
+			"policies": testkit.JSON{"conversations": "auto"},
+		}).AssertOK()
+		k.conversation("Charged twice.")
+		thread := k.thread("")
+		k.llm.Script(
+			tools(loadTools("dimmi_list_tags", "propose_changes")),
+			tools(callTool("dimmi_list_tags", map[string]any{})),
+			tools(callTool("propose_changes", map[string]any{
+				"suggestion_title": "File as billing", "reason": "A double charge.",
+				"operations": []map[string]any{{
+					"kind": "conversation.tag", "conversation_number": 1, "tags": []string{"billing"},
+				}},
+			})),
+			reply("Proposed."),
+		)
+
+		res := k.ask(thread, "File #1").AssertOK()
+		assert.Equal(t, "pending", res.String("data.changesets.0.status"))
+	})
+
 	t.Run("proposes changes through call_tool as a changeset that waits for review", func(t *testing.T) {
 		t.Parallel()
 		k := newDesk(t)
@@ -148,7 +175,7 @@ func TestOperatorToolLayer(t *testing.T) {
 		k.llm.Script(
 			tools(loadTools("propose_changes")),
 			tools(callTool("propose_changes", map[string]any{
-				"title": "File as billing", "reason": "A double charge.",
+				"suggestion_title": "File as billing", "reason": "A double charge.",
 				"operations": []map[string]any{{"kind": "conversation.tag", "tags": []string{"billing"}}},
 			})),
 			reply("Proposed."),
@@ -187,10 +214,10 @@ func TestOperatorCompactResults(t *testing.T) {
 	inbox := k.d.InboxID()
 	thread := k.thread("")
 	k.llm.Script(
-		tools(loadTools("dimmi_inboxes_list", "dimmi_inboxes_get")),
-		tools(callTool("dimmi_inboxes_list", map[string]any{"fields": []string{"name"}})),
-		tools(callTool("dimmi_inboxes_get", map[string]any{"inbox": "i1"})),
-		tools(callTool("dimmi_inboxes_get", map[string]any{"inbox": "i7"})),
+		tools(loadTools("dimmi_list_inboxes", "dimmi_get_inbox_by_id")),
+		tools(callTool("dimmi_list_inboxes", map[string]any{"fields": []string{"name"}})),
+		tools(callTool("dimmi_get_inbox_by_id", map[string]any{"inbox": "i1"})),
+		tools(callTool("dimmi_get_inbox_by_id", map[string]any{"inbox": "i7"})),
 		reply("One inbox."),
 	)
 

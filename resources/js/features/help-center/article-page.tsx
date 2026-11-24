@@ -48,6 +48,7 @@ export function ArticlePage({
   failure,
   onChange,
   onPickCollection,
+  proposed = null,
 }: {
   workspace: string;
   draft: Draft;
@@ -57,8 +58,10 @@ export function ArticlePage({
   failure: Error | null;
   onChange: (change: Partial<Draft>) => void;
   onPickCollection: () => void;
+  proposed?: { title: string | null; body: string | null; whole: boolean } | null;
 }) {
   const page = useRef<HTMLElement | null>(null);
+  const retitled = Boolean(proposed?.title && proposed.title !== draft.title && !proposed.whole);
 
   return (
     <article
@@ -81,9 +84,19 @@ export function ArticlePage({
           rows={1}
           placeholder="Untitled article"
           onKeyDown={(event) => nextOnEnter(event, () => focusIn(page.current, "textarea[data-description]"))}
-          className={cx(bareField, "mt-2 text-display-4-medium tracking-tight text-balance text-text-primary")}
+          className={cx(
+            bareField,
+            "mt-2 text-display-4-medium tracking-tight text-balance text-text-primary",
+            retitled &&
+              "rounded-e-md ps-2 border-s-2 border-status-rose-text bg-status-rose-background/40 text-text-tertiary line-through decoration-status-rose-text/60",
+          )}
         />
       </TextField>
+      {retitled ? (
+        <p className="mt-1 rounded-e-md ps-2 border-s-2 border-status-lime-text bg-status-lime-background/40 text-display-4-medium tracking-tight text-balance text-text-primary">
+          {proposed?.title}
+        </p>
+      ) : null}
       <TextField
         aria-label="Description"
         value={draft.description}
@@ -107,6 +120,8 @@ export function ArticlePage({
           label="Article"
           brand={brand}
           onChange={(body) => onChange({ body })}
+          proposed={proposed?.body ?? null}
+          whole={proposed?.whole ?? false}
         />
       </Suspense>
     </article>

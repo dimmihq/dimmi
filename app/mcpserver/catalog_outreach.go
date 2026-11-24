@@ -20,7 +20,11 @@ series.
 func outreachDocs() map[string]Doc {
 	out := map[string]Doc{}
 	for _, part := range []map[string]Doc{
-		broadcastDocs(), broadcastDraftDocs(), broadcastReviewDocs(), broadcastSendDocs(), broadcastTopicDocs(),
+		broadcastDocs(),
+		broadcastDraftDocs(),
+		broadcastReviewDocs(),
+		broadcastSendDocs(),
+		broadcastTopicDocs(),
 		seriesDocs(), seriesDraftDocs(), seriesLiveDocs(), seriesPeopleDocs(), journeyDocs(),
 	} {
 		maps.Copy(out, part)
@@ -50,8 +54,8 @@ func broadcastDocs() map[string]Doc {
 			Use:     "Reads one broadcast with everything its draft holds and where it stands.",
 			Returns: "the broadcast with its audience, content, sender, schedule, goal and status.",
 			Next: []string{
-				"dimmi_broadcasts_report_get: what it did once sent",
-				"dimmi_broadcasts_update: change the draft",
+				"dimmi_get_broadcast_report: what it did once sent",
+				"dimmi_update_broadcast: change the draft",
 			},
 		},
 		"broadcasts.store": {
@@ -59,7 +63,7 @@ func broadcastDocs() map[string]Doc {
 			Use: "Starts a draft broadcast on one channel. Nothing reaches anyone until it is sent; the draft " +
 				"saves half written.",
 			Returns: "the draft broadcast.",
-			Next:    []string{"dimmi_broadcasts_update: choose the audience and write the message"},
+			Next:    []string{"dimmi_update_broadcast: choose the audience and write the message"},
 			Params: map[string]string{
 				"name": "A name for the team, up to 120 characters.",
 				"channel": "email, chat (a Messenger conversation), post (a card in the Messenger) or slack " +
@@ -76,7 +80,7 @@ func broadcastDocs() map[string]Doc {
 			Use:     "Deletes a draft that was never sent. A broadcast that started sending cannot be deleted.",
 			Returns: "nothing once it is deleted.",
 			Risk:    new(RiskWrite),
-			Hint:    "broadcast_not_draft means it already started: stop it with dimmi_broadcasts_stop_create.",
+			Hint:    "broadcast_not_draft means it already started: stop it with dimmi_stop_broadcast.",
 		},
 	}
 }
@@ -93,8 +97,8 @@ func broadcastDraftDocs() map[string]Doc {
 				"checked on send.",
 			Returns: "the draft as it now is.",
 			Next: []string{
-				"dimmi_broadcasts_estimate_get: count who it would reach",
-				"dimmi_broadcasts_tests_create: send a test first",
+				"dimmi_estimate_broadcast: count who it would reach",
+				"dimmi_test_broadcast: send a test first",
 			},
 			Params: broadcastParams(),
 			Hint:   "broadcast_not_draft means it already started sending and can no longer change.",
@@ -107,18 +111,18 @@ broadcastParams explains the fields of a broadcast draft.
 */
 func broadcastParams() map[string]string {
 	return map[string]string{
-		"audience_id": "Saved audience (audn_...) that gets it. Find it with dimmi_audiences_list.",
+		"audience_id": "Saved audience (audn_...) that gets it. Find it with dimmi_list_audiences.",
 		"rules":       audienceRules() + " Used instead of a saved audience.",
-		"room_ids":    "For slack: the Slack channels (chr_...) to post in. Find them with dimmi_channels_rooms_list.",
+		"room_ids":    "For slack: the Slack channels (chr_...) to post in. Find them with dimmi_list_channel_rooms.",
 		"topic_id": "Topic (bctp_...) it is sent under; people who left the topic do not get it. Find it " +
-			"with dimmi_broadcast_topics_list.",
+			"with dimmi_list_broadcast_topics.",
 		"service": "true marks a service notice, such as an outage, that reaches people who left the " +
 			"marketing topics. Never use it for marketing.",
 		"subject":          "Email subject, up to 200 characters.",
 		"preview":          "Email preview text, up to 200 characters.",
 		"body":             "The message in Markdown, up to 50000 characters.",
-		"sender_id":        "Teammate (mem_...) it comes from. Find it with dimmi_members_list.",
-		"email_address_id": "Sending email address (ema_...). Find it with dimmi_email_addresses_list.",
+		"sender_id":        "Teammate (mem_...) it comes from. Find it with dimmi_list_members.",
+		"email_address_id": "Sending email address (ema_...). Find it with dimmi_list_email_addresses.",
 		"slack_as":         "For slack: bot posts as the dimmi app, member as the sender's own Slack account.",
 		"reply_team_id":    "Team (team_...) that gets the replies.",
 		"reply_member_id":  "Teammate (mem_...) who gets the replies.",
@@ -129,7 +133,7 @@ func broadcastParams() map[string]string {
 		"schedule": "When it goes out: {\"kind\": \"now\"}, {\"kind\": \"at\", \"at\": RFC 3339 time} or " +
 			"{\"kind\": \"local\", \"at\": time} for that time in each person's own zone.",
 		"goal": "What it hopes people do: {\"event\": event name, \"days\": days after getting it}. " +
-			"Find events with dimmi_event_definitions_list.",
+			"Find events with dimmi_list_event_definitions.",
 	}
 }
 
@@ -150,7 +154,7 @@ func broadcastReviewDocs() map[string]Doc {
 			Use: "Reads what a broadcast did: how many it reached, opened, clicked, replied and reached the " +
 				"goal, why the rest were left out, which links drew clicks and how each account responded.",
 			Returns: "the broadcast's counts, reasons, links and accounts.",
-			Next:    []string{"dimmi_broadcasts_recipients_list: the people behind a number"},
+			Next:    []string{"dimmi_list_broadcast_recipients: the people behind a number"},
 		},
 		"broadcasts.recipients.index": {
 			Title:   "List a broadcast's recipients",

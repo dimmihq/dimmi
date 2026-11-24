@@ -21,6 +21,7 @@ import (
 	"github.com/dimmihq/dimmi/framework/ids"
 
 	"github.com/dimmihq/dimmi/app/actions/operatorchat"
+	"github.com/dimmihq/dimmi/app/ai/operator"
 	"github.com/dimmihq/dimmi/app/exceptions"
 	"github.com/dimmihq/dimmi/app/http/requests"
 	"github.com/dimmihq/dimmi/app/http/resources"
@@ -83,7 +84,7 @@ func (c *OperatorController) UpdateSettings(ctx context.Context, in *requests.Up
 	s, err := c.Settings.Update(ctx, operatorchat.SettingsInput{
 		Membership: membership(ctx), Enabled: in.Body.Enabled, BriefOnOpen: in.Body.BriefOnOpen,
 		TriageOnArrival: in.Body.TriageOnArrival, Instructions: in.Body.Instructions, Policies: in.Body.Policies,
-		Model: in.Body.Model, ProcedureQA: in.Body.ProcedureQA,
+		Model: in.Body.Model,
 	})
 	if err != nil {
 		return nil, err
@@ -94,7 +95,8 @@ func (c *OperatorController) UpdateSettings(ctx context.Context, in *requests.Up
 /*
 Index lists the caller's threads, only those about the whole workspace
 when filter[scope] is workspace, or about one conversation when
-filter[conversation] names it.
+filter[conversation] names it; or a routine's shared threads when
+filter[routine] names it.
 */
 func (c *OperatorController) Index(ctx context.Context, _ *requests.NoInput) (*OperatorThreadsOutput, error) {
 	r, _ := fhttp.RequestFrom(ctx)
@@ -106,6 +108,13 @@ func (c *OperatorController) Index(ctx context.Context, _ *requests.NoInput) (*O
 			return nil, err
 		}
 		filter.Conversation = &id
+	}
+	if named := query.Get("filter[routine]"); named != "" {
+		id, err := c.decode(models.PrefixOperatorRoutine, named)
+		if err != nil {
+			return nil, err
+		}
+		filter.Routine = &id
 	}
 	rows, err := c.Threads.List(ctx, membership(ctx), filter)
 	if err != nil {
@@ -169,12 +178,28 @@ func (c *OperatorController) Ask(ctx context.Context, in *requests.AskOperatorRe
 		return nil, err
 	}
 	answer, err := c.Threads.Ask(ctx, operatorchat.AskInput{
-		Membership: membership(ctx), ThreadID: id, Body: in.Body.Body,
+		Membership: membership(ctx), ThreadID: id, Body: in.Body.Body, Viewing: c.viewing(in),
 	})
 	if err != nil {
 		return nil, err
 	}
 	return &OperatorAnswerOutput{Body: fhttp.NewResource(resources.NewOperatorAnswer(answer))}, nil
+}
+
+/*
+viewing reads what the teammate has open, as sent; Operator checks the
+ids and what the teammate may see when it reads the page.
+*/
+func (c *OperatorController) viewing(req *requests.AskOperatorRequest) operator.Viewing {
+	in := req.Body.Viewing
+	if in == nil {
+		return operator.Viewing{}
+	}
+	out := operator.Viewing{Page: in.Page, ID: in.ID}
+	if in.SuggestionID != nil {
+		out.Suggestion = *in.SuggestionID
+	}
+	return out
 }
 
 /*

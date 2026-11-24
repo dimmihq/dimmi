@@ -40,11 +40,11 @@ func accessDocs() map[string]Doc {
 			Use: "Lists the built-in roles (owner, admin, member), then the workspace's custom roles by name. " +
 				"A custom role narrows the admin or member role it is based on.",
 			Returns: "the roles with their base role, permissions and, for custom roles, id and member count.",
-			Next:    []string{"dimmi_members_update: give a teammate a custom role"},
+			Next:    []string{"dimmi_update_member: give a teammate a custom role"},
 		},
 		"roles.show": {
 			Title:   "Get a custom role",
-			Use:     "Reads one custom role. Built-in roles have no id; read them with dimmi_roles_list.",
+			Use:     "Reads one custom role. Built-in roles have no id; read them with dimmi_list_roles.",
 			Returns: "the role with its base role, permissions and member count.",
 		},
 		"permissions.index": {
@@ -73,7 +73,7 @@ func auditDocs() map[string]Doc {
 				"tokens and settings, newest first. It shows other people's activity and addresses, so use it " +
 				"only for a question the person asked.",
 			Returns: "a page of entries with event, actor, subject, changes and time, and next_cursor for more.",
-			Next:    []string{"dimmi_audit_logs_get: read one entry in full"},
+			Next:    []string{"dimmi_get_audit_log_by_id: read one entry in full"},
 			Risk:    new(RiskSensitive),
 			Params: map[string]string{
 				"filter[event]": "Event names, such as member.role_changed, member.signed_in or invitation.created.",
@@ -109,7 +109,7 @@ func notificationDocs() map[string]Doc {
 			Use: "Lists your own notifications, the bell in the app: new conversations, assignments, replies, " +
 				"mentions and approvals waiting, most recent first. Never anyone else's.",
 			Returns: "a page of notifications with unread_count, unseen_count and next_cursor in meta.",
-			Next:    []string{"dimmi_notifications_update_many: mark them read"},
+			Next:    []string{"dimmi_update_many_notifications: mark them read"},
 			Params: map[string]string{
 				"filter[status]":  "unread for unread ones only; all (default) for every one.",
 				"filter[trigger]": "One trigger key, such as mentioned or conversation_assigned.",
@@ -132,7 +132,7 @@ func notificationDocs() map[string]Doc {
 			Use: "Reads which things you are told about on which channel (in the app, email, push), with the " +
 				"defaults and locked cells, and your quiet hours and pause.",
 			Returns: "the triggers, channels, cells and settings.",
-			Next:    []string{"dimmi_notification_preferences_update: turn a trigger on or off"},
+			Next:    []string{"dimmi_update_notification_preferences: turn a trigger on or off"},
 		},
 	}
 }
@@ -153,7 +153,7 @@ func notificationSettingDocs() map[string]Doc {
 					"conversation_assigned, customer_replied, mentioned, ai_handoff_requested, " +
 					"ai_action_approval_requested, snooze_expired, team_joined. Channels: in_app, email, push.",
 			},
-			Hint: "Locked cells cannot be turned off; read them with dimmi_notification_preferences_list.",
+			Hint: "Locked cells cannot be turned off; read them with dimmi_list_notification_preferences.",
 		},
 		"notification-preferences.destroy": {
 			Title:   "Reset your notification channels",

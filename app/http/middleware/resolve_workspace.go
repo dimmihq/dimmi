@@ -7,7 +7,9 @@
 | the caller is known, this middleware decides that workspace, refuses
 | callers who may not work in it, and scopes the rest of the request to
 | it: database transactions see only its rows, and controllers read the
-| caller's membership and permissions from the context.
+| caller's membership and permissions from the context. A request
+| served within the process for a narrowed copy of a teammate, as
+| Operator's routines make, keeps that narrowing.
 |
 */
 
@@ -46,6 +48,7 @@ func ResolveWorkspace(resolve *workspaces.ResolveWorkspace, errs fhttp.Errors) f
 				return
 			}
 
+			membership = authz.Narrowed(r.Context(), membership)
 			ctx := tenancy.With(authz.WithMembership(r.Context(), membership), membership.Workspace.ID.String())
 
 			next.ServeHTTP(w, r.WithContext(ctx))

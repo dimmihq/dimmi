@@ -1,4 +1,4 @@
-import { expect, inbox, test as it } from "./support/fixtures";
+import { expect, home, test as it } from "./support/fixtures";
 
 const onePixel = Buffer.from(
   "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M/wHwAEBgIApD5fRAAAAABJRU5ErkJggg==",
@@ -48,11 +48,11 @@ it.describe("setting up a new workspace", () => {
     await expect(page.getByText("Added")).toBeVisible();
     await page.getByRole("button", { name: "Go to your workspace" }).click();
 
-    await expect(page).toHaveURL(inbox);
+    await expect(page).toHaveURL(home);
     await expect(page.getByText("Emily Johnson").first()).toBeVisible();
 
     await page.goto("/onboarding");
-    await expect(page).toHaveURL(inbox);
+    await expect(page).toHaveURL(home);
   });
 
   it("resumes on the step it reached after a reload", async ({ page, person }) => {

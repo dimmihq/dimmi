@@ -36,7 +36,7 @@ func agentDocs() map[string]Doc {
 			Title: "Get AI agent usage",
 			Use: "Reads one month of the AI agent's work: what it spent, tokens, how many conversations it " +
 				"answered, did not know or handed over, day by day and by model. Months are counted in UTC. " +
-				"Operator's own spend is in dimmi_operator_usage_get.",
+				"Operator's own spend is in dimmi_get_operator_usage.",
 			Returns: "the month's cost in micro-dollars, counts by outcome, daily series, spend by model and the cap.",
 			Params: map[string]string{
 				"period": "The month as YYYY-MM, such as 2026-11. Leave out for the current month.",
@@ -61,7 +61,10 @@ func keyDocs() map[string]Doc {
 				"provider as it saves; a key the provider refuses is not kept. Only add a key the person gave " +
 				"you for this.",
 			Returns: "the key with its status and the models it offers, the secret hidden.",
-			Next:    []string{"dimmi_ai_agents_update: point the agent at the new key with answer_key_id"},
+			Next: []string{
+				"dimmi_update_ai_settings: let every agent answer with the new key",
+				"dimmi_update_ai_agent: point one agent at the new key with answer_key_id",
+			},
 			Params: map[string]string{
 				"provider": "anthropic, openai, engy or openai_compatible. ChatGPT plans connect in the browser " +
 					"instead.",
@@ -79,8 +82,9 @@ func keyDocs() map[string]Doc {
 		},
 		"ai.keys.destroy": {
 			Title: "Remove an AI provider key",
-			Use: "Deletes a provider key and its secret. Refused while the agent still answers with it: point " +
-				"the agent at another key with dimmi_ai_agents_update first.",
+			Use: "Deletes a provider key and its secret. Refused while an agent or the shared settings still " +
+				"answer with it: point them at another key with dimmi_update_ai_agent or dimmi_update_ai_settings " +
+				"first.",
 		},
 		"ai.keys.test.store": {
 			Title:   "Check an AI provider key",

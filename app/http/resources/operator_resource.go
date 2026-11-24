@@ -35,7 +35,6 @@ type OperatorSettings struct {
 	Policies        map[string]string `json:"policies"`
 	AutoGroups      []string          `json:"auto_groups"`
 	Model           *string           `json:"model"`
-	ProcedureQA     bool              `json:"procedure_qa_weekly"`
 }
 
 /*
@@ -45,7 +44,7 @@ func NewOperatorSettings(s operator.Settings) OperatorSettings {
 	out := OperatorSettings{
 		Object: "operator_settings", Enabled: s.Enabled, BriefOnOpen: s.BriefOnOpen,
 		TriageOnArrival: s.TriageOnArrival, Instructions: s.Instructions, Policies: map[string]string{},
-		AutoGroups: []string{}, Model: optionalText(s.Model), ProcedureQA: s.ProcedureQA,
+		AutoGroups: []string{}, Model: optionalText(s.Model),
 	}
 	for _, g := range operator.Groups() {
 		out.Policies[g] = string(s.PolicyFor(g))
@@ -57,7 +56,8 @@ func NewOperatorSettings(s operator.Settings) OperatorSettings {
 }
 
 /*
-OperatorThread is one of the caller's threads with Operator.
+OperatorThread is one of the caller's threads with Operator, or the
+shared thread of a routine's run, which names the routine and the run.
 */
 type OperatorThread struct {
 	ID             string     `json:"id"`
@@ -66,6 +66,8 @@ type OperatorThread struct {
 	Title          string     `json:"title"`
 	LastMessageAt  *time.Time `json:"last_message_at"`
 	CreatedAt      time.Time  `json:"created_at"`
+	RoutineID      *string    `json:"routine_id"`
+	RoutineRunID   *string    `json:"routine_run_id"`
 }
 
 /*
@@ -76,6 +78,8 @@ func NewOperatorThread(t models.OperatorThread) OperatorThread {
 		ID: models.PublicID(models.PrefixOperatorThread, t.ID), Object: "operator_thread",
 		ConversationID: optionalID(models.PrefixConversation, t.ConversationID), Title: t.Title,
 		LastMessageAt: t.LastMessageAt, CreatedAt: t.CreatedAt,
+		RoutineID:    optionalID(models.PrefixOperatorRoutine, t.RoutineID),
+		RoutineRunID: optionalID(models.PrefixOperatorRoutineRun, t.RoutineRunID),
 	}
 }
 

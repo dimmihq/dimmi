@@ -32,7 +32,7 @@ func importDocs() map[string]Doc {
 			Use: "Runs a mapping over every row without writing anything and counts what would be created, " +
 				"updated, skipped or refused.",
 			Returns: "the counts and the first refused rows with why.",
-			Next:    []string{"dimmi_imports_runs_create: start the import with the same mapping"},
+			Next:    []string{"dimmi_start_import: start the import with the same mapping"},
 			Params: map[string]string{
 				"mapping": "A list of {column, field}: column is the index in the header from 0; field is " +
 					"email, name, external_id, phone, company_name, company_domain or tags for contacts, " +
@@ -41,10 +41,11 @@ func importDocs() map[string]Doc {
 			},
 		},
 		"imports.runs.store": {
+			Name:    "start_import",
 			Title:   "Start an import",
 			Use:     "Starts a draft import in the background with the mapping and mode given. An import runs once.",
 			Returns: "the import with status queued; poll it for progress.",
-			Next:    []string{"dimmi_imports_get: follow progress until completed"},
+			Next:    []string{"dimmi_get_import_by_id: follow progress until completed"},
 			Risk:    new(RiskDanger),
 			Params: map[string]string{
 				"mapping": "The same mapping as the dry run.",
@@ -52,6 +53,7 @@ func importDocs() map[string]Doc {
 			},
 		},
 		"imports.errors.show": {
+			Name:    "download_import_errors",
 			Title:   "Download an import's failed rows",
 			Use:     "Fetches a CSV of the rows that failed, each with its line in the file and why.",
 			Returns: "the CSV.",
@@ -71,7 +73,7 @@ func importRollbackDocs() map[string]Doc {
 				"unless changed or talked to since, puts back the values it changed unless changed again, and " +
 				"takes off the tags it added. Needs imports:rollback.",
 			Returns: "the import with rollback.status queued; poll it for the counts removed, reverted and kept.",
-			Next:    []string{"dimmi_imports_get: follow the undo until rollback.status is completed"},
+			Next:    []string{"dimmi_get_import_by_id: follow the undo until rollback.status is completed"},
 			Risk:    new(RiskDanger),
 		},
 	}

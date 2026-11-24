@@ -77,7 +77,7 @@ func (s *Set) trim(v any, fields []string, depth int) any {
 		if s.limits.Items > 0 && len(t) > s.limits.Items {
 			kept = t[:s.limits.Items]
 		}
-		out := make([]any, 0, len(kept)+1)
+		out := make([]any, 0, len(kept))
 		for _, item := range kept {
 			out = append(out, s.trim(project(item, fields), nil, depth+1))
 		}

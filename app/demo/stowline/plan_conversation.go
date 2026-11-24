@@ -381,6 +381,21 @@ func (p *planner) status(c *Conversation, last time.Time) {
 		if p.r.Float64() < 0.18 {
 			c.Teammate = -1
 		}
+		p.answerLongWait(c, last)
+	}
+}
+
+/*
+answerLongWait closes most open conversations whose customer wrote last
+more than a working day ago. A team that works leaves few customers
+waiting that long, and the ones left are what a report should find.
+*/
+func (p *planner) answerLongWait(c *Conversation, last time.Time) {
+	if c.Messages[len(c.Messages)-1].Author != "contact" || p.now.Sub(last) < 18*time.Hour {
+		return
+	}
+	if p.r.Float64() < 0.92 {
+		c.Status, c.ClosedAt = "closed", minTime(p.now, last.Add(time.Duration(30+p.r.IntN(240))*time.Minute))
 	}
 }
 

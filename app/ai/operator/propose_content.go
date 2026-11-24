@@ -84,20 +84,85 @@ func (r resolver) articleOp(ctx context.Context, in opInput) (Operation, error) 
 	if in.Kind == KindArticleNew {
 		return r.newArticleOp(ctx, op, in)
 	}
+	if strings.TrimSpace(in.Article) == "" {
+		return op, fmt.Errorf("%w: \"article_id\" is missing; send the id of the article to edit, as "+
+			"get_article_by_id and list_articles show it (art_...)", errBadArguments)
+	}
 	id, err := r.e.publicID(in.Article, models.PrefixArticle)
 	if err != nil {
-		return op, err
+		return op, fmt.Errorf("%w: there is no article %q; \"article_id\" is the id get_article_by_id and "+
+			"list_articles show (art_...), never the title", errBadArguments, in.Article)
 	}
 	a, err := r.e.Services.Articles.Show(ctx, r.s.m, id)
+	if errors.Is(err, exceptions.ErrNotFound) {
+		return op, fmt.Errorf("%w: there is no article %q; \"article_id\" is the id get_article_by_id and "+
+			"list_articles show (art_...)", errBadArguments, in.Article)
+	}
 	if err != nil {
 		return op, err
 	}
-	if op.Title == nil && op.Body == nil {
-		return op, fmt.Errorf("%w: give a new title or body", errBadArguments)
+	current := a.BodyMarkdown
+	if text, ok := r.s.suggested(id); ok {
+		current = text
 	}
-	op.Article, op.Label = &id, fmt.Sprintf("Edit the draft of “%s”", a.Title)
+	if err := editBody(&op, current, in.Edits); err != nil {
+		return op, fmt.Errorf("article %q: %w", a.Title, err)
+	}
+	op.Article, op.Current, op.Label = &id, current, fmt.Sprintf("Edit the draft of “%s”", a.Title)
 	return op, nil
 }
+
+/*
+editBody sets the new working copy of an edit: the body sent, or the
+article with the edits written in. An edit that would cut most of the
+article away is refused, since it is a description of the change sent
+in place of the article, and one that changes nothing is refused.
+*/
+func editBody(op *Operation, current string, edits []passageEdit) error {
+	if len(edits) > 0 {
+		if op.Body != nil {
+			return fmt.Errorf("%w: give either a body or edits, not both", errBadArguments)
+		}
+		body, notes, err := applyPassages(current, edits)
+		if err != nil {
+			return err
+		}
+		op.Body, op.Note = &body, strings.Join(notes, " ")
+	}
+	if op.Title == nil && op.Body == nil {
+		return fmt.Errorf("%w: \"edits\" is missing; send the passages to replace, each as {find, replace}",
+			errBadArguments)
+	}
+	if op.Body != nil && strings.TrimSpace(*op.Body) == strings.TrimSpace(current) {
+		op.Body = nil
+		if op.Title == nil {
+			return fmt.Errorf("%w: the edit leaves the article exactly as it is; each replace must differ "+
+				"from its find. To point something out for a person to check, say it in your message "+
+				"instead; do not send this fix again", errBadArguments)
+		}
+	}
+	if op.Body != nil && shrinks(current, *op.Body) {
+		return fmt.Errorf("%w: the body replaces the whole article, which has %d characters; send "+
+			"edits with the exact passages to change, or the full article, never a description of the change",
+			errBadArguments, len([]rune(current)))
+	}
+	return nil
+}
+
+/*
+shrinks reports whether an edit would cut most of an article away, as
+an edit does when a model sends what to change instead of the article.
+*/
+func shrinks(before, after string) bool {
+	was, now := len([]rune(strings.TrimSpace(before))), len([]rune(strings.TrimSpace(after)))
+	return was >= minGuardedArticle && now*2 < was
+}
+
+/*
+minGuardedArticle is the shortest article whose edits are checked for
+cutting most of it away.
+*/
+const minGuardedArticle = 400
 
 /*
 newArticleOp checks a new article draft and its help center.
@@ -119,7 +184,22 @@ func (r resolver) newArticleOp(ctx context.Context, op Operation, in opInput) (O
 			return op, err
 		}
 	}
+	if in.Collection != "" {
+		collection, err := r.e.publicID(in.Collection, models.PrefixCollection)
+		if err != nil {
+			return op, err
+		}
+		op.Collection = &collection
+	}
 	op.HelpCenter, op.Label = &center, fmt.Sprintf("Draft a new article “%s”", *op.Title)
+	switch in.Visibility {
+	case "", "public":
+	case "agent_only":
+		op.Visibility = &in.Visibility
+		op.Label = fmt.Sprintf("Draft a new snippet for the AI agent “%s”", *op.Title)
+	default:
+		return op, fmt.Errorf("%w: visibility is public or agent_only", errBadArguments)
+	}
 	return op, nil
 }
 
@@ -140,6 +220,7 @@ func (r resolver) procedureOp(ctx context.Context, in opInput) (Operation, error
 		return r.testCaseOp(ctx, op, p, in)
 	}
 	var shape map[string]any
+	in.Definition = objectArg(in.Definition)
 	if len(in.Definition) == 0 || json.Unmarshal(in.Definition, &shape) != nil {
 		return op, fmt.Errorf("%w: give the whole working copy as a JSON object", errBadArguments)
 	}
@@ -149,12 +230,25 @@ func (r resolver) procedureOp(ctx context.Context, in opInput) (Operation, error
 }
 
 /*
+objectArg reads an argument meant as a JSON object that a model sent
+encoded as a string instead, as models often do with nested objects.
+*/
+func objectArg(raw json.RawMessage) json.RawMessage {
+	var text string
+	if len(raw) == 0 || raw[0] != '"' || json.Unmarshal(raw, &text) != nil {
+		return raw
+	}
+	return json.RawMessage(text)
+}
+
+/*
 proposedTest is a test case as Operator proposes it: the conversation it
 came from is named by number.
 */
 type proposedTest struct {
 	Name               string                    `json:"name"`
 	SourceConversation int64                     `json:"source_conversation,omitempty"`
+	SourceNumber       int64                     `json:"source_conversation_number,omitempty"`
 	SourceID           string                    `json:"source_conversation_id,omitempty"`
 	Persona            *pipeline.SimPersona      `json:"persona,omitempty"`
 	Messages           []procedures.TestMessage  `json:"messages"`
@@ -169,8 +263,11 @@ resolved to its id.
 */
 func (r resolver) testCaseOp(ctx context.Context, op Operation, p models.Procedure, in opInput) (Operation, error) {
 	var t proposedTest
-	if len(in.TestCase) == 0 || json.Unmarshal(in.TestCase, &t) != nil {
+	if len(in.TestCase) == 0 {
 		return op, fmt.Errorf("%w: give the test case as a JSON object", errBadArguments)
+	}
+	if err := json.Unmarshal(objectArg(in.TestCase), &t); err != nil {
+		return op, fmt.Errorf("%w: the test case does not fit its shape: %s", errBadArguments, err.Error())
 	}
 	t.Name = strings.TrimSpace(t.Name)
 	if t.Name == "" || len([]rune(t.Name)) > 120 || len(t.Messages) == 0 || len(t.Messages) > 12 {
@@ -178,6 +275,9 @@ func (r resolver) testCaseOp(ctx context.Context, op Operation, p models.Procedu
 	}
 	if issues := procedure.CheckAssertions(t.Assertions); len(issues) > 0 {
 		return op, fmt.Errorf("%w: %s", errBadArguments, issues[0].Message)
+	}
+	if t.SourceNumber > 0 {
+		t.SourceConversation, t.SourceNumber = t.SourceNumber, 0
 	}
 	if t.SourceConversation > 0 {
 		c, err := r.conversation(ctx, t.SourceConversation)

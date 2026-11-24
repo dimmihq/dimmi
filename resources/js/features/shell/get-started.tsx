@@ -1,91 +1,95 @@
 /*
- * The first steps of a new workspace, at the foot of the sidebar. Each
- * step checks itself off from what the workspace has done: a messenger
- * that booted on a site, mail that arrived, a teammate invited, knowledge
- * for the agent, and a coding agent connected over MCP. Each leads to the
- * page that sets it up. The list starts folded, so the sidebar's own
- * pages stay in view on short screens; the person opens it with one
- * click, and the browser remembers. It shows to people who can change
- * settings, and goes away once every step is done.
+ * The first steps of a new workspace, at the foot of the sidebar. The
+ * sidebar keeps one line: a ring that fills as steps get done, and the
+ * count. Pressing it opens the steps beside the sidebar, where there is
+ * room to say why each one matters. Each step checks itself off from
+ * what the workspace has done and leads to the page that sets it up;
+ * while the list is open it keeps checking, so a step done in another
+ * tab ticks here on its own. It shows to people who can change settings,
+ * and goes away once every step is done.
  */
-import { RiArrowDownSLine, RiCheckboxBlankCircleLine, RiCheckboxCircleFill } from "@remixicon/react";
+import { RiArrowRightSLine, RiCheckLine } from "@remixicon/react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { useState } from "react";
 
-import { connectedAppsQuery } from "@/lib/api/connected-apps";
-import { emailAddressesQuery } from "@/lib/api/email";
-import { invitationsQuery } from "@/lib/api/invitations";
-import { sourcesQuery } from "@/lib/api/knowledge-sources";
-import { widgetSettingsQuery } from "@/lib/api/widget-settings";
-import { callerQuery, membersQuery } from "@/lib/api/workspace";
+import { Popover, PopoverTrigger } from "@/components/base/popover/popover";
+import { ProgressCircle, ProgressTrack } from "@/components/base/progress/progress";
+import { callerQuery } from "@/lib/api/workspace";
 import { cx } from "@/utils/cx";
 
-const key = "dimmi:get-started-folded";
+import { type Step, useSteps } from "./setup-steps";
 
-function folded(): boolean {
-  try {
-    return window.localStorage.getItem(key) !== "0";
-  } catch {
-    return true;
-  }
-}
-
-interface Step {
-  label: string;
-  href: string;
-  done: boolean;
+/*
+ * Tick is a step's mark: an empty ring, or a filled one whose check pops
+ * in when the step gets done.
+ */
+function Tick({ done }: { done: boolean }) {
+  return (
+    <span
+      aria-hidden
+      className={cx(
+        "flex size-5 shrink-0 items-center justify-center rounded-full border transition-colors duration-300",
+        done ? "border-transparent bg-accent-500" : "border-border-button-default",
+      )}
+    >
+      <RiCheckLine
+        className={cx(
+          "size-3.5 text-white transition-[scale,opacity] duration-300 ease-out motion-reduce:transition-none",
+          done ? "scale-100 opacity-100" : "scale-50 opacity-0",
+        )}
+      />
+    </span>
+  );
 }
 
 /*
- * useSteps reads what the workspace has set up so far.
+ * Steps is the list in the popover. Rows come in one after another, and
+ * a done one is struck through.
  */
-function useSteps(workspace: string, enabled: boolean): Step[] | null {
-  const on = { enabled: enabled && workspace !== "", retry: false } as const;
-  const widgets = useQuery({ ...widgetSettingsQuery(workspace), ...on });
-  const addresses = useQuery({ ...emailAddressesQuery(workspace), ...on });
-  const members = useQuery({ ...membersQuery(workspace), ...on });
-  const invitations = useQuery({ ...invitationsQuery(workspace), ...on });
-  const sources = useQuery({ ...sourcesQuery(workspace), ...on });
-  const apps = useQuery({ ...connectedAppsQuery, enabled: on.enabled, retry: false });
-
-  if (!enabled || widgets.isPending || addresses.isPending || members.isPending) {
-    return null;
-  }
-
-  return [
-    {
-      label: "Install the messenger",
-      href: "/d/settings/messenger",
-      done: (widgets.data ?? []).some((widget) => widget.last_boot_at),
-    },
-    {
-      label: "Connect your email",
-      href: "/d/settings/email",
-      done: (addresses.data ?? []).some((address) => address.last_inbound_at || address.inbound_verified_at),
-    },
-    {
-      label: "Invite your team",
-      href: "/d/settings/members",
-      done: (members.data?.length ?? 0) > 1 || (invitations.data?.length ?? 0) > 0,
-    },
-    {
-      label: "Add knowledge for the agent",
-      href: "/d/settings/knowledge",
-      done: (sources.data?.length ?? 0) > 0,
-    },
-    {
-      label: "Connect a coding agent over MCP",
-      href: "/d/settings/connected-apps",
-      done: (apps.data ?? []).some((app) => !app.workspace_id || app.workspace_id === workspace),
-    },
-  ];
+function Steps({ steps, onOpen }: { steps: Step[]; onOpen: () => void }) {
+  return (
+    <ul className="flex flex-col">
+      {steps.map((step, index) => (
+        <li key={step.label} className="motion-safe:animate-page-in" style={{ animationDelay: `${index * 45}ms` }}>
+          <Link
+            to={step.href}
+            onClick={onOpen}
+            className={cx(
+              "flex items-center gap-3 rounded-xl px-2.5 py-2 no-underline outline-none transition-colors duration-150",
+              "hover:bg-background-secondary-hover focus-visible:ring-2 focus-visible:ring-border-focus-ring",
+            )}
+          >
+            <Tick done={step.done} />
+            <span className="flex min-w-0 flex-1 flex-col">
+              <span
+                className={cx(
+                  "text-body-medium transition-colors duration-300",
+                  step.done ? "text-text-tertiary line-through" : "text-text-primary",
+                )}
+              >
+                {step.label}
+                <span className="sr-only">{step.done ? " (done)" : ""}</span>
+              </span>
+              <span className="text-body-2-regular text-text-secondary">{step.why}</span>
+            </span>
+            {step.done ? null : (
+              <RiArrowRightSLine
+                aria-hidden
+                className="size-5 shrink-0 text-foreground-icon-tertiary rtl:-scale-x-100"
+              />
+            )}
+          </Link>
+        </li>
+      ))}
+    </ul>
+  );
 }
 
 export function GetStarted({ workspace }: { workspace: string }) {
-  const [isFolded, setFolded] = useState(folded);
+  const [open, setOpen] = useState(false);
   const { data: caller } = useQuery({ ...callerQuery(workspace), enabled: workspace !== "" });
-  const steps = useSteps(workspace, caller?.member?.permissions?.includes("settings:read") ?? false);
+  const steps = useSteps(workspace, caller?.member?.permissions?.includes("settings:read") ?? false, open);
 
   if (!steps) {
     return null;
@@ -94,57 +98,49 @@ export function GetStarted({ workspace }: { workspace: string }) {
   if (done === steps.length) {
     return null;
   }
-
-  const toggle = () => {
-    setFolded(!isFolded);
-    try {
-      window.localStorage.setItem(key, isFolded ? "0" : "1");
-    } catch {
-      // Blocked storage keeps the choice for this page only.
-    }
-  };
+  const share = (done / steps.length) * 100;
 
   return (
-    <section aria-label="Get started" className="flex w-full flex-col rounded-xl bg-background-tertiary-default p-2">
+    <PopoverTrigger isOpen={open} onOpenChange={setOpen}>
       <button
         type="button"
-        aria-expanded={!isFolded}
-        onClick={toggle}
-        className="flex w-full cursor-pointer items-center justify-between rounded-lg px-1 py-0.5 outline-none focus-visible:ring-2 focus-visible:ring-border-focus-ring"
+        className={cx(
+          "flex w-full cursor-pointer items-center gap-2 rounded-xl bg-background-tertiary-default px-3 py-2 outline-none",
+          "transition-colors duration-150 hover:bg-background-secondary-hover",
+          "focus-visible:ring-2 focus-visible:ring-border-focus-ring",
+        )}
       >
-        <span className="text-body-medium text-text-primary">Get started</span>
-        <span className="flex items-center gap-1 text-caption-1-medium text-text-tertiary">
+        <ProgressCircle size="sm" value={share} aria-label="Setup progress" />
+        <span className="flex-1 text-start text-body-medium text-text-primary">Get started</span>
+        <span className="text-caption-1-medium text-text-tertiary tabular-nums">
           {done}/{steps.length}
-          <RiArrowDownSLine
-            aria-hidden
-            className={cx("size-4 transition-transform duration-200", isFolded && "-rotate-90")}
-          />
         </span>
+        <RiArrowRightSLine
+          aria-hidden
+          className={cx(
+            "size-4 text-foreground-icon-tertiary transition-transform duration-200 rtl:-scale-x-100",
+            open && "translate-x-0.5",
+          )}
+        />
       </button>
-      {isFolded ? null : (
-        <ul className="mt-1.5 flex flex-col gap-0.5">
-          {steps.map((step) => (
-            <li key={step.label}>
-              <Link
-                to={step.href}
-                className={cx(
-                  "flex items-center gap-2 rounded-lg px-1 py-1 text-body-regular outline-none transition-colors",
-                  "hover:bg-background-secondary-hover focus-visible:ring-2 focus-visible:ring-border-focus-ring",
-                  step.done ? "text-text-tertiary line-through" : "text-text-secondary",
-                )}
-              >
-                {step.done ? (
-                  <RiCheckboxCircleFill aria-hidden className="size-4 shrink-0 text-foreground-icon-secondary" />
-                ) : (
-                  <RiCheckboxBlankCircleLine aria-hidden className="size-4 shrink-0 text-foreground-icon-tertiary" />
-                )}
-                {step.label}
-                <span className="sr-only">{step.done ? " (done)" : ""}</span>
-              </Link>
-            </li>
-          ))}
-        </ul>
-      )}
-    </section>
+      <Popover
+        placement="right bottom"
+        offset={12}
+        aria-label="Get started"
+        className="w-[380px]"
+        dialogClassName="p-1.5"
+      >
+        <div className="flex flex-col gap-2 px-2.5 pt-2 pb-1">
+          <div className="flex items-baseline justify-between gap-4">
+            <span className="text-headline-medium text-text-primary">Get started</span>
+            <span className="text-body-2-regular text-text-secondary tabular-nums">
+              {done} of {steps.length} done
+            </span>
+          </div>
+          <ProgressTrack percentage={share} size="sm" />
+        </div>
+        <Steps steps={steps} onOpen={() => setOpen(false)} />
+      </Popover>
+    </PopoverTrigger>
   );
 }

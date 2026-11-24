@@ -57,5 +57,6 @@ func MCP(a *app.App) {
 		ResourceMetadata: mcpResourceURL(a),
 	}, a.Errors)
 
+	a.Router.Describe(mcpserver.DescribeAPI)
 	a.Router.Handle(http.MethodPost, "/mcp", "mcp.store", handler)
 }

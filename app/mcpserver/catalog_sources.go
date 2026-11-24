@@ -50,7 +50,7 @@ func knowledgeSettingDocs() map[string]Doc {
 			Risk:    new(RiskDanger),
 			Params: map[string]string{
 				"embedding_key_id": "Provider key (aik_...) to embed with; null or left out for the built-in " +
-					"embedder. Find it with dimmi_ai_keys_list.",
+					"embedder. Find it with dimmi_list_ai_keys.",
 				"model": "Embedding model id on that key.",
 				"dims":  "Vector size the model returns, 64 to 4096.",
 			},
@@ -74,7 +74,7 @@ func sourceReadDocs() map[string]Doc {
 			Use: "Lists the tools a knowledge source can be added from, with the settings each needs, the " +
 				"modes it supports, what it can feed and how often it may sync.",
 			Returns: "every source type with its settings schema and abilities.",
-			Next:    []string{"dimmi_knowledge_sources_previews_create: try settings before adding"},
+			Next:    []string{"dimmi_preview_knowledge_source: try settings before adding"},
 		},
 		"knowledge.sources.index": {
 			Title:   "List knowledge sources",
@@ -86,8 +86,8 @@ func sourceReadDocs() map[string]Doc {
 			Use:     "Reads one source. Secrets are never sent back; secrets_set names the ones stored.",
 			Returns: "the source with its settings, patterns, schedule, status, counts and last sync.",
 			Next: []string{
-				"dimmi_knowledge_sources_documents_list: what it read",
-				"dimmi_knowledge_sources_syncs_list: its recent syncs",
+				"dimmi_list_knowledge_source_documents: what it read",
+				"dimmi_list_knowledge_source_syncs: its recent syncs",
 			},
 		},
 		"knowledge.sources.tree.show": {
@@ -111,7 +111,7 @@ func sourceChangeDocs() map[string]Doc {
 				"before it is saved, so a wrong key fails at once. Only use credentials the person gave you " +
 				"for this.",
 			Returns: "the source.",
-			Next:    []string{"dimmi_knowledge_sources_syncs_create: read it now"},
+			Next:    []string{"dimmi_sync_knowledge_source: read it now"},
 			Params:  sourceParams(),
 		},
 		"knowledge.sources.update": {
@@ -134,14 +134,14 @@ sourceParams explains the fields of a knowledge source.
 */
 func sourceParams() map[string]string {
 	return map[string]string{
-		"type": "Source type, from dimmi_knowledge_source_types_list. Read on create only.",
+		"type": "Source type, from dimmi_list_knowledge_source_types. Read on create only.",
 		"name": "A name for the team, up to 80 characters.",
 		"mode": "sync keeps reading it for the agents; import turns it once into help center articles. " +
 			"Read on create only.",
 		"targets": "What it feeds: agent, operator and help_center. Defaults to agent and operator for sync, " +
 			"help_center for import.",
 		"help_center_id": "Help center (hc_...) an import or a help_center target writes to. Find it with " +
-			"dimmi_help_centers_list.",
+			"dimmi_list_help_centers.",
 		"settings": "The object the type's settings schema describes, secrets included.",
 		"include":  "Patterns of documents to read, up to 50; empty reads everything.",
 		"exclude":  "Patterns of documents to leave out, up to 50.",

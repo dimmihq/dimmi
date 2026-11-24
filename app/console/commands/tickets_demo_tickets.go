@@ -39,7 +39,8 @@ type demoConv struct {
 
 /*
 recentConversations returns conversations of the last weeks that are
-not tickets yet, in a stable shuffled order.
+not tickets yet, in a stable shuffled order. The demo's hand-written
+cases are left out: a ticket's history would close them.
 */
 func (d *ticketDemo) recentConversations(ctx context.Context, n int, since time.Time) ([]demoConv, error) {
 	var out []demoConv
@@ -47,6 +48,7 @@ func (d *ticketDemo) recentConversations(ctx context.Context, n int, since time.
 	err := d.app.DB.Transaction(ctx, func(ctx context.Context, tx *database.Tx) error {
 		rows, err := tx.Query(ctx, `SELECT c.id, c.created_at, coalesce(c.subject, '') FROM conversations c
 			WHERE c.workspace_id = $1 AND c.deleted_at IS NULL AND c.created_at >= $2
+			  AND coalesce(c.source ->> 'planted', '') = ''
 			  AND NOT EXISTS (SELECT 1 FROM tickets t WHERE t.conversation_id = c.id)
 			  AND NOT EXISTS (SELECT 1 FROM ticket_links l WHERE l.conversation_id = c.id)
 			ORDER BY md5(c.id::text) LIMIT $3`, d.owner.Workspace.ID, since, n)

@@ -40,17 +40,20 @@ const (
 writeTools are the tools that leave something behind.
 */
 func (e *Engine) writeTools() []tool {
-	return []tool{
+	return append(append(e.articleTools(), e.procedureEditTool()), []tool{
 		{spec: contracts.ToolSpec{
 			Name: "draft_reply",
-			Description: "Draft a reply to the customer of this thread's conversation. It lands in the " +
-				"teammate's reply box for them to edit and send; it is never sent by you.",
+			Description: "Draft a reply to the customer of this thread's conversation, following how this " +
+				"workspace replies to customers: its tone, languages and guidance, given with the open " +
+				"conversation. It lands in the teammate's reply box for them to edit and send; it is never " +
+				"sent by you.",
 			Schema: schema(`{"type":"object","required":["body"],"properties":{"body":{"type":"string",` +
-				`"description":"The reply in Markdown, written to the customer."}}}`),
+				`"description":"The whole reply in Markdown, written to the customer in their language and the ` +
+				`workspace's tone."}}}`),
 		}, handle: e.draftReply},
 		{spec: contracts.ToolSpec{
 			Name: "propose_changes", Description: proposeDescription, Schema: schema(proposeSchema),
-		}, writes: changeKinds(), handle: e.proposeChanges},
+		}, writes: changeKinds(), handle: e.proposeChanges, was: wasTitle()},
 		{spec: contracts.ToolSpec{
 			Name: "remember",
 			Description: "Remember something the teammate asked you to keep in mind for every future " +
@@ -58,15 +61,17 @@ func (e *Engine) writeTools() []tool {
 			Schema: schema(`{"type":"object","required":["fact"],"properties":{"fact":{"type":"string",` +
 				`"maxLength":1000}}}`),
 		}, handle: e.remember},
-	}
+	}...)
 }
 
 /*
-changeKinds are the kinds propose_changes writes; workspace actions are
-proposed through their own tools.
+changeKinds are the kinds propose_changes writes; workspace actions and
+help articles are proposed through their own tools.
 */
 func changeKinds() []Kind {
-	return slices.DeleteFunc(Kinds(), func(k Kind) bool { return k == KindAction })
+	return slices.DeleteFunc(Kinds(), func(k Kind) bool {
+		return k == KindAction || k == KindArticleEdit || k == KindArticleNew
+	})
 }
 
 /*
@@ -127,6 +132,31 @@ func (e *Engine) proposeChanges(ctx context.Context, s *session, args json.RawMe
 	if err := decode(args, &in); err != nil {
 		return result{}, err
 	}
+	return e.propose(ctx, s, in)
+}
+
+/*
+already settles a proposal that needs no new changeset: a routine's
+that reaches past one target or repeats a waiting suggestion, and a
+teammate's change to the suggestion they have open, which is added to
+it in place.
+*/
+func (e *Engine) already(ctx context.Context, s *session, in proposal, ops []Operation) (result, bool, error) {
+	if s.routine == nil {
+		return e.amend(ctx, s, in, ops)
+	}
+	if err := oneTarget(ops); err != nil {
+		return result{}, false, err
+	}
+	text, ok, err := e.repeated(ctx, s, ops)
+	return result{text: text, step: Step{Tool: "propose_changes", Summary: "Skipped a suggestion made before"}}, ok, err
+}
+
+/*
+propose checks a proposal and stores it as a changeset, whichever tool
+it came through.
+*/
+func (e *Engine) propose(ctx context.Context, s *session, in proposal) (result, error) {
 	if err := in.check(); err != nil {
 		return result{}, err
 	}
@@ -134,7 +164,13 @@ func (e *Engine) proposeChanges(ctx context.Context, s *session, args json.RawMe
 	if err != nil {
 		return result{}, err
 	}
-	auto := autoApplies(s.settings, ops) && !s.tainted && !s.background
+	if out, ok, err := e.already(ctx, s, in, ops); err != nil || ok {
+		return out, err
+	}
+	if text, ok, err := e.duplicate(ctx, s, in.DedupKey); err != nil || ok {
+		return result{text: text, step: Step{Tool: "propose_changes", Summary: "Skipped a suggestion made before"}}, err
+	}
+	auto := autoApplies(s.settings, ops) && !s.tainted && !s.background && s.routine == nil
 	row, err := e.createChangeset(ctx, s, changeset{proposal: in, ops: ops, auto: auto})
 	if err != nil {
 		return result{}, err
@@ -143,14 +179,28 @@ func (e *Engine) proposeChanges(ctx context.Context, s *session, args json.RawMe
 	public := models.PublicID(models.PrefixOperatorChangeset, row.ID)
 	st := Step{Tool: "propose_changes", Summary: "Proposed: " + row.Title, Changeset: public}
 	if !auto {
-		return result{text: fmt.Sprintf("Changeset %s is waiting for the teammate to review %d change(s).",
-			public, len(ops)), step: st}, nil
+		return result{text: fmt.Sprintf("Changeset %s is waiting for the teammate to review %d change(s).%s",
+			public, len(ops), notesOf(ops)), step: st}, nil
 	}
 	if _, err := e.Apply(ctx, s.m, row.ID); err != nil {
 		return result{text: "The changes could not be applied: " + refusal(err), step: st}, nil
 	}
 	st.Summary = "Applied: " + row.Title
 	return result{text: fmt.Sprintf("Applied changeset %s; the teammate can undo it.", public), step: st}, nil
+}
+
+/*
+notesOf is what the operations were matched to when that differs from
+what the model sent, for the model to read.
+*/
+func notesOf(ops []Operation) string {
+	var b strings.Builder
+	for _, op := range ops {
+		if op.Note != "" {
+			b.WriteString(" " + op.Note)
+		}
+	}
+	return b.String()
 }
 
 /*
@@ -169,14 +219,21 @@ operation shares when they share one.
 */
 func (e *Engine) createChangeset(ctx context.Context, s *session, in changeset) (models.OperatorChangeset, error) {
 	var row models.OperatorChangeset
+	now := e.Clock.Now()
+	params := models.CreateOperatorChangesetParams{
+		WorkspaceID: s.m.Workspace.ID, ThreadID: s.threadRef(), MemberID: s.memberRef(),
+		ConversationID: sharedConversation(in.ops), Title: truncate(strings.TrimSpace(in.Title), 200),
+		Reason: truncate(strings.TrimSpace(in.Reason), 2000), Operations: encodeOperations(in.ops), Auto: in.auto,
+		RoutineID: s.thread.RoutineID, RoutineRunID: s.thread.RoutineRunID, DedupKey: nilable(dedupKey(in.DedupKey)),
+		Now: now,
+	}
+	if s.routine != nil {
+		params.Preview = s.routine.dryRun
+		params.ExpiresAt = new(now.Add(suggestionLife))
+	}
 	err := e.DB.Transaction(ctx, func(ctx context.Context, tx *database.Tx) error {
 		var err error
-		row, err = models.New(tx).CreateOperatorChangeset(ctx, models.CreateOperatorChangesetParams{
-			WorkspaceID: s.m.Workspace.ID, ThreadID: s.threadRef(), MemberID: s.memberRef(),
-			ConversationID: sharedConversation(in.ops), Title: truncate(strings.TrimSpace(in.Title), 200),
-			Reason: truncate(strings.TrimSpace(in.Reason), 2000), Operations: encodeOperations(in.ops), Auto: in.auto,
-			Now: e.Clock.Now(),
-		})
+		row, err = models.New(tx).CreateOperatorChangeset(ctx, params)
 		return err
 	})
 	if err != nil {
@@ -187,10 +244,10 @@ func (e *Engine) createChangeset(ctx context.Context, s *session, in changeset) 
 
 /*
 threadRef is the thread a run's changesets belong to, none for a run
-Operator started on its own.
+Operator started on its own or a call from an outside agent.
 */
 func (s *session) threadRef() *ids.UUID {
-	if s.background {
+	if s.background || s.outside {
 		return nil
 	}
 	return &s.thread.ID
@@ -199,10 +256,11 @@ func (s *session) threadRef() *ids.UUID {
 /*
 memberRef is who a run's changesets were proposed to, nobody for a run
 Operator started on its own, which any teammate who sees the
-conversation may review.
+conversation may review, or for a run on a routine's thread, whose
+changesets belong to the routine.
 */
 func (s *session) memberRef() *ids.UUID {
-	if s.background {
+	if s.background || s.thread.RoutineID != nil {
 		return nil
 	}
 	return &s.m.Member.ID

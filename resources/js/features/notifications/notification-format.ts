@@ -7,6 +7,7 @@
  */
 import {
   RiAtLine,
+  RiCalendarScheduleLine,
   RiChat3Line,
   RiReplyLine,
   RiRobot2Line,
@@ -34,6 +35,7 @@ const visuals: Record<string, Visual> = {
   ai_action_approval_requested: { icon: RiShieldCheckLine, status: "error" },
   snooze_expired: { icon: RiTimeLine, status: "neutral" },
   team_joined: { icon: RiTeamLine, status: "success" },
+  operator_routine_finished: { icon: RiCalendarScheduleLine, status: "information" },
 };
 
 const endings: Record<string, string> = {

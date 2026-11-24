@@ -3,9 +3,9 @@
 | Streaming To The Teammate
 |--------------------------------------------------------------------------
 |
-| A run reaches only the teammate who asked, on their own channel: the
-| text as the model writes it and each step as it finishes, neither kept
-| for replay, then the stored answer, which is. A broadcast that fails
+| A run reaches only the teammate who asked, on their own channel, or
+| every watcher of a routine on the routine's channel: the text as the
+| model writes it and each step as it finishes, then the stored answer. A broadcast that fails
 | changes nothing: the request answers with the stored message anyway.
 |
 */
@@ -35,7 +35,7 @@ const (
 publishDelta sends a piece of the answer's text.
 */
 func (e *Engine) publishDelta(ctx context.Context, s *session, text string) {
-	if text == "" {
+	if text == "" || s.sub != nil {
 		return
 	}
 	e.publish(ctx, s, fbroadcasting.Message{
@@ -67,13 +67,18 @@ func (e *Engine) publishAnswered(ctx context.Context, s *session, msg models.Ope
 }
 
 /*
-publish sends one broadcast on the asking teammate's channel.
+publish sends one broadcast on the asking teammate's channel, or on the
+routine's channel for a routine's run.
 */
 func (e *Engine) publish(ctx context.Context, s *session, m fbroadcasting.Message) {
 	if e.Publisher == nil || s.background {
 		return
 	}
-	_ = e.Publisher.Publish(ctx, []string{appbroadcasting.MemberChannel(s.m.Member.ID)}, m)
+	channel := appbroadcasting.MemberChannel(s.m.Member.ID)
+	if s.routine != nil {
+		channel = appbroadcasting.OperatorRoutineChannel(s.routine.row.ID)
+	}
+	_ = e.Publisher.Publish(ctx, []string{channel}, m)
 }
 
 /*

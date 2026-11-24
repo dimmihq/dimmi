@@ -57,7 +57,7 @@ func helpCenterDomainDocs() map[string]Doc {
 			Returns: "the domain with the CNAME and TXT records to create.",
 			Risk:    new(RiskReach),
 			Params:  map[string]string{"hostname": "A subdomain the team owns, such as help.example.com."},
-			Next:    []string{"dimmi_help_centers_domain_checks_create: check again after creating the records"},
+			Next:    []string{"dimmi_check_help_center_domain: check again after creating the records"},
 		},
 		"help-centers.domain.checks.store": {
 			Title:   "Check a help center's custom domain now",

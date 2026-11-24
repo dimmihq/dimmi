@@ -218,6 +218,17 @@ export function readiness(view: AgentView): Step[] {
 export const operatorDefaultModel = "gpt-6-luna";
 
 /*
+ * connectionOf is the connection Operator answers through: the one the
+ * agent answers with, or the workspace's first usable one when the agent
+ * names none, which is what the server falls back to.
+ */
+export function connectionOf(view: AgentView): AiProviderKey | undefined {
+  const usable = usableKeys(view.keys);
+
+  return usable.find((k) => k.id === view.agent.answer_key_id) ?? usable[0];
+}
+
+/*
  * operatorModel is the model Operator answers with: the one picked when
  * the connection offers it, else the default when offered, else the
  * agent's own.

@@ -23,13 +23,14 @@ func feedbackStatusDocs() map[string]Doc {
 			Returns: "the statuses with their key, name, color, category and whether the roadmap shows them, in order.",
 		},
 		"feedback-statuses.update": {
+			Name:    "reorder_feedback_statuses",
 			Title:   "Reorder feature request statuses",
 			Use:     "Sets the order the portal and the app show the statuses in.",
 			Returns: "the statuses in their new order.",
 			Risk:    new(RiskReach),
 			Params: map[string]string{
 				"statuses": "Every status key, such as planned or under_review, once each in the new order. " +
-					"Find them with dimmi_feedback_statuses_list.",
+					"Find them with dimmi_list_feedback_statuses.",
 			},
 		},
 		"feedback-statuses.store": {
@@ -45,6 +46,7 @@ func feedbackStatusDocs() map[string]Doc {
 			},
 		},
 		"feedback-statuses.change": {
+			Name:    "change_feedback_status",
 			Title:   "Change a feature request status",
 			Use:     "Renames, recolors or recategorizes a status, named by its key. Its requests keep it.",
 			Returns: "the status as it now is.",
@@ -118,7 +120,7 @@ func feedbackLinkDocs() map[string]Doc {
 		"conversations.feedback-posts.store": {
 			Title: "Link a conversation to a feature request",
 			Use: "Links a conversation to the request post_id names, or posts a new one from it with a title, " +
-				"and votes for the conversation's customer. Search dimmi_help_centers_feedback_posts_list first.",
+				"and votes for the conversation's customer. Search dimmi_list_help_center_feedback_posts first.",
 			Returns: "the request with its new vote count.",
 			Risk:    new(RiskWrite),
 			Params: map[string]string{

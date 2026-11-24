@@ -4,13 +4,15 @@
 |--------------------------------------------------------------------------
 |
 | With the layer on, Operator is offered search_knowledge,
-| get_conversation and search_conversations, plus load_tools and
+| get_conversation_by_number and search_conversations, plus load_tools and
 | call_tool, the same on every call. Its other tools, and the read-only
 | tools of the API catalog, sit in groups named in the system prompt:
 | call_tool runs one once it is loaded, with its arguments checked and a
 | reading tool's result trimmed. The layer never widens what Operator
 | may do: its own tools keep their write policies and changesets, and
-| the catalog is reached only to read, as the teammate. A model without
+| the catalog is reached only to read, as the teammate. A catalog read
+| may hold what a customer wrote, so a run that made one applies
+| nothing on its own afterwards. A model without
 | a prompt cache gets every tool instead: each load re-reads the prefix
 | at full price, which cost more than the layer saved on the benchmark.
 |
@@ -96,7 +98,7 @@ type layerState struct {
 fixedTools are the tools offered outside the layer.
 */
 func fixedTools() []string {
-	return []string{"get_conversation", "search_conversations", "search_knowledge"}
+	return []string{"get_conversation_by_number", "search_conversations", "search_knowledge"}
 }
 
 /*
@@ -142,7 +144,7 @@ func ownGroupOf(t tool) string {
 		return groupActions
 	case len(t.writes) > 0 || t.spec.Name == "remember" || t.spec.Name == "draft_reply":
 		return groupChanges
-	case t.spec.Name == "workspace_report" || t.spec.Name == "agent_runs":
+	case t.spec.Name == "get_workspace_report" || t.spec.Name == "get_ai_agent_runs":
 		return groupInsights
 	case strings.Contains(t.spec.Name, "article") || strings.Contains(t.spec.Name, "procedure"):
 		return groupKnowledge
@@ -170,7 +172,7 @@ func (e *Engine) openLayer(ctx context.Context, s *session) {
 	}
 	groups := ownGroups()
 	ls := &layerState{catalog: map[string]bool{}, fixed: fixed}
-	if e.Catalog != nil {
+	if e.Catalog != nil && s.routine == nil {
 		seen := map[string]bool{}
 		for _, c := range e.Catalog.Tools() {
 			entries = append(entries, toolset.Entry{Spec: c.Spec, Group: c.Group, Reads: true})
@@ -271,6 +273,7 @@ func (e *Engine) layerCall(ctx context.Context, s *session, p *pending) (result,
 		if err != nil {
 			return result{}, err
 		}
+		s.tainted = true
 		return result{text: set.Shape(out, c.Fields), step: Step{Tool: c.Name, Summary: "Read " +
 			strings.TrimPrefix(c.Name, "dimmi_")}}, nil
 	}

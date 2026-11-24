@@ -40,11 +40,42 @@ If your client cannot open a browser for OAuth, pass an [API token](/developers/
 
 ## Available tools
 
-- **Matches the REST API:** every endpoint becomes a tool (like `dimmi_conversations_list`), filtered by the token's [abilities](/developers/api/abilities/).
+- **Matches the REST API:** every endpoint becomes a tool, filtered by the token's [abilities](/developers/api/abilities/).
+- **Named for what they do:** verb first, like `dimmi_list_conversations`, `dimmi_get_article_by_id`, or `dimmi_publish_article`.
 - **Scoped to your role:** every call runs through the REST API as you inside one workspace.
 - **Built-in guide:** `dimmi_guide` teaches your assistant dimmi's data model and common workflows.
 - **Procedure testing tools:** assistants with `ai:read` and `ai:write` can preview [procedure](/ai/procedures/) turns, create and run saved simulations, compare or restore versions, and inspect procedure metrics.
 - **Excluded operations:** endpoints that upload files, require password confirmation, or need browser sign-in are omitted.
+
+## Tool arguments
+
+A tool takes the same arguments as its REST endpoint, under the same names: path parameters, query parameters, and body fields side by side.
+
+- **Same names as the API reference:** `article`, `filter[status]`, `q`, `body`.
+- **Every argument is described:** what it takes, its allowed values, and an example. The text is the API reference's own; where the reference names an endpoint, the tool names the tool.
+- **Forgiving:** likely spellings such as `article_id`, `id`, or `search_text` are still read.
+- **Refused before anything runs:** a missing, unknown, or out-of-range argument is named, with what belongs in it. So is a field inside an argument, by its path, such as `contact.mail`.
+
+## Do Operator's work with your own agent
+
+Any connected agent can do what Operator does. Its suggestions wait for a teammate's review; nothing it suggests applies by itself.
+
+| Tool | What it does |
+| --- | --- |
+| `dimmi_search_knowledge` | Searches what the AI agent answers from. |
+| `dimmi_list_recent_suggestions` | Lists recent suggestions with their `dedup_key`, so nothing is suggested twice. |
+| `dimmi_propose_article_edit` | Suggests a fix to one article by quoting the passages to replace. |
+| `dimmi_propose_new_article` | Suggests a new article as a draft. |
+| `dimmi_propose_procedure_edit` | Suggests an edit to one procedure. |
+| `dimmi_propose_changes` | Suggests tags, assignments, notes, and other conversation changes. |
+| `dimmi_get_routine_state`, `dimmi_save_routine_state` | Keeps what a routine needs between runs. |
+| `dimmi_report_nothing_to_change` | Records a routine run that found nothing, so nobody is notified. |
+| `dimmi_list_skills`, `dimmi_get_skill_by_name` | Reads the steps Operator follows for each kind of routine work. |
+
+- **Same rules as Operator:** a kind of change switched off in **Settings → Operator** is refused.
+- **Routines:** pass `routine_id` to tie a suggestion to a routine. It needs the right to manage the AI agent.
+- **Dry runs:** pass `dry_run: true` with `routine_id` to leave only a preview and keep no state.
+- **Forgiving edits:** a quoted passage that slipped a word still matches, and the answer says what it matched.
 
 ## Built-in safety approvals
 

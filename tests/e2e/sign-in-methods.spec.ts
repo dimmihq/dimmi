@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 
 import type { Page } from "@playwright/test";
 
-import { createAccount, expect, inbox, test as it, signIn, signOut } from "./support/fixtures";
+import { createAccount, expect, home, test as it, signIn, signOut } from "./support/fixtures";
 
 /*
  * approve signs in at the local test provider as the address, the way a
@@ -36,7 +36,7 @@ it.describe("sign-in methods", { tag: "@local" }, () => {
     await signOut(page, person);
     await page.getByRole("link", { name: "Continue with Google" }).click();
     await approve(page, providerEmail);
-    await expect(page).toHaveURL(inbox);
+    await expect(page).toHaveURL(home);
 
     await page.goto("/d/settings/security");
     await methods.getByRole("button", { name: "Unlink" }).click();

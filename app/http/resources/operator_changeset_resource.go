@@ -22,7 +22,11 @@ import (
 
 /*
 OperatorChangeset is one set of changes Operator proposed. ProposedTo
-is nil when Operator proposed it on its own.
+is nil when Operator proposed it on its own. RoutineID and RoutineRunID
+name the routine and run that suggested it; DedupKey is the key that
+keeps it from being suggested twice; Preview marks a dry run's
+suggestion, which is never applied; ExpiresAt is when a routine's
+suggestion counts as stale.
 */
 type OperatorChangeset struct {
 	ID             string              `json:"id"`
@@ -41,6 +45,11 @@ type OperatorChangeset struct {
 	AppliedAt      *time.Time          `json:"applied_at"`
 	RevertedAt     *time.Time          `json:"reverted_at"`
 	CreatedAt      time.Time           `json:"created_at"`
+	RoutineID      *string             `json:"routine_id"`
+	RoutineRunID   *string             `json:"routine_run_id"`
+	DedupKey       *string             `json:"dedup_key"`
+	Preview        bool                `json:"preview"`
+	ExpiresAt      *time.Time          `json:"expires_at"`
 }
 
 /*
@@ -48,7 +57,9 @@ OperatorOperation is one change inside a changeset. Number is the
 conversation's number when it changes one; Created names the note or
 article it made; Text is the full text it writes, such as a note, an
 article body or a procedure's working copy, for the reviewer to read
-before applying.
+before applying. ArticleID, HelpCenterID and ProcedureID name what an
+article or procedure operation changes; Title is a new article title
+and Visibility whether a new article is public or agent_only.
 */
 type OperatorOperation struct {
 	Kind    string          `json:"kind"`
@@ -59,6 +70,12 @@ type OperatorOperation struct {
 	After   json.RawMessage `json:"after,omitempty"`
 	Outcome string          `json:"outcome,omitempty"`
 	Created *string         `json:"created_id,omitempty"`
+
+	ArticleID    *string `json:"article_id,omitempty"`
+	HelpCenterID *string `json:"help_center_id,omitempty"`
+	ProcedureID  *string `json:"procedure_id,omitempty"`
+	Title        *string `json:"title,omitempty"`
+	Visibility   *string `json:"visibility,omitempty"`
 }
 
 /*
@@ -74,6 +91,9 @@ func NewOperatorChangeset(c models.OperatorChangeset) OperatorChangeset {
 		DecidedBy:      optionalID(models.PrefixMember, c.DecidedByMemberID),
 		Title:          c.Title, Reason: c.Reason, Status: c.Status, Auto: c.Auto, Error: c.Error,
 		AppliedAt: c.AppliedAt, RevertedAt: c.RevertedAt, CreatedAt: c.CreatedAt,
+		RoutineID:    optionalID(models.PrefixOperatorRoutine, c.RoutineID),
+		RoutineRunID: optionalID(models.PrefixOperatorRoutineRun, c.RoutineRunID),
+		DedupKey:     c.DedupKey, Preview: c.Preview, ExpiresAt: c.ExpiresAt,
 	}
 	ops := operator.Operations(c.Operations)
 	out.Operations = make([]OperatorOperation, len(ops))
@@ -81,6 +101,9 @@ func NewOperatorChangeset(c models.OperatorChangeset) OperatorChangeset {
 		out.Operations[i] = OperatorOperation{
 			Kind: op.Kind, Label: op.Label, Text: textOf(op), Number: op.Number, Before: op.Before, After: op.After,
 			Outcome: op.Outcome, Created: created(op),
+			ArticleID:    optionalID(models.PrefixArticle, op.Article),
+			HelpCenterID: optionalID(models.PrefixHelpCenter, op.HelpCenter),
+			ProcedureID:  optionalID(models.PrefixProcedure, op.Procedure), Title: op.Title, Visibility: op.Visibility,
 		}
 	}
 	return out

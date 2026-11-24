@@ -14,6 +14,7 @@ import {
   RiArticleLine,
   RiBarChart2Line,
   RiFolderForbidLine,
+  RiGitPullRequestLine,
 } from "@remixicon/react";
 import { type ReactNode, useState } from "react";
 
@@ -25,7 +26,15 @@ import type { Article, Collection } from "@/lib/api/help-centers";
 import { cx } from "@/utils/cx";
 
 import { CollectionRow, DraftRow, type RowAct, type RowProps } from "./collection-rows";
-import { allKey, analyticsKey, articlesIn, childrenOf, descendantsOf, unfiledKey } from "./collection-tree";
+import {
+  allKey,
+  analyticsKey,
+  articlesIn,
+  childrenOf,
+  descendantsOf,
+  requestsKey,
+  unfiledKey,
+} from "./collection-tree";
 import { useCollectionEdits } from "./use-collection-edits";
 
 /*
@@ -72,6 +81,7 @@ export function CollectionPanel({
   articles,
   pick,
   onPick,
+  requests,
 }: {
   workspace: string;
   helpCenter: string;
@@ -80,6 +90,7 @@ export function CollectionPanel({
   articles: Article[];
   pick: string;
   onPick: (pick: string) => void;
+  requests: number;
 }) {
   const edits = useCollectionEdits({ workspace, helpCenter, collections, onCreated: (made) => onPick(made.id) });
   const [deleting, setDeleting] = useState<Collection | null>(null);
@@ -138,6 +149,13 @@ export function CollectionPanel({
             current={pick === allKey}
             onPress={() => onPick(allKey)}
           />
+          <PickRow
+            label="Change requests"
+            icon={RiGitPullRequestLine}
+            count={requests}
+            current={pick === requestsKey}
+            onPress={() => onPick(requestsKey)}
+          />
           {unfiled > 0 ? (
             <PickRow
               label="No collection"
@@ -157,7 +175,7 @@ export function CollectionPanel({
               aria-label="Collections"
               size="sm"
               selectionMode="single"
-              selectedKeys={pick === allKey || pick === unfiledKey || pick === analyticsKey ? [] : [pick]}
+              selectedKeys={[allKey, unfiledKey, analyticsKey, requestsKey].includes(pick) ? [] : [pick]}
               onSelectionChange={(keys) => {
                 const [key] = keys === "all" ? [] : [...keys];
                 if (key !== undefined && key !== "new-collection") {

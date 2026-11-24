@@ -79,10 +79,7 @@ export function ProcedureOperatorPanel({
           icon: RiSearchEyeLine,
           title: "Review this procedure for gaps",
           detail: "Finds unclear steps and missing edge cases.",
-          onPick: () =>
-            chat.ask(
-              `Review ${about} using get_procedure and suggest any unclear steps, missing edge cases, or improvements.`,
-            ),
+          onPick: () => chat.ask(`Review ${about} and suggest any unclear steps, missing edge cases, or improvements.`),
         },
         {
           icon: RiTestTubeLine,

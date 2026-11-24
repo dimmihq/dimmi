@@ -89,6 +89,7 @@ export const sidebar: Group[] = [
     items: [
       { label: "Overview", link: "/operator/work-with-operator/" },
       { label: "Changesets", link: "/operator/changesets/" },
+      { label: "Routines", link: "/operator/routines/" },
     ],
   },
   {
