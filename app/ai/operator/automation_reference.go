@@ -69,6 +69,11 @@ func workflowSettingShapes() map[string]string {
 		workflowspec.KindSetTicketFields: shapeOf[workflowspec.SetTicketFieldsSettings](),
 		workflowspec.KindEscalate:        shapeOf[workflowspec.EscalateSettings](),
 		workflowspec.KindAddToTracker:    shapeOf[workflowspec.AddToTrackerSettings](),
+		workflowspec.KindExtract:         shapeOf[workflowspec.ExtractSettings](),
+		workflowspec.KindRunAction:       shapeOf[workflowspec.RunActionSettings](),
+		workflowspec.KindAssignAgent:     shapeOf[workflowspec.AssignAgentSettings](),
+		workflowspec.KindTurnOffAI:       shapeOf[workflowspec.NoSettings](),
+		workflowspec.KindTurnOnAI:        shapeOf[workflowspec.NoSettings](),
 	}
 }
 
@@ -89,6 +94,8 @@ func seriesSettingShapes() map[string]string {
 		series.KindSetAttribute: action,
 		series.KindTopic:        action,
 		series.KindWebhook:      shapeOf[series.WebhookSettings](),
+		series.KindExtract:      shapeOf[series.ExtractSettings](),
+		series.KindRunAction:    shapeOf[series.RunActionSettings](),
 	}
 }
 
@@ -292,7 +299,7 @@ func seriesReference() string {
 	for _, kind := range []string{
 		series.KindEmail, series.KindChat, series.KindPost, series.KindSlack, series.KindWait, series.KindWaitFor,
 		series.KindCondition, series.KindSplit, series.KindAIPath, series.KindTag, series.KindUntag,
-		series.KindSetAttribute, series.KindTopic, series.KindWebhook, series.KindExit,
+		series.KindSetAttribute, series.KindTopic, series.KindExtract, series.KindRunAction, series.KindExit,
 	} {
 		fmt.Fprintf(&b, "- %s", kind)
 		if shape, ok := shapes[kind]; ok {

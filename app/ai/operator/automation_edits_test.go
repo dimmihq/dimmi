@@ -183,7 +183,7 @@ func TestAutomationReference(t *testing.T) {
 		assert.Contains(t, ref, "- email: settings {body: string, preview?: string, recipients?: json, "+
 			"subject?: string, track_clicks?: boolean}. Paths: next, failed.")
 		assert.Contains(t, ref, "Paths: matched, timed_out.")
-		assert.Contains(t, ref, "Goal: {days: number, event?: string, rules?: json}")
+		assert.Contains(t, ref, "Goal: {control_percent?: number, days: number, event?: string, rules?: json}")
 		assert.Contains(t, ref, "- exit. No paths: the journey ends here.")
 	})
 }
