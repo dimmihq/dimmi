@@ -38,6 +38,7 @@ export type Draft = Pick<
   | "reply_team_id"
   | "reply_member_id"
   | "ai_replies"
+  | "reply_agent_id"
   | "track_clicks"
   | "skip_frequency_cap"
   | "schedule_kind"
@@ -66,6 +67,7 @@ export function draftOf(broadcast: Broadcast): Draft {
     reply_team_id: broadcast.reply_team_id,
     reply_member_id: broadcast.reply_member_id,
     ai_replies: broadcast.ai_replies,
+    reply_agent_id: broadcast.reply_agent_id ?? null,
     track_clicks: broadcast.track_clicks,
     skip_frequency_cap: broadcast.skip_frequency_cap,
     schedule_kind: broadcast.schedule_kind,
@@ -83,6 +85,7 @@ const references = [
   "email_address_id",
   "reply_team_id",
   "reply_member_id",
+  "reply_agent_id",
 ] as const;
 
 const plain = [

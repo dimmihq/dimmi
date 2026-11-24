@@ -27,6 +27,7 @@ export interface Names {
   articles?: ReadonlyMap<string, string>;
   connections?: ReadonlyMap<string, string>;
   tickets?: ReadonlyMap<string, string>;
+  agents?: ReadonlyMap<string, string>;
 }
 
 export const noNames: Names = { teams: new Map(), members: new Map(), tags: new Map() };
@@ -198,13 +199,19 @@ const describers: Partial<Record<StepKind, (step: Step, names: Names) => string>
     return workflow ? `Run ${nameOf(names.workflows ?? noMap, workflow)}` : unsetSummary;
   },
   http_request: called,
-  dimmi: (step) => {
-    const instructions = text(step.settings, "instructions").trim();
+  dimmi: (step, names) => {
+    const agent = text(step.settings, "agent_id");
+    const who = agent ? nameOf(names.agents ?? noMap, agent) : "The agent placed on the channel";
 
-    return instructions
-      ? `dimmi answers, following: ${instructions}`
-      : "dimmi answers until it resolves, hands over or the customer goes quiet";
+    return `${who} answers until it resolves, hands over or the customer goes quiet`;
   },
+  assign_ai_agent: (step, names) => {
+    const agent = text(step.settings, "agent_id");
+
+    return agent ? `Hand the conversation to ${nameOf(names.agents ?? noMap, agent)}` : unsetSummary;
+  },
+  turn_off_ai: () => "Keep every AI agent off this conversation",
+  turn_on_ai: () => "Let the AI agent answer again",
   wait: (step) => waited(step, "Wait"),
   snooze: (step) => waited(step, "Snooze"),
   assign: (step, names) => assigned(step.settings, names),

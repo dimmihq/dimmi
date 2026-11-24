@@ -1,7 +1,7 @@
 /*
  * How each kind of workflow step and trigger looks: its name, its icon,
  * and the BoardUI chip tint its mark wears, so the builder reads at a
- * glance: messages and questions blue, logic purple, Dimmi lime, team
+ * glance: messages and questions blue, logic purple, AI agents lime, team
  * actions neutral. Every kind the server knows has a look, so a definition
  * made through the API reads on the canvas too.
  */
@@ -19,8 +19,11 @@ import {
   RiListRadio,
   RiLoopRightLine,
   RiMessage2Line,
+  RiPauseCircleLine,
+  RiPlayCircleLine,
   RiPriceTag3Line,
   RiQuestionAnswerLine,
+  RiRobot2Line,
   RiShareForwardLine,
   RiSignpostLine,
   RiSparkling2Line,
@@ -56,7 +59,10 @@ export const stepLook: Record<StepKind, KindLook> = {
   classify: { name: "Sort by topic", icon: RiSignpostLine, tint: "purple" },
   wait: { name: "Wait", icon: RiTimerLine, tint: "purple" },
   run_workflow: { name: "Run a workflow", icon: RiLinksLine, tint: "purple" },
-  dimmi: { name: "Let dimmi handle", icon: RiSparkling2Line, tint: "lime" },
+  dimmi: { name: "Hand to an AI agent", icon: RiSparkling2Line, tint: "lime" },
+  assign_ai_agent: { name: "Assign an AI agent", icon: RiRobot2Line, tint: "lime" },
+  turn_off_ai: { name: "Turn off AI", icon: RiPauseCircleLine, tint: "lime" },
+  turn_on_ai: { name: "Turn on AI", icon: RiPlayCircleLine, tint: "lime" },
   assign: { name: "Assign", icon: RiUserShared2Line, tint: "neutral" },
   unassign: { name: "Unassign", icon: RiUserUnfollowLine, tint: "neutral" },
   tag: { name: "Tag", icon: RiHashtag, tint: "neutral" },

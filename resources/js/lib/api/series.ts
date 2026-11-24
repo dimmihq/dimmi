@@ -123,6 +123,7 @@ export interface Series {
   reply_team_id: string | null;
   reply_member_id: string | null;
   ai_replies: boolean;
+  reply_agent_id?: string | null;
   published_at: string | null;
   paused_at: string | null;
   archived_at: string | null;
@@ -148,6 +149,7 @@ export interface SeriesSave {
   reply_team_id?: string;
   reply_member_id?: string;
   ai_replies?: boolean;
+  reply_agent_id?: string;
 }
 
 export interface SeriesStepReport {

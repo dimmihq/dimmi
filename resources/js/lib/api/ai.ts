@@ -111,6 +111,14 @@ export interface AgentView {
   readiness_errors: string[];
   managed: boolean;
   prompt_version: string;
+  ties?: AgentTie[];
+}
+
+/* What still relies on an agent, which stops it being archived. */
+export interface AgentTie {
+  kind: "workflow" | "series" | "connection" | "room" | "inbox" | "agent";
+  id: string;
+  name: string;
 }
 
 export interface AiUsage {

@@ -1,7 +1,7 @@
 /*
  * The add-step menu at the end of every path in the builder: a small
  * plus that opens BoardUI's menu panel with the step kinds offered,
- * grouped as messages, logic, dimmi, team actions and tickets; a group with
+ * grouped as messages, logic, AI agents, team actions and tickets; a group with
  * nothing offered is left out.
  */
 import { RiAddLine } from "@remixicon/react";
@@ -17,7 +17,7 @@ import type { StepKind } from "./workflows";
 const groups: [string, StepKind[]][] = [
   ["Messages", ["message", "article", "buttons", "collect", "reply_time"]],
   ["Logic", ["branch", "classify", "wait", "run_workflow"]],
-  ["dimmi", ["dimmi"]],
+  ["AI agents", ["dimmi", "assign_ai_agent", "turn_off_ai", "turn_on_ai"]],
   [
     "Team",
     [

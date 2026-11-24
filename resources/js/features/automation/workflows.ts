@@ -34,7 +34,10 @@ export type StepKind =
   | "set_ticket_state"
   | "set_ticket_fields"
   | "escalate"
-  | "add_to_tracker";
+  | "add_to_tracker"
+  | "assign_ai_agent"
+  | "turn_off_ai"
+  | "turn_on_ai";
 
 export type Step = SpecStep;
 export type Path = SpecPath;
@@ -70,6 +73,9 @@ export const readyKinds: StepKind[] = [
   "set_ticket_fields",
   "escalate",
   "add_to_tracker",
+  "assign_ai_agent",
+  "turn_off_ai",
+  "turn_on_ai",
 ];
 
 /*

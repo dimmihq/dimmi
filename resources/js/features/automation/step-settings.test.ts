@@ -129,9 +129,16 @@ describe("describe", () => {
     );
   });
 
-  it("says what dimmi is told while it handles the conversation", () => {
-    expect(describeStep({ id: "s", kind: "dimmi", settings: { instructions: "Only billing." } }, names)).toBe(
-      "dimmi answers, following: Only billing.",
+  it("names the agent that takes the conversation", () => {
+    const named = { ...names, agents: new Map([["aia_1", "Sales"]]) };
+    expect(describeStep({ id: "s", kind: "dimmi", settings: { agent_id: "aia_1" } }, named)).toBe(
+      "Sales answers until it resolves, hands over or the customer goes quiet",
+    );
+    expect(describeStep({ id: "s", kind: "dimmi", settings: {} }, named)).toBe(
+      "The agent placed on the channel answers until it resolves, hands over or the customer goes quiet",
+    );
+    expect(describeStep({ id: "s", kind: "assign_ai_agent", settings: { agent_id: "aia_1" } }, named)).toBe(
+      "Hand the conversation to Sales",
     );
   });
 });

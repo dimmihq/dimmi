@@ -401,6 +401,7 @@ export interface Sending {
   topic_id?: string;
   service?: boolean;
   ai_replies?: boolean;
+  reply_agent_id?: string;
 }
 
 /*
@@ -415,5 +416,6 @@ export function sendingOf(series: Series): Sending {
     topic_id: series.topic_id ?? undefined,
     service: series.service,
     ai_replies: series.ai_replies,
+    reply_agent_id: series.reply_agent_id ?? undefined,
   };
 }

@@ -36,6 +36,7 @@ import { AlertDialog } from "@/components/base/modal/modal";
 import { usePermission } from "@/features/settings/inboxes";
 import { ScrollArea } from "@/features/shell/page";
 import { useWide } from "@/features/shell/use-wide";
+import { agentsQuery } from "@/lib/api/agents";
 import { agentQuery } from "@/lib/api/ai";
 import { actionConnectionsQuery } from "@/lib/api/ai-actions";
 import { articlesQuery, helpCentersQuery } from "@/lib/api/help-centers";
@@ -74,6 +75,7 @@ function useLists(workspace: string, current: string): { lists: Lists; names: Na
   const members = useQuery(membersQuery(workspace)).data;
   const tags = useQuery(tagsQuery(workspace)).data;
   const agent = useQuery({ ...agentQuery(workspace), retry: false }).data;
+  const agents = useQuery({ ...agentsQuery(workspace), retry: false }).data;
   const workflows = useQuery(workflowsQuery(workspace)).data;
   const connections = useQuery({ ...actionConnectionsQuery(workspace), retry: false }).data;
   const schedules = useQuery({ ...schedulesQuery(workspace), retry: false }).data;
@@ -95,6 +97,7 @@ function useLists(workspace: string, current: string): { lists: Lists; names: Na
         .map((connection) => [connection.id, connection.name] as const),
       schedules: (schedules ?? []).map((schedule) => [schedule.id, schedule.name] as const),
       articles,
+      agents: (agents ?? []).map((one) => [one.id, one.draft.name || one.name] as const),
       agentOn: agent ? agent.agent.enabled && agent.ready : undefined,
       tickets,
     };
@@ -109,9 +112,10 @@ function useLists(workspace: string, current: string): { lists: Lists; names: Na
         connections: new Map((connections ?? []).map((connection) => [connection.id, connection.name] as const)),
         articles: new Map(articles),
         tickets: ticketNames(tickets),
+        agents: new Map((agents ?? []).map((one) => [one.id, one.name] as const)),
       },
     };
-  }, [teams, members, tags, agent, workflows, connections, schedules, articles, tickets, current]);
+  }, [teams, members, tags, agent, agents, workflows, connections, schedules, articles, tickets, current]);
 }
 
 /*

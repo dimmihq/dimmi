@@ -16,7 +16,8 @@ export type FieldType = "text" | "choice" | "yes_no" | "set";
 
 /*
  * ConditionField is a field offered in conditions. Options lists the
- * values of a choice field, or source names the workspace's own list
+ * values of a choice field, or source names the workspace's own list,
+ * such as its ticket types or AI agents,
  * they come from; triggers limits a field of the event to the triggers
  * that carry it.
  */
@@ -24,7 +25,7 @@ export interface ConditionField {
   name: string;
   type: FieldType;
   options?: Record<string, string>;
-  source?: "ticketTypes" | "ticketStates";
+  source?: "ticketTypes" | "ticketStates" | "agents";
   triggers?: TriggerKind[];
 }
 
@@ -55,6 +56,9 @@ export const conditionFields: Record<string, ConditionField> = {
     options: { none: "None", low: "Low", medium: "Medium", high: "High", urgent: "Urgent" },
   },
   "conversation.subject": { name: "Subject", type: "text" },
+  "conversation.ai_agent_id": { name: "AI agent", type: "choice", source: "agents" },
+  "agent.from_id": { name: "Transferred from", type: "choice", source: "agents", triggers: ["agent.transferred"] },
+  "agent.to_id": { name: "Transferred to", type: "choice", source: "agents", triggers: ["agent.transferred"] },
   "office_hours.open": { name: "Team in office hours", type: "yes_no" },
   "contact.email": { name: "Contact email", type: "text" },
   "contact.email_domain": { name: "Contact email domain", type: "text" },
@@ -216,10 +220,14 @@ export function describeCondition(condition: Condition | undefined): string {
 
 /*
  * optionsOf lists the values a choice condition offers: its own, or the
- * workspace's ticket types or states; nothing for a field typed in.
+ * workspace's ticket types, states or AI agents; nothing for a field
+ * typed in.
  */
-export function optionsOf(field: string, tickets?: TicketLists): Choices | undefined {
+export function optionsOf(field: string, tickets?: TicketLists, agents?: Choices): Choices | undefined {
   const known = conditionFields[field];
+  if (known?.source === "agents") {
+    return agents ?? [];
+  }
   if (known?.source === "ticketTypes") {
     return (tickets?.types ?? []).map((type) => [type.id, type.name] as const);
   }

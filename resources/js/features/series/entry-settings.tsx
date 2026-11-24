@@ -7,6 +7,8 @@
  * whether email keeps to the day in the person's zone, and where replies
  * land.
  */
+import { useQuery } from "@tanstack/react-query";
+
 import {
   useActiveMembers,
   useAudiences,
@@ -16,6 +18,7 @@ import {
   useTopics,
 } from "@/features/broadcasts/sources";
 import { Row, Section } from "@/features/settings/layout";
+import { agentsQuery } from "@/lib/api/agents";
 import type { SeriesSpec } from "@/lib/api/series";
 
 import { Amount, Flag, Pick, Rules } from "./inputs";
@@ -240,6 +243,7 @@ function SendingSettings({
   const addresses = useEmailAddresses(workspace);
   const members = useActiveMembers(workspace);
   const teams = useTeams(workspace);
+  const agents = useQuery(agentsQuery(workspace)).data ?? [];
   const topics = useTopics(workspace);
   const set = (change: Partial<Sending>) => onSending({ ...sending, ...change });
   const memberOptions = members.map((m): [string, string] => [m.id, m.user.name || m.user.email]);
@@ -312,14 +316,28 @@ function SendingSettings({
           disabled={!editable}
         />
       </Row>
-      <Row label="dimmi answers replies">
+      <Row label="An AI agent answers replies">
         <Flag
-          label="dimmi answers replies"
+          label="An AI agent answers replies"
           on={sending.ai_replies}
           onChange={(ai_replies) => set({ ai_replies })}
           disabled={!editable}
         />
       </Row>
+      {sending.ai_replies ? (
+        <Row label="Answered by">
+          <Pick
+            label="Answered by"
+            value={sending.reply_agent_id || "placed"}
+            options={[
+              ["placed", "The agent placed on the channel"],
+              ...agents.map((a): [string, string] => [a.id, a.name]),
+            ]}
+            onChange={(id) => set({ reply_agent_id: id === "placed" ? "" : id })}
+            disabled={!editable}
+          />
+        </Row>
+      ) : null}
     </Section>
   );
 }

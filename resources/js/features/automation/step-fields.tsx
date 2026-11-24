@@ -51,8 +51,8 @@ import type { TriggerKind } from "./triggers";
 import { pathName } from "./workflows";
 
 /*
- * Lists are the workspace's teams, teammates and tags, as choices, and
- * whether its agent is on, unknown until read. Workflows are the live
+ * Lists are the workspace's teams, teammates, tags and AI agents, as
+ * choices, and whether its default agent is on, unknown until read. Workflows are the live
  * reusable ones another workflow may run, connections the systems a
  * call may use, and schedules the office hours. Tickets are the ticket
  * setup, trackers and SLA policies the ticket steps pick from.
@@ -65,6 +65,7 @@ export interface Lists {
   connections: Choices;
   schedules: Choices;
   articles: Choices;
+  agents?: Choices;
   agentOn?: boolean;
   tickets?: TicketLists;
 }
@@ -173,7 +174,7 @@ function ConditionFields({
   }
   const field = condition?.field ?? "";
   const op = condition?.op ?? "";
-  const options = optionsOf(field, lists.tickets);
+  const options = optionsOf(field, lists.tickets, lists.agents);
 
   return (
     <>
@@ -450,14 +451,6 @@ function CloseFields({ step, onEdit }: Props) {
   );
 }
 
-const replyLimits: Record<string, string> = {
-  agent: "The agent's own limit",
-  "3": "3 replies",
-  "5": "5 replies",
-  "10": "10 replies",
-  "20": "20 replies",
-};
-
 const quietWaits: Record<string, string> = {
   channel: "10 minutes in chat, 1 day by email",
   "5m": "5 minutes",
@@ -468,38 +461,44 @@ const quietWaits: Record<string, string> = {
 };
 
 /*
- * DimmiFields shows how long dimmi keeps the conversation and what it
- * is told, and repeats the rules it always keeps.
+ * DimmiFields picks which AI agent takes the conversation and how long
+ * it keeps it. The agent answers by its own guidance and procedures;
+ * the step adds none. Inside the step its handover goes down the
+ * handed-over path instead of to the agent's own handover team.
  */
 function DimmiFields({ step, lists, onEdit }: Props) {
   const set = useSet(onEdit);
-  const limit = step.settings?.max_replies;
+  const agent = text(step.settings, "agent_id");
+  const placed = "placed";
 
   return (
     <>
       {lists.agentOn === false ? (
         <Section
-          title="dimmi is off"
-          description="Until you turn dimmi on in Agent settings, this step hands every conversation to the team."
+          title="The agent is off"
+          description="Until the agent that would answer is published, this step hands every conversation to the team."
         />
       ) : null}
-      <Section title="Extra instructions" description="Added to dimmi's guidance while this step is active.">
-        <Words
-          label="Extra instructions"
-          value={text(step.settings, "instructions")}
-          placeholder="Only answer billing questions; hand refunds to the team."
-          onChange={(value) => set({ instructions: value || undefined })}
-        />
-      </Section>
-      <Section title="While dimmi handles it">
-        <Row label="Replies at most">
+      <Section title="Who answers" description="The agent answers with its own guidance and procedures.">
+        <Row label="Agent">
           <Pick
-            label="Replies at most"
-            choices={choicesOf(replyLimits)}
-            value={typeof limit === "number" ? String(limit) : "agent"}
-            onChange={(value) => set({ max_replies: value === "agent" ? undefined : Number(value) })}
+            label="Agent"
+            choices={[[placed, "The agent placed on the channel"], ...(lists.agents ?? [])]}
+            value={agent || placed}
+            onChange={(value) => set({ agent_id: value === placed ? undefined : value, allow_transfers: undefined })}
           />
         </Row>
+        {agent ? (
+          <Row label="May transfer" description="To the agents it lists under May transfer to.">
+            <Toggle
+              label="May transfer"
+              on={step.settings?.allow_transfers === true}
+              onChange={(on) => set({ allow_transfers: on ? true : undefined })}
+            />
+          </Row>
+        ) : null}
+      </Section>
+      <Section title="While the agent handles it">
         <Row label="Customer gone quiet after">
           <Pick
             label="Customer gone quiet after"
@@ -525,9 +524,48 @@ function DimmiFields({ step, lists, onEdit }: Props) {
       </Section>
       <Section
         title="Always"
-        description="dimmi stops the moment a teammate replies. Silence never counts as resolved: it takes the quiet path."
+        description="The agent stops the moment a teammate replies. A handover takes the handed-over path, not the agent's own handover team. Silence never counts as resolved: it takes the quiet path."
       />
     </>
+  );
+}
+
+/*
+ * AssignAgentFields picks the agent the conversation moves to. It
+ * answers from the customer's next message on.
+ */
+function AssignAgentFields({ step, lists, onEdit }: Props) {
+  const set = useSet(onEdit);
+
+  return (
+    <Section title="Agent" description="Answers from the customer's next message, until a teammate steps in.">
+      <Row label="Agent">
+        <Pick
+          label="Agent"
+          choices={lists.agents ?? []}
+          value={text(step.settings, "agent_id")}
+          onChange={(id) => set({ agent_id: id })}
+        />
+      </Row>
+    </Section>
+  );
+}
+
+/*
+ * AIStateFields explains a step that turns AI off or on; it takes no
+ * settings.
+ */
+function AIStateFields({ step }: Props) {
+  return step.kind === "turn_off_ai" ? (
+    <Section
+      title="Turn off AI"
+      description="No AI agent answers this conversation until a teammate or a Turn on AI step lets one back in. A Hand to an AI agent step still can."
+    />
+  ) : (
+    <Section
+      title="Turn on AI"
+      description="The agent answers this conversation again from the customer's next message, even after a handover to the team."
+    />
   );
 }
 
@@ -553,6 +591,9 @@ const editors: Record<string, (props: Props) => ReactNode> = {
   buttons: ButtonsFields,
   collect: CollectFields,
   dimmi: DimmiFields,
+  assign_ai_agent: AssignAgentFields,
+  turn_off_ai: AIStateFields,
+  turn_on_ai: AIStateFields,
   branch: BranchFields,
   wait: (props) => <LengthFields {...props} title="Wait" />,
   snooze: (props) => <LengthFields {...props} title="Snooze" />,

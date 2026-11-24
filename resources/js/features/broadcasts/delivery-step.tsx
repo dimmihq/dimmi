@@ -11,6 +11,7 @@ import { useQuery } from "@tanstack/react-query";
 import { DatePicker } from "@/components/base/date-picker/date-picker";
 import { TimeField } from "@/components/base/time-field/time-field";
 import { Row, Section } from "@/features/settings/layout";
+import { agentsQuery } from "@/lib/api/agents";
 import type { Broadcast } from "@/lib/api/broadcasts";
 import type { EmailAddress } from "@/lib/api/email";
 import { workspaceQuery } from "@/lib/api/workspace";
@@ -87,6 +88,7 @@ function SenderSection({ workspace, broadcast, draft, onChange }: StepProps) {
 function RepliesSection({ workspace, draft, onChange }: StepProps) {
   const teams = useTeams(workspace).map((team) => ({ id: team.id, name: team.name }));
   const members = useActiveMembers(workspace).map((member) => ({ id: member.id, name: member.user.name }));
+  const agents = (useQuery(agentsQuery(workspace)).data ?? []).map((agent) => ({ id: agent.id, name: agent.name }));
 
   return (
     <Section title="Replies" description="Each reply opens a conversation in the inbox.">
@@ -108,13 +110,24 @@ function RepliesSection({ workspace, draft, onChange }: StepProps) {
           onChange={(reply_member_id) => onChange({ reply_member_id })}
         />
       </Row>
-      <Row label="The agent answers replies" description="Off: every reply waits for a teammate.">
+      <Row label="An AI agent answers replies" description="Off: every reply waits for a teammate.">
         <Flag
-          label="The agent answers replies"
+          label="An AI agent answers replies"
           on={draft.ai_replies}
           onChange={(ai_replies) => onChange({ ai_replies })}
         />
       </Row>
+      {draft.ai_replies ? (
+        <Row label="Answered by">
+          <Pick
+            label="Answered by"
+            options={agents}
+            value={draft.reply_agent_id ?? null}
+            placeholder="The agent placed on the channel"
+            onChange={(reply_agent_id) => onChange({ reply_agent_id })}
+          />
+        </Row>
+      ) : null}
     </Section>
   );
 }
