@@ -25,7 +25,7 @@ import { stepLook } from "./step-kinds";
 import { type TriggerKind, triggers } from "./triggers";
 import { findStep, pathName, type Step, type StepKind } from "./workflows";
 
-interface Reading {
+export interface Reading {
   steps: Step[];
   summarize: (step: Step) => string;
   workflows: ReadonlyMap<string, string>;
@@ -113,6 +113,39 @@ function RunEntry({ run, reading }: { run: WorkflowRun; reading: Reading }) {
   );
 }
 
+/*
+ * RunList is the runs as sections on the ground surface, for a tab that
+ * lists them below other things.
+ */
+export function RunList({ workspace, workflow, reading }: { workspace: string; workflow: string; reading: Reading }) {
+  const { data: runs, isPending, isError } = useQuery(workflowRunsQuery(workspace, workflow));
+
+  if (isError) {
+    return (
+      <Section title="Latest runs">
+        <Row label="Runs could not be loaded" description="Try again in a moment." />
+      </Section>
+    );
+  }
+  if (runs?.length === 0) {
+    return (
+      <EmptyState
+        icon={RiHistoryLine}
+        title="No runs yet"
+        description="Runs show here once the workflow is published and starts."
+      />
+    );
+  }
+
+  return (
+    <Section title="Latest runs" description="Newest first. Open a run to see what each step did." loading={isPending}>
+      {(runs ?? []).map((run) => (
+        <RunEntry key={run.id} run={run} reading={reading} />
+      ))}
+    </Section>
+  );
+}
+
 export function WorkflowRuns({
   workspace,
   workflow,
@@ -126,8 +159,6 @@ export function WorkflowRuns({
   onClose?: () => void;
   className?: string;
 }) {
-  const { data: runs, isPending, isError } = useQuery(workflowRunsQuery(workspace, workflow));
-
   return (
     <Panel label="Recent runs" ground className={className}>
       <PageHeader title="Recent runs" level={2}>
@@ -137,27 +168,7 @@ export function WorkflowRuns({
       </PageHeader>
       <ScrollArea ground className="px-4 pb-6">
         <div className="flex min-w-0 flex-col gap-6 pt-2">
-          {isError ? (
-            <Section title="Latest runs">
-              <Row label="Runs could not be loaded" description="Try again in a moment." />
-            </Section>
-          ) : runs?.length === 0 ? (
-            <EmptyState
-              icon={RiHistoryLine}
-              title="No runs yet"
-              description="Runs show here once the workflow is published and starts."
-            />
-          ) : (
-            <Section
-              title="Latest runs"
-              description="Newest first. Open a run to see what each step did."
-              loading={isPending}
-            >
-              {(runs ?? []).map((run) => (
-                <RunEntry key={run.id} run={run} reading={reading} />
-              ))}
-            </Section>
-          )}
+          <RunList workspace={workspace} workflow={workflow} reading={reading} />
         </div>
       </ScrollArea>
     </Panel>

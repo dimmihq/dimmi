@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 
 import { Spinner } from "@/components/base/spinner/spinner";
+import { StudioArrive } from "@/features/agents/agent-arrive";
 import { WorkflowBuilder } from "@/features/automation/workflow-builder";
 import { useAccount } from "@/features/settings/use-account";
 import { EmptyState, Panel } from "@/features/shell/page";
@@ -13,8 +14,8 @@ export const Route = createFileRoute("/d/workflows/$workflow")({
 });
 
 /*
- * WorkflowRoute opens the builder once the workflow is freshly read, so
- * the builder's first save names the lock version the server holds now,
+ * WorkflowRoute opens the workflow's studio once the workflow is freshly read, so
+ * the studio's first save names the lock version the server holds now,
  * and says so when the workspace has no such workflow.
  */
 function WorkflowRoute() {
@@ -45,5 +46,9 @@ function WorkflowRoute() {
     );
   }
 
-  return <WorkflowBuilder key={data.id} workspace={workspace} workflow={data} />;
+  return (
+    <StudioArrive key={data.id}>
+      <WorkflowBuilder workspace={workspace} workflow={data} />
+    </StudioArrive>
+  );
 }
