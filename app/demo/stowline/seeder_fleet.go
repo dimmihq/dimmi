@@ -97,7 +97,10 @@ func (r *run) fleet(ctx context.Context) error {
 	if err := r.saveAgent(ctx, sky.Agent.ID, ai.AgentPatch{TransferAgentIDs: &targets}); err != nil {
 		return fmt.Errorf("let Sky transfer: %w", err)
 	}
-	if err := r.simulations(ctx, sky.Agent.ID); err != nil {
+	if err := r.simulations(ctx, sky.Agent.ID, Simulations()); err != nil {
+		return err
+	}
+	if err := r.simulations(ctx, r.agents["Rio"], SalesSimulations()); err != nil {
 		return err
 	}
 	if !sky.Ready {
@@ -114,12 +117,12 @@ func (r *run) fleet(ctx context.Context) error {
 }
 
 /*
-simulations saves the chats Sky must keep getting right. Each carries
-its own scenario, so none is written by a model.
+simulations saves the chats an agent must keep getting right. Each
+carries its own scenario, so none is written by a model.
 */
-func (r *run) simulations(ctx context.Context, sky ids.UUID) error {
-	for _, sim := range Simulations() {
-		if _, err := r.s.App.Actions.AI.Simulations.Create(ctx, r.owner, sky, sim.Input(r.actions)); err != nil {
+func (r *run) simulations(ctx context.Context, agent ids.UUID, sims []Simulation) error {
+	for _, sim := range sims {
+		if _, err := r.s.App.Actions.AI.Simulations.Create(ctx, r.owner, agent, sim.Input(r.actions)); err != nil {
 			return fmt.Errorf("save simulation %s: %w", sim.Name, err)
 		}
 	}
