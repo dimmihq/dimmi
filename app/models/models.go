@@ -3331,6 +3331,39 @@ type WorkflowRunStep struct {
 	UpdatedAt   time.Time       `json:"updated_at"`
 }
 
+type WorkflowSimulation struct {
+	ID                   ids.UUID        `json:"id"`
+	WorkspaceID          ids.UUID        `json:"workspace_id"`
+	WorkflowID           ids.UUID        `json:"workflow_id"`
+	Name                 string          `json:"name"`
+	SourceConversationID *ids.UUID       `json:"source_conversation_id"`
+	Persona              json.RawMessage `json:"persona"`
+	Messages             json.RawMessage `json:"messages"`
+	ActionMocks          json.RawMessage `json:"action_mocks"`
+	Assertions           json.RawMessage `json:"assertions"`
+	Scenario             string          `json:"scenario"`
+	SimulatedAt          *time.Time      `json:"simulated_at"`
+	DraftResult          json.RawMessage `json:"draft_result"`
+	LiveResult           json.RawMessage `json:"live_result"`
+	DraftHistory         json.RawMessage `json:"draft_history"`
+	LiveHistory          json.RawMessage `json:"live_history"`
+	CreatedByMemberID    *ids.UUID       `json:"created_by_member_id"`
+	CreatedAt            time.Time       `json:"created_at"`
+	UpdatedAt            time.Time       `json:"updated_at"`
+}
+
+type WorkflowSimulationRun struct {
+	ID           ids.UUID        `json:"id"`
+	WorkspaceID  ids.UUID        `json:"workspace_id"`
+	SimulationID ids.UUID        `json:"simulation_id"`
+	Version      string          `json:"version"`
+	Fingerprint  string          `json:"fingerprint"`
+	Passed       bool            `json:"passed"`
+	Errored      bool            `json:"errored"`
+	Result       json.RawMessage `json:"result"`
+	RanAt        time.Time       `json:"ran_at"`
+}
+
 type WorkflowVersion struct {
 	ID                    ids.UUID        `json:"id"`
 	WorkspaceID           ids.UUID        `json:"workspace_id"`

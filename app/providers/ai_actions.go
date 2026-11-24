@@ -53,6 +53,7 @@ func aiActions(a *app.App, answerer any, prices *aiprices.Table) *app.AIActions 
 		out.Simulations = &agentsims.Simulations{
 			DB: a.DB, Clock: a.Clock, Simulator: runner, Procedures: a.Actions.Procedures,
 		}
+		bootWorkflowSims(a, runner)
 	}
 	if runner, ok := answerer.(*pipeline.Runner); ok && runner.Actions != nil {
 		addActionActions(a, out, runner.Actions)

@@ -1,0 +1,919 @@
+/*
+ * A workflow's simulations, the way an agent's work: chats the workflow
+ * must keep handling the way the team means, each with the checks that
+ * judge it, run against the draft or the live version. An AI customer
+ * plays each one: it taps buttons, answers what the workflow asks and
+ * lets timeouts pass, and dimmi answers inside agent steps. Nothing is
+ * sent and no action runs for real. Each simulation keeps how it last
+ * went on both copies and how its latest runs went, so it reads as
+ * passing, flaky or failing. Opening one shows its past runs, the chat,
+ * each step and path the workflow took, and its checks; Compare puts
+ * the draft and live runs side by side.
+ */
+import {
+  RiAddLine,
+  RiArrowLeftSLine,
+  RiArrowRightSLine,
+  RiCloseLine,
+  RiDeleteBinLine,
+  RiGitPullRequestLine,
+  RiPlayFill,
+} from "@remixicon/react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useState } from "react";
+
+import { Chip } from "@/components/base/badges/chip";
+import { Button } from "@/components/base/buttons/button";
+import { IconButton } from "@/components/base/buttons/icon-button";
+import { Input } from "@/components/base/input/input";
+import { AlertDialog, Modal, ModalBody, ModalFooter, ModalHeader } from "@/components/base/modal/modal";
+import { SegmentedControl, SegmentedControlItem } from "@/components/base/segmented-control/segmented-control";
+import { Select, SelectItem } from "@/components/base/select/select";
+import { Textarea } from "@/components/base/textarea/textarea";
+import { toast } from "@/components/base/toast/toast";
+import { Resize, Swap } from "@/features/inbox/motion";
+import { ScrollArea } from "@/features/shell/page";
+import type { AnswerAs } from "@/lib/api/agents";
+import { conversationsQuery } from "@/lib/api/inbox";
+import {
+  createWorkflowSimulation,
+  deleteWorkflowSimulation,
+  importWorkflowSimulation,
+  runWorkflowSimulations,
+  simHistoryOf,
+  simResultOf,
+  updateWorkflowSimulation,
+  type WorkflowAssertion,
+  type WorkflowSimResult,
+  type WorkflowSimulation,
+  type WorkflowSimulationRun,
+  workflowSimulationRunsQuery,
+  workflowSimulationsQuery,
+} from "@/lib/api/workflow-simulations";
+import { workflowQuery } from "@/lib/api/workflows";
+import { formatRelative } from "@/lib/i18n/format";
+import { cx } from "@/utils/cx";
+
+import { Dots } from "../../agents/agent-sim-history";
+import { card, fieldLabel, hint } from "../procedure-simulator/simulator";
+import type { ChipSources } from "../procedure-writer/procedure-suggestions";
+import { useChipSources } from "../procedure-writer/use-chip-sources";
+import { stepLook } from "../step-kinds";
+import { pathName, type StepKind } from "../workflows";
+import { type LiveWfRun, useWorkflowLiveRuns } from "./use-workflow-live-runs";
+import { WorkflowSimCompare } from "./workflow-sim-compare";
+import { CheckLine, LiveWfTalk, Trace, WfTalk } from "./workflow-sim-parts";
+import { lined, liveStatus, ranWhen, type Steps, simStanding } from "./workflow-sim-words";
+
+/* The copies a simulation runs against, and where a new one starts from. */
+const copies = [
+  ["draft", "Draft"],
+  ["live", "Live"],
+] as const;
+const starts = [
+  ["write", "Write one"],
+  ["conversation", "From a conversation"],
+] as const;
+
+/* statusOfSim is how a simulation stands: its latest runs, or where its run is while it goes. */
+function statusOfSim(sim: WorkflowSimulation, as: AnswerAs, busy: boolean, live?: LiveWfRun) {
+  return busy ? liveStatus(live) : simStanding(simResultOf(sim, as), simHistoryOf(sim, as));
+}
+
+/* pathChoices lists every path of every step, to check which one a step takes. */
+function pathChoices(steps: Steps): { id: string; name: string; step: string; path: string }[] {
+  const out: { id: string; name: string; step: string; path: string }[] = [];
+  const walk = (list: Steps) => {
+    for (const step of list) {
+      const look = stepLook[step.kind as StepKind];
+      for (const path of step.paths ?? []) {
+        out.push({
+          id: `${step.id}|${path.id}`,
+          name: `${look?.name ?? step.kind}: ${pathName(path) || path.id}`,
+          step: step.id,
+          path: path.id,
+        });
+        walk(path.steps ?? []);
+      }
+    }
+  };
+  walk(steps);
+
+  return out;
+}
+
+function Checks({
+  sim,
+  result,
+  steps,
+  sources,
+  readOnly,
+  onChange,
+}: {
+  sim: WorkflowSimulation;
+  result: WorkflowSimResult | null;
+  steps: Steps;
+  sources: ChipSources;
+  readOnly: boolean;
+  onChange: (assertions: WorkflowAssertion[]) => void;
+}) {
+  const [adding, setAdding] = useState("");
+  const results = lined(sim.assertions, result);
+  const paths = pathChoices(steps);
+  const add = () => {
+    const rubric = adding.trim();
+    if (rubric) {
+      onChange([...sim.assertions, { type: "llm_rubric", rubric }]);
+      setAdding("");
+    }
+  };
+
+  return (
+    <div className="flex flex-col gap-2.5">
+      <div className="flex flex-col">
+        <span className={fieldLabel}>Checks</span>
+        <span className={hint}>The simulation passes when all of these are true.</span>
+      </div>
+      <ul className="flex flex-col gap-1">
+        {sim.assertions.map((check, index) => (
+          <CheckLine
+            // biome-ignore lint/suspicious/noArrayIndexKey: checks change in place.
+            key={index}
+            check={check}
+            outcome={results[index]}
+            steps={steps}
+            sources={sources}
+          >
+            {readOnly ? null : (
+              <IconButton
+                variant="quiet"
+                size="small"
+                icon={RiCloseLine}
+                aria-label="Remove check"
+                onClick={() => onChange(sim.assertions.filter((_, at) => at !== index))}
+              />
+            )}
+          </CheckLine>
+        ))}
+      </ul>
+      {readOnly ? null : (
+        <div className="flex flex-col gap-2">
+          <div className="flex items-center gap-2">
+            <Input
+              aria-label="Add a check"
+              size="small"
+              placeholder="Add a check: the workflow should…"
+              className="min-w-0 flex-1"
+              value={adding}
+              onChange={setAdding}
+              onKeyDown={(event) => {
+                if (event.key === "Enter") {
+                  add();
+                }
+              }}
+            />
+            <Button variant="secondary" size="small" disabled={!adding.trim()} onClick={add}>
+              Add
+            </Button>
+          </div>
+          {paths.length > 0 ? (
+            <Select
+              aria-label="Check the path a step takes"
+              size="sm"
+              placeholder="Check the path a step takes"
+              selectedKey={null}
+              onSelectionChange={(key) => {
+                const picked = paths.find((p) => p.id === String(key));
+                if (picked) {
+                  onChange([...sim.assertions, { type: "path_taken", step_id: picked.step, branch: picked.path }]);
+                }
+              }}
+              popoverClassName="w-72"
+            >
+              {paths.map((p) => (
+                <SelectItem key={p.id} id={p.id} textValue={p.name}>
+                  {p.name}
+                </SelectItem>
+              ))}
+            </Select>
+          ) : null}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/*
+ * Scenario is who the simulation's customer is and what they came for.
+ * A change waits for Save, since the next run plays from it.
+ */
+function Scenario({
+  sim,
+  readOnly,
+  onSave,
+}: {
+  sim: WorkflowSimulation;
+  readOnly: boolean;
+  onSave: (scenario: string) => Promise<void>;
+}) {
+  const [text, setText] = useState(sim.scenario);
+  const [saving, setSaving] = useState(false);
+  const changed = text.trim() !== sim.scenario;
+
+  return (
+    <div className="flex flex-col gap-2">
+      <Textarea
+        label="Customer's situation"
+        hint="Who they are and what they came for. The simulated customer taps and answers from this."
+        placeholder="A customer on the Pro plan was charged twice and wants a refund. They would tap Billing."
+        rows={3}
+        autoResize
+        maxRows={8}
+        maxLength={1000}
+        isReadOnly={readOnly}
+        value={text}
+        onChange={setText}
+      />
+      {changed && !readOnly ? (
+        <span className="flex items-center justify-end gap-2">
+          <Button variant="secondary" size="xs" disabled={saving} onClick={() => setText(sim.scenario)}>
+            Discard
+          </Button>
+          <Button
+            size="xs"
+            loading={saving}
+            onClick={() => {
+              setSaving(true);
+              void onSave(text.trim()).finally(() => setSaving(false));
+            }}
+          >
+            Save
+          </Button>
+        </span>
+      ) : null}
+    </div>
+  );
+}
+
+/* RunRow is one kept run in the list of past runs. */
+function RunRow({
+  run,
+  latest,
+  open,
+  onView,
+}: {
+  run: WorkflowSimulationRun;
+  latest: boolean;
+  open: boolean;
+  onView: () => void;
+}) {
+  const label = run.errored ? "Did not finish" : run.passed ? "Passed" : "Failed";
+  const dot = run.errored
+    ? "bg-foreground-icon-quaternary"
+    : run.passed
+      ? "bg-status-lime-text"
+      : "bg-status-rose-text";
+
+  return (
+    <li>
+      <button
+        type="button"
+        aria-pressed={open}
+        onClick={onView}
+        className={cx(
+          "flex w-full cursor-pointer items-center gap-2.5 rounded-xl px-2.5 py-1.5 text-start outline-none transition-colors duration-150 hover:bg-background-primary-hover focus-visible:ring-2 focus-visible:ring-border-focus-ring",
+          open && "bg-background-primary-hover",
+        )}
+      >
+        <span aria-hidden className={cx("size-1.5 shrink-0 rounded-full", dot)} />
+        <span className="text-body-2-regular text-text-primary">{label}</span>
+        <span className={cx(hint, "min-w-0 flex-1 truncate")}>
+          {formatRelative(run.ran_at)}
+          {latest ? " · latest" : ""}
+        </span>
+        {run.counted || run.errored ? null : <span className={hint}>Before the last change</span>}
+      </button>
+    </li>
+  );
+}
+
+function PastRuns({
+  workspace,
+  workflow,
+  sim,
+  as,
+  viewing,
+  onView,
+}: {
+  workspace: string;
+  workflow: string;
+  sim: WorkflowSimulation;
+  as: AnswerAs;
+  viewing: string | null;
+  onView: (result: WorkflowSimResult | null, id: string | null) => void;
+}) {
+  const { data: runs = [] } = useQuery(workflowSimulationRunsQuery(workspace, workflow, sim.id, as));
+  if (runs.length < 2) {
+    return null;
+  }
+
+  return (
+    <div className="flex flex-col gap-2.5">
+      <span className={fieldLabel}>Past runs</span>
+      <ul className={cx("flex flex-col gap-0.5 p-1", card)}>
+        {runs.map((run, i) => (
+          <RunRow
+            key={run.id}
+            run={run}
+            latest={i === 0}
+            open={viewing === run.id || (viewing === null && i === 0)}
+            onView={() => onView(i === 0 ? null : run.result, i === 0 ? null : run.id)}
+          />
+        ))}
+      </ul>
+      <p className={hint}>
+        Runs made before the workflow or this simulation changed are kept here, and no longer count.
+      </p>
+    </div>
+  );
+}
+
+/* DetailBar is an opened simulation's header: back, its name, delete, compare and run. */
+function DetailBar({
+  name,
+  busy,
+  onBack,
+  onDelete,
+  onCompare,
+  onRun,
+}: {
+  name: string;
+  busy: boolean;
+  onBack: () => void;
+  onDelete: () => void;
+  onCompare?: () => void;
+  onRun: () => void;
+}) {
+  return (
+    <div className="flex h-12 shrink-0 items-center gap-2.5 ps-3 pe-3">
+      <IconButton
+        variant="quiet"
+        size="small"
+        icon={RiArrowLeftSLine}
+        aria-label="Back to simulations"
+        onClick={onBack}
+      />
+      <span className="min-w-0 flex-1 truncate text-body-medium text-text-primary">{name}</span>
+      <span className="flex shrink-0 items-center gap-1">
+        <IconButton
+          variant="quiet"
+          size="small"
+          icon={RiDeleteBinLine}
+          aria-label={`Delete ${name}`}
+          onClick={onDelete}
+        />
+        {onCompare ? (
+          <Button variant="tertiary" size="xs" leadingIcon={RiGitPullRequestLine} disabled={busy} onClick={onCompare}>
+            Compare
+          </Button>
+        ) : null}
+        <Button variant="tertiary" size="xs" leadingIcon={RiPlayFill} loading={busy} disabled={busy} onClick={onRun}>
+          Run
+        </Button>
+      </span>
+    </div>
+  );
+}
+
+/*
+ * Ran is one run of a simulation: what went wrong if it could not
+ * finish, its chat and the steps the workflow took. Live is the run as
+ * it happens, left out once it is over.
+ */
+function Ran({
+  sim,
+  result,
+  running,
+  live,
+  steps,
+  sources,
+}: {
+  sim: WorkflowSimulation;
+  result: WorkflowSimResult | null;
+  running: boolean;
+  live?: LiveWfRun;
+  steps: Steps;
+  sources: ChipSources;
+}) {
+  const shown = running ? (live?.result ?? null) : result;
+
+  return (
+    <>
+      {shown?.error ? <p className="text-body-2-regular text-text-error-primary">{shown.error}</p> : null}
+      <div className="flex flex-col gap-2.5">
+        <span className={fieldLabel}>Conversation</span>
+        {running ? (
+          <LiveWfTalk run={live} sources={sources} />
+        ) : (
+          <WfTalk messages={sim.messages} result={result} sources={sources} />
+        )}
+      </div>
+      <div className="flex flex-col gap-2.5">
+        <span className={fieldLabel}>Steps</span>
+        <Trace trace={shown?.trace} steps={steps} live={running ? (live?.steps ?? []) : undefined} />
+      </div>
+    </>
+  );
+}
+
+function Detail({
+  workspace,
+  workflow,
+  sim,
+  as,
+  steps,
+  sources,
+  busy,
+  live,
+  onBack,
+  onRun,
+  onDelete,
+  onChecks,
+  onScenario,
+  onCompare,
+}: {
+  workspace: string;
+  workflow: string;
+  sim: WorkflowSimulation;
+  as: AnswerAs;
+  steps: Steps;
+  sources: ChipSources;
+  busy: boolean;
+  live?: LiveWfRun;
+  onBack: () => void;
+  onRun: () => void;
+  onDelete: () => void;
+  onChecks: (assertions: WorkflowAssertion[]) => void;
+  onScenario: (scenario: string) => Promise<void>;
+  onCompare?: () => void;
+}) {
+  const latest = simResultOf(sim, as);
+  const [past, setPast] = useState<{ id: string; result: WorkflowSimResult } | null>(null);
+  const viewing = busy ? null : past;
+  const result = viewing ? viewing.result : latest;
+  const shown = busy ? (live?.result ?? null) : result;
+  const status = statusOfSim(sim, as, busy, live);
+  const history = simHistoryOf(sim, as);
+  const when = busy ? "" : ranWhen(latest, history);
+
+  return (
+    <div className="flex min-h-0 flex-1 flex-col">
+      <DetailBar
+        name={sim.name}
+        busy={busy}
+        onBack={onBack}
+        onDelete={onDelete}
+        onCompare={onCompare}
+        onRun={() => {
+          setPast(null);
+          onRun();
+        }}
+      />
+      <ScrollArea>
+        <div className="flex flex-col gap-6 px-4 pt-2 pb-10">
+          <span className="flex items-center gap-2">
+            <Chip variant="caption" color={status.color} className="py-0.5">
+              {status.label}
+            </Chip>
+            {history && !busy ? <Dots history={history} /> : null}
+            <span className={hint}>
+              {as === "draft" ? "On the draft" : "On the live version"}
+              {when}
+            </span>
+          </span>
+          {busy ? null : (
+            <PastRuns
+              workspace={workspace}
+              workflow={workflow}
+              sim={sim}
+              as={as}
+              viewing={viewing?.id ?? null}
+              onView={(r, id) => setPast(r && id ? { id, result: r } : null)}
+            />
+          )}
+          <Scenario key={`${sim.id}:${sim.scenario}`} sim={sim} readOnly={busy} onSave={onScenario} />
+          <Resize>
+            <Swap
+              view={busy ? "live" : (viewing?.id ?? `latest:${latest?.ran_at ?? ""}`)}
+              forward
+              className="flex flex-col gap-6"
+            >
+              <Ran sim={sim} result={result} running={busy} live={live} steps={steps} sources={sources} />
+              <Checks
+                sim={sim}
+                result={shown}
+                steps={steps}
+                sources={sources}
+                readOnly={busy || viewing !== null}
+                onChange={onChecks}
+              />
+            </Swap>
+          </Resize>
+        </div>
+      </ScrollArea>
+    </div>
+  );
+}
+
+/*
+ * NewSimulation saves a simulation: written from a first message and
+ * the customer's situation, or made from a past conversation, whose
+ * customer messages become the script.
+ */
+function NewSimulation({
+  workspace,
+  workflow,
+  onClose,
+  onMade,
+}: {
+  workspace: string;
+  workflow: string;
+  onClose: () => void;
+  onMade: (sim: WorkflowSimulation) => void;
+}) {
+  const [from, setFrom] = useState<"write" | "conversation">("write");
+  const [name, setName] = useState("");
+  const [message, setMessage] = useState("");
+  const [scenario, setScenario] = useState("");
+  const [conversation, setConversation] = useState("");
+  const [saving, setSaving] = useState(false);
+  const recent = useQuery({
+    ...conversationsQuery(workspace, { view: "all", status: "any", limit: 25 }),
+    enabled: from === "conversation",
+  }).data;
+  const ready = from === "write" ? name.trim() !== "" && message.trim() !== "" : conversation !== "";
+
+  const save = async () => {
+    setSaving(true);
+    try {
+      const made =
+        from === "write"
+          ? await createWorkflowSimulation(workspace, workflow, {
+              name: name.trim(),
+              messages: [{ text: message.trim() }],
+              ...(scenario.trim() ? { scenario: scenario.trim() } : {}),
+            })
+          : await importWorkflowSimulation(workspace, workflow, conversation);
+      onMade(made);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "The simulation was not saved.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <Modal isOpen onOpenChange={(open) => (open ? undefined : onClose())} size="md">
+      <ModalHeader title="New simulation" description="A chat the workflow must keep handling the way you mean." />
+      <ModalBody className="flex flex-col gap-4">
+        <SegmentedControl
+          aria-label="Start from"
+          selectedKeys={new Set([from])}
+          onSelectionChange={(keys) => setFrom([...keys][0] === "conversation" ? "conversation" : "write")}
+        >
+          {starts.map(([id, label]) => (
+            <SegmentedControlItem key={id} id={id}>
+              {label}
+            </SegmentedControlItem>
+          ))}
+        </SegmentedControl>
+        {from === "write" ? (
+          <>
+            <Input
+              label="Name"
+              placeholder="Billing question gets routed"
+              value={name}
+              onChange={setName}
+              maxLength={120}
+            />
+            <Textarea
+              label="The customer's first message"
+              placeholder="Hi, I was charged twice this month"
+              rows={2}
+              autoResize
+              maxLength={4000}
+              value={message}
+              onChange={setMessage}
+            />
+            <Textarea
+              label="Customer's situation"
+              hint="Optional. Left empty, it is written from the first message."
+              rows={3}
+              autoResize
+              maxLength={1000}
+              value={scenario}
+              onChange={setScenario}
+            />
+          </>
+        ) : (
+          <Select
+            label="Conversation"
+            placeholder="Pick a recent conversation"
+            selectedKey={conversation || null}
+            onSelectionChange={(key) => setConversation(String(key))}
+          >
+            {(recent ?? []).map((c) => {
+              const who = c.contact.name || c.contact.email || "A customer";
+              const text = `${who}: ${c.subject || c.last_message?.excerpt || `#${String(c.number)}`}`;
+
+              return (
+                <SelectItem key={c.id} id={c.id} textValue={text}>
+                  {text}
+                </SelectItem>
+              );
+            })}
+          </Select>
+        )}
+      </ModalBody>
+      <ModalFooter>
+        <Button variant="secondary" size="small" onClick={onClose}>
+          Cancel
+        </Button>
+        <Button size="small" loading={saving} disabled={!ready} onClick={() => void save()}>
+          Save simulation
+        </Button>
+      </ModalFooter>
+    </Modal>
+  );
+}
+
+function disagrees(sim: WorkflowSimulation): boolean {
+  return sim.draft_result !== null && sim.live_result !== null && sim.draft_result.passed !== sim.live_result.passed;
+}
+
+/* summaryOf says how many simulations pass, are flaky, fail or have not run on the copy. */
+function summaryOf(list: WorkflowSimulation[], as: AnswerAs): string {
+  const standings = list.map((sim) => simHistoryOf(sim, as)?.state ?? "none");
+  const count = (state: string) => standings.filter((s) => s === state).length;
+
+  return [
+    `${count("passing")} of ${list.length} passing`,
+    count("flaky") > 0 ? `${count("flaky")} flaky` : "",
+    count("failing") > 0 ? `${count("failing")} failing` : "",
+    count("none") > 0 ? `${count("none")} not run` : "",
+  ]
+    .filter(Boolean)
+    .join(", ");
+}
+
+/* SimRow is one simulation in the list: its name, first message, how it stands, and whether live differs. */
+function SimRow({
+  sim,
+  as,
+  busy,
+  live,
+  differs,
+  onOpen,
+}: {
+  sim: WorkflowSimulation;
+  as: AnswerAs;
+  busy: boolean;
+  live?: LiveWfRun;
+  differs: boolean;
+  onOpen: () => void;
+}) {
+  const history = simHistoryOf(sim, as);
+  const status = statusOfSim(sim, as, busy, live);
+  const first = sim.messages[0]?.text ?? "";
+
+  return (
+    <li>
+      <button
+        type="button"
+        onClick={onOpen}
+        className="flex w-full cursor-pointer items-center gap-3 rounded-xl px-2.5 py-2 text-start outline-none transition-colors duration-150 hover:bg-background-primary-hover focus-visible:ring-2 focus-visible:ring-border-focus-ring"
+      >
+        <span className="flex min-w-0 flex-1 flex-col">
+          <span className="truncate text-body-regular text-text-primary">{sim.name}</span>
+          <span className="flex min-w-0 items-center gap-2">
+            {history && !busy ? <Dots history={history} /> : null}
+            {first && !first.startsWith(sim.name) ? <span className={cx(hint, "truncate")}>“{first}”</span> : null}
+          </span>
+        </span>
+        {differs ? (
+          <Chip variant="caption" color="orange" className="shrink-0 py-0.5">
+            Live differs
+          </Chip>
+        ) : null}
+        <Chip variant="caption" color={status.color} className="shrink-0 py-0.5">
+          {status.label}
+        </Chip>
+        <RiArrowRightSLine aria-hidden className="size-5 shrink-0 text-foreground-icon-tertiary rtl:-scale-x-100" />
+      </button>
+    </li>
+  );
+}
+
+export function WorkflowSimulations({
+  workspace,
+  workflow,
+  flush,
+}: {
+  workspace: string;
+  workflow: string;
+  /* Saves the builder's unsaved changes, so a run on the draft runs what is on screen. */
+  flush?: () => Promise<void>;
+}) {
+  const queryClient = useQueryClient();
+  const { data: list = [] } = useQuery(workflowSimulationsQuery(workspace, workflow));
+  const wf = useQuery(workflowQuery(workspace, workflow)).data;
+  const sources = useChipSources(workspace, "");
+  const [as, setAs] = useState<AnswerAs>("draft");
+  const [openId, setOpenId] = useState<string | null>(null);
+  const [running, setRunning] = useState<string[]>([]);
+  const [deleting, setDeleting] = useState<WorkflowSimulation | null>(null);
+  const [comparing, setComparing] = useState(false);
+  const [adding, setAdding] = useState(false);
+  const live = useWorkflowLiveRuns(workspace);
+  const refresh = () => queryClient.invalidateQueries(workflowSimulationsQuery(workspace, workflow));
+  const steps: Steps = wf?.spec?.steps ?? [];
+  const hasLive = Boolean(wf?.live_version_id);
+  const copy = hasLive ? as : "draft";
+  const opened = list.find((sim) => sim.id === openId);
+  const summary = summaryOf(list, copy);
+
+  const run = async (ids?: string[]) => {
+    setRunning(ids ?? list.map((sim) => sim.id));
+    try {
+      if (copy === "draft" && flush) {
+        await flush();
+      }
+      const ran = await runWorkflowSimulations(workspace, workflow, {
+        simulation_ids: ids,
+        version: copy,
+        stream_id: live.begin(),
+      });
+      await refresh();
+      const broken = ran.map((sim) => [sim, simResultOf(sim, copy)] as const).find(([, r]) => r?.error);
+      if (broken) {
+        toast.error(`${broken[0].name}: ${broken[1]?.error}`);
+      }
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "The simulations did not run.");
+    } finally {
+      setRunning([]);
+      live.end();
+    }
+  };
+
+  const save = async (
+    sim: WorkflowSimulation,
+    change: Parameters<typeof updateWorkflowSimulation>[3],
+    failed: string,
+  ) => {
+    try {
+      await updateWorkflowSimulation(workspace, workflow, sim.id, change);
+      await refresh();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : failed);
+    }
+  };
+
+  const detail = opened ? (
+    <Detail
+      key={`${opened.id}:${copy}`}
+      workspace={workspace}
+      workflow={workflow}
+      sim={opened}
+      as={copy}
+      steps={steps}
+      sources={sources}
+      busy={running.includes(opened.id)}
+      live={live.runs[opened.id]}
+      onBack={() => setOpenId(null)}
+      onRun={() => void run([opened.id])}
+      onDelete={() => setDeleting(opened)}
+      onChecks={(assertions) => void save(opened, { assertions }, "The check was not saved.")}
+      onScenario={(scenario) => save(opened, { scenario }, "The customer's situation was not saved.")}
+      onCompare={hasLive ? () => setComparing(true) : undefined}
+    />
+  ) : null;
+
+  const none = (
+    <div className="flex flex-1 flex-col items-center justify-center gap-3 px-6 text-center">
+      <span className="flex flex-col gap-1">
+        <span className="text-body-medium text-text-primary">No simulations yet</span>
+        <span className={hint}>
+          A simulation is a chat this workflow must keep handling the way you mean. An AI customer taps its buttons and
+          answers its questions; nothing is sent.
+        </span>
+      </span>
+      <Button variant="secondary" size="small" leadingIcon={RiAddLine} onClick={() => setAdding(true)}>
+        New simulation
+      </Button>
+    </div>
+  );
+
+  const all = (
+    <>
+      <div className="flex h-11 shrink-0 items-center justify-between gap-2 ps-4 pe-3">
+        <p className={cx(hint, "min-w-0 truncate tabular-nums")}>
+          {summary} on the {copy === "draft" ? "draft" : "live version"}
+        </p>
+        <span className="flex shrink-0 items-center gap-1">
+          <IconButton
+            variant="quiet"
+            size="small"
+            icon={RiAddLine}
+            aria-label="New simulation"
+            onClick={() => setAdding(true)}
+          />
+          <Button
+            variant="tertiary"
+            size="xs"
+            leadingIcon={RiPlayFill}
+            loading={running.length > 1}
+            disabled={running.length > 0}
+            onClick={() => void run()}
+          >
+            Run all
+          </Button>
+        </span>
+      </div>
+      <ScrollArea>
+        <ul className={cx("mx-4 mt-1 mb-10 flex flex-col gap-0.5 p-1", card)}>
+          {list.map((sim) => (
+            <SimRow
+              key={sim.id}
+              sim={sim}
+              as={copy}
+              busy={running.includes(sim.id)}
+              live={live.runs[sim.id]}
+              differs={hasLive && disagrees(sim)}
+              onOpen={() => setOpenId(sim.id)}
+            />
+          ))}
+        </ul>
+      </ScrollArea>
+    </>
+  );
+
+  return (
+    <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden">
+      {hasLive && !opened ? (
+        <div className="shrink-0 px-4 pt-3">
+          <SegmentedControl
+            aria-label="Run against"
+            selectedKeys={new Set([copy])}
+            onSelectionChange={(keys) => setAs([...keys][0] === "live" ? "live" : "draft")}
+          >
+            {copies.map(([id, label]) => (
+              <SegmentedControlItem key={id} id={id}>
+                {label}
+              </SegmentedControlItem>
+            ))}
+          </SegmentedControl>
+        </div>
+      ) : null}
+      <Swap view={opened ? opened.id : "list"} forward={opened !== undefined} className="flex min-h-0 flex-1 flex-col">
+        {detail ?? (list.length === 0 ? none : all)}
+      </Swap>
+      <AlertDialog
+        isOpen={deleting !== null}
+        onOpenChange={(open) => (open ? undefined : setDeleting(null))}
+        title={deleting ? `Delete ${deleting.name}?` : "Delete simulation?"}
+        description="This cannot be undone."
+        confirmLabel="Delete"
+        onConfirm={() => {
+          const sim = deleting;
+          setDeleting(null);
+          setOpenId(null);
+
+          return sim ? deleteWorkflowSimulation(workspace, workflow, sim.id).then(refresh) : undefined;
+        }}
+      />
+      {adding ? (
+        <NewSimulation
+          workspace={workspace}
+          workflow={workflow}
+          onClose={() => setAdding(false)}
+          onMade={(sim) => {
+            setAdding(false);
+            void refresh().then(() => setOpenId(sim.id));
+          }}
+        />
+      ) : null}
+      {comparing && opened ? (
+        <WorkflowSimCompare
+          workspace={workspace}
+          workflow={workflow}
+          sim={opened}
+          steps={steps}
+          sources={sources}
+          flush={flush}
+          onClose={() => setComparing(false)}
+        />
+      ) : null}
+    </div>
+  );
+}

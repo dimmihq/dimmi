@@ -91,6 +91,8 @@ const (
 	moveAnswer    = "answer"
 	moveConfirm   = "confirm"
 	moveEnd       = "end"
+	moveTap       = "tap"
+	moveWait      = "wait"
 )
 
 /*
@@ -125,7 +127,10 @@ var ErrCustomerFailed = errors.New("the simulated customer did not answer")
 CustomerTurn is where a simulated chat stands when the customer moves
 next: who the customer is, the simulation's scenario, the saved chat
 with what has been sent of it, the chat of this run so far, and the
-card dimmi is waiting on, if any. Whether the customer may press
+card dimmi is waiting on, if any. In a workflow, Choices are the
+buttons the customer may tap now, ChoicesOnly says they may not type
+instead, and CanWait says the workflow waits for an answer the customer
+may simply not give, so that a timeout passes. Whether the customer may press
 Confirm on that card is worked out when the turn is played, and so is
 an answer of the customer's model that strayed from what is known
 about the customer and is being asked again.
@@ -138,6 +143,9 @@ type CustomerTurn struct {
 	Saved       []SavedMessage
 	Run         []SimMessage
 	Confirming  string
+	Choices     []string
+	ChoicesOnly bool
+	CanWait     bool
 	confirmable bool
 	strayed     string
 }
@@ -158,7 +166,9 @@ CustomerMove is the simulated customer's next move: a message, a press
 of Confirm, or the end of the chat. Saved is the number of the saved
 message the move sends or the saved press it makes, counting from one,
 and zero for a move that is neither. Unknown says the customer was
-asked for something it does not know.
+asked for something it does not know. Choice is the number of the
+button the customer tapped, counting from one, and Waited says the
+customer let the workflow's wait run out without answering.
 */
 type CustomerMove struct {
 	Message string
@@ -166,6 +176,8 @@ type CustomerMove struct {
 	Done    bool
 	Unknown bool
 	Saved   int
+	Choice  int
+	Waited  bool
 }
 
 /*
@@ -229,7 +241,7 @@ always does. With no decision model, or none that answers, it cannot be
 told and the customer model decides.
 */
 func (r *Runner) customerAsked(ctx context.Context, st *run, in CustomerTurn) (asks, known bool) {
-	if in.Confirming != "" {
+	if in.Confirming != "" || len(in.Choices) > 0 || in.CanWait {
 		return true, true
 	}
 	reply := ""
@@ -416,61 +428,6 @@ func unsent(saved []SavedMessage) []int {
 }
 
 /*
-movesNow lists the moves the chat allows the customer now: a saved
-message only while one is unsent, and Confirm only while a card waits
-for something this customer came for.
-*/
-func movesNow(in CustomerTurn) []string {
-	moves := []string{moveAnswer}
-	if len(unsent(in.Saved)) > 0 {
-		moves = append(moves, moveSendSaved)
-	}
-	if in.confirmable {
-		moves = append(moves, moveConfirm)
-	}
-
-	return append(moves, moveEnd)
-}
-
-/*
-customerSpec is the tool the customer moves through. It offers only
-the moves the chat allows now, and only the saved messages still
-unsent, so a move the chat does not allow cannot be asked for.
-*/
-func customerSpec(in CustomerTurn) contracts.ToolSpec {
-	numbers := append([]int{0}, unsent(in.Saved)...)
-	schema, _ := json.Marshal(map[string]any{
-		"type": "object",
-		"properties": map[string]any{
-			"move": map[string]any{
-				"type": "string", "enum": movesNow(in),
-				"description": moveSendSaved + ": send a saved message that has not been sent, word for word. " +
-					moveAnswer + ": write the customer's answer to what the agent asked. " +
-					moveConfirm + ": press Confirm on the waiting card. " +
-					moveEnd + ": the customer has nothing left to say.",
-			},
-			"saved": map[string]any{
-				"type": "integer", "enum": numbers,
-				"description": "For " + moveSendSaved + ": the number of the saved message to send. Otherwise 0.",
-			},
-			"message": map[string]any{
-				"type":        "string",
-				"description": "For " + moveAnswer + ": what the customer writes. Otherwise empty.",
-			},
-			"unknown": map[string]any{
-				"type":        "boolean",
-				"description": "True when the agent asked for something the customer does not know.",
-			},
-		},
-		"required": []string{"move", "saved", "message", "unknown"}, "additionalProperties": false,
-	})
-
-	return contracts.ToolSpec{
-		Name: customerTool, Description: "Make the customer's next move in the chat.", Schema: schema,
-	}
-}
-
-/*
 toldMove is the move as the customer's model told it through the tool.
 */
 type toldMove struct {
@@ -478,6 +435,7 @@ type toldMove struct {
 	Saved   int    `json:"saved"`
 	Message string `json:"message"`
 	Unknown bool   `json:"unknown"`
+	Choice  int    `json:"choice"`
 }
 
 /*
@@ -514,10 +472,16 @@ card the customer may confirm.
 func allowed(told toldMove, in CustomerTurn) (CustomerMove, bool) {
 	switch told.Move {
 	case moveSendSaved:
+		if in.ChoicesOnly && len(in.Choices) > 0 {
+			return CustomerMove{}, false
+		}
 		if slices.Contains(unsent(in.Saved), told.Saved) {
 			return CustomerMove{Message: in.Saved[told.Saved-1].Text, Saved: told.Saved}, true
 		}
 	case moveAnswer:
+		if in.ChoicesOnly && len(in.Choices) > 0 {
+			return CustomerMove{}, false
+		}
 		if text := strings.TrimSpace(told.Message); text != "" {
 			return CustomerMove{Message: text, Unknown: told.Unknown}, true
 		}
@@ -527,6 +491,8 @@ func allowed(told toldMove, in CustomerTurn) (CustomerMove, bool) {
 		}
 	case moveEnd:
 		return CustomerMove{Done: true}, true
+	case moveTap, moveWait:
+		return workflowMove(told, in)
 	}
 
 	return CustomerMove{}, false
@@ -635,6 +601,7 @@ func customerStatus(in CustomerTurn) string {
 	} else {
 		status += "\nNo card is waiting."
 	}
+	status += workflowStatus(in)
 
 	note := ""
 	if in.strayed != "" {

@@ -61,6 +61,23 @@ Hi {{contact.first_name | fallback: "there"}}, your order {{run.vars.order_numbe
 - `run.vars.<key>` reads a value saved by an earlier step.
 - If a variable is empty and has no fallback, dimmi leaves it blank.
 
+## Test with simulations
+
+A **simulation** plays a made-up customer through your workflow before anyone real meets it. Open **Simulations** beside the builder, write the customer's first message and their situation, or start from a past conversation.
+
+An AI customer then plays the chat:
+
+- **Taps buttons** that fit what they came for, or types instead when the step allows it.
+- **Answers collect steps** from their situation, and says nothing when they would not know, so the timeout path runs.
+- **Skips every wait**, so a 2-day wait passes at once.
+- **Talks to the agent** in a **Let dimmi handle** step, as your agent would answer.
+
+Nothing leaves the simulation. Messages are not sent, and tags, assignments, notes, tickets and HTTP requests are only listed under **Would have run**. An HTTP request step answers with its mock, or succeeds with an empty body.
+
+Each run shows the chat, every step with the path it took, and the variables it set. Add checks in plain words ("the workflow tags billing questions"), or pick **Check the path a step takes**. A model judges the written checks and can answer unsure.
+
+Run a simulation on the draft or the live version. **Compare** runs both side by side, so you can see what a change does before you publish it.
+
 ## Publish your workflow
 
 The **Publish** button stays disabled while there are unfinished steps. Look at the badge beside it (such as **2 to fix**) and click it to jump straight to the first issue.
