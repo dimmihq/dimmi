@@ -482,11 +482,10 @@ export function PrivacyPage() {
         </p>
         <LegalTable
           caption="Privacy Policy & DPA version archive"
-          headers={["Version", "Published", "Effective", "Summary"]}
+          headers={["Version", "Effective", "Summary"]}
           rows={[
             [
               `v${LEGAL_VERSION.version}`,
-              LEGAL_VERSION.publishedDate,
               LEGAL_VERSION.effectiveDate,
               "Initial release of dimmi Cloud Privacy Policy, End-User Notice, Cookie Notice, Subprocessor List, AI Transparency, Security Overview, and Global DPA.",
             ],

@@ -1,6 +1,6 @@
 /*
  * Single source of truth for dimmi Cloud's legal documents: entity details,
- * official contact addresses, effective dates, subprocessors, security
+ * official contact addresses, effective date, subprocessors, security
  * controls, cookies, and retention periods. Sharing these tables keeps
  * /terms and /privacy consistent on every build.
  */
@@ -24,7 +24,6 @@ export const LEGAL_CONTACTS = {
 
 export const LEGAL_VERSION = {
   version: "1.0",
-  publishedDate: "December 1, 2026",
   effectiveDate: "December 1, 2026",
 } as const;
 

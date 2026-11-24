@@ -93,12 +93,8 @@ export function LegalDocument({
                 </dd>
               </div>
               <div className="flex items-center gap-2">
-                <dt className="font-mono text-[11px] tracking-[0.08em] text-text-tertiary uppercase">Published</dt>
-                <dd className="text-text-primary">{LEGAL_VERSION.publishedDate}</dd>
-              </div>
-              <div className="flex items-center gap-2">
                 <dt className="font-mono text-[11px] tracking-[0.08em] text-text-tertiary uppercase">Effective</dt>
-                <dd className="font-medium text-text-primary">{LEGAL_VERSION.effectiveDate}</dd>
+                <dd className="text-text-primary">{LEGAL_VERSION.effectiveDate}</dd>
               </div>
               <div className="flex items-center gap-2">
                 <dt className="font-mono text-[11px] tracking-[0.08em] text-text-tertiary uppercase">Entity</dt>
@@ -403,10 +399,9 @@ export function LegalEntityFooter() {
         {LEGAL_ENTITY.incorporationAct}. Registered office: {LEGAL_ENTITY.address}.
       </p>
       <p className="mt-2">
-        Version v{LEGAL_VERSION.version} · Published {LEGAL_VERSION.publishedDate} · Effective{" "}
-        {LEGAL_VERSION.effectiveDate}. Legal, privacy, security &amp; abuse:{" "}
-        <LegalLink href={`mailto:${LEGAL_CONTACTS.legal}`}>{LEGAL_CONTACTS.legal}</LegalLink> · Support &amp; billing:{" "}
-        <LegalLink href={`mailto:${LEGAL_CONTACTS.support}`}>{LEGAL_CONTACTS.support}</LegalLink>.
+        Version v{LEGAL_VERSION.version} · Effective {LEGAL_VERSION.effectiveDate}. Legal, privacy, security &amp;
+        abuse: <LegalLink href={`mailto:${LEGAL_CONTACTS.legal}`}>{LEGAL_CONTACTS.legal}</LegalLink> · Support &amp;
+        billing: <LegalLink href={`mailto:${LEGAL_CONTACTS.support}`}>{LEGAL_CONTACTS.support}</LegalLink>.
       </p>
     </footer>
   );

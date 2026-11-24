@@ -929,11 +929,10 @@ export function TermsPage() {
         />
         <LegalTable
           caption="Terms of Service version archive"
-          headers={["Version", "Published", "Effective", "Summary"]}
+          headers={["Version", "Effective", "Summary"]}
           rows={[
             [
               `v${LEGAL_VERSION.version}`,
-              LEGAL_VERSION.publishedDate,
               LEGAL_VERSION.effectiveDate,
               "Initial release of dimmi Cloud Terms of Service, Product-Specific Terms, Acceptable Use Policy, and Self-Hosting Notice.",
             ],
