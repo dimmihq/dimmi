@@ -116,6 +116,15 @@ func readMetrics(ctx context.Context, q *models.Queries, wf models.Workflow, out
 		return fmt.Errorf("count workflow runs by day: %w", err)
 	}
 
+	return readSteps(ctx, q, wf, out)
+}
+
+/*
+readSteps fills every step's numbers: reached, waiting, failed, the
+paths taken and the drop-off.
+*/
+func readSteps(ctx context.Context, q *models.Queries, wf models.Workflow, out *Metrics) error {
+	ws, id, since, until, version := wf.WorkspaceID, wf.ID, out.From, out.To, out.Version
 	steps, err := q.WorkflowStepFigures(ctx, models.WorkflowStepFiguresParams{
 		WorkspaceID: ws, WorkflowID: id, Since: since, Until: until, Version: version,
 	})
@@ -231,7 +240,7 @@ func (w *Workflows) Failures(ctx context.Context, m authz.Membership, id ids.UUI
 
 	rows := int32(25)
 	if scope.Limit > 0 && scope.Limit <= maxRunsListed {
-		rows = int32(scope.Limit) //nolint:gosec // bounded above
+		rows = int32(scope.Limit)
 	}
 
 	from, to := w.rangeOf(scope.From, scope.To)

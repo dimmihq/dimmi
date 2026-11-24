@@ -65,7 +65,8 @@ func TestWorkflowAnalytics(t *testing.T) {
 		id := published(t, d, "Route by topic", testkit.JSON{
 			"schema": 1, "trigger": "conversation.first_message",
 			"steps": []testkit.JSON{step("s_ask0001", "buttons", testkit.JSON{"text": "What is it about?"},
-				path("p_billing", "Billing", step("s_assign1", "assign", testkit.JSON{"mode": "team", "team_id": team})),
+				path("p_billing", "Billing",
+					step("s_assign1", "assign", testkit.JSON{"mode": "team", "team_id": team})),
 				path("p_other1", "Something else"))},
 		})
 

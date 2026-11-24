@@ -35,24 +35,6 @@ type SeriesReport struct {
 }
 
 /*
-SeriesControl is a series' control group against everyone else: the
-share held out, and each group's entries and goals.
-*/
-type SeriesControl struct {
-	Percent int                  `json:"percent"`
-	Groups  []SeriesControlGroup `json:"groups"`
-}
-
-/*
-SeriesControlGroup is one group, control or treated, and its goal.
-*/
-type SeriesControlGroup struct {
-	Group   string `json:"group"`
-	Entered int64  `json:"entered"`
-	Goal    int64  `json:"goal"`
-}
-
-/*
 SeriesCount is a reason and how many.
 */
 type SeriesCount struct {
@@ -100,12 +82,7 @@ func NewSeriesReport(r series.Report) SeriesReport {
 		Steps: map[string]SeriesStepReport{},
 	}
 
-	if r.Control != nil {
-		out.Control = &SeriesControl{Percent: r.Control.Percent, Groups: []SeriesControlGroup{}}
-		for _, g := range r.Control.Groups {
-			out.Control.Groups = append(out.Control.Groups, SeriesControlGroup{Group: g.Path, Entered: g.Entered, Goal: g.Goal})
-		}
-	}
+	out.Control = newSeriesControl(r.Control)
 
 	for _, reason := range r.Reasons {
 		out.Reasons = append(out.Reasons, SeriesCount{Reason: reason.Reason, Count: reason.N})

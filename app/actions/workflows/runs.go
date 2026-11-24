@@ -66,31 +66,44 @@ func (w *Workflows) Runs(ctx context.Context, m authz.Membership, id ids.UUID, l
 			return fmt.Errorf("list workflow runs: %w", err)
 		}
 
-		numbers, err := versionNumbers(ctx, q, m.Workspace.ID, id)
-		if err != nil {
-			return err
-		}
+		out, err = traces(ctx, q, runs)
 
-		for _, run := range runs {
-			steps, err := q.ListWorkflowRunSteps(ctx, models.ListWorkflowRunStepsParams{
-				WorkspaceID: m.Workspace.ID, RunID: run.ID,
-			})
-			if err != nil {
-				return fmt.Errorf("list run steps: %w", err)
-			}
-
-			trace := RunTrace{Run: run, Steps: steps}
-			if run.VersionID != nil {
-				trace.VersionNumber = numbers[*run.VersionID]
-			}
-
-			out = append(out, trace)
-		}
-
-		return nil
+		return err
 	})
 
 	return out, err
+}
+
+/*
+traces reads each run's steps and names the version that handled it.
+*/
+func traces(ctx context.Context, q *models.Queries, runs []models.WorkflowRun) ([]RunTrace, error) {
+	if len(runs) == 0 {
+		return nil, nil
+	}
+
+	ws := runs[0].WorkspaceID
+	numbers, err := versionNumbers(ctx, q, ws, runs[0].WorkflowID)
+	if err != nil {
+		return nil, err
+	}
+
+	out := make([]RunTrace, 0, len(runs))
+	for _, run := range runs {
+		steps, err := q.ListWorkflowRunSteps(ctx, models.ListWorkflowRunStepsParams{WorkspaceID: ws, RunID: run.ID})
+		if err != nil {
+			return nil, fmt.Errorf("list run steps: %w", err)
+		}
+
+		trace := RunTrace{Run: run, Steps: steps}
+		if run.VersionID != nil {
+			trace.VersionNumber = numbers[*run.VersionID]
+		}
+
+		out = append(out, trace)
+	}
+
+	return out, nil
 }
 
 /*

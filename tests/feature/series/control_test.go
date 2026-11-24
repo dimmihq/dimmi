@@ -44,8 +44,8 @@ func TestSeriesControlGroup(t *testing.T) {
 		assert.Equal(t, int64(50), num(report, "data.control.percent"))
 		groups := map[string]int64{}
 		for i := range 2 {
-			groups[report.String(fmt.Sprintf("data.control.groups.%d.group", i))] =
-				num(report, fmt.Sprintf("data.control.groups.%d.entered", i))
+			at := fmt.Sprintf("data.control.groups.%d.", i)
+			groups[report.String(at+"group")] = num(report, at+"entered")
 		}
 		require.Equal(t, int64(people), groups["control"]+groups["treated"])
 		require.Positive(t, groups["control"])
@@ -69,8 +69,8 @@ func TestSeriesControlGroup(t *testing.T) {
 
 		reasons := map[string]int64{}
 		for i := range 3 {
-			reasons[report.String(fmt.Sprintf("data.reasons.%d.reason", i))] =
-				num(report, fmt.Sprintf("data.reasons.%d.count", i))
+			at := fmt.Sprintf("data.reasons.%d.", i)
+			reasons[report.String(at+"reason")] = num(report, at+"count")
 		}
 		assert.Equal(t, groups["control"], reasons["control"])
 	})
