@@ -50,7 +50,7 @@ func ensureManagedKey(ctx context.Context, d seedDeps, tx *database.Tx,
 		return nil, nil
 	}
 
-	modelsJSON, _ := json.Marshal(managedModelIDs())
+	modelsJSON, _ := json.Marshal(managedModelIDs(d.config))
 
 	key, err := models.New(tx).FindManagedProviderKey(ctx, workspaceID)
 	if err == nil {
@@ -83,7 +83,7 @@ returned untouched, so reading the agent writes nothing.
 func refreshManagedKey(ctx context.Context, d seedDeps, tx *database.Tx,
 	key models.AiProviderKey,
 ) (*models.AiProviderKey, error) {
-	modelsJSON, _ := json.Marshal(managedModelIDs())
+	modelsJSON, _ := json.Marshal(managedModelIDs(d.config))
 	var err error
 	if key.Name != managedKeyName {
 		key, err = models.New(tx).UpdateProviderKey(ctx, models.UpdateProviderKeyParams{
@@ -150,12 +150,31 @@ func managedFamily(cfg config.AIConfig) func(enums.AIModelFamily) bool {
 }
 
 /*
+managedModels lists the built-in models the install can serve: those
+whose family it holds an upstream key for. An install with only an
+Anthropic key offers no OpenAI or open-weight model.
+*/
+func managedModels(cfg config.AIConfig) []aimodels.Entry {
+	served := managedFamily(cfg)
+
+	var out []aimodels.Entry
+
+	for _, e := range aimodels.Managed() {
+		if served(e.Family) {
+			out = append(out, e)
+		}
+	}
+
+	return out
+}
+
+/*
 managedModelIDs lists the catalog ids the managed connection offers
 for its configured families.
 */
-func managedModelIDs() []string {
+func managedModelIDs(cfg config.AIConfig) []string {
 	var out []string
-	for _, e := range aimodels.Managed() {
+	for _, e := range managedModels(cfg) {
 		out = append(out, e.ID)
 	}
 	return out
@@ -201,11 +220,12 @@ func providers(cfg config.AIConfig) []ProviderDescriptor {
 }
 
 /*
-catalog lists the model pickers' entries per provider.
+catalog lists the model pickers' entries per provider. The built-in
+provider lists only the models the install can serve.
 */
-func catalog(prices *aiprices.Table) map[string][]CatalogEntry {
+func catalog(prices *aiprices.Table, cfg config.AIConfig) map[string][]CatalogEntry {
 	out := map[string][]CatalogEntry{}
-	for _, e := range aimodels.Managed() {
+	for _, e := range managedModels(cfg) {
 		out[string(enums.AIProviderDimmi)] = append(out[string(enums.AIProviderDimmi)], catalogEntry(e, prices))
 	}
 	for _, e := range aimodels.ChatGPT() {

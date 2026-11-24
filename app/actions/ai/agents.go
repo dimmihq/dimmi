@@ -240,7 +240,7 @@ func (a *Agents) view(ctx context.Context, tx *database.Tx, agent models.AiAgent
 	}
 	view := &AgentView{
 		Agent: agent, Working: working, Placement: placements[agent.ID], Unpublished: unpublished(agent),
-		Settings: settings, Keys: keys, Providers: providers(a.Config), Catalog: catalog(a.Prices),
+		Settings: settings, Keys: keys, Providers: providers(a.Config), Catalog: catalog(a.Prices, a.Config),
 		Managed: managed, PromptVersion: promptVersion(agent, a.Config),
 	}
 	if agent.LiveVersionID != nil {
