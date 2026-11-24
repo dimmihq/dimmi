@@ -159,3 +159,31 @@ func TestAgentArchive(t *testing.T) {
 		h.d.Owner.GetJSON("/api/v1/ai/agents/" + sales).AssertStatus(404)
 	})
 }
+
+func TestWorkflowAgentTransfers(t *testing.T) {
+	t.Parallel()
+
+	t.Run("lets a named agent transfer when the step allows it, and starts the transfer trigger", func(t *testing.T) {
+		t.Parallel()
+		r := newTransferDesk(t)
+		sales := models.PublicID(models.PrefixAiAgent, r.sales)
+		support := models.PublicID(models.PrefixAiAgent, r.support)
+		r.liveWorkflow("Sales first", "conversation.first_message", testkit.JSON{
+			"id": "s_dimmi00001", "kind": "dimmi", "settings": testkit.JSON{"agent_id": sales, "allow_transfers": true},
+		})
+		r.liveWorkflow("Note transfers", "agent.transferred",
+			wfStep("s_note000001", "note", testkit.JSON{"text": "Moved between agents"}))
+		r.llm.answer.Script(
+			tools(call("transfer_agent", `{"agent_id":"`+support+`","summary":"Existing customer with a bug"}`)),
+			reply("Sorry about the export. Which file type were you exporting?"),
+		)
+
+		conv, _ := r.conversation("We're customers and the invoice export is broken")
+		r.d.TC.Drain()
+
+		s := r.load(conv, ids.UUID{})
+		require.Len(t, s.agentReplies(), 1)
+		assert.Equal(t, r.support, *s.agentReplies()[0].AuthorID, "the agent it went to answers")
+		assert.Contains(t, noteTexts(s), "Moved between agents")
+	})
+}
