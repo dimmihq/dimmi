@@ -33,6 +33,7 @@ import { Pick, Picks } from "./pick";
 import { ReplyTimeFields } from "./reply-time-fields";
 import { RunActionFields } from "./run-action-fields";
 import { RunWorkflowFields } from "./run-workflow-fields";
+import { SplitFields } from "./split-fields";
 import {
   collectTargets,
   contactFields,
@@ -609,6 +610,7 @@ const editors: Record<string, (props: Props) => ReactNode> = {
   close: CloseFields,
   reply_time: ReplyTimeFields,
   classify: ClassifyFields,
+  split: SplitFields,
   run_workflow: RunWorkflowFields,
   http_request: CallFields,
   extract: ExtractFields,
