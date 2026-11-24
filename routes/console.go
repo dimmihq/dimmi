@@ -6,8 +6,11 @@
 | Work the scheduler runs on its own, in UTC. Every hour the sign-in
 | records that ran out are purged: unfinished authenticator enrollments,
 | spent mailed links and codes, expired password resets and sessions
-| nobody can resume. Every night the workspaces whose time in the trash
-| ran out are handed to their purges, the audit log and the security log
+| nobody can resume. Every night each workspace's trash is emptied, its
+| spam deleted and the source of its email removed once their days are
+| up, anonymous messenger sessions, invitations and tokens that ended
+| and idempotency keys past their time are deleted, the workspaces whose
+| time in the trash ran out are handed to their purges, the audit log and the security log
 | drop the entries older than they are kept for, the agent's traces lose
 | their payloads and old runs, all a few minutes apart so they never
 | compete, every workspace is checked for an active owner, and the
@@ -59,16 +62,26 @@ func Console(a *app.App) {
 	a.Schedule.Job(jobs.ScheduleEmailDomainChecksArgs{}).EveryMinute()
 	a.Schedule.Job(jobs.ExpireContactExportsArgs{}).Hourly()
 	a.Schedule.Job(jobs.ExpireDataExportsArgs{}).Hourly()
-	a.Schedule.Job(jobs.ApplyConversationRetentionArgs{}).DailyAt("02:30")
 	a.Schedule.Job(jobs.PruneAiTracesArgs{}).DailyAt("03:50")
 	a.Schedule.Job(jobs.PruneChannelInboundEventsArgs{}).DailyAt("03:45")
 	a.Schedule.Job(jobs.RefreshIdentityKeySetsArgs{}).Hourly()
 	a.Schedule.Job(jobs.PruneIdentityStatsArgs{}).DailyAt("03:55")
 	a.Schedule.Job(jobs.SweepAttachmentScansArgs{}).Cron("*/5 * * * *")
+	scheduleRetention(a)
 	scheduleReports(a)
 	scheduleKnowledge(a)
 	scheduleWebhooks(a)
 	scheduleWork(a)
+}
+
+/*
+scheduleRetention applies the workspaces' retention periods each night,
+then deletes what has passed them and the access records that expired.
+*/
+func scheduleRetention(a *app.App) {
+	a.Schedule.Job(jobs.ApplyConversationRetentionArgs{}).DailyAt("02:30")
+	a.Schedule.Job(jobs.PurgeExpiredRetentionArgs{}).DailyAt("02:45")
+	a.Schedule.Job(jobs.PurgeExpiredAccessRecordsArgs{}).DailyAt("03:15")
 }
 
 /*

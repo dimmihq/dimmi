@@ -20,13 +20,17 @@ import (
 	"fmt"
 	"io"
 
+	"github.com/dimmihq/dimmi/framework/clock"
+	"github.com/dimmihq/dimmi/framework/database"
 	"github.com/dimmihq/dimmi/framework/fault"
 	"github.com/dimmihq/dimmi/framework/filesystem"
 	"github.com/dimmihq/dimmi/framework/ids"
 	"github.com/dimmihq/dimmi/framework/image"
+	"github.com/dimmihq/dimmi/framework/tenancy"
 
 	"github.com/dimmihq/dimmi/app/auth/authz"
 	"github.com/dimmihq/dimmi/app/exceptions"
+	"github.com/dimmihq/dimmi/app/models"
 )
 
 /*
@@ -71,6 +75,8 @@ or a wrapped storage error.
 */
 type Images struct {
 	Disks ImageDisks
+	DB    *database.DB
+	Clock clock.Clock
 }
 
 /*
@@ -82,14 +88,16 @@ func (i *Images) Store(ctx context.Context, m authz.Membership, upload io.Reader
 		return "", exceptions.ErrForbidden
 	}
 
-	return i.Keep(ctx, upload)
+	return i.Keep(ctx, m.Workspace.ID, upload)
 }
 
 /*
-Keep redraws a picture and keeps it, returning the address it is served
-at, for callers that checked who asked, such as an import.
+Keep redraws a picture and keeps it for the workspace, returning the
+address it is served at, for callers that checked who asked, such as an
+import. The workspace is noted beside the file, so purging the workspace
+deletes the picture.
 */
-func (i *Images) Keep(ctx context.Context, upload io.Reader) (string, error) {
+func (i *Images) Keep(ctx context.Context, workspaceID ids.UUID, upload io.Reader) (string, error) {
 	picture, cfg, err := image.Reencode(upload, image.Options{
 		Limits: image.Limits{MaxBytes: MaxImageBytes, MaxPixels: maxImagePixels},
 	})
@@ -106,14 +114,37 @@ func (i *Images) Keep(ctx context.Context, upload io.Reader) (string, error) {
 		return "", fmt.Errorf("image disk: %w", err)
 	}
 
-	name := ids.New().String() + "." + imageExtension(cfg.Format)
+	path := ImageDir + "/" + ids.New().String() + "." + imageExtension(cfg.Format)
 
-	err = disk.Put(ctx, ImageDir+"/"+name, picture, filesystem.PutOptions{ContentType: cfg.Format.ContentType()})
+	if err := i.record(ctx, workspaceID, path); err != nil {
+		return "", err
+	}
+
+	err = disk.Put(ctx, path, picture, filesystem.PutOptions{ContentType: cfg.Format.ContentType()})
 	if err != nil {
 		return "", fmt.Errorf("store image: %w", err)
 	}
 
-	return "/" + ImageDir + "/" + name, nil
+	return "/" + path, nil
+}
+
+/*
+record notes which workspace keeps the picture, before the file is
+written, so no stored picture is ever without its workspace.
+*/
+func (i *Images) record(ctx context.Context, workspaceID ids.UUID, path string) error {
+	scoped := tenancy.With(ctx, workspaceID.String())
+
+	err := i.DB.Transaction(scoped, func(ctx context.Context, tx *database.Tx) error {
+		return models.New(tx).RecordHelpCenterImage(ctx, models.RecordHelpCenterImageParams{
+			WorkspaceID: workspaceID, Path: path, Now: i.Clock.Now(),
+		})
+	})
+	if err != nil {
+		return fmt.Errorf("record image: %w", err)
+	}
+
+	return nil
 }
 
 /*

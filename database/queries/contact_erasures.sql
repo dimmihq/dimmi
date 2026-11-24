@@ -132,3 +132,73 @@ UPDATE broadcast_recipients
 SET address = '', reason = NULL, external_ref = NULL, message_id_header = NULL, updated_at = @now
 WHERE workspace_id = @workspace_id AND contact_id = @contact_id
   AND (address <> '' OR reason IS NOT NULL OR external_ref IS NOT NULL OR message_id_header IS NOT NULL);
+
+-- name: FindOpenContactErasure :one
+-- FindOpenContactErasure returns the request under way for the contact,
+-- which holds the identities they were known by.
+SELECT * FROM contact_erasures
+WHERE workspace_id = @workspace_id AND contact_id = @contact_id AND status IN ('pending', 'pending_hold');
+
+-- name: FindErasedContactEmail :one
+-- FindErasedContactEmail returns the address on the contact's profile.
+SELECT email::text AS email FROM contacts WHERE workspace_id = @workspace_id AND id = @id;
+
+-- name: ListErasedRawEmails :many
+-- ListErasedRawEmails returns the stored source of the mail the contact
+-- sent: mail in their conversations, and mail from their addresses that
+-- never became a message.
+SELECT i.id, i.raw_disk, i.raw_path FROM inbound_emails i
+WHERE i.workspace_id = @workspace_id AND i.raw_path IS NOT NULL
+  AND (
+      i.conversation_id IN (
+          SELECT c.id FROM conversations c WHERE c.workspace_id = @workspace_id AND c.contact_id = @contact_id
+      )
+      OR i.from_address = ANY (@emails::citext[])
+      OR lower(i.envelope_from) = ANY (@emails::text[])
+  );
+
+-- name: DeleteErasedInboundEmails :execrows
+-- DeleteErasedInboundEmails deletes the records of the mail the contact
+-- sent.
+DELETE FROM inbound_emails i
+WHERE i.workspace_id = @workspace_id
+  AND (
+      i.conversation_id IN (
+          SELECT c.id FROM conversations c WHERE c.workspace_id = @workspace_id AND c.contact_id = @contact_id
+      )
+      OR i.from_address = ANY (@emails::citext[])
+      OR lower(i.envelope_from) = ANY (@emails::text[])
+  );
+
+-- name: ScrubErasedOutboundEmails :execrows
+-- ScrubErasedOutboundEmails forgets who the mail of the contact's
+-- conversations, and any other mail addressed to them, went to and what
+-- it was about. The rows stay, with how the send ended, so delivery
+-- counts do not change.
+UPDATE outbound_emails o
+SET to_addresses = '{}', cc_addresses = '{}', bcc_addresses = '{}', subject = '', recipient_statuses = '{}',
+    last_error = NULL, metadata = '{}', updated_at = @now::timestamptz
+WHERE o.workspace_id = @workspace_id
+  AND (
+      o.conversation_id IN (
+          SELECT c.id FROM conversations c WHERE c.workspace_id = @workspace_id AND c.contact_id = @contact_id
+      )
+      OR lower(o.to_addresses::text)::text[] && @emails::text[]
+  )
+  AND (o.to_addresses <> '{}' OR o.cc_addresses <> '{}' OR o.bcc_addresses <> '{}' OR o.subject <> ''
+      OR o.recipient_statuses <> '{}' OR o.last_error IS NOT NULL OR o.metadata <> '{}');
+
+-- name: StripErasedOutboundCopies :execrows
+-- StripErasedOutboundCopies takes the contact's addresses out of mail
+-- they were only copied on, which stays as it was for its recipients.
+UPDATE outbound_emails o
+SET cc_addresses = ARRAY(SELECT a FROM unnest(o.cc_addresses) AS a WHERE lower(a) <> ALL (@emails::text[])),
+    bcc_addresses = ARRAY(SELECT a FROM unnest(o.bcc_addresses) AS a WHERE lower(a) <> ALL (@emails::text[])),
+    recipient_statuses = (
+        SELECT coalesce(jsonb_object_agg(s.key, s.value), '{}'::jsonb)
+        FROM jsonb_each(o.recipient_statuses) AS s
+        WHERE lower(s.key) <> ALL (@emails::text[])
+    ),
+    updated_at = @now::timestamptz
+WHERE o.workspace_id = @workspace_id
+  AND (lower(o.cc_addresses::text)::text[] && @emails::text[] OR lower(o.bcc_addresses::text)::text[] && @emails::text[]);

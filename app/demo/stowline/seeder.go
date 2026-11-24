@@ -284,7 +284,7 @@ func (s *Seeder) purge(ctx context.Context, id ids.UUID) error {
 		return fmt.Errorf("workspace disk: %w", err)
 	}
 	purger := &jobs.PurgeWorkspace{
-		DB: s.App.DB, Clock: s.App.Clock, Disk: disk, Retention: s.App.Retention,
+		DB: s.App.DB, Clock: s.App.Clock, Disk: disk, Storage: s.App.Storage, Retention: s.App.Retention,
 		Log: s.App.Log, Revoke: s.App.Actions.Integrations.RevokeWorkspace.Handle,
 	}
 	purged, err := purger.Purge(ctx, id)

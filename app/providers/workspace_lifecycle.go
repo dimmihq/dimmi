@@ -87,7 +87,7 @@ func registerWorkspaceJobs(a *app.App) error {
 
 	return errors.Join(
 		queue.Register(a.Queue, &jobs.PurgeWorkspace{
-			DB: a.DB, Clock: a.Clock, Disk: disk, Retention: a.Retention, Log: a.Log,
+			DB: a.DB, Clock: a.Clock, Disk: disk, Storage: a.Storage, Retention: a.Retention, Log: a.Log,
 			Revoke: func(ctx context.Context, workspaceID ids.UUID) error {
 				return a.Actions.Integrations.RevokeWorkspace.Handle(ctx, workspaceID)
 			},

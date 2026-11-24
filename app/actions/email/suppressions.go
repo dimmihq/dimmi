@@ -54,11 +54,17 @@ func (a *ListContactSuppressions) Handle(
 	var rows []models.EmailSuppression
 
 	err := a.DB.Transaction(inWorkspace(ctx, m.Workspace.ID), func(ctx context.Context, tx *database.Tx) error {
-		var err error
-
-		rows, err = models.New(tx).ListContactSuppressions(ctx, models.ListContactSuppressionsParams{
+		found, err := models.New(tx).ListContactSuppressions(ctx, models.ListContactSuppressionsParams{
 			WorkspaceID: m.Workspace.ID, ContactID: contactID, Now: a.Clock.Now(),
 		})
+
+		for _, row := range found {
+			if row.EmailSuppression.Email == nil {
+				row.EmailSuppression.Email = &row.ContactEmail
+			}
+
+			rows = append(rows, row.EmailSuppression)
+		}
 
 		return err
 	})

@@ -143,6 +143,7 @@ type InboxActions struct {
 	ExpireContactExports  *contacts.ExpireContactExports
 
 	ApplyRetention   *retention.ApplyConversationRetention
+	PurgeRetention   *retention.PurgeExpired
 	PreviewRetention *retention.PreviewRetention
 
 	RequestDataExport  *dataexports.RequestDataExport

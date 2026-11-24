@@ -257,6 +257,34 @@ func (q *Queries) DeleteErasedContact(ctx context.Context, arg DeleteErasedConta
 	return result.RowsAffected(), nil
 }
 
+const deleteErasedInboundEmails = `-- name: DeleteErasedInboundEmails :execrows
+DELETE FROM inbound_emails i
+WHERE i.workspace_id = $1
+  AND (
+      i.conversation_id IN (
+          SELECT c.id FROM conversations c WHERE c.workspace_id = $1 AND c.contact_id = $2
+      )
+      OR i.from_address = ANY ($3::citext[])
+      OR lower(i.envelope_from) = ANY ($3::text[])
+  )
+`
+
+type DeleteErasedInboundEmailsParams struct {
+	WorkspaceID ids.UUID `json:"workspace_id"`
+	ContactID   ids.UUID `json:"contact_id"`
+	Emails      []string `json:"emails"`
+}
+
+// DeleteErasedInboundEmails deletes the records of the mail the contact
+// sent.
+func (q *Queries) DeleteErasedInboundEmails(ctx context.Context, arg DeleteErasedInboundEmailsParams) (int64, error) {
+	result, err := q.db.Exec(ctx, deleteErasedInboundEmails, arg.WorkspaceID, arg.ContactID, arg.Emails)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
 const deleteErasedMessageFiles = `-- name: DeleteErasedMessageFiles :execrows
 DELETE FROM attachments a
 USING messages m, conversations c
@@ -288,6 +316,54 @@ type FindContactErasureParams struct {
 
 func (q *Queries) FindContactErasure(ctx context.Context, arg FindContactErasureParams) (ContactErasure, error) {
 	row := q.db.QueryRow(ctx, findContactErasure, arg.WorkspaceID, arg.ID)
+	var i ContactErasure
+	err := row.Scan(
+		&i.ID,
+		&i.WorkspaceID,
+		&i.ContactID,
+		&i.Status,
+		&i.RequestedByMemberID,
+		&i.ScheduledFor,
+		&i.CompletedAt,
+		&i.Counts,
+		&i.IdentitiesStash,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const findErasedContactEmail = `-- name: FindErasedContactEmail :one
+SELECT email::text AS email FROM contacts WHERE workspace_id = $1 AND id = $2
+`
+
+type FindErasedContactEmailParams struct {
+	WorkspaceID ids.UUID `json:"workspace_id"`
+	ID          ids.UUID `json:"id"`
+}
+
+// FindErasedContactEmail returns the address on the contact's profile.
+func (q *Queries) FindErasedContactEmail(ctx context.Context, arg FindErasedContactEmailParams) (string, error) {
+	row := q.db.QueryRow(ctx, findErasedContactEmail, arg.WorkspaceID, arg.ID)
+	var email string
+	err := row.Scan(&email)
+	return email, err
+}
+
+const findOpenContactErasure = `-- name: FindOpenContactErasure :one
+SELECT id, workspace_id, contact_id, status, requested_by_member_id, scheduled_for, completed_at, counts, identities_stash, created_at, updated_at FROM contact_erasures
+WHERE workspace_id = $1 AND contact_id = $2 AND status IN ('pending', 'pending_hold')
+`
+
+type FindOpenContactErasureParams struct {
+	WorkspaceID ids.UUID `json:"workspace_id"`
+	ContactID   ids.UUID `json:"contact_id"`
+}
+
+// FindOpenContactErasure returns the request under way for the contact,
+// which holds the identities they were known by.
+func (q *Queries) FindOpenContactErasure(ctx context.Context, arg FindOpenContactErasureParams) (ContactErasure, error) {
+	row := q.db.QueryRow(ctx, findOpenContactErasure, arg.WorkspaceID, arg.ContactID)
 	var i ContactErasure
 	err := row.Scan(
 		&i.ID,
@@ -501,6 +577,53 @@ func (q *Queries) ListErasedMessageFiles(ctx context.Context, arg ListErasedMess
 	return items, nil
 }
 
+const listErasedRawEmails = `-- name: ListErasedRawEmails :many
+SELECT i.id, i.raw_disk, i.raw_path FROM inbound_emails i
+WHERE i.workspace_id = $1 AND i.raw_path IS NOT NULL
+  AND (
+      i.conversation_id IN (
+          SELECT c.id FROM conversations c WHERE c.workspace_id = $1 AND c.contact_id = $2
+      )
+      OR i.from_address = ANY ($3::citext[])
+      OR lower(i.envelope_from) = ANY ($3::text[])
+  )
+`
+
+type ListErasedRawEmailsParams struct {
+	WorkspaceID ids.UUID `json:"workspace_id"`
+	ContactID   ids.UUID `json:"contact_id"`
+	Emails      []string `json:"emails"`
+}
+
+type ListErasedRawEmailsRow struct {
+	ID      ids.UUID `json:"id"`
+	RawDisk string   `json:"raw_disk"`
+	RawPath *string  `json:"raw_path"`
+}
+
+// ListErasedRawEmails returns the stored source of the mail the contact
+// sent: mail in their conversations, and mail from their addresses that
+// never became a message.
+func (q *Queries) ListErasedRawEmails(ctx context.Context, arg ListErasedRawEmailsParams) ([]ListErasedRawEmailsRow, error) {
+	rows, err := q.db.Query(ctx, listErasedRawEmails, arg.WorkspaceID, arg.ContactID, arg.Emails)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListErasedRawEmailsRow
+	for rows.Next() {
+		var i ListErasedRawEmailsRow
+		if err := rows.Scan(&i.ID, &i.RawDisk, &i.RawPath); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const lockContactErasure = `-- name: LockContactErasure :one
 SELECT id, workspace_id, contact_id, status, requested_by_member_id, scheduled_for, completed_at, counts, identities_stash, created_at, updated_at FROM contact_erasures WHERE workspace_id = $1 AND id = $2 FOR UPDATE
 `
@@ -570,6 +693,45 @@ func (q *Queries) ScrubErasedBroadcastRecipients(ctx context.Context, arg ScrubE
 	return result.RowsAffected(), nil
 }
 
+const scrubErasedOutboundEmails = `-- name: ScrubErasedOutboundEmails :execrows
+UPDATE outbound_emails o
+SET to_addresses = '{}', cc_addresses = '{}', bcc_addresses = '{}', subject = '', recipient_statuses = '{}',
+    last_error = NULL, metadata = '{}', updated_at = $1::timestamptz
+WHERE o.workspace_id = $2
+  AND (
+      o.conversation_id IN (
+          SELECT c.id FROM conversations c WHERE c.workspace_id = $2 AND c.contact_id = $3
+      )
+      OR lower(o.to_addresses::text)::text[] && $4::text[]
+  )
+  AND (o.to_addresses <> '{}' OR o.cc_addresses <> '{}' OR o.bcc_addresses <> '{}' OR o.subject <> ''
+      OR o.recipient_statuses <> '{}' OR o.last_error IS NOT NULL OR o.metadata <> '{}')
+`
+
+type ScrubErasedOutboundEmailsParams struct {
+	Now         time.Time `json:"now"`
+	WorkspaceID ids.UUID  `json:"workspace_id"`
+	ContactID   ids.UUID  `json:"contact_id"`
+	Emails      []string  `json:"emails"`
+}
+
+// ScrubErasedOutboundEmails forgets who the mail of the contact's
+// conversations, and any other mail addressed to them, went to and what
+// it was about. The rows stay, with how the send ended, so delivery
+// counts do not change.
+func (q *Queries) ScrubErasedOutboundEmails(ctx context.Context, arg ScrubErasedOutboundEmailsParams) (int64, error) {
+	result, err := q.db.Exec(ctx, scrubErasedOutboundEmails,
+		arg.Now,
+		arg.WorkspaceID,
+		arg.ContactID,
+		arg.Emails,
+	)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
 const scrubErasedRatingComments = `-- name: ScrubErasedRatingComments :execrows
 UPDATE article_ratings SET comment = NULL, updated_at = $1
 WHERE workspace_id = $2 AND contact_id = $3 AND comment IS NOT NULL
@@ -627,6 +789,36 @@ func (q *Queries) SetContactErasureStatus(ctx context.Context, arg SetContactEra
 		&i.UpdatedAt,
 	)
 	return i, err
+}
+
+const stripErasedOutboundCopies = `-- name: StripErasedOutboundCopies :execrows
+UPDATE outbound_emails o
+SET cc_addresses = ARRAY(SELECT a FROM unnest(o.cc_addresses) AS a WHERE lower(a) <> ALL ($1::text[])),
+    bcc_addresses = ARRAY(SELECT a FROM unnest(o.bcc_addresses) AS a WHERE lower(a) <> ALL ($1::text[])),
+    recipient_statuses = (
+        SELECT coalesce(jsonb_object_agg(s.key, s.value), '{}'::jsonb)
+        FROM jsonb_each(o.recipient_statuses) AS s
+        WHERE lower(s.key) <> ALL ($1::text[])
+    ),
+    updated_at = $2::timestamptz
+WHERE o.workspace_id = $3
+  AND (lower(o.cc_addresses::text)::text[] && $1::text[] OR lower(o.bcc_addresses::text)::text[] && $1::text[])
+`
+
+type StripErasedOutboundCopiesParams struct {
+	Emails      []string  `json:"emails"`
+	Now         time.Time `json:"now"`
+	WorkspaceID ids.UUID  `json:"workspace_id"`
+}
+
+// StripErasedOutboundCopies takes the contact's addresses out of mail
+// they were only copied on, which stays as it was for its recipients.
+func (q *Queries) StripErasedOutboundCopies(ctx context.Context, arg StripErasedOutboundCopiesParams) (int64, error) {
+	result, err := q.db.Exec(ctx, stripErasedOutboundCopies, arg.Emails, arg.Now, arg.WorkspaceID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
 }
 
 const wipeErasedMessages = `-- name: WipeErasedMessages :execrows

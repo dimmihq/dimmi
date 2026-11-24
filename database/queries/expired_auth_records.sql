@@ -16,3 +16,23 @@ DELETE FROM password_reset_tokens WHERE expires_at <= @now;
 -- DeleteExpiredSessions removes sessions past their absolute expiry or
 -- unused since before the idle cutoff.
 DELETE FROM sessions WHERE expires_at <= @now OR last_activity_at < @idle_before;
+
+-- name: PurgeExpiredWidgetSessions :one
+-- PurgeExpiredWidgetSessions deletes a batch of anonymous messenger
+-- sessions that expired before the cutoff, across every workspace.
+SELECT dimmi_purge_expired_widget_sessions(@expired_before::timestamptz, @max_rows::integer)::bigint;
+
+-- name: PurgeExpiredInvitations :one
+-- PurgeExpiredInvitations deletes a batch of invitations that expired or
+-- were revoked before the cutoff, across every workspace.
+SELECT dimmi_purge_expired_invitations(@ended_before::timestamptz, @max_rows::integer)::bigint;
+
+-- name: PurgeDeadAccessTokens :one
+-- PurgeDeadAccessTokens deletes a batch of access tokens that expired or
+-- were revoked before the cutoff, across every workspace.
+SELECT dimmi_purge_dead_access_tokens(@ended_before::timestamptz, @max_rows::integer)::bigint;
+
+-- name: DeleteDeadOAuthTokens :execrows
+-- DeleteDeadOAuthTokens removes connected apps' tokens that expired or
+-- were revoked before the cutoff.
+DELETE FROM oauth_tokens WHERE expires_at < @ended_before::timestamptz OR revoked_at < @ended_before::timestamptz;
