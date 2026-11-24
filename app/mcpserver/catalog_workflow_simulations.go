@@ -23,6 +23,8 @@ func workflowSimulationDocs() map[string]Doc {
 		"assertions": "Checks after the run, such as workflow_started, step_reached (with step_id), " +
 			"path_taken (with branch, a path id), handed_off, or llm_rubric for one written in words.",
 		"source_conversation_id": "The real conversation (conv_...) the simulation was made from, when it was.",
+		"persona": "The made-up customer, an object with fields such as name, email, channel and " +
+			"attributes, such as {\"name\": \"Ada\", \"channel\": \"widget\"}.",
 	}
 
 	return map[string]Doc{
@@ -71,6 +73,8 @@ func workflowSimulationDocs() map[string]Doc {
 			Params: map[string]string{
 				"simulation_ids": "The simulations to run (wfs_...); leave out to run every one.",
 				"version":        "draft or live. Left out, it is draft.",
+				"stream_id": "An id you make up, at most 64 characters, so the run reports its progress live " +
+					"while it goes.",
 			},
 		},
 		"workflows.simulations.runs.index": {
