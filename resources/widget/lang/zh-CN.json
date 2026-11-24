@@ -90,5 +90,6 @@
   "verify_send": "发送验证码",
   "verify_sent": "请输入我们发送到 {email} 的 6 位验证码",
   "verify_submit": "验证",
-  "welcome_message": ""
+  "welcome_message": "",
+  "more_sources": "还有 {count} 篇"
 }

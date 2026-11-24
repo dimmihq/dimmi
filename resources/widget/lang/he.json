@@ -90,5 +90,6 @@
   "verify_send": "שליחת קוד",
   "verify_sent": "הזינו את הקוד בן 6 הספרות ששלחנו אל {email}",
   "verify_submit": "אימות",
-  "welcome_message": ""
+  "welcome_message": "",
+  "more_sources": "עוד {count}"
 }

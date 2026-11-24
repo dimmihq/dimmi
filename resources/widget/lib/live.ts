@@ -50,6 +50,8 @@ export interface Host {
   update(changes: OptionsUpdate): void;
   notify(message: { conversation: string; body: string; author: string }): void;
   showing(conversation: string): boolean;
+  /* replied tells the page a reply arrived in the conversation on screen. */
+  replied?(): void;
 }
 
 export interface Browser {
@@ -1008,6 +1010,7 @@ export class Live {
     }
     if (this.host.showing(message.conversation_id)) {
       void this.markRead(message.conversation_id);
+      this.host.replied?.();
       return;
     }
     this.host.notify({
@@ -1405,6 +1408,7 @@ export class Live {
       canceled: t.action_canceled,
       expired: t.action_expired,
       failed: t.action_failed,
+      moreSources: t.more_sources,
     };
   }
 

@@ -125,9 +125,15 @@ export interface Attachment {
   height?: number;
 }
 
+/*
+ * Source is an article an answer cites: excerpt is a line or two of what
+ * it says, and slug the help article the messenger can open in place.
+ */
 export interface Source {
   title: string;
   url?: string;
+  excerpt?: string;
+  slug?: string;
 }
 
 /*

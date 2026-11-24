@@ -59,4 +59,6 @@ type ConfigAppearance struct {
 	Launcher     ConfigLauncher   `json:"launcher"`
 	Font         string           `json:"font"`
 	Sound        bool             `json:"sound"`
+	SentSound    string           `json:"sent_sound"`
+	ReplySound   string           `json:"reply_sound"`
 }

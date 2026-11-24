@@ -34,7 +34,7 @@ export interface Attachment {
 export interface AiAnswer {
   generated?: boolean;
   outcome?: string;
-  sources?: { title: string; url?: string | null }[];
+  sources?: { title: string; url?: string | null; excerpt?: string | null; slug?: string | null }[];
   confirmation?: {
     action_call_id: string;
     title?: string | null;

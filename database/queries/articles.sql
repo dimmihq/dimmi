@@ -205,3 +205,13 @@ SELECT subdomain FROM help_centers WHERE workspace_id = @workspace_id AND delete
 -- such as those an agent's guidance cites.
 SELECT id, title FROM articles
 WHERE workspace_id = @workspace_id AND id = ANY (@ids::uuid[]) AND deleted_at IS NULL;
+
+-- name: ListPublicArticleCards :many
+-- ListPublicArticleCards returns the slug and description readers see of
+-- the published public articles among the ids given, such as those an
+-- agent's answer cites.
+SELECT a.id, v.slug, v.description
+FROM articles a
+JOIN article_versions v ON v.id = a.published_version_id
+WHERE a.workspace_id = @workspace_id AND a.id = ANY (@ids::uuid[]) AND a.deleted_at IS NULL
+  AND a.status = 'published' AND v.visibility = 'public';

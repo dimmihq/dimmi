@@ -437,28 +437,8 @@ textarea::placeholder {
   }
 }
 
-/* The agent's answers: a cited article opens from its chip, and under the
- * latest answer two quiet actions let the visitor say it helped or ask
- * for a person, lined up with the agent's bubbles. */
-a.source {
-  text-decoration: none;
-  transition:
-    background-color 150ms var(--out),
-    border-color 150ms var(--out);
-}
-
-a.source:hover {
-  border-color: var(--border-button-hover);
-  background: var(--bg-primary-hover);
-}
-
-.source-title {
-  overflow: hidden;
-  max-inline-size: 200px;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
+/* Under the agent's latest answer two quiet actions let the visitor say
+ * it helped or ask for a person, lined up with the agent's bubbles. */
 .ai-actions,
 .ai-thanks {
   display: flex;

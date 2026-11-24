@@ -90,5 +90,6 @@
   "verify_send": "Code sturen",
   "verify_sent": "Voer de 6-cijferige code in die we naar {email} hebben gestuurd",
   "verify_submit": "Verifiëren",
-  "welcome_message": ""
+  "welcome_message": "",
+  "more_sources": "Nog {count}"
 }

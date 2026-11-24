@@ -384,8 +384,9 @@ export function boot(win: Window & DimmiWindow, doc: Document): Widget | undefin
     });
     root.addEventListener("dimmi:send", (event) => {
       const sent = (event as CustomEvent<{ body: string; files: File[]; voice?: string; choice?: string }>).detail;
+      find()?.sent();
       if (preview) {
-        preview.answer(root, sent);
+        preview.answer(root, sent, () => find()?.replied());
       } else {
         void live?.send(sent.body, sent.files, sent.choice);
       }
@@ -474,6 +475,7 @@ export function boot(win: Window & DimmiWindow, doc: Document): Widget | undefin
         const messenger = find();
         return Boolean(messenger?.isOpen && messenger.tab === "conversation" && live?.open === conversation);
       },
+      replied: () => find()?.replied(),
     },
     { ...browserOf(win), language: () => language || win.navigator.language },
     settings.appId,

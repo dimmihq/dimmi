@@ -34,6 +34,15 @@ maxPadding is the most a launcher may sit from the page's edge, in pixels.
 const maxPadding = 200
 
 /*
+Sounds names the built-in sounds a messenger may play when the customer
+sends a message or a reply arrives; none plays nothing. The messenger
+draws each one itself, so there is no file to fetch.
+*/
+func Sounds() []string {
+	return []string{"none", "pop", "chime", "bubble", "swoosh", "tick"}
+}
+
+/*
 Launcher is how the launcher looks.
 */
 type Launcher struct {
@@ -79,6 +88,8 @@ type Appearance struct {
 	PaddingY     int        `json:"padding_y"`
 	Font         string     `json:"font"`
 	Sound        bool       `json:"sound"`
+	SentSound    string     `json:"sent_sound"`
+	ReplySound   string     `json:"reply_sound"`
 	Launcher     Launcher   `json:"launcher"`
 }
 
@@ -88,7 +99,7 @@ DefaultAppearance is what a widget looks like before anyone changes it.
 func DefaultAppearance() Appearance {
 	return Appearance{
 		PrimaryColor: "#1f2328", Theme: "auto", Position: "right", PaddingX: 20, PaddingY: 20, Font: "system",
-		Sound: true, Background: Background{Type: "solid"},
+		Sound: true, SentSound: "none", ReplySound: "pop", Background: Background{Type: "solid"},
 		Launcher: Launcher{Style: "bubble", Shape: "circle", Icon: "chat"},
 	}
 }
@@ -188,6 +199,7 @@ func checkAppearance(a map[string]any) error {
 		"theme": oneOf("light", "dark", "auto"), "position": oneOf("right", "left"),
 		"padding_x": between(0, maxPadding), "padding_y": between(0, maxPadding), "font": oneOf("system", "inherit"),
 		"sound": isBool, "logo_asset_id": isAssetID,
+		"sent_sound": oneOf(Sounds()...), "reply_sound": oneOf(Sounds()...),
 	}
 
 	for key, value := range a {

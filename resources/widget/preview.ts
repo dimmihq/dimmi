@@ -33,7 +33,7 @@ export interface Sent {
  * answer shows what the visitor sent in the thread, then the team typing
  * and a placeholder reply, the way a real conversation unfolds.
  */
-export function answer(root: ShadowRoot, sent: Sent) {
+export function answer(root: ShadowRoot, sent: Sent, replied?: () => void) {
   const thread = root.querySelector<HTMLElement>(".thread");
   const list = thread?.querySelector<HTMLElement>(".loaded") ?? thread;
   if (!thread || !list) {
@@ -70,6 +70,7 @@ export function answer(root: ShadowRoot, sent: Sent) {
     );
     connect();
     scroll();
+    replied?.();
   }, 1600);
 }
 
@@ -89,7 +90,13 @@ export const sample: Content = {
       from: "agent",
       author: "dimmi agent",
       body: "That usually means the webhook was not created. Open Settings, then GitHub, and choose Reconnect.",
-      sources: [{ title: "GitHub integration guide" }],
+      sources: [
+        {
+          title: "Connect a GitHub repository",
+          excerpt: "Sync docs and changelog drafts from your repository.",
+          slug: "connect-github",
+        },
+      ],
       at: "10:03",
     },
     { from: "visitor", attachment: { kind: "voice", name: "Voice note", duration: "0:14" }, at: "10:04" },

@@ -20,6 +20,8 @@ const saved = {
     padding_y: 20,
     font: "system",
     sound: true,
+    sent_sound: "none",
+    reply_sound: "pop",
     launcher: { style: "bubble", shape: "circle", label: "", icon: "chat" },
   },
   texts: { greeting: "Hi" },
