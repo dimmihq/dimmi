@@ -46,11 +46,14 @@ func mailTraces(t *testing.T, tc *tests.TestCase) string {
 		query string
 		args  []any
 	}{
-		{`INSERT INTO inbound_emails (workspace_id, source, envelope_to, envelope_from, from_address, subject,
+		{
+			`INSERT INTO inbound_emails (workspace_id, source, envelope_to, envelope_from, from_address, subject,
 			size_bytes, raw_disk, raw_path, status, received_at)
-			VALUES ($1, 'test', '{}', 'Ann@Example.com', 'ann@example.com', 'Out of office', 4, $2, $3, 'ignored', now()),
+			VALUES ($1, 'test', '{}', 'Ann@Example.com', 'ann@example.com', 'Out of office', 4, $2, $3,
+			'ignored', now()),
 			($1, 'test', '{}', 'bob@example.com', 'bob@example.com', 'Hello', 4, $2, NULL, 'ignored', now())`,
-			[]any{ws, disk, raw}},
+			[]any{ws, disk, raw},
+		},
 		{`INSERT INTO outbound_emails (workspace_id, kind, from_address, to_addresses, cc_addresses, subject,
 			message_id_header, transport, recipient_statuses)
 			VALUES ($1, 'reply', 'help@acme.example', '{bob@example.com}', '{Ann@example.com,cy@example.com}',
@@ -92,7 +95,9 @@ func TestErasureMail(t *testing.T) {
 			assert.False(t, exists(t, d.TC, ignored))
 
 			d.TC.Table("outbound_emails").AssertCount(2)
-			d.TC.Table("outbound_emails").AssertCount(1, testkit.Row{"subject": "", "message_id_header": "<ann@acme.example>"})
+			d.TC.Table("outbound_emails").AssertCount(1, testkit.Row{
+				"subject": "", "message_id_header": "<ann@acme.example>",
+			})
 
 			var (
 				to, cc   []string

@@ -77,7 +77,7 @@ func (e *MailEraser) Erase(ctx context.Context, workspaceID, contactID ids.UUID)
 			return err
 		}
 
-		raws, err = erasedRawEmails(ctx, models.New(tx), workspaceID, contactID, emails)
+		raws, err = erasedRawEmails(ctx, models.New(tx), erasedMail{workspaceID, contactID, emails})
 
 		return err
 	})
@@ -90,7 +90,7 @@ func (e *MailEraser) Erase(ctx context.Context, workspaceID, contactID ids.UUID)
 	}
 
 	return e.DB.Transaction(scoped, func(ctx context.Context, tx *database.Tx) error {
-		return e.records(ctx, models.New(tx), workspaceID, contactID, emails)
+		return e.records(ctx, models.New(tx), erasedMail{workspaceID, contactID, emails})
 	})
 }
 
@@ -99,7 +99,9 @@ addresses returns every email address the contact was known by, in
 lower case: the one on their profile and those among the identities
 their erasure set aside.
 */
-func (e *MailEraser) addresses(ctx context.Context, q *models.Queries, workspaceID, contactID ids.UUID) ([]string, error) {
+func (e *MailEraser) addresses(
+	ctx context.Context, q *models.Queries, workspaceID, contactID ids.UUID,
+) ([]string, error) {
 	emails := []string{}
 
 	profile, err := q.FindErasedContactEmail(ctx, models.FindErasedContactEmailParams{
@@ -150,13 +152,21 @@ func addAddress(emails []string, address string) []string {
 }
 
 /*
+erasedMail names whose mail is erased: the workspace, the contact and
+every address the contact was known by.
+*/
+type erasedMail struct {
+	workspaceID ids.UUID
+	contactID   ids.UUID
+	emails      []string
+}
+
+/*
 erasedRawEmails returns the stored source of the mail the contact sent.
 */
-func erasedRawEmails(
-	ctx context.Context, q *models.Queries, workspaceID, contactID ids.UUID, emails []string,
-) ([]retention.RawEmail, error) {
+func erasedRawEmails(ctx context.Context, q *models.Queries, who erasedMail) ([]retention.RawEmail, error) {
 	rows, err := q.ListErasedRawEmails(ctx, models.ListErasedRawEmailsParams{
-		WorkspaceID: workspaceID, ContactID: contactID, Emails: emails,
+		WorkspaceID: who.workspaceID, ContactID: who.contactID, Emails: who.emails,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("list raw email: %w", err)
@@ -174,10 +184,9 @@ func erasedRawEmails(
 records deletes the received mail's records, forgets the recipients and
 subjects of the sent mail, and hashes or deletes the suppressions.
 */
-func (e *MailEraser) records(
-	ctx context.Context, q *models.Queries, workspaceID, contactID ids.UUID, emails []string,
-) error {
+func (e *MailEraser) records(ctx context.Context, q *models.Queries, who erasedMail) error {
 	now := e.Clock.Now()
+	workspaceID, contactID, emails := who.workspaceID, who.contactID, who.emails
 
 	if _, err := q.DeleteErasedInboundEmails(ctx, models.DeleteErasedInboundEmailsParams{
 		WorkspaceID: workspaceID, ContactID: contactID, Emails: emails,

@@ -343,19 +343,9 @@ func (w *PurgeWorkspace) deleteRawEmails(ctx context.Context, id ids.UUID, deadl
 	}
 
 	for {
-		var rows []models.ListWorkspaceRawEmailsRow
-
-		err := w.DB.Transaction(ctx, func(ctx context.Context, tx *database.Tx) error {
-			var err error
-
-			rows, err = models.New(tx).ListWorkspaceRawEmails(ctx, models.ListWorkspaceRawEmailsParams{
-				WorkspaceID: id, RowLimit: purgeBatchFiles,
-			})
-
-			return err
-		})
+		rows, err := w.rawEmails(ctx, id)
 		if err != nil {
-			return false, fmt.Errorf("list raw email: %w", err)
+			return false, err
 		}
 
 		if len(rows) == 0 {
@@ -389,6 +379,29 @@ func (w *PurgeWorkspace) deleteRawEmails(ctx context.Context, id ids.UUID, deadl
 			return false, nil
 		}
 	}
+}
+
+/*
+rawEmails returns one batch of the workspace's received email that
+still has its source stored.
+*/
+func (w *PurgeWorkspace) rawEmails(ctx context.Context, id ids.UUID) ([]models.ListWorkspaceRawEmailsRow, error) {
+	var rows []models.ListWorkspaceRawEmailsRow
+
+	err := w.DB.Transaction(ctx, func(ctx context.Context, tx *database.Tx) error {
+		var err error
+
+		rows, err = models.New(tx).ListWorkspaceRawEmails(ctx, models.ListWorkspaceRawEmailsParams{
+			WorkspaceID: id, RowLimit: purgeBatchFiles,
+		})
+
+		return err
+	})
+	if err != nil {
+		return nil, fmt.Errorf("list raw email: %w", err)
+	}
+
+	return rows, nil
 }
 
 /*

@@ -62,18 +62,26 @@ func Console(a *app.App) {
 	a.Schedule.Job(jobs.ScheduleEmailDomainChecksArgs{}).EveryMinute()
 	a.Schedule.Job(jobs.ExpireContactExportsArgs{}).Hourly()
 	a.Schedule.Job(jobs.ExpireDataExportsArgs{}).Hourly()
-	a.Schedule.Job(jobs.ApplyConversationRetentionArgs{}).DailyAt("02:30")
-	a.Schedule.Job(jobs.PurgeExpiredRetentionArgs{}).DailyAt("02:45")
-	a.Schedule.Job(jobs.PurgeExpiredAccessRecordsArgs{}).DailyAt("03:15")
 	a.Schedule.Job(jobs.PruneAiTracesArgs{}).DailyAt("03:50")
 	a.Schedule.Job(jobs.PruneChannelInboundEventsArgs{}).DailyAt("03:45")
 	a.Schedule.Job(jobs.RefreshIdentityKeySetsArgs{}).Hourly()
 	a.Schedule.Job(jobs.PruneIdentityStatsArgs{}).DailyAt("03:55")
 	a.Schedule.Job(jobs.SweepAttachmentScansArgs{}).Cron("*/5 * * * *")
+	scheduleRetention(a)
 	scheduleReports(a)
 	scheduleKnowledge(a)
 	scheduleWebhooks(a)
 	scheduleWork(a)
+}
+
+/*
+scheduleRetention applies the workspaces' retention periods each night,
+then deletes what has passed them and the access records that expired.
+*/
+func scheduleRetention(a *app.App) {
+	a.Schedule.Job(jobs.ApplyConversationRetentionArgs{}).DailyAt("02:30")
+	a.Schedule.Job(jobs.PurgeExpiredRetentionArgs{}).DailyAt("02:45")
+	a.Schedule.Job(jobs.PurgeExpiredAccessRecordsArgs{}).DailyAt("03:15")
 }
 
 /*
