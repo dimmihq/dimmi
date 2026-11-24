@@ -33,7 +33,7 @@ import {
 } from "@xyflow/react";
 import { useReducedMotion } from "motion/react";
 import { createContext, type RefObject, useContext, useEffect, useMemo, useRef, useState } from "react";
-
+import { Chip } from "@/components/base/badges/chip";
 import { IconButton } from "@/components/base/buttons/icon-button";
 import { useWide } from "@/features/shell/use-wide";
 import { cx } from "@/utils/cx";
@@ -49,6 +49,8 @@ import type { Step, StepKind } from "./workflows";
  * CanvasMoves is what the canvas does and shows beyond the steps: the
  * selection, adding steps of the kinds offered (none when the workflow
  * can only be read), each step's sentence, and the steps with problems.
+ * Marks, while an Operator suggestion is under review, name the steps it
+ * adds and changes, which their cards show.
  */
 export interface CanvasMoves {
   selected: string;
@@ -57,9 +59,10 @@ export interface CanvasMoves {
   kinds: StepKind[];
   summarize: (step: Step) => string;
   flagged: ReadonlySet<string>;
+  marks?: { added: ReadonlySet<string>; changed: ReadonlySet<string> };
 }
 
-type CardNode = Node<{ look: KindLook; summary: string; flagged: boolean }, "card">;
+type CardNode = Node<{ look: KindLook; summary: string; flagged: boolean; mark?: "added" | "changed" }, "card">;
 type AddNode = Node<{ path: string | null }, "add">;
 type PathEdge = Edge<{ label?: string }, "path">;
 type Sizes = ReadonlyMap<string, { width: number; height: number }>;
@@ -106,6 +109,11 @@ function Card({ id, data }: NodeProps<CardNode>) {
         <span className="flex items-center gap-2">
           <KindMark icon={data.look.icon} tint={data.look.tint} size="sm" />
           <span className="flex-1 text-body-2-medium text-text-secondary">{data.look.name}</span>
+          {data.mark ? (
+            <Chip variant="caption" color={data.mark === "added" ? "lime" : "yellow"} className="shrink-0">
+              {data.mark === "added" ? "Added" : "Changed"}
+            </Chip>
+          ) : null}
           {data.flagged ? (
             <RiErrorWarningLine aria-label="Needs fixing" className="size-4 shrink-0 text-text-error-primary" />
           ) : null}
@@ -174,6 +182,11 @@ function lookOf(item: FlowItem, trigger: TriggerKind, moves: CanvasMoves): CardN
       look: stepLook[item.step.kind as StepKind] ?? stepLook.message,
       summary: moves.summarize(item.step),
       flagged: moves.flagged.has(item.step.id),
+      mark: moves.marks?.added.has(item.step.id)
+        ? ("added" as const)
+        : moves.marks?.changed.has(item.step.id)
+          ? ("changed" as const)
+          : undefined,
     };
   }
 

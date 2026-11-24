@@ -10,12 +10,14 @@
  * PaneSlotProps (onClose, className).
  */
 import type { ComponentType } from "react";
+import { SeriesOperatorPanel } from "@/features/series/studio/series-operator-panel";
+import { QuietHistory, QuietSimulations } from "./slot-placeholders";
 
-import { QuietHistory, QuietSeriesOperator, QuietSimulations, QuietWorkflowOperator } from "./slot-placeholders";
 import type { PaneSlotProps, SeriesSlotProps, WorkflowSlotProps } from "./slot-props";
 import { WorkflowAnalytics } from "./workflow-analytics";
 import { WorkflowFailures } from "./workflow-failures";
 import { WorkflowHistory } from "./workflow-history";
+import { WorkflowOperatorPanel } from "./workflow-operator-panel";
 
 export type { PaneSlotProps, SeriesSlotProps, WorkflowSlotProps } from "./slot-props";
 
@@ -38,7 +40,9 @@ export const workflowSlots: {
     <WorkflowHistory workspace={workspace} workflow={workflow.id} onRestored={onAdopt} />
   ),
   simulations: QuietSimulations,
-  operator: QuietWorkflowOperator,
+  operator: ({ workspace, workflow, onClose, className }) => (
+    <WorkflowOperatorPanel workspace={workspace} workflow={workflow.id} onClose={onClose} className={className} />
+  ),
 };
 
 /*
@@ -52,5 +56,7 @@ export const seriesSlots: {
 } = {
   history: QuietHistory,
   simulations: QuietSimulations,
-  operator: QuietSeriesOperator,
+  operator: ({ workspace, series, onClose, className }) => (
+    <SeriesOperatorPanel workspace={workspace} series={series.id} onClose={onClose} className={className} />
+  ),
 };

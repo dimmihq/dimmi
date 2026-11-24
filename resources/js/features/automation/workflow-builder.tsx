@@ -46,7 +46,7 @@ import { teamsQuery } from "@/lib/api/teams";
 import { type Issue, type Workflow, workflowsQuery } from "@/lib/api/workflows";
 import { membersQuery } from "@/lib/api/workspace";
 
-import { Canvas } from "./canvas";
+import { Canvas, type CanvasMoves } from "./canvas";
 import type { Choices } from "./choices";
 import { freshStep, withEdited, withoutStep, withStep } from "./edit-steps";
 import { type Head, Inspector } from "./inspector";
@@ -56,8 +56,10 @@ import { type Names, sentence } from "./step-settings";
 import { workflowSlots } from "./studio/slots";
 import { StepCounts } from "./studio/step-counts";
 import { type SideTabId, Studio, StudioSide, type StudioTabId } from "./studio/studio";
+import { SuggestionBar } from "./studio/suggestion-bar";
 import { useWorkflowStepCounts } from "./studio/use-workflow-step-counts";
 import { WorkflowPreview } from "./studio/workflow-preview";
+import { useWorkflowRequest } from "./studio/workflow-review";
 import { ticketNames, useTicketLists } from "./ticket-lists";
 import { allowsStep, type TriggerKind } from "./triggers";
 import { type SaveState, useWorkflowDraft } from "./use-workflow-draft";
@@ -291,6 +293,46 @@ function ProblemCount({ errors, onShow }: { errors: Issue[]; onShow: (issue: Iss
   );
 }
 
+/*
+ * BuildTab is the canvas, or, while Operator's suggestion is under
+ * review, the suggested copy with its added and changed steps marked and
+ * nothing to add until the teammate decides.
+ */
+function BuildTab({
+  trigger,
+  steps,
+  moves,
+  suggestion,
+}: {
+  trigger: TriggerKind;
+  steps: Step[];
+  moves: CanvasMoves;
+  suggestion: ReturnType<typeof useWorkflowRequest>;
+}) {
+  const review = suggestion.review;
+  if (!review) {
+    return <Canvas trigger={trigger} steps={steps} moves={moves} />;
+  }
+
+  return (
+    <div className="flex min-h-0 flex-1 flex-col">
+      <SuggestionBar
+        added={review.added.size}
+        changed={review.changed.size + (review.head ? 1 : 0)}
+        removed={review.removed.size}
+        deciding={suggestion.deciding}
+        onAccept={suggestion.accept}
+        onDecline={suggestion.decline}
+      />
+      <Canvas
+        trigger={trigger}
+        steps={review.proposed.steps}
+        moves={{ ...moves, kinds: [], marks: { added: review.added, changed: review.changed } }}
+      />
+    </div>
+  );
+}
+
 export function WorkflowBuilder({ workspace, workflow }: { workspace: string; workflow: Workflow }) {
   const navigate = useNavigate();
   const readOnly = !usePermission(workspace, "workflows:manage");
@@ -333,6 +375,7 @@ export function WorkflowBuilder({ workspace, workflow }: { workspace: string; wo
     onArchive: () => void draft.archive(),
   };
   const summarize = (card: Step) => sentence(card, names);
+  const suggestion = useWorkflowRequest(workspace, workflow.id, draft.spec, draft.adopt);
   const moves = { selected, onSelect: select, onAdd: add, kinds, summarize, flagged };
   const stepCounts = useWorkflowStepCounts(workspace, workflow.id);
   const inspector = {
@@ -401,7 +444,7 @@ export function WorkflowBuilder({ workspace, workflow }: { workspace: string; wo
       onTab={setTab}
       body={
         tab === "build" ? (
-          <Canvas trigger={trigger} steps={draft.spec.steps} moves={moves} />
+          <BuildTab trigger={trigger} steps={draft.spec.steps} moves={moves} suggestion={suggestion} />
         ) : (
           <ScrollArea ground className="px-4 pb-6">
             <div className="mx-auto flex w-full max-w-220 min-w-0 flex-col gap-6 pt-4">

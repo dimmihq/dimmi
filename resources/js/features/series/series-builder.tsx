@@ -39,6 +39,7 @@ import { StudioArrive } from "@/features/agents/agent-arrive";
 import { KindMark } from "@/features/automation/parts";
 import { seriesSlots } from "@/features/automation/studio/slots";
 import { type SideTabId, Studio, StudioSide, type StudioTabId } from "@/features/automation/studio/studio";
+import { SuggestionBar } from "@/features/automation/studio/suggestion-bar";
 import { useWorkspace } from "@/features/customers/names";
 import { Panel, ScrollArea } from "@/features/shell/page";
 import { useWide } from "@/features/shell/use-wide";
@@ -58,9 +59,10 @@ import {
 
 import { addGroups, nodeLook, statusLook } from "./looks";
 import { addStep, type Sending, sendingOf } from "./model";
-import { SeriesCanvas } from "./series-canvas";
+import { type Moves, SeriesCanvas } from "./series-canvas";
 import { SeriesInspector } from "./series-inspector";
 import { SeriesPreview } from "./series-preview";
+import { useSeriesRequest } from "./studio/series-review";
 
 /*
  * AddStep lists the kinds of step a path can lead to.
@@ -207,7 +209,53 @@ function useAutosave(workspace: string, series: Series) {
       setSending(next);
       setDirty(true);
     },
+    /*
+     * adopt takes a copy the server wrote, such as the one saved when the
+     * teammate accepts Operator's change, as the working copy, dropping a
+     * save still waiting so it never overwrites it.
+     */
+    adopt: (next: Series) => {
+      pending.current = null;
+      setDirty(false);
+      lock.current = next.lock_version;
+      setSpec(next.spec);
+      setSending(sendingOf(next));
+      client.setQueryData(seriesQuery(workspace, series.id).queryKey, next);
+    },
   };
+}
+
+/*
+ * ReviewedCanvas is the series canvas, or, while Operator's suggestion is
+ * under review, the suggested graph with its added and changed steps
+ * marked and nothing to edit until the teammate decides.
+ */
+function ReviewedCanvas({ moves, suggestion }: { moves: Moves; suggestion: ReturnType<typeof useSeriesRequest> }) {
+  const review = suggestion.review;
+  if (!review) {
+    return <SeriesCanvas moves={moves} />;
+  }
+
+  return (
+    <div className="flex min-h-0 flex-1 flex-col">
+      <SuggestionBar
+        added={review.added.size}
+        changed={review.changed.size + (review.head ? 1 : 0)}
+        removed={review.removed.size}
+        deciding={suggestion.deciding}
+        onAccept={suggestion.accept}
+        onDecline={suggestion.decline}
+      />
+      <SeriesCanvas
+        moves={{
+          ...moves,
+          editable: false,
+          spec: review.proposed,
+          marks: { added: review.added, changed: review.changed },
+        }}
+      />
+    </div>
+  );
 }
 
 function saveLine(saving: boolean, problems: number): string {
@@ -345,6 +393,7 @@ function SeriesMenu({
 function Builder({ workspace, series, step }: { workspace: string; series: Series; step?: string }) {
   const client = useQueryClient();
   const draft = useAutosave(workspace, series);
+  const suggestion = useSeriesRequest(workspace, series.id, draft.spec, draft.adopt);
   const ran = series.live_version_id !== null;
   const editable = series.status !== "archived";
   const report = useQuery({ ...seriesReportQuery(workspace, series.id, series.status === "live"), enabled: ran }).data;
@@ -449,7 +498,8 @@ function Builder({ workspace, series, step }: { workspace: string; series: Serie
     </>
   );
   const canvas = (
-    <SeriesCanvas
+    <ReviewedCanvas
+      suggestion={suggestion}
       moves={{
         selected,
         results,

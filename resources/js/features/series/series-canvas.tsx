@@ -30,7 +30,7 @@ import {
 } from "@xyflow/react";
 import { hierarchy, tree } from "d3-hierarchy";
 import { createContext, type RefObject, useContext, useEffect, useMemo, useRef } from "react";
-
+import { Chip } from "@/components/base/badges/chip";
 import { IconButton } from "@/components/base/buttons/icon-button";
 import { KindMark } from "@/features/automation/parts";
 import type { SeriesNode, SeriesProblem, SeriesReport, SeriesSpec } from "@/lib/api/series";
@@ -59,6 +59,8 @@ export interface Moves {
   problems: SeriesProblem[];
   onSelect: (id: string) => void;
   onAdd: (from: string, path: string) => void;
+  // marks name the steps an Operator suggestion under review adds or changes.
+  marks?: { added: ReadonlySet<string>; changed: ReadonlySet<string> };
 }
 
 const MovesContext = createContext<Moves | null>(null);
@@ -104,6 +106,7 @@ function Card({ id, data }: NodeProps<CardNode>) {
   const look = nodeLook[data.node.kind];
   const selected = moves.selected === id;
   const missing = moves.problems.some((p) => p.node_id === id);
+  const mark = moves.marks?.added.has(id) ? "Added" : moves.marks?.changed.has(id) ? "Changed" : null;
 
   return (
     <>
@@ -123,6 +126,11 @@ function Card({ id, data }: NodeProps<CardNode>) {
         <span className="flex items-center gap-2">
           <KindMark icon={look.icon} tint={look.tint} size="sm" />
           <span className="flex-1 text-body-2-medium text-text-secondary">{look.name}</span>
+          {mark ? (
+            <Chip variant="caption" color={mark === "Added" ? "lime" : "yellow"} className="shrink-0">
+              {mark}
+            </Chip>
+          ) : null}
           {missing ? (
             <RiErrorWarningLine aria-label="Something is missing" className="size-4 text-text-error-primary" />
           ) : null}
