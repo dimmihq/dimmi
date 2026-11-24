@@ -231,7 +231,7 @@ func (st *state) resolved(ctx context.Context, s workflowspec.Step) (outcome, er
 
 	out := fixedOrEnd(s, workflowspec.OutcomeResolved, EndCompleted)
 	out.acted = true
-	if out.path != "" || !workflowspec.On(settings[workflowspec.DimmiSettings](s).CloseOnResolved, true) {
+	if resolvedHasSteps(s) || !workflowspec.On(settings[workflowspec.DimmiSettings](s).CloseOnResolved, true) {
 		return out, nil
 	}
 
@@ -343,4 +343,18 @@ func (st *state) announceResolved(ctx context.Context, s workflowspec.Step) erro
 	}
 
 	return st.push(ctx, jobs.MatchWorkflowsArgs{Event: raw})
+}
+
+/*
+resolvedHasSteps reports whether the step's resolved path does
+anything; an empty one still lets the step close the conversation.
+*/
+func resolvedHasSteps(s workflowspec.Step) bool {
+	for _, p := range s.Paths {
+		if p.Outcome == workflowspec.OutcomeResolved && len(p.Steps) > 0 {
+			return true
+		}
+	}
+
+	return false
 }

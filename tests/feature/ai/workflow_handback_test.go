@@ -210,3 +210,25 @@ func TestTeammateTurnsAI(t *testing.T) {
 			AssertJSONPath("meta.changed", []string{})
 	})
 }
+
+func TestWorkflowResolvedCloses(t *testing.T) {
+	t.Parallel()
+
+	t.Run("closes the conversation when the customer confirms and the resolved path is empty", func(t *testing.T) {
+		t.Parallel()
+		h := newHarness(t, nil)
+		h.liveWorkflow("Agent first", "conversation.first_message", testkit.JSON{
+			"id": "s_dimmi00001", "kind": "dimmi", "settings": testkit.JSON{},
+			"paths": []testkit.JSON{{"id": "p_resolved01", "outcome": "resolved", "steps": []testkit.JSON{}}},
+		})
+		h.llm.answer.Script(search("pro plan price per seat"), reply("The Pro plan costs $12 per seat per month [1]."))
+
+		conv, _ := h.conversation("How much is Pro per seat?")
+		h.d.TC.Drain()
+		h.decider().Script(fits(map[string]float64{"confirms_resolution": 0.95}))
+		h.customer(conv, "Yes, that solved it, thanks!")
+		h.d.TC.DrainLater()
+
+		assert.Equal(t, "closed", h.load(conv, ids.UUID{}).conv.Status)
+	})
+}
