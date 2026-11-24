@@ -37,6 +37,10 @@ A series supports up to 200 steps, with up to 8 outgoing paths per step.
 - **Daily cap:** each customer receives at most 2 series messages per day across all series. Extra messages wait until the next day.
 - **Quiet hours:** **Email only by day** holds emails until 8:00 to 20:00 in the customer's local time zone.
 
+## Replies
+
+A reply to a series message opens a conversation in the inbox, routed to the **Replies to** teammate or team on the entry step. An AI agent answers it only when **An AI agent answers replies** is on. **Answered by** picks the agent; left empty, the agent placed on the channel the reply comes in on answers.
+
 ## Exit rules and goals
 
 Before every step, dimmi evaluates your **Leave early** rules against the customer's current state. Anyone who exits stops receiving queued steps.

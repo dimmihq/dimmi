@@ -10,9 +10,19 @@ A workflow runs a series of [steps](/workflows/triggers-and-steps/) on a convers
 When a trigger fires, dimmi checks every live workflow with that trigger from the top of your **Workflows** list down.
 
 - **Filters come first:** a workflow only starts if its **Audience**, **Channels**, **When it runs**, and **Once per conversation** rules all match.
-- **Customer-facing workflows:** any workflow with a **Start of conversation** trigger, a **Messages** step, or **Let dimmi handle** takes ownership of the conversation while it runs. Only the first matching one starts.
+- **Customer-facing workflows:** any workflow with a **Start of conversation** trigger, a **Messages** step, or **Hand to an AI agent** takes ownership of the conversation while it runs. Only the first matching one starts.
 - **Background workflows:** every other matching workflow runs, one after another in list order.
 - **Loop protection:** a workflow never triggers itself, and a chain of workflows triggering each other stops after 3 hops.
+
+## Workflows and AI agents
+
+While a customer-facing workflow holds a conversation, no AI agent answers it except inside a **Hand to an AI agent** step. Once the workflow finishes, the conversation goes back to the agent [placed on its channel](/ai/multiple-agents/), which answers the customer's next message. The message the workflow already took stays with the workflow, so the customer never gets two answers to it.
+
+Say your greeting workflow sends "Hi, thanks for writing in" and ends. The customer's next question goes to your support agent like any other conversation.
+
+- **Keep the agent out:** add **Turn off AI**. No agent answers until a teammate or a **Turn on AI** step lets one back in.
+- **Pick a different agent:** add **Assign an AI agent**. That agent answers from the next message.
+- **A handover still stops it:** once an agent hands a conversation to your team, it stays with the team.
 
 When a customer-facing workflow finishes and the conversation is still open and unassigned, your inbox's [assignment rules](/inbox/how-assignment-works/) take over.
 
@@ -40,7 +50,7 @@ Open the workflow's **Analytics** tab to see the 20 most recent runs. Click any 
 
 | Status | What it means |
 | --- | --- |
-| **Waiting** | Paused for a customer reply, a timer, the dimmi agent, or a reusable workflow. |
+| **Waiting** | Paused for a customer reply, a timer, an AI agent, or a reusable workflow. |
 | **Completed** | Reached the end of its path. |
 | **Passed over** | A customer-facing run ended without sending a message or changing anything. |
 | **Exited** | Stopped early because a teammate replied, the thread closed, or the customer did not pick a button. |

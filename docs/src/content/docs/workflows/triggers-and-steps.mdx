@@ -7,25 +7,25 @@ Every trigger and step available in the workflow builder, grouped the same way y
 
 ## Triggers
 
-Your trigger decides which **Messages** steps and AI handoffs you can use. Every trigger allows **Logic**, **Team**, and **Tickets** steps.
+Your trigger decides which **Messages** steps and AI handoffs you can use. Every trigger allows **Logic**, **Team**, **Tickets**, and the other **AI agents** steps.
 
 ### Start of conversation
 
-| Trigger | Notes | Messages steps | Let dimmi handle |
+| Trigger | Notes | Messages steps | Hand to an AI agent |
 | --- | --- | --- | --- |
 | **Customer sends their first message** | Runs once per conversation. | All | Yes |
 | **Customer writes on a closed conversation** | Fires when a closed thread reopens. | All | Yes |
 
 ### During conversation
 
-| Trigger | Notes | Messages steps | Let dimmi handle |
+| Trigger | Notes | Messages steps | Hand to an AI agent |
 | --- | --- | --- | --- |
 | **Customer sends a message** | Fires on every customer message. | None | No |
 | **Customer stops replying** | Fires 1 hour, 4 hours, 1 day, 2 days, or 7 days after a reply from a teammate, dimmi, or either, with no customer reply since. Open threads only. | All | Yes |
 
 ### Team
 
-| Trigger | Notes | Messages steps | Let dimmi handle |
+| Trigger | Notes | Messages steps | Hand to an AI agent |
 | --- | --- | --- | --- |
 | **Teammate sends a reply** | | None | No |
 | **Teammate adds a note** | | None | No |
@@ -37,7 +37,7 @@ Your trigger decides which **Messages** steps and AI handoffs you can use. Every
 
 Ticket triggers run on the ticket's conversation. Standalone tickets with no conversation do not start workflows.
 
-| Trigger | Messages steps | Let dimmi handle |
+| Trigger | Messages steps | Hand to an AI agent |
 | --- | --- | --- |
 | **Ticket is created** | **Send a message** | No |
 | **Ticket state changes** | **Send a message** | No |
@@ -47,23 +47,26 @@ Ticket triggers run on the ticket's conversation. Standalone tickets with no con
 | **Linked issue changes** | **Send a message** | No |
 | **Ticket needs the loop closed** | **Send a message** | No |
 
-### dimmi
+### AI agents
 
-| Trigger | Messages steps | Let dimmi handle |
+| Trigger | Messages steps | Hand to an AI agent |
 | --- | --- | --- |
-| **dimmi hands over** | None | No |
-| **dimmi resolves a conversation** | **Send a message** | No |
+| **AI agent hands over** | None | No |
+| **AI agent resolves a conversation** | **Send a message** | No |
+| **AI agent transfers to another agent** | None | No |
+
+To act on one agent only, add a branch on **AI agent**. Under the transfer trigger you can also branch on **Transferred from** and **Transferred to**.
 
 ### Service levels
 
-| Trigger | Messages steps | Let dimmi handle |
+| Trigger | Messages steps | Hand to an AI agent |
 | --- | --- | --- |
 | **SLA about to breach** | None | No |
 | **SLA breached** | None | No |
 
 ### Reusable
 
-| Trigger | Notes | Messages steps | Let dimmi handle |
+| Trigger | Notes | Messages steps | Hand to an AI agent |
 | --- | --- | --- | --- |
 | **Run from other workflows** | Starts only from a **Run a workflow** step. | All | Yes |
 
@@ -88,11 +91,14 @@ Ticket triggers run on the ticket's conversation. Standalone tickets with no con
 | **Wait** | Pauses for 5 minutes to 7 days, or until office hours open. Can count only office hours. | |
 | **Run a workflow** | Runs a live reusable workflow and waits for it to finish. | |
 
-### dimmi
+### AI agents
 
 | Step | What it does | Paths |
 | --- | --- | --- |
-| **Let dimmi handle** | Hands the thread to the dimmi agent, with optional extra instructions and a reply cap. Hands over right away if the agent is off. A customer counts as quiet after 10 minutes in the messenger or 1 day on email unless you set another time. | **Resolved**, **Handed over**, **Customer went quiet** |
+| **Hand to an AI agent** | Hands the thread to the agent you pick, or to the agent placed on the channel. The agent answers with its own guidance and procedures. A named agent transfers only when you turn on **May transfer**. Hands over right away if the agent is off. A customer counts as quiet after 10 minutes in the messenger or 1 day on email unless you set another time. | **Resolved**, **Handed over**, **Customer went quiet** |
+| **Assign an AI agent** | Puts the agent you pick on the conversation. It answers from the customer's next message. | |
+| **Turn off AI** | Keeps every AI agent off the conversation until a teammate or a **Turn on AI** step lets one back in. A later **Hand to an AI agent** step still works. | |
+| **Turn on AI** | Lets the agent answer again, even after a handover to the team. | |
 
 ### Team
 

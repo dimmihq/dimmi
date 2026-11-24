@@ -35,8 +35,8 @@ Tick **Make a widget for it** to give the new agent a messenger of its own, alre
 
 dimmi checks these in order and stops at the first match:
 
-1. **A workflow step:** a **Let dimmi handle** step that names an agent in its `agent_id` setting.
-2. **The agent already on the conversation:** the first agent that answers is pinned, so the customer keeps talking to the same one.
+1. **A workflow step:** a **Hand to an AI agent** step that names an agent.
+2. **The agent already on the conversation:** the first agent that answers is pinned, so the customer keeps talking to the same one. An **Assign an AI agent** workflow step, a transfer, or a broadcast or series that names who answers replies also sets this agent.
 3. **The Slack channel** the conversation came from, if an agent is placed there.
 4. **The channel connection:** the messenger, email address, or other connected channel.
 5. **The inbox** the conversation is in.
@@ -56,7 +56,16 @@ Open the agent and set **Build → Where it answers → Channels and inboxes**. 
   **Turn off** keeps the agent's places, and the default agent does not step in. Nothing answers there until you publish the agent again or place another agent.
 </Callout>
 
-Deleting an agent takes it off its places. Its conversations go to the next agent in line.
+## Archive an agent
+
+**Archive agent**, in the agent's **⋯** menu, turns it off and takes it out of the list. Its conversations, versions and history stay. You can't archive an agent while something still relies on it. The dialog lists each one for you to move to another agent first:
+
+- **Places:** channels and inboxes it answers on.
+- **Workflows:** live or draft workflows that hand conversations to it or assign it.
+- **Series:** series whose replies it answers.
+- **Other agents:** agents that list it under **May transfer to**.
+
+The default agent can't be archived. Turn it off instead.
 
 ## Hand a conversation to another agent
 
@@ -83,7 +92,7 @@ A transfer to a person is a [handover](/ai/handover/), which is a different thin
 - **2 moves at most:** a conversation moves between agents twice at most.
 - **No going back:** a conversation never returns to an agent it already left.
 - **Only agents that are on:** an agent that is unpublished or turned off can't receive transfers.
-- **Workflow picks stay put:** an agent named by a workflow step never transfers.
+- **Workflow picks stay put:** an agent named by a **Hand to an AI agent** step transfers only when the step's **May transfer** is on. The agent placed on the channel always may.
 
 ## Different agents on different pages of one site
 
