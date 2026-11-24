@@ -1,6 +1,6 @@
 import type { Page } from "@playwright/test";
 
-import { expect, finishOnboarding, inbox, test as it, signIn } from "./support/fixtures";
+import { expect, finishOnboarding, home, inbox, test as it, signIn } from "./support/fixtures";
 import { mailedLink } from "./support/mail";
 
 /*
@@ -30,7 +30,7 @@ it.describe("signing up", () => {
     await expect(page.getByRole("heading", { name: "Email verified" })).toBeVisible();
 
     await page.getByRole("link", { name: "Continue to Dimmi" }).click();
-    await expect(page).toHaveURL(inbox);
+    await expect(page).toHaveURL(home);
   });
 
   it("verifies nothing on another device until the person signs in there", async ({ page, guest, person }) => {

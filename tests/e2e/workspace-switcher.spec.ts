@@ -1,4 +1,4 @@
-import { createAccount, expect, finishOnboarding, inbox, test as it, type Person, signIn } from "./support/fixtures";
+import { createAccount, expect, finishOnboarding, home, test as it, type Person, signIn } from "./support/fixtures";
 
 /*
  * suffixOf is a short part of the person's address that keeps their
@@ -25,7 +25,7 @@ it.describe("the workspace menu", () => {
 
     await page.getByRole("button", { name: second, exact: true }).click();
     await menu.getByRole("button", { name: new RegExp(first) }).click();
-    await expect(page).toHaveURL(inbox);
+    await expect(page).toHaveURL(home);
     await expect(page.getByRole("button", { name: first, exact: true })).toBeVisible();
   });
 
@@ -39,7 +39,7 @@ it.describe("the workspace menu", () => {
     await expect(page.getByRole("heading", { name: "Name your workspace" })).toBeVisible();
     await page.getByRole("button", { name: "Cancel" }).click();
 
-    await expect(page).toHaveURL(inbox);
+    await expect(page).toHaveURL(home);
     await expect(page.getByRole("button", { name: first, exact: true })).toBeVisible();
   });
 });

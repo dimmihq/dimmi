@@ -27,6 +27,7 @@ import { Route as DChangelogRouteImport } from './routes/d/changelog'
 import { Route as DCustomersRouteImport } from './routes/d/customers'
 import { Route as DFeedbackRouteImport } from './routes/d/feedback'
 import { Route as DHelpCenterRouteImport } from './routes/d/help-center'
+import { Route as DHomeRouteImport } from './routes/d/home'
 import { Route as DNotificationsRouteImport } from './routes/d/notifications'
 import { Route as DReportsRouteImport } from './routes/d/reports'
 import { Route as DShortcutsRouteImport } from './routes/d/shortcuts'
@@ -185,6 +186,11 @@ const DFeedbackRoute = DFeedbackRouteImport.update({
 const DHelpCenterRoute = DHelpCenterRouteImport.update({
   id: '/help-center',
   path: '/help-center',
+  getParentRoute: () => DRouteRoute,
+} as any)
+const DHomeRoute = DHomeRouteImport.update({
+  id: '/home',
+  path: '/home',
   getParentRoute: () => DRouteRoute,
 } as any)
 const DNotificationsRoute = DNotificationsRouteImport.update({
@@ -576,6 +582,7 @@ export interface FileRoutesByFullPath {
   '/d/customers': typeof DCustomersRouteWithChildren
   '/d/feedback': typeof DFeedbackRouteWithChildren
   '/d/help-center': typeof DHelpCenterRouteWithChildren
+  '/d/home': typeof DHomeRoute
   '/d/notifications': typeof DNotificationsRoute
   '/d/reports': typeof DReportsRouteWithChildren
   '/d/shortcuts': typeof DShortcutsRoute
@@ -661,6 +668,7 @@ export interface FileRoutesByTo {
   '/two-factor-reset': typeof AuthTwoFactorResetRoute
   '/verify-email': typeof AuthVerifyEmailRoute
   '/d/customers': typeof DCustomersListsIndexRoute
+  '/d/home': typeof DHomeRoute
   '/d/notifications': typeof DNotificationsRoute
   '/d/shortcuts': typeof DShortcutsRoute
   '/d/whatsapp-return': typeof DWhatsappReturnRoute
@@ -748,6 +756,7 @@ export interface FileRoutesById {
   '/d/customers': typeof DCustomersRouteWithChildren
   '/d/feedback': typeof DFeedbackRouteWithChildren
   '/d/help-center': typeof DHelpCenterRouteWithChildren
+  '/d/home': typeof DHomeRoute
   '/d/notifications': typeof DNotificationsRoute
   '/d/reports': typeof DReportsRouteWithChildren
   '/d/shortcuts': typeof DShortcutsRoute
@@ -840,6 +849,7 @@ export interface FileRouteTypes {
     | '/d/customers'
     | '/d/feedback'
     | '/d/help-center'
+    | '/d/home'
     | '/d/notifications'
     | '/d/reports'
     | '/d/shortcuts'
@@ -925,6 +935,7 @@ export interface FileRouteTypes {
     | '/two-factor-reset'
     | '/verify-email'
     | '/d/customers'
+    | '/d/home'
     | '/d/notifications'
     | '/d/shortcuts'
     | '/d/whatsapp-return'
@@ -1011,6 +1022,7 @@ export interface FileRouteTypes {
     | '/d/customers'
     | '/d/feedback'
     | '/d/help-center'
+    | '/d/home'
     | '/d/notifications'
     | '/d/reports'
     | '/d/shortcuts'
@@ -1218,6 +1230,13 @@ declare module '@tanstack/react-router' {
       path: '/help-center'
       fullPath: '/d/help-center'
       preLoaderRoute: typeof DHelpCenterRouteImport
+      parentRoute: typeof DRouteRoute
+    }
+    '/d/home': {
+      id: '/d/home'
+      path: '/home'
+      fullPath: '/d/home'
+      preLoaderRoute: typeof DHomeRouteImport
       parentRoute: typeof DRouteRoute
     }
     '/d/notifications': {
@@ -1828,6 +1847,7 @@ interface DRouteRouteChildren {
   DCustomersRoute: typeof DCustomersRouteWithChildren
   DFeedbackRoute: typeof DFeedbackRouteWithChildren
   DHelpCenterRoute: typeof DHelpCenterRouteWithChildren
+  DHomeRoute: typeof DHomeRoute
   DNotificationsRoute: typeof DNotificationsRoute
   DReportsRoute: typeof DReportsRouteWithChildren
   DShortcutsRoute: typeof DShortcutsRoute
@@ -1881,6 +1901,7 @@ const DRouteRouteChildren: DRouteRouteChildren = {
   DCustomersRoute: DCustomersRouteWithChildren,
   DFeedbackRoute: DFeedbackRouteWithChildren,
   DHelpCenterRoute: DHelpCenterRouteWithChildren,
+  DHomeRoute: DHomeRoute,
   DNotificationsRoute: DNotificationsRoute,
   DReportsRoute: DReportsRouteWithChildren,
   DShortcutsRoute: DShortcutsRoute,

@@ -29,6 +29,7 @@ import {
   RiGitBranchLine,
   RiGroupLine,
   RiHistoryLine,
+  RiHome5Line,
   RiInbox2Line,
   RiKey2Line,
   RiLightbulbLine,
@@ -106,6 +107,13 @@ export const inboxViews = {
 export type InboxView = keyof typeof inboxViews;
 
 export const workspacePages = {
+  home: page(
+    "home",
+    "Home",
+    RiHome5Line,
+    "/d/home",
+    "Who needs a person now, what Operator found and how the week is going.",
+  ),
   notifications: page(
     "notifications",
     "Notifications",
@@ -467,6 +475,7 @@ export function appSections(
     {
       key: "you",
       items: [
+        workspacePages.home,
         { ...workspacePages.notifications, href: undefined, badge: unseen, panel: notifications },
         { ...inboxLink, badge: inboxBadge || undefined },
         ...(reports ? [workspacePages.reports] : []),
@@ -509,7 +518,7 @@ export function settingsSections(): DashboardNavSection[] {
   ];
 
   return [
-    { key: "back", items: [{ key: "back", label: "Back to inbox", icon: RiArrowLeftLine, href: "/d" }] },
+    { key: "back", items: [{ key: "back", label: "Back to inbox", icon: RiArrowLeftLine, href: "/d/inbox" }] },
     {
       key: "account",
       label: "Account",

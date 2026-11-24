@@ -29,7 +29,7 @@ it.describe("the app's frame", () => {
     await signIn(page, person);
   });
 
-  it("opens on the inbox with the person's workspace in the switcher", async ({ page, person }) => {
+  it("opens the inbox with the person's workspace in the switcher", async ({ page, person }) => {
     await expect(page).toHaveURL(inbox);
     await expect(page.getByRole("button", { name: workspaceOf(person) })).toBeVisible();
     await expect(page.getByRole("button", { name: person.name, exact: true })).toBeVisible();

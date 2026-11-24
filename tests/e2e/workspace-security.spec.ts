@@ -1,7 +1,7 @@
 import type { Locator, Page } from "@playwright/test";
 
 import { ageSessions, verifyEmail } from "./support/database";
-import { createAccount, expect, inbox, test as it, signIn } from "./support/fixtures";
+import { createAccount, expect, home, test as it, signIn } from "./support/fixtures";
 import { mailedCode } from "./support/mail";
 
 /*
@@ -13,7 +13,7 @@ async function signInByMail(page: Page, email: string) {
   await page.getByLabel("Email").fill(email);
   await page.getByRole("button", { name: "Email me a sign-in link" }).click();
   await page.getByLabel("Digit 1 of 6").pressSequentially(await mailedCode(email, "sign-in link"));
-  await expect(page).toHaveURL(inbox);
+  await expect(page).toHaveURL(home);
 }
 
 /*

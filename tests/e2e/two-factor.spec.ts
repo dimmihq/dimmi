@@ -1,6 +1,6 @@
 import type { Page } from "@playwright/test";
 
-import { createAccount, expect, inbox, test as it, type Person, signIn, signOut } from "./support/fixtures";
+import { createAccount, expect, home, test as it, type Person, signIn, signOut } from "./support/fixtures";
 import { currentStep, totpCode } from "./support/totp";
 
 /*
@@ -38,14 +38,14 @@ it.describe("two-factor authentication", () => {
     await expect(page).toHaveURL(/\/login\/two-factor/);
     const step = Math.max(currentStep(), activatedAt + 1);
     await page.getByLabel("Digit 1 of 6").pressSequentially(totpCode(secret, step));
-    await expect(page).toHaveURL(inbox);
+    await expect(page).toHaveURL(home);
 
     await signOut(page, person);
     await answerPassword(page, person);
     await page.getByRole("button", { name: "Use a recovery code instead" }).click();
     await page.getByLabel("Recovery code").fill(codes[0] ?? "");
     await page.getByRole("button", { name: "Verify" }).click();
-    await expect(page).toHaveURL(inbox);
+    await expect(page).toHaveURL(home);
 
     await page.goto("/d/settings/security");
     await expect(section.getByText("9 of 10 left")).toBeVisible();
