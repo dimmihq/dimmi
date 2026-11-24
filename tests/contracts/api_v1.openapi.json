@@ -14472,6 +14472,71 @@
         ],
         "type": "object"
       },
+      "CollectionWorkflowReportRow": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "description": "The items of this page, as a list; empty when nothing matches.",
+            "items": {
+              "$ref": "#/components/schemas/WorkflowReportRow"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "links": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "Addresses of related pages by name, such as next; left out when there are none.",
+            "type": "object"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/CollectionWorkflowReportRowMetaStruct"
+          }
+        },
+        "required": [
+          "data",
+          "meta"
+        ],
+        "type": "object"
+      },
+      "CollectionWorkflowReportRowMetaStruct": {
+        "additionalProperties": false,
+        "properties": {
+          "next_cursor": {
+            "description": "Send it as cursor to read the next page; null on the last page.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "per_page": {
+            "description": "How many items a page holds at most, such as 25.",
+            "format": "int64",
+            "type": "integer"
+          },
+          "prev_cursor": {
+            "description": "Send it as cursor to read the page before; null on the first page.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "total": {
+            "description": "How many items match in all; left out when the list does not count them.",
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "next_cursor",
+          "prev_cursor",
+          "per_page"
+        ],
+        "type": "object"
+      },
       "CollectionWorkflowRun": {
         "additionalProperties": false,
         "properties": {
@@ -34045,6 +34110,7 @@
         "additionalProperties": false,
         "properties": {
           "groups": {
+            "description": "Entrants and goals reached for the control group and for everyone else.",
             "items": {
               "$ref": "#/components/schemas/SeriesControlGroup"
             },
@@ -34054,6 +34120,7 @@
             ]
           },
           "percent": {
+            "description": "The share of entrants held out of the series to measure its lift, 0 to 50.",
             "format": "int64",
             "type": "integer"
           }
@@ -34068,14 +34135,17 @@
         "additionalProperties": false,
         "properties": {
           "entered": {
+            "description": "How many entrants were in the group.",
             "format": "int64",
             "type": "integer"
           },
           "goal": {
+            "description": "How many of them reached the series' goal.",
             "format": "int64",
             "type": "integer"
           },
           "group": {
+            "description": "Which group: control (held out, sent nothing) or treated (travelled the series).",
             "type": "string"
           }
         },
@@ -41755,6 +41825,7 @@
             ]
           },
           "ai_enabled": {
+            "description": "false keeps every AI agent off the conversation, or each one in a bulk change, until turned on again; true lets the agent answer again, even after a handover.",
             "type": "boolean"
           },
           "assignee_id": {
@@ -45652,33 +45723,41 @@
         "additionalProperties": false,
         "properties": {
           "conversation_id": {
+            "description": "Id of the conversation the run worked on, such as conv_....",
             "type": [
               "string",
               "null"
             ]
           },
           "conversation_number": {
+            "description": "The conversation's number, as the inbox shows it.",
             "format": "int64",
             "type": [
               "integer",
               "null"
             ]
           },
-          "detail": {},
+          "detail": {
+            "description": "A few small facts the failing step kept, as an object."
+          },
           "end_reason": {
+            "description": "Why the run ended. Null while it has not.",
             "type": [
               "string",
               "null"
             ]
           },
           "ended_at": {
+            "description": "When the run ended. Null while it has not.",
             "format": "date-time",
             "type": [
               "string",
               "null"
             ]
           },
-          "error": {},
+          "error": {
+            "description": "What went wrong, as the run recorded it. Null when it recorded nothing."
+          },
           "id": {
             "description": "The id of this record. Send it wherever an endpoint asks for this record; never use its name or title in its place.",
             "type": "string"
@@ -45688,34 +45767,41 @@
             "type": "string"
           },
           "outcome": {
+            "description": "The failing step's outcome, such as failed.",
             "type": [
               "string",
               "null"
             ]
           },
           "run_id": {
+            "description": "Id of the run, such as wfr_....",
             "type": "string"
           },
           "started_at": {
+            "description": "When the run started.",
             "format": "date-time",
             "type": "string"
           },
           "status": {
+            "description": "Where the run stands, such as failed or completed.",
             "type": "string"
           },
           "step_id": {
+            "description": "Id of the first step that failed.",
             "type": [
               "string",
               "null"
             ]
           },
           "step_kind": {
+            "description": "What the failing step does, such as http_request or classify.",
             "type": [
               "string",
               "null"
             ]
           },
           "version_number": {
+            "description": "The published version the run ran on.",
             "format": "int32",
             "type": [
               "integer",
@@ -45746,9 +45832,11 @@
         "additionalProperties": false,
         "properties": {
           "kind": {
+            "description": "What counts as the workflow working: resolved (closed with no teammate reply or handover) or csat (rated at least min_rating).",
             "type": "string"
           },
           "min_rating": {
+            "description": "With csat, the lowest rating that counts, 1 to 5. Null otherwise.",
             "format": "int64",
             "type": [
               "integer",
@@ -45756,6 +45844,7 @@
             ]
           },
           "window": {
+            "description": "How long after the run starts the goal may be reached, such as 7d.",
             "type": "string"
           }
         },
@@ -45770,14 +45859,17 @@
         "additionalProperties": false,
         "properties": {
           "active": {
+            "description": "Runs in the range still running or waiting.",
             "format": "int32",
             "type": "integer"
           },
           "completed": {
+            "description": "Runs in the range that reached the end of their path.",
             "format": "int32",
             "type": "integer"
           },
           "days": {
+            "description": "Runs started, completed and failed per day of the range.",
             "items": {
               "$ref": "#/components/schemas/WorkflowMetricsDay"
             },
@@ -45787,14 +45879,17 @@
             ]
           },
           "engaged": {
+            "description": "Runs in the range where the customer wrote while the run went on.",
             "format": "int32",
             "type": "integer"
           },
           "failed": {
+            "description": "Runs in the range that failed, or where a step failed.",
             "format": "int32",
             "type": "integer"
           },
           "from": {
+            "description": "The first moment the numbers count.",
             "format": "date-time",
             "type": "string"
           },
@@ -45802,6 +45897,7 @@
             "$ref": "#/components/schemas/WorkflowGoal"
           },
           "goal_met": {
+            "description": "Runs in the range whose conversation reached the workflow's goal. Null when the workflow has no goal.",
             "format": "int32",
             "type": [
               "integer",
@@ -45809,6 +45905,7 @@
             ]
           },
           "handed_over": {
+            "description": "Runs in the range that handed the conversation to a person.",
             "format": "int32",
             "type": "integer"
           },
@@ -45820,17 +45917,21 @@
             "additionalProperties": {
               "$ref": "#/components/schemas/WorkflowStepMetrics"
             },
+            "description": "Each step's numbers, by step id: reached, waiting now, failed, dropped and paths taken.",
             "type": "object"
           },
           "to": {
+            "description": "The moment the numbers stop counting.",
             "format": "date-time",
             "type": "string"
           },
           "triggered": {
+            "description": "Runs that started in the range and did something. Test conversations never count.",
             "format": "int32",
             "type": "integer"
           },
           "version": {
+            "description": "The published version the numbers count. Null when they count every version.",
             "format": "int32",
             "type": [
               "integer",
@@ -45838,6 +45939,7 @@
             ]
           },
           "workflow_id": {
+            "description": "The workflow the numbers are about, such as wf_....",
             "type": "string"
           }
         },
@@ -45864,18 +45966,22 @@
         "additionalProperties": false,
         "properties": {
           "completed": {
+            "description": "Runs started that day that completed.",
             "format": "int32",
             "type": "integer"
           },
           "day": {
+            "description": "The day, as YYYY-MM-DD in UTC.",
             "format": "date-time",
             "type": "string"
           },
           "failed": {
+            "description": "Runs started that day that failed.",
             "format": "int32",
             "type": "integer"
           },
           "triggered": {
+            "description": "Runs started that day.",
             "format": "int32",
             "type": "integer"
           }
@@ -45885,6 +45991,71 @@
           "triggered",
           "completed",
           "failed"
+        ],
+        "type": "object"
+      },
+      "WorkflowReportRow": {
+        "additionalProperties": false,
+        "properties": {
+          "completed": {
+            "description": "Runs in the range that reached the end of their path.",
+            "format": "int32",
+            "type": "integer"
+          },
+          "failed": {
+            "description": "Runs in the range that failed, or where a step failed.",
+            "format": "int32",
+            "type": "integer"
+          },
+          "goal": {
+            "$ref": "#/components/schemas/WorkflowGoal"
+          },
+          "goal_met": {
+            "description": "Runs in the range whose conversation reached the workflow's goal. Null when the workflow has no goal.",
+            "format": "int32",
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "handed_over": {
+            "description": "Runs in the range that handed the conversation to a person.",
+            "format": "int32",
+            "type": "integer"
+          },
+          "name": {
+            "description": "The workflow's name.",
+            "type": "string"
+          },
+          "status": {
+            "description": "Where the workflow stands: draft, live or paused.",
+            "type": "string"
+          },
+          "trigger": {
+            "description": "The event that starts the workflow, such as conversation.first_message.",
+            "type": "string"
+          },
+          "triggered": {
+            "description": "Runs that started in the range and did something. Test conversations never count.",
+            "format": "int32",
+            "type": "integer"
+          },
+          "workflow_id": {
+            "description": "Id of the workflow, such as wf_....",
+            "type": "string"
+          }
+        },
+        "required": [
+          "workflow_id",
+          "name",
+          "trigger",
+          "status",
+          "triggered",
+          "completed",
+          "handed_over",
+          "failed",
+          "goal",
+          "goal_met"
         ],
         "type": "object"
       },
@@ -45952,12 +46123,14 @@
             "type": "string"
           },
           "version_id": {
+            "description": "Id of the published version the run ran on, such as wfv_....",
             "type": [
               "string",
               "null"
             ]
           },
           "version_number": {
+            "description": "Number of the published version the run ran on.",
             "format": "int32",
             "type": [
               "integer",
@@ -46043,10 +46216,12 @@
         "additionalProperties": false,
         "properties": {
           "dropped": {
+            "description": "Runs that stopped on the step without finishing: exited, canceled, failed or expired.",
             "format": "int32",
             "type": "integer"
           },
           "failed": {
+            "description": "Runs where the step failed.",
             "format": "int32",
             "type": "integer"
           },
@@ -46055,13 +46230,16 @@
               "format": "int32",
               "type": "integer"
             },
+            "description": "How many runs left by each of the step's paths, by path id.",
             "type": "object"
           },
           "reached": {
+            "description": "Runs that reached the step.",
             "format": "int32",
             "type": "integer"
           },
           "waiting": {
+            "description": "Runs waiting on the step now.",
             "format": "int32",
             "type": "integer"
           }
@@ -69899,6 +70077,60 @@
         ]
       }
     },
+    "/reports/workflows": {
+      "get": {
+        "description": "Compares every workflow that ran over a period: runs started, completed, handed to a person, failed, and how many reached the workflow's goal. Returns one row per workflow with its counts, the busiest first.",
+        "operationId": "reports.workflows.index",
+        "parameters": [
+          {
+            "description": "First day, YYYY-MM-DD.",
+            "explode": false,
+            "in": "query",
+            "name": "from",
+            "schema": {
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Last day, YYYY-MM-DD.",
+            "explode": false,
+            "in": "query",
+            "name": "to",
+            "schema": {
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CollectionWorkflowReportRow"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseError"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Report on workflows",
+        "x-abilities": [
+          "workflows:read"
+        ]
+      }
+    },
     "/reports/{report}": {
       "get": {
         "description": "Reads one report for a range of days in the workspace's time zone, counting only conversations the caller may see. Durations are medians in seconds with the 90th percentile and mean beside them. Spam, test, deleted and merged-away conversations never count. Returns the headline numbers, each with its unit, value, value in the period before when compare is set, sample size and the metric that lists its conversations; and the charts as series or tables.",
@@ -77642,6 +77874,7 @@
     },
     "/workflows/{workflow}/failures": {
       "get": {
+        "description": "Lists the runs of a workflow where a step failed, newest first, each with its conversation. Returns the failed runs with the first failing step, and next_cursor for more.",
         "operationId": "workflows.failures.index",
         "parameters": [
           {
@@ -77654,7 +77887,7 @@
             }
           },
           {
-            "description": "The first day, such as 2026-01-01.",
+            "description": "First day, YYYY-MM-DD.",
             "explode": false,
             "in": "query",
             "name": "from",
@@ -77664,7 +77897,7 @@
             }
           },
           {
-            "description": "The last day, included, such as 2026-01-31.",
+            "description": "Last day, YYYY-MM-DD.",
             "explode": false,
             "in": "query",
             "name": "to",
@@ -77674,7 +77907,7 @@
             }
           },
           {
-            "description": "Step id: the id of the step, as the tool that lists them shows it.",
+            "description": "Only this step.",
             "explode": false,
             "in": "query",
             "name": "step_id",
@@ -77684,7 +77917,7 @@
             }
           },
           {
-            "description": "Before: text of at most 64 characters.",
+            "description": "Run id (wfr_...) to read on from.",
             "explode": false,
             "in": "query",
             "name": "before",
@@ -77694,7 +77927,7 @@
             }
           },
           {
-            "description": "How many items to return in one page, such as 25.",
+            "description": "How many to answer, at most 100.",
             "explode": false,
             "in": "query",
             "name": "limit",
@@ -77728,6 +77961,7 @@
             "description": "Error"
           }
         },
+        "summary": "List a workflow's failed runs",
         "x-abilities": [
           "workflows:read"
         ]
@@ -77735,6 +77969,7 @@
     },
     "/workflows/{workflow}/metrics": {
       "get": {
+        "description": "Reads a workflow's numbers over a range: runs started, completed, handed over and failed, its goal, each day, and each step's reached, waiting, failed and drop-off counts. Returns the workflow's numbers, with each step's by step id.",
         "operationId": "workflows.metrics.show",
         "parameters": [
           {
@@ -77747,7 +77982,7 @@
             }
           },
           {
-            "description": "The first day, such as 2026-01-01.",
+            "description": "First day, YYYY-MM-DD; 30 days ago when left out.",
             "explode": false,
             "in": "query",
             "name": "from",
@@ -77757,7 +77992,7 @@
             }
           },
           {
-            "description": "The last day, included, such as 2026-01-31.",
+            "description": "Last day, YYYY-MM-DD.",
             "explode": false,
             "in": "query",
             "name": "to",
@@ -77767,7 +78002,7 @@
             }
           },
           {
-            "description": "Version: a number, such as 10.",
+            "description": "Only runs on this published version number; 0 counts every version.",
             "explode": false,
             "in": "query",
             "name": "version",
@@ -77800,6 +78035,7 @@
             "description": "Error"
           }
         },
+        "summary": "Get a workflow's analytics",
         "x-abilities": [
           "workflows:read"
         ]

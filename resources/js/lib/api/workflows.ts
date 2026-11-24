@@ -360,3 +360,27 @@ export function archiveWorkflow(workspace: string, id: string): Promise<unknown>
 export function reorderWorkflows(workspace: string, order: string[]): Promise<Workflow[]> {
   return request<Workflow[]>("PATCH", "/workflows", { order }, { workspace });
 }
+
+/*
+ * WorkflowReportRow is one workflow in the workflows report.
+ */
+export interface WorkflowReportRow {
+  workflow_id: string;
+  name: string;
+  trigger: string;
+  status: WorkflowStatus;
+  triggered: number;
+  completed: number;
+  handed_over: number;
+  failed: number;
+  goal: WorkflowGoal | null;
+  goal_met: number | null;
+}
+
+export function workflowsReportQuery(workspace: string, from: string, to: string) {
+  return queryOptions({
+    queryKey: ["workspace", workspace, "reports", "workflows", from, to],
+    queryFn: () =>
+      request<WorkflowReportRow[]>("GET", `/reports/workflows?from=${from}&to=${to}`, undefined, { workspace }),
+  });
+}

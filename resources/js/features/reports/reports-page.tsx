@@ -27,6 +27,7 @@ import { DigestButton, FactsExportButton } from "./header-actions";
 import { MetricTiles, MetricTilesSkeleton } from "./metric-tiles";
 import { ProceduresTable } from "./procedures-table";
 import { type ReportSearch, reportFilters, withoutDrill, writeDrillBy } from "./search";
+import { WorkflowsTable } from "./workflows-table";
 
 const route = "/d/reports/$report";
 
@@ -258,6 +259,7 @@ export function ReportsPage() {
                 {view.data ? <Caption report={view.data} summary={view.type?.summary} /> : null}
                 {body}
                 {key === "ai" ? <ProceduresTable workspace={workspace} {...procedureRange(search)} /> : null}
+                {key === "ai" ? <WorkflowsTable workspace={workspace} {...procedureRange(search)} /> : null}
               </>
             )}
           </div>

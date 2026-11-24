@@ -110,3 +110,32 @@ func dayRange(from, to string) (time.Time, time.Time) {
 
 	return start, end
 }
+
+/*
+WorkflowsReportOutput is every workflow's numbers over a range.
+*/
+type WorkflowsReportOutput struct {
+	Body fhttp.Collection[resources.WorkflowReportRow]
+}
+
+/*
+Report lists every workflow that started a run in the range with its
+numbers.
+*/
+func (c *WorkflowController) Report(ctx context.Context, in *requests.WorkflowsReportRequest,
+) (*WorkflowsReportOutput, error) {
+	from, to := dayRange(in.From, in.To)
+	rows, err := c.Workflows.Report(ctx, membership(ctx), from, to)
+	if err != nil {
+		return nil, err
+	}
+
+	items := make([]resources.WorkflowReportRow, len(rows))
+	for i, r := range rows {
+		items[i] = resources.NewWorkflowReportRow(r)
+	}
+
+	return &WorkflowsReportOutput{
+		Body: fhttp.NewCollection(pagination.Page[resources.WorkflowReportRow]{Items: items, Limit: 500}),
+	}, nil
+}

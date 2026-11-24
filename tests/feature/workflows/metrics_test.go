@@ -109,6 +109,13 @@ func TestWorkflowAnalytics(t *testing.T) {
 
 		d.Owner.GetJSON("/api/v1/workflows/"+id+"/runs").AssertOK().
 			AssertJSONPath("data.0.version_number", float64(1))
+
+		report := d.Owner.GetJSON("/api/v1/reports/workflows").AssertOK()
+		report.AssertJSONPath("data.#", float64(1))
+		report.AssertJSONPath("data.0.workflow_id", id)
+		report.AssertJSONPath("data.0.triggered", float64(3))
+		report.AssertJSONPath("data.0.handed_over", float64(1))
+		report.AssertJSONPath("data.0.goal_met", nil)
 	})
 
 	t.Run("lists the runs whose call failed, with the conversation", func(t *testing.T) {

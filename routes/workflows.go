@@ -47,6 +47,7 @@ func workflowRoutes(workspace *routing.Router, a *app.App) {
 	routing.Get(workspace, one+"/runs", "workflows.runs.index", wf.Runs).Ability("workflows:read")
 	routing.Get(workspace, one+"/metrics", "workflows.metrics.show", wf.Metrics).Ability("workflows:read")
 	routing.Get(workspace, one+"/failures", "workflows.failures.index", wf.Failures).Ability("workflows:read")
+	routing.Get(workspace, "/reports/workflows", "reports.workflows.index", wf.Report).Ability("workflows:read")
 	scheduleRoutes(workspace, a)
 }
 

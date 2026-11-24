@@ -20,6 +20,7 @@ package workflows
 import (
 	"context"
 	"fmt"
+	"slices"
 	"time"
 
 	"github.com/dimmihq/dimmi/framework/database"
@@ -95,6 +96,25 @@ func (w *Workflows) Metrics(ctx context.Context, m authz.Membership, id ids.UUID
 readMetrics fills a workflow's numbers.
 */
 func readMetrics(ctx context.Context, q *models.Queries, wf models.Workflow, out *Metrics) error {
+	if err := readFigures(ctx, q, wf, out); err != nil {
+		return err
+	}
+
+	ws, id, since, until, version := wf.WorkspaceID, wf.ID, out.From, out.To, out.Version
+	var err error
+	if out.Days, err = q.WorkflowRunsByDay(ctx, models.WorkflowRunsByDayParams{
+		WorkspaceID: ws, WorkflowID: id, Since: since, Until: until, Version: version,
+	}); err != nil {
+		return fmt.Errorf("count workflow runs by day: %w", err)
+	}
+
+	return readSteps(ctx, q, wf, out)
+}
+
+/*
+readFigures counts a workflow's runs over the range, and its goal.
+*/
+func readFigures(ctx context.Context, q *models.Queries, wf models.Workflow, out *Metrics) error {
 	ws, id, since, until, version := wf.WorkspaceID, wf.ID, out.From, out.To, out.Version
 	p := models.WorkflowRunFiguresParams{
 		WorkspaceID: ws, WorkflowID: id, Since: since, Until: until, Version: version,
@@ -110,13 +130,7 @@ func readMetrics(ctx context.Context, q *models.Queries, wf models.Workflow, out
 		return fmt.Errorf("count workflow runs: %w", err)
 	}
 
-	if out.Days, err = q.WorkflowRunsByDay(ctx, models.WorkflowRunsByDayParams{
-		WorkspaceID: ws, WorkflowID: id, Since: since, Until: until, Version: version,
-	}); err != nil {
-		return fmt.Errorf("count workflow runs by day: %w", err)
-	}
-
-	return readSteps(ctx, q, wf, out)
+	return nil
 }
 
 /*
@@ -265,6 +279,53 @@ func (w *Workflows) Failures(ctx context.Context, m authz.Membership, id ids.UUI
 
 		return nil
 	})
+
+	return out, err
+}
+
+/*
+ReportRow is one workflow's numbers in the workflows report.
+*/
+type ReportRow struct {
+	Workflow models.Workflow
+	Goal     *workflowspec.Goal
+	Figures  models.WorkflowRunFiguresRow
+}
+
+/*
+Report lists every workflow that started a run in the range with its
+numbers, the busiest first, so workflows read side by side with the
+agents and procedures.
+*/
+func (w *Workflows) Report(ctx context.Context, m authz.Membership, from, to time.Time) ([]ReportRow, error) {
+	if !m.Can("workflows:read") {
+		return nil, exceptions.ErrForbidden
+	}
+
+	from, to = w.rangeOf(from, to)
+	var out []ReportRow
+	err := w.DB.Transaction(ctx, func(ctx context.Context, tx *database.Tx) error {
+		q := models.New(tx)
+		list, err := q.ListWorkflows(ctx, models.ListWorkflowsParams{WorkspaceID: m.Workspace.ID})
+		if err != nil {
+			return fmt.Errorf("list workflows: %w", err)
+		}
+
+		for _, wf := range list {
+			metrics := Metrics{From: from, To: to, Goal: goalOf(ctx, q, wf)}
+			if err := readFigures(ctx, q, wf, &metrics); err != nil {
+				return err
+			}
+
+			if metrics.Figures.Triggered > 0 {
+				out = append(out, ReportRow{Workflow: wf, Goal: metrics.Goal, Figures: metrics.Figures})
+			}
+		}
+
+		return nil
+	})
+
+	slices.SortStableFunc(out, func(a, b ReportRow) int { return int(b.Figures.Triggered - a.Figures.Triggered) })
 
 	return out, err
 }
