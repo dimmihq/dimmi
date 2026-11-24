@@ -31,7 +31,7 @@ func logoPicture(t *testing.T, width, height int) []byte {
 func TestWorkspaceLogo(t *testing.T) {
 	t.Parallel()
 
-	t.Run("an admin uploads a logo, which is served re-encoded and shown on the workspace", func(t *testing.T) {
+	t.Run("an admin's logo is served re-encoded and shown on the workspace and the member's list", func(t *testing.T) {
 		t.Parallel()
 		tc := tests.New(t)
 		owner := tc.ActingAsOwner()
@@ -42,6 +42,7 @@ func TestWorkspaceLogo(t *testing.T) {
 
 		tc.Client().GetJSON(url).AssertOK().AssertHeader("Content-Type", "image/png")
 		owner.GetJSON("/api/v1/workspace").AssertOK().AssertJSONPath("data.logo_url", url)
+		owner.GetJSON("/api/v1/me").AssertOK().AssertJSONPath("data.workspaces.0.logo_url", url)
 	})
 
 	t.Run("replacing a logo removes the old file", func(t *testing.T) {
@@ -71,6 +72,7 @@ func TestWorkspaceLogo(t *testing.T) {
 		owner.Delete("/api/v1/workspace/logo").AssertNoContent()
 
 		owner.GetJSON("/api/v1/workspace").AssertOK().AssertJSONPath("data.logo_url", nil)
+		owner.GetJSON("/api/v1/me").AssertOK().AssertJSONPath("data.workspaces.0.logo_url", nil)
 		tc.Drain()
 		tc.Client().GetJSON(url).AssertNotFound()
 	})

@@ -54,30 +54,31 @@ places where the team reviews the agent into drafts for a teammate to
 send. Actions, when set, gives the agent the workspace's own actions as
 tools. Delivery, when set, queues each reply on a channel that pushes.
 Decider, when set, checks that a procedure the agent asks for fits the
-request; DecisionPrice is what one of its input tokens costs, in
-millionths of a dollar. ProcedureVectors, when set, ranks a long list of
-procedures by meaning. It remembers each unpriced model it has logged,
-so each is logged once.
+request; DecisionProvider names it in a run's steps and DecisionPrice
+is what one of its input tokens costs, in millionths of a dollar.
+ProcedureVectors, when set, ranks a long list of procedures by meaning.
+It remembers each unpriced model it has logged, so each is logged once.
 */
 type Runner struct {
-	DB            *database.DB
-	Clock         clock.Clock
-	LLM           *managers.LLMManager
-	Knowledge     contracts.Knowledge
-	Prompts       *prompts.Loader
-	Prices        *aiprices.Table
-	Events        *fevents.Dispatcher
-	Publisher     appbroadcasting.Publisher
-	Working       contracts.AgentWorking
-	Drafts        contracts.AgentDrafts
-	Delivery      *conversations.Delivery
-	Actions       *actionkit.Kit
-	Tickets       *tickets.Tickets
-	Timeouts      config.AITimeoutsConfig
-	StorePayloads bool
-	AnswerEffort  contracts.Effort
-	Decider       contracts.Decider
-	DecisionPrice float64
+	DB               *database.DB
+	Clock            clock.Clock
+	LLM              *managers.LLMManager
+	Knowledge        contracts.Knowledge
+	Prompts          *prompts.Loader
+	Prices           *aiprices.Table
+	Events           *fevents.Dispatcher
+	Publisher        appbroadcasting.Publisher
+	Working          contracts.AgentWorking
+	Drafts           contracts.AgentDrafts
+	Delivery         *conversations.Delivery
+	Actions          *actionkit.Kit
+	Tickets          *tickets.Tickets
+	Timeouts         config.AITimeoutsConfig
+	StorePayloads    bool
+	AnswerEffort     contracts.Effort
+	Decider          contracts.Decider
+	DecisionProvider string
+	DecisionPrice    float64
 
 	ProcedureVectors ProcedureVectors
 

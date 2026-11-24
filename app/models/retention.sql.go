@@ -12,6 +12,27 @@ import (
 	"github.com/dimmihq/dimmi/framework/ids"
 )
 
+const clearRawEmails = `-- name: ClearRawEmails :execrows
+UPDATE inbound_emails SET raw_path = NULL, raw_deleted_at = $1::timestamptz, updated_at = $1::timestamptz
+WHERE workspace_id = $2 AND id = ANY ($3::uuid[])
+`
+
+type ClearRawEmailsParams struct {
+	Now         time.Time  `json:"now"`
+	WorkspaceID ids.UUID   `json:"workspace_id"`
+	Ids         []ids.UUID `json:"ids"`
+}
+
+// ClearRawEmails records that the mail's source is gone. The row stays
+// for the message it became.
+func (q *Queries) ClearRawEmails(ctx context.Context, arg ClearRawEmailsParams) (int64, error) {
+	result, err := q.db.Exec(ctx, clearRawEmails, arg.Now, arg.WorkspaceID, arg.Ids)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
 const countStaleClosedConversations = `-- name: CountStaleClosedConversations :one
 SELECT count(*) FROM conversations
 WHERE workspace_id = $1 AND status = 'closed' AND deleted_at IS NULL
@@ -28,6 +49,238 @@ func (q *Queries) CountStaleClosedConversations(ctx context.Context, arg CountSt
 	var count int64
 	err := row.Scan(&count)
 	return count, err
+}
+
+const deleteConversationInboundEmails = `-- name: DeleteConversationInboundEmails :execrows
+DELETE FROM inbound_emails WHERE workspace_id = $1 AND conversation_id = ANY ($2::uuid[])
+`
+
+type DeleteConversationInboundEmailsParams struct {
+	WorkspaceID ids.UUID   `json:"workspace_id"`
+	Ids         []ids.UUID `json:"ids"`
+}
+
+func (q *Queries) DeleteConversationInboundEmails(ctx context.Context, arg DeleteConversationInboundEmailsParams) (int64, error) {
+	result, err := q.db.Exec(ctx, deleteConversationInboundEmails, arg.WorkspaceID, arg.Ids)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
+const deleteConversationOutboundEmails = `-- name: DeleteConversationOutboundEmails :execrows
+DELETE FROM outbound_emails WHERE workspace_id = $1 AND conversation_id = ANY ($2::uuid[])
+`
+
+type DeleteConversationOutboundEmailsParams struct {
+	WorkspaceID ids.UUID   `json:"workspace_id"`
+	Ids         []ids.UUID `json:"ids"`
+}
+
+func (q *Queries) DeleteConversationOutboundEmails(ctx context.Context, arg DeleteConversationOutboundEmailsParams) (int64, error) {
+	result, err := q.db.Exec(ctx, deleteConversationOutboundEmails, arg.WorkspaceID, arg.Ids)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
+const deleteHelpCenterImages = `-- name: DeleteHelpCenterImages :execrows
+DELETE FROM help_center_images WHERE workspace_id = $1 AND id = ANY ($2::uuid[])
+`
+
+type DeleteHelpCenterImagesParams struct {
+	WorkspaceID ids.UUID   `json:"workspace_id"`
+	Ids         []ids.UUID `json:"ids"`
+}
+
+func (q *Queries) DeleteHelpCenterImages(ctx context.Context, arg DeleteHelpCenterImagesParams) (int64, error) {
+	result, err := q.db.Exec(ctx, deleteHelpCenterImages, arg.WorkspaceID, arg.Ids)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
+const deleteInboundEmails = `-- name: DeleteInboundEmails :execrows
+DELETE FROM inbound_emails WHERE workspace_id = $1 AND id = ANY ($2::uuid[]) AND message_id IS NULL
+`
+
+type DeleteInboundEmailsParams struct {
+	WorkspaceID ids.UUID   `json:"workspace_id"`
+	Ids         []ids.UUID `json:"ids"`
+}
+
+// DeleteInboundEmails deletes the records of mail that never became a
+// message.
+func (q *Queries) DeleteInboundEmails(ctx context.Context, arg DeleteInboundEmailsParams) (int64, error) {
+	result, err := q.db.Exec(ctx, deleteInboundEmails, arg.WorkspaceID, arg.Ids)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
+const listConversationFiles = `-- name: ListConversationFiles :many
+SELECT a.id, a.disk, a.path FROM attachments a
+JOIN messages m ON m.id = a.message_id AND m.workspace_id = a.workspace_id
+WHERE a.workspace_id = $1 AND m.conversation_id = ANY ($2::uuid[])
+`
+
+type ListConversationFilesParams struct {
+	WorkspaceID ids.UUID   `json:"workspace_id"`
+	Ids         []ids.UUID `json:"ids"`
+}
+
+type ListConversationFilesRow struct {
+	ID   ids.UUID `json:"id"`
+	Disk string   `json:"disk"`
+	Path string   `json:"path"`
+}
+
+// ListConversationFiles returns the stored files of the conversations'
+// messages.
+func (q *Queries) ListConversationFiles(ctx context.Context, arg ListConversationFilesParams) ([]ListConversationFilesRow, error) {
+	rows, err := q.db.Query(ctx, listConversationFiles, arg.WorkspaceID, arg.Ids)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListConversationFilesRow
+	for rows.Next() {
+		var i ListConversationFilesRow
+		if err := rows.Scan(&i.ID, &i.Disk, &i.Path); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listConversationRawEmails = `-- name: ListConversationRawEmails :many
+SELECT id, raw_disk, raw_path FROM inbound_emails
+WHERE workspace_id = $1 AND conversation_id = ANY ($2::uuid[]) AND raw_path IS NOT NULL
+`
+
+type ListConversationRawEmailsParams struct {
+	WorkspaceID ids.UUID   `json:"workspace_id"`
+	Ids         []ids.UUID `json:"ids"`
+}
+
+type ListConversationRawEmailsRow struct {
+	ID      ids.UUID `json:"id"`
+	RawDisk string   `json:"raw_disk"`
+	RawPath *string  `json:"raw_path"`
+}
+
+// ListConversationRawEmails returns the stored source of the mail the
+// conversations received.
+func (q *Queries) ListConversationRawEmails(ctx context.Context, arg ListConversationRawEmailsParams) ([]ListConversationRawEmailsRow, error) {
+	rows, err := q.db.Query(ctx, listConversationRawEmails, arg.WorkspaceID, arg.Ids)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListConversationRawEmailsRow
+	for rows.Next() {
+		var i ListConversationRawEmailsRow
+		if err := rows.Scan(&i.ID, &i.RawDisk, &i.RawPath); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listExpiredRawEmails = `-- name: ListExpiredRawEmails :many
+SELECT id, raw_disk, raw_path, message_id FROM inbound_emails
+WHERE workspace_id = $1 AND status IN ('processed', 'ignored', 'failed', 'quarantined')
+  AND coalesce(processed_at, received_at) < $2::timestamptz
+  AND (raw_path IS NOT NULL OR message_id IS NULL)
+ORDER BY received_at, id
+LIMIT $3
+`
+
+type ListExpiredRawEmailsParams struct {
+	WorkspaceID ids.UUID  `json:"workspace_id"`
+	Cutoff      time.Time `json:"cutoff"`
+	RowLimit    int32     `json:"row_limit"`
+}
+
+type ListExpiredRawEmailsRow struct {
+	ID        ids.UUID  `json:"id"`
+	RawDisk   string    `json:"raw_disk"`
+	RawPath   *string   `json:"raw_path"`
+	MessageID *ids.UUID `json:"message_id"`
+}
+
+// ListExpiredRawEmails returns mail read before the cutoff that still has
+// its source stored or never became a message, oldest first.
+func (q *Queries) ListExpiredRawEmails(ctx context.Context, arg ListExpiredRawEmailsParams) ([]ListExpiredRawEmailsRow, error) {
+	rows, err := q.db.Query(ctx, listExpiredRawEmails, arg.WorkspaceID, arg.Cutoff, arg.RowLimit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListExpiredRawEmailsRow
+	for rows.Next() {
+		var i ListExpiredRawEmailsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.RawDisk,
+			&i.RawPath,
+			&i.MessageID,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listHelpCenterImages = `-- name: ListHelpCenterImages :many
+SELECT id, path FROM help_center_images WHERE workspace_id = $1 ORDER BY id LIMIT $2
+`
+
+type ListHelpCenterImagesParams struct {
+	WorkspaceID ids.UUID `json:"workspace_id"`
+	RowLimit    int32    `json:"row_limit"`
+}
+
+type ListHelpCenterImagesRow struct {
+	ID   ids.UUID `json:"id"`
+	Path string   `json:"path"`
+}
+
+// ListHelpCenterImages returns a batch of the pictures the workspace
+// placed in articles.
+func (q *Queries) ListHelpCenterImages(ctx context.Context, arg ListHelpCenterImagesParams) ([]ListHelpCenterImagesRow, error) {
+	rows, err := q.db.Query(ctx, listHelpCenterImages, arg.WorkspaceID, arg.RowLimit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListHelpCenterImagesRow
+	for rows.Next() {
+		var i ListHelpCenterImagesRow
+		if err := rows.Scan(&i.ID, &i.Path); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const listRetainingWorkspaces = `-- name: ListRetainingWorkspaces :many
@@ -81,6 +334,53 @@ func (q *Queries) ListRetainingWorkspaces(ctx context.Context) ([]Workspace, err
 	return items, nil
 }
 
+const listSpamConversationsBefore = `-- name: ListSpamConversationsBefore :many
+SELECT c.id FROM conversations c
+WHERE c.workspace_id = $1 AND c.spam AND c.deleted_at IS NULL
+  AND coalesce((
+      SELECT max(e.occurred_at) FROM conversation_events e
+      WHERE e.conversation_id = c.id AND e.kind = 'spam'
+  ), c.created_at) < $2::timestamptz
+  AND NOT (c.id = ANY ($3::uuid[]))
+ORDER BY c.id
+LIMIT $4
+`
+
+type ListSpamConversationsBeforeParams struct {
+	WorkspaceID ids.UUID   `json:"workspace_id"`
+	Cutoff      time.Time  `json:"cutoff"`
+	Skipped     []ids.UUID `json:"skipped"`
+	RowLimit    int32      `json:"row_limit"`
+}
+
+// ListSpamConversationsBefore returns conversations marked spam since
+// before the cutoff: since the last time they were marked, or since
+// they arrived when they arrived as spam.
+func (q *Queries) ListSpamConversationsBefore(ctx context.Context, arg ListSpamConversationsBeforeParams) ([]ids.UUID, error) {
+	rows, err := q.db.Query(ctx, listSpamConversationsBefore,
+		arg.WorkspaceID,
+		arg.Cutoff,
+		arg.Skipped,
+		arg.RowLimit,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ids.UUID
+	for rows.Next() {
+		var id ids.UUID
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		items = append(items, id)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listStaleClosedConversations = `-- name: ListStaleClosedConversations :many
 SELECT id FROM conversations
 WHERE workspace_id = $1 AND status = 'closed' AND deleted_at IS NULL
@@ -122,6 +422,143 @@ func (q *Queries) ListStaleClosedConversations(ctx context.Context, arg ListStal
 		return nil, err
 	}
 	return items, nil
+}
+
+const listTrashedConversationsBefore = `-- name: ListTrashedConversationsBefore :many
+SELECT id FROM conversations
+WHERE workspace_id = $1 AND deleted_at < $2::timestamptz
+  AND NOT (id = ANY ($3::uuid[]))
+ORDER BY deleted_at, id
+LIMIT $4
+`
+
+type ListTrashedConversationsBeforeParams struct {
+	WorkspaceID ids.UUID   `json:"workspace_id"`
+	Cutoff      time.Time  `json:"cutoff"`
+	Skipped     []ids.UUID `json:"skipped"`
+	RowLimit    int32      `json:"row_limit"`
+}
+
+// ListTrashedConversationsBefore returns conversations in the trash since
+// before the cutoff, oldest first.
+func (q *Queries) ListTrashedConversationsBefore(ctx context.Context, arg ListTrashedConversationsBeforeParams) ([]ids.UUID, error) {
+	rows, err := q.db.Query(ctx, listTrashedConversationsBefore,
+		arg.WorkspaceID,
+		arg.Cutoff,
+		arg.Skipped,
+		arg.RowLimit,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ids.UUID
+	for rows.Next() {
+		var id ids.UUID
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		items = append(items, id)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listWorkspaceRawEmails = `-- name: ListWorkspaceRawEmails :many
+SELECT id, raw_disk, raw_path FROM inbound_emails
+WHERE workspace_id = $1 AND raw_path IS NOT NULL
+ORDER BY id
+LIMIT $2
+`
+
+type ListWorkspaceRawEmailsParams struct {
+	WorkspaceID ids.UUID `json:"workspace_id"`
+	RowLimit    int32    `json:"row_limit"`
+}
+
+type ListWorkspaceRawEmailsRow struct {
+	ID      ids.UUID `json:"id"`
+	RawDisk string   `json:"raw_disk"`
+	RawPath *string  `json:"raw_path"`
+}
+
+// ListWorkspaceRawEmails returns a batch of the workspace's stored mail
+// sources.
+func (q *Queries) ListWorkspaceRawEmails(ctx context.Context, arg ListWorkspaceRawEmailsParams) ([]ListWorkspaceRawEmailsRow, error) {
+	rows, err := q.db.Query(ctx, listWorkspaceRawEmails, arg.WorkspaceID, arg.RowLimit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListWorkspaceRawEmailsRow
+	for rows.Next() {
+		var i ListWorkspaceRawEmailsRow
+		if err := rows.Scan(&i.ID, &i.RawDisk, &i.RawPath); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const purgeConversations = `-- name: PurgeConversations :execrows
+DELETE FROM conversations WHERE workspace_id = $1 AND id = ANY ($2::uuid[])
+`
+
+type PurgeConversationsParams struct {
+	WorkspaceID ids.UUID   `json:"workspace_id"`
+	Ids         []ids.UUID `json:"ids"`
+}
+
+// PurgeConversations deletes the conversations for good, and with them
+// their messages, files' rows and everything else that hangs off them.
+func (q *Queries) PurgeConversations(ctx context.Context, arg PurgeConversationsParams) (int64, error) {
+	result, err := q.db.Exec(ctx, purgeConversations, arg.WorkspaceID, arg.Ids)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
+const rawEmailShared = `-- name: RawEmailShared :one
+SELECT dimmi_raw_email_shared($1::text, $2::text, $3::uuid[])::boolean
+`
+
+type RawEmailSharedParams struct {
+	RawDisk   string     `json:"raw_disk"`
+	RawPath   string     `json:"raw_path"`
+	ExceptIds []ids.UUID `json:"except_ids"`
+}
+
+// RawEmailShared reports whether a record other than the excepted ones,
+// in any workspace, still points at the stored email.
+func (q *Queries) RawEmailShared(ctx context.Context, arg RawEmailSharedParams) (bool, error) {
+	row := q.db.QueryRow(ctx, rawEmailShared, arg.RawDisk, arg.RawPath, arg.ExceptIds)
+	var column_1 bool
+	err := row.Scan(&column_1)
+	return column_1, err
+}
+
+const recordHelpCenterImage = `-- name: RecordHelpCenterImage :exec
+INSERT INTO help_center_images (workspace_id, path, created_at) VALUES ($1, $2, $3::timestamptz)
+ON CONFLICT (path) DO NOTHING
+`
+
+type RecordHelpCenterImageParams struct {
+	WorkspaceID ids.UUID  `json:"workspace_id"`
+	Path        string    `json:"path"`
+	Now         time.Time `json:"now"`
+}
+
+// RecordHelpCenterImage notes which workspace kept the picture.
+func (q *Queries) RecordHelpCenterImage(ctx context.Context, arg RecordHelpCenterImageParams) error {
+	_, err := q.db.Exec(ctx, recordHelpCenterImage, arg.WorkspaceID, arg.Path, arg.Now)
+	return err
 }
 
 const trashStaleConversations = `-- name: TrashStaleConversations :execrows

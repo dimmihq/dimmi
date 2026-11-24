@@ -48,6 +48,7 @@ func bootErasures(a *app.App) error {
 		Erasers: a.ContactErasers, Keys: a.Keys,
 	}
 	a.ContactErasers.Register(&erasures.TraceEraser{DB: a.DB, Clock: a.Clock})
+	a.ContactErasers.Register(&erasures.MailEraser{DB: a.DB, Clock: a.Clock, Storage: a.Storage, Keys: a.Keys})
 	a.ContactErasers.Register(webhooks.ContactEraser{Webhooks: &webhooks.Webhooks{DB: a.DB, Clock: a.Clock}})
 	if err := queue.Register(a.Queue, &jobs.EraseContact{Erase: acts.EraseContact}); err != nil {
 		return fmt.Errorf("erase job: %w", err)
@@ -75,12 +76,16 @@ func bootContactExports(a *app.App) error {
 	acts.ExpireContactExports = &contacts.ExpireContactExports{DB: a.DB, Clock: a.Clock, Storage: a.Storage}
 
 	acts.ApplyRetention = &retention.ApplyConversationRetention{DB: a.DB, Clock: a.Clock, Retention: a.Retention}
+	acts.PurgeRetention = &retention.PurgeExpired{
+		DB: a.DB, Clock: a.Clock, Storage: a.Storage, Retention: a.Retention,
+	}
 	acts.PreviewRetention = &retention.PreviewRetention{DB: a.DB, Clock: a.Clock}
 
 	return errors.Join(
 		queue.Register(a.Queue, &jobs.BuildContactExport{Build: acts.BuildContactExport}),
 		queue.Register(a.Queue, &jobs.ExpireContactExports{Expire: acts.ExpireContactExports}),
 		queue.Register(a.Queue, &jobs.ApplyConversationRetention{Apply: acts.ApplyRetention}),
+		queue.Register(a.Queue, &jobs.PurgeExpiredRetention{Purge: acts.PurgeRetention}),
 		bootDataExports(a),
 		bootImports(a),
 	)

@@ -260,6 +260,8 @@ export interface DashboardNavSection {
 export interface DashboardSwitcher {
   label: string;
   initials: string;
+  /** The workspace's logo; the initials show without one. */
+  src?: string;
   color?: AvatarColor;
   menuLabel: string;
   menu: (close: () => void) => ReactNode;
@@ -526,6 +528,7 @@ export function DashboardSidebar({
             <DashboardUserMenu
               label={switcher.label}
               initials={switcher.initials}
+              src={switcher.src}
               color={switcher.color}
               menuLabel={switcher.menuLabel}
               collapsed={collapsed}
