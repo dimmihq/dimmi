@@ -189,3 +189,12 @@ func TestAutomationReference(t *testing.T) {
 		assert.Contains(t, ref, "- exit. No paths: the journey ends here.")
 	})
 }
+
+func TestReferencesReadWhole(t *testing.T) {
+	t.Parallel()
+
+	assert.True(t, readWhole("get_workflow_reference"))
+	assert.True(t, readWhole("get_series_reference"))
+	assert.False(t, readWhole("get_workflow_by_id"))
+	assert.Greater(t, len(workflowReference("")), 2000, "the reference is longer than one cut page")
+}

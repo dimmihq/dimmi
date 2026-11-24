@@ -287,10 +287,19 @@ func (e *Engine) layerCall(ctx context.Context, s *session, p *pending) (result,
 		return result{}, errors.New("tool " + c.Name + " is not available")
 	}
 	out, err := t.handle(ctx, s, c.Arguments)
-	if err == nil && len(t.writes) == 0 && ownGroupOf(t) != groupChanges {
+	if err == nil && len(t.writes) == 0 && ownGroupOf(t) != groupChanges && !readWhole(c.Name) {
 		out.text = set.Shape(out.text, c.Fields)
 	}
 	return out, err
+}
+
+/*
+readWhole reports whether a tool's result is a guide the model needs in
+one piece. Cut into pages, the workflow reference took a chat's every
+turn to read, and none was left to write the draft.
+*/
+func readWhole(name string) bool {
+	return name == "get_workflow_reference" || name == "get_series_reference"
 }
 
 /*
