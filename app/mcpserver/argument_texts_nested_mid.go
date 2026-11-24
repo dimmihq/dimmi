@@ -16,8 +16,11 @@ midNestedTexts returns the texts written for these tools.
 func midNestedTexts() map[string]map[string]string {
 	out := map[string]map[string]string{}
 	for _, part := range []map[string]map[string]string{
-		midNestedTextsPart1(), midNestedTextsPart2(), midNestedTextsPart3(), midNestedTextsPart4(),
-		midNestedTextsPart5(), midNestedTextsPart6(),
+		midNestedTextsFromCreateSavedReplyImport(),
+		midNestedTextsFromCreateTicketTypeField(),
+		midNestedTextsFromPreviewWidgetSettings(),
+		midNestedTextsFromPreviewWidgetSettingsAndProposeArticleEdit(),
+		midNestedTextsFromSimulateProcedure(), midNestedTextsFromSimulateProcedureContinued(),
 	} {
 		mergeTexts(out, part)
 	}
@@ -26,10 +29,11 @@ func midNestedTexts() map[string]map[string]string {
 }
 
 /*
-midNestedTextsPart1 returns texts of create_saved_reply_import,
+midNestedTextsFromCreateSavedReplyImport returns texts of
+create_saved_reply_import,
 create_schedule and the tools after them.
 */
-func midNestedTextsPart1() map[string]map[string]string {
+func midNestedTextsFromCreateSavedReplyImport() map[string]map[string]string {
 	return map[string]map[string]string{
 		"create_saved_reply_import": {
 			"replies.body": "The text of the saved reply in Markdown, 1 to 65536 characters, such as Hi, " +
@@ -67,10 +71,11 @@ func midNestedTextsPart1() map[string]map[string]string {
 }
 
 /*
-midNestedTextsPart2 returns texts of create_ticket_type_field,
+midNestedTextsFromCreateTicketTypeField returns texts of
+create_ticket_type_field,
 create_widget_settings and the tools after them.
 */
-func midNestedTextsPart2() map[string]map[string]string {
+func midNestedTextsFromCreateTicketTypeField() map[string]map[string]string {
 	return map[string]map[string]string{
 		"create_ticket_type_field": {
 			"show_when.equals": "The values of the other field that make this field show, as a list of up to " +
@@ -109,9 +114,10 @@ func midNestedTextsPart2() map[string]map[string]string {
 }
 
 /*
-midNestedTextsPart3 returns texts of preview_widget_settings.
+midNestedTextsFromPreviewWidgetSettings returns texts of
+preview_widget_settings.
 */
-func midNestedTextsPart3() map[string]map[string]string {
+func midNestedTextsFromPreviewWidgetSettings() map[string]map[string]string {
 	return map[string]map[string]string{
 		"preview_widget_settings": {
 			"request_body.changelog_tab_enabled": "Whether the messenger shows a changelog tab. The tab only " +
@@ -151,10 +157,11 @@ func midNestedTextsPart3() map[string]map[string]string {
 }
 
 /*
-midNestedTextsPart4 returns texts of preview_widget_settings,
+midNestedTextsFromPreviewWidgetSettingsAndProposeArticleEdit returns
+texts of preview_widget_settings,
 propose_article_edit and the tools after them.
 */
-func midNestedTextsPart4() map[string]map[string]string {
+func midNestedTextsFromPreviewWidgetSettingsAndProposeArticleEdit() map[string]map[string]string {
 	return map[string]map[string]string{
 		"preview_widget_settings": {
 			"request_body.require_email_when_offline": "Whether a visitor with no email must give one before " +
@@ -193,9 +200,9 @@ func midNestedTextsPart4() map[string]map[string]string {
 }
 
 /*
-midNestedTextsPart5 returns texts of simulate_procedure.
+midNestedTextsFromSimulateProcedure returns texts of simulate_procedure.
 */
-func midNestedTextsPart5() map[string]map[string]string {
+func midNestedTextsFromSimulateProcedure() map[string]map[string]string {
 	return map[string]map[string]string{
 		"simulate_procedure": {
 			"active_state.branches": "Copy it unchanged from the state the last simulated turn handed back: an " +
@@ -235,9 +242,10 @@ func midNestedTextsPart5() map[string]map[string]string {
 }
 
 /*
-midNestedTextsPart6 returns texts of simulate_procedure.
+midNestedTextsFromSimulateProcedureContinued returns texts of
+simulate_procedure.
 */
-func midNestedTextsPart6() map[string]map[string]string {
+func midNestedTextsFromSimulateProcedureContinued() map[string]map[string]string {
 	return map[string]map[string]string{
 		"simulate_procedure": {
 			"persona.channel": "The channel the made-up customer writes from: widget, email, slack, whatsapp, " +

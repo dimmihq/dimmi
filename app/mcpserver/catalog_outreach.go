@@ -20,7 +20,11 @@ series.
 func outreachDocs() map[string]Doc {
 	out := map[string]Doc{}
 	for _, part := range []map[string]Doc{
-		broadcastDocs(), broadcastDraftDocs(), broadcastReviewDocs(), broadcastSendDocs(), broadcastTopicDocs(),
+		broadcastDocs(),
+		broadcastDraftDocs(),
+		broadcastReviewDocs(),
+		broadcastSendDocs(),
+		broadcastTopicDocs(),
 		seriesDocs(), seriesDraftDocs(), seriesLiveDocs(), seriesPeopleDocs(), journeyDocs(),
 	} {
 		maps.Copy(out, part)

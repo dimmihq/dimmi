@@ -19,10 +19,26 @@ messengerDocs returns these entries, by operation.
 func messengerDocs() map[string]Doc {
 	out := map[string]Doc{}
 	for _, part := range []map[string]Doc{
-		messengerDocs1(), messengerDocs2(), messengerDocs3(), messengerDocs4(), messengerDocs5(),
-		messengerDocs6(), messengerDocs7(), messengerDocs8(), messengerDocs9(), messengerDocs10(),
-		messengerDocs11(), messengerDocs12(), messengerDocs13(), messengerDocs14(), messengerDocs15(),
-		messengerDocs16(), messengerDocs17(), messengerDocs18(), messengerDocs19(), messengerDocs20(),
+		messengerDocsFromWidgetAppsArticleViewsStore(),
+		messengerDocsFromWidgetAppsConfigShow(),
+		messengerDocsFromWidgetArticleRatingsStore(),
+		messengerDocsFromWidgetAttachmentsUpdate(),
+		messengerDocsFromWidgetConversationsActionCallsShow(),
+		messengerDocsFromWidgetConversationsAiHandoff(),
+		messengerDocsFromWidgetConversationsMessagesIndex(),
+		messengerDocsFromWidgetConversationsMessagesStore(),
+		messengerDocsFromWidgetConversationsRatingShow(),
+		messengerDocsFromWidgetConversationsReadStateUpdate(),
+		messengerDocsFromWidgetConversationsStore(),
+		messengerDocsFromWidgetConversationsTypingIndicatorsStore(),
+		messengerDocsFromWidgetEventsStore(),
+		messengerDocsFromWidgetHelpShow(),
+		messengerDocsFromWidgetPingsStore(),
+		messengerDocsFromWidgetSessionDestroy(),
+		messengerDocsFromWidgetSessionsStore(),
+		messengerDocsFromWidgetTicketTypesIndex(),
+		messengerDocsFromWidgetTicketsStore(),
+		messengerDocsFromWidgetUpdatesIndex(),
 	} {
 		maps.Copy(out, part)
 	}
@@ -31,9 +47,10 @@ func messengerDocs() map[string]Doc {
 }
 
 /*
-messengerDocs1 returns entries from widget.apps.article-views.store on.
+messengerDocsFromWidgetAppsArticleViewsStore returns entries from
+widget.apps.article-views.store on.
 */
-func messengerDocs1() map[string]Doc {
+func messengerDocsFromWidgetAppsArticleViewsStore() map[string]Doc {
 	return map[string]Doc{
 		"widget.apps.article-views.store": {
 			Title: "Count an article view",
@@ -71,9 +88,10 @@ func messengerDocs1() map[string]Doc {
 }
 
 /*
-messengerDocs2 returns entries from widget.apps.config.show on.
+messengerDocsFromWidgetAppsConfigShow returns entries from
+widget.apps.config.show on.
 */
-func messengerDocs2() map[string]Doc {
+func messengerDocsFromWidgetAppsConfigShow() map[string]Doc {
 	return map[string]Doc{
 		"widget.apps.config.show": {
 			Title: "Load the messenger config",
@@ -111,9 +129,10 @@ func messengerDocs2() map[string]Doc {
 }
 
 /*
-messengerDocs3 returns entries from widget.article-ratings.store on.
+messengerDocsFromWidgetArticleRatingsStore returns entries from
+widget.article-ratings.store on.
 */
-func messengerDocs3() map[string]Doc {
+func messengerDocsFromWidgetArticleRatingsStore() map[string]Doc {
 	return map[string]Doc{
 		"widget.article-ratings.store": {
 			Title: "Rate a help article",
@@ -155,9 +174,10 @@ func messengerDocs3() map[string]Doc {
 }
 
 /*
-messengerDocs4 returns entries from widget.attachments.update on.
+messengerDocsFromWidgetAttachmentsUpdate returns entries from
+widget.attachments.update on.
 */
-func messengerDocs4() map[string]Doc {
+func messengerDocsFromWidgetAttachmentsUpdate() map[string]Doc {
 	return map[string]Doc{
 		"widget.attachments.update": {
 			Title: "Finish a file upload",
@@ -200,9 +220,10 @@ func messengerDocs4() map[string]Doc {
 }
 
 /*
-messengerDocs5 returns entries from widget.conversations.action-calls.show on.
+messengerDocsFromWidgetConversationsActionCallsShow returns entries from
+widget.conversations.action-calls.show on.
 */
-func messengerDocs5() map[string]Doc {
+func messengerDocsFromWidgetConversationsActionCallsShow() map[string]Doc {
 	return map[string]Doc{
 		"widget.conversations.action-calls.show": {
 			Title: "Get an action confirmation",
@@ -235,9 +256,10 @@ func messengerDocs5() map[string]Doc {
 }
 
 /*
-messengerDocs6 returns entries from widget.conversations.ai.handoff on.
+messengerDocsFromWidgetConversationsAiHandoff returns entries from
+widget.conversations.ai.handoff on.
 */
-func messengerDocs6() map[string]Doc {
+func messengerDocsFromWidgetConversationsAiHandoff() map[string]Doc {
 	return map[string]Doc{
 		"widget.conversations.ai.handoff": {
 			Title: "Ask for a person",
@@ -269,9 +291,10 @@ func messengerDocs6() map[string]Doc {
 }
 
 /*
-messengerDocs7 returns entries from widget.conversations.messages.index on.
+messengerDocsFromWidgetConversationsMessagesIndex returns entries from
+widget.conversations.messages.index on.
 */
-func messengerDocs7() map[string]Doc {
+func messengerDocsFromWidgetConversationsMessagesIndex() map[string]Doc {
 	return map[string]Doc{
 		"widget.conversations.messages.index": {
 			Title: "List a conversation's messages",

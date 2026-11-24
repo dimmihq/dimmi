@@ -21,8 +21,17 @@ share, by schema and field joined with a dot.
 func sharedTexts() map[string]string {
 	out := map[string]string{}
 	for _, part := range []map[string]string{
-		sharedTexts1(), sharedTexts2(), sharedTexts3(), sharedTexts4(), sharedTexts5(), sharedTexts6(),
-		sharedTexts7(), sharedTexts8(), sharedTexts9(), sharedTexts10(), sharedTexts11(),
+		sharedTextsFromAIActionBodyStatus(),
+		sharedTextsFromChangelogLabelBodyPosition(),
+		sharedTextsFromFeedbackBoardBodySlug(),
+		sharedTextsFromOperatorRoutineDeliveryInputEmailMemberIDs(),
+		sharedTextsFromSavedReplyMacroInputAssigneeID(),
+		sharedTextsFromStoreSocialChannelRequestBodyAccountID(),
+		sharedTextsFromTicketLinkBodyConversationID(),
+		sharedTextsFromUpdateConversationRequestBodyInboxID(),
+		sharedTextsFromUpdateMemberBodyAssignOnReply(),
+		sharedTextsFromWhatsAppTemplateButtonBodyType(),
+		sharedTextsFromWidgetSettingsBodyNativeAppsEnabled(),
 	} {
 		maps.Copy(out, part)
 	}
@@ -31,10 +40,10 @@ func sharedTexts() map[string]string {
 }
 
 /*
-sharedTexts1 returns the texts from
+sharedTextsFromAIActionBodyStatus returns the texts from
 AIActionBody.status on.
 */
-func sharedTexts1() map[string]string {
+func sharedTextsFromAIActionBodyStatus() map[string]string {
 	return map[string]string{
 		"AIActionBody.status": "When creating: has no effect, a new action always starts as a " +
 			"draft and goes live through dimmi_publish_ai_action, so leave it out. When updating: " +
@@ -77,10 +86,10 @@ func sharedTexts1() map[string]string {
 }
 
 /*
-sharedTexts2 returns the texts from
+sharedTextsFromChangelogLabelBodyPosition returns the texts from
 ChangelogLabelBody.position on.
 */
-func sharedTexts2() map[string]string {
+func sharedTextsFromChangelogLabelBodyPosition() map[string]string {
 	return map[string]string{
 		"ChangelogLabelBody.position": "Where the label sits in the list, counting from 0, lowest " +
 			"first, such as 2.",
@@ -124,10 +133,10 @@ func sharedTexts2() map[string]string {
 }
 
 /*
-sharedTexts3 returns the texts from
+sharedTextsFromFeedbackBoardBodySlug returns the texts from
 FeedbackBoardBody.slug on.
 */
-func sharedTexts3() map[string]string {
+func sharedTextsFromFeedbackBoardBodySlug() map[string]string {
 	return map[string]string{
 		"FeedbackBoardBody.slug": "The part of the board's address on the portal that names it, in " +
 			"lowercase words joined by hyphens, at most 60 characters, such as feature-requests. When " +
@@ -169,10 +178,10 @@ func sharedTexts3() map[string]string {
 }
 
 /*
-sharedTexts4 returns the texts from
+sharedTextsFromOperatorRoutineDeliveryInputEmailMemberIDs returns the texts from
 OperatorRoutineDeliveryInput.email_member_ids on.
 */
-func sharedTexts4() map[string]string {
+func sharedTextsFromOperatorRoutineDeliveryInputEmailMemberIDs() map[string]string {
 	return map[string]string{
 		"OperatorRoutineDeliveryInput.email_member_ids": "Ids of the teammates told about the " +
 			"routine's runs by email, as a list of up to 100, each starting with mem_, such as " +
@@ -217,10 +226,10 @@ func sharedTexts4() map[string]string {
 }
 
 /*
-sharedTexts5 returns the texts from
+sharedTextsFromSavedReplyMacroInputAssigneeID returns the texts from
 SavedReplyMacroInput.assignee_id on.
 */
-func sharedTexts5() map[string]string {
+func sharedTextsFromSavedReplyMacroInputAssigneeID() map[string]string {
 	return map[string]string{
 		"SavedReplyMacroInput.assignee_id": "Id of the teammate the conversation is assigned to " +
 			"when the reply is sent, starting with mem_, such as mem_01jx2m8k4t. Find it with " +
@@ -263,10 +272,10 @@ func sharedTexts5() map[string]string {
 }
 
 /*
-sharedTexts6 returns the texts from
+sharedTextsFromStoreSocialChannelRequestBodyAccountID returns the texts from
 StoreSocialChannelRequestBody.account_id on.
 */
-func sharedTexts6() map[string]string {
+func sharedTextsFromStoreSocialChannelRequestBodyAccountID() map[string]string {
 	return map[string]string{
 		"StoreSocialChannelRequestBody.account_id": "The id of the Facebook Page or Instagram " +
 			"account to connect, taken from the accounts list the Facebook or Instagram sign-in step " +

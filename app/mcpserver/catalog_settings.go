@@ -21,7 +21,11 @@ func settingsDocs() map[string]Doc {
 	out := map[string]Doc{}
 	for _, part := range []map[string]Doc{
 		emailAddressDocs(), emailAddressChangeDocs(), emailAddressMailDocs(), signatureDocs(),
-		signatureChangeDocs(), emailDomainDocs(), emailDomainChangeDocs(), messengerPrivacyDocs(), ratingDocs(),
+		signatureChangeDocs(),
+		emailDomainDocs(),
+		emailDomainChangeDocs(),
+		messengerPrivacyDocs(),
+		ratingDocs(),
 	} {
 		maps.Copy(out, part)
 	}

@@ -16,8 +16,14 @@ moreNestedTexts returns the texts written for these tools.
 func moreNestedTexts() map[string]map[string]string {
 	out := map[string]map[string]string{}
 	for _, part := range []map[string]map[string]string{
-		moreNestedTextsPart1(), moreNestedTextsPart2(), moreNestedTextsPart3(), moreNestedTextsPart4(),
-		moreNestedTextsPart5(), moreNestedTextsPart6(), moreNestedTextsPart7(), moreNestedTextsPart8(),
+		moreNestedTextsFromStartImport(),
+		moreNestedTextsFromUpdateBroadcast(),
+		moreNestedTextsFromUpdateDraft(),
+		moreNestedTextsFromUpdateHelpCenter(),
+		moreNestedTextsFromUpdateNotificationPreferences(),
+		moreNestedTextsFromUpdateProcedureTestCase(),
+		moreNestedTextsFromUpdateSnoozeList(),
+		moreNestedTextsFromUpdateWidgetSettings(),
 	} {
 		mergeTexts(out, part)
 	}
@@ -26,10 +32,10 @@ func moreNestedTexts() map[string]map[string]string {
 }
 
 /*
-moreNestedTextsPart1 returns texts of start_import, test_ai_action and
+moreNestedTextsFromStartImport returns texts of start_import, test_ai_action and
 the tools after them.
 */
-func moreNestedTextsPart1() map[string]map[string]string {
+func moreNestedTextsFromStartImport() map[string]map[string]string {
 	return map[string]map[string]string{
 		"start_import": {
 			"mapping.column": "Position of the column in the uploaded file, counting from 0, so the first " +
@@ -69,10 +75,10 @@ func moreNestedTextsPart1() map[string]map[string]string {
 }
 
 /*
-moreNestedTextsPart2 returns texts of update_broadcast,
+moreNestedTextsFromUpdateBroadcast returns texts of update_broadcast,
 update_channel_room and the tools after them.
 */
-func moreNestedTextsPart2() map[string]map[string]string {
+func moreNestedTextsFromUpdateBroadcast() map[string]map[string]string {
 	return map[string]map[string]string{
 		"update_broadcast": {
 			"schedule.at": "When the broadcast goes out, as an ISO 8601 time in the future, such as " +
@@ -112,10 +118,11 @@ func moreNestedTextsPart2() map[string]map[string]string {
 }
 
 /*
-moreNestedTextsPart3 returns texts of update_draft, update_email_address
+moreNestedTextsFromUpdateDraft returns texts of update_draft,
+update_email_address
 and the tools after them.
 */
-func moreNestedTextsPart3() map[string]map[string]string {
+func moreNestedTextsFromUpdateDraft() map[string]map[string]string {
 	return map[string]map[string]string{
 		"update_draft": {
 			"recipients.cc": "List of up to 50 addresses to copy, saved with the draft as given, such as " +
@@ -157,10 +164,10 @@ func moreNestedTextsPart3() map[string]map[string]string {
 }
 
 /*
-moreNestedTextsPart4 returns texts of update_help_center,
+moreNestedTextsFromUpdateHelpCenter returns texts of update_help_center,
 update_many_members and the tools after them.
 */
-func moreNestedTextsPart4() map[string]map[string]string {
+func moreNestedTextsFromUpdateHelpCenter() map[string]map[string]string {
 	return map[string]map[string]string{
 		"update_help_center": {
 			"settings.changelog_title": "Heading of the changelog pages, at most 60 characters, such as What's " +
@@ -202,10 +209,11 @@ func moreNestedTextsPart4() map[string]map[string]string {
 }
 
 /*
-moreNestedTextsPart5 returns texts of update_notification_preferences,
+moreNestedTextsFromUpdateNotificationPreferences returns texts of
+update_notification_preferences,
 update_operator_routine and the tools after them.
 */
-func moreNestedTextsPart5() map[string]map[string]string {
+func moreNestedTextsFromUpdateNotificationPreferences() map[string]map[string]string {
 	return map[string]map[string]string{
 		"update_notification_preferences": {
 			"preferences.enabled": "true turns this trigger on for this channel, false turns it off.",
@@ -246,10 +254,11 @@ func moreNestedTextsPart5() map[string]map[string]string {
 }
 
 /*
-moreNestedTextsPart6 returns texts of update_procedure_test_case,
+moreNestedTextsFromUpdateProcedureTestCase returns texts of
+update_procedure_test_case,
 update_saved_reply and the tools after them.
 */
-func moreNestedTextsPart6() map[string]map[string]string {
+func moreNestedTextsFromUpdateProcedureTestCase() map[string]map[string]string {
 	return map[string]map[string]string{
 		"update_procedure_test_case": {
 			"persona.channel": "Channel the made-up customer writes from: widget, email, slack, whatsapp, " +
@@ -289,10 +298,10 @@ func moreNestedTextsPart6() map[string]map[string]string {
 }
 
 /*
-moreNestedTextsPart7 returns texts of update_snooze_list,
+moreNestedTextsFromUpdateSnoozeList returns texts of update_snooze_list,
 update_ticket_field and the tools after them.
 */
-func moreNestedTextsPart7() map[string]map[string]string {
+func moreNestedTextsFromUpdateSnoozeList() map[string]map[string]string {
 	return map[string]map[string]string{
 		"update_snooze_list": {
 			"options.at": "Clock time the snooze ends, as 24-hour HH:MM in the reader's time zone, such as " +
@@ -332,10 +341,10 @@ func moreNestedTextsPart7() map[string]map[string]string {
 }
 
 /*
-moreNestedTextsPart8 returns texts of update_widget_settings,
+moreNestedTextsFromUpdateWidgetSettings returns texts of update_widget_settings,
 update_workspace.
 */
-func moreNestedTextsPart8() map[string]map[string]string {
+func moreNestedTextsFromUpdateWidgetSettings() map[string]map[string]string {
 	return map[string]map[string]string{
 		"update_widget_settings": {
 			"home_links.title": "Text of the link on the messenger's home screen, 1 to 40 characters, such as " +

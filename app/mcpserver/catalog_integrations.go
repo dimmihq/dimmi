@@ -20,7 +20,11 @@ connections and notification destinations.
 func integrationDocs() map[string]Doc {
 	out := map[string]Doc{}
 	for _, part := range []map[string]Doc{
-		installationDocs(), slackConnectionDocs(), slackRoomDocs(), destinationDocs(), destinationChangeDocs(),
+		installationDocs(),
+		slackConnectionDocs(),
+		slackRoomDocs(),
+		destinationDocs(),
+		destinationChangeDocs(),
 	} {
 		maps.Copy(out, part)
 	}

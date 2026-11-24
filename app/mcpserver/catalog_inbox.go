@@ -24,7 +24,13 @@ func inboxDocs() map[string]Doc {
 		conversationListDocs(), conversationDocs(), conversationChangeDocs(),
 		conversationTrashDocs(), conversationStateDocs(),
 		timelineDocs(), writingDocs(), messageChangeDocs(), collaborationDocs(), viewDocs(), preferenceDocs(),
-		draftDocs(), snoozeDocs(), tagDocs(), inboxSetupDocs(), inboxHoursDocs(), inboxAccessDocs(), inboxAIDocs(),
+		draftDocs(),
+		snoozeDocs(),
+		tagDocs(),
+		inboxSetupDocs(),
+		inboxHoursDocs(),
+		inboxAccessDocs(),
+		inboxAIDocs(),
 		savedReplyDocs(),
 	} {
 		maps.Copy(out, part)

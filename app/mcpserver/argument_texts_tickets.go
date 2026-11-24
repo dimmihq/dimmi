@@ -17,8 +17,15 @@ ticketTexts returns the texts written for these tools.
 func ticketTexts() map[string]map[string]string {
 	out := map[string]map[string]string{}
 	for _, part := range []map[string]map[string]string{
-		ticketTextsPart1(), ticketTextsPart2(), ticketTextsPart3(), ticketTextsPart4(), ticketTextsPart5(),
-		ticketTextsPart6(), ticketTextsPart7(), ticketTextsPart8(), ticketTextsPart9(),
+		ticketTextsFromConvertConversationToTicket(),
+		ticketTextsFromCreateTicketIssue(),
+		ticketTextsFromCreateTicketType(),
+		ticketTextsFromCreateTicketTypeField(),
+		ticketTextsFromEscalateTicket(),
+		ticketTextsFromUpdateIntegrationInstallationIssueSettings(),
+		ticketTextsFromUpdateTicket(),
+		ticketTextsFromUpdateTicketField(),
+		ticketTextsFromUpdateTicketType(),
 	} {
 		mergeTexts(out, part)
 	}
@@ -27,10 +34,11 @@ func ticketTexts() map[string]map[string]string {
 }
 
 /*
-ticketTextsPart1 returns texts of convert_conversation_to_ticket,
+ticketTextsFromConvertConversationToTicket returns texts of
+convert_conversation_to_ticket,
 create_integration_key_installation and the tools after them.
 */
-func ticketTextsPart1() map[string]map[string]string {
+func ticketTextsFromConvertConversationToTicket() map[string]map[string]string {
 	return map[string]map[string]string{
 		"convert_conversation_to_ticket": {
 			"ai_fill": "true to have the AI read the conversation and propose values for the type's fields. " +
@@ -66,10 +74,10 @@ func ticketTextsPart1() map[string]map[string]string {
 }
 
 /*
-ticketTextsPart2 returns texts of create_ticket_issue,
+ticketTextsFromCreateTicketIssue returns texts of create_ticket_issue,
 create_ticket_link and the tools after them.
 */
-func ticketTextsPart2() map[string]map[string]string {
+func ticketTextsFromCreateTicketIssue() map[string]map[string]string {
 	return map[string]map[string]string{
 		"create_ticket_issue": {
 			"key": "To link an issue that already exists instead of creating one: its key or id in the tool, " +
@@ -102,10 +110,10 @@ func ticketTextsPart2() map[string]map[string]string {
 }
 
 /*
-ticketTextsPart3 returns texts of create_ticket_type,
+ticketTextsFromCreateTicketType returns texts of create_ticket_type,
 create_ticket_type_field.
 */
-func ticketTextsPart3() map[string]map[string]string {
+func ticketTextsFromCreateTicketType() map[string]map[string]string {
 	return map[string]map[string]string{
 		"create_ticket_type": {
 			"ai_auto_fill": "true to let the AI save its proposed values straight into every empty field of " +
@@ -141,10 +149,10 @@ func ticketTextsPart3() map[string]map[string]string {
 }
 
 /*
-ticketTextsPart4 returns texts of create_ticket_type_field,
+ticketTextsFromCreateTicketTypeField returns texts of create_ticket_type_field,
 delete_ticket_issue and the tools after them.
 */
-func ticketTextsPart4() map[string]map[string]string {
+func ticketTextsFromCreateTicketTypeField() map[string]map[string]string {
 	return map[string]map[string]string{
 		"create_ticket_type_field": {
 			"key": "The short name field values are stored under: lowercase letters, digits and underscores, " +
@@ -179,10 +187,10 @@ func ticketTextsPart4() map[string]map[string]string {
 }
 
 /*
-ticketTextsPart5 returns texts of escalate_ticket,
+ticketTextsFromEscalateTicket returns texts of escalate_ticket,
 list_integration_installation_issue_options and the tools after them.
 */
-func ticketTextsPart5() map[string]map[string]string {
+func ticketTextsFromEscalateTicket() map[string]map[string]string {
 	return map[string]map[string]string{
 		"escalate_ticket": {
 			"fields": "A JSON object of field values, keyed by the field keys of the back-office ticket type " +
@@ -223,11 +231,11 @@ func ticketTextsPart5() map[string]map[string]string {
 }
 
 /*
-ticketTextsPart6 returns texts of
+ticketTextsFromUpdateIntegrationInstallationIssueSettings returns texts of
 update_integration_installation_issue_settings, update_sla_policy and
 the tools after them.
 */
-func ticketTextsPart6() map[string]map[string]string {
+func ticketTextsFromUpdateIntegrationInstallationIssueSettings() map[string]map[string]string {
 	return map[string]map[string]string{
 		"update_integration_installation_issue_settings": {
 			"deploy_repository": "The GitHub repository whose successful deployments mark done issues as " +
@@ -263,9 +271,9 @@ func ticketTextsPart6() map[string]map[string]string {
 }
 
 /*
-ticketTextsPart7 returns texts of update_ticket, update_ticket_field.
+ticketTextsFromUpdateTicket returns texts of update_ticket, update_ticket_field.
 */
-func ticketTextsPart7() map[string]map[string]string {
+func ticketTextsFromUpdateTicket() map[string]map[string]string {
 	return map[string]map[string]string{
 		"update_ticket": {
 			"fields": "A JSON object of field values to change, keyed by the field keys of the ticket's type; " +
@@ -299,10 +307,10 @@ func ticketTextsPart7() map[string]map[string]string {
 }
 
 /*
-ticketTextsPart8 returns texts of update_ticket_field,
+ticketTextsFromUpdateTicketField returns texts of update_ticket_field,
 update_ticket_settings and the tools after them.
 */
-func ticketTextsPart8() map[string]map[string]string {
+func ticketTextsFromUpdateTicketField() map[string]map[string]string {
 	return map[string]map[string]string{
 		"update_ticket_field": {
 			"required_resolve": "true if this field must have a value before a ticket can move to a resolved " +
@@ -339,9 +347,9 @@ func ticketTextsPart8() map[string]map[string]string {
 }
 
 /*
-ticketTextsPart9 returns texts of update_ticket_type.
+ticketTextsFromUpdateTicketType returns texts of update_ticket_type.
 */
-func ticketTextsPart9() map[string]map[string]string {
+func ticketTextsFromUpdateTicketType() map[string]map[string]string {
 	return map[string]map[string]string{
 		"update_ticket_type": {
 			"customer_visible": "true to let customers open tickets of this type and see them; false to keep " +

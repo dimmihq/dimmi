@@ -20,15 +20,47 @@ unexposedDocs returns the entries of the operations that are not tools.
 func unexposedDocs() map[string]Doc {
 	out := map[string]Doc{}
 	for _, part := range []map[string]Doc{
-		unexposedDocs1(), unexposedDocs2(), unexposedDocs3(), unexposedDocs4(), unexposedDocs5(),
-		unexposedDocs6(), unexposedDocs7(), unexposedDocs8(), unexposedDocs9(), unexposedDocs10(),
-		unexposedDocs11(), unexposedDocs12(), unexposedDocs13(), unexposedDocs14(), unexposedDocs15(),
-		unexposedDocs16(), unexposedDocs17(), unexposedDocs18(), unexposedDocs19(), unexposedDocs20(),
-		unexposedDocs21(), unexposedDocs22(), unexposedDocs23(), unexposedDocs24(), unexposedDocs25(),
-		unexposedDocs26(), unexposedDocs27(), unexposedDocs28(), unexposedDocs29(), unexposedDocs30(),
-		unexposedDocs31(), unexposedDocs32(), unexposedDocs33(), unexposedDocs34(), unexposedDocs35(),
-		unexposedDocs36(), unexposedDocs37(), unexposedDocs38(), unexposedDocs39(), unexposedDocs40(),
-		unexposedDocs41(),
+		unexposedDocsFromAiChatgptCallbackStore(),
+		unexposedDocsFromBroadcastPreferencesShow(),
+		unexposedDocsFromChannelsFacebookSignupsStore(),
+		unexposedDocsFromChannelsWhatsappSignupConfigIndex(),
+		unexposedDocsFromContactListsStore(),
+		unexposedDocsFromEmailChangesStore(),
+		unexposedDocsFromEmailVerificationsUpdate(),
+		unexposedDocsFromIdentityVerificationSettingsUpdate(),
+		unexposedDocsFromIntegrationsInstallationsStore(),
+		unexposedDocsFromIntegrationsMemberGrantsStore(),
+		unexposedDocsFromMagicLinksStore(),
+		unexposedDocsFromMembersSignInLockDestroy(),
+		unexposedDocsFromNotificationUnsubscribesDestroy(),
+		unexposedDocsFromOauthAuthorizationShow(),
+		unexposedDocsFromOrganizationDomainsChecksStore(),
+		unexposedDocsFromOrganizationDomainsStore(),
+		unexposedDocsFromPasswordResetsUpdate(),
+		unexposedDocsFromPushSubscriptionsIndex(),
+		unexposedDocsFromRolesStore(),
+		unexposedDocsFromSessionsDestroy(),
+		unexposedDocsFromSessionsStore(),
+		unexposedDocsFromSsoConnectionsDestroy(),
+		unexposedDocsFromSsoConnectionsStore(),
+		unexposedDocsFromSsoConnectionsTestsStore(),
+		unexposedDocsFromSsoConnectionsUpdate(),
+		unexposedDocsFromSsoLookupsStore(),
+		unexposedDocsFromTokensIndex(),
+		unexposedDocsFromTokensStore(),
+		unexposedDocsFromTwoFactorResetsUpdate(),
+		unexposedDocsFromUserAuthFactorsIndex(),
+		unexposedDocsFromUserAuthFactorsUpdate(),
+		unexposedDocsFromUserConfirmationCodesStore(),
+		unexposedDocsFromUserConnectedAppsDestroy(),
+		unexposedDocsFromUserDestroy(),
+		unexposedDocsFromUserMembershipsDestroy(),
+		unexposedDocsFromUserMembershipsStore(),
+		unexposedDocsFromUserSecurityEventsIndex(),
+		unexposedDocsFromUsersStore(),
+		unexposedDocsFromWorkspaceAccessPolicyUpdate(),
+		unexposedDocsFromWorkspaceDestroy(),
+		unexposedDocsFromWorkspacesUpdate(),
 	} {
 		maps.Copy(out, part)
 	}
@@ -37,9 +69,10 @@ func unexposedDocs() map[string]Doc {
 }
 
 /*
-unexposedDocs1 returns entries from ai.chatgpt.callback.store on.
+unexposedDocsFromAiChatgptCallbackStore returns entries from
+ai.chatgpt.callback.store on.
 */
-func unexposedDocs1() map[string]Doc {
+func unexposedDocsFromAiChatgptCallbackStore() map[string]Doc {
 	return map[string]Doc{
 		"ai.chatgpt.callback.store": {
 			Title: "Finish a ChatGPT sign-in",
@@ -81,9 +114,10 @@ func unexposedDocs1() map[string]Doc {
 }
 
 /*
-unexposedDocs2 returns entries from broadcast-preferences.show on.
+unexposedDocsFromBroadcastPreferencesShow returns entries from
+broadcast-preferences.show on.
 */
-func unexposedDocs2() map[string]Doc {
+func unexposedDocsFromBroadcastPreferencesShow() map[string]Doc {
 	return map[string]Doc{
 		"broadcast-preferences.show": {
 			Title: "Read broadcast preferences",
@@ -121,9 +155,10 @@ func unexposedDocs2() map[string]Doc {
 }
 
 /*
-unexposedDocs3 returns entries from channels.facebook.signups.store on.
+unexposedDocsFromChannelsFacebookSignupsStore returns entries from
+channels.facebook.signups.store on.
 */
-func unexposedDocs3() map[string]Doc {
+func unexposedDocsFromChannelsFacebookSignupsStore() map[string]Doc {
 	return map[string]Doc{
 		"channels.facebook.signups.store": {
 			Title: "Start a Facebook connection",
@@ -164,9 +199,10 @@ func unexposedDocs3() map[string]Doc {
 }
 
 /*
-unexposedDocs4 returns entries from channels.whatsapp.signup-config.index on.
+unexposedDocsFromChannelsWhatsappSignupConfigIndex returns entries from
+channels.whatsapp.signup-config.index on.
 */
-func unexposedDocs4() map[string]Doc {
+func unexposedDocsFromChannelsWhatsappSignupConfigIndex() map[string]Doc {
 	return map[string]Doc{
 		"channels.whatsapp.signup-config.index": {
 			Title: "Read WhatsApp signup settings",
@@ -201,9 +237,9 @@ func unexposedDocs4() map[string]Doc {
 }
 
 /*
-unexposedDocs5 returns entries from contact-lists.store on.
+unexposedDocsFromContactListsStore returns entries from contact-lists.store on.
 */
-func unexposedDocs5() map[string]Doc {
+func unexposedDocsFromContactListsStore() map[string]Doc {
 	return map[string]Doc{
 		"contact-lists.store": {
 			Title: "Tag customers from a CSV",
@@ -239,9 +275,9 @@ func unexposedDocs5() map[string]Doc {
 }
 
 /*
-unexposedDocs6 returns entries from email-changes.store on.
+unexposedDocsFromEmailChangesStore returns entries from email-changes.store on.
 */
-func unexposedDocs6() map[string]Doc {
+func unexposedDocsFromEmailChangesStore() map[string]Doc {
 	return map[string]Doc{
 		"email-changes.store": {
 			Title: "Request an email change",
@@ -278,9 +314,10 @@ func unexposedDocs6() map[string]Doc {
 }
 
 /*
-unexposedDocs7 returns entries from email-verifications.update on.
+unexposedDocsFromEmailVerificationsUpdate returns entries from email-
+verifications.update on.
 */
-func unexposedDocs7() map[string]Doc {
+func unexposedDocsFromEmailVerificationsUpdate() map[string]Doc {
 	return map[string]Doc{
 		"email-verifications.update": {
 			Title: "Verify an email address",

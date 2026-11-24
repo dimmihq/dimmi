@@ -17,8 +17,13 @@ aiTexts returns the texts written for these tools.
 func aiTexts() map[string]map[string]string {
 	out := map[string]map[string]string{}
 	for _, part := range []map[string]map[string]string{
-		aiTextsPart1(), aiTextsPart2(), aiTextsPart3(), aiTextsPart4(), aiTextsPart5(), aiTextsPart6(),
-		aiTextsPart7(), aiTextsPart8(),
+		aiTextsFromCreateAiAction(),
+		aiTextsFromCreateAiActionConnection(),
+		aiTextsFromCreateOperatorRoutine(),
+		aiTextsFromSimulateProcedure(),
+		aiTextsFromUpdateAiAction(),
+		aiTextsFromUpdateAiActionConnection(),
+		aiTextsFromUpdateOperatorRoutine(), aiTextsFromUpdateProcedureTestCase(),
 	} {
 		mergeTexts(out, part)
 	}
@@ -27,10 +32,10 @@ func aiTexts() map[string]map[string]string {
 }
 
 /*
-aiTextsPart1 returns texts of create_ai_action,
+aiTextsFromCreateAiAction returns texts of create_ai_action,
 create_ai_action_connection.
 */
-func aiTextsPart1() map[string]map[string]string {
+func aiTextsFromCreateAiAction() map[string]map[string]string {
 	return map[string]map[string]string{
 		"create_ai_action": {
 			"body_encoding": "How the request body is sent: \"json\" or \"form\". Left out, it is \"json\". " +
@@ -69,10 +74,11 @@ func aiTextsPart1() map[string]map[string]string {
 }
 
 /*
-aiTextsPart2 returns texts of create_ai_action_connection, create_ai_key
+aiTextsFromCreateAiActionConnection returns texts of
+create_ai_action_connection, create_ai_key
 and the tools after them.
 */
-func aiTextsPart2() map[string]map[string]string {
+func aiTextsFromCreateAiActionConnection() map[string]map[string]string {
 	return map[string]map[string]string{
 		"create_ai_action_connection": {
 			"default_headers": "Headers sent with every request through this connection, as an object of " +
@@ -111,10 +117,10 @@ func aiTextsPart2() map[string]map[string]string {
 }
 
 /*
-aiTextsPart3 returns texts of create_operator_routine,
+aiTextsFromCreateOperatorRoutine returns texts of create_operator_routine,
 create_procedure_test_case and the tools after them.
 */
-func aiTextsPart3() map[string]map[string]string {
+func aiTextsFromCreateOperatorRoutine() map[string]map[string]string {
 	return map[string]map[string]string{
 		"create_operator_routine": {
 			"template_key": "The template the new routine starts from; fields you leave out take its values. " +
@@ -154,10 +160,11 @@ func aiTextsPart3() map[string]map[string]string {
 }
 
 /*
-aiTextsPart4 returns texts of simulate_procedure, test_ai_action and the
+aiTextsFromSimulateProcedure returns texts of simulate_procedure,
+test_ai_action and the
 tools after them.
 */
-func aiTextsPart4() map[string]map[string]string {
+func aiTextsFromSimulateProcedure() map[string]map[string]string {
 	return map[string]map[string]string{
 		"simulate_procedure": {
 			"action_mocks": "What each action answers instead of really being called, as an object keyed by " +
@@ -195,10 +202,10 @@ func aiTextsPart4() map[string]map[string]string {
 }
 
 /*
-aiTextsPart5 returns texts of update_ai_action,
+aiTextsFromUpdateAiAction returns texts of update_ai_action,
 update_ai_action_connection.
 */
-func aiTextsPart5() map[string]map[string]string {
+func aiTextsFromUpdateAiAction() map[string]map[string]string {
 	return map[string]map[string]string{
 		"update_ai_action": {
 			"error_message_path": "Dotted path to the error message in the other system's JSON response, read " +
@@ -239,10 +246,11 @@ func aiTextsPart5() map[string]map[string]string {
 }
 
 /*
-aiTextsPart6 returns texts of update_ai_action_connection,
+aiTextsFromUpdateAiActionConnection returns texts of
+update_ai_action_connection,
 update_ai_agent and the tools after them.
 */
-func aiTextsPart6() map[string]map[string]string {
+func aiTextsFromUpdateAiActionConnection() map[string]map[string]string {
 	return map[string]map[string]string{
 		"update_ai_action_connection": {
 			"variables": "Named values the connection's actions can use in their templates as " +
@@ -281,10 +289,10 @@ func aiTextsPart6() map[string]map[string]string {
 }
 
 /*
-aiTextsPart7 returns texts of update_operator_routine,
+aiTextsFromUpdateOperatorRoutine returns texts of update_operator_routine,
 update_procedure_test_case.
 */
-func aiTextsPart7() map[string]map[string]string {
+func aiTextsFromUpdateOperatorRoutine() map[string]map[string]string {
 	return map[string]map[string]string{
 		"update_operator_routine": {
 			"delivery": "Who is told about the routine's runs, as an object of id lists: in_app_member_ids and " +
@@ -320,9 +328,9 @@ func aiTextsPart7() map[string]map[string]string {
 }
 
 /*
-aiTextsPart8 returns texts of update_procedure_test_case.
+aiTextsFromUpdateProcedureTestCase returns texts of update_procedure_test_case.
 */
-func aiTextsPart8() map[string]map[string]string {
+func aiTextsFromUpdateProcedureTestCase() map[string]map[string]string {
 	return map[string]map[string]string{
 		"update_procedure_test_case": {
 			"messages": "The customer's scripted messages in order, 1 to 12, each an object with text (1 to " +

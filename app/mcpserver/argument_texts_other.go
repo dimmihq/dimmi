@@ -17,8 +17,15 @@ otherTexts returns the texts written for these tools.
 func otherTexts() map[string]map[string]string {
 	out := map[string]map[string]string{}
 	for _, part := range []map[string]map[string]string{
-		otherTextsPart1(), otherTextsPart2(), otherTextsPart3(), otherTextsPart4(), otherTextsPart5(),
-		otherTextsPart6(), otherTextsPart7(), otherTextsPart8(), otherTextsPart9(),
+		otherTextsFromChangeFeedbackStatus(),
+		otherTextsFromCreateChannelWhatsapp(),
+		otherTextsFromCreateConversationBulkChange(),
+		otherTextsFromCreateWidgetSettings(),
+		otherTextsFromSendWhatsappTemplateToConversation(),
+		otherTextsFromUpdateChannelWhatsappTemplate(),
+		otherTextsFromUpdateInboxPreferences(),
+		otherTextsFromUpdateNotificationSettings(),
+		otherTextsFromUpdateWidgetSettings(),
 	} {
 		mergeTexts(out, part)
 	}
@@ -27,10 +34,10 @@ func otherTexts() map[string]map[string]string {
 }
 
 /*
-otherTextsPart1 returns texts of change_feedback_status,
+otherTextsFromChangeFeedbackStatus returns texts of change_feedback_status,
 create_attribute_definition and the tools after them.
 */
-func otherTextsPart1() map[string]map[string]string {
+func otherTextsFromChangeFeedbackStatus() map[string]map[string]string {
 	return map[string]map[string]string{
 		"change_feedback_status": {
 			"category": "What the feedback status means, in the order work moves: open, planned, in_progress, " +
@@ -64,10 +71,10 @@ func otherTextsPart1() map[string]map[string]string {
 }
 
 /*
-otherTextsPart2 returns texts of create_channel_whatsapp,
+otherTextsFromCreateChannelWhatsapp returns texts of create_channel_whatsapp,
 create_channel_whatsapp_account and the tools after them.
 */
-func otherTextsPart2() map[string]map[string]string {
+func otherTextsFromCreateChannelWhatsapp() map[string]map[string]string {
 	return map[string]map[string]string{
 		"create_channel_whatsapp": {
 			"phone_number_id": "Meta's id of the WhatsApp phone number to connect, one of the numbers of the " +
@@ -101,10 +108,11 @@ func otherTextsPart2() map[string]map[string]string {
 }
 
 /*
-otherTextsPart3 returns texts of create_conversation_bulk_change,
+otherTextsFromCreateConversationBulkChange returns texts of
+create_conversation_bulk_change,
 create_conversation_feedback_post and the tools after them.
 */
-func otherTextsPart3() map[string]map[string]string {
+func otherTextsFromCreateConversationBulkChange() map[string]map[string]string {
 	return map[string]map[string]string{
 		"create_conversation_bulk_change": {
 			"changes": "Object of changes to apply to every listed conversation; send this or trash, never " +
@@ -143,10 +151,10 @@ func otherTextsPart3() map[string]map[string]string {
 }
 
 /*
-otherTextsPart4 returns texts of create_widget_settings,
+otherTextsFromCreateWidgetSettings returns texts of create_widget_settings,
 list_conversations_behind_report_number and the tools after them.
 */
-func otherTextsPart4() map[string]map[string]string {
+func otherTextsFromCreateWidgetSettings() map[string]map[string]string {
 	return map[string]map[string]string{
 		"create_widget_settings": {
 			"show_branding": "Whether the messenger shows the 'Powered by' badge: true shows it, false hides " +
@@ -184,10 +192,11 @@ func otherTextsPart4() map[string]map[string]string {
 }
 
 /*
-otherTextsPart5 returns texts of send_whatsapp_template_to_conversation,
+otherTextsFromSendWhatsappTemplateToConversation returns texts of
+send_whatsapp_template_to_conversation,
 update_attribute_definition and the tools after them.
 */
-func otherTextsPart5() map[string]map[string]string {
+func otherTextsFromSendWhatsappTemplateToConversation() map[string]map[string]string {
 	return map[string]map[string]string{
 		"send_whatsapp_template_to_conversation": {
 			"client_message_id": "An id you make up for this send, 1 to 64 characters, so that a retried " +
@@ -225,10 +234,11 @@ func otherTextsPart5() map[string]map[string]string {
 }
 
 /*
-otherTextsPart6 returns texts of update_channel_whatsapp_template,
+otherTextsFromUpdateChannelWhatsappTemplate returns texts of
+update_channel_whatsapp_template,
 update_event_definition and the tools after them.
 */
-func otherTextsPart6() map[string]map[string]string {
+func otherTextsFromUpdateChannelWhatsappTemplate() map[string]map[string]string {
 	return map[string]map[string]string{
 		"update_channel_whatsapp_template": {
 			"header": "Optional text header above the message: at most 60 characters, with at most one " +
@@ -267,10 +277,11 @@ func otherTextsPart6() map[string]map[string]string {
 }
 
 /*
-otherTextsPart7 returns texts of update_inbox_preferences, update_member
+otherTextsFromUpdateInboxPreferences returns texts of
+update_inbox_preferences, update_member
 and the tools after them.
 */
-func otherTextsPart7() map[string]map[string]string {
+func otherTextsFromUpdateInboxPreferences() map[string]map[string]string {
 	return map[string]map[string]string{
 		"update_inbox_preferences": {
 			"sidebar": "Free-form object of the caller's own inbox sidebar settings. It replaces the whole " +
@@ -306,10 +317,11 @@ func otherTextsPart7() map[string]map[string]string {
 }
 
 /*
-otherTextsPart8 returns texts of update_notification_settings,
+otherTextsFromUpdateNotificationSettings returns texts of
+update_notification_settings,
 update_report_digest and the tools after them.
 */
-func otherTextsPart8() map[string]map[string]string {
+func otherTextsFromUpdateNotificationSettings() map[string]map[string]string {
 	return map[string]map[string]string{
 		"update_notification_settings": {
 			"quiet_hours_enabled": "Whether the caller's own quiet hours are on. The hours themselves are set " +
@@ -346,10 +358,10 @@ func otherTextsPart8() map[string]map[string]string {
 }
 
 /*
-otherTextsPart9 returns texts of update_widget_settings,
+otherTextsFromUpdateWidgetSettings returns texts of update_widget_settings,
 update_workspace.
 */
-func otherTextsPart9() map[string]map[string]string {
+func otherTextsFromUpdateWidgetSettings() map[string]map[string]string {
 	return map[string]map[string]string{
 		"update_widget_settings": {
 			"show_team_avatars": "Whether the messenger shows visitors the team's avatars. Part of the config " +

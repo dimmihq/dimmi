@@ -16,8 +16,12 @@ nestedTexts returns the texts written for these tools.
 func nestedTexts() map[string]map[string]string {
 	out := map[string]map[string]string{}
 	for _, part := range []map[string]map[string]string{
-		nestedTextsPart1(), nestedTextsPart2(), nestedTextsPart3(), nestedTextsPart4(), nestedTextsPart5(),
-		nestedTextsPart6(), nestedTextsPart7(),
+		nestedTextsFromCreateAiAction(),
+		nestedTextsFromCreateChannelWhatsappTemplate(),
+		nestedTextsFromCreateContactEvent(),
+		nestedTextsFromCreateConversationBulkChange(),
+		nestedTextsFromCreateDraft(),
+		nestedTextsFromCreateOperatorRoutine(), nestedTextsFromCreateSavedReply(),
 	} {
 		mergeTexts(out, part)
 	}
@@ -26,10 +30,10 @@ func nestedTexts() map[string]map[string]string {
 }
 
 /*
-nestedTextsPart1 returns texts of create_ai_action,
+nestedTextsFromCreateAiAction returns texts of create_ai_action,
 create_ai_action_connection and the tools after them.
 */
-func nestedTextsPart1() map[string]map[string]string {
+func nestedTextsFromCreateAiAction() map[string]map[string]string {
 	return map[string]map[string]string{
 		"create_ai_action": {
 			"response_fields.description": "An optional note saying what this value means, such as The order's " +
@@ -69,10 +73,11 @@ func nestedTextsPart1() map[string]map[string]string {
 }
 
 /*
-nestedTextsPart2 returns texts of create_channel_whatsapp_template,
+nestedTextsFromCreateChannelWhatsappTemplate returns texts of
+create_channel_whatsapp_template,
 create_contact and the tools after them.
 */
-func nestedTextsPart2() map[string]map[string]string {
+func nestedTextsFromCreateChannelWhatsappTemplate() map[string]map[string]string {
 	return map[string]map[string]string{
 		"create_channel_whatsapp_template": {
 			"buttons.type": "What the button does: quick_reply (sends its label back as a reply), url (opens a " +
@@ -108,10 +113,10 @@ func nestedTextsPart2() map[string]map[string]string {
 }
 
 /*
-nestedTextsPart3 returns texts of create_contact_event,
+nestedTextsFromCreateContactEvent returns texts of create_contact_event,
 create_conversation and the tools after them.
 */
-func nestedTextsPart3() map[string]map[string]string {
+func nestedTextsFromCreateContactEvent() map[string]map[string]string {
 	return map[string]map[string]string{
 		"create_contact_event": {
 			"events.occurred_at": "When it happened, as an ISO 8601 time, such as 2026-11-20T14:30:00Z. Left " +
@@ -151,10 +156,11 @@ func nestedTextsPart3() map[string]map[string]string {
 }
 
 /*
-nestedTextsPart4 returns texts of create_conversation_bulk_change,
+nestedTextsFromCreateConversationBulkChange returns texts of
+create_conversation_bulk_change,
 create_data_export.
 */
-func nestedTextsPart4() map[string]map[string]string {
+func nestedTextsFromCreateConversationBulkChange() map[string]map[string]string {
 	return map[string]map[string]string{
 		"create_conversation_bulk_change": {
 			"changes.snooze_preset": "Only with status snoozed: later_today, tomorrow, next_week or one_week, " +
@@ -191,10 +197,10 @@ func nestedTextsPart4() map[string]map[string]string {
 }
 
 /*
-nestedTextsPart5 returns texts of create_draft, create_invitation and
+nestedTextsFromCreateDraft returns texts of create_draft, create_invitation and
 the tools after them.
 */
-func nestedTextsPart5() map[string]map[string]string {
+func nestedTextsFromCreateDraft() map[string]map[string]string {
 	return map[string]map[string]string{
 		"create_draft": {
 			"recipients.bcc": "Who gets a hidden copy when the draft is sent, as a list of up to 50 texts, " +
@@ -234,10 +240,10 @@ func nestedTextsPart5() map[string]map[string]string {
 }
 
 /*
-nestedTextsPart6 returns texts of create_operator_routine,
+nestedTextsFromCreateOperatorRoutine returns texts of create_operator_routine,
 create_procedure_test_case.
 */
-func nestedTextsPart6() map[string]map[string]string {
+func nestedTextsFromCreateOperatorRoutine() map[string]map[string]string {
 	return map[string]map[string]string{
 		"create_operator_routine": {
 			"scope.github.base_branch": "The branch pull requests are merged into; the routine lists the pull " +
@@ -276,9 +282,9 @@ func nestedTextsPart6() map[string]map[string]string {
 }
 
 /*
-nestedTextsPart7 returns texts of create_saved_reply.
+nestedTextsFromCreateSavedReply returns texts of create_saved_reply.
 */
-func nestedTextsPart7() map[string]map[string]string {
+func nestedTextsFromCreateSavedReply() map[string]map[string]string {
 	return map[string]map[string]string{
 		"create_saved_reply": {
 			"actions.assignee_id": "Id of the teammate the conversation is assigned to when the reply is sent, " +
