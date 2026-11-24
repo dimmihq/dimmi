@@ -97,7 +97,28 @@ func (s *statement) filters(q Query) []string {
 		out = append(out, "NOT f.ai_involved")
 	}
 
+	if f.AIAttribute != "" {
+		out = append(out, s.aiAttribute(f.AIAttribute, f.AIValue))
+	}
+
 	return append(out, s.access(q)...)
+}
+
+/*
+aiAttribute returns the clause of the AI attribute filter: the
+conversations the attribute was found on, or only those where it holds
+the value, compared as text.
+*/
+func (s *statement) aiAttribute(key, value string) string {
+	var held string
+	if value == "" {
+		held = "jsonb_typeof(av.\"values\" -> " + s.arg(key) + "::text) <> 'null'"
+	} else {
+		held = "av.\"values\" ->> " + s.arg(key) + "::text = " + s.arg(value) + "::text"
+	}
+
+	return "EXISTS (SELECT 1 FROM conversation_ai_values av WHERE av.conversation_id = f.conversation_id AND " +
+		held + ")"
 }
 
 /*

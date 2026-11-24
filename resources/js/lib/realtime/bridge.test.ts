@@ -109,6 +109,23 @@ describe("Bridge", () => {
     });
   });
 
+  it("refetches what the AI found on a conversation when an attribute changes", () => {
+    const { client, bridge } = setup();
+    const found = realtimeKeys.aiAttributes(ws, "conv_1");
+    const other = realtimeKeys.aiAttributes(ws, "conv_2");
+    client.setQueryData(found, { values: [] });
+    client.setQueryData(other, { values: [] });
+
+    bridge.apply(
+      ws,
+      "conversation:conv_1",
+      envelope("conversation.ai_attribute_changed", { id: "conv_1", object: "conversation", status: "open" }),
+    );
+
+    expect(stale(client, found)).toBe(true);
+    expect(stale(client, other)).toBe(false);
+  });
+
   it("appends a new message to the timeline and patches an edited one", () => {
     const { client, bridge } = setup();
     const key = realtimeKeys.messages(ws, "conv_1");

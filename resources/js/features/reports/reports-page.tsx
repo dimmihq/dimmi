@@ -14,6 +14,8 @@ import { Select, SelectItem } from "@/components/base/select/select";
 import { Skeleton } from "@/components/base/skeleton/skeleton";
 import { useInbox } from "@/features/inbox/conversations";
 import { EmptyState, PageHeader, Panel, ScrollArea } from "@/features/shell/page";
+import { defaultBreakdown, splitsReports } from "@/lib/ai-values";
+import { aiAttributesQuery } from "@/lib/api/ai-attributes";
 import { type Report, type ReportChart, type ReportType, reportQuery, reportTypesQuery } from "@/lib/api/reports";
 import { callerQuery } from "@/lib/api/workspace";
 import { cx } from "@/utils/cx";
@@ -107,26 +109,81 @@ function Caption({ report, summary }: { report: Report; summary: string | undefi
 type Drill = Pick<ReportSearch, "drill" | "drill_from" | "drill_to" | "drill_by">;
 
 /*
+ * BreakdownPicker picks the AI attribute the AI report's table splits
+ * by: the choice and yes-or-no ones, the first active one when none is
+ * picked, as the server does.
+ */
+function BreakdownPicker({
+  workspace,
+  value,
+  onChange,
+}: {
+  workspace: string;
+  value: string | undefined;
+  onChange: (key: string) => void;
+}) {
+  const all = useQuery(aiAttributesQuery(workspace)).data ?? [];
+  const choices = all.filter((a) => splitsReports(a) && (a.status === "active" || a.key === value));
+  const selected = value ?? defaultBreakdown(all)?.key;
+  if (choices.length < 2) {
+    return null;
+  }
+
+  return (
+    <Select
+      aria-label="Split by AI attribute"
+      size="sm"
+      variant="quiet"
+      className="w-40"
+      selectedKey={selected ?? null}
+      onSelectionChange={(key) => key !== null && onChange(String(key))}
+    >
+      {choices.map((a) => (
+        <SelectItem key={a.key} id={a.key} textValue={a.label}>
+          {a.label}
+        </SelectItem>
+      ))}
+    </Select>
+  );
+}
+
+/*
  * ReportBody draws a report: its numbers, then its charts. A point
  * clicked on a chart over days opens that day's conversations; a table
  * row opens its conversations, or narrows the report when the table has
  * none behind it.
  */
 function ReportBody({
+  workspace,
   report,
+  search,
   dimmed,
   onDrill,
   onNarrow,
 }: {
+  workspace: string;
   report: Report;
+  search: ReportSearch;
   dimmed: boolean;
   onDrill: (drill: Drill) => void;
   onNarrow: (filter: Record<string, string>) => void;
 }) {
   const pick = (chart: ReportChart, p: PointPick) =>
     onDrill(chart.axis === "day" ? { drill: p.drill, drill_from: p.x, drill_to: p.x } : { drill: p.drill });
-  const row = (chart: ReportChart, r: ReportChart["rows"][number]) =>
+  const row = (chart: ReportChart, r: ReportChart["rows"][number]) => {
+    if (chart.key === "ai_attribute" && Object.keys(r.filter).length === 0) {
+      return;
+    }
     chart.drill ? onDrill({ drill: chart.drill, drill_by: writeDrillBy(r.filter) }) : onNarrow(r.filter);
+  };
+  const control = (chart: ReportChart) =>
+    chart.key === "ai_attribute" ? (
+      <BreakdownPicker
+        workspace={workspace}
+        value={search.ai_breakdown}
+        onChange={(key) => onNarrow({ ai_breakdown: key })}
+      />
+    ) : undefined;
 
   if (report.metrics.length === 0 && report.charts.length === 0) {
     return <EmptyState icon={RiBarChart2Line} title="Nothing to show yet" />;
@@ -144,6 +201,7 @@ function ReportBody({
               report={report}
               onPick={(p) => pick(chart, p)}
               onRow={(r) => row(chart, r)}
+              control={control(chart)}
             />
           ))}
         </div>
@@ -235,7 +293,16 @@ export function ReportsPage() {
   if (view.error) {
     body = <EmptyState icon={RiErrorWarningLine} title="This report could not load" description={view.error.message} />;
   } else if (view.data) {
-    body = <ReportBody report={view.data} dimmed={view.dimmed} onDrill={drill} onNarrow={change} />;
+    body = (
+      <ReportBody
+        workspace={workspace}
+        report={view.data}
+        search={search}
+        dimmed={view.dimmed}
+        onDrill={drill}
+        onNarrow={change}
+      />
+    );
   } else {
     body = <Loading />;
   }

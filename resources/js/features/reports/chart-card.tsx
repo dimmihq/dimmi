@@ -2,10 +2,12 @@
  * One chart of a report on its card: its title, a legend when it has
  * more than one series, a CSV of exactly its data, and the chart its
  * kind calls for. A table takes the data table's card, outlined on the
- * page with its title above the header row. A kind this page does not
+ * page with its title above the header row, and any control the page
+ * hands it, such as what the table splits by, beside its title. A kind this page does not
  * know yet draws as a table when it has rows, else as bars.
  */
 import { RiDownload2Line } from "@remixicon/react";
+import type { ReactNode } from "react";
 
 import { Skeleton } from "@/components/base/skeleton/skeleton";
 import type { Report, ReportChart } from "@/lib/api/reports";
@@ -56,11 +58,14 @@ export function ChartCard({
   report,
   onPick,
   onRow,
+  control,
 }: {
   chart: ReportChart;
   report: Report;
   onPick: (pick: PointPick) => void;
   onRow: (row: ReportChart["rows"][number]) => void;
+  /* A control beside a table's title. */
+  control?: ReactNode;
 }) {
   const drawn = drawnAs(chart);
   const empty = isEmpty(chart, drawn);
@@ -78,13 +83,16 @@ export function ChartCard({
       >
         <header className="flex min-h-10 min-w-0 items-center justify-between gap-2 px-3 pb-2">
           <h2 className="truncate text-body-medium text-text-primary">{chart.title}</h2>
-          <IconAction
-            icon={RiDownload2Line}
-            label={`Download ${chart.title} as CSV`}
-            isDisabled={empty}
-            className="-me-1"
-            onPress={download}
-          />
+          <div className="flex shrink-0 items-center gap-1">
+            {control}
+            <IconAction
+              icon={RiDownload2Line}
+              label={`Download ${chart.title} as CSV`}
+              isDisabled={empty}
+              className="-me-1"
+              onPress={download}
+            />
+          </div>
         </header>
         <ReportTable chart={chart} onRow={onRow} />
       </section>

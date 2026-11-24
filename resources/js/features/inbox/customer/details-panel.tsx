@@ -1,8 +1,8 @@
 /*
  * What a teammate needs beside the thread, as one quiet list. Its header
  * holds the moves they make on the case, in one Actions menu beside the
- * close button. Below come the case's own properties, its tags, its
- * ticket when it is one (or the trackers it joined), then who the
+ * close button. Below come the case's own properties, its tags, what the
+ * AI read off it, its ticket when it is one (or the trackers it joined), then who the
  * customer is, the team's notes on them, their company, their other
  * conversations and the feature requests the conversation was linked
  * to, all read from the conversation's context in one request. Each part
@@ -25,6 +25,7 @@ import { callerQuery } from "@/lib/api/workspace";
 import type { CaseControls } from "../case";
 import { RatingSection } from "../rating";
 import { CustomerSkeleton } from "../skeletons";
+import { AIAttributesSection } from "./ai-attributes-section";
 import { Actions, CaseFields, CaseTags, Refusal } from "./case-section";
 import { CompanySection } from "./company-section";
 import { ContactSection } from "./contact-section";
@@ -40,6 +41,7 @@ import { SocialSection } from "./social-section";
  */
 const sections = [
   "Tags",
+  "AI attributes",
   "Ticket",
   "Back-office",
   "Trackers",
@@ -114,6 +116,7 @@ export function DetailsPanel({
           </div>
           <CaseTags workspace={workspace} conversation={conversation} caze={caze} />
           <RatingSection workspace={workspace} conversation={conversation.id} />
+          <AIAttributesSection workspace={workspace} conversation={conversation.id} />
           <TicketPanel
             workspace={workspace}
             conversation={conversation.id}

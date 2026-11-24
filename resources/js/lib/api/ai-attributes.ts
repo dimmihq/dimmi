@@ -3,11 +3,16 @@
  * name, a type, what it means and, for a choice, its values) that the
  * decision model fills in on every conversation and checks again as the
  * customer writes. Workflows branch and start on them and inbox views
- * filter by them as conversation.ai.<key>. A key and a type never change;
- * an attribute is archived rather than deleted. Reading takes
- * conversations:read; changing takes ai:write, which the server checks.
+ * filter by them as conversation.ai.<key>; reports filter and split by
+ * them. The details panel shows what was found on a conversation, kept
+ * current by the conversation.ai_attribute_changed broadcast. A key and
+ * a type never change; an attribute is archived rather than deleted.
+ * Reading takes conversations:read; changing takes ai:write, which the
+ * server checks.
  */
 import { queryOptions } from "@tanstack/react-query";
+
+import { realtimeKeys } from "@/lib/realtime/keys";
 
 import { request } from "./client";
 
@@ -56,7 +61,7 @@ export function aiAttributesQuery(workspace: string) {
 
 export function conversationAIAttributesQuery(workspace: string, conversation: string) {
   return queryOptions({
-    queryKey: ["workspace", workspace, "conversations", conversation, "ai-attributes"],
+    queryKey: realtimeKeys.aiAttributes(workspace, conversation),
     queryFn: () =>
       request<ConversationAIAttributes>("GET", `/conversations/${conversation}/ai-attributes`, undefined, {
         workspace,
