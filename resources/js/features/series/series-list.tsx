@@ -5,7 +5,7 @@
  * sit on top. A new series starts from a template, for contacts or for
  * whole accounts, and opens in its builder.
  */
-import { RiAddLine, RiBuilding2Line, RiFlowChart, RiUser3Line } from "@remixicon/react";
+import { RiAddLine, RiBuilding2Line, RiFlowChart, RiSparkling2Line, RiUser3Line } from "@remixicon/react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import type { ColumnDef } from "@tanstack/react-table";
@@ -21,6 +21,7 @@ import { RadioCard } from "@/components/base/radio/radio-card";
 import { toast } from "@/components/base/toast/toast";
 import { KindMark } from "@/features/automation/parts";
 import { useWorkspace } from "@/features/customers/names";
+import { DraftFromDescription } from "@/features/operator/draft-from-description";
 import { PageHeader, Panel, ScrollArea } from "@/features/shell/page";
 import { createSeries, type Series, type SeriesSubject, seriesListQuery } from "@/lib/api/series";
 import { formatDate, formatNumber } from "@/lib/i18n/format";
@@ -215,6 +216,7 @@ export function SeriesList() {
   const navigate = useNavigate();
   const [query, setQuery] = useState("");
   const [making, setMaking] = useState(false);
+  const [describing, setDescribing] = useState(false);
   const list = useQuery(seriesListQuery(workspace));
   const needle = query.trim().toLowerCase();
   const all = list.data ?? [];
@@ -223,6 +225,9 @@ export function SeriesList() {
   return (
     <Panel label="Series" ground className="h-full w-full flex-1">
       <PageHeader title="Series">
+        <Button size="small" variant="secondary" leadingIcon={RiSparkling2Line} onClick={() => setDescribing(true)}>
+          Describe it
+        </Button>
         <Button size="small" leadingIcon={RiAddLine} onClick={() => setMaking(true)}>
           New series
         </Button>
@@ -258,6 +263,7 @@ export function SeriesList() {
         </div>
       </ScrollArea>
       {making ? <NewSeries workspace={workspace} onClose={() => setMaking(false)} /> : null}
+      <DraftFromDescription workspace={workspace} kind="series" isOpen={describing} onOpenChange={setDescribing} />
     </Panel>
   );
 }

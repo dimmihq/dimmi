@@ -10,7 +10,15 @@ import { queryOptions } from "@tanstack/react-query";
 
 import { request } from "./client";
 
-export const OPERATOR_GROUPS = ["conversations", "notes", "contacts", "articles", "procedures", "actions"] as const;
+export const OPERATOR_GROUPS = [
+  "conversations",
+  "notes",
+  "contacts",
+  "articles",
+  "procedures",
+  "automation",
+  "actions",
+] as const;
 export type OperatorGroup = (typeof OPERATOR_GROUPS)[number];
 export type OperatorPolicy = "auto" | "ask" | "off";
 
@@ -64,6 +72,8 @@ export interface OperatorOperation {
   article_id?: string;
   help_center_id?: string;
   procedure_id?: string;
+  workflow_id?: string;
+  series_id?: string;
   title?: string;
   visibility?: "public" | "agent_only";
 }
@@ -206,7 +216,15 @@ export function operatorThreadQuery(workspace: string, id: string) {
  * of page, the id of what it shows, and the suggested change shown on it.
  */
 export interface OperatorViewing {
-  page: "article" | "procedure" | "conversation" | "help_center" | "feature_request" | "changelog_entry";
+  page:
+    | "article"
+    | "procedure"
+    | "conversation"
+    | "help_center"
+    | "feature_request"
+    | "changelog_entry"
+    | "workflow"
+    | "series";
   id: string;
   suggestion_id?: string;
 }
