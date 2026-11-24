@@ -31,7 +31,22 @@ export type NodeKind =
   | "set_attribute"
   | "topic"
   | "webhook"
-  | "exit";
+  | "exit"
+  | "extract"
+  | "run_action";
+
+/*
+ * ExtractValue is one value an extract step writes to the person's
+ * attribute of the same key; fallback is written when the AI is unsure.
+ */
+export interface ExtractValue {
+  key: string;
+  label?: string;
+  description?: string;
+  type: "text" | "number" | "date" | "boolean" | "choice";
+  options?: string[];
+  fallback?: unknown;
+}
 
 export interface Engagement {
   node: string;
@@ -67,6 +82,10 @@ export interface NodeSettings {
   topic_id?: string;
   subscribed?: boolean;
   url?: string;
+  fields?: ExtractValue[];
+  action_id?: string;
+  inputs?: { name: string; value: string }[];
+  save?: { output: string; attribute: string }[];
 }
 
 export interface SeriesNode {

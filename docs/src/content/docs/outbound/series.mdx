@@ -28,9 +28,10 @@ A series supports up to 200 steps, with up to 8 outgoing paths per step.
 | **Wait for** | Pauses until an event fires, rules match, or the customer opens, clicks, or replies to an earlier message. Takes the timeout path if time runs out. |
 | **Check** | Follows the first matching branch, or the fallback branch. |
 | **Split test** | Permanently assigns each customer to 1 of 2 to 4 variants by percentage. |
-| **AI path** | Uses AI to read the customer, company, and recent threads and pick a path. Falls back after 20 seconds or on error. |
+| **AI path** | Uses AI to read the customer, their company and recent events and pick a path. Falls back after 20 seconds or on error. |
+| **Extract with AI** | Uses AI to read the same profile and write typed values to the customer's attributes. A value the AI isn't sure of takes its fallback, or the **Not found** path. |
 | **Tag**, **Remove tag**, **Set attribute**, **Topic** | Updates the customer (or company in an account series). |
-| **Webhook** | Sends the customer and step payload to your endpoint (does not follow redirects). See [Workflow requests](/developers/workflow-requests/). |
+| **Run an action** | Calls one of your published [actions](/ai/actions/) with inputs from the customer's details and attributes, and writes the outputs you pick to their attributes. Takes the **Action failed** path on an error. Series made earlier may still hold a **Webhook** step, which keeps running. |
 
 ## Sending limits
 

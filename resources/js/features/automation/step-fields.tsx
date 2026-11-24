@@ -10,6 +10,7 @@ import type { ReactNode } from "react";
 import { Action, Danger, Field, Toggle } from "@/features/settings/controls";
 import { Row, Section } from "@/features/settings/layout";
 import type { Condition } from "@/lib/api/workflows";
+import { useAIConditionFields } from "./ai-condition-fields";
 import { ArticleFields } from "./article-fields";
 import { CallFields } from "./call-fields";
 import { type Choices, choicesOf } from "./choices";
@@ -26,9 +27,11 @@ import {
   valueList,
   valueText,
 } from "./conditions";
+import { ExtractFields } from "./extract-fields";
 import { type EditorProps, Words } from "./field-parts";
 import { Pick, Picks } from "./pick";
 import { ReplyTimeFields } from "./reply-time-fields";
+import { RunActionFields } from "./run-action-fields";
 import { RunWorkflowFields } from "./run-workflow-fields";
 import {
   collectTargets,
@@ -567,10 +570,13 @@ const editors: Record<string, (props: Props) => ReactNode> = {
   classify: ClassifyFields,
   run_workflow: RunWorkflowFields,
   http_request: CallFields,
+  extract: ExtractFields,
+  run_action: RunActionFields,
   ...Object.fromEntries(ticketStepKinds.map((kind) => [kind, TicketStepFields])),
 };
 
 export function StepFields(props: Props): ReactNode {
+  useAIConditionFields();
   const Editor = editors[props.step.kind] ?? Unavailable;
 
   return <Editor {...props} />;

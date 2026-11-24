@@ -6,12 +6,28 @@
  */
 import type { ViewCondition, ViewDefinition } from "@/lib/api/views";
 
-export type ValueKind = "statuses" | "level" | "member" | "team" | "inbox" | "channels" | "flag" | "text" | "duration";
+export type ValueKind =
+  | "statuses"
+  | "level"
+  | "member"
+  | "team"
+  | "inbox"
+  | "channels"
+  | "flag"
+  | "text"
+  | "duration"
+  | "number"
+  | "choice";
 
+/*
+ * FieldSpec is a field the editor offers. Choices lists the values of a
+ * field whose kind is choice, such as an AI attribute's.
+ */
 export interface FieldSpec {
   field: string;
   label: string;
   ops: { op: string; label: string; kind?: ValueKind }[];
+  choices?: { id: string; label: string }[];
 }
 
 export const fieldSpecs: FieldSpec[] = [
@@ -116,7 +132,10 @@ export function defaultValue(kind: ValueKind | undefined): unknown {
     case "duration":
       return "P1D";
     case "text":
+    case "choice":
       return "";
+    case "number":
+      return 0;
     default:
       return undefined;
   }

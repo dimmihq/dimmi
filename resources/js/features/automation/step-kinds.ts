@@ -12,6 +12,7 @@ import {
   RiContactsLine,
   RiFileList3Line,
   RiFlag2Line,
+  RiFlashlightLine,
   RiGitBranchLine,
   RiGlobalLine,
   RiHashtag,
@@ -21,6 +22,7 @@ import {
   RiMessage2Line,
   RiPriceTag3Line,
   RiQuestionAnswerLine,
+  RiScan2Line,
   RiShareForwardLine,
   RiSignpostLine,
   RiSparkling2Line,
@@ -73,6 +75,8 @@ export const stepLook: Record<StepKind, KindLook> = {
   set_ticket_fields: { name: "Set ticket fields", icon: RiFileList3Line, tint: "cyan" },
   escalate: { name: "Escalate to a team", icon: RiShareForwardLine, tint: "cyan" },
   add_to_tracker: { name: "Add to a tracker", icon: RiStackLine, tint: "cyan" },
+  extract: { name: "Extract with AI", icon: RiScan2Line, tint: "purple" },
+  run_action: { name: "Run an action", icon: RiFlashlightLine, tint: "neutral" },
 };
 
 /*
