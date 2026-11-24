@@ -15,7 +15,11 @@
 |   - A split takes the winner, or a variant picked the way a journey's
 |     is; an AI path asks the same picker a journey does.
 |   - Tags, attributes, topics and webhooks are recorded as what would
-|     happen.
+|     happen. Tags and attributes are kept in memory, so later rules
+|     read them.
+|   - An extract step takes its mock or asks the AI a journey asks, and
+|     a run action step answers with its mock and never runs the
+|     action; the values both find are kept as attributes.
 |
 | The goal and the exit rules are checked before every step, as a
 | journey's are. "Try it on me" stays the way to see the real messages.
@@ -35,6 +39,7 @@ import (
 	"github.com/dimmihq/dimmi/framework/ids"
 
 	"github.com/dimmihq/dimmi/app/actions/audiences"
+	"github.com/dimmihq/dimmi/app/ai/actionkit"
 	"github.com/dimmihq/dimmi/app/ai/aidecision"
 	"github.com/dimmihq/dimmi/app/auth/authz"
 	"github.com/dimmihq/dimmi/app/exceptions"
@@ -59,8 +64,9 @@ var (
 /*
 SimulateInput is a dry simulation: the series and which copy, the real
 contact or the made-up person who travels it, the events they would
-do, and what they would do with its messages: opened, clicked or
-replied.
+do, what they would do with its messages (opened, clicked or replied),
+and the mocks of its extract and run action steps, by step id or by
+action id.
 */
 type SimulateInput struct {
 	Membership authz.Membership
@@ -70,6 +76,7 @@ type SimulateInput struct {
 	Person     *SimPerson
 	Events     []string
 	Engaged    []string
+	Mocks      map[string]actionkit.Mock
 }
 
 /*
@@ -92,6 +99,7 @@ type simRun struct {
 	person   models.Contact
 	out      *SimTrace
 	variants string
+	tags     map[string]bool
 }
 
 /*
@@ -106,7 +114,7 @@ func (s *Series) Simulate(ctx context.Context, in SimulateInput) (*SimTrace, err
 		return nil, ErrSimNoPerson
 	}
 	r := &simRun{
-		s: s, in: in, ws: m.Workspace.ID, variants: in.ID.String(),
+		s: s, in: in, ws: m.Workspace.ID, variants: in.ID.String(), tags: map[string]bool{},
 		out: &SimTrace{Steps: []SimStep{}, Messages: []SimMessage{}, Actions: []SimAction{}},
 	}
 	if err := r.load(ctx); err != nil {
@@ -212,7 +220,7 @@ func (r *simRun) matches(ctx context.Context, audience *ids.UUID, rules json.Raw
 	err := r.s.inWorkspace(ctx, r.ws, func(ctx context.Context, q *models.Queries) error {
 		var err error
 		got, err = r.s.Audiences.Matching(ctx, q, audiences.MatchInput{
-			WorkspaceID: r.ws, AudienceID: audience, Rules: rules,
+			WorkspaceID: r.ws, AudienceID: audience, Rules: rules, Adjust: r.adjust,
 		}, []models.Contact{r.person})
 		return err
 	})
@@ -310,6 +318,10 @@ func (r *simRun) enter(ctx context.Context, n Node) (outcome, error) {
 		return r.split(n), nil
 	case n.Kind == KindAIPath:
 		return r.aiPath(ctx, n), nil
+	case n.Kind == KindExtract:
+		return r.extract(ctx, n), nil
+	case n.Kind == KindRunAction:
+		return r.runAction(n), nil
 	case n.Kind == KindWebhook:
 		url := settingsOf[WebhookSettings](n).URL
 		r.act(n, map[string]any{"url": url})
@@ -449,8 +461,8 @@ func (r *simRun) aiPath(ctx context.Context, n Node) outcome {
 }
 
 /*
-action records a change that would be made, and keeps an attribute it
-writes for the steps after it.
+action records a change that would be made, and keeps a tag or an
+attribute it writes for the steps after it.
 */
 func (r *simRun) action(n Node) outcome {
 	s := settingsOf[ActionSettings](n)
@@ -458,14 +470,14 @@ func (r *simRun) action(n Node) outcome {
 	switch n.Kind {
 	case KindTag, KindUntag:
 		detail["tag_ids"] = s.TagIDs
+		for _, t := range s.TagIDs {
+			r.tags[t] = n.Kind == KindTag
+		}
 	case KindSetAttribute:
 		var value any
 		_ = json.Unmarshal(s.Value, &value)
 		detail["key"], detail["value"] = s.Key, value
-		attrs := map[string]any{}
-		_ = json.Unmarshal(r.person.CustomAttributes, &attrs)
-		attrs[s.Key] = value
-		r.person.CustomAttributes, _ = json.Marshal(attrs)
+		r.setAttribute(s.Key, value)
 	case KindTopic:
 		detail["topic_id"], detail["subscribed"] = s.TopicID, s.Subscribed
 	}
