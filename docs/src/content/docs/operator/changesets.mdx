@@ -18,9 +18,12 @@ Admins choose a policy for each group under **Settings → Operator → What Ope
 | **Customers** | Updating a customer's name | Yes |
 | **Help articles** | Creating a new draft or editing a draft | No |
 | **Procedures** | Editing a procedure's working copy and adding saved simulations (tests) | No |
+| **Workflows and series** | Drafting a new workflow or series, and editing a working copy | No |
 | **Workspace actions** | Running an [action](/ai/actions/) that changes data | No |
 
-Operator never publishes a help article or a procedure. Publishing always stays with a teammate.
+Operator never publishes a help article, a procedure, a workflow or a series. Publishing always stays with a teammate.
+
+Every workflow or series change is checked the way **Publish** checks it. Operator cannot suggest a step with missing settings, a path to nowhere, or a team that does not exist.
 
 Even when a group is set to **On its own**, Operator still asks a teammate first whenever it triages a new chat or bases its edit on untrusted conversation text or an external action response.
 
@@ -45,11 +48,11 @@ Even when a group is set to **On its own**, Operator still asks a teammate first
 
 ## Where suggestions show up
 
-A change to an article or a procedure is reviewed in that article's or procedure's editor, not on the card. The card's **Review** button opens it, with removed lines struck through in red and added lines in green, and **Accept changes** or **Decline** in the header. Help center → **Change requests** lists every article waiting on one.
+A change to an article, a procedure, a workflow or a series is reviewed in its own editor or builder, not on the card. The card's **Review** button opens it, with removed lines struck through in red and added lines in green, and **Accept changes** or **Decline** in the header. Help center → **Change requests** lists every article waiting on one.
 
 You are not limited to accepting or declining. Open **Operator** in the editor's header and talk to it about the page:
 
-- **Ask why:** Operator knows which article or procedure you have open and which suggestion is on it, so "why this change?" gets a straight answer.
+- **Ask why:** Operator knows which article, procedure, workflow or series you have open and which suggestion is on it, so "why this change?" gets a straight answer.
 - **Ask for a change:** "make it 500, not 1,000" or "also fix the heading". Operator adds your change to the suggestion already on the page, and the red and green lines update.
 - **Ask for something new:** with no suggestion on the page, what Operator changes becomes a new one, shown the same way.
 
