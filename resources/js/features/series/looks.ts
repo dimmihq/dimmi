@@ -72,6 +72,7 @@ export const endReasonName: Record<string, string> = {
   step_budget: "Too many steps",
   subject_gone: "Contact gone",
   replaced: "Replaced by a newer test",
+  control: "Held out in the control group",
 };
 
 export function percent(part: number, whole: number): string {

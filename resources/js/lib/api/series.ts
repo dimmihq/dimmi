@@ -91,7 +91,8 @@ export interface SeriesSpec {
     reentry: { kind: "once" | "again"; cooldown_days?: number };
   };
   exit: { rules?: AudienceRules; on_goal?: boolean; on_reply?: boolean; on_unsubscribe?: boolean };
-  goal?: { event?: string; rules?: AudienceRules; days: number } | null;
+  /* control_percent holds that share of entrants out, 0 to 50, to measure lift. */
+  goal?: { event?: string; rules?: AudienceRules; days: number; control_percent?: number } | null;
   quiet_hours?: boolean;
   nodes: SeriesNode[];
   edges: SeriesEdge[];
@@ -168,6 +169,8 @@ export interface SeriesReport {
   reasons: { reason: string; count: number }[];
   days: { day: string; entered: number; goal: number }[];
   steps: Record<string, SeriesStepReport>;
+  /* Set while a control group is held out, or was. */
+  control?: { percent: number; groups: { group: "control" | "treated"; entered: number; goal: number }[] };
 }
 
 export interface SeriesJourney {
