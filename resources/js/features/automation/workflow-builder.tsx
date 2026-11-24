@@ -1,27 +1,40 @@
 /*
- * The workflow builder: the canvas of steps on the left and the
- * inspector for the selected step on the right, under a header with the
- * workflow's name, its status, whether its changes are saved, what still
- * needs fixing, and the buttons that publish, pause or resume it. Every
- * change is saved to the working copy as it is made; publishing makes
- * that copy the version that runs. Steps with problems carry a mark, and
- * the problems count jumps to the first of them. Teammates who may only
- * read workflows see the same builder without anything to change.
- * Picking a card, or the settings button, pushes the inspector out from
- * the right in a pane that drags to any width; on screens too narrow for
- * both, it opens in a drawer. The runs button shows the workflow's
- * latest runs in the same pane, each opening to what its steps did.
+ * The workflow studio, laid out like Agent Studio. Build holds the
+ * canvas of steps; picking a card, or the settings button, pushes the
+ * step settings out beside it. Analytics shows how the workflow does
+ * and its latest runs, each opening to what its steps did; History its
+ * published versions. Beside them sit Preview (the draft in words, and
+ * what still needs fixing), Simulations, and Operator. Every change is
+ * saved to the working copy as it is made; publishing makes that copy
+ * the version that runs. Steps with problems carry a mark, and the
+ * problems count jumps to the first of them. Teammates who may only
+ * read workflows see the same studio without anything to change.
  */
-import { RiArrowLeftSLine, RiErrorWarningLine, RiHistoryLine, RiSettings3Line } from "@remixicon/react";
+import {
+  RiArchiveLine,
+  RiArrowLeftSLine,
+  RiErrorWarningLine,
+  RiMore2Line,
+  RiPauseCircleLine,
+  RiPlayCircleLine,
+  RiSettings3Line,
+} from "@remixicon/react";
 import { useQuery } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 
 import { Button } from "@/components/base/buttons/button";
 import { IconButton } from "@/components/base/buttons/icon-button";
+import {
+  Dropdown,
+  DropdownDivider,
+  DropdownItem,
+  DropdownPopover,
+  DropdownTrigger,
+} from "@/components/base/dropdown/dropdown";
+import { AlertDialog } from "@/components/base/modal/modal";
 import { usePermission } from "@/features/settings/inboxes";
-import { Panel } from "@/features/shell/page";
-import { PushPane } from "@/features/shell/push-pane";
+import { ScrollArea } from "@/features/shell/page";
 import { useWide } from "@/features/shell/use-wide";
 import { agentQuery } from "@/lib/api/ai";
 import { actionConnectionsQuery } from "@/lib/api/ai-actions";
@@ -39,10 +52,13 @@ import { type Head, Inspector } from "./inspector";
 import { StatusChip } from "./parts";
 import type { Lists } from "./step-fields";
 import { type Names, sentence } from "./step-settings";
+import { workflowSlots } from "./studio/slots";
+import { type SideTabId, Studio, StudioSide, type StudioTabId } from "./studio/studio";
+import { WorkflowPreview } from "./studio/workflow-preview";
 import { ticketNames, useTicketLists } from "./ticket-lists";
 import { allowsStep, type TriggerKind } from "./triggers";
 import { type SaveState, useWorkflowDraft } from "./use-workflow-draft";
-import { WorkflowRuns } from "./workflow-runs";
+import { RunList } from "./workflow-runs";
 import { findStep, readyKinds, type Step, type StepKind, triggerStep } from "./workflows";
 
 /*
@@ -134,31 +150,118 @@ function stateLine(saveState: SaveState, workflow: Workflow): string {
   return workflow.status === "draft" ? "Saved as draft" : "Published";
 }
 
-function Actions({ draft, readOnly }: { draft: ReturnType<typeof useWorkflowDraft>; readOnly: boolean }) {
-  if (readOnly) {
-    return null;
-  }
+type Draft = ReturnType<typeof useWorkflowDraft>;
+
+/*
+ * Publish asks before it puts the working copy in front of customers,
+ * as Agent Studio does. It is held back while something needs fixing.
+ */
+function Publish({ draft }: { draft: Draft }) {
+  const [asking, setAsking] = useState(false);
   const { server, busy, report } = draft;
   const changed = server.status === "draft" || server.has_unpublished_changes;
   const blocked = report.errors.length > 0 || draft.saveState === "conflict";
+  if (!changed) {
+    return null;
+  }
+  const first = server.status === "draft";
+  const name = draft.name || server.name;
 
   return (
     <>
-      {server.status === "live" ? (
-        <Button variant="secondary" size="small" disabled={busy} onClick={() => void draft.setStatus("paused")}>
-          Pause
-        </Button>
-      ) : null}
-      {server.status === "paused" ? (
-        <Button variant="secondary" size="small" disabled={busy} onClick={() => void draft.setStatus("live")}>
-          Resume
-        </Button>
-      ) : null}
-      {changed ? (
-        <Button size="small" loading={busy} disabled={busy || blocked} onClick={() => void draft.publish()}>
-          {server.status === "draft" ? "Publish" : "Publish changes"}
-        </Button>
-      ) : null}
+      <Button size="small" loading={busy} disabled={busy || blocked} onClick={() => setAsking(true)}>
+        {first ? "Publish" : "Publish changes"}
+      </Button>
+      <AlertDialog
+        isOpen={asking}
+        onOpenChange={setAsking}
+        variant="default"
+        icon={false}
+        title={first ? `Publish ${name}?` : `Publish changes to ${name}?`}
+        description={
+          first
+            ? "It starts running on the next conversation that matches its trigger."
+            : "Runs that start from now on follow the new version."
+        }
+        confirmLabel={first ? "Publish" : "Publish changes"}
+        onConfirm={() => {
+          setAsking(false);
+
+          return draft.publish();
+        }}
+      />
+    </>
+  );
+}
+
+/*
+ * WorkflowMenu holds what the header does less often: pausing or
+ * resuming a published workflow, and archiving it, which asks first.
+ */
+function WorkflowMenu({ draft }: { draft: Draft }) {
+  const [open, setOpen] = useState(false);
+  const [archiving, setArchiving] = useState(false);
+  const status = draft.server.status;
+
+  return (
+    <>
+      <Dropdown isOpen={open} onOpenChange={setOpen}>
+        <DropdownTrigger
+          aria-label="Workflow actions"
+          className="flex size-8 shrink-0 items-center justify-center rounded-lg text-foreground-icon-secondary transition-colors duration-150 hover:bg-background-secondary-hover"
+        >
+          <RiMore2Line aria-hidden className="size-4" />
+        </DropdownTrigger>
+        <DropdownPopover aria-label="Workflow actions" placement="bottom end" className="w-52">
+          {status === "live" ? (
+            <DropdownItem
+              className="gap-2"
+              onSelect={() => {
+                setOpen(false);
+                void draft.setStatus("paused");
+              }}
+            >
+              <RiPauseCircleLine aria-hidden className="size-4 shrink-0 text-foreground-icon-secondary" />
+              Pause
+            </DropdownItem>
+          ) : null}
+          {status === "paused" ? (
+            <DropdownItem
+              className="gap-2"
+              onSelect={() => {
+                setOpen(false);
+                void draft.setStatus("live");
+              }}
+            >
+              <RiPlayCircleLine aria-hidden className="size-4 shrink-0 text-foreground-icon-secondary" />
+              Resume
+            </DropdownItem>
+          ) : null}
+          {status === "draft" ? null : <DropdownDivider />}
+          <DropdownItem
+            className="gap-2 text-text-error-primary"
+            onSelect={() => {
+              setOpen(false);
+              setArchiving(true);
+            }}
+          >
+            <RiArchiveLine aria-hidden className="size-4 shrink-0" />
+            Archive workflow
+          </DropdownItem>
+        </DropdownPopover>
+      </Dropdown>
+      <AlertDialog
+        isOpen={archiving}
+        onOpenChange={setArchiving}
+        title={`Archive ${draft.name || draft.server.name}?`}
+        description="It stops running and leaves the workflows list. Only the API can bring it back."
+        confirmLabel="Archive"
+        onConfirm={() => {
+          setArchiving(false);
+
+          return draft.archive();
+        }}
+      />
     </>
   );
 }
@@ -187,7 +290,8 @@ export function WorkflowBuilder({ workspace, workflow }: { workspace: string; wo
   const readOnly = !usePermission(workspace, "workflows:manage");
   const draft = useWorkflowDraft(workspace, workflow, () => void navigate({ to: "/d/workflows" }));
   const { lists, names } = useLists(workspace, workflow.id);
-  const [showing, setShowing] = useState<"settings" | "runs">("settings");
+  const [tab, setTab] = useState<StudioTabId>("build");
+  const [sideTab, setSideTab] = useState<SideTabId>("preview");
   const [selected, setSelected] = useState<string>(triggerStep);
   const trigger = draft.spec.trigger as TriggerKind;
   const step = selected === triggerStep ? undefined : findStep(draft.spec.steps, selected);
@@ -200,13 +304,10 @@ export function WorkflowBuilder({ workspace, workflow }: { workspace: string; wo
   const kinds = readOnly ? [] : readyKinds.filter((kind) => allowsStep(trigger, kind));
   const select = (id: string) => {
     setSelected(id);
-    setShowing("settings");
+    setTab("build");
     setInspecting(true);
   };
-  const toggle = (pane: "settings" | "runs") => {
-    setInspecting(!(inspecting && showing === pane));
-    setShowing(pane);
-  };
+  const show = (issue: Issue) => select(issue.step_id ?? triggerStep);
   const editSteps = (edit: (steps: Step[]) => Step[]) => draft.change((spec) => ({ ...spec, steps: edit(spec.steps) }));
   const remove = (id: string) => {
     editSteps((steps) => withoutStep(steps, id));
@@ -225,14 +326,8 @@ export function WorkflowBuilder({ workspace, workflow }: { workspace: string; wo
     onSpec: draft.change,
     onArchive: () => void draft.archive(),
   };
-  const moves = {
-    selected,
-    onSelect: select,
-    onAdd: add,
-    kinds,
-    summarize: (card: Step) => sentence(card, names),
-    flagged,
-  };
+  const summarize = (card: Step) => sentence(card, names);
+  const moves = { selected, onSelect: select, onAdd: add, kinds, summarize, flagged };
   const inspector = {
     spec: draft.spec,
     step,
@@ -243,71 +338,102 @@ export function WorkflowBuilder({ workspace, workflow }: { workspace: string; wo
     onRemove: remove,
     onEdit: edit,
   };
+  const current = { ...draft.server, name: draft.name || draft.server.name, spec: draft.spec };
+  const slot = { workspace, workflow: current };
+  const reading = { steps: draft.spec.steps, summarize, workflows: names.workflows ?? new Map() };
+  const Analytics = workflowSlots.analytics;
+  const Failures = workflowSlots.failures;
+  const History = workflowSlots.history;
+  const Simulations = workflowSlots.simulations;
+  const Operator = workflowSlots.operator;
 
-  const canvas = (
-    <Panel label="Workflow" ground className="h-full w-full">
-      <header className="flex min-h-12 shrink-0 flex-wrap items-center justify-between gap-x-3 gap-y-1 ps-2.5 pe-2.5 pt-[7px]">
-        <div className="flex min-w-40 flex-1 items-center gap-2">
-          <Link
-            to="/d/workflows"
-            aria-label="Back to workflows"
-            className="flex size-8 shrink-0 items-center justify-center rounded-lg text-foreground-icon-secondary outline-none transition-colors duration-150 hover:bg-background-secondary-hover focus-visible:ring-2 focus-visible:ring-border-focus-ring"
-          >
-            <RiArrowLeftSLine aria-hidden className="size-5 rtl:-scale-x-100" />
-          </Link>
-          <h1 className="min-w-0 truncate text-body-medium text-text-primary">{draft.name || workflow.name}</h1>
-          <StatusChip status={draft.server.status} />
-          <span role="status" className="hidden truncate text-body-2-regular text-text-tertiary sm:inline">
-            {stateLine(draft.saveState, draft.server)}
-          </span>
-        </div>
-        <div className="ms-auto flex shrink-0 items-center gap-2">
-          <ProblemCount errors={draft.report.errors} onShow={(issue) => select(issue.step_id ?? triggerStep)} />
-          <Button
-            variant="secondary"
-            size="small"
-            leadingIcon={RiHistoryLine}
-            aria-pressed={inspecting && showing === "runs"}
-            onClick={() => toggle("runs")}
-          >
-            Runs
-          </Button>
-          <IconButton
-            size="small"
-            icon={RiSettings3Line}
-            aria-label="Step settings"
-            onClick={() => toggle("settings")}
-          />
-          <Actions draft={draft} readOnly={readOnly} />
-        </div>
-      </header>
-      <Canvas trigger={trigger} steps={draft.spec.steps} moves={moves} />
-    </Panel>
+  const start = (
+    <>
+      <Link
+        to="/d/workflows"
+        aria-label="Back to workflows"
+        className="flex size-8 shrink-0 items-center justify-center rounded-lg text-foreground-icon-secondary outline-none transition-colors duration-150 hover:bg-background-secondary-hover focus-visible:ring-2 focus-visible:ring-border-focus-ring"
+      >
+        <RiArrowLeftSLine aria-hidden className="size-5 rtl:-scale-x-100" />
+      </Link>
+      <h1 className="min-w-0 truncate px-1.5 text-body-medium text-text-primary">{current.name}</h1>
+      <span className="flex shrink-0 items-center gap-1.5">
+        <StatusChip status={draft.server.status} />
+      </span>
+      <span role="status" className="hidden truncate text-body-2-regular text-text-tertiary @lg:inline">
+        {stateLine(draft.saveState, draft.server)}
+      </span>
+    </>
+  );
+  const end = (
+    <>
+      <ProblemCount errors={draft.report.errors} onShow={show} />
+      {tab === "build" ? (
+        <IconButton
+          size="small"
+          icon={RiSettings3Line}
+          aria-label="Step settings"
+          aria-pressed={inspecting}
+          onClick={() => setInspecting(!inspecting)}
+        />
+      ) : null}
+      {readOnly ? null : <Publish draft={draft} />}
+      {readOnly ? null : <WorkflowMenu draft={draft} />}
+    </>
   );
 
   return (
-    <div className="flex h-full min-h-0 min-w-0 flex-1">
-      <PushPane
-        name="dimmi:workflow"
-        label={showing === "runs" ? "Recent runs" : "Step settings"}
-        open={inspecting}
-        onOpenChange={setInspecting}
-        width={380}
-        main={canvas}
-        side={
-          showing === "runs" ? (
-            <WorkflowRuns
-              workspace={workspace}
-              workflow={workflow.id}
-              reading={{ steps: draft.spec.steps, summarize: moves.summarize, workflows: names.workflows ?? new Map() }}
-              onClose={() => setInspecting(false)}
-              className="h-full w-full"
+    <Studio
+      name="dimmi:workflow"
+      label="Workflow"
+      start={start}
+      end={end}
+      tab={tab}
+      onTab={setTab}
+      body={
+        tab === "build" ? (
+          <Canvas trigger={trigger} steps={draft.spec.steps} moves={moves} />
+        ) : (
+          <ScrollArea ground className="px-4 pb-6">
+            <div className="mx-auto flex w-full max-w-220 min-w-0 flex-col gap-6 pt-4">
+              {tab === "analytics" ? (
+                <>
+                  <Analytics {...slot} />
+                  <Failures {...slot} />
+                  <RunList workspace={workspace} workflow={workflow.id} reading={reading} />
+                </>
+              ) : (
+                <History {...slot} />
+              )}
+            </div>
+          </ScrollArea>
+        )
+      }
+      inspector={{
+        label: "Step settings",
+        open: inspecting && tab === "build",
+        onOpenChange: setInspecting,
+        node: <Inspector {...inspector} onClose={() => setInspecting(false)} className="h-full w-full" />,
+      }}
+      side={(onClose) => (
+        <StudioSide
+          tab={sideTab}
+          onTab={setSideTab}
+          preview={
+            <WorkflowPreview
+              trigger={trigger}
+              steps={draft.spec.steps}
+              report={draft.report}
+              summarize={summarize}
+              onShow={show}
             />
-          ) : (
-            <Inspector {...inspector} onClose={() => setInspecting(false)} className="h-full w-full" />
-          )
-        }
-      />
-    </div>
+          }
+          simulations={<Simulations {...slot} />}
+          onClose={onClose}
+          className="h-full w-full"
+        />
+      )}
+      operator={(onClose) => <Operator {...slot} onClose={onClose} className="h-full w-full" />}
+    />
   );
 }

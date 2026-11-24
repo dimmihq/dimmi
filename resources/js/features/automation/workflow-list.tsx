@@ -3,7 +3,7 @@
  * and whether it is live, in the order they run when two share a
  * trigger. A new workflow begins by picking its trigger; it is made on
  * the server at once, as a draft named so it never clashes with another,
- * and the builder opens on it. Teammates who may only read workflows see
+ * and its studio opens on it. Rows read like the agents page. Teammates who may only read workflows see
  * the list without the button.
  */
 import { RiAddLine, RiFlowChart } from "@remixicon/react";
@@ -11,6 +11,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 
+import { Chip } from "@/components/base/badges/chip";
 import { Button } from "@/components/base/buttons/button";
 import { toast } from "@/components/base/toast/toast";
 import { usePermission } from "@/features/settings/inboxes";
@@ -24,9 +25,7 @@ import { TriggerPicker } from "./trigger-picker";
 import { type TriggerKind, tintOf, triggers } from "./triggers";
 
 function detailOf(workflow: Workflow): string {
-  const name = triggers[workflow.trigger as TriggerKind]?.name ?? workflow.trigger;
-
-  return workflow.status !== "draft" && workflow.has_unpublished_changes ? `${name} · Unpublished changes` : name;
+  return triggers[workflow.trigger as TriggerKind]?.name ?? workflow.trigger;
 }
 
 export function WorkflowList() {
@@ -90,6 +89,11 @@ export function WorkflowList() {
               title={workflow.name}
               detail={detailOf(workflow)}
             >
+              {workflow.status !== "draft" && workflow.has_unpublished_changes ? (
+                <Chip variant="caption" color="yellow" className="py-0.5">
+                  Unpublished changes
+                </Chip>
+              ) : null}
               <StatusChip status={workflow.status} />
             </OpenRow>
           );

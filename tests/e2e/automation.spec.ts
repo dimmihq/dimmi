@@ -50,7 +50,7 @@ it.describe("automation", () => {
     await expect(page.getByText("Saved as draft")).toBeVisible();
 
     await page.getByRole("button", { name: "Publish", exact: true }).click();
-    await expect(page.getByRole("button", { name: "Pause" })).toBeVisible();
+    await page.getByRole("alertdialog").getByRole("button", { name: "Publish", exact: true }).click();
     await expect(page.getByText("Published", { exact: true })).toBeVisible();
 
     await page.reload();
@@ -88,7 +88,8 @@ it.describe("automation", () => {
     await expect(canvas.getByText("Everyone else", { exact: true })).toBeVisible();
 
     await page.getByRole("button", { name: "Publish", exact: true }).click();
-    await expect(page.getByRole("button", { name: "Pause" })).toBeVisible();
+    await page.getByRole("alertdialog").getByRole("button", { name: "Publish", exact: true }).click();
+    await expect(page.getByText("Published", { exact: true })).toBeVisible();
   });
 
   it("lets dimmi handle a conversation with a path for each way its turn ends", async ({ page }) => {
@@ -107,7 +108,8 @@ it.describe("automation", () => {
     await expect(canvas.getByRole("button", { name: /following: Only answer billing questions/ })).toBeVisible();
     await expect(page.getByText("Saved as draft")).toBeVisible();
     await page.getByRole("button", { name: "Publish", exact: true }).click();
-    await expect(page.getByRole("button", { name: "Pause" })).toBeVisible();
+    await page.getByRole("alertdialog").getByRole("button", { name: "Publish", exact: true }).click();
+    await expect(page.getByText("Published", { exact: true })).toBeVisible();
   });
 
   it("waits out a quiet customer until office hours open, and publishes", async ({ page }) => {
@@ -124,7 +126,8 @@ it.describe("automation", () => {
     await expect(page.getByText("Saved as draft")).toBeVisible();
 
     await page.getByRole("button", { name: "Publish", exact: true }).click();
-    await expect(page.getByRole("button", { name: "Pause" })).toBeVisible();
+    await page.getByRole("alertdialog").getByRole("button", { name: "Publish", exact: true }).click();
+    await expect(page.getByText("Published", { exact: true })).toBeVisible();
   });
 
   it("opens Saturday in office hours and keeps it", async ({ page }) => {
