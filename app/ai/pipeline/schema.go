@@ -29,6 +29,13 @@ func textProperty(description string) map[string]any {
 }
 
 /*
+listProperty is a list of strings argument with a description.
+*/
+func listProperty(description string) map[string]any {
+	return map[string]any{"type": "array", "items": map[string]any{"type": "string"}, "description": description}
+}
+
+/*
 objectSchema is a closed object schema of the properties, each listed as
 required. It holds only strings and string lists, so it always encodes.
 */

@@ -143,6 +143,8 @@ func (r *Runner) write(ctx context.Context, tx *database.Tx, st *run, d *decisio
 		return r.writeUnknown(ctx, tx, st, d)
 	case outcomeHandoff:
 		return r.writeHandoff(ctx, tx, st, d)
+	case outcomeTransferred:
+		return r.writeTransfer(ctx, tx, st)
 	case outcomeError:
 		if e.Conversation.AiState != aiStateActive {
 			return nil
@@ -323,7 +325,7 @@ func (r *Runner) metadata(st *run, d *decision) json.RawMessage {
 		ai["handoff_available"] = st.env.availability() != "unavailable"
 	}
 	actionMetadata(st, ai)
-	data, err := json.Marshal(map[string]any{"ai": ai})
+	data, err := json.Marshal(map[string]any{"ai": ai, "author_name": st.env.Agent.Name})
 	if err != nil {
 		return json.RawMessage("{}")
 	}

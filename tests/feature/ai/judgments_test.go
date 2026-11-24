@@ -14,6 +14,7 @@ import (
 	"github.com/dimmihq/dimmi/app/ai/pipeline"
 	"github.com/dimmihq/dimmi/app/contracts"
 	decisionfake "github.com/dimmihq/dimmi/app/drivers/decision/fake"
+	"github.com/dimmihq/dimmi/app/drivers/llm/fake"
 )
 
 /*
@@ -34,6 +35,28 @@ be written again rather than being cut out.
 */
 func TestReplyCheck(t *testing.T) {
 	t.Parallel()
+
+	t.Run("sends a reply that explains what the agent could not find back once", func(t *testing.T) {
+		t.Parallel()
+		h := newHarness(t, nil)
+		conv, trigger := h.conversation("Do you work with Outlook?")
+		h.llm.answer.Script(search("outlook calendar integration"),
+			reply("I couldn't find anything about Outlook in our help center, so I can't confirm it."),
+			reply("Not sure about Outlook."))
+		h.llm.judge(map[string]bool{"about_itself": true})
+
+		res := h.run(conv, trigger)
+
+		assert.NotEqual(t, "handoff", res.Outcome, "how a reply reads never hands a conversation over")
+		s := h.load(conv, res.RunID)
+		assert.Contains(t, s.run.Flags, "reply_reworded")
+		assert.NotContains(t, s.run.Flags, "reply_withheld", "a reply is never kept back for how it reads")
+		sent := h.llm.answer.Sent()
+		require.Len(t, sent, 3, "the reply was written once more, and only once, though the judge still says so")
+		last := sent[2].Messages[len(sent[2].Messages)-1].Parts[0].Text
+		assert.Contains(t, last, "tells the customer about your own knowledge", "the agent is told why")
+		assert.Equal(t, "Not sure about Outlook.", *s.agentReplies()[0].Body)
+	})
 
 	t.Run("sends a reply with a note to itself back to be written again", func(t *testing.T) {
 		t.Parallel()
@@ -57,6 +80,26 @@ func TestReplyCheck(t *testing.T) {
 		assert.Contains(t, last, "That reply was not sent", "the agent is told why")
 		assert.Equal(t, "Pro costs $12 per seat per month.", *s.agentReplies()[0].Body,
 			"what the customer reads is the second reply, whole")
+	})
+
+	t.Run("sends the reply the agent wrote beside a tool call when it then adds nothing", func(t *testing.T) {
+		t.Parallel()
+		h := newHarness(t, nil)
+		conv, trigger := h.conversation("How much is Pro per seat?")
+		h.llm.answer.Script(search("pro plan price per seat"),
+			fake.Step{
+				Text:      "Pro costs $12 per seat per month [1].",
+				ToolCalls: []contracts.ToolCall{call("triage_conversation", `{"title":"Pro price per seat"}`)},
+				Usage:     contracts.LLMUsage{InputTokens: 1200, OutputTokens: 80, Reported: true},
+			},
+			reply(""))
+
+		res := h.run(conv, trigger)
+
+		assert.Equal(t, "answered", res.Outcome, "the reply was written; saying nothing more is not an unknown")
+		s := h.load(conv, res.RunID)
+		require.Len(t, s.agentReplies(), 1)
+		assert.Equal(t, "Pro costs $12 per seat per month.", *s.agentReplies()[0].Body)
 	})
 
 	t.Run("hands over rather than send a reply that still carries it", func(t *testing.T) {
@@ -237,10 +280,10 @@ func TestSimulationJudge(t *testing.T) {
 		t.Parallel()
 		res, d, h := sentence(t, 0.93)
 		res.AssertJSONPath("data.0.last_result.passed", true).
-			AssertJSONPath("data.0.last_result.assertion_results.0.message", "Met (93% likely).")
+			AssertJSONPath("data.0.last_result.assertion_results.0.message", "Met.")
 		asked := d.Sent()[len(d.Sent())-1]
 		assert.Contains(t, asked.Questions["met"].Instructions, "dimmi says the team will cancel it")
-		assert.Contains(t, asked.State, "AGENT: The team will cancel your plan.")
+		assert.Contains(t, asked.State, "CUSTOMER: Cancel my plan\nADA: The team will cancel your plan.")
 		assert.Empty(t, h.llm.judgments(), "the agent's own model does not grade its work")
 	})
 
@@ -248,18 +291,38 @@ func TestSimulationJudge(t *testing.T) {
 		t.Parallel()
 		res, _, _ := sentence(t, 0.08)
 		res.AssertJSONPath("data.0.last_result.passed", false).
-			AssertJSONPath("data.0.last_result.assertion_results.0.message", "Not met (8% likely that it was).")
+			AssertJSONPath("data.0.last_result.assertion_results.0.message", "Not met.")
 	})
 
-	t.Run("reports an error when no model can judge a sentence check", func(t *testing.T) {
+	t.Run("marks a sentence check the decision model only leans toward as unsure, without failing the run",
+		func(t *testing.T) {
+			t.Parallel()
+			res, _, _ := sentence(t, 0.58)
+			res.AssertJSONPath("data.0.last_result.passed", true).
+				AssertJSONPath("data.0.last_result.assertion_results.0.passed", false).
+				AssertJSONPath("data.0.last_result.assertion_results.0.unsure", true)
+			assert.Contains(t, res.String("data.0.last_result.assertion_results.0.message"), "could not tell")
+		})
+
+	t.Run("passes a sentence check from sixty in a hundred", func(t *testing.T) {
+		t.Parallel()
+		res, _, _ := sentence(t, 0.61)
+		res.AssertJSONPath("data.0.last_result.passed", true).
+			AssertJSONPath("data.0.last_result.assertion_results.0.message", "Met.")
+	})
+
+	t.Run("fails the simulation when the decision model cannot judge a sentence check twice", func(t *testing.T) {
 		t.Parallel()
 		res, d, h := sentence(t, -1)
 		res.AssertJSONPath("data.0.last_result.passed", false).
 			AssertJSONPath("data.0.last_result.assertion_results.0.passed", false).
 			AssertJSONPath("data.0.last_result.assertion_results.0.message", "This check could not be judged.")
-		assert.Contains(t, res.String("data.0.last_result.error"), "A check could not be judged")
-		assert.GreaterOrEqual(t, len(d.Sent()), 2, "the decision model was asked again first")
-		assert.NotEmpty(t, h.llm.judgments(), "then the answer model was asked")
+		assert.Contains(t, res.String("data.0.last_result.error"), "The simulation failed")
+		assert.Contains(t, res.String("data.0.last_result.error"), "Try again.")
+		assert.GreaterOrEqual(t, len(d.Sent()), 2, "the decision model was asked again")
+		for _, asked := range h.llm.judgments() {
+			assert.NotContains(t, string(asked.Schema.Schema), `"met"`, "the answer model never judges a check")
+		}
 	})
 }
 

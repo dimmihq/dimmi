@@ -21,6 +21,7 @@ import (
 
 	"github.com/dimmihq/dimmi/app/contracts"
 	"github.com/dimmihq/dimmi/app/support/procedure"
+	"github.com/dimmihq/dimmi/app/support/prompts"
 )
 
 /*
@@ -43,7 +44,9 @@ func (r *Runner) skipProcedureStep(ctx context.Context, st *run, number string) 
 /*
 reportProcedureStep takes the agent's word that a step is finished or
 already covered, and refuses it when the step waits on the customer and
-they have not given what it needs.
+they have not given what it needs. A step that takes an action is
+finished by taking it, with one exception: the customer turned the
+action down, which their own messages have to show.
 */
 func (r *Runner) reportProcedureStep(ctx context.Context, st *run, number string) (string, error) {
 	number = stepNumber(number)
@@ -54,8 +57,7 @@ func (r *Runner) reportProcedureStep(ctx context.Context, st *run, number string
 	}
 	n := plan.Nodes[at]
 	if len(n.Step.Actions()) > 0 {
-		return nothingChanged("A step that calls a tool is finished by calling the tool. There is no need to " +
-			"report it. Carry on.")
+		return r.reportActionStep(ctx, st, n)
 	}
 	if handsOverIn(n.Step) && st.handoff == nil {
 		return st.proc.refused(number, "Step "+number+" is finished by handing the conversation over: say what it "+
@@ -83,6 +85,22 @@ func (r *Runner) reportProcedureStep(ctx context.Context, st *run, number string
 			"in this reply.")
 	}
 	return r.markProcedureStep(st, number)
+}
+
+/*
+reportActionStep answers a report on a step that takes an action. Such
+a step is finished by taking the action, so the report changes nothing,
+unless the customer's own messages turn the action down: then the step
+is done without it.
+*/
+func (r *Runner) reportActionStep(ctx context.Context, st *run, n procedure.Node) (string, error) {
+	if n.Status != procedure.StatusDone && r.stepDeclined(ctx, st, n) {
+		st.proc.guard(guardEvent{Type: "step_declined", StepID: n.ID})
+		return r.markProcedureStep(st, n.Label)
+	}
+	return nothingChanged("A step that calls a tool is finished by calling the tool. There is no need to " +
+		"report it. Carry on. Only when the customer's own messages turn down what the step does is it " +
+		"reported, with step_skipped and their words.")
 }
 
 /*
@@ -171,7 +189,8 @@ func stepLeftNote(number string) (string, error) {
 	out, err := json.Marshal(map[string]any{"ok": false, "active_step": number, "note": "The procedure is not " +
 		"finished: step " + number + " is still to do. Waiting for the customer's answer does not finish " +
 		"it; the procedure stays open until they reply. Report nothing now and end your reply on the step " +
-		"you are on. Only when the customer no longer wants this at all, use exited_topic_changed."})
+		"you are on. If the customer has turned down what that step does, report it with step_skipped and " +
+		"their words. Only when the customer no longer wants this at all, use exited_topic_changed."})
 	return string(out), err
 }
 
@@ -225,16 +244,10 @@ is the customer's call, never the agent's: an agent that finds a step
 awkward is held to it. When no model can say, the agent's word stands.
 */
 func (r *Runner) movedOn(ctx context.Context, st *run) bool {
+	vars := prompts.Vars{"request": st.proc.live.def.Description, "conversation": r.conversationLines(st.env)}
 	answers := r.judge(ctx, st, contracts.DecisionRequest{
-		State: "A support conversation. The AGENT follows a procedure its team wrote for this request:\n" +
-			st.proc.live.def.Description + "\n\nThe conversation so far:\n" + r.conversationLines(st.env),
-		Questions: map[string]contracts.DecisionQuestion{"moved_on": {
-			Type:         contracts.DecisionNoul,
-			Instructions: "Has the customer moved on from this request?",
-			True: "The CUSTOMER now asks about something else, says they no longer want this, or the request is " +
-				"fully settled.",
-			False: "The CUSTOMER still wants what the procedure is for.",
-		}},
+		State:     prompts.Judgment("moved_on", vars).State,
+		Questions: map[string]contracts.DecisionQuestion{"moved_on": question("moved_on", vars)},
 	})
 	moved, ok := answers["moved_on"]
 

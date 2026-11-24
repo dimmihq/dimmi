@@ -3,11 +3,9 @@
 | AI Actions
 |--------------------------------------------------------------------------
 |
-| The agent's actions on the registry: its settings, its connections,
-| the subscription sign-in, the runs and usage readers, the playground
-| and the workspace actions the agent may call.| playground. The playground asks whatever answers the AIPlayground
-| contract, which is the pipeline once it offers a stateless entry; until
-| then the playground answers that it is unavailable.
+| The agents' actions on the registry: the agents and their shared
+| settings, the connections, the subscription sign-in, the runs and
+| usage readers, and the workspace actions an agent may call.
 |
 */
 
@@ -16,25 +14,22 @@ package providers
 import (
 	"github.com/dimmihq/dimmi/app"
 	"github.com/dimmihq/dimmi/app/actions/agentactions"
+	"github.com/dimmihq/dimmi/app/actions/agentsims"
 	"github.com/dimmihq/dimmi/app/actions/ai"
 	"github.com/dimmihq/dimmi/app/actions/widget"
 	"github.com/dimmihq/dimmi/app/ai/actionkit"
 	"github.com/dimmihq/dimmi/app/ai/pipeline"
-	"github.com/dimmihq/dimmi/app/contracts"
 	"github.com/dimmihq/dimmi/app/jobs"
 	"github.com/dimmihq/dimmi/app/support/aiprices"
 )
 
 /*
-aiActions builds the agent's actions. The answerer, the pipeline, also
-serves the playground when it implements the contract.
+aiActions builds the agents' actions. When the answerer is the
+pipeline, the workspace actions an agent may call come with it.
 */
 func aiActions(a *app.App, answerer any, prices *aiprices.Table) *app.AIActions {
-	playground, _ := answerer.(contracts.AIPlayground)
-
 	out := &app.AIActions{
-		GetAgent:    &ai.GetAiAgent{DB: a.DB, Clock: a.Clock, Config: a.Config.AI, Prices: prices},
-		UpdateAgent: &ai.UpdateAiAgent{DB: a.DB, Clock: a.Clock, Config: a.Config.AI},
+		Agents: &ai.Agents{DB: a.DB, Clock: a.Clock, Config: a.Config.AI, Prices: prices},
 
 		ListProviderKeys:  &ai.ListProviderKeys{DB: a.DB},
 		CreateProviderKey: &ai.CreateProviderKey{DB: a.DB, Clock: a.Clock, Keys: a.Keys, LLM: a.LLM},
@@ -50,10 +45,14 @@ func aiActions(a *app.App, answerer any, prices *aiprices.Table) *app.AIActions 
 			Keys: a.Keys, HTTP: a.HTTP,
 		},
 
-		ListRuns:      &ai.ListConversationRuns{DB: a.DB},
-		ShowRun:       &ai.ShowRun{DB: a.DB},
-		ShowUsage:     &ai.ShowUsage{DB: a.DB, Clock: a.Clock},
-		AskPlayground: &ai.AskPlayground{DB: a.DB, Playground: playground, Limiter: a.Limiter},
+		ListRuns:  &ai.ListConversationRuns{DB: a.DB},
+		ShowRun:   &ai.ShowRun{DB: a.DB},
+		ShowUsage: &ai.ShowUsage{DB: a.DB, Clock: a.Clock},
+	}
+	if runner, ok := answerer.(*pipeline.Runner); ok {
+		out.Simulations = &agentsims.Simulations{
+			DB: a.DB, Clock: a.Clock, Simulator: runner, Procedures: a.Actions.Procedures,
+		}
 	}
 	if runner, ok := answerer.(*pipeline.Runner); ok && runner.Actions != nil {
 		addActionActions(a, out, runner.Actions)

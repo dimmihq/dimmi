@@ -12,7 +12,7 @@ import (
 )
 
 const listChannelConnectionsOfType = `-- name: ListChannelConnectionsOfType :many
-SELECT id, workspace_id, inbox_id, type, name, status, external_id, config, credentials_encrypted, last_error, last_error_at, last_activity_at, deleted_at, created_at, updated_at, integration_installation_id FROM channel_connections
+SELECT id, workspace_id, inbox_id, type, name, status, external_id, config, credentials_encrypted, last_error, last_error_at, last_activity_at, deleted_at, created_at, updated_at, integration_installation_id, ai_agent_id FROM channel_connections
 WHERE workspace_id = $1 AND type = $2 AND deleted_at IS NULL
 ORDER BY created_at, id
 `
@@ -50,6 +50,7 @@ func (q *Queries) ListChannelConnectionsOfType(ctx context.Context, arg ListChan
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.IntegrationInstallationID,
+			&i.AiAgentID,
 		); err != nil {
 			return nil, err
 		}

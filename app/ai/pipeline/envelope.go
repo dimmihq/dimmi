@@ -24,6 +24,7 @@ import (
 	"github.com/dimmihq/dimmi/app/contracts"
 	"github.com/dimmihq/dimmi/app/enums"
 	"github.com/dimmihq/dimmi/app/models"
+	"github.com/dimmihq/dimmi/app/support/pii"
 )
 
 /*
@@ -44,6 +45,35 @@ escape makes data inert inside the envelope.
 */
 func escape(s string) string {
 	return strings.NewReplacer("&", "&amp;", "<", "&lt;", ">", "&gt;").Replace(s)
+}
+
+/*
+hiddenDetails tells the agent what a masked value is. An agent set to
+hide personal data never reads an email address or a phone number: it
+reads a placeholder in its place. Told nothing, it takes the
+placeholder for what the customer typed and asks for the address again.
+*/
+const hiddenDetails = "Personal details in these messages are hidden from you. Where a message shows [email], " +
+	"[phone], [iban], [ssn] or [secret], the customer wrote the real value there. It is saved in the " +
+	"conversation and the team can read it. Treat it as given: never ask for it again, never say it is " +
+	"missing or did not come through, and never write the placeholder in a reply. In a note for the team, say " +
+	"the customer gave it in the conversation."
+
+/*
+masked reports whether any turn the agent reads carries a placeholder
+for a hidden value.
+*/
+func masked(msgs []contracts.ChatMessage) bool {
+	for _, m := range msgs {
+		for _, p := range m.Parts {
+			for _, mark := range []string{pii.Email, pii.Phone, pii.IBAN, pii.SSN, pii.Secret} {
+				if strings.Contains(p.Text, mark) {
+					return true
+				}
+			}
+		}
+	}
+	return false
 }
 
 /*
@@ -88,6 +118,9 @@ func (r *Runner) envelope(e *env, update string) []contracts.ChatMessage {
 	last.Parts[0].Text += "\n<today>" + e.now.UTC().Format("Monday 2 January 2006") + " (UTC)</today>"
 	if repliedBefore(e.History) {
 		last.Parts[0].Text += "\n<reply_focus>" + replyFocus + "</reply_focus>"
+	}
+	if e.Agent.PiiRedaction && masked(msgs) {
+		last.Parts[0].Text += "\n<hidden_details>" + hiddenDetails + "</hidden_details>"
 	}
 
 	if contact := r.contactBlock(e); contact != "" {
@@ -282,11 +315,14 @@ func annotatedOf(m models.Message) string {
 replyFocus closes the newest turn of a conversation the agent already
 answered in. Guidance placed in the newest turn is what a fast model
 follows best mid-conversation, and repeating earlier steps, questions
-and offers is the habit long conversations show most.
+and offers is the habit long conversations show most. It asks for a
+short reply only by default: what the workspace's procedure or guidance
+says to tell the customer is never cut to fit.
 */
 const replyFocus = "Your earlier replies above are settled: they stand as given, whether or not their knowledge " +
 	"is in front of you now, and the customer already has every step, tip, question and offer in them. " +
-	"This reply answers only what is new in the latest message, short and easy to scan."
+	"This reply answers only what is new in the latest message, short and easy to scan. What a procedure step " +
+	"or the workspace's guidance tells you to say now is still said in full."
 
 /*
 repliedBefore reports whether the agent has replied earlier in the
@@ -299,4 +335,16 @@ func repliedBefore(history []models.Message) bool {
 		}
 	}
 	return false
+}
+
+/*
+cmpOr returns the first non-empty text.
+*/
+func cmpOr(values ...string) string {
+	for _, v := range values {
+		if v != "" {
+			return v
+		}
+	}
+	return ""
 }

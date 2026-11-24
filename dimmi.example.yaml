@@ -886,12 +886,15 @@ ai:
     # AIManagedEmbeddings is the built-in embedder every workspace gets
     # semantic search from, with its own key apart from the language
     # models'. Without a key the built-in embedder is absent. Model is the
-    # upstream model and Dims the size its vectors are shortened to.
+    # Voyage model and Dims the size of its vectors. RerankModel, on the same
+    # key, orders what a search found by how well each passage answers the
+    # question; empty turns reranking off.
     embeddings:
       api_key: ""  # DIMMI_AI__MANAGED__EMBEDDINGS__API_KEY (secret; or DIMMI_AI__MANAGED__EMBEDDINGS__API_KEY_FILE naming a file)
-      base_url: https://api.deepinfra.com/v1/openai  # DIMMI_AI__MANAGED__EMBEDDINGS__BASE_URL
-      model: Qwen/Qwen3-Embedding-8B  # DIMMI_AI__MANAGED__EMBEDDINGS__MODEL
+      base_url: https://api.voyageai.com/v1  # DIMMI_AI__MANAGED__EMBEDDINGS__BASE_URL
+      model: voyage-4-lite  # DIMMI_AI__MANAGED__EMBEDDINGS__MODEL
       dims: 1024  # DIMMI_AI__MANAGED__EMBEDDINGS__DIMS
+      rerank_model: rerank-2.5-lite  # DIMMI_AI__MANAGED__EMBEDDINGS__RERANK_MODEL
   # AIChatGPTConfig configures the subscription sign-in source. It signs
   # in with the public client the ChatGPT coding tools share, so a hosted
   # web app cannot use its own redirect: the member either enters a
@@ -965,9 +968,15 @@ ai:
       input_price_per_mtok: 0.042  # DIMMI_AI__DECISIONS__TYPESAFE__INPUT_PRICE_PER_MTOK
   # AIKnowledgeConfig bounds retrieval: how long a search waits for the
   # query's vector and for the vector query before it answers from
-  # keywords alone. Hosted embedders answer a short query in one to five
-  # seconds, so the wait leaves room for that; a vector found once is
-  # cached and later searches for the same words wait for nothing.
+  # keywords as the last resort. The built-in embedder answers a short
+  # query in a fraction of a second, so the wait is short; a vector found
+  # once is cached and later searches for the same words wait for nothing.
+  # A query whose vector has not come back after QueryEmbedHedgeMS is asked
+  # for a second time, and whichever answer comes first is used, so one
+  # slow call does not send a search to keywords; zero turns that off.
+  # RerankTimeoutMS is how long the reranker has; past it the passages are
+  # returned nearest first. The three waits add up to under three seconds, the
+  # longest a search by meaning may take.
   # CrawlIntervalMS is the least time between two requests the website
   # crawler sends one host; zero lifts the pace, for tests only. With a
   # Cloudflare API token, websites are crawled through Cloudflare's
@@ -976,8 +985,10 @@ ai:
   # CloudflareBrowserHourMicros is what an hour of that browser costs, in
   # millionths of a dollar, so crawl time can be billed on.
   knowledge:
-    query_embed_timeout_ms: 4000  # DIMMI_AI__KNOWLEDGE__QUERY_EMBED_TIMEOUT_MS
+    query_embed_timeout_ms: 1000  # DIMMI_AI__KNOWLEDGE__QUERY_EMBED_TIMEOUT_MS
+    query_embed_hedge_ms: 350  # DIMMI_AI__KNOWLEDGE__QUERY_EMBED_HEDGE_MS
     vector_timeout_ms: 250  # DIMMI_AI__KNOWLEDGE__VECTOR_TIMEOUT_MS
+    rerank_timeout_ms: 1500  # DIMMI_AI__KNOWLEDGE__RERANK_TIMEOUT_MS
     crawl_interval_ms: 1000  # DIMMI_AI__KNOWLEDGE__CRAWL_INTERVAL_MS
     cloudflare_api_token: ""  # DIMMI_AI__KNOWLEDGE__CLOUDFLARE_API_TOKEN (secret; or DIMMI_AI__KNOWLEDGE__CLOUDFLARE_API_TOKEN_FILE naming a file)
     cloudflare_account_id: ""  # DIMMI_AI__KNOWLEDGE__CLOUDFLARE_ACCOUNT_ID

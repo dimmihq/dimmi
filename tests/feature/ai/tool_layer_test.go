@@ -59,7 +59,7 @@ func TestAiToolLayer(t *testing.T) {
 
 		sent := h.llm.answer.Sent()
 		require.Len(t, sent, 3)
-		want := []string{"call_tool", "handoff", "load_tools", "search_knowledge"}
+		want := []string{"call_tool", "handoff", "leave_note", "load_tools", "search_knowledge"}
 		for _, req := range sent {
 			assert.Equal(t, want, toolNames(req))
 		}
@@ -82,7 +82,8 @@ func TestAiToolLayer(t *testing.T) {
 				names = append(names, str(st.Model))
 			}
 		}
-		assert.Equal(t, []string{"load_tools", "triage_conversation"}, names)
+		assert.Equal(t, []string{"search_knowledge", "load_tools", "triage_conversation"}, names,
+			"the first message is searched before the agent's first call")
 	})
 
 	t.Run("runs a tool not loaded when its arguments fit, and refuses misfits in short words", func(t *testing.T) {

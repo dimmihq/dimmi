@@ -469,6 +469,43 @@ func (q *Queries) FindWorkspaceArticleDocument(ctx context.Context, arg FindWork
 	return i, err
 }
 
+const listArticleTitles = `-- name: ListArticleTitles :many
+SELECT id, title FROM articles
+WHERE workspace_id = $1 AND id = ANY ($2::uuid[]) AND deleted_at IS NULL
+`
+
+type ListArticleTitlesParams struct {
+	WorkspaceID ids.UUID   `json:"workspace_id"`
+	Ids         []ids.UUID `json:"ids"`
+}
+
+type ListArticleTitlesRow struct {
+	ID    ids.UUID `json:"id"`
+	Title string   `json:"title"`
+}
+
+// ListArticleTitles names the workspace's articles among the ids given,
+// such as those an agent's guidance cites.
+func (q *Queries) ListArticleTitles(ctx context.Context, arg ListArticleTitlesParams) ([]ListArticleTitlesRow, error) {
+	rows, err := q.db.Query(ctx, listArticleTitles, arg.WorkspaceID, arg.Ids)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListArticleTitlesRow
+	for rows.Next() {
+		var i ListArticleTitlesRow
+		if err := rows.Scan(&i.ID, &i.Title); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listArticleVersions = `-- name: ListArticleVersions :many
 SELECT id, number, kind, title, created_by_type, created_by_id, created_at FROM article_versions
 WHERE workspace_id = $1 AND article_id = $2

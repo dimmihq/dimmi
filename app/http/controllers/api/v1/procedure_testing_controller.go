@@ -206,7 +206,9 @@ func (c *ProcedureController) RunTestCases(ctx context.Context, in *requests.Run
 testCaseInput reads a saved test's fields.
 */
 func (c *ProcedureController) testCaseInput(b requests.TestCaseBody) (procedures.TestCaseInput, error) {
-	out := procedures.TestCaseInput{Name: b.Name, Mocks: mocks(b.ActionMocks), SimulatedAt: b.SimulatedAt}
+	out := procedures.TestCaseInput{
+		Name: b.Name, Mocks: mocks(b.ActionMocks), SimulatedAt: b.SimulatedAt, Scenario: b.Scenario,
+	}
 	if b.Persona != nil {
 		p := persona(b.Persona)
 		out.Persona = &p

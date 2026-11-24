@@ -80,7 +80,10 @@ it.describe("feature requests", () => {
     await page.getByRole("radiogroup", { name: "Write" }).getByRole("radio", { name: "Note" }).click();
     await page.getByRole("textbox", { name: "Internal note" }).fill("Needs the export service first.");
     await page.getByRole("button", { name: "Add note" }).click();
-    await expect(page.getByText("Needs the export service first.")).toBeVisible();
+    // The composer still holds the note for a moment after it is added, so the note is looked for in the thread.
+    await expect(
+      page.getByRole("list", { name: "Comments" }).getByText("Needs the export service first."),
+    ).toBeVisible();
     // The note box takes focus back once it has cleared, which would close a menu opened before.
     await expect(page.getByRole("textbox", { name: "Internal note" })).toBeFocused();
 

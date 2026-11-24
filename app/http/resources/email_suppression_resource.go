@@ -37,7 +37,8 @@ func NewEmailSuppressions(rows []models.EmailSuppression) []EmailSuppression {
 	out := make([]EmailSuppression, 0, len(rows))
 	for _, r := range rows {
 		out = append(out, EmailSuppression{
-			ID: models.PublicID(models.PrefixEmailSuppression, r.ID), Object: "email_suppression", Email: suppressedEmail(r),
+			ID:     models.PublicID(models.PrefixEmailSuppression, r.ID),
+			Object: "email_suppression", Email: suppressedEmail(r),
 			Reason: r.Reason, Scope: r.Scope, Source: r.Source, ExpiresAt: r.ExpiresAt, CreatedAt: r.CreatedAt,
 		})
 	}

@@ -317,11 +317,15 @@ func lastAuthor(ctx context.Context, q *models.Queries, e *env, c change) string
 }
 
 /*
-applyChanges applies the recorded triage as the agent.
+applyChanges applies what the turn recorded for the inbox as the
+agent: the notes it left for the team, then its triage.
 */
 func (r *Runner) applyChanges(ctx context.Context, tx *database.Tx, st *run) error {
 	e, ch := st.env, st.changes
 	w := r.agentWriter(tx, e)
+	if err := r.writeTeamNotes(ctx, tx, st); err != nil {
+		return err
+	}
 
 	if _, err := w.AddTags(ctx, e.Conversation, tags.Refs{IDs: ch.addTags}, nil); err != nil {
 		return fmt.Errorf("add tags: %w", err)

@@ -55,6 +55,7 @@ type Filters struct {
 	Tags          []ids.UUID
 	Priorities    []int16
 	AI            string
+	Agents        []ids.UUID
 	BusinessHours bool
 }
 

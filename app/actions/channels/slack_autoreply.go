@@ -26,6 +26,7 @@ import (
 
 	"github.com/dimmihq/dimmi/app/actions/conversations"
 	"github.com/dimmihq/dimmi/app/actions/schedules"
+	"github.com/dimmihq/dimmi/app/ai/agents"
 	"github.com/dimmihq/dimmi/app/enums"
 	"github.com/dimmihq/dimmi/app/jobs"
 	"github.com/dimmihq/dimmi/app/models"
@@ -102,16 +103,18 @@ func (s *Slack) autoReplyDue(ctx context.Context, conv models.Conversation, room
 	err := s.read(ctx, func(q *models.Queries) error {
 		var err error
 
-		agent, err = q.FindAgent(ctx, conv.WorkspaceID)
+		where := agents.ForConversation(conv, nil)
+		where.ChannelRoomID = &room.ID
+		agent, err = agents.Resolve(ctx, q, where)
 
 		return err
 	})
 
 	switch {
-	case errors.Is(err, database.ErrNotFound):
+	case errors.Is(err, agents.ErrNoAgent):
 		return settingOf(&room, settingAutoReplyWhen) != whenOutsideHours, nil
 	case err != nil:
-		return false, fmt.Errorf("find agent: %w", err)
+		return false, err
 	case agent.Enabled && room.AgentEnabled && conv.AiState != "handed_off":
 		return false, nil
 	case settingOf(&room, settingAutoReplyWhen) != whenOutsideHours:

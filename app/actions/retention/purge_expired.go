@@ -156,7 +156,7 @@ func (a *PurgeExpired) conversations(
 	for {
 		var found []ids.UUID
 
-		err := a.DB.Transaction(ctx, func(ctx context.Context, tx *database.Tx) error {
+		err := a.DB.Transaction(ctx, func(_ context.Context, tx *database.Tx) error {
 			var err error
 
 			found, err = list(models.New(tx), held)
@@ -244,9 +244,17 @@ func (a *PurgeExpired) destroy(ctx context.Context, workspaceID ids.UUID, conver
 		return 0, err
 	}
 
+	return a.deleteRows(ctx, workspaceID, conversations)
+}
+
+/*
+deleteRows deletes the conversations' rows and the records of the mail
+they received and sent, and returns how many conversations went.
+*/
+func (a *PurgeExpired) deleteRows(ctx context.Context, workspaceID ids.UUID, conversations []ids.UUID) (int64, error) {
 	var purged int64
 
-	err = a.DB.Transaction(ctx, func(ctx context.Context, tx *database.Tx) error {
+	err := a.DB.Transaction(ctx, func(ctx context.Context, tx *database.Tx) error {
 		q := models.New(tx)
 
 		if _, err := q.DeleteConversationInboundEmails(ctx, models.DeleteConversationInboundEmailsParams{

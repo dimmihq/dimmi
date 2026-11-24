@@ -31,6 +31,7 @@ type Allowed = {
   id: string;
   operation?: string;
   event?: string;
+  schema?: string;
   match?: string;
   reason: string;
   deprecated: string;
@@ -195,8 +196,8 @@ function entryProblems(e: Allowed, i: number): string[] {
       problems.push(`entry ${i} has no ${key}`);
     }
   }
-  if (!e.operation && !e.event) {
-    problems.push(`entry ${i} names neither an operation nor an event`);
+  if (!e.operation && !e.event && !e.schema) {
+    problems.push(`entry ${i} names no operation, event or schema`);
   }
   for (const key of ["deprecated", "sunset"] as const) {
     if (e[key] && Number.isNaN(Date.parse(e[key]))) {
@@ -218,6 +219,9 @@ function loadAllowlist(): Allowed[] {
 }
 
 function allows(entry: Allowed, f: Finding): boolean {
+  if (entry.schema) {
+    return entry.id === f.id && f.operation === "" && f.text.includes(`\`${entry.schema}\``);
+  }
   const target = entry.operation ?? `event ${entry.event}`;
   return (
     entry.id === f.id &&

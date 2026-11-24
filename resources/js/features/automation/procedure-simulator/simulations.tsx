@@ -19,6 +19,7 @@ import {
   RiCloseLine,
   RiDeleteBinLine,
   RiPlayFill,
+  RiQuestionFill,
 } from "@remixicon/react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
@@ -80,6 +81,10 @@ function Mark({ result }: { result?: CheckResult }) {
     return (
       <RiCheckboxBlankCircleLine aria-label="Not run" className="size-4.5 shrink-0 text-foreground-icon-quaternary" />
     );
+  }
+
+  if (result.unsure) {
+    return <RiQuestionFill aria-label="Unsure" className="size-4.5 shrink-0 text-status-yellow-text" />;
   }
 
   return result.passed ? (
@@ -252,7 +257,14 @@ function Checks({
               <span className="flex min-w-0 flex-1 flex-col py-1">
                 <span className="text-body-2-regular text-text-primary">{sayOf(said)}</span>
                 {outcome && !outcome.passed && !outcome.skipped ? (
-                  <span className="text-body-2-regular text-text-error-primary">{outcome.message}</span>
+                  <span
+                    className={cx(
+                      "text-body-2-regular",
+                      outcome.unsure ? "text-text-secondary" : "text-text-error-primary",
+                    )}
+                  >
+                    {outcome.message}
+                  </span>
                 ) : null}
               </span>
               {readOnly ? null : (

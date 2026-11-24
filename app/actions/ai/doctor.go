@@ -83,16 +83,18 @@ func (d *Doctor) managedCheck() Check {
 }
 
 /*
-promptsCheck renders one template per model family.
+promptsCheck renders every root system prompt of each model family.
 */
 func (d *Doctor) promptsCheck() Check {
 	for _, family := range []enums.AIModelFamily{
 		enums.AIModelFamilyAnthropic, enums.AIModelFamilyOpenAI, enums.AIModelFamilyOpenWeight,
 	} {
-		if _, err := d.Prompts.RenderFile(family, "answer.system.md", prompts.Vars{}); err != nil {
-			return Check{
-				ID: "ai.prompts", Status: CheckFail,
-				Message: "the " + string(family) + " prompt templates do not render: " + err.Error(),
+		for _, root := range prompts.Roots() {
+			if _, err := d.Prompts.RenderFile(family, root, prompts.Vars{}); err != nil {
+				return Check{
+					ID: "ai.prompts", Status: CheckFail,
+					Message: "the " + string(family) + " prompt templates do not render: " + err.Error(),
+				}
 			}
 		}
 	}

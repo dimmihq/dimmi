@@ -1,0 +1,135 @@
+---
+title: "Run several AI agents"
+description: "Give sales, billing, and support their own AI agent, decide which one answers, and let them pass conversations to each other."
+---
+import { Callout } from "~docs/components/mdx";
+
+One agent can answer most questions. It starts to strain when two audiences need different rules: a sales agent should quote prices and book demos, while a support agent should never promise a discount.
+
+dimmi lets a workspace run several agents. Each one has its own name, guidance, knowledge, procedures, actions, and model. You build and test each one in [Agent Studio](/ai/set-up-the-agent/), on the **Agents** page.
+
+## The default agent and the rest
+
+Every workspace has one **default agent**. It answers every conversation no other agent takes, and you can't delete it.
+
+Every other agent answers only where you **place** it: on a messenger, an email address, a Slack channel, or an inbox. A new agent answers nowhere until you place it and publish.
+
+## Start from a template
+
+**New agent** opens a picker. Each template brings a suggested name, a tone, and guidance written for the job:
+
+| Template | Built for |
+| --- | --- |
+| **Customer support** | A second support agent, for another brand or product. |
+| **Orders and returns** | Tracking orders and running returns inside your return window. |
+| **Billing and retention** | Invoices, refunds, and cancellations, by policy. |
+| **Developer docs** | Code-first answers from your docs and API reference. |
+| **Sales and lead qualification** | Pricing questions, qualifying leads, and booking demos. |
+| **Onboarding coach** | Walking new customers through setup, one step at a time. |
+| **IT and people helpdesk** | Answering teammates in Slack from internal docs. |
+| **Start from scratch** | An empty draft. |
+
+Tick **Make a widget for it** to give the new agent a messenger of its own, already placed on it. **Developer docs** and **Sales and lead qualification** tick it for you, since those agents usually live on one page, such as a docs site or a pricing page.
+
+## How a conversation picks its agent
+
+dimmi checks these in order and stops at the first match:
+
+1. **A workflow step:** a **Let dimmi handle** step that names an agent in its `agent_id` setting.
+2. **The agent already on the conversation:** the first agent that answers is pinned, so the customer keeps talking to the same one.
+3. **The Slack channel** the conversation came from, if an agent is placed there.
+4. **The channel connection:** the messenger, email address, or other connected channel.
+5. **The inbox** the conversation is in.
+6. **The default agent.**
+
+Because of the pin, moving an agent to a new place only changes who answers new conversations.
+
+## Place an agent
+
+Open the agent and set **Build → Where it answers → Channels and inboxes**. The picker shows which agent holds each place now.
+
+- **One agent per place:** picking a place that another agent holds moves it to this agent.
+- **Changes wait for Publish:** the placement is part of the draft, like everything else in **Build**.
+- **The default agent** can be placed too. That keeps a place for it even when you place other agents.
+
+<Callout type="caution" title="Turning an agent off leaves its places empty">
+  **Turn off** keeps the agent's places, and the default agent does not step in. Nothing answers there until you publish the agent again or place another agent.
+</Callout>
+
+Deleting an agent takes it off its places. Its conversations go to the next agent in line.
+
+## Hand a conversation to another agent
+
+A customer sometimes asks the wrong agent. The sales agent gets a bug report, or support gets a pricing question. A **transfer** hands the conversation to the agent whose job it is.
+
+Two things set it up, both in **Build**:
+
+1. **What it handles:** write a sentence or two on each agent saying who it is for and what they ask about, like `People who have not bought yet: prices, which plan fits, trials and demos.`
+2. **May transfer to:** under **Handover and transfers**, list the agents an agent may hand to.
+
+That is all you write. Each agent is told its own job and what the agents on its list handle, and dimmi's own instructions tell it when to transfer. You don't need to describe transfers in the guidance. An agent with no description still receives transfers, but only when a request plainly matches its name and role, so describe every agent you transfer to.
+
+When a request is another agent's job, the agent transfers:
+
+- **The customer sees nothing.** No goodbye, no notice.
+- **The other agent answers the same message** right away.
+- **Your team sees a timeline line**, such as `Sales transferred the conversation to Support: Existing customer with a bug`.
+- **Any procedure** the first agent was following ends.
+
+A transfer to a person is a [handover](/ai/handover/), which is a different thing.
+
+### Transfer rules
+
+- **2 moves at most:** a conversation moves between agents twice at most.
+- **No going back:** a conversation never returns to an agent it already left.
+- **Only agents that are on:** an agent that is unpublished or turned off can't receive transfers.
+- **Workflow picks stay put:** an agent named by a workflow step never transfers.
+
+## Different agents on different pages of one site
+
+dimmi has no rules that match page URLs. To show a sales agent on your pricing page and a support agent in your app, use two messengers:
+
+1. Add a second messenger under **Settings → Messengers**, or tick **Make a widget for it** when you create the agent.
+2. Place the sales agent on that messenger.
+3. Load that messenger's `appId` on the pricing page, and your main messenger's `appId` everywhere else. See [Add the messenger to your app](/developers/messenger/install/).
+
+```html title="pricing.html"
+<script async src="https://trydimmi.com/widget/v1/loader.js" data-app-id="<sales_app_id>"></script>
+```
+
+`<sales_app_id>` is the `wgt_...` id of the sales messenger.
+
+<Callout type="note" title="One messenger per page load">
+  The messenger loads once per page. A single-page app keeps the first messenger it loaded until the browser does a full page load, even if a later route asks for a different `appId`.
+</Callout>
+
+## Compare agents in reports
+
+**Reports → dimmi agent** has a **Conversations by AI agent** table with one row per agent:
+
+| Column | What it shows |
+| --- | --- |
+| **Conversations** | Conversations the agent held last. |
+| **Resolved** | Share it resolved. |
+| **Handed over** | Share it handed to your team. |
+| **Transferred** | How many it handed to another agent. |
+| **CSAT** | What customers rated it. |
+| **Cost per resolution** | Its AI cost divided by its resolutions. |
+
+A conversation counts for the agent that held it last. After a transfer, it counts for the agent that finished the work. The cost of each run counts for the agent that ran it.
+
+Use the **AI agent** filter to narrow any report to one agent. Each agent's **Analytics** tab in Agent Studio shows the same report for that agent over the last 30 days.
+
+## Test changes before customers see them
+
+Every change in **Build** goes to a draft. Customers get the live version until you press **Publish**, so you can test freely.
+
+- **Preview:** chat with the agent in the side panel. Switch between **Draft** and **Live** to compare answers.
+- **Simulations:** saved chats the agent must keep getting right. Press **Save as simulation** on a Preview chat to keep it. **Run all** runs every simulation against the draft or the live version.
+- **Passing, flaky, failing:** an agent's answers vary from run to run, so each simulation is scored on its last 5 runs, like `Passing · 5 of 5` or `Flaky · 3 of 5`. The count starts again when you change the agent, a procedure or the simulation. Open a simulation to read its **Past runs**.
+- **Customer's situation:** each simulation says who its customer is and what they came for. dimmi writes it when you save, and you can edit it in the simulation. The simulated customer answers from it and only agrees to what it says they want. To test a customer who accepts an offer, say so there: `Wants to move to Growth and will confirm it.`
+- **Live differs:** marks a simulation whose draft and live results disagree. Open it and press **Compare** to see both runs side by side. **Run both** reruns them at the same time, and you watch each one as it happens.
+- **Transfers:** a simulation follows a transfer the way a real conversation does. The chat stays with the agent it went to, and a check can name who should answer, like `Stays with Rio`.
+- **Publish:** warns you when simulations failed on their last run on the draft.
+
+To see what changed between two versions, or roll one back, use **History**. See [Go back to an earlier version](/ai/set-up-the-agent/#go-back-to-an-earlier-version).

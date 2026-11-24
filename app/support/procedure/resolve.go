@@ -306,9 +306,14 @@ func (r *resolver) add(n Node) {
 }
 
 /*
-planned lists a node's actions with their enforcement.
+planned lists a node's actions with their enforcement. A step marked
+done without its actions is one the customer turned down, so its
+actions are no longer planned and nothing asks for them.
 */
 func (r *resolver) planned(n Node, order int) []Planned {
+	if r.in.Done[n.ID] {
+		return nil
+	}
 	var out []Planned
 	scope := strings.TrimSuffix(n.ID, n.Step.ID)
 	for _, b := range n.Step.Actions() {
@@ -451,12 +456,17 @@ func (r *resolver) leave(from, to int) {
 /*
 finished reports whether a step is done: every action it takes was
 called, or, for a step that takes none, dimmi said it finished it or a
-step after it is done.
+step after it is done. A step that takes an action is marked done
+without it only when the customer turned the action down, and is then
+finished too.
 */
 func (r *resolver) finished(n Node, doneAfter bool) bool {
 	actions := n.Step.Actions()
 	if len(actions) == 0 {
 		return doneAfter || r.in.Done[n.ID]
+	}
+	if r.in.Done[n.ID] {
+		return true
 	}
 	for _, b := range actions {
 		if !r.in.Called[b.Ref] {

@@ -30,6 +30,7 @@ import (
 	"github.com/dimmihq/dimmi/framework/ids"
 
 	"github.com/dimmihq/dimmi/app/ai/actionkit"
+	"github.com/dimmihq/dimmi/app/ai/agents"
 	"github.com/dimmihq/dimmi/app/audiences"
 	"github.com/dimmihq/dimmi/app/models"
 )
@@ -65,10 +66,11 @@ inScope keeps the procedures that apply to the conversation.
 */
 func (r *Runner) inScope(ctx context.Context, q *models.Queries, e *env, all []liveProcedure) ([]liveProcedure, error) {
 	identity := identityOf(e.ChannelType, e.Trigger, e.Contact)
+	scope := agents.ProceduresOf(e.Agent)
 	var out []liveProcedure
 	var needed []ids.UUID
 	for _, p := range all {
-		if !applies(e, identity, p) {
+		if !scope.Allows(p.row.ID) || !applies(e, identity, p) {
 			continue
 		}
 		needed = appendAudiences(needed, p)

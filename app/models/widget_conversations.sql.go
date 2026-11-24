@@ -14,7 +14,7 @@ import (
 )
 
 const findWidgetConversation = `-- name: FindWidgetConversation :one
-SELECT c.id, c.workspace_id, c.number, c.inbox_id, c.channel_connection_id, c.contact_id, c.subject, c.status, c.spam, c.assignee_member_id, c.assignee_team_id, c.ai_state, c.snoozed_until, c.external_thread_key, c.source, c.first_customer_message_at, c.last_customer_message_at, c.first_reply_at, c.last_reply_at, c.last_message_at, c.closed_at, c.message_count, c.deleted_at, c.created_at, c.updated_at, c.ai_reply_count, c.ai_cost_micros, c.ai_language, c.ai_handed_off_at, c.ai_handoff_reason, c.merged_into_id, c.is_test, c.previous_conversation_id, c.assignment_wait_reason, c.assignment_waiting_since, c.waiting_since, c.last_activity_at, c.last_message_id, c.search, c.priority, c.workflow_run_id, c.ai_mode, c.ai_memory, cc.type AS channel_type,
+SELECT c.id, c.workspace_id, c.number, c.inbox_id, c.channel_connection_id, c.contact_id, c.subject, c.status, c.spam, c.assignee_member_id, c.assignee_team_id, c.ai_state, c.snoozed_until, c.external_thread_key, c.source, c.first_customer_message_at, c.last_customer_message_at, c.first_reply_at, c.last_reply_at, c.last_message_at, c.closed_at, c.message_count, c.deleted_at, c.created_at, c.updated_at, c.ai_reply_count, c.ai_cost_micros, c.ai_language, c.ai_handed_off_at, c.ai_handoff_reason, c.merged_into_id, c.is_test, c.previous_conversation_id, c.assignment_wait_reason, c.assignment_waiting_since, c.waiting_since, c.last_activity_at, c.last_message_id, c.search, c.priority, c.workflow_run_id, c.ai_mode, c.ai_memory, c.ai_agent_id, c.ai_transferred_from_ids, cc.type AS channel_type,
     (SELECT count(*) FROM messages m
      WHERE m.workspace_id = c.workspace_id AND m.conversation_id = c.id AND m.type = 'message'
        AND m.author_type IN ('member', 'agent') AND m.read_at IS NULL AND m.deleted_at IS NULL)::bigint AS unread_count
@@ -99,6 +99,8 @@ func (q *Queries) FindWidgetConversation(ctx context.Context, arg FindWidgetConv
 		&i.Conversation.WorkflowRunID,
 		&i.Conversation.AiMode,
 		&i.Conversation.AiMemory,
+		&i.Conversation.AiAgentID,
+		&i.Conversation.AiTransferredFromIds,
 		&i.ChannelType,
 		&i.UnreadCount,
 	)
@@ -214,8 +216,45 @@ func (q *Queries) LatestWidgetMessages(ctx context.Context, arg LatestWidgetMess
 	return items, nil
 }
 
+const listWidgetAgentAuthors = `-- name: ListWidgetAgentAuthors :many
+SELECT id, name FROM ai_agents
+WHERE workspace_id = $1 AND id = ANY($2::uuid[])
+`
+
+type ListWidgetAgentAuthorsParams struct {
+	WorkspaceID ids.UUID   `json:"workspace_id"`
+	AgentIds    []ids.UUID `json:"agent_ids"`
+}
+
+type ListWidgetAgentAuthorsRow struct {
+	ID   ids.UUID `json:"id"`
+	Name string   `json:"name"`
+}
+
+// ListWidgetAgentAuthors returns the names of the AI agents that wrote
+// messages, as a visitor sees them.
+func (q *Queries) ListWidgetAgentAuthors(ctx context.Context, arg ListWidgetAgentAuthorsParams) ([]ListWidgetAgentAuthorsRow, error) {
+	rows, err := q.db.Query(ctx, listWidgetAgentAuthors, arg.WorkspaceID, arg.AgentIds)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListWidgetAgentAuthorsRow
+	for rows.Next() {
+		var i ListWidgetAgentAuthorsRow
+		if err := rows.Scan(&i.ID, &i.Name); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listWidgetConversationChanges = `-- name: ListWidgetConversationChanges :many
-SELECT c.id, c.workspace_id, c.number, c.inbox_id, c.channel_connection_id, c.contact_id, c.subject, c.status, c.spam, c.assignee_member_id, c.assignee_team_id, c.ai_state, c.snoozed_until, c.external_thread_key, c.source, c.first_customer_message_at, c.last_customer_message_at, c.first_reply_at, c.last_reply_at, c.last_message_at, c.closed_at, c.message_count, c.deleted_at, c.created_at, c.updated_at, c.ai_reply_count, c.ai_cost_micros, c.ai_language, c.ai_handed_off_at, c.ai_handoff_reason, c.merged_into_id, c.is_test, c.previous_conversation_id, c.assignment_wait_reason, c.assignment_waiting_since, c.waiting_since, c.last_activity_at, c.last_message_id, c.search, c.priority, c.workflow_run_id, c.ai_mode, c.ai_memory FROM conversations c
+SELECT c.id, c.workspace_id, c.number, c.inbox_id, c.channel_connection_id, c.contact_id, c.subject, c.status, c.spam, c.assignee_member_id, c.assignee_team_id, c.ai_state, c.snoozed_until, c.external_thread_key, c.source, c.first_customer_message_at, c.last_customer_message_at, c.first_reply_at, c.last_reply_at, c.last_message_at, c.closed_at, c.message_count, c.deleted_at, c.created_at, c.updated_at, c.ai_reply_count, c.ai_cost_micros, c.ai_language, c.ai_handed_off_at, c.ai_handoff_reason, c.merged_into_id, c.is_test, c.previous_conversation_id, c.assignment_wait_reason, c.assignment_waiting_since, c.waiting_since, c.last_activity_at, c.last_message_id, c.search, c.priority, c.workflow_run_id, c.ai_mode, c.ai_memory, c.ai_agent_id, c.ai_transferred_from_ids FROM conversations c
 JOIN channel_connections cc ON cc.id = c.channel_connection_id AND cc.workspace_id = c.workspace_id
 WHERE c.workspace_id = $1 AND c.contact_id = $2 AND c.deleted_at IS NULL
   AND (
@@ -300,6 +339,8 @@ func (q *Queries) ListWidgetConversationChanges(ctx context.Context, arg ListWid
 			&i.WorkflowRunID,
 			&i.AiMode,
 			&i.AiMemory,
+			&i.AiAgentID,
+			&i.AiTransferredFromIds,
 		); err != nil {
 			return nil, err
 		}
@@ -312,7 +353,7 @@ func (q *Queries) ListWidgetConversationChanges(ctx context.Context, arg ListWid
 }
 
 const listWidgetConversations = `-- name: ListWidgetConversations :many
-SELECT c.id, c.workspace_id, c.number, c.inbox_id, c.channel_connection_id, c.contact_id, c.subject, c.status, c.spam, c.assignee_member_id, c.assignee_team_id, c.ai_state, c.snoozed_until, c.external_thread_key, c.source, c.first_customer_message_at, c.last_customer_message_at, c.first_reply_at, c.last_reply_at, c.last_message_at, c.closed_at, c.message_count, c.deleted_at, c.created_at, c.updated_at, c.ai_reply_count, c.ai_cost_micros, c.ai_language, c.ai_handed_off_at, c.ai_handoff_reason, c.merged_into_id, c.is_test, c.previous_conversation_id, c.assignment_wait_reason, c.assignment_waiting_since, c.waiting_since, c.last_activity_at, c.last_message_id, c.search, c.priority, c.workflow_run_id, c.ai_mode, c.ai_memory, cc.type AS channel_type,
+SELECT c.id, c.workspace_id, c.number, c.inbox_id, c.channel_connection_id, c.contact_id, c.subject, c.status, c.spam, c.assignee_member_id, c.assignee_team_id, c.ai_state, c.snoozed_until, c.external_thread_key, c.source, c.first_customer_message_at, c.last_customer_message_at, c.first_reply_at, c.last_reply_at, c.last_message_at, c.closed_at, c.message_count, c.deleted_at, c.created_at, c.updated_at, c.ai_reply_count, c.ai_cost_micros, c.ai_language, c.ai_handed_off_at, c.ai_handoff_reason, c.merged_into_id, c.is_test, c.previous_conversation_id, c.assignment_wait_reason, c.assignment_waiting_since, c.waiting_since, c.last_activity_at, c.last_message_id, c.search, c.priority, c.workflow_run_id, c.ai_mode, c.ai_memory, c.ai_agent_id, c.ai_transferred_from_ids, cc.type AS channel_type,
     (SELECT count(*) FROM messages m
      WHERE m.workspace_id = c.workspace_id AND m.conversation_id = c.id AND m.type = 'message'
        AND m.author_type IN ('member', 'agent') AND m.read_at IS NULL AND m.deleted_at IS NULL)::bigint AS unread_count
@@ -420,6 +461,8 @@ func (q *Queries) ListWidgetConversations(ctx context.Context, arg ListWidgetCon
 			&i.Conversation.WorkflowRunID,
 			&i.Conversation.AiMode,
 			&i.Conversation.AiMemory,
+			&i.Conversation.AiAgentID,
+			&i.Conversation.AiTransferredFromIds,
 			&i.ChannelType,
 			&i.UnreadCount,
 		); err != nil {

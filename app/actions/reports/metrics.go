@@ -32,6 +32,7 @@ const (
 	groupTeam     = "f.assignee_team_id"
 	groupMember   = "f.assignee_member_id"
 	groupPriority = "f.priority"
+	groupAgent    = "f.ai_agent_id"
 )
 
 /*
