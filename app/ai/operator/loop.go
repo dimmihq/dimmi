@@ -340,6 +340,9 @@ func (e *Engine) transcript(s *session) []contracts.ChatMessage {
 	if s.looking != "" {
 		question.Parts = append(question.Parts, contracts.ContentPart{Text: s.looking})
 	}
+	if s.sub == nil {
+		question.Parts = append(question.Parts, contracts.ContentPart{Text: writeReminder})
+	}
 	if s.layer != nil {
 		if note := toolset.Note(s.layer.earlier, s.layer.suggested); note != "" {
 			question.Parts = append(question.Parts, contracts.ContentPart{Text: note})

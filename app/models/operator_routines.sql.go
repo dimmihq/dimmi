@@ -48,6 +48,46 @@ func (q *Queries) CountOperatorRoutineChangesets(ctx context.Context, workspaceI
 	return items, nil
 }
 
+const countWaitingOperatorRoutineSuggestions = `-- name: CountWaitingOperatorRoutineSuggestions :many
+SELECT routine_run_id::uuid AS run_id, COUNT(*)::int AS waiting FROM operator_changesets
+WHERE workspace_id = $1 AND routine_id = $2 AND routine_run_id IS NOT NULL
+  AND status = 'pending' AND NOT preview
+GROUP BY routine_run_id
+`
+
+type CountWaitingOperatorRoutineSuggestionsParams struct {
+	WorkspaceID ids.UUID  `json:"workspace_id"`
+	RoutineID   *ids.UUID `json:"routine_id"`
+}
+
+type CountWaitingOperatorRoutineSuggestionsRow struct {
+	RunID   ids.UUID `json:"run_id"`
+	Waiting int32    `json:"waiting"`
+}
+
+// CountWaitingOperatorRoutineSuggestions counts, for each run of a
+// routine, its suggestions nobody has applied or declined yet. A dry
+// run's previews wait for nobody.
+func (q *Queries) CountWaitingOperatorRoutineSuggestions(ctx context.Context, arg CountWaitingOperatorRoutineSuggestionsParams) ([]CountWaitingOperatorRoutineSuggestionsRow, error) {
+	rows, err := q.db.Query(ctx, countWaitingOperatorRoutineSuggestions, arg.WorkspaceID, arg.RoutineID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []CountWaitingOperatorRoutineSuggestionsRow
+	for rows.Next() {
+		var i CountWaitingOperatorRoutineSuggestionsRow
+		if err := rows.Scan(&i.RunID, &i.Waiting); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const createOperatorRoutine = `-- name: CreateOperatorRoutine :one
 INSERT INTO operator_routines (
     workspace_id, name, description, template_key, prompt, cadence, cron_expr, run_at, timezone, next_run_at,

@@ -96,9 +96,25 @@ func applyPassages(body string, edits []passageEdit) (string, []string, error) {
 		if note != "" {
 			notes = append(notes, note)
 		}
+		if e.Replace == "" {
+			body = cut(body, find)
+			continue
+		}
 		body = strings.ReplaceAll(body, find, e.Replace)
 	}
 	return body, notes, nil
+}
+
+/*
+cut removes a passage from an article. A passage that is a whole line,
+such as a table row or a list item, goes with its line break, so the
+lines around it stay together; an empty line left in a table would end
+the table there.
+*/
+func cut(body, find string) string {
+	out := strings.ReplaceAll("\n"+body+"\n", "\n"+find+"\n", "\n")
+	out = strings.ReplaceAll(out, find, "")
+	return strings.TrimSuffix(strings.TrimPrefix(out, "\n"), "\n")
 }
 
 /*

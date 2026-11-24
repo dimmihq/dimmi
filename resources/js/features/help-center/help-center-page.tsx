@@ -21,6 +21,7 @@ import { Drawer } from "@/components/base/drawer/drawer";
 import { Input } from "@/components/base/input/input";
 import { Modal, ModalBody, ModalFooter, ModalHeader } from "@/components/base/modal/modal";
 import { Notification } from "@/components/base/notification/notification";
+import { useViewing } from "@/features/operator/viewing";
 import { PageHeader, Panel, ScrollArea } from "@/features/shell/page";
 import { PaneGroup, PaneHandle } from "@/features/shell/resizable";
 import { useWide } from "@/features/shell/use-wide";
@@ -94,6 +95,7 @@ function useDocs() {
 export function HelpCenterPage() {
   const docs = useDocs();
   const { workspace, center, hc, collections, articles } = docs;
+  useViewing("help_center", center?.id);
   const [pick, setPick] = usePick();
   const [dialog, setDialog] = useState<Dialog>(null);
   const wide = useWide(1024);

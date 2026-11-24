@@ -14,6 +14,8 @@ import (
 	"encoding/json"
 	"time"
 
+	"github.com/dimmihq/dimmi/framework/ids"
+
 	"github.com/dimmihq/dimmi/app/ai/operator"
 	"github.com/dimmihq/dimmi/app/models"
 )
@@ -24,34 +26,98 @@ went, what it suggested and cost, the thread it wrote on, and the steps
 it has finished, which grow while it runs.
 */
 type OperatorRoutineRun struct {
-	ID              string          `json:"id"`
-	Object          string          `json:"object"`
-	RoutineID       string          `json:"routine_id"`
-	Trigger         string          `json:"trigger"`
-	TriggeredBy     *string         `json:"triggered_by"`
-	ScheduledFor    *time.Time      `json:"scheduled_for"`
-	ThreadID        *string         `json:"thread_id"`
-	AIRunID         *string         `json:"ai_run_id"`
-	Status          string          `json:"status"`
-	Outcome         *string         `json:"outcome"`
-	NoopReason      *string         `json:"noop_reason"`
-	SkipReason      *string         `json:"skip_reason"`
-	ErrorCode       *string         `json:"error_code"`
-	ErrorMessage    *string         `json:"error_message"`
-	ChangesetsCount int32           `json:"changesets_count"`
-	CostMicros      int64           `json:"cost_micros"`
-	Notified        bool            `json:"notified"`
-	DeliveryResults json.RawMessage `json:"delivery_results"`
-	Steps           json.RawMessage `json:"steps"`
-	StartedAt       *time.Time      `json:"started_at"`
-	CompletedAt     *time.Time      `json:"completed_at"`
-	CreatedAt       time.Time       `json:"created_at"`
+	ID              string     `json:"id"`
+	Object          string     `json:"object"`
+	RoutineID       string     `json:"routine_id"`
+	Trigger         string     `json:"trigger"`
+	TriggeredBy     *string    `json:"triggered_by"`
+	ScheduledFor    *time.Time `json:"scheduled_for"`
+	ThreadID        *string    `json:"thread_id"`
+	AIRunID         *string    `json:"ai_run_id"`
+	Status          string     `json:"status"`
+	Outcome         *string    `json:"outcome"`
+	NoopReason      *string    `json:"noop_reason"`
+	SkipReason      *string    `json:"skip_reason"`
+	ErrorCode       *string    `json:"error_code"`
+	ErrorMessage    *string    `json:"error_message"`
+	ChangesetsCount int32      `json:"changesets_count"`
+	// How many of the run's suggestions nobody has applied or declined yet.
+	SuggestionsWaiting int32 `json:"suggestions_waiting"`
+	// What the run read to do its work, counted once each.
+	Read            OperatorRoutineRunRead `json:"read"`
+	CostMicros      int64                  `json:"cost_micros"`
+	Notified        bool                   `json:"notified"`
+	DeliveryResults json.RawMessage        `json:"delivery_results"`
+	Steps           json.RawMessage        `json:"steps"`
+	StartedAt       *time.Time             `json:"started_at"`
+	CompletedAt     *time.Time             `json:"completed_at"`
+	CreatedAt       time.Time              `json:"created_at"`
 }
 
 /*
-NewOperatorRoutineRun shapes a run.
+OperatorRoutineRunRead is how much a run read: the articles,
+conversations and procedures it opened, each counted once.
 */
-func NewOperatorRoutineRun(r models.OperatorRoutineRun) OperatorRoutineRun {
+type OperatorRoutineRunRead struct {
+	Articles      int `json:"articles"`
+	Conversations int `json:"conversations"`
+	Procedures    int `json:"procedures"`
+}
+
+/*
+readKind is what a tool opens one of: an article, a conversation or a
+procedure, under the name the tool has and the name it had; empty for
+any other tool.
+*/
+func readKind(tool string) string {
+	switch tool {
+	case "get_article_by_id", "get_article":
+		return "article"
+	case "get_conversation_by_number", "get_conversation":
+		return "conversation"
+	case "get_procedure_by_id", "get_procedure":
+		return "procedure"
+	}
+	return ""
+}
+
+/*
+readOf counts what a run's steps read. A step's summary names what it
+opened, so the same article read twice, by the run or by two of its
+subagents, counts once.
+*/
+func readOf(steps json.RawMessage) OperatorRoutineRunRead {
+	var list []struct {
+		Tool    string `json:"tool"`
+		Summary string `json:"summary"`
+		OK      bool   `json:"ok"`
+	}
+	_ = json.Unmarshal(steps, &list)
+	seen := map[string]bool{}
+	var out OperatorRoutineRunRead
+	for _, s := range list {
+		kind := readKind(s.Tool)
+		if kind == "" || !s.OK || seen[kind+s.Summary] {
+			continue
+		}
+		seen[kind+s.Summary] = true
+		switch kind {
+		case "article":
+			out.Articles++
+		case "conversation":
+			out.Conversations++
+		default:
+			out.Procedures++
+		}
+	}
+	return out
+}
+
+/*
+NewOperatorRoutineRun shapes a run, with how many of its suggestions
+still wait for a teammate.
+*/
+func NewOperatorRoutineRun(r models.OperatorRoutineRun, waiting int32) OperatorRoutineRun {
 	out := OperatorRoutineRun{
 		ID: models.PublicID(models.PrefixOperatorRoutineRun, r.ID), Object: "operator_routine_run",
 		RoutineID: models.PublicID(models.PrefixOperatorRoutine, r.RoutineID), Trigger: r.Trigger,
@@ -61,7 +127,7 @@ func NewOperatorRoutineRun(r models.OperatorRoutineRun) OperatorRoutineRun {
 		NoopReason: r.NoopReason, SkipReason: r.SkipReason, ErrorCode: r.ErrorCode, ErrorMessage: r.ErrorMessage,
 		ChangesetsCount: r.ChangesetsCount, CostMicros: r.CostMicros, Notified: r.Notified,
 		DeliveryResults: r.DeliveryResults, Steps: r.Steps, StartedAt: r.StartedAt, CompletedAt: r.CompletedAt,
-		CreatedAt: r.CreatedAt,
+		CreatedAt: r.CreatedAt, SuggestionsWaiting: waiting, Read: readOf(r.Steps),
 	}
 	if len(out.DeliveryResults) == 0 {
 		out.DeliveryResults = json.RawMessage("[]")
@@ -73,12 +139,13 @@ func NewOperatorRoutineRun(r models.OperatorRoutineRun) OperatorRoutineRun {
 }
 
 /*
-NewOperatorRoutineRuns shapes runs.
+NewOperatorRoutineRuns shapes runs, with the suggestions of each still
+waiting, by run.
 */
-func NewOperatorRoutineRuns(rows []models.OperatorRoutineRun) []OperatorRoutineRun {
+func NewOperatorRoutineRuns(rows []models.OperatorRoutineRun, waiting map[ids.UUID]int32) []OperatorRoutineRun {
 	out := make([]OperatorRoutineRun, len(rows))
 	for i, r := range rows {
-		out[i] = NewOperatorRoutineRun(r)
+		out[i] = NewOperatorRoutineRun(r, waiting[r.ID])
 	}
 	return out
 }

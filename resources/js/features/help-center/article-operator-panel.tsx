@@ -22,14 +22,12 @@ import {
 
 export function ArticleOperatorPanel({
   workspace,
-  articleId,
   articleTitle,
   suggestion,
   onClose,
   className,
 }: {
   workspace: string;
-  articleId: string;
   articleTitle: string;
   /* The suggested change shown on the article, when one waits. */
   suggestion: string | null;
@@ -47,10 +45,7 @@ export function ArticleOperatorPanel({
       : operatorKeys.thread(workspace, picked);
   const { data: past = [] } = useQuery(workspaceThreadsQuery(workspace));
   const { data: settings } = useQuery(operatorSettingsQuery(workspace));
-  const chat = useOperatorChat(workspace, thread, key, {
-    article_id: articleId,
-    changeset_id: suggestion ?? undefined,
-  });
+  const chat = useOperatorChat(workspace, thread, key);
   const fresh = useMutation({
     mutationFn: () => startWorkspaceThread(workspace),
     onSuccess: (started) => {

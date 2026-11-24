@@ -24,6 +24,7 @@ import (
 	"github.com/dimmihq/dimmi/framework/tenancy"
 
 	"github.com/dimmihq/dimmi/app"
+	"github.com/dimmihq/dimmi/app/actions/helpcenters"
 	"github.com/dimmihq/dimmi/app/actions/notifications"
 	"github.com/dimmihq/dimmi/app/actions/operatorchat"
 	"github.com/dimmihq/dimmi/app/actions/operatorroutines"
@@ -77,14 +78,18 @@ func newOperatorEngine(a *app.App) *operator.Engine {
 	return &operator.Engine{
 		DB: a.DB, IDs: a.IDs, Clock: a.Clock, LLM: a.LLM, Prices: a.AI.Prices, Publisher: a.Broadcast,
 		Timeouts: a.Config.AI.Timeouts, StorePayloads: a.Config.AI.TracesStorePayloads, Catalog: newOperatorCatalog(a),
+		AppURL: a.Application.Config.App.URL,
+		Addresses: helpcenters.Addresses{
+			BaseDomain: a.Config.HelpCenters.BaseDomain, AppURL: a.Application.Config.App.URL,
+		},
 		Services: operator.Services{
 			Knowledge: a.Knowledge, Show: inbox.ShowConversation, Search: inbox.Search, List: inbox.ListConversations,
 			Context:  inbox.ShowContext,
 			Messages: inbox.ListMessages, Runs: a.Actions.AI.ListRuns, Change: inbox.ApplyChanges,
 			Note: inbox.AddNote, Delete: inbox.DeleteMessage, Contacts: inbox.UpdateContact,
 			Articles: a.Actions.Articles, Procedures: a.Actions.Procedures, Audit: a.Actions.RecordAuditLog,
-			Actions: a.AI.Actions,
-			GitHub:  &operator.GitHubAPI{HTTP: a.HTTP, Tokens: a.Actions.Integrations.Tokens},
+			Actions: a.AI.Actions, Memory: a.Vectors,
+			GitHub: &operator.GitHubAPI{HTTP: a.HTTP, Tokens: a.Actions.Integrations.Tokens},
 		},
 	}
 }

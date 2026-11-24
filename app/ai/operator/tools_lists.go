@@ -90,9 +90,9 @@ func (e *Engine) listConversations(ctx context.Context, s *session, args json.Ra
 	var b strings.Builder
 	for _, l := range page.Conversations {
 		c := l.Conversation
-		fmt.Fprintf(&b, "#%d %s · %s · %s · AI %s · %s · last from %s · %s\n", c.Number,
+		fmt.Fprintf(&b, "#%d %s · %s · %s · AI %s · %s · last from %s · %s · link %s\n", c.Number,
 			untrusted(deref(c.Subject)), c.Status, assigneeOf(l), c.AiState, untrusted(deref(l.Contact.Name)),
-			lastFrom(l), waiting(l))
+			lastFrom(l), waiting(l), e.conversationLink(s, c.ID))
 	}
 
 	if b.Len() == 0 {

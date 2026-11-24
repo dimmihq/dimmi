@@ -44,6 +44,31 @@ describe("change request", () => {
     expect(added[0].tagName).toBe("LI");
   });
 
+  it("draws a requested line again when its wording changes past the first words", () => {
+    const long = "Return labels are created on the carrier and service you choose, and shown at the counter.";
+    const dom = review("Old line", long);
+    const editor = editors[editors.length - 1];
+    const parsed = editor.markdown?.parse(long.replace("the counter", "the post office counter"));
+    const node = parsed ? editor.state.schema.nodeFromJSON(parsed) : null;
+    editor.commands.command(({ tr }) => {
+      tr.setMeta(changeRequestKey, { proposed: node, whole: false });
+      return true;
+    });
+
+    const added = [...dom.querySelectorAll("[data-change=added]")].map((n) => n.textContent);
+    expect(added).toEqual([long.replace("the counter", "the post office counter")]);
+  });
+
+  it("draws a new list and a new table whole, not one per item or row", () => {
+    const table = "| Plan | Labels |\n| --- | --- |\n| Free | 50 |\n| Growth | 1,500 |";
+    const dom = review("Intro", `Intro\n\n- one\n- two\n- three\n\n${table}`);
+
+    const added = [...dom.querySelectorAll("[data-change=added]")];
+    expect(added.map((n) => n.tagName)).toEqual(["UL", "TABLE"]);
+    expect(added[0].querySelectorAll("li")).toHaveLength(3);
+    expect(added[1].querySelectorAll("tr")).toHaveLength(3);
+  });
+
   it("marks a reworded paragraph and adds a new one after it", () => {
     const dom = review("First\n\nSecond", "First\n\nSecond, reworded\n\nThird");
 

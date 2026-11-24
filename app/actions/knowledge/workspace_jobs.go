@@ -180,8 +180,8 @@ func (w *SweepKnowledgeEmbeddings) Handle(ctx context.Context, _ *queue.Job[jobs
 
 /*
 Sweep binds the workspace's default model when it has none, retries
-refused inputs, queues a build of every model in use and purges models
-out of use.
+refused inputs, queues a build of every model in use, catches up on
+conversations to remember and purges models out of use.
 */
 func (v *Vectors) Sweep(ctx context.Context, ws ids.UUID) error {
 	var s models.KnowledgeSetting
@@ -211,6 +211,9 @@ func (v *Vectors) Sweep(ctx context.Context, ws ids.UUID) error {
 		if err := v.Queue.Push(ctx, jobs.ReembedWorkspaceKnowledgeArgs{WorkspaceID: ws, ModelKey: model}); err != nil {
 			return fmt.Errorf("queue knowledge build: %w", err)
 		}
+	}
+	if err := v.RememberStale(ctx, ws); err != nil {
+		return err
 	}
 	return v.purge(ctx, ws, keptModels(s, v.Clock.Now()))
 }

@@ -1,6 +1,6 @@
 /*
- * One routine: its runs, newest first, each opening the thread Operator
- * wrote on, and its settings, saved with the bar like any setting. From
+ * One routine: how it is built, saved with the bar like any setting, and
+ * its runs, each opening the thread Operator wrote on. From
  * the header an admin runs it now, for real or as a dry run that reads
  * real data but changes nothing, pauses or resumes it, and deletes it. A
  * routine that paused itself says why, with the way back.
@@ -10,8 +10,6 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useBlocker, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 
-import { StatCards } from "@/components/application/dashboard/stat-cards";
-import { Chip } from "@/components/base/badges/chip";
 import { Button } from "@/components/base/buttons/button";
 import { IconButton } from "@/components/base/buttons/icon-button";
 import { AlertDialog } from "@/components/base/modal/modal";
@@ -19,35 +17,23 @@ import { Tab, TabList, Tabs } from "@/components/base/tabs/tabs";
 import { toast } from "@/components/base/toast/toast";
 import { KindMark } from "@/features/automation/parts";
 import { usePermission } from "@/features/settings/inboxes";
-import { Item, Section } from "@/features/settings/layout";
 import { SaveBar } from "@/features/settings/save-bar";
 import { useAccount } from "@/features/settings/use-account";
 import { Panel, ScrollArea } from "@/features/shell/page";
 import { PushPane } from "@/features/shell/push-pane";
 import { useWide } from "@/features/shell/use-wide";
-import {
-  deleteRoutine,
-  type Routine,
-  type RoutineRun,
-  routineKeys,
-  routineQuery,
-  routineRunsQuery,
-  runRoutine,
-  updateRoutine,
-} from "@/lib/api/routines";
-import { formatDateTime, formatRelative } from "@/lib/i18n/format";
-import { cx } from "@/utils/cx";
+import { deleteRoutine, type Routine, routineKeys, routineQuery, runRoutine, updateRoutine } from "@/lib/api/routines";
 
 import { draftFromRoutine, inputOf, problems, type RoutineDraft, sameDraft } from "./draft";
 import { lookOf } from "./looks";
 import { RoutineFields } from "./routine-fields";
 import { OutcomeChip } from "./routine-list";
+import { Runs } from "./run-list";
 import { RunPanel } from "./run-panel";
-import { runLine, triggers } from "./runs";
 import { describeRoutine } from "./timing";
 import { useRoutineWatch } from "./use-run-live";
 
-type Tabbed = "runs" | "settings";
+type Tabbed = "build" | "runs";
 
 const pauses: Record<string, string> = {
   consecutive_failures: "It paused after failing three runs in a row.",
@@ -58,7 +44,7 @@ const pauses: Record<string, string> = {
 export function RoutinePage({ id }: { id: string }) {
   const workspace = useAccount().workspace.id;
   const { data: routine, isError } = useQuery(routineQuery(workspace, id));
-  const [tab, setTab] = useState<Tabbed>("runs");
+  const [tab, setTab] = useState<Tabbed>("build");
 
   if (isError) {
     return (
@@ -165,8 +151,8 @@ function Loaded({
           <TabList
             aria-label="Routine"
             items={[
+              { id: "build", label: "Build" },
               { id: "runs", label: "Runs" },
-              { id: "settings", label: "Settings" },
             ]}
           >
             {(item) => <Tab id={item.id}>{item.label}</Tab>}
@@ -183,9 +169,8 @@ function Loaded({
               onResume={() => status.mutate("active")}
             />
           ) : null}
-          {tab === "runs" ? <RoutineStats routine={routine} /> : null}
           {tab === "runs" ? <Runs workspace={workspace} routine={routine} onOpen={wide ? watch : undefined} /> : null}
-          {tab === "settings" ? (
+          {tab === "build" ? (
             <RoutineFields
               key={generation}
               workspace={workspace}
@@ -274,131 +259,6 @@ function Paused({
         </Button>
       ) : null}
     </div>
-  );
-}
-
-/*
- * RoutineStats says what came of the routine: its suggestions waiting,
- * applied and declined, and what it cost this month.
- */
-function RoutineStats({ routine }: { routine: Routine }) {
-  const c = routine.suggestions;
-  const decided = c.applied + c.declined + c.reverted;
-  const usd = (micros: number) => `$${(micros / 1_000_000).toFixed(2)}`;
-
-  return (
-    <StatCards
-      variant="compact"
-      className="gap-2"
-      stats={[
-        {
-          label: "Waiting for review",
-          hint: "Suggestions from this routine nobody has applied or declined yet.",
-          value: c.pending.toLocaleString(),
-        },
-        {
-          label: "Applied",
-          hint: "Suggestions a teammate applied and kept.",
-          value: c.applied.toLocaleString(),
-          caption: decided > 0 ? `${Math.round((c.applied / decided) * 100)}% of decided` : "None decided yet",
-        },
-        {
-          label: "Declined",
-          hint: "Suggestions declined, undone after applying, or gone stale after four weeks.",
-          value: (c.declined + c.reverted).toLocaleString(),
-        },
-        {
-          label: "Spend this month",
-          hint: "What this routine's runs cost this month, in US dollars.",
-          value: usd(routine.month_spend_micros),
-        },
-      ]}
-    />
-  );
-}
-
-function Runs({
-  workspace,
-  routine,
-  onOpen,
-}: {
-  workspace: string;
-  routine: Routine;
-  /* Opens a run beside the routine; without it a run opens on its own page. */
-  onOpen?: (run: string) => void;
-}) {
-  const { data, isPending } = useQuery(routineRunsQuery(workspace, routine.id));
-  const next = routine.status === "active" && routine.next_run_at;
-
-  return (
-    <Section
-      title="Runs"
-      description={
-        next ? `Next run ${formatRelative(routine.next_run_at ?? "")}. ${describeRoutine(routine)}.` : undefined
-      }
-      loading={isPending}
-    >
-      {data?.length === 0 ? (
-        <Item
-          mark={<KindMark icon={RiPlayLine} tint="neutral" />}
-          title="No runs yet"
-          detail="Try a dry run: it reads real data and shows what it would suggest, without changing anything."
-        />
-      ) : null}
-      {(data ?? []).map((r) => (
-        <RunRow key={r.id} routine={routine.id} run={r} onOpen={onOpen} />
-      ))}
-    </Section>
-  );
-}
-
-/*
- * runTint is the colour of a run's mark: red when it failed, green when
- * it suggested something.
- */
-function runTint(r: RoutineRun): "rose" | "lime" | "neutral" {
-  if (r.status === "failed") {
-    return "rose";
-  }
-  return r.outcome === "findings" ? "lime" : "neutral";
-}
-
-/*
- * RunRow is one run, opening it as it happens or as it went.
- */
-function RunRow({ routine, run: r, onOpen }: { routine: string; run: RoutineRun; onOpen?: (run: string) => void }) {
-  const live = r.status === "running" || r.status === "queued";
-  const cost = `$${(r.cost_micros / 1_000_000).toFixed(3)}`;
-  const row = (
-    <Item
-      mark={<KindMark icon={r.trigger === "dry_run" ? RiFlaskLine : RiPlayLine} tint={runTint(r)} />}
-      title={runLine(r)}
-      detail={`${triggers[r.trigger]} · ${formatDateTime(r.started_at ?? r.created_at)} · ${cost}`}
-    >
-      {live ? (
-        <Chip variant="caption" color="blue">
-          {r.status === "running" ? "Running" : "Queued"}
-        </Chip>
-      ) : null}
-    </Item>
-  );
-  const shape =
-    "-ms-3 block ps-3 transition-colors duration-150 first:rounded-t-2xl last:rounded-b-2xl hover:bg-background-secondary-hover";
-  if (onOpen) {
-    return (
-      <button
-        type="button"
-        onClick={() => onOpen(r.id)}
-        className={cx(shape, "w-[calc(100%+0.75rem)] cursor-pointer text-start")}
-      >
-        {row}
-      </button>
-    );
-  }
-  return (
-    <Link to="/d/routines/$routine/runs/$run" params={{ routine, run: r.id }} className={shape}>
-      {row}
-    </Link>
   );
 }
 

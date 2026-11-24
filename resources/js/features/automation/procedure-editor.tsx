@@ -62,6 +62,7 @@ import { Switch } from "@/components/base/switch/switch";
 import { Tab, TabList, Tabs } from "@/components/base/tabs/tabs";
 import { Textarea } from "@/components/base/textarea/textarea";
 import { useSidePanes } from "@/features/inbox/use-side-panes";
+import { useViewing } from "@/features/operator/viewing";
 import { Action, Field } from "@/features/settings/controls";
 import { usePermission } from "@/features/settings/inboxes";
 import { Row, Section } from "@/features/settings/layout";
@@ -1118,6 +1119,7 @@ export function ProcedureEditor({ workspace, procedure }: { workspace: string; p
   const [sideTab, setSideTab] = useState<SideTab>("preview");
   const stepUI = useStepInteractions(draft);
   const { request, review, decide } = useRequestReview(workspace, procedure.id, draft.definition, adoptFresh);
+  useViewing("procedure", procedure.id, request?.changeset.id);
 
   const toggle = (id: string) => ease(() => sides.toggle(id));
   const toggleDetails = () => (sideBySide ? toggle(pane.details) : setDetailsDrawer((open) => !open));
@@ -1245,7 +1247,6 @@ export function ProcedureEditor({ workspace, procedure }: { workspace: string; p
             workspace={workspace}
             procedureId={procedure.id}
             procedureName={draft.name || procedure.name}
-            suggestion={request?.changeset.id ?? null}
             onClose={() => setOperatorDrawer(false)}
             className="h-full w-full"
           />
@@ -1311,7 +1312,6 @@ export function ProcedureEditor({ workspace, procedure }: { workspace: string; p
             workspace={workspace}
             procedureId={procedure.id}
             procedureName={draft.name || procedure.name}
-            suggestion={request?.changeset.id ?? null}
             onClose={() => toggle(pane.operator)}
             className="h-full w-full"
           />

@@ -166,11 +166,14 @@ export function MessageBody({
   fromCustomer = false,
   mentions = [],
   pictures = {},
+  link,
 }: {
   text: string;
   format?: "markdown" | "plain";
   className?: string;
   fromCustomer?: boolean;
+  /* Draws the text's links, in place of the plain underlined ones. */
+  link?: Components["a"];
   mentions?: MentionRef[];
   pictures?: Record<string, string>;
 }) {
@@ -184,7 +187,7 @@ export function MessageBody({
       <Markdown
         remarkPlugins={plugins}
         rehypePlugins={highlight}
-        components={fromCustomer ? customerComponents : components}
+        components={fromCustomer ? customerComponents : link ? { ...components, a: link } : components}
         urlTransform={(url) => pictureFor(url, pictures) ?? keepMentions(url)}
         skipHtml
       >

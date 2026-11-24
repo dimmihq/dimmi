@@ -110,9 +110,11 @@ export function RoutineList() {
                   <span className="truncate text-body-regular text-text-primary">{r.name}</span>
                   <span className="truncate text-body-2-regular text-text-secondary">{detailOf(r)}</span>
                 </span>
-                <span className="hidden shrink-0 text-body-2-regular text-text-tertiary sm:inline">
-                  {`$${(r.month_spend_micros / 1_000_000).toFixed(2)} this month`}
-                </span>
+                {r.suggestions.pending > 0 ? (
+                  <span className="hidden shrink-0 text-body-2-regular text-text-tertiary sm:inline">
+                    {`${r.suggestions.pending.toLocaleString()} waiting for review`}
+                  </span>
+                ) : null}
                 <OutcomeChip routine={r} />
               </Link>
             );

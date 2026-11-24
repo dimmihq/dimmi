@@ -17,13 +17,13 @@ import {
   decideChangeset,
   type OperatorStep,
   type OperatorThreadView,
-  type OperatorViewing,
   operatorKeys,
 } from "@/lib/api/operator";
 import { callerQuery } from "@/lib/api/workspace";
 import type { Envelope } from "@/lib/realtime/bridge";
 import { channels } from "@/lib/realtime/keys";
 import { useChannel } from "@/lib/realtime/use-channel";
+import { useCurrentViewing } from "./viewing";
 
 /*
  * Live is a turn in progress: the question, null for a brief, and what
@@ -52,13 +52,9 @@ export function failureText(error: unknown): string {
   return "Operator could not answer just now. Try again in a moment.";
 }
 
-export function useOperatorChat(
-  workspace: string,
-  thread: OperatorThreadView | undefined,
-  threadKey: QueryKey,
+export function useOperatorChat(workspace: string, thread: OperatorThreadView | undefined, threadKey: QueryKey) {
   /* What the teammate has open, sent with each question so Operator works on it. */
-  viewing?: OperatorViewing,
-) {
+  const viewing = useCurrentViewing();
   const client = useQueryClient();
   const { data: caller } = useQuery(callerQuery(workspace));
   const member = caller?.member?.id ?? null;
@@ -85,7 +81,11 @@ export function useOperatorChat(
       setLive((current) => current && { ...current, text: "", steps: [...current.steps, step] });
       // A step that changed or suggested something shows on the page at once, not when the answer ends.
       if (step.changeset_id) {
-        void client.invalidateQueries({ queryKey: ["workspace", workspace] });
+        // The chat itself is left alone: reloading it mid-answer would show the question twice.
+        void client.invalidateQueries({
+          queryKey: ["workspace", workspace],
+          predicate: (query) => !(query.queryKey[2] === "operator" && String(query.queryKey[3]).startsWith("thread")),
+        });
       }
     } else if (envelope.event === "operator.answered" && !running.current) {
       void refresh();
@@ -117,7 +117,7 @@ export function useOperatorChat(
     if (!thread || running.current) {
       return;
     }
-    void run(question, (signal) => askOperator(workspace, thread.id, question, signal, viewing));
+    void run(question, (signal) => askOperator(workspace, thread.id, question, signal, viewing()));
   };
 
   const decide = async (id: string, decision: ChangesetDecision) => {

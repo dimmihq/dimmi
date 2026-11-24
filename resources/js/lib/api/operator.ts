@@ -202,13 +202,13 @@ export function operatorThreadQuery(workspace: string, id: string) {
 }
 
 /*
- * OperatorViewing is what the teammate has open when they ask: an article
- * or a procedure, and the suggested change shown on it.
+ * OperatorViewing is what the teammate has open when they ask: the kind
+ * of page, the id of what it shows, and the suggested change shown on it.
  */
 export interface OperatorViewing {
-  article_id?: string;
-  procedure_id?: string;
-  changeset_id?: string;
+  page: "article" | "procedure" | "conversation" | "help_center" | "feature_request" | "changelog_entry";
+  id: string;
+  suggestion_id?: string;
 }
 
 export function askOperator(

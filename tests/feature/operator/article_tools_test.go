@@ -225,6 +225,27 @@ func TestOperatorArticleTools(t *testing.T) {
 		assert.Equal(t, 1, strings.Count(steps, `"ok":false`))
 	})
 
+	t.Run("removes a table row with its line, so the table stays whole", func(t *testing.T) {
+		t.Parallel()
+		k := newDesk(t)
+		hc := k.d.Owner.GetJSON("/api/v1/help-centers").AssertOK().String("data.0.id")
+		table := "Plans:\n\n| Plan | Labels |\n| --- | --- |\n| Pro | 7,500 |\n| Enterprise | 60,000 |\n" +
+			"| Starter | 500 |\n"
+		article := k.d.Owner.PostJSON("/api/v1/help-centers/"+hc+"/articles", testkit.JSON{
+			"title": "Plans", "body_markdown": table,
+		}).AssertCreated().String("data.id")
+		k.llm.Script(tools(call("propose_article_edits", map[string]any{"fixes": []map[string]any{{
+			"article_id": article, "suggestion_title": "Drop Enterprise", "reason": "x",
+			"edits": []map[string]any{{"find": "| Enterprise | 60,000 |", "replace": ""}},
+		}}})), reply("Removed."))
+
+		res := k.ask(k.thread(""), "Remove the Enterprise row").AssertOK()
+
+		text := res.String("data.changesets.0.operations.0.text")
+		assert.Contains(t, text, "| Pro | 7,500 |\n| Starter | 500 |")
+		assert.NotContains(t, text, "Enterprise")
+	})
+
 	t.Run("drafts a new article", func(t *testing.T) {
 		t.Parallel()
 		k := newDesk(t)

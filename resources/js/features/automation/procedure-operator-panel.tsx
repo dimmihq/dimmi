@@ -24,15 +24,12 @@ export function ProcedureOperatorPanel({
   workspace,
   procedureId,
   procedureName,
-  suggestion = null,
   onClose,
   className,
 }: {
   workspace: string;
   procedureId: string;
   procedureName: string;
-  /* The suggested change shown on the procedure, when one waits. */
-  suggestion?: string | null;
   onClose: () => void;
   className?: string;
 }) {
@@ -47,10 +44,7 @@ export function ProcedureOperatorPanel({
       : operatorKeys.thread(workspace, picked);
   const { data: past = [] } = useQuery(workspaceThreadsQuery(workspace));
   const { data: settings } = useQuery(operatorSettingsQuery(workspace));
-  const chat = useOperatorChat(workspace, thread, key, {
-    procedure_id: procedureId,
-    changeset_id: suggestion ?? undefined,
-  });
+  const chat = useOperatorChat(workspace, thread, key);
   const fresh = useMutation({
     mutationFn: () => startWorkspaceThread(workspace),
     onSuccess: (started) => {
