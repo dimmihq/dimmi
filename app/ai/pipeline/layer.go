@@ -66,10 +66,12 @@ fixedTools are the tools offered outside the layer. The procedure tool
 is one of them because its description is the list of the team's
 procedures and when each applies: behind the layer the agent saw only
 that procedures exist, so it could not tell a request matched one and
-almost never followed any.
+almost never followed any. The note tool is one because it is the
+other choice at the moment the agent would hand over: hidden behind
+the layer, handoff is the only way it sees to tell the team anything.
 */
 func fixedTools() []string {
-	return []string{toolSearchKnowledge, toolHandoff, toolProcedure, toolTransfer}
+	return []string{toolSearchKnowledge, toolHandoff, toolNote, toolProcedure, toolTransfer}
 }
 
 /*

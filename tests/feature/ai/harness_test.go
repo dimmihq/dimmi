@@ -299,8 +299,16 @@ func tools(calls ...contracts.ToolCall) fake.Step {
 search is a scripted search_knowledge call.
 */
 func search(query string) fake.Step {
-	q, _ := json.Marshal(map[string]string{"query": query})
+	q, _ := json.Marshal(map[string]string{"question": query})
 	return tools(call("search_knowledge", string(q)))
+}
+
+/*
+lastText is the newest message of a request to the answer model: the
+result of the tool it called last.
+*/
+func lastText(req contracts.ChatRequest) string {
+	return req.Messages[len(req.Messages)-1].Parts[0].Text
 }
 
 /*

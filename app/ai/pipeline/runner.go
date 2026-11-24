@@ -203,6 +203,7 @@ func (r *Runner) turn(ctx context.Context, st *run) *decision {
 		r.ensureProcedureActions(ctx, st)
 	}
 	st.loop.newest = len(st.loop.messages) - 1
+	r.searchAhead(ctx, st)
 
 	draft, err := r.agentLoop(ctx, st)
 	if err == nil && st.transfer == nil {

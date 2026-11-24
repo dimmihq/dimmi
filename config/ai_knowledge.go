@@ -38,7 +38,7 @@ A query whose vector has not come back after QueryEmbedHedgeMS is asked
 for a second time, and whichever answer comes first is used, so one
 slow call does not send a search to keywords; zero turns that off.
 RerankTimeoutMS is how long the reranker has; past it the passages are
-returned nearest first. The three waits add up to under two seconds, the
+returned nearest first. The three waits add up to under three seconds, the
 longest a search by meaning may take.
 CrawlIntervalMS is the least time between two requests the website
 crawler sends one host; zero lifts the pace, for tests only. With a
@@ -52,7 +52,7 @@ type AIKnowledgeConfig struct {
 	QueryEmbedTimeoutMS int    `default:"1000" koanf:"query_embed_timeout_ms"`
 	QueryEmbedHedgeMS   int    `default:"350"  koanf:"query_embed_hedge_ms"`
 	VectorTimeoutMS     int    `default:"250"  koanf:"vector_timeout_ms"`
-	RerankTimeoutMS     int    `default:"700"  koanf:"rerank_timeout_ms"`
+	RerankTimeoutMS     int    `default:"1500" koanf:"rerank_timeout_ms"`
 	CrawlIntervalMS     int    `default:"1000" koanf:"crawl_interval_ms"`
 	CloudflareAPIToken  string `koanf:"cloudflare_api_token"  secret:"true"`
 	CloudflareAccountID string `koanf:"cloudflare_account_id"`

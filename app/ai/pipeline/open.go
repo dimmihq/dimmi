@@ -57,10 +57,12 @@ type run struct {
 	query          string
 	searched       bool
 	searches       int
+	ahead          bool
 	lastSearch     searchTrace
 	handoff        *handoffRequest
 	transfer       *transferRequest
 	changes        changeSet
+	teamNotes      []string
 	actions        actionState
 	followed       bool
 	procedureAsked map[string]bool

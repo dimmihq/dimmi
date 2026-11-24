@@ -973,7 +973,7 @@ ai:
   # for a second time, and whichever answer comes first is used, so one
   # slow call does not send a search to keywords; zero turns that off.
   # RerankTimeoutMS is how long the reranker has; past it the passages are
-  # returned nearest first. The three waits add up to under two seconds, the
+  # returned nearest first. The three waits add up to under three seconds, the
   # longest a search by meaning may take.
   # CrawlIntervalMS is the least time between two requests the website
   # crawler sends one host; zero lifts the pace, for tests only. With a
@@ -986,7 +986,7 @@ ai:
     query_embed_timeout_ms: 1000  # DIMMI_AI__KNOWLEDGE__QUERY_EMBED_TIMEOUT_MS
     query_embed_hedge_ms: 350  # DIMMI_AI__KNOWLEDGE__QUERY_EMBED_HEDGE_MS
     vector_timeout_ms: 250  # DIMMI_AI__KNOWLEDGE__VECTOR_TIMEOUT_MS
-    rerank_timeout_ms: 700  # DIMMI_AI__KNOWLEDGE__RERANK_TIMEOUT_MS
+    rerank_timeout_ms: 1500  # DIMMI_AI__KNOWLEDGE__RERANK_TIMEOUT_MS
     crawl_interval_ms: 1000  # DIMMI_AI__KNOWLEDGE__CRAWL_INTERVAL_MS
     cloudflare_api_token: ""  # DIMMI_AI__KNOWLEDGE__CLOUDFLARE_API_TOKEN (secret; or DIMMI_AI__KNOWLEDGE__CLOUDFLARE_API_TOKEN_FILE naming a file)
     cloudflare_account_id: ""  # DIMMI_AI__KNOWLEDGE__CLOUDFLARE_ACCOUNT_ID

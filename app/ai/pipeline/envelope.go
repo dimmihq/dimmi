@@ -24,6 +24,7 @@ import (
 	"github.com/dimmihq/dimmi/app/contracts"
 	"github.com/dimmihq/dimmi/app/enums"
 	"github.com/dimmihq/dimmi/app/models"
+	"github.com/dimmihq/dimmi/app/support/pii"
 )
 
 /*
@@ -44,6 +45,35 @@ escape makes data inert inside the envelope.
 */
 func escape(s string) string {
 	return strings.NewReplacer("&", "&amp;", "<", "&lt;", ">", "&gt;").Replace(s)
+}
+
+/*
+hiddenDetails tells the agent what a masked value is. An agent set to
+hide personal data never reads an email address or a phone number: it
+reads a placeholder in its place. Told nothing, it takes the
+placeholder for what the customer typed and asks for the address again.
+*/
+const hiddenDetails = "Personal details in these messages are hidden from you. Where a message shows [email], " +
+	"[phone], [iban], [ssn] or [secret], the customer wrote the real value there. It is saved in the " +
+	"conversation and the team can read it. Treat it as given: never ask for it again, never say it is " +
+	"missing or did not come through, and never write the placeholder in a reply. In a note for the team, say " +
+	"the customer gave it in the conversation."
+
+/*
+masked reports whether any turn the agent reads carries a placeholder
+for a hidden value.
+*/
+func masked(msgs []contracts.ChatMessage) bool {
+	for _, m := range msgs {
+		for _, p := range m.Parts {
+			for _, mark := range []string{pii.Email, pii.Phone, pii.IBAN, pii.SSN, pii.Secret} {
+				if strings.Contains(p.Text, mark) {
+					return true
+				}
+			}
+		}
+	}
+	return false
 }
 
 /*
@@ -88,6 +118,9 @@ func (r *Runner) envelope(e *env, update string) []contracts.ChatMessage {
 	last.Parts[0].Text += "\n<today>" + e.now.UTC().Format("Monday 2 January 2006") + " (UTC)</today>"
 	if repliedBefore(e.History) {
 		last.Parts[0].Text += "\n<reply_focus>" + replyFocus + "</reply_focus>"
+	}
+	if e.Agent.PiiRedaction && masked(msgs) {
+		last.Parts[0].Text += "\n<hidden_details>" + hiddenDetails + "</hidden_details>"
 	}
 
 	if contact := r.contactBlock(e); contact != "" {

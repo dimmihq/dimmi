@@ -56,7 +56,7 @@ const (
 /*
 defaultRerankTimeout bounds the reranker when the install set no wait.
 */
-const defaultRerankTimeout = 700 * time.Millisecond
+const defaultRerankTimeout = 1500 * time.Millisecond
 
 /*
 nothingEmbedded is why a search by meaning found nothing to rank: the
@@ -123,11 +123,12 @@ func (k *Knowledge) ranked(ctx context.Context, s search, vec knowledge.VectorSe
 	perDoc := cmp.Or(max(s.opts.MaxPerDocument, 0), defaultPerDocument)
 
 	started := k.Vectors.Clock.Now()
-	order, reranked := k.rerank(ctx, s.query, pooled(nearest, keyword))
+	order, why := k.rerank(ctx, s.query, pooled(nearest, keyword))
 	if k.Reranker != nil {
 		out.Timings["rerank"] = k.Vectors.Clock.Now().Sub(started)
 	}
-	if reranked {
+	out.RerankSkipped = why
+	if why == "" {
 		out.Mode, out.Chunks = "reranked", knowledge.Fuse(limit, perDoc, order)
 		return out, nil
 	}
@@ -179,13 +180,16 @@ func (k *Knowledge) restrictions(ctx context.Context, s search) (*audiences.Rest
 
 /*
 rerank puts the passages that answer the query first. With no
-reranker, or one that failed or ran out of time, it reports false and
-the caller orders them another way.
+reranker, or one that failed or ran out of time, it says why it did
+not, and the caller orders them another way.
 */
 func (k *Knowledge) rerank(ctx context.Context, query string, chunks []contracts.KnowledgeChunk,
-) ([]contracts.KnowledgeChunk, bool) {
-	if k.Reranker == nil || len(chunks) < 2 {
-		return chunks, false
+) ([]contracts.KnowledgeChunk, string) {
+	if k.Reranker == nil {
+		return chunks, "no_reranker"
+	}
+	if len(chunks) < 2 {
+		return chunks, "too_few"
 	}
 	head := chunks[:min(len(chunks), contracts.MaxRerankDocuments)]
 	documents := make([]string, len(head))
@@ -196,7 +200,10 @@ func (k *Knowledge) rerank(ctx context.Context, query string, chunks []contracts
 	defer cancel()
 	res, err := k.Reranker.Rerank(ctx, contracts.RerankRequest{Query: query, Documents: documents})
 	if err != nil {
-		return chunks, false
+		if ctx.Err() != nil {
+			return chunks, "timeout"
+		}
+		return chunks, "failed: " + err.Error()
 	}
 	out := make([]contracts.KnowledgeChunk, 0, len(chunks))
 	placed := make([]bool, len(head))
@@ -212,7 +219,7 @@ func (k *Knowledge) rerank(ctx context.Context, query string, chunks []contracts
 			out = append(out, ch)
 		}
 	}
-	return append(out, chunks[len(head):]...), true
+	return append(out, chunks[len(head):]...), ""
 }
 
 /*

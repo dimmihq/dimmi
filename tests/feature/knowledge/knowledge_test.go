@@ -45,10 +45,11 @@ reranker stands in for the built-in reranker. It puts the passages
 holding its word first, fails when told to, and otherwise is absent.
 */
 type reranker struct {
-	mu    sync.Mutex
-	first string
-	err   error
-	calls int
+	mu      sync.Mutex
+	first   string
+	err     error
+	calls   int
+	queries []string
 }
 
 /*
@@ -79,12 +80,24 @@ func (r *reranker) asked() int {
 }
 
 /*
+read are the queries the reranker was asked to rank against, sorted.
+*/
+func (r *reranker) read() []string {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	out := slices.Clone(r.queries)
+	slices.Sort(out)
+	return out
+}
+
+/*
 Rerank orders the documents holding the preferred word first.
 */
 func (r *reranker) Rerank(_ context.Context, req contracts.RerankRequest) (*contracts.RerankResponse, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	r.calls++
+	r.queries = append(r.queries, req.Query)
 	if r.err != nil {
 		return nil, r.err
 	}
@@ -316,6 +329,7 @@ func TestKnowledgeEmbeddings(t *testing.T) {
 		x.rerank.fail(&contracts.LLMError{Kind: contracts.LLMErrorServer, Message: "down"})
 		res = x.search(t, "can I get a refund on a custom pallet", "")
 		assert.Equal(t, "hybrid", res.Mode, "the two rankings are fused by rank")
+		assert.Contains(t, res.RerankSkipped, "failed", "why the reranker was not used is kept")
 		assert.Empty(t, res.Degraded, "a failed rerank is not a fallback to keywords")
 		assert.Len(t, res.Chunks, 2)
 	})

@@ -117,7 +117,23 @@ func inScope(c contracts.KnowledgeChunk, opts contracts.KnowledgeSearchOptions) 
 }
 
 /*
-searchAll searches every article and source the options let through.
+searchAll searches every article and source the options let through,
+with the question and with each other way of asking it the options
+carry. Each is a search of its own, ranked against its own words, as
+several.go says; a search with one query, or by keywords alone, is one
+search.
+*/
+func (k *Knowledge) searchAll(ctx context.Context, ws ids.UUID, query string, opts contracts.KnowledgeSearchOptions,
+) (contracts.KnowledgeSearchResult, error) {
+	asked := knowledge.Asked(query, opts.Queries)
+	if k.Vectors == nil || opts.Mode == "keyword" || len(asked) < 2 {
+		return k.searchOne(ctx, ws, query, opts)
+	}
+	return k.searchEach(ctx, ws, asked, opts)
+}
+
+/*
+searchOne searches every article and source the options let through.
 A workspace with an embedding model is searched two ways at once, by
 meaning and by keywords, and what both found is ranked together, as
 meaning.go says. One with no model, or a search that asked for
@@ -126,7 +142,7 @@ could not be done, because the question's vector could not be had even
 after its retry or nothing is embedded yet, the keyword passages are
 the answer, as the last resort, and the result says so.
 */
-func (k *Knowledge) searchAll(ctx context.Context, ws ids.UUID, query string, opts contracts.KnowledgeSearchOptions,
+func (k *Knowledge) searchOne(ctx context.Context, ws ids.UUID, query string, opts contracts.KnowledgeSearchOptions,
 ) (contracts.KnowledgeSearchResult, error) {
 	if k.Vectors == nil || opts.Mode == "keyword" || strings.TrimSpace(query) == "" {
 		return k.byKeyword(ctx, ws, query, opts)
