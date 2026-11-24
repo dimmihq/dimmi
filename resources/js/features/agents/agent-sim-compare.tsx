@@ -32,7 +32,7 @@ import { Did } from "../automation/procedure-simulator/parts";
 import { fieldLabel, fromCustomer, hint, sentenceOf, words } from "../automation/procedure-simulator/simulator";
 import { type LiveRun, useLiveRuns } from "../automation/procedure-simulator/use-live-runs";
 import type { ChipSources } from "../automation/procedure-writer/procedure-suggestions";
-import { choicesOf, sayOf, statusNow } from "./agent-sim-words";
+import { choicesOf, judgedOf, sayOf, statusNow } from "./agent-sim-words";
 import { Transferred } from "./agent-transferred";
 
 const pressedConfirm = "Pressed Confirm on the card";
@@ -92,6 +92,7 @@ export function CheckList({
     <ul className="flex flex-col gap-1">
       {sim.assertions.map((a, index) => {
         const outcome = lined[index];
+        const said = judgedOf(outcome);
 
         return (
           // biome-ignore lint/suspicious/noArrayIndexKey: checks never reorder while shown.
@@ -101,14 +102,11 @@ export function CheckList({
             </span>
             <span className="flex min-w-0 flex-1 flex-col py-1">
               <span className="text-body-2-regular text-text-primary">{sayOf(sentenceOf(a, choices), name)}</span>
-              {outcome && !outcome.passed && !outcome.skipped ? (
+              {said ? (
                 <span
-                  className={cx(
-                    "text-body-2-regular",
-                    outcome.unsure ? "text-text-secondary" : "text-text-error-primary",
-                  )}
+                  className={cx("text-body-2-regular", said.failed ? "text-text-error-primary" : "text-text-secondary")}
                 >
-                  {outcome.message}
+                  {said.text}
                 </span>
               ) : null}
             </span>

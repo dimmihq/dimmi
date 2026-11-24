@@ -86,3 +86,23 @@ export function statusNow(
 
   return { label: `Running${turn}`, color: "blue" };
 }
+
+/*
+ * judgedOf is the line under a check after a run: why it failed, or the judge's reason for a
+ * written check that passed. A check with nothing more to say than that it was met shows no line.
+ */
+export function judgedOf(
+  outcome: TestResult["assertion_results"][number] | undefined,
+): { text: string; failed: boolean } | null {
+  if (!outcome || outcome.skipped || !outcome.message) {
+    return null;
+  }
+  if (!outcome.passed) {
+    return { text: outcome.message, failed: !outcome.unsure };
+  }
+  if (outcome.type !== "llm_rubric" || outcome.message === "Met.") {
+    return null;
+  }
+
+  return { text: outcome.message, failed: false };
+}

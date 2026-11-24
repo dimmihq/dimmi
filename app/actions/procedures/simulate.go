@@ -93,13 +93,14 @@ type Vectors interface {
 }
 
 /*
-Judge decides whether a transcript meets a rubric.
+Judge decides whether a transcript meets a run's written checks.
 */
 type Judge interface {
 	/*
-		JudgeRubric answers met, not met or unsure.
+		JudgeRubrics answers every written check of one run, in the
+		order given, each with the judge's reason when it has one.
 	*/
-	JudgeRubric(ctx context.Context, in pipeline.Rubric) (procedure.Judgment, error)
+	JudgeRubrics(ctx context.Context, in pipeline.Rubrics) ([]procedure.Judgment, error)
 }
 
 /*

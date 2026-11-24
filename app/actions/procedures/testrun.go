@@ -88,8 +88,9 @@ func (p *Procedures) runTestCase(ctx context.Context, run simulated) TestResult 
 	}
 
 	run.w.tell(ctx, runJudging, nil)
-	res.AssertionResults = procedure.Assert(script.assertions, chat.observed, strings.Join(chat.lines, "\n"),
-		p.judge(ctx, run.m))
+	transcript := strings.Join(chat.lines, "\n")
+	res.AssertionResults = procedure.Assert(script.assertions, chat.observed, transcript,
+		p.judge(ctx, run.m, judging{checks: script.assertions, transcript: transcript, wrote: chat.wrote}))
 	res.Passed = procedure.Passed(res.AssertionResults)
 	res.Error = unjudged(res.AssertionResults)
 
@@ -102,7 +103,8 @@ what was observed, and whether dimmi handed over. Sent marks the saved
 messages the customer has sent, so none goes out twice. HeldBy is the
 agent the chat was transferred to, which answers from then on. Lines is
 the chat as the judge reads it: who wrote each message, by name, with
-every transfer and handover recorded between them.
+every transfer and handover recorded between them. Wrote are the
+models that wrote the agent's replies, so the judge is none of them.
 */
 type played struct {
 	history   []pipeline.SimMessage
@@ -112,6 +114,7 @@ type played struct {
 	sent      []bool
 	heldBy    *ids.UUID
 	lines     []string
+	wrote     []string
 }
 
 /*
@@ -124,6 +127,9 @@ func (c *played) record(msg TestMessage, turn *pipeline.SimulationResult) {
 		c.lines = append(c.lines, "[The customer pressed Confirm on the card]")
 	} else {
 		c.lines = append(c.lines, "CUSTOMER: "+msg.Text)
+	}
+	if turn.Model != "" && !slices.Contains(c.wrote, turn.Model) {
+		c.wrote = append(c.wrote, turn.Model)
 	}
 	name := cmp.Or(turn.AgentName, "AGENT")
 	if t := turn.Transfer; t != nil {
@@ -370,17 +376,47 @@ func observe(o *procedure.Observed, turn *pipeline.SimulationResult) {
 }
 
 /*
-judge is the rubric judge of a run, none when no judge is set up.
+judging is what the judge of one run reads: the run's checks, its
+transcript, and the models that wrote the agent's replies.
 */
-func (p *Procedures) judge(ctx context.Context, m authz.Membership) procedure.Judge {
+type judging struct {
+	checks     []procedure.Assertion
+	transcript string
+	wrote      []string
+}
+
+/*
+judge is the rubric judge of a run, none when no judge is set up. The
+run's written checks are judged together, once, the first time one of
+them is asked for; each check then reads its own verdict.
+*/
+func (p *Procedures) judge(ctx context.Context, m authz.Membership, j judging) procedure.Judge {
 	if p.Judge == nil {
 		return nil
 	}
+	var rubrics []string
+	for _, a := range j.checks {
+		if a.Type == procedure.AssertLLMRubric && !slices.Contains(rubrics, a.Rubric) {
+			rubrics = append(rubrics, a.Rubric)
+		}
+	}
+	var verdicts []procedure.Judgment
+	var failed error
+	asked := false
 
-	return func(rubric, transcript string) (procedure.Judgment, error) {
-		return p.Judge.JudgeRubric(ctx, pipeline.Rubric{
-			WorkspaceID: m.Workspace.ID, MemberID: m.Member.ID, Rubric: rubric, Transcript: transcript,
-		})
+	return func(rubric, _ string) (procedure.Judgment, error) {
+		if !asked {
+			asked = true
+			verdicts, failed = p.Judge.JudgeRubrics(ctx, pipeline.Rubrics{
+				WorkspaceID: m.Workspace.ID, MemberID: m.Member.ID, Rubrics: rubrics, Transcript: j.transcript,
+				Wrote: j.wrote,
+			})
+		}
+		i := slices.Index(rubrics, rubric)
+		if failed != nil || i < 0 || i >= len(verdicts) {
+			return procedure.Judgment{}, cmp.Or(failed, pipeline.ErrNoJudgment)
+		}
+		return verdicts[i], nil
 	}
 }
 

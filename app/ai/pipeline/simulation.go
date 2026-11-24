@@ -96,6 +96,7 @@ under test was followed.
 type SimulationResult struct {
 	RunID          ids.UUID
 	AgentName      string
+	Model          string
 	Reply          string
 	Outcome        string
 	Handoff        *SimHandoff
@@ -432,7 +433,7 @@ simulationResult reports what the simulated turn did.
 func (r *Runner) simulationResult(st *run, d *decision) *SimulationResult {
 	out := &SimulationResult{
 		RunID: st.rec.Run.ID, AgentName: st.env.Agent.Name, Outcome: d.outcome, Calls: st.sim.calls,
-		Transfer: simTransfer(st),
+		Transfer: simTransfer(st), Model: strv(st.env.Agent.AnswerModel),
 	}
 	if d.writesMessage() {
 		out.Reply = strings.ReplaceAll(r.reply(st.env, d), ticketReference, sampleReference)

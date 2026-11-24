@@ -4,9 +4,12 @@
 |--------------------------------------------------------------------------
 |
 | A saved test may check something only words can say, such as "explains
-| the 30-day policy politely". The decision model reads the simulated
-| transcript and the rubric and says how likely the conversation meets
-| it, so the agent never grades its own work. When the decision model
+| the 30-day policy politely". On an install that serves its own models
+| a model that writes judges every such check of a run together, with
+| a reason for each (simulation_judge_model.go). This file is the judge
+| it falls back to: the decision model reads the simulated transcript
+| and one rubric and says how likely the conversation meets it. Either
+| way the agent never grades its own work. When the decision model
 | fails it is asked once more; when it fails again the check has no
 | verdict and the run reports an error, since an answer model grading
 | its own kind of work is no judge. What the judge is asked is

@@ -50,7 +50,7 @@ import { type LiveRun, useLiveRuns } from "../automation/procedure-simulator/use
 import type { ChipSources } from "../automation/procedure-writer/procedure-suggestions";
 import { LiveTalk, Mark, SimCompare, Talk } from "./agent-sim-compare";
 import { Dots, PastRuns } from "./agent-sim-history";
-import { choicesOf, lastRun, sayOf, statusNow } from "./agent-sim-words";
+import { choicesOf, judgedOf, lastRun, sayOf, statusNow } from "./agent-sim-words";
 
 function Checks({
   sim,
@@ -88,6 +88,7 @@ function Checks({
       <ul className="flex flex-col gap-1">
         {sim.assertions.map((a, index) => {
           const outcome = lined[index];
+          const said = judgedOf(outcome);
 
           return (
             // biome-ignore lint/suspicious/noArrayIndexKey: checks change in place.
@@ -97,14 +98,14 @@ function Checks({
               </span>
               <span className="flex min-w-0 flex-1 flex-col py-1">
                 <span className="text-body-2-regular text-text-primary">{sayOf(sentenceOf(a, choices), name)}</span>
-                {outcome && !outcome.passed && !outcome.skipped ? (
+                {said ? (
                   <span
                     className={cx(
                       "text-body-2-regular",
-                      outcome.unsure ? "text-text-secondary" : "text-text-error-primary",
+                      said.failed ? "text-text-error-primary" : "text-text-secondary",
                     )}
                   >
-                    {outcome.message}
+                    {said.text}
                   </span>
                 ) : null}
               </span>
