@@ -172,6 +172,7 @@ export function useWorkflowDraft(workspace: string, workflow: Workflow, onArchiv
     report,
     busy,
     saveState: saver.state,
+    flush: saver.flush,
     change: (edit: (spec: Spec) => Spec) => {
       const next = edit(current.current);
       current.current = next;

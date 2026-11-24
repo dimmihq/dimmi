@@ -391,7 +391,7 @@ export function WorkflowBuilder({ workspace, workflow }: { workspace: string; wo
     onEdit: edit,
   };
   const current = { ...draft.server, name: draft.name || draft.server.name, spec: draft.spec };
-  const slot = { workspace, workflow: current, onAdopt: draft.adopt };
+  const slot = { workspace, workflow: current, onAdopt: draft.adopt, flush: draft.flush };
   const reading = { steps: draft.spec.steps, summarize, workflows: names.workflows ?? new Map() };
   const Analytics = workflowSlots.analytics;
   const Failures = workflowSlots.failures;

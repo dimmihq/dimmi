@@ -10,14 +10,16 @@
  * PaneSlotProps (onClose, className).
  */
 import type { ComponentType } from "react";
+import { SeriesHistory } from "@/features/series/studio/series-history";
 import { SeriesOperatorPanel } from "@/features/series/studio/series-operator-panel";
-import { QuietHistory, QuietSimulations } from "./slot-placeholders";
+import { SeriesSimulations } from "@/features/series/studio/series-simulations";
 
 import type { PaneSlotProps, SeriesSlotProps, WorkflowSlotProps } from "./slot-props";
 import { WorkflowAnalytics } from "./workflow-analytics";
 import { WorkflowFailures } from "./workflow-failures";
 import { WorkflowHistory } from "./workflow-history";
 import { WorkflowOperatorPanel } from "./workflow-operator-panel";
+import { WorkflowSimulations } from "./workflow-simulations";
 
 export type { PaneSlotProps, SeriesSlotProps, WorkflowSlotProps } from "./slot-props";
 
@@ -39,7 +41,9 @@ export const workflowSlots: {
   history: ({ workspace, workflow, onAdopt }) => (
     <WorkflowHistory workspace={workspace} workflow={workflow.id} onRestored={onAdopt} />
   ),
-  simulations: QuietSimulations,
+  simulations: ({ workspace, workflow, flush }) => (
+    <WorkflowSimulations workspace={workspace} workflow={workflow.id} flush={flush} />
+  ),
   operator: ({ workspace, workflow, onClose, className }) => (
     <WorkflowOperatorPanel workspace={workspace} workflow={workflow.id} onClose={onClose} className={className} />
   ),
@@ -54,8 +58,10 @@ export const seriesSlots: {
   simulations: ComponentType<SeriesSlotProps>;
   operator: ComponentType<SeriesSlotProps & PaneSlotProps>;
 } = {
-  history: QuietHistory,
-  simulations: QuietSimulations,
+  history: ({ workspace, series, onAdopt }) => (
+    <SeriesHistory workspace={workspace} series={series} onAdopt={onAdopt} />
+  ),
+  simulations: ({ workspace, series }) => <SeriesSimulations workspace={workspace} series={series.id} />,
   operator: ({ workspace, series, onClose, className }) => (
     <SeriesOperatorPanel workspace={workspace} series={series.id} onClose={onClose} className={className} />
   ),

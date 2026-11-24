@@ -10,6 +10,8 @@ export interface WorkflowSlotProps {
   workflow: Workflow;
   /* Hands a working copy the slot changed, such as a restored version, to the open editor. */
   onAdopt?: (next: Workflow) => void;
+  /* Saves the editor's unsaved changes first, so a run on the draft runs what is on screen. */
+  flush?: () => Promise<void>;
 }
 
 /*
@@ -19,6 +21,8 @@ export interface WorkflowSlotProps {
 export interface SeriesSlotProps {
   workspace: string;
   series: Series;
+  /* Hands a working copy the slot changed, such as a restored version, to the open editor. */
+  onAdopt?: (next: Series) => void;
 }
 
 /*

@@ -458,7 +458,7 @@ function Builder({ workspace, series, step }: { workspace: string; series: Serie
     onSelect: setSelected,
   };
   const current = { ...series, spec: draft.spec };
-  const slot = { workspace, series: current };
+  const slot = { workspace, series: current, onAdopt: draft.adopt };
   const History = seriesSlots.history;
   const Simulations = seriesSlots.simulations;
   const Operator = seriesSlots.operator;

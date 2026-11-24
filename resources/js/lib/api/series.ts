@@ -324,3 +324,12 @@ export function removeFromSeries(workspace: string, id: string, journey: string)
 export function pickSeriesWinner(workspace: string, id: string, node: string, winner: string): Promise<Series> {
   return request<Series>("POST", `${path(id)}/nodes/${node}/winner`, { path: winner }, { workspace });
 }
+
+/*
+ * restoreSeriesVersion copies a published version into the working copy.
+ */
+export function restoreSeriesVersion(workspace: string, id: string, version: string): Promise<Series> {
+  return request<Series>("POST", `${path(id)}/versions/${encodeURIComponent(version)}/restore`, undefined, {
+    workspace,
+  });
+}
