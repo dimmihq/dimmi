@@ -52,6 +52,10 @@ export default defineConfig({
     screenshot: "only-on-failure",
     extraHTTPHeaders: gateKey ? { "X-Gate-Key": gateKey } : undefined,
     channel: "chromium",
+    // Pages slide in for 400 ms. A click on something still moving has
+    // Playwright retry and scroll it into place, and that scroll closes a
+    // menu the click just opened. Reduced motion lands every page at once.
+    reducedMotion: "reduce",
     launchOptions: { args: ["--use-fake-ui-for-media-stream", "--use-fake-device-for-media-stream"] },
   },
   projects: [
