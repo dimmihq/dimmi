@@ -24,8 +24,9 @@ Prefix each variable below with `DIMMI_AI__`:
 | --- | --- | --- |
 | `MANAGED__ANTHROPIC__BASE_URL` | Anthropic API | Custom endpoint or proxy URL for Anthropic calls. |
 | `MANAGED__OPENAI__BASE_URL` | OpenAI API | Custom endpoint or proxy URL for OpenAI calls. |
-| `MANAGED__EMBEDDINGS__BASE_URL` | `https://api.deepinfra.com/v1/openai` | OpenAI-compatible embeddings API URL. |
-| `MANAGED__EMBEDDINGS__MODEL` | `Qwen/Qwen3-Embedding-8B` | Embedding model (must output 1024 dimensions). |
+| `MANAGED__EMBEDDINGS__BASE_URL` | `https://api.voyageai.com/v1` | Voyage API URL. |
+| `MANAGED__EMBEDDINGS__MODEL` | `voyage-4-lite` | Voyage embedding model (must output 1024 dimensions). |
+| `MANAGED__EMBEDDINGS__RERANK_MODEL` | `rerank-2.5-lite` | Voyage model that reorders search results. Set empty to turn reranking off. |
 | `DEFAULT_MONTHLY_CAP_USD` | `25` | Starting monthly AI spend cap (USD) for new workspaces. |
 | `ENABLED` | `true` | Set `false` to disable the dimmi agent server-wide. |
 

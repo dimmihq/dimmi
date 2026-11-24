@@ -22,6 +22,7 @@ import (
 	"github.com/dimmihq/dimmi/framework/fault"
 	"github.com/dimmihq/dimmi/framework/ids"
 
+	"github.com/dimmihq/dimmi/app/ai/agents"
 	"github.com/dimmihq/dimmi/app/auth/authz"
 	"github.com/dimmihq/dimmi/app/models"
 )
@@ -123,8 +124,8 @@ func read(ctx context.Context, q *models.Queries, workspaceID ids.UUID, start ti
 	period.PeriodStart = database.Date(start)
 	view.Period = period
 
-	if agent, err := q.FindAgent(ctx, workspaceID); err == nil {
-		view.CapMicros = agent.MonthlySpendCapMicros
+	if settings, err := agents.Shared(ctx, q, workspaceID); err == nil {
+		view.CapMicros = settings.MonthlySpendCapMicros
 	}
 
 	if view.Daily, err = q.ListDailySpend(ctx, models.ListDailySpendParams{

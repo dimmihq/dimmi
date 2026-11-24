@@ -147,6 +147,24 @@ func TestWidgetMessages(t *testing.T) {
 		v.client().GetJSON("/widget/v1/session").AssertOK().AssertJSONPath("data.unread_count", float64(1))
 	})
 
+	t.Run("an AI agent's reply carries the agent's name", func(t *testing.T) {
+		t.Parallel()
+		tc := tests.New(t)
+		v := startVisitor(t, tc)
+		id := v.startConversation(t, "how much is it?")
+		owner(tc).PostJSON("/api/v1/ai/agents", testkit.JSON{"name": "Sales"}).AssertCreated()
+		_, err := tc.Operator().Exec(t.Context(), `
+			INSERT INTO messages (workspace_id, conversation_id, type, author_type, author_id, body)
+			SELECT c.workspace_id, c.id, 'message', 'agent', a.id, 'Growth is $29 a seat.'
+			FROM conversations c JOIN ai_agents a ON a.workspace_id = c.workspace_id AND a.name = 'Sales'
+			WHERE c.workspace_id = $1`, tc.Workspace.Workspace.ID)
+		require.NoError(t, err)
+
+		res := v.client().GetJSON("/widget/v1/conversations/" + id + "/messages").AssertOK()
+		res.AssertJSONPath("data.1.author.type", "agent")
+		res.AssertJSONPath("data.1.author.name", "Sales")
+	})
+
 	t.Run("writing to a closed conversation reopens it", func(t *testing.T) {
 		t.Parallel()
 		tc := tests.New(t)

@@ -16,7 +16,7 @@ SELECT * FROM workspace_members WHERE workspace_id = @workspace_id AND id = @id;
 -- name: ListUserWorkspaces :many
 -- ListUserWorkspaces returns the live workspaces the user is an active
 -- member of, the one used most recently first, with the slugs each gave
--- up and still holds. It runs before any workspace is chosen, through
+-- up and still holds and its logo. It runs before any workspace is chosen, through
 -- security definer functions.
 SELECT
     m.member_id::uuid AS member_id,
@@ -24,9 +24,11 @@ SELECT
     m.workspace_name::text AS workspace_name,
     m.workspace_slug::citext AS workspace_slug,
     m.role::text AS role,
-    coalesce(p.previous_slugs, '[]'::jsonb)::jsonb AS previous_slugs
+    coalesce(p.previous_slugs, '[]'::jsonb)::jsonb AS previous_slugs,
+    coalesce(l.logo_path, '')::text AS logo_path
 FROM auth_user_memberships(@user_id) AS m
 LEFT JOIN auth_user_previous_slugs(@user_id) AS p ON p.workspace_id = m.workspace_id
+LEFT JOIN auth_user_workspace_logos(@user_id) AS l ON l.workspace_id = m.workspace_id
 WHERE m.status = 'active' AND m.deleted_at IS NULL;
 
 -- name: UpdateWorkspaceMemberStatus :exec

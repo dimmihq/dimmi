@@ -106,6 +106,102 @@
       "approved_by": "Frantz Kati"
     },
     {
+      "id": "api-path-removed-without-deprecation",
+      "operation": "GET /ai/agent",
+      "reason": "A workspace now runs many agents, each edited as a draft and published as a version. Pre-production: the single-agent route is replaced by /ai/agents, /ai/agents/{agent} and /ai/settings instead of kept beside it.",
+      "deprecated": "2026-11-22",
+      "sunset": "2026-11-22",
+      "approved_by": "Frantz Kati"
+    },
+    {
+      "id": "api-path-removed-without-deprecation",
+      "operation": "PATCH /ai/agent",
+      "reason": "A workspace now runs many agents, each edited as a draft and published as a version. Pre-production: the single-agent route is replaced by /ai/agents, /ai/agents/{agent} and /ai/settings instead of kept beside it.",
+      "deprecated": "2026-11-22",
+      "sunset": "2026-11-22",
+      "approved_by": "Frantz Kati"
+    },
+    {
+      "id": "api-path-removed-without-deprecation",
+      "operation": "POST /ai/playground",
+      "reason": "Pre-production: the internal playground is replaced by previewing an agent's draft. Nothing outside dimmi's own app called it.",
+      "deprecated": "2026-11-22",
+      "sunset": "2026-11-22",
+      "approved_by": "Frantz Kati"
+    },
+    {
+      "id": "api-schema-removed",
+      "schema": "AIPlaygroundRequestBody",
+      "reason": "Pre-production: the internal playground is replaced by previewing an agent's draft. Nothing outside dimmi's own app called it.",
+      "deprecated": "2026-11-22",
+      "sunset": "2026-11-22",
+      "approved_by": "Frantz Kati"
+    },
+    {
+      "id": "api-schema-removed",
+      "schema": "AiPlaygroundAnswer",
+      "reason": "Pre-production: the internal playground is replaced by previewing an agent's draft. Nothing outside dimmi's own app called it.",
+      "deprecated": "2026-11-22",
+      "sunset": "2026-11-22",
+      "approved_by": "Frantz Kati"
+    },
+    {
+      "id": "api-schema-removed",
+      "schema": "AiPlaygroundCitation",
+      "reason": "Pre-production: the internal playground is replaced by previewing an agent's draft. Nothing outside dimmi's own app called it.",
+      "deprecated": "2026-11-22",
+      "sunset": "2026-11-22",
+      "approved_by": "Frantz Kati"
+    },
+    {
+      "id": "api-schema-removed",
+      "schema": "AiPlaygroundClass",
+      "reason": "Pre-production: the internal playground is replaced by previewing an agent's draft. Nothing outside dimmi's own app called it.",
+      "deprecated": "2026-11-22",
+      "sunset": "2026-11-22",
+      "approved_by": "Frantz Kati"
+    },
+    {
+      "id": "api-schema-removed",
+      "schema": "AiPlaygroundReply",
+      "reason": "Pre-production: the internal playground is replaced by previewing an agent's draft. Nothing outside dimmi's own app called it.",
+      "deprecated": "2026-11-22",
+      "sunset": "2026-11-22",
+      "approved_by": "Frantz Kati"
+    },
+    {
+      "id": "api-schema-removed",
+      "schema": "AiPlaygroundSource",
+      "reason": "Pre-production: the internal playground is replaced by previewing an agent's draft. Nothing outside dimmi's own app called it.",
+      "deprecated": "2026-11-22",
+      "sunset": "2026-11-22",
+      "approved_by": "Frantz Kati"
+    },
+    {
+      "id": "api-schema-removed",
+      "schema": "AiPlaygroundTiming",
+      "reason": "Pre-production: the internal playground is replaced by previewing an agent's draft. Nothing outside dimmi's own app called it.",
+      "deprecated": "2026-11-22",
+      "sunset": "2026-11-22",
+      "approved_by": "Frantz Kati"
+    },
+    {
+      "id": "api-schema-removed",
+      "schema": "AiPlaygroundUsage",
+      "reason": "Pre-production: the internal playground is replaced by previewing an agent's draft. Nothing outside dimmi's own app called it.",
+      "deprecated": "2026-11-22",
+      "sunset": "2026-11-22",
+      "approved_by": "Frantz Kati"
+    },
+    {
+      "id": "api-schema-removed",
+      "schema": "ResourceAiPlaygroundAnswer",
+      "reason": "Pre-production: the internal playground is replaced by previewing an agent's draft. Nothing outside dimmi's own app called it.",
+      "deprecated": "2026-11-22",
+      "sunset": "2026-11-22",
+      "approved_by": "Frantz Kati"
+    },
+    {
       "id": "response-required-property-removed",
       "operation": "GET /operator/settings",
       "reason": "Internal route: the weekly procedure review is replaced by Operator routines, and nothing is in production.",

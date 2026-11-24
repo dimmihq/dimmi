@@ -30,6 +30,8 @@ export type AvatarColor = "neutral" | "blue" | "lime" | "pink";
 
 export type UserRow = {
   initials: string;
+  /** Photo or logo URL; the initials show without one. */
+  src?: string;
   color: AvatarColor;
   name: string;
   /** Second line under the name, e.g. the person's role in the workspace. */
@@ -52,7 +54,7 @@ function Collapsible({ collapsed, children }: { collapsed: boolean; children: Re
   ));
 }
 
-export function UserMenuItem({ initials, color, name, detail, isSelected, onSelect }: UserRow & { onSelect: () => void }) {
+export function UserMenuItem({ initials, src, color, name, detail, isSelected, onSelect }: UserRow & { onSelect: () => void }) {
   const localize = useTemplateCopy();
   return localize((
     <AriaButton
@@ -65,7 +67,7 @@ export function UserMenuItem({ initials, color, name, detail, isSelected, onSele
         isSelected && "bg-background-primary-hover",
       )}
     >
-      <Avatar size="xs" color={color} initials={initials} />
+      <Avatar size="xs" color={color} src={src} alt={name} initials={initials} />
       <span className="min-w-0 truncate text-body-2-medium text-text-primary">{name}</span>
       {isSelected ? <RiCheckLine aria-hidden className="size-4 shrink-0 text-foreground-icon-secondary" /> : null}
       {detail ? (
@@ -78,11 +80,11 @@ export function UserMenuItem({ initials, color, name, detail, isSelected, onSele
 }
 
 /** The panel's header: who or what the menu is about, larger than the rows below it. */
-export function MenuHeader({ initials, color, name, detail }: Omit<UserRow, "isSelected">) {
+export function MenuHeader({ initials, src, color, name, detail }: Omit<UserRow, "isSelected">) {
   const localize = useTemplateCopy();
   return localize((
     <div className="flex items-center gap-2 px-2 py-1.5">
-      <Avatar size="xs" color={color} initials={initials} />
+      <Avatar size="xs" color={color} src={src} alt={name} initials={initials} />
       <span className="min-w-0 flex-1 truncate text-body-2-medium text-text-primary">{name}</span>
       {detail ? (
         <span className="shrink-0 rounded-full bg-background-tertiary-default px-1.5 py-px text-caption-1-medium text-text-tertiary">
@@ -154,6 +156,7 @@ export function DashboardUserMenu({
   avatarClassName,
   label,
   initials,
+  src,
   color = "neutral",
   menuLabel,
   children,
@@ -162,6 +165,8 @@ export function DashboardUserMenu({
   /** Text on the trigger, e.g. the workspace name. */
   label: string;
   initials: string;
+  /** Photo or logo URL; the initials show without one. */
+  src?: string;
   color?: AvatarColor;
   /** Accessible name of the panel. */
   menuLabel: string;
@@ -215,7 +220,7 @@ export function DashboardUserMenu({
           collapsed && "w-9 justify-center gap-0 before:-inset-x-[3px]",
         )}
       >
-        <Avatar size="md" color={color} initials={initials} className={avatarClassName} />
+        <Avatar size="md" color={color} src={src} alt={label} initials={initials} className={avatarClassName} />
         <Collapsible collapsed={collapsed}>
           <span className="flex items-center gap-0.5">
             <span className="text-body-medium whitespace-nowrap text-text-primary">{label}</span>

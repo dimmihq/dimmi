@@ -27,6 +27,7 @@ import (
 
 	"github.com/dimmihq/dimmi/app"
 	"github.com/dimmihq/dimmi/app/ai/actionkit"
+	"github.com/dimmihq/dimmi/app/ai/agents"
 	"github.com/dimmihq/dimmi/app/contracts"
 	"github.com/dimmihq/dimmi/app/enums"
 	"github.com/dimmihq/dimmi/app/managers"
@@ -90,7 +91,7 @@ giving it a stand-in connection in a dry run when it has none.
 */
 func (h *Harness) pointAgent(ctx context.Context, o *Options, p *prepared) error {
 	q := models.New(h.App.DB)
-	agent, err := q.FindAgent(ctx, o.Owner.Workspace.ID)
+	agent, err := q.FindDefaultAgent(ctx, o.Owner.Workspace.ID)
 	if err != nil {
 		return fmt.Errorf("find agent: %w", err)
 	}
@@ -117,14 +118,26 @@ func (h *Harness) pointAgent(ctx context.Context, o *Options, p *prepared) error
 		WHERE id = $1`, original.ID, o.AgentModel, o.ClassifierModel); err != nil {
 		return fmt.Errorf("point agent at models: %w", err)
 	}
+	settings, err := agents.Shared(ctx, q, original.WorkspaceID)
+	if err != nil {
+		return err
+	}
+	if _, err := h.App.DB.Exec(ctx, `UPDATE workspace_ai_settings
+		SET classifier_model = COALESCE(NULLIF($2, ''), classifier_model) WHERE workspace_id = $1`,
+		original.WorkspaceID, o.ClassifierModel); err != nil {
+		return fmt.Errorf("point workspace at classifier: %w", err)
+	}
 	p.restores = append(p.restores, h.later(ctx, func(ctx context.Context) {
+		_, _ = h.App.DB.Exec(ctx, `UPDATE workspace_ai_settings SET classifier_model = $2 WHERE workspace_id = $1`,
+			original.WorkspaceID, settings.ClassifierModel)
+	}), h.later(ctx, func(ctx context.Context) {
 		if _, err := h.App.DB.Exec(ctx, `UPDATE ai_agents SET answer_model = $2, classifier_model = $3,
 			enabled = $4, enabled_channels = $5, answer_key_id = $6 WHERE id = $1`, original.ID, original.AnswerModel,
 			original.ClassifierModel, original.Enabled, original.EnabledChannels, original.AnswerKeyID); err != nil {
 			o.Log("could not put the agent back: %v", err)
 		}
 	}))
-	p.agent, err = q.FindAgent(ctx, o.Owner.Workspace.ID)
+	p.agent, err = q.FindDefaultAgent(ctx, o.Owner.Workspace.ID)
 	return err
 }
 
@@ -155,7 +168,7 @@ func (h *Harness) dryKey(ctx context.Context, p *prepared) error {
 		_, _ = a.DB.Exec(ctx, `UPDATE ai_provider_keys SET deleted_at = now() WHERE id = $1`, key)
 	}))
 	var err error
-	p.agent, err = models.New(a.DB).FindAgent(ctx, agent.WorkspaceID)
+	p.agent, err = models.New(a.DB).FindDefaultAgent(ctx, agent.WorkspaceID)
 	return err
 }
 

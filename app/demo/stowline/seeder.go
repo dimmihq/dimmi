@@ -102,6 +102,8 @@ type run struct {
 	center   ids.UUID
 	articles map[string]ids.UUID
 	followed map[string]*followedProcedure
+	agents   map[string]ids.UUID
+	actions  map[string]string
 }
 
 /*
@@ -153,6 +155,7 @@ func (r *run) steps(ctx context.Context) error {
 		{"tags, saved replies and attributes", r.vocabulary},
 		{"help center", r.helpCenter},
 		{"AI agent, actions and procedures", r.agent},
+		{"AI agent fleet", r.fleet},
 		{"companies and people", r.people},
 		{"conversations", r.conversations},
 		{"past AI runs", r.aiRuns},

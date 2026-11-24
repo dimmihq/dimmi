@@ -37,6 +37,8 @@ import { Route as AuthEmailConfirmRouteImport } from './routes/_auth/email.confi
 import { Route as AuthLoginMagicRouteImport } from './routes/_auth/login_.magic'
 import { Route as AuthLoginTwoFactorRouteImport } from './routes/_auth/login_.two-factor'
 import { Route as AuthOauthAuthorizeRouteImport } from './routes/_auth/oauth.authorize'
+import { Route as DAgentsIndexRouteImport } from './routes/d/agents/index'
+import { Route as DAgentsAgentRouteImport } from './routes/d/agents/$agent'
 import { Route as DBroadcastsIndexRouteImport } from './routes/d/broadcasts/index'
 import { Route as DBroadcastsBroadcastRouteImport } from './routes/d/broadcasts/$broadcast'
 import { Route as DChangelogIndexRouteImport } from './routes/d/changelog/index'
@@ -234,6 +236,16 @@ const AuthOauthAuthorizeRoute = AuthOauthAuthorizeRouteImport.update({
   id: '/oauth/authorize',
   path: '/oauth/authorize',
   getParentRoute: () => AuthRoute,
+} as any)
+const DAgentsIndexRoute = DAgentsIndexRouteImport.update({
+  id: '/agents/',
+  path: '/agents/',
+  getParentRoute: () => DRouteRoute,
+} as any)
+const DAgentsAgentRoute = DAgentsAgentRouteImport.update({
+  id: '/agents/$agent',
+  path: '/agents/$agent',
+  getParentRoute: () => DRouteRoute,
 } as any)
 const DBroadcastsIndexRoute = DBroadcastsIndexRouteImport.update({
   id: '/broadcasts/',
@@ -576,6 +588,7 @@ export interface FileRoutesByFullPath {
   '/login/magic': typeof AuthLoginMagicRoute
   '/login/two-factor': typeof AuthLoginTwoFactorRoute
   '/oauth/authorize': typeof AuthOauthAuthorizeRoute
+  '/d/agents/$agent': typeof DAgentsAgentRoute
   '/d/broadcasts/$broadcast': typeof DBroadcastsBroadcastRoute
   '/d/changelog/$entry': typeof DChangelogEntryRoute
   '/d/customers/$contact': typeof DCustomersContactRoute
@@ -588,6 +601,7 @@ export interface FileRoutesByFullPath {
   '/d/settings/$section': typeof DSettingsSectionRoute
   '/d/tickets/$ticket': typeof DTicketsTicketRoute
   '/d/workflows/$workflow': typeof DWorkflowsWorkflowRoute
+  '/d/agents/': typeof DAgentsIndexRoute
   '/d/broadcasts/': typeof DBroadcastsIndexRoute
   '/d/changelog/': typeof DChangelogIndexRoute
   '/d/feedback/': typeof DFeedbackIndexRoute
@@ -657,6 +671,7 @@ export interface FileRoutesByTo {
   '/login/magic': typeof AuthLoginMagicRoute
   '/login/two-factor': typeof AuthLoginTwoFactorRoute
   '/oauth/authorize': typeof AuthOauthAuthorizeRoute
+  '/d/agents/$agent': typeof DAgentsAgentRoute
   '/d/broadcasts/$broadcast': typeof DBroadcastsBroadcastRoute
   '/d/changelog/$entry': typeof DChangelogEntryRoute
   '/d/customers/$contact': typeof DCustomersContactRoute
@@ -669,6 +684,7 @@ export interface FileRoutesByTo {
   '/d/settings/$section': typeof DSettingsSectionRoute
   '/d/tickets/$ticket': typeof DTicketsTicketRoute
   '/d/workflows/$workflow': typeof DWorkflowsWorkflowRoute
+  '/d/agents': typeof DAgentsIndexRoute
   '/d/broadcasts': typeof DBroadcastsIndexRoute
   '/d/changelog': typeof DChangelogIndexRoute
   '/d/feedback': typeof DFeedbackIndexRoute
@@ -744,6 +760,7 @@ export interface FileRoutesById {
   '/_auth/login_/magic': typeof AuthLoginMagicRoute
   '/_auth/login_/two-factor': typeof AuthLoginTwoFactorRoute
   '/_auth/oauth/authorize': typeof AuthOauthAuthorizeRoute
+  '/d/agents/$agent': typeof DAgentsAgentRoute
   '/d/broadcasts/$broadcast': typeof DBroadcastsBroadcastRoute
   '/d/changelog/$entry': typeof DChangelogEntryRoute
   '/d/customers/$contact': typeof DCustomersContactRoute
@@ -757,6 +774,7 @@ export interface FileRoutesById {
   '/d/settings/$section': typeof DSettingsSectionRoute
   '/d/tickets/$ticket': typeof DTicketsTicketRoute
   '/d/workflows/$workflow': typeof DWorkflowsWorkflowRoute
+  '/d/agents/': typeof DAgentsIndexRoute
   '/d/broadcasts/': typeof DBroadcastsIndexRoute
   '/d/changelog/': typeof DChangelogIndexRoute
   '/d/feedback/': typeof DFeedbackIndexRoute
@@ -834,6 +852,7 @@ export interface FileRouteTypes {
     | '/login/magic'
     | '/login/two-factor'
     | '/oauth/authorize'
+    | '/d/agents/$agent'
     | '/d/broadcasts/$broadcast'
     | '/d/changelog/$entry'
     | '/d/customers/$contact'
@@ -846,6 +865,7 @@ export interface FileRouteTypes {
     | '/d/settings/$section'
     | '/d/tickets/$ticket'
     | '/d/workflows/$workflow'
+    | '/d/agents/'
     | '/d/broadcasts/'
     | '/d/changelog/'
     | '/d/feedback/'
@@ -915,6 +935,7 @@ export interface FileRouteTypes {
     | '/login/magic'
     | '/login/two-factor'
     | '/oauth/authorize'
+    | '/d/agents/$agent'
     | '/d/broadcasts/$broadcast'
     | '/d/changelog/$entry'
     | '/d/customers/$contact'
@@ -927,6 +948,7 @@ export interface FileRouteTypes {
     | '/d/settings/$section'
     | '/d/tickets/$ticket'
     | '/d/workflows/$workflow'
+    | '/d/agents'
     | '/d/broadcasts'
     | '/d/changelog'
     | '/d/feedback'
@@ -1001,6 +1023,7 @@ export interface FileRouteTypes {
     | '/_auth/login_/magic'
     | '/_auth/login_/two-factor'
     | '/_auth/oauth/authorize'
+    | '/d/agents/$agent'
     | '/d/broadcasts/$broadcast'
     | '/d/changelog/$entry'
     | '/d/customers/$contact'
@@ -1014,6 +1037,7 @@ export interface FileRouteTypes {
     | '/d/settings/$section'
     | '/d/tickets/$ticket'
     | '/d/workflows/$workflow'
+    | '/d/agents/'
     | '/d/broadcasts/'
     | '/d/changelog/'
     | '/d/feedback/'
@@ -1265,6 +1289,20 @@ declare module '@tanstack/react-router' {
       fullPath: '/oauth/authorize'
       preLoaderRoute: typeof AuthOauthAuthorizeRouteImport
       parentRoute: typeof AuthRoute
+    }
+    '/d/agents/': {
+      id: '/d/agents/'
+      path: '/agents'
+      fullPath: '/d/agents/'
+      preLoaderRoute: typeof DAgentsIndexRouteImport
+      parentRoute: typeof DRouteRoute
+    }
+    '/d/agents/$agent': {
+      id: '/d/agents/$agent'
+      path: '/agents/$agent'
+      fullPath: '/d/agents/$agent'
+      preLoaderRoute: typeof DAgentsAgentRouteImport
+      parentRoute: typeof DRouteRoute
     }
     '/d/broadcasts/': {
       id: '/d/broadcasts/'
@@ -1797,6 +1835,7 @@ interface DRouteRouteChildren {
   DShortcutsRoute: typeof DShortcutsRoute
   DIndexRoute: typeof DIndexRoute
   DInboxViewRouteRoute: typeof DInboxViewRouteRouteWithChildren
+  DAgentsAgentRoute: typeof DAgentsAgentRoute
   DBroadcastsBroadcastRoute: typeof DBroadcastsBroadcastRoute
   DProceduresProcedureRoute: typeof DProceduresProcedureRoute
   DRoutinesNewRoute: typeof DRoutinesNewRoute
@@ -1804,6 +1843,7 @@ interface DRouteRouteChildren {
   DSettingsSectionRoute: typeof DSettingsSectionRoute
   DTicketsTicketRoute: typeof DTicketsTicketRoute
   DWorkflowsWorkflowRoute: typeof DWorkflowsWorkflowRoute
+  DAgentsIndexRoute: typeof DAgentsIndexRoute
   DBroadcastsIndexRoute: typeof DBroadcastsIndexRoute
   DInboxIndexRoute: typeof DInboxIndexRoute
   DProceduresIndexRoute: typeof DProceduresIndexRoute
@@ -1848,6 +1888,7 @@ const DRouteRouteChildren: DRouteRouteChildren = {
   DShortcutsRoute: DShortcutsRoute,
   DIndexRoute: DIndexRoute,
   DInboxViewRouteRoute: DInboxViewRouteRouteWithChildren,
+  DAgentsAgentRoute: DAgentsAgentRoute,
   DBroadcastsBroadcastRoute: DBroadcastsBroadcastRoute,
   DProceduresProcedureRoute: DProceduresProcedureRoute,
   DRoutinesNewRoute: DRoutinesNewRoute,
@@ -1855,6 +1896,7 @@ const DRouteRouteChildren: DRouteRouteChildren = {
   DSettingsSectionRoute: DSettingsSectionRoute,
   DTicketsTicketRoute: DTicketsTicketRoute,
   DWorkflowsWorkflowRoute: DWorkflowsWorkflowRoute,
+  DAgentsIndexRoute: DAgentsIndexRoute,
   DBroadcastsIndexRoute: DBroadcastsIndexRoute,
   DInboxIndexRoute: DInboxIndexRoute,
   DProceduresIndexRoute: DProceduresIndexRoute,

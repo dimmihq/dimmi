@@ -28,6 +28,7 @@ import (
 
 	"github.com/dimmihq/dimmi/app/contracts"
 	"github.com/dimmihq/dimmi/app/models"
+	"github.com/dimmihq/dimmi/app/support/prompts"
 )
 
 /*
@@ -294,13 +295,15 @@ instructions can say "since the last run" and mean it.
 */
 func (e *Engine) runWindow(s *session) string {
 	start, end, last := e.window(s)
-	ran := "This is the routine's first run."
+	ran := prompts.Task(taskRoutineFirstRun, nil)
 	if last != nil {
-		ran = "Its last run that went well was at " + last.UTC().Format(time.RFC3339) + "."
+		ran = prompts.Task(taskRoutineLastRun, prompts.Vars{"at": last.UTC().Format(time.RFC3339)})
 	}
-	return fmt.Sprintf("This run covers %s to %s (UTC); for reports that take whole days, since %s until %s. %s",
-		start.UTC().Format(time.RFC3339), end.UTC().Format(time.RFC3339), start.UTC().Format(time.DateOnly),
-		end.UTC().AddDate(0, 0, 1).Format(time.DateOnly), ran)
+	return prompts.Task(taskRoutineWindow, prompts.Vars{
+		"start": start.UTC().Format(time.RFC3339), "end": end.UTC().Format(time.RFC3339),
+		"start_date": start.UTC().Format(time.DateOnly),
+		"end_date":   end.UTC().AddDate(0, 0, 1).Format(time.DateOnly), "last_run": ran,
+	})
 }
 
 /*

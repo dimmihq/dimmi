@@ -261,6 +261,9 @@ Operator.
 func assistantPublicIDs() []PublicIDEntry {
 	return []PublicIDEntry{
 		{PrefixAiAgent, "ai_agents"},
+		{PrefixAiAgentVersion, "ai_agent_versions"},
+		{PrefixAiAgentTestCase, "ai_agent_test_cases"},
+		{PrefixAiAgentTestCaseRun, "ai_agent_test_case_runs"},
 		{PrefixAiProviderKey, "ai_provider_keys"},
 		{PrefixAiRun, "ai_runs"},
 		{PrefixAiRunStep, "ai_run_steps"},
@@ -282,6 +285,9 @@ The prefixes of the AI agent's and Operator's tables.
 */
 const (
 	PrefixAiAgent            Prefix = "aia"
+	PrefixAiAgentVersion     Prefix = "aiav"
+	PrefixAiAgentTestCase    Prefix = "aias"
+	PrefixAiAgentTestCaseRun Prefix = "aiar"
 	PrefixAiProviderKey      Prefix = "aik"
 	PrefixAiRun              Prefix = "air"
 	PrefixAiRunStep          Prefix = "ais"
@@ -301,10 +307,11 @@ const (
 The prefixes of the help center's tables.
 */
 const (
-	PrefixHelpCenter     Prefix = "hc"
-	PrefixCollection     Prefix = "col"
-	PrefixArticle        Prefix = "art"
-	PrefixArticleVersion Prefix = "artv"
+	PrefixHelpCenter      Prefix = "hc"
+	PrefixCollection      Prefix = "col"
+	PrefixKnowledgeSource Prefix = "ks"
+	PrefixArticle         Prefix = "art"
+	PrefixArticleVersion  Prefix = "artv"
 )
 
 /*
@@ -322,7 +329,7 @@ func helpCenterPublicIDs() []PublicIDEntry {
 		{"hcd", "help_center_domains"},
 		{"rdr", "help_center_redirects"},
 		{"ast", "help_center_assets"},
-		{"ks", "knowledge_sources"},
+		{PrefixKnowledgeSource, "knowledge_sources"},
 		{"ksr", "knowledge_sync_runs"},
 		{"kd", "knowledge_documents"},
 		{"kc", "knowledge_chunks"},
@@ -513,49 +520,6 @@ func engagePublicIDs() []PublicIDEntry {
 		{"svr", "survey_responses"},
 		{"erc", "engage_receipts"},
 		{"eas", "engage_assets"},
-	}
-}
-
-/*
-The prefixes of broadcasts, their topics and their recipients.
-*/
-const (
-	PrefixBroadcast          Prefix = "bcst"
-	PrefixBroadcastTopic     Prefix = "bctp"
-	PrefixBroadcastRecipient Prefix = "bcrc"
-)
-
-/*
-broadcastPublicIDs lists the prefixes of broadcasts, the topics people
-subscribe to and each broadcast's recipients.
-*/
-func broadcastPublicIDs() []PublicIDEntry {
-	return []PublicIDEntry{
-		{PrefixBroadcast, "broadcasts"},
-		{PrefixBroadcastTopic, "broadcast_topics"},
-		{PrefixBroadcastRecipient, "broadcast_recipients"},
-	}
-}
-
-/*
-The prefixes of series, their versions and the journeys people take
-through them.
-*/
-const (
-	PrefixSeries           Prefix = "srs"
-	PrefixSeriesVersion    Prefix = "srsv"
-	PrefixSeriesEnrollment Prefix = "sren"
-)
-
-/*
-seriesPublicIDs lists the prefixes of series, their published versions
-and their enrollments.
-*/
-func seriesPublicIDs() []PublicIDEntry {
-	return []PublicIDEntry{
-		{PrefixSeries, "series"},
-		{PrefixSeriesVersion, "series_versions"},
-		{PrefixSeriesEnrollment, "series_enrollments"},
 	}
 }
 

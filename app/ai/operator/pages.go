@@ -31,6 +31,7 @@ import (
 	"github.com/dimmihq/dimmi/app/actions/conversations"
 	"github.com/dimmihq/dimmi/app/actions/messages"
 	"github.com/dimmihq/dimmi/app/models"
+	"github.com/dimmihq/dimmi/app/support/prompts"
 )
 
 /*
@@ -65,7 +66,7 @@ func (e *Engine) pageKinds() map[string]pageKind {
 		PageHelpCenter: {
 			prefix: models.PrefixHelpCenter,
 			describe: e.apiPage(apiSource{
-				what: "help center", tool: "dimmi_help_centers_get", argument: "help_center",
+				what: "help center", tool: "dimmi_get_help_center_by_id", argument: "help_center",
 				prefix: models.PrefixHelpCenter, public: func(r apiRecord, _ string) string { return r.URL },
 				live: func(r apiRecord) bool { return r.Status == "active" },
 			}),
@@ -73,7 +74,7 @@ func (e *Engine) pageKinds() map[string]pageKind {
 		PageFeatureRequest: {
 			prefix: models.PrefixFeedbackPost,
 			describe: e.apiPage(apiSource{
-				what: "feature request", tool: "dimmi_feedback_posts_get", argument: "post",
+				what: "feature request", tool: "dimmi_get_feedback_post_by_id", argument: "post",
 				prefix: models.PrefixFeedbackPost, page: linkFeedback,
 				public: func(r apiRecord, root string) string {
 					return fmt.Sprintf("%s/feedback/%d-%s", root, r.Number, r.Slug)
@@ -84,7 +85,7 @@ func (e *Engine) pageKinds() map[string]pageKind {
 		PageChangelogEntry: {
 			prefix: models.PrefixChangelogEntry,
 			describe: e.apiPage(apiSource{
-				what: "changelog entry", tool: "dimmi_changelog_entries_get", argument: "entry",
+				what: "changelog entry", tool: "dimmi_get_changelog_entry_by_id", argument: "entry",
 				prefix: models.PrefixChangelogEntry, page: linkChangelog,
 				public: func(r apiRecord, root string) string { return root + "/changelog/" + r.Slug },
 				live:   func(r apiRecord) bool { return r.Status == "published" },
@@ -188,33 +189,9 @@ func (e *Engine) replyGuide(s *session) string {
 	if guidance := strings.TrimSpace(a.Guidance); guidance != "" {
 		fmt.Fprintf(&b, "The workspace's own guidance, to follow exactly:\n%s\n", truncate(guidance, 8000))
 	}
-	b.WriteString(replyDrafting)
+	b.WriteString(prompts.Task(taskReplyDrafting, nil))
 	return b.String()
 }
-
-/*
-replyDrafting is how Operator drafts a reply to a customer.
-*/
-const replyDrafting = `How to draft a reply:
-- Draft a reply only when the teammate asks for one in so many words. A brief, a question or
-  any other request is answered in the chat, never with a draft.
-- Answer the customer's latest message. Lead with the fix or the answer, then the reason.
-- Reply in the language the customer writes in when the team replies in it, else the default.
-- Check every fact about the product with search_knowledge first. Never state a price, limit,
-  date, policy or step you did not find there or in this conversation. When you cannot confirm
-  something, leave it out of the draft and tell the teammate what to check.
-- When the help center has no answer, look at how the team answered the same question in the
-  similar conversations you were given, or find them with find_related_conversations, and base
-  the draft on that answer. Tell the teammate the draft rests on a past reply, and which
-  conversation, so they can check it still holds.
-- Never promise what only a person can decide: a refund, a credit, an exception, a date.
-- Write as the team, to the customer, in the workspace's tone. Never mention Operator, an AI,
-  internal notes, tags, ids or what teammates said to each other.
-- Match the channel: an email opens with a greeting and closes with a sign-off; a chat reply
-  is a few short lines with neither.
-- Keep it as short as the answer allows. No filler, no apology unless something went wrong.
-- Call draft_reply once with the whole reply. Then tell the teammate in one line what you
-  drafted, and in one more anything they should check before sending.`
 
 /*
 apiSource says how a page with no reader of Operator's own is read: by

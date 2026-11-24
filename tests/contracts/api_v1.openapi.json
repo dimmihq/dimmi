@@ -1075,6 +1075,9 @@
       "AIAgent": {
         "additionalProperties": false,
         "properties": {
+          "action_scope": {
+            "$ref": "#/components/schemas/AIScope"
+          },
           "actions_enabled": {
             "description": "Whether the agent may use the workspace's actions at all.",
             "type": "boolean"
@@ -1107,9 +1110,21 @@
             "description": "What the agent does in a conversation a teammate holds: skip_when_human_active, never_when_assigned or always.",
             "type": "string"
           },
+          "created_at": {
+            "description": "When it was created, as an RFC 3339 time, such as 2026-01-31T09:00:00Z.",
+            "format": "date-time",
+            "type": "string"
+          },
           "default_language": {
             "description": "Language tag the agent falls back to, such as en.",
             "type": "string"
+          },
+          "description": {
+            "description": "What the live agent handles. Other agents read it to know when to pass a conversation to this one.",
+            "type": "string"
+          },
+          "draft": {
+            "$ref": "#/components/schemas/AIAgentDefinition"
           },
           "enabled": {
             "description": "Whether the agent is switched on and answers customers.",
@@ -1158,6 +1173,10 @@
               "null"
             ]
           },
+          "has_unpublished_changes": {
+            "description": "true when the draft differs from what customers meet, so a publish would change something.",
+            "type": "boolean"
+          },
           "id": {
             "description": "The id of this record. Send it wherever an endpoint asks for this record; never use its name or title in its place.",
             "type": "string"
@@ -1165,6 +1184,13 @@
           "include_contact_context": {
             "description": "How much the agent reads about the contact: none, basic or allowlist.",
             "type": "string"
+          },
+          "is_default": {
+            "description": "true for the one agent that answers every conversation no other agent takes.",
+            "type": "boolean"
+          },
+          "knowledge_scope": {
+            "$ref": "#/components/schemas/AIKnowledgeScope"
           },
           "languages": {
             "description": "Language tags set for the agent, such as [\"en\",\"de\"]. Empty when none are set.",
@@ -1186,6 +1212,16 @@
               "null"
             ]
           },
+          "live_version": {
+            "description": "Number of the version customers meet now. 0 before the first publish.",
+            "format": "int32",
+            "type": "integer"
+          },
+          "lock_version": {
+            "description": "Counts the agent's saves. Send it back with an edit to refuse the edit when someone else saved in between.",
+            "format": "int32",
+            "type": "integer"
+          },
           "max_ai_replies": {
             "description": "The most replies the agent gives in one conversation before it hands off to the team, from 1 to 50. Defaults to 5.",
             "format": "int64",
@@ -1195,14 +1231,6 @@
             "description": "The most tokens the agent may write in one answer. Defaults to 600.",
             "format": "int64",
             "type": "integer"
-          },
-          "monthly_spend_cap_micros": {
-            "description": "The most the agent may spend on models in a month, in millionths of a US dollar (25000000 is $25). Null when there is no cap.",
-            "format": "int64",
-            "type": [
-              "integer",
-              "null"
-            ]
           },
           "name": {
             "description": "The name the agent goes by with customers, 1 to 60 characters.",
@@ -1216,8 +1244,22 @@
             "description": "Whether redaction of personal data is switched on for the agent.",
             "type": "boolean"
           },
+          "placement": {
+            "$ref": "#/components/schemas/AIPlacement"
+          },
+          "procedure_scope": {
+            "$ref": "#/components/schemas/AIScope"
+          },
           "product_name": {
             "description": "The name of the product the agent supports, up to 80 characters. Null when not set.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "published_at": {
+            "description": "When the agent was last published. Null when it never was.",
+            "format": "date-time",
             "type": [
               "string",
               "null"
@@ -1231,17 +1273,42 @@
             "description": "Whether the agent's answers must cite their sources.",
             "type": "boolean"
           },
+          "role": {
+            "description": "The kind of work the agent was made for, taken from its template, such as support, billing or developer.",
+            "type": "string"
+          },
           "schedule": {
             "description": "When the agent may answer: always, outside_office_hours or inside_office_hours.",
+            "type": "string"
+          },
+          "status": {
+            "description": "Where the agent stands: draft (never published), live or paused.",
             "type": "string"
           },
           "streaming": {
             "description": "Whether answers are streamed to the customer as they are written.",
             "type": "boolean"
           },
+          "template": {
+            "description": "Key of the template the agent started from, such as support. Null when it started empty.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
           "tone": {
             "description": "How the agent sounds: friendly, professional or concise.",
             "type": "string"
+          },
+          "transfer_agent_ids": {
+            "description": "Ids of the agents the live agent may pass a conversation to, each starting with aia_.",
+            "items": {
+              "type": "string"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
           },
           "unknown_behavior": {
             "description": "What the agent does when it cannot answer: offer_handoff, handoff or say_unknown.",
@@ -1256,11 +1323,26 @@
         "required": [
           "id",
           "object",
-          "name",
+          "is_default",
+          "role",
+          "template",
+          "status",
           "enabled",
+          "lock_version",
+          "has_unpublished_changes",
+          "live_version",
+          "max_output_tokens",
+          "grounding_mode",
+          "actions_enabled",
+          "draft",
+          "published_at",
+          "created_at",
+          "updated_at",
+          "name",
           "product_name",
           "tone",
           "guidance",
+          "description",
           "enabled_channels",
           "schedule",
           "assigned_behavior",
@@ -1268,10 +1350,8 @@
           "answer_model",
           "fallback_key_id",
           "fallback_model",
-          "max_output_tokens",
           "max_ai_replies",
           "unknown_behavior",
-          "grounding_mode",
           "require_citations",
           "languages",
           "default_language",
@@ -1283,9 +1363,593 @@
           "raise_priority_on_handoff",
           "handoff_mode",
           "always_handoff_tag_ids",
-          "monthly_spend_cap_micros",
-          "actions_enabled",
+          "knowledge_scope",
+          "procedure_scope",
+          "action_scope",
+          "transfer_agent_ids",
+          "placement"
+        ],
+        "type": "object"
+      },
+      "AIAgentDefinition": {
+        "additionalProperties": false,
+        "properties": {
+          "action_scope": {
+            "$ref": "#/components/schemas/AIScope"
+          },
+          "always_handoff_tag_ids": {
+            "description": "Ids of the tags that always send a conversation to a person, each starting with tag_.",
+            "items": {
+              "type": "string"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "answer_key_id": {
+            "description": "Id of the provider key the agent answers with (starts with aik_). Null when it uses the key every agent shares.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "answer_model": {
+            "description": "The model the agent answers with. Null when it uses the shared model.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "assigned_behavior": {
+            "description": "What the agent does in a conversation a teammate holds: skip_when_human_active, never_when_assigned or always.",
+            "type": "string"
+          },
+          "default_language": {
+            "description": "Language tag the agent answers in when the customer's language is unknown, such as en.",
+            "type": "string"
+          },
+          "description": {
+            "description": "What the agent handles. Other agents read it to know when to pass a conversation to this one.",
+            "type": "string"
+          },
+          "enabled_channels": {
+            "description": "The kinds of channel the agent answers on, such as widget, email and api.",
+            "items": {
+              "type": "string"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "fallback_key_id": {
+            "description": "Id of the provider key used when the answer key fails (starts with aik_). Null when there is none.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "fallback_model": {
+            "description": "The model used when the answer model fails. Null when there is none.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "guidance": {
+            "description": "How the agent talks and what it does, in the team's own words.",
+            "type": "string"
+          },
+          "handoff_mode": {
+            "description": "full when the agent answers from the knowledge; triage_only when it only sorts the conversation and hands it to a person.",
+            "type": "string"
+          },
+          "handoff_team_id": {
+            "description": "Id of the team a handed-over conversation goes to (starts with team_). Null when it goes to no team.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "include_contact_context": {
+            "description": "How much of the customer's record the agent reads: none or basic.",
+            "type": "string"
+          },
+          "knowledge_scope": {
+            "$ref": "#/components/schemas/AIKnowledgeScope"
+          },
+          "languages": {
+            "description": "Language tags the agent answers in, such as en or pt-BR.",
+            "items": {
+              "type": "string"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "link_allowlist": {
+            "description": "Hosts the agent may link to, such as example.com or *.example.com.",
+            "items": {
+              "type": "string"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "max_ai_replies": {
+            "description": "Most replies the agent sends in one conversation before it hands over.",
+            "format": "int64",
+            "type": "integer"
+          },
+          "name": {
+            "description": "What the team calls the agent.",
+            "type": "string"
+          },
+          "pii_redaction": {
+            "description": "true when personal data is masked in text before it is sent to the model provider.",
+            "type": "boolean"
+          },
+          "placement": {
+            "$ref": "#/components/schemas/AIPlacement"
+          },
+          "procedure_scope": {
+            "$ref": "#/components/schemas/AIScope"
+          },
+          "product_name": {
+            "description": "The product's name as the agent says it. Null when it uses the workspace's name.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "raise_priority_on_handoff": {
+            "description": "true when a conversation becomes high priority as the agent hands it over.",
+            "type": "boolean"
+          },
+          "require_citations": {
+            "description": "true when the agent answers only with what it can cite from the knowledge.",
+            "type": "boolean"
+          },
+          "schedule": {
+            "description": "When the agent answers: always, outside_office_hours or inside_office_hours.",
+            "type": "string"
+          },
+          "streaming": {
+            "description": "true when the agent's reply appears in the messenger as it is written.",
+            "type": "boolean"
+          },
+          "tone": {
+            "description": "How the agent sounds: friendly, professional or concise.",
+            "type": "string"
+          },
+          "transfer_agent_ids": {
+            "description": "Ids of the agents this one may pass a conversation to, each starting with aia_.",
+            "items": {
+              "type": "string"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "unknown_behavior": {
+            "description": "What the agent does when it cannot answer: offer_handoff, handoff or say_unknown.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "product_name",
+          "tone",
+          "guidance",
+          "description",
+          "enabled_channels",
+          "schedule",
+          "assigned_behavior",
+          "answer_key_id",
+          "answer_model",
+          "fallback_key_id",
+          "fallback_model",
+          "max_ai_replies",
+          "unknown_behavior",
+          "require_citations",
+          "languages",
+          "default_language",
+          "streaming",
+          "include_contact_context",
+          "pii_redaction",
+          "link_allowlist",
+          "handoff_team_id",
+          "raise_priority_on_handoff",
+          "handoff_mode",
+          "always_handoff_tag_ids",
+          "knowledge_scope",
+          "procedure_scope",
+          "action_scope",
+          "transfer_agent_ids",
+          "placement"
+        ],
+        "type": "object"
+      },
+      "AIAgentPreview": {
+        "additionalProperties": false,
+        "properties": {
+          "action_calls": {
+            "description": "The actions the agent called this turn, in order, each with what it was called with and what it answered. No call reached the workspace's own systems.",
+            "items": {
+              "$ref": "#/components/schemas/ObservedCall"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "active_state": {
+            "$ref": "#/components/schemas/SimState"
+          },
+          "handoff": {
+            "$ref": "#/components/schemas/SimHandoff"
+          },
+          "object": {
+            "description": "The kind of record this is, the same for every record of its kind, such as article.",
+            "type": "string"
+          },
+          "outcome": {
+            "description": "How the turn ended, such as answered, unknown, handoff, refused or error.",
+            "type": "string"
+          },
+          "procedure_trace": {
+            "description": "The procedure the agent followed this turn and the steps it took, as a JSON object. Left out when it followed none."
+          },
+          "reply": {
+            "description": "What the agent wrote to the customer this turn. Empty when it wrote nothing.",
+            "type": "string"
+          },
+          "run_id": {
+            "description": "Id of the run that answered this turn.",
+            "type": "string"
+          },
+          "transfer": {
+            "$ref": "#/components/schemas/SimTransfer"
+          }
+        },
+        "required": [
+          "object",
+          "run_id",
+          "reply",
+          "outcome",
+          "handoff",
+          "active_state",
+          "action_calls",
+          "transfer"
+        ],
+        "type": "object"
+      },
+      "AIAgentSimulation": {
+        "additionalProperties": false,
+        "properties": {
+          "action_mocks": {
+            "description": "What each mocked action answers, as a JSON object keyed by action, each with an HTTP status and a body."
+          },
+          "agent_id": {
+            "description": "Id of the agent the simulation belongs to (starts with aia_).",
+            "type": "string"
+          },
+          "assertions": {
+            "description": "What must hold after the simulated conversation, as a JSON array of checks, such as an action call, a handover, reply text or a check written in words."
+          },
+          "created_at": {
+            "description": "When it was created, as an RFC 3339 time, such as 2026-01-31T09:00:00Z.",
+            "format": "date-time",
+            "type": "string"
+          },
+          "draft_history": {
+            "$ref": "#/components/schemas/AIAgentSimulationHistory"
+          },
+          "draft_result": {
+            "description": "How its last run on the draft went, as a JSON object with passed, ran_at, turns, assertion_results and, on a broken run, error. Null when it never ran there."
+          },
+          "id": {
+            "description": "The id of this record. Send it wherever an endpoint asks for this record; never use its name or title in its place.",
+            "type": "string"
+          },
+          "live_history": {
+            "$ref": "#/components/schemas/AIAgentSimulationHistory"
+          },
+          "live_result": {
+            "description": "How its last run on the live version went, as a JSON object with passed, ran_at, turns, assertion_results and, on a broken run, error. Null when it never ran there."
+          },
+          "messages": {
+            "description": "The customer's messages, in order, as a JSON array; each has text and an optional confirm."
+          },
+          "name": {
+            "description": "Name of the simulation, up to 120 characters.",
+            "type": "string"
+          },
+          "object": {
+            "description": "The kind of record this is, the same for every record of its kind, such as article.",
+            "type": "string"
+          },
+          "persona": {
+            "description": "The made-up customer, as a JSON object with fields such as name, email, verified, channel, attributes and company."
+          },
+          "scenario": {
+            "description": "Who the customer is and what they came for. The simulated customer answers from it.",
+            "type": "string"
+          },
+          "simulated_at": {
+            "description": "The moment the simulation pretends it is, so date rules such as a refund window give the same result every run. Null to run at the real time.",
+            "format": "date-time",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "source_conversation_id": {
+            "description": "Id of the real conversation the simulation was made from (starts with conv_). Null when it was written by hand.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "updated_at": {
+            "description": "When it last changed, as an RFC 3339 time, such as 2026-01-31T09:00:00Z.",
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "object",
+          "agent_id",
+          "name",
+          "source_conversation_id",
+          "persona",
+          "messages",
+          "action_mocks",
+          "assertions",
+          "scenario",
+          "draft_result",
+          "live_result",
+          "draft_history",
+          "live_history",
+          "simulated_at",
+          "created_at",
           "updated_at"
+        ],
+        "type": "object"
+      },
+      "AIAgentSimulationHistory": {
+        "additionalProperties": false,
+        "properties": {
+          "passed": {
+            "description": "How many of the counted runs passed.",
+            "format": "int64",
+            "type": "integer"
+          },
+          "runs": {
+            "description": "The counted runs, newest first.",
+            "items": {
+              "$ref": "#/components/schemas/AIAgentSimulationHistoryRun"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "state": {
+            "description": "passing when every counted run passed, failing when none did, flaky in between.",
+            "enum": [
+              "passing",
+              "flaky",
+              "failing"
+            ],
+            "type": "string"
+          },
+          "total": {
+            "description": "How many runs are counted.",
+            "format": "int64",
+            "type": "integer"
+          },
+          "window": {
+            "description": "The most runs a history counts: only the latest this many.",
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "state",
+          "passed",
+          "total",
+          "window",
+          "runs"
+        ],
+        "type": "object"
+      },
+      "AIAgentSimulationHistoryRun": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "description": "The id of this record. Send it wherever an endpoint asks for this record; never use its name or title in its place.",
+            "type": "string"
+          },
+          "passed": {
+            "description": "true when every check of the run held.",
+            "type": "boolean"
+          },
+          "ran_at": {
+            "description": "When the run happened.",
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "passed",
+          "ran_at"
+        ],
+        "type": "object"
+      },
+      "AIAgentSimulationRun": {
+        "additionalProperties": false,
+        "properties": {
+          "counted": {
+            "description": "true when the run counts toward the simulation's history: it ran on the agent, the procedures and the simulation as they stand now.",
+            "type": "boolean"
+          },
+          "errored": {
+            "description": "true when the run broke before its checks could be judged, which is not a pass.",
+            "type": "boolean"
+          },
+          "id": {
+            "description": "The id of this record. Send it wherever an endpoint asks for this record; never use its name or title in its place.",
+            "type": "string"
+          },
+          "object": {
+            "description": "The kind of record this is, the same for every record of its kind, such as article.",
+            "type": "string"
+          },
+          "passed": {
+            "description": "true when every check of the run held.",
+            "type": "boolean"
+          },
+          "ran_at": {
+            "description": "When the run happened.",
+            "format": "date-time",
+            "type": "string"
+          },
+          "result": {
+            "description": "How the run went, as a JSON object with the turns, the result of each check and, on a broken run, the error."
+          },
+          "simulation_id": {
+            "description": "Id of the simulation that ran (starts with aias_).",
+            "type": "string"
+          },
+          "version": {
+            "description": "The copy of the agent the run was on: draft or live.",
+            "enum": [
+              "draft",
+              "live"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "object",
+          "simulation_id",
+          "version",
+          "passed",
+          "errored",
+          "counted",
+          "result",
+          "ran_at"
+        ],
+        "type": "object"
+      },
+      "AIAgentTemplate": {
+        "additionalProperties": false,
+        "properties": {
+          "agent_name": {
+            "description": "The name the template suggests for the new agent, such as Billing.",
+            "type": "string"
+          },
+          "description": {
+            "description": "What an agent made from the template does, in a sentence, for the picker.",
+            "type": "string"
+          },
+          "group": {
+            "description": "The group the picker lists the template under: support, growth, internal or blank.",
+            "type": "string"
+          },
+          "key": {
+            "description": "The template's key, sent as template when creating an agent. Empty for starting from nothing.",
+            "type": "string"
+          },
+          "name": {
+            "description": "The template's name in the picker, such as Billing and retention.",
+            "type": "string"
+          },
+          "object": {
+            "description": "The kind of record this is, the same for every record of its kind, such as article.",
+            "type": "string"
+          },
+          "role": {
+            "description": "The kind of work an agent made from the template does, such as support or billing.",
+            "type": "string"
+          },
+          "widget": {
+            "description": "true when an agent of this kind usually answers on a page of its own, such as a docs site, and not in the support messenger.",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "key",
+          "object",
+          "group",
+          "name",
+          "description",
+          "agent_name",
+          "role",
+          "widget"
+        ],
+        "type": "object"
+      },
+      "AIAgentVersion": {
+        "additionalProperties": false,
+        "properties": {
+          "agent_id": {
+            "description": "Id of the agent this is a version of (starts with aia_).",
+            "type": "string"
+          },
+          "change_note": {
+            "description": "The publisher's note on what changed in this version. Null when none was given.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "definition": {
+            "$ref": "#/components/schemas/AIAgentDefinition"
+          },
+          "id": {
+            "description": "The id of this record. Send it wherever an endpoint asks for this record; never use its name or title in its place.",
+            "type": "string"
+          },
+          "object": {
+            "description": "The kind of record this is, the same for every record of its kind, such as article.",
+            "type": "string"
+          },
+          "published_at": {
+            "description": "When this version was published.",
+            "format": "date-time",
+            "type": "string"
+          },
+          "published_by_member_id": {
+            "description": "Id of the teammate who published this version. Null when they are no longer known.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "version": {
+            "description": "The version's number, counted from 1 for each agent.",
+            "format": "int32",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "object",
+          "agent_id",
+          "version",
+          "definition",
+          "change_note",
+          "published_by_member_id",
+          "published_at"
         ],
         "type": "object"
       },
@@ -1349,10 +2013,14 @@
           "ready": {
             "description": "True when the agent could go live: it has a usable answer model and at least one channel.",
             "type": "boolean"
+          },
+          "settings": {
+            "$ref": "#/components/schemas/AISettings"
           }
         },
         "required": [
           "agent",
+          "settings",
           "keys",
           "providers",
           "catalog",
@@ -1421,23 +2089,282 @@
         },
         "type": "object"
       },
-      "AIPlaygroundRequestBody": {
+      "AIImportAgentSimulationBody": {
         "additionalProperties": false,
         "properties": {
-          "conversation": {
-            "description": "Optional conversation (conv_...) whose history the question reads, to test a follow-up. The conversation is not changed.",
+          "conversation_id": {
+            "description": "The conversation to save (conv_...). Find it with GET /conversations. The conversation is not changed.",
             "maxLength": 64,
-            "type": "string"
-          },
-          "message": {
-            "description": "The test question, as a customer would write it, up to 4000 characters.",
-            "maxLength": 4000,
             "type": "string"
           }
         },
         "required": [
-          "message"
+          "conversation_id"
         ],
+        "type": "object"
+      },
+      "AIKnowledgeScope": {
+        "additionalProperties": false,
+        "properties": {
+          "help_center_ids": {
+            "description": "With mode selected: ids of the help centers the agent may search, each starting with hc_.",
+            "items": {
+              "type": "string"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "mode": {
+            "description": "all when the agent may search every help center and knowledge source; selected when only the ones listed.",
+            "type": "string"
+          },
+          "source_ids": {
+            "description": "With mode selected: ids of the knowledge sources the agent may search, each starting with ks_.",
+            "items": {
+              "type": "string"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "mode",
+          "help_center_ids",
+          "source_ids"
+        ],
+        "type": "object"
+      },
+      "AIKnowledgeScopeBody": {
+        "additionalProperties": false,
+        "properties": {
+          "help_center_ids": {
+            "description": "With mode \"selected\": the help centers the agent may search, at most 50, each starting with hc_, such as [\"hc_01jx2m8k4t\"]. Find them with GET /help-centers.",
+            "items": {
+              "maxLength": 64,
+              "type": "string"
+            },
+            "maxItems": 50,
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "mode": {
+            "description": "\"all\" lets the agent search every help center and knowledge source; \"selected\" only the ones named beside it.",
+            "enum": [
+              "all",
+              "selected"
+            ],
+            "type": "string"
+          },
+          "source_ids": {
+            "description": "With mode \"selected\": the knowledge sources the agent may search, at most 200, each starting with ks_, such as [\"ks_01jx2m8k4t\"]. Find them with GET /knowledge/sources.",
+            "items": {
+              "maxLength": 64,
+              "type": "string"
+            },
+            "maxItems": 200,
+            "type": [
+              "array",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "mode"
+        ],
+        "type": "object"
+      },
+      "AIPlacement": {
+        "additionalProperties": false,
+        "properties": {
+          "channel_connection_ids": {
+            "description": "Ids of the channel connections whose new conversations the agent takes, each starting with chn_.",
+            "items": {
+              "type": "string"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "channel_room_ids": {
+            "description": "Ids of the Slack channels whose new conversations the agent takes, each starting with chr_.",
+            "items": {
+              "type": "string"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "inbox_ids": {
+            "description": "Ids of the inboxes whose new conversations the agent takes, each starting with inbox_.",
+            "items": {
+              "type": "string"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "channel_connection_ids",
+          "channel_room_ids",
+          "inbox_ids"
+        ],
+        "type": "object"
+      },
+      "AIPlacementBody": {
+        "additionalProperties": false,
+        "properties": {
+          "channel_connection_ids": {
+            "description": "The channel connections (a messenger, an email address, a number) whose new conversations this agent takes, replacing the list, at most 100, each starting with chn_, such as [\"chn_01jx2m8k4t\"]. Find them with GET /ai/placements.",
+            "items": {
+              "maxLength": 64,
+              "type": "string"
+            },
+            "maxItems": 100,
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "channel_room_ids": {
+            "description": "The Slack channels whose new conversations this agent takes, replacing the list, at most 200, each starting with chr_, such as [\"chr_01jx2m8k4t\"]. Find them with GET /ai/placements.",
+            "items": {
+              "maxLength": 64,
+              "type": "string"
+            },
+            "maxItems": 200,
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "inbox_ids": {
+            "description": "The inboxes whose new conversations this agent takes, replacing the list, at most 100, each starting with inbox_, such as [\"inbox_01jx2m8k4t\"]. Find them with GET /ai/placements.",
+            "items": {
+              "maxLength": 64,
+              "type": "string"
+            },
+            "maxItems": 100,
+            "type": [
+              "array",
+              "null"
+            ]
+          }
+        },
+        "type": "object"
+      },
+      "AIPlacementTarget": {
+        "additionalProperties": false,
+        "properties": {
+          "agent_id": {
+            "description": "Id of the agent placed there now (starts with aia_). Null where the default agent answers.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "channel": {
+            "description": "The connection's type, such as widget or email, the room's kind, or inbox.",
+            "type": "string"
+          },
+          "id": {
+            "description": "The id of this record. Send it wherever an endpoint asks for this record; never use its name or title in its place.",
+            "type": "string"
+          },
+          "kind": {
+            "description": "What the place is: connection, room or inbox.",
+            "type": "string"
+          },
+          "name": {
+            "description": "The place's name as the team sees it.",
+            "type": "string"
+          },
+          "object": {
+            "description": "The kind of record this is, the same for every record of its kind, such as article.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "object",
+          "kind",
+          "name",
+          "channel",
+          "agent_id"
+        ],
+        "type": "object"
+      },
+      "AIPreviewAgentBody": {
+        "additionalProperties": false,
+        "properties": {
+          "action_mocks": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/ActionMockInput"
+            },
+            "description": "What each action answers instead of really being called, as an object keyed by action id; each value has status (HTTP status, 100 to 599) and body (any JSON), such as {\"aac_abc123\": {\"status\": 200, \"body\": {\"order\": {\"status\": \"shipped\"}}}}. An action with no mock answers with the result of its last live test.",
+            "type": "object"
+          },
+          "active_state": {
+            "$ref": "#/components/schemas/SimStateInput"
+          },
+          "confirmed_action_ids": {
+            "description": "Ids of the waiting writes you confirm or approve this turn, taken from action_id in the pending list of the state the last preview turn handed back (send that state as active_state). At most 10, such as [\"aac_01jx2m8k4t\"]. You may send these without a message.",
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 10,
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "history": {
+            "description": "The turns so far, oldest first, at most 40, as returned by earlier calls.",
+            "items": {
+              "$ref": "#/components/schemas/SimMessageInput"
+            },
+            "maxItems": 40,
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "message": {
+            "description": "What the customer writes, up to 4000 characters.",
+            "maxLength": 4000,
+            "type": "string"
+          },
+          "persona": {
+            "$ref": "#/components/schemas/SimPersonaInput"
+          },
+          "source_conversation_id": {
+            "description": "A real conversation (conv_...) whose messages the preview replays as the turns so far. The conversation is not changed.",
+            "type": "string"
+          },
+          "stream_id": {
+            "description": "An id you make up, at most 64 characters, so the turn reports its progress live on your own realtime channel while it happens. Only useful to a client listening on that channel; leave it out otherwise. Such as \"sim-7f3a2c\".",
+            "maxLength": 64,
+            "type": "string"
+          },
+          "version": {
+            "description": "draft tests the working copy, live the published one. Left out, it is draft.",
+            "enum": [
+              "draft",
+              "live",
+              ""
+            ],
+            "type": "string"
+          }
+        },
         "type": "object"
       },
       "AIProviderKey": {
@@ -1583,6 +2510,244 @@
         },
         "type": "object"
       },
+      "AIPublishAgentBody": {
+        "additionalProperties": false,
+        "properties": {
+          "change_note": {
+            "description": "What changed and why, for the version history, up to 500 characters.",
+            "maxLength": 500,
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "AIRestoreAgentVersionBody": {
+        "additionalProperties": false,
+        "properties": {
+          "publish": {
+            "description": "true to publish it at once, false to leave it a draft.",
+            "type": "boolean"
+          }
+        },
+        "type": "object"
+      },
+      "AIRunAgentSimulationsBody": {
+        "additionalProperties": false,
+        "properties": {
+          "simulation_ids": {
+            "description": "The simulations to run (aias_...), at most 20; leave out to run every one.",
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 20,
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "stream_id": {
+            "description": "An id you make up, at most 64 characters, so the run reports each simulation as it finishes live on your own realtime channel while it happens. Only useful to a client listening on that channel; leave it out otherwise. Such as \"sim-7f3a2c\".",
+            "maxLength": 64,
+            "type": "string"
+          },
+          "version": {
+            "description": "draft runs the working copy, live the published one. Left out, it is draft.",
+            "enum": [
+              "draft",
+              "live",
+              ""
+            ],
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "AIScope": {
+        "additionalProperties": false,
+        "properties": {
+          "ids": {
+            "description": "With mode selected: ids of the procedures or actions the agent may use.",
+            "items": {
+              "type": "string"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "mode": {
+            "description": "all when the agent may use every one; selected when only the ones in ids.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "mode",
+          "ids"
+        ],
+        "type": "object"
+      },
+      "AIScopeBody": {
+        "additionalProperties": false,
+        "properties": {
+          "ids": {
+            "description": "With mode \"selected\": the actions the agent may call, at most 200, each starting with aac_, such as [\"aac_01jx2m8k4t\"]. Find them with GET /ai/actions.",
+            "items": {
+              "maxLength": 64,
+              "type": "string"
+            },
+            "maxItems": 200,
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "mode": {
+            "description": "\"all\" lets the agent call every live action; \"selected\" only the ones in ids.",
+            "enum": [
+              "all",
+              "selected"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "mode"
+        ],
+        "type": "object"
+      },
+      "AISettings": {
+        "additionalProperties": false,
+        "properties": {
+          "answer_key_id": {
+            "description": "Id of the provider key every agent answers with until it picks its own (starts with aik_). Null when none is set.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "answer_model": {
+            "description": "The model every agent answers with until it picks its own. Null when none is set.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "classifier_key_id": {
+            "description": "Id of the provider key that sorts each customer message before an agent answers (starts with aik_). Null when none is set.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "classifier_model": {
+            "description": "The model that sorts each customer message. Null when none is set.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "fallback_key_id": {
+            "description": "Id of the provider key used when an agent's answer key fails (starts with aik_). Null when there is none.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "fallback_model": {
+            "description": "The model used when an agent's answer model fails. Null when there is none.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "monthly_spend_cap_micros": {
+            "description": "Most the workspace's AI may spend a month, in millionths of a US dollar. Null when there is no cap.",
+            "format": "int64",
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "object": {
+            "description": "The kind of record this is, the same for every record of its kind, such as article.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "object",
+          "answer_key_id",
+          "answer_model",
+          "classifier_key_id",
+          "classifier_model",
+          "fallback_key_id",
+          "fallback_model",
+          "monthly_spend_cap_micros"
+        ],
+        "type": "object"
+      },
+      "AISettingsBody": {
+        "additionalProperties": false,
+        "properties": {
+          "answer_key_id": {
+            "description": "Provider key every agent answers with until it picks its own, starting with aik_, such as aik_01jx2m8k4t. Find it with GET /ai/keys. Send null to clear it.",
+            "maxLength": 64,
+            "type": "string"
+          },
+          "answer_model": {
+            "description": "Model every agent answers with until it picks its own, one of the models the answer key lists, at most 120 characters, such as \"claude-haiku-5-5\". Send null to clear it.",
+            "maxLength": 120,
+            "type": "string"
+          },
+          "classifier_key_id": {
+            "description": "Provider key that sorts each customer message before an agent answers, starting with aik_, such as aik_01jx2m8k4t. Find it with GET /ai/keys. Send null to clear it.",
+            "maxLength": 64,
+            "type": "string"
+          },
+          "classifier_model": {
+            "description": "Model that sorts each customer message, one of the models the classifier key lists, at most 120 characters, such as \"claude-haiku-5-5\". Send null to clear it.",
+            "maxLength": 120,
+            "type": "string"
+          },
+          "fallback_key_id": {
+            "description": "Provider key used when an agent's answer key fails, starting with aik_, such as aik_01jx2m8k4t. Find it with GET /ai/keys. Send null to clear it.",
+            "maxLength": 64,
+            "type": "string"
+          },
+          "fallback_model": {
+            "description": "Model used when an agent's answer model fails, one of the models the fallback key lists, at most 120 characters, such as \"claude-haiku-5-5\". Send null to clear it.",
+            "maxLength": 120,
+            "type": "string"
+          },
+          "monthly_cap_usd": {
+            "description": "Most the workspace's agents may spend a month, in US dollars, 0 to 100000, such as 250. 0 or null means no cap. Raising it lifts a pause the old cap caused.",
+            "format": "double",
+            "maximum": 100000,
+            "minimum": 0,
+            "type": "number"
+          }
+        },
+        "type": "object"
+      },
+      "AIStoreAgentBody": {
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "description": "What the team calls the agent, 1 to 60 characters, such as Billing.",
+            "maxLength": 60,
+            "minLength": 1,
+            "type": "string"
+          },
+          "template": {
+            "description": "A template's key from GET /ai/agent-templates, such as support; leave out to start empty.",
+            "maxLength": 40,
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
       "AIStoreKeyRequestBody": {
         "additionalProperties": false,
         "properties": {
@@ -1712,8 +2877,11 @@
       "AIUpdateAgentBody": {
         "additionalProperties": false,
         "properties": {
+          "action_scope": {
+            "$ref": "#/components/schemas/AIScopeBody"
+          },
           "always_handoff_tag_ids": {
-            "description": "Tags (tag_...) that always send a conversation to a person, replacing the list.",
+            "description": "Tags that always send a conversation to a person, replacing the list, at most 50, each starting with tag_, such as [\"tag_01jx2m8k4t\"]. Find them with GET /tags.",
             "items": {
               "maxLength": 64,
               "type": "string"
@@ -1722,30 +2890,31 @@
             "type": "array"
           },
           "answer_key_id": {
-            "description": "Provider key (aik_...) the agent answers with. Find it with GET /ai/keys.",
+            "description": "Provider key the agent answers with, starting with aik_, such as aik_01jx2m8k4t. Find it with GET /ai/keys. Send null to use the key every agent shares, set with PATCH /ai/settings.",
             "maxLength": 64,
             "type": "string"
           },
           "answer_model": {
-            "description": "Model id on that key, from the models the key lists.",
+            "description": "Model the agent answers with, one of the models its answer key lists, at most 120 characters, such as \"claude-haiku-5-5\". Send null to use the shared model.",
             "maxLength": 120,
             "type": "string"
           },
           "assigned_behavior": {
-            "description": "In a conversation a teammate holds: skip_when_human_active, never_when_assigned or always.",
+            "description": "What the agent does in a conversation a teammate holds: skip_when_human_active, never_when_assigned or always, such as \"skip_when_human_active\".",
             "type": "string"
           },
           "default_language": {
-            "description": "Language tag used when the customer's language is unknown.",
+            "description": "Language tag the agent answers in when the customer's language is unknown, at most 35 characters, such as \"en\".",
             "maxLength": 35,
             "type": "string"
           },
-          "enabled": {
-            "description": "true lets the agent answer customers. Switching on needs a usable answer model and a channel.",
-            "type": "boolean"
+          "description": {
+            "description": "What the agent handles, up to 400 characters. Other agents read it to know when to pass a conversation.",
+            "maxLength": 400,
+            "type": "string"
           },
           "enabled_channels": {
-            "description": "Where the agent answers, replacing the list: widget (the messenger), email and api.",
+            "description": "The kinds of channel the agent answers on, replacing the list: widget (the messenger), email and api, at most 10, such as [\"widget\", \"email\"].",
             "items": {
               "type": "string"
             },
@@ -1753,7 +2922,7 @@
             "type": "array"
           },
           "fallback_key_id": {
-            "description": "Provider key (aik_...) used when the answer key fails; null clears it.",
+            "description": "Provider key used when the answer key fails, starting with aik_, such as aik_01jx2m8k4t. Find it with GET /ai/keys. Send null to clear it.",
             "maxLength": 64,
             "type": "string"
           },
@@ -1763,25 +2932,28 @@
             "type": "string"
           },
           "guidance": {
-            "description": "Instructions for the agent in plain words, up to 2000 characters.",
-            "maxLength": 2000,
+            "description": "How the agent talks and what it does, in the team's own words, up to 20000 characters.",
+            "maxLength": 20000,
             "type": "string"
           },
           "handoff_mode": {
-            "description": "full answers from the knowledge; triage_only only sorts the conversation and hands it to a person.",
+            "description": "full lets the agent answer from the knowledge; triage_only has it only sort the conversation and hand it to a person. Such as \"full\".",
             "type": "string"
           },
           "handoff_team_id": {
-            "description": "Team (team_...) a handed-over conversation goes to; null clears it.",
+            "description": "Team a handed-over conversation goes to, starting with team_, such as team_01jx2m8k4t. Find it with GET /teams. Send null to clear it.",
             "maxLength": 64,
             "type": "string"
           },
           "include_contact_context": {
-            "description": "none or basic: how much of the customer's record the agent reads.",
+            "description": "How much of the customer's record the agent reads: none or basic, such as \"basic\".",
             "type": "string"
           },
+          "knowledge_scope": {
+            "$ref": "#/components/schemas/AIKnowledgeScopeBody"
+          },
           "languages": {
-            "description": "Language tags the agent answers in, such as en or pt-BR, replacing the list.",
+            "description": "Language tags the agent answers in, replacing the list, at most 50, such as [\"en\", \"pt-BR\"].",
             "items": {
               "type": "string"
             },
@@ -1789,29 +2961,28 @@
             "type": "array"
           },
           "link_allowlist": {
-            "description": "Hosts the agent may link to, such as example.com or *.example.com, replacing the list.",
+            "description": "Hosts the agent may link to, replacing the list, at most 100, such as [\"example.com\", \"*.example.com\"].",
             "items": {
               "type": "string"
             },
             "maxItems": 100,
             "type": "array"
           },
+          "lock_version": {
+            "description": "The lock_version the record had when you read it, such as 3. It stops you overwriting a newer save.",
+            "format": "int32",
+            "minimum": 1,
+            "type": "integer"
+          },
           "max_ai_replies": {
-            "description": "Most replies the agent sends in one conversation, 1 to 50.",
+            "description": "Most replies the agent sends in one conversation before it hands over, 1 to 50, such as 10.",
             "format": "int32",
             "maximum": 50,
             "minimum": 1,
             "type": "integer"
           },
-          "monthly_cap_usd": {
-            "description": "Most the agent may spend a month, in US dollars; 0 or null means no cap. Raising it lifts a pause the old cap caused.",
-            "format": "double",
-            "maximum": 100000,
-            "minimum": 0,
-            "type": "number"
-          },
           "name": {
-            "description": "The name of the agent, at most 60 characters.",
+            "description": "What the team calls the agent, 1 to 60 characters.",
             "maxLength": 60,
             "minLength": 1,
             "type": "string"
@@ -1819,6 +2990,12 @@
           "pii_redaction": {
             "description": "true to mask personal data in text before it is sent to the model provider (emails, phone numbers, card and bank account numbers, US social security numbers, API keys); false to send text as it is. Such as true.",
             "type": "boolean"
+          },
+          "placement": {
+            "$ref": "#/components/schemas/AIPlacementBody"
+          },
+          "procedure_scope": {
+            "$ref": "#/components/schemas/AIScopeBody"
           },
           "product_name": {
             "description": "The name of your product, which the AI agent uses for it in its answers. At most 80 characters; when empty, the workspace name is used. Such as \"Acme Billing\".",
@@ -1834,7 +3011,7 @@
             "type": "boolean"
           },
           "schedule": {
-            "description": "When it answers: always, outside_office_hours or inside_office_hours.",
+            "description": "When the agent answers: always, outside_office_hours or inside_office_hours, such as \"always\".",
             "type": "string"
           },
           "streaming": {
@@ -1842,12 +3019,21 @@
             "type": "boolean"
           },
           "tone": {
-            "description": "friendly, professional or concise.",
+            "description": "How the agent sounds: friendly, professional or concise, such as \"friendly\".",
             "maxLength": 20,
             "type": "string"
           },
+          "transfer_agent_ids": {
+            "description": "The other agents this one may pass a conversation to, replacing the list, at most 20, each starting with aia_, such as [\"aia_01jx2m8k4t\"]. Find them with GET /ai/agents. Each is offered by its description.",
+            "items": {
+              "maxLength": 64,
+              "type": "string"
+            },
+            "maxItems": 20,
+            "type": "array"
+          },
           "unknown_behavior": {
-            "description": "When it cannot answer: offer_handoff, handoff or say_unknown.",
+            "description": "What the agent does when it cannot answer: offer_handoff (asks whether the customer wants a person), handoff (hands over at once) or say_unknown (says it does not know), such as \"offer_handoff\".",
             "type": "string"
           }
         },
@@ -2094,222 +3280,6 @@
         },
         "required": [
           "emoji"
-        ],
-        "type": "object"
-      },
-      "AiPlaygroundAnswer": {
-        "additionalProperties": false,
-        "properties": {
-          "answer": {
-            "$ref": "#/components/schemas/AiPlaygroundReply"
-          },
-          "classification": {
-            "$ref": "#/components/schemas/AiPlaygroundClass"
-          },
-          "object": {
-            "description": "The kind of record this is, the same for every record of its kind, such as article.",
-            "type": "string"
-          },
-          "outcome": {
-            "description": "How the test run ended: answered, unknown or handoff.",
-            "type": "string"
-          },
-          "retrieved": {
-            "description": "The passages the agent found for the question, numbered the way the answer cites them. Empty when it found none.",
-            "items": {
-              "$ref": "#/components/schemas/AiPlaygroundSource"
-            },
-            "type": [
-              "array",
-              "null"
-            ]
-          },
-          "run_id": {
-            "description": "Id of the recorded playground run, such as air_... Null when no run was kept.",
-            "type": [
-              "string",
-              "null"
-            ]
-          },
-          "timing": {
-            "$ref": "#/components/schemas/AiPlaygroundTiming"
-          },
-          "usage": {
-            "$ref": "#/components/schemas/AiPlaygroundUsage"
-          }
-        },
-        "required": [
-          "object",
-          "run_id",
-          "outcome",
-          "classification",
-          "retrieved",
-          "answer",
-          "usage",
-          "timing"
-        ],
-        "type": "object"
-      },
-      "AiPlaygroundCitation": {
-        "additionalProperties": false,
-        "properties": {
-          "n": {
-            "description": "The citation's number, the same number as the retrieved passage it points to.",
-            "format": "int64",
-            "type": "integer"
-          },
-          "title": {
-            "description": "Title of the cited source.",
-            "type": "string"
-          },
-          "url": {
-            "description": "Link to the cited source.",
-            "type": "string"
-          }
-        },
-        "required": [
-          "n",
-          "title",
-          "url"
-        ],
-        "type": "object"
-      },
-      "AiPlaygroundClass": {
-        "additionalProperties": false,
-        "properties": {
-          "intent": {
-            "description": "What the agent took the question to be asking for.",
-            "type": "string"
-          },
-          "language": {
-            "description": "The language the agent detected in the question, as a language tag such as en.",
-            "type": "string"
-          },
-          "query": {
-            "description": "The standalone search query the agent rewrote the question into and searched with.",
-            "type": "string"
-          }
-        },
-        "required": [
-          "intent",
-          "language",
-          "query"
-        ],
-        "type": "object"
-      },
-      "AiPlaygroundReply": {
-        "additionalProperties": false,
-        "properties": {
-          "body": {
-            "description": "The reply the agent would send. Empty when it would send none.",
-            "type": "string"
-          },
-          "citations": {
-            "description": "The sources the reply cites. Empty when it cites none.",
-            "items": {
-              "$ref": "#/components/schemas/AiPlaygroundCitation"
-            },
-            "type": [
-              "array",
-              "null"
-            ]
-          }
-        },
-        "required": [
-          "body",
-          "citations"
-        ],
-        "type": "object"
-      },
-      "AiPlaygroundSource": {
-        "additionalProperties": false,
-        "properties": {
-          "n": {
-            "description": "The passage's number, the one the answer uses to cite it.",
-            "format": "int64",
-            "type": "integer"
-          },
-          "similarity": {
-            "description": "How closely the passage matched the question, as a number where higher is closer.",
-            "format": "double",
-            "type": "number"
-          },
-          "text": {
-            "description": "The passage's text.",
-            "type": "string"
-          },
-          "title": {
-            "description": "Title of the source the passage comes from.",
-            "type": "string"
-          },
-          "url": {
-            "description": "Link to the source the passage comes from.",
-            "type": "string"
-          },
-          "used": {
-            "description": "True when the answer used this passage.",
-            "type": "boolean"
-          }
-        },
-        "required": [
-          "n",
-          "title",
-          "url",
-          "similarity",
-          "used",
-          "text"
-        ],
-        "type": "object"
-      },
-      "AiPlaygroundTiming": {
-        "additionalProperties": false,
-        "properties": {
-          "first_token_ms": {
-            "description": "Milliseconds until the first piece of the answer arrived.",
-            "format": "int64",
-            "type": "integer"
-          },
-          "latency_ms": {
-            "description": "Milliseconds the whole answer took.",
-            "format": "int64",
-            "type": "integer"
-          }
-        },
-        "required": [
-          "first_token_ms",
-          "latency_ms"
-        ],
-        "type": "object"
-      },
-      "AiPlaygroundUsage": {
-        "additionalProperties": false,
-        "properties": {
-          "cached_input_tokens": {
-            "description": "How many of the input tokens were read from the provider's cache.",
-            "format": "int64",
-            "type": "integer"
-          },
-          "cost_micros": {
-            "description": "What the question cost, in millionths of a US dollar (1000000 is $1).",
-            "format": "int64",
-            "type": "integer"
-          },
-          "input_tokens": {
-            "description": "Tokens sent to the models for this question.",
-            "format": "int64",
-            "type": "integer"
-          },
-          "output_tokens": {
-            "description": "Tokens the models wrote for this question.",
-            "format": "int64",
-            "type": "integer"
-          }
-        },
-        "required": [
-          "input_tokens",
-          "cached_input_tokens",
-          "output_tokens",
-          "cost_micros"
         ],
         "type": "object"
       },
@@ -6349,6 +7319,396 @@
         "type": "object"
       },
       "CollectionAIActionVersionMetaStruct": {
+        "additionalProperties": false,
+        "properties": {
+          "next_cursor": {
+            "description": "Send it as cursor to read the next page; null on the last page.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "per_page": {
+            "description": "How many items a page holds at most, such as 25.",
+            "format": "int64",
+            "type": "integer"
+          },
+          "prev_cursor": {
+            "description": "Send it as cursor to read the page before; null on the first page.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "total": {
+            "description": "How many items match in all; left out when the list does not count them.",
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "next_cursor",
+          "prev_cursor",
+          "per_page"
+        ],
+        "type": "object"
+      },
+      "CollectionAIAgent": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "description": "The items of this page, as a list; empty when nothing matches.",
+            "items": {
+              "$ref": "#/components/schemas/AIAgent"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "links": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "Addresses of related pages by name, such as next; left out when there are none.",
+            "type": "object"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/CollectionAIAgentMetaStruct"
+          }
+        },
+        "required": [
+          "data",
+          "meta"
+        ],
+        "type": "object"
+      },
+      "CollectionAIAgentMetaStruct": {
+        "additionalProperties": false,
+        "properties": {
+          "next_cursor": {
+            "description": "Send it as cursor to read the next page; null on the last page.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "per_page": {
+            "description": "How many items a page holds at most, such as 25.",
+            "format": "int64",
+            "type": "integer"
+          },
+          "prev_cursor": {
+            "description": "Send it as cursor to read the page before; null on the first page.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "total": {
+            "description": "How many items match in all; left out when the list does not count them.",
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "next_cursor",
+          "prev_cursor",
+          "per_page"
+        ],
+        "type": "object"
+      },
+      "CollectionAIAgentSimulation": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "description": "The items of this page, as a list; empty when nothing matches.",
+            "items": {
+              "$ref": "#/components/schemas/AIAgentSimulation"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "links": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "Addresses of related pages by name, such as next; left out when there are none.",
+            "type": "object"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/CollectionAIAgentSimulationMetaStruct"
+          }
+        },
+        "required": [
+          "data",
+          "meta"
+        ],
+        "type": "object"
+      },
+      "CollectionAIAgentSimulationMetaStruct": {
+        "additionalProperties": false,
+        "properties": {
+          "next_cursor": {
+            "description": "Send it as cursor to read the next page; null on the last page.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "per_page": {
+            "description": "How many items a page holds at most, such as 25.",
+            "format": "int64",
+            "type": "integer"
+          },
+          "prev_cursor": {
+            "description": "Send it as cursor to read the page before; null on the first page.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "total": {
+            "description": "How many items match in all; left out when the list does not count them.",
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "next_cursor",
+          "prev_cursor",
+          "per_page"
+        ],
+        "type": "object"
+      },
+      "CollectionAIAgentSimulationRun": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "description": "The items of this page, as a list; empty when nothing matches.",
+            "items": {
+              "$ref": "#/components/schemas/AIAgentSimulationRun"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "links": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "Addresses of related pages by name, such as next; left out when there are none.",
+            "type": "object"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/CollectionAIAgentSimulationRunMetaStruct"
+          }
+        },
+        "required": [
+          "data",
+          "meta"
+        ],
+        "type": "object"
+      },
+      "CollectionAIAgentSimulationRunMetaStruct": {
+        "additionalProperties": false,
+        "properties": {
+          "next_cursor": {
+            "description": "Send it as cursor to read the next page; null on the last page.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "per_page": {
+            "description": "How many items a page holds at most, such as 25.",
+            "format": "int64",
+            "type": "integer"
+          },
+          "prev_cursor": {
+            "description": "Send it as cursor to read the page before; null on the first page.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "total": {
+            "description": "How many items match in all; left out when the list does not count them.",
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "next_cursor",
+          "prev_cursor",
+          "per_page"
+        ],
+        "type": "object"
+      },
+      "CollectionAIAgentTemplate": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "description": "The items of this page, as a list; empty when nothing matches.",
+            "items": {
+              "$ref": "#/components/schemas/AIAgentTemplate"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "links": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "Addresses of related pages by name, such as next; left out when there are none.",
+            "type": "object"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/CollectionAIAgentTemplateMetaStruct"
+          }
+        },
+        "required": [
+          "data",
+          "meta"
+        ],
+        "type": "object"
+      },
+      "CollectionAIAgentTemplateMetaStruct": {
+        "additionalProperties": false,
+        "properties": {
+          "next_cursor": {
+            "description": "Send it as cursor to read the next page; null on the last page.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "per_page": {
+            "description": "How many items a page holds at most, such as 25.",
+            "format": "int64",
+            "type": "integer"
+          },
+          "prev_cursor": {
+            "description": "Send it as cursor to read the page before; null on the first page.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "total": {
+            "description": "How many items match in all; left out when the list does not count them.",
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "next_cursor",
+          "prev_cursor",
+          "per_page"
+        ],
+        "type": "object"
+      },
+      "CollectionAIAgentVersion": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "description": "The items of this page, as a list; empty when nothing matches.",
+            "items": {
+              "$ref": "#/components/schemas/AIAgentVersion"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "links": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "Addresses of related pages by name, such as next; left out when there are none.",
+            "type": "object"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/CollectionAIAgentVersionMetaStruct"
+          }
+        },
+        "required": [
+          "data",
+          "meta"
+        ],
+        "type": "object"
+      },
+      "CollectionAIAgentVersionMetaStruct": {
+        "additionalProperties": false,
+        "properties": {
+          "next_cursor": {
+            "description": "Send it as cursor to read the next page; null on the last page.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "per_page": {
+            "description": "How many items a page holds at most, such as 25.",
+            "format": "int64",
+            "type": "integer"
+          },
+          "prev_cursor": {
+            "description": "Send it as cursor to read the page before; null on the first page.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "total": {
+            "description": "How many items match in all; left out when the list does not count them.",
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "next_cursor",
+          "prev_cursor",
+          "per_page"
+        ],
+        "type": "object"
+      },
+      "CollectionAIPlacementTarget": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "description": "The items of this page, as a list; empty when nothing matches.",
+            "items": {
+              "$ref": "#/components/schemas/AIPlacementTarget"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "links": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "Addresses of related pages by name, such as next; left out when there are none.",
+            "type": "object"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/CollectionAIPlacementTargetMetaStruct"
+          }
+        },
+        "required": [
+          "data",
+          "meta"
+        ],
+        "type": "object"
+      },
+      "CollectionAIPlacementTargetMetaStruct": {
         "additionalProperties": false,
         "properties": {
           "next_cursor": {
@@ -25017,6 +26377,9 @@
               "null"
             ]
           },
+          "read": {
+            "$ref": "#/components/schemas/OperatorRoutineRunRead"
+          },
           "routine_id": {
             "description": "Id of the routine this is a run of (starts with ort_).",
             "type": "string"
@@ -25050,6 +26413,11 @@
           },
           "steps": {
             "description": "The tool calls it has finished so far, in order, as a JSON array that grows while it runs; each has tool, summary and ok."
+          },
+          "suggestions_waiting": {
+            "description": "How many of the run's suggestions nobody has applied or declined yet.",
+            "format": "int32",
+            "type": "integer"
           },
           "thread_id": {
             "description": "Id of the shared Operator thread it wrote on (starts with opt_); read it for the full run. Null when there is none.",
@@ -25086,6 +26454,8 @@
           "error_code",
           "error_message",
           "changesets_count",
+          "suggestions_waiting",
+          "read",
           "cost_micros",
           "notified",
           "delivery_results",
@@ -25093,6 +26463,32 @@
           "started_at",
           "completed_at",
           "created_at"
+        ],
+        "type": "object"
+      },
+      "OperatorRoutineRunRead": {
+        "additionalProperties": false,
+        "properties": {
+          "articles": {
+            "description": "How many help articles the run opened, each counted once.",
+            "format": "int64",
+            "type": "integer"
+          },
+          "conversations": {
+            "description": "How many conversations the run opened, each counted once.",
+            "format": "int64",
+            "type": "integer"
+          },
+          "procedures": {
+            "description": "How many procedures the run opened, each counted once.",
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "articles",
+          "conversations",
+          "procedures"
         ],
         "type": "object"
       },
@@ -25813,22 +27209,26 @@
       "OperatorViewing": {
         "additionalProperties": false,
         "properties": {
-          "article_id": {
-            "description": "The id of the help article the person has open, such as art_01jx2m8k4t. Leave out when none is.",
+          "id": {
+            "description": "The id of what that page shows, such as art_01jx2m8k4t for an article or prc_01jx2m8k4t for a procedure.",
             "maxLength": 64,
             "type": "string"
           },
-          "changeset_id": {
-            "description": "The id of the suggestion shown on that article or procedure, such as opc_01jx2m8k4t. A change the person asks for is added to it while it still waits for review. Leave out when none is shown.",
+          "page": {
+            "description": "The kind of page the person has open: article, procedure, conversation, help_center, feature_request or changelog_entry. A kind Operator does not know is ignored.",
             "maxLength": 64,
             "type": "string"
           },
-          "procedure_id": {
-            "description": "The id of the procedure the person has open, such as prc_01jx2m8k4t. Leave out when none is.",
+          "suggestion_id": {
+            "description": "The id of the suggestion shown on that page, such as opc_01jx2m8k4t. A change the person asks for is added to it while it still waits for review. Leave out when none is shown.",
             "maxLength": 64,
             "type": "string"
           }
         },
+        "required": [
+          "page",
+          "id"
+        ],
         "type": "object"
       },
       "Option": {
@@ -26839,6 +28239,10 @@
             "description": "Id of the procedure the test belongs to (starts with prc_).",
             "type": "string"
           },
+          "scenario": {
+            "description": "Who the customer is and what they came for. The simulated customer answers from it.",
+            "type": "string"
+          },
           "simulated_at": {
             "description": "The moment the test pretends it is, so date rules such as a refund window give the same result every run. Null to run at the real time.",
             "format": "date-time",
@@ -26870,6 +28274,7 @@
           "messages",
           "action_mocks",
           "assertions",
+          "scenario",
           "last_result",
           "simulated_at",
           "created_at",
@@ -28350,6 +29755,42 @@
         ],
         "type": "object"
       },
+      "ResourceAIAgentPreview": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/AIAgentPreview"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "ResourceAIAgentSimulation": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/AIAgentSimulation"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "ResourceAIAgentVersion": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/AIAgentVersion"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
       "ResourceAIAgentView": {
         "additionalProperties": false,
         "properties": {
@@ -28386,11 +29827,11 @@
         ],
         "type": "object"
       },
-      "ResourceAccessPolicy": {
+      "ResourceAISettings": {
         "additionalProperties": false,
         "properties": {
           "data": {
-            "$ref": "#/components/schemas/AccessPolicy"
+            "$ref": "#/components/schemas/AISettings"
           }
         },
         "required": [
@@ -28398,11 +29839,11 @@
         ],
         "type": "object"
       },
-      "ResourceAiPlaygroundAnswer": {
+      "ResourceAccessPolicy": {
         "additionalProperties": false,
         "properties": {
           "data": {
-            "$ref": "#/components/schemas/AiPlaygroundAnswer"
+            "$ref": "#/components/schemas/AccessPolicy"
           }
         },
         "required": [
@@ -33645,11 +35086,11 @@
             "additionalProperties": {
               "type": "string"
             },
-            "description": "Copy it unchanged from the state the last simulated turn handed back: an object of step id to the side that step took.",
+            "description": "Copy it unchanged from the state the last preview turn handed back: an object of step id to the side that step took.",
             "type": "object"
           },
           "called_action_ids": {
-            "description": "Copy it unchanged from the state the last simulated turn handed back: the list of ids of the actions already called, such as [\"aac_01jx2m8k4t\"].",
+            "description": "Copy it unchanged from the state the last preview turn handed back: the list of ids of the actions already called, such as [\"aac_01jx2m8k4t\"].",
             "items": {
               "type": "string"
             },
@@ -33659,7 +35100,7 @@
             ]
           },
           "completed_step_ids": {
-            "description": "Copy it unchanged from the state the last simulated turn handed back: the list of ids of the procedure's steps already done.",
+            "description": "Copy it unchanged from the state the last preview turn handed back: the list of ids of the procedure's steps already done.",
             "items": {
               "type": "string"
             },
@@ -33669,7 +35110,7 @@
             ]
           },
           "pending": {
-            "description": "Copy it unchanged from the state the last simulated turn handed back: the list of writes still waiting to be confirmed or approved, each with action_id, tool, args, state and summary.",
+            "description": "Copy it unchanged from the state the last preview turn handed back: the list of writes still waiting to be confirmed or approved, each with action_id, tool, args, state and summary.",
             "items": {
               "$ref": "#/components/schemas/SimPendingInput"
             },
@@ -33679,19 +35120,47 @@
             ]
           },
           "procedure_id": {
-            "description": "Id of the procedure the conversation is in, starting with prc_, such as prc_01jx2m8k4t, copied from the state the last simulated turn handed back.",
+            "description": "Id of the procedure the conversation is in, starting with prc_, such as prc_01jx2m8k4t, copied from the state the last preview turn handed back.",
             "type": "string"
           },
           "status": {
-            "description": "Where the procedure stands, copied from the state the last simulated turn handed back: active, completed, handed_off or exited. Only active carries the procedure on.",
+            "description": "Where the procedure stands, copied from the state the last preview turn handed back: active, completed, handed_off or exited. Only active carries the procedure on.",
             "type": "string"
           },
           "step_outputs": {
             "additionalProperties": {},
-            "description": "Copy it unchanged from the state the last simulated turn handed back: an object of what the procedure's steps have produced so far.",
+            "description": "Copy it unchanged from the state the last preview turn handed back: an object of what the procedure's steps have produced so far.",
             "type": "object"
           }
         },
+        "type": "object"
+      },
+      "SimTransfer": {
+        "additionalProperties": false,
+        "properties": {
+          "agent_id": {
+            "description": "Id of the agent the conversation was passed to (starts with aia_).",
+            "type": "string"
+          },
+          "from_name": {
+            "description": "Name of the agent that passed the conversation on.",
+            "type": "string"
+          },
+          "name": {
+            "description": "Name of the agent the conversation was passed to.",
+            "type": "string"
+          },
+          "summary": {
+            "description": "What the first agent told the next one about the conversation so far.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "agent_id",
+          "name",
+          "from_name",
+          "summary"
+        ],
         "type": "object"
       },
       "SimulateProcedureRequestBody": {
@@ -37289,20 +38758,25 @@
             ]
           },
           "name": {
-            "description": "The name of the test case, at most 120 characters.",
+            "description": "What the team calls the simulation, up to 120 characters, such as Refund past the window.",
             "maxLength": 120,
             "type": "string"
           },
           "persona": {
             "$ref": "#/components/schemas/SimPersonaInput"
           },
+          "scenario": {
+            "description": "Who the customer is and what they came for, up to 1000 characters; the simulated customer answers from it.",
+            "maxLength": 1000,
+            "type": "string"
+          },
           "simulated_at": {
-            "description": "The date and time the test pretends it is when it runs, as an ISO 8601 time, such as \"2026-12-24T18:00:00Z\". Left out, the test runs at the real current time.",
+            "description": "The date and time the simulation pretends it is when it runs, as an ISO 8601 time, such as \"2026-12-24T18:00:00Z\". Left out, it runs at the real current time.",
             "format": "date-time",
             "type": "string"
           },
           "source_conversation_id": {
-            "description": "Id of the conversation, such as conv_01jx2m8k4t, or its number, such as 1042 for #1042. Find it with GET /conversations or GET /search.",
+            "description": "The real conversation (conv_...) the simulation was made from, when it was. Leave out otherwise.",
             "type": "string"
           }
         },
@@ -44495,6 +45969,13 @@
             "description": "The id of this record. Send it wherever an endpoint asks for this record; never use its name or title in its place.",
             "type": "string"
           },
+          "logo_url": {
+            "description": "Address of the workspace's logo on this server. Null when it has none.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
           "name": {
             "description": "The workspace's name.",
             "type": "string"
@@ -44528,6 +46009,7 @@
           "name",
           "slug",
           "role",
+          "logo_url",
           "previous_slugs"
         ],
         "type": "object"
@@ -45399,10 +46881,159 @@
         ]
       }
     },
-    "/ai/agent": {
+    "/ai/agent-templates": {
       "get": {
-        "description": "Reads the workspace's AI agent, the one that answers customers: whether it is on, its tone, guidance, channels, schedule, models, spending cap and handoff rules. Read it before changing the agent, to see what is set today. Returns the agent's settings with the provider keys and models it answers with.",
-        "operationId": "ai.agent.show",
+        "description": "Lists what a new agent can start from, such as support or sales, with its starting guidance. Returns the templates with their key, name and the guidance a new agent starts with.",
+        "operationId": "ai.agent-templates.index",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CollectionAIAgentTemplate"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseError"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "List AI agent templates",
+        "x-abilities": [
+          "ai:read"
+        ]
+      }
+    },
+    "/ai/agents": {
+      "get": {
+        "description": "Lists the workspace's AI agents: what each handles, whether it is live, and which is default. Returns the agents with their name, description, status and whether a draft waits to be published.",
+        "operationId": "ai.agents.index",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CollectionAIAgent"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseError"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "List AI agents",
+        "x-abilities": [
+          "ai:read"
+        ]
+      },
+      "post": {
+        "description": "Creates an agent, from a template or empty. It starts switched off, as a draft: customers meet it only once it is published and placed somewhere. Returns the new agent with its draft.",
+        "operationId": "ai.agents.store",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AIStoreAgentBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResourceAIAgentView"
+                }
+              }
+            },
+            "description": "Created"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseError"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Create an AI agent",
+        "x-abilities": [
+          "ai:write"
+        ]
+      }
+    },
+    "/ai/agents/{agent}": {
+      "delete": {
+        "description": "Deletes an agent that is not the default, with its versions and simulations. Conversations it would have taken go to the default agent. Returns nothing.",
+        "operationId": "ai.agents.destroy",
+        "parameters": [
+          {
+            "description": "Id of the AI agent, starting with aia_, such as aia_01jx2m8k4t. Find it with GET /ai/agents.",
+            "in": "path",
+            "name": "agent",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseError"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Delete an AI agent",
+        "x-abilities": [
+          "ai:write"
+        ]
+      },
+      "get": {
+        "description": "Reads one agent: its guidance, tone, channels, models, handover rules, where it is placed, and the draft a teammate is working on beside the version that is live. Returns the agent with its live definition and its draft, when it has one.",
+        "operationId": "ai.agents.show",
+        "parameters": [
+          {
+            "description": "Id of the AI agent, starting with aia_, such as aia_01jx2m8k4t. Find it with GET /ai/agents.",
+            "in": "path",
+            "name": "agent",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "content": {
@@ -45425,14 +47056,25 @@
             "description": "Error"
           }
         },
-        "summary": "Get the AI agent",
+        "summary": "Get an AI agent",
         "x-abilities": [
           "ai:read"
         ]
       },
       "patch": {
-        "description": "Changes how the AI agent answers customers: switching it on or off, its tone, guidance, channels, schedule, models, spending cap and handoff. Customers get the change on their next message. Only the fields sent change; null clears a field that may be empty. Returns the agent's settings as they now are.",
-        "operationId": "ai.agent.update",
+        "description": "Changes the agent's draft: guidance, tone, models, knowledge, handover, transfers or placement. Customers see no change until the draft is published. Returns the agent with the draft as saved.",
+        "operationId": "ai.agents.update",
+        "parameters": [
+          {
+            "description": "Id of the AI agent, starting with aia_, such as aia_01jx2m8k4t. Find it with GET /ai/agents.",
+            "in": "path",
+            "name": "agent",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
         "requestBody": {
           "content": {
             "application/json": {
@@ -45465,7 +47107,755 @@
             "description": "Error"
           }
         },
-        "summary": "Change the AI agent",
+        "summary": "Edit an AI agent's draft",
+        "x-abilities": [
+          "ai:write"
+        ]
+      }
+    },
+    "/ai/agents/{agent}/preview": {
+      "post": {
+        "description": "Sends one customer message to the agent's draft or live version and returns its reply. Nothing reaches a customer, and actions answer with their saved test result, never your systems. Every turn runs real models and spends the workspace's AI budget. Returns the agent's reply, what it did on the way, and whether it handed over.",
+        "operationId": "ai.agents.preview.store",
+        "parameters": [
+          {
+            "description": "Id of the AI agent, starting with aia_, such as aia_01jx2m8k4t. Find it with GET /ai/agents.",
+            "in": "path",
+            "name": "agent",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AIPreviewAgentBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResourceAIAgentPreview"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseError"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Preview an AI agent turn",
+        "x-abilities": [
+          "ai:write"
+        ]
+      }
+    },
+    "/ai/agents/{agent}/publications": {
+      "delete": {
+        "description": "Stops the agent taking conversations. Its draft, versions and simulations are kept, and it can be published again. Returns the agent, now off.",
+        "operationId": "ai.agents.publications.destroy",
+        "parameters": [
+          {
+            "description": "Id of the AI agent, starting with aia_, such as aia_01jx2m8k4t. Find it with GET /ai/agents.",
+            "in": "path",
+            "name": "agent",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResourceAIAgentView"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseError"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Switch an AI agent off",
+        "x-abilities": [
+          "ai:write"
+        ]
+      },
+      "post": {
+        "description": "Makes the agent's draft live: from now on customers meet the agent as the draft describes it. Run its simulations first. Returns the agent as published, with its new version number.",
+        "operationId": "ai.agents.publications.store",
+        "parameters": [
+          {
+            "description": "Id of the AI agent, starting with aia_, such as aia_01jx2m8k4t. Find it with GET /ai/agents.",
+            "in": "path",
+            "name": "agent",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AIPublishAgentBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResourceAIAgentView"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseError"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Publish an AI agent",
+        "x-abilities": [
+          "ai:write"
+        ]
+      }
+    },
+    "/ai/agents/{agent}/simulations": {
+      "get": {
+        "description": "Lists the agent's saved simulations and how each has gone lately: passing, flaky or failing over its recent runs. Returns the simulations with their messages, checks, last result and recent history.",
+        "operationId": "ai.agents.simulations.index",
+        "parameters": [
+          {
+            "description": "Id of the AI agent, starting with aia_, such as aia_01jx2m8k4t. Find it with GET /ai/agents.",
+            "in": "path",
+            "name": "agent",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CollectionAIAgentSimulation"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseError"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "List an AI agent's simulations",
+        "x-abilities": [
+          "ai:read"
+        ]
+      },
+      "post": {
+        "description": "Saves a conversation the agent must keep getting right: who the customer is, what they write, and the checks that say whether the agent did what it should. Returns the saved simulation.",
+        "operationId": "ai.agents.simulations.store",
+        "parameters": [
+          {
+            "description": "Id of the AI agent, starting with aia_, such as aia_01jx2m8k4t. Find it with GET /ai/agents.",
+            "in": "path",
+            "name": "agent",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TestCaseBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResourceAIAgentSimulation"
+                }
+              }
+            },
+            "description": "Created"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseError"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Save an AI agent simulation",
+        "x-abilities": [
+          "ai:write"
+        ]
+      }
+    },
+    "/ai/agents/{agent}/simulations/from-conversation": {
+      "post": {
+        "description": "Turns a real conversation into a simulation of the agent, with a scenario written from what the customer said. Returns the saved simulation.",
+        "operationId": "ai.agents.simulations.from-conversation.store",
+        "parameters": [
+          {
+            "description": "Id of the AI agent, starting with aia_, such as aia_01jx2m8k4t. Find it with GET /ai/agents.",
+            "in": "path",
+            "name": "agent",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AIImportAgentSimulationBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResourceAIAgentSimulation"
+                }
+              }
+            },
+            "description": "Created"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseError"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Save a conversation as a simulation",
+        "x-abilities": [
+          "ai:write"
+        ]
+      }
+    },
+    "/ai/agents/{agent}/simulations/run": {
+      "post": {
+        "description": "Replays the agent's saved simulations, all of them or the ones named, against its draft or its live version. A simulated customer plays each one and a judge reads the result. Every run uses real models and is tallied as simulation spend. Returns each simulation with its verdict, the reason for every written check, and the conversation.",
+        "operationId": "ai.agents.simulations.run.store",
+        "parameters": [
+          {
+            "description": "Id of the AI agent, starting with aia_, such as aia_01jx2m8k4t. Find it with GET /ai/agents.",
+            "in": "path",
+            "name": "agent",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AIRunAgentSimulationsBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CollectionAIAgentSimulation"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseError"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Run an AI agent's simulations",
+        "x-abilities": [
+          "ai:write"
+        ]
+      }
+    },
+    "/ai/agents/{agent}/simulations/{simulation}": {
+      "delete": {
+        "description": "Deletes a saved simulation and its past runs. Returns nothing.",
+        "operationId": "ai.agents.simulations.destroy",
+        "parameters": [
+          {
+            "description": "Id of the AI agent, starting with aia_, such as aia_01jx2m8k4t. Find it with GET /ai/agents.",
+            "in": "path",
+            "name": "agent",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Id of the AI agent simulation, starting with aias_, such as aias_01jx2m8k4t. Find it with GET /ai/agents/{agent}/simulations.",
+            "in": "path",
+            "name": "simulation",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseError"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Delete an AI agent simulation",
+        "x-abilities": [
+          "ai:write"
+        ]
+      },
+      "get": {
+        "description": "Reads one saved simulation of an agent, with its last result turn by turn. Returns the simulation with its scenario, messages, checks and last result.",
+        "operationId": "ai.agents.simulations.show",
+        "parameters": [
+          {
+            "description": "Id of the AI agent, starting with aia_, such as aia_01jx2m8k4t. Find it with GET /ai/agents.",
+            "in": "path",
+            "name": "agent",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Id of the AI agent simulation, starting with aias_, such as aias_01jx2m8k4t. Find it with GET /ai/agents/{agent}/simulations.",
+            "in": "path",
+            "name": "simulation",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResourceAIAgentSimulation"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseError"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Get an AI agent simulation",
+        "x-abilities": [
+          "ai:read"
+        ]
+      },
+      "patch": {
+        "description": "Changes a saved simulation's name, scenario, messages, customer or checks. Returns the simulation as saved.",
+        "operationId": "ai.agents.simulations.update",
+        "parameters": [
+          {
+            "description": "Id of the AI agent, starting with aia_, such as aia_01jx2m8k4t. Find it with GET /ai/agents.",
+            "in": "path",
+            "name": "agent",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Id of the AI agent simulation, starting with aias_, such as aias_01jx2m8k4t. Find it with GET /ai/agents/{agent}/simulations.",
+            "in": "path",
+            "name": "simulation",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TestCaseBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResourceAIAgentSimulation"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseError"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Edit an AI agent simulation",
+        "x-abilities": [
+          "ai:write"
+        ]
+      }
+    },
+    "/ai/agents/{agent}/simulations/{simulation}/runs": {
+      "get": {
+        "description": "Lists the latest runs of one simulation, newest first, to see whether it passes steadily or only sometimes. Returns the runs with their verdict, when they ran and what was said.",
+        "operationId": "ai.agents.simulations.runs.index",
+        "parameters": [
+          {
+            "description": "Id of the AI agent, starting with aia_, such as aia_01jx2m8k4t. Find it with GET /ai/agents.",
+            "in": "path",
+            "name": "agent",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Id of the AI agent simulation, starting with aias_, such as aias_01jx2m8k4t. Find it with GET /ai/agents/{agent}/simulations.",
+            "in": "path",
+            "name": "simulation",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "draft lists runs on the working copy, live on the published one. Left out, it is draft.",
+            "explode": false,
+            "in": "query",
+            "name": "version",
+            "schema": {
+              "enum": [
+                "draft",
+                "live"
+              ],
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CollectionAIAgentSimulationRun"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseError"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "List a simulation's past runs",
+        "x-abilities": [
+          "ai:read"
+        ]
+      }
+    },
+    "/ai/agents/{agent}/versions": {
+      "get": {
+        "description": "Lists every published version of an agent, newest first, with who published it and why. Returns the versions with their number, note and publish time.",
+        "operationId": "ai.agents.versions.index",
+        "parameters": [
+          {
+            "description": "Id of the AI agent, starting with aia_, such as aia_01jx2m8k4t. Find it with GET /ai/agents.",
+            "in": "path",
+            "name": "agent",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Version number to page from: only versions older than it are listed. Leave out for the newest, such as 12.",
+            "explode": false,
+            "in": "query",
+            "name": "before",
+            "schema": {
+              "format": "int32",
+              "minimum": 0,
+              "type": "integer"
+            }
+          },
+          {
+            "description": "How many items to return in one page, such as 25.",
+            "explode": false,
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "format": "int32",
+              "maximum": 100,
+              "minimum": 0,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CollectionAIAgentVersion"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseError"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "List an AI agent's versions",
+        "x-abilities": [
+          "ai:read"
+        ]
+      }
+    },
+    "/ai/agents/{agent}/versions/{version}": {
+      "get": {
+        "description": "Reads one published version of an agent as it was. Returns the version with its full definition.",
+        "operationId": "ai.agents.versions.show",
+        "parameters": [
+          {
+            "description": "Id of the AI agent, starting with aia_, such as aia_01jx2m8k4t. Find it with GET /ai/agents.",
+            "in": "path",
+            "name": "agent",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "The version's number, such as 3. Find it with GET /ai/agents/{agent}/versions.",
+            "in": "path",
+            "name": "version",
+            "required": true,
+            "schema": {
+              "format": "int32",
+              "minimum": 1,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResourceAIAgentVersion"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseError"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Get an AI agent version",
+        "x-abilities": [
+          "ai:read"
+        ]
+      }
+    },
+    "/ai/agents/{agent}/versions/{version}/restore": {
+      "post": {
+        "description": "Copies a published version into the agent's draft. Customers see no change until the draft is published again. Returns the agent with the restored draft.",
+        "operationId": "ai.agents.versions.restore.store",
+        "parameters": [
+          {
+            "description": "Id of the AI agent, starting with aia_, such as aia_01jx2m8k4t. Find it with GET /ai/agents.",
+            "in": "path",
+            "name": "agent",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "The version's number, such as 3. Find it with GET /ai/agents/{agent}/versions.",
+            "in": "path",
+            "name": "version",
+            "required": true,
+            "schema": {
+              "format": "int32",
+              "minimum": 1,
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AIRestoreAgentVersionBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResourceAIAgentView"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseError"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Restore an AI agent version",
         "x-abilities": [
           "ai:write"
         ]
@@ -45631,7 +48021,7 @@
     },
     "/ai/keys/{key}": {
       "delete": {
-        "description": "Deletes a provider key and its secret. Refused while the agent still answers with it: point the agent at another key with PATCH /ai/agent first.",
+        "description": "Deletes a provider key and its secret. Refused while an agent or the shared settings still answer with it: point them at another key with PATCH /ai/agents/{agent} or PATCH /ai/settings first.",
         "operationId": "ai.keys.destroy",
         "parameters": [
           {
@@ -45759,26 +48149,16 @@
         ]
       }
     },
-    "/ai/playground": {
-      "post": {
-        "description": "Asks the AI agent a test question and shows what it would answer, without writing any message or changing a conversation. Each question runs the real model and spends real tokens from the workspace's AI budget, so ask only what the person wants tested. Works while the agent is off. Returns the answer with its outcome, how the question was read, the knowledge found, tokens, cost and timing.",
-        "operationId": "ai.playground.store",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/AIPlaygroundRequestBody"
-              }
-            }
-          },
-          "required": true
-        },
+    "/ai/placements": {
+      "get": {
+        "description": "Lists everywhere an agent can take new conversations, channel connections, Slack channels and inboxes, with the agent placed at each now. Returns the places with their kind and the agent there, null where the default agent answers.",
+        "operationId": "ai.placements.index",
         "responses": {
           "200": {
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ResourceAiPlaygroundAnswer"
+                  "$ref": "#/components/schemas/CollectionAIPlacementTarget"
                 }
               }
             },
@@ -45795,11 +48175,82 @@
             "description": "Error"
           }
         },
-        "summary": "Test the AI agent",
+        "summary": "List where AI agents can be placed",
+        "x-abilities": [
+          "ai:read"
+        ]
+      }
+    },
+    "/ai/settings": {
+      "get": {
+        "description": "Reads what every agent shares: the answer and fallback models an agent uses until it picks its own, the classifier, and the monthly spend cap. Returns the shared models and the spend cap, null when there is none.",
+        "operationId": "ai.settings.show",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResourceAISettings"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseError"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Get shared AI settings",
+        "x-abilities": [
+          "ai:read"
+        ]
+      },
+      "patch": {
+        "description": "Changes the models every agent falls back on, or the workspace's monthly AI spend cap. Returns the settings as saved.",
+        "operationId": "ai.settings.update",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AISettingsBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResourceAISettings"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseError"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Change shared AI settings",
         "x-abilities": [
           "ai:write"
-        ],
-        "x-internal": true
+        ]
       }
     },
     "/ai/usage": {
@@ -67089,6 +69540,16 @@
               ],
               "type": "string"
             }
+          },
+          {
+            "description": "Only items whose agent matches. Several values separated by commas match any of them.",
+            "explode": false,
+            "in": "query",
+            "name": "filter[agent]",
+            "schema": {
+              "maxLength": 2000,
+              "type": "string"
+            }
           }
         ],
         "responses": {
@@ -67278,6 +69739,16 @@
                 "not_involved",
                 ""
               ],
+              "type": "string"
+            }
+          },
+          {
+            "description": "Only items whose agent matches. Several values separated by commas match any of them.",
+            "explode": false,
+            "in": "query",
+            "name": "filter[agent]",
+            "schema": {
+              "maxLength": 2000,
               "type": "string"
             }
           }

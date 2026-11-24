@@ -17,7 +17,7 @@ Admins choose a policy for each group under **Settings → Operator → What Ope
 | **Internal notes** | Adding a private note to a thread | Yes |
 | **Customers** | Updating a customer's name | Yes |
 | **Help articles** | Creating a new draft or editing a draft | No |
-| **Procedures** | Editing a procedure's working draft | No |
+| **Procedures** | Editing a procedure's working copy and adding saved simulations (tests) | No |
 | **Workspace actions** | Running an [action](/ai/actions/) that changes data | No |
 
 Operator never publishes a help article or a procedure. Publishing always stays with a teammate.
@@ -39,7 +39,7 @@ Even when a group is set to **On its own**, Operator still asks a teammate first
 - **All or nothing:** dimmi applies every change in a changeset inside one transaction, so partial edits never happen.
 - **Runs as you:** every change checks the permissions of the teammate who clicks **Apply**. Actions that require an admin must be approved by an admin.
 - **Smart undo:** clicking **Undo** restores each previous value in reverse order and skips any field a teammate edited afterward.
-- **Content undo:** internal notes are removed; drafted articles are removed only if never published; draft edits revert only if nobody edited the text since.
+- **Content undo:** internal notes are removed; drafted articles are removed only if never published; added procedure simulations are removed; draft edits revert only if nobody edited the text since.
 - **External actions cannot undo:** once a workspace action calls your external API, dimmi cannot roll it back.
 - **Works in Slack and audit logs:** Slack cards show the same **Apply**, **Decline**, and **Undo** buttons, and every decision is logged under the teammate in the [audit log](/workspace/audit-log/).
 

@@ -45,6 +45,6 @@ func schemaTextParts() []map[string]map[string]string {
 		schemaTexts142(), schemaTexts143(), schemaTexts144(), schemaTexts145(), schemaTexts146(),
 		schemaTexts147(), schemaTexts148(), schemaTexts149(), schemaTexts150(), schemaTexts151(),
 		schemaTexts152(), schemaTexts153(), schemaTexts154(), schemaTexts155(), schemaTexts156(),
-		schemaTexts157(), schemaTexts158(),
+		schemaTexts157(), schemaTexts158(), agentStudioSchemaTexts(),
 	}
 }

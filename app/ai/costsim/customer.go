@@ -8,8 +8,9 @@
 | costs nothing. The model-played customer opens with the scenario's
 | first message, then a cheap model writes each next message from the
 | persona, the goal and the conversation so far, and says it is done
-| when the goal is met or it gives up. Its calls pass the same spend
-| guard and are reported apart from the agent's.
+| when the goal is met or it gives up, as costsim/customer.md tells it
+| to. Its calls pass the same spend guard and are reported apart from
+| the agent's.
 |
 */
 
@@ -21,6 +22,7 @@ import (
 	"strings"
 
 	"github.com/dimmihq/dimmi/app/contracts"
+	"github.com/dimmihq/dimmi/app/support/prompts"
 )
 
 /*
@@ -34,15 +36,14 @@ const (
 )
 
 /*
-customerPrompt tells the customer's model who it plays and when to stop.
+The task files the model-played customer reads, under
+resources/prompts/tasks/: who it plays and when to stop, and the turn
+it is given when the agent has not replied.
 */
-const customerPrompt = `You are role-playing a customer writing to the support chat of %s.
-Persona: %s
-Your goal: %s
-Write only your next chat message to the support agent, as this customer would type it:
-short, natural, in the language with code %q. Never say you are an AI or a simulation.
-When your goal is met, or you have clearly given up or been handed to a person,
-reply with exactly %s and nothing else.`
+const (
+	taskCustomer        = "costsim/customer"
+	taskCustomerWaiting = "costsim/customer_waiting"
+)
 
 /*
 Turn is one message of a simulated conversation: who wrote it, customer
@@ -97,7 +98,9 @@ func (p Played) Next(ctx context.Context, sc Scenario, turn int, transcript []Tu
 	if turn == 0 && len(sc.Messages) > 0 {
 		return sc.Messages[0], false, nil
 	}
-	system := fmt.Sprintf(customerPrompt, p.Company, sc.Persona, sc.Goal, sc.Locale, DoneMarker)
+	system := prompts.Task(taskCustomer, prompts.Vars{
+		"company": p.Company, "persona": sc.Persona, "goal": sc.Goal, "locale": sc.Locale, "done_marker": DoneMarker,
+	})
 
 	var msgs []contracts.ChatMessage
 	for _, t := range transcript {
@@ -110,7 +113,7 @@ func (p Played) Next(ctx context.Context, sc Scenario, turn int, transcript []Tu
 	if !agentSpokeLast(msgs) {
 		msgs = append(msgs, contracts.ChatMessage{
 			Role:  contracts.ChatRoleUser,
-			Parts: []contracts.ContentPart{{Text: "(The agent has not replied. Write your next message.)"}},
+			Parts: []contracts.ContentPart{{Text: prompts.Task(taskCustomerWaiting, nil)}},
 		})
 	}
 	temp := 0.7

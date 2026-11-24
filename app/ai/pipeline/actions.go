@@ -27,6 +27,7 @@ import (
 
 	"github.com/dimmihq/dimmi/app/actions/conversations"
 	"github.com/dimmihq/dimmi/app/ai/actionkit"
+	"github.com/dimmihq/dimmi/app/ai/agents"
 	"github.com/dimmihq/dimmi/app/enums"
 	"github.com/dimmihq/dimmi/app/models"
 )
@@ -66,8 +67,7 @@ the agent still answers from its knowledge.
 */
 func (r *Runner) offerActions(ctx context.Context, st *run) {
 	e := st.env
-	if r.Actions == nil || !e.Agent.ActionsEnabled || st.args.Kind == playgroundKind ||
-		(e.Conversation.ID == (ids.UUID{}) && st.sim == nil) {
+	if r.Actions == nil || !e.Agent.ActionsEnabled || (e.Conversation.ID == (ids.UUID{}) && st.sim == nil) {
 		return
 	}
 	if st.actions.followUp == nil && st.sim == nil {
@@ -94,7 +94,7 @@ func (r *Runner) offerInput(st *run) actionkit.OfferInput {
 	e := st.env
 	return actionkit.OfferInput{
 		WorkspaceID: e.Workspace.ID, ChannelType: e.ChannelType, Identity: st.actions.identity,
-		NoWrites: st.actions.noWrites, Agent: actionkit.AgentDimmi,
+		NoWrites: st.actions.noWrites, Agent: actionkit.AgentDimmi, Scope: agents.ActionsOf(e.Agent),
 	}
 }
 

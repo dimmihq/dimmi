@@ -70,8 +70,12 @@ export const sidebar: Group[] = [
     items: [
       { label: "Overview", link: "/ai/how-the-agent-works/" },
       { label: "Setup", link: "/ai/set-up-the-agent/" },
+      { label: "Several agents", link: "/ai/multiple-agents/" },
       { label: "Knowledge", link: "/ai/knowledge-sources/" },
       { label: "Procedures", link: "/ai/procedures/" },
+      { label: "Steps and rules", link: "/ai/procedure-steps/" },
+      { label: "Test procedures", link: "/ai/test-procedures/" },
+      { label: "Versions and analytics", link: "/ai/procedure-versions/" },
       { label: "Actions", link: "/ai/actions/" },
       { label: "First action", link: "/ai/first-action/" },
       { label: "Handover", link: "/ai/handover/" },

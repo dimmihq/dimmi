@@ -199,3 +199,9 @@ WHERE a.workspace_id = @workspace_id AND a.id = @id AND a.deleted_at IS NULL AND
 -- ListWorkspaceHelpCenterSubdomains lists the subdomains of the
 -- workspace's live help centers.
 SELECT subdomain FROM help_centers WHERE workspace_id = @workspace_id AND deleted_at IS NULL AND status = 'active';
+
+-- name: ListArticleTitles :many
+-- ListArticleTitles names the workspace's articles among the ids given,
+-- such as those an agent's guidance cites.
+SELECT id, title FROM articles
+WHERE workspace_id = @workspace_id AND id = ANY (@ids::uuid[]) AND deleted_at IS NULL;

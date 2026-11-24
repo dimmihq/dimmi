@@ -95,7 +95,7 @@ func purposeOf(s *session) string {
 		return PurposeRoutine
 	case s.background:
 		return PurposeTriage
-	case s.question == strings.TrimSpace(BriefQuestion):
+	case s.question == strings.TrimSpace(BriefQuestion()):
 		return PurposeBrief
 	default:
 		return PurposeAsk

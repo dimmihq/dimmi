@@ -61,6 +61,7 @@ type ProcedureTestCase struct {
 	Messages             json.RawMessage `json:"messages"`
 	ActionMocks          json.RawMessage `json:"action_mocks"`
 	Assertions           json.RawMessage `json:"assertions"`
+	Scenario             string          `json:"scenario"`
 	LastResult           json.RawMessage `json:"last_result"`
 	SimulatedAt          *time.Time      `json:"simulated_at"`
 	CreatedAt            time.Time       `json:"created_at"`
@@ -81,6 +82,7 @@ func NewProcedureTestCase(c models.ProcedureTestCase) ProcedureTestCase {
 		ProcedureID: models.PublicID(models.PrefixProcedure, c.ProcedureID), Name: c.Name,
 		SourceConversationID: publicPtr(models.PrefixConversation, c.SourceConversationID),
 		Persona:              c.Persona, Messages: c.Messages, ActionMocks: c.ActionMocks, Assertions: c.Assertions,
+		Scenario:   c.Scenario,
 		LastResult: last, SimulatedAt: c.SimulatedAt, CreatedAt: c.CreatedAt, UpdatedAt: c.UpdatedAt,
 	}
 }

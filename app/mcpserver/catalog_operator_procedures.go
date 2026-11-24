@@ -233,15 +233,15 @@ func askOperatorDoc() Doc {
 		Params: map[string]string{
 			"body": "What to ask, in plain words, up to 8000 characters.",
 			"viewing": "What the person has open while they ask, so Operator explains or changes that: an " +
-				"object with article_id or procedure_id, and changeset_id for the suggestion shown on it, " +
-				"such as {\"article_id\": \"art_01jx2m8k4t\"}. Leave out when nothing is open.",
-			"viewing.article_id": "The id of the help article the person has open, such as art_01jx2m8k4t. " +
-				"Leave out when none is.",
-			"viewing.procedure_id": "The id of the procedure the person has open, such as prc_01jx2m8k4t. " +
-				"Leave out when none is.",
-			"viewing.changeset_id": "The id of the suggestion shown on that article or procedure, such as " +
-				"opc_01jx2m8k4t. A change the person asks for is added to it while it still waits for " +
-				"review. Leave out when none is shown.",
+				"object with page and id, and suggestion_id for the suggestion shown on it, such as " +
+				"{\"page\": \"article\", \"id\": \"art_01jx2m8k4t\"}. Leave out when nothing is open.",
+			"viewing.page": "The kind of page the person has open: article, procedure, conversation, " +
+				"help_center, feature_request or changelog_entry. A kind Operator does not know is ignored.",
+			"viewing.id": "The id of what that page shows, such as art_01jx2m8k4t for an article or " +
+				"prc_01jx2m8k4t for a procedure.",
+			"viewing.suggestion_id": "The id of the suggestion shown on that page, such as opc_01jx2m8k4t. A " +
+				"change the person asks for is added to it while it still waits for review. Leave out when " +
+				"none is shown.",
 		},
 		Hint: "A teammate may ask at most 30 questions a minute; wait and try again.",
 	}

@@ -28,6 +28,7 @@ import (
 	"github.com/dimmihq/dimmi/app/enums"
 	"github.com/dimmihq/dimmi/app/models"
 	"github.com/dimmihq/dimmi/app/support/llmretry"
+	"github.com/dimmihq/dimmi/app/support/prompts"
 )
 
 /*
@@ -131,19 +132,14 @@ func (e *Engine) bounds(s *session, calls int) (spent, closing bool) {
 }
 
 /*
-lastCall tells the model its tools are spent and to write now.
-*/
-const lastCall = "You are out of steps for this run. Do not call any more tools. Write your message now, from " +
-	"what you already found and suggested. Say only what you did and found, never what you would do next."
-
-/*
 conclude asks for the answer once the run may call no more tools. The
 tools stay in the request so the prompt cache holds; any call the model
 still makes is dropped, and a model that wrote nothing is asked once
 more without them.
 */
 func (e *Engine) conclude(ctx context.Context, s *session, p prompt) (string, string) {
-	p.messages = append(p.messages, contracts.ChatMessage{Role: contracts.ChatRoleUser, Parts: textParts(lastCall)})
+	last := contracts.ChatMessage{Role: contracts.ChatRoleUser, Parts: textParts(prompts.Task(taskLastCall, nil))}
+	p.messages = append(p.messages, last)
 	out, err := e.generateWithRetry(ctx, s, p, e.toolSpecs(s))
 	if err == nil && strings.TrimSpace(out.text) == "" {
 		out, err = e.generateWithRetry(ctx, s, p, nil)
@@ -341,7 +337,7 @@ func (e *Engine) transcript(s *session) []contracts.ChatMessage {
 		question.Parts = append(question.Parts, contracts.ContentPart{Text: s.looking})
 	}
 	if s.sub == nil {
-		question.Parts = append(question.Parts, contracts.ContentPart{Text: writeReminder})
+		question.Parts = append(question.Parts, contracts.ContentPart{Text: writeReminder()})
 	}
 	if s.layer != nil {
 		if note := toolset.Note(s.layer.earlier, s.layer.suggested); note != "" {

@@ -8,6 +8,8 @@ The **dimmi agent** works in the same shared inbox as your team. When you turn i
 
 In a new workspace, the agent starts **off**. You can add your docs, write playbooks, and test it on past chats before any customer sees it.
 
+You can also run [several agents](/ai/multiple-agents/), such as one for sales and one for support. Each has its own guidance, knowledge, and channels.
+
 ## dimmi agent vs. Operator
 
 dimmi has two AI tools with different jobs:
@@ -20,8 +22,8 @@ dimmi has two AI tools with different jobs:
 When a customer sends a message, the agent follows four steps:
 
 1. **Checks if it should reply:** confirms the agent is on for that channel, inside its [office hours](/ai/set-up-the-agent/), and not already being handled by a teammate.
-2. **Checks playbooks and docs:** reads the thread and customer info, checks for a matching [procedure](/ai/procedures/), searches your help center and [knowledge sources](/ai/knowledge-sources/), and runs any [actions](/ai/actions/) needed.
-3. **Replies with sources:** answers in the customer's language, attaches links to the exact articles it used, and titles and tags the chat.
+2. **Checks playbooks and docs:** reads the thread and customer info, checks for a matching [procedure](/ai/procedures/) (enforcing your exact rules and required actions), searches your help center and [knowledge sources](/ai/knowledge-sources/), and runs any [actions](/ai/actions/) needed.
+3. **Replies with sources:** answers in the customer's language, attaches links to the exact articles it used, opens a [ticket](/tickets/how-tickets-work/) with its real reference when needed, and titles and tags the chat.
 4. **Hands over when needed:** if it cannot find an answer, hits a handover rule, or reaches its reply cap, it [hands over](/ai/handover/) with a private summary for your team and stops replying.
 
 ## Built-in safety
@@ -29,11 +31,12 @@ When a customer sends a message, the agent follows four steps:
 dimmi checks every AI reply before a customer sees it:
 
 - **No guessing:** factual answers must come from your docs, procedures, or actions. When your docs do not cover a question, the agent says so instead of making things up.
+- **Pre-send reply checks:** dimmi checks each draft for accidental internal notes or placeholders, asks the agent to rewrite it once if needed, and hands over instead of sending if the text stays unsafe. Long paragraphs are split for readability.
 - **Private notes stay private:** the agent reads customer messages and teammate replies, never internal notes. It also skips spam, deleted chats, and blocked customers.
 - **Approved links only:** dimmi strips any URL that is not your help center, a site in **Links it may share**, a source page, or a link the customer sent.
 
 <Callout type="note" title="Personal data protection">
-  **Hide personal data** is on by default in **Settings → dimmi agent**. See [What reaches the model](/ai/customer-data/) for how dimmi hides private customer fields.
+  **Hide personal data** is on by default, under **Settings → dimmi agent → Privacy**. See [What reaches the model](/ai/customer-data/) for how dimmi hides private customer fields.
 </Callout>
 
 ## Triage and budget controls

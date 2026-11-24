@@ -251,12 +251,13 @@ func (p filterParser) statuses(f *conversations.Filters) error {
 }
 
 /*
-ai reads filter[ai]: handed_off, active or any agent involvement.
+ai reads filter[ai]: handed_off, active, any agent involvement, or
+transferred between agents.
 */
 func (p filterParser) ai(f *conversations.Filters) error {
 	for _, value := range p.filters["ai"] {
 		switch value {
-		case "handed_off", "active", "any":
+		case "handed_off", "active", "any", "transferred":
 			f.Ai = append(f.Ai, value)
 		default:
 			return pagination.ErrInvalidFilter

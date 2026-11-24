@@ -120,11 +120,11 @@ export const workspacePages = {
     "How fast the team answers, what gets resolved and what customers think.",
   ),
   agent: page(
-    "agent",
-    "Agent",
+    "agents",
+    "Agents",
     RiSparkling2Line,
-    "/d/agent",
-    "dimmi agent answers customers from your docs and hands over when it should.",
+    "/d/agents",
+    "Agents answer customers from your docs and hand over when they should.",
   ),
   workflows: page(
     "workflows",

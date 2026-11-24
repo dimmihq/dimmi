@@ -56,7 +56,7 @@ it.describe("ai settings", () => {
     await expect(answer).toBeChecked();
     await Promise.all([
       page.waitForResponse(
-        (response) => response.url().endsWith("/api/v1/ai/agent") && response.request().method() === "PATCH",
+        (response) => response.url().endsWith("/publications") && response.request().method() === "POST",
       ),
       page.getByRole("button", { name: "Save", exact: true }).click(),
     ]);
@@ -70,7 +70,7 @@ it.describe("ai settings", () => {
 
     const saved = () =>
       page.waitForResponse(
-        (response) => response.url().endsWith("/api/v1/ai/agent") && response.request().method() === "PATCH",
+        (response) => /\/api\/v1\/ai\/agents\/[^/]+$/.test(response.url()) && response.request().method() === "PATCH",
       );
     const name = page.getByRole("textbox", { name: "Agent name" });
     await name.fill("Ada");

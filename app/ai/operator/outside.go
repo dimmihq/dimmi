@@ -285,7 +285,7 @@ AllSkills lists the skills, in the order the routine prompt names them.
 func AllSkills() []Skill {
 	out := make([]Skill, 0, len(skills()))
 	for _, s := range skills() {
-		out = append(out, Skill{Name: s.name, Use: s.when, Body: s.body})
+		out = append(out, Skill{Name: s.name, Use: s.when, Body: skillBody(s.name)})
 	}
 	return out
 }

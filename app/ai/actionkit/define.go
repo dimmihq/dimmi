@@ -69,7 +69,7 @@ func channelPattern() *regexp.Regexp {
 ReservedName reports whether a tool name belongs to the agent itself.
 */
 func ReservedName(name string) bool {
-	return slices.Contains([]string{"search_knowledge", "handoff", "triage_conversation"}, name) ||
+	return slices.Contains([]string{"search_knowledge", "handoff", "triage_conversation", "leave_note"}, name) ||
 		strings.HasPrefix(name, "dimmi_")
 }
 

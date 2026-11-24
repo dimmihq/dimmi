@@ -5,11 +5,12 @@
 | Marketing Demo: Agent And Workflows
 |--------------------------------------------------------------------------
 |
-| The parts of the Lumen workspace the AI agent and Workflows pages are
-| shot in: two teams to route to, a few tags, the agent's voice and
-| rules, one procedure the agent follows, and one workflow that sorts a
-| first message by topic. Everything is saved through the real actions.
-| The agent is left switched off, so nothing here calls a model.
+| The parts of the Lumen workspace the AI agent, Procedures and Workflows
+| pages are shot in: two teams to route to, a few tags, the agent's voice
+| and rules, one versioned procedure with actions and simulations, and one
+| workflow that sorts a first message by topic. Everything is saved
+| through the real actions. The agent is left switched off, so nothing
+| here calls a model.
 |
 */
 
@@ -23,13 +24,11 @@ import (
 	"github.com/dimmihq/dimmi/framework/ids"
 
 	"github.com/dimmihq/dimmi/app/actions/ai"
-	"github.com/dimmihq/dimmi/app/actions/procedures"
 	"github.com/dimmihq/dimmi/app/actions/tags"
 	"github.com/dimmihq/dimmi/app/actions/teams"
 	"github.com/dimmihq/dimmi/app/actions/workflows"
 	"github.com/dimmihq/dimmi/app/auth/authz"
 	"github.com/dimmihq/dimmi/app/models"
-	"github.com/dimmihq/dimmi/app/support/procedure"
 )
 
 /*
@@ -43,7 +42,7 @@ const marketingGuidance = `You answer customers of Lumen, an analytics product f
 - If an Enterprise customer reports an outage, hand over at once.`
 
 /*
-agentSetup seeds what the agent and workflow shots need.
+agentSetup seeds what the agent, procedures and workflow shots need.
 */
 func (c MarketingDemoCommand) agentSetup(ctx context.Context, owner authz.Membership) error {
 	a := c.App
@@ -70,7 +69,31 @@ func (c MarketingDemoCommand) agentSetup(ctx context.Context, owner authz.Member
 		tagIDs[t[0]] = made.ID
 	}
 
-	if _, err := a.Actions.AI.GetAgent.Handle(ctx, ai.GetAgentInput{Membership: owner}); err != nil {
+	if err := c.configureAgent(ctx, owner, teamIDs["Engineering"]); err != nil {
+		return err
+	}
+
+	actions, err := c.actions(ctx, owner)
+	if err != nil {
+		return err
+	}
+
+	if err := c.procedure(ctx, owner, actions, teamIDs); err != nil {
+		return err
+	}
+
+	return c.workflow(ctx, owner, teamIDs, tagIDs)
+}
+
+/*
+configureAgent names the workspace's agent, gives it its guidance and
+the team it hands over to, and publishes it when it is ready to answer.
+*/
+func (c MarketingDemoCommand) configureAgent(ctx context.Context, owner authz.Membership, handsTo ids.UUID) error {
+	a := c.App
+
+	view, err := a.Actions.AI.Agents.Default(ctx, owner)
+	if err != nil {
 		return fmt.Errorf("provision agent: %w", err)
 	}
 
@@ -79,69 +102,19 @@ func (c MarketingDemoCommand) agentSetup(ctx context.Context, owner authz.Member
 		AssignedBehavior: new("skip_when_human_active"), UnknownBehavior: new("offer_handoff"),
 		DefaultLanguage: new("en"), RequireCitations: new(true), EnabledChannels: &[]string{"widget", "email"},
 		ProductName:   ai.Optional[string]{Set: true, Value: new("Lumen")},
-		HandoffTeamID: ai.Optional[ids.UUID]{Set: true, Value: new(teamIDs["Engineering"])},
+		HandoffTeamID: ai.Optional[ids.UUID]{Set: true, Value: new(handsTo)},
 	}
-	update := ai.UpdateAgentInput{Membership: owner, Patch: patch}
-	if _, err := a.Actions.AI.UpdateAgent.Handle(ctx, update); err != nil {
+	update := ai.UpdateAgentInput{Membership: owner, AgentID: view.Agent.ID, Patch: patch}
+	if _, err := a.Actions.AI.Agents.Update(ctx, update); err != nil {
 		return fmt.Errorf("configure agent: %w", err)
 	}
-
-	if err := c.procedure(ctx, owner); err != nil {
-		return err
+	if !view.Ready {
+		return nil
 	}
-
-	return c.workflow(ctx, owner, teamIDs, tagIDs)
-}
-
-/*
-procedure saves and publishes the one procedure the agent follows.
-*/
-func (c MarketingDemoCommand) procedure(ctx context.Context, owner authz.Membership) error {
-	a := c.App
-
-	def := procedure.Definition{
-		Description: "The customer says they were charged twice for the same period and asks for one charge back.",
-		Steps: []procedure.Step{
-			{ID: "account", Kind: procedure.KindInstruction, Text: "Look up the customer's account and plan."},
-			{
-				ID: "charges", Kind: procedure.KindInstruction,
-				Text: "Find the charges for the month they name, and confirm two match.",
-			},
-			{
-				ID: "single", Kind: procedure.KindCondition,
-				Text: "If there is only one charge, explain what it covers and stop.",
-			},
-			{
-				ID: "refund", Kind: procedure.KindInstruction,
-				Text: "Refund the duplicate charge once someone on the Billing team approves it.",
-			},
-			{
-				ID: "tell", Kind: procedure.KindInstruction,
-				Text: "Tell the customer the amount and that it shows on their card in 5 to 10 days.",
-			},
-		},
-		Handover: []string{
-			"The charges are more than 90 days old.",
-			"The customer disputes the charge with their bank.",
-		},
-	}
-
-	made, err := a.Actions.Procedures.Create(ctx, owner, "Refund a duplicate charge")
-	if err != nil {
-		return fmt.Errorf("create procedure: %w", err)
-	}
-
-	raw, _ := json.Marshal(def)
-
-	saved, err := a.Actions.Procedures.Save(ctx, procedures.SaveInput{
-		Membership: owner, ID: made.ID, LockVersion: made.LockVersion, Definition: raw,
-	})
-	if err != nil {
-		return fmt.Errorf("save procedure: %w", err)
-	}
-
-	if _, err := a.Actions.Procedures.Publish(ctx, owner, saved.ID); err != nil {
-		return fmt.Errorf("publish procedure: %w", err)
+	if _, err := a.Actions.AI.Agents.Publish(ctx, ai.PublishInput{
+		Membership: owner, AgentID: view.Agent.ID, ChangeNote: "Set up for the marketing demo",
+	}); err != nil {
+		return fmt.Errorf("publish agent: %w", err)
 	}
 
 	return nil

@@ -26,7 +26,8 @@ and then by argument.
 func writtenTexts() map[string]map[string]string {
 	out := map[string]map[string]string{}
 	for _, area := range []map[string]map[string]string{
-		aiTexts(), ticketTexts(), otherTexts(), nestedTexts(), midNestedTexts(), moreNestedTexts(),
+		aiTexts(), agentStudioTexts(), ticketTexts(), otherTexts(), nestedTexts(), midNestedTexts(),
+		moreNestedTexts(),
 	} {
 		mergeTexts(out, area)
 	}

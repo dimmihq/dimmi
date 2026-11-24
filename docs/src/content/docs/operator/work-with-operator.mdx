@@ -10,6 +10,7 @@ Customers never see Operator, and it never sends a customer message on its own.
 ## Where to talk to Operator
 
 - **Inside any conversation:** click **Operator** in the thread header, or press `O`. The chat focuses on that conversation and is private to you.
+- **Inside a procedure:** click **Operator** in the procedure editor header to review recent runs that went wrong, check the playbook for gaps, or generate saved simulations.
 - **In Slack:** mention the dimmi app in a **Team only** channel or send it a direct message. Paste a link to a dimmi conversation in your first message to make the Slack thread about that chat.
 
 In Slack, Operator only replies to [linked teammates](/channels/slack-room-modes/) and stays silent in any channel customers can read.
@@ -21,7 +22,8 @@ Operator always runs with **your own role and permissions**. It only reads conve
 - **Search and summarize:** reads conversations, customers, tags, teammates, help center articles and drafts, procedures, knowledge sources, and up to **366 days** of reports.
 - **Draft replies:** writes a suggested reply in your workspace's tone and language, following the guidance you gave your AI agent. It checks the help center first; when that has no answer, it leans on how your team answered the same question before, and tells you which conversation.
 - **Recommend with reasons:** when it suggests a teammate, a team, a tag or a priority, it says why. It looks at what your team did with similar conversations and cites them: "Assign to Maya: she handled 6 of the 8 similar conversations."
-- **Propose edits:** updates tags, assignment, priority, status, notes, customer names, article drafts, and procedure drafts through [changesets](/operator/changesets/).
+- **Propose edits:** updates tags, assignment, priority, status, notes, customer names, article drafts, procedure drafts, and saved procedure simulations through [changesets](/operator/changesets/).
+- **Audit procedures:** reviews recent failed [procedure](/ai/procedure-versions/) runs and proposes working-copy fixes alongside [simulations](/ai/test-procedures/) made from the failing chats.
 - **Run workspace actions:** calls [actions](/ai/actions/) where **Operator** is ticked under **Used by**. Read lookups run right away; actions that change data always wait as a changeset.
 - **Remember your preferences:** tell Operator how you like summaries or drafts formatted. Your memories are private to you and can be deleted anytime in **Settings → Operator**.
 

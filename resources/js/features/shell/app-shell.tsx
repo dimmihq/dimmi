@@ -94,12 +94,14 @@ function useSwitcher(me: Me): DashboardSwitcher {
   return {
     label: current?.name ?? "No workspace",
     initials: initialsOf(current?.name ?? "?"),
+    src: current?.logo_url ?? undefined,
     menuLabel: "Workspaces",
     menu: (close) => (
       <>
         {current && me.workspaces.length < 2 ? (
           <MenuHeader
             initials={initialsOf(current.name)}
+            src={current.logo_url ?? undefined}
             color="neutral"
             name={current.name}
             detail={roleOf(current.role)}
@@ -114,6 +116,7 @@ function useSwitcher(me: Me): DashboardSwitcher {
             rows={me.workspaces.map((workspace) => ({
               key: workspace.id,
               initials: initialsOf(workspace.name),
+              src: workspace.logo_url ?? undefined,
               color: "neutral",
               name: workspace.name,
               detail: roleOf(workspace.role),
@@ -169,6 +172,7 @@ function useAccount(me: Me, workspace: string | undefined): DashboardAccount {
     name: me.user.name,
     detail: me.user.email,
     initials: initialsOf(me.user.name),
+    src: me.user.avatar_url ?? undefined,
     product: "dimmi",
     version: me.instance?.version,
     status: availability.status,

@@ -17,7 +17,10 @@ func billingArticles() []Article {
 	var rows [][]string
 	for _, p := range Plans() {
 		price := "Free"
-		if p.MonthlyUSD > 0 {
+		switch {
+		case p.ByContract:
+			price = "Priced per contract"
+		case p.MonthlyUSD > 0:
 			price = fmt.Sprintf("$%d a month", p.MonthlyUSD)
 		}
 		over := "No overage; buying stops at the limit"
@@ -212,8 +215,12 @@ When you close your account, any positive balance is refunded to your card autom
 		},
 		{
 			Collection: "billing", Title: "Discount programs for nonprofits and new businesses",
-			Description: "Who qualifies for a discount and how to apply.",
-			Body: `We offer two discounts on plan fees. Neither applies to postage.
+			Description: "Who qualifies for a discount, what paying yearly saves, and how to apply.",
+			Body: `We offer two discount programs on plan fees, and a saving for paying yearly. None of them applies to postage.
+
+## Paying yearly
+
+Growth and Pro can be paid yearly at ten times the monthly price, which is two months free. Any account can switch under **Billing → Plan → Switch to annual**. Enterprise contracts are yearly by default.
 
 ## Nonprofits
 

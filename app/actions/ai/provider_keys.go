@@ -240,10 +240,12 @@ func (a *DeleteProviderKey) Handle(ctx context.Context, in DeleteKeyInput) error
 			}
 		}
 
-		if agent, err := models.New(tx).FindAgent(ctx, key.WorkspaceID); err == nil {
-			if roles := keyInUse(agent, key.ID); len(roles) > 0 {
-				return fault.New(fault.Conflict, "key_in_use", "key is the agent's "+roles[0]+" model")
-			}
+		inUse, err := keyUsed(ctx, models.New(tx), key.WorkspaceID, key.ID)
+		if err != nil {
+			return err
+		}
+		if inUse {
+			return fault.New(fault.Conflict, "key_in_use", "an agent or the workspace's defaults use this key")
 		}
 
 		return models.New(tx).DeleteProviderKey(ctx, models.DeleteProviderKeyParams{

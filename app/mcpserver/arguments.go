@@ -84,8 +84,19 @@ func idGuides() map[string]idGuide {
 	out := idArguments()
 	maps.Copy(out, featureIDArguments())
 	maps.Copy(out, ticketIDArguments())
+	maps.Copy(out, agentIDArguments())
 
 	return out
+}
+
+/*
+agentIDArguments explains the ids of AI agents and their simulations.
+*/
+func agentIDArguments() map[string]idGuide {
+	return map[string]idGuide{
+		"agent":      idArgument("AI agent", "aia", "dimmi_list_ai_agents"),
+		"simulation": idArgument("AI agent simulation", "aias", "dimmi_list_ai_agent_simulations"),
+	}
 }
 
 /*

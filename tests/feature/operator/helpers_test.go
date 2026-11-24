@@ -71,9 +71,9 @@ func connect(ctx context.Context, t *testing.T, d tests.Desk) error {
 	if err != nil {
 		return err
 	}
-	agent, err := q.FindAgent(ctx, ws)
+	agent, err := q.FindDefaultAgent(ctx, ws)
 	if err != nil {
-		agent, err = q.CreateAgent(ctx, models.CreateAgentParams{WorkspaceID: ws, Now: now})
+		agent, err = q.CreateDefaultAgent(ctx, models.CreateDefaultAgentParams{WorkspaceID: ws, Now: now})
 		require.NoError(t, err)
 	}
 	_, err = q.UpdateAgent(ctx, models.UpdateAgentParams{
@@ -85,7 +85,9 @@ func connect(ctx context.Context, t *testing.T, d tests.Desk) error {
 		DefaultLanguage: "en", Languages: []string{}, ContactAttributeAllowlist: []string{},
 		LinkAllowlist: []string{}, Streaming: true, IncludeContactContext: "basic",
 		MinSimilarity: database.NumericFloat(0.35), Handoff: json.RawMessage("{}"),
-		Messages: json.RawMessage("{}"), Now: now,
+		Messages: json.RawMessage("{}"), Now: now, KnowledgeScope: json.RawMessage(`{"mode":"all"}`),
+		ProcedureScope: json.RawMessage(`{"mode":"all"}`), ActionScope: json.RawMessage(`{"mode":"all"}`),
+		TransferAgentIds: []ids.UUID{},
 	})
 	if err != nil {
 		return err

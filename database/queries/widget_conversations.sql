@@ -110,6 +110,12 @@ FROM workspace_members m
 JOIN users u ON u.id = m.user_id
 WHERE m.workspace_id = @workspace_id AND m.id = ANY(@member_ids::uuid[]);
 
+-- name: ListWidgetAgentAuthors :many
+-- ListWidgetAgentAuthors returns the names of the AI agents that wrote
+-- messages, as a visitor sees them.
+SELECT id, name FROM ai_agents
+WHERE workspace_id = @workspace_id AND id = ANY(@agent_ids::uuid[]);
+
 -- name: StampWidgetMessage :exec
 -- StampWidgetMessage records which browser message a stored message was, so
 -- a retry of it is recognised and the team sees the page it was sent from.

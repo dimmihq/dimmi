@@ -75,15 +75,24 @@ agentRow makes sure the workspace's agent exists and returns its id.
 func agentRow(t *testing.T, d tests.Desk) ids.UUID {
 	t.Helper()
 
-	d.Owner.GetJSON("/api/v1/ai/agent").AssertOK()
+	d.Owner.GetJSON("/api/v1/ai/agents").AssertOK()
 
 	var id ids.UUID
 	err := d.TC.Operator().QueryRow(t.Context(),
-		"SELECT id FROM ai_agents WHERE workspace_id = $1 AND deleted_at IS NULL",
+		"SELECT id FROM ai_agents WHERE workspace_id = $1 AND is_default AND deleted_at IS NULL",
 		d.TC.Workspace.Workspace.ID).Scan(&id)
 	require.NoError(t, err)
 
 	return id
+}
+
+/*
+agentPath is the API path of the workspace's default agent.
+*/
+func agentPath(t *testing.T, d tests.Desk) string {
+	t.Helper()
+
+	return "/api/v1/ai/agents/" + models.PublicID(models.PrefixAiAgent, agentRow(t, d))
 }
 
 /*

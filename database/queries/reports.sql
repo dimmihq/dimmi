@@ -1,6 +1,6 @@
 -- name: ReportNames :many
 -- ReportNames returns the names reports show groups under: every inbox,
--- team and teammate of the workspace, removed ones included, so old
+-- team, teammate and AI agent of the workspace, removed ones included, so old
 -- figures still read.
 SELECT 'inbox'::text AS kind, i.id, i.name::text AS name FROM inboxes i WHERE i.workspace_id = @workspace_id
 UNION ALL
@@ -8,7 +8,9 @@ SELECT 'team', t.id, t.name FROM teams t WHERE t.workspace_id = @workspace_id
 UNION ALL
 SELECT 'member', m.id, COALESCE(nullif(u.name, ''), u.email)::text
 FROM workspace_members m JOIN users u ON u.id = m.user_id
-WHERE m.workspace_id = @workspace_id;
+WHERE m.workspace_id = @workspace_id
+UNION ALL
+SELECT 'agent', a.id, a.name FROM ai_agents a WHERE a.workspace_id = @workspace_id;
 
 -- name: ReportBacklogDays :many
 -- ReportBacklogDays returns the backlog counted at the end of each day of
@@ -74,6 +76,7 @@ FROM ai_runs
 WHERE workspace_id = @workspace_id AND kind = 'conversation' AND outcome IN ('unknown', 'handoff')
   AND created_at >= @since::timestamptz AND created_at < @until::timestamptz
   AND COALESCE(nullif(query_rewritten, ''), query_original) IS NOT NULL
+  AND (cardinality(@agents::uuid[]) = 0 OR agent_id = ANY (@agents::uuid[]))
 GROUP BY 1
 ORDER BY asked DESC, 1
 LIMIT @row_limit;
@@ -83,7 +86,18 @@ LIMIT @row_limit;
 -- run included.
 SELECT COALESCE(sum(cost_micros), 0)::bigint AS cost_micros, count(*)::bigint AS runs
 FROM ai_runs
-WHERE workspace_id = @workspace_id AND created_at >= @since::timestamptz AND created_at < @until::timestamptz;
+WHERE workspace_id = @workspace_id AND created_at >= @since::timestamptz AND created_at < @until::timestamptz
+  AND (cardinality(@agents::uuid[]) = 0 OR agent_id = ANY (@agents::uuid[]));
+
+-- name: ReportAiAgentRuns :many
+-- ReportAiAgentRuns sums, for each agent, what its runs cost in a range
+-- and how many conversations it handed to another agent.
+SELECT agent_id, COALESCE(sum(cost_micros), 0)::bigint AS cost_micros,
+    count(*) FILTER (WHERE outcome = 'transferred')::bigint AS transfers
+FROM ai_runs
+WHERE workspace_id = @workspace_id AND created_at >= @since::timestamptz AND created_at < @until::timestamptz
+  AND (cardinality(@agents::uuid[]) = 0 OR agent_id = ANY (@agents::uuid[]))
+GROUP BY agent_id;
 
 -- name: FindMemberReportDigest :one
 -- FindMemberReportDigest returns the teammate's report digest.

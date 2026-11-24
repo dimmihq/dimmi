@@ -60,14 +60,14 @@ func classifyingModel(t *testing.T, d tests.Desk, llm *fake.LLM) {
 		})
 		require.NoError(t, err)
 
-		agent, err := q.FindAgent(ctx, ws)
-		if err != nil {
-			agent, err = q.CreateAgent(ctx, models.CreateAgentParams{WorkspaceID: ws, Now: now})
+		if _, err := q.FindDefaultAgent(ctx, ws); err != nil {
+			_, err = q.CreateDefaultAgent(ctx, models.CreateDefaultAgentParams{WorkspaceID: ws, Now: now})
 			require.NoError(t, err)
 		}
 
-		_, err = d.TC.App.DB.Exec(ctx, `UPDATE ai_agents SET classifier_key_id = $1, classifier_model = 'sorter'
-			WHERE id = $2`, key.ID, agent.ID)
+		_, err = d.TC.App.DB.Exec(ctx, `INSERT INTO workspace_ai_settings
+			(workspace_id, classifier_key_id, classifier_model) VALUES ($1, $2, 'sorter') ON CONFLICT (workspace_id)
+			DO UPDATE SET classifier_key_id = $2, classifier_model = 'sorter'`, ws, key.ID)
 
 		return err
 	})
