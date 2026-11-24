@@ -122,6 +122,8 @@ export function detailLine(step: RunStep, workflows: ReadonlyMap<string, string>
       return extracted(detail);
     case "classify":
       return sorted(detail);
+    case "split":
+      return word(detail, "label") ? `Took ${word(detail, "label")}` : "";
     case "run_workflow":
       return ran(detail, workflows);
     case "reply_time":

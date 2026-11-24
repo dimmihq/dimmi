@@ -17,6 +17,7 @@ export type StepKind =
   | "dimmi"
   | "branch"
   | "classify"
+  | "split"
   | "wait"
   | "run_workflow"
   | "assign"
@@ -57,6 +58,7 @@ export const readyKinds: StepKind[] = [
   "dimmi",
   "branch",
   "classify",
+  "split",
   "wait",
   "run_workflow",
   "assign",

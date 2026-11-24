@@ -6,6 +6,7 @@
  * made. Settings are the server's own, so what the builder saves is
  * exactly what runs.
  */
+import { splitSentence } from "./split";
 import { stepLook } from "./step-kinds";
 import { ticketSentences } from "./ticket-sentences";
 import { newId, type Path, type Step, type StepKind } from "./workflows";
@@ -211,6 +212,7 @@ const describers: Partial<Record<StepKind, (step: Step, names: Names) => string>
   reply_time: (step) => text(step.settings, "text").trim() || replyTimeText,
   branch: () => "Go down the first path that matches",
   classify: sorted,
+  split: splitSentence,
   extract: extracting,
   run_action: acting,
   run_workflow: (step, names) => {

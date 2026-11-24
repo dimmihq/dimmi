@@ -74,6 +74,7 @@ func workflowSettingShapes() map[string]string {
 		workflowspec.KindAssignAgent:     shapeOf[workflowspec.AssignAgentSettings](),
 		workflowspec.KindTurnOffAI:       shapeOf[workflowspec.NoSettings](),
 		workflowspec.KindTurnOnAI:        shapeOf[workflowspec.NoSettings](),
+		workflowspec.KindSplit:           shapeOf[workflowspec.SplitSettings](),
 	}
 }
 

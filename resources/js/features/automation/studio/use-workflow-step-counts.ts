@@ -2,7 +2,8 @@
  * useWorkflowStepCounts reads a workflow's per-step numbers from its
  * analytics, the last 30 days by default, and maps each step id to what
  * it did: runs that reached it, wait on it now, failed on it, ended on
- * it without completing, and left by each path.
+ * it without completing, and left by each path, and whether the
+ * workflow has a goal its splits' variants are compared by.
  */
 import { useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
@@ -19,9 +20,9 @@ export function useWorkflowStepCounts(
   workspace: string,
   workflow: string,
   { days = 30, version = 0 }: { days?: number; version?: number } = {},
-): { counts: StepCountsMap; loading: boolean } {
+): { counts: StepCountsMap; loading: boolean; goal: boolean } {
   const query = useQuery(workflowMetricsQuery(workspace, workflow, { from: daysBack(days), version }));
   const counts = useMemo(() => (query.data ? new Map(Object.entries(query.data.steps)) : none), [query.data]);
 
-  return { counts, loading: query.isPending };
+  return { counts, loading: query.isPending, goal: Boolean(query.data?.goal) };
 }

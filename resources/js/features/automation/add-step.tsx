@@ -18,7 +18,7 @@ import type { StepKind } from "./workflows";
 
 const groups: [string, StepKind[]][] = [
   ["Messages", ["message", "article", "buttons", "collect", "reply_time"]],
-  ["Logic", ["branch", "classify", "extract", "wait", "run_workflow"]],
+  ["Logic", ["branch", "classify", "split", "extract", "wait", "run_workflow"]],
   ["AI agents", ["dimmi", "assign_ai_agent", "turn_off_ai", "turn_on_ai"]],
   [
     "Team",

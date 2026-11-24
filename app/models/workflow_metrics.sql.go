@@ -442,3 +442,90 @@ func (q *Queries) WorkflowStepPaths(ctx context.Context, arg WorkflowStepPathsPa
 	}
 	return items, nil
 }
+
+const workflowVariantGoals = `-- name: WorkflowVariantGoals :many
+WITH runs AS (
+    SELECT DISTINCT ON (s.run_id, s.step_id) s.run_id, s.step_id, s.path_id, r.started_at, r.conversation_id,
+        EXISTS (
+            SELECT 1 FROM workflow_run_steps h
+            WHERE h.workspace_id = r.workspace_id AND h.run_id = r.id
+              AND ((h.kind = 'dimmi' AND h.outcome = 'handed_over') OR (h.kind = 'assign' AND h.outcome = 'assigned')
+                OR (h.kind = 'escalate' AND h.status = 'completed'))
+        ) AS handed_over
+    FROM workflow_run_steps s
+    JOIN workflow_runs r ON r.id = s.run_id AND r.workspace_id = s.workspace_id
+    LEFT JOIN workflow_versions v ON v.id = r.version_id
+    WHERE s.workspace_id = $4 AND s.workflow_id = $5 AND s.kind = 'split'
+      AND s.status = 'completed' AND s.path_id IS NOT NULL
+      AND r.mode = 'live' AND r.status <> 'passed' AND r.started_at >= $6 AND r.started_at < $7
+      AND ($8::integer = 0 OR v.number = $8::integer)
+    ORDER BY s.run_id, s.step_id, s.started_at, s.id
+)
+SELECT r.step_id, COALESCE(r.path_id, '')::text AS path_id, count(*)::integer AS reached,
+    count(*) FILTER (WHERE
+        ($1::text = 'resolved' AND NOT r.handed_over AND f.ai_handed_off_at IS NULL AND f.human_replies = 0
+            AND f.closed_at >= r.started_at
+            AND f.closed_at < r.started_at + make_interval(secs => $2::integer))
+        OR ($1::text = 'csat' AND f.rating >= $3::integer AND f.rated_at >= r.started_at
+            AND f.rated_at < r.started_at + make_interval(secs => $2::integer))
+    )::integer AS goal
+FROM runs r
+LEFT JOIN conversation_facts f ON f.conversation_id = r.conversation_id AND f.workspace_id = $4
+GROUP BY r.step_id, r.path_id
+`
+
+type WorkflowVariantGoalsParams struct {
+	GoalKind          string    `json:"goal_kind"`
+	GoalWindowSeconds int32     `json:"goal_window_seconds"`
+	GoalMinRating     int32     `json:"goal_min_rating"`
+	WorkspaceID       ids.UUID  `json:"workspace_id"`
+	WorkflowID        ids.UUID  `json:"workflow_id"`
+	Since             time.Time `json:"since"`
+	Until             time.Time `json:"until"`
+	Version           int32     `json:"version"`
+}
+
+type WorkflowVariantGoalsRow struct {
+	StepID  string `json:"step_id"`
+	PathID  string `json:"path_id"`
+	Reached int32  `json:"reached"`
+	Goal    int32  `json:"goal"`
+}
+
+// WorkflowVariantGoals counts, for each variant of each split step of a
+// workflow, the live runs of a range that did something and took it,
+// and how many of those reached the goal, counted as WorkflowRunFigures
+// counts it.
+func (q *Queries) WorkflowVariantGoals(ctx context.Context, arg WorkflowVariantGoalsParams) ([]WorkflowVariantGoalsRow, error) {
+	rows, err := q.db.Query(ctx, workflowVariantGoals,
+		arg.GoalKind,
+		arg.GoalWindowSeconds,
+		arg.GoalMinRating,
+		arg.WorkspaceID,
+		arg.WorkflowID,
+		arg.Since,
+		arg.Until,
+		arg.Version,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []WorkflowVariantGoalsRow
+	for rows.Next() {
+		var i WorkflowVariantGoalsRow
+		if err := rows.Scan(
+			&i.StepID,
+			&i.PathID,
+			&i.Reached,
+			&i.Goal,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}

@@ -166,7 +166,8 @@ export interface WorkflowRun {
 /*
  * WorkflowStepMetrics is what one step did over a range: runs that
  * reached it, wait on it now, failed on it, ended on it without
- * completing, and left by each path.
+ * completing, and left by each path. A split also counts, by variant
+ * (path) id, the runs that took each variant and reached the goal.
  */
 export interface WorkflowStepMetrics {
   reached: number;
@@ -174,6 +175,7 @@ export interface WorkflowStepMetrics {
   failed: number;
   dropped: number;
   paths: Record<string, number>;
+  variants?: Record<string, { reached: number; goal: number }>;
 }
 
 /*

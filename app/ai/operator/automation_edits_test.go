@@ -173,6 +173,8 @@ func TestAutomationReference(t *testing.T) {
 		assert.Contains(t, ref, "- wait: settings {count?: string, for?: string, interrupt_on?: [string], "+
 			"schedule_id?: string, until?: {kind: string, schedule_id?: string, time?: string}}.")
 		assert.Contains(t, ref, "- branch. Paths you add: 1 to 10. Fixed paths, by outcome: else (always has else).")
+		assert.Contains(t, ref, "- split: settings {variants: [{id: string, label: string, weight: number}], "+
+			"winner?: string}. Paths you add: 2 to 4.")
 		assert.Contains(t, ref, "conversation.priority (list: none, low, medium, high, urgent)")
 		assert.NotContains(t, ref, "- conversation.opener:")
 	})

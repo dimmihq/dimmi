@@ -33,6 +33,7 @@ import {
   DropdownTrigger,
 } from "@/components/base/dropdown/dropdown";
 import { AlertDialog } from "@/components/base/modal/modal";
+import { toast } from "@/components/base/toast/toast";
 import { usePermission } from "@/features/settings/inboxes";
 import { ScrollArea } from "@/features/shell/page";
 import { useWide } from "@/features/shell/use-wide";
@@ -51,6 +52,7 @@ import type { Choices } from "./choices";
 import { freshStep, withEdited, withoutStep, withStep } from "./edit-steps";
 import { type Head, Inspector } from "./inspector";
 import { StatusChip } from "./parts";
+import { withWinner } from "./split";
 import type { Lists } from "./step-fields";
 import { type Names, sentence } from "./step-settings";
 import { workflowSlots } from "./studio/slots";
@@ -378,9 +380,20 @@ export function WorkflowBuilder({ workspace, workflow }: { workspace: string; wo
   const suggestion = useWorkflowRequest(workspace, workflow.id, draft.spec, draft.adopt);
   const moves = { selected, onSelect: select, onAdd: add, kinds, summarize, flagged };
   const stepCounts = useWorkflowStepCounts(workspace, workflow.id);
+  const pickWinner = (id: string, variant: string) => {
+    edit(id, (current) => withWinner(current, variant));
+    toast.success("Winner set in the draft. Publish to send everyone down it.");
+  };
   const inspector = {
     results:
-      step && workflow.live_version_id ? <StepCounts step={step} counts={stepCounts.counts.get(step.id)} /> : null,
+      step && workflow.live_version_id ? (
+        <StepCounts
+          step={step}
+          counts={stepCounts.counts.get(step.id)}
+          goal={stepCounts.goal}
+          onWinner={readOnly ? undefined : (variant) => pickWinner(step.id, variant)}
+        />
+      ) : null,
     spec: draft.spec,
     step,
     issues: issues.filter((issue) => (step ? issue.step_id === step.id : !issue.step_id)),

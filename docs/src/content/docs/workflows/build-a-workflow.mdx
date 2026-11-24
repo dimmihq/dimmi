@@ -46,9 +46,22 @@ Some steps split the workflow into paths based on what happens next:
 - **Collect data:** asks for an email, name, or phone number and saves it. If the answer is invalid, dimmi asks once more. Typed emails are saved unverified, and only if the customer does not already have one.
 - **Branch:** check up to 10 conditions. The first matching path wins, and anything else goes to **Everyone else**.
 - **Sort by topic:** define 2 to 10 topics and let AI pick the right path from the conversation.
+- **A/B split:** send conversations down 2 to 4 variants by share, to see which path works better. See [A/B test a path](#ab-test-a-path).
 - **Extract with AI:** pull typed values, like an order number, out of the conversation into variables. Values the AI isn't sure of take a fallback instead of a guess.
 - **Wait:** pause for a set time, or until office hours open.
 - **Run an action:** call one of your [actions](/ai/actions/) and save what it returns. Workflows made before actions existed may still hold a **Call your system** step; it keeps running, but new workflows use actions.
+
+## A/B test a path
+
+Not sure whether a short greeting or a set of reply buttons gets more conversations resolved? Add an **A/B split** step and put each version on its own path. Each variant gets a share of conversations, and the shares add up to 100%: 50/50, or 90/10 to try something new on a few customers first.
+
+The pick is fixed per conversation. A conversation that reaches the split again, on a later message, takes the same variant, and a simulation started from a past conversation takes the variant a live run of it would. To simulate a particular variant, pick it as the winner in the draft while you test.
+
+To compare the variants, give the workflow a [goal](/workflows/how-workflows-work/#goals-and-analytics), publish it, and select the split. Its results list each variant with how many conversations took it over the last 30 days and how many of those reached the goal.
+
+Once one variant wins, click **Send everyone down this one**, or pick it under **Winner** in the step's settings. The winner is saved to the draft, so nothing changes until you publish. From then on, every conversation goes down the winner and the other paths stop getting new ones.
+
+Through the API, a split is a step of kind `split` whose settings list `variants` (`id`, `label`, `weight`), with each `id` matching one of the step's paths. Set `winner` to a variant's `id` in the draft, then publish. The workflow's metrics carry each variant's `reached` and `goal` under the split's step.
 
 ## Personalize messages with variables
 

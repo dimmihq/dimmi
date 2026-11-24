@@ -56,6 +56,8 @@ func (d *dry) step(ctx context.Context, s workflowspec.Step) (outcome, error) {
 		return d.handle(ctx, s)
 	case workflowspec.KindHTTPRequest:
 		return d.request(s), nil
+	case workflowspec.KindSplit:
+		return splitOutcome(s, d.conv.ID.String()), nil
 	}
 
 	return d.action(ctx, s), nil

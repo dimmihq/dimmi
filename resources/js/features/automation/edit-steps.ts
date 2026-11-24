@@ -3,6 +3,7 @@
  * tree (paths hold steps, steps hold paths), so each change rebuilds the
  * branch it touches and leaves the rest as it was.
  */
+import { freshSplit } from "./split";
 import { newId, type Path, type Step, type StepKind } from "./workflows";
 
 /*
@@ -75,7 +76,8 @@ const starts: Partial<Record<StepKind, Step["settings"]>> = {
  * freshStep is a new step of a kind with the settings it starts with
  * and the paths it needs: two buttons for reply buttons, one condition
  * and everyone else for a branch, two categories and none matched for
- * sorting by topic, and for dimmi a path for each way its turn ends. A
+ * sorting by topic, variants A and B for a split, half each, and for
+ * dimmi a path for each way its turn ends. A
  * call to your system starts with no paths; its failure path is opt-in.
  */
 export function freshStep(kind: StepKind): Step {
@@ -92,6 +94,9 @@ export function freshStep(kind: StepKind): Step {
       { id: newId("p_"), label: "Category 2", steps: [] },
       { id: newId("p_"), outcome: "none", steps: [] },
     ];
+  }
+  if (kind === "split") {
+    return freshSplit(step);
   }
   if (kind === "branch") {
     step.paths = [
