@@ -11,7 +11,21 @@ import (
 )
 
 /*
-managedDesk is a desk on an install that offers dimmi's own models.
+everyUpstream is the settings of an install that holds a key for every
+upstream of the built-in provider, so it offers every built-in model.
+*/
+func everyUpstream() []string {
+	return []string{
+		"DIMMI_AI__MANAGED__ANTHROPIC__API_KEY=sk-ant-managed",
+		"DIMMI_AI__MANAGED__OPENAI__API_KEY=sk-openai-managed",
+		"DIMMI_AI__MANAGED__OPENWEIGHT__ENGY__API_KEY=sk-engy-managed",
+	}
+}
+
+/*
+managedDesk is a desk on an install that offers dimmi's own models: with
+no settings given, the Anthropic ones only, since an install offers the
+models it holds a key for.
 */
 func managedDesk(t *testing.T, env ...string) tests.Desk {
 	t.Helper()
@@ -42,7 +56,7 @@ func TestManagedConnection(t *testing.T) {
 
 	t.Run("names the built-in connection dimmi and offers today's models", func(t *testing.T) {
 		t.Parallel()
-		d := managedDesk(t)
+		d := managedDesk(t, everyUpstream()...)
 
 		res := d.Owner.GetJSON(agentPath(t, d)).AssertOK()
 
@@ -52,7 +66,7 @@ func TestManagedConnection(t *testing.T) {
 
 	t.Run("brings an older built-in connection up to date", func(t *testing.T) {
 		t.Parallel()
-		d := managedDesk(t)
+		d := managedDesk(t, everyUpstream()...)
 		d.Owner.GetJSON(agentPath(t, d)).AssertOK()
 		_, err := d.TC.Operator().Exec(t.Context(), `
 			UPDATE ai_provider_keys SET name = 'Dimmi (built-in)', models = '["claude-retired", "gpt-retired"]'

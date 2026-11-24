@@ -66608,7 +66608,7 @@
         ],
         "x-internal": true
       },
-      "put": {
+      "patch": {
         "description": "Saves what the next run of a routine needs, as a JSON object of at most 64 KB. Keys given replace the saved ones; every other saved key stays. Returns the state as it now stands, and saved (false for a dry run).",
         "operationId": "operator.routines.state.update",
         "parameters": [

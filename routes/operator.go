@@ -82,7 +82,7 @@ func operatorAgentRoutes(r *routing.Router, a *app.App) {
 	routing.Get(r, "/operator/suggestions/recent", "operator.suggestions.recent.index", c.Recent).
 		Ability("conversations:read")
 	routing.Get(r, "/operator/routines/{routine}/state", "operator.routines.state.show", c.State).Ability("ai:read")
-	routing.Put(r, "/operator/routines/{routine}/state", "operator.routines.state.update", c.SaveState).
+	routing.Patch(r, "/operator/routines/{routine}/state", "operator.routines.state.update", c.SaveState).
 		Ability("ai:write")
 	routing.Post(r, "/operator/routines/{routine}/nothing-to-change", "operator.routines.nothing-to-change.store",
 		c.NothingToChange).Ability("ai:write").Status(fhttp.StatusOK)
