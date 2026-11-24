@@ -26,7 +26,9 @@ Steps:
    handed over. With 12 or fewer, read them all. With more, pick up to 48 that cover the
    different reasons and the subjects that repeat, keep conversations on the same subject
    together, and hand them to subagents, about 12 each, every number written out. Twelve out
-   of two hundred is too few to say what the agent keeps missing.
+   of two hundred is too few to say what the agent keeps missing. Subagents do steps 3 and 4
+   and report: each handover's kind, the question, what the team answered, and the article that
+   answers it or should. Steps 5 to 9 are yours, from their reports.
    Each conversation is read with get_conversation_by_number and get_ai_agent_runs, passing its
    number: the runs show what the agent searched for, what it found and why it stopped.
 4. Sort each handover into one of four:

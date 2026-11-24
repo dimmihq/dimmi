@@ -97,14 +97,15 @@ func (e *Engine) sessionPrompt(s *session) string {
 			"today": today,
 		})
 	}
-	task := taskRoutine
-	if s.sub != nil {
-		task = taskSubagent
-	}
-	return prompts.Task(task, prompts.Vars{
+	vars := prompts.Vars{
 		"workspace": s.m.Workspace.Name, "today": today, "name": s.routine.row.Name,
-		"suggesting": prompts.Task(taskRoutineSuggesting, nil), "window": e.runWindow(s), "skills": skillList(),
-	})
+		"window": e.runWindow(s), "skills": skillList(),
+	}
+	if s.sub != nil {
+		return prompts.Task(taskSubagent, vars)
+	}
+	vars["suggesting"] = prompts.Task(taskRoutineSuggesting, nil)
+	return prompts.Task(taskRoutine, vars)
 }
 
 /*

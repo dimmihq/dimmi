@@ -1,7 +1,7 @@
 <!--
-Who reads this: the model that runs Operator in a routine's run, main agent and subagent alike. The
-code places it inside routine.md and subagent.md (app/ai/operator/prompt.go), so both suggest
-changes the same way.
+Who reads this: the model that runs Operator in a routine's run, as its main agent. The code
+places it inside routine.md (app/ai/operator/prompt.go). A subagent suggests nothing and is not
+told this.
 
 What it must get right: take few steps, since every step re-reads everything read so far; never
 suggest again what waits or was declined; one suggestion per article or procedure; and keep

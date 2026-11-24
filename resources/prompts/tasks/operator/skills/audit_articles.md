@@ -27,9 +27,12 @@ When you are the main agent:
    help articles at offset 25, limit 25, for contradictions and stale facts. Read the
    audit_articles skill first and follow its steps for a subagent." With 25 or fewer, audit them
    yourself with the subagent's steps below.
-4. Save next_offset with save_routine_state: the offset you listed from plus the number of
+4. When the subagents have reported, call list_recent_suggestions, then call
+   propose_article_edits once with every fix their reports back, each article once. Two
+   subagents may report the two sides of one contradiction: fix one side, never both.
+5. Save next_offset with save_routine_state: the offset you listed from plus the number of
    articles audited this run.
-5. When nobody suggested anything, call report_nothing_to_change with the reason.
+6. When you suggested nothing, call report_nothing_to_change with the reason.
 
 When you are a subagent, or auditing 25 or fewer yourself:
 1. In one step, call list_articles with the offset and limit you were given, and
@@ -41,7 +44,8 @@ When you are a subagent, or auditing 25 or fewer yourself:
    tell.
 4. Call propose_article_edits once, with one fix for each article that has a contradiction or
    stale fact: the article's id, edits with the exact sentences to fix, and a dedup_key like
-   stale:<article id>.
+   stale:<article id>. A subagent reports these instead: for each fix, the article's title and
+   id, the exact sentence, what it should say, and the other article that shows it.
 
 Which side of a contradiction to fix:
 - When two articles disagree, the newer one, or the one the team's own answers in conversations

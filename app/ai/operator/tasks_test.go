@@ -25,7 +25,7 @@ func TestTaskFiles(t *testing.T) {
 		{name: taskSystem},
 		{name: taskSession, vars: []string{"workspace", "teammate", "role", "today"}},
 		{name: taskRoutine, vars: []string{"workspace", "today", "name", "suggesting", "window", "skills"}},
-		{name: taskSubagent, vars: []string{"workspace", "today", "name", "suggesting", "window", "skills"}},
+		{name: taskSubagent, vars: []string{"workspace", "today", "name", "window", "skills"}},
 		{name: taskRoutineSuggesting},
 		{name: taskRoutineWindow, vars: []string{"start", "end", "start_date", "end_date", "last_run"}},
 		{name: taskRoutineFirstRun},

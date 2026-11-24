@@ -7,10 +7,12 @@
 | articles, a month of conversations. The main agent splits such work
 | across subagents that run at the same time. Each is the same model
 | with the same skills and reading tools, starts from nothing but the
-| task it was given, makes its own suggestions for the team to review,
-| and reports back; the main agent waits for all of them, then saves
-| the routine's state and writes the run's message. A subagent cannot
-| start subagents, touch the routine's state or end the run. Its model
+| task it was given, and reports back what it found. It suggests
+| nothing: subagents work at the same time and cannot see each other,
+| so two of them would suggest the same change. The main agent waits
+| for all of them, makes every suggestion from their reports, then
+| saves the routine's state and writes the run's message. A subagent
+| cannot start subagents, touch the routine's state or end the run. Its model
 | calls are a run of their own, so its cost is counted once, and its
 | steps show in the run's timeline under its name.
 |
@@ -80,9 +82,10 @@ func (e *Engine) subagentsTool() tool {
 	return tool{spec: contracts.ToolSpec{
 		Name: toolSubagents,
 		Description: "Split a large piece of this routine's work across up to 4 subagents that run at the same " +
-			"time. Each reads its part, makes its own suggestions for the team to review, and reports back to " +
-			"you; this call returns once all have reported. Use it when the work is more than you can read " +
-			"yourself in one run. A run may start 8 subagents in all.",
+			"time. Each reads its part and reports back to you what it found, with the evidence; it suggests " +
+			"nothing, so every suggestion is yours to make from the reports. This call returns once all have " +
+			"reported. Use it when the work is more than you can read yourself in one run. A run may start 8 " +
+			"subagents in all.",
 		Schema: schema(subagentsSchema),
 	}, handle: e.runSubagents, routine: true, mainOnly: true, alone: true}
 }
@@ -117,20 +120,14 @@ func (e *Engine) runSubagents(ctx context.Context, s *session, args json.RawMess
 	}
 	wg.Wait()
 	var b strings.Builder
-	suggested := 0
 	for i, sub := range subs {
-		s.proposed = append(s.proposed, sub.proposed...)
 		s.tainted = s.tainted || sub.tainted
 		s.routine.helpersCost += sub.tally.cost
-		suggested += len(sub.proposed)
-		fmt.Fprintf(&b, "Subagent %d (%s)\nSuggestions it made: %s\nIts report:\n%s\n\n", sub.sub.n, sub.sub.title,
-			titlesOf(sub.proposed), reports[i])
+		fmt.Fprintf(&b, "Subagent %d (%s)\nIts report:\n%s\n\n", sub.sub.n, sub.sub.title, reports[i])
 	}
-	summary := fmt.Sprintf("%s reported", counted(len(subs)))
-	if suggested > 0 {
-		summary += fmt.Sprintf(", %d suggested", suggested)
-	}
-	return result{text: strings.TrimSpace(b.String()), step: Step{Tool: toolSubagents, Summary: summary}}, nil
+	b.WriteString("No subagent suggested anything: they cannot. Suggest what their reports back, each change once.")
+	summary := counted(len(subs)) + " reported"
+	return result{text: b.String(), step: Step{Tool: toolSubagents, Summary: summary}}, nil
 }
 
 /*
@@ -141,21 +138,6 @@ func counted(n int) string {
 		return "1 subagent"
 	}
 	return fmt.Sprintf("%d subagents", n)
-}
-
-/*
-titlesOf lists the suggestions a subagent made, so the main agent
-reports what was really suggested and not what a report claims.
-*/
-func titlesOf(rows []models.OperatorChangeset) string {
-	if len(rows) == 0 {
-		return "none"
-	}
-	titles := make([]string, len(rows))
-	for i, row := range rows {
-		titles[i] = `"` + row.Title + `"`
-	}
-	return strings.Join(titles, ", ")
 }
 
 /*

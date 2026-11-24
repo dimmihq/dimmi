@@ -137,13 +137,14 @@ func (e *Engine) toolSpecs(s *session) []contracts.ToolSpec {
 offers reports whether a tool is offered under the settings: reading
 tools always, writing tools while any group they write is on. A routine
 is offered only the groups it was given, never drafts or memories, and
-the routine tools only to a routine.
+the routine tools only to a routine. A subagent is offered no tool that
+suggests a change: the main agent suggests, from what subagents report.
 */
 func (e *Engine) offers(s *session, t tool) bool {
 	if s.routine == nil && t.routine {
 		return false
 	}
-	if s.sub != nil && t.mainOnly {
+	if s.sub != nil && (t.mainOnly || len(t.writes) > 0) {
 		return false
 	}
 	if s.routine != nil && !s.routine.allows(e, t) {

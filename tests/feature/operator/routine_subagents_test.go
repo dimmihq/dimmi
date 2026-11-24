@@ -35,21 +35,21 @@ func toolNames(req contracts.ChatRequest) []string {
 
 /*
 TestOperatorRoutineSubagents covers a routine splitting its work: what
-a subagent is given, what it may do, and how its suggestions, steps and
+a subagent is given, what it may do, and how its report, steps and
 report come back to the run.
 */
 func TestOperatorRoutineSubagents(t *testing.T) {
 	t.Parallel()
 
-	t.Run("runs a subagent that suggests a change and reports back to the main agent", func(t *testing.T) {
+	t.Run("runs a subagent that reports back, and leaves the suggesting to the main agent", func(t *testing.T) {
 		t.Parallel()
 		k := newDesk(t)
 		article := k.article("Batches")
 		routine := k.routine(testkit.JSON{"name": "Audit", "prompt": "Audit articles."})
 		k.llm.Script(
 			tools(split("Articles 1 to 25")),
+			reply("I read 25 articles. Batches gives a Free limit that no plan has."),
 			batchFix(article, "Fix the batch limit", "stale:batch", "- A batch can hold at most 1,000 shipments."),
-			reply("I read 25 articles and suggested one fix: Fix the batch limit."),
 			reply("I read 25 articles. One had a wrong limit. My suggestion is below."),
 		)
 
@@ -61,9 +61,10 @@ func TestOperatorRoutineSubagents(t *testing.T) {
 		run.AssertJSONPath("data.steps.1.tool", "subagent")
 		run.AssertJSONPath("data.steps.1.summary", "Articles 1 to 25")
 		run.AssertJSONPath("data.steps.1.subagent", float64(1))
+		run.AssertJSONPath("data.steps.2.tool", "subagent_report")
 		run.AssertJSONPath("data.steps.2.subagent", float64(1))
-		run.AssertJSONPath("data.steps.3.tool", "subagent_report")
-		run.AssertJSONPath("data.steps.4.summary", "1 subagent reported, 1 suggested")
+		run.AssertJSONPath("data.steps.3.summary", "1 subagent reported")
+		run.AssertJSONPath("data.steps.4.summary", "Proposed: Fix the batch limit")
 		sent := k.llm.Sent()
 		assert.Contains(t, sent[0].System[0].Text, "subagents with run_subagents")
 		assert.Contains(t, sent[1].System[0].Text, "You are a subagent")
@@ -72,10 +73,14 @@ func TestOperatorRoutineSubagents(t *testing.T) {
 		for _, name := range []string{"run_subagents", "save_routine_state", "report_nothing_to_change"} {
 			assert.NotContains(t, toolNames(sent[1]), name)
 		}
-		assert.Contains(t, toolNames(sent[1]), "propose_article_edits")
-		back := sent[3].Messages[len(sent[3].Messages)-1].Parts[0].Text
-		assert.Contains(t, back, `Suggestions it made: "Fix the batch limit"`)
-		assert.Contains(t, back, "I read 25 articles and suggested one fix")
+		for _, name := range []string{"propose_article_edits", "propose_new_article", "propose_changes"} {
+			assert.Contains(t, toolNames(sent[0]), name)
+			assert.NotContains(t, toolNames(sent[1]), name)
+		}
+		assert.Contains(t, sent[1].System[0].Text, "You suggest nothing")
+		back := sent[2].Messages[len(sent[2].Messages)-1].Parts[0].Text
+		assert.Contains(t, back, "Batches gives a Free limit that no plan has.")
+		assert.Contains(t, back, "No subagent suggested anything")
 	})
 
 	t.Run("waits for every subagent and keeps each one's steps under its number", func(t *testing.T) {
