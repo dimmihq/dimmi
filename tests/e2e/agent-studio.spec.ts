@@ -44,10 +44,10 @@ it.describe("agent studio", () => {
 
   it("filters the AI report to one agent", async ({ page }) => {
     await page.goto("/d/reports/ai");
-    // The address gains the workspace's slug and the page mounts again: a
-    // menu opened before that closes with the first mount.
-    await expect(page).toHaveURL(/\/d\/[^/]+\/reports\/ai$/);
-    await page.getByRole("button", { name: "Filter" }).click();
+    // Opened from the keyboard: a menu closes when the page behind it
+    // scrolls, and a mouse click made while the report is still sliding in
+    // has Playwright scroll the button into place a moment after it opens.
+    await page.getByRole("button", { name: "Filter" }).press("Enter");
     const filters = page.getByRole("dialog", { name: "Filter the report" });
     await filters.getByRole("button", { name: "AI agent" }).click();
     await expect(filters.getByText("dimmi", { exact: true })).toBeVisible();
