@@ -11,6 +11,7 @@ import (
 	fhttp "github.com/dimmihq/dimmi/framework/http"
 	"github.com/dimmihq/dimmi/framework/testkit"
 
+	"github.com/dimmihq/dimmi/app/models"
 	"github.com/dimmihq/dimmi/database/factories"
 	"github.com/dimmihq/dimmi/tests"
 )
@@ -112,4 +113,16 @@ func TestSelfHostEdition(t *testing.T) {
 
 		assertNotAccepted(t, userByEmail(t, tc, "grace@example.com"))
 	})
+}
+
+/*
+assertNotAccepted checks the account holds no acceptance at all.
+*/
+func assertNotAccepted(t *testing.T, user models.User) {
+	t.Helper()
+
+	assert.Nil(t, user.TermsVersion)
+	assert.Nil(t, user.TermsAcceptedAt)
+	assert.Nil(t, user.TermsAcceptedIp)
+	assert.Nil(t, user.TermsAcceptedUserAgent)
 }

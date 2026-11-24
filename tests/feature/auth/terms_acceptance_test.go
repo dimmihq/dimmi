@@ -171,15 +171,3 @@ func assertAccepted(t *testing.T, tc *tests.TestCase, user models.User, version 
 	assert.True(t, user.TermsAcceptedIp.IsValid())
 	assert.Equal(t, browserAgent, *user.TermsAcceptedUserAgent)
 }
-
-/*
-assertNotAccepted checks the account holds no acceptance at all.
-*/
-func assertNotAccepted(t *testing.T, user models.User) {
-	t.Helper()
-
-	assert.Nil(t, user.TermsVersion)
-	assert.Nil(t, user.TermsAcceptedAt)
-	assert.Nil(t, user.TermsAcceptedIp)
-	assert.Nil(t, user.TermsAcceptedUserAgent)
-}
