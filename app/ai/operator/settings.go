@@ -6,9 +6,10 @@
 | A workspace that never opened its Operator settings still has them:
 | Operator on, nothing spent without a teammate asking, every change
 | waiting for a teammate. Policies say per group of tools whether
-| changes apply at once, wait for approval or are never offered; article
-| and procedure changes always wait, since drafts are still reviewed,
-| and so do the workspace's own actions, which cannot be undone.
+| changes apply at once, wait for approval or are never offered; article,
+| procedure, workflow and series changes always wait, since drafts are
+| still reviewed, and so do the workspace's own actions, which cannot
+| be undone.
 |
 */
 
@@ -59,13 +60,16 @@ const (
 	GroupArticles      Group = "articles"
 	GroupProcedures    Group = "procedures"
 	GroupActions       Group = "actions"
+	GroupAutomation    Group = "automation"
 )
 
 /*
 Groups lists every group in the order settings show them.
 */
 func Groups() []Group {
-	return []Group{GroupConversations, GroupNotes, GroupContacts, GroupArticles, GroupProcedures, GroupActions}
+	return []Group{
+		GroupConversations, GroupNotes, GroupContacts, GroupArticles, GroupProcedures, GroupAutomation, GroupActions,
+	}
 }
 
 /*
@@ -124,7 +128,7 @@ func ValidPolicy(p Policy) bool {
 CanAuto reports whether a group's changes may apply without approval.
 */
 func CanAuto(g Group) bool {
-	return g != GroupArticles && g != GroupProcedures && g != GroupActions
+	return g != GroupArticles && g != GroupProcedures && g != GroupActions && g != GroupAutomation
 }
 
 /*

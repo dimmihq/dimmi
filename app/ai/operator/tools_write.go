@@ -65,12 +65,13 @@ func (e *Engine) writeTools() []tool {
 }
 
 /*
-changeKinds are the kinds propose_changes writes; workspace actions and
-help articles are proposed through their own tools.
+changeKinds are the kinds propose_changes writes; workspace actions,
+help articles, workflows and series are proposed through their own
+tools.
 */
 func changeKinds() []Kind {
 	return slices.DeleteFunc(Kinds(), func(k Kind) bool {
-		return k == KindAction || k == KindArticleEdit || k == KindArticleNew
+		return k == KindAction || k == KindArticleEdit || k == KindArticleNew || isAutomation(k)
 	})
 }
 
