@@ -43,6 +43,20 @@ Before every step, dimmi evaluates your **Leave early** rules against the custom
 
 The **Goal** window begins the moment the customer enters the series.
 
+### Control group
+
+A goal rate alone can't tell you whether the series caused it. Set **Control group, percent** (0 to 50) to hold that share of people out: they enter, receive nothing, and leave at once, and dimmi still counts their goal for the whole window.
+
+The entry step's results then show both groups side by side. For example, with a 10% control group:
+
+| Group | People | Reached the goal |
+| --- | --- | --- |
+| Got the series | 900 | 27% |
+| Held out | 100 | 19% |
+| **Lift** | | **+8 pts** |
+
+Who is held out is decided once, when they enter. Test journeys never join the control group.
+
 ## Publish, pause, and archive
 
 - **Publish changes:** customers already in the series pick up the new version from their current step. If their step was deleted, they move to the next remaining step.
