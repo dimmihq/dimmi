@@ -13,6 +13,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useBlocker } from "@tanstack/react-router";
 import { toast } from "@/components/base/toast/toast";
 import { DomainList } from "@/features/email/domains/domain-list";
+import { SendingPaused } from "@/features/email/sending/sending-paused";
 import { AddAddress } from "@/features/email/setup/add-address";
 import { AddressStatus } from "@/features/email/setup/address-status";
 import { Failure } from "@/features/email/setup/failure";
@@ -64,6 +65,7 @@ export function EmailSettings() {
         />
       }
     >
+      <SendingPaused workspace={me.workspace.id} canResume={permissions.includes("email:resume_sending")} />
       <Section title="Addresses" description="Where customers write to you." loading={!addresses} rows={2}>
         {addresses?.length === 0 ? <Empty>No address is connected yet.</Empty> : null}
         {addresses?.map((address) => (

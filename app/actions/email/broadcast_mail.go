@@ -45,6 +45,8 @@ var (
 		"Verify the domain of this address before sending broadcasts from it, so they're signed as yours.")
 	ErrBroadcastPaused = fault.New(fault.Invalid, "broadcast_sending_paused",
 		"Email sending is paused for this workspace, so broadcasts can't go out.")
+	ErrSendingPaused = fault.New(fault.Invalid, "email_sending_paused",
+		"Bulk email is paused for this workspace. An owner can resume it in Settings, under Email.")
 )
 
 /*
@@ -58,6 +60,8 @@ type SendBroadcastEmail struct {
 	Senders   *Domains
 	Stamps    inbound.Stamps
 	Transport string
+
+	Reputation *Reputation
 }
 
 /*
@@ -122,6 +126,8 @@ func (a *SendBroadcastEmail) sender(ctx context.Context, q *models.Queries, ws i
 	}
 
 	switch {
+	case sender.BlockedReason == BlockedSendingPaused:
+		return address, sender, ErrSendingPaused
 	case sender.BlockedReason != "":
 		return address, sender, ErrBroadcastPaused
 	case sender.State != SendingOwnDomain:
@@ -247,7 +253,7 @@ func (a *SendBroadcastEmail) deliver(ctx context.Context, row models.OutboundEma
 			return fmt.Errorf("mark broadcast email sent: %w", err)
 		}
 
-		return nil
+		return a.Reputation.Sent(ctx, q, row.WorkspaceID)
 	})
 }
 

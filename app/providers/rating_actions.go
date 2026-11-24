@@ -40,6 +40,7 @@ func bootRatings(a *app.App) error {
 		Email: &email.SendRatingEmail{
 			DB: a.DB, Clock: a.Clock, Mail: a.Mail, Config: a.Config.Channels.Email, Senders: a.EmailDomains,
 			Stamps: inbound.NewStamps(a.DerivedKey(stampsKeyPurpose)), Transport: customerTransport(a),
+			Reputation: a.EmailReputation,
 		},
 	}
 	r.Listen(a.Events)

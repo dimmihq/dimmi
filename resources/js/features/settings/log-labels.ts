@@ -57,6 +57,8 @@ const groups: { id: string; events: string[] }[] = [
       "workspace.restored",
       "workspace.suspended",
       "workspace.unsuspended",
+      "email_sending.paused",
+      "email_sending.resumed",
       "member.joined",
       "member.role_changed",
       "ownership.transferred",

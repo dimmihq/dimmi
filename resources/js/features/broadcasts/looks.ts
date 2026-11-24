@@ -61,6 +61,7 @@ export const pauseReasons: Record<PauseReason, string> = {
   bounce_rate: "Too many emails bounced, so sending paused to protect your domain.",
   complaint_rate: "Too many people reported it as spam, so sending paused to protect your domain.",
   paused_by_teammate: "A teammate paused it.",
+  sending_paused: "Bulk email is paused for the workspace. An owner can resume it in Settings, under Email.",
 };
 
 const reasonNames: Record<string, string> = {

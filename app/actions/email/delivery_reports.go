@@ -27,6 +27,7 @@ package email
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"regexp"
@@ -93,6 +94,22 @@ type reportRun struct {
 	tx   *database.Tx
 	q    *models.Queries
 	sent models.OutboundEmail
+}
+
+/*
+judged handles a complaint or a bounce, then pauses the workspace's
+sending when the report took it past a rate.
+*/
+func (a *ProcessInboundEmail) judged(
+	ctx context.Context, mail *received, handle func(context.Context, *received) error,
+) error {
+	if err := handle(ctx, mail); err != nil {
+		return err
+	}
+
+	_, err := a.Reputation.Judge(ctx, mail.row.WorkspaceID)
+
+	return err
 }
 
 /*
@@ -409,5 +426,35 @@ func (run reportRun) record(ctx context.Context, o outcome) error {
 		return fmt.Errorf("record recipient status: %w", err)
 	}
 
+	if err := run.count(ctx, o); err != nil {
+		return err
+	}
+
 	return run.broadcastFailed(ctx, o)
+}
+
+/*
+count adds a lasting bounce or a complaint to the workspace's sending
+counts. A test email says nothing about how the workspace's mail fares,
+and a report already recorded for the recipient is counted once.
+*/
+func (run reportRun) count(ctx context.Context, o outcome) error {
+	if run.sent.Kind == string(enums.OutboundEmailKindTest) {
+		return nil
+	}
+
+	var known map[string]recipientStatus
+	if json.Unmarshal(run.sent.RecipientStatuses, &known) == nil && known[o.address].Status == o.status.Status {
+		return nil
+	}
+
+	if o.reason == enums.EmailSuppressionReasonComplaint {
+		return run.a.Reputation.Complained(ctx, run.q, run.sent.WorkspaceID)
+	}
+
+	if o.reason == enums.EmailSuppressionReasonHardBounce {
+		return run.a.Reputation.Bounced(ctx, run.q, run.sent.WorkspaceID)
+	}
+
+	return nil
 }

@@ -33,8 +33,10 @@ type EmailLimitsConfig struct {
 }
 
 /*
-EmailReputation holds the rates that pause a workspace's sending. Zero turns
-a rate off.
+EmailReputation holds the shares of a workspace's customer email, between
+0 and 1, that pause its broadcasts, series and rating emails once passed:
+emails that bounced for good, and emails reported as spam. Zero turns a
+rate off.
 */
 type EmailReputation struct {
 	BouncePauseRate    float64 `koanf:"bounce_pause_rate"`
