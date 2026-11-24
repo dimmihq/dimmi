@@ -65,7 +65,8 @@ function Builder({
       <header className="flex h-12 shrink-0 items-center justify-between gap-3 ps-2.5 pe-2.5 pt-[7px]">
         <div className="flex min-w-0 flex-1 items-center gap-2">
           <Link
-            to="/d/routines"
+            to="/d/operator/$tab"
+            params={{ tab: "routines" }}
             aria-label="Back to routines"
             className="flex size-8 shrink-0 items-center justify-center rounded-lg text-foreground-icon-secondary outline-none transition-colors duration-150 hover:bg-background-secondary-hover focus-visible:ring-2 focus-visible:ring-border-focus-ring"
           >

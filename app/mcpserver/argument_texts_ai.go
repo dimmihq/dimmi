@@ -119,7 +119,9 @@ func aiTextsPart3() map[string]map[string]string {
 		"create_operator_routine": {
 			"template_key": "The template the new routine starts from; fields you leave out take its values. " +
 				"One of tpl_knowledge_gap_finder, tpl_github_pr_docs_sync, tpl_knowledge_staleness_audit, " +
-				"tpl_qa_procedure_digest or tpl_custom. Left out, it is tpl_custom. Such as " +
+				"tpl_qa_procedure_digest, tpl_voice_of_customer, tpl_feature_request_roundup, " +
+				"tpl_unhappy_customer_watch, tpl_waiting_conversations, tpl_ai_handover_review, " +
+				"tpl_simulation_review or tpl_custom. Left out, it is tpl_custom. Such as " +
 				"\"tpl_knowledge_gap_finder\".",
 		},
 		"create_procedure_test_case": {

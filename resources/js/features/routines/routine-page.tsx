@@ -51,7 +51,11 @@ export function RoutinePage({ id }: { id: string }) {
       <Panel label="Routine" ground className="h-full flex-1">
         <div className="m-auto flex flex-col items-center gap-2 p-8 text-center">
           <p className="text-body-medium text-text-primary">No such routine</p>
-          <Link to="/d/routines" className="text-body-2-regular text-text-secondary underline">
+          <Link
+            to="/d/operator/$tab"
+            params={{ tab: "routines" }}
+            className="text-body-2-regular text-text-secondary underline"
+          >
             Back to routines
           </Link>
         </div>
@@ -205,7 +209,7 @@ function Loaded({
         onConfirm={async () => {
           await deleteRoutine(workspace, routine.id);
           refresh();
-          void navigate({ to: "/d/routines" });
+          void navigate({ to: "/d/operator/$tab", params: { tab: "routines" } });
         }}
       />
     </Panel>
@@ -286,7 +290,8 @@ function Header({
     <header className="@container flex h-12 shrink-0 items-center justify-between gap-3 ps-2.5 pe-2.5 pt-[7px]">
       <div className="flex min-w-0 flex-1 items-center gap-2">
         <Link
-          to="/d/routines"
+          to="/d/operator/$tab"
+          params={{ tab: "routines" }}
           aria-label="Back to routines"
           className="flex size-8 shrink-0 items-center justify-center rounded-lg text-foreground-icon-secondary outline-none transition-colors duration-150 hover:bg-background-secondary-hover focus-visible:ring-2 focus-visible:ring-border-focus-ring"
         >
