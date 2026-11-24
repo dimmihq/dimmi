@@ -19,6 +19,7 @@ import (
 	"time"
 
 	"github.com/dimmihq/dimmi/framework/database"
+	"github.com/dimmihq/dimmi/framework/ids"
 
 	"github.com/dimmihq/dimmi/app/actions/conversations"
 	"github.com/dimmihq/dimmi/app/models"
@@ -42,6 +43,33 @@ func (e *Engine) listTags(ctx context.Context, s *session, _ json.RawMessage) (r
 	}
 	text := tagNames(tags)
 	return result{text: text, step: Step{Tool: "list_tags", Summary: fmt.Sprintf("Listed %d tags", len(tags))}}, nil
+}
+
+/*
+tagNamed finds a tag by its name, whatever its case, and reports whether
+the workspace has one.
+*/
+func (e *Engine) tagNamed(ctx context.Context, s *session, name string) (ids.UUID, bool, error) {
+	var tags []models.Tag
+
+	err := e.DB.Transaction(ctx, func(ctx context.Context, tx *database.Tx) error {
+		var err error
+
+		tags, err = models.New(tx).ListTags(ctx, models.ListTagsParams{WorkspaceID: s.m.Workspace.ID})
+
+		return err
+	})
+	if err != nil {
+		return ids.UUID{}, false, fmt.Errorf("list tags: %w", err)
+	}
+
+	for _, tag := range tags {
+		if strings.EqualFold(tag.Name, name) {
+			return tag.ID, true, nil
+		}
+	}
+
+	return ids.UUID{}, false, nil
 }
 
 /*

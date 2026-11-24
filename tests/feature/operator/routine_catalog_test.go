@@ -70,6 +70,11 @@ func TestOperatorRoutineCatalog(t *testing.T) {
 			names = append(names, spec.Name)
 		}
 		assert.Contains(t, names, "dimmi_list_help_centers")
+		assert.Contains(t, names, "dimmi_list_ai_agents")
+		assert.Contains(t, names, "dimmi_get_ai_agent_by_id")
+		assert.Contains(t, names, "dimmi_list_ai_agent_simulations")
+		assert.Contains(t, names, "dimmi_get_ai_agent_simulation_by_id")
+		assert.Contains(t, names, "dimmi_list_ai_agent_simulation_runs")
 		assert.NotContains(t, names, "dimmi_list_conversations")
 		assert.Contains(t, lastResult(sent[1]).Parts[0].Text, "hc_")
 	})

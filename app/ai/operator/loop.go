@@ -18,6 +18,7 @@ package operator
 import (
 	"context"
 	"errors"
+	"fmt"
 	"io"
 	"strings"
 	"time"
@@ -88,6 +89,7 @@ func (e *Engine) converse(ctx context.Context, s *session) (string, string) {
 			Role: contracts.ChatRoleAssistant, Parts: textParts(out.text), ToolCalls: out.calls,
 		})
 		p.messages = append(p.messages, e.callTools(ctx, s, out.calls)...)
+		remind(p.messages, e.running(s, calls))
 		if ctx.Err() != nil {
 			return "", statusOf(ctx.Err())
 		}
@@ -129,6 +131,51 @@ func (e *Engine) bounds(s *session, calls int) (spent, closing bool) {
 		return true, false
 	}
 	return false, true
+}
+
+/*
+The reading steps and turns a routine has left when it is first told so,
+and from then on after every turn.
+*/
+const (
+	lowToolCalls  = 20
+	lowModelCalls = 5
+)
+
+/*
+running is the note a routine's run reads once it is near its limits:
+how many reading steps and turns it has left. It is empty for a chat,
+for a run with plenty left, and for one already closing, which the
+refusals speak for.
+*/
+func (e *Engine) running(s *session, calls int) string {
+	if s.routine == nil {
+		return ""
+	}
+
+	modelCalls, toolCalls := s.limits()
+	steps, turns := toolCalls-s.toolCalls, modelCalls-calls
+
+	if steps <= 0 || turns <= 0 || (steps > lowToolCalls && turns > lowModelCalls) {
+		return ""
+	}
+
+	return fmt.Sprintf("[You have %d reading steps and %d turns left in this run. Read only what you still "+
+		"need, then suggest and write your message.]", steps, turns)
+}
+
+/*
+remind adds the note to the last tool result, where the model reads it
+next. Nothing earlier in the conversation changes, so the provider's
+prompt cache holds.
+*/
+func remind(messages []contracts.ChatMessage, note string) {
+	if note == "" || len(messages) == 0 {
+		return
+	}
+
+	last := &messages[len(messages)-1]
+	last.Parts = append(last.Parts, textParts(note)...)
 }
 
 /*

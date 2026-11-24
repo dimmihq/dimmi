@@ -65,7 +65,7 @@ func TestOperatorRoutineSubagents(t *testing.T) {
 		run.AssertJSONPath("data.steps.3.tool", "subagent_report")
 		run.AssertJSONPath("data.steps.4.summary", "1 subagent reported, 1 suggested")
 		sent := k.llm.Sent()
-		assert.Contains(t, sent[0].System[0].Text, "split it with run_subagents")
+		assert.Contains(t, sent[0].System[0].Text, "subagents with run_subagents")
 		assert.Contains(t, sent[1].System[0].Text, "You are a subagent")
 		assert.Equal(t, "Audit the help articles at offset 0, limit 25.", sent[1].Messages[0].Parts[0].Text)
 		assert.Contains(t, toolNames(sent[0]), "run_subagents")

@@ -64,6 +64,25 @@ func skills() []skill {
 			when: "the routine asks for a digest, summary or report of support over a period",
 		},
 		{
+			name: "watch_waiting_customers",
+			when: "the routine asks who is waiting, who is unhappy or at risk of leaving, or which " +
+				"conversations need a person now",
+		},
+		{
+			name: "collect_feature_requests",
+			when: "the routine asks what customers asked for, wished for or want the product to do",
+		},
+		{
+			name: "review_ai_handovers",
+			when: "the routine asks what the AI agent handed to the team, which of it the agent could " +
+				"have answered, or why it handed over",
+		},
+		{
+			name: "review_agent_simulations",
+			when: "the routine asks why an AI agent's simulations fail or are flaky, or to check an agent's " +
+				"guidance for instructions that contradict each other",
+		},
+		{
 			name: "research_conversations",
 			when: "the routine asks what customers are saying, asking or complaining about, or anything " +
 				"else that is answered by reading conversations",

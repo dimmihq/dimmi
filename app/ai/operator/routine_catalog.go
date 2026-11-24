@@ -27,14 +27,19 @@ routine tool group that brings it.
 */
 func routineReads() map[string]string {
 	return map[string]string{
-		"dimmi_list_help_centers":            RoutineGroupKnowledge,
-		"dimmi_list_help_center_collections": RoutineGroupKnowledge,
-		"dimmi_list_article_versions":        RoutineGroupKnowledge,
-		"dimmi_get_article_feedback":         RoutineGroupKnowledge,
-		"dimmi_list_procedure_versions":      RoutineGroupKnowledge,
-		"dimmi_list_inboxes":                 RoutineGroupConversations,
-		"dimmi_get_help_center_analytics":    RoutineGroupInsights,
-		"dimmi_get_procedure_metrics":        RoutineGroupInsights,
+		"dimmi_list_help_centers":             RoutineGroupKnowledge,
+		"dimmi_list_help_center_collections":  RoutineGroupKnowledge,
+		"dimmi_list_article_versions":         RoutineGroupKnowledge,
+		"dimmi_get_article_feedback":          RoutineGroupKnowledge,
+		"dimmi_list_procedure_versions":       RoutineGroupKnowledge,
+		"dimmi_list_inboxes":                  RoutineGroupConversations,
+		"dimmi_list_ai_agents":                RoutineGroupKnowledge,
+		"dimmi_get_ai_agent_by_id":            RoutineGroupKnowledge,
+		"dimmi_list_ai_agent_simulations":     RoutineGroupKnowledge,
+		"dimmi_get_ai_agent_simulation_by_id": RoutineGroupKnowledge,
+		"dimmi_list_ai_agent_simulation_runs": RoutineGroupInsights,
+		"dimmi_get_help_center_analytics":     RoutineGroupInsights,
+		"dimmi_get_procedure_metrics":         RoutineGroupInsights,
 	}
 }
 

@@ -59,7 +59,7 @@ func TestOperatorViewing(t *testing.T) {
 		sent := k.llm.Sent()
 		asked := sent[2].Messages[len(sent[2].Messages)-1]
 		note := asked.Parts[len(asked.Parts)-2].Text
-		assert.Contains(t, asked.Parts[len(asked.Parts)-1].Text, "Write your answer for a busy teammate")
+		assert.Contains(t, asked.Parts[len(asked.Parts)-1].Text, "Write your answer the way you would say it out loud")
 		assert.Contains(t, note, `The help article "Batches" is open.`)
 		assert.Contains(t, note, "article_id: "+article)
 		assert.Contains(t, note, "suggestion_id: "+suggestion)

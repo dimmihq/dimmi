@@ -70,8 +70,8 @@ const subagentsSchema = `{"type":"object","required":["subagents"],"properties":
 "title":{"type":"string","maxLength":80,"description":"A few words naming this part, like 'Articles 26 to ` +
 	`50'. The team sees it."},
 "task":{"type":"string","maxLength":4000,"description":"Everything this subagent must know, since it sees ` +
-	`nothing of your run: exactly what to read (ids, or an offset and a limit), what to look for, and the ` +
-	`name of the skill to read first."}}}}}}`
+	`nothing of your run: exactly what to read (every conversation number or id, written out), what to ` +
+	`look for, and the name of the skill to read first."}}}}}}`
 
 /*
 subagentsTool is the tool that splits a routine's work.
