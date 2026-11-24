@@ -71,7 +71,10 @@ export function ExportsSettings() {
   const failure = remove.error ?? download.error ?? whole.error;
 
   return (
-    <SettingsPage title="Exports" description="Files of conversations and customers you exported from their lists.">
+    <SettingsPage
+      title="Exports"
+      description="Take the workspace's data out: everything at once, or the lists of conversations and customers you exported."
+    >
       {exportsAll ? (
         <Section
           title="Whole workspace"
