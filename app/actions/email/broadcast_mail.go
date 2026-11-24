@@ -203,6 +203,7 @@ func (a *SendBroadcastEmail) prepare(ctx context.Context, q *models.Queries, in 
 	message.Headers["List-Unsubscribe-Post"] = "List-Unsubscribe=One-Click"
 	message.Headers["Precedence"] = "bulk"
 	message.Tags = map[string]string{"stream": "customer", "kind": string(enums.OutboundEmailKindBroadcast)}
+	message.ConfigurationSet = a.Config.Sending.SES.ConfigurationSet
 
 	if previous.ID != ids.Nil() {
 		return previous, message, q.StartOutboundEmailAttempt(ctx, models.StartOutboundEmailAttemptParams{

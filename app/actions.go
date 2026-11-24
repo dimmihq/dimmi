@@ -262,6 +262,7 @@ type Actions struct {
 	InboundBudget        *mailbox.Budget
 	InboundMetrics       *email.InboundMetrics
 	ProcessInboundEmail  *email.ProcessInboundEmail
+	RecordDeliveryEvent  *email.RecordDeliveryEvent
 	SendEmailMessage     *email.SendEmailMessage
 
 	Reports           *reports.Reports

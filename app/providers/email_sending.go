@@ -53,6 +53,9 @@ func bootEmailSending(a *app.App) error {
 	}
 	a.Actions.SendEmailMessage.Reputation = a.EmailReputation
 	a.Actions.ProcessInboundEmail.Reputation = a.EmailReputation
+	a.Actions.RecordDeliveryEvent = &email.RecordDeliveryEvent{
+		DB: a.DB, Clock: a.Clock, Events: a.Events, Reputation: a.EmailReputation,
+	}
 	appmail.RegisterSendingNotices(a.Mail)
 
 	(&appbroadcasting.EmailSending{Server: a.Broadcast}).Listen(a.Events)

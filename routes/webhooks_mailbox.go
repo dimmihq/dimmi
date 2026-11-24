@@ -8,11 +8,17 @@
 | extra path segment is its own rule: it posts the raw message only to a
 | URL ending in "mime".
 |
+| SES also reports what became of sent mail, bounces and complaints,
+| on a route of its own.
+|
 */
 
 package routes
 
 import (
+	"slices"
+
+	"github.com/dimmihq/dimmi/framework/aws/sesevents"
 	fhttp "github.com/dimmihq/dimmi/framework/http"
 
 	"github.com/dimmihq/dimmi/app"
@@ -43,4 +49,26 @@ func mailboxRoutes(a *app.App) {
 		a.Router.Handle(fhttp.MethodPost, route.path, "webhooks."+route.source+".inbound",
 			controller.Store(route.source))
 	}
+
+	sesEventRoutes(a)
+}
+
+/*
+sesEventRoutes declares where SES reports bounces and complaints. The
+customer stream's topic and the system stream's are both accepted; an
+install that named neither answers not found.
+*/
+func sesEventRoutes(a *app.App) {
+	sending := a.Config.Channels.Email.Sending.SES
+	topics := slices.DeleteFunc([]string{sending.EventsTopicARN, sending.SystemTopicARN}, func(arn string) bool {
+		return arn == ""
+	})
+
+	controller := &webhooks.SESEventsController{
+		Events: sesevents.New(a.HTTP, topics), Record: a.Actions.RecordDeliveryEvent, Enabled: len(topics) > 0,
+		Log: a.Log, Errors: a.Errors,
+	}
+
+	a.Router.Handle(fhttp.MethodPost, "/webhooks/ses/events", "webhooks.ses.events",
+		fhttp.HandlerFunc(controller.Store))
 }

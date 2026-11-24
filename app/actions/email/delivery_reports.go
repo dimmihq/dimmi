@@ -21,6 +21,9 @@
 | A bounced forwarding test fails that test and suppresses nothing: the
 | address it bounced from is the workspace's own.
 |
+| A sending provider that reports by event instead of by mail is
+| recorded through the same steps; see delivery_events.go.
+|
 */
 
 package email
@@ -35,7 +38,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/dimmihq/dimmi/framework/clock"
 	"github.com/dimmihq/dimmi/framework/database"
+	"github.com/dimmihq/dimmi/framework/events"
 	"github.com/dimmihq/dimmi/framework/mailbox/dsn"
 
 	"github.com/dimmihq/dimmi/app/enums"
@@ -90,10 +95,22 @@ type outcome struct {
 reportRun records a report's outcomes on one sent email.
 */
 type reportRun struct {
-	a    *ProcessInboundEmail
-	tx   *database.Tx
-	q    *models.Queries
-	sent models.OutboundEmail
+	clock      clock.Clock
+	events     *events.Dispatcher
+	reputation *Reputation
+	tx         *database.Tx
+	q          *models.Queries
+	sent       models.OutboundEmail
+}
+
+/*
+reporting starts recording a report about the sent email inside the
+transaction.
+*/
+func (a *ProcessInboundEmail) reporting(tx *database.Tx, sent models.OutboundEmail) reportRun {
+	return reportRun{
+		clock: a.Clock, events: a.Events, reputation: a.Reputation, tx: tx, q: models.New(tx), sent: sent,
+	}
 }
 
 /*
@@ -123,22 +140,17 @@ func (a *ProcessInboundEmail) complaint(ctx context.Context, mail *received) err
 
 	reason := ignoreComplaint + unmatchedSuffix
 
-	err := within(ctx, a.DB, func(ctx context.Context, q *models.Queries) error {
-		sent, ok, err := findSent(ctx, q, mail.row.WorkspaceID, report.OriginalMessageID)
+	err := a.DB.Transaction(ctx, func(ctx context.Context, tx *database.Tx) error {
+		sent, ok, err := findSent(ctx, models.New(tx), mail.row.WorkspaceID, report.OriginalMessageID)
 		if err != nil || !ok {
 			return err
 		}
 
 		reason = ignoreComplaint
-		run := reportRun{a: a, q: q, sent: sent}
-		complained := string(enums.OutboundEmailStatusComplained)
+		run := a.reporting(tx, sent)
 
 		for _, recipient := range complainers(report.OriginalRcptTo, sent) {
-			err := run.record(ctx, outcome{
-				address: recipient, status: recipientStatus{Status: complained, At: a.Clock.Now()},
-				reason: enums.EmailSuppressionReasonComplaint, source: "arf", overall: complained,
-			})
-			if err != nil {
+			if err := run.complained(ctx, recipient, "arf"); err != nil {
 				return err
 			}
 		}
@@ -169,15 +181,13 @@ func (a *ProcessInboundEmail) bounce(ctx context.Context, mail *received) error 
 	reason := ignoreBounceUnmatched
 
 	err := a.DB.Transaction(ctx, func(ctx context.Context, tx *database.Tx) error {
-		q := models.New(tx)
-
-		sent, ok, err := findSent(ctx, q, mail.row.WorkspaceID, original)
+		sent, ok, err := findSent(ctx, models.New(tx), mail.row.WorkspaceID, original)
 		if err != nil || !ok {
 			return err
 		}
 
 		reason = ignoreBounce
-		run := reportRun{a: a, tx: tx, q: q, sent: sent}
+		run := a.reporting(tx, sent)
 
 		for _, r := range report.Recipients {
 			if err := run.bounced(ctx, r); err != nil {
@@ -207,27 +217,37 @@ func (run reportRun) bounced(ctx context.Context, r dsn.Recipient) error {
 	}
 
 	status := recipientStatus{
-		Status: "delayed", Code: r.Status, Diagnostic: diagnostic(r.DiagnosticCode), At: run.a.Clock.Now(),
+		Status: "delayed", Code: r.Status, Diagnostic: diagnostic(r.DiagnosticCode), At: run.clock.Now(),
 	}
 
 	if !r.Permanent() {
 		return run.record(ctx, outcome{address: address, status: status, overall: run.sent.Status})
 	}
 
-	status.Status = string(enums.OutboundEmailStatusBounced)
-
-	if run.sent.Kind == string(enums.OutboundEmailKindTest) {
-		return run.testBounced(ctx, address, status)
-	}
-
-	failed := outcome{
-		address: address, status: status, reason: enums.EmailSuppressionReasonHardBounce, source: "dsn",
-		overall: status.Status,
-	}
-
+	failed := outcome{address: address, status: status, source: "dsn", reason: enums.EmailSuppressionReasonHardBounce}
 	if !addressGone(r.Status) {
 		failed.reason = enums.EmailSuppressionReasonSoftBounce
-		failed.expires = new(run.a.Clock.Now().Add(lapsingBounce))
+	}
+
+	return run.undelivered(ctx, failed)
+}
+
+/*
+undelivered records that the email will never reach the address the
+outcome names, for the reason it gives. A hard bounce stops mail to it
+for good and a soft one for a few days, and the reply fails when it was
+meant for it.
+*/
+func (run reportRun) undelivered(ctx context.Context, failed outcome) error {
+	failed.status.Status = string(enums.OutboundEmailStatusBounced)
+	failed.overall = failed.status.Status
+
+	if run.sent.Kind == string(enums.OutboundEmailKindTest) {
+		return run.testBounced(ctx, failed.address, failed.status)
+	}
+
+	if failed.reason == enums.EmailSuppressionReasonSoftBounce {
+		failed.expires = new(run.clock.Now().Add(lapsingBounce))
 	}
 
 	err := run.record(ctx, failed)
@@ -235,7 +255,20 @@ func (run reportRun) bounced(ctx context.Context, r dsn.Recipient) error {
 		return err
 	}
 
-	return run.failReply(ctx, address, status.Diagnostic)
+	return run.failReply(ctx, failed.address, failed.status.Diagnostic)
+}
+
+/*
+complained records that the address reported the email as spam, and
+stops all mail to it.
+*/
+func (run reportRun) complained(ctx context.Context, address, source string) error {
+	complained := string(enums.OutboundEmailStatusComplained)
+
+	return run.record(ctx, outcome{
+		address: address, status: recipientStatus{Status: complained, At: run.clock.Now()},
+		reason: enums.EmailSuppressionReasonComplaint, source: source, overall: complained,
+	})
 }
 
 /*
@@ -248,7 +281,7 @@ func (run reportRun) failReply(ctx context.Context, address, why string) error {
 	}
 
 	err := run.q.FailEmailMessageDelivery(ctx, models.FailEmailMessageDeliveryParams{
-		DeliveryError: new("Email to " + address + " bounced: " + why), Now: run.a.Clock.Now(),
+		DeliveryError: new("Email to " + address + " bounced: " + why), Now: run.clock.Now(),
 		WorkspaceID: run.sent.WorkspaceID, ID: *run.sent.MessageID,
 	})
 	if err != nil {
@@ -266,9 +299,9 @@ are marked bounced, or every direct recipient when it names none.
 func (a *ProcessInboundEmail) noticeBounce(ctx context.Context, mail *received) error {
 	reason := ignoreBounceUnmatched
 
-	err := within(ctx, a.DB, func(ctx context.Context, q *models.Queries) error {
+	err := a.DB.Transaction(ctx, func(ctx context.Context, tx *database.Tx) error {
 		for _, original := range quotedIDs(mail) {
-			sent, ok, err := findSent(ctx, q, mail.row.WorkspaceID, original)
+			sent, ok, err := findSent(ctx, models.New(tx), mail.row.WorkspaceID, original)
 			if err != nil {
 				return err
 			}
@@ -276,7 +309,7 @@ func (a *ProcessInboundEmail) noticeBounce(ctx context.Context, mail *received) 
 			if ok {
 				reason = ignoreBounce
 
-				return reportRun{a: a, q: q, sent: sent}.noticeFailed(ctx, failedNamed(mail, sent))
+				return a.reporting(tx, sent).noticeFailed(ctx, failedNamed(mail, sent))
 			}
 		}
 
@@ -296,7 +329,7 @@ func (run reportRun) noticeFailed(ctx context.Context, addresses []string) error
 	bounced := string(enums.OutboundEmailStatusBounced)
 
 	for _, address := range addresses {
-		status := recipientStatus{Status: bounced, Diagnostic: noticeDiagnostic, At: run.a.Clock.Now()}
+		status := recipientStatus{Status: bounced, Diagnostic: noticeDiagnostic, At: run.clock.Now()}
 		if err := run.record(ctx, outcome{address: address, status: status, overall: bounced}); err != nil {
 			return err
 		}
@@ -393,7 +426,7 @@ func (run reportRun) testBounced(ctx context.Context, address string, status rec
 		return fmt.Errorf("find bounced email address test: %w", err)
 	}
 
-	steps := testSteps{Clock: run.a.Clock, Events: run.a.Events}
+	steps := testSteps{Clock: run.clock, Events: run.events}
 	_, err = steps.settle(ctx, run.tx, test, testEnd{
 		status: TestFailed, findings: bounceFindings(status.Code, status.Diagnostic),
 	})
@@ -411,7 +444,7 @@ func (run reportRun) record(ctx context.Context, o outcome) error {
 			WorkspaceID: run.sent.WorkspaceID, Email: o.address, Reason: string(o.reason),
 			Scope: string(enums.EmailSuppressionScopeAll), Source: o.source,
 			Details:         jsonOf(map[string]string{"code": o.status.Code, "diagnostic": o.status.Diagnostic}),
-			OutboundEmailID: &run.sent.ID, ExpiresAt: o.expires, Now: run.a.Clock.Now(),
+			OutboundEmailID: &run.sent.ID, ExpiresAt: o.expires, Now: run.clock.Now(),
 		})
 		if err != nil {
 			return fmt.Errorf("suppress email: %w", err)
@@ -419,7 +452,7 @@ func (run reportRun) record(ctx context.Context, o outcome) error {
 	}
 
 	_, err := run.q.RecordOutboundRecipientStatus(ctx, models.RecordOutboundRecipientStatusParams{
-		Recipient: o.address, RecipientStatus: jsonOf(o.status), Status: o.overall, Now: run.a.Clock.Now(),
+		Recipient: o.address, RecipientStatus: jsonOf(o.status), Status: o.overall, Now: run.clock.Now(),
 		WorkspaceID: run.sent.WorkspaceID, ID: run.sent.ID,
 	})
 	if err != nil {
@@ -449,11 +482,11 @@ func (run reportRun) count(ctx context.Context, o outcome) error {
 	}
 
 	if o.reason == enums.EmailSuppressionReasonComplaint {
-		return run.a.Reputation.Complained(ctx, run.q, run.sent.WorkspaceID)
+		return run.reputation.Complained(ctx, run.q, run.sent.WorkspaceID)
 	}
 
 	if o.reason == enums.EmailSuppressionReasonHardBounce {
-		return run.a.Reputation.Bounced(ctx, run.q, run.sent.WorkspaceID)
+		return run.reputation.Bounced(ctx, run.q, run.sent.WorkspaceID)
 	}
 
 	return nil

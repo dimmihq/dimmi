@@ -53,7 +53,7 @@ dimmi counts the customer email your workspace sends: replies, broadcasts, serie
 - **What stops:** broadcasts, series, and rating emails. Broadcasts being sent pause where they are, and nobody on the list is skipped.
 - **What keeps going:** replies to customers, from teammates and from the agent. Support never goes dark.
 - **Who hears about it:** owners and admins get an email, and the [audit log](/workspace/audit-log/) records the pause with the numbers.
-- **What is counted:** bounce and spam reports that mailbox providers send back to your support address.
+- **What is counted:** bounce and spam reports that mailbox providers send back to your support address. Amazon SES, which dimmi cloud sends through, reports them to dimmi directly as well: every spam complaint, and every bounce it marks permanent. A report that arrives both ways counts once.
 
 ### Resume sending
 
