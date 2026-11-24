@@ -179,6 +179,18 @@ export function useWorkflowDraft(workspace: string, workflow: Workflow, onArchiv
 
         return done.workflow;
       }),
+    /*
+     * adopt takes a working copy saved elsewhere, such as a restored
+     * version or an edit Operator applied, as the one being edited.
+     */
+    adopt: (next: Workflow) => {
+      current.current = next.spec as Spec;
+      latest.current = next;
+      setSpec(next.spec as Spec);
+      setName(next.name);
+      setServer(next);
+      setFound(null);
+    },
     setStatus: (status: "live" | "paused") => act(() => setWorkflowStatus(workspace, workflow.id, status)),
     archive: async () => {
       await saver.flush();

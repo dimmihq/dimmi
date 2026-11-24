@@ -54,7 +54,9 @@ import { StatusChip } from "./parts";
 import type { Lists } from "./step-fields";
 import { type Names, sentence } from "./step-settings";
 import { workflowSlots } from "./studio/slots";
+import { StepCounts } from "./studio/step-counts";
 import { type SideTabId, Studio, StudioSide, type StudioTabId } from "./studio/studio";
+import { useWorkflowStepCounts } from "./studio/use-workflow-step-counts";
 import { WorkflowPreview } from "./studio/workflow-preview";
 import { ticketNames, useTicketLists } from "./ticket-lists";
 import { allowsStep, type TriggerKind } from "./triggers";
@@ -332,7 +334,10 @@ export function WorkflowBuilder({ workspace, workflow }: { workspace: string; wo
   };
   const summarize = (card: Step) => sentence(card, names);
   const moves = { selected, onSelect: select, onAdd: add, kinds, summarize, flagged };
+  const stepCounts = useWorkflowStepCounts(workspace, workflow.id);
   const inspector = {
+    results:
+      step && workflow.live_version_id ? <StepCounts step={step} counts={stepCounts.counts.get(step.id)} /> : null,
     spec: draft.spec,
     step,
     issues: issues.filter((issue) => (step ? issue.step_id === step.id : !issue.step_id)),
@@ -343,7 +348,7 @@ export function WorkflowBuilder({ workspace, workflow }: { workspace: string; wo
     onEdit: edit,
   };
   const current = { ...draft.server, name: draft.name || draft.server.name, spec: draft.spec };
-  const slot = { workspace, workflow: current };
+  const slot = { workspace, workflow: current, onAdopt: draft.adopt };
   const reading = { steps: draft.spec.steps, summarize, workflows: names.workflows ?? new Map() };
   const Analytics = workflowSlots.analytics;
   const Failures = workflowSlots.failures;

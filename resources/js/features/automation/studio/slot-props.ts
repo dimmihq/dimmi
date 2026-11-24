@@ -8,6 +8,8 @@ import type { Workflow } from "@/lib/api/workflows";
 export interface WorkflowSlotProps {
   workspace: string;
   workflow: Workflow;
+  /* Hands a working copy the slot changed, such as a restored version, to the open editor. */
+  onAdopt?: (next: Workflow) => void;
 }
 
 /*

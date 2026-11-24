@@ -255,7 +255,9 @@ export function Inspector({
   onEdit,
   onClose,
   className,
+  results,
 }: {
+  results?: ReactNode;
   spec: Spec;
   step: Step | undefined;
   issues: Issue[];
@@ -290,6 +292,7 @@ export function Inspector({
           ) : (
             <TriggerSettings spec={spec} head={head} />
           )}
+          {results}
           {step && !readOnly ? (
             <Section title="Remove">
               <Row label="Remove this step" description="Steps on its paths go with it.">

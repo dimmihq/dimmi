@@ -11,15 +11,11 @@
  */
 import type { ComponentType } from "react";
 
-import {
-  QuietAnalytics,
-  QuietFailures,
-  QuietHistory,
-  QuietSeriesOperator,
-  QuietSimulations,
-  QuietWorkflowOperator,
-} from "./slot-placeholders";
+import { QuietHistory, QuietSeriesOperator, QuietSimulations, QuietWorkflowOperator } from "./slot-placeholders";
 import type { PaneSlotProps, SeriesSlotProps, WorkflowSlotProps } from "./slot-props";
+import { WorkflowAnalytics } from "./workflow-analytics";
+import { WorkflowFailures } from "./workflow-failures";
+import { WorkflowHistory } from "./workflow-history";
 
 export type { PaneSlotProps, SeriesSlotProps, WorkflowSlotProps } from "./slot-props";
 
@@ -36,9 +32,11 @@ export const workflowSlots: {
   simulations: ComponentType<WorkflowSlotProps>;
   operator: ComponentType<WorkflowSlotProps & PaneSlotProps>;
 } = {
-  analytics: QuietAnalytics,
-  failures: QuietFailures,
-  history: QuietHistory,
+  analytics: ({ workspace, workflow }) => <WorkflowAnalytics workspace={workspace} workflow={workflow.id} />,
+  failures: ({ workspace, workflow }) => <WorkflowFailures workspace={workspace} workflow={workflow.id} />,
+  history: ({ workspace, workflow, onAdopt }) => (
+    <WorkflowHistory workspace={workspace} workflow={workflow.id} onRestored={onAdopt} />
+  ),
   simulations: QuietSimulations,
   operator: QuietWorkflowOperator,
 };
