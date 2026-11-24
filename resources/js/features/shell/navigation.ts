@@ -12,7 +12,6 @@ import {
   RiAtLine,
   RiBarChart2Line,
   RiBookOpenLine,
-  RiCalendarScheduleLine,
   RiChatQuoteLine,
   RiChatSmile3Line,
   RiContactsBook3Line,
@@ -68,6 +67,8 @@ import type {
 export interface Page extends DashboardNavItem {
   href: string;
   description: string;
+  /* Other addresses the page holds, such as the pages opened from one of its tabs. */
+  also?: string[];
 }
 
 function page(key: string, label: string, icon: DashboardNavItem["icon"], href: string, description: string): Page {
@@ -140,13 +141,16 @@ export const workspacePages = {
     "/d/procedures",
     "Step-by-step instructions dimmi follows for particular requests.",
   ),
-  routines: page(
-    "routines",
-    "Routines",
-    RiCalendarScheduleLine,
-    "/d/routines",
-    "Operator on a clock: it checks what changed and suggests fixes for the team to review.",
-  ),
+  operator: {
+    ...page(
+      "operator",
+      "Operator",
+      RiRobot2Line,
+      "/d/operator",
+      "Your team's own agent: its routines, what it suggests and what it costs.",
+    ),
+    also: ["/d/routines"],
+  },
   helpCenter: page(
     "help-center",
     "Help center",
@@ -471,7 +475,7 @@ export function appSections(
     {
       key: "automation",
       label: "Automation",
-      items: [workspacePages.agent, workspacePages.workflows, workspacePages.procedures, workspacePages.routines],
+      items: [workspacePages.agent, workspacePages.workflows, workspacePages.procedures, workspacePages.operator],
     },
     {
       key: "customers",
@@ -539,7 +543,7 @@ export function settingsSections(): DashboardNavSection[] {
       label: "Channels",
       items: [pages.messenger, pages.email, pages.integrations],
     },
-    { key: "ai", label: "AI", items: [pages.agent, pages.operator, pages.actions, pages["ai-providers"]] },
+    { key: "ai", label: "AI", items: [pages.agent, pages.actions, pages["ai-providers"]] },
     {
       key: "content",
       label: "Content",
@@ -562,7 +566,8 @@ export function selectedKey(sections: DashboardNavSection[], extra: DashboardNav
     if (!href) {
       continue;
     }
-    const holds = path === href || path.startsWith(`${href}/`);
+    const held = [href, ...((item as Partial<Page>).also ?? [])];
+    const holds = held.some((address) => path === address || path.startsWith(`${address}/`));
     if (holds && href.length > best.length) {
       best = { key: item.key, length: href.length };
     }

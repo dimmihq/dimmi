@@ -23,13 +23,11 @@ import { Route as AuthSignupRouteImport } from './routes/_auth/signup'
 import { Route as AuthTwoFactorResetRouteImport } from './routes/_auth/two-factor-reset'
 import { Route as AuthVerifyEmailRouteImport } from './routes/_auth/verify-email'
 import { Route as DIndexRouteImport } from './routes/d/index'
-import { Route as DAgentRouteImport } from './routes/d/agent'
 import { Route as DChangelogRouteImport } from './routes/d/changelog'
 import { Route as DCustomersRouteImport } from './routes/d/customers'
 import { Route as DFeedbackRouteImport } from './routes/d/feedback'
 import { Route as DHelpCenterRouteImport } from './routes/d/help-center'
 import { Route as DNotificationsRouteImport } from './routes/d/notifications'
-import { Route as DOperatorRouteImport } from './routes/d/operator'
 import { Route as DReportsRouteImport } from './routes/d/reports'
 import { Route as DShortcutsRouteImport } from './routes/d/shortcuts'
 import { Route as DWhatsappReturnRouteImport } from './routes/d_.whatsapp-return'
@@ -51,6 +49,8 @@ import { Route as DHelpCenterIndexRouteImport } from './routes/d/help-center/ind
 import { Route as DHelpCenterArticleRouteImport } from './routes/d/help-center/$article'
 import { Route as DInboxIndexRouteImport } from './routes/d/inbox/index'
 import { Route as DInboxViewRouteRouteImport } from './routes/d/inbox/$view/route'
+import { Route as DOperatorIndexRouteImport } from './routes/d/operator/index'
+import { Route as DOperatorTabRouteImport } from './routes/d/operator/$tab'
 import { Route as DProceduresIndexRouteImport } from './routes/d/procedures/index'
 import { Route as DProceduresProcedureRouteImport } from './routes/d/procedures/$procedure'
 import { Route as DReportsIndexRouteImport } from './routes/d/reports/index'
@@ -167,11 +167,6 @@ const DIndexRoute = DIndexRouteImport.update({
   path: '/',
   getParentRoute: () => DRouteRoute,
 } as any)
-const DAgentRoute = DAgentRouteImport.update({
-  id: '/agent',
-  path: '/agent',
-  getParentRoute: () => DRouteRoute,
-} as any)
 const DChangelogRoute = DChangelogRouteImport.update({
   id: '/changelog',
   path: '/changelog',
@@ -195,11 +190,6 @@ const DHelpCenterRoute = DHelpCenterRouteImport.update({
 const DNotificationsRoute = DNotificationsRouteImport.update({
   id: '/notifications',
   path: '/notifications',
-  getParentRoute: () => DRouteRoute,
-} as any)
-const DOperatorRoute = DOperatorRouteImport.update({
-  id: '/operator',
-  path: '/operator',
   getParentRoute: () => DRouteRoute,
 } as any)
 const DReportsRoute = DReportsRouteImport.update({
@@ -304,6 +294,16 @@ const DInboxIndexRoute = DInboxIndexRouteImport.update({
 const DInboxViewRouteRoute = DInboxViewRouteRouteImport.update({
   id: '/inbox/$view',
   path: '/inbox/$view',
+  getParentRoute: () => DRouteRoute,
+} as any)
+const DOperatorIndexRoute = DOperatorIndexRouteImport.update({
+  id: '/operator/',
+  path: '/operator/',
+  getParentRoute: () => DRouteRoute,
+} as any)
+const DOperatorTabRoute = DOperatorTabRouteImport.update({
+  id: '/operator/$tab',
+  path: '/operator/$tab',
   getParentRoute: () => DRouteRoute,
 } as any)
 const DProceduresIndexRoute = DProceduresIndexRouteImport.update({
@@ -572,13 +572,11 @@ export interface FileRoutesByFullPath {
   '/signup': typeof AuthSignupRoute
   '/two-factor-reset': typeof AuthTwoFactorResetRoute
   '/verify-email': typeof AuthVerifyEmailRoute
-  '/d/agent': typeof DAgentRoute
   '/d/changelog': typeof DChangelogRouteWithChildren
   '/d/customers': typeof DCustomersRouteWithChildren
   '/d/feedback': typeof DFeedbackRouteWithChildren
   '/d/help-center': typeof DHelpCenterRouteWithChildren
   '/d/notifications': typeof DNotificationsRoute
-  '/d/operator': typeof DOperatorRoute
   '/d/reports': typeof DReportsRouteWithChildren
   '/d/shortcuts': typeof DShortcutsRoute
   '/d/whatsapp-return': typeof DWhatsappReturnRoute
@@ -594,6 +592,7 @@ export interface FileRoutesByFullPath {
   '/d/customers/$contact': typeof DCustomersContactRoute
   '/d/feedback/$post': typeof DFeedbackPostRoute
   '/d/help-center/$article': typeof DHelpCenterArticleRoute
+  '/d/operator/$tab': typeof DOperatorTabRoute
   '/d/procedures/$procedure': typeof DProceduresProcedureRoute
   '/d/reports/$report': typeof DReportsReportRoute
   '/d/routines/new': typeof DRoutinesNewRoute
@@ -607,6 +606,7 @@ export interface FileRoutesByFullPath {
   '/d/feedback/': typeof DFeedbackIndexRoute
   '/d/help-center/': typeof DHelpCenterIndexRoute
   '/d/inbox/': typeof DInboxIndexRoute
+  '/d/operator/': typeof DOperatorIndexRoute
   '/d/procedures/': typeof DProceduresIndexRoute
   '/d/reports/': typeof DReportsIndexRoute
   '/d/routines/': typeof DRoutinesIndexRoute
@@ -660,10 +660,8 @@ export interface FileRoutesByTo {
   '/signup': typeof AuthSignupRoute
   '/two-factor-reset': typeof AuthTwoFactorResetRoute
   '/verify-email': typeof AuthVerifyEmailRoute
-  '/d/agent': typeof DAgentRoute
   '/d/customers': typeof DCustomersListsIndexRoute
   '/d/notifications': typeof DNotificationsRoute
-  '/d/operator': typeof DOperatorRoute
   '/d/shortcuts': typeof DShortcutsRoute
   '/d/whatsapp-return': typeof DWhatsappReturnRoute
   '/d': typeof DIndexRoute
@@ -677,6 +675,7 @@ export interface FileRoutesByTo {
   '/d/customers/$contact': typeof DCustomersContactRoute
   '/d/feedback/$post': typeof DFeedbackPostRoute
   '/d/help-center/$article': typeof DHelpCenterArticleRoute
+  '/d/operator/$tab': typeof DOperatorTabRoute
   '/d/procedures/$procedure': typeof DProceduresProcedureRoute
   '/d/reports/$report': typeof DReportsReportRoute
   '/d/routines/new': typeof DRoutinesNewRoute
@@ -690,6 +689,7 @@ export interface FileRoutesByTo {
   '/d/feedback': typeof DFeedbackIndexRoute
   '/d/help-center': typeof DHelpCenterIndexRoute
   '/d/inbox': typeof DInboxIndexRoute
+  '/d/operator': typeof DOperatorIndexRoute
   '/d/procedures': typeof DProceduresIndexRoute
   '/d/reports': typeof DReportsIndexRoute
   '/d/routines': typeof DRoutinesIndexRoute
@@ -744,13 +744,11 @@ export interface FileRoutesById {
   '/_auth/signup': typeof AuthSignupRoute
   '/_auth/two-factor-reset': typeof AuthTwoFactorResetRoute
   '/_auth/verify-email': typeof AuthVerifyEmailRoute
-  '/d/agent': typeof DAgentRoute
   '/d/changelog': typeof DChangelogRouteWithChildren
   '/d/customers': typeof DCustomersRouteWithChildren
   '/d/feedback': typeof DFeedbackRouteWithChildren
   '/d/help-center': typeof DHelpCenterRouteWithChildren
   '/d/notifications': typeof DNotificationsRoute
-  '/d/operator': typeof DOperatorRoute
   '/d/reports': typeof DReportsRouteWithChildren
   '/d/shortcuts': typeof DShortcutsRoute
   '/d_/whatsapp-return': typeof DWhatsappReturnRoute
@@ -767,6 +765,7 @@ export interface FileRoutesById {
   '/d/customers/_lists': typeof DCustomersListsRouteWithChildren
   '/d/feedback/$post': typeof DFeedbackPostRoute
   '/d/help-center/$article': typeof DHelpCenterArticleRoute
+  '/d/operator/$tab': typeof DOperatorTabRoute
   '/d/procedures/$procedure': typeof DProceduresProcedureRoute
   '/d/reports/$report': typeof DReportsReportRoute
   '/d/routines/new': typeof DRoutinesNewRoute
@@ -780,6 +779,7 @@ export interface FileRoutesById {
   '/d/feedback/': typeof DFeedbackIndexRoute
   '/d/help-center/': typeof DHelpCenterIndexRoute
   '/d/inbox/': typeof DInboxIndexRoute
+  '/d/operator/': typeof DOperatorIndexRoute
   '/d/procedures/': typeof DProceduresIndexRoute
   '/d/reports/': typeof DReportsIndexRoute
   '/d/routines/': typeof DRoutinesIndexRoute
@@ -836,13 +836,11 @@ export interface FileRouteTypes {
     | '/signup'
     | '/two-factor-reset'
     | '/verify-email'
-    | '/d/agent'
     | '/d/changelog'
     | '/d/customers'
     | '/d/feedback'
     | '/d/help-center'
     | '/d/notifications'
-    | '/d/operator'
     | '/d/reports'
     | '/d/shortcuts'
     | '/d/whatsapp-return'
@@ -858,6 +856,7 @@ export interface FileRouteTypes {
     | '/d/customers/$contact'
     | '/d/feedback/$post'
     | '/d/help-center/$article'
+    | '/d/operator/$tab'
     | '/d/procedures/$procedure'
     | '/d/reports/$report'
     | '/d/routines/new'
@@ -871,6 +870,7 @@ export interface FileRouteTypes {
     | '/d/feedback/'
     | '/d/help-center/'
     | '/d/inbox/'
+    | '/d/operator/'
     | '/d/procedures/'
     | '/d/reports/'
     | '/d/routines/'
@@ -924,10 +924,8 @@ export interface FileRouteTypes {
     | '/signup'
     | '/two-factor-reset'
     | '/verify-email'
-    | '/d/agent'
     | '/d/customers'
     | '/d/notifications'
-    | '/d/operator'
     | '/d/shortcuts'
     | '/d/whatsapp-return'
     | '/d'
@@ -941,6 +939,7 @@ export interface FileRouteTypes {
     | '/d/customers/$contact'
     | '/d/feedback/$post'
     | '/d/help-center/$article'
+    | '/d/operator/$tab'
     | '/d/procedures/$procedure'
     | '/d/reports/$report'
     | '/d/routines/new'
@@ -954,6 +953,7 @@ export interface FileRouteTypes {
     | '/d/feedback'
     | '/d/help-center'
     | '/d/inbox'
+    | '/d/operator'
     | '/d/procedures'
     | '/d/reports'
     | '/d/routines'
@@ -1007,13 +1007,11 @@ export interface FileRouteTypes {
     | '/_auth/signup'
     | '/_auth/two-factor-reset'
     | '/_auth/verify-email'
-    | '/d/agent'
     | '/d/changelog'
     | '/d/customers'
     | '/d/feedback'
     | '/d/help-center'
     | '/d/notifications'
-    | '/d/operator'
     | '/d/reports'
     | '/d/shortcuts'
     | '/d_/whatsapp-return'
@@ -1030,6 +1028,7 @@ export interface FileRouteTypes {
     | '/d/customers/_lists'
     | '/d/feedback/$post'
     | '/d/help-center/$article'
+    | '/d/operator/$tab'
     | '/d/procedures/$procedure'
     | '/d/reports/$report'
     | '/d/routines/new'
@@ -1043,6 +1042,7 @@ export interface FileRouteTypes {
     | '/d/feedback/'
     | '/d/help-center/'
     | '/d/inbox/'
+    | '/d/operator/'
     | '/d/procedures/'
     | '/d/reports/'
     | '/d/routines/'
@@ -1192,13 +1192,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DIndexRouteImport
       parentRoute: typeof DRouteRoute
     }
-    '/d/agent': {
-      id: '/d/agent'
-      path: '/agent'
-      fullPath: '/d/agent'
-      preLoaderRoute: typeof DAgentRouteImport
-      parentRoute: typeof DRouteRoute
-    }
     '/d/changelog': {
       id: '/d/changelog'
       path: '/changelog'
@@ -1232,13 +1225,6 @@ declare module '@tanstack/react-router' {
       path: '/notifications'
       fullPath: '/d/notifications'
       preLoaderRoute: typeof DNotificationsRouteImport
-      parentRoute: typeof DRouteRoute
-    }
-    '/d/operator': {
-      id: '/d/operator'
-      path: '/operator'
-      fullPath: '/d/operator'
-      preLoaderRoute: typeof DOperatorRouteImport
       parentRoute: typeof DRouteRoute
     }
     '/d/reports': {
@@ -1386,6 +1372,20 @@ declare module '@tanstack/react-router' {
       path: '/inbox/$view'
       fullPath: '/d/inbox/$view'
       preLoaderRoute: typeof DInboxViewRouteRouteImport
+      parentRoute: typeof DRouteRoute
+    }
+    '/d/operator/': {
+      id: '/d/operator/'
+      path: '/operator'
+      fullPath: '/d/operator/'
+      preLoaderRoute: typeof DOperatorIndexRouteImport
+      parentRoute: typeof DRouteRoute
+    }
+    '/d/operator/$tab': {
+      id: '/d/operator/$tab'
+      path: '/operator/$tab'
+      fullPath: '/d/operator/$tab'
+      preLoaderRoute: typeof DOperatorTabRouteImport
       parentRoute: typeof DRouteRoute
     }
     '/d/procedures/': {
@@ -1824,19 +1824,18 @@ const DInboxViewRouteRouteWithChildren = DInboxViewRouteRoute._addFileChildren(
 )
 
 interface DRouteRouteChildren {
-  DAgentRoute: typeof DAgentRoute
   DChangelogRoute: typeof DChangelogRouteWithChildren
   DCustomersRoute: typeof DCustomersRouteWithChildren
   DFeedbackRoute: typeof DFeedbackRouteWithChildren
   DHelpCenterRoute: typeof DHelpCenterRouteWithChildren
   DNotificationsRoute: typeof DNotificationsRoute
-  DOperatorRoute: typeof DOperatorRoute
   DReportsRoute: typeof DReportsRouteWithChildren
   DShortcutsRoute: typeof DShortcutsRoute
   DIndexRoute: typeof DIndexRoute
   DInboxViewRouteRoute: typeof DInboxViewRouteRouteWithChildren
   DAgentsAgentRoute: typeof DAgentsAgentRoute
   DBroadcastsBroadcastRoute: typeof DBroadcastsBroadcastRoute
+  DOperatorTabRoute: typeof DOperatorTabRoute
   DProceduresProcedureRoute: typeof DProceduresProcedureRoute
   DRoutinesNewRoute: typeof DRoutinesNewRoute
   DSeriesSeriesRoute: typeof DSeriesSeriesRoute
@@ -1846,6 +1845,7 @@ interface DRouteRouteChildren {
   DAgentsIndexRoute: typeof DAgentsIndexRoute
   DBroadcastsIndexRoute: typeof DBroadcastsIndexRoute
   DInboxIndexRoute: typeof DInboxIndexRoute
+  DOperatorIndexRoute: typeof DOperatorIndexRoute
   DProceduresIndexRoute: typeof DProceduresIndexRoute
   DRoutinesIndexRoute: typeof DRoutinesIndexRoute
   DSeriesIndexRoute: typeof DSeriesIndexRoute
@@ -1877,19 +1877,18 @@ interface DRouteRouteChildren {
 }
 
 const DRouteRouteChildren: DRouteRouteChildren = {
-  DAgentRoute: DAgentRoute,
   DChangelogRoute: DChangelogRouteWithChildren,
   DCustomersRoute: DCustomersRouteWithChildren,
   DFeedbackRoute: DFeedbackRouteWithChildren,
   DHelpCenterRoute: DHelpCenterRouteWithChildren,
   DNotificationsRoute: DNotificationsRoute,
-  DOperatorRoute: DOperatorRoute,
   DReportsRoute: DReportsRouteWithChildren,
   DShortcutsRoute: DShortcutsRoute,
   DIndexRoute: DIndexRoute,
   DInboxViewRouteRoute: DInboxViewRouteRouteWithChildren,
   DAgentsAgentRoute: DAgentsAgentRoute,
   DBroadcastsBroadcastRoute: DBroadcastsBroadcastRoute,
+  DOperatorTabRoute: DOperatorTabRoute,
   DProceduresProcedureRoute: DProceduresProcedureRoute,
   DRoutinesNewRoute: DRoutinesNewRoute,
   DSeriesSeriesRoute: DSeriesSeriesRoute,
@@ -1899,6 +1898,7 @@ const DRouteRouteChildren: DRouteRouteChildren = {
   DAgentsIndexRoute: DAgentsIndexRoute,
   DBroadcastsIndexRoute: DBroadcastsIndexRoute,
   DInboxIndexRoute: DInboxIndexRoute,
+  DOperatorIndexRoute: DOperatorIndexRoute,
   DProceduresIndexRoute: DProceduresIndexRoute,
   DRoutinesIndexRoute: DRoutinesIndexRoute,
   DSeriesIndexRoute: DSeriesIndexRoute,

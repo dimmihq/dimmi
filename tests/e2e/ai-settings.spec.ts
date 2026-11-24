@@ -86,13 +86,4 @@ it.describe("ai settings", () => {
     await expect(page.getByRole("radio", { name: "Concise" })).toBeChecked();
     await expect(page.getByRole("checkbox", { name: /Email/ })).toBeChecked();
   });
-
-  it("shows the agent's overview instead of a placeholder", async ({ page }) => {
-    await page.goto("/d/agent");
-    await expect(page.getByText("Paused", { exact: true })).toBeVisible();
-    await expect(page.getByRole("region", { name: "This month" })).toContainText("Answered");
-    await expect(page.getByText("Nothing yet. Conversations show here once the agent answers.")).toBeVisible();
-    await page.getByRole("button", { name: "Open settings" }).click();
-    await expect(page.getByRole("heading", { level: 1, name: "dimmi agent" })).toBeVisible();
-  });
 });

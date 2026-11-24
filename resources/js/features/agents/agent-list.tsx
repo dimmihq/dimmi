@@ -1,9 +1,10 @@
 /*
  * The agents page: every agent the workspace runs, the default one
  * first, with its role and where it answers. New agent opens the
- * template picker.
+ * template picker. Operator, who works for the team, is listed last and
+ * opens its own page.
  */
-import { RiAddLine } from "@remixicon/react";
+import { RiAddLine, RiRobot2Line } from "@remixicon/react";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 
@@ -13,7 +14,7 @@ import { Section } from "@/features/settings/layout";
 import { type Agent, agentsQuery, type PlacementTarget, placementsQuery } from "@/lib/api/agents";
 import type { TestResult } from "@/lib/api/procedures";
 
-import { ListPage, OpenRow, StatusChip } from "../automation/parts";
+import { KindMark, ListPage, OpenRow, StatusChip } from "../automation/parts";
 import { AgentMark } from "./agent-mark";
 import { NewAgentModal } from "./new-agent-modal";
 
@@ -118,6 +119,14 @@ export function AgentList({ workspace }: { workspace: string }) {
         ) : (
           rest.map((a) => <AgentRow key={a.id} agent={a} places={places} agents={agents ?? []} />)
         )}
+      </Section>
+      <Section title="Your team's agent" description="Works for teammates, never answers a customer.">
+        <OpenRow
+          target={{ to: "/d/operator" }}
+          mark={<KindMark icon={RiRobot2Line} tint="neutral" />}
+          title="Operator"
+          detail="Answers teammates, runs routines and suggests fixes for review"
+        />
       </Section>
       {creating ? <NewAgentModal workspace={workspace} onClose={() => setCreating(false)} /> : null}
     </ListPage>

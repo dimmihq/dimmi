@@ -25,6 +25,15 @@ export const isProcedure = (op: OperatorOperation) =>
   op.kind === "procedure.edit_draft" || op.kind === "procedure.create_test_case";
 
 /*
+ * usePendingCount is how many suggestions wait for review.
+ */
+export function usePendingCount(workspace: string): number {
+  const { data } = useQuery({ ...pendingChangesetsQuery(workspace), enabled: workspace !== "" });
+
+  return (data ?? []).filter((c) => !c.preview).length;
+}
+
+/*
  * useSuggestions is the pending changes with an operation the test
  * matches, and how to decide one: deciding refreshes the workspace's
  * data, tells onDecided with the decision and returns the changeset.
