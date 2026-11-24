@@ -1,4 +1,5 @@
 import { DimmiLogo } from "@/features/brand/logo";
+import { CHANNELS } from "../channels";
 import { LEGAL_ENTITY } from "../legal/constants";
 import { GITHUB_URL } from "../links";
 import { PRODUCT_GROUPS } from "../products";
@@ -6,8 +7,8 @@ import { PRODUCT_GROUPS } from "../products";
 // Links that have a page; the rest of the footer is still plain text.
 const pages = new Map<string, string>([
   ...PRODUCT_GROUPS.flatMap((group) => group.products.map((p) => [p.name, p.href] as const)),
+  ...CHANNELS.map((c) => [c.name, c.href] as const),
   ["Pricing", "/pricing"],
-  ["Compare", "/compare"],
   ["Self-host", "/#self-host"],
   ["Security", "/privacy#security-overview"],
   ["Terms", "/terms"],
@@ -27,13 +28,13 @@ const columns = [
   },
   {
     title: "Channels",
-    links: ["Messenger", "Email", "Slack", "Microsoft Teams", "Discord", "WhatsApp & SMS", "Phone", "Headless & API"],
+    links: CHANNELS.map((c) => c.name),
   },
   { title: "Run it", links: ["Self-host", "dimmi Cloud", "Security", "Self-Hosting Notice", "AI Transparency"] },
   { title: "Developers", links: ["Docs", "API reference", "SDKs", "Webhooks", "GitHub"] },
   {
     title: "Company & Legal",
-    links: ["Pricing", "Compare", "Terms", "Acceptable Use", "Privacy", "DPA", "Subprocessors", "Cookies"],
+    links: ["Pricing", "Terms", "Acceptable Use", "Privacy", "DPA", "Subprocessors", "Cookies"],
   },
 ];
 

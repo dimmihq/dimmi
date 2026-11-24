@@ -68,18 +68,35 @@ export function ProductHero({
   );
 }
 
-export function ChannelStrip({ label, items }: { label: string; items: { icon: Icon; name: string }[] }) {
+export function ChannelStrip({
+  label,
+  items,
+}: {
+  label: string;
+  items: { icon: Icon; name: string; href?: string }[];
+}) {
   return (
     <Section frameClassName="!py-9 flex flex-wrap items-center justify-between gap-x-6 gap-y-5">
       <span className="font-mono text-[12px] leading-5 font-medium tracking-[0.04em] text-text-tertiary uppercase">
         {label}
       </span>
-      {items.map((item) => (
-        <span key={item.name} className="inline-flex items-center gap-2.5 text-[16px] leading-7 text-text-primary">
-          <item.icon className="size-5 text-foreground-icon-secondary" aria-hidden />
-          {item.name}
-        </span>
-      ))}
+      {items.map((item) =>
+        item.href ? (
+          <a
+            key={item.name}
+            href={item.href}
+            className="inline-flex items-center gap-2.5 text-[16px] leading-7 text-text-primary transition-colors hover:text-accent-600 dark:hover:text-accent-400"
+          >
+            <item.icon className="size-5 text-foreground-icon-secondary" aria-hidden />
+            {item.name}
+          </a>
+        ) : (
+          <span key={item.name} className="inline-flex items-center gap-2.5 text-[16px] leading-7 text-text-primary">
+            <item.icon className="size-5 text-foreground-icon-secondary" aria-hidden />
+            {item.name}
+          </span>
+        ),
+      )}
     </Section>
   );
 }

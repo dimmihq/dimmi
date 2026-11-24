@@ -18,11 +18,9 @@ import {
 import {
   RiChat3Line,
   RiCodeSSlashLine,
-  RiDiscordLine,
+  RiInstagramLine,
   RiMailLine,
-  RiMessage2Line,
-  RiMicrosoftLine,
-  RiPhoneLine,
+  RiMessengerLine,
   RiSlackLine,
   RiWhatsappLine,
 } from "@remixicon/react";
@@ -205,15 +203,13 @@ export function InboxPage() {
       <ChannelStrip
         label="Channels"
         items={[
-          { icon: RiChat3Line, name: "Messenger" },
-          { icon: RiMailLine, name: "Email" },
-          { icon: RiSlackLine, name: "Slack" },
-          { icon: RiMicrosoftLine, name: "Teams" },
-          { icon: RiDiscordLine, name: "Discord" },
-          { icon: RiWhatsappLine, name: "WhatsApp" },
-          { icon: RiMessage2Line, name: "SMS" },
-          { icon: RiPhoneLine, name: "Phone" },
-          { icon: RiCodeSSlashLine, name: "API" },
+          { icon: RiChat3Line, name: "Messenger", href: "/channels/messenger" },
+          { icon: RiMailLine, name: "Email", href: "/channels/email" },
+          { icon: RiSlackLine, name: "Slack", href: "/channels/slack" },
+          { icon: RiWhatsappLine, name: "WhatsApp", href: "/channels/whatsapp" },
+          { icon: RiInstagramLine, name: "Instagram", href: "/channels/instagram" },
+          { icon: RiMessengerLine, name: "Facebook", href: "/channels/facebook-messenger" },
+          { icon: RiCodeSSlashLine, name: "API", href: "/channels/api" },
         ]}
       />
       <FeatureCards

@@ -24,7 +24,6 @@
 <p align="center">
   <a href="https://trydimmi.com/?utm_source=github&utm_medium=readme&utm_content=nav">Website</a> ·
   <a href="https://trydimmi.com/docs/?utm_source=github&utm_medium=readme&utm_content=nav">Docs</a> ·
-  <a href="https://trydimmi.com/compare?utm_source=github&utm_medium=readme&utm_content=nav">Compare</a> ·
   <a href="https://trydimmi.com/pricing?utm_source=github&utm_medium=readme&utm_content=nav">Pricing</a> ·
   <a href="https://trydimmi.com/docs/self-hosting/?utm_source=github&utm_medium=readme&utm_content=nav">Self-host</a> ·
   <a href="https://trydimmi.com/docs/api-reference/?utm_source=github&utm_medium=readme&utm_content=nav">API reference</a> ·
@@ -148,7 +147,6 @@ Issues and pull requests are welcome. Read [AGENTS.md](AGENTS.md) before changin
   <a href="https://trydimmi.com/?utm_source=github&utm_medium=readme&utm_content=footer"><b>Start free</b></a> ·
   <a href="https://trydimmi.com/docs/self-hosting/?utm_source=github&utm_medium=readme&utm_content=footer"><b>Self-host it</b></a> ·
   <a href="https://trydimmi.com/docs/?utm_source=github&utm_medium=readme&utm_content=footer">Docs</a> ·
-  <a href="https://trydimmi.com/compare?utm_source=github&utm_medium=readme&utm_content=footer">Compare</a> ·
   <a href="AGENTS.md">Contributing</a>
 </p>
 

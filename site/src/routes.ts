@@ -8,7 +8,13 @@ import { AgentStudioPage } from "./pages/agent-studio";
 import { AgentsPage } from "./pages/agents";
 import { BroadcastsPage } from "./pages/broadcasts";
 import { ChangelogPage } from "./pages/changelog";
-import { ComparePage } from "./pages/compare";
+import { ApiChannelPage } from "./pages/channels/api";
+import { EmailChannelPage } from "./pages/channels/email";
+import { FacebookMessengerChannelPage } from "./pages/channels/facebook-messenger";
+import { InstagramChannelPage } from "./pages/channels/instagram";
+import { MessengerChannelPage } from "./pages/channels/messenger";
+import { SlackChannelPage } from "./pages/channels/slack";
+import { WhatsAppChannelPage } from "./pages/channels/whatsapp";
 import { FeedbackPage } from "./pages/feedback";
 import { HelpCenterPage } from "./pages/help-center";
 import { HomePage } from "./pages/home";
@@ -65,13 +71,6 @@ export const routes: Route[] = [
     description:
       "Put Operator on a daily or weekly schedule to sync merged GitHub PRs to help articles, catch knowledge gaps, and review edits inline.",
     page: RoutinesPage,
-  },
-  {
-    path: "/compare",
-    title: "Compare dimmi: customer support features and real monthly cost | dimmi",
-    description:
-      "Side-by-side comparison of specialized support agents, policy procedures, scheduled routines, real monthly bills, and open-source self-hosting.",
-    page: ComparePage,
   },
   {
     path: "/workflows",
@@ -142,6 +141,55 @@ export const routes: Route[] = [
     description:
       "Collect customer votes on your help center, link live support chats, and email every voter the day you ship.",
     page: FeedbackPage,
+  },
+  {
+    path: "/channels/messenger",
+    title: "Web messenger: live chat, docs, and updates inside your app | dimmi",
+    description:
+      "Embed live chat, help center search, and release notes with one script tag or 6 framework packages. Verified customer identity and AI support agents included.",
+    page: MessengerChannelPage,
+  },
+  {
+    path: "/channels/email",
+    title: "Shared email inbox: run support@ on your own domain | dimmi",
+    description:
+      "Forward support@, billing@, and security@ into one shared inbox with verified SPF/DKIM/DMARC domains, collision alerts, internal notes, and AI support agents.",
+    page: EmailChannelPage,
+  },
+  {
+    path: "/channels/slack",
+    title: "Slack customer support: sync Slack Connect channels to your inbox | dimmi",
+    description:
+      "Turn Slack Connect, community, and internal help desk channels into tracked support threads with two-way sync, SLAs, tickets, support agents, and Operator.",
+    page: SlackChannelPage,
+  },
+  {
+    path: "/channels/whatsapp",
+    title: "WhatsApp Business shared inbox: templates, media, and AI agents | dimmi",
+    description:
+      "Connect official WhatsApp Business numbers through Meta, manage approved templates, track 24-hour windows, and answer together with zero message markup.",
+    page: WhatsAppChannelPage,
+  },
+  {
+    path: "/channels/instagram",
+    title: "Instagram DM support: shared inbox for brand accounts | dimmi",
+    description:
+      "Connect Instagram Business accounts via Meta OAuth, answer DMs and story replies beside order history, track reply windows, and automate returns with support agents.",
+    page: InstagramChannelPage,
+  },
+  {
+    path: "/channels/facebook-messenger",
+    title: "Facebook Messenger support: manage Page messages in one queue | dimmi",
+    description:
+      "Connect Facebook Pages via Meta OAuth, route multiple brands into dedicated inboxes, and answer Page messages beside email and WhatsApp without Meta Business Suite.",
+    page: FacebookMessengerChannelPage,
+  },
+  {
+    path: "/channels/api",
+    title: "Headless chat & API: custom UIs, webhooks, and 11 typed SDKs | dimmi",
+    description:
+      "Build custom web or mobile chat on /widget/v1, sync backend threads over /api/v1, subscribe to signed webhooks, and ship faster with 11 typed SDKs and MCP.",
+    page: ApiChannelPage,
   },
   {
     path: "/terms",
