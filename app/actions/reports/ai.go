@@ -38,8 +38,8 @@ Describe says what the report is.
 */
 func (AI) Describe() Description {
 	return Description{
-		Key: "ai", Title: "dimmi agent", Order: 70,
-		Summary: "How often the dimmi agent answers and resolves, why it hands over, and what it costs.",
+		Key: "ai", Title: "AI agents", Order: 70,
+		Summary: "How often your AI agents answer and resolve, why they hand over, and what they cost.",
 	}
 }
 
