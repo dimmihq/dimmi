@@ -187,10 +187,10 @@ Workflows and series get the agent studio's shell: Build, Analytics and History 
 - **Series:** control groups with lift in the report.
 - **Templates:** six workflow templates in the new-workflow dialog; a Workflow check-up Operator routine.
 - **Reports:** a Workflows table in the AI report.
+- **Simulations:** a customer can interrupt a wait, a called workflow's steps run nested in the trace, Extract and Run an action take mocks or ask the AI (series too), reply times are worked out and articles named.
 
 ### Left for later
 
 - A/B paths inside workflows.
 - A reports breakdown by AI attribute, and a conversation sidebar panel showing attribute values.
 - Series run explanations in Operator.
-- Simulating the Extract and Run an action steps beyond recording them, a customer interrupting a wait, and a called workflow's own steps.
