@@ -132,7 +132,7 @@ func (s *Simulations) play(ctx context.Context, p playing) Result {
 	}
 	trigger := map[string]any{}
 	if spec.Trigger != workflowspec.TriggerOpener {
-		first, ok := ch.opening()
+		first, ok := ch.opening(ctx)
 		if !ok {
 			res.Error = errNoOpening.Error()
 			return res
@@ -233,11 +233,11 @@ func (s *Simulations) newChat(p playing) *chat {
 opening sends the first saved message as the one that triggers the
 workflow.
 */
-func (c *chat) opening() (string, bool) {
+func (c *chat) opening(ctx context.Context) (string, bool) {
 	for i, m := range c.script.messages {
 		if !m.Confirm && strings.TrimSpace(m.Text) != "" {
 			c.sent[i] = true
-			c.customerSaid(m.Text, Line{})
+			c.customerSaid(ctx, m.Text, Line{})
 			return m.Text, true
 		}
 	}
@@ -247,11 +247,19 @@ func (c *chat) opening() (string, bool) {
 /*
 customerSaid keeps a message of the customer's.
 */
-func (c *chat) customerSaid(text string, l Line) {
+func (c *chat) customerSaid(ctx context.Context, text string, l Line) {
 	l.From, l.Text = "customer", text
-	c.lines = append(c.lines, l)
+	c.add(ctx, l)
 	c.history = append(c.history, pipeline.SimMessage{From: "customer", Text: text})
 	c.waiting = text
+}
+
+/*
+add keeps one line of the chat and tells whoever watches.
+*/
+func (c *chat) add(ctx context.Context, l Line) {
+	c.lines = append(c.lines, l)
+	c.tell(ctx, "line", map[string]any{"line": l})
 }
 
 /*
@@ -262,9 +270,8 @@ func (c *chat) Said(ctx context.Context, m engine.DryMessage) {
 	if len(m.Choices) > 0 {
 		text += "\n\n" + numbered(m.Choices)
 	}
-	c.lines = append(c.lines, Line{From: "workflow", Text: m.Text, StepID: m.StepID, Choices: m.Choices})
+	c.add(ctx, Line{From: "workflow", Text: m.Text, StepID: m.StepID, Choices: m.Choices})
 	c.history = append(c.history, pipeline.SimMessage{From: "agent", Text: text})
-	c.tell(ctx, "said", map[string]any{"message": m})
 }
 
 /*
@@ -309,10 +316,10 @@ func (c *chat) Customer(ctx context.Context, ask engine.DryAsk) (engine.DryAnswe
 		return engine.DryAnswer{}, err
 	}
 	if move.Done || move.Waited || (move.Message == "" && move.Choice == 0) {
-		c.lines = append(c.lines, Line{From: "customer", Silent: true, StepID: ask.StepID})
+		c.add(ctx, Line{From: "customer", Silent: true, StepID: ask.StepID})
 		return engine.DryAnswer{Silent: true}, nil
 	}
-	c.customerSaid(move.Message, Line{StepID: ask.StepID, Tapped: move.Choice > 0})
+	c.customerSaid(ctx, move.Message, Line{StepID: ask.StepID, Tapped: move.Choice > 0})
 	return engine.DryAnswer{Text: move.Message, Choice: move.Choice}, nil
 }
 
@@ -366,14 +373,14 @@ func (c *chat) Handle(ctx context.Context, h engine.DryHandle) (engine.DryHandle
 			switch {
 			case move.Confirm:
 				confirm = true
-				c.lines = append(c.lines, Line{From: "customer", Text: "(pressed Confirm)"})
+				c.add(ctx, Line{From: "customer", Text: "(pressed Confirm)"})
 			case move.Done:
 				return engine.DryHandled{Outcome: workflowspec.OutcomeResolved, Reason: "customer_done"}, nil
 			case move.Waited || move.Message == "":
-				c.lines = append(c.lines, Line{From: "customer", Silent: true, StepID: h.StepID})
+				c.add(ctx, Line{From: "customer", Silent: true, StepID: h.StepID})
 				return engine.DryHandled{Outcome: workflowspec.OutcomeQuiet, Reason: "customer_quiet"}, nil
 			default:
-				c.customerSaid(move.Message, Line{})
+				c.customerSaid(ctx, move.Message, Line{})
 			}
 		}
 		res, err := c.agentTurn(ctx, h.StepID, agent, confirm)
@@ -464,7 +471,7 @@ func (c *chat) keepTurn(ctx context.Context, stepID, msg string, confirm bool, r
 		c.wrote = append(c.wrote, res.Model)
 	}
 	if res.Reply != "" {
-		c.lines = append(c.lines, Line{From: "agent", Text: res.Reply, StepID: stepID, Name: res.AgentName})
+		c.add(ctx, Line{From: "agent", Text: res.Reply, StepID: stepID, Name: res.AgentName})
 		c.history = append(c.history, pipeline.SimMessage{From: "agent", Text: res.Reply})
 	}
 	c.calls = append(c.calls, res.Calls...)
