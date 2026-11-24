@@ -66,6 +66,7 @@ func executors() map[string]executor {
 		workflowspec.KindRunWorkflow: runRunWorkflow, workflowspec.KindHTTPRequest: runHTTPRequest,
 	}
 	maps.Copy(all, ticketExecutors())
+	maps.Copy(all, automationExecutors())
 
 	return all
 }
@@ -74,12 +75,15 @@ func executors() map[string]executor {
 resumers returns the resumer of every step kind that waits.
 */
 func resumers() map[string]resumer {
-	return map[string]resumer{
+	all := map[string]resumer{
 		workflowspec.KindButtons: resumeButtons, workflowspec.KindCollect: resumeCollect,
 		workflowspec.KindWait: resumeWait, workflowspec.KindDimmi: resumeDimmi,
 		workflowspec.KindRunWorkflow: resumeRunWorkflow, workflowspec.KindHTTPRequest: resumeHTTPRequest,
 		workflowspec.KindClassify: resumeClassify,
 	}
+	maps.Copy(all, automationResumers())
+
+	return all
 }
 
 /*

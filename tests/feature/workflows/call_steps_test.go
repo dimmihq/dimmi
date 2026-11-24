@@ -288,7 +288,7 @@ func TestCallSteps(t *testing.T) {
 		t.Parallel()
 		d := tests.NewDesk(t)
 		llm := fake.New(contracts.LLMProviderAnthropic).Script(fake.Step{
-			Text: `{"category":"p_billing1","confidence":"high"}`,
+			Text: `{"choice":"p_billing1","confidence":"high"}`,
 		})
 		classifyingModel(t, d, llm)
 		live(t, d, "Sort", testkit.JSON{

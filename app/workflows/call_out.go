@@ -27,6 +27,8 @@ import (
 	"github.com/dimmihq/dimmi/framework/database"
 	"github.com/dimmihq/dimmi/framework/ids"
 
+	"github.com/dimmihq/dimmi/app/ai/actionkit"
+	"github.com/dimmihq/dimmi/app/ai/aidecision"
 	"github.com/dimmihq/dimmi/app/jobs"
 	"github.com/dimmihq/dimmi/app/models"
 	"github.com/dimmihq/dimmi/app/support/workflowspec"
@@ -49,12 +51,13 @@ category and confidence, or why it went unsorted. Only the mapped
 values of a response are kept, never its body.
 */
 type callAnswer struct {
-	Error      string       `json:"error,omitempty"`
-	Status     int          `json:"status,omitempty"`
-	Saves      []savedValue `json:"saves,omitempty"`
-	Category   string       `json:"category,omitempty"`
-	Confidence string       `json:"confidence,omitempty"`
-	Reason     string       `json:"reason,omitempty"`
+	Error      string         `json:"error,omitempty"`
+	Status     int            `json:"status,omitempty"`
+	Saves      []savedValue   `json:"saves,omitempty"`
+	Category   string         `json:"category,omitempty"`
+	Confidence string         `json:"confidence,omitempty"`
+	Reason     string         `json:"reason,omitempty"`
+	Values     map[string]any `json:"values,omitempty"`
 }
 
 /*
@@ -78,13 +81,16 @@ request to send or the question to ask, or the answer when there is
 nothing to call.
 */
 type call struct {
-	kind     string
-	request  outbound
-	saves    []workflowspec.ResponseSave
-	timeout  string
-	question ClassifyQuestion
-	answer   *callAnswer
-	contact  *ids.UUID
+	kind       string
+	request    outbound
+	saves      []workflowspec.ResponseSave
+	timeout    string
+	choice     aidecision.Choice
+	extraction aidecision.Extraction
+	action     *actionkit.AutomationCall
+	outputs    []workflowspec.ActionSave
+	answer     *callAnswer
+	contact    *ids.UUID
 }
 
 /*
@@ -159,8 +165,13 @@ func awaitsCall(run models.WorkflowRun, a jobs.CallOutForWorkflowArgs) bool {
 prepare reads what the step's call needs.
 */
 func (st *state) prepare(ctx context.Context, s workflowspec.Step) (*call, error) {
-	if s.Kind == workflowspec.KindClassify {
+	switch s.Kind {
+	case workflowspec.KindClassify:
 		return st.prepareQuestion(ctx, s)
+	case workflowspec.KindExtract:
+		return st.prepareExtraction(ctx, s)
+	case workflowspec.KindRunAction:
+		return st.prepareAction(ctx, s)
 	}
 
 	return st.prepareRequest(ctx, s)
@@ -170,8 +181,13 @@ func (st *state) prepare(ctx context.Context, s workflowspec.Step) (*call, error
 makeCall makes the call, with no transaction open.
 */
 func (e *Engine) makeCall(ctx context.Context, c *call) *callAnswer {
-	if c.kind == workflowspec.KindClassify {
-		return e.ask(ctx, c.question)
+	switch c.kind {
+	case workflowspec.KindClassify:
+		return e.ask(ctx, c.choice)
+	case workflowspec.KindExtract:
+		return e.extract(ctx, c.extraction)
+	case workflowspec.KindRunAction:
+		return e.runAction(ctx, c)
 	}
 
 	return e.sendRequest(ctx, c)

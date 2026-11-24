@@ -2031,6 +2031,85 @@
         ],
         "type": "object"
       },
+      "AIAttribute": {
+        "additionalProperties": false,
+        "properties": {
+          "created_at": {
+            "description": "When it was created, as an RFC 3339 time, such as 2026-01-31T09:00:00Z.",
+            "format": "date-time",
+            "type": "string"
+          },
+          "data_type": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "id": {
+            "description": "The id of this record. Send it wherever an endpoint asks for this record; never use its name or title in its place.",
+            "type": "string"
+          },
+          "key": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          },
+          "object": {
+            "description": "The kind of record this is, the same for every record of its kind, such as article.",
+            "type": "string"
+          },
+          "options": {
+            "items": {
+              "type": "string"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "status": {
+            "type": "string"
+          },
+          "updated_at": {
+            "description": "When it last changed, as an RFC 3339 time, such as 2026-01-31T09:00:00Z.",
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "object",
+          "key",
+          "label",
+          "description",
+          "data_type",
+          "options",
+          "status",
+          "created_at",
+          "updated_at"
+        ],
+        "type": "object"
+      },
+      "AIAttributeValue": {
+        "additionalProperties": false,
+        "properties": {
+          "attribute": {
+            "$ref": "#/components/schemas/AIAttribute"
+          },
+          "object": {
+            "description": "The kind of record this is, the same for every record of its kind, such as article.",
+            "type": "string"
+          },
+          "value": {}
+        },
+        "required": [
+          "object",
+          "attribute",
+          "value"
+        ],
+        "type": "object"
+      },
       "AIChatGPTCompleteRequestBody": {
         "additionalProperties": false,
         "properties": {
@@ -7644,6 +7723,71 @@
         "type": "object"
       },
       "CollectionAIAgentVersionMetaStruct": {
+        "additionalProperties": false,
+        "properties": {
+          "next_cursor": {
+            "description": "Send it as cursor to read the next page; null on the last page.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "per_page": {
+            "description": "How many items a page holds at most, such as 25.",
+            "format": "int64",
+            "type": "integer"
+          },
+          "prev_cursor": {
+            "description": "Send it as cursor to read the page before; null on the first page.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "total": {
+            "description": "How many items match in all; left out when the list does not count them.",
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "next_cursor",
+          "prev_cursor",
+          "per_page"
+        ],
+        "type": "object"
+      },
+      "CollectionAIAttribute": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "description": "The items of this page, as a list; empty when nothing matches.",
+            "items": {
+              "$ref": "#/components/schemas/AIAttribute"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "links": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "Addresses of related pages by name, such as next; left out when there are none.",
+            "type": "object"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/CollectionAIAttributeMetaStruct"
+          }
+        },
+        "required": [
+          "data",
+          "meta"
+        ],
+        "type": "object"
+      },
+      "CollectionAIAttributeMetaStruct": {
         "additionalProperties": false,
         "properties": {
           "next_cursor": {
@@ -16091,6 +16235,37 @@
           "tags",
           "created_at",
           "updated_at"
+        ],
+        "type": "object"
+      },
+      "ConversationAIAttributes": {
+        "additionalProperties": false,
+        "properties": {
+          "checked_at": {
+            "format": "date-time",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "object": {
+            "description": "The kind of record this is, the same for every record of its kind, such as article.",
+            "type": "string"
+          },
+          "values": {
+            "items": {
+              "$ref": "#/components/schemas/AIAttributeValue"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "object",
+          "values",
+          "checked_at"
         ],
         "type": "object"
       },
@@ -29803,6 +29978,18 @@
         ],
         "type": "object"
       },
+      "ResourceAIAttribute": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/AIAttribute"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
       "ResourceAIChatGPTConnection": {
         "additionalProperties": false,
         "properties": {
@@ -30180,6 +30367,18 @@
         "properties": {
           "data": {
             "$ref": "#/components/schemas/Conversation"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "ResourceConversationAIAttributes": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/ConversationAIAttributes"
           }
         },
         "required": [
@@ -36101,6 +36300,54 @@
         ],
         "type": "object"
       },
+      "StoreAIAttributeRequestBody": {
+        "additionalProperties": false,
+        "properties": {
+          "data_type": {
+            "description": "Data type: one of text, number, date, boolean, choice.",
+            "enum": [
+              "text",
+              "number",
+              "date",
+              "boolean",
+              "choice"
+            ],
+            "type": "string"
+          },
+          "description": {
+            "description": "The description of the conversation attribute, at most 500 characters.",
+            "maxLength": 500,
+            "type": "string"
+          },
+          "key": {
+            "description": "Key: text of at most 64 characters.",
+            "maxLength": 64,
+            "type": "string"
+          },
+          "label": {
+            "description": "Label: text of at most 80 characters.",
+            "maxLength": 80,
+            "type": "string"
+          },
+          "options": {
+            "description": "Options: a list, such as [\"...\"].",
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 30,
+            "type": [
+              "array",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "key",
+          "label",
+          "data_type"
+        ],
+        "type": "object"
+      },
       "StoreArticleEditSuggestionRequestBody": {
         "additionalProperties": false,
         "properties": {
@@ -41202,6 +41449,38 @@
           "data",
           "meta"
         ],
+        "type": "object"
+      },
+      "UpdateAIAttributeRequestBody": {
+        "additionalProperties": false,
+        "properties": {
+          "description": {
+            "description": "The description of the conversation attribute, at most 500 characters.",
+            "maxLength": 500,
+            "type": "string"
+          },
+          "label": {
+            "description": "Label: text of at most 80 characters.",
+            "maxLength": 80,
+            "type": "string"
+          },
+          "options": {
+            "description": "Options: a list, such as [\"...\"].",
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 30,
+            "type": "array"
+          },
+          "status": {
+            "description": "Status: one of active, archived.",
+            "enum": [
+              "active",
+              "archived"
+            ],
+            "type": "string"
+          }
+        },
         "type": "object"
       },
       "UpdateArticleRequestBody": {
@@ -47945,6 +48224,125 @@
           "ai:keys"
         ],
         "x-internal": true
+      }
+    },
+    "/ai/conversation-attributes": {
+      "get": {
+        "operationId": "ai.conversation-attributes.index",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CollectionAIAttribute"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseError"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "x-abilities": [
+          "conversations:read"
+        ]
+      },
+      "post": {
+        "operationId": "ai.conversation-attributes.store",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StoreAIAttributeRequestBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResourceAIAttribute"
+                }
+              }
+            },
+            "description": "Created"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseError"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "x-abilities": [
+          "ai:write"
+        ]
+      }
+    },
+    "/ai/conversation-attributes/{attribute}": {
+      "patch": {
+        "operationId": "ai.conversation-attributes.update",
+        "parameters": [
+          {
+            "description": "Id of the custom attribute, starting with atd_, such as atd_01jx2m8k4t. Find it with GET /attribute-definitions.",
+            "in": "path",
+            "name": "attribute",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateAIAttributeRequestBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResourceAIAttribute"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseError"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "x-abilities": [
+          "ai:write"
+        ]
       }
     },
     "/ai/keys": {
@@ -55061,6 +55459,47 @@
         "summary": "Update a conversation",
         "x-abilities": [
           "conversations:write"
+        ]
+      }
+    },
+    "/conversations/{conversation}/ai-attributes": {
+      "get": {
+        "operationId": "conversations.ai-attributes.index",
+        "parameters": [
+          {
+            "description": "Id of the conversation, such as conv_01jx2m8k4t, or its number, such as 1042 for #1042. Find it with GET /conversations or GET /search.",
+            "in": "path",
+            "name": "conversation",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResourceConversationAIAttributes"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseError"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "x-abilities": [
+          "conversations:read"
         ]
       }
     },

@@ -88,7 +88,9 @@ func customerSteps() []string {
 Triggers returns every trigger in list order.
 */
 func Triggers() []Trigger {
-	return slices.Concat(startTriggers(), duringTriggers(), teamTriggers(), ticketTriggers(), otherTriggers())
+	return slices.Concat(
+		startTriggers(), duringTriggers(), aiTriggers(), teamTriggers(), ticketTriggers(), otherTriggers(),
+	)
 }
 
 /*

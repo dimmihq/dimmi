@@ -35,6 +35,7 @@ import (
 	"github.com/dimmihq/dimmi/app/actions/helpcenters"
 	"github.com/dimmihq/dimmi/app/actions/sla"
 	"github.com/dimmihq/dimmi/app/actions/tickets"
+	"github.com/dimmihq/dimmi/app/ai/aidecision"
 )
 
 /*
@@ -66,10 +67,11 @@ IDs reads the public ids definitions name; AgentOn says this server
 runs the agent at all, so a step that lets dimmi handle a conversation
 hands it over at once when it cannot. HTTP is the guarded client
 request steps call out through, Keys open the secrets of their
-connections, and Classifier sorts conversations by topic; without one
-every classify step takes its none path. Tickets works the customer
-tickets of conversations and SLA applies service level policies; without
-them, ticket and SLA steps are skipped.
+connections, Decisions is the AI decision step that sorts and reads
+conversations, without which every classify and extract step takes its
+none path, and Actions runs the workspace's actions for action steps.
+Tickets works the customer tickets of conversations and SLA applies
+service level policies; without them, ticket and SLA steps are skipped.
 */
 type Engine struct {
 	DB          *database.DB
@@ -82,7 +84,8 @@ type Engine struct {
 	AgentOn     bool
 	HTTP        *httpclient.Client
 	Keys        *encryption.Keys
-	Classifier  Classifier
+	Decisions   aidecision.Service
+	Actions     ActionRunner
 	Tickets     *tickets.Tickets
 	HelpCenters helpcenters.Addresses
 	SLA         *sla.SLA

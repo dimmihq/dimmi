@@ -237,6 +237,10 @@ func (c *checker) node(n Node) {
 		c.split(n)
 	case n.Kind == KindAIPath:
 		c.aiPath(n)
+	case n.Kind == KindExtract:
+		c.extract(n)
+	case n.Kind == KindRunAction:
+		c.runAction(n)
 	default:
 		c.action(n)
 	}
@@ -338,6 +342,6 @@ knownKind reports whether a kind of step exists.
 func knownKind(kind string) bool {
 	return slices.Contains([]string{
 		KindEntry, KindEmail, KindChat, KindPost, KindSlack, KindWait, KindWaitFor, KindCondition, KindSplit,
-		KindAIPath, KindTag, KindUntag, KindSetAttribute, KindTopic, KindWebhook, KindExit,
+		KindAIPath, KindTag, KindUntag, KindSetAttribute, KindTopic, KindWebhook, KindExit, KindExtract, KindRunAction,
 	}, kind)
 }

@@ -33,6 +33,7 @@ import (
 
 	"github.com/dimmihq/dimmi/app/actions/audiences"
 	"github.com/dimmihq/dimmi/app/actions/broadcasts"
+	"github.com/dimmihq/dimmi/app/ai/aidecision"
 	"github.com/dimmihq/dimmi/app/auth/authz"
 	"github.com/dimmihq/dimmi/app/exceptions"
 	"github.com/dimmihq/dimmi/app/models"
@@ -75,34 +76,13 @@ var (
 )
 
 /*
-PathPicker lets an AI pick one path for a person.
-*/
-type PathPicker interface {
-	/*
-		Pick returns the id of the path the AI chose for the profile, or
-		an error when it could not choose.
-	*/
-	Pick(ctx context.Context, in PickInput) (string, error)
-}
-
-/*
-PickInput is what the AI reads: the workspace that pays for it, the
-team's instructions, the paths to choose from and the person's profile.
-*/
-type PickInput struct {
-	WorkspaceID ids.UUID
-	Prompt      string
-	Paths       []AIPath
-	Profile     string
-}
-
-/*
 Series holds every series action. DB stores them, Clock dates them,
 Queue runs their jobs, Events tells the rest of the app, Audiences
 decides who matches, Broadcasts sends their messages, IDs reads the
 public ids a definition names, Limiter counts messages per person,
-Picker is the AI that picks paths, HTTP posts webhooks, and Config sets
-the limits.
+Decisions is the AI decision step that picks paths and reads people,
+Actions runs the workspace's actions, HTTP posts webhooks, and Config
+sets the limits.
 */
 type Series struct {
 	DB         *database.DB
@@ -113,7 +93,8 @@ type Series struct {
 	Broadcasts *broadcasts.Broadcasts
 	IDs        *ids.Registry
 	Limiter    *ratelimit.Limiter
-	Picker     PathPicker
+	Decisions  aidecision.Service
+	Actions    ActionRunner
 	HTTP       *httpclient.Client
 	Config     config.SeriesConfig
 }
