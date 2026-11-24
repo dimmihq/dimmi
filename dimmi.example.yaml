@@ -953,8 +953,22 @@ ai:
     openai_compatible_api_key: ""  # DIMMI_AI__BOOTSTRAP__OPENAI_COMPATIBLE_API_KEY (secret; or DIMMI_AI__BOOTSTRAP__OPENAI_COMPATIBLE_API_KEY_FILE naming a file)
     answer_model: ""  # DIMMI_AI__BOOTSTRAP__ANSWER_MODEL
     classifier_model: ""  # DIMMI_AI__BOOTSTRAP__CLASSIFIER_MODEL
-  # AIDecisionsConfig configures the decision model.
+  # AIDecisionsConfig configures the decision model. Clef answers when its
+  # account is set, TypeSafe otherwise; with neither, the workspace's
+  # answer model judges in its place.
   decisions:
+    # AIClefConfig is the Cloudflare account Clef runs on: its id, an API
+    # token allowed to run Workers AI, the API base URL, the model (clef or
+    # clef-flash), the timeout of one call and the price of a million input
+    # tokens in US dollars (output is free). Workers AI keeps no request
+    # after answering it and trains on none.
+    clef:
+      account_id: ""  # DIMMI_AI__DECISIONS__CLEF__ACCOUNT_ID
+      api_token: ""  # DIMMI_AI__DECISIONS__CLEF__API_TOKEN (secret; or DIMMI_AI__DECISIONS__CLEF__API_TOKEN_FILE naming a file)
+      base_url: https://api.cloudflare.com/client/v4  # DIMMI_AI__DECISIONS__CLEF__BASE_URL
+      model: clef  # DIMMI_AI__DECISIONS__CLEF__MODEL
+      timeout: 3s  # DIMMI_AI__DECISIONS__CLEF__TIMEOUT
+      input_price_per_mtok: 0.24  # DIMMI_AI__DECISIONS__CLEF__INPUT_PRICE_PER_MTOK
     # AITypeSafeConfig is the TypeSafe System One account: its key, the API
     # base URL, the model or alias, the timeout of one call and the price of
     # a million input tokens in US dollars (output is free).

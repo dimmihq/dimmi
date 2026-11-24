@@ -64,8 +64,12 @@ func (r *Runner) decide(
 ) map[string]contracts.DecisionAnswer {
 	started := r.Clock.Now()
 	res, err := r.Decider.Decide(ctx, req)
+	provider := r.DecisionProvider
+	if provider == "" {
+		provider = "decision"
+	}
 	rec := stepRecord{
-		kind: enums.AIRunStepKindVerify, provider: "typesafe", started: started, request: req.State, err: err,
+		kind: enums.AIRunStepKindVerify, provider: provider, started: started, request: req.State, err: err,
 	}
 	if err != nil || res == nil {
 		r.step(ctx, st, rec)
