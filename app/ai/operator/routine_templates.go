@@ -115,7 +115,9 @@ func knowledgeTemplates() []RoutineTemplate {
 
 /*
 conversationTemplates are the routines that read what customers wrote:
-what they ask for, who is unhappy and who is waiting.
+what they ask for, who is unhappy and who is waiting. They report and
+suggest no change, so each tells the team after every run: one that
+waited for a suggestion would never be heard from.
 */
 func conversationTemplates() []RoutineTemplate {
 	return []RoutineTemplate{
@@ -134,7 +136,7 @@ func conversationTemplates() []RoutineTemplate {
 				"and who.",
 			Prompt: "List the features customers asked for since the last run, how many customers asked " +
 				"for each, and the conversations where they asked.",
-			Cadence: "weekly", Expr: "0 9 * * 4", NotifyPolicy: "on_findings",
+			Cadence: "weekly", Expr: "0 9 * * 4", NotifyPolicy: "always",
 			Requires: []string{RequiresConversations},
 		},
 		{
@@ -143,7 +145,7 @@ func conversationTemplates() []RoutineTemplate {
 				"talks of leaving, and says which need a person today.",
 			Prompt: "Find the open conversations where the customer is frustrated, has asked more than " +
 				"once, or talks of leaving, and tell the team which need a person today and why.",
-			Cadence: "daily", Expr: "0 9 * * *", NotifyPolicy: "on_findings",
+			Cadence: "daily", Expr: "0 9 * * *", NotifyPolicy: "always",
 			Requires: []string{RequiresConversations},
 		},
 		{
@@ -152,7 +154,7 @@ func conversationTemplates() []RoutineTemplate {
 				"day, and says what each is waiting on.",
 			Prompt: "Find the open conversations where the customer has waited more than a day for the " +
 				"team to reply, and say what each one is waiting on.",
-			Cadence: "daily", Expr: "0 8 * * *", NotifyPolicy: "on_findings",
+			Cadence: "daily", Expr: "0 8 * * *", NotifyPolicy: "always",
 			Requires: []string{RequiresConversations},
 		},
 	}
