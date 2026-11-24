@@ -27,6 +27,7 @@ import (
 	"github.com/dimmihq/dimmi/framework/ratelimit"
 
 	"github.com/dimmihq/dimmi/app/actions/conversations"
+	"github.com/dimmihq/dimmi/app/ai/agents"
 	"github.com/dimmihq/dimmi/app/auth"
 	appevents "github.com/dimmihq/dimmi/app/events"
 	"github.com/dimmihq/dimmi/app/exceptions"
@@ -151,7 +152,7 @@ func (a *RequestAiHandoff) handOff(ctx context.Context, tx *database.Tx, conv mo
 	q := models.New(tx)
 	now := a.Clock.Now()
 
-	agent, err := q.FindAgent(ctx, conv.WorkspaceID)
+	agent, err := agents.Resolve(ctx, q, agents.ForConversation(conv, nil))
 	if err != nil {
 		return exceptions.ErrWidgetConversationNotFound
 	}

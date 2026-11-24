@@ -49,7 +49,8 @@ export function ListPage({
  */
 export type Opened =
   | { to: "/d/workflows/$workflow"; params: { workflow: string } }
-  | { to: "/d/procedures/$procedure"; params: { procedure: string } };
+  | { to: "/d/procedures/$procedure"; params: { procedure: string } }
+  | { to: "/d/agents/$agent"; params: { agent: string } };
 
 export function OpenRow({
   target,

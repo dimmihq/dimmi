@@ -13,7 +13,11 @@
 
 package workflowspec
 
-import "encoding/json"
+import (
+	"encoding/json"
+
+	"github.com/dimmihq/dimmi/framework/ids"
+)
 
 /*
 WaitAgent is the wait kind of a run whose agent step is active.
@@ -21,14 +25,16 @@ WaitAgent is the wait kind of a run whose agent step is active.
 const WaitAgent = "dimmi"
 
 /*
-AgentHandling is what an active agent step tells the agent: extra
+AgentHandling is what an active agent step tells the agent: which
+agent answers (nil for the one the conversation would get anyway), extra
 instructions, the most replies it may send (zero for the agent's own
 limit) and whether answers ask the customer to confirm them.
 */
 type AgentHandling struct {
-	Instructions      string `json:"instructions,omitempty"`
-	MaxReplies        int    `json:"max_replies,omitempty"`
-	ConfirmResolution bool   `json:"confirm_resolution"`
+	AgentID           *ids.UUID `json:"agent_id,omitempty"`
+	Instructions      string    `json:"instructions,omitempty"`
+	MaxReplies        int       `json:"max_replies,omitempty"`
+	ConfirmResolution bool      `json:"confirm_resolution"`
 }
 
 /*

@@ -95,15 +95,52 @@ Variables lists, per required file, the placeholders the pipeline
 fills. A file naming any other placeholder fails the boot check.
 */
 func Variables() map[string][]string {
+	root := []string{
+		"agent_name", "product_name", "tone", "language", "guidance", "channel", "handoff", "rules",
+		"job", "transfers",
+	}
 	return map[string][]string{
-		"answer.system.md": {
-			"agent_name", "product_name", "tone", "language", "guidance", "channel", "handoff", "rules",
-		},
+		RootSupport:            root,
+		RootSales:              root,
+		"job.md":               {"job"},
+		"transfers.md":         {"agents"},
 		"tone_friendly.md":     {},
 		"tone_professional.md": {},
 		"tone_concise.md":      {},
 		"defaults.md":          {},
 	}
+}
+
+/*
+The root system prompts. An agent answers from one of them, chosen by
+the job it was made for: each is written whole for that job, with its
+own judgement, voice and examples, and all of them take the same
+placeholders, so everything layered on top of a root (the agent's job,
+its guidance, its tone, the agents it can pass to) works the same way
+under any of them.
+*/
+const (
+	RootSupport = "answer.system.md"
+	RootSales   = "sales.system.md"
+)
+
+/*
+Roots lists every root system prompt.
+*/
+func Roots() []string {
+	return []string{RootSupport, RootSales}
+}
+
+/*
+RootFor is the root system prompt of an agent made from the template
+with the key. Templates with no root of their own, and agents made
+from none, answer from the support root.
+*/
+func RootFor(templateKey string) string {
+	if templateKey == "sales" {
+		return RootSales
+	}
+	return RootSupport
 }
 
 /*
@@ -144,6 +181,9 @@ func NewLoader(version string, override fs.FS) (*Loader, error) {
 
 	if _, ok := l.versions[version]; !ok {
 		return nil, fmt.Errorf("%w: version %s is not compiled in", ErrInvalid, version)
+	}
+	if err := errors.Join(CheckTasks(), CheckGuidance()); err != nil {
+		return nil, err
 	}
 	return l, nil
 }

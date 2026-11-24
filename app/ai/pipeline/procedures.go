@@ -38,6 +38,7 @@ import (
 	"github.com/dimmihq/dimmi/app/enums"
 	"github.com/dimmihq/dimmi/app/models"
 	"github.com/dimmihq/dimmi/app/support/procedure"
+	"github.com/dimmihq/dimmi/app/support/prompts"
 )
 
 /*
@@ -274,12 +275,9 @@ func (r *Runner) procedureFits(ctx context.Context, st *run) map[string]float64 
 		State: r.procedureState(st.env), Questions: map[string]contracts.DecisionQuestion{},
 	}
 	for _, p := range st.env.Procedures {
-		req.Questions[p.publicID()] = contracts.DecisionQuestion{
-			Type:         contracts.DecisionNoul,
-			Instructions: "Does the procedure \"" + p.row.Name + "\" fit the customer's current request?",
-			True:         p.def.Description,
-			False:        "The customer is asking for something else, or it is not yet clear what they need.",
-		}
+		req.Questions[p.publicID()] = question("procedure_fits", prompts.Vars{
+			"name": p.row.Name, "description": p.def.Description,
+		})
 	}
 
 	fits := map[string]float64{}
@@ -295,9 +293,7 @@ procedureState is what the decision model reads: the conversation's
 latest messages, the customer's newest last.
 */
 func (r *Runner) procedureState(e *env) string {
-	return "A support conversation. The team wrote procedures for a few kinds of request. Judge what the " +
-		"customer is asking for now, in their latest message, read in the light of the conversation.\n" +
-		r.conversationLines(e)
+	return prompts.Judgment("procedure_fits", prompts.Vars{"conversation": r.conversationLines(e)}).State
 }
 
 /*

@@ -69,20 +69,8 @@ func (c MarketingDemoCommand) agentSetup(ctx context.Context, owner authz.Member
 		tagIDs[t[0]] = made.ID
 	}
 
-	if _, err := a.Actions.AI.GetAgent.Handle(ctx, ai.GetAgentInput{Membership: owner}); err != nil {
-		return fmt.Errorf("provision agent: %w", err)
-	}
-
-	patch := ai.AgentPatch{
-		Name: new("Lumi"), Tone: new("friendly"), Guidance: new(marketingGuidance), Schedule: new("always"),
-		AssignedBehavior: new("skip_when_human_active"), UnknownBehavior: new("offer_handoff"),
-		DefaultLanguage: new("en"), RequireCitations: new(true), EnabledChannels: &[]string{"widget", "email"},
-		ProductName:   ai.Optional[string]{Set: true, Value: new("Lumen")},
-		HandoffTeamID: ai.Optional[ids.UUID]{Set: true, Value: new(teamIDs["Engineering"])},
-	}
-	update := ai.UpdateAgentInput{Membership: owner, Patch: patch}
-	if _, err := a.Actions.AI.UpdateAgent.Handle(ctx, update); err != nil {
-		return fmt.Errorf("configure agent: %w", err)
+	if err := c.configureAgent(ctx, owner, teamIDs["Engineering"]); err != nil {
+		return err
 	}
 
 	actions, err := c.actions(ctx, owner)
@@ -95,6 +83,41 @@ func (c MarketingDemoCommand) agentSetup(ctx context.Context, owner authz.Member
 	}
 
 	return c.workflow(ctx, owner, teamIDs, tagIDs)
+}
+
+/*
+configureAgent names the workspace's agent, gives it its guidance and
+the team it hands over to, and publishes it when it is ready to answer.
+*/
+func (c MarketingDemoCommand) configureAgent(ctx context.Context, owner authz.Membership, handsTo ids.UUID) error {
+	a := c.App
+
+	view, err := a.Actions.AI.Agents.Default(ctx, owner)
+	if err != nil {
+		return fmt.Errorf("provision agent: %w", err)
+	}
+
+	patch := ai.AgentPatch{
+		Name: new("Lumi"), Tone: new("friendly"), Guidance: new(marketingGuidance), Schedule: new("always"),
+		AssignedBehavior: new("skip_when_human_active"), UnknownBehavior: new("offer_handoff"),
+		DefaultLanguage: new("en"), RequireCitations: new(true), EnabledChannels: &[]string{"widget", "email"},
+		ProductName:   ai.Optional[string]{Set: true, Value: new("Lumen")},
+		HandoffTeamID: ai.Optional[ids.UUID]{Set: true, Value: new(handsTo)},
+	}
+	update := ai.UpdateAgentInput{Membership: owner, AgentID: view.Agent.ID, Patch: patch}
+	if _, err := a.Actions.AI.Agents.Update(ctx, update); err != nil {
+		return fmt.Errorf("configure agent: %w", err)
+	}
+	if !view.Ready {
+		return nil
+	}
+	if _, err := a.Actions.AI.Agents.Publish(ctx, ai.PublishInput{
+		Membership: owner, AgentID: view.Agent.ID, ChangeNote: "Set up for the marketing demo",
+	}); err != nil {
+		return fmt.Errorf("publish agent: %w", err)
+	}
+
+	return nil
 }
 
 /*

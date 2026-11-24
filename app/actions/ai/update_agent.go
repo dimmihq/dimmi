@@ -1,14 +1,16 @@
 /*
 |--------------------------------------------------------------------------
-| Update AI Agent
+| Update Agent
 |--------------------------------------------------------------------------
 |
-| The agent's whole settings surface in one save: identity, models,
-| rules, channels, schedule, handoff, privacy and spend. Only what the
-| caller sends changes; a field it leaves out keeps its stored value,
-| and clearing a nullable field is an explicit request. Every
-| connection and team it names must belong to the workspace, and an
-| agent is only switched on once it could actually answer.
+| One save of an agent's working copy: identity, guidance, models,
+| rules, channels, schedule, handoff, privacy, what it may search,
+| follow and call, which agents it may hand to and where it answers.
+| Only what the caller sends changes; a field it leaves out keeps its
+| value, and clearing a nullable field is an explicit request. Every
+| connection, team, tag, agent and channel it names must belong to the
+| workspace. Nothing reaches customers until the agent is published; a
+| draft edited back to what is published is dropped.
 |
 */
 
@@ -16,20 +18,20 @@ package ai
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"slices"
 	"strings"
-	"time"
 
-	"github.com/dimmihq/dimmi/framework/clock"
 	"github.com/dimmihq/dimmi/framework/database"
 	"github.com/dimmihq/dimmi/framework/fault"
 	"github.com/dimmihq/dimmi/framework/ids"
 
+	"github.com/dimmihq/dimmi/app/ai/agents"
 	"github.com/dimmihq/dimmi/app/auth/authz"
 	"github.com/dimmihq/dimmi/app/enums"
 	"github.com/dimmihq/dimmi/app/models"
-	"github.com/dimmihq/dimmi/config"
 )
 
 /*
@@ -45,17 +47,19 @@ type Optional[T any] struct {
 AgentPatch is what one save changes. Plain pointer fields change when
 non-nil and cannot be cleared; Optional fields may also be cleared.
 EnabledChannels, Languages and LinkAllowlist replace their lists
-whole; link hosts are stored lowercase.
-MonthlyCapMicros cleared means no cap. HandoffTeamID names the team a
+whole; link hosts are stored lowercase. HandoffTeamID names the team a
 handed-off conversation goes to, HandoffMode the agent's role and
 AlwaysHandoffTags the tags that always send a conversation to a
-person; that list replaces the stored one whole.
+person; that list replaces the stored one whole. Knowledge, Procedures
+and Actions replace what the agent may use; TransferAgentIDs the
+agents it may hand to; Placement where it answers.
 */
 type AgentPatch struct {
 	Name, Tone, Guidance, Schedule     *string
+	Description                        *string
 	AssignedBehavior, UnknownBehavior  *string
 	DefaultLanguage, IncludeContact    *string
-	Enabled, RequireCitations          *bool
+	RequireCitations                   *bool
 	PiiRedaction, Streaming, RaisePrio *bool
 	EnabledChannels, Languages         *[]string
 	LinkAllowlist                      *[]string
@@ -66,108 +70,142 @@ type AgentPatch struct {
 	HandoffMode                        *enums.AIHandoffMode
 	AlwaysHandoffTags                  *[]ids.UUID
 	HandoffTeamID                      Optional[ids.UUID]
-	MonthlyCapMicros                   Optional[int64]
+	Knowledge                          *agents.KnowledgeScope
+	Procedures, Actions                *agents.Scope
+	TransferAgentIDs                   *[]ids.UUID
+	Placement                          *agents.Placement
 }
 
 /*
-UpdateAgentInput is who saves and what changes.
+UpdateAgentInput is who saves, which agent, what changes and the lock
+version the editor read; zero skips the check.
 */
 type UpdateAgentInput struct {
-	Membership authz.Membership
-	Patch      AgentPatch
+	Membership  authz.Membership
+	AgentID     ids.UUID
+	Patch       AgentPatch
+	LockVersion int32
 }
 
 /*
-UpdateAiAgent saves the agent's settings.
+Update saves the agent's working copy.
 
-Rules:
-  - The caller needs ai_agent:manage.
-  - Connections named for a role, the handoff team and the tags that
-    always hand off must be live rows of the workspace.
-  - Switching the agent on needs a usable answer model and a channel.
-  - Changing the cap lifts a pause the old cap caused, when the month's
-    spend is below the new one.
-
-Errors: [exceptions.ErrForbidden], a [fault] naming the field it
-refuses, or a wrapped database error.
+Errors: [ErrAgentNotFound], [ErrAgentChanged], a [fault] naming the
+field it refuses, or a wrapped database error.
 */
-type UpdateAiAgent struct {
-	DB     *database.DB
-	Clock  clock.Clock
-	Config config.AIConfig
-}
-
-/*
-Handle saves and returns the agent.
-*/
-func (a *UpdateAiAgent) Handle(ctx context.Context, in UpdateAgentInput) (*models.AiAgent, error) {
+func (a *Agents) Update(ctx context.Context, in UpdateAgentInput) (*AgentView, error) {
 	if err := RequireAgentManage(in.Membership); err != nil {
 		return nil, err
 	}
 
-	var out models.AiAgent
-
+	var view *AgentView
 	err := a.DB.Transaction(ctx, func(ctx context.Context, tx *database.Tx) error {
-		agent, err := ensureAgent(ctx, seedDeps{clock: a.Clock, config: a.Config}, tx, in.Membership.Workspace.ID)
+		_, key, err := a.Provision(ctx, tx, in.Membership.Workspace.ID)
 		if err != nil {
 			return err
 		}
-
-		applyPatch(&agent, in.Patch)
-
-		if err := checkPatch(ctx, tx, agent, in.Patch); err != nil {
+		agent, err := findAgent(ctx, models.New(tx), in.Membership.Workspace.ID, in.AgentID)
+		if err != nil {
 			return err
 		}
-
-		out, err = models.New(tx).UpdateAgent(ctx, updateParams(&agent, a.Clock.Now()))
-		if err != nil {
-			return fmt.Errorf("update ai agent: %w", err)
+		if in.LockVersion != 0 && in.LockVersion != agent.LockVersion {
+			return ErrAgentChanged
 		}
-
-		return a.liftCap(ctx, tx, out, in.Patch)
+		saved, err := a.saveDraft(ctx, tx, agent, in)
+		if err != nil {
+			return err
+		}
+		view, err = a.view(ctx, tx, saved, key != nil)
+		return err
 	})
-	if err != nil {
-		return nil, err
-	}
-
-	return &out, nil
+	return view, err
 }
 
 /*
-liftCap clears the month's pause when the cap changed and the spend so
-far sits below the new cap, or there is no cap any more.
+saveDraft folds the patch into the agent's working copy and keeps it,
+dropping a draft that says what is published already.
 */
-func (a *UpdateAiAgent) liftCap(ctx context.Context, tx *database.Tx, agent models.AiAgent, p AgentPatch) error {
-	if !p.MonthlyCapMicros.Set {
-		return nil
+func (a *Agents) saveDraft(ctx context.Context, tx *database.Tx, agent models.AiAgent, in UpdateAgentInput,
+) (models.AiAgent, error) {
+	q := models.New(tx)
+	placements, err := agents.Placements(ctx, q, agent.WorkspaceID)
+	if err != nil {
+		return agent, err
+	}
+	working, err := agents.Working(agent, placements[agent.ID])
+	if err != nil {
+		return agent, err
 	}
 
-	now := a.Clock.Now().UTC()
-	start := database.Date(time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, time.UTC))
+	next := patched(agent, working, in.Patch)
+	next.Name = strings.TrimSpace(next.Name)
+	err = checkName(ctx, q, models.AgentNameTakenParams{WorkspaceID: agent.WorkspaceID, ID: agent.ID, Name: next.Name})
+	if err != nil {
+		return agent, err
+	}
+	if err := checkPatch(ctx, tx, agent, in.Patch); err != nil {
+		return agent, err
+	}
 
-	period, err := models.New(tx).GetSpendPeriod(ctx, models.GetSpendPeriodParams{
-		WorkspaceID: agent.WorkspaceID, PeriodStart: start,
+	var draft json.RawMessage
+	if !agents.Same(next, agents.Published(agent, placements[agent.ID])) || agent.Status == "draft" {
+		draft, _ = json.Marshal(next)
+	}
+	saved, err := q.SaveAgentDraft(ctx, models.SaveAgentDraftParams{
+		WorkspaceID: agent.WorkspaceID, ID: agent.ID, Name: publishedName(agent, next, draft),
+		Draft: draft, MemberID: memberOf(in.Membership), LockVersion: agent.LockVersion, Now: a.Clock.Now(),
 	})
 	if errors.Is(err, database.ErrNotFound) {
-		return nil
+		return agent, ErrAgentChanged
 	}
 	if err != nil {
-		return fmt.Errorf("find spend period: %w", err)
+		return agent, fmt.Errorf("save agent draft: %w", err)
 	}
-	if period.CappedAt == nil {
-		return nil
-	}
-	if agent.MonthlySpendCapMicros != nil && period.CostMicros >= *agent.MonthlySpendCapMicros {
-		return nil
-	}
+	return saved, nil
+}
 
-	if err := models.New(tx).SetSpendCap(ctx, models.SetSpendCapParams{
-		WorkspaceID: agent.WorkspaceID, PeriodStart: start, CappedAt: nil, Now: a.Clock.Now(),
-	}); err != nil {
-		return fmt.Errorf("lift spend cap: %w", err)
+/*
+publishedName is the name the list shows: a never published agent
+shows its working name, a published one keeps its published name until
+it is published again.
+*/
+func publishedName(agent models.AiAgent, next agents.Definition, draft json.RawMessage) string {
+	if agent.Status == "draft" || draft == nil {
+		return next.Name
 	}
+	return agent.Name
+}
 
-	return nil
+/*
+patched folds the patch into the working copy.
+*/
+func patched(agent models.AiAgent, working agents.Definition, p AgentPatch) agents.Definition {
+	row := agent
+	agents.Apply(&row, working)
+	applyPatch(&row, p)
+	next := agents.Published(row, working.Placement)
+	if p.Knowledge != nil {
+		next.Knowledge = *p.Knowledge
+	}
+	if p.Procedures != nil {
+		next.Procedures = *p.Procedures
+	}
+	if p.Actions != nil {
+		next.Actions = *p.Actions
+	}
+	if p.TransferAgentIDs != nil {
+		next.TransferAgentIDs = distinct(*p.TransferAgentIDs)
+	}
+	if p.Placement != nil {
+		next.Placement = agents.Placement{
+			ChannelConnectionIDs: distinct(p.Placement.ChannelConnectionIDs),
+			ChannelRoomIDs:       distinct(p.Placement.ChannelRoomIDs),
+			InboxIDs:             distinct(p.Placement.InboxIDs),
+		}
+	}
+	// Normalise scopes the way the published columns hold them.
+	agents.Apply(&row, next)
+	return agents.Published(row, next.Placement)
 }
 
 /*
@@ -177,12 +215,14 @@ func applyPatch(agent *models.AiAgent, p AgentPatch) {
 	set(&agent.Name, p.Name)
 	set(&agent.Tone, p.Tone)
 	set(&agent.Guidance, p.Guidance)
+	if p.Description != nil {
+		agent.Description = strings.TrimSpace(*p.Description)
+	}
 	set(&agent.Schedule, p.Schedule)
 	set(&agent.AssignedBehavior, p.AssignedBehavior)
 	set(&agent.UnknownBehavior, p.UnknownBehavior)
 	set(&agent.DefaultLanguage, p.DefaultLanguage)
 	set(&agent.IncludeContactContext, p.IncludeContact)
-	set(&agent.Enabled, p.Enabled)
 	set(&agent.RequireCitations, p.RequireCitations)
 	set(&agent.PiiRedaction, p.PiiRedaction)
 	set(&agent.Streaming, p.Streaming)
@@ -195,7 +235,6 @@ func applyPatch(agent *models.AiAgent, p AgentPatch) {
 	setText(&agent.FallbackModel, p.FallbackModel)
 	setOptional(&agent.AnswerKeyID, p.AnswerKeyID)
 	setOptional(&agent.FallbackKeyID, p.FallbackKeyID)
-	setOptional(&agent.MonthlySpendCapMicros, capMicros(p.MonthlyCapMicros))
 	agent.Handoff = mergeHandoff(agent.Handoff, p)
 }
 
@@ -243,19 +282,7 @@ func setText(dst **string, src Optional[string]) {
 }
 
 /*
-capMicros maps a cap of zero or below to no cap at all: a cleared cap
-field never pauses the agent.
-*/
-func capMicros(c Optional[int64]) Optional[int64] {
-	if c.Set && c.Value != nil && *c.Value <= 0 {
-		return Optional[int64]{Set: true}
-	}
-	return c
-}
-
-/*
-checkPatch refuses a save that names rows outside the workspace or
-switches on an agent that could not answer.
+checkPatch refuses a save that names rows outside the workspace.
 */
 func checkPatch(ctx context.Context, tx *database.Tx, agent models.AiAgent, p AgentPatch) error {
 	roles := []struct {
@@ -275,16 +302,13 @@ func checkPatch(ctx context.Context, tx *database.Tx, agent models.AiAgent, p Ag
 	if err := checkTeam(ctx, tx, agent.WorkspaceID, p.HandoffTeamID); err != nil {
 		return err
 	}
-
 	if err := checkTags(ctx, tx, agent.WorkspaceID, p.AlwaysHandoffTags); err != nil {
 		return err
 	}
-
-	if p.Enabled == nil || !*p.Enabled {
-		return nil
+	if err := checkTransfers(ctx, models.New(tx), agent, p.TransferAgentIDs); err != nil {
+		return err
 	}
-
-	return checkReady(ctx, tx, agent)
+	return checkScopes(ctx, models.New(tx), agent.WorkspaceID, p)
 }
 
 /*
@@ -314,46 +338,25 @@ func checkTeam(ctx context.Context, tx *database.Tx, workspaceID ids.UUID, id Op
 }
 
 /*
-checkReady refuses to switch on an agent that could not answer,
-naming every reason.
+checkTransfers refuses handing to the agent itself or to an agent the
+workspace does not have.
 */
-func checkReady(ctx context.Context, tx *database.Tx, agent models.AiAgent) error {
-	keys, err := models.New(tx).ListProviderKeys(ctx, agent.WorkspaceID)
-	if err != nil {
-		return fmt.Errorf("list provider keys: %w", err)
-	}
-
-	ready, reasons := readiness(agent, keys)
-	if ready {
+func checkTransfers(ctx context.Context, q *models.Queries, agent models.AiAgent, list *[]ids.UUID) error {
+	if list == nil || len(*list) == 0 {
 		return nil
 	}
-
-	return fault.New(fault.Invalid, "agent_not_ready", "the agent cannot answer yet").
-		OnField("enabled").With("reasons", reasons)
-}
-
-/*
-updateParams maps the agent row to the update params.
-*/
-func updateParams(agent *models.AiAgent, now time.Time) models.UpdateAgentParams {
-	return models.UpdateAgentParams{
-		ID: agent.ID, WorkspaceID: agent.WorkspaceID,
-		Name: agent.Name, AvatarAttachmentID: agent.AvatarAttachmentID, Enabled: agent.Enabled,
-		ProductName: agent.ProductName, Tone: agent.Tone, Guidance: agent.Guidance,
-		EnabledChannels: agent.EnabledChannels, ExcludedChannelConnectionIds: agent.ExcludedChannelConnectionIds,
-		Schedule: agent.Schedule, AssignedBehavior: agent.AssignedBehavior,
-		AnswerKeyID: agent.AnswerKeyID, AnswerModel: agent.AnswerModel,
-		ClassifierKeyID: agent.ClassifierKeyID, ClassifierModel: agent.ClassifierModel,
-		FallbackKeyID: agent.FallbackKeyID, FallbackModel: agent.FallbackModel,
-		Temperature: agent.Temperature, MaxOutputTokens: agent.MaxOutputTokens, MaxAiReplies: agent.MaxAiReplies,
-		UnknownBehavior: agent.UnknownBehavior, GroundingMode: agent.GroundingMode,
-		RequireCitations: agent.RequireCitations, MinSimilarity: agent.MinSimilarity,
-		Languages: agent.Languages, DefaultLanguage: agent.DefaultLanguage, Streaming: agent.Streaming,
-		IncludeContactContext:     agent.IncludeContactContext,
-		ContactAttributeAllowlist: agent.ContactAttributeAllowlist,
-		PiiRedaction:              agent.PiiRedaction, LinkAllowlist: agent.LinkAllowlist,
-		Handoff: agent.Handoff, Messages: agent.Messages, PromptVersion: agent.PromptVersion,
-		MonthlySpendCapMicros: agent.MonthlySpendCapMicros, ActionsEnabled: agent.ActionsEnabled,
-		Now: now,
+	want := distinct(*list)
+	if slices.Contains(want, agent.ID) {
+		return fault.New(fault.Invalid, "transfer_to_self", "an agent cannot hand to itself").
+			OnField("transfer_agent_ids")
 	}
+	found, err := q.ListAgentsByID(ctx, models.ListAgentsByIDParams{WorkspaceID: agent.WorkspaceID, Ids: want})
+	if err != nil {
+		return fmt.Errorf("find transfer agents: %w", err)
+	}
+	if len(found) != len(want) {
+		return fault.New(fault.Invalid, "agent_not_found", "an agent it hands to does not exist").
+			OnField("transfer_agent_ids")
+	}
+	return nil
 }

@@ -45,7 +45,7 @@ SET external_id = $1, status = 'active', config = config || $2::jsonb,
     credentials_encrypted = $3, last_error = NULL, last_error_at = NULL,
     updated_at = $4::timestamptz
 WHERE workspace_id = $5 AND id = $6
-RETURNING id, workspace_id, inbox_id, type, name, status, external_id, config, credentials_encrypted, last_error, last_error_at, last_activity_at, deleted_at, created_at, updated_at, integration_installation_id
+RETURNING id, workspace_id, inbox_id, type, name, status, external_id, config, credentials_encrypted, last_error, last_error_at, last_activity_at, deleted_at, created_at, updated_at, integration_installation_id, ai_agent_id
 `
 
 type ConnectChannelConnectionParams struct {
@@ -86,6 +86,7 @@ func (q *Queries) ConnectChannelConnection(ctx context.Context, arg ConnectChann
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.IntegrationInstallationID,
+		&i.AiAgentID,
 	)
 	return i, err
 }
@@ -99,7 +100,7 @@ VALUES (
     $1, $2, 'slack', $3, $4, $5, $6,
     $7, $8::timestamptz, $8::timestamptz
 )
-RETURNING id, workspace_id, inbox_id, type, name, status, external_id, config, credentials_encrypted, last_error, last_error_at, last_activity_at, deleted_at, created_at, updated_at, integration_installation_id
+RETURNING id, workspace_id, inbox_id, type, name, status, external_id, config, credentials_encrypted, last_error, last_error_at, last_activity_at, deleted_at, created_at, updated_at, integration_installation_id, ai_agent_id
 `
 
 type CreateSlackConnectionParams struct {
@@ -144,12 +145,13 @@ func (q *Queries) CreateSlackConnection(ctx context.Context, arg CreateSlackConn
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.IntegrationInstallationID,
+		&i.AiAgentID,
 	)
 	return i, err
 }
 
 const findAdoptableSlackConnection = `-- name: FindAdoptableSlackConnection :one
-SELECT id, workspace_id, inbox_id, type, name, status, external_id, config, credentials_encrypted, last_error, last_error_at, last_activity_at, deleted_at, created_at, updated_at, integration_installation_id FROM channel_connections
+SELECT id, workspace_id, inbox_id, type, name, status, external_id, config, credentials_encrypted, last_error, last_error_at, last_activity_at, deleted_at, created_at, updated_at, integration_installation_id, ai_agent_id FROM channel_connections
 WHERE workspace_id = $1 AND type = 'slack' AND status = 'disconnected' AND deleted_at IS NULL
   AND config->>'team_id' = $2::text
 ORDER BY updated_at DESC, id DESC
@@ -185,12 +187,13 @@ func (q *Queries) FindAdoptableSlackConnection(ctx context.Context, arg FindAdop
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.IntegrationInstallationID,
+		&i.AiAgentID,
 	)
 	return i, err
 }
 
 const findInstallationChannelConnection = `-- name: FindInstallationChannelConnection :one
-SELECT id, workspace_id, inbox_id, type, name, status, external_id, config, credentials_encrypted, last_error, last_error_at, last_activity_at, deleted_at, created_at, updated_at, integration_installation_id FROM channel_connections
+SELECT id, workspace_id, inbox_id, type, name, status, external_id, config, credentials_encrypted, last_error, last_error_at, last_activity_at, deleted_at, created_at, updated_at, integration_installation_id, ai_agent_id FROM channel_connections
 WHERE workspace_id = $1 AND type = 'slack' AND integration_installation_id = $2
   AND deleted_at IS NULL
 `
@@ -222,12 +225,13 @@ func (q *Queries) FindInstallationChannelConnection(ctx context.Context, arg Fin
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.IntegrationInstallationID,
+		&i.AiAgentID,
 	)
 	return i, err
 }
 
 const findLiveChannelConnectionByExternalID = `-- name: FindLiveChannelConnectionByExternalID :one
-SELECT id, workspace_id, inbox_id, type, name, status, external_id, config, credentials_encrypted, last_error, last_error_at, last_activity_at, deleted_at, created_at, updated_at, integration_installation_id FROM channel_connections
+SELECT id, workspace_id, inbox_id, type, name, status, external_id, config, credentials_encrypted, last_error, last_error_at, last_activity_at, deleted_at, created_at, updated_at, integration_installation_id, ai_agent_id FROM channel_connections
 WHERE workspace_id = $1 AND type = $2 AND external_id = $3 AND deleted_at IS NULL
 `
 
@@ -259,6 +263,7 @@ func (q *Queries) FindLiveChannelConnectionByExternalID(ctx context.Context, arg
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.IntegrationInstallationID,
+		&i.AiAgentID,
 	)
 	return i, err
 }
@@ -301,7 +306,7 @@ SET status = $1, last_error = $2,
     last_error_at = CASE WHEN $2::text IS NULL THEN NULL ELSE $3::timestamptz END,
     updated_at = $3::timestamptz
 WHERE workspace_id = $4 AND id = $5
-RETURNING id, workspace_id, inbox_id, type, name, status, external_id, config, credentials_encrypted, last_error, last_error_at, last_activity_at, deleted_at, created_at, updated_at, integration_installation_id
+RETURNING id, workspace_id, inbox_id, type, name, status, external_id, config, credentials_encrypted, last_error, last_error_at, last_activity_at, deleted_at, created_at, updated_at, integration_installation_id, ai_agent_id
 `
 
 type MarkChannelConnectionParams struct {
@@ -340,6 +345,7 @@ func (q *Queries) MarkChannelConnection(ctx context.Context, arg MarkChannelConn
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.IntegrationInstallationID,
+		&i.AiAgentID,
 	)
 	return i, err
 }

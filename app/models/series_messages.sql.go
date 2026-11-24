@@ -218,7 +218,7 @@ func (q *Queries) ListCompanySeriesContacts(ctx context.Context, arg ListCompany
 }
 
 const listCompanySeriesRooms = `-- name: ListCompanySeriesRooms :many
-SELECT cr.id, cr.workspace_id, cr.channel_connection_id, cr.kind, cr.external_id, cr.name, cr.status, cr.mode, cr.trigger, cr.agent_enabled, cr.company_id, cr.settings, cr.is_shared_external, cr.last_error, cr.last_seen_event_at, cr.removed_at, cr.created_at, cr.updated_at FROM channel_rooms cr
+SELECT cr.id, cr.workspace_id, cr.channel_connection_id, cr.kind, cr.external_id, cr.name, cr.status, cr.mode, cr.trigger, cr.agent_enabled, cr.company_id, cr.settings, cr.is_shared_external, cr.last_error, cr.last_seen_event_at, cr.removed_at, cr.created_at, cr.updated_at, cr.ai_agent_id FROM channel_rooms cr
 JOIN channel_connections cc ON cc.id = cr.channel_connection_id
 WHERE cr.workspace_id = $1 AND cc.type = 'slack' AND cc.deleted_at IS NULL
   AND cr.mode IN ('shared', 'community') AND cr.company_id = $2
@@ -260,6 +260,7 @@ func (q *Queries) ListCompanySeriesRooms(ctx context.Context, arg ListCompanySer
 			&i.RemovedAt,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.AiAgentID,
 		); err != nil {
 			return nil, err
 		}

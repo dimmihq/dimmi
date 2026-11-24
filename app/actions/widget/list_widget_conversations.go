@@ -251,8 +251,8 @@ func (a *ListWidgetConversations) visible(
 	out := make([]VisibleMessage, 0, len(rows))
 	for _, m := range rows {
 		author := Author{Type: m.AuthorType}
-		if m.AuthorID != nil && m.AuthorType == string(enums.AuthorTypeMember) {
-			author = authors[*m.AuthorID]
+		if found, ok := authors[authorKey(m)]; ok {
+			author = found
 		}
 
 		out = append(out, VisibleMessage{Message: m, Author: author, Attachments: files[m.ID]})
@@ -262,20 +262,45 @@ func (a *ListWidgetConversations) visible(
 }
 
 /*
-authors returns the members who wrote the messages, by member id.
+authoredBy is who wrote a message: its author type and id.
+*/
+type authoredBy struct {
+	kind string
+	id   ids.UUID
+}
+
+/*
+authorKey is the message's author, or nothing when it names none.
+*/
+func authorKey(m models.Message) authoredBy {
+	if m.AuthorID == nil {
+		return authoredBy{}
+	}
+	return authoredBy{kind: m.AuthorType, id: *m.AuthorID}
+}
+
+/*
+authors returns the members and AI agents who wrote the messages, each
+by its author type and id. An agent is shown by its name.
 */
 func (a *ListWidgetConversations) authors(
 	ctx context.Context, q *models.Queries, ws ids.UUID, rows []models.Message,
-) (map[ids.UUID]Author, error) {
-	var members []ids.UUID
+) (map[authoredBy]Author, error) {
+	var members, agents []ids.UUID
 
 	for _, m := range rows {
-		if m.AuthorID != nil && m.AuthorType == string(enums.AuthorTypeMember) {
-			members = append(members, *m.AuthorID)
+		switch by := authorKey(m); by.kind {
+		case string(enums.AuthorTypeMember):
+			members = append(members, by.id)
+		case string(enums.AuthorTypeAgent):
+			agents = append(agents, by.id)
 		}
 	}
 
-	out := map[ids.UUID]Author{}
+	out, err := agentAuthors(ctx, q, ws, agents)
+	if err != nil {
+		return nil, err
+	}
 	if len(members) == 0 {
 		return out, nil
 	}
@@ -297,7 +322,7 @@ func (a *ListWidgetConversations) authors(
 			}
 		}
 
-		out[row.ID] = author
+		out[authoredBy{kind: string(enums.AuthorTypeMember), id: row.ID}] = author
 	}
 
 	return out, nil

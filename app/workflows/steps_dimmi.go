@@ -26,8 +26,10 @@ import (
 	"time"
 
 	"github.com/dimmihq/dimmi/framework/database"
+	"github.com/dimmihq/dimmi/framework/ids"
 
 	"github.com/dimmihq/dimmi/app/actions/conversations"
+	"github.com/dimmihq/dimmi/app/ai/agents"
 	"github.com/dimmihq/dimmi/app/enums"
 	"github.com/dimmihq/dimmi/app/jobs"
 	"github.com/dimmihq/dimmi/app/models"
@@ -49,7 +51,7 @@ runDimmi hands the conversation to the agent and waits.
 */
 func runDimmi(ctx context.Context, st *state, s workflowspec.Step) (outcome, error) {
 	d := settings[workflowspec.DimmiSettings](s)
-	ready, err := st.agentReady(ctx)
+	ready, err := st.agentReady(ctx, d)
 	if err != nil || !ready {
 		return handedOver(s, "agent_disabled"), err
 	}
@@ -73,23 +75,39 @@ func runDimmi(ctx context.Context, st *state, s workflowspec.Step) (outcome, err
 }
 
 /*
-agentReady reports whether the workspace has an agent that is on.
+agentReady reports whether the agent that would answer is on: the one
+the step names, or the one the conversation gets by its channel.
 */
-func (st *state) agentReady(ctx context.Context) (bool, error) {
+func (st *state) agentReady(ctx context.Context, d workflowspec.DimmiSettings) (bool, error) {
 	if !st.e.AgentOn {
 		return false, nil
 	}
 
-	agent, err := st.q.FindAgent(ctx, st.conv.WorkspaceID)
-	if errors.Is(err, database.ErrNotFound) {
+	agent, err := agents.Resolve(ctx, st.q, agents.ForConversation(st.conv, st.stepAgent(d)))
+	if errors.Is(err, agents.ErrNoAgent) {
 		return false, nil
 	}
 
 	if err != nil {
-		return false, fmt.Errorf("find agent: %w", err)
+		return false, err
 	}
 
 	return agent.Enabled, nil
+}
+
+/*
+stepAgent is the agent the step names, when it names one this
+workspace has.
+*/
+func (st *state) stepAgent(d workflowspec.DimmiSettings) *ids.UUID {
+	if d.AgentID == "" {
+		return nil
+	}
+	id, ok := st.decode(models.PrefixAiAgent, d.AgentID)
+	if !ok {
+		return nil
+	}
+	return &id
 }
 
 /*
@@ -113,7 +131,7 @@ func (st *state) agentWait(ctx context.Context, d workflowspec.DimmiSettings) (*
 	return &waitState{
 		Kind: workflowspec.WaitAgent, Since: &now, Until: &until, Quiet: quiet.String(),
 		Agent: &workflowspec.AgentHandling{
-			Instructions: instructions, MaxReplies: d.MaxReplies,
+			AgentID: st.stepAgent(d), Instructions: instructions, MaxReplies: d.MaxReplies,
 			ConfirmResolution: workflowspec.On(d.ConfirmResolution, true),
 		},
 	}, nil

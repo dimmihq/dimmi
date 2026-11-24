@@ -314,8 +314,17 @@ export interface TestResult {
     outcome: string;
     calls: ObservedCall[];
     run_id: string;
+    /* The turn moved the chat to another AI agent, which wrote the reply. */
+    transfer?: { agent_id: string; name: string; from_name: string; summary: string } | null;
   }[];
-  assertion_results: { type: AssertionType; passed: boolean; message: string; skipped?: boolean }[];
+  /* unsure: a check written in plain words that the judge could not tell either way; it does not fail the run. */
+  assertion_results: {
+    type: AssertionType;
+    passed: boolean;
+    message: string;
+    skipped?: boolean;
+    unsure?: boolean;
+  }[];
   error?: string;
 }
 

@@ -31,7 +31,12 @@ func TestHarmful(t *testing.T) {
 			rates,
 			email.PausedComplaintRate,
 		},
-		{"rates turned off", email.SendingCounts{Sent: 100, HardBounced: 100, Complained: 100}, config.EmailReputation{}, ""},
+		{
+			"rates turned off",
+			email.SendingCounts{Sent: 100, HardBounced: 100, Complained: 100},
+			config.EmailReputation{},
+			"",
+		},
 		{
 			"only the bounce rate set",
 			email.SendingCounts{Sent: 100, HardBounced: 6, Complained: 50},

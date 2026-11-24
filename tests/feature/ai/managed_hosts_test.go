@@ -187,6 +187,6 @@ func TestManagedOpenWeightHosts(t *testing.T) {
 		t.Parallel()
 		d := managedDesk(t, basetenKeyEnv)
 
-		d.Owner.GetJSON("/api/v1/ai/agent").AssertOK().AssertJSONPath("data.agent.answer_model", "glm-5.3-flash")
+		d.Owner.GetJSON(agentPath(t, d)).AssertOK().AssertJSONPath("data.settings.answer_model", "glm-5.3-flash")
 	})
 }

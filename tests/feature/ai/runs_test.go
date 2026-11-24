@@ -1,13 +1,10 @@
 package ai_test
 
 import (
-	"context"
 	"testing"
 
 	"github.com/dimmihq/dimmi/framework/ids"
-	"github.com/dimmihq/dimmi/framework/testkit"
 
-	"github.com/dimmihq/dimmi/app/contracts"
 	"github.com/dimmihq/dimmi/app/enums"
 	"github.com/dimmihq/dimmi/app/models"
 	"github.com/dimmihq/dimmi/tests"
@@ -74,87 +71,5 @@ func TestAiRuns(t *testing.T) {
 			AssertNotFound()
 		d.Owner.GetJSON("/api/v1/conversations/" + models.PublicID(models.PrefixConversation, ids.New()) + "/ai/runs").
 			AssertNotFound()
-	})
-}
-
-/*
-playground is a stand-in for the pipeline's playground entry that
-answers every question the same way.
-*/
-type playground struct {
-	asked []contracts.PlaygroundQuestion
-}
-
-/*
-Ask records the question and answers it.
-*/
-func (p *playground) Ask(_ context.Context, q contracts.PlaygroundQuestion) (*contracts.PlaygroundAnswer, error) {
-	p.asked = append(p.asked, q)
-
-	return &contracts.PlaygroundAnswer{
-		Outcome:        "answered",
-		Classification: contracts.PlaygroundClassification{Intent: "question", Language: "en", Query: q.Message},
-		Retrieved:      []contracts.PlaygroundSource{{N: 1, Title: "Billing", URL: "https://help.acme.com", Used: true}},
-		Answer:         "Go to Settings > Billing [1].",
-		Citations:      []contracts.PlaygroundCitation{{N: 1, Title: "Billing", URL: "https://help.acme.com"}},
-		InputTokens:    120, OutputTokens: 30, CostMicros: 450, LatencyMs: 800,
-	}, nil
-}
-
-func TestAiPlayground(t *testing.T) {
-	t.Parallel()
-
-	t.Run("answers a test question with everything the agent did", func(t *testing.T) {
-		t.Parallel()
-		d := tests.NewDesk(t)
-		fake := &playground{}
-		d.TC.App.Actions.AI.AskPlayground.Playground = fake
-		conv, convID := conversationOf(t, d, "jane")
-
-		res := d.Owner.PostJSON("/api/v1/ai/playground", testkit.JSON{
-			"message": "How do I change billing?", "conversation": conv,
-		}).AssertOK()
-
-		res.AssertJSONPath("data.object", "ai_playground_answer")
-		res.AssertJSONPath("data.outcome", "answered")
-		res.AssertJSONPath("data.classification.query", "How do I change billing?")
-		res.AssertJSONPath("data.retrieved.0.title", "Billing")
-		res.AssertJSONPath("data.answer.body", "Go to Settings > Billing [1].")
-		res.AssertJSONPath("data.answer.citations.0.n", 1)
-		res.AssertJSONPath("data.usage.cost_micros", 450)
-		res.AssertJSONPath("data.timing.latency_ms", 800)
-		if len(fake.asked) != 1 || fake.asked[0].ConversationID == nil || *fake.asked[0].ConversationID != convID {
-			t.Fatalf("the playground was not asked about the conversation: %+v", fake.asked)
-		}
-		d.TC.Table("messages").AssertCount(1, testkit.Row{"conversation_id": convID})
-	})
-
-	t.Run("lets members try the agent", func(t *testing.T) {
-		t.Parallel()
-		d := tests.NewDesk(t)
-		d.TC.App.Actions.AI.AskPlayground.Playground = &playground{}
-		member, _ := d.Join(t, enums.RoleMember)
-
-		member.PostJSON("/api/v1/ai/playground", testkit.JSON{"message": "hi"}).AssertOK()
-	})
-
-	t.Run("refuses an empty question or an unknown conversation", func(t *testing.T) {
-		t.Parallel()
-		d := tests.NewDesk(t)
-		d.TC.App.Actions.AI.AskPlayground.Playground = &playground{}
-
-		d.Owner.PostJSON("/api/v1/ai/playground", testkit.JSON{"message": ""}).AssertValidationError("message")
-		d.Owner.PostJSON("/api/v1/ai/playground", testkit.JSON{"message": "   "}).AssertValidationError("message")
-		d.Owner.PostJSON("/api/v1/ai/playground", testkit.JSON{
-			"message": "hi", "conversation": models.PublicID(models.PrefixConversation, ids.New()),
-		}).AssertNotFound()
-	})
-
-	t.Run("says it is unavailable while nothing answers it", func(t *testing.T) {
-		t.Parallel()
-		d := tests.NewDesk(t)
-		d.TC.App.Actions.AI.AskPlayground.Playground = nil
-
-		d.Owner.PostJSON("/api/v1/ai/playground", testkit.JSON{"message": "hi"}).AssertStatus(503)
 	})
 }

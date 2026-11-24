@@ -32,7 +32,7 @@ func TestAiUsage(t *testing.T) {
 				runs_count, answered_count, unknown_count, handoff_count
 			) VALUES ($1, '2026-11-01', 4500, 300, 60, 3, 1, 1, 1)`, d.TC.Workspace.Workspace.ID)
 		require.NoError(t, err)
-		d.Owner.PatchJSON("/api/v1/ai/agent", testkit.JSON{"monthly_cap_usd": 25}).AssertOK()
+		d.Owner.PatchJSON("/api/v1/ai/settings", testkit.JSON{"monthly_cap_usd": 25}).AssertOK()
 
 		res := d.Owner.GetJSON("/api/v1/ai/usage").AssertOK()
 

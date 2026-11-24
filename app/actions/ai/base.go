@@ -119,17 +119,24 @@ func findKey(ctx context.Context, tx *database.Tx, workspaceID, keyID ids.UUID) 
 }
 
 /*
-keyInUse reports whether an agent points a role at the key.
+keyUsed reports whether any agent, in its published settings or its draft,
+or the workspace's defaults point a role at the key.
 */
-func keyInUse(agent models.AiAgent, keyID ids.UUID) []string {
-	var roles []string
-	if agent.AnswerKeyID != nil && *agent.AnswerKeyID == keyID {
-		roles = append(roles, "answer")
+func keyUsed(ctx context.Context, q *models.Queries, workspaceID, keyID ids.UUID) (bool, error) {
+	byAgents, err := q.KeyUsedByAgents(ctx, models.KeyUsedByAgentsParams{WorkspaceID: workspaceID, KeyID: &keyID})
+	if err != nil {
+		return false, fmt.Errorf("check agent keys: %w", err)
 	}
-	if agent.FallbackKeyID != nil && *agent.FallbackKeyID == keyID {
-		roles = append(roles, "fallback")
+	if byAgents {
+		return true, nil
 	}
-	return roles
+	byDefaults, err := q.KeyUsedByWorkspaceAISettings(ctx, models.KeyUsedByWorkspaceAISettingsParams{
+		WorkspaceID: workspaceID, KeyID: &keyID,
+	})
+	if err != nil {
+		return false, fmt.Errorf("check default keys: %w", err)
+	}
+	return byDefaults, nil
 }
 
 /*

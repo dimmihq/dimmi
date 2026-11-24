@@ -638,7 +638,7 @@ func (q *Queries) FindBroadcastRecipientByReplyToken(ctx context.Context, arg Fi
 }
 
 const findContactWidgetConnection = `-- name: FindContactWidgetConnection :one
-SELECT cc.id, cc.workspace_id, cc.inbox_id, cc.type, cc.name, cc.status, cc.external_id, cc.config, cc.credentials_encrypted, cc.last_error, cc.last_error_at, cc.last_activity_at, cc.deleted_at, cc.created_at, cc.updated_at, cc.integration_installation_id FROM widget_sessions s
+SELECT cc.id, cc.workspace_id, cc.inbox_id, cc.type, cc.name, cc.status, cc.external_id, cc.config, cc.credentials_encrypted, cc.last_error, cc.last_error_at, cc.last_activity_at, cc.deleted_at, cc.created_at, cc.updated_at, cc.integration_installation_id, cc.ai_agent_id FROM widget_sessions s
 JOIN widget_settings ws ON ws.id = s.widget_settings_id
 JOIN channel_connections cc ON cc.id = ws.channel_connection_id
 WHERE s.workspace_id = $1 AND s.contact_id = $2 AND s.test = false AND cc.deleted_at IS NULL
@@ -673,6 +673,7 @@ func (q *Queries) FindContactWidgetConnection(ctx context.Context, arg FindConta
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.IntegrationInstallationID,
+		&i.AiAgentID,
 	)
 	return i, err
 }
@@ -965,7 +966,7 @@ func (q *Queries) ListBroadcastRecipientPage(ctx context.Context, arg ListBroadc
 }
 
 const listBroadcastRooms = `-- name: ListBroadcastRooms :many
-SELECT cr.id, cr.workspace_id, cr.channel_connection_id, cr.kind, cr.external_id, cr.name, cr.status, cr.mode, cr.trigger, cr.agent_enabled, cr.company_id, cr.settings, cr.is_shared_external, cr.last_error, cr.last_seen_event_at, cr.removed_at, cr.created_at, cr.updated_at FROM channel_rooms cr
+SELECT cr.id, cr.workspace_id, cr.channel_connection_id, cr.kind, cr.external_id, cr.name, cr.status, cr.mode, cr.trigger, cr.agent_enabled, cr.company_id, cr.settings, cr.is_shared_external, cr.last_error, cr.last_seen_event_at, cr.removed_at, cr.created_at, cr.updated_at, cr.ai_agent_id FROM channel_rooms cr
 JOIN channel_connections cc ON cc.id = cr.channel_connection_id
 WHERE cr.workspace_id = $1 AND cc.type = 'slack' AND cc.deleted_at IS NULL
   AND cr.mode IN ('shared', 'community')
@@ -1008,6 +1009,7 @@ func (q *Queries) ListBroadcastRooms(ctx context.Context, arg ListBroadcastRooms
 			&i.RemovedAt,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.AiAgentID,
 		); err != nil {
 			return nil, err
 		}
@@ -1678,7 +1680,7 @@ func (q *Queries) SkipQueuedBroadcastRecipients(ctx context.Context, arg SkipQue
 const stampBroadcastConversationClosed = `-- name: StampBroadcastConversationClosed :one
 UPDATE conversations SET closed_at = $1::timestamptz
 WHERE workspace_id = $2 AND id = $3 AND status = 'closed'
-RETURNING id, workspace_id, number, inbox_id, channel_connection_id, contact_id, subject, status, spam, assignee_member_id, assignee_team_id, ai_state, snoozed_until, external_thread_key, source, first_customer_message_at, last_customer_message_at, first_reply_at, last_reply_at, last_message_at, closed_at, message_count, deleted_at, created_at, updated_at, ai_reply_count, ai_cost_micros, ai_language, ai_handed_off_at, ai_handoff_reason, merged_into_id, is_test, previous_conversation_id, assignment_wait_reason, assignment_waiting_since, waiting_since, last_activity_at, last_message_id, search, priority, workflow_run_id, ai_mode, ai_memory
+RETURNING id, workspace_id, number, inbox_id, channel_connection_id, contact_id, subject, status, spam, assignee_member_id, assignee_team_id, ai_state, snoozed_until, external_thread_key, source, first_customer_message_at, last_customer_message_at, first_reply_at, last_reply_at, last_message_at, closed_at, message_count, deleted_at, created_at, updated_at, ai_reply_count, ai_cost_micros, ai_language, ai_handed_off_at, ai_handoff_reason, merged_into_id, is_test, previous_conversation_id, assignment_wait_reason, assignment_waiting_since, waiting_since, last_activity_at, last_message_id, search, priority, workflow_run_id, ai_mode, ai_memory, ai_agent_id, ai_transferred_from_ids
 `
 
 type StampBroadcastConversationClosedParams struct {
@@ -1737,6 +1739,8 @@ func (q *Queries) StampBroadcastConversationClosed(ctx context.Context, arg Stam
 		&i.WorkflowRunID,
 		&i.AiMode,
 		&i.AiMemory,
+		&i.AiAgentID,
+		&i.AiTransferredFromIds,
 	)
 	return i, err
 }

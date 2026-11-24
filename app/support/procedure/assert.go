@@ -86,18 +86,31 @@ type Observed struct {
 }
 
 /*
-Judge decides a rubric over a transcript, with its reason.
+Judgment is what a judge made of a rubric: met, not met, or unsure,
+when the transcript did not let it tell either way.
 */
-type Judge func(rubric, transcript string) (bool, string, error)
+type Judgment struct {
+	Passed  bool
+	Unsure  bool
+	Message string
+}
 
 /*
-AssertionResult is how one assertion came out.
+Judge decides a rubric over a transcript.
+*/
+type Judge func(rubric, transcript string) (Judgment, error)
+
+/*
+AssertionResult is how one assertion came out. Unsure marks a rubric
+the judge could not tell either way: it neither passes nor fails, and
+does not fail the run.
 */
 type AssertionResult struct {
 	Type    string `json:"type"`
 	Passed  bool   `json:"passed"`
 	Message string `json:"message"`
 	Skipped bool   `json:"skipped,omitempty"`
+	Unsure  bool   `json:"unsure,omitempty"`
 	Err     error  `json:"-"`
 }
 
@@ -179,11 +192,12 @@ func Assert(as []Assertion, o Observed, transcript string, judge Judge) []Assert
 }
 
 /*
-Passed reports whether every result passed or was skipped.
+Passed reports whether no result failed: each passed, was skipped, or
+is a rubric the judge was unsure of.
 */
 func Passed(rs []AssertionResult) bool {
 	for _, r := range rs {
-		if !r.Passed && !r.Skipped {
+		if !r.Passed && !r.Skipped && !r.Unsure {
 			return false
 		}
 	}
@@ -253,12 +267,12 @@ func rubric(a Assertion, transcript string, judge Judge) AssertionResult {
 		return AssertionResult{Message: "This check could not be judged.", Err: ErrNoJudge}
 	}
 
-	ok, why, err := judge(a.Rubric, transcript)
+	v, err := judge(a.Rubric, transcript)
 	if err != nil {
 		return AssertionResult{Message: "This check could not be judged.", Err: err}
 	}
 
-	return AssertionResult{Passed: ok, Message: why}
+	return AssertionResult{Passed: v.Passed, Unsure: v.Unsure, Message: v.Message}
 }
 
 /*

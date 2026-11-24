@@ -81,14 +81,18 @@ func mailed(t *testing.T, tc *tests.TestCase, conversation ids.UUID, name string
 		{`INSERT INTO attachments
 			(workspace_id, message_id, uploaded_by_type, disk, path, filename, content_type, size_bytes)
 			VALUES ($1, $2, 'contact', $3, $4, 'note.txt', 'text/plain', 4)`, []any{ws, message, disk, file}},
-		{`INSERT INTO inbound_emails (workspace_id, source, envelope_to, from_address, subject, size_bytes, raw_disk,
+		{
+			`INSERT INTO inbound_emails (workspace_id, source, envelope_to, from_address, subject, size_bytes, raw_disk,
 			raw_path, status, conversation_id, message_id, received_at, processed_at)
 			VALUES ($1, 'test', '{}', 'ann@example.com', 'My order', 4, $2, $3, 'processed', $4, $5, $6, $6)`,
-			[]any{ws, disk, raw, conversation, message, tc.Clock.Now()}},
-		{`INSERT INTO outbound_emails (workspace_id, conversation_id, kind, from_address, to_addresses, subject,
+			[]any{ws, disk, raw, conversation, message, tc.Clock.Now()},
+		},
+		{
+			`INSERT INTO outbound_emails (workspace_id, conversation_id, kind, from_address, to_addresses, subject,
 			message_id_header, transport)
 			VALUES ($1, $2, 'reply', 'help@acme.example', '{ann@example.com}', 'Re: My order', $3, 'log')`,
-			[]any{ws, conversation, "<" + name + "@acme.example>"}},
+			[]any{ws, conversation, "<" + name + "@acme.example>"},
+		},
 	}
 	for _, seed := range seeds {
 		_, err := db.Exec(ctx, seed.query, seed.args...)
@@ -166,7 +170,7 @@ func TestRetentionPurge(t *testing.T) {
 		d.TC.Table("conversations").AssertHas(testkit.Row{"id": conversationID(t, d.TC, live)})
 	})
 
-	t.Run("honours the days the workspace chose, never the day they are set", func(t *testing.T) {
+	t.Run("honors the days the workspace chose, never the day they are set", func(t *testing.T) {
 		t.Parallel()
 		d := tests.NewDesk(t)
 		old := closed(t, d, "ann")

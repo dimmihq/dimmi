@@ -37,7 +37,7 @@ func (k *Kit) Execute(ctx context.Context, workspaceID, callID ids.UUID) error {
 	var actor conversations.Actor
 	err := k.DB.Transaction(ctx, func(ctx context.Context, tx *database.Tx) error {
 		q := models.New(tx)
-		actor = agentActor(ctx, q, workspaceID)
+		actor = agentActor(ctx, q, workspaceID, nil)
 		call, err := q.ClaimActionCall(ctx, models.ClaimActionCallParams{
 			WorkspaceID: workspaceID, ID: callID, Now: k.Clock.Now(),
 		})
@@ -48,6 +48,7 @@ func (k *Kit) Execute(ctx context.Context, workspaceID, callID ids.UUID) error {
 			return fmt.Errorf("claim action call: %w", err)
 		}
 		claimed = &call
+		actor = agentActor(ctx, q, workspaceID, call.ConversationID)
 		s, err := specOf(ctx, q, call)
 		if err != nil {
 			return err

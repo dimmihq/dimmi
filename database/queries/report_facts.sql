@@ -4,7 +4,7 @@
 -- whether it was imported. The facts job asks, no member is.
 SELECT c.id, c.workspace_id, c.number, c.inbox_id, ch.type AS channel, c.assignee_member_id, c.assignee_team_id,
     c.priority, c.status, c.spam, c.is_test, c.deleted_at, c.merged_into_id, c.created_at, c.closed_at,
-    c.ai_cost_micros, c.ai_handed_off_at, c.ai_handoff_reason,
+    c.ai_cost_micros, c.ai_handed_off_at, c.ai_handoff_reason, c.ai_agent_id,
     COALESCE((c.source ->> 'imported')::boolean, false)::boolean AS imported
 FROM conversations c
 JOIN channel_connections ch ON ch.id = c.channel_connection_id

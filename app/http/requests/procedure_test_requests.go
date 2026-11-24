@@ -32,6 +32,7 @@ type TestCaseBody struct {
 	ActionMocks          map[string]ActionMockInput `json:"action_mocks,omitempty"`
 	Assertions           []map[string]any           `json:"assertions,omitempty"             maxItems:"30"`
 	SimulatedAt          *time.Time                 `json:"simulated_at,omitempty"`
+	Scenario             *string                    `json:"scenario,omitempty"               maxLength:"1000"`
 }
 
 /*

@@ -68,6 +68,13 @@ UPDATE conversations SET
     updated_at = @now
 WHERE workspace_id = @workspace_id AND id = @id AND ai_state = 'active';
 
+-- name: AddConversationAiCost :exec
+-- AddConversationAiCost adds a run's cost to the agent's spend on the
+-- conversation without counting a reply, as a transfer to another agent
+-- costs a turn but answers nothing itself.
+UPDATE conversations SET ai_cost_micros = ai_cost_micros + @cost_micros, updated_at = @now
+WHERE workspace_id = @workspace_id AND id = @id;
+
 -- name: SetConversationAiMemory :exec
 -- SetConversationAiMemory stores what the agent remembers of the
 -- conversation and adds what remembering cost to the agent's spend on it.

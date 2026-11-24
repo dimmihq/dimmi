@@ -70,7 +70,7 @@ g.Internal() // or every route of a group
 
 Only with a new API version, or, rarely, a reviewed exception:
 
-- Add an entry to `contracts/breaking-changes.json` with `id` and `operation` (or `event`) from the `make api-compat` output, a `reason`, `deprecated` and `sunset` dates, and `approved_by`.
+- Add an entry to `contracts/breaking-changes.json` with `id` and `operation` (or `event`, or `schema` for a removed component schema) from the `make api-compat` output, a `reason`, `deprecated` and `sunset` dates, and `approved_by`.
 - The next platform release raises a major version of every SDK that exposes the API. An SDK whose own surface breaks needs a major changeset; `make sdk-compat` blocks it otherwise.
 
 ## Releases and baselines

@@ -1,44 +1,78 @@
 ---
 title: "Set up the dimmi agent"
-description: "Turn on the dimmi agent, see its defaults, and choose how it works alongside your team."
+description: "Build an agent in Agent Studio, test the draft, publish it, and see the defaults every agent starts from."
 ---
+import { Callout } from "~docs/components/mdx";
 
-The dimmi agent starts turned off in a new workspace. You set it up in **Settings → dimmi agent**, and only admins can change these settings.
+Every workspace has one **default agent**, named `dimmi`, that starts turned off. You build it, and any other agents, on the **Agents** page in the sidebar. Only admins can change agents.
 
-Add your [knowledge sources](/ai/knowledge-sources/) before you switch it on. The agent only answers from your help center and the sources you connect.
+Add your [knowledge sources](/ai/knowledge-sources/) before you publish. An agent only answers from your help center and the sources you connect.
 
-## Turn the agent on
+## How Agent Studio works
 
-The **Answer customers** switch unlocks as soon as three things are in place:
+Open an agent to land in **Agent Studio**. It works like the procedure editor: you change a draft, test it, and publish when it is ready.
 
-- **A provider connection:** set up and working in **Settings → AI providers**. See [AI providers](/ai/providers/).
-- **An answer model:** picked on that connection.
-- **At least one channel:** ticked under **Channels**.
+- **Build:** the whole agent on one page. Name, guidance, what it may search and call, where it answers, who takes over, and the model.
+- **Analytics:** the last 30 days of the AI report for this agent alone.
+- **History:** every published version, with **Restore** and **Compare**.
+- **Preview and Simulations:** a side panel where you chat with the agent or rerun saved chats. Switch between **Draft** and **Live** to test either version.
+
+**Edits save to the draft as you type.** Customers keep getting the live version until you press **Publish**. Publishing also saves a numbered version you can restore later.
+
+## Publish the default agent
+
+**Publish** stays blocked until two things are in place. Agent Studio lists what is missing under **To fix before publishing**.
+
+- **An answer model:** a working connection from **Settings → AI providers**, with a model it offers. See [AI providers](/ai/providers/).
+- **At least one channel:** ticked for the default agent under **Settings → dimmi agent → Where & when → Channels**.
+
+Other agents need only the model. They answer wherever you place them, so they have no channel list. See [Run several agents](/ai/multiple-agents/).
 
 ## Settings and defaults
 
-Start with the defaults and tune them once you see the agent answer real conversations.
+Start with the defaults and tune them once you see real answers. A new agent copies the default agent's current settings, then takes its own name, the template's tone and guidance, and **Workspace default** as its model.
+
+These settings live in **Build** for every agent:
 
 | Setting | Default | What it changes |
 | --- | --- | --- |
-| **Name** | `dimmi` | The name shown on the agent's replies. |
-| **Tone** | **Friendly** | How formal or casual the agent sounds. |
-| **Guidance** | Empty | Plain rules the agent follows in every reply. |
+| **Name** | `dimmi` | The name shown on the agent's replies. A template suggests a name for each new agent. |
+| **Guidance** | Empty | Plain rules the agent follows in every reply. Templates fill this in for you. |
+| **Knowledge** | **Everything** | Pick **Only what I pick** to limit search to certain help centers and sources. |
+| **Procedures** and **Actions** | All live procedures, all published actions | Pick some to keep the rest out of reach. |
+| **Hours** | **Always** | Or only inside or outside the [office hours](/inbox/office-hours/) of each inbox. |
+| **Once a teammate steps in** | **Stops while they reply** | How the agent shares a thread with a teammate. See below. |
+| **Hand over to** | **Whoever the inbox assigns** | The team that gets the conversation on [handover](/ai/handover/). |
+| **Answers with** | **Workspace default** | The model this agent answers with. |
+
+The default agent has more settings under **Settings → dimmi agent**:
+
+| Setting | Default | What it changes |
+| --- | --- | --- |
+| **Tone** | **Friendly** | Also **Professional** or **Concise**. |
 | **Channels** | **Messenger** | Also **Email**, **API**, and **Slack**. |
-| **Hours** | **Always** | The other options follow the [office hours](/inbox/office-hours/) of each inbox. |
-| **Once a teammate is assigned** | **Step back while a teammate is active** | How the agent shares a thread with a teammate. See below. |
 | **Replies per conversation** | 5 replies | Choose 3, 5, 10, or 20. After that, the agent [hands over](/ai/handover/). |
 | **When it doesn't know** | **Offer a teammate** | What happens when the agent has no answer. See [Control handover](/ai/handover/). |
 | **Links it may share** | Empty | One site per line. `*.example.com` covers `example.com` and every subdomain. |
-| **Hide personal data** | On | Masks sensitive details before sending text to the AI provider. See [customer data](/ai/customer-data/). |
-| **Monthly cap** | $25 | Stops AI spend at your limit. See [the monthly cap](/ai/providers/#set-the-monthly-cap). |
+| **Hide personal data** | On | Masks sensitive details before text reaches the AI provider. See [customer data](/ai/customer-data/). |
+| **Monthly cap** | $25 | Stops AI spend for every agent at your limit. See [the monthly cap](/ai/providers/#set-the-monthly-cap). |
+
+<Callout type="caution" title="Saving there publishes">
+  When the default agent is live, **Save** in **Settings → dimmi agent** publishes at once. That includes any unpublished draft you left in Agent Studio.
+</Callout>
 
 ## How the agent shares threads with teammates
 
-Pick how the agent behaves once a conversation has an assigned teammate:
+Pick how an agent behaves once a teammate is on the conversation:
 
-- **Step back while a teammate is active:** the agent stays quiet while the assigned teammate is online, or replied in the last 24 hours.
-- **Stop once someone is assigned:** the agent stops replying in any assigned conversation.
-- **Keep answering:** the agent replies even when a teammate is assigned.
+- **Stops while they reply:** the agent stays quiet while the assigned teammate is online, or replied in the last 24 hours.
+- **Stops once assigned:** the agent stops replying in any assigned conversation.
+- **Keeps replying:** the agent replies even when a teammate is assigned.
 
 No matter which option you pick, the agent never replies to a customer message that a teammate already answered.
+
+## Go back to an earlier version
+
+**History** lists each published version, newest first, with the note it went out with. **Restore** makes that version your working copy. Customers keep the live version until you publish again.
+
+**Compare** puts any two versions, or the working copy, side by side. Each changed field shows its value before and after. Guidance compares line by line, so you see only the lines added or taken out.

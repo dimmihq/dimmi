@@ -19,6 +19,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/dimmihq/dimmi/framework/database"
@@ -69,6 +70,61 @@ type VectorSearch struct {
 	Usage     *contracts.LLMUsage
 	Degraded  string
 	Timings   map[string]time.Duration
+}
+
+/*
+MaxQueries is the most queries one search reads: the question and the
+other ways of asking it.
+*/
+const MaxQueries = 3
+
+/*
+Asked are the queries a search reads, the question first: each one
+once, blank ones dropped, at most MaxQueries.
+*/
+func Asked(query string, others []string) []string {
+	out := make([]string, 0, MaxQueries)
+	seen := map[string]bool{}
+	for _, q := range append([]string{query}, others...) {
+		q = strings.TrimSpace(q)
+		key := strings.ToLower(q)
+		if q == "" || seen[key] || len(out) == MaxQueries {
+			continue
+		}
+		seen[key] = true
+		out = append(out, q)
+	}
+	return out
+}
+
+/*
+Warmed is what embedding a search's queries together cost: the tokens
+of the one request, and the model and key it went to. Usage is nil
+when every vector was already cached or the request failed.
+*/
+type Warmed struct {
+	Usage *contracts.LLMUsage
+	Model string
+	KeyID *ids.UUID
+}
+
+/*
+Warm embeds the queries of one search in a single request and caches
+their vectors, so the searches that follow, one per query, each find
+theirs waiting. A failure is not an error: each search then embeds its
+own query, as it would have.
+*/
+func (v *Vectors) Warm(ctx context.Context, ws ids.UUID, queries []string, timeout time.Duration) Warmed {
+	vectors, err := v.queryVectors(ctx, ws, queries, v.queryTimeout(timeout))
+	if err != nil {
+		return Warmed{}
+	}
+	for _, qv := range vectors {
+		if qv.usage != nil {
+			return Warmed{Usage: qv.usage, Model: qv.model, KeyID: qv.keyID}
+		}
+	}
+	return Warmed{}
 }
 
 /*

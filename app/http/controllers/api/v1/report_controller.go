@@ -223,7 +223,7 @@ func reportFiltersOf(reg *ids.Registry, m map[string]string) (reports.Filters, e
 	return reportFilters(reg, requests.ReportFilters{
 		From: m["from"], To: m["to"], BusinessHours: m["business_hours"] == "true", Inbox: m["inbox"],
 		Team: m["team"], Member: m["member"], Channel: m["channel"], Tag: m["tag"], Priority: m["priority"],
-		AI: m["ai"],
+		AI: m["ai"], Agent: m["agent"],
 	})
 }
 
@@ -247,6 +247,7 @@ func reportFilters(reg *ids.Registry, in requests.ReportFilters) (reports.Filter
 		{&f.Teams, models.PrefixTeam, in.Team, "filter[team]"},
 		{&f.Members, models.PrefixMember, in.Member, "filter[member]"},
 		{&f.Tags, models.PrefixTag, in.Tag, "filter[tag]"},
+		{&f.Agents, models.PrefixAiAgent, in.Agent, "filter[agent]"},
 	}
 	for _, l := range lists {
 		decoded, err := decodeReportIDs(reg, l.prefix, splitList(l.value), l.field)
