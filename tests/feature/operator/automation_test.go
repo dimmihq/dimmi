@@ -202,6 +202,116 @@ func TestOperatorWorkflows(t *testing.T) {
 }
 
 /*
+liveSeries publishes a contact series that people on the pro plan
+enter: it waits two days, then tags them. It returns its id.
+*/
+func (k *desk) liveSeries(name string) string {
+	k.t.Helper()
+	tag := k.d.Owner.PostJSON("/api/v1/tags", testkit.JSON{"name": "Onboarded " + name}).AssertCreated().
+		String("data.id")
+	id := k.d.Owner.PostJSON("/api/v1/series", testkit.JSON{"name": name, "subject": "contact", "spec": testkit.JSON{
+		"entry": testkit.JSON{
+			"rules":   testkit.JSON{"rules": testkit.JSON{"field": "contact.custom.plan", "op": "eq", "value": "pro"}},
+			"reentry": testkit.JSON{"kind": "once"},
+		},
+		"nodes": []testkit.JSON{
+			{"id": "entry", "kind": "entry"},
+			{"id": "wait", "kind": "wait", "settings": testkit.JSON{"mode": "duration", "amount": 2, "unit": "days"}},
+			{"id": "tagged", "kind": "tag", "settings": testkit.JSON{"tag_ids": []string{tag}}},
+		},
+		"edges": []testkit.JSON{
+			{"from": "entry", "path": "next", "to": "wait"}, {"from": "wait", "path": "next", "to": "tagged"},
+		},
+	}}).AssertCreated().String("data.id")
+	k.d.Owner.PostJSON("/api/v1/series/"+id+"/publications", testkit.JSON{"note": "go"}).AssertOK()
+	k.d.TC.DrainLater()
+	return id
+}
+
+/*
+TestOperatorSeriesJourneys covers Operator explaining what series did
+with a person, and why someone never entered.
+*/
+func TestOperatorSeriesJourneys(t *testing.T) {
+	t.Parallel()
+
+	t.Run("walks a journey step by step and says what it waits for", func(t *testing.T) {
+		t.Parallel()
+		k := newDesk(t)
+		srs := k.liveSeries("Onboarding")
+		ada := k.d.Owner.PostJSON("/api/v1/contacts", testkit.JSON{
+			"name": "Ada Okafor", "email": "ada@customer.test", "custom_attributes": testkit.JSON{"plan": "pro"},
+		}).AssertCreated().String("data.id")
+		for range 3 {
+			k.d.TC.DrainLater()
+		}
+		k.llm.Script(tools(call("explain_series_journey", map[string]any{"email": "ada@customer.test"})),
+			reply("She waits."))
+
+		k.ask(k.thread(""), "Where is Ada in onboarding?").AssertOK()
+
+		back := k.lastToolResult()
+		assert.Contains(t, back, "contact_id "+ada)
+		assert.Contains(t, back, `Series "Onboarding" · series_id `+srs)
+		assert.Contains(t, back, "entered ")
+		assert.Contains(t, back, "by rules")
+		assert.Contains(t, back, "1. step entry (entry)")
+		assert.Contains(t, back, "took path next → wait")
+		assert.Contains(t, back, `Now at step wait (wait {"mode":"duration","unit":"days","amount":2})`)
+		assert.Contains(t, back, "Waiting for a wait step's time to pass (wait kind timer) until ")
+		assert.Contains(t, back, "Entry rules: the contact matches")
+	})
+
+	t.Run("says which entry rule keeps someone out", func(t *testing.T) {
+		t.Parallel()
+		k := newDesk(t)
+		srs := k.liveSeries("Pro welcome")
+		bo := k.d.Owner.PostJSON("/api/v1/contacts", testkit.JSON{
+			"name": "Bo Chen", "custom_attributes": testkit.JSON{"plan": "free"},
+		}).AssertCreated().String("data.id")
+		k.d.TC.DrainLater()
+		k.llm.Script(tools(call("explain_series_journey", map[string]any{"contact_id": bo, "series_id": srs})),
+			reply("Bo is on the free plan."))
+
+		k.ask(k.thread(""), "Why did Bo never get the pro welcome?").AssertOK()
+
+		back := k.lastToolResult()
+		assert.Contains(t, back, "Journeys: none. This person never entered this series.")
+		assert.Contains(t, back, "Entry rules: the contact does not match")
+		assert.Contains(t, back, `- contact.custom.plan eq "pro": false · the contact has "free"`)
+	})
+
+	t.Run("refuses a call that names nobody", func(t *testing.T) {
+		t.Parallel()
+		k := newDesk(t)
+		k.llm.Script(tools(call("explain_series_journey", map[string]any{})), reply("Who?"))
+
+		k.ask(k.thread(""), "Explain the series").AssertOK()
+
+		assert.Contains(t, k.lastToolResult(), "name the person by contact_id or email")
+	})
+
+	t.Run("tells Operator which step is selected in the series builder", func(t *testing.T) {
+		t.Parallel()
+		k := newDesk(t)
+		srs := k.liveSeries("Selected")
+		thread := k.thread("")
+		k.llm.Script(reply("It waits two days."))
+
+		k.d.Owner.PostJSON("/api/v1/operator/threads/"+thread+"/messages", testkit.JSON{
+			"body": "What does this step do?", "viewing": testkit.JSON{"page": "series", "id": srs, "step_id": "wait"},
+		}).AssertOK()
+
+		sent := k.llm.Sent()
+		asked := sent[0].Messages[len(sent[0].Messages)-1]
+		note := asked.Parts[len(asked.Parts)-2].Text
+		assert.Contains(t, note, "The series builder is open on this series.")
+		assert.Contains(t, note, `Selected step: wait · wait · settings {"mode":"duration","unit":"days","amount":2}`)
+		assert.Contains(t, note, "When the teammate says this step, they mean step wait.")
+	})
+}
+
+/*
 TestOperatorSeries covers Operator editing and drafting series.
 */
 func TestOperatorSeries(t *testing.T) {

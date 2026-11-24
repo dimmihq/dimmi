@@ -5,7 +5,8 @@
 |
 | Operator reads series the way the builder shows them: who enters, what
 | makes them leave, the goal, and every step with where each of its
-| paths leads, with what publishing would refuse. Its changes are
+| paths leads, with what publishing would refuse. It explains what
+| series did with a person (explain_series.go). Its changes are
 | suggestions on the working copy (propose_automation.go).
 |
 */
@@ -57,6 +58,7 @@ func (e *Engine) seriesTools() []tool {
 				"shapes of entry, exit and goal. Read it before drafting a new series.",
 			Schema: schema(`{"type":"object","properties":{}}`),
 		}, handle: e.getSeriesReference},
+		e.explainSeriesTool(),
 	}
 }
 

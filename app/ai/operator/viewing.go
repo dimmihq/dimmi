@@ -32,13 +32,15 @@ import (
 
 /*
 Viewing is what the teammate has open when they ask, as the app sends
-it: the kind of page, the id of what it shows, and the id of the
-suggestion shown on it, when there is one. The ids are the public ones.
+it: the kind of page, the id of what it shows, the id of the
+suggestion shown on it, when there is one, and on a series the step
+selected in its builder. The ids are the public ones.
 */
 type Viewing struct {
 	Page       string
 	ID         string
 	Suggestion string
+	Step       string
 }
 
 /*

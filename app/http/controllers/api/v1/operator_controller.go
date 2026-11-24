@@ -199,6 +199,9 @@ func (c *OperatorController) viewing(req *requests.AskOperatorRequest) operator.
 	if in.SuggestionID != nil {
 		out.Suggestion = *in.SuggestionID
 	}
+	if in.StepID != nil {
+		out.Step = *in.StepID
+	}
 	return out
 }
 

@@ -197,3 +197,16 @@ UPDATE series_enrollments SET status = 'exited', end_reason = 'replaced', left_a
 WHERE workspace_id = @workspace_id AND series_id = @series_id AND test AND status IN ('active', 'waiting')
   AND (contact_id = @contact_id OR (sqlc.narg(company_id)::uuid IS NOT NULL AND company_id = sqlc.narg(company_id)::uuid))
 RETURNING id;
+
+-- name: ListPersonSeriesJourneys :many
+-- ListPersonSeriesJourneys returns every journey of a contact and of
+-- their company, newest first, on one series when one is named. Unlike
+-- the person's page it keeps tests and the rows of people kept out
+-- because they already matched when the series went live, since those
+-- explain why someone never entered.
+SELECT e.*, s.name AS series_name FROM series_enrollments e
+JOIN series s ON s.id = e.series_id
+WHERE e.workspace_id = @workspace_id
+  AND (e.contact_id = sqlc.narg(contact_id)::uuid OR e.company_id = sqlc.narg(company_id)::uuid)
+  AND (sqlc.narg(series_id)::uuid IS NULL OR e.series_id = sqlc.narg(series_id)::uuid)
+ORDER BY e.entered_at DESC, e.id DESC LIMIT @row_limit::bigint;

@@ -242,6 +242,8 @@ func askOperatorDoc() Doc {
 			"viewing.suggestion_id": "The id of the suggestion shown on that page, such as opc_01jx2m8k4t. A " +
 				"change the person asks for is added to it while it still waits for review. Leave out when " +
 				"none is shown.",
+			"viewing.step_id": "On a series, the id of the step selected in its builder, such as wait-1. " +
+				"Operator takes \"this step\" to mean that one. Leave out when no step is selected.",
 		},
 		Hint: "A teammate may ask at most 30 questions a minute; wait and try again.",
 	}
