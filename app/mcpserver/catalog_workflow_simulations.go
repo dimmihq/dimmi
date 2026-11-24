@@ -63,6 +63,15 @@ func workflowSimulationDocs() map[string]Doc {
 			Returns: "nothing.",
 			Risk:    new(RiskWrite),
 		},
+	}
+}
+
+/*
+workflowSimulationRunDocs returns the entries for running simulations,
+reading their past runs and walking a person through a series.
+*/
+func workflowSimulationRunDocs() map[string]Doc {
+	return map[string]Doc{
 		"workflows.simulations.run.store": {
 			Name:  "run_workflow_simulations",
 			Title: "Run a workflow's simulations",
@@ -146,6 +155,14 @@ func workflowSimulationSchemaTexts() map[string]map[string]string {
 			"simulation_id": "Id of the simulation that ran (wfs_...).",
 			"version":       "The copy of the workflow the run was on: draft or live.",
 		},
+	}
+}
+
+/*
+seriesSimulationSchemaTexts returns the texts of a series' dry run.
+*/
+func seriesSimulationSchemaTexts() map[string]map[string]string {
+	return map[string]map[string]string{
 		"SeriesSimulation": {
 			"actions":      "The changes the journey would make, such as tags and attributes, in order.",
 			"end":          "How the journey ended: finished, goal, exited or still waiting.",

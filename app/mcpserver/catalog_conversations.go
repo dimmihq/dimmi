@@ -97,7 +97,8 @@ func conversationChangeDocs() map[string]Doc {
 				"inbox_id":    "Moves the conversation to this inbox (inbox_...).",
 				"unread":      "true marks it unread for you alone; false marks it read.",
 				"spam":        "true moves it to the spam view and out of every other; false brings it back.",
-				"ai_enabled":  "false keeps every AI agent off it until turned on again; true lets the agent answer again, even after a handover.",
+				"ai_enabled": "false keeps every AI agent off it until turned on again; true lets the agent " +
+					"answer again, even after a handover.",
 				"add_tags":    "Tags by id (tag_...) or name; a name no tag has yet becomes a new tag. Up to 50.",
 				"remove_tags": "Tag ids (tag_...) to take off.",
 			},

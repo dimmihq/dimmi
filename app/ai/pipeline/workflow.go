@@ -7,9 +7,10 @@
 | of the workflow's steps hands it to an agent. That step's settings
 | live on the run waiting on it, and every turn reads them there: which
 | agent answers, whether it may transfer and whether answers ask the
-| customer to confirm. The agent keeps its own guidance and procedures. Inside such a step the workflow routes a handoff down its
-| own path, so the agent's own handoff routing stays out of it. A
-| customer confirming an answer is the workflow's to act on, never a
+| customer to confirm. The agent keeps its own guidance and procedures.
+| Inside such a step the workflow routes a handoff down its own path,
+| so the agent's own handoff routing stays out of it. A customer
+| confirming an answer is the workflow's to act on, never a
 | new question for the agent.
 |
 */

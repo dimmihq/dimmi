@@ -202,7 +202,8 @@ func replyAgent(ctx context.Context, w *conversations.Writer, c models.Conversat
 		return nil
 	}
 
-	if _, err := w.Q.FindAgentByID(ctx, models.FindAgentByIDParams{WorkspaceID: c.WorkspaceID, ID: *agentID}); err != nil {
+	_, err := w.Q.FindAgentByID(ctx, models.FindAgentByIDParams{WorkspaceID: c.WorkspaceID, ID: *agentID})
+	if err != nil {
 		if errors.Is(err, database.ErrNotFound) {
 			return nil
 		}
@@ -210,7 +211,7 @@ func replyAgent(ctx context.Context, w *conversations.Writer, c models.Conversat
 		return wrap("find reply agent", err)
 	}
 
-	_, err := w.Q.AssignConversationAgent(ctx, models.AssignConversationAgentParams{
+	_, err = w.Q.AssignConversationAgent(ctx, models.AssignConversationAgentParams{
 		WorkspaceID: c.WorkspaceID, ID: c.ID, AgentID: agentID, Now: w.Now,
 	})
 

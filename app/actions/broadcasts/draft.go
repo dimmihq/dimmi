@@ -144,8 +144,8 @@ func saveParams(row models.Broadcast, d Draft, now time.Time) models.SaveBroadca
 		WorkspaceID: row.WorkspaceID, ID: row.ID, Name: d.Name, AudienceID: d.AudienceID, Rules: nullJSON(d.Rules),
 		RoomIds: rooms, TopicID: d.TopicID, Service: d.Service, Subject: d.Subject, Preview: d.Preview, Body: d.Body,
 		SenderMemberID: d.SenderMemberID, EmailAddressID: d.EmailAddressID, SlackAs: d.SlackAs,
-		ReplyTeamID: d.ReplyTeamID, ReplyMemberID: d.ReplyMemberID, AiReplies: d.AIReplies, ReplyAgentID: d.ReplyAgentID,
-		TrackClicks:      d.TrackClicks,
+		ReplyTeamID: d.ReplyTeamID, ReplyMemberID: d.ReplyMemberID, AiReplies: d.AIReplies,
+		ReplyAgentID: d.ReplyAgentID, TrackClicks: d.TrackClicks,
 		SkipFrequencyCap: d.SkipFrequencyCap, ScheduleKind: d.ScheduleKind, ScheduledAt: d.ScheduledAt,
 		Goal: nullJSON(d.Goal), Holds: nonNilStrings(d.Holds), Now: now,
 	}
@@ -160,8 +160,9 @@ func DraftOf(row models.Broadcast) Draft {
 		Service: row.Service, Subject: row.Subject, Preview: row.Preview, Body: row.Body,
 		SenderMemberID: row.SenderMemberID, EmailAddressID: row.EmailAddressID, SlackAs: row.SlackAs,
 		ReplyTeamID: row.ReplyTeamID, ReplyMemberID: row.ReplyMemberID, AIReplies: row.AiReplies,
-		ReplyAgentID: row.ReplyAgentID, TrackClicks: row.TrackClicks, SkipFrequencyCap: row.SkipFrequencyCap, ScheduleKind: row.ScheduleKind,
-		ScheduledAt: row.ScheduledAt, Goal: row.Goal, Holds: row.Holds,
+		ReplyAgentID: row.ReplyAgentID, TrackClicks: row.TrackClicks, SkipFrequencyCap: row.SkipFrequencyCap,
+		ScheduleKind: row.ScheduleKind,
+		ScheduledAt:  row.ScheduledAt, Goal: row.Goal, Holds: row.Holds,
 	}
 }
 

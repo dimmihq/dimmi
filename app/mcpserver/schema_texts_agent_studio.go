@@ -20,7 +20,7 @@ func agentStudioSchemaTexts() map[string]map[string]string {
 	for _, part := range []map[string]map[string]string{
 		agentSchemaTexts(), agentDefinitionSchemaTexts(), agentScopeSchemaTexts(), agentRunSchemaTexts(),
 		agentSimulationSchemaTexts(), sharedAISchemaTexts(), mergedSchemaTexts(),
-		workflowSimulationSchemaTexts(),
+		workflowSimulationSchemaTexts(), seriesSimulationSchemaTexts(),
 	} {
 		mergeTexts(out, part)
 	}

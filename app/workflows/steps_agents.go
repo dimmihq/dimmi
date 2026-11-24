@@ -50,7 +50,8 @@ func runAssignAgent(ctx context.Context, st *state, s workflowspec.Step) (outcom
 		return skipped("agent_gone"), nil
 	}
 
-	if _, err := st.q.FindAgentByID(ctx, models.FindAgentByIDParams{WorkspaceID: st.conv.WorkspaceID, ID: id}); err != nil {
+	_, err := st.q.FindAgentByID(ctx, models.FindAgentByIDParams{WorkspaceID: st.conv.WorkspaceID, ID: id})
+	if err != nil {
 		if errors.Is(err, database.ErrNotFound) {
 			return skipped("agent_gone"), nil
 		}

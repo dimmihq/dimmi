@@ -148,8 +148,8 @@ none.
 */
 func loadAgent(ctx context.Context, q *models.Queries, e *env) (bool, error) {
 	var stepAgent *ids.UUID
-	if s := e.WorkflowStep; s != nil && !(s.AllowTransfers && s.AgentID != nil &&
-		slices.Contains(e.Conversation.AiTransferredFromIds, *s.AgentID)) {
+	if s := e.WorkflowStep; s != nil && (!s.AllowTransfers || s.AgentID == nil ||
+		!slices.Contains(e.Conversation.AiTransferredFromIds, *s.AgentID)) {
 		stepAgent = s.AgentID
 	}
 	agent, err := agents.Answerer(ctx, q, agents.ForConversation(e.Conversation, stepAgent))

@@ -3,8 +3,9 @@
 | dimmi Inside A Workflow Simulation
 |--------------------------------------------------------------------------
 |
-| A step that lets dimmi handle the conversation plays the agent's turns
-| on the agent simulator: as the agent the step names, or the
+| A step that hands the conversation to an agent plays the agent's turns
+| on the agent simulator: as the agent the step names, or else the one
+| placed where the simulation's source conversation came in, or else the
 | workspace's default, with the chat so far as history. The customer
 | answers each reply, and the step ends the way a real one would: dimmi
 | hands over, the customer is done (the resolved path), or the customer
@@ -20,9 +21,11 @@ import (
 	"errors"
 	"slices"
 
+	"github.com/dimmihq/dimmi/framework/database"
 	"github.com/dimmihq/dimmi/framework/ids"
 
 	"github.com/dimmihq/dimmi/app/actions/procedures"
+	"github.com/dimmihq/dimmi/app/ai/agents"
 	"github.com/dimmihq/dimmi/app/ai/pipeline"
 	"github.com/dimmihq/dimmi/app/models"
 	"github.com/dimmihq/dimmi/app/support/workflowspec"
@@ -37,7 +40,7 @@ func (c *chat) Handle(ctx context.Context, h engine.DryHandle) (engine.DryHandle
 	if c.s.Simulator == nil {
 		return handedOver("agent_disabled"), nil
 	}
-	turn := agentAsk{stepID: h.StepID, agent: h.AgentID}
+	turn := agentAsk{stepID: h.StepID, agent: c.stepAgent(ctx, h.AgentID)}
 	for range maxAgentTurns {
 		if c.waiting == "" && !turn.confirm {
 			ended, confirm, err := c.answerAgent(ctx, h.StepID)
@@ -229,4 +232,51 @@ func withoutLast(history []pipeline.SimMessage, text string) []pipeline.SimMessa
 		}
 	}
 	return history
+}
+
+/*
+stepAgent is the agent an agent step names, or the one placed where the
+simulation's source conversation came in.
+*/
+func (c *chat) stepAgent(ctx context.Context, named *ids.UUID) *ids.UUID {
+	if named != nil {
+		return named
+	}
+
+	return c.placedAgent(ctx)
+}
+
+/*
+placedAgent is the agent placed where the simulation's source
+conversation came in, as a step that names none would get in a real
+conversation; nil leaves it to the workspace's default.
+*/
+func (c *chat) placedAgent(ctx context.Context) *ids.UUID {
+	source := c.p.c.SourceConversationID
+	if source == nil || c.s.DB == nil {
+		return nil
+	}
+
+	var placed *ids.UUID
+	err := c.s.DB.Transaction(ctx, func(ctx context.Context, tx *database.Tx) error {
+		q := models.New(tx)
+		conv, err := q.FindConversation(ctx, models.FindConversationParams{
+			WorkspaceID: c.p.m.Workspace.ID, ID: *source,
+		})
+		if err != nil {
+			return err
+		}
+		conv.AiAgentID = nil
+		agent, err := agents.Resolve(ctx, q, agents.ForConversation(conv, nil))
+		if err != nil {
+			return err
+		}
+		placed = &agent.ID
+		return nil
+	})
+	if err != nil {
+		return nil
+	}
+
+	return placed
 }
