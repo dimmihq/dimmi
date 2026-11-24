@@ -26,7 +26,12 @@ export const PRODUCT_GROUPS: { title: string; products: Product[] }[] = [
     products: [
       { name: "AI agent", href: "/agent", blurb: "Cites your docs and knows when to stop.", icon: Sparkle },
       { name: "Operator", href: "/operator", blurb: "Backstage AI teammate for your team.", icon: MagicWand },
-      { name: "Procedures", href: "/procedures", blurb: "Playbooks the AI runs in plain English.", icon: ListChecks },
+      {
+        name: "Procedures",
+        href: "/procedures",
+        blurb: "Support policies your AI agent cannot break.",
+        icon: ListChecks,
+      },
     ],
   },
   {
