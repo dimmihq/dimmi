@@ -32935,7 +32935,7 @@
             ]
           },
           "stream_id": {
-            "description": "Stream id: the id of the stream, as the tool that lists them shows it.",
+            "description": "An id you make up, at most 64 characters, so the run reports its progress live while it goes.",
             "maxLength": 64,
             "type": "string"
           },
@@ -34389,7 +34389,7 @@
             "type": "integer"
           },
           "group": {
-            "description": "Which group: control (held out, sent nothing) or treated (travelled the series).",
+            "description": "Which group: control (held out, sent nothing) or treated (traveled the series).",
             "type": "string"
           }
         },
