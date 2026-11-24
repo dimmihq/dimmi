@@ -11,6 +11,7 @@ it.describe("setting up a new workspace", () => {
     await page.getByLabel("Full name").fill(person.name);
     await page.getByLabel("Email").fill(person.email);
     await page.getByLabel("Password").fill(person.password);
+    await page.locator("label", { hasText: "I agree to the" }).click({ position: { x: 8, y: 8 } });
     await page.getByRole("button", { name: "Create account" }).click();
 
     await expect(page).toHaveURL(/\/onboarding$/);
@@ -60,6 +61,7 @@ it.describe("setting up a new workspace", () => {
     await page.getByLabel("Full name").fill(person.name);
     await page.getByLabel("Email").fill(person.email);
     await page.getByLabel("Password").fill(person.password);
+    await page.locator("label", { hasText: "I agree to the" }).click({ position: { x: 8, y: 8 } });
     await page.getByRole("button", { name: "Create account" }).click();
     await page.getByLabel("Workspace name").fill("Acme");
     await page.getByRole("button", { name: "Save and continue" }).click();
