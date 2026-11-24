@@ -87,7 +87,8 @@ func NewSeries(s models.Series, liveHash string) Series {
 		SenderID:       broadcastRef(models.PrefixMember, s.SenderMemberID), SlackAs: s.SlackAs,
 		ReplyTeamID: broadcastRef(models.PrefixTeam, s.ReplyTeamID), ReplyMemberID: broadcastRef(models.PrefixMember,
 			s.ReplyMemberID),
-		AIReplies: s.AiReplies, ReplyAgentID: broadcastRef(models.PrefixAiAgent, s.ReplyAgentID), Counts: s.Counts, PublishedAt: s.PublishedAt, PausedAt: s.PausedAt,
+		AIReplies: s.AiReplies, ReplyAgentID: broadcastRef(models.PrefixAiAgent, s.ReplyAgentID), Counts: s.Counts,
+		PublishedAt: s.PublishedAt, PausedAt: s.PausedAt,
 		ArchivedAt: s.ArchivedAt, CreatedAt: s.CreatedAt, UpdatedAt: s.UpdatedAt,
 	}
 }

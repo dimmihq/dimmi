@@ -62,12 +62,3 @@ type ProceduresReportRequest struct {
 	From string `query:"from" pattern:"^\\d{4}-\\d{2}-\\d{2}$"`
 	To   string `query:"to"   pattern:"^\\d{4}-\\d{2}-\\d{2}$"`
 }
-
-/*
-WorkflowsReportRequest is the input of GET /reports/workflows: a range
-of whole days, to included.
-*/
-type WorkflowsReportRequest struct {
-	From string `query:"from" pattern:"^\\d{4}-\\d{2}-\\d{2}$"`
-	To   string `query:"to"   pattern:"^\\d{4}-\\d{2}-\\d{2}$"`
-}

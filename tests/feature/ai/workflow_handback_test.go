@@ -62,7 +62,8 @@ func TestWorkflowHandsBack(t *testing.T) {
 	t.Run("keeps every agent off once a workflow turns AI off, until one turns it on", func(t *testing.T) {
 		t.Parallel()
 		h := newHarness(t, nil)
-		h.liveWorkflow("Quiet please", "conversation.first_message", wfStep("s_off0000001", "turn_off_ai", testkit.JSON{}))
+		h.liveWorkflow("Quiet please", "conversation.first_message",
+			wfStep("s_off0000001", "turn_off_ai", testkit.JSON{}))
 		h.liveWorkflow("Back on", "note.created", wfStep("s_on00000001", "turn_on_ai", testkit.JSON{}))
 		h.llm.answer.Script(search("pro plan price per seat"), reply("The Pro plan costs $12 per seat per month [1]."))
 
@@ -107,7 +108,9 @@ func TestWorkflowHandsBack(t *testing.T) {
 		t.Parallel()
 		h := newHarness(t, nil)
 		spec := testkit.JSON{"schema": 1, "trigger": "conversation.first_message", "steps": []testkit.JSON{
-			wfStep("s_assign0001", "assign_ai_agent", testkit.JSON{"agent_id": models.PublicID(models.PrefixAiAgent, ids.New())}),
+			wfStep("s_assign0001", "assign_ai_agent", testkit.JSON{
+				"agent_id": models.PublicID(models.PrefixAiAgent, ids.New()),
+			}),
 		}}
 		id := h.d.Owner.PostJSON("/api/v1/workflows", testkit.JSON{"name": "Nowhere", "spec": spec}).
 			AssertCreated().String("data.id")
@@ -138,7 +141,8 @@ func TestAgentArchive(t *testing.T) {
 			AssertCreated().String("data.agent.id")
 		support := h.d.Owner.PostJSON("/api/v1/ai/agents", testkit.JSON{"name": "Support", "template": "support"}).
 			AssertCreated().String("data.agent.id")
-		h.d.Owner.PatchJSON("/api/v1/ai/agents/"+support, testkit.JSON{"transfer_agent_ids": []string{sales}}).AssertOK()
+		h.d.Owner.PatchJSON("/api/v1/ai/agents/"+support, testkit.JSON{"transfer_agent_ids": []string{sales}}).
+			AssertOK()
 		wf := h.liveWorkflow("Route to sales", "conversation.first_message",
 			wfStep("s_assign0001", "assign_ai_agent", testkit.JSON{"agent_id": sales}))
 
@@ -152,7 +156,8 @@ func TestAgentArchive(t *testing.T) {
 		refused := h.d.Owner.Delete("/api/v1/ai/agents/" + sales).AssertStatus(409)
 		refused.AssertJSONPath("code", "agent_in_use")
 
-		h.d.Owner.PatchJSON("/api/v1/ai/agents/"+support, testkit.JSON{"transfer_agent_ids": []string{}}).AssertOK()
+		h.d.Owner.PatchJSON("/api/v1/ai/agents/"+support, testkit.JSON{"transfer_agent_ids": []string{}}).
+			AssertOK()
 		h.d.Owner.Delete("/api/v1/workflows/" + wf).AssertNoContent()
 		h.d.Owner.GetJSON("/api/v1/ai/agents/"+sales).AssertOK().AssertJSONPath("data.ties.#", 0)
 		h.d.Owner.Delete("/api/v1/ai/agents/" + sales).AssertNoContent()
@@ -169,7 +174,8 @@ func TestWorkflowAgentTransfers(t *testing.T) {
 		sales := models.PublicID(models.PrefixAiAgent, r.sales)
 		support := models.PublicID(models.PrefixAiAgent, r.support)
 		r.liveWorkflow("Sales first", "conversation.first_message", testkit.JSON{
-			"id": "s_dimmi00001", "kind": "dimmi", "settings": testkit.JSON{"agent_id": sales, "allow_transfers": true},
+			"id": "s_dimmi00001", "kind": "dimmi",
+			"settings": testkit.JSON{"agent_id": sales, "allow_transfers": true},
 		})
 		r.liveWorkflow("Note transfers", "agent.transferred",
 			wfStep("s_note000001", "note", testkit.JSON{"text": "Moved between agents"}))
@@ -200,6 +206,7 @@ func TestTeammateTurnsAI(t *testing.T) {
 		h.d.Owner.PatchJSON(path, testkit.JSON{"ai_enabled": false}).AssertOK().
 			AssertJSONPath("data.ai_state", "handed_off").AssertJSONPath("meta.changed", []string{"ai_state"})
 		h.d.Owner.PatchJSON(path, testkit.JSON{"ai_enabled": true}).AssertOK().AssertJSONPath("data.ai_state", "off")
-		h.d.Owner.PatchJSON(path, testkit.JSON{"ai_enabled": true}).AssertOK().AssertJSONPath("meta.changed", []string{})
+		h.d.Owner.PatchJSON(path, testkit.JSON{"ai_enabled": true}).AssertOK().
+			AssertJSONPath("meta.changed", []string{})
 	})
 }
