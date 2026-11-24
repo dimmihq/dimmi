@@ -48,6 +48,10 @@ type OptionsQuery struct {
 /*
 Options returns one of a tool's lists, within the parent named, such
 as the states of a team.
+
+A fresh read pulls from the tool itself and never goes through the
+cache: the copy kept in this process outlives Forget until the cache
+server says the key changed.
 */
 func (s *Issues) Options(ctx context.Context, m authz.Membership, in OptionsQuery) ([]trackers.Option, error) {
 	if err := tickets.MayRead(m); err != nil {
@@ -80,13 +84,13 @@ func (s *Issues) Options(ctx context.Context, m authz.Membership, in OptionsQuer
 		return options, nil
 	}
 
-	if s.Cache == nil {
-		return pull(ctx)
+	key := "issue-options:" + m.Workspace.ID.String() + ":" + in.Installation.String() + ":" + in.List + ":" + in.Parent
+	if s.Cache != nil && in.Fresh {
+		_ = s.Cache.Forget(ctx, key)
 	}
 
-	key := "issue-options:" + m.Workspace.ID.String() + ":" + in.Installation.String() + ":" + in.List + ":" + in.Parent
-	if in.Fresh {
-		_ = s.Cache.Forget(ctx, key)
+	if s.Cache == nil || in.Fresh {
+		return pull(ctx)
 	}
 
 	options, err := cache.For[[]trackers.Option](s.Cache, optionsKept).Remember(ctx, key, pull)
