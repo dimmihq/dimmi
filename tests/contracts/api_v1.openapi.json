@@ -14326,6 +14326,71 @@
         ],
         "type": "object"
       },
+      "CollectionWorkflowFailure": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "description": "The items of this page, as a list; empty when nothing matches.",
+            "items": {
+              "$ref": "#/components/schemas/WorkflowFailure"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "links": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "Addresses of related pages by name, such as next; left out when there are none.",
+            "type": "object"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/CollectionWorkflowFailureMetaStruct"
+          }
+        },
+        "required": [
+          "data",
+          "meta"
+        ],
+        "type": "object"
+      },
+      "CollectionWorkflowFailureMetaStruct": {
+        "additionalProperties": false,
+        "properties": {
+          "next_cursor": {
+            "description": "Send it as cursor to read the next page; null on the last page.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "per_page": {
+            "description": "How many items a page holds at most, such as 25.",
+            "format": "int64",
+            "type": "integer"
+          },
+          "prev_cursor": {
+            "description": "Send it as cursor to read the page before; null on the first page.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "total": {
+            "description": "How many items match in all; left out when the list does not count them.",
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "next_cursor",
+          "prev_cursor",
+          "per_page"
+        ],
+        "type": "object"
+      },
       "CollectionWorkflowMetaStruct": {
         "additionalProperties": false,
         "properties": {
@@ -32109,6 +32174,18 @@
         ],
         "type": "object"
       },
+      "ResourceWorkflowMetrics": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/WorkflowMetrics"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
       "ResourceWorkspace": {
         "additionalProperties": false,
         "properties": {
@@ -33898,6 +33975,51 @@
         ],
         "type": "object"
       },
+      "SeriesControl": {
+        "additionalProperties": false,
+        "properties": {
+          "groups": {
+            "items": {
+              "$ref": "#/components/schemas/SeriesControlGroup"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "percent": {
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "percent",
+          "groups"
+        ],
+        "type": "object"
+      },
+      "SeriesControlGroup": {
+        "additionalProperties": false,
+        "properties": {
+          "entered": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "goal": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "group": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "group",
+          "entered",
+          "goal"
+        ],
+        "type": "object"
+      },
       "SeriesCount": {
         "additionalProperties": false,
         "properties": {
@@ -34090,6 +34212,9 @@
             "description": "How many travelers are on the series now.",
             "format": "int64",
             "type": "integer"
+          },
+          "control": {
+            "$ref": "#/components/schemas/SeriesControl"
           },
           "days": {
             "description": "Entries and goals reached per day over the period of the report.",
@@ -45454,6 +45579,246 @@
         ],
         "type": "object"
       },
+      "WorkflowFailure": {
+        "additionalProperties": false,
+        "properties": {
+          "conversation_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "conversation_number": {
+            "format": "int64",
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "detail": {},
+          "end_reason": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "ended_at": {
+            "format": "date-time",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "error": {},
+          "id": {
+            "description": "The id of this record. Send it wherever an endpoint asks for this record; never use its name or title in its place.",
+            "type": "string"
+          },
+          "object": {
+            "description": "The kind of record this is, the same for every record of its kind, such as article.",
+            "type": "string"
+          },
+          "outcome": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "run_id": {
+            "type": "string"
+          },
+          "started_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "step_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "step_kind": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "version_number": {
+            "format": "int32",
+            "type": [
+              "integer",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "object",
+          "run_id",
+          "status",
+          "end_reason",
+          "error",
+          "conversation_id",
+          "conversation_number",
+          "version_number",
+          "step_id",
+          "step_kind",
+          "outcome",
+          "detail",
+          "started_at",
+          "ended_at"
+        ],
+        "type": "object"
+      },
+      "WorkflowGoal": {
+        "additionalProperties": false,
+        "properties": {
+          "kind": {
+            "type": "string"
+          },
+          "min_rating": {
+            "format": "int64",
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "window": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "window",
+          "min_rating"
+        ],
+        "type": "object"
+      },
+      "WorkflowMetrics": {
+        "additionalProperties": false,
+        "properties": {
+          "active": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "completed": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "days": {
+            "items": {
+              "$ref": "#/components/schemas/WorkflowMetricsDay"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "engaged": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "failed": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "from": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "goal": {
+            "$ref": "#/components/schemas/WorkflowGoal"
+          },
+          "goal_met": {
+            "format": "int32",
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "handed_over": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "object": {
+            "description": "The kind of record this is, the same for every record of its kind, such as article.",
+            "type": "string"
+          },
+          "steps": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/WorkflowStepMetrics"
+            },
+            "type": "object"
+          },
+          "to": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "triggered": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "version": {
+            "format": "int32",
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "workflow_id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "object",
+          "workflow_id",
+          "from",
+          "to",
+          "version",
+          "goal",
+          "triggered",
+          "engaged",
+          "completed",
+          "active",
+          "handed_over",
+          "failed",
+          "goal_met",
+          "days",
+          "steps"
+        ],
+        "type": "object"
+      },
+      "WorkflowMetricsDay": {
+        "additionalProperties": false,
+        "properties": {
+          "completed": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "day": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "failed": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "triggered": {
+            "format": "int32",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "day",
+          "triggered",
+          "completed",
+          "failed"
+        ],
+        "type": "object"
+      },
       "WorkflowRun": {
         "additionalProperties": false,
         "properties": {
@@ -45516,6 +45881,19 @@
           "trigger": {
             "description": "The event that started the run, such as message.customer or ticket.created.",
             "type": "string"
+          },
+          "version_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "version_number": {
+            "format": "int32",
+            "type": [
+              "integer",
+              "null"
+            ]
           }
         },
         "required": [
@@ -45526,6 +45904,8 @@
           "trigger",
           "conversation_id",
           "parent_run_id",
+          "version_id",
+          "version_number",
           "started_at",
           "ended_at",
           "steps"
@@ -45587,6 +45967,42 @@
           "detail",
           "started_at",
           "finished_at"
+        ],
+        "type": "object"
+      },
+      "WorkflowStepMetrics": {
+        "additionalProperties": false,
+        "properties": {
+          "dropped": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "failed": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "paths": {
+            "additionalProperties": {
+              "format": "int32",
+              "type": "integer"
+            },
+            "type": "object"
+          },
+          "reached": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "waiting": {
+            "format": "int32",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "reached",
+          "waiting",
+          "failed",
+          "dropped",
+          "paths"
         ],
         "type": "object"
       },
@@ -77152,6 +77568,171 @@
         "summary": "Change a workflow",
         "x-abilities": [
           "workflows:write"
+        ]
+      }
+    },
+    "/workflows/{workflow}/failures": {
+      "get": {
+        "operationId": "workflows.failures.index",
+        "parameters": [
+          {
+            "description": "Id of the workflow, starting with wf_, such as wf_01jx2m8k4t. Find it with GET /workflows.",
+            "in": "path",
+            "name": "workflow",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "The first day, such as 2026-01-01.",
+            "explode": false,
+            "in": "query",
+            "name": "from",
+            "schema": {
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+              "type": "string"
+            }
+          },
+          {
+            "description": "The last day, included, such as 2026-01-31.",
+            "explode": false,
+            "in": "query",
+            "name": "to",
+            "schema": {
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Step id: the id of the step, as the tool that lists them shows it.",
+            "explode": false,
+            "in": "query",
+            "name": "step_id",
+            "schema": {
+              "maxLength": 64,
+              "type": "string"
+            }
+          },
+          {
+            "description": "Before: text of at most 64 characters.",
+            "explode": false,
+            "in": "query",
+            "name": "before",
+            "schema": {
+              "maxLength": 64,
+              "type": "string"
+            }
+          },
+          {
+            "description": "How many items to return in one page, such as 25.",
+            "explode": false,
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "format": "int64",
+              "maximum": 50,
+              "minimum": 0,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CollectionWorkflowFailure"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseError"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "x-abilities": [
+          "workflows:read"
+        ]
+      }
+    },
+    "/workflows/{workflow}/metrics": {
+      "get": {
+        "operationId": "workflows.metrics.show",
+        "parameters": [
+          {
+            "description": "Id of the workflow, starting with wf_, such as wf_01jx2m8k4t. Find it with GET /workflows.",
+            "in": "path",
+            "name": "workflow",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "The first day, such as 2026-01-01.",
+            "explode": false,
+            "in": "query",
+            "name": "from",
+            "schema": {
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+              "type": "string"
+            }
+          },
+          {
+            "description": "The last day, included, such as 2026-01-31.",
+            "explode": false,
+            "in": "query",
+            "name": "to",
+            "schema": {
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Version: a number, such as 10.",
+            "explode": false,
+            "in": "query",
+            "name": "version",
+            "schema": {
+              "format": "int32",
+              "minimum": 0,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResourceWorkflowMetrics"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseError"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "x-abilities": [
+          "workflows:read"
         ]
       }
     },
