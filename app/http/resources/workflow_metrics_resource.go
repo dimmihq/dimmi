@@ -6,7 +6,8 @@
 | A workflow's numbers as the analytics view reads them: totals over
 | the range, the goal they were counted against, runs per day, and per
 | step how many reached it, wait on it, failed on it, ended on it and
-| left by each path. A failure is one run that failed, with its first
+| left by each path, and for a split each variant's runs and goal. A
+| failure is one run that failed, with its first
 | failing step and the conversation to open.
 |
 */
@@ -67,11 +68,12 @@ type WorkflowMetricsDay struct {
 WorkflowStepMetrics is one step's numbers.
 */
 type WorkflowStepMetrics struct {
-	Reached int32            `json:"reached"`
-	Waiting int32            `json:"waiting"`
-	Failed  int32            `json:"failed"`
-	Dropped int32            `json:"dropped"`
-	Paths   map[string]int32 `json:"paths"`
+	Reached  int32                             `json:"reached"`
+	Waiting  int32                             `json:"waiting"`
+	Failed   int32                             `json:"failed"`
+	Dropped  int32                             `json:"dropped"`
+	Paths    map[string]int32                  `json:"paths"`
+	Variants map[string]WorkflowVariantMetrics `json:"variants,omitempty"`
 }
 
 /*
@@ -110,9 +112,11 @@ func NewWorkflowMetrics(id ids.UUID, m workflows.Metrics) WorkflowMetrics {
 	}
 
 	for stepID, st := range m.Steps {
-		out.Steps[stepID] = WorkflowStepMetrics{
+		step := WorkflowStepMetrics{
 			Reached: st.Reached, Waiting: st.Waiting, Failed: st.Failed, Dropped: st.Dropped, Paths: st.Paths,
 		}
+		step.Variants = newWorkflowVariants(st.Variants)
+		out.Steps[stepID] = step
 	}
 
 	return out

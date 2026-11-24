@@ -18,6 +18,7 @@ How workflows work:
 - Paths you add carry a label: on buttons, one button each; on a branch, a condition each; on classify, a category with a description each. Fixed paths carry an outcome instead, such as timeout, else or none, and take the run when that outcome happens.
 - Customer-facing steps (message, buttons, collect, reply_time) and the dimmi step, which hands the conversation to an AI agent, only work under triggers that allow them. Background triggers may only act: assign, tag, note, close and the like.
 - Ids: steps are s_..., paths are p_.... Leave ids out of new steps and paths; they get fresh ones. Never change an existing id.
+- A split (A/B test) sends each conversation down one of 2 to 4 variants by share. Each variant in settings.variants names one of its paths by id, so give a new split's paths ids of your own, such as p_variant_a, and use the same ids in the variants. The shares add up to 100. Setting winner to a variant's id sends everyone down it.
 - Teams, teammates, tags, schedules, SLA policies, agents and other workflows are named by their public ids (team_..., mem_..., tag_...). Look them up before you use them; never invent one.
 - A condition or an audience is a rule: a leaf {"field": "...", "op": "...", "value": ...}, or a group {"all": [rules]}, {"any": [rules]} or {"not": rule}. Run variables are run.vars.<key>; custom contact attributes are contact.custom.<key>. Texts may use variables such as {{contact.first_name}}.
 - Durations are written like 30s, 10m, 4h or 2d.

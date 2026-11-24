@@ -137,3 +137,37 @@ WHERE r.workspace_id = @workspace_id AND r.workflow_id = @workflow_id AND r.mode
   AND (sqlc.narg(before)::uuid IS NULL OR r.id < sqlc.narg(before)::uuid)
 ORDER BY r.id DESC
 LIMIT @row_limit;
+
+-- name: WorkflowVariantGoals :many
+-- WorkflowVariantGoals counts, for each variant of each split step of a
+-- workflow, the live runs of a range that did something and took it,
+-- and how many of those reached the goal, counted as WorkflowRunFigures
+-- counts it.
+WITH runs AS (
+    SELECT DISTINCT ON (s.run_id, s.step_id) s.run_id, s.step_id, s.path_id, r.started_at, r.conversation_id,
+        EXISTS (
+            SELECT 1 FROM workflow_run_steps h
+            WHERE h.workspace_id = r.workspace_id AND h.run_id = r.id
+              AND ((h.kind = 'dimmi' AND h.outcome = 'handed_over') OR (h.kind = 'assign' AND h.outcome = 'assigned')
+                OR (h.kind = 'escalate' AND h.status = 'completed'))
+        ) AS handed_over
+    FROM workflow_run_steps s
+    JOIN workflow_runs r ON r.id = s.run_id AND r.workspace_id = s.workspace_id
+    LEFT JOIN workflow_versions v ON v.id = r.version_id
+    WHERE s.workspace_id = @workspace_id AND s.workflow_id = @workflow_id AND s.kind = 'split'
+      AND s.status = 'completed' AND s.path_id IS NOT NULL
+      AND r.mode = 'live' AND r.status <> 'passed' AND r.started_at >= @since AND r.started_at < @until
+      AND (@version::integer = 0 OR v.number = @version::integer)
+    ORDER BY s.run_id, s.step_id, s.started_at, s.id
+)
+SELECT r.step_id, COALESCE(r.path_id, '')::text AS path_id, count(*)::integer AS reached,
+    count(*) FILTER (WHERE
+        (@goal_kind::text = 'resolved' AND NOT r.handed_over AND f.ai_handed_off_at IS NULL AND f.human_replies = 0
+            AND f.closed_at >= r.started_at
+            AND f.closed_at < r.started_at + make_interval(secs => @goal_window_seconds::integer))
+        OR (@goal_kind::text = 'csat' AND f.rating >= @goal_min_rating::integer AND f.rated_at >= r.started_at
+            AND f.rated_at < r.started_at + make_interval(secs => @goal_window_seconds::integer))
+    )::integer AS goal
+FROM runs r
+LEFT JOIN conversation_facts f ON f.conversation_id = r.conversation_id AND f.workspace_id = @workspace_id
+GROUP BY r.step_id, r.path_id;

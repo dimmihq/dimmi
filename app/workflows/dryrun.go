@@ -19,6 +19,7 @@
 |   - Buttons and collect steps ask the driver for the customer's move:
 |     a tap, a typed answer, or no answer, which lets the timeout pass.
 |   - Waits are skipped, and recorded as skipped.
+|   - A split takes the variant a live run of the conversation would.
 |   - A step that lets dimmi handle the conversation hands the chat to
 |     the driver, which plays the agent's turns and says how it ended.
 |   - Actions are recorded as what would run. HTTP requests answer with

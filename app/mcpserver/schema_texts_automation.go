@@ -44,6 +44,11 @@ func schemaTextsFromAutomation() map[string]map[string]string {
 		"WorkflowMetricsDay":  metricsDayTexts(),
 		"WorkflowStepMetrics": stepMetricsTexts(),
 		"WorkflowGoal":        goalTexts(),
+		"WorkflowVariantMetrics": {
+			"reached": "Runs that took the variant.",
+			"goal": "Runs that took the variant and whose conversation reached the workflow's goal. Zero when " +
+				"the workflow has no goal.",
+		},
 	}
 }
 
@@ -83,6 +88,8 @@ func stepMetricsTexts() map[string]string {
 		"failed":  "Runs where the step failed.",
 		"dropped": "Runs that stopped on the step without finishing: exited, canceled, failed or expired.",
 		"paths":   "How many runs left by each of the step's paths, by path id.",
+		"variants": "For an A/B split, each variant's runs and goal, by variant (path) id. Missing for " +
+			"other steps.",
 	}
 }
 

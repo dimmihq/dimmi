@@ -9,7 +9,9 @@
 | customer wrote during, completed, still go, went to a person, failed
 | and reached the workflow's goal. Per step: how many runs reached it,
 | wait on it now, failed on it, ended on it without completing (the
-| drop-off), and left by each path. Failures lists the runs where a
+| drop-off), and left by each path; a split step also counts, per
+| variant, the runs that took it and how many reached the goal, so the
+| variants can be compared and a winner picked. Failures lists the runs where a
 | call, an action, a classify step or the run itself failed, with the
 | conversation to open.
 |
@@ -59,11 +61,13 @@ type Metrics struct {
 }
 
 /*
-StepMetrics is one step's numbers.
+StepMetrics is one step's numbers. Variants holds a split's variants
+by path id.
 */
 type StepMetrics struct {
 	Reached, Waiting, Failed, Dropped int32
 	Paths                             map[string]int32
+	Variants                          map[string]models.WorkflowVariantGoalsRow
 }
 
 /*
@@ -134,6 +138,36 @@ func readFigures(ctx context.Context, q *models.Queries, wf models.Workflow, out
 }
 
 /*
+readVariants counts each split variant's runs and goal over the range.
+*/
+func readVariants(ctx context.Context, q *models.Queries, wf models.Workflow, out *Metrics) error {
+	p := models.WorkflowVariantGoalsParams{
+		WorkspaceID: wf.WorkspaceID, WorkflowID: wf.ID, Since: out.From, Until: out.To, Version: out.Version,
+	}
+
+	if g := out.Goal; g != nil {
+		p.GoalKind, p.GoalMinRating = g.Kind, int32(g.MinRating) //nolint:gosec // checked to be 1 to 5
+		p.GoalWindowSeconds = int32(g.WindowOf().Seconds())
+	}
+
+	rows, err := q.WorkflowVariantGoals(ctx, p)
+	if err != nil {
+		return fmt.Errorf("count split variants: %w", err)
+	}
+
+	for _, r := range rows {
+		st := out.step(r.StepID)
+		if st.Variants == nil {
+			st.Variants = map[string]models.WorkflowVariantGoalsRow{}
+		}
+
+		st.Variants[r.PathID] = r
+	}
+
+	return nil
+}
+
+/*
 readSteps fills every step's numbers: reached, waiting, failed, the
 paths taken and the drop-off.
 */
@@ -173,7 +207,7 @@ func readSteps(ctx context.Context, q *models.Queries, wf models.Workflow, out *
 		out.step(s.StepID).Dropped = s.Dropped
 	}
 
-	return nil
+	return readVariants(ctx, q, wf, out)
 }
 
 /*

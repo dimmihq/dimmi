@@ -47169,6 +47169,13 @@
             "format": "int32",
             "type": "integer"
           },
+          "variants": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/WorkflowVariantMetrics"
+            },
+            "description": "For an A/B split, each variant's runs and goal, by variant (path) id. Missing for other steps.",
+            "type": "object"
+          },
           "waiting": {
             "description": "Runs waiting on the step now.",
             "format": "int32",
@@ -47181,6 +47188,26 @@
           "failed",
           "dropped",
           "paths"
+        ],
+        "type": "object"
+      },
+      "WorkflowVariantMetrics": {
+        "additionalProperties": false,
+        "properties": {
+          "goal": {
+            "description": "Runs that took the variant and whose conversation reached the workflow's goal. Zero when the workflow has no goal.",
+            "format": "int32",
+            "type": "integer"
+          },
+          "reached": {
+            "description": "Runs that took the variant.",
+            "format": "int32",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "reached",
+          "goal"
         ],
         "type": "object"
       },

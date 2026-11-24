@@ -64,6 +64,7 @@ func executors() map[string]executor {
 		workflowspec.KindClose: runClose, workflowspec.KindDimmi: runDimmi,
 		workflowspec.KindReplyTime: runReplyTime, workflowspec.KindClassify: runClassify,
 		workflowspec.KindRunWorkflow: runRunWorkflow, workflowspec.KindHTTPRequest: runHTTPRequest,
+		workflowspec.KindSplit: runSplit,
 	}
 	maps.Copy(all, ticketExecutors())
 	maps.Copy(all, agentExecutors())
