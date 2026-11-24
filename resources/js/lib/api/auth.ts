@@ -80,6 +80,8 @@ export interface WorkspaceSummary {
   name: string;
   slug: string;
   role: string;
+  /** Address of the workspace's logo on this server, null without one. */
+  logo_url?: string | null;
   previous_slugs?: { slug: string; until: string }[];
 }
 

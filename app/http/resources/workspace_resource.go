@@ -100,8 +100,9 @@ func NewWorkspace(w models.Workspace) Workspace {
 
 /*
 WorkspaceSummary is a workspace in a list to switch between, with the
-caller's role in it and the slugs it gave up and still holds, so a link
-naming an old slug still finds it.
+caller's role in it, the slugs it gave up and still holds, so a link
+naming an old slug still finds it, and LogoURL, the address of its logo
+on this server, null without one.
 */
 type WorkspaceSummary struct {
 	ID            string         `json:"id"`
@@ -109,6 +110,7 @@ type WorkspaceSummary struct {
 	Name          string         `json:"name"`
 	Slug          string         `json:"slug"`
 	Role          string         `json:"role"`
+	LogoURL       *string        `json:"logo_url"`
 	PreviousSlugs []PreviousSlug `json:"previous_slugs"`
 }
 
@@ -127,11 +129,13 @@ func NewWorkspaceSummaries(rows []models.ListUserWorkspacesRow) []WorkspaceSumma
 	summaries := make([]WorkspaceSummary, 0, len(rows))
 	for _, row := range rows {
 		summaries = append(summaries, WorkspaceSummary{
-			ID:     models.PublicID(models.PrefixWorkspace, row.WorkspaceID),
-			Object: "workspace",
-			Name:   row.WorkspaceName,
-			Slug:   row.WorkspaceSlug,
-			Role:   row.Role, PreviousSlugs: previousSlugs(row.PreviousSlugs),
+			ID:            models.PublicID(models.PrefixWorkspace, row.WorkspaceID),
+			Object:        "workspace",
+			Name:          row.WorkspaceName,
+			Slug:          row.WorkspaceSlug,
+			Role:          row.Role,
+			LogoURL:       models.Workspace{LogoPath: nonEmpty(row.LogoPath)}.LogoURL(),
+			PreviousSlugs: previousSlugs(row.PreviousSlugs),
 		})
 	}
 
@@ -149,4 +153,15 @@ func previousSlugs(raw json.RawMessage) []PreviousSlug {
 	}
 
 	return out
+}
+
+/*
+nonEmpty is the string, or nil when it is empty.
+*/
+func nonEmpty(s string) *string {
+	if s == "" {
+		return nil
+	}
+
+	return &s
 }
