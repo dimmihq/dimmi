@@ -21046,7 +21046,7 @@
         "additionalProperties": false,
         "properties": {
           "conversation_id": {
-            "description": "Id of the conversation, such as conv_01jx2m8k4t, or its number, such as 1042 for #1042. Find it with GET /conversations or GET /search.",
+            "description": "The conversation to save (conv_...). It is not changed.",
             "maxLength": 64,
             "type": "string"
           }
@@ -32857,12 +32857,12 @@
         "additionalProperties": false,
         "properties": {
           "contact_id": {
-            "description": "Id of the contact (a customer or lead), starting with ctc_, such as ctc_01jx2m8k4t. Find it with GET /contacts.",
+            "description": "The contact to walk through (cnt_...); or leave out and describe a person.",
             "maxLength": 64,
             "type": "string"
           },
           "engaged": {
-            "description": "Engaged: a list, such as [\"...\"].",
+            "description": "Whether they open, click or reply to the messages: opened, clicked or replied.",
             "items": {
               "type": "string"
             },
@@ -32873,7 +32873,7 @@
             ]
           },
           "events": {
-            "description": "Events: a list, such as [\"...\"].",
+            "description": "Events the person does on the way, by name.",
             "items": {
               "type": "string"
             },
@@ -32887,7 +32887,7 @@
             "$ref": "#/components/schemas/SimulateSeriesPerson"
           },
           "version": {
-            "description": "Version: one of draft, live.",
+            "description": "draft or live. Left out, it is draft.",
             "enum": [
               "draft",
               "live",
@@ -32924,7 +32924,7 @@
         "additionalProperties": false,
         "properties": {
           "simulation_ids": {
-            "description": "Ids of AI agent simulations, as a list, such as [\"aias_01jx2m8k4t\"]. Find them with GET /ai/agents/{agent}/simulations.",
+            "description": "The simulations to run (wfs_...); leave out to run every one.",
             "items": {
               "type": "string"
             },
@@ -32940,7 +32940,7 @@
             "type": "string"
           },
           "version": {
-            "description": "Version: one of draft, live.",
+            "description": "draft or live. Left out, it is draft.",
             "enum": [
               "draft",
               "live",
@@ -34665,6 +34665,7 @@
         "additionalProperties": false,
         "properties": {
           "actions": {
+            "description": "The changes the journey would make, such as tags and attributes, in order.",
             "items": {
               "$ref": "#/components/schemas/SeriesSimulationAction"
             },
@@ -34674,15 +34675,19 @@
             ]
           },
           "end": {
+            "description": "How the journey ended: finished, goal, exited or still waiting.",
             "type": "string"
           },
           "entered": {
+            "description": "true when the person would enter the series.",
             "type": "boolean"
           },
           "goal_reached": {
+            "description": "true when the person would reach the series' goal.",
             "type": "boolean"
           },
           "messages": {
+            "description": "The messages that would go out, in order.",
             "items": {
               "$ref": "#/components/schemas/SeriesSimulationMessage"
             },
@@ -34696,9 +34701,11 @@
             "type": "string"
           },
           "reason": {
+            "description": "Why the person would not enter, or why the journey ended. Empty when nothing to say.",
             "type": "string"
           },
           "steps": {
+            "description": "Each step the person would reach, in order, with the path it took.",
             "items": {
               "$ref": "#/components/schemas/SeriesSimulationStep"
             },
@@ -34724,12 +34731,15 @@
         "properties": {
           "detail": {
             "additionalProperties": {},
+            "description": "What the change is, as an object.",
             "type": "object"
           },
           "kind": {
+            "description": "What the step does, such as tag or set_attribute.",
             "type": "string"
           },
           "node_id": {
+            "description": "Id of the step.",
             "type": "string"
           }
         },
@@ -34743,18 +34753,23 @@
         "additionalProperties": false,
         "properties": {
           "body": {
+            "description": "The message as written, variables unfilled.",
             "type": "string"
           },
           "kind": {
+            "description": "How it would go out: email, chat, post or slack.",
             "type": "string"
           },
           "node_id": {
+            "description": "Id of the step that sends it.",
             "type": "string"
           },
           "subject": {
+            "description": "The email subject. Empty for other kinds.",
             "type": "string"
           },
           "to": {
+            "description": "Who would receive it.",
             "type": "string"
           }
         },
@@ -34770,21 +34785,27 @@
         "properties": {
           "detail": {
             "additionalProperties": {},
+            "description": "A few facts the step kept, as an object.",
             "type": "object"
           },
           "kind": {
+            "description": "What the step does, such as wait, condition or ai_path.",
             "type": "string"
           },
           "node_id": {
+            "description": "Id of the step.",
             "type": "string"
           },
           "path": {
+            "description": "The path the step took. Empty when it has one way on.",
             "type": "string"
           },
           "result": {
+            "description": "What the step did, as a short word.",
             "type": "string"
           },
           "skipped": {
+            "description": "true when the step was a wait the simulation skipped.",
             "type": "boolean"
           }
         },
@@ -35871,13 +35892,16 @@
         "properties": {
           "attributes": {
             "additionalProperties": {},
+            "description": "The made-up person's attributes, by key.",
             "type": "object"
           },
           "email": {
+            "description": "The made-up person's email address.",
             "maxLength": 320,
             "type": "string"
           },
           "name": {
+            "description": "The made-up person's name.",
             "maxLength": 200,
             "type": "string"
           }
@@ -46611,8 +46635,12 @@
       "WorkflowSimulation": {
         "additionalProperties": false,
         "properties": {
-          "action_mocks": {},
-          "assertions": {},
+          "action_mocks": {
+            "description": "What each mocked HTTP step answers, by step id, each with a status and a body."
+          },
+          "assertions": {
+            "description": "What must hold after the run, as a JSON array of checks."
+          },
           "created_at": {
             "description": "When it was created, as an RFC 3339 time, such as 2026-01-31T09:00:00Z.",
             "format": "date-time",
@@ -46621,7 +46649,9 @@
           "draft_history": {
             "$ref": "#/components/schemas/WorkflowSimulationHistory"
           },
-          "draft_result": {},
+          "draft_result": {
+            "description": "How its last run on the draft went, as a JSON object with passed, ran_at, the trace of steps, the result of each check and, on a broken run, error. Null when it never ran there."
+          },
           "id": {
             "description": "The id of this record. Send it wherever an endpoint asks for this record; never use its name or title in its place.",
             "type": "string"
@@ -46629,20 +46659,29 @@
           "live_history": {
             "$ref": "#/components/schemas/WorkflowSimulationHistory"
           },
-          "live_result": {},
-          "messages": {},
+          "live_result": {
+            "description": "How its last run on the live version went, as a JSON object with passed, ran_at, the trace of steps, the result of each check and, on a broken run, error. Null when it never ran there."
+          },
+          "messages": {
+            "description": "The customer's messages, in order, as a JSON array."
+          },
           "name": {
+            "description": "Name of the simulation, up to 120 characters.",
             "type": "string"
           },
           "object": {
             "description": "The kind of record this is, the same for every record of its kind, such as article.",
             "type": "string"
           },
-          "persona": {},
+          "persona": {
+            "description": "The made-up customer, as a JSON object with fields such as name, email and attributes."
+          },
           "scenario": {
+            "description": "Who the customer is and what they came for. The simulated customer answers from it.",
             "type": "string"
           },
           "simulated_at": {
+            "description": "The moment the simulation pretends it is. Null to run at the real time.",
             "format": "date-time",
             "type": [
               "string",
@@ -46650,6 +46689,7 @@
             ]
           },
           "source_conversation_id": {
+            "description": "Id of the real conversation the simulation was made from (conv_...). Null when written by hand.",
             "type": [
               "string",
               "null"
@@ -46661,6 +46701,7 @@
             "type": "string"
           },
           "workflow_id": {
+            "description": "Id of the workflow the simulation belongs to (wf_...).",
             "type": "string"
           }
         },
@@ -46689,10 +46730,12 @@
         "additionalProperties": false,
         "properties": {
           "passed": {
+            "description": "How many of the counted runs passed.",
             "format": "int64",
             "type": "integer"
           },
           "runs": {
+            "description": "The counted runs, newest first.",
             "items": {
               "$ref": "#/components/schemas/WorkflowSimulationHistoryRun"
             },
@@ -46702,6 +46745,7 @@
             ]
           },
           "state": {
+            "description": "passing when every counted run passed, failing when none did, flaky in between.",
             "enum": [
               "passing",
               "flaky",
@@ -46710,10 +46754,12 @@
             "type": "string"
           },
           "total": {
+            "description": "How many runs are counted.",
             "format": "int64",
             "type": "integer"
           },
           "window": {
+            "description": "The most runs a history counts: only the latest this many.",
             "format": "int64",
             "type": "integer"
           }
@@ -46735,9 +46781,11 @@
             "type": "string"
           },
           "passed": {
+            "description": "true when every check of the run held.",
             "type": "boolean"
           },
           "ran_at": {
+            "description": "When the run happened.",
             "format": "date-time",
             "type": "string"
           }
@@ -46753,9 +46801,11 @@
         "additionalProperties": false,
         "properties": {
           "counted": {
+            "description": "true when the run counts toward the simulation's history.",
             "type": "boolean"
           },
           "errored": {
+            "description": "true when the run broke before its checks could be judged, which is not a pass.",
             "type": "boolean"
           },
           "id": {
@@ -46767,17 +46817,23 @@
             "type": "string"
           },
           "passed": {
+            "description": "true when every check of the run held.",
             "type": "boolean"
           },
           "ran_at": {
+            "description": "When the run happened.",
             "format": "date-time",
             "type": "string"
           },
-          "result": {},
+          "result": {
+            "description": "How the run went, as a JSON object with the trace, each check's result and any error."
+          },
           "simulation_id": {
+            "description": "Id of the simulation that ran (wfs_...).",
             "type": "string"
           },
           "version": {
+            "description": "The copy of the workflow the run was on: draft or live.",
             "enum": [
               "draft",
               "live"
@@ -72755,6 +72811,7 @@
     },
     "/series/{series}/simulations/run": {
       "post": {
+        "description": "Walks a contact, or a made-up person, through a series' draft or live version without sending anything, skipping every wait. AI paths still ask the AI. Returns each step with the path it took, the messages that would go out, the changes, and whether the person reached the goal.",
         "operationId": "series.simulations.run.store",
         "parameters": [
           {
@@ -72799,6 +72856,7 @@
             "description": "Error"
           }
         },
+        "summary": "Walk one person through a series",
         "x-abilities": [
           "series:write"
         ]
@@ -78787,6 +78845,7 @@
     },
     "/workflows/{workflow}/simulations": {
       "get": {
+        "description": "Lists the workflow's saved simulations and how each has gone lately. Returns the simulations with their messages, checks, last result and recent history.",
         "operationId": "workflows.simulations.index",
         "parameters": [
           {
@@ -78821,11 +78880,13 @@
             "description": "Error"
           }
         },
+        "summary": "List a workflow's simulations",
         "x-abilities": [
           "workflows:read"
         ]
       },
       "post": {
+        "description": "Saves a conversation the workflow must keep handling right: who the customer is, what they write, and the checks on the steps and paths it takes. Returns the saved simulation.",
         "operationId": "workflows.simulations.store",
         "parameters": [
           {
@@ -78870,6 +78931,7 @@
             "description": "Error"
           }
         },
+        "summary": "Save a workflow simulation",
         "x-abilities": [
           "workflows:write"
         ]
@@ -78877,6 +78939,7 @@
     },
     "/workflows/{workflow}/simulations/from-conversation": {
       "post": {
+        "description": "Turns a real conversation into a simulation of the workflow. Returns the saved simulation.",
         "operationId": "workflows.simulations.from-conversation.store",
         "parameters": [
           {
@@ -78921,6 +78984,7 @@
             "description": "Error"
           }
         },
+        "summary": "Save a conversation as a workflow simulation",
         "x-abilities": [
           "workflows:write"
         ]
@@ -78928,6 +78992,7 @@
     },
     "/workflows/{workflow}/simulations/run": {
       "post": {
+        "description": "Replays the workflow's saved simulations against its draft or live version, with nothing sent and no action run. A simulated customer taps buttons and answers questions, agent steps answer as the agent would, and a judge reads the result. Every run uses real models. Returns each simulation with its verdict, the trigger verdict and every step and path taken.",
         "operationId": "workflows.simulations.run.store",
         "parameters": [
           {
@@ -78971,6 +79036,7 @@
             "description": "Error"
           }
         },
+        "summary": "Run a workflow's simulations",
         "x-abilities": [
           "workflows:write"
         ]
@@ -78978,6 +79044,7 @@
     },
     "/workflows/{workflow}/simulations/{simulation}": {
       "delete": {
+        "description": "Deletes a saved simulation and its past runs. Returns nothing.",
         "operationId": "workflows.simulations.destroy",
         "parameters": [
           {
@@ -79014,11 +79081,13 @@
             "description": "Error"
           }
         },
+        "summary": "Delete a workflow simulation",
         "x-abilities": [
           "workflows:write"
         ]
       },
       "get": {
+        "description": "Reads one saved simulation of a workflow, with its last result step by step. Returns the simulation with its scenario, messages, checks and last result.",
         "operationId": "workflows.simulations.show",
         "parameters": [
           {
@@ -79062,11 +79131,13 @@
             "description": "Error"
           }
         },
+        "summary": "Get a workflow simulation",
         "x-abilities": [
           "workflows:read"
         ]
       },
       "patch": {
+        "description": "Changes a saved simulation's name, scenario, messages, customer or checks. Returns the simulation as saved.",
         "operationId": "workflows.simulations.update",
         "parameters": [
           {
@@ -79120,6 +79191,7 @@
             "description": "Error"
           }
         },
+        "summary": "Edit a workflow simulation",
         "x-abilities": [
           "workflows:write"
         ]
@@ -79127,6 +79199,7 @@
     },
     "/workflows/{workflow}/simulations/{simulation}/runs": {
       "get": {
+        "description": "Lists the latest runs of one simulation, newest first. Returns the runs with their verdict and when they ran.",
         "operationId": "workflows.simulations.runs.index",
         "parameters": [
           {
@@ -79148,7 +79221,7 @@
             }
           },
           {
-            "description": "Version: one of draft, live.",
+            "description": "draft or live. Left out, it is draft.",
             "explode": false,
             "in": "query",
             "name": "version",
@@ -79183,6 +79256,7 @@
             "description": "Error"
           }
         },
+        "summary": "List a workflow simulation's past runs",
         "x-abilities": [
           "workflows:read"
         ]

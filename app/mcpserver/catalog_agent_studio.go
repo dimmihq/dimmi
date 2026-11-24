@@ -24,6 +24,7 @@ func agentStudioDocs() map[string]Doc {
 	for _, part := range []map[string]Doc{
 		agentListDocs(), agentDraftDocs(), agentVersionDocs(), agentPastVersionDocs(), agentPreviewDocs(),
 		agentSimulationDocs(), agentSimulationEditDocs(), agentSimulationRunDocs(), sharedAIDocs(),
+		workflowSimulationDocs(),
 	} {
 		maps.Copy(out, part)
 	}
