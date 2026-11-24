@@ -448,11 +448,12 @@ func (run reportRun) count(ctx context.Context, o outcome) error {
 		return nil
 	}
 
-	switch o.reason {
-	case enums.EmailSuppressionReasonComplaint:
-		return run.a.Reputation.Reported(ctx, run.q, run.sent.WorkspaceID, true)
-	case enums.EmailSuppressionReasonHardBounce:
-		return run.a.Reputation.Reported(ctx, run.q, run.sent.WorkspaceID, false)
+	if o.reason == enums.EmailSuppressionReasonComplaint {
+		return run.a.Reputation.Complained(ctx, run.q, run.sent.WorkspaceID)
+	}
+
+	if o.reason == enums.EmailSuppressionReasonHardBounce {
+		return run.a.Reputation.Bounced(ctx, run.q, run.sent.WorkspaceID)
 	}
 
 	return nil

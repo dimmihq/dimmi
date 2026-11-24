@@ -141,25 +141,32 @@ func (r *Reputation) Sent(ctx context.Context, q *models.Queries, workspaceID id
 }
 
 /*
-Reported counts one customer email that bounced for good, or one that
-was reported as spam.
+Bounced counts one customer email that bounced for good.
 */
-func (r *Reputation) Reported(ctx context.Context, q *models.Queries, workspaceID ids.UUID, complaint bool) error {
+func (r *Reputation) Bounced(ctx context.Context, q *models.Queries, workspaceID ids.UUID) error {
 	if r == nil {
 		return nil
 	}
 
-	now := r.Clock.Now()
-
-	var err error
-	if complaint {
-		err = q.CountEmailComplaint(ctx, models.CountEmailComplaintParams{WorkspaceID: workspaceID, Now: now})
-	} else {
-		err = q.CountEmailHardBounce(ctx, models.CountEmailHardBounceParams{WorkspaceID: workspaceID, Now: now})
+	err := q.CountEmailHardBounce(ctx, models.CountEmailHardBounceParams{WorkspaceID: workspaceID, Now: r.Clock.Now()})
+	if err != nil {
+		return fmt.Errorf("count email bounce: %w", err)
 	}
 
+	return nil
+}
+
+/*
+Complained counts one customer email that was reported as spam.
+*/
+func (r *Reputation) Complained(ctx context.Context, q *models.Queries, workspaceID ids.UUID) error {
+	if r == nil {
+		return nil
+	}
+
+	err := q.CountEmailComplaint(ctx, models.CountEmailComplaintParams{WorkspaceID: workspaceID, Now: r.Clock.Now()})
 	if err != nil {
-		return fmt.Errorf("count email report: %w", err)
+		return fmt.Errorf("count email complaint: %w", err)
 	}
 
 	return nil
@@ -211,7 +218,7 @@ func (r *Reputation) Judge(ctx context.Context, workspaceID ids.UUID) (bool, err
 			return fmt.Errorf("pause email broadcasts: %w", err)
 		}
 
-		return r.tell(ctx, tx, workspaceID, reason, counts)
+		return r.tell(ctx, tx, sendingPause{workspaceID: workspaceID, reason: reason, counts: counts})
 	})
 
 	return paused, err
@@ -232,13 +239,22 @@ func (r *Reputation) counts(ctx context.Context, q *models.Queries, workspaceID 
 }
 
 /*
+sendingPause is one pause to tell people of: the workspace, why it
+paused and the counts that paused it.
+*/
+type sendingPause struct {
+	workspaceID ids.UUID
+	reason      string
+	counts      SendingCounts
+}
+
+/*
 tell writes the pause to the audit log and mails the workspace's owners
 and admins why sending paused and where to resume it.
 */
-func (r *Reputation) tell(
-	ctx context.Context, tx *database.Tx, workspaceID ids.UUID, reason string, counts SendingCounts,
-) error {
+func (r *Reputation) tell(ctx context.Context, tx *database.Tx, pause sendingPause) error {
 	q := models.New(tx)
+	workspaceID, reason, counts := pause.workspaceID, pause.reason, pause.counts
 
 	workspace, err := q.FindWorkspace(ctx, workspaceID)
 	if err != nil {
@@ -294,7 +310,7 @@ func (r *Reputation) Status(ctx context.Context, m authz.Membership) (SendingSta
 	err := r.DB.Transaction(inWorkspace(ctx, m.Workspace.ID), func(ctx context.Context, tx *database.Tx) error {
 		var err error
 
-		out, err = r.status(ctx, models.New(tx), m.Workspace.ID)
+		out, err = r.standing(ctx, models.New(tx), m.Workspace.ID)
 
 		return err
 	})
@@ -303,9 +319,9 @@ func (r *Reputation) Status(ctx context.Context, m authz.Membership) (SendingSta
 }
 
 /*
-status reads the standing inside a transaction.
+standing reads the workspace's standing inside a transaction.
 */
-func (r *Reputation) status(ctx context.Context, q *models.Queries, workspaceID ids.UUID) (SendingStatus, error) {
+func (r *Reputation) standing(ctx context.Context, q *models.Queries, workspaceID ids.UUID) (SendingStatus, error) {
 	out := SendingStatus{Rates: r.Rates}
 
 	profile, err := q.FindEmailSendingProfile(ctx, workspaceID)
@@ -344,7 +360,7 @@ func (r *Reputation) Resume(ctx context.Context, m authz.Membership) (SendingSta
 
 		_, err := q.ResumeEmailSending(ctx, models.ResumeEmailSendingParams{WorkspaceID: ws, Now: r.Clock.Now()})
 		if errors.Is(err, database.ErrNotFound) {
-			out, err = r.status(ctx, q, ws)
+			out, err = r.standing(ctx, q, ws)
 
 			return err
 		}
@@ -366,7 +382,7 @@ func (r *Reputation) Resume(ctx context.Context, m authz.Membership) (SendingSta
 			}
 		}
 
-		out, err = r.status(ctx, q, ws)
+		out, err = r.standing(ctx, q, ws)
 
 		return err
 	})

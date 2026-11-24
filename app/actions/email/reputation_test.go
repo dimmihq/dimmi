@@ -26,13 +26,22 @@ func TestHarmful(t *testing.T) {
 		{"at the complaint rate, not past it", email.SendingCounts{Sent: 1000, Complained: 1}, rates, ""},
 		{"past the complaint rate", email.SendingCounts{Sent: 1000, Complained: 2}, rates, email.PausedComplaintRate},
 		{
-			"complaints come before bounces", email.SendingCounts{Sent: 100, HardBounced: 50, Complained: 1}, rates,
+			"complaints come before bounces",
+			email.SendingCounts{Sent: 100, HardBounced: 50, Complained: 1},
+			rates,
 			email.PausedComplaintRate,
 		},
-		{"rates turned off", email.SendingCounts{Sent: 100, HardBounced: 100, Complained: 100}, config.EmailReputation{}, ""},
 		{
-			"only the bounce rate set", email.SendingCounts{Sent: 100, HardBounced: 6, Complained: 50},
-			config.EmailReputation{BouncePauseRate: 0.05}, email.PausedBounceRate,
+			"rates turned off",
+			email.SendingCounts{Sent: 100, HardBounced: 100, Complained: 100},
+			config.EmailReputation{},
+			"",
+		},
+		{
+			"only the bounce rate set",
+			email.SendingCounts{Sent: 100, HardBounced: 6, Complained: 50},
+			config.EmailReputation{BouncePauseRate: 0.05},
+			email.PausedBounceRate,
 		},
 	}
 
