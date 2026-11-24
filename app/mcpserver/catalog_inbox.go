@@ -24,7 +24,13 @@ func inboxDocs() map[string]Doc {
 		conversationListDocs(), conversationDocs(), conversationChangeDocs(),
 		conversationTrashDocs(), conversationStateDocs(),
 		timelineDocs(), writingDocs(), messageChangeDocs(), collaborationDocs(), viewDocs(), preferenceDocs(),
-		draftDocs(), snoozeDocs(), tagDocs(), inboxSetupDocs(), inboxHoursDocs(), inboxAccessDocs(), inboxAIDocs(),
+		draftDocs(),
+		snoozeDocs(),
+		tagDocs(),
+		inboxSetupDocs(),
+		inboxHoursDocs(),
+		inboxAccessDocs(),
+		inboxAIDocs(),
 		savedReplyDocs(),
 	} {
 		maps.Copy(out, part)
@@ -41,7 +47,7 @@ func conversationListFilters() map[string]string {
 	return map[string]string{
 		"filter[view]": "Which list: mine (the default: assigned to you), unassigned, all, mentions (notes that " +
 			"mention you), spam, deleted (the trash), member:mem_... for one teammate's, team:team_..., " +
-			"inbox:inbox_..., or a saved view's id (cvw_..., from dimmi_conversation_views_list). Spam and " +
+			"inbox:inbox_..., or a saved view's id (cvw_..., from dimmi_list_conversation_views). Spam and " +
 			"deleted conversations show only in their own views.",
 		"filter[status]": "open (the default), snoozed or closed, several separated by commas, or any for every " +
 			"status. A saved view brings its own status unless you pass one.",
@@ -59,6 +65,8 @@ func conversationListFilters() map[string]string {
 		"filter[created_after]":      "An RFC 3339 time, such as 2026-11-01T00:00:00Z: started at or after it.",
 		"filter[created_before]":     "An RFC 3339 time: started before it.",
 		"filter[waiting]":            "true for conversations waiting for a reply from the team.",
+		"filter[where]": "Unsaved view conditions as a JSON list, the same shape a saved view's conditions " +
+			"have. Leave out unless you filter by conditions no other filter covers.",
 		"filter[unread]":             "true for conversations with entries you have not read.",
 		"filter[assignment_waiting]": "true for conversations automatic assignment could not place yet.",
 		"filter[ai]": "handed_off (the AI agent passed it to the team), active (the AI agent is still " +
@@ -88,8 +96,8 @@ func conversationListDocs() map[string]Doc {
 			Returns: "a page of conversations, newest activity first by default, each with status, priority, " +
 				"assignee, team, tags, AI agent state and latest message, and next_cursor for more.",
 			Next: []string{
-				"dimmi_conversations_messages_list: read a conversation's thread",
-				"dimmi_conversations_update: assign, tag, prioritize, snooze or close",
+				"dimmi_list_conversation_messages: read a conversation's thread",
+				"dimmi_update_conversation: assign, tag, prioritize, snooze or close",
 			},
 			Params: conversationListFilters(),
 			Hint:   "A cursor works only with the filters and sort it came from: drop cursor after changing them.",
@@ -97,10 +105,10 @@ func conversationListDocs() map[string]Doc {
 		"conversations.neighbors.index": {
 			Title: "Find the next and previous conversation",
 			Use: "Finds the conversations just before and after one in a list, given the same filters and sort " +
-				"as dimmi_conversations_list. Use it to work through a queue one at a time; it still works once " +
+				"as dimmi_list_conversations. Use it to work through a queue one at a time; it still works once " +
 				"the conversation left the list, such as right after you closed it.",
 			Returns: "prev and next, each a short conversation (id, number, subject, status) or null.",
-			Next:    []string{"dimmi_conversations_get: open the next conversation"},
+			Next:    []string{"dimmi_get_conversation_by_id_or_number: open the next conversation"},
 			Params:  conversationListFilters(),
 		},
 		"conversation-counts.index": {
@@ -109,16 +117,19 @@ func conversationListDocs() map[string]Doc {
 				"mentions, spam, and each inbox, team, teammate and pinned saved view. Counts stop at a cap. " +
 				"Use it for a quick picture of the workload before listing.",
 			Returns: "the counts by view, with the time they were worked out.",
-			Next:    []string{"dimmi_conversations_list: list the view that needs attention"},
+			Next:    []string{"dimmi_list_conversations: list the view that needs attention"},
 		},
 		"search.index": {
+			Name:  "search_conversations_and_contacts",
 			Title: "Search conversations and contacts",
 			Use: "Quick search across every status (never spam or the trash): a few conversations whose subject " +
 				"or messages match, each with an excerpt, and a few contacts by name, email or id. A #number " +
 				"or conv_ id answers that conversation as jump. For a full filtered list use " +
-				"dimmi_conversations_list with q.",
+				"dimmi_list_conversations with q.",
 			Returns: "jump (an exact hit or null), conversations with the matching message, and contacts.",
-			Next:    []string{"dimmi_conversations_get: open a hit", "dimmi_contacts_get: open a contact"},
+			Next: []string{
+				"dimmi_get_conversation_by_id_or_number: open a hit", "dimmi_get_contact_by_id: open a contact",
+			},
 			Params: map[string]string{
 				"q":     "Words, \"a phrase\", -word to leave out, a #number or an id.",
 				"limit": "How many results of each kind to return.",

@@ -80,6 +80,48 @@ func TestSimilarConversations(t *testing.T) {
 	})
 }
 
+func TestConversationMemory(t *testing.T) {
+	t.Parallel()
+
+	t.Run("finds what is like a conversation still open, and catches up on ones never remembered", func(t *testing.T) {
+		t.Parallel()
+		x := newIndex(t)
+		inbox, err := factories.DefaultInbox(t.Context(), x.tc.App, x.tc.Workspace.Workspace)
+		require.NoError(t, err)
+		inboxID := models.PublicID(models.PrefixInbox, inbox.Inbox.ID)
+		ws := x.tc.Workspace.Workspace.ID
+		solved := x.owner.PostJSON("/api/v1/conversations", testkit.JSON{
+			"inbox_id": inboxID, "author": "contact", "subject": "Billing", "body": "My card was declined",
+			"contact": testkit.JSON{"email": testkit.UniqueName("c") + "@example.com", "name": "Ana"},
+		}).AssertCreated().String("data.id")
+		x.owner.PostJSON("/api/v1/conversations/"+solved+"/replies", testkit.JSON{"body": "Ask your bank."}).
+			AssertCreated()
+		x.owner.PatchJSON("/api/v1/conversations/"+solved, testkit.JSON{"status": "closed"}).AssertOK()
+		x.tc.Drain()
+		_, err = x.tc.Operator().Exec(t.Context(), "DELETE FROM knowledge_conversations WHERE workspace_id = $1", ws)
+		require.NoError(t, err)
+		open := x.owner.PostJSON("/api/v1/conversations", testkit.JSON{
+			"inbox_id": inboxID, "author": "contact", "subject": "Checkout", "body": "My card was declined again",
+			"contact": testkit.JSON{"email": testkit.UniqueName("c") + "@example.com", "name": "Ben"},
+		}).AssertCreated().String("data.id")
+
+		require.NoError(t, x.tc.App.Vectors.RememberStale(t.Context(), ws))
+
+		assert.Equal(t, 1, x.count(t, "SELECT count(*) FROM knowledge_conversations"), "the open one is not quiet yet")
+		openID, err := x.tc.App.IDs.Decode(string(models.PrefixConversation), open)
+		require.NoError(t, err)
+		solvedID, err := x.tc.App.IDs.Decode(string(models.PrefixConversation), solved)
+		require.NoError(t, err)
+		m := authz.NewMembership(x.tc.Workspace.Workspace, x.tc.Workspace.Owner, []string{"conversations:read"})
+		similar, err := x.tc.App.Vectors.SimilarConversations(t.Context(), m, openID, 5)
+		require.NoError(t, err)
+		require.NotEmpty(t, similar)
+		assert.Equal(t, solvedID, similar[0].ID)
+		assert.Contains(t, similar[0].Text, "Ask your bank.")
+		assert.Equal(t, 2, x.count(t, "SELECT count(*) FROM knowledge_conversations"), "asking remembers the open one")
+	})
+}
+
 func TestKnowledgeSweep(t *testing.T) {
 	t.Parallel()
 

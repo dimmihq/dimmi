@@ -63,7 +63,7 @@ func TestSeed(t *testing.T) {
 		assert.GreaterOrEqual(t, c["articles"], int64(150))
 		assert.Greater(t, c["knowledge_chunks"], c["articles"], "the help center is indexed for search")
 		assert.Equal(t, int64(len(stowline.Collections())), c["collections"])
-		assert.Equal(t, int64(tiny().Conversations), c["conversations"])
+		assert.Equal(t, int64(tiny().Conversations+stowline.PlantedCases()), c["conversations"])
 		assert.Greater(t, c["messages"], int64(tiny().Conversations*2))
 		assert.Equal(t, int64(tiny().Contacts), c["contacts"])
 		assert.Equal(t, int64(tiny().Companies), c["companies"])

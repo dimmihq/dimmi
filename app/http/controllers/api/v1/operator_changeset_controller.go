@@ -58,7 +58,7 @@ type OperatorChangesetController struct {
 
 /*
 Index lists the changesets the caller may review, of
-filter[conversation] or filter[status] when sent.
+filter[conversation], filter[routine] or filter[status] when sent.
 */
 func (c *OperatorChangesetController) Index(ctx context.Context, _ *requests.NoInput,
 ) (*OperatorChangesetsOutput, error) {
@@ -71,6 +71,13 @@ func (c *OperatorChangesetController) Index(ctx context.Context, _ *requests.NoI
 			return nil, err
 		}
 		f.Conversation = &id
+	}
+	if named := query.Get("filter[routine]"); named != "" {
+		id, err := c.decode(models.PrefixOperatorRoutine, named)
+		if err != nil {
+			return nil, err
+		}
+		f.Routine = &id
 	}
 	if status := query.Get("filter[status]"); status != "" {
 		f.Status = &status

@@ -207,7 +207,10 @@ func bootSurfaces(ctx context.Context, a *app.App) error {
 	if err := bootOperatorAgent(a); err != nil {
 		return err
 	}
-	return bootSlackSurfaces(a)
+	if err := bootSlackSurfaces(a); err != nil {
+		return err
+	}
+	return bootRoutineDelivery(a)
 }
 
 /*

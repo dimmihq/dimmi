@@ -112,7 +112,7 @@ function Change({ change: c, sources }: { change: StepChange; sources: ChipSourc
   );
 }
 
-function Diff({
+export function Diff({
   before,
   after,
   sources,

@@ -122,7 +122,10 @@ type Encoded struct {
 }
 
 /*
-Encode turns arguments into the request the operation expects.
+Encode turns arguments into the request the operation expects. An
+operation without a body also sends the filters it was given beyond
+those the document names, such as filter[custom.plan], which an API
+may take for keys it cannot list.
 */
 func (o Operation) Encode(args map[string]any) (Encoded, error) {
 	rest := maps.Clone(args)
@@ -152,6 +155,8 @@ func (o Operation) Encode(args map[string]any) (Encoded, error) {
 	}
 
 	if !o.body {
+		filters(e.Query, rest)
+
 		return e, nil
 	}
 
@@ -167,6 +172,18 @@ func (o Operation) Encode(args map[string]any) (Encoded, error) {
 	e.Body = body
 
 	return e, nil
+}
+
+/*
+filters adds to the query the filters among the arguments the
+document does not name.
+*/
+func filters(query url.Values, rest map[string]any) {
+	for name, value := range rest {
+		if strings.HasPrefix(name, "filter[") && value != nil {
+			query.Set(name, text(value))
+		}
+	}
 }
 
 /*

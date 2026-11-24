@@ -7,7 +7,9 @@
 | Each call streams: its text reaches the teammate as it is written, and
 | each tool it runs shows as a step. After a set number of model calls
 | or tool calls the tools are withdrawn, so the model has to answer with
-| what it has found.
+| or tool calls the model is told to answer with what it has found. A
+| routine may still close its run for a few calls more, so a run that
+| read too much can still suggest what it found.
 |
 */
 
@@ -16,6 +18,7 @@ package operator
 import (
 	"context"
 	"errors"
+	"fmt"
 	"io"
 	"strings"
 	"time"
@@ -26,6 +29,7 @@ import (
 	"github.com/dimmihq/dimmi/app/enums"
 	"github.com/dimmihq/dimmi/app/models"
 	"github.com/dimmihq/dimmi/app/support/llmretry"
+	"github.com/dimmihq/dimmi/app/support/prompts"
 )
 
 /*
@@ -51,7 +55,9 @@ type streamed struct {
 
 /*
 converse runs model calls and tools until the model answers, and
-returns the answer with how the run ended.
+returns the answer with how the run ended. Only the last call's text is
+the answer: what the model writes before calling tools is a note among
+the run's steps, where it was written.
 */
 func (e *Engine) converse(ctx context.Context, s *session) (string, string) {
 	e.openLayer(ctx, s)
@@ -62,31 +68,193 @@ func (e *Engine) converse(ctx context.Context, s *session) (string, string) {
 		p.system += "\n\n" + s.layer.set.Prompt()
 		s.layer.system = p.system
 	}
-	var written strings.Builder
 	for calls := 1; ; calls++ {
-		var tools []contracts.ToolSpec
-		if calls < maxModelCalls && s.toolCalls < maxToolCalls {
-			tools = e.toolSpecs(s)
+		spent, closing := e.bounds(s, calls)
+		if spent {
+			return e.conclude(ctx, s, p)
 		}
-		out, err := e.generate(ctx, s, p, tools)
-		written.WriteString(out.text)
+		s.closing = closing
+		out, err := e.generateWithRetry(ctx, s, p, e.toolSpecs(s))
 		if err != nil {
-			return strings.TrimSpace(written.String()), statusOf(err)
+			return strings.TrimSpace(out.text), statusOf(err)
 		}
-		if len(out.calls) == 0 || len(tools) == 0 {
-			return strings.TrimSpace(written.String()), "done"
+		if len(out.calls) == 0 {
+			if strings.TrimSpace(out.text) == "" {
+				return e.conclude(ctx, s, p)
+			}
+			return strings.TrimSpace(out.text), "done"
 		}
-		if out.text != "" {
-			written.WriteString("\n\n")
-		}
+		e.note(ctx, s, out.text)
 		p.messages = append(p.messages, contracts.ChatMessage{
 			Role: contracts.ChatRoleAssistant, Parts: textParts(out.text), ToolCalls: out.calls,
 		})
 		p.messages = append(p.messages, e.callTools(ctx, s, out.calls)...)
+		remind(p.messages, e.running(s, calls))
 		if ctx.Err() != nil {
-			return strings.TrimSpace(written.String()), statusOf(ctx.Err())
+			return "", statusOf(ctx.Err())
 		}
 	}
+}
+
+/*
+The calls a routine keeps for closing its run once its reading is spent.
+*/
+const (
+	closingModelCalls = 3
+	closingToolCalls  = 8
+)
+
+/*
+closes reports whether a tool closes a routine's run: suggesting,
+saving what the next run needs, or saying nothing needs attention.
+*/
+func closes(name string) bool {
+	switch name {
+	case "report_nothing_to_change", "save_routine_state", "propose_changes", toolArticleEdit, toolArticleNew:
+		return true
+	}
+	return false
+}
+
+/*
+bounds reports where a run stands before a model call: spent when it
+may call no more tools, closing when a routine has used up its reading
+and may only close. The tools offered never change, so the provider's
+prompt cache holds to the end; a closing run is refused the others.
+*/
+func (e *Engine) bounds(s *session, calls int) (spent, closing bool) {
+	modelCalls, toolCalls := s.limits()
+	if calls < modelCalls && s.toolCalls < toolCalls {
+		return false, false
+	}
+	if s.routine == nil || calls >= modelCalls+closingModelCalls || s.toolCalls >= toolCalls+closingToolCalls {
+		return true, false
+	}
+	return false, true
+}
+
+/*
+The reading steps and turns a routine has left when it is first told so,
+and from then on after every turn.
+*/
+const (
+	lowToolCalls  = 20
+	lowModelCalls = 5
+)
+
+/*
+running is the note a routine's run reads once it is near its limits:
+how many reading steps and turns it has left. It is empty for a chat,
+for a run with plenty left, and for one already closing, which the
+refusals speak for.
+*/
+func (e *Engine) running(s *session, calls int) string {
+	if s.routine == nil {
+		return ""
+	}
+
+	modelCalls, toolCalls := s.limits()
+	steps, turns := toolCalls-s.toolCalls, modelCalls-calls
+
+	if steps <= 0 || turns <= 0 || (steps > lowToolCalls && turns > lowModelCalls) {
+		return ""
+	}
+
+	return fmt.Sprintf("[You have %d reading steps and %d turns left in this run. Read only what you still "+
+		"need, then suggest and write your message.]", steps, turns)
+}
+
+/*
+remind adds the note to the last tool result, where the model reads it
+next. Nothing earlier in the conversation changes, so the provider's
+prompt cache holds.
+*/
+func remind(messages []contracts.ChatMessage, note string) {
+	if note == "" || len(messages) == 0 {
+		return
+	}
+
+	last := &messages[len(messages)-1]
+	last.Parts = append(last.Parts, textParts(note)...)
+}
+
+/*
+conclude asks for the answer once the run may call no more tools. The
+tools stay in the request so the prompt cache holds; any call the model
+still makes is dropped, and a model that wrote nothing is asked once
+more without them.
+*/
+func (e *Engine) conclude(ctx context.Context, s *session, p prompt) (string, string) {
+	last := contracts.ChatMessage{Role: contracts.ChatRoleUser, Parts: textParts(prompts.Task(taskLastCall, nil))}
+	p.messages = append(p.messages, last)
+	out, err := e.generateWithRetry(ctx, s, p, e.toolSpecs(s))
+	if err == nil && strings.TrimSpace(out.text) == "" {
+		out, err = e.generateWithRetry(ctx, s, p, nil)
+	}
+	if err != nil {
+		return strings.TrimSpace(out.text), statusOf(err)
+	}
+	return strings.TrimSpace(out.text), "done"
+}
+
+/*
+noteLength is how much of a remark a step keeps.
+*/
+const noteLength = 400
+
+/*
+note keeps what the model wrote before calling tools as a step, so the
+run's timeline shows it where it was said and the answer stays the last
+thing written.
+*/
+func (e *Engine) note(ctx context.Context, s *session, text string) {
+	text = strings.TrimSpace(text)
+	if text == "" {
+		return
+	}
+	e.addStep(ctx, s, Step{Tool: "note", Summary: truncate(text, noteLength), OK: true})
+}
+
+/*
+routineRetries is how many more times a routine's run tries a model
+call that failed before it produced anything.
+*/
+const routineRetries = 2
+
+/*
+generateWithRetry runs one model call. Nobody watches a routine's run,
+so a call that timed out or hit an overloaded provider before writing
+anything is tried again after a short wait instead of failing the run;
+a teammate's question fails at once, since they can ask again.
+*/
+func (e *Engine) generateWithRetry(ctx context.Context, s *session, p prompt, tools []contracts.ToolSpec,
+) (streamed, error) {
+	out, err := e.generate(ctx, s, p, tools)
+	for try := 1; try <= routineRetries && s.routine != nil && retriable(out, err); try++ {
+		if e.RetryWait > 0 {
+			select {
+			case <-ctx.Done():
+				return out, err
+			case <-e.Clock.After(time.Duration(try) * e.RetryWait):
+			}
+		}
+		s.failure = nil
+		out, err = e.generate(ctx, s, p, tools)
+	}
+	return out, err
+}
+
+/*
+retriable reports whether a failed call produced nothing and failed in
+a way that may pass: a timeout, a dropped connection, throttling or an
+overloaded or failing provider.
+*/
+func retriable(out streamed, err error) bool {
+	if err == nil || out.text != "" || len(out.calls) > 0 {
+		return false
+	}
+	llmErr, ok := errors.AsType[*contracts.LLMError](err)
+	return ok && llmErr.Retryable()
 }
 
 /*
@@ -212,6 +380,12 @@ func (e *Engine) transcript(s *session) []contracts.ChatMessage {
 		out[len(out)-1].Cacheable = true
 	}
 	question := contracts.ChatMessage{Role: contracts.ChatRoleUser, Parts: textParts(s.question)}
+	if s.looking != "" {
+		question.Parts = append(question.Parts, contracts.ContentPart{Text: s.looking})
+	}
+	if s.sub == nil {
+		question.Parts = append(question.Parts, contracts.ContentPart{Text: writeReminder()})
+	}
 	if s.layer != nil {
 		if note := toolset.Note(s.layer.earlier, s.layer.suggested); note != "" {
 			question.Parts = append(question.Parts, contracts.ContentPart{Text: note})

@@ -51,9 +51,9 @@ func connectionDocs() map[string]Doc {
 				"action on it is published. Only store a credential the person gave you for this.",
 			Returns: "the connection, the secret hidden.",
 			Next: []string{
-				"dimmi_ai_action_connections_tests_create: check dimmi can reach it",
-				"dimmi_ai_action_connections_tool_syncs_create: turn an MCP server's tools into draft actions",
-				"dimmi_ai_actions_create: draft an action on it",
+				"dimmi_test_ai_action_connection: check dimmi can reach it",
+				"dimmi_import_ai_action_connection_tools: turn an MCP server's tools into draft actions",
+				"dimmi_create_ai_action: draft an action on it",
 			},
 			Params: map[string]string{
 				"kind":      "http for an HTTP API, mcp for an MCP server. Fixed once created.",
@@ -97,13 +97,14 @@ func connectionCheckDocs() map[string]Doc {
 			Params:  map[string]string{"path": "Optional path under the base url to probe, such as /health."},
 		},
 		"ai.action-connections.tool-syncs.store": {
+			Name:  "import_ai_action_connection_tools",
 			Title: "Import MCP tools as actions",
 			Use: "Reads an MCP server connection's tools and creates a draft action for each one that has none. " +
 				"Drafts start as writes that ask the customer to confirm; nothing is live until published.",
 			Returns: "the draft actions created, how many tools already had one, and the tools skipped with why.",
 			Next: []string{
-				"dimmi_ai_actions_list: review the new drafts",
-				"dimmi_ai_actions_update: mark a tool that only reads as side_effect=read",
+				"dimmi_list_ai_actions: review the new drafts",
+				"dimmi_update_ai_action: mark a tool that only reads as side_effect=read",
 			},
 			Hint: "connection_not_mcp means this only works on an mcp connection.",
 		},
@@ -135,12 +136,12 @@ func actionDocs() map[string]Doc {
 			Title:   "List an action's versions",
 			Use:     "Lists the published versions of an action, newest first. Each is frozen once published.",
 			Returns: "every version with its number, definition, note and who published it.",
-			Next:    []string{"dimmi_ai_actions_update: restore a version with restore_version_id, then publish it"},
+			Next:    []string{"dimmi_update_ai_action: restore a version with restore_version_id, then publish it"},
 		},
 		"ai.actions.destroy": {
 			Title: "Delete an AI action",
 			Use: "Deletes an action so no agent can take it any more. Its past calls stay. To stop it for now, " +
-				"set status=disabled with dimmi_ai_actions_update instead.",
+				"set status=disabled with dimmi_update_ai_action instead.",
 		},
 		"ai.actions.publications.store": {
 			Title: "Publish an AI action",
@@ -179,7 +180,7 @@ func actionEditDocs() map[string]Doc {
 			Use: "Drafts an action on a connection: the request it sends, what the model fills in and who must " +
 				"agree. A draft never runs for customers until published.",
 			Returns: "the draft action with any warnings.",
-			Next:    []string{"dimmi_ai_actions_tests_create: try it before publishing"},
+			Next:    []string{"dimmi_test_ai_action: try it before publishing"},
 			Params:  fields,
 		},
 		"ai.actions.update": {

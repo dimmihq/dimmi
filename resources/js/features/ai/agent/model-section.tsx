@@ -101,8 +101,9 @@ export function ModelSelect({
       selectedKey={value}
       placeholder={placeholder}
       onSelectionChange={(id) => (id ? onPick(String(id)) : undefined)}
-      className="w-full sm:w-64"
-      popoverClassName="w-80"
+      className="w-full sm:w-72"
+      popoverClassName="w-88"
+      popoverPlacement="bottom end"
       renderValue={({ selectedText, isPlaceholder }) =>
         isPlaceholder || !value ? (
           placeholder

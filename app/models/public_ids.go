@@ -275,6 +275,8 @@ func assistantPublicIDs() []PublicIDEntry {
 		{PrefixOperatorMessage, "operator_messages"},
 		{PrefixOperatorChangeset, "operator_changesets"},
 		{PrefixOperatorMemory, "operator_memories"},
+		{PrefixOperatorRoutine, "operator_routines"},
+		{PrefixOperatorRoutineRun, "operator_routine_runs"},
 	}
 }
 
@@ -297,6 +299,8 @@ const (
 	PrefixOperatorMessage    Prefix = "opm"
 	PrefixOperatorChangeset  Prefix = "opc"
 	PrefixOperatorMemory     Prefix = "opy"
+	PrefixOperatorRoutine    Prefix = "ort"
+	PrefixOperatorRoutineRun Prefix = "orr"
 )
 
 /*
@@ -516,49 +520,6 @@ func engagePublicIDs() []PublicIDEntry {
 		{"svr", "survey_responses"},
 		{"erc", "engage_receipts"},
 		{"eas", "engage_assets"},
-	}
-}
-
-/*
-The prefixes of broadcasts, their topics and their recipients.
-*/
-const (
-	PrefixBroadcast          Prefix = "bcst"
-	PrefixBroadcastTopic     Prefix = "bctp"
-	PrefixBroadcastRecipient Prefix = "bcrc"
-)
-
-/*
-broadcastPublicIDs lists the prefixes of broadcasts, the topics people
-subscribe to and each broadcast's recipients.
-*/
-func broadcastPublicIDs() []PublicIDEntry {
-	return []PublicIDEntry{
-		{PrefixBroadcast, "broadcasts"},
-		{PrefixBroadcastTopic, "broadcast_topics"},
-		{PrefixBroadcastRecipient, "broadcast_recipients"},
-	}
-}
-
-/*
-The prefixes of series, their versions and the journeys people take
-through them.
-*/
-const (
-	PrefixSeries           Prefix = "srs"
-	PrefixSeriesVersion    Prefix = "srsv"
-	PrefixSeriesEnrollment Prefix = "sren"
-)
-
-/*
-seriesPublicIDs lists the prefixes of series, their published versions
-and their enrollments.
-*/
-func seriesPublicIDs() []PublicIDEntry {
-	return []PublicIDEntry{
-		{PrefixSeries, "series"},
-		{PrefixSeriesVersion, "series_versions"},
-		{PrefixSeriesEnrollment, "series_enrollments"},
 	}
 }
 

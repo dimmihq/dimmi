@@ -29,7 +29,7 @@ func ratingDocs() map[string]Doc {
 				"once it closes.",
 			Returns: "whether asking is on, the delay in minutes, whether agent-closed conversations ask, " +
 				"and the channels.",
-			Next: []string{"dimmi_conversation_rating_settings_update: change how ratings are asked"},
+			Next: []string{"dimmi_update_conversation_rating_settings: change how ratings are asked"},
 		},
 		"conversation-rating-settings.update": {
 			Title: "Update rating settings",

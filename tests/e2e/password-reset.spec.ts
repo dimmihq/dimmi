@@ -1,5 +1,5 @@
 import { verifyEmail } from "./support/database";
-import { createAccount, expect, inbox, test as it, signOut } from "./support/fixtures";
+import { createAccount, expect, home, test as it, signOut } from "./support/fixtures";
 import { mailedLink } from "./support/mail";
 
 it.describe("resetting a password", () => {
@@ -18,7 +18,7 @@ it.describe("resetting a password", () => {
     await page.goto(await mailedLink(person.email, "Reset"));
     await page.getByLabel("New password").fill("difference-engine-1822");
     await page.getByRole("button", { name: "Save password and sign in" }).click();
-    await expect(page).toHaveURL(inbox);
+    await expect(page).toHaveURL(home);
 
     await signOut(page, person);
     await page.getByLabel("Email").fill(person.email);

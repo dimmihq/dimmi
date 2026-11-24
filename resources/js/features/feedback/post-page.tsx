@@ -34,6 +34,7 @@ import { NoteComposer } from "@/features/inbox/composer";
 import { onRowHover } from "@/features/inbox/customer/quiet";
 import { Row, Section } from "@/features/inbox/customer/rows";
 import { MessageBody } from "@/features/inbox/message-body";
+import { useViewing } from "@/features/operator/viewing";
 import { useAccount } from "@/features/settings/use-account";
 import { avatarColor } from "@/features/shell/avatar-color";
 import { PageHeader, Panel, ScrollArea } from "@/features/shell/page";
@@ -357,6 +358,7 @@ function Details({
 
 export function PostPage({ id }: { id: string }) {
   const workspace = useAccount().workspace.id;
+  useViewing("feature_request", id);
   const navigate = useNavigate();
   const { post, settle } = usePost(workspace, id);
   const { data: centers = [] } = useQuery({ ...helpCentersQuery(workspace), enabled: workspace !== "" });

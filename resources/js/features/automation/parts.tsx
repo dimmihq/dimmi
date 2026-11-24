@@ -44,13 +44,14 @@ export function ListPage({
  * OpenRow is a list row that opens the item it names.
  */
 /*
- * Opened is where a list row leads: a workflow's builder or a
- * procedure's editor.
+ * Opened is where a list row leads: a workflow's builder, a
+ * procedure's editor, an agent's page or Operator's.
  */
 export type Opened =
   | { to: "/d/workflows/$workflow"; params: { workflow: string } }
   | { to: "/d/procedures/$procedure"; params: { procedure: string } }
-  | { to: "/d/agents/$agent"; params: { agent: string } };
+  | { to: "/d/agents/$agent"; params: { agent: string } }
+  | { to: "/d/operator" };
 
 export function OpenRow({
   target,

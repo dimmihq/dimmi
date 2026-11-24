@@ -26,7 +26,7 @@ func slaDocs() map[string]Doc {
 			Title:   "List SLA policies",
 			Use:     "Lists the service level policies, archived ones last, with their targets in seconds.",
 			Returns: "policies with first reply, next reply, follow-up and resolution targets and breach actions.",
-			Next:    []string{"dimmi_tickets_sla_clocks_list: see how a ticket is doing against its policy"},
+			Next:    []string{"dimmi_list_ticket_sla_clocks: see how a ticket is doing against its policy"},
 		},
 		"sla-policies.show": {Title: "Get an SLA policy", Use: "Reads one policy."},
 		"sla-policies.store": {
@@ -35,7 +35,7 @@ func slaDocs() map[string]Doc {
 				"hours; ticket_type_ids and priorities make new matching tickets follow it; breach_priority and " +
 				"breach_team_id escalate on a breach.",
 			Risk: new(RiskDanger),
-			Next: []string{"dimmi_workflows_create: apply the policy to conversations with an apply_sla step"},
+			Next: []string{"dimmi_create_workflow: apply the policy to conversations with an apply_sla step"},
 		},
 		"sla-policies.update": setting("Update an SLA policy",
 			"Changes a policy; a target of 0 removes it. Running clocks keep their due times."),

@@ -23,6 +23,7 @@ package operator
 import (
 	"context"
 	"errors"
+	"time"
 
 	"github.com/dimmihq/dimmi/framework/clock"
 	"github.com/dimmihq/dimmi/framework/database"
@@ -34,6 +35,7 @@ import (
 	"github.com/dimmihq/dimmi/app/actions/contacts"
 	"github.com/dimmihq/dimmi/app/actions/conversations"
 	"github.com/dimmihq/dimmi/app/actions/helpcenters"
+	"github.com/dimmihq/dimmi/app/actions/knowledge"
 	"github.com/dimmihq/dimmi/app/actions/messages"
 	"github.com/dimmihq/dimmi/app/actions/procedures"
 	"github.com/dimmihq/dimmi/app/ai/actionkit"
@@ -66,24 +68,49 @@ type Services struct {
 	Procedures *procedures.Procedures
 	Audit      *audit.RecordAuditLog
 	Actions    *actionkit.Kit
+	GitHub     GitHub
+	Memory     Memory
+}
+
+/*
+Memory is the workspace's memory of its conversations: what each was
+about and how the team answered, searched by keywords and by meaning.
+*/
+type Memory interface {
+	/*
+		SimilarConversations returns the conversations most like one, best
+		first, among those the teammate may see.
+	*/
+	SimilarConversations(ctx context.Context, m authz.Membership, conversation ids.UUID, limit int,
+	) ([]knowledge.SimilarConversation, error)
 }
 
 /*
 Engine runs Operator. Publisher streams each run to the teammate who
 asked; IDs reads and writes the public ids tools speak in;
 StorePayloads keeps request and response text on the run's steps.
+Finished queues the delivery of a routine's run that ended, in the
+transaction that recorded it. RetryWait is how long a routine's run
+waits before it tries a failed model call again: two seconds when
+zero, no wait when negative, a test's way to skip waiting.
 */
 type Engine struct {
-	DB            *database.DB
-	IDs           *ids.Registry
-	Clock         clock.Clock
-	LLM           *managers.LLMManager
-	Prices        *aiprices.Table
-	Publisher     appbroadcasting.Publisher
-	Timeouts      config.AITimeoutsConfig
-	Services      Services
+	DB        *database.DB
+	IDs       *ids.Registry
+	Clock     clock.Clock
+	LLM       *managers.LLMManager
+	Prices    *aiprices.Table
+	Publisher appbroadcasting.Publisher
+	Timeouts  config.AITimeoutsConfig
+	Services  Services
+	/* Addresses says where a help center's public pages start. */
+	Addresses helpcenters.Addresses
+	/* AppURL is the address of the app, which the links Operator gives start with. */
+	AppURL        string
 	StorePayloads bool
 	Catalog       Catalog
+	RetryWait     time.Duration
+	Finished      PushRun
 }
 
 /*
@@ -96,6 +123,7 @@ type Question struct {
 	ThreadID   ids.UUID
 	Text       string
 	Hidden     bool
+	Viewing    Viewing
 }
 
 /*
@@ -130,6 +158,8 @@ func (e *Engine) Ask(ctx context.Context, q Question) (Answer, error) {
 	if err != nil {
 		return Answer{}, err
 	}
+	s.viewing = q.Viewing
+	s.looking = e.lookAt(ctx, s)
 	text, status := e.converse(ctx, s)
 	answer, err := e.finish(context.WithoutCancel(ctx), s, text, status)
 	answer.Asked = asked
@@ -143,18 +173,32 @@ func (e *Engine) prepare() {
 	if e.Clock == nil {
 		e.Clock = clock.System()
 	}
+	if e.RetryWait == 0 {
+		e.RetryWait = 2 * time.Second
+	}
 }
 
 /*
-statusOf names how a run ended from the error that ended it.
+statusOf names how a run ended from the error that ended it. A
+teammate who presses Stop cancels the request; a model call cut short
+by that reports its own canceled error, which is a stop, not a failure.
 */
 func statusOf(err error) string {
 	switch {
 	case err == nil:
 		return "done"
-	case errors.Is(err, context.Canceled):
+	case errors.Is(err, context.Canceled) || canceled(err):
 		return "stopped"
 	default:
 		return "failed"
 	}
+}
+
+/*
+canceled reports whether a model call ended because its request was
+canceled.
+*/
+func canceled(err error) bool {
+	llmErr, ok := errors.AsType[*contracts.LLMError](err)
+	return ok && llmErr.Kind == contracts.LLMErrorCanceled
 }

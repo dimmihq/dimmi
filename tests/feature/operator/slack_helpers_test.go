@@ -77,6 +77,8 @@ func (f *fakeSlack) serve(w fhttp.ResponseWriter, r *fhttp.Request) {
 	case "users.conversations":
 		body = `{"ok": true, "channels": [{"id": "` + teamRoom + `", "name": "team"}],
 			"response_metadata": {"next_cursor": ""}}`
+	case "conversations.info":
+		body = `{"ok": true, "channel": {"id": "` + r.Form.Get("channel") + `", "name": "team"}}`
 	case "chat.postMessage":
 		body = `{"ok": true, "channel": "` + r.Form.Get("channel") + `", "ts": "` + placedTS + `"}`
 	}

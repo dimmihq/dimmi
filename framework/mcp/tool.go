@@ -42,6 +42,12 @@ pass the server's confirmation hook first. ReadOnly, Destructive,
 Idempotent and OpenWorld are hints shown to clients: whether the tool
 only reads, may destroy, repeats safely, and reaches beyond the server,
 such as sending a message to a customer.
+
+Arguments, when set, reads a call's arguments before they are checked
+against the schema, to accept other spellings of a name or refuse a
+call in words the agent can act on. Invalid, when set, explains
+arguments the schema refused. An error either returns that is a
+ToolError reaches the agent as a tool error.
 */
 type ToolDef struct {
 	Name        string
@@ -54,6 +60,8 @@ type ToolDef struct {
 	Destructive bool
 	Idempotent  bool
 	OpenWorld   bool
+	Arguments   func(args map[string]any) (map[string]any, error)
+	Invalid     func(err error) error
 }
 
 /*
@@ -203,24 +211,79 @@ func (s *Server) addTool(
 			return s.failure(ctx, auth.ErrMissingAbility.With("required_ability", ability))
 		}
 
-		call, err := prepare(req.Params.Arguments)
-		if err != nil {
-			return nil, invalidParams("invalid arguments: %v", err)
-		}
-
-		if def.Confirm {
-			if res, err := s.confirmation(ctx, req, def.Name, call.input); res != nil || err != nil {
-				return res, err
-			}
-		}
-
-		out, err := call.run(ctx)
-		if err != nil {
-			return s.failure(ctx, err)
-		}
-
-		return success(out)
+		return s.run(ctx, req, def, prepare)
 	})
+}
+
+/*
+run checks a call's arguments, asks for confirmation when the tool
+needs it, and runs the tool.
+*/
+func (s *Server) run(
+	ctx context.Context, req *sdk.CallToolRequest, def ToolDef, prepare func(json.RawMessage) (prepared, error),
+) (*sdk.CallToolResult, error) {
+	raw, err := arguments(def, req.Params.Arguments)
+	if err != nil {
+		return s.refused(ctx, err)
+	}
+
+	call, err := prepare(raw)
+	if err != nil {
+		if def.Invalid != nil {
+			err = def.Invalid(err)
+		}
+
+		return s.refused(ctx, err)
+	}
+
+	if def.Confirm {
+		if res, err := s.confirmation(ctx, req, def.Name, call.input); res != nil || err != nil {
+			return res, err
+		}
+	}
+
+	out, err := call.run(ctx)
+	if err != nil {
+		return s.failure(ctx, err)
+	}
+
+	return success(out)
+}
+
+/*
+arguments passes a call's raw arguments through the tool's own reading
+of them, when it has one.
+*/
+func arguments(def ToolDef, raw json.RawMessage) (json.RawMessage, error) {
+	if def.Arguments == nil {
+		return raw, nil
+	}
+
+	args := map[string]any{}
+	if len(raw) > 0 {
+		if err := json.Unmarshal(raw, &args); err != nil {
+			return nil, fmt.Errorf("decode arguments: %w", err)
+		}
+	}
+
+	args, err := def.Arguments(args)
+	if err != nil {
+		return nil, err
+	}
+
+	return json.Marshal(args)
+}
+
+/*
+refused answers a call whose arguments did not fit: a tool error when
+the tool explained it, else the protocol's invalid arguments error.
+*/
+func (s *Server) refused(ctx context.Context, err error) (*sdk.CallToolResult, error) {
+	if _, ok := errors.AsType[ToolError](err); ok {
+		return s.failure(ctx, err)
+	}
+
+	return nil, invalidParams("invalid arguments: %v", err)
 }
 
 /*

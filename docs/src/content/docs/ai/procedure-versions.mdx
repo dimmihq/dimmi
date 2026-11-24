@@ -41,6 +41,6 @@ Click **Operator** in the procedure editor header to work on a live playbook wit
 - **Review this procedure for gaps:** flags unclear steps, missing edge cases, and policy conflicts.
 - **Suggest test cases:** proposes saved [simulations](/ai/test-procedures/) covering your main branches and edge cases.
 
-To run failure audits automatically, turn on **Review procedures every week** under **Settings → Operator**. Every Monday, Operator reviews recent failing procedure runs and prepares reviewable changesets for your team. Operator never publishes a procedure on its own.
+To run failure audits on a schedule, add a [routine](/operator/routines/) from the **Weekly digest and procedure tune-up** template. Each run, Operator reviews recent failing procedure runs and prepares reviewable changesets for your team. Operator never publishes a procedure on its own.
 
 For programmatic access to versions, metrics, and the workspace procedures report, check the `ai:read` and `ai:write` endpoints in the [API reference](/api-reference/) or connect over [MCP](/developers/mcp/).

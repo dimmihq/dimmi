@@ -19,14 +19,14 @@ conversation.
 func conversationDocs() map[string]Doc {
 	return map[string]Doc{
 		"conversations.show": {
-			Title: "Get a conversation",
+			Name: "get_conversation_by_id_or_number", Title: "Get a conversation",
 			Use: "Reads one conversation by id (conv_...) or number (1042 for #1042): status, priority, subject, " +
 				"customer, channel, inbox, assignee, team, tags, AI agent state and the latest message. It " +
-				"does not hold the thread; read that with dimmi_conversations_messages_list.",
+				"does not hold the thread; read that with dimmi_list_conversation_messages.",
 			Returns: "the conversation.",
 			Next: []string{
-				"dimmi_conversations_messages_list: read the thread",
-				"dimmi_conversations_context_get: see who the customer is",
+				"dimmi_list_conversation_messages: read the thread",
+				"dimmi_get_conversation_context: see who the customer is",
 			},
 		},
 		"conversations.context.show": {
@@ -35,7 +35,7 @@ func conversationDocs() map[string]Doc {
 				"with custom attributes, their company, the ways they reach you, where this conversation " +
 				"started, their recent conversations and how many possible duplicates they have.",
 			Returns: "the contact, company, identities, source, past conversations and duplicates count.",
-			Next:    []string{"dimmi_contacts_get: read the contact in full"},
+			Next:    []string{"dimmi_get_contact_by_id: read the contact in full"},
 		},
 		"conversations.store": {
 			Title: "Start a conversation",
@@ -44,7 +44,7 @@ func conversationDocs() map[string]Doc {
 				"customer receives the message. As author contact you record what a customer wrote, on an " +
 				"inbox's API channel, and it waits for the team. Use only when asked.",
 			Returns: "the new conversation with its id and number.",
-			Next:    []string{"dimmi_conversations_messages_list: confirm the first message and its delivery"},
+			Next:    []string{"dimmi_list_conversation_messages: confirm the first message and its delivery"},
 			Risk:    new(RiskReach),
 			Params: map[string]string{
 				"body": "The first message in Markdown. As a teammate, the customer receives exactly this text.",
@@ -53,7 +53,7 @@ func conversationDocs() map[string]Doc {
 				"author": "member (default): you write first and the customer receives it. contact: you record " +
 					"what the customer wrote.",
 				"channel_connection_id": "The channel to send on (chn_..., an email address's " +
-					"channel_connection from dimmi_email_addresses_list). Required with author member.",
+					"channel_connection from dimmi_list_email_addresses). Required with author member.",
 				"inbox_id":    "With author contact: the inbox (inbox_...) whose API channel takes the message.",
 				"assignee_id": "mem_..., me, or null for nobody. A teammate's conversation is theirs by default.",
 				"created_at": "Import only (needs imports:manage): when the conversation really started, RFC 3339, " +
@@ -79,9 +79,9 @@ func conversationChangeDocs() map[string]Doc {
 			Use: "Changes several things in one step: status (close, reopen, snooze), assignee, team, " +
 				"priority, subject, inbox, tags, spam and your unread mark. Fields left out stay; if one fails " +
 				"nothing changes. Nothing here reaches the customer: to answer them use " +
-				"dimmi_conversations_replies_create.",
+				"dimmi_reply_to_conversation.",
 			Returns: "the conversation as it is now, and meta.changed with the fields that changed.",
-			Next:    []string{"dimmi_conversations_neighbors_list: move on to the next conversation in the queue"},
+			Next:    []string{"dimmi_list_conversation_neighbors: move on to the next conversation in the queue"},
 			Params: map[string]string{
 				"status": "open, snoozed or closed. A closed conversation cannot be snoozed: reopen it first.",
 				"snoozed_until": "With status=snoozed, exactly one of snoozed_until, snooze_preset or " +
@@ -89,10 +89,10 @@ func conversationChangeDocs() map[string]Doc {
 				"snooze_preset": "later_today (three hours on), tomorrow or next_week (at nine) or one_week " +
 					"(seven days on, at nine), in your time zone.",
 				"snooze_option": "The key of one of this conversation's snooze choices, from " +
-					"dimmi_snooze_options_list.",
+					"dimmi_list_snooze_options.",
 				"note":        "Only with status=closed: a note for the team, kept with the closing.",
-				"assignee_id": "A teammate (mem_..., from dimmi_members_list), me, or null to hand it to nobody.",
-				"team_id":     "A team (team_..., from dimmi_teams_list), or null for no team.",
+				"assignee_id": "A teammate (mem_..., from dimmi_list_members), me, or null to hand it to nobody.",
+				"team_id":     "A team (team_..., from dimmi_list_teams), or null for no team.",
 				"priority":    "none, low, medium, high or urgent.",
 				"inbox_id":    "Moves the conversation to this inbox (inbox_...).",
 				"unread":      "true marks it unread for you alone; false marks it read.",
@@ -112,6 +112,7 @@ and the reader's read state.
 func conversationStateDocs() map[string]Doc {
 	return map[string]Doc{
 		"conversations.tags.store": {
+			Name:    "tag_conversation",
 			Title:   "Tag a conversation",
 			Use:     "Adds tags to a conversation, by id or by name; a name no tag has yet becomes a new tag.",
 			Returns: "the conversation with its tags as they are now.",
@@ -121,6 +122,7 @@ func conversationStateDocs() map[string]Doc {
 			},
 		},
 		"conversations.tags.destroy": {
+			Name:    "untag_conversation",
 			Title:   "Remove a tag from a conversation",
 			Use:     "Takes one tag off a conversation. The tag itself stays in the workspace.",
 			Returns: "the conversation with its tags as they are now.",
@@ -154,7 +156,7 @@ func conversationTrashDocs() map[string]Doc {
 			Title:   "Move a conversation to the trash",
 			Use:     "Takes a conversation out of every list and count. Its messages stay, so it can be put back.",
 			Returns: "nothing.",
-			Next:    []string{"dimmi_conversations_restore_create: put it back"},
+			Next:    []string{"dimmi_restore_conversation: put it back"},
 			Risk:    new(RiskWrite),
 		},
 		"conversations.restore.store": {
@@ -167,7 +169,7 @@ func conversationTrashDocs() map[string]Doc {
 			Use:     "Lists the bounces, complaints and blocks that stop mail to a contact's address.",
 			Returns: "each suppression with its reason, the kind of mail it stops and when it lapses.",
 			Params:  map[string]string{"filter[contact]": "The contact (ctc_...) whose address to read."},
-			Next:    []string{"dimmi_email_suppressions_delete: let mail reach the address again"},
+			Next:    []string{"dimmi_delete_email_suppression: let mail reach the address again"},
 		},
 		"email-suppressions.destroy": {
 			Title:   "Lift an email suppression",

@@ -37,13 +37,13 @@ func workflowDocs() map[string]Doc {
 			Title:   "List a workflow's versions",
 			Use:     "Lists every published version of a workflow, newest first.",
 			Returns: "the versions with their number, note, who published them and their spec.",
-			Next:    []string{"dimmi_workflows_update: roll back with restore_version_id"},
+			Next:    []string{"dimmi_update_workflow: roll back with restore_version_id"},
 		},
 		"workflows.store": workflowCreateDoc(),
 		"workflows.destroy": {
 			Title: "Archive a workflow",
 			Use: "Archives a workflow: it stops matching at once and leaves the list. Its versions stay, and " +
-				"dimmi_workflows_unarchive_create brings it back.",
+				"dimmi_unarchive_workflow brings it back.",
 			Risk: new(RiskReach),
 			Hint: "workflow_in_use means a live workflow still calls it; change that one first.",
 		},
@@ -69,7 +69,7 @@ func workflowChangeDocs() map[string]Doc {
 			Returns: "the workflow as it now is.",
 			Risk:    new(RiskReach),
 			Params: map[string]string{
-				"spec": "The whole working copy, in the shape dimmi_workflows_get returns; its trigger must " +
+				"spec": "The whole working copy, in the shape dimmi_get_workflow_by_id returns; its trigger must " +
 					"match the workflow's.",
 				"lock_version":               "The lock_version you read; 0 skips the check and the last save wins.",
 				"status":                     "live or paused. Making it live needs a published version.",
@@ -102,7 +102,7 @@ func workflowChangeDocs() map[string]Doc {
 			Returns: "the workflows in their new order.",
 			Risk:    new(RiskReach),
 			Params:  map[string]string{"order": "Every workflow id (wf_...) that is not archived, exactly once."},
-			Hint:    "order_stale means the list changed: read it again with dimmi_workflows_list.",
+			Hint:    "order_stale means the list changed: read it again with dimmi_list_workflows.",
 		},
 	}
 }
@@ -117,8 +117,8 @@ func workflowCreateDoc() Doc {
 			"trigger never changes later. Nothing runs until it is published.",
 		Returns: "the draft workflow.",
 		Next: []string{
-			"dimmi_workflows_update: build its steps",
-			"dimmi_workflows_publications_create: make it live",
+			"dimmi_update_workflow: build its steps",
+			"dimmi_publish_workflow: make it live",
 		},
 		Params: map[string]string{
 			"trigger": "conversation.opener, conversation.first_message, conversation.customer_reopened, " +
@@ -126,7 +126,7 @@ func workflowCreateDoc() Doc {
 				"note.created, conversation.assignment_changed, conversation.status_changed, " +
 				"conversation.teammate_quiet, dimmi.handed_over, dimmi.resolved, sla.warning, sla.breached " +
 				"or reusable (called from other workflows).",
-			"spec": "A whole definition to start from, in the shape dimmi_workflows_get returns.",
+			"spec": "A whole definition to start from, in the shape dimmi_get_workflow_by_id returns.",
 		},
 	}
 }

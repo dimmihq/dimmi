@@ -14,6 +14,19 @@ package mcpserver
 import "maps"
 
 /*
+The words the report tools share for the filters they share.
+*/
+const (
+	reportInboxes    = "Inbox ids separated by commas, such as inbox_01jx2m8k4t. Find them with dimmi_list_inboxes."
+	reportTeams      = "Team ids separated by commas, such as team_01jx2m8k4t. Find them with dimmi_list_teams."
+	reportMembers    = "Ids of the teammates holding the conversations, separated by commas, such as mem_01jx2m8k4t."
+	reportChannels   = "Channel types separated by commas, such as email,widget."
+	reportTags       = "Tag ids separated by commas, such as tag_01jx2m8k4t. Find them with dimmi_list_tags."
+	reportPriorities = "Priorities separated by commas, such as high,urgent."
+	reportAI         = "involved or not_involved: conversations the AI answered in, or not."
+)
+
+/*
 reportDocs returns the entries for the reports.
 */
 func reportDocs() map[string]Doc {
@@ -24,21 +37,29 @@ func reportDocs() map[string]Doc {
 				"workload, satisfaction, AI, help center and any others the workspace has.",
 			Returns: "each report's key, title and one line about it, and whether it shows the present " +
 				"instead of a range.",
-			Next: []string{"dimmi_reports_get: read one report"},
+			Next: []string{"dimmi_get_report_by_name: read one report"},
 			Risk: new(RiskRead),
 		},
 		"reports.conversations.index": {
+			Name:  "list_conversations_behind_report_number",
 			Title: "List the conversations behind a number",
 			Use: "Lists the conversations one of a report's numbers counts, with the same range and filters, each " +
 				"with the value it added. Stops at ten thousand.",
 			Returns: "the conversations with number, subject, status, channel, start, close, assignee and value, " +
 				"slowest or newest first, and how many there are.",
-			Next: []string{"dimmi_conversations_get: open one conversation"},
+			Next: []string{"dimmi_get_conversation_by_id_or_number: open one conversation"},
 			Risk: new(RiskRead),
 			Params: map[string]string{
-				"metric": "the drill key the number names, such as first_response, resolution, csat or open.",
-				"limit":  "how many to return, at most 100.",
-				"offset": "how many to skip, for the next page.",
+				"metric":           "the drill key the number names, such as first_response, resolution, csat or open.",
+				"filter[inbox]":    reportInboxes,
+				"filter[team]":     reportTeams,
+				"filter[member]":   reportMembers,
+				"filter[channel]":  reportChannels,
+				"filter[tag]":      reportTags,
+				"filter[priority]": reportPriorities,
+				"filter[ai]":       reportAI,
+				"limit":            "how many to return, at most 100.",
+				"offset":           "how many to skip, for the next page.",
 			},
 		},
 	}
@@ -53,13 +74,14 @@ reportShowDoc returns the entry for reading one report.
 */
 func reportShowDoc() Doc {
 	return Doc{
+		Name:  "get_report_by_name",
 		Title: "Read a report",
 		Use: "Reads one report for a range of days in the workspace's time zone, counting only conversations the " +
 			"caller may see. Durations are medians in seconds with the 90th percentile and mean beside them. " +
 			"Spam, test, deleted and merged-away conversations never count.",
 		Returns: "the headline numbers, each with its unit, value, value in the period before when compare is " +
 			"set, sample size and the metric that lists its conversations; and the charts as series or tables.",
-		Next: []string{"dimmi_reports_conversations_list: list the conversations behind a number"},
+		Next: []string{"dimmi_list_conversations_behind_report_number: list the conversations behind a number"},
 		Risk: new(RiskRead),
 		Params: map[string]string{
 			"report": "the report's key, such as overview, responsiveness, resolution, team, live, satisfaction, " +
@@ -68,13 +90,13 @@ func reportShowDoc() Doc {
 			"to":               "the last day, included.",
 			"compare":          "true sets each number beside the same number of days just before.",
 			"business_hours":   "true counts durations only while the inbox's office hours were open.",
-			"filter[inbox]":    "a comma list of inbox ids.",
-			"filter[team]":     "a comma list of team ids.",
-			"filter[member]":   "a comma list of teammate ids holding the conversation.",
-			"filter[channel]":  "a comma list of channel types, such as email,widget.",
-			"filter[tag]":      "a comma list of tag ids.",
-			"filter[priority]": "a comma list of priorities.",
-			"filter[ai]":       "involved or not_involved: conversations the AI answered in, or not.",
+			"filter[inbox]":    reportInboxes,
+			"filter[team]":     reportTeams,
+			"filter[member]":   reportMembers,
+			"filter[channel]":  reportChannels,
+			"filter[tag]":      reportTags,
+			"filter[priority]": reportPriorities,
+			"filter[ai]":       reportAI,
 		},
 	}
 }

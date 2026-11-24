@@ -12,9 +12,6 @@
 | conversation, as one changeset the team reviews. It never edits a
 | procedure on its own.
 |
-| Once a week, when the workspace turns it on, Operator reviews every
-| live procedure by itself and leaves its proposals for the team.
-|
 */
 
 package operator
@@ -28,7 +25,6 @@ import (
 	"strings"
 
 	"github.com/dimmihq/dimmi/framework/database"
-	"github.com/dimmihq/dimmi/framework/ids"
 
 	"github.com/dimmihq/dimmi/app/contracts"
 	"github.com/dimmihq/dimmi/app/enums"
@@ -59,8 +55,9 @@ func (e *Engine) procedureTools() []tool {
 				"conversation went to the team, the customer rated it 1 or 2, or reopened it. Newest first.",
 			Schema: schema(`{"type":"object","required":["procedure_id"],"properties":{` +
 				`"procedure_id":{"type":"string","description":"Procedure id, such as prc_..."},` +
-				`"days":{"type":"integer","minimum":1,"maximum":90,"description":"How far back; 14 by default."}}}`),
-		}, handle: e.listProcedureAnomalies},
+				`"days_back":{"type":"integer","minimum":1,"maximum":90,"description":"How many days back to ` +
+				`look; 14 by default."}}}`),
+		}, handle: e.listProcedureAnomalies, was: map[string]string{"days": "days_back", "procedure": "procedure_id"}},
 		{spec: contracts.ToolSpec{
 			Name: "read_procedure_trace",
 			Description: "Read what one run did with its procedure, step by step: the branches code decided, " +
@@ -77,7 +74,7 @@ listProcedureAnomalies lists a procedure's runs that went wrong.
 func (e *Engine) listProcedureAnomalies(ctx context.Context, s *session, args json.RawMessage) (result, error) {
 	var in struct {
 		Procedure string `json:"procedure_id"`
-		Days      int    `json:"days"`
+		Days      int    `json:"days_back"`
 	}
 	if err := decode(args, &in); err != nil {
 		return result{}, err
@@ -182,63 +179,4 @@ func orNull(raw json.RawMessage) json.RawMessage {
 		return json.RawMessage("null")
 	}
 	return raw
-}
-
-/*
-ReviewProcedures has Operator review the workspace's live procedures by
-itself, as the first owner, when the workspace turned weekly reviews
-on. Its proposals wait for the team.
-*/
-func (e *Engine) ReviewProcedures(ctx context.Context, workspaceID ids.UUID) error {
-	e.prepare()
-	s, err := e.openReview(ctx, workspaceID)
-	if errors.Is(err, errSkip) {
-		return nil
-	}
-	if err != nil {
-		return err
-	}
-	if s.llm, err = e.LLM.ForKey(ctx, s.key); err != nil {
-		return fmt.Errorf("open operator model: %w", err)
-	}
-	_, status := e.converse(ctx, s)
-	return e.DB.Transaction(context.WithoutCancel(ctx), func(ctx context.Context, tx *database.Tx) error {
-		if err := e.finishRun(ctx, models.New(tx), s, status); err != nil {
-			return err
-		}
-		return addSpend(ctx, tx, e, s)
-	})
-}
-
-/*
-openReview loads what a review run needs, as the workspace's first
-owner, and opens its run; a workspace that did not ask for reviews, or
-has no live procedure, is skipped.
-*/
-func (e *Engine) openReview(ctx context.Context, workspaceID ids.UUID) (*session, error) {
-	s := &session{background: true, question: ProcedureQAQuestion()}
-	err := e.DB.Transaction(ctx, func(ctx context.Context, tx *database.Tx) error {
-		q := models.New(tx)
-		settings, err := LoadSettings(ctx, q, workspaceID)
-		if err != nil {
-			return err
-		}
-		if !settings.Enabled || !settings.ProcedureQA {
-			return errSkip
-		}
-		s.settings = settings
-		if s.m, err = ownerMembership(ctx, q, workspaceID); err != nil {
-			return err
-		}
-		live, err := q.ListLiveProcedures(ctx, workspaceID)
-		if err != nil || len(live) == 0 {
-			return errors.Join(errSkip, err)
-		}
-		if err := e.loadModel(ctx, q, s); err != nil {
-			return errors.Join(errSkip, err)
-		}
-		s.run, err = e.startRun(ctx, q, s)
-		return err
-	})
-	return s, err
 }

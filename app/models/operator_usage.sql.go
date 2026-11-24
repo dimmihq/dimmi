@@ -17,17 +17,21 @@ const listRecentOperatorRuns = `-- name: ListRecentOperatorRuns :many
 SELECT r.id, r.status, r.cost_micros, r.latency_ms, r.created_at, c.id AS conversation_id,
     COALESCE(r.config_snapshot->>'purpose', 'ask')::text AS purpose,
     COALESCE(u.name, '')::text AS member_name,
-    COALESCE(t.title, '')::text AS thread_title,
+    (COALESCE(tt.title, '') || CASE WHEN r.config_snapshot ? 'subagent' AND tt.id IS NOT NULL
+        THEN ' · subagent ' || (r.config_snapshot->>'subagent') ELSE '' END)::text AS thread_title,
+    tt.id AS thread_id,
+    tt.routine_id AS routine_id,
     c.number AS conversation_number
 FROM ai_runs r
 LEFT JOIN workspace_members m ON m.id = r.actor_id AND m.workspace_id = r.workspace_id AND r.actor_type = 'member'
 LEFT JOIN users u ON u.id = m.user_id
 LEFT JOIN LATERAL (
-    SELECT th.title FROM operator_messages om
-    JOIN operator_threads th ON th.id = om.thread_id AND th.workspace_id = om.workspace_id
+    SELECT om.thread_id AS id FROM operator_messages om
     WHERE om.workspace_id = r.workspace_id AND om.run_id = r.id
     LIMIT 1
 ) t ON true
+LEFT JOIN operator_threads tt ON tt.workspace_id = r.workspace_id
+    AND tt.id = COALESCE(t.id, NULLIF(r.config_snapshot->>'thread', '')::uuid)
 LEFT JOIN conversations c ON c.id = r.conversation_id AND c.workspace_id = r.workspace_id
     AND c.deleted_at IS NULL AND dimmi_conversation_visible(
         c.assignee_member_id, c.assignee_team_id, c.inbox_id, $1::text,
@@ -61,13 +65,17 @@ type ListRecentOperatorRunsRow struct {
 	Purpose            string    `json:"purpose"`
 	MemberName         string    `json:"member_name"`
 	ThreadTitle        string    `json:"thread_title"`
+	ThreadID           *ids.UUID `json:"thread_id"`
+	RoutineID          *ids.UUID `json:"routine_id"`
 	ConversationNumber *int64    `json:"conversation_number"`
 }
 
 // ListRecentOperatorRuns returns Operator's latest runs in a range,
 // newest first, with why each ran, who it ran for, the thread it
-// answered on and the conversation it was about. A run about a
-// conversation the viewer may not see still counts, but names none.
+// answered on, the routine that thread belongs to, and the conversation it was about. A run about a
+// conversation the viewer may not see still counts, but names none. A
+// subagent's run answers on no thread: it is found by the thread the
+// run row names, and its title says which subagent it was.
 func (q *Queries) ListRecentOperatorRuns(ctx context.Context, arg ListRecentOperatorRunsParams) ([]ListRecentOperatorRunsRow, error) {
 	rows, err := q.db.Query(ctx, listRecentOperatorRuns,
 		arg.AccessMode,
@@ -97,6 +105,8 @@ func (q *Queries) ListRecentOperatorRuns(ctx context.Context, arg ListRecentOper
 			&i.Purpose,
 			&i.MemberName,
 			&i.ThreadTitle,
+			&i.ThreadID,
+			&i.RoutineID,
 			&i.ConversationNumber,
 		); err != nil {
 			return nil, err

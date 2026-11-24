@@ -81,21 +81,41 @@ func (s *Set) compactText(text string) string {
 }
 
 /*
-shortenIDs replaces every public id with its alias.
+shortenIDs replaces every public id with its alias. An id inside an
+address, right after a slash, is left whole: an alias there would make
+a link that opens nothing.
 */
 func (s *Set) shortenIDs(text string) string {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	return publicID.ReplaceAllStringFunc(text, func(id string) string {
-		if a, ok := s.alias.byID[id]; ok {
-			return a
+	var b strings.Builder
+	last := 0
+	for _, at := range publicID.FindAllStringIndex(text, -1) {
+		b.WriteString(text[last:at[0]])
+		last = at[1]
+		id := text[at[0]:at[1]]
+		if at[0] > 0 && text[at[0]-1] == '/' {
+			b.WriteString(id)
+			continue
 		}
-		letter := id[0]
-		s.alias.count[letter]++
-		a := string(letter) + strconv.Itoa(s.alias.count[letter])
-		s.alias.byID[id], s.alias.byAlias[a] = a, id
+		b.WriteString(s.aliasOf(id))
+	}
+	b.WriteString(text[last:])
+	return b.String()
+}
+
+/*
+aliasOf is the alias of an id, handed out the first time it is seen.
+*/
+func (s *Set) aliasOf(id string) string {
+	if a, ok := s.alias.byID[id]; ok {
 		return a
-	})
+	}
+	letter := id[0]
+	s.alias.count[letter]++
+	a := string(letter) + strconv.Itoa(s.alias.count[letter])
+	s.alias.byID[id], s.alias.byAlias[a] = a, id
+	return a
 }
 
 /*

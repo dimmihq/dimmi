@@ -135,6 +135,7 @@ export function OperatorSidePanel({
   onNew,
   onClose,
   className,
+  instructions,
 }: {
   thread: OperatorThreadView | undefined;
   chat: ReturnType<typeof useOperatorChat>;
@@ -151,9 +152,12 @@ export function OperatorSidePanel({
   inputId: string;
   scope: ChatProps["scope"];
   onPick: (thread: string) => void;
-  onNew: () => void;
+  /* Left out where a thread is not started by hand, such as a routine's run. */
+  onNew?: () => void;
   onClose: () => void;
   className?: string;
+  /* Names the routine whose prompt opens the thread, folded into a card. */
+  instructions?: string;
 }) {
   return (
     <Panel label="Operator" className={className}>
@@ -167,13 +171,15 @@ export function OperatorSidePanel({
         </span>
         <span className="flex shrink-0 items-center gap-0.5">
           <History threads={past} current={thread?.id} onPick={onPick} />
-          <IconButton
-            size="small"
-            icon={RiChatNewLine}
-            aria-label="New chat"
-            disabled={chat.busy || starting || thread?.messages.length === 0}
-            onClick={onNew}
-          />
+          {onNew ? (
+            <IconButton
+              size="small"
+              icon={RiChatNewLine}
+              aria-label="New chat"
+              disabled={chat.busy || starting || thread?.messages.length === 0}
+              onClick={onNew}
+            />
+          ) : null}
           <IconButton size="small" icon={RiCloseLine} aria-label="Close Operator" onClick={onClose} />
         </span>
       </header>
@@ -186,6 +192,7 @@ export function OperatorSidePanel({
           placeholder={placeholder}
           inputId={inputId}
           scope={scope}
+          instructions={instructions}
         />
       ) : (
         <p className="px-4 pt-2 text-body-2-regular text-text-secondary">

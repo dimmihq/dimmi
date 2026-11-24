@@ -74,7 +74,8 @@ func TestOperatorChangesets(t *testing.T) {
 		k.d.Owner.PatchJSON("/api/v1/operator/settings", testkit.JSON{
 			"policies": testkit.JSON{"conversations": "auto"},
 		}).AssertOK()
-		k.llm.Script(tools(call("get_conversation", map[string]any{})), tools(call("propose_changes", triage)),
+		read := tools(call("get_conversation_by_number", map[string]any{}))
+		k.llm.Script(read, tools(call("propose_changes", triage)),
 			reply("Proposed."))
 
 		res := k.ask(thread, "File this").AssertOK()
@@ -90,13 +91,13 @@ func TestOperatorChangesets(t *testing.T) {
 		k.d.Owner.PatchJSON("/api/v1/operator/settings", testkit.JSON{
 			"policies": testkit.JSON{"conversations": "auto"},
 		}).AssertOK()
-		k.llm.Script(tools(call("list_tags", map[string]any{}), call("get_conversation", map[string]any{}),
+		k.llm.Script(tools(call("list_tags", map[string]any{}), call("get_conversation_by_number", map[string]any{}),
 			call("propose_changes", triage), call("list_teammates", map[string]any{})), reply("Proposed."))
 
 		res := k.ask(thread, "File this").AssertOK()
 
 		assert.Equal(t, "pending", res.String("data.changesets.0.status"))
-		for i, tool := range []string{"list_tags", "get_conversation", "propose_changes", "list_teammates"} {
+		for i, tool := range []string{"list_tags", "get_conversation_by_number", "propose_changes", "list_teammates"} {
 			assert.Equal(t, tool, res.String("data.message.steps."+itoa(i)+".tool"))
 		}
 		results := k.llm.Sent()[1].Messages
@@ -150,7 +151,8 @@ func TestOperatorChangesets(t *testing.T) {
 		t.Parallel()
 		k := newDesk(t)
 		k.d.Owner.PatchJSON("/api/v1/operator/settings", testkit.JSON{"triage_on_arrival": true}).AssertOK()
-		k.llm.Script(tools(call("get_conversation", map[string]any{})), tools(call("propose_changes", triage)),
+		read := tools(call("get_conversation_by_number", map[string]any{}))
+		k.llm.Script(read, tools(call("propose_changes", triage)),
 			reply("Triaged."))
 
 		conv := k.conversation("Charged twice.")

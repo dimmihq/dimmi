@@ -2256,6 +2256,11 @@ type OperatorChangeset struct {
 	RevertedAt        *time.Time      `json:"reverted_at"`
 	CreatedAt         time.Time       `json:"created_at"`
 	UpdatedAt         time.Time       `json:"updated_at"`
+	RoutineID         *ids.UUID       `json:"routine_id"`
+	RoutineRunID      *ids.UUID       `json:"routine_run_id"`
+	DedupKey          *string         `json:"dedup_key"`
+	Preview           bool            `json:"preview"`
+	ExpiresAt         *time.Time      `json:"expires_at"`
 }
 
 type OperatorMemory struct {
@@ -2278,20 +2283,84 @@ type OperatorMessage struct {
 	CreatedAt   time.Time       `json:"created_at"`
 }
 
+type OperatorRoutine struct {
+	ID                     ids.UUID        `json:"id"`
+	WorkspaceID            ids.UUID        `json:"workspace_id"`
+	Name                   string          `json:"name"`
+	Description            string          `json:"description"`
+	TemplateKey            *string         `json:"template_key"`
+	Prompt                 string          `json:"prompt"`
+	Cadence                string          `json:"cadence"`
+	CronExpr               *string         `json:"cron_expr"`
+	RunAt                  *time.Time      `json:"run_at"`
+	Timezone               string          `json:"timezone"`
+	NextRunAt              *time.Time      `json:"next_run_at"`
+	CreatedByMemberID      *ids.UUID       `json:"created_by_member_id"`
+	OwnerMemberID          *ids.UUID       `json:"owner_member_id"`
+	Permissions            []string        `json:"permissions"`
+	ToolGroups             []string        `json:"tool_groups"`
+	InboxIds               []ids.UUID      `json:"inbox_ids"`
+	WritePolicies          json.RawMessage `json:"write_policies"`
+	Scope                  json.RawMessage `json:"scope"`
+	Model                  *string         `json:"model"`
+	Effort                 *string         `json:"effort"`
+	MaxModelCalls          int32           `json:"max_model_calls"`
+	MaxToolCalls           int32           `json:"max_tool_calls"`
+	MonthlyBudgetMicros    *int64          `json:"monthly_budget_micros"`
+	NotifyPolicy           string          `json:"notify_policy"`
+	Delivery               json.RawMessage `json:"delivery"`
+	State                  json.RawMessage `json:"state"`
+	Status                 string          `json:"status"`
+	PauseReason            *string         `json:"pause_reason"`
+	ConsecutiveFailures    int32           `json:"consecutive_failures"`
+	MaxConsecutiveFailures int32           `json:"max_consecutive_failures"`
+	LastRunAt              *time.Time      `json:"last_run_at"`
+	LastSuccessAt          *time.Time      `json:"last_success_at"`
+	LastOutcome            *string         `json:"last_outcome"`
+	DeletedAt              *time.Time      `json:"deleted_at"`
+	CreatedAt              time.Time       `json:"created_at"`
+	UpdatedAt              time.Time       `json:"updated_at"`
+}
+
+type OperatorRoutineRun struct {
+	ID                  ids.UUID        `json:"id"`
+	WorkspaceID         ids.UUID        `json:"workspace_id"`
+	RoutineID           ids.UUID        `json:"routine_id"`
+	Trigger             string          `json:"trigger"`
+	TriggeredByMemberID *ids.UUID       `json:"triggered_by_member_id"`
+	ScheduledFor        *time.Time      `json:"scheduled_for"`
+	ThreadID            *ids.UUID       `json:"thread_id"`
+	AiRunID             *ids.UUID       `json:"ai_run_id"`
+	Status              string          `json:"status"`
+	Outcome             *string         `json:"outcome"`
+	NoopReason          *string         `json:"noop_reason"`
+	SkipReason          *string         `json:"skip_reason"`
+	ErrorCode           *string         `json:"error_code"`
+	ErrorMessage        *string         `json:"error_message"`
+	ChangesetsCount     int32           `json:"changesets_count"`
+	CostMicros          int64           `json:"cost_micros"`
+	Notified            bool            `json:"notified"`
+	DeliveryResults     json.RawMessage `json:"delivery_results"`
+	StartedAt           *time.Time      `json:"started_at"`
+	CompletedAt         *time.Time      `json:"completed_at"`
+	CreatedAt           time.Time       `json:"created_at"`
+	UpdatedAt           time.Time       `json:"updated_at"`
+	Steps               json.RawMessage `json:"steps"`
+}
+
 type OperatorSetting struct {
-	WorkspaceID       ids.UUID        `json:"workspace_id"`
-	Enabled           bool            `json:"enabled"`
-	BriefOnOpen       bool            `json:"brief_on_open"`
-	TriageOnArrival   bool            `json:"triage_on_arrival"`
-	Instructions      string          `json:"instructions"`
-	Policies          json.RawMessage `json:"policies"`
-	Model             *string         `json:"model"`
-	CreatedAt         time.Time       `json:"created_at"`
-	UpdatedAt         time.Time       `json:"updated_at"`
-	ToolLayer         bool            `json:"tool_layer"`
-	CompactResults    bool            `json:"compact_results"`
-	Effort            string          `json:"effort"`
-	ProcedureQaWeekly bool            `json:"procedure_qa_weekly"`
+	WorkspaceID     ids.UUID        `json:"workspace_id"`
+	Enabled         bool            `json:"enabled"`
+	BriefOnOpen     bool            `json:"brief_on_open"`
+	TriageOnArrival bool            `json:"triage_on_arrival"`
+	Instructions    string          `json:"instructions"`
+	Policies        json.RawMessage `json:"policies"`
+	Model           *string         `json:"model"`
+	CreatedAt       time.Time       `json:"created_at"`
+	UpdatedAt       time.Time       `json:"updated_at"`
+	ToolLayer       bool            `json:"tool_layer"`
+	CompactResults  bool            `json:"compact_results"`
+	Effort          string          `json:"effort"`
 }
 
 type OperatorSlackThread struct {
@@ -2307,12 +2376,14 @@ type OperatorSlackThread struct {
 type OperatorThread struct {
 	ID             ids.UUID   `json:"id"`
 	WorkspaceID    ids.UUID   `json:"workspace_id"`
-	MemberID       ids.UUID   `json:"member_id"`
+	MemberID       *ids.UUID  `json:"member_id"`
 	ConversationID *ids.UUID  `json:"conversation_id"`
 	Title          string     `json:"title"`
 	LastMessageAt  *time.Time `json:"last_message_at"`
 	CreatedAt      time.Time  `json:"created_at"`
 	UpdatedAt      time.Time  `json:"updated_at"`
+	RoutineID      *ids.UUID  `json:"routine_id"`
+	RoutineRunID   *ids.UUID  `json:"routine_run_id"`
 }
 
 type Organization struct {

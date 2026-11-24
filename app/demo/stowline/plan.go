@@ -113,7 +113,7 @@ func NewPlan(size Size, seed uint64, now time.Time) Plan {
 	plan := Plan{Size: size, Now: p.now, Team: Teammates(size.Teammates)}
 	plan.Companies = p.companies(size.Companies)
 	plan.Contacts = p.contacts(size.Contacts, plan.Companies)
-	plan.Conversations = p.conversations(size.Conversations, plan)
+	plan.Conversations = append(p.conversations(size.Conversations, plan), p.operatorCases(plan)...)
 	return plan
 }
 

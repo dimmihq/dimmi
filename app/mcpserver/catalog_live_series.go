@@ -29,7 +29,7 @@ func seriesLiveDocs() map[string]Doc {
 				"moves": "For each removed step people stand on, by step id, the step id they move to. By " +
 					"default they go to the first later step that still exists, or leave.",
 			},
-			Hint: "series_invalid means it misses something: list it with dimmi_series_check_create.",
+			Hint: "series_invalid means it misses something: list it with dimmi_check_series.",
 		},
 		"series.pause.store": {
 			Title:   "Pause a series",
@@ -51,12 +51,13 @@ func seriesLiveDocs() map[string]Doc {
 			Risk:    new(RiskDanger),
 		},
 		"series.nodes.winner.store": {
+			Name:    "pick_series_split_winner",
 			Title:   "Pick a split's winner",
 			Use:     "Sends everyone who reaches a split step from now on down one variant.",
 			Returns: "the series as it now is.",
 			Risk:    new(RiskReach),
 			Params: map[string]string{
-				"node": "Id of the split step, from the spec dimmi_series_get returns.",
+				"node": "Id of the split step, from the spec dimmi_get_series_by_id returns.",
 				"path": "The variant's path name, from the split's edges.",
 			},
 		},
@@ -128,7 +129,7 @@ func journeyDocs() map[string]Doc {
 			Use: "Enrolls the contact with the person's own email in the series as a test journey: it may run " +
 				"again and again, counts in no report and its waits can be skipped.",
 			Returns: "the test journey step by step.",
-			Next:    []string{"dimmi_series_enrollments_skip_create: skip a wait"},
+			Next:    []string{"dimmi_skip_series_enrollment: skip a wait"},
 			Hint:    "series_test_contact_missing means no contact has the person's email yet; add one first.",
 		},
 		"contacts.series.index": {

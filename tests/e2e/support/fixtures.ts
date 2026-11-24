@@ -79,10 +79,26 @@ export const test = base.extend<{ person: Person; watch: undefined; guest: Page 
 export { expect };
 
 /*
- * inbox matches the address the app opens on: the workspace's
+ * inbox matches the inbox's own address: the workspace's
  * unassigned conversations.
  */
 export const inbox = /\/d\/[^/]+\/inbox\/unassigned$/;
+
+/*
+ * home matches the address the app opens on after signing in: the
+ * workspace's Home.
+ */
+export const home = /\/d\/[^/]+\/home$/;
+
+/*
+ * openInbox checks the app opened on Home, then opens the inbox, where
+ * most tests start.
+ */
+export async function openInbox(page: Page) {
+  await expect(page).toHaveURL(home);
+  await page.goto("/d/inbox");
+  await expect(page).toHaveURL(inbox);
+}
 
 /*
  * createAccount signs the person up through the API, as a quick way to
@@ -135,7 +151,7 @@ async function finishSetupRemotely(request: APIRequestContext, person: Person) {
 
 /*
  * finishOnboarding names the first workspace of a person who just signed
- * up and skips every other setup step, which lands them in the inbox.
+ * up and skips every other setup step, then opens the inbox.
  */
 export async function finishOnboarding(page: Page, workspace: string) {
   await expect(page).toHaveURL(/\/onboarding(\?new=true)?$/);
@@ -152,18 +168,18 @@ export async function finishOnboarding(page: Page, workspace: string) {
     await page.getByRole("button", { name: skip, exact: true }).click();
   }
   await page.getByRole("button", { name: "Go to your workspace" }).click();
-  await expect(page).toHaveURL(inbox);
+  await openInbox(page);
 }
 
 /*
- * signIn signs the person in through the sign-in page.
+ * signIn signs the person in through the sign-in page and opens the inbox.
  */
 export async function signIn(page: Page, person: Person) {
   await page.goto("/login");
   await page.getByLabel("Email").fill(person.email);
   await page.getByLabel("Password").fill(person.password);
   await page.getByRole("button", { name: "Sign in", exact: true }).click();
-  await expect(page).toHaveURL(inbox);
+  await openInbox(page);
 }
 
 /*

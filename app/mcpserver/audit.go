@@ -5,7 +5,7 @@
 |
 | The tools follow the API by construction, but the catalog is written by
 | hand, so it is checked: every operation an agent can call has an entry,
-| every entry belongs to an operation that exists, every entry is
+| every entry belongs to an operation of the API, every entry is
 | complete, and every tool a text names is a real tool. The test suite
 | runs the audit, so the MCP server cannot fall behind the API.
 |
@@ -15,6 +15,7 @@ package mcpserver
 
 import (
 	"fmt"
+	"maps"
 	"regexp"
 	"slices"
 	"strings"
@@ -27,9 +28,14 @@ import (
 Report is what the audit found. Undocumented lists callable operations
 without an entry, Stale entries without an operation, Incomplete
 entries missing a title or a use, and Unknown references to tools that
-do not exist, as "where: name". Tools lists every tool name.
+do not exist, as "where: name". Duplicate lists names two operations
+would share, and Unwritten arguments nobody explained, left with only
+what their name and type say, as "tool: argument". Tools lists every
+tool name.
 */
 type Report struct {
+	Duplicate    []string
+	Unwritten    []string
 	Undocumented []string
 	Stale        []string
 	Incomplete   []string
@@ -41,7 +47,7 @@ type Report struct {
 Clean reports whether the audit found nothing wrong.
 */
 func (r Report) Clean() bool {
-	return len(r.Undocumented)+len(r.Stale)+len(r.Incomplete)+len(r.Unknown) == 0
+	return len(r.Undocumented)+len(r.Stale)+len(r.Incomplete)+len(r.Unknown)+len(r.Duplicate)+len(r.Unwritten) == 0
 }
 
 /*
@@ -65,41 +71,119 @@ func Audit(router *routing.Router) (Report, error) {
 
 	docs := catalog()
 	known := map[string]bool{toolPrefix + "guide": true}
+	live := map[string]bool{}
 
 	var r Report
 
 	for _, op := range ops {
-		known[toolName(op.ID)] = true
-		entry, ok := docs[op.ID]
+		check(&r, op, docs, known)
+	}
 
-		if !ok {
-			r.Undocumented = append(r.Undocumented, op.ID)
+	r.Tools = slices.Collect(maps.Keys(known))
 
-			continue
-		}
+	every, err := mcp.Operations(doc, nil)
+	if err != nil {
+		return Report{}, fmt.Errorf("read api operations: %w", err)
+	}
 
-		if strings.TrimSpace(entry.Title) == "" || strings.TrimSpace(entry.Use) == "" {
-			r.Incomplete = append(r.Incomplete, op.ID)
-		}
+	for _, op := range every {
+		live[op.ID] = true
+		known[toolName(op, docs[op.ID])] = true
 	}
 
 	for id := range docs {
-		if !known[toolName(id)] {
+		if !live[id] {
 			r.Stale = append(r.Stale, id)
 		}
 	}
 
 	r.Unknown = unknownReferences(docs, known)
-
-	for name := range known {
-		r.Tools = append(r.Tools, name)
-	}
-
-	for _, list := range [][]string{r.Undocumented, r.Stale, r.Incomplete, r.Unknown, r.Tools} {
-		slices.Sort(list)
-	}
+	r.sort()
 
 	return r, nil
+}
+
+/*
+check audits one operation: its entry, its name and its arguments.
+*/
+func check(r *Report, op mcp.Operation, docs map[string]Doc, known map[string]bool) {
+	entry, ok := docs[op.ID]
+	name := toolName(op, entry)
+
+	if known[name] {
+		r.Duplicate = append(r.Duplicate, name)
+	}
+
+	known[name] = true
+	b := build(op, entry, nil)
+	r.Unwritten = append(r.Unwritten, unwritten(b)...)
+
+	switch {
+	case !ok:
+		r.Undocumented = append(r.Undocumented, op.ID)
+	case strings.TrimSpace(entry.Title) == "" || strings.TrimSpace(entry.Use) == "":
+		r.Incomplete = append(r.Incomplete, op.ID)
+	}
+}
+
+/*
+sort orders every list of the report.
+*/
+func (r Report) sort() {
+	for _, list := range [][]string{
+		r.Undocumented, r.Stale, r.Incomplete, r.Unknown, r.Duplicate, r.Unwritten, r.Tools,
+	} {
+		slices.Sort(list)
+	}
+}
+
+/*
+unwritten lists the arguments of a tool nobody explained: those whose
+description is only what their name and type say, and the fields
+inside an argument that have none.
+*/
+func unwritten(b built) []string {
+	var out []string
+
+	for name := range b.names.api {
+		schema := asMap(asMap(b.schema["properties"])[name])
+		if text, _ := schema["description"].(string); text == plainText(name, schema) {
+			out = append(out, b.def.Name+": "+name)
+		}
+
+		for _, path := range undescribed(schema, name) {
+			out = append(out, b.def.Name+": "+path)
+		}
+	}
+
+	return out
+}
+
+/*
+undescribed lists the fields inside a schema that nothing explains, by
+their path.
+*/
+func undescribed(schema map[string]any, path string) []string {
+	var out []string
+
+	for name, raw := range asMap(schema["properties"]) {
+		field := asMap(raw)
+		if field == nil {
+			continue
+		}
+
+		if text, _ := field["description"].(string); text == "" {
+			out = append(out, path+"."+name)
+		}
+
+		out = append(out, undescribed(field, path+"."+name)...)
+	}
+
+	if items := asMap(schema["items"]); items != nil {
+		out = append(out, undescribed(items, path)...)
+	}
+
+	return out
 }
 
 /*

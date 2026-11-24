@@ -21,7 +21,7 @@ func snoozeDocs() map[string]Doc {
 			Use: "Lists the snooze choices for one conversation, from its team's list, the workspace's or the " +
 				"built-in presets, each with the moment it would end in your time zone.",
 			Returns: "the choices with their key, label and end time.",
-			Next:    []string{"dimmi_conversations_update: snooze with status=snoozed and snooze_option=<key>"},
+			Next:    []string{"dimmi_update_conversation: snooze with status=snoozed and snooze_option=<key>"},
 		},
 		"snooze-lists.index": {
 			Title:   "List snooze lists",
@@ -103,7 +103,7 @@ func inboxSetupDocs() map[string]Doc {
 			Title:   "List inboxes",
 			Use:     "Lists the inboxes you can open. Conversations land in an inbox from the channels it connects.",
 			Returns: "the inboxes with their access, default team and settings.",
-			Next:    []string{"dimmi_conversations_list: list one inbox with filter[view]=inbox:inbox_..."},
+			Next:    []string{"dimmi_list_conversations: list one inbox with filter[view]=inbox:inbox_..."},
 		},
 		"inboxes.show": {
 			Title:   "Get an inbox",
@@ -148,7 +148,7 @@ func inboxHoursDocs() map[string]Doc {
 				"follow the workspace's default again. The AI agent, the Slack auto-reply and workflows read " +
 				"an inbox's hours from here.",
 			Returns: "the schedule the inbox now uses.",
-			Next:    []string{"dimmi_schedules_update: change the hours of its own schedule"},
+			Next:    []string{"dimmi_update_schedule: change the hours of its own schedule"},
 			Params: map[string]string{
 				"own": "true gives it its own hours; false follows the default and removes its own schedule " +
 					"unless a workflow still names it.",
@@ -191,7 +191,7 @@ on a conversation.
 */
 func inboxAIDocs() map[string]Doc {
 	conversation := "Id of the conversation, starting with conv_. A number does not work here; find the id " +
-		"with dimmi_conversations_get."
+		"with dimmi_get_conversation_by_id_or_number."
 
 	return map[string]Doc{
 		"conversations.ai.runs.index": {
@@ -199,7 +199,7 @@ func inboxAIDocs() map[string]Doc {
 			Use: "Lists each time the AI agent worked on a conversation: whether it answered, handed off to the " +
 				"team or skipped, why, and what it cost. Use it to explain what the AI agent did.",
 			Returns: "the runs with status, outcome, skip or handoff reason, answer message and token use.",
-			Next:    []string{"dimmi_conversations_ai_runs_get: read one run's steps"},
+			Next:    []string{"dimmi_get_conversation_ai_run_by_id: read one run's steps"},
 			Params:  map[string]string{"conversation": conversation},
 		},
 		"conversations.ai.runs.show": {
@@ -209,12 +209,13 @@ func inboxAIDocs() map[string]Doc {
 			Params:  map[string]string{"conversation": conversation},
 		},
 		"conversations.operator.brief.store": {
+			Name:  "brief_conversation",
 			Title: "Brief me on a conversation",
 			Use: "Asks Operator, the team's own agent, to sum up a conversation for you on your Operator thread " +
 				"about it. With attach=true the brief is also kept on the conversation as a note for the team. " +
 				"Each brief spends AI usage.",
 			Returns: "the Operator thread with the brief as its newest message.",
-			Next:    []string{"dimmi_operator_threads_messages_create: ask Operator a follow-up"},
+			Next:    []string{"dimmi_ask_operator: ask Operator a follow-up"},
 			Params: map[string]string{
 				"conversation": conversation,
 				"thread_id":    "An Operator thread (opt_...) about this conversation; your latest one when left out.",

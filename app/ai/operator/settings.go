@@ -74,8 +74,7 @@ groups an admin changed; the rest ask. Model is the model Operator
 answers with on the agent's connection; empty means the agent's own.
 ToolLayer offers the model a few tools and loads the rest on request;
 CompactResults writes tool results as short lines with short ids;
-Effort is how hard each model call thinks; ProcedureQA has Operator
-review the procedures' runs once a week.
+Effort is how hard each model call thinks.
 */
 type Settings struct {
 	Enabled         bool
@@ -87,7 +86,6 @@ type Settings struct {
 	ToolLayer       bool
 	CompactResults  bool
 	Effort          contracts.Effort
-	ProcedureQA     bool
 }
 
 /*
@@ -194,7 +192,6 @@ func SettingsOf(row models.OperatorSetting) Settings {
 		Enabled: row.Enabled, BriefOnOpen: row.BriefOnOpen, TriageOnArrival: row.TriageOnArrival,
 		Instructions: row.Instructions, Policies: map[Group]Policy{}, Model: deref(row.Model),
 		ToolLayer: row.ToolLayer, CompactResults: row.CompactResults, Effort: contracts.Effort(row.Effort),
-		ProcedureQA: row.ProcedureQaWeekly,
 	}
 	_ = json.Unmarshal(row.Policies, &s.Policies)
 	return s

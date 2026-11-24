@@ -22,7 +22,6 @@ type UpdateOperatorSettingsRequest struct {
 		Instructions    *string           `json:"instructions,omitempty"      validate:"omitempty,max=8000"`
 		Policies        map[string]string `json:"policies,omitempty"`
 		Model           *string           `json:"model,omitempty"             validate:"omitempty,max=200"`
-		ProcedureQA     *bool             `json:"procedure_qa_weekly,omitempty"`
 	}
 }
 
@@ -51,7 +50,8 @@ AskOperatorRequest is the input of POST /operator/threads/{thread}/messages.
 type AskOperatorRequest struct {
 	Thread string `path:"thread"`
 	Body   struct {
-		Body string `json:"body" validate:"required,max=8000"`
+		Body    string           `json:"body"              validate:"required,max=8000"`
+		Viewing *OperatorViewing `json:"viewing,omitempty"`
 	}
 }
 

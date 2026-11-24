@@ -38,7 +38,7 @@ func dataExportLinkDoc() Doc {
 			"download the file, so give it only to the person.",
 		Returns: "the link and when it stops working.",
 		Risk:    new(RiskSensitive),
-		Hint:    "export_not_ready: wait until dimmi_data_exports_get says ready; expired files are gone.",
+		Hint:    "export_not_ready: wait until dimmi_get_data_export_by_id says ready; expired files are gone.",
 	}
 }
 
@@ -51,9 +51,9 @@ func dataExportDocs() map[string]Doc {
 			Title: "Export conversations, contacts or the whole workspace",
 			Use: "Starts building a file of conversations or contacts, or one archive of the whole workspace, in " +
 				"the background. Each export belongs to you alone. For a privacy request about one customer, " +
-				"use dimmi_contacts_exports_create instead.",
+				"use dimmi_create_contact_export instead.",
 			Returns: "the export with status pending; poll it until ready.",
-			Next:    []string{"dimmi_data_exports_get: wait for status ready"},
+			Next:    []string{"dimmi_get_data_export_by_id: wait for status ready"},
 			Params: map[string]string{
 				"kind": "conversations, contacts, or workspace for everything the workspace owns (owners only).",
 				"format": "Conversations: txt (readable transcripts, 1,000 at most), csv (50,000) or json " +
@@ -62,7 +62,7 @@ func dataExportDocs() map[string]Doc {
 					"conversations.",
 				"selection": "What to export: ids (picked ids), or filter (the list's filter[...] keys and " +
 					"values) with q, or view_id (a saved inbox view), or for contacts conditions, as " +
-					"dimmi_contacts_list reads them. Empty means everything.",
+					"dimmi_list_contacts reads them. Empty means everything.",
 			},
 			Hint: "export_too_large: narrow the selection or pick a format that covers more rows.",
 		},
@@ -75,15 +75,16 @@ func dataExportDocs() map[string]Doc {
 			Title:   "Get a data export",
 			Use:     "Reads one of your exports: its status, row count, warnings and, once ready, when it expires.",
 			Returns: "the export.",
-			Next:    []string{"dimmi_data_exports_download_get: fetch the file once status is ready"},
+			Next:    []string{"dimmi_download_data_export: fetch the file once status is ready"},
 		},
 		"data-exports.download.show": {
+			Name:  "download_data_export",
 			Title: "Download a data export",
 			Use: "Fetches a ready export's file: one file as it is, or several as a zip. It can hold many " +
 				"customers' personal data, so fetch it only for the person and never pass it on.",
 			Returns: "the file's content.",
 			Risk:    new(RiskSensitive),
-			Hint:    "export_not_ready: wait until dimmi_data_exports_get says ready; expired files are gone.",
+			Hint:    "export_not_ready: wait until dimmi_get_data_export_by_id says ready; expired files are gone.",
 		},
 		"data-exports.link.show": dataExportLinkDoc(),
 		"data-exports.destroy": {
@@ -104,7 +105,7 @@ func contactExportDocs() map[string]Doc {
 			Use: "Starts building a zip of everything dimmi holds about one customer, to answer their request " +
 				"for a copy of their data. It is built in the background and kept for a day once ready.",
 			Returns: "the export with status pending.",
-			Next:    []string{"dimmi_contacts_exports_get: wait for status ready"},
+			Next:    []string{"dimmi_get_contact_export_by_id: wait for status ready"},
 			Params: map[string]string{
 				"include_notes": "true to add the team's internal notes, which stay out by default.",
 			},
@@ -114,8 +115,8 @@ func contactExportDocs() map[string]Doc {
 			Title:   "Get a customer's export",
 			Use:     "Reads where a customer's export stands: pending, running, ready, failed or expired.",
 			Returns: "the export, with when it expires once ready.",
-			Next:    []string{"dimmi_contacts_exports_download: fetch the zip once ready"},
-			Params:  map[string]string{"export": "Id of the customer's export, from dimmi_contacts_exports_create."},
+			Next:    []string{"dimmi_download_contact_export: fetch the zip once ready"},
+			Params:  map[string]string{"export": "Id of the customer's export, from dimmi_create_contact_export."},
 		},
 		"contacts.exports.download": {
 			Title: "Download a customer's export",
@@ -123,8 +124,8 @@ func contactExportDocs() map[string]Doc {
 				"data, so fetch it only for the person answering the request.",
 			Returns: "the zip.",
 			Risk:    new(RiskSensitive),
-			Params:  map[string]string{"export": "Id of the customer's export, from dimmi_contacts_exports_create."},
-			Hint:    "export_not_ready: wait until dimmi_contacts_exports_get says ready.",
+			Params:  map[string]string{"export": "Id of the customer's export, from dimmi_create_contact_export."},
+			Hint:    "export_not_ready: wait until dimmi_get_contact_export_by_id says ready.",
 		},
 	}
 }
@@ -181,24 +182,24 @@ func audienceDocs() map[string]Doc {
 			Title:   "Get an audience",
 			Use:     "Reads one saved audience with its rule and what uses it: workflows and other audiences.",
 			Returns: "the audience with used_by and lock_version.",
-			Next:    []string{"dimmi_audiences_previews_create: count who it matches now"},
+			Next:    []string{"dimmi_preview_audience: count who it matches now"},
 		},
 		"audiences.store": {
 			Title: "Create an audience",
 			Use: "Saves a named rule selecting contacts by their details, custom attributes, events, tags and " +
 				"company. Membership is never stored: it always means who matches now. Check the rule with " +
-				"dimmi_audience_previews_create first.",
+				"dimmi_create_audience_preview first.",
 			Returns: "the audience.",
 			Params: map[string]string{
 				"rules": audienceRules() + " Empty means everyone.",
 				"name":  "Unique in the workspace, 80 characters at most.",
 			},
-			Hint: "audience_invalid: the problems say which leaf to fix; check fields with dimmi_audience_fields_list.",
+			Hint: "audience_invalid: the problems say which leaf to fix; check fields with dimmi_list_audience_fields.",
 		},
 		"audiences.update": {
 			Title: "Update an audience",
 			Use: "Changes a saved audience's name, description or rule. Everything using it follows the change " +
-				"at once, so check what uses it with dimmi_audiences_get first.",
+				"at once, so check what uses it with dimmi_get_audience_by_id first.",
 			Returns: "the audience with its new lock_version.",
 			Params: map[string]string{
 				"rules":        audienceRules(),
@@ -264,6 +265,7 @@ audienceTagDocs returns the entries that tag contacts in bulk.
 func audienceTagDocs() map[string]Doc {
 	return map[string]Doc{
 		"audiences.freezes.store": {
+			Name:  "tag_audience_contacts",
 			Title: "Tag everyone in an audience",
 			Use: "Puts a tag on everyone a saved audience matches right now, so the group stays fixed while the " +
 				"audience keeps changing. Later joiners are not tagged.",
@@ -280,6 +282,6 @@ audienceRules explains the rules argument every audience tool takes.
 func audienceRules() string {
 	return "The audience as JSON: {\"visitors\": everyone, identified, leads, anonymous or " +
 		"anonymous_and_leads, \"rules\": a tree of all, any and not groups over leaves {field, op, value}}. " +
-		"Fields come from dimmi_audience_fields_list, such as contact.custom.plan or event.signed_up.count. " +
+		"Fields come from dimmi_list_audience_fields, such as contact.custom.plan or event.signed_up.count. " +
 		"Four levels, 50 leaves, 8 KB at most."
 }

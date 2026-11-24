@@ -34,12 +34,13 @@ func (q *Queries) AttachOperatorChangesets(ctx context.Context, arg AttachOperat
 const createOperatorChangeset = `-- name: CreateOperatorChangeset :one
 INSERT INTO operator_changesets (
     workspace_id, thread_id, message_id, member_id, conversation_id, title, reason, operations, status, auto,
-    created_at, updated_at
+    routine_id, routine_run_id, dedup_key, preview, expires_at, created_at, updated_at
 ) VALUES (
     $1, $2, $3, $4,
-    $5, $6, $7, $8, 'pending', $9, $10, $10
+    $5, $6, $7, $8, 'pending', $9, $10,
+    $11, $12, $13, $14, $15, $15
 )
-RETURNING id, workspace_id, thread_id, message_id, member_id, conversation_id, title, reason, operations, status, auto, error, decided_by_member_id, applied_at, reverted_at, created_at, updated_at
+RETURNING id, workspace_id, thread_id, message_id, member_id, conversation_id, title, reason, operations, status, auto, error, decided_by_member_id, applied_at, reverted_at, created_at, updated_at, routine_id, routine_run_id, dedup_key, preview, expires_at
 `
 
 type CreateOperatorChangesetParams struct {
@@ -52,6 +53,11 @@ type CreateOperatorChangesetParams struct {
 	Reason         string          `json:"reason"`
 	Operations     json.RawMessage `json:"operations"`
 	Auto           bool            `json:"auto"`
+	RoutineID      *ids.UUID       `json:"routine_id"`
+	RoutineRunID   *ids.UUID       `json:"routine_run_id"`
+	DedupKey       *string         `json:"dedup_key"`
+	Preview        bool            `json:"preview"`
+	ExpiresAt      *time.Time      `json:"expires_at"`
 	Now            time.Time       `json:"now"`
 }
 
@@ -67,6 +73,11 @@ func (q *Queries) CreateOperatorChangeset(ctx context.Context, arg CreateOperato
 		arg.Reason,
 		arg.Operations,
 		arg.Auto,
+		arg.RoutineID,
+		arg.RoutineRunID,
+		arg.DedupKey,
+		arg.Preview,
+		arg.ExpiresAt,
 		arg.Now,
 	)
 	var i OperatorChangeset
@@ -88,6 +99,11 @@ func (q *Queries) CreateOperatorChangeset(ctx context.Context, arg CreateOperato
 		&i.RevertedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.RoutineID,
+		&i.RoutineRunID,
+		&i.DedupKey,
+		&i.Preview,
+		&i.ExpiresAt,
 	)
 	return i, err
 }
@@ -172,12 +188,12 @@ func (q *Queries) CreateOperatorMessage(ctx context.Context, arg CreateOperatorM
 const createOperatorThread = `-- name: CreateOperatorThread :one
 INSERT INTO operator_threads (workspace_id, member_id, conversation_id, title, created_at, updated_at)
 VALUES ($1, $2, $3, $4, $5, $5)
-RETURNING id, workspace_id, member_id, conversation_id, title, last_message_at, created_at, updated_at
+RETURNING id, workspace_id, member_id, conversation_id, title, last_message_at, created_at, updated_at, routine_id, routine_run_id
 `
 
 type CreateOperatorThreadParams struct {
 	WorkspaceID    ids.UUID  `json:"workspace_id"`
-	MemberID       ids.UUID  `json:"member_id"`
+	MemberID       *ids.UUID `json:"member_id"`
 	ConversationID *ids.UUID `json:"conversation_id"`
 	Title          string    `json:"title"`
 	Now            time.Time `json:"now"`
@@ -203,6 +219,8 @@ func (q *Queries) CreateOperatorThread(ctx context.Context, arg CreateOperatorTh
 		&i.LastMessageAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.RoutineID,
+		&i.RoutineRunID,
 	)
 	return i, err
 }
@@ -231,9 +249,9 @@ DELETE FROM operator_threads WHERE workspace_id = $1 AND member_id = $2 AND id =
 `
 
 type DeleteOperatorThreadParams struct {
-	WorkspaceID ids.UUID `json:"workspace_id"`
-	MemberID    ids.UUID `json:"member_id"`
-	ID          ids.UUID `json:"id"`
+	WorkspaceID ids.UUID  `json:"workspace_id"`
+	MemberID    *ids.UUID `json:"member_id"`
+	ID          ids.UUID  `json:"id"`
 }
 
 // DeleteOperatorThread removes one of the member's threads with its
@@ -247,7 +265,7 @@ func (q *Queries) DeleteOperatorThread(ctx context.Context, arg DeleteOperatorTh
 }
 
 const findConversationOperatorThread = `-- name: FindConversationOperatorThread :one
-SELECT id, workspace_id, member_id, conversation_id, title, last_message_at, created_at, updated_at FROM operator_threads
+SELECT id, workspace_id, member_id, conversation_id, title, last_message_at, created_at, updated_at, routine_id, routine_run_id FROM operator_threads
 WHERE workspace_id = $1 AND member_id = $2 AND conversation_id = $3
 ORDER BY updated_at DESC, id DESC
 LIMIT 1
@@ -255,7 +273,7 @@ LIMIT 1
 
 type FindConversationOperatorThreadParams struct {
 	WorkspaceID    ids.UUID  `json:"workspace_id"`
-	MemberID       ids.UUID  `json:"member_id"`
+	MemberID       *ids.UUID `json:"member_id"`
 	ConversationID *ids.UUID `json:"conversation_id"`
 }
 
@@ -273,12 +291,14 @@ func (q *Queries) FindConversationOperatorThread(ctx context.Context, arg FindCo
 		&i.LastMessageAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.RoutineID,
+		&i.RoutineRunID,
 	)
 	return i, err
 }
 
 const findOperatorChangeset = `-- name: FindOperatorChangeset :one
-SELECT id, workspace_id, thread_id, message_id, member_id, conversation_id, title, reason, operations, status, auto, error, decided_by_member_id, applied_at, reverted_at, created_at, updated_at FROM operator_changesets WHERE workspace_id = $1 AND id = $2
+SELECT id, workspace_id, thread_id, message_id, member_id, conversation_id, title, reason, operations, status, auto, error, decided_by_member_id, applied_at, reverted_at, created_at, updated_at, routine_id, routine_run_id, dedup_key, preview, expires_at FROM operator_changesets WHERE workspace_id = $1 AND id = $2
 `
 
 type FindOperatorChangesetParams struct {
@@ -308,12 +328,17 @@ func (q *Queries) FindOperatorChangeset(ctx context.Context, arg FindOperatorCha
 		&i.RevertedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.RoutineID,
+		&i.RoutineRunID,
+		&i.DedupKey,
+		&i.Preview,
+		&i.ExpiresAt,
 	)
 	return i, err
 }
 
 const findOperatorSettings = `-- name: FindOperatorSettings :one
-SELECT workspace_id, enabled, brief_on_open, triage_on_arrival, instructions, policies, model, created_at, updated_at, tool_layer, compact_results, effort, procedure_qa_weekly FROM operator_settings WHERE workspace_id = $1
+SELECT workspace_id, enabled, brief_on_open, triage_on_arrival, instructions, policies, model, created_at, updated_at, tool_layer, compact_results, effort FROM operator_settings WHERE workspace_id = $1
 `
 
 // FindOperatorSettings returns the workspace's Operator settings.
@@ -333,19 +358,18 @@ func (q *Queries) FindOperatorSettings(ctx context.Context, workspaceID ids.UUID
 		&i.ToolLayer,
 		&i.CompactResults,
 		&i.Effort,
-		&i.ProcedureQaWeekly,
 	)
 	return i, err
 }
 
 const findOperatorThread = `-- name: FindOperatorThread :one
-SELECT id, workspace_id, member_id, conversation_id, title, last_message_at, created_at, updated_at FROM operator_threads WHERE workspace_id = $1 AND member_id = $2 AND id = $3
+SELECT id, workspace_id, member_id, conversation_id, title, last_message_at, created_at, updated_at, routine_id, routine_run_id FROM operator_threads WHERE workspace_id = $1 AND member_id = $2 AND id = $3
 `
 
 type FindOperatorThreadParams struct {
-	WorkspaceID ids.UUID `json:"workspace_id"`
-	MemberID    ids.UUID `json:"member_id"`
-	ID          ids.UUID `json:"id"`
+	WorkspaceID ids.UUID  `json:"workspace_id"`
+	MemberID    *ids.UUID `json:"member_id"`
+	ID          ids.UUID  `json:"id"`
 }
 
 // FindOperatorThread returns one of the member's threads.
@@ -361,57 +385,117 @@ func (q *Queries) FindOperatorThread(ctx context.Context, arg FindOperatorThread
 		&i.LastMessageAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.RoutineID,
+		&i.RoutineRunID,
+	)
+	return i, err
+}
+
+const findWorkspaceOperatorThread = `-- name: FindWorkspaceOperatorThread :one
+SELECT id, workspace_id, member_id, conversation_id, title, last_message_at, created_at, updated_at, routine_id, routine_run_id FROM operator_threads
+WHERE workspace_id = $1 AND member_id = $2 AND conversation_id IS NULL
+  AND routine_id IS NULL
+ORDER BY updated_at DESC, id DESC
+LIMIT 1
+`
+
+type FindWorkspaceOperatorThreadParams struct {
+	WorkspaceID ids.UUID  `json:"workspace_id"`
+	MemberID    *ids.UUID `json:"member_id"`
+}
+
+// FindWorkspaceOperatorThread returns the member's latest thread about
+// the whole workspace: one they opened themselves, about no conversation
+// and no routine.
+func (q *Queries) FindWorkspaceOperatorThread(ctx context.Context, arg FindWorkspaceOperatorThreadParams) (OperatorThread, error) {
+	row := q.db.QueryRow(ctx, findWorkspaceOperatorThread, arg.WorkspaceID, arg.MemberID)
+	var i OperatorThread
+	err := row.Scan(
+		&i.ID,
+		&i.WorkspaceID,
+		&i.MemberID,
+		&i.ConversationID,
+		&i.Title,
+		&i.LastMessageAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.RoutineID,
+		&i.RoutineRunID,
 	)
 	return i, err
 }
 
 const listOperatorChangesets = `-- name: ListOperatorChangesets :many
-SELECT s.id, s.workspace_id, s.thread_id, s.message_id, s.member_id, s.conversation_id, s.title, s.reason, s.operations, s.status, s.auto, s.error, s.decided_by_member_id, s.applied_at, s.reverted_at, s.created_at, s.updated_at FROM operator_changesets s
+SELECT s.id, s.workspace_id, s.thread_id, s.message_id, s.member_id, s.conversation_id, s.title, s.reason, s.operations, s.status, s.auto, s.error, s.decided_by_member_id, s.applied_at, s.reverted_at, s.created_at, s.updated_at, s.routine_id, s.routine_run_id, s.dedup_key, s.preview, s.expires_at FROM operator_changesets s
 LEFT JOIN conversations c ON c.id = s.conversation_id
+LEFT JOIN operator_routines r ON r.id = s.routine_id
 WHERE s.workspace_id = $1
-  AND (s.member_id = $2 OR (s.member_id IS NULL AND s.conversation_id IS NOT NULL))
-  AND ($3::uuid IS NULL OR s.conversation_id = $3::uuid)
-  AND ($4::uuid IS NULL OR s.thread_id = $4::uuid)
-  AND ($5::text IS NULL OR s.status = $5::text)
+  AND (s.member_id = $2
+    OR (s.member_id IS NULL AND s.routine_id IS NULL AND s.conversation_id IS NOT NULL)
+    OR (s.member_id IS NULL AND s.routine_id IS NOT NULL AND $3::boolean
+      AND ($4::boolean OR ($5::boolean AND cardinality(r.inbox_ids) > 0
+        AND NOT (r.inbox_ids && $6::uuid[])))))
+  AND ($7::uuid IS NULL OR s.conversation_id = $7::uuid)
+  AND ($8::uuid IS NULL OR s.thread_id = $8::uuid)
+  AND ($9::uuid IS NULL OR s.routine_id = $9::uuid)
+  AND ($10::text IS NULL OR s.status = $10::text)
+  AND ($11::timestamptz IS NULL OR s.created_at >= $11::timestamptz)
+  AND (NOT $12::boolean OR NOT s.preview)
   AND (s.conversation_id IS NULL OR (c.deleted_at IS NULL AND dimmi_conversation_visible(
-      c.assignee_member_id, c.assignee_team_id, c.inbox_id, $6::text,
-      $7::uuid, $8::uuid[], $9::boolean,
-      $10::uuid[]
+      c.assignee_member_id, c.assignee_team_id, c.inbox_id, $13::text,
+      $14::uuid, $15::uuid[], $16::boolean,
+      $6::uuid[]
   )))
 ORDER BY s.created_at DESC, s.id DESC
-LIMIT $11
+LIMIT $17
 `
 
 type ListOperatorChangesetsParams struct {
 	WorkspaceID         ids.UUID   `json:"workspace_id"`
 	MemberID            *ids.UUID  `json:"member_id"`
+	ReadsRoutines       bool       `json:"reads_routines"`
+	SeesEverything      bool       `json:"sees_everything"`
+	SeesAllModes        bool       `json:"sees_all_modes"`
+	AccessHiddenInboxes []ids.UUID `json:"access_hidden_inboxes"`
 	ConversationID      *ids.UUID  `json:"conversation_id"`
 	ThreadID            *ids.UUID  `json:"thread_id"`
+	RoutineID           *ids.UUID  `json:"routine_id"`
 	Status              *string    `json:"status"`
+	Since               *time.Time `json:"since"`
+	WithoutPreviews     bool       `json:"without_previews"`
 	AccessMode          string     `json:"access_mode"`
 	AccessViewer        *ids.UUID  `json:"access_viewer"`
 	AccessTeams         []ids.UUID `json:"access_teams"`
 	AccessUnassigned    bool       `json:"access_unassigned"`
-	AccessHiddenInboxes []ids.UUID `json:"access_hidden_inboxes"`
 	RowLimit            int32      `json:"row_limit"`
 }
 
 // ListOperatorChangesets returns the changesets a member may review,
-// newest first: their own, and those Operator proposed on its own about
-// conversations they can see, of one conversation, thread or status
-// when asked.
+// newest first: their own, those Operator proposed on its own about
+// conversations they can see, and those a routine left when the member
+// reads what the routine reads; of one conversation, thread, routine or
+// status, or since a moment, when asked. A routine reads every inbox
+// when it names none, so only members who see every conversation read
+// its suggestions; one that names inboxes is read by members who see all
+// of them.
 func (q *Queries) ListOperatorChangesets(ctx context.Context, arg ListOperatorChangesetsParams) ([]OperatorChangeset, error) {
 	rows, err := q.db.Query(ctx, listOperatorChangesets,
 		arg.WorkspaceID,
 		arg.MemberID,
+		arg.ReadsRoutines,
+		arg.SeesEverything,
+		arg.SeesAllModes,
+		arg.AccessHiddenInboxes,
 		arg.ConversationID,
 		arg.ThreadID,
+		arg.RoutineID,
 		arg.Status,
+		arg.Since,
+		arg.WithoutPreviews,
 		arg.AccessMode,
 		arg.AccessViewer,
 		arg.AccessTeams,
 		arg.AccessUnassigned,
-		arg.AccessHiddenInboxes,
 		arg.RowLimit,
 	)
 	if err != nil {
@@ -439,6 +523,11 @@ func (q *Queries) ListOperatorChangesets(ctx context.Context, arg ListOperatorCh
 			&i.RevertedAt,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.RoutineID,
+			&i.RoutineRunID,
+			&i.DedupKey,
+			&i.Preview,
+			&i.ExpiresAt,
 		); err != nil {
 			return nil, err
 		}
@@ -536,7 +625,7 @@ func (q *Queries) ListOperatorMessages(ctx context.Context, arg ListOperatorMess
 }
 
 const listOperatorThreads = `-- name: ListOperatorThreads :many
-SELECT id, workspace_id, member_id, conversation_id, title, last_message_at, created_at, updated_at FROM operator_threads
+SELECT id, workspace_id, member_id, conversation_id, title, last_message_at, created_at, updated_at, routine_id, routine_run_id FROM operator_threads
 WHERE workspace_id = $1 AND member_id = $2
   AND (NOT $3::boolean OR conversation_id IS NULL)
   AND ($4::uuid IS NULL OR conversation_id = $4::uuid)
@@ -547,7 +636,7 @@ LIMIT $5
 
 type ListOperatorThreadsParams struct {
 	WorkspaceID    ids.UUID  `json:"workspace_id"`
-	MemberID       ids.UUID  `json:"member_id"`
+	MemberID       *ids.UUID `json:"member_id"`
 	WorkspaceOnly  bool      `json:"workspace_only"`
 	ConversationID *ids.UUID `json:"conversation_id"`
 	RowLimit       int32     `json:"row_limit"`
@@ -580,6 +669,8 @@ func (q *Queries) ListOperatorThreads(ctx context.Context, arg ListOperatorThrea
 			&i.LastMessageAt,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.RoutineID,
+			&i.RoutineRunID,
 		); err != nil {
 			return nil, err
 		}
@@ -592,7 +683,7 @@ func (q *Queries) ListOperatorThreads(ctx context.Context, arg ListOperatorThrea
 }
 
 const lockOperatorChangeset = `-- name: LockOperatorChangeset :one
-SELECT id, workspace_id, thread_id, message_id, member_id, conversation_id, title, reason, operations, status, auto, error, decided_by_member_id, applied_at, reverted_at, created_at, updated_at FROM operator_changesets WHERE workspace_id = $1 AND id = $2 FOR UPDATE
+SELECT id, workspace_id, thread_id, message_id, member_id, conversation_id, title, reason, operations, status, auto, error, decided_by_member_id, applied_at, reverted_at, created_at, updated_at, routine_id, routine_run_id, dedup_key, preview, expires_at FROM operator_changesets WHERE workspace_id = $1 AND id = $2 FOR UPDATE
 `
 
 type LockOperatorChangesetParams struct {
@@ -623,6 +714,64 @@ func (q *Queries) LockOperatorChangeset(ctx context.Context, arg LockOperatorCha
 		&i.RevertedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.RoutineID,
+		&i.RoutineRunID,
+		&i.DedupKey,
+		&i.Preview,
+		&i.ExpiresAt,
+	)
+	return i, err
+}
+
+const reviseOperatorChangeset = `-- name: ReviseOperatorChangeset :one
+UPDATE operator_changesets
+SET operations = $1, reason = $2, updated_at = $3
+WHERE workspace_id = $4 AND id = $5 AND status = 'pending'
+RETURNING id, workspace_id, thread_id, message_id, member_id, conversation_id, title, reason, operations, status, auto, error, decided_by_member_id, applied_at, reverted_at, created_at, updated_at, routine_id, routine_run_id, dedup_key, preview, expires_at
+`
+
+type ReviseOperatorChangesetParams struct {
+	Operations  json.RawMessage `json:"operations"`
+	Reason      string          `json:"reason"`
+	Now         time.Time       `json:"now"`
+	WorkspaceID ids.UUID        `json:"workspace_id"`
+	ID          ids.UUID        `json:"id"`
+}
+
+// ReviseOperatorChangeset replaces what a changeset that still waits
+// would change, and why, when Operator amends it for a teammate.
+func (q *Queries) ReviseOperatorChangeset(ctx context.Context, arg ReviseOperatorChangesetParams) (OperatorChangeset, error) {
+	row := q.db.QueryRow(ctx, reviseOperatorChangeset,
+		arg.Operations,
+		arg.Reason,
+		arg.Now,
+		arg.WorkspaceID,
+		arg.ID,
+	)
+	var i OperatorChangeset
+	err := row.Scan(
+		&i.ID,
+		&i.WorkspaceID,
+		&i.ThreadID,
+		&i.MessageID,
+		&i.MemberID,
+		&i.ConversationID,
+		&i.Title,
+		&i.Reason,
+		&i.Operations,
+		&i.Status,
+		&i.Auto,
+		&i.Error,
+		&i.DecidedByMemberID,
+		&i.AppliedAt,
+		&i.RevertedAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.RoutineID,
+		&i.RoutineRunID,
+		&i.DedupKey,
+		&i.Preview,
+		&i.ExpiresAt,
 	)
 	return i, err
 }
@@ -638,7 +787,7 @@ ON CONFLICT (workspace_id) DO UPDATE SET
     enabled = EXCLUDED.enabled, brief_on_open = EXCLUDED.brief_on_open,
     triage_on_arrival = EXCLUDED.triage_on_arrival, instructions = EXCLUDED.instructions,
     policies = EXCLUDED.policies, model = EXCLUDED.model, updated_at = EXCLUDED.updated_at
-RETURNING workspace_id, enabled, brief_on_open, triage_on_arrival, instructions, policies, model, created_at, updated_at, tool_layer, compact_results, effort, procedure_qa_weekly
+RETURNING workspace_id, enabled, brief_on_open, triage_on_arrival, instructions, policies, model, created_at, updated_at, tool_layer, compact_results, effort
 `
 
 type SaveOperatorSettingsParams struct {
@@ -678,7 +827,6 @@ func (q *Queries) SaveOperatorSettings(ctx context.Context, arg SaveOperatorSett
 		&i.ToolLayer,
 		&i.CompactResults,
 		&i.Effort,
-		&i.ProcedureQaWeekly,
 	)
 	return i, err
 }
@@ -698,26 +846,6 @@ type SetOperatorCompactResultsParams struct {
 // SetOperatorCompactResults turns Operator's compact results on or off.
 func (q *Queries) SetOperatorCompactResults(ctx context.Context, arg SetOperatorCompactResultsParams) error {
 	_, err := q.db.Exec(ctx, setOperatorCompactResults, arg.WorkspaceID, arg.CompactResults, arg.Now)
-	return err
-}
-
-const setOperatorProcedureQA = `-- name: SetOperatorProcedureQA :exec
-INSERT INTO operator_settings (workspace_id, procedure_qa_weekly, created_at, updated_at)
-VALUES ($1, $2, $3, $3)
-ON CONFLICT (workspace_id) DO UPDATE SET procedure_qa_weekly = EXCLUDED.procedure_qa_weekly,
-    updated_at = EXCLUDED.updated_at
-`
-
-type SetOperatorProcedureQAParams struct {
-	WorkspaceID       ids.UUID  `json:"workspace_id"`
-	ProcedureQaWeekly bool      `json:"procedure_qa_weekly"`
-	Now               time.Time `json:"now"`
-}
-
-// SetOperatorProcedureQA turns Operator's weekly review of the
-// procedures on or off.
-func (q *Queries) SetOperatorProcedureQA(ctx context.Context, arg SetOperatorProcedureQAParams) error {
-	_, err := q.db.Exec(ctx, setOperatorProcedureQA, arg.WorkspaceID, arg.ProcedureQaWeekly, arg.Now)
 	return err
 }
 
@@ -746,7 +874,7 @@ SET status = $1, operations = $2, error = $3,
     applied_at = COALESCE($5, applied_at),
     reverted_at = COALESCE($6, reverted_at), updated_at = $7
 WHERE workspace_id = $8 AND id = $9
-RETURNING id, workspace_id, thread_id, message_id, member_id, conversation_id, title, reason, operations, status, auto, error, decided_by_member_id, applied_at, reverted_at, created_at, updated_at
+RETURNING id, workspace_id, thread_id, message_id, member_id, conversation_id, title, reason, operations, status, auto, error, decided_by_member_id, applied_at, reverted_at, created_at, updated_at, routine_id, routine_run_id, dedup_key, preview, expires_at
 `
 
 type SettleOperatorChangesetParams struct {
@@ -793,6 +921,11 @@ func (q *Queries) SettleOperatorChangeset(ctx context.Context, arg SettleOperato
 		&i.RevertedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.RoutineID,
+		&i.RoutineRunID,
+		&i.DedupKey,
+		&i.Preview,
+		&i.ExpiresAt,
 	)
 	return i, err
 }

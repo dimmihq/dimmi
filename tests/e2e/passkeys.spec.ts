@@ -1,6 +1,6 @@
 import type { Page } from "@playwright/test";
 
-import { createAccount, expect, inbox, test as it, type Person, signIn, signOut } from "./support/fixtures";
+import { createAccount, expect, home, test as it, type Person, signIn, signOut } from "./support/fixtures";
 
 it.describe("passkeys", () => {
   it("adds a passkey, signs in with it, renames it and removes it", async ({ page, person, request }) => {
@@ -28,7 +28,7 @@ it.describe("passkeys", () => {
     await expect(page).toHaveURL(/\/login\/two-factor/);
     await expect(page.getByRole("heading", { name: "Use your passkey" })).toBeVisible();
     await page.getByRole("button", { name: "Continue with passkey" }).click();
-    await expect(page).toHaveURL(inbox);
+    await expect(page).toHaveURL(home);
 
     await page.goto("/d/settings/security");
     await expect(section.getByText(/last used/)).toBeVisible();

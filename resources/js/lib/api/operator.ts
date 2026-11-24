@@ -18,7 +18,6 @@ export interface OperatorSettings {
   enabled: boolean;
   brief_on_open: boolean;
   triage_on_arrival: boolean;
-  procedure_qa_weekly: boolean;
   instructions: string;
   policies: Record<OperatorGroup, OperatorPolicy>;
   auto_groups: OperatorGroup[];
@@ -29,7 +28,6 @@ export interface OperatorSettingsChange {
   enabled?: boolean;
   brief_on_open?: boolean;
   triage_on_arrival?: boolean;
-  procedure_qa_weekly?: boolean;
   instructions?: string;
   policies?: Partial<Record<OperatorGroup, OperatorPolicy>>;
   model?: string;
@@ -41,6 +39,8 @@ export interface OperatorStep {
   ok: boolean;
   draft?: string;
   changeset_id?: string;
+  /* Which subagent took the step, counted from 1; absent for the main agent. */
+  subagent?: number;
 }
 
 export interface OperatorMessage {
@@ -61,6 +61,11 @@ export interface OperatorOperation {
   conversation_number?: number;
   outcome?: "applied" | "reverted" | "skipped";
   created_id?: string;
+  article_id?: string;
+  help_center_id?: string;
+  procedure_id?: string;
+  title?: string;
+  visibility?: "public" | "agent_only";
 }
 
 export interface OperatorChangeset {
@@ -78,6 +83,10 @@ export interface OperatorChangeset {
   applied_at: string | null;
   reverted_at: string | null;
   created_at: string;
+  routine_id?: string | null;
+  routine_run_id?: string | null;
+  dedup_key?: string | null;
+  preview?: boolean;
 }
 
 export interface OperatorThread {
@@ -105,7 +114,7 @@ export interface OperatorMemory {
   created_at: string;
 }
 
-export type OperatorPurpose = "ask" | "brief" | "triage";
+export type OperatorPurpose = "ask" | "brief" | "triage" | "routine";
 
 export interface OperatorUsageRun {
   id: string;
@@ -118,6 +127,8 @@ export interface OperatorUsageRun {
   cost_micros: number;
   latency_ms: number | null;
   created_at: string;
+  thread_id: string | null;
+  routine_id: string | null;
 }
 
 export interface OperatorUsage {
@@ -131,6 +142,7 @@ export interface OperatorUsage {
   monthly_spend_cap_micros: number | null;
   daily: { day: string; cost_micros: number; runs_count: number }[];
   by_purpose: { purpose: OperatorPurpose; runs_count: number; cost_micros: number }[];
+  by_routine: { routine_id: string; name: string; runs_count: number; cost_micros: number }[];
   by_member: { member_id: string; name: string; runs_count: number; cost_micros: number }[];
   by_model: { model: string; cost_micros: number; calls: number }[];
   changesets: { status: ChangesetStatus; count: number }[];
@@ -189,11 +201,27 @@ export function operatorThreadQuery(workspace: string, id: string) {
   });
 }
 
-export function askOperator(workspace: string, thread: string, body: string, signal?: AbortSignal) {
+/*
+ * OperatorViewing is what the teammate has open when they ask: the kind
+ * of page, the id of what it shows, and the suggested change shown on it.
+ */
+export interface OperatorViewing {
+  page: "article" | "procedure" | "conversation" | "help_center" | "feature_request" | "changelog_entry";
+  id: string;
+  suggestion_id?: string;
+}
+
+export function askOperator(
+  workspace: string,
+  thread: string,
+  body: string,
+  signal?: AbortSignal,
+  viewing?: OperatorViewing,
+) {
   return request<OperatorAnswer>(
     "POST",
     `/operator/threads/${encodeURIComponent(thread)}/messages`,
-    { body },
+    viewing ? { body, viewing } : { body },
     { workspace, signal },
   );
 }
@@ -243,6 +271,19 @@ export function startConversationThread(workspace: string, conversation: string)
     { conversation_id: conversation, fresh: true },
     { workspace },
   );
+}
+
+/*
+ * pendingChangesetsQuery lists the changes waiting for review that the
+ * teammate may see, newest first.
+ */
+export function pendingChangesetsQuery(workspace: string) {
+  return queryOptions({
+    queryKey: operatorKeys.changesets(workspace, "pending"),
+    queryFn: () =>
+      request<OperatorChangeset[]>("GET", "/operator/changesets?filter[status]=pending", undefined, { workspace }),
+    staleTime: 15_000,
+  });
 }
 
 export type ChangesetDecision = "applications" | "declines" | "reversions";

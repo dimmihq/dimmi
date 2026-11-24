@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 
 import { addTeammate, markTwoFactorOn } from "./support/database";
-import { createAccount, expect, inbox, test as it, type Person, signIn } from "./support/fixtures";
+import { createAccount, expect, home, test as it, type Person, signIn } from "./support/fixtures";
 import { mailedLink } from "./support/mail";
 
 /*
@@ -53,6 +53,6 @@ it.describe("helping a teammate with two-factor", () => {
     await guest.getByLabel("Email").fill(teammate.email);
     await guest.getByLabel("Password").fill(teammate.password);
     await guest.getByRole("button", { name: "Sign in", exact: true }).click();
-    await expect(guest).toHaveURL(inbox);
+    await expect(guest).toHaveURL(home);
   });
 });

@@ -27,8 +27,8 @@ func timelineDocs() map[string]Doc {
 			Returns: "a page of entries with author, body, delivery status, attachments and reactions, " +
 				"prev_cursor for older entries and next_cursor for newer ones.",
 			Next: []string{
-				"dimmi_conversations_replies_create: answer the customer",
-				"dimmi_conversations_notes_create: leave a note for the team",
+				"dimmi_reply_to_conversation: answer the customer",
+				"dimmi_add_conversation_note: leave a note for the team",
 			},
 			Params: map[string]string{
 				"filter[type]": "message, note or event, several separated by commas. All three by default.",
@@ -43,10 +43,11 @@ func timelineDocs() map[string]Doc {
 			Returns: "the text, the sanitized HTML when there is one, and whether the raw email is still kept.",
 		},
 		"conversations.messages.original.raw": {
+			Name:  "download_conversation_message_raw_email",
 			Title: "Download a raw email",
 			Use: "Downloads a received email exactly as it arrived, headers and hidden text included. Only " +
 				"for those allowed to read raw mail, and it may be purged by retention. Prefer " +
-				"dimmi_conversations_messages_original_get unless the headers are needed.",
+				"dimmi_get_conversation_message_original unless the headers are needed.",
 			Returns: "the raw email file.",
 			Risk:    new(RiskSensitive),
 		},
@@ -61,10 +62,11 @@ func writingDocs() map[string]Doc {
 	return map[string]Doc{
 		"conversations.replies.store": replyDoc(),
 		"conversations.notes.store": {
+			Name:  "add_conversation_note",
 			Title: "Add an internal note",
 			Use: "Writes a note only the team sees; it never reaches the customer and changes neither status " +
 				"nor assignee. Works on closed and spam conversations too. Mention a teammate with <@mem_...> " +
-				"or a team with <@team_...> (ids from dimmi_conversations_mentionables_list) to notify them.",
+				"or a team with <@team_...> (ids from dimmi_list_conversation_mentionables) to notify them.",
 			Returns: "the note with its id and mentions, and the conversation.",
 			Params: map[string]string{
 				"body": "The note in Markdown. Only the team sees it.",
@@ -90,7 +92,7 @@ func messageChangeDocs() map[string]Doc {
 			Title: "Record a customer's message",
 			Use: "Records a message the customer wrote elsewhere, on a conversation of the API channel only. " +
 				"Nothing is sent to the customer; the team gets it like any customer message, and a closed " +
-				"conversation reopens. Not for answering: use dimmi_conversations_replies_create.",
+				"conversation reopens. Not for answering: use dimmi_reply_to_conversation.",
 			Returns: "the message and the conversation as it is now.",
 			Params: map[string]string{
 				"body":       "What the customer wrote, as they wrote it.",
@@ -120,6 +122,7 @@ func messageChangeDocs() map[string]Doc {
 			Returns: "whether the message was undone (with its text) or deleted, and the conversation.",
 		},
 		"conversations.messages.retry": {
+			Name:  "resend_failed_conversation_reply",
 			Title: "Resend a failed reply",
 			Use: "Sends a reply whose delivery failed (delivery_status failed, with delivery_error saying why) " +
 				"once more, after the cause is fixed. Only a failed reply can be resent, so nothing reaches " +
@@ -141,7 +144,7 @@ func collaborationDocs() map[string]Doc {
 			Use: "Finds active teammates and teams whose name has a word starting with what you typed, up to " +
 				"ten of each, to mention in a note. Each teammate says whether they can see the conversation.",
 			Returns: "teammates and teams with their ids, names, availability and access to the conversation.",
-			Next:    []string{"dimmi_conversations_notes_create: write the note with <@mem_...> or <@team_...>"},
+			Next:    []string{"dimmi_add_conversation_note: write the note with <@mem_...> or <@team_...>"},
 			Params:  map[string]string{"q": "The start of a name, as typed after the at sign."},
 		},
 		"conversations.messages.reactions.store": {
@@ -159,6 +162,7 @@ func collaborationDocs() map[string]Doc {
 			Params:  map[string]string{"emoji": "The emoji to take off."},
 		},
 		"conversations.typing-indicators.store": {
+			Name:  "show_typing_in_conversation",
 			Title: "Show the customer you are typing",
 			Use: "Shows the customer, on channels that can show it such as the messenger, that a teammate is " +
 				"typing a reply. Nothing is stored. Agents rarely need it: just send the reply.",
@@ -178,15 +182,16 @@ replyDoc is the entry for replying to the customer.
 */
 func replyDoc() Doc {
 	return Doc{
+		Name:  "reply_to_conversation",
 		Title: "Reply to the customer",
 		Use: "Sends a reply the customer receives on the conversation's channel (email, messenger or API). " +
 			"Use only when the person asked you to reply, after showing them the exact text. For text " +
-			"only the team sees, use dimmi_conversations_notes_create. Replying may assign you a " +
+			"only the team sees, use dimmi_add_conversation_note. Replying may assign you a " +
 			"conversation nobody holds; spam conversations take no replies.",
 		Returns: "the reply with its id and delivery status, and the conversation as it is now.",
 		Next: []string{
-			"dimmi_conversations_messages_list: check the reply's delivery status",
-			"dimmi_conversations_neighbors_list: move on to the next conversation",
+			"dimmi_list_conversation_messages: check the reply's delivery status",
+			"dimmi_list_conversation_neighbors: move on to the next conversation",
 		},
 		Risk: new(RiskReach),
 		Params: map[string]string{
@@ -194,7 +199,7 @@ func replyDoc() Doc {
 				"customers' details. A reply needs a body or at least one attachment.",
 			"then": "What the conversation does after sending: keep (default), open, close or snooze.",
 			"snooze": "With then=snooze, exactly one of until (an RFC 3339 time), preset (later_today, " +
-				"tomorrow, next_week or one_week) or option (a key from dimmi_snooze_options_list).",
+				"tomorrow, next_week or one_week) or option (a key from dimmi_list_snooze_options).",
 			"attachment_ids": "Up to 10 ids (att_...) of files already uploaded.",
 			"expected_last_message_id": "The newest message (msg_...) you read. The reply is refused if the " +
 				"customer wrote since, so you never answer a question that changed.",

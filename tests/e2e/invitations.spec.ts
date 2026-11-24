@@ -1,7 +1,7 @@
 import type { APIRequestContext, Page } from "@playwright/test";
 
 import { verifyEmail } from "./support/database";
-import { createAccount, expect, inbox, test as it, type Person, signIn } from "./support/fixtures";
+import { createAccount, expect, home, test as it, type Person, signIn } from "./support/fixtures";
 import { mailedLink } from "./support/mail";
 
 /*
@@ -73,7 +73,7 @@ it.describe("invitations", () => {
     await guest.getByLabel("Password").fill(invitee.password);
     await guest.locator("label", { hasText: "I agree to the" }).click({ position: { x: 8, y: 8 } });
     await guest.getByRole("button", { name: "Create account" }).click();
-    await expect(guest).toHaveURL(inbox);
+    await expect(guest).toHaveURL(home);
     await expect(guest.getByRole("button", { name: invitee.name, exact: true })).toBeVisible();
 
     await page.reload();
@@ -103,7 +103,7 @@ it.describe("invitations", () => {
     await expect(guest).toHaveURL(/\/invitation$/);
     await expect(guest.getByRole("heading", { name: `Join Returning ${suffixOf(person)}` })).toBeVisible();
     await guest.getByRole("button", { name: "Accept invitation" }).click();
-    await expect(guest).toHaveURL(inbox);
+    await expect(guest).toHaveURL(home);
 
     await page.reload();
     const members = page.getByRole("region", { name: "Members" });
@@ -182,7 +182,7 @@ it.describe("invitations", () => {
     await guest.getByLabel("Password").fill(invitee.password);
     await guest.locator("label", { hasText: "I agree to the" }).click({ position: { x: 8, y: 8 } });
     await guest.getByRole("button", { name: "Create account" }).click();
-    await expect(guest).toHaveURL(inbox);
+    await expect(guest).toHaveURL(home);
 
     await page.goto("/d/settings/teams");
     await expect(page.getByRole("region", { name: "Teams" }).getByText("1 member", { exact: true })).toBeVisible();

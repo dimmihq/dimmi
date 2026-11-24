@@ -20,6 +20,7 @@ package slack
 
 import (
 	"context"
+	"errors"
 	"strings"
 
 	"github.com/slack-go/slack"
@@ -169,6 +170,10 @@ func (a *API) OpenDirect(ctx context.Context, userID string) (string, error) {
 	})
 	if err != nil {
 		return "", MapError("conversations.open", err)
+	}
+
+	if channel == nil {
+		return "", MapError("conversations.open", errors.New("slack opened no channel"))
 	}
 
 	return channel.ID, nil

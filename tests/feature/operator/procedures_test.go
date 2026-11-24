@@ -110,15 +110,6 @@ func TestOperatorProcedureQA(t *testing.T) {
 			AssertJSONPath("data.operations.0.outcome", "reverted")
 		k.d.Owner.GetJSON("/api/v1/procedures/"+proc+"/test-cases").AssertOK().AssertJSONPath("data.#", float64(0))
 	})
-
-	t.Run("turns the weekly review on and off", func(t *testing.T) {
-		t.Parallel()
-		k := newDesk(t)
-		k.d.Owner.GetJSON("/api/v1/operator/settings").AssertOK().AssertJSONPath("data.procedure_qa_weekly", false)
-		k.d.Owner.PatchJSON("/api/v1/operator/settings", testkit.JSON{"procedure_qa_weekly": true}).AssertOK().
-			AssertJSONPath("data.procedure_qa_weekly", true)
-		k.d.Owner.GetJSON("/api/v1/operator/settings").AssertOK().AssertJSONPath("data.procedure_qa_weekly", true)
-	})
 }
 
 func atoi(t *testing.T, s string) int {

@@ -22,7 +22,12 @@ reports.
 func workspaceDocs() map[string]Doc {
 	out := map[string]Doc{}
 	for _, part := range []map[string]Doc{
-		workspaceSetupDocs(), onboardingDocs(), memberDocs(), memberChangeDocs(), invitationDocs(), teamDocs(),
+		workspaceSetupDocs(),
+		onboardingDocs(),
+		memberDocs(),
+		memberChangeDocs(),
+		invitationDocs(),
+		teamDocs(),
 		teamChangeDocs(), workspaceAccessDocs(), callerDocs(), reportDocs(),
 	} {
 		maps.Copy(out, part)
@@ -86,11 +91,12 @@ func onboardingDocs() map[string]Doc {
 			},
 		},
 		"workspace.onboarding.test-conversations.store": {
+			Name:  "start_practice_conversations",
 			Title: "Start practice conversations",
 			Use: "Starts five made-up conversations from pretend customers, so the team can practice replying, " +
 				"tagging and closing. They are marked as tests: never billed and never sent anywhere.",
 			Returns: "how many practice conversations started.",
-			Next:    []string{"dimmi_conversations_list: open the practice conversations"},
+			Next:    []string{"dimmi_list_conversations: open the practice conversations"},
 			Hint:    "The workspace needs an inbox or messenger to receive them; create one first.",
 		},
 	}
@@ -108,7 +114,7 @@ func memberDocs() map[string]Doc {
 				"conversation access and custom role. Use it to find a teammate's id (mem_...) before assigning " +
 				"or mentioning them.",
 			Returns: "a page of members, and next_cursor for more.",
-			Next:    []string{"dimmi_members_get: read one teammate", "dimmi_teams_list: see the teams they form"},
+			Next:    []string{"dimmi_get_member_by_id: read one teammate", "dimmi_list_teams: see the teams they form"},
 			Params: map[string]string{
 				"filter[status]":     "active or deactivated.",
 				"filter[role]":       "owner, admin or member.",
@@ -126,6 +132,7 @@ func memberDocs() map[string]Doc {
 			Params:  map[string]string{"include": "teams adds the teams they are in."},
 		},
 		"members.me.update": {
+			Name:  "update_my_availability",
 			Title: "Set your own availability",
 			Use: "Changes your own membership, mostly whether you are online or away and how new conversations " +
 				"reach you. Going away can hand customers' answers back to the team; coming online ends that.",
@@ -174,7 +181,7 @@ func memberChangeDocs() map[string]Doc {
 			Title: "Change several teammates",
 			Use: "Gives up to 100 members the same role (admin or member) or custom role, such as moving everyone " +
 				"off a custom role before it is deleted. Each member is changed on its own by the same rules as " +
-				"dimmi_members_update.",
+				"dimmi_update_member.",
 			Returns: "one result per member: updated, skipped or failed with the reason, and the counts.",
 			Params: map[string]string{
 				"ids":     "Member ids (mem_...), 1 to 100.",
@@ -209,6 +216,7 @@ func invitationDocs() map[string]Doc {
 			Hint: "Inviting needs a verified email on the inviting account.",
 		},
 		"invitations.deliveries.store": {
+			Name:  "resend_invitation",
 			Title: "Resend an invitation",
 			Use: "Emails a pending invitation again with a fresh link, which stops the old one working and " +
 				"restarts its expiry. Allowed a few times a day per invitation.",
@@ -247,7 +255,7 @@ func teamDocs() map[string]Doc {
 			Title:   "Create a team",
 			Use:     "Creates a team. Two teams cannot share a name, whatever the letter case.",
 			Returns: "the new team.",
-			Next:    []string{"dimmi_teams_members_create: put teammates in it"},
+			Next:    []string{"dimmi_add_team_members: put teammates in it"},
 			Risk:    new(RiskWrite),
 			Params:  map[string]string{"name": "The team's name, 80 characters at most."},
 		},
@@ -278,6 +286,7 @@ func teamChangeDocs() map[string]Doc {
 			},
 		},
 		"teams.members.store": {
+			Name:  "add_team_members",
 			Title: "Add teammates to a team",
 			Use: "Puts up to 100 members in a team. They are told they joined, and teammates whose access " +
 				"follows their teams start seeing its conversations. Deactivated members are skipped.",
@@ -285,6 +294,7 @@ func teamChangeDocs() map[string]Doc {
 			Params:  map[string]string{"member_ids": "Member ids (mem_...), 1 to 100."},
 		},
 		"teams.members.destroy": {
+			Name:    "remove_team_member",
 			Title:   "Remove a teammate from a team",
 			Use:     "Takes one member out of a team. Their access to the team's conversations may end with it.",
 			Returns: "nothing.",

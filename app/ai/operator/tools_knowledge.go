@@ -40,17 +40,25 @@ func (e *Engine) knowledgeTools() []tool {
 		{spec: contracts.ToolSpec{
 			Name: "search_knowledge", Description: "Search the knowledge the AI agent answers customers from: " +
 				"published help articles and connected sources. Returns passages with titles and links.",
-			Schema: schema(`{"type":"object","required":["query"],"properties":{"query":{"type":"string"}}}`),
-		}, handle: e.searchKnowledge},
+			Schema: schema(`{"type":"object","required":["search_text"],"properties":{"search_text":{` +
+				`"type":"string","description":"What to look for, in a few words, such as refund window."}}}`),
+		}, handle: e.searchKnowledge, was: wasQuery()},
 		{spec: contracts.ToolSpec{
 			Name: "list_articles", Description: "List help center articles, drafts included, optionally " +
-				"matching words in the title. Returns ids, status and whether unpublished changes wait.",
-			Schema: schema(`{"type":"object","properties":{"query":{"type":"string"},` +
-				`"status":{"type":"string","enum":["draft","published","archived"]}}}`),
-		}, handle: e.listArticles},
+				"matching words in the title, numbered from 0. Returns ids, status, whether unpublished " +
+				"changes wait, and each article's link in dimmi and public link. Offset and limit page " +
+				"through a long list.",
+			Schema: schema(`{"type":"object","properties":{"search_text":{"type":"string","description":"Only ` +
+				`articles with these words in the title; leave out for all."},` +
+				`"status":{"type":"string","enum":["draft","published","archived"],"description":"Only ` +
+				`articles with this status; leave out for all."},` +
+				`"offset":{"type":"integer","minimum":0,"description":"How many articles to skip; 0 starts ` +
+				`at the first."},"limit":{"type":"integer","minimum":1,"maximum":100,"description":"How ` +
+				`many articles to list."}}}`),
+		}, handle: e.listArticles, was: wasQuery()},
 		{spec: contracts.ToolSpec{
-			Name: "get_article", Description: "Read one article's working copy in Markdown.",
-			Schema: idSchema("article", "Article id, such as art_..."),
+			Name: "get_article_by_id", Description: "Read one article's working copy in Markdown.",
+			Schema: idSchema("article_id", "Article id, such as art_..."),
 		}, handle: e.getArticle},
 		{spec: contracts.ToolSpec{
 			Name: "list_procedures", Description: "List the procedures the AI agent follows, with how often " +
@@ -58,8 +66,8 @@ func (e *Engine) knowledgeTools() []tool {
 			Schema: schema(`{"type":"object","properties":{}}`),
 		}, handle: e.listProcedures},
 		{spec: contracts.ToolSpec{
-			Name: "get_procedure", Description: "Read one procedure's working copy and live copy as JSON.",
-			Schema: idSchema("procedure", "Procedure id, such as prc_..."),
+			Name: "get_procedure_by_id", Description: "Read one procedure's working copy and live copy as JSON.",
+			Schema: idSchema("procedure_id", "Procedure id, such as prc_..."),
 		}, handle: e.getProcedure},
 	}
 }
@@ -69,7 +77,7 @@ searchKnowledge searches the agent's knowledge.
 */
 func (e *Engine) searchKnowledge(ctx context.Context, s *session, args json.RawMessage) (result, error) {
 	var in struct {
-		Query string `json:"query"`
+		Query string `json:"search_text"`
 	}
 	if err := decode(args, &in); err != nil {
 		return result{}, err
@@ -77,11 +85,7 @@ func (e *Engine) searchKnowledge(ctx context.Context, s *session, args json.RawM
 	if e.Services.Knowledge == nil {
 		return result{}, fmt.Errorf("%w: knowledge is not available", errBadArguments)
 	}
-	found, err := e.Services.Knowledge.Search(ctx, s.m.Workspace.ID, in.Query, contracts.KnowledgeSearchOptions{
-		Limit: 8, Surface: "operator", Visibility: []contracts.KnowledgeVisibility{
-			contracts.KnowledgeVisibilityPublic, contracts.KnowledgeVisibilityAgentOnly,
-		},
-	})
+	found, err := e.Services.Knowledge.Search(ctx, s.m.Workspace.ID, in.Query, knowledgeSearch(passagesFor(s)))
 	if err != nil {
 		return result{}, err
 	}
@@ -91,7 +95,10 @@ func (e *Engine) searchKnowledge(ctx context.Context, s *session, args json.RawM
 		if c.ArticleID != nil {
 			fmt.Fprintf(&b, " (article %s)", models.PublicID(models.PrefixArticle, *c.ArticleID))
 		}
-		fmt.Fprintf(&b, " %s\n%s\n\n", c.URL, truncate(c.Text, 1500))
+		if s.routine == nil {
+			b.WriteString(" " + c.URL)
+		}
+		fmt.Fprintf(&b, "\n%s\n\n", truncate(c.Text, 1500))
 	}
 	if b.Len() == 0 {
 		b.WriteString("Nothing in the knowledge matches.")
@@ -101,22 +108,67 @@ func (e *Engine) searchKnowledge(ctx context.Context, s *session, args json.RawM
 }
 
 /*
+passagesFor is how many passages a knowledge search returns. A routine
+searches many times in one run and keeps every result in what it
+re-reads, so it gets the best five and no links; a teammate's question
+gets eight, with the links they may want to open.
+*/
+func passagesFor(s *session) int {
+	if s.routine != nil {
+		return 5
+	}
+	return 8
+}
+
+/*
+knowledgeSearch is how Operator searches the knowledge: the best few
+passages of what customers and the AI agent may read.
+*/
+func knowledgeSearch(passages int) contracts.KnowledgeSearchOptions {
+	return contracts.KnowledgeSearchOptions{
+		Limit: passages, Surface: "operator", Visibility: []contracts.KnowledgeVisibility{
+			contracts.KnowledgeVisibilityPublic, contracts.KnowledgeVisibilityAgentOnly,
+		},
+	}
+}
+
+/*
+window is one page of a numbered list.
+*/
+type window struct {
+	offset, limit int
+}
+
+/*
+has reports whether the page shows the item at the index.
+*/
+func (w window) has(i int) bool {
+	return i >= w.offset && i < w.offset+w.limit
+}
+
+/*
 listArticles lists the articles of every help center.
 */
 func (e *Engine) listArticles(ctx context.Context, s *session, args json.RawMessage) (result, error) {
 	var in struct {
-		Query  string `json:"query"`
+		Query  string `json:"search_text"`
 		Status string `json:"status"`
+		Offset int    `json:"offset"`
+		Limit  int    `json:"limit"`
 	}
 	if err := decode(args, &in); err != nil {
 		return result{}, err
+	}
+	page := window{offset: max(in.Offset, 0), limit: in.Limit}
+	if page.limit <= 0 || page.limit > 100 {
+		page.limit = 100
 	}
 	centers, err := e.helpCenters(ctx, s)
 	if err != nil {
 		return result{}, err
 	}
 	var b strings.Builder
-	count := 0
+	count, shown := 0, 0
 	for _, hc := range centers {
 		list, err := e.Services.Articles.List(ctx, s.m, helpcenters.ArticleFilter{
 			HelpCenterID: hc.ID, Status: in.Status, Query: in.Query, Limit: 100,
@@ -126,13 +178,35 @@ func (e *Engine) listArticles(ctx context.Context, s *session, args json.RawMess
 		}
 		fmt.Fprintf(&b, "Help center %s (id %s):\n", hc.Name, models.PublicID(models.PrefixHelpCenter, hc.ID))
 		for _, a := range list {
-			fmt.Fprintf(&b, "- %s · %s%s · updated %s (id %s)\n", a.Title, a.Status, pendingMark(a),
-				a.UpdatedAt.UTC().Format("2006-01-02"), models.PublicID(models.PrefixArticle, a.ID))
+			if page.has(count) {
+				fmt.Fprintf(&b, "%d. %s · %s%s · updated %s (id %s)\n", count, a.Title, a.Status, pendingMark(a),
+					a.UpdatedAt.UTC().Format("2006-01-02"), models.PublicID(models.PrefixArticle, a.ID))
+				b.WriteString(e.listedLinks(s, hc, a))
+				shown++
+			}
+			count++
 		}
-		count += len(list)
 	}
-	summary := fmt.Sprintf("Listed %d articles", count)
+	fmt.Fprintf(&b, "Showing %d of %d articles from %d.", shown, count, page.offset)
+	summary := fmt.Sprintf("Listed %d of %d articles", shown, count)
 	return result{text: b.String(), step: Step{Tool: "list_articles", Summary: summary}}, nil
+}
+
+/*
+listedLinks are a listed article's links, indented under its line, for
+a teammate's question; a routine lists hundreds of articles and reads
+an article before it cites one, so its lists carry none.
+*/
+func (e *Engine) listedLinks(s *session, hc models.HelpCenter, a models.Article) string {
+	if s.routine != nil {
+		return ""
+	}
+	public := ""
+	if root := e.Addresses.Root(hc); root != "" && a.Status == "published" {
+		public = root + "/articles/" + a.Slug
+	}
+	lines := links(e.link(s, linkArticle, models.PrefixArticle, a.ID), public)
+	return "   " + strings.ReplaceAll(strings.TrimRight(lines, "\n"), "\n", "\n   ") + "\n"
 }
 
 /*
@@ -170,7 +244,7 @@ func (e *Engine) helpCenters(ctx context.Context, s *session) ([]models.HelpCent
 getArticle reads one article's working copy.
 */
 func (e *Engine) getArticle(ctx context.Context, s *session, args json.RawMessage) (result, error) {
-	id, err := e.idArg(args, "article", models.PrefixArticle)
+	id, err := e.idArg(args, "article_id", models.PrefixArticle)
 	if err != nil {
 		return result{}, err
 	}
@@ -178,10 +252,10 @@ func (e *Engine) getArticle(ctx context.Context, s *session, args json.RawMessag
 	if err != nil {
 		return result{}, err
 	}
-	text := fmt.Sprintf("Article %s (id %s)\nStatus: %s%s\nVisibility: %s\nDescription: %s\n\n%s",
+	text := fmt.Sprintf("Article %s (id %s)\nStatus: %s%s\nVisibility: %s\n%sDescription: %s\n\n%s",
 		a.Title, models.PublicID(models.PrefixArticle, a.ID), a.Status, pendingMark(a), a.Visibility,
-		deref(a.Description), truncate(a.BodyMarkdown, 20000))
-	return result{text: text, step: Step{Tool: "get_article", Summary: "Read the article " + a.Title}}, nil
+		e.articleLinks(ctx, s, a), deref(a.Description), truncate(a.BodyMarkdown, 20000))
+	return result{text: text, step: Step{Tool: "get_article_by_id", Summary: "Read the article " + a.Title}}, nil
 }
 
 /*
@@ -208,7 +282,7 @@ func (e *Engine) listProcedures(ctx context.Context, s *session, _ json.RawMessa
 getProcedure reads one procedure.
 */
 func (e *Engine) getProcedure(ctx context.Context, s *session, args json.RawMessage) (result, error) {
-	id, err := e.idArg(args, "procedure", models.PrefixProcedure)
+	id, err := e.idArg(args, "procedure_id", models.PrefixProcedure)
 	if err != nil {
 		return result{}, err
 	}
@@ -216,10 +290,11 @@ func (e *Engine) getProcedure(ctx context.Context, s *session, args json.RawMess
 	if err != nil {
 		return result{}, err
 	}
-	text := fmt.Sprintf("Procedure %s (id %s), %s\nWorking copy: %s\nLive copy: %s", p.Name,
-		models.PublicID(models.PrefixProcedure, p.ID), p.Status, truncate(string(p.Draft), 20000),
+	text := fmt.Sprintf("Procedure %s (id %s), %s\nLink: %s\nWorking copy: %s\nLive copy: %s", p.Name,
+		models.PublicID(models.PrefixProcedure, p.ID), p.Status,
+		e.link(s, linkProcedure, models.PrefixProcedure, p.ID), truncate(string(p.Draft), 20000),
 		truncate(string(p.Live), 20000))
-	return result{text: text, step: Step{Tool: "get_procedure", Summary: "Read the procedure " + p.Name}}, nil
+	return result{text: text, step: Step{Tool: "get_procedure_by_id", Summary: "Read the procedure " + p.Name}}, nil
 }
 
 /*
@@ -230,7 +305,18 @@ func (e *Engine) idArg(args json.RawMessage, field string, prefix models.Prefix)
 	if err := decode(args, &in); err != nil {
 		return ids.UUID{}, err
 	}
-	return e.publicID(in[field], prefix)
+	return e.publicID(either(in[field], in[strings.TrimSuffix(field, "_id")]), prefix)
+}
+
+/*
+either is the first of two values that is set: an id argument under its
+name, or under the shorter name models also send it by.
+*/
+func either(a, b string) string {
+	if strings.TrimSpace(a) != "" {
+		return a
+	}
+	return b
 }
 
 /*
