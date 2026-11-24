@@ -63,6 +63,7 @@ const (
 	RoutineGroupChanges       = groupChanges
 	RoutineGroupActions       = groupActions
 	RoutineGroupGitHub        = "github"
+	RoutineGroupAutomation    = groupAutomation
 )
 
 /*
@@ -71,7 +72,7 @@ RoutineGroups lists every routine tool group.
 func RoutineGroups() []string {
 	return []string{
 		RoutineGroupConversations, RoutineGroupKnowledge, RoutineGroupInsights, RoutineGroupChanges,
-		RoutineGroupActions, RoutineGroupGitHub,
+		RoutineGroupActions, RoutineGroupGitHub, RoutineGroupAutomation,
 	}
 }
 

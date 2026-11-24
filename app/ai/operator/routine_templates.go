@@ -54,6 +54,7 @@ const (
 	TemplateWaiting        = "tpl_waiting_conversations"
 	TemplateHandovers      = "tpl_ai_handover_review"
 	TemplateSimulations    = "tpl_simulation_review"
+	TemplateAutomation     = "tpl_workflow_checkup"
 	TemplateCustom         = "tpl_custom"
 )
 
@@ -183,6 +184,16 @@ func agentTemplates() []RoutineTemplate {
 			Prompt: "Find the agent simulations that fail or pass only sometimes, and say why each one " +
 				"does, quoting the lines of guidance or the checks that cause it.",
 			Cadence: "weekly", Expr: "0 10 * * 3", NotifyPolicy: "on_findings",
+		},
+		{
+			Key: TemplateAutomation, Name: "Workflow check-up",
+			Description: "Every Thursday, finds live workflows that hide each other, steps that keep " +
+				"failing and workflows nothing starts, and suggests the fixes.",
+			Prompt: "Read the live workflows. Find customer-facing workflows on the same trigger whose " +
+				"audiences overlap, since only the first one runs; steps that failed on recent runs; and " +
+				"workflows that have not run since the last check. For each, say what you found and " +
+				"suggest the edit that fixes it.",
+			Cadence: "weekly", Expr: "0 9 * * 4", NotifyPolicy: "on_findings",
 		},
 	}
 }

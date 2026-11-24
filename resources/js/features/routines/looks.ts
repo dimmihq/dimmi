@@ -6,6 +6,7 @@ import {
   RiCalendarScheduleLine,
   RiChat3Line,
   RiEmotionUnhappyLine,
+  RiFlowChart,
   RiGitPullRequestLine,
   RiHourglassLine,
   RiLightbulbFlashLine,
@@ -34,6 +35,7 @@ const looks: Record<string, { icon: ComponentType<{ className?: string }>; tint:
   tpl_waiting_conversations: { icon: RiHourglassLine, tint: "yellow" },
   tpl_ai_handover_review: { icon: RiRobot2Line, tint: "purple" },
   tpl_simulation_review: { icon: RiTestTubeLine, tint: "blue" },
+  tpl_workflow_checkup: { icon: RiFlowChart, tint: "purple" },
   tpl_custom: { icon: RiQuillPenLine, tint: "neutral" },
 };
 
@@ -51,7 +53,7 @@ const categories: { title: string; keys: string[] }[] = [
   { title: "Catch what needs a person", keys: ["tpl_unhappy_customer_watch", "tpl_waiting_conversations"] },
   {
     title: "Improve how the team works",
-    keys: ["tpl_qa_procedure_digest", "tpl_ai_handover_review", "tpl_simulation_review"],
+    keys: ["tpl_qa_procedure_digest", "tpl_ai_handover_review", "tpl_simulation_review", "tpl_workflow_checkup"],
   },
   { title: "Your own", keys: ["tpl_custom"] },
 ];
