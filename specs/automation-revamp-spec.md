@@ -186,11 +186,11 @@ Workflows and series get the agent studio's shell: Build, Analytics and History 
 - **AI:** one decision primitive behind Sort by topic, AI path and Extract; AI conversation attributes with a settings page.
 - **Series:** control groups with lift in the report.
 - **Templates:** six workflow templates in the new-workflow dialog; a Workflow check-up Operator routine.
-- **Reports:** a Workflows table in the AI report.
+- **Reports:** a Workflows table in the AI report; an AI attribute filter on every report and a Conversations by AI attribute table in the AI report.
+- **Inbox:** an AI attributes section in the conversation's details panel, refreshed when a value changes.
 
 ### Left for later
 
 - A/B paths inside workflows.
-- A reports breakdown by AI attribute, and a conversation sidebar panel showing attribute values.
 - Series run explanations in Operator.
 - Simulating the Extract and Run an action steps beyond recording them, a customer interrupting a wait, and a called workflow's own steps.
