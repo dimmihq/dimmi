@@ -31,6 +31,25 @@ type SeriesReport struct {
 	Reasons  []SeriesCount               `json:"reasons"`
 	Days     []SeriesDay                 `json:"days"`
 	Steps    map[string]SeriesStepReport `json:"steps"`
+	Control  *SeriesControl              `json:"control,omitempty"`
+}
+
+/*
+SeriesControl is a series' control group against everyone else: the
+share held out, and each group's entries and goals.
+*/
+type SeriesControl struct {
+	Percent int                  `json:"percent"`
+	Groups  []SeriesControlGroup `json:"groups"`
+}
+
+/*
+SeriesControlGroup is one group, control or treated, and its goal.
+*/
+type SeriesControlGroup struct {
+	Group   string `json:"group"`
+	Entered int64  `json:"entered"`
+	Goal    int64  `json:"goal"`
 }
 
 /*
@@ -79,6 +98,13 @@ func NewSeriesReport(r series.Report) SeriesReport {
 		Object: "series_report", Entered: r.Totals.Entered, Active: r.Totals.Active, Finished: r.Totals.Finished,
 		Exited: r.Totals.Exited, Goal: r.Totals.Goal, Reasons: []SeriesCount{}, Days: []SeriesDay{},
 		Steps: map[string]SeriesStepReport{},
+	}
+
+	if r.Control != nil {
+		out.Control = &SeriesControl{Percent: r.Control.Percent, Groups: []SeriesControlGroup{}}
+		for _, g := range r.Control.Groups {
+			out.Control.Groups = append(out.Control.Groups, SeriesControlGroup{Group: g.Path, Entered: g.Entered, Goal: g.Goal})
+		}
 	}
 
 	for _, reason := range r.Reasons {

@@ -97,6 +97,10 @@ func (s *Series) Advance(ctx context.Context, a jobs.AdvanceSeriesEnrollmentArgs
 advance runs the journey's steps.
 */
 func (r *run) advance(ctx context.Context) error {
+	if held, err := r.holdOut(ctx); held || err != nil {
+		return err
+	}
+
 	if left, err := r.guard(ctx); left || err != nil {
 		return err
 	}

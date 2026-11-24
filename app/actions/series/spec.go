@@ -104,12 +104,15 @@ type Exit struct {
 
 /*
 Goal is reached by doing Event, or by matching Rules, within Days of
-entering.
+entering. ControlPercent holds that share of entrants, 0 to 50, out of
+the series: they receive nothing and still count toward the goal, so
+the report can show what the series added.
 */
 type Goal struct {
-	Event string          `json:"event,omitempty"`
-	Rules json.RawMessage `json:"rules,omitempty"`
-	Days  int             `json:"days"`
+	Event          string          `json:"event,omitempty"`
+	Rules          json.RawMessage `json:"rules,omitempty"`
+	Days           int             `json:"days"`
+	ControlPercent int             `json:"control_percent,omitempty"`
 }
 
 /*
