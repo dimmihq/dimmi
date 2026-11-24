@@ -144,6 +144,9 @@ func (r *Runner) RunConversationTurn(ctx context.Context, args Args, settings *T
 	}
 
 	d := st.gate
+	if d == nil && r.confirmsResolution(ctx, st) {
+		d = skipped(skipResolutionConfirmed)
+	}
 	if d == nil {
 		d = r.turn(ctx, st)
 	}
@@ -192,10 +195,6 @@ func (r *Runner) turn(ctx context.Context, st *run) *decision {
 	if st.sim == nil {
 		stopTyping := r.typing(ctx, st.env)
 		defer stopTyping()
-	}
-
-	if r.confirmsResolution(ctx, st) {
-		return skipped(skipResolutionConfirmed)
 	}
 
 	st.loop = &loop{llm: llm, system: r.render(st.env, rootOf(st.env), r.answerVars(st))}
