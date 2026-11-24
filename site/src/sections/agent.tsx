@@ -10,8 +10,8 @@ const tabs = [
     body: "Reads your help center, links the page it used, and says when it does not know.",
   },
   {
-    title: "Follows your playbooks",
-    body: "Runs your written steps in order, calls your API, and asks a teammate before risky actions.",
+    title: "Follows your policies",
+    body: "Handles refunds and account changes in order, respects your limits, and gets tested before going live.",
   },
   {
     title: "Hands over with a summary",

@@ -58,6 +58,13 @@ type AIAgentSimulationOutput struct {
 }
 
 /*
+AIAgentSimulationRunsOutput is a simulation's kept runs.
+*/
+type AIAgentSimulationRunsOutput struct {
+	Body fhttp.Collection[resources.AIAgentSimulationRun]
+}
+
+/*
 Preview answers one turn as the agent.
 */
 func (c *AIAgentSimulationController) Preview(ctx context.Context, in *requests.AIPreviewAgentRequest,
@@ -202,6 +209,25 @@ func (c *AIAgentSimulationController) Run(ctx context.Context, in *requests.AIRu
 		return nil, err
 	}
 	return simulationsOutput(rows), nil
+}
+
+/*
+Runs lists a simulation's latest runs on the draft or the live
+version, newest first.
+*/
+func (c *AIAgentSimulationController) Runs(ctx context.Context, in *requests.AIAgentSimulationRunsRequest,
+) (*AIAgentSimulationRunsOutput, error) {
+	ref, err := c.ref(in.Agent, in.Simulation)
+	if err != nil {
+		return nil, err
+	}
+	rows, err := c.Simulations.Runs(ctx, membership(ctx), ref, in.Version)
+	if err != nil {
+		return nil, err
+	}
+	items := resources.NewAIAgentSimulationRuns(rows)
+	page := pagination.Page[resources.AIAgentSimulationRun]{Items: items, Limit: len(items)}
+	return &AIAgentSimulationRunsOutput{Body: fhttp.NewCollection(page)}, nil
 }
 
 /*

@@ -40,9 +40,10 @@ Test case limits: the scripted messages, the tests one run takes, and
 the saved tests of one procedure.
 */
 const (
-	maxTestMessages = 12
-	maxTestsPerRun  = 20
-	maxTestCases    = 100
+	maxTestMessages  = 12
+	maxTestsPerRun   = 20
+	maxTestCases     = 100
+	maxScenarioRunes = 1000
 )
 
 /*
@@ -76,10 +77,12 @@ type TestCaseInput struct {
 	Mocks              map[string]actionkit.Mock
 	Assertions         []procedure.Assertion
 	SimulatedAt        *time.Time
+	Scenario           *string
 }
 
 /*
-TestTurn is one turn of a test run.
+TestTurn is one turn of a test run. Transfer is set when the turn moved
+the chat from one AI agent to another, which then wrote the reply.
 */
 type TestTurn struct {
 	Message        string                   `json:"message"`
@@ -90,6 +93,7 @@ type TestTurn struct {
 	Calls          []procedure.ObservedCall `json:"calls"`
 	ProcedureTrace json.RawMessage          `json:"procedure_trace,omitempty"`
 	RunID          string                   `json:"run_id"`
+	Transfer       *pipeline.SimTransfer    `json:"transfer,omitempty"`
 }
 
 /*
@@ -162,6 +166,7 @@ func (p *Procedures) CreateTestCase(ctx context.Context, m authz.Membership, id 
 	if in.Name == nil {
 		return models.ProcedureTestCase{}, ErrTestCaseInvalid.With("reason", "Name the test.").OnField("name")
 	}
+	in = p.WithScenario(ctx, m, in)
 
 	var out models.ProcedureTestCase
 	err := p.DB.Transaction(ctx, func(ctx context.Context, tx *database.Tx) error {
@@ -182,7 +187,7 @@ func (p *Procedures) CreateTestCase(ctx context.Context, m authz.Membership, id 
 		out, err = q.CreateProcedureTestCase(ctx, models.CreateProcedureTestCaseParams{
 			WorkspaceID: m.Workspace.ID, ProcedureID: id, Name: row.Name, SourceConversationID: in.SourceConversation,
 			Persona: row.Persona, Messages: row.Messages, ActionMocks: row.ActionMocks, Assertions: row.Assertions,
-			SimulatedAt: row.SimulatedAt, MemberID: memberOf(m), Now: p.Clock.Now(),
+			SimulatedAt: row.SimulatedAt, Scenario: row.Scenario, MemberID: memberOf(m), Now: p.Clock.Now(),
 		})
 
 		return wrap("save procedure test", err)
@@ -252,8 +257,8 @@ func (p *Procedures) UpdateTestCase(ctx context.Context, m authz.Membership, ref
 
 		out, err = q.UpdateProcedureTestCase(ctx, models.UpdateProcedureTestCaseParams{
 			Name: row.Name, Persona: row.Persona, Messages: row.Messages, ActionMocks: row.ActionMocks,
-			Assertions: row.Assertions, SimulatedAt: row.SimulatedAt, Now: p.Clock.Now(), WorkspaceID: m.Workspace.ID,
-			ProcedureID: id, ID: testID,
+			Assertions: row.Assertions, SimulatedAt: row.SimulatedAt, Scenario: row.Scenario, Now: p.Clock.Now(),
+			WorkspaceID: m.Workspace.ID, ProcedureID: id, ID: testID,
 		})
 
 		return wrap("save procedure test", err)
@@ -342,6 +347,10 @@ func (p *Procedures) keepResult(ctx context.Context, one simulated, res TestResu
 	raw, _ := json.Marshal(res)
 	w.tell(ctx, runFinished, map[string]any{"result": res})
 	err := p.DB.Transaction(ctx, func(ctx context.Context, tx *database.Tx) error {
+		ran := pipeline.SimulationSpend{WorkspaceID: m.Workspace.ID, At: p.Clock.Now(), Runs: 1}
+		if err := pipeline.AddSimulationSpend(ctx, tx, ran); err != nil {
+			return err
+		}
 		return models.New(tx).SetProcedureTestCaseResult(ctx, models.SetProcedureTestCaseResultParams{
 			LastResult: raw, WorkspaceID: m.Workspace.ID, ID: c.ID,
 		})
@@ -391,6 +400,10 @@ func testRow(current models.ProcedureTestCase, in TestCaseInput) (models.Procedu
 		row.SimulatedAt = in.SimulatedAt
 	}
 
+	if in.Scenario != nil {
+		row.Scenario = strings.TrimSpace(*in.Scenario)
+	}
+
 	return withDefaults(row), nil
 }
 
@@ -401,6 +414,10 @@ on, a script of the wrong length, and assertions that make no sense.
 func checkTestInput(in TestCaseInput) error {
 	if in.Persona != nil && in.Persona.Channel != "" && !slices.Contains(procedure.Channels(), in.Persona.Channel) {
 		return ErrTestCaseInvalid.With("reason", "Pick a channel dimmi answers on.").OnField("persona")
+	}
+
+	if in.Scenario != nil && utf8.RuneCountInString(strings.TrimSpace(*in.Scenario)) > maxScenarioRunes {
+		return ErrTestCaseInvalid.With("reason", "Write the scenario in at most 1000 characters.").OnField("scenario")
 	}
 
 	if in.Messages != nil && (len(in.Messages) == 0 || len(in.Messages) > maxTestMessages) {

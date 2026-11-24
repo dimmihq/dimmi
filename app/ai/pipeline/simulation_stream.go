@@ -117,6 +117,7 @@ func (r *Runner) previewStep(st *run, f finished) (PreviewStep, bool) {
 		toolHandoff:         "Handed the conversation to the team",
 		toolTriage:          triageSummary(f),
 		toolOpenTicket:      "Opened a ticket",
+		toolNote:            "Left a note for the team",
 	}
 	switch f.tool {
 	case toolset.LoadTool:

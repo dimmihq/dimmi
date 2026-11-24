@@ -41,7 +41,7 @@ const rows = [
   {
     label: "AI agent",
     title: "See what AI solved and where it handed off.",
-    body: "Track how often the agent joins and resolves chats, plus the exact questions it could not answer so you know which help article to write next.",
+    body: "Track AI resolutions, unanswered questions, and every procedure side by side, including handovers, CSAT, and safety checks.",
     visual: <AiFragment />,
   },
   {

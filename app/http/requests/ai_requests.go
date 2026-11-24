@@ -42,6 +42,7 @@ type AIUpdateAgentBody struct {
 	Name             *string   `json:"name,omitempty"                      validate:"omitempty,min=1,max=60"`
 	Tone             *string   `json:"tone,omitempty"                      validate:"omitempty,max=20"`
 	Guidance         *string   `json:"guidance,omitempty"                  validate:"omitempty,max=20000"`
+	Description      *string   `json:"description,omitempty"               validate:"omitempty,max=400"`
 	ProductName      *string   `json:"product_name,omitempty"              validate:"omitempty,max=80"`
 	EnabledChannels  *[]string `json:"enabled_channels,omitempty"          validate:"omitempty,max=10"`
 	Schedule         *string   `json:"schedule,omitempty"`

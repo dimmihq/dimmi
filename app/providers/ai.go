@@ -118,6 +118,8 @@ func newRunner(ctx context.Context, a *app.App) (*pipeline.Runner, error) {
 			DB: a.DB, Fallback: seed, Vectors: a.Vectors, Addresses: helpcenters.Addresses{
 				BaseDomain: a.Config.HelpCenters.BaseDomain, AppURL: a.Application.Config.App.URL,
 			},
+			Reranker:      builtinReranker(a),
+			RerankTimeout: time.Duration(a.Config.AI.Knowledge.RerankTimeoutMS) * time.Millisecond,
 		}
 	}
 	if a.LLM == nil {

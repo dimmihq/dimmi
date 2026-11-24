@@ -263,6 +263,7 @@ func assistantPublicIDs() []PublicIDEntry {
 		{PrefixAiAgent, "ai_agents"},
 		{PrefixAiAgentVersion, "ai_agent_versions"},
 		{PrefixAiAgentTestCase, "ai_agent_test_cases"},
+		{PrefixAiAgentTestCaseRun, "ai_agent_test_case_runs"},
 		{PrefixAiProviderKey, "ai_provider_keys"},
 		{PrefixAiRun, "ai_runs"},
 		{PrefixAiRunStep, "ai_run_steps"},
@@ -284,6 +285,7 @@ const (
 	PrefixAiAgent            Prefix = "aia"
 	PrefixAiAgentVersion     Prefix = "aiav"
 	PrefixAiAgentTestCase    Prefix = "aias"
+	PrefixAiAgentTestCaseRun Prefix = "aiar"
 	PrefixAiProviderKey      Prefix = "aik"
 	PrefixAiRun              Prefix = "air"
 	PrefixAiRunStep          Prefix = "ais"

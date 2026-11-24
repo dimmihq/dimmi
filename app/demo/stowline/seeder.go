@@ -103,6 +103,7 @@ type run struct {
 	articles map[string]ids.UUID
 	followed map[string]*followedProcedure
 	agents   map[string]ids.UUID
+	actions  map[string]string
 }
 
 /*

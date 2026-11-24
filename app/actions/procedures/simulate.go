@@ -67,13 +67,18 @@ type Simulator interface {
 }
 
 /*
-Customer plays the customer of a saved simulation when it runs.
+Customer plays the customer of a saved simulation when it runs, and
+writes the scenario it plays from when one is saved.
 */
 type Customer interface {
 	/*
 		PlayCustomer returns the customer's next move.
 	*/
 	PlayCustomer(ctx context.Context, in pipeline.CustomerTurn) (pipeline.CustomerMove, error)
+	/*
+		DescribeCustomer writes the scenario of a saved chat's customer.
+	*/
+	DescribeCustomer(ctx context.Context, in pipeline.CustomerProfile) (string, error)
 }
 
 /*
@@ -88,20 +93,23 @@ type Vectors interface {
 }
 
 /*
-Judge decides whether a transcript meets a rubric.
+Judge decides whether a transcript meets a run's written checks.
 */
 type Judge interface {
 	/*
-		JudgeRubric answers pass or fail, with its reason.
+		JudgeRubrics answers every written check of one run, in the
+		order given, each with the judge's reason when it has one.
 	*/
-	JudgeRubric(ctx context.Context, in pipeline.Rubric) (bool, string, error)
+	JudgeRubrics(ctx context.Context, in pipeline.Rubrics) ([]procedure.Judgment, error)
 }
 
 /*
 SimulateInput is one simulated turn: the procedure and which copy to
 test, the conversation so far or a real one to replay, the customer's
 message, the persona, the mocks by action public id, the state handed
-back by the last turn, and the waiting writes confirmed since.
+back by the last turn, and the waiting writes confirmed since. HeldBy
+is the agent an earlier turn transferred the chat to, which answers
+from then on.
 */
 type SimulateInput struct {
 	Membership         authz.Membership
@@ -116,6 +124,7 @@ type SimulateInput struct {
 	SourceConversation *ids.UUID
 	StreamID           string
 	Now                *time.Time
+	HeldBy             *ids.UUID
 }
 
 /*

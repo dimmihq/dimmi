@@ -26,6 +26,15 @@ import { ChipContext } from "../automation/procedure-writer/procedure-token";
 import { GuidanceToken } from "./guidance-token";
 import { ChipOptionRow, SlashOption } from "./writer-options";
 
+/*
+ * Guidance is a prompt, not an article: it takes the blocks a model
+ * reads as structure, and none of the help center's callouts, images or
+ * tables.
+ */
+const promptBlocks = new Set(["text", "heading", "subheading", "bullets", "numbers", "code"]);
+
+const findBlocks = (query: string) => findCommands(query).filter((command) => promptBlocks.has(command.id));
+
 /* Guidance is no step; chips read this stand-in for settings they never show here. */
 const guidanceStep = { id: "guidance", kind: "instruction", text: "" } as ProcedureStep;
 
@@ -55,7 +64,7 @@ export function GuidanceWriter({
         name: "slashCommand",
         char: "/",
         minLength: 0,
-        find: findCommands,
+        find: findBlocks,
         content: () => "",
         apply: (e, range, command) => runCommand(e, range, command, { pickImage: () => undefined }),
         onChange: setSlash,
@@ -77,7 +86,7 @@ export function GuidanceWriter({
         role: "textbox",
         "aria-multiline": "true",
         "aria-label": "Guidance",
-        class: "prose min-h-64 pb-6 outline-none",
+        class: "prose prose-compact min-h-48 pb-4 outline-none",
       },
     },
     onUpdate: ({ editor: e }) => changed.current(articleMarkdown(e.getMarkdown())),

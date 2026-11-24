@@ -6,6 +6,7 @@
 | What code, not the model, enforces while a procedure is followed: an
 | action whose prerequisites have not run is refused before it runs; a
 | reply that skips a required action is sent back with a note naming it,
+| unless the customer turned that action down, which ends the step;
 | up to the step's retries, then the conversation goes to the team,
 | unless the reply asks the customer what an earlier step asks, since
 | the steps after it wait for the answer; a
@@ -141,12 +142,11 @@ func (r *Runner) verifyProcedureCompliance(ctx context.Context, st *run, draft s
 		}
 		a := missing[0]
 		tool := in.Tools[a.ActionID]
-		if waitsOnCustomer(p, plan, a) {
+		if r.notDue(ctx, st, a, draft) {
 			return draft, nil
 		}
-		if r.asksForInput(ctx, st, a.ActionID, draft) {
-			p.guard(guardEvent{Type: "awaiting_input", MissingTool: tool, StepID: a.StepID})
-			return draft, nil
+		if r.declined(ctx, st, plan, a) {
+			continue
 		}
 		if p.retries >= a.MaxRetries {
 			return r.failProcedure(st, a, tool, draft), nil
@@ -165,6 +165,40 @@ func (r *Runner) verifyProcedureCompliance(ctx context.Context, st *run, draft s
 		}
 		draft = next
 	}
+}
+
+/*
+notDue reports whether a required action a reply left out is not due
+yet: an earlier step still waits on the customer, or the reply asks
+them for what the action needs.
+*/
+func (r *Runner) notDue(ctx context.Context, st *run, a procedure.Planned, draft string) bool {
+	plan, in := r.procedurePlan(st, triedToo)
+	if waitsOnCustomer(st.proc, plan, a) {
+		return true
+	}
+	if !r.asksForInput(ctx, st, a.ActionID, draft) {
+		return false
+	}
+	st.proc.guard(guardEvent{Type: "awaiting_input", MissingTool: in.Tools[a.ActionID], StepID: a.StepID})
+
+	return true
+}
+
+/*
+declined reports whether the customer turned down the action a reply
+left out, and when they did marks its step done, so the reply is not
+sent back to take an action the customer refused.
+*/
+func (r *Runner) declined(ctx context.Context, st *run, plan procedure.Plan, a procedure.Planned) bool {
+	at := slices.IndexFunc(plan.Nodes, func(n procedure.Node) bool { return n.ID == a.StepID })
+	if at < 0 || !r.stepDeclined(ctx, st, plan.Nodes[at]) {
+		return false
+	}
+	st.proc.done = appendOnce(st.proc.done, a.StepID)
+	st.proc.guard(guardEvent{Type: "step_declined", StepID: a.StepID})
+
+	return true
 }
 
 /*

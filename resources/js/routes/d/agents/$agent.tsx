@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 
 import { Spinner } from "@/components/base/spinner/spinner";
+import { StudioArrive } from "@/features/agents/agent-arrive";
 import { AgentStudio } from "@/features/agents/agent-studio";
 import { useAccount } from "@/features/settings/use-account";
 import { EmptyState, Panel } from "@/features/shell/page";
@@ -45,5 +46,9 @@ function AgentRoute() {
     );
   }
 
-  return <AgentStudio key={data.agent.id} workspace={workspace} view={data} />;
+  return (
+    <StudioArrive key={data.agent.id}>
+      <AgentStudio workspace={workspace} view={data} />
+    </StudioArrive>
+  );
 }

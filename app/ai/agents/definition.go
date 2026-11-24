@@ -75,6 +75,7 @@ type Definition struct {
 	ProductName               *string         `json:"product_name,omitempty"`
 	Tone                      string          `json:"tone"`
 	Guidance                  string          `json:"guidance"`
+	Description               string          `json:"description"`
 	EnabledChannels           []string        `json:"enabled_channels"`
 	ExcludedConnectionIDs     []ids.UUID      `json:"excluded_channel_connection_ids,omitempty"`
 	Schedule                  string          `json:"schedule"`
@@ -110,7 +111,7 @@ with where it answers as the caller read it from the channel rows.
 func Published(agent models.AiAgent, placement Placement) Definition {
 	return Definition{
 		Name: agent.Name, AvatarAttachmentID: agent.AvatarAttachmentID, ProductName: agent.ProductName,
-		Tone: agent.Tone, Guidance: agent.Guidance,
+		Tone: agent.Tone, Guidance: agent.Guidance, Description: agent.Description,
 		EnabledChannels: agent.EnabledChannels, ExcludedConnectionIDs: agent.ExcludedChannelConnectionIds,
 		Schedule: agent.Schedule, AssignedBehavior: agent.AssignedBehavior,
 		AnswerKeyID: agent.AnswerKeyID, AnswerModel: agent.AnswerModel,
@@ -153,7 +154,7 @@ func Apply(agent *models.AiAgent, def Definition) {
 	agent.AvatarAttachmentID = def.AvatarAttachmentID
 	agent.ProductName = def.ProductName
 	agent.Tone = def.Tone
-	agent.Guidance = def.Guidance
+	agent.Guidance, agent.Description = def.Guidance, def.Description
 	agent.EnabledChannels = nonNil(def.EnabledChannels)
 	agent.ExcludedChannelConnectionIds = nonNilIDs(def.ExcludedConnectionIDs)
 	agent.Schedule = def.Schedule
@@ -208,7 +209,7 @@ published columns.
 func UpdateParams(agent *models.AiAgent, now time.Time) models.UpdateAgentParams {
 	return models.UpdateAgentParams{
 		Name: agent.Name, AvatarAttachmentID: agent.AvatarAttachmentID, Enabled: agent.Enabled,
-		ProductName: agent.ProductName, Tone: agent.Tone, Guidance: agent.Guidance,
+		ProductName: agent.ProductName, Tone: agent.Tone, Guidance: agent.Guidance, Description: agent.Description,
 		EnabledChannels: agent.EnabledChannels, ExcludedChannelConnectionIds: agent.ExcludedChannelConnectionIds,
 		Schedule: agent.Schedule, AssignedBehavior: agent.AssignedBehavior,
 		AnswerKeyID: agent.AnswerKeyID, AnswerModel: agent.AnswerModel,

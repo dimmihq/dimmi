@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/dimmihq/dimmi/framework/testkit"
 
@@ -111,6 +112,43 @@ func TestAiAgentSimulations(t *testing.T) {
 		h.d.Owner.GetJSON(path+"/simulations").AssertOK().AssertJSONPath("data.#", 1)
 		h.d.Owner.Delete(path + "/simulations/" + id).AssertNoContent()
 		h.d.Owner.GetJSON(path + "/simulations/" + id).AssertNotFound()
+	})
+
+	t.Run("writes a scenario when one is saved without, keeps a teammate's own, and plays from it", func(t *testing.T) {
+		t.Parallel()
+		h := newHarness(t, nil)
+		path := agentPath(t, h.d)
+		h.player.scenario = "A prospect shipping 300 parcels a month wants a plan recommendation. Nothing else."
+
+		made := h.d.Owner.PostJSON(path+"/simulations", testkit.JSON{
+			"name":     "Recommends a plan",
+			"messages": []testkit.JSON{{"text": "Which plan fits us?"}, {"text": "About 300 a month"}},
+		}).AssertCreated()
+		made.AssertJSONPath("data.scenario", h.player.scenario)
+		require.Len(t, h.player.profiled, 1)
+		assert.Equal(t, "Which plan fits us?", h.player.profiled[0].Saved[0].Text)
+		id := made.String("data.id")
+
+		own := "An existing customer on Free wants to move to Growth and will confirm it."
+		h.d.Owner.PostJSON(path+"/simulations", testkit.JSON{
+			"name": "Upgrades", "messages": []testkit.JSON{{"text": "Move me to Growth"}}, "scenario": own,
+		}).AssertCreated().AssertJSONPath("data.scenario", own)
+		assert.Len(t, h.player.profiled, 1, "a scenario the teammate wrote is kept as written")
+
+		h.d.Owner.PatchJSON(path+"/simulations/"+id, testkit.JSON{"scenario": "  Wants advice only.  "}).AssertOK().
+			AssertJSONPath("data.scenario", "Wants advice only.")
+		h.d.Owner.PatchJSON(path+"/simulations/"+id, testkit.JSON{"name": "Recommends"}).AssertOK().
+			AssertJSONPath("data.scenario", "Wants advice only.")
+		h.d.Owner.PatchJSON(path+"/simulations/"+id, testkit.JSON{"scenario": strings.Repeat("a", 1001)}).
+			AssertStatus(422)
+
+		h.llm.answer.Script(reply("How many parcels a month?"), reply("Growth fits 300 a month."))
+		h.d.Owner.PostJSON(path+"/simulations/run", testkit.JSON{"simulation_ids": []string{id}}).AssertOK().
+			AssertJSONPath("data.0.draft_result.turns.1.message", "About 300 a month")
+		require.NotEmpty(t, h.player.asked)
+		assert.Equal(t, "Wants advice only.", h.player.asked[0].Scenario, "the customer plays from the scenario")
+		assert.True(t, h.player.asked[0].Saved[0].Sent)
+		assert.False(t, h.player.asked[0].Saved[1].Sent)
 	})
 
 	t.Run("saves a real conversation as a simulation", func(t *testing.T) {

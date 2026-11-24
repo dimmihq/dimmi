@@ -22,9 +22,27 @@ A handover happens in any of these cases:
 
 - **Reply or cost limit reached:** the conversation hits **Replies per conversation**, or the agent's replies in that thread cost $0.10.
 - **Blocked tag:** the conversation gets a tag listed in **Always hand over when tagged**.
+- **Procedure rule or missed step:** the chat matches a [procedure's](/ai/procedures/) **Hand over to the team when** list, or the agent still skips a required procedure action after **3** reminders.
+- **Reply withheld for safety:** a reply still contains internal notes or placeholders after dimmi asks the agent to rewrite it once.
 - **Triage mode:** **Agent's role** is set to **Triage only**. The agent titles, tags, and hands over every thread without replying.
 - **The agent cannot continue:** its active hours ended, the [monthly cap](/ai/providers/#set-the-monthly-cap) was hit, or the AI provider failed.
 - **Approval timed out:** no teammate approved a pending [action](/ai/actions/) in time.
+
+## When a note is enough
+
+Not everything your team should know needs a person to step in. A buyer who decided against you, or a feature someone asked for that you don't offer, is worth reading later. It is not worth taking a conversation over.
+
+For those moments the agent can leave an internal note instead. The note appears in the thread for your team, the customer never sees it, and the agent keeps the conversation and keeps replying. Nothing is reassigned and nobody is notified to reply.
+
+You choose which one happens with the words in your guidance:
+
+| You write | The agent does |
+| --- | --- |
+| "Note it for the team" | Leaves an internal note and keeps the conversation. |
+| "Ask if they would like you to bring someone in" | Offers a person, and hands over only if the customer says yes. |
+| "Pass the conversation to the team" | Hands over. |
+
+For example: _"When a buyer says they are going with someone else, ask once what was missing, then note it for the team. Tell them only that you have noted it, and wish them well."_
 
 ## What happens during a handover
 

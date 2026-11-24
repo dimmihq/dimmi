@@ -8,6 +8,7 @@ const base: AgentDefinition = {
   name: "Sales",
   product_name: null,
   tone: "friendly",
+  description: "",
   guidance: "Be brief.\nNever quote prices.",
   enabled_channels: ["widget"],
   schedule: "always",

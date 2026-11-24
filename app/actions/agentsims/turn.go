@@ -5,7 +5,8 @@
 |
 | One simulated turn answered as a copy of an agent. A turn that hands
 | the chat to another agent goes on as that agent's live version, the
-| way a real conversation does, so a simulation sees who answered.
+| way a real conversation does, and so does every turn after it: the
+| chat stays with the agent it was transferred to.
 |
 */
 
@@ -30,16 +31,24 @@ func (s *Simulations) turn(agentID ids.UUID, version string) procedures.TurnFunc
 		if s.Simulator == nil {
 			return nil, ErrSimulatorOff
 		}
-		def, err := s.copyOf(ctx, in.Membership, agentID, version)
-		if err != nil {
-			return nil, err
-		}
-		res, err := s.simulate(ctx, in, agentID, def)
-		for hops := 0; err == nil && res.Transfer != nil && hops < maxSimTransfers; hops++ {
-			moved := res.Transfer
-			if res, err = s.simulate(ctx, in, moved.To, nil); err == nil && res.Transfer == nil {
-				res.Transfer = moved
+		answering, def := agentID, (*agents.Definition)(nil)
+		if in.HeldBy != nil {
+			answering = *in.HeldBy
+		} else {
+			copied, err := s.copyOf(ctx, in.Membership, agentID, version)
+			if err != nil {
+				return nil, err
 			}
+			def = copied
+		}
+		res, err := s.simulate(ctx, in, answering, def)
+		var moved *pipeline.SimTransfer
+		for hops := 0; err == nil && res.Transfer != nil && hops < maxSimTransfers; hops++ {
+			moved = res.Transfer
+			res, err = s.simulate(ctx, in, moved.To, nil)
+		}
+		if err == nil && res.Transfer == nil {
+			res.Transfer = moved
 		}
 		return res, err
 	}

@@ -48,6 +48,7 @@ import {
   words,
 } from "../automation/procedure-simulator/simulator";
 import type { ChipSources } from "../automation/procedure-writer/procedure-suggestions";
+import { Transferred } from "./agent-transferred";
 
 interface Turn {
   message: string;
@@ -158,21 +159,6 @@ function AddedRow({
         />
       ) : null}
     </div>
-  );
-}
-
-/*
- * Transferred is the line the team sees when one agent hands the chat
- * to another; the customer never sees it.
- */
-function Transferred({ transfer }: { transfer: NonNullable<AgentPreview["transfer"]> }) {
-  return (
-    <span className="flex items-center gap-2 self-stretch text-center text-body-2-regular text-text-tertiary">
-      <span className="h-px min-w-4 flex-1 bg-separator-border" />
-      {transfer.from_name} transferred to {transfer.name}
-      {transfer.summary ? `: ${transfer.summary}` : ""}
-      <span className="h-px min-w-4 flex-1 bg-separator-border" />
-    </span>
   );
 }
 

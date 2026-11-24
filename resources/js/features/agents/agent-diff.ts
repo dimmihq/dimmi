@@ -114,6 +114,7 @@ export function agentChanges(before: AgentDefinition, after: AgentDefinition, na
   const fields: [string, string, (d: AgentDefinition) => string][] = [
     ["name", "Name", (d) => d.name],
     ["tone", "Tone", (d) => word(d.tone)],
+    ["description", "What it handles", (d) => d.description],
     ["guidance", "Guidance", (d) => d.guidance],
     [
       "placement",

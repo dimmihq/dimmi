@@ -268,7 +268,7 @@ func (a *Threads) Brief(ctx context.Context, in BriefInput) (Thread, error) {
 		return thread, err
 	}
 	answer, err := a.Operator.Ask(ctx, operator.Question{
-		Membership: in.Membership, ThreadID: thread.Thread.ID, Text: operator.BriefQuestion, Hidden: true,
+		Membership: in.Membership, ThreadID: thread.Thread.ID, Text: operator.BriefQuestion(), Hidden: true,
 	})
 	if err != nil {
 		return thread, err

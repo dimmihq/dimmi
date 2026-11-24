@@ -11,6 +11,8 @@ import (
 	"github.com/dimmihq/dimmi/framework/ids"
 	"github.com/dimmihq/dimmi/framework/testkit"
 
+	"github.com/dimmihq/dimmi/app/contracts"
+	decisionfake "github.com/dimmihq/dimmi/app/drivers/decision/fake"
 	"github.com/dimmihq/dimmi/app/models"
 )
 
@@ -164,6 +166,31 @@ func TestAiAgentTransfers(t *testing.T) {
 		require.Len(t, sent, 2)
 		assert.Contains(t, offered(r.llm.answer, 0), "transfer_agent:", "Sales may transfer")
 		assert.NotContains(t, offered(r.llm.answer, 1), "transfer_agent:", "the default agent may not send it back")
+		assert.Contains(t, systemOf(sent[0]), "# Other agents", "Sales is told who it may pass the chat to")
+		assert.NotContains(t, systemOf(sent[1]), "# Other agents",
+			"an agent that cannot transfer is told nothing about other agents")
+	})
+
+	t.Run("tells each agent its own job and what the agents it may pass to handle", func(t *testing.T) {
+		t.Parallel()
+		r := newTransferDesk(t)
+		r.allowBack()
+		r.operator(`UPDATE ai_agents SET description = 'Existing customers with a problem in their account.'
+			WHERE id = $1`, r.support)
+		r.operator(`UPDATE ai_agents SET description = 'People who have not bought yet: prices and plans.'
+			WHERE id = $1`, r.sales)
+		r.llm.answer.Script(reply("Growth fits 500 labels a month."))
+		conv, trigger := r.conversation("Which plan fits 500 labels?")
+
+		r.run(conv, trigger)
+
+		system := systemOf(r.llm.answer.Sent()[0])
+		assert.Contains(t, system, "# Your job")
+		assert.Contains(t, system, "Existing customers with a problem in their account.")
+		assert.Contains(t, system, "# Other agents")
+		assert.Contains(t, system, "- Sales (id "+models.PublicID(models.PrefixAiAgent, r.sales)+", sales agent): "+
+			"People who have not bought yet: prices and plans.")
+		assert.Contains(t, system, "Transfer even when you could answer the question yourself.")
 	})
 
 	t.Run("offers no transfer to an agent that is not live", func(t *testing.T) {
@@ -177,5 +204,52 @@ func TestAiAgentTransfers(t *testing.T) {
 		r.run(conv, trigger)
 
 		assert.NotContains(t, offered(r.llm.answer, 0), "transfer_agent:")
+	})
+}
+
+func TestAiAgentTransferSimulations(t *testing.T) {
+	t.Parallel()
+
+	t.Run("stays with the agent it was transferred to, and its judge reads who answered", func(t *testing.T) {
+		t.Parallel()
+		r := newTransferDesk(t)
+		r.allowBack()
+		d := r.decider()
+		d.Script(decisionfake.Step{Answers: map[string]contracts.DecisionAnswer{
+			"met": {Type: contracts.DecisionNoul, Noul: 0.94},
+		}})
+		sales := models.PublicID(models.PrefixAiAgent, r.sales)
+		path := "/api/v1/ai/agents/" + models.PublicID(models.PrefixAiAgent, r.support) + "/simulations"
+		id := r.d.Owner.PostJSON(path, testkit.JSON{
+			"name":     "Pricing goes to sales",
+			"messages": []testkit.JSON{{"text": "Which plan fits 500 labels?"}, {"text": "About 20 a day"}},
+			"assertions": []testkit.JSON{
+				{"type": "llm_rubric", "rubric": "Stays with the agent it was transferred to"},
+			},
+		}).AssertCreated().String("data.id")
+		r.llm.answer.Script(
+			tools(call("transfer_agent", `{"agent_id":"`+sales+`","summary":"Prospect asking about plans"}`)),
+			reply("Happy to help. How many a day?"),
+			reply("Growth fits that."),
+		)
+
+		ran := r.d.Owner.PostJSON(path+"/run", testkit.JSON{"simulation_ids": []string{id}}).AssertOK()
+
+		ran.AssertJSONPath("data.0.draft_result.passed", true)
+		ran.AssertJSONPath("data.0.draft_result.turns.1.reply", "Growth fits that.")
+		ran.AssertJSONPath("data.0.draft_result.turns.0.transfer.name", "Sales")
+		ran.AssertJSONPath("data.0.draft_result.turns.0.transfer.summary", "Prospect asking about plans")
+		require.Len(t, r.llm.answer.Sent(), 3, "the second message goes straight to the agent holding the chat")
+		var state string
+		for _, asked := range d.Sent() {
+			if _, ok := asked.Questions["met"]; ok {
+				state = asked.State
+			}
+		}
+		assert.Contains(t, state, "CUSTOMER: Which plan fits 500 labels?\n[")
+		assert.Contains(t, state,
+			" transferred the conversation to Sales. Its note for Sales: Prospect asking about plans]")
+		assert.Contains(t, state,
+			"SALES: Happy to help. How many a day?\nCUSTOMER: About 20 a day\nSALES: Growth fits that.")
 	})
 }

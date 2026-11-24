@@ -109,6 +109,7 @@ type KnowledgeSearchResult struct {
 	Chunks         []KnowledgeChunk
 	Mode           string
 	Degraded       string
+	RerankSkipped  string
 	EmbeddingModel string
 	EmbeddingKeyID *ids.UUID
 	EmbeddingUsage *LLMUsage

@@ -11,7 +11,9 @@ export const SHOTS: Record<string, { width: number; height: number; ready: boole
   "inbox-snooze": { width: 531, height: 540, ready: true },
   workflow: { width: 1680, height: 1000, ready: true },
   "workflow-canvas": { width: 742, height: 632, ready: true },
-  procedure: { width: 664, height: 800, ready: true },
+  procedure: { width: 720, height: 781, ready: true },
+  "procedure-simulations": { width: 388, height: 740, ready: true },
+  "procedure-history": { width: 720, height: 680, ready: true },
   "agent-voice": { width: 640, height: 486, ready: true },
   "help-center": { width: 1680, height: 1000, ready: false },
 };

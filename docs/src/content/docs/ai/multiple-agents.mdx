@@ -62,7 +62,14 @@ Deleting an agent takes it off its places. Its conversations go to the next agen
 
 A customer sometimes asks the wrong agent. The sales agent gets a bug report, or support gets a pricing question. A **transfer** hands the conversation to the agent whose job it is.
 
-List the agents an agent may hand to under **Build → Handover and transfers → May transfer to**. When a request fits one of them better, the agent transfers:
+Two things set it up, both in **Build**:
+
+1. **What it handles:** write a sentence or two on each agent saying who it is for and what they ask about, like `People who have not bought yet: prices, which plan fits, trials and demos.`
+2. **May transfer to:** under **Handover and transfers**, list the agents an agent may hand to.
+
+That is all you write. Each agent is told its own job and what the agents on its list handle, and dimmi's own instructions tell it when to transfer. You don't need to describe transfers in the guidance. An agent with no description still receives transfers, but only when a request plainly matches its name and role, so describe every agent you transfer to.
+
+When a request is another agent's job, the agent transfers:
 
 - **The customer sees nothing.** No goodbye, no notice.
 - **The other agent answers the same message** right away.
@@ -119,7 +126,10 @@ Every change in **Build** goes to a draft. Customers get the live version until 
 
 - **Preview:** chat with the agent in the side panel. Switch between **Draft** and **Live** to compare answers.
 - **Simulations:** saved chats the agent must keep getting right. Press **Save as simulation** on a Preview chat to keep it. **Run all** runs every simulation against the draft or the live version.
-- **Live differs:** marks a simulation whose draft and live results disagree. Open it and press **Compare** to see both runs side by side, then **Run both** to rerun them.
+- **Passing, flaky, failing:** an agent's answers vary from run to run, so each simulation is scored on its last 5 runs, like `Passing · 5 of 5` or `Flaky · 3 of 5`. The count starts again when you change the agent, a procedure or the simulation. Open a simulation to read its **Past runs**.
+- **Customer's situation:** each simulation says who its customer is and what they came for. dimmi writes it when you save, and you can edit it in the simulation. The simulated customer answers from it and only agrees to what it says they want. To test a customer who accepts an offer, say so there: `Wants to move to Growth and will confirm it.`
+- **Live differs:** marks a simulation whose draft and live results disagree. Open it and press **Compare** to see both runs side by side. **Run both** reruns them at the same time, and you watch each one as it happens.
+- **Transfers:** a simulation follows a transfer the way a real conversation does. The chat stays with the agent it went to, and a check can name who should answer, like `Stays with Rio`.
 - **Publish:** warns you when simulations failed on their last run on the draft.
 
 To see what changed between two versions, or roll one back, use **History**. See [Go back to an earlier version](/ai/set-up-the-agent/#go-back-to-an-earlier-version).

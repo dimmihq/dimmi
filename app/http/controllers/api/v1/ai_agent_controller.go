@@ -281,7 +281,7 @@ sent, nullable fields set or cleared, public ids decoded.
 */
 func (c *AIAgentController) agentPatch(b requests.AIUpdateAgentBody, sent map[string]bool) (ai.AgentPatch, error) {
 	p := ai.AgentPatch{
-		Name: b.Name, Tone: b.Tone, Guidance: b.Guidance, Schedule: b.Schedule,
+		Name: b.Name, Tone: b.Tone, Guidance: b.Guidance, Description: b.Description, Schedule: b.Schedule,
 		AssignedBehavior: b.AssignedBehavior, UnknownBehavior: b.UnknownBehavior,
 		DefaultLanguage: b.DefaultLanguage, IncludeContact: b.IncludeContact,
 		RequireCitations: b.RequireCitations, PiiRedaction: b.PiiRedaction,

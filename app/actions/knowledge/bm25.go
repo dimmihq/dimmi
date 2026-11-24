@@ -3,7 +3,7 @@
 | BM25 Ranking
 |--------------------------------------------------------------------------
 |
-| Articles become chunks, one per heading, and chunks become term
+| Articles become chunks, cut as cut.go says, and chunks become term
 | counts. A query is ranked with BM25, the classic keyword score, and
 | its similarity is the inverse-document-frequency weight of the query
 | terms a chunk contains over the weight of all of them: a chunk that
@@ -113,45 +113,11 @@ func frontMatter(a *Article, text string) {
 }
 
 /*
-cutArticle cuts an article at its "## " headings; the text before
-the first one is the intro chunk. Empty sections are dropped.
+newChunk builds one public chunk of an article, under the headings
+below its title.
 */
-func cutArticle(a Article) []contracts.KnowledgeChunk {
-	var out []contracts.KnowledgeChunk
-	heading := ""
-	var section []string
-
-	flush := func() {
-		text := strings.TrimSpace(strings.Join(section, "\n"))
-		if text != "" {
-			out = append(out, newChunk(a, heading, text))
-		}
-		section = nil
-	}
-
-	for line := range strings.SplitSeq(a.Body, "\n") {
-		if strings.HasPrefix(line, "# ") {
-			continue
-		}
-		if h, ok := strings.CutPrefix(line, "## "); ok {
-			flush()
-			heading = strings.TrimSpace(h)
-			continue
-		}
-		section = append(section, line)
-	}
-	flush()
-	return out
-}
-
-/*
-newChunk builds one public chunk of an article.
-*/
-func newChunk(a Article, heading, text string) contracts.KnowledgeChunk {
-	path := []string{a.Title}
-	if heading != "" {
-		path = append(path, heading)
-	}
+func newChunk(a Article, headings []string, text string) contracts.KnowledgeChunk {
+	path := append([]string{a.Title}, headings...)
 	visibility := a.Visibility
 	if visibility == "" {
 		visibility = contracts.KnowledgeVisibilityPublic

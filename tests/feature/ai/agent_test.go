@@ -280,7 +280,7 @@ func TestAiAgent(t *testing.T) {
 		sales.AssertJSONPath("data.agent.role", "sales")
 		sales.AssertJSONPath("data.agent.template", "sales")
 		sales.AssertJSONPath("data.agent.draft.name", "Sales")
-		assert.Contains(t, sales.String("data.agent.draft.guidance"), "Qualifying")
+		assert.Contains(t, sales.String("data.agent.draft.guidance"), "## Discounts and special terms")
 
 		d.Owner.PostJSON("/api/v1/ai/agents", testkit.JSON{"name": "sales"}).AssertValidationError("name")
 		d.Owner.PostJSON("/api/v1/ai/agents", testkit.JSON{"name": "X", "template": "nope"}).

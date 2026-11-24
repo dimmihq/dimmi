@@ -4,29 +4,25 @@
 |--------------------------------------------------------------------------
 |
 | Every workspace gets semantic search with no setup, from the model
-| the install configured, by default Qwen3-Embedding-8B on DeepInfra's
-| OpenAI-compatible endpoint. The model is trained so a prefix of its
-| vector keeps its meaning: the size is asked for, and a longer vector
-| is cut and normalized again whether or not the provider honored it.
-| Questions carry the model's retrieval instruction; stored documents
-| are embedded as they are.
+| the install configured: by default voyage-4-lite on Voyage's API,
+| chosen because a search waits on one call to it and it answers a
+| short question quickly and steadily. Questions and stored passages
+| are embedded as what they are, a query or a document, so a question
+| lands near the passage that answers it.
 |
 */
 
 package dimmi
 
 import (
+	"slices"
+
 	"github.com/dimmihq/dimmi/framework/clock"
 	"github.com/dimmihq/dimmi/framework/httpclient"
 
 	"github.com/dimmihq/dimmi/app/contracts"
-	"github.com/dimmihq/dimmi/app/drivers/embeddings/openaicompat"
+	"github.com/dimmihq/dimmi/app/drivers/embeddings/voyage"
 )
-
-/*
-QueryPrefix is the instruction a question is embedded behind.
-*/
-const QueryPrefix = "Instruct: Given a customer support question, retrieve help articles that answer it\nQuery: "
 
 /*
 Provider names the built-in embedder in model keys.
@@ -35,7 +31,7 @@ const Provider = "dimmi"
 
 /*
 Options configure the built-in embedder: the upstream endpoint, its
-key, the model and the size its vectors are shortened to.
+key, the model and the size of its vectors.
 */
 type Options struct {
 	BaseURL string
@@ -49,13 +45,24 @@ type Options struct {
 /*
 New returns the built-in embedder.
 */
-func New(opts Options) *openaicompat.Driver {
-	return openaicompat.New(openaicompat.Options{
+func New(opts Options) *voyage.Driver {
+	return voyage.New(voyage.Options{
 		Provider: Provider, BaseURL: opts.BaseURL, APIKey: opts.APIKey, HTTP: opts.HTTP, Clock: opts.Clock,
-		SendDimensions: true, Truncate: true, QueryPrefix: QueryPrefix,
 		Models: []contracts.EmbeddingModel{{
-			ID: opts.Model, NativeDims: 4096, AllowedDims: []int{384, 512, 768, 1024, 1536, opts.Dims},
-			MaxInputTokens: 32_768, MaxBatch: contracts.MaxEmbedBatch,
+			ID: opts.Model, NativeDims: 1024, AllowedDims: sizes(opts.Dims),
+			MaxInputTokens: 32_000, MaxBatch: contracts.MaxEmbedBatch,
 		}},
 	})
+}
+
+/*
+sizes are the vector sizes the 4 series can be asked for, with the
+install's own when it is another.
+*/
+func sizes(configured int) []int {
+	out := []int{256, 512, 1024, 2048}
+	if slices.Contains(out, configured) {
+		return out
+	}
+	return append(out, configured)
 }

@@ -49,6 +49,7 @@ func (r *run) agent(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
+	r.actions = published
 	return r.publishProcedures(ctx, published)
 }
 
@@ -70,7 +71,8 @@ func (r *run) configureAgent(ctx context.Context) error {
 	}
 	mode := enums.AIHandoffModeFull
 	patch := ai.AgentPatch{
-		Name: new("Sky"), Tone: new("friendly"), Guidance: new(AgentGuidance), Schedule: new("always"),
+		Name: new("Sky"), Tone: new("friendly"), Guidance: new(AgentGuidance), Description: new(AgentHandles),
+		Schedule:         new("always"),
 		AssignedBehavior: new("skip_when_human_active"), UnknownBehavior: new("offer_handoff"),
 		DefaultLanguage: new("en"), IncludeContact: new("basic"), RequireCitations: new(true),
 		PiiRedaction: new(true), Streaming: new(true), EnabledChannels: &[]string{"widget", "email"},

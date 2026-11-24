@@ -14,6 +14,7 @@ package procedures
 
 import (
 	"context"
+	"strings"
 
 	"github.com/dimmihq/dimmi/framework/database"
 	"github.com/dimmihq/dimmi/framework/ids"
@@ -37,6 +38,32 @@ func BuildTestCase(current models.ProcedureTestCase, in TestCaseInput) (models.P
 }
 
 /*
+WithScenario gives a simulation being saved its scenario when the
+teammate wrote none: the customer's model writes it from the saved
+messages. A scenario that cannot be written is left empty, and the
+simulation runs from its messages alone; saving never fails over it.
+*/
+func (p *Procedures) WithScenario(ctx context.Context, m authz.Membership, in TestCaseInput) TestCaseInput {
+	if in.Scenario != nil || p.Customer == nil || len(in.Messages) == 0 {
+		return in
+	}
+	profile := pipeline.CustomerProfile{WorkspaceID: m.Workspace.ID, MemberID: m.Member.ID}
+	if in.Persona != nil {
+		profile.Name = in.Persona.Name
+	}
+	for _, msg := range in.Messages {
+		profile.Saved = append(profile.Saved, pipeline.SavedMessage{Text: msg.Text, Confirm: msg.Confirm})
+	}
+	written, err := p.Customer.DescribeCustomer(ctx, profile)
+	if err != nil || strings.TrimSpace(written) == "" {
+		return in
+	}
+	in.Scenario = &written
+
+	return in
+}
+
+/*
 CaseRun is one saved simulation to play: who plays it, the case, how
 whoever watches follows it and the public id they know it by, and what
 answers each turn.
@@ -51,14 +78,19 @@ type CaseRun struct {
 
 /*
 PlayCase plays one saved simulation with the engine procedures use,
-each turn answered by the run's own TurnFunc.
+each turn answered by the run's own TurnFunc, and tells whoever watches
+how it went as soon as it is judged. Without that, a simulation run
+beside others would read as still being judged until the last of them
+was done.
 */
 func (p *Procedures) PlayCase(ctx context.Context, c CaseRun) TestResult {
 	w := p.watching(c.Membership, c.Run, c.Case)
 	if c.PublicID != "" {
 		w.test = c.PublicID
 	}
-	return p.runTestCase(ctx, simulated{m: c.Membership, c: c.Case, w: w, turn: c.Turn})
+	res := p.runTestCase(ctx, simulated{m: c.Membership, c: c.Case, w: w, turn: c.Turn})
+	w.tell(ctx, runFinished, map[string]any{"result": res})
+	return res
 }
 
 /*

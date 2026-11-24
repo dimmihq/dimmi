@@ -95,6 +95,18 @@ export function Swap({
 }
 
 /*
+ * Glide is the highlight behind the chosen row of a list. Rows that
+ * share an id share one highlight, so choosing another row slides it
+ * there on BoardUI's tight spring instead of blinking from one row to
+ * the next. The row positions itself and draws its content above it.
+ */
+export function Glide({ id, className }: { id: string; className?: string }) {
+  const timing = useTiming(0.22);
+
+  return <motion.span aria-hidden layoutId={id} transition={timing.reflow} className={className} />;
+}
+
+/*
  * Resize eases its height to whatever its content needs, so a panel
  * grows and shrinks smoothly as its view swaps.
  */

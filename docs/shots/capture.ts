@@ -17,7 +17,7 @@ import { fileURLToPath } from "node:url";
 
 import { chromium, type Page } from "@playwright/test";
 
-import { type Clip, type Shot, shots, VIEWPORT } from "./shots.ts";
+import { type Annotation, type Clip, type Shot, shots, VIEWPORT } from "./shots.ts";
 
 const base = process.env.SHOTS_URL ?? "http://localhost:8080";
 const email = process.env.SHOTS_EMAIL ?? "maya@lumen.test";
@@ -26,11 +26,14 @@ const out = fileURLToPath(new URL("../public/shots/", import.meta.url));
 const only = process.argv.includes("--only") ? process.argv[process.argv.indexOf("--only") + 1] : undefined;
 
 // The crop of a shot: the whole window, a box given in CSS pixels, a
-// section found by its heading, or the open dialog, padded.
+// custom locator/callback, a section found by its heading, or the open dialog.
 async function clipFor(page: Page, shot: Shot): Promise<Clip | undefined> {
   const crop = shot.crop;
   if (!crop) {
     return undefined;
+  }
+  if (typeof crop === "function") {
+    return crop(page);
   }
   if ("x" in crop) {
     return crop;
@@ -54,6 +57,75 @@ async function clipFor(page: Page, shot: Shot): Promise<Clip | undefined> {
     width: Math.min(VIEWPORT.width - x, box.width + pad * 2),
     height: Math.min(VIEWPORT.height - y, box.height + pad * 2),
   };
+}
+
+function anchorPoint(box: Clip, item: Annotation): { x: number; y: number } {
+  const anchor = item.anchor ?? "top-left";
+  const ax = anchor.includes("right") ? box.x + box.width : box.x;
+  const ay = anchor.includes("bottom")
+    ? box.y + box.height
+    : anchor.includes("middle")
+      ? box.y + box.height / 2
+      : box.y;
+  return { x: ax + (item.dx ?? 0), y: ay + (item.dy ?? 0) };
+}
+
+// Draws numbered callout pins anchored to real DOM elements so docs shots
+// guide the reader directly to each part explained below the picture.
+async function annotate(page: Page, annotations: Annotation[] | undefined, scheme: "light" | "dark") {
+  if (!annotations || annotations.length === 0) {
+    return;
+  }
+  const resolved: { label: string; x: number; y: number }[] = [];
+  for (const item of annotations) {
+    const box = await item.target(page).boundingBox();
+    if (!box) {
+      throw new Error(`annotation ${item.label}: target not visible`);
+    }
+    resolved.push({ label: item.label, ...anchorPoint(box, item) });
+  }
+  await page.evaluate(
+    ({ pins, dark }) => {
+      const host = document.createElement("div");
+      host.setAttribute("data-docs-annotations", "true");
+      Object.assign(host.style, { position: "fixed", inset: "0", pointerEvents: "none", zIndex: "2147483647" });
+      for (const pin of pins) {
+        const badge = document.createElement("div");
+        badge.textContent = pin.label;
+        Object.assign(badge.style, {
+          position: "fixed",
+          left: `${Math.round(pin.x)}px`,
+          top: `${Math.round(pin.y)}px`,
+          transform: "translate(-50%, -50%)",
+          width: "24px",
+          height: "24px",
+          borderRadius: "9999px",
+          background: "#059669",
+          color: "#ffffff",
+          border: dark ? "2px solid #0b0f0e" : "2px solid #ffffff",
+          boxShadow: dark ? "0 4px 12px rgba(0,0,0,0.55)" : "0 4px 12px rgba(5,150,105,0.32)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
+          fontSize: "12px",
+          fontWeight: "700",
+          lineHeight: "1",
+        });
+        host.appendChild(badge);
+      }
+      document.body.appendChild(host);
+    },
+    { pins: resolved, dark: scheme === "dark" },
+  );
+}
+
+async function clearAnnotations(page: Page) {
+  await page.evaluate(() => {
+    for (const el of document.querySelectorAll("[data-docs-annotations]")) {
+      el.remove();
+    }
+  });
 }
 
 // Pictures show dimmi Cloud's address, not the local server's: snippets
@@ -115,11 +187,14 @@ for (const scheme of ["light", "dark"] as const) {
     await showProductionHost(page);
     // Let transitions and lazy content settle.
     await page.waitForTimeout(600);
+    await annotate(page, shot.annotations, scheme);
     const clip = (await clipFor(page, shot)) ?? { x: 0, y: 0, ...VIEWPORT };
     await shoot(page, `${out}${shot.name}-${scheme}.webp`, clip);
+    await clearAnnotations(page);
     process.stdout.write(`saved ${shot.name}-${scheme}.webp\n`);
     await shot.cleanup?.(page);
   }
+
   await context.close();
 }
 

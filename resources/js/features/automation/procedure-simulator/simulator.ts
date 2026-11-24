@@ -168,13 +168,13 @@ export function sentenceOf(a: Assertion, choices: CriterionChoices): { kind: str
             kind: "Outcome",
             claim: a.team_id ? `handed over to ${nameIn(choices.teams, a.team_id, "a team")}` : "handed over",
           }
-        : { kind: "Outcome", claim: "stayed with dimmi" };
+        : { kind: "Outcome", claim: "not handed over to the team" };
     case "reply_contains":
       return { kind: "Reply", claim: a.text ? `says “${a.text}”` : "says…" };
     case "reply_not_contains":
       return { kind: "Reply", claim: a.text ? `never says “${a.text}”` : "never says…" };
     case "llm_rubric":
-      return { kind: "Reply", claim: a.rubric || "meets a rubric…" };
+      return { kind: "Judged", claim: a.rubric || "meets a rubric…" };
     default:
       return { kind: "Check", claim: words(a.type) };
   }

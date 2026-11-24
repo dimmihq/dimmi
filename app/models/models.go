@@ -198,6 +198,7 @@ type AiAgent struct {
 	CreatedByMemberID            *ids.UUID       `json:"created_by_member_id"`
 	UpdatedByMemberID            *ids.UUID       `json:"updated_by_member_id"`
 	LiveVersionID                *ids.UUID       `json:"live_version_id"`
+	Description                  string          `json:"description"`
 }
 
 type AiAgentTestCase struct {
@@ -216,6 +217,21 @@ type AiAgentTestCase struct {
 	CreatedByMemberID    *ids.UUID       `json:"created_by_member_id"`
 	CreatedAt            time.Time       `json:"created_at"`
 	UpdatedAt            time.Time       `json:"updated_at"`
+	Scenario             string          `json:"scenario"`
+	DraftHistory         json.RawMessage `json:"draft_history"`
+	LiveHistory          json.RawMessage `json:"live_history"`
+}
+
+type AiAgentTestCaseRun struct {
+	ID          ids.UUID        `json:"id"`
+	WorkspaceID ids.UUID        `json:"workspace_id"`
+	TestCaseID  ids.UUID        `json:"test_case_id"`
+	Version     string          `json:"version"`
+	Fingerprint string          `json:"fingerprint"`
+	Passed      bool            `json:"passed"`
+	Errored     bool            `json:"errored"`
+	Result      json.RawMessage `json:"result"`
+	RanAt       time.Time       `json:"ran_at"`
 }
 
 type AiAgentVersion struct {
@@ -341,20 +357,22 @@ type AiRunStep struct {
 }
 
 type AiSpendPeriod struct {
-	WorkspaceID        ids.UUID    `json:"workspace_id"`
-	PeriodStart        pgtype.Date `json:"period_start"`
-	CostMicros         int64       `json:"cost_micros"`
-	InputTokens        int64       `json:"input_tokens"`
-	CachedInputTokens  int64       `json:"cached_input_tokens"`
-	OutputTokens       int64       `json:"output_tokens"`
-	RunsCount          int32       `json:"runs_count"`
-	AnsweredCount      int32       `json:"answered_count"`
-	UnknownCount       int32       `json:"unknown_count"`
-	HandoffCount       int32       `json:"handoff_count"`
-	SilentCount        int32       `json:"silent_count"`
-	ThresholdsNotified []int32     `json:"thresholds_notified"`
-	CappedAt           *time.Time  `json:"capped_at"`
-	UpdatedAt          time.Time   `json:"updated_at"`
+	WorkspaceID          ids.UUID    `json:"workspace_id"`
+	PeriodStart          pgtype.Date `json:"period_start"`
+	CostMicros           int64       `json:"cost_micros"`
+	InputTokens          int64       `json:"input_tokens"`
+	CachedInputTokens    int64       `json:"cached_input_tokens"`
+	OutputTokens         int64       `json:"output_tokens"`
+	RunsCount            int32       `json:"runs_count"`
+	AnsweredCount        int32       `json:"answered_count"`
+	UnknownCount         int32       `json:"unknown_count"`
+	HandoffCount         int32       `json:"handoff_count"`
+	SilentCount          int32       `json:"silent_count"`
+	ThresholdsNotified   []int32     `json:"thresholds_notified"`
+	CappedAt             *time.Time  `json:"capped_at"`
+	UpdatedAt            time.Time   `json:"updated_at"`
+	SimulationCostMicros int64       `json:"simulation_cost_micros"`
+	SimulationRunsCount  int32       `json:"simulation_runs_count"`
 }
 
 type Article struct {
@@ -2402,6 +2420,7 @@ type ProcedureTestCase struct {
 	CreatedAt            time.Time       `json:"created_at"`
 	UpdatedAt            time.Time       `json:"updated_at"`
 	SimulatedAt          *time.Time      `json:"simulated_at"`
+	Scenario             string          `json:"scenario"`
 }
 
 type ProcedureVersion struct {

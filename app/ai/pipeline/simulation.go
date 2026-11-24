@@ -88,12 +88,15 @@ type SimHandoff struct {
 }
 
 /*
-SimulationResult is what the simulated turn did: the run, the reply and
-outcome, the handover, the state to hand back, the procedure trace, the
-action calls, and whether the procedure under test was followed.
+SimulationResult is what the simulated turn did: the run, the agent
+that answered, the reply and outcome, the handover, the state to hand
+back, the procedure trace, the action calls, and whether the procedure
+under test was followed.
 */
 type SimulationResult struct {
 	RunID          ids.UUID
+	AgentName      string
+	Model          string
 	Reply          string
 	Outcome        string
 	Handoff        *SimHandoff
@@ -428,7 +431,10 @@ func (r *Runner) runMock(st *run, live actionkit.Live, args json.RawMessage, agr
 simulationResult reports what the simulated turn did.
 */
 func (r *Runner) simulationResult(st *run, d *decision) *SimulationResult {
-	out := &SimulationResult{RunID: st.rec.Run.ID, Outcome: d.outcome, Calls: st.sim.calls, Transfer: simTransfer(st)}
+	out := &SimulationResult{
+		RunID: st.rec.Run.ID, AgentName: st.env.Agent.Name, Outcome: d.outcome, Calls: st.sim.calls,
+		Transfer: simTransfer(st), Model: strv(st.env.Agent.AnswerModel),
+	}
 	if d.writesMessage() {
 		out.Reply = strings.ReplaceAll(r.reply(st.env, d), ticketReference, sampleReference)
 	}
