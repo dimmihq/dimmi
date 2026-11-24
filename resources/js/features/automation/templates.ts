@@ -33,7 +33,7 @@ export const workflowTemplates: WorkflowTemplate[] = [
     trigger: "conversation.first_message",
     build: (spec) => ({
       ...spec,
-      steps: [step("message", { text: "Hi {{contact.first_name}}, thanks for writing in." }), step("dimmi")],
+      steps: [step("message", { text: "Hi, thanks for writing in. Someone will be with you shortly." }), step("dimmi")],
     }),
   },
   {
