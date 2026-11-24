@@ -89,6 +89,7 @@ To act on one agent only, add a branch on **AI agent**. Under the transfer trigg
 | --- | --- | --- |
 | **Branch** | Follows the first of up to 10 matching conditions. | One per condition, **Everyone else** |
 | **Sort by topic** | Asks AI to read the conversation and pick one of 2 to 10 topics. | One per category, **None matched or AI unavailable** |
+| **A/B split** | Sends each conversation down one of 2 to 4 variants by the shares you set, which add up to 100%. A conversation keeps its variant every time it reaches the step. Once you pick a winner, everyone goes down it. See [A/B test a path](/workflows/build-a-workflow/#ab-test-a-path). | One per variant |
 | **Extract with AI** | Asks AI to read the conversation and save up to 10 typed values (text, number, date, yes or no, one of a list) to run variables or contact attributes. A value the AI isn't sure of takes its fallback. | **None matched or AI unavailable** (when turned on), for a value with no fallback |
 | **Wait** | Pauses for 5 minutes to 7 days, or until office hours open. Can count only office hours. | |
 | **Run a workflow** | Runs a live reusable workflow and waits for it to finish. | |
