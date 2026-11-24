@@ -17,7 +17,7 @@ import { FinalCta } from "../sections/final-cta";
 const how = [
   {
     title: "Start from an event",
-    body: "Trigger on a first message, tag, app event, quiet thread, SLA alert, or timer.",
+    body: "Trigger on a first message, a tag, a quiet thread, an SLA alert, or an AI agent handing over.",
   },
   {
     title: "Check your rules",
@@ -25,7 +25,7 @@ const how = [
   },
   {
     title: "Take action",
-    body: "Route to a team, reply, open a ticket, call your API, or hand to the dimmi agent.",
+    body: "Route to a team, reply, open a ticket, call your API, or hand the chat to one of your AI agents.",
   },
 ];
 
@@ -38,7 +38,11 @@ const stepKinds = [
   { icon: Hourglass, title: "Wait and follow up", body: "Pause for a reply, then nudge, snooze, or close the chat." },
   { icon: Ticket, title: "Create tickets", body: "Turn bug reports or requests into tickets with zero clicks." },
   { icon: Globe, title: "Call your API", body: "Send HTTP requests to your backend and use the response." },
-  { icon: Sparkle, title: "Hand to the AI agent", body: "Let the dimmi agent take over when a path calls for AI." },
+  {
+    icon: Sparkle,
+    title: "Hand to an AI agent",
+    body: "Pick your sales or support agent for this path. It answers with its own guidance, or you turn AI off entirely.",
+  },
 ];
 
 const templates = [
@@ -59,8 +63,19 @@ const questions = [
       "Not unless a step calls your own API. Pick a template, drag steps on the canvas, or describe what you want in plain English and let dimmi draft it.",
   },
   {
-    question: "Can workflows run on a schedule or office hours?",
-    answer: "Yes. Run them every Monday at 9:00, every hour, or only inside or outside your workspace office hours.",
+    question: "Can workflows run on a schedule?",
+    answer:
+      "They run when something happens, never on a clock. You can limit one to inside or outside office hours. For a weekly sweep of your inbox, an Operator routine is the better tool.",
+  },
+  {
+    question: "Who answers once the workflow is done?",
+    answer:
+      "The AI agent placed on that channel picks up the customer's next message, unless the workflow turned AI off or a teammate took over. The message the workflow already handled never gets a second answer.",
+  },
+  {
+    question: "How do I know a change won't break something?",
+    answer:
+      "Run it in a simulation first: an AI-played customer taps the buttons and types answers against your draft, and you see every step it took. After you publish, Analytics shows where people drop off, version by version.",
   },
   {
     question: "So can I cancel Zapier?",
@@ -80,7 +95,7 @@ const questions = [
   {
     question: "How do I debug what ran at 3am?",
     answer:
-      "Open the run log on the workflow or right on the conversation. Every step and branch choice is recorded in order.",
+      "Open the run log on the workflow's Analytics tab. Every step and branch choice is recorded in order, along with the version that ran, and failed runs get their own list.",
   },
 ];
 
