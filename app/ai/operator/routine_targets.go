@@ -28,6 +28,10 @@ func targetOf(op Operation) string {
 		return "article " + op.Article.String()
 	case op.Procedure != nil:
 		return "procedure " + op.Procedure.String()
+	case op.Workflow != nil:
+		return "workflow " + op.Workflow.String()
+	case op.Series != nil:
+		return "series " + op.Series.String()
 	}
 	return ""
 }

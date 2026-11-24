@@ -48,6 +48,10 @@ const groupLabels: Record<OperatorGroup, { label: string; description: string }>
   contacts: { label: "Customers", description: "A customer's name." },
   articles: { label: "Help articles", description: "New drafts and edits to drafts. Publishing stays yours." },
   procedures: { label: "Procedures", description: "Edits to a procedure's working copy. Publishing stays yours." },
+  automation: {
+    label: "Workflows and series",
+    description: "New drafts and edits to a working copy. Publishing stays yours.",
+  },
   actions: {
     label: "Workspace actions",
     description: "Actions you gave Operator in Settings, Actions. Lookups run at once; changes wait for you.",

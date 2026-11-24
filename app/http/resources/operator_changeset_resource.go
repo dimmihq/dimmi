@@ -57,9 +57,11 @@ OperatorOperation is one change inside a changeset. Number is the
 conversation's number when it changes one; Created names the note or
 article it made; Text is the full text it writes, such as a note, an
 article body or a procedure's working copy, for the reviewer to read
-before applying. ArticleID, HelpCenterID and ProcedureID name what an
-article or procedure operation changes; Title is a new article title
-and Visibility whether a new article is public or agent_only.
+before applying. ArticleID, HelpCenterID, ProcedureID, WorkflowID and
+SeriesID name what an article, procedure, workflow or series operation
+changes; Title is a new article title and Visibility whether a new
+article is public or agent_only. A new workflow's or series' Text is
+its name, trigger or subject and whole working copy.
 */
 type OperatorOperation struct {
 	Kind    string          `json:"kind"`
@@ -74,6 +76,8 @@ type OperatorOperation struct {
 	ArticleID    *string `json:"article_id,omitempty"`
 	HelpCenterID *string `json:"help_center_id,omitempty"`
 	ProcedureID  *string `json:"procedure_id,omitempty"`
+	WorkflowID   *string `json:"workflow_id,omitempty"`
+	SeriesID     *string `json:"series_id,omitempty"`
 	Title        *string `json:"title,omitempty"`
 	Visibility   *string `json:"visibility,omitempty"`
 }
@@ -104,6 +108,8 @@ func NewOperatorChangeset(c models.OperatorChangeset) OperatorChangeset {
 			ArticleID:    optionalID(models.PrefixArticle, op.Article),
 			HelpCenterID: optionalID(models.PrefixHelpCenter, op.HelpCenter),
 			ProcedureID:  optionalID(models.PrefixProcedure, op.Procedure), Title: op.Title, Visibility: op.Visibility,
+			WorkflowID: optionalID(models.PrefixWorkflow, op.Workflow),
+			SeriesID:   optionalID(models.PrefixSeries, op.Series),
 		}
 	}
 	return out
@@ -144,8 +150,13 @@ func created(op operator.Operation) *string {
 	if op.Created == nil {
 		return nil
 	}
-	if op.Kind == operator.KindNote {
+	switch op.Kind {
+	case operator.KindNote:
 		return optionalID(models.PrefixMessage, op.Created)
+	case operator.KindWorkflowNew:
+		return optionalID(models.PrefixWorkflow, op.Created)
+	case operator.KindSeriesNew:
+		return optionalID(models.PrefixSeries, op.Created)
 	}
 	return optionalID(models.PrefixArticle, op.Created)
 }

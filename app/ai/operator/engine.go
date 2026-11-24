@@ -38,6 +38,8 @@ import (
 	"github.com/dimmihq/dimmi/app/actions/knowledge"
 	"github.com/dimmihq/dimmi/app/actions/messages"
 	"github.com/dimmihq/dimmi/app/actions/procedures"
+	"github.com/dimmihq/dimmi/app/actions/series"
+	"github.com/dimmihq/dimmi/app/actions/workflows"
 	"github.com/dimmihq/dimmi/app/ai/actionkit"
 	"github.com/dimmihq/dimmi/app/auth/authz"
 	appbroadcasting "github.com/dimmihq/dimmi/app/broadcasting"
@@ -66,6 +68,8 @@ type Services struct {
 	Contacts   *contacts.UpdateContact
 	Articles   *helpcenters.Articles
 	Procedures *procedures.Procedures
+	Workflows  *workflows.Workflows
+	Series     *series.Series
 	Audit      *audit.RecordAuditLog
 	Actions    *actionkit.Kit
 	GitHub     GitHub

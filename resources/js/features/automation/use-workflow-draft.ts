@@ -5,7 +5,9 @@
  * someone else saved first stops saving, so their work is never
  * overwritten; reloading shows theirs. Publishing first saves what is
  * pending, then publishes exactly the copy that was saved, and what the
- * server found wrong with it shows beside the steps.
+ * server found wrong with it shows beside the steps. A copy the server
+ * wrote, such as an Operator change the teammate accepted, is adopted
+ * whole.
  */
 import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
@@ -102,7 +104,19 @@ function useSaver(workspace: string, workflow: Workflow, onSaved: (next: Workflo
     timer.current = window.setTimeout(() => void flush(), pause);
   };
 
-  return { state, queue, flush };
+  /*
+   * reset drops what is queued and starts again from a copy the server
+   * wrote, such as one Operator's accepted change saved.
+   */
+  const reset = (next: Workflow) => {
+    window.clearTimeout(timer.current);
+    wanted.current = {};
+    lock.current = next.lock_version;
+    stopped.current = false;
+    setState("saved");
+  };
+
+  return { state, queue, flush, reset };
 }
 
 export function useWorkflowDraft(workspace: string, workflow: Workflow, onArchived: () => void) {
@@ -179,19 +193,22 @@ export function useWorkflowDraft(workspace: string, workflow: Workflow, onArchiv
 
         return done.workflow;
       }),
+    setStatus: (status: "live" | "paused") => act(() => setWorkflowStatus(workspace, workflow.id, status)),
     /*
-     * adopt takes a working copy saved elsewhere, such as a restored
-     * version or an edit Operator applied, as the one being edited.
+     * adopt takes a copy the server wrote as the working copy, such as
+     * a restored version or the one saved when the teammate accepts
+     * Operator's change.
      */
     adopt: (next: Workflow) => {
-      current.current = next.spec as Spec;
+      saver.reset(next);
       latest.current = next;
+      current.current = next.spec as Spec;
       setSpec(next.spec as Spec);
       setName(next.name);
       setServer(next);
       setFound(null);
+      void refresh();
     },
-    setStatus: (status: "live" | "paused") => act(() => setWorkflowStatus(workspace, workflow.id, status)),
     archive: async () => {
       await saver.flush();
       try {

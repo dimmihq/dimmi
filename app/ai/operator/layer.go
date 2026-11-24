@@ -80,6 +80,7 @@ const (
 	groupInsights      = "insights"
 	groupChanges       = "changes"
 	groupActions       = "actions"
+	groupAutomation    = "automation"
 )
 
 /*
@@ -132,6 +133,8 @@ func ownGroups() []toolset.Group {
 		{Name: groupInsights, Line: "workspace reports and the AI agent's past runs"},
 		{Name: groupChanges, Line: "draft replies, propose changes the teammate applies, remember notes"},
 		{Name: groupActions, Line: "the workspace's own actions on its systems"},
+		{Name: groupAutomation, Line: "workflows and series: read them, explain what workflows did on a " +
+			"conversation, suggest edits and new drafts"},
 	}
 }
 
@@ -142,6 +145,8 @@ func ownGroupOf(t tool) string {
 	switch {
 	case strings.HasPrefix(t.spec.Name, actionPrefix):
 		return groupActions
+	case strings.Contains(t.spec.Name, "workflow") || strings.Contains(t.spec.Name, "series"):
+		return groupAutomation
 	case len(t.writes) > 0 || t.spec.Name == "remember" || t.spec.Name == "draft_reply":
 		return groupChanges
 	case t.spec.Name == "get_workspace_report" || t.spec.Name == "get_ai_agent_runs":
