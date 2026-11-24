@@ -3,6 +3,8 @@ package ai_test
 import (
 	"encoding/json"
 	"fmt"
+	nethttp "net/http"
+	"slices"
 	"testing"
 	"time"
 
@@ -234,9 +236,12 @@ func TestClefDecider(t *testing.T) {
 		d, http := newDriver(t)
 		http.Stub(address, httpclient.Response{Status: 200, Body: []byte(
 			`{"result":{"answers":{"billing":{"type":"noul","noul":1.7}}},"success":true}`)})
-		_, err := d.Decide(t.Context(), contracts.DecisionRequest{State: "x", Questions: map[string]contracts.DecisionQuestion{
-			"billing": {Type: contracts.DecisionNoul, Instructions: "Billing?"},
-		}})
+		_, err := d.Decide(t.Context(), contracts.DecisionRequest{
+			State: "x",
+			Questions: map[string]contracts.DecisionQuestion{
+				"billing": {Type: contracts.DecisionNoul, Instructions: "Billing?"},
+			},
+		})
 		assert.ErrorIs(t, err, clef.ErrUnavailable)
 	})
 
@@ -285,15 +290,72 @@ func TestClefDecider(t *testing.T) {
 		assert.ErrorIs(t, err, clef.ErrUnavailable)
 	})
 
-	t.Run("refuses more questions than one request takes", func(t *testing.T) {
-		t.Parallel()
-		d, _ := newDriver(t)
-		many := contracts.DecisionRequest{State: "x", Questions: map[string]contracts.DecisionQuestion{}}
-		for i := range clef.MaxQuestions + 1 {
-			many.Questions[fmt.Sprintf("q%d", i)] = contracts.DecisionQuestion{Type: contracts.DecisionNoul}
+	many := func(count int) contracts.DecisionRequest {
+		req := contracts.DecisionRequest{State: "x", Questions: map[string]contracts.DecisionQuestion{}}
+		for i := range count {
+			req.Questions[fmt.Sprintf("q%03d", i)] = contracts.DecisionQuestion{Type: contracts.DecisionNoul}
 		}
-		_, err := d.Decide(t.Context(), many)
-		assert.ErrorIs(t, err, clef.ErrTooManyQuestions)
+		return req
+	}
+	echo := func(broken string) nethttp.Handler {
+		return nethttp.HandlerFunc(func(w nethttp.ResponseWriter, req *nethttp.Request) {
+			var body struct {
+				Questions map[string]any `json:"questions"`
+			}
+			_ = json.NewDecoder(req.Body).Decode(&body)
+			if _, hit := body.Questions[broken]; hit {
+				w.WriteHeader(nethttp.StatusServiceUnavailable)
+				_, _ = w.Write([]byte(`{"success":false}`))
+				return
+			}
+			out := map[string]any{}
+			for name := range body.Questions {
+				out[name] = map[string]any{"type": "noul", "noul": 0.9}
+			}
+			_ = json.NewEncoder(w).Encode(map[string]any{"success": true, "result": map[string]any{
+				"model": "clef", "answers": out, "usage": map[string]int{"input_tokens": len(out)},
+			}})
+		})
+	}
+
+	t.Run("asks a long list of questions as several requests and joins the answers", func(t *testing.T) {
+		t.Parallel()
+		d, http := newDriver(t)
+		http.Serve(address, echo(""))
+		res, err := d.Decide(t.Context(), many(2*clef.MaxQuestions+10))
+		require.NoError(t, err)
+		assert.Len(t, res.Answers, 2*clef.MaxQuestions+10)
+		assert.InDelta(t, 0.9, res.Answers["q137"].Noul, 0.001)
+		assert.Equal(t, int64(2*clef.MaxQuestions+10), res.Usage.InputTokens)
+
+		sizes := []int{}
+		for _, sent := range http.Sent() {
+			var body struct {
+				Questions map[string]any `json:"questions"`
+			}
+			_ = json.Unmarshal(sent.Body, &body)
+			sizes = append(sizes, len(body.Questions))
+		}
+		slices.Sort(sizes)
+		assert.Equal(t, []int{10, clef.MaxQuestions, clef.MaxQuestions}, sizes)
+	})
+
+	t.Run("fails the whole call when one of its requests fails", func(t *testing.T) {
+		t.Parallel()
+		d, http := newDriver(t)
+		http.Serve(address, echo("q100"))
+		_, err := d.Decide(t.Context(), many(2*clef.MaxQuestions+10))
+		assert.ErrorIs(t, err, clef.ErrUnavailable)
+	})
+
+	t.Run("sends exactly the limit as one request", func(t *testing.T) {
+		t.Parallel()
+		d, http := newDriver(t)
+		http.Serve(address, echo(""))
+		res, err := d.Decide(t.Context(), many(clef.MaxQuestions))
+		require.NoError(t, err)
+		assert.Len(t, res.Answers, clef.MaxQuestions)
+		assert.Len(t, http.Sent(), 1)
 	})
 
 	t.Run("needs an account id and a token", func(t *testing.T) {

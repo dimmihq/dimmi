@@ -256,7 +256,9 @@ func TestLiveClefTakesAFullRequest(t *testing.T) {
 		state += fmt.Sprintf("\n<customer_message>Message %d: my invoice for March shows the wrong VAT number "+
 			"and I need a corrected copy for my accountant.</customer_message>", i)
 	}
-	req := contracts.DecisionRequest{State: state + "\n</conversation>", Questions: map[string]contracts.DecisionQuestion{}}
+	req := contracts.DecisionRequest{
+		State: state + "\n</conversation>", Questions: map[string]contracts.DecisionQuestion{},
+	}
 	for i := range clef.MaxQuestions {
 		req.Questions[fmt.Sprintf("q%02d", i)] = contracts.DecisionQuestion{
 			Type: contracts.DecisionNoul, Instructions: "Is the conversation about an invoice?",
@@ -268,5 +270,36 @@ func TestLiveClefTakesAFullRequest(t *testing.T) {
 	require.Len(t, res.Answers, clef.MaxQuestions)
 	for name, a := range res.Answers {
 		assert.Greater(t, a.Noul, 0.5, name)
+	}
+}
+
+/*
+TestLiveClefSplitsALongList asks more questions than one request takes,
+the way a workspace with many procedures does, and expects every one
+answered in about the time of one request.
+*/
+func TestLiveClefSplitsALongList(t *testing.T) {
+	d := liveClef(t)
+	const asked = 2*clef.MaxQuestions + 22
+	req := contracts.DecisionRequest{
+		State:     "<customer_message>My invoice for March shows the wrong VAT number.</customer_message>",
+		Questions: map[string]contracts.DecisionQuestion{},
+	}
+	for i := range asked {
+		ask := "Is the message about an invoice?"
+		if i%2 == 1 {
+			ask = "Is the message about a late delivery?"
+		}
+		req.Questions[fmt.Sprintf("q%03d", i)] = contracts.DecisionQuestion{
+			Type: contracts.DecisionNoul, Instructions: ask,
+		}
+	}
+	started := time.Now()
+	res, _ := decideTwice(t, d, req)
+	t.Logf("%d questions, %d input tokens, %s", len(res.Answers), res.Usage.InputTokens, time.Since(started))
+	require.Len(t, res.Answers, asked)
+	for i := range asked {
+		name := fmt.Sprintf("q%03d", i)
+		assert.Equal(t, i%2 == 0, res.Answers[name].Noul >= 0.5, name)
 	}
 }

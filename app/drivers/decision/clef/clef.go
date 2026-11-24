@@ -4,11 +4,12 @@
 |--------------------------------------------------------------------------
 |
 | Cloudflare's Clef answers choice, score and yes-or-no questions about
-| a piece of state with a probability each, in one request for up to
-| sixty-four questions. It runs on Workers AI, which keeps no request
-| after answering it and trains on none. The driver translates the
-| contract to the Workers AI REST API over the shared HTTP client and
-| maps its failures to errors the pipeline can record.
+| a piece of state with a probability each, up to sixty-four questions
+| a request. It runs on Workers AI, which keeps no request after
+| answering it and trains on none. The driver translates the contract
+| to the Workers AI REST API over the shared HTTP client, asks a longer
+| list of questions as several requests at once, and maps its failures
+| to errors the pipeline can record.
 |
 */
 
@@ -19,8 +20,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"maps"
 	"net/url"
+	"slices"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/dimmihq/dimmi/framework/clock"
@@ -33,20 +37,22 @@ import (
 Errors the driver returns: ErrNotConfigured without an account id or
 an API token, ErrRejected when the API refuses the request,
 ErrUnavailable when it fails, is out of capacity or answers something
-unreadable, ErrTooManyQuestions when one request asks more than the
-API takes.
+unreadable.
 */
 var (
-	ErrNotConfigured    = errors.New("clef: no account id or api token")
-	ErrRejected         = errors.New("clef: request rejected")
-	ErrUnavailable      = errors.New("clef: unavailable")
-	ErrTooManyQuestions = errors.New("clef: more questions than one request takes")
+	ErrNotConfigured = errors.New("clef: no account id or api token")
+	ErrRejected      = errors.New("clef: request rejected")
+	ErrUnavailable   = errors.New("clef: unavailable")
 )
 
 /*
-MaxQuestions is how many questions one request may ask.
+MaxQuestions is how many questions the API takes in one request, and
+maxRequests how many requests one call sends at once.
 */
-const MaxQuestions = 64
+const (
+	MaxQuestions = 64
+	maxRequests  = 4
+)
 
 /*
 The instructions sent for a question that came without any: the API
@@ -164,27 +170,84 @@ type wireAnswer struct {
 }
 
 /*
-Decide asks the questions in one request. Every question asked must
-come back answered with a probability in range, or the call counts as
-failed: a missing answer read as zero would be a confident no.
+Decide asks the questions, in one request when the API takes them all
+and otherwise in as many as it needs, a few at once, each with the same
+state. Every question asked must come back answered with a probability
+in range, or the call counts as failed: a missing answer read as zero
+would be a confident no. One request that fails fails the call, so a
+caller never acts on half the answers.
 */
 func (d *Driver) Decide(ctx context.Context, req contracts.DecisionRequest) (*contracts.DecisionResponse, error) {
-	if len(req.Questions) > MaxQuestions {
-		return nil, fmt.Errorf("%w: %d asked, %d allowed", ErrTooManyQuestions, len(req.Questions), MaxQuestions)
+	started := d.clock.Now()
+	names := slices.Sorted(maps.Keys(req.Questions))
+	if len(names) <= MaxQuestions {
+		out, err := d.ask(ctx, req)
+		if err != nil {
+			return nil, err
+		}
+		return fromWire(out, d.clock.Now().Sub(started)), nil
 	}
+
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+	var (
+		mu     sync.Mutex
+		wg     sync.WaitGroup
+		failed error
+		all    = wireResponse{Answers: make(map[string]wireAnswer, len(names))}
+		slots  = make(chan struct{}, maxRequests)
+	)
+	for part := range slices.Chunk(names, MaxQuestions) {
+		wg.Go(func() {
+			slots <- struct{}{}
+			defer func() { <-slots }()
+			some := contracts.DecisionRequest{
+				State: req.State, Questions: make(map[string]contracts.DecisionQuestion, len(part)),
+			}
+			for _, name := range part {
+				some.Questions[name] = req.Questions[name]
+			}
+			out, err := d.ask(ctx, some)
+			mu.Lock()
+			defer mu.Unlock()
+			if err != nil {
+				if failed == nil {
+					failed = err
+					cancel()
+				}
+				return
+			}
+			maps.Copy(all.Answers, out.Answers)
+			all.Model = out.Model
+			all.Usage.InputTokens += out.Usage.InputTokens
+			all.Usage.OutputTokens += out.Usage.OutputTokens
+		})
+	}
+	wg.Wait()
+	if failed != nil {
+		return nil, failed
+	}
+	return fromWire(all, d.clock.Now().Sub(started)), nil
+}
+
+/*
+ask sends one request of at most MaxQuestions questions and returns
+its checked answer.
+*/
+func (d *Driver) ask(ctx context.Context, req contracts.DecisionRequest) (wireResponse, error) {
+	var none wireResponse
 	body := wireRequest{Model: d.cfg.Model, State: req.State, Questions: map[string]wireQuestion{}}
 	for name, q := range req.Questions {
 		body.Questions[name] = toWire(q)
 	}
 
-	started := d.clock.Now()
 	call := d.http.New().WithToken(d.cfg.APIToken).Accept("application/json")
 	if d.cfg.Timeout > 0 {
 		call = call.Timeout(d.cfg.Timeout)
 	}
 	resp, err := call.Post(ctx, d.url, body)
 	if err != nil {
-		return nil, fmt.Errorf("%w: %w", ErrUnavailable, err)
+		return none, fmt.Errorf("%w: %w", ErrUnavailable, err)
 	}
 
 	var env wireEnvelope
@@ -192,13 +255,13 @@ func (d *Driver) Decide(ctx context.Context, req contracts.DecisionRequest) (*co
 	detail := failure(env, resp.Body)
 	switch {
 	case resp.Status == 400 || resp.Status == 401 || resp.Status == 403 || resp.Status == 404 || resp.Status == 422:
-		return nil, fmt.Errorf("%w: status %d: %s", ErrRejected, resp.Status, detail)
+		return none, fmt.Errorf("%w: status %d: %s", ErrRejected, resp.Status, detail)
 	case resp.Status < 200 || resp.Status > 299:
-		return nil, fmt.Errorf("%w: status %d: %s", ErrUnavailable, resp.Status, detail)
+		return none, fmt.Errorf("%w: status %d: %s", ErrUnavailable, resp.Status, detail)
 	case !readable:
-		return nil, fmt.Errorf("%w: unreadable answer", ErrUnavailable)
+		return none, fmt.Errorf("%w: unreadable answer", ErrUnavailable)
 	case env.Success != nil && !*env.Success:
-		return nil, fmt.Errorf("%w: %s", ErrUnavailable, detail)
+		return none, fmt.Errorf("%w: %s", ErrUnavailable, detail)
 	}
 
 	out := env.wireResponse
@@ -206,12 +269,12 @@ func (d *Driver) Decide(ctx context.Context, req contracts.DecisionRequest) (*co
 		out = *env.Result
 	}
 	if err := complete(req, out); err != nil {
-		return nil, fmt.Errorf("%w: %w", ErrUnavailable, err)
+		return none, fmt.Errorf("%w: %w", ErrUnavailable, err)
 	}
 	if out.Model == "" {
 		out.Model = d.cfg.Model
 	}
-	return fromWire(out, d.clock.Now().Sub(started)), nil
+	return out, nil
 }
 
 /*
