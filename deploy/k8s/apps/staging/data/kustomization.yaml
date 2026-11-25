@@ -8,6 +8,9 @@ namespace: dimmi-staging
 resources:
   - ../../base/data
   - backup.yaml
+# The database was started empty on 2026-11-25, on the reinstalled server.
+# serverName gives it its own archive in the bucket, beside the one the
+# database before it wrote, which a new database must never write over.
 patches:
   - target:
       kind: Cluster
@@ -20,6 +23,7 @@ patches:
             isWALArchiver: true
             parameters:
               barmanObjectName: postgres-backup
+              serverName: postgres-2026-11-25
   - target:
       kind: ConfigMap
       name: dimmi-config
