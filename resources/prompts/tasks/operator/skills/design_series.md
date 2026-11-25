@@ -85,6 +85,10 @@ Steps:
    - the one who replies: "replies to the first email with a question";
    - the one who reaches the goal early: "upgrades the day after the second email";
    - and one who should not enter, to check the entry keeps them out.
+   A scenario says how the person behaves, the way a teammate would describe a real customer. It
+   never names the branch, path or ending you expect ("goes down the discount path"): the test is
+   whether the series gets there on its own. To walk a person again after a change, send the same
+   scenario.
    Read each walk: did each person get what they needed and nothing more, did the goal or a reply
    end it at the right time, did every branch go where you meant? Fix and walk again when one does
    not. Each walk asks a model a few times, so do not walk the same person twice without a change

@@ -4,8 +4,10 @@
  * try starting, each line of the chat and each step as they happen, and
  * the result. A page showing that workflow or series keeps the tries of
  * this visit and calls onStart when one begins, so it can open its
- * Simulations panel and the teammate watches Operator work. Nothing is
- * kept: the tries are gone once the page is left.
+ * Simulations panel and the teammate watches Operator work. A try of a
+ * case Operator tried before, the same first message or scenario,
+ * takes that case's place instead of adding another. Nothing is kept:
+ * the tries are gone once the page is left.
  */
 import { useQuery } from "@tanstack/react-query";
 import { useRef, useState } from "react";
@@ -34,7 +36,7 @@ export interface OperatorTry {
   done: boolean;
 }
 
-interface TryEvent extends WfRunEvent {
+export interface TryEvent extends WfRunEvent {
   kind?: "workflow" | "series";
   try_id?: string;
   workflow_id?: string;
@@ -44,6 +46,11 @@ interface TryEvent extends WfRunEvent {
   scenario?: string;
   name?: string;
   error?: string;
+}
+
+/* caseOf is what makes two tries the same case: the customer's first message, or the scenario. */
+function caseOf(t: { message?: string; scenario?: string }): string {
+  return (t.message || t.scenario || "").trim().toLowerCase().replace(/\s+/g, " ");
 }
 
 /* next is a try once one more moment has happened. */
@@ -66,6 +73,22 @@ function next(was: OperatorTry | undefined, data: TryEvent): OperatorTry {
   }
 
   return { ...now, run: movedOn(now.run, data), done: data.moment === "finished" };
+}
+
+/*
+ * withTry is the tries once one more moment has happened: the try it
+ * belongs to moves on, and a new try of a case tried before takes that
+ * case's place.
+ */
+export function withTry(now: OperatorTry[], data: TryEvent): OperatorTry[] {
+  const at = now.findIndex((t) => t.id === data.try_id);
+  if (at >= 0) {
+    return now.map((t, i) => (i === at ? next(t, data) : t));
+  }
+  const fresh = next(undefined, data);
+  const same = now.findIndex((t) => caseOf(t) !== "" && caseOf(t) === caseOf(fresh));
+
+  return same < 0 ? [...now, fresh] : now.map((t, i) => (i === same ? fresh : t));
 }
 
 /*
@@ -93,14 +116,7 @@ export function useOperatorTries(
       if (data.moment === "started") {
         starting.current();
       }
-      setTries((now) => {
-        const at = now.findIndex((t) => t.id === data.try_id);
-        if (at < 0) {
-          return [...now, next(undefined, data)];
-        }
-
-        return now.map((t, i) => (i === at ? next(t, data) : t));
-      });
+      setTries((now) => withTry(now, data));
     },
   });
 

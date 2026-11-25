@@ -71,11 +71,20 @@ Steps:
    stop there: you cannot create one. Write every customer message in full, ready to send.
 5. Try it with simulate_workflow before you hand it over. One try for each path that matters: each
    category, None matched, a customer who never answers, and a customer the fast lane should catch
-   next to one it should not. Write the message and the situation so they push into that path:
-   "Hi, my parcel from last Tuesday never arrived" with "a shop owner who ships 40 parcels a week,
-   answers questions briefly". Read the steps: when a try takes a path you did not mean, fix the
-   workflow and try that path again. Six tries are usually enough. Each try asks a model a few
-   times, so do not try a path twice without a change in between.
+   next to one it should not. Pick cases like the real ones you read in step 2.
+   - The message is what such a customer writes, in their words: "Hi, my parcel from last Tuesday
+     never arrived".
+   - The situation describes the customer as a teammate would brief someone playing them: who they
+     are, what happened to them, what they want, and how they answer questions. "Runs a small
+     candle shop, ships about 40 parcels a week. A parcel to a customer in Leeds has not moved in
+     six days. Wants to know where it is. Answers briefly, gives the order number when asked."
+   - Never write in the situation which category, team or path it belongs to, or what it is not
+     ("this is a billing issue", "not a refund"). Customers never say that, and the test is whether
+     the workflow works it out on its own.
+   Read the steps: when a try takes a path you did not mean, fix the workflow and try that case
+   again with the same message and situation, so the team sees the same case go the right way.
+   Six tries are usually enough. Each try asks a model a few times, so never try a case twice
+   without a change in between.
 6. Hand it over (see the message below).
 
 Getting it right:

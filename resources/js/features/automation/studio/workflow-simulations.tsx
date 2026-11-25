@@ -931,18 +931,28 @@ function disagrees(sim: WorkflowSimulation): boolean {
 }
 
 /* summaryOf says how many simulations pass, are flaky, fail or have not run on the copy. */
-function summaryOf(list: WorkflowSimulation[], as: AnswerAs): string {
-  const standings = list.map((sim) => simHistoryOf(sim, as)?.state ?? "none");
+function summaryOf(list: WorkflowSimulation[], as: AnswerAs, tries: OperatorTry[]): string {
+  const standings = [...list.map((sim) => simHistoryOf(sim, as)?.state ?? "none"), ...tries.map(tryStanding)];
   const count = (state: string) => standings.filter((s) => s === state).length;
 
   return [
-    `${count("passing")} of ${list.length} passing`,
+    `${count("passing")} of ${standings.length} passing`,
+    count("running") > 0 ? `${count("running")} running` : "",
     count("flaky") > 0 ? `${count("flaky")} flaky` : "",
     count("failing") > 0 ? `${count("failing")} failing` : "",
     count("none") > 0 ? `${count("none")} not run` : "",
   ]
     .filter(Boolean)
     .join(", ");
+}
+
+/* tryStanding is where one of Operator's tries stands, in the words of a simulation's standing. */
+function tryStanding(t: OperatorTry): string {
+  if (!t.done) {
+    return "running";
+  }
+
+  return t.run.result?.passed && !t.run.result.error ? "passing" : "failing";
 }
 
 /* SimRow is one simulation in the list: its name, first message, how it stands, and whether live differs. */
@@ -1043,7 +1053,7 @@ export function WorkflowSimulations({
   const opened = list.find((sim) => sim.id === openId);
   const openedTry = tries.find((t) => t.id === openId);
   useOpensTries(tries, setOpenId);
-  const summary = summaryOf(list, copy);
+  const summary = summaryOf(list, copy, tries);
 
   const run = async (ids?: string[]) => {
     setRunning(ids ?? list.map((sim) => sim.id));

@@ -52,10 +52,12 @@ func (e *Engine) simulationTools() []tool {
 			Schema: schema(`{"type":"object","required":["workflow_id","message","situation"],"properties":{` +
 				`"workflow_id":{"type":"string","description":"Workflow id (wf_...)."},` +
 				`"version":{"type":"string","enum":["draft","live"],"description":"Which copy. Draft by default."},` +
-				`"message":{"type":"string","maxLength":4000,"description":"The customer's first message."},` +
-				`"situation":{"type":"string","maxLength":1000,"description":"Who the customer is, what they ` +
-				`want and how they answer what the workflow asks, such as: on the Pro plan, charged twice, ` +
-				`picks the refund when offered."},` +
+				`"message":{"type":"string","maxLength":4000,"description":"The customer's first message, in ` +
+				`their own words. To try a case again after a change, send the same message."},` +
+				`"situation":{"type":"string","maxLength":1000,"description":"The customer as a teammate would ` +
+				`describe them: who they are, what happened, what they want and how they answer questions, such ` +
+				`as: runs a small shop on the Pro plan, was charged twice this month, wants one charge back, ` +
+				`answers briefly. Never which category, team or path it belongs to, or what it is not."},` +
 				`"customer":{"type":"object","description":"Who writes: name, email and custom attributes.",` +
 				`"properties":{"name":{"type":"string"},"email":{"type":"string"},"attributes":{"type":"object"}}}}}`),
 		}, handle: e.simulateWorkflow})
