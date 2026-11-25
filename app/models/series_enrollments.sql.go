@@ -91,50 +91,6 @@ func (q *Queries) EndSeriesEnrollments(ctx context.Context, arg EndSeriesEnrollm
 	return items, nil
 }
 
-const endTestJourneys = `-- name: EndTestJourneys :many
-UPDATE series_enrollments SET status = 'exited', end_reason = 'replaced', left_at = $1::timestamptz,
-    wait = NULL, wake_at = NULL, seq = seq + 1, updated_at = $1::timestamptz
-WHERE workspace_id = $2 AND series_id = $3 AND test AND status IN ('active', 'waiting')
-  AND (contact_id = $4 OR ($5::uuid IS NOT NULL AND company_id = $5::uuid))
-RETURNING id
-`
-
-type EndTestJourneysParams struct {
-	Now         time.Time `json:"now"`
-	WorkspaceID ids.UUID  `json:"workspace_id"`
-	SeriesID    ids.UUID  `json:"series_id"`
-	ContactID   *ids.UUID `json:"contact_id"`
-	CompanyID   *ids.UUID `json:"company_id"`
-}
-
-// EndTestJourneys ends the test journeys a contact, or their company,
-// still has on a series, so trying it again starts afresh.
-func (q *Queries) EndTestJourneys(ctx context.Context, arg EndTestJourneysParams) ([]ids.UUID, error) {
-	rows, err := q.db.Query(ctx, endTestJourneys,
-		arg.Now,
-		arg.WorkspaceID,
-		arg.SeriesID,
-		arg.ContactID,
-		arg.CompanyID,
-	)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []ids.UUID
-	for rows.Next() {
-		var id ids.UUID
-		if err := rows.Scan(&id); err != nil {
-			return nil, err
-		}
-		items = append(items, id)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
 const enrollSeriesCompanies = `-- name: EnrollSeriesCompanies :many
 INSERT INTO series_enrollments (workspace_id, series_id, version_id, subject, company_id, node_id, seq, entered_at,
     entered_by, trigger_ref, test, created_at, updated_at)

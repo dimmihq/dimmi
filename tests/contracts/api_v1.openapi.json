@@ -33002,7 +33002,7 @@
             "$ref": "#/components/schemas/SimulateSeriesPerson"
           },
           "scenario": {
-            "description": "Scenario: text of at most 2000 characters.",
+            "description": "How the person behaves, in words, such as opens every email but never clicks. The AI reads it to say whether they open, click, reply or do an event each time the series asks, in place of events and engaged.",
             "maxLength": 2000,
             "type": "string"
           },
@@ -72996,51 +72996,6 @@
         ]
       }
     },
-    "/series/{series}/enrollments/{enrollment}/skip": {
-      "post": {
-        "description": "Ends the wait a test journey stands on now, so the next step runs. Only for test journeys. Returns nothing once it moved on.",
-        "operationId": "series.enrollments.skip.store",
-        "parameters": [
-          {
-            "description": "Id of the series, starting with srs_, such as srs_01jx2m8k4t. Find it with GET /series.",
-            "in": "path",
-            "name": "series",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "description": "Id of the journey on a series, starting with sren_, such as sren_01jx2m8k4t. Find it with GET /series/{series}/enrollments.",
-            "in": "path",
-            "name": "enrollment",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "204": {
-            "description": "No Content"
-          },
-          "default": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ResponseError"
-                }
-              }
-            },
-            "description": "Error"
-          }
-        },
-        "summary": "Skip a test journey's wait",
-        "x-abilities": [
-          "series:write"
-        ]
-      }
-    },
     "/series/{series}/nodes/{node}/winner": {
       "post": {
         "description": "Sends everyone who reaches a split step from now on down one variant. Returns the series as it now is.",
@@ -73297,7 +73252,7 @@
     },
     "/series/{series}/simulations/run": {
       "post": {
-        "description": "Walks a contact, or a made-up person, through a series' draft or live version without sending anything, skipping every wait. AI paths and extract steps still ask the AI unless mocked; run action steps never run the action, and answer with their mock. Returns each step with the path it took, the messages that would go out, the changes, and whether the person reached the goal.",
+        "description": "Walks a contact, or a made-up person, through a series' draft or live version without sending anything, skipping every wait. AI paths and extract steps still ask the AI unless mocked; run action steps never run the action, and answer with their mock. Returns each step with the path it took, the messages that would go out, the changes, whether the person reached the goal, and with a scenario, what they did each time the series asked.",
         "operationId": "series.simulations.run.store",
         "parameters": [
           {
@@ -73343,49 +73298,6 @@
           }
         },
         "summary": "Walk one person through a series",
-        "x-abilities": [
-          "series:write"
-        ]
-      }
-    },
-    "/series/{series}/tests": {
-      "post": {
-        "description": "Enrolls the contact with the person's own email in the series as a test journey: it may run again and again, counts in no report and its waits can be skipped. Returns the test journey step by step.",
-        "operationId": "series.tests.store",
-        "parameters": [
-          {
-            "description": "Id of the series, starting with srs_, such as srs_01jx2m8k4t. Find it with GET /series.",
-            "in": "path",
-            "name": "series",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "201": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ResourceSeriesTrace"
-                }
-              }
-            },
-            "description": "Created"
-          },
-          "default": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ResponseError"
-                }
-              }
-            },
-            "description": "Error"
-          }
-        },
-        "summary": "Try a series on yourself",
         "x-abilities": [
           "series:write"
         ]

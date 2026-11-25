@@ -102,18 +102,12 @@ func seriesPeopleDocs() map[string]Doc {
 			Use:     "Ends one journey now; nothing more of the series reaches them.",
 			Returns: "nothing once it ended.",
 		},
-		"series.enrollments.skip.store": {
-			Title:   "Skip a test journey's wait",
-			Use:     "Ends the wait a test journey stands on now, so the next step runs. Only for test journeys.",
-			Returns: "nothing once it moved on.",
-			Hint:    "series_enrollment_not_test means it is a real journey, whose waits cannot be skipped.",
-		},
 	}
 }
 
 /*
-journeyDocs returns the entries for a series' report, trying a series
-and the journeys of one contact or company.
+journeyDocs returns the entries for a series' report and the journeys
+of one contact or company.
 */
 func journeyDocs() map[string]Doc {
 	return map[string]Doc{
@@ -123,14 +117,6 @@ func journeyDocs() map[string]Doc {
 				"and per step, with what each message step's broadcast counted. Test journeys never count.",
 			Returns: "the totals, the daily series and the numbers of every step.",
 			Params:  map[string]string{"days": "How many days back the daily numbers cover."},
-		},
-		"series.tests.store": {
-			Title: "Try a series on yourself",
-			Use: "Enrolls the contact with the person's own email in the series as a test journey: it may run " +
-				"again and again, counts in no report and its waits can be skipped.",
-			Returns: "the test journey step by step.",
-			Next:    []string{"dimmi_skip_series_enrollment: skip a wait"},
-			Hint:    "series_test_contact_missing means no contact has the person's email yet; add one first.",
 		},
 		"contacts.series.index": {
 			Title:   "List a contact's series",

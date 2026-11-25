@@ -80,8 +80,4 @@ func seriesJourneyRoutes(workspace *routing.Router, sc *v1.SeriesController, one
 	routing.Get(workspace, journey, "series.enrollments.show", sc.Trace).Ability("series:read")
 	routing.Delete(workspace, journey, "series.enrollments.destroy", sc.Remove).
 		Ability("series:write").Status(fhttp.StatusNoContent)
-	routing.Post(workspace, journey+"/skip", "series.enrollments.skip.store", sc.Skip).
-		Ability("series:write").Status(fhttp.StatusNoContent)
-	routing.Post(workspace, one+"/tests", "series.tests.store", sc.Try).
-		Ability("series:write").Status(fhttp.StatusCreated)
 }

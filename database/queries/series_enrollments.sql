@@ -189,15 +189,6 @@ FROM series_enrollments
 WHERE workspace_id = @workspace_id AND series_id = @series_id AND NOT test AND variants ? @node_id::text
 GROUP BY 1;
 
--- name: EndTestJourneys :many
--- EndTestJourneys ends the test journeys a contact, or their company,
--- still has on a series, so trying it again starts afresh.
-UPDATE series_enrollments SET status = 'exited', end_reason = 'replaced', left_at = @now::timestamptz,
-    wait = NULL, wake_at = NULL, seq = seq + 1, updated_at = @now::timestamptz
-WHERE workspace_id = @workspace_id AND series_id = @series_id AND test AND status IN ('active', 'waiting')
-  AND (contact_id = @contact_id OR (sqlc.narg(company_id)::uuid IS NOT NULL AND company_id = sqlc.narg(company_id)::uuid))
-RETURNING id;
-
 -- name: ListPersonSeriesJourneys :many
 -- ListPersonSeriesJourneys returns every journey of a contact and of
 -- their company, newest first, on one series when one is named. Unlike
