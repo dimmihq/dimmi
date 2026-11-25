@@ -57,10 +57,10 @@ export function SiteFooter() {
           </p>
           <a
             href={GITHUB_URL}
-            aria-label="dimmi on GitHub"
-            className="self-start text-text-secondary transition-colors hover:text-text-primary"
+            className="inline-flex items-center gap-1.5 self-start text-body-medium text-text-secondary transition-colors hover:text-text-primary"
           >
-            <RiGithubFill className="size-6" aria-hidden />
+            <RiGithubFill className="size-[18px]" aria-hidden />
+            GitHub
           </a>
         </div>
         {columns.map((column) => (
