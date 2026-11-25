@@ -40,6 +40,7 @@ import { KindMark } from "@/features/automation/parts";
 import { seriesSlots } from "@/features/automation/studio/slots";
 import { type SideTabId, Studio, StudioSide, type StudioTabId } from "@/features/automation/studio/studio";
 import { SuggestionBar } from "@/features/automation/studio/suggestion-bar";
+import { useOperatorTries } from "@/features/automation/studio/use-operator-tries";
 import { useWorkspace } from "@/features/customers/names";
 import { Panel, ScrollArea } from "@/features/shell/page";
 import { useWide } from "@/features/shell/use-wide";
@@ -400,6 +401,11 @@ function Builder({ workspace, series, step }: { workspace: string; series: Serie
   const [selected, setSelected] = useState(step ?? "entry");
   const [tab, setTab] = useState<StudioTabId>(ran ? "analytics" : "build");
   const [sideTab, setSideTab] = useState<SideTabId>("preview");
+  const [testing, setTesting] = useState(0);
+  const tries = useOperatorTries(workspace, { kind: "series", id: series.id }, () => {
+    setSideTab("simulations");
+    setTesting((n) => n + 1);
+  });
   const wide = useWide(1280);
   const [inspecting, setInspecting] = useState(step !== undefined || wide);
   const [adding, setAdding] = useState<{ from: string; path: string } | null>(null);
@@ -458,7 +464,7 @@ function Builder({ workspace, series, step }: { workspace: string; series: Serie
     onSelect: setSelected,
   };
   const current = { ...series, spec: draft.spec };
-  const slot = { workspace, series: current, onAdopt: draft.adopt, step: node?.id };
+  const slot = { workspace, series: current, onAdopt: draft.adopt, step: node?.id, tries };
   const History = seriesSlots.history;
   const Simulations = seriesSlots.simulations;
   const Operator = seriesSlots.operator;
@@ -516,6 +522,7 @@ function Builder({ workspace, series, step }: { workspace: string; series: Serie
   return (
     <>
       <Studio
+        testing={testing}
         name="dimmi:series"
         label="Series"
         start={start}

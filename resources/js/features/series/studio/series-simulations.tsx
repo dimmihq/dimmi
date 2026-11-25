@@ -23,6 +23,7 @@ import { madeUpPerson } from "@/features/automation/procedure-simulator/made-up"
 import { PreviewAddMenu } from "@/features/automation/procedure-simulator/preview-add-menu";
 import { Added, PreviewComposer } from "@/features/automation/procedure-simulator/preview-composer";
 import { fromCustomer, hint } from "@/features/automation/procedure-simulator/simulator";
+import type { OperatorTry } from "@/features/automation/studio/use-operator-tries";
 import { MessageBody } from "@/features/inbox/message-body";
 import { avatarColor } from "@/features/shell/avatar-color";
 import { ScrollArea } from "@/features/shell/page";
@@ -32,8 +33,8 @@ import type { SimPersona } from "@/lib/api/procedures";
 import { seriesQuery } from "@/lib/api/series";
 import { type SeriesSimulation, simulateSeries } from "@/lib/api/workflow-simulations";
 import { cx } from "@/utils/cx";
-
 import { nodeLook } from "../looks";
+
 import { journey, type Moment } from "./series-sim-words";
 
 const copies = [
@@ -50,11 +51,26 @@ const examples = [
 /* Traveler is who walks the series: a real contact, or a made-up person. */
 type Traveler = { kind: "contact"; contact: Contact } | { kind: "made_up"; person: SimPersona };
 
-/* Walk is one sent scenario: what was written, who walked it, and how it went. */
+/* Walk is one sent scenario: what was written, who walked it, how it went, and whether Operator sent it. */
 interface Walk {
+  key: string;
   scenario: string;
   name: string;
   result: SeriesSimulation | null;
+  failed?: string;
+  operator?: boolean;
+}
+
+/* walkOf reads one of Operator's tries as a walk. */
+function walkOf(t: OperatorTry): Walk {
+  return {
+    key: t.id,
+    scenario: t.scenario ?? "",
+    name: firstName(t.name || "Someone"),
+    result: t.walk ?? null,
+    failed: t.failed,
+    operator: true,
+  };
 }
 
 function travelerName(t: Traveler): string {
@@ -128,10 +144,14 @@ function WalkView({ walk, spec }: { walk: Walk; spec: Parameters<typeof journey>
   return (
     <li className="flex flex-col gap-4">
       <div className="ms-auto flex max-w-[85%] flex-col items-end gap-1">
-        <span className={hint}>How {walk.name} behaves</span>
+        <span className={hint}>
+          {walk.operator ? "Operator tried: " : ""}How {walk.name} behaves
+        </span>
         <p className={cx(fromCustomer, "max-w-full")}>{walk.scenario || "Does nothing with the messages"}</p>
       </div>
-      {result === null ? (
+      {walk.failed ? (
+        <p className="text-body-2-regular text-text-error-primary">{walk.failed}</p>
+      ) : result === null ? (
         <p className={cx(hint, "flex items-center gap-1.5")}>
           <RiSparkling2Line aria-hidden className="size-4 animate-pulse text-foreground-icon-tertiary" />
           Walking {walk.name} through it…
@@ -182,7 +202,16 @@ function Blank({ onExample }: { onExample: (text: string) => void }) {
   );
 }
 
-export function SeriesSimulations({ workspace, series }: { workspace: string; series: string }) {
+export function SeriesSimulations({
+  workspace,
+  series,
+  tries = [],
+}: {
+  workspace: string;
+  series: string;
+  /* Operator's tries of this series, shown live with the walks sent here. */
+  tries?: OperatorTry[];
+}) {
   const row = useQuery(seriesQuery(workspace, series)).data;
   const [as, setAs] = useState<AnswerAs>("draft");
   const [traveler, setTraveler] = useState<Traveler>(() => ({ kind: "made_up", person: madeUpPerson() }));
@@ -192,12 +221,13 @@ export function SeriesSimulations({ workspace, series }: { workspace: string; se
   const hasLive = Boolean(row?.live_version_id);
   const copy = hasLive ? as : "draft";
   const busy = walks.some((w) => w.result === null);
+  const shown = [...walks, ...tries.map(walkOf)];
   const name = travelerName(traveler);
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: scrolls to the latest walk whenever one is added or lands.
   useEffect(() => {
     end.current?.scrollIntoView({ behavior: "smooth", block: "end" });
-  }, [walks]);
+  }, [walks, tries]);
 
   const send = async () => {
     if (busy) {
@@ -206,7 +236,7 @@ export function SeriesSimulations({ workspace, series }: { workspace: string; se
     const text = scenario.trim();
     const at = walks.length;
     const who = firstName(name);
-    setWalks((list) => [...list, { scenario: text, name: who, result: null }]);
+    setWalks((list) => [...list, { key: crypto.randomUUID(), scenario: text, name: who, result: null }]);
     setScenario("");
     try {
       const result = await simulateSeries(workspace, series, {
@@ -247,14 +277,13 @@ export function SeriesSimulations({ workspace, series }: { workspace: string; se
           </SegmentedControl>
         </div>
       ) : null}
-      {walks.length === 0 ? (
+      {shown.length === 0 ? (
         <Blank onExample={setScenario} />
       ) : (
         <ScrollArea>
           <ol className="flex flex-col gap-10 px-4 pt-4 pb-6">
-            {walks.map((walk, index) => (
-              // biome-ignore lint/suspicious/noArrayIndexKey: walks are only ever added at the end.
-              <WalkView key={index} walk={walk} spec={copy === "draft" ? row?.spec : undefined} />
+            {shown.map((walk) => (
+              <WalkView key={walk.key} walk={walk} spec={copy === "draft" && !walk.operator ? row?.spec : undefined} />
             ))}
           </ol>
           <div ref={end} />

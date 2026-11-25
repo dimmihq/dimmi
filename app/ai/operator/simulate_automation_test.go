@@ -1,13 +1,18 @@
 package operator
 
 import (
+	"encoding/json"
 	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
+	"github.com/dimmihq/dimmi/framework/ids"
 
 	"github.com/dimmihq/dimmi/app/actions/series"
 	"github.com/dimmihq/dimmi/app/actions/workflowsims"
+	"github.com/dimmihq/dimmi/app/models"
 	engine "github.com/dimmihq/dimmi/app/workflows"
 )
 
@@ -80,8 +85,8 @@ func TestBuildingBudget(t *testing.T) {
 	t.Parallel()
 
 	s := &session{}
-	models, tools := s.limits()
-	assert.Equal(t, []int{maxModelCalls, maxToolCalls}, []int{models, tools})
+	turns, tools := s.limits()
+	assert.Equal(t, []int{maxModelCalls, maxToolCalls}, []int{turns, tools})
 
 	_, err := (&Engine{}).readSkill(t.Context(), s, []byte(`{"skill_name":"audit_articles"}`))
 	assert.NoError(t, err)
@@ -89,6 +94,30 @@ func TestBuildingBudget(t *testing.T) {
 
 	_, err = (&Engine{}).readSkill(t.Context(), s, []byte(`{"skill_name":"design_workflow"}`))
 	assert.NoError(t, err)
-	models, tools = s.limits()
-	assert.Equal(t, []int{buildingModelCalls, buildingToolCalls}, []int{models, tools})
+	turns, tools = s.limits()
+	assert.Equal(t, []int{buildingModelCalls, buildingToolCalls}, []int{turns, tools})
+}
+
+func TestProposedDefinition(t *testing.T) {
+	t.Parallel()
+
+	wf, other := ids.New(), ids.New()
+	ops := func(list ...Operation) []byte {
+		raw, err := json.Marshal(list)
+		require.NoError(t, err)
+		return raw
+	}
+	s := &session{proposed: []models.OperatorChangeset{
+		{Operations: ops(Operation{Kind: KindWorkflowSet, Workflow: &wf, Definition: []byte(`{"v":1}`)})},
+		{Operations: ops(Operation{Kind: KindWorkflowSet, Workflow: &other, Definition: []byte(`{"v":9}`)})},
+		{Operations: ops(Operation{Kind: KindWorkflowSet, Workflow: &wf, Definition: []byte(`{"v":2}`)})},
+	}}
+
+	got, ok := proposedDefinition(s, KindWorkflowSet, wf)
+	assert.True(t, ok)
+	assert.JSONEq(t, `{"v":2}`, string(got), "the newest suggestion for the workflow is tried")
+	_, ok = proposedDefinition(s, KindSeriesSet, wf)
+	assert.False(t, ok, "a workflow's suggestion is never a series'")
+	_, ok = proposedDefinition(&session{}, KindWorkflowSet, wf)
+	assert.False(t, ok)
 }

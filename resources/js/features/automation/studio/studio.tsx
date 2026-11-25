@@ -103,6 +103,7 @@ export function Studio({
   inspector,
   side,
   operator,
+  testing = 0,
 }: {
   /* name keys the remembered layout, such as "dimmi:workflow". */
   name: string;
@@ -116,6 +117,8 @@ export function Studio({
   inspector: Inspected;
   side: (onClose: () => void) => ReactNode;
   operator: (onClose: () => void) => ReactNode;
+  /* Opens the testing panel each time it goes up, such as when Operator starts trying something. */
+  testing?: number;
 }) {
   const pane = { editor: `${name}:editor`, inspector: `${name}:inspector`, details: "details", operator: "operator" };
   const sideBySide = useWide(1024);
@@ -136,6 +139,18 @@ export function Studio({
   const toggleDetails = () => (sideBySide ? toggle(pane.details) : setDetailsDrawer((open) => !open));
   const toggleOperator = () => (sideBySide ? toggle(pane.operator) : setOperatorDrawer((open) => !open));
   const detailsShown = sideBySide ? detailsOpen : detailsDrawer;
+
+  // biome-ignore lint/correctness/useExhaustiveDependencies: opens the panel only when asked again, not as it moves.
+  useEffect(() => {
+    if (testing === 0 || detailsShown) {
+      return;
+    }
+    if (sideBySide) {
+      toggle(pane.details);
+    } else {
+      setDetailsDrawer(true);
+    }
+  }, [testing]);
   const operatorShown = sideBySide ? operatorOpen : operatorDrawer;
 
   const main = (

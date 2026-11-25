@@ -41,8 +41,8 @@ export const workflowSlots: {
   history: ({ workspace, workflow, onAdopt }) => (
     <WorkflowHistory workspace={workspace} workflow={workflow.id} onRestored={onAdopt} />
   ),
-  simulations: ({ workspace, workflow, flush }) => (
-    <WorkflowSimulations workspace={workspace} workflow={workflow.id} flush={flush} />
+  simulations: ({ workspace, workflow, flush, tries }) => (
+    <WorkflowSimulations workspace={workspace} workflow={workflow.id} flush={flush} tries={tries} />
   ),
   operator: ({ workspace, workflow, onClose, className }) => (
     <WorkflowOperatorPanel workspace={workspace} workflow={workflow.id} onClose={onClose} className={className} />
@@ -61,7 +61,9 @@ export const seriesSlots: {
   history: ({ workspace, series, onAdopt }) => (
     <SeriesHistory workspace={workspace} series={series} onAdopt={onAdopt} />
   ),
-  simulations: ({ workspace, series }) => <SeriesSimulations workspace={workspace} series={series.id} />,
+  simulations: ({ workspace, series, tries }) => (
+    <SeriesSimulations workspace={workspace} series={series.id} tries={tries} />
+  ),
   operator: ({ workspace, series, step, onClose, className }) => (
     <SeriesOperatorPanel workspace={workspace} series={series.id} step={step} onClose={onClose} className={className} />
   ),

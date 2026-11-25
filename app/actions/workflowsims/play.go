@@ -119,6 +119,7 @@ type playing struct {
 	copy    copied
 	version string
 	stream  string
+	watch   Watch
 }
 
 /*
@@ -371,6 +372,9 @@ func (c *chat) move(ctx context.Context, turn pipeline.CustomerTurn) (pipeline.C
 tell sends one moment of the run to whoever watches.
 */
 func (c *chat) tell(ctx context.Context, moment string, details map[string]any) {
+	if c.p.watch != nil {
+		c.p.watch(ctx, moment, details)
+	}
 	p := c.s.Procedures
 	if c.p.stream == "" || p == nil || p.Live == nil {
 		return

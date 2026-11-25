@@ -10,7 +10,8 @@
  * answers its HTTP requests, actions and extract steps get in place of
  * real calls, the chat, each step and path the workflow took (a called
  * workflow's steps nested under the call), and its checks; Compare puts
- * the draft and live runs side by side. A new simulation starts the way
+ * the draft and live runs side by side. Operator's tries, when it tests
+ * what it built, play live above the list. A new simulation starts the way
  * a chat with the agent does: the customer's first message typed in the
  * composer at the bottom, with the plus to pick who writes it, a real
  * customer or a made-up one. Sending saves it and runs it at once.
@@ -67,9 +68,11 @@ import type { ChipSources } from "../procedure-writer/procedure-suggestions";
 import { useChipSources } from "../procedure-writer/use-chip-sources";
 import { stepLook } from "../step-kinds";
 import { pathName, type StepKind } from "../workflows";
+import type { OperatorTry } from "./use-operator-tries";
 import { type LiveWfRun, useWorkflowLiveRuns } from "./use-workflow-live-runs";
 import { WorkflowSimCompare } from "./workflow-sim-compare";
 import { CheckLine, LiveWfTalk, Trace, WfTalk } from "./workflow-sim-parts";
+import { OperatorTries } from "./workflow-sim-tries";
 import {
   lined,
   liveStatus,
@@ -822,15 +825,33 @@ function SimRow({
   );
 }
 
+/* NoSimulations is the panel before the workflow has any simulation. */
+function NoSimulations() {
+  return (
+    <div className="flex flex-1 flex-col items-center justify-center gap-3 px-6 text-center">
+      <span className="flex flex-col gap-1">
+        <span className="text-body-medium text-text-primary">No simulations yet</span>
+        <span className={hint}>
+          A simulation is a chat this workflow must keep handling the way you mean. Write what a customer says first,
+          below. An AI customer plays the rest; nothing is sent.
+        </span>
+      </span>
+    </div>
+  );
+}
+
 export function WorkflowSimulations({
   workspace,
   workflow,
   flush,
+  tries = [],
 }: {
   workspace: string;
   workflow: string;
   /* Saves the builder's unsaved changes, so a run on the draft runs what is on screen. */
   flush?: () => Promise<void>;
+  /* Operator's tries of this workflow, shown live above the saved simulations. */
+  tries?: OperatorTry[];
 }) {
   const queryClient = useQueryClient();
   const { data: list = [] } = useQuery(workflowSimulationsQuery(workspace, workflow));
@@ -907,17 +928,14 @@ export function WorkflowSimulations({
     />
   ) : null;
 
-  const none = (
-    <div className="flex flex-1 flex-col items-center justify-center gap-3 px-6 text-center">
-      <span className="flex flex-col gap-1">
-        <span className="text-body-medium text-text-primary">No simulations yet</span>
-        <span className={hint}>
-          A simulation is a chat this workflow must keep handling the way you mean. Write what a customer says first,
-          below. An AI customer plays the rest; nothing is sent.
-        </span>
-      </span>
-    </div>
-  );
+  const none =
+    tries.length > 0 ? (
+      <ScrollArea>
+        <OperatorTries tries={tries} steps={steps} sources={sources} />
+      </ScrollArea>
+    ) : (
+      <NoSimulations />
+    );
 
   const all = (
     <>
@@ -939,6 +957,7 @@ export function WorkflowSimulations({
         </span>
       </div>
       <ScrollArea>
+        <OperatorTries tries={tries} steps={steps} sources={sources} />
         <ul className={cx("mx-4 mt-1 mb-6 flex flex-col gap-0.5 p-1", card)}>
           {list.map((sim) => (
             <SimRow
@@ -955,6 +974,8 @@ export function WorkflowSimulations({
       </ScrollArea>
     </>
   );
+
+  const listView = list.length === 0 ? none : all;
 
   return (
     <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden">
@@ -976,7 +997,7 @@ export function WorkflowSimulations({
       <Swap view={opened ? opened.id : "list"} forward={opened !== undefined} className="flex min-h-0 flex-1 flex-col">
         {detail ?? (
           <>
-            {list.length === 0 ? <>{none}</> : <>{all}</>}
+            {listView}
             <NewSimulation
               workspace={workspace}
               workflow={workflow}

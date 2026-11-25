@@ -24,18 +24,18 @@ export interface LiveWfRun {
   result?: WorkflowSimResult;
 }
 
-interface WfRunEvent {
+export interface WfRunEvent {
   stream_id?: string;
   simulation_id?: string;
-  moment?: "started" | "line" | "step" | "turn_started" | "turn_finished" | "judging" | "finished";
+  moment?: "started" | "line" | "step" | "turn_started" | "turn_finished" | "judging" | "finished" | "failed";
   line?: ChatLine;
   step?: DryStep;
   result?: unknown;
 }
 
-const nothingYet: LiveWfRun = { lines: [], steps: [], working: false, judging: false };
+export const nothingYet: LiveWfRun = { lines: [], steps: [], working: false, judging: false };
 
-function movedOn(run: LiveWfRun, data: WfRunEvent): LiveWfRun {
+export function movedOn(run: LiveWfRun, data: WfRunEvent): LiveWfRun {
   switch (data.moment) {
     case "started":
       return nothingYet;

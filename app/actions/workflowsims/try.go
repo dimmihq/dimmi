@@ -8,7 +8,9 @@
 | a situation, against the draft or the live version. Nothing is kept:
 | no simulation is saved, no result recorded, nothing sent and no
 | action run. It is how Operator checks the workflow it just built
-| before it hands it to the team.
+| before it hands it to the team: it may play the version Operator
+| suggested rather than the saved one, and a watcher sees each moment
+| of the chat as it happens, so the teammate can follow it live.
 |
 */
 
@@ -28,14 +30,23 @@ import (
 )
 
 /*
-TryInput is one chat to play once: the copy, the customer's first
-message, their situation, and who they are.
+Watch sees each moment of a chat as it happens: started, line, step,
+turn_started, turn_finished, judging and finished, with its details.
+*/
+type Watch func(ctx context.Context, moment string, details map[string]any)
+
+/*
+TryInput is one chat to play once: the copy, or the definition to play
+instead of it, the customer's first message, their situation, who they
+are, and who watches it.
 */
 type TryInput struct {
 	Version  string
+	Spec     json.RawMessage
 	Message  string
 	Scenario string
 	Persona  json.RawMessage
+	Watch    Watch
 }
 
 /*
@@ -59,6 +70,9 @@ func (s *Simulations) Try(ctx context.Context, m authz.Membership, workflowID id
 	if err != nil {
 		return Result{}, err
 	}
+	if len(in.Spec) > 0 {
+		copied.spec = in.Spec
+	}
 	messages, err := json.Marshal([]procedures.TestMessage{{Text: text}})
 	if err != nil {
 		return Result{}, fmt.Errorf("write the first message: %w", err)
@@ -68,10 +82,10 @@ func (s *Simulations) Try(ctx context.Context, m authz.Membership, workflowID id
 		persona = json.RawMessage(`{}`)
 	}
 	c := models.WorkflowSimulation{
-		WorkspaceID: m.Workspace.ID, WorkflowID: workflowID, Name: "Operator's try", Messages: messages,
+		ID: ids.New(), WorkspaceID: m.Workspace.ID, WorkflowID: workflowID, Name: "Operator's try", Messages: messages,
 		Persona: persona, Scenario: strings.TrimSpace(in.Scenario), ActionMocks: json.RawMessage(`{}`),
 		Assertions: json.RawMessage(`[]`),
 	}
 
-	return s.play(ctx, playing{m: m, c: c, copy: copied, version: in.Version}), nil
+	return s.play(ctx, playing{m: m, c: c, copy: copied, version: in.Version, watch: in.Watch}), nil
 }

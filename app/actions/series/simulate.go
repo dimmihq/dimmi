@@ -80,6 +80,8 @@ type SimulateInput struct {
 	Engaged    []string
 	Scenario   string
 	Mocks      map[string]actionkit.Mock
+	/* Spec, when set, is walked instead of the draft or the live version. */
+	Spec json.RawMessage
 }
 
 /*
@@ -173,6 +175,9 @@ copyOf reads the definition of the series' draft or its live version.
 */
 func (r *simRun) copyOf(ctx context.Context, q *models.Queries) (json.RawMessage, error) {
 	row, err := find(ctx, q, r.ws, r.in.ID)
+	if err == nil && len(r.in.Spec) > 0 {
+		return r.in.Spec, nil
+	}
 	if err != nil || r.in.Version != "live" {
 		return row.Working, err
 	}

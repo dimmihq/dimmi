@@ -9,17 +9,27 @@
 | situation it is given. simulate_series walks one person, real or made
 | up, through a series from a scenario in words; every wait is skipped.
 | Both run against the draft or the live version and keep nothing:
-| nothing is saved, sent or run for real.
+| nothing is saved, sent or run for real. A try plays what Operator
+| suggested in this chat, or on the suggestion the teammate has open,
+| when there is one, so Operator checks its own change before the
+| teammate accepts it. Each try is sent to the teammate as it happens,
+| as operator.simulation events, and their page shows it live.
 |
 */
 
 package operator
 
 import (
+	"cmp"
 	"context"
 	"encoding/json"
 	"fmt"
+	"maps"
+	"slices"
 	"strings"
+
+	fbroadcasting "github.com/dimmihq/dimmi/framework/broadcasting"
+	"github.com/dimmihq/dimmi/framework/ids"
 
 	"github.com/dimmihq/dimmi/app/actions/series"
 	"github.com/dimmihq/dimmi/app/actions/workflowsims"
@@ -72,6 +82,57 @@ func (e *Engine) simulationTools() []tool {
 }
 
 /*
+EventSimulation is one moment of a try Operator runs, sent to the
+teammate: started, a chat line, a step, and finished with the result.
+*/
+const EventSimulation = "operator.simulation"
+
+/*
+proposedDefinition is the newest definition Operator suggested for the
+workflow or series, in this chat or on the suggestion the teammate has
+open, and whether there is one.
+*/
+func proposedDefinition(s *session, kind Kind, id ids.UUID) (json.RawMessage, bool) {
+	for _, row := range slices.Backward(s.proposed) {
+		if def, ok := definitionIn(Operations(row.Operations), kind, id); ok {
+			return def, true
+		}
+	}
+	if s.viewed != nil {
+		return definitionIn(Operations(s.viewed.Operations), kind, id)
+	}
+	return nil, false
+}
+
+/*
+definitionIn is the newest definition among the operations for the
+workflow or series.
+*/
+func definitionIn(ops []Operation, kind Kind, id ids.UUID) (json.RawMessage, bool) {
+	for _, op := range slices.Backward(ops) {
+		if op.Kind != kind {
+			continue
+		}
+		about := op.Series
+		if kind == KindWorkflowSet {
+			about = op.Workflow
+		}
+		if about != nil && *about == id {
+			return op.Definition, true
+		}
+	}
+	return nil, false
+}
+
+/*
+publishTry sends one moment of a try to the teammate.
+*/
+func (e *Engine) publishTry(ctx context.Context, s *session, data map[string]any) {
+	data["thread_id"] = threadID(s)
+	e.publish(ctx, s, fbroadcasting.Message{Event: EventSimulation, Ephemeral: true, Data: data})
+}
+
+/*
 simulateWorkflow plays one chat through a workflow.
 */
 func (e *Engine) simulateWorkflow(ctx context.Context, s *session, args json.RawMessage) (result, error) {
@@ -89,13 +150,32 @@ func (e *Engine) simulateWorkflow(ctx context.Context, s *session, args json.Raw
 	if err != nil {
 		return result{}, err
 	}
+	try := ids.Encode("try", ids.New())
+	base := map[string]any{
+		"kind": "workflow", "workflow_id": models.PublicID(models.PrefixWorkflow, id), "try_id": try,
+		"message": in.Message, "situation": in.Situation,
+	}
+	spec, suggested := proposedDefinition(s, KindWorkflowSet, id)
+	if in.Version == "live" {
+		spec, suggested = nil, false
+	}
 	res, err := e.Services.WorkflowSims.Try(ctx, s.m, id, workflowsims.TryInput{
-		Version: in.Version, Message: in.Message, Scenario: in.Situation, Persona: in.Customer,
+		Version: in.Version, Spec: spec, Message: in.Message, Scenario: in.Situation, Persona: in.Customer,
+		Watch: func(ctx context.Context, moment string, details map[string]any) {
+			data := maps.Clone(base)
+			maps.Copy(data, details)
+			data["moment"] = moment
+			e.publishTry(ctx, s, data)
+		},
 	})
 	if err != nil {
 		return result{}, err
 	}
-	return result{text: workflowTryText(res), step: Step{Tool: "simulate_workflow", Summary: "Tried the workflow"}}, nil
+	text := workflowTryText(res)
+	if suggested {
+		text = "Played your suggested version, not the saved one.\n" + text
+	}
+	return result{text: text, step: Step{Tool: "simulate_workflow", Summary: "Tried the workflow"}}, nil
 }
 
 /*
@@ -163,23 +243,62 @@ func (e *Engine) simulateSeries(ctx context.Context, s *session, args json.RawMe
 		return result{}, err
 	}
 	sim := series.SimulateInput{Membership: s.m, ID: id, Version: in.Version, Scenario: strings.TrimSpace(in.Scenario)}
+	if err := e.traveler(&sim, in.Contact, in.Person); err != nil {
+		return result{}, err
+	}
+	if spec, suggested := proposedDefinition(s, KindSeriesSet, id); in.Version != "live" && suggested {
+		sim.Spec = spec
+	}
+	base := map[string]any{
+		"kind": "series", "series_id": models.PublicID(models.PrefixSeries, id), "try_id": ids.Encode("try", ids.New()),
+		"scenario": sim.Scenario, "name": "A contact",
+	}
+	if sim.Person != nil {
+		base["name"] = cmp.Or(sim.Person.Name, "Test person")
+	}
+	e.publishTry(ctx, s, withMoment(base, "started", nil))
+	trace, err := e.Services.Series.Simulate(ctx, sim)
+	if err != nil {
+		e.publishTry(ctx, s, withMoment(base, "failed", map[string]any{"error": err.Error()}))
+		return result{}, err
+	}
+	e.publishTry(ctx, s, withMoment(base, "finished", map[string]any{"result": trace}))
+	text := seriesTryText(trace)
+	if sim.Spec != nil {
+		text = "Walked your suggested version, not the saved one.\n" + text
+	}
+	return result{text: text, step: Step{Tool: "simulate_series", Summary: "Tried the series"}}, nil
+}
+
+/*
+traveler sets who walks a series: a real contact by id, the made-up
+person given, or a test person.
+*/
+func (e *Engine) traveler(sim *series.SimulateInput, contact string, person *series.SimPerson) error {
 	switch {
-	case in.Contact != "":
-		contact, err := e.publicID(in.Contact, models.PrefixContact)
+	case contact != "":
+		id, err := e.publicID(contact, models.PrefixContact)
 		if err != nil {
-			return result{}, err
+			return err
 		}
-		sim.ContactID = &contact
-	case in.Person != nil:
-		sim.Person = in.Person
+		sim.ContactID = &id
+	case person != nil:
+		sim.Person = person
 	default:
 		sim.Person = &series.SimPerson{Name: "Test person"}
 	}
-	trace, err := e.Services.Series.Simulate(ctx, sim)
-	if err != nil {
-		return result{}, err
-	}
-	return result{text: seriesTryText(trace), step: Step{Tool: "simulate_series", Summary: "Tried the series"}}, nil
+	return nil
+}
+
+/*
+withMoment is a copy of a try's details with the moment and what it
+adds.
+*/
+func withMoment(base map[string]any, moment string, more map[string]any) map[string]any {
+	data := maps.Clone(base)
+	maps.Copy(data, more)
+	data["moment"] = moment
+	return data
 }
 
 /*

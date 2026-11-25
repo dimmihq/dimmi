@@ -59,6 +59,7 @@ import { workflowSlots } from "./studio/slots";
 import { StepCounts } from "./studio/step-counts";
 import { type SideTabId, Studio, StudioSide, type StudioTabId } from "./studio/studio";
 import { SuggestionBar } from "./studio/suggestion-bar";
+import { useOperatorTries } from "./studio/use-operator-tries";
 import { useWorkflowStepCounts } from "./studio/use-workflow-step-counts";
 import { WorkflowPreview } from "./studio/workflow-preview";
 import { useWorkflowRequest } from "./studio/workflow-review";
@@ -342,6 +343,11 @@ export function WorkflowBuilder({ workspace, workflow }: { workspace: string; wo
   const { lists, names } = useLists(workspace, workflow.id);
   const [tab, setTab] = useState<StudioTabId>("build");
   const [sideTab, setSideTab] = useState<SideTabId>("preview");
+  const [testing, setTesting] = useState(0);
+  const tries = useOperatorTries(workspace, { kind: "workflow", id: workflow.id }, () => {
+    setSideTab("simulations");
+    setTesting((n) => n + 1);
+  });
   const [selected, setSelected] = useState<string>(triggerStep);
   const trigger = draft.spec.trigger as TriggerKind;
   const step = selected === triggerStep ? undefined : findStep(draft.spec.steps, selected);
@@ -404,7 +410,7 @@ export function WorkflowBuilder({ workspace, workflow }: { workspace: string; wo
     onEdit: edit,
   };
   const current = { ...draft.server, name: draft.name || draft.server.name, spec: draft.spec };
-  const slot = { workspace, workflow: current, onAdopt: draft.adopt, flush: draft.flush };
+  const slot = { workspace, workflow: current, onAdopt: draft.adopt, flush: draft.flush, tries };
   const reading = { steps: draft.spec.steps, summarize, workflows: names.workflows ?? new Map() };
   const Analytics = workflowSlots.analytics;
   const Failures = workflowSlots.failures;
@@ -449,6 +455,7 @@ export function WorkflowBuilder({ workspace, workflow }: { workspace: string; wo
 
   return (
     <Studio
+      testing={testing}
       name="dimmi:workflow"
       label="Workflow"
       start={start}
