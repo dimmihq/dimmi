@@ -67,6 +67,7 @@ func logTables() map[string]string {
 		"workflow_runs":             "log: workflow runs; what they did is on the conversations",
 		"workflow_run_steps":        "log: workflow run steps",
 		"workflow_match_logs":       "trace: why workflows matched",
+		"workflow_simulation_runs":  "log: each run of a workflow simulation; the latest result is on the simulation",
 		"attribute_problems":        "log: rejected attribute writes",
 	}
 }

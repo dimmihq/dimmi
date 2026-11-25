@@ -95,6 +95,7 @@ func workspaceTables() []ArchiveTable {
 		{Name: "snooze_lists", About: "Snooze options per team."},
 		{Name: "redaction_rules", About: "Rules that mask sensitive text.", Key: byID()},
 		{Name: "attribute_definitions", About: "Custom attribute definitions.", Key: byID()},
+		{Name: "ai_conversation_attributes", About: "Attributes the AI reads from conversations.", Key: byID()},
 		{Name: "event_definitions", About: "Customer event definitions.", Key: byID()},
 		{Name: "conversation_rating_settings", About: "How satisfaction ratings are asked."},
 		{Name: "identity_settings", About: "How customers' identities are verified."},
@@ -143,6 +144,7 @@ func conversationTables() []ArchiveTable {
 			Key: []string{"conversation_id", "contact_id"},
 		},
 		{Name: "conversation_tag", About: "Tags on conversations.", Key: []string{"conversation_id", "tag_id"}},
+		{Name: "conversation_ai_values", About: "Values the AI read for each conversation.", Key: []string{"conversation_id"}},
 		{Name: "conversation_ratings", About: "Satisfaction ratings.", Key: byID()},
 		{Name: "conversation_events", About: "Assignments, closes and reopens of conversations.", Key: byID()},
 		{
@@ -291,6 +293,7 @@ func automationTables() []ArchiveTable {
 	return []ArchiveTable{
 		{Name: "workflows", About: "Workflows.", Key: byID()},
 		{Name: "workflow_versions", About: "Published versions of workflows.", Key: byID()},
+		{Name: "workflow_simulations", About: "Saved simulations of workflows with their latest results.", Key: byID()},
 		{Name: "procedures", About: "Procedures the AI follows.", Key: byID()},
 		{Name: "procedure_versions", About: "Published versions of procedures.", Key: byID()},
 		{Name: "procedure_test_cases", About: "Test cases of procedures.", Key: byID()},
