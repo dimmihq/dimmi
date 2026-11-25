@@ -27,7 +27,7 @@ import {
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import { Avatar } from "@/components/base/avatar/avatar";
-import { Chip } from "@/components/base/badges/chip";
+import { Chip, type ChipColor } from "@/components/base/badges/chip";
 import { Button } from "@/components/base/buttons/button";
 import { IconButton } from "@/components/base/buttons/icon-button";
 import { Input } from "@/components/base/input/input";
@@ -80,6 +80,7 @@ import {
   mockDrafts,
   mocksOf,
   ranWhen,
+  resultStatus,
   type Steps,
   simStanding,
 } from "./workflow-sim-words";
@@ -93,6 +94,11 @@ const copies = [
 /* statusOfSim is how a simulation stands: its latest runs, or where its run is while it goes. */
 function statusOfSim(sim: WorkflowSimulation, as: AnswerAs, busy: boolean, live?: LiveWfRun) {
   return busy ? liveStatus(live) : simStanding(simResultOf(sim, as), simHistoryOf(sim, as));
+}
+
+/* statusOfTry is where one of Operator's tries stands: running, or how its one run went. */
+function statusOfTry(sim: WorkflowSimulation, busy: boolean, live?: LiveWfRun) {
+  return busy ? liveStatus(live) : resultStatus(sim.draft_result);
 }
 
 /* pathChoices lists every path of every step, to check which one a step takes. */
@@ -720,7 +726,7 @@ function TryDetail({
   sources: ChipSources;
   onBack: () => void;
 }) {
-  const status = statusOfSim(sim, "draft", busy, live);
+  const status = statusOfTry(sim, busy, live);
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
@@ -774,17 +780,22 @@ function TryRows({
 }) {
   return (
     <>
-      {[...tries].reverse().map((t) => (
-        <SimRow
-          key={t.id}
-          sim={simOfTry(t, workflow)}
-          as="draft"
-          busy={!t.done}
-          live={t.run}
-          differs={false}
-          onOpen={() => onOpen(t.id)}
-        />
-      ))}
+      {[...tries].reverse().map((t) => {
+        const sim = simOfTry(t, workflow);
+
+        return (
+          <SimRow
+            key={t.id}
+            sim={sim}
+            as="draft"
+            busy={!t.done}
+            live={t.run}
+            differs={false}
+            status={statusOfTry(sim, !t.done, t.run)}
+            onOpen={() => onOpen(t.id)}
+          />
+        );
+      })}
     </>
   );
 }
@@ -942,6 +953,7 @@ function SimRow({
   live,
   differs,
   onOpen,
+  status = statusOfSim(sim, as, busy, live),
 }: {
   sim: WorkflowSimulation;
   as: AnswerAs;
@@ -949,9 +961,10 @@ function SimRow({
   live?: LiveWfRun;
   differs: boolean;
   onOpen: () => void;
+  /* Where it stands, when not read from its saved runs, such as one of Operator's tries. */
+  status?: { label: string; color: ChipColor };
 }) {
   const history = simHistoryOf(sim, as);
-  const status = statusOfSim(sim, as, busy, live);
   const first = sim.messages[0]?.text ?? "";
 
   return (
