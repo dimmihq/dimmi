@@ -203,10 +203,10 @@ func schemaTextsFromConfig() map[string]map[string]string {
 				"200. Defaults to 20.",
 			"position":      "The side of the page the launcher sits on: right or left.",
 			"primary_color": "The messenger's brand color as #RRGGBB, such as #1f2328.",
-			"reply_sound": "The sound to play when a reply arrives: none, pop, chime, bubble, swoosh or " +
-				"tick.",
-			"sent_sound": "The sound to play when the visitor sends a message: none, pop, chime, bubble, " +
-				"swoosh or tick.",
+			"reply_sound": "Whether a message coming in makes the messenger's incoming sound: none turns " +
+				"it off; pop, chime, bubble, swoosh and tick all turn it on.",
+			"sent_sound": "Whether a message the visitor sends makes the messenger's outgoing sound: " +
+				"none turns it off; pop, chime, bubble, swoosh and tick all turn it on.",
 			"sound": "True when the messenger plays a sound for new messages.",
 			"theme": "The messenger's color theme: light, dark or auto to follow the visitor's device.",
 		},

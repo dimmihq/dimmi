@@ -34,9 +34,12 @@ maxPadding is the most a launcher may sit from the page's edge, in pixels.
 const maxPadding = 200
 
 /*
-Sounds names the built-in sounds a messenger may play when the customer
-sends a message or a reply arrives; none plays nothing. The messenger
-draws each one itself, so there is no file to fetch.
+Sounds are the values a messenger's sent and reply sound settings take.
+The messenger has one sound for a message going out and one for a
+message coming in, and draws both itself, so there is no file to fetch.
+None turns that sound off; any other value plays it. The other names are
+from when each could be picked, and are kept so older settings and API
+clients still work.
 */
 func Sounds() []string {
 	return []string{"none", "pop", "chime", "bubble", "swoosh", "tick"}
@@ -99,7 +102,7 @@ DefaultAppearance is what a widget looks like before anyone changes it.
 func DefaultAppearance() Appearance {
 	return Appearance{
 		PrimaryColor: "#1f2328", Theme: "auto", Position: "right", PaddingX: 20, PaddingY: 20, Font: "system",
-		Sound: true, SentSound: "none", ReplySound: "pop", Background: Background{Type: "solid"},
+		Sound: true, SentSound: "pop", ReplySound: "pop", Background: Background{Type: "solid"},
 		Launcher: Launcher{Style: "bubble", Shape: "circle", Icon: "chat"},
 	}
 }

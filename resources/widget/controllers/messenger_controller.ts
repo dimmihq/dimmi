@@ -3,8 +3,9 @@
  * inside it. Open and closed are one data attribute the stylesheet
  * animates; the panel stays in the page but inert while closed, so it can
  * fade out instead of vanishing, and nothing inside it takes focus or
- * clicks. Opening plays the sound when the customer left it on; restore
- * reopens it silently after the options re-render it.
+ * clicks. Opening is silent; the messenger's two sounds mark messages
+ * coming in and going out. Restore reopens it after the options re-render
+ * it.
  *
  * Exactly one view is current. The tab bar switches between the tabs;
  * pages opened from them (a collection, an article, a changelog entry, a
@@ -69,7 +70,7 @@ export class MessengerController extends Controller {
   }
 
   restore(view: string): void {
-    this.#toggle(true, false);
+    this.#toggle(true);
     this.show(view);
   }
 
@@ -152,25 +153,26 @@ export class MessengerController extends Controller {
   }
 
   /*
-   * replied plays the sound the settings pick for a reply arriving, and
-   * sent the one for the visitor's own message leaving, both unless the
-   * messenger's sound is off.
+   * replied plays the "in" sound for a message arriving from the team or
+   * the AI agent, and sent the "out" sound for the visitor's own message
+   * leaving, each unless the settings turned it or all sound off.
    */
   replied(): void {
-    this.#play(this.element.dataset.replySound, "pop");
+    this.#play("in", this.element.dataset.replySound);
   }
 
   sent(): void {
-    this.#play(this.element.dataset.sentSound, "none");
+    this.#play("out", this.element.dataset.sentSound);
   }
 
   /*
-   * play plays a sound unless the messenger's sound is off. The sounds
-   * load on first use, so a page that never hears one never fetches them.
+   * play plays a sound unless the messenger's sound or that sound is off.
+   * The sounds load on first use, so a page that never hears one never
+   * fetches them.
    */
-  #play(name: string | undefined, fallback: "pop" | "none"): void {
-    if (this.element.dataset.sound === "true" && name !== "none") {
-      void import("../lib/sound").then((sounds) => sounds.play(sounds.soundOf(name, fallback)));
+  #play(sound: "in" | "out", setting: string | undefined): void {
+    if (this.element.dataset.sound === "true" && setting !== "none") {
+      void import("../lib/sound").then((sounds) => sounds.play(sound));
     }
   }
 
@@ -448,7 +450,7 @@ export class MessengerController extends Controller {
     }
   }
 
-  #toggle(open: boolean, sound = true): void {
+  #toggle(open: boolean): void {
     if (open === this.isOpen) {
       return;
     }
@@ -466,9 +468,6 @@ export class MessengerController extends Controller {
     const current = this.#view(this.tab);
     if (open && current) {
       this.#load(current);
-    }
-    if (open && sound) {
-      this.#play("pop", "pop");
     }
     this.dispatch(open ? "open" : "close");
   }

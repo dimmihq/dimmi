@@ -1,59 +1,54 @@
 /*
- * The sounds a messenger plays: whether it plays any, and which built-in
- * sound marks the customer's message leaving and a reply arriving. Each
- * pick plays as it is chosen, and the button beside it plays it again;
- * the messenger draws the same sounds, so the preview is what customers
- * hear. Nothing saves until Save.
+ * The sounds a messenger plays: whether it plays any, and whether a
+ * message coming in and a message going out each make their sound. The
+ * button beside each plays it; the messenger draws the same sounds, so
+ * the preview is what customers hear. Turning one on plays it. Nothing
+ * saves until Save.
  */
 import { RiPlayFill } from "@remixicon/react";
 
 import { IconButton } from "@/components/base/buttons/icon-button";
-import type { MessengerSound } from "@/lib/api/widget-settings";
 
-import { play } from "../../../../widget/lib/sound";
-import { Choice, Toggle } from "../controls";
+import { play, type Sound } from "../../../../widget/lib/sound";
+import { Toggle } from "../controls";
 import { Row, Section } from "../layout";
-import { labelled, type TabProps } from "./parts";
+import type { TabProps } from "./parts";
 
-const sounds = labelled<MessengerSound>({
-  none: "None",
-  pop: "Pop",
-  chime: "Chime",
-  bubble: "Bubble",
-  swoosh: "Swoosh",
-  tick: "Tick",
-});
-
-function SoundPick({
+/*
+ * SoundSwitch turns one of the messenger's sounds on or off, with a
+ * button that plays it.
+ */
+function SoundSwitch({
   label,
-  value,
+  sound,
+  on,
   disabled,
   onChange,
 }: {
   label: string;
-  value: MessengerSound;
+  sound: Sound;
+  on: boolean;
   disabled: boolean;
-  onChange: (sound: MessengerSound) => void;
+  onChange: (on: boolean) => void;
 }) {
   return (
     <>
-      <Choice
-        label={label}
-        options={sounds.options}
-        value={sounds.label(value)}
-        disabled={disabled}
-        onChange={(picked) => {
-          const sound = sounds.value(picked) ?? "none";
-          play(sound);
-          onChange(sound);
-        }}
-      />
       <IconButton
         size="small"
         icon={RiPlayFill}
         aria-label={`Play ${label.toLowerCase()}`}
-        disabled={value === "none"}
-        onClick={() => play(value)}
+        onClick={() => play(sound)}
+      />
+      <Toggle
+        label={label}
+        on={on}
+        disabled={disabled}
+        onChange={(next) => {
+          if (next) {
+            play(sound);
+          }
+          onChange(next);
+        }}
       />
     </>
   );
@@ -64,7 +59,7 @@ export function SoundsSection({ value, set, locked }: TabProps) {
 
   return (
     <Section title="Sounds">
-      <Row label="Play sounds" description="The messenger also pops softly when it opens.">
+      <Row label="Play sounds">
         <Toggle
           label="Play sounds"
           on={a.sound}
@@ -72,20 +67,22 @@ export function SoundsSection({ value, set, locked }: TabProps) {
           onChange={(sound) => set({ appearance: { sound } })}
         />
       </Row>
-      <Row label="Customer sends a message">
-        <SoundPick
-          label="Sent sound"
-          value={a.sent_sound}
+      <Row label="Message comes in" description="From your team or the AI agent.">
+        <SoundSwitch
+          label="Incoming sound"
+          sound="in"
+          on={a.reply_sound !== "none"}
           disabled={locked || !a.sound}
-          onChange={(sent_sound) => set({ appearance: { sent_sound } })}
+          onChange={(on) => set({ appearance: { reply_sound: on ? "pop" : "none" } })}
         />
       </Row>
-      <Row label="A reply arrives" description="From your team or the AI agent.">
-        <SoundPick
-          label="Reply sound"
-          value={a.reply_sound}
+      <Row label="Message goes out" description="When the customer sends one.">
+        <SoundSwitch
+          label="Outgoing sound"
+          sound="out"
+          on={a.sent_sound !== "none"}
           disabled={locked || !a.sound}
-          onChange={(reply_sound) => set({ appearance: { reply_sound } })}
+          onChange={(on) => set({ appearance: { sent_sound: on ? "pop" : "none" } })}
         />
       </Row>
     </Section>

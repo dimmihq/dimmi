@@ -10,8 +10,6 @@
  * turns ink or white by its lightness.
  */
 
-import type { Sound } from "./lib/sound";
-
 export type Tab = "home" | "messages" | "changelog" | "help";
 
 export interface Launcher {
@@ -31,8 +29,9 @@ export interface Appearance {
   launcher: Launcher;
   font: "system" | "inherit";
   sound: boolean;
-  sent_sound: Sound;
-  reply_sound: Sound;
+  /* "none" turns that sound off; any other value plays the messenger's sound. */
+  sent_sound: string;
+  reply_sound: string;
 }
 
 export interface Texts {
@@ -130,7 +129,7 @@ export const defaults: Options = {
     launcher: { style: "bubble", shape: "circle", label: "" },
     font: "system",
     sound: true,
-    sent_sound: "none",
+    sent_sound: "pop",
     reply_sound: "pop",
   },
   texts: {

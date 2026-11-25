@@ -960,7 +960,7 @@ describe("core", () => {
     expect(notes).toHaveBeenCalledTimes(2);
   });
 
-  it("plays the sounds the settings pick when the visitor sends and a reply arrives", async () => {
+  it("plays the outgoing and incoming sounds, and nothing on open", async () => {
     const waves: string[] = [];
     const param = () => ({ value: 0, setValueAtTime: vi.fn(), exponentialRampToValueAtTime: vi.fn() });
     vi.stubGlobal(
@@ -982,20 +982,25 @@ describe("core", () => {
       },
     );
     await started();
-    win.Dimmi?.("update", { appearance: { sent_sound: "tick", reply_sound: "chime" } });
-    const messenger = shadow().querySelector(".messenger") as HTMLElement;
-    expect(messenger.dataset.sentSound).toBe("tick");
+    win.Dimmi?.("open");
+    await settle();
+    expect(waves).toEqual([]);
 
     shadow().dispatchEvent(new CustomEvent("dimmi:send", { detail: { body: "Hi", files: [] } }));
-    await vi.waitFor(() => expect(waves).toEqual(["triangle"]));
+    await vi.waitFor(() => expect(waves).toEqual(["sine", "sine"]));
 
     win.Dimmi?.("simulate", { message: "Hello" });
-    await vi.waitFor(() => expect(waves).toEqual(["triangle", "sine", "sine"]));
+    await vi.waitFor(() => expect(waves).toHaveLength(4));
+
+    win.Dimmi?.("update", { appearance: { sent_sound: "none" } });
+    shadow().dispatchEvent(new CustomEvent("dimmi:send", { detail: { body: "Again", files: [] } }));
+    await settle();
+    expect(waves).toHaveLength(4);
 
     win.Dimmi?.("update", { appearance: { sound: false } });
     win.Dimmi?.("simulate", { message: "Again" });
     await settle();
-    expect(waves).toHaveLength(3);
+    expect(waves).toHaveLength(4);
   });
 
   it("warns about commands it does not know", async () => {

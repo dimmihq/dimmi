@@ -3915,11 +3915,11 @@
             "type": "string"
           },
           "reply_sound": {
-            "description": "The sound the messenger plays when a reply arrives: none, pop, chime, bubble, swoosh or tick. Defaults to pop.",
+            "description": "Whether a message coming in makes the messenger's incoming sound: none turns it off; pop, chime, bubble, swoosh and tick all turn it on. Defaults to pop.",
             "type": "string"
           },
           "sent_sound": {
-            "description": "The sound the messenger plays when the customer sends a message: none, pop, chime, bubble, swoosh or tick. Defaults to none.",
+            "description": "Whether a message the customer sends makes the messenger's outgoing sound: none turns it off; pop, chime, bubble, swoosh and tick all turn it on. Defaults to pop.",
             "type": "string"
           },
           "sound": {
@@ -15222,11 +15222,11 @@
             "type": "string"
           },
           "reply_sound": {
-            "description": "The sound to play when a reply arrives: none, pop, chime, bubble, swoosh or tick.",
+            "description": "Whether a message coming in makes the messenger's incoming sound: none turns it off; pop, chime, bubble, swoosh and tick all turn it on.",
             "type": "string"
           },
           "sent_sound": {
-            "description": "The sound to play when the visitor sends a message: none, pop, chime, bubble, swoosh or tick.",
+            "description": "Whether a message the visitor sends makes the messenger's outgoing sound: none turns it off; pop, chime, bubble, swoosh and tick all turn it on.",
             "type": "string"
           },
           "sound": {

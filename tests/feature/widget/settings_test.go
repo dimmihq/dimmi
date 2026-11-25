@@ -411,14 +411,20 @@ func TestWidgetSettingsUpdate(t *testing.T) {
 		config.AssertJSONPath("data.appearance.background.gradient.from", "#000000")
 	})
 
-	t.Run("picks the sounds for a sent message and a reply and serves them in the config", func(t *testing.T) {
+	t.Run("turns the sent and reply sounds on or off and serves them in the config", func(t *testing.T) {
 		t.Parallel()
 		tc := tests.New(t)
 
 		owner(tc).GetJSON(settingsPath(t, tc)).AssertOK().
-			AssertJSONPath("data.appearance.sent_sound", "none").AssertJSONPath("data.appearance.reply_sound", "pop")
+			AssertJSONPath("data.appearance.sent_sound", "pop").AssertJSONPath("data.appearance.reply_sound", "pop")
 		tc.Client().GetJSON(configPath(t, tc)).AssertOK().
-			AssertJSONPath("data.appearance.sent_sound", "none").AssertJSONPath("data.appearance.reply_sound", "pop")
+			AssertJSONPath("data.appearance.sent_sound", "pop").AssertJSONPath("data.appearance.reply_sound", "pop")
+
+		off := func(res *testkit.Response) {
+			res.AssertJSONPath("data.appearance.sent_sound", "none")
+		}
+		off(patch(t, tc, testkit.JSON{"appearance": testkit.JSON{"sent_sound": "none"}}))
+		off(tc.Client().GetJSON(configPath(t, tc)).AssertOK())
 
 		picked := func(res *testkit.Response) {
 			res.AssertJSONPath("data.appearance.sent_sound", "swoosh").
