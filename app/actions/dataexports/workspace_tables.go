@@ -317,6 +317,8 @@ func agentTables() []ArchiveTable {
 		{Name: "operator_threads", About: "Members' threads with the Operator.", Key: byID()},
 		{Name: "operator_messages", About: "Messages in Operator threads.", Key: byID(), Omit: []string{"steps"}},
 		{Name: "operator_changesets", About: "Changes the Operator proposed.", Key: byID()},
+		{Name: "operator_routines", About: "Routines the Operator runs on a schedule.", Key: byID()},
+		{Name: "operator_routine_runs", About: "Each run of a routine.", Key: byID(), Omit: []string{"steps"}},
 	}
 }
 
