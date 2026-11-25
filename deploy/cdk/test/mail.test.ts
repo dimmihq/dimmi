@@ -86,11 +86,10 @@ describe("mail stack", () => {
     ).not.toThrow();
   });
 
-  it("both webhooks retry for about an hour and then dead-letter", () => {
+  it("the inbound webhook retries for about an hour and then dead-letters", () => {
     const subscriptions = resources(template, "AWS::SNS::Subscription");
 
-    expect(subscriptions.map((sub) => sub.Properties.Endpoint).sort()).toEqual([
-      "https://staging.trydimmi.com/webhooks/ses/events",
+    expect(subscriptions.map((sub) => sub.Properties.Endpoint)).toEqual([
       "https://staging.trydimmi.com/webhooks/ses/inbound",
     ]);
 
@@ -151,6 +150,12 @@ describe("mail stack", () => {
       template.hasResourceProperties("AWS::SES::ConfigurationSet", { Name: "dimmi-customer-staging" }),
     ).not.toThrow();
     expect(() => template.resourceCountIs("AWS::SES::ConfigurationSetEventDestination", 2)).not.toThrow();
+
+    for (const set of resources(template, "AWS::SES::ConfigurationSet")) {
+      expect(set.Properties.SuppressionOptions, "refuses bounced and complaining addresses").toEqual({
+        SuppressedReasons: ["BOUNCE", "COMPLAINT"],
+      });
+    }
     expect(() =>
       template.allResourcesProperties("AWS::SES::ConfigurationSetEventDestination", {
         EventDestination: {
