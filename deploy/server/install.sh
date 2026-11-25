@@ -37,7 +37,7 @@ for drive in /dev/nvme0n1 /dev/nvme1n1; do
   nvme format "$drive" --ses=1 --force || blkdiscard -f "$drive"
 done
 
-/root/.oldroot/nfs/install/installimage -a -c /root/install.conf -x /root/post-install
+/root/.oldroot/nfs/install/installimage -a -c /root/install.conf -x /root/post-install </dev/null
 shred -u /root/install.conf
 REMOTE
 
