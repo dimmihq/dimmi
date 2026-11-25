@@ -34,7 +34,7 @@ interface HelpIndex {
 }
 
 import type { Options, OptionsUpdate, Tab, Texts } from "../options";
-import type { ActionTexts } from "../text";
+import type { ActionTexts, AiTexts } from "../text";
 import { type Availability, type Config, content, fromConfig, reading } from "./map";
 import { patch } from "./patch";
 import { report } from "./report";
@@ -46,7 +46,7 @@ export interface Host {
   root: ShadowRoot;
   options(): Options;
   update(changes: OptionsUpdate): void | Promise<void>;
-  notify(message: { conversation: string; body: string; author: string }): void;
+  notify(message: { conversation: string; body: string; author: string; agent: boolean }): void;
   showing(conversation: string): boolean;
   /* replied tells the page a reply arrived in the conversation on screen. */
   replied?(): void;
@@ -256,6 +256,7 @@ export class Live {
   private changelog: Pick<Content, "changelog" | "unread_changelog"> | undefined;
   private greeting = false;
   private locked = false;
+  private headed = false;
   private readonly expecting = new Map<string, { after: number; until: number }>();
   private latestEntry = "";
   private readonly rated = new Map<string, "yes" | "no">();
@@ -1085,6 +1086,7 @@ export class Live {
       conversation: message.conversation_id,
       body: message.body ?? "",
       author: message.author.name ?? "",
+      agent: message.author.type === "agent",
     });
   }
 
@@ -1179,14 +1181,29 @@ export class Live {
     if ((change === "messages" || change === "typing" || change === "seen") && conversation === this.open) {
       this.drawThread();
     }
+    this.markAi();
+  }
+
+  /*
+   * markAi redraws the header when who answers the open conversation
+   * changed between the agent and the team.
+   */
+  private markAi() {
+    const found = this.store.conversations.find((c) => c.id === this.open);
+    if ((found?.ai_state === "active") !== this.headed) {
+      this.drawHeader();
+    }
   }
 
   /*
    * drawHeader redraws who the visitor talks to once the team's
-   * availability is known.
+   * availability is known, and whenever the AI agent takes or leaves the
+   * open conversation, so its mark is at the top while it answers.
    */
   private drawHeader() {
-    const markup = String(Whoami({ content: this.content() }));
+    const content = this.content();
+    this.headed = Boolean(content.ai);
+    const markup = String(Whoami({ content, ai: this.aiTexts() }));
     for (const whoami of this.host.root.querySelectorAll<HTMLElement>('[data-target="whoami"]')) {
       whoami.outerHTML = markup;
     }
@@ -1231,6 +1248,7 @@ export class Live {
    * reply.
    */
   private drawThread() {
+    this.markAi();
     const thread = this.host.root.querySelector<HTMLElement>(".thread");
     const loaded = thread?.querySelector<HTMLElement>(".loaded");
     if (!thread || !loaded) {
@@ -1249,7 +1267,7 @@ export class Live {
     const last = messages.at(-1);
     const parts = [
       this.statusLine(),
-      String(t.Thread({ messages, texts: this.actionTexts(), team: this.content().company })),
+      String(t.Thread({ messages, texts: this.actionTexts(), team: this.content().company, ai: this.aiTexts() })),
     ];
     const ticket = this.store.conversations.find((c) => c.id === open)?.ticket;
     const strip = tickets()?.Strip;
@@ -1391,6 +1409,12 @@ export class Live {
     }
     this.verifying.set(call, { step: "email", email: current.email });
     this.drawThread();
+  }
+
+  private aiTexts(): AiTexts {
+    const t = this.host.options().texts;
+
+    return { label: t.ai_label, name: t.ai_agent };
   }
 
   private actionTexts(): ActionTexts {

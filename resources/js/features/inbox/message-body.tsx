@@ -9,7 +9,7 @@
  * stays those five characters. A customer's links pass the workspace's
  * link checks first. Code blocks are highlighted once the highlighter,
  * loaded only for a message that has one, arrives; an image opens large
- * on a click. A note's mentions read as @Name chips. An email's pictures
+ * on a click, and one that cannot load reads as a link to it. A note's mentions read as @Name chips. An email's pictures
  * named by content id show from the message's own files.
  */
 import { type ComponentProps, lazy, Suspense, useEffect, useState } from "react";
@@ -76,8 +76,12 @@ function Link({ href, children }: ComponentProps<"a">) {
 
 function Picture({ src, alt }: ComponentProps<"img">) {
   const [open, setOpen] = useState(false);
+  const [failed, setFailed] = useState(false);
   if (typeof src !== "string" || src === "") {
     return alt ? <span>{alt}</span> : null;
+  }
+  if (failed) {
+    return <Link href={src}>{alt || src}</Link>;
   }
 
   return (
@@ -88,7 +92,7 @@ function Picture({ src, alt }: ComponentProps<"img">) {
         onClick={() => setOpen(true)}
         className="block cursor-zoom-in rounded-xl outline-none focus-visible:ring-2 focus-visible:ring-border-focus-ring"
       >
-        <img src={src} alt={alt ?? ""} className="max-h-60 rounded-xl" />
+        <img src={src} alt={alt ?? ""} onError={() => setFailed(true)} className="max-h-60 rounded-xl" />
       </button>
       {open ? (
         <Suspense fallback={null}>

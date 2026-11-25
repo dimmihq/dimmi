@@ -131,6 +131,7 @@ export function content(
     company: config.company?.name ?? base.company,
     logo: config.company?.logo_url ?? null,
     links: links(config),
+    ai: store.conversations.find((c) => c.id === open)?.ai_state === "active",
     reply_time: availability?.reply_time_text ?? base.reply_time,
     team: availability ? availability.team.map((member): Member => ({ name: member.name })) : base.team,
     conversations: store.conversations.map((c) => toConversation(c, now)),

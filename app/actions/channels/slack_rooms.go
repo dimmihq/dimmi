@@ -14,7 +14,8 @@
 | first one's data.
 |
 | An uninstalled app or a revoked bot token disconnects the connection
-| and every room with it.
+| and every room with it, wipes its secrets and starts the grace period
+| after which what Slack brought in is deleted.
 |
 */
 
@@ -273,12 +274,15 @@ func (s *Slack) revokeInstallation(ctx context.Context, ev SlackEvent) error {
 }
 
 /*
-disconnect marks the connection disconnected and removes its rooms.
+disconnect ends the connection and removes its rooms: it is marked
+disconnected, its own secrets are wiped at once and it remembers when
+it ended, so what Slack brought in is deleted after the grace period
+unless Slack is connected again first.
 */
 func (s *Slack) disconnect(ctx context.Context, conn models.ChannelConnection, reason string) error {
 	return s.read(ctx, func(q *models.Queries) error {
-		_, err := q.MarkChannelConnection(ctx, models.MarkChannelConnectionParams{
-			Status: "disconnected", LastError: &reason, Now: s.Clock.Now(), WorkspaceID: conn.WorkspaceID, ID: conn.ID,
+		_, err := q.EndChannelConnection(ctx, models.EndChannelConnectionParams{
+			LastError: &reason, Now: s.Clock.Now(), WorkspaceID: conn.WorkspaceID, ID: conn.ID,
 		})
 		if err != nil {
 			return fmt.Errorf("disconnect slack: %w", err)

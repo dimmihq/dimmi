@@ -77,7 +77,7 @@ func (c *OAuthCallbackController) Invoke(w fhttp.ResponseWriter, r *fhttp.Reques
 
 	result, err := c.Callback.Handle(ctx, auth.OAuthCallbackInput{
 		Identity: identity, Intent: attempt.Intent, UserID: attempt.UserID, Invitation: attempt.Invitation,
-		Client: clientOf(r, c.Cookies),
+		TermsAccepted: attempt.TermsAccepted, Client: clientOf(r, c.Cookies),
 	})
 	if code := fault.CodeOf(err); code != "" {
 		redirect(w, withError(failurePage(attempt.Intent), code))

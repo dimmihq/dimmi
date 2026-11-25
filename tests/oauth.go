@@ -15,6 +15,8 @@
 package tests
 
 import (
+	"strings"
+
 	"github.com/stretchr/testify/require"
 
 	fhttp "github.com/dimmihq/dimmi/framework/http"
@@ -45,9 +47,19 @@ func (tc *TestCase) Social() *socialite.Fake {
 StartOAuth opens the redirect at the path, such as
 /auth/github/redirect, with the client, and returns the attempt. Call
 Social first to sign in through the fake rather than the real provider.
+The person is taken to have accepted the terms, as someone who ticked
+the box on the page would have, unless the path says otherwise.
 */
 func (tc *TestCase) StartOAuth(client *testkit.Client, path string) OAuthAttempt {
 	tc.T.Helper()
+
+	if !strings.Contains(path, "terms_accepted=") {
+		joint := "?"
+		if strings.Contains(path, "?") {
+			joint = "&"
+		}
+		path += joint + "terms_accepted=true"
+	}
 
 	res := client.Send(fhttp.MethodGet, path, nil).AssertStatus(fhttp.StatusFound)
 

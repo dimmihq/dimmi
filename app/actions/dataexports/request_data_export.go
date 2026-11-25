@@ -41,6 +41,7 @@ const (
 	KindConversations = "conversations"
 	KindContacts      = "contacts"
 	KindFacts         = "conversation_facts"
+	KindWorkspace     = "workspace"
 )
 
 /*
@@ -58,15 +59,22 @@ func limits() map[string]map[string]int {
 		KindConversations: {"txt": 1_000, "csv": 50_000, "json": 10_000},
 		KindContacts:      {"csv": 50_000, "json": 10_000},
 		KindFacts:         {"csv": 200_000},
+		KindWorkspace:     {"zip": countCap},
 	}
 }
 
 /*
-permissionOf returns the permission an export of the kind needs.
+permissionOf returns the permission an export of the kind needs. A
+workspace export takes everything, so it needs exports:write, which
+only owners hold.
 */
 func permissionOf(kind string) string {
 	if kind == KindContacts {
 		return "contacts:export"
+	}
+
+	if kind == KindWorkspace {
+		return "exports:write"
 	}
 
 	return "conversations:export"
@@ -80,7 +88,8 @@ type BuildArgs = jobs.BuildDataExportArgs
 /*
 RequestInput is who asks for which export. Conversations is read for a
 conversations export, Contacts for a contacts export and Facts, a
-report's range and filters, for a conversation facts export.
+report's range and filters, for a conversation facts export. A
+workspace export reads none: it covers everything.
 */
 type RequestInput struct {
 	Membership    authz.Membership
@@ -98,6 +107,7 @@ RequestDataExport starts building an export.
 Rules:
   - The caller needs conversations:export or contacts:export for the
     kind, and conversations:moderate to include notes.
+  - A workspace export needs exports:write and always holds the notes.
   - The kind comes only in its formats.
   - The rows the caller may see are counted now; more than the format
     allows is refused with how many matched.
@@ -171,8 +181,14 @@ func allowed(in RequestInput) (int, error) {
 
 /*
 count returns how many rows the export covers as the caller sees them.
+A workspace export is not counted: it has no ceiling, and its manifest
+says what it holds.
 */
 func (a *RequestDataExport) count(ctx context.Context, tx *database.Tx, in RequestInput) (int, error) {
+	if in.Kind == KindWorkspace {
+		return 0, nil
+	}
+
 	if in.Kind == KindFacts {
 		return reports.CountFacts(ctx, tx, reports.FactScope{
 			Membership: in.Membership, Filters: in.Facts, Now: a.Clock.Now(), Limit: countCap,
@@ -195,7 +211,10 @@ record stores the export with its selection and queues its build.
 */
 func (a *RequestDataExport) record(ctx context.Context, tx *database.Tx, in RequestInput) (models.DataExport, error) {
 	var selection any = in.Conversations
+
 	switch in.Kind {
+	case KindWorkspace:
+		selection, in.IncludeNotes = struct{}{}, true
 	case KindContacts:
 		selection = in.Contacts
 	case KindFacts:

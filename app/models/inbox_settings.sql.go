@@ -14,7 +14,7 @@ import (
 )
 
 const channelConnectionsByIDs = `-- name: ChannelConnectionsByIDs :many
-SELECT id, workspace_id, inbox_id, type, name, status, external_id, config, credentials_encrypted, last_error, last_error_at, last_activity_at, deleted_at, created_at, updated_at, integration_installation_id, ai_agent_id FROM channel_connections WHERE workspace_id = $1 AND id = ANY ($2::uuid[])
+SELECT id, workspace_id, inbox_id, type, name, status, external_id, config, credentials_encrypted, last_error, last_error_at, last_activity_at, deleted_at, created_at, updated_at, integration_installation_id, ai_agent_id, ended_at, data_purged_at FROM channel_connections WHERE workspace_id = $1 AND id = ANY ($2::uuid[])
 `
 
 type ChannelConnectionsByIDsParams struct {
@@ -51,6 +51,8 @@ func (q *Queries) ChannelConnectionsByIDs(ctx context.Context, arg ChannelConnec
 			&i.UpdatedAt,
 			&i.IntegrationInstallationID,
 			&i.AiAgentID,
+			&i.EndedAt,
+			&i.DataPurgedAt,
 		); err != nil {
 			return nil, err
 		}
@@ -63,7 +65,7 @@ func (q *Queries) ChannelConnectionsByIDs(ctx context.Context, arg ChannelConnec
 }
 
 const findInboxAPIConnection = `-- name: FindInboxAPIConnection :one
-SELECT id, workspace_id, inbox_id, type, name, status, external_id, config, credentials_encrypted, last_error, last_error_at, last_activity_at, deleted_at, created_at, updated_at, integration_installation_id, ai_agent_id FROM channel_connections
+SELECT id, workspace_id, inbox_id, type, name, status, external_id, config, credentials_encrypted, last_error, last_error_at, last_activity_at, deleted_at, created_at, updated_at, integration_installation_id, ai_agent_id, ended_at, data_purged_at FROM channel_connections
 WHERE workspace_id = $1 AND inbox_id = $2 AND type = 'api' AND deleted_at IS NULL
 ORDER BY created_at, id
 LIMIT 1
@@ -97,6 +99,8 @@ func (q *Queries) FindInboxAPIConnection(ctx context.Context, arg FindInboxAPICo
 		&i.UpdatedAt,
 		&i.IntegrationInstallationID,
 		&i.AiAgentID,
+		&i.EndedAt,
+		&i.DataPurgedAt,
 	)
 	return i, err
 }
@@ -146,7 +150,7 @@ func (q *Queries) InboxesByIDs(ctx context.Context, arg InboxesByIDsParams) ([]I
 }
 
 const membersByIDs = `-- name: MembersByIDs :many
-SELECT m.id, m.workspace_id, m.user_id, m.role, m.availability, m.status, m.created_at, m.updated_at, m.last_accessed_at, m.deactivated_at, m.deactivated_by_member_id, m.joined_via, m.conversation_access, m.conversation_access_unassigned, m.away_reassign, m.away_since, m.availability_source, m.away_reason_id, m.assign_on_reply, m.conversation_capacity, m.capacity_by_channel, m.last_assigned_at, m.undo_send_seconds, m.custom_role_id, u.id, u.name, u.email, u.email_verified_at, u.password_hash, u.two_factor_confirmed_at, u.avatar_path, u.locale, u.timezone, u.last_seen_at, u.created_at, u.updated_at, u.deleted_at, u.password_changed_at, u.risk_flags, u.created_via, u.preferences, u.managed_by_organization_id
+SELECT m.id, m.workspace_id, m.user_id, m.role, m.availability, m.status, m.created_at, m.updated_at, m.last_accessed_at, m.deactivated_at, m.deactivated_by_member_id, m.joined_via, m.conversation_access, m.conversation_access_unassigned, m.away_reassign, m.away_since, m.availability_source, m.away_reason_id, m.assign_on_reply, m.conversation_capacity, m.capacity_by_channel, m.last_assigned_at, m.undo_send_seconds, m.custom_role_id, u.id, u.name, u.email, u.email_verified_at, u.password_hash, u.two_factor_confirmed_at, u.avatar_path, u.locale, u.timezone, u.last_seen_at, u.created_at, u.updated_at, u.deleted_at, u.password_changed_at, u.risk_flags, u.created_via, u.preferences, u.managed_by_organization_id, u.terms_version, u.terms_accepted_at, u.terms_accepted_ip, u.terms_accepted_user_agent
 FROM workspace_members m
 JOIN users u ON u.id = m.user_id
 WHERE m.workspace_id = $1 AND m.id = ANY ($2::uuid[])
@@ -216,6 +220,10 @@ func (q *Queries) MembersByIDs(ctx context.Context, arg MembersByIDsParams) ([]M
 			&i.User.CreatedVia,
 			&i.User.Preferences,
 			&i.User.ManagedByOrganizationID,
+			&i.User.TermsVersion,
+			&i.User.TermsAcceptedAt,
+			&i.User.TermsAcceptedIp,
+			&i.User.TermsAcceptedUserAgent,
 		); err != nil {
 			return nil, err
 		}

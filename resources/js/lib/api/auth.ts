@@ -32,7 +32,20 @@ export interface AuthConfig {
   providers: Provider[];
   locales: Locale[];
   captcha?: Captcha | null;
+  terms?: Terms | null;
   sso_available?: boolean;
+}
+
+/*
+ * Terms is the legal terms a person accepts when creating an account on
+ * a server that publishes them: the version in force and where to read
+ * each document.
+ */
+export interface Terms {
+  version: string;
+  terms_url: string;
+  privacy_url: string;
+  data_processing_url: string;
 }
 
 /*
@@ -194,7 +207,13 @@ export async function signInWithPasskey(options: RequestOptions): Promise<Me> {
   return request<Me>("POST", "/sessions", { grant: "two_factor", method: "passkey", credential });
 }
 
-export function signUp(input: { name: string; email: string; password: string; captcha_token?: string }): Promise<Me> {
+export function signUp(input: {
+  name: string;
+  email: string;
+  password: string;
+  captcha_token?: string;
+  terms_accepted?: boolean;
+}): Promise<Me> {
   return request<Me>("POST", "/users", input);
 }
 

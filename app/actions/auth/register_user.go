@@ -51,7 +51,8 @@ const signupWindow = time.Hour
 /*
 RegisterUserInput is the new account and, when WorkspaceName is set,
 its first workspace, with the client signing up. InvitationToken is the
-link of an invitation the account answers, "" for none.
+link of an invitation the account answers, "" for none. TermsAccepted
+says the person ticked the box that accepts the legal terms.
 */
 type RegisterUserInput struct {
 	Name            string
@@ -60,6 +61,7 @@ type RegisterUserInput struct {
 	WorkspaceName   string
 	InvitationToken string
 	CaptchaToken    string
+	TermsAccepted   bool
 	Client          appauth.Client
 }
 
@@ -75,6 +77,8 @@ Rules:
   - An invitation makes the account a member of its workspace, and its
     address verified; no workspace is created then.
   - Otherwise a workspace name creates a workspace the new user owns.
+  - An acceptance of the legal terms is recorded on the account. An
+    install that publishes terms demands one before this action runs.
   - The new address is sent a verification link unless the invitation
     proved it; nothing waits for it.
 
@@ -227,7 +231,7 @@ func (a *RegisterUser) create(ctx context.Context, s signup) (models.User, ids.U
 
 		user, err = a.CreateUser.Handle(ctx, users.CreateUserInput{
 			Name: in.Name, Email: in.Email, PasswordHash: &hash, Verified: invited != nil,
-			CreatedVia: createdVia(invited),
+			CreatedVia: createdVia(invited), Terms: in.terms(),
 		})
 		if err != nil {
 			return err
@@ -328,4 +332,24 @@ func createdVia(invited *invitations.Preview) string {
 	}
 
 	return appauth.CreatedViaRegister
+}
+
+/*
+terms returns the acceptance of the legal terms the signup gave, nil
+when it gave none.
+*/
+func (in RegisterUserInput) terms() *users.TermsAcceptance {
+	if !in.TermsAccepted {
+		return nil
+	}
+
+	return acceptanceFrom(in.Client)
+}
+
+/*
+acceptanceFrom returns an acceptance of the legal terms given from the
+client.
+*/
+func acceptanceFrom(client appauth.Client) *users.TermsAcceptance {
+	return &users.TermsAcceptance{IP: client.Addr(), UserAgent: client.TruncatedUserAgent()}
 }

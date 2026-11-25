@@ -91,7 +91,6 @@ func registerInboxJobs(a *app.App) error {
 	return errors.Join(
 		queue.Register(a.Queue, &jobs.SendChannelMessage{
 			DB: a.DB, Clock: a.Clock, Events: a.Events, Channels: a.Channels, Disks: a.Storage, Queue: a.Queue,
-			GIFs: a.Config.Inbox.GIF.GiphyAPIKey != "",
 		}),
 		queue.Register(a.Queue, &jobs.EraseMessageCopies{DB: a.DB, Storage: a.Storage, Erasers: a.MessageErasers}),
 		queue.Register(a.Queue, &jobs.PurgeStaleDrafts{

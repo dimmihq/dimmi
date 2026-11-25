@@ -202,6 +202,118 @@
       "approved_by": "Frantz Kati"
     },
     {
+      "id": "api-path-removed-without-deprecation",
+      "operation": "GET /gif-search",
+      "reason": "GIF search removed before the first production release; nothing was live and no SDK was published.",
+      "deprecated": "2026-11-24",
+      "sunset": "2026-11-24",
+      "approved_by": "Frantz Kati"
+    },
+    {
+      "id": "response-required-property-removed",
+      "operation": "GET /me",
+      "reason": "GIF search removed before the first production release; nothing was live and no SDK was published.",
+      "deprecated": "2026-11-24",
+      "sunset": "2026-11-24",
+      "approved_by": "Frantz Kati"
+    },
+    {
+      "id": "response-required-property-removed",
+      "operation": "POST /users",
+      "reason": "GIF search removed before the first production release; nothing was live and no SDK was published.",
+      "deprecated": "2026-11-24",
+      "sunset": "2026-11-24",
+      "approved_by": "Frantz Kati"
+    },
+    {
+      "id": "response-required-property-removed",
+      "operation": "DELETE /workspace",
+      "reason": "GIF search removed before the first production release; nothing was live and no SDK was published.",
+      "deprecated": "2026-11-24",
+      "sunset": "2026-11-24",
+      "approved_by": "Frantz Kati"
+    },
+    {
+      "id": "response-required-property-removed",
+      "operation": "GET /workspace",
+      "reason": "GIF search removed before the first production release; nothing was live and no SDK was published.",
+      "deprecated": "2026-11-24",
+      "sunset": "2026-11-24",
+      "approved_by": "Frantz Kati"
+    },
+    {
+      "id": "response-required-property-removed",
+      "operation": "PATCH /workspace",
+      "reason": "GIF search removed before the first production release; nothing was live and no SDK was published.",
+      "deprecated": "2026-11-24",
+      "sunset": "2026-11-24",
+      "approved_by": "Frantz Kati"
+    },
+    {
+      "id": "response-required-property-removed",
+      "operation": "PUT /workspace/logo",
+      "reason": "GIF search removed before the first production release; nothing was live and no SDK was published.",
+      "deprecated": "2026-11-24",
+      "sunset": "2026-11-24",
+      "approved_by": "Frantz Kati"
+    },
+    {
+      "id": "response-required-property-removed",
+      "operation": "PATCH /workspace/onboarding",
+      "reason": "GIF search removed before the first production release; nothing was live and no SDK was published.",
+      "deprecated": "2026-11-24",
+      "sunset": "2026-11-24",
+      "approved_by": "Frantz Kati"
+    },
+    {
+      "id": "response-required-property-removed",
+      "operation": "POST /workspaces",
+      "reason": "GIF search removed before the first production release; nothing was live and no SDK was published.",
+      "deprecated": "2026-11-24",
+      "sunset": "2026-11-24",
+      "approved_by": "Frantz Kati"
+    },
+    {
+      "id": "response-required-property-removed",
+      "operation": "PATCH /workspaces/{workspace}",
+      "reason": "GIF search removed before the first production release; nothing was live and no SDK was published.",
+      "deprecated": "2026-11-24",
+      "sunset": "2026-11-24",
+      "approved_by": "Frantz Kati"
+    },
+    {
+      "id": "api-schema-removed",
+      "schema": "GIFSearch",
+      "reason": "GIF search removed before the first production release; nothing was live and no SDK was published.",
+      "deprecated": "2026-11-24",
+      "sunset": "2026-11-24",
+      "approved_by": "Frantz Kati"
+    },
+    {
+      "id": "api-schema-removed",
+      "schema": "ResourceGIFSearch",
+      "reason": "GIF search removed before the first production release; nothing was live and no SDK was published.",
+      "deprecated": "2026-11-24",
+      "sunset": "2026-11-24",
+      "approved_by": "Frantz Kati"
+    },
+    {
+      "id": "request-property-removed",
+      "operation": "PATCH /workspace",
+      "reason": "GIF search removed before the first production release; nothing was live and no SDK was published.",
+      "deprecated": "2026-11-24",
+      "sunset": "2026-11-24",
+      "approved_by": "Frantz Kati"
+    },
+    {
+      "id": "request-property-removed",
+      "operation": "PATCH /workspaces/{workspace}",
+      "reason": "GIF search removed before the first production release; nothing was live and no SDK was published.",
+      "deprecated": "2026-11-24",
+      "sunset": "2026-11-24",
+      "approved_by": "Frantz Kati"
+    },
+    {
       "id": "response-required-property-removed",
       "operation": "GET /operator/settings",
       "reason": "Internal route: the weekly procedure review is replaced by Operator routines, and nothing is in production.",

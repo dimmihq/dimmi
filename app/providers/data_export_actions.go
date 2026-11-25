@@ -36,6 +36,7 @@ func bootDataExports(a *app.App) error {
 	acts.ListDataExports = &dataexports.ListDataExports{DB: a.DB}
 	acts.ShowDataExport = &dataexports.ShowDataExport{DB: a.DB}
 	acts.DownloadDataExport = &dataexports.DownloadDataExport{DB: a.DB, Storage: a.Storage}
+	acts.LinkDataExport = &dataexports.LinkDataExport{DB: a.DB, Storage: a.Storage, Clock: a.Clock}
 	acts.DeleteDataExport = &dataexports.DeleteDataExport{
 		DB: a.DB, Events: a.Events, Clock: a.Clock, Storage: a.Storage,
 	}

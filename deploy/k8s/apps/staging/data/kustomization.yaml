@@ -1,5 +1,5 @@
 # Staging is production in miniature: the same services, a gate in front,
-# mail through the staging SES stack in us-east-2, telemetry to the
+# mail through the staging SES stack in eu-west-1, telemetry to the
 # cluster's collector (infrastructure/observability.yaml). Values that name AWS
 # resources or hold keys live in dimmi-secrets, never here.
 apiVersion: kustomize.config.k8s.io/v1beta1
@@ -8,6 +8,9 @@ namespace: dimmi-staging
 resources:
   - ../../base/data
   - backup.yaml
+# The database was started empty on 2026-11-25, on the reinstalled server.
+# serverName gives it its own archive in the bucket, beside the one the
+# database before it wrote, which a new database must never write over.
 patches:
   - target:
       kind: Cluster
@@ -20,6 +23,7 @@ patches:
             isWALArchiver: true
             parameters:
               barmanObjectName: postgres-backup
+              serverName: postgres-2026-11-25
   - target:
       kind: ConfigMap
       name: dimmi-config
@@ -71,7 +75,7 @@ patches:
         value: ses
       - op: add
         path: /data/DIMMI_MAIL__MAILERS__SYSTEM__REGION
-        value: us-east-2
+        value: eu-west-1
       - op: add
         path: /data/DIMMI_MAIL__MAILERS__SYSTEM__CONFIGURATION_SET
         value: dimmi-system-staging
@@ -80,7 +84,7 @@ patches:
         value: ses
       - op: add
         path: /data/DIMMI_MAIL__MAILERS__CUSTOMER__REGION
-        value: us-east-2
+        value: eu-west-1
       - op: add
         path: /data/DIMMI_MAIL__MAILERS__CUSTOMER__CONFIGURATION_SET
         value: dimmi-customer-staging
@@ -104,7 +108,7 @@ patches:
         value: s3
       - op: add
         path: /data/DIMMI_FILESYSTEMS__DISKS__SES_INBOUND__REGION
-        value: us-east-2
+        value: eu-west-1
       - op: add
         path: /data/DIMMI_MALWARE__DEFAULT
         value: clamav

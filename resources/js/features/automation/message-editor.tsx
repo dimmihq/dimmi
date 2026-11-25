@@ -16,7 +16,6 @@ import { AddMenu } from "@/features/inbox/add-menu";
 import { ComposerField } from "@/features/inbox/composer/composer-field";
 import { linkMarkdown } from "@/features/inbox/composer/link-token";
 import type { Mentionable } from "@/features/inbox/composer/mentionable";
-import { useGifs } from "@/features/inbox/composer/use-gifs";
 import { useInbox } from "@/features/inbox/conversations";
 import { searchLibrary } from "@/features/inbox/library";
 import { savedRepliesQuery } from "@/lib/api/saved-replies";
@@ -42,11 +41,10 @@ export function MessageEditor({
   teammates?: ReadonlyArray<readonly [string, string]>;
   onChange: (markdown: string) => void;
 }) {
-  const { workspace, userId } = useInbox();
+  const { workspace } = useInbox();
   const queryClient = useQueryClient();
   const [slot, setSlot] = useState<HTMLElement | null>(null);
   const insert = (text: string) => onChange(value ? `${value}\n\n${text}` : text);
-  const gifs = useGifs(workspace, userId, insert);
 
   return (
     <div className="py-2.5 pe-2.5">
@@ -76,7 +74,6 @@ export function MessageEditor({
             onLink={(title, url) =>
               onChange(`${value.trimEnd()}${value.trim() ? " " : ""}${linkMarkdown(title, url)} `)
             }
-            gifs={gifs.gifs}
           />
           <span ref={setSlot} className="contents" />
         </div>

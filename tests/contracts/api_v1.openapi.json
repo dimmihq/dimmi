@@ -5228,6 +5228,9 @@
           "sso_available": {
             "description": "Whether single sign-on is available on this server.",
             "type": "boolean"
+          },
+          "terms": {
+            "$ref": "#/components/schemas/Terms"
           }
         },
         "required": [
@@ -5241,6 +5244,7 @@
           "password_login",
           "magic_link",
           "captcha",
+          "terms",
           "mail_configured",
           "password_min_length",
           "providers",
@@ -17597,6 +17601,30 @@
         ],
         "type": "object"
       },
+      "DataExportLink": {
+        "additionalProperties": false,
+        "properties": {
+          "expires_at": {
+            "description": "When the signed download link stops working, in UTC.",
+            "format": "date-time",
+            "type": "string"
+          },
+          "object": {
+            "description": "The kind of record this is, the same for every record of its kind, such as article.",
+            "type": "string"
+          },
+          "url": {
+            "description": "The signed link the ready export file downloads from without credentials.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "object",
+          "url",
+          "expires_at"
+        ],
+        "type": "object"
+      },
       "DataStruct": {
         "additionalProperties": false,
         "properties": {
@@ -19664,40 +19692,6 @@
         },
         "required": [
           "tag"
-        ],
-        "type": "object"
-      },
-      "GIFSearch": {
-        "additionalProperties": false,
-        "properties": {
-          "api_key": {
-            "description": "The GIPHY key the browser uses to search GIFs directly. Null when GIF search is off.",
-            "type": [
-              "string",
-              "null"
-            ]
-          },
-          "enabled": {
-            "description": "True when teammates may search GIFs: the instance has a GIPHY key and the workspace's GIF picker is on.",
-            "type": "boolean"
-          },
-          "object": {
-            "description": "The kind of record this is, the same for every record of its kind, such as article.",
-            "type": "string"
-          },
-          "provider": {
-            "description": "Where the GIFs come from, currently always giphy. Null when GIF search is off.",
-            "type": [
-              "string",
-              "null"
-            ]
-          }
-        },
-        "required": [
-          "object",
-          "enabled",
-          "provider",
-          "api_key"
         ],
         "type": "object"
       },
@@ -30733,6 +30727,18 @@
         ],
         "type": "object"
       },
+      "ResourceDataExportLink": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/DataExportLink"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
       "ResourceDeletionPreview": {
         "additionalProperties": false,
         "properties": {
@@ -30918,18 +30924,6 @@
         "properties": {
           "data": {
             "$ref": "#/components/schemas/FeedbackStatus"
-          }
-        },
-        "required": [
-          "data"
-        ],
-        "type": "object"
-      },
-      "ResourceGIFSearch": {
-        "additionalProperties": false,
-        "properties": {
-          "data": {
-            "$ref": "#/components/schemas/GIFSearch"
           }
         },
         "required": [
@@ -37418,12 +37412,13 @@
         "additionalProperties": false,
         "properties": {
           "format": {
-            "description": "Conversations: txt (readable transcripts, 1,000 at most), csv (50,000) or json (10,000). Contacts: csv (50,000) or json (10,000).",
+            "description": "Conversations: txt (readable transcripts, 1,000 at most), csv (50,000) or json (10,000). Contacts: csv (50,000) or json (10,000). Workspace: zip.",
             "enum": [
               "txt",
               "pdf",
               "csv",
-              "json"
+              "json",
+              "zip"
             ],
             "type": "string"
           },
@@ -37432,11 +37427,12 @@
             "type": "boolean"
           },
           "kind": {
-            "description": "conversations or contacts.",
+            "description": "conversations, contacts, or workspace for everything the workspace owns (owners only).",
             "enum": [
               "conversations",
               "contacts",
-              "conversation_facts"
+              "conversation_facts",
+              "workspace"
             ],
             "type": "string"
           },
@@ -38978,6 +38974,10 @@
             "maxLength": 256,
             "type": "string"
           },
+          "terms_accepted": {
+            "description": "Terms accepted: true or false.",
+            "type": "boolean"
+          },
           "workspace_name": {
             "description": "Name of a first workspace to create and own, up to 80 characters, such as Acme Support. Leave out to create none; it is not used when an invitation is accepted.",
             "maxLength": 80,
@@ -39602,6 +39602,34 @@
           "email",
           "email_verified",
           "avatar_url"
+        ],
+        "type": "object"
+      },
+      "Terms": {
+        "additionalProperties": false,
+        "properties": {
+          "data_processing_url": {
+            "description": "Link to the install's data processing addendum.",
+            "type": "string"
+          },
+          "privacy_url": {
+            "description": "Link to the install's privacy policy.",
+            "type": "string"
+          },
+          "terms_url": {
+            "description": "Link to the install's terms of service.",
+            "type": "string"
+          },
+          "version": {
+            "description": "Version label of the legal terms currently in force.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "version",
+          "terms_url",
+          "privacy_url",
+          "data_processing_url"
         ],
         "type": "object"
       },
@@ -42612,10 +42640,6 @@
             "maxLength": 80,
             "type": "string"
           },
-          "gif_picker": {
-            "description": "Whether teammates may search GIFs from the reply composer. On unless turned off; the picker also needs the install to have a GIF search key. Example: false.",
-            "type": "boolean"
-          },
           "link_safety": {
             "$ref": "#/components/schemas/LinkSafetyBody"
           },
@@ -44156,9 +44180,6 @@
       "UpdateWorkspaceRequestBody": {
         "additionalProperties": false,
         "properties": {
-          "gif_picker": {
-            "description": "Never send this here; it is refused. Change it through the workspace update."
-          },
           "link_safety": {
             "description": "Never send this here; it is refused. Change link checks through the workspace update."
           },
@@ -47263,10 +47284,6 @@
               "null"
             ]
           },
-          "gif_picker": {
-            "description": "True when teammates may search GIFs from the composer.",
-            "type": "boolean"
-          },
           "id": {
             "description": "The id of this record. Send it wherever an endpoint asks for this record; never use its name or title in its place.",
             "type": "string"
@@ -47362,7 +47379,6 @@
           "link_safety",
           "retention",
           "undo_send_seconds",
-          "gif_picker",
           "team_mentions_enabled",
           "onboarding",
           "deleted_at",
@@ -58997,7 +59013,7 @@
         ]
       },
       "post": {
-        "description": "Starts building a file of conversations or contacts, in the background. Each export belongs to you alone. For a privacy request about one customer, use POST /contacts/{contact}/exports instead. Returns the export with status pending; poll it until ready.",
+        "description": "Starts building a file of conversations or contacts, or one archive of the whole workspace, in the background. Each export belongs to you alone. For a privacy request about one customer, use POST /contacts/{contact}/exports instead. Returns the export with status pending; poll it until ready.",
         "operationId": "data-exports.store",
         "requestBody": {
           "content": {
@@ -59031,7 +59047,7 @@
             "description": "Error"
           }
         },
-        "summary": "Export conversations or contacts",
+        "summary": "Export conversations, contacts or the whole workspace",
         "x-abilities": [
           "conversations:read"
         ]
@@ -59155,6 +59171,11 @@
                 "schema": {
                   "type": "string"
                 }
+              },
+              "Location": {
+                "schema": {
+                  "type": "string"
+                }
               }
             }
           },
@@ -59170,6 +59191,49 @@
           }
         },
         "summary": "Download a data export",
+        "x-abilities": [
+          "conversations:read"
+        ]
+      }
+    },
+    "/data-exports/{data_export}/link": {
+      "get": {
+        "description": "Signs a link a ready export's file downloads from for a few minutes, without credentials. Use it for a workspace export, which is too large to fetch as content. Whoever holds the link can download the file, so give it only to the person. Returns the link and when it stops working.",
+        "operationId": "data-exports.link.show",
+        "parameters": [
+          {
+            "description": "Id of the data export, starting with dex_, such as dex_01jx2m8k4t. Find it with GET /data-exports.",
+            "in": "path",
+            "name": "data_export",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResourceDataExportLink"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseError"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Get a download link for a data export",
         "x-abilities": [
           "conversations:read"
         ]
@@ -61564,39 +61628,6 @@
         "x-abilities": [
           "settings:write"
         ]
-      }
-    },
-    "/gif-search": {
-      "get": {
-        "description": "Returns the key the dashboard's composer uses to search GIFs with GIPHY, when the instance has one and the workspace allows GIFs. Agents have no use for it. Returns whether GIF search is on, and its key.",
-        "operationId": "gif-search.show",
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ResourceGIFSearch"
-                }
-              }
-            },
-            "description": "OK"
-          },
-          "default": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ResponseError"
-                }
-              }
-            },
-            "description": "Error"
-          }
-        },
-        "summary": "Get the GIF search setup",
-        "x-abilities": [
-          "conversations:write"
-        ],
-        "x-internal": true
       }
     },
     "/help-centers": {

@@ -524,7 +524,10 @@ describe("a connected messenger", () => {
     }
 
     const thread = root.querySelector(".thread") as HTMLElement;
-    expect(thread.querySelector(".byline")?.textContent).toContain("AI");
+    const badge = thread.querySelector(".byline .ai-badge");
+    expect(badge?.textContent).toBe("AI");
+    expect(badge?.getAttribute("aria-label")).toBe("AI agent");
+    expect(root.querySelector(".whoami .ai-badge")?.getAttribute("aria-label")).toBe("AI agent");
     const link = thread.querySelector<HTMLAnchorElement>(".sources a.article");
     expect(link?.href).toBe("https://help.shop.example/invoices");
     expect(link?.target).toBe("_blank");

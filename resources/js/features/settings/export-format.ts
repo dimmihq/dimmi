@@ -9,6 +9,14 @@ const formatNames: Record<DataExport["format"], string> = {
   csv: "Spreadsheet",
   json: "Data",
   pdf: "PDF",
+  zip: "Archive",
+};
+
+const kindNames: Record<DataExport["kind"], string> = {
+  conversations: "conversations",
+  contacts: "customers",
+  conversation_facts: "conversations",
+  workspace: "the whole workspace",
 };
 
 export const statusNames: Record<DataExport["status"], string> = {
@@ -28,8 +36,9 @@ export function building(exports: DataExport[] | undefined): boolean {
  * once ready, until when it downloads.
  */
 export function exportDetail(e: DataExport): string {
-  const what = `${formatNames[e.format]} of ${e.kind === "contacts" ? "customers" : "conversations"}`;
-  const rows = e.row_count === null ? "" : `, ${e.row_count} ${e.row_count === 1 ? "row" : "rows"}`;
+  const what = `${formatNames[e.format]} of ${kindNames[e.kind]}`;
+  const unit = e.kind === "workspace" ? "record" : "row";
+  const rows = e.row_count === null ? "" : `, ${e.row_count} ${e.row_count === 1 ? unit : `${unit}s`}`;
   const asked = new Date(e.created_at).toLocaleString();
   const until = e.status === "ready" && e.expires_at ? ` · until ${new Date(e.expires_at).toLocaleDateString()}` : "";
 

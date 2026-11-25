@@ -144,12 +144,14 @@ type InboxActions struct {
 
 	ApplyRetention   *retention.ApplyConversationRetention
 	PurgeRetention   *retention.PurgeExpired
+	PurgeSlackData   *retention.PurgeSlackData
 	PreviewRetention *retention.PreviewRetention
 
 	RequestDataExport  *dataexports.RequestDataExport
 	ListDataExports    *dataexports.ListDataExports
 	ShowDataExport     *dataexports.ShowDataExport
 	DownloadDataExport *dataexports.DownloadDataExport
+	LinkDataExport     *dataexports.LinkDataExport
 	DeleteDataExport   *dataexports.DeleteDataExport
 	BuildDataExport    *dataexports.BuildDataExport
 	ExpireDataExports  *dataexports.ExpireDataExports

@@ -2,7 +2,9 @@
  * Creating an account with a name, an email and a password, or through
  * a provider. On a server that takes accounts by invitation only, the
  * page says so instead of offering a form that cannot work. A server with
- * a captcha waits for its answer before the form can be sent.
+ * a captcha waits for its answer before the form can be sent, and one
+ * that publishes legal terms takes no account, by form or by provider,
+ * until the person ticks the box that accepts them.
  */
 import { RiMailLine } from "@remixicon/react";
 import { useMutation } from "@tanstack/react-query";
@@ -18,6 +20,8 @@ import { CaptchaField } from "./captcha-field";
 import { field } from "./form-data";
 import { fieldError } from "./form-errors";
 import { ProviderButtons } from "./provider-buttons";
+import { TermsAgreement } from "./terms-agreement";
+import { useAgreement } from "./use-agreement";
 
 export interface SignupFormProps {
   config: AuthConfig;
@@ -28,6 +32,7 @@ export interface SignupFormProps {
 export function SignupForm({ config, redirect, onSignedIn }: SignupFormProps) {
   const [token, setToken] = useState<string | null>(null);
   const [round, setRound] = useState(0);
+  const agreement = useAgreement(config.terms);
   const register = useMutation({
     mutationFn: (form: FormData) =>
       signUp({
@@ -35,6 +40,7 @@ export function SignupForm({ config, redirect, onSignedIn }: SignupFormProps) {
         email: field(form, "email"),
         password: field(form, "password"),
         ...(token ? { captcha_token: token } : {}),
+        ...(agreement.terms ? { terms_accepted: agreement.accepted } : {}),
       }),
     onSuccess: onSignedIn,
     onError: () => {
@@ -43,12 +49,14 @@ export function SignupForm({ config, redirect, onSignedIn }: SignupFormProps) {
     },
   });
   const waiting = Boolean(config.captcha) && token === null;
-  const fields = ["name", "email", "password", "captcha_token"];
+  const fields = ["name", "email", "password", "captcha_token", ...(agreement.terms ? ["terms_accepted"] : [])];
   const errorFor = (name: string) => fieldError(register.error, name, fields, "email");
 
   const submit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    register.mutate(new FormData(event.currentTarget));
+    if (agreement.confirm()) {
+      register.mutate(new FormData(event.currentTarget));
+    }
   };
 
   if (config.signup_mode !== "open") {
@@ -73,6 +81,7 @@ export function SignupForm({ config, redirect, onSignedIn }: SignupFormProps) {
         redirect={redirect}
         action="Sign up with"
         emailLabel="or sign up with email"
+        agreement={agreement}
       />
       <form
         onSubmit={submit}
@@ -120,12 +129,10 @@ export function SignupForm({ config, redirect, onSignedIn }: SignupFormProps) {
             {errorFor("captcha_token")}
           </p>
         ) : null}
+        <TermsAgreement agreement={agreement} error={errorFor("terms_accepted")} />
         <Button type="submit" className="w-full" loading={register.isPending} disabled={waiting}>
           Create account
         </Button>
-        <p className="text-caption-1-regular text-text-tertiary">
-          By creating an account you agree to our Terms of Service and Privacy Policy.
-        </p>
       </form>
       <AuthFooter>
         Already have an account? <LinkButton to="/login">Sign in</LinkButton>

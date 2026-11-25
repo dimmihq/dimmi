@@ -87,6 +87,7 @@ const (
 	EventContactErasureHeld      = "contact_erasure.held"
 	EventContactErasureCompleted = "contact_erasure.completed"
 	EventContactMerged           = "contact.merged"
+	EventSlackDataDeleted        = "slack_data.deleted"
 
 	EventDataExportRequested = "data_export.requested"
 	EventDataExportReady     = "data_export.ready"

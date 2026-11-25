@@ -76,7 +76,7 @@ func TestWidgetTeamFailures(t *testing.T) {
 			func(tc *tests.TestCase, _ widgetRef) *testkit.Response {
 				return tc.Client().PostJSON("/api/v1/users", testkit.JSON{
 					"name": "Grace", "email": "grace@example.com", "password": "analytical-engine-1843",
-					"workspace_name": "Shop",
+					"workspace_name": "Shop", "terms_accepted": true,
 				})
 			},
 		},
@@ -112,7 +112,7 @@ func TestWidgetTeamFailures(t *testing.T) {
 			func(tc *tests.TestCase, _ widgetRef) *testkit.Response {
 				return tc.Client().PostJSON("/api/v1/users", testkit.JSON{
 					"name": "Grace", "email": "grace@example.com", "password": "analytical-engine-1843",
-					"workspace_name": "Shop",
+					"workspace_name": "Shop", "terms_accepted": true,
 				})
 			},
 		},

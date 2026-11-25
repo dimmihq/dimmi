@@ -3,9 +3,11 @@
  * where it stands, and its file to download until the workspace's export
  * period runs out. Exports are started from the lists themselves; this
  * page only keeps them. Deleting one removes its file at once. The list
- * checks again every few seconds while one is still being built.
+ * checks again every few seconds while one is still being built. Whoever
+ * may export the whole workspace starts that archive here; it downloads
+ * from a signed link, since it can be far larger than a list's file.
  */
-import { RiDownload2Line, RiFileList3Line } from "@remixicon/react";
+import { RiArchiveLine, RiDownload2Line, RiFileList3Line } from "@remixicon/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { Chip } from "@/components/base/badges/chip";
@@ -13,11 +15,15 @@ import { Button } from "@/components/base/buttons/button";
 import { Notification } from "@/components/base/notification/notification";
 import {
   type DataExport,
+  dataExportLink,
   dataExportsKey,
   dataExportsQuery,
   deleteDataExport,
   downloadDataExport,
+  requestWorkspaceExport,
+  WORKSPACE_EXPORT,
 } from "@/lib/api/data-exports";
+import { callerQuery } from "@/lib/api/workspace";
 
 import { Action } from "../controls";
 import { building, exportDetail, statusNames } from "../export-format";
@@ -38,6 +44,8 @@ function save(blob: Blob, name: string) {
 export function ExportsSettings() {
   const workspace = useAccount().workspace.id;
   const client = useQueryClient();
+  const { data: caller } = useQuery({ ...callerQuery(workspace), enabled: workspace !== "" });
+  const exportsAll = caller?.member?.permissions.includes(WORKSPACE_EXPORT) ?? false;
   const { data: exports, isPending } = useQuery({
     ...dataExportsQuery(workspace),
     enabled: workspace !== "",
@@ -49,15 +57,40 @@ export function ExportsSettings() {
   });
   const download = useMutation({
     mutationFn: async (e: DataExport) => {
-      if (e.url) {
+      if (e.kind === "workspace") {
+        window.location.assign(await dataExportLink(workspace, e.id));
+      } else if (e.url) {
         save(await downloadDataExport(workspace, e.url), e.file_name);
       }
     },
   });
-  const failure = remove.error ?? download.error;
+  const whole = useMutation({
+    mutationFn: () => requestWorkspaceExport(workspace),
+    onSettled: () => client.invalidateQueries({ queryKey: dataExportsKey(workspace) }),
+  });
+  const failure = remove.error ?? download.error ?? whole.error;
 
   return (
-    <SettingsPage title="Exports" description="Files of conversations and customers you exported from their lists.">
+    <SettingsPage
+      title="Exports"
+      description="Take the workspace's data out: everything at once, or the lists of conversations and customers you exported."
+    >
+      {exportsAll ? (
+        <Section
+          title="Whole workspace"
+          description="Take everything with you, in a format other tools can read. Passwords, keys and tokens stay out."
+        >
+          <Item
+            mark={<Glyph icon={RiArchiveLine} />}
+            title="Complete workspace export"
+            detail="One zip of conversations, customers, tickets, articles, settings and files, as JSON lines."
+          >
+            <Button variant="secondary" size="small" loading={whole.isPending} onClick={() => whole.mutate()}>
+              Export workspace
+            </Button>
+          </Item>
+        </Section>
+      ) : null}
       <Section title="Your exports" description="Only you see your exports. Files are removed when they expire.">
         {failure ? (
           <div className="py-2.5 pe-2.5">

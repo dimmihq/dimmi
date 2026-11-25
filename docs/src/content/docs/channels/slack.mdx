@@ -43,3 +43,22 @@ dimmi links a Slack user to a dimmi teammate automatically when their Slack emai
 - **Reply in a customer's thread:** dimmi records your Slack reply as your public answer in the inbox.
 - **Reply under a triage card:** saves as an internal note the customer never sees. Start a message with `>>` to send it as a public reply to the customer. Choose your triage channel under **Post new conversations to**.
 - **Emoji shortcuts on the first message:** react with `:white_check_mark:` to close, `:eyes:` to assign to yourself, or `:rotating_light:` to mark urgent.
+
+## What happens when Slack is disconnected
+
+dimmi only keeps Slack data while its app is installed. The connection ends when someone uninstalls the dimmi app in Slack, Slack revokes its token, or a teammate disconnects Slack in **Settings → Integrations**.
+
+- **Immediately:** dimmi wipes the stored Slack tokens and stops watching every channel.
+- **For 10 days:** everything stays as it was. Connect the same Slack workspace again and nothing is lost.
+- **After 10 days:** dimmi deletes what came from Slack, for good.
+
+| Deleted | Kept |
+| --- | --- |
+| The text and files of every message that came from Slack: your customers' messages, and replies your teammates wrote in Slack | The conversations themselves and the replies your team wrote in dimmi, so reports and counts do not change |
+| Slack user, team, channel and thread identifiers, and the channel settings | Conversations from every other channel |
+| Customers known only from Slack, and the Slack link on any other customer | Customers who also reached you another way |
+| Links between teammates and their Slack users, and Operator chats held in Slack | Teammates and their dimmi accounts |
+
+The deletion is recorded in the [audit log](/workspace/audit-log/) as `slack_data.deleted`, with counts only. Connecting Slack after the deletion starts from scratch.
+
+On a self-hosted install, `channels.slack.data_deletion_grace_days` sets the wait. It defaults to `10` and cannot exceed `14`, the deadline Slack gives apps.

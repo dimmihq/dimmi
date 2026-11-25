@@ -247,7 +247,7 @@ export const settingsPages = {
     "Exports",
     RiDownload2Line,
     "/d/settings/exports",
-    "Files of conversations and customers you exported.",
+    "The whole workspace as one file, and the lists you exported.",
   ),
   inboxes: page(
     "settings-inboxes",
@@ -522,6 +522,7 @@ export function settingsSections(): DashboardNavSection[] {
     pages["workspace-security"],
     pages["single-sign-on"],
     pages["audit-log"],
+    pages.exports,
   ];
 
   return [
@@ -536,7 +537,6 @@ export function settingsSections(): DashboardNavSection[] {
         pages.security,
         pages.tokens,
         pages["connected-apps"],
-        pages.exports,
       ],
     },
     {

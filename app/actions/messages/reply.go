@@ -38,7 +38,6 @@ import (
 	"github.com/dimmihq/dimmi/app/enums"
 	"github.com/dimmihq/dimmi/app/exceptions"
 	"github.com/dimmihq/dimmi/app/models"
-	"github.com/dimmihq/dimmi/app/support/gifs"
 )
 
 /*
@@ -262,7 +261,7 @@ func (a *ReplyToConversation) check(ctx context.Context, s *session, in ReplyInp
 		return route, nil, err
 	}
 
-	metadata, err := replyMetadata(in.Body, in.ChannelOptions)
+	metadata, err := replyMetadata(in.ChannelOptions)
 
 	return route, metadata, err
 }
@@ -299,25 +298,15 @@ func (a *ReplyToConversation) checkWindow(
 }
 
 /*
-replyMetadata is what the reply keeps beside its body: the GIF it shows
-and the channel options it is sent with.
+replyMetadata is what the reply keeps beside its body: the channel
+options it is sent with.
 */
-func replyMetadata(body string, options json.RawMessage) (json.RawMessage, error) {
-	meta := gifs.Metadata(body)
+func replyMetadata(options json.RawMessage) (json.RawMessage, error) {
 	if len(options) == 0 {
-		return meta, nil
+		return nil, nil
 	}
 
-	merged := map[string]json.RawMessage{}
-	if len(meta) > 0 {
-		if err := json.Unmarshal(meta, &merged); err != nil {
-			return nil, fmt.Errorf("read reply metadata: %w", err)
-		}
-	}
-
-	merged["channel_options"] = options
-
-	out, err := json.Marshal(merged)
+	out, err := json.Marshal(map[string]json.RawMessage{"channel_options": options})
 	if err != nil {
 		return nil, fmt.Errorf("encode reply metadata: %w", err)
 	}

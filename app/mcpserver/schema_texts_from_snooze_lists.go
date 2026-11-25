@@ -218,6 +218,12 @@ func schemaTextsFromTallyBroadcastRecipientsRow() map[string]map[string]string {
 			"email_verified": "True when the teammate has confirmed their email address.",
 			"name":           "The teammate's name.",
 		},
+		"Terms": {
+			"data_processing_url": "Link to the install's data processing addendum.",
+			"privacy_url":         "Link to the install's privacy policy.",
+			"terms_url":           "Link to the install's terms of service.",
+			"version":             "Version label of the legal terms currently in force.",
+		},
 		"TestConversations": {
 			"count": "How many practice conversations were started.",
 		},

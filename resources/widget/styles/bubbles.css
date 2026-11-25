@@ -54,6 +54,10 @@
   margin-inline-end: 5px;
 }
 
+.byline > .ai-badge::before {
+  content: none;
+}
+
 .bubbles {
   display: grid;
   justify-items: inherit;

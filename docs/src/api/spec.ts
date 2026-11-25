@@ -177,7 +177,6 @@ const CATEGORIES: [string, string[]][] = [
       "saved-replies",
       "saved-reply-imports",
       "snooze-*",
-      "gif-search",
       "search",
       "inboxes",
       "inbox-preferences",

@@ -26,11 +26,12 @@ FROM channel_socket_connections(@connection_type::text) AS r;
 
 -- name: ConnectChannelConnection :one
 -- ConnectChannelConnection records what the provider said the connection
--- is and makes it live.
+-- is and makes it live. A connection that had ended is live again, so
+-- the purge waiting for it finds nothing to do.
 UPDATE channel_connections
 SET external_id = @external_id, status = 'active', config = config || @config::jsonb,
     credentials_encrypted = @credentials_encrypted, last_error = NULL, last_error_at = NULL,
-    updated_at = @now::timestamptz
+    ended_at = NULL, updated_at = @now::timestamptz
 WHERE workspace_id = @workspace_id AND id = @id
 RETURNING *;
 

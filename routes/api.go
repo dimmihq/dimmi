@@ -293,15 +293,22 @@ func emailAddressRoutes(workspace *routing.Router, c *v1.EmailAddressController)
 }
 
 /*
-newControllers builds the controllers with the actions and the facts
-about the server their answers carry.
+serverFacts returns the facts about the server that answers carry.
 */
-func newControllers(a *app.App) controllers {
-	server := v1.Server{
+func serverFacts(a *app.App) v1.Server {
+	return v1.Server{
 		Edition: string(a.Config.App.Edition), Version: a.Version, APIVersion: a.Config.API.Version,
 		Region: a.Config.App.Region, MailConfigured: a.MailConfigured(), Clock: a.Clock,
 		AuditRetentionDays: *a.Config.Audit.RetentionDays,
 	}
+}
+
+/*
+newControllers builds the controllers with the actions and the facts
+about the server their answers carry.
+*/
+func newControllers(a *app.App) controllers {
+	server := serverFacts(a)
 	acts := a.Actions
 	cursors := pagination.NewCursors(a.DerivedKey(v1.CursorKeyPurpose))
 
@@ -310,8 +317,10 @@ func newControllers(a *app.App) controllers {
 			Auth: a.Config.Auth, Factors: a.Factors.Types(), Providers: a.Providers, Server: server,
 			SSO: appauth.OrganizationLoginPolicy{DB: a.DB},
 		},
-		users: &v1.UserController{RegisterUser: acts.RegisterUser, Cookies: a.Cookies, Server: server},
-		me:    &v1.MeController{LoadMe: acts.LoadMe, IDs: a.IDs, Server: server},
+		users: &v1.UserController{
+			RegisterUser: acts.RegisterUser, Terms: a.Config.Auth.Terms, Cookies: a.Cookies, Server: server,
+		},
+		me: &v1.MeController{LoadMe: acts.LoadMe, IDs: a.IDs, Server: server},
 		sessions: &v1.SessionController{
 			AttemptLogin: acts.AttemptLogin, ConsumeMagicLink: acts.ConsumeMagicLink,
 			TwoFactor: acts.CompleteTwoFactorChallenge, ListSessions: acts.ListSessions,

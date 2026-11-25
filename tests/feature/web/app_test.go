@@ -174,20 +174,14 @@ func TestAppPage(t *testing.T) {
 			"fbcdn")
 	})
 
-	t.Run("lets only the app reach GIPHY, and only once the instance has a key", func(t *testing.T) {
+	t.Run("lets no page reach GIPHY", func(t *testing.T) {
 		t.Parallel()
-		off := tests.New(t, withBuild())
-		on := tests.New(t, withBuild(), tests.Before(func(a *app.App) { a.Config.Inbox.GIF.GiphyAPIKey = "k" }))
+		tc := tests.New(t, withBuild())
 
-		assert.NotContains(t, off.Client().Send(fhttp.MethodGet, "/d", nil).Header.Get("Content-Security-Policy"),
-			"giphy")
-
-		policy := ownPolicy(t, on,
-			on.Client().Send(fhttp.MethodGet, "/d/inbox", nil).AssertOK().Header.Get("Content-Security-Policy"))
-		assert.Contains(t, policy, "img-src 'self' data: blob: "+metaImages+" https://*.giphy.com;")
-		assert.Contains(t, policy, "connect-src 'self' https://api.giphy.com;")
-		assert.NotContains(t, on.Client().Send(fhttp.MethodGet, "/login", nil).Header.Get("Content-Security-Policy"),
-			"giphy")
+		for _, path := range []string{"/d/inbox", "/login"} {
+			assert.NotContains(t, tc.Client().Send(fhttp.MethodGet, path, nil).Header.Get("Content-Security-Policy"),
+				"giphy")
+		}
 	})
 }
 

@@ -6,7 +6,9 @@
 | Signing up takes a name, an email, a password and optionally the name
 | of a first workspace. A password must be long enough and must not be
 | one of the passwords people use most, or the person's own email or
-| name, which are the first things an attacker tries.
+| name, which are the first things an attacker tries. A sign-up page
+| that shows the legal terms says whether the person accepted them, and
+| an install that publishes terms creates no account without that.
 |
 */
 
@@ -33,6 +35,7 @@ type StoreUserRequest struct {
 		WorkspaceName   string `json:"workspace_name,omitempty"   validate:"omitempty,max=80"`
 		InvitationToken string `json:"invitation_token,omitempty" validate:"omitempty,max=200"`
 		CaptchaToken    string `json:"captcha_token,omitempty"    validate:"omitempty,max=4096"`
+		TermsAccepted   bool   `json:"terms_accepted,omitempty"`
 	}
 }
 
@@ -55,6 +58,19 @@ func (r *StoreUserRequest) Validate(ctx context.Context, _ *validation.Factory) 
 	}
 
 	return nil
+}
+
+/*
+TermsAccepted refuses a sign-up that did not accept the legal terms. An
+install that publishes terms asks it; the field stays optional for one
+that publishes none.
+*/
+func (r *StoreUserRequest) TermsAccepted(ctx context.Context) error {
+	if r.Body.TermsAccepted {
+		return nil
+	}
+
+	return violation(ctx, "terms_accepted", "accepted", "validation.terms_accepted")
 }
 
 /*

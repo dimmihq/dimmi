@@ -28,20 +28,36 @@ func exportErasureAudienceDocs() map[string]Doc {
 }
 
 /*
+dataExportLinkDoc returns the entry for an export's signed link.
+*/
+func dataExportLinkDoc() Doc {
+	return Doc{
+		Title: "Get a download link for a data export",
+		Use: "Signs a link a ready export's file downloads from for a few minutes, without credentials. Use " +
+			"it for a workspace export, which is too large to fetch as content. Whoever holds the link can " +
+			"download the file, so give it only to the person.",
+		Returns: "the link and when it stops working.",
+		Risk:    new(RiskSensitive),
+		Hint:    "export_not_ready: wait until dimmi_get_data_export_by_id says ready; expired files are gone.",
+	}
+}
+
+/*
 dataExportDocs returns the entries for members' data exports.
 */
 func dataExportDocs() map[string]Doc {
 	return map[string]Doc{
 		"data-exports.store": {
-			Title: "Export conversations or contacts",
-			Use: "Starts building a file of conversations or contacts, in the background. Each export belongs to " +
-				"you alone. For a privacy request about one customer, use dimmi_create_contact_export instead.",
+			Title: "Export conversations, contacts or the whole workspace",
+			Use: "Starts building a file of conversations or contacts, or one archive of the whole workspace, in " +
+				"the background. Each export belongs to you alone. For a privacy request about one customer, " +
+				"use dimmi_create_contact_export instead.",
 			Returns: "the export with status pending; poll it until ready.",
 			Next:    []string{"dimmi_get_data_export_by_id: wait for status ready"},
 			Params: map[string]string{
-				"kind": "conversations or contacts.",
+				"kind": "conversations, contacts, or workspace for everything the workspace owns (owners only).",
 				"format": "Conversations: txt (readable transcripts, 1,000 at most), csv (50,000) or json " +
-					"(10,000). Contacts: csv (50,000) or json (10,000).",
+					"(10,000). Contacts: csv (50,000) or json (10,000). Workspace: zip.",
 				"include_notes": "true to include the team's internal notes, only if you may moderate " +
 					"conversations.",
 				"selection": "What to export: ids (picked ids), or filter (the list's filter[...] keys and " +
@@ -70,6 +86,7 @@ func dataExportDocs() map[string]Doc {
 			Risk:    new(RiskSensitive),
 			Hint:    "export_not_ready: wait until dimmi_get_data_export_by_id says ready; expired files are gone.",
 		},
+		"data-exports.link.show": dataExportLinkDoc(),
 		"data-exports.destroy": {
 			Title: "Delete a data export",
 			Use:   "Deletes one of your exports and its file at once, instead of waiting for it to expire.",

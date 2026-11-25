@@ -3,7 +3,7 @@ import { fireEvent, screen, waitFor } from "@testing-library/react";
 import type { InvitationPreview } from "@/lib/api/invitations";
 
 import { InvitationPage } from "./invitation-page";
-import { config, renderWithQueries } from "./test-utils";
+import { config, renderWithQueries, terms } from "./test-utils";
 
 afterEach(() => {
   vi.unstubAllGlobals();
@@ -62,6 +62,38 @@ describe("InvitationPage", () => {
     expect(await screen.findByText("Use the address the invitation was sent to (a***@acme.com).")).toBeTruthy();
     const signup = fetch.mock.calls.find(([url, init]) => url === "/api/v1/users" && init?.method === "POST");
     expect(JSON.parse(String(signup?.[1]?.body)).invitation_token).toBe("inv-secret");
+  });
+
+  it("asks an invitee to accept the terms and the privacy policy before creating the account", async () => {
+    const fetch = serve({
+      "GET /api/v1/me": [401, { code: "unauthenticated" }],
+      "GET /api/v1/invitations/preview": [200, { data: preview }],
+      "POST /api/v1/users": [403, { code: "invitation_email_mismatch", message: "Wrong address." }],
+    });
+    renderWithQueries(<InvitationPage token="inv-secret" config={{ ...config, terms }} />);
+
+    const box = await screen.findByRole("checkbox", { name: "I agree to the Terms of Service and Privacy Policy." });
+    expect(screen.queryByRole("link", { name: "Data Processing Agreement" })).toBeNull();
+
+    fill(/full name/i, "Ada Lovelace");
+    fill(/email/i, "ada@acme.com");
+    fill(/password/i, "analytical-engine-1843");
+    fireEvent.click(screen.getByRole("button", { name: "Create account" }));
+
+    expect(await screen.findByText("Tick the box to agree before you create your account.")).toBeTruthy();
+    expect(fetch.mock.calls.some(([url, init]) => url === "/api/v1/users" && init?.method === "POST")).toBe(false);
+
+    fireEvent.click(box);
+    fireEvent.click(screen.getByRole("button", { name: "Create account" }));
+
+    await waitFor(() =>
+      expect(fetch.mock.calls.some(([url, init]) => url === "/api/v1/users" && init?.method === "POST")).toBe(true),
+    );
+    const signup = fetch.mock.calls.find(([url, init]) => url === "/api/v1/users" && init?.method === "POST");
+    expect(JSON.parse(String(signup?.[1]?.body))).toMatchObject({
+      invitation_token: "inv-secret",
+      terms_accepted: true,
+    });
   });
 
   it("says an expired invitation has ended and who can send a new one", async () => {

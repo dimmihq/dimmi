@@ -61,3 +61,14 @@ export const actionTexts: ActionTexts = {
   failed: "This didn't go through",
   moreSources: "{count} more",
 };
+
+/*
+ * AiTexts are the words that mark the AI agent wherever it speaks: the
+ * short label a reader sees and the name a screen reader says.
+ */
+export interface AiTexts {
+  label: string;
+  name: string;
+}
+
+export const aiTexts: AiTexts = { label: "AI", name: "AI agent" };

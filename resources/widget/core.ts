@@ -528,8 +528,11 @@ export function boot(win: Window & DimmiWindow, doc: Document): Widget | undefin
       root,
       options: () => options,
       update: (changes) => widget.update(changes),
-      notify: ({ conversation, body, author }) => {
-        find()?.alert({ conversation, from: "team", author, body, at: "" });
+      notify: ({ conversation, body, author, agent }) => {
+        find()?.alert(
+          { conversation, from: agent ? "agent" : "team", author, body, at: "" },
+          { label: options.texts.ai_label, name: options.texts.ai_agent },
+        );
       },
       showing: (conversation) => {
         const messenger = find();

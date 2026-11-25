@@ -744,21 +744,3 @@ export function snoozeChoicesQuery(workspace: string, conversation: string) {
       }),
   });
 }
-
-/*
- * GifSearch says whether the composer may search GIFs, and with which
- * key; the browser calls GIPHY itself.
- */
-export interface GifSearch {
-  enabled: boolean;
-  provider: "giphy" | null;
-  api_key: string | null;
-}
-
-export function gifSearchQuery(workspace: string) {
-  return queryOptions({
-    queryKey: ["workspace", workspace, "gif-search"],
-    queryFn: () => request<GifSearch>("GET", "/gif-search", undefined, { workspace }),
-    staleTime: Number.POSITIVE_INFINITY,
-  });
-}

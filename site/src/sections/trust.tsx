@@ -55,7 +55,7 @@ export function Trust() {
           ))}
         </ul>
         <span className="mt-4">
-          <MonoLink href="/security">Read about security</MonoLink>
+          <MonoLink href="/privacy#security-overview">Read about security</MonoLink>
         </span>
       </div>
     </Section>

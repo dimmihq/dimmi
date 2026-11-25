@@ -21,6 +21,7 @@ import (
 	"github.com/dimmihq/dimmi/framework/queue"
 
 	"github.com/dimmihq/dimmi/app"
+	"github.com/dimmihq/dimmi/app/actions/audit"
 	"github.com/dimmihq/dimmi/app/actions/contacts"
 	"github.com/dimmihq/dimmi/app/actions/erasures"
 	"github.com/dimmihq/dimmi/app/actions/retention"
@@ -79,6 +80,11 @@ func bootContactExports(a *app.App) error {
 	acts.PurgeRetention = &retention.PurgeExpired{
 		DB: a.DB, Clock: a.Clock, Storage: a.Storage, Retention: a.Retention,
 	}
+	acts.PurgeSlackData = &retention.PurgeSlackData{
+		DB: a.DB, Clock: a.Clock, Storage: a.Storage, Retention: a.Retention, Erasers: a.ContactErasers,
+		Audit: &audit.RecordAuditLog{DB: a.DB, Clock: a.Clock},
+		Grace: time.Duration(a.Config.Channels.Slack.DataDeletionGraceDays) * 24 * time.Hour,
+	}
 	acts.PreviewRetention = &retention.PreviewRetention{DB: a.DB, Clock: a.Clock}
 
 	return errors.Join(
@@ -86,6 +92,7 @@ func bootContactExports(a *app.App) error {
 		queue.Register(a.Queue, &jobs.ExpireContactExports{Expire: acts.ExpireContactExports}),
 		queue.Register(a.Queue, &jobs.ApplyConversationRetention{Apply: acts.ApplyRetention}),
 		queue.Register(a.Queue, &jobs.PurgeExpiredRetention{Purge: acts.PurgeRetention}),
+		queue.Register(a.Queue, &jobs.PurgeSlackData{Purge: acts.PurgeSlackData}),
 		bootDataExports(a),
 		bootImports(a),
 	)

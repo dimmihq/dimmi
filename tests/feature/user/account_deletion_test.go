@@ -148,7 +148,7 @@ func TestUserDestroy(t *testing.T) {
 		destroy(tc.ActingAs(user), user.Email).AssertNoContent()
 
 		fresh := tc.Client().PostJSON("/api/v1/users", testkit.JSON{
-			"name": "Someone New", "email": user.Email, "password": nextPhrase,
+			"name": "Someone New", "email": user.Email, "password": nextPhrase, "terms_accepted": true,
 		}).AssertCreated()
 		assert.NotEqual(t, models.PublicID(models.PrefixUser, user.ID), fresh.String("data.user.id"))
 
@@ -188,6 +188,7 @@ func TestUserDestroy(t *testing.T) {
 		tc.Client().WithHeader("Dimmi-Invitation-Token", invite).GetJSON("/api/v1/invitations/preview").AssertOK()
 		invitee := tc.Client().PostJSON("/api/v1/users", testkit.JSON{
 			"name": "Invitee", "email": "invitee@example.com", "password": nextPhrase, "invitation_token": invite,
+			"terms_accepted": true,
 		}).AssertCreated()
 		tc.Browser(invitee).GetJSON("/api/v1/user/memberships").AssertOK().AssertJSONPath("data.#", 1)
 	})

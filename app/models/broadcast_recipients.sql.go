@@ -638,7 +638,7 @@ func (q *Queries) FindBroadcastRecipientByReplyToken(ctx context.Context, arg Fi
 }
 
 const findContactWidgetConnection = `-- name: FindContactWidgetConnection :one
-SELECT cc.id, cc.workspace_id, cc.inbox_id, cc.type, cc.name, cc.status, cc.external_id, cc.config, cc.credentials_encrypted, cc.last_error, cc.last_error_at, cc.last_activity_at, cc.deleted_at, cc.created_at, cc.updated_at, cc.integration_installation_id, cc.ai_agent_id FROM widget_sessions s
+SELECT cc.id, cc.workspace_id, cc.inbox_id, cc.type, cc.name, cc.status, cc.external_id, cc.config, cc.credentials_encrypted, cc.last_error, cc.last_error_at, cc.last_activity_at, cc.deleted_at, cc.created_at, cc.updated_at, cc.integration_installation_id, cc.ai_agent_id, cc.ended_at, cc.data_purged_at FROM widget_sessions s
 JOIN widget_settings ws ON ws.id = s.widget_settings_id
 JOIN channel_connections cc ON cc.id = ws.channel_connection_id
 WHERE s.workspace_id = $1 AND s.contact_id = $2 AND s.test = false AND cc.deleted_at IS NULL
@@ -674,6 +674,8 @@ func (q *Queries) FindContactWidgetConnection(ctx context.Context, arg FindConta
 		&i.UpdatedAt,
 		&i.IntegrationInstallationID,
 		&i.AiAgentID,
+		&i.EndedAt,
+		&i.DataPurgedAt,
 	)
 	return i, err
 }

@@ -24,7 +24,11 @@ func TestCloudEdition(t *testing.T) {
 		tc.Client().GetJSON("/api/v1/auth/config").AssertOK().
 			AssertJSONPath("data.edition", "cloud").
 			AssertJSONPath("data.region", "us").
-			AssertJSONPath("data.signup_mode", "open")
+			AssertJSONPath("data.signup_mode", "open").
+			AssertJSONPath("data.terms.version", "1.0").
+			AssertJSONPath("data.terms.terms_url", "https://trydimmi.com/terms").
+			AssertJSONPath("data.terms.privacy_url", "https://trydimmi.com/privacy").
+			AssertJSONPath("data.terms.data_processing_url", "https://trydimmi.com/privacy#dpa")
 	})
 
 	t.Run("starts open to anyone", func(t *testing.T) {
@@ -32,6 +36,17 @@ func TestCloudEdition(t *testing.T) {
 		tc := tests.New(t, tests.WithEnv("DIMMI_AUTH__SIGNUP__MODE="))
 
 		tc.Client().PostJSON("/api/v1/users", registration("a@example.com")).AssertCreated()
+	})
+
+	t.Run("refuses a sign-up that does not accept the terms", func(t *testing.T) {
+		t.Parallel()
+		tc := tests.New(t)
+		silent := registration("a@example.com")
+		delete(silent, "terms_accepted")
+
+		tc.Client().PostJSON("/api/v1/users", silent).AssertValidationError("terms_accepted").
+			AssertJSONPath("message", "Accept the terms to create your account.")
+		tc.Table("users").AssertCount(0, testkit.Row{"email": "a@example.com"})
 	})
 
 	t.Run("requires a proven email for steps that reach other people", func(t *testing.T) {

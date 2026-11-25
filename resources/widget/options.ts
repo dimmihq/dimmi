@@ -65,7 +65,9 @@ export interface Texts {
   status_closed: string;
   email_prompt: string;
   delay_notice: string;
+  ai_agent: string;
   ai_answering: string;
+  ai_label: string;
   ai_helped: string;
   ai_thanks: string;
   rating_ask: string;
@@ -163,7 +165,9 @@ export const defaults: Options = {
     status_closed: "Closed",
     email_prompt: "Where should we reply?",
     delay_notice: "We're away right now. We'll reply as soon as we're back.",
+    ai_agent: "AI agent",
     ai_answering: "AI answering",
+    ai_label: "AI",
     ai_helped: "That helped",
     ai_thanks: "Glad it helped.",
     rating_ask: "How did we do?",

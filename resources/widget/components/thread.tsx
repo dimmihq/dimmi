@@ -13,7 +13,8 @@ import { raw } from "widget-jsx/jsx-runtime";
 
 import type { ActionCard, Attachment, Message, Source } from "../content";
 import { markdown } from "../lib/markdown";
-import { type ActionTexts, actionTexts } from "../text";
+import { type ActionTexts, type AiTexts, actionTexts, aiTexts } from "../text";
+import { AiBadge } from "./ai-badge";
 import {
   BookIcon,
   CheckIcon,
@@ -441,14 +442,14 @@ function Bubble({ message, texts }: { message: Message; texts: ActionTexts }) {
   );
 }
 
-function Byline({ who, when, team }: { who: Message; when: string; team?: string }) {
+function Byline({ who, when, team, ai }: { who: Message; when: string; team?: string; ai: AiTexts }) {
   const agent = who.from === "agent";
   const name = who.from === "visitor" ? "" : (who.author ?? team ?? "");
 
   return (
     <p className="byline">
       {name ? <span>{name}</span> : null}
-      {agent ? <span>AI</span> : null}
+      {agent ? <AiBadge texts={ai} /> : null}
       {when ? <time>{when}</time> : null}
     </p>
   );
@@ -458,10 +459,12 @@ export function Said({
   messages,
   texts = actionTexts,
   team,
+  ai = aiTexts,
 }: {
   messages: Message[];
   texts?: ActionTexts;
   team?: string;
+  ai?: AiTexts;
 }) {
   const [first] = messages;
   const last = messages.at(-1);
@@ -476,7 +479,7 @@ export function Said({
           <Bubble message={message} texts={texts} key={`${message.at}-${message.body ?? message.attachment?.name}`} />
         ))}
       </div>
-      <Byline who={first} when={last.at} team={team} />
+      <Byline who={first} when={last.at} team={team} ai={ai} />
     </div>
   );
 }
@@ -503,17 +506,19 @@ export function Thread({
   messages,
   texts = actionTexts,
   team,
+  ai = aiTexts,
 }: {
   messages: Message[];
   texts?: ActionTexts;
   team?: string;
+  ai?: AiTexts;
 }) {
   const last = messages.at(-1);
 
   return (
     <>
       {runs(messages).map((run) => (
-        <Said messages={run} texts={texts} team={team} key={`${run[0]?.at}-${run[0]?.from}-${run.length}`} />
+        <Said messages={run} texts={texts} team={team} ai={ai} key={`${run[0]?.at}-${run[0]?.from}-${run.length}`} />
       ))}
       {last ? <Choices message={last} /> : null}
     </>

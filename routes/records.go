@@ -48,7 +48,8 @@ func dataExportRoutes(r *routing.Router, a *app.App) {
 	acts := a.Actions.Inbox
 	c := &v1.DataExportController{
 		Request: acts.RequestDataExport, List: acts.ListDataExports, Show: acts.ShowDataExport,
-		Download: acts.DownloadDataExport, Remove: acts.DeleteDataExport, IDs: a.IDs, Clock: a.Clock,
+		Download: acts.DownloadDataExport, Link: acts.LinkDataExport, Remove: acts.DeleteDataExport,
+		IDs: a.IDs, Clock: a.Clock,
 	}
 	path := "/data-exports/{data_export}"
 
@@ -57,6 +58,7 @@ func dataExportRoutes(r *routing.Router, a *app.App) {
 	routing.Get(r, "/data-exports", "data-exports.index", c.Index).Ability("conversations:read")
 	routing.Get(r, path, "data-exports.show", c.Get).Ability("conversations:read")
 	routing.Get(r, path+"/download", "data-exports.download.show", c.File).Ability("conversations:read")
+	routing.Get(r, path+"/link", "data-exports.link.show", c.SignedLink).Ability("conversations:read")
 	routing.Delete(r, path, "data-exports.destroy", c.Destroy).Ability("conversations:read").
 		Status(http.StatusNoContent)
 }
