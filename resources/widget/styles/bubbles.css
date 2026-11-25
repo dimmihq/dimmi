@@ -306,6 +306,24 @@
   align-self: center;
   inline-size: 16px;
   block-size: 16px;
+  color: var(--text-secondary);
+}
+
+/*
+ * The card sits on the thread's own background, so its edge and its
+ * quieter text need more weight than a row in a list: a border that
+ * shows, and grey text that stays readable in dark mode too.
+ */
+.article.card {
+  border-color: var(--border-button-hover);
+}
+
+.article .text small {
+  color: light-dark(#525252, #a3a3a3);
+}
+
+.article .row-icon {
+  color: light-dark(#404040, #d4d4d4);
 }
 
 .sources-more {
