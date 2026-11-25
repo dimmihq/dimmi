@@ -65,7 +65,7 @@ export function mentionedIn(markdown: string): string[] {
 /*
  * readableText writes a message as a step's card shows it: each
  * variable as its name in braces, such as {First name}, each link as
- * its title, and each mention as an at sign.
+ * its title, each mention as an at sign, and bold as plain words.
  */
 export function readableText(markdown: string): string {
   const all = [...baseVariables, ...handoverVariables, ...ticketVariables];
@@ -78,5 +78,6 @@ export function readableText(markdown: string): string {
     })
     .replace(/\[([^\]\n]+)\]\([^)\s]+\)/g, "$1")
     .replace(/<@[a-z]+_[a-z0-9]+>/g, "@teammate")
+    .replace(/(\*\*|__)(.+?)\1/g, "$2")
     .replace(/\\([\\`*_{}[\]()#+\-.!>])/g, "$1");
 }

@@ -20,6 +20,7 @@ describe("message variables", () => {
     expect(readableText("See [Reset a password](https://help.acme.test/articles/reset) for help.")).toBe(
       "See Reset a password for help.",
     );
+    expect(readableText("Open **Settings → Billing**.")).toBe("Open Settings → Billing.");
   });
 
   it("finds the teammates a note mentions", () => {
