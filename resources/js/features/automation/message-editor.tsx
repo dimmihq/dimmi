@@ -13,6 +13,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { AddMenu } from "@/features/inbox/add-menu";
 import { ComposerField } from "@/features/inbox/composer/composer-field";
+import { linkMarkdown } from "@/features/inbox/composer/link-token";
 import type { Mentionable } from "@/features/inbox/composer/mentionable";
 import { useGifs } from "@/features/inbox/composer/use-gifs";
 import { useInbox } from "@/features/inbox/conversations";
@@ -69,6 +70,9 @@ export function MessageEditor({
             onInsert={insert}
             onEmoji={(emoji) => onChange(`${value}${emoji}`)}
             onSavedReply={(reply) => insert(reply.body)}
+            onLink={(title, url) =>
+              onChange(`${value.trimEnd()}${value.trim() ? " " : ""}${linkMarkdown(title, url)} `)
+            }
             gifs={gifs.gifs}
           />
           <span ref={setSlot} className="contents" />

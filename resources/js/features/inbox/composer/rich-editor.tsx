@@ -9,7 +9,8 @@
  * teams to mention. A hash and a letter or more suggest saved replies,
  * whose text takes the place of what was typed. Where the text is filled
  * in for each customer, such as a workflow's message, an open brace
- * suggests the variables, each kept as a chip.
+ * suggests the variables, each kept as a chip, and links to help center
+ * pages show as chips with their titles.
  */
 import type { RemixiconComponentType } from "@remixicon/react";
 import {
@@ -36,6 +37,7 @@ import { composerExtensions } from "./composer-markdown";
 import { applyLink, syncContent, whenReady } from "./editor-helpers";
 import { type Emoji, findEmoji, loadEmoji } from "./emoji";
 import { LinkRow } from "./link-row";
+import { LinkToken } from "./link-token";
 import type { Mentionable } from "./mentionable";
 import { type Suggested, suggestionExtension } from "./suggestion-extension";
 
@@ -165,6 +167,7 @@ export default function RichEditor({
   named.current = variables;
   const variableHelpers = variables
     ? [
+        LinkToken,
         VariableToken.configure({
           named: (key) => named.current?.find((v) => v.key === key)?.label ?? variableOf(key)?.label,
         }),

@@ -9,7 +9,8 @@
  * so the tree always reads top to bottom. Whatever is picked, added or
  * focused with the keyboard is brought into view. Cards sit on the
  * ground surface as BoardUI secondary cards; the selected one wears the
- * accent ring.
+ * accent ring. A long message shows its first three lines, the whole of
+ * it in the step's panel.
  */
 import { RiAddLine, RiErrorWarningLine, RiFocus3Line, RiSubtractLine } from "@remixicon/react";
 import {
@@ -118,7 +119,9 @@ function Card({ id, data }: NodeProps<CardNode>) {
             <RiErrorWarningLine aria-label="Needs fixing" className="size-4 shrink-0 text-text-error-primary" />
           ) : null}
         </span>
-        <span className="wrap-break-word text-body-regular text-text-primary">{data.summary}</span>
+        <span className="line-clamp-3 wrap-break-word text-body-regular text-text-primary" title={data.summary}>
+          {data.summary}
+        </span>
       </button>
       <Handle type="source" position={Position.Bottom} isConnectable={false} className="invisible" />
     </>

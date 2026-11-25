@@ -17,6 +17,9 @@ describe("message variables", () => {
       "Hi {First name}! We reply {Reply time}.",
     );
     expect(readableText("<@mem_01abc> please look")).toBe("@teammate please look");
+    expect(readableText("See [Reset a password](https://help.acme.test/articles/reset) for help.")).toBe(
+      "See Reset a password for help.",
+    );
   });
 
   it("finds the teammates a note mentions", () => {

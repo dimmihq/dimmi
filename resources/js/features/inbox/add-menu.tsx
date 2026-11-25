@@ -250,9 +250,12 @@ export function AddMenu({
   onInsert,
   onEmoji,
   onSavedReply,
+  onLink,
   gifs,
 }: {
   onInsert: (text: string) => void;
+  /* Takes a picked page with an address, such as an article, as a link of its own, instead of a line of text. */
+  onLink?: (title: string, url: string) => void;
   onEmoji: (emoji: string) => void;
   onSavedReply: (reply: SavedReply) => void;
   gifs: Gifs | null;
@@ -272,7 +275,11 @@ export function AddMenu({
       toggle(false);
       return;
     }
-    onInsert(item.url ? `${item.title}: ${item.url}` : item.title);
+    if (item.url && onLink) {
+      onLink(item.title, item.url);
+    } else {
+      onInsert(item.url ? `${item.title}: ${item.url}` : item.title);
+    }
     toggle(false);
   };
 
