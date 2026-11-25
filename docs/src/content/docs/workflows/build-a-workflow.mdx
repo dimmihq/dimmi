@@ -42,7 +42,7 @@ Some steps split the workflow into paths based on what happens next:
 - **Reply buttons:** offer 2 to 6 buttons. On channels without buttons (like email), customers can reply with a button's number, its label, or their own words.
 - **Collect data:** asks for an email, name, or phone number and saves it. If the answer is invalid, dimmi asks once more. Typed emails are saved unverified, and only if the customer does not already have one.
 - **Branch:** check up to 10 conditions. The first matching path wins, and anything else goes to **Everyone else**.
-- **Sort by topic:** define 2 to 10 topics and let AI pick the right path from the conversation. When the AI is not fairly sure, the conversation takes **None matched**. The topic it picks is saved as `{{ run.vars.topic }}` for later steps; a second sort step in the same workflow saves to `topic_2`, and so on.
+- **Sort by topic:** define 2 to 10 topics and let AI pick the right path from the conversation. When the AI is not fairly sure, the conversation takes **None matched**. Give the step a **Name**, such as `topic`, and later steps read the topic it picks as `{{ run.vars.topic }}`. A second sort step starts as `topic_2`; rename it to something clearer.
 - **A/B split:** send conversations down 2 to 4 variants by share, to see which path works better. See [A/B test a path](#ab-test-a-path).
 - **Extract with AI:** pull typed values, like an order number, out of the conversation into variables. Values the AI isn't sure of take a fallback instead of a guess.
 - **Wait:** pause for a set time, or until office hours open.
