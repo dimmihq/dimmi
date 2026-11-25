@@ -484,7 +484,7 @@ describe("a connected messenger", () => {
     expect(root.querySelector("form[data-capture]")).toBeNull();
   });
 
-  it("shows the agent's answer with its sources and the two actions under it", async () => {
+  it("shows the agent's answer with its sources", async () => {
     localStorage.setItem("dimmi:wgt_1:token", "dmi_ws_1");
     const answering = { ...conversation, ai_state: "active" };
     const answer = {
@@ -510,7 +510,6 @@ describe("a connected messenger", () => {
       "GET /conversations": () => ({ status: 200, body: { data: [answering] } }),
       "GET /conversations/conv_1/messages": () => ({ status: 200, body: { data: [answer] } }),
       "PATCH /conversations/conv_1/read-state": () => ({ status: 204 }),
-      "POST /conversations/conv_1/ai/handoff": () => ({ status: 202 }),
       "POST /realtime-tokens": () => ({ status: 503, body: {} }),
       "GET /updates": () => ({ status: 200, body: { data: [], meta: { cursor: "c", poll_after_ms: 5000 } } }),
     });
@@ -533,6 +532,45 @@ describe("a connected messenger", () => {
     expect(thread.querySelectorAll(".sources .article")).toHaveLength(2);
     expect(thread.querySelector(".bubble .article")).toBeNull();
     expect(thread.querySelector(".ai-actions")).toBeNull();
+  });
+
+  it("says the team is away only while no AI agent is answering", async () => {
+    localStorage.setItem("dimmi:wgt_1:token", "dmi_ws_1");
+    let state = "active";
+    const asked = {
+      id: "msg_1",
+      conversation_id: "conv_1",
+      author: { type: "contact", name: null, avatar_url: null },
+      body: "Tell me more about the shop",
+      attachments: [],
+      created_at: "2026-01-01T00:00:01Z",
+    };
+    serve({
+      "GET /apps/wgt_1/config": () => ({ status: 200, body: config }),
+      "GET /apps/wgt_1/availability": () => ({ status: 200, body: { data: { ...availability.data, online: false } } }),
+      "GET /availability": () => ({ status: 200, body: { data: { ...availability.data, online: false } } }),
+      "GET /session": () => ({ status: 200, body: session }),
+      "GET /conversations": () => ({ status: 200, body: { data: [{ ...conversation, ai_state: state }] } }),
+      "GET /conversations/conv_1/messages": () => ({ status: 200, body: { data: [asked] } }),
+      "PATCH /conversations/conv_1/read-state": () => ({ status: 204 }),
+      "POST /realtime-tokens": () => ({ status: 503, body: {} }),
+      "GET /updates": () => ({ status: 200, body: { data: [], meta: { cursor: "c", poll_after_ms: 5000 } } }),
+    });
+
+    const widget = boot(win, document);
+    await settle();
+    await settle();
+    const root = shadow() as ShadowRoot;
+    root.dispatchEvent(new CustomEvent("dimmi:converse", { detail: { conversation: "conv_1" } }));
+    for (let i = 0; i < 4; i++) {
+      await settle();
+    }
+    expect(root.querySelector(".thread .delay")).toBeNull();
+
+    state = "handed_off";
+    await widget?.live?.reloadConversations();
+    widget?.live?.redraw();
+    expect(root.querySelector(".thread .delay")).not.toBeNull();
   });
 
   it("confirms an action card, then checks on it until the team decides", async () => {

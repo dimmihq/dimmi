@@ -646,12 +646,14 @@ export class Live {
 
   /*
    * awayNotice tells a visitor whose message is the latest that the team
-   * is away. A workflow still answering is not the team being away, and
-   * a menu that only takes taps has nothing to wait for, so neither says
-   * it.
+   * is away. A workflow still answering is not the team being away, nor
+   * is the AI agent holding the conversation or anyone typing a reply,
+   * and a menu that only takes taps has nothing to wait for, so none of
+   * them says it.
    */
-  private awayNotice(last: Message | undefined, waiting: boolean, texts: Texts): string {
-    const away = !waiting && !this.locked && this.availability?.online === false;
+  private awayNotice(last: Message | undefined, answering: boolean, texts: Texts): string {
+    const agent = this.store.conversations.find((c) => c.id === this.open)?.ai_state === "active";
+    const away = !answering && !agent && !this.locked && this.availability?.online === false;
     if (last?.from !== "visitor" || this.config.delay_notice === false || !away) {
       return "";
     }
@@ -1257,12 +1259,12 @@ export class Live {
     }
 
     const waiting = this.expected(open);
+    parts.push(this.delivery(open));
     if (typing || waiting) {
       parts.push(String(t.Typing()));
     }
     parts.push(
-      this.delivery(open),
-      this.awayNotice(last, waiting, texts),
+      this.awayNotice(last, waiting || Boolean(typing), texts),
       this.ratingCard(),
       this.emailCapture(open, texts),
     );
