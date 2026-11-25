@@ -2,22 +2,19 @@
  * The settings of a step that sorts a conversation by topic. Its
  * categories are its paths: each has a name and, to help the AI tell
  * them apart, a description. A conversation that fits none, or that
- * meets no AI to sort it, takes the none matched path. The category
- * picked can be saved for later steps.
+ * meets no AI to sort it, takes the none matched path. A new step
+ * keeps the category it picks for later steps and sorts only when the
+ * AI is fairly sure; both are set when the step is made and are not
+ * shown here.
  */
 import { Action, Danger, Field } from "@/features/settings/controls";
 import { Row, Section } from "@/features/settings/layout";
 
-import { choicesOf } from "./choices";
 import { type EditorProps, Note, Words } from "./field-parts";
-import { Pick } from "./pick";
-import { SaveTarget } from "./save-target";
 import { text, useSet, withNewPath, withoutPath, withPathChange, withPathLabel } from "./step-settings";
 
 const fewest = 2;
 const most = 10;
-
-const confidences = { any: "Any", medium: "Medium", high: "High" };
 
 export function ClassifyFields({ step, onEdit }: EditorProps) {
   const set = useSet(onEdit);
@@ -79,24 +76,6 @@ export function ClassifyFields({ step, onEdit }: EditorProps) {
         ) : (
           <Note>A step sorts into 10 categories at most.</Note>
         )}
-      </Section>
-      <Section title="After sorting">
-        <Row label="Save the category as" description="Later steps can use it.">
-          <SaveTarget
-            label="Save the category as"
-            value={text(step.settings, "save_to")}
-            nothing="Don't save it"
-            onChange={(target) => set({ save_to: target })}
-          />
-        </Row>
-        <Row label="Least confidence" description="Less sure than this takes the None matched path.">
-          <Pick
-            label="Least confidence"
-            choices={choicesOf(confidences)}
-            value={text(step.settings, "min_confidence") || "any"}
-            onChange={(value) => set({ min_confidence: value === "any" ? undefined : value })}
-          />
-        </Row>
       </Section>
     </>
   );
