@@ -1,15 +1,21 @@
 import { DimmiLogo } from "@/features/brand/logo";
 import { CHANNELS } from "../channels";
 import { LEGAL_ENTITY } from "../legal/constants";
-import { GITHUB_URL } from "../links";
+import { APP_URL, GITHUB_URL } from "../links";
 import { PRODUCT_GROUPS } from "../products";
 
-// Links that have a page; the rest of the footer is still plain text.
+// Where each footer link goes.
 const pages = new Map<string, string>([
   ...PRODUCT_GROUPS.flatMap((group) => group.products.map((p) => [p.name, p.href] as const)),
   ...CHANNELS.map((c) => [c.name, c.href] as const),
   ["Pricing", "/pricing"],
   ["Self-host", "/#self-host"],
+  ["dimmi Cloud", `${APP_URL}/signup`],
+  ["Docs", "/docs"],
+  ["API reference", "/docs/api-reference"],
+  ["SDKs", "/docs/developers/sdks/typescript"],
+  ["Webhooks", "/docs/developers/webhooks/events"],
+  ["GitHub", GITHUB_URL],
   ["Security", "/privacy#security-overview"],
   ["Terms", "/terms"],
   ["Acceptable Use", "/terms#acceptable-use"],
@@ -45,7 +51,7 @@ export function SiteFooter() {
         <div className="col-span-full flex flex-col gap-4 lg:col-span-1">
           <DimmiLogo className="h-6 w-auto self-start text-text-primary" title="dimmi" />
           <p className="max-w-60 text-body-regular text-text-secondary">
-            Customer support you own. Open source under MIT, on our cloud or your own server.
+            The open customer support platform. MIT licensed, on our cloud or your own server.
           </p>
           <a href={GITHUB_URL} className="text-body-medium text-text-primary underline-offset-4 hover:underline">
             github.com/dimmihq/dimmi
