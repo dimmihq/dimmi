@@ -1,15 +1,15 @@
 import { At, Buildings, ChatsCircle, CurrencyDollar, GitMerge, Timer } from "@phosphor-icons/react";
 
-import { FeatureGrid, ProductHero, Questions, Rows } from "../../components/product-page";
+import { ChannelLinks, FeatureGrid, ProductHero, Questions, Rows } from "../../components/product-page";
 import { ShotStill } from "../../components/shot-still";
 import { ShotVideo } from "../../components/shot-video";
 import { FinalCta } from "../../sections/final-cta";
 
 const rows = [
   {
-    label: "Meta OAuth",
-    title: "Connect Instagram Business accounts through Meta and route each brand.",
-    body: "Sign in with official Meta OAuth and pick which Business or Creator accounts to share. Send each brand handle to its own inbox and team.",
+    label: "Connect",
+    title: "Connect one or more Instagram accounts through Meta.",
+    body: "Sign in with Meta and pick your Instagram Business or Creator accounts. Send each brand handle to its own inbox and team.",
     visual: (
       <ShotStill
         name="channel-instagram-connect"
@@ -19,8 +19,8 @@ const rows = [
   },
   {
     label: "Shared inbox",
-    title: "Reply beside email, chat, and order history without touching a phone.",
-    body: "Incoming DMs land beside past emails, chat threads, and order history. Teammates jump in, tag ops, and leave private internal notes from one queue.",
+    title: "See past emails and orders beside every DM.",
+    body: "Instagram DMs land next to past emails, live chats, and order history. Teammates can tag coworkers and leave private notes before replying.",
     visual: (
       <ShotVideo
         name="channel-instagram-thread"
@@ -31,9 +31,9 @@ const rows = [
     ),
   },
   {
-    label: "Media & reply windows",
-    title: "See customer photos and story replies, plus your Meta reply countdown.",
-    body: "View grouped photos, videos, and story replies in the thread, and send images, audio, or PDFs back. The composer shows Meta's 24-hour and 7-day reply countdown.",
+    label: "Photos and replies",
+    title: "View photos, story replies, and reply timers in one place.",
+    body: "See customer photos, videos, and story replies right in the thread, and send images, audio, or PDFs back. The reply box shows how much time Meta allows to answer.",
     visual: (
       <ShotStill
         name="channel-instagram-media"
@@ -42,9 +42,9 @@ const rows = [
     ),
   },
   {
-    label: "Agents & automation",
-    title: "Let support agents look up orders and handle returns automatically.",
-    body: "Assign a dedicated support agent to your Instagram inbox. It looks up orders and runs return procedures, while workflows and SLAs route escalations to the right teammate.",
+    label: "AI agents",
+    title: "Let AI agents check orders and handle simple returns.",
+    body: "Assign an AI support agent to your Instagram inbox to look up orders and walk customers through returns, while tricky cases go straight to your team.",
     visual: (
       <ShotStill
         name="channel-instagram-agents"
@@ -57,33 +57,33 @@ const rows = [
 const more = [
   {
     icon: ChatsCircle,
-    title: "Story replies and shared reels",
-    body: "Story mentions, replies, and shared posts open with a link in the thread, and edited messages update in place.",
+    title: "Story replies and reels",
+    body: "Story mentions, story replies, and shared posts open with a link in the thread, and edited messages update in place.",
   },
   {
     icon: Buildings,
-    title: "One workspace for multiple brands",
-    body: "Connect multiple Instagram accounts and route each brand handle to its own inbox, support agent, and saved replies.",
+    title: "Multiple brand accounts",
+    body: "Connect as many Instagram accounts as you run and route each handle to its own team and saved replies.",
   },
   {
     icon: GitMerge,
-    title: "Merge DMs with email threads",
-    body: "Merge a customer's Instagram DM with their email profile so teammates see past orders and tickets beside each reply.",
+    title: "Merge DMs with email",
+    body: "Link a customer's Instagram handle to their email profile so your team sees past orders beside every DM.",
   },
   {
     icon: Timer,
-    title: "Clear 24-hour and 7-day timers",
-    body: "Watch Meta's 24-hour agent window and 7-day human window in the composer, while long replies split without losing text.",
+    title: "Clear reply timers",
+    body: "See Meta's 24-hour AI window and 7-day human reply window right in the reply box.",
   },
   {
     icon: At,
-    title: "Private internal notes",
-    body: "Tag warehouse staff, founders, or social leads right inside a DM thread to check an order before replying.",
+    title: "Private team notes",
+    body: "Tag warehouse staff or founders inside a DM thread to check an order before answering the customer.",
   },
   {
     icon: CurrencyDollar,
-    title: "Zero social add-on fees",
-    body: "Instagram DMs share your 100 free monthly conversations on dimmi Cloud and ship in the MIT self-hosted build for $0.",
+    title: "No social add-on fee",
+    body: "Instagram DMs are included in your 100 free monthly conversations on dimmi Cloud and cost $0 self-hosted.",
   },
 ];
 
@@ -91,32 +91,32 @@ const questions = [
   {
     question: "Does dimmi handle public Instagram comments or personal accounts?",
     answer:
-      "Instagram integration in dimmi covers direct messages for Business and Creator accounts only. If you need social media publishing or public comment moderation on posts and reels, keep a dedicated social tool alongside dimmi.",
+      "Only direct messages for Business and Creator accounts. Keep a social media tool if you need post scheduling or public comment moderation.",
   },
   {
-    question: "How do Meta's reply windows work inside dimmi?",
+    question: "How long do we have to reply to an Instagram DM?",
     answer:
-      "Support agents and teammates can reply for 24 hours after a customer's last DM, and teammates can reply for up to 7 days. After 7 days, Meta locks the thread until the customer writes again. You cannot start a cold DM thread from dimmi.",
+      "Both AI agents and teammates can reply for 24 hours after a customer's last message. Teammates can reply for up to 7 days. After 7 days, Meta locks the thread until the customer writes again.",
   },
   {
-    question: "Why did a first-time DM from a non-follower stay in Instagram Requests?",
+    question: "Why did a message from a non-follower stay in Instagram Requests?",
     answer:
-      "Meta holds first-time messages from accounts you do not follow inside Instagram's Requests folder until you accept them in the Instagram app. Once you accept it, future messages from that customer flow into dimmi.",
+      "Meta holds first-time DMs from accounts you do not follow inside Instagram's Requests folder until you accept them in the app. After that, messages flow into dimmi.",
   },
   {
-    question: "What do we need to turn on in the Instagram app?",
+    question: "What setting do we need to turn on in Instagram?",
     answer:
-      "Connect your Business or Creator account through Meta OAuth in dimmi, then enable Allow access to messages under Connected tools in the Instagram app. Without that toggle on, Meta sends zero messages to dimmi.",
+      "Connect your account in dimmi, then turn on Allow access to messages under Connected tools in the Instagram app so Meta sends DMs to dimmi.",
   },
   {
     question: "Can we connect multiple Instagram accounts for different brands?",
     answer:
-      "Link as many Business or Creator accounts as you run and route each handle to its own inbox, team, and support agent. Your workspace includes multi-brand routing with zero extra channel fees.",
+      "Yes. Link as many Business or Creator accounts as you run and route each one to its own inbox and team for $0 extra.",
   },
   {
     question: "Do you charge extra for Instagram DMs?",
     answer:
-      "Not a cent extra. Instagram DMs use standard dimmi conversation pricing on dimmi Cloud, and ship in the MIT self-hosted build for $0.",
+      "No. Instagram DMs use standard conversation pricing on dimmi Cloud and are completely free in the self-hosted MIT build.",
   },
 ];
 
@@ -125,20 +125,25 @@ export function InstagramChannelPage() {
     <>
       <ProductHero
         eyebrow="Instagram"
-        title="Answer Instagram DMs without passing one phone around the office."
-        body="Connect your Instagram Business accounts beside email and chat. Your team and AI support agents answer order questions, story replies, and returns from one shared inbox."
+        breadcrumb={[
+          { label: "Home", href: "/" },
+          { label: "Channels", href: "/channels" },
+        ]}
+        title="Answer Instagram DMs from one shared inbox."
+        body="Connect your Instagram Business accounts to dimmi. Reply to DMs and story replies beside email and order history without passing one phone around."
         visual={
           <ShotVideo
             name="channel-instagram-hero"
             poster="channel-instagram-hero"
-            alt="Instagram DM conversation in the dimmi inbox beside email and chat, showing customer order history and a support agent draft"
+            alt="An Instagram DM conversation on the left synced live with the dimmi inbox on the right, showing order history and a support agent reply"
             bleed
           />
         }
       />
-      <Rows title="Run Instagram support like a real queue, with full order context." rows={rows} />
+      <Rows title="Turn Instagram DMs into a clean support queue." rows={rows} />
       <FeatureGrid title="Built for how customers message brands on Instagram." items={more} />
-      <Questions body="What ecommerce and brand teams ask before moving Instagram DMs into dimmi." items={questions} />
+      <ChannelLinks current="/channels/instagram" />
+      <Questions body="What teams ask before moving Instagram DMs into dimmi." items={questions} />
       <FinalCta />
     </>
   );

@@ -46,7 +46,11 @@ it.describe("series", () => {
 
     await page.getByRole("button", { name: "Series actions" }).click();
     await page.getByRole("button", { name: "Pause" }).click();
-    await page.getByRole("alertdialog", { name: "Pause this series?" }).getByRole("button", { name: "Pause" }).click();
+    const pausing = page.getByRole("alertdialog", { name: "Pause this series?" });
+    await pausing.getByRole("button", { name: "Pause" }).click();
+    // The question hands focus back as it closes, which shuts a menu opened
+    // meanwhile; so it must be gone before the menu is opened again.
+    await expect(pausing).toBeHidden();
     await expect(page.getByText("Paused", { exact: true })).toBeVisible();
     await page.getByRole("button", { name: "Series actions" }).click();
     await page.getByRole("button", { name: "Resume" }).click();

@@ -2,7 +2,6 @@ import { getCollection } from "astro:content";
 import type { APIRoute, GetStaticPaths } from "astro";
 
 import { operationMarkdown, operations } from "~docs/api/spec";
-import { withBase } from "~docs/base";
 import { docMarkdown } from "~docs/markdown";
 
 // Each docs page and API endpoint as Markdown, at its path plus ".md".
@@ -17,12 +16,14 @@ export const getStaticPaths = (async () => {
   ];
 }) satisfies GetStaticPaths;
 
-// Each copy ends with a pointer to the index, so an agent that fetched one
-// page can find the rest.
-export const GET: APIRoute = ({ props, site }) =>
-  new Response(
-    `${props.body as string}\n---\n\nIndex of all dimmi docs: ${site?.origin ?? ""}${withBase("/llms.txt")}\n`,
+// Each copy ends with a pointer to the root index, so an agent that fetched
+// one page can discover MCP, SDKs, and the rest of the docs.
+export const GET: APIRoute = ({ props, site }) => {
+  const origin = site?.origin ?? "https://trydimmi.com";
+  return new Response(
+    `${props.body as string}\n---\n\nIndex of all dimmi docs: ${origin}/llms.txt (full text: ${origin}/llms-full.txt)\n`,
     {
       headers: { "Content-Type": "text/markdown; charset=utf-8" },
     },
   );
+};

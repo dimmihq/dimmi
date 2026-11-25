@@ -321,12 +321,8 @@ function ChannelsMenu({ path }: { path: string }) {
                     here && "bg-background-secondary-default",
                   )}
                 >
-                  <span className="flex size-10 shrink-0 items-center justify-center rounded-[10px] bg-accent-500/10 ring-1 ring-accent-500/15 ring-inset">
-                    <channel.icon
-                      weight="duotone"
-                      className="size-[22px] text-accent-600 dark:text-accent-400"
-                      aria-hidden
-                    />
+                  <span className="flex size-10 shrink-0 items-center justify-center rounded-[10px] border border-border-button-default bg-background-full shadow-2xs">
+                    <channel.logo className="size-[22px]" />
                   </span>
                   <span className="flex min-w-0 flex-col">
                     <span className="text-[14px] leading-5 font-medium text-text-primary">{channel.name}</span>
@@ -341,10 +337,10 @@ function ChannelsMenu({ path }: { path: string }) {
               Every channel lands in one shared inbox with unlimited free seats.
             </span>
             <a
-              href="/inbox"
+              href="/channels"
               className="inline-flex shrink-0 items-center gap-1 text-[13px] leading-5 font-medium text-text-primary hover:underline underline-offset-4"
             >
-              Explore inbox
+              All channels
               <RiArrowRightLine className="size-3.5" aria-hidden />
             </a>
           </div>

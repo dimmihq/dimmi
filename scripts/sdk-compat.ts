@@ -403,12 +403,23 @@ function roave(): string | null {
   return bin;
 }
 
-/* dropPathRepositories removes what a mirror cannot have: path repositories, such as Laravel's ../php, and the lock. */
-function dropPathRepositories(dir: string) {
+/*
+ * mirrorRepositories makes a composer.json installable on its own: path
+ * repositories, such as Laravel's ../php, and the lock are dropped, and a
+ * dimmi package it requires is taken from that package's mirror, so the
+ * check never depends on Packagist listing it.
+ */
+function mirrorRepositories(dir: string) {
   const file = path.join(dir, "composer.json");
   const manifest = JSON.parse(fs.readFileSync(file, "utf8"));
-  if (Array.isArray(manifest.repositories)) {
-    manifest.repositories = manifest.repositories.filter((r: { type?: string }) => r.type !== "path");
+  const kept = Array.isArray(manifest.repositories)
+    ? manifest.repositories.filter((r: { type?: string }) => r.type !== "path")
+    : [];
+  const mirrors = Object.keys(manifest.require ?? {})
+    .filter((name) => name.startsWith("dimmi/"))
+    .map((name) => ({ type: "vcs", url: `https://github.com/dimmihq/${name.slice("dimmi/".length)}` }));
+  if (kept.length + mirrors.length > 0 || Array.isArray(manifest.repositories)) {
+    manifest.repositories = [...kept, ...mirrors];
     fs.writeFileSync(file, `${JSON.stringify(manifest, null, 4)}\n`);
   }
   fs.rmSync(path.join(dir, "composer.lock"), { force: true });
@@ -435,20 +446,21 @@ function php(sdk: "php" | "laravel") {
   if (!bin) {
     return;
   }
-  const scratch = history(sdk, clone(repo, tag), dir, dropPathRepositories);
+  const scratch = history(sdk, clone(repo, tag), dir, mirrorRepositories);
   const res = run(bin, ["--from=base", "--to=HEAD", "--format=markdown"], scratch);
   if (!res.ok) {
     const all = res.out.split("\n").filter((l) => l.includes("[BC]"));
-    const found = all.filter((l) => !GENERATED_LIST_GREW.test(l));
-    // Only the generated lists changed: a new operation, which is additive.
-    if (all.length > 0 && found.length === 0) {
+    // The tool failing to run is not a break: no changeset can answer it.
+    if (all.length === 0) {
+      failures.push(`sdk/${sdk}: roave could not compare with ${repo} ${tag}\n${res.out}`);
       return;
     }
-    breaking(
-      changesetName[sdk] ?? "",
-      `sdk/${sdk} (against ${repo} ${tag})`,
-      (found.length > 0 ? found : [res.out]).join("\n"),
-    );
+    const found = all.filter((l) => !GENERATED_LIST_GREW.test(l));
+    // Only the generated lists changed: a new operation, which is additive.
+    if (found.length === 0) {
+      return;
+    }
+    breaking(changesetName[sdk] ?? "", `sdk/${sdk} (against ${repo} ${tag})`, found.join("\n"));
   }
 }
 

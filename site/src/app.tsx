@@ -14,6 +14,7 @@ import { cx } from "@/utils/cx";
 import { SiteFooter } from "./components/site-footer";
 import { SiteNav } from "./components/site-nav";
 import { findRoute } from "./routes";
+import { pageSchemas, syncHead } from "./seo";
 
 // useLayoutEffect warns when it runs on the server; the prerender has no scroll to set.
 const useBrowserLayoutEffect = typeof window === "undefined" ? useEffect : useLayoutEffect;
@@ -77,15 +78,12 @@ export function App({ path: initial }: { path: string }) {
     return () => window.removeEventListener("popstate", onPop);
   }, []);
 
-  // After a swap: the title and description follow the page, and the view
-  // jumps to the top, the linked section, or the reader's place on the way back.
+  // Keep head tags in sync on initial dev load and after client-side page swaps;
+  // after a swap, also jump to the top, linked section, or saved scroll position.
   useBrowserLayoutEffect(() => {
+    syncHead(route);
     if (!navigated.current) {
       return;
-    }
-    if (route) {
-      document.title = route.title;
-      document.querySelector('meta[name="description"]')?.setAttribute("content", route.description);
     }
     const target = location.hash ? document.getElementById(decodeURIComponent(location.hash.slice(1))) : null;
     if (target) {
@@ -102,6 +100,14 @@ export function App({ path: initial }: { path: string }) {
     <div className="flex min-h-screen flex-col bg-background-full" onClick={onClick}>
       <SiteNav path={location.path} />
       <main key={location.path} className={cx("flex-1", navigated.current && "animate-page-in")}>
+        {pageSchemas(route).map((schema) => (
+          <script
+            key={String(schema["@type"])}
+            type="application/ld+json"
+            // biome-ignore lint/security/noDangerouslySetInnerHtml: static JSON-LD structured data for search engines
+            dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }}
+          />
+        ))}
         {Page ? (
           <Page />
         ) : (

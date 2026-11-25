@@ -1,27 +1,42 @@
 # dimmi
 
-> dimmi is an open-source customer messenger, inbox and help center, an Intercom alternative you can self-host. This file tells coding assistants how to add the dimmi messenger to an app and call the dimmi API.
+> dimmi is an open-source (MIT) customer support platform with a shared inbox, AI support agents, procedures, Operator, tickets, workflows, and a help center. This file tells coding assistants how to add the dimmi messenger to an app, call the REST API, or connect over MCP on a dimmi server.
 
-You need two values from the dimmi dashboard: the messenger's app id (`wgt_...`, Settings > Messenger) and the dimmi host (the cloud address or your self-hosted URL, e.g. `https://dimmi.example.com`). The messenger script is `<host>/widget/v1/loader.js`.
+You need two values from the dimmi dashboard: the messenger app id (`wgt_...`, Settings > Messengers) and the dimmi host (the cloud address `https://trydimmi.com` or your self-hosted URL). The messenger loader script is `<host>/widget/v1/loader.js`.
 
-## Pick the package
+## MCP server
+
+Connect an MCP client to `<host>/mcp` (Streamable HTTP transport, OAuth 2.0 or `Authorization: Bearer <api_token>`) to search knowledge, manage conversations, contacts, tickets, help articles, and procedures, or propose reviewable Operator edits.
+
+- OAuth discovery metadata: `<host>/.well-known/oauth-authorization-server`
+- MCP guide: https://trydimmi.com/docs/developers/mcp.md
+- Server card (dimmi Cloud): https://trydimmi.com/docs/mcp/server-card.json
+
+## Pick the messenger package
 
 - Plain HTML or any other stack: paste `<script async src="<host>/widget/v1/loader.js" data-app-id="wgt_..."></script>` before `</body>`, or use `@dimmi/browser`.
-- React (Vite, CRA, Remix, React Router): `npm i @dimmi/react`; wrap the app in `<DimmiProvider appId host identity>`; use `useDimmi()`.
-- Next.js (app router): `npm i @dimmi/nextjs`; add `dimmi.config.ts` with `defineDimmi({ identify })`, a server action returning `identityToken(config)` from `@dimmi/nextjs/server`, and `<DimmiProvider identity={action}>` in `app/layout.tsx`.
+- React 18+ (Vite, CRA, Remix, React Router): `npm i @dimmi/react`; wrap the app in `<DimmiProvider appId host identity>`; use `useDimmi()`.
+- Next.js 14+ (App Router): `npm i @dimmi/nextjs`; add `dimmi.config.ts` with `defineDimmi({ identify })`, a server action returning `identityToken(config)` from `@dimmi/nextjs/server`, and `<DimmiProvider identity={action}>` in `app/layout.tsx`.
 - Vue 3: `npm i @dimmi/vue`; `app.use(createDimmi({ appId, host }))`; `useDimmi()` in components.
 - Nuxt 3: `npm i @dimmi/vue`; register `createDimmi` in `plugins/dimmi.client.ts` (client-only).
 - Angular 17+: `npm i @dimmi/angular`; `provideDimmi({ appId, host })` in `app.config.ts`; inject `DimmiService`.
 - Svelte / SvelteKit: `npm i @dimmi/svelte`; `initDimmi({ appId, host })` in the root layout's `onMount`; `use:dimmiAction`.
-- Server-side API calls (Node, Bun, Deno, workers): `npm i @dimmi/api`; `createDimmiApi({ host, token, workspace })`; `api.GET("/contacts")`; `paginate(api, "/contacts")`.
+
+## Pick the backend SDK
+
+- TypeScript / Node.js 20+: `npm i @dimmi/api`; `createDimmiApi({ host, token, workspace })`; `api.GET("/contacts")`; `paginate(api, "/contacts")`.
+- Node.js identity tokens: `npm i @dimmi/server` (`signIdentityToken`, `createIdentityHandler`, `@dimmi/server/express`, `@dimmi/server/hono`).
+- Go 1.22+: `go get github.com/dimmihq/dimmi-go` (REST client, identity tokens, webhook verification).
+- PHP 8.2+: `composer require dimmi/dimmi-php` (Guzzle REST client, identity tokens, webhook verification).
+- Laravel 10-12: `composer require dimmi/dimmi-laravel` (`Dimmi::` facade, `@dimmiMessenger`, webhook routes & events).
+- Python 3.10+: `pip install dimmi-sdk` (`import dimmi`; httpx REST client, identity tokens, webhook verification).
 
 ## Identity verification
 
-Never trust a user id from the browser. Sign a short-lived token on your server and hand the browser only the token:
+Never trust a user id from the browser. Sign a short-lived JWT on your server and hand the browser only the token:
 
-- `@dimmi/server`: `signIdentityToken({ id, email, name })`, `createIdentityHandler(identify)` (Fetch API), `@dimmi/server/express`, `@dimmi/server/hono`.
-- Env: `DIMMI_IDENTITY_SECRET` and `DIMMI_IDENTITY_KID` from Settings > Identity verification (or `DIMMI_IDENTITY_PRIVATE_KEY` for RS256/ES256/EdDSA).
-- Browser: pass `identity: async () => token-or-null`, or `identityUrl: "/api/dimmi/token"` answering `{"token": "<jwt>"}` or `{"token": null}`.
+- Env: `DIMMI_IDENTITY_SECRET` (optional `DIMMI_IDENTITY_KID` for HS256; required with `DIMMI_IDENTITY_PRIVATE_KEY` for RS256/ES256/EdDSA) from Settings > Identity verification.
+- Browser: pass `identity: async () => tokenOrNull`, or `identityUrl: "/api/dimmi/token"` answering `{"token": "<jwt>"}` or `{"token": null}`.
 - After sign-in without a reload call `identify()`; on sign-out call `shutdown()`.
 
 ## Messenger API (every browser package)
@@ -30,11 +45,14 @@ Never trust a user id from the browser. Sign a short-lived token on your server 
 
 ## REST API
 
-- Base URL: `<host>/api/v1`; OpenAPI 3.1 at `<host>/api/v1/openapi.json`.
+- Base URL: `<host>/api/v1`; OpenAPI 3.1 contract at `<host>/api/v1/openapi.json`.
 - Auth: `Authorization: Bearer <access token>`; workspace: `Dimmi-Workspace: <workspace id>`.
 - Lists: `cursor` + `limit` (`meta.next_cursor`); a few page by `offset`. `429` answers carry `Retry-After`. POSTs accept `Idempotency-Key`.
 
-## Docs
+## Full documentation & coding agent skill
 
-- [SDK overview](https://github.com/dimmihq/dimmi/tree/main/sdk)
-- [Install skill for coding agents](https://github.com/dimmihq/dimmi/tree/main/sdk/skills/dimmi-install/SKILL.md)
+- [Complete llms.txt index (all guides & 450+ API endpoints)](https://trydimmi.com/llms.txt)
+- [Complete docs in one file (llms-full.txt)](https://trydimmi.com/llms-full.txt)
+- [SDK catalog JSON](https://trydimmi.com/docs/sdks.json)
+- [Install skill for coding agents (dimmi-install)](https://raw.githubusercontent.com/dimmihq/dimmi/main/sdk/skills/dimmi-install/SKILL.md)
+- [Source repository (MIT)](https://github.com/dimmihq/dimmi)

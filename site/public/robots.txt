@@ -1,0 +1,15 @@
+User-agent: *
+Allow: /
+Disallow: /d/
+Disallow: /api/
+Disallow: /widget/
+Disallow: /oauth/
+Disallow: /internal/
+Disallow: /login
+Disallow: /signup
+Disallow: /reset-password
+Disallow: /forgot-password
+Disallow: /verify-email
+Disallow: /invitations/
+
+Sitemap: https://trydimmi.com/sitemap.xml

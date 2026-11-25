@@ -1,15 +1,15 @@
 import { Buildings, Checks, CurrencyDollar, Files, Megaphone, Sparkle } from "@phosphor-icons/react";
 
-import { FeatureGrid, ProductHero, Questions, Rows } from "../../components/product-page";
+import { ChannelLinks, FeatureGrid, ProductHero, Questions, Rows } from "../../components/product-page";
 import { ShotStill } from "../../components/shot-still";
 import { ShotVideo } from "../../components/shot-video";
 import { FinalCta } from "../../sections/final-cta";
 
 const rows = [
   {
-    label: "Direct Meta signup",
-    title: "Connect your numbers in minutes and pay Meta yourself.",
-    body: "Link a WhatsApp Business number through Meta Embedded Signup and keep the phone app running if you want. Meta bills you for template messages, and dimmi adds $0 markup.",
+    label: "Connect Meta",
+    title: "Connect your numbers in minutes and pay Meta directly.",
+    body: "Link your WhatsApp Business number through Meta and keep using the phone app if you want. Meta bills you directly for template messages, and dimmi adds $0 markup.",
     visual: (
       <ShotStill
         name="channel-whatsapp-signup"
@@ -18,9 +18,9 @@ const rows = [
     ),
   },
   {
-    label: "Approved templates",
-    title: "Write, submit, and send Meta templates without leaving dimmi.",
-    body: "Create templates with text headers, variables, quick replies, and links, with Meta approval status right beside each one. Type / in the composer to fill details and preview before sending.",
+    label: "Templates",
+    title: "Write and send Meta-approved templates from dimmi.",
+    body: "Create templates with headers, customer names, quick reply buttons, and links. Type / in the reply box to pick a template and preview it before you send.",
     visual: (
       <ShotVideo
         name="channel-whatsapp-templates"
@@ -31,9 +31,9 @@ const rows = [
     ),
   },
   {
-    label: "24-hour window",
-    title: "See the 24-hour clock right where you type.",
-    body: "WhatsApp closes free-form replies 24 hours after a customer writes. Our composer shows the hours left and switches to approved templates once time runs out, so messages never fail without warning.",
+    label: "24-hour clock",
+    title: "See how much time is left to reply.",
+    body: "WhatsApp closes normal replies 24 hours after a customer writes. dimmi shows the countdown in your reply box and switches to approved templates when time runs out.",
     visual: (
       <ShotStill
         name="channel-whatsapp-window"
@@ -42,9 +42,9 @@ const rows = [
     ),
   },
   {
-    label: "Media, agents & broadcasts",
-    title: "One channel for photos, multiple numbers, agents, and broadcasts.",
-    body: "Share photos, videos, voice notes, and documents in the thread. Route multiple numbers to separate inboxes, turn on support agents, and send WhatsApp broadcasts whose replies land in your queue.",
+    label: "Photos and audio",
+    title: "Send photos, voice notes, and files in the same chat.",
+    body: "Receive and send photos, videos, voice notes, and PDFs right in the thread. Route multiple numbers to separate teams, add AI agents, and send template updates.",
     visual: (
       <ShotStill
         name="channel-whatsapp-media"
@@ -57,66 +57,66 @@ const rows = [
 const more = [
   {
     icon: Buildings,
-    title: "Multiple numbers, separate inboxes",
-    body: "Connect numbers for sales, support, or regional brands and send each line to its own team and SLA.",
+    title: "Multiple phone numbers",
+    body: "Connect numbers for sales, support, or different regions and route each one to its own team.",
   },
   {
     icon: Files,
-    title: "Two-way template sync",
-    body: "Templates you build in WhatsApp Manager pull into dimmi on connect, and you can refresh them in one click.",
+    title: "Templates stay in sync",
+    body: "Templates you already made in Meta pull into dimmi automatically, and you can refresh them in one click.",
   },
   {
     icon: Sparkle,
-    title: "Support agents on WhatsApp",
-    body: "Agents answer from your help center, follow refund or order procedures, and hand over with a private summary.",
+    title: "AI agents on WhatsApp",
+    body: "Agents answer from your help center, check orders, and hand over to your team with a short summary.",
   },
   {
     icon: Megaphone,
-    title: "Two-way WhatsApp broadcasts",
-    body: "Send approved template updates to filtered customer lists and handle every reply inside your shared inbox.",
+    title: "Two-way broadcasts",
+    body: "Send approved updates to customer lists and answer every reply right inside your shared inbox.",
   },
   {
     icon: Checks,
-    title: "Read receipts and rich cards",
-    body: "Replying marks the customer's latest message as read, and shared locations, contact cards, and quick replies render right in the thread.",
+    title: "Read receipts and rich messages",
+    body: "Replying marks messages as read, and shared locations, contacts, and quick replies show cleanly.",
   },
   {
     icon: CurrencyDollar,
-    title: "Direct Meta billing",
-    body: "Connect your own WhatsApp Business account and pay Meta directly, with zero per-message markup from dimmi.",
+    title: "Zero message markup",
+    body: "Connect your own Meta account and pay Meta's standard rates with $0 added by dimmi.",
   },
 ];
 
 const questions = [
   {
-    question: "Does dimmi charge extra per WhatsApp message or per number?",
+    question: "Does dimmi charge extra per WhatsApp message or phone number?",
     answer:
-      "Not a cent. You connect your own Meta account and pay Meta for template messages. On dimmi Cloud, WhatsApp threads count under your standard conversation pricing after your first 100 free conversations each month.",
+      "No. You pay Meta directly for template messages with $0 markup from dimmi. On dimmi Cloud, WhatsApp chats use normal conversation pricing after 100 free conversations each month.",
   },
   {
-    question: "Can we keep using the WhatsApp Business app on our phone?",
+    question: "Can we still use the WhatsApp Business app on our phone?",
     answer:
-      "You can. Connect a number that already runs on the WhatsApp Business app through Meta Embedded Signup and keep that app active while your team answers from dimmi.",
+      "Yes. Connect your existing WhatsApp Business app number through Meta and keep using your phone while your team replies from dimmi.",
   },
   {
-    question: "What happens when a customer writes and we reply after 24 hours?",
+    question: "What happens if we reply after 24 hours?",
     answer:
-      "Meta blocks free-form replies once 24 hours pass. dimmi shows the countdown in the composer and switches to your approved templates when it hits zero. As soon as the customer replies, a fresh 24-hour window opens.",
+      "Meta blocks normal messages once 24 hours pass. dimmi shows the countdown and switches the reply box to your approved templates. Once the customer writes back, normal chat reopens.",
   },
   {
-    question: "Which WhatsApp template types work in dimmi today?",
+    question: "Which WhatsApp templates can we send from dimmi?",
     answer:
-      "dimmi creates and sends templates with a text header, formatted body, footer, variables, and buttons for quick replies or links. Templates with media headers, carousels, or dynamic buttons sync into your list, though you cannot edit or send them from dimmi yet.",
+      "You can write and send templates with a text header, formatted body, footer, variables, and quick reply or link buttons. Media-header and carousel templates sync to your list, though you cannot edit or send them here yet.",
   },
   {
-    question: "Is dimmi the right tool for WhatsApp ad funnels or voice calls?",
+    question: "Does dimmi support WhatsApp voice calls or ad campaigns?",
     answer:
-      "Pick a marketing tool or call center for those. dimmi handles two-way support threads and template updates. We skip click-to-WhatsApp ad campaigns, emoji reactions, and WhatsApp voice or video calls.",
+      "Not today. dimmi focuses on two-way support chats and template updates. Pick a marketing or phone tool if you need click-to-WhatsApp ads or WhatsApp voice calls.",
   },
   {
-    question: "Does WhatsApp work on the self-hosted MIT build too?",
+    question: "Does WhatsApp work if we self-host dimmi?",
     answer:
-      "The exact same integration runs on both dimmi Cloud and self-hosted servers. Connect your Meta app, point webhooks at your server, and run unlimited seats and numbers while paying $0 to dimmi.",
+      "Yes. The same WhatsApp connection ships in the free MIT self-hosted build with unlimited seats and numbers.",
   },
 ];
 
@@ -125,20 +125,25 @@ export function WhatsAppChannelPage() {
     <>
       <ProductHero
         eyebrow="WhatsApp"
-        title="Turn WhatsApp Business into a shared inbox for your whole team."
-        body="Connect your official WhatsApp Business numbers through Meta. Manage approved templates, track 24-hour windows, and answer beside customer history with zero message markup."
+        breadcrumb={[
+          { label: "Home", href: "/" },
+          { label: "Channels", href: "/channels" },
+        ]}
+        title="Answer WhatsApp Business messages as a team."
+        body="Connect your WhatsApp Business number straight through Meta. Your team answers from one inbox, sends approved templates, and pays Meta directly with $0 markup."
         visual={
           <ShotVideo
             name="channel-whatsapp-hero"
             poster="channel-whatsapp-hero"
-            alt="dimmi shared inbox showing a live WhatsApp customer conversation, 24-hour reply timer, customer details, and an agent reply"
+            alt="A customer WhatsApp chat on the left synced live with the dimmi shared inbox on the right, showing the 24-hour reply timer and agent reply"
             bleed
           />
         }
       />
-      <Rows title="Built around Meta's real rules, without the middleman fees." rows={rows} />
-      <FeatureGrid title="Everything your team needs on WhatsApp, with no add-on tier." items={more} />
-      <Questions body="What teams ask before connecting their WhatsApp Business numbers." items={questions} />
+      <Rows title="Manage WhatsApp support without sharing one phone." rows={rows} />
+      <FeatureGrid title="Everything you need to run support on WhatsApp." items={more} />
+      <ChannelLinks current="/channels/whatsapp" />
+      <Questions body="What teams ask before connecting WhatsApp Business." items={questions} />
       <FinalCta />
     </>
   );

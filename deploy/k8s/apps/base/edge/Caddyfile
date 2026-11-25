@@ -40,7 +40,7 @@ http:// {
 # name (local.sh) sets it to "tls internal" for a certificate of Caddy's own.
 {$HOST} {
 	{$HOST_TLS}
-	@site path / /favicon.svg /docs /docs/* /assets/* /logos/* /shots/* /agent /agent/* /agent-studio /agent-studio/* /agents /agents/* /broadcasts /broadcasts/* /changelog /changelog/* /channels /channels/* /compare /compare/* /feedback /feedback/* /help-center /help-center/* /inbox /inbox/* /operator /operator/* /pricing /pricing/* /privacy /privacy/* /procedures /procedures/* /reports /reports/* /routines /routines/* /terms /terms/* /tickets /tickets/* /workflows /workflows/*
+	@site path / /favicon.svg /llms.txt /llms-full.txt /og.png /robots.txt /sitemap.xml /docs /docs/* /assets/* /logos/* /shots/* /agent /agent/* /agent-studio /agent-studio/* /agents /agents/* /broadcasts /broadcasts/* /changelog /changelog/* /channels /channels/* /compare /compare/* /feedback /feedback/* /help-center /help-center/* /inbox /inbox/* /operator /operator/* /pricing /pricing/* /privacy /privacy/* /procedures /procedures/* /reports /reports/* /routines /routines/* /terms /terms/* /tickets /tickets/* /workflows /workflows/*
 	handle @site {
 		header X-Robots-Tag {$SITE_ROBOTS:all}
 		reverse_proxy site:8080
