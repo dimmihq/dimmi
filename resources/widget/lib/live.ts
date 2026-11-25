@@ -21,7 +21,7 @@ import { Session, type SessionData, type Storage } from "../client/session";
 import { type Conversation as ApiConversation, type Message as ApiMessage, Store } from "../client/store";
 import { ConversationRow } from "../components/rows";
 import { Whoami } from "../components/whoami";
-import type { Block, Collection, Content, Message, VerifyStep } from "../content";
+import type { Block, Collection, Content, Message, TicketType, VerifyStep } from "../content";
 
 /*
  * HelpIndex is what the server answers for the Help tab.
@@ -833,9 +833,26 @@ export class Live {
       await loadTickets(this.host.root).catch(() => undefined);
     }
     this.ticketing = { ticket_types };
-    await this.host.update({});
+    this.drawHelp(ticket_types);
     this.typesKnown = true;
     this.arrive();
+  }
+
+  /*
+   * drawHelp puts the request types into Home's slot in place. Drawing
+   * the whole messenger again for them, as the panel opens, replaced
+   * every element on screen and flashed the panel.
+   */
+  private drawHelp(types: TicketType[]) {
+    const slot = this.host.root.querySelector<HTMLElement>('.view[data-view="home"] .help-slot');
+    const parts = tickets();
+    if (!slot || !parts) {
+      if (types.length > 0) {
+        void this.host.update({});
+      }
+      return;
+    }
+    slot.innerHTML = String(parts.HomeCards({ types, texts: this.host.options().texts }));
   }
 
   /*

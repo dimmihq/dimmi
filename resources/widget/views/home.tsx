@@ -56,10 +56,12 @@ export function Home({ options, content }: { options: Options; content: Content 
             </>
           }
         >
-          {tickets()?.HomeCards({
-            types: content.ticket_types ?? [],
-            texts: options.texts,
-          }) ?? null}
+          <div className="help-slot">
+            {tickets()?.HomeCards({
+              types: content.ticket_types ?? [],
+              texts: options.texts,
+            }) ?? null}
+          </div>
           {recent.length > 0 && (
             <Section title={texts.recent_messages} more={showAll}>
               {recent.map((conversation) => (

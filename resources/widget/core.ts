@@ -151,6 +151,26 @@ export function boot(win: Window & DimmiWindow, doc: Document): Widget | undefin
     return Promise.race([finished.then(() => undefined), capped]);
   };
 
+  /*
+   * still ends at once the entrance animations a redraw starts while the
+   * panel is open: the view on screen and its content were already there,
+   * so playing them again made the panel flash. Endless ones, such as a
+   * skeleton's sheen, keep running.
+   */
+  const still = () => {
+    if (typeof CSSAnimation === "undefined" || typeof root.getAnimations !== "function") {
+      return;
+    }
+    for (const animation of root.getAnimations()) {
+      if (
+        animation instanceof CSSAnimation &&
+        animation.effect?.getComputedTiming().iterations !== Number.POSITIVE_INFINITY
+      ) {
+        animation.finish();
+      }
+    }
+  };
+
   let waiting: Promise<void> | undefined;
 
   /*
@@ -193,6 +213,7 @@ export function boot(win: Window & DimmiWindow, doc: Document): Widget | undefin
     app.connect(root);
     if (wasOpen) {
       find()?.restore(tab);
+      still();
     } else {
       find()?.show(tab);
     }
