@@ -5,8 +5,10 @@
  * kept as Markdown, the only thing the composer reads and saves. Pasted
  * pages keep only what the composer's document holds, so headings,
  * colours and underline fall away to plain text. A colon and two letters
- * suggest emoji by name; in a note, an at sign suggests teammates and
- * teams to mention. A hash and a letter or more suggest saved replies,
+ * suggest emoji by name, from the first letter. An at sign searches what
+ * can go into the message: in a note, teammates and teams to mention,
+ * then saved replies, help articles, feature requests, changelog entries
+ * and emoji. A hash and a letter or more suggest saved replies,
  * whose text takes the place of what was typed. Where the text is filled
  * in for each customer, such as a workflow's message, an open brace
  * suggests the variables, each kept as a chip. Links to help center
@@ -14,15 +16,21 @@
  */
 import type { RemixiconComponentType } from "@remixicon/react";
 import {
+  RiArticleLine,
   RiBold,
+  RiChatQuoteLine,
   RiCodeLine,
   RiCodeSSlashLine,
   RiDoubleQuotesL,
+  RiHistoryLine,
   RiItalic,
+  RiLightbulbLine,
   RiLink,
   RiListOrdered,
   RiListUnordered,
   RiStrikethrough,
+  RiTeamLine,
+  RiUser3Line,
 } from "@remixicon/react";
 import { type Editor, EditorContent, useEditor, useEditorState } from "@tiptap/react";
 import { useEffect, useRef, useState } from "react";
@@ -33,6 +41,7 @@ import { variableOf } from "@/features/broadcasts/writer/variables";
 import type { SavedReply } from "@/lib/api/saved-replies";
 import type { WhatsAppTemplate } from "@/lib/api/whatsapp";
 import { cx } from "@/utils/cx";
+import type { LibraryItem } from "../library";
 import { composerExtensions } from "./composer-markdown";
 import { applyLink, syncContent, whenReady } from "./editor-helpers";
 import { type Emoji, findEmoji, loadEmoji } from "./emoji";
@@ -65,6 +74,8 @@ export interface RichEditorProps {
   onBlur: () => void;
   onFiles: (files: FileList) => void;
   findMentions?: (query: string) => Promise<Mentionable[]>;
+  /* Saved replies, articles, feature requests and changelog entries that hold what follows an @. */
+  findLibrary?: (query: string) => Promise<LibraryItem[]>;
   /* Saved replies whose title or shortcut holds what follows a #. */
   findSavedReplies?: (query: string) => Promise<SavedReply[]>;
   /* The Markdown a picked saved reply puts in place of what was typed. */
@@ -126,6 +137,7 @@ export default function RichEditor({
   onBlur,
   onFiles,
   findMentions,
+  findLibrary,
   findSavedReplies,
   takeSavedReply,
   findTemplates,
@@ -140,6 +152,7 @@ export default function RichEditor({
     onBlur,
     onFiles,
     findMentions,
+    findLibrary,
     findSavedReplies,
     takeSavedReply,
     findTemplates,
@@ -151,6 +164,7 @@ export default function RichEditor({
     onBlur,
     onFiles,
     findMentions,
+    findLibrary,
     findSavedReplies,
     takeSavedReply,
     findTemplates,
@@ -159,7 +173,7 @@ export default function RichEditor({
   const linkRef = useRef<() => void>(() => undefined);
   const [linking, setLinking] = useState<string | null>(null);
   const [emoji, setEmoji] = useState<Suggested<Emoji> | null>(null);
-  const [mention, setMention] = useState<Suggested<Mentionable> | null>(null);
+  const [mention, setMention] = useState<Suggested<AtItem> | null>(null);
   const [saved, setSaved] = useState<Suggested<SavedReply> | null>(null);
   const [template, setTemplate] = useState<Suggested<WhatsAppTemplate> | null>(null);
   const [variable, setVariable] = useState<Suggested<EditorVariable> | null>(null);
@@ -191,20 +205,18 @@ export default function RichEditor({
         suggestionExtension<Emoji>({
           name: "emojiSuggestion",
           char: ":",
-          minLength: 2,
+          minLength: 1,
           find: async (query) => findEmoji(await loadEmoji(), query, 8),
           content: (item) => item.unicode,
           onChange: setEmoji,
         }),
-        suggestionExtension<Mentionable>({
+        suggestionExtension<AtItem>({
           name: "mentionSuggestion",
           char: "@",
           minLength: 0,
-          find: (query) => handlers.current.findMentions?.(query) ?? [],
-          content: (item) => [
-            { type: "mentionToken", attrs: { id: item.id, label: item.name } },
-            { type: "text", text: " " },
-          ],
+          find: (query) => findAt(handlers.current, query),
+          content: () => "",
+          apply: (editor, range, item) => takeAt(editor, range, item, handlers.current.takeSavedReply),
           onChange: setMention,
         }),
         suggestionExtension<SavedReply>({
@@ -289,18 +301,10 @@ export default function RichEditor({
         <EditorContent editor={editor} />
       </div>
       <SuggestionList
-        label="Mention"
+        label="Mention or add"
         suggested={mention}
-        keyOf={(item) => item.id}
-        render={(item) => (
-          <span className="flex min-w-0 flex-col">
-            <span className="truncate">
-              @{item.name}
-              {item.detail ? <span className="ms-1.5 text-text-tertiary">{item.detail}</span> : null}
-            </span>
-            {item.warning ? <span className="text-body-2-regular text-text-error-primary">{item.warning}</span> : null}
-          </span>
-        )}
+        keyOf={atKey}
+        render={(item) => <AtRow item={item} />}
       />
       <SuggestionList
         label="Saved replies"
@@ -464,5 +468,149 @@ export function Toolbar({ editor, onLink, only }: { editor: Editor; onLink?: () 
         </button>
       ))}
     </div>
+  );
+}
+
+/*
+ * AtItem is one suggestion after an at sign: a teammate or team to
+ * mention, something from the library, or an emoji.
+ */
+type AtItem =
+  | { kind: "mention"; mention: Mentionable }
+  | { kind: "library"; item: LibraryItem }
+  | { kind: "emoji"; emoji: Emoji };
+
+/*
+ * mentionsShown and emojiShown are how many teammates and emoji an at
+ * sign lists beside the library's matches.
+ */
+const mentionsShown = 5;
+const emojiShown = 3;
+
+function atKey(item: AtItem): string {
+  if (item.kind === "mention") {
+    return `mention:${item.mention.id}`;
+  }
+
+  return item.kind === "library" ? `${item.item.kind}:${item.item.id}` : `emoji:${item.emoji.unicode}`;
+}
+
+/*
+ * findAt searches every source an at sign offers at once: teammates
+ * first where mentions are allowed, then the library, then emoji once
+ * two letters name one.
+ */
+async function findAt(
+  sources: Pick<RichEditorProps, "findMentions" | "findLibrary">,
+  query: string,
+): Promise<AtItem[]> {
+  const [mentions, library, emoji] = await Promise.all([
+    sources.findMentions?.(query).catch(() => []) ?? [],
+    sources.findLibrary?.(query).catch(() => []) ?? [],
+    query.trim().length >= 2 ? loadEmoji().then((all) => findEmoji(all, query, emojiShown)) : [],
+  ]);
+
+  return [
+    ...mentions.slice(0, mentionsShown).map((mention) => ({ kind: "mention" as const, mention })),
+    ...library.map((item) => ({ kind: "library" as const, item })),
+    ...emoji.map((found) => ({ kind: "emoji" as const, emoji: found })),
+  ];
+}
+
+/*
+ * takeAt puts the picked suggestion in place of what was typed: a
+ * mention or a link as a chip, a saved reply's text, or an emoji.
+ */
+function takeAt(
+  editor: Editor,
+  range: { from: number; to: number },
+  picked: AtItem,
+  takeSavedReply: RichEditorProps["takeSavedReply"],
+) {
+  const chain = editor.chain().focus();
+  if (picked.kind === "mention") {
+    chain
+      .insertContentAt(range, [
+        { type: "mentionToken", attrs: { id: picked.mention.id, label: picked.mention.name } },
+        { type: "text", text: " " },
+      ])
+      .run();
+    return;
+  }
+  if (picked.kind === "emoji") {
+    chain.insertContentAt(range, picked.emoji.unicode).run();
+    return;
+  }
+  const { item } = picked;
+  if (item.reply) {
+    chain.insertContentAt(range, takeSavedReply?.(item.reply) ?? item.reply.body, { contentType: "markdown" }).run();
+    return;
+  }
+  chain
+    .insertContentAt(
+      range,
+      item.url
+        ? [
+            { type: "linkToken", attrs: { title: item.title, url: item.url } },
+            { type: "text", text: " " },
+          ]
+        : `${item.title} `,
+    )
+    .run();
+}
+
+const kindLooks = {
+  saved: { icon: RiChatQuoteLine, name: "Saved reply" },
+  article: { icon: RiArticleLine, name: "Help article" },
+  request: { icon: RiLightbulbLine, name: "Feature request" },
+  changelog: { icon: RiHistoryLine, name: "Changelog" },
+} as const;
+
+/*
+ * AtRow is one suggestion as the list shows it, with what kind it is.
+ */
+function AtRow({ item }: { item: AtItem }) {
+  if (item.kind === "emoji") {
+    return (
+      <>
+        <span aria-hidden>{item.emoji.unicode}</span>
+        <span className="truncate">{item.emoji.label}</span>
+        <span className="ms-auto shrink-0 text-body-2-regular text-text-tertiary">Emoji</span>
+      </>
+    );
+  }
+  if (item.kind === "mention") {
+    const { mention } = item;
+
+    return (
+      <span className="flex min-w-0 flex-1 items-center gap-2">
+        {mention.kind === "team" ? (
+          <RiTeamLine aria-hidden className="size-4 shrink-0 text-foreground-icon-secondary" />
+        ) : (
+          <RiUser3Line aria-hidden className="size-4 shrink-0 text-foreground-icon-secondary" />
+        )}
+        <span className="flex min-w-0 flex-col">
+          <span className="truncate">
+            @{mention.name}
+            {mention.detail ? <span className="ms-1.5 text-text-tertiary">{mention.detail}</span> : null}
+          </span>
+          {mention.warning ? (
+            <span className="text-body-2-regular text-text-error-primary">{mention.warning}</span>
+          ) : null}
+        </span>
+      </span>
+    );
+  }
+  const look = kindLooks[item.item.kind];
+  const Icon = look.icon;
+
+  return (
+    <span className="flex min-w-0 flex-1 items-center gap-2">
+      <Icon aria-hidden className="size-4 shrink-0 text-foreground-icon-secondary" />
+      <span className="flex min-w-0 flex-col">
+        <span className="truncate">{item.item.title}</span>
+        <span className="truncate text-body-2-regular text-text-tertiary">{look.name}</span>
+      </span>
+    </span>
   );
 }

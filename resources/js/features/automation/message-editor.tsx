@@ -2,7 +2,8 @@
  * A workflow's message, written in the inbox's reply editor: the same
  * formatting, emoji after a colon, saved replies after a hash, and the
  * add menu for help articles, feature requests, changelog entries,
- * saved replies, emoji and GIFs. An open brace offers the details the
+ * saved replies, emoji and GIFs; an at sign searches all of them, and a
+ * colon finds emoji. An open brace offers the details the
  * workflow fills in for each customer, such as their first name, and
  * keeps each as a chip. A note names teammates after an at sign, as a
  * note in the inbox does. What is written is kept as Markdown, with the
@@ -17,6 +18,7 @@ import { linkMarkdown } from "@/features/inbox/composer/link-token";
 import type { Mentionable } from "@/features/inbox/composer/mentionable";
 import { useGifs } from "@/features/inbox/composer/use-gifs";
 import { useInbox } from "@/features/inbox/conversations";
+import { searchLibrary } from "@/features/inbox/library";
 import { savedRepliesQuery } from "@/lib/api/saved-replies";
 
 import { variablesFor } from "./message-variables";
@@ -61,6 +63,7 @@ export function MessageEditor({
           onBlur={() => undefined}
           onFiles={() => undefined}
           findMentions={teammates ? async (query) => findTeammates(teammates, query) : undefined}
+          findLibrary={(query) => searchLibrary(queryClient, workspace, query)}
           findSavedReplies={(query) => queryClient.fetchQuery(savedRepliesQuery(workspace, query))}
           takeSavedReply={(reply) => reply.body}
           toolbarSlot={slot}
