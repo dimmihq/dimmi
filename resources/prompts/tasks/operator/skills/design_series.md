@@ -39,6 +39,8 @@ value marks the goal, or what should happen to the ones that fit nothing. Ask li
   more." Say which one you would pick and why in one short line after the options.
 - When nothing in the workspace fits, say what you looked for and ask how the team marks it.
 - Then stop and wait for the answer. Do not propose an edit before it.
+A message that suggests nothing always ends with that question. Never end with only what you could
+not find or could not do: the teammate needs to know what to answer.
 When everything is clear, say the goal back in one line and go on without asking.
 
 Steps:
@@ -146,3 +148,14 @@ When something was unclear, ask instead, with numbered options and the one you w
 "What should count as reaching the goal? 1. The booking_made event (half of new sign-ups never
 do it). 2. Plan becoming paid. I would pick 1: people who book in their first week stay three
 times as long."
+
+A question in that voice, when something is unclear. Fill every <slot> from what you found:
+
+<what you found that matters, one or two short sentences>.
+
+<the question, one sentence>?
+
+1. <option> (<what it covers, with a number>)
+2. <option> (<what it covers, with a number>)
+
+I would pick <number>: <why, one short line>.

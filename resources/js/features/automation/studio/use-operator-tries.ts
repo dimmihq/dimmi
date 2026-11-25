@@ -5,8 +5,8 @@
  * the result. A page showing that workflow or series keeps the tries of
  * this visit and calls onStart when one begins, so it can open its
  * Simulations panel and the teammate watches Operator work. A try of a
- * case Operator tried before, the same first message or scenario,
- * takes that case's place instead of adding another. Nothing is kept:
+ * case Operator tried before, the same first message from the same
+ * customer, takes that case's place instead of adding another. Nothing is kept:
  * the tries are gone once the page is left.
  */
 import { useQuery } from "@tanstack/react-query";
@@ -48,9 +48,17 @@ export interface TryEvent extends WfRunEvent {
   error?: string;
 }
 
-/* caseOf is what makes two tries the same case: the customer's first message, or the scenario. */
-function caseOf(t: { message?: string; scenario?: string }): string {
-  return (t.message || t.scenario || "").trim().toLowerCase().replace(/\s+/g, " ");
+/*
+ * caseOf is what makes two tries the same case: the same first message
+ * from the same customer (their situation), or for a series the same
+ * person behaving the same way.
+ */
+function caseOf(t: { message?: string; situation?: string; scenario?: string; name?: string }): string {
+  const parts = [t.message, t.situation, t.scenario, t.name].map((p) =>
+    (p ?? "").trim().toLowerCase().replace(/\s+/g, " "),
+  );
+
+  return parts.some(Boolean) ? parts.join("|") : "";
 }
 
 /* next is a try once one more moment has happened. */
