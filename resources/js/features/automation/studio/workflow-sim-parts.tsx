@@ -4,9 +4,10 @@
  * their buttons, what the customer tapped or typed, a wait they let run
  * out, and dimmi's replies inside agent steps), the workflow's trace
  * (whether the trigger started it, each step with the path it took and
- * what it found or saved, a called workflow's steps nested under the
- * call, and the actions that would have run), and the checks as a run
- * left them.
+ * what it found or saved, and a called workflow's steps nested under the
+ * call), and the checks as a run left them. What the workflow did to the
+ * conversation, such as tags, notes and assignments, shows in the chat
+ * the way the inbox shows it.
  * A run in progress streams its lines and steps as they happen.
  */
 import { RiCursorLine, RiTimerLine } from "@remixicon/react";
@@ -25,6 +26,8 @@ import type { ChipSources } from "../procedure-writer/procedure-suggestions";
 import { stepLook } from "../step-kinds";
 import type { StepKind } from "../workflows";
 import type { LiveWfRun } from "./use-workflow-live-runs";
+import { Event } from "./workflow-sim-events";
+import { moments, useNames } from "./workflow-sim-moments";
 import { type CheckResult, checkSentence, lined, pathNamed, type Steps, stepNote } from "./workflow-sim-words";
 
 /* CheckLine is one check with its mark and, after a run, why it failed or what the judge said. */
@@ -159,6 +162,7 @@ export function WfTalk({
   bubble?: string;
 }) {
   const shown = lines ?? result?.transcript ?? [];
+  const names = useNames();
   if (shown.length === 0) {
     return (
       <div className="flex flex-col gap-3">
@@ -172,15 +176,23 @@ export function WfTalk({
     );
   }
   let agentAt = 0;
+  const shownMoments = lines ? moments(shown) : moments(shown, result?.trace);
 
   return (
     <ol aria-label="Simulated conversation" aria-live={lines ? "polite" : undefined} className="flex flex-col gap-5">
-      {shown.map((line, index) => {
+      {shownMoments.map((moment, at) => {
+        if (moment.kind === "action") {
+          return (
+            <li key={`action-${moment.action.step_id}-${String(at)}`}>
+              <Event action={moment.action} names={names} />
+            </li>
+          );
+        }
+        const { line, index } = moment;
         const turn = line.from === "agent" ? result?.turns[agentAt++] : undefined;
 
         return (
-          // biome-ignore lint/suspicious/noArrayIndexKey: a run's lines never reorder.
-          <li key={index}>
+          <li key={`line-${String(index)}`}>
             <Line line={line} turn={turn} sources={sources} bubble={bubble} />
           </li>
         );
@@ -225,11 +237,20 @@ function StepRow({ done, steps, opens }: { done: DryStep; steps: Steps; opens: b
           {note ? <span className="break-words text-body-2-regular text-text-secondary">{note}</span> : null}
         </span>
         <Chip variant="caption" color={done.skipped ? "neutral" : "soft"} className="shrink-0 py-0.5">
-          {done.skipped ? (done.kind === "wait" ? "Skipped" : words(done.outcome)) : words(done.outcome)}
+          {outcomeWord(done)}
         </Chip>
       </span>
     </li>
   );
+}
+
+/* outcomeWord is a step's outcome as its chip reads: an action the run did reads as done. */
+function outcomeWord(done: DryStep): string {
+  if (done.skipped && done.kind === "wait") {
+    return "Skipped";
+  }
+
+  return !done.skipped && done.outcome === "would_run" ? "Done" : words(done.outcome);
 }
 
 /* Verdict says why the trigger would not start the workflow. */
@@ -247,30 +268,13 @@ function Verdict({ verdict }: { verdict: DryTrace["verdict"] }) {
   );
 }
 
-/* Actions lists what the workflow would have run, none of it for real. */
-function Actions({ actions }: { actions: DryTrace["actions"] }) {
+/* Simulated says that what the workflow did stayed in the simulation. */
+function Simulated({ actions }: { actions: DryTrace["actions"] }) {
   if (actions.length === 0) {
     return null;
   }
 
-  return (
-    <div className="flex flex-col gap-1.5">
-      <span className={fieldLabel}>Would have run</span>
-      <ul className="flex flex-col gap-1">
-        {actions.map((a, index) => (
-          <li key={`${a.step_id}-${String(index)}`} className="flex items-center gap-2 text-body-2-regular">
-            <span className="text-text-primary">{a.summary}</span>
-            {a.mocked ? (
-              <Chip variant="caption" color="neutral" className="py-0.5">
-                Mocked
-              </Chip>
-            ) : null}
-          </li>
-        ))}
-      </ul>
-      <p className={hint}>Nothing ran for real: no tag, assignment, ticket or request left the simulation.</p>
-    </div>
-  );
+  return <p className={hint}>Simulated: no tag, assignment, ticket or request left the simulation.</p>;
 }
 
 /* Vars lists the run's variables as the run left them. */
@@ -321,7 +325,7 @@ export function Trace({ trace, steps, live }: { trace?: DryTrace; steps: Steps; 
           ))}
         </ol>
       ) : null}
-      {trace ? <Actions actions={trace.actions} /> : null}
+      {trace ? <Simulated actions={trace.actions} /> : null}
       {trace ? <Vars vars={trace.vars} /> : null}
       {trace?.end ? <p className={hint}>Ended: {words(trace.end).toLowerCase()}.</p> : null}
     </div>
