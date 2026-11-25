@@ -1,0 +1,24 @@
+# The production load balancer forwards ports 80 and 443 to these node
+# ports, which are its own: staging's edge holds 30080 and 30443.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: dimmi-production
+resources:
+  - ../../base/edge
+configMapGenerator:
+  - name: edge
+    literals:
+      - HOST=trydimmi.com
+      - FILES_HOST=files.trydimmi.com
+      - ACME_EMAIL=support@trydimmi.com
+patches:
+  - target:
+      kind: Service
+      name: edge
+    patch: |
+      - op: add
+        path: /spec/ports/0/nodePort
+        value: 31080
+      - op: add
+        path: /spec/ports/1/nodePort
+        value: 31443
