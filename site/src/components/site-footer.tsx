@@ -1,3 +1,5 @@
+import { RiGithubFill } from "@remixicon/react";
+
 import { DimmiLogo } from "@/features/brand/logo";
 import { CHANNELS } from "../channels";
 import { LEGAL_ENTITY } from "../legal/constants";
@@ -53,8 +55,12 @@ export function SiteFooter() {
           <p className="max-w-60 text-body-regular text-text-secondary">
             The open customer support platform. MIT licensed, on our cloud or your own server.
           </p>
-          <a href={GITHUB_URL} className="text-body-medium text-text-primary underline-offset-4 hover:underline">
-            github.com/dimmihq/dimmi
+          <a
+            href={GITHUB_URL}
+            aria-label="dimmi on GitHub"
+            className="self-start text-text-secondary transition-colors hover:text-text-primary"
+          >
+            <RiGithubFill className="size-6" aria-hidden />
           </a>
         </div>
         {columns.map((column) => (
