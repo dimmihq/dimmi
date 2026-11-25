@@ -927,7 +927,11 @@ describe("core", () => {
   });
 
   it("plays the outgoing and incoming sounds, and nothing on open", async () => {
-    const waves: string[] = [];
+    // Each note's pitch tells the sounds apart: the outgoing one starts at
+    // 523 Hz, the incoming one at 392 Hz. A preview may answer a sent
+    // message by itself, so the incoming sound can follow the outgoing one
+    // at any moment and the test never counts on the order.
+    const pitches: number[] = [];
     const param = () => ({ value: 0, setValueAtTime: vi.fn(), exponentialRampToValueAtTime: vi.fn() });
     vi.stubGlobal(
       "AudioContext",
@@ -941,32 +945,35 @@ describe("core", () => {
           return { gain: param(), connect: (to: unknown) => to };
         }
         createOscillator() {
-          const note = { type: "", frequency: param(), connect: (to: unknown) => to, start: vi.fn(), stop: vi.fn() };
-          queueMicrotask(() => waves.push(note.type));
-          return note;
+          const frequency = { ...param(), setValueAtTime: (hz: number) => pitches.push(hz) };
+          return { type: "", frequency, connect: (to: unknown) => to, start: vi.fn(), stop: vi.fn() };
         }
       },
     );
+    const outgoing = () => pitches.filter((hz) => hz === 523).length;
     await started();
     win.Dimmi?.("open");
     await settle();
-    expect(waves).toEqual([]);
+    expect(pitches).toEqual([]);
 
     shadow().dispatchEvent(new CustomEvent("dimmi:send", { detail: { body: "Hi", files: [] } }));
-    await vi.waitFor(() => expect(waves).toEqual(["sine", "sine"]));
+    await vi.waitFor(() => expect(pitches).toEqual(expect.arrayContaining([523, 784])));
 
     win.Dimmi?.("simulate", { message: "Hello" });
-    await vi.waitFor(() => expect(waves).toHaveLength(4));
+    await vi.waitFor(() => expect(pitches).toEqual(expect.arrayContaining([392, 440])));
 
     win.Dimmi?.("update", { appearance: { sent_sound: "none" } });
+    const sent = outgoing();
     shadow().dispatchEvent(new CustomEvent("dimmi:send", { detail: { body: "Again", files: [] } }));
     await settle();
-    expect(waves).toHaveLength(4);
+    expect(outgoing()).toBe(sent);
 
     win.Dimmi?.("update", { appearance: { sound: false } });
+    await settle();
+    const heard = pitches.length;
     win.Dimmi?.("simulate", { message: "Again" });
     await settle();
-    expect(waves).toHaveLength(4);
+    expect(pitches).toHaveLength(heard);
   });
 
   it("warns about commands it does not know", async () => {
