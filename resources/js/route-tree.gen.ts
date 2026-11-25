@@ -29,6 +29,7 @@ import { Route as DFeedbackRouteImport } from './routes/d/feedback'
 import { Route as DHelpCenterRouteImport } from './routes/d/help-center'
 import { Route as DHomeRouteImport } from './routes/d/home'
 import { Route as DNotificationsRouteImport } from './routes/d/notifications'
+import { Route as DOperatorRouteRouteImport } from './routes/d/operator/route'
 import { Route as DReportsRouteImport } from './routes/d/reports'
 import { Route as DShortcutsRouteImport } from './routes/d/shortcuts'
 import { Route as DWhatsappReturnRouteImport } from './routes/d_.whatsapp-return'
@@ -198,6 +199,11 @@ const DNotificationsRoute = DNotificationsRouteImport.update({
   path: '/notifications',
   getParentRoute: () => DRouteRoute,
 } as any)
+const DOperatorRouteRoute = DOperatorRouteRouteImport.update({
+  id: '/operator',
+  path: '/operator',
+  getParentRoute: () => DRouteRoute,
+} as any)
 const DReportsRoute = DReportsRouteImport.update({
   id: '/reports',
   path: '/reports',
@@ -303,14 +309,14 @@ const DInboxViewRouteRoute = DInboxViewRouteRouteImport.update({
   getParentRoute: () => DRouteRoute,
 } as any)
 const DOperatorIndexRoute = DOperatorIndexRouteImport.update({
-  id: '/operator/',
-  path: '/operator/',
-  getParentRoute: () => DRouteRoute,
+  id: '/',
+  path: '/',
+  getParentRoute: () => DOperatorRouteRoute,
 } as any)
 const DOperatorTabRoute = DOperatorTabRouteImport.update({
-  id: '/operator/$tab',
-  path: '/operator/$tab',
-  getParentRoute: () => DRouteRoute,
+  id: '/$tab',
+  path: '/$tab',
+  getParentRoute: () => DOperatorRouteRoute,
 } as any)
 const DProceduresIndexRoute = DProceduresIndexRouteImport.update({
   id: '/procedures/',
@@ -569,6 +575,7 @@ export interface FileRoutesByFullPath {
   '/__gate': typeof Char91__gateChar93Route
   '/': typeof AuthRouteWithChildren
   '/onboarding': typeof OnboardingRoute
+  '/d/operator': typeof DOperatorRouteRouteWithChildren
   '/email-preferences': typeof AuthEmailPreferencesRoute
   '/forgot-password': typeof AuthForgotPasswordRoute
   '/invitation': typeof AuthInvitationRoute
@@ -743,6 +750,7 @@ export interface FileRoutesById {
   '/__gate': typeof Char91__gateChar93Route
   '/_auth': typeof AuthRouteWithChildren
   '/onboarding': typeof OnboardingRoute
+  '/d/operator': typeof DOperatorRouteRouteWithChildren
   '/_auth/email-preferences': typeof AuthEmailPreferencesRoute
   '/_auth/forgot-password': typeof AuthForgotPasswordRoute
   '/_auth/invitation': typeof AuthInvitationRoute
@@ -836,6 +844,7 @@ export interface FileRouteTypes {
     | '/__gate'
     | '/'
     | '/onboarding'
+    | '/d/operator'
     | '/email-preferences'
     | '/forgot-password'
     | '/invitation'
@@ -1009,6 +1018,7 @@ export interface FileRouteTypes {
     | '/__gate'
     | '/_auth'
     | '/onboarding'
+    | '/d/operator'
     | '/_auth/email-preferences'
     | '/_auth/forgot-password'
     | '/_auth/invitation'
@@ -1246,6 +1256,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DNotificationsRouteImport
       parentRoute: typeof DRouteRoute
     }
+    '/d/operator': {
+      id: '/d/operator'
+      path: '/operator'
+      fullPath: '/d/operator'
+      preLoaderRoute: typeof DOperatorRouteRouteImport
+      parentRoute: typeof DRouteRoute
+    }
     '/d/reports': {
       id: '/d/reports'
       path: '/reports'
@@ -1395,17 +1412,17 @@ declare module '@tanstack/react-router' {
     }
     '/d/operator/': {
       id: '/d/operator/'
-      path: '/operator'
+      path: '/'
       fullPath: '/d/operator/'
       preLoaderRoute: typeof DOperatorIndexRouteImport
-      parentRoute: typeof DRouteRoute
+      parentRoute: typeof DOperatorRouteRoute
     }
     '/d/operator/$tab': {
       id: '/d/operator/$tab'
-      path: '/operator/$tab'
+      path: '/$tab'
       fullPath: '/d/operator/$tab'
       preLoaderRoute: typeof DOperatorTabRouteImport
-      parentRoute: typeof DRouteRoute
+      parentRoute: typeof DOperatorRouteRoute
     }
     '/d/procedures/': {
       id: '/d/procedures/'
@@ -1732,6 +1749,20 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface DOperatorRouteRouteChildren {
+  DOperatorTabRoute: typeof DOperatorTabRoute
+  DOperatorIndexRoute: typeof DOperatorIndexRoute
+}
+
+const DOperatorRouteRouteChildren: DOperatorRouteRouteChildren = {
+  DOperatorTabRoute: DOperatorTabRoute,
+  DOperatorIndexRoute: DOperatorIndexRoute,
+}
+
+const DOperatorRouteRouteWithChildren = DOperatorRouteRoute._addFileChildren(
+  DOperatorRouteRouteChildren,
+)
+
 interface DChangelogRouteChildren {
   DChangelogEntryRoute: typeof DChangelogEntryRoute
   DChangelogIndexRoute: typeof DChangelogIndexRoute
@@ -1843,6 +1874,7 @@ const DInboxViewRouteRouteWithChildren = DInboxViewRouteRoute._addFileChildren(
 )
 
 interface DRouteRouteChildren {
+  DOperatorRouteRoute: typeof DOperatorRouteRouteWithChildren
   DChangelogRoute: typeof DChangelogRouteWithChildren
   DCustomersRoute: typeof DCustomersRouteWithChildren
   DFeedbackRoute: typeof DFeedbackRouteWithChildren
@@ -1855,7 +1887,6 @@ interface DRouteRouteChildren {
   DInboxViewRouteRoute: typeof DInboxViewRouteRouteWithChildren
   DAgentsAgentRoute: typeof DAgentsAgentRoute
   DBroadcastsBroadcastRoute: typeof DBroadcastsBroadcastRoute
-  DOperatorTabRoute: typeof DOperatorTabRoute
   DProceduresProcedureRoute: typeof DProceduresProcedureRoute
   DRoutinesNewRoute: typeof DRoutinesNewRoute
   DSeriesSeriesRoute: typeof DSeriesSeriesRoute
@@ -1865,7 +1896,6 @@ interface DRouteRouteChildren {
   DAgentsIndexRoute: typeof DAgentsIndexRoute
   DBroadcastsIndexRoute: typeof DBroadcastsIndexRoute
   DInboxIndexRoute: typeof DInboxIndexRoute
-  DOperatorIndexRoute: typeof DOperatorIndexRoute
   DProceduresIndexRoute: typeof DProceduresIndexRoute
   DRoutinesIndexRoute: typeof DRoutinesIndexRoute
   DSeriesIndexRoute: typeof DSeriesIndexRoute
@@ -1897,6 +1927,7 @@ interface DRouteRouteChildren {
 }
 
 const DRouteRouteChildren: DRouteRouteChildren = {
+  DOperatorRouteRoute: DOperatorRouteRouteWithChildren,
   DChangelogRoute: DChangelogRouteWithChildren,
   DCustomersRoute: DCustomersRouteWithChildren,
   DFeedbackRoute: DFeedbackRouteWithChildren,
@@ -1909,7 +1940,6 @@ const DRouteRouteChildren: DRouteRouteChildren = {
   DInboxViewRouteRoute: DInboxViewRouteRouteWithChildren,
   DAgentsAgentRoute: DAgentsAgentRoute,
   DBroadcastsBroadcastRoute: DBroadcastsBroadcastRoute,
-  DOperatorTabRoute: DOperatorTabRoute,
   DProceduresProcedureRoute: DProceduresProcedureRoute,
   DRoutinesNewRoute: DRoutinesNewRoute,
   DSeriesSeriesRoute: DSeriesSeriesRoute,
@@ -1919,7 +1949,6 @@ const DRouteRouteChildren: DRouteRouteChildren = {
   DAgentsIndexRoute: DAgentsIndexRoute,
   DBroadcastsIndexRoute: DBroadcastsIndexRoute,
   DInboxIndexRoute: DInboxIndexRoute,
-  DOperatorIndexRoute: DOperatorIndexRoute,
   DProceduresIndexRoute: DProceduresIndexRoute,
   DRoutinesIndexRoute: DRoutinesIndexRoute,
   DSeriesIndexRoute: DSeriesIndexRoute,
