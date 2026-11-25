@@ -210,6 +210,8 @@ func schemaTextPartsFromSeriesTrace() []map[string]map[string]string {
 		schemaTextsFromWidgetPreviewConfig(),
 		schemaTextsFromWidgetSettings(),
 		schemaTextsFromWorkflow(),
+		schemaTextsFromAutomation(),
+		schemaTextsFromAutomationFailures(),
 		schemaTextsFromWorkflowRunStep(),
 		schemaTextsFromWorkspace(),
 		schemaTextsFromWorkspaceMember(),

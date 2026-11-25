@@ -1,17 +1,15 @@
 /*
- * The series page: every series with who it starts for, whether it is
- * running, how many people are on it right now, how many ever entered
- * and how many of those reached its goal. Totals across the live ones
- * sit on top. A new series starts from a template, for contacts or for
+ * The series page, laid out like the agents page: every series with
+ * who it starts for, whether it is running, how many people are on it
+ * right now, how many ever entered and how many of those reached its
+ * goal, published ones first. Totals across them sit on top. A new series starts from a template, for contacts or for
  * whole accounts, and opens in its builder.
  */
 import { RiAddLine, RiBuilding2Line, RiFlowChart, RiUser3Line } from "@remixicon/react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
-import type { ColumnDef } from "@tanstack/react-table";
 import { useState } from "react";
 import { StatCards } from "@/components/application/dashboard/stat-cards";
-import { DataTable } from "@/components/application/data-table/data-table";
 import { Chip } from "@/components/base/badges/chip";
 import { Button } from "@/components/base/buttons/button";
 import { Input } from "@/components/base/input/input";
@@ -19,91 +17,57 @@ import { Modal, ModalBody, ModalFooter, ModalHeader } from "@/components/base/mo
 import { RadioGroup } from "@/components/base/radio/radio";
 import { RadioCard } from "@/components/base/radio/radio-card";
 import { toast } from "@/components/base/toast/toast";
-import { KindMark } from "@/features/automation/parts";
+import { KindMark, ListPage, OpenRow } from "@/features/automation/parts";
 import { useWorkspace } from "@/features/customers/names";
-import { PageHeader, Panel, ScrollArea } from "@/features/shell/page";
+import { Item, Section } from "@/features/settings/layout";
 import { createSeries, type Series, type SeriesSubject, seriesListQuery } from "@/lib/api/series";
-import { formatDate, formatNumber } from "@/lib/i18n/format";
+import { formatNumber } from "@/lib/i18n/format";
 
 import { percent, statusLook } from "./looks";
 import { summary, templateSpec, templates } from "./model";
 
-function NameCell({ series }: { series: Series }) {
+/*
+ * detailOf says who a series starts for until it has run, then how it
+ * is doing: who is on it now, how many entered, and how many of those
+ * reached its goal.
+ */
+function detailOf(series: Series): string {
   const entry = series.spec.nodes.find((n) => n.kind === "entry");
+  const who = entry ? summary(entry, series.spec) : "";
+  if (series.live_version_id === null) {
+    return who || "Not live yet";
+  }
+  const totals = series.totals;
+  const entered = totals?.entered ?? 0;
+  const parts = [`${formatNumber(totals?.active ?? 0)} on it now`, `${formatNumber(entered)} entered`];
+  if (entered > 0) {
+    parts.push(`${percent(totals?.goal ?? 0, entered)} reached the goal`);
+  }
+
+  return parts.join(" · ");
+}
+
+function SeriesRow({ series }: { series: Series }) {
+  const look = statusLook[series.status];
 
   return (
-    <span className="flex min-w-0 max-w-80 items-center gap-3">
-      <KindMark icon={series.subject === "company" ? RiBuilding2Line : RiFlowChart} tint="purple" />
-      <span className="flex min-w-0 flex-col">
-        <span className="truncate text-body-medium text-text-primary">{series.name}</span>
-        <span className="truncate text-body-2-regular text-text-tertiary">
-          {entry ? summary(entry, series.spec) : ""}
-        </span>
-      </span>
-    </span>
+    <OpenRow
+      target={{ to: "/d/series/$series", params: { series: series.id } }}
+      mark={<KindMark icon={series.subject === "company" ? RiBuilding2Line : RiFlowChart} tint="purple" />}
+      title={series.name}
+      detail={detailOf(series)}
+    >
+      {series.status !== "draft" && series.status !== "archived" && series.has_unpublished_changes ? (
+        <Chip variant="caption" color="yellow" className="py-0.5">
+          Unpublished changes
+        </Chip>
+      ) : null}
+      <Chip variant="caption" color={look.tint}>
+        {look.name}
+      </Chip>
+    </OpenRow>
   );
 }
-
-function Count({ value, ran }: { value: string; ran: boolean }) {
-  return ran ? (
-    <span className="whitespace-nowrap text-body-2-regular text-text-primary tabular-nums">{value}</span>
-  ) : (
-    <span className="text-body-2-regular text-text-tertiary">–</span>
-  );
-}
-
-const columns: ColumnDef<Series>[] = [
-  { id: "series", header: "Series", cell: ({ row }) => <NameCell series={row.original} /> },
-  {
-    id: "status",
-    header: "Status",
-    cell: ({ row }) => {
-      const look = statusLook[row.original.status];
-      return (
-        <span className="flex flex-col items-start gap-0.5">
-          <Chip variant="caption" color={look.tint}>
-            {look.name}
-          </Chip>
-          <span className="whitespace-nowrap text-caption-1-regular text-text-tertiary">
-            Edited {formatDate(row.original.updated_at)}
-          </span>
-        </span>
-      );
-    },
-  },
-  {
-    id: "active",
-    header: "On it now",
-    cell: ({ row }) => (
-      <Count value={formatNumber(row.original.totals?.active ?? 0)} ran={row.original.live_version_id !== null} />
-    ),
-  },
-  {
-    id: "entered",
-    header: "Entered",
-    cell: ({ row }) => (
-      <Count value={formatNumber(row.original.totals?.entered ?? 0)} ran={row.original.live_version_id !== null} />
-    ),
-  },
-  {
-    id: "goal",
-    header: "Reached goal",
-    cell: ({ row }) => (
-      <Count
-        value={percent(row.original.totals?.goal ?? 0, row.original.totals?.entered ?? 0)}
-        ran={(row.original.totals?.entered ?? 0) > 0}
-      />
-    ),
-  },
-];
-
-const widths = {
-  series: "w-[320px]",
-  status: "w-[180px]",
-  active: "w-[130px]",
-  entered: "w-[130px]",
-  goal: "w-[140px]",
-};
 
 function Totals({ list }: { list: Series[] }) {
   const live = list.filter((series) => series.status === "live");
@@ -212,52 +176,55 @@ function NewSeries({ workspace, onClose }: { workspace: string; onClose: () => v
 
 export function SeriesList() {
   const workspace = useWorkspace();
-  const navigate = useNavigate();
-  const [query, setQuery] = useState("");
   const [making, setMaking] = useState(false);
   const list = useQuery(seriesListQuery(workspace));
-  const needle = query.trim().toLowerCase();
   const all = list.data ?? [];
-  const rows = all.filter((series) => needle === "" || series.name.toLowerCase().includes(needle));
+  const published = all.filter((series) => series.status === "live" || series.status === "paused");
+  const drafts = all.filter((series) => series.status === "draft");
+  const archived = all.filter((series) => series.status === "archived");
 
   return (
-    <Panel label="Series" ground className="h-full w-full flex-1">
-      <PageHeader title="Series">
+    <ListPage
+      title="Series"
+      description="Messages that reach people on their own, step by step, over days or weeks."
+      action={
         <Button size="small" leadingIcon={RiAddLine} onClick={() => setMaking(true)}>
           New series
         </Button>
-      </PageHeader>
-      <ScrollArea ground>
-        <div className="flex h-full flex-col gap-4 px-4 pb-4 animate-page-in">
-          <Totals list={all} />
-          <div className="min-h-[420px] flex-1">
-            <DataTable
-              aria-label="Series"
-              data={rows}
-              columns={columns}
-              getRowId={(series) => series.id}
-              total={`${formatNumber(rows.length)} series`}
-              loading={list.isPending}
-              toolbar={
-                <Input
-                  aria-label="Search series"
-                  placeholder="Search series"
-                  value={query}
-                  onChange={setQuery}
-                  className="w-64"
-                />
-              }
-              page={1}
-              pageCount={1}
-              onPageChange={() => undefined}
-              onRowAction={(id) => void navigate({ to: "/d/series/$series", params: { series: id } })}
-              widths={widths}
-              empty={needle ? "No series matches." : "No series yet. Make one to welcome new signups."}
-            />
-          </div>
-        </div>
-      </ScrollArea>
+      }
+    >
+      {all.length > 0 ? <Totals list={all} /> : null}
+      <Section
+        title="Published"
+        description="Live series send as people match. Paused ones hold everyone in place."
+        loading={list.isPending}
+        rows={2}
+      >
+        {published.length === 0 ? (
+          <Item
+            mark={<KindMark icon={RiFlowChart} tint="neutral" />}
+            title={all.length === 0 ? "No series yet" : "None published yet"}
+            detail="Make one to welcome new signups."
+          />
+        ) : (
+          published.map((series) => <SeriesRow key={series.id} series={series} />)
+        )}
+      </Section>
+      {drafts.length > 0 ? (
+        <Section title="Drafts" description="Nobody gets these until you set them live.">
+          {drafts.map((series) => (
+            <SeriesRow key={series.id} series={series} />
+          ))}
+        </Section>
+      ) : null}
+      {archived.length > 0 ? (
+        <Section title="Archived" description="Finished for good. Their reports stay.">
+          {archived.map((series) => (
+            <SeriesRow key={series.id} series={series} />
+          ))}
+        </Section>
+      ) : null}
       {making ? <NewSeries workspace={workspace} onClose={() => setMaking(false)} /> : null}
-    </Panel>
+    </ListPage>
   );
 }

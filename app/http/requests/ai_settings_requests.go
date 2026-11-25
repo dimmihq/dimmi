@@ -17,8 +17,9 @@ type AISettingsRequest struct{}
 
 /*
 AISettingsBody is the body of PATCH /ai/settings. Key ids are public
-ids; a field sent as null is cleared; monthly_cap_usd of 0 or null
-means no cap.
+ids; a field sent as null is cleared. The monthly cap is the most the
+workspace may spend on dimmi in a month, in US dollars; 0 or null means
+no cap.
 */
 type AISettingsBody struct {
 	AnswerKeyID     *string  `json:"answer_key_id,omitempty"     validate:"omitempty,max=64"`

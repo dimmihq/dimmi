@@ -45,6 +45,9 @@ func workflowRoutes(workspace *routing.Router, a *app.App) {
 		Ability("workflows:write").Status(fhttp.StatusOK)
 	routing.Get(workspace, one+"/versions", "workflows.versions.index", wf.Versions).Ability("workflows:read")
 	routing.Get(workspace, one+"/runs", "workflows.runs.index", wf.Runs).Ability("workflows:read")
+	routing.Get(workspace, one+"/metrics", "workflows.metrics.show", wf.Metrics).Ability("workflows:read")
+	routing.Get(workspace, one+"/failures", "workflows.failures.index", wf.Failures).Ability("workflows:read")
+	routing.Get(workspace, "/reports/workflows", "reports.workflows.index", wf.Report).Ability("workflows:read")
 	scheduleRoutes(workspace, a)
 }
 

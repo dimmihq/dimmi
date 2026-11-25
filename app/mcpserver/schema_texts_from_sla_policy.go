@@ -199,6 +199,8 @@ func schemaTextsFromSecurityEvent() map[string]map[string]string {
 		},
 		"Series": {
 			"ai_replies": "True when the AI agent may answer replies to the series' messages.",
+			"reply_agent_id": "The AI agent that answers replies when ai_replies is true, such as aia_.... Null " +
+				"leaves it to the agent placed on the channel the reply comes in on.",
 			"archived_at": "When the series was archived; null if it has not been. An archived series " +
 				"can no longer change.",
 			"counts":      "Counts stored on the series, as a JSON object; empty when none are stored.",

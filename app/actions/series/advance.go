@@ -53,10 +53,11 @@ wait is what a waiting step holds on: its kind, the step row it
 belongs to, until when, and what a call made outside learned.
 */
 type wait struct {
-	Kind   string    `json:"kind"`
-	StepID string    `json:"step_id"`
-	Until  time.Time `json:"until,omitzero"`
-	Result string    `json:"result,omitempty"`
+	Kind   string                     `json:"kind"`
+	StepID string                     `json:"step_id"`
+	Until  time.Time                  `json:"until,omitzero"`
+	Result string                     `json:"result,omitempty"`
+	Values map[string]json.RawMessage `json:"values,omitempty"`
 }
 
 /*
@@ -97,6 +98,10 @@ func (s *Series) Advance(ctx context.Context, a jobs.AdvanceSeriesEnrollmentArgs
 advance runs the journey's steps.
 */
 func (r *run) advance(ctx context.Context) error {
+	if held, err := r.holdOut(ctx); held || err != nil {
+		return err
+	}
+
 	if left, err := r.guard(ctx); left || err != nil {
 		return err
 	}

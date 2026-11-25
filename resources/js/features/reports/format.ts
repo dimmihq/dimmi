@@ -103,7 +103,6 @@ const lowerIsBetterKeys = new Set([
   "oldest_open",
   "median_open_age",
   "empty_searches",
-  "ai_cost_per_resolution",
 ]);
 
 export function lowerIsBetter(metric: Pick<ReportMetric, "key" | "unit">): boolean {

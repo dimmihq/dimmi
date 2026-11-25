@@ -5,7 +5,6 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 
 	"github.com/dimmihq/dimmi/framework/testkit"
 )
@@ -283,42 +282,5 @@ func TestAccountSeries(t *testing.T) {
 
 		journeys := d.owner.GetJSON("/api/v1/companies/" + company + "/series").AssertOK()
 		journeys.AssertJSONPath("data.0.series_name", "Renewal")
-	})
-}
-
-func TestTryingSeries(t *testing.T) {
-	t.Parallel()
-
-	t.Run("try it on me runs a test journey whose waits can be skipped and that never counts", func(t *testing.T) {
-		t.Parallel()
-		d := newDesk(t)
-		ownerEmail := d.owner.GetJSON("/api/v1/user").AssertOK().String("data.email")
-		d.contact(ownerEmail, "Me", testkit.JSON{})
-
-		id := d.series("Try", "contact", testkit.JSON{
-			"nodes": []testkit.JSON{{"id": "entry", "kind": "entry"}, waitDays("wait", 3), email("hello", "Hello me")},
-			"edges": []testkit.JSON{edge("entry", "", "wait"), edge("wait", "", "hello")},
-		})
-		d.publish(id)
-
-		journey := d.owner.PostJSON("/api/v1/series/"+id+"/tests", testkit.JSON{}).AssertCreated().String("data.id")
-		d.drain()
-		d.owner.GetJSON("/api/v1/series/"+id+"/enrollments/"+journey).AssertOK().AssertJSONPath("data.status",
-			"waiting")
-
-		d.owner.PostJSON("/api/v1/series/"+id+"/enrollments/"+journey+"/skip", testkit.JSON{}).AssertNoContent()
-		d.drain()
-
-		trace := d.owner.GetJSON("/api/v1/series/" + id + "/enrollments/" + journey).AssertOK()
-		trace.AssertJSONPath("data.status", "finished")
-		trace.AssertJSONPath("data.steps.2.node_id", "hello")
-		require.Equal(t, 1, mailCount(t, ownerEmail))
-		assert.Equal(t, int64(0), num(d.report(id), "data.entered"))
-
-		again := d.owner.PostJSON("/api/v1/series/"+id+"/tests", testkit.JSON{}).AssertCreated().String("data.id")
-		assert.NotEqual(t, journey, again)
-		d.owner.PostJSON("/api/v1/series/"+id+"/tests", testkit.JSON{}).AssertCreated()
-		replaced := d.owner.GetJSON("/api/v1/series/" + id + "/enrollments/" + again).AssertOK()
-		replaced.AssertJSONPath("data.end_reason", "replaced")
 	})
 }

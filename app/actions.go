@@ -15,6 +15,7 @@ import (
 	"github.com/dimmihq/dimmi/framework/mailbox"
 
 	"github.com/dimmihq/dimmi/app/actions/accesspolicy"
+	"github.com/dimmihq/dimmi/app/actions/aiattributes"
 	"github.com/dimmihq/dimmi/app/actions/assignment"
 	"github.com/dimmihq/dimmi/app/actions/attributes"
 	"github.com/dimmihq/dimmi/app/actions/audiences"
@@ -55,6 +56,7 @@ import (
 	"github.com/dimmihq/dimmi/app/actions/users"
 	"github.com/dimmihq/dimmi/app/actions/webhooks"
 	"github.com/dimmihq/dimmi/app/actions/workflows"
+	"github.com/dimmihq/dimmi/app/actions/workflowsims"
 	"github.com/dimmihq/dimmi/app/actions/workspaces"
 	engine "github.com/dimmihq/dimmi/app/workflows"
 )
@@ -172,9 +174,11 @@ type Actions struct {
 	Broadcasts                 *broadcasts.Broadcasts
 	Series                     *series.Series
 	Attributes                 *attributes.Definitions
+	AIAttributes               *aiattributes.Attributes
 	Events                     *events.Events
 	ContactLists               *contactlists.Lists
 	WorkflowEngine             *engine.Engine
+	WorkflowSims               *workflowsims.Simulations
 	ShowAccessPolicy           *accesspolicy.ShowAccessPolicy
 	UpdateAccessPolicy         *accesspolicy.UpdateAccessPolicy
 	ClearAccessPolicy          *accesspolicy.ClearAccessPolicy

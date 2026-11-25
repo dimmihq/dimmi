@@ -162,6 +162,7 @@ func (c *EmailAddressController) Update(
 		update.QuotePrevious = b.Settings.QuotePrevious
 		update.BulkMailHandling = (*enums.BulkMailHandling)(b.Settings.BulkMailHandling)
 		update.Style = replyStyle(b.Settings.ReplyStyle)
+		update.AwayReply, update.AwayReplyText = b.Settings.AwayReply, b.Settings.AwayReplyText
 	}
 
 	update.IsDefault = b.IsDefault

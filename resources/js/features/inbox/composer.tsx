@@ -8,7 +8,8 @@
  * Markdown, and a toolbar with the add menu (saved replies, help articles,
  * feature requests, changelog entries and emoji, dropped into the
  * text) and a way to ask Operator. Typing # and a few letters finds a
- * saved reply too. A saved reply's variables are filled in for the
+ * saved reply too, an at sign searches all of that (and, in a note,
+ * teammates to mention), and a colon finds emoji. A saved reply's variables are filled in for the
  * customer as it is inserted, and its macro actions wait beside the
  * draft and apply to the conversation once the message is sent. Replies cannot carry files yet, so the composer offers none
  * rather than show files that would never be sent. Sending goes to the
@@ -40,6 +41,7 @@ import { toMentionables } from "./composer/mentionable";
 import { useInbox } from "./conversations";
 import { DraftConflict } from "./drafts/draft-conflict";
 import { useDraft } from "./drafts/use-draft";
+import { searchLibrary } from "./library";
 import { type Mode, modes } from "./modes";
 import { AttachButton, ReplyFileChips } from "./reply-files";
 import { SendMenu } from "./send-menu";
@@ -365,6 +367,7 @@ function Panel({
           onBlur={() => onTyping(false)}
           onFiles={(picked) => files.add(picked, attachable)}
           findMentions={note ? (query) => mentionables(workspace, conversation, query).then(toMentionables) : undefined}
+          findLibrary={(query) => searchLibrary(client, workspace, query)}
           findSavedReplies={(query) =>
             client.fetchQuery(savedRepliesQuery(workspace, query)).then((found) => found.slice(0, 8))
           }
@@ -538,6 +541,7 @@ export function NoteComposer({ onAdd, reply }: { onAdd: (text: string) => Promis
             onSubmit={() => void add()}
             onBlur={noop}
             onFiles={noop}
+            findLibrary={(query) => searchLibrary(client, workspace, query)}
             findSavedReplies={(query) =>
               client.fetchQuery(savedRepliesQuery(workspace, query)).then((found) => found.slice(0, 8))
             }

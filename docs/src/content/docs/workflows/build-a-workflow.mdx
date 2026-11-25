@@ -5,6 +5,27 @@ description: "Pick a trigger, add steps and branches, use variables in messages,
 
 Open **Workflows** and click **New workflow**, then pick a trigger. You cannot change a workflow's trigger later, and it decides which [steps](/workflows/triggers-and-steps/) appear in the builder.
 
+To skip the blank canvas, pick a template at the top of the same dialog instead. It starts on its trigger with the steps in place:
+
+| Template | Trigger | Steps |
+| --- | --- | --- |
+| **Nudge, then close quiet conversations** | Customer stops replying for 2 days | **Send a message**, **Wait** 3 days (stops if the customer writes), **Send a message**, **Close** |
+| **Route by topic** | Customer sends their first message | **Sort by topic** into Billing, Bug and Sales, each **Assign** to a team |
+| **Ask what they need, then route** | Customer sends their first message, in the messenger | **Reply buttons**: help goes to your AI agent, sales and bugs to a team |
+| **Fast lane for top customers** | Customer sends their first message | **Branch** on who counts as a top customer, then urgent **Set priority**, **Apply an SLA** and **Assign** |
+| **Escalate when the team goes quiet** | Customer waits 4 hours for the team | **Show reply time**, **Set priority** to high, **Add a note** |
+| **Warn before an SLA breaches** | SLA about to breach | **Set priority** to urgent, **Add a note**, **Assign** |
+| **Follow up on a bad rating** | Customer rates the conversation | **Branch** on a rating of 2 or lower, then **Set priority**, **Add a note**, **Assign** |
+| **Catch customers at risk of leaving** | AI attribute changes | **Branch** on the attribute that flags it, then urgent **Set priority**, **Add a note**, **Assign** |
+
+A template leaves empty what only your workspace knows, such as the team or the SLA policy. **To fix before publishing** lists each one.
+
+Some jobs are settings, not workflows. An agent's **Where it answers** picks its channels, its handover leaves a note and goes to its **Hand over to** team, and an SLA policy raises the priority and reassigns the conversation when a target is missed.
+
+## Build it with Operator
+
+Inside the builder, open [Operator](/operator/work-with-operator/) and say what the workflow should do. It writes the steps, changes them ("ask for their order number first") and explains why a workflow did or did not run on a conversation. Its changes show in the builder for you to accept.
+
 ## Choose who the workflow runs for
 
 Click the **Trigger** card to limit which conversations start the workflow:
@@ -21,9 +42,23 @@ Some steps split the workflow into paths based on what happens next:
 - **Reply buttons:** offer 2 to 6 buttons. On channels without buttons (like email), customers can reply with a button's number, its label, or their own words.
 - **Collect data:** asks for an email, name, or phone number and saves it. If the answer is invalid, dimmi asks once more. Typed emails are saved unverified, and only if the customer does not already have one.
 - **Branch:** check up to 10 conditions. The first matching path wins, and anything else goes to **Everyone else**.
-- **Sort by topic:** define 2 to 10 topics and let your workspace's AI model pick the right path from the customer's message.
+- **Sort by topic:** define 2 to 10 topics and let AI pick the right path from the conversation. When the AI is not fairly sure, the conversation takes **None matched**. Give the step a **Name**, such as `topic`, and later steps read the topic it picks as `{{ run.vars.topic }}`. A second sort step starts as `topic_2`; rename it to something clearer.
+- **A/B split:** send conversations down 2 to 4 variants by share, to see which path works better. See [A/B test a path](#ab-test-a-path).
+- **Extract with AI:** pull typed values, like an order number, out of the conversation into variables. Values the AI isn't sure of take a fallback instead of a guess.
 - **Wait:** pause for a set time, or until office hours open.
-- **Call your system:** send an HTTP request to your backend. See [Workflow requests](/developers/workflow-requests/).
+- **Run an action:** call one of your [actions](/ai/actions/) and save what it returns. Workflows made before actions existed may still hold a **Call your system** step; it keeps running, but new workflows use actions.
+
+## A/B test a path
+
+Not sure whether a short greeting or a set of reply buttons gets more conversations resolved? Add an **A/B split** step and put each version on its own path. Each variant gets a share of conversations, and the shares add up to 100%: 50/50, or 90/10 to try something new on a few customers first.
+
+The pick is fixed per conversation. A conversation that reaches the split again, on a later message, takes the same variant, and a simulation started from a past conversation takes the variant a live run of it would. To simulate a particular variant, pick it as the winner in the draft while you test.
+
+To compare the variants, give the workflow a [goal](/workflows/how-workflows-work/#goals-and-analytics), publish it, and select the split. Its results list each variant with how many conversations took it over the last 30 days and how many of those reached the goal.
+
+Once one variant wins, click **Send everyone down this one**, or pick it under **Winner** in the step's settings. The winner is saved to the draft, so nothing changes until you publish. From then on, every conversation goes down the winner and the other paths stop getting new ones.
+
+Through the API, a split is a step of kind `split` whose settings list `variants` (`id`, `label`, `weight`), with each `id` matching one of the step's paths. Set `winner` to a variant's `id` in the draft, then publish. The workflow's metrics carry each variant's `reached` and `goal` under the split's step.
 
 ## Personalize messages with variables
 
@@ -36,6 +71,35 @@ Hi {{contact.first_name | fallback: "there"}}, your order {{run.vars.order_numbe
 - `contact.custom.<key>` reads a custom customer [attribute](/customers/attributes-and-events/).
 - `run.vars.<key>` reads a value saved by an earlier step.
 - If a variable is empty and has no fallback, dimmi leaves it blank.
+
+## Test with simulations
+
+A **simulation** plays a made-up customer through your workflow before anyone real meets it. Open **Simulations** beside the builder and type the customer's first message in the box at the bottom. The **+** picks who writes it: one of your customers, or a made-up one with the plan and details you set. Sending saves the simulation and runs it. Its situation is written from the message; change it once the simulation is open.
+
+An AI customer then plays the chat:
+
+- **Taps buttons** that fit what they came for, or types instead when the step allows it.
+- **Answers collect steps** from their situation, and says nothing when they would not know, so the timeout path runs.
+- **Writes during a wait** or lets it pass at once. A message takes the wait's **Cut short** path, as a real reply would.
+- **Talks to the agent** in a **Let dimmi handle** step, as your agent would answer.
+
+A **Run a workflow** step walks the live workflow it calls right there in the run. Its steps show nested under the call, and both share the same variables.
+
+Nothing leaves the simulation. Messages are not sent. Tags, assignments, notes, tickets, HTTP requests and actions show in the chat where they happened, the way the inbox shows them, but none of them run. Reply time steps work out the real estimate, and article steps name the article they would share.
+
+Under **Answers in place of real calls**, set what each step that calls out gets back:
+
+| Step | Its answer | Without one |
+| --- | --- | --- |
+| **Call your system** | A status and a JSON body. 400 or more takes the failure path. | Succeeds with an empty body. |
+| **Run an action** | A status and the action's result, such as `{"plan": "pro"}`. A status outside 2xx takes the failure path. | Succeeds with nothing saved. The action never runs. |
+| **Extract with AI** | The values it finds, such as `{"order_number": "A-1234"}`. | The AI reads what the customer wrote. |
+
+Extracted values and saved outputs land in the run's variables, so later branches and messages read them.
+
+Each run shows the chat and every step with the path it took. Add checks in plain words ("the workflow tags billing questions"), or pick **Check the path a step takes**. A model judges the written checks and can answer unsure.
+
+Run a simulation on the draft or the live version. **Compare** runs both side by side, so you can see what a change does before you publish it.
 
 ## Publish your workflow
 

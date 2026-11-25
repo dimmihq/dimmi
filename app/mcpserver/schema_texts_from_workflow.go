@@ -38,8 +38,10 @@ func schemaTextsFromWorkflow() map[string]map[string]string {
 			"started_at": "When the run started.",
 			"status": "Where the run stands: running, waiting, completed, passed, exited, canceled, " +
 				"failed or expired.",
-			"steps":   "Every step the run executed, in order, with the path it took and its outcome.",
-			"trigger": "The event that started the run, such as message.customer or ticket.created.",
+			"steps":          "Every step the run executed, in order, with the path it took and its outcome.",
+			"trigger":        "The event that started the run, such as message.customer or ticket.created.",
+			"version_id":     "Id of the published version the run ran on, such as wfv_....",
+			"version_number": "Number of the published version the run ran on.",
 		},
 		"WorkflowRunStep": {
 			"detail": "A few small facts the step kept, such as the member it picked, as an object. " +

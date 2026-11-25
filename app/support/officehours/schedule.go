@@ -345,3 +345,27 @@ func (s *Schedule) BusinessBetween(from, to time.Time) time.Duration {
 
 	return total
 }
+
+/*
+BackAt says when a closed team is back, at next: later today,
+tomorrow, on a weekday this week, or on a date.
+*/
+func (s *Schedule) BackAt(now, next time.Time) string {
+	loc := s.Location()
+	from, at := now.In(loc), next.In(loc)
+	clock := at.Format("15:04")
+
+	day := func(t time.Time) time.Time { return time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, loc) }
+	days := int(day(at).Sub(day(from)).Hours() / 24)
+
+	switch {
+	case days <= 0:
+		return "later today after " + clock
+	case days == 1:
+		return "tomorrow after " + clock
+	case days < 7:
+		return "on " + at.Weekday().String() + " after " + clock
+	}
+
+	return "on " + at.Format("2 January") + " after " + clock
+}

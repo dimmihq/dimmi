@@ -30,6 +30,7 @@ import (
 
 	"github.com/dimmihq/dimmi/app/actions/conversations"
 	"github.com/dimmihq/dimmi/app/actions/messages"
+	"github.com/dimmihq/dimmi/app/actions/series"
 	"github.com/dimmihq/dimmi/app/models"
 	"github.com/dimmihq/dimmi/app/support/prompts"
 )
@@ -53,6 +54,8 @@ const (
 	PageHelpCenter     = "help_center"
 	PageFeatureRequest = "feature_request"
 	PageChangelogEntry = "changelog_entry"
+	PageWorkflow       = "workflow"
+	PageSeries         = "series"
 )
 
 /*
@@ -63,6 +66,8 @@ func (e *Engine) pageKinds() map[string]pageKind {
 		PageArticle:      {prefix: models.PrefixArticle, describe: e.articlePage},
 		PageProcedure:    {prefix: models.PrefixProcedure, describe: e.procedurePage},
 		PageConversation: {prefix: models.PrefixConversation, describe: e.conversationPage},
+		PageWorkflow:     {prefix: models.PrefixWorkflow, describe: e.workflowPage},
+		PageSeries:       {prefix: models.PrefixSeries, describe: e.seriesPage},
 		PageHelpCenter: {
 			prefix: models.PrefixHelpCenter,
 			describe: e.apiPage(apiSource{
@@ -128,6 +133,73 @@ func (e *Engine) procedurePage(ctx context.Context, s *session, id ids.UUID) (st
 		"To change it, call propose_changes with a procedure.edit_draft for procedure_id %s.", p.Name, public,
 		p.Status, e.link(s, linkProcedure, models.PrefixProcedure, p.ID), truncate(string(p.Draft), 20000),
 		public), nil
+}
+
+/*
+workflowPage describes an open workflow in its builder: everything
+get_workflow_by_id reads, with the suggestion open on it when there is
+one.
+*/
+func (e *Engine) workflowPage(ctx context.Context, s *session, id ids.UUID) (string, error) {
+	if e.Services.Workflows == nil {
+		return "", nil
+	}
+	wf, err := e.Services.Workflows.Show(ctx, s.m, id)
+	if err != nil {
+		return "", err
+	}
+	text, err := e.workflowText(ctx, s, wf)
+	if err != nil {
+		return "", err
+	}
+	return "The workflow builder is open on this workflow.\n" + text, nil
+}
+
+/*
+seriesPage describes an open series in its builder.
+*/
+func (e *Engine) seriesPage(ctx context.Context, s *session, id ids.UUID) (string, error) {
+	if e.Services.Series == nil {
+		return "", nil
+	}
+	row, err := e.Services.Series.Show(ctx, s.m, id)
+	if err != nil {
+		return "", err
+	}
+	text, err := e.seriesText(s, row)
+	if err != nil {
+		return "", err
+	}
+	return "The series builder is open on this series.\n" + e.selectedStep(s, row) + text, nil
+}
+
+/*
+selectedStep says which step the teammate has selected in the series
+builder, as the working copy shows it, so "this step" means that one.
+*/
+func (e *Engine) selectedStep(s *session, row models.Series) string {
+	id := strings.TrimSpace(s.viewing.Step)
+	if id == "" {
+		return ""
+	}
+	spec, err := series.SpecOf(row)
+	if err != nil {
+		return ""
+	}
+	if suggested, ok := s.suggestedSeries(row.ID); ok {
+		spec = suggested
+	}
+	for _, n := range spec.Nodes {
+		if n.ID != id {
+			continue
+		}
+		line := fmt.Sprintf("Selected step: %s · %s", n.ID, n.Kind)
+		if len(n.Settings) > 0 {
+			line += " · settings " + truncate(compactJSON(n.Settings), 2000)
+		}
+		return line + "\nWhen the teammate says this step, they mean step " + n.ID + ".\n"
+	}
+	return ""
 }
 
 /*

@@ -110,23 +110,6 @@ func (c *SeriesController) Enroll(ctx context.Context, in *requests.EnrollSeries
 }
 
 /*
-Try enrolls the teammate's own contact as a test journey.
-*/
-func (c *SeriesController) Try(ctx context.Context, in *requests.SeriesRequest) (*SeriesTraceOutput, error) {
-	id, err := c.decode(in.Series)
-	if err != nil {
-		return nil, err
-	}
-
-	e, err := c.Series.TrySelf(ctx, membership(ctx), id)
-	if err != nil {
-		return nil, err
-	}
-
-	return &SeriesTraceOutput{Body: fhttp.NewResource(resources.NewSeriesTrace(e, nil))}, nil
-}
-
-/*
 Trace reads one journey step by step.
 */
 func (c *SeriesController) Trace(ctx context.Context, in *requests.SeriesEnrollmentRequest) (*SeriesTraceOutput,
@@ -155,18 +138,6 @@ func (c *SeriesController) Remove(ctx context.Context, in *requests.SeriesEnroll
 	}
 
 	return &EmptyOutput{}, c.Series.Remove(ctx, membership(ctx), id, journey)
-}
-
-/*
-Skip ends the wait of a test journey now.
-*/
-func (c *SeriesController) Skip(ctx context.Context, in *requests.SeriesEnrollmentRequest) (*EmptyOutput, error) {
-	id, journey, err := c.journey(in)
-	if err != nil {
-		return nil, err
-	}
-
-	return &EmptyOutput{}, c.Series.Skip(ctx, membership(ctx), id, journey)
 }
 
 /*

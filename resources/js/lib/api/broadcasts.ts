@@ -109,6 +109,7 @@ export interface Broadcast {
   reply_team_id: string | null;
   reply_member_id: string | null;
   ai_replies: boolean;
+  reply_agent_id?: string | null;
   track_clicks: boolean;
   skip_frequency_cap: boolean;
   schedule_kind: ScheduleKind;
@@ -143,6 +144,7 @@ export interface BroadcastChanges {
   reply_team_id?: string;
   reply_member_id?: string;
   ai_replies?: boolean;
+  reply_agent_id?: string;
   track_clicks?: boolean;
   skip_frequency_cap?: boolean;
   schedule?: { kind: ScheduleKind; at?: string };

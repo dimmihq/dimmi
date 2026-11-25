@@ -4,7 +4,8 @@
  * bring into the message. Each source opens a searchable list in the
  * same panel: the team's saved replies, the help center's articles, feature requests and changelog
  * entries; typing narrows the list, Enter takes the first match and the
- * down arrow moves into the list. Emoji has a picker of its own. A pick drops in a line
+ * down arrow moves into the list. A picked page goes in as a link that
+ * the editor shows as a chip with its title. Emoji has a picker of its own. A pick drops in a line
  * naming it with its link, so it reaches the customer with the message;
  * a saved reply drops in its text and hands its macro to the composer.
  * Files are not offered until replies can carry them. Moving between the menu
@@ -32,6 +33,7 @@ import type { SavedReply } from "@/lib/api/saved-replies";
 import { cx } from "@/utils/cx";
 
 import { EmojiPicker } from "./composer/emoji-picker";
+import { linkMarkdown } from "./composer/link-token";
 import { useInbox } from "./conversations";
 import { type LibraryItem, type SourceKind, useLibrary } from "./library";
 import { Resize, Swap } from "./motion";
@@ -229,8 +231,11 @@ export function AddMenu({
   onInsert,
   onEmoji,
   onSavedReply,
+  onLink,
 }: {
   onInsert: (text: string) => void;
+  /* Takes a picked page with an address, such as an article, as a link of its own, instead of a line of text. */
+  onLink?: (title: string, url: string) => void;
   onEmoji: (emoji: string) => void;
   onSavedReply: (reply: SavedReply) => void;
 }) {
@@ -249,7 +254,11 @@ export function AddMenu({
       toggle(false);
       return;
     }
-    onInsert(item.url ? `${item.title}: ${item.url}` : item.title);
+    if (item.url && onLink) {
+      onLink(item.title, item.url);
+    } else {
+      onInsert(item.url ? linkMarkdown(item.title, item.url) : item.title);
+    }
     toggle(false);
   };
 

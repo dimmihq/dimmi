@@ -31,7 +31,22 @@ export type NodeKind =
   | "set_attribute"
   | "topic"
   | "webhook"
-  | "exit";
+  | "exit"
+  | "extract"
+  | "run_action";
+
+/*
+ * ExtractValue is one value an extract step writes to the person's
+ * attribute of the same key; fallback is written when the AI is unsure.
+ */
+export interface ExtractValue {
+  key: string;
+  label?: string;
+  description?: string;
+  type: "text" | "number" | "date" | "boolean" | "choice";
+  options?: string[];
+  fallback?: unknown;
+}
 
 export interface Engagement {
   node: string;
@@ -67,6 +82,10 @@ export interface NodeSettings {
   topic_id?: string;
   subscribed?: boolean;
   url?: string;
+  fields?: ExtractValue[];
+  action_id?: string;
+  inputs?: { name: string; value: string }[];
+  save?: { output: string; attribute: string }[];
 }
 
 export interface SeriesNode {
@@ -91,7 +110,8 @@ export interface SeriesSpec {
     reentry: { kind: "once" | "again"; cooldown_days?: number };
   };
   exit: { rules?: AudienceRules; on_goal?: boolean; on_reply?: boolean; on_unsubscribe?: boolean };
-  goal?: { event?: string; rules?: AudienceRules; days: number } | null;
+  /* control_percent holds that share of entrants out, 0 to 50, to measure lift. */
+  goal?: { event?: string; rules?: AudienceRules; days: number; control_percent?: number } | null;
   quiet_hours?: boolean;
   nodes: SeriesNode[];
   edges: SeriesEdge[];
@@ -123,6 +143,7 @@ export interface Series {
   reply_team_id: string | null;
   reply_member_id: string | null;
   ai_replies: boolean;
+  reply_agent_id?: string | null;
   published_at: string | null;
   paused_at: string | null;
   archived_at: string | null;
@@ -148,6 +169,7 @@ export interface SeriesSave {
   reply_team_id?: string;
   reply_member_id?: string;
   ai_replies?: boolean;
+  reply_agent_id?: string;
 }
 
 export interface SeriesStepReport {
@@ -168,6 +190,8 @@ export interface SeriesReport {
   reasons: { reason: string; count: number }[];
   days: { day: string; entered: number; goal: number }[];
   steps: Record<string, SeriesStepReport>;
+  /* Set while a control group is held out, or was. */
+  control?: { percent: number; groups: { group: "control" | "treated"; entered: number; goal: number }[] };
 }
 
 export interface SeriesJourney {
@@ -264,14 +288,6 @@ export function seriesJourneysQuery(workspace: string, id: string, node?: string
   });
 }
 
-export function seriesTraceQuery(workspace: string, id: string, journey: string) {
-  return queryOptions({
-    queryKey: [...seriesKey(workspace), "one", id, "trace", journey] as const,
-    queryFn: () => request<SeriesTrace>("GET", `${path(id)}/enrollments/${journey}`, undefined, { workspace }),
-    refetchInterval: 3_000,
-  });
-}
-
 export function seriesVersionsQuery(workspace: string, id: string) {
   return queryOptions({
     queryKey: [...seriesKey(workspace), "one", id, "versions"] as const,
@@ -304,18 +320,19 @@ export function actOnSeries(workspace: string, id: string, action: SeriesAction)
   return request<Series>("POST", `${path(id)}/${action}`, undefined, { workspace });
 }
 
-export function trySeries(workspace: string, id: string): Promise<SeriesTrace> {
-  return request<SeriesTrace>("POST", `${path(id)}/tests`, {}, { workspace });
-}
-
-export function skipSeriesWait(workspace: string, id: string, journey: string): Promise<void> {
-  return request<void>("POST", `${path(id)}/enrollments/${journey}/skip`, {}, { workspace });
-}
-
 export function removeFromSeries(workspace: string, id: string, journey: string): Promise<void> {
   return request<void>("DELETE", `${path(id)}/enrollments/${journey}`, undefined, { workspace });
 }
 
 export function pickSeriesWinner(workspace: string, id: string, node: string, winner: string): Promise<Series> {
   return request<Series>("POST", `${path(id)}/nodes/${node}/winner`, { path: winner }, { workspace });
+}
+
+/*
+ * restoreSeriesVersion copies a published version into the working copy.
+ */
+export function restoreSeriesVersion(workspace: string, id: string, version: string): Promise<Series> {
+  return request<Series>("POST", `${path(id)}/versions/${encodeURIComponent(version)}/restore`, undefined, {
+    workspace,
+  });
 }

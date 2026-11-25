@@ -3,8 +3,9 @@
  * inside it. Open and closed are one data attribute the stylesheet
  * animates; the panel stays in the page but inert while closed, so it can
  * fade out instead of vanishing, and nothing inside it takes focus or
- * clicks. Opening plays the sound when the customer left it on; restore
- * reopens it silently after the options re-render it.
+ * clicks. Opening is silent; the messenger's two sounds mark messages
+ * coming in and going out. Restore reopens it after the options re-render
+ * it.
  *
  * Exactly one view is current. The tab bar switches between the tabs;
  * pages opened from them (a collection, an article, a changelog entry, a
@@ -36,7 +37,6 @@
 import { Notice } from "../components/notice";
 import type { Incoming } from "../content";
 import { Controller } from "../lib/controller";
-import { pop } from "../lib/sound";
 import { loadThread } from "../lib/threads";
 import type { AiTexts } from "../text";
 
@@ -71,7 +71,7 @@ export class MessengerController extends Controller {
   }
 
   restore(view: string): void {
-    this.#toggle(true, false);
+    this.#toggle(true);
     this.show(view);
   }
 
@@ -89,6 +89,18 @@ export class MessengerController extends Controller {
     this.#push(open);
     if (open.startsWith("article:")) {
       this.dispatch("view", { article: open.slice("article:".length) });
+    }
+  }
+
+  /*
+   * cite opens an article an answer cites in place when the messenger has
+   * it, and otherwise lets its link open the article in a new tab.
+   */
+  cite(event: Event): void {
+    const open = (event.target as Element).closest<HTMLElement>("[data-open]")?.dataset.open;
+    if (open && this.#view(open)) {
+      event.preventDefault();
+      this.visit(event);
     }
   }
 
@@ -118,6 +130,7 @@ export class MessengerController extends Controller {
     this.#preview(message);
 
     if (this.isOpen && this.tab === "conversation") {
+      this.replied();
       return;
     }
 
@@ -137,8 +150,30 @@ export class MessengerController extends Controller {
       notice.innerHTML = String(Notice({ message, ai }));
       notice.hidden = false;
     }
-    if (this.element.dataset.sound === "true") {
-      pop();
+    this.replied();
+  }
+
+  /*
+   * replied plays the "in" sound for a message arriving from the team or
+   * the AI agent, and sent the "out" sound for the visitor's own message
+   * leaving, each unless the settings turned it or all sound off.
+   */
+  replied(): void {
+    this.#play("in", this.element.dataset.replySound);
+  }
+
+  sent(): void {
+    this.#play("out", this.element.dataset.sentSound);
+  }
+
+  /*
+   * play plays a sound unless the messenger's sound or that sound is off.
+   * The sounds load on first use, so a page that never hears one never
+   * fetches them.
+   */
+  #play(sound: "in" | "out", setting: string | undefined): void {
+    if (this.element.dataset.sound === "true" && setting !== "none") {
+      void import("../lib/sound").then((sounds) => sounds.play(sound));
     }
   }
 
@@ -352,6 +387,11 @@ export class MessengerController extends Controller {
 
     view.dataset.state = "loading";
     view.setAttribute("aria-busy", "true");
+    // A connected messenger still waiting on what this view shows leaves
+    // it loading; the connection takes it off once everything arrived.
+    if ((this.element.dataset.waiting ?? "").split(" ").includes(view.dataset.view ?? "")) {
+      return;
+    }
     const arrive = () => {
       view.dataset.state = "ready";
       view.removeAttribute("aria-busy");
@@ -411,7 +451,7 @@ export class MessengerController extends Controller {
     }
   }
 
-  #toggle(open: boolean, sound = true): void {
+  #toggle(open: boolean): void {
     if (open === this.isOpen) {
       return;
     }
@@ -429,9 +469,6 @@ export class MessengerController extends Controller {
     const current = this.#view(this.tab);
     if (open && current) {
       this.#load(current);
-    }
-    if (open && sound && this.element.dataset.sound === "true") {
-      pop();
     }
     this.dispatch(open ? "open" : "close");
   }

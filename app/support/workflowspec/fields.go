@@ -24,7 +24,7 @@ import (
 Catalog returns the fields workflow rules may read.
 */
 func Catalog() *audience.Catalog {
-	fields := slices.Concat(conversationFields(), eventFields(), ticketFields(), ticketEventFields())
+	fields := slices.Concat(conversationFields(), eventFields(), ticketFields(), ticketEventFields(), aiFields())
 
 	return audience.Base().With(fields...)
 }
@@ -48,6 +48,7 @@ func conversationFields() []audience.Field {
 		f("conversation.assignee_id", audience.TypeID),
 		f("conversation.team_id", audience.TypeID),
 		f("conversation.ai_state", audience.TypeList),
+		f("conversation.ai_agent_id", audience.TypeID),
 		f("conversation.subject", audience.TypeString),
 		f("conversation.message_count", audience.TypeNumber),
 		f("conversation.waiting_minutes", audience.TypeNumber),
@@ -80,6 +81,8 @@ func eventFields() []audience.Field {
 		on("note.body", audience.TypeString, audience.Observed, TriggerNoteCreated),
 		on("rating.score", audience.TypeNumber, audience.Claimed, TriggerRated),
 		on("dimmi.handover_reason", audience.TypeList, audience.Observed, TriggerDimmiHandedOver),
+		on("agent.from_id", audience.TypeID, audience.Observed, TriggerAgentTransferred),
+		on("agent.to_id", audience.TypeID, audience.Observed, TriggerAgentTransferred),
 		on("trigger.to", audience.TypeList, audience.Observed, TriggerStatusChanged, TriggerAssignmentChanged),
 		on("trigger.from", audience.TypeList, audience.Observed, TriggerStatusChanged),
 		on("trigger.reason", audience.TypeString, audience.Observed, TriggerStatusChanged),

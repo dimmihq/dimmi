@@ -124,9 +124,38 @@ func workflowCreateDoc() Doc {
 			"trigger": "conversation.opener, conversation.first_message, conversation.customer_reopened, " +
 				"message.customer, conversation.customer_quiet, conversation.rated, message.teammate, " +
 				"note.created, conversation.assignment_changed, conversation.status_changed, " +
-				"conversation.teammate_quiet, dimmi.handed_over, dimmi.resolved, sla.warning, sla.breached " +
+				"conversation.teammate_quiet, conversation.ai_attribute_changed, dimmi.handed_over, " +
+				"dimmi.resolved, agent.transferred, sla.warning, sla.breached, the ticket triggers " +
 				"or reusable (called from other workflows).",
 			"spec": "A whole definition to start from, in the shape dimmi_get_workflow_by_id returns.",
+		},
+	}
+}
+
+/*
+workflowMetricsDocs returns the entries for a workflow's analytics and
+its failed runs.
+*/
+func workflowMetricsDocs() map[string]Doc {
+	return map[string]Doc{
+		"workflows.metrics.show": {
+			Title: "Get a workflow's analytics",
+			Use: "Reads a workflow's numbers over a range: runs started, completed, handed over and failed, " +
+				"its goal, each day, and each step's reached, waiting, failed and drop-off counts.",
+			Returns: "the workflow's numbers, with each step's by step id.",
+			Params: map[string]string{
+				"from": "First day, YYYY-MM-DD; 30 days ago when left out.", "to": "Last day, YYYY-MM-DD.",
+				"version": "Only runs on this published version number; 0 counts every version.",
+			},
+		},
+		"workflows.failures.index": {
+			Title:   "List a workflow's failed runs",
+			Use:     "Lists the runs of a workflow where a step failed, newest first, each with its conversation.",
+			Returns: "the failed runs with the first failing step, and next_cursor for more.",
+			Params: map[string]string{
+				"from": "First day, YYYY-MM-DD.", "to": "Last day, YYYY-MM-DD.", "step_id": "Only this step.",
+				"before": "Run id (wfr_...) to read on from.", "limit": "How many to answer, at most 100.",
+			},
 		},
 	}
 }

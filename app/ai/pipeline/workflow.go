@@ -4,12 +4,13 @@
 |--------------------------------------------------------------------------
 |
 | A conversation a workflow holds hears from the agent only while one
-| of the workflow's steps lets dimmi handle it. That step's settings
-| live on the run waiting on it, and every turn reads them there: extra
-| guidance, a reply limit and whether answers ask the customer to
-| confirm. Inside such a step the workflow routes a handoff down its
-| own path, so the agent's own handoff routing stays out of it. A
-| customer confirming an answer is the workflow's to act on, never a
+| of the workflow's steps hands it to an agent. That step's settings
+| live on the run waiting on it, and every turn reads them there: which
+| agent answers, whether it may transfer and whether answers ask the
+| customer to confirm. The agent keeps its own guidance and procedures.
+| Inside such a step the workflow routes a handoff down its own path,
+| so the agent's own handoff routing stays out of it. A customer
+| confirming an answer is the workflow's to act on, never a
 | new question for the agent.
 |
 */
@@ -69,21 +70,8 @@ func applyWorkflowStep(e *env, s *TurnSettings) {
 	}
 
 	s.Workflow.StepActive = true
-	s.Instructions = step.Instructions
 	s.ConfirmResolution = step.ConfirmResolution
 	s.HandoffTeamID, s.RaisePriority = nil, false
-	if step.MaxReplies > 0 {
-		s.MaxReplies = int32(min(step.MaxReplies, 50))
-	}
-}
-
-/*
-confirmsAnswer reports whether the pending message confirms the
-agent's answer right before it, which the workflow resolves.
-*/
-func confirmsAnswer(e *env, s *TurnSettings) bool {
-	return s.Workflow.StepActive && s.ConfirmResolution &&
-		e.ReplyAfter == string(enums.AuthorTypeAgent) && resolution.Confirms(e.pendingText())
 }
 
 /*
@@ -96,4 +84,28 @@ func withConfirmation(text string, st *run, d *decision) string {
 	}
 
 	return text + "\n\n" + resolution.Prompt
+}
+
+/*
+loadWorkflowAnswered notes whether a workflow took the trigger: a
+customer-facing run that acted held the conversation when it arrived,
+or started on it. Once that run let go of the conversation, the agent
+answers from the customer's next message, never the one the workflow
+took.
+*/
+func loadWorkflowAnswered(ctx context.Context, q *models.Queries, e *env) error {
+	if e.Conversation.AiMode == "workflow" || e.Trigger.AuthorType != string(enums.AuthorTypeContact) {
+		return nil
+	}
+
+	handled, err := q.WorkflowHandledSince(ctx, models.WorkflowHandledSinceParams{
+		WorkspaceID: e.Conversation.WorkspaceID, ConversationID: &e.Conversation.ID, Since: &e.Trigger.CreatedAt,
+	})
+	if err != nil {
+		return fmt.Errorf("check workflow answered: %w", err)
+	}
+
+	e.WorkflowAnswered = handled
+
+	return nil
 }

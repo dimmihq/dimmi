@@ -8,7 +8,7 @@ import type { Child } from "widget-jsx/jsx-runtime";
 
 import type { TicketBlock, TicketField, TicketType } from "../content";
 import { type Words, word } from "../lib/ticket_words";
-import { ArrowUpIcon, BackIcon, ChevronRightIcon } from "./icons";
+import { BackIcon, CheckIcon, ChevronDownIcon, ChevronRightIcon } from "./icons";
 
 function TypeIcon({ icon }: { icon: string }) {
   const paths: Record<string, string> = {
@@ -106,6 +106,59 @@ export function Strip({ ticket, texts }: { ticket: TicketBlock; texts: Words }) 
   );
 }
 
+/*
+ * Option is one checkbox card: the real checkbox stays in the form,
+ * hidden, and a drawn box in the brand's colour shows its state.
+ */
+function Option({ name, value, children }: { name: string; value: string; children: Child }) {
+  return (
+    <label className="ticket-option">
+      <input type="checkbox" name={name} value={value} />
+      <span className="ticket-box" aria-hidden="true">
+        <CheckIcon className="ticket-box-tick" />
+      </span>
+      <span>{children}</span>
+    </label>
+  );
+}
+
+/*
+ * Select is a single choice drawn by the messenger rather than the
+ * browser: a trigger that shows the pick, and a menu of real radio
+ * inputs, so the form reads and checks it like any other field.
+ */
+function Select({
+  name,
+  label,
+  options,
+  placeholder,
+}: {
+  name: string;
+  label: string;
+  options: string[];
+  placeholder: string;
+}) {
+  return (
+    <details className="ticket-select" data-select>
+      <summary className="ticket-trigger" aria-label={label}>
+        <span className="ticket-value" data-select-label data-empty="true">
+          {placeholder}
+        </span>
+        <ChevronDownIcon className="ticket-chevron" />
+      </summary>
+      <div className="ticket-menu" role="radiogroup" aria-label={label} popover="manual">
+        {options.map((option) => (
+          <label className="ticket-menu-item" key={option}>
+            <input type="radio" name={name} value={option} />
+            <span className="ticket-menu-text">{option}</span>
+            <CheckIcon className="ticket-tick" />
+          </label>
+        ))}
+      </div>
+    </details>
+  );
+}
+
 function Input({ field, texts }: { field: TicketField; texts: Words }) {
   const name = `field.${field.key}`;
   const required = field.required || undefined;
@@ -115,35 +168,24 @@ function Input({ field, texts }: { field: TicketField; texts: Words }) {
     case "long_text":
       return <textarea name={name} rows={3} required={required} aria-label={label} />;
     case "single_choice":
-      return (
-        <select name={name} required={required} aria-label={label}>
-          <option value="">{word(texts, "ticket_choose")}</option>
-          {field.options.map((option) => (
-            <option value={option} key={option}>
-              {option}
-            </option>
-          ))}
-        </select>
-      );
+      return <Select name={name} label={label} options={field.options} placeholder={word(texts, "ticket_choose")} />;
     case "multiple_choice":
       return (
-        <span className="choices">
+        <fieldset className="ticket-options" aria-label={label}>
           {field.options.map((option) => (
-            <label key={option}>
-              <input type="checkbox" name={name} value={option} />
+            <Option name={name} value={option} key={option}>
               {option}
-            </label>
+            </Option>
           ))}
-        </span>
+        </fieldset>
       );
     case "boolean":
       return (
-        <span className="choices">
-          <label>
-            <input type="checkbox" name={name} value="true" />
+        <fieldset className="ticket-options" aria-label={label}>
+          <Option name={name} value="true">
             {word(texts, "ticket_yes")}
-          </label>
-        </span>
+          </Option>
+        </fieldset>
       );
     case "file":
       return <input type="file" name={name} multiple aria-label={word(texts, "ticket_attach")} />;
@@ -181,7 +223,7 @@ function Field({
         {label}
         {optional ? <em> ({optional})</em> : null}
       </span>
-      {field?.description ? <small>{field.description}</small> : null}
+      {field?.description ? <small className="ticket-hint">{field.description}</small> : null}
       {children}
     </div>
   );
@@ -209,11 +251,44 @@ export function Form({ type, texts }: { type: TicketType; texts: Words }) {
           <Input field={field} texts={texts} />
         </Field>
       ))}
-      <button className="button primary wide" type="submit">
-        {word(texts, "ticket_send")}
-        <ArrowUpIcon />
-      </button>
+      <div className="ticket-actions">
+        <button className="button primary wide ticket-submit" type="submit">
+          <span className="ticket-submit-label">{word(texts, "ticket_send")}</span>
+          <ChevronRightIcon className="ticket-caret" />
+          <span className="ticket-spinner" aria-hidden="true" />
+        </button>
+      </div>
     </form>
+  );
+}
+
+/*
+ * Sent is the page a request lands on once sent: a tick that draws
+ * itself, what was sent, where the reply will come, and the way to the
+ * request's conversation, pinned at the bottom like the form's button.
+ */
+export function Sent({ type, title, texts }: { type: TicketType; title: string; texts: Words }) {
+  return (
+    <div className="ticket-sent" role="status">
+      <div className="ticket-sent-body">
+        <svg className="ticket-sent-mark" viewBox="0 0 64 64" aria-hidden="true">
+          <circle className="ticket-sent-ring" cx="32" cy="32" r="28" />
+          <path className="ticket-sent-tick" d="m21 33 7.5 7.5L43 25" />
+        </svg>
+        <h3>{word(texts, "ticket_sent")}</h3>
+        <p>{word(texts, "ticket_sent_body")}</p>
+        <div className="ticket-sent-card">
+          <small className="ticket-sent-type">{type.name}</small>
+          <strong className="ticket-sent-title">{title}</strong>
+        </div>
+      </div>
+      <div className="ticket-actions">
+        <button className="button primary wide ticket-submit" type="button" data-ticket-view>
+          <span className="ticket-submit-label">{word(texts, "ticket_view")}</span>
+          <ChevronRightIcon className="ticket-caret" />
+        </button>
+      </div>
+    </div>
   );
 }
 

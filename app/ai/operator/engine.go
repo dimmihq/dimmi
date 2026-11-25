@@ -38,6 +38,9 @@ import (
 	"github.com/dimmihq/dimmi/app/actions/knowledge"
 	"github.com/dimmihq/dimmi/app/actions/messages"
 	"github.com/dimmihq/dimmi/app/actions/procedures"
+	"github.com/dimmihq/dimmi/app/actions/series"
+	"github.com/dimmihq/dimmi/app/actions/workflows"
+	"github.com/dimmihq/dimmi/app/actions/workflowsims"
 	"github.com/dimmihq/dimmi/app/ai/actionkit"
 	"github.com/dimmihq/dimmi/app/auth/authz"
 	appbroadcasting "github.com/dimmihq/dimmi/app/broadcasting"
@@ -66,10 +69,14 @@ type Services struct {
 	Contacts   *contacts.UpdateContact
 	Articles   *helpcenters.Articles
 	Procedures *procedures.Procedures
-	Audit      *audit.RecordAuditLog
-	Actions    *actionkit.Kit
-	GitHub     GitHub
-	Memory     Memory
+	Workflows  *workflows.Workflows
+	Series     *series.Series
+	/* WorkflowSims plays a workflow once, for Operator to try what it built. */
+	WorkflowSims *workflowsims.Simulations
+	Audit        *audit.RecordAuditLog
+	Actions      *actionkit.Kit
+	GitHub       GitHub
+	Memory       Memory
 }
 
 /*
@@ -145,7 +152,7 @@ var (
 	ErrNoModel  = fault.New(fault.Conflict, "operator_no_model",
 		"Operator needs an AI connection. Connect one in Settings, AI.")
 	ErrCapped = fault.New(fault.Conflict, "ai_spend_capped",
-		"This month's AI spend reached its cap, so Operator is paused until the cap is raised.")
+		"This month's spend reached the workspace's cap, so Operator is paused until the cap is raised.")
 )
 
 /*

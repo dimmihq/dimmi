@@ -10,7 +10,8 @@
 |
 | A conversation that bulk mail opened is closed straight away, and a
 | teammate's forward leaves an internal note with their comment, so the
-| team knows who handed the customer over.
+| team knows who handed the customer over. Outside office hours, the
+| address may answer a new conversation with its away reply.
 |
 */
 
@@ -44,6 +45,7 @@ type persisting struct {
 	insp  inspection
 	plan  plan
 	ownID string
+	tx    *database.Tx
 	q     *models.Queries
 	conv  models.Conversation
 	msg   models.Message
@@ -55,9 +57,11 @@ the message is stored.
 */
 func (a *ProcessInboundEmail) afterPersist(p persisting) contracts.AfterPersist {
 	return func(ctx context.Context, tx *database.Tx, conv models.Conversation, msg models.Message) error {
-		p.q, p.conv, p.msg = models.New(tx), conv, msg
+		p.tx, p.q, p.conv, p.msg = tx, models.New(tx), conv, msg
 
-		steps := []func(context.Context, persisting) error{a.fileRefs, a.ensureThread, a.settle, a.markOutcome}
+		steps := []func(context.Context, persisting) error{
+			a.fileRefs, a.ensureThread, a.settle, a.awayReply, a.markOutcome,
+		}
 		for _, step := range steps {
 			if err := step(ctx, p); err != nil {
 				return err

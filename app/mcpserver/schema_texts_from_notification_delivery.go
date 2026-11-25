@@ -280,12 +280,14 @@ func schemaTextsFromOperatorOperation() map[string]map[string]string {
 				"operation is applied; left out before.",
 			"conversation_number": "Number of the conversation the operation changes. Left out when it " +
 				"does not change one.",
-			"created_id": "Id of what the operation made once applied: the note (starts with msg_) or " +
-				"the article (starts with art_). Left out otherwise.",
+			"created_id": "Id of what the operation made once applied: the note (starts with msg_), " +
+				"the article (starts with art_), the workflow (starts with wf_) or the series (starts with " +
+				"srs_). Left out otherwise.",
 			"help_center_id": "Id of the help center a new article goes in (starts with hc_). Left out " +
 				"for other kinds.",
 			"kind": "What it does: conversation.tag, .untag, .assign, .priority, .status, .title or " +
-				".note, contact.update, article.create_draft, article.edit_draft, procedure.edit_draft or " +
+				".note, contact.update, article.create_draft, article.edit_draft, procedure.edit_draft, " +
+				"workflow.edit_draft, series.edit_draft or " +
 				"action.run.",
 			"label": "One line saying what the operation does, for a reviewer to read.",
 			"outcome": "What became of it: applied, reverted or skipped. Left out until the changeset " +
@@ -294,8 +296,12 @@ func schemaTextsFromOperatorOperation() map[string]map[string]string {
 				"for other kinds.",
 			"text": "The full text it writes, such as a note, an article body or a procedure's working " +
 				"copy, to read before applying. Left out when the label says it all.",
+			"series_id": "Id of the series whose working copy the operation changes (starts with srs_). " +
+				"Left out for other kinds.",
 			"title":      "Title of the article it creates or retitles. Left out for other kinds.",
 			"visibility": "Whether a new article is public or agent_only. Left out for other kinds.",
+			"workflow_id": "Id of the workflow whose working copy the operation changes (starts with wf_). " +
+				"Left out for other kinds.",
 		},
 		"OperatorRecentSuggestion": {
 			"changes": "One line per change the suggestion holds, saying what it does.",

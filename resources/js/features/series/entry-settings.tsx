@@ -1,12 +1,15 @@
 /*
  * The settings of the whole series, on its entry step. Who enters: by
  * rules, by an event, or only by hand; whether people already matching
- * join when it goes live; whether someone can travel it again. The goal
- * and the rules and moments that take people out early. Then how its
+ * join when it goes live; whether someone can travel it again. The goal,
+ * with the share of people held out as a control group, and the rules
+ * and moments that take people out early. Then how its
  * messages go out: from which address and teammate, under which topic,
  * whether email keeps to the day in the person's zone, and where replies
  * land.
  */
+import { useQuery } from "@tanstack/react-query";
+
 import {
   useActiveMembers,
   useAudiences,
@@ -16,6 +19,7 @@ import {
   useTopics,
 } from "@/features/broadcasts/sources";
 import { Row, Section } from "@/features/settings/layout";
+import { agentsQuery } from "@/lib/api/agents";
 import type { SeriesSpec } from "@/lib/api/series";
 
 import { Amount, Flag, Pick, Rules } from "./inputs";
@@ -157,7 +161,7 @@ export function EntrySettings({
             value={spec.goal?.event || "_none"}
             options={[["_none", "No goal"], ...eventOptions]}
             onChange={(event) =>
-              onSpec({ ...spec, goal: event === "_none" ? null : { event, days: spec.goal?.days ?? 14 } })
+              onSpec({ ...spec, goal: event === "_none" ? null : { ...spec.goal, event, days: spec.goal?.days ?? 14 } })
             }
             disabled={!editable}
           />
@@ -169,6 +173,26 @@ export function EntrySettings({
                 label="Goal window"
                 value={spec.goal.days}
                 onChange={(days) => onSpec({ ...spec, goal: { ...spec.goal, days } })}
+                disabled={!editable}
+              />
+            </Row>
+            <Row
+              label="Control group, percent"
+              description="This share of people enters but gets nothing, so the results show what the series adds."
+            >
+              <Amount
+                label="Control group percent"
+                value={spec.goal.control_percent ?? 0}
+                onChange={(percent) =>
+                  onSpec({
+                    ...spec,
+                    goal: {
+                      ...spec.goal,
+                      days: spec.goal?.days ?? 14,
+                      control_percent: Math.min(Math.max(percent, 0), 50),
+                    },
+                  })
+                }
                 disabled={!editable}
               />
             </Row>
@@ -240,6 +264,7 @@ function SendingSettings({
   const addresses = useEmailAddresses(workspace);
   const members = useActiveMembers(workspace);
   const teams = useTeams(workspace);
+  const agents = useQuery(agentsQuery(workspace)).data ?? [];
   const topics = useTopics(workspace);
   const set = (change: Partial<Sending>) => onSending({ ...sending, ...change });
   const memberOptions = members.map((m): [string, string] => [m.id, m.user.name || m.user.email]);
@@ -312,14 +337,25 @@ function SendingSettings({
           disabled={!editable}
         />
       </Row>
-      <Row label="dimmi answers replies">
+      <Row label="An AI agent answers replies">
         <Flag
-          label="dimmi answers replies"
+          label="An AI agent answers replies"
           on={sending.ai_replies}
           onChange={(ai_replies) => set({ ai_replies })}
           disabled={!editable}
         />
       </Row>
+      {sending.ai_replies ? (
+        <Row label="Answered by">
+          <Pick
+            label="Answered by"
+            value={sending.reply_agent_id || "placed"}
+            options={[["placed", "Agent on the channel"], ...agents.map((a): [string, string] => [a.id, a.name])]}
+            onChange={(id) => set({ reply_agent_id: id === "placed" ? "" : id })}
+            disabled={!editable}
+          />
+        </Row>
+      ) : null}
     </Section>
   );
 }

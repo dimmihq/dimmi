@@ -5,7 +5,8 @@
 |
 | A run as the builder shows it: how it ended, what started it, the
 | conversation it worked and the run that called it, with every step
-| it executed, the path it took and the facts the step kept.
+| it executed, the path it took and the facts the step kept, and the
+| version that handled it.
 |
 */
 
@@ -32,6 +33,8 @@ type WorkflowRun struct {
 	Trigger        string            `json:"trigger"`
 	ConversationID *string           `json:"conversation_id"`
 	ParentRunID    *string           `json:"parent_run_id"`
+	VersionID      *string           `json:"version_id"`
+	VersionNumber  *int32            `json:"version_number"`
 	StartedAt      time.Time         `json:"started_at"`
 	EndedAt        *time.Time        `json:"ended_at"`
 	Steps          []WorkflowRunStep `json:"steps"`
@@ -63,6 +66,11 @@ func NewWorkflowRuns(traces []workflows.RunTrace) []WorkflowRun {
 			EndReason: r.EndReason, Trigger: r.Trigger, StartedAt: r.StartedAt, EndedAt: r.EndedAt,
 			ConversationID: publicOrNil(models.PrefixConversation, r.ConversationID),
 			ParentRunID:    publicOrNil(models.PrefixWorkflowRun, r.ParentRunID), Steps: []WorkflowRunStep{},
+			VersionID: publicOrNil(models.PrefixWorkflowVersion, r.VersionID),
+		}
+
+		if t.VersionNumber > 0 {
+			run.VersionNumber = &t.VersionNumber
 		}
 
 		for _, s := range t.Steps {

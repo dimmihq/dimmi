@@ -76,6 +76,9 @@
   "ticket_required": "יש למלא שדה זה",
   "ticket_resolved": "נפתרה",
   "ticket_send": "שליחת בקשה",
+  "ticket_sent": "הבקשה נשלחה",
+  "ticket_sent_body": "נענה כאן בהודעות שלך, ואפשר לעקוב אחריה בכל עת.",
+  "ticket_view": "צפייה בבקשה",
   "ticket_subject": "נושא",
   "ticket_submitted": "נשלחה",
   "ticket_yes": "כן",
@@ -92,5 +95,6 @@
   "verify_send": "שליחת קוד",
   "verify_sent": "הזינו את הקוד בן 6 הספרות ששלחנו אל {email}",
   "verify_submit": "אימות",
-  "welcome_message": ""
+  "welcome_message": "",
+  "more_sources": "עוד {count}"
 }

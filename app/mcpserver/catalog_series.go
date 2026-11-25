@@ -135,5 +135,7 @@ func seriesParams() map[string]string {
 		"reply_team_id":    "Team (team_...) that gets the replies.",
 		"reply_member_id":  "Teammate (mem_...) who gets the replies.",
 		"ai_replies":       "true lets the AI agent answer replies.",
+		"reply_agent_id": "The AI agent (aia_...) that answers replies when ai_replies is true; empty " +
+			"leaves it to the agent placed on the channel.",
 	}
 }

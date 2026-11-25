@@ -15,10 +15,6 @@ schemaTextsFromCatalogEntry returns the texts from CatalogEntry on.
 func schemaTextsFromCatalogEntry() map[string]map[string]string {
 	return map[string]map[string]string{
 		"CatalogEntry": {
-			"input_per_mtok": "Price in US dollars per million input tokens, as a decimal string. Null " +
-				"when the price list does not know this model.",
-			"output_per_mtok": "Price in US dollars per million output tokens, as a decimal string. " +
-				"Null when the price list does not know this model.",
 			"suggested": "The jobs this model is suggested for: any of answer, classifier and " +
 				"fallback.",
 		},
@@ -207,8 +203,12 @@ func schemaTextsFromConfig() map[string]map[string]string {
 				"200. Defaults to 20.",
 			"position":      "The side of the page the launcher sits on: right or left.",
 			"primary_color": "The messenger's brand color as #RRGGBB, such as #1f2328.",
-			"sound":         "True when the messenger plays a sound for new messages.",
-			"theme":         "The messenger's color theme: light, dark or auto to follow the visitor's device.",
+			"reply_sound": "Whether a message coming in makes the messenger's incoming sound: none turns " +
+				"it off; pop, chime, bubble, swoosh and tick all turn it on.",
+			"sent_sound": "Whether a message the visitor sends makes the messenger's outgoing sound: " +
+				"none turns it off; pop, chime, bubble, swoosh and tick all turn it on.",
+			"sound": "True when the messenger plays a sound for new messages.",
+			"theme": "The messenger's color theme: light, dark or auto to follow the visitor's device.",
 		},
 		"ConfigBackground": {
 			"fade":      "True when the background softens into the page below it.",

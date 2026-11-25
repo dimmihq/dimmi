@@ -24,6 +24,8 @@ Operator always runs with **your own role and permissions**. It only reads conve
 - **Recommend with reasons:** when it suggests a teammate, a team, a tag or a priority, it says why. It looks at what your team did with similar conversations and cites them: "Assign to Maya: she handled 6 of the 8 similar conversations."
 - **Propose edits:** updates tags, assignment, priority, status, notes, customer names, article drafts, procedure drafts, and saved procedure simulations through [changesets](/operator/changesets/).
 - **Audit procedures:** reviews recent failed [procedure](/ai/procedure-versions/) runs and proposes working-copy fixes alongside [simulations](/ai/test-procedures/) made from the failing chats.
+- **Build and tune automation:** on a workflow's or series' page, tell Operator what you want to fix or grow, such as slow billing replies or more trials turning paid. It looks at your conversations, reports and events first, builds the steps, tries them with simulations, and tells you why it built it that way. Nothing is saved or sent while it tries, and nothing runs until you publish. It also reads how a live one is doing and suggests the one or two changes that would help most.
+- **Explain automation:** says why a [workflow](/workflows/build-a-workflow/) did or did not run on a conversation, and what a [series](/outbound/series/) did with a person: each step of their journey, what it waits for, the messages it sent, and which entry rule kept them out.
 - **Run workspace actions:** calls [actions](/ai/actions/) where **Operator** is ticked under **Used by**. Read lookups run right away; actions that change data always wait as a changeset.
 - **Remember your preferences:** tell Operator how you like summaries or drafts formatted. Your memories are private to you and can be deleted anytime in **Settings → Operator**.
 
@@ -40,4 +42,4 @@ Admins manage Operator in **Settings → Operator**:
 | **Model** | GPT-6 Luna | Runs on your agent's AI connection (falls back to the agent's answer model if unavailable). |
 | **Instructions** | Empty | Team guidance Operator follows on every question. |
 
-Operator usage counts toward the dimmi agent's [monthly spend cap](/ai/providers/#set-the-monthly-cap) and stops if the cap is reached. Track Operator runs and spend on the **Operator** tab of the **Agent** page.
+Operator usage counts toward the dimmi agent's [monthly spend cap](/ai/providers/#set-the-monthly-cap) and stops if the cap is reached. Track Operator runs on Operator's **Overview** and **Activity** tabs.

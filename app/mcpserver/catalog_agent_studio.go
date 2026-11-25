@@ -24,6 +24,7 @@ func agentStudioDocs() map[string]Doc {
 	for _, part := range []map[string]Doc{
 		agentListDocs(), agentDraftDocs(), agentVersionDocs(), agentPastVersionDocs(), agentPreviewDocs(),
 		agentSimulationDocs(), agentSimulationEditDocs(), agentSimulationRunDocs(), sharedAIDocs(),
+		workflowSimulationDocs(), workflowSimulationRunDocs(), aiAttributeDocs(),
 	} {
 		maps.Copy(out, part)
 	}
@@ -110,11 +111,13 @@ func agentDraftDocs() map[string]Doc {
 				"what is set now.",
 		},
 		"ai.agents.destroy": {
-			Title: "Delete an AI agent",
-			Use: "Deletes an agent that is not the default, with its versions and simulations. Conversations it " +
-				"would have taken go to the default agent.",
+			Title: "Archive an AI agent",
+			Use: "Archives an agent that is not the default: it is switched off and leaves the list, while " +
+				"its conversations, versions and history stay. It is refused with agent_in_use while " +
+				"anything still relies on the agent; the error lists each tie.",
 			Returns: "nothing.",
-			Hint:    "The default agent cannot be deleted; switch it off with dimmi_unpublish_ai_agent instead.",
+			Hint: "Read the agent's ties with dimmi_get_ai_agent_by_id and move each to another agent " +
+				"first. The default agent cannot be archived; switch it off with dimmi_unpublish_ai_agent instead.",
 		},
 	}
 }
@@ -337,9 +340,9 @@ func sharedAIDocs() map[string]Doc {
 		},
 		"ai.settings.update": {
 			Title:   "Change shared AI settings",
-			Use:     "Changes the models every agent falls back on, or the workspace's monthly AI spend cap.",
+			Use:     "Changes the models every agent falls back on, or the workspace's monthly spend cap.",
 			Returns: "the settings as saved.",
-			Next:    []string{"dimmi_get_ai_usage: see the month's spend against the cap"},
+			Next:    []string{"dimmi_get_ai_usage: see the month's runs and how they ended"},
 			Risk:    new(RiskReach),
 			Hint:    "Only the fields sent change. Find provider keys with dimmi_list_ai_keys.",
 		},

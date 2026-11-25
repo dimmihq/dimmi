@@ -71,18 +71,6 @@ WHERE workspace_id = @workspace_id AND conversation_id = @conversation_id
 ORDER BY created_at DESC
 LIMIT @page_limit;
 
--- name: SetLatestAnswerFeedback :execrows
--- SetLatestAnswerFeedback records the customer's verdict on the
--- conversation's newest answered run.
-UPDATE ai_runs AS ar SET feedback = @feedback, updated_at = @now
-WHERE ar.workspace_id = @workspace_id
-  AND ar.id = (
-      SELECT r.id FROM ai_runs r
-      WHERE r.workspace_id = @workspace_id AND r.conversation_id = @conversation_id
-        AND r.status = 'completed' AND r.outcome = 'answered'
-      ORDER BY r.created_at DESC, r.id DESC LIMIT 1
-  );
-
 -- name: PruneAiRuns :execrows
 -- PruneAiRuns deletes up to a batch of the workspace's runs older than
 -- the cutoff, of one kind when a kind is given; their steps go with

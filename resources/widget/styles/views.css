@@ -33,6 +33,7 @@ h2 {
 }
 
 .empty {
+  animation: enter 260ms var(--out);
   display: flex;
   flex-direction: column;
   align-items: center;

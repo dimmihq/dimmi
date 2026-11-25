@@ -71,7 +71,7 @@ func TestOperatorRoutines(t *testing.T) {
 	t.Run("creates a routine from a template", func(t *testing.T) {
 		t.Parallel()
 		k := newDesk(t)
-		k.d.Owner.GetJSON("/api/v1/operator/routine-templates").AssertOK().AssertJSONPath("data.#", float64(11))
+		k.d.Owner.GetJSON("/api/v1/operator/routine-templates").AssertOK().AssertJSONPath("data.#", float64(12))
 
 		res := k.d.Owner.PostJSON("/api/v1/operator/routines", testkit.JSON{
 			"template_key": operator.TemplateKnowledgeGaps,

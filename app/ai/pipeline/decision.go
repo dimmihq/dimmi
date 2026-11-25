@@ -67,7 +67,10 @@ type decision struct {
 
 /*
 citation is one source an answer cites, as the message metadata keeps
-it for the widget and the channels to render.
+it for the widget and the channels to render. Excerpt is a line or two
+of what the source says, for the card the messenger shows; Slug names a
+published public help article the messenger can open in place. Both
+stay empty for a source a customer may not read.
 */
 type citation struct {
 	N          int     `json:"n"`
@@ -76,6 +79,10 @@ type citation struct {
 	Title      string  `json:"title"`
 	URL        string  `json:"url"`
 	Similarity float64 `json:"similarity"`
+	Excerpt    string  `json:"excerpt,omitempty"`
+	Slug       string  `json:"slug,omitempty"`
+
+	articleID *ids.UUID
 }
 
 /*

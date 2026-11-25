@@ -19,7 +19,8 @@ export const levels = [5, 9, 14, 8, 18, 12, 20, 10, 15, 7, 17, 11, 19, 9, 13, 6,
 /*
  * ActionTexts are the words of an action card: its two buttons, the
  * steps of confirming an email with a code, and a line for each state
- * it can end in.
+ * it can end in; and moreSources the line that unfolds the articles an
+ * answer cites past the first few.
  */
 export interface ActionTexts {
   confirm: string;
@@ -38,6 +39,7 @@ export interface ActionTexts {
   canceled: string;
   expired: string;
   failed: string;
+  moreSources: string;
 }
 
 export const actionTexts: ActionTexts = {
@@ -57,6 +59,7 @@ export const actionTexts: ActionTexts = {
   canceled: "Canceled",
   expired: "This request expired",
   failed: "This didn't go through",
+  moreSources: "{count} more",
 };
 
 /*

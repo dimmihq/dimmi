@@ -9,9 +9,8 @@ it.describe("series", () => {
     await expect(page).toHaveURL(inbox);
   });
 
-  it("builds a series, sets it live, runs a test journey through it, and pauses it", async ({ page, person }) => {
+  it("builds a series, sets it live, walks someone through it, and pauses it", async ({ page }) => {
     await api(page, "POST", "/tags", { name: "Welcomed" });
-    await api(page, "POST", "/contacts", { name: "Me", email: person.email });
 
     await page.goto("/d/series");
     await expect(page.getByText("No series yet")).toBeVisible();
@@ -25,7 +24,7 @@ it.describe("series", () => {
     await expect(page.getByRole("heading", { name: "Welcome" })).toBeVisible();
     await page.getByRole("button", { name: "Add a step" }).click();
     await page.getByRole("dialog", { name: "Add a step" }).getByRole("button", { name: "Tag", exact: true }).click();
-    await expect(page.getByText("Choose the tags.")).toBeVisible();
+    await expect(page.getByRole("region", { name: "Step settings" }).getByText("Choose the tags.")).toBeVisible();
     await page.getByRole("button", { name: "Add a tag" }).click();
     await page.getByRole("dialog", { name: "Tags" }).getByRole("button", { name: "Welcomed" }).click();
     await page.keyboard.press("Escape");
@@ -38,25 +37,23 @@ it.describe("series", () => {
     await expect(live).toBeHidden();
     await expect(page.getByText("Live", { exact: true })).toBeVisible();
 
-    await page.getByRole("button", { name: "Try it on me" }).click();
-    await page
-      .getByRole("alertdialog", { name: "Try this series on yourself?" })
-      .getByRole("button", { name: "Start test" })
-      .click();
-    const trial = page.getByRole("dialog", { name: "Your test journey" });
-    await expect(trial.getByText("Ended: Finished.")).toBeVisible({ timeout: 15_000 });
-    await expect(trial.getByText("Add 1 tag")).toBeVisible();
-    await page.keyboard.press("Escape");
-    await expect(trial).toBeHidden();
+    await page.getByRole("button", { name: "Show testing" }).click();
+    await page.getByRole("tab", { name: "Simulations" }).click();
+    await page.getByRole("button", { name: "Send message" }).click();
+    const walk = page.getByRole("list", { name: /'s journey$/ });
+    await expect(walk.getByText("Add 1 tag")).toBeVisible({ timeout: 15_000 });
+    await expect(walk.getByText("Finished", { exact: true })).toBeVisible();
 
+    await page.getByRole("button", { name: "Series actions" }).click();
     await page.getByRole("button", { name: "Pause" }).click();
     await page.getByRole("alertdialog", { name: "Pause this series?" }).getByRole("button", { name: "Pause" }).click();
     await expect(page.getByText("Paused", { exact: true })).toBeVisible();
+    await page.getByRole("button", { name: "Series actions" }).click();
     await page.getByRole("button", { name: "Resume" }).click();
-    await expect(page.getByText("Live", { exact: true })).toBeVisible();
+    await expect(page.getByTestId("dimmi:series:editor").getByText("Live", { exact: true })).toBeVisible();
 
     await page.getByRole("link", { name: "Back to series" }).click();
-    await expect(page.getByRole("row", { name: /Welcome/ })).toContainText("Live");
+    await expect(page.getByRole("link", { name: /Welcome/ })).toContainText("Live");
   });
 
   it("writes a message on its own page and comes back to the same step", async ({ page }) => {
@@ -68,7 +65,7 @@ it.describe("series", () => {
 
     await page.getByRole("button", { name: "Add a step" }).click();
     await page.getByRole("dialog", { name: "Add a step" }).getByRole("button", { name: "Chat", exact: true }).click();
-    await expect(page.getByText("Nothing written yet")).toBeVisible();
+    await expect(page.getByRole("region", { name: "Step settings" }).getByText("Nothing written yet")).toBeVisible();
     await page.getByRole("button", { name: "Compose" }).click();
 
     await expect(page).toHaveURL(/\/compose\//);

@@ -1,9 +1,8 @@
 /*
  * How the team uses Operator, on Operator's own page: whether
- * it is on and which model it answers with, what it cost this month and
- * how often it ran, day by day, why it ran, for whom, with which models,
- * what became of the changes it proposed, and its latest runs. Operator
- * and dimmi share one monthly cap, so its spend is shown against both.
+ * it is on and which model it answers with, how often it ran this month,
+ * day by day, why it ran, for whom, with which models, what became of
+ * the changes it proposed, and its latest runs.
  */
 import {
   RiArrowRightSLine,
@@ -33,7 +32,7 @@ import {
 } from "@/lib/api/operator";
 import { routinesQuery } from "@/lib/api/routines";
 
-import { connectionOf, modelsFor, operatorModel, usd } from "../format";
+import { connectionOf, modelsFor, operatorModel } from "../format";
 import { ModelLogo } from "../logos";
 
 const purposes: Record<OperatorPurpose, { label: string; icon: typeof RiChat3Line }> = {
@@ -83,24 +82,11 @@ export function OperatorStatus({ workspace, view }: { workspace: string; view: A
   );
 }
 
-/*
- * share says what part of a whole is, as a percentage; a small but real
- * part reads "under 1%" rather than a misleading 0%.
- */
-function share(part: number, whole: number): string {
-  if (whole <= 0 || part <= 0) {
-    return "0%";
-  }
-  const percent = Math.round((part / whole) * 100);
-
-  return percent < 1 ? "under 1%" : `${percent}%`;
-}
-
 function MonthStats({ usage }: { usage: OperatorUsage | undefined }) {
   if (!usage) {
     return (
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-        {["runs", "spend", "changes", "failed"].map((id) => (
+        {["runs", "teammates", "changes", "failed"].map((id) => (
           <Skeleton key={id} className="h-[100px] rounded-2xl" />
         ))}
       </div>
@@ -108,7 +94,6 @@ function MonthStats({ usage }: { usage: OperatorUsage | undefined }) {
   }
   const count = (status: string) => usage.changesets.find((c) => c.status === status)?.count ?? 0;
   const proposed = usage.changesets.reduce((sum, c) => sum + c.count, 0);
-  const cap = usage.monthly_spend_cap_micros;
 
   return (
     <StatCards
@@ -121,13 +106,9 @@ function MonthStats({ usage }: { usage: OperatorUsage | undefined }) {
           value: usage.runs_count.toLocaleString(),
         },
         {
-          label: "Spend",
-          hint: "What the AI provider charged this month for Operator's runs, in US dollars.",
-          value: usd(usage.cost_micros),
-          caption:
-            cap === null
-              ? `${share(usage.cost_micros, usage.agent_cost_micros)} of agent spend`
-              : `${share(usage.cost_micros, cap)} of ${usd(cap)} cap`,
+          label: "Teammates",
+          hint: "Teammates Operator worked for this month: answered their questions or briefed them.",
+          value: usage.by_member.length.toLocaleString(),
         },
         {
           label: "Changes applied",
@@ -157,7 +138,7 @@ function Daily({ usage }: { usage: OperatorUsage }) {
     const day = new Date(Date.UTC(start.getUTCFullYear(), start.getUTCMonth(), index + 1)).toISOString().slice(0, 10);
     const entry = byDay.get(day);
 
-    return { day, runs: entry?.runs_count ?? 0, cost: entry?.cost_micros ?? 0 };
+    return { day, runs: entry?.runs_count ?? 0 };
   });
 
   return (
@@ -167,7 +148,7 @@ function Daily({ usage }: { usage: OperatorUsage }) {
         {bars.map((bar) => (
           <span
             key={bar.day}
-            title={`${bar.day}: ${bar.runs} ${bar.runs === 1 ? "run" : "runs"}, ${usd(bar.cost)}`}
+            title={`${bar.day}: ${bar.runs} ${bar.runs === 1 ? "run" : "runs"}`}
             className="flex h-full min-w-0 flex-1 items-end"
           >
             <span
@@ -192,9 +173,7 @@ function Splits({ usage, view }: { usage: OperatorUsage; view: AgentView | undef
             mark={<Glyph icon={purposes[row.purpose]?.icon ?? RiChat3Line} />}
             title={purposes[row.purpose]?.label ?? row.purpose}
             detail={row.runs_count === 1 ? "1 run" : `${row.runs_count.toLocaleString()} runs`}
-          >
-            <span className="pe-3 text-body-2-medium text-text-primary tabular-nums">{usd(row.cost_micros)}</span>
-          </Item>
+          />
         ))}
       </Section>
       <ByRoutine usage={usage} />
@@ -206,23 +185,19 @@ function Splits({ usage, view }: { usage: OperatorUsage; view: AgentView | undef
               mark={<Avatar size="md" color={avatarColor(row.name)} initials={row.name.charAt(0).toUpperCase()} />}
               title={row.name}
               detail={row.runs_count === 1 ? "1 run" : `${row.runs_count.toLocaleString()} runs`}
-            >
-              <span className="pe-3 text-body-2-medium text-text-primary tabular-nums">{usd(row.cost_micros)}</span>
-            </Item>
+            />
           ))}
         </Section>
       ) : null}
       {usage.by_model.length > 0 ? (
-        <Section title="By model" description="What each model cost Operator this month.">
+        <Section title="By model" description="The models Operator called this month.">
           {usage.by_model.map((row) => (
             <Item
               key={row.model}
               mark={<ModelLogo model={row.model} size="md" tile />}
               title={modelName(view, row.model)}
               detail={row.calls === 1 ? "1 call" : `${row.calls.toLocaleString()} calls`}
-            >
-              <span className="pe-3 text-body-2-medium text-text-primary tabular-nums">{usd(row.cost_micros)}</span>
-            </Item>
+            />
           ))}
         </Section>
       ) : null}
@@ -239,7 +214,7 @@ function ByRoutine({ usage }: { usage: OperatorUsage }) {
     return null;
   }
   return (
-    <Section title="By routine" description="What each routine cost this month.">
+    <Section title="By routine" description="How often each routine ran this month.">
       {usage.by_routine.map((row) => (
         <Item
           key={row.routine_id}
@@ -250,9 +225,7 @@ function ByRoutine({ usage }: { usage: OperatorUsage }) {
             </Link>
           }
           detail={row.runs_count === 1 ? "1 run" : `${row.runs_count.toLocaleString()} runs`}
-        >
-          <span className="pe-3 text-body-2-medium text-text-primary tabular-nums">{usd(row.cost_micros)}</span>
-        </Item>
+        />
       ))}
     </Section>
   );
@@ -311,7 +284,6 @@ function Recent({ usage }: { usage: OperatorUsage }) {
                 Failed
               </Chip>
             ) : null}
-            <span className="pe-3 text-body-2-medium text-text-primary tabular-nums">{usd(run.cost_micros)}</span>
           </Item>
         );
       })}
@@ -321,7 +293,7 @@ function Recent({ usage }: { usage: OperatorUsage }) {
 
 /*
  * OperatorOverview is Operator at a glance: its routines, and this
- * month's runs, spend and what started them.
+ * month's runs and what started them.
  */
 export function OperatorOverview({ workspace, view }: { workspace: string; view: AgentView | undefined }) {
   const { data: usage } = useQuery({ ...operatorUsageQuery(workspace), enabled: workspace !== "" });

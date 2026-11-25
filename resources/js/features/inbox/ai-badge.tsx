@@ -1,7 +1,8 @@
 /*
  * The agent's part in a conversation, on its list row and in its
  * header: a small chip while the agent answers, and another once it
- * handed the conversation to the team. A conversation the agent never
+ * handed the conversation to the team, or a teammate or a workflow
+ * turned AI off. A conversation the agent never
  * touched shows nothing. A conversation with actions waiting for a
  * teammate's approval shows how many, so they are found from the list.
  */
@@ -36,11 +37,21 @@ export function ApprovalBadge({ count }: { count: number | undefined }) {
   );
 }
 
-export function AiBadge({ state, long = false }: { state: AiState | undefined; long?: boolean }) {
+const turnedOff = { label: "AI off", long: "AI turned off", color: "neutral" as const };
+
+export function AiBadge({
+  state,
+  reason,
+  long = false,
+}: {
+  state: AiState | undefined;
+  reason?: string | null;
+  long?: boolean;
+}) {
   if (!state || state === "off") {
     return null;
   }
-  const look = looks[state];
+  const look = state === "handed_off" && reason?.startsWith("turned_off") ? turnedOff : looks[state];
 
   return (
     <Chip variant="caption" color={look.color} className="shrink-0 gap-0.5" title={look.long}>

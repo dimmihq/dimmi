@@ -247,7 +247,7 @@ func (c *ConversationController) changes(
 ) (conversations.Changes, error) {
 	ch := conversations.Changes{
 		Spam: b.Spam, AssignMember: sent["assignee_id"], AssignTeam: sent["team_id"], Status: b.Status,
-		SnoozedUntil: b.SnoozedUntil, Note: b.Note, Unread: b.Unread,
+		SnoozedUntil: b.SnoozedUntil, Note: b.Note, Unread: b.Unread, AIEnabled: b.AIEnabled,
 		Attributes: conversations.Attributes{Subject: b.Subject},
 	}
 

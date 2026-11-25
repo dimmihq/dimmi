@@ -22,6 +22,7 @@ import {
   ClockIcon,
   CloseIcon,
   DownloadIcon,
+  ExternalIcon,
   FileIcon,
   ImageIcon,
   PauseIcon,
@@ -135,24 +136,79 @@ function keyOf(message: Message): string {
 }
 
 /*
- * SourceChip is an article an answer cites, opening it in a new tab when
- * it has an address.
+ * ArticleCard is a help article as a card under a message: its title, a
+ * line or two of what it says, and the whole card to tap. An article the
+ * messenger has opens in place; anything else opens its address in a new
+ * tab, which is also where a messenger without the article sends it.
  */
-function SourceChip({ source }: { source: Source }) {
-  if (!source.url) {
-    return (
-      <span className="source">
+function ArticleCard({ title, summary, slug, url }: { title: string; summary?: string; slug?: string; url?: string }) {
+  const open = slug ? `article:${slug}` : undefined;
+  const body = (
+    <>
+      <span className="row-icon">
         <BookIcon />
-        <span className="source-title">{source.title}</span>
       </span>
+      <span className="text">
+        <strong>{title}</strong>
+        {summary ? <small>{summary}</small> : null}
+      </span>
+      {open ? <ChevronRightIcon /> : <ExternalIcon />}
+    </>
+  );
+
+  if (url) {
+    return (
+      <a
+        className="row card article"
+        href={url}
+        target="_blank"
+        rel="noopener noreferrer"
+        data-action="click->cite"
+        data-open={open}
+      >
+        {body}
+      </a>
     );
   }
 
+  return open ? (
+    <button className="row card article" type="button" data-action="click->visit" data-open={open}>
+      {body}
+    </button>
+  ) : (
+    <div className="row card article">{body}</div>
+  );
+}
+
+/*
+ * shownSources is how many cited articles show as cards before the rest
+ * fold under a "more" line.
+ */
+const shownSources = 3;
+
+/*
+ * Sources are the articles an answer cites, as cards under its bubble.
+ */
+function Sources({ message, texts }: { message: Message; texts: ActionTexts }) {
+  const sources = message.sources ?? [];
+  if (sources.length === 0) {
+    return raw("");
+  }
+  const card = (source: Source) => (
+    <ArticleCard title={source.title} summary={source.excerpt} slug={source.slug} url={source.url} key={source.title} />
+  );
+  const rest = sources.slice(shownSources);
+
   return (
-    <a className="source" href={source.url} target="_blank" rel="noopener noreferrer">
-      <BookIcon />
-      <span className="source-title">{source.title}</span>
-    </a>
+    <div className="sources" data-key={`${keyOf(message)}:sources`}>
+      {sources.slice(0, shownSources).map(card)}
+      {rest.length > 0 ? (
+        <details className="sources-more">
+          <summary>{texts.moreSources.replace("{count}", String(rest.length))}</summary>
+          {rest.map(card)}
+        </details>
+      ) : null}
+    </div>
   );
 }
 
@@ -313,7 +369,7 @@ function spoken(message: Message): string | undefined {
 }
 
 /*
- * ArticleAnswer is the help article a workflow answered with: a row the
+ * ArticleAnswer is the help article a workflow answered with: a card the
  * visitor taps to read it in the messenger.
  */
 function ArticleAnswer({ message }: { message: Message }) {
@@ -324,16 +380,7 @@ function ArticleAnswer({ message }: { message: Message }) {
 
   return (
     <div className="bubble-wrap" data-key={`${keyOf(message)}:article`}>
-      <button className="row card" type="button" data-action="click->visit" data-open={`article:${article.slug}`}>
-        <span className="row-icon">
-          <BookIcon />
-        </span>
-        <span className="text">
-          <strong>{article.title}</strong>
-          {article.summary ? <small>{article.summary}</small> : null}
-        </span>
-        <ChevronRightIcon />
-      </button>
+      <ArticleCard title={article.title} summary={article.summary} slug={article.slug} />
     </div>
   );
 }
@@ -369,7 +416,6 @@ function Choices({ message }: { message: Message }) {
 }
 
 function Bubble({ message, texts }: { message: Message; texts: ActionTexts }) {
-  const sources = message.sources ?? [];
   const key = keyOf(message);
   const body = spoken(message);
 
@@ -382,15 +428,9 @@ function Bubble({ message, texts }: { message: Message; texts: ActionTexts }) {
           data-state={message.state}
         >
           {message.from === "visitor" ? body : raw(markdown(body))}
-          {sources.length > 0 && (
-            <span className="sources">
-              {sources.map((source) => (
-                <SourceChip source={source} key={source.title} />
-              ))}
-            </span>
-          )}
         </div>
       ) : null}
+      <Sources message={message} texts={texts} />
       {message.attachment ? (
         <div className="bubble-wrap" data-key={`${key}:file`}>
           <AttachmentBubble attachment={message.attachment} />
@@ -482,40 +522,6 @@ export function Thread({
       ))}
       {last ? <Choices message={last} /> : null}
     </>
-  );
-}
-
-/*
- * AiActionTexts are the words of the action under an answer from the
- * agent, and the thanks once the visitor said it helped.
- */
-export interface AiActionTexts {
-  helped: string;
-  thanks: string;
-}
-
-/*
- * AiActions is the quiet choice under the agent's latest answer: that it
- * helped. Once the visitor says so, a thanks takes its place. A visitor
- * who wants a person says so in the thread, and the agent hands over.
- */
-export function AiActions({ texts, helped }: { texts: AiActionTexts; helped: boolean }) {
-  if (helped) {
-    return (
-      <p className="ai-thanks" data-key="ai-actions">
-        <CheckIcon />
-        {texts.thanks}
-      </p>
-    );
-  }
-
-  return (
-    <div className="ai-actions" data-key="ai-actions">
-      <button type="button" className="ai-action" data-ai="helped">
-        <CheckIcon />
-        {texts.helped}
-      </button>
-    </div>
   );
 }
 

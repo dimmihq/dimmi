@@ -216,7 +216,7 @@ func sharedAITexts() map[string]map[string]string {
 			"classifier_model":  model("that sorts each customer message", "classifier"),
 			"fallback_key_id":   key("used when an agent's answer key fails"),
 			"fallback_model":    model("used when an agent's answer model fails", "fallback"),
-			"monthly_cap_usd": "Most the workspace's agents may spend a month, in US dollars, 0 to 100000, " +
+			"monthly_cap_usd": "Most the workspace may spend on dimmi in a month, in US dollars, 0 to 100000, " +
 				"such as 250. 0 or null means no cap. Raising it lifts a pause the old cap caused.",
 		},
 	}

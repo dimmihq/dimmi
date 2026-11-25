@@ -42,6 +42,16 @@ const (
 )
 
 /*
+The bounds of a chat that took on building work by reading one of the
+chat skills, such as designing a workflow: researching the workspace,
+building, and trying each path takes far more than a question does.
+*/
+const (
+	buildingModelCalls = 30
+	buildingToolCalls  = 100
+)
+
+/*
 streamed is what one model call produced.
 */
 type streamed struct {

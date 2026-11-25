@@ -6,9 +6,7 @@
  *
  * The views ask through events: "dimmi:converse" to show a conversation, or a
  * new one when none is named, and "dimmi:send" to send what the composer
- * holds. Under the agent's latest answer the visitor can say it helped or
- * ask for a person; either shows at once and is sent in the background.
- * An action card's Confirm or Cancel waits on the server, since the
+ * holds. An action card's Confirm or Cancel waits on the server, since the
  * choice decides whether something runs. Answers land in the store, and
  * only the parts of the panel that changed are drawn again, so a
  * half-written message, the scroll position and the open tab survive
@@ -23,7 +21,7 @@ import { Session, type SessionData, type Storage } from "../client/session";
 import { type Conversation as ApiConversation, type Message as ApiMessage, Store } from "../client/store";
 import { ConversationRow } from "../components/rows";
 import { Whoami } from "../components/whoami";
-import type { Block, Collection, Content, Message, VerifyStep } from "../content";
+import type { Block, Collection, Content, Message, TicketType, VerifyStep } from "../content";
 
 /*
  * HelpIndex is what the server answers for the Help tab.
@@ -41,15 +39,17 @@ import { type Availability, type Config, content, fromConfig, reading } from "./
 import { patch } from "./patch";
 import { report } from "./report";
 import type { Surface } from "./rules";
-import { loadThread, type Parts, thread as threadParts } from "./threads";
+import { loadThread, thread as threadParts } from "./threads";
 import { loadTickets, tickets } from "./tickets";
 
 export interface Host {
   root: ShadowRoot;
   options(): Options;
-  update(changes: OptionsUpdate): void;
+  update(changes: OptionsUpdate): void | Promise<void>;
   notify(message: { conversation: string; body: string; author: string; agent: boolean }): void;
   showing(conversation: string): boolean;
+  /* replied tells the page a reply arrived in the conversation on screen. */
+  replied?(): void;
 }
 
 export interface Browser {
@@ -156,11 +156,21 @@ function followBottom(thread: HTMLElement, at: { pinned: boolean; jump: boolean 
         theirs = Date.now();
       });
     }
+    /*
+     * Scrolling up lets go of the end at once, however close to it they
+     * still are: in a short thread every upward scroll stays within
+     * reach of the end, and holding on there pulled them back down while
+     * they scrolled. Scrolling down near the end takes it up again.
+     */
+    let last = thread.scrollTop;
     thread.addEventListener("scroll", () => {
+      const up = thread.scrollTop < last;
+      last = thread.scrollTop;
       if (Date.now() - theirs > handScroll) {
         return;
       }
-      thread.dataset.pinned = String(thread.scrollHeight - thread.scrollTop - thread.clientHeight < 48);
+      const away = thread.scrollHeight - thread.scrollTop - thread.clientHeight;
+      thread.dataset.pinned = String(up ? away < 2 : away < 48);
     });
     thread.addEventListener(
       "load",
@@ -238,8 +248,9 @@ export class Live {
   config: Config = {};
   availability: Availability | undefined;
   open: string | undefined;
-  private readonly helped = new Set<string>();
   private readonly deciding = new Set<string>();
+  private conversationsKnown = false;
+  private typesKnown = false;
   private readonly verifying = new Map<string, VerifyStep>();
   private help: Pick<Content, "collections" | "articles" | "popular" | "help_url"> | undefined;
   private changelog: Pick<Content, "changelog" | "unread_changelog"> | undefined;
@@ -343,6 +354,8 @@ export class Live {
       await this.reload();
       this.streaming();
     }
+    this.conversationsKnown = true;
+    this.arrive();
     if (this.outbox.pending.length > 0) {
       void this.outbox.flush();
     }
@@ -634,12 +647,14 @@ export class Live {
 
   /*
    * awayNotice tells a visitor whose message is the latest that the team
-   * is away. A workflow still answering is not the team being away, and
-   * a menu that only takes taps has nothing to wait for, so neither says
-   * it.
+   * is away. A workflow still answering is not the team being away, nor
+   * is the AI agent holding the conversation or anyone typing a reply,
+   * and a menu that only takes taps has nothing to wait for, so none of
+   * them says it.
    */
-  private awayNotice(last: Message | undefined, waiting: boolean, texts: Texts): string {
-    const away = !waiting && !this.locked && this.availability?.online === false;
+  private awayNotice(last: Message | undefined, answering: boolean, texts: Texts): string {
+    const agent = this.store.conversations.find((c) => c.id === this.open)?.ai_state === "active";
+    const away = !answering && !agent && !this.locked && this.availability?.online === false;
     if (last?.from !== "visitor" || this.config.delay_notice === false || !away) {
       return "";
     }
@@ -821,7 +836,61 @@ export class Live {
       await loadTickets(this.host.root).catch(() => undefined);
     }
     this.ticketing = { ticket_types };
-    this.host.update({});
+    this.drawHelp(ticket_types);
+    this.typesKnown = true;
+    this.arrive();
+  }
+
+  /*
+   * drawHelp puts the request types into Home's slot in place. Drawing
+   * the whole messenger again for them, as the panel opens, replaced
+   * every element on screen and flashed the panel.
+   */
+  private drawHelp(types: TicketType[]) {
+    const slot = this.host.root.querySelector<HTMLElement>('.view[data-view="home"] .help-slot');
+    const parts = tickets();
+    if (!slot || !parts) {
+      if (types.length > 0) {
+        void this.host.update({});
+      }
+      return;
+    }
+    slot.innerHTML = String(parts.HomeCards({ types, texts: this.host.options().texts }));
+  }
+
+  /*
+   * waiting names the views still waiting on what they show: Home on the
+   * visitor's conversations and the request types, Messages on the
+   * conversations. Until then they keep their skeletons, so nothing pops
+   * in on the first open.
+   */
+  get waiting(): string {
+    const views = [];
+    if (!(this.conversationsKnown && this.typesKnown)) {
+      views.push("home");
+    }
+    if (!this.conversationsKnown) {
+      views.push("messages");
+    }
+    return views.join(" ");
+  }
+
+  /*
+   * arrive takes each view off its skeleton once everything it shows has
+   * arrived.
+   */
+  private arrive() {
+    const waiting = this.waiting.split(" ");
+    const messenger = this.host.root.firstElementChild as HTMLElement | null;
+    if (messenger) {
+      messenger.dataset.waiting = this.waiting;
+    }
+    for (const view of this.host.root.querySelectorAll<HTMLElement>('.view[data-state="loading"]')) {
+      if (["home", "messages"].includes(view.dataset.view ?? "") && !waiting.includes(view.dataset.view ?? "")) {
+        view.dataset.state = "ready";
+        view.removeAttribute("aria-busy");
+      }
+    }
   }
 
   /*
@@ -834,6 +903,7 @@ export class Live {
       button.setAttribute("aria-pressed", String((button.getAttribute("data-ticket-filter") === "open") === open));
     }
     this.drawConversations();
+    tickets()?.enterRows(this.host.root.querySelectorAll('.view[data-view="messages"] .list > *'));
   }
 
   /*
@@ -1009,6 +1079,7 @@ export class Live {
     }
     if (this.host.showing(message.conversation_id)) {
       void this.markRead(message.conversation_id);
+      this.host.replied?.();
       return;
     }
     this.host.notify({
@@ -1199,22 +1270,19 @@ export class Live {
       String(t.Thread({ messages, texts: this.actionTexts(), team: this.content().company, ai: this.aiTexts() })),
     ];
     const ticket = this.store.conversations.find((c) => c.id === open)?.ticket;
-    const strip = tickets()?.Strip;
-    if (ticket && strip) {
-      parts.unshift(String(strip({ ticket, texts })));
-    } else if (ticket) {
+    const requests = tickets();
+    requests?.pinStrip(thread, ticket ? String(requests.Strip({ ticket, texts })) : "");
+    if (ticket && !requests) {
       void loadTickets(this.host.root).then(() => this.drawThread());
     }
 
     const waiting = this.expected(open);
+    parts.push(this.delivery(open));
     if (typing || waiting) {
       parts.push(String(t.Typing()));
-    } else {
-      parts.push(this.aiActions(last, t));
     }
     parts.push(
-      this.delivery(open),
-      this.awayNotice(last, waiting, texts),
+      this.awayNotice(last, waiting || Boolean(typing), texts),
       this.ratingCard(),
       this.emailCapture(open, texts),
     );
@@ -1235,26 +1303,6 @@ export class Live {
     if (panel) {
       panel.toggleAttribute("data-choices-only", locked);
     }
-  }
-
-  /*
-   * aiActions offers the visitor That helped under the agent's latest
-   * answer while the agent still holds the conversation, and nothing
-   * under a reply that answered nothing or once the conversation is with
-   * the team.
-   */
-  private aiActions(last: { from: string; id?: string; outcome?: string } | undefined, t: Parts): string {
-    const found = this.store.conversations.find((c) => c.id === this.open);
-    if (last?.from !== "agent" || !last.id || found?.ai_state !== "active") {
-      return "";
-    }
-    const helped = this.helped.has(last.id);
-    if (!helped && last.outcome !== "answered" && last.outcome !== "partial") {
-      return "";
-    }
-    const texts = this.host.options().texts;
-
-    return String(t.AiActions({ texts: { helped: texts.ai_helped, thanks: texts.ai_thanks }, helped }));
   }
 
   /*
@@ -1292,30 +1340,6 @@ export class Live {
     const failed = open ? this.store.dropLocal(open, clientId) : undefined;
     if (failed?.failed) {
       void this.send(failed.body ?? "", []);
-    }
-  }
-
-  /*
-   * aiAction tells the server the agent's answer helped. The thread
-   * changes at once; a refusal puts it back.
-   */
-  async aiAction() {
-    const open = this.open;
-    const found = this.store.conversations.find((c) => c.id === open);
-    const last = this.content().thread.at(-1);
-    if (!open || open === draftId || !found || !last?.id) {
-      return;
-    }
-    const answer = last.id;
-    this.helped.add(answer);
-    this.drawThread();
-
-    try {
-      await this.http.post(`/conversations/${open}/ai/helped`);
-    } catch (error) {
-      report("warn", error instanceof ApiError ? error.code : "network", "the answer could not be marked helpful.");
-      this.helped.delete(answer);
-      this.drawThread();
     }
   }
 
@@ -1413,6 +1437,7 @@ export class Live {
       canceled: t.action_canceled,
       expired: t.action_expired,
       failed: t.action_failed,
+      moreSources: t.more_sources,
     };
   }
 

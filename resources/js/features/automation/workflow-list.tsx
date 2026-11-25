@@ -3,30 +3,31 @@
  * and whether it is live, in the order they run when two share a
  * trigger. A new workflow begins by picking its trigger; it is made on
  * the server at once, as a draft named so it never clashes with another,
- * and the builder opens on it. Teammates who may only read workflows see
- * the list without the button.
+ * and its studio opens on it, empty or from a template, where Operator
+ * helps build it. Teammates who may only read workflows see the list
+ * without the button.
  */
 import { RiAddLine, RiFlowChart } from "@remixicon/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 
+import { Chip } from "@/components/base/badges/chip";
 import { Button } from "@/components/base/buttons/button";
 import { toast } from "@/components/base/toast/toast";
 import { usePermission } from "@/features/settings/inboxes";
 import { Item, Section } from "@/features/settings/layout";
 import { useAccount } from "@/features/settings/use-account";
-import { createWorkflow, type Workflow, workflowsQuery } from "@/lib/api/workflows";
+import { createWorkflow, type Spec, saveWorkflow, type Workflow, workflowsQuery } from "@/lib/api/workflows";
 
 import { freshName } from "./fresh-name";
 import { KindMark, ListPage, OpenRow, StatusChip } from "./parts";
+import type { WorkflowTemplate } from "./templates";
 import { TriggerPicker } from "./trigger-picker";
 import { type TriggerKind, tintOf, triggers } from "./triggers";
 
 function detailOf(workflow: Workflow): string {
-  const name = triggers[workflow.trigger as TriggerKind]?.name ?? workflow.trigger;
-
-  return workflow.status !== "draft" && workflow.has_unpublished_changes ? `${name} · Unpublished changes` : name;
+  return triggers[workflow.trigger as TriggerKind]?.name ?? workflow.trigger;
 }
 
 export function WorkflowList() {
@@ -37,8 +38,19 @@ export function WorkflowList() {
   const queryClient = useQueryClient();
   const { data: workflows, isPending } = useQuery(workflowsQuery(workspace));
   const create = useMutation({
-    mutationFn: (trigger: TriggerKind) =>
-      createWorkflow(workspace, freshName((workflows ?? []).map((workflow) => workflow.name)), trigger),
+    mutationFn: async (from: TriggerKind | WorkflowTemplate) => {
+      const names = (workflows ?? []).map((workflow) => workflow.name);
+      if (typeof from === "string") {
+        return createWorkflow(workspace, freshName(names), from);
+      }
+      const made = await createWorkflow(
+        workspace,
+        names.includes(from.name) ? freshName(names) : from.name,
+        from.trigger,
+      );
+
+      return saveWorkflow(workspace, made.id, { spec: from.build(made.spec as Spec), lock_version: made.lock_version });
+    },
     onSuccess: (workflow) => {
       void queryClient.invalidateQueries({ queryKey: ["workspace", workspace, "workflows"] });
       void navigate({ to: "/d/workflows/$workflow", params: { workflow: workflow.id } });
@@ -65,6 +77,10 @@ export function WorkflowList() {
           setPicking(false);
           create.mutate(trigger);
         }}
+        onTemplate={(template) => {
+          setPicking(false);
+          create.mutate(template);
+        }}
       />
       <Section
         title="Workflows"
@@ -90,6 +106,11 @@ export function WorkflowList() {
               title={workflow.name}
               detail={detailOf(workflow)}
             >
+              {workflow.status !== "draft" && workflow.has_unpublished_changes ? (
+                <Chip variant="caption" color="yellow" className="py-0.5">
+                  Unpublished changes
+                </Chip>
+              ) : null}
               <StatusChip status={workflow.status} />
             </OpenRow>
           );

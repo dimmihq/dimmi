@@ -130,8 +130,10 @@ UPDATE conversations SET workflow_run_id = @run_id, ai_mode = 'workflow', update
 WHERE workspace_id = @workspace_id AND id = @conversation_id AND workflow_run_id IS NULL;
 
 -- name: ReleaseConversationClaim :exec
--- ReleaseConversationClaim lets go of a conversation a run held.
-UPDATE conversations SET workflow_run_id = NULL, updated_at = @now
+-- ReleaseConversationClaim lets go of a conversation a run held and
+-- hands it back to the agent placed on it, which answers the next
+-- customer message unless AI was turned off or handed to the team.
+UPDATE conversations SET workflow_run_id = NULL, ai_mode = 'auto', updated_at = @now
 WHERE workspace_id = @workspace_id AND id = @conversation_id AND workflow_run_id = @run_id;
 
 -- name: CreateWorkflowMatchLog :exec
@@ -226,3 +228,14 @@ SELECT
         WHERE m.workspace_id = @workspace_id AND m.conversation_id = @conversation_id AND m.type = 'message'
           AND m.author_type = 'contact' AND m.deleted_at IS NULL AND m.id > @anchor_id
     )::boolean AS customer_wrote;
+
+-- name: WorkflowHandledSince :one
+-- WorkflowHandledSince reports whether a customer-facing run that did
+-- something still held the conversation at the moment, or started
+-- after it, so the agent leaves a message a workflow took to the
+-- workflow.
+SELECT EXISTS (
+    SELECT 1 FROM workflow_runs
+    WHERE workspace_id = @workspace_id AND conversation_id = @conversation_id
+      AND kind = 'customer_facing' AND acted AND (ended_at IS NULL OR ended_at >= @since)
+)::boolean;

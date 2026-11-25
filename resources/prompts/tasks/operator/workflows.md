@@ -1,0 +1,38 @@
+<!--
+Who reads this: the model that runs Operator, when it reads a workflow (get_workflow_by_id) or the
+workflow reference (get_workflow_reference). The code adds it before the triggers, the step kinds
+with their settings and paths, and the fields rules read, all written from the checker's own
+registries (app/ai/operator/automation_reference.go).
+
+What it must get right: workflows decide when something happens to a conversation and who owns it;
+agents decide what to say. Edits name steps and paths by the ids the outline shows. Every proposal
+is checked as publishing would check it, so the model fixes what the check refuses instead of
+sending the same edit again. Nothing goes live: publishing stays the teammate's.
+
+Contract with the code: no placeholders. The tool is propose_workflow_edit; its schema carries the
+edit actions.
+-->
+How workflows work:
+- A workflow starts on one trigger, such as the customer's first message or an SLA breach. The trigger never changes; to start on another trigger, a teammate makes a new workflow with New workflow.
+- Its steps run top to bottom. A step with paths sends the run down one of them, and the steps inside that path run next. When a path has no steps, the run ends there.
+- Paths you add carry a label: on buttons, one button each; on a branch, a condition each; on classify, a category with a description each. Fixed paths carry an outcome instead, such as timeout, else or none, and take the run when that outcome happens.
+- Customer-facing steps (message, buttons, collect, reply_time) and the dimmi step, which hands the conversation to an AI agent, only work under triggers that allow them. Background triggers may only act: assign, tag, note, close and the like.
+- AI agents (aia_..., from dimmi_list_ai_agents) are not teammates. To send a conversation to one, use a dimmi step with settings.agent_id when it should answer now, or assign_ai_agent to pin it so it answers from the customer's next message; assign_ai_agent also works under background triggers. turn_off_ai keeps every agent out until a teammate or a turn_on_ai step lets them back in. assign assigns teammates and teams only.
+- Ids: steps are s_..., paths are p_.... Leave ids out of new steps and paths; they get fresh ones. Never change an existing id.
+- A split (A/B test) sends each conversation down one of 2 to 4 variants by share. Each variant in settings.variants names one of its paths by id, so give a new split's paths ids of your own, such as p_variant_a, and use the same ids in the variants. The shares add up to 100. Setting winner to a variant's id sends everyone down it.
+- Teams, teammates, tags, schedules, SLA policies, agents and other workflows are named by their public ids (team_..., mem_..., tag_...). Look them up before you use them; never invent one.
+- A condition or an audience is a rule: a leaf {"field": "...", "op": "...", "value": ...}, or a group {"all": [rules]}, {"any": [rules]} or {"not": rule}. Run variables are run.vars.<key>; custom contact attributes are contact.custom.<key>. Texts may use variables such as {{contact.first_name}}.
+- Durations are written like 30s, 10m, 4h or 2d.
+
+How to change one:
+- Read it first with get_workflow_by_id, unless it is the page the teammate has open. Its outline lists every step and path with its id.
+- Call propose_workflow_edit with the edits, in order: add_step after a step or into a path, change_step with the step's whole new settings, remove_step (it takes everything under the step's paths with it), move_step, add_path, change_path, remove_path, and set_trigger for the trigger's settings, channels, audience, schedule, re-entry and exclusive. Send a whole spec only to rewrite most of it.
+- The edit is checked as publishing would check it. When it is refused, the refusal lists each problem with its step: fix those in the same edit and send it again. Never send the same edit twice.
+- The result shows the workflow as it would read. Warnings are allowed, but tell the teammate about each one in plain words.
+- You cannot create a workflow. When a teammate asks for one, tell them to click New workflow and pick its trigger; you then build its steps from its builder.
+- Your change is a suggestion on the working copy. Nothing runs differently until a teammate accepts it and publishes the workflow.
+
+How to explain what a workflow did:
+- Call explain_workflow_run with the conversation's number or the run's id. It shows each live workflow's verdict on each event, then each run's steps with the path it took.
+- A skipped verdict has a reason: trigger_settings (the trigger's own settings did not match), channel, audience (the rule named in failed_rule did not match), schedule (outside the office hours it asks for), reentry (it ran before), already_running, held (another workflow holds the conversation), lower_priority (a workflow higher in the list took it), exclusive (an earlier workflow stops the rest), loop_guard, chain_depth or conversation_budget (limits that stop runaway runs).
+- Say what happened in order, in plain words, naming each workflow and step by what it does, not by its id.

@@ -1,8 +1,10 @@
 /*
  * The add-step menu at the end of every path in the builder: a small
  * plus that opens BoardUI's menu panel with the step kinds offered,
- * grouped as messages, logic, dimmi, team actions and tickets; a group with
- * nothing offered is left out.
+ * grouped as messages, logic, AI agents, team actions and tickets; a group with
+ * nothing offered is left out. Calling your system goes through a
+ * workspace action; the older request step still runs and still opens,
+ * but is no longer offered.
  */
 import { RiAddLine } from "@remixicon/react";
 import { Button as AriaButton, Dialog, DialogTrigger, Popover } from "react-aria-components";
@@ -16,8 +18,8 @@ import type { StepKind } from "./workflows";
 
 const groups: [string, StepKind[]][] = [
   ["Messages", ["message", "article", "buttons", "collect", "reply_time"]],
-  ["Logic", ["branch", "classify", "wait", "run_workflow"]],
-  ["dimmi", ["dimmi"]],
+  ["Logic", ["branch", "classify", "split", "extract", "wait", "run_workflow"]],
+  ["AI agents", ["dimmi", "assign_ai_agent", "turn_off_ai", "turn_on_ai"]],
   [
     "Team",
     [
@@ -31,7 +33,7 @@ const groups: [string, StepKind[]][] = [
       "snooze",
       "close",
       "apply_sla",
-      "http_request",
+      "run_action",
     ],
   ],
   ["Tickets", ["create_ticket", "set_ticket_state", "set_ticket_fields", "escalate", "add_to_tracker"]],

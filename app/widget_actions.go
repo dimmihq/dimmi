@@ -33,22 +33,20 @@ type WidgetActions struct {
 	Availability *widget.ComputeTeamAvailability
 	Install      *widgetinstall.Tracker
 
-	Authenticate   *widget.AuthenticateWidgetSession
-	StartSession   *widget.StartWidgetSession
-	ShowSession    *widget.ShowWidgetSession
-	RevokeSession  *widget.RevokeWidgetSession
-	UpdateContact  *widget.UpdateWidgetContact
-	EmailProofs    *widget.EmailProofs
-	Conversations  *widget.ListWidgetConversations
-	PostMessage    *widget.PostWidgetMessage
-	OpenChat       *widget.OpenWidgetConversation
-	MarkRead       *widget.MarkWidgetConversationRead
-	ConfirmHelp    *widget.ConfirmAiHelp
-	RequestHandoff *widget.RequestAiHandoff
-	Typing         *widget.BroadcastVisitorTyping
-	Ping           *widget.RecordWidgetPing
-	Realtime       *widget.Realtime
-	Updates        *widget.ListWidgetUpdates
-	Contacts       *widget.ContactSessions
-	Uploads        *widget.Uploads
+	Authenticate  *widget.AuthenticateWidgetSession
+	StartSession  *widget.StartWidgetSession
+	ShowSession   *widget.ShowWidgetSession
+	RevokeSession *widget.RevokeWidgetSession
+	UpdateContact *widget.UpdateWidgetContact
+	EmailProofs   *widget.EmailProofs
+	Conversations *widget.ListWidgetConversations
+	PostMessage   *widget.PostWidgetMessage
+	OpenChat      *widget.OpenWidgetConversation
+	MarkRead      *widget.MarkWidgetConversationRead
+	Typing        *widget.BroadcastVisitorTyping
+	Ping          *widget.RecordWidgetPing
+	Realtime      *widget.Realtime
+	Updates       *widget.ListWidgetUpdates
+	Contacts      *widget.ContactSessions
+	Uploads       *widget.Uploads
 }

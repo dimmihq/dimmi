@@ -191,7 +191,7 @@ func broadcastParams(row models.Series, n Node, status string, now time.Time) mo
 		SeriesID: &row.ID, SeriesNodeID: &n.ID, TopicID: row.TopicID, Service: row.Service, Subject: m.Subject,
 		Preview: m.Preview, Body: m.Body, SenderMemberID: row.SenderMemberID, EmailAddressID: row.EmailAddressID,
 		SlackAs: row.SlackAs, ReplyTeamID: row.ReplyTeamID, ReplyMemberID: row.ReplyMemberID,
-		AiReplies: row.AiReplies, TrackClicks: track, Now: now,
+		AiReplies: row.AiReplies, ReplyAgentID: row.ReplyAgentID, TrackClicks: track, Now: now,
 	}
 }
 

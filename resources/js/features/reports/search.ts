@@ -31,6 +31,11 @@ export interface ReportSearch {
   priority?: string;
   ai?: "involved" | "not_involved";
   agent?: string;
+  /** An AI attribute's key, and the value it holds. */
+  ai_attribute?: string;
+  ai_attribute_value?: string;
+  /** The AI attribute the AI report's table splits by. */
+  ai_breakdown?: string;
   /** The metric whose conversations are open. */
   drill?: string;
   /** The first and last day the open list is narrowed to. */
@@ -41,6 +46,7 @@ export interface ReportSearch {
 }
 
 const day = /^\d{4}-\d{2}-\d{2}$/;
+const attributeKey = /^[a-z][a-z0-9_]{0,63}$/;
 
 function text(value: unknown, max = 2000): string | undefined {
   if (typeof value === "number") {
@@ -54,6 +60,12 @@ function date(value: unknown): string | undefined {
   const v = text(value);
 
   return v && day.test(v) ? v : undefined;
+}
+
+function key(value: unknown): string | undefined {
+  const v = text(value, 64);
+
+  return v && attributeKey.test(v) ? v : undefined;
 }
 
 function flag(value: unknown): true | undefined {
@@ -80,10 +92,22 @@ export function validateReportSearch(search: Record<string, unknown>): ReportSea
     priority: text(search.priority),
     ai: search.ai === "involved" || search.ai === "not_involved" ? search.ai : undefined,
     agent: text(search.agent),
+    ...aiAttributeSearch(search),
+    ai_breakdown: key(search.ai_breakdown),
     ...drillSearch(search),
   };
 
   return Object.fromEntries(Object.entries(out).filter(([, v]) => v !== undefined)) as ReportSearch;
+}
+
+/*
+ * aiAttributeSearch keeps the AI attribute filter: a value only beside
+ * the attribute it belongs to.
+ */
+function aiAttributeSearch(search: Record<string, unknown>): Partial<ReportSearch> {
+  const attribute = key(search.ai_attribute);
+
+  return attribute ? { ai_attribute: attribute, ai_attribute_value: text(search.ai_attribute_value, 500) } : {};
 }
 
 function drillSearch(search: Record<string, unknown>): Partial<ReportSearch> {
@@ -112,6 +136,22 @@ export function presetDays(preset: RangePreset): { from: string; to: string } {
 }
 
 /*
+ * settings are what the report is asked beside its range and filters:
+ * office hours, and the AI attribute the AI report splits by.
+ */
+function settings(search: ReportSearch): ReportFilters {
+  const out: ReportFilters = {};
+  if (search.business_hours) {
+    out.business_hours = true;
+  }
+  if (search.ai_breakdown) {
+    out.ai_breakdown = search.ai_breakdown;
+  }
+
+  return out;
+}
+
+/*
  * reportFilters is what the report is asked for. With no range at all
  * the server answers the last 30 days. A live report has no range.
  */
@@ -132,9 +172,7 @@ export function reportFilters(search: ReportSearch, live = false): ReportFilters
       filters.compare = true;
     }
   }
-  if (search.business_hours) {
-    filters.business_hours = true;
-  }
+  Object.assign(filters, settings(search));
   for (const key of filterKeys) {
     const value = search[key];
     if (value) {
@@ -153,6 +191,7 @@ export function reportFilters(search: ReportSearch, live = false): ReportFilters
 export function drillFilters(search: ReportSearch, live = false): ReportFilters {
   const filters = reportFilters(search, live);
   delete filters.compare;
+  delete filters.ai_breakdown;
   if (search.drill_from) {
     filters.from = search.drill_from;
   }

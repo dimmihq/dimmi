@@ -175,10 +175,12 @@ func answeredPath(raw json.RawMessage) string {
 }
 
 /*
-variablePattern finds a variable and its fallback in workflow text.
+variablePattern finds a variable and its fallback in workflow text,
+written {{ name | fallback: "x" }} or, as the message editor and the
+other writers write it, {{ name | default: "x" }}.
 */
 func variablePattern() *regexp.Regexp {
-	return regexp.MustCompile(`\{\{\s*([a-z][a-z0-9_.]*)\s*(?:\|\s*fallback:\s*"([^"]*)"\s*)?\}\}`)
+	return regexp.MustCompile(`\{\{\s*([a-z][a-z0-9_.]*)\s*(?:\|\s*(?:fallback|default):\s*"([^"]*)"\s*)?\}\}`)
 }
 
 /*

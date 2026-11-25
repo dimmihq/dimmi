@@ -97,6 +97,7 @@ const (
 	InputTimer         = "timer"
 	InputTeammateReply = "teammate_reply"
 	InputAgentHandover = "agent_handover"
+	InputAgentResolved = "agent_resolved"
 )
 
 /*
@@ -174,7 +175,7 @@ func (e *Engine) applies(run models.WorkflowRun, s Step) bool {
 		return w.Kind == waitInput || w.Kind == workflowspec.WaitAgent || w.interrupts(interruptCustomer)
 	case InputTeammateReply:
 		return w.interrupts(interruptTeammate)
-	case InputAgentHandover:
+	case InputAgentHandover, InputAgentResolved:
 		return w.Kind == workflowspec.WaitAgent
 	case InputCallDone:
 		return w.Kind == waitCall

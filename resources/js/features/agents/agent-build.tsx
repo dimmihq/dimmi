@@ -7,6 +7,7 @@
  * reaches customers until it is published.
  */
 import { useQuery } from "@tanstack/react-query";
+import { Link } from "@tanstack/react-router";
 import { useState } from "react";
 
 import { RadioGroup } from "@/components/base/radio/radio";
@@ -158,13 +159,15 @@ function WhereAndWhen({ draft, view, workspace }: { draft: AgentDraft; view: Age
     return holder ? `${what} (now ${holder})` : what;
   };
 
+  const workflows = (view.ties ?? []).filter((tie) => tie.kind === "workflow");
+
   return (
     <Section
       title="Where it answers"
       description={
         view.agent.is_default
           ? "It answers every conversation no other agent takes. Pick channels to keep them for it even when others are placed."
-          : "New conversations here go to this agent, unless a workflow picks another."
+          : "New conversations here go to this agent, unless a workflow hands them to another."
       }
     >
       <Row label="Channels and inboxes">
@@ -178,6 +181,22 @@ function WhereAndWhen({ draft, view, workspace }: { draft: AgentDraft; view: Age
           onChange={(ids) => draft.change({ placement: placementOf(ids) })}
         />
       </Row>
+      {workflows.length > 0 ? (
+        <Row label="Workflows" description="These hand conversations to this agent.">
+          <span className="flex min-w-0 flex-wrap justify-end gap-x-3 gap-y-1 py-2 text-body-2-regular">
+            {workflows.map((w) => (
+              <Link
+                key={w.id}
+                to="/d/workflows/$workflow"
+                params={{ workflow: w.id }}
+                className="text-text-primary underline"
+              >
+                {w.name}
+              </Link>
+            ))}
+          </span>
+        </Row>
+      ) : null}
       <Row label="Hours">
         <Pick
           key={`hours-${draft.generation}`}

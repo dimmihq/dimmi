@@ -76,6 +76,9 @@
   "ticket_required": "Compila questo campo",
   "ticket_resolved": "Risolta",
   "ticket_send": "Invia richiesta",
+  "ticket_sent": "Richiesta inviata",
+  "ticket_sent_body": "Ti risponderemo qui nei tuoi messaggi, così puoi seguirla in qualsiasi momento.",
+  "ticket_view": "Vedi richiesta",
   "ticket_subject": "Oggetto",
   "ticket_submitted": "Inviata",
   "ticket_yes": "Sì",
@@ -92,5 +95,6 @@
   "verify_send": "Invia codice",
   "verify_sent": "Inserisci il codice di 6 cifre che abbiamo inviato a {email}",
   "verify_submit": "Verifica",
-  "welcome_message": ""
+  "welcome_message": "",
+  "more_sources": "Altri {count}"
 }

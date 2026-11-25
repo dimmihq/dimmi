@@ -2,29 +2,59 @@
  * The settings of a step that sorts a conversation by topic. Its
  * categories are its paths: each has a name and, to help the AI tell
  * them apart, a description. A conversation that fits none, or that
- * meets no AI to sort it, takes the none matched path. The category
- * picked can be saved for later steps.
+ * meets no AI to sort it, takes the none matched path. The step has a
+ * name, required here, under which later steps read the category it
+ * picked, such as {{ run.vars.topic }}; a new step starts with topic,
+ * or topic_2 when another sort step has it. It sorts only when the AI
+ * is fairly sure, set when the step is made and not shown here.
  */
+import { Input } from "@/components/base/input/input";
 import { Action, Danger, Field } from "@/features/settings/controls";
 import { Row, Section } from "@/features/settings/layout";
 
-import { choicesOf } from "./choices";
 import { type EditorProps, Note, Words } from "./field-parts";
-import { Pick } from "./pick";
-import { SaveTarget } from "./save-target";
 import { text, useSet, withNewPath, withoutPath, withPathChange, withPathLabel } from "./step-settings";
 
 const fewest = 2;
-const most = 10;
 
-const confidences = { any: "Any", medium: "Medium", high: "High" };
+const prefix = "run.vars.";
+
+/*
+ * keyOf writes a name the way a variable keeps it: lowercase, words
+ * joined by underscores, starting with a letter.
+ */
+function keyOf(name: string): string {
+  return name
+    .toLowerCase()
+    .replace(/[^a-z0-9_]+/g, "_")
+    .replace(/^[^a-z]+/, "")
+    .slice(0, 64);
+}
+const most = 10;
 
 export function ClassifyFields({ step, onEdit }: EditorProps) {
   const set = useSet(onEdit);
   const categories = (step.paths ?? []).filter((path) => !path.outcome);
 
+  const saved = text(step.settings, "save_to");
+  const name = saved.startsWith(prefix) ? saved.slice(prefix.length) : saved.split(".").pop() || "";
+
   return (
     <>
+      <Section title="Name" description="Later steps use the topic it picks by this name.">
+        <div className="py-2.5 pe-2.5">
+          <Input
+            aria-label="Name"
+            size="small"
+            className="w-full"
+            value={name}
+            placeholder="topic"
+            isInvalid={name === ""}
+            hint={name === "" ? "Give it a name." : undefined}
+            onChange={(value) => set({ save_to: keyOf(value) ? `${prefix}${keyOf(value)}` : "" })}
+          />
+        </div>
+      </Section>
       <Section title="AI">
         <Note>
           Sorting uses the AI provider set in Agent settings. Without one, every conversation takes the None matched
@@ -79,24 +109,6 @@ export function ClassifyFields({ step, onEdit }: EditorProps) {
         ) : (
           <Note>A step sorts into 10 categories at most.</Note>
         )}
-      </Section>
-      <Section title="After sorting">
-        <Row label="Save the category as" description="Later steps can use it.">
-          <SaveTarget
-            label="Save the category as"
-            value={text(step.settings, "save_to")}
-            nothing="Don't save it"
-            onChange={(target) => set({ save_to: target })}
-          />
-        </Row>
-        <Row label="Least confidence" description="Less sure than this takes the None matched path.">
-          <Pick
-            label="Least confidence"
-            choices={choicesOf(confidences)}
-            value={text(step.settings, "min_confidence") || "any"}
-            onChange={(value) => set({ min_confidence: value === "any" ? undefined : value })}
-          />
-        </Row>
       </Section>
     </>
   );

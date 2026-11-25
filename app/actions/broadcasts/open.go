@@ -18,9 +18,11 @@ package broadcasts
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 
 	"github.com/dimmihq/dimmi/framework/database"
+	"github.com/dimmihq/dimmi/framework/ids"
 
 	"github.com/dimmihq/dimmi/app/actions/conversations"
 	"github.com/dimmihq/dimmi/app/actions/slackteam"
@@ -121,8 +123,12 @@ func firstMessage(ctx context.Context, w *conversations.Writer, c models.Convers
 		Type: string(enums.MessageTypeMessage), Body: o.body, BodyFormat: new("markdown"),
 		DeliveryStatus: &status, Metadata: metadataOf(o), SentAt: &w.Now,
 	})
-	if err != nil || o.row.AiReplies {
+	if err != nil {
 		return msg, c, err
+	}
+
+	if o.row.AiReplies {
+		return msg, c, replyAgent(ctx, w, c, o.row.ReplyAgentID)
 	}
 
 	err = w.Q.SetConversationAIOff(ctx, models.SetConversationAIOffParams{
@@ -184,4 +190,30 @@ func orSender(err error) error {
 	}
 
 	return ErrNoSender
+}
+
+/*
+replyAgent puts the agent the broadcast names on the conversation of a
+reply, so it answers; an archived agent is skipped, leaving the agent
+placed on the channel.
+*/
+func replyAgent(ctx context.Context, w *conversations.Writer, c models.Conversation, agentID *ids.UUID) error {
+	if agentID == nil {
+		return nil
+	}
+
+	_, err := w.Q.FindAgentByID(ctx, models.FindAgentByIDParams{WorkspaceID: c.WorkspaceID, ID: *agentID})
+	if err != nil {
+		if errors.Is(err, database.ErrNotFound) {
+			return nil
+		}
+
+		return wrap("find reply agent", err)
+	}
+
+	_, err = w.Q.AssignConversationAgent(ctx, models.AssignConversationAgentParams{
+		WorkspaceID: c.WorkspaceID, ID: c.ID, AgentID: agentID, Now: w.Now,
+	})
+
+	return wrap("put reply agent on", err)
 }

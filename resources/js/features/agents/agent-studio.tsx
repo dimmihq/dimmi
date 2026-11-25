@@ -8,10 +8,10 @@
  */
 import {
   RiAddLine,
+  RiArchiveLine,
   RiArrowDownSLine,
   RiArrowLeftSLine,
   RiCheckLine,
-  RiDeleteBinLine,
   RiMore2Line,
   RiPauseCircleLine,
   RiSparkling2Line,
@@ -42,6 +42,7 @@ import { PaneGroup, PaneHandle } from "@/features/shell/resizable";
 import { useEasing } from "@/features/shell/use-easing";
 import { useWide } from "@/features/shell/use-wide";
 import { type AgentView, type AnswerAs, agentSimulationsQuery, agentsQuery, resultOf } from "@/lib/api/agents";
+import type { AgentTie } from "@/lib/api/ai";
 import { cx } from "@/utils/cx";
 
 import { StatusChip } from "../automation/parts";
@@ -116,7 +117,47 @@ function AgentSwitcher({ workspace, draft }: { workspace: string; draft: AgentDr
   );
 }
 
-function AgentMenu({ draft }: { draft: AgentDraft }) {
+const tieKinds: Record<AgentTie["kind"], string> = {
+  workflow: "Workflow",
+  series: "Series",
+  connection: "Answers on",
+  room: "Answers in",
+  inbox: "Answers in the inbox",
+  agent: "Can transfer to it",
+};
+
+/*
+ * TieList names what still relies on an agent, each with where to
+ * change it.
+ */
+function TieList({ ties }: { ties: AgentTie[] }) {
+  return (
+    <ul className="flex flex-col gap-1.5 pt-2">
+      {ties.map((tie) => (
+        <li key={`${tie.kind}-${tie.id}`} className="flex items-baseline gap-2 text-body-2-regular">
+          <span className="shrink-0 text-text-tertiary">{tieKinds[tie.kind]}</span>
+          {tie.kind === "workflow" ? (
+            <Link
+              to="/d/workflows/$workflow"
+              params={{ workflow: tie.id }}
+              className="truncate text-text-primary underline"
+            >
+              {tie.name}
+            </Link>
+          ) : tie.kind === "agent" ? (
+            <Link to="/d/agents/$agent" params={{ agent: tie.id }} className="truncate text-text-primary underline">
+              {tie.name}
+            </Link>
+          ) : (
+            <span className="truncate text-text-primary">{tie.name}</span>
+          )}
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+function AgentMenu({ draft, ties }: { draft: AgentDraft; ties: AgentTie[] }) {
   const [open, setOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const agent = draft.server;
@@ -156,8 +197,8 @@ function AgentMenu({ draft }: { draft: AgentDraft }) {
                   setDeleting(true);
                 }}
               >
-                <RiDeleteBinLine aria-hidden className="size-4 shrink-0" />
-                Delete agent
+                <RiArchiveLine aria-hidden className="size-4 shrink-0" />
+                Archive agent
               </DropdownItem>
             </>
           )}
@@ -166,15 +207,22 @@ function AgentMenu({ draft }: { draft: AgentDraft }) {
       <AlertDialog
         isOpen={deleting}
         onOpenChange={setDeleting}
-        title={`Delete ${draft.draft.name}?`}
-        description="Its conversations go to the default agent. This cannot be undone."
-        confirmLabel="Delete agent"
+        title={ties.length > 0 ? `${draft.draft.name} is still in use` : `Archive ${draft.draft.name}?`}
+        description={
+          ties.length > 0
+            ? "Move each of these to another agent first."
+            : "It stops answering and leaves the list. Its conversations and history stay."
+        }
+        confirmLabel="Archive agent"
+        isConfirmDisabled={ties.length > 0}
         onConfirm={() => {
           setDeleting(false);
 
           return draft.remove();
         }}
-      />
+      >
+        {ties.length > 0 ? <TieList ties={ties} /> : null}
+      </AlertDialog>
     </>
   );
 }
@@ -286,7 +334,7 @@ function MainPanel({
             <SimulationsChip results={results} />
           </button>
           <Publish draft={draft} failing={failing} />
-          <AgentMenu draft={draft} />
+          <AgentMenu draft={draft} ties={view.ties ?? []} />
           <IconButton
             size="small"
             icon={RiTestTubeLine}

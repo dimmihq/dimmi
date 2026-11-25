@@ -1,0 +1,62 @@
+---
+title: "AI attributes"
+description: "Have AI note the same few facts on every conversation, like intent or order number, and use them in workflows, views and reports."
+---
+
+Some facts matter on every conversation: what the customer wants, which order they mean, whether they're on a trial. Asking teammates to tag these by hand never sticks, and a workflow can't read them from the words alone.
+
+An **AI attribute** is one of those facts, defined once in **Settings → AI attributes**. dimmi reads each conversation and fills it in, then checks again as the customer writes. Workflows branch and start on the value, inbox views filter by it, reports split by it, and teammates see it beside the conversation.
+
+## Define an attribute
+
+Give each attribute a name, a type and a description. The description is what the AI reads, so write it the way you'd brief a new teammate.
+
+| Name | Type | Description |
+| --- | --- | --- |
+| Intent | One of a list: `refund`, `bug`, `question`, `other` | The customer's main reason for writing. |
+| Order number | Text | The order the customer is writing about, such as `A-1042`. |
+| On a trial | Yes or no | Whether the customer says they're still on a free trial. |
+
+Types are text, number, date, yes or no, and one of a list. The key (`intent`, `order_number`) and the type are fixed once saved. Turning off **Detect on conversations** archives an attribute and keeps the values it already found.
+
+## How values are found
+
+The decision model reads the whole conversation and answers for every active attribute at once. When it fails, it's asked again, then your workspace's own AI provider answers instead.
+
+- **Only sure values are kept.** When the AI isn't sure, the attribute stays empty. It never guesses to fill the field.
+- **Values update as the conversation goes.** Each customer message starts a fresh check about 20 seconds later, at most once a minute. A sure new value replaces the old one; an unsure answer leaves the old one in place.
+- **Archived attributes keep their values**, so workflows and views that read them keep working.
+
+## Use attributes in workflows
+
+Every attribute reads as `conversation.ai.<key>`:
+
+- **Branch** on it, like "AI: Intent is any of `refund`".
+- **Start a workflow** with the **AI attribute changes** trigger. It fires each time a value is set or changes, and its conditions can read **Changed AI attribute** and **New AI value**.
+- **Use it in text** as a variable, like `{{conversation.ai.order_number}}`, or map it into a [Run an action](/workflows/triggers-and-steps/#team) input.
+
+## See values in the inbox
+
+The conversation's **Details** panel lists every active attribute under **AI attributes**, with the value the AI found or **Not found yet**. The heading says when the AI last read the conversation, and the list updates on its own when a value changes. The section is hidden while your workspace has no active attribute.
+
+## Use attributes in views
+
+In a [view](/inbox/views/), add a condition on **AI: Intent**, for example, to list every open refund request.
+
+## Use attributes in reports
+
+Every report can [filter by an attribute](/reports/reports/#filter-by-an-ai-attribute): pick **Filter → AI attribute → Intent → refund** to see the overview, response times or CSAT of refund requests alone. **Any value** keeps every conversation the attribute was found on.
+
+The **dimmi agent** report adds a **Conversations by** table that splits the range's conversations by a one-of-a-list or yes-or-no attribute. Each value shows its conversations, AI resolution rate and CSAT, so you can see that the agent resolves 70% of questions but 20% of refunds. Pick the attribute beside the table's title; it starts on the first active one.
+
+## Rules and limits
+
+| Rule | Limit |
+| --- | --- |
+| Active attributes per workspace | 30 |
+| Values of a list | 1 to 30, 80 characters each |
+| Name | 80 characters |
+| Description | 500 characters |
+| How often a conversation is read again | About 20 seconds after a customer message, at most once a minute |
+
+The API lists attributes at `GET /api/v1/ai/conversation-attributes` and a conversation's values at `GET /api/v1/conversations/{conversation}/ai-attributes`. Reports take `filter[ai_attribute]=intent` and `filter[ai_attribute_value]=refund`, and the AI report takes `ai_breakdown=intent`.

@@ -31,7 +31,7 @@ ExportSelection is what an export covers. Filter takes the same keys and
 values as the list's filter[...] parameters, and Conditions the contact
 list's conditions parameter. A conversation facts export reads Filter
 as a report's query: from, to, business_hours, inbox, team, member,
-channel, tag, priority and ai.
+channel, tag, priority, ai, agent, ai_attribute and ai_attribute_value.
 */
 type ExportSelection struct {
 	IDs        []string          `json:"ids,omitempty"        validate:"max=10000"`

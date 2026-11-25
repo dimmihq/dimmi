@@ -156,11 +156,14 @@ func (a *Audiences) members(ctx context.Context, q *models.Queries, row models.A
 }
 
 /*
-judge decides who a program matches in its environment.
+judge decides who a program matches in its environment. Adjust, when
+set, changes what is read about each person before they are judged,
+as a dry simulation does with the tags it would add.
 */
 type judge struct {
 	program *audience.Program
 	env     audience.Env
+	adjust  func(p *audiences.Person)
 }
 
 /*
@@ -180,6 +183,9 @@ func (j judge) matching(ctx context.Context, q *models.Queries, page []models.Co
 	var out []ids.UUID
 	for _, p := range people {
 		p.Now = env.Now
+		if j.adjust != nil {
+			j.adjust(&p)
+		}
 		e := env
 		e.Facts = p
 

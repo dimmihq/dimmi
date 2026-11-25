@@ -134,6 +134,8 @@ type opInput struct {
 	NoteText     string          `json:"note_text"`
 	CustomerName string          `json:"customer_name"`
 	NewWorking   json.RawMessage `json:"procedure_definition"`
+	/* A workflow or series proposal, which only its own tools send. */
+	auto *automationInput
 }
 
 /*
@@ -232,6 +234,8 @@ func (r resolver) resolve(ctx context.Context, in opInput) (Operation, error) {
 		return r.contactOp(ctx, in)
 	case GroupArticles:
 		return r.articleOp(ctx, in)
+	case GroupAutomation:
+		return r.automationOp(ctx, in)
 	default:
 		return r.procedureOp(ctx, in)
 	}

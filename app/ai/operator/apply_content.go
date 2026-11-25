@@ -41,7 +41,8 @@ type draftCopy struct {
 }
 
 /*
-applyContent applies an operation on a customer, article or procedure.
+applyContent applies an operation on a customer, article, procedure,
+workflow or series.
 */
 func (e *Engine) applyContent(ctx context.Context, m authz.Membership, op *Operation) error {
 	var err error
@@ -61,6 +62,8 @@ func (e *Engine) applyContent(ctx context.Context, m authz.Membership, op *Opera
 		err = e.runAction(ctx, m, op)
 	case KindProcedureTestCaseNew:
 		err = e.addTestCase(ctx, m, op)
+	case KindWorkflowSet, KindSeriesSet:
+		err = e.applyAutomation(ctx, m, op)
 	default:
 		err = e.editProcedure(ctx, m, op)
 	}
@@ -169,6 +172,8 @@ func (e *Engine) revertContentOp(ctx context.Context, m authz.Membership, op Ope
 		return false, nil
 	case KindProcedureTestCaseNew:
 		return e.dropTestCase(ctx, m, op)
+	case KindWorkflowSet, KindSeriesSet:
+		return e.revertAutomation(ctx, m, op)
 	default:
 		return e.restoreProcedure(ctx, m, op)
 	}

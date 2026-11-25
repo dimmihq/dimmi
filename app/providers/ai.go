@@ -27,12 +27,14 @@ import (
 
 	"github.com/dimmihq/dimmi/app"
 	"github.com/dimmihq/dimmi/app/actions/ai"
+	"github.com/dimmihq/dimmi/app/actions/aiattributes"
 	"github.com/dimmihq/dimmi/app/actions/conversations"
 	"github.com/dimmihq/dimmi/app/actions/helpcenters"
 	"github.com/dimmihq/dimmi/app/actions/knowledge"
 	"github.com/dimmihq/dimmi/app/actions/schedules"
 	"github.com/dimmihq/dimmi/app/ai/actionkit"
 	"github.com/dimmihq/dimmi/app/ai/agents"
+	"github.com/dimmihq/dimmi/app/ai/aidecision"
 	aijobs "github.com/dimmihq/dimmi/app/ai/jobs"
 	"github.com/dimmihq/dimmi/app/ai/pipeline"
 	"github.com/dimmihq/dimmi/app/ai/verdicts"
@@ -40,6 +42,7 @@ import (
 	"github.com/dimmihq/dimmi/app/drivers/decision/clef"
 	"github.com/dimmihq/dimmi/app/drivers/decision/typesafe"
 	appevents "github.com/dimmihq/dimmi/app/events"
+	"github.com/dimmihq/dimmi/app/jobs"
 	"github.com/dimmihq/dimmi/app/managers"
 	"github.com/dimmihq/dimmi/app/models"
 	"github.com/dimmihq/dimmi/app/support/aiprices"
@@ -62,12 +65,7 @@ func bootAI(ctx context.Context, a *app.App) error {
 	cheap := &verdicts.Verdicts{DB: a.DB, Clock: a.Clock, LLM: a.LLM, Prices: runner.Prices}
 	a.Actions.Slack.Channel.Classifier = &verdicts.Requests{Verdicts: cheap}
 	a.Actions.Slack.Channel.Judge = &verdicts.Judge{Verdicts: cheap}
-	if a.Actions.Series != nil {
-		a.Actions.Series.Picker = &verdicts.Paths{Verdicts: cheap}
-	}
-	if a.Actions.WorkflowEngine != nil {
-		a.Actions.WorkflowEngine.Classifier = &verdicts.Categories{Verdicts: cheap}
-	}
+	bootDecisions(a, aidecision.New(runner.Decider, cheap))
 	if a.Actions.Tickets != nil {
 		a.Actions.Tickets.Filler = &verdicts.Tickets{Verdicts: cheap}
 		runner.Tickets = a.Actions.Tickets
@@ -75,6 +73,7 @@ func bootAI(ctx context.Context, a *app.App) error {
 	runner.Actions = &actionkit.Kit{
 		DB: a.DB, Clock: a.Clock, HTTP: a.HTTP, Keys: a.Keys, Events: a.Events, Queue: a.Queue,
 	}
+	bootAutomationActions(a, runner.Actions)
 	if p := a.Actions.Procedures; p != nil {
 		p.Simulator, p.Judge, p.Live, p.Customer = runner, runner, runner, runner
 		if a.Vectors != nil {
@@ -82,7 +81,7 @@ func bootAI(ctx context.Context, a *app.App) error {
 		}
 	}
 
-	a.Actions.AI = aiActions(a, runner, runner.Prices)
+	a.Actions.AI = aiActions(a, runner)
 	a.WorkspaceInitializers.Register(&ai.EnsureAI{Agents: a.Actions.AI.Agents})
 
 	events.Listen(a.Events, events.AfterCommit, func(ctx context.Context, e appevents.MessageCreated) error {
@@ -100,7 +99,38 @@ func bootAI(ctx context.Context, a *app.App) error {
 		queue.Register(a.Queue, &aijobs.ExecuteAiActionCall{Kit: runner.Actions}),
 		queue.Register(a.Queue, &aijobs.FollowUpAiActionCall{Runner: runner}),
 		queue.Register(a.Queue, &aijobs.ExpireAiActionCall{Kit: runner.Actions}),
+		queue.Register(a.Queue, &jobs.DetectConversationAttributes{Detector: a.Actions.AIAttributes}),
 	)
+}
+
+/*
+bootDecisions gives workflows and series the AI decision step, and
+builds the AI conversation attributes it fills in.
+*/
+func bootDecisions(a *app.App, decisions *aidecision.Decider) {
+	if a.Actions.Series != nil {
+		a.Actions.Series.Decisions = decisions
+	}
+	if a.Actions.WorkflowEngine != nil {
+		a.Actions.WorkflowEngine.Decisions = decisions
+	}
+	a.Actions.AIAttributes = &aiattributes.Attributes{
+		DB: a.DB, Clock: a.Clock, IDs: a.IDs, Events: a.Events, Queue: a.Queue, Decisions: decisions,
+	}
+	a.Actions.AIAttributes.Listen(a.Events)
+}
+
+/*
+bootAutomationActions lets workflows and series run the workspace's
+actions.
+*/
+func bootAutomationActions(a *app.App, kit *actionkit.Kit) {
+	if a.Actions.Series != nil {
+		a.Actions.Series.Actions = kit
+	}
+	if a.Actions.WorkflowEngine != nil {
+		a.Actions.WorkflowEngine.Actions = kit
+	}
 }
 
 /*

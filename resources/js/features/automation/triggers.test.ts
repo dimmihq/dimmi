@@ -33,7 +33,7 @@ describe("triggers", () => {
   });
 
   it("offers dimmi's triggers and reusable workflows", () => {
-    expect(triggersIn("dimmi").sort()).toEqual(["dimmi.handed_over", "dimmi.resolved"]);
+    expect(triggersIn("dimmi").sort()).toEqual(["agent.transferred", "dimmi.handed_over", "dimmi.resolved"]);
     expect(triggersIn("reuse")).toEqual(["reusable"]);
   });
 

@@ -76,6 +76,9 @@
   "ticket_required": "Bitte ausfüllen",
   "ticket_resolved": "Gelöst",
   "ticket_send": "Anfrage senden",
+  "ticket_sent": "Anfrage gesendet",
+  "ticket_sent_body": "Wir antworten hier in deinen Nachrichten, so kannst du sie jederzeit verfolgen.",
+  "ticket_view": "Anfrage ansehen",
   "ticket_subject": "Betreff",
   "ticket_submitted": "Eingereicht",
   "ticket_yes": "Ja",
@@ -92,5 +95,6 @@
   "verify_send": "Code senden",
   "verify_sent": "Gib den 6-stelligen Code ein, den wir an {email} gesendet haben",
   "verify_submit": "Bestätigen",
-  "welcome_message": ""
+  "welcome_message": "",
+  "more_sources": "{count} weitere"
 }

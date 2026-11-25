@@ -32,13 +32,15 @@ import (
 
 /*
 Viewing is what the teammate has open when they ask, as the app sends
-it: the kind of page, the id of what it shows, and the id of the
-suggestion shown on it, when there is one. The ids are the public ones.
+it: the kind of page, the id of what it shows, the id of the
+suggestion shown on it, when there is one, and on a series the step
+selected in its builder. The ids are the public ones.
 */
 type Viewing struct {
 	Page       string
 	ID         string
 	Suggestion string
+	Step       string
 }
 
 /*
@@ -71,8 +73,9 @@ func (e *Engine) lookAt(ctx context.Context, s *session) string {
 	if s.viewed != nil {
 		b.WriteString("\n\nA suggestion waits for review on it, shown on the teammate's page:\n")
 		b.WriteString(e.suggestionText(ctx, s, *s.viewed, e.madeBy(ctx, s, *s.viewed)))
-		b.WriteString("\nChanges you make to this article or procedure are added to that suggestion, so quote " +
-			"passages from the text shown above as suggested, not from the published article.")
+		b.WriteString("\nChanges you make to this article, procedure, workflow or series are added to that " +
+			"suggestion, so build on it as suggested: quote passages from the text shown above, not from the " +
+			"published article, and edit the steps as the suggestion leaves them.")
 	}
 	return "[What the teammate has open right now. A question or a change they ask for is about it unless " +
 		"they say otherwise. Everything you need is here: use these ids exactly as written, and do not look " +
@@ -279,6 +282,10 @@ func (e *Engine) describeChange(ctx context.Context, s *session, b *strings.Buil
 	}
 	if op.Body != nil {
 		fmt.Fprintf(b, "Text:\n%s\n", truncate(*op.Body, 20000))
+	}
+	if outline, ok := automationOutline(op); ok {
+		fmt.Fprintf(b, "As suggested:\n%s\n", outline)
+		return
 	}
 	if len(op.Definition) > 0 {
 		fmt.Fprintf(b, "As suggested:\n%s\n", truncate(string(op.Definition), 20000))

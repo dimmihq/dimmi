@@ -105,7 +105,8 @@ func (c *AIAgentController) Update(ctx context.Context, in *requests.AIUpdateAge
 }
 
 /*
-Destroy deletes an agent that is not the default.
+Destroy archives an agent that is not the default and that nothing
+relies on any more.
 */
 func (c *AIAgentController) Destroy(ctx context.Context, in *requests.AIShowAgentRequest) (*EmptyOutput, error) {
 	id, err := c.agentID(in.Agent)

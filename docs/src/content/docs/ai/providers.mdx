@@ -1,6 +1,6 @@
 ---
 title: "Choose an AI provider and spending cap"
-description: "Connect your own AI provider keys or use dimmi's built-in provider, and set a monthly spending cap."
+description: "Connect your own AI provider keys or use dimmi's built-in provider, and how the monthly spending cap works."
 ---
 
 Admins add provider connections in **Settings → AI providers**. Once connected, pick a model for each agent in [Agent Studio](/ai/set-up-the-agent/), under **Build → Model → Answers with**. An agent left on **Workspace default** answers with the workspace's model.
@@ -24,9 +24,9 @@ When you bring your own API key, your AI provider bills you at its normal rates.
 
 ## Set the monthly cap
 
-Set **Monthly cap** in **Settings → dimmi agent**, under **Spend**. The cap covers the whole workspace: every agent and Operator share it. New workspaces start at $25, and the lowest cap is $1.
+The cap is the most your workspace spends on dimmi in a month. Every agent and Operator share it. New workspaces start at $25, and the lowest cap is $1.
 
-- **What counts:** every reply from any agent and every Operator run, across all connections. dimmi estimates spend in US dollars from its built-in model price list. Models not on that list count as $0.
+- **How to change it:** send `monthly_cap_usd` to `PATCH /api/v1/ai/settings`. `0` or `null` removes the cap.
 - **When it resets:** on the first of each calendar month in UTC.
 - **When you hit the cap:** every agent hands over active conversations and stays quiet on new ones. Operator stops answering until the next month.
-- **How to resume early:** raise the cap above your current month's spend, or switch to **No cap**. Your agents and Operator start again right away.
+- **How to resume early:** raise the cap above your current month's spend, or remove it. Your agents and Operator start again right away.

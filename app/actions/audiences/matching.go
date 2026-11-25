@@ -27,7 +27,9 @@ import (
 
 /*
 MatchInput is one page to read: the saved audience, or the rules when
-none is named, and the last contact the previous page ended on.
+none is named, and the last contact the previous page ended on. Adjust
+changes what is read about a person before they are judged; only
+Matching reads it.
 */
 type MatchInput struct {
 	WorkspaceID ids.UUID
@@ -35,6 +37,7 @@ type MatchInput struct {
 	Rules       json.RawMessage
 	After       ids.UUID
 	Size        int
+	Adjust      func(p *audiences.Person)
 }
 
 /*

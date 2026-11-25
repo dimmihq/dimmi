@@ -57,6 +57,8 @@ routine, which runs as a narrowed copy of the routine's owner on a
 thread of its own.
 */
 type session struct {
+	/* Building is set once a chat reads a chat skill, and raises its bounds. */
+	building     bool
 	m            authz.Membership
 	thread       models.OperatorThread
 	conversation *models.Conversation

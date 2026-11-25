@@ -3,9 +3,7 @@ package ai_test
 import (
 	"context"
 	"testing"
-	"time"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/dimmihq/dimmi/framework/ids"
@@ -77,84 +75,8 @@ func (v visitor) start(t *testing.T) (string, ids.UUID) {
 	return public, id
 }
 
-/*
-aiState reads the conversation's agent state and how many messages the
-agent wrote in it.
-*/
-func aiState(t *testing.T, d tests.Desk, conv ids.UUID) (string, int) {
-	t.Helper()
-
-	var state string
-	var agentLines int
-	err := d.TC.Operator().QueryRow(t.Context(), `
-		SELECT c.ai_state, (
-			SELECT count(*) FROM messages m
-			WHERE m.conversation_id = c.id AND m.author_type = 'agent' AND m.type = 'message'
-		)
-		FROM conversations c WHERE c.id = $1`, conv).Scan(&state, &agentLines)
-	require.NoError(t, err)
-
-	return state, agentLines
-}
-
-func TestAiWidgetControls(t *testing.T) {
+func TestAiWidgetSources(t *testing.T) {
 	t.Parallel()
-
-	t.Run("records that the agent's latest answer helped", func(t *testing.T) {
-		t.Parallel()
-		d := tests.NewDesk(t)
-		agent := agentRow(t, d)
-		v := newVisitor(t, d)
-		conv, convID := v.start(t)
-		older := seedRun(t, d, agent, run{
-			conversation: &convID, outcome: "answered", at: d.TC.Clock.Now().Add(-time.Minute),
-		})
-		latest := seedRun(t, d, agent, run{conversation: &convID, outcome: "answered", at: d.TC.Clock.Now()})
-
-		v.client().PostJSON("/widget/v1/conversations/"+conv+"/ai/helped", nil).AssertNoContent()
-		v.client().PostJSON("/widget/v1/conversations/"+conv+"/ai/helped", nil).AssertNoContent()
-
-		d.TC.Table("ai_runs").AssertCount(1, testkit.Row{"id": latest, "feedback": "helped"})
-		d.TC.Table("ai_runs").AssertCount(1, testkit.Row{"id": older, "outcome": "answered"})
-		d.TC.Table("ai_runs").AssertCount(0, testkit.Row{"id": older, "feedback": "helped"})
-	})
-
-	t.Run("does nothing when the agent never answered", func(t *testing.T) {
-		t.Parallel()
-		d := tests.NewDesk(t)
-		v := newVisitor(t, d)
-		conv, _ := v.start(t)
-
-		v.client().PostJSON("/widget/v1/conversations/"+conv+"/ai/helped", nil).AssertNoContent()
-	})
-
-	t.Run("hands a conversation over once however often the visitor asks", func(t *testing.T) {
-		t.Parallel()
-		d := tests.NewDesk(t)
-		agentRow(t, d)
-		v := newVisitor(t, d)
-		conv, convID := v.start(t)
-
-		v.client().PostJSON("/widget/v1/conversations/"+conv+"/ai/handoff", nil).AssertNoContent()
-		v.client().PostJSON("/widget/v1/conversations/"+conv+"/ai/handoff", nil).AssertNoContent()
-
-		state, lines := aiState(t, d, convID)
-		assert.Equal(t, "handed_off", state)
-		assert.Equal(t, 1, lines)
-	})
-
-	t.Run("slows down a visitor pressing handoff over and over", func(t *testing.T) {
-		t.Parallel()
-		d := tests.NewDesk(t)
-		agentRow(t, d)
-		v := newVisitor(t, d)
-		conv, _ := v.start(t)
-
-		for range 5 {
-			v.client().PostJSON("/widget/v1/conversations/"+conv+"/ai/handoff", nil).AssertNoContent()
-		}
-		v.client().PostJSON("/widget/v1/conversations/"+conv+"/ai/handoff", nil).AssertStatus(429)
-	})
 
 	t.Run("shows the sources an agent reply cites to the visitor and the team", func(t *testing.T) {
 		t.Parallel()
@@ -182,23 +104,5 @@ func TestAiWidgetControls(t *testing.T) {
 		timeline.AssertJSONPath("data.#(author.type==\"agent\").ai.sources", source)
 		timeline.AssertJSONPath("data.#(author.type==\"agent\").ai.run_id",
 			models.PublicID(models.PrefixAiRun, runID))
-	})
-
-	t.Run("answers not found for another visitor's conversation", func(t *testing.T) {
-		t.Parallel()
-		d := tests.NewDesk(t)
-		agent := agentRow(t, d)
-		owner := newVisitor(t, d)
-		conv, convID := owner.start(t)
-		seedRun(t, d, agent, run{conversation: &convID, outcome: "answered", at: d.TC.Clock.Now()})
-		stranger := newVisitor(t, d)
-
-		stranger.client().PostJSON("/widget/v1/conversations/"+conv+"/ai/helped", nil).AssertNotFound()
-		stranger.client().PostJSON("/widget/v1/conversations/"+conv+"/ai/handoff", nil).AssertNotFound()
-
-		state, lines := aiState(t, d, convID)
-		assert.NotEqual(t, "handed_off", state)
-		assert.Equal(t, 0, lines)
-		d.TC.Table("ai_runs").AssertCount(0, testkit.Row{"conversation_id": convID, "feedback": "helped"})
 	})
 }

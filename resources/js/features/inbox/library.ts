@@ -4,7 +4,7 @@
  * published changelog entries. Each drops a line naming it, with the link
  * a customer can open.
  */
-import { useQuery } from "@tanstack/react-query";
+import { type QueryClient, useQuery } from "@tanstack/react-query";
 import type { ChangelogEntry } from "@/lib/api/changelog";
 import { entriesQuery } from "@/lib/api/changelog";
 import type { FeedbackPost } from "@/lib/api/feedback";
@@ -124,4 +124,49 @@ export function useLibrary(workspace: string, kind: SourceKind, query: string) {
   }[kind]();
 
   return { items: read.items.slice(0, 50), loading: read.pending && id !== "", missing: centers.length === 0 };
+}
+
+/*
+ * perKind is how many matches of each kind a search across the library
+ * brings back.
+ */
+const perKind = 3;
+
+/*
+ * searchLibrary finds, across every source at once, the saved replies,
+ * articles, feature requests and changelog entries that hold the query,
+ * a few of each, for suggestions while typing.
+ */
+export async function searchLibrary(client: QueryClient, workspace: string, query: string): Promise<LibraryItem[]> {
+  if (workspace === "") {
+    return [];
+  }
+  const needle = query.trim().toLocaleLowerCase();
+  const search = needle || undefined;
+  const centers = await client.fetchQuery(helpCentersQuery(workspace)).catch(() => []);
+  const center = centers.find((candidate) => candidate.is_default) ?? centers[0];
+  const base = center?.url ?? "";
+  const none = Promise.resolve(null);
+
+  const [saved, articles, posts, entries] = await Promise.all([
+    client.fetchQuery(savedRepliesQuery(workspace, needle)).catch(() => []),
+    center ? client.fetchQuery(articlesQuery(workspace, center.id)).catch(() => []) : none,
+    center
+      ? client
+          .fetchQuery(postsQuery(workspace, center.id, { sort: "trending", page: 1, query: search }))
+          .catch(() => null)
+      : none,
+    center
+      ? client
+          .fetchQuery(entriesQuery(workspace, center.id, { status: "published", page: 1, query: search }))
+          .catch(() => null)
+      : none,
+  ]);
+
+  return [
+    ...savedItems(saved ?? []).slice(0, perKind),
+    ...articleItems(articles ?? [], base, needle).slice(0, perKind),
+    ...requestItems(posts?.data ?? [], base).slice(0, perKind),
+    ...changelogItems(entries?.data ?? [], base).slice(0, perKind),
+  ];
 }

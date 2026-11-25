@@ -45,7 +45,8 @@ Pass any of these keys to `update`. Omitted keys keep your dashboard defaults.
 | `appearance.launcher.shape` | `"circle"` or `"squircle"` |
 | `appearance.launcher.label` | Custom tab label text |
 | `appearance.font` | `"system"` or `"inherit"` (matches your page font) |
-| `appearance.sound` | Boolean |
+| `appearance.sound` | Boolean; `false` silences the messenger |
+| `appearance.sent_sound`, `appearance.reply_sound` | `"none"` turns off the sound for a message going out or coming in; any other value (`"pop"`, `"chime"`, `"bubble"`, `"swoosh"`, `"tick"`) turns it on |
 | `texts` | Key-value overrides such as `greeting`, `chat_title`, or `composer_placeholder` |
 | `language` | Language tag such as `fr` or `pt-BR` |
 

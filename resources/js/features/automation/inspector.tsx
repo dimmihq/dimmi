@@ -26,6 +26,7 @@ import { KindMark } from "./parts";
 import { Pick, Picks } from "./pick";
 import { type Lists, StepFields } from "./step-fields";
 import { stepLook } from "./step-kinds";
+import { WorkflowGoalSettings } from "./studio/workflow-goal";
 import { type TriggerKind, tintOf, triggers } from "./triggers";
 import type { Step, StepKind } from "./workflows";
 
@@ -154,9 +155,9 @@ function TriggerSettings({ spec, head }: { spec: Spec; head: Head }) {
   return (
     <>
       <Section title="Name">
-        <Row label="Name">
-          <Field label="Workflow name" value={head.name} onChange={head.onRename} />
-        </Row>
+        <div className="py-2.5 pe-2.5">
+          <Field label="Workflow name" value={head.name} width="w-full" onChange={head.onRename} />
+        </div>
       </Section>
       <Section
         title="When it starts"
@@ -230,6 +231,7 @@ function TriggerSettings({ spec, head }: { spec: Spec; head: Head }) {
           />
         </Row>
       </Section>
+      <WorkflowGoalSettings spec={spec} onSpec={head.onSpec} />
       <Section title="Archive">
         <Row
           label="Archive this workflow"
@@ -253,7 +255,9 @@ export function Inspector({
   onEdit,
   onClose,
   className,
+  results,
 }: {
+  results?: ReactNode;
   spec: Spec;
   step: Step | undefined;
   issues: Issue[];
@@ -288,6 +292,7 @@ export function Inspector({
           ) : (
             <TriggerSettings spec={spec} head={head} />
           )}
+          {results}
           {step && !readOnly ? (
             <Section title="Remove">
               <Row label="Remove this step" description="Steps on its paths go with it.">

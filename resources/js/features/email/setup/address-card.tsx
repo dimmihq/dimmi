@@ -2,13 +2,15 @@
  * One address with its forwarding setup: where to forward, the steps for
  * the mail service it lives in, whether mail arrived, and the settings
  * of the address for whoever may manage it, among them the default that
- * new mail leaves from and how replies look. The settings are held in
+ * new mail leaves from, the reply sent outside office hours, and how
+ * replies look. The settings are held in
  * the page's draft and sent with its save bar; making the address the
  * default is an action of its own and happens at once.
  */
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 import { Button } from "@/components/base/buttons/button";
+import { Textarea } from "@/components/base/textarea/textarea";
 import { Choice, Toggle } from "@/features/settings/controls";
 import { Row, Section } from "@/features/settings/layout";
 import { useAccount } from "@/features/settings/use-account";
@@ -124,6 +126,33 @@ export function AddressCard({
               }}
             />
           </Row>
+          <Row
+            label="Reply when you're away"
+            description="Outside office hours, a new email gets this once, unless an AI agent answers it."
+          >
+            <Toggle
+              key={`away-${settings.away_reply}`}
+              label="Reply when you're away"
+              on={settings.away_reply}
+              onChange={(on) => draft.set("away_reply", on)}
+            />
+          </Row>
+          {settings.away_reply ? (
+            <div className="flex flex-col gap-1.5 py-2.5 pe-2.5">
+              <Textarea
+                key={`away-text-${draft.generation}`}
+                aria-label="Away reply"
+                defaultValue={settings.away_reply_text}
+                rows={2}
+                autoResize
+                maxRows={6}
+                onChange={(text) => draft.set("away_reply_text", text)}
+              />
+              <p className="text-caption-1-regular text-text-tertiary">
+                {"{{reply_time}}"} becomes when you're back, such as "tomorrow after 09:00".
+              </p>
+            </div>
+          ) : null}
           <TemplateSettings workspace={me.workspace.id} address={address} draft={draft} settings={settings} />
         </>
       ) : null}

@@ -77,6 +77,7 @@ export const sidebar: Group[] = [
       { label: "Test procedures", link: "/ai/test-procedures/" },
       { label: "Versions and analytics", link: "/ai/procedure-versions/" },
       { label: "Actions", link: "/ai/actions/" },
+      { label: "AI attributes", link: "/ai/ai-attributes/" },
       { label: "First action", link: "/ai/first-action/" },
       { label: "Handover", link: "/ai/handover/" },
       { label: "AI providers", link: "/ai/providers/" },

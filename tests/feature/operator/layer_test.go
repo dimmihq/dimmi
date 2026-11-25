@@ -81,7 +81,8 @@ func TestOperatorToolLayer(t *testing.T) {
 			"the provider's id for the call and the model that answered are kept")
 
 		want := []string{
-			"call_tool", "get_conversation_by_number", "load_tools", "search_conversations", "search_knowledge",
+			"call_tool", "get_conversation_by_number", "get_skill_by_name", "load_tools", "search_conversations",
+			"search_knowledge",
 		}
 		for _, req := range k.llm.Sent() {
 			assert.Equal(t, want, offered(req))

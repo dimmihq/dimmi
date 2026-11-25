@@ -57,6 +57,9 @@ func (c *checker) checkSettings(s Step) {
 		KindHTTPRequest: c.checkHTTPRequest,
 	}
 	maps.Copy(checks, c.ticketChecks())
+	maps.Copy(checks, c.agentChecks())
+	maps.Copy(checks, c.automationChecks())
+	maps.Copy(checks, c.splitChecks())
 
 	if check, ok := checks[s.Kind]; ok {
 		check(s)

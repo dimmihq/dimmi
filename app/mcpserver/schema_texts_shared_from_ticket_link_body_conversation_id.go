@@ -63,6 +63,9 @@ func sharedTextsFromUpdateConversationRequestBodyInboxID() map[string]string {
 		"UpdateConversationRequestBody.inbox_id": "Id of the inbox to move the conversation, or " +
 			"each one in a bulk change, to, starting with inbox_, such as inbox_01jx2m8k4t. Find it with " +
 			"dimmi_list_inboxes.",
+		"UpdateConversationRequestBody.ai_enabled": "false keeps every AI agent off the conversation, or " +
+			"each one in a bulk change, until turned on again; true lets the agent answer again, even after " +
+			"a handover.",
 		"UpdateConversationRequestBody.note": "Only with status closed: a note for the team kept " +
 			"with the closing, 1 to 65536 characters, such as Refund sent, nothing more to do.",
 		"UpdateConversationRequestBody.priority": "How urgent the conversation is, or each one in " +

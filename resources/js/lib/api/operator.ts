@@ -10,7 +10,15 @@ import { queryOptions } from "@tanstack/react-query";
 
 import { request } from "./client";
 
-export const OPERATOR_GROUPS = ["conversations", "notes", "contacts", "articles", "procedures", "actions"] as const;
+export const OPERATOR_GROUPS = [
+  "conversations",
+  "notes",
+  "contacts",
+  "articles",
+  "procedures",
+  "automation",
+  "actions",
+] as const;
 export type OperatorGroup = (typeof OPERATOR_GROUPS)[number];
 export type OperatorPolicy = "auto" | "ask" | "off";
 
@@ -64,6 +72,8 @@ export interface OperatorOperation {
   article_id?: string;
   help_center_id?: string;
   procedure_id?: string;
+  workflow_id?: string;
+  series_id?: string;
   title?: string;
   visibility?: "public" | "agent_only";
 }
@@ -124,7 +134,6 @@ export interface OperatorUsageRun {
   thread_title: string;
   conversation_id: string | null;
   conversation_number: number | null;
-  cost_micros: number;
   latency_ms: number | null;
   created_at: string;
   thread_id: string | null;
@@ -133,18 +142,15 @@ export interface OperatorUsageRun {
 
 export interface OperatorUsage {
   period_start: string;
-  cost_micros: number;
   runs_count: number;
   failed_count: number;
   input_tokens: number;
   output_tokens: number;
-  agent_cost_micros: number;
-  monthly_spend_cap_micros: number | null;
-  daily: { day: string; cost_micros: number; runs_count: number }[];
-  by_purpose: { purpose: OperatorPurpose; runs_count: number; cost_micros: number }[];
-  by_routine: { routine_id: string; name: string; runs_count: number; cost_micros: number }[];
-  by_member: { member_id: string; name: string; runs_count: number; cost_micros: number }[];
-  by_model: { model: string; cost_micros: number; calls: number }[];
+  daily: { day: string; runs_count: number }[];
+  by_purpose: { purpose: OperatorPurpose; runs_count: number }[];
+  by_routine: { routine_id: string; name: string; runs_count: number }[];
+  by_member: { member_id: string; name: string; runs_count: number }[];
+  by_model: { model: string; calls: number }[];
   changesets: { status: ChangesetStatus; count: number }[];
   recent: OperatorUsageRun[];
 }
@@ -203,12 +209,22 @@ export function operatorThreadQuery(workspace: string, id: string) {
 
 /*
  * OperatorViewing is what the teammate has open when they ask: the kind
- * of page, the id of what it shows, and the suggested change shown on it.
+ * of page, the id of what it shows, the suggested change shown on it,
+ * and, in the series builder, the step selected on the canvas.
  */
 export interface OperatorViewing {
-  page: "article" | "procedure" | "conversation" | "help_center" | "feature_request" | "changelog_entry";
+  page:
+    | "article"
+    | "procedure"
+    | "conversation"
+    | "help_center"
+    | "feature_request"
+    | "changelog_entry"
+    | "workflow"
+    | "series";
   id: string;
   suggestion_id?: string;
+  step_id?: string;
 }
 
 export function askOperator(

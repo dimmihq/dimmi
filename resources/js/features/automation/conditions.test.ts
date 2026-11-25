@@ -61,4 +61,13 @@ describe("conditions", () => {
       value: ["done"],
     });
   });
+
+  it("compares a rating as a number", () => {
+    expect(fieldsFor("conversation.rated")).toHaveProperty("rating.score");
+    expect(fieldsFor("message.customer")).not.toHaveProperty("rating.score");
+    expect(opsFor("rating.score")).toHaveProperty("lte");
+    expect(conditionOf("rating.score", "lte", "2")).toEqual({ field: "rating.score", op: "lte", value: 2 });
+    expect(conditionOf("rating.score", "lte", "two")).toEqual({ field: "rating.score", op: "lte", value: "" });
+    expect(describeCondition({ field: "rating.score", op: "lte", value: 2 })).toBe("Rating is at most 2");
+  });
 });

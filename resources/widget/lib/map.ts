@@ -56,6 +56,8 @@ export function fromConfig(config: Config): OptionsUpdate {
         "padding_y",
         "font",
         "sound",
+        "sent_sound",
+        "reply_sound",
       ]),
       launcher: {
         ...(a.launcher?.style === "bubble" || a.launcher?.style === "tab" || a.launcher?.style === "hidden"
@@ -297,7 +299,14 @@ export function toSources(ai: api.AiAnswer | null | undefined): Source[] {
     }
     const url = source.url && /^https?:\/\//.test(source.url) ? source.url : undefined;
 
-    return [url ? { title: source.title, url } : { title: source.title }];
+    return [
+      {
+        title: source.title,
+        ...(url ? { url } : {}),
+        ...(source.excerpt ? { excerpt: source.excerpt } : {}),
+        ...(source.slug ? { slug: source.slug } : {}),
+      },
+    ];
   });
 }
 

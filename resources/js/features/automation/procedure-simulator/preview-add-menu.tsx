@@ -243,17 +243,20 @@ function Conversations({
 
 /*
  * PreviewAddMenu is the plus of the preview composer. A conversation
- * can only be replayed before the chat has begun.
+ * can only be replayed before the chat has begun. With onContact, a
+ * customer picked from the list is handed over as the contact itself.
  */
 export function PreviewAddMenu({
   workspace,
   replayable,
   onCustomer,
+  onContact,
   onConversation,
 }: {
   workspace: string;
   replayable: boolean;
   onCustomer: (persona: SimPersona) => void;
+  onContact?: (person: Contact) => void;
   onConversation: (conversation: Conversation) => void;
 }) {
   const [open, setOpen] = useState(false);
@@ -292,6 +295,11 @@ export function PreviewAddMenu({
                 workspace={workspace}
                 onBack={() => setFinding(null)}
                 onPick={(person) => {
+                  if (onContact) {
+                    onContact(person);
+                    toggle(false);
+                    return;
+                  }
                   onCustomer({
                     verified: true,
                     channel: "widget",

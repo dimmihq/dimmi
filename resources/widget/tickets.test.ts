@@ -107,11 +107,13 @@ describe("requests in the messenger", () => {
     expect(calls.map((c) => c.key)).not.toContain("GET /apps/wgt_1/ticket-types");
 
     widget?.messenger?.open();
+    const home = shadow().querySelector<HTMLElement>('.view[data-view="home"]');
+    expect(home?.dataset.state).toBe("loading");
     await settle();
 
-    const home = shadow().querySelector('.view[data-view="home"]');
-    expect(home?.textContent).toContain("Get help with");
-    expect(home?.querySelector("[data-ticket-type]")?.textContent).toContain("Bug report");
+    expect(shadow().querySelector<HTMLElement>('.view[data-view="home"]')?.dataset.state).toBe("ready");
+    expect(shadow().querySelector('.view[data-view="home"]')?.textContent).toContain("Get help with");
+    expect(shadow().querySelector('.view[data-view="home"] [data-ticket-type]')?.textContent).toContain("Bug report");
     expect(calls.map((c) => c.key)).not.toContain("GET /apps/wgt_1/incidents");
   });
 
@@ -158,6 +160,73 @@ describe("requests in the messenger", () => {
       expect.objectContaining({ type_id: "tktt_1", title: "Export is broken", fields: { steps: "Open reports" } }),
     ]);
     expect((sent[0] as { client_id: string }).client_id).toMatch(/^[0-9a-f-]{36}$/);
+  });
+
+  it("picks a choice from the drawn select and sends it", async () => {
+    const sent: unknown[] = [];
+    const access = {
+      ...bug,
+      fields: [
+        {
+          key: "severity",
+          label: "Severity",
+          data_type: "single_choice",
+          options: ["Low", "High"],
+          required: true,
+          editable: true,
+          show_when: null,
+        },
+        {
+          key: "impact",
+          label: "Impact",
+          data_type: "short_text",
+          options: [],
+          required: false,
+          editable: true,
+          show_when: { field: "severity", equals: ["High"] },
+        },
+      ],
+    };
+    serve({
+      "GET /apps/wgt_1/config": () => ({ status: 200, body: config }),
+      "GET /apps/wgt_1/ticket-types": () => ({ status: 200, body: { data: [access] } }),
+      "POST /sessions": () => ({
+        status: 201,
+        body: { data: { id: "wss_1", token: "dmi_ws_1", kind: "anonymous", contact: { id: "ctc_1" } } },
+      }),
+      "POST /tickets": (body) => {
+        sent.push(body);
+        return { status: 201, body: { data: { id: "tkt_1", conversation_id: "conv_1" } } };
+      },
+      "GET /conversations": () => ({ status: 200, body: { data: [] } }),
+    });
+
+    const widget = boot(win, document);
+    await widget?.ready;
+    widget?.messenger?.open();
+    await settle();
+    shadow().querySelector<HTMLElement>("[data-ticket-type]")?.click();
+    await settle();
+
+    const form = shadow().querySelector<HTMLFormElement>("[data-ticket-form]") as HTMLFormElement;
+    const select = form.querySelector<HTMLDetailsElement>("[data-select]") as HTMLDetailsElement;
+    expect(form.querySelector("select")).toBeNull();
+    expect(form.querySelector<HTMLElement>('[data-field="impact"]')?.hidden).toBe(true);
+
+    select.open = true;
+    const high = form.querySelector<HTMLInputElement>('input[value="High"]') as HTMLInputElement;
+    high.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true, composed: true }));
+    high.click();
+
+    expect(select.open).toBe(false);
+    expect(select.querySelector("[data-select-label]")?.textContent).toBe("High");
+    expect(form.querySelector<HTMLElement>('[data-field="impact"]')?.hidden).toBe(false);
+
+    (form.querySelector('[name="title"]') as HTMLInputElement).value = "Locked out";
+    form.requestSubmit();
+    await settle(10);
+
+    expect(sent).toEqual([expect.objectContaining({ title: "Locked out", fields: { severity: "High" } })]);
   });
 
   it("draws the progress strip with the current stop marked", () => {

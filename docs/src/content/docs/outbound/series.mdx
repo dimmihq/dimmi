@@ -28,14 +28,35 @@ A series supports up to 200 steps, with up to 8 outgoing paths per step.
 | **Wait for** | Pauses until an event fires, rules match, or the customer opens, clicks, or replies to an earlier message. Takes the timeout path if time runs out. |
 | **Check** | Follows the first matching branch, or the fallback branch. |
 | **Split test** | Permanently assigns each customer to 1 of 2 to 4 variants by percentage. |
-| **AI path** | Uses AI to read the customer, company, and recent threads and pick a path. Falls back after 20 seconds or on error. |
+| **AI path** | Uses AI to read the customer, their company and recent events and pick a path. Falls back after 20 seconds or on error. |
+| **Extract with AI** | Uses AI to read the same profile and write typed values to the customer's attributes. A value the AI isn't sure of takes its fallback, or the **Not found** path. |
 | **Tag**, **Remove tag**, **Set attribute**, **Topic** | Updates the customer (or company in an account series). |
-| **Webhook** | Sends the customer and step payload to your endpoint (does not follow redirects). See [Workflow requests](/developers/workflow-requests/). |
+| **Run an action** | Calls one of your published [actions](/ai/actions/) with inputs from the customer's details and attributes, and writes the outputs you pick to their attributes. Takes the **Action failed** path on an error. Series made earlier may still hold a **Webhook** step, which keeps running. |
 
 ## Sending limits
 
 - **Daily cap:** each customer receives at most 2 series messages per day across all series. Extra messages wait until the next day.
 - **Quiet hours:** **Email only by day** holds emails until 8:00 to 20:00 in the customer's local time zone.
+
+## Replies
+
+A reply to a series message opens a conversation in the inbox, routed to the **Replies go to** teammate or team on the entry step. An AI agent answers it only when **An AI agent answers replies** is on. **Answered by** picks the agent; left empty, the agent placed on the channel the reply comes in on answers.
+
+## Build it with Operator
+
+Inside the builder, open [Operator](/operator/work-with-operator/) to write the steps, add a follow-up, rewrite a message or change the goal. Its changes show in the builder for you to accept. Operator also sees the step you have selected, so "shorten this step" means that one.
+
+### Ask why someone got a message, or never entered
+
+Ask Operator about a person, by email or contact, or about one journey: "Why did ada@example.com get the trial reminder?" It reads each journey they took and answers with:
+
+- **Entry:** when they entered and how (rules, event, by hand or the API).
+- **Steps:** each one they reached, in order, with the path it took.
+- **Waiting:** what the journey waits for now, and until when.
+- **Messages:** what each message step sent, with opens, clicks and replies.
+- **Ending:** the goal, and why the journey ended.
+
+For someone who never entered, Operator tests the live version's entry and exit rules on them as they are now. It names the condition that keeps them out and the value they have, such as `plan` being `free`. People who already matched when the series went live stay out unless the entry lets them in.
 
 ## Exit rules and goals
 
@@ -43,12 +64,32 @@ Before every step, dimmi evaluates your **Leave early** rules against the custom
 
 The **Goal** window begins the moment the customer enters the series.
 
+### Control group
+
+A goal rate alone can't tell you whether the series caused it. Set **Control group, percent** (0 to 50) to hold that share of people out: they enter, receive nothing, and leave at once, and dimmi still counts their goal for the whole window.
+
+The entry step's results then show both groups side by side. For example, with a 10% control group:
+
+| Group | People | Reached the goal |
+| --- | --- | --- |
+| Got the series | 900 | 27% |
+| Held out | 100 | 19% |
+| **Lift** | | **+8 pts** |
+
+Who is held out is decided once, when they enter.
+
 ## Publish, pause, and archive
 
 - **Publish changes:** customers already in the series pick up the new version from their current step. If their step was deleted, they move to the next remaining step.
-- **Pause:** halts all sends and movement. Waits that finish during a pause resume once you click **Resume**.
+- **Pause:** halts all sends and movement. Waits that finish during a pause resume once you click **Resume**. Both sit in the series' **⋯** menu, beside **Archive**.
 - **Archive:** ends all active journeys permanently. Archived series cannot be republished.
 
 ## Test before launching
 
-Click **Try it on me** to run the published version using the customer profile with your own email address. Real messages send to you, caps and quiet hours are skipped, you can fast-forward through waits, and test runs stay out of reports.
+Open **Simulations** in the panel beside the builder to walk one person through the draft or the live version. Nothing is sent and every wait is skipped, so a month-long series runs in seconds.
+
+1. **Pick who travels it.** A made-up person starts in the box at the bottom. The **+** swaps in one of your contacts, or a made-up person with the attributes your entry rules need.
+2. **Say how they behave.** Type it in plain words, such as "opens every email but never clicks" or "ships abroad and upgrades after the second email".
+3. **Send.** The journey reads like a chat: each message they would get, what they did each time the series asked, the path each check took, and how it ended.
+
+The AI reads your words to decide each open, click, reply and event, using the messages they got so far. AI paths read them too. Nobody clicks a message they never got. Run an action steps never run the action and succeed with nothing. Tags, attributes and extracted values carry forward, so a later check reads them.

@@ -24,13 +24,41 @@
   color: var(--text-tertiary);
 }
 
+/*
+ * The All / Open requests switch: two equal halves and one thumb that
+ * slides between them, the labels easing their colour as it passes.
+ */
 .ticket-filter {
-  display: inline-flex;
+  position: relative;
+  isolation: isolate;
+  display: inline-grid;
+  grid-template-columns: 1fr 1fr;
   gap: 2px;
   justify-self: start;
   padding: 3px;
   border-radius: 10px;
   background: var(--bg-tertiary);
+}
+
+.ticket-filter::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  inset-block: 3px;
+  inset-inline-start: 3px;
+  inline-size: calc(50% - 4px);
+  border-radius: 8px;
+  background: var(--card);
+  box-shadow: var(--shadow-xs);
+  transition: translate 280ms var(--out);
+}
+
+.ticket-filter:has([data-ticket-filter="open"][aria-pressed="true"])::before {
+  translate: calc(100% + 2px) 0;
+}
+
+[dir="rtl"] .ticket-filter:has([data-ticket-filter="open"][aria-pressed="true"])::before {
+  translate: calc(-100% - 2px) 0;
 }
 
 .ticket-filter button {
@@ -42,29 +70,51 @@
   font: inherit;
   font-size: 13px;
   font-weight: 500;
+  white-space: nowrap;
   cursor: pointer;
+  transition: color 200ms ease;
+}
+
+.ticket-filter button:hover {
+  color: var(--text-primary);
 }
 
 .ticket-filter [aria-pressed="true"] {
-  background: var(--card);
   color: var(--text-primary);
-  box-shadow: var(--shadow-xs);
+}
+
+/*
+ * A request's progress sits in a bar of its own under the conversation's
+ * header, a second header that never scrolls away: the reference and
+ * title, three stops and the label of the current one. Once the thread
+ * scrolls, it folds to the title and a thin progress line.
+ */
+.ticket-pin {
+  flex: none;
+  border-block-end: 1px solid var(--separator);
+  background: var(--bg-full);
+}
+
+.ticket-pin[hidden] {
+  display: none;
 }
 
 .ticket-strip {
   display: grid;
   gap: 8px;
-  margin: 4px 0 16px;
-  padding: 12px 14px;
-  border: 1px solid var(--border-button);
-  border-radius: 14px;
-  background: var(--card);
+  padding: 10px 16px 12px;
+  transition:
+    gap 220ms var(--out),
+    padding 220ms var(--out);
 }
 
 .ticket-strip p {
   margin: 0;
   overflow: hidden;
+  color: var(--text-primary);
   font-size: 14px;
+  font-weight: 500;
+  line-height: 20px;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -77,7 +127,7 @@
 .ticket-strip ol {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 6px;
+  gap: 4px;
   margin: 0;
   padding: 0;
   list-style: none;
@@ -85,19 +135,30 @@
 
 .ticket-strip li {
   display: grid;
+  grid-template-rows: auto 1fr;
   gap: 6px;
   color: var(--text-tertiary);
   font-size: 12px;
+  line-height: 16px;
+  transition: gap 220ms var(--out);
+}
+
+.ticket-strip li > span {
+  overflow: hidden;
+  transition: opacity 160ms ease;
 }
 
 .ticket-strip i {
   block-size: 4px;
   border-radius: 999px;
   background: var(--bg-tertiary);
+  transition:
+    block-size 220ms var(--out),
+    background-color 300ms ease;
 }
 
 .ticket-strip [data-done="true"] i {
-  background: var(--brand);
+  background: var(--accent);
 }
 
 .ticket-strip [aria-current="step"] {
@@ -106,13 +167,282 @@
 }
 
 .ticket-strip small {
+  overflow: hidden;
   color: var(--text-secondary);
   font-size: 12px;
+  line-height: 16px;
 }
 
-.ticket-form {
-  display: grid;
+.ticket-pin[data-folded] .ticket-strip {
+  gap: 6px;
+  padding-block: 8px;
+}
+
+.ticket-pin[data-folded] .ticket-strip li {
+  grid-template-rows: auto 0fr;
+  gap: 0;
+}
+
+.ticket-pin[data-folded] .ticket-strip li > span,
+.ticket-pin[data-folded] .ticket-strip small {
+  opacity: 0;
+}
+
+.ticket-pin[data-folded] .ticket-strip small {
+  display: none;
+}
+
+.ticket-pin[data-folded] .ticket-strip i {
+  block-size: 3px;
+}
+
+/*
+ * A request page fills the view: the fields scroll, and the action stays
+ * pinned to the bottom edge on the panel's own surface, with a hairline
+ * above it once fields pass under it.
+ */
+.view[data-view="ticket"] > .stack {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  padding-block-end: 0;
+}
+
+.ticket-form,
+.ticket-sent {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
   gap: 16px;
+}
+
+.ticket-actions {
+  position: sticky;
+  z-index: 4;
+  inset-block-end: 0;
+  margin: auto -16px 0;
+  padding: 12px 16px 16px;
+  border-block-start: 1px solid var(--separator);
+  background: var(--bg-full);
+}
+
+/*
+ * The send button: the label with a caret that steps forward on hover, a
+ * press that gives a little, a spinner in place of the caret while the
+ * request goes out, and a shake when something still needs filling in.
+ */
+.ticket-submit {
+  block-size: 42px;
+  font-size: 14px;
+  transition:
+    transform 120ms ease,
+    filter 150ms ease;
+}
+
+.ticket-submit:active:not(:disabled) {
+  transform: scale(0.985);
+}
+
+.ticket-caret {
+  inline-size: 18px;
+  block-size: 18px;
+  transition:
+    translate 200ms var(--out),
+    opacity 150ms ease,
+    transform 200ms var(--out);
+}
+
+.ticket-submit:hover:not(:disabled) .ticket-caret {
+  translate: 3px 0;
+}
+
+[dir="rtl"] .ticket-submit:hover:not(:disabled) .ticket-caret {
+  translate: -3px 0;
+}
+
+.ticket-submit-label {
+  transition:
+    opacity 150ms ease,
+    transform 200ms var(--out);
+}
+
+.ticket-spinner {
+  position: absolute;
+  inset: 0;
+  inline-size: 18px;
+  block-size: 18px;
+  margin: auto;
+  border: 2px solid currentcolor;
+  border-inline-end-color: transparent;
+  border-radius: 50%;
+  opacity: 0;
+  transform: scale(0.6);
+  transition:
+    opacity 150ms ease,
+    transform 200ms var(--out);
+}
+
+.ticket-submit[data-state="sending"] {
+  cursor: progress;
+}
+
+.ticket-submit[data-state="sending"] :is(.ticket-submit-label, .ticket-caret) {
+  opacity: 0;
+  transform: translateY(-6px);
+}
+
+.ticket-submit[data-state="sending"] .ticket-spinner {
+  opacity: 1;
+  transform: none;
+  animation: spin 700ms linear infinite;
+}
+
+.ticket-submit[data-state="nudge"] {
+  animation: nudge 360ms ease;
+}
+
+@keyframes spin {
+  to {
+    rotate: 1turn;
+  }
+}
+
+@keyframes nudge {
+  20%,
+  60% {
+    translate: -4px 0;
+  }
+
+  40%,
+  80% {
+    translate: 4px 0;
+  }
+}
+
+/*
+ * The page a request lands on once sent: a ring in the brand's accent
+ * draws itself, the tick follows, and the words and the request rise in
+ * after it.
+ */
+.ticket-sent-body {
+  display: grid;
+  flex: 1;
+  align-content: center;
+  justify-items: center;
+  gap: 8px;
+  padding-block: 24px;
+  text-align: center;
+}
+
+.ticket-sent-mark {
+  inline-size: 64px;
+  block-size: 64px;
+  margin-block-end: 8px;
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.ticket-sent-ring {
+  fill: var(--tint);
+  stroke: var(--accent);
+  stroke-width: 2.5;
+  stroke-dasharray: 176;
+  stroke-dashoffset: 176;
+  transform: rotate(-90deg);
+  transform-origin: center;
+  animation: draw 600ms var(--out) forwards;
+}
+
+.ticket-sent-tick {
+  stroke: var(--accent);
+  stroke-width: 3.5;
+  stroke-dasharray: 32;
+  stroke-dashoffset: 32;
+  animation: draw 360ms var(--out) 420ms forwards;
+}
+
+.ticket-sent-body > :is(h3, p, .ticket-sent-card) {
+  animation: rise 420ms var(--out) both;
+}
+
+.ticket-sent-body > h3 {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: 18px;
+  font-weight: 600;
+  line-height: 24px;
+  animation-delay: 360ms;
+}
+
+.ticket-sent-body > p {
+  max-inline-size: 280px;
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 14px;
+  line-height: 20px;
+  animation-delay: 440ms;
+}
+
+.ticket-sent-card {
+  display: grid;
+  gap: 2px;
+  inline-size: 100%;
+  margin-block-start: 16px;
+  padding: 12px 14px;
+  border: 1px solid light-dark(#e5e5e5, #404040);
+  border-radius: 12px;
+  background: var(--bg-primary);
+  text-align: start;
+  animation-delay: 520ms;
+}
+
+.ticket-sent-type {
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 16px;
+}
+
+.ticket-sent-title {
+  overflow: hidden;
+  color: var(--text-primary);
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 20px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ticket-sent .ticket-actions {
+  border-block-start-color: transparent;
+  animation: rise 420ms var(--out) 600ms both;
+}
+
+@keyframes draw {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ticket-sent-ring,
+  .ticket-sent-tick {
+    stroke-dashoffset: 0;
+    animation: none;
+  }
+
+  .ticket-sent-body > :is(h3, p, .ticket-sent-card),
+  .ticket-sent .ticket-actions,
+  .ticket-submit[data-state="nudge"] {
+    animation: none;
+  }
 }
 
 .ticket-field {
@@ -134,70 +464,212 @@
   font-weight: 400;
 }
 
-.ticket-field small {
+.ticket-hint {
   color: var(--text-secondary);
   font-size: 12px;
   font-weight: 400;
 }
 
-/* The same field as the messenger's search: filled, a ring on hover and focus. */
-.ticket-field > input:not([type="checkbox"]),
-.ticket-field > select,
-.ticket-field > textarea {
+/*
+ * Text fields, the select's trigger and textareas share one look: a card
+ * surface with a hairline edge that darkens on hover, and the brand's
+ * accent with a soft halo on focus. A field left empty turns red.
+ */
+.ticket-field > input,
+.ticket-field > textarea,
+.ticket-trigger {
   box-sizing: border-box;
   inline-size: 100%;
-  block-size: 36px;
-  max-block-size: none;
+  min-block-size: 40px;
   margin: 0;
-  padding: 0 10px;
-  border: 0;
+  padding: 9px 12px;
+  border: 1px solid light-dark(#e5e5e5, #404040);
   border-radius: 10px;
-  background: var(--bg-tertiary);
+  background: var(--bg-primary);
   color: var(--text-primary);
   font: inherit;
   font-size: 14px;
   font-weight: 400;
   line-height: 20px;
-  box-shadow: inset 0 0 0 2px transparent;
-  transition: box-shadow 150ms ease;
+  transition:
+    border-color 150ms ease,
+    box-shadow 150ms ease,
+    background-color 150ms ease;
 }
 
 .ticket-field > textarea {
-  block-size: auto;
-  min-block-size: 88px;
-  padding: 8px 10px;
-  resize: vertical;
-}
-
-.ticket-field > select {
-  padding-inline-end: 32px;
-  appearance: none;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='none' stroke='%23737373' stroke-width='1.75' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 8 4 4 4-4'/%3E%3C/svg%3E");
-  background-position: right 8px center;
-  background-repeat: no-repeat;
-  background-size: 18px;
-  cursor: pointer;
-}
-
-[dir="rtl"] .ticket-field > select {
-  background-position: left 8px center;
+  display: block;
+  min-block-size: 96px;
+  resize: none;
+  field-sizing: content;
+  max-block-size: 220px;
 }
 
 .ticket-field > :is(input, textarea)::placeholder {
   color: var(--text-tertiary);
 }
 
-.ticket-field > :is(input, select, textarea):hover {
-  box-shadow: inset 0 0 0 2px var(--border-button-hover);
+.ticket-field > :is(input, textarea):hover,
+.ticket-trigger:hover {
+  border-color: var(--border-button-hover);
 }
 
-.ticket-field > :is(input, select, textarea):focus-visible {
+.ticket-field > :is(input, textarea):focus,
+.ticket-trigger:focus-visible,
+.ticket-select[open] > summary {
   outline: 0;
-  box-shadow: inset 0 0 0 2px var(--border-button-active);
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--tint);
 }
 
-.ticket-field[data-invalid] > :is(input, select, textarea) {
-  box-shadow: inset 0 0 0 2px #ef4444;
+/*
+ * The select: a trigger showing the choice, or a quiet placeholder, with
+ * a chevron that turns as the menu opens, and a menu floating under it
+ * with a tick beside the choice.
+ */
+.ticket-select {
+  position: relative;
+}
+
+.ticket-trigger {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  list-style: none;
+  cursor: pointer;
+  user-select: none;
+}
+
+.ticket-trigger::-webkit-details-marker {
+  display: none;
+}
+
+.ticket-value {
+  flex: 1;
+  min-inline-size: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ticket-value[data-empty="true"] {
+  color: var(--text-tertiary);
+}
+
+.ticket-chevron {
+  flex: none;
+  inline-size: 18px;
+  block-size: 18px;
+  color: var(--text-secondary);
+  transition: transform 200ms var(--out);
+}
+
+.ticket-select[open] .ticket-chevron {
+  transform: rotate(180deg);
+}
+
+.ticket-menu {
+  position: absolute;
+  z-index: 6;
+  inset-inline: 0;
+  inset-block-start: calc(100% + 6px);
+  display: grid;
+  gap: 2px;
+  max-block-size: 240px;
+  overflow-y: auto;
+  padding: 4px;
+  border: 1px solid light-dark(#e5e5e5, #404040);
+  border-radius: 12px;
+  background: var(--bg-primary);
+  box-shadow:
+    0 12px 32px -8px rgb(0 0 0 / 0.18),
+    0 2px 6px rgb(0 0 0 / 0.06);
+  animation: menu-in 160ms var(--out);
+}
+
+.ticket-select[data-up="true"] > .ticket-menu {
+  inset-block: auto calc(100% + 6px);
+  transform-origin: bottom;
+  animation-name: menu-up;
+}
+
+/* In the top layer the menu is placed against the screen from script. */
+.ticket-menu:popover-open {
+  position: fixed;
+  inset: auto;
+  box-sizing: border-box;
+  margin: 0;
+  color: var(--text-primary);
+}
+
+@keyframes menu-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.98);
+  }
+}
+
+@keyframes menu-up {
+  from {
+    opacity: 0;
+    transform: translateY(4px) scale(0.98);
+  }
+}
+
+.ticket-menu-item {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  color: var(--text-primary);
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 20px;
+  cursor: pointer;
+  transition: background-color 120ms ease;
+}
+
+.ticket-menu-item:hover,
+.ticket-menu-item:has(input:focus-visible) {
+  background: var(--bg-primary-hover);
+}
+
+.ticket-menu-item > input {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  margin: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.ticket-menu-text {
+  flex: 1;
+}
+
+.ticket-tick {
+  flex: none;
+  inline-size: 16px;
+  block-size: 16px;
+  color: var(--accent);
+  stroke-width: 2.5;
+  opacity: 0;
+}
+
+.ticket-menu-item:has(input:checked) {
+  font-weight: 500;
+}
+
+.ticket-menu-item:has(input:checked) .ticket-tick {
+  opacity: 1;
+}
+
+.ticket-field[data-invalid] > :is(input, textarea),
+.ticket-field[data-invalid] .ticket-trigger {
+  border-color: #ef4444;
+  box-shadow: 0 0 0 3px color-mix(in oklab, #ef4444 14%, transparent);
 }
 
 .ticket-field[data-invalid]::after {
@@ -207,33 +679,97 @@
   font-weight: 400;
 }
 
-.choices {
-  display: flex;
-  flex-wrap: wrap;
+/*
+ * Checkbox fields are cards, one under another, the full width of the
+ * form: a drawn box in the brand's accent instead of the browser's,
+ * a ring on hover and a tinted card once ticked, in both themes.
+ */
+.ticket-options {
+  display: grid;
   gap: 6px;
+  min-inline-size: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
 }
 
-.choices label {
-  display: inline-flex;
+.ticket-option {
+  position: relative;
+  display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 6px 10px;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid light-dark(#e5e5e5, #404040);
   border-radius: 10px;
-  background: var(--bg-tertiary);
+  background: var(--bg-primary);
+  color: var(--text-primary);
   font-size: 14px;
   font-weight: 400;
-  box-shadow: inset 0 0 0 2px transparent;
-  transition: box-shadow 150ms ease;
+  line-height: 20px;
   cursor: pointer;
+  transition:
+    background-color 150ms ease,
+    border-color 150ms ease;
 }
 
-.choices label:hover {
-  box-shadow: inset 0 0 0 2px var(--border-button-hover);
+.ticket-option:hover {
+  border-color: var(--border-button-hover);
+  background: var(--bg-primary-hover);
 }
 
-.choices input {
+.ticket-option:has(input:checked) {
+  border-color: var(--accent);
+  background: var(--tint);
+}
+
+.ticket-option > input {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  margin: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.ticket-box {
+  display: grid;
   flex: none;
-  accent-color: var(--brand);
+  place-items: center;
+  inline-size: 18px;
+  block-size: 18px;
+  border: 1.5px solid light-dark(#a3a3a3, #737373);
+  border-radius: 5px;
+  background: var(--bg-primary);
+  transition:
+    background-color 150ms ease,
+    border-color 150ms ease;
+}
+
+.ticket-box-tick {
+  inline-size: 14px;
+  block-size: 14px;
+  stroke-width: 3;
+  opacity: 0;
+  transform: scale(0.6);
+  transition:
+    opacity 150ms ease,
+    transform 150ms var(--out);
+}
+
+.ticket-option > input:checked + .ticket-box {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: light-dark(#fff, #0a0a0a);
+}
+
+.ticket-option > input:checked + .ticket-box .ticket-box-tick {
+  opacity: 1;
+  transform: none;
+}
+
+.ticket-option > input:focus-visible + .ticket-box {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
 
 .ticket-error {
@@ -243,4 +779,43 @@
   background: color-mix(in oklab, #ef4444 12%, transparent);
   color: #dc2626;
   font-size: 13px;
+}
+
+/*
+ * Things that show up in a form ease in rather than pop: a field whose
+ * condition starts to hold, the note under a field left empty, and the
+ * error when a request could not be sent.
+ */
+.ticket-field[data-show-field]:not([hidden]) {
+  animation: rise 240ms var(--out);
+}
+
+.ticket-field[data-invalid]::after {
+  animation: rise 200ms var(--out);
+}
+
+.ticket-error:not([hidden]) {
+  animation: rise 220ms var(--out);
+}
+
+.ticket-pin:not([hidden]) {
+  animation: pin-in 260ms var(--out);
+}
+
+@keyframes pin-in {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ticket-filter::before,
+  .ticket-field[data-show-field]:not([hidden]),
+  .ticket-field[data-invalid]::after,
+  .ticket-error:not([hidden]),
+  .ticket-pin:not([hidden]) {
+    transition: none;
+    animation: none;
+  }
 }

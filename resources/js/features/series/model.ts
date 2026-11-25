@@ -58,6 +58,12 @@ export function optionalPaths(node: SeriesNode): { id: string; label: string }[]
   if (node.kind === "wait" && node.settings?.mode === "attribute") {
     return [{ id: "no_date", label: "No date" }];
   }
+  if (node.kind === "extract") {
+    return [{ id: "fallback", label: "Not found" }];
+  }
+  if (node.kind === "run_action") {
+    return [{ id: "failed", label: "Action failed" }];
+  }
 
   return [];
 }
@@ -120,6 +126,10 @@ export function defaults(kind: NodeKind, spec: SeriesSpec): NodeSettings {
       };
     case "webhook":
       return { url: "https://" };
+    case "extract":
+      return { prompt: "", fields: [{ key: "team_size", label: "Team size", type: "number" }] };
+    case "run_action":
+      return { action_id: "" };
     default:
       return {};
   }
@@ -271,6 +281,12 @@ const summaries: Partial<Record<NodeKind, (s: NodeSettings) => string>> = {
   set_attribute: (s) => (s.key ? `Set ${s.key}` : "Set an attribute"),
   topic: (s) => (s.subscribed ? "Subscribe to a topic" : "Unsubscribe from a topic"),
   webhook: (s) => s.url || "Post to a webhook",
+  extract: (s) => {
+    const names = (s.fields ?? []).map((f) => f.label || f.key).filter(Boolean);
+
+    return names.length > 0 ? `Find ${names.join(", ")}` : "Let the AI find values";
+  },
+  run_action: (s) => (s.action_id ? "Run the action" : "Choose an action to run"),
 };
 
 function entrySummary(spec: SeriesSpec): string {
@@ -401,6 +417,7 @@ export interface Sending {
   topic_id?: string;
   service?: boolean;
   ai_replies?: boolean;
+  reply_agent_id?: string;
 }
 
 /*
@@ -415,5 +432,6 @@ export function sendingOf(series: Series): Sending {
     topic_id: series.topic_id ?? undefined,
     service: series.service,
     ai_replies: series.ai_replies,
+    reply_agent_id: series.reply_agent_id ?? undefined,
   };
 }

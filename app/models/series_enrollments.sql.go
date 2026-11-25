@@ -91,50 +91,6 @@ func (q *Queries) EndSeriesEnrollments(ctx context.Context, arg EndSeriesEnrollm
 	return items, nil
 }
 
-const endTestJourneys = `-- name: EndTestJourneys :many
-UPDATE series_enrollments SET status = 'exited', end_reason = 'replaced', left_at = $1::timestamptz,
-    wait = NULL, wake_at = NULL, seq = seq + 1, updated_at = $1::timestamptz
-WHERE workspace_id = $2 AND series_id = $3 AND test AND status IN ('active', 'waiting')
-  AND (contact_id = $4 OR ($5::uuid IS NOT NULL AND company_id = $5::uuid))
-RETURNING id
-`
-
-type EndTestJourneysParams struct {
-	Now         time.Time `json:"now"`
-	WorkspaceID ids.UUID  `json:"workspace_id"`
-	SeriesID    ids.UUID  `json:"series_id"`
-	ContactID   *ids.UUID `json:"contact_id"`
-	CompanyID   *ids.UUID `json:"company_id"`
-}
-
-// EndTestJourneys ends the test journeys a contact, or their company,
-// still has on a series, so trying it again starts afresh.
-func (q *Queries) EndTestJourneys(ctx context.Context, arg EndTestJourneysParams) ([]ids.UUID, error) {
-	rows, err := q.db.Query(ctx, endTestJourneys,
-		arg.Now,
-		arg.WorkspaceID,
-		arg.SeriesID,
-		arg.ContactID,
-		arg.CompanyID,
-	)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []ids.UUID
-	for rows.Next() {
-		var id ids.UUID
-		if err := rows.Scan(&id); err != nil {
-			return nil, err
-		}
-		items = append(items, id)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
 const enrollSeriesCompanies = `-- name: EnrollSeriesCompanies :many
 INSERT INTO series_enrollments (workspace_id, series_id, version_id, subject, company_id, node_id, seq, entered_at,
     entered_by, trigger_ref, test, created_at, updated_at)
@@ -525,6 +481,106 @@ func (q *Queries) ListGoalWindowEnrollments(ctx context.Context, arg ListGoalWin
 			&i.StepsExecuted,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listPersonSeriesJourneys = `-- name: ListPersonSeriesJourneys :many
+SELECT e.id, e.workspace_id, e.series_id, e.version_id, e.subject, e.contact_id, e.company_id, e.status, e.node_id, e.seq, e.wait, e.wake_at, e.entered_at, e.entered_by, e.trigger_ref, e.goal_at, e.left_at, e.end_reason, e.variants, e.test, e.steps_executed, e.created_at, e.updated_at, s.name AS series_name FROM series_enrollments e
+JOIN series s ON s.id = e.series_id
+WHERE e.workspace_id = $1
+  AND (e.contact_id = $2::uuid OR e.company_id = $3::uuid)
+  AND ($4::uuid IS NULL OR e.series_id = $4::uuid)
+ORDER BY e.entered_at DESC, e.id DESC LIMIT $5::bigint
+`
+
+type ListPersonSeriesJourneysParams struct {
+	WorkspaceID ids.UUID  `json:"workspace_id"`
+	ContactID   *ids.UUID `json:"contact_id"`
+	CompanyID   *ids.UUID `json:"company_id"`
+	SeriesID    *ids.UUID `json:"series_id"`
+	RowLimit    int64     `json:"row_limit"`
+}
+
+type ListPersonSeriesJourneysRow struct {
+	ID            ids.UUID        `json:"id"`
+	WorkspaceID   ids.UUID        `json:"workspace_id"`
+	SeriesID      ids.UUID        `json:"series_id"`
+	VersionID     ids.UUID        `json:"version_id"`
+	Subject       string          `json:"subject"`
+	ContactID     *ids.UUID       `json:"contact_id"`
+	CompanyID     *ids.UUID       `json:"company_id"`
+	Status        string          `json:"status"`
+	NodeID        string          `json:"node_id"`
+	Seq           int64           `json:"seq"`
+	Wait          json.RawMessage `json:"wait"`
+	WakeAt        *time.Time      `json:"wake_at"`
+	EnteredAt     time.Time       `json:"entered_at"`
+	EnteredBy     string          `json:"entered_by"`
+	TriggerRef    *string         `json:"trigger_ref"`
+	GoalAt        *time.Time      `json:"goal_at"`
+	LeftAt        *time.Time      `json:"left_at"`
+	EndReason     *string         `json:"end_reason"`
+	Variants      json.RawMessage `json:"variants"`
+	Test          bool            `json:"test"`
+	StepsExecuted int32           `json:"steps_executed"`
+	CreatedAt     time.Time       `json:"created_at"`
+	UpdatedAt     time.Time       `json:"updated_at"`
+	SeriesName    string          `json:"series_name"`
+}
+
+// ListPersonSeriesJourneys returns every journey of a contact and of
+// their company, newest first, on one series when one is named. Unlike
+// the person's page it keeps tests and the rows of people kept out
+// because they already matched when the series went live, since those
+// explain why someone never entered.
+func (q *Queries) ListPersonSeriesJourneys(ctx context.Context, arg ListPersonSeriesJourneysParams) ([]ListPersonSeriesJourneysRow, error) {
+	rows, err := q.db.Query(ctx, listPersonSeriesJourneys,
+		arg.WorkspaceID,
+		arg.ContactID,
+		arg.CompanyID,
+		arg.SeriesID,
+		arg.RowLimit,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListPersonSeriesJourneysRow
+	for rows.Next() {
+		var i ListPersonSeriesJourneysRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.WorkspaceID,
+			&i.SeriesID,
+			&i.VersionID,
+			&i.Subject,
+			&i.ContactID,
+			&i.CompanyID,
+			&i.Status,
+			&i.NodeID,
+			&i.Seq,
+			&i.Wait,
+			&i.WakeAt,
+			&i.EnteredAt,
+			&i.EnteredBy,
+			&i.TriggerRef,
+			&i.GoalAt,
+			&i.LeftAt,
+			&i.EndReason,
+			&i.Variants,
+			&i.Test,
+			&i.StepsExecuted,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.SeriesName,
 		); err != nil {
 			return nil, err
 		}

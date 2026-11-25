@@ -1,6 +1,6 @@
 /*
 |--------------------------------------------------------------------------
-| Letting dimmi Handle A Conversation
+| Handing A Conversation To An AI Agent
 |--------------------------------------------------------------------------
 |
 | The agent speaks in a conversation a workflow holds only while this
@@ -33,7 +33,6 @@ import (
 	"github.com/dimmihq/dimmi/app/enums"
 	"github.com/dimmihq/dimmi/app/jobs"
 	"github.com/dimmihq/dimmi/app/models"
-	"github.com/dimmihq/dimmi/app/support/resolution"
 	"github.com/dimmihq/dimmi/app/support/workflowspec"
 )
 
@@ -111,15 +110,10 @@ func (st *state) stepAgent(d workflowspec.DimmiSettings) *ids.UUID {
 }
 
 /*
-agentWait is the wait of an active agent step: the guidance and limits
-the agent reads on every turn, and the quiet timer.
+agentWait is the wait of an active agent step: which agent answers and
+how, read on every turn, and the quiet timer.
 */
 func (st *state) agentWait(ctx context.Context, d workflowspec.DimmiSettings) (*waitState, error) {
-	instructions, err := st.render(ctx, d.Instructions)
-	if err != nil {
-		return nil, err
-	}
-
 	quiet, err := st.quietAfter(ctx, d.QuietAfter)
 	if err != nil {
 		return nil, err
@@ -131,7 +125,7 @@ func (st *state) agentWait(ctx context.Context, d workflowspec.DimmiSettings) (*
 	return &waitState{
 		Kind: workflowspec.WaitAgent, Since: &now, Until: &until, Quiet: quiet.String(),
 		Agent: &workflowspec.AgentHandling{
-			AgentID: st.stepAgent(d), Instructions: instructions, MaxReplies: d.MaxReplies,
+			AgentID: st.stepAgent(d), AllowTransfers: workflowspec.On(d.AllowTransfers, false),
 			ConfirmResolution: workflowspec.On(d.ConfirmResolution, true),
 		},
 	}, nil
@@ -191,8 +185,11 @@ func resumeDimmi(ctx context.Context, st *state, s workflowspec.Step, in Input) 
 	switch in.Kind {
 	case InputAgentHandover:
 		return handedOver(s, in.Reason), nil
-	case InputMessage:
-		return st.maybeResolved(ctx, s, in)
+	case InputAgentResolved:
+		if st.wait.Agent == nil || !st.wait.Agent.ConfirmResolution {
+			return st.keepWaiting(), nil
+		}
+		return st.resolved(ctx, s)
 	case InputTimer:
 		return st.maybeQuiet(ctx, s)
 	}
@@ -220,30 +217,6 @@ func (st *state) keepWaiting() outcome {
 }
 
 /*
-maybeResolved takes the resolved path when the customer confirms the
-answer right before their message solved it.
-*/
-func (st *state) maybeResolved(ctx context.Context, s workflowspec.Step, in Input) (outcome, error) {
-	if st.wait.Agent == nil || !st.wait.Agent.ConfirmResolution || in.MessageID == nil ||
-		!resolution.Confirms(in.Text) {
-		return st.keepWaiting(), nil
-	}
-
-	before, err := st.q.PublicAuthorBefore(ctx, models.PublicAuthorBeforeParams{
-		WorkspaceID: st.conv.WorkspaceID, ConversationID: st.conv.ID, MessageID: *in.MessageID,
-	})
-	if errors.Is(err, database.ErrNotFound) || err == nil && before != string(enums.AuthorTypeAgent) {
-		return st.keepWaiting(), nil
-	}
-
-	if err != nil {
-		return outcome{}, fmt.Errorf("find answer before: %w", err)
-	}
-
-	return st.resolved(ctx, s)
-}
-
-/*
 resolved stands the agent down and takes the resolved path; with none,
 it closes the conversation unless the step says not to.
 */
@@ -258,7 +231,7 @@ func (st *state) resolved(ctx context.Context, s workflowspec.Step) (outcome, er
 
 	out := fixedOrEnd(s, workflowspec.OutcomeResolved, EndCompleted)
 	out.acted = true
-	if out.path != "" || !workflowspec.On(settings[workflowspec.DimmiSettings](s).CloseOnResolved, true) {
+	if resolvedHasSteps(s) || !workflowspec.On(settings[workflowspec.DimmiSettings](s).CloseOnResolved, true) {
 		return out, nil
 	}
 
@@ -370,4 +343,18 @@ func (st *state) announceResolved(ctx context.Context, s workflowspec.Step) erro
 	}
 
 	return st.push(ctx, jobs.MatchWorkflowsArgs{Event: raw})
+}
+
+/*
+resolvedHasSteps reports whether the step's resolved path does
+anything; an empty one still lets the step close the conversation.
+*/
+func resolvedHasSteps(s workflowspec.Step) bool {
+	for _, p := range s.Paths {
+		if p.Outcome == workflowspec.OutcomeResolved && len(p.Steps) > 0 {
+			return true
+		}
+	}
+
+	return false
 }

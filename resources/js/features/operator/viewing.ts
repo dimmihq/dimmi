@@ -19,18 +19,24 @@ export const ViewingContext = createContext<HeldViewing | null>(null);
 
 /*
  * useViewing says what this page shows while it is on screen: the kind
- * of page, the id of what it shows, and the suggestion shown on it.
+ * of page, the id of what it shows, the suggestion shown on it and, in
+ * a builder, the step selected on its canvas.
  */
-export function useViewing(page: OperatorViewing["page"], id: string | null | undefined, suggestion?: string | null) {
+export function useViewing(
+  page: OperatorViewing["page"],
+  id: string | null | undefined,
+  suggestion?: string | null,
+  step?: string | null,
+) {
   const held = useContext(ViewingContext);
   const show = held?.show;
   useEffect(() => {
     if (!show || !id) {
       return;
     }
-    show({ page, id, suggestion_id: suggestion ?? undefined });
+    show({ page, id, suggestion_id: suggestion ?? undefined, step_id: step ?? undefined });
     return () => show(null);
-  }, [show, page, id, suggestion]);
+  }, [show, page, id, suggestion, step]);
 }
 
 /*

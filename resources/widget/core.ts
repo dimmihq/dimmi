@@ -58,7 +58,7 @@ export interface Widget {
   readonly options: Options;
   readonly live: Live | undefined;
   readonly ready: Promise<void>;
-  update(changes: OptionsUpdate): void;
+  update(changes: OptionsUpdate): Promise<void>;
 }
 
 const toggles = ["open", "close", "toggle"] as const;
@@ -130,7 +130,69 @@ export function boot(win: Window & DimmiWindow, doc: Document): Widget | undefin
     });
   };
 
-  const draw = () => {
+  /*
+   * settling is what the messenger is still animating: a panel opening, a
+   * launcher's mark turning into its chevron. Drawing the messenger again
+   * replaces those elements, so their animation would jump to its end.
+   */
+  const settling = (): Promise<void> | undefined => {
+    if (typeof CSSTransition === "undefined" || typeof root.getAnimations !== "function") {
+      return undefined;
+    }
+    const running = root
+      .getAnimations()
+      .filter((animation) => animation instanceof CSSTransition && animation.playState === "running");
+    if (running.length === 0) {
+      return undefined;
+    }
+    // A hidden tab stops the clock that runs them, so the wait has a cap.
+    const capped = new Promise<void>((resolve) => win.setTimeout(resolve, 500));
+    const finished = Promise.all(running.map((animation) => animation.finished.catch(() => undefined)));
+    return Promise.race([finished.then(() => undefined), capped]);
+  };
+
+  /*
+   * still ends at once the entrance animations a redraw starts while the
+   * panel is open: the view on screen and its content were already there,
+   * so playing them again made the panel flash. Endless ones, such as a
+   * skeleton's sheen, keep running.
+   */
+  const still = () => {
+    if (typeof CSSAnimation === "undefined" || typeof root.getAnimations !== "function") {
+      return;
+    }
+    for (const animation of root.getAnimations()) {
+      if (
+        animation instanceof CSSAnimation &&
+        animation.effect?.getComputedTiming().iterations !== Number.POSITIVE_INFINITY
+      ) {
+        animation.finish();
+      }
+    }
+  };
+
+  let waiting: Promise<void> | undefined;
+
+  /*
+   * draw draws the messenger again, at once when nothing is moving and
+   * otherwise once what moves has settled, then puts back what only the
+   * connection draws.
+   */
+  const draw = (): Promise<void> => {
+    const moving = settling();
+    if (!moving) {
+      paint();
+      return Promise.resolve();
+    }
+    waiting ??= moving.then(() => {
+      waiting = undefined;
+      paint();
+      live?.redraw();
+    });
+    return waiting;
+  };
+
+  const paint = () => {
     const before = find();
     const [wasOpen, tab] = [before?.isOpen, before?.tab ?? ""];
     const loaded = [...root.querySelectorAll<HTMLElement>('.view[data-state="ready"]')].map(
@@ -142,6 +204,7 @@ export function boot(win: Window & DimmiWindow, doc: Document): Widget | undefin
     const messenger = root.firstElementChild as HTMLElement;
     messenger.dataset.latency = String(latency);
     messenger.dataset.live = String(Boolean(live));
+    messenger.dataset.waiting = live?.waiting ?? "";
     for (const view of root.querySelectorAll<HTMLElement>(".view")) {
       if (loaded.includes(view.dataset.view)) {
         view.dataset.state = "ready";
@@ -150,6 +213,7 @@ export function boot(win: Window & DimmiWindow, doc: Document): Widget | undefin
     app.connect(root);
     if (wasOpen) {
       find()?.restore(tab);
+      still();
     } else {
       find()?.show(tab);
     }
@@ -205,7 +269,7 @@ export function boot(win: Window & DimmiWindow, doc: Document): Widget | undefin
     },
     update(changes) {
       options = merge(options, changes);
-      draw();
+      return draw();
     },
   };
 
@@ -384,8 +448,9 @@ export function boot(win: Window & DimmiWindow, doc: Document): Widget | undefin
     });
     root.addEventListener("dimmi:send", (event) => {
       const sent = (event as CustomEvent<{ body: string; files: File[]; voice?: string; choice?: string }>).detail;
+      find()?.sent();
       if (preview) {
-        preview.answer(root, sent);
+        preview.answer(root, sent, () => find()?.replied());
       } else {
         void live?.send(sent.body, sent.files, sent.choice);
       }
@@ -406,9 +471,6 @@ export function boot(win: Window & DimmiWindow, doc: Document): Widget | undefin
       }
       rateClick(live, target);
       previewClick(target);
-      if (target?.closest<HTMLElement>('[data-ai="helped"]')) {
-        void live?.aiAction();
-      }
       verifyClick(target);
       articleClick(event, target);
       retryClick(live, target);
@@ -476,6 +538,7 @@ export function boot(win: Window & DimmiWindow, doc: Document): Widget | undefin
         const messenger = find();
         return Boolean(messenger?.isOpen && messenger.tab === "conversation" && live?.open === conversation);
       },
+      replied: () => find()?.replied(),
     },
     { ...browserOf(win), language: () => language || win.navigator.language },
     settings.appId,

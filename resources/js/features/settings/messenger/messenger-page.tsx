@@ -42,6 +42,7 @@ import {
   TabsSection,
   VisitorsSection,
 } from "./sections";
+import { SoundsSection } from "./sounds-section";
 import { TextsSection } from "./texts-section";
 import { usePreviewConfig } from "./use-preview-config";
 
@@ -150,6 +151,7 @@ function Editor({ workspace, saved }: { workspace: string; saved: WidgetSettings
           <InstallSection value={edit.shown} />
           <GeneralSection {...props} locales={locales} />
           <AppearanceSection {...props} />
+          <SoundsSection {...props} />
           <TextsSection {...props} locales={locales} language={language} onLanguage={setLanguage} />
           <VisitorsSection {...props} />
           <LinksSection {...props} problems={problems} />

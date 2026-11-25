@@ -27,25 +27,19 @@ import (
 )
 
 /*
-Errors of people on a series.
+ErrNotLive says a series must be live before people are added to it.
 */
-var (
-	ErrNotLive = fault.New(fault.Conflict, "series_not_live", "Set the series live before adding people to it.")
-	ErrNoSelf  = fault.New(fault.Invalid, "series_test_contact_missing",
-		"No contact has your email yet. Add yourself as a contact, then try again.")
-	ErrNotTest = fault.New(fault.Conflict, "series_enrollment_not_test", "Only test journeys can skip a wait.")
-)
+var ErrNotLive = fault.New(fault.Conflict, "series_not_live", "Set the series live before adding people to it.")
 
 /*
 EnrollInput adds people to a series: contacts by id, or companies by id
-for an account series. Test marks a try-out journey.
+for an account series.
 */
 type EnrollInput struct {
 	Membership authz.Membership
 	ID         ids.UUID
 	ContactIDs []ids.UUID
 	CompanyIDs []ids.UUID
-	Test       bool
 	By         string
 }
 
@@ -54,7 +48,7 @@ Enroll adds people to a live series and returns the journeys started.
 */
 func (s *Series) Enroll(ctx context.Context, in EnrollInput) ([]models.SeriesEnrollment, error) {
 	m := in.Membership
-	if !m.Can("series:publish") && (!in.Test || !m.Can("series:write")) {
+	if !m.Can("series:publish") {
 		return nil, exceptions.ErrForbidden
 	}
 
@@ -73,7 +67,7 @@ func (s *Series) Enroll(ctx context.Context, in EnrollInput) ([]models.SeriesEnr
 			return err
 		}
 
-		in2.by, in2.test = in.By, in.Test
+		in2.by = in.By
 		out, err = s.admit(ctx, tx, in2)
 
 		return err
@@ -83,73 +77,11 @@ func (s *Series) Enroll(ctx context.Context, in EnrollInput) ([]models.SeriesEnr
 }
 
 /*
-TrySelf enrolls the teammate's own contact as a test journey.
-*/
-func (s *Series) TrySelf(ctx context.Context, m authz.Membership, id ids.UUID) (models.SeriesEnrollment, error) {
-	var contact models.Contact
-
-	err := s.inWorkspace(ctx, m.Workspace.ID, func(ctx context.Context, q *models.Queries) error {
-		me, err := q.FindBroadcastSender(ctx, models.FindBroadcastSenderParams{
-			WorkspaceID: m.Workspace.ID,
-			ID:          m.Member.ID,
-		})
-		if err != nil || me.Email == "" {
-			return ErrNoSelf
-		}
-
-		contact, err = q.FindMemberContact(ctx, models.FindMemberContactParams{
-			WorkspaceID: m.Workspace.ID,
-			Email:       me.Email,
-		})
-		if err != nil {
-			return ErrNoSelf
-		}
-
-		return s.endTests(ctx, q, id, contact)
-	})
-	if err != nil {
-		return models.SeriesEnrollment{}, err
-	}
-
-	in := EnrollInput{Membership: m, ID: id, ContactIDs: []ids.UUID{contact.ID}, Test: true, By: "test"}
-	if contact.CompanyID != nil {
-		in.CompanyIDs = []ids.UUID{*contact.CompanyID}
-	}
-
-	rows, err := s.Enroll(ctx, in)
-	if err != nil || len(rows) == 0 {
-		return models.SeriesEnrollment{}, err
-	}
-
-	return rows[0], nil
-}
-
-/*
 Remove takes someone off a series.
 */
 func (s *Series) Remove(ctx context.Context, m authz.Membership, series, id ids.UUID) error {
 	return s.onJourney(ctx, journeyRef{m: m, series: series, id: id}, func(ctx context.Context, r *run) error {
 		return r.end(ctx, "removed")
-	})
-}
-
-/*
-Skip ends the wait of a test journey now.
-*/
-func (s *Series) Skip(ctx context.Context, m authz.Membership, series, id ids.UUID) error {
-	return s.onJourney(ctx, journeyRef{m: m, series: series, id: id}, func(ctx context.Context, r *run) error {
-		if !r.e.Test {
-			return ErrNotTest
-		}
-
-		if r.e.Status != "waiting" {
-			return nil
-		}
-
-		w := r.waitOf()
-		w.Until = r.now
-
-		return r.hold(ctx, w)
 	})
 }
 
@@ -358,27 +290,4 @@ func (s *Series) PersonJourneys(ctx context.Context, m authz.Membership, contact
 	})
 
 	return out, err
-}
-
-/*
-endTests ends the contact's earlier test journeys on the series and
-withdraws what they had not sent.
-*/
-func (s *Series) endTests(ctx context.Context, q *models.Queries, series ids.UUID, c models.Contact) error {
-	ended, err := q.EndTestJourneys(ctx, models.EndTestJourneysParams{
-		WorkspaceID: c.WorkspaceID, SeriesID: series, ContactID: &c.ID, CompanyID: c.CompanyID, Now: s.Clock.Now(),
-	})
-	if err != nil {
-		return wrap("end test journeys", err)
-	}
-
-	for _, e := range ended {
-		if _, err := q.WithdrawSeriesRecipients(ctx, models.WithdrawSeriesRecipientsParams{
-			WorkspaceID: c.WorkspaceID, SeriesEnrollmentID: &e, Now: s.Clock.Now(),
-		}); err != nil {
-			return wrap("withdraw test sends", err)
-		}
-	}
-
-	return nil
 }

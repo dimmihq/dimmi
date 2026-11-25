@@ -6,6 +6,8 @@
  * made. Settings are the server's own, so what the builder saves is
  * exactly what runs.
  */
+import { readableText } from "./message-variables";
+import { splitSentence } from "./split";
 import { stepLook } from "./step-kinds";
 import { ticketSentences } from "./ticket-sentences";
 import { newId, type Path, type Step, type StepKind } from "./workflows";
@@ -27,6 +29,7 @@ export interface Names {
   articles?: ReadonlyMap<string, string>;
   connections?: ReadonlyMap<string, string>;
   tickets?: ReadonlyMap<string, string>;
+  agents?: ReadonlyMap<string, string>;
 }
 
 export const noNames: Names = { teams: new Map(), members: new Map(), tags: new Map() };
@@ -94,7 +97,7 @@ export function list(settings: Settings | undefined, name: string): string[] {
 }
 
 function written(step: Step): string {
-  return text(step.settings, "text").trim() || unsetSummary;
+  return readableText(text(step.settings, "text").trim()) || unsetSummary;
 }
 
 function lasting(value: string): string {
@@ -148,7 +151,7 @@ function waited(step: Step, verb: string): string {
 }
 
 function collected(step: Step): string {
-  const question = text(step.settings, "text").trim();
+  const question = readableText(text(step.settings, "text").trim());
   const field = text(step.settings, "field");
   const target = collectTargets[field]?.name ?? field;
 
@@ -172,6 +175,24 @@ function called(step: Step, names: Names): string {
   return method === "GET" ? `GET ${where}` : `${method} to ${where}`;
 }
 
+function extracting(step: Step): string {
+  const fields = Array.isArray(step.settings?.fields)
+    ? (step.settings.fields as { key?: string; label?: string }[])
+    : [];
+  const named = fields.map((field) => field.label?.trim() || field.key?.trim() || "").filter(Boolean);
+
+  return named.length > 0 ? `Find ${named.join(", ")}` : unsetSummary;
+}
+
+function acting(step: Step): string {
+  if (!text(step.settings, "action_id")) {
+    return unsetSummary;
+  }
+  const saves = Array.isArray(step.settings?.save) ? step.settings.save.length : 0;
+
+  return saves > 0 ? `Run the action and save ${saves === 1 ? "1 output" : `${saves} outputs`}` : "Run the action";
+}
+
 function sorted(step: Step): string {
   const categories = (step.paths ?? []).filter((path) => !path.outcome).map((path) => path.label?.trim() ?? "");
   const named = categories.filter(Boolean);
@@ -189,22 +210,31 @@ const describers: Partial<Record<StepKind, (step: Step, names: Names) => string>
   },
   buttons: written,
   collect: collected,
-  reply_time: (step) => text(step.settings, "text").trim() || replyTimeText,
+  reply_time: (step) => readableText(text(step.settings, "text").trim()) || replyTimeText,
   branch: () => "Go down the first path that matches",
   classify: sorted,
+  split: splitSentence,
+  extract: extracting,
+  run_action: acting,
   run_workflow: (step, names) => {
     const workflow = text(step.settings, "workflow_id");
 
     return workflow ? `Run ${nameOf(names.workflows ?? noMap, workflow)}` : unsetSummary;
   },
   http_request: called,
-  dimmi: (step) => {
-    const instructions = text(step.settings, "instructions").trim();
+  dimmi: (step, names) => {
+    const agent = text(step.settings, "agent_id");
+    const who = agent ? nameOf(names.agents ?? noMap, agent) : "The agent placed on the channel";
 
-    return instructions
-      ? `dimmi answers, following: ${instructions}`
-      : "dimmi answers until it resolves, hands over or the customer goes quiet";
+    return `${who} answers until it resolves, hands over or the customer goes quiet`;
   },
+  assign_ai_agent: (step, names) => {
+    const agent = text(step.settings, "agent_id");
+
+    return agent ? `Hand the conversation to ${nameOf(names.agents ?? noMap, agent)}` : unsetSummary;
+  },
+  turn_off_ai: () => "Keep every AI agent off this conversation",
+  turn_on_ai: () => "Let the AI agent answer again",
   wait: (step) => waited(step, "Wait"),
   snooze: (step) => waited(step, "Snooze"),
   assign: (step, names) => assigned(step.settings, names),

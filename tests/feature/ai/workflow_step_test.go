@@ -71,7 +71,7 @@ func TestWorkflowDimmiStep(t *testing.T) {
 	t.Run("answers the first message, asks to confirm, and resolves on the customer's thanks", func(t *testing.T) {
 		t.Parallel()
 		h := newHarness(t, nil)
-		h.handlingWorkflow(testkit.JSON{"instructions": "Only answer questions about plans."})
+		h.handlingWorkflow(testkit.JSON{})
 		h.llm.answer.Script(search("pro plan price per seat"), reply("The Pro plan costs $12 per seat per month [1]."))
 
 		conv, _ := h.conversation("How much is Pro per seat?")
@@ -81,10 +81,10 @@ func TestWorkflowDimmiStep(t *testing.T) {
 		replies := s.agentReplies()
 		require.Len(t, replies, 1)
 		assert.True(t, strings.HasSuffix(str(replies[0].Body), resolution.Prompt), str(replies[0].Body))
-		assert.Contains(t, sentText(h.llm.answer), "Only answer questions about plans.")
 		assert.Equal(t, "workflow", s.conv.AiMode)
 
-		h.customer(conv, "Thanks!")
+		h.decider().Script(fits(map[string]float64{"confirms_resolution": 0.95}))
+		h.customer(conv, "Perfect, that sorted it, thank you so much")
 		h.d.TC.DrainLater()
 
 		s = h.load(conv, ids.UUID{})
@@ -136,6 +136,7 @@ func TestWorkflowDimmiStep(t *testing.T) {
 		h.llm.answer.Script(search("pro plan price per seat"), reply("The Pro plan costs $12 per seat per month [1]."),
 			search("annual discount"), reply("Paying yearly saves two months [1]."))
 
+		h.decider().Script(fits(map[string]float64{"confirms_resolution": 0.1}))
 		conv, _ := h.conversation("How much is Pro per seat?")
 		h.d.TC.Drain()
 		h.customer(conv, "Thanks, but is there a discount for paying yearly?")

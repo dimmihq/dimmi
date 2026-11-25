@@ -29,6 +29,9 @@ export interface Appearance {
   launcher: Launcher;
   font: "system" | "inherit";
   sound: boolean;
+  /* "none" turns that sound off; any other value plays the messenger's sound. */
+  sent_sound: string;
+  reply_sound: string;
 }
 
 export interface Texts {
@@ -88,6 +91,7 @@ export interface Texts {
   verify_submit: string;
   verify_resend: string;
   verify_other: string;
+  more_sources: string;
 }
 
 export interface Options {
@@ -127,6 +131,8 @@ export const defaults: Options = {
     launcher: { style: "bubble", shape: "circle", label: "" },
     font: "system",
     sound: true,
+    sent_sound: "pop",
+    reply_sound: "pop",
   },
   texts: {
     greeting_intro: "Hey there.",
@@ -185,6 +191,7 @@ export const defaults: Options = {
     verify_submit: "Verify",
     verify_resend: "Send a new code",
     verify_other: "Use another email",
+    more_sources: "{count} more",
   },
   tabs: ["home", "messages", "changelog", "help"],
   show_branding: true,

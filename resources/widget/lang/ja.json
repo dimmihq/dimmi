@@ -76,6 +76,9 @@
   "ticket_required": "入力してください",
   "ticket_resolved": "解決済み",
   "ticket_send": "リクエストを送信",
+  "ticket_sent": "リクエストを送信しました",
+  "ticket_sent_body": "ここのメッセージで返信しますので、いつでも確認できます。",
+  "ticket_view": "リクエストを見る",
   "ticket_subject": "件名",
   "ticket_submitted": "送信済み",
   "ticket_yes": "はい",
@@ -92,5 +95,6 @@
   "verify_send": "コードを送信",
   "verify_sent": "{email} に送信した6桁のコードを入力してください",
   "verify_submit": "確認する",
-  "welcome_message": ""
+  "welcome_message": "",
+  "more_sources": "他{count}件"
 }

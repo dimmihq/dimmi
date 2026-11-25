@@ -3,6 +3,7 @@
  * tree (paths hold steps, steps hold paths), so each change rebuilds the
  * branch it touches and leaves the rest as it was.
  */
+import { freshSplit } from "./split";
 import { newId, type Path, type Step, type StepKind } from "./workflows";
 
 /*
@@ -67,17 +68,62 @@ const starts: Partial<Record<StepKind, Step["settings"]>> = {
   note: { text: "" },
   update_contact: { set: [{ field: "contact.name", value: "" }] },
   http_request: { method: "GET", url: "" },
+  extract: { fields: [{ key: "value", label: "", type: "text" }] },
+  classify: { save_to: "run.vars.topic", min_confidence: "medium" },
+  run_action: { action_id: "" },
 };
+
+/*
+ * savedTo lists where the steps, and every step on their paths, save
+ * what they find.
+ */
+function savedTo(steps: Step[]): Set<string> {
+  const out = new Set<string>();
+  const visit = (list: Step[]) => {
+    for (const step of list) {
+      const target = (step.settings as Record<string, unknown> | undefined)?.save_to;
+      if (typeof target === "string") {
+        out.add(target);
+      }
+      for (const path of step.paths ?? []) {
+        visit(path.steps);
+      }
+    }
+  };
+  visit(steps);
+
+  return out;
+}
+
+/*
+ * freeTopic is where a new sort step keeps its topic: topic, or
+ * topic_2, topic_3 and on when earlier sort steps already use it, so two
+ * sort steps never overwrite each other.
+ */
+export function freeTopic(steps: Step[]): string {
+  const used = savedTo(steps);
+  let n = 1;
+  while (used.has(n === 1 ? "run.vars.topic" : `run.vars.topic_${String(n)}`)) {
+    n++;
+  }
+
+  return n === 1 ? "run.vars.topic" : `run.vars.topic_${String(n)}`;
+}
 
 /*
  * freshStep is a new step of a kind with the settings it starts with
  * and the paths it needs: two buttons for reply buttons, one condition
  * and everyone else for a branch, two categories and none matched for
- * sorting by topic, and for dimmi a path for each way its turn ends. A
+ * sorting by topic, variants A and B for a split, half each, and for
+ * dimmi a path for each way its turn ends. A
  * call to your system starts with no paths; its failure path is opt-in.
+ * A sort step keeps its topic where no other step in the workflow does.
  */
-export function freshStep(kind: StepKind): Step {
+export function freshStep(kind: StepKind, others: Step[] = []): Step {
   const step: Step = { id: newId("s_"), kind, settings: { ...starts[kind] } };
+  if (kind === "classify") {
+    step.settings = { ...step.settings, save_to: freeTopic(others) };
+  }
   if (kind === "buttons") {
     step.paths = ["Option 1", "Option 2"].map((label) => ({ id: newId("p_"), label, steps: [] }));
   }
@@ -90,6 +136,9 @@ export function freshStep(kind: StepKind): Step {
       { id: newId("p_"), label: "Category 2", steps: [] },
       { id: newId("p_"), outcome: "none", steps: [] },
     ];
+  }
+  if (kind === "split") {
+    return freshSplit(step);
   }
   if (kind === "branch") {
     step.paths = [

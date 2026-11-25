@@ -10,6 +10,7 @@ import type { ReactNode } from "react";
 import { Action, Danger, Field, Toggle } from "@/features/settings/controls";
 import { Row, Section } from "@/features/settings/layout";
 import type { Condition } from "@/lib/api/workflows";
+import { useAIConditionFields } from "./ai-condition-fields";
 import { ArticleFields } from "./article-fields";
 import { CallFields } from "./call-fields";
 import { type Choices, choicesOf } from "./choices";
@@ -17,6 +18,7 @@ import { ClassifyFields } from "./classify-fields";
 import {
   changeField,
   changeOp,
+  conditionFields,
   conditionOf,
   fieldsFor,
   isSimple,
@@ -26,10 +28,15 @@ import {
   valueList,
   valueText,
 } from "./conditions";
+import { ExtractFields } from "./extract-fields";
 import { type EditorProps, Words } from "./field-parts";
+import { MessageEditor } from "./message-editor";
+import { mentionedIn } from "./message-variables";
 import { Pick, Picks } from "./pick";
 import { ReplyTimeFields } from "./reply-time-fields";
+import { RunActionFields } from "./run-action-fields";
 import { RunWorkflowFields } from "./run-workflow-fields";
+import { SplitFields } from "./split-fields";
 import {
   collectTargets,
   contactFields,
@@ -51,8 +58,8 @@ import type { TriggerKind } from "./triggers";
 import { pathName } from "./workflows";
 
 /*
- * Lists are the workspace's teams, teammates and tags, as choices, and
- * whether its agent is on, unknown until read. Workflows are the live
+ * Lists are the workspace's teams, teammates, tags and AI agents, as
+ * choices, and whether its default agent is on, unknown until read. Workflows are the live
  * reusable ones another workflow may run, connections the systems a
  * call may use, and schedules the office hours. Tickets are the ticket
  * setup, trackers and SLA policies the ticket steps pick from.
@@ -65,24 +72,35 @@ export interface Lists {
   connections: Choices;
   schedules: Choices;
   articles: Choices;
+  agents?: Choices;
   agentOn?: boolean;
   tickets?: TicketLists;
 }
 
 type Props = EditorProps;
 
-function MessageFields({ step, onEdit }: Props) {
+function MessageFields({ step, trigger, lists, onEdit }: Props) {
   const set = useSet(onEdit);
-  const name = step.kind === "note" ? "Note" : "Message";
+  const note = step.kind === "note";
+  const name = note ? "Note" : "Message";
 
   return (
-    <Section title={name} description="Use {{contact.first_name}} and other variables to fill in details.">
-      <Words label={name} value={text(step.settings, "text")} onChange={(value) => set({ text: value })} />
+    <Section
+      title={name}
+      description={note ? "Type { for a variable, or @ to mention a teammate." : "Type { for a variable."}
+    >
+      <MessageEditor
+        label={name}
+        value={text(step.settings, "text")}
+        trigger={trigger}
+        teammates={note ? lists.members : undefined}
+        onChange={(value) => set(note ? { text: value, mention_member_ids: mentionedIn(value) } : { text: value })}
+      />
     </Section>
   );
 }
 
-function ButtonsFields({ step, onEdit }: Props) {
+function ButtonsFields({ step, trigger, onEdit }: Props) {
   const set = useSet(onEdit);
   const buttons = (step.paths ?? []).filter((path) => !path.outcome);
 
@@ -92,7 +110,12 @@ function ButtonsFields({ step, onEdit }: Props) {
         title="Question and buttons"
         description="Customers answer with a number, a button's name or in their own words."
       >
-        <Words label="Question" value={text(step.settings, "text")} onChange={(value) => set({ text: value })} />
+        <MessageEditor
+          label="Question"
+          value={text(step.settings, "text")}
+          trigger={trigger}
+          onChange={(value) => set({ text: value })}
+        />
         {buttons.map((path, index) => (
           <Row key={path.id} label={`Button ${index + 1}`}>
             <div className="flex items-center gap-2">
@@ -131,13 +154,18 @@ function ButtonsFields({ step, onEdit }: Props) {
   );
 }
 
-function CollectFields({ step, onEdit }: Props) {
+function CollectFields({ step, trigger, onEdit }: Props) {
   const set = useSet(onEdit);
   const field = text(step.settings, "field");
 
   return (
     <Section title="Question">
-      <Words label="Question" value={text(step.settings, "text")} onChange={(value) => set({ text: value })} />
+      <MessageEditor
+        label="Question"
+        value={text(step.settings, "text")}
+        trigger={trigger}
+        onChange={(value) => set({ text: value })}
+      />
       <Row label="Save the answer as">
         <Pick
           label="Save the answer as"
@@ -173,7 +201,7 @@ function ConditionFields({
   }
   const field = condition?.field ?? "";
   const op = condition?.op ?? "";
-  const options = optionsOf(field, lists.tickets);
+  const options = optionsOf(field, lists.tickets, lists.agents);
 
   return (
     <>
@@ -209,7 +237,7 @@ function ConditionFields({
           <Field
             key={`${field}-${op}`}
             label="Condition value"
-            placeholder="Words, separated by commas"
+            placeholder={conditionFields[field]?.type === "number" ? "A number, like 2" : "Words, separated by commas"}
             value={valueText(condition)}
             onChange={(typed) => onChange(conditionOf(field, op, typed))}
           />
@@ -308,6 +336,15 @@ function LengthFields({ step, onEdit, title }: Props & { title: string }) {
           />
         </Row>
       )}
+      {step.kind === "wait" ? (
+        <Row label="Stop if the customer writes" description="The workflow ends there instead of going on.">
+          <Toggle
+            label="Stop if the customer writes"
+            on={Array.isArray(step.settings?.interrupt_on) && step.settings.interrupt_on.includes("customer_message")}
+            onChange={(on) => set({ interrupt_on: on ? ["customer_message"] : undefined })}
+          />
+        </Row>
+      ) : null}
     </Section>
   );
 }
@@ -450,14 +487,6 @@ function CloseFields({ step, onEdit }: Props) {
   );
 }
 
-const replyLimits: Record<string, string> = {
-  agent: "The agent's own limit",
-  "3": "3 replies",
-  "5": "5 replies",
-  "10": "10 replies",
-  "20": "20 replies",
-};
-
 const quietWaits: Record<string, string> = {
   channel: "10 minutes in chat, 1 day by email",
   "5m": "5 minutes",
@@ -468,38 +497,44 @@ const quietWaits: Record<string, string> = {
 };
 
 /*
- * DimmiFields shows how long dimmi keeps the conversation and what it
- * is told, and repeats the rules it always keeps.
+ * DimmiFields picks which AI agent takes the conversation and how long
+ * it keeps it. The agent answers by its own guidance and procedures;
+ * the step adds none. Inside the step its handover goes down the
+ * handed-over path instead of to the agent's own handover team.
  */
 function DimmiFields({ step, lists, onEdit }: Props) {
   const set = useSet(onEdit);
-  const limit = step.settings?.max_replies;
+  const agent = text(step.settings, "agent_id");
+  const placed = "placed";
 
   return (
     <>
       {lists.agentOn === false ? (
         <Section
-          title="dimmi is off"
-          description="Until you turn dimmi on in Agent settings, this step hands every conversation to the team."
+          title="The agent is off"
+          description="Until the agent that would answer is published, this step hands every conversation to the team."
         />
       ) : null}
-      <Section title="Extra instructions" description="Added to dimmi's guidance while this step is active.">
-        <Words
-          label="Extra instructions"
-          value={text(step.settings, "instructions")}
-          placeholder="Only answer billing questions; hand refunds to the team."
-          onChange={(value) => set({ instructions: value || undefined })}
-        />
-      </Section>
-      <Section title="While dimmi handles it">
-        <Row label="Replies at most">
+      <Section title="Who answers" description="The agent answers with its own guidance and procedures.">
+        <Row label="Agent">
           <Pick
-            label="Replies at most"
-            choices={choicesOf(replyLimits)}
-            value={typeof limit === "number" ? String(limit) : "agent"}
-            onChange={(value) => set({ max_replies: value === "agent" ? undefined : Number(value) })}
+            label="Agent"
+            choices={[[placed, "The agent placed on the channel"], ...(lists.agents ?? [])]}
+            value={agent || placed}
+            onChange={(value) => set({ agent_id: value === placed ? undefined : value, allow_transfers: undefined })}
           />
         </Row>
+        {agent ? (
+          <Row label="May transfer" description="To the agents it lists under May transfer to.">
+            <Toggle
+              label="May transfer"
+              on={step.settings?.allow_transfers === true}
+              onChange={(on) => set({ allow_transfers: on ? true : undefined })}
+            />
+          </Row>
+        ) : null}
+      </Section>
+      <Section title="While the agent handles it">
         <Row label="Customer gone quiet after">
           <Pick
             label="Customer gone quiet after"
@@ -525,9 +560,48 @@ function DimmiFields({ step, lists, onEdit }: Props) {
       </Section>
       <Section
         title="Always"
-        description="dimmi stops the moment a teammate replies. Silence never counts as resolved: it takes the quiet path."
+        description="The agent stops the moment a teammate replies. A handover takes the handed-over path, not the agent's own handover team. Silence never counts as resolved: it takes the quiet path."
       />
     </>
+  );
+}
+
+/*
+ * AssignAgentFields picks the agent the conversation moves to. It
+ * answers from the customer's next message on.
+ */
+function AssignAgentFields({ step, lists, onEdit }: Props) {
+  const set = useSet(onEdit);
+
+  return (
+    <Section title="Agent" description="Answers from the customer's next message, until a teammate steps in.">
+      <Row label="Agent">
+        <Pick
+          label="Agent"
+          choices={lists.agents ?? []}
+          value={text(step.settings, "agent_id")}
+          onChange={(id) => set({ agent_id: id })}
+        />
+      </Row>
+    </Section>
+  );
+}
+
+/*
+ * AIStateFields explains a step that turns AI off or on; it takes no
+ * settings.
+ */
+function AIStateFields({ step }: Props) {
+  return step.kind === "turn_off_ai" ? (
+    <Section
+      title="Turn off AI"
+      description="No AI agent answers this conversation until a teammate or a Turn on AI step lets one back in. A Hand to an AI agent step still can."
+    />
+  ) : (
+    <Section
+      title="Turn on AI"
+      description="The agent answers this conversation again from the customer's next message, even after a handover to the team."
+    />
   );
 }
 
@@ -553,6 +627,9 @@ const editors: Record<string, (props: Props) => ReactNode> = {
   buttons: ButtonsFields,
   collect: CollectFields,
   dimmi: DimmiFields,
+  assign_ai_agent: AssignAgentFields,
+  turn_off_ai: AIStateFields,
+  turn_on_ai: AIStateFields,
   branch: BranchFields,
   wait: (props) => <LengthFields {...props} title="Wait" />,
   snooze: (props) => <LengthFields {...props} title="Snooze" />,
@@ -565,12 +642,16 @@ const editors: Record<string, (props: Props) => ReactNode> = {
   close: CloseFields,
   reply_time: ReplyTimeFields,
   classify: ClassifyFields,
+  split: SplitFields,
   run_workflow: RunWorkflowFields,
   http_request: CallFields,
+  extract: ExtractFields,
+  run_action: RunActionFields,
   ...Object.fromEntries(ticketStepKinds.map((kind) => [kind, TicketStepFields])),
 };
 
 export function StepFields(props: Props): ReactNode {
+  useAIConditionFields();
   const Editor = editors[props.step.kind] ?? Unavailable;
 
   return <Editor {...props} />;

@@ -21,6 +21,7 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/dimmihq/dimmi/framework/ids"
 	"github.com/dimmihq/dimmi/framework/markdown"
 
 	"github.com/dimmihq/dimmi/app/models"
@@ -270,4 +271,29 @@ openPixel is the image that tells the broadcast an email was opened.
 */
 func openPixel(url string) string {
 	return `<img src="` + html.EscapeString(url) + `" width="1" height="1" alt="" style="display:block;border:0">`
+}
+
+/*
+PreviewVariables are the values a message to the contact would fill
+its variables with: the contact's workspace, the sender, the contact
+and their company. A dry run fills its messages with them.
+*/
+func PreviewVariables(
+	ctx context.Context, q *models.Queries, sender *ids.UUID, c models.Contact,
+) (map[string]string, error) {
+	d := Delivery{
+		Broadcast: models.Broadcast{WorkspaceID: c.WorkspaceID, SenderMemberID: sender},
+		Recipient: models.BroadcastRecipient{CompanyID: c.CompanyID},
+		Contact:   &c,
+	}
+
+	return (*Broadcasts)(nil).variables(ctx, q, d)
+}
+
+/*
+FillVariables replaces every variable in the text with its value, or with its
+fallback when there is none.
+*/
+func FillVariables(text string, vars map[string]string) string {
+	return fill(text, vars)
 }

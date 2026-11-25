@@ -106,3 +106,15 @@ SELECT id FROM broadcast_recipients
 WHERE workspace_id = @workspace_id AND series_step_id IS NOT NULL AND status = 'queued'
   AND due_at < @before::timestamptz
 ORDER BY due_at LIMIT 1000;
+
+-- name: ListSeriesEnrollmentMessages :many
+-- ListSeriesEnrollmentMessages returns every message a journey sent or
+-- tried to send, in order, with the step that sent it and how the
+-- traveler engaged with it.
+SELECT r.id, s.node_id, s.kind, r.status, coalesce(r.reason, '')::text AS reason, r.address, r.contact_id,
+    r.room_id, r.conversation_id, r.due_at, r.sent_at, r.delivered_at, r.opened_at, r.clicked_at, r.replied_at,
+    r.unsubscribed_at, r.created_at
+FROM broadcast_recipients r
+JOIN series_steps s ON s.id = r.series_step_id
+WHERE r.workspace_id = @workspace_id AND r.series_enrollment_id = @series_enrollment_id
+ORDER BY r.created_at, r.id LIMIT 200;

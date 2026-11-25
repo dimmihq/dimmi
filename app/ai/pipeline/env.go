@@ -44,27 +44,30 @@ const transcriptSize = 30
 env is the run's loaded world.
 */
 type env struct {
-	Workspace       models.Workspace
-	Agent           models.AiAgent
-	Conversation    models.Conversation
-	Contact         *models.Contact
-	Trigger         models.Message
-	History         []models.Message
-	Pending         []models.Message
-	Newest          ids.UUID
-	ReplyAfter      string
-	ChannelType     string
-	AnswerKey       *models.AiProviderKey
-	ClassifierKey   *models.AiProviderKey
-	Facts           facts
-	Triage          triageFacts
-	Version         string
-	Defaults        map[string]string
-	WorkflowStep    *workflowspec.AgentHandling
-	Procedures      []liveProcedure
-	AllProcedures   []liveProcedure
-	ActiveProcedure *activeProcedure
-	TicketTypes     []tickets.AgentType
+	Workspace    models.Workspace
+	Agent        models.AiAgent
+	Conversation models.Conversation
+	Contact      *models.Contact
+	Trigger      models.Message
+	History      []models.Message
+	Pending      []models.Message
+	Newest       ids.UUID
+	ReplyAfter   string
+	// WorkflowAnswered says a workflow took the trigger: a customer-facing
+	// run that acted held the conversation when it came, or started on it.
+	WorkflowAnswered bool
+	ChannelType      string
+	AnswerKey        *models.AiProviderKey
+	ClassifierKey    *models.AiProviderKey
+	Facts            facts
+	Triage           triageFacts
+	Version          string
+	Defaults         map[string]string
+	WorkflowStep     *workflowspec.AgentHandling
+	Procedures       []liveProcedure
+	AllProcedures    []liveProcedure
+	ActiveProcedure  *activeProcedure
+	TicketTypes      []tickets.AgentType
 	// GuidanceArticles names the articles the agent's guidance cites,
 	// by public id.
 	GuidanceArticles map[string]string
@@ -120,6 +123,9 @@ func (r *Runner) loadEnv(ctx context.Context, tx *database.Tx, args Args) (*env,
 	if err := r.loadMessages(ctx, q, e, args.TriggerMessageID); err != nil {
 		return nil, err
 	}
+	if err := loadWorkflowAnswered(ctx, q, e); err != nil {
+		return nil, err
+	}
 	r.loadConnections(ctx, q, e)
 
 	loadTicketContext(ctx, q, e)
@@ -136,12 +142,15 @@ func (r *Runner) loadEnv(ctx context.Context, tx *database.Tx, args Args) (*env,
 /*
 loadAgent resolves the agent that answers the conversation, the one a
 workflow step names first, and pins it to the conversation when it is
-on. A workspace without an agent finds none.
+on. Once a named agent that may transfer has passed the conversation
+on, the agent it went to answers. A workspace without an agent finds
+none.
 */
 func loadAgent(ctx context.Context, q *models.Queries, e *env) (bool, error) {
 	var stepAgent *ids.UUID
-	if e.WorkflowStep != nil {
-		stepAgent = e.WorkflowStep.AgentID
+	if s := e.WorkflowStep; s != nil && (!s.AllowTransfers || s.AgentID == nil ||
+		!slices.Contains(e.Conversation.AiTransferredFromIds, *s.AgentID)) {
+		stepAgent = s.AgentID
 	}
 	agent, err := agents.Answerer(ctx, q, agents.ForConversation(e.Conversation, stepAgent))
 	if errors.Is(err, agents.ErrNoAgent) {

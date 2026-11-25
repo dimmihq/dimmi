@@ -20,6 +20,7 @@ func agentStudioSchemaTexts() map[string]map[string]string {
 	for _, part := range []map[string]map[string]string{
 		agentSchemaTexts(), agentDefinitionSchemaTexts(), agentScopeSchemaTexts(), agentRunSchemaTexts(),
 		agentSimulationSchemaTexts(), sharedAISchemaTexts(), mergedSchemaTexts(),
+		workflowSimulationSchemaTexts(), seriesSimulationSchemaTexts(), aiAttributeSchemaTexts(),
 	} {
 		mergeTexts(out, part)
 	}
@@ -252,8 +253,8 @@ func sharedAISchemaTexts() map[string]map[string]string {
 			"fallback_key_id": "Id of the provider key used when an agent's answer key fails (starts with " +
 				"aik_). Null when there is none.",
 			"fallback_model": "The model used when an agent's answer model fails. Null when there is none.",
-			"monthly_spend_cap_micros": "Most the workspace's AI may spend a month, in millionths of a US " +
-				"dollar. Null when there is no cap.",
+			"monthly_spend_cap_micros": "Most the workspace may spend on dimmi in a month, in millionths of " +
+				"a US dollar. Null when there is no cap.",
 		},
 	}
 }

@@ -50,6 +50,7 @@ type subject struct {
 	saved            *audiences.Resolver
 	events           map[string]eventroll.Summary
 	ticket           *ticketFacts
+	aiValues         map[string]any
 }
 
 /*
@@ -82,6 +83,10 @@ func loadSubject(ctx context.Context, q *models.Queries, c models.Conversation) 
 
 	s.channel = conn.Type
 	if s.ticket, err = loadTicket(ctx, q, c); err != nil {
+		return nil, err
+	}
+
+	if err := s.loadAIValues(ctx, q); err != nil {
 		return nil, err
 	}
 
@@ -213,6 +218,10 @@ func (s *subject) companyField(name string) any {
 conversationField returns one of the conversation's fields.
 */
 func (s *subject) conversationField(name string) any {
+	if key, ok := strings.CutPrefix(name, "ai."); ok {
+		return s.aiValues[key]
+	}
+
 	c := s.conversation
 	waiting := any(nil)
 	if c.WaitingSince != nil {
@@ -224,6 +233,7 @@ func (s *subject) conversationField(name string) any {
 		"priority": string(enums.ConversationPriorityOf(c.Priority)), "tags": s.conversationTags,
 		"assignee_id": publicID(models.PrefixMember, c.AssigneeMemberID),
 		"team_id":     publicID(models.PrefixTeam, c.AssigneeTeamID), "ai_state": c.AiState, "subject": c.Subject,
+		"ai_agent_id":   publicID(models.PrefixAiAgent, c.AiAgentID),
 		"message_count": c.MessageCount, "waiting_minutes": waiting, "created_at": c.CreatedAt, "is_test": c.IsTest,
 	}[name]
 }

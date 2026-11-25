@@ -219,3 +219,40 @@ ORDER BY kind, name;
 UPDATE conversations
 SET ai_agent_id = sqlc.narg(to_agent_id), ai_transferred_from_ids = array_append(ai_transferred_from_ids, @from_agent_id::uuid)
 WHERE workspace_id = @workspace_id AND id = @id;
+
+-- name: AgentTies :many
+-- AgentTies lists what still relies on an agent, so it is never archived
+-- from under them: workflows whose working copy or live version names it
+-- in a step, series whose replies go to it, the places it answers on,
+-- and the other agents that may transfer to it, live or in their draft.
+SELECT 'workflow'::text AS kind, w.id, w.name FROM workflows w
+LEFT JOIN workflow_versions v ON v.id = w.live_version_id
+WHERE w.workspace_id = @workspace_id AND w.deleted_at IS NULL AND (
+    jsonb_path_exists(w.draft, '$.**.settings.agent_id ? (@ == $id)', jsonb_build_object('id', @public_id::text))
+    OR jsonb_path_exists(COALESCE(v.spec, '{}'), '$.**.settings.agent_id ? (@ == $id)', jsonb_build_object('id', @public_id::text))
+)
+UNION ALL
+SELECT 'series'::text, s.id, s.name FROM series s
+WHERE s.workspace_id = @workspace_id AND s.archived_at IS NULL AND s.reply_agent_id = @agent_id
+UNION ALL
+SELECT 'connection'::text, cc.id, cc.name FROM channel_connections cc
+WHERE cc.workspace_id = @workspace_id AND cc.ai_agent_id = @agent_id
+UNION ALL
+SELECT 'room'::text, cr.id, cr.name FROM channel_rooms cr
+WHERE cr.workspace_id = @workspace_id AND cr.ai_agent_id = @agent_id
+UNION ALL
+SELECT 'inbox'::text, ib.id, ib.name FROM inboxes ib
+WHERE ib.workspace_id = @workspace_id AND ib.ai_agent_id = @agent_id
+UNION ALL
+SELECT 'agent'::text, a.id, a.name FROM ai_agents a
+WHERE a.workspace_id = @workspace_id AND a.deleted_at IS NULL AND a.id <> @agent_id AND (
+    @agent_id::uuid = ANY (a.transfer_agent_ids)
+    OR jsonb_path_exists(COALESCE(a.draft, '{}'), '$.transfer_agent_ids[*] ? (@ == $id)', jsonb_build_object('id', (@agent_id::uuid)::text))
+)
+ORDER BY 1, 3;
+
+-- name: AssignConversationAgent :execrows
+-- AssignConversationAgent puts an agent on a conversation in place of
+-- the one it had, as a workflow step chooses it.
+UPDATE conversations SET ai_agent_id = @agent_id, updated_at = @now
+WHERE workspace_id = @workspace_id AND id = @id AND ai_agent_id IS DISTINCT FROM @agent_id;

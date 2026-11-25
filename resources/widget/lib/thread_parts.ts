@@ -6,7 +6,7 @@
 import actions from "../styles/actions.css?inline";
 import bubbles from "../styles/bubbles.css?inline";
 
-export { ActionBlock, AiActions, Delivery, Said, Thread, Typing } from "../components/thread";
+export { ActionBlock, Delivery, Said, Thread, Typing } from "../components/thread";
 
 const styled = new WeakSet<ShadowRoot>();
 

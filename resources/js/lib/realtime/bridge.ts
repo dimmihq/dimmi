@@ -200,6 +200,10 @@ export class Bridge {
       );
     }
 
+    if (event === "conversation.ai_attribute_changed") {
+      this.refetch(realtimeKeys.aiAttributes(workspace, record.id));
+    }
+
     if (isReference(record)) {
       this.refetch(realtimeKeys.conversation(workspace, record.id), realtimeKeys.conversations(workspace));
       return;

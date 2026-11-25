@@ -144,6 +144,9 @@ func (r *Runner) RunConversationTurn(ctx context.Context, args Args, settings *T
 	}
 
 	d := st.gate
+	if d == nil && r.confirmsResolution(ctx, st) {
+		d = skipped(skipResolutionConfirmed)
+	}
 	if d == nil {
 		d = r.turn(ctx, st)
 	}

@@ -1,6 +1,6 @@
 ---
 title: "How workflows work"
-description: "How dimmi picks which workflows run on a conversation, what stops a run, and how drafts and run history work."
+description: "How dimmi picks which workflows run, what stops a run, and how versions, goals, analytics and failures work."
 ---
 
 A workflow runs a series of [steps](/workflows/triggers-and-steps/) on a conversation whenever its trigger fires. You can use workflows to greet customers, collect details, route threads, or call your own systems.
@@ -10,9 +10,19 @@ A workflow runs a series of [steps](/workflows/triggers-and-steps/) on a convers
 When a trigger fires, dimmi checks every live workflow with that trigger from the top of your **Workflows** list down.
 
 - **Filters come first:** a workflow only starts if its **Audience**, **Channels**, **When it runs**, and **Once per conversation** rules all match.
-- **Customer-facing workflows:** any workflow with a **Start of conversation** trigger, a **Messages** step, or **Let dimmi handle** takes ownership of the conversation while it runs. Only the first matching one starts.
+- **Customer-facing workflows:** any workflow with a **Start of conversation** trigger, a **Messages** step, or **Hand to an AI agent** takes ownership of the conversation while it runs. Only the first matching one starts.
 - **Background workflows:** every other matching workflow runs, one after another in list order.
 - **Loop protection:** a workflow never triggers itself, and a chain of workflows triggering each other stops after 3 hops.
+
+## Workflows and AI agents
+
+While a customer-facing workflow holds a conversation, no AI agent answers it except inside a **Hand to an AI agent** step. Once the workflow finishes, the conversation goes back to the agent [placed on its channel](/ai/multiple-agents/), which answers the customer's next message. The message the workflow already took stays with the workflow, so the customer never gets two answers to it.
+
+Say your greeting workflow sends "Hi, thanks for writing in" and ends. The customer's next question goes to your support agent like any other conversation.
+
+- **Keep the agent out:** add **Turn off AI**. No agent answers until a **Turn on AI** step, or a teammate picking **Turn on AI** in the conversation's **⋯** menu, lets one back in.
+- **Pick a different agent:** add **Assign an AI agent**. That agent answers from the next message.
+- **A handover still stops it:** once an agent hands a conversation to your team, it stays with the team.
 
 When a customer-facing workflow finishes and the conversation is still open and unassigned, your inbox's [assignment rules](/inbox/how-assignment-works/) take over.
 
@@ -28,7 +38,9 @@ A running workflow stops early in a few cases:
 
 Edits save to a draft as you work. Your live workflow keeps running its published version until you click **Publish changes**.
 
-Runs already in progress finish on the version they started with. Clicking **Pause** or **Archive** stops new runs from starting. Archived workflows leave the list and can only be restored through the API.
+Runs already in progress finish on the version they started with, and every run records that version. **Pause** and **Archive**, in the workflow's **⋯** menu, stop new runs from starting. Archived workflows leave the list and can only be restored through the API.
+
+**History** lists every published version with who published it. Compare any two versions, or a version and your draft, to see each step added, removed, moved or edited. **Restore** copies a version into your draft; customers keep the live version until you publish.
 
 ## Reusable workflows
 
@@ -36,12 +48,42 @@ A workflow with the **Run from other workflows** trigger only starts when anothe
 
 ## Run history
 
-Open **Runs** in the workflow builder to see the 20 most recent runs. Click any run to inspect what each step did.
+Open the workflow's **Analytics** tab to see the 20 most recent runs. Click any run to inspect what each step did.
 
 | Status | What it means |
 | --- | --- |
-| **Waiting** | Paused for a customer reply, a timer, the dimmi agent, or a reusable workflow. |
+| **Waiting** | Paused for a customer reply, a timer, an AI agent, or a reusable workflow. |
 | **Completed** | Reached the end of its path. |
 | **Passed over** | A customer-facing run ended without sending a message or changing anything. |
 | **Exited** | Stopped early because a teammate replied, the thread closed, or the customer did not pick a button. |
 | **Failed** | Hit the 200-step limit or ran into an error. |
+
+## Goals and analytics
+
+Completed runs only tell you a workflow reached its end. A **Goal**, set beside the trigger, says what success looks like, counted within a window from when the run starts (1 to 30 days, 7 by default):
+
+- **Resolved without a handover:** the conversation is closed, no teammate replied, and neither the run nor the agent handed it to a person.
+- **Rated at least:** the customer rated the conversation at or above the score you pick, 3, 4 or 5 of 5.
+
+A goal never changes what the workflow does. **Analytics** counts live runs over the last 7, 30 or 90 days, for every version or one, and can put two versions side by side:
+
+| Number | What it counts |
+| --- | --- |
+| **Triggered** | Runs that started and did something. Passed-over runs and test runs never count. |
+| **Engaged** | Runs the customer wrote during. |
+| **Completed** | Runs that reached the end of a path. |
+| **Handed over** | Runs that assigned the conversation, escalated it, or whose **Let dimmi handle** step handed it to a person. |
+| **Failed** | Runs that failed, or in which a step failed. |
+| **Reached the goal** | Runs whose conversation met the goal inside its window. |
+
+Under the numbers, every step shows how many runs reached it, how many wait there now, and how many ended there without completing, so you can see where customers drop off.
+
+## Failures
+
+**Failures** lists the runs where something went wrong, newest first, each linked to its conversation:
+
+- **Call your system** got an error or no answer.
+- **Sort by topic** could not reach the AI.
+- A step could not apply, or the run itself failed.
+
+A failed step that has a **Failed** path still counts here, even though the run went on. Narrow the list to one step to check a fix.

@@ -78,10 +78,10 @@ describe("describe", () => {
     expect(describeStep({ id: "s", kind: "escalate", settings: {} }, withTickets)).toBe(unsetSummary);
   });
 
-  it("says the reply time message, or the default one", () => {
+  it("says the reply time message, with its variable by name, or the default one", () => {
     expect(describeStep({ id: "s", kind: "reply_time", settings: {} }, names)).toBe(replyTimeText);
     expect(describeStep({ id: "s", kind: "reply_time", settings: { text: "Back {{reply_time}}" } }, names)).toBe(
-      "Back {{reply_time}}",
+      "Back {Reply time}",
     );
   });
 
@@ -129,9 +129,16 @@ describe("describe", () => {
     );
   });
 
-  it("says what dimmi is told while it handles the conversation", () => {
-    expect(describeStep({ id: "s", kind: "dimmi", settings: { instructions: "Only billing." } }, names)).toBe(
-      "dimmi answers, following: Only billing.",
+  it("names the agent that takes the conversation", () => {
+    const named = { ...names, agents: new Map([["aia_1", "Sales"]]) };
+    expect(describeStep({ id: "s", kind: "dimmi", settings: { agent_id: "aia_1" } }, named)).toBe(
+      "Sales answers until it resolves, hands over or the customer goes quiet",
+    );
+    expect(describeStep({ id: "s", kind: "dimmi", settings: {} }, named)).toBe(
+      "The agent placed on the channel answers until it resolves, hands over or the customer goes quiet",
+    );
+    expect(describeStep({ id: "s", kind: "assign_ai_agent", settings: { agent_id: "aia_1" } }, named)).toBe(
+      "Hand the conversation to Sales",
     );
   });
 });

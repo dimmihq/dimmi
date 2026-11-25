@@ -90,7 +90,7 @@ func bootEmail(a *app.App) error {
 
 	acts.ProcessInboundEmail = &email.ProcessInboundEmail{
 		DB: a.DB, Clock: a.Clock, Storage: a.Storage, DNS: a.DNS, Limiter: a.Limiter, Config: cfg, Stamps: stamps,
-		Events: a.Events, Receiver: &conversations.ReceiveInboundMessage{
+		Events: a.Events, Queue: a.Queue, Receiver: &conversations.ReceiveInboundMessage{
 			DB: a.DB, Events: a.Events, Clock: a.Clock, Disk: disk, DiskName: diskName, Queue: a.Queue,
 			ReopenWindow: cfg.Inbound.ReopenWindow,
 		},

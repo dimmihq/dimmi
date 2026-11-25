@@ -8,7 +8,8 @@
  * only the triggers that match, still in their groups, and Enter picks
  * the first one, while the dialog keeps its height so it never jumps as
  * the list narrows. Picking a trigger opens the builder on an empty
- * workflow with it, which it then keeps.
+ * workflow with it, which it then keeps. Templates sit on top: each
+ * starts a workflow on its trigger with steps already in place.
  */
 import { RiArrowRightSLine, RiSearchLine } from "@remixicon/react";
 import { useState } from "react";
@@ -17,7 +18,49 @@ import { Input } from "@/components/base/input/input";
 import { Modal, ModalBody, ModalHeader } from "@/components/base/modal/modal";
 
 import { KindMark } from "./parts";
+import { type WorkflowTemplate, workflowTemplates } from "./templates";
 import { type TriggerKind, tintOf, triggerGroups, triggers, triggersIn } from "./triggers";
+
+function Templates({ query, onPick }: { query: string; onPick: (template: WorkflowTemplate) => void }) {
+  const words = query.toLowerCase();
+  const found = workflowTemplates.filter((t) => !words || `${t.name} ${t.description}`.toLowerCase().includes(words));
+  if (found.length === 0) {
+    return null;
+  }
+
+  return (
+    <section aria-label="Templates" className="flex flex-col gap-2 pb-5">
+      <div className="flex flex-col">
+        <h3 className="text-body-2-medium text-text-primary">Templates</h3>
+        <p className="text-body-2-regular text-text-secondary">Start with the steps in place, then change them.</p>
+      </div>
+      <div className="flex flex-col gap-0.5 rounded-2xl bg-background-secondary-default p-1">
+        {found.map((template) => {
+          const trigger = triggers[template.trigger];
+
+          return (
+            <button
+              key={template.id}
+              type="button"
+              onClick={() => onPick(template)}
+              className="flex w-full cursor-pointer items-center gap-3 rounded-xl px-2.5 py-2 text-start outline-none transition-colors duration-150 hover:bg-background-secondary-hover focus-visible:ring-2 focus-visible:ring-border-focus-ring"
+            >
+              <KindMark icon={trigger.icon} tint={tintOf(template.trigger)} />
+              <span className="flex min-w-0 flex-1 flex-col">
+                <span className="text-body-regular text-text-primary">{template.name}</span>
+                <span className="text-body-2-regular text-text-secondary">{template.description}</span>
+              </span>
+              <RiArrowRightSLine
+                aria-hidden
+                className="size-5 shrink-0 text-foreground-icon-tertiary rtl:-scale-x-100"
+              />
+            </button>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
 
 function Choice({ kind, onPick }: { kind: TriggerKind; onPick: (kind: TriggerKind) => void }) {
   const trigger = triggers[kind];
@@ -70,10 +113,12 @@ export function TriggerPicker({
   isOpen,
   onOpenChange,
   onPick,
+  onTemplate,
 }: {
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
   onPick: (kind: TriggerKind) => void;
+  onTemplate?: (template: WorkflowTemplate) => void;
 }) {
   const [query, setQuery] = useState("");
   const first = triggerGroups.flatMap((group) => triggersIn(group.id, query.trim()))[0];
@@ -86,8 +131,8 @@ export function TriggerPicker({
       />
       <div className="shrink-0 px-6">
         <Input
-          aria-label="Search triggers"
-          placeholder="Search triggers"
+          aria-label="Search triggers and templates"
+          placeholder="Search triggers and templates"
           leadingIcon={RiSearchLine}
           value={query}
           onChange={setQuery}
@@ -100,6 +145,7 @@ export function TriggerPicker({
         />
       </div>
       <ModalBody>
+        {onTemplate ? <Templates query={query.trim()} onPick={onTemplate} /> : null}
         <Groups query={query.trim()} onPick={onPick} />
       </ModalBody>
     </Modal>

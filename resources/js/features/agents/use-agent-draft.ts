@@ -161,7 +161,7 @@ export function useAgentDraft(workspace: string, view: AgentView, onDeleted: () 
         void refresh();
         onDeleted();
       } catch (error) {
-        toast.error(error instanceof Error ? error.message : "The agent could not be deleted.");
+        toast.error(error instanceof Error ? error.message : "The agent could not be archived.");
       }
     },
   };

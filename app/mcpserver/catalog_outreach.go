@@ -127,7 +127,9 @@ func broadcastParams() map[string]string {
 		"reply_team_id":    "Team (team_...) that gets the replies.",
 		"reply_member_id":  "Teammate (mem_...) who gets the replies.",
 		"ai_replies":       "true lets the AI agent answer replies.",
-		"track_clicks":     "true counts who clicks the links.",
+		"reply_agent_id": "The AI agent (aia_...) that answers replies when ai_replies is true; empty " +
+			"leaves it to the agent placed on the channel.",
+		"track_clicks": "true counts who clicks the links.",
 		"skip_frequency_cap": "true sends even to people who got the most messages the workspace allows " +
 			"lately.",
 		"schedule": "When it goes out: {\"kind\": \"now\"}, {\"kind\": \"at\", \"at\": RFC 3339 time} or " +

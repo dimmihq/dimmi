@@ -24,7 +24,6 @@ import (
 	"github.com/dimmihq/dimmi/app/exceptions"
 	"github.com/dimmihq/dimmi/app/models"
 	"github.com/dimmihq/dimmi/app/support/aimodels"
-	"github.com/dimmihq/dimmi/app/support/aiprices"
 )
 
 /*
@@ -95,14 +94,11 @@ type ProviderDescriptor struct {
 CatalogEntry is one selectable model for the settings UI.
 */
 type CatalogEntry struct {
-	ID                 string              `json:"id"`
-	DisplayName        string              `json:"display_name"`
-	Family             enums.AIModelFamily `json:"family"`
-	Suggested          []enums.AIModelRole `json:"suggested"`
-	ContextTokens      int                 `json:"context_tokens"`
-	InputPerMtok       *string             `json:"input_per_mtok"`
-	OutputPerMtok      *string             `json:"output_per_mtok"`
-	CachedInputPerMtok *string             `json:"cached_input_per_mtok"`
+	ID            string              `json:"id"`
+	DisplayName   string              `json:"display_name"`
+	Family        enums.AIModelFamily `json:"family"`
+	Suggested     []enums.AIModelRole `json:"suggested"`
+	ContextTokens int                 `json:"context_tokens"`
 }
 
 /*
@@ -142,17 +138,9 @@ func keyUsed(ctx context.Context, q *models.Queries, workspaceID, keyID ids.UUID
 /*
 catalogEntry maps a catalog row for the API.
 */
-func catalogEntry(e aimodels.Entry, prices *aiprices.Table) CatalogEntry {
-	out := CatalogEntry{
+func catalogEntry(e aimodels.Entry) CatalogEntry {
+	return CatalogEntry{
 		ID: e.ID, DisplayName: e.DisplayName, Family: e.Family,
 		Suggested: e.Suggested, ContextTokens: e.ContextTokens,
 	}
-	if prices != nil {
-		if p := prices.Find(string(enums.AIProviderDimmi), e.ID); p != nil {
-			out.InputPerMtok = new(p.InputPerMtok)
-			out.OutputPerMtok = new(p.OutputPerMtok)
-			out.CachedInputPerMtok = new(p.CachedInputPerMtok)
-		}
-	}
-	return out
 }

@@ -17,6 +17,7 @@ export type StepKind =
   | "dimmi"
   | "branch"
   | "classify"
+  | "split"
   | "wait"
   | "run_workflow"
   | "assign"
@@ -34,7 +35,12 @@ export type StepKind =
   | "set_ticket_state"
   | "set_ticket_fields"
   | "escalate"
-  | "add_to_tracker";
+  | "add_to_tracker"
+  | "assign_ai_agent"
+  | "turn_off_ai"
+  | "turn_on_ai"
+  | "extract"
+  | "run_action";
 
 export type Step = SpecStep;
 export type Path = SpecPath;
@@ -52,6 +58,7 @@ export const readyKinds: StepKind[] = [
   "dimmi",
   "branch",
   "classify",
+  "split",
   "wait",
   "run_workflow",
   "assign",
@@ -70,6 +77,11 @@ export const readyKinds: StepKind[] = [
   "set_ticket_fields",
   "escalate",
   "add_to_tracker",
+  "assign_ai_agent",
+  "turn_off_ai",
+  "turn_on_ai",
+  "extract",
+  "run_action",
 ];
 
 /*

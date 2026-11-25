@@ -986,7 +986,7 @@ func (q *Queries) ReadyConversationAi(ctx context.Context, arg ReadyConversation
 }
 
 const releaseConversationClaim = `-- name: ReleaseConversationClaim :exec
-UPDATE conversations SET workflow_run_id = NULL, updated_at = $1
+UPDATE conversations SET workflow_run_id = NULL, ai_mode = 'auto', updated_at = $1
 WHERE workspace_id = $2 AND id = $3 AND workflow_run_id = $4
 `
 
@@ -997,7 +997,9 @@ type ReleaseConversationClaimParams struct {
 	RunID          *ids.UUID `json:"run_id"`
 }
 
-// ReleaseConversationClaim lets go of a conversation a run held.
+// ReleaseConversationClaim lets go of a conversation a run held and
+// hands it back to the agent placed on it, which answers the next
+// customer message unless AI was turned off or handed to the team.
 func (q *Queries) ReleaseConversationClaim(ctx context.Context, arg ReleaseConversationClaimParams) error {
 	_, err := q.db.Exec(ctx, releaseConversationClaim,
 		arg.Now,
@@ -1141,6 +1143,31 @@ type StandDownConversationAiParams struct {
 func (q *Queries) StandDownConversationAi(ctx context.Context, arg StandDownConversationAiParams) error {
 	_, err := q.db.Exec(ctx, standDownConversationAi, arg.Now, arg.WorkspaceID, arg.ID)
 	return err
+}
+
+const workflowHandledSince = `-- name: WorkflowHandledSince :one
+SELECT EXISTS (
+    SELECT 1 FROM workflow_runs
+    WHERE workspace_id = $1 AND conversation_id = $2
+      AND kind = 'customer_facing' AND acted AND (ended_at IS NULL OR ended_at >= $3)
+)::boolean
+`
+
+type WorkflowHandledSinceParams struct {
+	WorkspaceID    ids.UUID   `json:"workspace_id"`
+	ConversationID *ids.UUID  `json:"conversation_id"`
+	Since          *time.Time `json:"since"`
+}
+
+// WorkflowHandledSince reports whether a customer-facing run that did
+// something still held the conversation at the moment, or started
+// after it, so the agent leaves a message a workflow took to the
+// workflow.
+func (q *Queries) WorkflowHandledSince(ctx context.Context, arg WorkflowHandledSinceParams) (bool, error) {
+	row := q.db.QueryRow(ctx, workflowHandledSince, arg.WorkspaceID, arg.ConversationID, arg.Since)
+	var column_1 bool
+	err := row.Scan(&column_1)
+	return column_1, err
 }
 
 const workflowRanOnConversation = `-- name: WorkflowRanOnConversation :one

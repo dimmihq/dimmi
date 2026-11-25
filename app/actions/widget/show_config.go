@@ -259,7 +259,8 @@ func configAppearance(a Appearance) ConfigAppearance {
 	out := ConfigAppearance{
 		PrimaryColor: a.PrimaryColor, HeaderColor: header, ButtonColor: button, HeaderInk: inkOn(header),
 		ButtonInk: inkOn(button), Theme: a.Theme, Position: a.Position, PaddingX: a.PaddingX, PaddingY: a.PaddingY,
-		Font: a.Font, Sound: a.Sound, Background: ConfigBackground{Type: a.Background.Type, Fade: a.Background.Fade},
+		Font: a.Font, Sound: a.Sound, SentSound: a.SentSound, ReplySound: a.ReplySound,
+		Background: ConfigBackground{Type: a.Background.Type, Fade: a.Background.Fade},
 		Launcher: ConfigLauncher{
 			Style: a.Launcher.Style, Shape: a.Launcher.Shape, Label: a.Launcher.Label, Icon: a.Launcher.Icon,
 		},

@@ -25,6 +25,8 @@ import (
 	"github.com/dimmihq/dimmi/framework/ids"
 
 	"github.com/dimmihq/dimmi/app/contracts"
+	"github.com/dimmihq/dimmi/app/enums"
+	appevents "github.com/dimmihq/dimmi/app/events"
 	"github.com/dimmihq/dimmi/app/models"
 	"github.com/dimmihq/dimmi/app/support/prompts"
 )
@@ -70,12 +72,14 @@ func loadAgentExtras(ctx context.Context, q *models.Queries, e *env) error {
 transferTargets are the agents the answering agent may hand this
 conversation to: live, allowed by its settings, and never one the
 conversation already left. A conversation that moved twice may not
-move again, and an agent a workflow step chose stays put.
+move again, and an agent a workflow step chose stays put unless the
+step lets it transfer.
 */
 func transferTargets(ctx context.Context, q *models.Queries, e *env) ([]models.AiAgent, error) {
 	allowed := e.Agent.TransferAgentIds
 	left := e.Conversation.AiTransferredFromIds
-	if len(allowed) == 0 || len(left) >= maxTransfers || (e.WorkflowStep != nil && e.WorkflowStep.AgentID != nil) {
+	pinned := e.WorkflowStep != nil && e.WorkflowStep.AgentID != nil && !e.WorkflowStep.AllowTransfers
+	if len(allowed) == 0 || len(left) >= maxTransfers || pinned {
 		return nil, nil
 	}
 	rows, err := q.ListAgentsByID(ctx, models.ListAgentsByIDParams{WorkspaceID: e.Workspace.ID, Ids: allowed})
@@ -201,9 +205,22 @@ func (r *Runner) writeTransfer(ctx context.Context, tx *database.Tx, st *run) er
 	}); err != nil {
 		return fmt.Errorf("end procedure states: %w", err)
 	}
-	return r.agentWriter(tx, e).Record(ctx, e.Conversation, transferEvent, map[string]any{
+	if err := r.agentWriter(tx, e).Record(ctx, e.Conversation, transferEvent, map[string]any{
 		"to_agent": map[string]any{"id": models.PublicID(models.PrefixAiAgent, t.to.ID), "name": t.to.Name},
 		"summary":  t.summary,
+	}); err != nil {
+		return err
+	}
+	if r.Events == nil {
+		return nil
+	}
+	return r.Events.Dispatch(ctx, tx, appevents.AiAgentTransferred{
+		Base: appevents.Base{
+			ID: ids.New(), WorkspaceID: e.Workspace.ID, OccurredAt: r.Clock.Now(),
+			Actor: appevents.Actor{Type: string(enums.AuthorTypeAgent), ID: e.Agent.ID},
+		},
+		ConversationRef: appevents.ConversationRef{ConversationID: e.Conversation.ID},
+		FromAgentID:     e.Agent.ID, ToAgentID: t.to.ID, Summary: t.summary,
 	})
 }
 

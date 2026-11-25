@@ -34,7 +34,7 @@ export interface Attachment {
 export interface AiAnswer {
   generated?: boolean;
   outcome?: string;
-  sources?: { title: string; url?: string | null }[];
+  sources?: { title: string; url?: string | null; excerpt?: string | null; slug?: string | null }[];
   confirmation?: {
     action_call_id: string;
     title?: string | null;
@@ -125,10 +125,18 @@ export class Store {
     this.emit("unread");
   }
 
+  /*
+   * upsertConversation stores the conversation as it now stands. Some
+   * answers, such as the one to a sent message, leave out the request a
+   * conversation carries; a conversation never stops being a request, so
+   * the one already known stays.
+   */
   upsertConversation(conversation: Conversation) {
     this.noteSeen(conversation);
+    const known = this.conversations.find((c) => c.id === conversation.id);
+    const kept = conversation.ticket || !known?.ticket ? conversation : { ...conversation, ticket: known.ticket };
     const rest = this.conversations.filter((c) => c.id !== conversation.id);
-    this.conversations = sortConversations([conversation, ...rest]);
+    this.conversations = sortConversations([kept, ...rest]);
     this.emit("conversations");
     this.emit("unread");
   }

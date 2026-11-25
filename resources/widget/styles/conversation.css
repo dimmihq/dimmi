@@ -443,81 +443,6 @@ textarea::placeholder {
   }
 }
 
-/* The agent's answers: a cited article opens from its chip, and under the
- * latest answer two quiet actions let the visitor say it helped or ask
- * for a person, lined up with the agent's bubbles. */
-a.source {
-  text-decoration: none;
-  transition:
-    background-color 150ms var(--out),
-    border-color 150ms var(--out);
-}
-
-a.source:hover {
-  border-color: var(--border-button-hover);
-  background: var(--bg-primary-hover);
-}
-
-.source-title {
-  overflow: hidden;
-  max-inline-size: 200px;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.ai-actions,
-.ai-thanks {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 6px;
-  margin: -6px 0 0;
-  padding-inline-start: 32px;
-  animation: enter 220ms var(--out);
-}
-
-.ai-action {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 5px 10px 5px 8px;
-  border: 1px solid var(--border-button);
-  border-radius: 999px;
-  background: var(--bg-primary);
-  color: var(--text-secondary);
-  font: inherit;
-  font-size: 12px;
-  font-weight: 500;
-  line-height: 16px;
-  cursor: pointer;
-  transition:
-    color 150ms var(--out),
-    background-color 150ms var(--out),
-    border-color 150ms var(--out);
-}
-
-.ai-action:hover {
-  border-color: var(--border-button-hover);
-  background: var(--bg-primary-hover);
-  color: var(--text-primary);
-}
-
-.ai-action:active {
-  background: var(--bg-primary-active);
-}
-
-.ai-action > svg,
-.ai-thanks > svg {
-  inline-size: 14px;
-  block-size: 14px;
-}
-
-.ai-thanks {
-  color: var(--text-tertiary);
-  font-size: 12px;
-  line-height: 16px;
-}
-
 /* A bubble from the team or the agent renders their Markdown: paragraphs
  * spaced like chat, compact lists, code on a quiet panel, and links that
  * look like links in both themes. */
@@ -543,8 +468,16 @@ a.source:hover {
 
 .bubble.rich a {
   color: inherit;
+  font-weight: 500;
   text-decoration: underline;
-  text-underline-offset: 2px;
+  text-decoration-color: color-mix(in srgb, currentColor 35%, transparent);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+  transition: text-decoration-color 150ms ease;
+}
+
+.bubble.rich a:hover {
+  text-decoration-color: currentColor;
 }
 
 .bubble.rich code {

@@ -44,6 +44,9 @@ const (
 	KindAction       Kind = "action.run"
 
 	KindProcedureTestCaseNew Kind = "procedure.create_test_case"
+
+	KindWorkflowSet Kind = "workflow.edit_draft"
+	KindSeriesSet   Kind = "series.edit_draft"
 )
 
 /*
@@ -53,6 +56,7 @@ func Kinds() []Kind {
 	return []Kind{
 		KindTag, KindUntag, KindAssign, KindPriority, KindStatus, KindTitle, KindNote, KindContact,
 		KindArticleNew, KindArticleEdit, KindProcedureSet, KindAction, KindProcedureTestCaseNew,
+		KindWorkflowSet, KindSeriesSet,
 	}
 }
 
@@ -71,22 +75,33 @@ func GroupOf(k Kind) Group {
 		return GroupArticles
 	case k == KindAction:
 		return GroupActions
+	case isAutomation(k):
+		return GroupAutomation
 	default:
 		return GroupProcedures
 	}
 }
 
 /*
+isAutomation reports whether a kind drafts or edits a workflow or a
+series.
+*/
+func isAutomation(k Kind) bool {
+	return strings.HasPrefix(k, "workflow.") || strings.HasPrefix(k, "series.")
+}
+
+/*
 Operation is one change. Only the fields its kind reads are set:
 Conversation for conversation kinds, Contact, Article and HelpCenter,
-Procedure; Tags for tagging; Member and Team for assignment, Unassign
-to clear both; Value for priority, status, title, note body or contact
-name; Title and Body for articles; Definition for procedures, or an
-action's arguments, or a new test case of the procedure; Action and
-Version for the workspace action to run.
-Before
-and After are filled when it is applied, Created names a note or
-article it made, and Outcome says what became of it.
+Procedure, Workflow or Series; Tags for tagging; Member and Team for
+assignment, Unassign to clear both; Value for priority, status, title,
+note body or contact name; Title and Body for articles; Definition for
+procedures, or an action's arguments, or a new test case of the
+procedure, or a workflow's or series' whole new working copy, or the
+draft a new one starts as; Action and Version for the workspace action
+to run. Before and After are filled when it is applied, Created names
+a note, article, workflow or series it made, and Outcome says what
+became of it.
 */
 type Operation struct {
 	Kind         Kind            `json:"kind"`
@@ -98,6 +113,8 @@ type Operation struct {
 	HelpCenter   *ids.UUID       `json:"help_center_id,omitempty"`
 	Collection   *ids.UUID       `json:"collection_id,omitempty"`
 	Procedure    *ids.UUID       `json:"procedure_id,omitempty"`
+	Workflow     *ids.UUID       `json:"workflow_id,omitempty"`
+	Series       *ids.UUID       `json:"series_id,omitempty"`
 	Action       *ids.UUID       `json:"action_id,omitempty"`
 	Version      *ids.UUID       `json:"action_version_id,omitempty"`
 	Tags         []string        `json:"tags,omitempty"`

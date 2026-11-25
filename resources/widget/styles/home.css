@@ -341,3 +341,8 @@ h3 {
   inline-size: 12px;
   block-size: 12px;
 }
+
+/* The request types fill their slot in Home's flow, drawn in place. */
+.help-slot {
+  display: contents;
+}

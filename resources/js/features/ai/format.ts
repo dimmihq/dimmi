@@ -1,7 +1,6 @@
 /*
- * How the agent's numbers and states read in words: money from the
- * micro-dollars the server counts in, a connection's status and the
- * models it offers, a model's price and context window, and which steps
+ * How the agent's numbers and states read in words: a connection's
+ * status and the models it offers, a model's context window, and which steps
  * still stand between the agent and its first answer. A change is also
  * folded into the agent here, so a page shows it before the server
  * confirms it.
@@ -34,21 +33,6 @@ export function applyChange(agent: AiAgent, change: AgentChange): AiAgent {
   }
 
   return next;
-}
-
-/*
- * usd writes micro-dollars as dollars: cents below a hundred dollars,
- * whole dollars above.
- */
-export function usd(micros: number): string {
-  const dollars = micros / 1_000_000;
-
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-    minimumFractionDigits: dollars >= 100 ? 0 : 2,
-    maximumFractionDigits: dollars >= 100 ? 0 : 2,
-  }).format(dollars);
 }
 
 /*
@@ -105,7 +89,7 @@ export function usableKeys(keys: AiProviderKey[]): AiProviderKey[] {
 }
 
 /*
- * modelsFor lists the models a connection offers, priced from the
+ * modelsFor lists the models a connection offers, named from the
  * catalog when it knows them: the catalog of its provider first, then
  * the ids the provider listed when the key was checked.
  */
@@ -133,32 +117,15 @@ function bareModel(id: string, provider: string): AiModelEntry {
     family: provider === "anthropic" ? "anthropic" : provider === "openai" ? "openai" : "openweight",
     suggested: [],
     context_tokens: 0,
-    input_per_mtok: null,
-    output_per_mtok: null,
-    cached_input_per_mtok: null,
   };
 }
 
 /*
- * modelDetail is a model's price per million tokens in and out, and how
- * much it can read at once, for the line under its name.
+ * modelDetail is how much a model can read at once, for the line
+ * under its name.
  */
 export function modelDetail(model: AiModelEntry): string {
-  const parts: string[] = [];
-  if (model.input_per_mtok && model.output_per_mtok) {
-    parts.push(`$${trimPrice(model.input_per_mtok)} in · $${trimPrice(model.output_per_mtok)} out per 1M tokens`);
-  }
-  if (model.context_tokens > 0) {
-    parts.push(`${contextSize(model.context_tokens)} context`);
-  }
-
-  return parts.join(" · ");
-}
-
-function trimPrice(price: string): string {
-  const value = Number(price);
-
-  return Number.isFinite(value) ? String(Number(value.toFixed(2))) : price;
+  return model.context_tokens > 0 ? `${contextSize(model.context_tokens)} context` : "";
 }
 
 export function contextSize(tokens: number): string {

@@ -1,7 +1,7 @@
 /*
  * How each kind of workflow step and trigger looks: its name, its icon,
  * and the BoardUI chip tint its mark wears, so the builder reads at a
- * glance: messages and questions blue, logic purple, Dimmi lime, team
+ * glance: messages and questions blue, logic purple, AI agents lime, team
  * actions neutral. Every kind the server knows has a look, so a definition
  * made through the API reads on the canvas too.
  */
@@ -12,6 +12,7 @@ import {
   RiContactsLine,
   RiFileList3Line,
   RiFlag2Line,
+  RiFlashlightLine,
   RiGitBranchLine,
   RiGlobalLine,
   RiHashtag,
@@ -19,11 +20,16 @@ import {
   RiListRadio,
   RiLoopRightLine,
   RiMessage2Line,
+  RiPauseCircleLine,
+  RiPlayCircleLine,
   RiPriceTag3Line,
   RiQuestionAnswerLine,
+  RiRobot2Line,
+  RiScan2Line,
   RiShareForwardLine,
   RiSignpostLine,
   RiSparkling2Line,
+  RiSplitCellsHorizontal,
   RiStackLine,
   RiStickyNoteLine,
   RiTicket2Line,
@@ -54,9 +60,13 @@ export const stepLook: Record<StepKind, KindLook> = {
   reply_time: { name: "Show reply time", icon: RiTimeLine, tint: "blue" },
   branch: { name: "Branch", icon: RiGitBranchLine, tint: "purple" },
   classify: { name: "Sort by topic", icon: RiSignpostLine, tint: "purple" },
+  split: { name: "A/B split", icon: RiSplitCellsHorizontal, tint: "purple" },
   wait: { name: "Wait", icon: RiTimerLine, tint: "purple" },
   run_workflow: { name: "Run a workflow", icon: RiLinksLine, tint: "purple" },
-  dimmi: { name: "Let dimmi handle", icon: RiSparkling2Line, tint: "lime" },
+  dimmi: { name: "Hand to an AI agent", icon: RiSparkling2Line, tint: "lime" },
+  assign_ai_agent: { name: "Assign an AI agent", icon: RiRobot2Line, tint: "lime" },
+  turn_off_ai: { name: "Turn off AI", icon: RiPauseCircleLine, tint: "lime" },
+  turn_on_ai: { name: "Turn on AI", icon: RiPlayCircleLine, tint: "lime" },
   assign: { name: "Assign", icon: RiUserShared2Line, tint: "neutral" },
   unassign: { name: "Unassign", icon: RiUserUnfollowLine, tint: "neutral" },
   tag: { name: "Tag", icon: RiHashtag, tint: "neutral" },
@@ -73,6 +83,8 @@ export const stepLook: Record<StepKind, KindLook> = {
   set_ticket_fields: { name: "Set ticket fields", icon: RiFileList3Line, tint: "cyan" },
   escalate: { name: "Escalate to a team", icon: RiShareForwardLine, tint: "cyan" },
   add_to_tracker: { name: "Add to a tracker", icon: RiStackLine, tint: "cyan" },
+  extract: { name: "Extract with AI", icon: RiScan2Line, tint: "purple" },
+  run_action: { name: "Run an action", icon: RiFlashlightLine, tint: "neutral" },
 };
 
 /*

@@ -80,6 +80,7 @@ const (
 	groupInsights      = "insights"
 	groupChanges       = "changes"
 	groupActions       = "actions"
+	groupAutomation    = "automation"
 )
 
 /*
@@ -98,7 +99,7 @@ type layerState struct {
 fixedTools are the tools offered outside the layer.
 */
 func fixedTools() []string {
-	return []string{"get_conversation_by_number", "search_conversations", "search_knowledge"}
+	return []string{"get_conversation_by_number", "get_skill_by_name", "search_conversations", "search_knowledge"}
 }
 
 /*
@@ -132,6 +133,8 @@ func ownGroups() []toolset.Group {
 		{Name: groupInsights, Line: "workspace reports and the AI agent's past runs"},
 		{Name: groupChanges, Line: "draft replies, propose changes the teammate applies, remember notes"},
 		{Name: groupActions, Line: "the workspace's own actions on its systems"},
+		{Name: groupAutomation, Line: "workflows and series: read them, explain what workflows did on a " +
+			"conversation and what series did with a person, suggest edits"},
 	}
 }
 
@@ -142,6 +145,8 @@ func ownGroupOf(t tool) string {
 	switch {
 	case strings.HasPrefix(t.spec.Name, actionPrefix):
 		return groupActions
+	case strings.Contains(t.spec.Name, "workflow") || strings.Contains(t.spec.Name, "series"):
+		return groupAutomation
 	case len(t.writes) > 0 || t.spec.Name == "remember" || t.spec.Name == "draft_reply":
 		return groupChanges
 	case t.spec.Name == "get_workspace_report" || t.spec.Name == "get_ai_agent_runs":
@@ -282,10 +287,19 @@ func (e *Engine) layerCall(ctx context.Context, s *session, p *pending) (result,
 		return result{}, errors.New("tool " + c.Name + " is not available")
 	}
 	out, err := t.handle(ctx, s, c.Arguments)
-	if err == nil && len(t.writes) == 0 && ownGroupOf(t) != groupChanges {
+	if err == nil && len(t.writes) == 0 && ownGroupOf(t) != groupChanges && !readWhole(c.Name) {
 		out.text = set.Shape(out.text, c.Fields)
 	}
 	return out, err
+}
+
+/*
+readWhole reports whether a tool's result is a guide the model needs in
+one piece. Cut into pages, the workflow reference took a chat's every
+turn to read, and none was left to write the draft.
+*/
+func readWhole(name string) bool {
+	return name == "get_workflow_reference" || name == "get_series_reference"
 }
 
 /*

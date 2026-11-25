@@ -7,6 +7,7 @@
 import type { Content, Incoming, Message, TicketBlock, TicketType } from "./content";
 import { size } from "./lib/map";
 import { Said, Typing } from "./lib/thread_parts";
+import { enterRows, pinStrip } from "./lib/ticket_pin";
 import type { Words } from "./lib/ticket_words";
 
 /*
@@ -33,7 +34,7 @@ export interface Sent {
  * answer shows what the visitor sent in the thread, then the team typing
  * and a placeholder reply, the way a real conversation unfolds.
  */
-export function answer(root: ShadowRoot, sent: Sent) {
+export function answer(root: ShadowRoot, sent: Sent, replied?: () => void) {
   const thread = root.querySelector<HTMLElement>(".thread");
   const list = thread?.querySelector<HTMLElement>(".loaded") ?? thread;
   if (!thread || !list) {
@@ -70,6 +71,7 @@ export function answer(root: ShadowRoot, sent: Sent) {
     );
     connect();
     scroll();
+    replied?.();
   }, 1600);
 }
 
@@ -89,7 +91,13 @@ export const sample: Content = {
       from: "agent",
       author: "dimmi agent",
       body: "That usually means the webhook was not created. Open Settings, then GitHub, and choose Reconnect.",
-      sources: [{ title: "GitHub integration guide" }],
+      sources: [
+        {
+          title: "Connect a GitHub repository",
+          excerpt: "Sync docs and changelog drafts from your repository.",
+          slug: "connect-github",
+        },
+      ],
       at: "10:03",
     },
     { from: "visitor", attachment: { kind: "voice", name: "Voice note", duration: "0:14" }, at: "10:04" },
@@ -346,11 +354,8 @@ export function strip(root: ShadowRoot, content: Content, target: Element | null
   }
   const ticket = content.conversations.find((c) => String(c.number) === row.dataset.conversation)?.ticket;
   const thread = root.querySelector<HTMLElement>(".thread");
-  thread?.querySelector(".ticket-strip")?.remove();
-  const loaded = thread?.querySelector<HTMLElement>(".loaded");
-  if (ticket) {
-    const html = String(of({ ticket, texts }));
-    loaded ? loaded.insertAdjacentHTML("beforebegin", html) : thread?.insertAdjacentHTML("afterbegin", html);
+  if (thread) {
+    pinStrip(thread, ticket ? String(of({ ticket, texts })) : "");
   }
 }
 
@@ -367,4 +372,9 @@ export function filter(root: ShadowRoot, content: Content, open: boolean) {
     const item = row.closest("li") ?? row;
     (item as HTMLElement).style.display = open && (!ticket || ticket.state.group === "resolved") ? "none" : "";
   }
+  enterRows(
+    [...root.querySelectorAll<HTMLElement>('.view[data-view="messages"] [data-conversation]')]
+      .map((row) => row.closest("li") ?? row)
+      .filter((item) => (item as HTMLElement).style.display !== "none"),
+  );
 }

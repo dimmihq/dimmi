@@ -633,6 +633,48 @@ func (q *Queries) ListArticles(ctx context.Context, arg ListArticlesParams) ([]A
 	return items, nil
 }
 
+const listPublicArticleCards = `-- name: ListPublicArticleCards :many
+SELECT a.id, v.slug, v.description
+FROM articles a
+JOIN article_versions v ON v.id = a.published_version_id
+WHERE a.workspace_id = $1 AND a.id = ANY ($2::uuid[]) AND a.deleted_at IS NULL
+  AND a.status = 'published' AND v.visibility = 'public'
+`
+
+type ListPublicArticleCardsParams struct {
+	WorkspaceID ids.UUID   `json:"workspace_id"`
+	Ids         []ids.UUID `json:"ids"`
+}
+
+type ListPublicArticleCardsRow struct {
+	ID          ids.UUID `json:"id"`
+	Slug        string   `json:"slug"`
+	Description *string  `json:"description"`
+}
+
+// ListPublicArticleCards returns the slug and description readers see of
+// the published public articles among the ids given, such as those an
+// agent's answer cites.
+func (q *Queries) ListPublicArticleCards(ctx context.Context, arg ListPublicArticleCardsParams) ([]ListPublicArticleCardsRow, error) {
+	rows, err := q.db.Query(ctx, listPublicArticleCards, arg.WorkspaceID, arg.Ids)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListPublicArticleCardsRow
+	for rows.Next() {
+		var i ListPublicArticleCardsRow
+		if err := rows.Scan(&i.ID, &i.Slug, &i.Description); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listPublishedArticles = `-- name: ListPublishedArticles :many
 SELECT a.id, a.collection_id, a.position, a.published_at, v.title, v.slug, v.description, v.body_markdown,
     v.body_html, v.toc, v.id AS version_id, v.created_at AS version_created_at, v.renderer_version

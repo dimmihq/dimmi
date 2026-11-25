@@ -29,7 +29,6 @@ import (
 	"github.com/dimmihq/dimmi/app/auth/authz"
 	"github.com/dimmihq/dimmi/app/models"
 	"github.com/dimmihq/dimmi/app/support/aimodels"
-	"github.com/dimmihq/dimmi/app/support/aiprices"
 	"github.com/dimmihq/dimmi/config"
 )
 
@@ -42,7 +41,7 @@ var ErrAgentNotFound = fault.New(fault.NotFound, "agent_not_found", "the agent d
 ErrDefaultAgent refuses to delete the default agent.
 */
 var ErrDefaultAgent = fault.New(fault.Conflict, "default_agent",
-	"the default agent answers every conversation no other agent takes, so it cannot be deleted")
+	"the default agent answers every conversation no other agent takes, so it cannot be archived")
 
 /*
 ErrAgentChanged says someone else saved the agent since the editor
@@ -64,7 +63,6 @@ type Agents struct {
 	DB     *database.DB
 	Clock  clock.Clock
 	Config config.AIConfig
-	Prices *aiprices.Table
 }
 
 /*
@@ -87,6 +85,7 @@ type AgentView struct {
 	ReadinessErrs []string
 	Managed       bool
 	PromptVersion string
+	Ties          []Tie
 }
 
 /*
@@ -240,7 +239,7 @@ func (a *Agents) view(ctx context.Context, tx *database.Tx, agent models.AiAgent
 	}
 	view := &AgentView{
 		Agent: agent, Working: working, Placement: placements[agent.ID], Unpublished: unpublished(agent),
-		Settings: settings, Keys: keys, Providers: providers(a.Config), Catalog: catalog(a.Prices, a.Config),
+		Settings: settings, Keys: keys, Providers: providers(a.Config), Catalog: catalog(a.Config),
 		Managed: managed, PromptVersion: promptVersion(agent, a.Config),
 	}
 	if agent.LiveVersionID != nil {
@@ -251,6 +250,9 @@ func (a *Agents) view(ctx context.Context, tx *database.Tx, agent models.AiAgent
 		}
 	}
 	view.Ready, view.ReadinessErrs = readiness(draftAgent(agent, working, settings), keys)
+	if view.Ties, err = agentTies(ctx, q, agent.WorkspaceID, agent.ID); err != nil {
+		return nil, err
+	}
 	return view, nil
 }
 
@@ -299,8 +301,11 @@ func (a *Agents) Create(ctx context.Context, in CreateAgentInput) (*AgentView, e
 }
 
 /*
-Delete removes an agent that is not the default. Its conversations
-keep it on their history; new ones go to the next agent in line.
+Delete archives an agent that is not the default and that nothing
+relies on any more: it is turned off and leaves the list, while its
+conversations, runs and history stay. While a workflow, series, place
+or other agent still relies on it, it is refused with [ErrAgentTied],
+listing each tie.
 */
 func (a *Agents) Delete(ctx context.Context, m authz.Membership, id ids.UUID) error {
 	if err := RequireAgentManage(m); err != nil {
@@ -315,8 +320,12 @@ func (a *Agents) Delete(ctx context.Context, m authz.Membership, id ids.UUID) er
 		if agent.IsDefault {
 			return ErrDefaultAgent
 		}
-		if err := agents.Unplace(ctx, q, m.Workspace.ID, id); err != nil {
+		ties, err := agentTies(ctx, q, m.Workspace.ID, id)
+		if err != nil {
 			return err
+		}
+		if len(ties) > 0 {
+			return ErrAgentTied.With("ties", tieMeta(ties))
 		}
 		now := a.Clock.Now()
 		return q.DeleteAgent(ctx, models.DeleteAgentParams{WorkspaceID: m.Workspace.ID, ID: id, Now: &now})

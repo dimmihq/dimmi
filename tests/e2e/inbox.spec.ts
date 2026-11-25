@@ -262,9 +262,9 @@ it.describe("the inbox", () => {
     await menu.getByRole("button", { name: /^Help article/ }).click();
     await menu.getByRole("option", { name: /Reset your password/ }).click();
     await expect(reply).toContainText("Hi Emily");
-    await expect(reply).toContainText(
-      `Reset your password: ${center.url.replace(/\/+$/, "")}/articles/reset-your-password`,
-    );
+    const chip = reply.locator(`[data-link-token="${center.url.replace(/\/+$/, "")}/articles/reset-your-password"]`);
+    await expect(chip).toHaveCount(1);
+    await expect(chip).toContainText("Reset your password");
   });
 
   it("slides Operator over the thread on a narrow screen", async ({ page }) => {

@@ -37,7 +37,6 @@ type AiRun struct {
 	AnswerMessageID *string         `json:"answer_message_id"`
 	InputTokens     int64           `json:"input_tokens"`
 	OutputTokens    int64           `json:"output_tokens"`
-	CostMicros      int64           `json:"cost_micros"`
 	LatencyMs       *int32          `json:"latency_ms"`
 	FirstTokenMs    *int32          `json:"first_token_ms"`
 	PromptVersion   string          `json:"prompt_version"`
@@ -67,16 +66,16 @@ func NewAiRun(r models.AiRun) AiRun {
 		AnswerMessageID: publicPtr(models.PrefixMessage, r.AnswerMessageID),
 		InputTokens:     r.InputTokens,
 		OutputTokens:    r.OutputTokens,
-		CostMicros:      r.CostMicros,
-		LatencyMs:       r.LatencyMs,
-		FirstTokenMs:    r.FirstTokenMs,
-		PromptVersion:   r.PromptVersion,
-		Flags:           orEmpty(r.Flags),
-		ProcedureTrace:  r.ProcedureTrace,
-		Error:           runError(r),
-		Feedback:        r.Feedback,
-		CreatedAt:       r.CreatedAt,
-		CompletedAt:     r.CompletedAt,
+
+		LatencyMs:      r.LatencyMs,
+		FirstTokenMs:   r.FirstTokenMs,
+		PromptVersion:  r.PromptVersion,
+		Flags:          orEmpty(r.Flags),
+		ProcedureTrace: r.ProcedureTrace,
+		Error:          runError(r),
+		Feedback:       r.Feedback,
+		CreatedAt:      r.CreatedAt,
+		CompletedAt:    r.CompletedAt,
 	}
 }
 
@@ -110,7 +109,6 @@ type AiRunStep struct {
 	FirstTokenMs *int32          `json:"first_token_ms"`
 	InputTokens  int64           `json:"input_tokens"`
 	OutputTokens int64           `json:"output_tokens"`
-	CostMicros   int64           `json:"cost_micros"`
 	Request      json.RawMessage `json:"request"`
 	Response     json.RawMessage `json:"response"`
 }
@@ -123,7 +121,7 @@ func NewAiRunStep(s models.AiRunStep) AiRunStep {
 		ID: models.PublicID(models.PrefixAiRunStep, s.ID), Seq: s.Seq, Kind: s.Kind,
 		Provider: s.Provider, Upstream: s.Upstream, Model: s.Model, Status: s.Status, ErrorKind: s.ErrorKind,
 		LatencyMs: s.LatencyMs, FirstTokenMs: s.FirstTokenMs, InputTokens: s.InputTokens, OutputTokens: s.OutputTokens,
-		CostMicros: s.CostMicros, Request: s.Request, Response: s.Response,
+		Request: s.Request, Response: s.Response,
 	}
 }
 

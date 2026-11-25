@@ -1,40 +1,48 @@
 /*
- * One series: the canvas of its steps and the inspector of the one
- * picked, under a header with its name, where it stands, a switch
- * between building it and reading its results, and the buttons that
- * set it live, publish changes, pause, resume, archive and try it on
- * yourself. Every change saves a moment after the last keystroke, with
- * the lock version it read, so two teammates never undo each other;
- * nothing reaches customers until it is published. Picking a card
- * pushes its settings out from the right, in a pane that drags to any
- * width; on screens too narrow for both, they open in a drawer.
+ * One series, in the studio layout Agent Studio and workflows share.
+ * The header holds its name, where it stands and the buttons that set
+ * it live or publish changes; pausing, resuming, archiving and deleting
+ * a draft sit in its menu. Build holds the canvas of its steps; picking
+ * a card pushes its settings out beside it. Analytics reads the same
+ * canvas with each step's results; History lists published versions.
+ * Beside them sit Preview (the steps in words and what needs fixing),
+ * Simulations and Operator. Every change saves a moment
+ * after the last keystroke, with the lock version it read, so two
+ * teammates never undo each other; nothing reaches customers until it
+ * is published.
  */
 import {
-  type RemixiconComponentType,
   RiArchiveLine,
   RiArrowLeftSLine,
   RiDeleteBinLine,
-  RiPauseLine,
-  RiPlayLine,
-  RiTestTubeLine,
+  RiMore2Line,
+  RiPauseCircleLine,
+  RiPlayCircleLine,
 } from "@remixicon/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
-import { Focusable } from "react-aria-components";
 
 import { Chip } from "@/components/base/badges/chip";
 import { Button } from "@/components/base/buttons/button";
-import { IconButton } from "@/components/base/buttons/icon-button";
+import {
+  Dropdown,
+  DropdownDivider,
+  DropdownItem,
+  DropdownPopover,
+  DropdownTrigger,
+} from "@/components/base/dropdown/dropdown";
 import { Input } from "@/components/base/input/input";
 import { AlertDialog, Modal, ModalBody, ModalFooter, ModalHeader } from "@/components/base/modal/modal";
-import { SegmentedControl, SegmentedControlItem } from "@/components/base/segmented-control/segmented-control";
 import { toast } from "@/components/base/toast/toast";
-import { Tooltip, TooltipTrigger } from "@/components/base/tooltip/tooltip";
+import { StudioArrive } from "@/features/agents/agent-arrive";
 import { KindMark } from "@/features/automation/parts";
+import { seriesSlots } from "@/features/automation/studio/slots";
+import { type SideTabId, Studio, StudioSide, type StudioTabId } from "@/features/automation/studio/studio";
+import { SuggestionBar } from "@/features/automation/studio/suggestion-bar";
+import { useOperatorTries } from "@/features/automation/studio/use-operator-tries";
 import { useWorkspace } from "@/features/customers/names";
-import { Panel } from "@/features/shell/page";
-import { PushPane } from "@/features/shell/push-pane";
+import { Panel, ScrollArea } from "@/features/shell/page";
 import { useWide } from "@/features/shell/use-wide";
 import {
   actOnSeries,
@@ -48,35 +56,14 @@ import {
   seriesKey,
   seriesQuery,
   seriesReportQuery,
-  trySeries,
 } from "@/lib/api/series";
 
 import { addGroups, nodeLook, statusLook } from "./looks";
 import { addStep, type Sending, sendingOf } from "./model";
-import { SeriesCanvas } from "./series-canvas";
+import { type Moves, SeriesCanvas } from "./series-canvas";
 import { SeriesInspector } from "./series-inspector";
-import { TryPanel } from "./try-panel";
-
-const modes = [
-  ["build", "Build"],
-  ["results", "Results"],
-] as const;
-
-function Mode({ results, onChange }: { results: boolean; onChange: (results: boolean) => void }) {
-  return (
-    <SegmentedControl
-      aria-label="Show"
-      selectedKeys={new Set([results ? "results" : "build"])}
-      onSelectionChange={(keys) => onChange([...keys][0] === "results")}
-    >
-      {modes.map(([id, name]) => (
-        <SegmentedControlItem key={id} id={id}>
-          {name}
-        </SegmentedControlItem>
-      ))}
-    </SegmentedControl>
-  );
-}
+import { SeriesPreview } from "./series-preview";
+import { useSeriesRequest } from "./studio/series-review";
 
 /*
  * AddStep lists the kinds of step a path can lead to.
@@ -223,7 +210,53 @@ function useAutosave(workspace: string, series: Series) {
       setSending(next);
       setDirty(true);
     },
+    /*
+     * adopt takes a copy the server wrote, such as the one saved when the
+     * teammate accepts Operator's change, as the working copy, dropping a
+     * save still waiting so it never overwrites it.
+     */
+    adopt: (next: Series) => {
+      pending.current = null;
+      setDirty(false);
+      lock.current = next.lock_version;
+      setSpec(next.spec);
+      setSending(sendingOf(next));
+      client.setQueryData(seriesQuery(workspace, series.id).queryKey, next);
+    },
   };
+}
+
+/*
+ * ReviewedCanvas is the series canvas, or, while Operator's suggestion is
+ * under review, the suggested graph with its added and changed steps
+ * marked and nothing to edit until the teammate decides.
+ */
+function ReviewedCanvas({ moves, suggestion }: { moves: Moves; suggestion: ReturnType<typeof useSeriesRequest> }) {
+  const review = suggestion.review;
+  if (!review) {
+    return <SeriesCanvas moves={moves} />;
+  }
+
+  return (
+    <div className="flex min-h-0 flex-1 flex-col">
+      <SuggestionBar
+        added={review.added.size}
+        changed={review.changed.size + (review.head ? 1 : 0)}
+        removed={review.removed.size}
+        deciding={suggestion.deciding}
+        onAccept={suggestion.accept}
+        onDecline={suggestion.decline}
+      />
+      <SeriesCanvas
+        moves={{
+          ...moves,
+          editable: false,
+          spec: review.proposed,
+          marks: { added: review.added, changed: review.changed },
+        }}
+      />
+    </div>
+  );
 }
 
 function saveLine(saving: boolean, problems: number): string {
@@ -234,47 +267,13 @@ function saveLine(saving: boolean, problems: number): string {
   return problems > 0 ? `${problems} to fix before going live` : "Saved";
 }
 
-/*
- * Tip is an icon button that names itself in a tooltip.
- */
-function Tip({
-  label,
-  icon,
-  busy = false,
-  onPress,
-}: {
-  label: string;
-  icon: RemixiconComponentType;
-  busy?: boolean;
-  onPress: () => void;
-}) {
-  return (
-    <TooltipTrigger delay={200}>
-      <Focusable>
-        <IconButton size="small" icon={icon} aria-label={label} disabled={busy} onClick={onPress} />
-      </Focusable>
-      <Tooltip size="md">{label}</Tooltip>
-    </TooltipTrigger>
-  );
-}
-
-type Asked = "try" | "pause" | "archive" | "delete";
+type Asked = "pause" | "archive" | "delete";
 
 /*
- * asks words each question the header puts before acting: what trying
- * the series on yourself does, and what pausing or archiving does to
- * the people on it.
+ * asks words each question the menu puts before acting: what pausing,
+ * archiving or deleting does to the people on the series.
  */
 const asks = {
-  try: {
-    title: "Try this series on yourself?",
-    description:
-      "You enter the published version as a test journey, under the contact with your email. Its messages really " +
-      "go out, to you. Rules, quiet hours and the daily cap do not hold you back, you can skip each wait, and the " +
-      "report never counts you.",
-    confirmLabel: "Start test",
-    variant: "default",
-  },
   pause: {
     title: "Pause this series?",
     description:
@@ -300,41 +299,38 @@ const asks = {
 } as const;
 
 /*
- * Actions are the header's buttons, as the series' status allows them.
- * Trying, pausing, archiving and deleting a draft ask first; resuming does not, since it
- * only lets the series carry on. The question keeps its words while it
- * closes, so a dialog fading out never turns into a different one.
+ * SeriesMenu holds what the series' status allows beyond publishing.
+ * Pausing, archiving and deleting a draft ask first; resuming does not,
+ * since it only lets the series carry on. The question keeps its words
+ * while it closes, so a dialog fading out never turns into a different
+ * one.
  */
-function Actions({
+function SeriesMenu({
   series,
-  saving,
-  trying,
-  onTry,
   onAct,
   onDelete,
-  onPublish,
 }: {
   series: Series;
-  saving: boolean;
-  trying: boolean;
-  onTry: () => void;
   onAct: (action: SeriesAction) => void;
   onDelete: () => void;
-  onPublish: () => void;
 }) {
+  const [open, setOpen] = useState(false);
   const [asked, setAsked] = useState<Asked | null>(null);
   const [worded, setWorded] = useState<Asked>("pause");
   const ask = (next: Asked) => {
+    setOpen(false);
     setWorded(next);
     setAsked(next);
   };
   const ran = series.live_version_id !== null;
   const live = series.status === "live";
   const editable = series.status !== "archived";
+  const paused = series.status === "paused";
+  if (!(live || paused || (ran && editable) || !ran)) {
+    return null;
+  }
   const confirm = () => {
-    if (asked === "try") {
-      onTry();
-    } else if (asked === "delete") {
+    if (asked === "delete") {
       onDelete();
     } else if (asked) {
       onAct(asked);
@@ -343,27 +339,54 @@ function Actions({
 
   return (
     <>
+      <Dropdown isOpen={open} onOpenChange={setOpen}>
+        <DropdownTrigger
+          aria-label="Series actions"
+          className="flex size-8 shrink-0 items-center justify-center rounded-lg text-foreground-icon-secondary transition-colors duration-150 hover:bg-background-secondary-hover"
+        >
+          <RiMore2Line aria-hidden className="size-4" />
+        </DropdownTrigger>
+        <DropdownPopover aria-label="Series actions" placement="bottom end" className="w-52">
+          {live ? (
+            <DropdownItem className="gap-2" onSelect={() => ask("pause")}>
+              <RiPauseCircleLine aria-hidden className="size-4 shrink-0 text-foreground-icon-secondary" />
+              Pause
+            </DropdownItem>
+          ) : null}
+          {paused ? (
+            <DropdownItem
+              className="gap-2"
+              onSelect={() => {
+                setOpen(false);
+                onAct("resume");
+              }}
+            >
+              <RiPlayCircleLine aria-hidden className="size-4 shrink-0 text-foreground-icon-secondary" />
+              Resume
+            </DropdownItem>
+          ) : null}
+          {(live || paused) && ran && editable ? <DropdownDivider /> : null}
+          {ran && editable ? (
+            <DropdownItem className="gap-2 text-text-error-primary" onSelect={() => ask("archive")}>
+              <RiArchiveLine aria-hidden className="size-4 shrink-0" />
+              Archive
+            </DropdownItem>
+          ) : null}
+          {ran ? null : (
+            <DropdownItem className="gap-2 text-text-error-primary" onSelect={() => ask("delete")}>
+              <RiDeleteBinLine aria-hidden className="size-4 shrink-0" />
+              Delete draft
+            </DropdownItem>
+          )}
+        </DropdownPopover>
+      </Dropdown>
       <AlertDialog
         isOpen={asked !== null}
-        onOpenChange={(open) => (open ? undefined : setAsked(null))}
+        onOpenChange={(next) => (next ? undefined : setAsked(null))}
         isDismissable
         onConfirm={confirm}
         {...asks[worded]}
       />
-      {live ? <Tip label="Try it on me" icon={RiTestTubeLine} busy={trying} onPress={() => ask("try")} /> : null}
-      {live ? <Tip label="Pause" icon={RiPauseLine} onPress={() => ask("pause")} /> : null}
-      {series.status === "paused" ? <Tip label="Resume" icon={RiPlayLine} onPress={() => onAct("resume")} /> : null}
-      {ran && editable ? <Tip label="Archive" icon={RiArchiveLine} onPress={() => ask("archive")} /> : null}
-      {ran ? null : <Tip label="Delete draft" icon={RiDeleteBinLine} onPress={() => ask("delete")} />}
-      {editable ? (
-        <Button
-          size="small"
-          disabled={saving || series.problems.length > 0 || (ran && !series.has_unpublished_changes)}
-          onClick={onPublish}
-        >
-          {ran ? "Publish changes" : "Set live"}
-        </Button>
-      ) : null}
     </>
   );
 }
@@ -371,19 +394,26 @@ function Actions({
 function Builder({ workspace, series, step }: { workspace: string; series: Series; step?: string }) {
   const client = useQueryClient();
   const draft = useAutosave(workspace, series);
+  const suggestion = useSeriesRequest(workspace, series.id, draft.spec, draft.adopt);
   const ran = series.live_version_id !== null;
   const editable = series.status !== "archived";
   const report = useQuery({ ...seriesReportQuery(workspace, series.id, series.status === "live"), enabled: ran }).data;
   const [selected, setSelected] = useState(step ?? "entry");
-  const [results, setResults] = useState(ran);
+  const [tab, setTab] = useState<StudioTabId>(ran ? "analytics" : "build");
+  const [sideTab, setSideTab] = useState<SideTabId>("preview");
+  const [testing, setTesting] = useState(0);
+  const tries = useOperatorTries(workspace, { kind: "series", id: series.id }, () => {
+    setSideTab("simulations");
+    setTesting((n) => n + 1);
+  });
   const wide = useWide(1280);
   const [inspecting, setInspecting] = useState(step !== undefined || wide);
   const [adding, setAdding] = useState<{ from: string; path: string } | null>(null);
   const [publishing, setPublishing] = useState(false);
-  const [journey, setJourney] = useState<string | null>(null);
   const node = draft.spec.nodes.find((n) => n.id === selected) ?? draft.spec.nodes[0];
   const look = statusLook[series.status];
   const account = series.subject === "company";
+  const results = tab === "analytics" && ran;
   const refresh = () => void client.invalidateQueries({ queryKey: seriesKey(workspace) });
   const fail = (error: unknown) => void toast.error(error instanceof Error ? error.message : "That did not work.");
 
@@ -411,14 +441,12 @@ function Builder({ workspace, series, step }: { workspace: string; series: Serie
     },
     onError: fail,
   });
-  const tryIt = useMutation({
-    mutationFn: () => trySeries(workspace, series.id),
-    onSuccess: (j) => setJourney(j.id),
-    onError: fail,
-  });
 
   const select = (next: string) => {
     setSelected(next);
+    if (tab === "history") {
+      setTab(ran ? "analytics" : "build");
+    }
     setInspecting(true);
   };
   const inspector = {
@@ -428,79 +456,120 @@ function Builder({ workspace, series, step }: { workspace: string; series: Serie
     sending: draft.sending,
     account,
     report,
-    results: results && ran,
+    results,
     editable,
     problems: series.problems,
     onSpec: draft.setSpec,
     onSending: draft.setSending,
     onSelect: setSelected,
   };
+  const current = { ...series, spec: draft.spec };
+  const slot = { workspace, series: current, onAdopt: draft.adopt, step: node?.id, tries };
+  const History = seriesSlots.history;
+  const Simulations = seriesSlots.simulations;
+  const Operator = seriesSlots.operator;
 
+  const start = (
+    <>
+      <Link
+        to="/d/series"
+        aria-label="Back to series"
+        className="flex size-8 shrink-0 items-center justify-center rounded-lg text-foreground-icon-secondary outline-none transition-colors duration-150 hover:bg-background-secondary-hover focus-visible:ring-2 focus-visible:ring-border-focus-ring"
+      >
+        <RiArrowLeftSLine aria-hidden className="size-5 rtl:-scale-x-100" />
+      </Link>
+      <h1 className="min-w-0 truncate px-1.5 text-body-medium text-text-primary">{series.name}</h1>
+      <span className="flex shrink-0 items-center gap-1.5">
+        <Chip variant="caption" color={look.tint}>
+          {look.name}
+        </Chip>
+      </span>
+      <span role="status" className="hidden truncate text-body-2-regular text-text-tertiary @lg:inline">
+        {saveLine(draft.saving, series.problems.length)}
+      </span>
+    </>
+  );
+  const end = (
+    <>
+      {editable ? (
+        <Button
+          size="small"
+          disabled={draft.saving || series.problems.length > 0 || (ran && !series.has_unpublished_changes)}
+          onClick={() => setPublishing(true)}
+        >
+          {ran ? "Publish changes" : "Set live"}
+        </Button>
+      ) : null}
+      <SeriesMenu series={series} onAct={(action) => act.mutate(action)} onDelete={() => remove.mutate()} />
+    </>
+  );
   const canvas = (
-    <Panel label="Series" ground className="h-full w-full">
-      <header className="flex min-h-12 shrink-0 flex-wrap items-center justify-between gap-x-3 gap-y-1 ps-2.5 pe-2.5 pt-[7px]">
-        <div className="flex min-w-40 flex-1 items-center gap-2">
-          <Link
-            to="/d/series"
-            aria-label="Back to series"
-            className="flex size-8 shrink-0 items-center justify-center rounded-lg text-foreground-icon-secondary outline-none transition-colors duration-150 hover:bg-background-secondary-hover focus-visible:ring-2 focus-visible:ring-border-focus-ring"
-          >
-            <RiArrowLeftSLine aria-hidden className="size-5 rtl:-scale-x-100" />
-          </Link>
-          <h1 className="min-w-0 truncate text-body-medium text-text-primary">{series.name}</h1>
-          <Chip variant="caption" color={look.tint}>
-            {look.name}
-          </Chip>
-          <span className="hidden truncate text-body-2-regular text-text-tertiary sm:inline">
-            {saveLine(draft.saving, series.problems.length)}
-          </span>
-        </div>
-        <div className="ms-auto flex shrink-0 items-center gap-2">
-          {ran ? <Mode results={results} onChange={setResults} /> : null}
-          <Actions
-            series={series}
-            saving={draft.saving}
-            trying={tryIt.isPending}
-            onTry={() => tryIt.mutate()}
-            onAct={(action) => act.mutate(action)}
-            onDelete={() => remove.mutate()}
-            onPublish={() => setPublishing(true)}
-          />
-        </div>
-      </header>
-      <SeriesCanvas
-        moves={{
-          selected,
-          results: results && ran,
-          editable,
-          spec: draft.spec,
-          report,
-          problems: series.problems,
-          onSelect: select,
-          onAdd: (from, path) => setAdding({ from, path }),
-        }}
-      />
-    </Panel>
+    <ReviewedCanvas
+      suggestion={suggestion}
+      moves={{
+        selected,
+        results,
+        editable,
+        spec: draft.spec,
+        report,
+        problems: series.problems,
+        onSelect: select,
+        onAdd: (from, path) => setAdding({ from, path }),
+      }}
+    />
   );
 
   return (
-    <div className="flex h-full min-h-0 min-w-0 flex-1">
-      <PushPane
+    <>
+      <Studio
+        testing={testing}
         name="dimmi:series"
-        label="Step settings"
-        open={inspecting && node !== undefined}
-        onOpenChange={setInspecting}
-        main={canvas}
-        side={
-          node ? (
+        label="Series"
+        start={start}
+        end={end}
+        tab={tab}
+        onTab={setTab}
+        body={
+          tab === "history" ? (
+            <ScrollArea ground className="px-4 pb-6">
+              <div className="mx-auto flex w-full max-w-220 min-w-0 flex-col gap-6 pt-4">
+                <History {...slot} />
+              </div>
+            </ScrollArea>
+          ) : (
+            canvas
+          )
+        }
+        inspector={{
+          label: "Step settings",
+          open: inspecting && node !== undefined && tab !== "history",
+          onOpenChange: setInspecting,
+          node: node ? (
             <SeriesInspector
               {...inspector}
               node={node}
               onClose={() => setInspecting(false)}
               className="h-full w-full"
             />
-          ) : null
-        }
+          ) : null,
+        }}
+        side={(onClose) => (
+          <StudioSide
+            tab={sideTab}
+            onTab={setSideTab}
+            preview={
+              <SeriesPreview
+                series={series}
+                spec={draft.spec}
+                onShow={(problem) => select(problem.node_id ?? "entry")}
+              />
+            }
+            simulations={<Simulations {...slot} />}
+            onClose={onClose}
+            className="h-full w-full"
+          />
+        )}
+        operator={(onClose) => <Operator {...slot} onClose={onClose} className="h-full w-full" />}
       />
       {adding ? (
         <AddStep
@@ -522,16 +591,7 @@ function Builder({ workspace, series, step }: { workspace: string; series: Serie
           onClose={() => setPublishing(false)}
         />
       ) : null}
-      {journey ? (
-        <TryPanel
-          workspace={workspace}
-          series={series.id}
-          journey={journey}
-          spec={draft.spec}
-          onClose={() => setJourney(null)}
-        />
-      ) : null}
-    </div>
+    </>
   );
 }
 
@@ -549,5 +609,9 @@ export function SeriesBuilder({ id, step }: { id: string; step?: string }) {
     );
   }
 
-  return <Builder key={series.data.id} workspace={workspace} series={series.data} step={step} />;
+  return (
+    <StudioArrive key={series.data.id}>
+      <Builder workspace={workspace} series={series.data} step={step} />
+    </StudioArrive>
+  );
 }

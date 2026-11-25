@@ -153,6 +153,10 @@ func pathsOf(n Node) []string {
 		return pathIDs(settingsOf[SplitSettings](n).Variants, func(v Variant) string { return v.ID })
 	case n.Kind == KindAIPath:
 		return append(pathIDs(settingsOf[AIPathSettings](n).Paths, func(p AIPath) string { return p.ID }), PathFallback)
+	case n.Kind == KindExtract:
+		return []string{PathNext, PathFallback}
+	case n.Kind == KindRunAction:
+		return []string{PathNext, PathFailed}
 	}
 
 	return []string{PathNext}
@@ -162,7 +166,7 @@ func pathsOf(n Node) []string {
 pathIDs lists the ids of a step's own paths.
 */
 func pathIDs[T any](list []T, id func(T) string) []string {
-	out := make([]string, 0, len(list)+1)
+	out := make([]string, 0, len(list))
 	for _, item := range list {
 		out = append(out, id(item))
 	}

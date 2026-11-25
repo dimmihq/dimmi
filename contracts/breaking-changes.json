@@ -336,6 +336,166 @@
       "deprecated": "2026-11-22",
       "sunset": "2026-11-22",
       "approved_by": "Frantz Kati"
+    },
+    {
+      "id": "response-required-property-removed",
+      "operation": "POST /ai/agents",
+      "reason": "Never released: AI cost and model prices stay internal and are no longer sent.",
+      "deprecated": "2026-11-25",
+      "sunset": "2026-11-25",
+      "approved_by": "Frantz Kati"
+    },
+    {
+      "id": "response-required-property-removed",
+      "operation": "GET /ai/agents/{agent}",
+      "reason": "Never released: AI cost and model prices stay internal and are no longer sent.",
+      "deprecated": "2026-11-25",
+      "sunset": "2026-11-25",
+      "approved_by": "Frantz Kati"
+    },
+    {
+      "id": "response-required-property-removed",
+      "operation": "PATCH /ai/agents/{agent}",
+      "reason": "Never released: AI cost and model prices stay internal and are no longer sent.",
+      "deprecated": "2026-11-25",
+      "sunset": "2026-11-25",
+      "approved_by": "Frantz Kati"
+    },
+    {
+      "id": "response-required-property-removed",
+      "operation": "DELETE /ai/agents/{agent}/publications",
+      "reason": "Never released: AI cost and model prices stay internal and are no longer sent.",
+      "deprecated": "2026-11-25",
+      "sunset": "2026-11-25",
+      "approved_by": "Frantz Kati"
+    },
+    {
+      "id": "response-required-property-removed",
+      "operation": "POST /ai/agents/{agent}/publications",
+      "reason": "Never released: AI cost and model prices stay internal and are no longer sent.",
+      "deprecated": "2026-11-25",
+      "sunset": "2026-11-25",
+      "approved_by": "Frantz Kati"
+    },
+    {
+      "id": "response-required-property-removed",
+      "operation": "POST /ai/agents/{agent}/versions/{version}/restore",
+      "reason": "Never released: AI cost and model prices stay internal and are no longer sent.",
+      "deprecated": "2026-11-25",
+      "sunset": "2026-11-25",
+      "approved_by": "Frantz Kati"
+    },
+    {
+      "id": "response-required-property-removed",
+      "operation": "GET /ai/usage",
+      "reason": "Never released: AI cost and model prices stay internal and are no longer sent.",
+      "deprecated": "2026-11-25",
+      "sunset": "2026-11-25",
+      "approved_by": "Frantz Kati"
+    },
+    {
+      "id": "response-required-property-removed",
+      "operation": "GET /conversations/{conversation}/ai/runs",
+      "reason": "Never released: AI cost and model prices stay internal and are no longer sent.",
+      "deprecated": "2026-11-25",
+      "sunset": "2026-11-25",
+      "approved_by": "Frantz Kati"
+    },
+    {
+      "id": "response-required-property-removed",
+      "operation": "GET /conversations/{conversation}/ai/runs/{run}",
+      "reason": "Never released: AI cost and model prices stay internal and are no longer sent.",
+      "deprecated": "2026-11-25",
+      "sunset": "2026-11-25",
+      "approved_by": "Frantz Kati"
+    },
+    {
+      "id": "response-required-property-removed",
+      "operation": "GET /knowledge/usage",
+      "reason": "Never released: AI cost and model prices stay internal and are no longer sent.",
+      "deprecated": "2026-11-25",
+      "sunset": "2026-11-25",
+      "approved_by": "Frantz Kati"
+    },
+    {
+      "id": "response-required-property-removed",
+      "operation": "GET /operator/routines",
+      "reason": "Never released: AI cost and model prices stay internal and are no longer sent.",
+      "deprecated": "2026-11-25",
+      "sunset": "2026-11-25",
+      "approved_by": "Frantz Kati"
+    },
+    {
+      "id": "response-required-property-removed",
+      "operation": "POST /operator/routines",
+      "reason": "Never released: AI cost and model prices stay internal and are no longer sent.",
+      "deprecated": "2026-11-25",
+      "sunset": "2026-11-25",
+      "approved_by": "Frantz Kati"
+    },
+    {
+      "id": "response-required-property-removed",
+      "operation": "GET /operator/routines/{routine}",
+      "reason": "Never released: AI cost and model prices stay internal and are no longer sent.",
+      "deprecated": "2026-11-25",
+      "sunset": "2026-11-25",
+      "approved_by": "Frantz Kati"
+    },
+    {
+      "id": "response-required-property-removed",
+      "operation": "PATCH /operator/routines/{routine}",
+      "reason": "Never released: AI cost and model prices stay internal and are no longer sent.",
+      "deprecated": "2026-11-25",
+      "sunset": "2026-11-25",
+      "approved_by": "Frantz Kati"
+    },
+    {
+      "id": "response-required-property-removed",
+      "operation": "GET /operator/routines/{routine}/runs",
+      "reason": "Never released: AI cost and model prices stay internal and are no longer sent.",
+      "deprecated": "2026-11-25",
+      "sunset": "2026-11-25",
+      "approved_by": "Frantz Kati"
+    },
+    {
+      "id": "response-required-property-removed",
+      "operation": "POST /operator/routines/{routine}/runs",
+      "reason": "Never released: AI cost and model prices stay internal and are no longer sent.",
+      "deprecated": "2026-11-25",
+      "sunset": "2026-11-25",
+      "approved_by": "Frantz Kati"
+    },
+    {
+      "id": "response-required-property-removed",
+      "operation": "GET /operator/routines/{routine}/runs/{run}",
+      "reason": "Never released: AI cost and model prices stay internal and are no longer sent.",
+      "deprecated": "2026-11-25",
+      "sunset": "2026-11-25",
+      "approved_by": "Frantz Kati"
+    },
+    {
+      "id": "response-required-property-removed",
+      "operation": "GET /operator/usage",
+      "reason": "Never released: AI cost and model prices stay internal and are no longer sent.",
+      "deprecated": "2026-11-25",
+      "sunset": "2026-11-25",
+      "approved_by": "Frantz Kati"
+    },
+    {
+      "id": "api-path-removed-without-deprecation",
+      "operation": "POST /series/{series}/enrollments/{enrollment}/skip",
+      "reason": "Never released: Try it on me is removed; series simulations replace test journeys.",
+      "deprecated": "2026-11-25",
+      "sunset": "2026-11-25",
+      "approved_by": "Frantz Kati"
+    },
+    {
+      "id": "api-path-removed-without-deprecation",
+      "operation": "POST /series/{series}/tests",
+      "reason": "Never released: Try it on me is removed; series simulations replace test journeys.",
+      "deprecated": "2026-11-25",
+      "sunset": "2026-11-25",
+      "approved_by": "Frantz Kati"
     }
   ]
 }

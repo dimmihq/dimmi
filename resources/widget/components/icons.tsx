@@ -52,17 +52,17 @@ export function CollapseIcon() {
   );
 }
 
-export function ChevronDownIcon() {
+export function ChevronDownIcon({ className }: { className?: string } = {}) {
   return (
-    <Icon className="chevron">
+    <Icon className={className ? `chevron ${className}` : "chevron"}>
       <path d="m6 9.5 6 6 6-6" />
     </Icon>
   );
 }
 
-export function ChevronRightIcon() {
+export function ChevronRightIcon({ className }: { className?: string } = {}) {
   return (
-    <Icon className="flip">
+    <Icon className={className ? `flip ${className}` : "flip"}>
       <path d="m10 7 5 5-5 5" />
     </Icon>
   );
@@ -108,9 +108,9 @@ export function SparkleIcon() {
   );
 }
 
-export function CheckIcon() {
+export function CheckIcon({ className }: { className?: string } = {}) {
   return (
-    <Icon>
+    <Icon className={className}>
       <path d="m5 12.5 4.5 4.5L19 7.5" />
     </Icon>
   );

@@ -63,6 +63,7 @@ const (
 	RoutineGroupChanges       = groupChanges
 	RoutineGroupActions       = groupActions
 	RoutineGroupGitHub        = "github"
+	RoutineGroupAutomation    = groupAutomation
 )
 
 /*
@@ -71,7 +72,7 @@ RoutineGroups lists every routine tool group.
 func RoutineGroups() []string {
 	return []string{
 		RoutineGroupConversations, RoutineGroupKnowledge, RoutineGroupInsights, RoutineGroupChanges,
-		RoutineGroupActions, RoutineGroupGitHub,
+		RoutineGroupActions, RoutineGroupGitHub, RoutineGroupAutomation,
 	}
 }
 
@@ -187,7 +188,7 @@ func (r *routineRun) allows(e *Engine, t tool) bool {
 		return false
 	case t.group == RoutineGroupGitHub:
 		return r.hasGroup(RoutineGroupGitHub) && r.scope.GitHub != nil && e.Services.GitHub != nil
-	case t.routine || t.spec.Name == "list_recent_suggestions":
+	case t.routine || t.spec.Name == "list_recent_suggestions" || t.spec.Name == "get_skill_by_name":
 		return true
 	}
 	return r.hasGroup(routineGroupOf(t))
@@ -210,9 +211,12 @@ func routineGroupOf(t tool) string {
 
 /*
 limits are the model and tool calls the session may make: the
-routine's own, or the defaults.
+routine's own, a building chat's, or the defaults.
 */
 func (s *session) limits() (int, int) {
+	if s.routine == nil && s.building {
+		return buildingModelCalls, buildingToolCalls
+	}
 	if s.routine == nil {
 		return maxModelCalls, maxToolCalls
 	}

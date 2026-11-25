@@ -442,6 +442,8 @@ const (
 	PrefixWorkflow        Prefix = "wf"
 	PrefixWorkflowVersion Prefix = "wfv"
 	PrefixWorkflowRun     Prefix = "wfr"
+	PrefixWorkflowSim     Prefix = "wfs"
+	PrefixWorkflowSimRun  Prefix = "wfsr"
 	PrefixSchedule        Prefix = "sch"
 	PrefixSLAPolicy       Prefix = "sla"
 	PrefixProcedure       Prefix = "prc"
@@ -450,6 +452,7 @@ const (
 	PrefixAudience        Prefix = "audn"
 	PrefixAttribute       Prefix = "atd"
 	PrefixEvent           Prefix = "edf"
+	PrefixAIAttribute     Prefix = "aica"
 )
 
 /*
@@ -462,6 +465,8 @@ func workflowPublicIDs() []PublicIDEntry {
 		{PrefixWorkflow, "workflows"},
 		{PrefixWorkflowVersion, "workflow_versions"},
 		{PrefixWorkflowRun, "workflow_runs"},
+		{PrefixWorkflowSim, "workflow_simulations"},
+		{PrefixWorkflowSimRun, "workflow_simulation_runs"},
 		{PrefixSchedule, "schedules"},
 		{PrefixSLAPolicy, "sla_policies"},
 		{PrefixProcedure, "procedures"},
@@ -470,6 +475,7 @@ func workflowPublicIDs() []PublicIDEntry {
 		{PrefixAudience, "audiences"},
 		{PrefixAttribute, "attribute_definitions"},
 		{PrefixEvent, "event_definitions"},
+		{PrefixAIAttribute, "ai_conversation_attributes"},
 	}
 }
 

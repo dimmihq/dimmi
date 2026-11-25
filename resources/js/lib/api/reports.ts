@@ -87,7 +87,10 @@ export interface Report {
 
 /*
  * ReportFilters are the range and filters every report reads. Lists are
- * comma separated, as the query string carries them.
+ * comma separated, as the query string carries them. ai_attribute is an
+ * AI attribute's key, alone keeping the conversations it was found on,
+ * with ai_attribute_value only those holding that value. ai_breakdown
+ * picks the attribute the AI report's table splits by.
  */
 export interface ReportFilters {
   from?: string;
@@ -102,9 +105,23 @@ export interface ReportFilters {
   priority?: string;
   ai?: "involved" | "not_involved";
   agent?: string;
+  ai_attribute?: string;
+  ai_attribute_value?: string;
+  ai_breakdown?: string;
 }
 
-export const filterKeys = ["inbox", "team", "member", "channel", "tag", "priority", "ai", "agent"] as const;
+export const filterKeys = [
+  "inbox",
+  "team",
+  "member",
+  "channel",
+  "tag",
+  "priority",
+  "ai",
+  "agent",
+  "ai_attribute",
+  "ai_attribute_value",
+] as const;
 export type FilterKey = (typeof filterKeys)[number];
 
 /*
@@ -123,6 +140,9 @@ export function reportParams(filters: ReportFilters): URLSearchParams {
   }
   if (filters.business_hours) {
     params.set("business_hours", "true");
+  }
+  if (filters.ai_breakdown) {
+    params.set("ai_breakdown", filters.ai_breakdown);
   }
   for (const key of filterKeys) {
     const value = filters[key];

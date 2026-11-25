@@ -78,7 +78,8 @@ func KnownVariable(name string) bool {
 		return true
 	}
 
-	for _, prefix := range []string{"contact.custom.", "company.custom.", "run.vars.", "ticket.fields."} {
+	prefixes := []string{"contact.custom.", "company.custom.", "run.vars.", "ticket.fields.", "conversation.ai."}
+	for _, prefix := range prefixes {
 		if rest, ok := strings.CutPrefix(name, prefix); ok && rest != "" {
 			return true
 		}

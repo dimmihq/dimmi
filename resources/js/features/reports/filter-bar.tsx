@@ -1,8 +1,9 @@
 /*
  * The bar above a report. The range leads, then one Filter menu that
  * holds every filter: it lists them, and picking one slides in its
- * values to tick. Each filter in use shows as a chip that opens the same
- * values to change it, with a cross to remove it. Compare and office
+ * values to tick. The AI attribute filter picks an attribute, then its
+ * value. Each filter in use shows as a chip that opens the same values
+ * to change it, with a cross to remove it. Compare and office
  * hours sit at the far end. Every choice is written to the address, so
  * a view can be shared as a link. A live report has no range.
  */
@@ -15,6 +16,7 @@ import {
   RiFilter3Line,
   RiFlag2Line,
   RiInbox2Line,
+  RiListCheck3,
   RiPriceTag3Line,
   RiRobot2Line,
   RiSearchLine,
@@ -33,12 +35,14 @@ import { InputBase } from "@/components/base/input/input";
 import { Popover, PopoverTrigger } from "@/components/base/popover/popover";
 import { Switch } from "@/components/base/switch/switch";
 import { agentsQuery } from "@/lib/api/agents";
+import { type AIAttribute, aiAttributesQuery } from "@/lib/api/ai-attributes";
 import { inboxesQuery } from "@/lib/api/inboxes";
 import { tagsQuery } from "@/lib/api/tags";
 import { teamsQuery } from "@/lib/api/teams";
 import { membersQuery } from "@/lib/api/workspace";
 import { cx } from "@/utils/cx";
 
+import { AIAttributeChip, AIAttributePanel } from "./ai-attribute-filter";
 import { channelOptions, type Option, priorityOptions } from "./options";
 import { calendarRange, presetDays, type RangePreset, type ReportSearch, rangePresets } from "./search";
 
@@ -187,11 +191,21 @@ function setOf(key: FilterKey, value: string | undefined): Partial<ReportSearch>
  * FilterMenu is the one way in to every filter: the list of them, each
  * saying what it is set to, and the values of the one picked.
  */
-function FilterMenu({ defs, search, onChange }: { defs: FilterDef[]; search: ReportSearch; onChange: Change }) {
+function FilterMenu({
+  defs,
+  attributes,
+  search,
+  onChange,
+}: {
+  defs: FilterDef[];
+  attributes: AIAttribute[];
+  search: ReportSearch;
+  onChange: Change;
+}) {
   const [open, setOpen] = useState(false);
-  const [key, setKey] = useState<FilterKey | null>(null);
+  const [key, setKey] = useState<FilterKey | "ai_attribute" | null>(null);
   const def = defs.find((d) => d.key === key);
-  const active = defs.filter((d) => search[d.key]).length;
+  const active = defs.filter((d) => search[d.key]).length + (search.ai_attribute ? 1 : 0);
 
   return (
     <PopoverTrigger
@@ -210,7 +224,15 @@ function FilterMenu({ defs, search, onChange }: { defs: FilterDef[]; search: Rep
         ) : null}
       </Button>
       <Popover aria-label="Filter the report" placement="bottom start" className="w-64 overflow-hidden">
-        {def ? (
+        {key === "ai_attribute" ? (
+          <AIAttributePanel
+            attributes={attributes}
+            search={search}
+            onChange={onChange}
+            onDone={() => setOpen(false)}
+            onBack={() => setKey(null)}
+          />
+        ) : def ? (
           <div key={def.key}>
             <Values
               def={def}
@@ -242,6 +264,21 @@ function FilterMenu({ defs, search, onChange }: { defs: FilterDef[]; search: Rep
                 </button>
               );
             })}
+            {attributes.length > 0 ? (
+              <button type="button" onClick={() => setKey("ai_attribute")} className={row}>
+                <RiListCheck3 aria-hidden className="size-4 shrink-0 text-foreground-icon-secondary" />
+                <span className="min-w-0 flex-1 truncate">AI attribute</span>
+                {search.ai_attribute ? (
+                  <span className="max-w-24 shrink-0 truncate text-body-2-regular text-text-tertiary">
+                    {attributes.find((a) => a.key === search.ai_attribute)?.label ?? search.ai_attribute}
+                  </span>
+                ) : null}
+                <RiArrowRightSLine
+                  aria-hidden
+                  className="size-4 shrink-0 text-foreground-icon-tertiary rtl:-scale-x-100"
+                />
+              </button>
+            ) : null}
           </div>
         )}
       </Popover>
@@ -359,12 +396,16 @@ export function FilterBar({
   onChange: Change;
 }) {
   const defs = useFilterDefs(workspace);
+  const attributes = (useQuery({ ...aiAttributesQuery(workspace), enabled: workspace !== "" }).data ?? []).filter(
+    (a) => a.status === "active" || a.key === search.ai_attribute,
+  );
   const preset: RangePreset | null = search.range ?? (search.from || search.to ? null : "30d");
   const days = preset ? presetDays(preset) : null;
   const value = days
     ? calendarRange(days.from, days.to)
     : calendarRange(search.from ?? search.to ?? "", search.to ?? search.from ?? "");
   const inUse = defs.filter((d) => search[d.key]);
+  const used = inUse.length + (search.ai_attribute ? 1 : 0);
 
   return (
     <div className="flex flex-wrap items-center gap-x-2 gap-y-2">
@@ -388,11 +429,12 @@ export function FilterBar({
           }}
         />
       )}
-      <FilterMenu defs={defs} search={search} onChange={onChange} />
+      <FilterMenu defs={defs} attributes={attributes} search={search} onChange={onChange} />
       {inUse.map((d) => (
         <FilterChip key={d.key} def={d} value={search[d.key] ?? ""} onChange={onChange} />
       ))}
-      {inUse.length > 1 ? (
+      <AIAttributeChip attributes={attributes} search={search} onChange={onChange} />
+      {used > 1 ? (
         <LinkButton
           variant="secondary"
           size="xs"
@@ -406,6 +448,9 @@ export function FilterBar({
               tag: undefined,
               priority: undefined,
               ai: undefined,
+              agent: undefined,
+              ai_attribute: undefined,
+              ai_attribute_value: undefined,
             })
           }
         >

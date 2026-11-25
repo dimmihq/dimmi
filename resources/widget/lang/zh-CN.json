@@ -76,6 +76,9 @@
   "ticket_required": "请填写此项",
   "ticket_resolved": "已解决",
   "ticket_send": "发送请求",
+  "ticket_sent": "请求已发送",
+  "ticket_sent_body": "我们会在这里的消息中回复你，你可以随时查看进度。",
+  "ticket_view": "查看请求",
   "ticket_subject": "主题",
   "ticket_submitted": "已提交",
   "ticket_yes": "是",
@@ -92,5 +95,6 @@
   "verify_send": "发送验证码",
   "verify_sent": "请输入我们发送到 {email} 的 6 位验证码",
   "verify_submit": "验证",
-  "welcome_message": ""
+  "welcome_message": "",
+  "more_sources": "还有 {count} 篇"
 }

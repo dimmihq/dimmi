@@ -76,6 +76,9 @@
   "ticket_required": "يرجى ملء هذا الحقل",
   "ticket_resolved": "تم الحل",
   "ticket_send": "إرسال الطلب",
+  "ticket_sent": "تم إرسال الطلب",
+  "ticket_sent_body": "سنرد عليك هنا في رسائلك، لتتابعه في أي وقت.",
+  "ticket_view": "عرض الطلب",
   "ticket_subject": "الموضوع",
   "ticket_submitted": "تم الإرسال",
   "ticket_yes": "نعم",
@@ -92,5 +95,6 @@
   "verify_send": "إرسال الرمز",
   "verify_sent": "أدخل الرمز المكوّن من 6 أرقام الذي أرسلناه إلى {email}",
   "verify_submit": "تحقّق",
-  "welcome_message": ""
+  "welcome_message": "",
+  "more_sources": "{count} أخرى"
 }

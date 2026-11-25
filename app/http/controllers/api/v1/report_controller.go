@@ -98,6 +98,8 @@ func (c *ReportController) Show(ctx context.Context, in *requests.ShowReportRequ
 		return nil, err
 	}
 
+	f.AIBreakdown = in.AIBreakdown
+
 	r, err := c.Reports.Run(ctx, membership(ctx), in.Report, f)
 	if err != nil {
 		return nil, err
@@ -223,18 +225,23 @@ func reportFiltersOf(reg *ids.Registry, m map[string]string) (reports.Filters, e
 	return reportFilters(reg, requests.ReportFilters{
 		From: m["from"], To: m["to"], BusinessHours: m["business_hours"] == "true", Inbox: m["inbox"],
 		Team: m["team"], Member: m["member"], Channel: m["channel"], Tag: m["tag"], Priority: m["priority"],
-		AI: m["ai"], Agent: m["agent"],
+		AI: m["ai"], Agent: m["agent"], AIAttribute: m["ai_attribute"], AIValue: m["ai_attribute_value"],
 	})
 }
 
 /*
 reportFilters reads a report's range and filters, refusing ids that name
-nothing and priorities that are not levels.
+nothing, priorities that are not levels and an AI attribute value with
+no attribute.
 */
 func reportFilters(reg *ids.Registry, in requests.ReportFilters) (reports.Filters, error) {
 	f := reports.Filters{
 		From: in.From, To: in.To, Compare: in.Compare, BusinessHours: in.BusinessHours, AI: in.AI,
-		Channels: splitList(in.Channel),
+		Channels: splitList(in.Channel), AIAttribute: in.AIAttribute, AIValue: in.AIValue,
+	}
+
+	if f.AIValue != "" && f.AIAttribute == "" {
+		return f, exceptions.ErrNotFound.OnField("filter[ai_attribute]")
 	}
 
 	lists := []struct {

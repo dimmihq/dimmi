@@ -2,7 +2,9 @@
  * How each kind of series step looks: its name, icon and BoardUI chip
  * tint, in the same families the workflow builder uses, so messages
  * read blue, timing and logic purple, AI rose and housekeeping neutral.
- * The steps offered when adding one are grouped the same way.
+ * The steps offered when adding one are grouped the same way. Calling
+ * another system goes through a workspace action; the older webhook step
+ * still runs and opens, but is no longer offered.
  */
 
 import {
@@ -10,11 +12,13 @@ import {
   RiDoorOpenLine,
   RiEqualizerLine,
   RiFileTextLine,
+  RiFlashlightLine,
   RiGitBranchLine,
   RiHourglassLine,
   RiLoginCircleLine,
   RiMailLine,
   RiPriceTag3Line,
+  RiScan2Line,
   RiSparkling2Line,
   RiSplitCellsHorizontal,
   RiTimerLine,
@@ -43,13 +47,15 @@ export const nodeLook: Record<NodeKind, KindLook> = {
   topic: { name: "Topic", icon: RiUserUnfollowLine, tint: "gray" },
   webhook: { name: "Webhook", icon: RiWebhookLine, tint: "gray" },
   exit: { name: "Leave", icon: RiDoorOpenLine, tint: "gray" },
+  extract: { name: "Extract with AI", icon: RiScan2Line, tint: "rose" },
+  run_action: { name: "Run an action", icon: RiFlashlightLine, tint: "gray" },
 };
 
 export const addGroups: [string, NodeKind[]][] = [
   ["Messages", ["email", "chat", "post", "slack"]],
   ["Timing", ["wait", "wait_for"]],
-  ["Logic", ["condition", "split", "ai_path"]],
-  ["Actions", ["tag", "untag", "set_attribute", "topic", "webhook", "exit"]],
+  ["Logic", ["condition", "split", "ai_path", "extract"]],
+  ["Actions", ["tag", "untag", "set_attribute", "topic", "run_action", "exit"]],
 ];
 
 export const statusLook: Record<SeriesStatus, { name: string; tint: "lime" | "gray" | "yellow" }> = {
@@ -72,6 +78,7 @@ export const endReasonName: Record<string, string> = {
   step_budget: "Too many steps",
   subject_gone: "Contact gone",
   replaced: "Replaced by a newer test",
+  control: "Held out in the control group",
 };
 
 export function percent(part: number, whole: number): string {

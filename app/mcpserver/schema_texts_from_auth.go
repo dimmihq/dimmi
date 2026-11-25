@@ -84,6 +84,8 @@ func schemaTextsFromAuthFactor() map[string]map[string]string {
 		},
 		"Broadcast": {
 			"ai_replies": "Whether the AI agent may answer replies to this broadcast.",
+			"reply_agent_id": "The AI agent that answers replies when ai_replies is true, such as aia_.... Null " +
+				"leaves it to the agent placed on the channel the reply comes in on.",
 			"audience_id": "Id of the saved audience the broadcast goes to, such as audn_... Null when " +
 				"it uses its own rules or hand-picked Slack channels.",
 			"body": "The message's text, up to 50000 characters.",
@@ -299,8 +301,6 @@ func schemaTextsFromBulkChangesOutputBody() map[string]map[string]string {
 			"site_key": "The public site key the browser uses to show the captcha challenge.",
 		},
 		"CatalogEntry": {
-			"cached_input_per_mtok": "Price in US dollars per million cached input tokens, as a " +
-				"decimal string. Null when the price list does not know this model.",
 			"context_tokens": "The size of the model's context window, in tokens.",
 			"display_name":   "The model's name as shown to people in settings.",
 			"family":         "The model's family: anthropic, openai or openweight.",

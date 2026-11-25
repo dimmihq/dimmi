@@ -285,7 +285,7 @@ function ThreadTitle({
         #{conversation.number}
         <span className="whitespace-pre @max-xl:sr-only"> · {statusLabel[conversation.status]}</span>
       </Chip>
-      <AiBadge state={conversation.ai_state} long />
+      <AiBadge state={conversation.ai_state} reason={conversation.ai_handoff_reason} long />
       <RatingChip workspace={workspace} conversation={conversation.id} className="@max-2xl:hidden" />
     </div>
   );

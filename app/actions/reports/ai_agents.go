@@ -32,15 +32,14 @@ func agentColumns() []Column {
 		{Key: "handoff", Label: "Handed over", Unit: UnitPercent},
 		{Key: "transfers", Label: "Transferred", Unit: UnitCount},
 		{Key: "satisfaction", Label: "CSAT", Unit: UnitPercent},
-		{Key: "cost_per_resolution", Label: "Cost per resolution", Unit: UnitMicros},
 	}
 }
 
 /*
-agentRuns is what one agent's runs cost and how often they transferred.
+agentRuns is how often one agent's runs transferred.
 */
 type agentRuns struct {
-	cost, transfers int64
+	transfers int64
 }
 
 /*
@@ -91,14 +90,9 @@ and runs.
 func agentValues(v, rated values, runs agentRuns) []*float64 {
 	involved, handed, resolved := v.count(1), v.count(2), v.count(3)
 
-	var perResolution *float64
-	if resolved > 0 {
-		perResolution = num(float64(runs.cost) / float64(resolved))
-	}
-
 	return []*float64{
 		num(involved), ratio(resolved, involved), ratio(handed, involved), num(runs.transfers),
-		ratio(rated.count(1), rated.count(0)), perResolution,
+		ratio(rated.count(1), rated.count(0)),
 	}
 }
 
@@ -115,7 +109,7 @@ func keyed(rows []values) map[string]values {
 }
 
 /*
-agentRuns reads each agent's cost and transfers in the range, keyed
+agentRuns reads each agent's transfers in the range, keyed
 like grouped figures.
 */
 func (r reader) agentRuns(ctx context.Context) (map[string]agentRuns, error) {
@@ -128,7 +122,7 @@ func (r reader) agentRuns(ctx context.Context) (map[string]agentRuns, error) {
 
 	out := make(map[string]agentRuns, len(rows))
 	for _, row := range rows {
-		out[row.AgentID.String()] = agentRuns{cost: row.CostMicros, transfers: row.Transfers}
+		out[row.AgentID.String()] = agentRuns{transfers: row.Transfers}
 	}
 
 	return out, nil

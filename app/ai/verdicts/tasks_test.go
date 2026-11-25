@@ -25,11 +25,11 @@ func TestTaskFiles(t *testing.T) {
 		{name: taskDraftJudge},
 		{name: taskRequest},
 		{name: taskRequestEager},
-		{name: taskWorkflowCategory, vars: []string{"instructions", "categories"}},
 		{name: taskTrackerSummary},
-		{name: taskSeriesPath, vars: []string{"instructions", "paths"}},
 		{name: taskTicketFill, vars: []string{"fields"}},
 		{name: taskTicketMatch, vars: []string{"problems"}},
+		{name: "decisions/choose", vars: []string{"instructions", "options"}},
+		{name: "decisions/extract", vars: []string{"instructions", "fields"}},
 	}
 	for _, c := range cases {
 		require.NotEmpty(t, prompts.Task(c.name, nil), c.name)

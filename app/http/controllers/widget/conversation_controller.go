@@ -33,16 +33,14 @@ import (
 ConversationController serves a visitor's conversations and messages.
 */
 type ConversationController struct {
-	Read          *actions.ListWidgetConversations
-	Post          *actions.PostWidgetMessage
-	Open          *actions.OpenWidgetConversation
-	Help          *actions.ConfirmAiHelp
-	HandoffAction *actions.RequestAiHandoff
-	IDs           *ids.Registry
-	Cursors       *pagination.Cursors
-	Agents        *useragent.Parser
-	Clock         clock.Clock
-	Tickets       *tickets.Tickets
+	Read    *actions.ListWidgetConversations
+	Post    *actions.PostWidgetMessage
+	Open    *actions.OpenWidgetConversation
+	IDs     *ids.Registry
+	Cursors *pagination.Cursors
+	Agents  *useragent.Parser
+	Clock   clock.Clock
+	Tickets *tickets.Tickets
 }
 
 /*
@@ -348,49 +346,4 @@ func (c *ConversationController) conversationID(public string) (ids.UUID, error)
 	}
 
 	return id, nil
-}
-
-/*
-AiActionOutput is the no-content answer to a visitor's agent controls.
-*/
-type AiActionOutput struct {
-	Status int
-}
-
-/*
-Helped confirms the assistant resolved the visitor's conversation.
-*/
-func (c *ConversationController) Helped(
-	ctx context.Context, in *requests.StoreWidgetAiHelpRequest,
-) (*AiActionOutput, error) {
-	id, err := c.conversationID(in.Conversation)
-	if err != nil {
-		return nil, err
-	}
-
-	if err := c.Help.Handle(ctx, actions.HelpInput{Auth: authenticated(ctx), Conversation: id}); err != nil {
-		return nil, err
-	}
-
-	return &AiActionOutput{Status: fhttp.StatusNoContent}, nil
-}
-
-/*
-Handoff hands the visitor's conversation to the team.
-*/
-func (c *ConversationController) Handoff(
-	ctx context.Context, in *requests.StoreWidgetAiHandoffRequest,
-) (*AiActionOutput, error) {
-	id, err := c.conversationID(in.Conversation)
-	if err != nil {
-		return nil, err
-	}
-
-	if err := c.HandoffAction.Handle(ctx, actions.HandoffInput{
-		Auth: authenticated(ctx), Conversation: id,
-	}); err != nil {
-		return nil, err
-	}
-
-	return &AiActionOutput{Status: fhttp.StatusNoContent}, nil
 }

@@ -8,6 +8,7 @@
  */
 import {
   RiAlarmWarningLine,
+  RiArrowLeftRightLine,
   RiChat3Line,
   RiChatNewLine,
   RiChatSmile2Line,
@@ -17,6 +18,7 @@ import {
   RiLinksLine,
   RiMessage2Line,
   RiReplyLine,
+  RiScan2Line,
   RiSparkling2Line,
   RiStarSmileLine,
   RiStickyNoteLine,
@@ -40,6 +42,7 @@ export type TriggerKind =
   | "message.customer"
   | "conversation.customer_quiet"
   | "conversation.rated"
+  | "conversation.ai_attribute_changed"
   | "message.teammate"
   | "note.created"
   | "conversation.assignment_changed"
@@ -47,6 +50,7 @@ export type TriggerKind =
   | "conversation.teammate_quiet"
   | "dimmi.handed_over"
   | "dimmi.resolved"
+  | "agent.transferred"
   | "sla.warning"
   | "sla.breached"
   | "ticket.created"
@@ -82,7 +86,7 @@ export const triggerGroups: { id: TriggerGroup; name: string; detail: string; ti
   { id: "during", name: "During conversation", detail: "While you're talking.", tint: "purple" },
   { id: "team", name: "Team", detail: "When your team does something.", tint: "orange" },
   { id: "ticket", name: "Tickets", detail: "When a customer's ticket changes.", tint: "cyan" },
-  { id: "dimmi", name: "dimmi", detail: "When dimmi is done.", tint: "lime" },
+  { id: "dimmi", name: "AI agents", detail: "When an AI agent is done.", tint: "lime" },
   { id: "sla", name: "Service levels", detail: "When a reply target is at risk.", tint: "yellow" },
   { id: "reuse", name: "Reusable", detail: "Steps you can use anywhere.", tint: "neutral" },
 ];
@@ -142,6 +146,14 @@ export const triggers: Record<TriggerKind, Trigger> = {
     runs: false,
     talks: ["message"],
   },
+  "conversation.ai_attribute_changed": {
+    group: "during",
+    name: "AI attribute changes",
+    detail: "Route by what the AI found, like the customer's intent.",
+    icon: RiScan2Line,
+    runs: true,
+    talks: [],
+  },
   "message.teammate": {
     group: "team",
     name: "Teammate sends a reply",
@@ -185,19 +197,27 @@ export const triggers: Record<TriggerKind, Trigger> = {
   },
   "dimmi.handed_over": {
     group: "dimmi",
-    name: "dimmi hands over",
-    detail: "Brief the team when dimmi can't help.",
+    name: "AI agent hands over",
+    detail: "Brief the team when an agent can't help.",
     icon: RiUserVoiceLine,
     runs: true,
     talks: [],
   },
   "dimmi.resolved": {
     group: "dimmi",
-    name: "dimmi resolves a conversation",
+    name: "AI agent resolves a conversation",
     detail: "Ask for a rating, or tag it.",
     icon: RiSparkling2Line,
     runs: true,
     talks: ["message"],
+  },
+  "agent.transferred": {
+    group: "dimmi",
+    name: "AI agent transfers to another agent",
+    detail: "Tag it or tell the team who took over.",
+    icon: RiArrowLeftRightLine,
+    runs: true,
+    talks: [],
   },
   "sla.warning": {
     group: "sla",

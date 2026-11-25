@@ -11,6 +11,8 @@ export const realtimeKeys = {
   conversations: (workspace: string) => ["workspace", workspace, "conversations"] as const,
   conversation: (workspace: string, id: string) => ["workspace", workspace, "conversation", id] as const,
   messages: (workspace: string, id: string) => ["workspace", workspace, "conversation", id, "messages"] as const,
+  aiAttributes: (workspace: string, id: string) =>
+    ["workspace", workspace, "conversation", id, "ai-attributes"] as const,
   counts: (workspace: string) => ["workspace", workspace, "conversation-counts"] as const,
   preferences: (workspace: string) => ["workspace", workspace, "inbox-preferences"] as const,
   views: (workspace: string) => ["workspace", workspace, "conversation-views"] as const,

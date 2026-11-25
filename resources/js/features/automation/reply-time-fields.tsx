@@ -6,25 +6,28 @@
  */
 import { Row, Section } from "@/features/settings/layout";
 
-import { type EditorProps, Words } from "./field-parts";
+import type { EditorProps } from "./field-parts";
+import { MessageEditor } from "./message-editor";
 import { Pick } from "./pick";
 import { replyTimeText, text, useSet } from "./step-settings";
 
 const inboxHours = "inbox";
 const everyone = "workspace";
 
-export function ReplyTimeFields({ step, lists, onEdit }: EditorProps) {
+export function ReplyTimeFields({ step, trigger, lists, onEdit }: EditorProps) {
   const set = useSet(onEdit);
 
   return (
     <>
       <Section
         title="Message"
-        description="{{reply_time}} becomes when to expect a reply, such as “in a few minutes”, “within a day” or “on Monday after 09:00”."
+        description="Type { and pick Reply time for when to expect a reply, such as “in a few minutes”, “within a day” or “on Monday after 09:00”."
       >
-        <Words
+        <MessageEditor
           label="Reply time message"
           value={text(step.settings, "text")}
+          trigger={trigger}
+          replyTime
           placeholder={replyTimeText}
           onChange={(value) => set({ text: value.trim() ? value : undefined })}
         />

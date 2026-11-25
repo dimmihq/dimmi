@@ -1898,6 +1898,29 @@
         ],
         "type": "object"
       },
+      "AIAgentTie": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "description": "The id of what relies on the agent, such as wf_..., chn_... or aia_....",
+            "type": "string"
+          },
+          "kind": {
+            "description": "What relies on the agent: workflow, series, connection, room, inbox or agent.",
+            "type": "string"
+          },
+          "name": {
+            "description": "Its name.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "id",
+          "name"
+        ],
+        "type": "object"
+      },
       "AIAgentVersion": {
         "additionalProperties": false,
         "properties": {
@@ -2016,6 +2039,16 @@
           },
           "settings": {
             "$ref": "#/components/schemas/AISettings"
+          },
+          "ties": {
+            "description": "What still relies on the agent: workflows and series that name it, places it answers on and agents that may transfer to it. The agent can be archived only once this is empty.",
+            "items": {
+              "$ref": "#/components/schemas/AIAgentTie"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
           }
         },
         "required": [
@@ -2027,7 +2060,95 @@
           "ready",
           "readiness_errors",
           "managed",
-          "prompt_version"
+          "prompt_version",
+          "ties"
+        ],
+        "type": "object"
+      },
+      "AIAttribute": {
+        "additionalProperties": false,
+        "properties": {
+          "created_at": {
+            "description": "When it was created, as an RFC 3339 time, such as 2026-01-31T09:00:00Z.",
+            "format": "date-time",
+            "type": "string"
+          },
+          "data_type": {
+            "description": "What the value is: text, number, date, boolean or choice.",
+            "type": "string"
+          },
+          "description": {
+            "description": "What the AI looks for. Empty when not set.",
+            "type": "string"
+          },
+          "id": {
+            "description": "The id of this record. Send it wherever an endpoint asks for this record; never use its name or title in its place.",
+            "type": "string"
+          },
+          "key": {
+            "description": "The attribute's key, as conditions and variables name it: conversation.ai.\u003ckey\u003e.",
+            "type": "string"
+          },
+          "label": {
+            "description": "What the team calls the attribute.",
+            "type": "string"
+          },
+          "object": {
+            "description": "The kind of record this is, the same for every record of its kind, such as article.",
+            "type": "string"
+          },
+          "options": {
+            "description": "With choice, the values it may take. Empty otherwise.",
+            "items": {
+              "type": "string"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "status": {
+            "description": "active while the AI reads it, archived once it stopped.",
+            "type": "string"
+          },
+          "updated_at": {
+            "description": "When it last changed, as an RFC 3339 time, such as 2026-01-31T09:00:00Z.",
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "object",
+          "key",
+          "label",
+          "description",
+          "data_type",
+          "options",
+          "status",
+          "created_at",
+          "updated_at"
+        ],
+        "type": "object"
+      },
+      "AIAttributeValue": {
+        "additionalProperties": false,
+        "properties": {
+          "attribute": {
+            "$ref": "#/components/schemas/AIAttribute"
+          },
+          "object": {
+            "description": "The kind of record this is, the same for every record of its kind, such as article.",
+            "type": "string"
+          },
+          "value": {
+            "description": "What the AI found, in the attribute's type: text, a number, a YYYY-MM-DD date, true or false, or one of its options."
+          }
+        },
+        "required": [
+          "object",
+          "attribute",
+          "value"
         ],
         "type": "object"
       },
@@ -2661,7 +2782,7 @@
             ]
           },
           "monthly_spend_cap_micros": {
-            "description": "Most the workspace's AI may spend a month, in millionths of a US dollar. Null when there is no cap.",
+            "description": "Most the workspace may spend on dimmi in a month, in millionths of a US dollar. Null when there is no cap.",
             "format": "int64",
             "type": [
               "integer",
@@ -2719,7 +2840,7 @@
             "type": "string"
           },
           "monthly_cap_usd": {
-            "description": "Most the workspace's agents may spend a month, in US dollars, 0 to 100000, such as 250. 0 or null means no cap. Raising it lifts a pause the old cap caused.",
+            "description": "Most the workspace may spend on dimmi in a month, in US dollars, 0 to 100000, such as 250. 0 or null means no cap. Raising it lifts a pause the old cap caused.",
             "format": "double",
             "maximum": 100000,
             "minimum": 0,
@@ -3308,11 +3429,6 @@
               "null"
             ]
           },
-          "cost_micros": {
-            "description": "What the run cost in model calls, in millionths of a US dollar (1000000 is $1).",
-            "format": "int64",
-            "type": "integer"
-          },
           "created_at": {
             "description": "When it was created, as an RFC 3339 time, such as 2026-01-31T09:00:00Z.",
             "format": "date-time",
@@ -3438,7 +3554,6 @@
           "answer_message_id",
           "input_tokens",
           "output_tokens",
-          "cost_micros",
           "latency_ms",
           "first_token_ms",
           "prompt_version",
@@ -3453,11 +3568,6 @@
       "AiRunStep": {
         "additionalProperties": false,
         "properties": {
-          "cost_micros": {
-            "description": "What this step cost, in millionths of a US dollar (1000000 is $1).",
-            "format": "int64",
-            "type": "integer"
-          },
           "error_kind": {
             "description": "The kind of failure when the step failed, such as auth, quota, rate_limited, overloaded, timeout or network. Null when it did not fail.",
             "type": [
@@ -3549,7 +3659,6 @@
           "first_token_ms",
           "input_tokens",
           "output_tokens",
-          "cost_micros",
           "request",
           "response"
         ],
@@ -3564,7 +3673,7 @@
             "type": "integer"
           },
           "by_model": {
-            "description": "The month's spend and call count for each model. Empty when there were no calls.",
+            "description": "The month's call count for each model. Empty when there were no calls.",
             "items": {
               "$ref": "#/components/schemas/AiUsageModel"
             },
@@ -3596,13 +3705,8 @@
               "null"
             ]
           },
-          "cost_micros": {
-            "description": "What the agent cost this month, in millionths of a US dollar (1000000 is $1).",
-            "format": "int64",
-            "type": "integer"
-          },
           "daily": {
-            "description": "Cost and runs for each day of the month, days in UTC.",
+            "description": "Runs for each day of the month, days in UTC.",
             "items": {
               "$ref": "#/components/schemas/AiUsageDay"
             },
@@ -3620,14 +3724,6 @@
             "description": "Tokens sent to the models this month.",
             "format": "int64",
             "type": "integer"
-          },
-          "monthly_spend_cap_micros": {
-            "description": "The agent's monthly spending cap, in millionths of a US dollar. Null when there is no cap.",
-            "format": "int64",
-            "type": [
-              "integer",
-              "null"
-            ]
           },
           "output_tokens": {
             "description": "Tokens the models wrote this month.",
@@ -3656,7 +3752,6 @@
         },
         "required": [
           "period_start",
-          "cost_micros",
           "input_tokens",
           "cached_input_tokens",
           "output_tokens",
@@ -3665,7 +3760,6 @@
           "unknown_count",
           "handoff_count",
           "silent_count",
-          "monthly_spend_cap_micros",
           "capped_at",
           "daily",
           "by_model",
@@ -3676,11 +3770,6 @@
       "AiUsageDay": {
         "additionalProperties": false,
         "properties": {
-          "cost_micros": {
-            "description": "What the agent cost that day, in millionths of a US dollar.",
-            "format": "int64",
-            "type": "integer"
-          },
           "day": {
             "description": "The day in UTC, as YYYY-MM-DD, such as 2026-11-23.",
             "type": "string"
@@ -3693,7 +3782,6 @@
         },
         "required": [
           "day",
-          "cost_micros",
           "runs_count"
         ],
         "type": "object"
@@ -3706,11 +3794,6 @@
             "format": "int64",
             "type": "integer"
           },
-          "cost_micros": {
-            "description": "What this model cost in the month, in millionths of a US dollar.",
-            "format": "int64",
-            "type": "integer"
-          },
           "model": {
             "description": "Id of the model.",
             "type": "string"
@@ -3718,7 +3801,6 @@
         },
         "required": [
           "model",
-          "cost_micros",
           "calls"
         ],
         "type": "object"
@@ -3832,6 +3914,14 @@
             "description": "The messenger's main color as #RRGGBB. Defaults to #1f2328.",
             "type": "string"
           },
+          "reply_sound": {
+            "description": "Whether a message coming in makes the messenger's incoming sound: none turns it off; pop, chime, bubble, swoosh and tick all turn it on. Defaults to pop.",
+            "type": "string"
+          },
+          "sent_sound": {
+            "description": "Whether a message the customer sends makes the messenger's outgoing sound: none turns it off; pop, chime, bubble, swoosh and tick all turn it on. Defaults to pop.",
+            "type": "string"
+          },
           "sound": {
             "description": "Whether the messenger plays a sound. On by default.",
             "type": "boolean"
@@ -3853,6 +3943,8 @@
           "padding_y",
           "font",
           "sound",
+          "sent_sound",
+          "reply_sound",
           "launcher"
         ],
         "type": "object"
@@ -5430,6 +5522,13 @@
             "description": "The preview line an email shows after its subject, up to 200 characters. Empty when none.",
             "type": "string"
           },
+          "reply_agent_id": {
+            "description": "The AI agent that answers replies when ai_replies is true, such as aia_.... Null leaves it to the agent placed on the channel the reply comes in on.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
           "reply_member_id": {
             "description": "Id of the teammate replies are assigned to, such as mem_... Null when none is set.",
             "type": [
@@ -5549,6 +5648,7 @@
           "reply_team_id",
           "reply_member_id",
           "ai_replies",
+          "reply_agent_id",
           "track_clicks",
           "skip_frequency_cap",
           "schedule_kind",
@@ -5607,6 +5707,10 @@
           "preview": {
             "description": "Email preview text, up to 200 characters.",
             "maxLength": 200,
+            "type": "string"
+          },
+          "reply_agent_id": {
+            "description": "The AI agent (aia_...) that answers replies when ai_replies is true; empty leaves it to the agent placed on the channel.",
             "type": "string"
           },
           "reply_member_id": {
@@ -6372,13 +6476,6 @@
       "CatalogEntry": {
         "additionalProperties": false,
         "properties": {
-          "cached_input_per_mtok": {
-            "description": "Price in US dollars per million cached input tokens, as a decimal string. Null when the price list does not know this model.",
-            "type": [
-              "string",
-              "null"
-            ]
-          },
           "context_tokens": {
             "description": "The size of the model's context window, in tokens.",
             "format": "int64",
@@ -6396,20 +6493,6 @@
             "description": "The id of this record. Send it wherever an endpoint asks for this record; never use its name or title in its place.",
             "type": "string"
           },
-          "input_per_mtok": {
-            "description": "Price in US dollars per million input tokens, as a decimal string. Null when the price list does not know this model.",
-            "type": [
-              "string",
-              "null"
-            ]
-          },
-          "output_per_mtok": {
-            "description": "Price in US dollars per million output tokens, as a decimal string. Null when the price list does not know this model.",
-            "type": [
-              "string",
-              "null"
-            ]
-          },
           "suggested": {
             "description": "The jobs this model is suggested for: any of answer, classifier and fallback.",
             "items": {
@@ -6426,10 +6509,7 @@
           "display_name",
           "family",
           "suggested",
-          "context_tokens",
-          "input_per_mtok",
-          "output_per_mtok",
-          "cached_input_per_mtok"
+          "context_tokens"
         ],
         "type": "object"
       },
@@ -7648,6 +7728,71 @@
         "type": "object"
       },
       "CollectionAIAgentVersionMetaStruct": {
+        "additionalProperties": false,
+        "properties": {
+          "next_cursor": {
+            "description": "Send it as cursor to read the next page; null on the last page.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "per_page": {
+            "description": "How many items a page holds at most, such as 25.",
+            "format": "int64",
+            "type": "integer"
+          },
+          "prev_cursor": {
+            "description": "Send it as cursor to read the page before; null on the first page.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "total": {
+            "description": "How many items match in all; left out when the list does not count them.",
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "next_cursor",
+          "prev_cursor",
+          "per_page"
+        ],
+        "type": "object"
+      },
+      "CollectionAIAttribute": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "description": "The items of this page, as a list; empty when nothing matches.",
+            "items": {
+              "$ref": "#/components/schemas/AIAttribute"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "links": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "Addresses of related pages by name, such as next; left out when there are none.",
+            "type": "object"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/CollectionAIAttributeMetaStruct"
+          }
+        },
+        "required": [
+          "data",
+          "meta"
+        ],
+        "type": "object"
+      },
+      "CollectionAIAttributeMetaStruct": {
         "additionalProperties": false,
         "properties": {
           "next_cursor": {
@@ -14330,7 +14475,137 @@
         ],
         "type": "object"
       },
+      "CollectionWorkflowFailure": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "description": "The items of this page, as a list; empty when nothing matches.",
+            "items": {
+              "$ref": "#/components/schemas/WorkflowFailure"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "links": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "Addresses of related pages by name, such as next; left out when there are none.",
+            "type": "object"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/CollectionWorkflowFailureMetaStruct"
+          }
+        },
+        "required": [
+          "data",
+          "meta"
+        ],
+        "type": "object"
+      },
+      "CollectionWorkflowFailureMetaStruct": {
+        "additionalProperties": false,
+        "properties": {
+          "next_cursor": {
+            "description": "Send it as cursor to read the next page; null on the last page.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "per_page": {
+            "description": "How many items a page holds at most, such as 25.",
+            "format": "int64",
+            "type": "integer"
+          },
+          "prev_cursor": {
+            "description": "Send it as cursor to read the page before; null on the first page.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "total": {
+            "description": "How many items match in all; left out when the list does not count them.",
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "next_cursor",
+          "prev_cursor",
+          "per_page"
+        ],
+        "type": "object"
+      },
       "CollectionWorkflowMetaStruct": {
+        "additionalProperties": false,
+        "properties": {
+          "next_cursor": {
+            "description": "Send it as cursor to read the next page; null on the last page.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "per_page": {
+            "description": "How many items a page holds at most, such as 25.",
+            "format": "int64",
+            "type": "integer"
+          },
+          "prev_cursor": {
+            "description": "Send it as cursor to read the page before; null on the first page.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "total": {
+            "description": "How many items match in all; left out when the list does not count them.",
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "next_cursor",
+          "prev_cursor",
+          "per_page"
+        ],
+        "type": "object"
+      },
+      "CollectionWorkflowReportRow": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "description": "The items of this page, as a list; empty when nothing matches.",
+            "items": {
+              "$ref": "#/components/schemas/WorkflowReportRow"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "links": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "Addresses of related pages by name, such as next; left out when there are none.",
+            "type": "object"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/CollectionWorkflowReportRowMetaStruct"
+          }
+        },
+        "required": [
+          "data",
+          "meta"
+        ],
+        "type": "object"
+      },
+      "CollectionWorkflowReportRowMetaStruct": {
         "additionalProperties": false,
         "properties": {
           "next_cursor": {
@@ -14396,6 +14671,136 @@
         "type": "object"
       },
       "CollectionWorkflowRunMetaStruct": {
+        "additionalProperties": false,
+        "properties": {
+          "next_cursor": {
+            "description": "Send it as cursor to read the next page; null on the last page.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "per_page": {
+            "description": "How many items a page holds at most, such as 25.",
+            "format": "int64",
+            "type": "integer"
+          },
+          "prev_cursor": {
+            "description": "Send it as cursor to read the page before; null on the first page.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "total": {
+            "description": "How many items match in all; left out when the list does not count them.",
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "next_cursor",
+          "prev_cursor",
+          "per_page"
+        ],
+        "type": "object"
+      },
+      "CollectionWorkflowSimulation": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "description": "The items of this page, as a list; empty when nothing matches.",
+            "items": {
+              "$ref": "#/components/schemas/WorkflowSimulation"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "links": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "Addresses of related pages by name, such as next; left out when there are none.",
+            "type": "object"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/CollectionWorkflowSimulationMetaStruct"
+          }
+        },
+        "required": [
+          "data",
+          "meta"
+        ],
+        "type": "object"
+      },
+      "CollectionWorkflowSimulationMetaStruct": {
+        "additionalProperties": false,
+        "properties": {
+          "next_cursor": {
+            "description": "Send it as cursor to read the next page; null on the last page.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "per_page": {
+            "description": "How many items a page holds at most, such as 25.",
+            "format": "int64",
+            "type": "integer"
+          },
+          "prev_cursor": {
+            "description": "Send it as cursor to read the page before; null on the first page.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "total": {
+            "description": "How many items match in all; left out when the list does not count them.",
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "next_cursor",
+          "prev_cursor",
+          "per_page"
+        ],
+        "type": "object"
+      },
+      "CollectionWorkflowSimulationRun": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "description": "The items of this page, as a list; empty when nothing matches.",
+            "items": {
+              "$ref": "#/components/schemas/WorkflowSimulationRun"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "links": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "Addresses of related pages by name, such as next; left out when there are none.",
+            "type": "object"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/CollectionWorkflowSimulationRunMetaStruct"
+          }
+        },
+        "required": [
+          "data",
+          "meta"
+        ],
+        "type": "object"
+      },
+      "CollectionWorkflowSimulationRunMetaStruct": {
         "additionalProperties": false,
         "properties": {
           "next_cursor": {
@@ -14820,6 +15225,14 @@
             "description": "The messenger's brand color as #RRGGBB, such as #1f2328.",
             "type": "string"
           },
+          "reply_sound": {
+            "description": "Whether a message coming in makes the messenger's incoming sound: none turns it off; pop, chime, bubble, swoosh and tick all turn it on.",
+            "type": "string"
+          },
+          "sent_sound": {
+            "description": "Whether a message the visitor sends makes the messenger's outgoing sound: none turns it off; pop, chime, bubble, swoosh and tick all turn it on.",
+            "type": "string"
+          },
           "sound": {
             "description": "True when the messenger plays a sound for new messages.",
             "type": "boolean"
@@ -14842,7 +15255,9 @@
           "padding_y",
           "launcher",
           "font",
-          "sound"
+          "sound",
+          "sent_sound",
+          "reply_sound"
         ],
         "type": "object"
       },
@@ -16095,6 +16510,39 @@
           "tags",
           "created_at",
           "updated_at"
+        ],
+        "type": "object"
+      },
+      "ConversationAIAttributes": {
+        "additionalProperties": false,
+        "properties": {
+          "checked_at": {
+            "description": "When the AI last read the conversation. Null when it never has.",
+            "format": "date-time",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "object": {
+            "description": "The kind of record this is, the same for every record of its kind, such as article.",
+            "type": "string"
+          },
+          "values": {
+            "description": "Each value found, with its attribute. An attribute with nothing found is left out.",
+            "items": {
+              "$ref": "#/components/schemas/AIAttributeValue"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "object",
+          "values",
+          "checked_at"
         ],
         "type": "object"
       },
@@ -17842,6 +18290,14 @@
       "EmailAddressSettings": {
         "additionalProperties": false,
         "properties": {
+          "away_reply": {
+            "description": "true when a new email that arrives outside office hours gets one automatic reply saying when the team is back. Defaults to false.",
+            "type": "boolean"
+          },
+          "away_reply_text": {
+            "description": "What the away reply says. {{reply_time}} becomes when the team is back.",
+            "type": "string"
+          },
           "brand_color": {
             "description": "The color a branded reply uses. Empty when none is set.",
             "type": "string"
@@ -17873,7 +18329,9 @@
           "bulk_mail_handling",
           "template",
           "brand_color",
-          "footer_markdown"
+          "footer_markdown",
+          "away_reply",
+          "away_reply_text"
         ],
         "type": "object"
       },
@@ -20730,6 +21188,20 @@
         ],
         "type": "object"
       },
+      "ImportWorkflowSimulationBody": {
+        "additionalProperties": false,
+        "properties": {
+          "conversation_id": {
+            "description": "The conversation to save (conv_...). It is not changed.",
+            "maxLength": 64,
+            "type": "string"
+          }
+        },
+        "required": [
+          "conversation_id"
+        ],
+        "type": "object"
+      },
       "ImportedSavedReply": {
         "additionalProperties": false,
         "properties": {
@@ -22925,13 +23397,8 @@
       "KnowledgeUsage": {
         "additionalProperties": false,
         "properties": {
-          "cost_micros": {
-            "description": "The month's total cost in millionths of a US dollar; 1500000 is $1.50.",
-            "format": "int64",
-            "type": "integer"
-          },
           "lines": {
-            "description": "The month's usage per source and kind, the most costly first.",
+            "description": "The month's usage per source and kind, the largest first.",
             "items": {
               "$ref": "#/components/schemas/KnowledgeUsageLine"
             },
@@ -22947,17 +23414,11 @@
           "period_start": {
             "description": "The first day of the month the usage is for, in UTC, written YYYY-MM-DD, such as 2026-11-01.",
             "type": "string"
-          },
-          "unpriced": {
-            "description": "True when part of the usage has no known price, so the cost is lower than the real one.",
-            "type": "boolean"
           }
         },
         "required": [
           "object",
           "period_start",
-          "cost_micros",
-          "unpriced",
           "lines"
         ],
         "type": "object"
@@ -22967,11 +23428,6 @@
         "properties": {
           "browser_ms": {
             "description": "Browser time spent reading pages for this line, in milliseconds.",
-            "format": "int64",
-            "type": "integer"
-          },
-          "cost_micros": {
-            "description": "This line's cost in millionths of a US dollar; 1500000 is $1.50.",
             "format": "int64",
             "type": "integer"
           },
@@ -23008,10 +23464,6 @@
           "source_type": {
             "description": "The kind of that source, such as website or notion.",
             "type": "string"
-          },
-          "unpriced": {
-            "description": "True when part of this line's usage has no known price.",
-            "type": "boolean"
           }
         },
         "required": [
@@ -23022,9 +23474,7 @@
           "input_tokens",
           "estimated_tokens",
           "browser_ms",
-          "requests",
-          "cost_micros",
-          "unpriced"
+          "requests"
         ],
         "type": "object"
       },
@@ -24076,6 +24526,14 @@
       "MessageAISource": {
         "additionalProperties": false,
         "properties": {
+          "excerpt": {
+            "description": "A line or two of what the cited source says: a help article's description, or the start of the passage the answer drew on. Left out for a source customers may not read.",
+            "type": "string"
+          },
+          "slug": {
+            "description": "Slug of the published help article the source is, for opening it in a help center or the messenger. Left out when the source is not a public help article.",
+            "type": "string"
+          },
           "title": {
             "description": "Title of a source the AI answer cites, such as a help article's title.",
             "type": "string"
@@ -25791,7 +26249,7 @@
             "type": "integer"
           },
           "created_id": {
-            "description": "Id of what the operation made once applied: the note (starts with msg_) or the article (starts with art_). Left out otherwise.",
+            "description": "Id of what the operation made once applied: the note (starts with msg_), the article (starts with art_), the workflow (starts with wf_) or the series (starts with srs_). Left out otherwise.",
             "type": "string"
           },
           "help_center_id": {
@@ -25799,7 +26257,7 @@
             "type": "string"
           },
           "kind": {
-            "description": "What it does: conversation.tag, .untag, .assign, .priority, .status, .title or .note, contact.update, article.create_draft, article.edit_draft, procedure.edit_draft or action.run.",
+            "description": "What it does: conversation.tag, .untag, .assign, .priority, .status, .title or .note, contact.update, article.create_draft, article.edit_draft, procedure.edit_draft, workflow.edit_draft, series.edit_draft or action.run.",
             "type": "string"
           },
           "label": {
@@ -25814,6 +26272,10 @@
             "description": "Id of the procedure the operation changes (starts with prc_). Left out for other kinds.",
             "type": "string"
           },
+          "series_id": {
+            "description": "Id of the series whose working copy the operation changes (starts with srs_). Left out for other kinds.",
+            "type": "string"
+          },
           "text": {
             "description": "The full text it writes, such as a note, an article body or a procedure's working copy, to read before applying. Left out when the label says it all.",
             "type": "string"
@@ -25824,6 +26286,10 @@
           },
           "visibility": {
             "description": "Whether a new article is public or agent_only. Left out for other kinds.",
+            "type": "string"
+          },
+          "workflow_id": {
+            "description": "Id of the workflow whose working copy the operation changes (starts with wf_). Left out for other kinds.",
             "type": "string"
           }
         },
@@ -25973,11 +26439,6 @@
             "format": "int32",
             "type": "integer"
           },
-          "month_spend_micros": {
-            "description": "What its runs cost this month, in micros, millionths of the billing currency unit.",
-            "format": "int64",
-            "type": "integer"
-          },
           "name": {
             "description": "Name of the routine, up to 120 characters.",
             "type": "string"
@@ -26082,7 +26543,6 @@
           "owner_id",
           "inbox_ids",
           "scope",
-          "month_spend_micros",
           "suggestions",
           "notify_policy",
           "delivery",
@@ -26299,7 +26759,7 @@
         "additionalProperties": false,
         "properties": {
           "ai_run_id": {
-            "description": "Id of the AI run behind it (starts with air_), for its steps and cost. Null when it never started one.",
+            "description": "Id of the AI run behind it (starts with air_), for its steps. Null when it never started one.",
             "type": [
               "string",
               "null"
@@ -26317,11 +26777,6 @@
               "string",
               "null"
             ]
-          },
-          "cost_micros": {
-            "description": "What the run cost, in micros, millionths of the billing currency unit.",
-            "format": "int64",
-            "type": "integer"
           },
           "created_at": {
             "description": "When it was created, as an RFC 3339 time, such as 2026-01-31T09:00:00Z.",
@@ -26450,7 +26905,6 @@
           "changesets_count",
           "suggestions_waiting",
           "read",
-          "cost_micros",
           "notified",
           "delivery_results",
           "steps",
@@ -26877,13 +27331,8 @@
       "OperatorUsage": {
         "additionalProperties": false,
         "properties": {
-          "agent_cost_micros": {
-            "description": "The whole AI agent's spend that month, the customer-facing agent's and Operator's together, which the spend cap holds, in micros, millionths of the billing currency unit.",
-            "format": "int64",
-            "type": "integer"
-          },
           "by_member": {
-            "description": "Operator's runs and cost that month for each teammate.",
+            "description": "Operator's runs that month for each teammate.",
             "items": {
               "$ref": "#/components/schemas/OperatorUsageMember"
             },
@@ -26893,7 +27342,7 @@
             ]
           },
           "by_model": {
-            "description": "Operator's cost and calls that month for each model.",
+            "description": "Operator's calls that month for each model.",
             "items": {
               "$ref": "#/components/schemas/AiUsageModel"
             },
@@ -26903,7 +27352,7 @@
             ]
           },
           "by_purpose": {
-            "description": "Operator's runs and cost that month by why they ran: ask, brief, triage or routine.",
+            "description": "Operator's runs that month by why they ran: ask, brief, triage or routine.",
             "items": {
               "$ref": "#/components/schemas/OperatorUsagePurpose"
             },
@@ -26913,7 +27362,7 @@
             ]
           },
           "by_routine": {
-            "description": "Operator's runs and cost that month for each routine.",
+            "description": "Operator's runs that month for each routine.",
             "items": {
               "$ref": "#/components/schemas/OperatorUsageRoutine"
             },
@@ -26932,13 +27381,8 @@
               "null"
             ]
           },
-          "cost_micros": {
-            "description": "What Operator cost that month, in micros, millionths of the billing currency unit.",
-            "format": "int64",
-            "type": "integer"
-          },
           "daily": {
-            "description": "Operator's cost and runs for each day of the month.",
+            "description": "Operator's runs for each day of the month.",
             "items": {
               "$ref": "#/components/schemas/AiUsageDay"
             },
@@ -26957,14 +27401,6 @@
             "format": "int64",
             "type": "integer"
           },
-          "monthly_spend_cap_micros": {
-            "description": "The AI agent's monthly spend cap, in micros, millionths of the billing currency unit. Null when no cap is set.",
-            "format": "int64",
-            "type": [
-              "integer",
-              "null"
-            ]
-          },
           "output_tokens": {
             "description": "Tokens models wrote back for Operator that month.",
             "format": "int64",
@@ -26975,7 +27411,7 @@
             "type": "string"
           },
           "recent": {
-            "description": "Operator's latest runs, each with why it ran, for whom, how it ended and what it cost.",
+            "description": "Operator's latest runs, each with why it ran, for whom and how it ended.",
             "items": {
               "$ref": "#/components/schemas/OperatorUsageRun"
             },
@@ -26992,13 +27428,10 @@
         },
         "required": [
           "period_start",
-          "cost_micros",
           "runs_count",
           "failed_count",
           "input_tokens",
           "output_tokens",
-          "agent_cost_micros",
-          "monthly_spend_cap_micros",
           "daily",
           "by_purpose",
           "by_member",
@@ -27031,11 +27464,6 @@
       "OperatorUsageMember": {
         "additionalProperties": false,
         "properties": {
-          "cost_micros": {
-            "description": "What Operator's runs for this teammate cost that month, in micros, millionths of the billing currency unit.",
-            "format": "int64",
-            "type": "integer"
-          },
           "member_id": {
             "description": "Id of the teammate (starts with mem_).",
             "type": "string"
@@ -27053,19 +27481,13 @@
         "required": [
           "member_id",
           "name",
-          "runs_count",
-          "cost_micros"
+          "runs_count"
         ],
         "type": "object"
       },
       "OperatorUsagePurpose": {
         "additionalProperties": false,
         "properties": {
-          "cost_micros": {
-            "description": "What the runs for this purpose cost that month, in micros, millionths of the billing currency unit.",
-            "format": "int64",
-            "type": "integer"
-          },
           "purpose": {
             "description": "Why the runs happened: ask (a teammate asked), brief, triage or routine.",
             "type": "string"
@@ -27078,19 +27500,13 @@
         },
         "required": [
           "purpose",
-          "runs_count",
-          "cost_micros"
+          "runs_count"
         ],
         "type": "object"
       },
       "OperatorUsageRoutine": {
         "additionalProperties": false,
         "properties": {
-          "cost_micros": {
-            "description": "What this routine's runs cost that month, in micros, millionths of the billing currency unit.",
-            "format": "int64",
-            "type": "integer"
-          },
           "name": {
             "description": "Name of the routine.",
             "type": "string"
@@ -27108,8 +27524,7 @@
         "required": [
           "routine_id",
           "name",
-          "runs_count",
-          "cost_micros"
+          "runs_count"
         ],
         "type": "object"
       },
@@ -27130,11 +27545,6 @@
               "integer",
               "null"
             ]
-          },
-          "cost_micros": {
-            "description": "What the run cost, in micros, millionths of the billing currency unit.",
-            "format": "int64",
-            "type": "integer"
           },
           "created_at": {
             "description": "When it was created, as an RFC 3339 time, such as 2026-01-31T09:00:00Z.",
@@ -27192,7 +27602,6 @@
           "thread_title",
           "conversation_id",
           "conversation_number",
-          "cost_micros",
           "latency_ms",
           "created_at",
           "thread_id",
@@ -27210,6 +27619,11 @@
           },
           "page": {
             "description": "The kind of page the person has open: article, procedure, conversation, help_center, feature_request or changelog_entry. A kind Operator does not know is ignored.",
+            "maxLength": 64,
+            "type": "string"
+          },
+          "step_id": {
+            "description": "On a series, the id of the step selected in its builder, such as wait-1. Operator takes \"this step\" to mean that one. Leave out when no step is selected.",
             "maxLength": 64,
             "type": "string"
           },
@@ -29797,6 +30211,18 @@
         ],
         "type": "object"
       },
+      "ResourceAIAttribute": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/AIAttribute"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
       "ResourceAIChatGPTConnection": {
         "additionalProperties": false,
         "properties": {
@@ -30174,6 +30600,18 @@
         "properties": {
           "data": {
             "$ref": "#/components/schemas/Conversation"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "ResourceConversationAIAttributes": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/ConversationAIAttributes"
           }
         },
         "required": [
@@ -31635,6 +32073,18 @@
         ],
         "type": "object"
       },
+      "ResourceSeriesSimulation": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/SeriesSimulation"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
       "ResourceSeriesTrace": {
         "additionalProperties": false,
         "properties": {
@@ -32103,6 +32553,30 @@
         ],
         "type": "object"
       },
+      "ResourceWorkflowMetrics": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/WorkflowMetrics"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "ResourceWorkflowSimulation": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/WorkflowSimulation"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
       "ResourceWorkspace": {
         "additionalProperties": false,
         "properties": {
@@ -32483,6 +32957,63 @@
         ],
         "type": "object"
       },
+      "RunSeriesSimulationBody": {
+        "additionalProperties": false,
+        "properties": {
+          "action_mocks": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/ActionMockInput"
+            },
+            "description": "What extract and run action steps answer instead of the AI or the action, keyed by step id or action id (aac_...): a status and a body. An extract step's body holds the values by key; a run action step's body is the action's result, and a status outside 2xx takes the failed path.",
+            "type": "object"
+          },
+          "contact_id": {
+            "description": "The contact to walk through (cnt_...); or leave out and describe a person.",
+            "maxLength": 64,
+            "type": "string"
+          },
+          "engaged": {
+            "description": "Whether they open, click or reply to the messages: opened, clicked or replied.",
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 3,
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "events": {
+            "description": "Events the person does on the way, by name.",
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 20,
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "person": {
+            "$ref": "#/components/schemas/SimulateSeriesPerson"
+          },
+          "scenario": {
+            "description": "How the person behaves, in words, such as opens every email but never clicks. The AI reads it to say whether they open, click, reply or do an event each time the series asks, in place of events and engaged.",
+            "maxLength": 2000,
+            "type": "string"
+          },
+          "version": {
+            "description": "draft or live. Left out, it is draft.",
+            "enum": [
+              "draft",
+              "live",
+              ""
+            ],
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
       "RunTestCasesRequestBody": {
         "additionalProperties": false,
         "properties": {
@@ -32501,6 +33032,37 @@
               "array",
               "null"
             ]
+          }
+        },
+        "type": "object"
+      },
+      "RunWorkflowSimulationsBody": {
+        "additionalProperties": false,
+        "properties": {
+          "simulation_ids": {
+            "description": "The simulations to run (wfs_...); leave out to run every one.",
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 20,
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "stream_id": {
+            "description": "An id you make up, at most 64 characters, so the run reports its progress live while it goes.",
+            "maxLength": 64,
+            "type": "string"
+          },
+          "version": {
+            "description": "draft or live. Left out, it is draft.",
+            "enum": [
+              "draft",
+              "live",
+              ""
+            ],
+            "type": "string"
           }
         },
         "type": "object"
@@ -33741,6 +34303,13 @@
               "null"
             ]
           },
+          "reply_agent_id": {
+            "description": "The AI agent that answers replies when ai_replies is true, such as aia_.... Null leaves it to the agent placed on the channel the reply comes in on.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
           "reply_member_id": {
             "description": "Id of the teammate replies to the series are assigned to, such as mem_...; null for none.",
             "type": [
@@ -33817,6 +34386,7 @@
           "reply_team_id",
           "reply_member_id",
           "ai_replies",
+          "reply_agent_id",
           "counts",
           "published_at",
           "paused_at",
@@ -33851,6 +34421,10 @@
             "description": "A name for the team, up to 120 characters.",
             "maxLength": 120,
             "minLength": 1,
+            "type": "string"
+          },
+          "reply_agent_id": {
+            "description": "The AI agent (aia_...) that answers replies when ai_replies is true; empty leaves it to the agent placed on the channel.",
             "type": "string"
           },
           "reply_member_id": {
@@ -33889,6 +34463,56 @@
         "required": [
           "lock_version",
           "name"
+        ],
+        "type": "object"
+      },
+      "SeriesControl": {
+        "additionalProperties": false,
+        "properties": {
+          "groups": {
+            "description": "Entrants and goals reached for the control group and for everyone else.",
+            "items": {
+              "$ref": "#/components/schemas/SeriesControlGroup"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "percent": {
+            "description": "The share of entrants held out of the series to measure its lift, 0 to 50.",
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "percent",
+          "groups"
+        ],
+        "type": "object"
+      },
+      "SeriesControlGroup": {
+        "additionalProperties": false,
+        "properties": {
+          "entered": {
+            "description": "How many entrants were in the group.",
+            "format": "int64",
+            "type": "integer"
+          },
+          "goal": {
+            "description": "How many of them reached the series' goal.",
+            "format": "int64",
+            "type": "integer"
+          },
+          "group": {
+            "description": "Which group: control (held out, sent nothing) or treated (traveled the series).",
+            "type": "string"
+          }
+        },
+        "required": [
+          "group",
+          "entered",
+          "goal"
         ],
         "type": "object"
       },
@@ -34085,6 +34709,9 @@
             "format": "int64",
             "type": "integer"
           },
+          "control": {
+            "$ref": "#/components/schemas/SeriesControl"
+          },
           "days": {
             "description": "Entries and goals reached per day over the period of the report.",
             "items": {
@@ -34147,6 +34774,196 @@
           "reasons",
           "days",
           "steps"
+        ],
+        "type": "object"
+      },
+      "SeriesSimulation": {
+        "additionalProperties": false,
+        "properties": {
+          "actions": {
+            "description": "The changes the journey would make, such as tags and attributes, in order.",
+            "items": {
+              "$ref": "#/components/schemas/SeriesSimulationAction"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "decisions": {
+            "description": "With a scenario, what the person did each time the series asked whether they open, click, reply or do an event. Empty without a scenario.",
+            "items": {
+              "$ref": "#/components/schemas/SeriesSimulationDecision"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "end": {
+            "description": "How the journey ended: finished, goal, exited or still waiting.",
+            "type": "string"
+          },
+          "entered": {
+            "description": "true when the person would enter the series.",
+            "type": "boolean"
+          },
+          "goal_reached": {
+            "description": "true when the person would reach the series' goal.",
+            "type": "boolean"
+          },
+          "messages": {
+            "description": "The messages that would go out, in order.",
+            "items": {
+              "$ref": "#/components/schemas/SeriesSimulationMessage"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "object": {
+            "description": "The kind of record this is, the same for every record of its kind, such as article.",
+            "type": "string"
+          },
+          "reason": {
+            "description": "Why the person would not enter, or why the journey ended. Empty when nothing to say.",
+            "type": "string"
+          },
+          "steps": {
+            "description": "Each step the person would reach, in order, with the path it took.",
+            "items": {
+              "$ref": "#/components/schemas/SeriesSimulationStep"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "object",
+          "entered",
+          "steps",
+          "messages",
+          "actions",
+          "goal_reached",
+          "end",
+          "decisions"
+        ],
+        "type": "object"
+      },
+      "SeriesSimulationAction": {
+        "additionalProperties": false,
+        "properties": {
+          "detail": {
+            "additionalProperties": {},
+            "description": "What the change is, as an object.",
+            "type": "object"
+          },
+          "kind": {
+            "description": "What the step does, such as tag or set_attribute.",
+            "type": "string"
+          },
+          "node_id": {
+            "description": "Id of the step.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "node_id",
+          "kind"
+        ],
+        "type": "object"
+      },
+      "SeriesSimulationDecision": {
+        "additionalProperties": false,
+        "properties": {
+          "before": {
+            "description": "The index in steps of the step this was asked before.",
+            "format": "int64",
+            "type": "integer"
+          },
+          "did": {
+            "description": "true when the person did it.",
+            "type": "boolean"
+          },
+          "what": {
+            "description": "What the series asked, in words, such as open the message \"Welcome\".",
+            "type": "string"
+          }
+        },
+        "required": [
+          "before",
+          "what",
+          "did"
+        ],
+        "type": "object"
+      },
+      "SeriesSimulationMessage": {
+        "additionalProperties": false,
+        "properties": {
+          "body": {
+            "description": "The message as written, variables unfilled.",
+            "type": "string"
+          },
+          "kind": {
+            "description": "How it would go out: email, chat, post or slack.",
+            "type": "string"
+          },
+          "node_id": {
+            "description": "Id of the step that sends it.",
+            "type": "string"
+          },
+          "subject": {
+            "description": "The email subject. Empty for other kinds.",
+            "type": "string"
+          },
+          "to": {
+            "description": "Who would receive it.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "node_id",
+          "kind",
+          "body"
+        ],
+        "type": "object"
+      },
+      "SeriesSimulationStep": {
+        "additionalProperties": false,
+        "properties": {
+          "detail": {
+            "additionalProperties": {},
+            "description": "A few facts the step kept, as an object.",
+            "type": "object"
+          },
+          "kind": {
+            "description": "What the step does, such as wait, condition or ai_path.",
+            "type": "string"
+          },
+          "node_id": {
+            "description": "Id of the step.",
+            "type": "string"
+          },
+          "path": {
+            "description": "The path the step took. Empty when it has one way on.",
+            "type": "string"
+          },
+          "result": {
+            "description": "What the step did, as a short word.",
+            "type": "string"
+          },
+          "skipped": {
+            "description": "true when the step was a wait the simulation skipped.",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "node_id",
+          "kind",
+          "result"
         ],
         "type": "object"
       },
@@ -34674,6 +35491,16 @@
       "SettingsStruct": {
         "additionalProperties": false,
         "properties": {
+          "away_reply": {
+            "description": "true answers a new email that arrives outside office hours once, saying when the team is back; false sends nothing. New addresses start with false.",
+            "type": "boolean"
+          },
+          "away_reply_text": {
+            "description": "What the away reply says, at most 1000 characters. {{reply_time}} becomes when the team is back.",
+            "maxLength": 1000,
+            "minLength": 1,
+            "type": "string"
+          },
           "brand_color": {
             "description": "Color used in branded replies, as # and six hex digits, such as #10b981. Only used when template is branded.",
             "type": "string"
@@ -35216,6 +36043,27 @@
               "live",
               ""
             ],
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "SimulateSeriesPerson": {
+        "additionalProperties": false,
+        "properties": {
+          "attributes": {
+            "additionalProperties": {},
+            "description": "The made-up person's attributes, by key.",
+            "type": "object"
+          },
+          "email": {
+            "description": "The made-up person's email address.",
+            "maxLength": 320,
+            "type": "string"
+          },
+          "name": {
+            "description": "The made-up person's name.",
+            "maxLength": 200,
             "type": "string"
           }
         },
@@ -36092,6 +36940,54 @@
           "state",
           "url",
           "expires_at"
+        ],
+        "type": "object"
+      },
+      "StoreAIAttributeRequestBody": {
+        "additionalProperties": false,
+        "properties": {
+          "data_type": {
+            "description": "text, number, date, boolean or choice.",
+            "enum": [
+              "text",
+              "number",
+              "date",
+              "boolean",
+              "choice"
+            ],
+            "type": "string"
+          },
+          "description": {
+            "description": "What to look for, for the AI, up to 500 characters.",
+            "maxLength": 500,
+            "type": "string"
+          },
+          "key": {
+            "description": "The attribute's key, lowercase letters, digits and underscores, such as order_number.",
+            "maxLength": 64,
+            "type": "string"
+          },
+          "label": {
+            "description": "What the team calls it, up to 80 characters, such as Order number.",
+            "maxLength": 80,
+            "type": "string"
+          },
+          "options": {
+            "description": "With choice, the values it may take, at most 30, such as [\"billing\", \"bug\"].",
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 30,
+            "type": [
+              "array",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "key",
+          "label",
+          "data_type"
         ],
         "type": "object"
       },
@@ -38253,7 +39149,7 @@
             "description": "A whole definition to start from, in the shape GET /workflows/{workflow} returns."
           },
           "trigger": {
-            "description": "conversation.opener, conversation.first_message, conversation.customer_reopened, message.customer, conversation.customer_quiet, conversation.rated, message.teammate, note.created, conversation.assignment_changed, conversation.status_changed, conversation.teammate_quiet, dimmi.handed_over, dimmi.resolved, sla.warning, sla.breached or reusable (called from other workflows).",
+            "description": "conversation.opener, conversation.first_message, conversation.customer_reopened, message.customer, conversation.customer_quiet, conversation.rated, message.teammate, note.created, conversation.assignment_changed, conversation.status_changed, conversation.teammate_quiet, conversation.ai_attribute_changed, dimmi.handed_over, dimmi.resolved, agent.transferred, sla.warning, sla.breached, the ticket triggers or reusable (called from other workflows).",
             "maxLength": 40,
             "type": "string"
           }
@@ -41232,6 +42128,38 @@
         ],
         "type": "object"
       },
+      "UpdateAIAttributeRequestBody": {
+        "additionalProperties": false,
+        "properties": {
+          "description": {
+            "description": "What to look for, for the AI, up to 500 characters.",
+            "maxLength": 500,
+            "type": "string"
+          },
+          "label": {
+            "description": "What the team calls it, up to 80 characters, such as Order number.",
+            "maxLength": 80,
+            "type": "string"
+          },
+          "options": {
+            "description": "With choice, the values it may take, at most 30, such as [\"billing\", \"bug\"].",
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 30,
+            "type": "array"
+          },
+          "status": {
+            "description": "active to keep reading it, archived to stop.",
+            "enum": [
+              "active",
+              "archived"
+            ],
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
       "UpdateArticleRequestBody": {
         "additionalProperties": false,
         "properties": {
@@ -41590,6 +42518,10 @@
               "array",
               "null"
             ]
+          },
+          "ai_enabled": {
+            "description": "false keeps every AI agent off the conversation, or each one in a bulk change, until turned on again; true lets the agent answer again, even after a handover.",
+            "type": "boolean"
           },
           "assignee_id": {
             "description": "Who the conversation, or each one in a bulk change, goes to: a teammate's id starting with mem_, such as mem_01jx2m8k4t (find it with GET /members), me for yourself, or null to hand it to nobody.",
@@ -45475,6 +46407,346 @@
         ],
         "type": "object"
       },
+      "WorkflowFailure": {
+        "additionalProperties": false,
+        "properties": {
+          "conversation_id": {
+            "description": "Id of the conversation the run worked on, such as conv_....",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "conversation_number": {
+            "description": "The conversation's number, as the inbox shows it.",
+            "format": "int64",
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "detail": {
+            "description": "A few small facts the failing step kept, as an object."
+          },
+          "end_reason": {
+            "description": "Why the run ended. Null while it has not.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "ended_at": {
+            "description": "When the run ended. Null while it has not.",
+            "format": "date-time",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "error": {
+            "description": "What went wrong, as the run recorded it. Null when it recorded nothing."
+          },
+          "id": {
+            "description": "The id of this record. Send it wherever an endpoint asks for this record; never use its name or title in its place.",
+            "type": "string"
+          },
+          "object": {
+            "description": "The kind of record this is, the same for every record of its kind, such as article.",
+            "type": "string"
+          },
+          "outcome": {
+            "description": "The failing step's outcome, such as failed.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "run_id": {
+            "description": "Id of the run, such as wfr_....",
+            "type": "string"
+          },
+          "started_at": {
+            "description": "When the run started.",
+            "format": "date-time",
+            "type": "string"
+          },
+          "status": {
+            "description": "Where the run stands, such as failed or completed.",
+            "type": "string"
+          },
+          "step_id": {
+            "description": "Id of the first step that failed.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "step_kind": {
+            "description": "What the failing step does, such as http_request or classify.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "version_number": {
+            "description": "The published version the run ran on.",
+            "format": "int32",
+            "type": [
+              "integer",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "object",
+          "run_id",
+          "status",
+          "end_reason",
+          "error",
+          "conversation_id",
+          "conversation_number",
+          "version_number",
+          "step_id",
+          "step_kind",
+          "outcome",
+          "detail",
+          "started_at",
+          "ended_at"
+        ],
+        "type": "object"
+      },
+      "WorkflowGoal": {
+        "additionalProperties": false,
+        "properties": {
+          "kind": {
+            "description": "What counts as the workflow working: resolved (closed with no teammate reply or handover) or csat (rated at least min_rating).",
+            "type": "string"
+          },
+          "min_rating": {
+            "description": "With csat, the lowest rating that counts, 1 to 5. Null otherwise.",
+            "format": "int64",
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "window": {
+            "description": "How long after the run starts the goal may be reached, such as 7d.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "window",
+          "min_rating"
+        ],
+        "type": "object"
+      },
+      "WorkflowMetrics": {
+        "additionalProperties": false,
+        "properties": {
+          "active": {
+            "description": "Runs in the range still running or waiting.",
+            "format": "int32",
+            "type": "integer"
+          },
+          "completed": {
+            "description": "Runs in the range that reached the end of their path.",
+            "format": "int32",
+            "type": "integer"
+          },
+          "days": {
+            "description": "Runs started, completed and failed per day of the range.",
+            "items": {
+              "$ref": "#/components/schemas/WorkflowMetricsDay"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "engaged": {
+            "description": "Runs in the range where the customer wrote while the run went on.",
+            "format": "int32",
+            "type": "integer"
+          },
+          "failed": {
+            "description": "Runs in the range that failed, or where a step failed.",
+            "format": "int32",
+            "type": "integer"
+          },
+          "from": {
+            "description": "The first moment the numbers count.",
+            "format": "date-time",
+            "type": "string"
+          },
+          "goal": {
+            "$ref": "#/components/schemas/WorkflowGoal"
+          },
+          "goal_met": {
+            "description": "Runs in the range whose conversation reached the workflow's goal. Null when the workflow has no goal.",
+            "format": "int32",
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "handed_over": {
+            "description": "Runs in the range that handed the conversation to a person.",
+            "format": "int32",
+            "type": "integer"
+          },
+          "object": {
+            "description": "The kind of record this is, the same for every record of its kind, such as article.",
+            "type": "string"
+          },
+          "steps": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/WorkflowStepMetrics"
+            },
+            "description": "Each step's numbers, by step id: reached, waiting now, failed, dropped and paths taken.",
+            "type": "object"
+          },
+          "to": {
+            "description": "The moment the numbers stop counting.",
+            "format": "date-time",
+            "type": "string"
+          },
+          "triggered": {
+            "description": "Runs that started in the range and did something. Test conversations never count.",
+            "format": "int32",
+            "type": "integer"
+          },
+          "version": {
+            "description": "The published version the numbers count. Null when they count every version.",
+            "format": "int32",
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "workflow_id": {
+            "description": "The workflow the numbers are about, such as wf_....",
+            "type": "string"
+          }
+        },
+        "required": [
+          "object",
+          "workflow_id",
+          "from",
+          "to",
+          "version",
+          "goal",
+          "triggered",
+          "engaged",
+          "completed",
+          "active",
+          "handed_over",
+          "failed",
+          "goal_met",
+          "days",
+          "steps"
+        ],
+        "type": "object"
+      },
+      "WorkflowMetricsDay": {
+        "additionalProperties": false,
+        "properties": {
+          "completed": {
+            "description": "Runs started that day that completed.",
+            "format": "int32",
+            "type": "integer"
+          },
+          "day": {
+            "description": "The day, as YYYY-MM-DD in UTC.",
+            "format": "date-time",
+            "type": "string"
+          },
+          "failed": {
+            "description": "Runs started that day that failed.",
+            "format": "int32",
+            "type": "integer"
+          },
+          "triggered": {
+            "description": "Runs started that day.",
+            "format": "int32",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "day",
+          "triggered",
+          "completed",
+          "failed"
+        ],
+        "type": "object"
+      },
+      "WorkflowReportRow": {
+        "additionalProperties": false,
+        "properties": {
+          "completed": {
+            "description": "Runs in the range that reached the end of their path.",
+            "format": "int32",
+            "type": "integer"
+          },
+          "failed": {
+            "description": "Runs in the range that failed, or where a step failed.",
+            "format": "int32",
+            "type": "integer"
+          },
+          "goal": {
+            "$ref": "#/components/schemas/WorkflowGoal"
+          },
+          "goal_met": {
+            "description": "Runs in the range whose conversation reached the workflow's goal. Null when the workflow has no goal.",
+            "format": "int32",
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "handed_over": {
+            "description": "Runs in the range that handed the conversation to a person.",
+            "format": "int32",
+            "type": "integer"
+          },
+          "name": {
+            "description": "The workflow's name.",
+            "type": "string"
+          },
+          "status": {
+            "description": "Where the workflow stands: draft, live or paused.",
+            "type": "string"
+          },
+          "trigger": {
+            "description": "The event that starts the workflow, such as conversation.first_message.",
+            "type": "string"
+          },
+          "triggered": {
+            "description": "Runs that started in the range and did something. Test conversations never count.",
+            "format": "int32",
+            "type": "integer"
+          },
+          "workflow_id": {
+            "description": "Id of the workflow, such as wf_....",
+            "type": "string"
+          }
+        },
+        "required": [
+          "workflow_id",
+          "name",
+          "trigger",
+          "status",
+          "triggered",
+          "completed",
+          "handed_over",
+          "failed",
+          "goal",
+          "goal_met"
+        ],
+        "type": "object"
+      },
       "WorkflowRun": {
         "additionalProperties": false,
         "properties": {
@@ -45537,6 +46809,21 @@
           "trigger": {
             "description": "The event that started the run, such as message.customer or ticket.created.",
             "type": "string"
+          },
+          "version_id": {
+            "description": "Id of the published version the run ran on, such as wfv_....",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "version_number": {
+            "description": "Number of the published version the run ran on.",
+            "format": "int32",
+            "type": [
+              "integer",
+              "null"
+            ]
           }
         },
         "required": [
@@ -45547,6 +46834,8 @@
           "trigger",
           "conversation_id",
           "parent_run_id",
+          "version_id",
+          "version_number",
           "started_at",
           "ended_at",
           "steps"
@@ -45608,6 +46897,296 @@
           "detail",
           "started_at",
           "finished_at"
+        ],
+        "type": "object"
+      },
+      "WorkflowSimulation": {
+        "additionalProperties": false,
+        "properties": {
+          "action_mocks": {
+            "description": "What each mocked step answers instead of a real call, by step id, each with a status and a body: an HTTP request or run action step (also keyed by action id, aac_...) its response, an extract step the values by key, a classify step the path as path_id."
+          },
+          "assertions": {
+            "description": "What must hold after the run, as a JSON array of checks."
+          },
+          "created_at": {
+            "description": "When it was created, as an RFC 3339 time, such as 2026-01-31T09:00:00Z.",
+            "format": "date-time",
+            "type": "string"
+          },
+          "draft_history": {
+            "$ref": "#/components/schemas/WorkflowSimulationHistory"
+          },
+          "draft_result": {
+            "description": "How its last run on the draft went, as a JSON object with passed, ran_at, the trace of steps, the result of each check and, on a broken run, error. Null when it never ran there."
+          },
+          "id": {
+            "description": "The id of this record. Send it wherever an endpoint asks for this record; never use its name or title in its place.",
+            "type": "string"
+          },
+          "live_history": {
+            "$ref": "#/components/schemas/WorkflowSimulationHistory"
+          },
+          "live_result": {
+            "description": "How its last run on the live version went, as a JSON object with passed, ran_at, the trace of steps, the result of each check and, on a broken run, error. Null when it never ran there."
+          },
+          "messages": {
+            "description": "The customer's messages, in order, as a JSON array."
+          },
+          "name": {
+            "description": "Name of the simulation, up to 120 characters.",
+            "type": "string"
+          },
+          "object": {
+            "description": "The kind of record this is, the same for every record of its kind, such as article.",
+            "type": "string"
+          },
+          "persona": {
+            "description": "The made-up customer, as a JSON object with fields such as name, email and attributes."
+          },
+          "scenario": {
+            "description": "Who the customer is and what they came for. The simulated customer answers from it.",
+            "type": "string"
+          },
+          "simulated_at": {
+            "description": "The moment the simulation pretends it is. Null to run at the real time.",
+            "format": "date-time",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "source_conversation_id": {
+            "description": "Id of the real conversation the simulation was made from (conv_...). Null when written by hand.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "updated_at": {
+            "description": "When it last changed, as an RFC 3339 time, such as 2026-01-31T09:00:00Z.",
+            "format": "date-time",
+            "type": "string"
+          },
+          "workflow_id": {
+            "description": "Id of the workflow the simulation belongs to (wf_...).",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "object",
+          "workflow_id",
+          "name",
+          "source_conversation_id",
+          "persona",
+          "messages",
+          "action_mocks",
+          "assertions",
+          "scenario",
+          "draft_result",
+          "live_result",
+          "draft_history",
+          "live_history",
+          "simulated_at",
+          "created_at",
+          "updated_at"
+        ],
+        "type": "object"
+      },
+      "WorkflowSimulationHistory": {
+        "additionalProperties": false,
+        "properties": {
+          "passed": {
+            "description": "How many of the counted runs passed.",
+            "format": "int64",
+            "type": "integer"
+          },
+          "runs": {
+            "description": "The counted runs, newest first.",
+            "items": {
+              "$ref": "#/components/schemas/WorkflowSimulationHistoryRun"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "state": {
+            "description": "passing when every counted run passed, failing when none did, flaky in between.",
+            "enum": [
+              "passing",
+              "flaky",
+              "failing"
+            ],
+            "type": "string"
+          },
+          "total": {
+            "description": "How many runs are counted.",
+            "format": "int64",
+            "type": "integer"
+          },
+          "window": {
+            "description": "The most runs a history counts: only the latest this many.",
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "state",
+          "passed",
+          "total",
+          "window",
+          "runs"
+        ],
+        "type": "object"
+      },
+      "WorkflowSimulationHistoryRun": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "description": "The id of this record. Send it wherever an endpoint asks for this record; never use its name or title in its place.",
+            "type": "string"
+          },
+          "passed": {
+            "description": "true when every check of the run held.",
+            "type": "boolean"
+          },
+          "ran_at": {
+            "description": "When the run happened.",
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "passed",
+          "ran_at"
+        ],
+        "type": "object"
+      },
+      "WorkflowSimulationRun": {
+        "additionalProperties": false,
+        "properties": {
+          "counted": {
+            "description": "true when the run counts toward the simulation's history.",
+            "type": "boolean"
+          },
+          "errored": {
+            "description": "true when the run broke before its checks could be judged, which is not a pass.",
+            "type": "boolean"
+          },
+          "id": {
+            "description": "The id of this record. Send it wherever an endpoint asks for this record; never use its name or title in its place.",
+            "type": "string"
+          },
+          "object": {
+            "description": "The kind of record this is, the same for every record of its kind, such as article.",
+            "type": "string"
+          },
+          "passed": {
+            "description": "true when every check of the run held.",
+            "type": "boolean"
+          },
+          "ran_at": {
+            "description": "When the run happened.",
+            "format": "date-time",
+            "type": "string"
+          },
+          "result": {
+            "description": "How the run went, as a JSON object with the trace, each check's result and any error."
+          },
+          "simulation_id": {
+            "description": "Id of the simulation that ran (wfs_...).",
+            "type": "string"
+          },
+          "version": {
+            "description": "The copy of the workflow the run was on: draft or live.",
+            "enum": [
+              "draft",
+              "live"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "object",
+          "simulation_id",
+          "version",
+          "passed",
+          "errored",
+          "counted",
+          "result",
+          "ran_at"
+        ],
+        "type": "object"
+      },
+      "WorkflowStepMetrics": {
+        "additionalProperties": false,
+        "properties": {
+          "dropped": {
+            "description": "Runs that stopped on the step without finishing: exited, canceled, failed or expired.",
+            "format": "int32",
+            "type": "integer"
+          },
+          "failed": {
+            "description": "Runs where the step failed.",
+            "format": "int32",
+            "type": "integer"
+          },
+          "paths": {
+            "additionalProperties": {
+              "format": "int32",
+              "type": "integer"
+            },
+            "description": "How many runs left by each of the step's paths, by path id.",
+            "type": "object"
+          },
+          "reached": {
+            "description": "Runs that reached the step.",
+            "format": "int32",
+            "type": "integer"
+          },
+          "variants": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/WorkflowVariantMetrics"
+            },
+            "description": "For an A/B split, each variant's runs and goal, by variant (path) id. Missing for other steps.",
+            "type": "object"
+          },
+          "waiting": {
+            "description": "Runs waiting on the step now.",
+            "format": "int32",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "reached",
+          "waiting",
+          "failed",
+          "dropped",
+          "paths"
+        ],
+        "type": "object"
+      },
+      "WorkflowVariantMetrics": {
+        "additionalProperties": false,
+        "properties": {
+          "goal": {
+            "description": "Runs that took the variant and whose conversation reached the workflow's goal. Zero when the workflow has no goal.",
+            "format": "int32",
+            "type": "integer"
+          },
+          "reached": {
+            "description": "Runs that took the variant.",
+            "format": "int32",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "reached",
+          "goal"
         ],
         "type": "object"
       },
@@ -47003,7 +48582,7 @@
     },
     "/ai/agents/{agent}": {
       "delete": {
-        "description": "Deletes an agent that is not the default, with its versions and simulations. Conversations it would have taken go to the default agent. Returns nothing.",
+        "description": "Archives an agent that is not the default: it is switched off and leaves the list, while its conversations, versions and history stay. It is refused with agent_in_use while anything still relies on the agent; the error lists each tie. Returns nothing.",
         "operationId": "ai.agents.destroy",
         "parameters": [
           {
@@ -47031,7 +48610,7 @@
             "description": "Error"
           }
         },
-        "summary": "Delete an AI agent",
+        "summary": "Archive an AI agent",
         "x-abilities": [
           "ai:write"
         ]
@@ -47963,6 +49542,131 @@
         "x-internal": true
       }
     },
+    "/ai/conversation-attributes": {
+      "get": {
+        "description": "Lists the facts the AI reads off each conversation, active and archived. Returns the attributes with their key, type, options and status.",
+        "operationId": "ai.conversation-attributes.index",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CollectionAIAttribute"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseError"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "List AI conversation attributes",
+        "x-abilities": [
+          "conversations:read"
+        ]
+      },
+      "post": {
+        "description": "Adds a fact the AI reads off each conversation and checks again as the customer writes. Workflows can start when it changes and branch on its value. Returns the attribute.",
+        "operationId": "ai.conversation-attributes.store",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StoreAIAttributeRequestBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResourceAIAttribute"
+                }
+              }
+            },
+            "description": "Created"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseError"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Add an AI conversation attribute",
+        "x-abilities": [
+          "ai:write"
+        ]
+      }
+    },
+    "/ai/conversation-attributes/{attribute}": {
+      "patch": {
+        "description": "Changes an attribute's label, description or options, or archives it. Its key and type stay. Returns the attribute as saved.",
+        "operationId": "ai.conversation-attributes.update",
+        "parameters": [
+          {
+            "description": "Id of the custom attribute, starting with atd_, such as atd_01jx2m8k4t. Find it with GET /attribute-definitions.",
+            "in": "path",
+            "name": "attribute",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateAIAttributeRequestBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResourceAIAttribute"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseError"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Edit an AI conversation attribute",
+        "x-abilities": [
+          "ai:write"
+        ]
+      }
+    },
     "/ai/keys": {
       "get": {
         "description": "Lists the AI provider connections the agents answer with. Secrets never come back, only a hint. Returns every key with its provider, status, the models it offers and when it was last checked.",
@@ -48229,7 +49933,7 @@
         ]
       },
       "patch": {
-        "description": "Changes the models every agent falls back on, or the workspace's monthly AI spend cap. Returns the settings as saved.",
+        "description": "Changes the models every agent falls back on, or the workspace's monthly spend cap. Returns the settings as saved.",
         "operationId": "ai.settings.update",
         "requestBody": {
           "content": {
@@ -55077,6 +56781,49 @@
         "summary": "Update a conversation",
         "x-abilities": [
           "conversations:write"
+        ]
+      }
+    },
+    "/conversations/{conversation}/ai-attributes": {
+      "get": {
+        "description": "Reads what the AI found on a conversation for each active attribute. Returns each value found with its attribute, and when the conversation was last read.",
+        "operationId": "conversations.ai-attributes.index",
+        "parameters": [
+          {
+            "description": "Id of the conversation, such as conv_01jx2m8k4t, or its number, such as 1042 for #1042. Find it with GET /conversations or GET /search.",
+            "in": "path",
+            "name": "conversation",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResourceConversationAIAttributes"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseError"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Get a conversation's AI attributes",
+        "x-abilities": [
+          "conversations:read"
         ]
       }
     },
@@ -69445,6 +71192,60 @@
         ]
       }
     },
+    "/reports/workflows": {
+      "get": {
+        "description": "Compares every workflow that ran over a period: runs started, completed, handed to a person, failed, and how many reached the workflow's goal. Returns one row per workflow with its counts, the busiest first.",
+        "operationId": "reports.workflows.index",
+        "parameters": [
+          {
+            "description": "First day, YYYY-MM-DD.",
+            "explode": false,
+            "in": "query",
+            "name": "from",
+            "schema": {
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Last day, YYYY-MM-DD.",
+            "explode": false,
+            "in": "query",
+            "name": "to",
+            "schema": {
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CollectionWorkflowReportRow"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseError"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Report on workflows",
+        "x-abilities": [
+          "workflows:read"
+        ]
+      }
+    },
     "/reports/{report}": {
       "get": {
         "description": "Reads one report for a range of days in the workspace's time zone, counting only conversations the caller may see. Durations are medians in seconds with the 90th percentile and mean beside them. Spam, test, deleted and merged-away conversations never count. Returns the headline numbers, each with its unit, value, value in the period before when compare is set, sample size and the metric that lists its conversations; and the charts as series or tables.",
@@ -69457,6 +71258,16 @@
             "required": true,
             "schema": {
               "maxLength": 64,
+              "type": "string"
+            }
+          },
+          {
+            "description": "for the ai report, the key of the choice or yes-or-no AI attribute its Conversations by attribute table splits by; left out, the first active one.",
+            "explode": false,
+            "in": "query",
+            "name": "ai_breakdown",
+            "schema": {
+              "pattern": "^[a-z][a-z0-9_]{0,63}$",
               "type": "string"
             }
           },
@@ -69579,6 +71390,26 @@
             "name": "filter[agent]",
             "schema": {
               "maxLength": 2000,
+              "type": "string"
+            }
+          },
+          {
+            "description": "The key of an AI conversation attribute, such as reason: only conversations it was found on. Find keys with GET /ai/conversation-attributes.",
+            "explode": false,
+            "in": "query",
+            "name": "filter[ai_attribute]",
+            "schema": {
+              "pattern": "^[a-z][a-z0-9_]{0,63}$",
+              "type": "string"
+            }
+          },
+          {
+            "description": "With filter[ai_attribute], only conversations where it holds this value, as text: an option of a choice, true or false for yes or no.",
+            "explode": false,
+            "in": "query",
+            "name": "filter[ai_attribute_value]",
+            "schema": {
+              "maxLength": 500,
               "type": "string"
             }
           }
@@ -69780,6 +71611,26 @@
             "name": "filter[agent]",
             "schema": {
               "maxLength": 2000,
+              "type": "string"
+            }
+          },
+          {
+            "description": "The key of an AI conversation attribute, such as reason: only conversations it was found on. Find keys with GET /ai/conversation-attributes.",
+            "explode": false,
+            "in": "query",
+            "name": "filter[ai_attribute]",
+            "schema": {
+              "pattern": "^[a-z][a-z0-9_]{0,63}$",
+              "type": "string"
+            }
+          },
+          {
+            "description": "With filter[ai_attribute], only conversations where it holds this value, as text: an option of a choice, true or false for yes or no.",
+            "explode": false,
+            "in": "query",
+            "name": "filter[ai_attribute_value]",
+            "schema": {
+              "maxLength": 500,
               "type": "string"
             }
           }
@@ -71182,51 +73033,6 @@
         ]
       }
     },
-    "/series/{series}/enrollments/{enrollment}/skip": {
-      "post": {
-        "description": "Ends the wait a test journey stands on now, so the next step runs. Only for test journeys. Returns nothing once it moved on.",
-        "operationId": "series.enrollments.skip.store",
-        "parameters": [
-          {
-            "description": "Id of the series, starting with srs_, such as srs_01jx2m8k4t. Find it with GET /series.",
-            "in": "path",
-            "name": "series",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "description": "Id of the journey on a series, starting with sren_, such as sren_01jx2m8k4t. Find it with GET /series/{series}/enrollments.",
-            "in": "path",
-            "name": "enrollment",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "204": {
-            "description": "No Content"
-          },
-          "default": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ResponseError"
-                }
-              }
-            },
-            "description": "Error"
-          }
-        },
-        "summary": "Skip a test journey's wait",
-        "x-abilities": [
-          "series:write"
-        ]
-      }
-    },
     "/series/{series}/nodes/{node}/winner": {
       "post": {
         "description": "Sends everyone who reaches a split step from now on down one variant. Returns the series as it now is.",
@@ -71481,10 +73287,10 @@
         ]
       }
     },
-    "/series/{series}/tests": {
+    "/series/{series}/simulations/run": {
       "post": {
-        "description": "Enrolls the contact with the person's own email in the series as a test journey: it may run again and again, counts in no report and its waits can be skipped. Returns the test journey step by step.",
-        "operationId": "series.tests.store",
+        "description": "Walks a contact, or a made-up person, through a series' draft or live version without sending anything, skipping every wait. AI paths and extract steps still ask the AI unless mocked; run action steps never run the action, and answer with their mock. Returns each step with the path it took, the messages that would go out, the changes, whether the person reached the goal, and with a scenario, what they did each time the series asked.",
+        "operationId": "series.simulations.run.store",
         "parameters": [
           {
             "description": "Id of the series, starting with srs_, such as srs_01jx2m8k4t. Find it with GET /series.",
@@ -71496,16 +73302,26 @@
             }
           }
         ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RunSeriesSimulationBody"
+              }
+            }
+          },
+          "required": true
+        },
         "responses": {
-          "201": {
+          "200": {
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ResourceSeriesTrace"
+                  "$ref": "#/components/schemas/ResourceSeriesSimulation"
                 }
               }
             },
-            "description": "Created"
+            "description": "OK"
           },
           "default": {
             "content": {
@@ -71518,7 +73334,7 @@
             "description": "Error"
           }
         },
-        "summary": "Try a series on yourself",
+        "summary": "Walk one person through a series",
         "x-abilities": [
           "series:write"
         ]
@@ -77186,6 +79002,175 @@
         ]
       }
     },
+    "/workflows/{workflow}/failures": {
+      "get": {
+        "description": "Lists the runs of a workflow where a step failed, newest first, each with its conversation. Returns the failed runs with the first failing step, and next_cursor for more.",
+        "operationId": "workflows.failures.index",
+        "parameters": [
+          {
+            "description": "Id of the workflow, starting with wf_, such as wf_01jx2m8k4t. Find it with GET /workflows.",
+            "in": "path",
+            "name": "workflow",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "First day, YYYY-MM-DD.",
+            "explode": false,
+            "in": "query",
+            "name": "from",
+            "schema": {
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Last day, YYYY-MM-DD.",
+            "explode": false,
+            "in": "query",
+            "name": "to",
+            "schema": {
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Only this step.",
+            "explode": false,
+            "in": "query",
+            "name": "step_id",
+            "schema": {
+              "maxLength": 64,
+              "type": "string"
+            }
+          },
+          {
+            "description": "Run id (wfr_...) to read on from.",
+            "explode": false,
+            "in": "query",
+            "name": "before",
+            "schema": {
+              "maxLength": 64,
+              "type": "string"
+            }
+          },
+          {
+            "description": "How many to answer, at most 100.",
+            "explode": false,
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "format": "int64",
+              "maximum": 50,
+              "minimum": 0,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CollectionWorkflowFailure"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseError"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "List a workflow's failed runs",
+        "x-abilities": [
+          "workflows:read"
+        ]
+      }
+    },
+    "/workflows/{workflow}/metrics": {
+      "get": {
+        "description": "Reads a workflow's numbers over a range: runs started, completed, handed over and failed, its goal, each day, and each step's reached, waiting, failed and drop-off counts. Returns the workflow's numbers, with each step's by step id.",
+        "operationId": "workflows.metrics.show",
+        "parameters": [
+          {
+            "description": "Id of the workflow, starting with wf_, such as wf_01jx2m8k4t. Find it with GET /workflows.",
+            "in": "path",
+            "name": "workflow",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "First day, YYYY-MM-DD; 30 days ago when left out.",
+            "explode": false,
+            "in": "query",
+            "name": "from",
+            "schema": {
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Last day, YYYY-MM-DD.",
+            "explode": false,
+            "in": "query",
+            "name": "to",
+            "schema": {
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Only runs on this published version number; 0 counts every version.",
+            "explode": false,
+            "in": "query",
+            "name": "version",
+            "schema": {
+              "format": "int32",
+              "minimum": 0,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResourceWorkflowMetrics"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseError"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Get a workflow's analytics",
+        "x-abilities": [
+          "workflows:read"
+        ]
+      }
+    },
     "/workflows/{workflow}/publications": {
       "post": {
         "description": "Freezes the working copy as a new version and makes it live: new events run it for real customers, while conversations already running keep their version. Every error must be fixed first; warnings need the person's yes. Returns the workflow and the new version.",
@@ -77288,6 +79273,425 @@
           }
         },
         "summary": "List a workflow's runs",
+        "x-abilities": [
+          "workflows:read"
+        ]
+      }
+    },
+    "/workflows/{workflow}/simulations": {
+      "get": {
+        "description": "Lists the workflow's saved simulations and how each has gone lately. Returns the simulations with their messages, checks, last result and recent history.",
+        "operationId": "workflows.simulations.index",
+        "parameters": [
+          {
+            "description": "Id of the workflow, starting with wf_, such as wf_01jx2m8k4t. Find it with GET /workflows.",
+            "in": "path",
+            "name": "workflow",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CollectionWorkflowSimulation"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseError"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "List a workflow's simulations",
+        "x-abilities": [
+          "workflows:read"
+        ]
+      },
+      "post": {
+        "description": "Saves a conversation the workflow must keep handling right: who the customer is, what they write, and the checks on the steps and paths it takes. Returns the saved simulation.",
+        "operationId": "workflows.simulations.store",
+        "parameters": [
+          {
+            "description": "Id of the workflow, starting with wf_, such as wf_01jx2m8k4t. Find it with GET /workflows.",
+            "in": "path",
+            "name": "workflow",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TestCaseBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResourceWorkflowSimulation"
+                }
+              }
+            },
+            "description": "Created"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseError"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Save a workflow simulation",
+        "x-abilities": [
+          "workflows:write"
+        ]
+      }
+    },
+    "/workflows/{workflow}/simulations/from-conversation": {
+      "post": {
+        "description": "Turns a real conversation into a simulation of the workflow. Returns the saved simulation.",
+        "operationId": "workflows.simulations.from-conversation.store",
+        "parameters": [
+          {
+            "description": "Id of the workflow, starting with wf_, such as wf_01jx2m8k4t. Find it with GET /workflows.",
+            "in": "path",
+            "name": "workflow",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ImportWorkflowSimulationBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResourceWorkflowSimulation"
+                }
+              }
+            },
+            "description": "Created"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseError"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Save a conversation as a workflow simulation",
+        "x-abilities": [
+          "workflows:write"
+        ]
+      }
+    },
+    "/workflows/{workflow}/simulations/run": {
+      "post": {
+        "description": "Replays the workflow's saved simulations against its draft or live version, with nothing sent and no action run. A simulated customer taps buttons and answers questions, agent steps answer as the agent would, and a judge reads the result. Every run uses real models. Returns each simulation with its verdict, the trigger verdict and every step and path taken.",
+        "operationId": "workflows.simulations.run.store",
+        "parameters": [
+          {
+            "description": "Id of the workflow, starting with wf_, such as wf_01jx2m8k4t. Find it with GET /workflows.",
+            "in": "path",
+            "name": "workflow",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RunWorkflowSimulationsBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CollectionWorkflowSimulation"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseError"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Run a workflow's simulations",
+        "x-abilities": [
+          "workflows:write"
+        ]
+      }
+    },
+    "/workflows/{workflow}/simulations/{simulation}": {
+      "delete": {
+        "description": "Deletes a saved simulation and its past runs. Returns nothing.",
+        "operationId": "workflows.simulations.destroy",
+        "parameters": [
+          {
+            "description": "Id of the workflow, starting with wf_, such as wf_01jx2m8k4t. Find it with GET /workflows.",
+            "in": "path",
+            "name": "workflow",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Id of the AI agent simulation, starting with aias_, such as aias_01jx2m8k4t. Find it with GET /ai/agents/{agent}/simulations.",
+            "in": "path",
+            "name": "simulation",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseError"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Delete a workflow simulation",
+        "x-abilities": [
+          "workflows:write"
+        ]
+      },
+      "get": {
+        "description": "Reads one saved simulation of a workflow, with its last result step by step. Returns the simulation with its scenario, messages, checks and last result.",
+        "operationId": "workflows.simulations.show",
+        "parameters": [
+          {
+            "description": "Id of the workflow, starting with wf_, such as wf_01jx2m8k4t. Find it with GET /workflows.",
+            "in": "path",
+            "name": "workflow",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Id of the AI agent simulation, starting with aias_, such as aias_01jx2m8k4t. Find it with GET /ai/agents/{agent}/simulations.",
+            "in": "path",
+            "name": "simulation",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResourceWorkflowSimulation"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseError"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Get a workflow simulation",
+        "x-abilities": [
+          "workflows:read"
+        ]
+      },
+      "patch": {
+        "description": "Changes a saved simulation's name, scenario, messages, customer or checks. Returns the simulation as saved.",
+        "operationId": "workflows.simulations.update",
+        "parameters": [
+          {
+            "description": "Id of the workflow, starting with wf_, such as wf_01jx2m8k4t. Find it with GET /workflows.",
+            "in": "path",
+            "name": "workflow",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Id of the AI agent simulation, starting with aias_, such as aias_01jx2m8k4t. Find it with GET /ai/agents/{agent}/simulations.",
+            "in": "path",
+            "name": "simulation",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TestCaseBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResourceWorkflowSimulation"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseError"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Edit a workflow simulation",
+        "x-abilities": [
+          "workflows:write"
+        ]
+      }
+    },
+    "/workflows/{workflow}/simulations/{simulation}/runs": {
+      "get": {
+        "description": "Lists the latest runs of one simulation, newest first. Returns the runs with their verdict and when they ran.",
+        "operationId": "workflows.simulations.runs.index",
+        "parameters": [
+          {
+            "description": "Id of the workflow, starting with wf_, such as wf_01jx2m8k4t. Find it with GET /workflows.",
+            "in": "path",
+            "name": "workflow",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Id of the AI agent simulation, starting with aias_, such as aias_01jx2m8k4t. Find it with GET /ai/agents/{agent}/simulations.",
+            "in": "path",
+            "name": "simulation",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "draft or live. Left out, it is draft.",
+            "explode": false,
+            "in": "query",
+            "name": "version",
+            "schema": {
+              "enum": [
+                "draft",
+                "live"
+              ],
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CollectionWorkflowSimulationRun"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseError"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "List a workflow simulation's past runs",
         "x-abilities": [
           "workflows:read"
         ]

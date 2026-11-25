@@ -143,6 +143,8 @@ const handoffWords: Record<string, string> = {
   no_answer: "it had no answer",
   low_confidence: "it was not sure of its answer",
   sensitive_topic: "the topic needs a person",
+  turned_off_by_teammate: "a teammate turned AI off",
+  turned_off_by_workflow: "a workflow turned AI off",
 };
 
 /*

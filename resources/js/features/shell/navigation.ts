@@ -318,7 +318,7 @@ export const settingsPages = {
     "dimmi agent",
     RiSparkling2Line,
     "/d/settings/agent",
-    "How the agent answers customers, when it hands over and what it may spend.",
+    "How the agent answers customers, when it hands over and what it keeps private.",
   ),
   operator: page(
     "settings-operator",
@@ -333,6 +333,13 @@ export const settingsPages = {
     RiFlashlightLine,
     "/d/settings/actions",
     "What the agent can do in your own systems, such as looking up an order.",
+  ),
+  "ai-attributes": page(
+    "settings-ai-attributes",
+    "AI attributes",
+    RiPriceTag3Line,
+    "/d/settings/ai-attributes",
+    "What the AI notes on every conversation, for workflows and views.",
   ),
   "ai-providers": page(
     "settings-ai-providers",
@@ -552,7 +559,7 @@ export function settingsSections(): DashboardNavSection[] {
       label: "Channels",
       items: [pages.messenger, pages.email, pages.integrations],
     },
-    { key: "ai", label: "AI", items: [pages.agent, pages.actions, pages["ai-providers"]] },
+    { key: "ai", label: "AI", items: [pages.agent, pages.actions, pages["ai-attributes"], pages["ai-providers"]] },
     {
       key: "content",
       label: "Content",

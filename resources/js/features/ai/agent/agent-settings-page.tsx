@@ -1,6 +1,6 @@
 /*
  * The agent's settings, from whether it answers at all down to what it
- * may spend. Every change goes into one draft for the whole page, shown
+ * keeps private. Every change goes into one draft for the whole page, shown
  * at once in the controls, and is sent only when the save bar's Save is
  * pressed; Discard puts the saved settings back, and leaving with
  * changes unsaved asks first. People the server does not let change the
@@ -23,7 +23,6 @@ import { AnswersSection, PrivacySection } from "./answers-section";
 import { HandoverSection } from "./handover-section";
 import { IdentitySection } from "./identity-section";
 import { ModelSection } from "./model-section";
-import { SpendSection } from "./spend-section";
 import { StatusSection } from "./status-section";
 import { WhereSection } from "./where-section";
 
@@ -153,7 +152,6 @@ export function AgentSettings() {
       <AnswersSection agent={agent} canWrite={canWrite} save={save} />
       <HandoverSection workspace={workspace} agent={agent} canWrite={canWrite} save={save} />
       <PrivacySection agent={agent} canWrite={canWrite} save={save} />
-      <SpendSection workspace={workspace} agent={agent} canWrite={canWrite} save={save} />
     </SettingsPage>
   );
 }

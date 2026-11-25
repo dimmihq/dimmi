@@ -38,7 +38,8 @@ const MaxBytes = 256 * 1024
 /*
 Spec is a workflow definition. Audience is an audience rule; Schedule
 and Reentry restrict when the workflow runs; Exclusive stops later
-workflows from running for the same event once this one starts.
+workflows from running for the same event once this one starts. Goal,
+when set, is what analytics counts as the workflow working.
 */
 type Spec struct {
 	Schema          int             `json:"schema"`
@@ -49,6 +50,7 @@ type Spec struct {
 	Schedule        Schedule        `json:"schedule"`
 	Reentry         Reentry         `json:"reentry"`
 	Exclusive       bool            `json:"exclusive"`
+	Goal            *Goal           `json:"goal,omitempty"`
 	Steps           []Step          `json:"steps"`
 }
 

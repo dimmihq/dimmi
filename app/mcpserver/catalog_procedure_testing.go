@@ -135,5 +135,13 @@ func procedureVersionDocs() map[string]Doc {
 			Returns: "one row per procedure with its counts and rates.",
 			Params:  map[string]string{"from": "First day, YYYY-MM-DD.", "to": "Last day, YYYY-MM-DD."},
 		},
+		"reports.workflows.index": {
+			Name:  "report_workflows",
+			Title: "Report on workflows",
+			Use: "Compares every workflow that ran over a period: runs started, completed, handed to a person, " +
+				"failed, and how many reached the workflow's goal.",
+			Returns: "one row per workflow with its counts, the busiest first.",
+			Params:  map[string]string{"from": "First day, YYYY-MM-DD.", "to": "Last day, YYYY-MM-DD."},
+		},
 	}
 }

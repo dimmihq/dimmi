@@ -24,6 +24,13 @@ async function started() {
   return widget;
 }
 
+/*
+ * settle lets the messenger's lazy chunks, such as its sounds, load.
+ */
+function settle() {
+  return new Promise((resolve) => setTimeout(resolve, 20));
+}
+
 function shadow() {
   return document.getElementById("dimmi-messenger")?.shadowRoot as ShadowRoot;
 }
@@ -877,7 +884,9 @@ describe("core", () => {
 
     const form = shadow().querySelector('.view[data-view="ticket"] form');
     expect(form?.textContent).toContain("What happened");
-    expect([...(form?.querySelectorAll("option") ?? [])].map((o) => o.textContent)).toContain("SSO error");
+    expect([...(form?.querySelectorAll<HTMLInputElement>(".ticket-menu input") ?? [])].map((o) => o.value)).toContain(
+      "SSO error",
+    );
 
     win.Dimmi?.("tickets", { types: [type], request, show: "messages" });
 
@@ -894,9 +903,11 @@ describe("core", () => {
     expect(rows().length).toBeGreaterThan(1);
 
     rows()[0]?.click();
-    expect(shadow().querySelector(".thread .ticket-strip")?.textContent).toContain("With our team");
+    const pin = () => shadow().querySelector<HTMLElement>(".ticket-pin");
+    expect(pin()?.nextElementSibling?.classList.contains("thread")).toBe(true);
+    expect(pin()?.querySelector(".ticket-strip")?.textContent).toContain("With our team");
     rows()[1]?.click();
-    expect(shadow().querySelector(".thread .ticket-strip")).toBeNull();
+    expect(pin()?.hidden).toBe(true);
   });
 
   it("hides the launcher when the customer opens the messenger from their own buttons", async () => {
@@ -915,8 +926,12 @@ describe("core", () => {
     expect(launcher().querySelector(".label")?.textContent).toBe("Help");
   });
 
-  it("pops on open when sound is on, and never on a silent re-render", async () => {
-    const notes = vi.fn();
+  it("plays the outgoing and incoming sounds, and nothing on open", async () => {
+    // Each note's pitch tells the sounds apart: the outgoing one starts at
+    // 523 Hz, the incoming one at 392 Hz. A preview may answer a sent
+    // message by itself, so the incoming sound can follow the outgoing one
+    // at any moment and the test never counts on the order.
+    const pitches: number[] = [];
     const param = () => ({ value: 0, setValueAtTime: vi.fn(), exponentialRampToValueAtTime: vi.fn() });
     vi.stubGlobal(
       "AudioContext",
@@ -924,27 +939,41 @@ describe("core", () => {
         currentTime = 0;
         destination = {};
         createBiquadFilter() {
-          return { type: "", frequency: param(), connect: (to: unknown) => to };
+          return { type: "", frequency: param(), Q: param(), connect: (to: unknown) => to };
         }
         createGain() {
           return { gain: param(), connect: (to: unknown) => to };
         }
         createOscillator() {
-          notes();
-          return { frequency: param(), connect: (to: unknown) => to, start: vi.fn(), stop: vi.fn() };
+          const frequency = { ...param(), setValueAtTime: (hz: number) => pitches.push(hz) };
+          return { type: "", frequency, connect: (to: unknown) => to, start: vi.fn(), stop: vi.fn() };
         }
       },
     );
+    const outgoing = () => pitches.filter((hz) => hz === 523).length;
     await started();
+    win.Dimmi?.("open");
+    await settle();
+    expect(pitches).toEqual([]);
 
-    win.Dimmi?.("open");
-    expect(notes).toHaveBeenCalledTimes(2);
-    win.Dimmi?.("update", { texts: { greeting: "Hey" } });
-    expect(notes).toHaveBeenCalledTimes(2);
-    win.Dimmi?.("close");
+    shadow().dispatchEvent(new CustomEvent("dimmi:send", { detail: { body: "Hi", files: [] } }));
+    await vi.waitFor(() => expect(pitches).toEqual(expect.arrayContaining([523, 784])));
+
+    win.Dimmi?.("simulate", { message: "Hello" });
+    await vi.waitFor(() => expect(pitches).toEqual(expect.arrayContaining([392, 440])));
+
+    win.Dimmi?.("update", { appearance: { sent_sound: "none" } });
+    const sent = outgoing();
+    shadow().dispatchEvent(new CustomEvent("dimmi:send", { detail: { body: "Again", files: [] } }));
+    await settle();
+    expect(outgoing()).toBe(sent);
+
     win.Dimmi?.("update", { appearance: { sound: false } });
-    win.Dimmi?.("open");
-    expect(notes).toHaveBeenCalledTimes(2);
+    await settle();
+    const heard = pitches.length;
+    win.Dimmi?.("simulate", { message: "Again" });
+    await settle();
+    expect(pitches).toHaveLength(heard);
   });
 
   it("warns about commands it does not know", async () => {

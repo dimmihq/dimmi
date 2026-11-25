@@ -545,6 +545,14 @@
             "description": "The messenger's brand color as #RRGGBB, such as #1f2328.",
             "type": "string"
           },
+          "reply_sound": {
+            "description": "Whether a message coming in makes the messenger's incoming sound: none turns it off; pop, chime, bubble, swoosh and tick all turn it on.",
+            "type": "string"
+          },
+          "sent_sound": {
+            "description": "Whether a message the visitor sends makes the messenger's outgoing sound: none turns it off; pop, chime, bubble, swoosh and tick all turn it on.",
+            "type": "string"
+          },
           "sound": {
             "description": "True when the messenger plays a sound for new messages.",
             "type": "boolean"
@@ -567,7 +575,9 @@
           "padding_y",
           "launcher",
           "font",
-          "sound"
+          "sound",
+          "sent_sound",
+          "reply_sound"
         ],
         "type": "object"
       },
@@ -1301,6 +1311,14 @@
       "MessageAISource": {
         "additionalProperties": false,
         "properties": {
+          "excerpt": {
+            "description": "A line or two of what the cited source says: a help article's description, or the start of the passage the answer drew on. Left out for a source customers may not read.",
+            "type": "string"
+          },
+          "slug": {
+            "description": "Slug of the published help article the source is, for opening it in a help center or the messenger. Left out when the source is not a public help article.",
+            "type": "string"
+          },
           "title": {
             "description": "Title of a source the AI answer cites, such as a help article's title.",
             "type": "string"
@@ -4087,72 +4105,6 @@
           }
         },
         "summary": "Confirm or cancel an action"
-      }
-    },
-    "/conversations/{conversation}/ai/handoff": {
-      "post": {
-        "description": "Hands the visitor's conversation from the AI agent to the team: the agent writes its handoff line and the team is told. Needs the messenger session the conversation belongs to. A conversation already handed off stays as it is, and a session may ask 5 times a minute.",
-        "operationId": "widget.conversations.ai.handoff",
-        "parameters": [
-          {
-            "description": "Id of one of the visitor's own conversations on this messenger, such as conv_8f3k2m; any other id answers not found.",
-            "in": "path",
-            "name": "conversation",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "201": {
-            "description": "Created"
-          },
-          "default": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ResponseError"
-                }
-              }
-            },
-            "description": "Error"
-          }
-        },
-        "summary": "Ask for a person"
-      }
-    },
-    "/conversations/{conversation}/ai/helped": {
-      "post": {
-        "description": "Records that the AI agent's newest answer in the conversation helped the visitor. Needs the messenger session the conversation belongs to. Sending it again changes nothing.",
-        "operationId": "widget.conversations.ai.helped",
-        "parameters": [
-          {
-            "description": "Id of one of the visitor's own conversations on this messenger, such as conv_8f3k2m; any other id answers not found.",
-            "in": "path",
-            "name": "conversation",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "201": {
-            "description": "Created"
-          },
-          "default": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ResponseError"
-                }
-              }
-            },
-            "description": "Error"
-          }
-        },
-        "summary": "Mark the AI answer helpful"
       }
     },
     "/conversations/{conversation}/messages": {

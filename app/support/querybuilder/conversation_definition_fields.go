@@ -32,7 +32,7 @@ type field struct {
 
 /*
 fieldFor returns the field of the name, the attribute fields of contacts
-and companies included.
+and companies and the AI attributes of conversations included.
 */
 func fieldFor(name string) (field, bool) {
 	if key, ok := strings.CutPrefix(name, "contact.attr."); ok && validKey(key) {
@@ -41,6 +41,10 @@ func fieldFor(name string) (field, bool) {
 
 	if key, ok := strings.CutPrefix(name, "company.attr."); ok && validKey(key) {
 		return attributeField("co.custom_attributes", companyAttribute, key), true
+	}
+
+	if key, ok := strings.CutPrefix(name, "conversation.ai."); ok && validKey(key) {
+		return attributeField(`av."values"`, conversationAIValue, key), true
 	}
 
 	f, ok := fields()[name]
