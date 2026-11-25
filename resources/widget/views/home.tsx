@@ -48,18 +48,18 @@ export function Home({ options, content }: { options: Options; content: Content 
             <ArrowRightIcon />
           </span>
         </button>
-        {tickets()?.HomeCards({
-          types: content.ticket_types ?? [],
-          texts: options.texts,
-        }) ?? null}
         <Loadable
           skeleton={
             <>
+              <SkeletonSection count={3} />
               <SkeletonSection count={2} round />
-              <SkeletonSection count={2} />
             </>
           }
         >
+          {tickets()?.HomeCards({
+            types: content.ticket_types ?? [],
+            texts: options.texts,
+          }) ?? null}
           {recent.length > 0 && (
             <Section title={texts.recent_messages} more={showAll}>
               {recent.map((conversation) => (

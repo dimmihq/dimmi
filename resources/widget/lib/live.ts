@@ -45,7 +45,7 @@ import { enterRows, loadTickets, pinStrip, tickets } from "./tickets";
 export interface Host {
   root: ShadowRoot;
   options(): Options;
-  update(changes: OptionsUpdate): void;
+  update(changes: OptionsUpdate): void | Promise<void>;
   notify(message: { conversation: string; body: string; author: string }): void;
   showing(conversation: string): boolean;
   /* replied tells the page a reply arrived in the conversation on screen. */
@@ -249,6 +249,8 @@ export class Live {
   availability: Availability | undefined;
   open: string | undefined;
   private readonly deciding = new Set<string>();
+  private conversationsKnown = false;
+  private typesKnown = false;
   private readonly verifying = new Map<string, VerifyStep>();
   private help: Pick<Content, "collections" | "articles" | "popular" | "help_url"> | undefined;
   private changelog: Pick<Content, "changelog" | "unread_changelog"> | undefined;
@@ -351,6 +353,8 @@ export class Live {
       await this.reload();
       this.streaming();
     }
+    this.conversationsKnown = true;
+    this.arrive();
     if (this.outbox.pending.length > 0) {
       void this.outbox.flush();
     }
@@ -829,7 +833,44 @@ export class Live {
       await loadTickets(this.host.root).catch(() => undefined);
     }
     this.ticketing = { ticket_types };
-    this.host.update({});
+    await this.host.update({});
+    this.typesKnown = true;
+    this.arrive();
+  }
+
+  /*
+   * waiting names the views still waiting on what they show: Home on the
+   * visitor's conversations and the request types, Messages on the
+   * conversations. Until then they keep their skeletons, so nothing pops
+   * in on the first open.
+   */
+  get waiting(): string {
+    const views = [];
+    if (!(this.conversationsKnown && this.typesKnown)) {
+      views.push("home");
+    }
+    if (!this.conversationsKnown) {
+      views.push("messages");
+    }
+    return views.join(" ");
+  }
+
+  /*
+   * arrive takes each view off its skeleton once everything it shows has
+   * arrived.
+   */
+  private arrive() {
+    const waiting = this.waiting.split(" ");
+    const messenger = this.host.root.firstElementChild as HTMLElement | null;
+    if (messenger) {
+      messenger.dataset.waiting = this.waiting;
+    }
+    for (const view of this.host.root.querySelectorAll<HTMLElement>('.view[data-state="loading"]')) {
+      if (["home", "messages"].includes(view.dataset.view ?? "") && !waiting.includes(view.dataset.view ?? "")) {
+        view.dataset.state = "ready";
+        view.removeAttribute("aria-busy");
+      }
+    }
   }
 
   /*

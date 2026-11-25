@@ -107,11 +107,13 @@ describe("requests in the messenger", () => {
     expect(calls.map((c) => c.key)).not.toContain("GET /apps/wgt_1/ticket-types");
 
     widget?.messenger?.open();
+    const home = shadow().querySelector<HTMLElement>('.view[data-view="home"]');
+    expect(home?.dataset.state).toBe("loading");
     await settle();
 
-    const home = shadow().querySelector('.view[data-view="home"]');
-    expect(home?.textContent).toContain("Get help with");
-    expect(home?.querySelector("[data-ticket-type]")?.textContent).toContain("Bug report");
+    expect(shadow().querySelector<HTMLElement>('.view[data-view="home"]')?.dataset.state).toBe("ready");
+    expect(shadow().querySelector('.view[data-view="home"]')?.textContent).toContain("Get help with");
+    expect(shadow().querySelector('.view[data-view="home"] [data-ticket-type]')?.textContent).toContain("Bug report");
     expect(calls.map((c) => c.key)).not.toContain("GET /apps/wgt_1/incidents");
   });
 

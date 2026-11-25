@@ -58,7 +58,7 @@ export interface Widget {
   readonly options: Options;
   readonly live: Live | undefined;
   readonly ready: Promise<void>;
-  update(changes: OptionsUpdate): void;
+  update(changes: OptionsUpdate): Promise<void>;
 }
 
 const toggles = ["open", "close", "toggle"] as const;
@@ -145,7 +145,10 @@ export function boot(win: Window & DimmiWindow, doc: Document): Widget | undefin
     if (running.length === 0) {
       return undefined;
     }
-    return Promise.all(running.map((animation) => animation.finished.catch(() => undefined))).then(() => undefined);
+    // A hidden tab stops the clock that runs them, so the wait has a cap.
+    const capped = new Promise<void>((resolve) => win.setTimeout(resolve, 500));
+    const finished = Promise.all(running.map((animation) => animation.finished.catch(() => undefined)));
+    return Promise.race([finished.then(() => undefined), capped]);
   };
 
   let waiting: Promise<void> | undefined;
@@ -181,6 +184,7 @@ export function boot(win: Window & DimmiWindow, doc: Document): Widget | undefin
     const messenger = root.firstElementChild as HTMLElement;
     messenger.dataset.latency = String(latency);
     messenger.dataset.live = String(Boolean(live));
+    messenger.dataset.waiting = live?.waiting ?? "";
     for (const view of root.querySelectorAll<HTMLElement>(".view")) {
       if (loaded.includes(view.dataset.view)) {
         view.dataset.state = "ready";
@@ -244,7 +248,7 @@ export function boot(win: Window & DimmiWindow, doc: Document): Widget | undefin
     },
     update(changes) {
       options = merge(options, changes);
-      draw();
+      return draw();
     },
   };
 

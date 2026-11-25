@@ -384,6 +384,11 @@ export class MessengerController extends Controller {
 
     view.dataset.state = "loading";
     view.setAttribute("aria-busy", "true");
+    // A connected messenger still waiting on what this view shows leaves
+    // it loading; the connection takes it off once everything arrived.
+    if ((this.element.dataset.waiting ?? "").split(" ").includes(view.dataset.view ?? "")) {
+      return;
+    }
     const arrive = () => {
       view.dataset.state = "ready";
       view.removeAttribute("aria-busy");
