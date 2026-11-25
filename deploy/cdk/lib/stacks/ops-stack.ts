@@ -42,11 +42,14 @@ export class OpsStack extends Stack {
   /**
    * Filters on the `Environment` tag, which only counts once a person has
    * activated it as a cost allocation tag in the billing console.
+   *
+   * The budget has no fixed name. Changing who it mails replaces the
+   * budget, and CloudFormation creates the new one before deleting the
+   * old, so a fixed name clashes with itself.
    */
   private budget(config: EnvironmentConfig): void {
     new CfnBudget(this, "Budget", {
       budget: {
-        budgetName: `dimmi-${config.name}`,
         budgetType: "COST",
         timeUnit: "MONTHLY",
         budgetLimit: { amount: config.budgetUsd, unit: "USD" },
