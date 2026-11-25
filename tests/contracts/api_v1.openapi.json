@@ -18629,22 +18629,27 @@
         "additionalProperties": false,
         "properties": {
           "bounce_pause_rate": {
+            "description": "The share of the window's emails that may bounce for good before bulk sending pauses, from 0 to 1. Zero means bounces never pause it.",
             "format": "double",
             "type": "number"
           },
           "complained": {
+            "description": "How many emails sent in the window were reported as spam.",
             "format": "int64",
             "type": "integer"
           },
           "complaint_pause_rate": {
+            "description": "The share of the window's emails that may be reported as spam before bulk sending pauses, from 0 to 1. Zero means complaints never pause it.",
             "format": "double",
             "type": "number"
           },
           "hard_bounced": {
+            "description": "How many emails sent in the window bounced for good, such as to an address that does not exist.",
             "format": "int64",
             "type": "integer"
           },
           "minimum_sent": {
+            "description": "How many emails the window must hold before the workspace is judged.",
             "format": "int64",
             "type": "integer"
           },
@@ -18653,6 +18658,7 @@
             "type": "string"
           },
           "paused_at": {
+            "description": "When bulk sending was paused, as a UTC time. Null while it is active.",
             "format": "date-time",
             "type": [
               "string",
@@ -18660,6 +18666,7 @@
             ]
           },
           "paused_reason": {
+            "description": "Why bulk sending paused: bounce_rate or complaint_rate. Null while it is active.",
             "enum": [
               "bounce_rate",
               "complaint_rate"
@@ -18670,10 +18677,12 @@
             ]
           },
           "sent": {
+            "description": "How many customer emails the workspace sent in the window.",
             "format": "int64",
             "type": "integer"
           },
           "status": {
+            "description": "Whether the workspace may send bulk email: active, or paused, when broadcasts, series and rating emails wait while replies still send.",
             "enum": [
               "active",
               "paused"
@@ -18681,6 +18690,7 @@
             "type": "string"
           },
           "window_days": {
+            "description": "How many days of sending the counts cover.",
             "format": "int64",
             "type": "integer"
           }

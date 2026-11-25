@@ -183,7 +183,7 @@ func conversationTrashDocs() map[string]Doc {
 			Title:   "Read whether the workspace may send email",
 			Use:     "Reads whether email sending is paused, why, and the bounce and complaint counts it is judged by.",
 			Returns: "whether sending is paused, the reason, the last week's counts and the rates that pause it.",
-			Next:    []string{"dimmi_email_sending_resumptions_create: let a paused workspace send again"},
+			Next:    []string{"dimmi_resume_email_sending: let a paused workspace send again"},
 		},
 		"email-sending.resumptions.store": {
 			Title:   "Resume email sending",
