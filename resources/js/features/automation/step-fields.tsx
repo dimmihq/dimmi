@@ -30,6 +30,8 @@ import {
 } from "./conditions";
 import { ExtractFields } from "./extract-fields";
 import { type EditorProps, Words } from "./field-parts";
+import { MessageEditor } from "./message-editor";
+import { mentionedIn } from "./message-variables";
 import { Pick, Picks } from "./pick";
 import { ReplyTimeFields } from "./reply-time-fields";
 import { RunActionFields } from "./run-action-fields";
@@ -77,18 +79,28 @@ export interface Lists {
 
 type Props = EditorProps;
 
-function MessageFields({ step, onEdit }: Props) {
+function MessageFields({ step, trigger, lists, onEdit }: Props) {
   const set = useSet(onEdit);
-  const name = step.kind === "note" ? "Note" : "Message";
+  const note = step.kind === "note";
+  const name = note ? "Note" : "Message";
 
   return (
-    <Section title={name} description="Use {{contact.first_name}} and other variables to fill in details.">
-      <Words label={name} value={text(step.settings, "text")} onChange={(value) => set({ text: value })} />
+    <Section
+      title={name}
+      description={note ? "Type { for a variable, or @ to mention a teammate." : "Type { for a variable."}
+    >
+      <MessageEditor
+        label={name}
+        value={text(step.settings, "text")}
+        trigger={trigger}
+        teammates={note ? lists.members : undefined}
+        onChange={(value) => set(note ? { text: value, mention_member_ids: mentionedIn(value) } : { text: value })}
+      />
     </Section>
   );
 }
 
-function ButtonsFields({ step, onEdit }: Props) {
+function ButtonsFields({ step, trigger, onEdit }: Props) {
   const set = useSet(onEdit);
   const buttons = (step.paths ?? []).filter((path) => !path.outcome);
 
@@ -98,7 +110,12 @@ function ButtonsFields({ step, onEdit }: Props) {
         title="Question and buttons"
         description="Customers answer with a number, a button's name or in their own words."
       >
-        <Words label="Question" value={text(step.settings, "text")} onChange={(value) => set({ text: value })} />
+        <MessageEditor
+          label="Question"
+          value={text(step.settings, "text")}
+          trigger={trigger}
+          onChange={(value) => set({ text: value })}
+        />
         {buttons.map((path, index) => (
           <Row key={path.id} label={`Button ${index + 1}`}>
             <div className="flex items-center gap-2">
@@ -137,13 +154,18 @@ function ButtonsFields({ step, onEdit }: Props) {
   );
 }
 
-function CollectFields({ step, onEdit }: Props) {
+function CollectFields({ step, trigger, onEdit }: Props) {
   const set = useSet(onEdit);
   const field = text(step.settings, "field");
 
   return (
     <Section title="Question">
-      <Words label="Question" value={text(step.settings, "text")} onChange={(value) => set({ text: value })} />
+      <MessageEditor
+        label="Question"
+        value={text(step.settings, "text")}
+        trigger={trigger}
+        onChange={(value) => set({ text: value })}
+      />
       <Row label="Save the answer as">
         <Pick
           label="Save the answer as"

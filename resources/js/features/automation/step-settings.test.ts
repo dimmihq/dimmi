@@ -78,10 +78,10 @@ describe("describe", () => {
     expect(describeStep({ id: "s", kind: "escalate", settings: {} }, withTickets)).toBe(unsetSummary);
   });
 
-  it("says the reply time message, or the default one", () => {
+  it("says the reply time message, with its variable by name, or the default one", () => {
     expect(describeStep({ id: "s", kind: "reply_time", settings: {} }, names)).toBe(replyTimeText);
     expect(describeStep({ id: "s", kind: "reply_time", settings: { text: "Back {{reply_time}}" } }, names)).toBe(
-      "Back {{reply_time}}",
+      "Back {Reply time}",
     );
   });
 

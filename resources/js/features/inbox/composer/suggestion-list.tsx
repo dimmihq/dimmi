@@ -1,7 +1,8 @@
 /*
  * The list of suggestions above the caret while typing, such as emoji
- * after a colon, or below it when there is no room above. A long list
- * scrolls and keeps the chosen match in view. A click takes a match
+ * after a colon, or below it when there is no room above, kept inside the
+ * window near its right edge. A long list scrolls and keeps the chosen
+ * match in view. A click takes a match
  * without moving the focus out of the editor.
  */
 import type { ReactNode } from "react";
@@ -17,6 +18,13 @@ import type { Suggested } from "./suggestion-extension";
  * the list to open above it.
  */
 const roomAbove = 340;
+
+/*
+ * listWidth is the list's width, w-72, with the gap kept from the
+ * window's edge.
+ */
+const listWidth = 288;
+const edgeGap = 8;
 
 export function SuggestionList<T>({
   label,
@@ -34,9 +42,8 @@ export function SuggestionList<T>({
   }
   const { caret } = suggested;
   const below = caret.top < roomAbove;
-  const place = below
-    ? { left: caret.left, top: caret.bottom + 6 }
-    : { left: caret.left, bottom: window.innerHeight - caret.top + 6 };
+  const left = Math.max(edgeGap, Math.min(caret.left, window.innerWidth - listWidth - edgeGap));
+  const place = below ? { left, top: caret.bottom + 6 } : { left, bottom: window.innerHeight - caret.top + 6 };
 
   return createPortal(
     <div

@@ -7,7 +7,9 @@
  * colours and underline fall away to plain text. A colon and two letters
  * suggest emoji by name; in a note, an at sign suggests teammates and
  * teams to mention. A hash and a letter or more suggest saved replies,
- * whose text takes the place of what was typed.
+ * whose text takes the place of what was typed. Where the text is filled
+ * in for each customer, such as a workflow's message, an open brace
+ * suggests the variables, each kept as a chip.
  */
 import type { RemixiconComponentType } from "@remixicon/react";
 import {
@@ -25,6 +27,8 @@ import { type Editor, EditorContent, useEditor, useEditorState } from "@tiptap/r
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
+import { VariableToken } from "@/features/broadcasts/writer/variable-token";
+import { variableOf } from "@/features/broadcasts/writer/variables";
 import type { SavedReply } from "@/lib/api/saved-replies";
 import type { WhatsAppTemplate } from "@/lib/api/whatsapp";
 import { cx } from "@/utils/cx";
@@ -69,6 +73,30 @@ export interface RichEditorProps {
   takeTemplate?: (template: WhatsAppTemplate) => void;
   /* Where the formatting buttons go, such as the composer's own toolbar row; under the text when left out. */
   toolbarSlot?: HTMLElement | null;
+  /* Details filled in for each customer, offered after an open brace and kept as chips. */
+  variables?: EditorVariable[];
+  /* Whether the field takes the focus when it opens; it does unless told not to. */
+  autoFocus?: boolean;
+}
+
+/*
+ * EditorVariable is one detail a message can name: its key, as the
+ * Markdown keeps it, and the name its chip shows.
+ */
+export interface EditorVariable {
+  key: string;
+  label: string;
+  detail?: string;
+}
+
+/*
+ * findVariable narrows the variables to those whose name or key holds
+ * what was typed after the brace.
+ */
+function findVariable(variables: EditorVariable[], query: string): EditorVariable[] {
+  const needle = query.replace(/[{}\s]/g, "").toLowerCase();
+
+  return variables.filter((v) => needle === "" || `${v.label} ${v.key}`.toLowerCase().includes(needle)).slice(0, 12);
 }
 
 /*
@@ -101,6 +129,8 @@ export default function RichEditor({
   findTemplates,
   takeTemplate,
   toolbarSlot,
+  variables,
+  autoFocus = true,
 }: RichEditorProps) {
   const handlers = useRef({
     onChange,
@@ -130,6 +160,27 @@ export default function RichEditor({
   const [mention, setMention] = useState<Suggested<Mentionable> | null>(null);
   const [saved, setSaved] = useState<Suggested<SavedReply> | null>(null);
   const [template, setTemplate] = useState<Suggested<WhatsAppTemplate> | null>(null);
+  const [variable, setVariable] = useState<Suggested<EditorVariable> | null>(null);
+  const named = useRef(variables);
+  named.current = variables;
+  const variableHelpers = variables
+    ? [
+        VariableToken.configure({
+          named: (key) => named.current?.find((v) => v.key === key)?.label ?? variableOf(key)?.label,
+        }),
+        suggestionExtension<EditorVariable>({
+          name: "variableSuggestion",
+          char: "{",
+          minLength: 0,
+          find: (query) => findVariable(named.current ?? [], query),
+          content: (item) => [
+            { type: "variableToken", attrs: { key: item.key, fallback: variableOf(item.key)?.fallback ?? "" } },
+            { type: "text", text: " " },
+          ],
+          onChange: setVariable,
+        }),
+      ]
+    : [];
 
   const editor = useEditor({
     extensions: composerExtensions(
@@ -178,11 +229,12 @@ export default function RichEditor({
           },
           onChange: setTemplate,
         }),
+        ...variableHelpers,
       ],
     ),
     content: value,
     contentType: "markdown",
-    autofocus: "end",
+    autofocus: autoFocus ? "end" : false,
     editorProps: {
       attributes: {
         role: "textbox",
@@ -215,7 +267,10 @@ export default function RichEditor({
   linkRef.current = () => setLinking((editor?.getAttributes("link").href as string | undefined) ?? "https://");
 
   useEffect(() => whenReady(editor, (ready) => syncContent(ready, value)), [editor, value]);
-  useEffect(() => whenReady(editor, (ready) => focusKey && ready.commands.focus("end")), [editor, focusKey]);
+  useEffect(
+    () => whenReady(editor, (ready) => autoFocus && focusKey && ready.commands.focus("end")),
+    [editor, focusKey, autoFocus],
+  );
 
   return (
     <div className="flex flex-col gap-2">
@@ -271,6 +326,17 @@ export default function RichEditor({
               </span>
             </span>
             <span className="truncate text-body-2-regular text-text-tertiary">{item.preview.replace(/[*_]/g, "")}</span>
+          </span>
+        )}
+      />
+      <SuggestionList
+        label="Variables"
+        suggested={variable}
+        keyOf={(item) => item.key}
+        render={(item) => (
+          <span className="flex min-w-0 flex-col">
+            <span className="truncate">{item.label}</span>
+            <span className="truncate text-body-2-regular text-text-tertiary">{item.detail ?? item.key}</span>
           </span>
         )}
       />

@@ -6,6 +6,7 @@
  * made. Settings are the server's own, so what the builder saves is
  * exactly what runs.
  */
+import { readableText } from "./message-variables";
 import { splitSentence } from "./split";
 import { stepLook } from "./step-kinds";
 import { ticketSentences } from "./ticket-sentences";
@@ -96,7 +97,7 @@ export function list(settings: Settings | undefined, name: string): string[] {
 }
 
 function written(step: Step): string {
-  return text(step.settings, "text").trim() || unsetSummary;
+  return readableText(text(step.settings, "text").trim()) || unsetSummary;
 }
 
 function lasting(value: string): string {
@@ -150,7 +151,7 @@ function waited(step: Step, verb: string): string {
 }
 
 function collected(step: Step): string {
-  const question = text(step.settings, "text").trim();
+  const question = readableText(text(step.settings, "text").trim());
   const field = text(step.settings, "field");
   const target = collectTargets[field]?.name ?? field;
 
@@ -209,7 +210,7 @@ const describers: Partial<Record<StepKind, (step: Step, names: Names) => string>
   },
   buttons: written,
   collect: collected,
-  reply_time: (step) => text(step.settings, "text").trim() || replyTimeText,
+  reply_time: (step) => readableText(text(step.settings, "text").trim()) || replyTimeText,
   branch: () => "Go down the first path that matches",
   classify: sorted,
   split: splitSentence,
