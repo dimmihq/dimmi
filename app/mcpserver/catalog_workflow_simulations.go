@@ -110,14 +110,17 @@ func workflowSimulationRunDocs() map[string]Doc {
 			Use: "Walks a contact, or a made-up person, through a series' draft or live version without sending " +
 				"anything, skipping every wait. AI paths and extract steps still ask the AI unless mocked; run " +
 				"action steps never run the action, and answer with their mock.",
-			Returns: "each step with the path it took, the messages that would go out, the changes, and whether " +
-				"the person reached the goal.",
+			Returns: "each step with the path it took, the messages that would go out, the changes, whether " +
+				"the person reached the goal, and with a scenario, what they did each time the series asked.",
 			Params: map[string]string{
 				"version":    "draft or live. Left out, it is draft.",
 				"contact_id": "The contact to walk through (cnt_...); or leave out and describe a person.",
 				"person":     "A made-up person, with name, email and attributes.",
 				"events":     "Events the person does on the way, by name.",
 				"engaged":    "Whether they open, click or reply to the messages: opened, clicked or replied.",
+				"scenario": "How the person behaves, in words, such as opens every email but never clicks. The AI " +
+					"reads it to say whether they open, click, reply or do an event each time the series asks, " +
+					"in place of events and engaged.",
 				"action_mocks": "What extract and run action steps answer instead of the AI or the action, keyed " +
 					"by step id or action id (aac_...): a status and a body. An extract step's body holds the " +
 					"values by key; a run action step's body is the action's result, and a status outside 2xx " +

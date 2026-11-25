@@ -22,7 +22,8 @@
 |     action; the values both find are kept as attributes.
 |
 | The goal and the exit rules are checked before every step, as a
-| journey's are. "Try it on me" stays the way to see the real messages.
+| journey's are. With a scenario in words, the decision model says what
+| the person does instead; see simulate_scenario.go.
 |
 */
 
@@ -66,8 +67,8 @@ var (
 SimulateInput is a dry simulation: the series and which copy, the real
 contact or the made-up person who travels it, the events they would
 do, what they would do with its messages (opened, clicked or replied),
-and the mocks of its extract and run action steps, by step id or by
-action id.
+or a scenario that says how they behave in words, and the mocks of
+its extract and run action steps, by step id or by action id.
 */
 type SimulateInput struct {
 	Membership authz.Membership
@@ -77,6 +78,7 @@ type SimulateInput struct {
 	Person     *SimPerson
 	Events     []string
 	Engaged    []string
+	Scenario   string
 	Mocks      map[string]actionkit.Mock
 }
 
@@ -102,6 +104,7 @@ type simRun struct {
 	variants string
 	tags     map[string]bool
 	vars     map[string]string
+	decided  map[string]bool
 }
 
 /*
@@ -117,7 +120,8 @@ func (s *Series) Simulate(ctx context.Context, in SimulateInput) (*SimTrace, err
 	}
 	r := &simRun{
 		s: s, in: in, ws: m.Workspace.ID, variants: in.ID.String(), tags: map[string]bool{},
-		out: &SimTrace{Steps: []SimStep{}, Messages: []SimMessage{}, Actions: []SimAction{}},
+		decided: map[string]bool{},
+		out:     &SimTrace{Steps: []SimStep{}, Messages: []SimMessage{}, Actions: []SimAction{}},
 	}
 	if err := r.load(ctx); err != nil {
 		return nil, err
@@ -206,7 +210,7 @@ audience or rules, or would do its event.
 func (r *simRun) enters(ctx context.Context) (bool, error) {
 	entry := r.g.spec.Entry
 	if entry.Event != "" {
-		if slices.Contains(r.in.Events, entry.Event) {
+		if r.in.Scenario != "" || slices.Contains(r.in.Events, entry.Event) {
 			return true, nil
 		}
 		r.out.Reason = "event_not_done"
@@ -284,24 +288,41 @@ func (r *simRun) guard(ctx context.Context) (string, error) {
 			return map[bool]string{true: "exit_rules"}[ok], err
 		}
 	}
-	if spec.Exit.OnReply && len(r.out.Messages) > 0 && slices.Contains(r.in.Engaged, "replied") {
-		return "replied", nil
+	if spec.Exit.OnReply && len(r.out.Messages) > 0 {
+		replied, err := r.engaged(ctx, &Engagement{Action: "replied"}, asking{quiet: true})
+		if err != nil || replied {
+			return map[bool]string{true: "replied"}[replied], err
+		}
 	}
 	if spec.Goal == nil || r.out.Goal {
 		return "", nil
 	}
-	reached := spec.Goal.Event != "" && slices.Contains(r.in.Events, spec.Goal.Event)
-	if !reached && len(spec.Goal.Rules) > 0 {
-		var err error
-		if reached, err = r.matches(ctx, nil, spec.Goal.Rules); err != nil {
-			return "", err
-		}
+	reached, err := r.goalReached(ctx, spec.Goal)
+	if err != nil {
+		return "", err
 	}
 	r.out.Goal = reached
 	if reached && spec.Exit.OnGoal {
 		return "goal", nil
 	}
 	return "", nil
+}
+
+/*
+goalReached reports whether the person does the goal's event or
+matches its rules.
+*/
+func (r *simRun) goalReached(ctx context.Context, goal *Goal) (bool, error) {
+	if goal.Event != "" {
+		did, err := r.did(ctx, goal.Event, asking{quiet: true})
+		if err != nil || did {
+			return did, err
+		}
+	}
+	if len(goal.Rules) == 0 {
+		return false, nil
+	}
+	return r.matches(ctx, nil, goal.Rules)
 }
 
 /*
@@ -368,7 +389,7 @@ or engaged as told, and the timed-out path otherwise, at once.
 */
 func (r *simRun) waitFor(ctx context.Context, n Node) (outcome, error) {
 	s := settingsOf[WaitForSettings](n)
-	ok, err := r.test(ctx, s.Rules, s.Event, s.Engagement)
+	ok, err := r.test(ctx, check{rules: s.Rules, event: s.Event, engagement: s.Engagement})
 	if err != nil {
 		return outcome{}, err
 	}
@@ -379,31 +400,11 @@ func (r *simRun) waitFor(ctx context.Context, n Node) (outcome, error) {
 }
 
 /*
-test reports whether the person matches the rules, would do the event
-and engaged as told, whichever are given.
-*/
-func (r *simRun) test(ctx context.Context, rules json.RawMessage, event string, e *Engagement) (bool, error) {
-	if len(rules) > 0 {
-		ok, err := r.matches(ctx, nil, rules)
-		if err != nil || !ok {
-			return false, err
-		}
-	}
-	if event != "" && !slices.Contains(r.in.Events, event) {
-		return false, nil
-	}
-	if e == nil {
-		return len(rules) > 0 || event != "", nil
-	}
-	return slices.Contains(r.in.Engaged, e.Action), nil
-}
-
-/*
 condition takes the first path whose test matches, else everyone else.
 */
 func (r *simRun) condition(ctx context.Context, n Node) (outcome, error) {
 	for _, p := range settingsOf[ConditionSettings](n).Paths {
-		ok, err := r.test(ctx, p.Rules, "", p.Engagement)
+		ok, err := r.test(ctx, check{rules: p.Rules, engagement: p.Engagement, label: p.Label})
 		if err != nil {
 			return outcome{}, err
 		}
@@ -441,7 +442,7 @@ func (r *simRun) split(n Node) outcome {
 
 /*
 aiPath asks the picker a journey asks, and takes the fallback path
-when it cannot choose.
+when it cannot choose. With a scenario, the picker reads it too.
 */
 func (r *simRun) aiPath(ctx context.Context, n Node) outcome {
 	settings := settingsOf[AIPathSettings](n)
@@ -454,10 +455,12 @@ func (r *simRun) aiPath(ctx context.Context, n Node) outcome {
 	for _, p := range settings.Paths {
 		options = append(options, aidecision.Option{ID: p.ID, Label: p.Label, Description: p.Description})
 	}
+	profile := profileOf(&run{people: []models.Contact{r.person}})
+	if r.in.Scenario != "" {
+		profile = r.scenarioContext()
+	}
 	chosen, err := r.s.Decisions.Choose(ctx, aidecision.Choice{
-		Subject: aidecision.Subject{
-			WorkspaceID: r.ws, Context: profileOf(&run{people: []models.Contact{r.person}}),
-		},
+		Subject:      aidecision.Subject{WorkspaceID: r.ws, Context: profile},
 		Instructions: settings.Prompt, Options: options,
 	})
 	picked := chosen.OptionID

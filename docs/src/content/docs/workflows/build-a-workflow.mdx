@@ -74,7 +74,7 @@ Hi {{contact.first_name | fallback: "there"}}, your order {{run.vars.order_numbe
 
 ## Test with simulations
 
-A **simulation** plays a made-up customer through your workflow before anyone real meets it. Open **Simulations** beside the builder, write the customer's first message and their situation, or start from a past conversation.
+A **simulation** plays a made-up customer through your workflow before anyone real meets it. Open **Simulations** beside the builder and type the customer's first message in the box at the bottom. The **+** picks who writes it: one of your customers, or a made-up one with the plan and details you set. Sending saves the simulation and runs it. Its situation is written from the message; change it once the simulation is open.
 
 An AI customer then plays the chat:
 
@@ -85,7 +85,7 @@ An AI customer then plays the chat:
 
 A **Run a workflow** step walks the live workflow it calls right there in the run. Its steps show nested under the call, and both share the same variables.
 
-Nothing leaves the simulation. Messages are not sent, and tags, assignments, notes, tickets, HTTP requests and actions are only listed under **Would have run**. Reply time steps work out the real estimate, and article steps name the article they would share.
+Nothing leaves the simulation. Messages are not sent. Tags, assignments, notes, tickets, HTTP requests and actions show in the chat where they happened, the way the inbox shows them, but none of them run. Reply time steps work out the real estimate, and article steps name the article they would share.
 
 Under **Answers in place of real calls**, set what each step that calls out gets back:
 
@@ -97,7 +97,7 @@ Under **Answers in place of real calls**, set what each step that calls out gets
 
 Extracted values and saved outputs land in the run's variables, so later branches and messages read them.
 
-Each run shows the chat, every step with the path it took, and the variables it set. Add checks in plain words ("the workflow tags billing questions"), or pick **Check the path a step takes**. A model judges the written checks and can answer unsure.
+Each run shows the chat and every step with the path it took. Add checks in plain words ("the workflow tags billing questions"), or pick **Check the path a step takes**. A model judges the written checks and can answer unsure.
 
 Run a simulation on the draft or the live version. **Compare** runs both side by side, so you can see what a change does before you publish it.
 

@@ -24,7 +24,8 @@ type SimulateSeriesPerson struct {
 RunSeriesSimulationBody is a dry simulation of a series: the copy
 (draft by default, or live), the contact who travels it or a made-up
 person, the events they would do, what they would do with its
-messages, and what its extract and run action steps answer, by step id
+messages or a scenario that says how they behave in words, and what
+its extract and run action steps answer, by step id
 or action id.
 */
 type RunSeriesSimulationBody struct {
@@ -33,6 +34,7 @@ type RunSeriesSimulationBody struct {
 	Person      *SimulateSeriesPerson      `json:"person,omitempty"`
 	Events      []string                   `json:"events,omitempty"       maxItems:"20"`
 	Engaged     []string                   `json:"engaged,omitempty"      maxItems:"3"`
+	Scenario    string                     `json:"scenario,omitempty"     maxLength:"2000"`
 	ActionMocks map[string]ActionMockInput `json:"action_mocks,omitempty"`
 }
 

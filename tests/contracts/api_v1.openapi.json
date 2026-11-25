@@ -33001,6 +33001,11 @@
           "person": {
             "$ref": "#/components/schemas/SimulateSeriesPerson"
           },
+          "scenario": {
+            "description": "Scenario: text of at most 2000 characters.",
+            "maxLength": 2000,
+            "type": "string"
+          },
           "version": {
             "description": "draft or live. Left out, it is draft.",
             "enum": [
@@ -34789,6 +34794,15 @@
               "null"
             ]
           },
+          "decisions": {
+            "items": {
+              "$ref": "#/components/schemas/SeriesSimulationDecision"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
           "end": {
             "description": "How the journey ended: finished, goal, exited or still waiting.",
             "type": "string"
@@ -34837,7 +34851,8 @@
           "messages",
           "actions",
           "goal_reached",
-          "end"
+          "end",
+          "decisions"
         ],
         "type": "object"
       },
@@ -34861,6 +34876,27 @@
         "required": [
           "node_id",
           "kind"
+        ],
+        "type": "object"
+      },
+      "SeriesSimulationDecision": {
+        "additionalProperties": false,
+        "properties": {
+          "before": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "did": {
+            "type": "boolean"
+          },
+          "what": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "before",
+          "what",
+          "did"
         ],
         "type": "object"
       },

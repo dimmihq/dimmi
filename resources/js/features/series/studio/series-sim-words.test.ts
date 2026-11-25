@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 
-import { mockableNodes, walkedNote } from "./series-sim-words";
+import type { SeriesSimulation } from "@/lib/api/workflow-simulations";
+
+import { didWords, journey, mockableNodes, walkedNote } from "./series-sim-words";
 
 describe("series simulation words", () => {
   it("says what extract and action steps kept", () => {
@@ -31,6 +33,42 @@ describe("series simulation words", () => {
     ).toEqual([
       { id: "fit", kind: "extract" },
       { id: "seats", kind: "run_action" },
+    ]);
+  });
+
+  it("says what the person did or did not do", () => {
+    expect(didWords("Ada", 'open the message "Welcome"', true)).toBe('Ada opened the message "Welcome"');
+    expect(didWords("Ada", 'click a link in the message "Pricing"', false)).toBe(
+      'Ada did not click a link in the message "Pricing"',
+    );
+    expect(didWords("Ada", 'do the event "upgraded" in the product', true)).toBe(
+      'Ada did the event "upgraded" in the product',
+    );
+  });
+
+  it("reads a walk as messages, what they did, and what the series did", () => {
+    const result: SeriesSimulation = {
+      object: "series_simulation",
+      entered: true,
+      steps: [
+        { node_id: "entry", kind: "entry", result: "entered" },
+        { node_id: "welcome", kind: "email", result: "sent" },
+        { node_id: "wait", kind: "wait", result: "waited", skipped: true },
+        { node_id: "check", kind: "condition", path: "else", result: "else" },
+      ],
+      messages: [{ node_id: "welcome", kind: "email", subject: "Welcome", body: "Hi" }],
+      actions: [],
+      goal_reached: false,
+      end: "finished",
+      decisions: [{ before: 3, what: 'open the message "Welcome"', did: false }],
+    };
+
+    expect(journey(result, "Ada").map((m) => (m.kind === "message" ? `mail:${m.subject}` : m.text))).toEqual([
+      "mail:Welcome",
+      "Wait, skipped",
+      'Ada did not open the message "Welcome"',
+      "Check: everyone else",
+      "Finished",
     ]);
   });
 });

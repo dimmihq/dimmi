@@ -288,14 +288,6 @@ export function seriesJourneysQuery(workspace: string, id: string, node?: string
   });
 }
 
-export function seriesTraceQuery(workspace: string, id: string, journey: string) {
-  return queryOptions({
-    queryKey: [...seriesKey(workspace), "one", id, "trace", journey] as const,
-    queryFn: () => request<SeriesTrace>("GET", `${path(id)}/enrollments/${journey}`, undefined, { workspace }),
-    refetchInterval: 3_000,
-  });
-}
-
 export function seriesVersionsQuery(workspace: string, id: string) {
   return queryOptions({
     queryKey: [...seriesKey(workspace), "one", id, "versions"] as const,
@@ -326,14 +318,6 @@ export type SeriesAction = "pause" | "resume" | "archive" | "duplicate";
 
 export function actOnSeries(workspace: string, id: string, action: SeriesAction): Promise<Series> {
   return request<Series>("POST", `${path(id)}/${action}`, undefined, { workspace });
-}
-
-export function trySeries(workspace: string, id: string): Promise<SeriesTrace> {
-  return request<SeriesTrace>("POST", `${path(id)}/tests`, {}, { workspace });
-}
-
-export function skipSeriesWait(workspace: string, id: string, journey: string): Promise<void> {
-  return request<void>("POST", `${path(id)}/enrollments/${journey}/skip`, {}, { workspace });
 }
 
 export function removeFromSeries(workspace: string, id: string, journey: string): Promise<void> {

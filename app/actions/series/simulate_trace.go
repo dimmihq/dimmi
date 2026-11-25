@@ -17,13 +17,24 @@ every step with the path it took, what would be sent, the changes that
 would be made, whether the goal was reached, and how it ended.
 */
 type SimTrace struct {
-	Entered  bool         `json:"entered"`
-	Reason   string       `json:"reason,omitempty"`
-	Steps    []SimStep    `json:"steps"`
-	Messages []SimMessage `json:"messages"`
-	Actions  []SimAction  `json:"actions"`
-	Goal     bool         `json:"goal_reached"`
-	End      string       `json:"end"`
+	Entered   bool          `json:"entered"`
+	Reason    string        `json:"reason,omitempty"`
+	Steps     []SimStep     `json:"steps"`
+	Messages  []SimMessage  `json:"messages"`
+	Actions   []SimAction   `json:"actions"`
+	Goal      bool          `json:"goal_reached"`
+	End       string        `json:"end"`
+	Decisions []SimDecision `json:"decisions"`
+}
+
+/*
+SimDecision is what the scenario's person did when the series asked:
+before which step, in words, and whether they did it.
+*/
+type SimDecision struct {
+	Before int    `json:"before"`
+	What   string `json:"what"`
+	Did    bool   `json:"did"`
 }
 
 /*

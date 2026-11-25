@@ -16,6 +16,7 @@ package v1
 
 import (
 	"context"
+	"strings"
 
 	fhttp "github.com/dimmihq/dimmi/framework/http"
 	"github.com/dimmihq/dimmi/framework/http/pagination"
@@ -214,7 +215,7 @@ func (c *WorkflowSimulationController) SimulateSeries(ctx context.Context, in *r
 	b := in.Body
 	input := series.SimulateInput{
 		Membership: membership(ctx), ID: id, Version: b.Version, Events: b.Events, Engaged: b.Engaged,
-		Mocks: mocks(b.ActionMocks),
+		Scenario: strings.TrimSpace(b.Scenario), Mocks: mocks(b.ActionMocks),
 	}
 	if b.ContactID != "" {
 		contact, err := c.IDs.Decode(string(models.PrefixContact), b.ContactID)

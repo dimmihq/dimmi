@@ -237,6 +237,8 @@ export interface SeriesSimulation {
   actions: { node_id: string; kind: string; detail?: Record<string, unknown> }[];
   goal_reached: boolean;
   end: string;
+  /* What a scenario's person did each time the series asked, before the step at that index. */
+  decisions: { before: number; what: string; did: boolean }[];
 }
 
 export type Engagement = "opened" | "clicked" | "replied";
@@ -247,6 +249,8 @@ export interface SeriesSimulationInput {
   person?: { name?: string; email?: string; attributes?: Record<string, unknown> };
   events?: string[];
   engaged?: Engagement[];
+  /* How the person behaves, in words; the AI reads it to say what they do with each message. */
+  scenario?: string;
   /* What extract and run action steps answer, by step id or action id, instead of the AI or the action. */
   action_mocks?: Record<string, ActionMock>;
 }

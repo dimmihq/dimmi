@@ -15,17 +15,30 @@ import "github.com/dimmihq/dimmi/app/actions/series"
 SeriesSimulation is a series' dry simulation of one person: whether
 they would enter and why not, every step with the path it took, the
 messages that would be sent, the changes that would be made, whether
-the goal was reached, and how the journey would end.
+the goal was reached, how the journey would end, and what a
+scenario's person did each time the series asked.
 */
 type SeriesSimulation struct {
-	Object      string                    `json:"object"`
-	Entered     bool                      `json:"entered"`
-	Reason      string                    `json:"reason,omitempty"`
-	Steps       []SeriesSimulationStep    `json:"steps"`
-	Messages    []SeriesSimulationMessage `json:"messages"`
-	Actions     []SeriesSimulationAction  `json:"actions"`
-	GoalReached bool                      `json:"goal_reached"`
-	End         string                    `json:"end"`
+	Object      string                     `json:"object"`
+	Entered     bool                       `json:"entered"`
+	Reason      string                     `json:"reason,omitempty"`
+	Steps       []SeriesSimulationStep     `json:"steps"`
+	Messages    []SeriesSimulationMessage  `json:"messages"`
+	Actions     []SeriesSimulationAction   `json:"actions"`
+	GoalReached bool                       `json:"goal_reached"`
+	End         string                     `json:"end"`
+	Decisions   []SeriesSimulationDecision `json:"decisions"`
+}
+
+/*
+SeriesSimulationDecision is what a scenario's person did when the
+series asked: before which step (an index into steps), in words, and
+whether they did it.
+*/
+type SeriesSimulationDecision struct {
+	Before int    `json:"before"`
+	What   string `json:"what"`
+	Did    bool   `json:"did"`
 }
 
 /*
@@ -68,7 +81,11 @@ func NewSeriesSimulation(t *series.SimTrace) SeriesSimulation {
 	out := SeriesSimulation{
 		Object: "series_simulation", Entered: t.Entered, Reason: t.Reason, GoalReached: t.Goal, End: t.End,
 		Steps: make([]SeriesSimulationStep, len(t.Steps)), Messages: make([]SeriesSimulationMessage, len(t.Messages)),
-		Actions: make([]SeriesSimulationAction, len(t.Actions)),
+		Actions:   make([]SeriesSimulationAction, len(t.Actions)),
+		Decisions: make([]SeriesSimulationDecision, len(t.Decisions)),
+	}
+	for i, d := range t.Decisions {
+		out.Decisions[i] = SeriesSimulationDecision(d)
 	}
 	for i, s := range t.Steps {
 		out.Steps[i] = SeriesSimulationStep(s)

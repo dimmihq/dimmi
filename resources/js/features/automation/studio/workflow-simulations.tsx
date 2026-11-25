@@ -10,10 +10,12 @@
  * answers its HTTP requests, actions and extract steps get in place of
  * real calls, the chat, each step and path the workflow took (a called
  * workflow's steps nested under the call), and its checks; Compare puts
- * the draft and live runs side by side.
+ * the draft and live runs side by side. A new simulation starts the way
+ * a chat with the agent does: the customer's first message typed in the
+ * composer at the bottom, with the plus to pick who writes it, a real
+ * customer or a made-up one. Sending saves it and runs it at once.
  */
 import {
-  RiAddLine,
   RiArrowLeftSLine,
   RiArrowRightSLine,
   RiCloseLine,
@@ -23,19 +25,21 @@ import {
 } from "@remixicon/react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-
+import { Avatar } from "@/components/base/avatar/avatar";
 import { Chip } from "@/components/base/badges/chip";
 import { Button } from "@/components/base/buttons/button";
 import { IconButton } from "@/components/base/buttons/icon-button";
 import { Input } from "@/components/base/input/input";
-import { AlertDialog, Modal, ModalBody, ModalFooter, ModalHeader } from "@/components/base/modal/modal";
+import { AlertDialog } from "@/components/base/modal/modal";
 import { SegmentedControl, SegmentedControlItem } from "@/components/base/segmented-control/segmented-control";
 import { Select, SelectItem } from "@/components/base/select/select";
 import { Textarea } from "@/components/base/textarea/textarea";
 import { toast } from "@/components/base/toast/toast";
 import { Resize, Swap } from "@/features/inbox/motion";
+import { avatarColor } from "@/features/shell/avatar-color";
 import { ScrollArea } from "@/features/shell/page";
 import type { AnswerAs } from "@/lib/api/agents";
+import type { SimPersona } from "@/lib/api/procedures";
 import {
   createWorkflowSimulation,
   deleteWorkflowSimulation,
@@ -56,6 +60,8 @@ import { cx } from "@/utils/cx";
 
 import { Dots } from "../../agents/agent-sim-history";
 import { KindMark } from "../parts";
+import { PreviewAddMenu } from "../procedure-simulator/preview-add-menu";
+import { Added, PreviewComposer } from "../procedure-simulator/preview-composer";
 import { card, fieldLabel, hint } from "../procedure-simulator/simulator";
 import type { ChipSources } from "../procedure-writer/procedure-suggestions";
 import { useChipSources } from "../procedure-writer/use-chip-sources";
@@ -660,35 +666,52 @@ function Detail({
 }
 
 /*
- * NewSimulation saves a simulation written from a name, the customer's
- * first message and their situation, which tells the simulated customer
- * who they are and how to answer what the workflow asks.
+ * nameFrom names a simulation after the customer's first message: its
+ * first line, cut at a word near 60 characters.
+ */
+function nameFrom(message: string): string {
+  const line = message.trim().split("\n")[0] ?? "";
+  if (line.length <= 60) {
+    return line;
+  }
+  const cut = line.slice(0, 60);
+
+  return `${cut.slice(0, Math.max(cut.lastIndexOf(" "), 40))}…`;
+}
+
+/*
+ * NewSimulation is the composer under the list: the customer's first
+ * message, and through the plus, who writes it. Sending saves the
+ * simulation; its situation is written from the message and can be
+ * changed once it is open.
  */
 function NewSimulation({
   workspace,
   workflow,
-  onClose,
   onMade,
 }: {
   workspace: string;
   workflow: string;
-  onClose: () => void;
   onMade: (sim: WorkflowSimulation) => void;
 }) {
-  const [name, setName] = useState("");
   const [message, setMessage] = useState("");
-  const [scenario, setScenario] = useState("");
+  const [persona, setPersona] = useState<SimPersona | null>(null);
   const [saving, setSaving] = useState(false);
-  const ready = name.trim() !== "" && message.trim() !== "";
+  const who = persona?.name || persona?.email || "";
 
   const save = async () => {
+    const text = message.trim();
+    if (text === "" || saving) {
+      return;
+    }
     setSaving(true);
     try {
       const made = await createWorkflowSimulation(workspace, workflow, {
-        name: name.trim(),
-        messages: [{ text: message.trim() }],
-        ...(scenario.trim() ? { scenario: scenario.trim() } : {}),
+        name: nameFrom(text),
+        messages: [{ text }],
+        ...(persona ? { persona } : {}),
       });
+      setMessage("");
       onMade(made);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "The simulation was not saved.");
@@ -698,45 +721,37 @@ function NewSimulation({
   };
 
   return (
-    <Modal isOpen onOpenChange={(open) => (open ? undefined : onClose())} size="md">
-      <ModalHeader title="New simulation" description="A chat the workflow must keep handling the way you mean." />
-      <ModalBody className="flex flex-col gap-4">
-        <Input
-          label="Name"
-          placeholder="Double charge goes to Billing as a refund"
-          value={name}
-          onChange={setName}
-          maxLength={120}
-        />
-        <Textarea
-          label="The customer's first message"
-          placeholder="Hi, I was charged twice for my October invoice. Can I get one of them refunded?"
-          rows={2}
-          autoResize
-          maxLength={4000}
-          value={message}
-          onChange={setMessage}
-        />
-        <Textarea
-          label="Customer's situation"
-          hint="Who the customer is, what they want, and how they answer the workflow's questions. Optional: left empty, it is written from the first message."
-          placeholder="A customer on the Pro plan was charged twice and wants a refund. When offered options, they pick the refund. If asked for an email, they give ada@northwind.test."
-          rows={3}
-          autoResize
-          maxLength={1000}
-          value={scenario}
-          onChange={setScenario}
-        />
-      </ModalBody>
-      <ModalFooter>
-        <Button variant="secondary" size="small" onClick={onClose}>
-          Cancel
-        </Button>
-        <Button size="small" loading={saving} disabled={!ready} onClick={() => void save()}>
-          Save simulation
-        </Button>
-      </ModalFooter>
-    </Modal>
+    <div className="shrink-0 px-4 pb-4">
+      <PreviewComposer
+        value={message}
+        onValueChange={setMessage}
+        onSubmit={() => void save()}
+        onStop={() => undefined}
+        busy={saving}
+        placeholder="Write what the customer says first"
+        canSubmit={false}
+        added={
+          who ? (
+            <div className="flex flex-wrap gap-1.5 px-0.5 pt-0.5">
+              <Added
+                mark={<Avatar size="md" color={avatarColor(who)} initials={who.charAt(0).toUpperCase()} />}
+                title={who}
+                detail={persona?.name && persona.email ? `Writing as ${persona.email}` : "Writing as this customer"}
+                onRemove={() => setPersona(null)}
+              />
+            </div>
+          ) : null
+        }
+        menu={
+          <PreviewAddMenu
+            workspace={workspace}
+            replayable={false}
+            onCustomer={setPersona}
+            onConversation={() => undefined}
+          />
+        }
+      />
+    </div>
   );
 }
 
@@ -826,7 +841,6 @@ export function WorkflowSimulations({
   const [running, setRunning] = useState<string[]>([]);
   const [deleting, setDeleting] = useState<WorkflowSimulation | null>(null);
   const [comparing, setComparing] = useState(false);
-  const [adding, setAdding] = useState(false);
   const live = useWorkflowLiveRuns(workspace);
   const refresh = () => queryClient.invalidateQueries(workflowSimulationsQuery(workspace, workflow));
   const steps: Steps = wf?.spec?.steps ?? [];
@@ -898,13 +912,10 @@ export function WorkflowSimulations({
       <span className="flex flex-col gap-1">
         <span className="text-body-medium text-text-primary">No simulations yet</span>
         <span className={hint}>
-          A simulation is a chat this workflow must keep handling the way you mean. An AI customer taps its buttons and
-          answers its questions; nothing is sent.
+          A simulation is a chat this workflow must keep handling the way you mean. Write what a customer says first,
+          below. An AI customer plays the rest; nothing is sent.
         </span>
       </span>
-      <Button variant="secondary" size="small" leadingIcon={RiAddLine} onClick={() => setAdding(true)}>
-        New simulation
-      </Button>
     </div>
   );
 
@@ -915,13 +926,6 @@ export function WorkflowSimulations({
           {summary} on the {copy === "draft" ? "draft" : "live version"}
         </p>
         <span className="flex shrink-0 items-center gap-1">
-          <IconButton
-            variant="quiet"
-            size="small"
-            icon={RiAddLine}
-            aria-label="New simulation"
-            onClick={() => setAdding(true)}
-          />
           <Button
             variant="tertiary"
             size="xs"
@@ -935,7 +939,7 @@ export function WorkflowSimulations({
         </span>
       </div>
       <ScrollArea>
-        <ul className={cx("mx-4 mt-1 mb-10 flex flex-col gap-0.5 p-1", card)}>
+        <ul className={cx("mx-4 mt-1 mb-6 flex flex-col gap-0.5 p-1", card)}>
           {list.map((sim) => (
             <SimRow
               key={sim.id}
@@ -970,7 +974,21 @@ export function WorkflowSimulations({
         </div>
       ) : null}
       <Swap view={opened ? opened.id : "list"} forward={opened !== undefined} className="flex min-h-0 flex-1 flex-col">
-        {detail ?? (list.length === 0 ? none : all)}
+        {detail ?? (
+          <>
+            {list.length === 0 ? <>{none}</> : <>{all}</>}
+            <NewSimulation
+              workspace={workspace}
+              workflow={workflow}
+              onMade={(sim) => {
+                void refresh().then(() => {
+                  setOpenId(sim.id);
+                  void run([sim.id]);
+                });
+              }}
+            />
+          </>
+        )}
       </Swap>
       <AlertDialog
         isOpen={deleting !== null}
@@ -986,17 +1004,6 @@ export function WorkflowSimulations({
           return sim ? deleteWorkflowSimulation(workspace, workflow, sim.id).then(refresh) : undefined;
         }}
       />
-      {adding ? (
-        <NewSimulation
-          workspace={workspace}
-          workflow={workflow}
-          onClose={() => setAdding(false)}
-          onMade={(sim) => {
-            setAdding(false);
-            void refresh().then(() => setOpenId(sim.id));
-          }}
-        />
-      ) : null}
       {comparing && opened ? (
         <WorkflowSimCompare
           workspace={workspace}

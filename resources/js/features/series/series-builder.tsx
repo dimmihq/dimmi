@@ -5,8 +5,8 @@
  * a draft sit in its menu. Build holds the canvas of its steps; picking
  * a card pushes its settings out beside it. Analytics reads the same
  * canvas with each step's results; History lists published versions.
- * Beside them sit Preview (the steps in words, what needs fixing, and
- * "Try it on me"), Simulations and Operator. Every change saves a moment
+ * Beside them sit Preview (the steps in words and what needs fixing),
+ * Simulations and Operator. Every change saves a moment
  * after the last keystroke, with the lock version it read, so two
  * teammates never undo each other; nothing reaches customers until it
  * is published.
@@ -552,7 +552,6 @@ function Builder({ workspace, series, step }: { workspace: string; series: Serie
             onTab={setSideTab}
             preview={
               <SeriesPreview
-                workspace={workspace}
                 series={series}
                 spec={draft.spec}
                 onShow={(problem) => select(problem.node_id ?? "entry")}

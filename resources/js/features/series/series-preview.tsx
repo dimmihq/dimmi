@@ -1,24 +1,17 @@
 /*
  * The series' Preview: the working copy read back in words. What still
  * stops it from going live comes first, and picking a problem opens the
- * step it is about. Then each step in the order people reach it, and
- * "Try it on me", which runs the published version on yourself and
- * follows the journey here as it moves.
+ * step it is about. Then each step in the order people reach it.
  */
-import { RiErrorWarningLine, RiTestTubeLine } from "@remixicon/react";
-import { useMutation } from "@tanstack/react-query";
-import { type ReactNode, useState } from "react";
+import { RiErrorWarningLine } from "@remixicon/react";
+import type { ReactNode } from "react";
 
-import { Button } from "@/components/base/buttons/button";
-import { AlertDialog } from "@/components/base/modal/modal";
-import { toast } from "@/components/base/toast/toast";
 import { KindMark } from "@/features/automation/parts";
 import { ScrollArea } from "@/features/shell/page";
-import { type Series, type SeriesNode, type SeriesProblem, type SeriesSpec, trySeries } from "@/lib/api/series";
+import type { Series, SeriesNode, SeriesProblem, SeriesSpec } from "@/lib/api/series";
 
 import { nodeLook } from "./looks";
 import { summary } from "./model";
-import { TryJourney } from "./try-panel";
 
 function Block({ title, children }: { title: string; children: ReactNode }) {
   return (
@@ -52,71 +45,11 @@ function reachOrder(spec: SeriesSpec): SeriesNode[] {
   return [...order, ...spec.nodes.filter((n) => !seen.has(n.id))];
 }
 
-function TryIt({ workspace, series, spec }: { workspace: string; series: Series; spec: SeriesSpec }) {
-  const [asking, setAsking] = useState(false);
-  const [journey, setJourney] = useState<string | null>(null);
-  const start = useMutation({
-    mutationFn: () => trySeries(workspace, series.id),
-    onSuccess: (j) => setJourney(j.id),
-    onError: (error) => void toast.error(error instanceof Error ? error.message : "That did not work."),
-  });
-  const live = series.status === "live";
-
-  return (
-    <Block title="Try it on me">
-      <p className="text-body-2-regular text-text-secondary">
-        {live
-          ? "Run the published version on yourself. Its messages really go out, to your email."
-          : "Set the series live to run it on yourself."}
-      </p>
-      {live ? (
-        <div>
-          <Button
-            size="small"
-            variant="secondary"
-            leadingIcon={RiTestTubeLine}
-            loading={start.isPending}
-            onClick={() => setAsking(true)}
-          >
-            Try it on me
-          </Button>
-        </div>
-      ) : null}
-      <AlertDialog
-        isOpen={asking}
-        onOpenChange={setAsking}
-        isDismissable
-        variant="default"
-        title="Try this series on yourself?"
-        description={
-          "You enter the published version as a test journey, under the contact with your email. Its messages really " +
-          "go out, to you. Rules, quiet hours and the daily cap do not hold you back, you can skip each wait, and the " +
-          "report never counts you."
-        }
-        confirmLabel="Start test"
-        onConfirm={() => start.mutate()}
-      />
-      {journey ? (
-        <TryJourney
-          key={journey}
-          workspace={workspace}
-          series={series.id}
-          journey={journey}
-          spec={spec}
-          onDone={() => setJourney(null)}
-        />
-      ) : null}
-    </Block>
-  );
-}
-
 export function SeriesPreview({
-  workspace,
   series,
   spec,
   onShow,
 }: {
-  workspace: string;
   series: Series;
   spec: SeriesSpec;
   onShow: (problem: SeriesProblem) => void;
@@ -156,7 +89,6 @@ export function SeriesPreview({
             })}
           </ol>
         </Block>
-        <TryIt workspace={workspace} series={series} spec={spec} />
       </div>
     </ScrollArea>
   );
