@@ -4,7 +4,8 @@
  * bring into the message. Each source opens a searchable list in the
  * same panel: the team's saved replies, the help center's articles, feature requests and changelog
  * entries; typing narrows the list, Enter takes the first match and the
- * down arrow moves into the list. Emoji and, when the workspace allows
+ * down arrow moves into the list. A picked page goes in as a link that
+ * the editor shows as a chip with its title. Emoji and, when the workspace allows
  * it, GIFs from GIPHY have pickers of their own. A pick drops in a line
  * naming it with its link, so it reaches the customer with the message;
  * a saved reply drops in its text and hands its macro to the composer.
@@ -35,6 +36,7 @@ import { cx } from "@/utils/cx";
 
 import { EmojiPicker } from "./composer/emoji-picker";
 import { GifPicker, type PickedGif } from "./composer/gif-picker";
+import { linkMarkdown } from "./composer/link-token";
 import { useInbox } from "./conversations";
 import { type LibraryItem, type SourceKind, useLibrary } from "./library";
 import { Resize, Swap } from "./motion";
@@ -278,7 +280,7 @@ export function AddMenu({
     if (item.url && onLink) {
       onLink(item.title, item.url);
     } else {
-      onInsert(item.url ? `${item.title}: ${item.url}` : item.title);
+      onInsert(item.url ? linkMarkdown(item.title, item.url) : item.title);
     }
     toggle(false);
   };

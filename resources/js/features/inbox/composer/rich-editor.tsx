@@ -9,7 +9,7 @@
  * teams to mention. A hash and a letter or more suggest saved replies,
  * whose text takes the place of what was typed. Where the text is filled
  * in for each customer, such as a workflow's message, an open brace
- * suggests the variables, each kept as a chip, and links to help center
+ * suggests the variables, each kept as a chip. Links to help center
  * pages show as chips with their titles.
  */
 import type { RemixiconComponentType } from "@remixicon/react";
@@ -167,7 +167,6 @@ export default function RichEditor({
   named.current = variables;
   const variableHelpers = variables
     ? [
-        LinkToken,
         VariableToken.configure({
           named: (key) => named.current?.find((v) => v.key === key)?.label ?? variableOf(key)?.label,
         }),
@@ -232,6 +231,7 @@ export default function RichEditor({
           },
           onChange: setTemplate,
         }),
+        LinkToken,
         ...variableHelpers,
       ],
     ),
