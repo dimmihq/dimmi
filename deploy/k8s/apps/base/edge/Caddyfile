@@ -77,6 +77,10 @@ http:// {
 	}
 }
 
+# Sites of an environment's own, each a .caddy file its overlay adds to this
+# directory. An environment with none imports nothing.
+import /etc/caddy/*.caddy
+
 https:// {
 	tls {
 		on_demand

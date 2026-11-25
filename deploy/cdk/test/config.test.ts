@@ -11,8 +11,8 @@ describe("environment config", () => {
     expect(environments.production.region).toBe("eu-central-1");
   });
 
-  it("both environments sit behind the same load balancer", () => {
-    expect(environments.staging.ingressAddresses).toEqual(environments.production.ingressAddresses);
+  it("each environment sits behind a load balancer of its own", () => {
+    expect(environments.staging.ingressAddresses).not.toEqual(environments.production.ingressAddresses);
   });
 
   it("an unknown environment names the ones that exist", () => {
