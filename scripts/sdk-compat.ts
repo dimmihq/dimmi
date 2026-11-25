@@ -372,7 +372,9 @@ function golang() {
     failures.push(`sdk/go: apidiff failed\n${res.out}`);
     return;
   }
-  const found = res.stdout.split("\n").filter((line) => line.trim() !== "" && !GENERATED_METHOD_ADDED.test(line));
+  const found = res.stdout
+    .split("\n")
+    .filter((line) => line.trim() !== "" && !GENERATED_METHOD_ADDED.test(line) && !GO_VERSION_RAISED.test(line));
   if (found.length > 0) {
     breaking(changesetName.go ?? "", `sdk/go (against dimmi-go ${tag})`, found.join("\n"));
   }
@@ -404,22 +406,34 @@ function roave(): string | null {
 }
 
 /*
- * mirrorRepositories makes a composer.json installable on its own: path
- * repositories, such as Laravel's ../php, and the lock are dropped, and a
- * dimmi package it requires is taken from that package's mirror, so the
- * check never depends on Packagist listing it.
+ * installable makes a composer.json installable from a scratch copy. A
+ * path repository, such as Laravel's ../php, is pointed at the package in
+ * this checkout, which a release needs: the plan raises both packages
+ * together, so the PHP client Laravel then requires is not on any mirror
+ * yet. A dimmi package is also offered from its mirror, so the released
+ * copy installs as it shipped and nothing depends on Packagist. The lock
+ * is dropped.
  */
-function mirrorRepositories(dir: string) {
+function installable(dir: string, origin: string) {
   const file = path.join(dir, "composer.json");
   const manifest = JSON.parse(fs.readFileSync(file, "utf8"));
-  const kept = Array.isArray(manifest.repositories)
-    ? manifest.repositories.filter((r: { type?: string }) => r.type !== "path")
+  const declared: { type?: string; url?: string; options?: object }[] = Array.isArray(manifest.repositories)
+    ? manifest.repositories
     : [];
+  const local = declared.map((r) =>
+    r.type === "path" && r.url
+      ? { ...r, url: path.resolve(origin, r.url), canonical: false, options: { ...r.options, symlink: false } }
+      : r,
+  );
   const mirrors = Object.keys(manifest.require ?? {})
     .filter((name) => name.startsWith("dimmi/"))
-    .map((name) => ({ type: "vcs", url: `https://github.com/dimmihq/${name.slice("dimmi/".length)}` }));
-  if (kept.length + mirrors.length > 0 || Array.isArray(manifest.repositories)) {
-    manifest.repositories = [...kept, ...mirrors];
+    .map((name) => ({
+      type: "vcs",
+      url: `https://github.com/dimmihq/${name.slice("dimmi/".length)}`,
+      canonical: false,
+    }));
+  if (local.length + mirrors.length > 0) {
+    manifest.repositories = [...local, ...mirrors];
     fs.writeFileSync(file, `${JSON.stringify(manifest, null, 4)}\n`);
   }
   fs.rmSync(path.join(dir, "composer.lock"), { force: true });
@@ -446,8 +460,10 @@ function php(sdk: "php" | "laravel") {
   if (!bin) {
     return;
   }
-  const scratch = history(sdk, clone(repo, tag), dir, mirrorRepositories);
-  const res = run(bin, ["--from=base", "--to=HEAD", "--format=markdown"], scratch);
+  const scratch = history(sdk, clone(repo, tag), dir, (copy) => installable(copy, dir));
+  // roave installs both copies' dependencies with composer as a library,
+  // which the command line's memory limit would otherwise cut short.
+  const res = run("php", ["-d", "memory_limit=-1", bin, "--from=base", "--to=HEAD", "--format=markdown"], scratch);
   if (!res.ok) {
     const all = res.out.split("\n").filter((l) => l.includes("[BC]"));
     // The tool failing to run is not a break: no changeset can answer it.
@@ -455,8 +471,8 @@ function php(sdk: "php" | "laravel") {
       failures.push(`sdk/${sdk}: roave could not compare with ${repo} ${tag}\n${res.out}`);
       return;
     }
-    const found = all.filter((l) => !GENERATED_LIST_GREW.test(l));
-    // Only the generated lists changed: a new operation, which is additive.
+    const found = all.filter((l) => !GENERATED_LIST_GREW.test(l) && !PHP_VERSION_RAISED.test(l));
+    // Only the generated lists or the version changed: nothing a caller relies on.
     if (found.length === 0) {
       return;
     }
@@ -471,6 +487,14 @@ function php(sdk: "php" | "laravel") {
  * already refuses to drop or change an entry (sdk/php/api-surface.json).
  */
 const GENERATED_LIST_GREW = /\[BC\] Value of constant Dimmi\\Generated\\(Operations::ALL|Api::RESOURCES) changed/;
+
+/*
+ * A release raises the version each client reports in its User-Agent, and
+ * both tools call a constant's new value a break. The version is the one
+ * constant meant to change with every release.
+ */
+const PHP_VERSION_RAISED = /\[BC\] Value of constant Dimmi\\Client::VERSION changed/;
+const GO_VERSION_RAISED = /^- Version: value changed from "[^"]+" to "[^"]+"$/;
 
 /* ---------------------------------------------------------------- Python */
 
