@@ -95,6 +95,8 @@ func (c *OAuthRedirectController) attempt(r *fhttp.Request) (appauth.OAuthAttemp
 		Intent:     cmp.Or(query.Get("intent"), appauth.IntentLogin),
 		Invitation: query.Get("invitation"),
 		Redirect:   appauth.SafeRedirect(query.Get("redirect")),
+
+		TermsAccepted: query.Get("terms_accepted") == "true",
 	}
 
 	userID := sessionUser(r)

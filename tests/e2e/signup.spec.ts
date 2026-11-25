@@ -22,6 +22,7 @@ it.describe("signing up", () => {
     await page.getByLabel("Full name").fill(person.name);
     await page.getByLabel("Email").fill(person.email);
     await page.getByLabel("Password").fill(person.password);
+    await page.locator("label", { hasText: "I agree to the" }).click({ position: { x: 8, y: 8 } });
     await page.getByRole("button", { name: "Create account" }).click();
     await finishOnboarding(page, `${person.name}'s team`);
     await expect(page.getByRole("button", { name: person.name, exact: true })).toBeVisible();
@@ -39,6 +40,7 @@ it.describe("signing up", () => {
     await page.getByLabel("Full name").fill(person.name);
     await page.getByLabel("Email").fill(person.email);
     await page.getByLabel("Password").fill(person.password);
+    await page.locator("label", { hasText: "I agree to the" }).click({ position: { x: 8, y: 8 } });
     await page.getByRole("button", { name: "Create account" }).click();
     await finishOnboarding(page, `${person.name}'s team`);
     const link = await mailedLink(person.email, "Verify");
@@ -60,6 +62,7 @@ it.describe("signing up", () => {
     await page.getByLabel("Full name").fill(person.name);
     await page.getByLabel("Email").fill(person.email);
     await page.getByLabel("Password").fill(person.password);
+    await page.locator("label", { hasText: "I agree to the" }).click({ position: { x: 8, y: 8 } });
     await page.getByRole("button", { name: "Create account" }).click();
     await finishOnboarding(page, `${person.name}'s team`);
 
@@ -76,6 +79,7 @@ it.describe("signing up", () => {
     await page.getByLabel("Full name").fill(person.name);
     await page.getByLabel("Email").fill(person.email);
     await page.getByLabel("Password").fill("password123");
+    await page.locator("label", { hasText: "I agree to the" }).click({ position: { x: 8, y: 8 } });
     await page.getByRole("button", { name: "Create account" }).click();
 
     await expect(page.getByText("The password is too common. Choose another one.")).toBeVisible();

@@ -1,9 +1,17 @@
 -- name: CreateUser :one
 -- CreateUser stores a new account. The email is unique without regard to
 -- case, so a second account for the same address fails on
--- users_email_key.
-INSERT INTO users (name, email, password_hash, email_verified_at, locale, timezone, created_via, created_at, updated_at)
-VALUES (@name, @email, @password_hash, @email_verified_at, @locale, @timezone, @created_via, @now, @now)
+-- users_email_key. The terms columns hold the acceptance given when the
+-- account was made, all null without one.
+INSERT INTO users (
+    name, email, password_hash, email_verified_at, locale, timezone, created_via, created_at, updated_at,
+    terms_version, terms_accepted_at, terms_accepted_ip, terms_accepted_user_agent
+)
+VALUES (
+    @name, @email, @password_hash, @email_verified_at, @locale, @timezone, @created_via, @now, @now,
+    sqlc.narg('terms_version'), sqlc.narg('terms_accepted_at'), sqlc.narg('terms_accepted_ip'),
+    sqlc.narg('terms_accepted_user_agent')
+)
 RETURNING *;
 
 -- name: FindUser :one
@@ -91,7 +99,8 @@ RETURNING *;
 -- is unique and can never receive mail, and frees the old one for anyone.
 UPDATE users
 SET name = @name, email = @email, password_hash = NULL, two_factor_confirmed_at = NULL, avatar_path = NULL,
-    locale = NULL, timezone = NULL, deleted_at = @now::timestamptz, updated_at = @now::timestamptz
+    locale = NULL, timezone = NULL, terms_accepted_ip = NULL, terms_accepted_user_agent = NULL,
+    deleted_at = @now::timestamptz, updated_at = @now::timestamptz
 WHERE id = @id;
 
 -- name: CountUserLiveTokens :one

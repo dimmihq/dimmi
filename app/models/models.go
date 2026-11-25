@@ -756,6 +756,8 @@ type ChannelConnection struct {
 	UpdatedAt                 time.Time         `json:"updated_at"`
 	IntegrationInstallationID *ids.UUID         `json:"integration_installation_id"`
 	AiAgentID                 *ids.UUID         `json:"ai_agent_id"`
+	EndedAt                   *time.Time        `json:"ended_at"`
+	DataPurgedAt              *time.Time        `json:"data_purged_at"`
 }
 
 type ChannelContactState struct {
@@ -3070,6 +3072,10 @@ type User struct {
 	CreatedVia              *string         `json:"created_via"`
 	Preferences             json.RawMessage `json:"preferences"`
 	ManagedByOrganizationID *ids.UUID       `json:"managed_by_organization_id"`
+	TermsVersion            *string         `json:"terms_version"`
+	TermsAcceptedAt         *time.Time      `json:"terms_accepted_at"`
+	TermsAcceptedIp         *netip.Addr     `json:"terms_accepted_ip"`
+	TermsAcceptedUserAgent  *string         `json:"terms_accepted_user_agent"`
 }
 
 type UserAuthFactor struct {

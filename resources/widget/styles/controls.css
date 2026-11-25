@@ -162,3 +162,19 @@ input::placeholder {
 input::-webkit-search-cancel-button {
   display: none;
 }
+
+/*
+ * The mark of the AI agent, beside its name wherever it speaks. Always
+ * shown: a visitor is told they are talking to an AI, not left to guess.
+ */
+.ai-badge {
+  flex: none;
+  padding-inline: 5px;
+  border-radius: 5px;
+  background: var(--bg-tertiary);
+  color: var(--text-secondary);
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 16px;
+  letter-spacing: 0.02em;
+}

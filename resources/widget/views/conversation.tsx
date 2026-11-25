@@ -12,19 +12,21 @@ import { thread } from "../lib/threads";
 import type { Options } from "../options";
 
 export function Conversation({ options, content }: { options: Options; content: Content }) {
+  const ai = { label: options.texts.ai_label, name: options.texts.ai_agent };
+
   return (
     <>
       <header className="bar chat-bar">
         <button className="icon-button" type="button" data-action="click->back" aria-label="Back">
           <BackIcon />
         </button>
-        <Whoami content={content} />
+        <Whoami content={content} ai={ai} />
         <Tools />
       </header>
       <div className="thread" data-target="thread">
         <Loadable skeleton={<SkeletonThread />}>
           <p className="day">{options.texts.today}</p>
-          {thread()?.Thread({ messages: content.thread }) ?? null}
+          {thread()?.Thread({ messages: content.thread, ai }) ?? null}
           <p className="seen">{options.texts.seen}</p>
         </Loadable>
       </div>

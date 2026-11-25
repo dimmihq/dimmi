@@ -35,7 +35,7 @@ const rows = [
   {
     label: "Zero policy drift",
     title: "Your agent follows every step and cannot bend the rules.",
-    body: "Most support bots cave when a customer pushes back or skip a check three messages in. dimmi enforces your order and limits automatically, so an out-of-policy refund never goes through.",
+    body: "Most AI agents cave when a customer pushes back or skip a check three messages in. dimmi enforces your order and limits automatically, so an out-of-policy refund never goes through.",
     visual: <FollowFragment />,
   },
   {
@@ -46,6 +46,8 @@ const rows = [
       <ShotStill
         name="procedure-simulations"
         alt="A saved customer test scenario showing the conversation and every passed policy check before publishing"
+        anchor="bottom"
+        maxWidth={368}
       />
     ),
   },
@@ -141,8 +143,8 @@ export function ProceduresPage() {
         eyebrow="Procedures"
         title="Support policies your AI agent cannot break."
         body="Teach the dimmi agent how your team handles refunds, cancellations, and account changes. It follows every step in order, respects your limits, and never goes off-script."
-        shot="procedure"
-        shotAlt="A duplicate-charge refund policy in dimmi showing required account checks, a $500 refund cap, and automatic Billing handover"
+        shot="procedure-hero"
+        shotAlt="The dimmi Procedures editor showing ordered refund steps with action chips, conditional branches, and the Simulations test panel"
       />
       <HowItWorks
         label="How it works"

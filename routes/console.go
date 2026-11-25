@@ -8,7 +8,8 @@
 | spent mailed links and codes, expired password resets and sessions
 | nobody can resume. Every night each workspace's trash is emptied, its
 | spam deleted and the source of its email removed once their days are
-| up, anonymous messenger sessions, invitations and tokens that ended
+| up, the data of Slack connections that ended is deleted after its
+| grace period, anonymous messenger sessions, invitations and tokens that ended
 | and idempotency keys past their time are deleted, the workspaces whose
 | time in the trash ran out are handed to their purges, the audit log and the security log
 | drop the entries older than they are kept for, the agent's traces lose
@@ -76,11 +77,14 @@ func Console(a *app.App) {
 
 /*
 scheduleRetention applies the workspaces' retention periods each night,
-then deletes what has passed them and the access records that expired.
+then deletes what has passed them, what Slack connections that ended
+brought in once their grace period is over, and the access records that
+expired.
 */
 func scheduleRetention(a *app.App) {
 	a.Schedule.Job(jobs.ApplyConversationRetentionArgs{}).DailyAt("02:30")
 	a.Schedule.Job(jobs.PurgeExpiredRetentionArgs{}).DailyAt("02:45")
+	a.Schedule.Job(jobs.PurgeSlackDataArgs{}).DailyAt("02:55")
 	a.Schedule.Job(jobs.PurgeExpiredAccessRecordsArgs{}).DailyAt("03:15")
 }
 

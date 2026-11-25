@@ -80,7 +80,7 @@ func inboxViewRoutes(r *routing.Router, a *app.App) {
 
 /*
 collaborationRoutes declares how teammates work together on a note: who
-it may mention, emoji reactions, and the GIF search the composer uses.
+it may mention and emoji reactions.
 */
 func collaborationRoutes(r *routing.Router, a *app.App) {
 	acts := a.Actions.Inbox
@@ -95,7 +95,4 @@ func collaborationRoutes(r *routing.Router, a *app.App) {
 		Ability("conversations:write").Status(fhttp.StatusOK)
 	routing.Delete(r, message+"/{emoji}", "conversations.messages.reactions.destroy", reactions.Destroy).
 		Ability("conversations:write").Status(fhttp.StatusOK)
-
-	gifs := &v1.GIFSearchController{APIKey: a.Config.Inbox.GIF.GiphyAPIKey}
-	routing.Get(r, "/gif-search", "gif-search.show", gifs.Show).Internal().Ability("conversations:write")
 }

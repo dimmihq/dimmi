@@ -116,38 +116,52 @@ export function TestFragment() {
 }
 
 const models = [
-  { name: "Claude", by: "Anthropic", picked: true },
-  { name: "GPT", by: "OpenAI", picked: false },
-  { name: "Gemini", by: "Google", picked: false },
-  { name: "Your own endpoint", by: "Any OpenAI-compatible API", picked: false },
+  { name: "Anthropic", model: "Claude", light: "anthropic-light", dark: "anthropic-dark", picked: true },
+  { name: "OpenAI & ChatGPT", model: "GPT", light: "openai-light", dark: "openai-dark", picked: false },
+  { name: "DeepSeek", model: "OpenAI-compatible", light: "deepseek-default", picked: false },
+  { name: "Mistral", model: "OpenAI-compatible", light: "mistral-ai-default", picked: false },
+  { name: "OpenRouter", model: "Any model", light: "openrouter-light", dark: "openrouter-dark", picked: false },
 ];
 
 export function ModelFragment() {
   return (
     <Card className="max-w-105 rounded-b-none border-b-0">
       <div className="flex flex-col gap-1 border-b border-separator-border px-5 py-4">
-        <span className="text-headline-semibold text-text-primary">Model</span>
-        <span className="text-body-regular text-text-secondary">Runs on your key. You pay your provider.</span>
+        <span className="text-headline-semibold text-text-primary">AI providers</span>
+        <span className="text-body-regular text-text-secondary">
+          Connect your own keys and save 50% to 83% on dimmi AI fees.
+        </span>
       </div>
-      <ul className="flex flex-col gap-2 px-5 py-5">
-        {models.map((model) => (
+      <ul className="flex flex-col gap-2 px-5 py-4">
+        {models.map((provider) => (
           <li
-            key={model.name}
+            key={provider.name}
             className={cx(
               "flex items-center gap-3 rounded-lg border px-3 py-2.5",
-              model.picked ? "border-accent-500 bg-accent-500/6" : "border-border-button-default",
+              provider.picked ? "border-accent-500 bg-accent-500/6" : "border-border-button-default",
             )}
           >
-            <span
-              className={cx(
-                "flex size-4 items-center justify-center rounded-full border",
-                model.picked ? "border-accent-600" : "border-border-button-hover",
-              )}
-            >
-              {model.picked ? <span className="size-2 rounded-full bg-accent-600" /> : null}
+            <span className="flex size-7 shrink-0 items-center justify-center rounded-md border border-separator-border bg-background-secondary-default">
+              <img
+                src={`/logos/${provider.light}.svg`}
+                alt={provider.name}
+                className={cx("size-4", provider.dark && "dark:hidden")}
+              />
+              {provider.dark ? (
+                <img src={`/logos/${provider.dark}.svg`} alt="" className="hidden size-4 dark:block" />
+              ) : null}
             </span>
-            <span className="text-body-medium text-text-primary">{model.name}</span>
-            <span className="ms-auto text-caption-1-regular text-text-tertiary">{model.by}</span>
+            <span className="text-body-medium text-text-primary">{provider.name}</span>
+            <span className="ms-auto text-caption-1-regular text-text-tertiary">
+              {provider.picked ? (
+                <span className="inline-flex items-center gap-1 font-medium text-accent-700 dark:text-accent-400">
+                  <RiCheckLine className="size-3.5" aria-hidden />
+                  Connected
+                </span>
+              ) : (
+                provider.model
+              )}
+            </span>
           </li>
         ))}
       </ul>

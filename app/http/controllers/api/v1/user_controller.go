@@ -4,7 +4,9 @@
 |--------------------------------------------------------------------------
 |
 | Signing up: POST /users creates the account, optionally its first
-| workspace, and signs the person in, answering like a sign-in does.
+| workspace, and signs the person in, answering like a sign-in does. An
+| install that publishes legal terms refuses a sign-up that did not
+| accept them.
 |
 */
 
@@ -19,13 +21,16 @@ import (
 	appauth "github.com/dimmihq/dimmi/app/auth"
 	"github.com/dimmihq/dimmi/app/http/requests"
 	"github.com/dimmihq/dimmi/app/http/resources"
+	"github.com/dimmihq/dimmi/config"
 )
 
 /*
-UserController serves the user collection.
+UserController serves the user collection. Terms is the legal terms of
+the install, asked of every sign-up when it publishes them.
 */
 type UserController struct {
 	RegisterUser *auth.RegisterUser
+	Terms        config.TermsConfig
 	Cookies      appauth.Cookies
 	Server       Server
 }
@@ -34,6 +39,12 @@ type UserController struct {
 Store registers a user and answers with their picture.
 */
 func (c *UserController) Store(ctx context.Context, in *requests.StoreUserRequest) (*MeOutput, error) {
+	if c.Terms.SiteURL != "" {
+		if err := in.TermsAccepted(ctx); err != nil {
+			return nil, err
+		}
+	}
+
 	signedIn, err := c.RegisterUser.Handle(ctx, auth.RegisterUserInput{
 		Name:            in.Body.Name,
 		Email:           in.Body.Email,
@@ -41,6 +52,7 @@ func (c *UserController) Store(ctx context.Context, in *requests.StoreUserReques
 		WorkspaceName:   in.Body.WorkspaceName,
 		InvitationToken: in.Body.InvitationToken,
 		CaptchaToken:    in.Body.CaptchaToken,
+		TermsAccepted:   in.Body.TermsAccepted,
 		Client:          clientOf(ctx, c.Cookies),
 	})
 	if err != nil {

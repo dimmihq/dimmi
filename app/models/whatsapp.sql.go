@@ -56,7 +56,7 @@ UPDATE channel_connections
 SET status = 'disconnected', credentials_encrypted = NULL, external_id = NULL, deleted_at = $1::timestamptz,
     updated_at = $1::timestamptz
 WHERE workspace_id = $2 AND id = $3 AND deleted_at IS NULL
-RETURNING id, workspace_id, inbox_id, type, name, status, external_id, config, credentials_encrypted, last_error, last_error_at, last_activity_at, deleted_at, created_at, updated_at, integration_installation_id, ai_agent_id
+RETURNING id, workspace_id, inbox_id, type, name, status, external_id, config, credentials_encrypted, last_error, last_error_at, last_activity_at, deleted_at, created_at, updated_at, integration_installation_id, ai_agent_id, ended_at, data_purged_at
 `
 
 type DisconnectChannelConnectionParams struct {
@@ -89,6 +89,8 @@ func (q *Queries) DisconnectChannelConnection(ctx context.Context, arg Disconnec
 		&i.UpdatedAt,
 		&i.IntegrationInstallationID,
 		&i.AiAgentID,
+		&i.EndedAt,
+		&i.DataPurgedAt,
 	)
 	return i, err
 }
@@ -221,7 +223,7 @@ func (q *Queries) FindWhatsAppTemplateByID(ctx context.Context, arg FindWhatsApp
 }
 
 const listWhatsAppConnections = `-- name: ListWhatsAppConnections :many
-SELECT id, workspace_id, inbox_id, type, name, status, external_id, config, credentials_encrypted, last_error, last_error_at, last_activity_at, deleted_at, created_at, updated_at, integration_installation_id, ai_agent_id FROM channel_connections
+SELECT id, workspace_id, inbox_id, type, name, status, external_id, config, credentials_encrypted, last_error, last_error_at, last_activity_at, deleted_at, created_at, updated_at, integration_installation_id, ai_agent_id, ended_at, data_purged_at FROM channel_connections
 WHERE workspace_id = $1 AND type = 'whatsapp' AND deleted_at IS NULL
 ORDER BY created_at, id
 `
@@ -255,6 +257,8 @@ func (q *Queries) ListWhatsAppConnections(ctx context.Context, workspaceID ids.U
 			&i.UpdatedAt,
 			&i.IntegrationInstallationID,
 			&i.AiAgentID,
+			&i.EndedAt,
+			&i.DataPurgedAt,
 		); err != nil {
 			return nil, err
 		}
@@ -319,7 +323,7 @@ func (q *Queries) ListWhatsAppTemplates(ctx context.Context, arg ListWhatsAppTem
 const moveChannelConnection = `-- name: MoveChannelConnection :one
 UPDATE channel_connections SET inbox_id = $1, updated_at = $2::timestamptz
 WHERE workspace_id = $3 AND id = $4 AND deleted_at IS NULL
-RETURNING id, workspace_id, inbox_id, type, name, status, external_id, config, credentials_encrypted, last_error, last_error_at, last_activity_at, deleted_at, created_at, updated_at, integration_installation_id, ai_agent_id
+RETURNING id, workspace_id, inbox_id, type, name, status, external_id, config, credentials_encrypted, last_error, last_error_at, last_activity_at, deleted_at, created_at, updated_at, integration_installation_id, ai_agent_id, ended_at, data_purged_at
 `
 
 type MoveChannelConnectionParams struct {
@@ -357,6 +361,8 @@ func (q *Queries) MoveChannelConnection(ctx context.Context, arg MoveChannelConn
 		&i.UpdatedAt,
 		&i.IntegrationInstallationID,
 		&i.AiAgentID,
+		&i.EndedAt,
+		&i.DataPurgedAt,
 	)
 	return i, err
 }
@@ -506,7 +512,7 @@ func (q *Queries) SetWhatsAppTemplateStatus(ctx context.Context, arg SetWhatsApp
 const updateChannelConnectionFacts = `-- name: UpdateChannelConnectionFacts :one
 UPDATE channel_connections SET config = config || $1::jsonb, updated_at = $2::timestamptz
 WHERE workspace_id = $3 AND id = $4
-RETURNING id, workspace_id, inbox_id, type, name, status, external_id, config, credentials_encrypted, last_error, last_error_at, last_activity_at, deleted_at, created_at, updated_at, integration_installation_id, ai_agent_id
+RETURNING id, workspace_id, inbox_id, type, name, status, external_id, config, credentials_encrypted, last_error, last_error_at, last_activity_at, deleted_at, created_at, updated_at, integration_installation_id, ai_agent_id, ended_at, data_purged_at
 `
 
 type UpdateChannelConnectionFactsParams struct {
@@ -544,6 +550,8 @@ func (q *Queries) UpdateChannelConnectionFacts(ctx context.Context, arg UpdateCh
 		&i.UpdatedAt,
 		&i.IntegrationInstallationID,
 		&i.AiAgentID,
+		&i.EndedAt,
+		&i.DataPurgedAt,
 	)
 	return i, err
 }

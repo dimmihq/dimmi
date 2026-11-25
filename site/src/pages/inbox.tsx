@@ -18,11 +18,9 @@ import {
 import {
   RiChat3Line,
   RiCodeSSlashLine,
-  RiDiscordLine,
+  RiInstagramLine,
   RiMailLine,
-  RiMessage2Line,
-  RiMicrosoftLine,
-  RiPhoneLine,
+  RiMessengerLine,
   RiSlackLine,
   RiWhatsappLine,
 } from "@remixicon/react";
@@ -141,9 +139,9 @@ const more = [
 const related = [
   {
     icon: Sparkle,
-    title: "AI agent",
-    body: "Takes the first reply from your docs and hands over with a summary.",
-    link: { href: "/agent", label: "Explore the AI agent" },
+    title: "Agents",
+    body: "Specialized support agents that cite your docs, follow policies, and hand over with a summary.",
+    link: { href: "/agents", label: "Explore agents" },
   },
   {
     icon: FlowArrow,
@@ -205,15 +203,13 @@ export function InboxPage() {
       <ChannelStrip
         label="Channels"
         items={[
-          { icon: RiChat3Line, name: "Messenger" },
-          { icon: RiMailLine, name: "Email" },
-          { icon: RiSlackLine, name: "Slack" },
-          { icon: RiMicrosoftLine, name: "Teams" },
-          { icon: RiDiscordLine, name: "Discord" },
-          { icon: RiWhatsappLine, name: "WhatsApp" },
-          { icon: RiMessage2Line, name: "SMS" },
-          { icon: RiPhoneLine, name: "Phone" },
-          { icon: RiCodeSSlashLine, name: "API" },
+          { icon: RiChat3Line, name: "Messenger", href: "/channels/messenger" },
+          { icon: RiMailLine, name: "Email", href: "/channels/email" },
+          { icon: RiSlackLine, name: "Slack", href: "/channels/slack" },
+          { icon: RiWhatsappLine, name: "WhatsApp", href: "/channels/whatsapp" },
+          { icon: RiInstagramLine, name: "Instagram", href: "/channels/instagram" },
+          { icon: RiMessengerLine, name: "Facebook", href: "/channels/facebook-messenger" },
+          { icon: RiCodeSSlashLine, name: "API", href: "/channels/api" },
         ]}
       />
       <FeatureCards

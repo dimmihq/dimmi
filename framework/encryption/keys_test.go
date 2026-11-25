@@ -183,7 +183,7 @@ func TestRotation(t *testing.T) {
 		second, err := cached.Encrypt(t.Context(), tenant("1"), nil, nil)
 		require.NoError(t, err)
 
-		assert.NotEqual(t, first[:12], second[:12])
+		assert.NotEqual(t, sealedBy(first), sealedBy(second))
 	})
 }
 

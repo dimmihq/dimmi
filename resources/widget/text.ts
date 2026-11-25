@@ -58,3 +58,14 @@ export const actionTexts: ActionTexts = {
   expired: "This request expired",
   failed: "This didn't go through",
 };
+
+/*
+ * AiTexts are the words that mark the AI agent wherever it speaks: the
+ * short label a reader sees and the name a screen reader says.
+ */
+export interface AiTexts {
+  label: string;
+  name: string;
+}
+
+export const aiTexts: AiTexts = { label: "AI", name: "AI agent" };

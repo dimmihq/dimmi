@@ -57,7 +57,7 @@ routing.Get(g, "/old", "things.old", c.things.Old).Deprecated(routing.Deprecatio
 Routes built for dimmi's own app, such as signing in, a person's own account, inbox screen state and settings previews, are marked internal:
 
 ```go
-routing.Get(g, "/gif-search", "gif-search.index", c.Search).Internal()
+routing.Get(g, "/inbox-preferences", "inbox-preferences.show", c.Show).Internal()
 g.Internal() // or every route of a group
 ```
 

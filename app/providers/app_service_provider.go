@@ -119,7 +119,7 @@ func (p AppServiceProvider) Boot(ctx context.Context, _ *foundation.Application)
 	bootLoginPolicy(a)
 
 	a.Actions = &app.Actions{
-		CreateUser: &users.CreateUser{DB: a.DB, Clock: a.Clock},
+		CreateUser: &users.CreateUser{DB: a.DB, Clock: a.Clock, TermsVersion: a.Config.Auth.Terms.Version},
 		CreateWorkspace: &workspaces.CreateWorkspace{
 			DB: a.DB, Events: a.Events, Clock: a.Clock, Initializers: a.WorkspaceInitializers,
 		},
@@ -365,7 +365,8 @@ func bootIdentities(a *app.App) {
 
 	acts.HandleOAuthCallback = &auth.HandleOAuthCallback{
 		DB: a.DB, Clock: a.Clock, Events: a.Events, Queue: a.Queue, LoginPolicy: a.LoginPolicy,
-		Signup: a.Config.Auth.Signup, CreateUser: acts.CreateUser, Link: acts.LinkOAuthIdentity,
+		Signup: a.Config.Auth.Signup, Terms: a.Config.Auth.Terms,
+		CreateUser: acts.CreateUser, Link: acts.LinkOAuthIdentity,
 		CompletePrimaryAuth: acts.CompletePrimaryAuth, ClaimAccount: acts.ConsumeMagicLink.ClaimAccount,
 	}
 

@@ -356,7 +356,8 @@ api:
     bad_credential_per_minute: 60  # DIMMI_API__LIMITS__BAD_CREDENTIAL_PER_MINUTE
 
 # AuthConfig groups the authentication settings. DisposableEmail is off,
-# flag or block: how a signup from a throwaway mailbox is treated.
+# flag or block: how a signup from a throwaway mailbox is treated. Terms
+# is the legal terms a person accepts when creating an account.
 auth:
   # SignupConfig says who may create an account. Mode is open or
   # invite_only. MaxPerHourPerIP caps the accounts one address creates in an
@@ -441,6 +442,13 @@ auth:
     verify_url: https://challenges.cloudflare.com/turnstile/v0/siteverify  # DIMMI_AUTH__CAPTCHA__VERIFY_URL
     timeout: 3s  # DIMMI_AUTH__CAPTCHA__TIMEOUT
   disposable_email: ""  # DIMMI_AUTH__DISPOSABLE_EMAIL
+  # TermsConfig describes the legal terms a person accepts when creating an
+  # account. SiteURL is the site that publishes them, at /terms and
+  # /privacy; with none, nothing is asked. Version is the version in force,
+  # recorded on each account that accepts it.
+  terms:
+    site_url: ""  # DIMMI_AUTH__TERMS__SITE_URL
+    version: "1.0"  # DIMMI_AUTH__TERMS__VERSION
 
 # OAuthServerConfig sets how agents sign in. AccessTokenTTL and
 # RefreshTokenTTL are how long the two tokens last, and Registration
@@ -773,7 +781,8 @@ channels:
   # is the longest message a pleasantry may be. TriggerEmoji opens a
   # conversation in an emoji room, ClosedMarker marks a closed one and
   # WorkingMarker shows the agent is writing. LeaseTTL and RenewInterval
-  # time the socket leases.
+  # time the socket leases. DataDeletionGraceDays is how many days after a
+  # connection ended its Slack data is deleted, 14 at most.
   slack:
     api_url: https://slack.com/api/  # DIMMI_CHANNELS__SLACK__API_URL
     max_payload_bytes: 1048576  # DIMMI_CHANNELS__SLACK__MAX_PAYLOAD_BYTES
@@ -785,6 +794,7 @@ channels:
     working_marker: eyes  # DIMMI_CHANNELS__SLACK__WORKING_MARKER
     lease_ttl: 15s  # DIMMI_CHANNELS__SLACK__LEASE_TTL
     renew_interval: 5s  # DIMMI_CHANNELS__SLACK__RENEW_INTERVAL
+    data_deletion_grace_days: 10  # DIMMI_CHANNELS__SLACK__DATA_DELETION_GRACE_DAYS
   # WhatsAppChannelConfig configures the WhatsApp channel.
   #
   # GraphURL is the Graph API host, Meta's own unless a test or a proxy
@@ -832,10 +842,6 @@ inbox:
   # daily purge removes it; 0 keeps drafts for ever.
   drafts:
     retention_days: 30  # DIMMI_INBOX__DRAFTS__RETENTION_DAYS
-  # GIFConfig holds the GIPHY key the composer's GIF search uses; empty
-  # turns GIF search off for every workspace.
-  gif:
-    giphy_api_key: ""  # DIMMI_INBOX__GIF__GIPHY_API_KEY (secret; or DIMMI_INBOX__GIF__GIPHY_API_KEY_FILE naming a file)
 
 # AIConfig configures the AI agent.
 ai:

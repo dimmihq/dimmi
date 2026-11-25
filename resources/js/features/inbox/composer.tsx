@@ -6,7 +6,7 @@
  * BoardUI tab strip behind its top edge saying who will see the message,
  * a field that grows with what is typed with formatting kept as
  * Markdown, and a toolbar with the add menu (saved replies, help articles,
- * feature requests, changelog entries, emoji and GIFs, dropped into the
+ * feature requests, changelog entries and emoji, dropped into the
  * text) and a way to ask Operator. Typing # and a few letters finds a
  * saved reply too. A saved reply's variables are filled in for the
  * customer as it is inserted, and its macro actions wait beside the
@@ -37,7 +37,6 @@ import { AddMenu } from "./add-menu";
 import { ComposerField } from "./composer/composer-field";
 import { preloadEditor } from "./composer/load-editor";
 import { toMentionables } from "./composer/mentionable";
-import { useGifs } from "./composer/use-gifs";
 import { useInbox } from "./conversations";
 import { DraftConflict } from "./drafts/draft-conflict";
 import { useDraft } from "./drafts/use-draft";
@@ -281,7 +280,7 @@ function Panel({
   held: Held;
   onSent?: () => void;
 }) {
-  const { workspace, userId, me } = useInbox();
+  const { workspace, me } = useInbox();
   const client = useQueryClient();
   const macro = useMacro(workspace, conversation, me);
   const drafts = { reply: useDraft(workspace, conversation, "reply"), note: useDraft(workspace, conversation, "note") };
@@ -296,7 +295,6 @@ function Panel({
     }
   }, [incoming, takeIncoming, onIncomingUsed]);
   const addEmoji = (emoji: string) => draft.edit(`${draft.body}${emoji}`);
-  const gifs = useGifs(workspace, userId, insert);
   const files = useReplyFiles(workspace);
   const [slot, setSlot] = useState<HTMLElement | null>(null);
   const attachable = !note && canAttach;
@@ -309,8 +307,7 @@ function Panel({
     held,
     onSend,
     onTyping,
-    onSent: (text, then) => {
-      gifs.sent(text);
+    onSent: (_text, then) => {
       void macro.apply(then);
       onSent?.();
     },
@@ -385,12 +382,7 @@ function Panel({
         </p>
       ) : null}
       <div className="flex items-center gap-2">
-        <AddMenu
-          onInsert={insert}
-          onEmoji={addEmoji}
-          onSavedReply={(reply) => insert(macro.take(reply))}
-          gifs={gifs.gifs}
-        />
+        <AddMenu onInsert={insert} onEmoji={addEmoji} onSavedReply={(reply) => insert(macro.take(reply))} />
         <span ref={setSlot} className="contents" />
         <AttachButton onPick={files.add} shown={attachable} />
         <button
@@ -469,7 +461,7 @@ export interface ReplySide {
  * send button; what is typed stays until it has been taken.
  */
 export function NoteComposer({ onAdd, reply }: { onAdd: (text: string) => Promise<unknown>; reply?: ReplySide }) {
-  const { workspace, userId } = useInbox();
+  const { workspace } = useInbox();
   const client = useQueryClient();
   const [body, setBody] = useState("");
   const [mode, setMode] = useState<Mode>(reply ? modes.reply : modes.note);
@@ -478,7 +470,6 @@ export function NoteComposer({ onAdd, reply }: { onAdd: (text: string) => Promis
   const [round, setRound] = useState(0);
   const [slot, setSlot] = useState<HTMLElement | null>(null);
   const insert = (text: string) => setBody((was) => (was ? `${was}\n\n${text}` : text));
-  const gifs = useGifs(workspace, userId, insert);
   const ready = body.trim() !== "" && !sending;
   const replying = reply !== undefined && mode === modes.reply;
   useEffect(preloadEditor, []);
@@ -559,7 +550,6 @@ export function NoteComposer({ onAdd, reply }: { onAdd: (text: string) => Promis
             onInsert={insert}
             onEmoji={(emoji) => setBody((was) => `${was}${emoji}`)}
             onSavedReply={(reply) => insert(reply.body)}
-            gifs={gifs.gifs}
           />
           <span ref={setSlot} className="contents" />
           <span

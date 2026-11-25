@@ -129,6 +129,10 @@ func schemaTextsFromDNSSetupOffer() map[string]map[string]string {
 			"warnings": "A list naming what the file could not hold as asked. An empty list when there " +
 				"is nothing to flag.",
 		},
+		"DataExportLink": {
+			"expires_at": "When the signed download link stops working, in UTC.",
+			"url":        "The signed link the ready export file downloads from without credentials.",
+		},
 		"DataStruct": {
 			"url": "The address the uploaded help center image is served from, for use in an article's " +
 				"body.",

@@ -10,7 +10,8 @@
 | copy, the way a reply to all would, and the teammate who wrote it by
 | name, with the answer controls an agent's answer offers. The driver
 never reads the database to learn any of it. Remote
-| pictures leave only when they are GIFs from GIPHY and GIF search is on.
+| pictures never leave: one could track the customer or show something
+| nobody checked, so it is reduced to its words.
 |
 */
 
@@ -22,6 +23,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net/url"
 
 	"github.com/dimmihq/dimmi/framework/ids"
 	"github.com/dimmihq/dimmi/framework/markdown"
@@ -30,7 +32,6 @@ import (
 	"github.com/dimmihq/dimmi/app/contracts"
 	"github.com/dimmihq/dimmi/app/enums"
 	"github.com/dimmihq/dimmi/app/models"
-	"github.com/dimmihq/dimmi/app/support/gifs"
 )
 
 /*
@@ -72,7 +73,7 @@ func (w *SendChannelMessage) outbound(ctx context.Context, q *models.Queries, ms
 		return outbound{}, err
 	}
 
-	message, err := outboundMessage(c, msg, contact, w.remoteImages())
+	message, err := outboundMessage(c, msg, contact)
 	message.Author, message.Controls, message.Sources = author, controlsOf(msg), sourcesOf(msg)
 	message.Options = optionsOf(msg)
 	if err != nil {
@@ -86,18 +87,6 @@ func (w *SendChannelMessage) outbound(ctx context.Context, q *models.Queries, ms
 	message.Attachments, err = w.filesOf(ctx, q, msg)
 
 	return outbound{conn: conn, driver: driver, message: message}, err
-}
-
-/*
-remoteImages says which remote pictures a reply may carry: GIFs from
-GIPHY while GIF search is on, none otherwise.
-*/
-func (w *SendChannelMessage) remoteImages() func(string) bool {
-	if w.GIFs {
-		return gifs.Hosted
-	}
-
-	return gifs.Never
 }
 
 /*
@@ -169,18 +158,18 @@ func copiesOf(ctx context.Context, q *models.Queries, c models.Conversation) ([]
 
 /*
 outboundMessage shapes the reply for its driver, its body rendered from
-the Markdown it was written in, keeping the remote pictures keep allows:
+the Markdown it was written in, without its remote pictures:
 every line break the teammate typed is kept, and the plain version keeps
 links' addresses and list numbers, so the customer reads what the thread
 shows.
 */
 func outboundMessage(
-	c models.Conversation, msg models.Message, contact models.Contact, keep func(string) bool,
+	c models.Conversation, msg models.Message, contact models.Contact,
 ) (contracts.OutboundMessage, error) {
 	body := deref(msg.Body)
 
 	rendered, err := markdown.New(markdown.Options{
-		GFM: true, HardWraps: true, RewriteLink: gifs.Images(keep),
+		GFM: true, HardWraps: true, RewriteLink: ownPictures,
 	}).HTML([]byte(body))
 	if err != nil {
 		return contracts.OutboundMessage{}, fmt.Errorf("render reply: %w", err)
@@ -297,4 +286,23 @@ func orNil(id *ids.UUID) ids.UUID {
 	}
 
 	return *id
+}
+
+/*
+ownPictures keeps a picture of this server, such as an uploaded image,
+and reduces a remote one to its words.
+*/
+func ownPictures(link markdown.Link) markdown.Link {
+	if !link.Image {
+		return link
+	}
+
+	u, err := url.Parse(link.URL)
+	if err == nil && u.Host == "" && u.Scheme == "" {
+		return link
+	}
+
+	link.URL = ""
+
+	return link
 }

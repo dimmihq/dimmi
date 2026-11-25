@@ -28,8 +28,8 @@ import (
 AuthConfig is the sign-in options and capabilities of the server.
 MinClientVersions maps each app platform to the oldest version this
 server accepts, null when any version is. Captcha is null when nothing
-is asked. Locales lists the languages
-people may pick, the default first.
+is asked. Terms is null when the install publishes no legal terms to
+accept. Locales lists the languages people may pick, the default first.
 */
 type AuthConfig struct {
 	Object            string             `json:"object"`
@@ -42,6 +42,7 @@ type AuthConfig struct {
 	PasswordLogin     bool               `json:"password_login"`
 	MagicLink         bool               `json:"magic_link"`
 	Captcha           *Captcha           `json:"captcha"`
+	Terms             *Terms             `json:"terms"`
 	MailConfigured    bool               `json:"mail_configured"`
 	PasswordMinLength int                `json:"password_min_length"`
 	Providers         []Provider         `json:"providers"`

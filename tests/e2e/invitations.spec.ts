@@ -71,6 +71,7 @@ it.describe("invitations", () => {
     await guest.getByLabel("Full name").fill(invitee.name);
     await guest.getByRole("textbox", { name: "Email" }).fill(invitee.email);
     await guest.getByLabel("Password").fill(invitee.password);
+    await guest.locator("label", { hasText: "I agree to the" }).click({ position: { x: 8, y: 8 } });
     await guest.getByRole("button", { name: "Create account" }).click();
     await expect(guest).toHaveURL(home);
     await expect(guest.getByRole("button", { name: invitee.name, exact: true })).toBeVisible();
@@ -179,6 +180,7 @@ it.describe("invitations", () => {
     await guest.getByLabel("Full name").fill(invitee.name);
     await guest.getByRole("textbox", { name: "Email" }).fill(invitee.email);
     await guest.getByLabel("Password").fill(invitee.password);
+    await guest.locator("label", { hasText: "I agree to the" }).click({ position: { x: 8, y: 8 } });
     await guest.getByRole("button", { name: "Create account" }).click();
     await expect(guest).toHaveURL(home);
 

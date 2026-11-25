@@ -17,8 +17,8 @@
 | so no hash can name it. Styles cannot run code, so scripts stay locked
 | to the nonce.
 |
-| A page may name more sources, such as the dashboard reaching GIPHY
-| when GIF search is on; only pages that need them get them.
+| A page may name more sources, such as the dashboard showing pictures
+| Meta serves; only pages that need them get them.
 |
 | While the Vite dev server runs, pages also load modules, styles and
 | fonts from it and keep a socket open for hot updates. A production

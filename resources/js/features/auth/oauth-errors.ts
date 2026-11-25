@@ -8,6 +8,7 @@ const messages: Record<string, string> = {
   oauth_unavailable: "The provider could not be reached. Try again, or sign in another way.",
   oauth_email_unverified: "The provider has not verified your email address. Verify it there, or sign in another way.",
   signup_closed: "Signing up is by invitation on this server.",
+  terms_not_accepted: "You have no account yet. Sign up and agree to the terms to create one.",
   sso_required: "Sign in with your organization's single sign-on.",
   identity_taken: "That account is already linked to another user.",
   provider_already_linked: "You already linked an account of this provider.",

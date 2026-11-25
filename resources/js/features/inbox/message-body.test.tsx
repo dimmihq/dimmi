@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 
 import { MessageBody } from "./message-body";
 import { ThreadZone } from "./thread/thread-zone";
@@ -18,6 +18,16 @@ describe("MessageBody", () => {
 
     expect(screen.getByRole("button", { name: "Open image Receipt" })).toBeTruthy();
     expect(screen.getByText("Lost")).toBeTruthy();
+  });
+
+  it("shows an image that cannot load, such as an old GIF, as a link to it", () => {
+    render(<MessageBody text="![Happy dance](https://media1.giphy.com/media/abc/giphy.gif)" />);
+
+    fireEvent.error(screen.getByRole("img", { name: "Happy dance" }));
+
+    const link = screen.getByRole("link", { name: "Happy dance" });
+    expect(link.getAttribute("href")).toBe("https://media1.giphy.com/media/abc/giphy.gif");
+    expect(screen.queryByRole("img")).toBeNull();
   });
 });
 

@@ -4,18 +4,28 @@
  * produces an empty HTML file.
  */
 import type { ComponentType } from "react";
-
-import { AgentPage } from "./pages/agent";
+import { AgentStudioPage } from "./pages/agent-studio";
+import { AgentsPage } from "./pages/agents";
 import { BroadcastsPage } from "./pages/broadcasts";
 import { ChangelogPage } from "./pages/changelog";
+import { ApiChannelPage } from "./pages/channels/api";
+import { EmailChannelPage } from "./pages/channels/email";
+import { FacebookMessengerChannelPage } from "./pages/channels/facebook-messenger";
+import { InstagramChannelPage } from "./pages/channels/instagram";
+import { MessengerChannelPage } from "./pages/channels/messenger";
+import { SlackChannelPage } from "./pages/channels/slack";
+import { WhatsAppChannelPage } from "./pages/channels/whatsapp";
 import { FeedbackPage } from "./pages/feedback";
 import { HelpCenterPage } from "./pages/help-center";
 import { HomePage } from "./pages/home";
 import { InboxPage } from "./pages/inbox";
 import { OperatorPage } from "./pages/operator";
 import { PricingPage } from "./pages/pricing";
+import { PrivacyPage } from "./pages/privacy";
 import { ProceduresPage } from "./pages/procedures";
 import { ReportsPage } from "./pages/reports";
+import { RoutinesPage } from "./pages/routines";
+import { TermsPage } from "./pages/terms";
 import { TicketsPage } from "./pages/tickets";
 import { WorkflowsPage } from "./pages/workflows";
 
@@ -29,9 +39,9 @@ export type Route = {
 export const routes: Route[] = [
   {
     path: "/",
-    title: "dimmi: customer support you own",
+    title: "dimmi: the open customer support platform",
     description:
-      "Inbox, AI agent, tickets, workflows, and help center, all open source under MIT. Run on dimmi Cloud with free seats or self-host for $0.",
+      "Shared inbox, specialized support agents, tickets, workflows, and help center, all open source under MIT. Run on dimmi Cloud with free seats or self-host for $0.",
     page: HomePage,
   },
   {
@@ -42,11 +52,25 @@ export const routes: Route[] = [
     page: InboxPage,
   },
   {
-    path: "/agent",
-    title: "AI agent: cites your docs and knows when to stop | dimmi",
+    path: "/agents",
+    title: "Agents: dedicated support agents for every customer need | dimmi",
     description:
-      "An AI support agent that cites your docs, follows written playbooks, asks before risky actions, and saves up to 83% with your own AI keys.",
-    page: AgentPage,
+      "Run one frontline support agent or build specialists for billing, technical docs, orders, and brands. Cites your docs and saves 50% to 83% with your own model keys.",
+    page: AgentsPage,
+  },
+  {
+    path: "/agent-studio",
+    title: "Agent Studio: build, simulate, and compare support agents | dimmi",
+    description:
+      "Write guidance with @ chips, catch flaky replies with multi-run simulations, compare Draft against Live side by side, and diagnose failures with Operator.",
+    page: AgentStudioPage,
+  },
+  {
+    path: "/routines",
+    title: "Operator Routines: scheduled doc sync, gap audits, and QA | dimmi",
+    description:
+      "Put Operator on a daily or weekly schedule to sync merged GitHub PRs to help articles, catch knowledge gaps, and review edits inline.",
+    page: RoutinesPage,
   },
   {
     path: "/workflows",
@@ -59,7 +83,7 @@ export const routes: Route[] = [
     path: "/pricing",
     title: "Pricing: pay per conversation, never per seat | dimmi",
     description:
-      "Unlimited free seats, 100 free conversations every month, and up to 83% off AI threads with your own model keys. Free to self-host under MIT.",
+      "Unlimited free seats, 100 free conversations every month, and 50% to 83% off AI fees with your own model keys. Free to self-host under MIT.",
     page: PricingPage,
   },
   {
@@ -71,9 +95,9 @@ export const routes: Route[] = [
   },
   {
     path: "/procedures",
-    title: "Procedures: teach the AI agent your team's playbooks | dimmi",
+    title: "Procedures: support policies your agents cannot break | dimmi",
     description:
-      "Write how your team handles requests in plain English. The dimmi agent follows your steps, calls your API, and asks before risky actions.",
+      "Write how your team handles refunds, cancellations, and account changes. Agents follow every step, respect hard limits, and pause for approval.",
     page: ProceduresPage,
   },
   {
@@ -92,9 +116,9 @@ export const routes: Route[] = [
   },
   {
     path: "/help-center",
-    title: "Help center: one source for customers and AI | dimmi",
+    title: "Help center: one source for customers and agents | dimmi",
     description:
-      "Publish help articles on your own domain. Customers get instant answers, and the dimmi agent reads from the same docs.",
+      "Publish help articles on your own domain. Customers get instant answers, and your support agents read from the same docs.",
     page: HelpCenterPage,
   },
   {
@@ -117,6 +141,69 @@ export const routes: Route[] = [
     description:
       "Collect customer votes on your help center, link live support chats, and email every voter the day you ship.",
     page: FeedbackPage,
+  },
+  {
+    path: "/channels/messenger",
+    title: "Web messenger: live chat, docs, and updates inside your app | dimmi",
+    description:
+      "Embed live chat, help center search, and release notes with one script tag or 6 framework packages. Verified customer identity and AI support agents included.",
+    page: MessengerChannelPage,
+  },
+  {
+    path: "/channels/email",
+    title: "Shared email inbox: run support@ on your own domain | dimmi",
+    description:
+      "Forward support@, billing@, and security@ into one shared inbox with verified SPF/DKIM/DMARC domains, collision alerts, internal notes, and AI support agents.",
+    page: EmailChannelPage,
+  },
+  {
+    path: "/channels/slack",
+    title: "Slack customer support: sync Slack Connect channels to your inbox | dimmi",
+    description:
+      "Turn Slack Connect, community, and internal help desk channels into tracked support threads with two-way sync, SLAs, tickets, support agents, and Operator.",
+    page: SlackChannelPage,
+  },
+  {
+    path: "/channels/whatsapp",
+    title: "WhatsApp Business shared inbox: templates, media, and AI agents | dimmi",
+    description:
+      "Connect official WhatsApp Business numbers through Meta, manage approved templates, track 24-hour windows, and answer together with zero message markup.",
+    page: WhatsAppChannelPage,
+  },
+  {
+    path: "/channels/instagram",
+    title: "Instagram DM support: shared inbox for brand accounts | dimmi",
+    description:
+      "Connect Instagram Business accounts via Meta OAuth, answer DMs and story replies beside order history, track reply windows, and automate returns with support agents.",
+    page: InstagramChannelPage,
+  },
+  {
+    path: "/channels/facebook-messenger",
+    title: "Facebook Messenger support: manage Page messages in one queue | dimmi",
+    description:
+      "Connect Facebook Pages via Meta OAuth, route multiple brands into dedicated inboxes, and answer Page messages beside email and WhatsApp without Meta Business Suite.",
+    page: FacebookMessengerChannelPage,
+  },
+  {
+    path: "/channels/api",
+    title: "Headless chat & API: custom UIs, webhooks, and 11 typed SDKs | dimmi",
+    description:
+      "Build custom web or mobile chat on /widget/v1, sync backend threads over /api/v1, subscribe to signed webhooks, and ship faster with 11 typed SDKs and MCP.",
+    page: ApiChannelPage,
+  },
+  {
+    path: "/terms",
+    title: "Terms of Service | dimmi",
+    description:
+      "Complete dimmi Cloud Terms of Service, Product-Specific Terms, Acceptable Use Policy, and Self-Hosting Notice by Hivy Technologies Limited (RC 9601398).",
+    page: TermsPage,
+  },
+  {
+    path: "/privacy",
+    title: "Privacy Policy & Data Governance | dimmi",
+    description:
+      "Complete dimmi Cloud Privacy Policy, End-User Notice, Cookie Notice, Subprocessor List, AI Transparency, Security Overview, and Global DPA.",
+    page: PrivacyPage,
   },
 ];
 

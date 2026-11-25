@@ -56,7 +56,8 @@ OAuthAttempt is a sign-in at a provider in progress. Provider is the
 provider's key and State what it must hand back. UserID is the
 signed-in user a link or fresh sign-in was started for, else nil.
 Invitation is the invitation token the browser carried, and Redirect
-the safe page to land on.
+the safe page to land on. TermsAccepted says the person ticked the box
+that accepts the legal terms before leaving for the provider.
 */
 type OAuthAttempt struct {
 	Provider   string   `json:"provider"`
@@ -65,6 +66,8 @@ type OAuthAttempt struct {
 	UserID     ids.UUID `json:"user_id"`
 	Invitation string   `json:"invitation,omitempty"`
 	Redirect   string   `json:"redirect"`
+
+	TermsAccepted bool `json:"terms_accepted,omitempty"`
 }
 
 /*

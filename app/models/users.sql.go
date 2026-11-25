@@ -8,6 +8,7 @@ package models
 import (
 	"context"
 	"encoding/json"
+	"net/netip"
 	"time"
 
 	"github.com/dimmihq/dimmi/framework/ids"
@@ -34,7 +35,8 @@ func (q *Queries) AddUserRiskFlags(ctx context.Context, arg AddUserRiskFlagsPara
 const anonymizeUser = `-- name: AnonymizeUser :exec
 UPDATE users
 SET name = $1, email = $2, password_hash = NULL, two_factor_confirmed_at = NULL, avatar_path = NULL,
-    locale = NULL, timezone = NULL, deleted_at = $3::timestamptz, updated_at = $3::timestamptz
+    locale = NULL, timezone = NULL, terms_accepted_ip = NULL, terms_accepted_user_agent = NULL,
+    deleted_at = $3::timestamptz, updated_at = $3::timestamptz
 WHERE id = $4
 `
 
@@ -91,25 +93,37 @@ func (q *Queries) CountUserLiveTokens(ctx context.Context, arg CountUserLiveToke
 }
 
 const createUser = `-- name: CreateUser :one
-INSERT INTO users (name, email, password_hash, email_verified_at, locale, timezone, created_via, created_at, updated_at)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $8)
-RETURNING id, name, email, email_verified_at, password_hash, two_factor_confirmed_at, avatar_path, locale, timezone, last_seen_at, created_at, updated_at, deleted_at, password_changed_at, risk_flags, created_via, preferences, managed_by_organization_id
+INSERT INTO users (
+    name, email, password_hash, email_verified_at, locale, timezone, created_via, created_at, updated_at,
+    terms_version, terms_accepted_at, terms_accepted_ip, terms_accepted_user_agent
+)
+VALUES (
+    $1, $2, $3, $4, $5, $6, $7, $8, $8,
+    $9, $10, $11,
+    $12
+)
+RETURNING id, name, email, email_verified_at, password_hash, two_factor_confirmed_at, avatar_path, locale, timezone, last_seen_at, created_at, updated_at, deleted_at, password_changed_at, risk_flags, created_via, preferences, managed_by_organization_id, terms_version, terms_accepted_at, terms_accepted_ip, terms_accepted_user_agent
 `
 
 type CreateUserParams struct {
-	Name            string     `json:"name"`
-	Email           string     `json:"email"`
-	PasswordHash    *string    `json:"password_hash"`
-	EmailVerifiedAt *time.Time `json:"email_verified_at"`
-	Locale          *string    `json:"locale"`
-	Timezone        *string    `json:"timezone"`
-	CreatedVia      *string    `json:"created_via"`
-	Now             time.Time  `json:"now"`
+	Name                   string      `json:"name"`
+	Email                  string      `json:"email"`
+	PasswordHash           *string     `json:"password_hash"`
+	EmailVerifiedAt        *time.Time  `json:"email_verified_at"`
+	Locale                 *string     `json:"locale"`
+	Timezone               *string     `json:"timezone"`
+	CreatedVia             *string     `json:"created_via"`
+	Now                    time.Time   `json:"now"`
+	TermsVersion           *string     `json:"terms_version"`
+	TermsAcceptedAt        *time.Time  `json:"terms_accepted_at"`
+	TermsAcceptedIp        *netip.Addr `json:"terms_accepted_ip"`
+	TermsAcceptedUserAgent *string     `json:"terms_accepted_user_agent"`
 }
 
 // CreateUser stores a new account. The email is unique without regard to
 // case, so a second account for the same address fails on
-// users_email_key.
+// users_email_key. The terms columns hold the acceptance given when the
+// account was made, all null without one.
 func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, error) {
 	row := q.db.QueryRow(ctx, createUser,
 		arg.Name,
@@ -120,6 +134,10 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, e
 		arg.Timezone,
 		arg.CreatedVia,
 		arg.Now,
+		arg.TermsVersion,
+		arg.TermsAcceptedAt,
+		arg.TermsAcceptedIp,
+		arg.TermsAcceptedUserAgent,
 	)
 	var i User
 	err := row.Scan(
@@ -141,12 +159,16 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, e
 		&i.CreatedVia,
 		&i.Preferences,
 		&i.ManagedByOrganizationID,
+		&i.TermsVersion,
+		&i.TermsAcceptedAt,
+		&i.TermsAcceptedIp,
+		&i.TermsAcceptedUserAgent,
 	)
 	return i, err
 }
 
 const findUser = `-- name: FindUser :one
-SELECT id, name, email, email_verified_at, password_hash, two_factor_confirmed_at, avatar_path, locale, timezone, last_seen_at, created_at, updated_at, deleted_at, password_changed_at, risk_flags, created_via, preferences, managed_by_organization_id FROM users WHERE id = $1
+SELECT id, name, email, email_verified_at, password_hash, two_factor_confirmed_at, avatar_path, locale, timezone, last_seen_at, created_at, updated_at, deleted_at, password_changed_at, risk_flags, created_via, preferences, managed_by_organization_id, terms_version, terms_accepted_at, terms_accepted_ip, terms_accepted_user_agent FROM users WHERE id = $1
 `
 
 // FindUser returns the account with the id, deleted or not.
@@ -172,12 +194,16 @@ func (q *Queries) FindUser(ctx context.Context, id ids.UUID) (User, error) {
 		&i.CreatedVia,
 		&i.Preferences,
 		&i.ManagedByOrganizationID,
+		&i.TermsVersion,
+		&i.TermsAcceptedAt,
+		&i.TermsAcceptedIp,
+		&i.TermsAcceptedUserAgent,
 	)
 	return i, err
 }
 
 const findUserByEmail = `-- name: FindUserByEmail :one
-SELECT id, name, email, email_verified_at, password_hash, two_factor_confirmed_at, avatar_path, locale, timezone, last_seen_at, created_at, updated_at, deleted_at, password_changed_at, risk_flags, created_via, preferences, managed_by_organization_id FROM users WHERE email = $1 AND deleted_at IS NULL
+SELECT id, name, email, email_verified_at, password_hash, two_factor_confirmed_at, avatar_path, locale, timezone, last_seen_at, created_at, updated_at, deleted_at, password_changed_at, risk_flags, created_via, preferences, managed_by_organization_id, terms_version, terms_accepted_at, terms_accepted_ip, terms_accepted_user_agent FROM users WHERE email = $1 AND deleted_at IS NULL
 `
 
 // FindUserByEmail returns the live account with the address. A deleted
@@ -204,12 +230,16 @@ func (q *Queries) FindUserByEmail(ctx context.Context, email string) (User, erro
 		&i.CreatedVia,
 		&i.Preferences,
 		&i.ManagedByOrganizationID,
+		&i.TermsVersion,
+		&i.TermsAcceptedAt,
+		&i.TermsAcceptedIp,
+		&i.TermsAcceptedUserAgent,
 	)
 	return i, err
 }
 
 const listLiveUsers = `-- name: ListLiveUsers :many
-SELECT u.id, u.name, u.email, u.email_verified_at, u.password_hash, u.two_factor_confirmed_at, u.avatar_path, u.locale, u.timezone, u.last_seen_at, u.created_at, u.updated_at, u.deleted_at, u.password_changed_at, u.risk_flags, u.created_via, u.preferences, u.managed_by_organization_id,
+SELECT u.id, u.name, u.email, u.email_verified_at, u.password_hash, u.two_factor_confirmed_at, u.avatar_path, u.locale, u.timezone, u.last_seen_at, u.created_at, u.updated_at, u.deleted_at, u.password_changed_at, u.risk_flags, u.created_via, u.preferences, u.managed_by_organization_id, u.terms_version, u.terms_accepted_at, u.terms_accepted_ip, u.terms_accepted_user_agent,
     coalesce((
         SELECT array_agg(DISTINCT f.type ORDER BY f.type) FROM user_auth_factors f
         WHERE f.user_id = u.id AND f.status = 'active' AND f.type <> 'recovery_code'
@@ -254,6 +284,10 @@ func (q *Queries) ListLiveUsers(ctx context.Context) ([]ListLiveUsersRow, error)
 			&i.User.CreatedVia,
 			&i.User.Preferences,
 			&i.User.ManagedByOrganizationID,
+			&i.User.TermsVersion,
+			&i.User.TermsAcceptedAt,
+			&i.User.TermsAcceptedIp,
+			&i.User.TermsAcceptedUserAgent,
 			&i.FactorTypes,
 		); err != nil {
 			return nil, err
@@ -267,7 +301,7 @@ func (q *Queries) ListLiveUsers(ctx context.Context) ([]ListLiveUsersRow, error)
 }
 
 const lockUser = `-- name: LockUser :one
-SELECT id, name, email, email_verified_at, password_hash, two_factor_confirmed_at, avatar_path, locale, timezone, last_seen_at, created_at, updated_at, deleted_at, password_changed_at, risk_flags, created_via, preferences, managed_by_organization_id FROM users WHERE id = $1 FOR UPDATE
+SELECT id, name, email, email_verified_at, password_hash, two_factor_confirmed_at, avatar_path, locale, timezone, last_seen_at, created_at, updated_at, deleted_at, password_changed_at, risk_flags, created_via, preferences, managed_by_organization_id, terms_version, terms_accepted_at, terms_accepted_ip, terms_accepted_user_agent FROM users WHERE id = $1 FOR UPDATE
 `
 
 // LockUser returns the account and holds it until the transaction ends,
@@ -295,6 +329,10 @@ func (q *Queries) LockUser(ctx context.Context, id ids.UUID) (User, error) {
 		&i.CreatedVia,
 		&i.Preferences,
 		&i.ManagedByOrganizationID,
+		&i.TermsVersion,
+		&i.TermsAcceptedAt,
+		&i.TermsAcceptedIp,
+		&i.TermsAcceptedUserAgent,
 	)
 	return i, err
 }
@@ -318,7 +356,7 @@ func (q *Queries) MarkUserEmailVerified(ctx context.Context, arg MarkUserEmailVe
 }
 
 const replaceUserAvatarPath = `-- name: ReplaceUserAvatarPath :one
-UPDATE users SET avatar_path = $1, updated_at = $2::timestamptz WHERE id = $3 RETURNING id, name, email, email_verified_at, password_hash, two_factor_confirmed_at, avatar_path, locale, timezone, last_seen_at, created_at, updated_at, deleted_at, password_changed_at, risk_flags, created_via, preferences, managed_by_organization_id
+UPDATE users SET avatar_path = $1, updated_at = $2::timestamptz WHERE id = $3 RETURNING id, name, email, email_verified_at, password_hash, two_factor_confirmed_at, avatar_path, locale, timezone, last_seen_at, created_at, updated_at, deleted_at, password_changed_at, risk_flags, created_via, preferences, managed_by_organization_id, terms_version, terms_accepted_at, terms_accepted_ip, terms_accepted_user_agent
 `
 
 type ReplaceUserAvatarPathParams struct {
@@ -351,6 +389,10 @@ func (q *Queries) ReplaceUserAvatarPath(ctx context.Context, arg ReplaceUserAvat
 		&i.CreatedVia,
 		&i.Preferences,
 		&i.ManagedByOrganizationID,
+		&i.TermsVersion,
+		&i.TermsAcceptedAt,
+		&i.TermsAcceptedIp,
+		&i.TermsAcceptedUserAgent,
 	)
 	return i, err
 }
@@ -399,7 +441,7 @@ const setUserManagedBy = `-- name: SetUserManagedBy :one
 UPDATE users
 SET managed_by_organization_id = $1, name = COALESCE($2, name), updated_at = $3
 WHERE id = $4
-RETURNING id, name, email, email_verified_at, password_hash, two_factor_confirmed_at, avatar_path, locale, timezone, last_seen_at, created_at, updated_at, deleted_at, password_changed_at, risk_flags, created_via, preferences, managed_by_organization_id
+RETURNING id, name, email, email_verified_at, password_hash, two_factor_confirmed_at, avatar_path, locale, timezone, last_seen_at, created_at, updated_at, deleted_at, password_changed_at, risk_flags, created_via, preferences, managed_by_organization_id, terms_version, terms_accepted_at, terms_accepted_ip, terms_accepted_user_agent
 `
 
 type SetUserManagedByParams struct {
@@ -439,6 +481,10 @@ func (q *Queries) SetUserManagedBy(ctx context.Context, arg SetUserManagedByPara
 		&i.CreatedVia,
 		&i.Preferences,
 		&i.ManagedByOrganizationID,
+		&i.TermsVersion,
+		&i.TermsAcceptedAt,
+		&i.TermsAcceptedIp,
+		&i.TermsAcceptedUserAgent,
 	)
 	return i, err
 }
@@ -463,7 +509,7 @@ const updateUserEmail = `-- name: UpdateUserEmail :one
 UPDATE users
 SET email = $1, email_verified_at = $2::timestamptz, updated_at = $2::timestamptz
 WHERE id = $3
-RETURNING id, name, email, email_verified_at, password_hash, two_factor_confirmed_at, avatar_path, locale, timezone, last_seen_at, created_at, updated_at, deleted_at, password_changed_at, risk_flags, created_via, preferences, managed_by_organization_id
+RETURNING id, name, email, email_verified_at, password_hash, two_factor_confirmed_at, avatar_path, locale, timezone, last_seen_at, created_at, updated_at, deleted_at, password_changed_at, risk_flags, created_via, preferences, managed_by_organization_id, terms_version, terms_accepted_at, terms_accepted_ip, terms_accepted_user_agent
 `
 
 type UpdateUserEmailParams struct {
@@ -496,6 +542,10 @@ func (q *Queries) UpdateUserEmail(ctx context.Context, arg UpdateUserEmailParams
 		&i.CreatedVia,
 		&i.Preferences,
 		&i.ManagedByOrganizationID,
+		&i.TermsVersion,
+		&i.TermsAcceptedAt,
+		&i.TermsAcceptedIp,
+		&i.TermsAcceptedUserAgent,
 	)
 	return i, err
 }
@@ -541,7 +591,7 @@ UPDATE users
 SET name = $1, locale = $2, timezone = $3, preferences = $4,
     updated_at = $5::timestamptz
 WHERE id = $6
-RETURNING id, name, email, email_verified_at, password_hash, two_factor_confirmed_at, avatar_path, locale, timezone, last_seen_at, created_at, updated_at, deleted_at, password_changed_at, risk_flags, created_via, preferences, managed_by_organization_id
+RETURNING id, name, email, email_verified_at, password_hash, two_factor_confirmed_at, avatar_path, locale, timezone, last_seen_at, created_at, updated_at, deleted_at, password_changed_at, risk_flags, created_via, preferences, managed_by_organization_id, terms_version, terms_accepted_at, terms_accepted_ip, terms_accepted_user_agent
 `
 
 type UpdateUserProfileParams struct {
@@ -584,6 +634,10 @@ func (q *Queries) UpdateUserProfile(ctx context.Context, arg UpdateUserProfilePa
 		&i.CreatedVia,
 		&i.Preferences,
 		&i.ManagedByOrganizationID,
+		&i.TermsVersion,
+		&i.TermsAcceptedAt,
+		&i.TermsAcceptedIp,
+		&i.TermsAcceptedUserAgent,
 	)
 	return i, err
 }

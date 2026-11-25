@@ -63,6 +63,17 @@ type BuildDataExport struct {
 }
 
 /*
+buildTimeout is how long one build may take: a whole workspace with its
+files is far more than the queue's usual job.
+*/
+const buildTimeout = 6 * time.Hour
+
+/*
+Timeout lets a build run as long as a whole workspace takes.
+*/
+func (w *BuildDataExport) Timeout() time.Duration { return buildTimeout }
+
+/*
 Handle builds the export.
 */
 func (w *BuildDataExport) Handle(ctx context.Context, job *queue.Job[BuildDataExportArgs]) error {

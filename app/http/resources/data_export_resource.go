@@ -72,3 +72,20 @@ func NewDataExports(rows []models.DataExport) []DataExport {
 
 	return out
 }
+
+/*
+DataExportLink is a signed link a ready export's file downloads from
+until it expires.
+*/
+type DataExportLink struct {
+	Object    string    `json:"object"`
+	URL       string    `json:"url"`
+	ExpiresAt time.Time `json:"expires_at"`
+}
+
+/*
+NewDataExportLink shapes the link.
+*/
+func NewDataExportLink(l dataexports.Link) DataExportLink {
+	return DataExportLink{Object: "data_export_link", URL: l.URL, ExpiresAt: l.ExpiresAt}
+}

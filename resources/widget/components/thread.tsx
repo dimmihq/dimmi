@@ -13,7 +13,8 @@ import { raw } from "widget-jsx/jsx-runtime";
 
 import type { ActionCard, Attachment, Message, Source } from "../content";
 import { markdown } from "../lib/markdown";
-import { type ActionTexts, actionTexts } from "../text";
+import { type ActionTexts, type AiTexts, actionTexts, aiTexts } from "../text";
+import { AiBadge } from "./ai-badge";
 import {
   BookIcon,
   CheckIcon,
@@ -24,7 +25,6 @@ import {
   FileIcon,
   ImageIcon,
   PauseIcon,
-  PersonIcon,
   PlayIcon,
 } from "./icons";
 import { Waveform } from "./wave";
@@ -402,14 +402,14 @@ function Bubble({ message, texts }: { message: Message; texts: ActionTexts }) {
   );
 }
 
-function Byline({ who, when, team }: { who: Message; when: string; team?: string }) {
+function Byline({ who, when, team, ai }: { who: Message; when: string; team?: string; ai: AiTexts }) {
   const agent = who.from === "agent";
   const name = who.from === "visitor" ? "" : (who.author ?? team ?? "");
 
   return (
     <p className="byline">
       {name ? <span>{name}</span> : null}
-      {agent ? <span>AI</span> : null}
+      {agent ? <AiBadge texts={ai} /> : null}
       {when ? <time>{when}</time> : null}
     </p>
   );
@@ -419,10 +419,12 @@ export function Said({
   messages,
   texts = actionTexts,
   team,
+  ai = aiTexts,
 }: {
   messages: Message[];
   texts?: ActionTexts;
   team?: string;
+  ai?: AiTexts;
 }) {
   const [first] = messages;
   const last = messages.at(-1);
@@ -437,7 +439,7 @@ export function Said({
           <Bubble message={message} texts={texts} key={`${message.at}-${message.body ?? message.attachment?.name}`} />
         ))}
       </div>
-      <Byline who={first} when={last.at} team={team} />
+      <Byline who={first} when={last.at} team={team} ai={ai} />
     </div>
   );
 }
@@ -464,17 +466,19 @@ export function Thread({
   messages,
   texts = actionTexts,
   team,
+  ai = aiTexts,
 }: {
   messages: Message[];
   texts?: ActionTexts;
   team?: string;
+  ai?: AiTexts;
 }) {
   const last = messages.at(-1);
 
   return (
     <>
       {runs(messages).map((run) => (
-        <Said messages={run} texts={texts} team={team} key={`${run[0]?.at}-${run[0]?.from}-${run.length}`} />
+        <Said messages={run} texts={texts} team={team} ai={ai} key={`${run[0]?.at}-${run[0]?.from}-${run.length}`} />
       ))}
       {last ? <Choices message={last} /> : null}
     </>
@@ -482,21 +486,20 @@ export function Thread({
 }
 
 /*
- * AiActionTexts are the words of the two actions under an answer from
- * the agent, and the thanks once the visitor said it helped.
+ * AiActionTexts are the words of the action under an answer from the
+ * agent, and the thanks once the visitor said it helped.
  */
 export interface AiActionTexts {
   helped: string;
-  handoff: string;
   thanks: string;
 }
 
 /*
- * AiActions are the quiet choices under the agent's latest reply: that
- * it helped, offered only under a real answer, and to talk to a person
- * instead. Once the visitor says it helped, a thanks takes their place.
+ * AiActions is the quiet choice under the agent's latest answer: that it
+ * helped. Once the visitor says so, a thanks takes its place. A visitor
+ * who wants a person says so in the thread, and the agent hands over.
  */
-export function AiActions({ texts, helped, answered }: { texts: AiActionTexts; helped: boolean; answered: boolean }) {
+export function AiActions({ texts, helped }: { texts: AiActionTexts; helped: boolean }) {
   if (helped) {
     return (
       <p className="ai-thanks" data-key="ai-actions">
@@ -508,15 +511,9 @@ export function AiActions({ texts, helped, answered }: { texts: AiActionTexts; h
 
   return (
     <div className="ai-actions" data-key="ai-actions">
-      {answered ? (
-        <button type="button" className="ai-action" data-ai="helped">
-          <CheckIcon />
-          {texts.helped}
-        </button>
-      ) : null}
-      <button type="button" className="ai-action" data-ai="handoff">
-        <PersonIcon />
-        {texts.handoff}
+      <button type="button" className="ai-action" data-ai="helped">
+        <CheckIcon />
+        {texts.helped}
       </button>
     </div>
   );

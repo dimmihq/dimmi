@@ -202,8 +202,12 @@ export interface Message {
   at: string;
 }
 
+/*
+ * ai says the AI agent is the one answering the open conversation.
+ */
 export interface Content {
   company: string;
+  ai?: boolean;
   logo?: string | null;
   reply_time: string;
   team: Member[];

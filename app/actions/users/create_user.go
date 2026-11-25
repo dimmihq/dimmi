@@ -17,6 +17,7 @@ package users
 import (
 	"context"
 	"fmt"
+	"net/netip"
 	"time"
 
 	"github.com/dimmihq/dimmi/framework/clock"
@@ -32,7 +33,8 @@ import (
 CreateUserInput is the account to create. PasswordHash is already
 hashed, or nil for an account without a password. Verified marks the
 email as proven, such as when an invitation link carried it. CreatedVia
-is a registered way of creating an account.
+is a registered way of creating an account. Terms is the person's
+acceptance of the legal terms, nil when they were not asked.
 */
 type CreateUserInput struct {
 	Name         string
@@ -40,6 +42,16 @@ type CreateUserInput struct {
 	PasswordHash *string
 	Verified     bool
 	CreatedVia   string
+	Terms        *TermsAcceptance
+}
+
+/*
+TermsAcceptance is where a person was when they ticked the box that
+accepts the legal terms: the address and the browser of the request.
+*/
+type TermsAcceptance struct {
+	IP        netip.Addr
+	UserAgent string
 }
 
 /*
@@ -49,13 +61,16 @@ Rules:
   - The email is trimmed and keeps its case as typed; it is unique
     without regard to case.
   - The name is cleaned of control and invisible characters.
+  - An acceptance of the terms is stored with the version in force, the
+    time, and the address and browser it came from.
 
 Errors: [exceptions.ErrEmailTaken] when a live account has the address,
 or a wrapped database error.
 */
 type CreateUser struct {
-	DB    *database.DB
-	Clock clock.Clock
+	DB           *database.DB
+	Clock        clock.Clock
+	TermsVersion string
 }
 
 /*
@@ -75,14 +90,14 @@ func (a *CreateUser) Handle(ctx context.Context, in CreateUserInput) (models.Use
 	err := a.DB.Transaction(ctx, func(ctx context.Context, tx *database.Tx) error {
 		var err error
 
-		user, err = models.New(tx).CreateUser(ctx, models.CreateUserParams{
+		user, err = models.New(tx).CreateUser(ctx, a.accepted(in.Terms, models.CreateUserParams{
 			Name:            str.Clean(in.Name),
 			Email:           mail.CanonicalAddress(in.Email),
 			PasswordHash:    in.PasswordHash,
 			EmailVerifiedAt: verifiedAt,
 			CreatedVia:      &in.CreatedVia,
 			Now:             now,
-		})
+		}))
 
 		return err
 	})
@@ -95,4 +110,25 @@ func (a *CreateUser) Handle(ctx context.Context, in CreateUserInput) (models.Use
 	}
 
 	return user, nil
+}
+
+/*
+accepted returns the account with the acceptance of the terms written
+on it, unchanged without one. An address that does not parse is left
+out.
+*/
+func (a *CreateUser) accepted(terms *TermsAcceptance, account models.CreateUserParams) models.CreateUserParams {
+	if terms == nil {
+		return account
+	}
+
+	account.TermsVersion = &a.TermsVersion
+	account.TermsAcceptedAt = &account.Now
+	account.TermsAcceptedUserAgent = &terms.UserAgent
+
+	if terms.IP.IsValid() {
+		account.TermsAcceptedIp = &terms.IP
+	}
+
+	return account
 }

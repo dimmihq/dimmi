@@ -50,11 +50,14 @@ ErrCaptchaFailed refuses a wrong or missing captcha answer, and
 ErrCaptchaUnavailable a step the captcha provider could not check.
 ErrDisposableEmail refuses an address at a throwaway mailbox.
 ErrPasswordTooShort refuses a password set by the operator that is
-shorter than the install allows.
+shorter than the install allows. ErrTermsNotAccepted refuses a new
+account whose owner has not agreed to the terms the install publishes.
 */
 var (
-	ErrSignupClosed = fault.New(fault.Forbidden, "signup_closed", "Signing up is closed on this server.")
-	ErrEmailTaken   = fault.New(fault.Invalid, "email_taken",
+	ErrSignupClosed     = fault.New(fault.Forbidden, "signup_closed", "Signing up is closed on this server.")
+	ErrTermsNotAccepted = fault.New(fault.Forbidden, "terms_not_accepted",
+		"Accept the terms to create your account.")
+	ErrEmailTaken = fault.New(fault.Invalid, "email_taken",
 		"The email has already been taken.").OnField("email")
 	ErrTooManySignups = fault.New(fault.RateLimited, "too_many_attempts",
 		"Too many accounts were created from your address. Try again later.")

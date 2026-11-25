@@ -97,6 +97,10 @@ func (a *BuildDataExport) fail(ctx context.Context, row models.DataExport, cause
 build writes the file, stores it and marks the export ready.
 */
 func (a *BuildDataExport) build(ctx context.Context, row models.DataExport) error {
+	if row.Kind == KindWorkspace {
+		return a.buildArchive(ctx, row)
+	}
+
 	var (
 		out  packed
 		rows int
@@ -250,14 +254,15 @@ func renderContacts(ctx context.Context, q *models.Queries, row models.DataExpor
 }
 
 /*
-finished is where a built export was stored, what it holds and how long
-it is kept.
+finished is where a built export was stored, what it holds, what it
+had to leave out and how long it is kept.
 */
 type finished struct {
-	path string
-	size int64
-	rows int
-	ttl  time.Duration
+	path     string
+	size     int64
+	rows     int
+	ttl      time.Duration
+	warnings []string
 }
 
 /*
@@ -268,9 +273,14 @@ func (a *BuildDataExport) ready(ctx context.Context, row models.DataExport, f fi
 	return a.DB.Transaction(ctx, func(ctx context.Context, tx *database.Tx) error {
 		now := a.Clock.Now()
 
+		warnings, err := json.Marshal(append([]string{}, f.warnings...))
+		if err != nil {
+			return fmt.Errorf("encode warnings: %w", err)
+		}
+
 		if _, err := models.New(tx).FinishDataExport(ctx, models.FinishDataExportParams{
 			Disk: &a.DiskName, Path: &f.path, SizeBytes: &f.size, RowCount: new(int64(f.rows)),
-			Warnings: json.RawMessage(`[]`), ExpiresAt: new(now.Add(f.ttl)), Now: now,
+			Warnings: warnings, ExpiresAt: new(now.Add(f.ttl)), Now: now,
 			WorkspaceID: row.WorkspaceID, ID: row.ID,
 		}); err != nil {
 			return fmt.Errorf("finish export: %w", err)

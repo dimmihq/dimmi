@@ -19,11 +19,13 @@ import (
 )
 
 /*
-registration is a valid sign-up body for the email.
+registration is a valid sign-up body for the email, accepting the legal
+terms as an install that publishes them asks.
 */
 func registration(email string) testkit.JSON {
 	return testkit.JSON{
 		"name": "Grace Hopper", "email": email, "password": factories.Password, "workspace_name": "Navy",
+		"terms_accepted": true,
 	}
 }
 

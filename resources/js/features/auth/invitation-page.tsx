@@ -33,6 +33,8 @@ import { alreadyJoined, type Ended, emailMismatch, endedBy, endedText, forgetInv
 import { Working } from "./link-pages";
 import { oauthError } from "./oauth-errors";
 import { ProviderButtons } from "./provider-buttons";
+import { TermsAgreement } from "./terms-agreement";
+import { useAgreement } from "./use-agreement";
 
 /*
  * enter opens the app in the workspace just joined. The page loads
@@ -225,7 +227,8 @@ function SignInStep({
 /*
  * SignupStep creates the invitee's account. The server proves the
  * address by the invitation itself and makes the account a member of the
- * workspace, so the person lands in it straight away.
+ * workspace, so the person lands in it straight away. A server that
+ * publishes legal terms asks the person to accept them first.
  */
 function SignupStep({
   token,
@@ -238,6 +241,7 @@ function SignupStep({
   config: AuthConfig;
   error?: string;
 }) {
+  const agreement = useAgreement(config.terms);
   const register = useMutation({
     mutationFn: (form: FormData) =>
       signUpWithInvitation({
@@ -245,19 +249,22 @@ function SignupStep({
         email: field(form, "email"),
         password: field(form, "password"),
         invitation_token: token,
+        ...(agreement.terms ? { terms_accepted: agreement.accepted } : {}),
       }),
     onSuccess: (me) => {
       const joined = me.workspaces.find((workspace) => workspace.id === preview.workspace.id);
       enter(joined?.id ?? me.workspaces[0]?.id ?? null);
     },
   });
-  const fields = ["name", "email", "password"];
+  const fields = ["name", "email", "password", ...(agreement.terms ? ["terms_accepted"] : [])];
   const errorFor = (name: string) => fieldError(register.error, name, fields, "email");
   const emailError = emailMismatch(register.error) ? mismatchText(preview) : errorFor("email");
 
   const submit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    register.mutate(new FormData(event.currentTarget));
+    if (agreement.confirm()) {
+      register.mutate(new FormData(event.currentTarget));
+    }
   };
 
   return (
@@ -270,6 +277,7 @@ function SignupStep({
         invitation={token}
         action="Sign up with"
         emailLabel="or sign up with email"
+        agreement={agreement}
       />
       <form
         onSubmit={submit}
@@ -311,12 +319,10 @@ function SignupStep({
           isInvalid={Boolean(errorFor("password"))}
           errorMessage={errorFor("password")}
         />
+        <TermsAgreement agreement={agreement} joining error={errorFor("terms_accepted")} />
         <Button type="submit" className="w-full" loading={register.isPending} disabled={register.isSuccess}>
           Create account
         </Button>
-        <p className="text-caption-1-regular text-text-tertiary">
-          By creating an account you agree to our Terms of Service and Privacy Policy.
-        </p>
       </form>
     </AuthCard>
   );

@@ -345,7 +345,7 @@ func (q *Queries) ListFailingWebhookEndpoints(ctx context.Context, arg ListFaili
 }
 
 const listWebhookAlertRecipients = `-- name: ListWebhookAlertRecipients :many
-SELECT m.id, m.workspace_id, m.user_id, m.role, m.availability, m.status, m.created_at, m.updated_at, m.last_accessed_at, m.deactivated_at, m.deactivated_by_member_id, m.joined_via, m.conversation_access, m.conversation_access_unassigned, m.away_reassign, m.away_since, m.availability_source, m.away_reason_id, m.assign_on_reply, m.conversation_capacity, m.capacity_by_channel, m.last_assigned_at, m.undo_send_seconds, m.custom_role_id, u.id, u.name, u.email, u.email_verified_at, u.password_hash, u.two_factor_confirmed_at, u.avatar_path, u.locale, u.timezone, u.last_seen_at, u.created_at, u.updated_at, u.deleted_at, u.password_changed_at, u.risk_flags, u.created_via, u.preferences, u.managed_by_organization_id
+SELECT m.id, m.workspace_id, m.user_id, m.role, m.availability, m.status, m.created_at, m.updated_at, m.last_accessed_at, m.deactivated_at, m.deactivated_by_member_id, m.joined_via, m.conversation_access, m.conversation_access_unassigned, m.away_reassign, m.away_since, m.availability_source, m.away_reason_id, m.assign_on_reply, m.conversation_capacity, m.capacity_by_channel, m.last_assigned_at, m.undo_send_seconds, m.custom_role_id, u.id, u.name, u.email, u.email_verified_at, u.password_hash, u.two_factor_confirmed_at, u.avatar_path, u.locale, u.timezone, u.last_seen_at, u.created_at, u.updated_at, u.deleted_at, u.password_changed_at, u.risk_flags, u.created_via, u.preferences, u.managed_by_organization_id, u.terms_version, u.terms_accepted_at, u.terms_accepted_ip, u.terms_accepted_user_agent
 FROM workspace_members m
 JOIN users u ON u.id = m.user_id
 WHERE m.workspace_id = $1 AND m.role IN ('owner', 'admin') AND m.status = 'active'
@@ -410,6 +410,10 @@ func (q *Queries) ListWebhookAlertRecipients(ctx context.Context, workspaceID id
 			&i.User.CreatedVia,
 			&i.User.Preferences,
 			&i.User.ManagedByOrganizationID,
+			&i.User.TermsVersion,
+			&i.User.TermsAcceptedAt,
+			&i.User.TermsAcceptedIp,
+			&i.User.TermsAcceptedUserAgent,
 		); err != nil {
 			return nil, err
 		}

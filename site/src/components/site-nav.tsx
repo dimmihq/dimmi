@@ -6,8 +6,10 @@ import { ButtonLink } from "@/components/base/buttons/button";
 import { DimmiLogo } from "@/features/brand/logo";
 import { cx } from "@/utils/cx";
 
+import { CHANNEL_PATHS, CHANNELS } from "../channels";
 import { APP_URL, GITHUB_URL } from "../links";
 import { PRODUCT_GROUPS, PRODUCT_PATHS } from "../products";
+import { SiteNavMobile } from "./site-nav-mobile";
 
 const links = [
   { label: "Self-host", href: "/#self-host" },
@@ -27,6 +29,7 @@ export function SiteNav({ path }: { path: string }) {
         </a>
         <nav aria-label="Main" className="hidden min-w-0 items-center gap-1 lg:flex">
           <ProductMenu path={path} />
+          <ChannelsMenu path={path} />
           {links.map((link) => {
             const current = link.href === path;
             return (
@@ -59,6 +62,9 @@ export function SiteNav({ path }: { path: string }) {
           <ButtonLink href={`${APP_URL}/signup`} size="small">
             Start free
           </ButtonLink>
+          <div className="lg:hidden">
+            <SiteNavMobile path={path} links={links} />
+          </div>
         </div>
       </div>
     </header>
@@ -206,6 +212,139 @@ function ProductMenu({ path }: { path: string }) {
               className="inline-flex shrink-0 items-center gap-1 text-[13px] leading-5 font-medium text-text-primary hover:underline underline-offset-4"
             >
               Self-host it
+              <RiArrowRightLine className="size-3.5" aria-hidden />
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ChannelsMenu({ path }: { path: string }) {
+  const [open, setOpen] = useState(false);
+  const closing = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const root = useRef<HTMLDivElement>(null);
+  const panelId = useId();
+  const current = CHANNEL_PATHS.has(path);
+
+  const show = () => {
+    clearTimeout(closing.current);
+    setOpen(true);
+  };
+  const hide = () => {
+    clearTimeout(closing.current);
+    closing.current = setTimeout(() => setOpen(false), 140);
+  };
+
+  // biome-ignore lint/correctness/useExhaustiveDependencies: path is the trigger, not a value read
+  useEffect(() => {
+    clearTimeout(closing.current);
+    setOpen(false);
+  }, [path]);
+
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setOpen(false);
+        root.current?.querySelector("button")?.focus();
+      }
+    };
+    const onPress = (event: PointerEvent) => {
+      if (!root.current?.contains(event.target as Node)) {
+        setOpen(false);
+      }
+    };
+    document.addEventListener("keydown", onKey);
+    document.addEventListener("pointerdown", onPress);
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      document.removeEventListener("pointerdown", onPress);
+    };
+  }, [open]);
+
+  return (
+    // biome-ignore lint/a11y/noStaticElementInteractions: the button inside is the control
+    <div
+      ref={root}
+      className="relative"
+      onPointerEnter={(event) => event.pointerType === "mouse" && show()}
+      onPointerLeave={(event) => event.pointerType === "mouse" && hide()}
+      onBlur={(event) => {
+        if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
+          setOpen(false);
+        }
+      }}
+    >
+      <button
+        type="button"
+        aria-expanded={open}
+        aria-controls={panelId}
+        onClick={() => setOpen((was) => !was)}
+        className={cx(
+          item,
+          "inline-flex cursor-pointer items-center gap-1 outline-none focus-visible:ring-2 focus-visible:ring-border-focus-ring",
+          current || open ? "bg-background-secondary-default text-text-primary" : "text-text-secondary",
+        )}
+      >
+        Channels
+        <RiArrowDownSLine
+          className={cx("size-4 transition-transform duration-200", open && "rotate-180")}
+          aria-hidden
+        />
+      </button>
+      <div
+        id={panelId}
+        className={cx(
+          "absolute top-full -left-4 pt-3 transition-[opacity,translate,scale,visibility] duration-200 ease-[cubic-bezier(0.22,1,0.36,1)] origin-top-left",
+          open ? "visible translate-y-0 scale-100 opacity-100" : "invisible -translate-y-1 scale-[0.98] opacity-0",
+        )}
+      >
+        <span
+          aria-hidden
+          className="absolute top-[7px] left-12 size-3 rotate-45 rounded-tl-[3px] border-t border-l border-border-button-default bg-background-full"
+        />
+        <div className="w-[620px] overflow-hidden rounded-2xl border border-border-button-default bg-background-full shadow-[0_24px_60px_-20px_rgb(0_0_0/0.28)]">
+          <div className="grid grid-cols-2 gap-1 p-3">
+            {CHANNELS.map((channel) => {
+              const here = channel.href === path;
+              return (
+                <a
+                  key={channel.href}
+                  href={channel.href}
+                  aria-current={here ? "page" : undefined}
+                  className={cx(
+                    "group flex items-center gap-3 rounded-xl px-3 py-2.5 outline-none transition-colors hover:bg-background-secondary-default focus-visible:bg-background-secondary-default",
+                    here && "bg-background-secondary-default",
+                  )}
+                >
+                  <span className="flex size-10 shrink-0 items-center justify-center rounded-[10px] bg-accent-500/10 ring-1 ring-accent-500/15 ring-inset">
+                    <channel.icon
+                      weight="duotone"
+                      className="size-[22px] text-accent-600 dark:text-accent-400"
+                      aria-hidden
+                    />
+                  </span>
+                  <span className="flex min-w-0 flex-col">
+                    <span className="text-[14px] leading-5 font-medium text-text-primary">{channel.name}</span>
+                    <span className="truncate text-[13px] leading-5 text-text-tertiary">{channel.blurb}</span>
+                  </span>
+                </a>
+              );
+            })}
+          </div>
+          <div className="flex items-center justify-between gap-6 border-t border-separator-border bg-background-secondary-default/60 px-6 py-3.5">
+            <span className="text-[13px] leading-5 text-text-secondary">
+              Every channel lands in one shared inbox with unlimited free seats.
+            </span>
+            <a
+              href="/inbox"
+              className="inline-flex shrink-0 items-center gap-1 text-[13px] leading-5 font-medium text-text-primary hover:underline underline-offset-4"
+            >
+              Explore inbox
               <RiArrowRightLine className="size-3.5" aria-hidden />
             </a>
           </div>

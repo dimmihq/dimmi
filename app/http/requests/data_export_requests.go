@@ -13,12 +13,14 @@ package requests
 
 /*
 StoreDataExportRequest is the input of POST /data-exports. Selection
-holds ids, or filter and q, or view_id.
+holds ids, or filter and q, or view_id. Kind workspace with format zip
+exports the whole workspace and reads no selection.
 */
 type StoreDataExportRequest struct {
 	Body struct {
-		Kind         string          `json:"kind" validate:"required,oneof=conversations contacts conversation_facts"`
-		Format       string          `json:"format" validate:"required,oneof=txt pdf csv json"`
+		Kind string `json:"kind" validate:"required,oneof=conversations contacts conversation_facts workspace"`
+
+		Format       string          `json:"format" validate:"required,oneof=txt pdf csv json zip"`
 		IncludeNotes bool            `json:"include_notes,omitempty"`
 		Selection    ExportSelection `json:"selection,omitzero"`
 	}

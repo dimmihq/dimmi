@@ -77,7 +77,6 @@ type UpdateWorkspaceInput struct {
 	UndoSendSeconds  *int
 	SeenReceipts     *bool
 	SeenReceiptName  *bool
-	GIFPicker        *bool
 	TeamMentions     *bool
 
 	CustomerFacingName      *string
@@ -289,7 +288,6 @@ func inboxSettingChanges(
 		{key: "show_viewers_on_list", want: in.ShowViewers, has: w.ShowsViewersOnList()},
 		{key: "seen_receipts", want: in.SeenReceipts, has: w.ShowsSeenReceipts()},
 		{key: "seen_receipt_shows_name", want: in.SeenReceiptName, has: w.SeenReceiptShowsName()},
-		{key: "gif_picker", want: in.GIFPicker, has: w.GIFPickerOn()},
 		{key: "team_mentions_enabled", want: in.TeamMentions, has: w.TeamMentionsOn()},
 	} {
 		if flag.want == nil || *flag.want == flag.has {
