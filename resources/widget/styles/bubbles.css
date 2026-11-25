@@ -310,12 +310,28 @@
 }
 
 /*
- * The card sits on the thread's own background, so its edge and its
- * quieter text need more weight than a row in a list: a border that
- * shows, and grey text that stays readable in dark mode too.
+ * The card sits on the thread's own background, so it draws its own
+ * edge the way a BoardUI card does: a solid border on the primary
+ * surface, no shadow, and a hover that darkens the border and the fill.
+ * Its grey text and icon tile stay readable in both themes.
  */
 .article.card {
+  border: 1px solid light-dark(#e5e5e5, #404040);
+  background: var(--bg-primary);
+  box-shadow: none;
+  transition:
+    background-color 150ms ease,
+    border-color 150ms ease;
+}
+
+.article.card:is(a, button):hover {
   border-color: var(--border-button-hover);
+  background: var(--bg-primary-hover);
+}
+
+.article.card:is(a, button):focus-visible {
+  outline: 2px solid var(--border-button-active);
+  outline-offset: 2px;
 }
 
 .article .text small {
@@ -323,6 +339,7 @@
 }
 
 .article .row-icon {
+  background: light-dark(#f2f2f2, #171717);
   color: light-dark(#404040, #d4d4d4);
 }
 
