@@ -64,6 +64,11 @@ export function answer(root: ShadowRoot, sent: Sent, replied?: () => void) {
   scroll();
   connect();
   setTimeout(() => {
+    // A preview taken off the page in the meantime answers nothing: its
+    // reply would play a sound for a messenger nobody sees.
+    if (!root.isConnected) {
+      return;
+    }
     list.querySelector("[data-typing]")?.remove();
     list.insertAdjacentHTML(
       "beforeend",
