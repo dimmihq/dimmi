@@ -370,10 +370,22 @@ function golang() {
   );
   if (!res.ok) {
     failures.push(`sdk/go: apidiff failed\n${res.out}`);
-  } else if (res.stdout.trim() !== "") {
-    breaking(changesetName.go ?? "", `sdk/go (against dimmi-go ${tag})`, res.stdout.trim());
+    return;
+  }
+  const found = res.stdout.split("\n").filter((line) => line.trim() !== "" && !GENERATED_METHOD_ADDED.test(line));
+  if (found.length > 0) {
+    breaking(changesetName.go ?? "", `sdk/go (against dimmi-go ${tag})`, found.join("\n"));
   }
 }
+
+/*
+ * A new API operation adds a method to the generated client's two
+ * interfaces. apidiff calls that incompatible, since a type implementing
+ * the interface elsewhere would stop compiling, but the interfaces exist
+ * to be called, not implemented, and a new operation is the additive
+ * change the API allows. A method removed or changed is still a break.
+ */
+const GENERATED_METHOD_ADDED = /^- \.\/api\.Client(WithResponses)?Interface\.\w+: added$/;
 
 /* ---------------------------------------------------------------- PHP */
 
@@ -426,7 +438,12 @@ function php(sdk: "php" | "laravel") {
   const scratch = history(sdk, clone(repo, tag), dir, dropPathRepositories);
   const res = run(bin, ["--from=base", "--to=HEAD", "--format=markdown"], scratch);
   if (!res.ok) {
-    const found = res.out.split("\n").filter((l) => /\[BC\]|backwards-incompatible/.test(l));
+    const all = res.out.split("\n").filter((l) => l.includes("[BC]"));
+    const found = all.filter((l) => !GENERATED_LIST_GREW.test(l));
+    // Only the generated lists changed: a new operation, which is additive.
+    if (all.length > 0 && found.length === 0) {
+      return;
+    }
     breaking(
       changesetName[sdk] ?? "",
       `sdk/${sdk} (against ${repo} ${tag})`,
@@ -434,6 +451,14 @@ function php(sdk: "php" | "laravel") {
     );
   }
 }
+
+/*
+ * The generated client lists every operation and resource in two
+ * constants, so each new operation changes their values. roave reports a
+ * changed constant, but a longer list breaks nobody, and bin/generate
+ * already refuses to drop or change an entry (sdk/php/api-surface.json).
+ */
+const GENERATED_LIST_GREW = /\[BC\] Value of constant Dimmi\\Generated\\(Operations::ALL|Api::RESOURCES) changed/;
 
 /* ---------------------------------------------------------------- Python */
 
