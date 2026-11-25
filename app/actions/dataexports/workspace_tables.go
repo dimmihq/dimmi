@@ -144,7 +144,10 @@ func conversationTables() []ArchiveTable {
 			Key: []string{"conversation_id", "contact_id"},
 		},
 		{Name: "conversation_tag", About: "Tags on conversations.", Key: []string{"conversation_id", "tag_id"}},
-		{Name: "conversation_ai_values", About: "Values the AI read for each conversation.", Key: []string{"conversation_id"}},
+		{
+			Name: "conversation_ai_values", About: "Values the AI read for each conversation.",
+			Key: []string{"conversation_id"},
+		},
 		{Name: "conversation_ratings", About: "Satisfaction ratings.", Key: byID()},
 		{Name: "conversation_events", About: "Assignments, closes and reopens of conversations.", Key: byID()},
 		{
