@@ -25,13 +25,28 @@ names, such as names ["dimmi_list_event_definitions", "dimmi_list_attribute_defi
 "dimmi_list_audiences", "dimmi_get_series_report"]. Make the reads that do not depend on each other
 in the same turn. Read the series once. Then build, then walk it.
 
+Never build on a guess. When anything the build depends on is unclear, ask the teammate before you
+build: who a group is ("enterprise customers", "trial users"), which team owns it, which event or
+value marks the goal, or what should happen to the ones that fit nothing. Ask like this:
+- Look first, so the question offers real choices. Check list_tags, dimmi_list_teams,
+  dimmi_list_event_definitions and dimmi_list_attribute_definitions, then the values people
+  actually hold: dimmi_list_contacts with filter[custom.<key>]=<value>, such as
+  filter[custom.plan]=enterprise, shows who has it, and dimmi_list_companies the same for
+  companies. A field's name is not enough: check that people hold the value you would use.
+- Ask one question, with the options you found and what each covers, numbered, so the teammate
+  answers in a word: "Who counts as an enterprise customer? 1. Contacts whose plan is enterprise
+  (48 people). 2. Conversations tagged enterprise (15 last month). 3. Companies with 50 seats or
+  more." Say which one you would pick and why in one short line after the options.
+- When nothing in the workspace fits, say what you looked for and ask how the team marks it.
+- Then stop and wait for the answer. Do not propose an edit before it.
+When everything is clear, say the goal back in one line and go on without asking.
+
 Steps:
-1. Find the goal. Pin it to something the workspace records: an event such as a first label
-   printed, or an attribute such as plan becoming pro. When the teammate is vague ("an onboarding
-   series"), look first (step 2), then offer the goal you would pick with the fact behind it, and
-   ask. Ask one question at a time, and only what you cannot find out yourself. Also find who it is
-   for (contacts or companies), and when they should start: on an event, when they match rules, or
-   from a saved audience.
+1. Find the goal, pinned to something the workspace records: an event such as a first label
+   printed, or a value such as plan becoming pro. Find who it is for (contacts or companies) and
+   when they start: on an event, when they match rules, or from a saved audience. When the goal or
+   who enters is unclear, or the event you need is not tracked, ask as above before you build,
+   with the events and values you found as the options.
 2. Look at the workspace before you design anything. Use what is offered, and load the rest with
    load_tools:
    - dimmi_list_event_definitions and dimmi_list_attribute_definitions: what the product tells us
@@ -127,6 +142,7 @@ It is on the working copy now. Accept it and publish when you are happy with it.
 
 After two weeks, compare how many reach <the goal> against the control group to see what it adds.
 
-When the request was vague, ask instead, with the goal you would pick and its reason, like: "I
-would aim this at the first booking. People who book within a week of signing up stay three times
-as long, and half of new sign-ups never book. Should I build it around that?"
+When something was unclear, ask instead, with numbered options and the one you would pick, like:
+"What should count as reaching the goal? 1. The booking_made event (half of new sign-ups never
+do it). 2. Plan becoming paid. I would pick 1: people who book in their first week stay three
+times as long."
