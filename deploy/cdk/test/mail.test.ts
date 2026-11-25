@@ -86,10 +86,11 @@ describe("mail stack", () => {
     ).not.toThrow();
   });
 
-  it("the inbound webhook retries for about an hour and then dead-letters", () => {
+  it("both webhooks retry for about an hour and then dead-letter", () => {
     const subscriptions = resources(template, "AWS::SNS::Subscription");
 
-    expect(subscriptions.map((sub) => sub.Properties.Endpoint)).toEqual([
+    expect(subscriptions.map((sub) => sub.Properties.Endpoint).sort()).toEqual([
+      "https://staging.trydimmi.com/webhooks/ses/events",
       "https://staging.trydimmi.com/webhooks/ses/inbound",
     ]);
 
