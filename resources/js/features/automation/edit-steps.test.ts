@@ -1,4 +1,4 @@
-import { freshStep, withEdited, withoutStep, withStep } from "./edit-steps";
+import { freeTopic, freshStep, withEdited, withoutStep, withStep } from "./edit-steps";
 import { findStep, type Step } from "./workflows";
 
 const steps: Step[] = [
@@ -77,5 +77,16 @@ describe("freshStep", () => {
   it("starts a call with a GET and no paths", () => {
     expect(freshStep("http_request").settings).toEqual({ method: "GET", url: "" });
     expect(freshStep("http_request").paths).toBeUndefined();
+  });
+});
+
+describe("freeTopic", () => {
+  it("gives each sort step its own place for the topic", () => {
+    const first = freshStep("classify");
+    expect((first.settings as Record<string, unknown>).save_to).toBe("run.vars.topic");
+    const nested: Step = { ...freshStep("branch"), paths: [{ id: "p_x", label: "A", steps: [first] }] };
+    const second = freshStep("classify", [nested]);
+    expect((second.settings as Record<string, unknown>).save_to).toBe("run.vars.topic_2");
+    expect(freeTopic([nested, second])).toBe("run.vars.topic_3");
   });
 });

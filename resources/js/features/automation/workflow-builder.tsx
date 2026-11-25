@@ -365,7 +365,7 @@ export function WorkflowBuilder({ workspace, workflow }: { workspace: string; wo
     setInspecting(false);
   };
   const add = (path: string | null, kind: StepKind) => {
-    const fresh = freshStep(kind);
+    const fresh = freshStep(kind, draft.spec.steps);
     editSteps((steps) => withStep(steps, path, fresh));
     select(fresh.id);
   };
