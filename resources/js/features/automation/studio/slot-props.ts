@@ -2,6 +2,7 @@ import type { Series } from "@/lib/api/series";
 import type { Workflow } from "@/lib/api/workflows";
 
 import type { OperatorTry } from "./use-operator-tries";
+import type { Steps } from "./workflow-sim-words";
 
 /*
  * What every workflow slot gets: the workspace, and the workflow as the
@@ -16,6 +17,8 @@ export interface WorkflowSlotProps {
   flush?: () => Promise<void>;
   /* Operator's tries of this workflow during this visit, shown live in Simulations. */
   tries?: OperatorTry[];
+  /* The steps of Operator's open suggestion, which its tries play. */
+  suggested?: Steps;
 }
 
 /*

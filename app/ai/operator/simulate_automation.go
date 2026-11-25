@@ -173,7 +173,7 @@ func (e *Engine) simulateWorkflow(ctx context.Context, s *session, args json.Raw
 	}
 	text := workflowTryText(res)
 	if suggested {
-		text = "Played your suggested version, not the saved one.\n" + text
+		text = "This try played the change you suggested, which the teammate has not accepted yet.\n" + text
 	}
 	return result{text: text, step: Step{Tool: "simulate_workflow", Summary: "Tried the workflow"}}, nil
 }
@@ -265,7 +265,7 @@ func (e *Engine) simulateSeries(ctx context.Context, s *session, args json.RawMe
 	e.publishTry(ctx, s, withMoment(base, "finished", map[string]any{"result": trace}))
 	text := seriesTryText(trace)
 	if sim.Spec != nil {
-		text = "Walked your suggested version, not the saved one.\n" + text
+		text = "This walk followed the change you suggested, which the teammate has not accepted yet.\n" + text
 	}
 	return result{text: text, step: Step{Tool: "simulate_series", Summary: "Tried the series"}}, nil
 }

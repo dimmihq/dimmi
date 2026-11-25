@@ -25,7 +25,7 @@ import {
   RiPlayFill,
 } from "@remixicon/react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Avatar } from "@/components/base/avatar/avatar";
 import { Chip } from "@/components/base/badges/chip";
 import { Button } from "@/components/base/buttons/button";
@@ -72,7 +72,6 @@ import type { OperatorTry } from "./use-operator-tries";
 import { type LiveWfRun, useWorkflowLiveRuns } from "./use-workflow-live-runs";
 import { WorkflowSimCompare } from "./workflow-sim-compare";
 import { CheckLine, LiveWfTalk, Trace, WfTalk } from "./workflow-sim-parts";
-import { OperatorTries } from "./workflow-sim-tries";
 import {
   lined,
   liveStatus,
@@ -484,9 +483,9 @@ function DetailBar({
   name: string;
   busy: boolean;
   onBack: () => void;
-  onDelete: () => void;
+  onDelete?: () => void;
   onCompare?: () => void;
-  onRun: () => void;
+  onRun?: () => void;
 }) {
   return (
     <div className="flex h-12 shrink-0 items-center gap-2.5 ps-3 pe-3">
@@ -499,21 +498,25 @@ function DetailBar({
       />
       <span className="min-w-0 flex-1 truncate text-body-medium text-text-primary">{name}</span>
       <span className="flex shrink-0 items-center gap-1">
-        <IconButton
-          variant="quiet"
-          size="small"
-          icon={RiDeleteBinLine}
-          aria-label={`Delete ${name}`}
-          onClick={onDelete}
-        />
+        {onDelete ? (
+          <IconButton
+            variant="quiet"
+            size="small"
+            icon={RiDeleteBinLine}
+            aria-label={`Delete ${name}`}
+            onClick={onDelete}
+          />
+        ) : null}
         {onCompare ? (
           <Button variant="tertiary" size="xs" leadingIcon={RiGitPullRequestLine} disabled={busy} onClick={onCompare}>
             Compare
           </Button>
         ) : null}
-        <Button variant="tertiary" size="xs" leadingIcon={RiPlayFill} loading={busy} disabled={busy} onClick={onRun}>
-          Run
-        </Button>
+        {onRun ? (
+          <Button variant="tertiary" size="xs" leadingIcon={RiPlayFill} loading={busy} disabled={busy} onClick={onRun}>
+            Run
+          </Button>
+        ) : null}
       </span>
     </div>
   );
@@ -665,6 +668,160 @@ function Detail({
         </div>
       </ScrollArea>
     </div>
+  );
+}
+
+/*
+ * simOfTry reads one of Operator's tries as a simulation, so it shows
+ * in the list and opens the way a saved one does.
+ */
+function simOfTry(t: OperatorTry, workflow: string): WorkflowSimulation {
+  const message = t.message ?? "";
+
+  return {
+    id: t.id,
+    object: "workflow_simulation",
+    workflow_id: workflow,
+    name: nameFrom(message) || "Operator's try",
+    source_conversation_id: null,
+    persona: {},
+    messages: message ? [{ text: message }] : [],
+    action_mocks: {},
+    assertions: [],
+    scenario: t.situation ?? "",
+    draft_result: t.run.result ?? null,
+    live_result: null,
+    draft_history: null,
+    live_history: null,
+    simulated_at: null,
+    created_at: "",
+    updated_at: "",
+  };
+}
+
+/*
+ * TryDetail is one of Operator's tries, opened the way a simulation is:
+ * where it stands, the customer's situation, the chat as it plays and
+ * the steps. A try is not saved, so it has nothing to run again,
+ * delete, check or look back on.
+ */
+function TryDetail({
+  sim,
+  busy,
+  live,
+  steps,
+  sources,
+  onBack,
+}: {
+  sim: WorkflowSimulation;
+  busy: boolean;
+  live?: LiveWfRun;
+  steps: Steps;
+  sources: ChipSources;
+  onBack: () => void;
+}) {
+  const status = statusOfSim(sim, "draft", busy, live);
+
+  return (
+    <div className="flex min-h-0 flex-1 flex-col">
+      <DetailBar name={sim.name} busy={busy} onBack={onBack} />
+      <ScrollArea>
+        <div className="flex flex-col gap-6 px-4 pt-2 pb-10">
+          <span className="flex items-center gap-2">
+            <Chip variant="caption" color={status.color} className="py-0.5">
+              {status.label}
+            </Chip>
+            <span className={hint}>On the suggested version</span>
+          </span>
+          <Scenario sim={sim} readOnly onSave={async () => undefined} />
+          <div className="flex flex-col gap-6">
+            <Ran sim={sim} result={sim.draft_result} running={busy} live={live} steps={steps} sources={sources} />
+          </div>
+        </div>
+      </ScrollArea>
+    </div>
+  );
+}
+
+/*
+ * useOpensTries opens each try of Operator's as it starts, the way a new
+ * simulation opens as it runs.
+ */
+function useOpensTries(tries: OperatorTry[], open: (id: string) => void) {
+  const seen = useRef(new Set<string>());
+
+  // biome-ignore lint/correctness/useExhaustiveDependencies: reacts to new tries only.
+  useEffect(() => {
+    const fresh = tries.find((t) => !seen.current.has(t.id));
+    for (const t of tries) {
+      seen.current.add(t.id);
+    }
+    if (fresh && !fresh.done) {
+      open(fresh.id);
+    }
+  }, [tries]);
+}
+
+/* TryRows lists Operator's tries as simulations, the newest first. */
+function TryRows({
+  tries,
+  workflow,
+  onOpen,
+}: {
+  tries: OperatorTry[];
+  workflow: string;
+  onOpen: (id: string) => void;
+}) {
+  return (
+    <>
+      {[...tries].reverse().map((t) => (
+        <SimRow
+          key={t.id}
+          sim={simOfTry(t, workflow)}
+          as="draft"
+          busy={!t.done}
+          live={t.run}
+          differs={false}
+          onOpen={() => onOpen(t.id)}
+        />
+      ))}
+    </>
+  );
+}
+
+/* What each copy is called after "on the". */
+const copyWords: Record<AnswerAs, string> = { draft: "draft", live: "live version" };
+
+/* OpenedTry is the try that is open, or nothing; its steps are the suggestion's when there is one. */
+function OpenedTry({
+  t,
+  workflow,
+  steps,
+  suggested,
+  sources,
+  onBack,
+}: {
+  t: OperatorTry | undefined;
+  workflow: string;
+  steps: Steps;
+  suggested?: Steps;
+  sources: ChipSources;
+  onBack: () => void;
+}) {
+  if (!t) {
+    return null;
+  }
+
+  return (
+    <TryDetail
+      key={t.id}
+      sim={simOfTry(t, workflow)}
+      busy={!t.done}
+      live={t.run}
+      steps={suggested ?? steps}
+      sources={sources}
+      onBack={onBack}
+    />
   );
 }
 
@@ -845,13 +1002,16 @@ export function WorkflowSimulations({
   workflow,
   flush,
   tries = [],
+  suggested,
 }: {
   workspace: string;
   workflow: string;
   /* Saves the builder's unsaved changes, so a run on the draft runs what is on screen. */
   flush?: () => Promise<void>;
-  /* Operator's tries of this workflow, shown live above the saved simulations. */
+  /* Operator's tries of this workflow, listed and opened like the saved simulations. */
   tries?: OperatorTry[];
+  /* The steps of Operator's suggestion, which its tries play. */
+  suggested?: Steps;
 }) {
   const queryClient = useQueryClient();
   const { data: list = [] } = useQuery(workflowSimulationsQuery(workspace, workflow));
@@ -868,6 +1028,8 @@ export function WorkflowSimulations({
   const hasLive = Boolean(wf?.live_version_id);
   const copy = hasLive ? as : "draft";
   const opened = list.find((sim) => sim.id === openId);
+  const openedTry = tries.find((t) => t.id === openId);
+  useOpensTries(tries, setOpenId);
   const summary = summaryOf(list, copy);
 
   const run = async (ids?: string[]) => {
@@ -926,22 +1088,22 @@ export function WorkflowSimulations({
       onMocks={(mocks) => save(opened, { action_mocks: mocks }, "The answers were not saved.")}
       onCompare={hasLive ? () => setComparing(true) : undefined}
     />
-  ) : null;
-
-  const none =
-    tries.length > 0 ? (
-      <ScrollArea>
-        <OperatorTries tries={tries} steps={steps} sources={sources} />
-      </ScrollArea>
-    ) : (
-      <NoSimulations />
-    );
+  ) : (
+    <OpenedTry
+      t={openedTry}
+      workflow={workflow}
+      steps={steps}
+      suggested={suggested}
+      sources={sources}
+      onBack={() => setOpenId(null)}
+    />
+  );
 
   const all = (
     <>
       <div className="flex h-11 shrink-0 items-center justify-between gap-2 ps-4 pe-3">
         <p className={cx(hint, "min-w-0 truncate tabular-nums")}>
-          {summary} on the {copy === "draft" ? "draft" : "live version"}
+          {summary} on the {copyWords[copy]}
         </p>
         <span className="flex shrink-0 items-center gap-1">
           <Button
@@ -957,8 +1119,8 @@ export function WorkflowSimulations({
         </span>
       </div>
       <ScrollArea>
-        <OperatorTries tries={tries} steps={steps} sources={sources} />
         <ul className={cx("mx-4 mt-1 mb-6 flex flex-col gap-0.5 p-1", card)}>
+          <TryRows tries={tries} workflow={workflow} onOpen={setOpenId} />
           {list.map((sim) => (
             <SimRow
               key={sim.id}
@@ -975,11 +1137,12 @@ export function WorkflowSimulations({
     </>
   );
 
-  const listView = list.length === 0 ? none : all;
+  const listView = list.length + tries.length === 0 ? <NoSimulations /> : all;
+  const showing = (opened ?? openedTry)?.id;
 
   return (
     <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden">
-      {hasLive && !opened ? (
+      {hasLive && !showing ? (
         <div className="shrink-0 px-4 pt-3">
           <SegmentedControl
             aria-label="Run against"
@@ -994,8 +1157,10 @@ export function WorkflowSimulations({
           </SegmentedControl>
         </div>
       ) : null}
-      <Swap view={opened ? opened.id : "list"} forward={opened !== undefined} className="flex min-h-0 flex-1 flex-col">
-        {detail ?? (
+      <Swap view={showing ?? "list"} forward={showing !== undefined} className="flex min-h-0 flex-1 flex-col">
+        {opened || openedTry ? (
+          detail
+        ) : (
           <>
             {listView}
             <NewSimulation

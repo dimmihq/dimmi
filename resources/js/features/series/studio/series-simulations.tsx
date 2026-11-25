@@ -145,7 +145,7 @@ function WalkView({ walk, spec }: { walk: Walk; spec: Parameters<typeof journey>
     <li className="flex flex-col gap-4">
       <div className="ms-auto flex max-w-[85%] flex-col items-end gap-1">
         <span className={hint}>
-          {walk.operator ? "Operator tried: " : ""}How {walk.name} behaves
+          How {walk.name} behaves
         </span>
         <p className={cx(fromCustomer, "max-w-full")}>{walk.scenario || "Does nothing with the messages"}</p>
       </div>

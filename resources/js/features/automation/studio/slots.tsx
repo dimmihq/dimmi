@@ -41,8 +41,14 @@ export const workflowSlots: {
   history: ({ workspace, workflow, onAdopt }) => (
     <WorkflowHistory workspace={workspace} workflow={workflow.id} onRestored={onAdopt} />
   ),
-  simulations: ({ workspace, workflow, flush, tries }) => (
-    <WorkflowSimulations workspace={workspace} workflow={workflow.id} flush={flush} tries={tries} />
+  simulations: ({ workspace, workflow, flush, tries, suggested }) => (
+    <WorkflowSimulations
+      workspace={workspace}
+      workflow={workflow.id}
+      flush={flush}
+      tries={tries}
+      suggested={suggested}
+    />
   ),
   operator: ({ workspace, workflow, onClose, className }) => (
     <WorkflowOperatorPanel workspace={workspace} workflow={workflow.id} onClose={onClose} className={className} />

@@ -145,6 +145,7 @@ export function useWorkflowRequest(
 
   return {
     request,
+    proposed,
     review: proposed && current ? reviewOf(current, proposed) : null,
     accept: () => deciding.mutate(true),
     decline: () => deciding.mutate(false),
