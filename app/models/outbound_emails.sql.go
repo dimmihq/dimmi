@@ -205,6 +205,25 @@ func (q *Queries) FindOutboundEmailByMessageIDHeader(ctx context.Context, arg Fi
 	return i, err
 }
 
+const findOutboundEmailWorkspace = `-- name: FindOutboundEmailWorkspace :one
+SELECT r.workspace_id::uuid AS workspace_id
+FROM email_outbound_workspace($1::text, $2::text) r
+`
+
+type FindOutboundEmailWorkspaceParams struct {
+	Transport         string `json:"transport"`
+	ProviderMessageID string `json:"provider_message_id"`
+}
+
+// FindOutboundEmailWorkspace finds whose email the sending provider's
+// id belongs to, across every workspace, before any workspace is known.
+func (q *Queries) FindOutboundEmailWorkspace(ctx context.Context, arg FindOutboundEmailWorkspaceParams) (ids.UUID, error) {
+	row := q.db.QueryRow(ctx, findOutboundEmailWorkspace, arg.Transport, arg.ProviderMessageID)
+	var workspace_id ids.UUID
+	err := row.Scan(&workspace_id)
+	return workspace_id, err
+}
+
 const findQuotableMessage = `-- name: FindQuotableMessage :one
 SELECT m.body, m.body_format, m.created_at, c.name, c.email
 FROM messages AS m
@@ -239,6 +258,52 @@ func (q *Queries) FindQuotableMessage(ctx context.Context, arg FindQuotableMessa
 		&i.CreatedAt,
 		&i.Name,
 		&i.Email,
+	)
+	return i, err
+}
+
+const lockOutboundEmailByProviderMessageID = `-- name: LockOutboundEmailByProviderMessageID :one
+SELECT id, workspace_id, message_id, conversation_id, email_address_id, kind, from_address, to_addresses, cc_addresses, bcc_addresses, subject, message_id_header, transport, provider_message_id, status, recipient_statuses, size_bytes, attempts, last_error, metadata, sent_at, created_at, updated_at FROM outbound_emails
+WHERE workspace_id = $1 AND transport = $2 AND provider_message_id = $3::text
+FOR UPDATE
+`
+
+type LockOutboundEmailByProviderMessageIDParams struct {
+	WorkspaceID       ids.UUID `json:"workspace_id"`
+	Transport         string   `json:"transport"`
+	ProviderMessageID string   `json:"provider_message_id"`
+}
+
+// LockOutboundEmailByProviderMessageID returns the email the sending
+// provider knows by the id, held so two reports about it are recorded
+// one after the other.
+func (q *Queries) LockOutboundEmailByProviderMessageID(ctx context.Context, arg LockOutboundEmailByProviderMessageIDParams) (OutboundEmail, error) {
+	row := q.db.QueryRow(ctx, lockOutboundEmailByProviderMessageID, arg.WorkspaceID, arg.Transport, arg.ProviderMessageID)
+	var i OutboundEmail
+	err := row.Scan(
+		&i.ID,
+		&i.WorkspaceID,
+		&i.MessageID,
+		&i.ConversationID,
+		&i.EmailAddressID,
+		&i.Kind,
+		&i.FromAddress,
+		&i.ToAddresses,
+		&i.CcAddresses,
+		&i.BccAddresses,
+		&i.Subject,
+		&i.MessageIDHeader,
+		&i.Transport,
+		&i.ProviderMessageID,
+		&i.Status,
+		&i.RecipientStatuses,
+		&i.SizeBytes,
+		&i.Attempts,
+		&i.LastError,
+		&i.Metadata,
+		&i.SentAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
 	)
 	return i, err
 }

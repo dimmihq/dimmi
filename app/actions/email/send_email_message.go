@@ -67,6 +67,8 @@ type SendEmailMessage struct {
 	Stamps    inbound.Stamps
 	Transport string
 	Senders   *Domains
+
+	Reputation *Reputation
 }
 
 /*
@@ -97,6 +99,7 @@ func (a *SendEmailMessage) Send(
 
 	message := inbound.Compose(out.draft)
 	message.Tags = map[string]string{"stream": "customer", "kind": out.row.Kind}
+	message.ConfigurationSet = a.Config.Sending.SES.ConfigurationSet
 
 	mailer, err := a.Mail.Mailer(a.Config.Mailer)
 	if err != nil {
@@ -280,9 +283,14 @@ func (a *SendEmailMessage) record(ctx context.Context, out *outbound, res mail.S
 			}
 		}
 
-		return q.RecordEmailAddressOutbound(ctx, models.RecordEmailAddressOutboundParams{
+		err = q.RecordEmailAddressOutbound(ctx, models.RecordEmailAddressOutboundParams{
 			Now: a.Clock.Now(), WorkspaceID: out.address.WorkspaceID, ID: out.address.ID,
 		})
+		if err != nil {
+			return err
+		}
+
+		return a.Reputation.Sent(ctx, q, out.row.WorkspaceID)
 	})
 }
 

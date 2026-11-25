@@ -1,0 +1,23 @@
+package accounts
+
+import "github.com/dimmihq/dimmi/framework/i18n"
+
+/*
+EmailSendingPaused tells an owner or admin that the workspace's
+broadcasts, series and rating emails paused because too much of its
+email bounced or was reported as spam, how much, and where to resume.
+*/
+
+templ EmailSendingPaused(name, workspace, reason string, sent, failed int64, settingsURL string) {
+	@layout(i18n.T(ctx, "mail.email_sending_paused.subject", i18n.Args{"workspace": workspace})) {
+		@greeting(name)
+		<p>{ i18n.T(ctx, "mail.email_sending_paused.intro", i18n.Args{"workspace": workspace}) }</p>
+		if reason == "complaint_rate" {
+			<p>{ i18n.T(ctx, "mail.email_sending_paused.complaints", i18n.Args{"failed": failed, "sent": sent}) }</p>
+		} else {
+			<p>{ i18n.T(ctx, "mail.email_sending_paused.bounces", i18n.Args{"failed": failed, "sent": sent}) }</p>
+		}
+		<p>{ i18n.T(ctx, "mail.email_sending_paused.next", nil) }</p>
+		@button(settingsURL, i18n.T(ctx, "mail.email_sending_paused.action", nil))
+	}
+}

@@ -57,6 +57,7 @@ func bootBroadcasts(a *app.App) error {
 			}, Mailer: &email.SendBroadcastEmail{
 				DB: a.DB, Clock: a.Clock, Mail: a.Mail, Config: cfg, Senders: a.EmailDomains,
 				Stamps: inbound.NewStamps(a.DerivedKey(stampsKeyPurpose)), Transport: customerTransport(a),
+				Reputation: a.EmailReputation,
 			}},
 			broadcasts.ChannelChat: messenger,
 			broadcasts.ChannelPost: messenger,

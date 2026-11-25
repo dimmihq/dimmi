@@ -68,3 +68,148 @@ func (q *Queries) FindEmailSendingProfile(ctx context.Context, workspaceID ids.U
 	)
 	return i, err
 }
+
+const listSendingAlertRecipients = `-- name: ListSendingAlertRecipients :many
+SELECT u.id, u.name, u.email, u.email_verified_at, u.password_hash, u.two_factor_confirmed_at, u.avatar_path, u.locale, u.timezone, u.last_seen_at, u.created_at, u.updated_at, u.deleted_at, u.password_changed_at, u.risk_flags, u.created_via, u.preferences, u.managed_by_organization_id, u.terms_version, u.terms_accepted_at, u.terms_accepted_ip, u.terms_accepted_user_agent FROM workspace_members m
+JOIN users u ON u.id = m.user_id
+WHERE m.workspace_id = $1 AND m.role IN ('owner', 'admin') AND m.status = 'active'
+ORDER BY m.created_at, m.id
+`
+
+type ListSendingAlertRecipientsRow struct {
+	User User `json:"user"`
+}
+
+// ListSendingAlertRecipients returns the active owners and admins who
+// hear that the workspace's sending paused.
+func (q *Queries) ListSendingAlertRecipients(ctx context.Context, workspaceID ids.UUID) ([]ListSendingAlertRecipientsRow, error) {
+	rows, err := q.db.Query(ctx, listSendingAlertRecipients, workspaceID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListSendingAlertRecipientsRow
+	for rows.Next() {
+		var i ListSendingAlertRecipientsRow
+		if err := rows.Scan(
+			&i.User.ID,
+			&i.User.Name,
+			&i.User.Email,
+			&i.User.EmailVerifiedAt,
+			&i.User.PasswordHash,
+			&i.User.TwoFactorConfirmedAt,
+			&i.User.AvatarPath,
+			&i.User.Locale,
+			&i.User.Timezone,
+			&i.User.LastSeenAt,
+			&i.User.CreatedAt,
+			&i.User.UpdatedAt,
+			&i.User.DeletedAt,
+			&i.User.PasswordChangedAt,
+			&i.User.RiskFlags,
+			&i.User.CreatedVia,
+			&i.User.Preferences,
+			&i.User.ManagedByOrganizationID,
+			&i.User.TermsVersion,
+			&i.User.TermsAcceptedAt,
+			&i.User.TermsAcceptedIp,
+			&i.User.TermsAcceptedUserAgent,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const pauseEmailSending = `-- name: PauseEmailSending :one
+INSERT INTO email_sending_profiles (workspace_id, status, paused_at, paused_reason, created_at, updated_at)
+VALUES ($1, 'paused', $2::timestamptz, $3, $2::timestamptz, $2::timestamptz)
+ON CONFLICT (workspace_id) DO UPDATE
+SET status = 'paused', paused_at = excluded.paused_at, paused_reason = excluded.paused_reason,
+    updated_at = excluded.updated_at
+WHERE email_sending_profiles.status <> 'paused'
+RETURNING workspace_id, status, paused_at, paused_reason, daily_limit, hourly_limit, ses_tenant_name, created_at, updated_at
+`
+
+type PauseEmailSendingParams struct {
+	WorkspaceID ids.UUID  `json:"workspace_id"`
+	Now         time.Time `json:"now"`
+	Reason      *string   `json:"reason"`
+}
+
+// PauseEmailSending pauses the workspace's sending for the reason. A
+// workspace paused already returns no row, so it is paused, and its
+// people told, once.
+func (q *Queries) PauseEmailSending(ctx context.Context, arg PauseEmailSendingParams) (EmailSendingProfile, error) {
+	row := q.db.QueryRow(ctx, pauseEmailSending, arg.WorkspaceID, arg.Now, arg.Reason)
+	var i EmailSendingProfile
+	err := row.Scan(
+		&i.WorkspaceID,
+		&i.Status,
+		&i.PausedAt,
+		&i.PausedReason,
+		&i.DailyLimit,
+		&i.HourlyLimit,
+		&i.SesTenantName,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const pauseSendingEmailBroadcasts = `-- name: PauseSendingEmailBroadcasts :execrows
+UPDATE broadcasts SET status = 'paused', pause_reason = $1, updated_at = $2::timestamptz
+WHERE workspace_id = $3 AND channel = 'email' AND status = 'sending' AND deleted_at IS NULL
+`
+
+type PauseSendingEmailBroadcastsParams struct {
+	Reason      *string   `json:"reason"`
+	Now         time.Time `json:"now"`
+	WorkspaceID ids.UUID  `json:"workspace_id"`
+}
+
+// PauseSendingEmailBroadcasts pauses the workspace's email broadcasts
+// that are going out, since its sending as a whole paused. Each waits
+// for a teammate to resume it.
+func (q *Queries) PauseSendingEmailBroadcasts(ctx context.Context, arg PauseSendingEmailBroadcastsParams) (int64, error) {
+	result, err := q.db.Exec(ctx, pauseSendingEmailBroadcasts, arg.Reason, arg.Now, arg.WorkspaceID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
+const resumeEmailSending = `-- name: ResumeEmailSending :one
+UPDATE email_sending_profiles
+SET status = 'active', paused_at = NULL, paused_reason = NULL, updated_at = $1::timestamptz
+WHERE workspace_id = $2 AND status = 'paused'
+RETURNING workspace_id, status, paused_at, paused_reason, daily_limit, hourly_limit, ses_tenant_name, created_at, updated_at
+`
+
+type ResumeEmailSendingParams struct {
+	Now         time.Time `json:"now"`
+	WorkspaceID ids.UUID  `json:"workspace_id"`
+}
+
+// ResumeEmailSending lets a paused workspace send again. A workspace
+// that is not paused returns no row.
+func (q *Queries) ResumeEmailSending(ctx context.Context, arg ResumeEmailSendingParams) (EmailSendingProfile, error) {
+	row := q.db.QueryRow(ctx, resumeEmailSending, arg.Now, arg.WorkspaceID)
+	var i EmailSendingProfile
+	err := row.Scan(
+		&i.WorkspaceID,
+		&i.Status,
+		&i.PausedAt,
+		&i.PausedReason,
+		&i.DailyLimit,
+		&i.HourlyLimit,
+		&i.SesTenantName,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
