@@ -15,10 +15,6 @@ schemaTextsFromCatalogEntry returns the texts from CatalogEntry on.
 func schemaTextsFromCatalogEntry() map[string]map[string]string {
 	return map[string]map[string]string{
 		"CatalogEntry": {
-			"input_per_mtok": "Price in US dollars per million input tokens, as a decimal string. Null " +
-				"when the price list does not know this model.",
-			"output_per_mtok": "Price in US dollars per million output tokens, as a decimal string. " +
-				"Null when the price list does not know this model.",
 			"suggested": "The jobs this model is suggested for: any of answer, classifier and " +
 				"fallback.",
 		},

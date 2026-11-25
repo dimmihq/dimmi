@@ -135,6 +135,10 @@ func moreNestedTextsFromUpdateDraft() map[string]map[string]string {
 				"given, such as [\"ada@example.com\"].",
 		},
 		"update_email_address": {
+			"settings.away_reply": "true answers a new email that arrives outside office hours once, saying " +
+				"when the team is back; false sends nothing. New addresses start with false.",
+			"settings.away_reply_text": "What the away reply says, at most 1000 characters. {{reply_time}} " +
+				"becomes when the team is back.",
 			"settings.brand_color": "Color used in branded replies, as # and six hex digits, such as #10b981. " +
 				"Only used when template is branded.",
 			"settings.bulk_mail_handling": "What happens to bulk mail such as newsletters that starts a new " +

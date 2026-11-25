@@ -30,11 +30,9 @@ func schemaTextsFromOperatorRoutine() map[string]map[string]string {
 			"last_run_at":              "When it last ran. Null before the first run.",
 			"last_success_at":          "When it last ran without failing. Null when it never has.",
 			"max_consecutive_failures": "How many failed runs in a row pause it, from 1 to 10.",
-			"month_spend_micros": "What its runs cost this month, in micros, millionths of the billing " +
-				"currency unit.",
-			"name":        "Name of the routine, up to 120 characters.",
-			"next_run_at": "When it runs next. Null when no run is scheduled.",
-			"next_runs":   "Its next three runs, soonest first. Empty when none are due.",
+			"name":                     "Name of the routine, up to 120 characters.",
+			"next_run_at":              "When it runs next. Null when no run is scheduled.",
+			"next_runs":                "Its next three runs, soonest first. Empty when none are due.",
 			"notify_policy": "When it reports a run: on_findings (only when it suggested something), " +
 				"always or on_error_only.",
 			"owner_id": "Id of the teammate it runs as, with their access narrowed (starts with mem_). " +
@@ -86,11 +84,10 @@ func schemaTextsFromOperatorRoutineAndOperatorRoutineCounts() map[string]map[str
 			"repositories":    "The repositories it reads. Empty when none are named.",
 		},
 		"OperatorRoutineRun": {
-			"ai_run_id": "Id of the AI run behind it (starts with air_), for its steps and cost. Null " +
+			"ai_run_id": "Id of the AI run behind it (starts with air_), for its steps. Null " +
 				"when it never started one.",
 			"changesets_count": "How many changesets the run suggested.",
 			"completed_at":     "When the run ended. Null while queued or running.",
-			"cost_micros":      "What the run cost, in micros, millionths of the billing currency unit.",
 		},
 	}
 }
@@ -217,11 +214,8 @@ func schemaTextsFromOperatorSuggestionOutcome() map[string]map[string]string {
 			"title": "Title of the thread, up to 200 characters. May be empty.",
 		},
 		"OperatorUsage": {
-			"agent_cost_micros": "The whole AI agent's spend that month, the customer-facing agent's " +
-				"and Operator's together, which the spend cap holds, in micros, millionths of the billing " +
-				"currency unit.",
-			"by_member": "Operator's runs and cost that month for each teammate.",
-			"by_model":  "Operator's cost and calls that month for each model.",
+			"by_member": "Operator's runs that month for each teammate.",
+			"by_model":  "Operator's calls that month for each model.",
 		},
 	}
 }
@@ -233,22 +227,18 @@ func schemaTextsFromOperatorUsage() map[string]map[string]string {
 	//nolint:gosec // words about secrets, never a secret
 	return map[string]map[string]string{
 		"OperatorUsage": {
-			"by_purpose": "Operator's runs and cost that month by why they ran: ask, brief, triage or " +
+			"by_purpose": "Operator's runs that month by why they ran: ask, brief, triage or " +
 				"routine.",
-			"by_routine": "Operator's runs and cost that month for each routine.",
-			"changesets": "How many of the month's changesets ended in each status.",
-			"cost_micros": "What Operator cost that month, in micros, millionths of the billing " +
-				"currency unit.",
-			"daily":        "Operator's cost and runs for each day of the month.",
-			"failed_count": "How many of Operator's runs that month failed.",
-			"input_tokens": "Tokens Operator sent to models that month.",
-			"monthly_spend_cap_micros": "The AI agent's monthly spend cap, in micros, millionths of " +
-				"the billing currency unit. Null when no cap is set.",
+			"by_routine":    "Operator's runs that month for each routine.",
+			"changesets":    "How many of the month's changesets ended in each status.",
+			"daily":         "Operator's runs for each day of the month.",
+			"failed_count":  "How many of Operator's runs that month failed.",
+			"input_tokens":  "Tokens Operator sent to models that month.",
 			"output_tokens": "Tokens models wrote back for Operator that month.",
 			"period_start": "First day of the month these numbers cover, as YYYY-MM-DD, such as " +
 				"2026-11-01.",
-			"recent": "Operator's latest runs, each with why it ran, for whom, how it ended and what " +
-				"it cost.",
+			"recent": "Operator's latest runs, each with why it ran, for whom and how it " +
+				"ended.",
 			"runs_count": "How many times Operator ran that month.",
 		},
 		"OperatorUsageChangesets": {
@@ -256,15 +246,11 @@ func schemaTextsFromOperatorUsage() map[string]map[string]string {
 			"status": "The changeset status counted: pending, applied, declined, reverted or failed.",
 		},
 		"OperatorUsageMember": {
-			"cost_micros": "What Operator's runs for this teammate cost that month, in micros, " +
-				"millionths of the billing currency unit.",
 			"member_id":  "Id of the teammate (starts with mem_).",
 			"name":       "The teammate's name.",
 			"runs_count": "How many times Operator ran for this teammate that month.",
 		},
 		"OperatorUsagePurpose": {
-			"cost_micros": "What the runs for this purpose cost that month, in micros, millionths of " +
-				"the billing currency unit.",
 			"purpose": "Why the runs happened: ask (a teammate asked), brief, triage or routine.",
 		},
 	}
@@ -280,8 +266,6 @@ func schemaTextsFromOperatorUsagePurpose() map[string]map[string]string {
 			"runs_count": "How many runs happened for this purpose that month.",
 		},
 		"OperatorUsageRoutine": {
-			"cost_micros": "What this routine's runs cost that month, in micros, millionths of the " +
-				"billing currency unit.",
 			"name":       "Name of the routine.",
 			"routine_id": "Id of the routine (starts with ort_).",
 			"runs_count": "How many times this routine ran that month.",
@@ -291,8 +275,7 @@ func schemaTextsFromOperatorUsagePurpose() map[string]map[string]string {
 				"when it was not about one.",
 			"conversation_number": "Number of the conversation the run was about. Null when it was not " +
 				"about one.",
-			"cost_micros": "What the run cost, in micros, millionths of the billing currency unit.",
-			"latency_ms":  "How long the run took, in milliseconds. Null when not measured.",
+			"latency_ms": "How long the run took, in milliseconds. Null when not measured.",
 			"member_name": "Name of the teammate the run was for. Empty when there is none, as for a " +
 				"routine.",
 			"purpose": "Why it ran: ask, brief, triage or routine.",

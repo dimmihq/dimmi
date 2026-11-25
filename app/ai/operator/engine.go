@@ -149,7 +149,7 @@ var (
 	ErrNoModel  = fault.New(fault.Conflict, "operator_no_model",
 		"Operator needs an AI connection. Connect one in Settings, AI.")
 	ErrCapped = fault.New(fault.Conflict, "ai_spend_capped",
-		"This month's AI spend reached its cap, so Operator is paused until the cap is raised.")
+		"This month's spend reached the workspace's cap, so Operator is paused until the cap is raised.")
 )
 
 /*

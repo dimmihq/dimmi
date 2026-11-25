@@ -187,8 +187,8 @@ export function sourcesQuery(workspace: string) {
 }
 
 /*
- * KnowledgeUsage is the month's knowledge usage: what each source cost
- * to embed and to crawl, in millionths of a dollar.
+ * KnowledgeUsage is the month's knowledge usage: what each source took
+ * to embed and to crawl.
  */
 export interface KnowledgeUsageLine {
   source_id: string | null;
@@ -199,14 +199,10 @@ export interface KnowledgeUsageLine {
   estimated_tokens: number;
   browser_ms: number;
   requests: number;
-  cost_micros: number;
-  unpriced: boolean;
 }
 
 export interface KnowledgeUsage {
   period_start: string;
-  cost_micros: number;
-  unpriced: boolean;
   lines: KnowledgeUsageLine[];
 }
 

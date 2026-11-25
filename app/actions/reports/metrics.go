@@ -111,7 +111,7 @@ func (r reader) closedFigures(ctx context.Context, group string) ([]values, erro
 /*
 startedFigures reads the conversations started in the range: how many,
 how many the AI answered in, and of those how many it handed off, how
-many it resolved, how many confirmed, and their cost.
+many it resolved, and how many confirmed.
 */
 func (r reader) startedFigures(ctx context.Context, group string) ([]values, error) {
 	var s statement
@@ -120,11 +120,10 @@ func (r reader) startedFigures(ctx context.Context, group string) ([]values, err
 	f := figures{from: fromFacts, dated: "f.started_at", cols: fmt.Sprintf(
 		"count(*)::float8, count(*) FILTER (WHERE f.ai_involved)::float8, "+
 			"count(*) FILTER (WHERE f.ai_involved AND f.ai_handed_off_at IS NOT NULL)::float8, "+
-			"count(*) FILTER (WHERE %[1]s)::float8, count(*) FILTER (WHERE %[1]s AND f.ai_confirmed)::float8, "+
-			"COALESCE(sum(f.ai_cost_micros), 0)::float8", resolved,
+			"count(*) FILTER (WHERE %[1]s)::float8, count(*) FILTER (WHERE %[1]s AND f.ai_confirmed)::float8", resolved,
 	)}
 
-	return r.bound(s).read(ctx, f, group, 6)
+	return r.bound(s).read(ctx, f, group, 5)
 }
 
 /*

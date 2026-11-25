@@ -2782,7 +2782,7 @@
             ]
           },
           "monthly_spend_cap_micros": {
-            "description": "Most the workspace's AI may spend a month, in millionths of a US dollar. Null when there is no cap.",
+            "description": "Most the workspace may spend on dimmi in a month, in millionths of a US dollar. Null when there is no cap.",
             "format": "int64",
             "type": [
               "integer",
@@ -2840,7 +2840,7 @@
             "type": "string"
           },
           "monthly_cap_usd": {
-            "description": "Most the workspace's agents may spend a month, in US dollars, 0 to 100000, such as 250. 0 or null means no cap. Raising it lifts a pause the old cap caused.",
+            "description": "Most the workspace may spend on dimmi in a month, in US dollars, 0 to 100000, such as 250. 0 or null means no cap. Raising it lifts a pause the old cap caused.",
             "format": "double",
             "maximum": 100000,
             "minimum": 0,
@@ -3429,11 +3429,6 @@
               "null"
             ]
           },
-          "cost_micros": {
-            "description": "What the run cost in model calls, in millionths of a US dollar (1000000 is $1).",
-            "format": "int64",
-            "type": "integer"
-          },
           "created_at": {
             "description": "When it was created, as an RFC 3339 time, such as 2026-01-31T09:00:00Z.",
             "format": "date-time",
@@ -3559,7 +3554,6 @@
           "answer_message_id",
           "input_tokens",
           "output_tokens",
-          "cost_micros",
           "latency_ms",
           "first_token_ms",
           "prompt_version",
@@ -3574,11 +3568,6 @@
       "AiRunStep": {
         "additionalProperties": false,
         "properties": {
-          "cost_micros": {
-            "description": "What this step cost, in millionths of a US dollar (1000000 is $1).",
-            "format": "int64",
-            "type": "integer"
-          },
           "error_kind": {
             "description": "The kind of failure when the step failed, such as auth, quota, rate_limited, overloaded, timeout or network. Null when it did not fail.",
             "type": [
@@ -3670,7 +3659,6 @@
           "first_token_ms",
           "input_tokens",
           "output_tokens",
-          "cost_micros",
           "request",
           "response"
         ],
@@ -3685,7 +3673,7 @@
             "type": "integer"
           },
           "by_model": {
-            "description": "The month's spend and call count for each model. Empty when there were no calls.",
+            "description": "The month's call count for each model. Empty when there were no calls.",
             "items": {
               "$ref": "#/components/schemas/AiUsageModel"
             },
@@ -3717,13 +3705,8 @@
               "null"
             ]
           },
-          "cost_micros": {
-            "description": "What the agent cost this month, in millionths of a US dollar (1000000 is $1).",
-            "format": "int64",
-            "type": "integer"
-          },
           "daily": {
-            "description": "Cost and runs for each day of the month, days in UTC.",
+            "description": "Runs for each day of the month, days in UTC.",
             "items": {
               "$ref": "#/components/schemas/AiUsageDay"
             },
@@ -3741,14 +3724,6 @@
             "description": "Tokens sent to the models this month.",
             "format": "int64",
             "type": "integer"
-          },
-          "monthly_spend_cap_micros": {
-            "description": "The agent's monthly spending cap, in millionths of a US dollar. Null when there is no cap.",
-            "format": "int64",
-            "type": [
-              "integer",
-              "null"
-            ]
           },
           "output_tokens": {
             "description": "Tokens the models wrote this month.",
@@ -3777,7 +3752,6 @@
         },
         "required": [
           "period_start",
-          "cost_micros",
           "input_tokens",
           "cached_input_tokens",
           "output_tokens",
@@ -3786,7 +3760,6 @@
           "unknown_count",
           "handoff_count",
           "silent_count",
-          "monthly_spend_cap_micros",
           "capped_at",
           "daily",
           "by_model",
@@ -3797,11 +3770,6 @@
       "AiUsageDay": {
         "additionalProperties": false,
         "properties": {
-          "cost_micros": {
-            "description": "What the agent cost that day, in millionths of a US dollar.",
-            "format": "int64",
-            "type": "integer"
-          },
           "day": {
             "description": "The day in UTC, as YYYY-MM-DD, such as 2026-11-23.",
             "type": "string"
@@ -3814,7 +3782,6 @@
         },
         "required": [
           "day",
-          "cost_micros",
           "runs_count"
         ],
         "type": "object"
@@ -3827,11 +3794,6 @@
             "format": "int64",
             "type": "integer"
           },
-          "cost_micros": {
-            "description": "What this model cost in the month, in millionths of a US dollar.",
-            "format": "int64",
-            "type": "integer"
-          },
           "model": {
             "description": "Id of the model.",
             "type": "string"
@@ -3839,7 +3801,6 @@
         },
         "required": [
           "model",
-          "cost_micros",
           "calls"
         ],
         "type": "object"
@@ -6511,13 +6472,6 @@
       "CatalogEntry": {
         "additionalProperties": false,
         "properties": {
-          "cached_input_per_mtok": {
-            "description": "Price in US dollars per million cached input tokens, as a decimal string. Null when the price list does not know this model.",
-            "type": [
-              "string",
-              "null"
-            ]
-          },
           "context_tokens": {
             "description": "The size of the model's context window, in tokens.",
             "format": "int64",
@@ -6535,20 +6489,6 @@
             "description": "The id of this record. Send it wherever an endpoint asks for this record; never use its name or title in its place.",
             "type": "string"
           },
-          "input_per_mtok": {
-            "description": "Price in US dollars per million input tokens, as a decimal string. Null when the price list does not know this model.",
-            "type": [
-              "string",
-              "null"
-            ]
-          },
-          "output_per_mtok": {
-            "description": "Price in US dollars per million output tokens, as a decimal string. Null when the price list does not know this model.",
-            "type": [
-              "string",
-              "null"
-            ]
-          },
           "suggested": {
             "description": "The jobs this model is suggested for: any of answer, classifier and fallback.",
             "items": {
@@ -6565,10 +6505,7 @@
           "display_name",
           "family",
           "suggested",
-          "context_tokens",
-          "input_per_mtok",
-          "output_per_mtok",
-          "cached_input_per_mtok"
+          "context_tokens"
         ],
         "type": "object"
       },
@@ -23464,13 +23401,8 @@
       "KnowledgeUsage": {
         "additionalProperties": false,
         "properties": {
-          "cost_micros": {
-            "description": "The month's total cost in millionths of a US dollar; 1500000 is $1.50.",
-            "format": "int64",
-            "type": "integer"
-          },
           "lines": {
-            "description": "The month's usage per source and kind, the most costly first.",
+            "description": "The month's usage per source and kind, the largest first.",
             "items": {
               "$ref": "#/components/schemas/KnowledgeUsageLine"
             },
@@ -23486,17 +23418,11 @@
           "period_start": {
             "description": "The first day of the month the usage is for, in UTC, written YYYY-MM-DD, such as 2026-11-01.",
             "type": "string"
-          },
-          "unpriced": {
-            "description": "True when part of the usage has no known price, so the cost is lower than the real one.",
-            "type": "boolean"
           }
         },
         "required": [
           "object",
           "period_start",
-          "cost_micros",
-          "unpriced",
           "lines"
         ],
         "type": "object"
@@ -23506,11 +23432,6 @@
         "properties": {
           "browser_ms": {
             "description": "Browser time spent reading pages for this line, in milliseconds.",
-            "format": "int64",
-            "type": "integer"
-          },
-          "cost_micros": {
-            "description": "This line's cost in millionths of a US dollar; 1500000 is $1.50.",
             "format": "int64",
             "type": "integer"
           },
@@ -23547,10 +23468,6 @@
           "source_type": {
             "description": "The kind of that source, such as website or notion.",
             "type": "string"
-          },
-          "unpriced": {
-            "description": "True when part of this line's usage has no known price.",
-            "type": "boolean"
           }
         },
         "required": [
@@ -23561,9 +23478,7 @@
           "input_tokens",
           "estimated_tokens",
           "browser_ms",
-          "requests",
-          "cost_micros",
-          "unpriced"
+          "requests"
         ],
         "type": "object"
       },
@@ -26528,11 +26443,6 @@
             "format": "int32",
             "type": "integer"
           },
-          "month_spend_micros": {
-            "description": "What its runs cost this month, in micros, millionths of the billing currency unit.",
-            "format": "int64",
-            "type": "integer"
-          },
           "name": {
             "description": "Name of the routine, up to 120 characters.",
             "type": "string"
@@ -26637,7 +26547,6 @@
           "owner_id",
           "inbox_ids",
           "scope",
-          "month_spend_micros",
           "suggestions",
           "notify_policy",
           "delivery",
@@ -26854,7 +26763,7 @@
         "additionalProperties": false,
         "properties": {
           "ai_run_id": {
-            "description": "Id of the AI run behind it (starts with air_), for its steps and cost. Null when it never started one.",
+            "description": "Id of the AI run behind it (starts with air_), for its steps. Null when it never started one.",
             "type": [
               "string",
               "null"
@@ -26872,11 +26781,6 @@
               "string",
               "null"
             ]
-          },
-          "cost_micros": {
-            "description": "What the run cost, in micros, millionths of the billing currency unit.",
-            "format": "int64",
-            "type": "integer"
           },
           "created_at": {
             "description": "When it was created, as an RFC 3339 time, such as 2026-01-31T09:00:00Z.",
@@ -27005,7 +26909,6 @@
           "changesets_count",
           "suggestions_waiting",
           "read",
-          "cost_micros",
           "notified",
           "delivery_results",
           "steps",
@@ -27432,13 +27335,8 @@
       "OperatorUsage": {
         "additionalProperties": false,
         "properties": {
-          "agent_cost_micros": {
-            "description": "The whole AI agent's spend that month, the customer-facing agent's and Operator's together, which the spend cap holds, in micros, millionths of the billing currency unit.",
-            "format": "int64",
-            "type": "integer"
-          },
           "by_member": {
-            "description": "Operator's runs and cost that month for each teammate.",
+            "description": "Operator's runs that month for each teammate.",
             "items": {
               "$ref": "#/components/schemas/OperatorUsageMember"
             },
@@ -27448,7 +27346,7 @@
             ]
           },
           "by_model": {
-            "description": "Operator's cost and calls that month for each model.",
+            "description": "Operator's calls that month for each model.",
             "items": {
               "$ref": "#/components/schemas/AiUsageModel"
             },
@@ -27458,7 +27356,7 @@
             ]
           },
           "by_purpose": {
-            "description": "Operator's runs and cost that month by why they ran: ask, brief, triage or routine.",
+            "description": "Operator's runs that month by why they ran: ask, brief, triage or routine.",
             "items": {
               "$ref": "#/components/schemas/OperatorUsagePurpose"
             },
@@ -27468,7 +27366,7 @@
             ]
           },
           "by_routine": {
-            "description": "Operator's runs and cost that month for each routine.",
+            "description": "Operator's runs that month for each routine.",
             "items": {
               "$ref": "#/components/schemas/OperatorUsageRoutine"
             },
@@ -27487,13 +27385,8 @@
               "null"
             ]
           },
-          "cost_micros": {
-            "description": "What Operator cost that month, in micros, millionths of the billing currency unit.",
-            "format": "int64",
-            "type": "integer"
-          },
           "daily": {
-            "description": "Operator's cost and runs for each day of the month.",
+            "description": "Operator's runs for each day of the month.",
             "items": {
               "$ref": "#/components/schemas/AiUsageDay"
             },
@@ -27512,14 +27405,6 @@
             "format": "int64",
             "type": "integer"
           },
-          "monthly_spend_cap_micros": {
-            "description": "The AI agent's monthly spend cap, in micros, millionths of the billing currency unit. Null when no cap is set.",
-            "format": "int64",
-            "type": [
-              "integer",
-              "null"
-            ]
-          },
           "output_tokens": {
             "description": "Tokens models wrote back for Operator that month.",
             "format": "int64",
@@ -27530,7 +27415,7 @@
             "type": "string"
           },
           "recent": {
-            "description": "Operator's latest runs, each with why it ran, for whom, how it ended and what it cost.",
+            "description": "Operator's latest runs, each with why it ran, for whom and how it ended.",
             "items": {
               "$ref": "#/components/schemas/OperatorUsageRun"
             },
@@ -27547,13 +27432,10 @@
         },
         "required": [
           "period_start",
-          "cost_micros",
           "runs_count",
           "failed_count",
           "input_tokens",
           "output_tokens",
-          "agent_cost_micros",
-          "monthly_spend_cap_micros",
           "daily",
           "by_purpose",
           "by_member",
@@ -27586,11 +27468,6 @@
       "OperatorUsageMember": {
         "additionalProperties": false,
         "properties": {
-          "cost_micros": {
-            "description": "What Operator's runs for this teammate cost that month, in micros, millionths of the billing currency unit.",
-            "format": "int64",
-            "type": "integer"
-          },
           "member_id": {
             "description": "Id of the teammate (starts with mem_).",
             "type": "string"
@@ -27608,19 +27485,13 @@
         "required": [
           "member_id",
           "name",
-          "runs_count",
-          "cost_micros"
+          "runs_count"
         ],
         "type": "object"
       },
       "OperatorUsagePurpose": {
         "additionalProperties": false,
         "properties": {
-          "cost_micros": {
-            "description": "What the runs for this purpose cost that month, in micros, millionths of the billing currency unit.",
-            "format": "int64",
-            "type": "integer"
-          },
           "purpose": {
             "description": "Why the runs happened: ask (a teammate asked), brief, triage or routine.",
             "type": "string"
@@ -27633,19 +27504,13 @@
         },
         "required": [
           "purpose",
-          "runs_count",
-          "cost_micros"
+          "runs_count"
         ],
         "type": "object"
       },
       "OperatorUsageRoutine": {
         "additionalProperties": false,
         "properties": {
-          "cost_micros": {
-            "description": "What this routine's runs cost that month, in micros, millionths of the billing currency unit.",
-            "format": "int64",
-            "type": "integer"
-          },
           "name": {
             "description": "Name of the routine.",
             "type": "string"
@@ -27663,8 +27528,7 @@
         "required": [
           "routine_id",
           "name",
-          "runs_count",
-          "cost_micros"
+          "runs_count"
         ],
         "type": "object"
       },
@@ -27685,11 +27549,6 @@
               "integer",
               "null"
             ]
-          },
-          "cost_micros": {
-            "description": "What the run cost, in micros, millionths of the billing currency unit.",
-            "format": "int64",
-            "type": "integer"
           },
           "created_at": {
             "description": "When it was created, as an RFC 3339 time, such as 2026-01-31T09:00:00Z.",
@@ -27747,7 +27606,6 @@
           "thread_title",
           "conversation_id",
           "conversation_number",
-          "cost_micros",
           "latency_ms",
           "created_at",
           "thread_id",
@@ -35598,9 +35456,11 @@
         "additionalProperties": false,
         "properties": {
           "away_reply": {
+            "description": "true answers a new email that arrives outside office hours once, saying when the team is back; false sends nothing. New addresses start with false.",
             "type": "boolean"
           },
           "away_reply_text": {
+            "description": "What the away reply says, at most 1000 characters. {{reply_time}} becomes when the team is back.",
             "maxLength": 1000,
             "minLength": 1,
             "type": "string"
@@ -50015,7 +49875,7 @@
         ]
       },
       "patch": {
-        "description": "Changes the models every agent falls back on, or the workspace's monthly AI spend cap. Returns the settings as saved.",
+        "description": "Changes the models every agent falls back on, or the workspace's monthly spend cap. Returns the settings as saved.",
         "operationId": "ai.settings.update",
         "requestBody": {
           "content": {

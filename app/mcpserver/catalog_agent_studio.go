@@ -340,9 +340,9 @@ func sharedAIDocs() map[string]Doc {
 		},
 		"ai.settings.update": {
 			Title:   "Change shared AI settings",
-			Use:     "Changes the models every agent falls back on, or the workspace's monthly AI spend cap.",
+			Use:     "Changes the models every agent falls back on, or the workspace's monthly spend cap.",
 			Returns: "the settings as saved.",
-			Next:    []string{"dimmi_get_ai_usage: see the month's spend against the cap"},
+			Next:    []string{"dimmi_get_ai_usage: see the month's runs and how they ended"},
 			Risk:    new(RiskReach),
 			Hint:    "Only the fields sent change. Find provider keys with dimmi_list_ai_keys.",
 		},

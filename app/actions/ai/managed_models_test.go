@@ -39,7 +39,7 @@ func TestManagedModels(t *testing.T) {
 
 		assert.Empty(t, managedModels(config.AIConfig{}))
 		assert.Empty(t, managedModelIDs(config.AIConfig{}))
-		assert.Empty(t, catalog(nil, config.AIConfig{})[string(enums.AIProviderDimmi)])
+		assert.Empty(t, catalog(config.AIConfig{})[string(enums.AIProviderDimmi)])
 	})
 
 	t.Run("offers only the families the install holds a key for", func(t *testing.T) {
@@ -48,7 +48,7 @@ func TestManagedModels(t *testing.T) {
 		cfg := config.AIConfig{Managed: config.AIManagedConfig{Anthropic: held}}
 
 		assert.Equal(t, []enums.AIModelFamily{enums.AIModelFamilyAnthropic}, familiesOf(managedModels(cfg)))
-		assert.Len(t, catalog(nil, cfg)[string(enums.AIProviderDimmi)], len(managedModels(cfg)))
+		assert.Len(t, catalog(cfg)[string(enums.AIProviderDimmi)], len(managedModels(cfg)))
 		assert.Len(t, managedModelIDs(cfg), len(managedModels(cfg)))
 
 		cfg = config.AIConfig{Managed: config.AIManagedConfig{OpenAI: held, OpenWeight: hosts}}

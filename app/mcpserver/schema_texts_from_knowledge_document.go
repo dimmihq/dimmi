@@ -188,16 +188,12 @@ func schemaTextsFromKnowledgeUpload() map[string]map[string]string {
 			"name": "The uploaded file's name.",
 		},
 		"KnowledgeUsage": {
-			"cost_micros": "The month's total cost in millionths of a US dollar; 1500000 is $1.50.",
-			"lines":       "The month's usage per source and kind, the most costly first.",
+			"lines": "The month's usage per source and kind, the largest first.",
 			"period_start": "The first day of the month the usage is for, in UTC, written YYYY-MM-DD, " +
 				"such as 2026-11-01.",
-			"unpriced": "True when part of the usage has no known price, so the cost is lower than the " +
-				"real one.",
 		},
 		"KnowledgeUsageLine": {
-			"browser_ms":  "Browser time spent reading pages for this line, in milliseconds.",
-			"cost_micros": "This line's cost in millionths of a US dollar; 1500000 is $1.50.",
+			"browser_ms": "Browser time spent reading pages for this line, in milliseconds.",
 			"estimated_tokens": "How many of the input tokens were estimated rather than reported by " +
 				"the provider.",
 			"input_tokens": "How many tokens were embedded for this line.",
@@ -207,7 +203,6 @@ func schemaTextsFromKnowledgeUpload() map[string]map[string]string {
 				"articles and conversations.",
 			"source_name": "Name of the knowledge source the usage belongs to.",
 			"source_type": "The kind of that source, such as website or notion.",
-			"unpriced":    "True when part of this line's usage has no known price.",
 		},
 		"Launcher": {
 			"icon": "The picture on the messenger's launcher button: chat, help or wave.",

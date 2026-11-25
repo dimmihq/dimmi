@@ -25,7 +25,6 @@ import (
 	"github.com/dimmihq/dimmi/app/enums"
 	"github.com/dimmihq/dimmi/app/models"
 	"github.com/dimmihq/dimmi/app/support/aimodels"
-	"github.com/dimmihq/dimmi/app/support/aiprices"
 	"github.com/dimmihq/dimmi/app/support/prompts"
 	"github.com/dimmihq/dimmi/config"
 )
@@ -223,13 +222,13 @@ func providers(cfg config.AIConfig) []ProviderDescriptor {
 catalog lists the model pickers' entries per provider. The built-in
 provider lists only the models the install can serve.
 */
-func catalog(prices *aiprices.Table, cfg config.AIConfig) map[string][]CatalogEntry {
+func catalog(cfg config.AIConfig) map[string][]CatalogEntry {
 	out := map[string][]CatalogEntry{}
 	for _, e := range managedModels(cfg) {
-		out[string(enums.AIProviderDimmi)] = append(out[string(enums.AIProviderDimmi)], catalogEntry(e, prices))
+		out[string(enums.AIProviderDimmi)] = append(out[string(enums.AIProviderDimmi)], catalogEntry(e))
 	}
 	for _, e := range aimodels.ChatGPT() {
-		out[string(enums.AIProviderChatGPT)] = append(out[string(enums.AIProviderChatGPT)], catalogEntry(e, prices))
+		out[string(enums.AIProviderChatGPT)] = append(out[string(enums.AIProviderChatGPT)], catalogEntry(e))
 	}
 	return out
 }

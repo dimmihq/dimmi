@@ -318,7 +318,7 @@ export const settingsPages = {
     "dimmi agent",
     RiSparkling2Line,
     "/d/settings/agent",
-    "How the agent answers customers, when it hands over and what it may spend.",
+    "How the agent answers customers, when it hands over and what it keeps private.",
   ),
   operator: page(
     "settings-operator",

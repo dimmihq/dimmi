@@ -301,7 +301,7 @@ func schemaTextsFromAIAgent() map[string]map[string]string {
 			"max_ai_replies": "The most replies the agent gives in one conversation before it hands " +
 				"off to the team, from 1 to 50. Defaults to 5.",
 			"max_output_tokens": "The most tokens the agent may write in one answer. Defaults to 600.",
-			"monthly_spend_cap_micros": "The most the agent may spend on models in a month, in " +
+			"monthly_spend_cap_micros": "The most the workspace may spend on dimmi in a month, in " +
 				"millionths of a US dollar (25000000 is $25). Null when there is no cap.",
 			"name":          "The name the agent goes by with customers, 1 to 60 characters.",
 			"pii_redaction": "Whether redaction of personal data is switched on for the agent.",

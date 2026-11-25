@@ -81,19 +81,10 @@ GROUP BY 1
 ORDER BY asked DESC, 1
 LIMIT @row_limit;
 
--- name: ReportAiSpend :one
--- ReportAiSpend sums what the AI agent cost in a range, every kind of
--- run included.
-SELECT COALESCE(sum(cost_micros), 0)::bigint AS cost_micros, count(*)::bigint AS runs
-FROM ai_runs
-WHERE workspace_id = @workspace_id AND created_at >= @since::timestamptz AND created_at < @until::timestamptz
-  AND (cardinality(@agents::uuid[]) = 0 OR agent_id = ANY (@agents::uuid[]));
-
 -- name: ReportAiAgentRuns :many
--- ReportAiAgentRuns sums, for each agent, what its runs cost in a range
--- and how many conversations it handed to another agent.
-SELECT agent_id, COALESCE(sum(cost_micros), 0)::bigint AS cost_micros,
-    count(*) FILTER (WHERE outcome = 'transferred')::bigint AS transfers
+-- ReportAiAgentRuns counts, for each agent, how many conversations it
+-- handed to another agent in a range.
+SELECT agent_id, count(*) FILTER (WHERE outcome = 'transferred')::bigint AS transfers
 FROM ai_runs
 WHERE workspace_id = @workspace_id AND created_at >= @since::timestamptz AND created_at < @until::timestamptz
   AND (cardinality(@agents::uuid[]) = 0 OR agent_id = ANY (@agents::uuid[]))

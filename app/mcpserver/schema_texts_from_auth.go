@@ -301,8 +301,6 @@ func schemaTextsFromBulkChangesOutputBody() map[string]map[string]string {
 			"site_key": "The public site key the browser uses to show the captcha challenge.",
 		},
 		"CatalogEntry": {
-			"cached_input_per_mtok": "Price in US dollars per million cached input tokens, as a " +
-				"decimal string. Null when the price list does not know this model.",
 			"context_tokens": "The size of the model's context window, in tokens.",
 			"display_name":   "The model's name as shown to people in settings.",
 			"family":         "The model's family: anthropic, openai or openweight.",

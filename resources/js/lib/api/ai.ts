@@ -31,9 +31,6 @@ export interface AiModelEntry {
   family: "anthropic" | "openai" | "openweight";
   suggested: string[];
   context_tokens: number;
-  input_per_mtok: string | null;
-  output_per_mtok: string | null;
-  cached_input_per_mtok: string | null;
 }
 
 export interface AiProviderDescriptor {
@@ -123,7 +120,6 @@ export interface AgentTie {
 
 export interface AiUsage {
   period_start: string;
-  cost_micros: number;
   input_tokens: number;
   cached_input_tokens: number;
   output_tokens: number;
@@ -132,10 +128,9 @@ export interface AiUsage {
   unknown_count: number;
   handoff_count: number;
   silent_count: number;
-  monthly_spend_cap_micros: number | null;
   capped_at: string | null;
-  daily: { day: string; cost_micros: number; runs_count: number }[];
-  by_model: { model: string; cost_micros: number; calls: number }[];
+  daily: { day: string; runs_count: number }[];
+  by_model: { model: string; calls: number }[];
   by_outcome: { outcome: string; runs_count: number }[];
 }
 
@@ -153,7 +148,6 @@ export interface AiRunStep {
   first_token_ms: number | null;
   input_tokens: number;
   output_tokens: number;
-  cost_micros: number;
   /* Present only for those allowed to read payloads, and null once retention passes. */
   request: unknown;
   response: unknown;
@@ -171,7 +165,6 @@ export interface AiRun {
   answer_message_id: string | null;
   input_tokens: number;
   output_tokens: number;
-  cost_micros: number;
   latency_ms: number | null;
   first_token_ms: number | null;
   prompt_version: string;

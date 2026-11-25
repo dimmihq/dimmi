@@ -29,7 +29,6 @@ import (
 	"github.com/dimmihq/dimmi/app/auth/authz"
 	"github.com/dimmihq/dimmi/app/models"
 	"github.com/dimmihq/dimmi/app/support/aimodels"
-	"github.com/dimmihq/dimmi/app/support/aiprices"
 	"github.com/dimmihq/dimmi/config"
 )
 
@@ -64,7 +63,6 @@ type Agents struct {
 	DB     *database.DB
 	Clock  clock.Clock
 	Config config.AIConfig
-	Prices *aiprices.Table
 }
 
 /*
@@ -241,7 +239,7 @@ func (a *Agents) view(ctx context.Context, tx *database.Tx, agent models.AiAgent
 	}
 	view := &AgentView{
 		Agent: agent, Working: working, Placement: placements[agent.ID], Unpublished: unpublished(agent),
-		Settings: settings, Keys: keys, Providers: providers(a.Config), Catalog: catalog(a.Prices, a.Config),
+		Settings: settings, Keys: keys, Providers: providers(a.Config), Catalog: catalog(a.Config),
 		Managed: managed, PromptVersion: promptVersion(agent, a.Config),
 	}
 	if agent.LiveVersionID != nil {

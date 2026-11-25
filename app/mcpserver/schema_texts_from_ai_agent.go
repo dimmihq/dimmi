@@ -200,8 +200,6 @@ func schemaTextsFromAiRun() map[string]map[string]string {
 		"AiRun": {
 			"conversation_id": "Id of the conversation the run worked on, such as conv_... Null for a " +
 				"run outside a conversation, such as a playground question.",
-			"cost_micros": "What the run cost in model calls, in millionths of a US dollar (1000000 is " +
-				"$1).",
 			"error": "Why the run failed, as an object with code and message. Null when it did not " +
 				"fail.",
 			"feedback": "How the answer was rated: helped, not_helped, solved, handoff, discarded, " +
@@ -245,7 +243,6 @@ func schemaTextsFromAiRunAndAiRunStep() map[string]map[string]string {
 				"lists.",
 		},
 		"AiRunStep": {
-			"cost_micros": "What this step cost, in millionths of a US dollar (1000000 is $1).",
 			"error_kind": "The kind of failure when the step failed, such as auth, quota, " +
 				"rate_limited, overloaded, timeout or network. Null when it did not fail.",
 			"first_token_ms": "Milliseconds until the model's first output arrived in this step. Null " +
@@ -269,7 +266,7 @@ func schemaTextsFromAiRunAndAiRunStep() map[string]map[string]string {
 		},
 		"AiUsage": {
 			"answered_count": "Runs this month that ended with an answer.",
-			"by_model": "The month's spend and call count for each model. Empty when there were no " +
+			"by_model": "The month's call count for each model. Empty when there were no " +
 				"calls.",
 			"by_outcome": "How many of the month's runs ended each way. Empty when there were no runs.",
 			"cached_input_tokens": "How many of the month's input tokens were read from the provider's " +
@@ -286,13 +283,9 @@ func schemaTextsFromAiUsage() map[string]map[string]string {
 	//nolint:gosec // words about secrets, never a secret
 	return map[string]map[string]string{
 		"AiUsage": {
-			"cost_micros": "What the agent cost this month, in millionths of a US dollar (1000000 is " +
-				"$1).",
-			"daily":         "Cost and runs for each day of the month, days in UTC.",
+			"daily":         "Runs for each day of the month, days in UTC.",
 			"handoff_count": "Runs this month that ended with a handoff to the team.",
 			"input_tokens":  "Tokens sent to the models this month.",
-			"monthly_spend_cap_micros": "The agent's monthly spending cap, in millionths of a US " +
-				"dollar. Null when there is no cap.",
 			"output_tokens": "Tokens the models wrote this month.",
 			"period_start": "First day of the month the numbers cover, as YYYY-MM-DD, such as " +
 				"2026-11-01.",
@@ -301,14 +294,12 @@ func schemaTextsFromAiUsage() map[string]map[string]string {
 			"unknown_count": "Runs this month where the agent did not know the answer.",
 		},
 		"AiUsageDay": {
-			"cost_micros": "What the agent cost that day, in millionths of a US dollar.",
-			"day":         "The day in UTC, as YYYY-MM-DD, such as 2026-11-23.",
-			"runs_count":  "How many times the agent ran that day.",
+			"day":        "The day in UTC, as YYYY-MM-DD, such as 2026-11-23.",
+			"runs_count": "How many times the agent ran that day.",
 		},
 		"AiUsageModel": {
-			"calls":       "How many calls were made to this model in the month.",
-			"cost_micros": "What this model cost in the month, in millionths of a US dollar.",
-			"model":       "Id of the model.",
+			"calls": "How many calls were made to this model in the month.",
+			"model": "Id of the model.",
 		},
 		"AiUsageOutcome": {
 			"outcome":    "How the runs ended, such as answered, unknown, handoff, silent or skipped.",

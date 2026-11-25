@@ -8,6 +8,13 @@
 | behind the runs that spent it. Crossing 50, 80 and 100 percent of a
 | cap is marked once each; reaching 100 percent caps the month.
 |
+| The cap is meant as a billing limit: what the workspace spends on
+| dimmi in a month at dimmi's prices, the way a hosting provider's spend
+| limit works. Until billing exists it is checked against what the AI
+| provider charged for the runs, which is only a stand-in. When billing
+| is built, measure the cap against the month's dimmi charges instead.
+| AI provider cost stays internal and is never shown to a workspace.
+|
 | Rehearsing the agent is tallied apart: what simulations and their
 | judging cost, and how many simulations ran. That tally has no limit
 | and is no part of the cap, so testing an agent never stops it
@@ -135,6 +142,8 @@ type spendLimit struct {
 
 /*
 SpendCapped reports whether the agent's month already reached its cap.
+It compares the cap with AI provider cost for now; billing replaces
+that with what the workspace was charged on dimmi.
 */
 func SpendCapped(ctx context.Context, q *models.Queries, now time.Time, agent models.AiAgent) (bool, error) {
 	capMicros := agent.MonthlySpendCapMicros

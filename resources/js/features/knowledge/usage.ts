@@ -1,24 +1,7 @@
 /*
- * How knowledge usage reads: a cost in dollars from millionths of a
- * dollar, down to the millionth when it is tiny, and a line's
- * tokens or browser time in words.
+ * How knowledge usage reads: a line's tokens or browser time in words.
  */
 import type { KnowledgeUsageLine } from "@/lib/api/knowledge-sources";
-
-export function formatCost(micros: number): string {
-  if (micros === 0) {
-    return "$0.00";
-  }
-  const dollars = micros / 1_000_000;
-  if (dollars < 0.0001) {
-    return `$${dollars.toFixed(6)}`;
-  }
-  if (dollars < 0.01) {
-    return `$${dollars.toFixed(4)}`;
-  }
-
-  return `$${dollars.toFixed(2)}`;
-}
 
 export function usageDetail(line: KnowledgeUsageLine): string {
   if (line.kind === "crawl") {

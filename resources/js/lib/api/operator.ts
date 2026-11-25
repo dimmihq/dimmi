@@ -134,7 +134,6 @@ export interface OperatorUsageRun {
   thread_title: string;
   conversation_id: string | null;
   conversation_number: number | null;
-  cost_micros: number;
   latency_ms: number | null;
   created_at: string;
   thread_id: string | null;
@@ -143,18 +142,15 @@ export interface OperatorUsageRun {
 
 export interface OperatorUsage {
   period_start: string;
-  cost_micros: number;
   runs_count: number;
   failed_count: number;
   input_tokens: number;
   output_tokens: number;
-  agent_cost_micros: number;
-  monthly_spend_cap_micros: number | null;
-  daily: { day: string; cost_micros: number; runs_count: number }[];
-  by_purpose: { purpose: OperatorPurpose; runs_count: number; cost_micros: number }[];
-  by_routine: { routine_id: string; name: string; runs_count: number; cost_micros: number }[];
-  by_member: { member_id: string; name: string; runs_count: number; cost_micros: number }[];
-  by_model: { model: string; cost_micros: number; calls: number }[];
+  daily: { day: string; runs_count: number }[];
+  by_purpose: { purpose: OperatorPurpose; runs_count: number }[];
+  by_routine: { routine_id: string; name: string; runs_count: number }[];
+  by_member: { member_id: string; name: string; runs_count: number }[];
+  by_model: { model: string; calls: number }[];
   changesets: { status: ChangesetStatus; count: number }[];
   recent: OperatorUsageRun[];
 }

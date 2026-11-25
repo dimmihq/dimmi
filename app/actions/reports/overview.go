@@ -76,7 +76,7 @@ func (r reader) headline(ctx context.Context) (headlines, error) {
 		into *values
 		n    int
 	}{
-		{r.startedFigures, &h.started, 6},
+		{r.startedFigures, &h.started, 5},
 		{r.closedFigures, &h.closed, 7},
 		{r.firstResponse, &h.response, 4},
 		{r.ratingFigures, &h.ratings, 3},

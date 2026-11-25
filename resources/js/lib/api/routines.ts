@@ -51,7 +51,6 @@ export interface Routine {
   owner_id: string | null;
   inbox_ids: string[];
   scope: { help_center_ids: string[]; github: RoutineGitHubScope | null };
-  month_spend_micros: number;
   suggestions: RoutineSuggestionCounts;
   notify_policy: NotifyPolicy;
   delivery: RoutineDelivery;
@@ -95,7 +94,6 @@ export interface RoutineRun {
   suggestions_waiting: number;
   /* What the run read to do its work, each counted once. */
   read: { articles: number; conversations: number; procedures: number };
-  cost_micros: number;
   notified: boolean;
   /* steps is what the run has done so far; it grows while the run works. */
   steps: OperatorStep[];

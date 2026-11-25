@@ -1,9 +1,9 @@
 /*
- * The routines tab of Operator's page: what it does on its own, when each routine
- * runs next, how its last run went and what it spent this month. A new
- * routine starts from the template gallery: four routines that have
- * proved themselves, or a blank one. Teammates who may only read see
- * the list without the button.
+ * The routines tab of Operator's page: what it does on its own, when
+ * each routine runs next and how its last run went. A new routine
+ * starts from the template gallery: four routines that have proved
+ * themselves, or a blank one. Teammates who may only read see the list
+ * without the button.
  */
 import { RiAddLine, RiArrowRightSLine, RiCalendarScheduleLine } from "@remixicon/react";
 import { useQuery } from "@tanstack/react-query";

@@ -109,8 +109,7 @@ func (q *Queries) MarkReportDigestSent(ctx context.Context, arg MarkReportDigest
 }
 
 const reportAiAgentRuns = `-- name: ReportAiAgentRuns :many
-SELECT agent_id, COALESCE(sum(cost_micros), 0)::bigint AS cost_micros,
-    count(*) FILTER (WHERE outcome = 'transferred')::bigint AS transfers
+SELECT agent_id, count(*) FILTER (WHERE outcome = 'transferred')::bigint AS transfers
 FROM ai_runs
 WHERE workspace_id = $1 AND created_at >= $2::timestamptz AND created_at < $3::timestamptz
   AND (cardinality($4::uuid[]) = 0 OR agent_id = ANY ($4::uuid[]))
@@ -125,13 +124,12 @@ type ReportAiAgentRunsParams struct {
 }
 
 type ReportAiAgentRunsRow struct {
-	AgentID    ids.UUID `json:"agent_id"`
-	CostMicros int64    `json:"cost_micros"`
-	Transfers  int64    `json:"transfers"`
+	AgentID   ids.UUID `json:"agent_id"`
+	Transfers int64    `json:"transfers"`
 }
 
-// ReportAiAgentRuns sums, for each agent, what its runs cost in a range
-// and how many conversations it handed to another agent.
+// ReportAiAgentRuns counts, for each agent, how many conversations it
+// handed to another agent in a range.
 func (q *Queries) ReportAiAgentRuns(ctx context.Context, arg ReportAiAgentRunsParams) ([]ReportAiAgentRunsRow, error) {
 	rows, err := q.db.Query(ctx, reportAiAgentRuns,
 		arg.WorkspaceID,
@@ -146,7 +144,7 @@ func (q *Queries) ReportAiAgentRuns(ctx context.Context, arg ReportAiAgentRunsPa
 	var items []ReportAiAgentRunsRow
 	for rows.Next() {
 		var i ReportAiAgentRunsRow
-		if err := rows.Scan(&i.AgentID, &i.CostMicros, &i.Transfers); err != nil {
+		if err := rows.Scan(&i.AgentID, &i.Transfers); err != nil {
 			return nil, err
 		}
 		items = append(items, i)
@@ -155,39 +153,6 @@ func (q *Queries) ReportAiAgentRuns(ctx context.Context, arg ReportAiAgentRunsPa
 		return nil, err
 	}
 	return items, nil
-}
-
-const reportAiSpend = `-- name: ReportAiSpend :one
-SELECT COALESCE(sum(cost_micros), 0)::bigint AS cost_micros, count(*)::bigint AS runs
-FROM ai_runs
-WHERE workspace_id = $1 AND created_at >= $2::timestamptz AND created_at < $3::timestamptz
-  AND (cardinality($4::uuid[]) = 0 OR agent_id = ANY ($4::uuid[]))
-`
-
-type ReportAiSpendParams struct {
-	WorkspaceID ids.UUID   `json:"workspace_id"`
-	Since       time.Time  `json:"since"`
-	Until       time.Time  `json:"until"`
-	Agents      []ids.UUID `json:"agents"`
-}
-
-type ReportAiSpendRow struct {
-	CostMicros int64 `json:"cost_micros"`
-	Runs       int64 `json:"runs"`
-}
-
-// ReportAiSpend sums what the AI agent cost in a range, every kind of
-// run included.
-func (q *Queries) ReportAiSpend(ctx context.Context, arg ReportAiSpendParams) (ReportAiSpendRow, error) {
-	row := q.db.QueryRow(ctx, reportAiSpend,
-		arg.WorkspaceID,
-		arg.Since,
-		arg.Until,
-		arg.Agents,
-	)
-	var i ReportAiSpendRow
-	err := row.Scan(&i.CostMicros, &i.Runs)
-	return i, err
 }
 
 const reportBacklogDays = `-- name: ReportBacklogDays :many

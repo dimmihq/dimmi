@@ -31,7 +31,7 @@ func TestAiRuns(t *testing.T) {
 
 		one := d.Owner.GetJSON("/api/v1/conversations/" + conv + "/ai/runs/" + public).AssertOK()
 		one.AssertJSONPath("data.outcome", "answered")
-		one.AssertJSONPath("data.cost_micros", 900)
+		one.AssertJSONMissing("data.cost_micros")
 		one.AssertJSONPath("data.payloads_visible", true)
 		one.AssertJSONPath("data.steps.0.model", "claude-a")
 		one.AssertJSONPath("data.steps.0.request.prompt", "secret prompt")
@@ -52,7 +52,7 @@ func TestAiRuns(t *testing.T) {
 
 		one := member.GetJSON(path).AssertOK()
 		one.AssertJSONPath("data.payloads_visible", false)
-		one.AssertJSONPath("data.steps.0.cost_micros", 900)
+		one.AssertJSONMissing("data.steps.0.cost_micros")
 		one.AssertJSONPath("data.steps.0.request", nil)
 		one.AssertJSONPath("data.steps.0.response", nil)
 

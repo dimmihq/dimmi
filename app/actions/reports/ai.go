@@ -6,7 +6,7 @@
 | What the AI agent did for the conversations started in the range: how
 | many it answered in, how many it resolved, confirmed by the customer
 | or assumed from a close or a day of silence, how many it handed to the
-| team and why, and what each resolution cost. Questions it could not
+| team and why. Questions it could not
 | answer and searches that found no article show where knowledge is
 | missing. A table splits the conversations by an AI attribute's value.
 |
@@ -39,7 +39,7 @@ Describe says what the report is.
 func (AI) Describe() Description {
 	return Description{
 		Key: "ai", Title: "AI agents", Order: 70,
-		Summary: "How often your AI agents answer and resolve, why they hand over, and what they cost.",
+		Summary: "How often your AI agents answer and resolve, and why they hand over.",
 	}
 }
 
@@ -54,20 +54,8 @@ func (AI) Metrics(ctx context.Context, tx *database.Tx, q Query) ([]Metric, erro
 		return nil, err
 	}
 
-	s := only(v, 6)
+	s := only(v, 5)
 	started, involved, handed, resolved, confirmed := s.count(0), s.count(1), s.count(2), s.count(3), s.count(4)
-
-	spend, err := models.New(tx).ReportAiSpend(ctx, models.ReportAiSpendParams{
-		WorkspaceID: q.Membership.Workspace.ID, Since: q.Start, Until: q.End, Agents: q.Filters.Agents,
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	var perResolution *float64
-	if resolved > 0 {
-		perResolution = num(float64(s.count(5)) / float64(resolved))
-	}
 
 	return []Metric{
 		rateMetric("ai_involvement", "AI involvement", involved, started),
@@ -75,11 +63,6 @@ func (AI) Metrics(ctx context.Context, tx *database.Tx, q Query) ([]Metric, erro
 		countMetric("ai_confirmed", "Confirmed resolutions", confirmed),
 		countMetric("ai_assumed", "Assumed resolutions", resolved-confirmed),
 		rateMetric("ai_handoff", "Handover rate", handed, involved),
-		{
-			Key: "ai_cost_per_resolution", Label: "Cost per resolution", Unit: UnitMicros, Value: perResolution,
-			Sample: resolved, Drill: "ai_resolution",
-		},
-		{Key: "ai_spend", Label: "AI spend", Unit: UnitMicros, Value: num(spend.CostMicros), Sample: spend.Runs},
 	}, nil
 }
 

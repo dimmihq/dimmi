@@ -20,16 +20,15 @@ import (
 	"github.com/dimmihq/dimmi/app/ai/actionkit"
 	"github.com/dimmihq/dimmi/app/ai/pipeline"
 	"github.com/dimmihq/dimmi/app/jobs"
-	"github.com/dimmihq/dimmi/app/support/aiprices"
 )
 
 /*
 aiActions builds the agents' actions. When the answerer is the
 pipeline, the workspace actions an agent may call come with it.
 */
-func aiActions(a *app.App, answerer any, prices *aiprices.Table) *app.AIActions {
+func aiActions(a *app.App, answerer any) *app.AIActions {
 	out := &app.AIActions{
-		Agents: &ai.Agents{DB: a.DB, Clock: a.Clock, Config: a.Config.AI, Prices: prices},
+		Agents: &ai.Agents{DB: a.DB, Clock: a.Clock, Config: a.Config.AI},
 
 		ListProviderKeys:  &ai.ListProviderKeys{DB: a.DB},
 		CreateProviderKey: &ai.CreateProviderKey{DB: a.DB, Clock: a.Clock, Keys: a.Keys, LLM: a.LLM},

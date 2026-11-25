@@ -24,7 +24,7 @@ func TestKnowledgeUsage(t *testing.T) {
 		usage.AssertJSONPath("data.lines.0.source_id", source)
 		usage.AssertJSONPath("data.lines.0.kind", "embedding")
 		usage.AssertJSONPath("data.lines.0.source_name", "Hivy docs")
-		usage.AssertJSONPath("data.unpriced", false)
+		usage.AssertJSONMissing("data.cost_micros")
 
 		tokens := x.count(t,
 			"SELECT coalesce(sum(input_tokens), 0) FROM knowledge_usage_periods WHERE kind = 'embedding'")

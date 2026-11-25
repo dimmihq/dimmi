@@ -12,7 +12,6 @@ import {
   modelDetail,
   modelsFor,
   readiness,
-  usd,
 } from "./format";
 import { checkFields, problemsOf } from "./providers/problems";
 import { failure } from "./providers/use-chatgpt-sign-in";
@@ -81,9 +80,6 @@ const sonnet: AiModelEntry = {
   family: "anthropic",
   suggested: ["answer"],
   context_tokens: 200_000,
-  input_per_mtok: "3.00",
-  output_per_mtok: "15.00",
-  cached_input_per_mtok: null,
 };
 
 function view(over: Partial<AgentView>): AgentView {
@@ -101,12 +97,6 @@ function view(over: Partial<AgentView>): AgentView {
 }
 
 describe("ai format", () => {
-  it("writes micro-dollars as dollars", () => {
-    expect(usd(0)).toBe("$0.00");
-    expect(usd(1_234_567)).toBe("$1.23");
-    expect(usd(250_000_000)).toBe("$250");
-  });
-
   it("reads a connection's status in three states", () => {
     expect(keyStatus({ status: "valid", provider: "openai" })).toBe("ok");
     expect(keyStatus({ status: "unverified", provider: "dimmi" })).toBe("ok");
@@ -138,14 +128,14 @@ describe("ai format", () => {
     expect(applyChange(agent, { always_handoff_tag_ids: ["tag_1"] }).always_handoff_tag_ids).toEqual(["tag_1"]);
   });
 
-  it("prices models from the catalog, and lists bare ids it does not know", () => {
+  it("names models from the catalog, and lists bare ids it does not know", () => {
     const catalog = { dimmi: [sonnet] };
     expect(modelsFor(key({ provider: "dimmi" }), catalog)).toEqual([sonnet]);
     expect(modelsFor(key({ models: ["claude-sonnet", "mystery"] }), catalog).map((m) => m.display_name)).toEqual([
       "Claude Sonnet",
       "mystery",
     ]);
-    expect(modelDetail(sonnet)).toBe("$3 in · $15 out per 1M tokens · 200K context");
+    expect(modelDetail(sonnet)).toBe("200K context");
     expect(contextSize(1_000_000)).toBe("1M");
   });
 

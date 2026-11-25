@@ -108,12 +108,12 @@ func drills(q Query) map[string]drill {
 		"ai_handoff": {
 			dated: "f.started_at", extra: cond("f.ai_involved AND f.ai_handed_off_at IS NOT NULL"),
 		},
-		"ai_resolution": {dated: "f.started_at", value: "f.ai_cost_micros", extra: aiResolvedCond("")},
+		"ai_resolution": {dated: "f.started_at", extra: aiResolvedCond("")},
 		"ai_confirmed": {
-			dated: "f.started_at", value: "f.ai_cost_micros", extra: aiResolvedCond(" AND f.ai_confirmed"),
+			dated: "f.started_at", extra: aiResolvedCond(" AND f.ai_confirmed"),
 		},
 		"ai_assumed": {
-			dated: "f.started_at", value: "f.ai_cost_micros",
+			dated: "f.started_at",
 			extra: aiResolvedCond(" AND NOT f.ai_confirmed"),
 		},
 		"open":       {extra: open, order: "f.started_at ASC"},

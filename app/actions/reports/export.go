@@ -63,7 +63,6 @@ func factColumns() [][2]string {
 		{"ai_handed_off_at", "f.ai_handed_off_at"},
 		{"ai_handoff_reason", "f.ai_handoff_reason"},
 		{"ai_confirmed", "f.ai_confirmed"},
-		{"ai_cost_micros", "f.ai_cost_micros"},
 	}
 }
 

@@ -79,7 +79,8 @@ func NewAIAgentTemplates(list []ai.Template) []AIAgentTemplate {
 /*
 AISettings is what every agent and Operator share: the answer and
 fallback models an agent uses until it picks its own, the classifier,
-and the monthly spend cap, null when there is none.
+and the most the workspace may spend on dimmi in a month, null when
+there is no cap.
 */
 type AISettings struct {
 	Object                string  `json:"object"`

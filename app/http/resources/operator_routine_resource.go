@@ -4,8 +4,7 @@
 |--------------------------------------------------------------------------
 |
 | How routines read over the API: what a routine runs and when, what it
-| may read and change, where it reports, how its last run went and what
-| it spent this month; each run with its outcome, cost and thread; and
+| may read and change, where it reports, how its last run went; each run with its outcome and thread; and
 | the templates a routine starts from.
 |
 */
@@ -74,8 +73,8 @@ func countsOf(m map[string]int64) OperatorRoutineCounts {
 
 /*
 OperatorRoutine is one routine. NextRuns are its next three runs;
-MonthSpendMicros is what its runs cost this month; Suggestions counts
-its suggestions by status.
+Suggestions counts its
+suggestions by status.
 */
 type OperatorRoutine struct {
 	ID                     string                  `json:"id"`
@@ -94,7 +93,6 @@ type OperatorRoutine struct {
 	OwnerID                *string                 `json:"owner_id"`
 	InboxIDs               []string                `json:"inbox_ids"`
 	Scope                  OperatorRoutineScope    `json:"scope"`
-	MonthSpendMicros       int64                   `json:"month_spend_micros"`
 	Suggestions            OperatorRoutineCounts   `json:"suggestions"`
 	NotifyPolicy           string                  `json:"notify_policy"`
 	Delivery               OperatorRoutineDelivery `json:"delivery"`
@@ -111,7 +109,7 @@ type OperatorRoutine struct {
 }
 
 /*
-NewOperatorRoutine shapes a routine with its next runs and spend.
+NewOperatorRoutine shapes a routine with its next runs.
 */
 func NewOperatorRoutine(v operatorchat.RoutineView) OperatorRoutine {
 	r := v.Routine
@@ -123,7 +121,7 @@ func NewOperatorRoutine(v operatorchat.RoutineView) OperatorRoutine {
 		CreatedBy: optionalID(models.PrefixMember, r.CreatedByMemberID),
 		OwnerID:   optionalID(models.PrefixMember, r.OwnerMemberID),
 		InboxIDs:  publicIDs(models.PrefixInbox, r.InboxIds), Scope: routineScope(r.Scope),
-		MonthSpendMicros: v.MonthSpend, Suggestions: countsOf(v.Suggestions), NotifyPolicy: r.NotifyPolicy,
+		Suggestions: countsOf(v.Suggestions), NotifyPolicy: r.NotifyPolicy,
 		Delivery: routineDelivery(r.Delivery),
 		State:    r.State, Status: r.Status, PauseReason: r.PauseReason, ConsecutiveFailures: r.ConsecutiveFailures,
 		MaxConsecutiveFailures: r.MaxConsecutiveFailures, LastRunAt: r.LastRunAt, LastSuccessAt: r.LastSuccessAt,
