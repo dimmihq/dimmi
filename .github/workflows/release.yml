@@ -17,6 +17,9 @@
 #
 # A version with a suffix, such as v0.2.0-rc.1, is a prerelease: it never
 # moves :latest and install.sh only takes it when asked by name.
+#
+# A version that is not a prerelease is then released to production
+# (production.yml), which takes it only when its commit's checks passed.
 
 name: release
 
@@ -32,6 +35,7 @@ on:
 permissions:
   contents: write
   packages: write
+  actions: read
 
 concurrency:
   group: release
@@ -152,3 +156,15 @@ jobs:
           flags=(--title "$VERSION" --notes-file notes.md --verify-tag -R "$GITHUB_REPOSITORY")
           [ "$PRERELEASE" = true ] && flags+=(--prerelease) || flags+=(--latest)
           gh release create "$VERSION" assets/* "${flags[@]}"
+
+  production:
+    needs: release
+    if: ${{ !contains(inputs.version || github.ref_name, '-') }}
+    permissions:
+      contents: read
+      packages: read
+      actions: read
+    uses: ./.github/workflows/production.yml
+    with:
+      version: ${{ inputs.version || github.ref_name }}
+    secrets: inherit

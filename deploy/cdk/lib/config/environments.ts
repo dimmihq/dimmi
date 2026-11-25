@@ -4,11 +4,10 @@ import { validate } from "./environment.ts";
 /**
  * The Hetzner load balancers in front of the k3s server. Each environment
  * has its own, forwarding to its own Caddy edge, so a customer domain that
- * reaches a balancer belongs to that environment. Production points at
- * staging's until its own balancer exists.
+ * reaches a balancer belongs to that environment.
  */
 const STAGING_INGRESS = ["46.224.169.155"];
-const PRODUCTION_INGRESS = STAGING_INGRESS;
+const PRODUCTION_INGRESS = ["2.31.138.19"];
 
 const staging: EnvironmentConfig = {
   name: "staging",

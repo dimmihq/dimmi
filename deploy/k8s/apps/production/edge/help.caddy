@@ -1,0 +1,19 @@
+# Customers' help centers answer on names under dimmi.help. One wildcard
+# certificate covers them all, so a new help center is served at once and
+# none of them counts against the certificate authority's weekly limit for
+# the domain. A wildcard is proved through DNS: the edge writes the
+# challenge record at Vercel with the token in the edge-dns Secret.
+*.dimmi.help {
+	tls {
+		dns vercel {env.VERCEL_API_TOKEN}
+	}
+	reverse_proxy web:8080
+}
+
+# The bare domain has nothing of its own.
+dimmi.help {
+	tls {
+		dns vercel {env.VERCEL_API_TOKEN}
+	}
+	redir https://trydimmi.com{uri} 308
+}

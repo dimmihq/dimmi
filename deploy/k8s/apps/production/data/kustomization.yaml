@@ -1,0 +1,122 @@
+# Production: the same services as staging with no gate in front, mail
+# through the production SES stack in eu-central-1 and telemetry to the
+# cluster's collector (infrastructure/observability.yaml). Values that name
+# AWS resources or hold keys live in dimmi-secrets, never here. The database
+# and the file store get room to grow; both volumes can be made larger
+# later, never smaller.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: dimmi-production
+resources:
+  - ../../base/data
+  - backup.yaml
+patches:
+  - target:
+      kind: Cluster
+      name: postgres
+    patch: |
+      - op: add
+        path: /spec/plugins
+        value:
+          - name: barman-cloud.cloudnative-pg.io
+            isWALArchiver: true
+            parameters:
+              barmanObjectName: postgres-backup
+      - op: replace
+        path: /spec/storage/size
+        value: 100Gi
+  - target:
+      kind: ConfigMap
+      name: dimmi-config
+    patch: |
+      - op: add
+        path: /data/DIMMI_APP__URL
+        value: https://trydimmi.com
+      - op: add
+        path: /data/DIMMI_TELEMETRY__ENVIRONMENT
+        value: production
+      - op: add
+        path: /data/DIMMI_TELEMETRY__TRACING
+        value: otlp
+      - op: add
+        path: /data/DIMMI_TELEMETRY__OTLP_ENDPOINT
+        value: http://collector.observability.svc.cluster.local:4318/v1/traces
+      - op: add
+        path: /data/DIMMI_TELEMETRY__METRICS
+        value: prometheus
+      - op: add
+        path: /data/DIMMI_FILESYSTEMS__DISKS__S3__PUBLIC_ENDPOINT
+        value: https://files.trydimmi.com
+      - op: add
+        path: /data/DIMMI_HELP_CENTERS__BASE_DOMAIN
+        value: dimmi.help
+      - op: add
+        path: /data/DIMMI_HTTP__TRUSTED_PROXIES
+        value: 10.42.0.0/16
+      - op: add
+        path: /data/DIMMI_CUSTOM_DOMAINS__DEFAULT
+        value: edge
+      - op: add
+        path: /data/DIMMI_CUSTOM_DOMAINS__TLS__EDGE__DRIVER
+        value: caddyask
+      - op: add
+        path: /data/DIMMI_MAIL__DEFAULT
+        value: system
+      - op: add
+        path: /data/DIMMI_MAIL__FROM__EMAIL
+        value: no-reply@mail.trydimmi.com
+      - op: add
+        path: /data/DIMMI_MAIL__MAILERS__SYSTEM__DRIVER
+        value: ses
+      - op: add
+        path: /data/DIMMI_MAIL__MAILERS__SYSTEM__REGION
+        value: eu-central-1
+      - op: add
+        path: /data/DIMMI_MAIL__MAILERS__SYSTEM__CONFIGURATION_SET
+        value: dimmi-system-production
+      - op: add
+        path: /data/DIMMI_MAIL__MAILERS__CUSTOMER__DRIVER
+        value: ses
+      - op: add
+        path: /data/DIMMI_MAIL__MAILERS__CUSTOMER__REGION
+        value: eu-central-1
+      - op: add
+        path: /data/DIMMI_MAIL__MAILERS__CUSTOMER__CONFIGURATION_SET
+        value: dimmi-customer-production
+      - op: add
+        path: /data/DIMMI_MAILBOX__DEFAULT
+        value: ses
+      - op: add
+        path: /data/DIMMI_MAILBOX__SOURCES__SES__DRIVER
+        value: ses
+      - op: add
+        path: /data/DIMMI_CHANNELS__EMAIL__INBOUND_DOMAIN
+        value: inbound.trydimmi.com
+      - op: add
+        path: /data/DIMMI_CHANNELS__EMAIL__DEFAULT_SENDER_DOMAIN
+        value: inbound.trydimmi.com
+      - op: add
+        path: /data/DIMMI_CHANNELS__EMAIL__INBOUND__DRIVERS
+        value: ses
+      - op: add
+        path: /data/DIMMI_FILESYSTEMS__DISKS__SES_INBOUND__DRIVER
+        value: s3
+      - op: add
+        path: /data/DIMMI_FILESYSTEMS__DISKS__SES_INBOUND__REGION
+        value: eu-central-1
+      - op: add
+        path: /data/DIMMI_MALWARE__DEFAULT
+        value: clamav
+      - op: add
+        path: /data/DIMMI_MALWARE__SCANNERS__CLAMAV__DRIVER
+        value: clamav
+      - op: add
+        path: /data/DIMMI_MALWARE__SCANNERS__CLAMAV__ADDRESS
+        value: clamav.clamav.svc.cluster.local:3310
+  - target:
+      kind: StatefulSet
+      name: seaweedfs
+    patch: |
+      - op: replace
+        path: /spec/volumeClaimTemplates/0/spec/resources/requests/storage
+        value: 200Gi
