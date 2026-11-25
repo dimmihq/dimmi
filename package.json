@@ -19,7 +19,7 @@
     "test": "node scripts/sdk-generate.ts api --if-missing && vitest run",
     "e2e": "playwright test",
     "site:dev": "vite --config site/vite.config.ts",
-    "site:build": "vite build --config site/vite.config.ts && astro build --root docs",
+    "site:build": "vite build --config site/vite.config.ts && astro build --root docs && node scripts/generate-sitemap.ts && node scripts/generate-llms.ts",
     "site:preview": "vite preview --config site/vite.config.ts",
     "docs:dev": "astro dev --root docs",
     "docs:build": "astro build --root docs",

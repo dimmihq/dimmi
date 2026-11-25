@@ -10,6 +10,7 @@ import { createRoot, hydrateRoot } from "react-dom/client";
 
 import { App } from "./app";
 import { findRoute, routes } from "./routes";
+import { headElements } from "./seo";
 
 if (typeof window !== "undefined") {
   const target = document.getElementById("root");
@@ -48,11 +49,7 @@ export async function prerender(data: { url: string }) {
     head: {
       lang: "en",
       title: route?.title ?? "dimmi",
-      elements: new Set([
-        { type: "meta", props: { name: "description", content: route?.description ?? "" } },
-        { type: "meta", props: { property: "og:title", content: route?.title ?? "dimmi" } },
-        { type: "meta", props: { property: "og:description", content: route?.description ?? "" } },
-      ]),
+      elements: headElements(route),
     },
   };
 }

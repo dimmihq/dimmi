@@ -1,54 +1,54 @@
-import { ChatCircleText, ChatsCircle, Code, LockKey, Translate, UsersThree } from "@phosphor-icons/react";
+import { ChatCircleText, ChatsCircle, Code, Microphone, Translate, UsersThree } from "@phosphor-icons/react";
 
-import { FeatureGrid, ProductHero, Questions, Rows } from "../../components/product-page";
+import { ChannelLinks, FeatureGrid, ProductHero, Questions, Rows } from "../../components/product-page";
 import { ShotStill } from "../../components/shot-still";
 import { ShotVideo } from "../../components/shot-video";
 import { FinalCta } from "../../sections/final-cta";
 
 const rows = [
   {
-    label: "Install",
-    title: "One line of HTML, or 6 typed framework packages.",
-    body: "Paste a single script tag, or install packages for Browser, React, Next.js, Vue, Angular, and Svelte. Run multiple messengers per inbox across your sites and brands.",
-    visual: (
-      <ShotStill
-        name="channel-messenger-install"
-        alt="Messenger install settings showing the framework picker for HTML, Browser, React, Next.js, Vue, Angular, and Svelte with a one-line snippet"
-      />
-    ),
-  },
-  {
-    label: "Home tab",
-    title: "Chat, docs, release notes, and feature requests without leaving your app.",
-    body: "Customers start a conversation, search your help center, and browse feature requests from one home screen. New changelog posts trigger an unread dot so people spot releases right away.",
+    label: "Home screen",
+    title: "Chat, help articles, and updates in one window.",
+    body: "Customers can search your help center, read product updates, or start a chat without leaving your app. New updates show a small dot so people notice them.",
     visual: (
       <ShotVideo
         name="channel-messenger-home"
         poster="channel-messenger-home"
-        alt="Opening the dimmi messenger home tab to start a conversation, search help articles, check the changelog unread dot, and browse feature requests"
+        alt="The dimmi web messenger Home screen showing help search, recent conversations, and product updates with an unread dot"
         maxWidth={520}
       />
     ),
   },
   {
-    label: "Identity verification",
-    title: "Signed customer tokens your support agents can trust.",
-    body: "Never trust a browser console with account identity. Your server signs a short HMAC token, or dimmi checks your auth provider's JWKS, before loading customer attributes and product events.",
+    label: "Fast setup",
+    title: "Add it to your site or app in 5 minutes.",
+    body: "Paste one line of HTML on any website, or install a ready-made package for React, Next.js, Vue, Angular, or Svelte. Run separate chat windows for each site or brand.",
     visual: (
       <ShotStill
-        name="channel-messenger-identity"
-        alt="Identity verification settings with HS256 signing secrets, token debugger, and a conversation showing verified customer attributes and product events"
+        name="channel-messenger-install"
+        alt="Messenger install settings showing packages for HTML, Browser, React, Next.js, Vue, Angular, and Svelte with a one-line snippet"
       />
     ),
   },
   {
-    label: "Brand & security",
-    title: "Matches your theme, respects strict CSP, and never fakes a human.",
-    body: "Style the messenger in light or dark mode, and lock it down with allowed sites and CSP nonces. Support agents show an AI badge and hand over with a summary.",
+    label: "Customer context",
+    title: "Customers never have to repeat who they are.",
+    body: "When a signed-in customer opens chat, their name, email, plan, and past conversations load right next to the thread so your team can help on the first reply.",
+    visual: (
+      <ShotStill
+        name="channel-messenger-identity"
+        alt="Verified customer details, plan, and recent account activity loaded beside a live chat conversation"
+      />
+    ),
+  },
+  {
+    label: "Make it yours",
+    title: "Matches your colors, light or dark mode, and brand.",
+    body: "Pick your accent color, choose light or dark mode, and write your own greeting. AI replies always show an AI badge and hand over to a teammate with a summary.",
     visual: (
       <ShotStill
         name="channel-messenger-brand"
-        alt="Messenger appearance and security settings showing brand colors, light and dark mode, allowed sites, CSP nonce, and an AI-badged agent handover"
+        alt="Messenger look and brand settings showing custom accent colors, light and dark mode, and AI agent handover"
       />
     ),
   },
@@ -56,67 +56,67 @@ const rows = [
 
 const more = [
   {
+    icon: Microphone,
+    title: "Voice notes, photos, and files",
+    body: "Customers can send screenshots, logs, or quick voice notes right in chat, with live typing and Seen receipts.",
+  },
+  {
     icon: Code,
     title: "Open from your own buttons",
-    body: "Hide the default launcher and trigger chat from any button using a data-dimmi attribute or the JavaScript API.",
+    body: "Hide the corner chat bubble and open chat from any Help link or button inside your app.",
   },
   {
     icon: ChatsCircle,
-    title: "Live unread count hooks",
-    body: "Show unread badges inside your own navigation bar with React, Vue, Angular, and Svelte hooks or browser events.",
+    title: "Live unread badges",
+    body: "Show an unread message count inside your own menu bar so customers never miss a reply.",
   },
   {
     icon: UsersThree,
-    title: "Audience visibility controls",
-    body: "Restrict the launcher or new conversations to saved audiences, such as paid customers, without hiding past replies.",
+    title: "Choose who sees chat",
+    body: "Show live chat to everyone on your site, or limit new chats to signed-in or paid customers.",
   },
   {
     icon: Translate,
-    title: "Built for global customers",
-    body: "Translate your greeting, away message, and labels for any language, with automatic fallback to dimmi's default text.",
+    title: "Speaks your customers' language",
+    body: "Translate your greeting, away message, and tabs into any language your customers use.",
   },
   {
     icon: ChatCircleText,
-    title: "Pre-fill context on click",
-    body: "Launch a new conversation with a starting message from billing errors, upgrade prompts, or docs pages.",
-  },
-  {
-    icon: LockKey,
-    title: "Safe key rotation and checks",
-    body: "Rotate identity secrets with 7 days of overlap, revoke leaked keys right away, and inspect any JWT in settings.",
+    title: "Start chats with context",
+    body: "Pre-fill a starting message when a customer clicks Help from a billing error or checkout page.",
   },
 ];
 
 const questions = [
   {
-    question: "Do we have to build a token signing endpoint from scratch?",
+    question: "How fast can we add live chat to our website or app?",
     answer:
-      "Not if you use Clerk, Auth.js, Supabase, or Better Auth with our Next.js package, or point dimmi at your auth provider's JWKS URL. For custom setups, our Express, Go, PHP, Laravel, and Python SDKs sign tokens in a few lines.",
+      "About 5 minutes. Paste one script tag on any website, or install our package for React, Next.js, Vue, Angular, or Svelte.",
   },
   {
-    question: "Will the messenger break our strict Content Security Policy?",
+    question: "Can our AI agent answer live chats automatically?",
     answer:
-      "Add your dimmi host to script-src, connect-src, and img-src; style-src needs no changes. Sites using strict-dynamic pass a per-request nonce on the script tag or inside any framework package.",
+      "Yes. Your AI agent answers from your help center with linked sources, follows your support rules, and hands over to a teammate with a short summary whenever a person should step in.",
   },
   {
-    question: "Can we hide the AI badge so the support agent looks like a human?",
+    question: "Can customers see who is AI and who is a human?",
     answer:
-      "We do not allow that. Replies from the dimmi agent always display a clear AI badge in the customer's language so people know whether they are talking to software or a teammate.",
+      "Always. Every AI reply carries a clear AI badge in the customer's language so people always know who they are talking to.",
   },
   {
-    question: "Can we run different messengers on our marketing site and inside our app?",
+    question: "Can we run different chat windows on our site and inside our app?",
     answer:
-      "Create separate messengers inside one workspace, each with its own theme, greeting, allowed domains, and help center. You can require sign-in inside your app while leaving anonymous chat open on your marketing pages.",
+      "Create as many messengers as you need in one workspace. Each one can have its own colors, greeting, help articles, and visibility rules.",
   },
   {
-    question: "When should we skip the web messenger?",
+    question: "How do we make sure nobody fakes another customer's identity?",
     answer:
-      "Look elsewhere if you need a native iOS or Android chat SDK, or a marketing pop-up for lead scoring and ad funnels. We built the messenger for web apps and sites, though you can build a custom client on the Messenger API.",
+      "Turn on signed customer login in settings. Your server signs a short token (or connects your auth provider like Clerk or Supabase) so dimmi confirms who is writing before loading account details.",
   },
   {
-    question: "Does adding the messenger cost extra per site or per teammate?",
+    question: "Does adding live chat cost extra per site or per teammate?",
     answer:
-      "Unlimited seats and multiple messengers come standard on every workspace. dimmi Cloud includes 100 free conversations every month, and self-hosting runs the exact same messenger on your own server for $0.",
+      "No. Unlimited seats and multiple messengers are included. dimmi Cloud gives you 100 free conversations every month, and self-hosting is $0.",
   },
 ];
 
@@ -125,23 +125,25 @@ export function MessengerChannelPage() {
     <>
       <ProductHero
         eyebrow="Web messenger"
-        title="Put support, docs, and updates inside your app with one line."
-        body="Drop in a single script tag or pick one of 6 framework packages. Customers chat, search docs, and read release notes while signed tokens confirm who signed in."
+        breadcrumb={[
+          { label: "Home", href: "/" },
+          { label: "Channels", href: "/channels" },
+        ]}
+        title="Live chat that answers fast, right inside your app."
+        body="Help customers the moment they get stuck. AI answers simple questions with linked docs, and your team steps in with full customer history."
         visual={
           <ShotVideo
             name="channel-messenger-hero"
             poster="channel-messenger-hero"
-            alt="The dimmi web messenger open inside a customer app, showing conversations, help center search, and signed-in customer context"
+            alt="The dimmi web messenger open inside a customer app, showing live chat, AI answers with linked docs, voice notes, and teammate replies"
             bleed
           />
         }
       />
-      <Rows title="Ship support in minutes, without shipping a mystery script to production." rows={rows} />
-      <FeatureGrid title="Small details engineers look for before shipping chat to production." items={more} />
-      <Questions
-        body="What engineers and support leads ask before dropping the messenger into production."
-        items={questions}
-      />
+      <Rows title="Everything customers expect from modern live chat." rows={rows} />
+      <FeatureGrid title="Built to feel like part of your product." items={more} />
+      <ChannelLinks current="/channels/messenger" />
+      <Questions body="What teams ask before adding live chat to their site or app." items={questions} />
       <FinalCta />
     </>
   );

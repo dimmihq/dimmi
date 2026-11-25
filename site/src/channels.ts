@@ -1,69 +1,71 @@
 /*
  * Every channel connection dimmi ships completely, with its marketing page
- * route, short blurb, and icon. Navigation, footer, and the inbox channel
- * strip all read from here.
+ * route, short blurb, and official brand mark. Navigation, footer, the
+ * channels hub, and cross-link strips all read from here.
  */
+import type { ComponentType } from "react";
+
 import {
-  ChatCircleText,
-  Code,
-  EnvelopeSimple,
-  InstagramLogo,
-  MessengerLogo,
-  type Icon as PhosphorIcon,
-  SlackLogo,
-  WhatsappLogo,
-} from "@phosphor-icons/react";
+  ApiBrandLogo,
+  type ChannelLogoProps,
+  EmailBrandLogo,
+  FacebookMessengerBrandLogo,
+  InstagramBrandLogo,
+  MessengerBrandLogo,
+  SlackBrandLogo,
+  WhatsAppBrandLogo,
+} from "./components/channel-logos";
 
 export type ChannelItem = {
   name: string;
   href: string;
   blurb: string;
-  icon: PhosphorIcon;
+  logo: ComponentType<ChannelLogoProps>;
 };
 
 export const CHANNELS: ChannelItem[] = [
   {
     name: "Messenger",
     href: "/channels/messenger",
-    blurb: "Live chat, help center, and changelog inside your app.",
-    icon: ChatCircleText,
+    blurb: "Live chat, help center, and updates inside your app.",
+    logo: MessengerBrandLogo,
   },
   {
     name: "Email",
     href: "/channels/email",
-    blurb: "Support addresses on your own verified sending domain.",
-    icon: EnvelopeSimple,
+    blurb: "Support email addresses on your own verified domain.",
+    logo: EmailBrandLogo,
   },
   {
     name: "Slack",
     href: "/channels/slack",
     blurb: "Customer Slack Connect channels synced to your inbox.",
-    icon: SlackLogo,
+    logo: SlackBrandLogo,
   },
   {
     name: "WhatsApp",
     href: "/channels/whatsapp",
     blurb: "WhatsApp Business numbers, media, and templates with $0 markup.",
-    icon: WhatsappLogo,
+    logo: WhatsAppBrandLogo,
   },
   {
     name: "Instagram",
     href: "/channels/instagram",
     blurb: "Instagram DMs beside email, chat, and customer history.",
-    icon: InstagramLogo,
+    logo: InstagramBrandLogo,
   },
   {
     name: "Facebook Messenger",
     href: "/channels/facebook-messenger",
-    blurb: "Facebook Page messages routed straight into one queue.",
-    icon: MessengerLogo,
+    blurb: "Facebook Page messages routed straight into one inbox.",
+    logo: FacebookMessengerBrandLogo,
   },
   {
     name: "Headless & API",
     href: "/channels/api",
-    blurb: "Custom chat UIs, server threads, webhooks, and 11 typed SDKs.",
-    icon: Code,
+    blurb: "Custom chat screens, backend APIs, webhooks, and 11 SDKs.",
+    logo: ApiBrandLogo,
   },
 ];
 
-export const CHANNEL_PATHS = new Set(CHANNELS.map((c) => c.href));
+export const CHANNEL_PATHS = new Set(["/channels", ...CHANNELS.map((c) => c.href)]);

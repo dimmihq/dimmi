@@ -6,12 +6,13 @@
  */
 import type { Icon as PhosphorIcon } from "@phosphor-icons/react";
 import { type RemixiconComponentType, RiArrowRightLine } from "@remixicon/react";
-import { type ReactNode, useState } from "react";
+import { type ComponentType, type ReactNode, useState } from "react";
 
 import { Accordion, AccordionItem } from "@/components/base/accordion/accordion";
 import { ButtonLink } from "@/components/base/buttons/button";
 import { cx } from "@/utils/cx";
 
+import { CHANNELS } from "../channels";
 import { APP_URL, GITHUB_URL } from "../links";
 import { type FlowName, ShotFlow } from "../scenes/shot-flow";
 import { useScene } from "../scenes/use-scene";
@@ -24,6 +25,7 @@ type FeatureIconType = PhosphorIcon;
 
 export function ProductHero({
   eyebrow,
+  breadcrumb,
   title,
   body,
   shot,
@@ -31,6 +33,7 @@ export function ProductHero({
   visual,
 }: {
   eyebrow: string;
+  breadcrumb?: { label: string; href: string }[];
   title: ReactNode;
   body: ReactNode;
   /* The page's main capture, or a drawn visual where no capture exists yet. */
@@ -46,6 +49,22 @@ export function ProductHero({
           className="pointer-events-none absolute inset-0 opacity-60 [background-image:linear-gradient(var(--color-separator-border)_1px,transparent_1px),linear-gradient(90deg,var(--color-separator-border)_1px,transparent_1px)] [background-size:64px_64px] [mask-image:radial-gradient(60%_50%_at_50%_30%,black,transparent)]"
         />
         <div className="relative flex flex-col items-center gap-6 px-5 pt-20 pb-14 text-center sm:px-12 md:pt-28">
+          {breadcrumb ? (
+            <nav aria-label="Breadcrumb" className="flex items-center gap-2 text-[13px] leading-5 text-text-tertiary">
+              {breadcrumb.map((crumb, i) => (
+                <span key={crumb.href} className="inline-flex items-center gap-2">
+                  {i > 0 ? <span aria-hidden>/</span> : null}
+                  <a href={crumb.href} className="transition-colors hover:text-text-primary">
+                    {crumb.label}
+                  </a>
+                </span>
+              ))}
+              <span aria-hidden>/</span>
+              <span className="text-text-secondary" aria-current="page">
+                {eyebrow}
+              </span>
+            </nav>
+          ) : null}
           <Tag className="self-center">{eyebrow}</Tag>
           <h1 className="max-w-3xl text-[60px] leading-[1.04] font-medium tracking-[-0.035em] text-balance text-text-primary max-md:text-[46px] max-sm:text-[36px]">
             {title}
@@ -68,12 +87,22 @@ export function ProductHero({
   );
 }
 
+function ChannelStripMark({ logo: Mark, icon: Glyph }: { logo?: ComponentType<{ className?: string }>; icon?: Icon }) {
+  if (Mark) {
+    return <Mark className="size-5 shrink-0" />;
+  }
+  if (Glyph) {
+    return <Glyph className="size-5 text-foreground-icon-secondary" aria-hidden />;
+  }
+  return null;
+}
+
 export function ChannelStrip({
   label,
   items,
 }: {
   label: string;
-  items: { icon: Icon; name: string; href?: string }[];
+  items: { icon?: Icon; logo?: ComponentType<{ className?: string }>; name: string; href?: string }[];
 }) {
   return (
     <Section frameClassName="!py-9 flex flex-wrap items-center justify-between gap-x-6 gap-y-5">
@@ -87,12 +116,12 @@ export function ChannelStrip({
             href={item.href}
             className="inline-flex items-center gap-2.5 text-[16px] leading-7 text-text-primary transition-colors hover:text-accent-600 dark:hover:text-accent-400"
           >
-            <item.icon className="size-5 text-foreground-icon-secondary" aria-hidden />
+            <ChannelStripMark logo={item.logo} icon={item.icon} />
             {item.name}
           </a>
         ) : (
           <span key={item.name} className="inline-flex items-center gap-2.5 text-[16px] leading-7 text-text-primary">
-            <item.icon className="size-5 text-foreground-icon-secondary" aria-hidden />
+            <ChannelStripMark logo={item.logo} icon={item.icon} />
             {item.name}
           </span>
         ),
@@ -373,9 +402,82 @@ export function LinkList({ title, body, items }: { title: string; body?: string;
   );
 }
 
+export function ChannelLinks({ current }: { current: string }) {
+  const siblings = CHANNELS.filter((channel) => channel.href !== current);
+  return (
+    <Section frameClassName="flex flex-col gap-10">
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        <div className="flex flex-col gap-1">
+          <h2 className="text-[28px] leading-9 font-medium tracking-[-0.02em] text-text-primary max-sm:text-[24px]">
+            Connect every other channel to the same inbox.
+          </h2>
+          <p className="text-[16px] leading-7 text-text-secondary">
+            Pair this channel with your shared{" "}
+            <a href="/inbox" className="text-text-primary underline underline-offset-4 hover:text-accent-600">
+              inbox
+            </a>
+            ,{" "}
+            <a href="/agents" className="text-text-primary underline underline-offset-4 hover:text-accent-600">
+              AI support agents
+            </a>
+            ,{" "}
+            <a href="/workflows" className="text-text-primary underline underline-offset-4 hover:text-accent-600">
+              workflows
+            </a>
+            , and transparent{" "}
+            <a href="/pricing" className="text-text-primary underline underline-offset-4 hover:text-accent-600">
+              pricing
+            </a>
+            .
+          </p>
+        </div>
+        <a
+          href="/channels"
+          className="inline-flex items-center gap-1.5 font-mono text-[12px] leading-5 font-medium tracking-[0.04em] text-text-primary uppercase hover:text-accent-600"
+        >
+          View all channels
+          <RiArrowRightLine className="size-3.5" aria-hidden />
+        </a>
+      </div>
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 [&>*]:min-w-0">
+        {siblings.map((channel) => (
+          <a
+            key={channel.href}
+            href={channel.href}
+            className="group flex items-start gap-3.5 rounded-xl border border-border-button-default bg-background-full p-4 transition-colors hover:border-border-button-hover hover:bg-background-secondary-default/40"
+          >
+            <span className="flex size-9 shrink-0 items-center justify-center rounded-lg border border-border-button-default bg-background-full shadow-2xs">
+              <channel.logo className="size-5.5" />
+            </span>
+            <span className="flex min-w-0 flex-col gap-0.5">
+              <span className="text-[15px] leading-6 font-medium text-text-primary">{channel.name}</span>
+              <span className="text-[14px] leading-5 text-pretty text-text-secondary">{channel.blurb}</span>
+            </span>
+          </a>
+        ))}
+      </div>
+    </Section>
+  );
+}
+
 export function Questions({ body, items }: { body?: string; items: { question: string; answer: string }[] }) {
+  const faqSchema = {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    mainEntity: items.map((item) => ({
+      "@type": "Question",
+      name: item.question,
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: item.answer,
+      },
+    })),
+  };
+
   return (
     <Section frameClassName="grid grid-cols-1 gap-10 lg:grid-cols-[0.8fr_1.2fr] [&>*]:min-w-0">
+      {/* biome-ignore lint/security/noDangerouslySetInnerHtml: static FAQPage JSON-LD matching visible Q&A */}
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }} />
       <div className="flex flex-col gap-4">
         <h2 className="text-[40px] leading-[1.12] font-medium tracking-[-0.025em] text-text-primary max-sm:text-[30px]">
           Questions and answers.
