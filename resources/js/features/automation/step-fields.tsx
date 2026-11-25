@@ -18,6 +18,7 @@ import { ClassifyFields } from "./classify-fields";
 import {
   changeField,
   changeOp,
+  conditionFields,
   conditionOf,
   fieldsFor,
   isSimple,
@@ -214,7 +215,7 @@ function ConditionFields({
           <Field
             key={`${field}-${op}`}
             label="Condition value"
-            placeholder="Words, separated by commas"
+            placeholder={conditionFields[field]?.type === "number" ? "A number, like 2" : "Words, separated by commas"}
             value={valueText(condition)}
             onChange={(typed) => onChange(conditionOf(field, op, typed))}
           />
@@ -313,6 +314,15 @@ function LengthFields({ step, onEdit, title }: Props & { title: string }) {
           />
         </Row>
       )}
+      {step.kind === "wait" ? (
+        <Row label="Stop if the customer writes" description="The workflow ends there instead of going on.">
+          <Toggle
+            label="Stop if the customer writes"
+            on={Array.isArray(step.settings?.interrupt_on) && step.settings.interrupt_on.includes("customer_message")}
+            onChange={(on) => set({ interrupt_on: on ? ["customer_message"] : undefined })}
+          />
+        </Row>
+      ) : null}
     </Section>
   );
 }

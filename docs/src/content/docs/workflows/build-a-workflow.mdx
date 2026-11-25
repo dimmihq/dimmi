@@ -9,12 +9,18 @@ To skip the blank canvas, pick a template at the top of the same dialog instead.
 
 | Template | Trigger | Steps |
 | --- | --- | --- |
-| **Greet, then hand to your AI agent** | Customer sends their first message | **Send a message**, then **Hand to an AI agent** |
-| **Take an email out of hours** | Customer sends their first message, outside office hours | **Show reply time**, then **Collect data** |
-| **Keep AI off email** | Customer sends their first message, on email | **Turn off AI** |
-| **Brief the team after a handover** | AI agent hands over | **Set priority** and **Add a note** |
-| **Thank the customer when the agent resolves** | AI agent resolves a conversation | **Send a message** |
-| **Escalate a breached SLA** | SLA breached | **Set priority** to urgent and **Add a note** |
+| **Nudge, then close quiet conversations** | Customer stops replying for 2 days | **Send a message**, **Wait** 3 days (stops if the customer writes), **Send a message**, **Close** |
+| **Route by topic** | Customer sends their first message | **Sort by topic** into Billing, Bug and Sales, each **Assign** to a team |
+| **Ask what they need, then route** | Customer sends their first message, in the messenger | **Reply buttons**: help goes to your AI agent, sales and bugs to a team |
+| **Fast lane for top customers** | Customer sends their first message | **Branch** on who counts as a top customer, then urgent **Set priority**, **Apply an SLA** and **Assign** |
+| **Escalate when the team goes quiet** | Customer waits 4 hours for the team | **Show reply time**, **Set priority** to high, **Add a note** |
+| **Warn before an SLA breaches** | SLA about to breach | **Set priority** to urgent, **Add a note**, **Assign** |
+| **Follow up on a bad rating** | Customer rates the conversation | **Branch** on a rating of 2 or lower, then **Set priority**, **Add a note**, **Assign** |
+| **Catch customers at risk of leaving** | AI attribute changes | **Branch** on the attribute that flags it, then urgent **Set priority**, **Add a note**, **Assign** |
+
+A template leaves empty what only your workspace knows, such as the team or the SLA policy. **To fix before publishing** lists each one.
+
+Some jobs are settings, not workflows. An agent's **Where it answers** picks its channels, its handover leaves a note and goes to its **Hand over to** team, and an SLA policy raises the priority and reassigns the conversation when a target is missed.
 
 ## Build it with Operator
 

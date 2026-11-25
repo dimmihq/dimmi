@@ -144,7 +144,9 @@ function StepLine({
           {stepLabel(placed.step)}
         </span>
         <span className="truncate text-caption-1-medium text-text-tertiary tabular-nums">
-          {detail || placed.under || (reached > 0 ? `${rate(reached, m.triggered)} of runs reached it` : "Not yet reached")}
+          {detail ||
+            placed.under ||
+            (reached > 0 ? `${rate(reached, m.triggered)} of runs reached it` : "Not yet reached")}
         </span>
       </span>
       {s?.failed ? (

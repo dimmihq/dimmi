@@ -12,7 +12,7 @@ import { ticketConditionFields } from "./ticket-conditions";
 import type { TicketLists } from "./ticket-fields";
 import type { TriggerKind } from "./triggers";
 
-export type FieldType = "text" | "choice" | "yes_no" | "set";
+export type FieldType = "text" | "number" | "choice" | "yes_no" | "set";
 
 /*
  * ConditionField is a field offered in conditions. Options lists the
@@ -45,6 +45,7 @@ export const conditionFields: Record<string, ConditionField> = {
     options: { open: "Open", snoozed: "Snoozed", closed: "Closed" },
     triggers: ["conversation.status_changed"],
   },
+  "rating.score": { name: "Rating", type: "number", triggers: ["conversation.rated"] },
   "conversation.channel_type": {
     name: "Channel",
     type: "choice",
@@ -77,6 +78,12 @@ const textOps: Record<string, string> = {
   ends_with: "ends with",
   exists: "is known",
   not_exists: "is unknown",
+};
+
+const numberOps: Record<string, string> = {
+  lte: "is at most",
+  gte: "is at least",
+  eq: "is",
 };
 
 const yesNoOps: Record<string, string> = {
@@ -124,6 +131,9 @@ export function opsFor(field: string): Record<string, string> {
   if (type === "set") {
     return setOps;
   }
+  if (type === "number") {
+    return numberOps;
+  }
 
   return type === "choice" ? choiceOps : textOps;
 }
@@ -150,6 +160,10 @@ export function valueText(condition: Condition | undefined): string {
     return value.join(", ");
   }
 
+  if (typeof value === "number") {
+    return String(value);
+  }
+
   return typeof value === "string" ? value : "";
 }
 
@@ -160,6 +174,10 @@ export function valueList(condition: Condition | undefined): string[] {
   const value = condition?.value;
   if (Array.isArray(value)) {
     return value.filter((item): item is string => typeof item === "string");
+  }
+
+  if (typeof value === "number") {
+    return [String(value)];
   }
 
   return typeof value === "string" && value ? [value] : [];
@@ -179,6 +197,12 @@ export function conditionOf(field: string, op: string, typed: string | string[])
         .split(",")
         .map((word) => word.trim())
         .filter(Boolean);
+
+  if (conditionFields[field]?.type === "number") {
+    const number = Number(words[0]);
+
+    return { field, op, value: words[0] && Number.isFinite(number) ? number : "" };
+  }
 
   return { field, op, value: listOps.has(op) ? words : (words[0] ?? "") };
 }
