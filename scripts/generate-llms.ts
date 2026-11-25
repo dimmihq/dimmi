@@ -51,14 +51,21 @@ type SdksManifest = {
   }[];
 };
 
+const HTML_ENTITIES: Record<string, string> = {
+  "&amp;": "&",
+  "&lt;": "<",
+  "&gt;": ">",
+  "&quot;": '"',
+  "&#39;": "'",
+  "&apos;": "'",
+  "&#x27;": "'",
+};
+
 function decodeEntities(text: string): string {
-  return text
-    .replace(/&amp;/g, "&")
-    .replace(/&lt;/g, "<")
-    .replace(/&gt;/g, ">")
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;|&apos;/g, "'")
-    .replace(/&#x27;/gi, "'");
+  return text.replace(
+    /&(?:amp|lt|gt|quot|apos|#39|#x27);/gi,
+    (entity) => HTML_ENTITIES[entity.toLowerCase()] ?? entity,
+  );
 }
 
 function walkMarketingHtml(dir: string, root: string, out: string[] = []): string[] {
