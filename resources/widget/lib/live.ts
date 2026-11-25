@@ -40,7 +40,7 @@ import { patch } from "./patch";
 import { report } from "./report";
 import type { Surface } from "./rules";
 import { loadThread, thread as threadParts } from "./threads";
-import { enterRows, loadTickets, pinStrip, tickets } from "./tickets";
+import { loadTickets, tickets } from "./tickets";
 
 export interface Host {
   root: ShadowRoot;
@@ -903,7 +903,7 @@ export class Live {
       button.setAttribute("aria-pressed", String((button.getAttribute("data-ticket-filter") === "open") === open));
     }
     this.drawConversations();
-    enterRows(this.host.root.querySelectorAll('.view[data-view="messages"] .list > *'));
+    tickets()?.enterRows(this.host.root.querySelectorAll('.view[data-view="messages"] .list > *'));
   }
 
   /*
@@ -1270,9 +1270,9 @@ export class Live {
       String(t.Thread({ messages, texts: this.actionTexts(), team: this.content().company, ai: this.aiTexts() })),
     ];
     const ticket = this.store.conversations.find((c) => c.id === open)?.ticket;
-    const strip = tickets()?.Strip;
-    pinStrip(thread, ticket && strip ? String(strip({ ticket, texts })) : "");
-    if (ticket && !strip) {
+    const requests = tickets();
+    requests?.pinStrip(thread, ticket ? String(requests.Strip({ ticket, texts })) : "");
+    if (ticket && !requests) {
       void loadTickets(this.host.root).then(() => this.drawThread());
     }
 

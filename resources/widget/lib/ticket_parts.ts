@@ -17,6 +17,7 @@ import type { Live } from "./live";
 import { word } from "./ticket_words";
 
 export { Filter, HomeCards, Strip } from "../components/tickets";
+export { enterRows, pinStrip } from "./ticket_pin";
 
 const styled = new WeakSet<ShadowRoot>();
 

@@ -1,4 +1,4 @@
-import { pinStrip } from "./lib/tickets";
+import { pinStrip } from "./lib/ticket_pin";
 
 /*
  * thread builds a scrolling thread of the given size after a bar slot.

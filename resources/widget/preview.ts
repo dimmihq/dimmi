@@ -7,8 +7,8 @@
 import type { Content, Incoming, Message, TicketBlock, TicketType } from "./content";
 import { size } from "./lib/map";
 import { Said, Typing } from "./lib/thread_parts";
+import { enterRows, pinStrip } from "./lib/ticket_pin";
 import type { Words } from "./lib/ticket_words";
-import { enterRows, pinStrip } from "./lib/tickets";
 
 /*
  * teammate is who answers in a preview.
