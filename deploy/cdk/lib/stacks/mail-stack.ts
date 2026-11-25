@@ -89,7 +89,7 @@ export class MailStack extends Stack {
     const eventsTopic = new Topic(this, "EventsTopic", { topicName: name("events") });
 
     this.receiving(ruleSetName, config.mail, this.inboundBucket, this.inboundTopic);
-    this.webhooks(name("webhook-dlq"), `https://${config.host}`, { inbound: this.inboundTopic });
+    this.webhooks(name("webhook-dlq"), `https://${config.host}`, { inbound: this.inboundTopic, events: eventsTopic });
 
     const identities = [
       this.sendingIdentity("InboundIdentity", config.mail.inbound),
@@ -218,7 +218,7 @@ export class MailStack extends Stack {
    * still fails lands in one queue, kept for the longest time SQS allows, so an
    * outage of the application loses nothing.
    */
-  private webhooks(queueName: string, baseUrl: string, topics: { inbound: Topic }): void {
+  private webhooks(queueName: string, baseUrl: string, topics: { inbound: Topic; events: Topic }): void {
     const deadLetterQueue = new Queue(this, "WebhookDeadLetterQueue", {
       queueName,
       retentionPeriod: Duration.days(14),
@@ -248,10 +248,10 @@ export class MailStack extends Stack {
         deliveryPolicy,
       });
 
-    // Bounces and complaints reach the application as mail: SES forwards each
-    // report to the sender's address, which the receipt rules deliver here.
-    // The events topic has no webhook until the application reads it.
+    // Incoming mail and SES's own reports of bounces and complaints each
+    // reach the application at a webhook of their own.
     subscribe("InboundWebhook", topics.inbound, "/webhooks/ses/inbound");
+    subscribe("EventsWebhook", topics.events, "/webhooks/ses/events");
   }
 
   private sendingIdentity(id: string, domain: string): EmailIdentity {
