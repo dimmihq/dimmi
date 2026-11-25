@@ -40,10 +40,9 @@ const parts: PartSummary[] = [
       { id: "term", label: "19. Term & termination" },
       { id: "export", label: "20. Export & deletion" },
       { id: "switching", label: "21. Provider switching" },
-      { id: "support", label: "22. Support & SLAs" },
-      { id: "compliance", label: "23. Compliance & requests" },
-      { id: "governing-law", label: "24. Governing law & disputes" },
-      { id: "general", label: "25. General & version history" },
+      { id: "compliance", label: "22. Compliance & requests" },
+      { id: "governing-law", label: "23. Governing law & disputes" },
+      { id: "general", label: "24. General & version history" },
     ],
   },
   {
@@ -813,24 +812,8 @@ export function TermsPage() {
       </Clause>
 
       <Clause
-        anchor="support"
-        number="22"
-        title="Support and service levels"
-        summary="Email support is included for every cloud workspace. Uptime commitments, service credits, extended support hours, and response-time SLAs are available under an Order Form."
-      >
-        <p>
-          Standard support for dimmi Cloud is provided via email at{" "}
-          <LegalLink href={`mailto:${LEGAL_CONTACTS.support}`}>{LEGAL_CONTACTS.support}</LegalLink> and through our
-          documentation, Monday to Friday, 09:00 to 18:00 West Africa Time (08:00 to 17:00 UTC), excluding Nigerian
-          public holidays. Customers who need a guaranteed monthly uptime target, service credits, extended or
-          round-the-clock support hours, or severity-based response times can agree them with dimmi in an Order Form.
-          Without an Order Form, no contractual uptime percentage or service credit applies.
-        </p>
-      </Clause>
-
-      <Clause
         anchor="compliance"
-        number="23"
+        number="22"
         title="Compliance, sanctions, and lawful requests"
         summary="You confirm you are not on a sanctions list or in an embargoed country, and you acknowledge we must comply with lawful government or law enforcement orders."
       >
@@ -853,7 +836,7 @@ export function TermsPage() {
 
       <Clause
         anchor="governing-law"
-        number="24"
+        number="23"
         title="Governing law and dispute resolution"
         summary="Nigerian law governs. We negotiate in good faith for 30 days first; unresolved disputes go to binding arbitration in Lagos under Nigeria's Arbitration and Mediation Act 2023. An Order Form can name a different law and seat."
       >
@@ -888,7 +871,7 @@ export function TermsPage() {
 
       <Clause
         anchor="general"
-        number="25"
+        number="24"
         title="General provisions and version history"
         summary="We can assign this contract to a successor or affiliate on notice. We give 30 days' notice for material terms changes, and you can cancel with a pro-rata refund if you object."
       >
@@ -932,7 +915,7 @@ export function TermsPage() {
               dimmi may use subprocessors in accordance with the DPA and remains responsible for their performance. If
               any provision is held unenforceable, the remainder stays in full force. Failure to enforce a right is not
               a waiver. This Agreement is the entire agreement between the parties and is governed in English. Clauses
-              9, 12 (accrued fees), 13, 15, 16, 17, 18, 20, 23, 24, and 25 survive termination.
+              9, 12 (accrued fees), 13, 15, 16, 17, 18, 20, 22, 23, and 24 survive termination.
             </>,
           ]}
         />
