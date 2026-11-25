@@ -1,15 +1,15 @@
 import { ArrowsClockwise, Broadcast, Code, Key, Plugs, ShieldCheck } from "@phosphor-icons/react";
 
-import { FeatureGrid, ProductHero, Questions, Rows } from "../../components/product-page";
+import { ChannelLinks, FeatureGrid, ProductHero, Questions, Rows } from "../../components/product-page";
 import { ShotStill } from "../../components/shot-still";
 import { ShotVideo } from "../../components/shot-video";
 import { FinalCta } from "../../sections/final-cta";
 
 const rows = [
   {
-    label: "Messenger API",
-    title: "Build native web and mobile chat on /widget/v1.",
-    body: "Render chat inside your own web or mobile app with zero iframes or cookies. Sign a JWT on your server so dimmi checks each customer's identity and trusts their account attributes.",
+    label: "Custom chat",
+    title: "Build your own web or mobile chat with the Messenger API.",
+    body: "Design the chat screen yourself in your web, iOS, or Android app without iframes or cookies. Sign a short token on your server so dimmi knows which customer is writing.",
     visual: (
       <ShotStill
         name="channel-api-messenger"
@@ -18,9 +18,9 @@ const rows = [
     ),
   },
   {
-    label: "REST API",
+    label: "Backend API",
     title: "Open and answer conversations straight from your backend.",
-    body: "Each inbox includes a built-in API channel. Call /api/v1 from your backend to open conversations, post messages, update customer records, and track product events with scoped API tokens.",
+    body: "Every inbox includes an API channel. Call /api/v1 from your server to open chats, send replies, update customer details, and log product events.",
     visual: (
       <ShotVideo
         name="channel-api-rest"
@@ -31,24 +31,24 @@ const rows = [
     ),
   },
   {
-    label: "Signed webhooks",
-    title: "Push real-time events into your app, CRM, or custom bridge.",
-    body: "dimmi signs payloads with Standard Webhooks and retries failures up to 12 times over 24 hours. Subscribe with wildcards, skip repeats by event ID, and replay missed calls anytime.",
+    label: "Webhooks",
+    title: "Get real-time updates in your app when messages arrive.",
+    body: "dimmi signs every webhook so you can trust it, and retries failed deliveries up to 12 times over 24 hours. Pick the events you want and replay missed calls anytime.",
     visual: (
       <ShotStill
         name="channel-api-webhooks"
-        alt="Webhook endpoint view showing Standard Webhooks signing secret rotation, subscribed event patterns, and delivery retry history"
+        alt="Webhook endpoint view showing signing secret rotation, subscribed event patterns, and delivery retry history"
       />
     ),
   },
   {
-    label: "SDKs, OAuth & MCP",
-    title: "11 typed SDKs, OAuth apps, MCP, and llms.txt included.",
-    body: "Install typed SDKs for TypeScript, Go, PHP, Laravel, Python, Browser, React, Next.js, Vue, Angular, and Svelte. Register OAuth 2 apps, connect Claude or Cursor over /mcp, and feed docs to coding agents with llms.txt.",
+    label: "SDKs and tools",
+    title: "Ready-made SDKs for your stack, plus OAuth and AI tool access.",
+    body: "Install typed packages for TypeScript, Go, PHP, Laravel, Python, Browser, React, Next.js, Vue, Angular, and Svelte. Create OAuth apps, or connect Claude and Cursor over MCP.",
     visual: (
       <ShotStill
         name="channel-api-sdks"
-        alt="Developer tools overview showing the 11 typed SDKs, OAuth 2 app settings, remote MCP server URL, and llms.txt documentation index"
+        alt="Developer tools overview showing the 11 typed SDKs, OAuth 2 app settings, and remote MCP server URL"
       />
     ),
   },
@@ -57,66 +57,66 @@ const rows = [
 const more = [
   {
     icon: ShieldCheck,
-    title: "JWT and JWKS identity",
-    body: "Sign customer tokens with HS256, RSA, P-256, or Ed25519 keys, or point dimmi at your auth provider's JWKS URL.",
+    title: "Signed customer login",
+    body: "Sign customer tokens on your server or point dimmi at your auth provider so nobody can fake an identity.",
   },
   {
     icon: Broadcast,
-    title: "Realtime streams or cursor polling",
-    body: "Request a realtime stream token for live updates in custom chat clients, or poll /updates with a cursor.",
+    title: "Live streams or polling",
+    body: "Stream new messages to your custom chat app in real time, or poll for updates with a cursor.",
   },
   {
     icon: Key,
-    title: "Scoped API token abilities",
-    body: "Lock each API token to the exact read or write abilities it needs, capped by your workspace role.",
+    title: "Scoped API tokens",
+    body: "Give each API token only the read or write access it needs, matching your team permissions.",
   },
   {
     icon: ArrowsClockwise,
-    title: "Rotate secrets without downtime",
-    body: "Keep old and new webhook or identity keys active side by side while your servers roll out.",
+    title: "Zero-downtime key rotation",
+    body: "Keep your old and new webhook or login keys active together while you update your servers.",
   },
   {
     icon: Code,
-    title: "Additive public contracts",
-    body: "OpenAPI and webhook schemas only add fields. Existing paths, types, and SDK calls stay working across releases.",
+    title: "Updates never break old code",
+    body: "We only add new fields and endpoints. Your existing API calls and SDK code keep working.",
   },
   {
     icon: Plugs,
-    title: "MCP server with confirmation",
-    body: "Connect Claude, ChatGPT, or Cursor to /mcp over OAuth. Sensitive writes and deletes pause for your approval.",
+    title: "Connect Claude or Cursor",
+    body: "Plug AI coding tools into dimmi over /mcp using OAuth, with a confirmation check before edits run.",
   },
 ];
 
 const questions = [
   {
-    question: "When should we skip headless and use the hosted messenger instead?",
+    question: "Should we build our own chat or use the hosted web messenger?",
     answer:
-      "Most teams should start with the hosted messenger. It ships in 5 minutes with help search, tickets, changelog, and unread badges ready to go. Build on /widget/v1 only when you need custom native mobile screens or strict UI control.",
+      "Start with the hosted web messenger unless you need a custom native mobile screen or full control over the UI. The hosted messenger takes 5 minutes and includes docs search and updates.",
   },
   {
-    question: "Do dimmi support agents, workflows, and SLAs work on API threads?",
+    question: "Do AI agents, workflows, and reply timers work on API chats?",
     answer:
-      "Conversations opened through /widget/v1 or /api/v1 land in your shared inbox with the same routing, SLAs, tickets, and workflows. Support agents answer those threads, run procedures, and hand over to teammates like any other channel.",
+      "Yes. Conversations from /widget/v1 and /api/v1 land in your inbox like any other channel, with the same routing, reply timers, tickets, and AI agents.",
   },
   {
-    question: "Can we bridge our own chat channel or internal app into dimmi?",
+    question: "Can we connect our own chat system to dimmi?",
     answer:
-      "Open threads and post customer messages into any inbox's API channel with /api/v1, then subscribe to message.created webhooks to push teammate and agent replies back to your app. Stable event IDs and sequence numbers keep both sides in sync.",
+      "Send customer messages into any inbox with /api/v1, then listen to message.created webhooks to push teammate and AI replies back to your app.",
   },
   {
-    question: "Do API access, webhooks, or SDKs require a higher plan?",
+    question: "Do we need a higher plan for the API, webhooks, or SDKs?",
     answer:
-      "All 11 SDKs, /api/v1, /widget/v1, webhooks, OAuth apps, and /mcp come included on dimmi Cloud, starting with 100 free conversations a month, and in the self-hosted build for $0.",
+      "No. The API, webhooks, all 11 SDKs, OAuth apps, and MCP are included on dimmi Cloud (with 100 free conversations a month) and in the $0 self-hosted build.",
   },
   {
-    question: "Can native iOS and Android apps call the Messenger API?",
+    question: "Can iOS and Android apps use the Messenger API?",
     answer:
-      "Turn on native app access for your messenger and call /widget/v1 from iOS, Android, or React Native without cookies. Pass a JWT signed by your server to tie sessions to customers and merge anonymous threads.",
+      "Yes. Turn on native app access in settings and call /widget/v1 from iOS, Android, or React Native without browser cookies.",
   },
   {
-    question: "Will an API update break our integration or SDKs?",
+    question: "Will future dimmi updates break our integration?",
     answer:
-      "Public contracts for /api/v1, /widget/v1, and webhooks are additive only. We add fields and endpoints rather than renaming or removing existing ones, and we generate all 11 SDKs from the committed OpenAPI contract so types stay in sync.",
+      "No. Our public API and webhook formats only add new fields, never rename or remove old ones, and every SDK is generated straight from that contract.",
   },
 ];
 
@@ -125,20 +125,25 @@ export function ApiChannelPage() {
     <>
       <ProductHero
         eyebrow="Headless & API"
-        title="Own every pixel of customer chat without rebuilding a helpdesk."
-        body="Ship your own web or mobile chat on /widget/v1, or open threads from your backend with /api/v1. Your team and support agents answer them from one shared inbox."
+        breadcrumb={[
+          { label: "Home", href: "/" },
+          { label: "Channels", href: "/channels" },
+        ]}
+        title="Build your own chat UI on top of dimmi."
+        body="Build custom chat for your web or mobile app with our Messenger API, or open threads from your backend. Every message lands in your dimmi inbox."
         visual={
           <ShotVideo
             name="channel-api-hero"
             poster="channel-api-hero"
-            alt="A custom in-app chat client sending messages over /widget/v1 while a teammate and support agent reply in the dimmi inbox"
+            alt="A custom in-app chat client on the left sending messages over /widget/v1 while a teammate and support agent reply in the dimmi inbox on the right"
             bleed
           />
         }
       />
-      <Rows title="Skip the iframe hacks and wire support straight into your app." rows={rows} />
-      <FeatureGrid title="Built like infrastructure your team will not regret maintaining." items={more} />
-      <Questions body="What engineering leads ask before building on the dimmi API." items={questions} />
+      <Rows title="Connect your app and backend straight to your inbox." rows={rows} />
+      <FeatureGrid title="Simple tools for connecting custom apps." items={more} />
+      <ChannelLinks current="/channels/api" />
+      <Questions body="What developers ask before building on the dimmi API." items={questions} />
       <FinalCta />
     </>
   );

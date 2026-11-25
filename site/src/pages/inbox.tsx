@@ -15,16 +15,7 @@ import {
   Timer,
   Translate,
 } from "@phosphor-icons/react";
-import {
-  RiChat3Line,
-  RiCodeSSlashLine,
-  RiInstagramLine,
-  RiMailLine,
-  RiMessengerLine,
-  RiSlackLine,
-  RiWhatsappLine,
-} from "@remixicon/react";
-
+import { CHANNELS } from "../channels";
 import {
   ChannelStrip,
   type Feature,
@@ -200,18 +191,7 @@ export function InboxPage() {
         shot="inbox"
         shotAlt="The dimmi inbox: conversation list, thread and details"
       />
-      <ChannelStrip
-        label="Channels"
-        items={[
-          { icon: RiChat3Line, name: "Messenger", href: "/channels/messenger" },
-          { icon: RiMailLine, name: "Email", href: "/channels/email" },
-          { icon: RiSlackLine, name: "Slack", href: "/channels/slack" },
-          { icon: RiWhatsappLine, name: "WhatsApp", href: "/channels/whatsapp" },
-          { icon: RiInstagramLine, name: "Instagram", href: "/channels/instagram" },
-          { icon: RiMessengerLine, name: "Facebook", href: "/channels/facebook-messenger" },
-          { icon: RiCodeSSlashLine, name: "API", href: "/channels/api" },
-        ]}
-      />
+      <ChannelStrip label="Channels" items={CHANNELS.map((c) => ({ logo: c.logo, name: c.name, href: c.href }))} />
       <FeatureCards
         title="Answer without jumping across five tabs."
         body="Triage, customer info, and teamwork live in one view. Nobody opens another tool to find an order."

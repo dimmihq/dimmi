@@ -1,15 +1,15 @@
 import { Alarm, Buildings, ChatText, Files, Hourglass, ShieldCheck } from "@phosphor-icons/react";
 
-import { FeatureGrid, ProductHero, Questions, Rows } from "../../components/product-page";
+import { ChannelLinks, FeatureGrid, ProductHero, Questions, Rows } from "../../components/product-page";
 import { ShotStill } from "../../components/shot-still";
 import { ShotVideo } from "../../components/shot-video";
 import { FinalCta } from "../../sections/final-cta";
 
 const rows = [
   {
-    label: "Meta OAuth setup",
-    title: "Official Meta OAuth setup with live connection health checks.",
-    body: "Sign in with Meta, pick your business portfolio, and attach the Pages you want in dimmi. Health checks watch each Page so you spot expired permissions before messages drop.",
+    label: "Connect",
+    title: "Connect your Facebook Pages and check their health.",
+    body: "Sign in with Meta and pick the Facebook Pages you want in dimmi. Health checks watch each Page and warn you if permissions expire.",
     visual: (
       <ShotStill
         name="channel-facebook-connect"
@@ -19,8 +19,8 @@ const rows = [
   },
   {
     label: "Shared inbox",
-    title: "Skip Meta Business Suite and answer beside email and WhatsApp.",
-    body: "Incoming Page messages open in your shared inbox next to email, WhatsApp, and past tickets. Teammates see the customer's history, leave internal notes, and reply straight back to Messenger.",
+    title: "Reply beside past emails, WhatsApp chats, and team notes.",
+    body: "Skip Meta Business Suite. Incoming Page messages land next to past emails and tickets so teammates can leave private notes and reply right from dimmi.",
     visual: (
       <ShotVideo
         name="channel-facebook-thread"
@@ -31,9 +31,9 @@ const rows = [
     ),
   },
   {
-    label: "Routing, files, and windows",
-    title: "One inbox per brand, any file type, and a live 24-hour clock.",
-    body: "Attach multiple Facebook Pages and route each brand to its own inbox. Send photos, video, audio, or files while the composer tracks Meta's 24-hour and 7-day reply windows.",
+    label: "Files and timers",
+    title: "Route each Page to its own team and send any file.",
+    body: "Connect multiple Facebook Pages and send each brand to its own inbox. Share photos, videos, audio, or PDFs while seeing how much time Meta allows to reply.",
     visual: (
       <ShotStill
         name="channel-facebook-routing"
@@ -42,9 +42,9 @@ const rows = [
     ),
   },
   {
-    label: "Agents and SLAs",
-    title: "Support agents answer Page messages around the clock on your rules.",
-    body: "Assign specialized support agents to answer Page messages from your docs and follow procedures in plain English. Pair them with workflows and SLAs so edge cases reach teammates fast.",
+    label: "AI agents",
+    title: "Let AI agents answer Page messages day and night.",
+    body: "Put an AI support agent on your Facebook inbox to answer from your docs and follow your rules. Workflows and reply timers make sure urgent chats reach people fast.",
     visual: (
       <ShotStill
         name="channel-facebook-agents"
@@ -57,66 +57,64 @@ const rows = [
 const more = [
   {
     icon: Buildings,
-    title: "Multiple Pages in one workspace",
-    body: "Run separate Facebook Pages for each brand, store, or region and route each Page into its own inbox and team.",
+    title: "Multiple Facebook Pages",
+    body: "Connect Pages for different brands or stores and route each one to its own inbox and team.",
   },
   {
     icon: Hourglass,
-    title: "Live Meta reply clock",
-    body: "See how much time remains in Meta's 24-hour agent window and 7-day teammate window right inside the composer.",
+    title: "Live Meta reply timer",
+    body: "See how much time is left in Meta's 24-hour AI window and 7-day teammate window right in the reply box.",
   },
   {
     icon: Files,
-    title: "Media and file attachments",
-    body: "Receive customer photos, videos, shared links, and edited messages, and send back images, audio, video, or files like invoices.",
+    title: "Photos, videos, and PDFs",
+    body: "Receive customer photos, videos, and links, and send back images, audio, or files like invoices.",
   },
   {
     icon: ChatText,
-    title: "Automatic reply splitting",
-    body: "Write a full answer once without chopping text by hand. dimmi splits long replies into multiple Messenger messages in order.",
+    title: "Long replies split cleanly",
+    body: "Write a full answer once. dimmi splits long messages into ordered Messenger bubbles automatically.",
   },
   {
     icon: Alarm,
-    title: "Workflows and SLA targets",
-    body: "Tag incoming Page threads, open linked engineering tickets, and set reply targets that respect your workspace office hours.",
+    title: "Workflows and reply timers",
+    body: "Tag Page messages, link engineering tickets, and track reply targets during your office hours.",
   },
   {
     icon: ShieldCheck,
-    title: "Connection health checks",
-    body: "Automatic token and permission checks flag broken Facebook Page connections before customer messages go missing.",
+    title: "Connection health alerts",
+    body: "Automatic checks spot broken Page permissions before customer messages go missing.",
   },
 ];
 
 const questions = [
   {
-    question: "Can we start a new Facebook Messenger conversation from dimmi?",
+    question: "Can we start a new Facebook Messenger chat with a customer?",
     answer:
-      "Meta blocks businesses from starting cold Messenger threads. A customer has to message your Facebook Page first, and once they do, your team and support agents can reply right from dimmi.",
+      "No. Meta requires the customer to message your Facebook Page first. Once they write, your team and AI agents can reply from dimmi.",
   },
   {
-    question: "What happens after Meta's 24-hour reply window closes?",
+    question: "What happens after 24 hours?",
     answer:
-      "During the first 24 hours after a customer's message, both teammates and support agents can reply. Between 24 hours and 7 days, only human teammates can reply. Past 7 days, Meta locks the thread until the customer writes again.",
+      "For the first 24 hours, both people and AI agents can reply. Between 24 hours and 7 days, only human teammates can reply. After 7 days, Meta locks the thread until the customer writes again.",
   },
   {
-    question: "Can I connect a personal Facebook profile or multiple Pages?",
+    question: "Can we connect a personal Facebook account or multiple Pages?",
     answer:
-      "Only Facebook Pages in your Meta business portfolio can connect, since Meta does not expose personal profiles to helpdesk apps. Attach as many Pages as you run and route each to its own inbox.",
+      "Only Facebook Pages can connect, because Meta does not allow apps on personal profiles. You can connect as many Pages as you run in one workspace.",
   },
   {
-    question: "What kinds of customer messages and files work in Messenger?",
+    question: "What file types work in Facebook Messenger?",
     answer:
-      "Text, photos, videos, shared posts, links, and edited messages all arrive in the thread. Your team can reply with text, images, video, audio, or any file attachment, and long replies split across messages for you.",
+      "You can receive text, photos, videos, shared posts, and links, and send back text, images, video, audio, or PDFs.",
   },
   {
-    question: "Will our support agents keep replying if a teammate jumps in?",
-    answer:
-      "Support agents step aside as soon as a teammate replies or takes the thread, or whenever a handover rule triggers. Inside the 24-hour window, they answer from your docs and follow procedures you write in plain English.",
+    question: "Will the AI agent keep talking after a teammate steps in?",
+    answer: "No. The agent steps back the moment a teammate replies or takes over the conversation.",
   },
   {
-    question: "Do you charge extra for Facebook Messenger?",
-    answer:
-      "dimmi includes Facebook Messenger on both dimmi Cloud and the MIT self-hosted build with zero extra channel fees.",
+    question: "Does Facebook Messenger cost extra?",
+    answer: "No. Facebook Messenger is included on dimmi Cloud and in the free self-hosted MIT build.",
   },
 ];
 
@@ -125,19 +123,24 @@ export function FacebookMessengerChannelPage() {
     <>
       <ProductHero
         eyebrow="Facebook Messenger"
-        title="Answer Facebook Page messages without living inside Meta Business Suite."
-        body="Connect your Facebook Pages to dimmi through Meta OAuth. Answer Page messages beside email and past tickets, and let support agents reply around the clock."
+        breadcrumb={[
+          { label: "Home", href: "/" },
+          { label: "Channels", href: "/channels" },
+        ]}
+        title="Answer Facebook Page messages from your team inbox."
+        body="Connect your Facebook Pages to dimmi through Meta. Read and reply to Page messages beside email and WhatsApp without opening Meta Business Suite."
         visual={
           <ShotVideo
             name="channel-facebook-hero"
             poster="channel-facebook-hero"
-            alt="A Facebook Messenger conversation inside the dimmi inbox alongside email and WhatsApp threads, customer history, and a live reply window timer"
+            alt="A Facebook Messenger chat on the left synced live with the dimmi inbox on the right, showing internal notes and a live reply"
             bleed
           />
         }
       />
-      <Rows title="Handle Facebook Page messages inside your real support queue." rows={rows} />
-      <FeatureGrid title="The details that keep Facebook Messenger support moving." items={more} />
+      <Rows title="Keep every Facebook message in your main inbox." rows={rows} />
+      <FeatureGrid title="Helpful tools for Facebook Page support." items={more} />
+      <ChannelLinks current="/channels/facebook-messenger" />
       <Questions body="What teams ask before connecting their Facebook Pages." items={questions} />
       <FinalCta />
     </>
