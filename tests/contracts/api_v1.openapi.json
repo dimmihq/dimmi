@@ -18263,9 +18263,11 @@
         "additionalProperties": false,
         "properties": {
           "away_reply": {
+            "description": "true when a new email that arrives outside office hours gets one automatic reply saying when the team is back. Defaults to false.",
             "type": "boolean"
           },
           "away_reply_text": {
+            "description": "What the away reply says. {{reply_time}} becomes when the team is back.",
             "type": "string"
           },
           "brand_color": {
@@ -34795,6 +34797,7 @@
             ]
           },
           "decisions": {
+            "description": "With a scenario, what the person did each time the series asked whether they open, click, reply or do an event. Empty without a scenario.",
             "items": {
               "$ref": "#/components/schemas/SeriesSimulationDecision"
             },
@@ -34883,13 +34886,16 @@
         "additionalProperties": false,
         "properties": {
           "before": {
+            "description": "The index in steps of the step this was asked before.",
             "format": "int64",
             "type": "integer"
           },
           "did": {
+            "description": "true when the person did it.",
             "type": "boolean"
           },
           "what": {
+            "description": "What the series asked, in words, such as open the message \"Welcome\".",
             "type": "string"
           }
         },

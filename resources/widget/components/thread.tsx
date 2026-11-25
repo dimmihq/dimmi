@@ -25,7 +25,6 @@ import {
   FileIcon,
   ImageIcon,
   PauseIcon,
-  PersonIcon,
   PlayIcon,
 } from "./icons";
 import { Waveform } from "./wave";
@@ -518,47 +517,6 @@ export function Thread({
       ))}
       {last ? <Choices message={last} /> : null}
     </>
-  );
-}
-
-/*
- * AiActionTexts are the words of the two actions under an answer from
- * the agent, and the thanks once the visitor said it helped.
- */
-export interface AiActionTexts {
-  helped: string;
-  handoff: string;
-  thanks: string;
-}
-
-/*
- * AiActions are the quiet choices under the agent's latest reply: that
- * it helped, offered only under a real answer, and to talk to a person
- * instead. Once the visitor says it helped, a thanks takes their place.
- */
-export function AiActions({ texts, helped, answered }: { texts: AiActionTexts; helped: boolean; answered: boolean }) {
-  if (helped) {
-    return (
-      <p className="ai-thanks" data-key="ai-actions">
-        <CheckIcon />
-        {texts.thanks}
-      </p>
-    );
-  }
-
-  return (
-    <div className="ai-actions" data-key="ai-actions">
-      {answered ? (
-        <button type="button" className="ai-action" data-ai="helped">
-          <CheckIcon />
-          {texts.helped}
-        </button>
-      ) : null}
-      <button type="button" className="ai-action" data-ai="handoff">
-        <PersonIcon />
-        {texts.handoff}
-      </button>
-    </div>
   );
 }
 

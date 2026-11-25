@@ -6,9 +6,7 @@
  *
  * The views ask through events: "dimmi:converse" to show a conversation, or a
  * new one when none is named, and "dimmi:send" to send what the composer
- * holds. Under the agent's latest answer the visitor can say it helped or
- * ask for a person; either shows at once and is sent in the background.
- * An action card's Confirm or Cancel waits on the server, since the
+ * holds. An action card's Confirm or Cancel waits on the server, since the
  * choice decides whether something runs. Answers land in the store, and
  * only the parts of the panel that changed are drawn again, so a
  * half-written message, the scroll position and the open tab survive
@@ -41,7 +39,7 @@ import { type Availability, type Config, content, fromConfig, reading } from "./
 import { patch } from "./patch";
 import { report } from "./report";
 import type { Surface } from "./rules";
-import { loadThread, type Parts, thread as threadParts } from "./threads";
+import { loadThread, thread as threadParts } from "./threads";
 import { loadTickets, tickets } from "./tickets";
 
 export interface Host {
@@ -240,7 +238,6 @@ export class Live {
   config: Config = {};
   availability: Availability | undefined;
   open: string | undefined;
-  private readonly helped = new Set<string>();
   private readonly deciding = new Set<string>();
   private readonly verifying = new Map<string, VerifyStep>();
   private help: Pick<Content, "collections" | "articles" | "popular" | "help_url"> | undefined;
@@ -1194,8 +1191,6 @@ export class Live {
     const waiting = this.expected(open);
     if (typing || waiting) {
       parts.push(String(t.Typing()));
-    } else {
-      parts.push(this.aiActions(last, t));
     }
     parts.push(
       this.delivery(open),
@@ -1220,28 +1215,6 @@ export class Live {
     if (panel) {
       panel.toggleAttribute("data-choices-only", locked);
     }
-  }
-
-  /*
-   * aiActions offers the visitor the actions under the agent's latest
-   * reply while the agent still holds the conversation: That helped only
-   * under an answer, Talk to a person under any reply, and nothing once
-   * the conversation is with the team.
-   */
-  private aiActions(last: { from: string; id?: string; outcome?: string } | undefined, t: Parts): string {
-    const found = this.store.conversations.find((c) => c.id === this.open);
-    if (last?.from !== "agent" || !last.id || found?.ai_state !== "active") {
-      return "";
-    }
-    const texts = this.host.options().texts;
-
-    return String(
-      t.AiActions({
-        texts: { helped: texts.ai_helped, handoff: texts.talk_to_human, thanks: texts.ai_thanks },
-        helped: this.helped.has(last.id),
-        answered: last.outcome === "answered" || last.outcome === "partial",
-      }),
-    );
   }
 
   /*
@@ -1279,44 +1252,6 @@ export class Live {
     const failed = open ? this.store.dropLocal(open, clientId) : undefined;
     if (failed?.failed) {
       void this.send(failed.body ?? "", []);
-    }
-  }
-
-  /*
-   * aiAction tells the server the agent's answer helped, or hands the
-   * conversation to the team. The thread changes at once; a refusal puts
-   * it back.
-   */
-  async aiAction(kind: "helped" | "handoff") {
-    const open = this.open;
-    const found = this.store.conversations.find((c) => c.id === open);
-    const last = this.content().thread.at(-1);
-    if (!open || open === draftId || !found || !last?.id) {
-      return;
-    }
-    const answer = last.id;
-    if (kind === "helped") {
-      this.helped.add(answer);
-      this.drawThread();
-    } else {
-      this.store.upsertConversation({ ...found, ai_state: "handed_off" });
-      this.drawThread();
-    }
-
-    try {
-      await this.http.post(`/conversations/${open}/ai/${kind}`);
-    } catch (error) {
-      const code = error instanceof ApiError ? error.code : "network";
-      report(
-        "warn",
-        code,
-        kind === "helped" ? "the answer could not be marked helpful." : "the team could not be asked.",
-      );
-      this.helped.delete(answer);
-      if (kind === "handoff") {
-        this.store.upsertConversation(found);
-      }
-      this.drawThread();
     }
   }
 

@@ -503,14 +503,13 @@ describe("a connected messenger", () => {
         ],
       },
     };
-    const calls = serve({
+    serve({
       "GET /apps/wgt_1/config": () => ({ status: 200, body: config }),
       "GET /apps/wgt_1/availability": () => ({ status: 200, body: availability }),
       "GET /session": () => ({ status: 200, body: session }),
       "GET /conversations": () => ({ status: 200, body: { data: [answering] } }),
       "GET /conversations/conv_1/messages": () => ({ status: 200, body: { data: [answer] } }),
       "PATCH /conversations/conv_1/read-state": () => ({ status: 204 }),
-      "POST /conversations/conv_1/ai/helped": () => ({ status: 202 }),
       "POST /conversations/conv_1/ai/handoff": () => ({ status: 202 }),
       "POST /realtime-tokens": () => ({ status: 503, body: {} }),
       "GET /updates": () => ({ status: 200, body: { data: [], meta: { cursor: "c", poll_after_ms: 5000 } } }),
@@ -533,60 +532,7 @@ describe("a connected messenger", () => {
     expect(thread.querySelectorAll(".sources a.article")).toHaveLength(1);
     expect(thread.querySelectorAll(".sources .article")).toHaveLength(2);
     expect(thread.querySelector(".bubble .article")).toBeNull();
-    expect(thread.querySelector(".ai-actions")?.textContent).toContain("That helped");
-
-    thread.querySelector<HTMLButtonElement>('[data-ai="helped"]')?.click();
-    await settle();
-    expect(calls).toContain("POST /conversations/conv_1/ai/helped");
     expect(thread.querySelector(".ai-actions")).toBeNull();
-    expect(thread.querySelector(".ai-thanks")?.textContent).toContain("Glad it helped.");
-  });
-
-  it("hands the conversation to the team when the visitor asks for a person", async () => {
-    localStorage.setItem("dimmi:wgt_1:token", "dmi_ws_1");
-    const calls = serve({
-      "GET /apps/wgt_1/config": () => ({ status: 200, body: config }),
-      "GET /apps/wgt_1/availability": () => ({ status: 200, body: availability }),
-      "GET /session": () => ({ status: 200, body: session }),
-      "GET /conversations": () => ({ status: 200, body: { data: [{ ...conversation, ai_state: "active" }] } }),
-      "GET /conversations/conv_1/messages": () => ({
-        status: 200,
-        body: {
-          data: [
-            {
-              id: "msg_2",
-              conversation_id: "conv_1",
-              author: { type: "agent", name: "Ada", avatar_url: null },
-              body: "I am not sure about that one.",
-              attachments: [],
-              created_at: "2026-01-01T00:00:02Z",
-            },
-          ],
-        },
-      }),
-      "PATCH /conversations/conv_1/read-state": () => ({ status: 204 }),
-      "POST /conversations/conv_1/ai/handoff": () => ({ status: 202 }),
-      "POST /realtime-tokens": () => ({ status: 503, body: {} }),
-      "GET /updates": () => ({ status: 200, body: { data: [], meta: { cursor: "c", poll_after_ms: 5000 } } }),
-    });
-
-    const widget = boot(win, document);
-    await settle();
-    await settle();
-    const root = shadow() as ShadowRoot;
-    root.dispatchEvent(new CustomEvent("dimmi:converse", { detail: { conversation: "conv_1" } }));
-    for (let i = 0; i < 4; i++) {
-      await settle();
-    }
-
-    expect(root.querySelector('[data-ai="helped"]')).toBeNull();
-    expect(root.querySelector(".ai-actions")?.textContent).toContain("Talk to a person");
-    root.querySelector<HTMLButtonElement>('[data-ai="handoff"]')?.click();
-    await settle();
-
-    expect(calls).toContain("POST /conversations/conv_1/ai/handoff");
-    expect(widget?.live?.store.conversations[0]?.ai_state).toBe("handed_off");
-    expect(root.querySelector(".ai-actions")).toBeNull();
   });
 
   it("confirms an action card, then checks on it until the team decides", async () => {

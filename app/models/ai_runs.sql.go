@@ -777,39 +777,6 @@ func (q *Queries) PruneAiRuns(ctx context.Context, arg PruneAiRunsParams) (int64
 	return result.RowsAffected(), nil
 }
 
-const setLatestAnswerFeedback = `-- name: SetLatestAnswerFeedback :execrows
-UPDATE ai_runs AS ar SET feedback = $1, updated_at = $2
-WHERE ar.workspace_id = $3
-  AND ar.id = (
-      SELECT r.id FROM ai_runs r
-      WHERE r.workspace_id = $3 AND r.conversation_id = $4
-        AND r.status = 'completed' AND r.outcome = 'answered'
-      ORDER BY r.created_at DESC, r.id DESC LIMIT 1
-  )
-`
-
-type SetLatestAnswerFeedbackParams struct {
-	Feedback       *string   `json:"feedback"`
-	Now            time.Time `json:"now"`
-	WorkspaceID    ids.UUID  `json:"workspace_id"`
-	ConversationID *ids.UUID `json:"conversation_id"`
-}
-
-// SetLatestAnswerFeedback records the customer's verdict on the
-// conversation's newest answered run.
-func (q *Queries) SetLatestAnswerFeedback(ctx context.Context, arg SetLatestAnswerFeedbackParams) (int64, error) {
-	result, err := q.db.Exec(ctx, setLatestAnswerFeedback,
-		arg.Feedback,
-		arg.Now,
-		arg.WorkspaceID,
-		arg.ConversationID,
-	)
-	if err != nil {
-		return 0, err
-	}
-	return result.RowsAffected(), nil
-}
-
 const setRunFeedback = `-- name: SetRunFeedback :one
 UPDATE ai_runs SET feedback = $1, updated_at = $2
 WHERE workspace_id = $3 AND id = $4

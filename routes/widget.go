@@ -118,14 +118,11 @@ func widgetSessionRoutes(visitor *routing.Router, a *app.App) {
 	routing.Post(visitor, "/pings", "widget.pings.store", pings.Store)
 
 	one := "/conversations/{conversation}"
-	conv := widgetConversationRoutes(visitor, a, one)
+	widgetConversationRoutes(visitor, a, one)
 
 	activity := &widget.ActivityController{Read: a.Actions.Widget.MarkRead, Tell: a.Actions.Widget.Typing, IDs: a.IDs}
 	routing.Patch(visitor, one+"/read-state", "widget.conversations.read-state.update", activity.ReadState)
 	routing.Post(visitor, one+"/typing-indicators", "widget.conversations.typing-indicators.store", activity.Typing)
-
-	routing.Post(visitor, one+"/ai/helped", "widget.conversations.ai.helped", conv.Helped)
-	routing.Post(visitor, one+"/ai/handoff", "widget.conversations.ai.handoff", conv.Handoff).Middleware("idempotent")
 
 	widgetActionCallRoutes(visitor, a, one)
 	widgetTicketRoutes(visitor, a)
@@ -135,15 +132,13 @@ func widgetSessionRoutes(visitor *routing.Router, a *app.App) {
 
 /*
 widgetConversationRoutes declares the visitor's conversations and the
-messages in them, under one, and returns their controller for the
-routes that follow.
+messages in them, under one.
 */
-func widgetConversationRoutes(visitor *routing.Router, a *app.App, one string) *widget.ConversationController {
+func widgetConversationRoutes(visitor *routing.Router, a *app.App, one string) {
 	conv := &widget.ConversationController{
 		Read: a.Actions.Widget.Conversations, Post: a.Actions.Widget.PostMessage,
 		Open: a.Actions.Widget.OpenChat,
-		Help: a.Actions.Widget.ConfirmHelp, HandoffAction: a.Actions.Widget.RequestHandoff,
-		IDs: a.IDs, Clock: a.Clock, Tickets: a.Actions.Tickets,
+		IDs:  a.IDs, Clock: a.Clock, Tickets: a.Actions.Tickets,
 		Cursors: pagination.NewCursors(a.DerivedKey("widget.cursors")), Agents: useragent.New(),
 	}
 
@@ -153,8 +148,6 @@ func widgetConversationRoutes(visitor *routing.Router, a *app.App, one string) *
 	routing.Get(visitor, one, "widget.conversations.show", conv.Show)
 	routing.Get(visitor, one+"/messages", "widget.conversations.messages.index", conv.Messages)
 	routing.Post(visitor, one+"/messages", "widget.conversations.messages.store", conv.Send).Middleware("idempotent")
-
-	return conv
 }
 
 /*

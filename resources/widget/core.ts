@@ -407,10 +407,6 @@ export function boot(win: Window & DimmiWindow, doc: Document): Widget | undefin
       }
       rateClick(live, target);
       previewClick(target);
-      const kind = target?.closest<HTMLElement>("[data-ai]")?.dataset.ai;
-      if (kind === "helped" || kind === "handoff") {
-        void live?.aiAction(kind);
-      }
       verifyClick(target);
       articleClick(event, target);
       retryClick(live, target);

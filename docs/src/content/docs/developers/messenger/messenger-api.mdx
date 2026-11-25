@@ -74,8 +74,6 @@ Omit `since` on your first `/updates` call. Each response gives you `meta.cursor
 | `POST /conversations/{conversation}/messages` | Sends a message (`client_id`, `body`, up to 10 `attachment_ids`, or `choice` for reply buttons). |
 | `PATCH /conversations/{conversation}/read-state` | Marks messages read up to `last_read_message_id`. |
 | `POST /conversations/{conversation}/typing-indicators` | Sends a customer typing indicator. |
-| `POST /conversations/{conversation}/ai/helped` | Confirms the dimmi agent resolved the conversation. |
-| `POST /conversations/{conversation}/ai/handoff` | Requests handover to a human teammate. |
 | `GET`, `PATCH /conversations/{conversation}/action-calls/{call}` | Reads or resolves a pending [action](/ai/actions/) confirmation (`status`: `confirmed` or `canceled`). |
 | `GET`, `PATCH /conversations/{conversation}/rating` | Reads or submits a conversation rating (`score` 1 to 5, optional `comment`). |
 | `POST /attachments` | Requests a presigned upload (`filename`, `content_type`, `size_bytes`), then upload bytes to `data.upload.url`. |

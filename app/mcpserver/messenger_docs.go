@@ -24,7 +24,7 @@ func messengerDocs() map[string]Doc {
 		messengerDocsFromWidgetArticleRatingsStore(),
 		messengerDocsFromWidgetAttachmentsUpdate(),
 		messengerDocsFromWidgetConversationsActionCallsShow(),
-		messengerDocsFromWidgetConversationsAiHandoff(),
+		messengerDocsFromWidgetConversationsIndex(),
 		messengerDocsFromWidgetConversationsMessagesIndex(),
 		messengerDocsFromWidgetConversationsMessagesStore(),
 		messengerDocsFromWidgetConversationsRatingShow(),
@@ -256,30 +256,11 @@ func messengerDocsFromWidgetConversationsActionCallsShow() map[string]Doc {
 }
 
 /*
-messengerDocsFromWidgetConversationsAiHandoff returns entries from
-widget.conversations.ai.handoff on.
+messengerDocsFromWidgetConversationsIndex returns entries from
+widget.conversations.index on.
 */
-func messengerDocsFromWidgetConversationsAiHandoff() map[string]Doc {
+func messengerDocsFromWidgetConversationsIndex() map[string]Doc {
 	return map[string]Doc{
-		"widget.conversations.ai.handoff": {
-			Title: "Ask for a person",
-			Use: "Hands the visitor's conversation from the AI agent to the team: the agent writes its " +
-				"handoff line and the team is told. Needs the messenger session the conversation belongs to. A " +
-				"conversation already handed off stays as it is, and a session may ask 5 times a minute.",
-			Params: map[string]string{
-				"conversation": "Id of one of the visitor's own conversations on this messenger, such " +
-					"as conv_8f3k2m; any other id answers not found.",
-			},
-		},
-		"widget.conversations.ai.helped": {
-			Title: "Mark the AI answer helpful",
-			Use: "Records that the AI agent's newest answer in the conversation helped the visitor. Needs " +
-				"the messenger session the conversation belongs to. Sending it again changes nothing.",
-			Params: map[string]string{
-				"conversation": "Id of one of the visitor's own conversations on this messenger, such " +
-					"as conv_8f3k2m; any other id answers not found.",
-			},
-		},
 		"widget.conversations.index": {
 			Title: "List the visitor's conversations",
 			Use: "Lists the visitor's conversations on this messenger, latest activity first, a page at a " +
