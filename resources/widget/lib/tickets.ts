@@ -29,3 +29,34 @@ export function loadTickets(root: ShadowRoot): Promise<TicketParts> {
     return loaded;
   });
 }
+
+/*
+ * pinStrip shows a request's progress in a bar of its own between the
+ * conversation's header and its thread, so it stays in sight however far
+ * the visitor scrolls and is never drawn away with the messages. Once the
+ * thread scrolls, the bar folds to one line with a thin progress line.
+ * An empty markup takes the bar away.
+ */
+export function pinStrip(thread: HTMLElement, markup: string) {
+  let bar = thread.previousElementSibling as HTMLElement | null;
+  if (!bar?.classList.contains("ticket-pin")) {
+    if (!markup) {
+      return;
+    }
+    bar = thread.ownerDocument.createElement("div");
+    bar.className = "ticket-pin";
+    thread.before(bar);
+  }
+  bar.hidden = !markup;
+  if (bar.dataset.markup !== markup) {
+    bar.innerHTML = markup;
+    bar.dataset.markup = markup;
+  }
+  if (!thread.dataset.pinWatched) {
+    thread.dataset.pinWatched = "true";
+    const pinned = bar;
+    const fold = () => pinned.toggleAttribute("data-folded", thread.scrollTop > 12);
+    thread.addEventListener("scroll", fold, { passive: true });
+    fold();
+  }
+}

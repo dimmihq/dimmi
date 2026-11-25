@@ -884,7 +884,9 @@ describe("core", () => {
 
     const form = shadow().querySelector('.view[data-view="ticket"] form');
     expect(form?.textContent).toContain("What happened");
-    expect([...(form?.querySelectorAll("option") ?? [])].map((o) => o.textContent)).toContain("SSO error");
+    expect([...(form?.querySelectorAll<HTMLInputElement>(".ticket-menu input") ?? [])].map((o) => o.value)).toContain(
+      "SSO error",
+    );
 
     win.Dimmi?.("tickets", { types: [type], request, show: "messages" });
 
@@ -901,9 +903,11 @@ describe("core", () => {
     expect(rows().length).toBeGreaterThan(1);
 
     rows()[0]?.click();
-    expect(shadow().querySelector(".thread .ticket-strip")?.textContent).toContain("With our team");
+    const pin = () => shadow().querySelector<HTMLElement>(".ticket-pin");
+    expect(pin()?.nextElementSibling?.classList.contains("thread")).toBe(true);
+    expect(pin()?.querySelector(".ticket-strip")?.textContent).toContain("With our team");
     rows()[1]?.click();
-    expect(shadow().querySelector(".thread .ticket-strip")).toBeNull();
+    expect(pin()?.hidden).toBe(true);
   });
 
   it("hides the launcher when the customer opens the messenger from their own buttons", async () => {

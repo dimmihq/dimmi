@@ -471,6 +471,17 @@ describe("store", () => {
     expect(store.messages.get("conv_1")?.map((m) => m.id)).toEqual(["msg_3"]);
   });
 
+  it("keeps a conversation's request when an update leaves it out", () => {
+    const store = new Store(() => 0);
+    const ticket = { id: "tkt_1", reference: "T-49", title: "I am happy", state: { label: "Submitted" } };
+    store.setConversations([{ ...conversation, ticket } as never]);
+    store.upsertConversation({ ...conversation, unread_count: 2 });
+    expect(store.conversations[0]?.ticket).toEqual(ticket);
+
+    store.apply("conversation.closed", { conversation: { ...conversation, status: "closed" } });
+    expect(store.conversations[0]?.ticket).toEqual(ticket);
+  });
+
   it("takes conversation events and moves pending messages to a new conversation", () => {
     const store = new Store(() => 0);
     store.apply("conversation.closed", { conversation: { ...conversation, status: "closed" } });

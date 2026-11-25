@@ -8,6 +8,7 @@ import type { Content, Incoming, Message, TicketBlock, TicketType } from "./cont
 import { size } from "./lib/map";
 import { Said, Typing } from "./lib/thread_parts";
 import type { Words } from "./lib/ticket_words";
+import { pinStrip } from "./lib/tickets";
 
 /*
  * teammate is who answers in a preview.
@@ -353,11 +354,8 @@ export function strip(root: ShadowRoot, content: Content, target: Element | null
   }
   const ticket = content.conversations.find((c) => String(c.number) === row.dataset.conversation)?.ticket;
   const thread = root.querySelector<HTMLElement>(".thread");
-  thread?.querySelector(".ticket-strip")?.remove();
-  const loaded = thread?.querySelector<HTMLElement>(".loaded");
-  if (ticket) {
-    const html = String(of({ ticket, texts }));
-    loaded ? loaded.insertAdjacentHTML("beforebegin", html) : thread?.insertAdjacentHTML("afterbegin", html);
+  if (thread) {
+    pinStrip(thread, ticket ? String(of({ ticket, texts })) : "");
   }
 }
 

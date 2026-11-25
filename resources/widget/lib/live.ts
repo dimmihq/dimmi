@@ -40,7 +40,7 @@ import { patch } from "./patch";
 import { report } from "./report";
 import type { Surface } from "./rules";
 import { loadThread, thread as threadParts } from "./threads";
-import { loadTickets, tickets } from "./tickets";
+import { loadTickets, pinStrip, tickets } from "./tickets";
 
 export interface Host {
   root: ShadowRoot;
@@ -1182,9 +1182,8 @@ export class Live {
     ];
     const ticket = this.store.conversations.find((c) => c.id === open)?.ticket;
     const strip = tickets()?.Strip;
-    if (ticket && strip) {
-      parts.unshift(String(strip({ ticket, texts })));
-    } else if (ticket) {
+    pinStrip(thread, ticket && strip ? String(strip({ ticket, texts })) : "");
+    if (ticket && !strip) {
       void loadTickets(this.host.root).then(() => this.drawThread());
     }
 
