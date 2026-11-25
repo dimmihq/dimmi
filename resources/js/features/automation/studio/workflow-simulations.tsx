@@ -36,11 +36,9 @@ import { toast } from "@/components/base/toast/toast";
 import { Resize, Swap } from "@/features/inbox/motion";
 import { ScrollArea } from "@/features/shell/page";
 import type { AnswerAs } from "@/lib/api/agents";
-import { conversationsQuery } from "@/lib/api/inbox";
 import {
   createWorkflowSimulation,
   deleteWorkflowSimulation,
-  importWorkflowSimulation,
   runWorkflowSimulations,
   simHistoryOf,
   simResultOf,
@@ -82,10 +80,6 @@ import {
 const copies = [
   ["draft", "Draft"],
   ["live", "Live"],
-] as const;
-const starts = [
-  ["write", "Write one"],
-  ["conversation", "From a conversation"],
 ] as const;
 
 /* statusOfSim is how a simulation stands: its latest runs, or where its run is while it goes. */
@@ -666,9 +660,9 @@ function Detail({
 }
 
 /*
- * NewSimulation saves a simulation: written from a first message and
- * the customer's situation, or made from a past conversation, whose
- * customer messages become the script.
+ * NewSimulation saves a simulation written from a name, the customer's
+ * first message and their situation, which tells the simulated customer
+ * who they are and how to answer what the workflow asks.
  */
 function NewSimulation({
   workspace,
@@ -681,29 +675,20 @@ function NewSimulation({
   onClose: () => void;
   onMade: (sim: WorkflowSimulation) => void;
 }) {
-  const [from, setFrom] = useState<"write" | "conversation">("write");
   const [name, setName] = useState("");
   const [message, setMessage] = useState("");
   const [scenario, setScenario] = useState("");
-  const [conversation, setConversation] = useState("");
   const [saving, setSaving] = useState(false);
-  const recent = useQuery({
-    ...conversationsQuery(workspace, { view: "all", status: "any", limit: 25 }),
-    enabled: from === "conversation",
-  }).data;
-  const ready = from === "write" ? name.trim() !== "" && message.trim() !== "" : conversation !== "";
+  const ready = name.trim() !== "" && message.trim() !== "";
 
   const save = async () => {
     setSaving(true);
     try {
-      const made =
-        from === "write"
-          ? await createWorkflowSimulation(workspace, workflow, {
-              name: name.trim(),
-              messages: [{ text: message.trim() }],
-              ...(scenario.trim() ? { scenario: scenario.trim() } : {}),
-            })
-          : await importWorkflowSimulation(workspace, workflow, conversation);
+      const made = await createWorkflowSimulation(workspace, workflow, {
+        name: name.trim(),
+        messages: [{ text: message.trim() }],
+        ...(scenario.trim() ? { scenario: scenario.trim() } : {}),
+      });
       onMade(made);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "The simulation was not saved.");
@@ -716,64 +701,32 @@ function NewSimulation({
     <Modal isOpen onOpenChange={(open) => (open ? undefined : onClose())} size="md">
       <ModalHeader title="New simulation" description="A chat the workflow must keep handling the way you mean." />
       <ModalBody className="flex flex-col gap-4">
-        <SegmentedControl
-          aria-label="Start from"
-          selectedKeys={new Set([from])}
-          onSelectionChange={(keys) => setFrom([...keys][0] === "conversation" ? "conversation" : "write")}
-        >
-          {starts.map(([id, label]) => (
-            <SegmentedControlItem key={id} id={id}>
-              {label}
-            </SegmentedControlItem>
-          ))}
-        </SegmentedControl>
-        {from === "write" ? (
-          <>
-            <Input
-              label="Name"
-              placeholder="Billing question gets routed"
-              value={name}
-              onChange={setName}
-              maxLength={120}
-            />
-            <Textarea
-              label="The customer's first message"
-              placeholder="Hi, I was charged twice this month"
-              rows={2}
-              autoResize
-              maxLength={4000}
-              value={message}
-              onChange={setMessage}
-            />
-            <Textarea
-              label="Customer's situation"
-              hint="Optional. Left empty, it is written from the first message."
-              rows={3}
-              autoResize
-              maxLength={1000}
-              value={scenario}
-              onChange={setScenario}
-            />
-          </>
-        ) : (
-          <Select
-            label="Conversation"
-            placeholder="Pick a recent conversation"
-            selectedKey={conversation || null}
-            onSelectionChange={(key) => setConversation(String(key))}
-          >
-            {(recent ?? []).map((c) => {
-              const who = c.contact.name || c.contact.email || "A customer";
-              const text = `${who}: ${c.subject || c.last_message?.excerpt || `#${String(c.number)}`}`;
-
-              return (
-                <SelectItem key={c.id} id={c.id} textValue={text}>
-                  {text}
-                </SelectItem>
-              );
-            })}
-          </Select>
-        )}
+        <Input
+          label="Name"
+          placeholder="Double charge goes to Billing as a refund"
+          value={name}
+          onChange={setName}
+          maxLength={120}
+        />
+        <Textarea
+          label="The customer's first message"
+          placeholder="Hi, I was charged twice for my October invoice. Can I get one of them refunded?"
+          rows={2}
+          autoResize
+          maxLength={4000}
+          value={message}
+          onChange={setMessage}
+        />
+        <Textarea
+          label="Customer's situation"
+          hint="Who the customer is, what they want, and how they answer the workflow's questions. Optional: left empty, it is written from the first message."
+          placeholder="A customer on the Pro plan was charged twice and wants a refund. When offered options, they pick the refund. If asked for an email, they give ada@northwind.test."
+          rows={3}
+          autoResize
+          maxLength={1000}
+          value={scenario}
+          onChange={setScenario}
+        />
       </ModalBody>
       <ModalFooter>
         <Button variant="secondary" size="small" onClick={onClose}>
