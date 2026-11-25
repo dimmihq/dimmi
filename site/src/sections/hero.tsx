@@ -19,13 +19,14 @@ export function Hero() {
         <div className="relative flex min-w-0 flex-col items-start justify-center gap-7 px-5 pt-16 pb-14 sm:px-12 lg:py-24">
           <a
             href="/agents"
-            className="group inline-flex max-w-full items-center gap-2.5 rounded-2xl border border-border-button-default bg-background-secondary-default py-1 ps-1 pe-3 transition-colors hover:border-border-button-hover sm:rounded-full"
+            className="group inline-flex max-w-full items-center gap-2.5 rounded-full border border-border-button-default bg-background-secondary-default py-1 ps-1 pe-3 transition-colors hover:border-border-button-hover"
           >
             <span className="shrink-0 rounded-full bg-accent-500/15 px-2.5 py-1 font-mono text-[11px] leading-4 font-medium tracking-[0.08em] text-accent-600 uppercase">
               New
             </span>
-            <span className="min-w-0 text-caption-1-medium text-text-secondary">
-              Dedicated support agents for every queue and brand
+            <span className="min-w-0 truncate text-caption-1-medium text-text-secondary">
+              <span className="sm:hidden">Agents for every queue and brand</span>
+              <span className="max-sm:hidden">Dedicated support agents for every queue and brand</span>
             </span>
             <RiArrowRightLine
               className="size-3.5 shrink-0 text-foreground-icon-tertiary transition-transform group-hover:translate-x-0.5"
