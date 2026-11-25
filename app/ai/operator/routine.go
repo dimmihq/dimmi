@@ -211,9 +211,12 @@ func routineGroupOf(t tool) string {
 
 /*
 limits are the model and tool calls the session may make: the
-routine's own, or the defaults.
+routine's own, a building chat's, or the defaults.
 */
 func (s *session) limits() (int, int) {
+	if s.routine == nil && s.building {
+		return buildingModelCalls, buildingToolCalls
+	}
 	if s.routine == nil {
 		return maxModelCalls, maxToolCalls
 	}

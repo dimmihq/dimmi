@@ -171,6 +171,13 @@ func skillLines(keep func(skill) bool) string {
 }
 
 /*
+isChatSkill reports whether a chat is offered the skill.
+*/
+func isChatSkill(name string) bool {
+	return slices.ContainsFunc(skills(), func(s skill) bool { return s.name == name && s.chat })
+}
+
+/*
 skillBody is one skill's steps.
 */
 func skillBody(name string) string {
@@ -180,7 +187,7 @@ func skillBody(name string) string {
 /*
 readSkill hands the model one skill's steps.
 */
-func (e *Engine) readSkill(_ context.Context, _ *session, args json.RawMessage) (result, error) {
+func (e *Engine) readSkill(_ context.Context, s *session, args json.RawMessage) (result, error) {
 	var in struct {
 		Name string `json:"skill_name"`
 	}
@@ -188,6 +195,7 @@ func (e *Engine) readSkill(_ context.Context, _ *session, args json.RawMessage) 
 		return result{}, errBadArguments
 	}
 	if slices.Contains(skillNames(), in.Name) {
+		s.building = s.building || isChatSkill(in.Name)
 		label := strings.ReplaceAll(in.Name, "_", " ")
 		step := Step{Tool: "get_skill_by_name", Summary: "Read how to " + label}
 

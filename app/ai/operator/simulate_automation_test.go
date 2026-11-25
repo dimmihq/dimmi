@@ -75,3 +75,20 @@ func TestChatSkills(t *testing.T) {
 	assert.Contains(t, fixedTools(), "get_skill_by_name", "a chat always has the skill tool")
 	assert.False(t, (&Engine{}).skillTool().routine, "the skill tool is offered beyond routines")
 }
+
+func TestBuildingBudget(t *testing.T) {
+	t.Parallel()
+
+	s := &session{}
+	models, tools := s.limits()
+	assert.Equal(t, []int{maxModelCalls, maxToolCalls}, []int{models, tools})
+
+	_, err := (&Engine{}).readSkill(t.Context(), s, []byte(`{"skill_name":"audit_articles"}`))
+	assert.NoError(t, err)
+	assert.False(t, s.building, "a routine skill keeps a chat's bounds")
+
+	_, err = (&Engine{}).readSkill(t.Context(), s, []byte(`{"skill_name":"design_workflow"}`))
+	assert.NoError(t, err)
+	models, tools = s.limits()
+	assert.Equal(t, []int{buildingModelCalls, buildingToolCalls}, []int{models, tools})
+}

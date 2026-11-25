@@ -17,6 +17,9 @@ What the team wants from this: to know whether the automation does its job, and 
 changes that would make it do it better. Not a tour of every step. A workflow or series that works
 deserves a short "it works, here is why I think so".
 
+Work in few turns. Load every catalog tool you will need in one load_tools call, passing all their
+names, and make the reads that do not depend on each other in the same turn.
+
 Steps for a workflow:
 1. Read it with get_workflow_by_id, and its goal when it has one.
 2. Read how it did over the last 30 days with dimmi_get_workflow_metrics and dimmi_report_workflows
