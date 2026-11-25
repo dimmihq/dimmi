@@ -123,6 +123,34 @@ aws sns subscribe --region $REGION --topic-arn $TOPIC --protocol https \
 aws sns list-subscriptions-by-topic --region $REGION --topic-arn $TOPIC   # not PendingConfirmation
 ```
 
+### Bounces and complaints
+
+SES tells dimmi about bounces and spam complaints through a second topic, fed
+by a configuration set. dimmi stops mailing those addresses and counts them
+toward the pause that protects your sending reputation. Skip this and dimmi
+only sees the reports mailbox providers send back by mail.
+
+```bash
+EVENTS=$(aws sns create-topic --region $REGION --name dimmi-events --query TopicArn --output text)
+aws sns set-topic-attributes --region $REGION --topic-arn $EVENTS --attribute-name Policy \
+  --attribute-value "{\"Version\":\"2012-10-17\",\"Statement\":[{\"Effect\":\"Allow\",
+  \"Principal\":{\"Service\":\"ses.amazonaws.com\"},\"Action\":\"sns:Publish\",\"Resource\":\"$EVENTS\",
+  \"Condition\":{\"StringEquals\":{\"aws:SourceAccount\":\"$ACCOUNT\"}}}]}"
+
+aws sesv2 create-configuration-set --region $REGION --configuration-set-name dimmi-customer
+aws sesv2 create-configuration-set-event-destination --region $REGION \
+  --configuration-set-name dimmi-customer --event-destination-name dimmi-events \
+  --event-destination "{\"Enabled\":true,\"MatchingEventTypes\":[\"BOUNCE\",\"COMPLAINT\"],
+  \"SnsDestination\":{\"TopicArn\":\"$EVENTS\"}}"
+```
+
+Subscribe dimmi to this topic too, after step 5:
+
+```bash
+aws sns subscribe --region $REGION --topic-arn $EVENTS --protocol https \
+  --notification-endpoint https://$APP/webhooks/ses/events
+```
+
 ## 4. An IAM user for dimmi
 
 One user with only what dimmi needs: send mail, manage the sending identities
@@ -172,6 +200,8 @@ DIMMI_FILESYSTEMS__DISKS__SES_INBOUND__BUCKET=$BUCKET
 DIMMI_FILESYSTEMS__DISKS__SES_INBOUND__REGION=$REGION
 DIMMI_FILESYSTEMS__DISKS__SES_INBOUND__ACCESS_KEY_ID=AKIA...
 DIMMI_FILESYSTEMS__DISKS__SES_INBOUND__SECRET_ACCESS_KEY=...
+DIMMI_CHANNELS__EMAIL__SENDING__SES__CONFIGURATION_SET=dimmi-customer
+DIMMI_CHANNELS__EMAIL__SENDING__SES__EVENTS_TOPIC_ARN=$EVENTS
 EOF
 ```
 
@@ -181,8 +211,10 @@ Notes:
   not listed there.
 - The customer mailer is optional; without it, customer mail goes through
   the system mailer.
-- To use SES configuration sets (for reputation metrics), create them and add
-  `DIMMI_MAIL__MAILERS__<NAME>__CONFIGURATION_SET=<name>`.
+- The last two lines are for bounces and complaints (end of step 3); leave them
+  out if you skipped that. dimmi refuses events from any topic but `$EVENTS`.
+- To give the system mailer a configuration set of its own, add
+  `DIMMI_MAIL__MAILERS__SYSTEM__CONFIGURATION_SET=<name>`.
 
 Then subscribe the topic (end of step 3).
 

@@ -39,6 +39,28 @@ dimmi rechecks verified domains about once a day, switching to hourly checks if 
 - **Two failed checks in a row:** status changes to **Records missing**, and replies temporarily fall back to your forwarding address until the next passing check.
 - **Seven days missing:** status changes to **Failed**, and checks stop until you click **Check now**.
 
+## When bulk email pauses
+
+Mailbox providers judge a sender by how often its mail bounces or gets reported as spam. Past a certain point they start filing everything from your domain as junk, replies included. dimmi stops that early by pausing the mail that causes it.
+
+dimmi counts the customer email your workspace sends: replies, broadcasts, series, and rating emails. Once at least 100 went out in the last 7 days, bulk email pauses if either rate is passed:
+
+| Rate | dimmi cloud | Self-hosted |
+| --- | --- | --- |
+| Emails that bounced because the address doesn't exist | 5% | Off until [you set it](/self-hosting/configuration-options/) |
+| Emails reported as spam | 0.1% | Off until you set it |
+
+- **What stops:** broadcasts, series, and rating emails. Broadcasts being sent pause where they are, and nobody on the list is skipped.
+- **What keeps going:** replies to customers, from teammates and from the agent. Support never goes dark.
+- **Who hears about it:** owners and admins get an email, and the [audit log](/workspace/audit-log/) records the pause with the numbers.
+- **What is counted:** bounce and spam reports that mailbox providers send back to your support address. Amazon SES, which dimmi cloud sends through, reports them to dimmi directly as well: every spam complaint, and every bounce it marks permanent. A report that arrives both ways counts once.
+
+### Resume sending
+
+Open **Settings → Email**. A notice at the top shows why sending paused. Clean the list you send to first, then an owner clicks **Resume sending** (`email:resume_sending`).
+
+The count starts again from zero, so old bounces can't pause you twice. Paused broadcasts stay paused until you resume each one from **Broadcasts**.
+
 ## Rotate your DKIM key (self-hosted SMTP)
 
 Owners on a self-hosted SMTP relay can click **Rotate key** to roll signing keys without downtime. Other email providers handle key rotation for you.

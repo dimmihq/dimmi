@@ -18625,6 +18625,91 @@
         ],
         "type": "object"
       },
+      "EmailSending": {
+        "additionalProperties": false,
+        "properties": {
+          "bounce_pause_rate": {
+            "description": "The share of the window's emails that may bounce for good before bulk sending pauses, from 0 to 1. Zero means bounces never pause it.",
+            "format": "double",
+            "type": "number"
+          },
+          "complained": {
+            "description": "How many emails sent in the window were reported as spam.",
+            "format": "int64",
+            "type": "integer"
+          },
+          "complaint_pause_rate": {
+            "description": "The share of the window's emails that may be reported as spam before bulk sending pauses, from 0 to 1. Zero means complaints never pause it.",
+            "format": "double",
+            "type": "number"
+          },
+          "hard_bounced": {
+            "description": "How many emails sent in the window bounced for good, such as to an address that does not exist.",
+            "format": "int64",
+            "type": "integer"
+          },
+          "minimum_sent": {
+            "description": "How many emails the window must hold before the workspace is judged.",
+            "format": "int64",
+            "type": "integer"
+          },
+          "object": {
+            "description": "The kind of record this is, the same for every record of its kind, such as article.",
+            "type": "string"
+          },
+          "paused_at": {
+            "description": "When bulk sending was paused, as a UTC time. Null while it is active.",
+            "format": "date-time",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "paused_reason": {
+            "description": "Why bulk sending paused: bounce_rate or complaint_rate. Null while it is active.",
+            "enum": [
+              "bounce_rate",
+              "complaint_rate"
+            ],
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "sent": {
+            "description": "How many customer emails the workspace sent in the window.",
+            "format": "int64",
+            "type": "integer"
+          },
+          "status": {
+            "description": "Whether the workspace may send bulk email: active, or paused, when broadcasts, series and rating emails wait while replies still send.",
+            "enum": [
+              "active",
+              "paused"
+            ],
+            "type": "string"
+          },
+          "window_days": {
+            "description": "How many days of sending the counts cover.",
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "object",
+          "status",
+          "paused_at",
+          "paused_reason",
+          "sent",
+          "hard_bounced",
+          "complained",
+          "window_days",
+          "minimum_sent",
+          "bounce_pause_rate",
+          "complaint_pause_rate"
+        ],
+        "type": "object"
+      },
       "EmailSignature": {
         "additionalProperties": false,
         "properties": {
@@ -30804,6 +30889,18 @@
         "properties": {
           "data": {
             "$ref": "#/components/schemas/EmailDomain"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "ResourceEmailSending": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/EmailSending"
           }
         },
         "required": [
@@ -60305,6 +60402,72 @@
         "x-abilities": [
           "settings:write"
         ]
+      }
+    },
+    "/email-sending": {
+      "get": {
+        "description": "Reads whether email sending is paused, why, and the bounce and complaint counts it is judged by. Returns whether sending is paused, the reason, the last week's counts and the rates that pause it.",
+        "operationId": "email-sending.show",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResourceEmailSending"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseError"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Read whether the workspace may send email",
+        "x-abilities": [
+          "settings:read"
+        ],
+        "x-internal": true
+      }
+    },
+    "/email-sending/resumptions": {
+      "post": {
+        "description": "Lets a paused workspace send email again and forgets its counts. Takes an owner or an admin. Returns the workspace's standing as a sender as it is now.",
+        "operationId": "email-sending.resumptions.store",
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResourceEmailSending"
+                }
+              }
+            },
+            "description": "Created"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseError"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Resume email sending",
+        "x-abilities": [
+          "email:resume_sending"
+        ],
+        "x-internal": true
       }
     },
     "/email-signatures": {

@@ -61,8 +61,11 @@ Prefix every variable below with `DIMMI_CHANNELS__EMAIL__`. For mail drivers and
 | `SENDING__LIMITS__PROVIDER_PER_MINUTE` | `0` | Outbound mail provider quota per minute (`0` disables). |
 | `SENDING__LIMITS__PROVIDER_PER_DAY` | `0` | Outbound mail provider quota per day (`0` disables). |
 | `SENDING__LIMITS__BROADCAST_SHARE_PERCENT` | `80` | Max share of sending quota broadcasts may consume. |
-| `SENDING__REPUTATION__BOUNCE_PAUSE_RATE` | `0` | Bounce rate (`0` to `1`) that auto-pauses workspace sending (`0` disables). |
-| `SENDING__REPUTATION__COMPLAINT_PAUSE_RATE` | `0` | Spam complaint rate that auto-pauses sending (`0` disables). |
+| `SENDING__SES__CONFIGURATION_SET` | Mailer's own | SES configuration set customer email is sent with. It must publish bounce and complaint events to the events topic. |
+| `SENDING__SES__EVENTS_TOPIC_ARN` | Empty | SNS topic whose SES [bounce and complaint events](/self-hosting/email/#bounces-and-spam-complaints) dimmi accepts at `/webhooks/ses/events`. Empty turns the webhook off. |
+| `SENDING__SES__SYSTEM_EVENTS_TOPIC_ARN` | Empty | A second accepted topic, for the system mailer's configuration set. |
+| `SENDING__REPUTATION__BOUNCE_PAUSE_RATE` | `0` | Share of a workspace's email (`0` to `1`) that may bounce for good before its [bulk email pauses](/channels/sending-domain/#when-bulk-email-pauses) (`0` disables). |
+| `SENDING__REPUTATION__COMPLAINT_PAUSE_RATE` | `0` | Share reported as spam (`0` to `1`) before bulk email pauses (`0` disables). |
 
 ## AI
 

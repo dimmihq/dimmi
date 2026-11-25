@@ -56,6 +56,8 @@ type SendRatingEmail struct {
 	Senders   *Domains
 	Stamps    inbound.Stamps
 	Transport string
+
+	Reputation *Reputation
 }
 
 /*
@@ -153,6 +155,7 @@ func (a *SendRatingEmail) prepare(ctx context.Context, q *models.Queries, in Rat
 
 	message := inbound.Compose(draft)
 	message.Tags = map[string]string{"stream": "customer", "kind": string(enums.OutboundEmailKindRating)}
+	message.ConfigurationSet = a.Config.Sending.SES.ConfigurationSet
 
 	if previous.ID != ids.Nil() {
 		return previous, message, q.StartOutboundEmailAttempt(ctx, models.StartOutboundEmailAttemptParams{
@@ -299,10 +302,14 @@ func (a *SendRatingEmail) deliver(ctx context.Context, in RatingEmail, row model
 			return fmt.Errorf("mark rating email sent: %w", err)
 		}
 
-		return q.CreateEmailMessageRef(ctx, models.CreateEmailMessageRefParams{
+		if err := q.CreateEmailMessageRef(ctx, models.CreateEmailMessageRefParams{
 			WorkspaceID: row.WorkspaceID, RfcMessageID: row.MessageIDHeader, ConversationID: in.ConversationID,
 			Kind: string(enums.EmailRefKindOutbound), Now: a.Clock.Now(),
-		})
+		}); err != nil {
+			return err
+		}
+
+		return a.Reputation.Sent(ctx, q, row.WorkspaceID)
 	})
 }
 

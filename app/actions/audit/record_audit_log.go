@@ -96,6 +96,9 @@ const (
 	EventProcedurePublished   = "procedure.published"
 	EventProcedureUnpublished = "procedure.unpublished"
 	EventProcedureRestored    = "procedure.restored"
+
+	EventEmailSendingPaused  = "email_sending.paused"
+	EventEmailSendingResumed = "email_sending.resumed"
 )
 
 /*

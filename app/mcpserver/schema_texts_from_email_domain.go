@@ -54,6 +54,31 @@ func schemaTextsFromEmailDomain() map[string]map[string]string {
 }
 
 /*
+schemaTextsFromEmailSending describes a workspace's standing as a sender.
+*/
+func schemaTextsFromEmailSending() map[string]map[string]string {
+	return map[string]map[string]string{
+		"EmailSending": {
+			"bounce_pause_rate": "The share of the window's emails that may bounce for good before bulk " +
+				"sending pauses, from 0 to 1. Zero means bounces never pause it.",
+			"complained": "How many emails sent in the window were reported as spam.",
+			"complaint_pause_rate": "The share of the window's emails that may be reported as spam " +
+				"before bulk sending pauses, from 0 to 1. Zero means complaints never pause it.",
+			"hard_bounced": "How many emails sent in the window bounced for good, such as to an " +
+				"address that does not exist.",
+			"minimum_sent": "How many emails the window must hold before the workspace is judged.",
+			"paused_at":    "When bulk sending was paused, as a UTC time. Null while it is active.",
+			"paused_reason": "Why bulk sending paused: bounce_rate or complaint_rate. Null while it " +
+				"is active.",
+			"sent": "How many customer emails the workspace sent in the window.",
+			"status": "Whether the workspace may send bulk email: active, or paused, when broadcasts, " +
+				"series and rating emails wait while replies still send.",
+			"window_days": "How many days of sending the counts cover.",
+		},
+	}
+}
+
+/*
 schemaTextsFromEmailSignatureRendering returns the texts from
 EmailSignatureRendering on.
 */

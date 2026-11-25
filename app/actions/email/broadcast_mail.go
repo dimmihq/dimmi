@@ -45,6 +45,8 @@ var (
 		"Verify the domain of this address before sending broadcasts from it, so they're signed as yours.")
 	ErrBroadcastPaused = fault.New(fault.Invalid, "broadcast_sending_paused",
 		"Email sending is paused for this workspace, so broadcasts can't go out.")
+	ErrSendingPaused = fault.New(fault.Invalid, "email_sending_paused",
+		"Bulk email is paused for this workspace. An owner can resume it in Settings, under Email.")
 )
 
 /*
@@ -58,6 +60,8 @@ type SendBroadcastEmail struct {
 	Senders   *Domains
 	Stamps    inbound.Stamps
 	Transport string
+
+	Reputation *Reputation
 }
 
 /*
@@ -122,6 +126,8 @@ func (a *SendBroadcastEmail) sender(ctx context.Context, q *models.Queries, ws i
 	}
 
 	switch {
+	case sender.BlockedReason == BlockedSendingPaused:
+		return address, sender, ErrSendingPaused
 	case sender.BlockedReason != "":
 		return address, sender, ErrBroadcastPaused
 	case sender.State != SendingOwnDomain:
@@ -197,6 +203,7 @@ func (a *SendBroadcastEmail) prepare(ctx context.Context, q *models.Queries, in 
 	message.Headers["List-Unsubscribe-Post"] = "List-Unsubscribe=One-Click"
 	message.Headers["Precedence"] = "bulk"
 	message.Tags = map[string]string{"stream": "customer", "kind": string(enums.OutboundEmailKindBroadcast)}
+	message.ConfigurationSet = a.Config.Sending.SES.ConfigurationSet
 
 	if previous.ID != ids.Nil() {
 		return previous, message, q.StartOutboundEmailAttempt(ctx, models.StartOutboundEmailAttemptParams{
@@ -247,7 +254,7 @@ func (a *SendBroadcastEmail) deliver(ctx context.Context, row models.OutboundEma
 			return fmt.Errorf("mark broadcast email sent: %w", err)
 		}
 
-		return nil
+		return a.Reputation.Sent(ctx, q, row.WorkspaceID)
 	})
 }
 

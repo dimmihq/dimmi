@@ -71,14 +71,18 @@ type EmailSendingConfig struct {
 }
 
 /*
-EmailSESConfig configures sending through SES. AccountID completes the
+EmailSESConfig configures sending through SES. EventsTopicARN and
+SystemTopicARN name the SNS topics whose bounce and complaint events are
+accepted, for the customer stream and the system stream. ConfigurationSet
+is the set customer mail is sent with, the mailer's own when empty; it
+must publish to the events topic for events to arrive. AccountID completes the
 resource names a tenant holds; without it identities are not tied to
 tenants. PauseAll stops the customer stream on the whole install.
 */
 type EmailSESConfig struct {
 	EventsTopicARN     string `koanf:"events_topic_arn"`
 	SystemTopicARN     string `koanf:"system_events_topic_arn"`
-	ConfigurationSet   string `default:"dimmi-customer" koanf:"configuration_set"`
+	ConfigurationSet   string `koanf:"configuration_set"`
 	TenantPerWorkspace bool   `koanf:"tenant_per_workspace"`
 	MailFromSubdomain  string `default:"bounce"         koanf:"mail_from_subdomain"`
 	AccountID          string `koanf:"account_id"`
@@ -140,6 +144,10 @@ func (c *EmailSendingConfig) check() error {
 		{c.MaxAttachmentBytes <= 0, "channels.email.sending.max_attachment_bytes"},
 		{c.AttachmentLinkTTL <= 0, "channels.email.sending.attachment_link_ttl"},
 		{c.Reputation.BouncePauseRate < 0 || c.Reputation.BouncePauseRate > 1, "channels.email.sending.reputation"},
+		{
+			c.Reputation.ComplaintPauseRate < 0 || c.Reputation.ComplaintPauseRate > 1,
+			"channels.email.sending.reputation",
+		},
 		{connect.Enabled && connect.PrivateKey == "", "channels.email.sending.domain_connect.private_key"},
 		{trip.Enabled && trip.Workspace == "", "channels.email.sending.round_trip.workspace"},
 	}

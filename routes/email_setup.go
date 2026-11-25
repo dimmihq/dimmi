@@ -41,4 +41,11 @@ func emailSetupRoutes(workspace *routing.Router, a *app.App) {
 		Ability("contacts:read")
 	routing.Delete(workspace, "/email-suppressions/{email_suppression}", "email-suppressions.destroy",
 		suppressions.Destroy).Ability("contacts:write").Status(fhttp.StatusNoContent)
+
+	sending := &v1.EmailSendingController{Reputation: a.EmailReputation}
+
+	routing.Get(workspace, "/email-sending", "email-sending.show", sending.Show).Internal().
+		Ability("settings:read")
+	routing.Post(workspace, "/email-sending/resumptions", "email-sending.resumptions.store",
+		sending.StoreResumption).Internal().Ability("email:resume_sending")
 }
