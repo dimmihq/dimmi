@@ -9,6 +9,7 @@ import { cx } from "@/utils/cx";
 import { CHANNEL_PATHS, CHANNELS } from "../channels";
 import { APP_URL, GITHUB_URL } from "../links";
 import { PRODUCT_GROUPS, PRODUCT_PATHS } from "../products";
+import { SiteNavMobile } from "./site-nav-mobile";
 
 const links = [
   { label: "Self-host", href: "/#self-host" },
@@ -61,6 +62,9 @@ export function SiteNav({ path }: { path: string }) {
           <ButtonLink href={`${APP_URL}/signup`} size="small">
             Start free
           </ButtonLink>
+          <div className="lg:hidden">
+            <SiteNavMobile path={path} links={links} />
+          </div>
         </div>
       </div>
     </header>
