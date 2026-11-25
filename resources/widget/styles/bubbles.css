@@ -371,3 +371,8 @@
 .sources-more[open] > summary {
   display: none;
 }
+
+/* The rest of the sources ease in once the visitor asks for them. */
+.sources-more[open] > :not(summary) {
+  animation: say 260ms var(--out) both;
+}

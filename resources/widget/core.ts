@@ -130,7 +130,46 @@ export function boot(win: Window & DimmiWindow, doc: Document): Widget | undefin
     });
   };
 
-  const draw = () => {
+  /*
+   * settling is what the messenger is still animating: a panel opening, a
+   * launcher's mark turning into its chevron. Drawing the messenger again
+   * replaces those elements, so their animation would jump to its end.
+   */
+  const settling = (): Promise<void> | undefined => {
+    if (typeof CSSTransition === "undefined" || typeof root.getAnimations !== "function") {
+      return undefined;
+    }
+    const running = root
+      .getAnimations()
+      .filter((animation) => animation instanceof CSSTransition && animation.playState === "running");
+    if (running.length === 0) {
+      return undefined;
+    }
+    return Promise.all(running.map((animation) => animation.finished.catch(() => undefined))).then(() => undefined);
+  };
+
+  let waiting: Promise<void> | undefined;
+
+  /*
+   * draw draws the messenger again, at once when nothing is moving and
+   * otherwise once what moves has settled, then puts back what only the
+   * connection draws.
+   */
+  const draw = (): Promise<void> => {
+    const moving = settling();
+    if (!moving) {
+      paint();
+      return Promise.resolve();
+    }
+    waiting ??= moving.then(() => {
+      waiting = undefined;
+      paint();
+      live?.redraw();
+    });
+    return waiting;
+  };
+
+  const paint = () => {
     const before = find();
     const [wasOpen, tab] = [before?.isOpen, before?.tab ?? ""];
     const loaded = [...root.querySelectorAll<HTMLElement>('.view[data-state="ready"]')].map(

@@ -180,30 +180,47 @@ function place(target: EventTarget | null) {
   if (!menu || !trigger) {
     return;
   }
-  const floating = typeof menu.showPopover === "function";
+  const floating = float(menu, target.open);
   if (!target.open) {
-    if (floating && menu.matches(":popover-open")) {
-      menu.hidePopover();
-    }
     return;
-  }
-  if (floating && !menu.matches(":popover-open")) {
-    menu.showPopover();
   }
   const room = floating ? screenRoom(trigger) : viewRoom(target, trigger);
   const wanted = Math.min(menu.scrollHeight, 360);
   const up = room.below < wanted && room.above > room.below;
-  const tall = Math.max(120, Math.min(360, up ? room.above : room.below));
   target.dataset.up = String(up);
-  menu.style.maxBlockSize = `${tall}px`;
+  menu.style.maxBlockSize = `${Math.max(120, Math.min(360, up ? room.above : room.below))}px`;
   if (floating) {
-    const at = trigger.getBoundingClientRect();
-    const height = trigger.ownerDocument.defaultView?.innerHeight ?? 0;
-    menu.style.left = `${at.left}px`;
-    menu.style.width = `${at.width}px`;
-    menu.style.top = up ? "auto" : `${at.bottom + 6}px`;
-    menu.style.bottom = up ? `${height - at.top + 6}px` : "auto";
+    pin(menu, trigger, up);
   }
+}
+
+/*
+ * float shows or hides the menu in the top layer to match its select,
+ * answering whether the browser has a top layer at all.
+ */
+function float(menu: HTMLElement, open: boolean): boolean {
+  if (typeof menu.showPopover !== "function") {
+    return false;
+  }
+  const shown = menu.matches(":popover-open");
+  if (open && !shown) {
+    menu.showPopover();
+  } else if (!open && shown) {
+    menu.hidePopover();
+  }
+  return true;
+}
+
+/*
+ * pin lines a floating menu up with its trigger, under it or above it.
+ */
+function pin(menu: HTMLElement, trigger: HTMLElement, up: boolean) {
+  const at = trigger.getBoundingClientRect();
+  const height = trigger.ownerDocument.defaultView?.innerHeight ?? 0;
+  menu.style.left = `${at.left}px`;
+  menu.style.width = `${at.width}px`;
+  menu.style.top = up ? "auto" : `${at.bottom + 6}px`;
+  menu.style.bottom = up ? `${height - at.top + 6}px` : "auto";
 }
 
 /*

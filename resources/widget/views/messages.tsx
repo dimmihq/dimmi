@@ -3,7 +3,7 @@
  * state, with a button to start a new one always at the bottom.
  */
 import { Bar } from "../components/chrome";
-import { ArrowUpIcon, MessagesIcon } from "../components/icons";
+import { ChevronRightIcon, MessagesIcon } from "../components/icons";
 import { ConversationRow } from "../components/rows";
 import { Loadable, SkeletonRows } from "../components/skeleton";
 import type { Content } from "../content";
@@ -39,7 +39,7 @@ export function Messages({ options, content }: { options: Options; content: Cont
       <div className="dock">
         <button className="button primary wide" type="button" data-action="click->converse">
           {texts.send_message}
-          <ArrowUpIcon />
+          <ChevronRightIcon className="caret" />
         </button>
       </div>
     </>

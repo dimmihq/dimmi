@@ -40,7 +40,7 @@ import { patch } from "./patch";
 import { report } from "./report";
 import type { Surface } from "./rules";
 import { loadThread, thread as threadParts } from "./threads";
-import { loadTickets, pinStrip, tickets } from "./tickets";
+import { enterRows, loadTickets, pinStrip, tickets } from "./tickets";
 
 export interface Host {
   root: ShadowRoot;
@@ -156,11 +156,21 @@ function followBottom(thread: HTMLElement, at: { pinned: boolean; jump: boolean 
         theirs = Date.now();
       });
     }
+    /*
+     * Scrolling up lets go of the end at once, however close to it they
+     * still are: in a short thread every upward scroll stays within
+     * reach of the end, and holding on there pulled them back down while
+     * they scrolled. Scrolling down near the end takes it up again.
+     */
+    let last = thread.scrollTop;
     thread.addEventListener("scroll", () => {
+      const up = thread.scrollTop < last;
+      last = thread.scrollTop;
       if (Date.now() - theirs > handScroll) {
         return;
       }
-      thread.dataset.pinned = String(thread.scrollHeight - thread.scrollTop - thread.clientHeight < 48);
+      const away = thread.scrollHeight - thread.scrollTop - thread.clientHeight;
+      thread.dataset.pinned = String(up ? away < 2 : away < 48);
     });
     thread.addEventListener(
       "load",
@@ -832,6 +842,7 @@ export class Live {
       button.setAttribute("aria-pressed", String((button.getAttribute("data-ticket-filter") === "open") === open));
     }
     this.drawConversations();
+    enterRows(this.host.root.querySelectorAll('.view[data-view="messages"] .list > *'));
   }
 
   /*

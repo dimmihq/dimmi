@@ -23,6 +23,21 @@
     transform 420ms var(--press);
 }
 
+/* A caret on a button steps forward on hover, the way the visitor goes. */
+.button > .caret {
+  inline-size: 18px;
+  block-size: 18px;
+  transition: translate 200ms var(--out);
+}
+
+.button:hover:not(:disabled) > .caret {
+  translate: 3px 0;
+}
+
+[dir="rtl"] .button:hover:not(:disabled) > .caret {
+  translate: -3px 0;
+}
+
 .button:active:not(:disabled) {
   transform: scale(0.98);
   transition-duration: 150ms, 150ms, 150ms, 220ms;

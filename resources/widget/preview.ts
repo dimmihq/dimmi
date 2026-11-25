@@ -8,7 +8,7 @@ import type { Content, Incoming, Message, TicketBlock, TicketType } from "./cont
 import { size } from "./lib/map";
 import { Said, Typing } from "./lib/thread_parts";
 import type { Words } from "./lib/ticket_words";
-import { pinStrip } from "./lib/tickets";
+import { enterRows, pinStrip } from "./lib/tickets";
 
 /*
  * teammate is who answers in a preview.
@@ -372,4 +372,9 @@ export function filter(root: ShadowRoot, content: Content, open: boolean) {
     const item = row.closest("li") ?? row;
     (item as HTMLElement).style.display = open && (!ticket || ticket.state.group === "resolved") ? "none" : "";
   }
+  enterRows(
+    [...root.querySelectorAll<HTMLElement>('.view[data-view="messages"] [data-conversation]')]
+      .map((row) => row.closest("li") ?? row)
+      .filter((item) => (item as HTMLElement).style.display !== "none"),
+  );
 }
