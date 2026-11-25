@@ -50,7 +50,7 @@ it.describe("series", () => {
     await expect(page.getByText("Paused", { exact: true })).toBeVisible();
     await page.getByRole("button", { name: "Series actions" }).click();
     await page.getByRole("button", { name: "Resume" }).click();
-    await expect(page.getByText("Live", { exact: true })).toBeVisible();
+    await expect(page.getByTestId("dimmi:series:editor").getByText("Live", { exact: true })).toBeVisible();
 
     await page.getByRole("link", { name: "Back to series" }).click();
     await expect(page.getByRole("link", { name: /Welcome/ })).toContainText("Live");

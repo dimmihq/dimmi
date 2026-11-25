@@ -926,40 +926,6 @@ describe("core", () => {
     expect(launcher().querySelector(".label")?.textContent).toBe("Help");
   });
 
-  it("pops on open when sound is on, and never on a silent re-render", async () => {
-    const notes = vi.fn();
-    const param = () => ({ value: 0, setValueAtTime: vi.fn(), exponentialRampToValueAtTime: vi.fn() });
-    vi.stubGlobal(
-      "AudioContext",
-      class {
-        currentTime = 0;
-        destination = {};
-        createBiquadFilter() {
-          return { type: "", frequency: param(), connect: (to: unknown) => to };
-        }
-        createGain() {
-          return { gain: param(), connect: (to: unknown) => to };
-        }
-        createOscillator() {
-          notes();
-          return { frequency: param(), connect: (to: unknown) => to, start: vi.fn(), stop: vi.fn() };
-        }
-      },
-    );
-    await started();
-
-    win.Dimmi?.("open");
-    await vi.waitFor(() => expect(notes).toHaveBeenCalledTimes(2));
-    win.Dimmi?.("update", { texts: { greeting: "Hey" } });
-    await settle();
-    expect(notes).toHaveBeenCalledTimes(2);
-    win.Dimmi?.("close");
-    win.Dimmi?.("update", { appearance: { sound: false } });
-    win.Dimmi?.("open");
-    await settle();
-    expect(notes).toHaveBeenCalledTimes(2);
-  });
-
   it("plays the outgoing and incoming sounds, and nothing on open", async () => {
     const waves: string[] = [];
     const param = () => ({ value: 0, setValueAtTime: vi.fn(), exponentialRampToValueAtTime: vi.fn() });
