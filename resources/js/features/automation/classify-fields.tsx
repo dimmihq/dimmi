@@ -42,18 +42,18 @@ export function ClassifyFields({ step, onEdit }: EditorProps) {
   return (
     <>
       <Section title="Name" description="Later steps use the topic it picks by this name.">
-        <Row label="Name">
+        <div className="py-2.5 pe-2.5">
           <Input
             aria-label="Name"
             size="small"
-            className="w-40"
+            className="w-full"
             value={name}
             placeholder="topic"
             isInvalid={name === ""}
             hint={name === "" ? "Give it a name." : undefined}
             onChange={(value) => set({ save_to: keyOf(value) ? `${prefix}${keyOf(value)}` : "" })}
           />
-        </Row>
+        </div>
       </Section>
       <Section title="AI">
         <Note>
