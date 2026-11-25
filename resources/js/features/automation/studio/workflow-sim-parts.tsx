@@ -3,14 +3,15 @@
  * view: the chat as the customer met it (the workflow's messages with
  * their buttons, what the customer tapped or typed, a wait they let run
  * out, and dimmi's replies inside agent steps), the workflow's trace
- * (whether the trigger started it, each step with the path it took and
- * what it found or saved, and a called workflow's steps nested under the
- * call), and the checks as a run left them. What the workflow did to the
+ * (whether the trigger started it, then each step in a row with the path
+ * it took, a called workflow's steps naming it), and the checks as a run
+ * left them. What the workflow did to the
  * conversation, such as tags, notes and assignments, shows in the chat
  * the way the inbox shows it.
  * A run in progress streams its lines and steps as they happen.
  */
-import { RiCursorLine, RiTimerLine } from "@remixicon/react";
+import { RiArrowRightSLine, RiCursorLine, RiTimerLine } from "@remixicon/react";
+import { Fragment } from "react";
 
 import { Chip } from "@/components/base/badges/chip";
 import { MessageBody } from "@/features/inbox/message-body";
@@ -21,7 +22,7 @@ import { Mark } from "../../agents/agent-sim-compare";
 import { judgedOf } from "../../agents/agent-sim-words";
 import { KindMark } from "../parts";
 import { Did } from "../procedure-simulator/parts";
-import { fieldLabel, fromCustomer, hint, words } from "../procedure-simulator/simulator";
+import { fromCustomer, hint, words } from "../procedure-simulator/simulator";
 import type { ChipSources } from "../procedure-writer/procedure-suggestions";
 import { stepLook } from "../step-kinds";
 import type { StepKind } from "../workflows";
@@ -208,15 +209,18 @@ const verdictWords: Record<string, string> = {
   schedule: "it is outside the office hours it runs in",
 };
 
-/* nested indents a called workflow's steps one step deeper per call. */
-const nested = ["", "ps-5", "ps-10", "ps-14", "ps-18", "ps-22"];
+/*
+ * plainOutcomes are the outcomes a step's chip leaves unsaid: the step
+ * simply did its job.
+ */
+const plainOutcomes = new Set(["would_run", "sent", "matched", "button", "answered", "completed"]);
 
 /*
- * StepRow is one step the run took, the way the runs view reads it: a
- * called workflow's steps sit indented under the call, the first one
- * naming the workflow.
+ * StepChip is one step the run took, in a row that reads left to right:
+ * its kind, the path it took, and its outcome when that is news, such as
+ * a skip or a failure. A called workflow's steps say whose they are.
  */
-function StepRow({ done, steps, opens }: { done: DryStep; steps: Steps; opens: boolean }) {
+function StepChip({ done, steps, opens }: { done: DryStep; steps: Steps; opens: boolean }) {
   const look = stepLook[done.kind as StepKind];
   const deep = (done.depth ?? 0) > 0;
   const took = done.path_id
@@ -225,20 +229,22 @@ function StepRow({ done, steps, opens }: { done: DryStep; steps: Steps; opens: b
       : pathNamed(steps, done.step_id, done.path_id) || done.path_label
     : "";
   const note = stepNote(done);
+  const outcome = done.skipped || !plainOutcomes.has(done.outcome) ? outcomeWord(done) : "";
 
   return (
-    <li className={cx("flex flex-col", nested[Math.min(done.depth ?? 0, nested.length - 1)])}>
-      {opens ? <span className={cx(hint, "pt-1.5")}>Inside “{done.workflow}”</span> : null}
-      <span className="flex items-start gap-2.5 py-1.5">
+    <li className="flex items-center gap-1.5">
+      {opens ? <span className={hint}>Inside “{done.workflow}”:</span> : null}
+      <span
+        title={[outcomeWord(done), note].filter(Boolean).join(" · ")}
+        className={cx(
+          "flex items-center gap-1.5 rounded-full bg-background-primary-default py-0.5 ps-0.5 pe-2.5 shadow-card",
+          done.skipped && "opacity-60",
+        )}
+      >
         {look ? <KindMark icon={look.icon} tint={look.tint} size="sm" /> : null}
-        <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-          <span className="text-body-2-medium text-text-primary">{look?.name ?? words(done.kind)}</span>
-          {took ? <span className="text-body-2-regular text-text-secondary">Took the path {took}</span> : null}
-          {note ? <span className="break-words text-body-2-regular text-text-secondary">{note}</span> : null}
-        </span>
-        <Chip variant="caption" color={done.skipped ? "neutral" : "soft"} className="shrink-0 py-0.5">
-          {outcomeWord(done)}
-        </Chip>
+        <span className="text-body-2-medium text-text-primary">{look?.name ?? words(done.kind)}</span>
+        {took ? <span className="text-body-2-regular text-text-secondary">· {took}</span> : null}
+        {outcome ? <span className="text-body-2-regular text-text-tertiary">· {outcome}</span> : null}
       </span>
     </li>
   );
@@ -277,28 +283,6 @@ function Simulated({ actions }: { actions: DryTrace["actions"] }) {
   return <p className={hint}>Simulated: no tag, assignment, ticket or request left the simulation.</p>;
 }
 
-/* Vars lists the run's variables as the run left them. */
-function Vars({ vars }: { vars: Record<string, unknown> }) {
-  const entries = Object.entries(vars);
-  if (entries.length === 0) {
-    return null;
-  }
-
-  return (
-    <div className="flex flex-col gap-1.5">
-      <span className={fieldLabel}>Variables</span>
-      <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-body-2-regular">
-        {entries.map(([key, value]) => (
-          <div key={key} className="contents">
-            <dt className="text-text-secondary">{key}</dt>
-            <dd className="min-w-0 truncate text-text-primary">{String(value)}</dd>
-          </div>
-        ))}
-      </dl>
-    </div>
-  );
-}
-
 /*
  * Trace is what the workflow did in a run: whether the trigger started
  * it, each step and path, the actions that would have run, and the
@@ -314,19 +298,24 @@ export function Trace({ trace, steps, live }: { trace?: DryTrace; steps: Steps; 
     <div className="flex flex-col gap-3">
       {trace ? <Verdict verdict={trace.verdict} /> : null}
       {done.length > 0 ? (
-        <ol aria-label="Steps the workflow took" className="flex flex-col">
+        <ol aria-label="Steps the workflow took" className="flex flex-wrap items-center gap-x-1 gap-y-2">
           {done.map((step, index) => (
-            <StepRow
-              key={`${step.step_id}-${String(index)}`}
-              done={step}
-              steps={steps}
-              opens={(step.depth ?? 0) > 0 && (done[index - 1]?.depth ?? 0) < (step.depth ?? 0)}
-            />
+            <Fragment key={`${step.step_id}-${String(index)}`}>
+              {index > 0 ? (
+                <li aria-hidden className="text-foreground-icon-tertiary">
+                  <RiArrowRightSLine className="size-4" />
+                </li>
+              ) : null}
+              <StepChip
+                done={step}
+                steps={steps}
+                opens={(step.depth ?? 0) > 0 && (done[index - 1]?.depth ?? 0) < (step.depth ?? 0)}
+              />
+            </Fragment>
           ))}
         </ol>
       ) : null}
       {trace ? <Simulated actions={trace.actions} /> : null}
-      {trace ? <Vars vars={trace.vars} /> : null}
       {trace?.end ? <p className={hint}>Ended: {words(trace.end).toLowerCase()}.</p> : null}
     </div>
   );
