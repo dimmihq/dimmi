@@ -88,6 +88,17 @@ jobs:
           fi
       - name: Release
         run: deploy/k8s/scripts/release.sh production "$SHA"
+      # A new edge orders its certificates when it starts, and the first
+      # order can fail while the load balancer still learns the edge is up;
+      # the edge then orders again a minute later. So the host is given a
+      # few minutes to answer over verified TLS before it is checked.
+      - name: Wait for the edge's certificate
+        run: |
+          for _ in $(seq 1 30); do
+            curl --silent --output /dev/null --max-time 10 https://trydimmi.com/up && exit 0
+            sleep 10
+          done
+          echo "https://trydimmi.com/up never answered over verified TLS"; exit 1
       - name: Smoke test
         run: deploy/release/smoke.sh https://trydimmi.com
         env:
