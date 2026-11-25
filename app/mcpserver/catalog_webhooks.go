@@ -37,7 +37,7 @@ func webhookEndpointDocs() map[string]Doc {
 			Title:   "List webhook event types",
 			Use:     "Lists every event a webhook endpoint can subscribe to, grouped by area.",
 			Returns: "each event type with the object its payload carries, its area and what it means.",
-			Next:    []string{"dimmi_webhook_endpoints_create: subscribe an endpoint to some of them"},
+			Next:    []string{"dimmi_create_webhook_endpoint: subscribe an endpoint to some of them"},
 		},
 		"webhook-endpoints.index": {
 			Title:   "List webhook endpoints",
@@ -49,8 +49,8 @@ func webhookEndpointDocs() map[string]Doc {
 			Use:     "Reads one endpoint. Its secret is never part of it.",
 			Returns: "the endpoint.",
 			Next: []string{
-				"dimmi_webhook_endpoints_deliveries_list: what was sent to it",
-				"dimmi_webhook_endpoints_stats_get: how it answered over the last day",
+				"dimmi_list_webhook_endpoint_deliveries: what was sent to it",
+				"dimmi_get_webhook_endpoint_stats: how it answered over the last day",
 			},
 		},
 		"webhook-endpoints.store": {
@@ -59,7 +59,7 @@ func webhookEndpointDocs() map[string]Doc {
 				"Only add URLs the person gave you.",
 			Returns: "the endpoint, with its signing secret in meta.secret shown this once.",
 			Risk:    new(RiskDanger),
-			Next:    []string{"dimmi_webhook_endpoints_tests_create: check it answers"},
+			Next:    []string{"dimmi_test_webhook_endpoint: check it answers"},
 			Params:  webhookEndpointParams(),
 		},
 		"webhook-endpoints.update": {
@@ -90,12 +90,14 @@ sends.
 func webhookSecretDocs() map[string]Doc {
 	return map[string]Doc{
 		"webhook-endpoints.secret-reveals.store": {
+			Name:    "reveal_webhook_endpoint_secret",
 			Title:   "Reveal a webhook secret",
 			Use:     "Reads the secret an endpoint's requests are signed with. Who saw it is recorded.",
 			Returns: "the secret and, while a rotation overlaps, the previous one with when it stops.",
 			Risk:    new(RiskSensitive),
 		},
 		"webhook-endpoints.secret-rotations.store": {
+			Name:  "rotate_webhook_endpoint_secret",
 			Title: "Rotate a webhook secret",
 			Use: "Gives an endpoint a new signing secret. The old one keeps signing for overlap_seconds so the " +
 				"receiver can switch without dropping events.",
@@ -111,7 +113,7 @@ func webhookSecretDocs() map[string]Doc {
 			Use:     "Posts a sample event to an endpoint now and reports how it answered.",
 			Returns: "the test delivery and its attempt with the status, body and a hint on a signature failure.",
 			Params: map[string]string{
-				"type": "Event type to send a sample of, from dimmi_webhook_event_types_list; " +
+				"type": "Event type to send a sample of, from dimmi_list_webhook_event_types; " +
 					"webhook.test when left out.",
 			},
 		},
@@ -127,7 +129,7 @@ func webhookDeliveryDocs() map[string]Doc {
 			Title:   "List webhook deliveries",
 			Use:     "Lists the events sent to an endpoint, newest first, and how each went.",
 			Returns: "a page of deliveries with their status, attempts and last answer.",
-			Next:    []string{"dimmi_webhook_deliveries_get: the payload and every attempt of one"},
+			Next:    []string{"dimmi_get_webhook_delivery_by_id: the payload and every attempt of one"},
 			Params: map[string]string{
 				"status":     "Only deliveries in this status: pending, retrying, succeeded, failed or canceled.",
 				"event_type": "Only deliveries of this event type.",
@@ -139,9 +141,10 @@ func webhookDeliveryDocs() map[string]Doc {
 			Title:   "Get a webhook delivery",
 			Use:     "Reads one delivery with the exact payload it sends and every attempt.",
 			Returns: "the delivery, its payload and its attempts with their requests and answers.",
-			Next:    []string{"dimmi_webhook_deliveries_redeliveries_create: send it again"},
+			Next:    []string{"dimmi_resend_webhook_delivery: send it again"},
 		},
 		"webhook-deliveries.redeliveries.store": {
+			Name:    "resend_webhook_delivery",
 			Title:   "Send a webhook delivery again",
 			Use:     "Posts a delivery to its endpoint again now, with the same payload signed afresh.",
 			Returns: "the delivery with the new attempt.",
@@ -156,7 +159,7 @@ func webhookEndpointParams() map[string]string {
 	return map[string]string{
 		"url":         "The https URL to post to.",
 		"description": "A note for the team, up to 255 characters.",
-		"event_types": "Event types from dimmi_webhook_event_types_list, an area such as conversation.*, or * " +
+		"event_types": "Event types from dimmi_list_webhook_event_types, an area such as conversation.*, or * " +
 			"for every event.",
 		"include_notes": "Also send events about internal notes.",
 		"inbox_ids":     "Only conversations of these inboxes (inbox_...); an empty list means every inbox.",

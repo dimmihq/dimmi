@@ -33,8 +33,10 @@ func reportRoutes(workspace *routing.Router, a *app.App) {
 	routing.Get(workspace, "/reports/{report}", "reports.show", c.Show).Ability("conversations:read")
 	routing.Get(workspace, "/reports/{report}/conversations", "reports.conversations.index", c.Conversations).
 		Ability("conversations:read")
-	routing.Get(workspace, "/report-digest", "report-digest.show", c.ShowDigest).Internal().Ability("conversations:read")
-	routing.Patch(workspace, "/report-digest", "report-digest.update", c.UpdateDigest).Internal().Ability("conversations:read")
+	routing.Get(workspace, "/report-digest", "report-digest.show", c.ShowDigest).
+		Internal().Ability("conversations:read")
+	routing.Patch(workspace, "/report-digest", "report-digest.update", c.UpdateDigest).
+		Internal().Ability("conversations:read")
 	routing.Delete(workspace, "/report-digest", "report-digest.destroy", c.DestroyDigest).Internal().
 		Ability("conversations:read").Status(fhttp.StatusNoContent)
 }

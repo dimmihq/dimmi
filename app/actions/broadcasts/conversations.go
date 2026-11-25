@@ -100,22 +100,44 @@ func scopeOf(ctx context.Context, q *models.Queries, row models.Broadcast) (scop
 }
 
 /*
+conversationBatch is one page of conversations in scope: the people it
+keeps as candidates, the last conversation read, and whether it was the
+final page.
+*/
+type conversationBatch struct {
+	people []candidate
+	last   ids.UUID
+	done   bool
+}
+
+/*
+conversationCursor is where the next page of conversations in scope
+starts: after the conversation last read.
+*/
+type conversationCursor struct {
+	scope scope
+	after ids.UUID
+}
+
+/*
 conversationPage reads one page of the conversations in scope and keeps
 those whose customer the audience matches, each as a candidate.
 */
 func (b *Broadcasts) conversationPage(
-	ctx context.Context, q *models.Queries, row models.Broadcast, s scope, after ids.UUID,
-) ([]candidate, ids.UUID, bool, error) {
+	ctx context.Context, q *models.Queries, row models.Broadcast, at conversationCursor,
+) (conversationBatch, error) {
+	s, after := at.scope, at.after
+
 	page, err := q.BroadcastConversationPage(ctx, models.BroadcastConversationPageParams{
 		WorkspaceID: row.WorkspaceID, TicketID: s.ticket, After: after, PageSize: freezePage,
 	})
 	if err != nil {
-		return nil, after, false, wrap("read conversations", err)
+		return conversationBatch{last: after}, wrap("read conversations", err)
 	}
 
 	done := len(page) < freezePage
 	if len(page) == 0 {
-		return nil, after, done, nil
+		return conversationBatch{last: after, done: done}, nil
 	}
 
 	people := make([]models.Contact, 0, len(page))
@@ -127,9 +149,21 @@ func (b *Broadcasts) conversationPage(
 		WorkspaceID: row.WorkspaceID, AudienceID: row.AudienceID, Rules: row.Rules, Contacts: people,
 	})
 	if err != nil {
-		return nil, after, false, err
+		return conversationBatch{last: after}, err
 	}
 
+	out := b.candidates(row, s, page, kept)
+
+	return conversationBatch{people: out, last: page[len(page)-1].Conversation.ID, done: done}, nil
+}
+
+/*
+candidates turns the conversations of a page whose customer the
+audience kept into candidates, each skipped when a hold leaves it out.
+*/
+func (b *Broadcasts) candidates(
+	row models.Broadcast, s scope, page []models.BroadcastConversationPageRow, kept []models.Contact,
+) []candidate {
 	keep := make(map[ids.UUID]bool, len(kept))
 	for _, c := range kept {
 		keep[c.ID] = true
@@ -156,7 +190,7 @@ func (b *Broadcasts) conversationPage(
 		out = append(out, c)
 	}
 
-	return out, page[len(page)-1].Conversation.ID, done, nil
+	return out
 }
 
 /*
@@ -194,14 +228,13 @@ func (b *Broadcasts) freezeConversations(ctx context.Context, row models.Broadca
 				return err
 			}
 
-			var people []candidate
-
-			people, after, done, err = b.conversationPage(ctx, q, row, s, after)
+			batch, err := b.conversationPage(ctx, q, row, conversationCursor{scope: s, after: after})
+			after, done = batch.last, batch.done
 			if err != nil {
 				return err
 			}
 
-			return b.add(ctx, q, row, people)
+			return b.add(ctx, q, row, batch.people)
 		})
 		if err != nil || done {
 			return err
@@ -224,20 +257,20 @@ func (b *Broadcasts) estimateConversations(
 	after, read := ids.Nil(), 0
 
 	for {
-		people, last, done, err := b.conversationPage(ctx, q, row, s, after)
+		batch, err := b.conversationPage(ctx, q, row, conversationCursor{scope: s, after: after})
 		if err != nil {
 			return err
 		}
 
-		out.add(people)
+		out.add(batch.people)
 
-		if read += freezePage; done || read >= estimateCap {
-			out.Capped = !done
+		if read += freezePage; batch.done || read >= estimateCap {
+			out.Capped = !batch.done
 
 			return nil
 		}
 
-		after = last
+		after = batch.last
 	}
 }
 
@@ -276,7 +309,9 @@ func (s *ConversationSender) Deliver(ctx context.Context, d Delivery) (Delivered
 		q := models.New(tx)
 		ws := d.Recipient.WorkspaceID
 
-		c, err := q.FindConversation(ctx, models.FindConversationParams{WorkspaceID: ws, ID: *d.Recipient.ConversationID})
+		c, err := q.FindConversation(ctx, models.FindConversationParams{
+			WorkspaceID: ws, ID: *d.Recipient.ConversationID,
+		})
 		if errors.Is(err, database.ErrNotFound) {
 			return &UndeliverableError{Status: "failed", Reason: ReasonUnreachable}
 		}
@@ -404,7 +439,9 @@ func (b *Broadcasts) followDelivery(ctx context.Context, q *models.Queries, repo
 route finds how a message reaches the conversation's customer, failing
 the recipient for good when nothing can.
 */
-func (s *ConversationSender) route(ctx context.Context, q *models.Queries, c models.Conversation) (conversations.Route, error) {
+func (s *ConversationSender) route(
+	ctx context.Context, q *models.Queries, c models.Conversation,
+) (conversations.Route, error) {
 	conn, err := conversations.Connection(ctx, q, c)
 	if err != nil {
 		return conversations.Route{}, unreachable(err)

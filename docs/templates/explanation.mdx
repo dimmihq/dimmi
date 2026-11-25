@@ -1,24 +1,33 @@
 ---
-title: How the feature works, such as "How assignment works"
-description: One sentence under 160 characters on what the reader will understand.
+title: Feature or concept name, such as "Procedures" or "Automatic assignment"
+description: One concrete sentence under 160 characters stating what the reader will understand or configure.
 ---
 
 {/*
-  Explanation (docs/WRITING.md). How a feature behaves when the screen
-  doesn't show it. Budget: 150 to 400 words, paragraphs of 1 to 2 sentences,
-  lists and tables over prose. Rules and numbers from the code, no history,
-  no philosophy. Delete these comments before publishing.
+  Feature guide (docs/WRITING.md). The default progressive-disclosure chapter:
+  1. Warm, grounded introduction (2 to 3 short paragraphs): real problem + mental model.
+  2. Happy path early: one concrete, realistic example before optional knobs.
+  3. Core capabilities: 1 to 3 sentence setup -> concrete example -> non-obvious nuance.
+  4. Rules, limits, and edge cases cleanly separated in tables or front-loaded bullets.
+  Verify every name, default, and limit in the code. Run stop-slop and make-it-skim.
+  Delete these comments before publishing.
 */}
 
-One or two sentences: the behavior, as if the reader reads nothing else.
+Open with the real-world problem this feature solves for a support team or developer (1 to 3 sentences, one clear idea).
 
-## What happens
+Explain what dimmi provides, where it lives in the workspace, and how it fits alongside related features. If readers commonly confuse two concepts (such as procedures vs. workflows), clarify the boundary here.
 
-1. The trigger.
-2. What dimmi does, with exact timings and limits.
-3. The outcome.
+## Getting started with <feature>
 
-## Rules
+Show the 80% happy path with a concrete, realistic example (a real procedure, a real workflow rule, or a complete runnable code snippet) so the feature clicks right away.
 
-- A rule the reader can't see in the interface.
-- Another.
+## Core capability
+
+State when and why to use this capability in 1 to 3 sentences. Follow with a concrete example, table, or code block, then note any non-obvious behavior or default.
+
+## Rules and limits
+
+- **Load-bearing rule:** exact behavior checked in the codebase, with numbers written as digits.
+- **Boundary or cap:** exact limit or timeout, checked in the codebase.
+
+{/* Close with 1 to 2 natural inline links to what the reader typically configures next, only when genuinely helpful. */}

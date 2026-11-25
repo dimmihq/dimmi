@@ -121,15 +121,16 @@ it.describe("Integrations", () => {
     await expect(page.getByRole("heading", { name: "Integrations" })).toBeVisible();
     await expect(page.getByText("Answer customers in Slack channels", { exact: false })).toBeVisible();
 
-    await page.getByRole("button", { name: "Connect", exact: true }).click();
+    await page.getByRole("button", { name: "Connect Slack" }).click();
     await expect(page).toHaveURL(/\/settings\/integrations$/);
     expect(sent.find((call) => call.path === "/integrations/slack/installations")?.body).toEqual({
       return_to: expect.stringMatching(/^\/d\/[^/]+\/settings\/integrations$/),
     });
     await expect(page.getByText("Connected. Every feature can use it now.")).toBeVisible();
-    await expect(page.getByText("Needs permissions")).toBeVisible();
+    const slack = page.getByRole("button", { name: "Open Slack" });
+    await expect(slack.getByLabel("Needs permissions")).toBeVisible();
 
-    await page.getByRole("button", { name: "Manage Slack" }).click();
+    await slack.click();
     await expect(page.getByRole("heading", { name: "Acme" })).toBeVisible();
     await expect(page.getByText("Needs permission for im:history", { exact: false })).toBeVisible();
     await expect(page.getByRole("button", { name: "Update permissions" })).toBeVisible();
@@ -156,9 +157,11 @@ it.describe("Integrations", () => {
     });
     await expect(page.getByText("Shared with a customer · Requests the AI spots")).toBeVisible();
 
-    // The channel's dialog covers the page until it has closed.
+    // The channel's dialog covers the page until it has closed, and the
+    // toasts may still sit over the button, so it is pressed by keyboard.
     await expect(dialog).toBeHidden();
-    await page.getByRole("button", { name: "Disconnect", exact: true }).click();
+    await page.getByRole("button", { name: "Disconnect", exact: true }).focus();
+    await page.keyboard.press("Enter");
     await expect(page.getByRole("alertdialog", { name: "Disconnect Slack?" })).toBeVisible();
     await page.getByRole("button", { name: "Cancel" }).click();
   });

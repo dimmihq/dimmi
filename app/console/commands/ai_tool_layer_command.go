@@ -111,7 +111,7 @@ save switches the chosen savers for the agent and Operator.
 func (c AIToolLayerCommand) save(ctx context.Context, q *models.Queries, choice saverChoice) error {
 	ws, features, on := choice.ws, choice.features, choice.on
 	now := c.App.Clock.Now()
-	agent, err := q.FindAgent(ctx, ws)
+	agent, err := q.FindDefaultAgent(ctx, ws)
 	if err != nil {
 		return fmt.Errorf("find agent: %w", err)
 	}

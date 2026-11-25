@@ -1,6 +1,7 @@
 package operator_test
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -21,7 +22,8 @@ func TestOperatorTools(t *testing.T) {
 		thread := k.thread(conv)
 		k.llm.Script(
 			tools(call("list_tags", map[string]any{}), call("list_teammates", map[string]any{}),
-				call("get_customer", map[string]any{}), call("search_conversations", map[string]any{"query": "order"})),
+				call("get_customer_by_conversation_number", map[string]any{}),
+				call("search_conversations", map[string]any{"search_text": "order"})),
 			reply("Done."),
 		)
 
@@ -74,9 +76,12 @@ func TestOperatorTools(t *testing.T) {
 			String("data.id")
 		thread := k.thread(conv)
 		k.llm.Script(
-			tools(call("search_knowledge", map[string]any{"query": "refund"}), call("list_articles", map[string]any{}),
-				call("get_article", map[string]any{"article": article}), call("list_procedures", map[string]any{}),
-				call("get_procedure", map[string]any{"procedure": procedure}), call("agent_runs", map[string]any{})),
+			tools(call("search_knowledge", map[string]any{"search_text": "refund"}),
+				call("list_articles", map[string]any{}),
+				call("get_article_by_id", map[string]any{"article_id": article}),
+				call("list_procedures", map[string]any{}),
+				call("get_procedure_by_id", map[string]any{"procedure_id": procedure}),
+				call("get_ai_agent_runs", map[string]any{})),
 			reply("Done."),
 		)
 
@@ -95,9 +100,9 @@ func TestOperatorTools(t *testing.T) {
 		k := newDesk(t)
 		thread := k.thread("")
 		k.llm.Script(
-			tools(call("get_conversation", map[string]any{}), call("make_coffee", map[string]any{}),
-				call("get_article", map[string]any{"article": "nope"}),
-				call("workspace_report", map[string]any{"since": "yesterday"}),
+			tools(call("get_conversation_by_number", map[string]any{}), call("make_coffee", map[string]any{}),
+				call("get_article_by_id", map[string]any{"article": "nope"}),
+				call("get_workspace_report", map[string]any{"since": "yesterday"}),
 				call("draft_reply", map[string]any{"body": "Hi"})),
 			reply("Some of that failed."),
 		)
@@ -118,13 +123,41 @@ func TestOperatorTools(t *testing.T) {
 			"UPDATE workspace_members SET conversation_access = 'assigned' WHERE id = $1", row.ID)
 		require.NoError(t, err)
 		thread := member.PostJSON("/api/v1/operator/threads", testkit.JSON{}).AssertOK().String("data.id")
-		k.llm.Script(tools(call("workspace_report", map[string]any{})), reply("I cannot."))
+		k.llm.Script(tools(call("get_workspace_report", map[string]any{})), reply("I cannot."))
 
 		res := member.PostJSON("/api/v1/operator/threads/"+thread+"/messages", testkit.JSON{"body": "Report"}).
 			AssertOK()
 
 		assert.Equal(t, "false", res.String("data.message.steps.0.ok"))
 		member.PatchJSON("/api/v1/operator/settings", testkit.JSON{"enabled": false}).AssertForbidden()
+	})
+
+	t.Run("gives a real link with a conversation and an article it reads", func(t *testing.T) {
+		t.Parallel()
+		k := newDesk(t)
+		conv := k.conversation("Where is my refund?")
+		article := k.article("Refunds")
+		k.llm.Script(
+			tools(call("get_conversation_by_number", map[string]any{}), call("get_article_by_id", map[string]any{
+				"article_id": article,
+			}), call("list_articles", map[string]any{})),
+			reply("Here."),
+		)
+
+		k.ask(k.thread(conv), "Send me the links").AssertOK()
+
+		sent := k.llm.Sent()
+		assert.Contains(t, sent[0].System[0].Text, "Always write a link as Markdown on the name of what it opens")
+		assert.Contains(t, sent[0].System[0].Text,
+			"Give the public link when asked for the live, public or external page")
+		results := ""
+		for _, m := range sent[1].Messages[len(sent[1].Messages)-3:] {
+			results += m.Parts[0].Text
+		}
+		assert.Contains(t, results, "/inbox/all/"+conv)
+		assert.Contains(t, results, "Link in dimmi, for the team: ")
+		assert.Equal(t, 2, strings.Count(results, "/help-center/"+article), "read and listed, each with its link")
+		assert.Contains(t, results, "Public link: none yet, it is not published.")
 	})
 
 	t.Run("withholds tools whose changes are switched off", func(t *testing.T) {
@@ -142,6 +175,8 @@ func TestOperatorTools(t *testing.T) {
 
 		for _, spec := range k.llm.Sent()[0].Tools {
 			assert.NotEqual(t, "propose_changes", spec.Name)
+			assert.NotEqual(t, "propose_article_edits", spec.Name)
+			assert.NotEqual(t, "propose_new_article", spec.Name)
 		}
 	})
 

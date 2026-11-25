@@ -117,7 +117,8 @@ export function PushPane({
         groupResizeBehavior="preserve-pixel-size"
         onResize={(size) => {
           const out = size.inPixels > 0;
-          if (size.inPixels >= width / 2) {
+          // A width passed through while the pane slides is not one the teammate chose.
+          if (asked.current === null && size.inPixels >= width / 2) {
             last.current = size.asPercentage;
           }
           setShown(out);

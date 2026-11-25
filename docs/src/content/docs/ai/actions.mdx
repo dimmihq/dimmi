@@ -1,46 +1,57 @@
 ---
 title: "Connect actions to your systems"
-description: "Give the dimmi agent actions that read and change data in your own systems, and choose who must agree before a change runs."
+description: "Let the dimmi agent read data and make changes in your API or MCP server, with customer confirmation and team approval."
 ---
 
-An action is a call the dimmi agent makes to your API or MCP server during a conversation. Admins create actions in **Settings → Actions**; for what your endpoint receives, see [Let the dimmi agent call your API](/developers/agent-actions-api/).
+An action lets the dimmi agent call your API or MCP server during a conversation. Instead of telling a customer to check another page, the agent can look up an order or cancel a subscription on the spot.
 
-## Connections
+Admins create actions in **Settings → Actions**. For the exact headers and payloads your server receives, see [Let the dimmi agent call your API](/developers/agent-actions-api/).
 
-A connection holds the address and the secret its actions share. dimmi encrypts the secret, and the model never sees it.
+## Set up a connection
 
-- **REST API:** an HTTPS base URL. You describe each action's method, path, query and body.
-- **MCP server:** a remote server over Streamable HTTP. **Sync tools** turns each tool into a draft action that changes data and asks the customer first, whatever the server says about the tool.
+A connection holds the base URL and secret shared by a group of actions. dimmi encrypts the secret, and the AI model never sees it.
 
-## Reads and changes
+- **REST API:** give dimmi an HTTPS base URL, then define each action's method, path, query, and body.
+- **MCP server:** connect a remote server over Streamable HTTP. Click **Sync tools** to import each tool as a draft action.
+
+For safety, synced MCP tools start as actions that change data and ask the customer to confirm first, no matter how the server labels them.
+
+## Read actions vs. change actions
+
+Actions that only read data behave differently from actions that make changes.
 
 | | **Only reads data** | **Changes data** |
 | --- | --- | --- |
-| Runs | At once. | After the agreement you choose. |
+| When it runs | Right away. | Only after the approvals you pick. |
 | Channels | **Messenger**, **Email**, **API**. | **Messenger** only. |
-| Retries | Once, after a 502, 503 or 504. | Never. |
+| Retries | Retries once after a `502`, `503`, or `504`. | Never retries. |
 
-For an action that changes data, **Before it runs** and **Approval** decide who agrees:
+For an action that changes data, use **Before it runs** and **Approval** to decide who must say yes:
 
-- **Customer confirms first:** the customer gets a card with **Confirm** and **Cancel**. It lapses after 15 minutes.
-- **A teammate approves:** the request appears in the conversation in the inbox, and any teammate can decide it.
-- **An admin approves:** only an admin can decide it.
+- **Customer confirms first:** the customer sees a card with **Confirm** and **Cancel**. The card expires after 15 minutes.
+- **A teammate approves:** an approval request appears in the inbox thread, and any teammate can approve or decline it.
+- **An admin approves:** only an admin can approve or decline it.
 
-With both, the customer confirms before the team is asked. When nobody decides within the time limit (1 hour by default), the agent tells the customer and [hands over](/ai/handover/) with high priority.
+If you turn on both, the customer confirms before your team gets asked. If no one decides within the time limit (1 hour by default), the agent lets the customer know and [hands over](/ai/handover/) with high priority.
 
-## Whose data an action touches
+## Keep customer data safe
 
-The agent never picks the customer. dimmi fills `{contact.external_id}`, `{contact.email}` and `{contact.attr.<key>}` from the customer's proven identity, and offers the action only when it can:
+The AI model never picks which customer an action runs on. dimmi fills `{contact.external_id}`, `{contact.email}`, and `{contact.attr.<key>}` from the customer's verified identity.
 
-- In the messenger, when the session passed [identity verification](/developers/messenger/identity-verification/).
-- In conversations your server starts through the API.
+dimmi only offers the action when it knows who the customer is:
 
-An action that uses only `{contact.email}` also works for an anonymous messenger visitor, who types a six-digit code that dimmi emails them. The code lasts 10 minutes and the proof 24 hours.
+- **In the messenger:** when the session passed [identity verification](/developers/messenger/identity-verification/).
+- **Through the API:** in conversations started by your server.
+
+An action that only uses `{contact.email}` also works for a signed-out visitor in the messenger. dimmi emails them a 6-digit code first. The code lasts 10 minutes, and the verified session lasts 24 hours.
 
 ## Test and publish
 
-- **Test:** a **Dry run** builds the request and sends nothing. **Live** sends it as the customer you enter.
-- **Publish:** the agent runs only the published version. Later edits wait for **Publish changes**.
-- **Used by:** tick **Operator** to give the action to [Operator](/operator/work-with-operator/) too.
+Every action goes through a safe test step before customers see it:
 
-The agent is offered at most 20 actions in a conversation, the first 20 by tool name. Each call stays in the conversation's timeline.
+- **Dry run:** builds the request and shows it to you without sending anything.
+- **Live test:** sends the request as the customer you enter so you can inspect the real response.
+- **Publish:** the agent only runs the published version. Later edits stay in draft until you click **Publish changes**.
+- **Used by:** tick **Operator** if you want [Operator](/operator/work-with-operator/) to use the same action.
+
+The agent receives up to 20 actions in a conversation, picked alphabetically by tool name. Every action call is recorded in the conversation timeline.

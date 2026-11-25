@@ -50,7 +50,8 @@ AskOperatorRequest is the input of POST /operator/threads/{thread}/messages.
 type AskOperatorRequest struct {
 	Thread string `path:"thread"`
 	Body   struct {
-		Body string `json:"body" validate:"required,max=8000"`
+		Body    string           `json:"body"              validate:"required,max=8000"`
+		Viewing *OperatorViewing `json:"viewing,omitempty"`
 	}
 }
 

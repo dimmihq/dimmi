@@ -11,14 +11,17 @@
  * The writer owns its document once open: value is only where it starts,
  * so a slow render never puts older words back under the caret. To load
  * other words, such as a restored version, the page opens a new writer.
+ * A change request waiting on the article is drawn inside it: what it
+ * removes struck through in red, what it adds in green.
  */
 import { type Editor, EditorContent, useEditor } from "@tiptap/react";
-import { type CSSProperties, useRef, useState } from "react";
+import { type CSSProperties, useEffect, useRef, useState } from "react";
 
 import { type Suggested, suggestionExtension } from "@/features/inbox/composer/suggestion-extension";
 import { SuggestionList } from "@/features/inbox/composer/suggestion-list";
 
 import { articleExtensions, articleMarkdown } from "./article-markdown";
+import { ChangeRequest, changeRequestKey } from "./change-request";
 import { findCommands, runCommand, type SlashCommand } from "./slash-commands";
 import { imagesOf, useImageUpload } from "./use-image-upload";
 import { BlockPlus, ImageBar, SelectionBar } from "./writer-menus";
@@ -29,6 +32,22 @@ export interface ArticleWriterProps {
   label: string;
   brand?: string;
   onChange: (markdown: string) => void;
+  // proposed is a requested change to the article, in Markdown.
+  proposed?: string | null;
+  // whole draws the whole article as requested, for a new one.
+  whole?: boolean;
+}
+
+/*
+ * showChange scrolls to the first added passage the request did not have
+ * before, so a change made while the teammate watches is never off screen.
+ */
+function showChange(root: HTMLElement, before: string) {
+  const plain = (text: string) => text.replace(/[*_`#>\-\s]+/g, " ").trim();
+  const earlier = plain(before);
+  const added = [...root.querySelectorAll<HTMLElement>(".change-added")];
+  const fresh = added.find((el) => !earlier.includes(plain(el.textContent ?? "")));
+  (fresh ?? added[0])?.scrollIntoView({ block: "center", behavior: "smooth" });
 }
 
 /*
@@ -38,7 +57,15 @@ function dropPosition(editor: Editor, event: DragEvent): number | undefined {
   return editor.view.posAtCoords({ left: event.clientX, top: event.clientY })?.pos;
 }
 
-export default function ArticleWriter({ workspace, value, label, brand, onChange }: ArticleWriterProps) {
+export default function ArticleWriter({
+  workspace,
+  value,
+  label,
+  brand,
+  onChange,
+  proposed = null,
+  whole = false,
+}: ArticleWriterProps) {
   const [slash, setSlash] = useState<Suggested<SlashCommand> | null>(null);
   const changed = useRef(onChange);
   changed.current = onChange;
@@ -61,6 +88,7 @@ export default function ArticleWriter({ workspace, value, label, brand, onChange
         apply: (e, range, command) => runCommand(e, range, command, { pickImage }),
         onChange: setSlash,
       }),
+      ChangeRequest,
     ]),
     content: value,
     contentType: "markdown",
@@ -92,6 +120,38 @@ export default function ArticleWriter({ workspace, value, label, brand, onChange
     onUpdate: ({ editor: e }) => changed.current(articleMarkdown(e.getMarkdown())),
   });
   editorRef.current = editor;
+
+  const shown = useRef<string | null>(null);
+  useEffect(() => {
+    if (!editor) {
+      return;
+    }
+    // The writer can hand over an editor that is not mounted yet, or one
+    // already torn down while React mounts it a second time.
+    const send = () => {
+      if (editor.isDestroyed) {
+        return;
+      }
+      const parsed = proposed === null || !editor.markdown ? null : editor.markdown.parse(proposed);
+      const node = parsed ? editor.state.schema.nodeFromJSON(parsed) : null;
+      editor.view.dispatch(editor.state.tr.setMeta(changeRequestKey, { proposed: node, whole }));
+      // A request that changed while the article is open, as when Operator
+      // edits it for the teammate, is brought into view where it changed.
+      const before = shown.current;
+      shown.current = proposed;
+      if (before !== null && proposed !== null && before !== proposed) {
+        window.requestAnimationFrame(() => showChange(editor.view.dom, before));
+      }
+    };
+    if (editor.isInitialized) {
+      send();
+      return;
+    }
+    editor.on("create", send);
+    return () => {
+      editor.off("create", send);
+    };
+  }, [editor, proposed, whole]);
 
   if (!editor) {
     return null;

@@ -71,6 +71,9 @@ export interface SelectProps<T extends object>
   triggerClassName?: string;
   /** Classes for the open popover (e.g. constrain its width). */
   popoverClassName?: string;
+  /** Where the menu opens against the trigger; a menu wider than its
+   *  trigger ends where the trigger ends with `bottom end`. */
+  popoverPlacement?: "bottom start" | "bottom end";
   /** `md` (default) or `sm` for compact/dense contexts (e.g. compact tables). */
   size?: SelectSize;
   variant?: SelectVariant;
@@ -87,6 +90,7 @@ export function Select<T extends object>({
   className,
   triggerClassName,
   popoverClassName,
+  popoverPlacement = "bottom start",
   size = "md",
   variant = "default",
   children,
@@ -175,6 +179,7 @@ export function Select<T extends object>({
             ref={popoverRef}
             isNonModal
             offset={4}
+            placement={popoverPlacement}
             className={cx(
               MENU_POPOVER_WIDTH,
               MENU_POPOVER_SURFACE,

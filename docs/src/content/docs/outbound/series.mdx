@@ -1,54 +1,54 @@
 ---
 title: "Build a series"
-description: "Who enters a series, what each step does, the sending limits, and what publishing, pausing and testing do to customers on it."
+description: "Automate multi-step onboarding and lifecycle messages with waits, branches, split tests, and safe daily caps."
 ---
 
-A series, built in **Series**, moves each customer through messages, waits and checks on their own schedule.
+Open **Series** to build automated journeys that guide customers through messages, waits, and checks on their own schedule.
 
-With **Accounts** under **Who travels it**, a whole company travels the series once.
+Switch **Who travels it** to **Accounts** if you want an entire company to travel the series once instead of individual contacts.
 
-## Who enters
+## How customers enter a series
 
-- **They match rules** or **They join a saved audience:** only customers who start to match after the series goes live enter, unless **People already matching** is on.
-- **They do an event:** the customer enters when dimmi records the [event](/developers/messenger/track-events/).
-- **A teammate or the API adds them.**
+- **Rule or audience match:** choose **They match rules** or **They join a saved audience**. Only people who start matching after launch enter, unless you enable **People already matching**.
+- **Event trigger:** choose **They do an event** to start a journey when dimmi receives a tracked [event](/developers/messenger/track-events/).
+- **Manual or API:** a teammate or your backend adds customers to the series.
 
-dimmi checks a customer against the rules within seconds of a change to them, and every 15 minutes for rules that turn true with time, such as a trial that ends in 5 days.
+dimmi evaluates profile changes within seconds, and rechecks time-based rules (like a trial ending in 5 days) every 15 minutes.
 
-A customer enters once unless **Can travel it again** is on, and is never on the same series twice at a time. Blocked customers and customers who match the **Leave early** rules never enter.
+Each customer travels a series once unless **Can travel it again** is turned on, and never twice at the same time. Blocked customers and anyone already matching **Leave early** never enter.
 
-## Steps
+## Available steps
 
-A series holds 200 steps, with at most 8 paths out of one step.
+A series supports up to 200 steps, with up to 8 outgoing paths per step.
 
 | Step | What it does |
 | --- | --- |
-| **Email**, **Chat**, **Post**, **Slack** | Sends a message with the reach checks, pacing, tracking and reply handling of a [broadcast](/outbound/broadcasts/). |
-| **Wait** | Holds for up to 365 days, until a time of day in the customer's time zone, or until a date attribute such as `trial_ends_at`, moved by a number of days. A date in the past moves the customer on at once. |
-| **Wait for** | Holds until the customer does an event, matches rules, or opens, clicks or replies to an earlier message. Takes the other path when the time is up. |
-| **Check** | Takes the first path the customer matches, or the path for everyone else. |
-| **Split test** | Gives each customer one of 2 to 4 variants for good, by share. |
-| **AI path** | The AI reads the customer, their company and recent conversations, and picks a path. It takes the fallback path after 20 seconds or on any failure. |
-| **Tag**, **Remove tag**, **Set attribute**, **Topic** | Changes the customer, or the company in an account series. |
-| **Webhook** | Posts the customer and the step to your endpoint, without following redirects. See [Workflow requests](/developers/workflow-requests/). |
+| **Email**, **Chat**, **Post**, **Slack** | Sends a message with the same reach checks, pacing, tracking, and reply routing as a [broadcast](/outbound/broadcasts/). |
+| **Wait** | Pauses up to 365 days, until a local time of day, or relative to a date attribute like `trial_ends_at`. Dates in the past advance right away. |
+| **Wait for** | Pauses until an event fires, rules match, or the customer opens, clicks, or replies to an earlier message. Takes the timeout path if time runs out. |
+| **Check** | Follows the first matching branch, or the fallback branch. |
+| **Split test** | Permanently assigns each customer to 1 of 2 to 4 variants by percentage. |
+| **AI path** | Uses AI to read the customer, company, and recent threads and pick a path. Falls back after 20 seconds or on error. |
+| **Tag**, **Remove tag**, **Set attribute**, **Topic** | Updates the customer (or company in an account series). |
+| **Webhook** | Sends the customer and step payload to your endpoint (does not follow redirects). See [Workflow requests](/developers/workflow-requests/). |
 
 ## Sending limits
 
-- A customer gets at most two series messages a day, across every series. A message over the limit waits for the next day.
-- **Email only by day** holds email until 8:00 to 20:00 in the customer's time zone.
+- **Daily cap:** each customer receives at most 2 series messages per day across all series. Extra messages wait until the next day.
+- **Quiet hours:** **Email only by day** holds emails until 8:00 to 20:00 in the customer's local time zone.
 
-## Leaving and the goal
+## Exit rules and goals
 
-Before each step, dimmi checks the **Leave early** settings against the customer as they are at that moment. A customer who leaves gets nothing that was queued for them.
+Before every step, dimmi evaluates your **Leave early** rules against the customer's current state. Anyone who exits stops receiving queued steps.
 
-The **Goal** window starts when the customer enters.
+The **Goal** window begins the moment the customer enters the series.
 
-## Publish, pause and archive
+## Publish, pause, and archive
 
-- **Publish changes:** customers on the series follow the new version from the step they are on. A customer on a removed step moves to the next step that remains.
-- **Pause:** no message goes out and nobody moves. Waits that end during the pause carry on after **Resume**.
-- **Archive:** ends every journey. An archived series cannot go live again.
+- **Publish changes:** customers already in the series pick up the new version from their current step. If their step was deleted, they move to the next remaining step.
+- **Pause:** halts all sends and movement. Waits that finish during a pause resume once you click **Resume**.
+- **Archive:** ends all active journeys permanently. Archived series cannot be republished.
 
-## Test a series
+## Test before launching
 
-**Try it on me** enters the published version under the customer with your email address. The messages go out to you. Rules, quiet hours and the daily cap do not apply, you can skip each wait, and the journey counts in no report.
+Click **Try it on me** to run the published version using the customer profile with your own email address. Real messages send to you, caps and quiet hours are skipped, you can fast-forward through waits, and test runs stay out of reports.

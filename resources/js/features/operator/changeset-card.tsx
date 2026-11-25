@@ -1,28 +1,39 @@
 /*
- * A change Operator proposed, as a card the teammate decides on: what it
- * does and why, each operation in plain words, and what became of it.
+ * A change Operator proposed, as a compact card the teammate decides on:
+ * what it touches, why in two lines that open on a click, what each
+ * operation does when asked, and what became of it.
  * Waiting changes apply or are declined in one click; applied ones can
  * be undone, which puts back every value Operator replaced unless
  * someone changed it since. A change that failed says why and can be
- * tried again.
+ * tried again. A change to an article or a procedure is a short line
+ * per change with the way to review it in that editor, where it is
+ * accepted or declined.
  */
 import {
   RiArrowDownSLine,
-  RiArrowGoBackLine,
+  RiArticleLine,
   RiCheckLine,
   RiCloseLine,
   RiErrorWarningLine,
+  RiFlashlightLine,
   RiGitPullRequestLine,
+  RiListOrdered2,
+  RiPriceTag3Line,
+  RiStickyNoteLine,
 } from "@remixicon/react";
-import { useState } from "react";
+import { useNavigate } from "@tanstack/react-router";
+import { type ReactNode, useState } from "react";
 
 import { Chip, type ChipColor } from "@/components/base/badges/chip";
 import { Button } from "@/components/base/buttons/button";
+import { AlertDialog } from "@/components/base/modal/modal";
 import { MessageBody } from "@/features/inbox/message-body";
 import { Unfold } from "@/features/shell/reveal";
 import type { ChangesetDecision, ChangesetStatus, OperatorChangeset } from "@/lib/api/operator";
 import { cx } from "@/utils/cx";
 
+import { emphasized } from "./emphasized";
+import { reviewTarget } from "./review-target";
 import { failureText } from "./use-operator-chat";
 
 const statusLabels: Record<ChangesetStatus, string> = {
@@ -103,12 +114,17 @@ function FullText({ text }: { text: string }) {
 export function ChangesetCard({
   changeset,
   onDecide,
+  children,
 }: {
   changeset: OperatorChangeset;
-  onDecide: (id: string, decision: ChangesetDecision) => Promise<void>;
+  onDecide: (id: string, decision: ChangesetDecision) => Promise<unknown>;
+  /* What the change looks like in place, such as a diff, under its operations. */
+  children?: ReactNode;
 }) {
   const [pending, setPending] = useState<ChangesetDecision | null>(null);
   const [failure, setFailure] = useState<string | null>(null);
+  const target = reviewTarget(changeset);
+  const navigate = useNavigate();
   const decide = async (decision: ChangesetDecision) => {
     setPending(decision);
     setFailure(null);
@@ -120,38 +136,148 @@ export function ChangesetCard({
       setPending(null);
     }
   };
+  const label = changeset.preview
+    ? "Dry run preview"
+    : changeset.auto && changeset.status === "applied"
+      ? "Applied on its own"
+      : statusLabels[changeset.status];
+  const reviewing = target !== null && changeset.status === "pending";
+
   return (
     <section
       aria-label={changeset.title}
-      className="flex flex-col overflow-hidden rounded-2xl border border-border-button-default bg-background-primary-default shadow-xs"
+      className="flex flex-col gap-2.5 rounded-2xl border border-border-button-default bg-background-primary-default p-3 shadow-xs"
     >
-      <header className="flex min-h-10 items-center gap-2 border-b border-separator-border ps-3 pe-2 py-2">
-        <RiGitPullRequestLine aria-hidden className="size-4 shrink-0 text-foreground-icon-secondary" />
-        <h3 className="min-w-0 flex-1 truncate text-body-2-medium text-text-primary">{changeset.title}</h3>
-        <Chip variant="caption" color={statusColors[changeset.status]} className="shrink-0 py-0">
-          {changeset.auto && changeset.status === "applied" ? "Applied on its own" : statusLabels[changeset.status]}
-        </Chip>
-      </header>
-      <div className="flex flex-col gap-2.5 px-3 py-2.5">
-        {changeset.reason ? <p className="text-body-2-regular text-text-secondary">{changeset.reason}</p> : null}
-        <Operations changeset={changeset} />
-        {changeset.error || failure ? (
-          <p className="flex items-start gap-1.5 text-body-2-regular text-text-error-primary">
-            <RiErrorWarningLine aria-hidden className="mt-0.5 size-3.5 shrink-0" />
-            {failure ?? changeset.error}
-          </p>
-        ) : null}
+      <div className="flex items-start gap-3">
+        <KindTile changeset={changeset} />
+        <div className="flex min-w-0 flex-1 flex-col">
+          <h3 className="truncate text-body-2-medium text-text-primary">{changeset.title}</h3>
+          <p className="truncate text-body-2-regular text-text-tertiary">{targetLine(changeset)}</p>
+        </div>
+        {reviewing ? (
+          <Button size="xs" variant="secondary" onClick={() => void navigate(target)} className="mt-0.5 shrink-0">
+            Review
+          </Button>
+        ) : (
+          <Chip variant="caption" color={statusColors[changeset.status]} className="mt-0.5 shrink-0 py-0">
+            {label}
+          </Chip>
+        )}
       </div>
-      <Decisions changeset={changeset} pending={pending} decide={decide} />
+      {changeset.reason ? <Reason text={changeset.reason} /> : null}
+      {target === null ? <Details changeset={changeset} /> : null}
+      {children}
+      {changeset.error || failure ? (
+        <p className="flex items-start gap-1.5 text-body-2-regular text-text-error-primary">
+          <RiErrorWarningLine aria-hidden className="mt-0.5 size-3.5 shrink-0" />
+          {failure ?? changeset.error}
+        </p>
+      ) : null}
+      {reviewing || changeset.preview ? null : <Decisions changeset={changeset} pending={pending} decide={decide} />}
     </section>
   );
 }
 
 /*
- * Operations lists what a changeset does, one plain line each, marked
- * once applied.
+ * kindOf is what a changeset mostly changes, for its tile and its line.
  */
-function Operations({ changeset }: { changeset: OperatorChangeset }) {
+function kindOf(changeset: OperatorChangeset): { icon: typeof RiArticleLine; noun: string } {
+  const kind = changeset.operations[0]?.kind ?? "";
+  if (kind.startsWith("article.")) {
+    return { icon: RiArticleLine, noun: "Article" };
+  }
+  if (kind.startsWith("procedure.")) {
+    return { icon: RiListOrdered2, noun: "Procedure" };
+  }
+  if (kind.startsWith("action.")) {
+    return { icon: RiFlashlightLine, noun: "Action" };
+  }
+  if (kind.includes("tag")) {
+    return { icon: RiPriceTag3Line, noun: "Tags" };
+  }
+  if (kind.includes("note")) {
+    return { icon: RiStickyNoteLine, noun: "Note" };
+  }
+  return { icon: RiGitPullRequestLine, noun: "Change" };
+}
+
+function KindTile({ changeset }: { changeset: OperatorChangeset }) {
+  const Icon = kindOf(changeset).icon;
+  return (
+    <span className="flex size-8 shrink-0 items-center justify-center rounded-lg border border-border-button-default bg-background-secondary-default">
+      <Icon aria-hidden className="size-4 text-foreground-icon-secondary" />
+    </span>
+  );
+}
+
+/*
+ * targetLine names what the change touches: the article or procedure by
+ * name, or how many things it changes.
+ */
+function targetLine(changeset: OperatorChangeset): string {
+  const { noun } = kindOf(changeset);
+  const first = changeset.operations[0];
+  const quoted = first?.label.match(/["“]([^"”]+)["”]/)?.[1] ?? first?.title;
+  if (quoted) {
+    return `${noun} · ${quoted}`;
+  }
+  const n = changeset.operations.length;
+  return n === 1 ? (changeset.operations[0]?.label ?? noun) : `${noun} · ${n} changes`;
+}
+
+/*
+ * Reason is why Operator suggests the change, two lines until opened.
+ */
+function Reason({ text }: { text: string }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <button
+      type="button"
+      aria-expanded={open}
+      onClick={() => setOpen(!open)}
+      className={cx(
+        "cursor-pointer rounded-md text-start text-body-2-regular text-text-secondary outline-none focus-visible:ring-2 focus-visible:ring-border-focus-ring",
+        !open && "line-clamp-2",
+      )}
+    >
+      {emphasized(text)}
+    </button>
+  );
+}
+
+/*
+ * Details folds what each operation does, for changes applied right here.
+ */
+function Details({ changeset }: { changeset: OperatorChangeset }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="flex flex-col">
+      <button
+        type="button"
+        aria-expanded={open}
+        onClick={() => setOpen(!open)}
+        className="flex w-fit cursor-pointer items-center gap-0.5 rounded-md text-caption-1-medium text-text-tertiary outline-none transition-colors duration-150 hover:text-text-secondary focus-visible:ring-2 focus-visible:ring-border-focus-ring"
+      >
+        {changeset.operations.length === 1 ? "What it changes" : `What it changes (${changeset.operations.length})`}
+        <RiArrowDownSLine
+          aria-hidden
+          className={cx("size-3.5 transition-transform duration-300 ease", open && "rotate-180")}
+        />
+      </button>
+      <Unfold open={open}>
+        <div className="pt-2">
+          <Operations changeset={changeset} brief={false} />
+        </div>
+      </Unfold>
+    </div>
+  );
+}
+
+/*
+ * Operations lists what a changeset does, one plain line each, marked
+ * once applied; brief leaves out the text, which its editor shows.
+ */
+function Operations({ changeset, brief }: { changeset: OperatorChangeset; brief: boolean }) {
   return (
     <ul className="flex flex-col gap-1.5">
       {changeset.operations.map((operation) => (
@@ -175,7 +301,7 @@ function Operations({ changeset }: { changeset: OperatorChangeset }) {
                 <span className="text-text-tertiary"> · {outcomeLabels[operation.outcome]}</span>
               ) : null}
             </span>
-            {operation.text ? <FullText text={operation.text} /> : null}
+            {operation.text && !brief ? <FullText text={operation.text} /> : null}
           </span>
         </li>
       ))}
@@ -197,6 +323,7 @@ function Decisions({
   pending: ChangesetDecision | null;
   decide: (decision: ChangesetDecision) => void;
 }) {
+  const [asking, setAsking] = useState(false);
   const open = changeset.status === "pending" || changeset.status === "failed";
   const undoable = changeset.status === "applied" && changeset.operations.some((op) => op.kind !== "action.run");
   if (!open && !undoable) {
@@ -204,7 +331,7 @@ function Decisions({
   }
 
   return (
-    <footer className="flex gap-2 px-3 pb-3">
+    <footer className="flex gap-2">
       {open ? (
         <>
           <Button size="small" loading={pending === "applications"} onClick={() => decide("applications")}>
@@ -221,16 +348,20 @@ function Decisions({
           </Button>
         </>
       ) : (
-        <Button
-          size="small"
-          variant="secondary"
-          leadingIcon={RiArrowGoBackLine}
-          loading={pending === "reversions"}
-          onClick={() => decide("reversions")}
-        >
+        <Button size="small" variant="secondary" loading={pending === "reversions"} onClick={() => setAsking(true)}>
           Undo
         </Button>
       )}
+      {asking ? (
+        <AlertDialog
+          isOpen
+          onOpenChange={(shown) => (shown ? undefined : setAsking(false))}
+          title="Undo this change?"
+          description={`“${changeset.title}” is taken back: every value Operator replaced goes back to what it was, unless someone changed it since.`}
+          confirmLabel="Undo change"
+          onConfirm={() => decide("reversions")}
+        />
+      ) : null}
     </footer>
   );
 }

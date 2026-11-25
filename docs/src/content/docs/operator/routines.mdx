@@ -1,0 +1,93 @@
+---
+title: "How Operator routines work"
+description: "Put Operator on a clock to find knowledge gaps, stale articles and procedure fixes, then review what it suggests."
+---
+
+Some checks matter every week and nobody remembers to run them: which questions the AI agent kept handing over, which articles contradict each other, which procedure step keeps failing. A **routine** gives that job to **Operator**. You say what you want in a sentence, pick when it runs, and Operator leaves its findings as [changesets](/operator/changesets/) for your team to review.
+
+Open **Routines** in the sidebar and pick a template, or start from scratch.
+
+## Templates
+
+| Template | Runs | What it suggests |
+| --- | --- | --- |
+| **Knowledge gap finder** | Mondays at 09:00 | Articles and agent-only snippets for questions the AI agent could not answer |
+| **Pull requests to docs** | Every day at 08:30 | Edits to help articles that merged pull requests made out of date |
+| **Help center audit** | Wednesdays at 09:00 | Fixes for articles that contradict each other, up to 100 articles a run |
+| **Weekly digest and procedure tune-up** | Fridays at 15:00 | A digest of the week, plus fixes and regression tests for procedures |
+
+A template only fills in a name, a sentence of instructions and a schedule. Change any of them, or write the same sentence from scratch: the routine runs the same either way.
+
+## Writing the instructions
+
+Say what Operator should do the way you would ask a teammate, such as "Find the questions customers asked this week that our help center does not answer, and draft articles for them." Operator works out how: which conversations and articles to read, what it already suggested, and where the last run stopped.
+
+Under **What it reads**, pick **Inboxes** to keep a routine to some of them. Once GitHub is connected, pick the **Repositories** whose merged pull requests it reads.
+
+## What a run does
+
+Each run opens a thread that anyone who can read the routine can open from the routine's **Runs** tab. The thread shows your instructions, each step Operator took, its report, and the changes it suggested. Reply in the thread to ask for more; Operator answers with your permissions.
+
+You can watch a run while it works. Its steps and text appear as Operator writes them, for every teammate who opens it, on a schedule or not. A run opened midway shows the steps it took so far first. **Run now** and **Dry run** open the new run in the Operator panel beside the routine.
+
+- **Suggests, never applies:** a routine's changes always wait for a teammate, whatever your **Settings → Operator** policies say.
+- **Remembers between runs:** Operator saves a small state, such as the last pull request it read, so the next run starts where this one stopped.
+- **Skips repeats:** Operator does not suggest a change again while the same suggestion waits, or for 30 days after a teammate declines it.
+- **Splits big jobs:** when there is more to read than one run can hold, Operator hands parts of the work to **subagents** that work at the same time. Each suggests its own changes and reports back. Their steps show under each subagent's name in the run.
+- **Stays quiet:** a run that suggests nothing tells nobody, unless the routine reports after every run.
+- **Lets stale suggestions go:** a suggestion nobody applies or declines within four weeks is declined for you, so a later run can suggest it again from fresh data.
+
+Changes to articles and procedures are reviewed in their own editor:
+
+- **Help center → Change requests** lists each article a routine asked to change or write.
+- **Procedures** lists procedures with a request at the top.
+- In the editor, lines the request removes are struck through in red and lines it adds show in green. Keep editing if you like, then pick **Accept changes** or **Decline** in the header.
+- Each routine changeset changes one article or one procedure, with its tests, so accepting changes only what is on screen.
+
+The run's thread lists each change with a **Review** button that opens that editor.
+
+The top of the **Runs** tab counts the routine's suggestions waiting for review, applied and declined, and what it spent this month.
+
+Use **Dry run** to try a routine on real data. A dry run shows what it would suggest, but you cannot apply those changes, it keeps no state, and it tells nobody.
+
+## Who the routine runs as
+
+A routine runs as the admin who created it. It reads conversations, customers, articles, procedures and reports, never more than that admin can, and only the inboxes you pick.
+
+If that admin leaves or loses a permission the routine needs, the routine **pauses** instead of running as anyone else. Resume it from the routine's page once someone with the right access owns it.
+
+Only teammates who can see every inbox the routine reads can open its runs. A routine that reads every inbox shows its runs only to teammates who see every conversation.
+
+## Telling the team
+
+| Setting | Tells the team |
+| --- | --- |
+| **When it suggests something** (default) | After a run that suggested changes |
+| **After every run** | After every finished run, for digests |
+| **Only when it fails** | After a failed run |
+
+dimmi always tells the team when a routine pauses. Under **Who hears about it**, pick the **Channels**, then the **People** they reach:
+
+- **In dimmi** sends a notification.
+- **Email** sends the report and every suggestion.
+- **Slack** posts the report to the channels you pick, then one card per suggestion with **Apply** and **Decline**. With no Slack channel yet, **Connect Slack** or **Add a Slack channel** takes you to where you add one.
+
+## Cost
+
+Every run is an Operator run, billed like a question to Operator. A run that splits its work uses more of your AI budget, since each subagent reads and writes on its own. Runs count toward your workspace's monthly AI budget. Operator's usage, on the **Agent** page, splits them by routine, and each recent run opens its thread.
+
+## Rules and limits
+
+| Rule | Value |
+| --- | --- |
+| Most frequent schedule | Once an hour |
+| Run time | Up to 12 minutes |
+| Model calls per run | 16, and 16 for each subagent |
+| Tool calls per run | 75, and 75 for each subagent |
+| Subagents per run | 8, up to 4 at a time |
+| Failed model calls retried | Twice, when the provider timed out or was overloaded |
+| Failures before a routine pauses | 3 in a row |
+| Instructions length | 8,000 characters |
+| Monthly days | 1 to 28, or the last day of the month |
+| Suggestions left undecided | Declined after 4 weeks |
+| GitHub repositories per routine | 20 |

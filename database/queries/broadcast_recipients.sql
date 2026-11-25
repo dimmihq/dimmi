@@ -244,10 +244,16 @@ ORDER BY id;
 
 -- name: SuppressedEmailsAmong :many
 -- SuppressedEmailsAmong returns which of the addresses must not be
--- mailed now.
-SELECT DISTINCT lower(email::text)::text AS email FROM email_suppressions
-WHERE workspace_id = @workspace_id AND lower(email::text) = ANY (@emails::text[]) AND scope = 'all'
-  AND (expires_at IS NULL OR expires_at > @now::timestamptz);
+-- mailed now, in lower case. A suppression kept as a hash after its
+-- customer was erased stops the address like any other.
+SELECT DISTINCT lower(e.email)::text AS email FROM unnest(@emails::text[]) AS e (email)
+WHERE EXISTS (
+    SELECT 1 FROM email_suppressions s
+    WHERE s.workspace_id = @workspace_id AND s.scope = 'all'
+      AND (s.expires_at IS NULL OR s.expires_at > @now::timestamptz)
+      AND (lower(s.email::text) = lower(e.email)
+          OR s.email_hash = dimmi_email_suppression_hash(@workspace_id, e.email))
+);
 
 -- name: MessengerContactsAmong :many
 -- MessengerContactsAmong returns which of the contacts have used the

@@ -4,14 +4,16 @@
  * the last 30 days and whether it is live. A new procedure is made on the
  * server at once, as an empty draft named so it never clashes, and opens
  * in the editor. Teammates who may only read procedures see the list
- * without the button.
+ * without the button. Procedures Operator requests a change to are
+ * grouped at the top; opening one shows the change among its steps.
  */
 import { RiAddLine, RiListOrdered2 } from "@remixicon/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
-
+import { Chip } from "@/components/base/badges/chip";
 import { Button } from "@/components/base/buttons/button";
 import { toast } from "@/components/base/toast/toast";
+import { isProcedure, useSuggestions } from "@/features/operator/suggestions";
 import { usePermission } from "@/features/settings/inboxes";
 import { Item, Section } from "@/features/settings/layout";
 import { useAccount } from "@/features/settings/use-account";
@@ -46,6 +48,10 @@ export function ProcedureList() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { data, isPending } = useQuery(proceduresQuery(workspace));
+  const { suggestions } = useSuggestions(workspace, isProcedure);
+  const asked = new Set(suggestions.flatMap((c) => c.operations.map((o) => o.procedure_id ?? "")));
+  const requested = (data ?? []).filter((p) => asked.has(p.id));
+  const rest = (data ?? []).filter((p) => !asked.has(p.id));
   const create = useMutation({
     mutationFn: () => createProcedure(workspace, freshProcedureName((data ?? []).map((p) => p.name))),
     onSuccess: (p) => {
@@ -67,6 +73,26 @@ export function ProcedureList() {
         ) : null
       }
     >
+      {requested.length > 0 ? (
+        <Section
+          title="Change requests"
+          description="Operator asked to change these. Open one to review it among the steps."
+        >
+          {requested.map((p) => (
+            <OpenRow
+              key={p.id}
+              target={{ to: "/d/procedures/$procedure", params: { procedure: p.id } }}
+              mark={<KindMark icon={RiListOrdered2} tint="lime" />}
+              title={p.name}
+              detail={detailOf(p)}
+            >
+              <Chip variant="caption" color="blue">
+                Change requested
+              </Chip>
+            </OpenRow>
+          ))}
+        </Section>
+      ) : null}
       <Section
         title="Procedures"
         description="dimmi picks the live procedure whose description matches what the customer asks."
@@ -79,7 +105,7 @@ export function ProcedureList() {
             detail="Write one for a request your team handles the same way every time."
           />
         ) : null}
-        {(data ?? []).map((p) => (
+        {rest.map((p) => (
           <OpenRow
             key={p.id}
             target={{ to: "/d/procedures/$procedure", params: { procedure: p.id } }}

@@ -67,7 +67,7 @@ it.describe("tags", () => {
     await expect(page.getByText("Defect", { exact: true })).toBeVisible();
 
     await page.getByRole("button", { name: "Delete" }).first().click();
-    await expect(page.getByRole("alertdialog")).toContainText("1 conversations");
+    await expect(page.getByRole("alertdialog")).toContainText("It comes off 1 conversation,");
     await page.getByRole("button", { name: "Delete tag" }).click();
     await expect(page.getByRole("alertdialog")).toBeHidden();
     await expect(page.getByText("Defect", { exact: true })).toBeHidden();

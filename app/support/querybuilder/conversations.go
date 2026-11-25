@@ -341,11 +341,14 @@ func (c Conversations) text(b *builder) []string {
 
 	query := b.add(*c.TSQuery) + "::text"
 	search := "to_tsquery('dimmi_search', " + query + ")"
+	// The workspace is bound, not read from the outer row: a subquery that
+	// names c runs once for every conversation, one that does not runs once.
+	workspace := b.add(c.WorkspaceID) + "::uuid"
 
 	return []string{"(numnode(" + search + ") = 0 OR c.search @@ " + search +
-		" OR c.id IN (SELECT m.conversation_id FROM messages m WHERE m.workspace_id = c.workspace_id" +
+		" OR c.id IN (SELECT m.conversation_id FROM messages m WHERE m.workspace_id = " + workspace +
 		" AND m.deleted_at IS NULL AND m.type <> 'event' AND m.search @@ " + search + ")" +
-		" OR c.contact_id IN (SELECT ct.id FROM contacts ct WHERE ct.workspace_id = c.workspace_id" +
+		" OR c.contact_id IN (SELECT ct.id FROM contacts ct WHERE ct.workspace_id = " + workspace +
 		" AND ct.deleted_at IS NULL AND ct.search @@ to_tsquery('simple', " + query + ")))"}
 }
 

@@ -18,6 +18,8 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
+	"fmt"
 
 	"github.com/dimmihq/dimmi/framework/database"
 	"github.com/dimmihq/dimmi/framework/ids"
@@ -50,12 +52,15 @@ func (e *Engine) applyContent(ctx context.Context, m authz.Membership, op *Opera
 		var a models.Article
 		a, err = e.Services.Articles.Create(ctx, helpcenters.ArticleInput{
 			Membership: m, HelpCenterID: *op.HelpCenter, CollectionID: op.Collection, Title: op.Title, Body: op.Body,
+			Visibility: op.Visibility,
 		})
 		op.Created = &a.ID
 	case KindArticleEdit:
 		err = e.editArticle(ctx, m, op)
 	case KindAction:
 		err = e.runAction(ctx, m, op)
+	case KindProcedureTestCaseNew:
+		err = e.addTestCase(ctx, m, op)
 	default:
 		err = e.editProcedure(ctx, m, op)
 	}
@@ -162,6 +167,8 @@ func (e *Engine) revertContentOp(ctx context.Context, m authz.Membership, op Ope
 		return e.restoreArticle(ctx, m, op)
 	case KindAction:
 		return false, nil
+	case KindProcedureTestCaseNew:
+		return e.dropTestCase(ctx, m, op)
 	default:
 		return e.restoreProcedure(ctx, m, op)
 	}
@@ -227,4 +234,42 @@ func sameJSON(a, b json.RawMessage) bool {
 		return bytes.Equal(a, b)
 	}
 	return bytes.Equal(ca.Bytes(), cb.Bytes())
+}
+
+/*
+addTestCase saves the regression test Operator proposed.
+*/
+func (e *Engine) addTestCase(ctx context.Context, m authz.Membership, op *Operation) error {
+	var t proposedTest
+	if err := json.Unmarshal(op.Definition, &t); err != nil {
+		return fmt.Errorf("read proposed test: %w", err)
+	}
+	in := procedures.TestCaseInput{
+		Name: &t.Name, Persona: t.Persona, Messages: t.Messages, Mocks: t.Mocks, Assertions: t.Assertions,
+	}
+	if t.SourceID != "" {
+		if id, err := e.publicID(t.SourceID, models.PrefixConversation); err == nil {
+			in.SourceConversation = &id
+		}
+	}
+	row, err := e.Services.Procedures.CreateTestCase(ctx, m, *op.Procedure, in)
+	if err != nil {
+		return err
+	}
+	op.Created, op.After = &row.ID, rawJSON(models.PublicID(models.PrefixProcedureTest, row.ID))
+	return nil
+}
+
+/*
+dropTestCase removes the test Operator added while it still exists.
+*/
+func (e *Engine) dropTestCase(ctx context.Context, m authz.Membership, op Operation) (bool, error) {
+	if op.Created == nil {
+		return false, nil
+	}
+	err := e.Services.Procedures.DeleteTestCase(ctx, m, *op.Procedure, *op.Created)
+	if errors.Is(err, procedures.ErrTestCaseNotFound) {
+		return false, nil
+	}
+	return err == nil, err
 }

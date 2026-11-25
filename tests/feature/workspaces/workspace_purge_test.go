@@ -113,6 +113,43 @@ func TestPurgeWorkspace(t *testing.T) {
 		assert.False(t, exists)
 	})
 
+	t.Run("deletes the uploads, article pictures and stored email kept outside the workspace's folder",
+		func(t *testing.T) {
+			t.Parallel()
+			tc := tests.New(t)
+			ws := tc.Workspace.Workspace
+			disk, _ := storeFile(tc, ws.ID)
+			name := tc.App.Application.Config.Filesystems.Default
+			upload := jobs.WorkspaceUploadPrefix(ws.ID) + "docs.zip"
+			picture, raw, shared := "help-images/"+ws.ID.String()+".png", "inbound-emails/"+ws.ID.String()+"/a.eml",
+				"inbound-emails/"+ws.ID.String()+"/shared.eml"
+
+			for _, path := range []string{upload, picture, raw, shared} {
+				require.NoError(t, disk.Put(t.Context(), path, []byte("kept"), filesystem.PutOptions{}))
+			}
+
+			other, err := factories.Workspace(t.Context(), tc.App, tc.CreateUser())
+			require.NoError(t, err)
+			exec(t, tc, `INSERT INTO help_center_images (workspace_id, path) VALUES ($1, $2)`, ws.ID, picture)
+			exec(t, tc, `INSERT INTO inbound_emails (workspace_id, source, envelope_to, size_bytes, raw_disk, raw_path,
+				status, received_at) VALUES ($1, 'test', '{}', 4, $3, $4, 'processed', now()),
+				($1, 'test', '{}', 4, $3, $5, 'processed', now()), ($2, 'test', '{}', 4, $3, $5, 'processed', now())`,
+				ws.ID, other.Workspace.ID, name, raw, shared)
+			overdue(t, tc)
+
+			push(tc, jobs.PurgeWorkspaceArgs{WorkspaceID: ws.ID})
+
+			tc.Table("workspaces").AssertCount(0, testkit.Row{"id": ws.ID})
+			tc.Table("help_center_images").AssertCount(0, testkit.Row{"workspace_id": ws.ID})
+			tc.Table("inbound_emails").AssertCount(0, testkit.Row{"workspace_id": ws.ID})
+
+			for path, want := range map[string]bool{upload: false, picture: false, raw: false, shared: true} {
+				exists, err := disk.Exists(t.Context(), path)
+				require.NoError(t, err)
+				assert.Equal(t, want, exists, path)
+			}
+		})
+
 	t.Run("leaves a workspace the retention guard holds in the trash, untouched", func(t *testing.T) {
 		t.Parallel()
 		tc := tests.New(t, tests.Before(func(a *app.App) { a.Retention = legalHold{} }))

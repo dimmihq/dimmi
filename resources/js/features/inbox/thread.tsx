@@ -47,6 +47,7 @@ import { foldEvents, foldedText } from "./thread/fold-events";
 import { MessageActions, NoteEditor } from "./thread/message-actions";
 import { ReactionChips } from "./thread/reactions";
 import { ThreadZone } from "./thread/thread-zone";
+import { TransferCard } from "./thread/transfer-card";
 import { useMessageMoves } from "./thread/use-message-moves";
 import { When } from "./thread/when";
 import { useFollowNewest } from "./use-follow-newest";
@@ -246,6 +247,9 @@ function Entry({
   }
   if (entry.kind === "call") {
     return <ActionCallCard conversation={conversation} call={entry.call} />;
+  }
+  if (entry.kind === "transfer") {
+    return <TransferCard from={entry.from} to={entry.to} why={entry.why} iso={entry.iso} />;
   }
   if (entry.kind === "note" && entry.author === "Operator") {
     return <OperatorCard entry={entry} customer={customer} />;

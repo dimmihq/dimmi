@@ -41,11 +41,17 @@ changelog entries.
 */
 func changelogEntryDocs() map[string]Doc {
 	return map[string]Doc{
+		"help-centers.changelog-analytics.show": {
+			Title: "Read changelog analytics",
+			Use: "Says how readers took a help center's changelog over the last days (30 unless days is " +
+				"given): views by day, reactions, subscribers and the entries read most.",
+			Returns: "the totals, daily views and top entries.",
+		},
 		"help-centers.changelog-entries.index": {
 			Title:   "List changelog entries",
 			Use:     "Lists a help center's changelog entries, 25 a page, without their bodies.",
 			Returns: "the page of entries with total, and counts of entries in each status.",
-			Next:    []string{"dimmi_changelog_entries_get: read one entry's body"},
+			Next:    []string{"dimmi_get_changelog_entry_by_id: read one entry's body"},
 			Params: map[string]string{
 				"status":   "draft, scheduled or published; leave out for all.",
 				"label_id": "Id of a label (cll_...) to list only its entries.",
@@ -56,15 +62,15 @@ func changelogEntryDocs() map[string]Doc {
 		"help-centers.changelog-entries.store": {
 			Title: "Create a changelog draft",
 			Use: "Writes a new changelog entry as a draft. Readers and subscribers see nothing until it is " +
-				"published with dimmi_changelog_entries_publications_create.",
+				"published with dimmi_publish_changelog_entry.",
 			Returns: "the draft with its id and lock_version.",
-			Next:    []string{"dimmi_changelog_entries_publications_create: publish or schedule it once approved"},
+			Next:    []string{"dimmi_publish_changelog_entry: publish or schedule it once approved"},
 			Params: map[string]string{
 				"body_markdown": "The entry in Markdown, at most 256 KB.",
 				"summary":       "A short line for lists and mails, at most 300 characters.",
 				"cover_url": "An image address from this help center, such as one already used in an article; " +
 					"other addresses are refused.",
-				"label_ids": "Ids of labels (cll_...), at most 20, from dimmi_help_centers_changelog_labels_list.",
+				"label_ids": "Ids of labels (cll_...), at most 20, from dimmi_list_help_center_changelog_labels.",
 				"author_ids": "Ids of teammates (mem_...) shown as authors, at most 5. Leave out to show whoever " +
 					"edits it.",
 			},
@@ -89,7 +95,7 @@ func changelogEntryChangeDocs() map[string]Doc {
 			Use: "Saves the entry's working copy. Readers keep seeing the published copy until it is published " +
 				"again. Only the fields sent change; label_ids and author_ids replace the whole list.",
 			Returns: "the entry as it now is, with its new lock_version.",
-			Next:    []string{"dimmi_changelog_entries_publications_create: make the saved changes live"},
+			Next:    []string{"dimmi_publish_changelog_entry: make the saved changes live"},
 			Params: map[string]string{
 				"lock_version":  "The lock_version the entry had when you read it. Send it with every save.",
 				"body_markdown": "The full new entry in Markdown; it replaces the old text entirely.",
@@ -175,7 +181,7 @@ func changelogLabelDocs() map[string]Doc {
 		"changelog-subscribers.destroy": {
 			Title: "Remove a changelog subscriber",
 			Use: "Forgets a subscriber, so they get no more changelog mail. Use when someone asks to be removed. " +
-				"Find the subscriber with dimmi_help_centers_changelog_subscribers_list.",
+				"Find the subscriber with dimmi_list_help_center_changelog_subscribers.",
 		},
 	}
 }
@@ -190,10 +196,10 @@ func featureRequestDocs() map[string]Doc {
 			Title:   "List feature requests",
 			Use:     "Lists a help center's feature requests, 25 a page.",
 			Returns: "the page of requests with status, approval, votes and total, and counts in each status.",
-			Next:    []string{"dimmi_feedback_posts_get: read one request"},
+			Next:    []string{"dimmi_get_feedback_post_by_id: read one request"},
 			Params: map[string]string{
 				"board_id":   "Id of a board (fbd_...) to list only its requests; leave out for every board.",
-				"status":     "A status key from dimmi_feedback_statuses_list, such as planned; leave out for all.",
+				"status":     "A status key from dimmi_list_feedback_statuses, such as planned; leave out for all.",
 				"moderation": "approved, pending (waiting for the team's approval) or spam.",
 				"sort":       "trending, top (most votes) or new.",
 				"query":      "Text to find in titles.",
@@ -203,11 +209,11 @@ func featureRequestDocs() map[string]Doc {
 		"help-centers.feedback-posts.store": {
 			Title: "Post a feature request",
 			Use: "Posts a request on the public board for the team, or for a customer who asked for it. It needs " +
-				"no approval and is visible at once. Check dimmi_help_centers_feedback_posts_list for a duplicate " +
+				"no approval and is visible at once. Check dimmi_list_help_center_feedback_posts for a duplicate " +
 				"first and vote for that instead.",
 			Returns: "the request with its number and public path.",
 			Risk:    new(RiskReach),
-			Next:    []string{"dimmi_feedback_posts_votes_create: count the customer's vote"},
+			Next:    []string{"dimmi_create_feedback_post_vote: count the customer's vote"},
 			Params: map[string]string{
 				"body_markdown": "Details in Markdown, at most 64 KB.",
 				"contact_id":    "Id of the customer (ctc_...) it is posted for; leave out to post as the team.",
@@ -219,8 +225,8 @@ func featureRequestDocs() map[string]Doc {
 			Use:     "Reads one feature request.",
 			Returns: "the request with status, approval, vote and comment counts, and any merge or changelog link.",
 			Next: []string{
-				"dimmi_feedback_posts_comments_list: read the discussion",
-				"dimmi_feedback_posts_votes_list: see who asked for it",
+				"dimmi_list_feedback_post_comments: read the discussion",
+				"dimmi_list_feedback_post_votes: see who asked for it",
 			},
 		},
 	}
@@ -240,7 +246,7 @@ func featureRequestVoteDocs() map[string]Doc {
 			Returns: "the request as it now is.",
 			Risk:    new(RiskReach),
 			Params: map[string]string{
-				"status":   "A status key from dimmi_feedback_statuses_list. Closed statuses leave the public roadmap.",
+				"status":   "A status key from dimmi_list_feedback_statuses. Closed statuses leave the public roadmap.",
 				"board_id": "Id of another board (fbd_...) of the same help center to move it to.",
 				"notify":   "With status: true emails the voters and author that it moved. Ask the person first.",
 				"message": "With status and notify: the team's note in the email, at most 2000 characters. Write " +
@@ -254,7 +260,7 @@ func featureRequestVoteDocs() map[string]Doc {
 		"feedback-posts.destroy": {
 			Title: "Delete a feature request",
 			Use: "Deletes a request, taking it off the public board. To fold a duplicate into another request, " +
-				"merge it with dimmi_feedback_posts_update instead.",
+				"merge it with dimmi_update_feedback_post instead.",
 		},
 		"feedback-posts.votes.index": {
 			Title:   "List a feature request's voters",

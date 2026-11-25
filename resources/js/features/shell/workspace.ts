@@ -26,6 +26,7 @@ export const pages = new Set([
   "customers",
   "notifications",
   "agent",
+  "agents",
   "help-center",
   "feedback",
   "announcements",
@@ -34,8 +35,10 @@ export const pages = new Set([
   "changelog",
   "shortcuts",
   "procedures",
+  "routines",
   "workflows",
   "operator",
+  "home",
   /* Where Meta's sign-in popup returns; it belongs to no workspace. */
   "whatsapp-return",
 ]);

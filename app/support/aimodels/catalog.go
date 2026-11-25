@@ -113,6 +113,10 @@ func Engy() []Entry {
 			ID: "glm-5.3-flash", DisplayName: "GLM 5.3 Flash", Family: enums.AIModelFamilyOpenWeight,
 			ContextTokens: 327_680, MaxOutputTokens: 32_768, Suggested: answerRole(),
 		},
+		{
+			ID: "deepseek-v4-flash", DisplayName: "DeepSeek V4.1 Flash", Family: enums.AIModelFamilyOpenWeight,
+			ContextTokens: 1_048_576, MaxOutputTokens: 32_768, Suggested: answerRole(),
+		},
 	}
 }
 

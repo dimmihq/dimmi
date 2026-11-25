@@ -60,6 +60,13 @@ ErrSettled refuses to decide a changeset that was already decided.
 var ErrSettled = fault.New(fault.Conflict, "changeset_settled", "This change was already decided.")
 
 /*
+ErrPreview refuses to decide what a dry run of a routine suggested: it
+shows what the routine would suggest, and is never applied.
+*/
+var ErrPreview = fault.New(fault.Conflict, "changeset_preview",
+	"This is a dry run's preview, so it cannot be applied or declined.")
+
+/*
 Apply applies a pending changeset as the teammate deciding.
 */
 func (e *Engine) Apply(ctx context.Context, m authz.Membership, id ids.UUID) (models.OperatorChangeset, error) {
@@ -186,6 +193,9 @@ func (e *Engine) lockFor(ctx context.Context, q *models.Queries, m authz.Members
 	if err := Visible(ctx, q, m, c); err != nil {
 		return c, err
 	}
+	if c.Preview {
+		return c, ErrPreview
+	}
 	if !slices.Contains(w.statuses, c.Status) {
 		return c, ErrSettled
 	}
@@ -194,13 +204,18 @@ func (e *Engine) lockFor(ctx context.Context, q *models.Queries, m authz.Members
 
 /*
 Visible refuses a changeset the teammate may not see: another
-teammate's, or one about a conversation hidden from them.
+teammate's, one about a conversation hidden from them, or one a routine
+left when they may not read what the routine reads.
 */
 func Visible(ctx context.Context, q *models.Queries, m authz.Membership, c models.OperatorChangeset) error {
 	if c.MemberID != nil && *c.MemberID != m.Member.ID {
 		return exceptions.ErrNotFound
 	}
-	if c.MemberID == nil && c.ConversationID == nil {
+	if c.MemberID == nil && c.RoutineID != nil {
+		if err := readableRoutine(ctx, q, m, *c.RoutineID); err != nil {
+			return err
+		}
+	} else if c.MemberID == nil && c.ConversationID == nil {
 		return exceptions.ErrNotFound
 	}
 	if c.ConversationID == nil {

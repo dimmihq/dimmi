@@ -1,28 +1,31 @@
 ---
 title: "Create views"
-description: "Save a filtered list of conversations as a view, and share it with your team."
+description: "Save filtered conversation lists as personal or shared views and pin your favorites to the sidebar."
 ---
 
-To create a view, open **Filter** above a conversation list, add conditions, name the filter and choose **Save as view**. **Apply** filters the list once without saving.
+As your queue grows, default lists like **Unassigned** are not enough. **Views** let you save any filtered list of conversations, such as "Urgent billing chats" or "Open Enterprise bugs", so your team can jump straight to what matters.
 
-## Conditions
+To make one, click **Filter** above any conversation list, add your conditions, give it a name, and click **Save as view**. Use **Apply** instead if you want to filter the list once without saving it.
 
-- Conditions sit in groups. A group matches when all or any of its conditions do, and the groups join the same way.
-- A view holds up to 5 groups.
-- A new view keeps the status and sort of the list you started from.
-- When a condition names a team or inbox that was deleted, the condition matches nothing and the editor flags it.
+## Building filter conditions
 
-## Who sees a view
+Combine conditions to narrow a list down to the exact threads you want:
 
-- **Only me:** a personal view. Each teammate keeps up to 50.
-- **Everyone:** a shared view. A workspace keeps up to 200, and creating or changing one needs the **Manage shared views** permission from your [role](/workspace/roles-and-permissions/).
+- **Grouped logic:** group conditions together with **all** (AND) or **any** (OR), and join up to **5 groups** the same way.
+- **Keeps your starting state:** a new view saves the status tab and sort order of the list you started from.
+- **Deleted references flagged:** if a condition points to a team or inbox that was later deleted, dimmi flags it in the editor so you can fix it.
 
-You choose who sees a view when you create it, and the editor does not change it afterward. To share a personal view, create it again as **Everyone**.
+## Personal vs. shared views
 
-A name is up to 60 characters. Two shared views cannot share a name, and neither can two of your own.
+Pick who can see a view when you create it:
 
-## Pin, duplicate and filter by agent
+- **Only me:** a personal view only you see (up to **50** per teammate).
+- **Everyone:** a shared view for the whole workspace (up to **200** per workspace). Creating or editing shared views requires the **Manage shared views** permission in your [role](/workspace/roles-and-permissions/).
 
-- **Pin view** keeps a view in your sidebar. Pins are yours alone.
-- **Duplicate view** makes a personal copy named "Copy of" and the view's name.
-- **Filter by agent** narrows any list to **Agent involved**, **Agent answering** or **Handed over by agent**. dimmi does not save this filter with a view.
+Visibility is set at creation time and cannot be switched later. If you build a personal view your whole team wants, recreate it as **Everyone**.
+
+## Pinning, duplicating, and filtering by AI
+
+- **Pin view:** keep your most-used views at the top of your sidebar. Pins are personal and never change anyone else's sidebar.
+- **Duplicate view:** clone an existing view into a personal copy named `"Copy of <name>"` so you can tweak filters safely.
+- **Filter by agent:** narrow any list to **Agent involved**, **Agent answering**, or **Handed over by agent**. This quick filter is temporary and is not saved inside a view.

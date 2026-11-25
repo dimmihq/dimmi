@@ -5,18 +5,21 @@
         "additionalProperties": false,
         "properties": {
           "avatar_url": {
+            "description": "Link to the author's picture. Null when they have none.",
             "type": [
               "string",
               "null"
             ]
           },
           "name": {
+            "description": "The author's name as shown on the entry.",
             "type": [
               "string",
               "null"
             ]
           },
           "type": {
+            "description": "Who wrote the entry: contact, member, agent (the AI), system or integration.",
             "type": "string"
           }
         },
@@ -31,22 +34,28 @@
         "additionalProperties": false,
         "properties": {
           "object": {
+            "description": "The kind of record this is, the same for every record of its kind, such as article.",
             "type": "string"
           },
           "online": {
+            "description": "True when a teammate who answers this messenger's inbox is set to available and connected right now.",
             "type": "boolean"
           },
           "reply_time": {
+            "description": "How fast the team usually replies: minutes, hours or day. When the messenger's setting is automatic, it is minutes while someone is online and hours otherwise.",
             "type": "string"
           },
           "reply_time_text": {
+            "description": "The reply time as words to show the visitor, in the language asked for with the locale query parameter.",
             "type": "string"
           },
           "server_time": {
+            "description": "The server's clock when it answered, as an RFC 3339 timestamp.",
             "format": "date-time",
             "type": "string"
           },
           "team": {
+            "description": "Up to three teammates to show the visitor, each a name and an avatar link. Only teammates with an avatar are listed; empty when none have one.",
             "items": {
               "$ref": "#/components/schemas/TeamFace"
             },
@@ -56,6 +65,7 @@
             ]
           },
           "within_hours": {
+            "description": "Whether the team is inside its working hours. Currently always true.",
             "type": "boolean"
           }
         },
@@ -74,6 +84,7 @@
         "additionalProperties": false,
         "properties": {
           "items": {
+            "description": "The entries of a list or steps block as plain text, one per item. Absent on every other kind of block.",
             "items": {
               "type": "string"
             },
@@ -83,12 +94,15 @@
             ]
           },
           "kind": {
+            "description": "What the block is: h2 (heading), p (paragraph), list (bulleted), steps (numbered), code, note (quote or callout) or image.",
             "type": "string"
           },
           "text": {
+            "description": "The block's plain text: the heading, paragraph or note wording, the source of a code block, or the alt text of an image. Absent on list and steps blocks.",
             "type": "string"
           },
           "tokens": {
+            "description": "A code block's source split into runs for syntax coloring, in order. Absent when the code's language is unknown or the block is not code.",
             "items": {
               "$ref": "#/components/schemas/Token"
             },
@@ -107,12 +121,15 @@
         "additionalProperties": false,
         "properties": {
           "locked": {
+            "description": "True when the workspace may not hide the dimmi badge: on the cloud edition until it has paid.",
             "type": "boolean"
           },
           "show": {
+            "description": "Whether the dimmi badge shows on the messenger.",
             "type": "boolean"
           },
           "url": {
+            "description": "Where the badge links, such as https://trydimmi.com/?ref=\u003cworkspace\u003e.",
             "type": "string"
           }
         },
@@ -127,6 +144,7 @@
         "additionalProperties": false,
         "properties": {
           "body": {
+            "description": "The entry's content as blocks to draw in order, as it was last published.",
             "items": {
               "$ref": "#/components/schemas/Block"
             },
@@ -136,19 +154,24 @@
             ]
           },
           "label": {
+            "description": "The name of the entry's first label, such as New. Empty when the entry has no label.",
             "type": "string"
           },
           "published_at": {
+            "description": "When the entry was published. Null while it has never been published.",
             "format": "date-time",
             "type": "string"
           },
           "slug": {
+            "description": "The entry's URL name within the changelog, such as dark-mode-is-here.",
             "type": "string"
           },
           "summary": {
+            "description": "A short summary of the entry. Null when none was written.",
             "type": "string"
           },
           "title": {
+            "description": "The entry's title.",
             "type": "string"
           }
         },
@@ -166,6 +189,7 @@
         "additionalProperties": false,
         "properties": {
           "entries": {
+            "description": "The latest published changelog entries, at most 20. Empty when the messenger has no help center or its What's new tab is off.",
             "items": {
               "$ref": "#/components/schemas/ChangelogEntry"
             },
@@ -175,6 +199,7 @@
             ]
           },
           "url": {
+            "description": "The address of the full changelog page on the help center. Empty when there is none.",
             "type": "string"
           }
         },
@@ -200,6 +225,7 @@
         "additionalProperties": false,
         "properties": {
           "code": {
+            "description": "The six-digit code from the email, such as 482913; spaces around it are ignored.",
             "maxLength": 12,
             "minLength": 6,
             "type": "string"
@@ -214,6 +240,7 @@
         "additionalProperties": false,
         "properties": {
           "data": {
+            "description": "The items of this page, as a list; empty when nothing matches.",
             "items": {
               "$ref": "#/components/schemas/WidgetConversation"
             },
@@ -226,6 +253,7 @@
             "additionalProperties": {
               "type": "string"
             },
+            "description": "Addresses of related pages by name, such as next; left out when there are none.",
             "type": "object"
           },
           "meta": {
@@ -242,22 +270,26 @@
         "additionalProperties": false,
         "properties": {
           "next_cursor": {
+            "description": "Send it as cursor to read the next page; null on the last page.",
             "type": [
               "string",
               "null"
             ]
           },
           "per_page": {
+            "description": "How many items a page holds at most, such as 25.",
             "format": "int64",
             "type": "integer"
           },
           "prev_cursor": {
+            "description": "Send it as cursor to read the page before; null on the first page.",
             "type": [
               "string",
               "null"
             ]
           },
           "total": {
+            "description": "How many items match in all; left out when the list does not count them.",
             "format": "int64",
             "type": "integer"
           }
@@ -273,6 +305,7 @@
         "additionalProperties": false,
         "properties": {
           "data": {
+            "description": "The items of this page, as a list; empty when nothing matches.",
             "items": {
               "$ref": "#/components/schemas/WidgetMessage"
             },
@@ -285,6 +318,7 @@
             "additionalProperties": {
               "type": "string"
             },
+            "description": "Addresses of related pages by name, such as next; left out when there are none.",
             "type": "object"
           },
           "meta": {
@@ -301,22 +335,26 @@
         "additionalProperties": false,
         "properties": {
           "next_cursor": {
+            "description": "Send it as cursor to read the next page; null on the last page.",
             "type": [
               "string",
               "null"
             ]
           },
           "per_page": {
+            "description": "How many items a page holds at most, such as 25.",
             "format": "int64",
             "type": "integer"
           },
           "prev_cursor": {
+            "description": "Send it as cursor to read the page before; null on the first page.",
             "type": [
               "string",
               "null"
             ]
           },
           "total": {
+            "description": "How many items match in all; left out when the list does not count them.",
             "format": "int64",
             "type": "integer"
           }
@@ -332,6 +370,7 @@
         "additionalProperties": false,
         "properties": {
           "app_id": {
+            "description": "The messenger's id, such as wgt_abc123. Send it as app_id when starting a session.",
             "type": "string"
           },
           "appearance": {
@@ -344,22 +383,27 @@
             "$ref": "#/components/schemas/ConfigCompany"
           },
           "config_version": {
+            "description": "A number that goes up each time the messenger's settings change. Compare it with the session's config_version to know when to fetch the config again.",
             "format": "int64",
             "type": "integer"
           },
           "customer_status": {
+            "description": "Whether the messenger shows each conversation's customer status. Currently always true.",
             "type": "boolean"
           },
           "delay_notice": {
+            "description": "Whether the messenger's delay notice is on. Currently always true.",
             "type": "boolean"
           },
           "dir": {
+            "description": "The text direction of the resolved language: rtl for Arabic, Hebrew, Persian and Urdu, ltr for every other.",
             "type": "string"
           },
           "features": {
             "$ref": "#/components/schemas/ConfigFeatures"
           },
           "home_links": {
+            "description": "The links to show on the home screen, each with a title, a url and an icon, in the order set. Empty when none are set.",
             "items": {
               "$ref": "#/components/schemas/ConfigHomeLink"
             },
@@ -369,12 +413,15 @@
             ]
           },
           "honeypot_field": {
+            "description": "The name of the hidden form field real visitors never fill, currently website. Send it empty; a session started with it filled is treated as a bot.",
             "type": "string"
           },
           "locale": {
+            "description": "The language the texts were resolved to, such as en or fr: the messenger's fixed language, or else the closest match to the locale asked for, falling back to en.",
             "type": "string"
           },
           "locales": {
+            "description": "Every language dimmi ships messenger texts in, the fallback language first.",
             "items": {
               "type": "string"
             },
@@ -384,9 +431,11 @@
             ]
           },
           "object": {
+            "description": "The kind of record this is, the same for every record of its kind, such as article.",
             "type": "string"
           },
           "open_to": {
+            "description": "The tab the messenger opens on. Currently always home.",
             "type": "string"
           },
           "privacy": {
@@ -396,15 +445,18 @@
             "$ref": "#/components/schemas/ConfigRealtime"
           },
           "show_availability": {
+            "description": "Whether to show the team's availability and reply time to the visitor.",
             "type": "boolean"
           },
           "show_team_avatars": {
+            "description": "Whether to show teammates' avatars to the visitor.",
             "type": "boolean"
           },
           "surface": {
             "$ref": "#/components/schemas/ConfigSurface"
           },
           "tabs": {
+            "description": "The tabs that are on, in display order: home and messages always, then help and changelog when turned on and a help center is linked.",
             "items": {
               "type": "string"
             },
@@ -417,6 +469,7 @@
             "additionalProperties": {
               "type": "string"
             },
+            "description": "Every wording the messenger shows, keyed by text name, in the resolved language with the team's own wording where they set one.",
             "type": "object"
           }
         },
@@ -452,41 +505,52 @@
             "$ref": "#/components/schemas/ConfigBackground"
           },
           "button_color": {
+            "description": "The color of buttons as #RRGGBB, such as #1f2328. Falls back to primary_color when no button color is set.",
             "type": "string"
           },
           "button_ink": {
+            "description": "The text color that reads on button_color: dark on a light color, light on a dark one.",
             "type": "string"
           },
           "font": {
+            "description": "The messenger's font: system for the device's font or inherit to take the host page's.",
             "type": "string"
           },
           "header_color": {
+            "description": "The color of the header as #RRGGBB. Falls back to primary_color when no header color is set.",
             "type": "string"
           },
           "header_ink": {
+            "description": "The text color that reads on header_color: dark on a light color, light on a dark one.",
             "type": "string"
           },
           "launcher": {
             "$ref": "#/components/schemas/ConfigLauncher"
           },
           "padding_x": {
+            "description": "How far the launcher sits from the side edge of the page, in pixels, 0 to 200. Defaults to 20.",
             "format": "int64",
             "type": "integer"
           },
           "padding_y": {
+            "description": "How far the launcher sits from the bottom edge of the page, in pixels, 0 to 200. Defaults to 20.",
             "format": "int64",
             "type": "integer"
           },
           "position": {
+            "description": "The side of the page the launcher sits on: right or left.",
             "type": "string"
           },
           "primary_color": {
+            "description": "The messenger's brand color as #RRGGBB, such as #1f2328.",
             "type": "string"
           },
           "sound": {
+            "description": "True when the messenger plays a sound for new messages.",
             "type": "boolean"
           },
           "theme": {
+            "description": "The messenger's color theme: light, dark or auto to follow the visitor's device.",
             "type": "string"
           }
         },
@@ -511,15 +575,18 @@
         "additionalProperties": false,
         "properties": {
           "fade": {
+            "description": "True when the background softens into the page below it.",
             "type": "boolean"
           },
           "gradient": {
             "$ref": "#/components/schemas/ConfigGradient"
           },
           "image_url": {
+            "description": "URL of the background image. Absent when there is none.",
             "type": "string"
           },
           "type": {
+            "description": "What fills the home hero and header: solid, gradient or image.",
             "type": "string"
           }
         },
@@ -533,12 +600,14 @@
         "additionalProperties": false,
         "properties": {
           "logo_url": {
+            "description": "URL of the workspace's logo. Null when it has none.",
             "type": [
               "string",
               "null"
             ]
           },
           "name": {
+            "description": "The workspace's name, which the messenger speaks for.",
             "type": "string"
           }
         },
@@ -552,9 +621,11 @@
         "additionalProperties": false,
         "properties": {
           "console": {
+            "description": "True when the messenger captures the browser's console output for the team.",
             "type": "boolean"
           },
           "network": {
+            "description": "True when the messenger captures the browser's network activity for the team.",
             "type": "boolean"
           }
         },
@@ -568,37 +639,47 @@
         "additionalProperties": false,
         "properties": {
           "ai_agent": {
+            "description": "True when the AI agent is available in the messenger.",
             "type": "boolean"
           },
           "allow_anonymous": {
+            "description": "True when visitors who are not signed in may use the messenger. Always false when identity_mode is required.",
             "type": "boolean"
           },
           "attachments": {
+            "description": "True when visitors may attach files to messages.",
             "type": "boolean"
           },
           "collect_email": {
+            "description": "When the messenger asks a visitor for their email: never, offline (only when the team is away) or always.",
             "type": "string"
           },
           "dev_context": {
             "$ref": "#/components/schemas/ConfigDevContext"
           },
           "help_tab": {
+            "description": "True when the help tab is on and the messenger has a help center to show.",
             "type": "boolean"
           },
           "identity_mode": {
+            "description": "Whether the host app must sign visitors in: off, optional or required.",
             "type": "string"
           },
           "intercom_shim": {
+            "description": "True when the messenger also answers Intercom's JavaScript calls, for sites moving from Intercom.",
             "type": "boolean"
           },
           "max_attachment_mb": {
+            "description": "The largest file a visitor may attach, in megabytes.",
             "format": "int32",
             "type": "integer"
           },
           "opener": {
+            "description": "True when a workflow greets visitors as they open a chat, instead of the conversation starting from their first message.",
             "type": "boolean"
           },
           "require_email_when_offline": {
+            "description": "True when a visitor must give an email to write while the team is away.",
             "type": "boolean"
           }
         },
@@ -621,13 +702,16 @@
         "additionalProperties": false,
         "properties": {
           "angle": {
+            "description": "The gradient's direction, in degrees.",
             "format": "int64",
             "type": "integer"
           },
           "from": {
+            "description": "The gradient's starting color as #RRGGBB.",
             "type": "string"
           },
           "to": {
+            "description": "The gradient's ending color as #RRGGBB.",
             "type": "string"
           }
         },
@@ -642,12 +726,15 @@
         "additionalProperties": false,
         "properties": {
           "icon": {
+            "description": "The icon shown beside the link: link, calendar, book, mail, phone, chat, video or help.",
             "type": "string"
           },
           "title": {
+            "description": "The link's text on the messenger's home screen.",
             "type": "string"
           },
           "url": {
+            "description": "The address the link opens.",
             "type": "string"
           }
         },
@@ -662,21 +749,26 @@
         "additionalProperties": false,
         "properties": {
           "icon": {
+            "description": "The icon on the launcher: chat, help or wave.",
             "type": "string"
           },
           "image_url": {
+            "description": "URL of a custom launcher image. Null when the launcher uses its icon.",
             "type": [
               "string",
               "null"
             ]
           },
           "label": {
+            "description": "The text on the launcher, up to 24 characters. Empty when it shows none.",
             "type": "string"
           },
           "shape": {
+            "description": "The launcher's shape: circle or squircle.",
             "type": "string"
           },
           "style": {
+            "description": "How the launcher shows: bubble, tab or hidden.",
             "type": "string"
           }
         },
@@ -693,9 +785,11 @@
         "additionalProperties": false,
         "properties": {
           "enabled": {
+            "description": "True when a privacy notice shows above the composer.",
             "type": "boolean"
           },
           "url": {
+            "description": "The address of the privacy policy the notice links to. Null when none is set.",
             "type": [
               "string",
               "null"
@@ -712,13 +806,16 @@
         "additionalProperties": false,
         "properties": {
           "polling_interval_ms": {
+            "description": "How often, in milliseconds, a browser should poll for updates when it cannot hold a live stream.",
             "format": "int64",
             "type": "integer"
           },
           "token_url": {
+            "description": "The address the browser asks for a token to open the live stream.",
             "type": "string"
           },
           "url": {
+            "description": "The address of the live update stream.",
             "type": "string"
           }
         },
@@ -736,9 +833,11 @@
             "$ref": "#/components/schemas/Surface"
           },
           "dynamic": {
+            "description": "True when the messenger's rules depend on page conditions the browser must check.",
             "type": "boolean"
           },
           "version": {
+            "description": "The messenger's config version these rules were read at; it goes up when the messenger's settings change.",
             "format": "int64",
             "type": "integer"
           }
@@ -754,15 +853,18 @@
         "additionalProperties": false,
         "properties": {
           "comment": {
+            "description": "What the customer wrote with their rating. Null when they wrote nothing.",
             "type": [
               "string",
               "null"
             ]
           },
           "editable": {
+            "description": "True while the customer may still set or change the rating: for 7 days after they were asked.",
             "type": "boolean"
           },
           "faces": {
+            "description": "The five faces the customer picks from, each with its score from 1 to 5, its emoji and its word, worst first.",
             "items": {
               "$ref": "#/components/schemas/RatingFace"
             },
@@ -772,12 +874,15 @@
             ]
           },
           "id": {
+            "description": "The id of this record. Send it wherever an endpoint asks for this record; never use its name or title in its place.",
             "type": "string"
           },
           "object": {
+            "description": "The kind of record this is, the same for every record of its kind, such as article.",
             "type": "string"
           },
           "score": {
+            "description": "The score the customer picked, from 1 (worst) to 5 (best). Null while they have not rated.",
             "format": "int64",
             "type": [
               "integer",
@@ -785,6 +890,7 @@
             ]
           },
           "workspace": {
+            "description": "The name of the workspace asking for the rating, shown on the page an email links to. Absent when not needed.",
             "type": "string"
           }
         },
@@ -802,16 +908,20 @@
         "additionalProperties": false,
         "properties": {
           "email": {
+            "description": "The address the code was sent to, masked to its first letter and domain, such as j***@example.com.",
             "type": "string"
           },
           "expires_at": {
+            "description": "When the code stops working, 10 minutes after it was sent, as an RFC 3339 timestamp.",
             "format": "date-time",
             "type": "string"
           },
           "object": {
+            "description": "The kind of record this is, the same for every record of its kind, such as article.",
             "type": "string"
           },
           "resend_after": {
+            "description": "The earliest time another code may be asked for, 30 seconds after this one, as an RFC 3339 timestamp.",
             "format": "date-time",
             "type": "string"
           }
@@ -828,12 +938,15 @@
         "additionalProperties": false,
         "properties": {
           "email": {
+            "description": "The address the visitor proved, masked to its first letter and domain, such as j***@example.com.",
             "type": "string"
           },
           "object": {
+            "description": "The kind of record this is, the same for every record of its kind, such as article.",
             "type": "string"
           },
           "verified_at": {
+            "description": "When the visitor proved the address, as an RFC 3339 timestamp. The proof lasts 24 hours from then.",
             "format": "date-time",
             "type": [
               "string",
@@ -852,6 +965,7 @@
         "additionalProperties": false,
         "properties": {
           "body": {
+            "description": "The article's content as blocks to draw in order, so the messenger can open it without another request.",
             "items": {
               "$ref": "#/components/schemas/Block"
             },
@@ -861,15 +975,19 @@
             ]
           },
           "slug": {
+            "description": "The article's url-safe name, such as getting-started. Use it to report a view or rating, or to ask for a help pass.",
             "type": "string"
           },
           "summary": {
+            "description": "The article's short description. Empty when it has none.",
             "type": "string"
           },
           "title": {
+            "description": "The article's title.",
             "type": "string"
           },
           "updated": {
+            "description": "When the published version of the article was made, as an RFC 3339 timestamp.",
             "format": "date-time",
             "type": "string"
           }
@@ -887,6 +1005,7 @@
         "additionalProperties": false,
         "properties": {
           "articles": {
+            "description": "The slugs of the articles in this collection, matching entries of the articles list. Empty when it holds none the visitor may read.",
             "items": {
               "type": "string"
             },
@@ -896,12 +1015,15 @@
             ]
           },
           "description": {
+            "description": "The collection's description. Empty when it has none.",
             "type": "string"
           },
           "slug": {
+            "description": "The collection's url-safe name, such as billing.",
             "type": "string"
           },
           "title": {
+            "description": "The collection's name.",
             "type": "string"
           }
         },
@@ -917,6 +1039,7 @@
         "additionalProperties": false,
         "properties": {
           "articles": {
+            "description": "The help center's articles the visitor may read, with their content, at most 200. Empty when the messenger links to no help center.",
             "items": {
               "$ref": "#/components/schemas/HelpArticle"
             },
@@ -926,6 +1049,7 @@
             ]
           },
           "collections": {
+            "description": "The help center's collections, each listing the slugs of its articles. Empty when the messenger links to no help center.",
             "items": {
               "$ref": "#/components/schemas/HelpCollection"
             },
@@ -935,6 +1059,7 @@
             ]
           },
           "popular": {
+            "description": "The slugs of up to five articles to feature first, taken from the start of the articles list.",
             "items": {
               "type": "string"
             },
@@ -944,6 +1069,7 @@
             ]
           },
           "url": {
+            "description": "The address the help center's pages start at. Empty when the messenger links to no help center.",
             "type": "string"
           }
         },
@@ -971,9 +1097,11 @@
         "additionalProperties": false,
         "properties": {
           "object": {
+            "description": "The kind of record this is, the same for every record of its kind, such as article.",
             "type": "string"
           },
           "url": {
+            "description": "The address to open the article or the help center's home at. When the messenger knows the visitor, it signs them in on arrival, so open it soon and do not store it.",
             "type": "string"
           }
         },
@@ -993,15 +1121,19 @@
             "$ref": "#/components/schemas/MessageAIConfirmation"
           },
           "generated": {
+            "description": "True when the AI agent wrote this message.",
             "type": "boolean"
           },
           "outcome": {
+            "description": "How the agent's run ended, such as answered, handoff, unknown, greeted or refused. Left out when not recorded.",
             "type": "string"
           },
           "run_id": {
+            "description": "Id of the agent run that wrote the message, starting with air_. Shown to the team only; left out for customers.",
             "type": "string"
           },
           "sources": {
+            "description": "The sources the answer cites, each with a title and address; empty when it cites none.",
             "items": {
               "$ref": "#/components/schemas/MessageAISource"
             },
@@ -1021,9 +1153,11 @@
         "additionalProperties": false,
         "properties": {
           "name": {
+            "description": "The key of the action the agent ran.",
             "type": "string"
           },
           "title": {
+            "description": "The action's name as people read it.",
             "type": "string"
           }
         },
@@ -1041,28 +1175,35 @@
           },
           "arguments": {
             "additionalProperties": {},
+            "description": "The values the agent passed to the action. Shown to the team only; left out for customers.",
             "type": "object"
           },
           "decided_by": {
             "$ref": "#/components/schemas/MessageAIPerson"
           },
           "decision_reason": {
+            "description": "Why a teammate approved or declined the call, in their words. Shown to the team only; left out when none was given.",
             "type": "string"
           },
           "expires_at": {
+            "description": "When a call waiting for a decision lapses. Shown to the team only; left out when it does not expire.",
             "format": "date-time",
             "type": "string"
           },
           "id": {
+            "description": "The id of this record. Send it wherever an endpoint asks for this record; never use its name or title in its place.",
             "type": "string"
           },
           "result_summary": {
+            "description": "What the action came to, in words. Shown to the team only; left out until there is a result.",
             "type": "string"
           },
           "state": {
+            "description": "Where the call stands: awaiting_verification, awaiting_confirmation, pending_approval, approved, declined, expired, canceled, running, succeeded or failed.",
             "type": "string"
           },
           "summary": {
+            "description": "One line saying what the change is, written from its arguments.",
             "type": "string"
           }
         },
@@ -1077,9 +1218,11 @@
         "additionalProperties": false,
         "properties": {
           "action_call_id": {
+            "description": "Id of the action call waiting for the customer's yes, starting with aax_. Send it to confirm or cancel the change.",
             "type": "string"
           },
           "details": {
+            "description": "The lines of the confirmation card, each a label and a value; empty when there are none.",
             "items": {
               "$ref": "#/components/schemas/MessageAIDetail"
             },
@@ -1089,6 +1232,7 @@
             ]
           },
           "expires_at": {
+            "description": "When the confirmation lapses if the customer does not answer. Null when it does not expire.",
             "format": "date-time",
             "type": [
               "string",
@@ -1096,12 +1240,15 @@
             ]
           },
           "status": {
+            "description": "Where the call stood when the card was written, such as awaiting_confirmation, succeeded, canceled or expired.",
             "type": "string"
           },
           "text": {
+            "description": "The summary of the change the customer is asked to confirm, written from its arguments.",
             "type": "string"
           },
           "title": {
+            "description": "The card's title: the name of the change.",
             "type": "string"
           }
         },
@@ -1119,9 +1266,11 @@
         "additionalProperties": false,
         "properties": {
           "label": {
+            "description": "Name of one line on the confirmation card the customer is asked to approve, such as \"Amount\".",
             "type": "string"
           },
           "value": {
+            "description": "The value shown beside that line's label on the confirmation card.",
             "type": "string"
           }
         },
@@ -1135,9 +1284,11 @@
         "additionalProperties": false,
         "properties": {
           "id": {
+            "description": "The id of this record. Send it wherever an endpoint asks for this record; never use its name or title in its place.",
             "type": "string"
           },
           "name": {
+            "description": "Display name of the teammate who approved or declined the action call.",
             "type": "string"
           }
         },
@@ -1151,9 +1302,11 @@
         "additionalProperties": false,
         "properties": {
           "title": {
+            "description": "Title of a source the AI answer cites, such as a help article's title.",
             "type": "string"
           },
           "url": {
+            "description": "Web address of the cited source, for checking the answer against it.",
             "type": "string"
           }
         },
@@ -1167,16 +1320,20 @@
         "additionalProperties": false,
         "properties": {
           "cursor": {
+            "description": "Where this answer ends. Send it as since on the next poll to get only what changed after it.",
             "type": "string"
           },
           "has_more": {
+            "description": "true when more changes wait than this answer holds: poll again at once with the cursor. false when you are caught up.",
             "type": "boolean"
           },
           "poll_after_ms": {
+            "description": "How many milliseconds to wait before the next poll, such as 5000. 0 when has_more is true, since you should poll again at once.",
             "format": "int64",
             "type": "integer"
           },
           "server_time": {
+            "description": "The server's time when it answered, as an RFC 3339 time in UTC, such as 2026-01-31T09:00:00Z.",
             "format": "date-time",
             "type": "string"
           }
@@ -1193,18 +1350,22 @@
         "additionalProperties": false,
         "properties": {
           "conversation_status": {
+            "description": "The status of the conversation the message landed in, after it was sent, such as open.",
             "type": "string"
           },
           "redirected_from": {
+            "description": "The id of the conversation the message was sent to, such as conv_abc123, when a new conversation took it instead. Null when it landed where it was sent.",
             "type": [
               "string",
               "null"
             ]
           },
           "reopened": {
+            "description": "True when the message reopened a closed conversation.",
             "type": "boolean"
           },
           "server_time": {
+            "description": "The server's clock when it answered, as an RFC 3339 timestamp.",
             "format": "date-time",
             "type": "string"
           }
@@ -1237,10 +1398,12 @@
         "additionalProperties": false,
         "properties": {
           "comment": {
+            "description": "What the visitor wants to add, up to 2000 characters, such as \"Fast and friendly\". An empty text clears the comment; leaving it out keeps it.",
             "maxLength": 2000,
             "type": "string"
           },
           "score": {
+            "description": "Whole number from 1 (worst) to 5 (best), such as 4. Leaving it out keeps the score already given.",
             "format": "int64",
             "maximum": 5,
             "minimum": 1,
@@ -1253,12 +1416,15 @@
         "additionalProperties": false,
         "properties": {
           "face": {
+            "description": "The emoji shown for this score, such as 😍 for 5.",
             "type": "string"
           },
           "label": {
+            "description": "The word shown for this score: Terrible, Bad, OK, Good or Amazing.",
             "type": "string"
           },
           "score": {
+            "description": "The score the customer gives by picking this face, from 1 (worst) to 5 (best).",
             "format": "int64",
             "type": "integer"
           }
@@ -1286,15 +1452,19 @@
         "additionalProperties": false,
         "properties": {
           "conversation_id": {
+            "description": "The id of the conversation that was marked read, such as conv_abc123.",
             "type": "string"
           },
           "last_read_message_id": {
+            "description": "The id of the last message the visitor has read, as sent in the request, such as msg_abc123.",
             "type": "string"
           },
           "object": {
+            "description": "The kind of record this is, the same for every record of its kind, such as article.",
             "type": "string"
           },
           "unread_count": {
+            "description": "How many of the team's replies in this conversation the visitor still has not read.",
             "format": "int64",
             "type": "integer"
           }
@@ -1311,12 +1481,15 @@
         "additionalProperties": false,
         "properties": {
           "channel": {
+            "description": "The stream channel that carries this visitor's updates, such as widget_contact:ctc_abc123.",
             "type": "string"
           },
           "token_url": {
+            "description": "The address to POST to for a short-lived connect token before opening the stream.",
             "type": "string"
           },
           "url": {
+            "description": "The address of the live update stream (server-sent events) to connect to with a connect token.",
             "type": "string"
           }
         },
@@ -1331,19 +1504,24 @@
         "additionalProperties": false,
         "properties": {
           "channel": {
+            "description": "The stream channel that carries this visitor's updates, such as widget_contact:ctc_abc123.",
             "type": "string"
           },
           "expires_at": {
+            "description": "When the connect token stops working, as an RFC 3339 timestamp. Ask for a new one before reconnecting after that.",
             "format": "date-time",
             "type": "string"
           },
           "object": {
+            "description": "The kind of record this is, the same for every record of its kind, such as article.",
             "type": "string"
           },
           "token": {
+            "description": "A short-lived signed token that opens this session's live update stream. It is good for the stream only, not for API calls.",
             "type": "string"
           },
           "url": {
+            "description": "The address of the live update stream (server-sent events) to connect to with the token.",
             "type": "string"
           }
         },
@@ -1420,6 +1598,7 @@
         "additionalProperties": false,
         "properties": {
           "data": {
+            "description": "The items, as a list; empty when there are none.",
             "items": {
               "$ref": "#/components/schemas/WidgetTicket"
             },
@@ -1438,6 +1617,7 @@
         "additionalProperties": false,
         "properties": {
           "data": {
+            "description": "The items, as a list; empty when there are none.",
             "items": {
               "$ref": "#/components/schemas/WidgetTicketType"
             },
@@ -1576,6 +1756,7 @@
         "additionalProperties": false,
         "properties": {
           "code": {
+            "description": "Stable code for programs to tell errors apart, such as validation_failed or internal_error.",
             "type": "string"
           },
           "errors": {
@@ -1588,9 +1769,11 @@
                 "null"
               ]
             },
+            "description": "Each rejected field mapped to its messages. Only present when the input was invalid.",
             "type": "object"
           },
           "message": {
+            "description": "What went wrong, in words safe to show a person.",
             "type": "string"
           }
         },
@@ -1604,6 +1787,7 @@
         "additionalProperties": false,
         "properties": {
           "email": {
+            "description": "The bare email address to send the code to, 3 to 254 characters, such as ada@example.com.",
             "maxLength": 254,
             "minLength": 3,
             "type": "string"
@@ -1618,6 +1802,7 @@
         "additionalProperties": false,
         "properties": {
           "equals": {
+            "description": "Values of the other field under which this one shows. Left out when any value is enough.",
             "items": {
               "type": "string"
             },
@@ -1627,6 +1812,7 @@
             ]
           },
           "field": {
+            "description": "Key of the other ticket field that must have a value for this one to show.",
             "type": "string"
           }
         },
@@ -1667,12 +1853,14 @@
         "additionalProperties": false,
         "properties": {
           "article": {
+            "description": "Slug of the article being rated: 1 to 200 lowercase letters, digits and hyphens, such as reset-your-password.",
             "maxLength": 200,
             "minLength": 1,
             "pattern": "^[a-z0-9-]+$",
             "type": "string"
           },
           "helpful": {
+            "description": "true when the article helped the visitor, false when it did not.",
             "type": "boolean"
           }
         },
@@ -1686,6 +1874,7 @@
         "additionalProperties": false,
         "properties": {
           "article": {
+            "description": "Slug of the article that was opened: 1 to 200 lowercase letters, digits and hyphens, such as reset-your-password.",
             "maxLength": 200,
             "minLength": 1,
             "pattern": "^[a-z0-9-]+$",
@@ -1701,16 +1890,19 @@
         "additionalProperties": true,
         "properties": {
           "content_type": {
+            "description": "The file's media type, 1 to 255 characters, such as image/png. Types dimmi blocks are refused.",
             "maxLength": 255,
             "minLength": 1,
             "type": "string"
           },
           "filename": {
+            "description": "The file's name with its extension, 1 to 255 characters, such as invoice.pdf. Blocked extensions are refused.",
             "maxLength": 255,
             "minLength": 1,
             "type": "string"
           },
           "size_bytes": {
+            "description": "The file's exact size in bytes, at least 1, such as 48213. A size above the messenger's attachment limit is refused.",
             "format": "int64",
             "minimum": 1,
             "type": "integer"
@@ -1727,6 +1919,7 @@
         "additionalProperties": false,
         "properties": {
           "events": {
+            "description": "List of 1 to 20 events to record, each with a name and optionally metadata and an id.",
             "items": {
               "$ref": "#/components/schemas/WidgetEventSent"
             },
@@ -1747,6 +1940,7 @@
         "additionalProperties": false,
         "properties": {
           "article": {
+            "description": "Slug of the article to open: up to 200 lowercase letters, digits and hyphens, such as reset-your-password. Leave it out for the help center's home.",
             "maxLength": 200,
             "pattern": "^[a-z0-9-]*$",
             "type": "string"
@@ -1759,6 +1953,7 @@
         "properties": {
           "context": {
             "additionalProperties": {},
+            "description": "Flat object of details the page passes along, such as {\"plan\": \"pro\"}: text, number or true/false values only, at most 30 keys and 4 KB, and null removes a key.",
             "type": "object"
           },
           "page": {
@@ -1772,12 +1967,14 @@
         "properties": {
           "context": {
             "additionalProperties": {},
+            "description": "Flat object of details the page passes along, such as {\"plan\": \"pro\"}: text, number or true/false values only, at most 30 keys and 4 KB, and null removes a key.",
             "type": "object"
           },
           "page": {
             "$ref": "#/components/schemas/WidgetPageBody"
           },
           "visible": {
+            "description": "true while the page is in view, false while it is hidden. Optional.",
             "type": "boolean"
           }
         },
@@ -1787,14 +1984,17 @@
         "additionalProperties": true,
         "properties": {
           "app_id": {
+            "description": "The messenger's app id from its install snippet, such as wgt_7h2k9d. An unknown, malformed or deleted id answers not found.",
             "maxLength": 64,
             "type": "string"
           },
           "context": {
             "additionalProperties": {},
+            "description": "Flat object of details the page passes along, such as {\"plan\": \"pro\"}: text, number or true/false values only, at most 30 keys and 4 KB, and null removes a key.",
             "type": "object"
           },
           "locale": {
+            "description": "The visitor's language tag, such as en or pt-BR, up to 64 characters. Text that is no language tag is ignored.",
             "maxLength": 64,
             "type": "string"
           },
@@ -1802,6 +2002,7 @@
             "$ref": "#/components/schemas/WidgetPageBody"
           },
           "pages": {
+            "description": "Up to 10 pages the visitor saw before the session started, oldest first, each an object with url, title and referrer.",
             "items": {
               "$ref": "#/components/schemas/WidgetPageBody"
             },
@@ -1812,6 +2013,7 @@
             ]
           },
           "previous_token": {
+            "description": "The session token the client held before signing in, such as dmi_ws_ followed by 43 characters. With user_jwt, that anonymous session's visitor becomes the customer and the old session ends.",
             "maxLength": 128,
             "type": "string"
           },
@@ -1819,18 +2021,22 @@
             "$ref": "#/components/schemas/WidgetSDKBody"
           },
           "test_token": {
+            "description": "Optional text of up to 128 characters. Starting a session does not read it.",
             "maxLength": 128,
             "type": "string"
           },
           "timezone": {
+            "description": "The visitor's IANA time zone name, such as Europe/Berlin. An unknown name is ignored.",
             "maxLength": 64,
             "type": "string"
           },
           "user_jwt": {
+            "description": "Identity token your backend signed for the signed-in visitor, up to 16384 characters, such as eyJhbGciOi.... Leave it out for an anonymous session.",
             "maxLength": 16384,
             "type": "string"
           },
           "website": {
+            "description": "Hidden anti-bot form field that real visitors never fill; leave it out or empty. A filled one marks the session as a bot and what it starts lands as spam.",
             "maxLength": 1000,
             "type": "string"
           }
@@ -1844,6 +2050,7 @@
         "additionalProperties": true,
         "properties": {
           "attachment_ids": {
+            "description": "Up to 10 ids of files this session finished uploading, such as [\"att_4k2j9x\"], attached to the request's first message.",
             "items": {
               "type": "string"
             },
@@ -1854,25 +2061,30 @@
             ]
           },
           "client_id": {
+            "description": "A UUID the client makes up for this form, such as 6f1c2c1e-8a4b-4d1f-9c3e-2b7a5d9e0f11. Required; sending it again returns the first request.",
             "maxLength": 64,
             "type": "string"
           },
           "description": {
+            "description": "The details of the request, up to 10000 characters, such as \"The March invoice shows the wrong amount\". Optional.",
             "maxLength": 10000,
             "type": "string"
           },
           "fields": {
             "additionalProperties": {},
+            "description": "Object of values for the type's fields a customer may fill, keyed by field key, such as {\"order_number\": \"A-1042\"}. A file field holds a list of attachment ids.",
             "type": "object"
           },
           "page": {
             "$ref": "#/components/schemas/WidgetPageBody"
           },
           "title": {
+            "description": "Short summary of the request, 1 to 200 characters, such as \"Refund for order A-1042\". Required.",
             "maxLength": 200,
             "type": "string"
           },
           "type_id": {
+            "description": "Id of a request type customers may open, taken from the request types list, such as tktt_3m8v1c. Required.",
             "maxLength": 64,
             "type": "string"
           }
@@ -1888,6 +2100,7 @@
         "additionalProperties": true,
         "properties": {
           "state": {
+            "description": "started when the visitor begins typing, stopped when they stop or send.",
             "enum": [
               "started",
               "stopped"
@@ -1903,12 +2116,16 @@
       "Surface": {
         "additionalProperties": false,
         "properties": {
-          "launcher": {},
+          "launcher": {
+            "description": "Whether this visitor sees the messenger's launcher: true, false, or a rule object the browser still checks on each page."
+          },
           "start": {
+            "description": "True when this visitor may start a conversation.",
             "type": "boolean"
           },
           "tabs": {
             "additionalProperties": {},
+            "description": "Whether this visitor sees each messenger tab, keyed by tab name: true, false or a rule object still to check on each page. Left out when no tab has a rule.",
             "type": "object"
           }
         },
@@ -1922,12 +2139,14 @@
         "additionalProperties": false,
         "properties": {
           "avatar_url": {
+            "description": "A link to the teammate's avatar image that works for one hour, so fetch availability again rather than storing it.",
             "type": [
               "string",
               "null"
             ]
           },
           "name": {
+            "description": "The teammate's name as shown to the visitor.",
             "type": "string"
           }
         },
@@ -1941,9 +2160,11 @@
         "additionalProperties": false,
         "properties": {
           "class": {
+            "description": "What the run of code is, for coloring: keyword, string, number or comment. Absent for plain code that takes no color.",
             "type": "string"
           },
           "text": {
+            "description": "The run's exact text. Joining every token's text in order gives the code block's source.",
             "type": "string"
           }
         },
@@ -1956,12 +2177,16 @@
         "additionalProperties": false,
         "properties": {
           "event": {
+            "description": "What changed: message.created, message.updated, message.deleted, conversation.updated or conversation.closed. The names match the events the live stream carries.",
             "type": "string"
           },
           "id": {
+            "description": "The id of this record. Send it wherever an endpoint asks for this record; never use its name or title in its place.",
             "type": "string"
           },
-          "payload": {}
+          "payload": {
+            "description": "The changed record: a message event carries conversation_id and message, a conversation event carries conversation_id, widget_id and conversation."
+          }
         },
         "required": [
           "event",
@@ -1974,6 +2199,7 @@
         "additionalProperties": false,
         "properties": {
           "status": {
+            "description": "The visitor's answer: confirmed to go ahead, or canceled to drop the action. Required.",
             "enum": [
               "confirmed",
               "canceled"
@@ -1990,6 +2216,7 @@
         "additionalProperties": true,
         "properties": {
           "status": {
+            "description": "The state to move the upload to. Only uploaded is accepted; any other value is refused.",
             "maxLength": 32,
             "type": "string"
           }
@@ -2004,17 +2231,21 @@
         "properties": {
           "custom_attributes": {
             "additionalProperties": {},
+            "description": "Object of attribute values to merge into the profile, such as {\"plan\": \"pro\"}, at most 20 keys at once; values must fit attributes the workspace has defined.",
             "type": "object"
           },
           "email": {
+            "description": "A bare email address to reply to, such as ada@example.com, at most 254 characters. It is stored as typed by the visitor, not as proven.",
             "maxLength": 1000,
             "type": "string"
           },
           "name": {
+            "description": "The visitor's name, 1 to 120 characters, such as Ada Lovelace.",
             "maxLength": 1000,
             "type": "string"
           },
           "phone": {
+            "description": "Phone number in international format, a plus sign and 7 to 15 digits, such as +4930123456. Spaces are removed.",
             "maxLength": 64,
             "type": "string"
           }
@@ -2025,6 +2256,7 @@
         "additionalProperties": true,
         "properties": {
           "last_read_message_id": {
+            "description": "Id of the newest message the visitor has seen in this conversation, such as msg_9d3f7a. A message of another conversation is refused.",
             "maxLength": 64,
             "type": "string"
           }
@@ -2038,6 +2270,7 @@
         "additionalProperties": true,
         "properties": {
           "user_jwt": {
+            "description": "A fresh identity token your backend signed for the same customer the session belongs to, 1 to 16384 characters, such as eyJhbGciOi...",
             "maxLength": 16384,
             "minLength": 1,
             "type": "string"
@@ -2052,6 +2285,7 @@
         "additionalProperties": false,
         "properties": {
           "data": {
+            "description": "The changes since the cursor, each an event name, an id and a payload. Empty when nothing changed. A change returned twice keeps the same id, so keep each id once.",
             "items": {
               "$ref": "#/components/schemas/UpdateItem"
             },
@@ -2074,6 +2308,7 @@
         "additionalProperties": false,
         "properties": {
           "expires_at": {
+            "description": "When the visitor's chance to confirm runs out, as an RFC 3339 timestamp. Null when the call has no deadline.",
             "format": "date-time",
             "type": [
               "string",
@@ -2081,21 +2316,27 @@
             ]
           },
           "id": {
+            "description": "The id of this record. Send it wherever an endpoint asks for this record; never use its name or title in its place.",
             "type": "string"
           },
           "object": {
+            "description": "The kind of record this is, the same for every record of its kind, such as article.",
             "type": "string"
           },
           "state": {
+            "description": "Where the action stands: awaiting_verification, awaiting_confirmation, pending_approval, approved, declined, expired, canceled, running, succeeded or failed.",
             "type": "string"
           },
           "status": {
+            "description": "The same value as state, under the name the confirmation card reads.",
             "type": "string"
           },
           "summary": {
+            "description": "A plain description of what the action will do, to show the visitor before they confirm.",
             "type": "string"
           },
           "title": {
+            "description": "The action's short name, shown as the heading of the confirmation card.",
             "type": "string"
           }
         },
@@ -2114,15 +2355,19 @@
         "additionalProperties": false,
         "properties": {
           "slug": {
+            "description": "The help article's url-safe name, such as getting-started. Match it against the help tab's articles to open the article in place.",
             "type": "string"
           },
           "summary": {
+            "description": "The article's short description. Absent when it has none.",
             "type": "string"
           },
           "title": {
+            "description": "The article's title, shown on the card.",
             "type": "string"
           },
           "url": {
+            "description": "The article's address on the help center. Absent when there is none.",
             "type": "string"
           }
         },
@@ -2136,15 +2381,19 @@
         "additionalProperties": false,
         "properties": {
           "blocked": {
+            "description": "True only when the malware scan refused the file; its url is then null. Absent otherwise.",
             "type": "boolean"
           },
           "content_type": {
+            "description": "The file's media type, such as image/png.",
             "type": "string"
           },
           "filename": {
+            "description": "The file's name as uploaded, such as invoice.pdf.",
             "type": "string"
           },
           "height": {
+            "description": "The image's height in pixels. Null when it is not recorded, as for files that are not images.",
             "format": "int32",
             "type": [
               "integer",
@@ -2152,22 +2401,27 @@
             ]
           },
           "id": {
+            "description": "The id of this record. Send it wherever an endpoint asks for this record; never use its name or title in its place.",
             "type": "string"
           },
           "object": {
+            "description": "The kind of record this is, the same for every record of its kind, such as article.",
             "type": "string"
           },
           "size_bytes": {
+            "description": "The file's size in bytes.",
             "format": "int64",
             "type": "integer"
           },
           "url": {
+            "description": "A short-lived link to download the file. Null while the file is still being checked, when it was blocked, or when no link can be made.",
             "type": [
               "string",
               "null"
             ]
           },
           "width": {
+            "description": "The image's width in pixels. Null when it is not recorded, as for files that are not images.",
             "format": "int32",
             "type": [
               "integer",
@@ -2191,9 +2445,11 @@
         "additionalProperties": false,
         "properties": {
           "display": {
+            "description": "How to draw the broadcast's message: message for an ordinary chat message, post for a card with a title.",
             "type": "string"
           },
           "title": {
+            "description": "The heading a post card leads with. Absent when the broadcast has none.",
             "type": "string"
           }
         },
@@ -2206,9 +2462,11 @@
         "additionalProperties": false,
         "properties": {
           "id": {
+            "description": "The id of this record. Send it wherever an endpoint asks for this record; never use its name or title in its place.",
             "type": "string"
           },
           "label": {
+            "description": "The text to show on the answer's button.",
             "type": "string"
           }
         },
@@ -2222,24 +2480,29 @@
         "additionalProperties": false,
         "properties": {
           "email": {
+            "description": "The visitor's email address as they or their app gave it. Null when none is known.",
             "type": [
               "string",
               "null"
             ]
           },
           "id": {
+            "description": "The id of this record. Send it wherever an endpoint asks for this record; never use its name or title in its place.",
             "type": "string"
           },
           "kind": {
+            "description": "user for a customer the host app signed in, lead for a visitor it has not.",
             "type": "string"
           },
           "name": {
+            "description": "The visitor's name as they or their app gave it. Null when none is known.",
             "type": [
               "string",
               "null"
             ]
           },
           "object": {
+            "description": "The kind of record this is, the same for every record of its kind, such as article.",
             "type": "string"
           }
         },
@@ -2256,25 +2519,31 @@
         "additionalProperties": false,
         "properties": {
           "ai_state": {
+            "description": "The AI agent's part in the conversation: off, active while it is answering, or handed_off once it passed the conversation to the team.",
             "type": "string"
           },
           "created_at": {
+            "description": "When it was created, as an RFC 3339 time, such as 2026-01-31T09:00:00Z.",
             "format": "date-time",
             "type": "string"
           },
           "customer_status": {
+            "description": "What to tell the customer: closed, waiting_on_you when the team or the AI agent spoke last, or with_team otherwise.",
             "type": "string"
           },
           "id": {
+            "description": "The id of this record. Send it wherever an endpoint asks for this record; never use its name or title in its place.",
             "type": "string"
           },
           "imported": {
+            "description": "True when the conversation was imported from another tool. Absent otherwise.",
             "type": "boolean"
           },
           "last_message": {
             "$ref": "#/components/schemas/WidgetLastMessage"
           },
           "last_message_at": {
+            "description": "When the latest message was sent, as an RFC 3339 timestamp. Null when the conversation has no message yet.",
             "format": "date-time",
             "type": [
               "string",
@@ -2282,20 +2551,25 @@
             ]
           },
           "number": {
+            "description": "The conversation's number within the workspace, such as 1042.",
             "format": "int64",
             "type": "integer"
           },
           "object": {
+            "description": "The kind of record this is, the same for every record of its kind, such as article.",
             "type": "string"
           },
           "seen_by_team_at": {
+            "description": "When a teammate last read up to the customer's latest message. Absent when nobody has, or when the workspace hides it from customers.",
             "format": "date-time",
             "type": "string"
           },
           "status": {
+            "description": "open or closed. A conversation the team snoozed shows as open.",
             "type": "string"
           },
           "subject": {
+            "description": "The conversation's subject line. Null when it has none.",
             "type": [
               "string",
               "null"
@@ -2305,10 +2579,12 @@
             "$ref": "#/components/schemas/WidgetTicketBlock"
           },
           "unread_count": {
+            "description": "How many of the team's replies in this conversation the visitor has not read.",
             "format": "int64",
             "type": "integer"
           },
           "widget_id": {
+            "description": "The id of the messenger the conversation started on, such as wgt_abc123. Null for a conversation that started on another channel.",
             "type": [
               "string",
               "null"
@@ -2335,14 +2611,17 @@
         "additionalProperties": false,
         "properties": {
           "id": {
+            "description": "An id the client makes up for the event, up to 64 characters, such as evt-1042. A retry with the same id within 48 hours is counted once.",
             "maxLength": 64,
             "type": "string"
           },
           "metadata": {
             "additionalProperties": {},
+            "description": "Flat object of details about the event, such as {\"plan\": \"pro\", \"seats\": 5}: at most 20 keys of text, numbers or true/false, 2 KB in all.",
             "type": "object"
           },
           "name": {
+            "description": "The event's name: 1 to 64 lowercase letters, digits and _ . : -, such as checkout.completed.",
             "maxLength": 64,
             "type": "string"
           }
@@ -2356,15 +2635,18 @@
         "additionalProperties": false,
         "properties": {
           "error": {
+            "description": "Why the visitor's identity was not verified. Null when there is nothing to report.",
             "type": [
               "string",
               "null"
             ]
           },
           "status": {
+            "description": "verified when the session is a signed-in customer's, anonymous otherwise.",
             "type": "string"
           },
           "warnings": {
+            "description": "Notes about the identity check that did not stop it. Empty when there are none.",
             "items": {
               "type": "string"
             },
@@ -2388,13 +2670,16 @@
             "$ref": "#/components/schemas/Author"
           },
           "created_at": {
+            "description": "When it was created, as an RFC 3339 time, such as 2026-01-31T09:00:00Z.",
             "format": "date-time",
             "type": "string"
           },
           "excerpt": {
+            "description": "A short plain-text preview of the conversation's latest message, for a list row. Empty when that message was deleted.",
             "type": "string"
           },
           "id": {
+            "description": "The id of this record. Send it wherever an endpoint asks for this record; never use its name or title in its place.",
             "type": "string"
           }
         },
@@ -2416,6 +2701,7 @@
             "$ref": "#/components/schemas/WidgetArticleCard"
           },
           "attachments": {
+            "description": "The files on the message. Empty when it has none or the message was deleted.",
             "items": {
               "$ref": "#/components/schemas/WidgetAttachment"
             },
@@ -2428,6 +2714,7 @@
             "$ref": "#/components/schemas/Author"
           },
           "body": {
+            "description": "The message's text. Null when the message was deleted, or when it carries no text.",
             "type": [
               "string",
               "null"
@@ -2437,6 +2724,7 @@
             "$ref": "#/components/schemas/WidgetBroadcast"
           },
           "choices": {
+            "description": "The answers a workflow's question offers as buttons, each an id and a label. Send the tapped id as choice in the reply. Absent on any other message.",
             "items": {
               "$ref": "#/components/schemas/WidgetChoice"
             },
@@ -2446,31 +2734,39 @@
             ]
           },
           "choices_only": {
+            "description": "True when the question can be answered only by tapping a choice, so hide the text box until one is tapped. Absent otherwise.",
             "type": "boolean"
           },
           "client_id": {
+            "description": "The client_id the visitor's client sent with this message, to match it with the copy shown while sending. Null for messages sent without one.",
             "type": [
               "string",
               "null"
             ]
           },
           "conversation_id": {
+            "description": "The id of the conversation the message belongs to, such as conv_abc123.",
             "type": "string"
           },
           "created_at": {
+            "description": "When it was created, as an RFC 3339 time, such as 2026-01-31T09:00:00Z.",
             "format": "date-time",
             "type": "string"
           },
           "deleted": {
+            "description": "True when the message was deleted: keep its place in the thread and show no body or files. Absent otherwise.",
             "type": "boolean"
           },
           "id": {
+            "description": "The id of this record. Send it wherever an endpoint asks for this record; never use its name or title in its place.",
             "type": "string"
           },
           "object": {
+            "description": "The kind of record this is, the same for every record of its kind, such as article.",
             "type": "string"
           },
           "read_at": {
+            "description": "When the message was read by the other side, as an RFC 3339 timestamp. Null while it is unread.",
             "format": "date-time",
             "type": [
               "string",
@@ -2495,6 +2791,7 @@
         "additionalProperties": true,
         "properties": {
           "attachment_ids": {
+            "description": "Up to 10 ids of files this session finished uploading, such as [\"att_4k2j9x\"]; one that is missing, unfinished or another visitor's refuses the message.",
             "items": {
               "type": "string"
             },
@@ -2505,25 +2802,30 @@
             ]
           },
           "body": {
+            "description": "The message text, such as \"Where is my order?\"; at most 64 KB, and required unless attachment_ids names a file.",
             "maxLength": 262144,
             "type": "string"
           },
           "choice": {
+            "description": "Id of the button the visitor tapped when the message answers a question drawn as buttons, up to 64 characters, so the workflow takes that path. Leave out otherwise.",
             "maxLength": 64,
             "type": "string"
           },
           "client_id": {
+            "description": "A UUID the client makes up for this message, such as 6f1c2c1e-8a4b-4d1f-9c3e-2b7a5d9e0f11; sending the same one again returns the stored message instead of a second one.",
             "maxLength": 64,
             "type": "string"
           },
           "context": {
             "additionalProperties": {},
+            "description": "Flat object of details the page passes along, such as {\"plan\": \"pro\"}: text, number or true/false values only, at most 30 keys and 4 KB, and null removes a key.",
             "type": "object"
           },
           "page": {
             "$ref": "#/components/schemas/WidgetPageBody"
           },
           "website": {
+            "description": "Hidden anti-bot form field that real visitors never fill, up to 1000 characters; leave it out or empty.",
             "maxLength": 1000,
             "type": "string"
           }
@@ -2537,14 +2839,17 @@
         "additionalProperties": true,
         "properties": {
           "referrer": {
+            "description": "Address of the page that led here, such as https://google.com/; anything that is not an http or https address is dropped.",
             "maxLength": 4096,
             "type": "string"
           },
           "title": {
+            "description": "The page's title, such as Pricing; text beyond 300 characters is cut.",
             "maxLength": 1000,
             "type": "string"
           },
           "url": {
+            "description": "Full http or https address of the page, such as https://acme.com/pricing; kept up to 2048 characters, with query values that look like credentials removed.",
             "maxLength": 4096,
             "type": "string"
           }
@@ -2557,38 +2862,48 @@
       "WidgetProfile": {
         "additionalProperties": false,
         "properties": {
-          "custom_attributes": {},
+          "custom_attributes": {
+            "description": "The contact's custom attributes as an object keyed by attribute name."
+          },
           "email": {
+            "description": "The visitor's email address as they or their app gave it. Null when none is known.",
             "type": [
               "string",
               "null"
             ]
           },
           "email_verified": {
+            "description": "True when the email address is confirmed as the visitor's own, false when it is only what they typed.",
             "type": "boolean"
           },
           "id": {
+            "description": "The id of this record. Send it wherever an endpoint asks for this record; never use its name or title in its place.",
             "type": "string"
           },
           "kind": {
+            "description": "user for a customer the host app signed in, lead for a visitor it has not.",
             "type": "string"
           },
           "locale": {
+            "description": "The visitor's language, such as en-US. Null when none is known.",
             "type": [
               "string",
               "null"
             ]
           },
           "name": {
+            "description": "The visitor's name as they or their app gave it. Null when none is known.",
             "type": [
               "string",
               "null"
             ]
           },
           "object": {
+            "description": "The kind of record this is, the same for every record of its kind, such as article.",
             "type": "string"
           },
           "phone": {
+            "description": "The visitor's phone number as they or their app gave it. Null when none is known.",
             "type": [
               "string",
               "null"
@@ -2612,10 +2927,12 @@
         "additionalProperties": true,
         "properties": {
           "name": {
+            "description": "Name of the client library, up to 64 characters, such as @dimmi/browser.",
             "maxLength": 64,
             "type": "string"
           },
           "version": {
+            "description": "Version of the client library, up to 64 characters, such as 1.4.0.",
             "maxLength": 64,
             "type": "string"
           }
@@ -2626,6 +2943,7 @@
         "additionalProperties": false,
         "properties": {
           "config_version": {
+            "description": "The messenger's current settings version. When it is higher than the config you hold, fetch the config again.",
             "format": "int64",
             "type": "integer"
           },
@@ -2633,22 +2951,27 @@
             "$ref": "#/components/schemas/WidgetContact"
           },
           "expires_at": {
+            "description": "When the session stops working, as an RFC 3339 timestamp. Start a new session after that.",
             "format": "date-time",
             "type": "string"
           },
           "id": {
+            "description": "The id of this record. Send it wherever an endpoint asks for this record; never use its name or title in its place.",
             "type": "string"
           },
           "identity": {
             "$ref": "#/components/schemas/WidgetIdentity"
           },
           "kind": {
+            "description": "anonymous for a visitor nobody signed in, identified for a customer verified with an identity token.",
             "type": "string"
           },
           "object": {
+            "description": "The kind of record this is, the same for every record of its kind, such as article.",
             "type": "string"
           },
           "open_conversation_ids": {
+            "description": "The ids of the visitor's conversations that are not closed, such as conv_abc123. Empty when there are none.",
             "items": {
               "type": "string"
             },
@@ -2661,6 +2984,7 @@
             "$ref": "#/components/schemas/Realtime"
           },
           "server_time": {
+            "description": "The server's clock when it answered, as an RFC 3339 timestamp.",
             "format": "date-time",
             "type": "string"
           },
@@ -2668,12 +2992,15 @@
             "$ref": "#/components/schemas/Surface"
           },
           "test": {
+            "description": "True for a test session, whose conversations are marked as test ones.",
             "type": "boolean"
           },
           "token": {
+            "description": "The session's secret, starting with dmi_ws_, to send as the bearer token on later calls. Present only on the answer that created the session, so store it then.",
             "type": "string"
           },
           "unread_count": {
+            "description": "How many of the team's replies the visitor has not read, across their conversations on this messenger.",
             "format": "int64",
             "type": "integer"
           }
@@ -2698,19 +3025,23 @@
         "additionalProperties": false,
         "properties": {
           "conversation_id": {
+            "description": "The id of the conversation where the request is discussed, such as conv_abc123. Null when it has none.",
             "type": [
               "string",
               "null"
             ]
           },
           "created_at": {
+            "description": "When it was created, as an RFC 3339 time, such as 2026-01-31T09:00:00Z.",
             "format": "date-time",
             "type": "string"
           },
           "description": {
+            "description": "The longer explanation given when the request was opened. Empty when none was given.",
             "type": "string"
           },
           "fields": {
+            "description": "The request's fields a customer may see, each with its current value when it has one.",
             "items": {
               "$ref": "#/components/schemas/WidgetTicketField"
             },
@@ -2720,6 +3051,7 @@
             ]
           },
           "history": {
+            "description": "The states the request went through, each with its customer-facing label, its group and when it was entered.",
             "items": {
               "$ref": "#/components/schemas/WidgetTicketState"
             },
@@ -2729,18 +3061,23 @@
             ]
           },
           "id": {
+            "description": "The id of this record. Send it wherever an endpoint asks for this record; never use its name or title in its place.",
             "type": "string"
           },
           "mine": {
+            "description": "True when this visitor opened the request, false for a colleague's request their company shares.",
             "type": "boolean"
           },
           "object": {
+            "description": "The kind of record this is, the same for every record of its kind, such as article.",
             "type": "string"
           },
           "reference": {
+            "description": "The request's short reference as people quote it, such as T-482. It also works in place of the id when fetching the request.",
             "type": "string"
           },
           "resolved_at": {
+            "description": "When the request was resolved, as an RFC 3339 timestamp. Null while it is still open.",
             "format": "date-time",
             "type": [
               "string",
@@ -2751,12 +3088,14 @@
             "$ref": "#/components/schemas/WidgetTicketState"
           },
           "title": {
+            "description": "The request's short title.",
             "type": "string"
           },
           "type": {
             "$ref": "#/components/schemas/WidgetTicketType"
           },
           "updated_at": {
+            "description": "When it last changed, as an RFC 3339 time, such as 2026-01-31T09:00:00Z.",
             "format": "date-time",
             "type": "string"
           }
@@ -2783,15 +3122,18 @@
         "additionalProperties": false,
         "properties": {
           "id": {
+            "description": "The id of this record. Send it wherever an endpoint asks for this record; never use its name or title in its place.",
             "type": "string"
           },
           "reference": {
+            "description": "The request's short reference as people quote it, such as T-482.",
             "type": "string"
           },
           "state": {
             "$ref": "#/components/schemas/WidgetTicketState"
           },
           "title": {
+            "description": "The request's short title.",
             "type": "string"
           }
         },
@@ -2807,24 +3149,31 @@
         "additionalProperties": false,
         "properties": {
           "currency": {
+            "description": "The three-letter currency code of a currency field, such as USD. Absent on other fields.",
             "type": "string"
           },
           "data_type": {
+            "description": "The kind of value: short_text, long_text, number, decimal, currency, boolean, date, single_choice, multiple_choice, file, member or company.",
             "type": "string"
           },
           "description": {
+            "description": "Help text explaining the field to the customer. Absent when it has none.",
             "type": "string"
           },
           "editable": {
+            "description": "True when the customer may change this field's value.",
             "type": "boolean"
           },
           "key": {
+            "description": "The field's stable name, used as the key in the fields object when opening a request, such as order_number.",
             "type": "string"
           },
           "label": {
+            "description": "The field's name as shown to the customer.",
             "type": "string"
           },
           "options": {
+            "description": "The values to pick from on a single_choice or multiple_choice field. Empty for other fields.",
             "items": {
               "type": "string"
             },
@@ -2834,12 +3183,15 @@
             ]
           },
           "required": {
+            "description": "True when the customer must fill this field to open a request.",
             "type": "boolean"
           },
           "show_when": {
             "$ref": "#/components/schemas/ShowWhen"
           },
-          "value": {}
+          "value": {
+            "description": "The field's current value on a request, shaped by its data_type. Absent on a type's form and when the request has no value for it."
+          }
         },
         "required": [
           "key",
@@ -2856,13 +3208,16 @@
         "additionalProperties": false,
         "properties": {
           "at": {
+            "description": "When the request entered this state, as an RFC 3339 timestamp. Present only in a request's history.",
             "format": "date-time",
             "type": "string"
           },
           "group": {
+            "description": "The stage the state belongs to, which orders a progress strip: submitted, in_progress, waiting_customer, waiting_team or resolved.",
             "type": "string"
           },
           "label": {
+            "description": "The state's name as the customer reads it, never the team's internal name for it.",
             "type": "string"
           }
         },
@@ -2876,12 +3231,15 @@
         "additionalProperties": false,
         "properties": {
           "company_sharing": {
+            "description": "True when requests of this type are shared with the customer's colleagues at the same company.",
             "type": "boolean"
           },
           "description": {
+            "description": "A short explanation of what this type of request is for. May be empty.",
             "type": "string"
           },
           "fields": {
+            "description": "The form fields a customer fills when opening this type, in order. Empty when the type appears inside a request, whose own fields list holds them.",
             "items": {
               "$ref": "#/components/schemas/WidgetTicketField"
             },
@@ -2891,18 +3249,23 @@
             ]
           },
           "icon": {
+            "description": "The name of the icon the team picked for this type.",
             "type": "string"
           },
           "id": {
+            "description": "The id of this record. Send it wherever an endpoint asks for this record; never use its name or title in its place.",
             "type": "string"
           },
           "name": {
+            "description": "The type's name as shown to the customer, such as Bug report.",
             "type": "string"
           },
           "object": {
+            "description": "The kind of record this is, the same for every record of its kind, such as article.",
             "type": "string"
           },
           "states": {
+            "description": "The states a request of this type moves through, with their customer-facing labels. Empty when the type appears inside a request.",
             "items": {
               "$ref": "#/components/schemas/WidgetTicketState"
             },
@@ -2928,6 +3291,7 @@
         "additionalProperties": false,
         "properties": {
           "status": {
+            "description": "What became of the event: accepted, duplicate (its id was already sent), contact_not_found, archived, event_limit_reached or not_allowed.",
             "type": "string"
           }
         },
@@ -2940,10 +3304,12 @@
         "additionalProperties": false,
         "properties": {
           "accepted": {
+            "description": "How many events of the batch were accepted.",
             "format": "int64",
             "type": "integer"
           },
           "events": {
+            "description": "One result per event sent, in the same order as the request.",
             "items": {
               "$ref": "#/components/schemas/WidgetTrackedEvent"
             },
@@ -2953,6 +3319,7 @@
             ]
           },
           "object": {
+            "description": "The kind of record this is, the same for every record of its kind, such as article.",
             "type": "string"
           }
         },
@@ -2967,18 +3334,22 @@
         "additionalProperties": false,
         "properties": {
           "id": {
+            "description": "The id of this record. Send it wherever an endpoint asks for this record; never use its name or title in its place.",
             "type": "string"
           },
           "links": {
             "additionalProperties": {
               "type": "string"
             },
+            "description": "Related addresses keyed by name. self is this upload's own address, which you PATCH with status uploaded once the bytes are sent.",
             "type": "object"
           },
           "object": {
+            "description": "The kind of record this is, the same for every record of its kind, such as article.",
             "type": "string"
           },
           "status": {
+            "description": "The upload's state. Always pending here, until you send the bytes and mark it uploaded.",
             "type": "string"
           },
           "upload": {
@@ -2998,6 +3369,7 @@
         "additionalProperties": false,
         "properties": {
           "expires_at": {
+            "description": "When the upload address stops working, as an RFC 3339 timestamp. Ask for a new upload after that.",
             "format": "date-time",
             "type": "string"
           },
@@ -3005,12 +3377,15 @@
             "additionalProperties": {
               "type": "string"
             },
+            "description": "The headers to send with the upload exactly as given: Content-Type and Content-Length, matching what was declared.",
             "type": "object"
           },
           "method": {
+            "description": "The HTTP method to send the file's bytes with. Always PUT.",
             "type": "string"
           },
           "url": {
+            "description": "The address to send the file's bytes to: signed storage that takes them as they are, or dimmi's own upload route, which also needs the session's bearer token.",
             "type": "string"
           }
         },
@@ -3032,6 +3407,7 @@
   "paths": {
     "/apps/{app}/article-views": {
       "post": {
+        "description": "Tells dimmi that someone opened a help article inside the messenger, so the view is counted for the day. Needs no session: the messenger's app id goes in the path. Answers not found when the messenger links to no help center; an article the help center does not show is skipped without an error.",
         "operationId": "widget.apps.article-views.store",
         "requestBody": {
           "content": {
@@ -3057,14 +3433,17 @@
             },
             "description": "Error"
           }
-        }
+        },
+        "summary": "Count an article view"
       }
     },
     "/apps/{app}/availability": {
       "get": {
+        "description": "Tells whether someone on the team is there now and how soon they usually reply. Needs no session, only the messenger's app id, and the answer may be cached for 30 seconds. Returns the team's availability: online, within_hours, reply_time with its wording, team faces and the server time.",
         "operationId": "widget.apps.availability.show",
         "parameters": [
           {
+            "description": "The messenger's app id from its install snippet, such as wgt_7h2k9d. An unknown, malformed or deleted id answers not found.",
             "in": "path",
             "name": "app",
             "required": true,
@@ -3073,6 +3452,7 @@
             }
           },
           {
+            "description": "Language tag for the reply time wording, such as fr or pt-BR. Falls back to the base language, then English.",
             "explode": false,
             "in": "query",
             "name": "locale",
@@ -3109,11 +3489,13 @@
             },
             "description": "Error"
           }
-        }
+        },
+        "summary": "Check team availability"
       }
     },
     "/apps/{app}/changelog": {
       "get": {
+        "description": "Returns the newest published changelog entries of the help center this messenger links to, newest first, at most 20. Needs no session, only the app id in the path. The list is empty when the messenger has no help center or its changelog tab is off. Returns the full changelog's address and up to 20 entries with slug, title, summary, label, publish time and body blocks.",
         "operationId": "widget.apps.changelog.show",
         "responses": {
           "200": {
@@ -3136,14 +3518,17 @@
             },
             "description": "Error"
           }
-        }
+        },
+        "summary": "Read the changelog tab"
       }
     },
     "/apps/{app}/config": {
       "get": {
+        "description": "Returns everything a messenger needs to draw itself: appearance, texts in the visitor's language, tabs and settings. Call it first on every page load; it needs no session and is cacheable for a minute. Returns the messenger's config, or an empty 304 answer when If-None-Match matches the current version.",
         "operationId": "widget.apps.config.show",
         "parameters": [
           {
+            "description": "The messenger's app id from its install snippet, such as wgt_7h2k9d. An unknown, malformed or deleted id answers not found.",
             "in": "path",
             "name": "app",
             "required": true,
@@ -3152,6 +3537,7 @@
             }
           },
           {
+            "description": "Language tag the visitor prefers, such as de or pt-BR. A messenger set to one fixed language ignores it, and English is the default.",
             "explode": false,
             "in": "query",
             "name": "locale",
@@ -3160,6 +3546,7 @@
             }
           },
           {
+            "description": "Any value, such as the config version 42. It is not read; it only keeps a CDN from answering with an older copy.",
             "explode": false,
             "in": "query",
             "name": "v",
@@ -3168,6 +3555,7 @@
             }
           },
           {
+            "description": "The Etag header of an earlier answer, sent back as is. When it still matches, the answer is 304 with no body.",
             "in": "header",
             "name": "If-None-Match",
             "schema": {
@@ -3208,11 +3596,13 @@
             },
             "description": "Error"
           }
-        }
+        },
+        "summary": "Load the messenger config"
       }
     },
     "/apps/{app}/help": {
       "get": {
+        "description": "Returns the collections and published articles anyone may read in the help center this messenger links to, so help shows before the visitor says anything. Needs no session, only the app id in the path. Everything is empty when the messenger links to no help center. Returns the help center's address, its collections, up to 200 articles with body blocks, and up to 5 popular article slugs.",
         "operationId": "widget.apps.help.show",
         "responses": {
           "200": {
@@ -3235,11 +3625,13 @@
             },
             "description": "Error"
           }
-        }
+        },
+        "summary": "Read the help tab"
       }
     },
     "/apps/{app}/ticket-types": {
       "get": {
+        "description": "Lists the kinds of request a visitor may open from this messenger, so the home screen can offer them before the visitor writes. Needs no session, only the app id in the path. Returns the list of request types a customer may open.",
         "operationId": "widget.apps.ticket-types.index",
         "responses": {
           "200": {
@@ -3262,11 +3654,13 @@
             },
             "description": "Error"
           }
-        }
+        },
+        "summary": "List request types"
       }
     },
     "/article-ratings": {
       "post": {
+        "description": "Records whether a help article helped the visitor reading it in the messenger. Needs a messenger session and a help center linked to the messenger. Answering again changes the earlier answer instead of adding another.",
         "operationId": "widget.article-ratings.store",
         "requestBody": {
           "content": {
@@ -3292,11 +3686,13 @@
             },
             "description": "Error"
           }
-        }
+        },
+        "summary": "Rate a help article"
       }
     },
     "/article-views": {
       "post": {
+        "description": "Tells dimmi the visitor opened a help article inside the messenger, so the view is counted for the day; nothing about the visitor is kept with it. Needs a messenger session and a help center linked to the messenger.",
         "operationId": "widget.article-views.store",
         "requestBody": {
           "content": {
@@ -3322,11 +3718,13 @@
             },
             "description": "Error"
           }
-        }
+        },
+        "summary": "Count an article view"
       }
     },
     "/attachments": {
       "post": {
+        "description": "First of three upload steps: say which file is coming and get back where to send its bytes. Needs a messenger session and a messenger with attachments switched on. Then send the bytes, mark the upload uploaded, and pass its id in attachment_ids. Returns the pending upload with its id, status and where to send the bytes.",
         "operationId": "widget.attachments.store",
         "requestBody": {
           "content": {
@@ -3359,14 +3757,17 @@
             },
             "description": "Error"
           }
-        }
+        },
+        "summary": "Announce a file upload"
       }
     },
     "/attachments/{attachment}": {
       "patch": {
+        "description": "Last upload step: say the bytes arrived so dimmi checks them and marks the file uploaded. Needs the same messenger session that announced the file, and the bytes already sent. Returns the finished attachment, ready to name in attachment_ids.",
         "operationId": "widget.attachments.update",
         "parameters": [
           {
+            "description": "Id of the upload this session announced, such as att_4k2j9x; any other id answers not found.",
             "in": "path",
             "name": "attachment",
             "required": true,
@@ -3406,11 +3807,13 @@
             },
             "description": "Error"
           }
-        }
+        },
+        "summary": "Finish a file upload"
       }
     },
     "/contact": {
       "get": {
+        "description": "Returns what dimmi holds about the visitor behind the session. Needs a messenger session; the session decides whose profile it is, so no id is sent. Returns the visitor's profile.",
         "operationId": "widget.contact.show",
         "responses": {
           "200": {
@@ -3433,9 +3836,11 @@
             },
             "description": "Error"
           }
-        }
+        },
+        "summary": "Read the visitor's profile"
       },
       "patch": {
+        "description": "Lets a visitor say who they are: a name, an email to reply to, a phone number, a few attributes. Needs a messenger session. A signed-in customer's name, email and phone come from their app and are refused here; they may only write the attributes the workspace lets the messenger write. Returns the visitor's profile as it now is.",
         "operationId": "widget.contact.update",
         "requestBody": {
           "content": {
@@ -3468,11 +3873,13 @@
             },
             "description": "Error"
           }
-        }
+        },
+        "summary": "Update the visitor's profile"
       }
     },
     "/conversations": {
       "get": {
+        "description": "Lists the visitor's conversations on this messenger, latest activity first, a page at a time: 20 by default, 50 at most. Needs a messenger session. filter[status] narrows the list to open or closed conversations. Returns a page of the visitor's conversations with a cursor for the next page.",
         "operationId": "widget.conversations.index",
         "responses": {
           "200": {
@@ -3495,9 +3902,11 @@
             },
             "description": "Error"
           }
-        }
+        },
+        "summary": "List the visitor's conversations"
       },
       "post": {
+        "description": "Starts a new conversation with the visitor's first message. Needs a messenger session; the messenger's rules may refuse the visitor, and a messenger that asks for an email while the team is away refuses a visitor without one. A session may start 5 conversations an hour. Returns the new conversation, with the stored message beside it.",
         "operationId": "widget.conversations.store",
         "requestBody": {
           "content": {
@@ -3530,14 +3939,17 @@
             },
             "description": "Error"
           }
-        }
+        },
+        "summary": "Start a conversation"
       }
     },
     "/conversations/{conversation}": {
       "get": {
+        "description": "Returns one of the visitor's conversations. Needs the messenger session it belongs to. Returns the conversation.",
         "operationId": "widget.conversations.show",
         "parameters": [
           {
+            "description": "Id of one of the visitor's own conversations on this messenger, such as conv_8f3k2m; any other id answers not found.",
             "in": "path",
             "name": "conversation",
             "required": true,
@@ -3567,14 +3979,17 @@
             },
             "description": "Error"
           }
-        }
+        },
+        "summary": "Get a conversation"
       }
     },
     "/conversations/{conversation}/action-calls/{call}": {
       "get": {
+        "description": "Returns where an action the AI agent proposed in the conversation stands, to draw or refresh its confirmation card. Needs the messenger session the conversation belongs to. Returns the action call as the visitor sees it.",
         "operationId": "widget.conversations.action-calls.show",
         "parameters": [
           {
+            "description": "Id of one of the visitor's own conversations on this messenger, such as conv_8f3k2m; any other id answers not found.",
             "in": "path",
             "name": "conversation",
             "required": true,
@@ -3583,6 +3998,7 @@
             }
           },
           {
+            "description": "Id of an action the agent proposed in this conversation, such as aax_5t8w2q; any other id answers not found.",
             "in": "path",
             "name": "call",
             "required": true,
@@ -3612,12 +4028,15 @@
             },
             "description": "Error"
           }
-        }
+        },
+        "summary": "Get an action confirmation"
       },
       "patch": {
+        "description": "Records the visitor's yes or no to an action the AI agent proposed in the conversation. Needs the messenger session the conversation belongs to. Sending the same answer twice returns where the call stands and never runs anything twice. Returns the action call with its new state.",
         "operationId": "widget.conversations.action-calls.update",
         "parameters": [
           {
+            "description": "Id of one of the visitor's own conversations on this messenger, such as conv_8f3k2m; any other id answers not found.",
             "in": "path",
             "name": "conversation",
             "required": true,
@@ -3626,6 +4045,7 @@
             }
           },
           {
+            "description": "Id of an action the agent proposed in this conversation, such as aax_5t8w2q; any other id answers not found.",
             "in": "path",
             "name": "call",
             "required": true,
@@ -3665,14 +4085,17 @@
             },
             "description": "Error"
           }
-        }
+        },
+        "summary": "Confirm or cancel an action"
       }
     },
     "/conversations/{conversation}/ai/handoff": {
       "post": {
+        "description": "Hands the visitor's conversation from the AI agent to the team: the agent writes its handoff line and the team is told. Needs the messenger session the conversation belongs to. A conversation already handed off stays as it is, and a session may ask 5 times a minute.",
         "operationId": "widget.conversations.ai.handoff",
         "parameters": [
           {
+            "description": "Id of one of the visitor's own conversations on this messenger, such as conv_8f3k2m; any other id answers not found.",
             "in": "path",
             "name": "conversation",
             "required": true,
@@ -3695,14 +4118,17 @@
             },
             "description": "Error"
           }
-        }
+        },
+        "summary": "Ask for a person"
       }
     },
     "/conversations/{conversation}/ai/helped": {
       "post": {
+        "description": "Records that the AI agent's newest answer in the conversation helped the visitor. Needs the messenger session the conversation belongs to. Sending it again changes nothing.",
         "operationId": "widget.conversations.ai.helped",
         "parameters": [
           {
+            "description": "Id of one of the visitor's own conversations on this messenger, such as conv_8f3k2m; any other id answers not found.",
             "in": "path",
             "name": "conversation",
             "required": true,
@@ -3725,14 +4151,17 @@
             },
             "description": "Error"
           }
-        }
+        },
+        "summary": "Mark the AI answer helpful"
       }
     },
     "/conversations/{conversation}/messages": {
       "get": {
+        "description": "Reads one conversation's messages a page at a time, oldest first within each page. Needs the messenger session the conversation belongs to. Use before to scroll back in history, or after to catch up from a message the client already holds. Returns a page of messages, with a cursor for older ones when more remain.",
         "operationId": "widget.conversations.messages.index",
         "parameters": [
           {
+            "description": "Id of one of the visitor's own conversations on this messenger, such as conv_8f3k2m; any other id answers not found.",
             "in": "path",
             "name": "conversation",
             "required": true,
@@ -3741,6 +4170,7 @@
             }
           },
           {
+            "description": "The cursor a previous page returned, sent back as is, to read the messages older than that page.",
             "explode": false,
             "in": "query",
             "name": "before",
@@ -3749,6 +4179,7 @@
             }
           },
           {
+            "description": "Id of a message of this conversation the client already holds, such as msg_9d3f7a, to read the ones after it.",
             "explode": false,
             "in": "query",
             "name": "after",
@@ -3757,6 +4188,7 @@
             }
           },
           {
+            "description": "How many messages to return, 1 to 100, such as 50. Leaving it out, or 0, returns 30.",
             "explode": false,
             "in": "query",
             "name": "limit",
@@ -3789,12 +4221,15 @@
             },
             "description": "Error"
           }
-        }
+        },
+        "summary": "List a conversation's messages"
       },
       "post": {
+        "description": "Writes the visitor's message in a conversation. Needs the messenger session the conversation belongs to. A conversation closed long ago, or imported history, cannot take it: a new conversation does, and the answer names the old one in redirected_from. A session may send 20 messages a minute. Returns the stored message, with the conversation's status, whether it reopened and any redirect.",
         "operationId": "widget.conversations.messages.store",
         "parameters": [
           {
+            "description": "Id of one of the visitor's own conversations on this messenger, such as conv_8f3k2m; any other id answers not found.",
             "in": "path",
             "name": "conversation",
             "required": true,
@@ -3834,14 +4269,17 @@
             },
             "description": "Error"
           }
-        }
+        },
+        "summary": "Send a message"
       }
     },
     "/conversations/{conversation}/rating": {
       "get": {
+        "description": "Returns the latest request asking the visitor to rate the conversation, to draw the rating card. Needs the messenger session the conversation belongs to. Returns the conversation's latest rating request, or null when none was sent.",
         "operationId": "widget.conversations.rating.show",
         "parameters": [
           {
+            "description": "Id of one of the visitor's own conversations on this messenger, such as conv_8f3k2m; any other id answers not found.",
             "in": "path",
             "name": "conversation",
             "required": true,
@@ -3871,12 +4309,15 @@
             },
             "description": "Error"
           }
-        }
+        },
+        "summary": "Get the rating request"
       },
       "patch": {
+        "description": "Saves the visitor's score and comment for a conversation that asked how it went. Needs the messenger session the conversation belongs to and an open rating request; answers not found without one. Send a score, a comment or both; they can be changed for a week after the request went out. Returns the rating with the visitor's answer.",
         "operationId": "widget.conversations.rating.update",
         "parameters": [
           {
+            "description": "Id of one of the visitor's own conversations on this messenger, such as conv_8f3k2m; any other id answers not found.",
             "in": "path",
             "name": "conversation",
             "required": true,
@@ -3916,14 +4357,17 @@
             },
             "description": "Error"
           }
-        }
+        },
+        "summary": "Rate a conversation"
       }
     },
     "/conversations/{conversation}/read-state": {
       "patch": {
+        "description": "Says how far the visitor read, so the team's replies up to that message count as read. Needs the messenger session the conversation belongs to. The pointer only moves forward: an older message changes nothing. Returns the read state with the count of replies still unread.",
         "operationId": "widget.conversations.read-state.update",
         "parameters": [
           {
+            "description": "Id of one of the visitor's own conversations on this messenger, such as conv_8f3k2m; any other id answers not found.",
             "in": "path",
             "name": "conversation",
             "required": true,
@@ -3963,14 +4407,17 @@
             },
             "description": "Error"
           }
-        }
+        },
+        "summary": "Mark messages as read"
       }
     },
     "/conversations/{conversation}/typing-indicators": {
       "post": {
+        "description": "Tells the team the visitor started or stopped typing in the conversation. Needs the messenger session the conversation belongs to. Nothing is stored, and repeated starts are thinned so teammates are not flooded.",
         "operationId": "widget.conversations.typing-indicators.store",
         "parameters": [
           {
+            "description": "Id of one of the visitor's own conversations on this messenger, such as conv_8f3k2m; any other id answers not found.",
             "in": "path",
             "name": "conversation",
             "required": true,
@@ -4003,11 +4450,13 @@
             },
             "description": "Error"
           }
-        }
+        },
+        "summary": "Send a typing notice"
       }
     },
     "/email-verifications": {
       "post": {
+        "description": "Mails a six-digit code to an address so an anonymous visitor can prove they own it. Needs an anonymous messenger session; a signed-in session is refused. The code works for 10 minutes, replaces any earlier one, and another may be sent after 30 seconds, up to 5 an hour per session. Returns the masked address, when the code expires and when another may be sent.",
         "operationId": "widget.email-verifications.store",
         "requestBody": {
           "content": {
@@ -4040,11 +4489,13 @@
             },
             "description": "Error"
           }
-        }
+        },
+        "summary": "Send an email code"
       }
     },
     "/email-verifications/checks": {
       "post": {
+        "description": "Takes the code the visitor typed. A good one marks the session's email proven for a day and the visitor's address verified. Needs the messenger session that asked for the code. Five wrong tries lock the code, and an expired code needs a new one. Returns the masked address and when it was verified.",
         "operationId": "widget.email-verifications.checks.store",
         "requestBody": {
           "content": {
@@ -4077,11 +4528,13 @@
             },
             "description": "Error"
           }
-        }
+        },
+        "summary": "Check an email code"
       }
     },
     "/events": {
       "post": {
+        "description": "Records what the visitor did on the page, up to 20 events at once, on the session's contact. Needs a messenger session. Only event names the workspace opened to the messenger are recorded, unless it lets the messenger send any; the server sets each event's time. A session may send 30 batches a minute. Returns what became of each event sent, such as accepted, duplicate or not_allowed.",
         "operationId": "widget.events.store",
         "requestBody": {
           "content": {
@@ -4114,11 +4567,13 @@
             },
             "description": "Error"
           }
-        }
+        },
+        "summary": "Track visitor events"
       }
     },
     "/help": {
       "get": {
+        "description": "Returns the help center's collections and articles as this visitor may read them: what their audiences open when the messenger knows them (signed in, or with a proven email), and what anyone may read otherwise. Needs a messenger session. Everything is empty when the messenger links to no help center. Returns the help center's address, its collections, up to 200 articles with body blocks, and up to 5 popular article slugs.",
         "operationId": "widget.help.show",
         "responses": {
           "200": {
@@ -4141,11 +4596,13 @@
             },
             "description": "Error"
           }
-        }
+        },
+        "summary": "Read the visitor's help tab"
       }
     },
     "/help-passes": {
       "post": {
+        "description": "Returns the address to open an article, or the help center's home, in the full help center. Needs a messenger session and a help center linked to the messenger. A visitor the messenger knows gets an address that signs them in on arrival, good once and for a minute; anyone else gets the plain address. Returns the address to open.",
         "operationId": "widget.help-passes.store",
         "requestBody": {
           "content": {
@@ -4178,11 +4635,13 @@
             },
             "description": "Error"
           }
-        }
+        },
+        "summary": "Open the help center"
       }
     },
     "/openers": {
       "post": {
+        "description": "Starts a conversation before the visitor has written anything, so a workflow can greet them the moment the chat opens. Needs a messenger session. The same limit as a first message applies, 5 new conversations an hour per session, and the messenger's rules may refuse the visitor. Returns the new, empty conversation.",
         "operationId": "widget.openers.store",
         "requestBody": {
           "content": {
@@ -4215,11 +4674,13 @@
             },
             "description": "Error"
           }
-        }
+        },
+        "summary": "Open an empty conversation"
       }
     },
     "/pings": {
       "post": {
+        "description": "Tells dimmi which page the visitor is on now, so the team sees where a question came from. Needs a messenger session. It is written down at most once every 10 seconds per session; faster pings are accepted and change nothing.",
         "operationId": "widget.pings.store",
         "requestBody": {
           "content": {
@@ -4245,11 +4706,13 @@
             },
             "description": "Error"
           }
-        }
+        },
+        "summary": "Report the visitor's page"
       }
     },
     "/realtime-tokens": {
       "post": {
+        "description": "Issues a short-lived token that opens the visitor's live event stream. Needs a messenger session. Ask for a fresh one each time the stream opens or reopens: the token is good for about a minute and only for opening a stream, not for calling the API. Returns the connect token, when it expires, the stream's address and the visitor's channel.",
         "operationId": "widget.realtime-tokens.store",
         "responses": {
           "201": {
@@ -4272,11 +4735,13 @@
             },
             "description": "Error"
           }
-        }
+        },
+        "summary": "Get a realtime token"
       }
     },
     "/session": {
       "delete": {
+        "description": "Signs the visitor out: the session's token stops working at once and its open streams close. Send the session token as a bearer token. Ending a session that already ended answers the same.",
         "operationId": "widget.session.destroy",
         "responses": {
           "204": {
@@ -4292,9 +4757,11 @@
             },
             "description": "Error"
           }
-        }
+        },
+        "summary": "End the session"
       },
       "get": {
+        "description": "Returns the current session when a page loads with a stored token: who the visitor is, how many replies wait unread and which conversations are open. Works for anonymous sessions only; a signed-in session must send a fresh identity token with the session update instead. Returns the session, without its token.",
         "operationId": "widget.session.show",
         "responses": {
           "200": {
@@ -4317,9 +4784,11 @@
             },
             "description": "Error"
           }
-        }
+        },
+        "summary": "Resume the session"
       },
       "patch": {
+        "description": "Proves a signed-in session's customer again with a fresh identity token, which extends the session and updates the customer from the token. Send the session token as a bearer token; an expired signed-in session is accepted here and revived. A token for anyone else is refused and the session stays as it was. Returns the session with its new expiry, without its token.",
         "operationId": "widget.session.update",
         "requestBody": {
           "content": {
@@ -4352,11 +4821,13 @@
             },
             "description": "Error"
           }
-        }
+        },
+        "summary": "Refresh a signed-in session"
       }
     },
     "/sessions": {
       "post": {
+        "description": "Starts a messenger session the first time a visitor does something, and returns the token every later request sends as Authorization: Bearer. Without user_jwt the session is anonymous, if the messenger allows that; with one the visitor is signed in once the token passes every check. A bad token is refused, never treated as anonymous. Returns the session with its token, shown only this once; a signed-in session that was extended instead comes back without one.",
         "operationId": "widget.sessions.store",
         "requestBody": {
           "content": {
@@ -4389,11 +4860,13 @@
             },
             "description": "Error"
           }
-        }
+        },
+        "summary": "Start a session"
       }
     },
     "/ticket-types": {
       "get": {
+        "description": "Lists the kinds of request the visitor may open from the messenger. Needs a messenger session. Use a type's id as type_id when opening a request. Returns the list of request types a customer may open.",
         "operationId": "widget.ticket-types.index",
         "responses": {
           "200": {
@@ -4416,14 +4889,17 @@
             },
             "description": "Error"
           }
-        }
+        },
+        "summary": "List request types"
       }
     },
     "/tickets": {
       "get": {
+        "description": "Lists the requests the visitor opened, or their company's. Needs a messenger session. Company requests show only to a visitor signed in with a verified identity who belongs to a company, and only for request types shared with the company. Returns the list of requests as the customer sees them.",
         "operationId": "widget.tickets.index",
         "parameters": [
           {
+            "description": "Whose requests to list: mine for the visitor's own, or company for their company's too. Leaving it out means mine.",
             "explode": false,
             "in": "query",
             "name": "scope",
@@ -4437,7 +4913,7 @@
             }
           },
           {
-            "description": "Only requests not resolved.",
+            "description": "true to keep only requests not yet resolved, such as open=true. Leaving it out lists all of them.",
             "explode": false,
             "in": "query",
             "name": "open",
@@ -4468,9 +4944,11 @@
             },
             "description": "Error"
           }
-        }
+        },
+        "summary": "List the visitor's requests"
       },
       "post": {
+        "description": "Submits a request form: dimmi checks it, starts a conversation with the title and description as the visitor's first message, and puts a ticket on it. Needs a messenger session. Replies then go through that conversation's messages; the same client_id sent twice makes one request. Returns the request as the customer sees it.",
         "operationId": "widget.tickets.store",
         "requestBody": {
           "content": {
@@ -4503,14 +4981,17 @@
             },
             "description": "Error"
           }
-        }
+        },
+        "summary": "Open a request"
       }
     },
     "/tickets/{ticket}": {
       "get": {
+        "description": "Returns one of the visitor's requests with the states it went through. Needs a messenger session. Returns the request with its state history.",
         "operationId": "widget.tickets.show",
         "parameters": [
           {
+            "description": "The request's id, such as tkt_6b2n8r, or its reference, such as T-482 or 482.",
             "in": "path",
             "name": "ticket",
             "required": true,
@@ -4540,14 +5021,17 @@
             },
             "description": "Error"
           }
-        }
+        },
+        "summary": "Get a request"
       }
     },
     "/updates": {
       "get": {
+        "description": "Polling fallback for clients whose live stream is blocked: returns what changed in the visitor's conversations since the last poll, at most 100 changes. Needs a messenger session. Each answer carries the cursor for the next poll and how long to wait; when has_more is true, poll again at once. Returns the changes since the cursor, with the next cursor, the wait before the next poll and whether more remain.",
         "operationId": "widget.updates.index",
         "parameters": [
           {
+            "description": "The cursor from the previous answer's meta, sent back as is. Leave it out on the first poll.",
             "explode": false,
             "in": "query",
             "name": "since",
@@ -4577,7 +5061,8 @@
             },
             "description": "Error"
           }
-        }
+        },
+        "summary": "Poll for updates"
       }
     }
   },

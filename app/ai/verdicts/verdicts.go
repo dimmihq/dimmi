@@ -32,6 +32,7 @@ import (
 	"github.com/dimmihq/dimmi/framework/ids"
 	"github.com/dimmihq/dimmi/framework/tenancy"
 
+	"github.com/dimmihq/dimmi/app/ai/agents"
 	"github.com/dimmihq/dimmi/app/ai/pipeline"
 	"github.com/dimmihq/dimmi/app/contracts"
 	"github.com/dimmihq/dimmi/app/managers"
@@ -46,6 +47,21 @@ its month reached the spend cap.
 var (
 	ErrNoModel = errors.New("verdicts: no model to ask")
 	ErrCapped  = errors.New("verdicts: spend cap reached")
+)
+
+/*
+The task files the verdicts read their instructions from, under
+resources/prompts/tasks/.
+*/
+const (
+	taskDraftJudge       = "verdicts/draft_judge"
+	taskRequest          = "verdicts/request"
+	taskRequestEager     = "verdicts/request_eager"
+	taskWorkflowCategory = "verdicts/workflow_category"
+	taskTrackerSummary   = "verdicts/tracker_summary"
+	taskSeriesPath       = "verdicts/series_path"
+	taskTicketFill       = "verdicts/ticket_fill"
+	taskTicketMatch      = "verdicts/ticket_match"
 )
 
 /*
@@ -232,13 +248,13 @@ go to, classifier first.
 func candidatesOf(ctx context.Context, q *models.Queries, workspaceID ids.UUID) (
 	models.AiAgent, []candidate, error,
 ) {
-	agent, err := q.FindAgent(ctx, workspaceID)
-	if errors.Is(err, database.ErrNotFound) {
+	agent, err := agents.DefaultAnswerer(ctx, q, workspaceID)
+	if errors.Is(err, agents.ErrNoAgent) {
 		return agent, nil, ErrNoModel
 	}
 
 	if err != nil {
-		return agent, nil, fmt.Errorf("find agent: %w", err)
+		return agent, nil, err
 	}
 
 	var out []candidate

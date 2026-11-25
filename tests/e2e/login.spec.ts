@@ -1,4 +1,4 @@
-import { createAccount, expect, inbox, test as it, signIn, signOut } from "./support/fixtures";
+import { createAccount, expect, home, test as it, signIn, signOut } from "./support/fixtures";
 
 it.describe("signing in with a password", () => {
   it("sends a signed-out visitor of the app to sign in, and back where they were going", async ({
@@ -15,7 +15,7 @@ it.describe("signing in with a password", () => {
     await page.getByLabel("Password").fill(person.password);
     await page.getByRole("button", { name: "Sign in", exact: true }).click();
 
-    await expect(page).toHaveURL(inbox);
+    await expect(page).toHaveURL(home);
   });
 
   it("refuses a wrong password under the email field", async ({ page, person, request }) => {
@@ -46,9 +46,9 @@ it.describe("signing in with a password", () => {
     await signIn(page, person);
 
     await page.goto("/login");
-    await expect(page).toHaveURL(inbox);
+    await expect(page).toHaveURL(home);
     await page.goto("/signup");
-    await expect(page).toHaveURL(inbox);
+    await expect(page).toHaveURL(home);
   });
 
   it("tells the person a provider sign-in was cancelled", async ({ page }) => {

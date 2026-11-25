@@ -1,40 +1,46 @@
 /*
- * How the team uses Operator, on the agent's page beside dimmi: whether
+ * How the team uses Operator, on Operator's own page: whether
  * it is on and which model it answers with, what it cost this month and
  * how often it ran, day by day, why it ran, for whom, with which models,
  * what became of the changes it proposed, and its latest runs. Operator
  * and dimmi share one monthly cap, so its spend is shown against both.
  */
-import { RiArrowRightSLine, RiChat3Line, RiFileList3Line, RiInboxArchiveLine, RiRobot2Line } from "@remixicon/react";
+import {
+  RiArrowRightSLine,
+  RiCalendarScheduleLine,
+  RiChat3Line,
+  RiFileList3Line,
+  RiInboxArchiveLine,
+} from "@remixicon/react";
 import { useQuery } from "@tanstack/react-query";
-import { Link, useNavigate } from "@tanstack/react-router";
+import { Link } from "@tanstack/react-router";
 
 import { StatCards } from "@/components/application/dashboard/stat-cards";
 import { Avatar } from "@/components/base/avatar/avatar";
 import { Chip } from "@/components/base/badges/chip";
-import { StatusDot } from "@/components/base/badges/status-dot";
-import { Button } from "@/components/base/buttons/button";
 import { Skeleton } from "@/components/base/skeleton/skeleton";
 import { ago } from "@/features/inbox/conversations";
-import { Empty, Glyph, Item, Section } from "@/features/settings/layout";
+import { Empty, Glyph, Item, RowsSkeleton, Section } from "@/features/settings/layout";
 import { rowLink } from "@/features/settings/row-link";
 import { avatarColor } from "@/features/shell/avatar-color";
 import type { AgentView } from "@/lib/api/ai";
 import {
   type OperatorPurpose,
-  type OperatorSettings,
   type OperatorUsage,
+  type OperatorUsageRun,
   operatorSettingsQuery,
   operatorUsageQuery,
 } from "@/lib/api/operator";
+import { routinesQuery } from "@/lib/api/routines";
 
-import { modelsFor, operatorModel, usableKeys, usd } from "../format";
+import { connectionOf, modelsFor, operatorModel, usd } from "../format";
 import { ModelLogo } from "../logos";
 
 const purposes: Record<OperatorPurpose, { label: string; icon: typeof RiChat3Line }> = {
   ask: { label: "Questions from teammates", icon: RiChat3Line },
   brief: { label: "Briefs on conversations", icon: RiFileList3Line },
   triage: { label: "Triage as conversations arrive", icon: RiInboxArchiveLine },
+  routine: { label: "Routines", icon: RiCalendarScheduleLine },
 };
 
 /*
@@ -48,9 +54,16 @@ function modelName(view: AgentView | undefined, model: string): string {
   return entry?.display_name ?? model;
 }
 
-function StatusCard({ settings, view }: { settings: OperatorSettings; view: AgentView | undefined }) {
-  const navigate = useNavigate();
-  const key = view ? usableKeys(view.keys).find((k) => k.id === view.agent.answer_key_id) : undefined;
+/*
+ * OperatorStatus says, in the page's header, whether Operator is on and
+ * which model it answers with.
+ */
+export function OperatorStatus({ workspace, view }: { workspace: string; view: AgentView | undefined }) {
+  const { data: settings } = useQuery({ ...operatorSettingsQuery(workspace), enabled: workspace !== "" });
+  if (!settings) {
+    return null;
+  }
+  const key = view ? connectionOf(view) : undefined;
   const model = operatorModel(
     settings.model,
     view ? modelsFor(key, view.catalog) : [],
@@ -58,37 +71,15 @@ function StatusCard({ settings, view }: { settings: OperatorSettings; view: Agen
   );
 
   return (
-    <div className="flex flex-col gap-4 rounded-2xl bg-background-secondary-default p-4 sm:flex-row sm:items-center">
-      <span
-        aria-hidden
-        className="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-background-primary-default shadow-card"
-      >
-        <RiRobot2Line className="size-6 text-text-primary" />
+    <>
+      <Chip variant="caption" color={settings.enabled ? "lime" : "neutral"}>
+        {settings.enabled ? "On" : "Off"}
+      </Chip>
+      <span className="hidden min-w-0 items-center gap-1.5 text-body-2-regular text-text-tertiary @2xl:flex">
+        {model ? <ModelLogo model={model} size="xs" /> : null}
+        <span className="truncate">{model ? `Answers with ${modelName(view, model)}` : "No model chosen yet"}</span>
       </span>
-      <div className="flex min-w-0 flex-1 flex-col gap-1">
-        <span className="text-title-3-medium text-text-primary">Operator</span>
-        <span className="flex items-center gap-2 text-body-2-regular text-text-secondary">
-          {settings.enabled ? (
-            <StatusDot color="green" />
-          ) : (
-            <span aria-hidden className="size-2 rounded-full bg-foreground-icon-quaternary" />
-          )}
-          <span>{settings.enabled ? "Helping your team" : "Switched off"}</span>
-          <span aria-hidden>·</span>
-          {model ? <ModelLogo model={model} size="xs" /> : null}
-          <span className="truncate">{model ? `Answers with ${modelName(view, model)}` : "No model chosen yet"}</span>
-        </span>
-      </div>
-      <Button
-        size="small"
-        variant="secondary"
-        trailingIcon={RiArrowRightSLine}
-        onClick={() => navigate({ to: "/d/settings/$section", params: { section: "operator" } })}
-        className="self-start sm:self-auto"
-      >
-        Open settings
-      </Button>
-    </div>
+    </>
   );
 }
 
@@ -206,6 +197,7 @@ function Splits({ usage, view }: { usage: OperatorUsage; view: AgentView | undef
           </Item>
         ))}
       </Section>
+      <ByRoutine usage={usage} />
       {usage.by_member.length > 0 ? (
         <Section title="By teammate" description="Who Operator worked for.">
           {usage.by_member.map((row) => (
@@ -238,6 +230,64 @@ function Splits({ usage, view }: { usage: OperatorUsage; view: AgentView | undef
   );
 }
 
+/*
+ * ByRoutine splits the month's routine runs by routine, each opening its
+ * page.
+ */
+function ByRoutine({ usage }: { usage: OperatorUsage }) {
+  if (usage.by_routine.length === 0) {
+    return null;
+  }
+  return (
+    <Section title="By routine" description="What each routine cost this month.">
+      {usage.by_routine.map((row) => (
+        <Item
+          key={row.routine_id}
+          mark={<Glyph icon={RiCalendarScheduleLine} />}
+          title={
+            <Link to="/d/routines/$routine" params={{ routine: row.routine_id }} className={rowLink}>
+              {row.name}
+            </Link>
+          }
+          detail={row.runs_count === 1 ? "1 run" : `${row.runs_count.toLocaleString()} runs`}
+        >
+          <span className="pe-3 text-body-2-medium text-text-primary tabular-nums">{usd(row.cost_micros)}</span>
+        </Item>
+      ))}
+    </Section>
+  );
+}
+
+/*
+ * RunTitle names a run, opening the routine thread or the conversation it
+ * was about.
+ */
+function RunTitle({ run, title }: { run: OperatorUsageRun; title: string }) {
+  if (run.routine_id && run.thread_id) {
+    return (
+      <Link
+        to="/d/routines/$routine/threads/$thread"
+        params={{ routine: run.routine_id, thread: run.thread_id }}
+        className={rowLink}
+      >
+        {title}
+      </Link>
+    );
+  }
+  if (run.conversation_id) {
+    return (
+      <Link
+        to="/d/inbox/$view/$conversation"
+        params={{ view: "all", conversation: run.conversation_id }}
+        className={rowLink}
+      >
+        {title}
+      </Link>
+    );
+  }
+  return <>{title}</>;
+}
+
 function Recent({ usage }: { usage: OperatorUsage }) {
   return (
     <Section title="Recent runs" description="Operator's latest work, newest first.">
@@ -251,19 +301,7 @@ function Recent({ usage }: { usage: OperatorUsage }) {
           <Item
             key={run.id}
             mark={<Glyph icon={purpose.icon} />}
-            title={
-              run.conversation_id ? (
-                <Link
-                  to="/d/inbox/$view/$conversation"
-                  params={{ view: "all", conversation: run.conversation_id }}
-                  className={rowLink}
-                >
-                  {title}
-                </Link>
-              ) : (
-                title
-              )
-            }
+            title={<RunTitle run={run} title={title} />}
             detail={[who, run.conversation_number ? `#${run.conversation_number}` : null, ago(run.created_at)]
               .filter(Boolean)
               .join(" · ")}
@@ -281,13 +319,16 @@ function Recent({ usage }: { usage: OperatorUsage }) {
   );
 }
 
-export function OperatorUsageTab({ workspace, view }: { workspace: string; view: AgentView | undefined }) {
-  const { data: settings } = useQuery({ ...operatorSettingsQuery(workspace), enabled: workspace !== "" });
+/*
+ * OperatorOverview is Operator at a glance: its routines, and this
+ * month's runs, spend and what started them.
+ */
+export function OperatorOverview({ workspace, view }: { workspace: string; view: AgentView | undefined }) {
   const { data: usage } = useQuery({ ...operatorUsageQuery(workspace), enabled: workspace !== "" });
 
   return (
     <>
-      {settings ? <StatusCard settings={settings} view={view} /> : <Skeleton className="h-[84px] rounded-2xl" />}
+      <RoutinesCard workspace={workspace} />
       <section aria-label="Operator this month" className="flex flex-col gap-2">
         <h2 className="px-3 text-body-2-medium text-text-secondary">This month</h2>
         <MonthStats usage={usage} />
@@ -296,9 +337,67 @@ export function OperatorUsageTab({ workspace, view }: { workspace: string; view:
         <>
           <Daily usage={usage} />
           <Splits usage={usage} view={view} />
-          <Recent usage={usage} />
         </>
       ) : null}
     </>
+  );
+}
+
+/*
+ * OperatorActivity is Operator's latest runs, each opening the routine
+ * thread or the conversation it was about.
+ */
+export function OperatorActivity({ workspace }: { workspace: string }) {
+  const { data: usage } = useQuery({ ...operatorUsageQuery(workspace), enabled: workspace !== "" });
+
+  if (!usage) {
+    return (
+      <Section title="Recent runs">
+        <RowsSkeleton rows={4} />
+      </Section>
+    );
+  }
+
+  return <Recent usage={usage} />;
+}
+
+/*
+ * routinesLine sums up the routines: how many run, and how many of their
+ * suggestions wait for a teammate.
+ */
+function routinesLine(active: number, waiting: number): string {
+  const runs = active === 1 ? "1 routine running" : `${active} routines running`;
+  if (waiting === 0) {
+    return `${runs}, nothing waiting for review.`;
+  }
+  return `${runs}, ${waiting === 1 ? "1 suggestion" : `${waiting} suggestions`} waiting for review.`;
+}
+
+/*
+ * RoutinesCard leads to the routines: what Operator does on its own, and
+ * how many run and wait for review once there are some.
+ */
+function RoutinesCard({ workspace }: { workspace: string }) {
+  const { data: routines } = useQuery({ ...routinesQuery(workspace), enabled: workspace !== "" });
+  const active = (routines ?? []).filter((r) => r.status === "active").length;
+  const waiting = (routines ?? []).reduce((sum, r) => sum + r.suggestions.pending, 0);
+  const line =
+    routines && routines.length > 0
+      ? routinesLine(active, waiting)
+      : "Put Operator on a clock to find knowledge gaps, stale articles and procedure fixes.";
+
+  return (
+    <Link
+      to="/d/operator/$tab"
+      params={{ tab: "routines" }}
+      className="flex items-center gap-3 rounded-2xl bg-background-secondary-default p-4 outline-none transition-colors duration-150 hover:bg-background-secondary-hover focus-visible:ring-2 focus-visible:ring-border-focus-ring"
+    >
+      <Glyph icon={RiCalendarScheduleLine} />
+      <span className="flex min-w-0 flex-1 flex-col">
+        <span className="text-body-medium text-text-primary">Routines</span>
+        <span className="text-body-2-regular text-text-secondary">{line}</span>
+      </span>
+      <RiArrowRightSLine aria-hidden className="size-5 text-foreground-icon-tertiary rtl:-scale-x-100" />
+    </Link>
   );
 }

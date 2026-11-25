@@ -1,25 +1,49 @@
 ---
 title: "How the dimmi agent works"
-description: "What the dimmi agent does with each customer message: when it replies, what it answers from and when it stays quiet."
+description: "How the dimmi agent answers customers from your docs and procedures, stays safe, and hands over to your team."
 ---
+import { Callout } from "~docs/components/mdx";
 
-The dimmi agent replies to customer messages from your knowledge, and hands the conversation to a teammate when it cannot help.
+The **dimmi agent** works in the same shared inbox as your team. When you turn it on for a channel, it reads the chat, searches your help center and [knowledge sources](/ai/knowledge-sources/), follows matching [procedures](/ai/procedures/), and hands off when a human should take over.
 
-## What happens to a message
+In a new workspace, the agent starts **off**. You can add your docs, write playbooks, and test it on past chats before any customer sees it.
 
-1. A customer sends a message. dimmi waits 1.5 seconds in the messenger and 2.5 seconds in Slack and API conversations, so several quick messages get one reply. Email has no wait.
-2. dimmi checks that the agent may reply: it is on, the channel and hours match its [settings](/ai/set-up-the-agent/), and no teammate has taken the conversation.
-3. The agent searches your help center and [knowledge sources](/ai/knowledge-sources/), follows a [procedure](/ai/procedures/) that fits the request and calls the [actions](/ai/actions/) it needs.
-4. dimmi checks the reply, then sends it. The agent writes in the customer's language.
-5. When the agent cannot answer, or a rule says so, it [hands over](/ai/handover/) and stops replying in that conversation.
+You can also run [several agents](/ai/multiple-agents/), such as one for sales and one for support. Each has its own guidance, knowledge, and channels.
 
-## Rules
+## dimmi agent vs. Operator
 
-- **Never answered:** spam, deleted conversations and blocked customers.
-- **Never read:** internal notes. The agent reads the customer's messages, teammates' replies and its own. See [what reaches the model](/ai/customer-data/).
-- **No guessing:** a reply with no source behind it counts as "didn't know". Greetings and small talk need no source.
-- **Links:** dimmi removes any link that is not to your help center, a site in **Links it may share**, a page a source returned or an address the customer gave.
-- **Images and HTML:** dimmi removes them from replies.
-- **Length:** a reply holds at most 6,000 characters.
-- **Triage:** while it answers, the agent also titles and tags the conversation.
-- **Cost:** each reply adds to the month's spend, which the [monthly cap](/ai/providers/#set-the-monthly-cap) limits.
+dimmi has two AI tools with different jobs:
+
+- **dimmi agent** talks to customers. It answers on the channels you pick, runs procedures, and hands over to your team when needed.
+- **[Operator](/operator/work-with-operator/)** only talks to your team. Chat with it beside a thread or in Slack to sum up chats, draft replies, or propose workspace edits you can undo.
+
+## How a reply works
+
+When a customer sends a message, the agent follows four steps:
+
+1. **Checks if it should reply:** confirms the agent is on for that channel, inside its [office hours](/ai/set-up-the-agent/), and not already being handled by a teammate.
+2. **Checks playbooks and docs:** reads the thread and customer info, checks for a matching [procedure](/ai/procedures/) (enforcing your exact rules and required actions), searches your help center and [knowledge sources](/ai/knowledge-sources/), and runs any [actions](/ai/actions/) needed.
+3. **Replies with sources:** answers in the customer's language, attaches links to the exact articles it used, opens a [ticket](/tickets/how-tickets-work/) with its real reference when needed, and titles and tags the chat.
+4. **Hands over when needed:** if it cannot find an answer, hits a handover rule, or reaches its reply cap, it [hands over](/ai/handover/) with a private summary for your team and stops replying.
+
+## Built-in safety
+
+dimmi checks every AI reply before a customer sees it:
+
+- **No guessing:** factual answers must come from your docs, procedures, or actions. When your docs do not cover a question, the agent says so instead of making things up.
+- **Pre-send reply checks:** dimmi checks each draft for accidental internal notes or placeholders, asks the agent to rewrite it once if needed, and hands over instead of sending if the text stays unsafe. Long paragraphs are split for readability.
+- **Private notes stay private:** the agent reads customer messages and teammate replies, never internal notes. It also skips spam, deleted chats, and blocked customers.
+- **Approved links only:** dimmi strips any URL that is not your help center, a site in **Links it may share**, a source page, or a link the customer sent.
+
+<Callout type="note" title="Personal data protection">
+  **Hide personal data** is on by default, under **Settings → dimmi agent → Privacy**. See [What reaches the model](/ai/customer-data/) for how dimmi hides private customer fields.
+</Callout>
+
+## Triage and budget controls
+
+You decide how much the agent does and how much it can spend:
+
+- **Triage-only mode:** set **Agent's role** to **Triage only** if you want the agent to title, tag, and route chats without replying to customers.
+- **Spend and reply caps:** set a [monthly spend cap](/ai/providers/#set-the-monthly-cap) (**$25** by default) and a **Replies per conversation** limit (**5 replies** by default).
+
+Ready to turn it on? Head to [Set up the dimmi agent](/ai/set-up-the-agent/) for channels and tone, or [Write procedures](/ai/procedures/) to teach it playbooks step by step.

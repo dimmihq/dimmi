@@ -144,7 +144,7 @@ func baseRow(in Input) FactRow {
 		ConversationID: c.ID, WorkspaceID: c.WorkspaceID, Number: c.Number, InboxID: c.InboxID,
 		Channel: c.Channel, AssigneeMemberID: c.AssigneeMemberID, AssigneeTeamID: c.AssigneeTeamID,
 		Priority: c.Priority, Status: c.Status, Imported: c.Imported, AiCostMicros: c.AiCostMicros,
-		ComputedAt: in.Now,
+		AiAgentID: c.AiAgentID, ComputedAt: in.Now,
 	}
 }
 

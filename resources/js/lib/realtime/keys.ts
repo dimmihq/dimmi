@@ -28,4 +28,5 @@ export const channels = {
   workspaceConversations: (workspace: string) => `workspace_conversations:${workspace}`,
   conversation: (conversation: string) => `conversation:${conversation}`,
   member: (member: string) => `member:${member}`,
+  operatorRoutine: (routine: string) => `operator_routine:${routine}`,
 };

@@ -41,20 +41,21 @@ insightTools are the tools that report on the workspace and the agent.
 func (e *Engine) insightTools() []tool {
 	return []tool{
 		{spec: contracts.ToolSpec{
-			Name: "workspace_report",
+			Name: "get_workspace_report",
 			Description: "Report on support over a date range: conversations opened and closed per day and " +
 				"channel, median minutes to first reply and to close, busiest hours (UTC), top tags, the AI " +
 				"agent's outcomes, cost and handoff reasons, and the least helpful articles with readers' " +
 				"comments. Dates are YYYY-MM-DD; the default is the last 30 days.",
-			Schema: schema(`{"type":"object","properties":{"since":{"type":"string","format":"date"},` +
-				`"until":{"type":"string","format":"date","description":"Exclusive end date."}}}`),
-		}, handle: e.workspaceReport},
+			Schema: schema(`{"type":"object","properties":{"start_date":{"type":"string","format":"date",` +
+				`"description":"First day of the report, YYYY-MM-DD."},"end_date":{"type":"string",` +
+				`"format":"date","description":"The day after the last day of the report, YYYY-MM-DD."}}}`),
+		}, handle: e.workspaceReport, was: map[string]string{"since": "start_date", "until": "end_date"}},
 		{spec: contracts.ToolSpec{
-			Name: "agent_runs", Schema: schema(numberSchema),
+			Name: "get_ai_agent_runs", Schema: schema(numberSchema),
 			Description: "Show what the AI agent did in one conversation: each run's outcome, handoff reason, " +
 				"what it searched for and what it cost, newest first. Needs the conversation's number " +
-				"unless this thread is about one; for the agent across the workspace use workspace_report.",
-		}, handle: e.agentRuns},
+				"unless this thread is about one; for the agent across the workspace use get_workspace_report.",
+		}, handle: e.agentRuns, was: wasNumber()},
 	}
 }
 
@@ -93,8 +94,8 @@ workspaceReport reports on the workspace over a range.
 */
 func (e *Engine) workspaceReport(ctx context.Context, s *session, args json.RawMessage) (result, error) {
 	var in struct {
-		Since string `json:"since"`
-		Until string `json:"until"`
+		Since string `json:"start_date"`
+		Until string `json:"end_date"`
 	}
 	if err := decode(args, &in); err != nil {
 		return result{}, err
@@ -120,7 +121,7 @@ func (e *Engine) workspaceReport(ctx context.Context, s *session, args json.RawM
 	}
 	s.tainted = true
 	summary := fmt.Sprintf("Reported on %s to %s", r.since.Format(time.DateOnly), r.until.Format(time.DateOnly))
-	return result{text: b.String(), step: Step{Tool: "workspace_report", Summary: summary}}, nil
+	return result{text: b.String(), step: Step{Tool: "get_workspace_report", Summary: summary}}, nil
 }
 
 /*
@@ -159,7 +160,7 @@ func (e *Engine) agentRuns(ctx context.Context, s *session, args json.RawMessage
 		b.WriteString("The AI agent has not run on this conversation.")
 	}
 	summary := fmt.Sprintf("Read the AI agent's runs on #%d", loaded.Conversation.Number)
-	return result{text: b.String(), step: Step{Tool: "agent_runs", Summary: summary}}, nil
+	return result{text: b.String(), step: Step{Tool: "get_ai_agent_runs", Summary: summary}}, nil
 }
 
 /*

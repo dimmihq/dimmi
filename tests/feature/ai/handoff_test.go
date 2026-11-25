@@ -61,7 +61,7 @@ func TestAiHandoffs(t *testing.T) {
 		assert.Contains(t, strings.Join(s.timeline(), "\n"), `"name": "ai.handoff_requested"`)
 		assert.Contains(t, strings.Join(s.timeline(), "\n"), `"reason": "refund"`)
 
-		mode := h.llm.answer.Sent()[1].Messages[2].Parts[0].Text
+		mode := lastText(h.llm.answer.Sent()[1])
 		assert.JSONEq(t, `{"ok":true,"mode":"available"}`, mode)
 	})
 
@@ -93,7 +93,7 @@ func TestAiHandoffs(t *testing.T) {
 			s := h.load(conv, res.RunID)
 			assert.Equal(t, "handed_off", s.conv.AiState)
 			assert.Equal(t, false, aiMeta(t, s.agentReplies()[0])["handoff_available"])
-			assert.Contains(t, h.llm.answer.Sent()[1].Messages[2].Parts[0].Text, `"mode":"unavailable"`)
+			assert.Contains(t, lastText(h.llm.answer.Sent()[1]), `"mode":"unavailable"`)
 		})
 
 	t.Run("hands off at the reply limit", func(t *testing.T) {

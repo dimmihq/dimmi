@@ -22,6 +22,8 @@ import (
 
 	"github.com/dimmihq/dimmi/app"
 	"github.com/dimmihq/dimmi/app/actions/knowledge"
+	"github.com/dimmihq/dimmi/app/contracts"
+	rerank "github.com/dimmihq/dimmi/app/drivers/rerank/voyage"
 	appevents "github.com/dimmihq/dimmi/app/events"
 	"github.com/dimmihq/dimmi/app/jobs"
 	"github.com/dimmihq/dimmi/app/managers"
@@ -51,6 +53,20 @@ func bootKnowledge(a *app.App) {
 		return a.Queue.Push(context.WithoutCancel(ctx), jobs.EmbedConversationArgs{
 			WorkspaceID: e.WorkspaceID, ConversationID: e.ConversationID,
 		})
+	})
+}
+
+/*
+builtinReranker is the reranker on the built-in embedder's key, nil
+when the install configured no key or turned reranking off.
+*/
+func builtinReranker(a *app.App) contracts.Reranker {
+	e := a.Config.AI.Managed.Embeddings
+	if e.APIKey == "" || e.RerankModel == "" {
+		return nil
+	}
+	return rerank.New(rerank.Options{
+		BaseURL: e.BaseURL, APIKey: e.APIKey, Model: e.RerankModel, HTTP: a.HTTP, Clock: a.Clock,
 	})
 }
 

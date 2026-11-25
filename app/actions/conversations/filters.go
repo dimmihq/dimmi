@@ -216,7 +216,8 @@ func access(m authz.Membership) querybuilder.Access {
 /*
 aiClause maps the ai filter to its predicate: handed_off for the
 conversations with the team, active for those the agent still
-answers, and any for every conversation the agent touched.
+answers, any for every conversation the agent touched, and transferred
+for those one AI agent handed to another.
 */
 func aiClause(values []string) string {
 	for _, v := range values {
@@ -227,6 +228,8 @@ func aiClause(values []string) string {
 			return "c.ai_state = 'active' AND c.ai_reply_count > 0"
 		case "any":
 			return "(c.ai_reply_count > 0 OR c.ai_state <> 'off')"
+		case "transferred":
+			return "cardinality(c.ai_transferred_from_ids) > 0"
 		}
 	}
 	return ""

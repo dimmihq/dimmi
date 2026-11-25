@@ -361,7 +361,7 @@ func (w *Writer) warnAutoResolve(ctx context.Context, ticket models.Ticket, ty m
 
 	body := fmt.Sprintf("We haven't heard back about **%s**. We'll close this request tomorrow unless you reply.",
 		ticket.Title)
-	if _, err := w.Owner.send(ctx, w.Writer, ticket.WorkspaceID, sendInput{
+	if err := w.Owner.send(ctx, w.Writer, ticket.WorkspaceID, sendInput{
 		conversation: *ticket.ConversationID, body: body, dedupe: "ticket-auto-warn:" + ticket.ID.String(),
 	}); err != nil {
 		return err
@@ -385,7 +385,7 @@ func (w *Writer) resolveWaiting(ctx context.Context, ticket models.Ticket, ty mo
 	}
 
 	if ty.AutoResolveMessage != nil && ticket.ConversationID != nil {
-		if _, err := w.Owner.send(ctx, w.Writer, ticket.WorkspaceID, sendInput{
+		if err := w.Owner.send(ctx, w.Writer, ticket.WorkspaceID, sendInput{
 			conversation: *ticket.ConversationID, body: *ty.AutoResolveMessage,
 			dedupe: "ticket-auto-resolve:" + ticket.ID.String(),
 		}); err != nil {

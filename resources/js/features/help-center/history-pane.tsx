@@ -20,7 +20,13 @@ import { cx } from "@/utils/cx";
 import { ReaderFeedback } from "./reader-feedback";
 import { VersionHistory } from "./version-history";
 
-export type SideView = "history" | "feedback";
+export type SideView = "history" | "feedback" | "operator";
+
+const labels: Record<SideView, string> = {
+  history: "Version history",
+  feedback: "Reader feedback",
+  operator: "Operator",
+};
 
 const pane = { group: "dimmi:article", writer: "writer", history: "history" } as const;
 const visible = { overflow: "visible" } as const;
@@ -29,7 +35,13 @@ const visible = { overflow: "visible" } as const;
  * useHistoryPane says what the side pane shows, opens, swaps or closes
  * it, and lays the writer out beside it.
  */
-export function useHistoryPane(workspace: string, article: string, onRestored: (article: Article) => void) {
+export function useHistoryPane(
+  workspace: string,
+  article: string,
+  onRestored: (article: Article) => void,
+  /* Operator's panel for this article, drawn when the pane shows it. */
+  operator?: (className: string, close: () => void) => ReactNode,
+) {
   const wide = useWide(1024);
   const sides = useSidePanes(
     pane.writer,
@@ -54,7 +66,9 @@ export function useHistoryPane(workspace: string, article: string, onRestored: (
     setDrawer(!drawer);
   };
   const content = (className: string) =>
-    view === "history" ? (
+    view === "operator" && operator ? (
+      operator(className, close)
+    ) : view === "history" ? (
       <VersionHistory
         workspace={workspace}
         article={article}
@@ -76,7 +90,7 @@ export function useHistoryPane(workspace: string, article: string, onRestored: (
             onOpenChange={setDrawer}
             placement="end"
             size="md"
-            aria-label={view === "history" ? "Version history" : "Reader feedback"}
+            aria-label={labels[view]}
             className="p-0"
           >
             {content("h-full")}

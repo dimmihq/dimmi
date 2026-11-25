@@ -194,7 +194,7 @@ func TestWhatsAppTemplateWriting(t *testing.T) {
 		delete(d, "name")
 		delete(d, "language")
 		d["body"] = "Hi {{1}}, order {{2}} is ready to collect."
-		wc.ActingAsOwner().PutJSON(base+"/"+id, d).AssertOK().
+		wc.ActingAsOwner().PatchJSON(base+"/"+id, d).AssertOK().
 			AssertJSONPath("data.content.body", "Hi {{1}}, order {{2}} is ready to collect.")
 
 		wc.ActingAsOwner().Delete(base + "/" + id).AssertStatus(204)

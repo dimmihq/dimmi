@@ -6,11 +6,17 @@ import { useAgentStories } from "../scenes/use-agent-stories";
 
 const tabs = [
   {
-    title: "Answers from your knowledge",
-    body: "It searches your help center and links the article it used. No made-up answers.",
+    title: "Links every source",
+    body: "Reads your help center, links the page it used, and says when it does not know.",
   },
-  { title: "Follows your procedures", body: "It runs the steps you wrote, and asks a human before the risky ones." },
-  { title: "Knows when to stop", body: "When it shouldn't answer, it hands over with a summary for the right team." },
+  {
+    title: "Follows your policies",
+    body: "Handles refunds and account changes in order, respects your limits, and gets tested before going live.",
+  },
+  {
+    title: "Hands over with a summary",
+    body: "Steps back when a teammate joins and leaves a quick note so nobody rereads 30 messages.",
+  },
 ];
 
 export function Agent() {
@@ -20,15 +26,15 @@ export function Agent() {
   return (
     <Section anchor="agent" frameClassName="flex flex-col gap-16 md:gap-20">
       <Intro
-        title="Let the agent take the first reply."
-        body="It works in the same threads as your team, on the messenger, email, Slack, WhatsApp, and the phone."
+        title="An AI agent you can trust near real customers."
+        body="Most bots make things up and charge $0.99 per reply. dimmi cites your docs, follows your steps, and asks before risky actions."
       />
       <div className="flex flex-col gap-10">
         <SplitHead
           tag="AI agent"
-          title="An agent that shows its work."
-          body="You set what it knows, what it can do, and when it hands over. Bring your own model key and an AI conversation costs the same as a human one."
-          link={{ href: "/agent", label: "See the AI agent" }}
+          title="Real sources, simple steps, and honest pricing."
+          body="Pick which channels it covers and what it reads. Bring your own OpenAI or Anthropic keys and cut AI costs by up to 83%."
+          link={{ href: "/agent", label: "Explore the AI agent" }}
         />
         <Panel className="flex justify-center px-4 pt-10 sm:pt-14">
           <AgentDemoCard stories={stories} />

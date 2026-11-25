@@ -16,7 +16,7 @@ export function NotAMember({ slug }: { slug: string }) {
         title="You are not in this workspace"
         description={`The link is for “${slug}”. Ask someone in it to invite you.`}
       >
-        <Button size="small" variant="secondary" onClick={() => window.location.assign("/d")}>
+        <Button size="small" variant="secondary" onClick={() => window.location.assign("/d/inbox")}>
           Go to your inbox
         </Button>
       </EmptyState>

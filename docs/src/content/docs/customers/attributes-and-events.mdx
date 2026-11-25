@@ -1,38 +1,41 @@
 ---
 title: "Use attributes and events"
-description: "The types, limits and trust rules of customer and company attributes, and how dimmi counts events."
+description: "Store custom data on customers and companies, understand trusted vs. untrusted values, and track customer events for audiences."
 ---
 
-**Settings → Attributes** defines the attributes that hold your own data on customers and companies, and lists the events that count what customers do.
+Open **Settings → Attributes** to define custom fields for customers and companies and see the events your app tracks.
 
-## Attribute rules
+## Attribute rules and limits
 
-- **Key:** a lowercase letter, then up to 63 lowercase letters, digits or `_`. A key cannot be a standard field such as `email`, `name` or `created_at`.
-- **Type:** **Text**, **Number**, **Yes or no**, **Date** or **List**. The type never changes. A list holds 1 to 200 values.
-- **Dates:** ISO 8601 text, or Unix time in seconds or milliseconds.
-- **Undefined keys:** a key dimmi first sees in a write takes its type from the value. A key that ends in `_at` becomes a date.
-- **Wrong type:** dimmi drops the value and lists it under **Dropped values** for 30 days.
-- **Limits:** 500 active attributes each for people and companies, 100 keys on one record, 1,024 characters in a text value, no nested values.
-- **Archive:** stops new values and keeps old ones. dimmi refuses while an audience or workflow reads the attribute. **Delete** removes every value.
+- **Key format:** starts with a lowercase letter, followed by up to 63 lowercase letters, digits, or `_`. Cannot match built-in fields like `email`, `name`, or `created_at`.
+- **Types:** **Text**, **Number**, **Yes or no**, **Date**, or **List** (1 to 200 items). Types cannot change after creation.
+- **Date formats:** ISO 8601 strings, or Unix timestamps in seconds or milliseconds.
+- **Auto-created keys:** writing an unknown key creates it based on the value's type. Keys ending in `_at` become dates.
+- **Type mismatches:** invalid values are dropped and shown under **Dropped values** for 30 days.
+- **Limits:** up to 500 active attributes each for people and companies, 100 keys per record, no nested objects.
+- **Archive vs. delete:** archiving blocks new writes while keeping old values (blocked if an audience or workflow still uses it). Deleting removes every stored value.
 
-## Where values come from
+## Where attribute values come from
 
-- The REST API and an [import](/customers/import/).
-- The `custom_attributes` claim of an [identity token](/developers/messenger/identity-verification/).
-- A teammate who edits the customer.
-- The messenger code on your site or app, for the people attributes with **Set from your site** switched on. The switch covers every messenger in the workspace. At most 20 attributes can have it on.
+- Your backend via the REST API or a [CSV import](/customers/import/).
+- The `custom_attributes` claim inside a signed [identity token](/developers/messenger/identity-verification/).
+- A teammate editing the profile in dimmi.
+- Your site's messenger script, for people attributes with **Set from your site** turned on (up to 20 attributes workspace-wide).
 
-## Trusted values
+## Trusted vs. browser values
 
-A value the messenger wrote is not trusted, because anyone can change what a browser sends. Values from the other three sources are trusted.
+Values sent from the browser messenger are untrusted because any visitor can modify client-side code. Values from your API, identity tokens, imports, or teammates are trusted.
 
-Rules that decide who may start a conversation or read a [restricted article](/help-center/limit-articles/) read only trusted values. The dimmi agent passes only trusted values to an [action](/ai/actions/).
+Security-sensitive features only read trusted values:
 
-## Events
+- Audiences controlling who can start a conversation or view [restricted articles](/help-center/limit-articles/).
+- Bound attributes passed by the dimmi agent to your [actions](/ai/actions/).
 
-[Track customer events](/developers/messenger/track-events/) shows how to send them. dimmi keeps a count per customer for each event name, with the first and last time, so an [audience](/customers/audiences/) can ask "did `order.placed` at least 3 times in the last 30 days".
+## Customer events
 
-- A workspace holds 1,000 event names. dimmi defines a name on its first event.
-- An event can be dated up to 30 days back. dimmi moves an earlier date, or one more than 1 hour ahead, to the nearest allowed time.
-- An archived event name takes no new events. Its counts still answer audience rules.
-- When two customers merge, their counts add up.
+Send events from your app or site (see [Track customer events](/developers/messenger/track-events/)). dimmi tracks each event's count, first occurrence, and latest occurrence per customer, so [audiences](/customers/audiences/) can match rules like "`order.placed` at least 3 times in the last 30 days."
+
+- **Event names:** up to 1,000 unique names per workspace, created automatically on first use.
+- **Timestamps:** can be backdated up to 30 days. Timestamps older than 30 days or more than 1 hour in the future clamp to the nearest allowed time.
+- **Archived events:** stop accepting new events while keeping existing counts active for audience rules.
+- **Merged customers:** event counts combine automatically when two customers merge.

@@ -146,6 +146,72 @@ the cache when it was asked before, within the timeout.
 */
 func (v *Vectors) queryVector(ctx context.Context, ws ids.UUID, query string, timeout time.Duration,
 ) (queryVector, error) {
+	out, err := v.queryVectors(ctx, ws, []string{query}, timeout)
+	if err != nil {
+		return queryVector{}, err
+	}
+	return out[0], nil
+}
+
+/*
+queryVectors embeds several queries with the workspace's active model,
+in their order. Those asked before come from the cache; the rest go to
+the model in one request, within the timeout, and the first of them
+carries what that request cost.
+*/
+func (v *Vectors) queryVectors(ctx context.Context, ws ids.UUID, queries []string, timeout time.Duration,
+) ([]queryVector, error) {
+	with, err := v.embedder(ctx, ws)
+	if err != nil {
+		return nil, err
+	}
+	one, model := with.vector, with.model
+	out := make([]queryVector, len(queries))
+	var missing []int
+	for i, query := range queries {
+		out[i] = one
+		cached, err := v.Cache.Get(ctx, queryCacheKey(ws, one.model, query))
+		if err == nil && len(cached) == 4*int(model.Dims) {
+			out[i].vector, out[i].keyID = decodeVector(cached), nil
+			continue
+		}
+		missing = append(missing, i)
+	}
+	if len(missing) == 0 {
+		return out, nil
+	}
+	inputs := make([]string, len(missing))
+	for n, i := range missing {
+		inputs[n] = queries[i]
+	}
+	resp, err := v.embedQueries(ctx, with, inputs, timeout)
+	if err != nil {
+		return nil, err
+	}
+	for n, i := range missing {
+		out[i].vector = resp.Vectors[n]
+		_ = v.Cache.Set(context.WithoutCancel(ctx), queryCacheKey(ws, one.model, queries[i]),
+			encodeVector(out[i].vector), queryVectorTTL)
+	}
+	out[missing[0]].usage = &contracts.LLMUsage{InputTokens: resp.Usage.InputTokens, Reported: resp.Usage.Reported}
+	return out, nil
+}
+
+/*
+embedder is what a workspace embeds its queries with: the model and
+key every query vector carries, the driver that reaches the model, and
+the model itself.
+*/
+type embedder struct {
+	vector queryVector
+	drv    contracts.Embeddings
+	model  ModelKey
+}
+
+/*
+embedder finds what the workspace embeds its queries with.
+*/
+func (v *Vectors) embedder(ctx context.Context, ws ids.UUID) (embedder, error) {
 	var out queryVector
 	var drv contracts.Embeddings
 	var model ModelKey
@@ -164,30 +230,32 @@ func (v *Vectors) queryVector(ctx context.Context, ws ids.UUID, query string, ti
 		drv, err = v.driverFor(ctx, q, ws, binding{model: model, keyID: s.EmbeddingKeyID})
 		return err
 	})
-	if err != nil {
-		return out, err
-	}
-	cacheKey := queryCacheKey(ws, out.model, query)
-	if cached, err := v.Cache.Get(ctx, cacheKey); err == nil && len(cached) == 4*int(model.Dims) {
-		out.vector, out.keyID = decodeVector(cached), nil
-		return out, nil
-	}
+	return embedder{vector: out, drv: drv, model: model}, err
+}
+
+/*
+embedQueries asks the model for the vectors of the queries in one
+request, sent again when the first is slow, within the timeout.
+*/
+func (v *Vectors) embedQueries(ctx context.Context, with embedder, queries []string, timeout time.Duration,
+) (*contracts.EmbedResponse, error) {
+	drv, model := with.drv, with.model
 	embedCtx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
-	resp, err := drv.Embed(embedCtx, contracts.EmbedRequest{
-		Model: model.Model, Inputs: []string{query}, Dimensions: int(model.Dims),
-		InputType: contracts.EmbedInputQuery,
+	hedge := time.Duration(v.Config.Knowledge.QueryEmbedHedgeMS) * time.Millisecond
+	resp, err := hedged(embedCtx, hedge, func(ctx context.Context) (*contracts.EmbedResponse, error) {
+		return drv.Embed(ctx, contracts.EmbedRequest{
+			Model: model.Model, Inputs: queries, Dimensions: int(model.Dims),
+			InputType: contracts.EmbedInputQuery,
+		})
 	})
 	if err != nil {
 		if embedCtx.Err() != nil && ctx.Err() == nil {
-			return out, ErrEmbedTimeout
+			return nil, ErrEmbedTimeout
 		}
-		return out, fmt.Errorf("%w: %w", ErrEmbedFailed, err)
+		return nil, fmt.Errorf("%w: %w", ErrEmbedFailed, err)
 	}
-	out.vector = resp.Vectors[0]
-	out.usage = &contracts.LLMUsage{InputTokens: resp.Usage.InputTokens, Reported: resp.Usage.Reported}
-	_ = v.Cache.Set(context.WithoutCancel(ctx), cacheKey, encodeVector(out.vector), queryVectorTTL)
-	return out, nil
+	return resp, nil
 }
 
 /*

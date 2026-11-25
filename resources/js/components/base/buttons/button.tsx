@@ -56,7 +56,7 @@ import { directionalIconClass } from "@/utils/directional-icon";
  * `variant` to avoid the clash.
  */
 
-type ButtonVariant = "primary" | "secondary" | "ghost" | "danger" | "danger-secondary";
+type ButtonVariant = "primary" | "secondary" | "ghost" | "tertiary" | "danger" | "danger-secondary";
 type ButtonSize = "medium" | "small" | "xs";
 
 type IconComponent = ComponentType<{
@@ -154,6 +154,13 @@ const styles = sortCx({
       "active:bg-background-primary-active active:border-border-button-active",
       "disabled:bg-background-primary-disabled disabled:border-border-button-default disabled:text-text-tertiary disabled:shadow-none",
       "aria-disabled:bg-background-primary-disabled aria-disabled:border-border-button-default aria-disabled:text-text-tertiary aria-disabled:shadow-none",
+    ].join(" "),
+    /* Dimmi: the quietest button, plain text until hovered, like the icon button's quiet variant. */
+    tertiary: [
+      "bg-transparent text-text-secondary",
+      "hover:bg-background-secondary-hover hover:text-text-primary",
+      "active:bg-background-tertiary-default",
+      "disabled:text-text-tertiary aria-disabled:text-text-tertiary",
     ].join(" "),
     ghost: [
       "bg-button-ghost-background text-button-ghost-foreground",

@@ -142,6 +142,29 @@ func (w *riverWorker[A]) Work(ctx context.Context, job *river.Job[A]) error {
 }
 
 /*
+Timer is a worker whose jobs need longer, or shorter, than the queue's
+job timeout.
+*/
+type Timer interface {
+	/*
+		Timeout bounds one run of the worker's jobs.
+	*/
+	Timeout() time.Duration
+}
+
+/*
+Timeout returns the worker's own timeout when it has one, or zero to
+keep the queue's.
+*/
+func (w *riverWorker[A]) Timeout(*river.Job[A]) time.Duration {
+	if t, ok := w.worker.(Timer); ok {
+		return t.Timeout()
+	}
+
+	return 0
+}
+
+/*
 NextRetry returns the time a RetryAfter asked for, or the zero time to
 let River's backoff decide.
 */

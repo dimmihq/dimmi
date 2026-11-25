@@ -40,6 +40,7 @@ import { ActionProvider } from "@/features/inbox/actions/action-provider";
 import { OpenNotificationsContext } from "@/features/notifications/notification-center-context";
 import { NotificationsPanel } from "@/features/notifications/notifications-panel";
 import { useNotificationFocus } from "@/features/notifications/use-notification-focus";
+import { ViewingProvider } from "@/features/operator/viewing-provider";
 import { ConnectionIndicator } from "@/features/realtime/connection-indicator";
 import { type Me, meQuery, signOut } from "@/lib/api/auth";
 import { countsQuery } from "@/lib/api/inbox";
@@ -93,12 +94,14 @@ function useSwitcher(me: Me): DashboardSwitcher {
   return {
     label: current?.name ?? "No workspace",
     initials: initialsOf(current?.name ?? "?"),
+    src: current?.logo_url ?? undefined,
     menuLabel: "Workspaces",
     menu: (close) => (
       <>
         {current && me.workspaces.length < 2 ? (
           <MenuHeader
             initials={initialsOf(current.name)}
+            src={current.logo_url ?? undefined}
             color="neutral"
             name={current.name}
             detail={roleOf(current.role)}
@@ -113,6 +116,7 @@ function useSwitcher(me: Me): DashboardSwitcher {
             rows={me.workspaces.map((workspace) => ({
               key: workspace.id,
               initials: initialsOf(workspace.name),
+              src: workspace.logo_url ?? undefined,
               color: "neutral",
               name: workspace.name,
               detail: roleOf(workspace.role),
@@ -168,6 +172,7 @@ function useAccount(me: Me, workspace: string | undefined): DashboardAccount {
     name: me.user.name,
     detail: me.user.email,
     initials: initialsOf(me.user.name),
+    src: me.user.avatar_url ?? undefined,
     product: "dimmi",
     version: me.instance?.version,
     status: availability.status,
@@ -203,9 +208,11 @@ export function AppShell({ children }: { children: ReactNode }) {
   }
 
   return (
-    <SignedInShell me={me} path={path} drawerOpen={drawerOpen} setDrawerOpen={setDrawerOpen}>
-      {children}
-    </SignedInShell>
+    <ViewingProvider>
+      <SignedInShell me={me} path={path} drawerOpen={drawerOpen} setDrawerOpen={setDrawerOpen}>
+        {children}
+      </SignedInShell>
+    </ViewingProvider>
   );
 }
 

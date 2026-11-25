@@ -5,7 +5,8 @@
 -- reaches only the conversations linked to that tracker, and can leave
 -- out customers still waiting on an answer or already answered since
 -- the tracker last moved. Widening the channel check replaces it, which
--- the lint counts as a contract change.
+-- the lint counts as a contract change. The index on ticket_id is built
+-- in the next migration, without locking broadcasts.
 
 -- +goose Up
 ALTER TABLE broadcasts DROP CONSTRAINT broadcasts_channel_check;
@@ -16,10 +17,8 @@ ALTER TABLE broadcasts ADD COLUMN ticket_id uuid REFERENCES tickets ON DELETE SE
 ALTER TABLE broadcasts ADD COLUMN holds text[] NOT NULL DEFAULT '{}'
     CHECK (holds <@ ARRAY['customer_waiting', 'team_replied']::text[]);
 
-CREATE INDEX broadcasts_ticket_id_index ON broadcasts (ticket_id) WHERE ticket_id IS NOT NULL;
 
 -- +goose Down
-DROP INDEX broadcasts_ticket_id_index;
 ALTER TABLE broadcasts DROP COLUMN holds;
 ALTER TABLE broadcasts DROP COLUMN ticket_id;
 DELETE FROM broadcasts WHERE channel = 'conversation';

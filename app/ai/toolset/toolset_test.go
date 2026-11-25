@@ -275,3 +275,18 @@ func TestCompactWritesLinesAndShortIDs(t *testing.T) {
 		t.Fatal("compact is off unless asked for")
 	}
 }
+
+func TestCompactKeepsAnIDInsideALinkWhole(t *testing.T) {
+	t.Parallel()
+	set := toolset.New(nil, nil, nil).WithCompact()
+	id := "conv_01m41tf6p5f4dt208frcwhqeby"
+
+	out := set.Compact("Conversation #7 (id " + id + ")\nLink: https://app.example.test/d/acme/inbox/all/" + id)
+
+	if !strings.Contains(out, "(id c1)") {
+		t.Errorf("the id on its own should be shortened, got %q", out)
+	}
+	if !strings.Contains(out, "/inbox/all/"+id) {
+		t.Errorf("the id inside the link should stay whole, got %q", out)
+	}
+}

@@ -21,16 +21,17 @@ import (
 The run outcomes a decision can carry.
 */
 const (
-	outcomeAnswered   = "answered"
-	outcomeUnknown    = "unknown"
-	outcomeHandoff    = "handoff"
-	outcomeSilent     = "silent"
-	outcomeGreeted    = "greeted"
-	outcomeRefused    = "refused"
-	outcomeSkipped    = "skipped"
-	outcomeSuperseded = "superseded"
-	outcomeError      = "error"
-	outcomeDrafted    = "drafted"
+	outcomeAnswered    = "answered"
+	outcomeUnknown     = "unknown"
+	outcomeHandoff     = "handoff"
+	outcomeSilent      = "silent"
+	outcomeGreeted     = "greeted"
+	outcomeRefused     = "refused"
+	outcomeSkipped     = "skipped"
+	outcomeSuperseded  = "superseded"
+	outcomeError       = "error"
+	outcomeDrafted     = "drafted"
+	outcomeTransferred = "transferred"
 )
 
 /*
@@ -142,7 +143,7 @@ writesMessage reports whether the decision posts a reply.
 */
 func (d *decision) writesMessage() bool {
 	switch d.outcome {
-	case outcomeSkipped, outcomeSilent, outcomeSuperseded:
+	case outcomeSkipped, outcomeSilent, outcomeSuperseded, outcomeTransferred:
 		return false
 	}
 	return true

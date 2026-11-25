@@ -46,7 +46,7 @@ func TestHelpCenterMessenger(t *testing.T) {
 		t.Parallel()
 		team, ai, elsewhere := newCenter(t), newCenter(t), newCenter(t)
 		for _, c := range []center{ai, elsewhere} {
-			c.d.Owner.GetJSON("/api/v1/ai/agent").AssertOK()
+			c.d.Owner.GetJSON("/api/v1/ai/agents").AssertOK()
 		}
 		agent := func(c center, sql string) {
 			_, err := c.d.TC.Operator().Exec(t.Context(), sql, c.d.TC.Workspace.Workspace.ID)

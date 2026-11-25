@@ -51,6 +51,7 @@ type AiAction struct {
 	CreatedAt              time.Time       `json:"created_at"`
 	UpdatedAt              time.Time       `json:"updated_at"`
 	Agents                 []string        `json:"agents"`
+	LastTestResponse       json.RawMessage `json:"last_test_response"`
 }
 
 type AiActionCall struct {
@@ -183,6 +184,65 @@ type AiAgent struct {
 	CompactResults               bool            `json:"compact_results"`
 	SearchResults                int16           `json:"search_results"`
 	CarryPassages                bool            `json:"carry_passages"`
+	IsDefault                    bool            `json:"is_default"`
+	Role                         string          `json:"role"`
+	TemplateKey                  *string         `json:"template_key"`
+	Status                       string          `json:"status"`
+	LockVersion                  int32           `json:"lock_version"`
+	Draft                        json.RawMessage `json:"draft"`
+	KnowledgeScope               json.RawMessage `json:"knowledge_scope"`
+	ProcedureScope               json.RawMessage `json:"procedure_scope"`
+	ActionScope                  json.RawMessage `json:"action_scope"`
+	TransferAgentIds             []ids.UUID      `json:"transfer_agent_ids"`
+	PublishedAt                  *time.Time      `json:"published_at"`
+	CreatedByMemberID            *ids.UUID       `json:"created_by_member_id"`
+	UpdatedByMemberID            *ids.UUID       `json:"updated_by_member_id"`
+	LiveVersionID                *ids.UUID       `json:"live_version_id"`
+	Description                  string          `json:"description"`
+}
+
+type AiAgentTestCase struct {
+	ID                   ids.UUID        `json:"id"`
+	WorkspaceID          ids.UUID        `json:"workspace_id"`
+	AgentID              ids.UUID        `json:"agent_id"`
+	Name                 string          `json:"name"`
+	SourceConversationID *ids.UUID       `json:"source_conversation_id"`
+	Persona              json.RawMessage `json:"persona"`
+	Messages             json.RawMessage `json:"messages"`
+	ActionMocks          json.RawMessage `json:"action_mocks"`
+	Assertions           json.RawMessage `json:"assertions"`
+	SimulatedAt          *time.Time      `json:"simulated_at"`
+	DraftResult          json.RawMessage `json:"draft_result"`
+	LiveResult           json.RawMessage `json:"live_result"`
+	CreatedByMemberID    *ids.UUID       `json:"created_by_member_id"`
+	CreatedAt            time.Time       `json:"created_at"`
+	UpdatedAt            time.Time       `json:"updated_at"`
+	Scenario             string          `json:"scenario"`
+	DraftHistory         json.RawMessage `json:"draft_history"`
+	LiveHistory          json.RawMessage `json:"live_history"`
+}
+
+type AiAgentTestCaseRun struct {
+	ID          ids.UUID        `json:"id"`
+	WorkspaceID ids.UUID        `json:"workspace_id"`
+	TestCaseID  ids.UUID        `json:"test_case_id"`
+	Version     string          `json:"version"`
+	Fingerprint string          `json:"fingerprint"`
+	Passed      bool            `json:"passed"`
+	Errored     bool            `json:"errored"`
+	Result      json.RawMessage `json:"result"`
+	RanAt       time.Time       `json:"ran_at"`
+}
+
+type AiAgentVersion struct {
+	ID                  ids.UUID        `json:"id"`
+	WorkspaceID         ids.UUID        `json:"workspace_id"`
+	AgentID             ids.UUID        `json:"agent_id"`
+	Version             int32           `json:"version"`
+	Definition          json.RawMessage `json:"definition"`
+	ChangeNote          *string         `json:"change_note"`
+	PublishedByMemberID *ids.UUID       `json:"published_by_member_id"`
+	PublishedAt         time.Time       `json:"published_at"`
 }
 
 type AiProviderKey struct {
@@ -258,6 +318,7 @@ type AiRun struct {
 	FeedbackAt          *time.Time      `json:"feedback_at"`
 	ShadowAgreed        *bool           `json:"shadow_agreed"`
 	ToolLayer           json.RawMessage `json:"tool_layer"`
+	ProcedureTrace      json.RawMessage `json:"procedure_trace"`
 }
 
 type AiRunStep struct {
@@ -296,20 +357,22 @@ type AiRunStep struct {
 }
 
 type AiSpendPeriod struct {
-	WorkspaceID        ids.UUID    `json:"workspace_id"`
-	PeriodStart        pgtype.Date `json:"period_start"`
-	CostMicros         int64       `json:"cost_micros"`
-	InputTokens        int64       `json:"input_tokens"`
-	CachedInputTokens  int64       `json:"cached_input_tokens"`
-	OutputTokens       int64       `json:"output_tokens"`
-	RunsCount          int32       `json:"runs_count"`
-	AnsweredCount      int32       `json:"answered_count"`
-	UnknownCount       int32       `json:"unknown_count"`
-	HandoffCount       int32       `json:"handoff_count"`
-	SilentCount        int32       `json:"silent_count"`
-	ThresholdsNotified []int32     `json:"thresholds_notified"`
-	CappedAt           *time.Time  `json:"capped_at"`
-	UpdatedAt          time.Time   `json:"updated_at"`
+	WorkspaceID          ids.UUID    `json:"workspace_id"`
+	PeriodStart          pgtype.Date `json:"period_start"`
+	CostMicros           int64       `json:"cost_micros"`
+	InputTokens          int64       `json:"input_tokens"`
+	CachedInputTokens    int64       `json:"cached_input_tokens"`
+	OutputTokens         int64       `json:"output_tokens"`
+	RunsCount            int32       `json:"runs_count"`
+	AnsweredCount        int32       `json:"answered_count"`
+	UnknownCount         int32       `json:"unknown_count"`
+	HandoffCount         int32       `json:"handoff_count"`
+	SilentCount          int32       `json:"silent_count"`
+	ThresholdsNotified   []int32     `json:"thresholds_notified"`
+	CappedAt             *time.Time  `json:"capped_at"`
+	UpdatedAt            time.Time   `json:"updated_at"`
+	SimulationCostMicros int64       `json:"simulation_cost_micros"`
+	SimulationRunsCount  int32       `json:"simulation_runs_count"`
 }
 
 type Article struct {
@@ -692,6 +755,7 @@ type ChannelConnection struct {
 	CreatedAt                 time.Time         `json:"created_at"`
 	UpdatedAt                 time.Time         `json:"updated_at"`
 	IntegrationInstallationID *ids.UUID         `json:"integration_installation_id"`
+	AiAgentID                 *ids.UUID         `json:"ai_agent_id"`
 }
 
 type ChannelContactState struct {
@@ -783,6 +847,7 @@ type ChannelRoom struct {
 	RemovedAt           *time.Time      `json:"removed_at"`
 	CreatedAt           time.Time       `json:"created_at"`
 	UpdatedAt           time.Time       `json:"updated_at"`
+	AiAgentID           *ids.UUID       `json:"ai_agent_id"`
 }
 
 type ChannelSocketSession struct {
@@ -981,6 +1046,8 @@ type Conversation struct {
 	WorkflowRunID          *ids.UUID               `json:"workflow_run_id"`
 	AiMode                 string                  `json:"ai_mode"`
 	AiMemory               json.RawMessage         `json:"ai_memory"`
+	AiAgentID              *ids.UUID               `json:"ai_agent_id"`
+	AiTransferredFromIds   []ids.UUID              `json:"ai_transferred_from_ids"`
 }
 
 type ConversationDraft struct {
@@ -1055,6 +1122,7 @@ type ConversationFact struct {
 	AiConfirmed                  bool       `json:"ai_confirmed"`
 	AiCostMicros                 int64      `json:"ai_cost_micros"`
 	ComputedAt                   time.Time  `json:"computed_at"`
+	AiAgentID                    *ids.UUID  `json:"ai_agent_id"`
 }
 
 type ConversationMemberFact struct {
@@ -1074,6 +1142,24 @@ type ConversationParticipant struct {
 	ContactID      ids.UUID  `json:"contact_id"`
 	Role           string    `json:"role"`
 	CreatedAt      time.Time `json:"created_at"`
+}
+
+type ConversationProcedureState struct {
+	ID                 ids.UUID        `json:"id"`
+	WorkspaceID        ids.UUID        `json:"workspace_id"`
+	ConversationID     ids.UUID        `json:"conversation_id"`
+	ProcedureID        ids.UUID        `json:"procedure_id"`
+	ProcedureVersionID *ids.UUID       `json:"procedure_version_id"`
+	Status             string          `json:"status"`
+	CompletedStepIds   []string        `json:"completed_step_ids"`
+	CalledActionIds    []string        `json:"called_action_ids"`
+	StepOutputs        json.RawMessage `json:"step_outputs"`
+	StartedRunID       *ids.UUID       `json:"started_run_id"`
+	LastRunID          *ids.UUID       `json:"last_run_id"`
+	StartedAt          time.Time       `json:"started_at"`
+	UpdatedAt          time.Time       `json:"updated_at"`
+	EndedAt            *time.Time      `json:"ended_at"`
+	Branches           json.RawMessage `json:"branches"`
 }
 
 type ConversationRating struct {
@@ -1319,7 +1405,7 @@ type EmailSignature struct {
 type EmailSuppression struct {
 	ID                ids.UUID        `json:"id"`
 	WorkspaceID       ids.UUID        `json:"workspace_id"`
-	Email             string          `json:"email"`
+	Email             *string         `json:"email"`
 	Reason            string          `json:"reason"`
 	Scope             string          `json:"scope"`
 	Source            string          `json:"source"`
@@ -1329,6 +1415,7 @@ type EmailSuppression struct {
 	CreatedByMemberID *ids.UUID       `json:"created_by_member_id"`
 	CreatedAt         time.Time       `json:"created_at"`
 	UpdatedAt         time.Time       `json:"updated_at"`
+	EmailHash         *string         `json:"email_hash"`
 }
 
 type EmailThread struct {
@@ -1490,6 +1577,13 @@ type HelpCenterDomain struct {
 	VerifiedAt        *time.Time `json:"verified_at"`
 	CreatedAt         time.Time  `json:"created_at"`
 	UpdatedAt         time.Time  `json:"updated_at"`
+}
+
+type HelpCenterImage struct {
+	ID          ids.UUID  `json:"id"`
+	WorkspaceID ids.UUID  `json:"workspace_id"`
+	Path        string    `json:"path"`
+	CreatedAt   time.Time `json:"created_at"`
 }
 
 type HelpCenterRedirect struct {
@@ -1661,6 +1755,7 @@ type Inbox struct {
 	Access        string          `json:"access"`
 	ScheduleID    *ids.UUID       `json:"schedule_id"`
 	TicketTypeID  *ids.UUID       `json:"ticket_type_id"`
+	AiAgentID     *ids.UUID       `json:"ai_agent_id"`
 }
 
 type InboxAccess struct {
@@ -2159,6 +2254,11 @@ type OperatorChangeset struct {
 	RevertedAt        *time.Time      `json:"reverted_at"`
 	CreatedAt         time.Time       `json:"created_at"`
 	UpdatedAt         time.Time       `json:"updated_at"`
+	RoutineID         *ids.UUID       `json:"routine_id"`
+	RoutineRunID      *ids.UUID       `json:"routine_run_id"`
+	DedupKey          *string         `json:"dedup_key"`
+	Preview           bool            `json:"preview"`
+	ExpiresAt         *time.Time      `json:"expires_at"`
 }
 
 type OperatorMemory struct {
@@ -2179,6 +2279,71 @@ type OperatorMessage struct {
 	Status      string          `json:"status"`
 	RunID       *ids.UUID       `json:"run_id"`
 	CreatedAt   time.Time       `json:"created_at"`
+}
+
+type OperatorRoutine struct {
+	ID                     ids.UUID        `json:"id"`
+	WorkspaceID            ids.UUID        `json:"workspace_id"`
+	Name                   string          `json:"name"`
+	Description            string          `json:"description"`
+	TemplateKey            *string         `json:"template_key"`
+	Prompt                 string          `json:"prompt"`
+	Cadence                string          `json:"cadence"`
+	CronExpr               *string         `json:"cron_expr"`
+	RunAt                  *time.Time      `json:"run_at"`
+	Timezone               string          `json:"timezone"`
+	NextRunAt              *time.Time      `json:"next_run_at"`
+	CreatedByMemberID      *ids.UUID       `json:"created_by_member_id"`
+	OwnerMemberID          *ids.UUID       `json:"owner_member_id"`
+	Permissions            []string        `json:"permissions"`
+	ToolGroups             []string        `json:"tool_groups"`
+	InboxIds               []ids.UUID      `json:"inbox_ids"`
+	WritePolicies          json.RawMessage `json:"write_policies"`
+	Scope                  json.RawMessage `json:"scope"`
+	Model                  *string         `json:"model"`
+	Effort                 *string         `json:"effort"`
+	MaxModelCalls          int32           `json:"max_model_calls"`
+	MaxToolCalls           int32           `json:"max_tool_calls"`
+	MonthlyBudgetMicros    *int64          `json:"monthly_budget_micros"`
+	NotifyPolicy           string          `json:"notify_policy"`
+	Delivery               json.RawMessage `json:"delivery"`
+	State                  json.RawMessage `json:"state"`
+	Status                 string          `json:"status"`
+	PauseReason            *string         `json:"pause_reason"`
+	ConsecutiveFailures    int32           `json:"consecutive_failures"`
+	MaxConsecutiveFailures int32           `json:"max_consecutive_failures"`
+	LastRunAt              *time.Time      `json:"last_run_at"`
+	LastSuccessAt          *time.Time      `json:"last_success_at"`
+	LastOutcome            *string         `json:"last_outcome"`
+	DeletedAt              *time.Time      `json:"deleted_at"`
+	CreatedAt              time.Time       `json:"created_at"`
+	UpdatedAt              time.Time       `json:"updated_at"`
+}
+
+type OperatorRoutineRun struct {
+	ID                  ids.UUID        `json:"id"`
+	WorkspaceID         ids.UUID        `json:"workspace_id"`
+	RoutineID           ids.UUID        `json:"routine_id"`
+	Trigger             string          `json:"trigger"`
+	TriggeredByMemberID *ids.UUID       `json:"triggered_by_member_id"`
+	ScheduledFor        *time.Time      `json:"scheduled_for"`
+	ThreadID            *ids.UUID       `json:"thread_id"`
+	AiRunID             *ids.UUID       `json:"ai_run_id"`
+	Status              string          `json:"status"`
+	Outcome             *string         `json:"outcome"`
+	NoopReason          *string         `json:"noop_reason"`
+	SkipReason          *string         `json:"skip_reason"`
+	ErrorCode           *string         `json:"error_code"`
+	ErrorMessage        *string         `json:"error_message"`
+	ChangesetsCount     int32           `json:"changesets_count"`
+	CostMicros          int64           `json:"cost_micros"`
+	Notified            bool            `json:"notified"`
+	DeliveryResults     json.RawMessage `json:"delivery_results"`
+	StartedAt           *time.Time      `json:"started_at"`
+	CompletedAt         *time.Time      `json:"completed_at"`
+	CreatedAt           time.Time       `json:"created_at"`
+	UpdatedAt           time.Time       `json:"updated_at"`
+	Steps               json.RawMessage `json:"steps"`
 }
 
 type OperatorSetting struct {
@@ -2209,12 +2374,14 @@ type OperatorSlackThread struct {
 type OperatorThread struct {
 	ID             ids.UUID   `json:"id"`
 	WorkspaceID    ids.UUID   `json:"workspace_id"`
-	MemberID       ids.UUID   `json:"member_id"`
+	MemberID       *ids.UUID  `json:"member_id"`
 	ConversationID *ids.UUID  `json:"conversation_id"`
 	Title          string     `json:"title"`
 	LastMessageAt  *time.Time `json:"last_message_at"`
 	CreatedAt      time.Time  `json:"created_at"`
 	UpdatedAt      time.Time  `json:"updated_at"`
+	RoutineID      *ids.UUID  `json:"routine_id"`
+	RoutineRunID   *ids.UUID  `json:"routine_run_id"`
 }
 
 type Organization struct {
@@ -2299,19 +2466,52 @@ type PersonalAccessToken struct {
 }
 
 type Procedure struct {
-	ID                ids.UUID        `json:"id"`
-	WorkspaceID       ids.UUID        `json:"workspace_id"`
-	Name              string          `json:"name"`
-	Status            string          `json:"status"`
-	Draft             json.RawMessage `json:"draft"`
-	Live              json.RawMessage `json:"live"`
-	LockVersion       int32           `json:"lock_version"`
-	CreatedByMemberID *ids.UUID       `json:"created_by_member_id"`
-	UpdatedByMemberID *ids.UUID       `json:"updated_by_member_id"`
-	PublishedAt       *time.Time      `json:"published_at"`
-	DeletedAt         *time.Time      `json:"deleted_at"`
-	CreatedAt         time.Time       `json:"created_at"`
-	UpdatedAt         time.Time       `json:"updated_at"`
+	ID                   ids.UUID             `json:"id"`
+	WorkspaceID          ids.UUID             `json:"workspace_id"`
+	Name                 string               `json:"name"`
+	Status               string               `json:"status"`
+	Draft                json.RawMessage      `json:"draft"`
+	Live                 json.RawMessage      `json:"live"`
+	LockVersion          int32                `json:"lock_version"`
+	CreatedByMemberID    *ids.UUID            `json:"created_by_member_id"`
+	UpdatedByMemberID    *ids.UUID            `json:"updated_by_member_id"`
+	PublishedAt          *time.Time           `json:"published_at"`
+	DeletedAt            *time.Time           `json:"deleted_at"`
+	CreatedAt            time.Time            `json:"created_at"`
+	UpdatedAt            time.Time            `json:"updated_at"`
+	LiveVersionID        *ids.UUID            `json:"live_version_id"`
+	DescriptionEmbedding *database.HalfVector `json:"description_embedding"`
+	EmbeddingModelKey    *string              `json:"embedding_model_key"`
+}
+
+type ProcedureTestCase struct {
+	ID                   ids.UUID        `json:"id"`
+	WorkspaceID          ids.UUID        `json:"workspace_id"`
+	ProcedureID          ids.UUID        `json:"procedure_id"`
+	Name                 string          `json:"name"`
+	SourceConversationID *ids.UUID       `json:"source_conversation_id"`
+	Persona              json.RawMessage `json:"persona"`
+	Messages             json.RawMessage `json:"messages"`
+	ActionMocks          json.RawMessage `json:"action_mocks"`
+	Assertions           json.RawMessage `json:"assertions"`
+	LastResult           json.RawMessage `json:"last_result"`
+	CreatedByMemberID    *ids.UUID       `json:"created_by_member_id"`
+	CreatedAt            time.Time       `json:"created_at"`
+	UpdatedAt            time.Time       `json:"updated_at"`
+	SimulatedAt          *time.Time      `json:"simulated_at"`
+	Scenario             string          `json:"scenario"`
+}
+
+type ProcedureVersion struct {
+	ID                  ids.UUID        `json:"id"`
+	WorkspaceID         ids.UUID        `json:"workspace_id"`
+	ProcedureID         ids.UUID        `json:"procedure_id"`
+	Version             int32           `json:"version"`
+	Name                string          `json:"name"`
+	Definition          json.RawMessage `json:"definition"`
+	ChangeNote          *string         `json:"change_note"`
+	PublishedByMemberID *ids.UUID       `json:"published_by_member_id"`
+	PublishedAt         time.Time       `json:"published_at"`
 }
 
 type PushSubscription struct {
@@ -3168,6 +3368,19 @@ type Workspace struct {
 	LogoPath               *string         `json:"logo_path"`
 	TicketSettings         json.RawMessage `json:"ticket_settings"`
 	NextTicketNumber       int64           `json:"next_ticket_number"`
+}
+
+type WorkspaceAiSetting struct {
+	WorkspaceID           ids.UUID  `json:"workspace_id"`
+	AnswerKeyID           *ids.UUID `json:"answer_key_id"`
+	AnswerModel           *string   `json:"answer_model"`
+	ClassifierKeyID       *ids.UUID `json:"classifier_key_id"`
+	ClassifierModel       *string   `json:"classifier_model"`
+	FallbackKeyID         *ids.UUID `json:"fallback_key_id"`
+	FallbackModel         *string   `json:"fallback_model"`
+	MonthlySpendCapMicros *int64    `json:"monthly_spend_cap_micros"`
+	CreatedAt             time.Time `json:"created_at"`
+	UpdatedAt             time.Time `json:"updated_at"`
 }
 
 type WorkspaceMember struct {

@@ -4,7 +4,7 @@ import { pickView } from "./support/inbox";
 const pages = [
   ["Workflows", "/d/workflows"],
   ["Procedures", "/d/procedures"],
-  ["Agent", "/d/agent"],
+  ["Agents", "/d/agents"],
   ["Help center", "/d/help-center"],
   ["Feature requests", "/d/feedback"],
   ["Changelog", "/d/changelog"],
@@ -29,7 +29,7 @@ it.describe("the app's frame", () => {
     await signIn(page, person);
   });
 
-  it("opens on the inbox with the person's workspace in the switcher", async ({ page, person }) => {
+  it("opens the inbox with the person's workspace in the switcher", async ({ page, person }) => {
     await expect(page).toHaveURL(inbox);
     await expect(page.getByRole("button", { name: workspaceOf(person) })).toBeVisible();
     await expect(page.getByRole("button", { name: person.name, exact: true })).toBeVisible();
@@ -113,7 +113,7 @@ it.describe("the app's frame", () => {
 
     await page.getByRole("link", { name: "Members" }).click();
     await expect(page).toHaveURL(/\/d\/[^/]+\/settings\/members$/);
-    await expect(page.getByRole("link", { name: "Agent", exact: true })).toBeHidden();
+    await expect(page.getByRole("link", { name: "Agents", exact: true })).toBeHidden();
 
     await page.getByRole("link", { name: "Back to inbox" }).click();
     await expect(page).toHaveURL(inbox);
@@ -122,7 +122,7 @@ it.describe("the app's frame", () => {
   it("folds the sidebar on pages with a side panel of their own, and opens it by hand", async ({ page }) => {
     await expect(page.getByRole("button", { name: "Expand sidebar" })).toBeVisible();
 
-    await page.getByRole("link", { name: "Agent" }).click();
+    await page.getByRole("link", { name: "Agents", exact: true }).click();
     await expect(page.getByRole("button", { name: "Collapse sidebar" })).toBeVisible();
 
     await page.getByRole("link", { name: "Broadcasts" }).click();

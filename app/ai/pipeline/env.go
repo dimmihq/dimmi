@@ -29,6 +29,7 @@ import (
 
 	"github.com/dimmihq/dimmi/app/actions/schedules"
 	"github.com/dimmihq/dimmi/app/actions/tickets"
+	"github.com/dimmihq/dimmi/app/ai/agents"
 	"github.com/dimmihq/dimmi/app/enums"
 	"github.com/dimmihq/dimmi/app/models"
 	"github.com/dimmihq/dimmi/app/support/workflowspec"
@@ -43,26 +44,34 @@ const transcriptSize = 30
 env is the run's loaded world.
 */
 type env struct {
-	Workspace     models.Workspace
-	Agent         models.AiAgent
-	Conversation  models.Conversation
-	Contact       *models.Contact
-	Trigger       models.Message
-	History       []models.Message
-	Pending       []models.Message
-	Newest        ids.UUID
-	ReplyAfter    string
-	ChannelType   string
-	AnswerKey     *models.AiProviderKey
-	ClassifierKey *models.AiProviderKey
-	Facts         facts
-	Triage        triageFacts
-	Version       string
-	Defaults      map[string]string
-	WorkflowStep  *workflowspec.AgentHandling
-	Procedures    []liveProcedure
-	TicketTypes   []tickets.AgentType
-	now           time.Time
+	Workspace       models.Workspace
+	Agent           models.AiAgent
+	Conversation    models.Conversation
+	Contact         *models.Contact
+	Trigger         models.Message
+	History         []models.Message
+	Pending         []models.Message
+	Newest          ids.UUID
+	ReplyAfter      string
+	ChannelType     string
+	AnswerKey       *models.AiProviderKey
+	ClassifierKey   *models.AiProviderKey
+	Facts           facts
+	Triage          triageFacts
+	Version         string
+	Defaults        map[string]string
+	WorkflowStep    *workflowspec.AgentHandling
+	Procedures      []liveProcedure
+	AllProcedures   []liveProcedure
+	ActiveProcedure *activeProcedure
+	TicketTypes     []tickets.AgentType
+	// GuidanceArticles names the articles the agent's guidance cites,
+	// by public id.
+	GuidanceArticles map[string]string
+	// TransferTargets are the agents the answering agent may hand the
+	// conversation to.
+	TransferTargets []models.AiAgent
+	now             time.Time
 }
 
 /*
@@ -94,34 +103,61 @@ func (r *Runner) loadEnv(ctx context.Context, tx *database.Tx, args Args) (*env,
 		return nil, fmt.Errorf("find conversation: %w", err)
 	}
 
-	agent, err := q.FindAgent(ctx, conv.WorkspaceID)
-	if errors.Is(err, database.ErrNotFound) {
-		return nil, nil
-	}
-	if err != nil {
-		return nil, fmt.Errorf("find agent: %w", err)
-	}
-
 	ws, err := q.FindWorkspace(ctx, conv.WorkspaceID)
 	if err != nil {
 		return nil, fmt.Errorf("find workspace: %w", err)
 	}
 
-	e := &env{Workspace: ws, Agent: agent, Conversation: conv, now: r.Clock.Now()}
-	if err := r.loadMessages(ctx, q, e, args.TriggerMessageID); err != nil {
-		return nil, err
-	}
-	r.loadConnections(ctx, q, e)
+	e := &env{Workspace: ws, Conversation: conv, now: r.Clock.Now()}
 	if err := loadWorkflowStep(ctx, q, e); err != nil {
 		return nil, err
 	}
 
-	if err := loadProcedures(ctx, q, e); err != nil {
+	if found, err := loadAgent(ctx, q, e); err != nil || !found {
 		return nil, err
 	}
-	loadTicketContext(ctx, q, e)
 
-	return e, r.loadFacts(ctx, q, e)
+	if err := r.loadMessages(ctx, q, e, args.TriggerMessageID); err != nil {
+		return nil, err
+	}
+	r.loadConnections(ctx, q, e)
+
+	loadTicketContext(ctx, q, e)
+	if err := r.loadFacts(ctx, q, e); err != nil {
+		return nil, err
+	}
+	if err := r.loadProcedures(ctx, q, e); err != nil {
+		return nil, err
+	}
+
+	return e, loadActiveProcedure(ctx, q, e)
+}
+
+/*
+loadAgent resolves the agent that answers the conversation, the one a
+workflow step names first, and pins it to the conversation when it is
+on. A workspace without an agent finds none.
+*/
+func loadAgent(ctx context.Context, q *models.Queries, e *env) (bool, error) {
+	var stepAgent *ids.UUID
+	if e.WorkflowStep != nil {
+		stepAgent = e.WorkflowStep.AgentID
+	}
+	agent, err := agents.Answerer(ctx, q, agents.ForConversation(e.Conversation, stepAgent))
+	if errors.Is(err, agents.ErrNoAgent) {
+		return false, nil
+	}
+	if err != nil {
+		return false, err
+	}
+	e.Agent = agent
+	if err := loadAgentExtras(ctx, q, e); err != nil {
+		return false, err
+	}
+	if agent.Enabled {
+		return true, agents.Pin(ctx, q, e.Conversation, agent.ID)
+	}
+	return true, nil
 }
 
 /*

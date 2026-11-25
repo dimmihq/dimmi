@@ -22,83 +22,83 @@ import {
 import { FinalCta } from "../sections/final-cta";
 
 const reports = [
-  { icon: ChartBar, title: "Overview", body: "New and closed conversations, the busiest hours, and the backlog." },
-  { icon: Gauge, title: "Responsiveness", body: "First response and reply time as median, 90th percentile, and mean." },
+  { icon: ChartBar, title: "Overview", body: "New and closed chats, busiest hours, and your open backlog." },
+  { icon: Gauge, title: "Speed", body: "First reply and next reply times as median, p90, and average." },
   {
     icon: CheckCircle,
     title: "Resolution",
-    body: "Time to resolve, first contact resolution, and how often conversations reopen.",
+    body: "Time to resolve, solves on the first reply, and how often chats reopen.",
   },
-  { icon: UsersThree, title: "Team and teammates", body: "Replies, closes, reply times, and CSAT for each person." },
-  { icon: Pulse, title: "Live workload", body: "What's open, unassigned, and waiting right now. It refreshes itself." },
-  { icon: Smiley, title: "Satisfaction", body: "CSAT, the spread of ratings, and who earned them." },
-  { icon: Sparkle, title: "dimmi AI", body: "How often the agent joins, resolves, and hands off. And why." },
-  { icon: Article, title: "Help center", body: "The most read articles, and the searches that found nothing." },
-  { icon: Ticket, title: "Tickets and SLAs", body: "Tickets by type, time in each state, and service levels kept." },
+  { icon: UsersThree, title: "Team and teammates", body: "Replies, closes, response times, and CSAT for each person." },
+  { icon: Pulse, title: "Live queue", body: "See what is open, unassigned, and waiting right now in real time." },
+  { icon: Smiley, title: "Satisfaction", body: "CSAT scores, rating spread, and who earned every review." },
+  { icon: Sparkle, title: "AI agent", body: "How often the agent replies, solves, and hands off, plus why." },
+  { icon: Article, title: "Help center", body: "Top articles and searches that returned zero results." },
+  { icon: Ticket, title: "Tickets and SLAs", body: "Tickets by type, time in each state, and SLA targets met." },
 ];
 
 const rows = [
   {
     label: "AI agent",
-    title: "What the agent resolved, and what it didn't.",
-    body: "See how often the AI joins a conversation and how often it resolves one. You also get the reasons it handed over and the questions it couldn't answer.",
+    title: "See what AI solved and where it handed off.",
+    body: "Track AI resolutions, unanswered questions, and every procedure side by side, including handovers, CSAT, and safety checks.",
     visual: <AiFragment />,
   },
   {
     label: "Satisfaction",
-    title: "Ask customers how it went.",
-    body: "Customers rate a closed conversation in one click, from the messenger or email. CSAT is the share of fours and fives, credited to whoever helped.",
+    title: "Collect CSAT right when a chat closes.",
+    body: "Customers rate support in one click inside the messenger or email. CSAT counts fours and fives out of five, credited to whoever helped.",
     visual: <SatisfactionFragment />,
   },
   {
     label: "Team",
-    title: "Fair numbers for every teammate.",
-    body: "Replies, closes, response times, and ratings per person and per team. Count business hours only, and nights and weekends stop skewing the times.",
+    title: "Fair numbers that respect office hours.",
+    body: "Track replies, closes, speed, and CSAT per teammate or team. Count office hours only so nights and weekends never skew response times.",
     visual: <TeamFragment />,
   },
   {
     label: "Drill in",
-    title: "Every number opens its conversations.",
-    body: "Click a number or a bar to see the conversations behind it. Open any of them in the inbox. There's no number you can't check.",
+    title: "Every chart opens the real chats behind it.",
+    body: "Click any number or bar to see the exact conversations inside it, and open any thread in your inbox to check what happened.",
     visual: <DrillFragment />,
   },
   {
     label: "Digests and exports",
-    title: "The numbers come to you.",
-    body: "Get the main numbers by email, daily or weekly, set against the period before. Export one row per conversation as a spreadsheet for your own tools.",
+    title: "Send summaries to your inbox, or export raw data.",
+    body: "Get daily or weekly email digests compared against the prior period, or export one CSV row per conversation for your own tools.",
     visual: <DigestFragment />,
   },
 ];
 
 const questions = [
   {
-    question: "Can I filter, or is it one big average?",
+    question: "Can I slice reports by team, channel, or tag?",
     answer:
-      "Yes, filter away. Pick a date range, then narrow by inbox, team, teammate, channel, tag, priority, and whether the AI was involved. Turn on compare to see the period before.",
+      "Yes. Filter any chart by date range, inbox, team, teammate, channel, tag, priority, or AI involvement, and compare against the previous period.",
   },
   {
-    question: "Can I build my own reports?",
+    question: "Can we build custom dashboards?",
     answer:
-      "Yes. Start from one of the nine or from a blank page. Pick a number, split it by team, channel, tag, or any attribute, and save it to a dashboard your team shares.",
+      "Start from any standard report or a blank page. Pick a metric, split it by team, tag, or customer field, and save it to a shared dashboard.",
   },
   {
-    question: "Is this a BI tool?",
+    question: "Is this meant to replace a BI tool?",
     answer:
-      "No. There's no SQL and no joining against your warehouse. If that's what you need, export the data or read it through the API, and use the BI tool you already have.",
+      "Keep your BI tool for SQL queries and data warehouse joins. dimmi reports answer support questions fast; export CSVs or call the REST API when you want warehouse joins.",
   },
   {
-    question: "How do you work out CSAT?",
+    question: "How does dimmi calculate CSAT?",
     answer:
-      "Fours and fives. CSAT is the share of ratings that are four or five out of five. Each split shows how many ratings it rests on.",
+      "CSAT is the share of 4-star and 5-star ratings out of 5. Every chart shows the exact rating count behind the score so small samples never mislead you.",
   },
   {
-    question: "Can I get the raw data out?",
-    answer:
-      "Yes. Export one row per conversation as a CSV, built in the background. Or read every report through the REST API.",
+    question: "Can I pull report data into our own tools?",
+    answer: "Yes. Export one CSV row per conversation in the background, or query every report through the REST API.",
   },
   {
-    question: "Can everyone see everyone's numbers?",
-    answer: "No. Reports follow your roles. A teammate only sees numbers for the conversations they're allowed to see.",
+    question: "Can everyone see everyone else's metrics?",
+    answer:
+      "Reports follow your workspace roles. Each teammate only sees numbers for the inboxes and conversations they are allowed to access.",
   },
 ];
 
@@ -107,17 +107,17 @@ export function ReportsPage() {
     <>
       <ProductHero
         eyebrow="Reports"
-        title="See how support is actually going."
-        body="Volume, response times, ratings, and the AI agent's results, by team, channel, and teammate. Click any number to see the conversations behind it."
+        title="Support numbers you can click through and check."
+        body="Track volume, reply times, CSAT, and AI results by team or channel. Click any bar to see the real chats behind it."
         visual={<ReportsHeroFragment />}
       />
       <FeatureGrid
-        title="Nine reports before you build your own."
-        body="They're there from day one, each with its own numbers and charts."
+        title="Ready from day one, custom when you need more."
+        body="Open every core support report out of the box, or build shared dashboards for your team."
         items={reports}
       />
-      <Rows title="Numbers you can check." rows={rows} />
-      <Questions body="The fine print on how the numbers work." items={questions} />
+      <Rows title="Every number backed by real chats." rows={rows} />
+      <Questions body="How the numbers work under the hood." items={questions} />
       <FinalCta />
     </>
   );

@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"math"
-	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -46,7 +45,7 @@ func vectorsBody(vectors ...[]float32) httpclient.Response {
 		data[len(vectors)-1-i] = item{Object: "embedding", Index: i, Embedding: v}
 	}
 	body, _ := json.Marshal(map[string]any{
-		"object": "list", "data": data, "model": "Qwen/Qwen3-Embedding-8B",
+		"object": "list", "data": data, "model": "voyage-4-lite",
 		"usage": map[string]int{"prompt_tokens": 12, "total_tokens": 12},
 	})
 	return httpclient.Response{
@@ -79,64 +78,104 @@ func norm(v []float32) float64 {
 func TestEmbeddingDrivers(t *testing.T) {
 	t.Parallel()
 
-	builtin := func(hc *httpclient.Client) *openaicompat.Driver {
+	builtin := func(hc *httpclient.Client) contracts.Embeddings {
 		return dimmi.New(dimmi.Options{
-			BaseURL: "https://api.deepinfra.com/v1/openai", APIKey: "di-test", Model: "Qwen/Qwen3-Embedding-8B",
+			BaseURL: "https://api.voyageai.com/v1", APIKey: "pa-test", Model: "voyage-4-lite",
 			Dims: 1024, HTTP: hc,
 		})
 	}
 
-	t.Run("sends the deepinfra request shape with the qwen prefix on queries only", func(t *testing.T) {
+	t.Run("sends the voyage request shape, saying which inputs are queries", func(t *testing.T) {
 		t.Parallel()
 		hc, f := fakeHTTP(t)
-		f.Stub("POST https://api.deepinfra.com/v1/openai/embeddings", vectorsBody(ramp(1024)))
+		f.Stub("POST https://api.voyageai.com/v1/embeddings", vectorsBody(ramp(1024)))
 		drv := builtin(hc)
+		assert.Equal(t, "dimmi", drv.Provider())
 		_, err := drv.Embed(t.Context(), contracts.EmbedRequest{
-			Model: "Qwen/Qwen3-Embedding-8B", Inputs: []string{"Is it prorated?"}, Dimensions: 1024,
+			Model: "voyage-4-lite", Inputs: []string{"Is it prorated?"}, Dimensions: 1024,
 			InputType: contracts.EmbedInputQuery,
 		})
 		require.NoError(t, err)
 		_, err = drv.Embed(t.Context(), contracts.EmbedRequest{
-			Model: "Qwen/Qwen3-Embedding-8B", Inputs: []string{"Plans can be changed any time."}, Dimensions: 1024,
+			Model: "voyage-4-lite", Inputs: []string{"Plans can be changed any time."}, Dimensions: 1024,
 			InputType: contracts.EmbedInputDocument,
 		})
 		require.NoError(t, err)
 
 		sent := f.Sent()
 		require.Len(t, sent, 2)
-		assert.Equal(t, "Bearer di-test", sent[0].Header.Get("Authorization"))
+		assert.Equal(t, "Bearer pa-test", sent[0].Header.Get("Authorization"))
 		var query, doc map[string]any
 		require.NoError(t, json.Unmarshal(sent[0].Body, &query))
 		require.NoError(t, json.Unmarshal(sent[1].Body, &doc))
-		assert.Equal(t, "Qwen/Qwen3-Embedding-8B", query["model"])
-		assert.Equal(t, "float", query["encoding_format"])
-		assert.EqualValues(t, 1024, query["dimensions"])
-		assert.Equal(t, []any{dimmi.QueryPrefix + "Is it prorated?"}, query["input"])
-		assert.True(t, strings.HasPrefix(dimmi.QueryPrefix,
-			"Instruct: Given a customer support question, retrieve help articles that answer it\nQuery: "))
+		assert.Equal(t, "voyage-4-lite", query["model"])
+		assert.EqualValues(t, 1024, query["output_dimension"])
+		assert.Equal(t, true, query["truncation"])
+		assert.Equal(t, "query", query["input_type"])
+		assert.Equal(t, []any{"Is it prorated?"}, query["input"], "the question is sent as written")
+		assert.Equal(t, "document", doc["input_type"])
 		assert.Equal(t, []any{"Plans can be changed any time."}, doc["input"])
 	})
 
-	t.Run("truncates a native vector to the asked size and renormalizes it", func(t *testing.T) {
+	t.Run("normalizes the vectors and reports the tokens read", func(t *testing.T) {
 		t.Parallel()
 		hc, f := fakeHTTP(t)
-		f.Stub("POST https://api.deepinfra.com/v1/openai/embeddings", vectorsBody(ramp(4096), ramp(4096)))
+		f.Stub("POST https://api.voyageai.com/v1/embeddings", vectorsBody(ramp(1024), ramp(1024)))
 		resp, err := builtin(hc).Embed(t.Context(), contracts.EmbedRequest{
-			Model: "Qwen/Qwen3-Embedding-8B", Inputs: []string{"a", "b"}, Dimensions: 1024,
+			Model: "voyage-4-lite", Inputs: []string{"a", "b"}, Dimensions: 1024,
 		})
 		require.NoError(t, err)
 		require.Len(t, resp.Vectors, 2)
 		assert.Equal(t, 1024, resp.Dims)
+		assert.InDelta(t, 1.0, norm(resp.Vectors[0]), 1e-5)
+		assert.Equal(t, contracts.EmbedUsage{InputTokens: 12, Reported: true}, resp.Usage)
+	})
+
+	t.Run("refuses a vector of another size than asked for", func(t *testing.T) {
+		t.Parallel()
+		hc, f := fakeHTTP(t)
+		f.Stub("POST https://api.voyageai.com/v1/embeddings", vectorsBody(ramp(2048)))
+		_, err := builtin(hc).Embed(t.Context(), contracts.EmbedRequest{
+			Model: "voyage-4-lite", Inputs: []string{"a"}, Dimensions: 1024,
+		})
+		var llmErr *contracts.LLMError
+		require.ErrorAs(t, err, &llmErr)
+		assert.Equal(t, contracts.LLMErrorInvalidRequest, llmErr.Kind)
+	})
+
+	t.Run("reads voyage's error detail and maps the status", func(t *testing.T) {
+		t.Parallel()
+		hc, f := fakeHTTP(t)
+		f.Stub("POST https://api.voyageai.com/v1/embeddings", httpclient.Response{
+			Status: 429, Body: []byte(`{"detail":"rate limit reached"}`),
+		})
+		_, err := builtin(hc).Embed(t.Context(), contracts.EmbedRequest{
+			Model: "voyage-4-lite", Inputs: []string{"a"}, Dimensions: 1024,
+		})
+		var llmErr *contracts.LLMError
+		require.ErrorAs(t, err, &llmErr)
+		assert.Equal(t, contracts.LLMErrorRateLimited, llmErr.Kind)
+		assert.Equal(t, "rate limit reached", llmErr.Message)
+	})
+
+	t.Run("an openai-shaped server's long vector is cut to the asked size and renormalized", func(t *testing.T) {
+		t.Parallel()
+		hc, f := fakeHTTP(t)
+		f.Stub("POST https://embed.example.com/v1/embeddings", vectorsBody(ramp(4096)))
+		drv := openaicompat.New(openaicompat.Options{
+			Provider: "openai_compatible", BaseURL: "https://embed.example.com/v1", HTTP: hc, Truncate: true,
+		})
+		resp, err := drv.Embed(t.Context(), contracts.EmbedRequest{Model: "m", Inputs: []string{"a"}, Dimensions: 1024})
+		require.NoError(t, err)
 		assert.Len(t, resp.Vectors[0], 1024)
 		assert.InDelta(t, 1.0, norm(resp.Vectors[0]), 1e-5)
 		assert.InDelta(t, 1/norm(ramp(1024)), resp.Vectors[0][0], 1e-6)
-		assert.Equal(t, contracts.EmbedUsage{InputTokens: 12, Reported: true}, resp.Usage)
 	})
 
 	t.Run("orders vectors by input index", func(t *testing.T) {
 		t.Parallel()
 		hc, f := fakeHTTP(t)
-		f.Stub("POST https://api.deepinfra.com/v1/openai/embeddings",
+		f.Stub("POST https://api.voyageai.com/v1/embeddings",
 			vectorsBody([]float32{1, 0, 0}, []float32{0, 1, 0}))
 		resp, err := builtin(hc).Embed(t.Context(), contracts.EmbedRequest{
 			Model: "m", Inputs: []string{"a", "b"}, Dimensions: 3,
@@ -208,10 +247,10 @@ func TestEmbeddingDrivers(t *testing.T) {
 
 	t.Run("reads model keys", func(t *testing.T) {
 		t.Parallel()
-		k, err := knowledge.ParseModelKey("dimmi:Qwen/Qwen3-Embedding-8B@1024")
+		k, err := knowledge.ParseModelKey("dimmi:voyage-4-lite@1024")
 		require.NoError(t, err)
-		assert.Equal(t, knowledge.ModelKey{Provider: "dimmi", Model: "Qwen/Qwen3-Embedding-8B", Dims: 1024}, k)
-		assert.Equal(t, "dimmi:Qwen/Qwen3-Embedding-8B@1024", k.String())
+		assert.Equal(t, knowledge.ModelKey{Provider: "dimmi", Model: "voyage-4-lite", Dims: 1024}, k)
+		assert.Equal(t, "dimmi:voyage-4-lite@1024", k.String())
 		for _, bad := range []string{"", "dimmi", "dimmi:model", "dimmi:model@x", ":m@1", "dimmi:@3"} {
 			_, err := knowledge.ParseModelKey(bad)
 			assert.ErrorIs(t, err, knowledge.ErrModelKey, bad)

@@ -1,41 +1,45 @@
 ---
 title: "Add knowledge sources"
-description: "The sources the dimmi agent can learn from, their limits and sync schedules, and how to exclude documents or turn them into articles."
+description: "Connect your website, docs, Notion, GitHub, Intercom, or Zendesk so the dimmi agent and Operator can answer from them."
 ---
 
-Admins add sources in **Settings → Knowledge**. The dimmi agent already reads your help center; a source adds content that lives elsewhere.
+The dimmi agent already reads your help center. When your answers live in other tools too, admins can connect them in **Settings → Knowledge**.
 
-Connect GitHub, Notion, Intercom or Zendesk in **Settings → Integrations** first. A workspace connects one account of each, and its sources read through it.
+For GitHub, Notion, Intercom, or Zendesk, connect the account in **Settings → Integrations** first. One workspace connects one account of each tool, and your knowledge sources read through it.
 
 ## Source types
 
-| Source | What dimmi reads | Sync, default first |
+Pick the source that matches where your docs live.
+
+| Source | What dimmi reads | Sync options (default first) |
 | --- | --- | --- |
-| **Website** | Pages linked from a start address or listed in a sitemap. 500 pages by default, 5,000 at most. | **Every week**, **Every day**, **Only when I sync** |
-| **Markdown files** | A zip of Markdown files, or one file. Up to 50 MB, 2,000 files and 2 MB per file. | Upload again to replace the files. |
+| **Website** | Pages linked from a start URL or listed in a sitemap. Up to 500 pages by default, or 5,000 at most. | **Every week**, **Every day**, **Only when I sync** |
+| **Markdown files** | A zip of Markdown files, or one file. Up to 50 MB and 2,000 files. | Upload again to replace the files. |
 | **GitHub** | Markdown files on one branch of a repository. | **Every day**, **Every hour**, **Every week**, **Only when I sync** |
 | **Notion** | The pages you share with dimmi and tick. | **Every day**, **Every week**, **Only when I sync** |
 | **Intercom** | Help center articles, with translations. | **Only when I sync**, **Every day**, **Every week** |
 | **Zendesk** | Help center articles, with translations. | **Only when I sync**, **Every day**, **Every week** |
 
-- A source holds up to 5,000 documents. dimmi reads the first 512 KB of a document.
-- The website crawler obeys `robots.txt` and asks each host for at most one page a second.
+Each source holds up to 5,000 documents. The website crawler follows `robots.txt` and fetches at most one page per second from each host.
 
-## What a source becomes
+## Synced copy vs. help center articles
 
-- **A synced copy:** dimmi keeps a read-only copy up to date. **Agent** lets the dimmi agent answer from it, and **Operator** lets [Operator](/operator/work-with-operator/) use it.
-- **Help center articles:** dimmi imports the documents once as articles you can edit. Folders become collections, pictures are copied and the old addresses redirect to the new articles. A website cannot be imported.
+When you add a source, choose how dimmi stores it:
 
-**Turn into articles** on a synced source does the same import later. Importing again updates the same articles.
+- **Synced copy:** dimmi keeps a copy up to date automatically. Turn on **Agent** so the dimmi agent answers from it, and **Operator** so [Operator](/operator/work-with-operator/) can read it too.
+- **Help center articles:** dimmi imports the files once as articles you can edit. Folders become collections, images copy over, and old URLs redirect to the new articles. Websites cannot be imported this way.
 
-## Syncs
+You can also click **Turn into articles** on a synced source later. Importing again updates the same articles instead of making copies.
 
-- A source runs one sync at a time. A sync reads only documents that changed and removes documents that are gone from the source.
-- dimmi closes a sync that makes no progress for 30 minutes as failed.
-- **Sync history** keeps the last 50 runs.
+## How syncs work
 
-## Documents dimmi leaves out
+Each source runs one sync at a time. A sync only reads pages that changed and removes pages that were deleted at the source.
 
-The **Excluded** filter on a source lists each document with its reason: blocked by `robots.txt`, needs JavaScript, no text, a duplicate of another address or a draft at the source.
+- **Stalled syncs:** dimmi marks a sync as failed if it makes no progress for 30 minutes.
+- **Sync history:** keeps the last 50 runs so you can spot what changed or failed.
 
-To leave a document out yourself, exclude it in the list. It stays out through every later sync until you include it again.
+## Leave documents out
+
+Open the **Excluded** filter on any source to see pages dimmi skipped and why. Common reasons are `robots.txt`, pages that need JavaScript to render, empty pages, duplicates, or drafts.
+
+You can also exclude any page yourself from the list. It stays excluded through future syncs until you include it again.

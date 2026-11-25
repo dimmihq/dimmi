@@ -61,6 +61,8 @@ type Authorizers struct {
 	Resolve *workspaces.ResolveWorkspace
 	Policy  appauth.AccessPolicy
 	Live    *appauth.LiveCredentials
+	// RoutineReadable decides who may read an Operator routine's runs.
+	RoutineReadable func(authz.Membership, models.OperatorRoutine) bool
 }
 
 /*
@@ -160,6 +162,65 @@ func (a *Authorizers) reads(ctx context.Context, m authz.Membership, c models.Co
 }
 
 /*
+OperatorRoutine admits members who may read the routine's runs, by the
+same rule that opens its threads.
+*/
+func (a *Authorizers) OperatorRoutine(
+	ctx context.Context, p fbroadcasting.Principal, params map[string]string,
+) (bool, error) {
+	caller, ok := p.Subject.(*appauth.Principal)
+	if !ok || a.RoutineReadable == nil {
+		return false, nil
+	}
+	id, ok := a.decode(models.PrefixOperatorRoutine, params["routine"])
+	if !ok {
+		return false, nil
+	}
+	reached, err := a.reachable(ctx, caller)
+	if err != nil {
+		return false, err
+	}
+	for _, workspaceID := range reached {
+		routine, found, err := a.routineIn(ctx, workspaceID, id)
+		if err != nil || !found {
+			if err != nil {
+				return false, err
+			}
+			continue
+		}
+		m, ok, err := a.membership(ctx, caller, models.PublicID(models.PrefixWorkspace, workspaceID))
+		if err != nil || !ok {
+			return false, err
+		}
+		return a.RoutineReadable(m, routine), nil
+	}
+	return false, nil
+}
+
+/*
+routineIn reads the routine inside the workspace.
+*/
+func (a *Authorizers) routineIn(
+	ctx context.Context, workspaceID, id ids.UUID,
+) (models.OperatorRoutine, bool, error) {
+	var routine models.OperatorRoutine
+	err := a.DB.Transaction(tenancy.With(ctx, workspaceID.String()), func(ctx context.Context, tx *database.Tx) error {
+		var err error
+		routine, err = models.New(tx).FindAnyOperatorRoutine(ctx, models.FindAnyOperatorRoutineParams{
+			WorkspaceID: workspaceID, ID: id,
+		})
+		return err
+	})
+	if errors.Is(err, database.ErrNotFound) {
+		return routine, false, nil
+	}
+	if err != nil {
+		return routine, false, fmt.Errorf("find realtime routine: %w", err)
+	}
+	return routine, true, nil
+}
+
+/*
 Member admits only the member themselves.
 */
 func (a *Authorizers) Member(ctx context.Context, p fbroadcasting.Principal, params map[string]string) (bool, error) {
@@ -243,18 +304,9 @@ reaches: a token's own, or every workspace the user is active in.
 func (a *Authorizers) findConversation(
 	ctx context.Context, caller *appauth.Principal, id ids.UUID,
 ) (models.Conversation, bool, error) {
-	candidates := []ids.UUID{caller.WorkspaceID}
-
-	if caller.IsFirstParty() {
-		rows, err := models.New(a.DB).ListUserWorkspaces(ctx, caller.User.ID)
-		if err != nil {
-			return models.Conversation{}, false, fmt.Errorf("list workspaces of realtime user: %w", err)
-		}
-
-		candidates = candidates[:0]
-		for _, row := range rows {
-			candidates = append(candidates, row.WorkspaceID)
-		}
+	candidates, err := a.reachable(ctx, caller)
+	if err != nil {
+		return models.Conversation{}, false, err
 	}
 
 	for _, workspaceID := range candidates {
@@ -267,6 +319,28 @@ func (a *Authorizers) findConversation(
 	}
 
 	return models.Conversation{}, false, nil
+}
+
+/*
+reachable lists the workspaces the caller reaches: a token's own, or
+every workspace the user is active in.
+*/
+func (a *Authorizers) reachable(ctx context.Context, caller *appauth.Principal) ([]ids.UUID, error) {
+	if !caller.IsFirstParty() {
+		return []ids.UUID{caller.WorkspaceID}, nil
+	}
+
+	rows, err := models.New(a.DB).ListUserWorkspaces(ctx, caller.User.ID)
+	if err != nil {
+		return nil, fmt.Errorf("list workspaces of realtime user: %w", err)
+	}
+
+	out := make([]ids.UUID, 0, len(rows))
+	for _, row := range rows {
+		out = append(out, row.WorkspaceID)
+	}
+
+	return out, nil
 }
 
 /*

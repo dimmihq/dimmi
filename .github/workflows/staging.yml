@@ -1,6 +1,6 @@
 # Releases a commit to staging: main.yml calls this on every push to main
-# as soon as its run built the image and pushed it to GHCR under the
-# commit's sha, without waiting for the checks. This releases it to the
+# as soon as its run built the app image and the site image and pushed them
+# to GHCR (the commit's sha, and site-<sha>), without waiting for the checks. This releases it to the
 # server and checks it from the outside. Run by hand, it releases the
 # branch's newest commit.
 #
@@ -48,7 +48,7 @@ jobs:
             echo "pushed=true" >> "$GITHUB_OUTPUT"
           fi
       # Only when main's run pushed none, such as a manual release of a
-      # commit main never built.
+      # commit main never built. The same goes for the site image below.
       - if: steps.image.outputs.pushed != 'true'
         uses: docker/setup-buildx-action@v3
       - if: steps.image.outputs.pushed != 'true'
@@ -58,6 +58,23 @@ jobs:
           context: .
           push: true
           tags: ghcr.io/dimmihq/dimmi:${{ env.SHA }}
+          build-args: REVISION=${{ env.SHA }}
+      - name: Look for the site image main's run pushed
+        id: site
+        run: |
+          if docker buildx imagetools inspect "ghcr.io/dimmihq/dimmi:site-$SHA" > /dev/null; then
+            echo "pushed=true" >> "$GITHUB_OUTPUT"
+          fi
+      - if: steps.site.outputs.pushed != 'true' && steps.image.outputs.pushed == 'true'
+        uses: docker/setup-buildx-action@v3
+      - if: steps.site.outputs.pushed != 'true'
+        name: Build and push the site image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: site/Dockerfile
+          push: true
+          tags: ghcr.io/dimmihq/dimmi:site-${{ env.SHA }}
           build-args: REVISION=${{ env.SHA }}
       - name: Point kubectl at the server
         env:

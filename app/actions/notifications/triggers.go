@@ -59,6 +59,7 @@ const (
 	TriggerApprovalRequired = "ai_action_approval_requested"
 	TriggerSnoozeExpired    = "snooze_expired"
 	TriggerTeamJoined       = "team_joined"
+	TriggerRoutineFinished  = "operator_routine_finished"
 )
 
 /*
@@ -123,6 +124,11 @@ func Triggers() []Trigger {
 			Key: TriggerTeamJoined, Label: "Added to a team",
 			Description: "Someone adds you to a team.",
 			Defaults:    on(ChannelInApp, ChannelEmail),
+		},
+		{
+			Key: TriggerRoutineFinished, Label: "Operator routines",
+			Description: "A routine that reports to you found something, failed or paused.",
+			Defaults:    on(ChannelInApp, ChannelPush), Requires: "ai:read",
 		},
 	}
 }

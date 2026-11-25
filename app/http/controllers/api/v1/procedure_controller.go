@@ -7,6 +7,8 @@
 | adds an empty draft; PATCH saves the name or working copy; POST
 | .../publications makes the working copy what dimmi follows and
 | DELETE .../publications takes it back; DELETE removes a procedure.
+| The simulator, saved tests, versions and the scorecard live in
+| procedure_testing_controller.go.
 |
 */
 
@@ -111,13 +113,19 @@ func (c *ProcedureController) Update(ctx context.Context, in *requests.UpdatePro
 /*
 Publish makes the working copy what dimmi follows.
 */
-func (c *ProcedureController) Publish(ctx context.Context, in *requests.ProcedureRequest) (*ProcedureOutput, error) {
+func (c *ProcedureController) Publish(ctx context.Context, in *requests.PublishProcedureRequest,
+) (*ProcedureOutput, error) {
 	id, err := c.decode(in.Procedure)
 	if err != nil {
 		return nil, err
 	}
 
-	p, err := c.Procedures.Publish(ctx, membership(ctx), id)
+	note := ""
+	if in.Body != nil {
+		note = in.Body.ChangeNote
+	}
+
+	p, err := c.Procedures.PublishNote(ctx, membership(ctx), id, note)
 
 	return procedureOutput(p, err)
 }

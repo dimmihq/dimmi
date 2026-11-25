@@ -28,8 +28,27 @@ func (q *Queries) DeleteEmailSuppression(ctx context.Context, arg DeleteEmailSup
 	return err
 }
 
+const deleteErasedSuppressions = `-- name: DeleteErasedSuppressions :execrows
+DELETE FROM email_suppressions WHERE workspace_id = $1 AND email = ANY ($2::citext[])
+`
+
+type DeleteErasedSuppressionsParams struct {
+	WorkspaceID ids.UUID `json:"workspace_id"`
+	Emails      []string `json:"emails"`
+}
+
+// DeleteErasedSuppressions removes what is left of the erased customer's
+// suppressions that still name their address.
+func (q *Queries) DeleteErasedSuppressions(ctx context.Context, arg DeleteErasedSuppressionsParams) (int64, error) {
+	result, err := q.db.Exec(ctx, deleteErasedSuppressions, arg.WorkspaceID, arg.Emails)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
 const findEmailSuppression = `-- name: FindEmailSuppression :one
-SELECT id, workspace_id, email, reason, scope, source, details, outbound_email_id, expires_at, created_by_member_id, created_at, updated_at FROM email_suppressions WHERE workspace_id = $1 AND id = $2
+SELECT id, workspace_id, email, reason, scope, source, details, outbound_email_id, expires_at, created_by_member_id, created_at, updated_at, email_hash FROM email_suppressions WHERE workspace_id = $1 AND id = $2
 `
 
 type FindEmailSuppressionParams struct {
@@ -54,13 +73,46 @@ func (q *Queries) FindEmailSuppression(ctx context.Context, arg FindEmailSuppres
 		&i.CreatedByMemberID,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.EmailHash,
 	)
 	return i, err
 }
 
+const hashErasedSuppressions = `-- name: HashErasedSuppressions :execrows
+UPDATE email_suppressions s
+SET email = NULL, email_hash = dimmi_email_suppression_hash(s.workspace_id, s.email::text), details = NULL,
+    outbound_email_id = NULL, created_by_member_id = NULL, expires_at = NULL, updated_at = $1::timestamptz
+WHERE s.workspace_id = $2 AND s.email = ANY ($3::citext[])
+  AND s.reason IN ('unsubscribed', 'complaint')
+  AND NOT EXISTS (
+      SELECT 1 FROM email_suppressions kept
+      WHERE kept.workspace_id = s.workspace_id AND kept.scope = s.scope
+        AND kept.email_hash = dimmi_email_suppression_hash(s.workspace_id, s.email::text)
+  )
+`
+
+type HashErasedSuppressionsParams struct {
+	Now         time.Time `json:"now"`
+	WorkspaceID ids.UUID  `json:"workspace_id"`
+	Emails      []string  `json:"emails"`
+}
+
+// HashErasedSuppressions keeps the erased customer's wish to hear nothing
+// more without keeping their address: suppressions made because they
+// unsubscribed or complained hold a hash in its place and lose every
+// other detail. One already kept for the same address and scope is left
+// as it is.
+func (q *Queries) HashErasedSuppressions(ctx context.Context, arg HashErasedSuppressionsParams) (int64, error) {
+	result, err := q.db.Exec(ctx, hashErasedSuppressions, arg.Now, arg.WorkspaceID, arg.Emails)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
 const liftBounceSuppressions = `-- name: LiftBounceSuppressions :exec
 DELETE FROM email_suppressions
-WHERE workspace_id = $1 AND email = $2 AND reason IN ('hard_bounce', 'soft_bounce')
+WHERE workspace_id = $1 AND email = $2::citext AND reason IN ('hard_bounce', 'soft_bounce')
 `
 
 type LiftBounceSuppressionsParams struct {
@@ -76,8 +128,9 @@ func (q *Queries) LiftBounceSuppressions(ctx context.Context, arg LiftBounceSupp
 }
 
 const listContactSuppressions = `-- name: ListContactSuppressions :many
-SELECT s.id, s.workspace_id, s.email, s.reason, s.scope, s.source, s.details, s.outbound_email_id, s.expires_at, s.created_by_member_id, s.created_at, s.updated_at FROM email_suppressions s
-JOIN contacts c ON c.workspace_id = s.workspace_id AND c.email = s.email
+SELECT s.id, s.workspace_id, s.email, s.reason, s.scope, s.source, s.details, s.outbound_email_id, s.expires_at, s.created_by_member_id, s.created_at, s.updated_at, s.email_hash, c.email::text AS contact_email FROM email_suppressions s
+JOIN contacts c ON c.workspace_id = s.workspace_id
+    AND (c.email = s.email OR s.email_hash = dimmi_email_suppression_hash(c.workspace_id, c.email::text))
 WHERE s.workspace_id = $1 AND c.id = $2
   AND (s.expires_at IS NULL OR s.expires_at > $3::timestamptz)
 ORDER BY s.created_at DESC
@@ -89,30 +142,38 @@ type ListContactSuppressionsParams struct {
 	Now         time.Time `json:"now"`
 }
 
+type ListContactSuppressionsRow struct {
+	EmailSuppression EmailSuppression `json:"email_suppression"`
+	ContactEmail     string           `json:"contact_email"`
+}
+
 // ListContactSuppressions returns the live suppressions on the contact's
-// address, newest first.
-func (q *Queries) ListContactSuppressions(ctx context.Context, arg ListContactSuppressionsParams) ([]EmailSuppression, error) {
+// address, newest first, with the address they were found by: one kept
+// as a hash no longer holds it.
+func (q *Queries) ListContactSuppressions(ctx context.Context, arg ListContactSuppressionsParams) ([]ListContactSuppressionsRow, error) {
 	rows, err := q.db.Query(ctx, listContactSuppressions, arg.WorkspaceID, arg.ContactID, arg.Now)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []EmailSuppression
+	var items []ListContactSuppressionsRow
 	for rows.Next() {
-		var i EmailSuppression
+		var i ListContactSuppressionsRow
 		if err := rows.Scan(
-			&i.ID,
-			&i.WorkspaceID,
-			&i.Email,
-			&i.Reason,
-			&i.Scope,
-			&i.Source,
-			&i.Details,
-			&i.OutboundEmailID,
-			&i.ExpiresAt,
-			&i.CreatedByMemberID,
-			&i.CreatedAt,
-			&i.UpdatedAt,
+			&i.EmailSuppression.ID,
+			&i.EmailSuppression.WorkspaceID,
+			&i.EmailSuppression.Email,
+			&i.EmailSuppression.Reason,
+			&i.EmailSuppression.Scope,
+			&i.EmailSuppression.Source,
+			&i.EmailSuppression.Details,
+			&i.EmailSuppression.OutboundEmailID,
+			&i.EmailSuppression.ExpiresAt,
+			&i.EmailSuppression.CreatedByMemberID,
+			&i.EmailSuppression.CreatedAt,
+			&i.EmailSuppression.UpdatedAt,
+			&i.EmailSuppression.EmailHash,
+			&i.ContactEmail,
 		); err != nil {
 			return nil, err
 		}
@@ -125,21 +186,26 @@ func (q *Queries) ListContactSuppressions(ctx context.Context, arg ListContactSu
 }
 
 const listSuppressedEmails = `-- name: ListSuppressedEmails :many
-SELECT email::text AS email FROM email_suppressions
-WHERE workspace_id = $1 AND email = ANY ($2::citext[]) AND scope = 'all'
-  AND (expires_at IS NULL OR expires_at > $3::timestamptz)
+SELECT e.email::text AS email FROM unnest($1::citext[]) AS e (email)
+WHERE EXISTS (
+    SELECT 1 FROM email_suppressions s
+    WHERE s.workspace_id = $2 AND s.scope = 'all'
+      AND (s.expires_at IS NULL OR s.expires_at > $3::timestamptz)
+      AND (s.email = e.email OR s.email_hash = dimmi_email_suppression_hash($2, e.email::text))
+)
 `
 
 type ListSuppressedEmailsParams struct {
-	WorkspaceID ids.UUID  `json:"workspace_id"`
 	Emails      []string  `json:"emails"`
+	WorkspaceID ids.UUID  `json:"workspace_id"`
 	Now         time.Time `json:"now"`
 }
 
 // ListSuppressedEmails returns which of the addresses may not be mailed
-// at all right now.
+// at all right now, as they were asked about. A suppression kept as a
+// hash after its customer was erased stops the address like any other.
 func (q *Queries) ListSuppressedEmails(ctx context.Context, arg ListSuppressedEmailsParams) ([]string, error) {
-	rows, err := q.db.Query(ctx, listSuppressedEmails, arg.WorkspaceID, arg.Emails, arg.Now)
+	rows, err := q.db.Query(ctx, listSuppressedEmails, arg.Emails, arg.WorkspaceID, arg.Now)
 	if err != nil {
 		return nil, err
 	}
@@ -162,7 +228,7 @@ const suppressEmail = `-- name: SuppressEmail :exec
 INSERT INTO email_suppressions (
     workspace_id, email, reason, scope, source, details, outbound_email_id, expires_at, created_at, updated_at
 ) VALUES (
-    $1, $2, $3, $4, $5, $6, $7, $8,
+    $1, $2::citext, $3, $4, $5, $6, $7, $8,
     $9::timestamptz, $9::timestamptz
 )
 ON CONFLICT (workspace_id, email, scope) DO UPDATE SET

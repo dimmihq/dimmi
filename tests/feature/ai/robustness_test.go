@@ -47,8 +47,11 @@ func TestAiRunRobustness(t *testing.T) {
 		h.run(conv, trigger)
 
 		last := h.llm.answer.Sent()[5]
-		assert.Equal(t, "search limit reached for this turn; answer with what you have or say it isn't covered",
-			last.Messages[len(last.Messages)-1].Parts[0].Text)
+		assert.Equal(t, "search limit reached for this turn; no further search will run in this reply",
+			last.Messages[len(last.Messages)-2].Parts[0].Text)
+		assert.Contains(t, last.Messages[len(last.Messages)-1].Parts[0].Text, "You have no tools left in this reply",
+			"the last call of a turn is told it can no longer act")
+		assert.Empty(t, last.Tools)
 	})
 
 	t.Run("feeds a tool error back to the model", func(t *testing.T) {
@@ -70,7 +73,8 @@ func TestAiRunRobustness(t *testing.T) {
 			unknown.Parts[0].Text)
 
 		s := h.load(conv, res.RunID)
-		assert.Equal(t, "error", s.steps[1].Status)
+		assert.Equal(t, "ok", s.steps[0].Status, "the search made ahead of the agent")
+		assert.Equal(t, "error", s.steps[2].Status)
 	})
 
 	t.Run("never shows the model internal notes", func(t *testing.T) {

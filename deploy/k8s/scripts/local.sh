@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Runs the cluster on this machine in k3d, the way the server runs it:
-# operators first, then data, then migrations, then the app.
+# operators first, then data, then migrations, then the app, then the site
+# (the marketing site and docs) and the edge in front of both.
 #
 #   deploy/k8s/scripts/local.sh up      create or update everything
 #   deploy/k8s/scripts/local.sh down    delete the cluster and its data
@@ -13,6 +14,7 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 CLUSTER=dimmi
 NS=dimmi-local
 IMAGE=dimmi:local
+SITE_IMAGE=dimmi-site:local
 
 random() { openssl rand -hex 24; }
 
@@ -28,6 +30,13 @@ image() {
     docker build -t "$IMAGE" "$ROOT/../.."
   fi
   k3d image import "$IMAGE" -c "$CLUSTER"
+}
+
+site_image() {
+  if [[ "${BUILD:-1}" == 1 ]]; then
+    docker build -f "$ROOT/../../site/Dockerfile" -t "$SITE_IMAGE" "$ROOT/../.."
+  fi
+  k3d image import "$SITE_IMAGE" -c "$CLUSTER"
 }
 
 operators() {
@@ -98,8 +107,20 @@ app() {
   echo "dimmi is up at http://localhost:18080"
 }
 
+site() {
+  kubectl apply -k "$ROOT/apps/local/site"
+  kubectl -n "$NS" rollout restart deployment/site
+  kubectl -n "$NS" rollout status deployment/site --timeout=3m
+}
+
+edge() {
+  kubectl apply -k "$ROOT/apps/local/edge"
+  kubectl -n "$NS" rollout status deployment/edge --timeout=3m
+  echo "the site, its docs and the app (/d) are up at https://dimmi.localhost:18443"
+}
+
 case "${1:-}" in
-  up) cluster; image; operators; secrets; data; migrate; app ;;
+  up) cluster; image; site_image; operators; secrets; data; migrate; app; site; edge ;;
   down) k3d cluster delete "$CLUSTER" ;;
   *) echo "usage: $0 up|down" >&2; exit 2 ;;
 esac

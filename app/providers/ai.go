@@ -26,15 +26,18 @@ import (
 	"github.com/dimmihq/dimmi/framework/tenancy"
 
 	"github.com/dimmihq/dimmi/app"
+	"github.com/dimmihq/dimmi/app/actions/ai"
 	"github.com/dimmihq/dimmi/app/actions/conversations"
 	"github.com/dimmihq/dimmi/app/actions/helpcenters"
 	"github.com/dimmihq/dimmi/app/actions/knowledge"
 	"github.com/dimmihq/dimmi/app/actions/schedules"
 	"github.com/dimmihq/dimmi/app/ai/actionkit"
+	"github.com/dimmihq/dimmi/app/ai/agents"
 	aijobs "github.com/dimmihq/dimmi/app/ai/jobs"
 	"github.com/dimmihq/dimmi/app/ai/pipeline"
 	"github.com/dimmihq/dimmi/app/ai/verdicts"
 	"github.com/dimmihq/dimmi/app/contracts"
+	"github.com/dimmihq/dimmi/app/drivers/decision/clef"
 	"github.com/dimmihq/dimmi/app/drivers/decision/typesafe"
 	appevents "github.com/dimmihq/dimmi/app/events"
 	"github.com/dimmihq/dimmi/app/managers"
@@ -72,8 +75,15 @@ func bootAI(ctx context.Context, a *app.App) error {
 	runner.Actions = &actionkit.Kit{
 		DB: a.DB, Clock: a.Clock, HTTP: a.HTTP, Keys: a.Keys, Events: a.Events, Queue: a.Queue,
 	}
+	if p := a.Actions.Procedures; p != nil {
+		p.Simulator, p.Judge, p.Live, p.Customer = runner, runner, runner, runner
+		if a.Vectors != nil {
+			p.Vectors, runner.ProcedureVectors = a.Vectors, a.Vectors
+		}
+	}
 
 	a.Actions.AI = aiActions(a, runner, runner.Prices)
+	a.WorkspaceInitializers.Register(&ai.EnsureAI{Agents: a.Actions.AI.Agents})
 
 	events.Listen(a.Events, events.AfterCommit, func(ctx context.Context, e appevents.MessageCreated) error {
 		return enqueueAnswer(ctx, a, e)
@@ -109,6 +119,8 @@ func newRunner(ctx context.Context, a *app.App) (*pipeline.Runner, error) {
 			DB: a.DB, Fallback: seed, Vectors: a.Vectors, Addresses: helpcenters.Addresses{
 				BaseDomain: a.Config.HelpCenters.BaseDomain, AppURL: a.Application.Config.App.URL,
 			},
+			Reranker:      builtinReranker(a),
+			RerankTimeout: time.Duration(a.Config.AI.Knowledge.RerankTimeoutMS) * time.Millisecond,
 		}
 	}
 	if a.LLM == nil {
@@ -128,17 +140,50 @@ func newRunner(ctx context.Context, a *app.App) (*pipeline.Runner, error) {
 		Timeouts: a.Config.AI.Timeouts, StorePayloads: a.Config.AI.TracesStorePayloads,
 		AnswerEffort: contracts.Effort(a.Config.AI.AnswerEffort),
 	}
+	decides, err := decisionModel(a)
+	if err != nil {
+		return nil, fmt.Errorf("decision model: %w", err)
+	}
+	runner.Decider, runner.DecisionProvider, runner.DecisionPrice = decides.decider, decides.provider, decides.price
+
+	return runner, nil
+}
+
+/*
+decisionSetup is the decision model an install set up: the driver, the
+name its steps are recorded under and the price of a million input
+tokens. It is empty when none is set up.
+*/
+type decisionSetup struct {
+	decider  contracts.Decider
+	provider string
+	price    float64
+}
+
+/*
+decisionModel is the decision model the install set up: Clef when its
+account is set, else TypeSafe, else none.
+*/
+func decisionModel(a *app.App) (decisionSetup, error) {
+	if c := a.Config.AI.Decisions.Clef; c.AccountID != "" && c.APIToken != "" {
+		decider, err := clef.New(a.HTTP, a.Clock, clef.Config{
+			AccountID: c.AccountID, APIToken: c.APIToken, BaseURL: c.BaseURL, Model: c.Model, Timeout: c.Timeout,
+		})
+		if err != nil {
+			return decisionSetup{}, err
+		}
+		return decisionSetup{decider: decider, provider: "clef", price: c.InputPricePerMtok}, nil
+	}
 	if ts := a.Config.AI.Decisions.TypeSafe; ts.APIKey != "" {
 		decider, err := typesafe.New(a.HTTP, a.Clock, typesafe.Config{
 			APIKey: ts.APIKey, BaseURL: ts.BaseURL, Model: ts.Model, Timeout: ts.Timeout,
 		})
 		if err != nil {
-			return nil, fmt.Errorf("decision model: %w", err)
+			return decisionSetup{}, err
 		}
-		runner.Decider, runner.DecisionPrice = decider, ts.InputPricePerMtok
+		return decisionSetup{decider: decider, provider: "typesafe", price: ts.InputPricePerMtok}, nil
 	}
-
-	return runner, nil
+	return decisionSetup{}, nil
 }
 
 /*
@@ -202,9 +247,9 @@ type answerTarget struct {
 }
 
 /*
-answerable is the cheap check before queueing: the workspace has an
-enabled agent and the conversation is live and not handed to the
-team. It returns the conversation's channel type for the debounce.
+answerable is the cheap check before queueing: the agent that would
+answer the conversation is on and the conversation is live and not
+handed to the team. It returns the conversation's channel type for the debounce.
 */
 func answerable(ctx context.Context, a *app.App, e appevents.MessageCreated) (answerTarget, error) {
 	var t answerTarget
@@ -212,21 +257,24 @@ func answerable(ctx context.Context, a *app.App, e appevents.MessageCreated) (an
 
 	err := a.DB.Transaction(ctx, func(ctx context.Context, tx *database.Tx) error {
 		q := models.New(tx)
-		agent, err := q.FindAgent(ctx, e.WorkspaceID)
-		if errors.Is(err, database.ErrNotFound) {
-			return nil
-		}
-		if err != nil {
-			return err
-		}
 		conv, err := q.FindConversation(ctx, models.FindConversationParams{
 			WorkspaceID: e.WorkspaceID, ID: e.ConversationID,
 		})
 		if err != nil {
 			return err
 		}
+		agent, err := agents.Resolve(ctx, q, agents.ForConversation(conv, nil))
+		if errors.Is(err, agents.ErrNoAgent) {
+			return nil
+		}
+		if err != nil {
+			return err
+		}
 		t.agent = agent
-		t.eligible = agent.Enabled && conv.AiState != "handed_off" && conv.DeletedAt == nil && !conv.Spam
+		// A workflow step may hand the conversation to another agent;
+		// the pipeline resolves it and checks it is on.
+		on := agent.Enabled || conv.AiMode == "workflow"
+		t.eligible = on && conv.AiState != "handed_off" && conv.DeletedAt == nil && !conv.Spam
 		if conn, err := q.FindChannelConnection(ctx, models.FindChannelConnectionParams{
 			WorkspaceID: e.WorkspaceID, ID: conv.ChannelConnectionID,
 		}); err == nil {

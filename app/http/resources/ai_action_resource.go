@@ -131,6 +131,7 @@ type AIAction struct {
 	PublishedVersion       *AIActionVersionRef          `json:"published_version"`
 	CreatedAt              time.Time                    `json:"created_at"`
 	UpdatedAt              time.Time                    `json:"updated_at"`
+	LastTestResponse       json.RawMessage              `json:"last_test_response,omitempty"`
 }
 
 /*
@@ -150,7 +151,7 @@ func NewAIAction(v agentactions.View) AIAction {
 		ErrorMessagePath: a.ErrorMessagePath, ResponseMaxBytes: a.ResponseMaxBytes, TimeoutMS: a.TimeoutMs,
 		Channels: orEmpty(a.Channels), Agents: orEmpty(a.Agents), Source: a.Source, Warnings: []string{},
 		HasUnpublishedChanges: true,
-		CreatedAt:             a.CreatedAt, UpdatedAt: a.UpdatedAt,
+		CreatedAt:             a.CreatedAt, UpdatedAt: a.UpdatedAt, LastTestResponse: a.LastTestResponse,
 	}
 	if v.Version != nil {
 		out.PublishedVersion = &AIActionVersionRef{

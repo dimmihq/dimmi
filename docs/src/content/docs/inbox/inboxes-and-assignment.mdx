@@ -1,34 +1,42 @@
 ---
 title: "Set up inboxes and assignment"
-description: "Create inboxes and choose how dimmi assigns their conversations: manually, round robin or balanced."
+description: "Create separate inboxes for teams or brands, control who can see them, and turn on automatic assignment."
 ---
 
-Create and change inboxes in **Settings → Inboxes**. Each channel connection, such as one messenger or one support address, sends its new conversations to one inbox.
+Every workspace starts with one **Support** inbox. As your team grows, you can add separate inboxes under **Settings → Inboxes** for billing, security, or different products, each with its own channels, team, and routing rules.
 
-## Inbox settings
+Each channel connection (such as one website messenger or one support email address) routes its new conversations into a single inbox.
 
-- **Default team:** new conversations go to this team, and its members form the pool for automatic assignment. With **No team**, the pool is every active teammate.
-- **Tickets:** every new conversation becomes a [customer ticket](/tickets/how-tickets-work/) of the type you pick.
-- **Access:** with **Chosen teams and teammates**, only the people on the list, owners and admins can open the inbox and its conversations.
-- **Assign to whoever replies:** on in a new inbox.
-- **Reopen window:** how long after closing a customer's reply reopens the conversation. The default is 30 days.
+## Core inbox settings
 
-The default inbox cannot be deleted. Deleting another inbox moves its conversations and channels to the inbox you pick.
+- **Default team:** assigns incoming threads to this team and uses its members as the pool for automatic assignment. Leave it on **No team** to pull from every active teammate.
+- **Tickets:** turns every new conversation in this inbox into a [customer ticket](/tickets/how-tickets-work/) of your chosen type.
+- **Access:** choose **Chosen teams and teammates** to keep sensitive queues (like HR or security) private. Owners and admins always retain access.
+- **Assign to whoever replies:** turned **on** by default so the first teammate to answer takes ownership.
+- **Reopen window:** how many days after closing a customer reply reopens the same thread (**30 days** by default).
 
-## Automatic assignment
+Your default inbox cannot be deleted. When you delete any other inbox, dimmi asks which inbox should receive its existing conversations and channels.
 
-| Mode | What dimmi does |
+## Choosing an assignment mode
+
+Pick how dimmi hands out new conversations inside each inbox:
+
+| Mode | How it works |
 | --- | --- |
-| **Manual** | Assigns nobody. The default. |
-| **Round robin** | Gives each new conversation to the next teammate in the pool. |
-| **Balanced** | Gives each new conversation to the teammate with the fewest open conversations. |
+| **Manual** | Leaves new threads unassigned until a teammate claims or assigns them (the default). |
+| **Round robin** | Hands each new thread to the next available teammate in turn. |
+| **Balanced** | Gives each new thread to the available teammate with the fewest open chats. |
 
-[How automatic assignment works](/inbox/how-assignment-works/) has the rules for who is eligible and what happens when nobody is.
+For the full routing rules, see [How automatic assignment works](/inbox/how-assignment-works/).
 
-- **Capacity:** the most open conversations a teammate holds before dimmi skips them. Limits for one teammate or one channel are set through the REST API.
-- **Overflow team:** the team dimmi tries when nobody in the first pool can take the conversation.
-- **Queue order:** which waiting conversation goes first when a teammate frees up. **Oldest waiting first** is the default.
+## Capacity, overflow, and queue order
 
-## Assignment status
+Fine-tune how automatic assignment behaves when your queue gets busy:
 
-**Assignment status** lists the pool, each teammate's open conversations and why dimmi would skip them now: **Away**, **At capacity** or **At channel capacity**. It judges teammates as for a messenger conversation.
+- **Capacity:** the maximum open conversations one teammate can hold before dimmi skips them. Individual teammate or per-channel caps can also be set via the REST API.
+- **Overflow team:** a backup team dimmi checks when nobody in the main team has free capacity.
+- **Queue order:** decides which waiting chat goes out next when a teammate frees up (**Oldest waiting first** by default).
+
+## Checking who is up next
+
+Open **Assignment status** on an inbox to see every teammate in the pool, their current open count, and why dimmi would skip them right now (**Away**, **At capacity**, or **At channel capacity**).

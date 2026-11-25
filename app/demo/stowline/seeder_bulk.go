@@ -327,7 +327,7 @@ func (r *run) conversationRow(sets *conversationSets, number int, c Conversation
 		member, team, aiState, nilIfZero(c.SnoozedUntil), c.Messages[0].At, nilIfZero(th.lastCustomer),
 		nilIfZero(th.firstReply), nilIfZero(th.lastReply), th.last, nilIfZero(c.ClosedAt), th.count, waiting, updated,
 		th.lastID, c.Priority, th.agent, c.Language, handedAt, nilIfEmpty(c.HandoffReason), c.CreatedAt, updated,
-		jsonOf(map[string]string{"seed": Slug, "topic": c.Topic}),
+		jsonOf(sourceOf(c)),
 	})
 	r.tagRows(&sets.tags, c, member)
 	if c.Rating > 0 {
@@ -337,6 +337,18 @@ func (r *run) conversationRow(sets *conversationSets, number int, c Conversation
 			nilIfEmpty(c.RatingComment), c.ClosedAt.Add(47 * time.Minute), c.ClosedAt, c.ClosedAt,
 		})
 	}
+}
+
+/*
+sourceOf is what a seeded conversation says of where it came from: the
+seed, its topic, and that it is a hand-written case when it is one.
+*/
+func sourceOf(c Conversation) map[string]string {
+	source := map[string]string{"seed": Slug, "topic": c.Topic}
+	if c.Planted {
+		source["planted"] = "yes"
+	}
+	return source
 }
 
 /*
@@ -380,15 +392,7 @@ func (r *run) messageRows(set *rowSet, c Conversation, member any) thread {
 		var sent any
 		status := "not_applicable"
 		if kind == "message" {
-			th.count++
-			th.last, th.lastID = m.At, id
-			if m.Author != "contact" {
-				sent, status = m.At, "delivered"
-				th.lastReply = m.At
-				if th.firstReply.IsZero() {
-					th.firstReply = m.At
-				}
-			}
+			sent, status = th.message(m, id)
 		}
 		set.rows = append(set.rows, []any{
 			id, r.ws.ID, c.ID, kind, authorType, author, m.Body, sent, status, channel, m.At, m.At, nil, true,
@@ -402,6 +406,23 @@ func (r *run) messageRows(set *rowSet, c Conversation, member any) thread {
 		}
 	}
 	return th
+}
+
+/*
+message counts a message in the thread and returns when it was sent
+and its delivery status: a customer's message is never sent.
+*/
+func (th *thread) message(m Message, id ids.UUID) (any, string) {
+	th.count++
+	th.last, th.lastID = m.At, id
+	if m.Author == "contact" {
+		return nil, "not_applicable"
+	}
+	th.lastReply = m.At
+	if th.firstReply.IsZero() {
+		th.firstReply = m.At
+	}
+	return m.At, "delivered"
 }
 
 /*

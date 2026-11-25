@@ -1,31 +1,31 @@
 ---
 title: "Ask for conversation ratings"
-description: "When dimmi asks a customer to rate a closed conversation, on which channels, and what happens to the rating."
+description: "Turn on CSAT ratings when conversations close, pick the delay and channels, and use ratings in workflows."
 ---
 
-Turn on **Ask for a rating when a conversation closes** in **Settings → Conversation ratings**. It is off in a new workspace.
+Turn on **Ask for a rating when a conversation closes** in **Settings → Conversation ratings**. It starts turned off in a new workspace.
 
-The customer picks one of five faces, scored 1 to 5, and can add a comment of up to 2,000 characters.
+Customers pick one of five faces (scored 1 to 5) and can leave an optional comment.
 
-## When dimmi asks
+## When dimmi asks for a rating
 
-- **Channels:** only messenger and email conversations can carry an ask. Both are on once you turn asking on.
-- **Messenger:** a card with five faces at the end of the thread.
-- **Email:** an email in the same thread, from the address the conversation's replies use. Each face links to a rating page that needs no sign-in.
-- **Delay:** **Straight away**, **After 10 minutes** or **After an hour**. If the conversation reopens before the delay ends, dimmi sends nothing.
-- **dimmi agent closes:** conversations the agent closed ask only when **Include conversations closed by the agent** is on.
-- **Test conversations:** never ask.
+- **Channels:** works on messenger and email threads. Both turn on once you enable ratings.
+- **In the messenger:** shows a 5-face rating card at the end of the thread.
+- **Over email:** sends a reply in the same email thread from your conversation's sending address. Each face links to a rating page with no sign-in required.
+- **Delay:** choose **Straight away**, **After 10 minutes**, or **After an hour**. If the thread reopens before the delay finishes, dimmi cancels the ask.
+- **dimmi agent closes:** threads closed by the agent only ask when **Include conversations closed by the agent** is turned on.
+- **Test threads:** never receive rating requests.
 
-dimmi skips the email when the workspace has no address to send from, sending is paused, or the customer's address is missing or suppressed.
+dimmi skips sending an email ask if your workspace has no sending address, email sending is paused, or the customer's address is missing or suppressed.
 
-## After the customer rates
+## After a customer rates
 
-- **Changes:** the customer can change the score and the comment for 7 days after the ask went out.
-- **Timeline:** each answer joins the conversation's timeline under the customer's name.
-- **Credit:** the rating goes to the teammate assigned when the conversation closed, or to dimmi when no teammate replied. See [Satisfaction](/reports/reports/#satisfaction).
-- **Webhook:** dimmi sends [`conversation.rated`](/developers/webhooks/events/) for each answer.
+- **Editing window:** customers can update their score and comment for 7 days after the ask goes out.
+- **Conversation timeline:** each rating appears in the timeline under the customer's name.
+- **Report credit:** credited to the teammate assigned when the thread closed, or to dimmi if no teammate replied. See [Satisfaction](/reports/reports/#satisfaction).
+- **Webhooks:** fires [`conversation.rated`](/developers/webhooks/events/) each time a customer submits or updates a rating.
 
 ## Use ratings in workflows
 
-- **Trigger:** **Customer rates the conversation** starts a [workflow](/workflows/triggers-and-steps/) on the first answer only, so a changed rating does not run it again.
-- **Close step:** **Ask for a rating** on a workflow's close step asks even when the settings above would not. The conversation still has to be on the messenger or email.
+- **Trigger:** **Customer rates the conversation** starts a [workflow](/workflows/triggers-and-steps/) on the first rating only, so edits do not trigger it twice.
+- **Close step:** turning on **Ask for a rating** inside a workflow's **Close** step sends an ask even if global rating settings would skip it (as long as the thread is on messenger or email).

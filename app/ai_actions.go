@@ -3,10 +3,10 @@
 | AI Actions
 |--------------------------------------------------------------------------
 |
-| The agent's business actions: its settings, its provider
-| connections, the ChatGPT sign-in, the run and usage readers, the
-| playground, and the workspace actions it may call with their
-| connections, calls and the visitor's confirmations.
+| The agents' business actions: the agents and the workspace's shared
+| AI settings, the provider connections, the ChatGPT sign-in, the run
+| and usage readers, and the workspace actions an agent may call with
+| their connections, calls and the visitor's confirmations.
 |
 */
 
@@ -14,6 +14,7 @@ package app
 
 import (
 	"github.com/dimmihq/dimmi/app/actions/agentactions"
+	"github.com/dimmihq/dimmi/app/actions/agentsims"
 	"github.com/dimmihq/dimmi/app/actions/ai"
 	"github.com/dimmihq/dimmi/app/actions/widget"
 	"github.com/dimmihq/dimmi/app/ai/actionkit"
@@ -23,8 +24,8 @@ import (
 AIActions groups the agent's actions.
 */
 type AIActions struct {
-	GetAgent    *ai.GetAiAgent
-	UpdateAgent *ai.UpdateAiAgent
+	Agents      *ai.Agents
+	Simulations *agentsims.Simulations
 
 	ListProviderKeys  *ai.ListProviderKeys
 	CreateProviderKey *ai.CreateProviderKey
@@ -35,10 +36,9 @@ type AIActions struct {
 	StartChatGPTConnect    *ai.StartChatGPTConnect
 	CompleteChatGPTConnect *ai.CompleteChatGPTConnect
 
-	ListRuns      *ai.ListConversationRuns
-	ShowRun       *ai.ShowRun
-	ShowUsage     *ai.ShowUsage
-	AskPlayground *ai.AskPlayground
+	ListRuns  *ai.ListConversationRuns
+	ShowRun   *ai.ShowRun
+	ShowUsage *ai.ShowUsage
 
 	ActionKit         *actionkit.Kit
 	ActionConnections *agentactions.Connections

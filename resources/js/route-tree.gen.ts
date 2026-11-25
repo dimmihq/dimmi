@@ -23,13 +23,12 @@ import { Route as AuthSignupRouteImport } from './routes/_auth/signup'
 import { Route as AuthTwoFactorResetRouteImport } from './routes/_auth/two-factor-reset'
 import { Route as AuthVerifyEmailRouteImport } from './routes/_auth/verify-email'
 import { Route as DIndexRouteImport } from './routes/d/index'
-import { Route as DAgentRouteImport } from './routes/d/agent'
 import { Route as DChangelogRouteImport } from './routes/d/changelog'
 import { Route as DCustomersRouteImport } from './routes/d/customers'
 import { Route as DFeedbackRouteImport } from './routes/d/feedback'
 import { Route as DHelpCenterRouteImport } from './routes/d/help-center'
+import { Route as DHomeRouteImport } from './routes/d/home'
 import { Route as DNotificationsRouteImport } from './routes/d/notifications'
-import { Route as DOperatorRouteImport } from './routes/d/operator'
 import { Route as DReportsRouteImport } from './routes/d/reports'
 import { Route as DShortcutsRouteImport } from './routes/d/shortcuts'
 import { Route as DWhatsappReturnRouteImport } from './routes/d_.whatsapp-return'
@@ -37,6 +36,8 @@ import { Route as AuthEmailConfirmRouteImport } from './routes/_auth/email.confi
 import { Route as AuthLoginMagicRouteImport } from './routes/_auth/login_.magic'
 import { Route as AuthLoginTwoFactorRouteImport } from './routes/_auth/login_.two-factor'
 import { Route as AuthOauthAuthorizeRouteImport } from './routes/_auth/oauth.authorize'
+import { Route as DAgentsIndexRouteImport } from './routes/d/agents/index'
+import { Route as DAgentsAgentRouteImport } from './routes/d/agents/$agent'
 import { Route as DBroadcastsIndexRouteImport } from './routes/d/broadcasts/index'
 import { Route as DBroadcastsBroadcastRouteImport } from './routes/d/broadcasts/$broadcast'
 import { Route as DChangelogIndexRouteImport } from './routes/d/changelog/index'
@@ -49,10 +50,14 @@ import { Route as DHelpCenterIndexRouteImport } from './routes/d/help-center/ind
 import { Route as DHelpCenterArticleRouteImport } from './routes/d/help-center/$article'
 import { Route as DInboxIndexRouteImport } from './routes/d/inbox/index'
 import { Route as DInboxViewRouteRouteImport } from './routes/d/inbox/$view/route'
+import { Route as DOperatorIndexRouteImport } from './routes/d/operator/index'
+import { Route as DOperatorTabRouteImport } from './routes/d/operator/$tab'
 import { Route as DProceduresIndexRouteImport } from './routes/d/procedures/index'
 import { Route as DProceduresProcedureRouteImport } from './routes/d/procedures/$procedure'
 import { Route as DReportsIndexRouteImport } from './routes/d/reports/index'
 import { Route as DReportsReportRouteImport } from './routes/d/reports/$report'
+import { Route as DRoutinesIndexRouteImport } from './routes/d/routines/index'
+import { Route as DRoutinesNewRouteImport } from './routes/d/routines/new'
 import { Route as DSeriesIndexRouteImport } from './routes/d/series/index'
 import { Route as DSeriesSeriesRouteImport } from './routes/d/series/$series'
 import { Route as DSettingsIndexRouteImport } from './routes/d/settings/index'
@@ -65,8 +70,10 @@ import { Route as DCustomersListsBlockedRouteImport } from './routes/d/customers
 import { Route as DCustomersListsErasuresRouteImport } from './routes/d/customers/_lists/erasures'
 import { Route as DCustomersAudiencesAudienceRouteImport } from './routes/d/customers/audiences/$audience'
 import { Route as DCustomersCompaniesCompanyRouteImport } from './routes/d/customers/companies/$company'
+import { Route as DHelpCenterRequestsChangesetRouteImport } from './routes/d/help-center/requests/$changeset'
 import { Route as DInboxViewIndexRouteImport } from './routes/d/inbox/$view/index'
 import { Route as DInboxViewConversationRouteImport } from './routes/d/inbox/$view/$conversation'
+import { Route as DRoutinesRoutineIndexRouteImport } from './routes/d/routines/$routine/index'
 import { Route as DSettingsActionsActionRouteImport } from './routes/d/settings/actions.$action'
 import { Route as DSettingsInboxesInboxRouteImport } from './routes/d/settings/inboxes.$inbox'
 import { Route as DSettingsIntegrationsIntegrationRouteImport } from './routes/d/settings/integrations.$integration'
@@ -82,6 +89,8 @@ import { Route as DSettingsTicketsTypeRouteImport } from './routes/d/settings/ti
 import { Route as DSettingsWebhooksEndpointRouteImport } from './routes/d/settings/webhooks.$endpoint'
 import { Route as DCustomersListsAudiencesIndexRouteImport } from './routes/d/customers/_lists/audiences/index'
 import { Route as DCustomersListsCompaniesIndexRouteImport } from './routes/d/customers/_lists/companies/index'
+import { Route as DRoutinesRoutineRunsRunRouteImport } from './routes/d/routines/$routine/runs/$run'
+import { Route as DRoutinesRoutineThreadsThreadRouteImport } from './routes/d/routines/$routine/threads/$thread'
 import { Route as DSeriesSeriesComposeStepRouteImport } from './routes/d/series/$series_.compose.$step'
 import { Route as DSettingsEmailAddressesAddressRouteImport } from './routes/d/settings/email.addresses.$address'
 import { Route as DSettingsEmailDomainsDomainRouteImport } from './routes/d/settings/email.domains.$domain'
@@ -159,11 +168,6 @@ const DIndexRoute = DIndexRouteImport.update({
   path: '/',
   getParentRoute: () => DRouteRoute,
 } as any)
-const DAgentRoute = DAgentRouteImport.update({
-  id: '/agent',
-  path: '/agent',
-  getParentRoute: () => DRouteRoute,
-} as any)
 const DChangelogRoute = DChangelogRouteImport.update({
   id: '/changelog',
   path: '/changelog',
@@ -184,14 +188,14 @@ const DHelpCenterRoute = DHelpCenterRouteImport.update({
   path: '/help-center',
   getParentRoute: () => DRouteRoute,
 } as any)
+const DHomeRoute = DHomeRouteImport.update({
+  id: '/home',
+  path: '/home',
+  getParentRoute: () => DRouteRoute,
+} as any)
 const DNotificationsRoute = DNotificationsRouteImport.update({
   id: '/notifications',
   path: '/notifications',
-  getParentRoute: () => DRouteRoute,
-} as any)
-const DOperatorRoute = DOperatorRouteImport.update({
-  id: '/operator',
-  path: '/operator',
   getParentRoute: () => DRouteRoute,
 } as any)
 const DReportsRoute = DReportsRouteImport.update({
@@ -228,6 +232,16 @@ const AuthOauthAuthorizeRoute = AuthOauthAuthorizeRouteImport.update({
   id: '/oauth/authorize',
   path: '/oauth/authorize',
   getParentRoute: () => AuthRoute,
+} as any)
+const DAgentsIndexRoute = DAgentsIndexRouteImport.update({
+  id: '/agents/',
+  path: '/agents/',
+  getParentRoute: () => DRouteRoute,
+} as any)
+const DAgentsAgentRoute = DAgentsAgentRouteImport.update({
+  id: '/agents/$agent',
+  path: '/agents/$agent',
+  getParentRoute: () => DRouteRoute,
 } as any)
 const DBroadcastsIndexRoute = DBroadcastsIndexRouteImport.update({
   id: '/broadcasts/',
@@ -288,6 +302,16 @@ const DInboxViewRouteRoute = DInboxViewRouteRouteImport.update({
   path: '/inbox/$view',
   getParentRoute: () => DRouteRoute,
 } as any)
+const DOperatorIndexRoute = DOperatorIndexRouteImport.update({
+  id: '/operator/',
+  path: '/operator/',
+  getParentRoute: () => DRouteRoute,
+} as any)
+const DOperatorTabRoute = DOperatorTabRouteImport.update({
+  id: '/operator/$tab',
+  path: '/operator/$tab',
+  getParentRoute: () => DRouteRoute,
+} as any)
 const DProceduresIndexRoute = DProceduresIndexRouteImport.update({
   id: '/procedures/',
   path: '/procedures/',
@@ -307,6 +331,16 @@ const DReportsReportRoute = DReportsReportRouteImport.update({
   id: '/$report',
   path: '/$report',
   getParentRoute: () => DReportsRoute,
+} as any)
+const DRoutinesIndexRoute = DRoutinesIndexRouteImport.update({
+  id: '/routines/',
+  path: '/routines/',
+  getParentRoute: () => DRouteRoute,
+} as any)
+const DRoutinesNewRoute = DRoutinesNewRouteImport.update({
+  id: '/routines/new',
+  path: '/routines/new',
+  getParentRoute: () => DRouteRoute,
 } as any)
 const DSeriesIndexRoute = DSeriesIndexRouteImport.update({
   id: '/series/',
@@ -370,6 +404,12 @@ const DCustomersCompaniesCompanyRoute =
     path: '/companies/$company',
     getParentRoute: () => DCustomersRoute,
   } as any)
+const DHelpCenterRequestsChangesetRoute =
+  DHelpCenterRequestsChangesetRouteImport.update({
+    id: '/requests/$changeset',
+    path: '/requests/$changeset',
+    getParentRoute: () => DHelpCenterRoute,
+  } as any)
 const DInboxViewIndexRoute = DInboxViewIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -379,6 +419,11 @@ const DInboxViewConversationRoute = DInboxViewConversationRouteImport.update({
   id: '/$conversation',
   path: '/$conversation',
   getParentRoute: () => DInboxViewRouteRoute,
+} as any)
+const DRoutinesRoutineIndexRoute = DRoutinesRoutineIndexRouteImport.update({
+  id: '/routines/$routine/',
+  path: '/routines/$routine/',
+  getParentRoute: () => DRouteRoute,
 } as any)
 const DSettingsActionsActionRoute = DSettingsActionsActionRouteImport.update({
   id: '/settings/actions/$action',
@@ -465,6 +510,17 @@ const DCustomersListsCompaniesIndexRoute =
     path: '/companies/',
     getParentRoute: () => DCustomersListsRoute,
   } as any)
+const DRoutinesRoutineRunsRunRoute = DRoutinesRoutineRunsRunRouteImport.update({
+  id: '/routines/$routine/runs/$run',
+  path: '/routines/$routine/runs/$run',
+  getParentRoute: () => DRouteRoute,
+} as any)
+const DRoutinesRoutineThreadsThreadRoute =
+  DRoutinesRoutineThreadsThreadRouteImport.update({
+    id: '/routines/$routine/threads/$thread',
+    path: '/routines/$routine/threads/$thread',
+    getParentRoute: () => DRouteRoute,
+  } as any)
 const DSeriesSeriesComposeStepRoute =
   DSeriesSeriesComposeStepRouteImport.update({
     id: '/series/$series_/compose/$step',
@@ -522,13 +578,12 @@ export interface FileRoutesByFullPath {
   '/signup': typeof AuthSignupRoute
   '/two-factor-reset': typeof AuthTwoFactorResetRoute
   '/verify-email': typeof AuthVerifyEmailRoute
-  '/d/agent': typeof DAgentRoute
   '/d/changelog': typeof DChangelogRouteWithChildren
   '/d/customers': typeof DCustomersRouteWithChildren
   '/d/feedback': typeof DFeedbackRouteWithChildren
   '/d/help-center': typeof DHelpCenterRouteWithChildren
+  '/d/home': typeof DHomeRoute
   '/d/notifications': typeof DNotificationsRoute
-  '/d/operator': typeof DOperatorRoute
   '/d/reports': typeof DReportsRouteWithChildren
   '/d/shortcuts': typeof DShortcutsRoute
   '/d/whatsapp-return': typeof DWhatsappReturnRoute
@@ -538,24 +593,30 @@ export interface FileRoutesByFullPath {
   '/login/magic': typeof AuthLoginMagicRoute
   '/login/two-factor': typeof AuthLoginTwoFactorRoute
   '/oauth/authorize': typeof AuthOauthAuthorizeRoute
+  '/d/agents/$agent': typeof DAgentsAgentRoute
   '/d/broadcasts/$broadcast': typeof DBroadcastsBroadcastRoute
   '/d/changelog/$entry': typeof DChangelogEntryRoute
   '/d/customers/$contact': typeof DCustomersContactRoute
   '/d/feedback/$post': typeof DFeedbackPostRoute
   '/d/help-center/$article': typeof DHelpCenterArticleRoute
+  '/d/operator/$tab': typeof DOperatorTabRoute
   '/d/procedures/$procedure': typeof DProceduresProcedureRoute
   '/d/reports/$report': typeof DReportsReportRoute
+  '/d/routines/new': typeof DRoutinesNewRoute
   '/d/series/$series': typeof DSeriesSeriesRoute
   '/d/settings/$section': typeof DSettingsSectionRoute
   '/d/tickets/$ticket': typeof DTicketsTicketRoute
   '/d/workflows/$workflow': typeof DWorkflowsWorkflowRoute
+  '/d/agents/': typeof DAgentsIndexRoute
   '/d/broadcasts/': typeof DBroadcastsIndexRoute
   '/d/changelog/': typeof DChangelogIndexRoute
   '/d/feedback/': typeof DFeedbackIndexRoute
   '/d/help-center/': typeof DHelpCenterIndexRoute
   '/d/inbox/': typeof DInboxIndexRoute
+  '/d/operator/': typeof DOperatorIndexRoute
   '/d/procedures/': typeof DProceduresIndexRoute
   '/d/reports/': typeof DReportsIndexRoute
+  '/d/routines/': typeof DRoutinesIndexRoute
   '/d/series/': typeof DSeriesIndexRoute
   '/d/settings/': typeof DSettingsIndexRoute
   '/d/workflows/': typeof DWorkflowsIndexRoute
@@ -563,6 +624,7 @@ export interface FileRoutesByFullPath {
   '/d/customers/erasures': typeof DCustomersListsErasuresRoute
   '/d/customers/audiences/$audience': typeof DCustomersAudiencesAudienceRoute
   '/d/customers/companies/$company': typeof DCustomersCompaniesCompanyRoute
+  '/d/help-center/requests/$changeset': typeof DHelpCenterRequestsChangesetRoute
   '/d/inbox/$view/$conversation': typeof DInboxViewConversationRoute
   '/d/settings/actions/$action': typeof DSettingsActionsActionRoute
   '/d/settings/inboxes/$inbox': typeof DSettingsInboxesInboxRoute
@@ -579,6 +641,9 @@ export interface FileRoutesByFullPath {
   '/d/settings/webhooks/$endpoint': typeof DSettingsWebhooksEndpointRoute
   '/d/customers/': typeof DCustomersListsIndexRoute
   '/d/inbox/$view/': typeof DInboxViewIndexRoute
+  '/d/routines/$routine/': typeof DRoutinesRoutineIndexRoute
+  '/d/routines/$routine/runs/$run': typeof DRoutinesRoutineRunsRunRoute
+  '/d/routines/$routine/threads/$thread': typeof DRoutinesRoutineThreadsThreadRoute
   '/d/series/$series/compose/$step': typeof DSeriesSeriesComposeStepRoute
   '/d/settings/email/addresses/$address': typeof DSettingsEmailAddressesAddressRoute
   '/d/settings/email/domains/$domain': typeof DSettingsEmailDomainsDomainRoute
@@ -602,10 +667,9 @@ export interface FileRoutesByTo {
   '/signup': typeof AuthSignupRoute
   '/two-factor-reset': typeof AuthTwoFactorResetRoute
   '/verify-email': typeof AuthVerifyEmailRoute
-  '/d/agent': typeof DAgentRoute
   '/d/customers': typeof DCustomersListsIndexRoute
+  '/d/home': typeof DHomeRoute
   '/d/notifications': typeof DNotificationsRoute
-  '/d/operator': typeof DOperatorRoute
   '/d/shortcuts': typeof DShortcutsRoute
   '/d/whatsapp-return': typeof DWhatsappReturnRoute
   '/d': typeof DIndexRoute
@@ -613,24 +677,30 @@ export interface FileRoutesByTo {
   '/login/magic': typeof AuthLoginMagicRoute
   '/login/two-factor': typeof AuthLoginTwoFactorRoute
   '/oauth/authorize': typeof AuthOauthAuthorizeRoute
+  '/d/agents/$agent': typeof DAgentsAgentRoute
   '/d/broadcasts/$broadcast': typeof DBroadcastsBroadcastRoute
   '/d/changelog/$entry': typeof DChangelogEntryRoute
   '/d/customers/$contact': typeof DCustomersContactRoute
   '/d/feedback/$post': typeof DFeedbackPostRoute
   '/d/help-center/$article': typeof DHelpCenterArticleRoute
+  '/d/operator/$tab': typeof DOperatorTabRoute
   '/d/procedures/$procedure': typeof DProceduresProcedureRoute
   '/d/reports/$report': typeof DReportsReportRoute
+  '/d/routines/new': typeof DRoutinesNewRoute
   '/d/series/$series': typeof DSeriesSeriesRoute
   '/d/settings/$section': typeof DSettingsSectionRoute
   '/d/tickets/$ticket': typeof DTicketsTicketRoute
   '/d/workflows/$workflow': typeof DWorkflowsWorkflowRoute
+  '/d/agents': typeof DAgentsIndexRoute
   '/d/broadcasts': typeof DBroadcastsIndexRoute
   '/d/changelog': typeof DChangelogIndexRoute
   '/d/feedback': typeof DFeedbackIndexRoute
   '/d/help-center': typeof DHelpCenterIndexRoute
   '/d/inbox': typeof DInboxIndexRoute
+  '/d/operator': typeof DOperatorIndexRoute
   '/d/procedures': typeof DProceduresIndexRoute
   '/d/reports': typeof DReportsIndexRoute
+  '/d/routines': typeof DRoutinesIndexRoute
   '/d/series': typeof DSeriesIndexRoute
   '/d/settings': typeof DSettingsIndexRoute
   '/d/workflows': typeof DWorkflowsIndexRoute
@@ -638,6 +708,7 @@ export interface FileRoutesByTo {
   '/d/customers/erasures': typeof DCustomersListsErasuresRoute
   '/d/customers/audiences/$audience': typeof DCustomersAudiencesAudienceRoute
   '/d/customers/companies/$company': typeof DCustomersCompaniesCompanyRoute
+  '/d/help-center/requests/$changeset': typeof DHelpCenterRequestsChangesetRoute
   '/d/inbox/$view/$conversation': typeof DInboxViewConversationRoute
   '/d/settings/actions/$action': typeof DSettingsActionsActionRoute
   '/d/settings/inboxes/$inbox': typeof DSettingsInboxesInboxRoute
@@ -653,6 +724,9 @@ export interface FileRoutesByTo {
   '/d/settings/tickets/$type': typeof DSettingsTicketsTypeRoute
   '/d/settings/webhooks/$endpoint': typeof DSettingsWebhooksEndpointRoute
   '/d/inbox/$view': typeof DInboxViewIndexRoute
+  '/d/routines/$routine': typeof DRoutinesRoutineIndexRoute
+  '/d/routines/$routine/runs/$run': typeof DRoutinesRoutineRunsRunRoute
+  '/d/routines/$routine/threads/$thread': typeof DRoutinesRoutineThreadsThreadRoute
   '/d/series/$series/compose/$step': typeof DSeriesSeriesComposeStepRoute
   '/d/settings/email/addresses/$address': typeof DSettingsEmailAddressesAddressRoute
   '/d/settings/email/domains/$domain': typeof DSettingsEmailDomainsDomainRoute
@@ -678,13 +752,12 @@ export interface FileRoutesById {
   '/_auth/signup': typeof AuthSignupRoute
   '/_auth/two-factor-reset': typeof AuthTwoFactorResetRoute
   '/_auth/verify-email': typeof AuthVerifyEmailRoute
-  '/d/agent': typeof DAgentRoute
   '/d/changelog': typeof DChangelogRouteWithChildren
   '/d/customers': typeof DCustomersRouteWithChildren
   '/d/feedback': typeof DFeedbackRouteWithChildren
   '/d/help-center': typeof DHelpCenterRouteWithChildren
+  '/d/home': typeof DHomeRoute
   '/d/notifications': typeof DNotificationsRoute
-  '/d/operator': typeof DOperatorRoute
   '/d/reports': typeof DReportsRouteWithChildren
   '/d/shortcuts': typeof DShortcutsRoute
   '/d_/whatsapp-return': typeof DWhatsappReturnRoute
@@ -694,25 +767,31 @@ export interface FileRoutesById {
   '/_auth/login_/magic': typeof AuthLoginMagicRoute
   '/_auth/login_/two-factor': typeof AuthLoginTwoFactorRoute
   '/_auth/oauth/authorize': typeof AuthOauthAuthorizeRoute
+  '/d/agents/$agent': typeof DAgentsAgentRoute
   '/d/broadcasts/$broadcast': typeof DBroadcastsBroadcastRoute
   '/d/changelog/$entry': typeof DChangelogEntryRoute
   '/d/customers/$contact': typeof DCustomersContactRoute
   '/d/customers/_lists': typeof DCustomersListsRouteWithChildren
   '/d/feedback/$post': typeof DFeedbackPostRoute
   '/d/help-center/$article': typeof DHelpCenterArticleRoute
+  '/d/operator/$tab': typeof DOperatorTabRoute
   '/d/procedures/$procedure': typeof DProceduresProcedureRoute
   '/d/reports/$report': typeof DReportsReportRoute
+  '/d/routines/new': typeof DRoutinesNewRoute
   '/d/series/$series': typeof DSeriesSeriesRoute
   '/d/settings/$section': typeof DSettingsSectionRoute
   '/d/tickets/$ticket': typeof DTicketsTicketRoute
   '/d/workflows/$workflow': typeof DWorkflowsWorkflowRoute
+  '/d/agents/': typeof DAgentsIndexRoute
   '/d/broadcasts/': typeof DBroadcastsIndexRoute
   '/d/changelog/': typeof DChangelogIndexRoute
   '/d/feedback/': typeof DFeedbackIndexRoute
   '/d/help-center/': typeof DHelpCenterIndexRoute
   '/d/inbox/': typeof DInboxIndexRoute
+  '/d/operator/': typeof DOperatorIndexRoute
   '/d/procedures/': typeof DProceduresIndexRoute
   '/d/reports/': typeof DReportsIndexRoute
+  '/d/routines/': typeof DRoutinesIndexRoute
   '/d/series/': typeof DSeriesIndexRoute
   '/d/settings/': typeof DSettingsIndexRoute
   '/d/workflows/': typeof DWorkflowsIndexRoute
@@ -720,6 +799,7 @@ export interface FileRoutesById {
   '/d/customers/_lists/erasures': typeof DCustomersListsErasuresRoute
   '/d/customers/audiences/$audience': typeof DCustomersAudiencesAudienceRoute
   '/d/customers/companies/$company': typeof DCustomersCompaniesCompanyRoute
+  '/d/help-center/requests/$changeset': typeof DHelpCenterRequestsChangesetRoute
   '/d/inbox/$view/$conversation': typeof DInboxViewConversationRoute
   '/d/settings/actions/$action': typeof DSettingsActionsActionRoute
   '/d/settings/inboxes/$inbox': typeof DSettingsInboxesInboxRoute
@@ -736,6 +816,9 @@ export interface FileRoutesById {
   '/d/settings/webhooks/$endpoint': typeof DSettingsWebhooksEndpointRoute
   '/d/customers/_lists/': typeof DCustomersListsIndexRoute
   '/d/inbox/$view/': typeof DInboxViewIndexRoute
+  '/d/routines/$routine/': typeof DRoutinesRoutineIndexRoute
+  '/d/routines/$routine/runs/$run': typeof DRoutinesRoutineRunsRunRoute
+  '/d/routines/$routine/threads/$thread': typeof DRoutinesRoutineThreadsThreadRoute
   '/d/series/$series_/compose/$step': typeof DSeriesSeriesComposeStepRoute
   '/d/settings/email/addresses/$address': typeof DSettingsEmailAddressesAddressRoute
   '/d/settings/email/domains/$domain': typeof DSettingsEmailDomainsDomainRoute
@@ -762,13 +845,12 @@ export interface FileRouteTypes {
     | '/signup'
     | '/two-factor-reset'
     | '/verify-email'
-    | '/d/agent'
     | '/d/changelog'
     | '/d/customers'
     | '/d/feedback'
     | '/d/help-center'
+    | '/d/home'
     | '/d/notifications'
-    | '/d/operator'
     | '/d/reports'
     | '/d/shortcuts'
     | '/d/whatsapp-return'
@@ -778,24 +860,30 @@ export interface FileRouteTypes {
     | '/login/magic'
     | '/login/two-factor'
     | '/oauth/authorize'
+    | '/d/agents/$agent'
     | '/d/broadcasts/$broadcast'
     | '/d/changelog/$entry'
     | '/d/customers/$contact'
     | '/d/feedback/$post'
     | '/d/help-center/$article'
+    | '/d/operator/$tab'
     | '/d/procedures/$procedure'
     | '/d/reports/$report'
+    | '/d/routines/new'
     | '/d/series/$series'
     | '/d/settings/$section'
     | '/d/tickets/$ticket'
     | '/d/workflows/$workflow'
+    | '/d/agents/'
     | '/d/broadcasts/'
     | '/d/changelog/'
     | '/d/feedback/'
     | '/d/help-center/'
     | '/d/inbox/'
+    | '/d/operator/'
     | '/d/procedures/'
     | '/d/reports/'
+    | '/d/routines/'
     | '/d/series/'
     | '/d/settings/'
     | '/d/workflows/'
@@ -803,6 +891,7 @@ export interface FileRouteTypes {
     | '/d/customers/erasures'
     | '/d/customers/audiences/$audience'
     | '/d/customers/companies/$company'
+    | '/d/help-center/requests/$changeset'
     | '/d/inbox/$view/$conversation'
     | '/d/settings/actions/$action'
     | '/d/settings/inboxes/$inbox'
@@ -819,6 +908,9 @@ export interface FileRouteTypes {
     | '/d/settings/webhooks/$endpoint'
     | '/d/customers/'
     | '/d/inbox/$view/'
+    | '/d/routines/$routine/'
+    | '/d/routines/$routine/runs/$run'
+    | '/d/routines/$routine/threads/$thread'
     | '/d/series/$series/compose/$step'
     | '/d/settings/email/addresses/$address'
     | '/d/settings/email/domains/$domain'
@@ -842,10 +934,9 @@ export interface FileRouteTypes {
     | '/signup'
     | '/two-factor-reset'
     | '/verify-email'
-    | '/d/agent'
     | '/d/customers'
+    | '/d/home'
     | '/d/notifications'
-    | '/d/operator'
     | '/d/shortcuts'
     | '/d/whatsapp-return'
     | '/d'
@@ -853,24 +944,30 @@ export interface FileRouteTypes {
     | '/login/magic'
     | '/login/two-factor'
     | '/oauth/authorize'
+    | '/d/agents/$agent'
     | '/d/broadcasts/$broadcast'
     | '/d/changelog/$entry'
     | '/d/customers/$contact'
     | '/d/feedback/$post'
     | '/d/help-center/$article'
+    | '/d/operator/$tab'
     | '/d/procedures/$procedure'
     | '/d/reports/$report'
+    | '/d/routines/new'
     | '/d/series/$series'
     | '/d/settings/$section'
     | '/d/tickets/$ticket'
     | '/d/workflows/$workflow'
+    | '/d/agents'
     | '/d/broadcasts'
     | '/d/changelog'
     | '/d/feedback'
     | '/d/help-center'
     | '/d/inbox'
+    | '/d/operator'
     | '/d/procedures'
     | '/d/reports'
+    | '/d/routines'
     | '/d/series'
     | '/d/settings'
     | '/d/workflows'
@@ -878,6 +975,7 @@ export interface FileRouteTypes {
     | '/d/customers/erasures'
     | '/d/customers/audiences/$audience'
     | '/d/customers/companies/$company'
+    | '/d/help-center/requests/$changeset'
     | '/d/inbox/$view/$conversation'
     | '/d/settings/actions/$action'
     | '/d/settings/inboxes/$inbox'
@@ -893,6 +991,9 @@ export interface FileRouteTypes {
     | '/d/settings/tickets/$type'
     | '/d/settings/webhooks/$endpoint'
     | '/d/inbox/$view'
+    | '/d/routines/$routine'
+    | '/d/routines/$routine/runs/$run'
+    | '/d/routines/$routine/threads/$thread'
     | '/d/series/$series/compose/$step'
     | '/d/settings/email/addresses/$address'
     | '/d/settings/email/domains/$domain'
@@ -917,13 +1018,12 @@ export interface FileRouteTypes {
     | '/_auth/signup'
     | '/_auth/two-factor-reset'
     | '/_auth/verify-email'
-    | '/d/agent'
     | '/d/changelog'
     | '/d/customers'
     | '/d/feedback'
     | '/d/help-center'
+    | '/d/home'
     | '/d/notifications'
-    | '/d/operator'
     | '/d/reports'
     | '/d/shortcuts'
     | '/d_/whatsapp-return'
@@ -933,25 +1033,31 @@ export interface FileRouteTypes {
     | '/_auth/login_/magic'
     | '/_auth/login_/two-factor'
     | '/_auth/oauth/authorize'
+    | '/d/agents/$agent'
     | '/d/broadcasts/$broadcast'
     | '/d/changelog/$entry'
     | '/d/customers/$contact'
     | '/d/customers/_lists'
     | '/d/feedback/$post'
     | '/d/help-center/$article'
+    | '/d/operator/$tab'
     | '/d/procedures/$procedure'
     | '/d/reports/$report'
+    | '/d/routines/new'
     | '/d/series/$series'
     | '/d/settings/$section'
     | '/d/tickets/$ticket'
     | '/d/workflows/$workflow'
+    | '/d/agents/'
     | '/d/broadcasts/'
     | '/d/changelog/'
     | '/d/feedback/'
     | '/d/help-center/'
     | '/d/inbox/'
+    | '/d/operator/'
     | '/d/procedures/'
     | '/d/reports/'
+    | '/d/routines/'
     | '/d/series/'
     | '/d/settings/'
     | '/d/workflows/'
@@ -959,6 +1065,7 @@ export interface FileRouteTypes {
     | '/d/customers/_lists/erasures'
     | '/d/customers/audiences/$audience'
     | '/d/customers/companies/$company'
+    | '/d/help-center/requests/$changeset'
     | '/d/inbox/$view/$conversation'
     | '/d/settings/actions/$action'
     | '/d/settings/inboxes/$inbox'
@@ -975,6 +1082,9 @@ export interface FileRouteTypes {
     | '/d/settings/webhooks/$endpoint'
     | '/d/customers/_lists/'
     | '/d/inbox/$view/'
+    | '/d/routines/$routine/'
+    | '/d/routines/$routine/runs/$run'
+    | '/d/routines/$routine/threads/$thread'
     | '/d/series/$series_/compose/$step'
     | '/d/settings/email/addresses/$address'
     | '/d/settings/email/domains/$domain'
@@ -1094,13 +1204,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DIndexRouteImport
       parentRoute: typeof DRouteRoute
     }
-    '/d/agent': {
-      id: '/d/agent'
-      path: '/agent'
-      fullPath: '/d/agent'
-      preLoaderRoute: typeof DAgentRouteImport
-      parentRoute: typeof DRouteRoute
-    }
     '/d/changelog': {
       id: '/d/changelog'
       path: '/changelog'
@@ -1129,18 +1232,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DHelpCenterRouteImport
       parentRoute: typeof DRouteRoute
     }
+    '/d/home': {
+      id: '/d/home'
+      path: '/home'
+      fullPath: '/d/home'
+      preLoaderRoute: typeof DHomeRouteImport
+      parentRoute: typeof DRouteRoute
+    }
     '/d/notifications': {
       id: '/d/notifications'
       path: '/notifications'
       fullPath: '/d/notifications'
       preLoaderRoute: typeof DNotificationsRouteImport
-      parentRoute: typeof DRouteRoute
-    }
-    '/d/operator': {
-      id: '/d/operator'
-      path: '/operator'
-      fullPath: '/d/operator'
-      preLoaderRoute: typeof DOperatorRouteImport
       parentRoute: typeof DRouteRoute
     }
     '/d/reports': {
@@ -1191,6 +1294,20 @@ declare module '@tanstack/react-router' {
       fullPath: '/oauth/authorize'
       preLoaderRoute: typeof AuthOauthAuthorizeRouteImport
       parentRoute: typeof AuthRoute
+    }
+    '/d/agents/': {
+      id: '/d/agents/'
+      path: '/agents'
+      fullPath: '/d/agents/'
+      preLoaderRoute: typeof DAgentsIndexRouteImport
+      parentRoute: typeof DRouteRoute
+    }
+    '/d/agents/$agent': {
+      id: '/d/agents/$agent'
+      path: '/agents/$agent'
+      fullPath: '/d/agents/$agent'
+      preLoaderRoute: typeof DAgentsAgentRouteImport
+      parentRoute: typeof DRouteRoute
     }
     '/d/broadcasts/': {
       id: '/d/broadcasts/'
@@ -1276,6 +1393,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DInboxViewRouteRouteImport
       parentRoute: typeof DRouteRoute
     }
+    '/d/operator/': {
+      id: '/d/operator/'
+      path: '/operator'
+      fullPath: '/d/operator/'
+      preLoaderRoute: typeof DOperatorIndexRouteImport
+      parentRoute: typeof DRouteRoute
+    }
+    '/d/operator/$tab': {
+      id: '/d/operator/$tab'
+      path: '/operator/$tab'
+      fullPath: '/d/operator/$tab'
+      preLoaderRoute: typeof DOperatorTabRouteImport
+      parentRoute: typeof DRouteRoute
+    }
     '/d/procedures/': {
       id: '/d/procedures/'
       path: '/procedures'
@@ -1303,6 +1434,20 @@ declare module '@tanstack/react-router' {
       fullPath: '/d/reports/$report'
       preLoaderRoute: typeof DReportsReportRouteImport
       parentRoute: typeof DReportsRoute
+    }
+    '/d/routines/': {
+      id: '/d/routines/'
+      path: '/routines'
+      fullPath: '/d/routines/'
+      preLoaderRoute: typeof DRoutinesIndexRouteImport
+      parentRoute: typeof DRouteRoute
+    }
+    '/d/routines/new': {
+      id: '/d/routines/new'
+      path: '/routines/new'
+      fullPath: '/d/routines/new'
+      preLoaderRoute: typeof DRoutinesNewRouteImport
+      parentRoute: typeof DRouteRoute
     }
     '/d/series/': {
       id: '/d/series/'
@@ -1388,6 +1533,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DCustomersCompaniesCompanyRouteImport
       parentRoute: typeof DCustomersRoute
     }
+    '/d/help-center/requests/$changeset': {
+      id: '/d/help-center/requests/$changeset'
+      path: '/requests/$changeset'
+      fullPath: '/d/help-center/requests/$changeset'
+      preLoaderRoute: typeof DHelpCenterRequestsChangesetRouteImport
+      parentRoute: typeof DHelpCenterRoute
+    }
     '/d/inbox/$view/': {
       id: '/d/inbox/$view/'
       path: '/'
@@ -1401,6 +1553,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/d/inbox/$view/$conversation'
       preLoaderRoute: typeof DInboxViewConversationRouteImport
       parentRoute: typeof DInboxViewRouteRoute
+    }
+    '/d/routines/$routine/': {
+      id: '/d/routines/$routine/'
+      path: '/routines/$routine'
+      fullPath: '/d/routines/$routine/'
+      preLoaderRoute: typeof DRoutinesRoutineIndexRouteImport
+      parentRoute: typeof DRouteRoute
     }
     '/d/settings/actions/$action': {
       id: '/d/settings/actions/$action'
@@ -1506,6 +1665,20 @@ declare module '@tanstack/react-router' {
       fullPath: '/d/customers/companies/'
       preLoaderRoute: typeof DCustomersListsCompaniesIndexRouteImport
       parentRoute: typeof DCustomersListsRoute
+    }
+    '/d/routines/$routine/runs/$run': {
+      id: '/d/routines/$routine/runs/$run'
+      path: '/routines/$routine/runs/$run'
+      fullPath: '/d/routines/$routine/runs/$run'
+      preLoaderRoute: typeof DRoutinesRoutineRunsRunRouteImport
+      parentRoute: typeof DRouteRoute
+    }
+    '/d/routines/$routine/threads/$thread': {
+      id: '/d/routines/$routine/threads/$thread'
+      path: '/routines/$routine/threads/$thread'
+      fullPath: '/d/routines/$routine/threads/$thread'
+      preLoaderRoute: typeof DRoutinesRoutineThreadsThreadRouteImport
+      parentRoute: typeof DRouteRoute
     }
     '/d/series/$series_/compose/$step': {
       id: '/d/series/$series_/compose/$step'
@@ -1628,11 +1801,13 @@ const DFeedbackRouteWithChildren = DFeedbackRoute._addFileChildren(
 interface DHelpCenterRouteChildren {
   DHelpCenterArticleRoute: typeof DHelpCenterArticleRoute
   DHelpCenterIndexRoute: typeof DHelpCenterIndexRoute
+  DHelpCenterRequestsChangesetRoute: typeof DHelpCenterRequestsChangesetRoute
 }
 
 const DHelpCenterRouteChildren: DHelpCenterRouteChildren = {
   DHelpCenterArticleRoute: DHelpCenterArticleRoute,
   DHelpCenterIndexRoute: DHelpCenterIndexRoute,
+  DHelpCenterRequestsChangesetRoute: DHelpCenterRequestsChangesetRoute,
 }
 
 const DHelpCenterRouteWithChildren = DHelpCenterRoute._addFileChildren(
@@ -1668,26 +1843,31 @@ const DInboxViewRouteRouteWithChildren = DInboxViewRouteRoute._addFileChildren(
 )
 
 interface DRouteRouteChildren {
-  DAgentRoute: typeof DAgentRoute
   DChangelogRoute: typeof DChangelogRouteWithChildren
   DCustomersRoute: typeof DCustomersRouteWithChildren
   DFeedbackRoute: typeof DFeedbackRouteWithChildren
   DHelpCenterRoute: typeof DHelpCenterRouteWithChildren
+  DHomeRoute: typeof DHomeRoute
   DNotificationsRoute: typeof DNotificationsRoute
-  DOperatorRoute: typeof DOperatorRoute
   DReportsRoute: typeof DReportsRouteWithChildren
   DShortcutsRoute: typeof DShortcutsRoute
   DIndexRoute: typeof DIndexRoute
   DInboxViewRouteRoute: typeof DInboxViewRouteRouteWithChildren
+  DAgentsAgentRoute: typeof DAgentsAgentRoute
   DBroadcastsBroadcastRoute: typeof DBroadcastsBroadcastRoute
+  DOperatorTabRoute: typeof DOperatorTabRoute
   DProceduresProcedureRoute: typeof DProceduresProcedureRoute
+  DRoutinesNewRoute: typeof DRoutinesNewRoute
   DSeriesSeriesRoute: typeof DSeriesSeriesRoute
   DSettingsSectionRoute: typeof DSettingsSectionRoute
   DTicketsTicketRoute: typeof DTicketsTicketRoute
   DWorkflowsWorkflowRoute: typeof DWorkflowsWorkflowRoute
+  DAgentsIndexRoute: typeof DAgentsIndexRoute
   DBroadcastsIndexRoute: typeof DBroadcastsIndexRoute
   DInboxIndexRoute: typeof DInboxIndexRoute
+  DOperatorIndexRoute: typeof DOperatorIndexRoute
   DProceduresIndexRoute: typeof DProceduresIndexRoute
+  DRoutinesIndexRoute: typeof DRoutinesIndexRoute
   DSeriesIndexRoute: typeof DSeriesIndexRoute
   DSettingsIndexRoute: typeof DSettingsIndexRoute
   DWorkflowsIndexRoute: typeof DWorkflowsIndexRoute
@@ -1704,6 +1884,9 @@ interface DRouteRouteChildren {
   DSettingsTeamsTeamRoute: typeof DSettingsTeamsTeamRoute
   DSettingsTicketsTypeRoute: typeof DSettingsTicketsTypeRoute
   DSettingsWebhooksEndpointRoute: typeof DSettingsWebhooksEndpointRoute
+  DRoutinesRoutineIndexRoute: typeof DRoutinesRoutineIndexRoute
+  DRoutinesRoutineRunsRunRoute: typeof DRoutinesRoutineRunsRunRoute
+  DRoutinesRoutineThreadsThreadRoute: typeof DRoutinesRoutineThreadsThreadRoute
   DSeriesSeriesComposeStepRoute: typeof DSeriesSeriesComposeStepRoute
   DSettingsEmailAddressesAddressRoute: typeof DSettingsEmailAddressesAddressRoute
   DSettingsEmailDomainsDomainRoute: typeof DSettingsEmailDomainsDomainRoute
@@ -1714,26 +1897,31 @@ interface DRouteRouteChildren {
 }
 
 const DRouteRouteChildren: DRouteRouteChildren = {
-  DAgentRoute: DAgentRoute,
   DChangelogRoute: DChangelogRouteWithChildren,
   DCustomersRoute: DCustomersRouteWithChildren,
   DFeedbackRoute: DFeedbackRouteWithChildren,
   DHelpCenterRoute: DHelpCenterRouteWithChildren,
+  DHomeRoute: DHomeRoute,
   DNotificationsRoute: DNotificationsRoute,
-  DOperatorRoute: DOperatorRoute,
   DReportsRoute: DReportsRouteWithChildren,
   DShortcutsRoute: DShortcutsRoute,
   DIndexRoute: DIndexRoute,
   DInboxViewRouteRoute: DInboxViewRouteRouteWithChildren,
+  DAgentsAgentRoute: DAgentsAgentRoute,
   DBroadcastsBroadcastRoute: DBroadcastsBroadcastRoute,
+  DOperatorTabRoute: DOperatorTabRoute,
   DProceduresProcedureRoute: DProceduresProcedureRoute,
+  DRoutinesNewRoute: DRoutinesNewRoute,
   DSeriesSeriesRoute: DSeriesSeriesRoute,
   DSettingsSectionRoute: DSettingsSectionRoute,
   DTicketsTicketRoute: DTicketsTicketRoute,
   DWorkflowsWorkflowRoute: DWorkflowsWorkflowRoute,
+  DAgentsIndexRoute: DAgentsIndexRoute,
   DBroadcastsIndexRoute: DBroadcastsIndexRoute,
   DInboxIndexRoute: DInboxIndexRoute,
+  DOperatorIndexRoute: DOperatorIndexRoute,
   DProceduresIndexRoute: DProceduresIndexRoute,
+  DRoutinesIndexRoute: DRoutinesIndexRoute,
   DSeriesIndexRoute: DSeriesIndexRoute,
   DSettingsIndexRoute: DSettingsIndexRoute,
   DWorkflowsIndexRoute: DWorkflowsIndexRoute,
@@ -1750,6 +1938,9 @@ const DRouteRouteChildren: DRouteRouteChildren = {
   DSettingsTeamsTeamRoute: DSettingsTeamsTeamRoute,
   DSettingsTicketsTypeRoute: DSettingsTicketsTypeRoute,
   DSettingsWebhooksEndpointRoute: DSettingsWebhooksEndpointRoute,
+  DRoutinesRoutineIndexRoute: DRoutinesRoutineIndexRoute,
+  DRoutinesRoutineRunsRunRoute: DRoutinesRoutineRunsRunRoute,
+  DRoutinesRoutineThreadsThreadRoute: DRoutinesRoutineThreadsThreadRoute,
   DSeriesSeriesComposeStepRoute: DSeriesSeriesComposeStepRoute,
   DSettingsEmailAddressesAddressRoute: DSettingsEmailAddressesAddressRoute,
   DSettingsEmailDomainsDomainRoute: DSettingsEmailDomainsDomainRoute,

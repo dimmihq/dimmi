@@ -1,40 +1,43 @@
 ---
 title: "Work with Operator"
-description: "Where to ask Operator, what it can read and do as you, and the settings that decide what it may change and spend."
+description: "Use Operator inside dimmi or Slack to sum up threads, answer workspace questions, draft replies, and propose safe edits."
 ---
 
-Operator answers teammates from your workspace's data and proposes changes as [changesets](/operator/changesets/). It never writes to customers.
+**Operator** is an internal AI teammate built for your support team. Ask it to summarize a long chat, look up a customer's past tickets, draft a reply in your voice, or propose tags and edits as reviewable [changesets](/operator/changesets/).
 
-## Ask Operator
+Customers never see Operator, and it never sends a customer message on its own.
 
-- **In a conversation:** open **Operator** in the conversation's header, or press `O`. The chat is about that conversation, and only you see it.
-- **In Slack:** mention the dimmi app in a **Team only** channel, or send it a direct message. A link to a dimmi conversation in your first message makes the thread about it.
+## Where to talk to Operator
 
-In Slack, Operator answers only [linked teammates](/channels/slack-room-modes/), and never in a channel customers can read.
+- **Inside any conversation:** click **Operator** in the thread header, or press `O`. The chat focuses on that conversation and is private to you.
+- **Inside a procedure:** click **Operator** in the procedure editor header to review recent runs that went wrong, check the playbook for gaps, or generate saved simulations.
+- **In Slack:** mention the dimmi app in a **Team only** channel or send it a direct message. Paste a link to a dimmi conversation in your first message to make the Slack thread about that chat.
+
+In Slack, Operator only replies to [linked teammates](/channels/slack-room-modes/) and stays silent in any channel customers can read.
 
 ## What Operator can do
 
-Operator acts as you: it sees the conversations you may see and changes what your role allows.
+Operator always runs with **your own role and permissions**. It only reads conversations you are allowed to open and only proposes changes your role permits.
 
-- **Read:** conversations, customers, tags, teammates, help center articles and their drafts, procedures, the knowledge the dimmi agent answers from and reports of up to 366 days.
-- **Draft:** a reply for you to copy. Operator never sends it.
-- **Change:** tags, assignment, priority, status, notes, a customer's name, article drafts and procedures, all through changesets.
-- **Call your systems:** [actions](/ai/actions/) with **Operator** ticked under **Used by**. Lookups run at once; changes become changesets.
-- **Remember:** what you ask it to remember, up to 1,000 characters each. Only you see your memories; delete them in **Settings → Operator**.
+- **Search and summarize:** reads conversations, customers, tags, teammates, help center articles and drafts, procedures, knowledge sources, and up to **366 days** of reports.
+- **Draft replies:** writes a suggested reply in your workspace's tone and language, following the guidance you gave your AI agent. It checks the help center first; when that has no answer, it leans on how your team answered the same question before, and tells you which conversation.
+- **Recommend with reasons:** when it suggests a teammate, a team, a tag or a priority, it says why. It looks at what your team did with similar conversations and cites them: "Assign to Maya: she handled 6 of the 8 similar conversations."
+- **Propose edits:** updates tags, assignment, priority, status, notes, customer names, article drafts, procedure drafts, and saved procedure simulations through [changesets](/operator/changesets/).
+- **Audit procedures:** reviews recent failed [procedure](/ai/procedure-versions/) runs and proposes working-copy fixes alongside [simulations](/ai/test-procedures/) made from the failing chats.
+- **Run workspace actions:** calls [actions](/ai/actions/) where **Operator** is ticked under **Used by**. Read lookups run right away; actions that change data always wait as a changeset.
+- **Remember your preferences:** tell Operator how you like summaries or drafts formatted. Your memories are private to you and can be deleted anytime in **Settings → Operator**.
 
-One answer uses at most 12 model calls and 40 tool calls.
+## Settings and defaults
 
-## Settings
+Admins manage Operator in **Settings → Operator**:
 
-Admins change these in **Settings → Operator**.
-
-| Setting | Default | What it changes |
+| Setting | Default | What it controls |
 | --- | --- | --- |
-| **Operator** | On | Off stops every answer, in dimmi and in Slack. |
-| **Brief conversations as they open** | Off | Operator briefs a teammate on each conversation they open. |
-| **Triage new conversations** | Off | Operator proposes tags, an owner and a priority for each conversation a customer starts. |
-| **What Operator may change** | **Ask first** | See [changesets](/operator/changesets/). |
-| **Model** | GPT-6 Luna | A model on the dimmi agent's connection. Without GPT-6 Luna there, Operator uses the agent's model. |
-| **Instructions** | Empty | Up to 8,000 characters that Operator reads with every question. |
+| **Operator** | On | Turns Operator on or off across dimmi and Slack. |
+| **Brief conversations as they open** | Off | Automatically writes a private summary when a teammate opens a thread. |
+| **Triage new conversations** | Off | Proposes tags, an owner, and a priority on every incoming chat. |
+| **What Operator may change** | **Ask first** | Controls which changes wait for approval. See [Changesets](/operator/changesets/). |
+| **Model** | GPT-6 Luna | Runs on your agent's AI connection (falls back to the agent's answer model if unavailable). |
+| **Instructions** | Empty | Team guidance Operator follows on every question. |
 
-Operator's runs count toward the dimmi agent's [monthly cap](/ai/providers/#set-the-monthly-cap), and Operator stops answering when the cap is reached. The **Operator** tab of the **Agent** page shows its runs and spend.
+Operator usage counts toward the dimmi agent's [monthly spend cap](/ai/providers/#set-the-monthly-cap) and stops if the cap is reached. Track Operator runs and spend on the **Operator** tab of the **Agent** page.

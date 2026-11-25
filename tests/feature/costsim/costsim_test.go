@@ -63,7 +63,7 @@ func TestSeed(t *testing.T) {
 		assert.GreaterOrEqual(t, c["articles"], int64(150))
 		assert.Greater(t, c["knowledge_chunks"], c["articles"], "the help center is indexed for search")
 		assert.Equal(t, int64(len(stowline.Collections())), c["collections"])
-		assert.Equal(t, int64(tiny().Conversations), c["conversations"])
+		assert.Equal(t, int64(tiny().Conversations+stowline.PlantedCases()), c["conversations"])
 		assert.Greater(t, c["messages"], int64(tiny().Conversations*2))
 		assert.Equal(t, int64(tiny().Contacts), c["contacts"])
 		assert.Equal(t, int64(tiny().Companies), c["companies"])
@@ -73,11 +73,39 @@ func TestSeed(t *testing.T) {
 		assert.Greater(t, c["ai_run_steps"], c["ai_runs"])
 		assert.Equal(t, int64(8), c["ai_actions"])
 		assert.Equal(t, int64(3), c["procedures"])
+		assert.Equal(t, int64(9), c["procedure_versions"], "each procedure was published three times")
+		assert.Equal(t, int64(len(stowline.SavedTests())), c["procedure_test_cases"])
 		assert.Positive(t, c["conversation_tag"])
 		assert.Positive(t, c["conversation_ratings"])
 		assert.Positive(t, c["conversation_events"], "the event log saw every conversation")
 		assert.Positive(t, c["changelog_entries"])
 		assert.Positive(t, c["feedback_posts"])
+	})
+
+	t.Run("gives the procedures a history: dated versions and runs that followed them", func(t *testing.T) {
+		t.Parallel()
+		tc := tests.New(t)
+		size := stowline.Size{Name: "busy", Companies: 12, Contacts: 80, Conversations: 600, Teammates: 6}
+		res, err := (&stowline.Seeder{App: tc.App, Size: size, Seed: 7}).Run(t.Context())
+		require.NoError(t, err)
+		ctx := tenancy.With(t.Context(), res.Workspace.ID.String())
+
+		var versions, dated int
+		require.NoError(t, tc.Operator().QueryRow(ctx, `SELECT count(*),
+				count(*) FILTER (WHERE published_at < now() - interval '10 days')
+			FROM procedure_versions WHERE workspace_id = $1`, res.Workspace.ID).Scan(&versions, &dated))
+		assert.Equal(t, 9, versions)
+		assert.Equal(t, versions, dated, "every version is dated in the past")
+
+		var followed, traced, live int
+		require.NoError(t, tc.Operator().QueryRow(ctx, `SELECT count(*) FILTER (WHERE flags <> '{}'),
+				count(*) FILTER (WHERE procedure_trace ? 'steps'),
+				count(*) FILTER (WHERE (procedure_trace->>'version')::int = 3)
+			FROM ai_runs WHERE workspace_id = $1`, res.Workspace.ID).Scan(&followed, &traced, &live))
+		assert.Positive(t, followed, "runs on a procedure's topic follow it")
+		assert.Equal(t, followed, traced, "a run that follows a procedure carries its trace")
+		assert.Positive(t, live, "recent runs follow the live version")
+		assert.Positive(t, res.Counts["ai_action_calls"], "action steps record their calls")
 	})
 
 	t.Run("refuses an existing workspace, and a reset writes the same data again", func(t *testing.T) {
@@ -180,7 +208,7 @@ func TestSimulation(t *testing.T) {
 		first := report.Conversations[0]
 		assert.Equal(t, stowline.Scenarios()[0].Key, first.Scenario)
 		assert.Positive(t, first.AIReplies)
-		assert.Equal(t, 1, first.Searches, "the agent searched the help center")
+		assert.Equal(t, 2, first.Searches, "the first message was searched ahead, and the agent searched once more")
 		assert.GreaterOrEqual(t, first.ModelCalls, 2)
 		assert.Positive(t, first.CostMicros, "the recorded runs carry a cost")
 		assert.Positive(t, first.ConvCost)

@@ -1,31 +1,31 @@
 ---
 title: "Set email signatures and reply style"
-description: "Which signature an email reply carries, how the Plain and Branded reply styles differ and the variables a signature can use."
+description: "Choose Plain or Branded email replies, set personal and team signatures, and insert dynamic variables."
 ---
 
-Set an address's reply style and team signature in **Settings → Email**, and your own signature in **Settings → Profile**.
+Set each address's reply style and team signature in **Settings → Email**. Teammates set their personal signature in **Settings → Profile**.
 
-## Which signature a reply carries
+## Which signature gets used
 
-dimmi uses the first signature that applies:
+When sending an email reply, dimmi picks the first enabled signature from this list:
 
-1. The teammate's own signature for the address the reply is from. Create it through the REST API.
-2. The teammate's own signature.
-3. The address's team signature.
+1. **Per-address personal signature:** a teammate's signature for that specific support address (created through the REST API).
+2. **Personal signature:** the teammate's default signature from **Settings → Profile**.
+3. **Team signature:** the signature configured on the support address.
 
-Replies from the dimmi agent carry only the team signature. dimmi skips a signature that is turned off.
+Replies from the dimmi agent only use the team signature. Any signature that is turned off is skipped.
 
 ## Reply style
 
-- **Plain:** the reply alone. The default.
-- **Branded:** adds a line in your brand color above the reply and a footer of up to 500 characters below it.
+- **Plain:** sends your reply text on its own (default).
+- **Branded:** adds a thin bar in your brand color above the reply and a custom footer below it.
 
-## Variables
+## Signature variables
 
-A signature holds up to 2,000 characters and no images.
+Signatures support plain text without images and three variables:
 
-- `{{member_name}}`: the teammate who replies.
-- `{{address_name}}`: the address's display name.
-- `{{company_name}}`: your workspace's name.
+- `{{member_name}}`: the replying teammate's name.
+- `{{address_name}}`: the support address's display name.
+- `{{company_name}}`: your workspace name.
 
-dimmi leaves out the whole line of a variable with no value. dimmi agent replies have no `{{member_name}}` line.
+If a variable has no value, dimmi drops its entire line. Because dimmi agent replies have no `{{member_name}}`, any line containing it is omitted automatically.

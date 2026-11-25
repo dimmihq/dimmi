@@ -31,44 +31,71 @@ import (
 /*
 proposeDescription tells the model how to propose changes.
 */
-const proposeDescription = "Propose changes to the workspace as one changeset a teammate reviews: tag or untag, " +
-	"assign to a teammate or team, set priority, open or close, rename, add an internal note, update a " +
-	"customer's name, create a help article draft, edit an article's draft, or edit a procedure's working " +
-	"copy. Give a short title and the reason."
+const proposeDescription = "Propose changes to conversations, customers and procedures as one changeset a " +
+	"teammate reviews: tag or untag, assign to a teammate or team, set priority, open or close, rename, add " +
+	"an internal note, update a customer's name, edit a procedure's working copy, or add a regression test " +
+	"to a procedure from a conversation that went wrong. Help articles have their own tools: " +
+	"propose_article_edits and propose_new_article. Give a short title and the reason, both in plain words a " +
+	"teammate reads at a glance."
+
+/*
+reasonHelp tells the model how to write the reason of a suggestion,
+which a teammate reads on its card and above the change under review.
+*/
+const reasonHelp = "Why, written so a 12-year-old could follow it. Two or three very short sentences in " +
+	"everyday words, one idea in each: what is wrong today, what is true, what this changes. Like: 'This " +
+	"page says refunds take 30 days. **Refund timing** says 14 days. This fix makes them match.' Name " +
+	"another article by its title in **bold**, and conversations by number. When the change picks " +
+	"something (a teammate, a team, a tag, a priority), say why that one, from what you saw: 'Maya " +
+	"answered the last three billing questions.' Never join ideas with 'so', 'which' or 'while'. No " +
+	"jargon, no ids, no tool names."
 
 /*
 proposeSchema is the schema of a proposal.
 */
-const proposeSchema = `{"type":"object","required":["title","reason","operations"],"properties":{
-"title":{"type":"string","maxLength":200,"description":"What the changeset does, like 'Route to Billing'."},
-"reason":{"type":"string","maxLength":2000},
+const proposeSchema = `{"type":"object","required":["suggestion_title","reason","operations"],"properties":{
+"suggestion_title":{"type":"string","maxLength":200,"description":"What it does in a few everyday words, like ` +
+	`'Route to Billing'."},
+"reason":{"type":"string","maxLength":2000,"description":"` + reasonHelp + `"},
+"dedup_key":{"type":"string","maxLength":200,"description":"A stable key for what this suggests, like ` +
+	`'qa:prc_...:step-2'. A suggestion with the same key that still waits, or was declined in the last 30 ` +
+	`days, is not made again."},
 "operations":{"type":"array","minItems":1,"maxItems":50,"items":{"type":"object","required":["kind"],
 "properties":{
 "kind":{"type":"string","enum":["conversation.tag","conversation.untag","conversation.assign",
 "conversation.priority","conversation.status","conversation.title","conversation.note","contact.update",
-"article.create_draft","article.edit_draft","procedure.edit_draft"]},
-"conversation":{"type":"integer","description":"Conversation number; leave out for this thread's."},
-"tags":{"type":"array","items":{"type":"string"},"description":"Tag names, for tag and untag."},
-"member":{"type":"string","description":"Teammate id (mem_...) to assign, or none."},
-"team":{"type":"string","description":"Team id (team_...) to assign, or none."},
-"priority":{"type":"string","enum":["none","low","medium","high","urgent"]},
-"status":{"type":"string","enum":["open","closed"]},
-"title":{"type":"string","description":"Conversation subject or article title."},
-"body":{"type":"string","description":"Note text or article Markdown."},
-"contact":{"type":"string","description":"Customer id (ctc_...); leave out for this conversation's."},
-"name":{"type":"string","description":"The customer's new name."},
-"help_center":{"type":"string","description":"Help center id (hc_...); leave out for the default."},
-"article":{"type":"string","description":"Article id (art_...)."},
-"procedure":{"type":"string","description":"Procedure id (prc_...)."},
-"definition":{"type":"object","description":"The procedure's whole new working copy, as get_procedure shows it."}
+"procedure.edit_draft","procedure.create_test_case"]},
+"conversation_number":{"type":"integer","description":"Conversation number, such as 123 for #123; leave ` +
+	`out for this thread's."},
+"tags":{"type":"array","items":{"type":"string"},"description":"For conversation.tag and untag: tag names."},
+"member_id":{"type":"string","description":"For conversation.assign: teammate id (mem_...), or none."},
+"team_id":{"type":"string","description":"For conversation.assign: team id (team_...), or none."},
+"priority":{"type":"string","enum":["none","low","medium","high","urgent"],
+"description":"For conversation.priority."},
+"status":{"type":"string","enum":["open","closed"],"description":"For conversation.status."},
+"new_subject":{"type":"string","description":"For conversation.title: the conversation's new subject."},
+"note_text":{"type":"string","description":"For conversation.note: the note's text."},
+"contact_id":{"type":"string","description":"For contact.update: customer id (ctc_...); leave out for this ` +
+	`conversation's."},
+"customer_name":{"type":"string","description":"For contact.update: the customer's new name."},
+"procedure_id":{"type":"string","description":"For the procedure kinds: procedure id (prc_...)."},
+"procedure_definition":{"type":"object","description":"For procedure.edit_draft: the procedure's whole new working ` +
+	`copy, as get_procedure_by_id shows it."},
+"test_case":{"type":"object","description":"For procedure.create_test_case: the test, with name, messages ` +
+	`([{text}], the customer's turns), persona ({verified, external_id, channel, attributes}), action_mocks ` +
+	`({action name: {status: HTTP status as a number such as 200, body: any JSON}}), assertions ([{type, ...}]: ` +
+	`procedure_matched; action_called and action_not_called with action (its name); action_order with action ` +
+	`and before; branch_taken with step_id and branch; handed_off with handed_off true or false; ` +
+	`reply_contains and reply_not_contains with text) and source_conversation_number."}
 }}}}}`
 
 /*
 proposal is a proposal as the model sent it.
 */
 type proposal struct {
-	Title      string    `json:"title"`
+	Title      string    `json:"suggestion_title"`
 	Reason     string    `json:"reason"`
+	DedupKey   string    `json:"dedup_key"`
 	Operations []opInput `json:"operations"`
 }
 
@@ -88,9 +115,50 @@ type opInput struct {
 	Contact      string          `json:"contact"`
 	Name         string          `json:"name"`
 	HelpCenter   string          `json:"help_center"`
+	Collection   string          `json:"collection"`
+	Visibility   string          `json:"visibility"`
 	Article      string          `json:"article"`
 	Procedure    string          `json:"procedure"`
 	Definition   json.RawMessage `json:"definition"`
+	TestCase     json.RawMessage `json:"test_case"`
+	Edits        passageEdits    `json:"edits"`
+	MemberID     string          `json:"member_id"`
+	TeamID       string          `json:"team_id"`
+	ContactID    string          `json:"contact_id"`
+	HelpCenterID string          `json:"help_center_id"`
+	CollectionID string          `json:"collection_id"`
+	ArticleID    string          `json:"article_id"`
+	ProcedureID  string          `json:"procedure_id"`
+	Number       int64           `json:"conversation_number"`
+	Subject      string          `json:"new_subject"`
+	NoteText     string          `json:"note_text"`
+	CustomerName string          `json:"customer_name"`
+	NewWorking   json.RawMessage `json:"procedure_definition"`
+}
+
+/*
+named is the operation with every id under one name, whether the model
+sent it as article_id or, as older prompts did, as article.
+*/
+func (in opInput) named() opInput {
+	in.Member, in.Team = either(in.MemberID, in.Member), either(in.TeamID, in.Team)
+	in.Contact, in.Procedure = either(in.ContactID, in.Contact), either(in.ProcedureID, in.Procedure)
+	in.HelpCenter, in.Collection = either(in.HelpCenterID, in.HelpCenter), either(in.CollectionID, in.Collection)
+	in.Article = either(in.ArticleID, in.Article)
+	in.Name = either(in.CustomerName, in.Name)
+	if in.Number != 0 {
+		in.Conversation = in.Number
+	}
+	if len(in.NewWorking) > 0 {
+		in.Definition = in.NewWorking
+	}
+	if in.Kind == KindTitle {
+		in.Title = either(in.Subject, in.Title)
+	}
+	if in.Kind == KindNote {
+		in.Body = either(in.NoteText, in.Body)
+	}
+	return in
 }
 
 /*
@@ -99,10 +167,10 @@ check refuses a proposal without a title or operations.
 func (p proposal) check() error {
 	title := strings.TrimSpace(p.Title)
 	if title == "" || len([]rune(title)) > 200 {
-		return fmt.Errorf("%w: a title of 1 to 200 characters is required", errBadArguments)
+		return fmt.Errorf("%w: \"suggestion_title\" is missing; give 1 to 200 characters", errBadArguments)
 	}
 	if len(p.Operations) == 0 || len(p.Operations) > maxOperations {
-		return fmt.Errorf("%w: give 1 to %d operations", errBadArguments, maxOperations)
+		return fmt.Errorf("%w: \"operations\" must hold 1 to %d operations", errBadArguments, maxOperations)
 	}
 	return nil
 }
@@ -116,6 +184,7 @@ func (e *Engine) operations(ctx context.Context, s *session, in []opInput) ([]Op
 	err := e.DB.Transaction(ctx, func(ctx context.Context, tx *database.Tx) error {
 		r := resolver{e: e, s: s, q: models.New(tx)}
 		for i, raw := range in {
+			raw = raw.named()
 			if !slices.Contains(Kinds(), raw.Kind) || raw.Kind == KindAction {
 				return fmt.Errorf("%w: operation %d has an unknown kind %q", errBadArguments, i+1, raw.Kind)
 			}
@@ -124,13 +193,23 @@ func (e *Engine) operations(ctx context.Context, s *session, in []opInput) ([]Op
 			}
 			op, err := r.resolve(ctx, raw)
 			if err != nil {
-				return fmt.Errorf("operation %d (%s): %w", i+1, raw.Kind, err)
+				return placed(err, in, i)
 			}
 			out = append(out, op)
 		}
 		return nil
 	})
 	return out, err
+}
+
+/*
+placed says which operation an error is about when there are several.
+*/
+func placed(err error, in []opInput, i int) error {
+	if len(in) == 1 {
+		return err
+	}
+	return fmt.Errorf("operation %d (%s): %w", i+1, in[i].Kind, err)
 }
 
 /*

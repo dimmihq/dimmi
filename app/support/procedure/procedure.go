@@ -5,10 +5,17 @@
 |
 | A procedure is plain JSON: when it applies, its steps in order and
 | when to hand over. A step is an instruction, a condition the agent
-| weighs before going on, or an action the agent takes through one of
-| the workspace's own actions. A working copy may be unfinished; only a
-| definition with no problems can be published, so dimmi never follows
-| a half-written procedure.
+| weighs before going on, an action the agent takes through one of the
+| workspace's own actions, a branch dimmi decides itself from a rule, or
+| a reusable sub-procedure. A step's words may carry inline chips, kept
+| in the text as markers such as [[action:act_...]] and described in the
+| step's bindings, so the runtime never guesses what a chip meant. A
+| working copy may be unfinished; only a definition with no problems can
+| be published, so dimmi never follows a half-written procedure.
+|
+| Chips, rules, nested steps, scopes and enforcement are all optional: a
+| definition that uses none of them reads, checks and renders exactly as
+| it always has.
 |
 | The text dimmi reads is written by the team, so it is trusted as the
 | workspace's own guidance, unlike anything a customer typed.
@@ -21,52 +28,124 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"slices"
-	"strconv"
-	"strings"
-	"unicode/utf8"
 )
 
 /*
-The limits of a procedure.
+The limits of a procedure: top-level steps, every step counted nested
+ones included, the words of a step, when it applies, the handovers, how
+deep then and else steps nest, the rules of one condition, and how
+many sub-procedures may nest inside each other.
 */
 const (
 	MaxSteps       = 30
+	MaxAllSteps    = 80
 	MaxStepText    = 1000
 	MaxDescription = 500
 	MaxHandover    = 10
 	MaxHandoverLen = 300
+	MaxNesting     = 2
+	MaxRules       = 10
+	MaxSubDepth    = 3
+	MaxRetries     = 3
 )
 
 /*
 The step kinds.
 */
 const (
-	KindInstruction = "instruction"
-	KindCondition   = "condition"
-	KindAction      = "action"
+	KindInstruction  = "instruction"
+	KindCondition    = "condition"
+	KindAction       = "action"
+	KindBranch       = "branch"
+	KindSubProcedure = "sub_procedure"
+)
+
+/*
+The binding kinds: what an inline chip names.
+*/
+const (
+	BindAction       = "action"
+	BindAttribute    = "attribute"
+	BindArticle      = "article"
+	BindHandoff      = "handoff"
+	BindTag          = "tag"
+	BindTicketType   = "ticket_type"
+	BindSubProcedure = "sub_procedure"
+)
+
+/*
+How an action chip is enforced, what happens when it cannot be offered,
+and what a broken rule does.
+*/
+const (
+	ExecRequired    = "required"
+	ExecConditional = "conditional"
+	MissingHandoff  = "handoff"
+	MissingContinue = "continue"
+	ViolateHandoff  = "handoff"
+	ViolateWarn     = "warn_only"
 )
 
 /*
 Definition is a procedure: Description says when it applies, Steps are
 followed in order, Handover lists when to hand the conversation to a
-person.
+person. Scope narrows where it applies and HandoverRule routes the
+handovers it causes.
 */
 type Definition struct {
-	Description string   `json:"description"`
-	Steps       []Step   `json:"steps"`
-	Handover    []string `json:"handover"`
+	Description  string          `json:"description"`
+	Scope        *Scope          `json:"scope,omitempty"`
+	Steps        []Step          `json:"steps"`
+	Handover     []string        `json:"handover"`
+	HandoverRule *HandoverConfig `json:"handover_rule,omitempty"`
 }
 
 /*
-Step is one step: its id, kind and words, and for an action step the
-public id of the workspace action it takes.
+Step is one step: its id, kind and words, and for a legacy action step
+the public id of the workspace action it takes. Bindings describe the
+chips in its words; Enforcement says what must run before its actions;
+Condition is the rule of a branch, deciding between ThenSteps and
+ElseSteps; SubProcedure names the reusable procedure a sub_procedure
+step follows.
 */
 type Step struct {
-	ID       string `json:"id"`
-	Kind     string `json:"kind"`
-	Text     string `json:"text"`
-	ActionID string `json:"action_id,omitempty"`
+	ID           string         `json:"id"`
+	Kind         string         `json:"kind"`
+	Text         string         `json:"text"`
+	ActionID     string         `json:"action_id,omitempty"`
+	Bindings     []Binding      `json:"bindings,omitempty"`
+	Enforcement  *Enforcement   `json:"enforcement,omitempty"`
+	Condition    *ConditionExpr `json:"condition,omitempty"`
+	ThenSteps    []Step         `json:"then_steps,omitempty"`
+	ElseSteps    []Step         `json:"else_steps,omitempty"`
+	SubProcedure string         `json:"sub_procedure_id,omitempty"`
+}
+
+/*
+Binding is one chip: what it names and, for an action, whether dimmi
+must call it and what to do when it cannot be offered. Label is the
+name it had when written, shown should the thing be renamed; Priority
+goes with a handoff chip.
+*/
+type Binding struct {
+	ID        string `json:"id,omitempty"`
+	Kind      string `json:"kind"`
+	Ref       string `json:"ref"`
+	Label     string `json:"label,omitempty"`
+	Execution string `json:"execution,omitempty"`
+	OnMissing string `json:"on_missing,omitempty"`
+	Priority  string `json:"priority,omitempty"`
+}
+
+/*
+Enforcement is what must succeed before a step's actions run, how many
+times dimmi is told to call a skipped required action, and what follows
+when it still does not.
+*/
+type Enforcement struct {
+	Requires    []string `json:"requires,omitempty"`
+	MaxRetries  int      `json:"max_retries,omitempty"`
+	OnViolation string   `json:"on_violation,omitempty"`
 }
 
 /*
@@ -113,120 +192,20 @@ func Parse(raw json.RawMessage) (Definition, error) {
 }
 
 /*
-Check lists what stops the definition from being published.
+Walk calls fn on every step, nested then and else steps included, in
+reading order, with how deep the step sits.
 */
-func Check(d Definition) []Issue {
-	var out []Issue
-	if n := utf8.RuneCountInString(strings.TrimSpace(d.Description)); n == 0 || n > MaxDescription {
-		out = append(out, Issue{
-			Code: "missing_setting", Field: "description",
-			Message: "Say when dimmi should use this, in 500 characters.",
-		})
-	}
-
-	if len(d.Steps) == 0 || len(d.Steps) > MaxSteps {
-		out = append(out, Issue{Code: "limit_exceeded", Field: "steps", Message: "Write 1 to 30 steps."})
-	}
-
-	if len(d.Handover) > MaxHandover {
-		out = append(out, Issue{Code: "limit_exceeded", Field: "handover", Message: "List at most 10 handovers."})
-	}
-
-	for _, h := range d.Handover {
-		if n := utf8.RuneCountInString(strings.TrimSpace(h)); n == 0 || n > MaxHandoverLen {
-			out = append(out, Issue{
-				Code: "invalid_setting", Field: "handover", Message: "Write each handover in 1 to 300 characters.",
-			})
-		}
-	}
-
-	return append(out, checkSteps(d.Steps)...)
+func Walk(steps []Step, fn func(s Step, depth int)) {
+	walkFrom(steps, 0, fn)
 }
 
 /*
-checkSteps checks each step's kind, words and action.
+walkFrom walks steps that sit depth levels deep.
 */
-func checkSteps(steps []Step) []Issue {
-	var out []Issue
-	seen := map[string]bool{}
+func walkFrom(steps []Step, depth int, fn func(s Step, depth int)) {
 	for _, s := range steps {
-		if s.ID == "" || seen[s.ID] {
-			out = append(out, Issue{Code: "duplicate_id", StepID: s.ID, Message: "Every step needs its own id."})
-		}
-
-		seen[s.ID] = true
-		if s.Kind != KindInstruction && s.Kind != KindCondition && s.Kind != KindAction {
-			out = append(out, Issue{Code: "schema", StepID: s.ID, Message: "Use instruction, condition or action."})
-		}
-
-		if n := utf8.RuneCountInString(strings.TrimSpace(s.Text)); n == 0 || n > MaxStepText {
-			out = append(out, Issue{
-				Code: "missing_setting", StepID: s.ID, Field: "text",
-				Message: "Write the step in 1 to 1,000 characters.",
-			})
-		}
-
-		if s.Kind == KindAction && s.ActionID == "" {
-			out = append(out, Issue{
-				Code: "missing_setting", StepID: s.ID, Field: "action_id", Message: "Pick the action this step takes.",
-			})
-		}
+		fn(s, depth)
+		walkFrom(s.ThenSteps, depth+1, fn)
+		walkFrom(s.ElseSteps, depth+1, fn)
 	}
-
-	return out
-}
-
-/*
-ActionIDs lists the actions the definition's steps take, once each.
-*/
-func ActionIDs(d Definition) []string {
-	var out []string
-	for _, s := range d.Steps {
-		if s.Kind == KindAction && s.ActionID != "" && !slices.Contains(out, s.ActionID) {
-			out = append(out, s.ActionID)
-		}
-	}
-
-	return out
-}
-
-/*
-Render writes a procedure as dimmi reads it: its name, numbered steps
-naming the tool each action step calls, and when to hand over.
-*/
-func Render(name string, d Definition, tools map[string]string) string {
-	var b strings.Builder
-	b.WriteString("Procedure: " + name + "\nUse when: " + strings.TrimSpace(d.Description) + "\n\nSteps:\n")
-	for i, s := range d.Steps {
-		line := strings.TrimSpace(s.Text)
-		switch s.Kind {
-		case KindCondition:
-			line = "Check: " + line
-		case KindAction:
-			line = "Do: " + line + actionNote(tools[s.ActionID])
-		}
-
-		b.WriteString(strconv.Itoa(i+1) + ". " + line + "\n")
-	}
-
-	if len(d.Handover) > 0 {
-		b.WriteString("\nHand over to a teammate when:\n")
-		for _, h := range d.Handover {
-			b.WriteString("- " + strings.TrimSpace(h) + "\n")
-		}
-	}
-
-	return strings.TrimRight(b.String(), "\n")
-}
-
-/*
-actionNote names the tool an action step calls, or says it cannot be
-taken now.
-*/
-func actionNote(tool string) string {
-	if tool == "" {
-		return " (this action is not available right now: hand over instead)"
-	}
-
-	return " (call the " + tool + " tool)"
 }

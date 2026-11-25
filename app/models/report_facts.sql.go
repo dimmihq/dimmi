@@ -15,7 +15,7 @@ import (
 
 const backfillConversationEvents = `-- name: BackfillConversationEvents :execrows
 WITH chunk AS (
-    SELECT c.id, c.workspace_id, c.number, c.inbox_id, c.channel_connection_id, c.contact_id, c.subject, c.status, c.spam, c.assignee_member_id, c.assignee_team_id, c.ai_state, c.snoozed_until, c.external_thread_key, c.source, c.first_customer_message_at, c.last_customer_message_at, c.first_reply_at, c.last_reply_at, c.last_message_at, c.closed_at, c.message_count, c.deleted_at, c.created_at, c.updated_at, c.ai_reply_count, c.ai_cost_micros, c.ai_language, c.ai_handed_off_at, c.ai_handoff_reason, c.merged_into_id, c.is_test, c.previous_conversation_id, c.assignment_wait_reason, c.assignment_waiting_since, c.waiting_since, c.last_activity_at, c.last_message_id, c.search, c.priority, c.workflow_run_id, c.ai_mode, c.ai_memory FROM conversations c
+    SELECT c.id, c.workspace_id, c.number, c.inbox_id, c.channel_connection_id, c.contact_id, c.subject, c.status, c.spam, c.assignee_member_id, c.assignee_team_id, c.ai_state, c.snoozed_until, c.external_thread_key, c.source, c.first_customer_message_at, c.last_customer_message_at, c.first_reply_at, c.last_reply_at, c.last_message_at, c.closed_at, c.message_count, c.deleted_at, c.created_at, c.updated_at, c.ai_reply_count, c.ai_cost_micros, c.ai_language, c.ai_handed_off_at, c.ai_handoff_reason, c.merged_into_id, c.is_test, c.previous_conversation_id, c.assignment_wait_reason, c.assignment_waiting_since, c.waiting_since, c.last_activity_at, c.last_message_id, c.search, c.priority, c.workflow_run_id, c.ai_mode, c.ai_memory, c.ai_agent_id, c.ai_transferred_from_ids FROM conversations c
     WHERE c.workspace_id = $1 AND c.id > $2::uuid AND c.id <= $3::uuid
       AND c.created_at < $4::timestamptz
 ), timeline AS (
@@ -268,7 +268,7 @@ func (q *Queries) ReportBackfillBounds(ctx context.Context, workspaceID ids.UUID
 const reportConversationInputs = `-- name: ReportConversationInputs :many
 SELECT c.id, c.workspace_id, c.number, c.inbox_id, ch.type AS channel, c.assignee_member_id, c.assignee_team_id,
     c.priority, c.status, c.spam, c.is_test, c.deleted_at, c.merged_into_id, c.created_at, c.closed_at,
-    c.ai_cost_micros, c.ai_handed_off_at, c.ai_handoff_reason,
+    c.ai_cost_micros, c.ai_handed_off_at, c.ai_handoff_reason, c.ai_agent_id,
     COALESCE((c.source ->> 'imported')::boolean, false)::boolean AS imported
 FROM conversations c
 JOIN channel_connections ch ON ch.id = c.channel_connection_id
@@ -299,6 +299,7 @@ type ReportConversationInputsRow struct {
 	AiCostMicros     int64      `json:"ai_cost_micros"`
 	AiHandedOffAt    *time.Time `json:"ai_handed_off_at"`
 	AiHandoffReason  *string    `json:"ai_handoff_reason"`
+	AiAgentID        *ids.UUID  `json:"ai_agent_id"`
 	Imported         bool       `json:"imported"`
 }
 
@@ -333,6 +334,7 @@ func (q *Queries) ReportConversationInputs(ctx context.Context, arg ReportConver
 			&i.AiCostMicros,
 			&i.AiHandedOffAt,
 			&i.AiHandoffReason,
+			&i.AiAgentID,
 			&i.Imported,
 		); err != nil {
 			return nil, err

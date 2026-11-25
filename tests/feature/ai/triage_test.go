@@ -69,7 +69,7 @@ func TestAiTriage(t *testing.T) {
 		assert.Equal(t, map[ids.UUID]string{billing.ID: "agent"}, h.conversationTags(conv))
 
 		var result map[string]any
-		require.NoError(t, json.Unmarshal([]byte(h.llm.answer.Sent()[1].Messages[2].Parts[0].Text), &result))
+		require.NoError(t, json.Unmarshal([]byte(lastText(h.llm.answer.Sent()[1])), &result))
 		assert.Equal(t, []any{"tag vip"}, result["ignored"])
 		assert.Contains(t, result["note"], "Nobody on the team was told", "triage is never mistaken for passing it on")
 
@@ -101,7 +101,7 @@ func TestAiTriage(t *testing.T) {
 		s := h.load(conv, res.RunID)
 		assert.Equal(t, "Refund request", str(s.conv.Subject))
 
-		result := h.llm.answer.Sent()[1].Messages[2].Parts[0].Text
+		result := lastText(h.llm.answer.Sent()[1])
 		assert.Contains(t, result, "tag urgent added by a teammate")
 		assert.Contains(t, result, "title set by a teammate or the customer")
 	})
@@ -121,6 +121,6 @@ func TestAiTriage(t *testing.T) {
 
 		s := h.load(conv, res.RunID)
 		assert.Nil(t, s.conv.AssigneeTeamID)
-		assert.Contains(t, h.llm.answer.Sent()[1].Messages[2].Parts[0].Text, "assignment made by a teammate")
+		assert.Contains(t, lastText(h.llm.answer.Sent()[1]), "assignment made by a teammate")
 	})
 }

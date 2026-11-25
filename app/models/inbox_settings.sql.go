@@ -14,7 +14,7 @@ import (
 )
 
 const channelConnectionsByIDs = `-- name: ChannelConnectionsByIDs :many
-SELECT id, workspace_id, inbox_id, type, name, status, external_id, config, credentials_encrypted, last_error, last_error_at, last_activity_at, deleted_at, created_at, updated_at, integration_installation_id FROM channel_connections WHERE workspace_id = $1 AND id = ANY ($2::uuid[])
+SELECT id, workspace_id, inbox_id, type, name, status, external_id, config, credentials_encrypted, last_error, last_error_at, last_activity_at, deleted_at, created_at, updated_at, integration_installation_id, ai_agent_id FROM channel_connections WHERE workspace_id = $1 AND id = ANY ($2::uuid[])
 `
 
 type ChannelConnectionsByIDsParams struct {
@@ -50,6 +50,7 @@ func (q *Queries) ChannelConnectionsByIDs(ctx context.Context, arg ChannelConnec
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.IntegrationInstallationID,
+			&i.AiAgentID,
 		); err != nil {
 			return nil, err
 		}
@@ -62,7 +63,7 @@ func (q *Queries) ChannelConnectionsByIDs(ctx context.Context, arg ChannelConnec
 }
 
 const findInboxAPIConnection = `-- name: FindInboxAPIConnection :one
-SELECT id, workspace_id, inbox_id, type, name, status, external_id, config, credentials_encrypted, last_error, last_error_at, last_activity_at, deleted_at, created_at, updated_at, integration_installation_id FROM channel_connections
+SELECT id, workspace_id, inbox_id, type, name, status, external_id, config, credentials_encrypted, last_error, last_error_at, last_activity_at, deleted_at, created_at, updated_at, integration_installation_id, ai_agent_id FROM channel_connections
 WHERE workspace_id = $1 AND inbox_id = $2 AND type = 'api' AND deleted_at IS NULL
 ORDER BY created_at, id
 LIMIT 1
@@ -95,12 +96,13 @@ func (q *Queries) FindInboxAPIConnection(ctx context.Context, arg FindInboxAPICo
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.IntegrationInstallationID,
+		&i.AiAgentID,
 	)
 	return i, err
 }
 
 const inboxesByIDs = `-- name: InboxesByIDs :many
-SELECT id, workspace_id, name, default_team_id, settings, deleted_at, created_at, updated_at, access, schedule_id, ticket_type_id FROM inboxes WHERE workspace_id = $1 AND id = ANY ($2::uuid[])
+SELECT id, workspace_id, name, default_team_id, settings, deleted_at, created_at, updated_at, access, schedule_id, ticket_type_id, ai_agent_id FROM inboxes WHERE workspace_id = $1 AND id = ANY ($2::uuid[])
 `
 
 type InboxesByIDsParams struct {
@@ -131,6 +133,7 @@ func (q *Queries) InboxesByIDs(ctx context.Context, arg InboxesByIDsParams) ([]I
 			&i.Access,
 			&i.ScheduleID,
 			&i.TicketTypeID,
+			&i.AiAgentID,
 		); err != nil {
 			return nil, err
 		}
@@ -265,7 +268,7 @@ func (q *Queries) TeamsByIDs(ctx context.Context, arg TeamsByIDsParams) ([]Team,
 const updateInbox = `-- name: UpdateInbox :one
 UPDATE inboxes SET name = $1, settings = $2, updated_at = $3
 WHERE workspace_id = $4 AND id = $5
-RETURNING id, workspace_id, name, default_team_id, settings, deleted_at, created_at, updated_at, access, schedule_id, ticket_type_id
+RETURNING id, workspace_id, name, default_team_id, settings, deleted_at, created_at, updated_at, access, schedule_id, ticket_type_id, ai_agent_id
 `
 
 type UpdateInboxParams struct {
@@ -298,6 +301,7 @@ func (q *Queries) UpdateInbox(ctx context.Context, arg UpdateInboxParams) (Inbox
 		&i.Access,
 		&i.ScheduleID,
 		&i.TicketTypeID,
+		&i.AiAgentID,
 	)
 	return i, err
 }

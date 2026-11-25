@@ -7,7 +7,7 @@
 | and spends from the agent's budget, reads and changes the workspace
 | through the inbox, help center and procedure actions, and, when a
 | workspace asks for it, looks at every conversation a customer starts a
-| little after it arrives.
+| little after it arrives, and runs the routines admins put it on.
 |
 */
 
@@ -15,6 +15,7 @@ package providers
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	"github.com/dimmihq/dimmi/framework/database"
@@ -23,10 +24,14 @@ import (
 	"github.com/dimmihq/dimmi/framework/tenancy"
 
 	"github.com/dimmihq/dimmi/app"
+	"github.com/dimmihq/dimmi/app/actions/helpcenters"
+	"github.com/dimmihq/dimmi/app/actions/notifications"
 	"github.com/dimmihq/dimmi/app/actions/operatorchat"
+	"github.com/dimmihq/dimmi/app/actions/operatorroutines"
 	aijobs "github.com/dimmihq/dimmi/app/ai/jobs"
 	"github.com/dimmihq/dimmi/app/ai/operator"
 	appevents "github.com/dimmihq/dimmi/app/events"
+	appmail "github.com/dimmihq/dimmi/app/mail"
 	"github.com/dimmihq/dimmi/app/models"
 )
 
@@ -48,11 +53,20 @@ func bootOperatorAgent(a *app.App) error {
 		Changesets: &operatorchat.Changesets{DB: a.DB, Operator: engine},
 		Memories:   &operatorchat.Memories{DB: a.DB},
 		Usage:      &operatorchat.Usage{DB: a.DB, Clock: a.Clock},
+		Agents:     &operatorchat.Agents{Operator: engine},
+		Routines: &operatorchat.Routines{
+			DB: a.DB, Clock: a.Clock, Audit: a.Actions.RecordAuditLog, Push: aijobs.PushRoutineRun(a.Queue),
+		},
 	}
 	events.Listen(a.Events, events.AfterCommit, func(ctx context.Context, e appevents.ConversationCreated) error {
 		return enqueueTriage(ctx, a, e)
 	})
-	return queue.Register(a.Queue, &aijobs.TriageWithOperator{Operator: engine})
+	return errors.Join(
+		queue.Register(a.Queue, &aijobs.TriageWithOperator{Operator: engine}),
+		queue.Register(a.Queue, &aijobs.QueueOperatorRoutines{Operator: engine, Queue: a.Queue}),
+		queue.Register(a.Queue, &aijobs.RunOperatorRoutine{Operator: engine}),
+		queue.Register(a.Queue, &aijobs.ExpireOperatorSuggestions{Operator: engine}),
+	)
 }
 
 /*
@@ -64,13 +78,18 @@ func newOperatorEngine(a *app.App) *operator.Engine {
 	return &operator.Engine{
 		DB: a.DB, IDs: a.IDs, Clock: a.Clock, LLM: a.LLM, Prices: a.AI.Prices, Publisher: a.Broadcast,
 		Timeouts: a.Config.AI.Timeouts, StorePayloads: a.Config.AI.TracesStorePayloads, Catalog: newOperatorCatalog(a),
+		AppURL: a.Application.Config.App.URL,
+		Addresses: helpcenters.Addresses{
+			BaseDomain: a.Config.HelpCenters.BaseDomain, AppURL: a.Application.Config.App.URL,
+		},
 		Services: operator.Services{
 			Knowledge: a.Knowledge, Show: inbox.ShowConversation, Search: inbox.Search, List: inbox.ListConversations,
 			Context:  inbox.ShowContext,
 			Messages: inbox.ListMessages, Runs: a.Actions.AI.ListRuns, Change: inbox.ApplyChanges,
 			Note: inbox.AddNote, Delete: inbox.DeleteMessage, Contacts: inbox.UpdateContact,
 			Articles: a.Actions.Articles, Procedures: a.Actions.Procedures, Audit: a.Actions.RecordAuditLog,
-			Actions: a.AI.Actions,
+			Actions: a.AI.Actions, Memory: a.Vectors,
+			GitHub: &operator.GitHubAPI{HTTP: a.HTTP, Tokens: a.Actions.Integrations.Tokens},
 		},
 	}
 }
@@ -96,4 +115,21 @@ func enqueueTriage(ctx context.Context, a *app.App, e appevents.ConversationCrea
 	return a.Queue.Push(context.WithoutCancel(ctx), aijobs.TriageWithOperatorArgs{
 		WorkspaceID: e.WorkspaceID, ConversationID: e.ConversationID,
 	}, queue.At(a.Clock.Now().Add(triageDelay)), queue.Unique(queue.UniqueOpts{ByArgs: true}))
+}
+
+/*
+bootRoutineDelivery has a routine's people told how each run went: in
+the app, by email, and in Slack when the install has the Slack app.
+*/
+func bootRoutineDelivery(a *app.App) error {
+	delivery := &operatorroutines.Delivery{
+		DB: a.DB, Clock: a.Clock, Queue: a.Queue, Mail: a.Mail,
+		Links: notifications.Links{Base: a.Application.Config.App.URL},
+	}
+	if a.Actions.NotificationDestinations != nil {
+		delivery.Slack = a.Actions.NotificationDestinations.Channel
+	}
+	appmail.RegisterOperatorRoutines(a.Mail)
+	a.Actions.OperatorAgent.Engine.Finished = aijobs.PushRoutineDelivery(a.Queue)
+	return queue.Register(a.Queue, &aijobs.DeliverOperatorRoutine{Delivery: delivery})
 }

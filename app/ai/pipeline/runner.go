@@ -22,6 +22,7 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/dimmihq/dimmi/framework/clock"
@@ -32,6 +33,7 @@ import (
 	"github.com/dimmihq/dimmi/app/actions/conversations"
 	"github.com/dimmihq/dimmi/app/actions/tickets"
 	"github.com/dimmihq/dimmi/app/ai/actionkit"
+	"github.com/dimmihq/dimmi/app/ai/agents"
 	appbroadcasting "github.com/dimmihq/dimmi/app/broadcasting"
 	"github.com/dimmihq/dimmi/app/contracts"
 	"github.com/dimmihq/dimmi/app/managers"
@@ -52,31 +54,40 @@ places where the team reviews the agent into drafts for a teammate to
 send. Actions, when set, gives the agent the workspace's own actions as
 tools. Delivery, when set, queues each reply on a channel that pushes.
 Decider, when set, checks that a procedure the agent asks for fits the
-request; DecisionPrice is what one of its input tokens costs, in
-millionths of a dollar.
+request; DecisionProvider names it in a run's steps and DecisionPrice
+is what one of its input tokens costs, in millionths of a dollar.
+ProcedureVectors, when set, ranks a long list of procedures by meaning.
+It remembers each unpriced model it has logged, so each is logged once.
 */
 type Runner struct {
-	DB            *database.DB
-	Clock         clock.Clock
-	LLM           *managers.LLMManager
-	Knowledge     contracts.Knowledge
-	Prompts       *prompts.Loader
-	Prices        *aiprices.Table
-	Events        *fevents.Dispatcher
-	Publisher     appbroadcasting.Publisher
-	Working       contracts.AgentWorking
-	Drafts        contracts.AgentDrafts
-	Delivery      *conversations.Delivery
-	Actions       *actionkit.Kit
-	Tickets       *tickets.Tickets
-	Timeouts      config.AITimeoutsConfig
-	StorePayloads bool
-	AnswerEffort  contracts.Effort
-	Decider       contracts.Decider
-	DecisionPrice float64
+	DB               *database.DB
+	Clock            clock.Clock
+	LLM              *managers.LLMManager
+	Knowledge        contracts.Knowledge
+	Prompts          *prompts.Loader
+	Prices           *aiprices.Table
+	Events           *fevents.Dispatcher
+	Publisher        appbroadcasting.Publisher
+	Working          contracts.AgentWorking
+	Drafts           contracts.AgentDrafts
+	Delivery         *conversations.Delivery
+	Actions          *actionkit.Kit
+	Tickets          *tickets.Tickets
+	Timeouts         config.AITimeoutsConfig
+	StorePayloads    bool
+	AnswerEffort     contracts.Effort
+	Decider          contracts.Decider
+	DecisionProvider string
+	DecisionPrice    float64
 
+	ProcedureVectors ProcedureVectors
+
+	prepared sync.Once
 	redactor *pii.Redactor
 	guard    *linkguard.Guard
+
+	unpricedSeen sync.Map
+	stepWaits    sync.Map
 }
 
 /*
@@ -142,22 +153,30 @@ func (r *Runner) RunConversationTurn(ctx context.Context, args Args, settings *T
 		return nil, fmt.Errorf("pipeline commit: %w", err)
 	}
 	r.remember(ctx, st, res)
+	if res.Outcome == outcomeTransferred {
+		return r.RunConversationTurn(ctx, args, settings)
+	}
 	return res, nil
 }
 
 /*
-prepare fills the defaults a zero-configured runner lacks.
+prepare fills the defaults a zero-configured runner lacks, once. One
+runner answers every conversation, so two turns starting together both
+get here; filling the defaults unguarded let each write what the other
+was reading.
 */
 func (r *Runner) prepare() {
-	if r.Clock == nil {
-		r.Clock = clock.System()
-	}
-	if r.redactor == nil {
-		r.redactor = pii.New()
-	}
-	if r.guard == nil {
-		r.guard = linkguard.New()
-	}
+	r.prepared.Do(func() {
+		if r.Clock == nil {
+			r.Clock = clock.System()
+		}
+		if r.redactor == nil {
+			r.redactor = pii.New()
+		}
+		if r.guard == nil {
+			r.guard = linkguard.New()
+		}
+	})
 }
 
 /*
@@ -170,24 +189,40 @@ func (r *Runner) turn(ctx context.Context, st *run) *decision {
 		return failed("provider_unavailable", err)
 	}
 
-	stopTyping := r.typing(ctx, st.env)
-	defer stopTyping()
+	if st.sim == nil {
+		stopTyping := r.typing(ctx, st.env)
+		defer stopTyping()
+	}
 
-	st.loop = &loop{llm: llm, system: r.render(st.env, "answer.system.md", r.answerVars(st))}
-	st.loop.messages = r.withMemory(st, r.conversationMessages(st.env))
+	st.loop = &loop{llm: llm, system: r.render(st.env, rootOf(st.env), r.answerVars(st))}
+	r.shortlistProcedures(ctx, st)
+	r.resumeProcedure(ctx, st)
+	messages := r.conversationMessages(st.env)
+	if st.sim != nil {
+		if update := r.confirmPending(ctx, st); update != "" {
+			messages = r.envelope(st.env, update)
+		}
+	}
+	st.loop.messages = r.withMemory(st, messages)
 	r.offerActions(ctx, st)
 	r.openLayer(ctx, st)
+	if st.proc != nil {
+		r.ensureProcedureActions(ctx, st)
+	}
 	st.loop.newest = len(st.loop.messages) - 1
+	r.searchAhead(ctx, st)
 
 	draft, err := r.agentLoop(ctx, st)
-	if err == nil {
-		draft, err = r.withoutUnknownLinks(ctx, st, draft)
+	if err == nil && st.transfer == nil {
+		draft, err = r.checked(ctx, st, draft)
 	}
+	r.routeProcedureHandoff(st)
+	r.settleProcedure(st)
 	r.saveLayer(ctx, st)
 	if err != nil {
 		return failed("provider_error", err)
 	}
-	return r.review(ctx, st, draft)
+	return r.reviewOrTransfer(ctx, st, draft)
 }
 
 /*
@@ -204,6 +239,23 @@ func (r *Runner) timeout(ctx context.Context, d time.Duration) (context.Context,
 		timer.Stop()
 		cancel(context.Canceled)
 	}
+}
+
+/*
+checked passes a draft through the checks a reply must clear before it
+is sent, each of which may send it back to be written again: its links,
+the actions its procedure requires, and text never meant for the
+customer.
+*/
+func (r *Runner) checked(ctx context.Context, st *run, draft string) (string, error) {
+	draft, err := r.withoutUnknownLinks(ctx, st, draft)
+	if err == nil {
+		draft, err = r.verifyProcedureCompliance(ctx, st, draft)
+	}
+	if err == nil {
+		draft, err = r.withoutNotes(ctx, st, draft)
+	}
+	return draft, err
 }
 
 /*
@@ -228,3 +280,8 @@ func (r *Runner) withoutUnknownLinks(ctx context.Context, st *run, draft string)
 			"customer gave; when there is none, say in words where to go.</system_note>"))
 	return r.agentLoop(ctx, st)
 }
+
+/*
+ErrNoAgent marks a workspace without an agent to answer.
+*/
+var ErrNoAgent = agents.ErrNoAgent

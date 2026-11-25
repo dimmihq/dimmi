@@ -29,6 +29,7 @@ import (
 
 	"github.com/dimmihq/dimmi/app/contracts"
 	"github.com/dimmihq/dimmi/app/support/linkguard"
+	"github.com/dimmihq/dimmi/app/support/readable"
 )
 
 /*
@@ -54,9 +55,9 @@ func (r *Runner) review(ctx context.Context, st *run, draft string) *decision {
 	if st.loop != nil && st.loop.stop == contracts.StopReasonMaxTokens {
 		text = trimToSentence(text)
 	}
-	text = capLength(text)
+	text = readable.Format(capLength(text))
 
-	if st.handoff == nil && !st.actions.involved() && claimsHandoff(text) {
+	if st.handoff == nil && !st.actions.involved() && st.ticket == nil && r.claimsHandoff(ctx, st, text) {
 		st.handoff = &handoffRequest{reason: "other"}
 		st.flags = append(st.flags, "implied_handoff")
 	}
@@ -174,25 +175,6 @@ action, where a reply rightly says a teammate has the request.
 */
 func (a actionState) involved() bool {
 	return len(a.calls) > 0 || a.card != nil || a.followUp != nil || a.waiting || a.answered
-}
-
-/*
-claimsHandoff reports whether a reply says the agent passed the
-conversation to the team, asked or told a teammate, or the like. A reply
-that says so without the handoff tool is made true: the turn hands off.
-*/
-func claimsHandoff(text string) bool {
-	return handoffClaim().MatchString(text)
-}
-
-/*
-handoffClaim matches "I've passed this to the billing team", "I've asked
-the team to confirm", "I have flagged it for someone" and the like.
-*/
-func handoffClaim() *regexp.Regexp {
-	return regexp.MustCompile(`(?i)\bI(?:['’]ve| have) (?:just |now |already )?` +
-		`(?:passed|handed|sent|forwarded|flagged|asked|told|let|brought in|looped in|routed)\b[^.!?\n]{0,80}?` +
-		`\b(?:team|teammate|colleague|someone|somebody|billing|support|specialist)s?\b`)
 }
 
 /*

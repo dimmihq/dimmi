@@ -16,7 +16,7 @@ import (
 const createProcedure = `-- name: CreateProcedure :one
 INSERT INTO procedures (id, workspace_id, name, draft, created_by_member_id, updated_by_member_id, created_at, updated_at)
 VALUES ($1, $2, $3, $4, $5, $5, $6, $6)
-RETURNING id, workspace_id, name, status, draft, live, lock_version, created_by_member_id, updated_by_member_id, published_at, deleted_at, created_at, updated_at
+RETURNING id, workspace_id, name, status, draft, live, lock_version, created_by_member_id, updated_by_member_id, published_at, deleted_at, created_at, updated_at, live_version_id, description_embedding, embedding_model_key
 `
 
 type CreateProcedureParams struct {
@@ -53,6 +53,9 @@ func (q *Queries) CreateProcedure(ctx context.Context, arg CreateProcedureParams
 		&i.DeletedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.LiveVersionID,
+		&i.DescriptionEmbedding,
+		&i.EmbeddingModelKey,
 	)
 	return i, err
 }
@@ -75,7 +78,7 @@ func (q *Queries) DeleteProcedure(ctx context.Context, arg DeleteProcedureParams
 }
 
 const findProcedure = `-- name: FindProcedure :one
-SELECT id, workspace_id, name, status, draft, live, lock_version, created_by_member_id, updated_by_member_id, published_at, deleted_at, created_at, updated_at FROM procedures WHERE workspace_id = $1 AND id = $2 AND deleted_at IS NULL
+SELECT id, workspace_id, name, status, draft, live, lock_version, created_by_member_id, updated_by_member_id, published_at, deleted_at, created_at, updated_at, live_version_id, description_embedding, embedding_model_key FROM procedures WHERE workspace_id = $1 AND id = $2 AND deleted_at IS NULL
 `
 
 type FindProcedureParams struct {
@@ -101,20 +104,27 @@ func (q *Queries) FindProcedure(ctx context.Context, arg FindProcedureParams) (P
 		&i.DeletedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.LiveVersionID,
+		&i.DescriptionEmbedding,
+		&i.EmbeddingModelKey,
 	)
 	return i, err
 }
 
 const listLiveProcedures = `-- name: ListLiveProcedures :many
-SELECT id, name, live FROM procedures
-WHERE workspace_id = $1 AND status = 'live' AND deleted_at IS NULL AND live IS NOT NULL
-ORDER BY lower(name), id
+SELECT p.id, p.name, p.live, p.live_version_id, COALESCE(v.version, 0)::integer AS version
+FROM procedures p
+LEFT JOIN procedure_versions v ON v.id = p.live_version_id
+WHERE p.workspace_id = $1 AND p.status = 'live' AND p.deleted_at IS NULL AND p.live IS NOT NULL
+ORDER BY lower(p.name), p.id
 `
 
 type ListLiveProceduresRow struct {
-	ID   ids.UUID        `json:"id"`
-	Name string          `json:"name"`
-	Live json.RawMessage `json:"live"`
+	ID            ids.UUID        `json:"id"`
+	Name          string          `json:"name"`
+	Live          json.RawMessage `json:"live"`
+	LiveVersionID *ids.UUID       `json:"live_version_id"`
+	Version       int32           `json:"version"`
 }
 
 // ListLiveProcedures returns the procedures dimmi may follow.
@@ -127,7 +137,44 @@ func (q *Queries) ListLiveProcedures(ctx context.Context, workspaceID ids.UUID) 
 	var items []ListLiveProceduresRow
 	for rows.Next() {
 		var i ListLiveProceduresRow
-		if err := rows.Scan(&i.ID, &i.Name, &i.Live); err != nil {
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.Live,
+			&i.LiveVersionID,
+			&i.Version,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listProcedureNames = `-- name: ListProcedureNames :many
+SELECT id, name, status FROM procedures WHERE workspace_id = $1 AND deleted_at IS NULL
+`
+
+type ListProcedureNamesRow struct {
+	ID     ids.UUID `json:"id"`
+	Name   string   `json:"name"`
+	Status string   `json:"status"`
+}
+
+// ListProcedureNames returns every procedure's id, name and status.
+func (q *Queries) ListProcedureNames(ctx context.Context, workspaceID ids.UUID) ([]ListProcedureNamesRow, error) {
+	rows, err := q.db.Query(ctx, listProcedureNames, workspaceID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListProcedureNamesRow
+	for rows.Next() {
+		var i ListProcedureNamesRow
+		if err := rows.Scan(&i.ID, &i.Name, &i.Status); err != nil {
 			return nil, err
 		}
 		items = append(items, i)
@@ -139,7 +186,7 @@ func (q *Queries) ListLiveProcedures(ctx context.Context, workspaceID ids.UUID) 
 }
 
 const listProcedures = `-- name: ListProcedures :many
-SELECT id, workspace_id, name, status, draft, live, lock_version, created_by_member_id, updated_by_member_id, published_at, deleted_at, created_at, updated_at FROM procedures WHERE workspace_id = $1 AND deleted_at IS NULL ORDER BY lower(name), id
+SELECT id, workspace_id, name, status, draft, live, lock_version, created_by_member_id, updated_by_member_id, published_at, deleted_at, created_at, updated_at, live_version_id, description_embedding, embedding_model_key FROM procedures WHERE workspace_id = $1 AND deleted_at IS NULL ORDER BY lower(name), id
 `
 
 // ListProcedures returns the workspace's procedures by name.
@@ -166,6 +213,9 @@ func (q *Queries) ListProcedures(ctx context.Context, workspaceID ids.UUID) ([]P
 			&i.DeletedAt,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.LiveVersionID,
+			&i.DescriptionEmbedding,
+			&i.EmbeddingModelKey,
 		); err != nil {
 			return nil, err
 		}
@@ -243,7 +293,7 @@ const publishProcedure = `-- name: PublishProcedure :one
 UPDATE procedures SET live = draft, status = 'live', published_at = $1, updated_by_member_id = $2,
     updated_at = $1
 WHERE workspace_id = $3 AND id = $4 AND deleted_at IS NULL
-RETURNING id, workspace_id, name, status, draft, live, lock_version, created_by_member_id, updated_by_member_id, published_at, deleted_at, created_at, updated_at
+RETURNING id, workspace_id, name, status, draft, live, lock_version, created_by_member_id, updated_by_member_id, published_at, deleted_at, created_at, updated_at, live_version_id, description_embedding, embedding_model_key
 `
 
 type PublishProcedureParams struct {
@@ -276,6 +326,102 @@ func (q *Queries) PublishProcedure(ctx context.Context, arg PublishProcedurePara
 		&i.DeletedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.LiveVersionID,
+		&i.DescriptionEmbedding,
+		&i.EmbeddingModelKey,
+	)
+	return i, err
+}
+
+const rankLiveProcedures = `-- name: RankLiveProcedures :many
+SELECT id, (1 - (description_embedding <=> ($1::text)::halfvec))::float8 AS similarity FROM procedures
+WHERE workspace_id = $2 AND status = 'live' AND deleted_at IS NULL AND live IS NOT NULL
+    AND description_embedding IS NOT NULL AND embedding_model_key = $3
+ORDER BY description_embedding <=> ($1::text)::halfvec
+LIMIT $4
+`
+
+type RankLiveProceduresParams struct {
+	Query       string   `json:"query"`
+	WorkspaceID ids.UUID `json:"workspace_id"`
+	ModelKey    *string  `json:"model_key"`
+	RowLimit    int32    `json:"row_limit"`
+}
+
+type RankLiveProceduresRow struct {
+	ID         ids.UUID `json:"id"`
+	Similarity float64  `json:"similarity"`
+}
+
+// RankLiveProcedures orders the live procedures embedded with a model by
+// how close their description is to a query vector, closest first.
+func (q *Queries) RankLiveProcedures(ctx context.Context, arg RankLiveProceduresParams) ([]RankLiveProceduresRow, error) {
+	rows, err := q.db.Query(ctx, rankLiveProcedures,
+		arg.Query,
+		arg.WorkspaceID,
+		arg.ModelKey,
+		arg.RowLimit,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []RankLiveProceduresRow
+	for rows.Next() {
+		var i RankLiveProceduresRow
+		if err := rows.Scan(&i.ID, &i.Similarity); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const restoreProcedureDraft = `-- name: RestoreProcedureDraft :one
+UPDATE procedures SET draft = $1, lock_version = lock_version + 1, updated_by_member_id = $2,
+    updated_at = $3
+WHERE workspace_id = $4 AND id = $5 AND deleted_at IS NULL
+RETURNING id, workspace_id, name, status, draft, live, lock_version, created_by_member_id, updated_by_member_id, published_at, deleted_at, created_at, updated_at, live_version_id, description_embedding, embedding_model_key
+`
+
+type RestoreProcedureDraftParams struct {
+	Draft       json.RawMessage `json:"draft"`
+	MemberID    *ids.UUID       `json:"member_id"`
+	Now         time.Time       `json:"now"`
+	WorkspaceID ids.UUID        `json:"workspace_id"`
+	ID          ids.UUID        `json:"id"`
+}
+
+// RestoreProcedureDraft puts an old version back as the working copy.
+func (q *Queries) RestoreProcedureDraft(ctx context.Context, arg RestoreProcedureDraftParams) (Procedure, error) {
+	row := q.db.QueryRow(ctx, restoreProcedureDraft,
+		arg.Draft,
+		arg.MemberID,
+		arg.Now,
+		arg.WorkspaceID,
+		arg.ID,
+	)
+	var i Procedure
+	err := row.Scan(
+		&i.ID,
+		&i.WorkspaceID,
+		&i.Name,
+		&i.Status,
+		&i.Draft,
+		&i.Live,
+		&i.LockVersion,
+		&i.CreatedByMemberID,
+		&i.UpdatedByMemberID,
+		&i.PublishedAt,
+		&i.DeletedAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.LiveVersionID,
+		&i.DescriptionEmbedding,
+		&i.EmbeddingModelKey,
 	)
 	return i, err
 }
@@ -284,7 +430,7 @@ const saveProcedureDraft = `-- name: SaveProcedureDraft :one
 UPDATE procedures SET name = $1, draft = $2, lock_version = lock_version + 1,
     updated_by_member_id = $3, updated_at = $4
 WHERE workspace_id = $5 AND id = $6 AND deleted_at IS NULL AND lock_version = $7
-RETURNING id, workspace_id, name, status, draft, live, lock_version, created_by_member_id, updated_by_member_id, published_at, deleted_at, created_at, updated_at
+RETURNING id, workspace_id, name, status, draft, live, lock_version, created_by_member_id, updated_by_member_id, published_at, deleted_at, created_at, updated_at, live_version_id, description_embedding, embedding_model_key
 `
 
 type SaveProcedureDraftParams struct {
@@ -324,6 +470,70 @@ func (q *Queries) SaveProcedureDraft(ctx context.Context, arg SaveProcedureDraft
 		&i.DeletedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.LiveVersionID,
+		&i.DescriptionEmbedding,
+		&i.EmbeddingModelKey,
+	)
+	return i, err
+}
+
+const setProcedureEmbedding = `-- name: SetProcedureEmbedding :exec
+UPDATE procedures SET description_embedding = ($1::text)::halfvec,
+    embedding_model_key = $2
+WHERE workspace_id = $3 AND id = $4
+`
+
+type SetProcedureEmbeddingParams struct {
+	Embedding   *string  `json:"embedding"`
+	ModelKey    *string  `json:"model_key"`
+	WorkspaceID ids.UUID `json:"workspace_id"`
+	ID          ids.UUID `json:"id"`
+}
+
+// SetProcedureEmbedding keeps the vector of a procedure's description.
+func (q *Queries) SetProcedureEmbedding(ctx context.Context, arg SetProcedureEmbeddingParams) error {
+	_, err := q.db.Exec(ctx, setProcedureEmbedding,
+		arg.Embedding,
+		arg.ModelKey,
+		arg.WorkspaceID,
+		arg.ID,
+	)
+	return err
+}
+
+const setProcedureLiveVersion = `-- name: SetProcedureLiveVersion :one
+UPDATE procedures SET live_version_id = $1
+WHERE workspace_id = $2 AND id = $3
+RETURNING id, workspace_id, name, status, draft, live, lock_version, created_by_member_id, updated_by_member_id, published_at, deleted_at, created_at, updated_at, live_version_id, description_embedding, embedding_model_key
+`
+
+type SetProcedureLiveVersionParams struct {
+	VersionID   *ids.UUID `json:"version_id"`
+	WorkspaceID ids.UUID  `json:"workspace_id"`
+	ID          ids.UUID  `json:"id"`
+}
+
+// SetProcedureLiveVersion names the version dimmi follows.
+func (q *Queries) SetProcedureLiveVersion(ctx context.Context, arg SetProcedureLiveVersionParams) (Procedure, error) {
+	row := q.db.QueryRow(ctx, setProcedureLiveVersion, arg.VersionID, arg.WorkspaceID, arg.ID)
+	var i Procedure
+	err := row.Scan(
+		&i.ID,
+		&i.WorkspaceID,
+		&i.Name,
+		&i.Status,
+		&i.Draft,
+		&i.Live,
+		&i.LockVersion,
+		&i.CreatedByMemberID,
+		&i.UpdatedByMemberID,
+		&i.PublishedAt,
+		&i.DeletedAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.LiveVersionID,
+		&i.DescriptionEmbedding,
+		&i.EmbeddingModelKey,
 	)
 	return i, err
 }
@@ -331,7 +541,7 @@ func (q *Queries) SaveProcedureDraft(ctx context.Context, arg SaveProcedureDraft
 const unpublishProcedure = `-- name: UnpublishProcedure :one
 UPDATE procedures SET live = NULL, status = 'draft', updated_by_member_id = $1, updated_at = $2
 WHERE workspace_id = $3 AND id = $4 AND deleted_at IS NULL
-RETURNING id, workspace_id, name, status, draft, live, lock_version, created_by_member_id, updated_by_member_id, published_at, deleted_at, created_at, updated_at
+RETURNING id, workspace_id, name, status, draft, live, lock_version, created_by_member_id, updated_by_member_id, published_at, deleted_at, created_at, updated_at, live_version_id, description_embedding, embedding_model_key
 `
 
 type UnpublishProcedureParams struct {
@@ -365,6 +575,9 @@ func (q *Queries) UnpublishProcedure(ctx context.Context, arg UnpublishProcedure
 		&i.DeletedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.LiveVersionID,
+		&i.DescriptionEmbedding,
+		&i.EmbeddingModelKey,
 	)
 	return i, err
 }

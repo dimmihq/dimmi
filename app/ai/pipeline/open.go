@@ -24,6 +24,7 @@ import (
 	"time"
 
 	"github.com/dimmihq/dimmi/framework/database"
+	"github.com/dimmihq/dimmi/framework/ids"
 
 	"github.com/dimmihq/dimmi/app/actions/tickets"
 	"github.com/dimmihq/dimmi/app/enums"
@@ -39,7 +40,9 @@ called, whether it followed one of the team's procedures, the
 procedures it already checked or handed over, and how well the
 decision model found each procedure to fit. The cited chunks are the
 passages the reply's markers name, each once; the cited claims are, by
-chunk id, the reply's sentences citing it.
+chunk id, the reply's sentences citing it. The procedure the run follows
+is proc, those it stopped following procEnded, and the simulator's setup
+of a simulated run sim.
 */
 type run struct {
 	env            *env
@@ -48,14 +51,18 @@ type run struct {
 	settings       *TurnSettings
 	gate           *decision
 	loop           *loop
+	reply          *replyCheck
 	sources        []source
 	flags          []string
 	query          string
 	searched       bool
 	searches       int
+	ahead          bool
 	lastSearch     searchTrace
 	handoff        *handoffRequest
+	transfer       *transferRequest
 	changes        changeSet
+	teamNotes      []string
 	actions        actionState
 	followed       bool
 	procedureAsked map[string]bool
@@ -68,6 +75,9 @@ type run struct {
 	annotated      string
 	citedChunks    []source
 	citedClaims    map[string]string
+	proc           *procRun
+	procEnded      []*procRun
+	sim            *simulation
 }
 
 /*
@@ -225,7 +235,7 @@ func (r *Runner) createRun(ctx context.Context, tx *database.Tx, e *env, args Ar
 	hashes := json.RawMessage("{}")
 	if r.Prompts != nil {
 		if fp, err := r.Prompts.Fingerprint(e.Version, r.family(e.AnswerKey, e.Agent.AnswerModel),
-			[]string{"answer.system.md"}); err == nil {
+			[]string{rootOf(e)}); err == nil {
 			hashes, _ = json.Marshal(fp.Hashes)
 		}
 	}
@@ -243,7 +253,7 @@ func (r *Runner) createRun(ctx context.Context, tx *database.Tx, e *env, args Ar
 	}
 	conversation, trigger, actor := runSubject(e, kind)
 	actorType := "contact"
-	if kind == playgroundKind {
+	if kind == simulationKind || kind == judgeKind {
 		actorType, actor = "member", args.MemberID
 	}
 	now := r.Clock.Now()
@@ -255,4 +265,20 @@ func (r *Runner) createRun(ctx context.Context, tx *database.Tx, e *env, args Ar
 		PromptVersion: e.Version, PromptHashes: hashes, ConfigSnapshot: snapshot,
 		StartedAt: &now, Now: now,
 	})
+}
+
+/*
+runSubject is what a run is about: the conversation, the message that
+triggered it and the customer. A simulation or a run with no
+conversation has none.
+*/
+func runSubject(e *env, kind string) (*ids.UUID, *ids.UUID, *ids.UUID) {
+	if kind == simulationKind || e.Conversation.ID == (ids.UUID{}) {
+		return nil, nil, nil
+	}
+	var trigger *ids.UUID
+	if e.Trigger.ID != (ids.UUID{}) {
+		trigger = &e.Trigger.ID
+	}
+	return &e.Conversation.ID, trigger, &e.Conversation.ContactID
 }

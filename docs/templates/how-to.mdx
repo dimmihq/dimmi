@@ -1,23 +1,30 @@
 ---
 title: Verb and object, such as "Verify webhook signatures"
-description: One sentence under 160 characters on what the reader can do after this page.
+description: One concrete sentence under 160 characters stating what the reader accomplishes on this page.
 ---
 
 {/*
-  How-to (docs/WRITING.md). One goal the reader already has. Budget: 150 to
-  400 words of prose plus code, paragraphs of 1 to 2 sentences, at most 5
-  steps. No form walkthroughs: name the screen and only the field that
-  isn't obvious. Delete these comments before publishing.
+  Task / integration guide (docs/WRITING.md). Focused on one technical goal.
+  Open with 1 to 2 short paragraphs stating the goal, why it matters, and any
+  prerequisites as inline links. Show the working happy path first with complete,
+  copy-pasteable code, then cover variations, testing, and edge cases.
+  No form narration: name the screen and explain only non-obvious fields.
+  Verify everything in code. Run stop-slop and make-it-skim.
+  Delete these comments before publishing.
 */}
 
-One sentence: what the reader does here and the one fact they must know first, with an inline link if it needs another page.
+State what the reader will set up and why it matters in 1 to 2 short sentences. Link prerequisites inline rather than burying them in a boilerplate checklist.
 
-## Verb the goal
+## <Happy path goal>
+
+Introduce the cleanest working setup in 1 to 2 sentences, then show the complete, runnable snippet.
 
 ```ts title="file.ts"
-// The code the reader pastes, complete.
+// Complete, runnable example with imports and realistic fake values.
 ```
 
-A sentence on the part that isn't obvious. A list when there are parallel options.
+Explain any placeholder in `<angle_brackets>` and any non-obvious behavior right below the block.
 
-{/* Add a section only for a second real part of the goal. No "Before you begin", "Check that it worked", "Troubleshooting" or "Next steps" unless deleting it would make a reader fail. */}
+## <Customization or edge case>
+
+Add a section for each real variation, gotcha, or verification method (such as dry runs or test mode) that helps the reader ship with confidence.

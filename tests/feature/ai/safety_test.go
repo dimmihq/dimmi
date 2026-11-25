@@ -52,11 +52,20 @@ func TestAiSafety(t *testing.T) {
 		for _, step := range s.steps {
 			traces += string(step.Request) + string(step.Response)
 		}
+		for _, req := range h.llm.answer.Sent() {
+			for _, m := range req.Messages {
+				for _, c := range m.ToolCalls {
+					sent += string(c.Arguments)
+				}
+			}
+		}
 		for _, secret := range []string{"4242 4242 4242 4242", "ana.private@corp.example", "hunter2hunter2"} {
-			assert.NotContains(t, sent, secret)
+			assert.NotContains(t, sent, secret, "nor in the search made ahead with the customer's message")
 			assert.NotContains(t, traces, secret)
 		}
 		assert.Contains(t, sent, "[email]")
+		assert.Contains(t, sent, "<hidden_details>", "the agent is told a placeholder stands for a value given")
+		assert.Contains(t, sent, "never ask for it again")
 		assert.Contains(t, sent, "order 99812")
 	})
 

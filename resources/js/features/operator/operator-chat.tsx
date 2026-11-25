@@ -16,9 +16,10 @@ import { ScrollArea } from "@/features/shell/page";
 import { Reveal } from "@/features/shell/reveal";
 import type { OperatorChangeset, OperatorMessage, OperatorStep, OperatorThreadView } from "@/lib/api/operator";
 import { cx } from "@/utils/cx";
-
 import { ActivityLog } from "./activity-log";
 import { ChangesetCard } from "./changeset-card";
+import { InstructionsCard } from "./instructions-card";
+import { RichLink } from "./rich-link";
 import type { Scope } from "./scope";
 import type { OperatorChat as Chat, Live } from "./use-operator-chat";
 
@@ -102,6 +103,12 @@ function Extras({
   });
 }
 
+/*
+ * answerText spaces Operator's answers out like a person's message: room
+ * between paragraphs, and between the items of a list.
+ */
+const answerText = "gap-4 text-body-regular text-text-primary [&_li+li]:mt-1.5 [&_li>p]:inline";
+
 function Question({ text }: { text: string }) {
   return (
     <p className="-me-1.5 ms-auto w-fit max-w-[85%] rounded-2xl bg-background-primary-default px-3 py-[11px] text-start text-body-regular wrap-break-word whitespace-pre-wrap text-text-primary shadow-card">
@@ -153,7 +160,8 @@ function Answer({
       {message.body ? (
         <MessageBody
           text={message.body}
-          className={cx("text-body-regular text-text-primary", message.status === "failed" && "text-text-tertiary")}
+          link={RichLink}
+          className={cx(answerText, message.status === "failed" && "text-text-tertiary")}
         />
       ) : null}
       <Reveal animate={fresh} className="flex flex-col gap-3">
@@ -174,7 +182,7 @@ function Working({ live }: { live: Live }) {
       ) : null}
       <div className="flex flex-col gap-3">
         <ActivityLog steps={live.steps.filter((s) => !s.draft && !s.changeset_id)} working={live.text === ""} />
-        {live.text ? <MessageBody text={live.text} className="text-body-regular text-text-primary" /> : null}
+        {live.text ? <MessageBody text={live.text} className={answerText} /> : null}
       </div>
     </>
   );
@@ -234,6 +242,7 @@ export function OperatorChat({
   inputId,
   scope,
   wide = false,
+  instructions,
 }: {
   thread: OperatorThreadView | undefined;
   chat: Chat;
@@ -242,13 +251,16 @@ export function OperatorChat({
   inputId: string;
   scope: Scope;
   wide?: boolean;
+  /* instructions names the routine whose prompt opens the thread, folded into a card. */
+  instructions?: string;
 }) {
   const [draft, setDraft] = useState("");
   const isFresh = useFresh(thread);
   const messages = thread?.messages ?? [];
   const lastQuestion = messages.filter((message) => message.role === "user").at(-1)?.body;
   const changesets = thread?.changesets ?? [];
-  const own = changesets.filter((changeset) => changeset.proposed_to === null);
+  const answered = new Set(messages.flatMap((m) => m.steps.map((step) => step.changeset_id)));
+  const own = changesets.filter((changeset) => changeset.proposed_to === null && !answered.has(changeset.id));
   const end = useStickToBottom(`${messages.length}:${chat.live?.text.length ?? 0}:${chat.live?.steps.length ?? 0}`);
   const blank = messages.length === 0 && !chat.live && own.length === 0;
   const column = cx("mx-auto w-full", wide ? "max-w-[720px] px-6" : "px-4");
@@ -277,9 +289,11 @@ export function OperatorChat({
             </li>
           ))}
           {messages.length === 0 && !chat.live ? <li>{empty}</li> : null}
-          {messages.map((message) => (
+          {messages.map((message, index) => (
             <li key={message.id}>
-              {message.role === "user" ? (
+              {message.role === "user" && index === 0 && instructions ? (
+                <InstructionsCard label={instructions} text={message.body} />
+              ) : message.role === "user" ? (
                 <Question text={message.body} />
               ) : (
                 <Answer message={message} changesets={changesets} onDecide={chat.decide} fresh={isFresh(message.id)} />

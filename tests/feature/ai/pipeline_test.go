@@ -31,15 +31,16 @@ func TestAiTurn(t *testing.T) {
 		s := h.load(conv, res.RunID)
 		assert.Equal(t, "completed", s.run.Status)
 		assert.Equal(t, "v2", s.run.PromptVersion)
-		assert.Equal(t, []string{"generate", "tool_call", "generate"}, s.stepKinds())
+		assert.Equal(t, []string{"tool_call", "generate", "tool_call", "generate", "verify"}, s.stepKinds(),
+			"the first message is searched before the agent's first call")
 		var undated int
 		require.NoError(t, h.d.TC.Operator().QueryRow(t.Context(),
 			"SELECT count(*) FROM ai_run_steps WHERE run_id = $1 AND created_at < now() - interval '1 year'",
 			res.RunID).Scan(&undated))
 		assert.Zero(t, undated, "every step is stamped with when it was written")
-		assert.Equal(t, "anthropic", str(s.steps[0].Upstream))
-		assert.Equal(t, "msg_provider_1", str(s.steps[0].ProviderRequestID), "the provider's id for the call is kept")
-		assert.NotEmpty(t, str(s.steps[0].ResponseModel), "the model the provider says answered is kept")
+		assert.Equal(t, "anthropic", str(s.steps[1].Upstream))
+		assert.Equal(t, "msg_provider_1", str(s.steps[1].ProviderRequestID), "the provider's id for the call is kept")
+		assert.NotEmpty(t, str(s.steps[1].ResponseModel), "the model the provider says answered is kept")
 		assert.Positive(t, s.run.CostMicros)
 		assert.Equal(t, "pro plan price per seat", str(s.run.QueryRewritten))
 		assert.Equal(t, int32(1), s.conv.AiReplyCount)
@@ -79,12 +80,13 @@ func TestAiTurn(t *testing.T) {
 		h.llm.answer.Script(search("SAML single sign-on"), search("refund annual plan"),
 			reply("SSO is on Business [1], and annual plans are refundable within 30 days [6]."))
 
-		conv, trigger := h.conversation("Do you have SSO, and can I get a refund?")
+		conv, trigger := h.conversation("I have two questions for you today.")
 		res := h.run(conv, trigger)
 		require.Equal(t, "answered", res.Outcome)
 
 		s := h.load(conv, res.RunID)
-		assert.Equal(t, []string{"generate", "tool_call", "generate", "tool_call", "generate"}, s.stepKinds())
+		assert.Equal(t, []string{"tool_call", "generate", "tool_call", "generate", "tool_call", "generate", "verify"},
+			s.stepKinds())
 		sources, _ := aiMeta(t, s.agentReplies()[0])["sources"].([]any)
 		urls := []any{}
 		for _, src := range sources {

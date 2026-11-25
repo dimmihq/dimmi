@@ -47,9 +47,12 @@ type ResponseSave struct {
 
 /*
 DimmiSettings hands the conversation to dimmi until it resolves,
-hands over or the customer goes quiet.
+hands over or the customer goes quiet. AgentID, a public agent id,
+picks the agent that answers; empty leaves it to the conversation's
+channel and the workspace's default.
 */
 type DimmiSettings struct {
+	AgentID                string `json:"agent_id,omitempty"`
 	Instructions           string `json:"instructions,omitempty"`
 	MaxReplies             int    `json:"max_replies,omitempty"`
 	QuietAfter             string `json:"quiet_after,omitempty"`

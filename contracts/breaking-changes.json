@@ -1,4 +1,229 @@
 {
   "$comment": "Intentional breaking changes, reviewed one by one. See contracts/VERSIONING.md. Each entry needs id, operation (or event), reason, deprecated, sunset and approved_by. Entries are cleared when make api-baseline records a release.",
-  "entries": []
+  "entries": [
+    {
+      "id": "api-operation-id-removed",
+      "operation": "GET /channels/facebook/signup-config",
+      "reason": "Internal route, never released: renamed to the resource-style operation id the route naming rule requires.",
+      "deprecated": "2026-11-20",
+      "sunset": "2026-11-20",
+      "approved_by": "Frantz Kati"
+    },
+    {
+      "id": "api-operation-id-removed",
+      "operation": "POST /channels/facebook/signups",
+      "reason": "Internal route, never released: renamed to the resource-style operation id the route naming rule requires.",
+      "deprecated": "2026-11-20",
+      "sunset": "2026-11-20",
+      "approved_by": "Frantz Kati"
+    },
+    {
+      "id": "api-operation-id-removed",
+      "operation": "GET /channels/facebook/{channel}/check",
+      "reason": "Internal route, never released: renamed to the resource-style operation id the route naming rule requires.",
+      "deprecated": "2026-11-20",
+      "sunset": "2026-11-20",
+      "approved_by": "Frantz Kati"
+    },
+    {
+      "id": "api-operation-id-removed",
+      "operation": "GET /channels/instagram/signup-config",
+      "reason": "Internal route, never released: renamed to the resource-style operation id the route naming rule requires.",
+      "deprecated": "2026-11-20",
+      "sunset": "2026-11-20",
+      "approved_by": "Frantz Kati"
+    },
+    {
+      "id": "api-operation-id-removed",
+      "operation": "POST /channels/instagram/signups",
+      "reason": "Internal route, never released: renamed to the resource-style operation id the route naming rule requires.",
+      "deprecated": "2026-11-20",
+      "sunset": "2026-11-20",
+      "approved_by": "Frantz Kati"
+    },
+    {
+      "id": "api-operation-id-removed",
+      "operation": "GET /channels/instagram/{channel}/check",
+      "reason": "Internal route, never released: renamed to the resource-style operation id the route naming rule requires.",
+      "deprecated": "2026-11-20",
+      "sunset": "2026-11-20",
+      "approved_by": "Frantz Kati"
+    },
+    {
+      "id": "api-operation-id-removed",
+      "operation": "POST /channels/whatsapp/accounts",
+      "reason": "Internal route, never released: renamed to the resource-style operation id the route naming rule requires.",
+      "deprecated": "2026-11-20",
+      "sunset": "2026-11-20",
+      "approved_by": "Frantz Kati"
+    },
+    {
+      "id": "api-operation-id-removed",
+      "operation": "GET /channels/whatsapp/signup-config",
+      "reason": "Internal route, never released: renamed to the resource-style operation id the route naming rule requires.",
+      "deprecated": "2026-11-20",
+      "sunset": "2026-11-20",
+      "approved_by": "Frantz Kati"
+    },
+    {
+      "id": "api-operation-id-removed",
+      "operation": "POST /channels/whatsapp/signups",
+      "reason": "Internal route, never released: renamed to the resource-style operation id the route naming rule requires.",
+      "deprecated": "2026-11-20",
+      "sunset": "2026-11-20",
+      "approved_by": "Frantz Kati"
+    },
+    {
+      "id": "api-operation-id-removed",
+      "operation": "GET /channels/whatsapp/{channel}/templates",
+      "reason": "Internal route, never released: renamed to the resource-style operation id the route naming rule requires.",
+      "deprecated": "2026-11-20",
+      "sunset": "2026-11-20",
+      "approved_by": "Frantz Kati"
+    },
+    {
+      "id": "api-removed-without-deprecation",
+      "operation": "PUT /channels/whatsapp/{channel}/templates/{template}",
+      "reason": "Internal route, never released: editing a WhatsApp template changes part of it, so it moved from PUT to PATCH.",
+      "deprecated": "2026-11-20",
+      "sunset": "2026-11-20",
+      "approved_by": "Frantz Kati"
+    },
+    {
+      "id": "api-operation-id-removed",
+      "operation": "POST /conversations/{conversation}/whatsapp-templates",
+      "reason": "Internal route, never released: renamed to the resource-style operation id the route naming rule requires.",
+      "deprecated": "2026-11-20",
+      "sunset": "2026-11-20",
+      "approved_by": "Frantz Kati"
+    },
+    {
+      "id": "api-operation-id-removed",
+      "operation": "POST /tickets/{ticket}/issues/refresh",
+      "reason": "Internal route, never released: renamed to the resource-style operation id the route naming rule requires.",
+      "deprecated": "2026-11-20",
+      "sunset": "2026-11-20",
+      "approved_by": "Frantz Kati"
+    },
+    {
+      "id": "api-path-removed-without-deprecation",
+      "operation": "GET /ai/agent",
+      "reason": "A workspace now runs many agents, each edited as a draft and published as a version. Pre-production: the single-agent route is replaced by /ai/agents, /ai/agents/{agent} and /ai/settings instead of kept beside it.",
+      "deprecated": "2026-11-22",
+      "sunset": "2026-11-22",
+      "approved_by": "Frantz Kati"
+    },
+    {
+      "id": "api-path-removed-without-deprecation",
+      "operation": "PATCH /ai/agent",
+      "reason": "A workspace now runs many agents, each edited as a draft and published as a version. Pre-production: the single-agent route is replaced by /ai/agents, /ai/agents/{agent} and /ai/settings instead of kept beside it.",
+      "deprecated": "2026-11-22",
+      "sunset": "2026-11-22",
+      "approved_by": "Frantz Kati"
+    },
+    {
+      "id": "api-path-removed-without-deprecation",
+      "operation": "POST /ai/playground",
+      "reason": "Pre-production: the internal playground is replaced by previewing an agent's draft. Nothing outside dimmi's own app called it.",
+      "deprecated": "2026-11-22",
+      "sunset": "2026-11-22",
+      "approved_by": "Frantz Kati"
+    },
+    {
+      "id": "api-schema-removed",
+      "schema": "AIPlaygroundRequestBody",
+      "reason": "Pre-production: the internal playground is replaced by previewing an agent's draft. Nothing outside dimmi's own app called it.",
+      "deprecated": "2026-11-22",
+      "sunset": "2026-11-22",
+      "approved_by": "Frantz Kati"
+    },
+    {
+      "id": "api-schema-removed",
+      "schema": "AiPlaygroundAnswer",
+      "reason": "Pre-production: the internal playground is replaced by previewing an agent's draft. Nothing outside dimmi's own app called it.",
+      "deprecated": "2026-11-22",
+      "sunset": "2026-11-22",
+      "approved_by": "Frantz Kati"
+    },
+    {
+      "id": "api-schema-removed",
+      "schema": "AiPlaygroundCitation",
+      "reason": "Pre-production: the internal playground is replaced by previewing an agent's draft. Nothing outside dimmi's own app called it.",
+      "deprecated": "2026-11-22",
+      "sunset": "2026-11-22",
+      "approved_by": "Frantz Kati"
+    },
+    {
+      "id": "api-schema-removed",
+      "schema": "AiPlaygroundClass",
+      "reason": "Pre-production: the internal playground is replaced by previewing an agent's draft. Nothing outside dimmi's own app called it.",
+      "deprecated": "2026-11-22",
+      "sunset": "2026-11-22",
+      "approved_by": "Frantz Kati"
+    },
+    {
+      "id": "api-schema-removed",
+      "schema": "AiPlaygroundReply",
+      "reason": "Pre-production: the internal playground is replaced by previewing an agent's draft. Nothing outside dimmi's own app called it.",
+      "deprecated": "2026-11-22",
+      "sunset": "2026-11-22",
+      "approved_by": "Frantz Kati"
+    },
+    {
+      "id": "api-schema-removed",
+      "schema": "AiPlaygroundSource",
+      "reason": "Pre-production: the internal playground is replaced by previewing an agent's draft. Nothing outside dimmi's own app called it.",
+      "deprecated": "2026-11-22",
+      "sunset": "2026-11-22",
+      "approved_by": "Frantz Kati"
+    },
+    {
+      "id": "api-schema-removed",
+      "schema": "AiPlaygroundTiming",
+      "reason": "Pre-production: the internal playground is replaced by previewing an agent's draft. Nothing outside dimmi's own app called it.",
+      "deprecated": "2026-11-22",
+      "sunset": "2026-11-22",
+      "approved_by": "Frantz Kati"
+    },
+    {
+      "id": "api-schema-removed",
+      "schema": "AiPlaygroundUsage",
+      "reason": "Pre-production: the internal playground is replaced by previewing an agent's draft. Nothing outside dimmi's own app called it.",
+      "deprecated": "2026-11-22",
+      "sunset": "2026-11-22",
+      "approved_by": "Frantz Kati"
+    },
+    {
+      "id": "api-schema-removed",
+      "schema": "ResourceAiPlaygroundAnswer",
+      "reason": "Pre-production: the internal playground is replaced by previewing an agent's draft. Nothing outside dimmi's own app called it.",
+      "deprecated": "2026-11-22",
+      "sunset": "2026-11-22",
+      "approved_by": "Frantz Kati"
+    },
+    {
+      "id": "response-required-property-removed",
+      "operation": "GET /operator/settings",
+      "reason": "Internal route: the weekly procedure review is replaced by Operator routines, and nothing is in production.",
+      "deprecated": "2026-11-22",
+      "sunset": "2026-11-22",
+      "approved_by": "Frantz Kati"
+    },
+    {
+      "id": "response-required-property-removed",
+      "operation": "PATCH /operator/settings",
+      "reason": "Internal route: the weekly procedure review is replaced by Operator routines, and nothing is in production.",
+      "deprecated": "2026-11-22",
+      "sunset": "2026-11-22",
+      "approved_by": "Frantz Kati"
+    },
+    {
+      "id": "request-property-removed",
+      "operation": "PATCH /operator/settings",
+      "reason": "Internal route: the weekly procedure review is replaced by Operator routines, and nothing is in production.",
+      "deprecated": "2026-11-22",
+      "sunset": "2026-11-22",
+      "approved_by": "Frantz Kati"
+    }
+  ]
 }

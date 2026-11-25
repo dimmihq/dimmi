@@ -1,6 +1,8 @@
 # A local stand-in for the Hetzner server: one k3s node, no bundled ingress
-# or service load balancer, and the web NodePort published on the host at
-# localhost:18080.
+# or service load balancer, the web NodePort published on the host at
+# localhost:18080 and the edge's HTTPS one at localhost:18443. A cluster
+# made before the edge was added takes the port with:
+#   k3d cluster edit dimmi --port-add 18443:30443@loadbalancer
 apiVersion: k3d.io/v1alpha5
 kind: Simple
 metadata:
@@ -10,6 +12,8 @@ agents: 0
 image: rancher/k3s:v1.34.1-k3s1
 ports:
   - port: 18080:30080
+    nodeFilters: [server:0]
+  - port: 18443:30443
     nodeFilters: [server:0]
 options:
   k3s:

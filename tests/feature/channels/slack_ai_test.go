@@ -71,9 +71,11 @@ func saveAgent(ctx context.Context, sc *slackCase) error {
 		return err
 	}
 
-	agent, err := q.FindAgent(ctx, sc.Workspace.Workspace.ID)
+	agent, err := q.FindDefaultAgent(ctx, sc.Workspace.Workspace.ID)
 	if err != nil {
-		agent, err = q.CreateAgent(ctx, models.CreateAgentParams{WorkspaceID: sc.Workspace.Workspace.ID, Now: now})
+		agent, err = q.CreateDefaultAgent(ctx, models.CreateDefaultAgentParams{
+			WorkspaceID: sc.Workspace.Workspace.ID, Now: now,
+		})
 	}
 
 	if err != nil {
@@ -88,7 +90,9 @@ func saveAgent(ctx context.Context, sc *slackCase) error {
 		UnknownBehavior: "offer_handoff", GroundingMode: "citations", RequireCitations: true, DefaultLanguage: "en",
 		Languages: []string{}, ContactAttributeAllowlist: []string{}, LinkAllowlist: []string{}, Streaming: true,
 		IncludeContactContext: "basic", MinSimilarity: database.NumericFloat(0.35), Handoff: json.RawMessage("{}"),
-		Messages: json.RawMessage("{}"), Now: now,
+		Messages: json.RawMessage("{}"), Now: now, KnowledgeScope: json.RawMessage(`{"mode":"all"}`),
+		ProcedureScope: json.RawMessage(`{"mode":"all"}`), ActionScope: json.RawMessage(`{"mode":"all"}`),
+		TransferAgentIds: []ids.UUID{},
 	})
 
 	return err

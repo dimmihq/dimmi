@@ -1,20 +1,20 @@
 ---
 title: "Verify webhook signatures"
-description: "Check that a webhook request came from dimmi with the endpoint's signing secret, and rotate that secret."
+description: "Verify Standard Webhooks signatures from dimmi in Node.js, Go, PHP, Laravel, or Python, and rotate signing secrets safely."
 ---
 import { TabItem, Tabs } from "~docs/components/mdx";
 
-dimmi signs each request with the endpoint's signing secret, following [Standard Webhooks](https://www.standardwebhooks.com). Copy the secret from the endpoint's page in **Settings → Webhooks**.
+dimmi signs every webhook delivery using [Standard Webhooks](https://www.standardwebhooks.com). Copy your endpoint's signing secret from **Settings → Webhooks**.
 
-| Header | Value |
+| Header | Contents |
 | --- | --- |
-| `webhook-id` | The event's `id`. |
-| `webhook-timestamp` | The time dimmi sent this attempt, in Unix seconds. |
-| `webhook-signature` | `v1,` and a base64 HMAC-SHA256 of `<webhook-id>.<webhook-timestamp>.<body>`. |
+| `webhook-id` | The event `id`. |
+| `webhook-timestamp` | Unix timestamp (seconds) when dimmi sent this attempt. |
+| `webhook-signature` | `v1,` followed by a base64 HMAC-SHA256 of `<webhook-id>.<webhook-timestamp>.<body>`. |
 
-## Verify a request
+## Check signatures on your server
 
-Verify the raw body, before any JSON parsing. Each library rejects a timestamp more than 5 minutes from your server's clock.
+Always pass the raw request body before parsing JSON. Each library rejects timestamps more than 5 minutes away from your server clock.
 
 <Tabs>
 <TabItem label="Node.js">
@@ -120,7 +120,7 @@ class AppServiceProvider extends ServiceProvider
 }
 ```
 
-The route reads the secret from `DIMMI_WEBHOOK_SECRET` in `.env`.
+The route reads `DIMMI_WEBHOOK_SECRET` from `.env` automatically.
 
 </TabItem>
 <TabItem label="Python">
@@ -150,10 +150,10 @@ async def receive(request: Request) -> Response:
 </TabItem>
 </Tabs>
 
-Install `standardwebhooks` from npm for Node.js, or the dimmi [Go](/developers/sdks/go/), [PHP](/developers/sdks/php/), [Laravel](/developers/sdks/laravel/) or [Python](/developers/sdks/python/) SDK.
+Install `standardwebhooks` from npm for Node.js, or use our [Go](/developers/sdks/go/), [PHP](/developers/sdks/php/), [Laravel](/developers/sdks/laravel/), or [Python](/developers/sdks/python/) SDK.
 
-## Rotate the secret
+## Rotate a signing secret
 
-Click **Rotate** on the endpoint's page. dimmi signs each request with both secrets for 1 day, so your server passes with either one while you deploy the new secret.
+Click **Rotate** on the endpoint's page in dimmi. For 24 hours, dimmi signs every delivery with both the old and new secrets so you can deploy without downtime.
 
-With [Create webhook endpoint secret rotation](/api-reference/webhooks/create-webhook-endpoint-secret-rotation/), you choose the overlap in `overlap_seconds`, from `0` to `604800` (7 days). The default `0` stops the old secret at once.
+Through the API ([Create webhook endpoint secret rotation](/api-reference/webhooks/create-webhook-endpoint-secret-rotation/)), set `overlap_seconds` between `0` and `604800` (7 days). Passing `0` (the default) expires the old secret right away.

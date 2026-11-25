@@ -1,33 +1,57 @@
 ---
 title: "Control handover"
-description: "When the dimmi agent hands a conversation to your team, what a handover changes and how to route and prioritize it."
+description: "Choose when the dimmi agent hands a conversation to your team, and what happens the moment it does."
 ---
 
-Set the handover rules in **Settings → dimmi agent**, under **Answers** and **Handover**.
+Handover is how the dimmi agent passes a conversation to a human teammate. You control the default agent's rules in **Settings → dimmi agent**, under **Answers** and **Handover**. Each agent picks the team it hands to in [Agent Studio](/ai/set-up-the-agent/), under **Build → Hand over to**.
+
+Handing a conversation to another AI agent is a transfer, not a handover. See [transfers](/ai/multiple-agents/#hand-a-conversation-to-another-agent).
 
 ## When the agent hands over
 
-- The customer asks for a person, or presses **Talk to a person** in the messenger.
-- The agent has no answer, as **When it doesn't know** says:
+A handover happens in any of these cases:
+
+- **The customer asks for a person:** they say so, or click **Talk to a person** in the messenger.
+- **The agent has no answer:** what happens next depends on your **When it doesn't know** setting:
 
   | Option | What happens |
   | --- | --- |
-  | **Offer a teammate** | The agent says it doesn't know and the customer gets a **Talk to a person** button. A second unanswered question in a row hands over. Email has no button, so the first one hands over. |
-  | **Hand over straight away** | The first unanswered question hands over. |
+  | **Offer a teammate** | The agent says it does not know and shows a **Talk to a person** button. A second unanswered question in a row hands over. Email has no button, so the first one hands over. |
+  | **Hand over straight away** | The first unanswered question hands over right away. |
   | **Just say it doesn't know** | An unanswered question never hands over. |
 
-- The conversation reaches **Replies per conversation**, or the agent's replies in it have cost $0.10.
-- The conversation carries a tag listed in **Always hand over when tagged**.
-- **Agent's role** is **Triage only**. The agent then titles, tags and hands over every conversation, and never answers.
-- The agent was answering and can no longer continue: its hours ended, the [monthly cap](/ai/providers/#set-the-monthly-cap) was reached or the AI provider failed.
-- A teammate did not approve an [action](/ai/actions/) in time.
+- **Reply or cost limit reached:** the conversation hits **Replies per conversation**, or the agent's replies in that thread cost $0.10.
+- **Blocked tag:** the conversation gets a tag listed in **Always hand over when tagged**.
+- **Procedure rule or missed step:** the chat matches a [procedure's](/ai/procedures/) **Hand over to the team when** list, or the agent still skips a required procedure action after **3** reminders.
+- **Reply withheld for safety:** a reply still contains internal notes or placeholders after dimmi asks the agent to rewrite it once.
+- **Triage mode:** **Agent's role** is set to **Triage only**. The agent titles, tags, and hands over every thread without replying.
+- **The agent cannot continue:** its active hours ended, the [monthly cap](/ai/providers/#set-the-monthly-cap) was hit, or the AI provider failed.
+- **Approval timed out:** no teammate approved a pending [action](/ai/actions/) in time.
 
-## What a handover does
+## When a note is enough
 
-1. The agent tells the customer. The message says a teammate replies later when no teammate is online or the inbox is outside its [office hours](/inbox/office-hours/).
-2. dimmi assigns the conversation to the team in **Hand over to**, unless it already has an assignee. **The inbox's usual routing** assigns no team.
-3. With **Raise priority on handover**, dimmi sets the priority to high. A customer who may be in danger gets high priority with or without the setting.
-4. The agent adds an internal note with a summary for the team, and dimmi notifies teammates.
-5. The agent stops replying in that conversation.
+Not everything your team should know needs a person to step in. A buyer who decided against you, or a feature someone asked for that you don't offer, is worth reading later. It is not worth taking a conversation over.
 
-A handover also starts workflows with the **dimmi hands over** [trigger](/workflows/triggers-and-steps/) and sends the `ai.handoff_requested` [webhook event](/developers/webhooks/events/).
+For those moments the agent can leave an internal note instead. The note appears in the thread for your team, the customer never sees it, and the agent keeps the conversation and keeps replying. Nothing is reassigned and nobody is notified to reply.
+
+You choose which one happens with the words in your guidance:
+
+| You write | The agent does |
+| --- | --- |
+| "Note it for the team" | Leaves an internal note and keeps the conversation. |
+| "Ask if they would like you to bring someone in" | Offers a person, and hands over only if the customer says yes. |
+| "Pass the conversation to the team" | Hands over. |
+
+For example: _"When a buyer says they are going with someone else, ask once what was missing, then note it for the team. Tell them only that you have noted it, and wish them well."_
+
+## What happens during a handover
+
+The moment a handover triggers, dimmi runs five steps in order:
+
+1. **Tells the customer:** the agent lets them know a person is stepping in. If no teammate is online or the inbox is outside [office hours](/inbox/office-hours/), it says a teammate will reply later.
+2. **Routes the thread:** dimmi assigns the conversation to the team in **Hand over to**, unless someone is already assigned. Choosing **The inbox's usual routing** leaves team assignment to the inbox rules.
+3. **Raises priority (optional):** if **Raise priority on handover** is on, dimmi sets priority to high. Safety emergencies always get high priority, even when this setting is off.
+4. **Briefs your team:** the agent leaves an internal note with a summary, and dimmi notifies teammates.
+5. **Steps back:** the agent stops replying in that conversation.
+
+A handover also fires any workflow with the **dimmi hands over** [trigger](/workflows/triggers-and-steps/) and sends the `ai.handoff_requested` [webhook event](/developers/webhooks/events/).

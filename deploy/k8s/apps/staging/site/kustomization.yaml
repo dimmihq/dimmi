@@ -1,0 +1,11 @@
+# The site image is a tag of the app's package (site-<commit sha>), so it
+# shares the package's public visibility; release.sh sets the sha.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: dimmi-staging
+resources:
+  - ../../base/site
+images:
+  - name: dimmi-site
+    newName: ghcr.io/dimmihq/dimmi
+    newTag: site

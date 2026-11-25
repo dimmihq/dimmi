@@ -32,12 +32,15 @@ it.describe("operator", () => {
     ).toBeChecked();
   });
 
-  it("shows Operator's usage beside dimmi's, and its chats beside a conversation", async ({ page }) => {
+  it("shows Operator's usage on its own page, and its chats beside a conversation", async ({ page }) => {
     await page.goto("/d/operator");
-    await expect(page).toHaveURL(/\/d\/[^/]+\/agent\?tab=operator$/);
-    await expect(page.getByRole("tab", { name: "Operator", selected: true })).toBeVisible();
+    await expect(page).toHaveURL(/\/d\/[^/]+\/operator$/);
+    await expect(page.getByRole("heading", { level: 1, name: "Operator" })).toBeVisible();
+    await expect(page.getByRole("tab", { name: "Overview", selected: true })).toBeVisible();
     await expect(page.getByRole("region", { name: "Operator this month" })).toBeVisible();
-    await expect(page.getByRole("link", { name: "Operator", exact: true })).toHaveCount(0);
+    await page.getByRole("tab", { name: "Routines" }).click();
+    await expect(page).toHaveURL(/\/d\/[^/]+\/operator\/routines$/);
+    await expect(page.getByText("Start from a template")).toBeVisible();
 
     const inboxes = await api<{ id: string }[]>(page, "GET", "/inboxes");
     const created = await api<{ id: string }>(page, "POST", "/conversations", {

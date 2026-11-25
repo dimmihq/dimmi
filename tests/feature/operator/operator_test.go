@@ -18,13 +18,14 @@ func TestOperatorThreads(t *testing.T) {
 		k := newDesk(t)
 		conv := k.conversation("I was charged twice for March.")
 		thread := k.thread(conv)
-		k.llm.Script(tools(call("get_conversation", map[string]any{})), reply("Ana was charged twice; refund one."))
+		read := tools(call("get_conversation_by_number", map[string]any{}))
+		k.llm.Script(read, reply("Ana was charged twice; refund one."))
 
 		res := k.ask(thread, "What does Ana want?").AssertOK()
 
 		assert.Equal(t, "Ana was charged twice; refund one.", res.String("data.message.body"))
 		assert.Equal(t, "What does Ana want?", res.String("data.asked.body"))
-		assert.Equal(t, "get_conversation", res.String("data.message.steps.0.tool"))
+		assert.Equal(t, "get_conversation_by_number", res.String("data.message.steps.0.tool"))
 		assert.Equal(t, "true", res.String("data.message.steps.0.ok"))
 		sent := k.llm.Sent()
 		assert.Contains(t, sent[1].Messages[len(sent[1].Messages)-1].Parts[0].Text,
@@ -52,7 +53,7 @@ func TestOperatorThreads(t *testing.T) {
 		t.Parallel()
 		k := newDesk(t)
 		conv := k.conversation("My export is stuck.")
-		k.llm.Script(tools(call("get_conversation", map[string]any{})), reply("Ana's export is stuck."))
+		k.llm.Script(tools(call("get_conversation_by_number", map[string]any{})), reply("Ana's export is stuck."))
 
 		res := k.d.Owner.PostJSON("/api/v1/conversations/"+conv+"/operator/brief", testkit.JSON{}).AssertOK()
 
@@ -97,7 +98,7 @@ func TestOperatorThreads(t *testing.T) {
 		k := newDesk(t)
 		k.conversation("One")
 		thread := k.thread("")
-		k.llm.Script(tools(call("workspace_report", map[string]any{})), reply("One conversation this month."))
+		k.llm.Script(tools(call("get_workspace_report", map[string]any{})), reply("One conversation this month."))
 
 		res := k.ask(thread, "How busy were we?").AssertOK()
 

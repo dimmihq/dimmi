@@ -261,6 +261,9 @@ Operator.
 func assistantPublicIDs() []PublicIDEntry {
 	return []PublicIDEntry{
 		{PrefixAiAgent, "ai_agents"},
+		{PrefixAiAgentVersion, "ai_agent_versions"},
+		{PrefixAiAgentTestCase, "ai_agent_test_cases"},
+		{PrefixAiAgentTestCaseRun, "ai_agent_test_case_runs"},
 		{PrefixAiProviderKey, "ai_provider_keys"},
 		{PrefixAiRun, "ai_runs"},
 		{PrefixAiRunStep, "ai_run_steps"},
@@ -272,6 +275,8 @@ func assistantPublicIDs() []PublicIDEntry {
 		{PrefixOperatorMessage, "operator_messages"},
 		{PrefixOperatorChangeset, "operator_changesets"},
 		{PrefixOperatorMemory, "operator_memories"},
+		{PrefixOperatorRoutine, "operator_routines"},
+		{PrefixOperatorRoutineRun, "operator_routine_runs"},
 	}
 }
 
@@ -280,6 +285,9 @@ The prefixes of the AI agent's and Operator's tables.
 */
 const (
 	PrefixAiAgent            Prefix = "aia"
+	PrefixAiAgentVersion     Prefix = "aiav"
+	PrefixAiAgentTestCase    Prefix = "aias"
+	PrefixAiAgentTestCaseRun Prefix = "aiar"
 	PrefixAiProviderKey      Prefix = "aik"
 	PrefixAiRun              Prefix = "air"
 	PrefixAiRunStep          Prefix = "ais"
@@ -291,16 +299,19 @@ const (
 	PrefixOperatorMessage    Prefix = "opm"
 	PrefixOperatorChangeset  Prefix = "opc"
 	PrefixOperatorMemory     Prefix = "opy"
+	PrefixOperatorRoutine    Prefix = "ort"
+	PrefixOperatorRoutineRun Prefix = "orr"
 )
 
 /*
 The prefixes of the help center's tables.
 */
 const (
-	PrefixHelpCenter     Prefix = "hc"
-	PrefixCollection     Prefix = "col"
-	PrefixArticle        Prefix = "art"
-	PrefixArticleVersion Prefix = "artv"
+	PrefixHelpCenter      Prefix = "hc"
+	PrefixCollection      Prefix = "col"
+	PrefixKnowledgeSource Prefix = "ks"
+	PrefixArticle         Prefix = "art"
+	PrefixArticleVersion  Prefix = "artv"
 )
 
 /*
@@ -318,7 +329,7 @@ func helpCenterPublicIDs() []PublicIDEntry {
 		{"hcd", "help_center_domains"},
 		{"rdr", "help_center_redirects"},
 		{"ast", "help_center_assets"},
-		{"ks", "knowledge_sources"},
+		{PrefixKnowledgeSource, "knowledge_sources"},
 		{"ksr", "knowledge_sync_runs"},
 		{"kd", "knowledge_documents"},
 		{"kc", "knowledge_chunks"},
@@ -434,6 +445,8 @@ const (
 	PrefixSchedule        Prefix = "sch"
 	PrefixSLAPolicy       Prefix = "sla"
 	PrefixProcedure       Prefix = "prc"
+	PrefixProcedureVer    Prefix = "prcv"
+	PrefixProcedureTest   Prefix = "prct"
 	PrefixAudience        Prefix = "audn"
 	PrefixAttribute       Prefix = "atd"
 	PrefixEvent           Prefix = "edf"
@@ -452,6 +465,8 @@ func workflowPublicIDs() []PublicIDEntry {
 		{PrefixSchedule, "schedules"},
 		{PrefixSLAPolicy, "sla_policies"},
 		{PrefixProcedure, "procedures"},
+		{PrefixProcedureVer, "procedure_versions"},
+		{PrefixProcedureTest, "procedure_test_cases"},
 		{PrefixAudience, "audiences"},
 		{PrefixAttribute, "attribute_definitions"},
 		{PrefixEvent, "event_definitions"},
@@ -505,49 +520,6 @@ func engagePublicIDs() []PublicIDEntry {
 		{"svr", "survey_responses"},
 		{"erc", "engage_receipts"},
 		{"eas", "engage_assets"},
-	}
-}
-
-/*
-The prefixes of broadcasts, their topics and their recipients.
-*/
-const (
-	PrefixBroadcast          Prefix = "bcst"
-	PrefixBroadcastTopic     Prefix = "bctp"
-	PrefixBroadcastRecipient Prefix = "bcrc"
-)
-
-/*
-broadcastPublicIDs lists the prefixes of broadcasts, the topics people
-subscribe to and each broadcast's recipients.
-*/
-func broadcastPublicIDs() []PublicIDEntry {
-	return []PublicIDEntry{
-		{PrefixBroadcast, "broadcasts"},
-		{PrefixBroadcastTopic, "broadcast_topics"},
-		{PrefixBroadcastRecipient, "broadcast_recipients"},
-	}
-}
-
-/*
-The prefixes of series, their versions and the journeys people take
-through them.
-*/
-const (
-	PrefixSeries           Prefix = "srs"
-	PrefixSeriesVersion    Prefix = "srsv"
-	PrefixSeriesEnrollment Prefix = "sren"
-)
-
-/*
-seriesPublicIDs lists the prefixes of series, their published versions
-and their enrollments.
-*/
-func seriesPublicIDs() []PublicIDEntry {
-	return []PublicIDEntry{
-		{PrefixSeries, "series"},
-		{PrefixSeriesVersion, "series_versions"},
-		{PrefixSeriesEnrollment, "series_enrollments"},
 	}
 }
 

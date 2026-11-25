@@ -20,7 +20,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"sync"
 	"time"
 
 	"github.com/dimmihq/dimmi/framework/clock"
@@ -107,7 +106,7 @@ func (r *Runner) step(ctx context.Context, st *run, in stepRecord) {
 	if in.cost != nil {
 		cost = *in.cost
 		rec.costMicros += cost
-	} else if rec.unpriced(provider, in.model, usage) && firstUnpriced(provider, in.model) {
+	} else if rec.unpriced(provider, in.model, usage) && r.firstUnpriced(provider, in.model) {
 		log.From(ctx).WarnContext(ctx, "model has no price, its usage counts as free toward the spend cap",
 			log.String("provider", provider), log.String("model", in.model))
 	}
@@ -183,17 +182,11 @@ func (rec *Recorder) unpriced(provider, model string, u contracts.LLMUsage) bool
 }
 
 /*
-unpricedSeen holds the provider and model pairs already logged as
-having no price, so each is logged once per process.
+firstUnpriced reports whether this is the first time the runner meets
+the unpriced model, so each is logged once per process.
 */
-var unpricedSeen sync.Map
-
-/*
-firstUnpriced reports whether this is the first time the process meets
-the unpriced model.
-*/
-func firstUnpriced(provider, model string) bool {
-	_, seen := unpricedSeen.LoadOrStore(provider+"/"+model, struct{}{})
+func (r *Runner) firstUnpriced(provider, model string) bool {
+	_, seen := r.unpricedSeen.LoadOrStore(provider+"/"+model, struct{}{})
 	return !seen
 }
 
@@ -245,6 +238,9 @@ func estimate(text string) int64 {
 finishRun closes the run row with the decision and the run's sums.
 */
 func (r *Runner) finishRun(ctx context.Context, tx *database.Tx, st *run, d *decision) error {
+	if err := r.saveProcedureState(ctx, tx, st, d); err != nil {
+		return err
+	}
 	rec := st.rec
 	now := r.Clock.Now()
 	retrieval := retrievalJSON(st.sources)
@@ -272,7 +268,10 @@ func (r *Runner) finishRun(ctx context.Context, tx *database.Tx, st *run, d *dec
 		ErrorCode: nilable(d.errorCode), ErrorMessage: nilable(truncate(d.errorMessage, 500)),
 		CompletedAt: &now, Now: now,
 	})
-	return err
+	if err != nil {
+		return err
+	}
+	return r.saveProcedureTrace(ctx, tx, st)
 }
 
 /*

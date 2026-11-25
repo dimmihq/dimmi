@@ -116,3 +116,15 @@ SELECT v.*
 FROM ai_action_versions v
 JOIN ai_actions a ON a.workspace_id = v.workspace_id AND a.published_version_id = v.id
 WHERE a.workspace_id = @workspace_id AND a.deleted_at IS NULL;
+
+-- name: SetActionLastTestResponse :exec
+-- SetActionLastTestResponse keeps the result of an action's last
+-- successful live test.
+UPDATE ai_actions SET last_test_response = @response
+WHERE workspace_id = @workspace_id AND id = @id;
+
+-- name: ListActionTestResponses :many
+-- ListActionTestResponses returns the last test result of every action
+-- that has one.
+SELECT id, name, last_test_response FROM ai_actions
+WHERE workspace_id = @workspace_id AND deleted_at IS NULL AND last_test_response IS NOT NULL;

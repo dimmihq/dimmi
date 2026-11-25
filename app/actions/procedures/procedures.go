@@ -29,6 +29,7 @@ import (
 	"github.com/dimmihq/dimmi/framework/fault"
 	"github.com/dimmihq/dimmi/framework/ids"
 
+	"github.com/dimmihq/dimmi/app/actions/audit"
 	"github.com/dimmihq/dimmi/app/auth/authz"
 	"github.com/dimmihq/dimmi/app/exceptions"
 	"github.com/dimmihq/dimmi/app/models"
@@ -49,12 +50,21 @@ var (
 )
 
 /*
-Procedures manages a workspace's procedures.
+Procedures manages a workspace's procedures. Audit, when set, records
+publishing and restoring; Simulator runs the simulator's turns;
+Vectors, when set, embeds descriptions for routing; Judge, when set,
+decides the rubrics of saved tests.
 */
 type Procedures struct {
-	DB    *database.DB
-	Clock clock.Clock
-	IDs   *ids.Registry
+	DB        *database.DB
+	Clock     clock.Clock
+	IDs       *ids.Registry
+	Audit     *audit.RecordAuditLog
+	Simulator Simulator
+	Vectors   Vectors
+	Judge     Judge
+	Live      Live
+	Customer  Customer
 }
 
 /*

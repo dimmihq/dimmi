@@ -1,9 +1,9 @@
 ---
 title: "Add AI provider keys"
-description: "Give your server Anthropic, OpenAI and embedding keys so the dimmi agent and Operator work for every workspace."
+description: "Configure server-wide Anthropic, OpenAI, and embedding keys so the dimmi agent and Operator work out of the box."
 ---
 
-Keys set on the server give every workspace a built-in AI provider. Without them, each workspace adds its own keys in **Settings → AI providers** ([AI providers](/ai/providers/)).
+Setting AI keys at the server level gives every workspace a built-in **dimmi** AI provider. Without them, each workspace brings its own keys in **Settings → AI providers** ([AI providers](/ai/providers/)).
 
 ```bash
 dimmictl set <<'EOF'
@@ -13,23 +13,24 @@ DIMMI_AI__MANAGED__EMBEDDINGS__API_KEY=<embeddings_api_key>
 EOF
 ```
 
-- **Models:** set the Anthropic key, the OpenAI key or both. The built-in provider offers only the models of a provider whose key is set.
-- **Embeddings:** this key powers semantic search of knowledge sources. Without it, a workspace gets semantic search only from an OpenAI key of its own.
+- **Chat models:** add Anthropic, OpenAI, or both. Workspaces see only models for providers whose keys you set.
+- **Embeddings:** enables semantic search across knowledge sources. Without a server embedding key, semantic search only activates for workspaces with their own OpenAI key.
 
-## Options
+## Optional settings
 
-Each variable starts with `DIMMI_AI__`.
+Prefix each variable below with `DIMMI_AI__`:
 
 | Variable | Default | Description |
 | --- | --- | --- |
-| `MANAGED__ANTHROPIC__BASE_URL` | Anthropic's API | Another address for Anthropic requests, such as a proxy. |
-| `MANAGED__OPENAI__BASE_URL` | OpenAI's API | Another address for OpenAI requests. |
-| `MANAGED__EMBEDDINGS__BASE_URL` | `https://api.deepinfra.com/v1/openai` | An OpenAI-compatible embeddings API. |
-| `MANAGED__EMBEDDINGS__MODEL` | `Qwen/Qwen3-Embedding-8B` | The embedding model. It must produce 1024 dimensions. |
-| `DEFAULT_MONTHLY_CAP_USD` | `25` | The monthly spending cap a new workspace's dimmi agent starts with, in US dollars. |
-| `ENABLED` | `true` | `false` turns the dimmi agent off on the whole server. |
+| `MANAGED__ANTHROPIC__BASE_URL` | Anthropic API | Custom endpoint or proxy URL for Anthropic calls. |
+| `MANAGED__OPENAI__BASE_URL` | OpenAI API | Custom endpoint or proxy URL for OpenAI calls. |
+| `MANAGED__EMBEDDINGS__BASE_URL` | `https://api.voyageai.com/v1` | Voyage API URL. |
+| `MANAGED__EMBEDDINGS__MODEL` | `voyage-4-lite` | Voyage embedding model (must output 1024 dimensions). |
+| `MANAGED__EMBEDDINGS__RERANK_MODEL` | `rerank-2.5-lite` | Voyage model that reorders search results. Set empty to turn reranking off. |
+| `DEFAULT_MONTHLY_CAP_USD` | `25` | Starting monthly AI spend cap (USD) for new workspaces. |
+| `ENABLED` | `true` | Set `false` to disable the dimmi agent server-wide. |
 
-To list what stops the dimmi agent from answering, run:
+Diagnose anything blocking the agent from replying with:
 
 ```bash
 docker compose -f /opt/dimmi/compose.yaml exec web /dimmi ai:doctor

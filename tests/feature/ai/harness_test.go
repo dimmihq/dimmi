@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"slices"
 	"strings"
 	"sync"
 	"testing"
@@ -44,10 +45,72 @@ router is the scripted driver around the answer fake. Hook runs before
 the next stream starts; stop overrides the streams' stop reason.
 */
 type router struct {
-	answer *fake.LLM
-	mu     sync.Mutex
-	hook   func()
-	stop   contracts.StopReason
+	answer    *fake.LLM
+	mu        sync.Mutex
+	hook      func()
+	stop      contracts.StopReason
+	verdicts  map[string]bool
+	judged    []contracts.ChatRequest
+	onVerdict func()
+	judgeErr  error
+}
+
+/*
+judge sets what the model answers to the yes-or-no questions the
+pipeline asks about a reply or a step, by question name; a step's
+question is named "waits". Questions left out keep their usual answer:
+the customer gave what a step needs, and nothing else is so.
+*/
+func (r *router) judge(verdicts map[string]bool) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.verdicts = verdicts
+}
+
+/*
+judgments are the judgment calls the pipeline made, in order.
+*/
+func (r *router) judgments() []contracts.ChatRequest {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	return slices.Clone(r.judged)
+}
+
+/*
+verdict answers one judgment call: true or false for each question the
+response schema names.
+*/
+func (r *router) verdict(req contracts.ChatRequest) (*contracts.ChatResponse, error) {
+	var schema struct {
+		Required []string `json:"required"`
+	}
+	if err := json.Unmarshal(req.Schema.Schema, &schema); err != nil {
+		return nil, err
+	}
+	r.mu.Lock()
+	r.judged = append(r.judged, req)
+	verdicts, after, failing := r.verdicts, r.onVerdict, r.judgeErr
+	r.mu.Unlock()
+	if failing != nil {
+		return nil, failing
+	}
+	if after != nil {
+		defer after()
+	}
+	out := map[string]bool{}
+	for _, name := range schema.Required {
+		key := name
+		if strings.HasPrefix(name, "s_") {
+			key = "waits"
+		}
+		answer, ok := verdicts[key]
+		if !ok {
+			answer = key == "given"
+		}
+		out[name] = answer
+	}
+	text, err := json.Marshal(out)
+	return &contracts.ChatResponse{Text: string(text), StopReason: contracts.StopReasonEnd, Model: req.Model}, err
 }
 
 func (r *router) Provider() contracts.LLMProvider { return contracts.LLMProviderAnthropic }
@@ -55,6 +118,9 @@ func (r *router) Provider() contracts.LLMProvider { return contracts.LLMProvider
 func (r *router) pick(string) *fake.LLM { return r.answer }
 
 func (r *router) Chat(ctx context.Context, req contracts.ChatRequest) (*contracts.ChatResponse, error) {
+	if req.Schema != nil && req.Schema.Name == "procedure_judgment" {
+		return r.verdict(req)
+	}
 	return r.pick(req.Model).Chat(ctx, req)
 }
 
@@ -101,9 +167,10 @@ func (s *stopStream) Next(ctx context.Context) (contracts.StreamEvent, error) {
 harness is one test's desk with a scripted agent and decision model.
 */
 type harness struct {
-	t   *testing.T
-	d   tests.Desk
-	llm *router
+	player *scriptedCustomer
+	t      *testing.T
+	d      tests.Desk
+	llm    *router
 }
 
 /*
@@ -116,6 +183,10 @@ func newHarness(t *testing.T, change func(*models.UpdateAgentParams)) *harness {
 
 	d := tests.NewDesk(t)
 	h := &harness{t: t, d: d, llm: &router{answer: fake.New(contracts.LLMProviderAnthropic)}}
+	h.player = &scriptedCustomer{}
+	if d.TC.App.Actions.Procedures != nil {
+		d.TC.App.Actions.Procedures.Customer = h.player
+	}
 
 	seed, err := knowledge.LoadSeed(t.Context(), d.TC.App.Storage, seedPath)
 	require.NoError(t, err)
@@ -159,12 +230,21 @@ func saveAgent(ctx context.Context, t *testing.T, d tests.Desk, change func(*mod
 		DefaultLanguage: "en", Languages: []string{}, ContactAttributeAllowlist: []string{},
 		LinkAllowlist: []string{}, Streaming: true, IncludeContactContext: "basic", PiiRedaction: false,
 		MinSimilarity: database.NumericFloat(0.35), Handoff: json.RawMessage("{}"),
-		Messages: json.RawMessage("{}"), Now: now,
+		Messages: json.RawMessage("{}"), Now: now, KnowledgeScope: json.RawMessage(`{"mode":"all"}`),
+		ProcedureScope: json.RawMessage(`{"mode":"all"}`), ActionScope: json.RawMessage(`{"mode":"all"}`),
+		TransferAgentIds: []ids.UUID{},
 	}
 	if change != nil {
 		change(&params)
 	}
 	if _, err = q.UpdateAgent(ctx, params); err != nil {
+		return err
+	}
+	// The spend cap is the workspace's, shared by every agent.
+	if _, err := d.TC.App.DB.Exec(ctx, `INSERT INTO workspace_ai_settings (workspace_id, monthly_spend_cap_micros)
+		VALUES ($1, $2) ON CONFLICT (workspace_id)
+		DO UPDATE SET monthly_spend_cap_micros = EXCLUDED.monthly_spend_cap_micros`,
+		params.WorkspaceID, params.MonthlySpendCapMicros); err != nil {
 		return err
 	}
 	if err := q.SetAgentCarryPassages(ctx, models.SetAgentCarryPassagesParams{
@@ -191,9 +271,9 @@ agentID returns the workspace's agent id, creating the row if needed.
 */
 func agentID(ctx context.Context, t *testing.T, d tests.Desk) ids.UUID {
 	t.Helper()
-	agent, err := models.New(d.TC.App.DB).FindAgent(ctx, d.TC.Workspace.Workspace.ID)
+	agent, err := models.New(d.TC.App.DB).FindDefaultAgent(ctx, d.TC.Workspace.Workspace.ID)
 	if err != nil {
-		agent, err = models.New(d.TC.App.DB).CreateAgent(ctx, models.CreateAgentParams{
+		agent, err = models.New(d.TC.App.DB).CreateDefaultAgent(ctx, models.CreateDefaultAgentParams{
 			WorkspaceID: d.TC.Workspace.Workspace.ID, Now: d.TC.App.Clock.Now(),
 		})
 		require.NoError(t, err)
@@ -219,8 +299,16 @@ func tools(calls ...contracts.ToolCall) fake.Step {
 search is a scripted search_knowledge call.
 */
 func search(query string) fake.Step {
-	q, _ := json.Marshal(map[string]string{"query": query})
+	q, _ := json.Marshal(map[string]string{"question": query})
 	return tools(call("search_knowledge", string(q)))
+}
+
+/*
+lastText is the newest message of a request to the answer model: the
+result of the tool it called last.
+*/
+func lastText(req contracts.ChatRequest) string {
+	return req.Messages[len(req.Messages)-1].Parts[0].Text
 }
 
 /*
@@ -311,99 +399,6 @@ func (h *harness) messages(ctx context.Context, conv ids.UUID) []models.Message 
 	})
 	require.NoError(h.t, err)
 	return msgs
-}
-
-/*
-state is everything a test asserts on after a run.
-*/
-type state struct {
-	conv     models.Conversation
-	messages []models.Message
-	run      models.AiRun
-	steps    []models.AiRunStep
-	runs     []models.AiRun
-}
-
-/*
-agentReplies are the agent's public messages.
-*/
-func (s state) agentReplies() []models.Message {
-	var out []models.Message
-	for _, m := range s.messages {
-		if m.AuthorType == "agent" && m.Type == "message" {
-			out = append(out, m)
-		}
-	}
-	return out
-}
-
-/*
-timeline are the conversation's timeline events, as stored.
-*/
-func (s state) timeline() []string {
-	var out []string
-	for _, m := range s.messages {
-		if m.Type == "event" {
-			out = append(out, string(m.Event))
-		}
-	}
-	return out
-}
-
-/*
-notes are the conversation's internal notes.
-*/
-func (s state) notes() []models.Message {
-	var out []models.Message
-	for _, m := range s.messages {
-		if m.Type == "note" {
-			out = append(out, m)
-		}
-	}
-	return out
-}
-
-/*
-stepKinds lists the run's step kinds in order.
-*/
-func (s state) stepKinds() []string {
-	out := make([]string, len(s.steps))
-	for i, st := range s.steps {
-		out[i] = st.Kind
-	}
-	return out
-}
-
-/*
-load reads the conversation, its messages, its runs and the given
-run's steps.
-*/
-func (h *harness) load(conv, runID ids.UUID) state {
-	h.t.Helper()
-	var s state
-	ws := h.d.TC.Workspace.Workspace.ID
-	h.d.TC.InWorkspace(func(ctx context.Context) error {
-		q := models.New(h.d.TC.App.DB)
-		var err error
-		if s.conv, err = q.FindConversation(ctx, models.FindConversationParams{WorkspaceID: ws, ID: conv}); err != nil {
-			return err
-		}
-		s.messages = h.messages(ctx, conv)
-		if s.runs, err = q.ListConversationRuns(ctx, models.ListConversationRunsParams{
-			WorkspaceID: ws, ConversationID: &conv, PageLimit: 50,
-		}); err != nil {
-			return err
-		}
-		if runID == (ids.UUID{}) {
-			return nil
-		}
-		if s.run, err = q.FindRun(ctx, models.FindRunParams{WorkspaceID: ws, ID: runID}); err != nil {
-			return err
-		}
-		s.steps, err = q.ListRunSteps(ctx, models.ListRunStepsParams{WorkspaceID: ws, RunID: runID})
-		return err
-	})
-	return s
 }
 
 /*

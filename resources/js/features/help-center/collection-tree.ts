@@ -161,6 +161,11 @@ export const unfiledKey = "unfiled";
 export const analyticsKey = "analytics";
 
 /*
+ * requestsKey is the pick that lists the change requests on articles.
+ */
+export const requestsKey = "requests";
+
+/*
  * articlesIn lists the articles a pick shows: all of them, the unfiled
  * ones, or those in a collection and every collection inside it.
  */

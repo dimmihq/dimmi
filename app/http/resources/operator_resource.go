@@ -56,7 +56,8 @@ func NewOperatorSettings(s operator.Settings) OperatorSettings {
 }
 
 /*
-OperatorThread is one of the caller's threads with Operator.
+OperatorThread is one of the caller's threads with Operator, or the
+shared thread of a routine's run, which names the routine and the run.
 */
 type OperatorThread struct {
 	ID             string     `json:"id"`
@@ -65,6 +66,8 @@ type OperatorThread struct {
 	Title          string     `json:"title"`
 	LastMessageAt  *time.Time `json:"last_message_at"`
 	CreatedAt      time.Time  `json:"created_at"`
+	RoutineID      *string    `json:"routine_id"`
+	RoutineRunID   *string    `json:"routine_run_id"`
 }
 
 /*
@@ -75,6 +78,8 @@ func NewOperatorThread(t models.OperatorThread) OperatorThread {
 		ID: models.PublicID(models.PrefixOperatorThread, t.ID), Object: "operator_thread",
 		ConversationID: optionalID(models.PrefixConversation, t.ConversationID), Title: t.Title,
 		LastMessageAt: t.LastMessageAt, CreatedAt: t.CreatedAt,
+		RoutineID:    optionalID(models.PrefixOperatorRoutine, t.RoutineID),
+		RoutineRunID: optionalID(models.PrefixOperatorRoutineRun, t.RoutineRunID),
 	}
 }
 

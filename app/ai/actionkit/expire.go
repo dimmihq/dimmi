@@ -71,7 +71,8 @@ func (k *Kit) lapse(ctx context.Context, tx *database.Tx, call models.AiActionCa
 	if err != nil {
 		return fmt.Errorf("expire action call: %w", err)
 	}
-	if err := k.note(ctx, tx, step{row, agentActor(ctx, q, row.WorkspaceID), EventExpired}); err != nil {
+	actor := agentActor(ctx, q, row.WorkspaceID, row.ConversationID)
+	if err := k.note(ctx, tx, step{row, actor, EventExpired}); err != nil {
 		return err
 	}
 	if !wasApproval {

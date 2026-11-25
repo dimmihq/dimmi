@@ -312,7 +312,7 @@ func (e *Engine) copyImages(ctx context.Context, doc models.KnowledgeDocument) s
 			continue
 		}
 
-		kept, err := e.Images.Keep(ctx, bytes.NewReader(resp.Body))
+		kept, err := e.Images.Keep(ctx, doc.WorkspaceID, bytes.NewReader(resp.Body))
 		if err != nil {
 			continue
 		}

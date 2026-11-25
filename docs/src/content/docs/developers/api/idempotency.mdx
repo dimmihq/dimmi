@@ -1,9 +1,9 @@
 ---
 title: "Retry requests safely with idempotency keys"
-description: "Send an Idempotency-Key header so retried POST requests to the dimmi API never run twice."
+description: "Attach an Idempotency-Key header to supported POST endpoints so network retries never create duplicate records."
 ---
 
-Send an `Idempotency-Key` header with a `POST`, and a retry with the same key returns the first response without running the request again.
+Include an `Idempotency-Key` header on supported `POST` requests. If a network error forces a retry, sending the same key returns the original response instead of running the operation twice.
 
 ```bash
 curl https://trydimmi.com/api/v1/contacts \
@@ -13,11 +13,11 @@ curl https://trydimmi.com/api/v1/contacts \
   -d '{"email": "ada@example.com", "name": "Ada Lovelace"}'
 ```
 
-Replace `<api_token>` with your [API token](/developers/api/authentication/) and `<key>` with a value unique to this operation, such as a UUID, of at most 255 characters.
+Use a unique value per operation (such as a UUID, up to 255 characters) and replace `<api_token>` with your [API token](/developers/api/authentication/).
 
-## Endpoints that read the key
+## Supported endpoints
 
-Other endpoints ignore the header.
+Other endpoints ignore `Idempotency-Key`.
 
 | Method and path |
 | --- |
@@ -31,13 +31,13 @@ Other endpoints ignore the header.
 | `POST /ai/action-connections` |
 | `POST /ai/keys` |
 
-## How dimmi treats a key
+## How keys behave
 
-- **Storage.** dimmi keeps a key and its response for 24 hours, per token owner and workspace.
-- **Replay.** A replayed response has the first response's status and body, plus the header `Idempotent-Replayed: true`.
-- **Server errors.** dimmi does not store a `5xx` response, so the retry runs the request again.
-- **Different request.** The same key with another path, query or body gets `422` with code `idempotency_key_reused`.
-- **Still running.** A retry sent before the first request finishes gets `409` with code `idempotency_key_in_use`. After 5 minutes without a response, the next retry runs the request.
-- **Long key.** A key over 255 characters gets `422` with code `invalid_idempotency_key`.
+- **24-hour storage:** keys and their responses are stored for 24 hours per token owner and workspace.
+- **Replayed responses:** return the original status code and body along with `Idempotent-Replayed: true`.
+- **Server errors (`5xx`):** never cached, so retrying executes the request again.
+- **Key reuse with a different payload:** returns `422` (`idempotency_key_reused`) if path, query, or body differs.
+- **Concurrent retries:** returns `409` (`idempotency_key_in_use`) if the first call is still running. After 5 minutes with no response, a retry can take over.
+- **Key length:** keys longer than 255 characters return `422` (`invalid_idempotency_key`).
 
-The [Go](/developers/sdks/go/), [PHP](/developers/sdks/php/) and [Python](/developers/sdks/python/) SDKs send a key with each `POST`. The [TypeScript SDK](/developers/sdks/typescript/) does so with `autoIdempotency: true`.
+The [Go](/developers/sdks/go/), [PHP](/developers/sdks/php/), and [Python](/developers/sdks/python/) SDKs attach idempotency keys automatically on `POST` calls. In the [TypeScript SDK](/developers/sdks/typescript/), pass `autoIdempotency: true`.

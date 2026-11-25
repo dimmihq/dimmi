@@ -1,9 +1,9 @@
 ---
 title: "Paginate list responses"
-description: "The limit, cursor, filter, sort, include and search parameters of dimmi list endpoints, with their defaults and errors."
+description: "Use cursors, limits, filters, sorting, includes, and search on dimmi REST API list endpoints."
 ---
 
-List endpoints return `data` and `meta`. To read the next page, send `meta.next_cursor` as `cursor`.
+List endpoints return a `data` array and a `meta` object. To fetch the next page, pass `meta.next_cursor` as `cursor`.
 
 ```bash
 curl -G https://trydimmi.com/api/v1/conversations \
@@ -14,38 +14,38 @@ curl -G https://trydimmi.com/api/v1/conversations \
   --data-urlencode "cursor=<next_cursor>"
 ```
 
-Replace `<api_token>` with your [API token](/developers/api/authentication/) and `<next_cursor>` with the previous page's `meta.next_cursor`. Leave `cursor` out for the first page.
+Omit `cursor` on the first request, and swap `<api_token>` for your [API token](/developers/api/authentication/).
 
-## Parameters
+## Query parameters
 
-| Parameter | Format | Behavior |
+| Parameter | Format | What it does |
 | --- | --- | --- |
-| `limit` | Whole number | Items per page. Default `25`, maximum `100`. |
-| `cursor` | String | The `meta.next_cursor` of the page you read last. |
-| `filter[<field>]` | Values separated by commas | Items that match any of the values. |
-| `sort` | Fields separated by commas | Ascending. Put `-` before a field for descending. |
-| `include` | Names separated by commas | Adds related records to each item. |
-| `q` | Text | Search. |
+| `limit` | Integer | Items per page. Default `25`, max `100`. |
+| `cursor` | String | `meta.next_cursor` from the previous page. |
+| `filter[<field>]` | Comma-separated values | Matches items with any listed value. |
+| `sort` | Comma-separated fields | Ascending by default; prefix `-` for descending. |
+| `include` | Comma-separated names | Embeds related records on each item. |
+| `q` | String | Search query. |
 
-Each endpoint's page in the [API reference](/api-reference/) lists the filters, sorts and includes it accepts. A few lists page with `offset`, `after` or `page` in place of `cursor`.
+Check each endpoint in the [API reference](/api-reference/) for its supported filters, sorts, and includes. A few endpoints use `offset`, `after`, or `page` instead of `cursor`.
 
-## Response meta
+## Response `meta` fields
 
 | Field | Value |
 | --- | --- |
-| `next_cursor` | Cursor of the next page, `null` on the last page. |
-| `prev_cursor` | Cursor of the previous page, or `null`. |
-| `per_page` | The `limit` dimmi used. |
-| `total` | Count of matching items, on the endpoints that count. |
+| `next_cursor` | Cursor for the next page, or `null` on the last page. |
+| `prev_cursor` | Cursor for the previous page, or `null`. |
+| `per_page` | Effective `limit` applied by dimmi. |
+| `total` | Total matching items (present on endpoints that compute totals). |
 
-## Errors
+## Pagination errors
 
-Each of these answers `400` and names the rejected value in `parameter`.
+Invalid list parameters return `400` and name the bad input in `parameter`:
 
 | Code | Cause |
 | --- | --- |
-| `invalid_limit` | `limit` is not a whole number from 1 to the maximum, which the response gives in `max`. |
-| `invalid_cursor` | The cursor did not come from dimmi, or was changed. |
-| `invalid_filter` | The endpoint has no such filter. |
-| `invalid_sort` | The endpoint has no such sort. |
-| `invalid_include` | The endpoint has no such include. |
+| `invalid_limit` | `limit` is outside `1` to `max` (returned in the response). |
+| `invalid_cursor` | Cursor is malformed or tampered with. |
+| `invalid_filter` | Filter field is not supported on this endpoint. |
+| `invalid_sort` | Sort field is not supported on this endpoint. |
+| `invalid_include` | Include name is not supported on this endpoint. |

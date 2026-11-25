@@ -1,24 +1,29 @@
 ---
 title: "Erase a customer's data"
-description: "What erasing a customer removes, when it happens and how to cancel it within the grace period."
+description: "Permanently remove a customer's personal data and message contents, or cancel a pending erasure during the 7-day grace window."
 ---
 
 import { Callout } from "~docs/components/mdx";
 
-To erase a customer, open **Erase** in their row menu in **Customers**, with a role that may erase customers.
+Open **Customers**, open the row menu for the person you want to remove, and click **Erase**. Your role must allow erasing customers (`contacts:erase`).
 
-## What happens
+## What happens when you erase someone
 
-1. At once, the customer disappears from the inbox and every list. dimmi frees their email address and other identities, so a new message from them starts a new customer.
-2. After 7 days, dimmi wipes the text and files of every message in their conversations and deletes the customer. It also removes what other features kept about them, such as article feedback notes, changelog subscriptions and broadcast addresses.
-3. The emptied conversations stay, under a placeholder customer.
+1. **Hidden right away:** the customer disappears from your inbox and customer lists. Their email and other identities are freed so future messages create a fresh profile.
+2. **Wiped after 7 days:** dimmi permanently erases every message body and attachment in their conversations, deletes the customer profile, and removes related data such as article feedback notes, changelog subscriptions, and broadcast addresses.
+3. **Email records go too:** dimmi deletes the raw emails they sent and the records of receiving them, and strips their address and the subject from the delivery records of email sent to them.
+4. **Empty thread shells remain:** stripped conversations stay for reporting under a placeholder customer.
 
-**Wipe now instead of in 7 days** skips the wait. dimmi asks for your password when you have not confirmed it recently.
+### The one thing dimmi keeps
 
-## Cancel an erasure
+If the customer unsubscribed or marked your email as spam, erasing them must not start mailing them again. dimmi keeps that suppression as a one-way hash of their address, with no readable email, so a later import or sign-up with the same address still gets no mail. Every other suppression on their address, such as a bounce, is deleted.
 
-The **Erasures** tab lists each request with its status and the date of the wipe. **Cancel erasure** works while the status is **Waiting** and brings the customer back with their identities.
+Check **Wipe now instead of in 7 days** to skip the grace window. dimmi asks for your password if you have not confirmed it recently.
 
-When another customer took one of those identities during the wait, it stays with them. dimmi names it so you can [merge](/customers/customers-and-companies/#merge-duplicates) the two.
+## Cancel a pending erasure
 
-<Callout type="danger">After the wipe, the status is **Erased** and nothing can be restored.</Callout>
+Open the **Erasures** tab to track pending and finished requests. While a request is in **Waiting** status, click **Cancel erasure** to restore the customer and their identities.
+
+If another customer claimed one of those identities during the wait, that identity stays with the new customer. dimmi flags it so you can [merge the two profiles](/customers/customers-and-companies/#merge-duplicates).
+
+<Callout type="danger">Once status changes to **Erased**, the wipe is permanent and cannot be undone.</Callout>

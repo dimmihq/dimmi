@@ -41,7 +41,7 @@ func mergeDocs() map[string]Doc {
 				"Two users with different external ids cannot be merged.",
 			Returns: "this contact as it is now.",
 			Params:  map[string]string{"source_id": "The duplicate contact (ctc_...) to merge into this one."},
-			Next:    []string{"dimmi_contacts_duplicates_list: find likely duplicates first"},
+			Next:    []string{"dimmi_list_contact_duplicates: find likely duplicates first"},
 			Risk:    new(RiskDanger),
 		},
 	}

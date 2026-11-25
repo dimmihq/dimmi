@@ -263,7 +263,7 @@ export function updateWhatsAppTemplate(
 ): Promise<WhatsAppTemplate> {
   const { name: _name, language: _language, ...content } = draft;
   return request<WhatsAppTemplate>(
-    "PUT",
+    "PATCH",
     `/channels/whatsapp/${encodeURIComponent(channel)}/templates/${encodeURIComponent(template)}`,
     content,
     { workspace },

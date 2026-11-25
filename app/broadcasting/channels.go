@@ -39,6 +39,7 @@ const (
 	ConversationPattern           = "conversation:{conversation}"
 	MemberPattern                 = "member:{member}"
 	WidgetContactPattern          = "widget_contact:{contact}"
+	OperatorRoutinePattern        = "operator_routine:{routine}"
 )
 
 /*
@@ -114,6 +115,21 @@ MemberChannel names the member's own channel.
 */
 func MemberChannel(id ids.UUID) string {
 	return "member:" + models.PublicID(models.PrefixMember, id)
+}
+
+/*
+OperatorRoutineOptions keeps the last 300 broadcasts of a routine's
+runs, so a screen that reconnects mid-run catches up.
+*/
+func OperatorRoutineOptions() fbroadcasting.ChannelOptions {
+	return fbroadcasting.ChannelOptions{HistorySize: 300, HistoryTTL: historyTTL}
+}
+
+/*
+OperatorRoutineChannel names the channel a routine's runs stream on.
+*/
+func OperatorRoutineChannel(id ids.UUID) string {
+	return "operator_routine:" + models.PublicID(models.PrefixOperatorRoutine, id)
 }
 
 /*

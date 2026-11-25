@@ -108,6 +108,14 @@
     {
       "provider": "dimmi",
       "match": "exact",
+      "model": "deepseek-v4-flash",
+      "input_per_mtok": "0.19",
+      "cached_input_per_mtok": "0.012",
+      "output_per_mtok": "0.65"
+    },
+    {
+      "provider": "dimmi",
+      "match": "exact",
       "model": "glm-5.3-flash",
       "input_per_mtok": "0.05",
       "cached_input_per_mtok": "0.03",
@@ -116,8 +124,8 @@
     {
       "provider": "dimmi",
       "match": "exact",
-      "model": "Qwen/Qwen3-Embedding-8B",
-      "input_per_mtok": "0.01",
+      "model": "voyage-4-lite",
+      "input_per_mtok": "0.02",
       "cached_input_per_mtok": "",
       "cache_write_per_mtok": "",
       "output_per_mtok": "",

@@ -53,10 +53,10 @@ export function ProductHero({
           <p className="max-w-xl text-[18px] leading-7 text-pretty text-text-secondary">{body}</p>
           <div className="mt-2 flex flex-wrap justify-center gap-3">
             <ButtonLink href={`${APP_URL}/signup`} trailingIcon={RiArrowRightLine}>
-              Start free
+              Start free, no card
             </ButtonLink>
             <ButtonLink href={GITHUB_URL} variant="secondary">
-              Self-host it
+              Self-host on GitHub
             </ButtonLink>
           </div>
         </div>

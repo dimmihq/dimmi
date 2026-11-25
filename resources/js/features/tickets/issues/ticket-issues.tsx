@@ -18,7 +18,7 @@ import { AlertDialog } from "@/components/base/modal/modal";
 import { toast } from "@/components/base/toast/toast";
 import { Section } from "@/features/inbox/customer/rows";
 import { useAccount } from "@/features/settings/use-account";
-import { integrationsQuery } from "@/lib/api/integrations";
+import { type Integration, integrationsQuery } from "@/lib/api/integrations";
 import {
   issueKeys,
   refreshTicketIssues,
@@ -270,34 +270,19 @@ export function TicketIssues({
   }
 
   const dialogs = (
-    <>
-      {linking ? (
-        <LinkIssueDialog
-          workspace={workspace}
-          ticket={ticketId}
-          title={ticket?.title ?? ""}
-          tools={tools}
-          onClose={() => setLinking(false)}
-        />
-      ) : null}
-      <AlertDialog
-        isOpen={unlinking !== null}
-        onOpenChange={(open) => (open ? undefined : setUnlinking(null))}
-        title={`Unlink ${unlinking?.key ?? "the issue"}?`}
-        description={`Its status stops moving this ticket. The ${noun(unlinking?.provider ?? "")} stays in ${toolLook(unlinking?.provider ?? "").label}.`}
-        confirmLabel="Unlink"
-        onConfirm={() => (unlinking ? unlink.mutateAsync({ issue: unlinking, remove: removeFromTool }) : undefined)}
-      >
-        {unlinking && writtenOn(unlinking.provider) ? (
-          <Checkbox isSelected={removeFromTool} onChange={setRemoveFromTool}>
-            <span className="flex flex-col">
-              <span>Also remove what dimmi wrote in {toolLook(unlinking.provider).label}</span>
-              <span className="text-body-2-regular text-text-secondary">{writtenOn(unlinking.provider)}</span>
-            </span>
-          </Checkbox>
-        ) : null}
-      </AlertDialog>
-    </>
+    <IssueDialogs
+      workspace={workspace}
+      ticketId={ticketId}
+      title={ticket?.title ?? ""}
+      tools={tools}
+      linking={linking}
+      onCloseLinking={() => setLinking(false)}
+      unlinking={unlinking}
+      onCloseUnlinking={() => setUnlinking(null)}
+      removeFromTool={removeFromTool}
+      onRemoveFromTool={setRemoveFromTool}
+      onUnlink={(issue) => unlink.mutateAsync({ issue, remove: removeFromTool })}
+    />
   );
 
   if (heading) {
@@ -342,5 +327,62 @@ export function TicketIssues({
       ) : null}
       {dialogs}
     </section>
+  );
+}
+
+/*
+ * IssueDialogs are the block's dialogs: linking an issue, and confirming
+ * an unlink, with the choice to remove what dimmi wrote in the tool.
+ */
+function IssueDialogs({
+  workspace,
+  ticketId,
+  title,
+  tools,
+  linking,
+  onCloseLinking,
+  unlinking,
+  onCloseUnlinking,
+  removeFromTool,
+  onRemoveFromTool,
+  onUnlink,
+}: {
+  workspace: string;
+  ticketId: string;
+  title: string;
+  tools: Integration[];
+  linking: boolean;
+  onCloseLinking: () => void;
+  unlinking: TicketIssue | null;
+  onCloseUnlinking: () => void;
+  removeFromTool: boolean;
+  onRemoveFromTool: (remove: boolean) => void;
+  onUnlink: (issue: TicketIssue) => Promise<unknown>;
+}) {
+  const provider = unlinking?.provider ?? "";
+
+  return (
+    <>
+      {linking ? (
+        <LinkIssueDialog workspace={workspace} ticket={ticketId} title={title} tools={tools} onClose={onCloseLinking} />
+      ) : null}
+      <AlertDialog
+        isOpen={unlinking !== null}
+        onOpenChange={(open) => (open ? undefined : onCloseUnlinking())}
+        title={`Unlink ${unlinking?.key ?? "the issue"}?`}
+        description={`Its status stops moving this ticket. The ${noun(provider)} stays in ${toolLook(provider).label}.`}
+        confirmLabel="Unlink"
+        onConfirm={() => (unlinking ? onUnlink(unlinking) : undefined)}
+      >
+        {unlinking && writtenOn(unlinking.provider) ? (
+          <Checkbox isSelected={removeFromTool} onChange={onRemoveFromTool}>
+            <span className="flex flex-col">
+              <span>Also remove what dimmi wrote in {toolLook(unlinking.provider).label}</span>
+              <span className="text-body-2-regular text-text-secondary">{writtenOn(unlinking.provider)}</span>
+            </span>
+          </Checkbox>
+        ) : null}
+      </AlertDialog>
+    </>
   );
 }

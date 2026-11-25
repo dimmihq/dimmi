@@ -11,6 +11,5 @@ playwright-report
 deploy
 specs
 research
-docs
 .env*
 dimmi.yaml

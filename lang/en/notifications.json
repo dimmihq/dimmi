@@ -8,6 +8,10 @@
   "ai_action_approval_requested": "Approve {{.action}} for {{.name}}?",
   "snooze_expired": "{{.name}}'s conversation is back from snooze",
   "team_joined": "{{.actor}} added you to {{.team}}",
+  "operator_routine_finished_findings": "{{.routine}} has suggestions for you",
+  "operator_routine_finished_noop": "{{.routine}} found nothing to change",
+  "operator_routine_finished_failed": "{{.routine}} failed",
+  "operator_routine_finished_paused": "{{.routine}} paused",
   "someone": "Someone",
   "a_customer": "A customer",
   "test": "Notifications work on this device"

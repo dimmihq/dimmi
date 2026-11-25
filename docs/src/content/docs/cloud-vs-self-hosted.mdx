@@ -1,21 +1,29 @@
 ---
 title: "dimmi Cloud and self-hosted compared"
-description: "The main differences between dimmi Cloud and a self-hosted server: who runs it, sign-up, email domains, limits, branding and cost."
+description: "How dimmi Cloud and self-hosted installs differ on hosting, sign-up, email domains, branding, and billing."
 ---
 
-dimmi Cloud and a self-hosted server run the same MIT-licensed code with the same features. They differ in these defaults.
+**dimmi Cloud** and **self-hosted** dimmi run the exact same open source code under MIT. Neither edition holds features back behind an enterprise paywall.
 
-|                     | dimmi Cloud                                                         | Self-hosted                                                              |
-| ------------------- | ------------------------------------------------------------------- | ------------------------------------------------------------------------ |
-| Who runs it         | dimmi, at `trydimmi.com`                                            | You, on [one Linux server](/self-hosting/install/)                       |
-| Sign-up             | Open to anyone                                                      | By invitation                                                            |
-| Forwarded email     | Addresses on `inbound.trydimmi.com`                                 | Your own inbound domain; none until you set one                          |
-| Help center address | A subdomain of `dimmi.help`                                         | `/hc/<subdomain>` on your dimmi address, or a base domain you set        |
-| Invitations         | 100 per workspace a day                                             | No limit                                                                 |
-| Audit log           | Kept 365 days                                                       | Kept forever                                                             |
-| Messengers          | 10 per workspace                                                    | 10 per workspace until you change it                                     |
-| Email sending       | Paused at a 5% bounce rate or a 0.1% complaint rate                 | No pause                                                                 |
-| Branding            | Powered by dimmi badge until the workspace has paid an invoice      | No badge unless a messenger turns it on                                  |
-| Cost | Usage-based billing | Free |
+The differences come down to who runs the server and who supplies outside services like email and AI keys.
 
-On a self-hosted server you also supply the credentials for outside services: [email](/self-hosting/email/), [AI providers](/self-hosting/ai-providers/) and [integrations](/self-hosting/integrations/) such as Slack.
+## Side-by-side comparison
+
+| Area | dimmi Cloud | Self-hosted |
+| --- | --- | --- |
+| **Who runs it** | dimmi hosts it at `trydimmi.com` | You run it on [one Linux server](/self-hosting/install/) |
+| **Sign-up** | Open to anyone | Invite-only (your first owner invites the team) |
+| **Forwarded email** | Ready-to-use addresses on `inbound.trydimmi.com` | Your own inbound email domain |
+| **Help center address** | A subdomain on `dimmi.help` (plus custom domains) | `/hc/<subdomain>` on your dimmi host (plus custom domains) |
+| **Team invitations** | Up to 100 per workspace each day | Unlimited |
+| **Audit log history** | Kept for **365 days** | Kept forever |
+| **Messenger branding** | Shows a dimmi badge until your workspace pays an invoice | No badge unless you turn it on |
+| **Cost** | **100 free conversations** each month, unlimited seats, usage pricing after | **$0** to dimmi (you pay your server host) |
+
+## Outside services when self-hosting
+
+On dimmi Cloud, email forwarding, Slack, and included AI models work out of the box.
+
+When you self-host, you connect your own credentials for [email](/self-hosting/email/), [AI providers](/self-hosting/ai-providers/), and [integrations](/self-hosting/integrations/) like Slack or Google sign-in.
+
+Want to run dimmi on your own machine? Start with [Requirements and architecture](/self-hosting/).

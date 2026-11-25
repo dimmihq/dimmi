@@ -379,6 +379,11 @@ function Panel({
       </div>
       <ReplyFileChips files={files} shown={attachable} />
       <QueuedMacro workspace={workspace} macro={macro} />
+      {out.failure ? (
+        <p role="alert" className="px-1.5 text-body-2-regular text-text-error-primary">
+          {out.failure}
+        </p>
+      ) : null}
       <div className="flex items-center gap-2">
         <AddMenu
           onInsert={insert}
@@ -396,14 +401,8 @@ function Panel({
           <RiSparkling2Line aria-hidden className="size-4" />
           Ask Operator
         </button>
-        <span
-          role={out.failure ? "alert" : undefined}
-          className={cx(
-            "ms-auto min-w-0 truncate text-body-2-regular",
-            out.failure ? "text-text-error-primary" : "hidden text-text-tertiary sm:inline",
-          )}
-        >
-          {out.failure ?? (note ? "Only your team sees notes" : `Sends on ${channel}`)}
+        <span className="ms-auto hidden min-w-0 truncate text-body-2-regular text-text-tertiary sm:inline">
+          {note ? "Only your team sees notes" : `Sends on ${channel}`}
         </span>
         <button
           type="button"

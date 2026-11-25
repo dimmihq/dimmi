@@ -1,46 +1,45 @@
 ---
 title: "Connect Slack"
-description: "What connecting Slack to dimmi does: which Slack messages open conversations, how the dimmi agent answers and what teammates' replies in Slack do."
+description: "Connect Slack channels to dimmi so customer threads become conversations, replies sync both ways, and your team can triage from Slack."
 ---
 
-Connect Slack in **Settings → Integrations**. Each Slack thread that needs an answer becomes a conversation in your default inbox, and replies flow both ways.
+Connect your Slack workspace in **Settings → Integrations**. Threads that need help become conversations in your default inbox, and replies flow both ways between Slack and dimmi.
 
-- dimmi connects one Slack workspace and watches only the channels you invite its app to.
-- Each watched channel has its own [room mode](/channels/slack-room-modes/), trigger and agent settings.
+One dimmi workspace connects to one Slack workspace. dimmi only watches channels you invite the dimmi app into, and each channel has its own [room mode](/channels/slack-room-modes/), trigger, and AI settings.
 
 ## Triggers
 
-A channel's trigger decides which top-level customer messages open a conversation.
+Each channel's trigger decides which top-level customer messages open a new conversation.
 
-| Trigger | Opens a conversation for |
+| Trigger | Opens a conversation when |
 | --- | --- |
-| **Each new question** | A customer's message. Their next messages within 2 minutes join it while nobody has answered. The default. |
-| **Every message**, **Every post** | Each message. |
-| **Requests the AI spots** | Messages the AI reads as requests. |
-| **When someone reacts** | A message anyone reacts to with `:ticket:`. |
-| **When the app is mentioned** | A message that mentions the app. |
-| **Never** | Nothing. |
+| **Each new question** | A customer posts a message. Follow-ups within 2 minutes join the same thread while no one has answered (default). |
+| **Every message**, **Every post** | Every single customer message. |
+| **Requests the AI spots** | Messages the AI recognizes as support requests. |
+| **When someone reacts** | Anyone reacts to a message with `:ticket:`. |
+| **When the app is mentioned** | Someone mentions the dimmi app. |
+| **Never** | Never opens new conversations from top-level posts. |
 
-With every trigger:
+Across every trigger:
 
-- Short thanks open no conversation. dimmi reads no messages from bots.
-- A customer's reply in a thread continues that thread's conversation, or opens one. With **Never**, it only continues one.
+- **Noise stays out:** short "thanks" replies do not open conversations, and bot messages are ignored.
+- **Thread replies:** a customer reply inside a thread continues its conversation (or opens one, unless the trigger is **Never**).
 
-## The dimmi agent in Slack
+## Use the dimmi agent in Slack
 
-The dimmi agent answers in Slack when Slack is ticked under **Settings → dimmi agent → Where & when → Channels**. Each channel has a mode:
+Tick **Slack** under **Settings → dimmi agent → Where & when → Channels** to let the default agent help in Slack. To give one Slack channel its own agent, place that agent on the channel in [Agent Studio](/ai/multiple-agents/#place-an-agent). Then pick a mode per channel:
 
-- **Answer in the thread:** the agent replies to the customer. The default.
-- **Draft for review:** the agent posts a draft under the conversation's triage card for a teammate to send. Without a triage card, linked teammates see the draft as a private note in the channel.
+- **Answer in the thread:** the agent replies to the customer in Slack (default).
+- **Draft for review:** the agent posts a suggested reply under the conversation's triage card for a teammate to approve and send. Without a triage channel, linked teammates see the draft privately in the channel.
 
-The agent can wait up to 900 seconds before it answers. It steps back when a teammate replies in the thread or the customer mentions a teammate.
+You can set a delay of up to 900 seconds before the agent answers. It always steps back if a teammate replies in the thread or if the customer mentions a teammate.
 
-Under each agent answer, only the customer who asked can select **Solved**, which closes the conversation.
+Under each agent reply, only the customer who asked can click **Solved** to close the conversation.
 
-## Teammates in Slack
+## Work from Slack as a teammate
 
-dimmi links a Slack user to a teammate when their Slack email is the verified sign-in email of an active workspace member.
+dimmi links a Slack user to a dimmi teammate automatically when their Slack email matches a verified sign-in email of an active workspace member.
 
-- **Reply in a customer's thread:** dimmi records a linked teammate's reply as their answer.
-- **Write under a triage card:** the message becomes a note the customer does not see. Start it with `>>` to reply to the customer. dimmi posts the cards in the channel set under **Post new conversations to**.
-- **React to the customer's first message:** `:white_check_mark:` closes the conversation, `:eyes:` assigns it to you and `:rotating_light:` makes it urgent.
+- **Reply in a customer's thread:** dimmi records your Slack reply as your public answer in the inbox.
+- **Reply under a triage card:** saves as an internal note the customer never sees. Start a message with `>>` to send it as a public reply to the customer. Choose your triage channel under **Post new conversations to**.
+- **Emoji shortcuts on the first message:** react with `:white_check_mark:` to close, `:eyes:` to assign to yourself, or `:rotating_light:` to mark urgent.

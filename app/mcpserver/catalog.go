@@ -8,7 +8,9 @@
 | back, what to do next and how risky it is. The tools themselves are
 | generated from the API document, so they never drift from the API; the
 | catalog is what makes them teach. A new API operation without an entry
-| fails the catalog test, so no tool ever ships undescribed.
+| fails the catalog test, so no tool ever ships undescribed. The
+| operations that are not tools have entries too: the API document is
+| described from this catalog, and it explains every operation.
 |
 */
 
@@ -49,10 +51,13 @@ it does and when to reach for it, in a sentence or three. Returns says
 what comes back. Next lists what an agent usually does after it, by
 tool name and why. Risk overrides the risk worked out from the method
 and abilities when set. Params explains arguments the API document
-leaves unexplained, by name. Hint is shown with a failure of this tool,
-to steer the agent to the fix it most often needs.
+leaves unexplained, by the API's name of each. Hint is shown with a
+failure of this tool, to steer the agent to the fix it most often
+needs. Name is the tool's name, without the dimmi_ prefix, when the one
+worked out from the operation does not say what the tool does.
 */
 type Doc struct {
+	Name    string
 	Title   string
 	Use     string
 	Returns string
@@ -69,8 +74,14 @@ func catalog() map[string]Doc {
 	out := map[string]Doc{}
 	for _, area := range []map[string]Doc{
 		inboxDocs(), peopleDocs(), knowledgeDocs(), automationDocs(), workspaceDocs(), settingsDocs(),
-		outreachDocs(), sourceDocs(), integrationDocs(), webhookDocs(), mergeDocs(), ticketDocs(), trackerDocs(),
-		slaDocs(), ticketIssueDocs(), ticketReportDocs(),
+		outreachDocs(),
+		sourceDocs(),
+		integrationDocs(),
+		webhookDocs(),
+		mergeDocs(),
+		ticketDocs(),
+		trackerDocs(),
+		slaDocs(), ticketIssueDocs(), ticketReportDocs(), channelDocs(), noteDocs(), unexposedDocs(),
 	} {
 		maps.Copy(out, area)
 	}
@@ -85,7 +96,13 @@ agent could never complete them.
 */
 func excluded() map[string]string {
 	return map[string]string{
-		"ai.chatgpt.connect.store":  "Connecting a ChatGPT plan needs the person to sign in to OpenAI in a browser.",
-		"ai.chatgpt.callback.store": "Finishes the ChatGPT browser sign-in; only the browser calls it.",
+		"ai.chatgpt.connect.store":               "Connecting ChatGPT needs a person to sign in to OpenAI.",
+		"ai.chatgpt.callback.store":              "Finishes the ChatGPT browser sign-in; only the browser calls it.",
+		"channels.whatsapp.signup-config.index":  "What Meta's signup popup opens with; only the browser uses it.",
+		"channels.whatsapp.signups.store":        "Finishes Meta's signup in a browser; only the browser calls it.",
+		"channels.facebook.signup-config.index":  "What Meta's sign-in popup opens with; only the browser uses it.",
+		"channels.facebook.signups.store":        "Finishes Meta's sign-in in a browser; only the browser calls it.",
+		"channels.instagram.signup-config.index": "What Meta's sign-in popup opens with; only the browser uses it.",
+		"channels.instagram.signups.store":       "Finishes Meta's sign-in in a browser; only the browser calls it.",
 	}
 }

@@ -51,6 +51,10 @@ export interface AgentComposerProps {
   showStatus?: boolean;
   /** Dimmi: the attachment button, left out where there is nothing to attach. */
   attach?: boolean;
+  /** Dimmi: a control in the attachment button's place, such as a menu of things to add. */
+  leading?: ReactNode;
+  /** Dimmi: lets the message be sent with nothing typed, when something else was added. */
+  canSubmit?: boolean;
   /** Dimmi: the line under the pill, in place of the provider and count. */
   status?: ReactNode;
 }
@@ -69,6 +73,8 @@ export function AgentComposer({
   inputId = "agent-composer-input",
   showStatus = true,
   attach = true,
+  leading,
+  canSubmit = false,
   status,
 }: AgentComposerProps) {
   const localize = useTemplateCopy();
@@ -98,7 +104,7 @@ export function AgentComposer({
           onSubmit={submit}
           className={cx(
             "flex h-[52px] w-full items-center gap-2.5 rounded-full p-2",
-            !attach && "ps-4",
+            !attach && !leading && "ps-4",
             // ComposerLoader paints its own pill surface and runs the light
             // behind its children, so an opaque form would cover the light
             // entirely. While busy the form steps aside and lets it show.
@@ -111,7 +117,8 @@ export function AgentComposer({
               same control. They resolve one step lighter than the pill in dark
               and one step darker in light, which is why a single pair works for
               both themes without a dark: override. */}
-          {attach ? (
+          {leading}
+          {attach && !leading ? (
           <button
             type="button"
             aria-label="Add attachment"
@@ -162,7 +169,7 @@ export function AgentComposer({
               <button
                 type="submit"
                 aria-label="Send message"
-                disabled={value.trim().length === 0}
+                disabled={value.trim().length === 0 && !canSubmit}
                 className="flex size-9 cursor-pointer items-center justify-center rounded-full bg-button-primary text-white transition-opacity disabled:cursor-not-allowed disabled:opacity-40"
               >
                 <RiArrowUpLine className="size-5" aria-hidden />

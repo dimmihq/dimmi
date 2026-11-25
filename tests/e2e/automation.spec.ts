@@ -218,6 +218,7 @@ it.describe("automation", () => {
     await expect(page).toHaveURL(/\/d\/[^/]+\/procedures\/prc_[^/]+$/);
 
     await page.getByRole("button", { name: "Publish", exact: true }).click();
+    await page.getByRole("alertdialog").getByRole("button", { name: "Publish", exact: true }).click();
     await expect(page.getByText("Say when dimmi should use this, in 500 characters.")).toBeVisible();
 
     await page.getByRole("textbox", { name: "When dimmi uses this" }).fill("The customer cannot sign in.");
@@ -225,18 +226,53 @@ it.describe("automation", () => {
     await page.getByRole("textbox", { name: "Instruction 1" }).fill("Ask which email address they sign in with.");
     await page.getByRole("button", { name: "Condition", exact: true }).click();
     await page.getByRole("textbox", { name: "Condition 2" }).fill("If it is a work address, ask them to check spam.");
-    await page.getByRole("button", { name: "Move step 2 up" }).click();
+    await page.getByRole("button", { name: "Drag step 2" }).focus();
+    await page.keyboard.press("ArrowUp");
     await expect(page.getByRole("textbox", { name: "Condition 1" })).toBeVisible();
     await expect(page.getByText("Saved as draft")).toBeVisible();
 
     await page.getByRole("button", { name: "Publish", exact: true }).click();
-    await expect(page.getByRole("button", { name: "Turn off" })).toBeVisible();
+    await page.getByRole("alertdialog").getByRole("button", { name: "Publish", exact: true }).click();
+    await expect(page.getByText("Published", { exact: true })).toBeVisible();
     await page.reload();
-    await expect(page.getByRole("textbox", { name: "Condition 1" })).toHaveValue(
+    await expect(page.getByRole("textbox", { name: "Condition 1" })).toHaveText(
       "If it is a work address, ask them to check spam.",
     );
     await page.getByRole("link", { name: "Back to procedures" }).click();
     await expect(page.getByRole("link", { name: /Untitled procedure/ })).toContainText("Live");
+  });
+
+  it("puts chips in steps, decides a rule exactly, and keeps every published version", async ({ page }) => {
+    await page.goto("/d/procedures");
+    await page.getByRole("button", { name: "New procedure" }).click();
+    await expect(page).toHaveURL(/\/d\/[^/]+\/procedures\/prc_[^/]+$/);
+
+    await page.getByRole("textbox", { name: "When dimmi uses this" }).fill("The customer asks about their plan.");
+    await page.getByRole("button", { name: "Instruction", exact: true }).click();
+    const step = page.getByRole("textbox", { name: "Instruction 1" });
+    await step.click();
+    await step.pressSequentially("Check @email");
+    await expect(page.getByRole("listbox", { name: "Insert" })).toBeVisible();
+    await page.keyboard.press("Enter");
+    await expect(step.locator("[data-chip=attribute]")).toContainText("Customer email");
+
+    await page.getByRole("button", { name: "Rule", exact: true }).click();
+    await page.getByRole("combobox", { name: "Rule 1 field" }).fill("contact.attr.plan");
+    await page.keyboard.press("Tab");
+    await page.getByRole("textbox", { name: "Rule 1 value" }).fill("pro");
+    await expect(page.getByText("Then", { exact: true })).toBeVisible();
+    await expect(page.getByText("Else", { exact: true })).toBeVisible();
+    await expect(page.getByText("Saved as draft")).toBeVisible();
+
+    await page.getByRole("button", { name: "Publish", exact: true }).click();
+    await page.getByRole("alertdialog").getByRole("button", { name: "Publish", exact: true }).click();
+    await expect(page.getByText("Published", { exact: true })).toBeVisible();
+    await page.getByRole("tab", { name: "History" }).click();
+    await expect(page.getByRole("region", { name: "Versions" }).getByText("Version 1", { exact: true })).toBeVisible();
+    await page.getByRole("tab", { name: "Preview" }).click();
+    await expect(page.getByRole("textbox", { name: "Write as the customer" })).toBeVisible();
+    await page.getByRole("tab", { name: "Analytics" }).click();
+    await expect(page.getByText("Resolved by AI")).toBeVisible();
   });
 });
 

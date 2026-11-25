@@ -28,10 +28,10 @@ import (
 
 	"github.com/dimmihq/dimmi/app/actions/conversations"
 	"github.com/dimmihq/dimmi/app/ai/actionkit"
+	"github.com/dimmihq/dimmi/app/ai/agents"
 	"github.com/dimmihq/dimmi/app/ai/pipeline"
 	"github.com/dimmihq/dimmi/app/auth/authz"
 	"github.com/dimmihq/dimmi/app/contracts"
-	"github.com/dimmihq/dimmi/app/exceptions"
 	"github.com/dimmihq/dimmi/app/models"
 )
 
@@ -51,7 +51,10 @@ model it runs with, what the thread said before, and what the run has
 done so far. Tainted turns true once the run read text a customer
 wrote; from then on no change it proposes applies on its own.
 Background marks a run Operator started on its own, with no thread and
-no teammate waiting.
+no teammate waiting. Outside marks a call from an agent a teammate
+connected, which has no thread either. Routine is set on a run of a
+routine, which runs as a narrowed copy of the routine's owner on a
+thread of its own.
 */
 type session struct {
 	m            authz.Membership
@@ -73,10 +76,18 @@ type session struct {
 	actions      []actionkit.Live
 	identity     actionkit.Identity
 	tainted      bool
+	closing      bool
 	background   bool
+	outside      bool
 	failure      error
 	toolCalls    int
 	layer        *layerState
+	routine      *routineRun
+	sub          *subagent
+	/* What the teammate has open, the note that says so, and the suggestion shown on it. */
+	viewing Viewing
+	looking string
+	viewed  *models.OperatorChangeset
 }
 
 /*
@@ -123,14 +134,9 @@ needs, refusing when Operator may not answer.
 */
 func (e *Engine) load(ctx context.Context, q *models.Queries, s *session, in Question) error {
 	ws := s.m.Workspace.ID
-	thread, err := q.FindOperatorThread(ctx, models.FindOperatorThreadParams{
-		WorkspaceID: ws, MemberID: s.m.Member.ID, ID: in.ThreadID,
-	})
-	if errors.Is(err, database.ErrNotFound) {
-		return exceptions.ErrNotFound
-	}
+	thread, err := FindThread(ctx, q, s.m, in.ThreadID)
 	if err != nil {
-		return fmt.Errorf("find operator thread: %w", err)
+		return err
 	}
 	s.thread = thread
 	if err := e.loadConversation(ctx, q, s); err != nil {
@@ -169,16 +175,17 @@ func (e *Engine) loadConversation(ctx context.Context, q *models.Queries, s *ses
 }
 
 /*
-loadModel reads the agent's answer connection and model, and refuses
+loadModel reads the default agent's answer connection and model, or
+the workspace's when it names none, and refuses
 when there is none or the month's budget is spent.
 */
 func (e *Engine) loadModel(ctx context.Context, q *models.Queries, s *session) error {
-	agent, err := q.FindAgent(ctx, s.m.Workspace.ID)
-	if errors.Is(err, database.ErrNotFound) {
+	agent, err := agents.DefaultAnswerer(ctx, q, s.m.Workspace.ID)
+	if errors.Is(err, agents.ErrNoAgent) {
 		return ErrNoModel
 	}
 	if err != nil {
-		return fmt.Errorf("find agent: %w", err)
+		return err
 	}
 	if agent.AnswerKeyID == nil || agent.AnswerModel == nil || *agent.AnswerModel == "" {
 		return ErrNoModel
@@ -272,7 +279,7 @@ titleOf names a thread after its first question, or Brief when it began
 with a brief.
 */
 func titleOf(question string) string {
-	if strings.TrimSpace(question) == strings.TrimSpace(BriefQuestion) {
+	if strings.TrimSpace(question) == strings.TrimSpace(BriefQuestion()) {
 		return briefTitle
 	}
 	line, _, _ := strings.Cut(strings.TrimSpace(question), "\n")

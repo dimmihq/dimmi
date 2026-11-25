@@ -41,3 +41,15 @@ type UpdateProcedureRequest struct {
 		LockVersion int32           `json:"lock_version,omitempty"`
 	}
 }
+
+/*
+PublishProcedureRequest is the input of POST
+/procedures/{procedure}/publications: an optional note on what changed,
+kept on the version.
+*/
+type PublishProcedureRequest struct {
+	Procedure string `path:"procedure"`
+	Body      *struct {
+		ChangeNote string `json:"change_note,omitempty" maxLength:"500"`
+	}
+}

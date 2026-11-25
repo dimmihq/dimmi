@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Releases one commit's image to an environment on the server, in the order
-# local.sh uses: data first, then migrations, then the app, then the edge.
+# local.sh uses: data first, then migrations, then the app, then the site
+# (the marketing site and docs, image tag site-<sha>), then the edge.
 #
 #   deploy/k8s/scripts/release.sh staging <commit sha>
 #
@@ -20,7 +21,8 @@ IMAGE=ghcr.io/dimmihq/dimmi
 [[ -d "$ROOT/apps/$ENVIRONMENT" ]] || { echo "no environment named $ENVIRONMENT" >&2; exit 2; }
 
 render() {
-  kubectl kustomize "$ROOT/apps/$ENVIRONMENT/$1" | sed "s#image: $IMAGE\$#image: $IMAGE:$SHA#"
+  kubectl kustomize "$ROOT/apps/$ENVIRONMENT/$1" |
+    sed -e "s#image: $IMAGE\$#image: $IMAGE:$SHA#" -e "s#image: $IMAGE:site\$#image: $IMAGE:site-$SHA#"
 }
 
 data() {
@@ -51,6 +53,14 @@ app() {
   fi
 }
 
+site() {
+  render site | kubectl apply -f -
+  if ! kubectl -n "$NS" rollout status deployment/site --timeout=3m; then
+    kubectl -n "$NS" get pods -l app.kubernetes.io/component=site
+    exit 1
+  fi
+}
+
 edge() {
   render edge | kubectl apply -f -
   kubectl -n "$NS" rollout status deployment/edge --timeout=3m
@@ -59,5 +69,6 @@ edge() {
 data
 migrate
 app
+site
 edge
 echo "released $SHA to $ENVIRONMENT"

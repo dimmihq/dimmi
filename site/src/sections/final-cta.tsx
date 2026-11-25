@@ -22,14 +22,14 @@ export function FinalCta() {
     <Section tone="brand" flush frameClassName="overflow-hidden">
       <div className="relative flex flex-col items-center gap-8 px-5 pt-24 pb-56 text-center sm:px-12 md:pt-28">
         <h2 className="max-w-xl text-[40px] leading-[1.12] font-medium tracking-[-0.025em] text-balance text-text-primary max-sm:text-[30px]">
-          Start free. Or self-host and never pay us at all.
+          Try dimmi free on our cloud, or self-host it and pay us $0.
         </h2>
         <div className="flex flex-wrap justify-center gap-3">
           <ButtonLink href={`${APP_URL}/signup`} trailingIcon={RiArrowRightLine}>
-            Start free
+            Start free, no card
           </ButtonLink>
           <ButtonLink href={GITHUB_URL} variant="secondary" leadingIcon={RiGithubFill}>
-            Self-host from GitHub
+            Self-host on GitHub
           </ButtonLink>
         </div>
       </div>

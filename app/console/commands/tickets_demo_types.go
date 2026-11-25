@@ -53,10 +53,15 @@ func demoTypes() []demoType {
 		},
 		{
 			name: "Bug report", kind: tickets.KindCustomer,
-			fields: []demoField{{
-				key: "platform", label: "Platform", dataType: tickets.TypeMultipleChoice,
-				options: []string{"Web", "iOS", "Android", "API"}, customer: true,
-			}},
+			fields: []demoField{
+				{
+					key: "platform", label: "Platform", dataType: tickets.TypeMultipleChoice,
+					options: []string{"Web", "iOS", "Android", "API"}, customer: true,
+				},
+				{
+					key: "steps", label: "Steps to reproduce", dataType: tickets.TypeLongText, customer: true,
+				},
+			},
 		},
 	}, moreDemoTypes()...)
 }

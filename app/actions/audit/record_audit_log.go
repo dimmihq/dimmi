@@ -91,6 +91,10 @@ const (
 	EventDataExportRequested = "data_export.requested"
 	EventDataExportReady     = "data_export.ready"
 	EventDataExportDeleted   = "data_export.deleted"
+
+	EventProcedurePublished   = "procedure.published"
+	EventProcedureUnpublished = "procedure.unpublished"
+	EventProcedureRestored    = "procedure.restored"
 )
 
 /*

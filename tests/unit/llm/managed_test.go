@@ -60,8 +60,9 @@ func TestManagedDriver(t *testing.T) {
 
 		offered := aimodels.ManagedFor(func(f enums.AIModelFamily) bool { return f == enums.AIModelFamilyOpenWeight })
 
-		require.Len(t, offered, 1)
+		require.Len(t, offered, 2)
 		assert.Equal(t, "glm-5.3-flash", offered[0].ID)
+		assert.Equal(t, "deepseek-v4-flash", offered[1].ID)
 		assert.NotNil(t, aimodels.Find(aimodels.Anthropic(), "claude-haiku-5-5"))
 		assert.Nil(t, aimodels.Find(aimodels.Anthropic(), "claude-opus-5-5"))
 	})

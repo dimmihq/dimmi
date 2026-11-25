@@ -1,51 +1,51 @@
 ---
 title: "Requirements and architecture"
-description: "What a self-hosted dimmi needs: one Linux server, the services it runs and how they fit together."
+description: "See the server specs, DNS setup, Docker Compose services, and file paths behind a self-hosted dimmi install."
 ---
 
-A self-hosted dimmi is one Docker Compose project on one Linux server, installed and run with the `dimmictl` script.
+A self-hosted dimmi runs as a single Docker Compose stack on one Linux server, managed with the `dimmictl` CLI.
 
-## Server
+## Server requirements
 
-| Requirement | Value |
+| Requirement | Minimum |
 | --- | --- |
-| Operating system | Ubuntu 22.04 or 24.04, or Debian 12 |
-| CPU | 2 vCPU |
-| Memory | 4 GB, or 6 GB with malware scanning |
-| Disk | 40 GB |
-| Network | A public IPv4 address, with ports 80 and 443 open from the internet |
-| Access | root, or a user with `sudo` |
+| **Operating system** | Ubuntu 22.04 or 24.04, or Debian 12 |
+| **CPU** | 2 vCPU |
+| **Memory** | 4 GB (6 GB if you turn on ClamAV malware scanning) |
+| **Disk** | 40 GB |
+| **Network** | Public IPv4 address with ports 80 and 443 open |
+| **Access** | `root`, or a user with `sudo` |
 
-On another Linux distribution, install Docker with the Compose plugin yourself and pass `--skip-prepare` to the [installer](/self-hosting/install/).
+Using another Linux distribution? Install Docker with the Compose plugin yourself and pass `--skip-prepare` to the [installer](/self-hosting/install/).
 
-## Domain
+## Domain setup
 
-dimmi needs one host name, such as `support.example.com`, with an A record that points at the server. The app, the API, uploaded files, help centers and incoming webhooks all answer on it.
+Point one hostname (such as `support.example.com`) at your server's public IPv4 address with an `A` record. That single host serves the dashboard, REST API, uploads, help centers, and incoming webhooks.
 
-Caddy gets the certificate from Let's Encrypt, so the record must reach the server directly. On Cloudflare, set the record to DNS only.
+Caddy requests Let's Encrypt certificates automatically, so traffic must reach your server without a reverse proxy in front. If you use Cloudflare DNS, set the record to **DNS only**.
 
-## Services
+## Services in the stack
 
-| Service | Image | What it does |
+Every service talks over a private Docker network, except `caddy`, which handles public HTTP and HTTPS traffic.
+
+| Service | Image | Role |
 | --- | --- | --- |
-| `caddy` | `caddy:2.10` | The only published service. Takes ports 80 and 443, holds the certificates and proxies to `web`. |
-| `web` | `ghcr.io/dimmihq/dimmi` | The app and the API. |
-| `worker` | `ghcr.io/dimmihq/dimmi` | Background jobs and scheduled work. |
-| `migrate` | `ghcr.io/dimmihq/dimmi` | Applies database migrations, then exits. Runs before `web` and `worker` on each start. |
-| `postgres` | `pgvector/pgvector:pg18` | The database, including the job queue and sessions. |
-| `valkey` | `valkey/valkey:8` | Cache, rate limits and realtime messages. |
-| `seaweedfs` | `chrislusf/seaweedfs:3.97` | Uploaded files, behind an S3 API. dimmi serves them from its own address. |
-| `clamav` | `clamav/clamav:1.4` | Optional malware scanning of uploads and email attachments. Uses about 1.5 GB of memory. |
+| `caddy` | `caddy:2.10` | Only public service. Listens on ports 80 and 443, manages TLS, and proxies to `web`. |
+| `web` | `ghcr.io/dimmihq/dimmi` | Web dashboard and HTTP APIs. |
+| `worker` | `ghcr.io/dimmihq/dimmi` | Background jobs and scheduled tasks. |
+| `migrate` | `ghcr.io/dimmihq/dimmi` | Runs database migrations before `web` and `worker` boot, then exits. |
+| `postgres` | `pgvector/pgvector:pg18` | Primary database, job queue, and sessions. |
+| `valkey` | `valkey/valkey:8` | Cache, rate limits, and realtime pub/sub. |
+| `seaweedfs` | `chrislusf/seaweedfs:3.97` | S3-compatible storage for uploaded files (served through dimmi's own URL). |
+| `clamav` | `clamav/clamav:1.4` | Optional malware scanner for uploads and email attachments (~1.5 GB RAM). |
 
-Everything except `caddy` talks on a private Docker network.
+## Important files and volumes
 
-## Files on the server
+The stack installs to `/opt/dimmi`:
 
-The stack lives in `/opt/dimmi`.
-
-| Path | Holds |
+| Path or volume | Contents |
 | --- | --- |
-| `/opt/dimmi/.env` | Your settings and the generated secrets, including the app key. See [How configuration works](/self-hosting/configuration/). |
-| `/opt/dimmi/compose.yaml`, `Caddyfile` | The stack. [`dimmictl update`](/self-hosting/upgrade/) replaces them. |
-| `/opt/dimmi/VERSION` | The installed release. |
-| Docker volumes `dimmi_postgres`, `dimmi_seaweedfs` | Your data. See [Back up and restore](/self-hosting/backups/). |
+| `/opt/dimmi/.env` | Your configuration and generated secrets, including `DIMMI_APP__KEY`. See [How configuration works](/self-hosting/configuration/). |
+| `/opt/dimmi/compose.yaml`, `Caddyfile` | Stack definitions (updated by [`dimmictl update`](/self-hosting/upgrade/)). |
+| `/opt/dimmi/VERSION` | Currently installed release tag. |
+| `dimmi_postgres`, `dimmi_seaweedfs` | Docker volumes holding your database and uploads. See [Back up and restore](/self-hosting/backups/). |

@@ -44,7 +44,7 @@ func TestLLMManagerFlushDropsCachedDrivers(t *testing.T) {
 	ctx := tenancy.With(t.Context(), h.d.TC.Workspace.Workspace.ID.String())
 	var key models.AiProviderKey
 	h.d.TC.InWorkspace(func(ctx context.Context) error {
-		agent, err := models.New(h.d.TC.App.DB).FindAgent(ctx, h.d.TC.Workspace.Workspace.ID)
+		agent, err := models.New(h.d.TC.App.DB).FindDefaultAgent(ctx, h.d.TC.Workspace.Workspace.ID)
 		if err != nil {
 			return err
 		}

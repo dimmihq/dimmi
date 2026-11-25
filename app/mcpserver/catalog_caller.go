@@ -18,13 +18,15 @@ workspace itself.
 func callerDocs() map[string]Doc {
 	return map[string]Doc{
 		"me.show": {
+			Name:  "who_am_i",
 			Title: "Who am I",
 			Use: "Says who this connection acts for: the person, their membership and role in this workspace, and " +
 				"what they are allowed to do. Call it early to know which tools will work before trying them.",
 			Returns: "the person, the workspace, their role and their permissions.",
-			Next:    []string{"dimmi_workspace_get: the workspace's name, plan and settings"},
+			Next:    []string{"dimmi_get_workspace: the workspace's name, plan and settings"},
 		},
 		"user.show": {
+			Name:    "get_my_account",
 			Title:   "Get my account",
 			Use:     "Reads the account of the person this connection acts for: name, email, language and time zone.",
 			Returns: "the person's account.",
@@ -35,7 +37,7 @@ func callerDocs() map[string]Doc {
 				"Every tool acts inside this one workspace.",
 			Returns: "the workspace.",
 			Next: []string{
-				"dimmi_inboxes_list: the inboxes conversations arrive in", "dimmi_members_list: the team",
+				"dimmi_list_inboxes: the inboxes conversations arrive in", "dimmi_list_members: the team",
 			},
 		},
 		"workspace.entitlements.show": {

@@ -21,7 +21,7 @@ import { Switch } from "@/components/base/switch/switch";
 import { Textarea } from "@/components/base/textarea/textarea";
 import { toast } from "@/components/base/toast/toast";
 import { ModelSelect, NoConnection } from "@/features/ai/agent/model-section";
-import { modelsFor, operatorModel, usableKeys } from "@/features/ai/format";
+import { connectionOf, modelsFor, operatorModel } from "@/features/ai/format";
 import { agentQuery } from "@/lib/api/ai";
 import {
   forgetOperatorMemory,
@@ -109,7 +109,7 @@ function ModelRow({
   onChange: (change: OperatorSettingsChange) => void;
 }) {
   const { data: view } = useQuery({ ...agentQuery(workspace), enabled: workspace !== "" });
-  const key = view ? usableKeys(view.keys).find((k) => k.id === view.agent.answer_key_id) : undefined;
+  const key = view ? connectionOf(view) : undefined;
   const models = view ? modelsFor(key, view.catalog) : [];
   const value = operatorModel(settings.model, models, view?.agent.answer_model ?? null);
 
@@ -255,32 +255,31 @@ function useOperatorDraft(workspace: string, settings: OperatorSettings | undefi
   };
 }
 
-export function OperatorSettingsView() {
+/*
+ * useOperatorSettings is the settings as the teammate is changing them,
+ * and whether they may: leaving with changes unsaved asks first.
+ */
+function useOperatorSettings() {
   const workspace = useAccount().workspace.id;
   const { data } = useQuery({ ...operatorSettingsQuery(workspace), enabled: workspace !== "" });
   const { data: caller } = useQuery(callerQuery(workspace));
   const canManage = (caller?.member?.permissions ?? []).includes("ai_agent:manage");
   const draft = useOperatorDraft(workspace, data);
-  const settings = draft.shown;
   useBlocker({
     shouldBlockFn: () => draft.dirty && !window.confirm("Leave without saving your changes?"),
     enableBeforeUnload: () => draft.dirty,
   });
 
+  return { workspace, canManage, draft };
+}
+
+type Held = ReturnType<typeof useOperatorSettings>;
+
+function Sections({ workspace, canManage, draft }: Held) {
+  const settings = draft.shown;
+
   return (
-    <SettingsPage
-      title="Operator"
-      description="Your team's own agent. It answers teammates, never customers, and every change it makes can be undone."
-      footer={
-        <SaveBar
-          dirty={draft.dirty}
-          saving={draft.save.isPending}
-          error={draft.save.error ? failureText(draft.save.error) : null}
-          onSave={() => draft.save.mutate()}
-          onDiscard={draft.discard}
-        />
-      }
-    >
+    <>
       <Section title="Operator" loading={!settings} rows={4}>
         {settings ? (
           <>
@@ -339,6 +338,52 @@ export function OperatorSettingsView() {
         />
       ) : null}
       <Memories workspace={workspace} />
+    </>
+  );
+}
+
+function Bar({ draft }: { draft: Held["draft"] }) {
+  return (
+    <SaveBar
+      dirty={draft.dirty}
+      saving={draft.save.isPending}
+      error={draft.save.error ? failureText(draft.save.error) : null}
+      onSave={() => draft.save.mutate()}
+      onDiscard={draft.discard}
+    />
+  );
+}
+
+export function OperatorSettingsView() {
+  const held = useOperatorSettings();
+
+  return (
+    <SettingsPage
+      title="Operator"
+      description="Your team's own agent. It answers teammates, never customers, and every change it makes can be undone."
+      footer={<Bar draft={held.draft} />}
+    >
+      <Sections {...held} />
     </SettingsPage>
+  );
+}
+
+/*
+ * OperatorSettingsBody is the settings without a page around them, for
+ * the settings tab of Operator's page. The save bar stays in view at
+ * the foot of the tab.
+ */
+export function OperatorSettingsBody() {
+  const held = useOperatorSettings();
+
+  return (
+    <>
+      <Sections {...held} />
+      <div className="pointer-events-none sticky bottom-4 z-10">
+        <div className="pointer-events-auto mx-auto w-full max-w-[632px]">
+          <Bar draft={held.draft} />
+        </div>
+      </div>
+    </>
   );
 }

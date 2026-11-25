@@ -60,6 +60,8 @@ export interface ComboBoxProps<T extends object> extends Omit<AriaComboBoxProps<
   className?: string;
   /** Classes on the list's popover. */
   popoverClassName?: string;
+  /** Classes on the list itself, e.g. a fixed height so it never resizes as results change. */
+  listClassName?: string;
   children: ReactNode | ((item: T) => ReactNode);
   ref?: Ref<HTMLDivElement>;
 }
@@ -73,6 +75,7 @@ export function ComboBox<T extends object>({
   emptyMessage = "No results",
   className,
   popoverClassName,
+  listClassName,
   children,
   ref,
   ...props
@@ -139,7 +142,11 @@ export function ComboBox<T extends object>({
                 renderEmptyState={() => (
                   <div className="px-2 py-2 text-body-medium text-text-tertiary">{emptyMessage}</div>
                 )}
-                className={cx(MENU_ITEMS_CONTAINER, "max-h-[240px] min-h-0 overflow-y-auto overscroll-contain")}
+                className={cx(
+                  MENU_ITEMS_CONTAINER,
+                  "max-h-[240px] min-h-0 overflow-y-auto overscroll-contain",
+                  listClassName,
+                )}
               >
                 {children}
               </AriaListBox>

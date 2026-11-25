@@ -56,7 +56,7 @@ it.describe("ai settings", () => {
     await expect(answer).toBeChecked();
     await Promise.all([
       page.waitForResponse(
-        (response) => response.url().endsWith("/api/v1/ai/agent") && response.request().method() === "PATCH",
+        (response) => response.url().endsWith("/publications") && response.request().method() === "POST",
       ),
       page.getByRole("button", { name: "Save", exact: true }).click(),
     ]);
@@ -70,7 +70,7 @@ it.describe("ai settings", () => {
 
     const saved = () =>
       page.waitForResponse(
-        (response) => response.url().endsWith("/api/v1/ai/agent") && response.request().method() === "PATCH",
+        (response) => /\/api\/v1\/ai\/agents\/[^/]+$/.test(response.url()) && response.request().method() === "PATCH",
       );
     const name = page.getByRole("textbox", { name: "Agent name" });
     await name.fill("Ada");
@@ -85,14 +85,5 @@ it.describe("ai settings", () => {
     await expect(page.getByRole("textbox", { name: "Agent name" })).toHaveValue("Ada");
     await expect(page.getByRole("radio", { name: "Concise" })).toBeChecked();
     await expect(page.getByRole("checkbox", { name: /Email/ })).toBeChecked();
-  });
-
-  it("shows the agent's overview instead of a placeholder", async ({ page }) => {
-    await page.goto("/d/agent");
-    await expect(page.getByText("Paused", { exact: true })).toBeVisible();
-    await expect(page.getByRole("region", { name: "This month" })).toContainText("Answered");
-    await expect(page.getByText("Nothing yet. Conversations show here once the agent answers.")).toBeVisible();
-    await page.getByRole("button", { name: "Open settings" }).click();
-    await expect(page.getByRole("heading", { level: 1, name: "dimmi agent" })).toBeVisible();
   });
 });

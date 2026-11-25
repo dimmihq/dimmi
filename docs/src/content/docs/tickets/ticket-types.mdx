@@ -1,38 +1,40 @@
 ---
 title: "Set up ticket types and fields"
-description: "Create ticket types with their own states and custom fields, and preview how customers see them in the messenger."
+description: "Create ticket types with custom states and fields, and preview how the form looks to customers."
 ---
 
-Set up ticket types, their fields and the workspace's states in **Settings → Tickets**. A type's page shows a **Customer preview** of its form beside the settings.
+Manage ticket types, fields, and states in **Settings → Tickets**. Every ticket type page shows a **Customer preview** right beside the form settings so you can check how customers see it.
 
-## What cannot change later
+## Settings you cannot change later
 
-- A type's kind.
-- A field's **Key** and **Data type**.
+Choose these carefully when creating a type, field, or state:
+
+- A ticket type's kind (customer, back-office, or tracker).
+- A custom field's **Key** and **Data type**.
 - The group a state belongs to.
 
-Archiving a type or a field keeps it, with its values, on the tickets that already use it.
+If you no longer need a type or field, archive it. Existing tickets keep their saved values.
 
-## Types
+## Ticket type settings
 
-- **Routing:** new tickets of the type land in the **Inbox** and **Team** you pick. By default they stay in the conversation's inbox.
-- **Shown in the messenger and portal:** customers can open a ticket of this type themselves.
-- **Shared with the company:** everyone at the customer's company sees the ticket, but only customers with a [verified identity](/developers/messenger/identity-verification/).
-- **Reopen window:** 0 to 90 days. The default is 7.
-- **Auto-resolve:** 1 to 90 days. Off by default.
+- **Routing:** send new tickets of this type to a specific **Inbox** and **Team**. By default, they stay in the conversation's inbox.
+- **Shown in the messenger and portal:** lets customers submit this ticket type on their own.
+- **Shared with the company:** lets everyone at the customer's company view the ticket. This only works for customers with a [verified identity](/developers/messenger/identity-verification/).
+- **Reopen window:** how many days a customer reply reopens a resolved ticket (0 to 90 days; 7 by default).
+- **Auto-resolve:** close tickets left in **Waiting on customer** after 1 to 90 days. Off by default.
 
 ## States
 
-Each type lists the states its tickets move through, in its own order. Types can share a state.
+Each ticket type lists its own states in order, and multiple types can share the same state.
 
-- Removing a state from a type that still has tickets in it needs a state for them to move to. dimmi does not tell customers about that move.
-- Deleting a state moves its tickets to another state of the same group.
+- **Removing a state from a type:** if tickets still use that state, pick a replacement state to move them to. Customers are not notified about this move.
+- **Deleting a state:** moves its tickets to another state in the same group.
 
-## Fields
+## Custom fields
 
-A field has one of 12 data types: short text, long text, number, decimal, currency, yes or no, date, single choice, multiple choice, file, teammate and company.
+dimmi supports 12 field types: short text, long text, number, decimal, currency, yes or no, date, single choice, multiple choice, file, teammate, and company.
 
-- A field can be required to create a ticket, apart for teammates and for customers, so the customer's form can ask less.
-- A field required to resolve applies to everyone: the inbox, the API, the dimmi agent and workflows. It also blocks closing the ticket's conversation.
-- **Show** hides a field until another field is filled, or holds one of the answers you pick. A hidden field is never required.
-- **How the AI fills it** tells dimmi what to look for in the conversation. dimmi suggests a value, and writes it without a teammate only when the field or its type fills automatically.
+- **Required to create:** set separate rules for teammates and customers, so customer forms stay short.
+- **Required to resolve:** enforced everywhere (inbox, API, dimmi agent, and workflows) and blocks closing the conversation until filled.
+- **Conditional visibility:** use **Show** to hide a field until another field has a value or matches a specific choice. Hidden fields are never required.
+- **AI autofill:** fill in **How the AI fills it** to tell dimmi what to extract from the conversation. By default dimmi suggests a value; it only saves automatically when you turn on autofill for that field or type.

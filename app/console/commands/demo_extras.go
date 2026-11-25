@@ -19,11 +19,13 @@ package commands
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strings"
 
 	"github.com/dimmihq/dimmi/framework/console"
 	"github.com/dimmihq/dimmi/framework/database"
+	"github.com/dimmihq/dimmi/framework/fault"
 	"github.com/dimmihq/dimmi/framework/ids"
 	"github.com/dimmihq/dimmi/framework/tenancy"
 
@@ -140,7 +142,9 @@ func (s *demoSeed) send(ctx context.Context, tx *database.Tx, b demoBroadcast) e
 
 /*
 brandSeries builds the demo series under the brand's name, sent from
-the workspace's first address.
+the workspace's first address on a domain it has verified: a series
+only goes live from one, never from the forwarding address every
+workspace starts with.
 */
 func brandSeries(ctx context.Context, a *app.App, in DemoExtrasInput) error {
 	var demos []demoJourney
@@ -150,15 +154,19 @@ func brandSeries(ctx context.Context, a *app.App, in DemoExtrasInput) error {
 	}
 	var address ids.UUID
 	err := a.DB.Transaction(ctx, func(ctx context.Context, tx *database.Tx) error {
-		return tx.QueryRow(ctx, `SELECT id FROM email_addresses WHERE workspace_id = $1 AND deleted_at IS NULL
-			ORDER BY created_at LIMIT 1`, in.Owner.Workspace.ID).Scan(&address)
+		return tx.QueryRow(ctx, `SELECT a.id FROM email_addresses a
+			JOIN email_domains d ON d.workspace_id = a.workspace_id AND d.deleted_at IS NULL
+				AND d.status = 'verified' AND d.domain::text = split_part(a.address::text, '@', 2)
+			WHERE a.workspace_id = $1 AND a.deleted_at IS NULL
+				AND a.address::text <> coalesce(a.forwarding_address::text, '')
+			ORDER BY a.created_at LIMIT 1`, in.Owner.Workspace.ID).Scan(&address)
 	})
 	if err != nil {
 		return fmt.Errorf("find sender address: %w", err)
 	}
 	for _, demo := range demos {
 		if _, err := (SeriesDemoCommand{App: a}).build(ctx, in.Owner, demo, address); err != nil {
-			return fmt.Errorf("build series %s: %w", demo.Name, err)
+			return fmt.Errorf("build series %s: %w%s", demo.Name, err, whyNot(err))
 		}
 	}
 	return nil
@@ -177,7 +185,7 @@ func demoTickets(ctx context.Context, a *app.App, in DemoExtrasInput) error {
 	}
 	for _, step := range steps {
 		if err := step(ctx); err != nil {
-			return fmt.Errorf("seed tickets: %w", err)
+			return fmt.Errorf("seed tickets: %w%s", err, whyNot(err))
 		}
 	}
 	return nil
@@ -247,4 +255,22 @@ func plannedBroadcasts() []demoBroadcast {
 			body:    "Every carrier's last day to ship for delivery before December 24.", audience: "paying",
 		},
 	}
+}
+
+/*
+whyNot names what a refused series or ticket misses, since the refusal
+alone only says that something is wrong.
+*/
+func whyNot(err error) string {
+	var refused *fault.Error
+	if !errors.As(err, &refused) {
+		return ""
+	}
+
+	problems, ok := refused.Meta()["problems"]
+	if !ok {
+		return ""
+	}
+
+	return fmt.Sprintf(" (%+v)", problems)
 }
