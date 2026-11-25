@@ -22,7 +22,6 @@ import (
 	"time"
 
 	"github.com/dimmihq/dimmi/app/models"
-	"github.com/dimmihq/dimmi/app/support/officehours"
 	"github.com/dimmihq/dimmi/app/support/workflowspec"
 )
 
@@ -89,7 +88,7 @@ func (st *state) replyTime(ctx context.Context, r workflowspec.ReplyTimeSettings
 
 	if err == nil && !sched.IsOpen(now) {
 		if next, err := sched.NextOpen(now); err == nil {
-			return backAt(now, next, sched), false, nil
+			return sched.BackAt(now, next), false, nil
 		}
 	}
 
@@ -139,28 +138,4 @@ func withinWords(d time.Duration) string {
 	}
 
 	return "within a day"
-}
-
-/*
-backAt says when a closed team is back: later today, tomorrow, on a
-weekday this week, or on a date.
-*/
-func backAt(now, next time.Time, sched *officehours.Schedule) string {
-	loc := sched.Location()
-	from, at := now.In(loc), next.In(loc)
-	clock := at.Format("15:04")
-
-	day := func(t time.Time) time.Time { return time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, loc) }
-	days := int(day(at).Sub(day(from)).Hours() / 24)
-
-	switch {
-	case days <= 0:
-		return "later today after " + clock
-	case days == 1:
-		return "tomorrow after " + clock
-	case days < 7:
-		return "on " + at.Weekday().String() + " after " + clock
-	}
-
-	return "on " + at.Format("2 January") + " after " + clock
 }

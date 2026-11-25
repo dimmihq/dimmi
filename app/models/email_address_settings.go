@@ -6,8 +6,9 @@
 | The settings an email address keeps as JSON, read with their defaults
 | so an address stored before a setting existed behaves as a new one:
 | replies quote the previous message, subjects carry no ticket tag, and
-| bulk mail that starts no thread opens a closed conversation, and
-| replies keep the plain look.
+| bulk mail that starts no thread opens a closed conversation,
+| replies keep the plain look, and nothing answers mail that arrives
+| outside office hours.
 |
 */
 
@@ -20,7 +21,9 @@ EmailAddressSettings are an address's own settings. QuotePrevious puts
 the message answered below each reply. SubjectTag adds the conversation
 number to reply subjects. BulkMailHandling is close, open or drop.
 Template is the look of replies, plain or branded; a branded reply
-uses BrandColor and closes with FooterMarkdown.
+uses BrandColor and closes with FooterMarkdown. AwayReply answers a
+new conversation that arrives outside office hours with AwayReplyText,
+whose {{reply_time}} says when the team is back.
 */
 type EmailAddressSettings struct {
 	QuotePrevious    bool   `json:"quote_previous"`
@@ -29,13 +32,23 @@ type EmailAddressSettings struct {
 	Template         string `json:"template"`
 	BrandColor       string `json:"brand_color"`
 	FooterMarkdown   string `json:"footer_markdown"`
+	AwayReply        bool   `json:"away_reply"`
+	AwayReplyText    string `json:"away_reply_text"`
 }
+
+/*
+DefaultAwayReplyText is what an away reply says until the address
+words its own.
+*/
+const DefaultAwayReplyText = "Thanks for writing in. We're away right now and will reply {{reply_time}}."
 
 /*
 DefaultEmailAddressSettings returns the settings of a new address.
 */
 func DefaultEmailAddressSettings() EmailAddressSettings {
-	return EmailAddressSettings{QuotePrevious: true, BulkMailHandling: "close", Template: "plain"}
+	return EmailAddressSettings{
+		QuotePrevious: true, BulkMailHandling: "close", Template: "plain", AwayReplyText: DefaultAwayReplyText,
+	}
 }
 
 /*
@@ -55,6 +68,10 @@ func ReadEmailAddressSettings(raw json.RawMessage) EmailAddressSettings {
 
 	if settings.BulkMailHandling == "" {
 		settings.BulkMailHandling = "close"
+	}
+
+	if settings.AwayReplyText == "" {
+		settings.AwayReplyText = DefaultAwayReplyText
 	}
 
 	return settings

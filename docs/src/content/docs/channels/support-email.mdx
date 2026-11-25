@@ -1,6 +1,6 @@
 ---
 title: "Connect a support email address"
-description: "Forward your existing support inbox into dimmi, verify forwarding with a live test, and control how bulk mail is handled."
+description: "Forward your existing support inbox into dimmi, verify forwarding with a live test, control how bulk mail is handled, and reply when you are away."
 ---
 
 Your mail provider keeps receiving mail for your support address and forwards a copy to a dimmi forwarding address. Every forwarded email becomes a conversation in your inbox.
@@ -41,3 +41,20 @@ Bulk mail includes newsletters, automated alerts, and no-reply notifications. Bu
 | **Close** | Creates the conversation and closes it right away (default). |
 | **Keep open** | Creates the conversation and leaves it open. |
 | **Drop** | Ignores the email and creates nothing. |
+
+## Reply when you're away
+
+Turn on **Reply when you're away** to answer a new email that arrives outside your [office hours](/inbox/office-hours/). The reply goes once, on the email that opened the conversation:
+
+```text
+Thanks for writing in. We're away right now and will reply {{reply_time}}.
+```
+
+`{{reply_time}}` becomes when your team is back, such as "tomorrow after 09:00".
+
+dimmi skips the reply when:
+- an [AI agent](/ai/multiple-agents/#place-an-agent) answers email, since the agent replies anyway
+- the email is bulk mail, an automatic reply or a teammate's forward
+- the team is inside office hours
+
+The reply is marked as automatic, so the customer's mail system does not answer it back. The conversation still waits for your team.

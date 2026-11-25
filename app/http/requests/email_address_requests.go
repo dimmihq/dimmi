@@ -52,6 +52,8 @@ type UpdateEmailAddressRequest struct {
 		Settings      *struct {
 			QuotePrevious    *bool   `json:"quote_previous,omitempty"`
 			BulkMailHandling *string `json:"bulk_mail_handling,omitempty" validate:"omitempty,oneof=close open drop"`
+			AwayReply        *bool   `json:"away_reply,omitempty"`
+			AwayReplyText    *string `json:"away_reply_text,omitempty"    validate:"omitempty,min=1,max=1000"`
 			ReplyStyle
 		} `json:"settings,omitempty"`
 	}

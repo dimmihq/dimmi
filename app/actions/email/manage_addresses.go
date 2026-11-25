@@ -122,6 +122,8 @@ type UpdateEmailAddressInput struct {
 	FromNameStyle    *enums.FromNameStyle
 	QuotePrevious    *bool
 	BulkMailHandling *enums.BulkMailHandling
+	AwayReply        *bool
+	AwayReplyText    *string
 	IsDefault        *bool
 	Style            ReplyStyleInput
 	InboxID          *ids.UUID
@@ -232,6 +234,14 @@ func updateParams(current models.EmailAddress, in UpdateEmailAddressInput) model
 
 	if in.BulkMailHandling != nil {
 		settings.BulkMailHandling = string(*in.BulkMailHandling)
+	}
+
+	if in.AwayReply != nil {
+		settings.AwayReply = *in.AwayReply
+	}
+
+	if text := strings.TrimSpace(pick(in.AwayReplyText, "")); text != "" {
+		settings.AwayReplyText = text
 	}
 
 	settings.Template = pick(in.Style.Template, settings.Template)

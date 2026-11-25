@@ -43,6 +43,8 @@ export interface EmailAddress {
   settings: {
     quote_previous: boolean;
     bulk_mail_handling: "close" | "open" | "drop";
+    away_reply: boolean;
+    away_reply_text: string;
     template: ReplyStyle["template"];
     brand_color: string;
     footer_markdown: string;

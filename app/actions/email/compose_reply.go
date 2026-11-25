@@ -93,7 +93,7 @@ func (a *SendEmailMessage) compose(
 	out.draft = inbound.Draft{
 		From: from, To: to, Cc: cc, Subject: subjectOf(out.msg, refs), Text: out.msg.BodyText, HTML: out.msg.BodyHTML,
 		MessageID: messageID, References: inbound.TrimReferences(refs.ids, a.Config.Outbound.ReferencesMax),
-		InReplyTo: refs.inReplyTo, Automated: out.msg.Author.Type == enums.AuthorTypeAgent,
+		InReplyTo: refs.inReplyTo, Automated: automated(out.msg.Author.Type),
 		LoopStamp: a.Stamps.Loop(out.msg.WorkspaceID.String(), messageID), Signing: sender.Signing,
 	}
 
@@ -396,4 +396,12 @@ func deref(text *string) string {
 	}
 
 	return *text
+}
+
+/*
+automated reports whether a reply nobody wrote by hand goes out: the
+agent's, or the product's own, such as an away reply.
+*/
+func automated(author enums.AuthorType) bool {
+	return author == enums.AuthorTypeAgent || author == enums.AuthorTypeSystem
 }

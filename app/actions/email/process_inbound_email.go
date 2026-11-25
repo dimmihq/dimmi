@@ -36,6 +36,7 @@ import (
 	"github.com/dimmihq/dimmi/framework/mailbox/arf"
 	"github.com/dimmihq/dimmi/framework/mailbox/dsn"
 	"github.com/dimmihq/dimmi/framework/mailbox/parse"
+	"github.com/dimmihq/dimmi/framework/queue"
 	"github.com/dimmihq/dimmi/framework/ratelimit"
 	"github.com/dimmihq/dimmi/framework/tenancy"
 
@@ -90,6 +91,7 @@ type ProcessInboundEmail struct {
 	Events   *events.Dispatcher
 	Receiver contracts.InboundReceiver
 	Replies  BroadcastReplies
+	Queue    *queue.Queue
 }
 
 /*

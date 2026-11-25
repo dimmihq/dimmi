@@ -18325,6 +18325,12 @@
       "EmailAddressSettings": {
         "additionalProperties": false,
         "properties": {
+          "away_reply": {
+            "type": "boolean"
+          },
+          "away_reply_text": {
+            "type": "string"
+          },
           "brand_color": {
             "description": "The color a branded reply uses. Empty when none is set.",
             "type": "string"
@@ -18356,7 +18362,9 @@
           "bulk_mail_handling",
           "template",
           "brand_color",
-          "footer_markdown"
+          "footer_markdown",
+          "away_reply",
+          "away_reply_text"
         ],
         "type": "object"
       },
@@ -35589,6 +35597,14 @@
       "SettingsStruct": {
         "additionalProperties": false,
         "properties": {
+          "away_reply": {
+            "type": "boolean"
+          },
+          "away_reply_text": {
+            "maxLength": 1000,
+            "minLength": 1,
+            "type": "string"
+          },
           "brand_color": {
             "description": "Color used in branded replies, as # and six hex digits, such as #10b981. Only used when template is branded.",
             "type": "string"

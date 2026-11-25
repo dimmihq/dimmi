@@ -90,7 +90,7 @@ func (d *dry) replyPhrase(ctx context.Context, q *models.Queries, r workflowspec
 	}
 	if err == nil && !sched.IsOpen(now) {
 		if next, err := sched.NextOpen(now); err == nil {
-			return backAt(now, next, sched), false, nil
+			return sched.BackAt(now, next), false, nil
 		}
 	}
 	params := models.ReplyTimeFactsParams{WorkspaceID: d.in.WorkspaceID, Since: now.Add(-replyHistory)}
