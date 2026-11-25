@@ -17,11 +17,23 @@ import react from "@vitejs/plugin-react";
 import { defineConfig } from "vite";
 import { vitePrerenderPlugin } from "vite-prerender-plugin";
 
+import { generateSitemap } from "../scripts/generate-sitemap";
+
 export default defineConfig({
   root: fileURLToPath(new URL(".", import.meta.url)),
   // Its own dependency cache, so it never shares one with the app's dev server.
   cacheDir: fileURLToPath(new URL("../node_modules/.vite-site", import.meta.url)),
-  plugins: [react(), tailwindcss(), vitePrerenderPlugin({ renderTarget: "#root" })],
+  plugins: [
+    react(),
+    tailwindcss(),
+    vitePrerenderPlugin({ renderTarget: "#root" }),
+    {
+      name: "dimmi-sitemap",
+      closeBundle() {
+        generateSitemap(fileURLToPath(new URL("./dist", import.meta.url)));
+      },
+    },
+  ],
   resolve: {
     dedupe: ["react", "react-dom"],
     alias: {

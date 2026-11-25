@@ -1,0 +1,159 @@
+/*
+ * Canonical URLs, Open Graph/Twitter metadata, and JSON-LD structured data
+ * emitted for every prerendered page and kept in sync on client navigation.
+ */
+import { GITHUB_URL } from "./links";
+import type { Route } from "./routes";
+
+export const SITE_URL = "https://trydimmi.com";
+export const OG_IMAGE_URL = `${SITE_URL}/og.png`;
+
+export function canonicalUrl(path: string): string {
+  const clean = path.split(/[?#]/)[0].replace(/\/+$/, "") || "/";
+  return clean === "/" ? `${SITE_URL}/` : `${SITE_URL}${clean}`;
+}
+
+export function headElements(route: Route | undefined) {
+  const title = route?.title ?? "dimmi: the open customer support platform";
+  const description = route?.description ?? "";
+  const url = canonicalUrl(route?.path ?? "/");
+
+  return new Set([
+    { type: "link", props: { rel: "canonical", href: url } },
+    { type: "meta", props: { name: "description", content: description } },
+    { type: "meta", props: { property: "og:type", content: "website" } },
+    { type: "meta", props: { property: "og:site_name", content: "dimmi" } },
+    { type: "meta", props: { property: "og:url", content: url } },
+    { type: "meta", props: { property: "og:title", content: title } },
+    { type: "meta", props: { property: "og:description", content: description } },
+    { type: "meta", props: { property: "og:image", content: OG_IMAGE_URL } },
+    { type: "meta", props: { property: "og:image:width", content: "1200" } },
+    { type: "meta", props: { property: "og:image:height", content: "630" } },
+    { type: "meta", props: { property: "og:image:alt", content: title } },
+    { type: "meta", props: { name: "twitter:card", content: "summary_large_image" } },
+    { type: "meta", props: { name: "twitter:title", content: title } },
+    { type: "meta", props: { name: "twitter:description", content: description } },
+    { type: "meta", props: { name: "twitter:image", content: OG_IMAGE_URL } },
+  ]);
+}
+
+function upsertHeadTag(tag: "meta" | "link", matchAttr: string, matchVal: string, attrs: Record<string, string>) {
+  let el = document.head.querySelector(`${tag}[${matchAttr}="${matchVal}"]`);
+  if (!el) {
+    el = document.createElement(tag);
+    el.setAttribute(matchAttr, matchVal);
+    document.head.appendChild(el);
+  }
+  for (const [k, v] of Object.entries(attrs)) {
+    el.setAttribute(k, v);
+  }
+}
+
+/* Keeps document.head in sync during client-side swaps and Vite dev mode. */
+export function syncHead(route: Route | undefined) {
+  const title = route?.title ?? "dimmi: the open customer support platform";
+  const description = route?.description ?? "";
+  const url = canonicalUrl(route?.path ?? "/");
+
+  document.title = title;
+  upsertHeadTag("link", "rel", "canonical", { href: url });
+  upsertHeadTag("meta", "name", "description", { content: description });
+  upsertHeadTag("meta", "property", "og:type", { content: "website" });
+  upsertHeadTag("meta", "property", "og:site_name", { content: "dimmi" });
+  upsertHeadTag("meta", "property", "og:url", { content: url });
+  upsertHeadTag("meta", "property", "og:title", { content: title });
+  upsertHeadTag("meta", "property", "og:description", { content: description });
+  upsertHeadTag("meta", "property", "og:image", { content: OG_IMAGE_URL });
+  upsertHeadTag("meta", "property", "og:image:width", { content: "1200" });
+  upsertHeadTag("meta", "property", "og:image:height", { content: "630" });
+  upsertHeadTag("meta", "property", "og:image:alt", { content: title });
+  upsertHeadTag("meta", "name", "twitter:card", { content: "summary_large_image" });
+  upsertHeadTag("meta", "name", "twitter:title", { content: title });
+  upsertHeadTag("meta", "name", "twitter:description", { content: description });
+  upsertHeadTag("meta", "name", "twitter:image", { content: OG_IMAGE_URL });
+}
+
+const SOFTWARE_SCHEMA = {
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  name: "dimmi",
+  applicationCategory: "BusinessApplication",
+  operatingSystem: "Web, Linux",
+  url: `${SITE_URL}/`,
+  license: "https://opensource.org/licenses/MIT",
+  description:
+    "Open-source customer support platform with a shared inbox, specialized AI support agents, procedures, Operator, tickets, workflows, and help center.",
+  offers: [
+    {
+      "@type": "Offer",
+      name: "Self-hosted (MIT)",
+      price: "0",
+      priceCurrency: "USD",
+      description: "MIT open-source build on your own Linux server with every feature included.",
+    },
+    {
+      "@type": "Offer",
+      name: "dimmi Cloud Free Tier",
+      price: "0",
+      priceCurrency: "USD",
+      description: "100 free conversations every month with unlimited free seats and every feature unlocked.",
+    },
+  ],
+};
+
+const ORGANIZATION_SCHEMA = {
+  "@context": "https://schema.org",
+  "@type": "Organization",
+  name: "dimmi",
+  legalName: "Hivy Technologies Limited",
+  url: `${SITE_URL}/`,
+  logo: `${SITE_URL}/favicon.svg`,
+  sameAs: [GITHUB_URL],
+};
+
+const WEBSITE_SCHEMA = {
+  "@context": "https://schema.org",
+  "@type": "WebSite",
+  name: "dimmi",
+  url: `${SITE_URL}/`,
+};
+
+function breadcrumbLabel(route: Route): string {
+  const beforeColon = route.title.split(":")[0]?.trim();
+  const beforePipe = beforeColon?.split("|")[0]?.trim();
+  return beforePipe || route.path;
+}
+
+export function pageSchemas(route: Route | undefined): Record<string, unknown>[] {
+  if (!route) {
+    return [];
+  }
+  if (route.path === "/") {
+    return [ORGANIZATION_SCHEMA, WEBSITE_SCHEMA, SOFTWARE_SCHEMA];
+  }
+
+  const items: { "@type": "ListItem"; position: number; name: string; item: string }[] = [
+    { "@type": "ListItem", position: 1, name: "Home", item: `${SITE_URL}/` },
+  ];
+
+  if (route.path.startsWith("/channels/")) {
+    items.push({ "@type": "ListItem", position: 2, name: "Channels", item: `${SITE_URL}/channels` });
+    items.push({ "@type": "ListItem", position: 3, name: breadcrumbLabel(route), item: canonicalUrl(route.path) });
+  } else {
+    items.push({ "@type": "ListItem", position: 2, name: breadcrumbLabel(route), item: canonicalUrl(route.path) });
+  }
+
+  const schemas: Record<string, unknown>[] = [
+    {
+      "@context": "https://schema.org",
+      "@type": "BreadcrumbList",
+      itemListElement: items,
+    },
+  ];
+
+  if (route.path === "/pricing") {
+    schemas.push(SOFTWARE_SCHEMA);
+  }
+
+  return schemas;
+}
