@@ -3,10 +3,10 @@
 #
 #   ssh root@<server> bash -s < deploy/server/prepare.sh
 #
-# Safe to run again. It hardens SSH, turns swap off and reuses the swap array
-# (md0) as the RAID1 volume /srv/storage, loads the kernel settings k3s needs,
-# installs the AppArmor profile pods need and opens the firewall for SSH,
-# HTTP, HTTPS, the Kubernetes API and the private network.
+# Safe to run again. It hardens SSH, turns swap off, loads the kernel
+# settings k3s needs, installs the AppArmor profile pods need and opens the
+# firewall for SSH, HTTP, HTTPS, the Kubernetes API and the private network.
+# The disks are laid out and encrypted by install.sh before this runs.
 
 set -euo pipefail
 export DEBIAN_FRONTEND=noninteractive
@@ -31,16 +31,6 @@ sshd -t && { systemctl reload ssh 2>/dev/null || true; }
 
 swapoff -a
 sed -i '/[[:space:]]swap[[:space:]]/d' /etc/fstab
-sed -i '\|^# /dev/md/0$|d' /etc/fstab
-if ! blkid -o value -s TYPE /dev/md0 | grep -q ext4; then
-  wipefs -a /dev/md0
-  mkfs.ext4 -q -L storage -m 0 /dev/md0
-fi
-mkdir -p /srv/storage
-uuid=$(blkid -o value -s UUID /dev/md0)
-grep -q "$uuid" /etc/fstab || echo "UUID=$uuid /srv/storage ext4 defaults,noatime 0 2" >> /etc/fstab
-systemctl daemon-reload
-mount -a
 
 cat >/etc/modules-load.d/k3s.conf <<'EOF'
 overlay
