@@ -17,7 +17,7 @@ const staging: EnvironmentConfig = {
   dnsZone: "trydimmi.com",
   mail: { inbound: "inbound.staging.trydimmi.com", system: "mail.staging.trydimmi.com" },
   ingressAddresses: STAGING_INGRESS,
-  alarmEmail: "support@trydimmi.com",
+  alarmEmail: "support+aws@trydimmi.com",
   budgetUsd: 20,
 };
 
@@ -28,7 +28,7 @@ const production: EnvironmentConfig = {
   dnsZone: "trydimmi.com",
   mail: { inbound: "inbound.trydimmi.com", system: "mail.trydimmi.com" },
   ingressAddresses: PRODUCTION_INGRESS,
-  alarmEmail: "support@trydimmi.com",
+  alarmEmail: "support+aws@trydimmi.com",
   budgetUsd: 50,
 };
 
