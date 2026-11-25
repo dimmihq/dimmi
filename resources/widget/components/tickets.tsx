@@ -8,7 +8,7 @@ import type { Child } from "widget-jsx/jsx-runtime";
 
 import type { TicketBlock, TicketField, TicketType } from "../content";
 import { type Words, word } from "../lib/ticket_words";
-import { ArrowUpIcon, BackIcon, ChevronRightIcon } from "./icons";
+import { ArrowUpIcon, BackIcon, CheckIcon, ChevronRightIcon } from "./icons";
 
 function TypeIcon({ icon }: { icon: string }) {
   const paths: Record<string, string> = {
@@ -106,6 +106,22 @@ export function Strip({ ticket, texts }: { ticket: TicketBlock; texts: Words }) 
   );
 }
 
+/*
+ * Option is one checkbox card: the real checkbox stays in the form,
+ * hidden, and a drawn box in the brand's colour shows its state.
+ */
+function Option({ name, value, children }: { name: string; value: string; children: Child }) {
+  return (
+    <label className="ticket-option">
+      <input type="checkbox" name={name} value={value} />
+      <span className="ticket-box" aria-hidden="true">
+        <CheckIcon />
+      </span>
+      <span>{children}</span>
+    </label>
+  );
+}
+
 function Input({ field, texts }: { field: TicketField; texts: Words }) {
   const name = `field.${field.key}`;
   const required = field.required || undefined;
@@ -127,22 +143,20 @@ function Input({ field, texts }: { field: TicketField; texts: Words }) {
       );
     case "multiple_choice":
       return (
-        <span className="choices">
+        <span className="ticket-options" role="group" aria-label={label}>
           {field.options.map((option) => (
-            <label key={option}>
-              <input type="checkbox" name={name} value={option} />
+            <Option name={name} value={option} key={option}>
               {option}
-            </label>
+            </Option>
           ))}
         </span>
       );
     case "boolean":
       return (
-        <span className="choices">
-          <label>
-            <input type="checkbox" name={name} value="true" />
+        <span className="ticket-options" role="group" aria-label={label}>
+          <Option name={name} value="true">
             {word(texts, "ticket_yes")}
-          </label>
+          </Option>
         </span>
       );
     case "file":
