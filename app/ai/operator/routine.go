@@ -188,7 +188,7 @@ func (r *routineRun) allows(e *Engine, t tool) bool {
 		return false
 	case t.group == RoutineGroupGitHub:
 		return r.hasGroup(RoutineGroupGitHub) && r.scope.GitHub != nil && e.Services.GitHub != nil
-	case t.routine || t.spec.Name == "list_recent_suggestions":
+	case t.routine || t.spec.Name == "list_recent_suggestions" || t.spec.Name == "get_skill_by_name":
 		return true
 	}
 	return r.hasGroup(routineGroupOf(t))

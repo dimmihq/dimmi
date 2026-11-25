@@ -98,7 +98,7 @@ registry returns every tool by name.
 func (e *Engine) registry(s *session) map[string]tool {
 	all := slices.Concat(e.conversationTools(), e.knowledgeTools(), e.insightTools(), e.procedureTools(),
 		e.writeTools(), e.actionTools(s), e.routineTools(), e.githubTools(), e.workflowTools(), e.seriesTools(),
-		e.automationTools(),
+		e.automationTools(), e.simulationTools(),
 		[]tool{e.subagentsTool(), e.suggestionTool(), e.relatedTool()}, e.catalogTools(s))
 	out := make(map[string]tool, len(all))
 	for _, t := range all {

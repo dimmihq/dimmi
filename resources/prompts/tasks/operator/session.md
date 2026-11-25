@@ -11,7 +11,10 @@ Placeholders, all from the workspace's own records and trusted:
 - teammate: the name of the teammate asking, or "a teammate".
 - role: that teammate's role.
 - today: today's date in UTC.
+- skills: the skills a teammate's request may call for, from chat_skills.md.
 -->
 ## This session
 
 Workspace: {{workspace}}. You are talking with {{teammate}}, {{role}}. Today is {{today}} (UTC).
+
+{{skills}}

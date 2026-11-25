@@ -23,7 +23,8 @@ func TestTaskFiles(t *testing.T) {
 		vars []string
 	}{
 		{name: taskSystem},
-		{name: taskSession, vars: []string{"workspace", "teammate", "role", "today"}},
+		{name: taskSession, vars: []string{"workspace", "teammate", "role", "today", "skills"}},
+		{name: taskChatSkills, vars: []string{"list"}},
 		{name: taskRoutine, vars: []string{"workspace", "today", "name", "suggesting", "window", "skills"}},
 		{name: taskSubagent, vars: []string{"workspace", "today", "name", "window", "skills"}},
 		{name: taskRoutineSuggesting},

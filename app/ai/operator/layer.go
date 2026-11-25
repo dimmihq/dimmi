@@ -99,7 +99,7 @@ type layerState struct {
 fixedTools are the tools offered outside the layer.
 */
 func fixedTools() []string {
-	return []string{"get_conversation_by_number", "search_conversations", "search_knowledge"}
+	return []string{"get_conversation_by_number", "get_skill_by_name", "search_conversations", "search_knowledge"}
 }
 
 /*

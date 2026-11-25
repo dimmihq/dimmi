@@ -40,6 +40,7 @@ import (
 	"github.com/dimmihq/dimmi/app/actions/procedures"
 	"github.com/dimmihq/dimmi/app/actions/series"
 	"github.com/dimmihq/dimmi/app/actions/workflows"
+	"github.com/dimmihq/dimmi/app/actions/workflowsims"
 	"github.com/dimmihq/dimmi/app/ai/actionkit"
 	"github.com/dimmihq/dimmi/app/auth/authz"
 	appbroadcasting "github.com/dimmihq/dimmi/app/broadcasting"
@@ -70,10 +71,12 @@ type Services struct {
 	Procedures *procedures.Procedures
 	Workflows  *workflows.Workflows
 	Series     *series.Series
-	Audit      *audit.RecordAuditLog
-	Actions    *actionkit.Kit
-	GitHub     GitHub
-	Memory     Memory
+	/* WorkflowSims plays a workflow once, for Operator to try what it built. */
+	WorkflowSims *workflowsims.Simulations
+	Audit        *audit.RecordAuditLog
+	Actions      *actionkit.Kit
+	GitHub       GitHub
+	Memory       Memory
 }
 
 /*

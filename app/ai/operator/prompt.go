@@ -50,6 +50,7 @@ const (
 	taskRoutineFirstRun    = "operator/routine_first_run"
 	taskRoutineLastRun     = "operator/routine_last_run"
 	taskSkills             = "operator/skills"
+	taskChatSkills         = "operator/chat_skills"
 	taskThreadConversation = "operator/thread_conversation"
 	taskInstructions       = "operator/workspace_instructions"
 	taskMemories           = "operator/memories"
@@ -94,7 +95,7 @@ func (e *Engine) sessionPrompt(s *session) string {
 	if s.routine == nil {
 		return prompts.Task(taskSession, prompts.Vars{
 			"workspace": s.m.Workspace.Name, "teammate": cmp.Or(s.askerName, "a teammate"), "role": s.m.Member.Role,
-			"today": today,
+			"today": today, "skills": chatSkillList(),
 		})
 	}
 	vars := prompts.Vars{
