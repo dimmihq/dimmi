@@ -256,7 +256,10 @@ func schemaTextsFromEmailAddress() map[string]map[string]string {
 				"problems and a settings link, recommended first. Empty when not loaded.",
 		},
 		"EmailAddressSettings": {
-			"brand_color": "The color a branded reply uses. Empty when none is set.",
+			"away_reply": "true when a new email that arrives outside office hours gets one automatic " +
+				"reply saying when the team is back. Defaults to false.",
+			"away_reply_text": "What the away reply says. {{reply_time}} becomes when the team is back.",
+			"brand_color":     "The color a branded reply uses. Empty when none is set.",
 			"bulk_mail_handling": "What becomes of newsletters and notifications that start no thread: " +
 				"close (a closed conversation), open (an open one) or drop. Defaults to close.",
 			"footer_markdown": "The Markdown text a branded reply closes with. Empty when none is set.",

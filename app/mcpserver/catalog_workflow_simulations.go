@@ -186,13 +186,20 @@ seriesSimulationSchemaTexts returns the texts of a series' dry run.
 func seriesSimulationSchemaTexts() map[string]map[string]string {
 	return map[string]map[string]string{
 		"SeriesSimulation": {
-			"actions":      "The changes the journey would make, such as tags and attributes, in order.",
+			"actions": "The changes the journey would make, such as tags and attributes, in order.",
+			"decisions": "With a scenario, what the person did each time the series asked whether they " +
+				"open, click, reply or do an event. Empty without a scenario.",
 			"end":          "How the journey ended: finished, goal, exited or still waiting.",
 			"entered":      "true when the person would enter the series.",
 			"goal_reached": "true when the person would reach the series' goal.",
 			"messages":     "The messages that would go out, in order.",
 			"reason":       "Why the person would not enter, or why the journey ended. Empty when nothing to say.",
 			"steps":        "Each step the person would reach, in order, with the path it took.",
+		},
+		"SeriesSimulationDecision": {
+			"before": "The index in steps of the step this was asked before.",
+			"did":    "true when the person did it.",
+			"what":   "What the series asked, in words, such as open the message \"Welcome\".",
 		},
 		"SeriesSimulationAction": {
 			"detail":  "What the change is, as an object.",

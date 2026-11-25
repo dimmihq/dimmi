@@ -92,20 +92,20 @@ it.describe("automation", () => {
     await expect(page.getByText("Published", { exact: true })).toBeVisible();
   });
 
-  it("lets dimmi handle a conversation with a path for each way its turn ends", async ({ page }) => {
+  it("hands a conversation to an AI agent with a path for each way its turn ends", async ({ page }) => {
     await newWorkflow(page, "first message", /Customer sends their first message/);
     const canvas = page.getByRole("region", { name: "Workflow" });
     await canvas.getByRole("button", { name: "Add a step" }).click();
-    await page.getByRole("dialog", { name: "Add a step" }).getByRole("button", { name: "Let dimmi handle" }).click();
+    await page.getByRole("dialog", { name: "Add a step" }).getByRole("button", { name: "Hand to an AI agent" }).click();
 
     const inspector = page.getByRole("region", { name: "Step settings" });
-    await expect(inspector.getByRole("region", { name: "dimmi is off" })).toBeVisible();
+    await expect(inspector.getByRole("region", { name: "The agent is off" })).toBeVisible();
     for (const path of ["Resolved", "Handed over", "Customer went quiet"]) {
       await expect(canvas.getByText(path, { exact: true })).toBeVisible();
     }
+    await expect(canvas.getByRole("button", { name: /The agent placed on the channel answers/ })).toBeVisible();
 
-    await inspector.getByRole("textbox", { name: "Extra instructions" }).fill("Only answer billing questions.");
-    await expect(canvas.getByRole("button", { name: /following: Only answer billing questions/ })).toBeVisible();
+    await expect(inspector.getByRole("switch", { name: "Ask the customer to confirm answers" })).toBeChecked();
     await expect(page.getByText("Saved as draft")).toBeVisible();
     await page.getByRole("button", { name: "Publish", exact: true }).click();
     await page.getByRole("alertdialog").getByRole("button", { name: "Publish", exact: true }).click();
@@ -204,7 +204,7 @@ it.describe("automation", () => {
 
     const picker = page.getByRole("dialog", { name: "What starts this workflow?" });
     await expect(picker.getByRole("region", { name: "Team" })).toBeVisible();
-    await expect(picker.getByRole("region", { name: "dimmi" })).toContainText("dimmi hands over");
+    await expect(picker.getByRole("region", { name: "AI agents" })).toContainText("AI agent hands over");
     await expect(picker.getByText("Customer opens the messenger")).toBeHidden();
     await expect(picker.getByText("Customer rates the conversation")).toBeHidden();
     await picker.getByRole("textbox", { name: "Search triggers" }).fill("status");

@@ -9,9 +9,8 @@ it.describe("series", () => {
     await expect(page).toHaveURL(inbox);
   });
 
-  it("builds a series, sets it live, runs a test journey through it, and pauses it", async ({ page, person }) => {
+  it("builds a series, sets it live, walks someone through it, and pauses it", async ({ page }) => {
     await api(page, "POST", "/tags", { name: "Welcomed" });
-    await api(page, "POST", "/contacts", { name: "Me", email: person.email });
 
     await page.goto("/d/series");
     await expect(page.getByText("No series yet")).toBeVisible();
@@ -39,16 +38,11 @@ it.describe("series", () => {
     await expect(page.getByText("Live", { exact: true })).toBeVisible();
 
     await page.getByRole("button", { name: "Show testing" }).click();
-    await page.getByRole("button", { name: "Try it on me" }).click();
-    await page
-      .getByRole("alertdialog", { name: "Try this series on yourself?" })
-      .getByRole("button", { name: "Start test" })
-      .click();
-    const trial = page.getByRole("region", { name: "Your test journey" });
-    await expect(trial.getByText("Ended: Finished.")).toBeVisible({ timeout: 15_000 });
-    await expect(trial.getByText("Add 1 tag")).toBeVisible();
-    await trial.getByRole("button", { name: "Clear" }).click();
-    await expect(trial).toBeHidden();
+    await page.getByRole("tab", { name: "Simulations" }).click();
+    await page.getByRole("button", { name: "Send message" }).click();
+    const walk = page.getByRole("list", { name: /'s journey$/ });
+    await expect(walk.getByText("Add 1 tag")).toBeVisible({ timeout: 15_000 });
+    await expect(walk.getByText("Finished", { exact: true })).toBeVisible();
 
     await page.getByRole("button", { name: "Series actions" }).click();
     await page.getByRole("button", { name: "Pause" }).click();

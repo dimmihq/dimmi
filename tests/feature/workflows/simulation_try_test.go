@@ -6,6 +6,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/dimmihq/dimmi/framework/tenancy"
 	"github.com/dimmihq/dimmi/framework/testkit"
 
 	"github.com/dimmihq/dimmi/app/actions/workflowsims"
@@ -26,8 +27,9 @@ func TestTryingAWorkflow(t *testing.T) {
 		require.NoError(t, err)
 		sims := d.TC.App.Actions.WorkflowSims
 		owner := authz.NewMembership(d.TC.Workspace.Workspace, d.TC.Workspace.Owner, []string{"workflows:manage"})
+		ctx := tenancy.With(t.Context(), d.TC.Workspace.Workspace.ID.String())
 
-		res, err := sims.Try(t.Context(), owner, id, workflowsims.TryInput{
+		res, err := sims.Try(ctx, owner, id, workflowsims.TryInput{
 			Message: "Hello there", Scenario: "Has a billing question.", Persona: []byte(`{"name":"Ada Lovelace"}`),
 		})
 		require.NoError(t, err)
@@ -39,10 +41,10 @@ func TestTryingAWorkflow(t *testing.T) {
 		d.Owner.GetJSON("/api/v1/workflows/"+wf+"/simulations").AssertOK().AssertJSONPath("data.#", 0)
 		d.Owner.GetJSON("/api/v1/conversations?limit=5").AssertOK().AssertJSONPath("data.#", 0)
 
-		_, err = sims.Try(t.Context(), owner, id, workflowsims.TryInput{})
+		_, err = sims.Try(ctx, owner, id, workflowsims.TryInput{})
 		require.Error(t, err, "a try needs the customer's first message")
 		reader := authz.NewMembership(d.TC.Workspace.Workspace, d.TC.Workspace.Owner, []string{"workflows:read"})
-		_, err = sims.Try(t.Context(), reader, id, workflowsims.TryInput{Message: "Hi"})
+		_, err = sims.Try(ctx, reader, id, workflowsims.TryInput{Message: "Hi"})
 		require.ErrorIs(t, err, exceptions.ErrForbidden)
 	})
 }

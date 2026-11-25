@@ -166,7 +166,7 @@ func pathsOf(n Node) []string {
 pathIDs lists the ids of a step's own paths.
 */
 func pathIDs[T any](list []T, id func(T) string) []string {
-	out := make([]string, 0, len(list)+1)
+	out := make([]string, 0, len(list))
 	for _, item := range list {
 		out = append(out, id(item))
 	}
