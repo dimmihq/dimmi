@@ -414,9 +414,9 @@ async function vote(form: HTMLFormElement): Promise<void> {
   if (!(response.ok && button)) {
     return;
   }
-  const { voted, votes } = (await response.json()) as { voted: boolean; votes: number };
+  const { voted, votes, label } = (await response.json()) as { voted: boolean; votes: number; label: string };
   button.setAttribute("aria-pressed", String(voted));
-  button.setAttribute("aria-label", `Vote for ${form.dataset.vote ?? ""}, ${votes} votes`);
+  button.setAttribute("aria-label", label.replace("{title}", form.dataset.vote ?? ""));
   const count = button.querySelector<HTMLElement>("[data-votes]");
   if (count) {
     count.textContent = String(votes);

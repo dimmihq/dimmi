@@ -284,7 +284,10 @@ func (c PortalController) realVote(w fhttp.ResponseWriter, r *fhttp.Request, s l
 		return
 	}
 	if inPlace(r) {
-		fhttp.WriteJSON(w, fhttp.StatusOK, map[string]any{"voted": ballot.Voted, "votes": ballot.Votes})
+		fhttp.WriteJSON(w, fhttp.StatusOK, map[string]any{
+			"voted": ballot.Voted, "votes": ballot.Votes,
+			"label": s.center.T("vote_for", "title", voteTitle, "count", ballot.Votes),
+		})
 		return
 	}
 	back(w, s.center.Base+from)
@@ -294,6 +297,12 @@ func (c PortalController) realVote(w fhttp.ResponseWriter, r *fhttp.Request, s l
 returnPath is the board page a form came from, when the browser says,
 or the fallback.
 */
+/*
+voteTitle stands in for the request's title in the label a vote answers
+with, which the page fills with the title it shows.
+*/
+const voteTitle = "{title}"
+
 func returnPath(r *fhttp.Request, s liveSite, fallback string) string {
 	ref, err := url.Parse(r.Header.Get("Referer"))
 	if err != nil || ref.Host != r.Host || !strings.HasPrefix(ref.Path, s.center.Base+"/feedback") {
