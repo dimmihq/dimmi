@@ -22,6 +22,7 @@ import { Route as AuthResetPasswordRouteImport } from './routes/_auth/reset-pass
 import { Route as AuthSignupRouteImport } from './routes/_auth/signup'
 import { Route as AuthTwoFactorResetRouteImport } from './routes/_auth/two-factor-reset'
 import { Route as AuthVerifyEmailRouteImport } from './routes/_auth/verify-email'
+import { Route as AuthWaitingRouteImport } from './routes/_auth/waiting'
 import { Route as DIndexRouteImport } from './routes/d/index'
 import { Route as DChangelogRouteImport } from './routes/d/changelog'
 import { Route as DCustomersRouteImport } from './routes/d/customers'
@@ -162,6 +163,11 @@ const AuthTwoFactorResetRoute = AuthTwoFactorResetRouteImport.update({
 const AuthVerifyEmailRoute = AuthVerifyEmailRouteImport.update({
   id: '/verify-email',
   path: '/verify-email',
+  getParentRoute: () => AuthRoute,
+} as any)
+const AuthWaitingRoute = AuthWaitingRouteImport.update({
+  id: '/waiting',
+  path: '/waiting',
   getParentRoute: () => AuthRoute,
 } as any)
 const DIndexRoute = DIndexRouteImport.update({
@@ -585,6 +591,7 @@ export interface FileRoutesByFullPath {
   '/signup': typeof AuthSignupRoute
   '/two-factor-reset': typeof AuthTwoFactorResetRoute
   '/verify-email': typeof AuthVerifyEmailRoute
+  '/waiting': typeof AuthWaitingRoute
   '/d/changelog': typeof DChangelogRouteWithChildren
   '/d/customers': typeof DCustomersRouteWithChildren
   '/d/feedback': typeof DFeedbackRouteWithChildren
@@ -674,6 +681,7 @@ export interface FileRoutesByTo {
   '/signup': typeof AuthSignupRoute
   '/two-factor-reset': typeof AuthTwoFactorResetRoute
   '/verify-email': typeof AuthVerifyEmailRoute
+  '/waiting': typeof AuthWaitingRoute
   '/d/customers': typeof DCustomersListsIndexRoute
   '/d/home': typeof DHomeRoute
   '/d/notifications': typeof DNotificationsRoute
@@ -760,6 +768,7 @@ export interface FileRoutesById {
   '/_auth/signup': typeof AuthSignupRoute
   '/_auth/two-factor-reset': typeof AuthTwoFactorResetRoute
   '/_auth/verify-email': typeof AuthVerifyEmailRoute
+  '/_auth/waiting': typeof AuthWaitingRoute
   '/d/changelog': typeof DChangelogRouteWithChildren
   '/d/customers': typeof DCustomersRouteWithChildren
   '/d/feedback': typeof DFeedbackRouteWithChildren
@@ -854,6 +863,7 @@ export interface FileRouteTypes {
     | '/signup'
     | '/two-factor-reset'
     | '/verify-email'
+    | '/waiting'
     | '/d/changelog'
     | '/d/customers'
     | '/d/feedback'
@@ -943,6 +953,7 @@ export interface FileRouteTypes {
     | '/signup'
     | '/two-factor-reset'
     | '/verify-email'
+    | '/waiting'
     | '/d/customers'
     | '/d/home'
     | '/d/notifications'
@@ -1028,6 +1039,7 @@ export interface FileRouteTypes {
     | '/_auth/signup'
     | '/_auth/two-factor-reset'
     | '/_auth/verify-email'
+    | '/_auth/waiting'
     | '/d/changelog'
     | '/d/customers'
     | '/d/feedback'
@@ -1205,6 +1217,13 @@ declare module '@tanstack/react-router' {
       path: '/verify-email'
       fullPath: '/verify-email'
       preLoaderRoute: typeof AuthVerifyEmailRouteImport
+      parentRoute: typeof AuthRoute
+    }
+    '/_auth/waiting': {
+      id: '/_auth/waiting'
+      path: '/waiting'
+      fullPath: '/waiting'
+      preLoaderRoute: typeof AuthWaitingRouteImport
       parentRoute: typeof AuthRoute
     }
     '/d/': {
@@ -1996,6 +2015,7 @@ interface AuthRouteChildren {
   AuthSignupRoute: typeof AuthSignupRoute
   AuthTwoFactorResetRoute: typeof AuthTwoFactorResetRoute
   AuthVerifyEmailRoute: typeof AuthVerifyEmailRoute
+  AuthWaitingRoute: typeof AuthWaitingRoute
   AuthEmailConfirmRoute: typeof AuthEmailConfirmRoute
   AuthLoginMagicRoute: typeof AuthLoginMagicRoute
   AuthLoginTwoFactorRoute: typeof AuthLoginTwoFactorRoute
@@ -2012,6 +2032,7 @@ const AuthRouteChildren: AuthRouteChildren = {
   AuthSignupRoute: AuthSignupRoute,
   AuthTwoFactorResetRoute: AuthTwoFactorResetRoute,
   AuthVerifyEmailRoute: AuthVerifyEmailRoute,
+  AuthWaitingRoute: AuthWaitingRoute,
   AuthEmailConfirmRoute: AuthEmailConfirmRoute,
   AuthLoginMagicRoute: AuthLoginMagicRoute,
   AuthLoginTwoFactorRoute: AuthLoginTwoFactorRoute,

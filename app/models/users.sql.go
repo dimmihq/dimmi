@@ -32,6 +32,78 @@ func (q *Queries) AddUserRiskFlags(ctx context.Context, arg AddUserRiskFlagsPara
 	return err
 }
 
+const adoptPlaceholderUser = `-- name: AdoptPlaceholderUser :one
+UPDATE users
+SET name = $1, password_hash = $2,
+    password_changed_at = CASE WHEN $2::text IS NULL THEN password_changed_at ELSE $3::timestamptz END,
+    email_verified_at = $4,
+    terms_version = coalesce($5, terms_version),
+    terms_accepted_at = coalesce($6, terms_accepted_at),
+    terms_accepted_ip = coalesce($7, terms_accepted_ip),
+    terms_accepted_user_agent = coalesce($8, terms_accepted_user_agent),
+    updated_at = $3::timestamptz
+WHERE email = $9 AND deleted_at IS NULL AND created_via = 'import' AND password_hash IS NULL
+    AND email_verified_at IS NULL
+RETURNING id, name, email, email_verified_at, password_hash, two_factor_confirmed_at, avatar_path, locale, timezone, last_seen_at, created_at, updated_at, deleted_at, password_changed_at, risk_flags, created_via, preferences, managed_by_organization_id, terms_version, terms_accepted_at, terms_accepted_ip, terms_accepted_user_agent
+`
+
+type AdoptPlaceholderUserParams struct {
+	Name                   string      `json:"name"`
+	PasswordHash           *string     `json:"password_hash"`
+	Now                    time.Time   `json:"now"`
+	EmailVerifiedAt        *time.Time  `json:"email_verified_at"`
+	TermsVersion           *string     `json:"terms_version"`
+	TermsAcceptedAt        *time.Time  `json:"terms_accepted_at"`
+	TermsAcceptedIp        *netip.Addr `json:"terms_accepted_ip"`
+	TermsAcceptedUserAgent *string     `json:"terms_accepted_user_agent"`
+	Email                  string      `json:"email"`
+}
+
+// AdoptPlaceholderUser hands the placeholder account an import made at
+// the address to the person signing up with it: their name, password,
+// proof of the address when they gave one, and acceptance of the terms
+// when they gave one. Only a placeholder nobody claimed yet, with no
+// password and no proven address, is adopted; anything else is not found.
+func (q *Queries) AdoptPlaceholderUser(ctx context.Context, arg AdoptPlaceholderUserParams) (User, error) {
+	row := q.db.QueryRow(ctx, adoptPlaceholderUser,
+		arg.Name,
+		arg.PasswordHash,
+		arg.Now,
+		arg.EmailVerifiedAt,
+		arg.TermsVersion,
+		arg.TermsAcceptedAt,
+		arg.TermsAcceptedIp,
+		arg.TermsAcceptedUserAgent,
+		arg.Email,
+	)
+	var i User
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.Email,
+		&i.EmailVerifiedAt,
+		&i.PasswordHash,
+		&i.TwoFactorConfirmedAt,
+		&i.AvatarPath,
+		&i.Locale,
+		&i.Timezone,
+		&i.LastSeenAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.DeletedAt,
+		&i.PasswordChangedAt,
+		&i.RiskFlags,
+		&i.CreatedVia,
+		&i.Preferences,
+		&i.ManagedByOrganizationID,
+		&i.TermsVersion,
+		&i.TermsAcceptedAt,
+		&i.TermsAcceptedIp,
+		&i.TermsAcceptedUserAgent,
+	)
+	return i, err
+}
+
 const anonymizeUser = `-- name: AnonymizeUser :exec
 UPDATE users
 SET name = $1, email = $2, password_hash = NULL, two_factor_confirmed_at = NULL, avatar_path = NULL,
@@ -352,6 +424,34 @@ type MarkUserEmailVerifiedParams struct {
 // their address. An email proven earlier keeps its first proof.
 func (q *Queries) MarkUserEmailVerified(ctx context.Context, arg MarkUserEmailVerifiedParams) error {
 	_, err := q.db.Exec(ctx, markUserEmailVerified, arg.Now, arg.ID)
+	return err
+}
+
+const recordUserTerms = `-- name: RecordUserTerms :exec
+UPDATE users
+SET terms_version = $1, terms_accepted_at = $2::timestamptz, terms_accepted_ip = $3,
+    terms_accepted_user_agent = $4, updated_at = $2::timestamptz
+WHERE id = $5
+`
+
+type RecordUserTermsParams struct {
+	TermsVersion *string     `json:"terms_version"`
+	Now          time.Time   `json:"now"`
+	Ip           *netip.Addr `json:"ip"`
+	UserAgent    *string     `json:"user_agent"`
+	ID           ids.UUID    `json:"id"`
+}
+
+// RecordUserTerms stores the person's acceptance of the terms in force,
+// such as when they claim an account an import made for them.
+func (q *Queries) RecordUserTerms(ctx context.Context, arg RecordUserTermsParams) error {
+	_, err := q.db.Exec(ctx, recordUserTerms,
+		arg.TermsVersion,
+		arg.Now,
+		arg.Ip,
+		arg.UserAgent,
+		arg.ID,
+	)
 	return err
 }
 

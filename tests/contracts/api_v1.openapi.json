@@ -5378,6 +5378,28 @@
         ],
         "type": "object"
       },
+      "AwaitingAccess": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "description": "The id of this record. Send it wherever an endpoint asks for this record; never use its name or title in its place.",
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "object": {
+            "description": "The kind of record this is, the same for every record of its kind, such as article.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "object",
+          "name"
+        ],
+        "type": "object"
+      },
       "Background": {
         "additionalProperties": false,
         "properties": {
@@ -23890,6 +23912,15 @@
           "auth": {
             "$ref": "#/components/schemas/Auth"
           },
+          "awaiting_access": {
+            "items": {
+              "$ref": "#/components/schemas/AwaitingAccess"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
           "instance": {
             "$ref": "#/components/schemas/Instance"
           },
@@ -23928,6 +23959,7 @@
           "member",
           "auth",
           "workspaces",
+          "awaiting_access",
           "instance",
           "locale"
         ],
@@ -47521,6 +47553,9 @@
             "description": "What the member shows teammates and customers: online or away.",
             "type": "string"
           },
+          "awaiting_enable": {
+            "type": "boolean"
+          },
           "away_reassign": {
             "description": "True when customers' answers go back to the pool while the member is away.",
             "type": "boolean"
@@ -47573,9 +47608,31 @@
               "null"
             ]
           },
+          "enable_invited_at": {
+            "format": "date-time",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "enable_team_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
           "id": {
             "description": "The id of this record. Send it wherever an endpoint asks for this record; never use its name or title in its place.",
             "type": "string"
+          },
+          "imported_from": {
+            "type": [
+              "string",
+              "null"
+            ]
           },
           "joined_via": {
             "description": "How the member arrived in the workspace, such as created, cli or an invitation. Null when not recorded.",
@@ -47646,6 +47703,10 @@
           "sign_in_locked",
           "two_factor_enabled",
           "last_active_at",
+          "awaiting_enable",
+          "imported_from",
+          "enable_team_ids",
+          "enable_invited_at",
           "away_reassign",
           "away_since",
           "assign_on_reply",
@@ -66424,6 +66485,14 @@
             "description": "true or false: whether they turned on a second factor.",
             "in": "query",
             "name": "filter[two_factor]",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Only items whose awaiting_enable matches; several values separated by commas match any.",
+            "in": "query",
+            "name": "filter[awaiting_enable]",
             "schema": {
               "type": "string"
             }

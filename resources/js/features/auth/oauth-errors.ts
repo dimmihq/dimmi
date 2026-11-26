@@ -15,6 +15,7 @@ const messages: Record<string, string> = {
   reauth_user_mismatch: "Sign in as the user of this session.",
   two_factor_challenge_expired: "Your sign-in timed out before the second step. Sign in again.",
   auth_busy: "The server is busy. Try again in a moment.",
+  access_awaiting_enable: "Waiting for an admin to enable your access. We'll email you the moment you're in.",
 };
 
 /*

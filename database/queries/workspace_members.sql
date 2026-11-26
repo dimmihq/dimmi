@@ -43,7 +43,8 @@ WHERE workspace_id = @workspace_id AND id = @id;
 -- ListWorkspaceMembers returns a page of the workspace's members with
 -- their accounts, narrowed to the statuses and roles asked for (none
 -- means all), to members of any of the teams asked for, to accounts
--- with or without a second factor when asked, and to names or emails
+-- with or without a second factor when asked, to imported members
+-- waiting to be enabled or everyone else when asked, and to names or emails
 -- containing the search. They come by name, newest first, or most
 -- recently active first with those never active last.
 SELECT sqlc.embed(m), sqlc.embed(u)
@@ -58,6 +59,7 @@ WHERE m.workspace_id = @workspace_id
   ))
   AND (sqlc.narg(two_factor)::boolean IS NULL
       OR (u.two_factor_confirmed_at IS NOT NULL) = sqlc.narg(two_factor)::boolean)
+  AND (sqlc.narg(awaiting_enable)::boolean IS NULL OR m.import_pending = sqlc.narg(awaiting_enable)::boolean)
   AND (@search::text = '' OR u.name ILIKE '%' || @search::text || '%' OR u.email ILIKE '%' || @search::text || '%')
 ORDER BY
     CASE WHEN @sort::text = 'created_at' THEN m.created_at END DESC,
@@ -102,9 +104,10 @@ RETURNING *;
 
 -- name: ReactivateWorkspaceMember :one
 -- ReactivateWorkspaceMember gives the member their access back with the
--- role.
+-- role; an imported member stops waiting to be enabled.
 UPDATE workspace_members
-SET status = 'active', role = @role, deactivated_at = NULL, deactivated_by_member_id = NULL, updated_at = @now
+SET status = 'active', role = @role, deactivated_at = NULL, deactivated_by_member_id = NULL, import_pending = false,
+    updated_at = @now
 WHERE workspace_id = @workspace_id AND id = @id
 RETURNING *;
 

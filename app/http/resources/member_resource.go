@@ -33,6 +33,12 @@ SignInLocked says whether failed guesses locked the member's account,
 TwoFactorEnabled whether the account has a second factor, and
 LastActiveAt when the member last used the workspace; all three are
 null for callers who do not manage members.
+
+A teammate an import brought over from another tool waits deactivated
+until an admin enables them: AwaitingEnable says they still wait,
+ImportedFrom names the tool, null for anyone else, EnableTeamIDs the
+teams enabling puts them in, and EnableInvitedAt says when enabling
+mailed them an invitation because they had not signed up yet.
 */
 type WorkspaceMember struct {
 	ID           string  `json:"id"`
@@ -57,6 +63,11 @@ type WorkspaceMember struct {
 
 	TwoFactorEnabled *bool      `json:"two_factor_enabled"`
 	LastActiveAt     *time.Time `json:"last_active_at"`
+
+	AwaitingEnable  bool       `json:"awaiting_enable"`
+	ImportedFrom    *string    `json:"imported_from"`
+	EnableTeamIDs   []string   `json:"enable_team_ids"`
+	EnableInvitedAt *time.Time `json:"enable_invited_at"`
 }
 
 /*
@@ -102,7 +113,24 @@ func NewWorkspaceMember(m models.WorkspaceMember, u models.User) WorkspaceMember
 		CreatedAt:        m.CreatedAt,
 		TwoFactorEnabled: new(u.TwoFactorConfirmedAt != nil),
 		LastActiveAt:     m.LastAccessedAt,
+
+		AwaitingEnable:  m.ImportPending,
+		ImportedFrom:    m.ImportSource,
+		EnableTeamIDs:   enableTeamIDs(m),
+		EnableInvitedAt: m.ImportInvitedAt,
 	}
+}
+
+/*
+enableTeamIDs returns the public ids of the teams enabling an imported
+member puts them in, an empty list for anyone not waiting.
+*/
+func enableTeamIDs(m models.WorkspaceMember) []string {
+	if !m.ImportPending {
+		return []string{}
+	}
+
+	return PublicTeamIDs(m.ImportTeamIds)
 }
 
 /*

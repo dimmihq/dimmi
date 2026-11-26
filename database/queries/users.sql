@@ -18,6 +18,25 @@ RETURNING *;
 -- FindUser returns the account with the id, deleted or not.
 SELECT * FROM users WHERE id = @id;
 
+-- name: AdoptPlaceholderUser :one
+-- AdoptPlaceholderUser hands the placeholder account an import made at
+-- the address to the person signing up with it: their name, password,
+-- proof of the address when they gave one, and acceptance of the terms
+-- when they gave one. Only a placeholder nobody claimed yet, with no
+-- password and no proven address, is adopted; anything else is not found.
+UPDATE users
+SET name = @name, password_hash = @password_hash,
+    password_changed_at = CASE WHEN @password_hash::text IS NULL THEN password_changed_at ELSE @now::timestamptz END,
+    email_verified_at = sqlc.narg('email_verified_at'),
+    terms_version = coalesce(sqlc.narg('terms_version'), terms_version),
+    terms_accepted_at = coalesce(sqlc.narg('terms_accepted_at'), terms_accepted_at),
+    terms_accepted_ip = coalesce(sqlc.narg('terms_accepted_ip'), terms_accepted_ip),
+    terms_accepted_user_agent = coalesce(sqlc.narg('terms_accepted_user_agent'), terms_accepted_user_agent),
+    updated_at = @now::timestamptz
+WHERE email = @email AND deleted_at IS NULL AND created_via = 'import' AND password_hash IS NULL
+    AND email_verified_at IS NULL
+RETURNING *;
+
 -- name: FindUserByEmail :one
 -- FindUserByEmail returns the live account with the address. A deleted
 -- account no longer owns its address, so it is never found here.
@@ -140,3 +159,11 @@ UPDATE users
 SET managed_by_organization_id = @organization_id, name = COALESCE(sqlc.narg('name'), name), updated_at = @now
 WHERE id = @id
 RETURNING *;
+
+-- name: RecordUserTerms :exec
+-- RecordUserTerms stores the person's acceptance of the terms in force,
+-- such as when they claim an account an import made for them.
+UPDATE users
+SET terms_version = @terms_version, terms_accepted_at = @now::timestamptz, terms_accepted_ip = sqlc.narg('ip'),
+    terms_accepted_user_agent = @user_agent, updated_at = @now::timestamptz
+WHERE id = @id;

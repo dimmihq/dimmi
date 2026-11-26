@@ -55,6 +55,8 @@ Rules:
   - Lets go of the account's workspaces: see
     [members.ReleaseMemberships].
   - Logs what ended and, when a password was removed, mails the owner.
+  - Once the address is proven, tells the admins of every workspace the
+    user was imported into and waits in: see [members.NoteImportArrivals].
 
 Events: [appevents.UserSignedOutEverywhere], and those of
 [members.ReleaseMemberships].
@@ -70,6 +72,7 @@ type ClaimAccount struct {
 	AppGrants   appauth.AppGrants
 	SecurityLog *appauth.SecurityLog
 	Memberships *members.ReleaseMemberships
+	Arrivals    *members.NoteImportArrivals
 }
 
 /*
@@ -102,7 +105,11 @@ func (a *ClaimAccount) Prove(
 
 	user.EmailVerifiedAt = &now
 
-	return user, nil
+	if a.Arrivals == nil {
+		return user, nil
+	}
+
+	return user, a.Arrivals.Handle(ctx, tx, user)
 }
 
 /*

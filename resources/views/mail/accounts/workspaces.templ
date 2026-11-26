@@ -108,3 +108,29 @@ templ InvitationPending(name, workspace, email, sentOn, membersURL string) {
 		@button(membersURL, i18n.T(ctx, "mail.invitation_pending.action", nil))
 	}
 }
+
+/*
+ImportedTeammateWaiting tells an admin that a teammate brought over from
+another tool signed up and waits for someone to enable their access.
+*/
+
+templ ImportedTeammateWaiting(name, workspace, teammate, email, membersURL string) {
+	@layout(i18n.T(ctx, "mail.imported_teammate_waiting.subject", i18n.Args{"workspace": workspace, "teammate": teammate})) {
+		@greeting(name)
+		<p>{ i18n.T(ctx, "mail.imported_teammate_waiting.intro", i18n.Args{"workspace": workspace, "teammate": teammate, "email": email}) }</p>
+		@button(membersURL, i18n.T(ctx, "mail.imported_teammate_waiting.action", nil))
+	}
+}
+
+/*
+AccessEnabled tells a teammate brought over from another tool that an
+admin enabled them, so they can start working.
+*/
+
+templ AccessEnabled(name, workspace, appURL string) {
+	@layout(i18n.T(ctx, "mail.access_enabled.subject", i18n.Args{"workspace": workspace})) {
+		@greeting(name)
+		<p>{ i18n.T(ctx, "mail.access_enabled.intro", i18n.Args{"workspace": workspace}) }</p>
+		@button(appURL, i18n.T(ctx, "mail.access_enabled.action", i18n.Args{"workspace": workspace}))
+	}
+}
