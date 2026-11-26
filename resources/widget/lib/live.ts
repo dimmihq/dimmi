@@ -1258,9 +1258,17 @@ export class Live {
     const messages = this.content().thread.map((m) => this.withDecision(m));
     const typing = open ? this.store.typingIn(open) : undefined;
     const last = messages.at(-1);
+    const delivery = this.delivery(open, last?.at);
     const parts = [
-      this.statusLine(),
-      String(t.Thread({ messages, texts: this.actionTexts(), team: this.content().company, ai: this.aiTexts() })),
+      String(
+        t.Thread({
+          messages,
+          texts: this.actionTexts(),
+          team: this.content().company,
+          ai: this.aiTexts(),
+          delivered: delivery !== "",
+        }),
+      ),
     ];
     const ticket = this.store.conversations.find((c) => c.id === open)?.ticket;
     const requests = tickets();
@@ -1270,7 +1278,7 @@ export class Live {
     }
 
     const waiting = this.expected(open);
-    parts.push(this.delivery(open));
+    parts.push(delivery);
     if (typing || waiting) {
       parts.push(String(t.Typing()));
     }
@@ -1305,7 +1313,7 @@ export class Live {
    * needs no line. One refused for want of an email asks for the email
    * instead.
    */
-  private delivery(open: string | undefined): string {
+  private delivery(open: string | undefined, when?: string): string {
     const mine = open ? (this.store.messages.get(open) ?? []) : [];
     const last = mine.at(-1);
     if (last?.author.type !== "contact" || last.failed === "email_required") {
@@ -1322,7 +1330,7 @@ export class Live {
           ? "seen"
           : "sent";
 
-    return String(t?.Delivery({ state, texts, retry: last.client_id ?? undefined }) ?? "");
+    return String(t?.Delivery({ state, texts, retry: last.client_id ?? undefined, when }) ?? "");
   }
 
   /*
@@ -1545,21 +1553,6 @@ export class Live {
     if (this.open) {
       void this.ratings?.rate(this.open, answer);
     }
-  }
-
-  /*
-   * statusLine says where the open conversation stands, when the widget
-   * shows it.
-   */
-  private statusLine(): string {
-    const found = this.store.conversations.find((c) => c.id === this.open);
-    if (!found || this.config.customer_status === false) {
-      return "";
-    }
-    const texts = this.host.options().texts as unknown as Record<string, string>;
-    const label = texts[`status_${found.customer_status}`];
-
-    return label ? `<p class="status">${escapeHtml(label)}</p>` : "";
   }
 
   /*
