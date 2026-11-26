@@ -387,10 +387,9 @@ textarea::placeholder {
 }
 
 /*
- * Lines the connection adds to a thread: where the conversation stands,
- * that the team is away, and the field that asks for an email to reply to.
+ * Lines the connection adds to a thread: that the team is away, and the
+ * field that asks for an email to reply to.
  */
-.status,
 .delay {
   margin: 0;
   color: var(--text-secondary);

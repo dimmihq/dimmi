@@ -72,7 +72,9 @@ describe("slash commands", () => {
     expect(findCommands("list").map((c) => c.id)).toEqual(["bullets", "numbers"]);
     expect(findCommands("callout").map((c) => c.id)).toEqual(["note", "tip", "important", "warning", "caution"]);
     expect(findCommands("pic").map((c) => c.id)).toEqual(["image"]);
-    expect(findCommands("").length).toBe(15);
+    expect(findCommands("").length).toBe(19);
+    expect(findCommands("youtube").map((c) => c.id)).toEqual(["embed"]);
+    expect(findCommands("faq").map((c) => c.id)).toEqual(["details"]);
   });
 
   it("writes a callout the help center draws as an aside", () => {
@@ -128,5 +130,86 @@ describe("pictures", () => {
     editor.commands.updateAttributes("image", { src: "blob:new", upload: "u3" });
     settleUpload(editor, "u3", null, "/help-images/p.png");
     expect(editor.getMarkdown().trim()).toBe("![Plans](/help-images/p.png#width=60)");
+  });
+});
+
+describe("article blocks", () => {
+  it.each([
+    ["embed", '::embed[Set up the inbox]{src="https://youtu.be/dQw4w9WgXcQ"}'],
+    ["embed without a title", '::embed{src="https://www.loom.com/share/0281766fa2d04bb788eaf19e65135184"}'],
+    ["button", '::button[Start a trial]{href="https://example.com/start"}'],
+    ["centered button", '::button[Pricing]{href="/pricing" align="center"}'],
+    ["details", ":::details[How long do refunds take?]\nFive working days.\n:::"],
+    ["details holding a list", ":::details[Which cards?]\n- Visa\n- Mastercard\n:::"],
+    ["nested details", "::::details[Refunds]\nFive days.\n\n:::details[Partial ones]\nTwo days.\n:::\n::::"],
+    ["centered text", ":::center\n## Welcome\n\nGlad to see you.\n:::"],
+    ["captioned picture", '![Plans](/help-images/p.png "The plans page")'],
+    ["linked picture", "[![Plans](/help-images/p.png)](https://example.com/plans)"],
+    ["linked captioned picture", '[![Plans](/help-images/p.png#align=center "Open plans")](https://example.com/plans)'],
+  ])("keeps a %s as written", (_, markdown) => {
+    expect(articleMarkdown(open(markdown).getMarkdown()).trim()).toBe(markdown);
+  });
+
+  it("reads each block into its own node", () => {
+    const editor = open(
+      '::embed[Tour]{src="https://youtu.be/dQw4w9WgXcQ"}\n\n::button[Go]{href="/go"}\n\n' +
+        ":::details[Q]\nA\n:::\n\n:::center\nMiddle\n:::",
+    );
+    expect(editor.getJSON().content?.map((n) => n.type)).toEqual(["embed", "articleButton", "details", "center"]);
+    expect(editor.getJSON().content?.[0]?.attrs).toMatchObject({ src: "https://youtu.be/dQw4w9WgXcQ", title: "Tour" });
+    expect(editor.getJSON().content?.[2]?.attrs).toMatchObject({ summary: "Q" });
+  });
+
+  it("keeps fenced colons inside a section as code", () => {
+    const markdown = ":::details[Config]\n```\n:::\n```\n:::";
+    const editor = open(markdown);
+    expect(editor.getJSON().content?.[0]?.type).toBe("details");
+    expect(articleMarkdown(editor.getMarkdown()).trim()).toBe(markdown);
+  });
+
+  it("leaves an empty embed or button out of the Markdown", () => {
+    const editor = open("Intro");
+    editor.commands.insertContentAt(editor.state.doc.content.size, { type: "embed", attrs: { src: "" } });
+    editor.commands.insertContentAt(editor.state.doc.content.size, { type: "articleButton", attrs: {} });
+    expect(editor.getMarkdown().trim()).toBe("Intro");
+  });
+
+  it("escapes a label's brackets and a link's quotes", () => {
+    const editor = open("Intro");
+    editor.commands.insertContentAt(editor.state.doc.content.size, {
+      type: "articleButton",
+      attrs: { label: "Read [this]", href: 'https://example.com/?q="x"', align: "start" },
+    });
+    expect(editor.getMarkdown()).toContain('::button[Read \\[this\\]]{href="https://example.com/?q=%22x%22"}');
+  });
+
+  it("centers the selected text and puts it back", () => {
+    const editor = open("Hello");
+    editor.commands.setTextSelection(2);
+    editor.commands.toggleCenter();
+    expect(editor.getMarkdown().trim()).toBe(":::center\nHello\n:::");
+    editor.commands.toggleCenter();
+    expect(editor.getMarkdown().trim()).toBe("Hello");
+  });
+
+  it("gives a section around a section more colons", () => {
+    const editor = open("");
+    editor.commands.setContent({
+      type: "doc",
+      content: [
+        {
+          type: "details",
+          attrs: { summary: "Outer" },
+          content: [
+            {
+              type: "details",
+              attrs: { summary: "Inner" },
+              content: [{ type: "paragraph", content: [{ type: "text", text: "Deep" }] }],
+            },
+          ],
+        },
+      ],
+    });
+    expect(editor.getMarkdown().trim()).toBe("::::details[Outer]\n:::details[Inner]\nDeep\n:::\n::::");
   });
 });

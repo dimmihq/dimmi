@@ -460,11 +460,17 @@ export function Said({
   texts = actionTexts,
   team,
   ai = aiTexts,
+  quiet,
 }: {
   messages: Message[];
   texts?: ActionTexts;
   team?: string;
   ai?: AiTexts;
+  /*
+   * quiet leaves the byline out, for the visitor's latest messages,
+   * whose time the delivery line under them carries.
+   */
+  quiet?: boolean;
 }) {
   const [first] = messages;
   const last = messages.at(-1);
@@ -479,7 +485,7 @@ export function Said({
           <Bubble message={message} texts={texts} key={`${message.at}-${message.body ?? message.attachment?.name}`} />
         ))}
       </div>
-      <Byline who={first} when={last.at} team={team} ai={ai} />
+      {quiet ? null : <Byline who={first} when={last.at} team={team} ai={ai} />}
     </div>
   );
 }
@@ -507,18 +513,32 @@ export function Thread({
   texts = actionTexts,
   team,
   ai = aiTexts,
+  delivered,
 }: {
   messages: Message[];
   texts?: ActionTexts;
   team?: string;
   ai?: AiTexts;
+  /*
+   * delivered says a delivery line follows the thread, so the last run
+   * of messages leaves its time to it.
+   */
+  delivered?: boolean;
 }) {
   const last = messages.at(-1);
+  const grouped = runs(messages);
 
   return (
     <>
-      {runs(messages).map((run) => (
-        <Said messages={run} texts={texts} team={team} ai={ai} key={`${run[0]?.at}-${run[0]?.from}-${run.length}`} />
+      {grouped.map((run, index) => (
+        <Said
+          messages={run}
+          texts={texts}
+          team={team}
+          ai={ai}
+          quiet={delivered && index === grouped.length - 1}
+          key={`${run[0]?.at}-${run[0]?.from}-${run.length}`}
+        />
       ))}
       {last ? <Choices message={last} /> : null}
     </>
@@ -552,23 +572,26 @@ const deliveryWords: Record<string, string> = {
 };
 
 /*
- * Delivery is the line under the visitor's latest message: sending,
- * sent, seen by the team, or not delivered with a button that sends it
- * again.
+ * Delivery is the line under the visitor's latest message: when they
+ * sent it, then sending, sent, seen by the team, or not delivered with a
+ * button that sends it again.
  */
 export function Delivery({
   state,
   texts,
   retry,
+  when,
 }: {
   state: "sending" | "sent" | "seen" | "failed";
   texts: Record<string, string>;
   retry?: string;
+  when?: string;
 }) {
   const word = (key: string) => texts[key] || deliveryWords[key];
 
   return (
     <p className="seen delivery" data-delivery={state} data-key="delivery" role="status">
+      {when ? <time>{when} · </time> : null}
       {word(state === "seen" ? "seen" : `delivery_${state}`)}
       {state === "failed" && retry ? (
         <button type="button" className="retry" data-retry={retry}>

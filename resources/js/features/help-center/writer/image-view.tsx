@@ -4,7 +4,9 @@
  * resizes it as a share of the column, in steps of five, and lets go
  * only once the pointer is released, so the article changes once per
  * resize. A centered picture grows on both sides, so the handle moves
- * twice as far. The picture itself can be dragged to move it.
+ * twice as far. The picture itself can be dragged to move it. A caption,
+ * once added from the picture's bar, is typed in place under it, and a
+ * linked picture shows where it goes.
  */
 import { type NodeViewProps, NodeViewWrapper } from "@tiptap/react";
 import { type PointerEvent as ReactPointerEvent, useRef, useState } from "react";
@@ -76,11 +78,25 @@ export function ImageView({ node, updateAttributes, editor }: NodeViewProps) {
       <img
         src={node.attrs.src}
         alt={node.attrs.alt ?? ""}
-        title={node.attrs.title ?? undefined}
         data-uploading={node.attrs.upload ? "" : undefined}
         data-drag-handle=""
         draggable
       />
+      {typeof node.attrs.title === "string" ? (
+        <input
+          aria-label="Caption"
+          placeholder="Add a caption"
+          value={node.attrs.title}
+          readOnly={!editor.isEditable}
+          onChange={(event) => updateAttributes({ title: event.target.value })}
+          className="image-caption"
+        />
+      ) : null}
+      {node.attrs.href ? (
+        <span className="image-link-badge" title={node.attrs.href}>
+          Links to {node.attrs.href}
+        </span>
+      ) : null}
       {editor.isEditable ? (
         <>
           <Handle side="left" onGrab={grab} />

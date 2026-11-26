@@ -187,7 +187,8 @@ func (s *site) Article(_ helpcenter.Center, slug string) (helpcenter.Article, bo
 	a := s.snap.Articles[at]
 	page := helpcenter.Article{
 		Summary: s.summary(a), Trail: s.trail(a.CollectionID), Body: a.BodyHtml, Contents: contents(a.Toc),
-		Updated: a.VersionCreatedAt, Minutes: max(1, len(strings.Fields(a.BodyMarkdown))/wordsPerMinute),
+		Author: authorOf(a), Updated: a.VersionCreatedAt,
+		Minutes: max(1, len(strings.Fields(a.BodyMarkdown))/wordsPerMinute),
 	}
 	siblings := s.in(a.CollectionID)
 	i := indexOf(siblings, a.ID)
@@ -232,12 +233,24 @@ func (s *site) Search(query string) []helpcenter.Result {
 
 func (s *site) view(c models.Collection) helpcenter.Collection {
 	v := helpcenter.Collection{Slug: c.Slug, Title: c.Name, Description: deref(c.Description), Icon: deref(c.Icon)}
+	seen := map[string]bool{}
+	credit := func(p helpcenter.Person) {
+		if p.Name != "" && !seen[p.Name] {
+			seen[p.Name] = true
+			v.Authors = append(v.Authors, p)
+		}
+	}
 	for _, a := range s.in(&c.ID) {
 		v.Articles = append(v.Articles, s.summary(a))
+		credit(authorOf(a))
 	}
 	for _, child := range s.snap.Collections {
 		if child.ParentID != nil && *child.ParentID == c.ID {
-			v.Children = append(v.Children, s.view(child))
+			sub := s.view(child)
+			v.Children = append(v.Children, sub)
+			for _, p := range sub.Authors {
+				credit(p)
+			}
 		}
 	}
 	v.Count = len(v.Articles)
@@ -350,4 +363,16 @@ func deref(s *string) string {
 		return ""
 	}
 	return *s
+}
+
+/*
+authorOf is the teammate who wrote an article, with their photo when
+they have one, and no name when no teammate did.
+*/
+func authorOf(a models.ListPublishedArticlesRow) helpcenter.Person {
+	p := helpcenter.Person{Name: a.AuthorName, Initials: initialsOf(a.AuthorName)}
+	if photo := (models.User{AvatarPath: a.AuthorAvatar}).AvatarURL(); photo != nil {
+		p.Photo = *photo
+	}
+	return p
 }
