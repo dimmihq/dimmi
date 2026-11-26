@@ -6,6 +6,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	fhttp "github.com/dimmihq/dimmi/framework/http"
+	"github.com/dimmihq/dimmi/framework/ids"
 	"github.com/dimmihq/dimmi/framework/testkit"
 
 	appevents "github.com/dimmihq/dimmi/app/events"
@@ -209,6 +211,30 @@ func TestConversationAttributeValues(t *testing.T) {
 			"author":     "contact",
 			"attributes": testkit.JSON{"issue": "Nope"},
 		}).AssertStatus(422).AssertJSONPath("code", "attribute_filled_by_ai")
+	})
+}
+
+func TestConversationAttributeFiles(t *testing.T) {
+	t.Parallel()
+
+	t.Run("a file attribute holds uploads, shows them, and refuses one the workspace lacks", func(t *testing.T) {
+		t.Parallel()
+		d := open(t)
+		d.attribute(t, testkit.JSON{"key": "proof", "label": "Proof", "data_type": "file"})
+		path := "/api/v1/conversations/" + d.customer(t, "ann", "Refund", "Please") + "/attributes"
+
+		file := d.owner.WithHeader("Content-Type", "text/plain").
+			Send(fhttp.MethodPost, "/api/v1/attachments?filename=receipt.txt", []byte("paid")).AssertCreated().
+			String("data.id")
+
+		d.owner.PatchJSON(path, testkit.JSON{"values": testkit.JSON{"proof": []string{file}}}).AssertOK().
+			AssertJSONPath("data.values.0.value.0", file).
+			AssertJSONPath("data.values.0.files.0.id", file).
+			AssertJSONPath("data.values.0.files.0.filename", "receipt.txt")
+
+		d.owner.PatchJSON(path, testkit.JSON{"values": testkit.JSON{
+			"proof": []string{ids.Encode("att", ids.New())},
+		}}).AssertStatus(422).AssertJSONPath("problems.proof", "unknown_file")
 	})
 }
 

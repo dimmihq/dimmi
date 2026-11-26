@@ -31,6 +31,7 @@ import (
 	"github.com/dimmihq/dimmi/framework/ids"
 
 	"github.com/dimmihq/dimmi/app/actions/conversations"
+	"github.com/dimmihq/dimmi/app/actions/messages"
 	"github.com/dimmihq/dimmi/app/auth/authz"
 	"github.com/dimmihq/dimmi/app/enums"
 	appevents "github.com/dimmihq/dimmi/app/events"
@@ -51,8 +52,9 @@ const (
 The problems a value may have besides those of its type.
 */
 const (
-	ProblemUnknown  = "unknown_attribute"
-	ProblemArchived = "archived_attribute"
+	ProblemUnknown     = "unknown_attribute"
+	ProblemArchived    = "archived_attribute"
+	ProblemUnknownFile = "unknown_file"
 )
 
 /*
@@ -96,6 +98,7 @@ Found is a conversation's attributes and when the AI last read it.
 type Found struct {
 	Values    []Value
 	CheckedAt *time.Time
+	Files     map[string]messages.File
 }
 
 /*
@@ -136,7 +139,7 @@ func (a *Attributes) Values(ctx context.Context, m authz.Membership, ref convers
 			return err
 		}
 
-		out, err = foundFor(ctx, q, m, c.ID)
+		out, err = a.foundFor(ctx, q, m, c.ID)
 
 		return err
 	})
@@ -175,7 +178,7 @@ func (a *Attributes) Set(ctx context.Context, in SetInput) (Found, error) {
 			return err
 		}
 
-		out, err = foundFor(ctx, q, m, c.ID)
+		out, err = a.foundFor(ctx, q, m, c.ID)
 
 		return err
 	})
@@ -186,7 +189,9 @@ func (a *Attributes) Set(ctx context.Context, in SetInput) (Found, error) {
 /*
 foundFor reads a conversation's attributes the member's teams see.
 */
-func foundFor(ctx context.Context, q *models.Queries, m authz.Membership, conversationID ids.UUID) (Found, error) {
+func (a *Attributes) foundFor(
+	ctx context.Context, q *models.Queries, m authz.Membership, conversationID ids.UUID,
+) (Found, error) {
 	out, err := found(ctx, q, m.Workspace.ID, conversationID)
 	if err != nil {
 		return out, err
@@ -201,7 +206,37 @@ func foundFor(ctx context.Context, q *models.Queries, m authz.Membership, conver
 		return !conversations.SeesAttribute(v.Attribute.TeamIds, teams)
 	})
 
-	return out, nil
+	return out, a.present(ctx, q, m.Workspace.ID, &out)
+}
+
+/*
+present reads the files the values hold, each with a short-lived link
+once the malware scan lets it through.
+*/
+func (a *Attributes) present(ctx context.Context, q *models.Queries, workspaceID ids.UUID, out *Found) error {
+	var want []ids.UUID
+
+	for _, v := range out.Values {
+		if v.Attribute.DataType == TypeFile {
+			want = append(want, filesOf(v.Value)...)
+		}
+	}
+
+	if len(want) == 0 || a.Disks == nil {
+		return nil
+	}
+
+	rows, err := q.ListAttachmentsByID(ctx, models.ListAttachmentsByIDParams{WorkspaceID: workspaceID, Ids: want})
+	if err != nil {
+		return fmt.Errorf("list attribute files: %w", err)
+	}
+
+	out.Files = map[string]messages.File{}
+	for _, row := range rows {
+		out.Files[models.PublicID(models.PrefixAttachment, row.ID)] = messages.PresentFile(ctx, a.Disks, row)
+	}
+
+	return nil
 }
 
 /*
@@ -261,6 +296,7 @@ func Write(
 		return nil, fmt.Errorf("list conversation attributes: %w", err)
 	}
 
+	all := defs
 	if by == SetByMember {
 		teams, err := conversations.MemberTeamIDs(ctx, w.Q, c.WorkspaceID, w.Actor.ID)
 		if err != nil {
@@ -286,6 +322,10 @@ func Write(
 		return nil, err
 	}
 
+	if err := filesExist(ctx, w.Q, c.WorkspaceID, defs, fitted); err != nil {
+		return nil, err
+	}
+
 	next, changes := apply(defs, kept, sources, fitted, by)
 	if len(changes) == 0 {
 		return nil, nil
@@ -296,7 +336,7 @@ func Write(
 		sources[ch.Key] = source
 	}
 
-	if err := save(ctx, w.Q, c, next, sources, w.Now); err != nil {
+	if err := save(ctx, w.Q, c, next, sources, fileIDs(all, next), w.Now); err != nil {
 		return nil, err
 	}
 
@@ -416,7 +456,7 @@ save keeps a conversation's values and who set them.
 */
 func save(
 	ctx context.Context, q *models.Queries, c models.Conversation, values map[string]any, sources map[string]Source,
-	now time.Time,
+	files []ids.UUID, now time.Time,
 ) error {
 	raw, err := json.Marshal(values)
 	if err != nil {
@@ -429,7 +469,7 @@ func save(
 	}
 
 	if err := q.SaveConversationAttributeValues(ctx, models.SaveConversationAttributeValuesParams{
-		ConversationID: c.ID, WorkspaceID: c.WorkspaceID, Values: raw, Sources: by, Now: now,
+		ConversationID: c.ID, WorkspaceID: c.WorkspaceID, Values: raw, Sources: by, AttachmentIds: files, Now: now,
 	}); err != nil {
 		return fmt.Errorf("save conversation attribute values: %w", err)
 	}
@@ -514,4 +554,86 @@ func aiWriter(q *models.Queries, tx *database.Tx, a *Attributes) *conversations.
 		Q: q, Tx: tx, Events: a.Events, Now: a.Clock.Now(),
 		Actor: conversations.Actor{Type: string(enums.AuthorTypeSystem), Name: "AI"},
 	}
+}
+
+/*
+fileRegistry reads the public ids of files.
+*/
+var fileRegistry = func() *ids.Registry {
+	r := ids.NewRegistry()
+	_ = r.Register(string(models.PrefixAttachment), "attachment")
+
+	return r
+}()
+
+/*
+filesOf returns the files a value of a file attribute holds.
+*/
+func filesOf(value any) []ids.UUID {
+	list, _ := value.([]any)
+
+	out := make([]ids.UUID, 0, len(list))
+	for _, x := range list {
+		s, _ := x.(string)
+		if id, err := fileRegistry.Decode(string(models.PrefixAttachment), s); err == nil {
+			out = append(out, id)
+		}
+	}
+
+	return out
+}
+
+/*
+fileIDs returns every file the values of file attributes hold, so the
+purge of unused uploads keeps them.
+*/
+func fileIDs(defs []models.AiConversationAttribute, values map[string]any) []ids.UUID {
+	out := []ids.UUID{}
+
+	for _, d := range defs {
+		if d.DataType == TypeFile {
+			for _, id := range filesOf(values[d.Key]) {
+				if !slices.Contains(out, id) {
+					out = append(out, id)
+				}
+			}
+		}
+	}
+
+	return out
+}
+
+/*
+filesExist refuses a file value naming an upload the workspace does not
+have.
+*/
+func filesExist(
+	ctx context.Context, q *models.Queries, workspaceID ids.UUID, defs []models.AiConversationAttribute,
+	fitted map[string]any,
+) error {
+	problems := map[string]string{}
+
+	for _, d := range defs {
+		value, ok := fitted[d.Key]
+		if !ok || d.DataType != TypeFile || value == nil {
+			continue
+		}
+
+		want := filesOf(value)
+
+		rows, err := q.ListAttachmentsByID(ctx, models.ListAttachmentsByIDParams{WorkspaceID: workspaceID, Ids: want})
+		if err != nil {
+			return fmt.Errorf("list attribute files: %w", err)
+		}
+
+		if len(rows) != len(want) {
+			problems[d.Key] = ProblemUnknownFile
+		}
+	}
+
+	if len(problems) > 0 {
+		return ErrValueInvalid.With("problems", problems)
+	}
+
+	return nil
 }

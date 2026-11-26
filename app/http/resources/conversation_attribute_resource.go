@@ -81,6 +81,7 @@ type ConversationAttributeValue struct {
 	Attribute ConversationAttribute        `json:"attribute"`
 	Value     json.RawMessage              `json:"value"`
 	SetBy     *ConversationAttributeSource `json:"set_by"`
+	Files     []Attachment                 `json:"files"`
 }
 
 /*
@@ -108,12 +109,31 @@ func NewConversationAttributeValues(f aiattributes.Found) ConversationAttributeV
 
 		item := ConversationAttributeValue{
 			Object: "conversation_attribute_value", Attribute: NewConversationAttribute(v.Attribute), Value: value,
+			Files: filesOfValue(f, v),
 		}
 		if s := v.Source; s != nil {
 			item.SetBy = &ConversationAttributeSource{By: s.By, ID: orNull(s.ID), Name: orNull(s.Name), At: s.At}
 		}
 
 		out.Values = append(out.Values, item)
+	}
+
+	return out
+}
+
+/*
+filesOfValue returns the files a file attribute's value holds, in its
+order, none for other types.
+*/
+func filesOfValue(f aiattributes.Found, v aiattributes.Value) []Attachment {
+	out := []Attachment{}
+
+	list, _ := v.Value.([]any)
+	for _, x := range list {
+		id, _ := x.(string)
+		if file, ok := f.Files[id]; ok {
+			out = append(out, NewAttachment(file))
+		}
 	}
 
 	return out

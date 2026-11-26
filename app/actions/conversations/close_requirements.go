@@ -23,6 +23,7 @@ import (
 	"errors"
 	"fmt"
 	"slices"
+	"strings"
 
 	"github.com/dimmihq/dimmi/framework/database"
 	"github.com/dimmihq/dimmi/framework/fault"
@@ -69,19 +70,36 @@ func (w *Writer) checkRequiredToClose(ctx context.Context, c models.Conversation
 		return err
 	}
 
-	var missing []map[string]string
+	var (
+		missing []map[string]string
+		labels  []string
+	)
 
 	for _, a := range required {
 		if SeesAttribute(a.TeamIds, teams) && fieldvalues.Empty(values[a.Key]) {
 			missing = append(missing, map[string]string{"key": a.Key, "label": a.Label})
+			labels = append(labels, a.Label)
 		}
 	}
 
-	if len(missing) > 0 {
-		return ErrAttributesRequired.With("missing", missing)
+	if len(missing) == 0 {
+		return nil
 	}
 
-	return nil
+	return fault.New(fault.Invalid, ErrAttributesRequired.Code(), "Fill "+listed(labels)+" before closing.").
+		OnField("status").With("missing", missing)
+}
+
+/*
+listed joins names into a phrase: "Issue type", "Issue type and Plan",
+"Issue type, Plan and Seats".
+*/
+func listed(names []string) string {
+	if len(names) == 1 {
+		return names[0]
+	}
+
+	return strings.Join(names[:len(names)-1], ", ") + " and " + names[len(names)-1]
 }
 
 func wrapRequired(err error) error {

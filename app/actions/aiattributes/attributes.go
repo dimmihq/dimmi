@@ -33,6 +33,7 @@ import (
 	"github.com/dimmihq/dimmi/framework/ids"
 	"github.com/dimmihq/dimmi/framework/queue"
 
+	"github.com/dimmihq/dimmi/app/actions/messages"
 	"github.com/dimmihq/dimmi/app/ai/aidecision"
 	"github.com/dimmihq/dimmi/app/auth/authz"
 	"github.com/dimmihq/dimmi/app/exceptions"
@@ -89,6 +90,7 @@ type Attributes struct {
 	Events    *events.Dispatcher
 	Queue     *queue.Queue
 	Decisions aidecision.Service
+	Disks     messages.Disks
 }
 
 /*

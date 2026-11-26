@@ -16739,6 +16739,16 @@
           "attribute": {
             "$ref": "#/components/schemas/ConversationAttribute"
           },
+          "files": {
+            "description": "With a file attribute, the files the value holds, each with a short-lived link. Empty otherwise.",
+            "items": {
+              "$ref": "#/components/schemas/Attachment"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
           "object": {
             "description": "The kind of record this is, the same for every record of its kind, such as article.",
             "type": "string"
@@ -16754,7 +16764,8 @@
           "object",
           "attribute",
           "value",
-          "set_by"
+          "set_by",
+          "files"
         ],
         "type": "object"
       },
@@ -37721,7 +37732,7 @@
           },
           "attributes": {
             "additionalProperties": {},
-            "description": "Attributes: a JSON object.",
+            "description": "Object of conversation attribute values to set, by key, such as {\"issue_type\": \"Billing\"}. Each must fit its attribute's type; GET /conversation-attributes lists the keys. An import sets even what only the AI fills.",
             "maxProperties": 100,
             "type": "object"
           },

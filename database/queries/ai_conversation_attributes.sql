@@ -68,15 +68,17 @@ SET "values" = EXCLUDED."values", checked_message_id = EXCLUDED.checked_message_
     checked_at = EXCLUDED.checked_at, updated_at = EXCLUDED.updated_at;
 
 -- name: SaveConversationAttributeValues :exec
--- SaveConversationAttributeValues keeps the values of a conversation and
--- who set each, leaving when the AI last read it as it was.
+-- SaveConversationAttributeValues keeps the values of a conversation, who
+-- set each and the files they hold, leaving when the AI last read it as
+-- it was.
 INSERT INTO conversation_ai_values (
-    conversation_id, workspace_id, "values", sources, created_at, updated_at
+    conversation_id, workspace_id, "values", sources, attachment_ids, created_at, updated_at
 ) VALUES (
-    @conversation_id, @workspace_id, @values, @sources, @now, @now
+    @conversation_id, @workspace_id, @values, @sources, @attachment_ids, @now, @now
 )
 ON CONFLICT (conversation_id) DO UPDATE
-SET "values" = EXCLUDED."values", sources = EXCLUDED.sources, updated_at = EXCLUDED.updated_at;
+SET "values" = EXCLUDED."values", sources = EXCLUDED.sources, attachment_ids = EXCLUDED.attachment_ids,
+    updated_at = EXCLUDED.updated_at;
 
 -- name: SaveDetectedConversationAttributeValues :exec
 -- SaveDetectedConversationAttributeValues keeps the values the AI found,

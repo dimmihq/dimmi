@@ -143,6 +143,7 @@ func aiAttributeSchemaTexts() map[string]map[string]string {
 				"an RFC 3339 date and time, an option, a list of options or file ids, or a contact or company " +
 				"id. Null when empty.",
 			"set_by": "Who set the value and when. Null when it was never set.",
+			"files":  "With a file attribute, the files the value holds, each with a short-lived link. Empty otherwise.",
 		},
 		"ConversationAttributeSource": {
 			"by":   "ai, member, workflow or import.",

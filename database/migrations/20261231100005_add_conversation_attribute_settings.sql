@@ -3,7 +3,9 @@
 -- Each attribute says who fills it, whether a teammate must fill it
 -- before closing a conversation, which teams see it, and where it sits
 -- in the list. Each conversation keeps, beside its values, who set each
--- one and when, so a value a teammate set is never replaced by the AI.
+-- one and when, so a value a teammate set is never replaced by the AI,
+-- and the files its values hold, so the purge of unused uploads keeps
+-- them.
 
 -- +goose Up
 ALTER TABLE ai_conversation_attributes
@@ -13,10 +15,13 @@ ALTER TABLE ai_conversation_attributes
     ADD COLUMN position integer NOT NULL DEFAULT 0;
 
 ALTER TABLE conversation_ai_values
-    ADD COLUMN sources jsonb NOT NULL DEFAULT '{}' CHECK (jsonb_typeof(sources) = 'object');
+    ADD COLUMN sources jsonb NOT NULL DEFAULT '{}' CHECK (jsonb_typeof(sources) = 'object'),
+    ADD COLUMN attachment_ids uuid[] NOT NULL DEFAULT '{}';
+
+CREATE INDEX conversation_ai_values_attachment_ids_index ON conversation_ai_values USING gin (attachment_ids);
 
 -- +goose Down
-ALTER TABLE conversation_ai_values DROP COLUMN sources;
+ALTER TABLE conversation_ai_values DROP COLUMN attachment_ids, DROP COLUMN sources;
 ALTER TABLE ai_conversation_attributes
     DROP COLUMN position,
     DROP COLUMN team_ids,

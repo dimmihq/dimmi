@@ -120,7 +120,7 @@ func (q *Queries) FindAIConversationAttribute(ctx context.Context, arg FindAICon
 }
 
 const findConversationAIValues = `-- name: FindConversationAIValues :one
-SELECT conversation_id, workspace_id, values, checked_message_id, checked_at, created_at, updated_at, sources FROM conversation_ai_values WHERE workspace_id = $1 AND conversation_id = $2
+SELECT conversation_id, workspace_id, values, checked_message_id, checked_at, created_at, updated_at, sources, attachment_ids FROM conversation_ai_values WHERE workspace_id = $1 AND conversation_id = $2
 `
 
 type FindConversationAIValuesParams struct {
@@ -141,6 +141,7 @@ func (q *Queries) FindConversationAIValues(ctx context.Context, arg FindConversa
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.Sources,
+		&i.AttachmentIds,
 	)
 	return i, err
 }
@@ -275,7 +276,7 @@ func (q *Queries) ListRequiredToCloseConversationAttributes(ctx context.Context,
 }
 
 const lockConversationAIValues = `-- name: LockConversationAIValues :one
-SELECT conversation_id, workspace_id, values, checked_message_id, checked_at, created_at, updated_at, sources FROM conversation_ai_values
+SELECT conversation_id, workspace_id, values, checked_message_id, checked_at, created_at, updated_at, sources, attachment_ids FROM conversation_ai_values
 WHERE workspace_id = $1 AND conversation_id = $2
 FOR UPDATE
 `
@@ -299,6 +300,7 @@ func (q *Queries) LockConversationAIValues(ctx context.Context, arg LockConversa
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.Sources,
+		&i.AttachmentIds,
 	)
 	return i, err
 }
@@ -337,12 +339,13 @@ func (q *Queries) SaveConversationAIValues(ctx context.Context, arg SaveConversa
 
 const saveConversationAttributeValues = `-- name: SaveConversationAttributeValues :exec
 INSERT INTO conversation_ai_values (
-    conversation_id, workspace_id, "values", sources, created_at, updated_at
+    conversation_id, workspace_id, "values", sources, attachment_ids, created_at, updated_at
 ) VALUES (
-    $1, $2, $3, $4, $5, $5
+    $1, $2, $3, $4, $5, $6, $6
 )
 ON CONFLICT (conversation_id) DO UPDATE
-SET "values" = EXCLUDED."values", sources = EXCLUDED.sources, updated_at = EXCLUDED.updated_at
+SET "values" = EXCLUDED."values", sources = EXCLUDED.sources, attachment_ids = EXCLUDED.attachment_ids,
+    updated_at = EXCLUDED.updated_at
 `
 
 type SaveConversationAttributeValuesParams struct {
@@ -350,17 +353,20 @@ type SaveConversationAttributeValuesParams struct {
 	WorkspaceID    ids.UUID        `json:"workspace_id"`
 	Values         json.RawMessage `json:"values"`
 	Sources        json.RawMessage `json:"sources"`
+	AttachmentIds  []ids.UUID      `json:"attachment_ids"`
 	Now            time.Time       `json:"now"`
 }
 
-// SaveConversationAttributeValues keeps the values of a conversation and
-// who set each, leaving when the AI last read it as it was.
+// SaveConversationAttributeValues keeps the values of a conversation, who
+// set each and the files they hold, leaving when the AI last read it as
+// it was.
 func (q *Queries) SaveConversationAttributeValues(ctx context.Context, arg SaveConversationAttributeValuesParams) error {
 	_, err := q.db.Exec(ctx, saveConversationAttributeValues,
 		arg.ConversationID,
 		arg.WorkspaceID,
 		arg.Values,
 		arg.Sources,
+		arg.AttachmentIds,
 		arg.Now,
 	)
 	return err

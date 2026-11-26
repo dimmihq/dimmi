@@ -1079,6 +1079,7 @@ type ConversationAiValue struct {
 	CreatedAt        time.Time       `json:"created_at"`
 	UpdatedAt        time.Time       `json:"updated_at"`
 	Sources          json.RawMessage `json:"sources"`
+	AttachmentIds    []ids.UUID      `json:"attachment_ids"`
 }
 
 type ConversationDraft struct {
