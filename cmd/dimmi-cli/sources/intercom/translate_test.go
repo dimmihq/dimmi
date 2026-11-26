@@ -127,8 +127,8 @@ func TestConversationGolden(t *testing.T) {
 		t.Errorf("former teammates %+v, want the note's author 502", former)
 	}
 
-	if len(rec.Files) != 2 {
-		t.Errorf("files %d, want the source's and the note's", len(rec.Files))
+	if len(rec.Files) != 3 {
+		t.Errorf("files %d, want the source's, the note's and the inline picture", len(rec.Files))
 	}
 }
 

@@ -14,7 +14,7 @@
       "source_id": "1001",
       "source_updated_at": "2025-11-16T10:46:40Z",
       "contact_ref": "c-1",
-      "channel": "chat",
+      "channel": "widget",
       "created_at": "2025-11-15T09:46:40Z",
       "source": {
         "type": "conversation",
@@ -134,7 +134,10 @@
             "type": "contact",
             "ref": "c-1"
           },
-          "body": "Thanks!"
+          "body": "Thanks!",
+          "attachments": [
+            "file_bab2a957bb992de909f57332"
+          ]
         },
         {
           "source_id": "3008",
@@ -192,6 +195,10 @@
         "name": "screenshot.png",
         "content_type": "image/png",
         "size": 4096
+      },
+      {
+        "source_id": "file_bab2a957bb992de909f57332",
+        "name": "shoe.jpg"
       }
     ]
   }

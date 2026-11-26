@@ -2,6 +2,9 @@ package intercom
 
 import (
 	"encoding/json"
+	"html"
+	"path"
+	"regexp"
 	"strings"
 
 	"github.com/dimmihq/dimmi/cmd/dimmi-cli/format"
@@ -15,13 +18,11 @@ original type is kept on the conversation's source.
 func channel(sourceType string) string {
 	switch sourceType {
 	case "conversation", "chat", "push", "":
-		return "chat"
+		return "widget"
 	case "email":
 		return "email"
-	case "whatsapp", "facebook", "instagram", "sms":
+	case "whatsapp", "facebook", "instagram":
 		return sourceType
-	case "phone_call", "phone_switch", "call":
-		return "phone"
 	}
 
 	return "api"
@@ -113,6 +114,36 @@ func (t *convTranslation) addFiles(list []attachment) []string {
 }
 
 /*
+inline moves the pictures a message shows into its attachments: they
+are uploaded like any attachment, so they don't point back at Intercom.
+It returns the body without them and the attachment ids.
+*/
+func (t *convTranslation) inline(body string) (string, []string) {
+	var ids []string
+
+	out := imgTag.ReplaceAllStringFunc(body, func(m string) string {
+		src := imgSrc.FindStringSubmatch(m)
+		if src == nil {
+			return m
+		}
+
+		link := html.UnescapeString(src[2])
+		if !strings.HasPrefix(link, "http://") && !strings.HasPrefix(link, "https://") {
+			return m
+		}
+
+		name := path.Base(strings.SplitN(link, "?", 2)[0])
+		ids = append(ids, t.addFiles([]attachment{{Name: name, URL: link}})...)
+
+		return ""
+	})
+
+	return out, ids
+}
+
+var imgTag = regexp.MustCompile(`<img\b[^>]*>`)
+
+/*
 noteFormer records an admin author missing from GET /admins.
 */
 func (t *convTranslation) noteFormer(a author) {
@@ -201,8 +232,9 @@ func (t *convTranslation) entry(p part) []format.Entry {
 			e.Type = format.EntryMessage
 		}
 
-		e.Body = toMarkdown(p.Body)
-		e.Attachments = t.addFiles(p.Attachments)
+		body, pics := t.inline(p.Body)
+		e.Body = toMarkdown(body)
+		e.Attachments = append(pics, t.addFiles(p.Attachments)...)
 
 		if e.Body == "" && len(e.Attachments) == 0 && !e.Redacted {
 			return event(format.Event{Type: format.EventCustom, Text: plain(p.Body)})
@@ -211,8 +243,9 @@ func (t *convTranslation) entry(p part) []format.Entry {
 		return []format.Entry{e}
 	case "note", "note_and_reopen":
 		e.Type = format.EntryNote
-		e.Body = toMarkdown(p.Body)
-		e.Attachments = t.addFiles(p.Attachments)
+		body, pics := t.inline(p.Body)
+		e.Body = toMarkdown(body)
+		e.Attachments = append(pics, t.addFiles(p.Attachments)...)
 		out := []format.Entry{e}
 
 		if p.PartType == "note_and_reopen" {
@@ -401,9 +434,12 @@ func translateConversation(c conversation, parts []part, known map[string]bool) 
 
 	first := format.Entry{
 		SourceID: "source_" + string(firstID(c.Source.ID, c.ID)), CreatedAt: at(c.CreatedAt),
-		Author: authorOf(c.Source.Author, t.contacts), Body: toMarkdown(c.Source.Body),
-		Attachments: t.addFiles(c.Source.Attachments), Redacted: c.Source.Redacted,
+		Author: authorOf(c.Source.Author, t.contacts), Redacted: c.Source.Redacted,
 	}
+
+	sourceBody, pics := t.inline(c.Source.Body)
+	first.Body = toMarkdown(sourceBody)
+	first.Attachments = append(pics, t.addFiles(c.Source.Attachments)...)
 	t.noteFormer(c.Source.Author)
 
 	if c.Source.EmailMetadata != nil && c.Source.EmailMetadata.MessageID != "" {
