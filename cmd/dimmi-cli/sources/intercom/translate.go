@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"html"
+	"path"
 	"regexp"
 	"slices"
 	"sort"
@@ -553,7 +554,51 @@ func redirect(u string) string {
 	return u
 }
 
+/*
+images collects the pictures article bodies show. Each is uploaded as a
+file and the body points at it as dimmi-file:<id>, which the engine
+turns into the uploaded file's id and dimmi copies into the help
+center, so nothing links back to Intercom's CDN.
+*/
+type images struct {
+	files []*format.File
+	seen  map[string]bool
+}
+
+var imgSrc = regexp.MustCompile(`(<img\b[^>]*?\ssrc=")([^"]+)(")`)
+
+/*
+rewrite points every picture of the HTML at its upload.
+*/
+func (im *images) rewrite(body string) string {
+	return imgSrc.ReplaceAllStringFunc(body, func(m string) string {
+		parts := imgSrc.FindStringSubmatch(m)
+		src := html.UnescapeString(parts[2])
+
+		if !strings.HasPrefix(src, "http://") && !strings.HasPrefix(src, "https://") {
+			return m
+		}
+
+		name := path.Base(strings.SplitN(src, "?", 2)[0])
+		id := format.FileID(src, name, 0)
+
+		if im.seen == nil {
+			im.seen = map[string]bool{}
+		}
+
+		if !im.seen[id] {
+			im.seen[id] = true
+			im.files = append(im.files, &format.File{SourceID: id, Name: name, Source: src})
+		}
+
+		return parts[1] + "dimmi-file:" + id + parts[3]
+	})
+}
+
 func translateArticle(a article, helpCenter, defaultLocale string) format.Record {
+	im := &images{}
+	a.Body = im.rewrite(a.Body)
+
 	locale := firstOf(a.DefaultLocale, defaultLocale, "en")
 
 	art := &format.Article{
@@ -588,6 +633,7 @@ func translateArticle(a article, helpCenter, defaultLocale string) format.Record
 		}
 
 		bodies = append(bodies, c.Body)
+		c.Body = im.rewrite(c.Body)
 		tr := format.Translation{
 			Locale: l, Title: text(c.Title), Description: text(c.Description), Body: articleBody(c.Body, c.BodyMarkdown),
 			State: articleState(c.State), Author: teammateAuthor(c.AuthorID), CreatedAt: when(c.CreatedAt), UpdatedAt: when(c.UpdatedAt),
@@ -606,7 +652,7 @@ func translateArticle(a article, helpCenter, defaultLocale string) format.Record
 		art.TagRefs = append(art.TagRefs, string(t.ID))
 	}
 
-	return format.NewRecord(format.KindArticle, art.SourceID, art)
+	return format.NewRecord(format.KindArticle, art.SourceID, art, im.files...)
 }
 
 /*
@@ -617,13 +663,15 @@ func internalID(id ID) string { return "internal_" + string(id) }
 
 func translateInternalArticle(a internalArticle, helpCenter string) format.Record {
 	id := internalID(a.ID)
+	im := &images{}
+	a.Body = im.rewrite(a.Body)
 
 	return format.NewRecord(format.KindArticle, id, &format.Article{
 		Base: format.Base{SourceID: id, SourceUpdatedAt: when(a.UpdatedAt)}, HelpCenterRef: helpCenter, Title: text(a.Title),
 		Body: articleBody(a.Body, ""), State: "published", Visibility: format.VisibilityAgentOnly,
 		Author: teammateAuthor(firstID(a.AuthorID, a.OwnerID)), CreatedAt: when(a.CreatedAt), UpdatedAt: when(a.UpdatedAt),
 		Blocks: blocksOf(a.Body),
-	})
+	}, im.files...)
 }
 
 func firstID(ids ...ID) ID {

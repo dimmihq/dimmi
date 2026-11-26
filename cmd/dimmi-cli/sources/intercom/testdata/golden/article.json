@@ -8,7 +8,7 @@
       "collection_ref": "81",
       "title": "Reset your password",
       "description": "Two steps",
-      "body": "Hello\n\nGo to **Settings**.\n\n[Reset](https://app.example.com/reset)",
+      "body": "Hello\n\nGo to **Settings**.\n\n![Settings page](dimmi-file:file_8a9a6f30db2437ba014f936f)\n\n[Reset](https://app.example.com/reset)",
       "state": "published",
       "visibility": "public",
       "author": {
@@ -41,8 +41,15 @@
       "blocks": [
         "button",
         "centered",
+        "image",
         "video"
       ]
-    }
+    },
+    "files": [
+      {
+        "source_id": "file_8a9a6f30db2437ba014f936f",
+        "name": "settings.png"
+      }
+    ]
   }
 ]
