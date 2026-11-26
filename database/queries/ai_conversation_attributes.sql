@@ -3,7 +3,7 @@
 -- attributes, active first, then by name.
 SELECT * FROM ai_conversation_attributes
 WHERE workspace_id = @workspace_id
-ORDER BY status = 'archived', label, key;
+ORDER BY status = 'archived', position, label, key;
 
 -- name: ListActiveAIConversationAttributes :many
 -- ListActiveAIConversationAttributes returns the attributes the decision
@@ -25,9 +25,12 @@ SELECT count(*) FROM ai_conversation_attributes WHERE workspace_id = @workspace_
 -- CreateAIConversationAttribute stores a new attribute, nothing when
 -- the key is taken.
 INSERT INTO ai_conversation_attributes (
-    workspace_id, key, label, description, data_type, options, created_at, updated_at
+    workspace_id, key, label, description, data_type, options, filled_by, required_to_close, team_ids, position,
+    created_at, updated_at
 ) VALUES (
-    @workspace_id, @key, @label, @description, @data_type, @options, @now, @now
+    @workspace_id, @key, @label, @description, @data_type, @options, @filled_by, @required_to_close, @team_ids,
+    (SELECT coalesce(max(position) + 1, 0) FROM ai_conversation_attributes WHERE workspace_id = @workspace_id),
+    @now, @now
 )
 ON CONFLICT (workspace_id, key) DO NOTHING
 RETURNING *;
@@ -36,7 +39,8 @@ RETURNING *;
 -- UpdateAIConversationAttribute changes an attribute's words, its
 -- choices and its status.
 UPDATE ai_conversation_attributes
-SET label = @label, description = @description, options = @options, status = @status, updated_at = @now
+SET label = @label, description = @description, options = @options, status = @status,
+    filled_by = @filled_by, required_to_close = @required_to_close, team_ids = @team_ids, updated_at = @now
 WHERE workspace_id = @workspace_id AND id = @id
 RETURNING *;
 
@@ -62,3 +66,33 @@ INSERT INTO conversation_ai_values (
 ON CONFLICT (conversation_id) DO UPDATE
 SET "values" = EXCLUDED."values", checked_message_id = EXCLUDED.checked_message_id,
     checked_at = EXCLUDED.checked_at, updated_at = EXCLUDED.updated_at;
+
+-- name: SaveConversationAttributeValues :exec
+-- SaveConversationAttributeValues keeps the values of a conversation and
+-- who set each, leaving when the AI last read it as it was.
+INSERT INTO conversation_ai_values (
+    conversation_id, workspace_id, "values", sources, created_at, updated_at
+) VALUES (
+    @conversation_id, @workspace_id, @values, @sources, @now, @now
+)
+ON CONFLICT (conversation_id) DO UPDATE
+SET "values" = EXCLUDED."values", sources = EXCLUDED.sources, updated_at = EXCLUDED.updated_at;
+
+-- name: SaveDetectedConversationAttributeValues :exec
+-- SaveDetectedConversationAttributeValues keeps the values the AI found,
+-- who set each, and the message they were checked at.
+INSERT INTO conversation_ai_values (
+    conversation_id, workspace_id, "values", sources, checked_message_id, checked_at, created_at, updated_at
+) VALUES (
+    @conversation_id, @workspace_id, @values, @sources, @checked_message_id, @now, @now, @now
+)
+ON CONFLICT (conversation_id) DO UPDATE
+SET "values" = EXCLUDED."values", sources = EXCLUDED.sources, checked_message_id = EXCLUDED.checked_message_id,
+    checked_at = EXCLUDED.checked_at, updated_at = EXCLUDED.updated_at;
+
+-- name: ListRequiredToCloseConversationAttributes :many
+-- ListRequiredToCloseConversationAttributes returns the active attributes
+-- a teammate must fill before closing a conversation.
+SELECT * FROM ai_conversation_attributes
+WHERE workspace_id = @workspace_id AND status = 'active' AND required_to_close
+ORDER BY position, label, key;

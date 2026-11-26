@@ -1,16 +1,18 @@
 /*
 |--------------------------------------------------------------------------
-| Detecting AI Attributes
+| Detecting Conversation Attributes
 |--------------------------------------------------------------------------
 |
 | Each customer message asks for the conversation to be read again, a
 | short while later so a burst of messages is read once, and never more
 | than once a minute. The decision model reads the whole conversation
-| and fills in the active attributes. A value it is sure of replaces the
-| one kept; one it is unsure of leaves the kept value as it was, so a
-| conversation never loses what it was found to be about because the
-| customer said thanks. Every value set or changed dispatches an event
-| workflows start on. The model is asked with no transaction open.
+| and fills in the active attributes the AI fills. A value it is sure of
+| replaces the one it kept; one it is unsure of leaves the kept value as
+| it was, so a conversation never loses what it was found to be about
+| because the customer said thanks. A value a teammate, a workflow or an
+| import set is never replaced. Every value set or changed joins the
+| timeline and dispatches an event workflows start on. The model is
+| asked with no transaction open.
 |
 */
 
@@ -22,7 +24,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"maps"
 	"regexp"
 	"slices"
 	"time"
@@ -163,9 +164,14 @@ func (a *Attributes) read(ctx context.Context, args jobs.DetectConversationAttri
 	err := a.DB.Transaction(ctx, func(ctx context.Context, tx *database.Tx) error {
 		q := models.New(tx)
 
-		defs, err := q.ListActiveAIConversationAttributes(ctx, args.WorkspaceID)
-		if err != nil || len(defs) == 0 {
+		all, err := q.ListActiveAIConversationAttributes(ctx, args.WorkspaceID)
+		if err != nil {
 			return err
+		}
+
+		defs := slices.DeleteFunc(all, func(d models.AiConversationAttribute) bool { return !byAI(d) })
+		if len(defs) == 0 {
+			return nil
 		}
 
 		c, msgs, err := a.conversation(ctx, q, args)
@@ -232,48 +238,49 @@ func (a *Attributes) conversation(
 }
 
 /*
-keep merges the values found into the kept ones, records the message
-they were read at and tells workflows what changed.
+keep writes the values found that fit their attributes, as the AI,
+and records the message they were read at.
 */
 func (a *Attributes) keep(
 	ctx context.Context, args jobs.DetectConversationAttributesArgs, r *reading, found map[string]any,
 ) error {
 	return a.DB.Transaction(ctx, func(ctx context.Context, tx *database.Tx) error {
-		q, now := models.New(tx), a.Clock.Now()
+		q := models.New(tx)
+
+		c, err := q.FindConversation(ctx, models.FindConversationParams{
+			WorkspaceID: args.WorkspaceID, ID: args.ConversationID,
+		})
+		if errors.Is(err, database.ErrNotFound) {
+			return nil
+		}
+
+		if err != nil {
+			return fmt.Errorf("find conversation: %w", err)
+		}
+
+		w := aiWriter(q, tx, a)
+		if _, err := Write(ctx, w, c, sure(r.defs, found), SetByAI); err != nil {
+			return err
+		}
 
 		row, err := q.LockConversationAIValues(ctx, models.LockConversationAIValuesParams{
 			WorkspaceID: args.WorkspaceID, ConversationID: args.ConversationID,
 		})
 		if err != nil && !errors.Is(err, database.ErrNotFound) {
-			return fmt.Errorf("lock ai values: %w", err)
+			return fmt.Errorf("lock conversation attribute values: %w", err)
 		}
 
-		next, changes := merge(r.defs, decodeValues(row.Values), found)
-
-		raw, err := json.Marshal(next)
-		if err != nil {
-			return fmt.Errorf("encode ai values: %w", err)
+		values, sources := row.Values, row.Sources
+		if len(values) == 0 {
+			values, sources = json.RawMessage(`{}`), json.RawMessage(`{}`)
 		}
 
-		if err := q.SaveConversationAIValues(ctx, models.SaveConversationAIValuesParams{
-			ConversationID: args.ConversationID, WorkspaceID: args.WorkspaceID, Values: raw,
+		now := w.Now
+		if err := q.SaveDetectedConversationAttributeValues(ctx, models.SaveDetectedConversationAttributeValuesParams{
+			ConversationID: args.ConversationID, WorkspaceID: args.WorkspaceID, Values: values, Sources: sources,
 			CheckedMessageID: &r.newest, Now: &now,
 		}); err != nil {
-			return fmt.Errorf("save ai values: %w", err)
-		}
-
-		for _, ch := range changes {
-			ev := appevents.ConversationAIAttributeChanged{
-				Base: appevents.Base{
-					ID: ids.New(), WorkspaceID: args.WorkspaceID, OccurredAt: now,
-					Actor: appevents.Actor{Type: "system"},
-				},
-				ConversationRef: appevents.ConversationRef{ConversationID: args.ConversationID},
-				Key:             ch.key, From: ch.from, To: ch.to,
-			}
-			if err := a.Events.Dispatch(ctx, tx, ev); err != nil {
-				return err
-			}
+			return fmt.Errorf("save conversation attribute values: %w", err)
 		}
 
 		return nil
@@ -281,33 +288,24 @@ func (a *Attributes) keep(
 }
 
 /*
-change is one value set or changed.
+sure keeps the values found that fit the field the AI was asked for,
+by key.
 */
-type change struct {
-	key      string
-	from, to any
-}
-
-/*
-merge keeps every value found that fits its attribute, over the value
-kept, and lists what changed.
-*/
-func merge(defs []models.AiConversationAttribute, kept, found map[string]any) (map[string]any, []change) {
-	next := maps.Clone(kept)
-
-	var changes []change
+func sure(defs []models.AiConversationAttribute, found map[string]any) map[string]any {
+	out := map[string]any{}
 
 	for _, d := range defs {
 		value, ok := found[d.Key]
-		if !ok || !aidecision.Fits(fieldOf(d), value) || same(kept[d.Key], value) {
+		if !ok || value == nil || !aidecision.Fits(fieldOf(d), value) {
 			continue
 		}
 
-		next[d.Key] = value
-		changes = append(changes, change{key: d.Key, from: kept[d.Key], to: value})
+		if fitted, problem := fit(d, value); problem == "" {
+			out[d.Key] = fitted
+		}
 	}
 
-	return next, changes
+	return out
 }
 
 /*
@@ -341,7 +339,7 @@ fieldOf turns one attribute into a field.
 */
 func fieldOf(d models.AiConversationAttribute) aidecision.Field {
 	return aidecision.Field{
-		Key: d.Key, Label: d.Label, Description: d.Description, Type: d.DataType, Options: d.Options,
+		Key: d.Key, Label: d.Label, Description: d.Description, Type: aiType(d.DataType), Options: d.Options,
 	}
 }
 
