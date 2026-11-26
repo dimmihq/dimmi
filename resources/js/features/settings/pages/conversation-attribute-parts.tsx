@@ -49,6 +49,12 @@ export function OptionDescriptions({
 }
 
 /*
+ * rowHover is how a list row lights up under the pointer: the whole
+ * row, from its drag handle to its chevron.
+ */
+const rowHover = "-ms-1.5 ps-1.5 pe-1 rounded-lg transition-colors duration-150 hover:bg-background-secondary-hover";
+
+/*
  * Movable is a row the team drags into a new place by its handle, or
  * moves with the arrow keys on the handle. The whole row follows the
  * pointer, not just the handle. While a row is dragged, a
@@ -79,12 +85,16 @@ export function Movable({
   children: ReactNode;
 }) {
   if (!movable) {
-    return <li className="border-b border-separator-border pe-1 last:border-b-0">{children}</li>;
+    return <li className={rowHover}>{children}</li>;
   }
 
   return (
     <li
-      className={cx("relative flex items-center rounded-xl bg-background-secondary-default", dragging && "opacity-50")}
+      className={cx(
+        "relative flex items-center gap-1 bg-background-secondary-default",
+        rowHover,
+        dragging && "opacity-50",
+      )}
       onDragOver={(event: DragEvent) => {
         event.preventDefault();
         event.dataTransfer.dropEffect = "move";
@@ -125,7 +135,7 @@ export function Movable({
             onStep(event.key === "ArrowUp" ? -1 : 1);
           }
         }}
-        className="-ms-2 flex h-8 w-5 shrink-0 cursor-grab items-center justify-center rounded-md text-foreground-icon-tertiary outline-none hover:bg-background-secondary-hover focus-visible:ring-2 focus-visible:ring-border-focus-ring active:cursor-grabbing"
+        className="flex h-8 w-5 shrink-0 cursor-grab items-center justify-center rounded-md text-foreground-icon-tertiary outline-none focus-visible:ring-2 focus-visible:ring-border-focus-ring active:cursor-grabbing"
       >
         <RiDraggable aria-hidden className="size-4" />
       </button>

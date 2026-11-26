@@ -41,7 +41,7 @@ const tabs = { active: "active", archived: "archived" } as const;
 
 /*
  * Line is one attribute in the list, the way settings lists open an
- * item's page: the whole row is the button, it lights up under the
+ * item's page: the whole row, drag handle and all, lights up under the
  * pointer, and a chevron at its end says it leads somewhere. It shows
  * the type's mark, the name, the type and who fills it, and its chips.
  */
@@ -61,7 +61,7 @@ function Line({
       type="button"
       onClick={onOpen}
       aria-label={`Open ${attribute.label}`}
-      className="-ms-1.5 flex min-h-[52px] w-[calc(100%+0.375rem)] cursor-pointer items-center gap-3 rounded-lg py-2.5 ps-1.5 pe-2.5 text-start outline-none transition-colors duration-150 hover:bg-background-secondary-hover focus-visible:ring-2 focus-visible:ring-border-focus-ring"
+      className="flex min-h-[52px] w-full min-w-0 cursor-pointer items-center gap-3 rounded-lg py-2.5 pe-2.5 text-start outline-none focus-visible:ring-2 focus-visible:ring-border-focus-ring"
     >
       <span className="flex shrink-0 items-center">
         <Glyph icon={typeIcons[attribute.data_type]} />
