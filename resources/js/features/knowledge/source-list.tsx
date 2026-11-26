@@ -128,7 +128,7 @@ function SourceTable({
     return (
       <div className="flex flex-col items-start gap-3 py-4 pe-3">
         <p className="text-body-2-regular text-text-tertiary">
-          No sources yet. Add your docs site, a repository, Notion, or import your Intercom or Zendesk help center.
+          No sources yet. Add your docs site, a repository, Notion, or an upload.
         </p>
         {onAdd ? (
           <Button variant="secondary" size="small" leadingIcon={RiAddLine} onClick={onAdd}>

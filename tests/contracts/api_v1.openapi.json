@@ -21859,7 +21859,7 @@
             "$ref": "#/components/schemas/IntegrationMemberGrant"
           },
           "provider": {
-            "description": "The tool connected, such as linear, jira, github, notion, intercom or zendesk.",
+            "description": "The tool connected, such as linear, jira, github or notion.",
             "type": "string"
           },
           "scopes": {
@@ -21998,7 +21998,7 @@
         "additionalProperties": false,
         "properties": {
           "account": {
-            "description": "For a service hosted per customer, such as Zendesk, the account to connect, up to 63 characters, such as the subdomain acme.",
+            "description": "For a service hosted per customer, the account to connect, up to 63 characters, such as the subdomain acme.",
             "maxLength": 63,
             "type": "string"
           },
@@ -23078,7 +23078,7 @@
             ]
           },
           "type": {
-            "description": "What kind of source it is, such as website, notion, github, markdown_upload, zendesk_help_center or intercom_help_center.",
+            "description": "What kind of source it is, such as website, notion, github or markdown_upload.",
             "type": "string"
           },
           "updated_at": {

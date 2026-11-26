@@ -14,8 +14,6 @@ Set each OAuth app's redirect URI to `https://<app_domain>/integrations/<service
 | **Jira** | `jira` | `JIRA__CLIENT_ID`, `JIRA__CLIENT_SECRET` |
 | **GitHub** | `github` | `GITHUB__CLIENT_ID`, `GITHUB__CLIENT_SECRET`, `TRACKERS__GITHUB_WEBHOOK_SECRET` |
 | **Notion** | `notion` | `NOTION__CLIENT_ID`, `NOTION__CLIENT_SECRET` |
-| **Intercom** | `intercom` | `INTERCOM__CLIENT_ID`, `INTERCOM__CLIENT_SECRET` |
-| **Zendesk** | `zendesk` | `ZENDESK__CLIENT_ID`, `ZENDESK__CLIENT_SECRET` |
 | **WhatsApp** | None | `WHATSAPP__APP_ID`, `WHATSAPP__APP_SECRET`, `WHATSAPP__CONFIG_ID`, `WHATSAPP__VERIFY_TOKEN` |
 | **Instagram, Messenger** | None | `META__APP_ID`, `META__APP_SECRET`, `META__VERIFY_TOKEN`, `INSTAGRAM__CONFIG_ID`, `FACEBOOK__CONFIG_ID` |
 
@@ -38,4 +36,4 @@ EOF
 - **GitHub:** one OAuth app powers both [knowledge sources](/ai/knowledge-sources/) and [linked issues](/tickets/linked-issues/). Set `TRACKERS__GITHUB_WEBHOOK_SECRET` to a random string dimmi uses to sign repo webhooks. [GitHub sign-in](/self-hosting/sign-in-providers/) uses a separate OAuth app.
 - **incident.io, Rootly, PagerDuty:** no server setup required; each workspace connects with its own API key.
 
-To hide specific integrations server-wide, set `DIMMI_INTEGRATIONS__ENABLED` to the comma-separated list you want to keep (default: `slack,notion,intercom,zendesk,github,linear,jira,incident_io,rootly,pagerduty`).
+To hide specific integrations server-wide, set `DIMMI_INTEGRATIONS__ENABLED` to the comma-separated list you want to keep (default: `slack,notion,github,linear,jira,incident_io,rootly,pagerduty`).
