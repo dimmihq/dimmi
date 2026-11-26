@@ -37,6 +37,14 @@ type Error struct {
 	Message string
 }
 
+/*
+Refused reports whether dimmi turned the request down for what it held,
+which sending it again won't change.
+*/
+func (e *Error) Refused() bool {
+	return e.Status >= 400 && e.Status < 500 && e.Status != http.StatusUnauthorized && e.Status != http.StatusTooManyRequests
+}
+
 func (e *Error) Error() string {
 	return fmt.Sprintf("dimmi answered %d %s: %s", e.Status, e.Code, e.Message)
 }

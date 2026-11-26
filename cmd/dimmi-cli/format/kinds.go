@@ -70,9 +70,9 @@ const (
 The attribute types.
 */
 const (
-	TypeText     = "text"
+	TypeText     = "string"
 	TypeNumber   = "number"
-	TypeDecimal  = "decimal"
+	TypeDecimal  = "number"
 	TypeBoolean  = "boolean"
 	TypeDate     = "date"
 	TypeList     = "list"

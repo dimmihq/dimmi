@@ -112,8 +112,22 @@ func textLine(e Event, verbose bool) string {
 	return ""
 }
 
-func label(kind format.Kind) string {
-	return strings.ReplaceAll(string(kind), "_", " ") + "s"
+func label(kind format.Kind) string { return Label(kind) }
+
+/*
+Label is a kind's plural name for people: "companies", "saved replies".
+*/
+func Label(kind format.Kind) string {
+	name := strings.ReplaceAll(string(kind), "_", " ")
+
+	switch {
+	case strings.HasSuffix(name, "y") && !strings.HasSuffix(name, "ay") && !strings.HasSuffix(name, "ey"):
+		return strings.TrimSuffix(name, "y") + "ies"
+	case strings.HasSuffix(name, "s"):
+		return name
+	}
+
+	return name + "s"
 }
 
 func countText(counts map[string]int) string {

@@ -189,7 +189,7 @@ func (s *Source) Discover(ctx context.Context) (engine.Inventory, error) {
 			var out list[macro]
 			err := s.Client.get(ctx, "/macros", url.Values{"per_page": {"150"}}, &out)
 
-			return max(out.TotalCount, len(out.Data)), err
+			return max(int(out.TotalCount), len(out.Data)), err
 		}, true, "macros become saved replies; their placeholders are rewritten"),
 		counter(format.KindSchedule, length("/office_hours_schedules", nil, "data"), false),
 		counter(format.KindConversation, func() (int, error) {

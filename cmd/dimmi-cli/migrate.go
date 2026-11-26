@@ -285,7 +285,7 @@ func (a *app) plan(ctx context.Context, workflows []string) error {
 			count = "-"
 		}
 
-		fmt.Fprintf(w, "  %-24s %10s", strings.ReplaceAll(string(k.Kind), "_", " ")+"s", count)
+		fmt.Fprintf(w, "  %-24s %10s", engine.Label(k.Kind), count)
 
 		if len(k.Notes) > 0 {
 			fmt.Fprintf(w, "   %s", strings.Join(k.Notes, "; "))
@@ -430,7 +430,7 @@ func (a *app) verify(ctx context.Context, sample int) error {
 				mark = "✗"
 			}
 
-			fmt.Fprintf(w, "%s %-22s %8d %8d %8d %8d\n", mark, strings.ReplaceAll(string(k.Kind), "_", " ")+"s", k.Source, k.Dimmi, k.Sampled, len(k.Missing))
+			fmt.Fprintf(w, "%s %-22s %8d %8d %8d %8d\n", mark, engine.Label(k.Kind), k.Source, k.Dimmi, k.Sampled, len(k.Missing))
 		}
 
 		_ = w.Flush()
@@ -501,7 +501,7 @@ func (a *app) status(ctx context.Context) error {
 			state = "in progress"
 		}
 
-		line := fmt.Sprintf("  %-24s %-12s", strings.ReplaceAll(string(k), "_", " ")+"s", state)
+		line := fmt.Sprintf("  %-24s %-12s", engine.Label(k), state)
 		if st.Migration != nil {
 			c := st.Migration.Counts[k]
 			line += fmt.Sprintf(" %d in dimmi", c.Total())

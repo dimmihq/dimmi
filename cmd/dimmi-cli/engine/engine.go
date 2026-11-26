@@ -441,7 +441,14 @@ func (e *Engine) upload(ctx context.Context, migration string, f *format.File) (
 		return "", err
 	}
 
-	return e.Dest.Upload(ctx, migration, Upload{SourceID: f.SourceID, Name: f.Name, ContentType: f.ContentType, Size: n, Body: tmp})
+	id, err := e.Dest.Upload(ctx, migration, Upload{SourceID: f.SourceID, Name: f.Name, ContentType: f.ContentType, Size: n, Body: tmp})
+
+	var refused interface{ Refused() bool }
+	if errors.As(err, &refused) && refused.Refused() {
+		return "", &skipFile{fmt.Sprintf("dimmi refused a file: %v", err)}
+	}
+
+	return id, err
 }
 
 /*

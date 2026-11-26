@@ -28,7 +28,7 @@
         "9"
       ],
       "custom_attributes": {
-        "Issue type": "Billing"
+        "issue_type": "Billing"
       },
       "rating": {
         "score": 5,
@@ -121,7 +121,7 @@
           },
           "event": {
             "type": "attribute",
-            "attribute": "Issue type",
+            "attribute": "issue_type",
             "value": "Billing",
             "raw_type": "conversation_attribute_updated_by_admin"
           }

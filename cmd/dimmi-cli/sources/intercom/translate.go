@@ -136,7 +136,7 @@ func translateDataAttribute(a dataAttribute) (format.Record, bool) {
 	id := object + "_" + string(a.ID)
 
 	return format.NewRecord(format.KindAttributeDefinition, id, &format.AttributeDefinition{
-		Base: format.Base{SourceID: id, SourceUpdatedAt: when(a.UpdatedAt)}, Object: object, Key: a.Name,
+		Base: format.Base{SourceID: id, SourceUpdatedAt: when(a.UpdatedAt)}, Object: object, Key: attrKey(a.Name),
 		Label: text(firstOf(a.Label, a.Name)), Type: typ, Options: a.Options, Description: text(a.Description), Archived: a.Archived,
 	}), true
 }
@@ -159,9 +159,75 @@ func translateConversationAttribute(a conversationAttribute) (format.Record, boo
 
 	return format.NewRecord(format.KindAttributeDefinition, id, &format.AttributeDefinition{
 		Base: format.Base{SourceID: id, SourceUpdatedAt: when(a.UpdatedAt)}, Object: format.ObjectConversation,
-		Key: a.Name, Label: text(a.Name), Type: typ, Options: options, Description: text(a.Description),
+		Key: attrKey(a.Name), Label: text(a.Name), Type: typ, Options: options, Description: text(a.Description),
 		Archived: a.Archived, Multiline: a.Multiline, Required: a.Required,
 	}), true
+}
+
+/*
+attrKey turns an Intercom attribute name, such as "Beta tester", into a
+dimmi attribute key, beta_tester. Contact, company and conversation
+values are keyed the same way, so they land in their attributes.
+*/
+func attrKey(name string) string {
+	var b strings.Builder
+
+	under := false
+
+	for _, r := range strings.ToLower(strings.TrimSpace(name)) {
+		switch {
+		case r >= 'a' && r <= 'z', r >= '0' && r <= '9':
+			b.WriteRune(r)
+
+			under = false
+		case !under && b.Len() > 0:
+			b.WriteByte('_')
+
+			under = true
+		}
+	}
+
+	key := strings.TrimRight(b.String(), "_")
+	if key == "" || key[0] >= '0' && key[0] <= '9' {
+		key = "attr_" + key
+	}
+
+	if slices.Contains(reservedKeys, key) {
+		key = "custom_" + key
+	}
+
+	if len(key) > 64 {
+		key = strings.TrimRight(key[:64], "_")
+	}
+
+	return key
+}
+
+/*
+reservedKeys are dimmi's standard fields, which a custom attribute can't
+take; an Intercom attribute named like one gets a custom_ prefix.
+*/
+var reservedKeys = []string{
+	"email", "name", "phone", "external_id", "kind", "locale", "timezone", "country", "region", "city",
+	"created_at", "first_seen_at", "last_seen_at", "tags", "company", "domain", "id",
+	"claimed_user_id", "test_member_id",
+}
+
+/*
+attrValues keys a record's custom attributes the way their definitions
+are keyed.
+*/
+func attrValues(in map[string]any) map[string]any {
+	if len(in) == 0 {
+		return nil
+	}
+
+	out := make(map[string]any, len(in))
+	for k, v := range in {
+		out[attrKey(k)] = v
+	}
+
+	return out
 }
 
 func firstOf(values ...string) string {
@@ -181,7 +247,7 @@ dimmi has no column for are kept as custom attributes.
 func translateCompany(c company) format.Record {
 	attrs := map[string]any{}
 	for k, v := range c.CustomAttrs {
-		attrs[k] = v
+		attrs[attrKey(k)] = v
 	}
 
 	var plan struct {
@@ -272,10 +338,7 @@ func translateContact(c contact, tags, companies []string) format.Record {
 		links = append(links, format.CompanyLink{Ref: id, Default: i == 0})
 	}
 
-	attrs := c.CustomAttrs
-	if len(attrs) == 0 {
-		attrs = nil
-	}
+	attrs := attrValues(c.CustomAttrs)
 
 	return format.NewRecord(format.KindContact, string(c.ID), &format.Contact{
 		Base: base(c.ID, c.UpdatedAt), Kind: kind, ExternalID: c.ExternalID, Email: text(c.Email), Name: text(c.Name),
@@ -365,7 +428,7 @@ func translateTicketType(t ticketType) format.Record {
 		}
 
 		tt.Fields = append(tt.Fields, format.TicketField{
-			SourceID: string(a.ID), Key: a.Name, Label: text(a.Name), Type: typ, Options: options,
+			SourceID: string(a.ID), Key: attrKey(a.Name), Label: text(a.Name), Type: typ, Options: options,
 			CustomerVisible: a.VisibleToContacts, Required: a.RequiredToCreate, Multiline: a.Input.Multiline,
 		})
 	}
@@ -376,12 +439,23 @@ func translateTicketType(t ticketType) format.Record {
 
 	for _, s := range states {
 		tt.States = append(tt.States, format.TicketState{
-			SourceID: string(s.ID), Group: s.Category, Name: text(firstOf(s.InternalLabel, s.ExternalLabel, s.Category)),
+			SourceID: string(s.ID), Group: stateGroup(s.Category), Name: text(firstOf(s.InternalLabel, s.ExternalLabel, s.Category)),
 			CustomerLabel: text(s.ExternalLabel),
 		})
 	}
 
 	return format.NewRecord(format.KindTicketType, tt.SourceID, tt)
+}
+
+/*
+stateGroup maps Intercom's ticket state categories onto dimmi's groups.
+*/
+func stateGroup(category string) string {
+	if category == "waiting_on_customer" {
+		return "waiting_customer"
+	}
+
+	return category
 }
 
 func translateHelpCenter(h helpCenter, defaultLocale string) format.Record {
@@ -796,7 +870,7 @@ func parseTime(s string) *time.Time {
 	return nil
 }
 
-var weekdays = []string{"monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"}
+var weekdays = []string{"mon", "tue", "wed", "thu", "fri", "sat", "sun"}
 
 func clock(minute int) string {
 	if minute >= 1440 {

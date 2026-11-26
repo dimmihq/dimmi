@@ -257,7 +257,7 @@ func TestWorkflowID(t *testing.T) {
 
 func TestWeeklySplitsAtMidnight(t *testing.T) {
 	got := weekly([]interval{{StartMinute: 1380, EndMinute: 1500}})
-	if len(got) != 2 || got[0].Day != "monday" || got[0].End != "24:00" || got[1].Day != "tuesday" || got[1].End != "01:00" {
+	if len(got) != 2 || got[0].Day != "mon" || got[0].End != "24:00" || got[1].Day != "tue" || got[1].End != "01:00" {
 		t.Errorf("%+v", got)
 	}
 }

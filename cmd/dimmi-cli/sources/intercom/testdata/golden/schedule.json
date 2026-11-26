@@ -8,22 +8,22 @@
       "timezone": "Europe/Berlin",
       "weekly": [
         {
-          "day": "monday",
+          "day": "mon",
           "start": "09:00",
           "end": "17:00"
         },
         {
-          "day": "tuesday",
+          "day": "tue",
           "start": "09:00",
           "end": "17:00"
         },
         {
-          "day": "saturday",
+          "day": "sat",
           "start": "15:00",
           "end": "24:00"
         },
         {
-          "day": "sunday",
+          "day": "sun",
           "start": "00:00",
           "end": "01:00"
         }

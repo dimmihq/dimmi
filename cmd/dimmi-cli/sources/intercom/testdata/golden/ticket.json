@@ -9,7 +9,7 @@
       "title": "Refund \u0026 credit",
       "description": "Customer wants money back",
       "values": {
-        "Amount": 30
+        "amount": 30
       },
       "contact_ref": "c-1",
       "assignee_ref": "501",

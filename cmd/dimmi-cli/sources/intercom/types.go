@@ -54,6 +54,23 @@ func (ids IDs) strings() []string {
 }
 
 /*
+Num is a count the API sends as a number in some lists and a string in
+others.
+*/
+type Num int
+
+func (n *Num) UnmarshalJSON(raw []byte) error {
+	var t Time
+	if err := t.UnmarshalJSON(raw); err != nil {
+		return err
+	}
+
+	*n = Num(t)
+
+	return nil
+}
+
+/*
 Time is a Unix time the API sends as a number, sometimes a string.
 */
 type Time int64
@@ -148,12 +165,12 @@ type conversationAttribute struct {
 type list[T any] struct {
 	Data  []T `json:"data"`
 	Pages struct {
-		Page       int `json:"page"`
-		TotalPages int `json:"total_pages"`
+		Page       Num `json:"page"`
+		TotalPages Num `json:"total_pages"`
 		Next       json.RawMessage
 	} `json:"pages"`
 	HasMore    bool   `json:"has_more"`
-	TotalCount int    `json:"total_count"`
+	TotalCount Num    `json:"total_count"`
 	Scroll     string `json:"scroll_param"`
 }
 

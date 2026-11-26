@@ -452,7 +452,7 @@ func (s *Source) contactCompanies(ctx context.Context, id ID) ([]string, error) 
 			ids = append(ids, string(c.ID))
 		}
 
-		if len(out.Data) == 0 || out.Pages.TotalPages <= page {
+		if len(out.Data) == 0 || int(out.Pages.TotalPages) <= page {
 			break
 		}
 	}
@@ -475,7 +475,7 @@ func (s *Source) contactNotes(ctx context.Context, c contact) ([]format.Record, 
 			recs = append(recs, translateNote(n, string(c.ID)))
 		}
 
-		if len(out.Data) < 60 || out.Pages.TotalPages <= page {
+		if len(out.Data) < 60 || int(out.Pages.TotalPages) <= page {
 			break
 		}
 	}
@@ -600,7 +600,7 @@ func (s *Source) readCollections(ctx context.Context, opts engine.ReadOptions, e
 			recs = append(recs, translateCollection(c, hc))
 		}
 
-		last := len(out.Data) == 0 || page >= out.Pages.TotalPages
+		last := len(out.Data) == 0 || page >= int(out.Pages.TotalPages)
 		next := ""
 
 		if !last {
@@ -647,7 +647,7 @@ func (s *Source) collectionCenters(ctx context.Context) (map[string]string, erro
 			centers[string(c.ID)] = string(c.HelpCenterID)
 		}
 
-		if len(out.Data) == 0 || page >= out.Pages.TotalPages {
+		if len(out.Data) == 0 || page >= int(out.Pages.TotalPages) {
 			break
 		}
 	}
@@ -694,7 +694,7 @@ func (s *Source) readArticles(ctx context.Context, opts engine.ReadOptions, emit
 			recs = append(recs, translateArticle(a, hc, lang))
 		}
 
-		last := len(out.Data) == 0 || page >= out.Pages.TotalPages
+		last := len(out.Data) == 0 || page >= int(out.Pages.TotalPages)
 		next := strconv.Itoa(page + 1)
 
 		if last {
@@ -729,7 +729,7 @@ func (s *Source) readArticles(ctx context.Context, opts engine.ReadOptions, emit
 			recs = append(recs, translateInternalArticle(a, s.defaultHC))
 		}
 
-		last := len(out.Data) == 0 || page >= out.Pages.TotalPages
+		last := len(out.Data) == 0 || page >= int(out.Pages.TotalPages)
 		next := ""
 
 		if !last {
@@ -778,7 +778,7 @@ func (s *Source) readSnippets(ctx context.Context, opts engine.ReadOptions, emit
 			recs = append(recs, translateSnippet(sn, s.defaultHC))
 		}
 
-		last := len(out.Data) < 50 || (out.Pages.TotalPages > 0 && page >= out.Pages.TotalPages)
+		last := len(out.Data) < 50 || (int(out.Pages.TotalPages) > 0 && page >= int(out.Pages.TotalPages))
 		next := ""
 
 		if !last {

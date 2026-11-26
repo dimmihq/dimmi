@@ -237,7 +237,7 @@ func (t *convTranslation) entry(p part) []format.Entry {
 		"conversation_attribute_updated_by_user":
 		name, value := eventDetails(p.EventDetails)
 		if name != "" {
-			return event(format.Event{Type: format.EventAttribute, Attribute: name, Value: value})
+			return event(format.Event{Type: format.EventAttribute, Attribute: attrKey(name), Value: value})
 		}
 	case "priority_changed", "priority_updated", "conversation_priority_changed":
 		return event(format.Event{Type: format.EventCustom, Text: plain(p.Body)})
@@ -364,12 +364,8 @@ func translateConversation(c conversation, parts []part, known map[string]bool) 
 	conv := &format.Conversation{
 		Base: base(c.ID, c.UpdatedAt), Channel: channel(c.Source.Type), Subject: text(firstOf(c.Title, c.Source.Subject)),
 		CreatedAt: at(c.CreatedAt), Status: status(c.State, false), SnoozedUntil: when(c.SnoozedUntil),
-		Priority: priority(c.Priority), Attributes: c.CustomAttrs, Entries: []format.Entry{},
+		Priority: priority(c.Priority), Attributes: attrValues(c.CustomAttrs), Entries: []format.Entry{},
 		Source: format.ConversationSource{Type: c.Source.Type, URL: c.Source.URL},
-	}
-
-	if len(conv.Attributes) == 0 {
-		conv.Attributes = nil
 	}
 
 	for i, ct := range c.Contacts.Contacts {
@@ -474,7 +470,7 @@ func translateTicket(tk ticket, known map[string]bool) (format.Record, []Former)
 		case defaultDescription:
 			description, _ = v.(string)
 		default:
-			values[k] = v
+			values[attrKey(k)] = v
 		}
 	}
 
