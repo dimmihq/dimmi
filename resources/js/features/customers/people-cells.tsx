@@ -3,9 +3,12 @@
  * were last seen.
  */
 import type { ReactNode } from "react";
+import { Focusable } from "react-aria-components";
 
 import { Avatar } from "@/components/base/avatar/avatar";
+import { Badge } from "@/components/base/badges/badge";
 import { Chip } from "@/components/base/badges/chip";
+import { Tooltip, TooltipTrigger } from "@/components/base/tooltip/tooltip";
 import { TagChip } from "@/features/inbox/tags/tag-chip";
 import { avatarColor } from "@/features/shell/avatar-color";
 import type { CompanySummary, Contact } from "@/lib/api/customers";
@@ -38,12 +41,39 @@ export function Person({ person }: { person: Contact }) {
   );
 }
 
+/*
+ * Company draws the person's default company and, when they belong to
+ * more, how many more, naming them on hover.
+ */
 export function Company({ person }: { person: Contact }) {
   if (!person.company) {
     return <Muted>—</Muted>;
   }
 
-  return <CompanyName company={person.company} />;
+  const others = (person.companies ?? []).filter((c) => c.id !== person.company?.id);
+
+  return (
+    <span className="flex min-w-0 items-center gap-1.5">
+      <CompanyName company={person.company} />
+      {others.length > 0 ? (
+        <TooltipTrigger delay={200}>
+          <Focusable>
+            <span
+              role="img"
+              tabIndex={0}
+              aria-label={`Also at ${others.map((c) => c.name).join(", ")}`}
+              className="inline-flex shrink-0 rounded-sm outline-none focus-visible:ring-2 focus-visible:ring-border-focus-ring"
+            >
+              <Badge aria-hidden>+{others.length}</Badge>
+            </span>
+          </Focusable>
+          <Tooltip size="md" className="max-w-[280px]">
+            Also at {others.map((c) => c.name).join(", ")}
+          </Tooltip>
+        </TooltipTrigger>
+      ) : null}
+    </span>
+  );
 }
 
 /*

@@ -25,6 +25,15 @@ export interface CompanySummary {
   domain: string | null;
 }
 
+/*
+ * ContactCompany is one company a customer belongs to: whether it is
+ * their default and when it was added to them.
+ */
+export interface ContactCompany extends CompanySummary {
+  is_default: boolean;
+  added_at: string;
+}
+
 export interface Contact {
   id: string;
   object: "contact";
@@ -42,6 +51,7 @@ export interface Contact {
   notes: string | null;
   location: Location | null;
   company: CompanySummary | null;
+  companies?: ContactCompany[];
   tags: Tag[];
   first_seen_at: string | null;
   last_seen_at: string | null;
@@ -85,6 +95,7 @@ export interface ContactChanges {
   phone?: string | null;
   notes?: string | null;
   company_id?: string | null;
+  company_ids?: string[];
   custom_attributes?: Record<string, unknown>;
   add_tags?: string[];
   remove_tags?: string[];

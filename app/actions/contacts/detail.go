@@ -17,6 +17,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/dimmihq/dimmi/framework/database"
 	"github.com/dimmihq/dimmi/framework/ids"
 
 	"github.com/dimmihq/dimmi/app/models"
@@ -106,4 +107,28 @@ func LoadDetail(ctx context.Context, q *models.Queries, c models.Contact) (Detai
 	}
 
 	return details[0], nil
+}
+
+/*
+DescribeContacts loads what is shown beside contacts another action
+already read, such as a company's people, in a transaction of its own.
+*/
+type DescribeContacts struct {
+	DB *database.DB
+}
+
+/*
+Handle returns the contacts' details, in the order given.
+*/
+func (a *DescribeContacts) Handle(ctx context.Context, rows []models.Contact) ([]Detail, error) {
+	var out []Detail
+
+	err := a.DB.Transaction(ctx, func(ctx context.Context, tx *database.Tx) error {
+		var err error
+		out, err = LoadDetails(ctx, models.New(tx), rows)
+
+		return err
+	})
+
+	return out, err
 }

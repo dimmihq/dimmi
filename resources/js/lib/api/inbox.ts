@@ -77,6 +77,8 @@ export interface Conversation {
   channel: { id: string; type: string; name: string };
   inbox: Named;
   contact: ContactSummary;
+  /* The company the conversation is about, one of the customer's. */
+  company?: { id: string; object: "company"; name: string; domain: string | null } | null;
   assignee: Named | null;
   team: Named | null;
   last_message: MessageSummary | null;
@@ -281,6 +283,7 @@ export interface ConversationChanges {
   snoozed_until?: string;
   priority?: ConversationPriority;
   team_id?: string | null;
+  company_id?: string;
   unread?: boolean;
   spam?: boolean;
   ai_enabled?: boolean;

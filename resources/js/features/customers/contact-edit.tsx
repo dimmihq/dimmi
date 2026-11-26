@@ -1,6 +1,6 @@
 /*
  * Editing one customer in a modal opened from their row: their name,
- * email and phone, the tags they carry, the attributes the workspace
+ * email and phone, the companies they belong to, the tags they carry, the attributes the workspace
  * keeps on people and any others they have, and the team's notes. People
  * who look like the same person are listed first, to open and compare.
  * Everything is saved together on Save, and a field the server refuses
@@ -27,6 +27,7 @@ import { ApiError } from "@/lib/api/client";
 import { type Contact, contactQuery, updateContact } from "@/lib/api/customers";
 import { type Tag, tagsQuery } from "@/lib/api/tags";
 
+import { ContactCompanies } from "./contact-companies";
 import { Activity, Duplicates } from "./contact-edit-extras";
 import { changesOf, definedOn, type EditState, editStateOf } from "./contact-edit-state";
 import { personName, useWorkspace } from "./names";
@@ -255,6 +256,7 @@ function EditForm({
         <fieldset disabled={!canWrite} className="flex min-w-0 flex-col gap-6">
           <Duplicates contact={contact} canMerge={canWrite} />
           <Details state={state} set={set} fields={fields} />
+          <ContactCompanies state={state} set={set} />
           <Tags state={state} set={set} />
           <Attributes state={state} set={set} defined={defined} />
           <Section title="Notes">

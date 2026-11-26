@@ -37,4 +37,27 @@ describe("contact edit state", () => {
       custom_attributes: { legacy: null, seats: 5, plan: "pro" },
     });
   });
+
+  it("sends the company list when one is added or removed, and the default when it moves", () => {
+    const acme = { id: "cmp_1", object: "company" as const, name: "Acme", domain: null };
+    const globex = { id: "cmp_2", object: "company" as const, name: "Globex", domain: null };
+    const member = {
+      ...contact,
+      company: acme,
+      companies: [
+        { ...acme, is_default: true, added_at: "" },
+        { ...globex, is_default: false, added_at: "" },
+      ],
+    } as Contact;
+
+    const moved = editStateOf(member, []);
+    moved.defaultCompany = "cmp_2";
+    expect(changesOf(member, [], moved)).toEqual({ company_id: "cmp_2" });
+
+    const removed = editStateOf(member, []);
+    removed.companies = [];
+    removed.defaultCompany = null;
+    expect(changesOf(member, [], removed).company_ids).toEqual([]);
+    expect(changesOf(member, [], removed).company_id).toBeUndefined();
+  });
 });

@@ -1,7 +1,8 @@
 /*
  * The ticket part of the details beside a conversation that is a
  * ticket: its reference, then rows for its type, its state, what the
- * customer sees of it and when the next reply is due, each changed by
+ * customer sees of it, which of the customer's companies it is about
+ * when they have several, and when the next reply is due, each changed by
  * pressing its value. Below them its fields with the AI's suggestions,
  * and, only when there are any, the back-office work linked to it, the
  * trackers the conversation joined and the issues behind it. A
@@ -23,6 +24,7 @@ import { BackOfficeCard } from "./back-office-card";
 import { TicketIssues } from "./issues/ticket-issues";
 import { dueIn } from "./labels";
 import { StatePill, TypeIcon } from "./state-pill";
+import { TicketCompanyRow } from "./ticket-company";
 import { ClashPrompt, FieldsEditor, StateMenu } from "./ticket-fields";
 import { type TicketSave, useTicketSave } from "./use-ticket-save";
 import { useTicketSetup } from "./use-ticket-setup";
@@ -140,6 +142,7 @@ function OwnTicket({ workspace, ticket }: { workspace: string; ticket: Ticket })
         <Row label="Customer sees">
           <span className="truncate">{current?.customer_label ?? ticket.state.customer_label}</span>
         </Row>
+        <TicketCompanyRow workspace={workspace} ticket={ticket} save={save} />
         {nextDue(ticket.sla_clocks) ? (
           <Row label="SLA">
             <SlaLine clocks={ticket.sla_clocks} />

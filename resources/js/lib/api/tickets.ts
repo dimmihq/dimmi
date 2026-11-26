@@ -459,6 +459,7 @@ export interface TicketChange {
   priority?: TicketPriority;
   assignee_id?: string | null;
   team_id?: string | null;
+  company_id?: string;
   accept_suggestions?: string[];
 }
 

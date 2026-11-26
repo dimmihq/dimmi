@@ -50,6 +50,7 @@ import { TicketIssues } from "./issues/ticket-issues";
 import { ToolMark } from "./issues/tool-logos";
 import { eventText, priorityLabel } from "./labels";
 import { StatePill, TypeIcon } from "./state-pill";
+import { TicketCompanyRow } from "./ticket-company";
 import { ClashPrompt, FieldsEditor, StateMenu } from "./ticket-fields";
 import { type TicketSave, useTicketSave } from "./use-ticket-save";
 import { useTicketSetup } from "./use-ticket-setup";
@@ -294,7 +295,8 @@ export function NoteBox({ workspace, ticket, bare = false }: { workspace: string
 }
 
 /*
- * Holders are who holds the ticket and how urgent it is.
+ * Holders are who holds the ticket, how urgent it is and, for a
+ * customer in several companies, which company it is about.
  */
 export function Holders({ workspace, ticket, save }: { workspace: string; ticket: Ticket; save: TicketSave }) {
   const { data: members = [] } = useQuery({ ...membersQuery(workspace), enabled: workspace !== "" });
@@ -358,6 +360,7 @@ export function Holders({ workspace, ticket, save }: { workspace: string; ticket
           ))}
         </Select>
       </Row>
+      <TicketCompanyRow workspace={workspace} ticket={ticket} save={save} />
     </>
   );
 }

@@ -3,7 +3,7 @@
  * holds the moves they make on the case, in one Actions menu beside the
  * close button. Below come the case's own properties, its tags, what the
  * AI read off it, its ticket when it is one (or the trackers it joined), then who the
- * customer is, the team's notes on them, their company, their other
+ * customer is, the team's notes on them, their companies, their other
  * conversations and the feature requests the conversation was linked
  * to, all read from the conversation's context in one request. Each part
  * is an item of BoardUI's plain accordion, and a part with nothing to say
@@ -51,11 +51,20 @@ const sections = [
   "Instagram",
   "Facebook Messenger",
   "Company",
+  "Companies",
   "Past conversations",
   "Feature requests",
 ];
 
-function Customer({ workspace, conversation }: { workspace: string; conversation: Conversation }) {
+function Customer({
+  workspace,
+  conversation,
+  caze,
+}: {
+  workspace: string;
+  conversation: Conversation;
+  caze: CaseControls;
+}) {
   const { data: context, isPending } = useQuery(contextQuery(workspace, conversation.id));
 
   if (isPending) {
@@ -71,7 +80,7 @@ function Customer({ workspace, conversation }: { workspace: string; conversation
       <DuplicateBanner workspace={workspace} contact={context.contact.id} count={context.duplicates_count} />
       <ContactSection workspace={workspace} context={context} />
       <SocialSection workspace={workspace} conversation={conversation.id} channelType={conversation.channel.type} />
-      <CompanySection context={context} />
+      <CompanySection context={context} onSwitch={caze.setCompany} />
       <PastConversations workspace={workspace} context={context} current={conversation.id} />
       <Section title="Feature requests">
         <ConversationRequests
@@ -122,7 +131,7 @@ export function DetailsPanel({
             conversation={conversation.id}
             onConvert={onConvert ?? (() => undefined)}
           />
-          <Customer workspace={workspace} conversation={conversation} />
+          <Customer workspace={workspace} conversation={conversation} caze={caze} />
         </Accordion>
       </ScrollArea>
     </Panel>
