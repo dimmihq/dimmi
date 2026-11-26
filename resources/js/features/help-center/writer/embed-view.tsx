@@ -6,7 +6,7 @@
  */
 import { RiFilmLine } from "@remixicon/react";
 import { type NodeViewProps, NodeViewWrapper } from "@tiptap/react";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { Button } from "@/components/base/buttons/button";
 import { Input } from "@/components/base/input/input";
@@ -26,6 +26,14 @@ export function EmbedView({ node, updateAttributes, deleteNode, editor, selected
   const [name, setName] = useState(title);
   const [tried, setTried] = useState(false);
   const valid = resolveEmbed(link) !== null;
+
+  // A block just added asks for its settings, so bring it into view first.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: runs once, for a new block
+  useEffect(() => {
+    if (editing) {
+      anchor.current?.scrollIntoView({ block: "center" });
+    }
+  }, []);
 
   const close = () => {
     setEditing(false);

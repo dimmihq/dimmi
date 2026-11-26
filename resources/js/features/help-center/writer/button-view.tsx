@@ -5,7 +5,7 @@
  */
 import { RiAlignCenter, RiAlignLeft } from "@remixicon/react";
 import { type NodeViewProps, NodeViewWrapper } from "@tiptap/react";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { Button } from "@/components/base/buttons/button";
 import { Input } from "@/components/base/input/input";
@@ -33,6 +33,14 @@ export function ButtonView({ node, updateAttributes, deleteNode, editor, selecte
     setDraft({ label, href, align: align === "center" ? "center" : "start" });
     setEditing(true);
   };
+  // A block just added asks for its settings, so bring it into view first.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: runs once, for a new block
+  useEffect(() => {
+    if (editing) {
+      anchor.current?.scrollIntoView({ block: "center" });
+    }
+  }, []);
+
   const close = () => {
     setEditing(false);
     setTried(false);
