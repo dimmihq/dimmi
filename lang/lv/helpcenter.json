@@ -40,7 +40,8 @@
   "by_one": "Autors: {{.name}}",
   "by_many": "Autori: {{.name}} un citi",
   "updated": "Atjaunināts {{.date}}",
-  "updated_by": "Atjaunināts {{.date}}, autors: {{.name}}",
+  "updated_ago": "Atjaunināts {{.ago}}",
+  "written_by": "Autors: {{.name}}",
   "reading_time": "Lasīšanas laiks: {{.count}} min",
   "copy_page": "Kopēt lapu",
   "copied": "Nokopēts",
@@ -90,5 +91,27 @@
   "code": "Kods",
   "resend_code": "Sūtīt kodu vēlreiz",
   "use_another_email": "Izmantot citu e-pastu",
-  "date_format": "02.01.2006."
+  "date_format": "02.01.2006.",
+  "ago_today": "šodien",
+  "ago_yesterday": "vakar",
+  "ago_days": {
+    "zero": "pirms {{.count}} dienām",
+    "one": "pirms {{.count}} dienas",
+    "other": "pirms {{.count}} dienām"
+  },
+  "ago_weeks": {
+    "zero": "pirms vairāk nekā {{.count}} nedēļām",
+    "one": "pirms vairāk nekā nedēļas",
+    "other": "pirms vairāk nekā {{.count}} nedēļām"
+  },
+  "ago_months": {
+    "zero": "pirms vairāk nekā {{.count}} mēnešiem",
+    "one": "pirms vairāk nekā mēneša",
+    "other": "pirms vairāk nekā {{.count}} mēnešiem"
+  },
+  "ago_years": {
+    "zero": "pirms vairāk nekā {{.count}} gadiem",
+    "one": "pirms vairāk nekā {{.count}} gada",
+    "other": "pirms vairāk nekā {{.count}} gadiem"
+  }
 }

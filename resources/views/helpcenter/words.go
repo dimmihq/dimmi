@@ -57,3 +57,26 @@ func (c Center) Date(t time.Time) string {
 	}
 	return t.Format(c.T("date_format"))
 }
+
+/*
+Ago says how long before now a time was, as help centers say when an
+article last changed: today, yesterday, a few days ago, then over so
+many weeks, months or years ago, rounded down, in the page's language.
+*/
+func (c Center) Ago(t, now time.Time) string {
+	days := int(now.Sub(t).Hours() / 24)
+	switch {
+	case days < 1:
+		return c.T("ago_today")
+	case days == 1:
+		return c.T("ago_yesterday")
+	case days < 7:
+		return c.T("ago_days", "count", days)
+	case days < 30:
+		return c.T("ago_weeks", "count", days/7)
+	case days < 365:
+		return c.T("ago_months", "count", days/30)
+	default:
+		return c.T("ago_years", "count", days/365)
+	}
+}

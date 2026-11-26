@@ -40,7 +40,8 @@
   "by_one": "De {{.name}}",
   "by_many": "De {{.name}} și alții",
   "updated": "Actualizat pe {{.date}}",
-  "updated_by": "Actualizat pe {{.date}} de {{.name}}",
+  "updated_ago": "Actualizat {{.ago}}",
+  "written_by": "Scris de {{.name}}",
   "reading_time": "Timp de citire: {{.count}} min",
   "copy_page": "Copiază pagina",
   "copied": "Copiat",
@@ -90,5 +91,27 @@
   "code": "Cod",
   "resend_code": "Retrimite codul",
   "use_another_email": "Folosește alt e-mail",
-  "date_format": "02.01.2006"
+  "date_format": "02.01.2006",
+  "ago_today": "azi",
+  "ago_yesterday": "ieri",
+  "ago_days": {
+    "one": "acum {{.count}} zi",
+    "few": "acum {{.count}} zile",
+    "other": "acum {{.count}} de zile"
+  },
+  "ago_weeks": {
+    "one": "acum peste o săptămână",
+    "few": "acum peste {{.count}} săptămâni",
+    "other": "acum peste {{.count}} de săptămâni"
+  },
+  "ago_months": {
+    "one": "acum peste o lună",
+    "few": "acum peste {{.count}} luni",
+    "other": "acum peste {{.count}} de luni"
+  },
+  "ago_years": {
+    "one": "acum peste un an",
+    "few": "acum peste {{.count}} ani",
+    "other": "acum peste {{.count}} de ani"
+  }
 }

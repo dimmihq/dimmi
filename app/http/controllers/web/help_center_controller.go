@@ -23,6 +23,7 @@ import (
 	"errors"
 	"strings"
 
+	"github.com/dimmihq/dimmi/framework/clock"
 	fhttp "github.com/dimmihq/dimmi/framework/http"
 	"github.com/dimmihq/dimmi/framework/i18n"
 	"github.com/dimmihq/dimmi/framework/view"
@@ -57,6 +58,7 @@ Ratings keeps readers' answers about articles, and Passes signs readers
 in to the messenger on the help center's pages. Analytics counts views
 and searches, and Addresses names the help center's canonical address.
 Lang holds the words of the pages in every language.
+Clock says how long ago an article changed.
 */
 type HelpCenterController struct {
 	Library     *helpsample.Library
@@ -74,6 +76,7 @@ type HelpCenterController struct {
 	Analytics   *helpcenters.Analytics
 	Addresses   helpcenters.Addresses
 	Lang        *i18n.Translator
+	Clock       clock.Clock
 }
 
 /*
@@ -176,6 +179,9 @@ func (c *HelpCenterController) Article(w fhttp.ResponseWriter, r *fhttp.Request)
 		Answer: query.Get("helpful"), Commented: query.Has("commented"), Limited: query.Has("limited"),
 	}
 	c.countView(r, lib, slug)
+	if c.Clock != nil {
+		article.Age = center.Ago(article.Updated, c.Clock.Now())
+	}
 	page := helpcenter.ArticlePage(center, lib.Collections(), article, helpful, c.styles())
 	c.respond(w, r, fhttp.StatusOK, page)
 }
@@ -257,11 +263,7 @@ func (c *HelpCenterController) site(w fhttp.ResponseWriter, r *fhttp.Request,
 	if c.Public != nil {
 		snap, err := c.Public.LoadIn(r.Context(), slug, readingLocale(r.Context()))
 		if err == nil {
-			if c.localeAnswered(w, r, snap.HelpCenter, base) {
-				return helpcenter.Center{}, nil, false
-			}
-			keepLanguage(w, r, snap.HelpCenter, base)
-			return c.realSite(w, r, snap, base)
+			return c.publicSite(w, r, snap, base)
 		}
 		if !errors.Is(err, helpcenters.ErrNoHelpCenter) {
 			c.Errors.Render(w, r, err)
@@ -270,6 +272,20 @@ func (c *HelpCenterController) site(w fhttp.ResponseWriter, r *fhttp.Request,
 	}
 	center, ok := c.center(w, r)
 	return center, c.Library, ok
+}
+
+/*
+publicSite serves a real help center in the language the path names,
+after sending a reader of a language it does not offer elsewhere.
+*/
+func (c *HelpCenterController) publicSite(w fhttp.ResponseWriter, r *fhttp.Request, snap helpcenters.Snapshot,
+	base string,
+) (helpcenter.Center, HelpLibrary, bool) {
+	if c.localeAnswered(w, r, snap.HelpCenter, base) {
+		return helpcenter.Center{}, nil, false
+	}
+	keepLanguage(w, r, snap.HelpCenter, base)
+	return c.realSite(w, r, snap, base)
 }
 
 func origin(r *fhttp.Request) string {

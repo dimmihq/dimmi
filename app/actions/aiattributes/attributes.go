@@ -1,16 +1,18 @@
 /*
 |--------------------------------------------------------------------------
-| AI Conversation Attributes
+| Conversation Attributes
 |--------------------------------------------------------------------------
 |
 | A workspace defines once the things it wants known about every
-| conversation: a name, a type (text, number, date, yes or no, or one of
-| a few choices) and what it means. The decision model fills them in
-| and checks them again as the customer writes. Workflows branch and
-| start on them and inbox views filter by them. A key and a type never
-| change once made; an attribute is archived instead of deleted, so
-| what read it keeps reading its last values. Reading takes
-| conversations:read; changing takes ai_agent:manage.
+| conversation: a name, a type and what it means. Teammates fill them in
+| the conversation's details, the AI fills the ones it may and checks
+| them again as the customer writes, or both. One may be required before
+| a teammate closes a conversation, and shown only to some teams.
+| Workflows branch and start on them and inbox views filter by them. A
+| key and a type never change once made; an attribute is archived
+| instead of deleted, so what read it keeps reading its last values.
+| Reading takes conversations:read; changing takes attributes:manage,
+| or ai_agent:manage as it did when the AI alone filled them.
 |
 */
 
@@ -31,6 +33,7 @@ import (
 	"github.com/dimmihq/dimmi/framework/ids"
 	"github.com/dimmihq/dimmi/framework/queue"
 
+	"github.com/dimmihq/dimmi/app/actions/messages"
 	"github.com/dimmihq/dimmi/app/ai/aidecision"
 	"github.com/dimmihq/dimmi/app/auth/authz"
 	"github.com/dimmihq/dimmi/app/exceptions"
@@ -38,7 +41,7 @@ import (
 )
 
 /*
-The failures of AI conversation attributes.
+The failures of conversation attributes.
 */
 var (
 	ErrNotFound = fault.New(fault.NotFound, "ai_attribute_not_found", "No AI attribute of this workspace has this id.")
@@ -46,25 +49,33 @@ var (
 			OnField("key")
 	ErrKey = fault.New(fault.Invalid, "key_invalid",
 		"Keys start with a letter and use lowercase letters, digits and underscores, 64 at most.").OnField("key")
-	ErrType = fault.New(fault.Invalid, "data_type_invalid", "Pick text, number, date, boolean or choice.").
-		OnField("data_type")
+	ErrType = fault.New(fault.Invalid, "data_type_invalid",
+		"Pick text, long_text, number, decimal, choice, multiple_choice, boolean, date, datetime, file, contact "+
+			"or company.").OnField("data_type")
 	ErrOptions = fault.New(fault.Invalid, "options_invalid",
-		"A choice needs 1 to 30 different values of 80 characters at most; other types take none.").OnField("options")
+		"A list needs 1 to 200 different values of 80 characters at most; other types take none.").OnField("options")
+	ErrFilledBy = fault.New(fault.Invalid, "filled_by_invalid",
+		"Pick ai, teammates or both; the AI cannot fill files, several choices, a date and time, a contact "+
+			"or a company.").OnField("filled_by")
 	ErrLabel       = fault.New(fault.Invalid, "label_invalid", "Names are 1 to 80 characters.").OnField("label")
 	ErrDescription = fault.New(fault.Invalid, "description_invalid", "Descriptions are 500 characters at most.").
 			OnField("description")
 	ErrStatus = fault.New(fault.Invalid, "status_invalid", "Status is active or archived.").OnField("status")
-	ErrLimit  = fault.New(fault.Invalid, "ai_attribute_limit_reached", "A workspace may have 30 active AI attributes.")
+	ErrTeams  = fault.New(fault.Invalid, "team_ids_invalid", "An attribute shows to 100 teams at most.").
+			OnField("team_ids")
+	ErrLimit = fault.New(fault.Invalid, "ai_attribute_limit_reached",
+		"A workspace may have 200 active conversation attributes.")
 )
 
 /*
-Limits of AI attributes.
+Limits of conversation attributes.
 */
 const (
-	maxActive      = 30
+	maxActive      = 200
 	maxLabel       = 80
 	maxDescription = 500
-	maxChoices     = 30
+	maxChoices     = 200
+	maxTeams       = 100
 )
 
 /*
@@ -79,31 +90,49 @@ type Attributes struct {
 	Events    *events.Dispatcher
 	Queue     *queue.Queue
 	Decisions aidecision.Service
+	Disks     messages.Disks
 }
 
 /*
-CreateInput defines a new attribute.
+CreateInput defines a new attribute. FilledBy is ai, teammates or
+both, both when empty; TeamIDs are the teams that see it, every team
+when empty.
 */
 type CreateInput struct {
-	Membership  authz.Membership
-	Key         string
-	Label       string
-	Description string
-	DataType    string
-	Options     []string
+	Membership      authz.Membership
+	Key             string
+	Label           string
+	Description     string
+	DataType        string
+	Options         []string
+	Descriptions    map[string]string
+	FilledBy        string
+	RequiredToClose bool
+	TeamIDs         []ids.UUID
 }
 
 /*
-UpdateInput changes an attribute's words, choices and status; nil
-leaves each as it is.
+UpdateInput changes an attribute's words, choices, settings and status;
+nil leaves each as it is.
 */
 type UpdateInput struct {
-	Membership  authz.Membership
-	ID          ids.UUID
-	Label       *string
-	Description *string
-	Options     []string
-	Status      *string
+	Membership      authz.Membership
+	ID              ids.UUID
+	Label           *string
+	Description     *string
+	Options         []string
+	Descriptions    *map[string]string
+	Status          *string
+	FilledBy        *string
+	RequiredToClose *bool
+	TeamIDs         *[]ids.UUID
+}
+
+/*
+canManage reports whether the member may change the attributes.
+*/
+func canManage(m authz.Membership) bool {
+	return m.Can("attributes:manage") || m.Can("ai_agent:manage")
 }
 
 /*
@@ -134,17 +163,26 @@ Create defines a new attribute.
 */
 func (a *Attributes) Create(ctx context.Context, in CreateInput) (models.AiConversationAttribute, error) {
 	m := in.Membership
-	if !m.Can("ai_agent:manage") {
+	if !canManage(m) {
 		return models.AiConversationAttribute{}, exceptions.ErrForbidden
+	}
+
+	if in.FilledBy == "" {
+		in.FilledBy = FilledByBoth
 	}
 
 	if err := checkNew(in); err != nil {
 		return models.AiConversationAttribute{}, err
 	}
 
+	described, err := describe(trimmed(in.Options), in.Descriptions)
+	if err != nil {
+		return models.AiConversationAttribute{}, err
+	}
+
 	var out models.AiConversationAttribute
 
-	err := a.DB.Transaction(ctx, func(ctx context.Context, tx *database.Tx) error {
+	err = a.DB.Transaction(ctx, func(ctx context.Context, tx *database.Tx) error {
 		q := models.New(tx)
 
 		if err := roomFor(ctx, q, m.Workspace.ID); err != nil {
@@ -155,7 +193,8 @@ func (a *Attributes) Create(ctx context.Context, in CreateInput) (models.AiConve
 		out, err = q.CreateAIConversationAttribute(ctx, models.CreateAIConversationAttributeParams{
 			WorkspaceID: m.Workspace.ID, Key: in.Key, Label: strings.TrimSpace(in.Label),
 			Description: strings.TrimSpace(in.Description), DataType: in.DataType, Options: trimmed(in.Options),
-			Now: a.Clock.Now(),
+			OptionDescriptions: described, FilledBy: in.FilledBy, RequiredToClose: in.RequiredToClose,
+			TeamIds: teams(in.TeamIDs), Now: a.Clock.Now(),
 		})
 		if errors.Is(err, database.ErrNotFound) {
 			return ErrExists
@@ -172,7 +211,7 @@ Update changes an attribute.
 */
 func (a *Attributes) Update(ctx context.Context, in UpdateInput) (models.AiConversationAttribute, error) {
 	m := in.Membership
-	if !m.Can("ai_agent:manage") {
+	if !canManage(m) {
 		return models.AiConversationAttribute{}, exceptions.ErrForbidden
 	}
 
@@ -204,7 +243,9 @@ func (a *Attributes) Update(ctx context.Context, in UpdateInput) (models.AiConve
 		}
 
 		out, err = q.UpdateAIConversationAttribute(ctx, models.UpdateAIConversationAttributeParams{
-			Label: next.Label, Description: next.Description, Options: next.Options, Status: next.Status,
+			Label: next.Label, Description: next.Description, Options: next.Options,
+			OptionDescriptions: next.OptionDescriptions, Status: next.Status,
+			FilledBy: next.FilledBy, RequiredToClose: next.RequiredToClose, TeamIds: next.TeamIds,
 			Now: a.Clock.Now(), WorkspaceID: m.Workspace.ID, ID: in.ID,
 		})
 
@@ -251,11 +292,54 @@ func changed(cur models.AiConversationAttribute, in UpdateInput) (models.AiConve
 		next.Status = *in.Status
 	}
 
+	if in.FilledBy != nil {
+		next.FilledBy = *in.FilledBy
+	}
+
+	if in.RequiredToClose != nil {
+		next.RequiredToClose = *in.RequiredToClose
+	}
+
+	if in.TeamIDs != nil {
+		next.TeamIds = teams(*in.TeamIDs)
+	}
+
 	if next.Status != "active" && next.Status != "archived" {
 		return next, ErrStatus
 	}
 
+	described, err := keepDescribed(next.Options, OptionDescriptions(cur))
+	if in.Descriptions != nil {
+		described, err = describe(next.Options, *in.Descriptions)
+	}
+
+	if err != nil {
+		return next, err
+	}
+
+	next.OptionDescriptions = described
+
+	if err := checkSettings(next.DataType, next.FilledBy, next.TeamIds); err != nil {
+		return next, err
+	}
+
 	return next, checkWords(next.Label, next.Description, next.DataType, next.Options)
+}
+
+/*
+checkSettings checks who fills an attribute and the teams that see it.
+*/
+func checkSettings(dataType, filledBy string, teamIDs []ids.UUID) error {
+	switch {
+	case !slices.Contains([]string{FilledByAI, FilledByTeammates, FilledByBoth}, filledBy):
+		return ErrFilledBy
+	case filledBy == FilledByAI && !AIFillable(dataType):
+		return ErrFilledBy
+	case len(teamIDs) > maxTeams:
+		return ErrTeams
+	}
+
+	return nil
 }
 
 /*
@@ -266,8 +350,12 @@ func checkNew(in CreateInput) error {
 		return ErrKey
 	}
 
-	if !slices.Contains(aidecision.Types(), in.DataType) {
+	if !slices.Contains(DataTypes(), in.DataType) {
 		return ErrType
+	}
+
+	if err := checkSettings(in.DataType, in.FilledBy, teams(in.TeamIDs)); err != nil {
+		return err
 	}
 
 	return checkWords(strings.TrimSpace(in.Label), strings.TrimSpace(in.Description), in.DataType, trimmed(in.Options))
@@ -285,7 +373,7 @@ func checkWords(label, description, dataType string, options []string) error {
 		return ErrDescription
 	}
 
-	if dataType != aidecision.TypeChoice {
+	if !choosable(dataType) {
 		if len(options) > 0 {
 			return ErrOptions
 		}
@@ -307,16 +395,4 @@ func checkWords(label, description, dataType string, options []string) error {
 	}
 
 	return nil
-}
-
-/*
-trimmed trims each choice, an empty list for none.
-*/
-func trimmed(options []string) []string {
-	out := make([]string, 0, len(options))
-	for _, o := range options {
-		out = append(out, strings.TrimSpace(o))
-	}
-
-	return out
 }

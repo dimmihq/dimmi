@@ -40,7 +40,8 @@
   "by_one": "מאת {{.name}}",
   "by_many": "מאת {{.name}} ואחרים",
   "updated": "עודכן ב-{{.date}}",
-  "updated_by": "עודכן ב-{{.date}} על ידי {{.name}}",
+  "updated_ago": "עודכן {{.ago}}",
+  "written_by": "נכתב על ידי {{.name}}",
   "reading_time": "זמן קריאה: {{.count}} דק׳",
   "copy_page": "העתקת הדף",
   "copied": "הועתק",
@@ -90,5 +91,31 @@
   "code": "קוד",
   "resend_code": "שליחת הקוד שוב",
   "use_another_email": "שימוש באימייל אחר",
-  "date_format": "02.01.2006"
+  "date_format": "02.01.2006",
+  "ago_today": "היום",
+  "ago_yesterday": "אתמול",
+  "ago_days": {
+    "one": "לפני יום",
+    "two": "לפני יומיים",
+    "many": "לפני {{.count}} ימים",
+    "other": "לפני {{.count}} ימים"
+  },
+  "ago_weeks": {
+    "one": "לפני יותר משבוע",
+    "two": "לפני יותר משבועיים",
+    "many": "לפני יותר מ-{{.count}} שבועות",
+    "other": "לפני יותר מ-{{.count}} שבועות"
+  },
+  "ago_months": {
+    "one": "לפני יותר מחודש",
+    "two": "לפני יותר מחודשיים",
+    "many": "לפני יותר מ-{{.count}} חודשים",
+    "other": "לפני יותר מ-{{.count}} חודשים"
+  },
+  "ago_years": {
+    "one": "לפני יותר משנה",
+    "two": "לפני יותר משנתיים",
+    "many": "לפני יותר מ-{{.count}} שנים",
+    "other": "לפני יותר מ-{{.count}} שנים"
+  }
 }

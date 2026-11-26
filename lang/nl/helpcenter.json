@@ -40,7 +40,8 @@
   "by_one": "Door {{.name}}",
   "by_many": "Door {{.name}} en anderen",
   "updated": "Bijgewerkt op {{.date}}",
-  "updated_by": "Bijgewerkt op {{.date}} door {{.name}}",
+  "updated_ago": "Bijgewerkt {{.ago}}",
+  "written_by": "Geschreven door {{.name}}",
   "reading_time": "Leestijd: {{.count}} min",
   "copy_page": "Pagina kopiëren",
   "copied": "Gekopieerd",
@@ -90,5 +91,23 @@
   "code": "Code",
   "resend_code": "Code opnieuw sturen",
   "use_another_email": "Ander e-mailadres gebruiken",
-  "date_format": "2-1-2006"
+  "date_format": "2-1-2006",
+  "ago_today": "vandaag",
+  "ago_yesterday": "gisteren",
+  "ago_days": {
+    "one": "{{.count}} dag geleden",
+    "other": "{{.count}} dagen geleden"
+  },
+  "ago_weeks": {
+    "one": "meer dan een week geleden",
+    "other": "meer dan {{.count}} weken geleden"
+  },
+  "ago_months": {
+    "one": "meer dan een maand geleden",
+    "other": "meer dan {{.count}} maanden geleden"
+  },
+  "ago_years": {
+    "one": "meer dan een jaar geleden",
+    "other": "meer dan {{.count}} jaar geleden"
+  }
 }

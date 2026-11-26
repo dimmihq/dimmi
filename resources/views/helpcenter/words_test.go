@@ -7,6 +7,7 @@ import (
 	"slices"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -95,4 +96,30 @@ func readWords(t *testing.T, locale string) map[string]string {
 		}
 	}
 	return out
+}
+
+func TestAgoCountsBackInEachLanguage(t *testing.T) {
+	tr := translator(t)
+	now := time.Date(2026, 11, 26, 12, 0, 0, 0, time.UTC)
+	back := func(days int) time.Time { return now.AddDate(0, 0, -days) }
+	for _, c := range []struct {
+		locale string
+		days   int
+		want   string
+	}{
+		{"de", 3, "vor 3 Tagen"},
+		{"de", 9, "vor über einer Woche"},
+		{"fr", 0, "aujourd'hui"},
+		{"fr", 70, "il y a plus de 2 mois"},
+		{"ru", 2, "2 дня назад"},
+		{"ru", 5, "5 дней назад"},
+		{"ru", 800, "более 2 лет назад"},
+		{"pl", 3, "3 dni temu"},
+		{"pl", 45, "ponad miesiąc temu"},
+		{"ar", 2, "منذ يومين"},
+		{"ar", 4, "منذ 4 أيام"},
+		{"ja", 16, "2週間以上前"},
+	} {
+		assert.Equal(t, c.want, Center{Locale: c.locale, Lang: tr}.Ago(back(c.days), now), c.locale, c.days)
+	}
 }

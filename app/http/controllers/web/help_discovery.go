@@ -143,7 +143,7 @@ Robots tells crawlers where the sitemap is, or to stay away when the team
 turned indexing off.
 */
 func (c *HelpCenterController) Robots(w fhttp.ResponseWriter, r *fhttp.Request) {
-	snap, root, ok := c.discoverable(w, r)
+	snap, _, ok := c.discoverable(w, r)
 	if !ok {
 		return
 	}
@@ -151,7 +151,7 @@ func (c *HelpCenterController) Robots(w fhttp.ResponseWriter, r *fhttp.Request) 
 		writeText(w, "text/plain; charset=utf-8", "User-agent: *\nDisallow: /\n")
 		return
 	}
-	root = c.Addresses.Root(snap.HelpCenter)
+	root := c.Addresses.Root(snap.HelpCenter)
 	var b strings.Builder
 	b.WriteString("User-agent: *\nAllow: /\nDisallow: /search\n" +
 		"Disallow: /sso\nDisallow: /sign-in\nDisallow: /conversations\n")

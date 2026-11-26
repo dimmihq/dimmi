@@ -46,7 +46,8 @@
     "other": "By {{.name}} and {{.count}} others"
   },
   "updated": "Updated {{.date}}",
-  "updated_by": "Updated {{.date}} by {{.name}}",
+  "updated_ago": "Updated {{.ago}}",
+  "written_by": "Written by {{.name}}",
   "reading_time": "{{.count}} min read",
   "copy_page": "Copy page",
   "copied": "Copied",
@@ -99,5 +100,23 @@
   "code": "Code",
   "resend_code": "Resend code",
   "use_another_email": "Use another email",
-  "date_format": "January 2, 2006"
+  "date_format": "January 2, 2006",
+  "ago_today": "today",
+  "ago_yesterday": "yesterday",
+  "ago_days": {
+    "one": "{{.count}} day ago",
+    "other": "{{.count}} days ago"
+  },
+  "ago_weeks": {
+    "one": "over a week ago",
+    "other": "over {{.count}} weeks ago"
+  },
+  "ago_months": {
+    "one": "over a month ago",
+    "other": "over {{.count}} months ago"
+  },
+  "ago_years": {
+    "one": "over a year ago",
+    "other": "over {{.count}} years ago"
+  }
 }

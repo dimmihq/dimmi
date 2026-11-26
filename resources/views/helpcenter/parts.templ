@@ -245,13 +245,25 @@ func byline(c Center, people []Person) string {
 }
 
 /*
-updatedLine says when the article last changed, and who wrote it.
+updatedAround is the words before and after when the article last
+changed, which the page marks up as a time: how long ago when that is
+known, its date otherwise.
 */
-func updatedLine(c Center, a Article) string {
-	if a.Author.Name != "" {
-		return c.T("updated_by", "date", c.Date(a.Updated), "name", a.Author.Name)
+func updatedAround(c Center, a Article) (string, string) {
+	if a.Age != "" {
+		return c.Around("updated_ago", "ago")
 	}
-	return c.T("updated", "date", c.Date(a.Updated))
+	return c.Around("updated", "date")
+}
+
+func updatedBefore(c Center, a Article) string {
+	before, _ := updatedAround(c, a)
+	return before
+}
+
+func updatedAfter(c Center, a Article) string {
+	_, after := updatedAround(c, a)
+	return after
 }
 
 func searchTitle(c Center, query string) string {

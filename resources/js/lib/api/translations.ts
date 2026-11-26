@@ -131,7 +131,7 @@ export function saveArticleTranslation(
   locale: string,
   change: ArticleTranslationChange,
 ): Promise<ArticleTranslation> {
-  return request<ArticleTranslation>("PUT", article(id, locale), change, { workspace });
+  return request<ArticleTranslation>("PATCH", article(id, locale), change, { workspace });
 }
 
 export function publishArticleTranslation(workspace: string, id: string, locale: string): Promise<ArticleTranslation> {
@@ -175,7 +175,7 @@ export function saveCollectionTranslation(
   change: { name: string; slug?: string; description?: string },
 ): Promise<CollectionTranslation> {
   return request<CollectionTranslation>(
-    "PUT",
+    "PATCH",
     `/collections/${encodeURIComponent(collection)}/translations/${encodeURIComponent(locale)}`,
     change,
     { workspace },

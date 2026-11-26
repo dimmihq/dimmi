@@ -121,3 +121,14 @@ func colorScheme(c Center) string {
 	}
 	return "light dark"
 }
+
+/*
+age is how long ago an article changed, its date in the page's language
+when that is unknown.
+*/
+func age(c Center, a Article) string {
+	if a.Age == "" {
+		return c.Date(a.Updated)
+	}
+	return a.Age
+}

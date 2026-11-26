@@ -1,8 +1,7 @@
 /*
  * Ticking what a source reads from its own structure, drawn like the
- * help center's collections tree: Intercom collections and articles,
- * Zendesk categories, sections and articles, Notion pages, or a
- * repository's folders and Markdown files. Ticking an item takes
+ * help center's collections tree: Notion pages, or a repository's
+ * folders and Markdown files. Ticking an item takes
  * everything under it, so its children show as ticked and cannot be
  * unticked on their own; nothing ticked reads everything. The top level
  * opens at first. The tree has no frame of its own and scrolls inside

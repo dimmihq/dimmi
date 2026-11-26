@@ -40,7 +40,8 @@
   "by_one": "Av {{.name}}",
   "by_many": "Av {{.name}} med flera",
   "updated": "Uppdaterad {{.date}}",
-  "updated_by": "Uppdaterad {{.date}} av {{.name}}",
+  "updated_ago": "Uppdaterad {{.ago}}",
+  "written_by": "Skrivet av {{.name}}",
   "reading_time": "Lästid: {{.count}} min",
   "copy_page": "Kopiera sidan",
   "copied": "Kopierad",
@@ -90,5 +91,23 @@
   "code": "Kod",
   "resend_code": "Skicka koden igen",
   "use_another_email": "Använd en annan e-post",
-  "date_format": "2006-01-02"
+  "date_format": "2006-01-02",
+  "ago_today": "i dag",
+  "ago_yesterday": "i går",
+  "ago_days": {
+    "one": "för {{.count}} dag sedan",
+    "other": "för {{.count}} dagar sedan"
+  },
+  "ago_weeks": {
+    "one": "för över en vecka sedan",
+    "other": "för över {{.count}} veckor sedan"
+  },
+  "ago_months": {
+    "one": "för över en månad sedan",
+    "other": "för över {{.count}} månader sedan"
+  },
+  "ago_years": {
+    "one": "för över ett år sedan",
+    "other": "för över {{.count}} år sedan"
+  }
 }

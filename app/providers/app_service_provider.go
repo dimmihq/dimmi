@@ -28,6 +28,7 @@ import (
 	"github.com/dimmihq/dimmi/app"
 	"github.com/dimmihq/dimmi/app/actions/auth"
 	"github.com/dimmihq/dimmi/app/actions/identity"
+	"github.com/dimmihq/dimmi/app/actions/importedteammates"
 	"github.com/dimmihq/dimmi/app/actions/inboxes"
 	"github.com/dimmihq/dimmi/app/actions/members"
 	"github.com/dimmihq/dimmi/app/actions/sso"
@@ -317,6 +318,7 @@ func bootMailedSecrets(a *app.App) {
 		Clock: a.Clock, Events: a.Events, Mail: a.Mail, Links: a.Links, Sessions: a.Session, AppGrants: a.AppGrants,
 		SecurityLog: a.SecurityLog,
 		Memberships: &members.ReleaseMemberships{Events: a.Events, Clock: a.Clock, Trash: acts.TrashWorkspace},
+		Arrivals:    &members.NoteImportArrivals{DB: a.DB, Clock: a.Clock, Mail: a.Mail, Links: a.Links},
 	}
 
 	acts.ResendEmailVerification = &auth.ResendEmailVerification{Limiter: a.Limiter, Send: acts.SendEmailVerification}
@@ -400,6 +402,10 @@ func bootWorkspaces(a *app.App) {
 	acts.ListAccessTeams = &members.ListAccessTeams{DB: a.DB}
 	acts.UpdateMember = &members.UpdateMember{
 		DB: a.DB, Events: a.Events, Clock: a.Clock, ConfirmWindow: a.Config.Auth.PasswordConfirmation.TTL,
+		Mail: a.Mail, Links: a.Links, Invite: acts.CreateInvitations,
+	}
+	acts.CreateImportedTeammate = &importedteammates.CreateImportedTeammate{
+		DB: a.DB, Clock: a.Clock, Events: a.Events, Queue: a.Queue, CreateUser: acts.CreateUser,
 	}
 	acts.LeaveWorkspace = &members.LeaveWorkspace{DB: a.DB, Events: a.Events, Clock: a.Clock}
 }

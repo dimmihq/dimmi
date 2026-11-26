@@ -40,7 +40,8 @@
   "by_one": "Oleh {{.name}}",
   "by_many": "Oleh {{.name}} dan lainnya",
   "updated": "Diperbarui {{.date}}",
-  "updated_by": "Diperbarui {{.date}} oleh {{.name}}",
+  "updated_ago": "Diperbarui {{.ago}}",
+  "written_by": "Ditulis oleh {{.name}}",
   "reading_time": "Waktu baca: {{.count}} mnt",
   "copy_page": "Salin halaman",
   "copied": "Tersalin",
@@ -90,5 +91,19 @@
   "code": "Kode",
   "resend_code": "Kirim ulang kode",
   "use_another_email": "Gunakan email lain",
-  "date_format": "02/01/2006"
+  "date_format": "02/01/2006",
+  "ago_today": "hari ini",
+  "ago_yesterday": "kemarin",
+  "ago_days": {
+    "other": "{{.count}} hari lalu"
+  },
+  "ago_weeks": {
+    "other": "lebih dari {{.count}} minggu lalu"
+  },
+  "ago_months": {
+    "other": "lebih dari {{.count}} bulan lalu"
+  },
+  "ago_years": {
+    "other": "lebih dari {{.count}} tahun lalu"
+  }
 }

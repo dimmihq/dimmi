@@ -28,7 +28,7 @@ serveGitHub answers a GitHub account reaching one private repository
 with a main and a develop branch, holding a guide, a nested how-to and a
 README beside a Go file.
 */
-func serveGitHub(t *testing.T, x index) {
+func serveGitHub(t *testing.T, x index) *httpclienttest.Fake {
 	t.Helper()
 
 	fake := httpclienttest.New(x.tc.App.HTTP).PreventStrayRequests()
@@ -61,6 +61,8 @@ func serveGitHub(t *testing.T, x index) {
 			Status: 200, Header: textHeader("text/markdown"), Body: []byte(body),
 		})
 	}
+
+	return fake
 }
 
 /*
@@ -73,11 +75,38 @@ func connectGitHub(t *testing.T, x index) string {
 	ws := x.tc.Workspace
 	owner := authz.NewMembership(ws.Workspace, ws.Owner, auth.RolePermissions(enums.RoleOwner))
 	row, err := x.tc.App.Actions.Integrations.CreateManual.Handle(t.Context(), integrations.ManualInstallationInput{
-		Membership: owner, Provider: "github", Token: "gho_" + strings.Repeat("k", 36),
+		Membership: owner, Provider: "github", Token: githubToken(),
 	})
 	require.NoError(t, err)
 
 	return models.PublicID(models.PrefixIntegrationInstallation, row.ID)
+}
+
+/*
+githubToken is the access token the faked GitHub accepts.
+*/
+func githubToken() string {
+	return "gho_" + strings.Repeat("k", 36)
+}
+
+/*
+addGitHub adds a source of the whole main branch, read in the mode
+given, through the workspace's connected account.
+*/
+func addGitHub(t *testing.T, x index, mode string) string {
+	t.Helper()
+
+	body := testkit.JSON{
+		"type": "github", "name": "Docs", "mode": mode, "sync_now": true,
+		"settings": testkit.JSON{"installation": connectGitHub(t, x), "repository": "acme/docs", "branch": "main"},
+	}
+	if mode == "import" {
+		body["help_center_id"] = x.center
+	} else {
+		body["targets"] = []string{"agent"}
+	}
+
+	return x.owner.PostJSON("/api/v1/knowledge/sources", body).AssertCreated().String("data.id")
 }
 
 func TestGitHubSource(t *testing.T) {

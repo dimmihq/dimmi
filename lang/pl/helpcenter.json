@@ -40,7 +40,8 @@
   "by_one": "Autor: {{.name}}",
   "by_many": "Autorzy: {{.name}} i inni",
   "updated": "Zaktualizowano: {{.date}}",
-  "updated_by": "Zaktualizowano: {{.date}}, autor: {{.name}}",
+  "updated_ago": "Zaktualizowano {{.ago}}",
+  "written_by": "Autor: {{.name}}",
   "reading_time": "Czas czytania: {{.count}} min",
   "copy_page": "Kopiuj stronę",
   "copied": "Skopiowano",
@@ -90,5 +91,31 @@
   "code": "Kod",
   "resend_code": "Wyślij kod ponownie",
   "use_another_email": "Użyj innego adresu",
-  "date_format": "02.01.2006"
+  "date_format": "02.01.2006",
+  "ago_today": "dzisiaj",
+  "ago_yesterday": "wczoraj",
+  "ago_days": {
+    "one": "{{.count}} dzień temu",
+    "few": "{{.count}} dni temu",
+    "many": "{{.count}} dni temu",
+    "other": "{{.count}} dnia temu"
+  },
+  "ago_weeks": {
+    "one": "ponad tydzień temu",
+    "few": "ponad {{.count}} tygodnie temu",
+    "many": "ponad {{.count}} tygodni temu",
+    "other": "ponad {{.count}} tygodnia temu"
+  },
+  "ago_months": {
+    "one": "ponad miesiąc temu",
+    "few": "ponad {{.count}} miesiące temu",
+    "many": "ponad {{.count}} miesięcy temu",
+    "other": "ponad {{.count}} miesiąca temu"
+  },
+  "ago_years": {
+    "one": "ponad rok temu",
+    "few": "ponad {{.count}} lata temu",
+    "many": "ponad {{.count}} lat temu",
+    "other": "ponad {{.count}} roku temu"
+  }
 }

@@ -40,7 +40,8 @@
   "by_one": "Аутор: {{.name}}",
   "by_many": "Аутори: {{.name}} и други",
   "updated": "Ажурирано {{.date}}",
-  "updated_by": "Ажурирано {{.date}}, аутор: {{.name}}",
+  "updated_ago": "Ажурирано {{.ago}}",
+  "written_by": "Аутор: {{.name}}",
   "reading_time": "Време читања: {{.count}} мин",
   "copy_page": "Копирај страницу",
   "copied": "Копирано",
@@ -90,5 +91,27 @@
   "code": "Код",
   "resend_code": "Поново пошаљи код",
   "use_another_email": "Користи другу е-пошту",
-  "date_format": "02. 01. 2006."
+  "date_format": "02. 01. 2006.",
+  "ago_today": "данас",
+  "ago_yesterday": "јуче",
+  "ago_days": {
+    "one": "пре {{.count}} дан",
+    "few": "пре {{.count}} дана",
+    "other": "пре {{.count}} дана"
+  },
+  "ago_weeks": {
+    "one": "пре више од недељу дана",
+    "few": "пре више од {{.count}} недеље",
+    "other": "пре више од {{.count}} недеља"
+  },
+  "ago_months": {
+    "one": "пре више од месец дана",
+    "few": "пре више од {{.count}} месеца",
+    "other": "пре више од {{.count}} месеци"
+  },
+  "ago_years": {
+    "one": "пре више од {{.count}} године",
+    "few": "пре више од {{.count}} године",
+    "other": "пре више од {{.count}} година"
+  }
 }

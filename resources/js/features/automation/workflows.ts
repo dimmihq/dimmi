@@ -34,6 +34,7 @@ export type StepKind =
   | "create_ticket"
   | "set_ticket_state"
   | "set_ticket_fields"
+  | "set_conversation_attributes"
   | "escalate"
   | "add_to_tracker"
   | "assign_ai_agent"
@@ -75,6 +76,7 @@ export const readyKinds: StepKind[] = [
   "create_ticket",
   "set_ticket_state",
   "set_ticket_fields",
+  "set_conversation_attributes",
   "escalate",
   "add_to_tracker",
   "assign_ai_agent",

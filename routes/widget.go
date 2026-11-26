@@ -233,9 +233,11 @@ func widgetHelpRoutes(visitor *routing.Router, a *app.App) {
 helpController serves the messenger's Help tab.
 */
 func helpController(a *app.App) *widget.HelpController {
+	disk, _ := a.Storage.Default()
+
 	return &widget.HelpController{
 		Public: a.Actions.HelpPublic, Readers: a.Actions.HelpReaders, Ratings: a.Actions.HelpRatings,
-		Addresses: a.Actions.HelpCenterAddresses, Clock: a.Clock, Analytics: a.Actions.HelpAnalytics,
+		Addresses: a.Actions.HelpCenterAddresses, Clock: a.Clock, Analytics: a.Actions.HelpAnalytics, Disk: disk,
 	}
 }
 

@@ -40,7 +40,8 @@
   "by_one": "โดย {{.name}}",
   "by_many": "โดย {{.name}} และคนอื่นๆ",
   "updated": "อัปเดตเมื่อ {{.date}}",
-  "updated_by": "อัปเดตเมื่อ {{.date}} โดย {{.name}}",
+  "updated_ago": "อัปเดตเมื่อ {{.ago}}",
+  "written_by": "เขียนโดย {{.name}}",
   "reading_time": "เวลาอ่าน: {{.count}} นาที",
   "copy_page": "คัดลอกหน้า",
   "copied": "คัดลอกแล้ว",
@@ -90,5 +91,19 @@
   "code": "รหัส",
   "resend_code": "ส่งรหัสอีกครั้ง",
   "use_another_email": "ใช้อีเมลอื่น",
-  "date_format": "02/01/2006"
+  "date_format": "02/01/2006",
+  "ago_today": "วันนี้",
+  "ago_yesterday": "เมื่อวาน",
+  "ago_days": {
+    "other": "{{.count}} วันที่แล้ว"
+  },
+  "ago_weeks": {
+    "other": "มากกว่า {{.count}} สัปดาห์ที่แล้ว"
+  },
+  "ago_months": {
+    "other": "มากกว่า {{.count}} เดือนที่แล้ว"
+  },
+  "ago_years": {
+    "other": "มากกว่า {{.count}} ปีที่แล้ว"
+  }
 }

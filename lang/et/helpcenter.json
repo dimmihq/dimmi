@@ -40,7 +40,8 @@
   "by_one": "Autor: {{.name}}",
   "by_many": "Autorid: {{.name}} ja teised",
   "updated": "Uuendatud {{.date}}",
-  "updated_by": "Uuendatud {{.date}}, autor: {{.name}}",
+  "updated_ago": "Uuendatud {{.ago}}",
+  "written_by": "Autor: {{.name}}",
   "reading_time": "Lugemisaeg: {{.count}} min",
   "copy_page": "Kopeeri leht",
   "copied": "Kopeeritud",
@@ -90,5 +91,23 @@
   "code": "Kood",
   "resend_code": "Saada kood uuesti",
   "use_another_email": "Kasuta teist e-posti",
-  "date_format": "02.01.2006"
+  "date_format": "02.01.2006",
+  "ago_today": "täna",
+  "ago_yesterday": "eile",
+  "ago_days": {
+    "one": "{{.count}} päev tagasi",
+    "other": "{{.count}} päeva tagasi"
+  },
+  "ago_weeks": {
+    "one": "üle nädala tagasi",
+    "other": "üle {{.count}} nädala tagasi"
+  },
+  "ago_months": {
+    "one": "üle kuu tagasi",
+    "other": "üle {{.count}} kuu tagasi"
+  },
+  "ago_years": {
+    "one": "üle aasta tagasi",
+    "other": "üle {{.count}} aasta tagasi"
+  }
 }

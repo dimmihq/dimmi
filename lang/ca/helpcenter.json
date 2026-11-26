@@ -40,7 +40,8 @@
   "by_one": "Per {{.name}}",
   "by_many": "Per {{.name}} i altres",
   "updated": "Actualitzat el {{.date}}",
-  "updated_by": "Actualitzat el {{.date}} per {{.name}}",
+  "updated_ago": "Actualitzat {{.ago}}",
+  "written_by": "Escrit per {{.name}}",
   "reading_time": "Lectura: {{.count}} min",
   "copy_page": "Copia la pàgina",
   "copied": "Copiat",
@@ -90,5 +91,23 @@
   "code": "Codi",
   "resend_code": "Torna a enviar el codi",
   "use_another_email": "Fes servir un altre correu",
-  "date_format": "02/01/2006"
+  "date_format": "02/01/2006",
+  "ago_today": "avui",
+  "ago_yesterday": "ahir",
+  "ago_days": {
+    "one": "fa {{.count}} dia",
+    "other": "fa {{.count}} dies"
+  },
+  "ago_weeks": {
+    "one": "fa més d'una setmana",
+    "other": "fa més de {{.count}} setmanes"
+  },
+  "ago_months": {
+    "one": "fa més d'un mes",
+    "other": "fa més de {{.count}} mesos"
+  },
+  "ago_years": {
+    "one": "fa més d'un any",
+    "other": "fa més de {{.count}} anys"
+  }
 }

@@ -40,7 +40,8 @@
   "by_one": "Autor: {{.name}}",
   "by_many": "Autori: {{.name}} a ďalší",
   "updated": "Aktualizované {{.date}}",
-  "updated_by": "Aktualizované {{.date}}, autor: {{.name}}",
+  "updated_ago": "Aktualizované {{.ago}}",
+  "written_by": "Autor: {{.name}}",
   "reading_time": "Čas čítania: {{.count}} min",
   "copy_page": "Kopírovať stránku",
   "copied": "Skopírované",
@@ -90,5 +91,31 @@
   "code": "Kód",
   "resend_code": "Poslať kód znova",
   "use_another_email": "Použiť iný e-mail",
-  "date_format": "2. 1. 2006"
+  "date_format": "2. 1. 2006",
+  "ago_today": "dnes",
+  "ago_yesterday": "včera",
+  "ago_days": {
+    "one": "pred {{.count}} dňom",
+    "few": "pred {{.count}} dňami",
+    "many": "pred {{.count}} dňa",
+    "other": "pred {{.count}} dňami"
+  },
+  "ago_weeks": {
+    "one": "pred viac ako týždňom",
+    "few": "pred viac ako {{.count}} týždňami",
+    "many": "pred viac ako {{.count}} týždňa",
+    "other": "pred viac ako {{.count}} týždňami"
+  },
+  "ago_months": {
+    "one": "pred viac ako mesiacom",
+    "few": "pred viac ako {{.count}} mesiacmi",
+    "many": "pred viac ako {{.count}} mesiaca",
+    "other": "pred viac ako {{.count}} mesiacmi"
+  },
+  "ago_years": {
+    "one": "pred viac ako rokom",
+    "few": "pred viac ako {{.count}} rokmi",
+    "many": "pred viac ako {{.count}} roka",
+    "other": "pred viac ako {{.count}} rokmi"
+  }
 }

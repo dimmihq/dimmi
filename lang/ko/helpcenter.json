@@ -40,7 +40,8 @@
   "by_one": "작성자: {{.name}}",
   "by_many": "작성자: {{.name}} 외",
   "updated": "{{.date}} 업데이트",
-  "updated_by": "{{.date}} 업데이트 · 작성자: {{.name}}",
+  "updated_ago": "업데이트: {{.ago}}",
+  "written_by": "작성자: {{.name}}",
   "reading_time": "읽는 시간: {{.count}}분",
   "copy_page": "페이지 복사",
   "copied": "복사됨",
@@ -90,5 +91,19 @@
   "code": "코드",
   "resend_code": "코드 다시 보내기",
   "use_another_email": "다른 이메일 사용",
-  "date_format": "2006. 1. 2."
+  "date_format": "2006. 1. 2.",
+  "ago_today": "오늘",
+  "ago_yesterday": "어제",
+  "ago_days": {
+    "other": "{{.count}}일 전"
+  },
+  "ago_weeks": {
+    "other": "{{.count}}주 이상 전"
+  },
+  "ago_months": {
+    "other": "{{.count}}개월 이상 전"
+  },
+  "ago_years": {
+    "other": "{{.count}}년 이상 전"
+  }
 }

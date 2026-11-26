@@ -40,7 +40,8 @@
   "by_one": "लेखक: {{.name}}",
   "by_many": "लेखक: {{.name}} और अन्य",
   "updated": "अपडेट: {{.date}}",
-  "updated_by": "अपडेट: {{.date}}, लेखक: {{.name}}",
+  "updated_ago": "अपडेट: {{.ago}}",
+  "written_by": "लेखक: {{.name}}",
   "reading_time": "पढ़ने का समय: {{.count}} मिनट",
   "copy_page": "पेज कॉपी करें",
   "copied": "कॉपी हो गया",
@@ -90,5 +91,23 @@
   "code": "कोड",
   "resend_code": "कोड फिर भेजें",
   "use_another_email": "दूसरा ईमेल इस्तेमाल करें",
-  "date_format": "02/01/2006"
+  "date_format": "02/01/2006",
+  "ago_today": "आज",
+  "ago_yesterday": "कल",
+  "ago_days": {
+    "one": "{{.count}} दिन पहले",
+    "other": "{{.count}} दिन पहले"
+  },
+  "ago_weeks": {
+    "one": "एक हफ़्ते से ज़्यादा पहले",
+    "other": "{{.count}} हफ़्तों से ज़्यादा पहले"
+  },
+  "ago_months": {
+    "one": "एक महीने से ज़्यादा पहले",
+    "other": "{{.count}} महीनों से ज़्यादा पहले"
+  },
+  "ago_years": {
+    "one": "एक साल से ज़्यादा पहले",
+    "other": "{{.count}} साल से ज़्यादा पहले"
+  }
 }

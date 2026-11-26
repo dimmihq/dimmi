@@ -44,6 +44,8 @@
   "office_hours_text": "",
   "offline_message": "Wir sind gerade nicht da. Hinterlasse eine Nachricht, wir antworten per E-Mail.",
   "open_in_help_center": "Im Hilfecenter öffnen",
+  "written_by": "Verfasst von {name}",
+  "updated_ago": "Aktualisiert {time}",
   "popular": "Beliebte Artikel",
   "privacy_notice": "Wir verarbeiten deine Daten wie in unserer Datenschutzerklärung beschrieben.",
   "rated_thanks": "Danke für dein Feedback!",

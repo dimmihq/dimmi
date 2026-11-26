@@ -40,7 +40,8 @@
   "by_one": "Na {{.name}}",
   "by_many": "Na {{.name}} na wengine",
   "updated": "Imesasishwa {{.date}}",
-  "updated_by": "Imesasishwa {{.date}} na {{.name}}",
+  "updated_ago": "Imesasishwa {{.ago}}",
+  "written_by": "Imeandikwa na {{.name}}",
   "reading_time": "Muda wa kusoma: dakika {{.count}}",
   "copy_page": "Nakili ukurasa",
   "copied": "Imenakiliwa",
@@ -90,5 +91,23 @@
   "code": "Msimbo",
   "resend_code": "Tuma msimbo tena",
   "use_another_email": "Tumia barua pepe nyingine",
-  "date_format": "02/01/2006"
+  "date_format": "02/01/2006",
+  "ago_today": "leo",
+  "ago_yesterday": "jana",
+  "ago_days": {
+    "one": "siku {{.count}} iliyopita",
+    "other": "siku {{.count}} zilizopita"
+  },
+  "ago_weeks": {
+    "one": "zaidi ya wiki moja iliyopita",
+    "other": "zaidi ya wiki {{.count}} zilizopita"
+  },
+  "ago_months": {
+    "one": "zaidi ya mwezi mmoja uliopita",
+    "other": "zaidi ya miezi {{.count}} iliyopita"
+  },
+  "ago_years": {
+    "one": "zaidi ya mwaka mmoja uliopita",
+    "other": "zaidi ya miaka {{.count}} iliyopita"
+  }
 }

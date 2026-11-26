@@ -40,7 +40,8 @@
   "by_one": "Af {{.name}}",
   "by_many": "Af {{.name}} og andre",
   "updated": "Opdateret {{.date}}",
-  "updated_by": "Opdateret {{.date}} af {{.name}}",
+  "updated_ago": "Opdateret {{.ago}}",
+  "written_by": "Skrevet af {{.name}}",
   "reading_time": "Læsetid: {{.count}} min",
   "copy_page": "Kopiér side",
   "copied": "Kopieret",
@@ -90,5 +91,23 @@
   "code": "Kode",
   "resend_code": "Send kode igen",
   "use_another_email": "Brug en anden e-mail",
-  "date_format": "02.01.2006"
+  "date_format": "02.01.2006",
+  "ago_today": "i dag",
+  "ago_yesterday": "i går",
+  "ago_days": {
+    "one": "for {{.count}} dag siden",
+    "other": "for {{.count}} dage siden"
+  },
+  "ago_weeks": {
+    "one": "for over en uge siden",
+    "other": "for over {{.count}} uger siden"
+  },
+  "ago_months": {
+    "one": "for over en måned siden",
+    "other": "for over {{.count}} måneder siden"
+  },
+  "ago_years": {
+    "one": "for over et år siden",
+    "other": "for over {{.count}} år siden"
+  }
 }

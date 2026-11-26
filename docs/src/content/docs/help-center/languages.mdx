@@ -45,7 +45,7 @@ curl -X PATCH https://trydimmi.com/api/v1/help-centers/hc_01j9z3k8 \
 Open an article and pick a language from the language menu next to its title; each language shows whether its translation is **Missing**, a **Draft**, **Published** or **Outdated**. A missing one starts blank or from the English text. A translation is edited like the source: saving keeps a draft, **Publish** makes it live under that language's prefix, and each publish saves a version you can restore.
 
 ```bash
-curl -X PUT https://trydimmi.com/api/v1/articles/art_01j9z4m2/translations/fr \
+curl -X PATCH https://trydimmi.com/api/v1/articles/art_01j9z4m2/translations/fr \
   -H "Authorization: Bearer $DIMMI_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"title": "Réinitialiser le mot de passe", "body_markdown": "Ouvrez **Réglages**, puis **Sécurité**."}'
@@ -56,7 +56,7 @@ curl -X POST https://trydimmi.com/api/v1/articles/art_01j9z4m2/translations/fr/p
 
 The first save starts a draft and needs a `title`. dimmi makes the slug from a title in a Latin script, and keeps the English slug for titles in other scripts such as Japanese or Arabic, unless you send one, and a later save that sends `lock_version` is refused with `translation_changed` when a teammate saved since you opened it.
 
-Name collections in each language under **Help center → Translations**, or with `PUT /api/v1/collections/{collection}/translations/{locale}`.
+Name collections in each language under **Help center → Translations**, or with `PATCH /api/v1/collections/{collection}/translations/{locale}`.
 
 ## What readers of each language see
 

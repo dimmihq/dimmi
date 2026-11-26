@@ -100,7 +100,7 @@ func translationRoutes(workspace *routing.Router, a *app.App) {
 	routing.Get(workspace, "/articles/{article}/translations", "articles.translations.index", tr.Index).
 		Ability("articles:read")
 	routing.Get(workspace, one, "articles.translations.show", tr.Show).Ability("articles:read")
-	routing.Put(workspace, one, "articles.translations.update", tr.Update).Ability("articles:write")
+	routing.Patch(workspace, one, "articles.translations.update", tr.Update).Ability("articles:write")
 	routing.Delete(workspace, one, "articles.translations.destroy", tr.Destroy).
 		Ability("articles:write").Status(fhttp.StatusNoContent)
 	routing.Post(workspace, one+"/publications", "articles.translations.publications.store", tr.Publish).
@@ -118,7 +118,7 @@ func translationRoutes(workspace *routing.Router, a *app.App) {
 	routing.Get(workspace, "/help-centers/{help_center}/collection-translations",
 		"help-centers.collection-translations.index", tr.IndexHelpCenterCollections).Ability("articles:read")
 	routing.Get(workspace, col, "collections.translations.index", tr.IndexCollection).Ability("articles:read")
-	routing.Put(workspace, col+"/{locale}", "collections.translations.update", tr.UpdateCollection).
+	routing.Patch(workspace, col+"/{locale}", "collections.translations.update", tr.UpdateCollection).
 		Ability("articles:write")
 	routing.Delete(workspace, col+"/{locale}", "collections.translations.destroy", tr.DestroyCollection).
 		Ability("articles:write").Status(fhttp.StatusNoContent)

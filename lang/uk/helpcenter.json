@@ -40,7 +40,8 @@
   "by_one": "Автор: {{.name}}",
   "by_many": "Автори: {{.name}} та інші",
   "updated": "Оновлено {{.date}}",
-  "updated_by": "Оновлено {{.date}}, автор: {{.name}}",
+  "updated_ago": "Оновлено {{.ago}}",
+  "written_by": "Автор: {{.name}}",
   "reading_time": "Час читання: {{.count}} хв",
   "copy_page": "Копіювати сторінку",
   "copied": "Скопійовано",
@@ -90,5 +91,31 @@
   "code": "Код",
   "resend_code": "Надіслати код ще раз",
   "use_another_email": "Вказати іншу пошту",
-  "date_format": "02.01.2006"
+  "date_format": "02.01.2006",
+  "ago_today": "сьогодні",
+  "ago_yesterday": "учора",
+  "ago_days": {
+    "one": "{{.count}} день тому",
+    "few": "{{.count}} дні тому",
+    "many": "{{.count}} днів тому",
+    "other": "{{.count}} дня тому"
+  },
+  "ago_weeks": {
+    "one": "понад тиждень тому",
+    "few": "понад {{.count}} тижні тому",
+    "many": "понад {{.count}} тижнів тому",
+    "other": "понад {{.count}} тижня тому"
+  },
+  "ago_months": {
+    "one": "понад місяць тому",
+    "few": "понад {{.count}} місяці тому",
+    "many": "понад {{.count}} місяців тому",
+    "other": "понад {{.count}} місяця тому"
+  },
+  "ago_years": {
+    "one": "понад {{.count}} рік тому",
+    "few": "понад {{.count}} роки тому",
+    "many": "понад {{.count}} років тому",
+    "other": "понад {{.count}} року тому"
+  }
 }

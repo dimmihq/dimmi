@@ -22,6 +22,7 @@ import { SuggestionList } from "@/features/inbox/composer/suggestion-list";
 
 import { articleExtensions, articleMarkdown } from "./article-markdown";
 import { ChangeRequest, changeRequestKey } from "./change-request";
+import { resolveEmbed } from "./embed-providers";
 import { findCommands, runCommand, type SlashCommand } from "./slash-commands";
 import { imagesOf, useImageUpload } from "./use-image-upload";
 import { BlockPlus, ImageBar, SelectionBar } from "./writer-menus";
@@ -48,6 +49,21 @@ function showChange(root: HTMLElement, before: string) {
   const added = [...root.querySelectorAll<HTMLElement>(".change-added")];
   const fresh = added.find((el) => !earlier.includes(plain(el.textContent ?? "")));
   (fresh ?? added[0])?.scrollIntoView({ block: "center", behavior: "smooth" });
+}
+
+/*
+ * pasteEmbed embeds a pasted video or demo link when it is all that was
+ * pasted and the caret sits on an empty line, and reports whether it did.
+ */
+function pasteEmbed(editor: Editor, text: string | undefined): boolean {
+  const link = text?.trim() ?? "";
+  const { $from, empty } = editor.state.selection;
+  const blank = $from.parent.type.name === "paragraph" && $from.parent.content.size === 0;
+  if (!empty || !blank || /\s/.test(link) || !resolveEmbed(link)) {
+    return false;
+  }
+
+  return editor.chain().focus().insertEmbed(link).run();
 }
 
 /*
@@ -101,7 +117,10 @@ export default function ArticleWriter({
       },
       handlePaste: (_, event) => {
         const files = imagesOf(event.clipboardData?.files);
-        if (files.length === 0 || !editorRef.current) {
+        if (files.length === 0 && editorRef.current) {
+          return pasteEmbed(editorRef.current, event.clipboardData?.getData("text/plain"));
+        }
+        if (!editorRef.current) {
           return false;
         }
         images.upload(editorRef.current, files);

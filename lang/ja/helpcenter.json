@@ -40,7 +40,8 @@
   "by_one": "作成者: {{.name}}",
   "by_many": "作成者: {{.name}} ほか",
   "updated": "{{.date}} 更新",
-  "updated_by": "{{.date}} 更新・作成者: {{.name}}",
+  "updated_ago": "更新: {{.ago}}",
+  "written_by": "執筆者: {{.name}}",
   "reading_time": "読了時間: {{.count}}分",
   "copy_page": "ページをコピー",
   "copied": "コピーしました",
@@ -90,5 +91,19 @@
   "code": "コード",
   "resend_code": "コードを再送信",
   "use_another_email": "別のメールアドレスを使う",
-  "date_format": "2006年1月2日"
+  "date_format": "2006年1月2日",
+  "ago_today": "今日",
+  "ago_yesterday": "昨日",
+  "ago_days": {
+    "other": "{{.count}}日前"
+  },
+  "ago_weeks": {
+    "other": "{{.count}}週間以上前"
+  },
+  "ago_months": {
+    "other": "{{.count}}か月以上前"
+  },
+  "ago_years": {
+    "other": "{{.count}}年以上前"
+  }
 }

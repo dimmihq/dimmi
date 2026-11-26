@@ -40,7 +40,8 @@
   "by_one": "Kirjoittaja: {{.name}}",
   "by_many": "Kirjoittajat: {{.name}} ja muut",
   "updated": "Päivitetty {{.date}}",
-  "updated_by": "Päivitetty {{.date}}, kirjoittaja {{.name}}",
+  "updated_ago": "Päivitetty {{.ago}}",
+  "written_by": "Kirjoittaja: {{.name}}",
   "reading_time": "Lukuaika: {{.count}} min",
   "copy_page": "Kopioi sivu",
   "copied": "Kopioitu",
@@ -90,5 +91,23 @@
   "code": "Koodi",
   "resend_code": "Lähetä koodi uudelleen",
   "use_another_email": "Käytä toista sähköpostia",
-  "date_format": "2.1.2006"
+  "date_format": "2.1.2006",
+  "ago_today": "tänään",
+  "ago_yesterday": "eilen",
+  "ago_days": {
+    "one": "{{.count}} päivä sitten",
+    "other": "{{.count}} päivää sitten"
+  },
+  "ago_weeks": {
+    "one": "yli viikko sitten",
+    "other": "yli {{.count}} viikkoa sitten"
+  },
+  "ago_months": {
+    "one": "yli kuukausi sitten",
+    "other": "yli {{.count}} kuukautta sitten"
+  },
+  "ago_years": {
+    "one": "yli vuosi sitten",
+    "other": "yli {{.count}} vuotta sitten"
+  }
 }

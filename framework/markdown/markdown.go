@@ -39,9 +39,11 @@ ahead of the engine's own transformers and renderers, which use larger
 numbers.
 */
 const (
-	alertPriority    = 100
-	imagePriority    = 110
-	rendererPriority = 100
+	alertPriority     = 100
+	imagePriority     = 110
+	figurePriority    = 120
+	directivePriority = 90
+	rendererPriority  = 100
 )
 
 /*
@@ -52,10 +54,12 @@ Footnotes adds GFM footnotes. Alerts renders GitHub alerts such as
 "> [!NOTE]" as aside elements. HeadingIDs gives every heading a unique
 id, keeping letters of every script. Highlight colors fenced code
 blocks of a known language with CSS classes; StyleSheet returns the
-matching CSS. HardWraps keeps every line break inside a paragraph, as a
-person typing into a message box expects. ImageLayout reads a picture's
-width and alignment from its address's fragment and renders them as
-classes.
+matching CSS. Blocks adds the content blocks: embeds, buttons,
+collapsible details and centered text written as directives, and
+captioned pictures as figures. HardWraps keeps every line break inside a
+paragraph, as a person typing into a message box expects. ImageLayout
+reads a picture's width and alignment from its address's fragment and
+renders them as classes.
 
 RewriteLink, when set, sees every link and image and returns what to
 render instead. Sanitize is the policy the HTML passes through; nil
@@ -69,6 +73,7 @@ type Options struct {
 	Highlight   bool
 	HardWraps   bool
 	ImageLayout bool
+	Blocks      bool
 	RewriteLink func(Link) Link
 	Sanitize    *sanitize.Policy
 }
@@ -174,7 +179,17 @@ func newEngine(opts Options) goldmark.Markdown {
 		parsing = append(parsing, parser.WithASTTransformers(util.Prioritized(imageTransformer{}, imagePriority)))
 	}
 
-	nodes := newNodeRenderer(opts.Highlight, opts.Alerts)
+	if opts.Blocks {
+		parsing = append(parsing,
+			parser.WithBlockParsers(util.Prioritized(directiveParser{}, directivePriority)),
+			parser.WithASTTransformers(
+				util.Prioritized(buttonTransformer{}, directivePriority),
+				util.Prioritized(figureTransformer{}, figurePriority),
+			),
+		)
+	}
+
+	nodes := newNodeRenderer(opts.Highlight, opts.Alerts, opts.Blocks)
 	rendering := []renderer.Option{renderer.WithNodeRenderers(util.Prioritized(nodes, rendererPriority))}
 
 	if opts.HardWraps {

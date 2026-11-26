@@ -1,14 +1,19 @@
 /*
  * The blocks a slash starts in the article writer: headings, lists,
- * quotes, callouts, images, code, dividers and tables. Typing after the
+ * quotes, callouts, images, videos and demos, buttons, collapsible
+ * sections, centered text, code, dividers and tables. Typing after the
  * slash narrows them by name or by a word that means the same.
  */
 import {
   type RemixiconComponentType,
   RiAlertLine,
+  RiAlignCenter,
+  RiArrowDownSLine,
   RiCodeSSlashLine,
+  RiCursorLine,
   RiDoubleQuotesL,
   RiErrorWarningLine,
+  RiFilmLine,
   RiH2,
   RiH3,
   RiImageLine,
@@ -136,6 +141,38 @@ export const slashCommands: SlashCommand[] = [
     icon: RiImageLine,
     words: ["picture", "photo", "screenshot"],
     run: (c) => c,
+  },
+  {
+    id: "embed",
+    label: "Video or demo",
+    hint: "YouTube, Loom, Arcade and more",
+    icon: RiFilmLine,
+    words: ["embed", "youtube", "vimeo", "loom", "wistia", "movie", "tour"],
+    run: (c) => c.insertEmbed(),
+  },
+  {
+    id: "button",
+    label: "Button",
+    hint: "A link that stands out",
+    icon: RiCursorLine,
+    words: ["link", "cta", "call"],
+    run: (c) => c.insertButton(),
+  },
+  {
+    id: "details",
+    label: "Collapsible section",
+    hint: "Opens when clicked",
+    icon: RiArrowDownSLine,
+    words: ["toggle", "accordion", "faq", "expand", "details"],
+    run: (c) => c.insertDetails(),
+  },
+  {
+    id: "center",
+    label: "Centered text",
+    hint: "Text in the middle",
+    icon: RiAlignCenter,
+    words: ["align", "middle"],
+    run: (c) => c.toggleCenter(),
   },
   {
     id: "code",

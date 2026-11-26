@@ -21,7 +21,7 @@ import {
 } from "@remixicon/react";
 import { useQuery } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { Button } from "@/components/base/buttons/button";
 import { IconButton } from "@/components/base/buttons/icon-button";
@@ -34,6 +34,7 @@ import {
 } from "@/components/base/dropdown/dropdown";
 import { AlertDialog } from "@/components/base/modal/modal";
 import { toast } from "@/components/base/toast/toast";
+import { preloadEditor } from "@/features/inbox/composer/load-editor";
 import { usePermission } from "@/features/settings/inboxes";
 import { ScrollArea } from "@/features/shell/page";
 import { useWide } from "@/features/shell/use-wide";
@@ -339,6 +340,7 @@ function BuildTab({
 export function WorkflowBuilder({ workspace, workflow }: { workspace: string; workflow: Workflow }) {
   const navigate = useNavigate();
   const readOnly = !usePermission(workspace, "workflows:manage");
+  useEffect(preloadEditor, []);
   const draft = useWorkflowDraft(workspace, workflow, () => void navigate({ to: "/d/workflows" }));
   const { lists, names } = useLists(workspace, workflow.id);
   const [tab, setTab] = useState<StudioTabId>("build");

@@ -11,6 +11,8 @@
   "workspace_not_found": "Workspace not found.",
   "sso_required": "Sign in with your organization's single sign-on.",
   "membership_deactivated": "Your membership of this workspace is not active.",
+  "access_awaiting_enable": "Waiting for an admin to enable your access.",
+  "invalid_import_source": "The source must be a short lowercase name, such as intercom.",
   "workspace_mismatch": "This token belongs to another workspace.",
   "two_factor_challenge_expired": "The sign-in took too long or had too many wrong codes. Sign in again.",
   "factor_type_not_available": "This kind of factor is not available.",

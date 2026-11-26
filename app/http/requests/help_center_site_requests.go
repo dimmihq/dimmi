@@ -62,12 +62,3 @@ type StoreWidgetArticleViewRequest struct {
 		Article string `json:"article" minLength:"1" maxLength:"200" pattern:"^[a-z0-9-]+$"`
 	}
 }
-
-/*
-ShowWidgetHelpRequest is the input of the messenger's Help tab: the
-language to read it in, else the visitor's browser languages.
-*/
-type ShowWidgetHelpRequest struct {
-	Locale         string `query:"locale"          maxLength:"16"`
-	AcceptLanguage string `header:"Accept-Language" maxLength:"512"`
-}

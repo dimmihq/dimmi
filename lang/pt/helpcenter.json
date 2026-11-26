@@ -40,7 +40,8 @@
   "by_one": "Por {{.name}}",
   "by_many": "Por {{.name}} e outros",
   "updated": "Atualizado a {{.date}}",
-  "updated_by": "Atualizado a {{.date}} por {{.name}}",
+  "updated_ago": "Atualizado {{.ago}}",
+  "written_by": "Escrito por {{.name}}",
   "reading_time": "Leitura: {{.count}} min",
   "copy_page": "Copiar página",
   "copied": "Copiado",
@@ -90,5 +91,23 @@
   "code": "Código",
   "resend_code": "Reenviar código",
   "use_another_email": "Usar outro e-mail",
-  "date_format": "02/01/2006"
+  "date_format": "02/01/2006",
+  "ago_today": "hoje",
+  "ago_yesterday": "ontem",
+  "ago_days": {
+    "one": "há {{.count}} dia",
+    "other": "há {{.count}} dias"
+  },
+  "ago_weeks": {
+    "one": "há mais de uma semana",
+    "other": "há mais de {{.count}} semanas"
+  },
+  "ago_months": {
+    "one": "há mais de um mês",
+    "other": "há mais de {{.count}} meses"
+  },
+  "ago_years": {
+    "one": "há mais de um ano",
+    "other": "há mais de {{.count}} anos"
+  }
 }

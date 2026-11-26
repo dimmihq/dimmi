@@ -41,14 +41,15 @@ nodeRenderer writes the HTML for raw HTML, alerts and highlighted code.
 type nodeRenderer struct {
 	highlight bool
 	alerts    bool
+	blocks    bool
 	formatter *chromahtml.Formatter
 }
 
 /*
 newNodeRenderer returns the renderer for the enabled features.
 */
-func newNodeRenderer(highlight, alerts bool) *nodeRenderer {
-	return &nodeRenderer{highlight: highlight, alerts: alerts, formatter: newFormatter()}
+func newNodeRenderer(highlight, alerts, blocks bool) *nodeRenderer {
+	return &nodeRenderer{highlight: highlight, alerts: alerts, blocks: blocks, formatter: newFormatter()}
 }
 
 /*
@@ -86,6 +87,11 @@ func (r *nodeRenderer) RegisterFuncs(reg renderer.NodeRendererFuncRegisterer) {
 
 	if r.alerts {
 		reg.Register(ast.KindBlockquote, r.renderBlockquote)
+	}
+
+	if r.blocks {
+		reg.Register(KindDirective, r.renderDirective)
+		reg.Register(KindFigure, r.renderFigure)
 	}
 
 	if r.highlight {

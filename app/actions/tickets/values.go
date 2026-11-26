@@ -17,32 +17,28 @@ package tickets
 import (
 	"encoding/json"
 	"maps"
-	"math"
-	"regexp"
 	"slices"
-	"strings"
-	"time"
 
 	"github.com/dimmihq/dimmi/app/models"
-	"github.com/dimmihq/dimmi/app/support/attributes"
+	"github.com/dimmihq/dimmi/app/support/fieldvalues"
 )
 
 /*
 The data types a field may hold.
 */
 const (
-	TypeShortText      = "short_text"
-	TypeLongText       = "long_text"
-	TypeNumber         = "number"
-	TypeDecimal        = "decimal"
-	TypeCurrency       = "currency"
-	TypeBoolean        = "boolean"
-	TypeDate           = "date"
-	TypeSingleChoice   = "single_choice"
-	TypeMultipleChoice = "multiple_choice"
-	TypeFile           = "file"
-	TypeMember         = "member"
-	TypeCompany        = "company"
+	TypeShortText      = fieldvalues.TypeShortText
+	TypeLongText       = fieldvalues.TypeLongText
+	TypeNumber         = fieldvalues.TypeNumber
+	TypeDecimal        = fieldvalues.TypeDecimal
+	TypeCurrency       = fieldvalues.TypeCurrency
+	TypeBoolean        = fieldvalues.TypeBoolean
+	TypeDate           = fieldvalues.TypeDate
+	TypeSingleChoice   = fieldvalues.TypeSingleChoice
+	TypeMultipleChoice = fieldvalues.TypeMultipleChoice
+	TypeFile           = fieldvalues.TypeFile
+	TypeMember         = fieldvalues.TypeMember
+	TypeCompany        = fieldvalues.TypeCompany
 )
 
 /*
@@ -54,21 +50,6 @@ func DataTypes() []string {
 		TypeMultipleChoice, TypeFile, TypeMember, TypeCompany,
 	}
 }
-
-/*
-publicIDShape is what a public id looks like: a prefix, an underscore
-and 26 Crockford base32 characters.
-*/
-var publicIDShape = regexp.MustCompile(`^[a-z]{2,8}_[0-7][0-9a-hjkmnp-tv-z]{25}$`)
-
-/*
-Text limits of the text types.
-*/
-const (
-	maxShortText = 255
-	maxLongText  = 10000
-	maxFiles     = 10
-)
 
 /*
 ShowWhen is the condition a field shows under: another field has a
@@ -153,18 +134,7 @@ func textsOf(v any) []string {
 /*
 empty reports whether a value counts as missing.
 */
-func empty(v any) bool {
-	switch t := v.(type) {
-	case nil:
-		return true
-	case string:
-		return strings.TrimSpace(t) == ""
-	case []any:
-		return len(t) == 0
-	}
-
-	return false
-}
+func empty(v any) bool { return fieldvalues.Empty(v) }
 
 /*
 merge applies changes to stored values: a null removes a key. Each
@@ -217,146 +187,7 @@ func fieldByKey(fields []models.TicketField, key string) (models.TicketField, bo
 fit makes a value the field's type, or says why it does not fit.
 */
 func fit(f models.TicketField, value any) (any, string) {
-	switch f.DataType {
-	case TypeShortText, TypeLongText:
-		return text(f.DataType, value)
-	case TypeNumber, TypeDecimal, TypeCurrency:
-		return numeric(f.DataType, value)
-	case TypeBoolean:
-		return attributes.Coerce(attributes.TypeBoolean, nil, value)
-	case TypeDate:
-		return day(value)
-	case TypeSingleChoice:
-		return attributes.Coerce(attributes.TypeList, f.Options, value)
-	case TypeMultipleChoice:
-		return choices(f.Options, value)
-	case TypeFile:
-		return publicIDs(models.PrefixAttachment, value, maxFiles)
-	case TypeMember:
-		return publicID(models.PrefixMember, value)
-	case TypeCompany:
-		return publicID(models.PrefixCompany, value)
-	}
-
-	return nil, attributes.ProblemTypeMismatch
-}
-
-/*
-text fits text within the type's length.
-*/
-func text(dataType string, value any) (any, string) {
-	s, ok := value.(string)
-	if !ok {
-		return nil, attributes.ProblemTypeMismatch
-	}
-
-	limit := maxShortText
-	if dataType == TypeLongText {
-		limit = maxLongText
-	}
-
-	if len([]rune(s)) > limit {
-		return nil, "too_long"
-	}
-
-	return s, ""
-}
-
-/*
-numeric fits a number; a number field holds whole numbers.
-*/
-func numeric(dataType string, value any) (any, string) {
-	n, problem := attributes.Coerce(attributes.TypeNumber, nil, value)
-	if problem != "" {
-		return nil, problem
-	}
-
-	f, _ := n.(float64)
-	if dataType == TypeNumber && f != math.Trunc(f) {
-		return nil, "not_whole"
-	}
-
-	if dataType == TypeCurrency {
-		return math.Round(f*100) / 100, ""
-	}
-
-	return f, ""
-}
-
-/*
-day fits a calendar date, kept as YYYY-MM-DD.
-*/
-func day(value any) (any, string) {
-	s, ok := value.(string)
-	if !ok {
-		return nil, attributes.ProblemTypeMismatch
-	}
-
-	for _, layout := range []string{time.DateOnly, time.RFC3339, time.RFC3339Nano} {
-		if t, err := time.Parse(layout, strings.TrimSpace(s)); err == nil {
-			return t.Format(time.DateOnly), ""
-		}
-	}
-
-	return nil, attributes.ProblemTypeMismatch
-}
-
-/*
-choices fits a list of options, each at most once.
-*/
-func choices(options []string, value any) (any, string) {
-	list, ok := value.([]any)
-	if !ok {
-		return nil, attributes.ProblemTypeMismatch
-	}
-
-	out := []any{}
-	for _, x := range list {
-		s, ok := x.(string)
-		if !ok || !slices.Contains(options, s) {
-			return nil, attributes.ProblemInvalidOption
-		}
-
-		if !slices.Contains(out, any(s)) {
-			out = append(out, s)
-		}
-	}
-
-	return out, ""
-}
-
-/*
-publicID fits one public id of the prefix.
-*/
-func publicID(prefix models.Prefix, value any) (any, string) {
-	s, ok := value.(string)
-	if !ok || !publicIDShape.MatchString(s) || !strings.HasPrefix(s, string(prefix)+"_") {
-		return nil, attributes.ProblemTypeMismatch
-	}
-
-	return s, ""
-}
-
-/*
-publicIDs fits a list of public ids of the prefix.
-*/
-func publicIDs(prefix models.Prefix, value any, limit int) (any, string) {
-	list, ok := value.([]any)
-	if !ok || len(list) > limit {
-		return nil, attributes.ProblemTypeMismatch
-	}
-
-	out := []any{}
-	for _, x := range list {
-		id, problem := publicID(prefix, x)
-		if problem != "" {
-			return nil, problem
-		}
-
-		out = append(out, id)
-	}
-
-	return out, ""
+	return fieldvalues.Fit(f.DataType, f.Options, value)
 }
 
 /*

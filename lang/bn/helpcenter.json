@@ -40,7 +40,8 @@
   "by_one": "লেখক: {{.name}}",
   "by_many": "লেখক: {{.name}} ও অন্যরা",
   "updated": "আপডেট: {{.date}}",
-  "updated_by": "আপডেট: {{.date}}, লেখক: {{.name}}",
+  "updated_ago": "আপডেট: {{.ago}}",
+  "written_by": "লেখক: {{.name}}",
   "reading_time": "পড়ার সময়: {{.count}} মিনিট",
   "copy_page": "পেজ কপি করুন",
   "copied": "কপি হয়েছে",
@@ -90,5 +91,23 @@
   "code": "কোড",
   "resend_code": "আবার কোড পাঠান",
   "use_another_email": "অন্য ইমেল ব্যবহার করুন",
-  "date_format": "02/01/2006"
+  "date_format": "02/01/2006",
+  "ago_today": "আজ",
+  "ago_yesterday": "গতকাল",
+  "ago_days": {
+    "one": "{{.count}} দিন আগে",
+    "other": "{{.count}} দিন আগে"
+  },
+  "ago_weeks": {
+    "one": "এক সপ্তাহেরও বেশি আগে",
+    "other": "{{.count}} সপ্তাহেরও বেশি আগে"
+  },
+  "ago_months": {
+    "one": "এক মাসেরও বেশি আগে",
+    "other": "{{.count}} মাসেরও বেশি আগে"
+  },
+  "ago_years": {
+    "one": "এক বছরেরও বেশি আগে",
+    "other": "{{.count}} বছরেরও বেশি আগে"
+  }
 }

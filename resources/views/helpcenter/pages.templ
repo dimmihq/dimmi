@@ -57,11 +57,21 @@ templ ArticlePage(c Center, all []Collection, a Article, helpful Helpful, assets
 				if a.Description != "" {
 					<p class="mt-3 text-title-3-regular text-text-secondary">{ a.Description }</p>
 				}
-				<p class="mt-4 flex flex-wrap items-center gap-2 text-body-2-regular text-text-tertiary">
-					<time datetime={ Stamp(a.Updated) }>{ updatedLine(c, a) }</time>
-					<span aria-hidden="true">·</span>
-					<span>{ c.T("reading_time", "count", a.Minutes) }</span>
-				</p>
+				<div class="mt-5 flex items-center gap-3 text-body-2-regular">
+					if a.Author.Name != "" {
+						@Avatar(a.Author, "size-9 text-caption-1-semibold")
+					}
+					<p class="grid">
+						if a.Author.Name != "" {
+							<span class="text-text-secondary">{ c.T("written_by", "name", a.Author.Name) }</span>
+						}
+						<span class="text-text-tertiary">
+							{ updatedBefore(c, a) }<time datetime={ Stamp(a.Updated) } title={ c.Date(a.Updated) }>{ age(c, a) }</time>{ updatedAfter(c, a) }
+							<span aria-hidden="true">·</span>
+							{ c.T("reading_time", "count", a.Minutes) }
+						</span>
+					</p>
+				</div>
 				<div class="prose mt-8" { originalLang(a)... }>
 					@templ.Raw(a.Body)
 				</div>

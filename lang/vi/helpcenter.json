@@ -40,7 +40,8 @@
   "by_one": "Bởi {{.name}}",
   "by_many": "Bởi {{.name}} và những người khác",
   "updated": "Cập nhật {{.date}}",
-  "updated_by": "Cập nhật {{.date}} bởi {{.name}}",
+  "updated_ago": "Cập nhật {{.ago}}",
+  "written_by": "Tác giả: {{.name}}",
   "reading_time": "Thời gian đọc: {{.count}} phút",
   "copy_page": "Sao chép trang",
   "copied": "Đã sao chép",
@@ -90,5 +91,19 @@
   "code": "Mã",
   "resend_code": "Gửi lại mã",
   "use_another_email": "Dùng email khác",
-  "date_format": "02/01/2006"
+  "date_format": "02/01/2006",
+  "ago_today": "hôm nay",
+  "ago_yesterday": "hôm qua",
+  "ago_days": {
+    "other": "{{.count}} ngày trước"
+  },
+  "ago_weeks": {
+    "other": "hơn {{.count}} tuần trước"
+  },
+  "ago_months": {
+    "other": "hơn {{.count}} tháng trước"
+  },
+  "ago_years": {
+    "other": "hơn {{.count}} năm trước"
+  }
 }

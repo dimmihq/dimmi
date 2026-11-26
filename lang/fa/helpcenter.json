@@ -40,7 +40,8 @@
   "by_one": "نوشتهٔ {{.name}}",
   "by_many": "نوشتهٔ {{.name}} و دیگران",
   "updated": "به‌روزرسانی: {{.date}}",
-  "updated_by": "به‌روزرسانی: {{.date}}، نوشتهٔ {{.name}}",
+  "updated_ago": "به‌روزرسانی: {{.ago}}",
+  "written_by": "نوشتهٔ {{.name}}",
   "reading_time": "زمان مطالعه: {{.count}} دقیقه",
   "copy_page": "کپی صفحه",
   "copied": "کپی شد",
@@ -90,5 +91,23 @@
   "code": "کد",
   "resend_code": "ارسال دوبارهٔ کد",
   "use_another_email": "استفاده از ایمیل دیگر",
-  "date_format": "2006/01/02"
+  "date_format": "2006/01/02",
+  "ago_today": "امروز",
+  "ago_yesterday": "دیروز",
+  "ago_days": {
+    "one": "{{.count}} روز پیش",
+    "other": "{{.count}} روز پیش"
+  },
+  "ago_weeks": {
+    "one": "بیش از یک هفته پیش",
+    "other": "بیش از {{.count}} هفته پیش"
+  },
+  "ago_months": {
+    "one": "بیش از یک ماه پیش",
+    "other": "بیش از {{.count}} ماه پیش"
+  },
+  "ago_years": {
+    "one": "بیش از یک سال پیش",
+    "other": "بیش از {{.count}} سال پیش"
+  }
 }

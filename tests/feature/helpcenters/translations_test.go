@@ -28,7 +28,7 @@ french saves and publishes an article's French translation.
 */
 func (c center) french(t *testing.T, article string, body testkit.JSON) {
 	t.Helper()
-	c.d.Owner.PutJSON("/api/v1/articles/"+article+"/translations/fr", body).AssertOK()
+	c.d.Owner.PatchJSON("/api/v1/articles/"+article+"/translations/fr", body).AssertOK()
 	c.d.Owner.PostJSON("/api/v1/articles/"+article+"/translations/fr/publications", nil).AssertOK()
 }
 
@@ -76,18 +76,18 @@ func TestHelpCenterLanguages(t *testing.T) {
 		id := c.published(t, testkit.JSON{"title": "Reset your password", "body_markdown": "Open settings."})
 		tr := "/api/v1/articles/" + id + "/translations/fr"
 
-		c.d.Owner.PutJSON("/api/v1/articles/"+id+"/translations/en", testkit.JSON{"title": "Nope"}).
+		c.d.Owner.PatchJSON("/api/v1/articles/"+id+"/translations/en", testkit.JSON{"title": "Nope"}).
 			AssertStatus(fhttp.StatusUnprocessableEntity).AssertJSONPath("code", "locale_is_default")
-		c.d.Owner.PutJSON("/api/v1/articles/"+id+"/translations/es", testkit.JSON{"title": "No"}).
+		c.d.Owner.PatchJSON("/api/v1/articles/"+id+"/translations/es", testkit.JSON{"title": "No"}).
 			AssertStatus(fhttp.StatusUnprocessableEntity).AssertJSONPath("code", "locale_not_enabled")
 		c.d.Owner.GetJSON(tr).AssertNotFound().AssertJSONPath("code", "translation_not_found")
 
-		c.d.Owner.PutJSON(tr, testkit.JSON{
+		c.d.Owner.PatchJSON(tr, testkit.JSON{
 			"title": "Réinitialiser votre mot de passe", "body_markdown": "Ouvrez les réglages.",
 		}).AssertOK().AssertJSONPath("data.status", "draft").
 			AssertJSONPath("data.slug", "reinitialiser-votre-mot-de-passe").
 			AssertJSONPath("data.outdated", false)
-		c.d.Owner.PutJSON(tr, testkit.JSON{"title": "Plus tard", "lock_version": 99}).
+		c.d.Owner.PatchJSON(tr, testkit.JSON{"title": "Plus tard", "lock_version": 99}).
 			AssertStatus(fhttp.StatusConflict).AssertJSONPath("code", "translation_changed")
 		c.d.Owner.PostJSON(tr+"/publications", nil).AssertOK().AssertJSONPath("data.status", "published")
 		c.d.Owner.PostJSON(tr+"/publications", nil).AssertStatus(fhttp.StatusConflict)
@@ -126,7 +126,7 @@ func TestHelpCenterLanguages(t *testing.T) {
 
 		other := tests.NewDesk(t)
 		other.Owner.GetJSON("/api/v1/articles/" + id + "/translations/fr").AssertNotFound()
-		other.Owner.PutJSON("/api/v1/articles/"+id+"/translations/fr", testkit.JSON{"title": "Hijack"}).
+		other.Owner.PatchJSON("/api/v1/articles/"+id+"/translations/fr", testkit.JSON{"title": "Hijack"}).
 			AssertNotFound()
 		other.Owner.GetJSON("/api/v1/help-centers/" + c.id + "/translation-states").AssertNotFound()
 	})
@@ -148,9 +148,9 @@ func TestHelpCenterLanguages(t *testing.T) {
 		c.french(t, reset, testkit.JSON{
 			"title": "Réinitialiser le mot de passe", "body_markdown": "Ouvrez les réglages.",
 		})
-		c.d.Owner.PutJSON("/api/v1/collections/"+col+"/translations/fr", testkit.JSON{"name": "Compte"}).AssertOK().
+		c.d.Owner.PatchJSON("/api/v1/collections/"+col+"/translations/fr", testkit.JSON{"name": "Compte"}).AssertOK().
 			AssertJSONPath("data.slug", "compte")
-		c.d.Owner.PutJSON("/api/v1/collections/"+empty+"/translations/fr", testkit.JSON{"name": "Facturation"}).
+		c.d.Owner.PatchJSON("/api/v1/collections/"+empty+"/translations/fr", testkit.JSON{"name": "Facturation"}).
 			AssertOK()
 		open := c.browse()
 

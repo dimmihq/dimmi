@@ -40,7 +40,8 @@
   "by_one": "作者：{{.name}}",
   "by_many": "作者：{{.name}} 等",
   "updated": "更新于 {{.date}}",
-  "updated_by": "更新于 {{.date}}，作者：{{.name}}",
+  "updated_ago": "更新于{{.ago}}",
+  "written_by": "作者：{{.name}}",
   "reading_time": "阅读时间：{{.count}} 分钟",
   "copy_page": "复制页面",
   "copied": "已复制",
@@ -90,5 +91,19 @@
   "code": "验证码",
   "resend_code": "重新发送验证码",
   "use_another_email": "使用其他邮箱",
-  "date_format": "2006年1月2日"
+  "date_format": "2006年1月2日",
+  "ago_today": "今天",
+  "ago_yesterday": "昨天",
+  "ago_days": {
+    "other": "{{.count}} 天前"
+  },
+  "ago_weeks": {
+    "other": "{{.count}} 周多前"
+  },
+  "ago_months": {
+    "other": "{{.count}} 个多月前"
+  },
+  "ago_years": {
+    "other": "{{.count}} 年多前"
+  }
 }

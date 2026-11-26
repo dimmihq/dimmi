@@ -71,8 +71,8 @@ type CompleteSSOLoginInput struct {
 CompleteSSOLogin signs a person in through a connection.
 
 Errors: [exceptions.ErrSSOEmailDomainNotVerified],
-[exceptions.ErrSSONoAccess], [exceptions.ErrMembershipDeactivated], or a
-wrapped error.
+[exceptions.ErrSSONoAccess], [exceptions.ErrMembershipDeactivated],
+[exceptions.ErrAccessAwaitingEnable], or a wrapped error.
 */
 type CompleteSSOLogin struct {
 	DB                  *database.DB

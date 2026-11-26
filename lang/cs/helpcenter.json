@@ -40,7 +40,8 @@
   "by_one": "Autor: {{.name}}",
   "by_many": "Autoři: {{.name}} a další",
   "updated": "Aktualizováno {{.date}}",
-  "updated_by": "Aktualizováno {{.date}}, autor: {{.name}}",
+  "updated_ago": "Aktualizováno {{.ago}}",
+  "written_by": "Autor: {{.name}}",
   "reading_time": "Doba čtení: {{.count}} min",
   "copy_page": "Kopírovat stránku",
   "copied": "Zkopírováno",
@@ -90,5 +91,31 @@
   "code": "Kód",
   "resend_code": "Poslat kód znovu",
   "use_another_email": "Použít jiný e-mail",
-  "date_format": "2. 1. 2006"
+  "date_format": "2. 1. 2006",
+  "ago_today": "dnes",
+  "ago_yesterday": "včera",
+  "ago_days": {
+    "one": "před {{.count}} dnem",
+    "few": "před {{.count}} dny",
+    "many": "před {{.count}} dne",
+    "other": "před {{.count}} dny"
+  },
+  "ago_weeks": {
+    "one": "před více než týdnem",
+    "few": "před více než {{.count}} týdny",
+    "many": "před více než {{.count}} týdne",
+    "other": "před více než {{.count}} týdny"
+  },
+  "ago_months": {
+    "one": "před více než měsícem",
+    "few": "před více než {{.count}} měsíci",
+    "many": "před více než {{.count}} měsíce",
+    "other": "před více než {{.count}} měsíci"
+  },
+  "ago_years": {
+    "one": "před více než rokem",
+    "few": "před více než {{.count}} lety",
+    "many": "před více než {{.count}} roku",
+    "other": "před více než {{.count}} lety"
+  }
 }

@@ -40,7 +40,8 @@
   "by_one": "Szerző: {{.name}}",
   "by_many": "Szerzők: {{.name}} és mások",
   "updated": "Frissítve: {{.date}}",
-  "updated_by": "Frissítve: {{.date}}, szerző: {{.name}}",
+  "updated_ago": "Frissítve: {{.ago}}",
+  "written_by": "Írta: {{.name}}",
   "reading_time": "Olvasási idő: {{.count}} perc",
   "copy_page": "Oldal másolása",
   "copied": "Másolva",
@@ -90,5 +91,23 @@
   "code": "Kód",
   "resend_code": "Kód újraküldése",
   "use_another_email": "Másik e-mail-cím",
-  "date_format": "2006. 01. 02."
+  "date_format": "2006. 01. 02.",
+  "ago_today": "ma",
+  "ago_yesterday": "tegnap",
+  "ago_days": {
+    "one": "{{.count}} napja",
+    "other": "{{.count}} napja"
+  },
+  "ago_weeks": {
+    "one": "több mint egy hete",
+    "other": "több mint {{.count}} hete"
+  },
+  "ago_months": {
+    "one": "több mint egy hónapja",
+    "other": "több mint {{.count}} hónapja"
+  },
+  "ago_years": {
+    "one": "több mint egy éve",
+    "other": "több mint {{.count}} éve"
+  }
 }

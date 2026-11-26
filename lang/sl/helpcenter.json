@@ -40,7 +40,8 @@
   "by_one": "Avtor: {{.name}}",
   "by_many": "Avtorji: {{.name}} in drugi",
   "updated": "Posodobljeno {{.date}}",
-  "updated_by": "Posodobljeno {{.date}}, avtor: {{.name}}",
+  "updated_ago": "Posodobljeno {{.ago}}",
+  "written_by": "Avtor: {{.name}}",
   "reading_time": "Čas branja: {{.count}} min",
   "copy_page": "Kopiraj stran",
   "copied": "Kopirano",
@@ -90,5 +91,31 @@
   "code": "Koda",
   "resend_code": "Znova pošlji kodo",
   "use_another_email": "Uporabi drug e-poštni naslov",
-  "date_format": "2. 1. 2006"
+  "date_format": "2. 1. 2006",
+  "ago_today": "danes",
+  "ago_yesterday": "včeraj",
+  "ago_days": {
+    "one": "pred {{.count}} dnevom",
+    "two": "pred {{.count}} dnevoma",
+    "few": "pred {{.count}} dnevi",
+    "other": "pred {{.count}} dnevi"
+  },
+  "ago_weeks": {
+    "one": "pred več kot tednom",
+    "two": "pred več kot {{.count}} tednoma",
+    "few": "pred več kot {{.count}} tedni",
+    "other": "pred več kot {{.count}} tedni"
+  },
+  "ago_months": {
+    "one": "pred več kot mesecem",
+    "two": "pred več kot {{.count}} mesecema",
+    "few": "pred več kot {{.count}} meseci",
+    "other": "pred več kot {{.count}} meseci"
+  },
+  "ago_years": {
+    "one": "pred več kot {{.count}} letom",
+    "two": "pred več kot {{.count}} letoma",
+    "few": "pred več kot {{.count}} leti",
+    "other": "pred več kot {{.count}} leti"
+  }
 }

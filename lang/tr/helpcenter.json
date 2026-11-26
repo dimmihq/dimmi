@@ -40,7 +40,8 @@
   "by_one": "Yazar: {{.name}}",
   "by_many": "Yazarlar: {{.name}} ve diğerleri",
   "updated": "Güncelleme: {{.date}}",
-  "updated_by": "Güncelleme: {{.date}}, yazar: {{.name}}",
+  "updated_ago": "Güncelleme: {{.ago}}",
+  "written_by": "Yazan: {{.name}}",
   "reading_time": "Okuma süresi: {{.count}} dk",
   "copy_page": "Sayfayı kopyala",
   "copied": "Kopyalandı",
@@ -90,5 +91,23 @@
   "code": "Kod",
   "resend_code": "Kodu yeniden gönder",
   "use_another_email": "Başka e-posta kullan",
-  "date_format": "02.01.2006"
+  "date_format": "02.01.2006",
+  "ago_today": "bugün",
+  "ago_yesterday": "dün",
+  "ago_days": {
+    "one": "{{.count}} gün önce",
+    "other": "{{.count}} gün önce"
+  },
+  "ago_weeks": {
+    "one": "bir haftadan uzun süre önce",
+    "other": "{{.count}} haftadan uzun süre önce"
+  },
+  "ago_months": {
+    "one": "bir aydan uzun süre önce",
+    "other": "{{.count}} aydan uzun süre önce"
+  },
+  "ago_years": {
+    "one": "bir yıldan uzun süre önce",
+    "other": "{{.count}} yıldan uzun süre önce"
+  }
 }

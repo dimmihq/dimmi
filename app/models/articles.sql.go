@@ -682,9 +682,12 @@ func (q *Queries) ListPublicArticleCards(ctx context.Context, arg ListPublicArti
 
 const listPublishedArticles = `-- name: ListPublishedArticles :many
 SELECT a.id, a.collection_id, a.position, a.published_at, v.title, v.slug, v.description, v.body_markdown,
-    v.body_html, v.toc, v.id AS version_id, v.created_at AS version_created_at, v.renderer_version
+    v.body_html, v.toc, v.id AS version_id, v.created_at AS version_created_at, v.renderer_version,
+    coalesce(u.name, '')::text AS author_name, u.avatar_path AS author_avatar
 FROM articles a
 JOIN article_versions v ON v.id = a.published_version_id
+LEFT JOIN workspace_members m ON m.id = a.author_member_id
+LEFT JOIN users u ON u.id = m.user_id AND u.deleted_at IS NULL
 WHERE a.workspace_id = $1 AND a.help_center_id = $2 AND a.deleted_at IS NULL
   AND a.status = 'published' AND v.visibility = 'public'
 ORDER BY a.collection_id NULLS LAST, a.position, a.id
@@ -709,10 +712,13 @@ type ListPublishedArticlesRow struct {
 	VersionID        ids.UUID        `json:"version_id"`
 	VersionCreatedAt time.Time       `json:"version_created_at"`
 	RendererVersion  int16           `json:"renderer_version"`
+	AuthorName       string          `json:"author_name"`
+	AuthorAvatar     *string         `json:"author_avatar"`
 }
 
 // ListPublishedArticles returns what readers see of a help center: every
-// published public article with its live version, in collection order.
+// published public article with its live version and who wrote it, in
+// collection order. author_name is empty when no teammate wrote it.
 func (q *Queries) ListPublishedArticles(ctx context.Context, arg ListPublishedArticlesParams) ([]ListPublishedArticlesRow, error) {
 	rows, err := q.db.Query(ctx, listPublishedArticles, arg.WorkspaceID, arg.HelpCenterID)
 	if err != nil {
@@ -736,6 +742,8 @@ func (q *Queries) ListPublishedArticles(ctx context.Context, arg ListPublishedAr
 			&i.VersionID,
 			&i.VersionCreatedAt,
 			&i.RendererVersion,
+			&i.AuthorName,
+			&i.AuthorAvatar,
 		); err != nil {
 			return nil, err
 		}

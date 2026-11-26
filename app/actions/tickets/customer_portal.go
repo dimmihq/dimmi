@@ -32,6 +32,7 @@ import (
 	"github.com/dimmihq/dimmi/app/enums"
 	appevents "github.com/dimmihq/dimmi/app/events"
 	"github.com/dimmihq/dimmi/app/models"
+	"github.com/dimmihq/dimmi/app/support/fieldvalues"
 )
 
 /*
@@ -258,7 +259,7 @@ PortalReply writes the reader's reply in their request's conversation.
 */
 func (t *Tickets) PortalReply(ctx context.Context, who Customer, ref Ref, body string) error {
 	body = strings.TrimSpace(body)
-	if n := len([]rune(body)); n < 1 || n > maxLongText {
+	if n := len([]rune(body)); n < 1 || n > fieldvalues.MaxLongText {
 		return ErrReplyInvalid
 	}
 

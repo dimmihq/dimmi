@@ -30,16 +30,30 @@ Me is the caller's picture. Workspace and Member are null when no
 workspace is in play; Workspaces is null for tokens, which cannot
 switch. Locale is the language the caller reads in: their own choice,
 else the workspace's, else the one the request was served in.
+AwaitingAccess lists the workspaces the caller was imported into from
+another tool and waits for an admin to enable them in; like Workspaces
+it is null for tokens.
 */
 type Me struct {
-	Object     string             `json:"object"`
-	User       User               `json:"user"`
-	Workspace  *Workspace         `json:"workspace"`
-	Member     *Member            `json:"member"`
-	Auth       Auth               `json:"auth"`
-	Workspaces []WorkspaceSummary `json:"workspaces"`
-	Instance   Instance           `json:"instance"`
-	Locale     string             `json:"locale"`
+	Object         string             `json:"object"`
+	User           User               `json:"user"`
+	Workspace      *Workspace         `json:"workspace"`
+	Member         *Member            `json:"member"`
+	Auth           Auth               `json:"auth"`
+	Workspaces     []WorkspaceSummary `json:"workspaces"`
+	AwaitingAccess []AwaitingAccess   `json:"awaiting_access"`
+	Instance       Instance           `json:"instance"`
+	Locale         string             `json:"locale"`
+}
+
+/*
+AwaitingAccess is a workspace the caller waits to be enabled in, by
+name only: they may see nothing else of it yet.
+*/
+type AwaitingAccess struct {
+	ID     string `json:"id"`
+	Object string `json:"object"`
+	Name   string `json:"name"`
 }
 
 /*
@@ -118,6 +132,15 @@ func NewMe(ctx context.Context, me auth.Me, instance Instance) Me {
 
 	if me.Workspaces != nil {
 		out.Workspaces = NewWorkspaceSummaries(me.Workspaces)
+	}
+
+	if me.Awaiting != nil {
+		out.AwaitingAccess = make([]AwaitingAccess, 0, len(me.Awaiting))
+		for _, w := range me.Awaiting {
+			out.AwaitingAccess = append(out.AwaitingAccess, AwaitingAccess{
+				ID: models.PublicID(models.PrefixWorkspace, w.WorkspaceID), Object: "workspace", Name: w.WorkspaceName,
+			})
+		}
 	}
 
 	return out

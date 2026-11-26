@@ -77,26 +77,6 @@ type Center struct {
 }
 
 /*
-LanguageLink is a language in the language menu: its tag, its name in
-itself, where the page is in it and whether it is the page's language.
-*/
-type LanguageLink struct {
-	Code    string
-	Name    string
-	URL     string
-	Current bool
-}
-
-/*
-Alternate is a page's address in one language, or x-default for the
-one a reader of none of them gets.
-*/
-type Alternate struct {
-	Lang string
-	URL  string
-}
-
-/*
 Section is a part of the portal, such as the changelog, with the key
 pages use to mark it current, its icon and the path under the base it
 lives at.
@@ -109,13 +89,14 @@ type Section struct {
 }
 
 /*
-Person is an author shown with an article or a changelog entry, by name
-and the initials drawn when there is no photo.
+Person is an author shown with an article or a changelog entry, by name,
+the address of their photo and the initials drawn when there is none.
 */
 type Person struct {
 	Name     string
 	Initials string
 	Role     string
+	Photo    string
 }
 
 /*
