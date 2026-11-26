@@ -16195,11 +16195,16 @@
       "Conflict": {
         "additionalProperties": false,
         "properties": {
-          "dimmi": {},
+          "dimmi": {
+            "description": "The value it holds in dimmi now, which the sync kept."
+          },
           "field": {
+            "description": "The field a teammate changed in dimmi since the migration wrote it, such as status.",
             "type": "string"
           },
-          "source": {}
+          "source": {
+            "description": "The value the other tool sent, which was not applied."
+          }
         },
         "required": [
           "field",
@@ -25892,6 +25897,7 @@
         "additionalProperties": false,
         "properties": {
           "counts": {
+            "description": "The migration's records per kind, by how they stand.",
             "items": {
               "$ref": "#/components/schemas/MigrationKindCount"
             },
@@ -25906,6 +25912,7 @@
             "type": "string"
           },
           "format_version": {
+            "description": "The import format version the migration reads, 1 today.",
             "format": "int32",
             "type": "integer"
           },
@@ -25914,6 +25921,7 @@
             "type": "string"
           },
           "last_record_at": {
+            "description": "When the migration last received a record. Null before the first.",
             "format": "date-time",
             "type": [
               "string",
@@ -25921,6 +25929,7 @@
             ]
           },
           "name": {
+            "description": "The migration's name, such as Intercom move. Null when none was given.",
             "type": [
               "string",
               "null"
@@ -25931,6 +25940,7 @@
             "type": "string"
           },
           "problems": {
+            "description": "The latest 50 records that failed, are unsupported or carry conflicts, newest first.",
             "items": {
               "$ref": "#/components/schemas/MigrationRecordProblem"
             },
@@ -25943,12 +25953,15 @@
             "$ref": "#/components/schemas/MigrationRollback"
           },
           "source": {
+            "description": "The short name of the tool the history comes from, such as intercom.",
             "type": "string"
           },
           "source_account": {
+            "description": "The id of the account in that tool. Starting again for it resumes this migration.",
             "type": "string"
           },
           "status": {
+            "description": "active while it takes records, rolling_back while it is undone, rolled_back once undone, or rollback_failed when the undo stopped and can be asked again.",
             "enum": [
               "active",
               "rolling_back",
@@ -25984,6 +25997,7 @@
         "additionalProperties": false,
         "properties": {
           "kind": {
+            "description": "The kind of the records sent.",
             "type": "string"
           },
           "object": {
@@ -25991,6 +26005,7 @@
             "type": "string"
           },
           "resolved": {
+            "description": "Records sent before that waited for this batch and are now applied or failed.",
             "items": {
               "$ref": "#/components/schemas/MigrationRecordResult"
             },
@@ -26000,6 +26015,7 @@
             ]
           },
           "results": {
+            "description": "A result per record, in the order sent.",
             "items": {
               "$ref": "#/components/schemas/MigrationRecordResult"
             },
@@ -26021,12 +26037,15 @@
         "additionalProperties": false,
         "properties": {
           "code": {
+            "description": "A stable code for why the record failed, such as company_exists.",
             "type": "string"
           },
           "field": {
+            "description": "The record field at fault, such as external_id. Null when no single field is.",
             "type": "string"
           },
           "message": {
+            "description": "What went wrong, in words for a person.",
             "type": "string"
           }
         },
@@ -26040,29 +26059,36 @@
         "additionalProperties": false,
         "properties": {
           "applied": {
+            "description": "Records applied, created or matched to what the workspace had.",
             "format": "int64",
             "type": "integer"
           },
           "conflicted": {
+            "description": "Records whose last sync left a teammate's change in place.",
             "format": "int64",
             "type": "integer"
           },
           "created": {
+            "description": "Applied records the migration created, which an undo removes.",
             "format": "int64",
             "type": "integer"
           },
           "deferred": {
+            "description": "Records waiting for others they name.",
             "format": "int64",
             "type": "integer"
           },
           "failed": {
+            "description": "Records not applied because of an error.",
             "format": "int64",
             "type": "integer"
           },
           "kind": {
+            "description": "The record kind counted, such as conversation.",
             "type": "string"
           },
           "unsupported": {
+            "description": "Records dimmi cannot apply yet.",
             "format": "int64",
             "type": "integer"
           }
@@ -26089,9 +26115,11 @@
             ]
           },
           "source_id": {
+            "description": "The record's id in the other tool, as asked.",
             "type": "string"
           },
           "status": {
+            "description": "applied, deferred, failed or unsupported as the ledger has it, or missing when the migration never received it.",
             "enum": [
               "applied",
               "deferred",
@@ -26159,6 +26187,7 @@
         "additionalProperties": false,
         "properties": {
           "conflicts": {
+            "description": "Fields a teammate changed in dimmi, which the last sync left as they are.",
             "items": {
               "$ref": "#/components/schemas/Conflict"
             },
@@ -26171,12 +26200,15 @@
             "$ref": "#/components/schemas/MigrationError"
           },
           "kind": {
+            "description": "The record's kind.",
             "type": "string"
           },
           "source_id": {
+            "description": "The record's id in the other tool.",
             "type": "string"
           },
           "status": {
+            "description": "failed or unsupported; applied when only conflicts make it a problem.",
             "enum": [
               "applied",
               "deferred",
@@ -26205,6 +26237,7 @@
         "additionalProperties": false,
         "properties": {
           "conflicts": {
+            "description": "Fields a teammate changed in dimmi, which this sync left as they are.",
             "items": {
               "$ref": "#/components/schemas/Conflict"
             },
@@ -26224,12 +26257,15 @@
             ]
           },
           "kind": {
+            "description": "The record's kind.",
             "type": "string"
           },
           "source_id": {
+            "description": "The record's id in the other tool.",
             "type": "string"
           },
           "status": {
+            "description": "created, updated, unchanged (sent before as it is and skipped), deferred, failed or unsupported.",
             "enum": [
               "created",
               "updated",
@@ -26241,6 +26277,7 @@
             "type": "string"
           },
           "waiting_for": {
+            "description": "The records a deferred record waits for. Empty otherwise.",
             "items": {
               "$ref": "#/components/schemas/Ref"
             },
@@ -26250,6 +26287,7 @@
             ]
           },
           "warnings": {
+            "description": "Fields left out of the record, each with a code and why.",
             "items": {
               "$ref": "#/components/schemas/Notice"
             },
@@ -26318,12 +26356,14 @@
         "additionalProperties": false,
         "properties": {
           "error": {
+            "description": "Why the undo stopped. Null unless it failed.",
             "type": [
               "string",
               "null"
             ]
           },
           "finished_at": {
+            "description": "When the undo finished or stopped. Null while it runs.",
             "format": "date-time",
             "type": [
               "string",
@@ -26331,10 +26371,12 @@
             ]
           },
           "removed": {
+            "description": "How many records the undo removed so far.",
             "format": "int32",
             "type": "integer"
           },
           "requested_at": {
+            "description": "When the undo was asked for.",
             "format": "date-time",
             "type": [
               "string",
@@ -26363,6 +26405,7 @@
             "type": "string"
           },
           "last_record_at": {
+            "description": "When the migration last received a record. Null before the first.",
             "format": "date-time",
             "type": [
               "string",
@@ -26370,6 +26413,7 @@
             ]
           },
           "name": {
+            "description": "The migration's name, such as Intercom move. Null when none was given.",
             "type": [
               "string",
               "null"
@@ -26380,12 +26424,15 @@
             "type": "string"
           },
           "source": {
+            "description": "The short name of the tool the history comes from, such as intercom.",
             "type": "string"
           },
           "source_account": {
+            "description": "The id of the account in that tool. Starting again for it resumes this migration.",
             "type": "string"
           },
           "status": {
+            "description": "active while it takes records, rolling_back while it is undone, rolled_back once undone, or rollback_failed when the undo stopped and can be asked again.",
             "enum": [
               "active",
               "rolling_back",
@@ -26548,12 +26595,15 @@
         "additionalProperties": false,
         "properties": {
           "code": {
+            "description": "A stable code for the warning, such as not_supported_yet or file_unavailable.",
             "type": "string"
           },
           "field": {
+            "description": "The record field left out, such as custom_attributes.",
             "type": "string"
           },
           "message": {
+            "description": "What was left out and why, in words for a person.",
             "type": "string"
           }
         },
@@ -30817,9 +30867,11 @@
         "additionalProperties": false,
         "properties": {
           "kind": {
+            "description": "The kind of the record named, such as contact or teammate.",
             "type": "string"
           },
           "source_id": {
+            "description": "The record's id in the other tool.",
             "type": "string"
           }
         },
@@ -70104,6 +70156,7 @@
     },
     "/migrations/{migration}/records": {
       "post": {
+        "description": "Applies a batch of 1 to 100 records of one kind in dimmi's import format to the migration, as quiet history: nothing is sent and no event goes out. Each record is kept under its source_id, so sending it again updates what it became or skips it when unchanged, and a record naming one not sent yet waits for it. It needs the settings:write ability and the imports:manage permission. Returns a result per record, in the order sent, and the waiting records this batch let through.",
         "operationId": "migrations.records.store",
         "parameters": [
           {
@@ -70148,6 +70201,7 @@
             "description": "Error"
           }
         },
+        "summary": "Send migration records",
         "x-abilities": [
           "settings:write"
         ]

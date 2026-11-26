@@ -20,7 +20,7 @@ func schemaTextParts() []map[string]map[string]string {
 		schemaTextPartsFromConversationRating(),
 		schemaTextPartsFromMessageAIConfirmation(),
 		schemaTextPartsFromSeriesTrace(),
-		[]map[string]map[string]string{agentStudioSchemaTexts()},
+		[]map[string]map[string]string{agentStudioSchemaTexts(), schemaTextsFromMigration()},
 	)
 }
 
