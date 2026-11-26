@@ -46,11 +46,13 @@ Loaded is a conversation with everything shown beside it. Assignee,
 Team and LastMessage are nil when there is none, and LastAuthor when a
 member did not write the latest message; Unread is judged for the
 member who loaded it. PendingApprovals counts the agent's calls waiting
-for a teammate to approve them.
+for a teammate to approve them. Company is the company the conversation
+is about, nil when none.
 */
 type Loaded struct {
 	Conversation models.Conversation
 	Contact      models.Contact
+	Company      *models.Company
 	Inbox        models.Inbox
 	Connection   models.ChannelConnection
 	Assignee     *Member

@@ -101,6 +101,7 @@ type UpdateTicketRequest struct {
 		AssigneeID        *string        `json:"assignee_id,omitempty"    maxLength:"64"`
 		TeamID            *string        `json:"team_id,omitempty"        maxLength:"64"`
 		SLAPolicyID       *string        `json:"sla_policy_id,omitempty"  maxLength:"64"`
+		CompanyID         *string        `json:"company_id,omitempty"     maxLength:"64"`
 		AcceptSuggestions []string       `json:"accept_suggestions,omitempty" maxItems:"200"`
 	}
 }

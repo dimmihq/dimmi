@@ -472,6 +472,7 @@ func (c *TicketController) change(in *requests.UpdateTicketRequest) (tickets.Cha
 		{models.PrefixMember, b.AssigneeID, &out.Assignee},
 		{models.PrefixTeam, b.TeamID, &out.Team},
 		{models.PrefixSLAPolicy, b.SLAPolicyID, &out.SLAPolicyID},
+		{models.PrefixCompany, b.CompanyID, &out.CompanyID},
 	} {
 		if *d.dst, err = c.optionalPtr(d.prefix, d.value); err != nil {
 			return out, err

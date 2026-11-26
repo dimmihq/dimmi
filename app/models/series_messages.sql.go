@@ -159,9 +159,11 @@ func (q *Queries) FindMemberContact(ctx context.Context, arg FindMemberContactPa
 }
 
 const listCompanySeriesContacts = `-- name: ListCompanySeriesContacts :many
-SELECT id, workspace_id, kind, external_id, email, email_verified, name, phone, avatar_url, company_id, custom_attributes, trusted_attribute_keys, locale, timezone, location, first_seen_at, last_seen_at, blocked_at, merged_into_id, search, deleted_at, created_at, updated_at, notes, placeholder FROM contacts
-WHERE workspace_id = $1 AND company_id = $2 AND deleted_at IS NULL AND blocked_at IS NULL
-ORDER BY created_at, id LIMIT 200
+SELECT c.id, c.workspace_id, c.kind, c.external_id, c.email, c.email_verified, c.name, c.phone, c.avatar_url, c.company_id, c.custom_attributes, c.trusted_attribute_keys, c.locale, c.timezone, c.location, c.first_seen_at, c.last_seen_at, c.blocked_at, c.merged_into_id, c.search, c.deleted_at, c.created_at, c.updated_at, c.notes, c.placeholder FROM contacts AS c
+JOIN contact_companies AS cc ON cc.contact_id = c.id AND cc.workspace_id = c.workspace_id
+WHERE c.workspace_id = $1 AND cc.company_id = $2::uuid
+  AND c.deleted_at IS NULL AND c.blocked_at IS NULL
+ORDER BY c.created_at, c.id LIMIT 200
 `
 
 type ListCompanySeriesContactsParams struct {
@@ -170,7 +172,8 @@ type ListCompanySeriesContactsParams struct {
 }
 
 // ListCompanySeriesContacts returns the people of a company a message
-// step can pick from.
+// step can pick from: everyone who belongs to it, as their default
+// company or not.
 func (q *Queries) ListCompanySeriesContacts(ctx context.Context, arg ListCompanySeriesContactsParams) ([]Contact, error) {
 	rows, err := q.db.Query(ctx, listCompanySeriesContacts, arg.WorkspaceID, arg.CompanyID)
 	if err != nil {

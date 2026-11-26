@@ -49,10 +49,12 @@ type ContextInput struct {
 Context is what is known about a conversation's customer. Source is the
 page, browser and device the conversation started from, as the channel
 recorded it. Past holds the customer's newest other conversations, and
-PastTotal how many they have, counted up to 100.
+PastTotal how many they have, counted up to 100. Company is the company
+the conversation is about, else the customer's default company.
 */
 type Context struct {
 	Contact    contacts.Detail
+	Company    *models.Company
 	Identities []models.ContactIdentity
 	Source     json.RawMessage
 	Past       []Loaded
@@ -136,6 +138,11 @@ func loadContext(ctx context.Context, tx *database.Tx, m authz.Membership, c mod
 	list, _ := listOf(m, Filters{View: ViewAll, AnyStatus: true, ContactID: &contact.ID}, querybuilder.SortLatest)
 
 	out := Context{Contact: detail, Identities: identities, Source: c.Source, Duplicates: len(duplicates)}
+
+	if out.Company, err = companyOf(ctx, q, c, detail); err != nil {
+		return Context{}, err
+	}
+
 	out.Past, out.PastTotal, err = pastConversations(ctx, tx, list, c.ID)
 
 	return out, err
@@ -171,4 +178,31 @@ func pastConversations(
 	}
 
 	return page.Conversations, total, nil
+}
+
+/*
+companyOf returns the company the conversation is about: its own, else
+the customer's default. A company since deleted is none.
+*/
+func companyOf(
+	ctx context.Context, q *models.Queries, c models.Conversation, d contacts.Detail,
+) (*models.Company, error) {
+	if c.CompanyID == nil {
+		return d.Company, nil
+	}
+
+	for i := range d.Companies {
+		if d.Companies[i].Company.ID == *c.CompanyID {
+			return &d.Companies[i].Company, nil
+		}
+	}
+
+	found, err := q.CompaniesByIDs(ctx, models.CompaniesByIDsParams{
+		WorkspaceID: c.WorkspaceID, Ids: []ids.UUID{*c.CompanyID},
+	})
+	if err != nil || len(found) == 0 {
+		return d.Company, err
+	}
+
+	return &found[0], nil
 }

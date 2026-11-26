@@ -31,7 +31,8 @@ import (
 
 /*
 subject is what conditions are evaluated about: the conversation, its
-contact and company with their tags, the channel, the trigger's data,
+contact and the company the conversation is about (else the contact's
+default company) with their tags, the channel, the trigger's data,
 the run's variables, the workspace's default office hours, and its
 saved audiences once a rule names one, and its customer ticket.
 */
@@ -65,8 +66,14 @@ func loadSubject(ctx context.Context, q *models.Queries, c models.Conversation) 
 	}
 
 	s.contact = contact
-	if contact.CompanyID != nil {
-		company, err := q.FindCompany(ctx, models.FindCompanyParams{WorkspaceID: c.WorkspaceID, ID: *contact.CompanyID})
+
+	companyID := c.CompanyID
+	if companyID == nil {
+		companyID = contact.CompanyID
+	}
+
+	if companyID != nil {
+		company, err := q.FindCompany(ctx, models.FindCompanyParams{WorkspaceID: c.WorkspaceID, ID: *companyID})
 		if err != nil {
 			return nil, fmt.Errorf("find company: %w", err)
 		}

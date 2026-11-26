@@ -47,6 +47,7 @@ type Profile struct {
 	Locale        *string
 	Timezone      *string
 	Company       *companies.Fields
+	Companies     []companies.Fields
 	Attributes    map[string]any
 	Warnings      []Warning
 }
@@ -80,6 +81,7 @@ func ReadProfile(extra map[string]any) Profile {
 	}
 	p.EmailVerified = p.Email != nil && r.flag("email_verified")
 	p.Company = r.company()
+	p.Companies = r.companies()
 	p.Attributes = r.attributes(extra["custom_attributes"], "custom_attributes")
 	p.Warnings = r.warnings
 	return p
@@ -210,19 +212,56 @@ func (r *reader) company() *companies.Fields {
 	if !ok || raw == nil {
 		return nil
 	}
+
+	return r.companyObject(raw, "company")
+}
+
+/*
+maxClaimCompanies is the most companies the companies claim may list.
+*/
+const maxClaimCompanies = 50
+
+/*
+companies reads the companies claim: a list of company objects shaped
+like the company claim, the further companies the customer belongs to.
+*/
+func (r *reader) companies() []companies.Fields {
+	raw, ok := r.claims["companies"]
+	if !ok || raw == nil {
+		return nil
+	}
+	list, ok := raw.([]any)
+	if !ok || len(list) > maxClaimCompanies {
+		r.drop("companies", fmt.Sprintf("it must be a list of at most %d companies", maxClaimCompanies))
+		return nil
+	}
+	out := make([]companies.Fields, 0, len(list))
+	for _, item := range list {
+		if f := r.companyObject(item, "companies"); f != nil {
+			out = append(out, *f)
+		}
+	}
+	return out
+}
+
+/*
+companyObject reads one company object: an id, and optionally a name,
+a domain and custom attributes.
+*/
+func (r *reader) companyObject(raw any, claim string) *companies.Fields {
 	obj, ok := raw.(map[string]any)
 	if !ok {
-		r.drop("company", "it must be an object")
+		r.drop(claim, "a company must be an object")
 		return nil
 	}
 	inner := reader{claims: obj}
 	id := inner.text("id", 255)
 	if id == nil {
-		r.drop("company", "it needs an id")
+		r.drop(claim, "a company needs an id")
 		return nil
 	}
 	f := &companies.Fields{ExternalID: id, Name: inner.text("name", 120), Domain: inner.text("domain", 253)}
-	f.CustomAttributes = inner.attributes(obj["custom_attributes"], "company")
+	f.CustomAttributes = inner.attributes(obj["custom_attributes"], claim)
 	r.warnings = append(r.warnings, inner.warnings...)
 	return f
 }

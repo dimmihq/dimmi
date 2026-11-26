@@ -131,7 +131,7 @@ html = messenger_snippet("wgt_...", "https://trydimmi.com", token=token)
 
 Fields: `id`, `email`, `email_verified`, `name`, `phone`,
 `phone_verified`, `avatar_url`, `locale`, `timezone`, `signed_up_at`,
-`company`, `attributes`. The camelCase names of the JavaScript SDK are
+`company`, `companies` (up to 50 more), `attributes`. The camelCase names of the JavaScript SDK are
 accepted too. Anything else raises `IdentityError` with a stable `code`
 (`user_field_unknown`, `attribute_key_invalid`, `secret_missing`, ...).
 

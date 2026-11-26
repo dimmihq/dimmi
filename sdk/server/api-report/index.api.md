@@ -64,6 +64,8 @@ export interface IdentityUser {
     // (undocumented)
     avatarUrl?: string | null;
     // (undocumented)
+    companies?: IdentityCompany[] | null;
+    // (undocumented)
     company?: IdentityCompany | null;
     // (undocumented)
     email?: string | null;

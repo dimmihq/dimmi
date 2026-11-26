@@ -43,10 +43,33 @@ type UpdateContactRequest struct {
 		Blocked    *bool    `json:"blocked,omitempty"`
 		Notes      *string  `json:"notes,omitempty"       validate:"omitempty,max=10000"`
 		CompanyID  *string  `json:"company_id,omitempty"`
+		CompanyIDs []string `json:"company_ids,omitempty" validate:"omitempty,max=300,dive,min=1,max=64"`
 		AddTags    []string `json:"add_tags,omitempty"    validate:"omitempty,max=50,dive,min=1,max=100"`
 		RemoveTags []string `json:"remove_tags,omitempty" validate:"omitempty,max=50"`
 	}
 	RawBody []byte
+}
+
+/*
+StoreContactCompanyRequest is the input of POST
+/contacts/{contact}/companies: the company to add, and whether it
+becomes the contact's default.
+*/
+type StoreContactCompanyRequest struct {
+	Contact string `path:"contact"`
+	Body    struct {
+		CompanyID string `json:"company_id"        validate:"required,max=64"`
+		Default   bool   `json:"default,omitempty"`
+	}
+}
+
+/*
+ContactCompanyRequest is the input of the routes on one company of a
+contact, /contacts/{contact}/companies/{company}.
+*/
+type ContactCompanyRequest struct {
+	Contact string `path:"contact"`
+	Company string `path:"company"`
 }
 
 /*

@@ -232,8 +232,9 @@ through.
 const (
 	contactAttribute = "EXISTS (SELECT 1 FROM contacts ct WHERE ct.workspace_id = c.workspace_id" +
 		" AND ct.id = c.contact_id AND "
-	companyAttribute = "EXISTS (SELECT 1 FROM contacts ct JOIN companies co ON co.id = ct.company_id" +
-		" AND co.workspace_id = ct.workspace_id WHERE ct.workspace_id = c.workspace_id AND ct.id = c.contact_id AND "
+	companyAttribute = "EXISTS (SELECT 1 FROM contact_companies lnk JOIN companies co ON co.id = lnk.company_id" +
+		" AND co.workspace_id = lnk.workspace_id WHERE lnk.workspace_id = c.workspace_id" +
+		" AND lnk.contact_id = c.contact_id AND "
 	conversationAIValue = "EXISTS (SELECT 1 FROM conversation_ai_values av WHERE av.workspace_id = c.workspace_id" +
 		" AND av.conversation_id = c.id AND "
 )

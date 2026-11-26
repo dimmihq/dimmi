@@ -24,6 +24,7 @@ relatedRows is everything a page of conversations points at, by id.
 */
 type relatedRows struct {
 	contacts    map[ids.UUID]models.Contact
+	companies   map[ids.UUID]models.Company
 	inboxes     map[ids.UUID]models.Inbox
 	connections map[ids.UUID]models.ChannelConnection
 	members     map[ids.UUID]Member
@@ -39,8 +40,8 @@ pageIDs are the workspace of a page of conversations and the ids the
 page points at.
 */
 type pageIDs struct {
-	workspace                                                     ids.UUID
-	conversations, contacts, inboxes, connections, members, teams []ids.UUID
+	workspace                                                                ids.UUID
+	conversations, contacts, companies, inboxes, connections, members, teams []ids.UUID
 }
 
 /*
@@ -54,6 +55,10 @@ func collect(convs []models.Conversation) pageIDs {
 		p.contacts = append(p.contacts, c.ContactID)
 		p.inboxes = append(p.inboxes, c.InboxID)
 		p.connections = append(p.connections, c.ChannelConnectionID)
+
+		if c.CompanyID != nil {
+			p.companies = append(p.companies, *c.CompanyID)
+		}
 
 		if c.AssigneeMemberID != nil {
 			p.members = append(p.members, *c.AssigneeMemberID)
@@ -101,12 +106,12 @@ func related(
 		return r, err
 	}
 
-	if err := r.readTags(ctx, q, p); err != nil {
-		return r, err
-	}
-
-	if err := r.readApprovals(ctx, q, p); err != nil {
-		return r, err
+	for _, read := range []func(context.Context, *models.Queries, pageIDs) error{
+		r.readTags, r.readCompanies, r.readApprovals,
+	} {
+		if err := read(ctx, q, p); err != nil {
+			return r, err
+		}
 	}
 
 	for _, m := range r.last {
@@ -170,6 +175,20 @@ func (r *relatedRows) readActivity(ctx context.Context, q *models.Queries, membe
 }
 
 /*
+readCompanies reads the companies the conversations are about.
+*/
+func (r *relatedRows) readCompanies(ctx context.Context, q *models.Queries, p pageIDs) error {
+	companies, err := q.CompaniesByIDs(ctx, models.CompaniesByIDsParams{WorkspaceID: p.workspace, Ids: p.companies})
+	if err != nil {
+		return err
+	}
+
+	r.companies = byID(companies, func(c models.Company) ids.UUID { return c.ID })
+
+	return nil
+}
+
+/*
 readTags reads the tags on each conversation.
 */
 func (r *relatedRows) readTags(ctx context.Context, q *models.Queries, p pageIDs) error {
@@ -216,6 +235,12 @@ func (r *relatedRows) loaded(c models.Conversation) Loaded {
 		Conversation: c, Contact: r.contacts[c.ContactID], Inbox: r.inboxes[c.InboxID],
 		Connection: r.connections[c.ChannelConnectionID], Unread: r.unread[c.ID], Tags: r.tags[c.ID],
 		PendingApprovals: r.approvals[c.ID],
+	}
+
+	if c.CompanyID != nil {
+		if co, ok := r.companies[*c.CompanyID]; ok {
+			l.Company = &co
+		}
 	}
 
 	if c.AssigneeMemberID != nil {

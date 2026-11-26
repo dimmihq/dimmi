@@ -71,6 +71,18 @@ final class IdentityTest extends TestCase
         $this->assertSame(['sub' => 'u1', 'email' => 'a@b.test'], array_diff_key($claims, ['iat' => 1, 'exp' => 1]));
     }
 
+    public function testCompaniesListFurtherCompanies(): void
+    {
+        $claims = Identity::claims([
+            'id' => 1,
+            'company' => ['id' => 'c1'],
+            'companies' => [['id' => 8, 'name' => 'Beta', 'domain' => 'beta.test'], ['id' => 'c3']],
+        ]);
+        $this->assertSame(['id' => 'c1'], $claims['company']);
+        $this->assertSame([['id' => '8', 'name' => 'Beta', 'domain' => 'beta.test'], ['id' => 'c3']], $claims['companies']);
+        $this->assertArrayNotHasKey('companies', Identity::claims(['id' => 1, 'companies' => []]));
+    }
+
     public function testSignedUpAtAcceptsDatesStringsAndSeconds(): void
     {
         $this->assertSame(1700000000, Identity::claims(['id' => 1, 'signedUpAt' => new \DateTimeImmutable('@1700000000')])['custom_attributes']['signed_up_at']);
@@ -142,6 +154,8 @@ final class IdentityTest extends TestCase
         yield 'bad key' => [['id' => 1, 'attributes' => ['planName' => 'x']], [], 'attribute_key_invalid'];
         yield 'nested value' => [['id' => 1, 'attributes' => ['plan' => ['x']]], [], 'attribute_value_invalid'];
         yield 'company without id' => [['id' => 1, 'company' => ['name' => 'Acme']], [], 'identify_user_invalid'];
+        yield 'companies item without id' => [['id' => 1, 'companies' => [['id' => 'c1'], ['name' => 'Acme']]], [], 'identify_user_invalid'];
+        yield 'too many companies' => [['id' => 1, 'companies' => array_map(fn ($i) => ['id' => "c{$i}"], range(1, 51))], [], 'company_limit'];
         yield 'expires too long' => [['id' => 1], ['expiresIn' => 3601], 'expires_in_invalid'];
         yield 'expires zero' => [['id' => 1], ['expiresIn' => 0], 'expires_in_invalid'];
         yield 'no secret' => [['id' => 1], ['secret' => ''], 'secret_missing'];

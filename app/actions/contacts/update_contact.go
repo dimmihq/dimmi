@@ -42,7 +42,9 @@ UpdateContactInput is who changes which contact and how. Fields holds
 the details sent; ClearExternalID and ClearEmail and friends say a
 field was sent as null. Blocked blocks or unblocks. AddTags and
 RemoveTags change the tags following the contact. CompanySet says the
-company was sent, CompanyID nil meaning none.
+default company was sent, CompanyID nil meaning none. CompaniesSet says
+the full list of companies was sent in CompanyIDs, which replaces the
+companies the contact belongs to.
 */
 type UpdateContactInput struct {
 	Membership      authz.Membership
@@ -56,6 +58,8 @@ type UpdateContactInput struct {
 	ClearNotes      bool
 	CompanySet      bool
 	CompanyID       *ids.UUID
+	CompaniesSet    bool
+	CompanyIDs      []ids.UUID
 	AddTags         tags.Refs
 	RemoveTags      []ids.UUID
 	Blocked         *bool
@@ -68,7 +72,10 @@ Rules:
   - The caller needs contacts:write, and contacts:manage_external_id to
     change or clear the external id.
   - An external id another contact holds is refused.
-  - A contact holds at most 50 tags.
+  - A contact holds at most 50 tags and belongs to at most 300 companies.
+  - A list of companies replaces the contact's companies. The default is
+    the company sent as company_id, else the current default when it
+    stays, else the first of the list.
   - Values equal to the current ones change nothing.
 
 Events: [appevents.ContactUpdated] when anything changed.
@@ -118,6 +125,10 @@ func (a *UpdateContact) Handle(ctx context.Context, in UpdateContactInput) (Deta
 
 		contact, err := u.write(ctx, q)
 		if err != nil {
+			return err
+		}
+
+		if contact, err = u.companies(ctx, q, contact); err != nil {
 			return err
 		}
 
@@ -300,6 +311,34 @@ func (u *update) company(ctx context.Context, q *models.Queries) error {
 	u.event.Changes = append(u.event.Changes, "company_id")
 
 	return nil
+}
+
+/*
+companies replaces the contact's companies with the list sent, keeping
+the default the update chose.
+*/
+func (u *update) companies(ctx context.Context, q *models.Queries, c models.Contact) (models.Contact, error) {
+	if !u.in.CompaniesSet {
+		return c, nil
+	}
+
+	want := CompanySet{IDs: u.in.CompanyIDs, Now: u.now}
+	if u.in.CompanySet && u.in.CompanyID != nil {
+		want.Default = u.in.CompanyID
+	}
+
+	after, changes, err := SetCompanies(ctx, q, c, want)
+	if err != nil {
+		return c, err
+	}
+
+	for _, change := range changes {
+		if !slices.Contains(u.event.Changes, change) {
+			u.event.Changes = append(u.event.Changes, change)
+		}
+	}
+
+	return after, nil
 }
 
 /*

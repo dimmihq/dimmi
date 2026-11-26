@@ -28,6 +28,7 @@ export interface IdentityUser {
   timezone?: string | null;
   signedUpAt?: Date | number | string | null;
   company?: IdentityCompany | null;
+  companies?: IdentityCompany[] | null;
   attributes?: Record<string, AttributeValue>;
 }
 
@@ -58,8 +59,10 @@ const known = new Set([
   "timezone",
   "signedUpAt",
   "company",
+  "companies",
   "attributes",
 ]);
+const maxCompanies = 50;
 
 /*
  * toClaims turns a user into token claims, throwing DimmiIdentityError
@@ -98,6 +101,12 @@ export function toClaims(user: IdentityUser): Record<string, unknown> {
   }
   if (user.company) {
     claims.company = companyClaims(user.company);
+  }
+  if (user.companies && user.companies.length > 0) {
+    if (user.companies.length > maxCompanies) {
+      throw new DimmiIdentityError("company_limit", `send at most ${maxCompanies} companies; add others through the API.`);
+    }
+    claims.companies = user.companies.map(companyClaims);
   }
   return claims;
 }

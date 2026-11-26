@@ -1682,7 +1682,7 @@ func (q *Queries) SkipQueuedBroadcastRecipients(ctx context.Context, arg SkipQue
 const stampBroadcastConversationClosed = `-- name: StampBroadcastConversationClosed :one
 UPDATE conversations SET closed_at = $1::timestamptz
 WHERE workspace_id = $2 AND id = $3 AND status = 'closed'
-RETURNING id, workspace_id, number, inbox_id, channel_connection_id, contact_id, subject, status, spam, assignee_member_id, assignee_team_id, ai_state, snoozed_until, external_thread_key, source, first_customer_message_at, last_customer_message_at, first_reply_at, last_reply_at, last_message_at, closed_at, message_count, deleted_at, created_at, updated_at, ai_reply_count, ai_cost_micros, ai_language, ai_handed_off_at, ai_handoff_reason, merged_into_id, is_test, previous_conversation_id, assignment_wait_reason, assignment_waiting_since, waiting_since, last_activity_at, last_message_id, search, priority, workflow_run_id, ai_mode, ai_memory, ai_agent_id, ai_transferred_from_ids
+RETURNING id, workspace_id, number, inbox_id, channel_connection_id, contact_id, subject, status, spam, assignee_member_id, assignee_team_id, ai_state, snoozed_until, external_thread_key, source, first_customer_message_at, last_customer_message_at, first_reply_at, last_reply_at, last_message_at, closed_at, message_count, deleted_at, created_at, updated_at, ai_reply_count, ai_cost_micros, ai_language, ai_handed_off_at, ai_handoff_reason, merged_into_id, is_test, previous_conversation_id, assignment_wait_reason, assignment_waiting_since, waiting_since, last_activity_at, last_message_id, search, priority, workflow_run_id, ai_mode, ai_memory, ai_agent_id, ai_transferred_from_ids, company_id
 `
 
 type StampBroadcastConversationClosedParams struct {
@@ -1743,6 +1743,7 @@ func (q *Queries) StampBroadcastConversationClosed(ctx context.Context, arg Stam
 		&i.AiMemory,
 		&i.AiAgentID,
 		&i.AiTransferredFromIds,
+		&i.CompanyID,
 	)
 	return i, err
 }

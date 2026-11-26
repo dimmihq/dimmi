@@ -56,7 +56,7 @@ func newInboxControllers(a *app.App) inboxControllers {
 		},
 		contacts: &v1.ContactController{
 			List: acts.ListContacts, Show: acts.ShowContact, Create: acts.CreateContact, Upsert: acts.UpsertContact,
-			Change: acts.UpdateContact, Conversations: acts.ListRecordConversations,
+			Change: acts.UpdateContact, Companies: acts.ChangeCompany, Conversations: acts.ListRecordConversations,
 			IDs: a.IDs, Cursors: cursors, Clock: a.Clock,
 		},
 		conversations: &v1.ConversationController{
@@ -107,6 +107,12 @@ func inboxRoutes(r *routing.Router, a *app.App) {
 		Query(routing.QueryParam{Name: "filename", Description: "Name of the uploaded file. Required."})
 	routing.Get(r, "/contacts/{contact}", "contacts.show", c.contacts.Get).Ability("contacts:read")
 	routing.Patch(r, "/contacts/{contact}", "contacts.update", c.contacts.Update).Ability("contacts:write")
+	routing.Post(r, "/contacts/{contact}/companies", "contacts.companies.store", c.contacts.StoreCompany).
+		Ability("contacts:write").Status(fhttp.StatusOK)
+	routing.Delete(r, "/contacts/{contact}/companies/{company}", "contacts.companies.destroy",
+		c.contacts.DestroyCompany).Ability("contacts:write").Status(fhttp.StatusOK)
+	routing.Post(r, "/contacts/{contact}/companies/{company}/default", "contacts.companies.default.store",
+		c.contacts.StoreDefaultCompany).Ability("contacts:write").Status(fhttp.StatusOK)
 	contactNoteRoutes(r, a)
 
 	conversationRoutes(r, c)

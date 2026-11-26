@@ -98,6 +98,8 @@ token, err := dimmi.SignIdentityToken(dimmi.User{
 }, dimmi.IdentityOptions{}) // $DIMMI_IDENTITY_SECRET + $DIMMI_IDENTITY_KID, or $DIMMI_IDENTITY_PRIVATE_KEY
 ```
 
+`Companies` lists up to 50 more companies the user belongs to; `Company` stays the default.
+
 How a token is signed:
 
 - With a shared secret, the token is HS256. The whole `dmi_idsec_...` string is the key.

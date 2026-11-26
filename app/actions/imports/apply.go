@@ -184,6 +184,10 @@ func (a applier) contact(ctx context.Context, r record) (string, error) {
 	}
 
 	err = a.db.Transaction(ctx, func(ctx context.Context, tx *database.Tx) error {
+		if err := a.otherCompanies(ctx, tx, c.id, r.others); err != nil {
+			return err
+		}
+
 		return a.contactExtras(ctx, models.New(tx), r, c)
 	})
 	if err != nil {
@@ -226,21 +230,75 @@ func (a applier) contactExtras(ctx context.Context, q *models.Queries, r record,
 }
 
 /*
+otherCompanies adds the customer to the further companies the row
+names, finding each by external id or domain, else by name, and adding
+it when there is none. Their default company stays as it is.
+*/
+func (a applier) otherCompanies(
+	ctx context.Context, tx *database.Tx, contact ids.UUID, others []companies.Fields,
+) error {
+	ws, now, q := a.m.Workspace.ID, a.now(), models.New(tx)
+
+	for _, f := range others {
+		var (
+			c   models.Company
+			err error
+		)
+
+		switch {
+		case f.ExternalID != nil || companies.NormalizeDomain(f.Domain) != nil:
+			c, _, err = companies.Identify(ctx, tx, companies.Identity{WorkspaceID: ws, Fields: f, Now: now})
+		case f.Name != nil:
+			c, err = a.companyByName(ctx, q, *f.Name)
+		default:
+			continue
+		}
+
+		if err != nil {
+			return err
+		}
+
+		if _, err := q.LinkContactCompany(ctx, models.LinkContactCompanyParams{
+			WorkspaceID: ws, ContactID: contact, CompanyID: c.ID, Now: now,
+		}); err != nil {
+			return fmt.Errorf("link company: %w", err)
+		}
+	}
+
+	return nil
+}
+
+/*
+companyByName finds the live company with the name, adding one when
+there is none.
+*/
+func (a applier) companyByName(ctx context.Context, q *models.Queries, name string) (models.Company, error) {
+	ws := a.m.Workspace.ID
+
+	c, err := q.FindCompanyByName(ctx, models.FindCompanyByNameParams{WorkspaceID: ws, Name: name})
+	if errors.Is(err, database.ErrNotFound) {
+		c, err = q.CreateCompany(ctx, models.CreateCompanyParams{
+			WorkspaceID: ws, Name: name, CustomAttributes: []byte(`{}`), Now: a.now(),
+		})
+	}
+
+	if err != nil {
+		return c, fmt.Errorf("find company by name: %w", err)
+	}
+
+	return c, nil
+}
+
+/*
 linkByName puts the customer in the live company with the name, adding
 one when there is none.
 */
 func (a applier) linkByName(ctx context.Context, q *models.Queries, contact ids.UUID, name string) error {
 	ws, now := a.m.Workspace.ID, a.now()
 
-	c, err := q.FindCompanyByName(ctx, models.FindCompanyByNameParams{WorkspaceID: ws, Name: name})
-	if errors.Is(err, database.ErrNotFound) {
-		c, err = q.CreateCompany(ctx, models.CreateCompanyParams{
-			WorkspaceID: ws, Name: name, CustomAttributes: []byte(`{}`), Now: now,
-		})
-	}
-
+	c, err := a.companyByName(ctx, q, name)
 	if err != nil {
-		return fmt.Errorf("find company by name: %w", err)
+		return err
 	}
 
 	return q.LinkImportedContactCompany(ctx, models.LinkImportedContactCompanyParams{

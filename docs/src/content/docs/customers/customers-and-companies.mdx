@@ -27,11 +27,22 @@ A lead who only typed an email address in chat never auto-matches an existing re
 
 Companies match by external ID first, then by domain (`WWW.Acme.dev` and `acme.dev` match as one company).
 
+## Customers in several companies
+
+A customer can belong to up to 300 companies. One of them is their **default company**: `company` and `company_id` in the API always name it.
+
+- **First is default:** the first company a customer gets becomes the default.
+- **Removing the default:** the oldest remaining company takes over.
+- **New conversations and tickets:** they start on the default company. A teammate can switch one to any other company the customer belongs to.
+- **Filters match any company:** segments, audiences, saved views and the company filter count a customer in every company they belong to.
+
+In the API, `companies` on a customer lists them all. Add one with `POST /contacts/{contact}/companies`, remove one with `DELETE /contacts/{contact}/companies/{company}`, and make one the default with `POST /contacts/{contact}/companies/{company}/default`. Sending `company_ids` when you create or update a customer replaces the whole list.
+
 ## Merge duplicates
 
 Open the row menu on the customer you want to keep and click **Merge…**. dimmi suggests up to 20 likely matches with the same email, phone number, or name and company.
 
-- **History moves over:** all conversations, identities, tags, and event counts transfer to the kept customer.
+- **History moves over:** all conversations, identities, tags, companies, and event counts transfer to the kept customer.
 - **Kept profile wins:** existing fields on the kept customer stay untouched; the merged record only fills blank fields and missing attributes.
 - **Old links redirect:** opening the merged customer's URL takes you to the kept profile.
 - **Different external IDs stay separate:** dimmi will not merge two users who have different external IDs.

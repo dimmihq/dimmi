@@ -48,10 +48,13 @@ WHERE workspace_id = @workspace_id AND series_enrollment_id = @series_enrollment
 
 -- name: ListCompanySeriesContacts :many
 -- ListCompanySeriesContacts returns the people of a company a message
--- step can pick from.
-SELECT * FROM contacts
-WHERE workspace_id = @workspace_id AND company_id = @company_id AND deleted_at IS NULL AND blocked_at IS NULL
-ORDER BY created_at, id LIMIT 200;
+-- step can pick from: everyone who belongs to it, as their default
+-- company or not.
+SELECT c.* FROM contacts AS c
+JOIN contact_companies AS cc ON cc.contact_id = c.id AND cc.workspace_id = c.workspace_id
+WHERE c.workspace_id = @workspace_id AND cc.company_id = sqlc.narg(company_id)::uuid
+  AND c.deleted_at IS NULL AND c.blocked_at IS NULL
+ORDER BY c.created_at, c.id LIMIT 200;
 
 -- name: ListCompanySeriesRooms :many
 -- ListCompanySeriesRooms returns the customer Slack channels of a

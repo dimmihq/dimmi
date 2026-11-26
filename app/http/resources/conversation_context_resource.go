@@ -65,8 +65,8 @@ func NewConversationContext(c conversations.Context) ConversationContext {
 		PastConversations: PastConversations{Data: NewConversations(c.Past), TotalEstimate: c.PastTotal},
 	}
 
-	if c.Contact.Company != nil {
-		out.Company = new(newContextCompany(*c.Contact.Company))
+	if c.Company != nil {
+		out.Company = new(newContextCompany(*c.Company))
 	}
 
 	return out

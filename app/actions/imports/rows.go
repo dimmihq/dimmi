@@ -29,18 +29,28 @@ import (
 )
 
 /*
-maxTags is how many tags one row may add.
+maxTags is how many tags one row may add, and maxRowCompanies how many
+companies one customer's row may name.
 */
-const maxTags = 20
+const (
+	maxTags         = 20
+	maxRowCompanies = 20
+
+	nameSeparators   = ";|"
+	domainSeparators = ";|,"
+)
 
 /*
 record is what one row says: a customer with the company they belong
-to, or a company, and the tags to add.
+to and any further companies, or a company, and the tags to add. The
+first company a customer's row names becomes their default when they
+have none; the others are added beside it.
 */
 type record struct {
 	line    int
 	contact contacts.Fields
 	company *companies.Fields
+	others  []companies.Fields
 	self    companies.Fields
 	tags    []string
 }
@@ -117,9 +127,9 @@ func (b builder) set(r *record, custom map[string]any, field, value string) stri
 	case FieldDomain:
 		r.self.Domain = &value
 	case FieldCompanyName:
-		r.employer().Name = &value
+		return r.setCompanies(splitCompanies(value, nameSeparators), setName)
 	case FieldCompanyDomain:
-		r.employer().Domain = &value
+		return r.setCompanies(splitCompanies(value, domainSeparators), setDomain)
 	case FieldTags:
 		r.tags = splitTags(value)
 		if len(r.tags) > maxTags {
@@ -135,6 +145,68 @@ func (b builder) set(r *record, custom map[string]any, field, value string) stri
 	}
 
 	return ""
+}
+
+/*
+setName and setDomain put one cell's value in a company's fields.
+*/
+func setName(f *companies.Fields, v *string)   { f.Name = v }
+func setDomain(f *companies.Fields, v *string) { f.Domain = v }
+
+/*
+setCompanies puts one value in each company the row names, in order.
+*/
+func (r *record) setCompanies(values []string, put func(f *companies.Fields, v *string)) string {
+	if len(values) > maxRowCompanies {
+		return fmt.Sprintf("more than %d companies", maxRowCompanies)
+	}
+
+	for i := range values {
+		if values[i] == "" {
+			continue
+		}
+
+		if i == 0 {
+			put(r.employer(), &values[i])
+
+			continue
+		}
+
+		for len(r.others) < i {
+			r.others = append(r.others, companies.Fields{})
+		}
+
+		put(&r.others[i-1], &values[i])
+	}
+
+	return ""
+}
+
+/*
+splitCompanies splits a cell naming several companies, keeping empty
+places so names and domains pair up by position. Names are split on ;
+and | only, since a name may hold a comma; domains on commas too.
+*/
+func splitCompanies(value, separators string) []string {
+	if strings.TrimSpace(value) == "" {
+		return nil
+	}
+
+	var out []string
+
+	start := 0
+	for i, r := range value + string(separators[0]) {
+		if strings.ContainsRune(separators, r) {
+			out = append(out, strings.TrimSpace(value[start:min(i, len(value))]))
+			start = i + 1
+		}
+	}
+
+	for len(out) > 0 && out[len(out)-1] == "" {
+		out = out[:len(out)-1]
+	}
+
+	return out
 }
 
 /*

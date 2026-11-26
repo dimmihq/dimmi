@@ -317,8 +317,9 @@ func (u *companyUpdate) tags(ctx context.Context, q *models.Queries) error {
 }
 
 /*
-DeleteCompany moves a company to the trash, its people left without a
-company.
+DeleteCompany moves a company to the trash and takes it off everyone
+who belongs to it. Someone whose default it was gets their oldest
+remaining company as the default.
 
 Rules:
   - The caller needs companies:delete.
@@ -359,6 +360,12 @@ func (a *DeleteCompany) Handle(ctx context.Context, in ShowInput) error {
 		})
 		if err != nil {
 			return fmt.Errorf("detach contacts: %w", err)
+		}
+
+		if _, err = q.UnlinkCompanyContacts(ctx, models.UnlinkCompanyContactsParams{
+			WorkspaceID: ws, CompanyID: in.CompanyID,
+		}); err != nil {
+			return fmt.Errorf("unlink contacts: %w", err)
 		}
 
 		return a.Events.Dispatch(ctx, tx, appevents.CompanyDeleted{

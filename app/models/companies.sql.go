@@ -100,10 +100,11 @@ func (q *Queries) CountCompanies(ctx context.Context, arg CountCompaniesParams) 
 }
 
 const countCompanyPeople = `-- name: CountCompanyPeople :many
-SELECT company_id::uuid AS company_id, count(*) AS people FROM contacts
-WHERE workspace_id = $1 AND company_id = ANY ($2::uuid[])
-  AND deleted_at IS NULL AND merged_into_id IS NULL
-GROUP BY company_id
+SELECT cc.company_id::uuid AS company_id, count(*) AS people FROM contact_companies AS cc
+JOIN contacts AS c ON c.id = cc.contact_id AND c.workspace_id = cc.workspace_id
+WHERE cc.workspace_id = $1 AND cc.company_id = ANY ($2::uuid[])
+  AND c.deleted_at IS NULL AND c.merged_into_id IS NULL
+GROUP BY cc.company_id
 `
 
 type CountCompanyPeopleParams struct {
@@ -116,7 +117,8 @@ type CountCompanyPeopleRow struct {
 	People    int64    `json:"people"`
 }
 
-// CountCompanyPeople counts the live contacts of each company given.
+// CountCompanyPeople counts the live contacts that belong to each company
+// given, whether it is their default company or not.
 func (q *Queries) CountCompanyPeople(ctx context.Context, arg CountCompanyPeopleParams) ([]CountCompanyPeopleRow, error) {
 	rows, err := q.db.Query(ctx, countCompanyPeople, arg.WorkspaceID, arg.CompanyIds)
 	if err != nil {
@@ -393,16 +395,17 @@ func (q *Queries) ListCompanies(ctx context.Context, arg ListCompaniesParams) ([
 }
 
 const listCompanyContacts = `-- name: ListCompanyContacts :many
-SELECT id, workspace_id, kind, external_id, email, email_verified, name, phone, avatar_url, company_id, custom_attributes, trusted_attribute_keys, locale, timezone, location, first_seen_at, last_seen_at, blocked_at, merged_into_id, search, deleted_at, created_at, updated_at, notes, placeholder FROM contacts
-WHERE workspace_id = $1
-  AND company_id = $2::uuid
-  AND deleted_at IS NULL
-  AND merged_into_id IS NULL
+SELECT c.id, c.workspace_id, c.kind, c.external_id, c.email, c.email_verified, c.name, c.phone, c.avatar_url, c.company_id, c.custom_attributes, c.trusted_attribute_keys, c.locale, c.timezone, c.location, c.first_seen_at, c.last_seen_at, c.blocked_at, c.merged_into_id, c.search, c.deleted_at, c.created_at, c.updated_at, c.notes, c.placeholder FROM contacts AS c
+JOIN contact_companies AS cc ON cc.contact_id = c.id AND cc.workspace_id = c.workspace_id
+WHERE c.workspace_id = $1
+  AND cc.company_id = $2::uuid
+  AND c.deleted_at IS NULL
+  AND c.merged_into_id IS NULL
   AND (
       $3::uuid IS NULL
-      OR (created_at, id) < ($4::timestamptz, $3::uuid)
+      OR (c.created_at, c.id) < ($4::timestamptz, $3::uuid)
   )
-ORDER BY created_at DESC, id DESC
+ORDER BY c.created_at DESC, c.id DESC
 LIMIT $5::bigint
 `
 
@@ -414,9 +417,10 @@ type ListCompanyContactsParams struct {
 	RowLimit        int64      `json:"row_limit"`
 }
 
-// ListCompanyContacts returns a page of the live contacts that work for
-// the company, newest first. A page after the first passes the
-// created_at and id of the last contact it saw.
+// ListCompanyContacts returns a page of the live contacts that belong to
+// the company, as their default company or not, newest first. A page
+// after the first passes the created_at and id of the last contact it
+// saw.
 func (q *Queries) ListCompanyContacts(ctx context.Context, arg ListCompanyContactsParams) ([]Contact, error) {
 	rows, err := q.db.Query(ctx, listCompanyContacts,
 		arg.WorkspaceID,

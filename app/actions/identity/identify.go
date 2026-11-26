@@ -224,6 +224,16 @@ func (r *identifyRun) apply(ctx context.Context, c models.Contact) (Identified, 
 	if contact, err = r.profile(ctx, contact, &ch); err != nil {
 		return Identified{}, err
 	}
+	if err := r.companies(ctx, contact, &ch, p.Companies); err != nil {
+		return Identified{}, err
+	}
+	if contact.CompanyID == nil && len(p.Companies) > 0 {
+		if contact, err = r.q.FindContact(ctx, models.FindContactParams{
+			WorkspaceID: contact.WorkspaceID, ID: contact.ID,
+		}); err != nil {
+			return Identified{}, fmt.Errorf("find customer: %w", err)
+		}
+	}
 	if err := r.identities(ctx, contact); err != nil {
 		return Identified{}, err
 	}
@@ -246,6 +256,32 @@ func (r *identifyRun) company(ctx context.Context, ch *change, f *companies.Fiel
 	if ch.params.CompanyID == nil || *ch.params.CompanyID != company.ID {
 		ch.params.CompanyID = &company.ID
 		ch.changes = append(ch.changes, "company_id")
+	}
+	return nil
+}
+
+/*
+companies finds or adds the further companies the token lists and adds
+the customer to each. The default stays the company claim's, or the
+customer's own; without either the first listed becomes the default.
+*/
+func (r *identifyRun) companies(ctx context.Context, c models.Contact, ch *change, list []companies.Fields) error {
+	for _, f := range list {
+		company, _, err := companies.Identify(ctx, r.tx, companies.Identity{
+			WorkspaceID: r.v.WorkspaceID, Fields: f, Now: r.v.Now,
+		})
+		if err != nil {
+			return fmt.Errorf("identify company: %w", err)
+		}
+		added, err := r.q.LinkContactCompany(ctx, models.LinkContactCompanyParams{
+			WorkspaceID: c.WorkspaceID, ContactID: c.ID, CompanyID: company.ID, Now: r.v.Now,
+		})
+		if err != nil {
+			return fmt.Errorf("link company: %w", err)
+		}
+		if added > 0 && !slices.Contains(ch.changes, "companies") {
+			ch.changes = append(ch.changes, "companies")
+		}
 	}
 	return nil
 }

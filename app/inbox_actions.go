@@ -45,6 +45,7 @@ type InboxActions struct {
 	ShowContact    *contacts.ShowContact
 	CreateContact  *contacts.CreateContact
 	UpdateContact  *contacts.UpdateContact
+	ChangeCompany  *contacts.ChangeCompany
 	UpsertContact  *contacts.UpsertIdentifiedContact
 	DeleteContact  *contacts.DeleteContact
 	ListIdentities *contacts.ListIdentities
