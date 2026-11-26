@@ -102,7 +102,7 @@ It asks you to type `yes`, then removes everything the migration created in dimm
 | --- | --- |
 | Intercom API use | At most 30% of your workspace's Intercom rate limit, so your other Intercom apps keep working. `dimmi-migrate` waits when Intercom asks it to. |
 | Batches | Up to 100 records per request to dimmi |
-| Files | Attachments up to 200 MB each are downloaded once and uploaded once, however many records share them |
+| Files | Attachments up to 100 MB each are downloaded once and uploaded once, however many records share them |
 | Output | Short lines by default; `--json` prints one JSON object a line for AI agents. Neither ever prints customer content or keys. |
 | Progress | Kept in your user config folder, under `dimmi-migrate/<profile>/`. `--profile` keeps separate keys and progress, for example per workspace. |
 

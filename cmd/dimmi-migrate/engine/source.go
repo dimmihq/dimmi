@@ -13,6 +13,7 @@ package engine
 
 import (
 	"context"
+	"errors"
 	"io"
 	"time"
 
@@ -102,6 +103,7 @@ type Source interface {
 Counts is how many records of a kind dimmi took.
 */
 type Counts struct {
+	Deferred  int `json:"deferred"`
 	Created   int `json:"created"`
 	Updated   int `json:"updated"`
 	Unchanged int `json:"unchanged"`
@@ -173,8 +175,11 @@ type Upload struct {
 }
 
 /*
-Destination is dimmi's migrations API.
+ErrNoLookup is what a Destination returns when it can't look records
+up; verify then compares counts only.
 */
+var ErrNoLookup = errors.New("lookups not supported")
+
 type Destination interface {
 	Start(ctx context.Context, start Start) (Migration, error)
 	Get(ctx context.Context, id string) (Migration, error)

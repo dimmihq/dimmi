@@ -28,10 +28,11 @@ client that signs in with PKCE through a loopback redirect on any port.
 const ClientID = "dimmi-migrate"
 
 /*
-Scopes are what the CLI asks for: managing imports, and a refresh token
+Scopes are what the CLI asks for: settings:write, which the migrations
+API requires, and a refresh token
 so a long migration or a sync that runs for weeks stays signed in.
 */
-const Scopes = "imports:manage offline_access"
+const Scopes = "settings:write offline_access"
 
 /*
 Token is a saved dimmi sign-in.

@@ -109,6 +109,21 @@ func (c *Client) do(ctx context.Context, method, path string, body io.Reader, co
 			return err
 		}
 
+		if sz, ok := body.(sized); ok {
+			req.Body = io.NopCloser(sz.r)
+			req.ContentLength = sz.n
+
+			if seeker, ok := sz.r.(io.Seeker); ok {
+				req.GetBody = func() (io.ReadCloser, error) {
+					if _, err := seeker.Seek(0, io.SeekStart); err != nil {
+						return nil, err
+					}
+
+					return io.NopCloser(sz.r), nil
+				}
+			}
+		}
+
 		req.Header.Set("Authorization", "Bearer "+token)
 		req.Header.Set("Accept", "application/json")
 		req.Header.Set("User-Agent", c.Agent)
@@ -133,7 +148,12 @@ func (c *Client) do(ctx context.Context, method, path string, body io.Reader, co
 		}
 
 		if res.StatusCode == http.StatusUnauthorized && attempt == 0 {
-			seeker, rewinds := body.(io.Seeker)
+			var seeker io.Seeker
+
+			rewinds := false
+			if sz, ok := body.(sized); ok {
+				seeker, rewinds = sz.r.(io.Seeker)
+			}
 			if raw != nil || body == nil || rewinds {
 				_ = res.Body.Close()
 
@@ -152,6 +172,16 @@ func (c *Client) do(ctx context.Context, method, path string, body io.Reader, co
 
 	return errors.New("dimmi refused the refreshed token: run `dimmi-migrate connect` again")
 }
+
+/*
+sized is a body with a known length, which an upload must declare.
+*/
+type sized struct {
+	r io.Reader
+	n int64
+}
+
+func (s sized) Read(p []byte) (int, error) { return s.r.Read(p) }
 
 func decode(res *http.Response, out any) error {
 	defer res.Body.Close()
@@ -216,18 +246,26 @@ migration is the migration resource.
 type migration struct {
 	ID     string `json:"id"`
 	Status string `json:"status"`
-	Counts map[format.Kind]struct {
-		Created   int `json:"created"`
-		Updated   int `json:"updated"`
-		Unchanged int `json:"unchanged"`
-		Failed    int `json:"failed"`
+	Counts []struct {
+		Kind        format.Kind `json:"kind"`
+		Applied     int         `json:"applied"`
+		Created     int         `json:"created"`
+		Deferred    int         `json:"deferred"`
+		Failed      int         `json:"failed"`
+		Unsupported int         `json:"unsupported"`
 	} `json:"counts"`
 }
 
+/*
+engine reads dimmi's counts: applied records are held, created ones a
+part of them; deferred ones wait for the records they name.
+*/
 func (m migration) engine() engine.Migration {
 	out := engine.Migration{ID: m.ID, Status: m.Status, Counts: map[format.Kind]engine.Counts{}}
-	for k, v := range m.Counts {
-		out.Counts[k] = engine.Counts{Created: v.Created, Updated: v.Updated, Unchanged: v.Unchanged, Failed: v.Failed}
+	for _, c := range m.Counts {
+		out.Counts[c.Kind] = engine.Counts{
+			Created: c.Created, Updated: c.Applied - c.Created, Unchanged: c.Unsupported, Failed: c.Failed, Deferred: c.Deferred,
+		}
 	}
 
 	return out
@@ -297,46 +335,42 @@ updated), deferred until the records it names arrive, unsupported, or
 failed with a problem.
 */
 type result struct {
-	SourceID  string `json:"source_id"`
-	Outcome   string `json:"outcome"`
-	Created   bool   `json:"created"`
-	Unchanged bool   `json:"unchanged"`
-	RecordID  string `json:"record_id"`
-	Problem   *struct {
+	SourceID string  `json:"source_id"`
+	Status   string  `json:"status"`
+	ID       *string `json:"id"`
+	Error    *struct {
 		Code    string `json:"code"`
 		Message string `json:"message"`
 		Field   string `json:"field"`
-	} `json:"problem"`
+	} `json:"error"`
 }
 
 func (r result) engine() engine.Result {
-	out := engine.Result{SourceID: r.SourceID, ID: r.RecordID}
+	out := engine.Result{SourceID: r.SourceID}
+	if r.ID != nil {
+		out.ID = *r.ID
+	}
 
-	switch r.Outcome {
-	case "applied":
+	switch r.Status {
+	case "created":
+		out.Status = engine.StatusCreated
+	case "updated":
 		out.Status = engine.StatusUpdated
-		if r.Created {
-			out.Status = engine.StatusCreated
-		} else if r.Unchanged {
-			out.Status = engine.StatusUnchanged
-		}
-	case "skipped", "unchanged":
+	case "unchanged", "unsupported":
 		out.Status = engine.StatusUnchanged
 	case "deferred":
 		out.Status = engine.StatusDeferred
-	case "unsupported":
-		out.Status = engine.StatusUnchanged
 	default:
 		out.Status = engine.StatusFailed
 	}
 
-	if r.Problem != nil {
-		msg := r.Problem.Message
-		if r.Problem.Field != "" {
-			msg = r.Problem.Field + ": " + msg
+	if r.Error != nil {
+		msg := r.Error.Message
+		if r.Error.Field != "" {
+			msg = r.Error.Field + ": " + msg
 		}
 
-		out.Error = &engine.RecordError{Code: r.Problem.Code, Message: msg}
+		out.Error = &engine.RecordError{Code: r.Error.Code, Message: msg}
 	}
 
 	return out
@@ -359,7 +393,7 @@ func (c *Client) Upload(ctx context.Context, id string, f engine.Upload) (string
 		} `json:"data"`
 	}
 
-	err := c.do(ctx, http.MethodPost, "/migrations/"+url.PathEscape(id)+"/files?"+q.Encode(), f.Body, ct, &out)
+	err := c.do(ctx, http.MethodPost, "/migrations/"+url.PathEscape(id)+"/files?"+q.Encode(), sized{f.Body, f.Size}, ct, &out)
 
 	return out.Data.ID, err
 }
@@ -381,6 +415,11 @@ func (c *Client) Lookup(ctx context.Context, id string, kind format.Kind, ids []
 	}
 
 	if err := c.json(ctx, http.MethodPost, "/migrations/"+url.PathEscape(id)+"/lookups", in, &out); err != nil {
+		var e *Error
+		if errors.As(err, &e) && (e.Status == http.StatusNotFound || e.Status == http.StatusMethodNotAllowed) {
+			return nil, engine.ErrNoLookup
+		}
+
 		return nil, err
 	}
 

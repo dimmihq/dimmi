@@ -97,7 +97,7 @@ func fakeIntercom(t *testing.T, limited *atomic.Int32) *httptest.Server {
 
 		_ = json.NewEncoder(w).Encode(map[string]any{
 			"id": id, "created_at": 1000, "updated_at": 2000, "state": "open",
-			"source": map[string]any{"type": "conversation", "id": "s" + id, "body": "<p>hi</p>", "author": map[string]any{"type": "user", "id": "u1"}},
+			"source":             map[string]any{"type": "conversation", "id": "s" + id, "body": "<p>hi</p>", "author": map[string]any{"type": "user", "id": "u1"}},
 			"contacts":           map[string]any{"contacts": []any{map[string]any{"id": "u1"}}},
 			"conversation_parts": map[string]any{"conversation_parts": parts, "total_count": total},
 		})

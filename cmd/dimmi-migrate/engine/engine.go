@@ -35,7 +35,7 @@ type Engine struct {
 
 /*
 Defaults fills the settings left empty: batches of 100 records or 4MB,
-4 parallel requests, files up to 200MB, and syncs that reread the 10
+4 parallel requests, files up to 100MB, and syncs that reread the 10
 minutes before the last one, so nothing written while it ran is missed.
 */
 func (e *Engine) defaults() {
@@ -52,7 +52,7 @@ func (e *Engine) defaults() {
 	}
 
 	if e.MaxFileSize <= 0 {
-		e.MaxFileSize = 200 << 20
+		e.MaxFileSize = 100 << 20
 	}
 
 	if e.Overlap <= 0 {
@@ -632,13 +632,17 @@ func (e *Engine) Verify(ctx context.Context, sample int) (Verification, error) {
 
 		if len(ids) > 0 {
 			found, err := e.Dest.Lookup(ctx, st.MigrationID, kind, ids)
-			if err != nil {
-				return out, err
-			}
 
-			for _, id := range ids {
-				if !found[id] {
-					check.Missing = append(check.Missing, id)
+			switch {
+			case errors.Is(err, ErrNoLookup):
+				check.Sampled = 0
+			case err != nil:
+				return out, err
+			default:
+				for _, id := range ids {
+					if !found[id] {
+						check.Missing = append(check.Missing, id)
+					}
 				}
 			}
 		}
