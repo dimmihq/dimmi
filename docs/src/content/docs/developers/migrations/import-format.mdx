@@ -71,7 +71,7 @@ A `saved_reply` takes `title`, `body`, `shortcut`, `shared`, `owner_ref` and `ac
 | `status` | `status`: `open`, `closed` or `snoozed` |
 | `priority` | `status`: the priority |
 
-A `schedule` takes `name`, `timezone` (such as `Europe/Paris`), `default`, `weekly` and `holidays`:
+A `schedule` takes `name`, `timezone` (such as `Europe/Paris`), `default`, `weekly`, `holidays` and `exceptions`. An exception that is `closed` becomes a day off; one with other hours (`start`, `end`) is not applied yet.
 
 ```json
 {
@@ -118,7 +118,7 @@ A conversation carries every entry it had and the state it ended in:
 | `channel` | Channel type, such as `widget`, `email` or `whatsapp`. The conversation lands on a channel of that type in the default inbox, else its API channel. Nothing is sent on it. |
 | `source` | `type`: the other tool's name for the channel; `visitor_ref`: the anonymous visitor who started it. |
 | `status`, `snoozed_until`, `priority`, `assignee_ref`, `team_ref`, `tag_refs` | The state it ended in, applied after the entries when sent. |
-| `rating` | `score` 1 to 5, `remark`, `created_at`. Kept only on a closed conversation. |
+| `rating` | `score` 1 to 5, `remark`, `teammate_ref` (who was rated, else the assignee), `created_at`. Kept only on a closed conversation. |
 | `entries` | 1 to 5,000 entries, at least one a `message` or `reply`. |
 
 ### Entries
@@ -141,6 +141,10 @@ An entry older than the conversation's latest is written at the latest time, wit
 | `tag` | `added_tag_refs`, `removed_tag_refs` | Tags and untags it. |
 | `attribute` | `attribute`, `value` | Not applied yet; comes back as a warning. |
 | `custom` | `raw_type`, `text` | Joins the timeline with the other tool's own type and text, so nothing is dropped. |
+
+## Workflows
+
+A `workflow` takes `name`, `description`, `trigger`, `channels`, `steps` (each `source_type`, `type`, `supported`), `unsupported` and `definition`, the raw export. dimmi keeps it and answers `unsupported`; it is never turned on.
 
 ## Tickets
 
