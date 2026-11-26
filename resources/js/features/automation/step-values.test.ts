@@ -58,6 +58,7 @@ describe("step values", () => {
         description: "",
         data_type: "choice",
         options: ["refund", "question"],
+        option_descriptions: {},
         filled_by: "both",
         required_to_close: false,
         team_ids: [],

@@ -11,6 +11,7 @@ function attribute(over: Partial<ConversationAttribute>): ConversationAttribute 
     description: "",
     data_type: "choice",
     options: ["billing", "bug"],
+    option_descriptions: {},
     filled_by: "both",
     required_to_close: false,
     team_ids: [],

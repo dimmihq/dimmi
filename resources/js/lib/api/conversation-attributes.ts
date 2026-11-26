@@ -42,6 +42,7 @@ export interface ConversationAttribute {
   description: string;
   data_type: ConversationAttributeType;
   options: string[];
+  option_descriptions: Record<string, string>;
   filled_by: FilledBy;
   required_to_close: boolean;
   team_ids: string[];
@@ -56,6 +57,7 @@ export interface ConversationAttributeInput {
   description?: string;
   data_type: ConversationAttributeType;
   options?: string[];
+  option_descriptions?: Record<string, string>;
   filled_by?: FilledBy;
   required_to_close?: boolean;
   team_ids?: string[];
@@ -65,6 +67,7 @@ export interface ConversationAttributeChange {
   label?: string;
   description?: string;
   options?: string[];
+  option_descriptions?: Record<string, string>;
   status?: "active" | "archived";
   filled_by?: FilledBy;
   required_to_close?: boolean;
@@ -76,6 +79,9 @@ export interface AttributeSource {
   id: string | null;
   name: string | null;
   at: string;
+  /* Why the AI chose the value, and how sure it was from 0 to 1. */
+  reason: string | null;
+  sureness: number | null;
 }
 
 export interface ConversationAttributeValue {
@@ -122,6 +128,10 @@ export function updateConversationAttribute(
   body: ConversationAttributeChange,
 ): Promise<ConversationAttribute> {
   return request<ConversationAttribute>("PATCH", `/conversation-attributes/${id}`, body, { workspace });
+}
+
+export function reorderConversationAttributes(workspace: string, ids: string[]): Promise<ConversationAttribute[]> {
+  return request<ConversationAttribute[]>("PUT", "/conversation-attributes/order", { ids }, { workspace });
 }
 
 export function setConversationAttributeValues(

@@ -65,7 +65,8 @@ function refusal(error: unknown, key: string): string {
 }
 
 /*
- * sourceText says who set a value and when.
+ * sourceText says who set a value and when, and for the AI how sure it
+ * was.
  */
 function sourceText(item: ConversationAttributeValue): string | null {
   const s = item.set_by;
@@ -73,8 +74,9 @@ function sourceText(item: ConversationAttributeValue): string | null {
     return null;
   }
   const who = s.by === "ai" ? "the AI" : s.by === "import" ? "an import" : (s.name ?? "a teammate");
+  const sure = s.sureness === null ? "" : ` · ${Math.round(s.sureness * 100)}% sure`;
 
-  return `Set by ${who} ${ago(s.at).toLowerCase()}`;
+  return `Set by ${who} ${ago(s.at).toLowerCase()}${sure}`;
 }
 
 /*
@@ -510,7 +512,11 @@ function Mark({ item }: { item: ConversationAttributeValue }) {
   return (
     <TooltipTrigger>
       <Focusable>
-        <span role="img" aria-label={text} className="flex shrink-0 items-center">
+        <span
+          role="img"
+          aria-label={item.set_by?.reason ? `${text}. ${item.set_by.reason}` : text}
+          className="flex shrink-0 items-center"
+        >
           {item.set_by?.by === "ai" ? (
             <RiSparkling2Line aria-hidden className="size-3.5 text-foreground-icon-secondary" />
           ) : (
@@ -518,7 +524,10 @@ function Mark({ item }: { item: ConversationAttributeValue }) {
           )}
         </span>
       </Focusable>
-      <Tooltip>{text}</Tooltip>
+      <Tooltip>
+        <span className="block">{text}</span>
+        {item.set_by?.reason ? <span className="mt-1 block text-text-secondary">{item.set_by.reason}</span> : null}
+      </Tooltip>
     </TooltipTrigger>
   );
 }

@@ -37,6 +37,10 @@ The key (`issue_type`, `order_number`) and the type are fixed once you save. Wor
 | Contact | A link to one of your contacts | No |
 | Company | A link to one of your companies | No |
 
+### Describe each option
+
+A list or multi-select can say what each option means, such as **Billing**: "Charges, invoices and refunds". The AI reads these to pick the right option, so describe the ones it could confuse.
+
 ### Who fills it
 
 - **AI and teammates:** the AI fills the value as the customer writes, and a teammate can change it. Once a teammate sets a value, the AI never replaces it.
@@ -47,9 +51,9 @@ Workflows and imports can set any attribute. A value a workflow or an import set
 
 ### Required before closing
 
-Turn on **Required before closing** and a teammate can't close a conversation while the attribute is empty. dimmi names the empty attributes, such as "Fill Issue type before closing.", and marks them in the **Details** panel. A bulk close closes the conversations that pass and reports how many still need their attributes filled.
+Turn on **Required before closing** and a teammate can't close a conversation in dimmi while the attribute is empty. dimmi names the empty attributes, such as "Fill Issue type before closing.", and marks them in the **Details** panel. A bulk close closes the conversations that pass and reports how many still need their attributes filled.
 
-The AI agent, workflows, the customer and imports still close conversations as before.
+The API, the AI agent, workflows, the customer, Slack and imports still close conversations as before.
 
 ### Visible to some teams
 
@@ -59,13 +63,13 @@ Pick teams under **Visible to** to show an attribute only to their members. Ever
 
 Archiving takes an attribute out of the **Details** panel, and nobody fills it any more. Conversations keep their values, so workflows, views and reports that read it keep working. Restore it from the **Archived** tab.
 
-Every change on this page waits in a draft until you press **Save** in the bar at the bottom.
+Drag attributes by their handle to set the order the **Details** panel shows them in. Every change on this page waits in a draft until you press **Save** in the bar at the bottom.
 
 ## Fill attributes in the inbox
 
 The **Details** panel lists every active attribute your teams see, under **Conversation attributes**. Click a value to change it: text and numbers save when you leave the field or press Enter, and lists, dates, files and links save as you pick them. Press Escape to put a typed value back.
 
-A sparkle marks a value the AI set. Hover any value to see who set it and when. The list updates on its own when the AI, a workflow or a teammate changes a value.
+A sparkle marks a value the AI set. Hover any value to see who set it and when; for the AI, also how sure it was and, for text, numbers and dates, its reason, such as "The customer says they upgraded to Pro last month." The list updates on its own when the AI, a workflow or a teammate changes a value.
 
 Every change also lands in the conversation's timeline, such as **Issue type set to Billing by Ada** or **by the AI**.
 
@@ -107,7 +111,7 @@ A value that doesn't fit is refused with `attribute_values_invalid`, and `proble
 
 `POST /api/v1/conversations` takes the same `attributes` object, and so does an import (a request with `external_id` or `created_at`). An import sets even the attributes only the AI fills.
 
-Manage attributes at `/api/v1/conversation-attributes`. Files are set as the ids of uploads from `POST /api/v1/attachments`, contacts and companies as their ids.
+Manage attributes at `/api/v1/conversation-attributes`, and set their order with `PUT /api/v1/conversation-attributes/order`. Each value's `set_by` carries the AI's `reason` and `sureness` (0 to 1) when it set the value. Files are set as the ids of uploads from `POST /api/v1/attachments`, contacts and companies as their ids.
 
 The older `/api/v1/ai/conversation-attributes` and `/api/v1/conversations/{conversation}/ai-attributes` endpoints keep working until 1 December 2027.
 
@@ -115,8 +119,9 @@ The older `/api/v1/ai/conversation-attributes` and `/api/v1/conversations/{conve
 
 | Rule | Limit |
 | --- | --- |
-| Active attributes per workspace | 100 |
+| Active attributes per workspace | 200 |
 | Options of a list or multi-select | 1 to 200, 80 characters each |
+| Description of one option | 300 characters |
 | Files per value | 10 |
 | Name | 80 characters |
 | Description | 500 characters |

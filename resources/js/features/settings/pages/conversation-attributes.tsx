@@ -20,6 +20,7 @@ import {
   RiBuilding2Line,
   RiCalendarLine,
   RiCheckboxMultipleLine,
+  RiDraggable,
   RiHashtag,
   RiListCheck,
   RiMore2Line,
@@ -31,7 +32,7 @@ import {
 } from "@remixicon/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useBlocker } from "@tanstack/react-router";
-import { type ComponentType, useState } from "react";
+import { type ComponentType, type DragEvent, type ReactNode, useState } from "react";
 
 import { Chip } from "@/components/base/badges/chip";
 import { Button } from "@/components/base/buttons/button";
@@ -59,6 +60,7 @@ import {
   createConversationAttribute,
   type FilledBy,
   filledByLabels,
+  reorderConversationAttributes,
   updateConversationAttribute,
 } from "@/lib/api/conversation-attributes";
 import { teamsQuery } from "@/lib/api/teams";
@@ -114,14 +116,15 @@ interface Added extends ConversationAttributeInput {
 }
 
 /*
- * useDraft holds the changes not saved yet: edits by attribute id and
- * the attributes added. Save sends them one by one, then reads the list
- * again; Discard drops them.
+ * useDraft holds the changes not saved yet: edits by attribute id, the
+ * attributes added, and a new order. Save sends them one by one, then
+ * reads the list again; Discard drops them.
  */
 function useDraft(workspace: string) {
   const client = useQueryClient();
   const [edits, setEdits] = useState<Record<string, ConversationAttributeChange>>({});
   const [added, setAdded] = useState<Added[]>([]);
+  const [order, setOrder] = useState<string[] | null>(null);
   const save = useMutation({
     mutationFn: async () => {
       for (const { draft: _, ...body } of added) {
@@ -130,10 +133,14 @@ function useDraft(workspace: string) {
       for (const [id, change] of Object.entries(edits)) {
         await updateConversationAttribute(workspace, id, change);
       }
+      if (order) {
+        await reorderConversationAttributes(workspace, order);
+      }
     },
     onSuccess: async () => {
       setEdits({});
       setAdded([]);
+      setOrder(null);
       await client.invalidateQueries({ queryKey: conversationAttributesQuery(workspace).queryKey });
       toast.success("Conversation attributes saved");
     },
@@ -142,8 +149,10 @@ function useDraft(workspace: string) {
   return {
     edits,
     added,
+    order,
     save,
-    dirty: Object.keys(edits).length > 0 || added.length > 0,
+    dirty: Object.keys(edits).length > 0 || added.length > 0 || order !== null,
+    reorder: setOrder,
     edit: (id: string, change: ConversationAttributeChange) =>
       setEdits((all) => ({ ...all, [id]: { ...all[id], ...change } })),
     add: (input: ConversationAttributeInput) => setAdded((all) => [...all, { ...input, draft: crypto.randomUUID() }]),
@@ -154,6 +163,7 @@ function useDraft(workspace: string) {
       save.reset();
       setEdits({});
       setAdded([]);
+      setOrder(null);
     },
   };
 }
@@ -174,6 +184,7 @@ interface Form {
   key: string;
   dataType: ConversationAttributeType;
   options: string[];
+  descriptions: Record<string, string>;
   description: string;
   filledBy: FilledBy;
   required: boolean;
@@ -187,6 +198,7 @@ function formOf(editing: Editing, draft: Draft): Form {
       key: "",
       dataType: "choice",
       options: [],
+      descriptions: {},
       description: "",
       filledBy: "both",
       required: false,
@@ -200,11 +212,61 @@ function formOf(editing: Editing, draft: Draft): Form {
     key: base.key,
     dataType: base.data_type,
     options: base.options ?? [],
+    descriptions: base.option_descriptions ?? {},
     description: base.description ?? "",
     filledBy: base.filled_by ?? "both",
     required: base.required_to_close ?? false,
     teams: base.team_ids ?? [],
   };
+}
+
+/*
+ * describedOf keeps the descriptions of the options the list has, and
+ * drops empty ones.
+ */
+function describedOf(options: string[], descriptions: Record<string, string>): Record<string, string> {
+  return Object.fromEntries(
+    options.map((o) => [o, (descriptions[o] ?? "").trim()] as const).filter(([, text]) => text !== ""),
+  );
+}
+
+/*
+ * OptionDescriptions says what each option means, one line each, for
+ * the AI to read when it picks one.
+ */
+function OptionDescriptions({
+  options,
+  value,
+  onChange,
+}: {
+  options: string[];
+  value: Record<string, string>;
+  onChange: (value: Record<string, string>) => void;
+}) {
+  return (
+    <fieldset className="flex flex-col gap-1.5">
+      <legend className="pb-0.5 text-body-2-medium text-text-primary">What each option means</legend>
+      <p className="pb-1 text-caption-1-regular text-text-tertiary">
+        Optional. The AI reads these to pick the right one.
+      </p>
+      {options.map((option) => (
+        <div key={option} className="grid grid-cols-1 gap-1 sm:grid-cols-[8rem_minmax(0,1fr)] sm:items-center sm:gap-3">
+          <span className="truncate text-body-2-regular text-text-secondary" title={option}>
+            {option}
+          </span>
+          <Input
+            aria-label={`What ${option} means`}
+            size="small"
+            className="min-w-0"
+            value={value[option] ?? ""}
+            placeholder={`When to pick ${option}`}
+            maxLength={300}
+            onChange={(text) => onChange({ ...value, [option]: text })}
+          />
+        </div>
+      ))}
+    </fieldset>
+  );
 }
 
 function AttributeDrawer({ editing, draft, onClose }: { editing: Editing; draft: Draft; onClose: () => void }) {
@@ -227,6 +289,7 @@ function AttributeDrawer({ editing, draft, onClose }: { editing: Editing; draft:
       description: form.description.trim(),
       data_type: form.dataType,
       options: choosable.includes(form.dataType) ? options : [],
+      option_descriptions: choosable.includes(form.dataType) ? describedOf(options, form.descriptions) : {},
       filled_by: filledBy,
       required_to_close: form.required,
       team_ids: form.teams,
@@ -293,6 +356,13 @@ function AttributeDrawer({ editing, draft, onClose }: { editing: Editing; draft:
         </div>
         {choosable.includes(form.dataType) ? (
           <OptionsEditor label="Options" value={form.options} onChange={(next) => set({ options: next })} />
+        ) : null}
+        {choosable.includes(form.dataType) && options.length > 0 ? (
+          <OptionDescriptions
+            options={options}
+            value={form.descriptions}
+            onChange={(descriptions) => set({ descriptions })}
+          />
         ) : null}
         <Textarea
           label="Description"
@@ -490,6 +560,67 @@ function Line({
   );
 }
 
+/*
+ * Movable is a row the team drags into a new place by its handle, or
+ * moves with the arrow keys on the handle.
+ */
+function Movable({
+  label,
+  movable,
+  dragging,
+  onStart,
+  onEnd,
+  onDrop,
+  onStep,
+  children,
+}: {
+  label: string;
+  movable: boolean;
+  dragging: boolean;
+  onStart: () => void;
+  onEnd: () => void;
+  onDrop: () => void;
+  onStep: (by: number) => void;
+  children: ReactNode;
+}) {
+  if (!movable) {
+    return <li>{children}</li>;
+  }
+
+  return (
+    <li
+      className={cx("flex items-center", dragging && "opacity-50")}
+      onDragOver={(event: DragEvent) => event.preventDefault()}
+      onDrop={(event: DragEvent) => {
+        event.preventDefault();
+        onDrop();
+      }}
+    >
+      <button
+        type="button"
+        draggable
+        aria-label={`Move ${label}`}
+        onDragStart={(event) => {
+          event.dataTransfer.effectAllowed = "move";
+          event.dataTransfer.setData("text/plain", label);
+          onStart();
+        }}
+        onDragEnd={onEnd}
+        onKeyDown={(event) => {
+          if (event.key === "ArrowUp" || event.key === "ArrowDown") {
+            event.preventDefault();
+            onStep(event.key === "ArrowUp" ? -1 : 1);
+          }
+        }}
+        className="-ms-2 flex h-8 w-5 shrink-0 cursor-grab items-center justify-center rounded-md text-foreground-icon-tertiary outline-none hover:bg-background-secondary-hover focus-visible:ring-2 focus-visible:ring-border-focus-ring active:cursor-grabbing"
+      >
+        <RiDraggable aria-hidden className="size-4" />
+      </button>
+      <div className="min-w-0 flex-1">{children}</div>
+    </li>
+  );
+}
+
 function ArchiveDialog({
   attribute,
   onArchive,
@@ -554,10 +685,26 @@ function List({
   onEdit: (editing: Editing) => void;
   onArchive: (attribute: ConversationAttribute) => void;
 }) {
-  const listed = attributes
+  const [dragging, setDragging] = useState<string | null>(null);
+  const ordered = draft.order
+    ? [...attributes].sort((a, b) => (draft.order ?? []).indexOf(a.id) - (draft.order ?? []).indexOf(b.id))
+    : attributes;
+  const listed = ordered
     .map((a) => ({ saved: a, now: { ...a, ...draft.edits[a.id] } }))
     .filter(({ now }) => now.status === tab);
   const added = tab === "active" ? draft.added : [];
+  const movable = canManage && tab === "active" && listed.length > 1;
+  const move = (id: string, to: number) => {
+    const ids = ordered.map((a) => a.id);
+    const from = ids.indexOf(id);
+    const target = ordered.indexOf(listed[Math.max(0, Math.min(listed.length - 1, to))]?.saved);
+    if (from < 0 || target < 0 || from === target) {
+      return;
+    }
+    ids.splice(from, 1);
+    ids.splice(target, 0, id);
+    draft.reorder(ids);
+  };
 
   return (
     <Section title={tab === "active" ? "Attributes" : "Archived"}>
@@ -572,17 +719,29 @@ function List({
           onRemove={() => draft.drop(item.draft)}
         />
       ))}
-      {listed.map(({ saved, now }) => (
-        <Line
-          key={saved.id}
-          attribute={now}
-          teams={teams}
-          canManage={canManage}
-          pending={draft.edits[saved.id] ? "Edited" : undefined}
-          onEdit={() => onEdit({ kind: "saved", attribute: saved })}
-          onStatus={() => (now.status === "active" ? onArchive(saved) : draft.edit(saved.id, { status: "active" }))}
-        />
-      ))}
+      <ul className="contents">
+        {listed.map(({ saved, now }, index) => (
+          <Movable
+            key={saved.id}
+            label={now.label}
+            movable={movable}
+            dragging={dragging === saved.id}
+            onStart={() => setDragging(saved.id)}
+            onEnd={() => setDragging(null)}
+            onDrop={() => (dragging ? move(dragging, index) : undefined)}
+            onStep={(by) => move(saved.id, index + by)}
+          >
+            <Line
+              attribute={now}
+              teams={teams}
+              canManage={canManage}
+              pending={draft.edits[saved.id] ? "Edited" : undefined}
+              onEdit={() => onEdit({ kind: "saved", attribute: saved })}
+              onStatus={() => (now.status === "active" ? onArchive(saved) : draft.edit(saved.id, { status: "active" }))}
+            />
+          </Movable>
+        ))}
+      </ul>
       {listed.length === 0 && added.length === 0 ? (
         <Empty>
           {tab === "active" ? "None yet. Add one, such as the issue type or an order number." : "Nothing archived."}
@@ -647,7 +806,7 @@ export function ConversationAttributesSettings() {
             <SegmentedControlItem id={tabs.active}>Active</SegmentedControlItem>
             <SegmentedControlItem id={tabs.archived}>Archived</SegmentedControlItem>
           </SegmentedControl>
-          <span className="text-body-2-regular text-text-tertiary">{activeCount} of 100 active</span>
+          <span className="text-body-2-regular text-text-tertiary">{activeCount} of 200 active</span>
         </div>
         {data ? (
           <List
