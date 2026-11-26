@@ -1,0 +1,33 @@
+{
+  "type": "list",
+  "data": [
+    {
+      "type": "content_snippet",
+      "id": "123",
+      "title": "How to reset your password",
+      "locale": "en",
+      "json_blocks": [
+        {
+          "type": "paragraph",
+          "text": "Navigate to Settings > Security > Reset password."
+        }
+      ],
+      "body_markdown": "Navigate to Settings \\> Security \\> Reset password.\n",
+      "chatbot_availability": 2,
+      "copilot_availability": 2,
+      "ai_chatbot_availability": true,
+      "ai_copilot_availability": true,
+      "ai_sales_agent_availability": true,
+      "created_at": 1663597223,
+      "updated_at": 1663597223,
+      "audience_ids": [
+        1,
+        2
+      ]
+    }
+  ],
+  "total_count": 1,
+  "page": 1,
+  "per_page": 50,
+  "total_pages": 1
+}

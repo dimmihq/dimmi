@@ -1,0 +1,10 @@
+{"ticket": {"type": "ticket", "id": "t-1", "ticket_id": "42", "category": "Back-office", "ticket_attributes": {"_default_title_": "Refund &amp; credit", "_default_description_": "<p>Customer wants money back</p>", "Amount": 30},
+  "ticket_state": {"id": "st-2", "category": "in_progress", "internal_label": "With finance", "external_label": "In progress"},
+  "ticket_type": {"id": "tt-1", "name": "Refund", "category": "Back-office", "ticket_states": {"data": [{"id": "st-1", "category": "submitted", "internal_label": "Submitted"}, {"id": "st-2", "category": "in_progress", "internal_label": "With finance"}]}},
+  "contacts": {"contacts": [{"type": "contact", "id": "c-1"}]}, "admin_assignee_id": "501", "team_assignee_id": "0", "created_at": 1763300000, "updated_at": 1763310000, "open": true,
+  "linked_objects": {"data": [{"type": "conversation", "id": "1001"}]},
+  "ticket_parts": {"total_count": 2, "ticket_parts": [
+    {"id": "tp-1", "part_type": "ticket_state_updated_by_admin", "previous_ticket_state": "submitted", "ticket_state": "in_progress", "created_at": 1763305000, "author": {"type": "admin", "id": "501"}},
+    {"id": "tp-2", "part_type": "note", "body": "<p>Sent to finance</p>", "created_at": 1763306000, "author": {"type": "admin", "id": "501"}}
+  ]}},
+ "known_admins": ["501"]}

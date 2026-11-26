@@ -1,0 +1,26 @@
+{
+  "type": "list",
+  "data": [
+    {
+      "type": "data_attribute",
+      "id": 1700000016,
+      "model": "contact",
+      "name": "text name",
+      "full_name": "text full_name",
+      "label": "text label",
+      "description": "text description",
+      "data_type": "string",
+      "options": [
+        "text options"
+      ],
+      "api_writable": true,
+      "messenger_writable": true,
+      "ui_writable": true,
+      "custom": true,
+      "archived": true,
+      "created_at": 1700000017,
+      "updated_at": 1700000018,
+      "admin_id": "19"
+    }
+  ]
+}

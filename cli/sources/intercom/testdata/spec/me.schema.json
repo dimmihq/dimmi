@@ -1,0 +1,33 @@
+{
+  "type": "text type",
+  "id": "893",
+  "name": "text name",
+  "email": "text email",
+  "job_title": "text job_title",
+  "away_mode_enabled": true,
+  "away_mode_reassign": true,
+  "has_inbox_seat": true,
+  "team_ids": [
+    1700000894
+  ],
+  "avatar": {
+    "type": "text type",
+    "image_url": "https://example.com/x"
+  },
+  "email_verified": true,
+  "role": {
+    "type": "text type",
+    "id": "895",
+    "name": "text name"
+  },
+  "app": {
+    "type": "text type",
+    "id_code": "text id_code",
+    "name": "text name",
+    "region": "text region",
+    "timezone": "text timezone",
+    "created_at": 1700000896,
+    "identity_verification": true,
+    "secure": true
+  }
+}

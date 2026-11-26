@@ -1,0 +1,15 @@
+{
+  "type": "list",
+  "data": [
+    {
+      "type": "tag",
+      "id": "80",
+      "name": "Manual tag",
+      "applied_at": 1663597223,
+      "applied_by": {
+        "type": "admin",
+        "id": "456"
+      }
+    }
+  ]
+}

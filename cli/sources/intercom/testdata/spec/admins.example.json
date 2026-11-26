@@ -1,0 +1,15 @@
+{
+  "type": "admin.list",
+  "admins": [
+    {
+      "type": "admin",
+      "email": "admin7@email.com",
+      "id": "991267466",
+      "name": "Ciaran7 Lee",
+      "away_mode_enabled": false,
+      "away_mode_reassign": false,
+      "has_inbox_seat": true,
+      "team_ids": []
+    }
+  ]
+}

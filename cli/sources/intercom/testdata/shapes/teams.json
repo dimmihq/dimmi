@@ -1,0 +1,23 @@
+{
+  "teams": [
+    {
+      "admin_ids": [
+        0
+      ],
+      "distribution_method": "\u003cstring\u003e",
+      "id": "\u003cstring\u003e",
+      "name": "\u003cstring\u003e",
+      "type": "team"
+    },
+    {
+      "admin_ids": [
+        0
+      ],
+      "distribution_method": "\u003cstring\u003e",
+      "id": "\u003cstring\u003e",
+      "name": "\u003cstring\u003e",
+      "type": "team"
+    }
+  ],
+  "type": "team.list"
+}

@@ -1,0 +1,38 @@
+{
+  "type": "list",
+  "data": [
+    {
+      "type": "company",
+      "company_id": "remote_companies_scroll_2",
+      "id": "6762f0971bb69f9f2193bb2b",
+      "app_id": "this_is_an_id193_that_should_be_at_least_",
+      "name": "IntercomQATest1",
+      "remote_created_at": 1734537367,
+      "created_at": 1734537367,
+      "updated_at": 1734537367,
+      "monthly_spend": 0,
+      "session_count": 0,
+      "user_count": 4,
+      "tags": {
+        "type": "tag.list",
+        "tags": []
+      },
+      "segments": {
+        "type": "segment.list",
+        "segments": []
+      },
+      "plan": {},
+      "custom_attributes": {},
+      "notes": {
+        "type": "note.list",
+        "data": [],
+        "url": "/companies/6762f0971bb69f9f2193bb2b/notes",
+        "total_count": 0,
+        "has_more": false
+      }
+    }
+  ],
+  "pages": null,
+  "total_count": null,
+  "scroll_param": "69352cd2-ab5b-42ac-b004-a13d4e55e9b0"
+}

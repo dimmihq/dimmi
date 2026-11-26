@@ -1,0 +1,28 @@
+{
+  "type": "list",
+  "data": [
+    {
+      "type": "macro",
+      "id": "583",
+      "name": "text name",
+      "body": "text body",
+      "body_text": "text body_text",
+      "created_at": "2026-01-02T03:04:05Z",
+      "updated_at": "2026-01-02T03:04:05Z",
+      "visible_to": "everyone",
+      "visible_to_team_ids": [
+        "text visible_to_team_ids"
+      ],
+      "available_on": [
+        "inbox"
+      ]
+    }
+  ],
+  "pages": {
+    "type": "pages",
+    "per_page": 1700000584,
+    "next": {
+      "starting_after": "text starting_after"
+    }
+  }
+}

@@ -1,0 +1,52 @@
+[
+  {
+    "kind": "ticket",
+    "record": {
+      "source_id": "t-1",
+      "source_updated_at": "2025-11-16T16:20:00Z",
+      "ticket_type_ref": "tt-1",
+      "state_ref": "st-2",
+      "title": "Refund \u0026 credit",
+      "description": "Customer wants money back",
+      "values": {
+        "amount": 30
+      },
+      "contact_ref": "c-1",
+      "assignee_ref": "501",
+      "conversation_ref": "1001",
+      "created_at": "2025-11-16T13:33:20Z",
+      "updated_at": "2025-11-16T16:20:00Z",
+      "state_history": [
+        {
+          "state_ref": "st-2",
+          "at": "2025-11-16T14:56:40Z"
+        }
+      ],
+      "entries": [
+        {
+          "source_id": "tp-1",
+          "type": "event",
+          "created_at": "2025-11-16T14:56:40Z",
+          "author": {
+            "type": "teammate",
+            "ref": "501"
+          },
+          "event": {
+            "type": "custom",
+            "raw_type": "ticket_state_updated_by_admin"
+          }
+        },
+        {
+          "source_id": "tp-2",
+          "type": "note",
+          "created_at": "2025-11-16T15:13:20Z",
+          "author": {
+            "type": "teammate",
+            "ref": "501"
+          },
+          "body": "Sent to finance"
+        }
+      ]
+    }
+  }
+]

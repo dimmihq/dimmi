@@ -1,0 +1,169 @@
+{
+  "type": "ticket.list",
+  "tickets": [
+    {
+      "type": "ticket",
+      "id": "808",
+      "ticket_id": "809",
+      "category": "Customer",
+      "channel": "text channel",
+      "ticket_attributes": {},
+      "ticket_state": {
+        "type": "text type",
+        "id": "810",
+        "category": "submitted",
+        "internal_label": "text internal_label",
+        "external_label": "text external_label"
+      },
+      "ticket_type": {
+        "type": "text type",
+        "id": "811",
+        "category": "Customer",
+        "name": "text name",
+        "description": "text description",
+        "icon": "text icon",
+        "workspace_id": "812",
+        "ticket_type_attributes": {
+          "type": "text type",
+          "data": [
+            {
+              "type": "text type",
+              "id": "813",
+              "workspace_id": "814",
+              "name": "text name",
+              "description": "text description",
+              "data_type": "text data_type",
+              "input_options": {},
+              "order": 1700000815,
+              "required_to_create": true,
+              "required_to_create_for_contacts": true,
+              "visible_on_create": true,
+              "visible_to_contacts": true,
+              "default": true,
+              "ticket_type_id": 1700000816,
+              "archived": true,
+              "created_at": 1700000817,
+              "updated_at": 1700000818
+            }
+          ]
+        },
+        "ticket_states": {
+          "type": "text type",
+          "data": [
+            {
+              "type": "text type",
+              "id": "819",
+              "category": "submitted",
+              "internal_label": "text internal_label",
+              "external_label": "text external_label"
+            }
+          ]
+        },
+        "archived": true,
+        "is_internal": true,
+        "created_at": 1700000820,
+        "updated_at": 1700000821
+      },
+      "contacts": {
+        "type": "contact.list",
+        "contacts": [
+          {
+            "type": "contact",
+            "id": "822",
+            "external_id": "823",
+            "email": "text email"
+          }
+        ]
+      },
+      "admin_assignee_id": 1700000824,
+      "team_assignee_id": 1700000825,
+      "created_at": 1700000826,
+      "updated_at": 1700000827,
+      "open": true,
+      "snoozed_until": 1700000828,
+      "linked_objects": {
+        "type": "list",
+        "total_count": 1700000829,
+        "has_more": true,
+        "data": [
+          {
+            "type": "ticket",
+            "id": "830",
+            "category": "Customer"
+          }
+        ]
+      },
+      "ticket_parts": {
+        "type": "ticket_part.list",
+        "ticket_parts": [
+          {
+            "type": "text type",
+            "id": "831",
+            "part_type": "text part_type",
+            "body": "text body",
+            "previous_ticket_state": "submitted",
+            "ticket_state": "submitted",
+            "created_at": 1700000832,
+            "updated_at": 1700000833,
+            "assigned_to": {
+              "type": "text type",
+              "id": "834"
+            },
+            "admin_assignee_id": 1700000835,
+            "team_assignee_id": 1700000836,
+            "author": {
+              "type": "admin",
+              "id": "837",
+              "name": "text name",
+              "email": "text email"
+            },
+            "attachments": [
+              {
+                "type": "text type",
+                "name": "text name",
+                "url": "text url",
+                "content_type": "text content_type",
+                "filesize": 1700000838,
+                "width": 1700000839,
+                "height": 1700000840
+              }
+            ],
+            "external_id": "841",
+            "redacted": true,
+            "app_package_code": "text app_package_code",
+            "translations": {
+              "original": "text original"
+            },
+            "updated_attribute_data": {
+              "attribute": {
+                "type": "attribute",
+                "id": "842",
+                "label": "text label"
+              },
+              "value": {
+                "type": "value",
+                "id": "843",
+                "label": "text label"
+              }
+            }
+          }
+        ],
+        "total_count": 1700000845
+      },
+      "is_shared": true,
+      "company_id": "846",
+      "previous_ticket_state_id": "847"
+    }
+  ],
+  "total_count": 1700000848,
+  "pages": {
+    "type": "pages",
+    "page": 1700000849,
+    "next": {
+      "page": 1700000850,
+      "starting_after": "text starting_after"
+    },
+    "per_page": 1700000851,
+    "total_pages": 1700000852
+  }
+}

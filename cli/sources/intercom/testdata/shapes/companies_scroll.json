@@ -1,0 +1,95 @@
+{
+  "data": [
+    {
+      "app_id": "\u003cstring\u003e",
+      "company_id": "\u003cstring\u003e",
+      "created_at": 0,
+      "custom_attributes": {},
+      "id": "\u003cstring\u003e",
+      "monthly_spend": 0,
+      "name": "\u003cstring\u003e",
+      "notes": {
+        "data": [],
+        "has_more": false,
+        "total_count": 0,
+        "type": "note.list",
+        "url": "\u003cstring\u003e"
+      },
+      "plan": {},
+      "segments": {
+        "segments": [],
+        "type": "segment.list"
+      },
+      "session_count": 0,
+      "tags": {
+        "tags": [],
+        "type": "tag.list"
+      },
+      "type": "company",
+      "updated_at": 0,
+      "user_count": 0
+    },
+    {
+      "app_id": "\u003cstring\u003e",
+      "company_id": "\u003cstring\u003e",
+      "created_at": 0,
+      "custom_attributes": {},
+      "id": "\u003cstring\u003e",
+      "monthly_spend": 0,
+      "name": "\u003cstring\u003e",
+      "notes": {
+        "data": [],
+        "has_more": false,
+        "total_count": 0,
+        "type": "note.list",
+        "url": "\u003cstring\u003e"
+      },
+      "plan": {},
+      "segments": {
+        "segments": [],
+        "type": "segment.list"
+      },
+      "session_count": 0,
+      "tags": {
+        "tags": [],
+        "type": "tag.list"
+      },
+      "type": "company",
+      "updated_at": 0,
+      "user_count": 0
+    },
+    {
+      "app_id": "\u003cstring\u003e",
+      "company_id": "\u003cstring\u003e",
+      "created_at": 0,
+      "custom_attributes": {},
+      "id": "\u003cstring\u003e",
+      "monthly_spend": 0,
+      "name": "\u003cstring\u003e",
+      "notes": {
+        "data": [],
+        "has_more": false,
+        "total_count": 0,
+        "type": "note.list",
+        "url": "\u003cstring\u003e"
+      },
+      "plan": {},
+      "segments": {
+        "segments": [],
+        "type": "segment.list"
+      },
+      "session_count": 0,
+      "tags": {
+        "tags": [],
+        "type": "tag.list"
+      },
+      "type": "company",
+      "updated_at": 0,
+      "user_count": 0
+    }
+  ],
+  "pages": null,
+  "scroll_param": "\u003cstring\u003e",
+  "total_count": null,
+  "type": "list"
+}

@@ -1,0 +1,10 @@
+{
+  "type": "list",
+  "data": [
+    {
+      "type": "tag",
+      "id": "102",
+      "name": "Manual tag 1"
+    }
+  ]
+}

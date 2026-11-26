@@ -1,0 +1,26 @@
+{
+  "type": "office_hours_schedule.list",
+  "data": [
+    {
+      "type": "office_hours_schedule",
+      "id": "123",
+      "name": "Standard Support Hours",
+      "time_zone_name": "America/New_York",
+      "time_intervals": [
+        {
+          "start_minute": 540,
+          "end_minute": 1020,
+          "day_of_week": 0
+        },
+        {
+          "start_minute": 1980,
+          "end_minute": 2460,
+          "day_of_week": 1
+        }
+      ],
+      "twenty_four_seven": false,
+      "created_at": 1717200000,
+      "updated_at": 1717200000
+    }
+  ]
+}

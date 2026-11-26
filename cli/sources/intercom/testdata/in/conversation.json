@@ -1,0 +1,28 @@
+{
+  "conversation": {
+    "type": "conversation", "id": "1001", "title": null, "created_at": 1763200000, "updated_at": 1763290000,
+    "state": "closed", "priority": "priority", "admin_assignee_id": 501, "team_assignee_id": "71",
+    "snoozed_until": null,
+    "custom_attributes": {"Issue type": "Billing"},
+    "tags": {"type": "tag.list", "tags": [{"type": "tag", "id": "9", "name": "vip"}]},
+    "conversation_rating": {"rating": 5, "remark": "Quick &amp; kind", "created_at": 1763280000, "contact": {"type": "contact", "id": "c-1"}, "teammate": {"type": "admin", "id": "501"}},
+    "source": {"type": "conversation", "id": "2001", "delivered_as": "customer_initiated", "subject": "", "body": "<p>Hi, my invoice is wrong</p>",
+      "author": {"type": "lead", "id": "c-1", "name": "Ada &amp; Co", "email": "ada@example.com"},
+      "attachments": [{"type": "upload", "name": "invoice.pdf", "url": "https://downloads.intercomcdn.com/i/o/1/abc/invoice.pdf?expires=1&signature=x", "content_type": "application/pdf", "filesize": 2048}],
+      "url": "https://example.com/pricing", "redacted": false},
+    "contacts": {"type": "contact.list", "contacts": [{"type": "contact", "id": "c-1"}]},
+    "conversation_parts": {"type": "conversation_part.list", "total_count": 9, "conversation_parts": [
+      {"type": "conversation_part", "id": "3001", "part_type": "assignment", "body": null, "created_at": 1763200100, "assigned_to": {"type": "team", "id": "71"}, "author": {"type": "bot", "id": "400", "name": "Operator"}, "attachments": []},
+      {"type": "conversation_part", "id": "3002", "part_type": "comment", "body": "<p>Sorry about that! <b>Fixing</b> it now.</p>", "created_at": 1763200200, "author": {"type": "admin", "id": "501", "name": "Grace", "email": "grace@example.com"}, "attachments": []},
+      {"type": "conversation_part", "id": "3003", "part_type": "comment", "body": "<p>Here is the answer from our docs.</p>", "created_at": 1763200250, "author": {"type": "bot", "id": "401", "name": "Fin", "from_ai_agent": true, "is_ai_answer": true}, "attachments": []},
+      {"type": "conversation_part", "id": "3004", "part_type": "note", "body": "<p>Refund approved by finance</p>", "created_at": 1763200300, "author": {"type": "admin", "id": "502", "name": "Old Teammate", "email": "old@example.com"}, "attachments": [{"type": "upload", "name": "screenshot.png", "url": "https://downloads.intercomcdn.com/i/o/1/def/screenshot.png?expires=2", "content_type": "image/png", "filesize": 4096, "width": 800, "height": 600}]},
+      {"type": "conversation_part", "id": "3005", "part_type": "snoozed", "body": null, "created_at": 1763200400, "author": {"type": "admin", "id": "501", "name": "Grace"}},
+      {"type": "conversation_part", "id": "3006", "part_type": "conversation_attribute_updated_by_admin", "body": null, "created_at": 1763200500, "author": {"type": "admin", "id": "501"}, "event_details": {"attribute": {"name": "Issue type"}, "value": {"name": "Billing"}}},
+      {"type": "conversation_part", "id": "3007", "part_type": "comment", "body": "<p>Thanks!</p><img src=\"https://downloads.intercomcdn.com/i/o/1/ghi/shoe.jpg?expires=3\">", "created_at": 1763200600, "author": {"type": "lead", "id": "c-1", "name": "Ada"}},
+      {"type": "conversation_part", "id": "3008", "part_type": "close", "body": "<p>Refund sent, closing this. Have a great week!</p>", "created_at": 1763200700, "author": {"type": "admin", "id": "501"}},
+      {"type": "conversation_part", "id": "3009", "part_type": "operator_workflow_event", "body": null, "created_at": 1763200800, "author": {"type": "bot", "id": "400", "name": "Operator"}, "event_details": {"workflow": {"name": "CSAT survey"}, "event": {"type": "started", "result": "sent"}}},
+      {"type": "conversation_part", "id": "3010", "part_type": "unknown", "body": "<p>Something new</p>", "created_at": 1763200900, "author": {"type": "admin", "id": "501"}}
+    ]}
+  },
+  "known_admins": ["501", "400", "401"]
+}

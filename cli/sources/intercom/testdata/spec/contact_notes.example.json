@@ -1,0 +1,67 @@
+{
+  "type": "list",
+  "data": [
+    {
+      "type": "note",
+      "id": "26",
+      "created_at": 1733932587,
+      "contact": {
+        "type": "contact",
+        "id": "6762f0ab1bb69f9f2193bb60"
+      },
+      "author": {
+        "type": "admin",
+        "id": "991267581",
+        "name": "Ciaran122 Lee",
+        "email": "admin122@email.com",
+        "away_mode_enabled": false,
+        "away_mode_reassign": false
+      },
+      "body": "<p>This is a note.</p>"
+    },
+    {
+      "type": "note",
+      "id": "25",
+      "created_at": 1733846187,
+      "contact": {
+        "type": "contact",
+        "id": "6762f0ab1bb69f9f2193bb60"
+      },
+      "author": {
+        "type": "admin",
+        "id": "991267581",
+        "name": "Ciaran122 Lee",
+        "email": "admin122@email.com",
+        "away_mode_enabled": false,
+        "away_mode_reassign": false
+      },
+      "body": "<p>This is a note.</p>"
+    },
+    {
+      "type": "note",
+      "id": "24",
+      "created_at": 1733846187,
+      "contact": {
+        "type": "contact",
+        "id": "6762f0ab1bb69f9f2193bb60"
+      },
+      "author": {
+        "type": "admin",
+        "id": "991267581",
+        "name": "Ciaran122 Lee",
+        "email": "admin122@email.com",
+        "away_mode_enabled": false,
+        "away_mode_reassign": false
+      },
+      "body": "<p>This is a note.</p>"
+    }
+  ],
+  "total_count": 3,
+  "pages": {
+    "type": "pages",
+    "next": null,
+    "page": 1,
+    "per_page": 50,
+    "total_pages": 1
+  }
+}
