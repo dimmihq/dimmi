@@ -366,14 +366,15 @@ func avatarURL(raw json.RawMessage) string {
 	return obj.ImageURL
 }
 
-func translateNote(n note, contactID string) format.Record {
+func translateNote(n note, contactID, companyID string) format.Record {
 	a := format.Author{Type: format.AuthorSystem}
 	if n.Author.ID != "" {
 		a = format.Author{Type: format.AuthorTeammate, Ref: string(n.Author.ID)}
 	}
 
 	return format.NewRecord(format.KindContactNote, string(n.ID), &format.ContactNote{
-		Base: base(n.ID, 0), ContactRef: contactID, Author: a, Body: toMarkdown(n.Body), CreatedAt: at(n.CreatedAt),
+		Base: base(n.ID, 0), ContactRef: contactID, CompanyRef: companyID, Author: a, Body: toMarkdown(n.Body),
+		CreatedAt: at(n.CreatedAt),
 	})
 }
 

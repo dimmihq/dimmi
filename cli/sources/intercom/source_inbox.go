@@ -21,12 +21,22 @@ func (s *Source) search(ctx context.Context, path string, page searchPage, out a
 		value = page.since.Unix()
 	}
 
-	body := map[string]any{
-		"query":      map[string]any{"field": "updated_at", "operator": ">", "value": value},
-		"pagination": pagination(page.cursor),
-	}
+	return s.Client.post(ctx, path, changedSince(value, page.cursor), out)
+}
 
-	return s.Client.post(ctx, path, body, out)
+/*
+changedSince is the body of a search for what changed after the Unix
+time, oldest change first. Intercom sorts newest first unless told; read
+that way, a record that changes during a long read moves behind the
+cursor and is missed until the next sync. Oldest first, it moves ahead
+and is read again.
+*/
+func changedSince(unix int64, cursor string) map[string]any {
+	return map[string]any{
+		"query":      map[string]any{"field": "updated_at", "operator": ">", "value": unix},
+		"pagination": pagination(cursor),
+		"sort":       map[string]any{"field": "updated_at", "order": "ascending"},
+	}
 }
 
 /*
@@ -107,7 +117,8 @@ func (s *Source) newFormer(list []Former) []format.Record {
 /*
 conversation reads a conversation and every one of its parts. Without
 page, Intercom returns only the latest 500 parts; with it, parts come
-oldest first, 500 a page, until a page is empty.
+oldest first, 500 a page, for conversation_parts.pages.total_pages
+pages.
 */
 func (s *Source) conversation(ctx context.Context, id ID) (conversation, []part, error) {
 	var first conversation
@@ -127,12 +138,24 @@ func (s *Source) conversation(ctx context.Context, id ID) (conversation, []part,
 
 		parts = append(parts, c.Parts.Parts...)
 
-		if len(c.Parts.Parts) < 500 {
+		if lastPartsPage(page, len(c.Parts.Parts), int(c.Parts.Pages.TotalPages)) {
 			break
 		}
 	}
 
 	return first, parts, nil
+}
+
+/*
+lastPartsPage reports whether a page of n parts is the last: the last of
+the pages Intercom counts, or a short page when it counts none.
+*/
+func lastPartsPage(page, n, totalPages int) bool {
+	if totalPages > 0 {
+		return page >= totalPages
+	}
+
+	return n < 500
 }
 
 func (s *Source) readTickets(ctx context.Context, opts engine.ReadOptions, emit func(engine.Page) error) error {

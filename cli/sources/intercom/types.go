@@ -178,6 +178,7 @@ type list[T any] struct {
 	} `json:"pages"`
 	HasMore    bool   `json:"has_more"`
 	TotalCount Num    `json:"total_count"`
+	TotalPages Num    `json:"total_pages"`
 	Scroll     string `json:"scroll_param"`
 }
 
@@ -220,6 +221,7 @@ type company struct {
 	Tags            struct {
 		Tags []tag `json:"tags"`
 	} `json:"tags"`
+	Notes refList `json:"notes"`
 }
 
 type ref struct {
@@ -228,10 +230,16 @@ type ref struct {
 }
 
 type refList struct {
-	Data    []ref `json:"data"`
-	HasMore bool  `json:"has_more"`
-	URL     string
+	Data       []ref `json:"data"`
+	HasMore    bool  `json:"has_more"`
+	TotalCount Num   `json:"total_count"`
+	URL        string
 }
+
+/*
+empty reports whether the list says there is nothing in it.
+*/
+func (l refList) empty() bool { return len(l.Data) == 0 && !l.HasMore && l.TotalCount == 0 }
 
 type contact struct {
 	ID               ID              `json:"id"`
@@ -252,6 +260,7 @@ type contact struct {
 	CustomAttrs      map[string]any  `json:"custom_attributes"`
 	Tags             refList         `json:"tags"`
 	Companies        refList         `json:"companies"`
+	Notes            refList         `json:"notes"`
 	Location         struct {
 		Country string `json:"country"`
 		Region  string `json:"region"`

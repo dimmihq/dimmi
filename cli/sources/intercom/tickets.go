@@ -22,7 +22,16 @@ func translateTicket(tk ticket, known map[string]bool) (format.Record, []Former)
 
 	states := map[string]string{}
 	for _, s := range tk.Type.States.Data {
-		states[s.Category] = string(s.ID)
+		if states[s.Category] == "" {
+			states[s.Category] = string(s.ID)
+		}
+	}
+
+	// Parts name only the category of the state a ticket moved to, and a
+	// type can have several states in one: the ticket's own state stands
+	// for its category.
+	if tk.State.ID != "" && tk.State.Category != "" {
+		states[tk.State.Category] = string(tk.State.ID)
 	}
 
 	for _, p := range tk.Parts.Parts {

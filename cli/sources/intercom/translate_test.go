@@ -311,3 +311,41 @@ func checkReplies(t *testing.T, conv *format.Conversation) {
 		}
 	}
 }
+
+func TestRatingKeepsOnlyATeammate(t *testing.T) {
+	for typ, want := range map[string]string{"admin": "7", "team": "", "bot": "", "workflow": ""} {
+		var c conversation
+		raw := `{"conversation_rating":{"rating":4,"teammate":{"type":"` + typ + `","id":"7"}}}`
+
+		if err := json.Unmarshal([]byte(raw), &c); err != nil {
+			t.Fatal(err)
+		}
+
+		if got := rating(c).TeammateRef; got != want {
+			t.Errorf("rated by a %s: teammate %q, want %q", typ, got, want)
+		}
+	}
+}
+
+func TestTicketStateUsesItsOwnStateForItsCategory(t *testing.T) {
+	var tk ticket
+
+	raw := `{"id":"1","ticket_state":{"id":"s-review","category":"in_progress"},
+	  "ticket_type":{"id":"tt","ticket_states":{"data":[
+	    {"id":"s-work","category":"in_progress"},{"id":"s-review","category":"in_progress"},
+	    {"id":"s-new","category":"submitted"}]}},
+	  "ticket_parts":{"ticket_parts":[
+	    {"id":"p1","part_type":"ticket_state_updated_by_admin","previous_ticket_state":"submitted",
+	     "ticket_state":"in_progress","created_at":1000,"author":{"type":"admin","id":"1"}}]}}`
+
+	if err := json.Unmarshal([]byte(raw), &tk); err != nil {
+		t.Fatal(err)
+	}
+
+	rec, _ := translateTicket(tk, nil)
+
+	got, ok := rec.Data.(*format.Ticket)
+	if !ok || len(got.StateHistory) != 1 || got.StateHistory[0].StateRef != "s-review" {
+		t.Fatalf("state history %+v", rec.Data)
+	}
+}

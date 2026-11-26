@@ -333,7 +333,7 @@ func (s *Source) readSnippets(ctx context.Context, opts engine.ReadOptions, emit
 			recs = append(recs, translateSnippet(sn, s.defaultHC))
 		}
 
-		last := lastSnippetPage(len(out.Data), page, int(out.Pages.TotalPages))
+		last := lastSnippetPage(len(out.Data), page, int(max(out.TotalPages, out.Pages.TotalPages)))
 		next := ""
 		if !last {
 			next = strconv.Itoa(page + 1)

@@ -85,6 +85,9 @@ type conversation struct {
 	Parts struct {
 		Parts      []part `json:"conversation_parts"`
 		TotalCount int    `json:"total_count"`
+		Pages      struct {
+			TotalPages Num `json:"total_pages"`
+		} `json:"pages"`
 	} `json:"conversation_parts"`
 }
 

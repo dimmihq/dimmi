@@ -572,7 +572,9 @@ func rating(c conversation) *format.Rating {
 		r.CreatedAt = at(c.UpdatedAt)
 	}
 
-	if c.Rating.Teammate != nil {
+	// The rated teammate can also be a team, a bot or a workflow, which
+	// are no teammate in dimmi.
+	if c.Rating.Teammate != nil && c.Rating.Teammate.Type == "admin" {
 		r.TeammateRef = string(c.Rating.Teammate.ID)
 	}
 

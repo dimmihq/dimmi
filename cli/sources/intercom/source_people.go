@@ -2,8 +2,10 @@ package intercom
 
 import (
 	"context"
+	"errors"
 	"net/url"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/dimmihq/dimmi/cli/engine"
@@ -156,12 +158,28 @@ func (s *Source) conversationAttributes(ctx context.Context) ([]format.Record, e
 
 /*
 readCompanies scrolls every company: the list and search endpoints
-leave out companies without users. A scroll expires after a minute
-idle; a resumed read whose scroll expired starts again, and records
-already sent are skipped by the engine.
+leave out companies without users.
 */
 func (s *Source) readCompanies(ctx context.Context, opts engine.ReadOptions, emit func(engine.Page) error) error {
-	cursor := opts.Cursor
+	return s.scrollCompanies(ctx, opts.Cursor, func(list []company, next string) error {
+		return emit(engine.Page{Records: companyRecords(list), Cursor: next})
+	})
+}
+
+/*
+scrollWait is how long a scroll left open stays open: Intercom allows
+one per workspace, and closes one unused for a minute.
+*/
+var scrollWait = 65 * time.Second //nolint:gochecknoglobals // shortened in tests
+
+/*
+scrollCompanies scrolls every company from the cursor on, a page at a
+time. A resumed scroll that expired starts again; records already sent
+are skipped by the engine. When another scroll is open, such as one an
+interrupted run left, it waits for that one to close.
+*/
+func (s *Source) scrollCompanies(ctx context.Context, cursor string, fn func([]company, string) error) error {
+	waited := 0
 
 	for {
 		q := url.Values{}
@@ -172,17 +190,27 @@ func (s *Source) readCompanies(ctx context.Context, opts engine.ReadOptions, emi
 		var out list[company]
 
 		err := s.Client.get(ctx, "/companies/scroll", q, &out)
-		if err != nil && cursor != "" && !isForbidden(err) {
+
+		switch {
+		case err != nil && cursor != "" && isNotFound(err):
 			cursor = ""
 
 			continue
-		}
+		case isScrollOpen(err) && waited < 3:
+			waited++
 
-		if err != nil || len(out.Data) == 0 {
+			if err := sleep(ctx, scrollWait); err != nil {
+				return err
+			}
+
+			continue
+		case err != nil:
 			return err
+		case len(out.Data) == 0:
+			return nil
 		}
 
-		if err := emit(engine.Page{Records: companyRecords(out.Data), Cursor: out.Scroll}); err != nil {
+		if err := fn(out.Data, out.Scroll); err != nil {
 			return err
 		}
 
@@ -190,6 +218,28 @@ func (s *Source) readCompanies(ctx context.Context, opts engine.ReadOptions, emi
 		if cursor == "" {
 			return nil
 		}
+	}
+}
+
+/*
+isScrollOpen reports whether Intercom refused a scroll because another
+is open.
+*/
+func isScrollOpen(err error) bool {
+	var e *APIError
+
+	return errors.As(err, &e) && e.Code == "scroll_exists"
+}
+
+func sleep(ctx context.Context, d time.Duration) error {
+	t := time.NewTimer(d)
+	defer t.Stop()
+
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	case <-t.C:
+		return nil
 	}
 }
 
@@ -218,12 +268,7 @@ func (s *Source) contactPage(ctx context.Context, since time.Time, cursor string
 
 		err = s.Client.get(ctx, "/contacts", q, &out)
 	} else {
-		body := map[string]any{
-			"query":      map[string]any{"field": "updated_at", "operator": ">", "value": since.Unix()},
-			"pagination": pagination(cursor),
-		}
-
-		err = s.Client.post(ctx, "/contacts/search", body, &out)
+		err = s.Client.post(ctx, "/contacts/search", changedSince(since.Unix(), cursor), &out)
 	}
 
 	if err != nil {
@@ -246,8 +291,50 @@ func (s *Source) readContacts(ctx context.Context, opts engine.ReadOptions, emit
 	return s.eachContact(ctx, opts, emit, s.fullContact)
 }
 
+/*
+readContactNotes reads the notes on every contact, then on every
+company. The cursor is prefixed c: once on companies.
+*/
 func (s *Source) readContactNotes(ctx context.Context, opts engine.ReadOptions, emit func(engine.Page) error) error {
-	return s.eachContact(ctx, opts, emit, s.contactNotes)
+	cursor, onCompanies := strings.CutPrefix(opts.Cursor, "c:")
+
+	if !onCompanies {
+		contacts := opts
+		contacts.Cursor = cursor
+
+		err := s.eachContact(ctx, contacts, func(p engine.Page) error {
+			if p.Cursor == "" {
+				p.Cursor = "c:"
+			}
+
+			return emit(p)
+		}, s.contactNotes)
+		if err != nil {
+			return err
+		}
+
+		cursor = ""
+	}
+
+	return s.scrollCompanies(ctx, cursor, func(list []company, next string) error {
+		var withNotes []company
+		for _, c := range list {
+			if !c.Notes.empty() {
+				withNotes = append(withNotes, c)
+			}
+		}
+
+		recs, err := parallel(ctx, s.Workers, withNotes, s.companyNotes)
+		if err != nil {
+			return err
+		}
+
+		if next != "" {
+			next = "c:" + next
+		}
+
+		return emit(engine.Page{Records: recs, Cursor: next})
+	})
 }
 
 /*
@@ -347,22 +434,53 @@ func (s *Source) contactCompanies(ctx context.Context, id ID) ([]string, error) 
 	return ids, nil
 }
 
+/*
+contactNotes reads a contact's notes, oldest first. A contact whose
+notes list is empty is not asked.
+*/
 func (s *Source) contactNotes(ctx context.Context, c contact) ([]format.Record, error) {
+	if c.Notes.empty() {
+		return nil, nil
+	}
+
+	return s.notes(ctx, "/contacts/"+url.PathEscape(string(c.ID))+"/notes", func(n note) format.Record {
+		return translateNote(n, string(c.ID), "")
+	})
+}
+
+/*
+companyNotes reads a company's notes, oldest first.
+*/
+func (s *Source) companyNotes(ctx context.Context, c company) ([]format.Record, error) {
+	recs, err := s.notes(ctx, "/companies/"+url.PathEscape(string(c.ID))+"/notes", func(n note) format.Record {
+		return translateNote(n, "", string(c.ID))
+	})
+	if isNotFound(err) {
+		return nil, nil
+	}
+
+	return recs, err
+}
+
+/*
+notes reads every page of a notes list.
+*/
+func (s *Source) notes(ctx context.Context, path string, fn func(note) format.Record) ([]format.Record, error) {
 	var recs []format.Record
 
 	for page := 1; page < 1000; page++ {
 		var out list[note]
 
 		q := url.Values{"page": {strconv.Itoa(page)}, "per_page": {"60"}, "order": {"asc"}}
-		if err := s.Client.get(ctx, "/contacts/"+url.PathEscape(string(c.ID))+"/notes", q, &out); err != nil {
+		if err := s.Client.get(ctx, path, q, &out); err != nil {
 			return nil, err
 		}
 
 		for _, n := range out.Data {
-			recs = append(recs, translateNote(n, string(c.ID)))
+			recs = append(recs, fn(n))
 		}
 
-		if len(out.Data) < 60 || int(out.Pages.TotalPages) <= page {
+		if len(out.Data) == 0 || int(out.Pages.TotalPages) <= page {
 			break
 		}
 	}
