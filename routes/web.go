@@ -233,6 +233,7 @@ func authPages() map[string]string {
 		"two-factor-reset":    "/two-factor-reset",
 		"invitation":          "/invitation",
 		"onboarding":          "/onboarding",
+		"waiting":             "/waiting",
 		"oauth.authorize":     "/oauth/authorize",
 		"email.preferences":   "/email-preferences",
 		"conversation.rating": "/rate",

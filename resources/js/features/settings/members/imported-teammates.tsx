@@ -134,12 +134,17 @@ export function ImportedTeammates({ workspace }: { workspace: string }) {
                 key={member.id}
                 mark={<Avatar size="md" color={avatarColor(member.user.name)} initials={member.user.name.charAt(0)} />}
                 title={member.user.name}
-                detail={member.user.email}
+                detail={
+                  <>
+                    <span className="sm:hidden">{stateLabels[state]}</span>
+                    <span className="hidden sm:inline">{member.user.email}</span>
+                  </>
+                }
               >
-                <Chip variant="caption" color={stateColors[state]}>
+                <Chip variant="caption" color={stateColors[state]} className="hidden sm:inline-flex">
                   {stateLabels[state]}
                 </Chip>
-                <Chip variant="caption" color="neutral">
+                <Chip variant="caption" color="neutral" className="hidden sm:inline-flex">
                   {member.role === "admin" ? "Admin" : "Member"}
                 </Chip>
                 <Button
