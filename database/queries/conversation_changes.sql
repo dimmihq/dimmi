@@ -93,3 +93,14 @@ RETURNING *;
 UPDATE conversations SET deleted_at = NULL, updated_at = @now::timestamptz
 WHERE workspace_id = @workspace_id AND id = @id AND deleted_at IS NOT NULL
 RETURNING *;
+
+-- name: LockExpiredSnoozes :many
+-- LockExpiredSnoozes holds the workspace's live conversations whose snooze
+-- ran out by the time, the earliest first, skipping the ones another
+-- worker already holds, so each wakes once.
+SELECT * FROM conversations
+WHERE workspace_id = @workspace_id AND status = 'snoozed' AND deleted_at IS NULL
+  AND snoozed_until <= @now::timestamptz
+ORDER BY snoozed_until, id
+LIMIT @row_limit::integer
+FOR UPDATE SKIP LOCKED;
