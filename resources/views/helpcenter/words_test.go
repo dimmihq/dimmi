@@ -123,3 +123,19 @@ func TestAgoCountsBackInEachLanguage(t *testing.T) {
 		assert.Equal(t, c.want, Center{Locale: c.locale, Lang: tr}.Ago(back(c.days), now), c.locale, c.days)
 	}
 }
+
+func TestPortalWordsReadInEachLanguage(t *testing.T) {
+	tr := translator(t)
+	ru := Center{Locale: "ru", Lang: tr}
+	assert.Equal(t, "Голосовать за «Тёмная тема», 5 голосов", ru.T("vote_for", "title", "Тёмная тема", "count", 5))
+	assert.Equal(t, "май", ru.Month(time.May))
+	assert.Equal(t, "Mai", Center{Locale: "de", Lang: tr}.Month(time.May))
+	assert.Equal(t, "Jan", Center{Lang: tr}.Month(time.January))
+	assert.Empty(t, Center{Lang: tr}.Month(0))
+	assert.Equal(t, "Changelog", Center{Lang: tr}.ChangelogTitle(""))
+	assert.Equal(t, "Journal des modifications", Center{Locale: "fr", Lang: tr}.ChangelogTitle("Changelog"))
+	assert.Equal(t, "What's new", Center{Locale: "fr", Lang: tr}.ChangelogTitle("What's new"))
+	for _, l := range helpcenters.Languages() {
+		assert.Len(t, strings.Fields(Center{Locale: l.Code, Lang: tr}.T("months_short")), 12, l.Code)
+	}
+}

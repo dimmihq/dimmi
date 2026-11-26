@@ -93,7 +93,7 @@ func (c *HelpCenterController) announce(r *fhttp.Request, h models.HelpCenter, c
 	if helpcenters.SettingsOf(h).FeedbackBoard {
 		defer func() {
 			center.Sections = append(center.Sections, helpcenter.Section{
-				Key: "feedback", Name: "Feature requests", Icon: "lightbulb", Path: "/feedback",
+				Key: "feedback", Name: center.T("feature_requests"), Icon: "lightbulb", Path: "/feedback",
 			})
 		}()
 	}
@@ -105,7 +105,8 @@ func (c *HelpCenterController) announce(r *fhttp.Request, h models.HelpCenter, c
 		return nil
 	}
 	center.Sections = append(center.Sections, helpcenter.Section{
-		Key: "changelog", Name: helpcenters.ChangelogOf(h).Title, Icon: "megaphone", Path: "/changelog",
+		Key: "changelog", Name: center.ChangelogTitle(helpcenters.ChangelogOf(h).Title), Icon: "megaphone",
+		Path: "/changelog",
 	})
 	out := make([]helpcenter.Update, len(latest))
 	for i, e := range latest {

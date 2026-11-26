@@ -80,3 +80,40 @@ func (c Center) Ago(t, now time.Time) string {
 		return c.T("ago_years", "count", days/365)
 	}
 }
+
+/*
+ShortDate writes a date without its year where the page's language
+does, such as "Oct 28", and in full otherwise.
+*/
+func (c Center) ShortDate(t time.Time) string {
+	if pageLang(c) == "en" {
+		return ShortDay(t)
+	}
+	return c.Date(t)
+}
+
+/*
+Month is the short name of the month in the page's language, such as
+Jan, empty for none.
+*/
+func (c Center) Month(m time.Month) string {
+	if m < time.January || m > time.December {
+		return ""
+	}
+	names := strings.Fields(c.T("months_short"))
+	if len(names) != 12 {
+		return m.String()[:3]
+	}
+	return names[m-1]
+}
+
+/*
+ChangelogTitle is the changelog's name: the team's own, or Changelog in
+the page's language when they kept the default.
+*/
+func (c Center) ChangelogTitle(title string) string {
+	if title == "" || title == "Changelog" {
+		return c.T("changelog")
+	}
+	return title
+}

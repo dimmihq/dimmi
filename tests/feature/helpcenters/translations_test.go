@@ -304,4 +304,31 @@ func TestHelpCenterLanguages(t *testing.T) {
 		c.d.TC.Client().GetJSON(help+"?locale=en").AssertOK().AssertJSONPath("data.articles.#", float64(2)).
 			AssertJSONPath("data.locale", "en")
 	})
+
+	t.Run("reads the changelog and the request board in the reader's language", func(t *testing.T) {
+		t.Parallel()
+		c := newCenter(t)
+		c.speaks(t, "fr")
+		c.d.Owner.PatchJSON("/api/v1/help-centers/"+c.id, testkit.JSON{
+			"settings": testkit.JSON{"feedback_board": true},
+		}).AssertOK()
+		entry := c.d.Owner.PostJSON("/api/v1/help-centers/"+c.id+"/changelog-entries", testkit.JSON{
+			"title": "Faster search", "summary": "Results as you type.", "body_markdown": "Search answers at once.",
+		}).AssertCreated().String("data.id")
+		c.d.Owner.PostJSON("/api/v1/changelog-entries/"+entry+"/publications", testkit.JSON{}).AssertOK()
+		open := c.browse()
+
+		changelog := string(open("/fr/changelog").AssertOK().Body)
+		assert.Contains(t, changelog, `<html lang="fr"`)
+		assert.Contains(t, changelog, "Journal des modifications")
+		assert.Contains(t, changelog, "abonner au flux RSS")
+		assert.Contains(t, changelog, "de fonctionnalités", "the header names the board in French")
+		assert.Contains(t, string(open("/changelog").AssertOK().Body), "Subscribe to RSS")
+
+		board := string(open("/fr/feedback").AssertOK().Body)
+		assert.Contains(t, board, `<html lang="fr"`)
+		assert.Contains(t, board, "Proposer une idée")
+		assert.Contains(t, board, "Feuille de route")
+		assert.NotContains(t, board, "Submit idea")
+	})
 }

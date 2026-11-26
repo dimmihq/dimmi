@@ -21,16 +21,16 @@ templ subscribe(c helpcenter.Center, subscribed bool) {
 			<span class="grid size-7 place-items-center rounded-full bg-tint text-link">
 				@helpcenter.Icon("mail", "size-3.5")
 			</span>
-			Check your inbox to confirm your subscription.
+			{ c.T("check_inbox_to_confirm") }
 		</p>
 		<form method="post" action={ helpcenter.Href(c, "/changelog/subscriptions") } hidden?={ subscribed } class="flex w-full gap-2 md:w-[22rem]">
 			<label class="flex h-10 min-w-0 flex-1 items-center gap-2 rounded-xl border border-border-button-default bg-background-primary-default px-3 shadow-xs transition focus-within:border-border-button-hover focus-within:ring-4 focus-within:ring-tint hover:border-border-button-hover">
 				@helpcenter.Icon("mail", "size-4 shrink-0 text-foreground-icon-tertiary")
-				<span class="sr-only">Email address</span>
+				<span class="sr-only">{ c.T("email_address") }</span>
 				<input type="email" name="email" required placeholder="you@company.com" autocomplete="email" class="min-w-0 flex-1 bg-transparent text-body-regular outline-none placeholder:text-text-placeholder"/>
 			</label>
 			<input type="text" name="website" tabindex="-1" autocomplete="off" aria-hidden="true" class="hidden"/>
-			<button type="submit" class="button-brand inline-flex h-10 shrink-0 cursor-pointer items-center rounded-xl px-4 text-body-medium outline-none transition focus-visible:ring-2 focus-visible:ring-border-focus-ring disabled:opacity-60">Subscribe</button>
+			<button type="submit" class="button-brand inline-flex h-10 shrink-0 cursor-pointer items-center rounded-xl px-4 text-body-medium outline-none transition focus-visible:ring-2 focus-visible:ring-border-focus-ring disabled:opacity-60">{ c.T("subscribe") }</button>
 		</form>
 	</div>
 }
@@ -68,9 +68,9 @@ sends it in the background and writes the new counts on the buttons.
 
 templ reactions(c helpcenter.Center, e Entry) {
 	if len(e.Reactions) > 0 {
-		<form method="post" action={ helpcenter.Href(c, e.Path+"/reactions") } data-reactions class="flex flex-wrap items-center gap-1.5" aria-label="Reactions">
+		<form method="post" action={ helpcenter.Href(c, e.Path+"/reactions") } data-reactions class="flex flex-wrap items-center gap-1.5" aria-label={ c.T("reactions") }>
 			for _, r := range e.Reactions {
-				<button type="submit" name="emoji" value={ r.Emoji } aria-label={ reactionLabel(r) } class="inline-flex h-8 cursor-pointer items-center gap-1.5 rounded-full border border-border-button-default bg-background-primary-default px-2.5 text-body-2-medium tabular-nums text-text-secondary outline-none transition hover:border-border-button-hover hover:bg-background-secondary-hover focus-visible:ring-2 focus-visible:ring-border-focus-ring active:scale-95">
+				<button type="submit" name="emoji" value={ r.Emoji } aria-label={ reactionLabel(c, r) } class="inline-flex h-8 cursor-pointer items-center gap-1.5 rounded-full border border-border-button-default bg-background-primary-default px-2.5 text-body-2-medium tabular-nums text-text-secondary outline-none transition hover:border-border-button-hover hover:bg-background-secondary-hover focus-visible:ring-2 focus-visible:ring-border-focus-ring active:scale-95">
 					<span class="text-[0.9375rem] leading-none">{ r.Emoji }</span>
 					<span data-count hidden?={ r.Count == 0 }>{ strconv.Itoa(r.Count) }</span>
 				</button>
@@ -93,14 +93,14 @@ templ pageLink(c helpcenter.Center, path, label, icon string, before bool) {
 
 templ entryNeighbors(c helpcenter.Center, previous, next *Entry) {
 	if previous != nil || next != nil {
-		<nav aria-label="More updates" class="mt-6 grid gap-3 sm:grid-cols-2">
+		<nav aria-label={ c.T("more_updates") } class="mt-6 grid gap-3 sm:grid-cols-2">
 			if previous != nil {
-				@neighbor(c, *previous, "Older", "")
+				@neighbor(c, *previous, c.T("older"), "")
 			} else {
 				<span></span>
 			}
 			if next != nil {
-				@neighbor(c, *next, "Newer", "sm:items-end sm:text-end")
+				@neighbor(c, *next, c.T("newer"), "sm:items-end sm:text-end")
 			}
 		</nav>
 	}
@@ -108,13 +108,13 @@ templ entryNeighbors(c helpcenter.Center, previous, next *Entry) {
 
 templ neighbor(c helpcenter.Center, e Entry, label, align string) {
 	<a href={ helpcenter.Href(c, e.Path) } class={ "group flex flex-col rounded-2xl border border-border-button-default p-4 transition hover:border-border-button-hover hover:bg-background-secondary-hover " + align }>
-		<span class="text-caption-1-medium text-text-tertiary">{ label } · { helpcenter.ShortDay(e.Published) }</span>
+		<span class="text-caption-1-medium text-text-tertiary">{ label } · { c.ShortDate(e.Published) }</span>
 		<span class="mt-1 text-body-medium group-hover:text-link">{ e.Title }</span>
 	</a>
 }
 
-func reactionLabel(r Reaction) string {
-	return r.Name + ", " + strconv.Itoa(r.Count)
+func reactionLabel(c helpcenter.Center, r Reaction) string {
+	return c.T("reaction_count", "name", c.T("reaction_"+r.Name), "count", strconv.Itoa(r.Count))
 }
 
 func authorNames(people []helpcenter.Person) string {
@@ -134,19 +134,8 @@ func feedPath(label string) string {
 	return "/changelog/labels/" + label + "/feed.xml"
 }
 
-/*
-titleOr is the changelog's title, Changelog when the team gave none.
-*/
-func titleOr(title string) string {
-	if title == "" {
-		return "Changelog"
-	}
-
-	return title
-}
-
-func indexTrail(index Index) []helpcenter.Crumb {
-	trail := []helpcenter.Crumb{{Title: titleOr(index.Title), Path: "/changelog"}}
+func indexTrail(c helpcenter.Center, index Index) []helpcenter.Crumb {
+	trail := []helpcenter.Crumb{{Title: c.ChangelogTitle(index.Title), Path: "/changelog"}}
 	for _, l := range index.Labels {
 		if l.Slug == index.Active {
 			trail = append(trail, helpcenter.Crumb{Title: l.Name, Path: l.Path})
@@ -161,7 +150,7 @@ func yearText(year int) string {
 }
 
 func indexTitle(c helpcenter.Center, index Index) string {
-	title := titleOr(index.Title) + " | " + c.Product
+	title := c.ChangelogTitle(index.Title) + " | " + c.Product
 	for _, l := range index.Labels {
 		if l.Slug == index.Active {
 			return l.Name + " · " + title
